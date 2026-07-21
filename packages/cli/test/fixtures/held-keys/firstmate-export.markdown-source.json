@@ -1,0 +1,14 @@
+{
+  "format": "firstmate-structured-backlog",
+  "source": "factories-helpers/42-decision-key-registry.md",
+  "registryEpoch": 2,
+  "exportedAt": "2026-07-20T12:00:00.000Z",
+  "holds": [
+    {
+      "identity": "captain-decision-synthetic-demo-alpha",
+      "title": "Synthetic demo hold alpha (fixture only; not a real captain hold)",
+      "state": "open",
+      "registeredAt": "2026-07-18T09:00:00.000Z"
+    }
+  ]
+}

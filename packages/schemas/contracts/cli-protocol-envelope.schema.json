@@ -55,6 +55,22 @@
         "heldKey": {
           "type": "string",
           "description": "Named captain hold when code is HELD_KEY (sceneaxi#7)."
+        },
+        "heldKeyReason": {
+          "type": "string",
+          "enum": [
+            "command-map-invalid",
+            "verb-undeclared",
+            "currency-unavailable",
+            "authoritative-epoch-mismatch",
+            "snapshot-missing",
+            "snapshot-invalid",
+            "snapshot-stale",
+            "map-snapshot-epoch-mismatch",
+            "unknown-held-key",
+            "open-held-key"
+          ],
+          "description": "Machine-readable refusal-table row when code is HELD_KEY (docs/held-key-enforcement.md)."
         }
       }
     }

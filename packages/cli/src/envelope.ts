@@ -8,6 +8,7 @@
 
 import type { FailureClass } from "./exit-codes.js";
 import { ExitCode, exitCodeForFailure, type ExitCodeValue } from "./exit-codes.js";
+import type { HeldKeyRefusalReason } from "./held-keys/gate.js";
 import { CLI_VERSION, PROTOCOL_SCHEMA_VERSION } from "./version.js";
 
 /** Machine payload for a successful command. */
@@ -20,6 +21,8 @@ export interface CliErrorBody {
   readonly path: readonly string[];
   /** Present when code is HELD_KEY (sceneaxi#7); omitted otherwise. */
   readonly heldKey?: string;
+  /** Refusal-table row when code is HELD_KEY (docs/held-key-enforcement.md). */
+  readonly heldKeyReason?: HeldKeyRefusalReason;
 }
 
 interface EnvelopeBase {
@@ -71,16 +74,22 @@ export function failure(
     readonly path?: readonly string[];
     readonly help?: readonly string[];
     readonly heldKey?: string;
+    readonly heldKeyReason?: HeldKeyRefusalReason;
   } = {},
 ): CliOutcome {
   const path = Object.freeze([...(options.path ?? [])]);
   const help = Object.freeze([
     ...(options.help ?? defaultHelpForFailure(code, path)),
   ]);
-  const error: CliErrorBody =
-    options.heldKey === undefined
-      ? { code, message, path }
-      : { code, message, path, heldKey: options.heldKey };
+  const error: CliErrorBody = {
+    code,
+    message,
+    path,
+    ...(options.heldKey === undefined ? {} : { heldKey: options.heldKey }),
+    ...(options.heldKeyReason === undefined
+      ? {}
+      : { heldKeyReason: options.heldKeyReason }),
+  };
 
   return {
     exitCode: exitCodeForFailure(code),

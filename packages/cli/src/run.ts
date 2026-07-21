@@ -3,7 +3,7 @@
  * tests can assert on outcomes without spawning a subprocess.
  */
 
-import { dispatch } from "./dispatcher.js";
+import { dispatch, type DispatchOptions } from "./dispatcher.js";
 import type { CliOutcome } from "./envelope.js";
 import { formatOutcome, type OutputFormat } from "./format.js";
 
@@ -15,8 +15,11 @@ export interface RunCliResult {
 }
 
 /** Run the umbrella CLI against argv (no binary name). Pure of process.exit. */
-export function runCli(argv: readonly string[] = []): RunCliResult {
-  const { outcome, format } = dispatch(argv);
+export function runCli(
+  argv: readonly string[] = [],
+  options: DispatchOptions = {},
+): RunCliResult {
+  const { outcome, format } = dispatch(argv, options);
   return {
     exitCode: outcome.exitCode,
     envelope: outcome.envelope,

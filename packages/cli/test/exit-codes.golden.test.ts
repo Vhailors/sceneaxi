@@ -86,6 +86,7 @@ describe("exit codes at every nesting level (anti gh-axi wart)", () => {
       "profile",
       "catalog",
       "evidence",
+      "demo",
       "protocol",
     ]) {
       const r = runCli([group, "no-such-verb"]);
