@@ -83,26 +83,72 @@ if (schema && fixtures) {
   }
   validate(fixtures, schema, "fixtures");
 
-  const ids = (fixtures.jobs ?? []).map((j) => j?.id).filter(Boolean);
+  const jobs = Array.isArray(fixtures.jobs) ? fixtures.jobs : [];
+  const ids = jobs.map((j) => j?.id).filter(Boolean);
   const dupes = ids.filter((id, i) => ids.indexOf(id) !== i);
   if (dupes.length > 0) fail(`fixtures: duplicate job id(s): ${[...new Set(dupes)].join(", ")}`);
 
   // --- doc cross-checks: one shared table matching the JSON, both contracts bound to it ---
   if (doc) {
-    const tableMatch = doc.match(/<!-- authoring-jobs:list -->([\s\S]*?)<!-- \/authoring-jobs:list -->/);
-    if (!tableMatch) {
-      fail("doc: missing <!-- authoring-jobs:list --> ... <!-- /authoring-jobs:list --> shared fixture table markers");
+    const tableStart = "<!-- authoring-jobs:list -->";
+    const tableEnd = "<!-- /authoring-jobs:list -->";
+    const tableStarts = doc.split(tableStart).length - 1;
+    const tableEnds = doc.split(tableEnd).length - 1;
+    const tableMatches = [...doc.matchAll(/<!-- authoring-jobs:list -->([\s\S]*?)<!-- \/authoring-jobs:list -->/g)];
+    if (tableStarts !== 1 || tableEnds !== 1 || tableMatches.length !== 1) {
+      fail(`doc: expected exactly one ${tableStart} ... ${tableEnd} shared fixture table, found ${tableStarts} start and ${tableEnds} end marker(s)`);
     } else {
-      const docIds = [...tableMatch[1].matchAll(/^\|\s*`([a-z0-9-]+)`/gm)].map((m) => m[1]);
-      if (docIds.join("\n") !== ids.join("\n")) {
+      const actualTable = tableMatches[0][1].trim().replaceAll("\r\n", "\n");
+      const expectedTable = [
+        "| id | job | edit class |",
+        "|---|---|---|",
+        ...jobs.map((job) => `| \`${job.id}\` | ${job.title} | ${job.editClass} |`),
+      ].join("\n");
+      if (actualTable !== expectedTable) {
         fail(
-          `doc: shared fixture table ids [${docIds.join(", ")}] do not exactly match canonical fixtures [${ids.join(", ")}]`
+          "doc: shared fixture table does not exactly match canonical fixture id, title/job, and edit class columns in order"
         );
       }
     }
+
+    const headingMatches = {
+      E1: [...doc.matchAll(/^## E1(?:\s|$).*$/gm)],
+      E2: [...doc.matchAll(/^## E2(?:\s|$).*$/gm)],
+      shared: [...doc.matchAll(/^## Shared authoring-jobs fixture list\s*$/gm)],
+    };
+    for (const [section, matches] of Object.entries(headingMatches)) {
+      if (matches.length !== 1) {
+        fail(`doc: expected exactly one ${section} contract boundary heading, found ${matches.length}`);
+      }
+    }
+    const bindMatches = Object.fromEntries(
+      ["E1", "E2"].map((contract) => [
+        contract,
+        [...doc.matchAll(new RegExp(`<!-- authoring-jobs:bind ${contract} -->`, "g"))],
+      ])
+    );
     for (const contract of ["E1", "E2"]) {
-      if (!doc.includes(`<!-- authoring-jobs:bind ${contract} -->`)) {
-        fail(`doc: ${contract} section does not bind to the shared fixture list (missing <!-- authoring-jobs:bind ${contract} --> marker)`);
+      if (bindMatches[contract].length !== 1) {
+        fail(`doc: expected exactly one <!-- authoring-jobs:bind ${contract} --> marker, found ${bindMatches[contract].length}`);
+      }
+    }
+    if (
+      headingMatches.E1.length === 1 &&
+      headingMatches.E2.length === 1 &&
+      headingMatches.shared.length === 1 &&
+      bindMatches.E1.length === 1 &&
+      bindMatches.E2.length === 1
+    ) {
+      const e1Heading = headingMatches.E1[0].index;
+      const e2Heading = headingMatches.E2[0].index;
+      const sharedHeading = headingMatches.shared[0].index;
+      const e1Bind = bindMatches.E1[0].index;
+      const e2Bind = bindMatches.E2[0].index;
+      if (!(e1Heading < e1Bind && e1Bind < e2Heading)) {
+        fail("doc: <!-- authoring-jobs:bind E1 --> must appear after the E1 heading and before the E2 heading");
+      }
+      if (!(e2Heading < e2Bind && e2Bind < sharedHeading)) {
+        fail("doc: <!-- authoring-jobs:bind E2 --> must appear after the E2 heading and before the shared fixture list heading");
       }
     }
     if (!doc.includes("packages/schemas/contracts/authoring-jobs.fixtures.json")) {
