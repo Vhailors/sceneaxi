@@ -22,9 +22,9 @@ authority by itself**.
 ## Procedure (each step only under its own authority)
 
 1. **Pre-flight (no authority needed):** in this tree, `pnpm check:syntax` and
-   `pnpm check:boundaries` must PASS, and `pnpm gate` must **FAIL** (build/test/lint
-   are intentionally fail-closed until wired — a passing gate here means the gate has
-   been tampered with).
+   `pnpm check:boundaries` must PASS, and `pnpm gate` must **PASS**. Build/test/lint
+   were intentionally fail-closed during bootstrap; that era ended when sceneaxi#2
+   wired the real gate surfaces.
 2. **[apply]** Copy this directory tree into a clean clone of `projects/sceneaxi`
    (or a `git checkout --orphan` initial tree) without rewriting any other repo's
    history.
