@@ -2,7 +2,7 @@
   "name": "@sceneaxi/desktop-shell",
   "version": "0.0.0",
   "private": true,
-  "description": "SceneAxi desktop-shell app (bootstrap stub) — thin wrapper over the same protocol layer as web-shell",
+  "description": "SceneAxi desktop-shell — thin wrapper over the same authoring-core protocol layer as web-shell",
   "type": "module",
   "exports": { ".": "./src/index.ts" },
   "dependencies": {

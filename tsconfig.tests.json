@@ -8,5 +8,9 @@
     "noEmit": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["tests"]
+  "include": [
+    "tests",
+    "packages/*/src/**/*.ts",
+    "apps/*/src/**/*.ts"
+  ]
 }
