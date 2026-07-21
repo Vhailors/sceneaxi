@@ -2,6 +2,15 @@
 
 Shared contracts home for SceneAxi. Zero internal dependencies by rule.
 
+## Profile Conformance (sceneaxi#10)
+
+- `contracts/profile-conformance.schema.json` — versioned claim document
+- Registry: `profileConformanceRegistry` (Game = development-consumer; Web/Kids =
+  not-yet-claimed; never a shipping claim; always cites `profile-rollout-order`)
+- Shared suite: `runProfileConformanceSuite(surface)` — kernel session + document
+  propose/apply through the profile's pinned core + evidence-hook presence
+- First development consumer: `@sceneaxi/profile-game` (exports `conformance`)
+
 ## Document + propose/apply (sceneaxi#9)
 
 - `contracts/document.schema.json` — text-canonical SceneAxi document (v1)

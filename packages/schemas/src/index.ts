@@ -104,6 +104,8 @@ export const contracts = Object.freeze({
   catalogItem: "contracts/catalog-item.schema.json",
   document: "contracts/document.schema.json",
   proposal: "contracts/proposal.schema.json",
+  /** Profile Conformance claim (sceneaxi#10) — shared suite + development consumers. */
+  profileConformance: "contracts/profile-conformance.schema.json",
 });
 
 export const seam: PackageSeam = Object.freeze({
@@ -124,3 +126,34 @@ export {
   type KernelSessionEvent,
   type KernelSessionSaveArtifact,
 } from "./kernel-session.js";
+
+export {
+  PROFILE_CONFORMANCE_KIND,
+  PROFILE_CONFORMANCE_SCHEMA_VERSION,
+  PROFILE_CONFORMANCE_SUITE_VERSION,
+  PROFILE_ROLLOUT_ORDER_HELD_KEY,
+  createProfileConformanceClaim,
+  profileConformanceRegistry,
+  registryEntryFor,
+  validateProfileConformanceClaim,
+} from "./profile-conformance.js";
+export type {
+  ClaimValidationOk,
+  ClaimValidationRefuse,
+  ClaimValidationResult,
+  ProfileClaimStatus,
+  ProfileConformanceClaim,
+  ProfileConformanceRegistryEntry,
+  ProfileConformanceSeam,
+  ProfileConformanceSurface,
+  ProfileCoreAuthoring,
+  ProfileCoreKernel,
+  ProfileEvidenceHook,
+  ProfileEvidenceHooks,
+} from "./profile-conformance.js";
+
+export {
+  runProfileConformanceSuite,
+  type ConformanceCheckResult,
+  type ConformanceSuiteResult,
+} from "./profile-conformance-suite.js";

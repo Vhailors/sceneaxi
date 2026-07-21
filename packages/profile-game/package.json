@@ -2,7 +2,7 @@
   "name": "@sceneaxi/profile-game",
   "version": "0.0.0",
   "private": true,
-  "description": "SceneAxi profile-game package (bootstrap stub) — Game profile; pins a core range, compiles its policy in",
+  "description": "SceneAxi Game profile — first development consumer of the Profile Conformance suite (sceneaxi#10); pins a core range; no shipping claim",
   "type": "module",
   "exports": { ".": "./src/index.ts" },
   "files": ["src"],
