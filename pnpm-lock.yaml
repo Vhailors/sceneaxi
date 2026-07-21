@@ -1,0 +1,152 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .: {}
+
+  apps/catalog-game:
+    dependencies:
+      '@sceneaxi/schemas':
+        specifier: workspace:^
+        version: link:../../packages/schemas
+
+  apps/catalog-web:
+    dependencies:
+      '@sceneaxi/schemas':
+        specifier: workspace:^
+        version: link:../../packages/schemas
+
+  apps/desktop-shell:
+    dependencies:
+      '@sceneaxi/authoring-core':
+        specifier: workspace:^
+        version: link:../../packages/authoring-core
+      '@sceneaxi/schemas':
+        specifier: workspace:^
+        version: link:../../packages/schemas
+
+  apps/web-shell:
+    dependencies:
+      '@sceneaxi/authoring-core':
+        specifier: workspace:^
+        version: link:../../packages/authoring-core
+      '@sceneaxi/schemas':
+        specifier: workspace:^
+        version: link:../../packages/schemas
+
+  packages/authoring-core:
+    dependencies:
+      '@sceneaxi/engine-kernel':
+        specifier: workspace:^
+        version: link:../engine-kernel
+      '@sceneaxi/engine-orchestrator':
+        specifier: workspace:^
+        version: link:../engine-orchestrator
+      '@sceneaxi/engine-presentation':
+        specifier: workspace:^
+        version: link:../engine-presentation
+      '@sceneaxi/schemas':
+        specifier: workspace:^
+        version: link:../schemas
+
+  packages/cli:
+    dependencies:
+      '@sceneaxi/authoring-core':
+        specifier: workspace:^
+        version: link:../authoring-core
+      '@sceneaxi/schemas':
+        specifier: workspace:^
+        version: link:../schemas
+
+  packages/engine-kernel:
+    dependencies:
+      '@sceneaxi/schemas':
+        specifier: workspace:^
+        version: link:../schemas
+
+  packages/engine-orchestrator:
+    dependencies:
+      '@sceneaxi/engine-kernel':
+        specifier: workspace:^
+        version: link:../engine-kernel
+      '@sceneaxi/schemas':
+        specifier: workspace:^
+        version: link:../schemas
+
+  packages/engine-presentation:
+    dependencies:
+      '@sceneaxi/engine-kernel':
+        specifier: workspace:^
+        version: link:../engine-kernel
+      '@sceneaxi/schemas':
+        specifier: workspace:^
+        version: link:../schemas
+
+  packages/importers:
+    dependencies:
+      '@sceneaxi/authoring-core':
+        specifier: workspace:^
+        version: link:../authoring-core
+      '@sceneaxi/schemas':
+        specifier: workspace:^
+        version: link:../schemas
+
+  packages/profile-game:
+    dependencies:
+      '@sceneaxi/authoring-core':
+        specifier: workspace:^
+        version: link:../authoring-core
+      '@sceneaxi/engine-kernel':
+        specifier: workspace:^
+        version: link:../engine-kernel
+      '@sceneaxi/engine-orchestrator':
+        specifier: workspace:^
+        version: link:../engine-orchestrator
+      '@sceneaxi/engine-presentation':
+        specifier: workspace:^
+        version: link:../engine-presentation
+      '@sceneaxi/schemas':
+        specifier: workspace:^
+        version: link:../schemas
+
+  packages/profile-kids:
+    dependencies:
+      '@sceneaxi/authoring-core':
+        specifier: workspace:^
+        version: link:../authoring-core
+      '@sceneaxi/engine-kernel':
+        specifier: workspace:^
+        version: link:../engine-kernel
+      '@sceneaxi/engine-orchestrator':
+        specifier: workspace:^
+        version: link:../engine-orchestrator
+      '@sceneaxi/engine-presentation':
+        specifier: workspace:^
+        version: link:../engine-presentation
+      '@sceneaxi/schemas':
+        specifier: workspace:^
+        version: link:../schemas
+
+  packages/profile-web:
+    dependencies:
+      '@sceneaxi/authoring-core':
+        specifier: workspace:^
+        version: link:../authoring-core
+      '@sceneaxi/engine-kernel':
+        specifier: workspace:^
+        version: link:../engine-kernel
+      '@sceneaxi/engine-orchestrator':
+        specifier: workspace:^
+        version: link:../engine-orchestrator
+      '@sceneaxi/engine-presentation':
+        specifier: workspace:^
+        version: link:../engine-presentation
+      '@sceneaxi/schemas':
+        specifier: workspace:^
+        version: link:../schemas
+
+  packages/schemas: {}

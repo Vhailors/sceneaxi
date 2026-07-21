@@ -1,0 +1,11 @@
+{
+  "name": "@sceneaxi/catalog-web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "SceneAxi catalog-web app (bootstrap stub) — website-asset storefront over the catalog pipeline contracts only; commerce fields inert",
+  "dependencies": {
+    "@sceneaxi/schemas": "workspace:^"
+  },
+  "sceneaxi": { "releaseGroup": "apps" },
+  "license": "UNLICENSED"
+}

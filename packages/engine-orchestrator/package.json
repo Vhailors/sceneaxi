@@ -1,0 +1,15 @@
+{
+  "name": "@sceneaxi/engine-orchestrator",
+  "version": "0.0.0",
+  "private": true,
+  "description": "SceneAxi engine-orchestrator package (bootstrap stub) — Factory Orchestrator seam from spec #41's six deep modules",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "files": ["src"],
+  "dependencies": {
+    "@sceneaxi/schemas": "workspace:^",
+    "@sceneaxi/engine-kernel": "workspace:^"
+  },
+  "sceneaxi": { "releaseGroup": "core-train" },
+  "license": "UNLICENSED"
+}

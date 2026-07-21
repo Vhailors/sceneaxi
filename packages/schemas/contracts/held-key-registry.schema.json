@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/held-key-registry/v1",
+  "title": "SceneAxi held-key registry snapshot (v1)",
+  "description": "Machine-readable snapshot of captain decision keys, generated from the authoritative FirstMate structured backlog (tasks-axi captain holds, identities <origin>-decision-<key>). The Markdown registry in factories-helpers #42 documents these keys for humans; it is never the runtime source. Consumers MUST fail closed per docs/held-key-enforcement.md.",
+  "type": "object",
+  "required": ["schemaVersion", "registryEpoch", "generatedAt", "source", "sourceDigest", "keys"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "registryEpoch": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Monotonic counter incremented whenever a key is added or removed. A CLI built for epoch N MUST refuse held-key-gated commands when the snapshot epoch differs from what its command map was built against."
+    },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "source": {
+      "type": "string",
+      "description": "Identifier of the authoritative structured backlog the snapshot was exported from (never a Markdown document)."
+    },
+    "sourceDigest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "Digest of the canonicalized exported hold set, for integrity checks."
+    },
+    "keys": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["key", "origin", "title", "state", "registeredAt"],
+        "additionalProperties": false,
+        "properties": {
+          "key": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+          "origin": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+          "title": { "type": "string" },
+          "state": { "enum": ["open", "resolved"] },
+          "registeredAt": { "type": "string", "format": "date-time" },
+          "resolvedAt": { "type": "string", "format": "date-time" },
+          "decisionRecord": {
+            "type": "string",
+            "description": "Pointer to the durable captain decision record; required when state is resolved."
+          }
+        },
+        "if": { "properties": { "state": { "const": "resolved" } } },
+        "then": { "required": ["resolvedAt", "decisionRecord"] }
+      }
+    }
+  }
+}

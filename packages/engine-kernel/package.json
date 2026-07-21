@@ -1,0 +1,14 @@
+{
+  "name": "@sceneaxi/engine-kernel",
+  "version": "0.0.0",
+  "private": true,
+  "description": "SceneAxi engine-kernel package (bootstrap stub) — Game Kernel seam (open/dispatch/advance/observe/save/replay)",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "files": ["src"],
+  "dependencies": {
+    "@sceneaxi/schemas": "workspace:^"
+  },
+  "sceneaxi": { "releaseGroup": "core-train" },
+  "license": "UNLICENSED"
+}

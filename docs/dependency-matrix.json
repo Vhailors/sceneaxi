@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "authoredFor": "sceneaxi bootstrap seed (post-FAIL remediations, 2026-07-21)",
+  "rule": "packages depend downward only; allow lists are exhaustive — any internal dependency or source import not listed here is a violation",
+  "packages": {
+    "@sceneaxi/schemas": {
+      "dir": "packages/schemas",
+      "releaseGroup": "contracts",
+      "allow": []
+    },
+    "@sceneaxi/engine-kernel": {
+      "dir": "packages/engine-kernel",
+      "releaseGroup": "core-train",
+      "allow": ["@sceneaxi/schemas"]
+    },
+    "@sceneaxi/engine-presentation": {
+      "dir": "packages/engine-presentation",
+      "releaseGroup": "core-train",
+      "allow": ["@sceneaxi/schemas", "@sceneaxi/engine-kernel"]
+    },
+    "@sceneaxi/engine-orchestrator": {
+      "dir": "packages/engine-orchestrator",
+      "releaseGroup": "core-train",
+      "allow": ["@sceneaxi/schemas", "@sceneaxi/engine-kernel"]
+    },
+    "@sceneaxi/authoring-core": {
+      "dir": "packages/authoring-core",
+      "releaseGroup": "core-train",
+      "allow": [
+        "@sceneaxi/schemas",
+        "@sceneaxi/engine-kernel",
+        "@sceneaxi/engine-presentation",
+        "@sceneaxi/engine-orchestrator"
+      ]
+    },
+    "@sceneaxi/profile-game": {
+      "dir": "packages/profile-game",
+      "releaseGroup": "profile",
+      "allow": [
+        "@sceneaxi/schemas",
+        "@sceneaxi/authoring-core",
+        "@sceneaxi/engine-kernel",
+        "@sceneaxi/engine-presentation",
+        "@sceneaxi/engine-orchestrator"
+      ]
+    },
+    "@sceneaxi/profile-web": {
+      "dir": "packages/profile-web",
+      "releaseGroup": "profile",
+      "allow": [
+        "@sceneaxi/schemas",
+        "@sceneaxi/authoring-core",
+        "@sceneaxi/engine-kernel",
+        "@sceneaxi/engine-presentation",
+        "@sceneaxi/engine-orchestrator"
+      ]
+    },
+    "@sceneaxi/profile-kids": {
+      "dir": "packages/profile-kids",
+      "releaseGroup": "profile",
+      "allow": [
+        "@sceneaxi/schemas",
+        "@sceneaxi/authoring-core",
+        "@sceneaxi/engine-kernel",
+        "@sceneaxi/engine-presentation",
+        "@sceneaxi/engine-orchestrator"
+      ]
+    },
+    "@sceneaxi/cli": {
+      "dir": "packages/cli",
+      "releaseGroup": "cli-protocol",
+      "allow": ["@sceneaxi/schemas", "@sceneaxi/authoring-core"]
+    },
+    "@sceneaxi/importers": {
+      "dir": "packages/importers",
+      "releaseGroup": "importers",
+      "allow": ["@sceneaxi/schemas", "@sceneaxi/authoring-core"]
+    },
+    "@sceneaxi/web-shell": {
+      "dir": "apps/web-shell",
+      "releaseGroup": "apps",
+      "allow": ["@sceneaxi/schemas", "@sceneaxi/authoring-core"]
+    },
+    "@sceneaxi/desktop-shell": {
+      "dir": "apps/desktop-shell",
+      "releaseGroup": "apps",
+      "allow": ["@sceneaxi/schemas", "@sceneaxi/authoring-core"]
+    },
+    "@sceneaxi/catalog-game": {
+      "dir": "apps/catalog-game",
+      "releaseGroup": "apps",
+      "allow": ["@sceneaxi/schemas"]
+    },
+    "@sceneaxi/catalog-web": {
+      "dir": "apps/catalog-web",
+      "releaseGroup": "apps",
+      "allow": ["@sceneaxi/schemas"]
+    }
+  },
+  "kidsBoundary": {
+    "kidsPackages": ["@sceneaxi/profile-kids"],
+    "allowedDependents": [],
+    "rule": "no package or app may depend on or import a Kids package unless listed in allowedDependents; future Kids surfaces are added here explicitly under the kids-surface-isolation decision"
+  },
+  "delayed": {
+    "@sceneaxi/engine-asset-compiler": {
+      "releaseGroup": "core-train",
+      "allow": ["@sceneaxi/schemas", "@sceneaxi/engine-kernel"],
+      "arrives": "with the proof program's landings (spec #41)"
+    },
+    "@sceneaxi/engine-platform-host": {
+      "releaseGroup": "core-train",
+      "allow": ["@sceneaxi/schemas", "@sceneaxi/engine-kernel", "@sceneaxi/engine-presentation"],
+      "arrives": "with the proof program's landings (spec #41)"
+    },
+    "@sceneaxi/engine-evidence": {
+      "releaseGroup": "core-train",
+      "allow": ["@sceneaxi/schemas"],
+      "arrives": "with the proof program's landings (spec #41)"
+    },
+    "@sceneaxi/provider-<name>": {
+      "releaseGroup": "importers",
+      "allow": ["@sceneaxi/schemas", "@sceneaxi/authoring-core"],
+      "arrives": "provider adapters behind the Model Provider Port, only after llm-provider-policy is resolved"
+    }
+  },
+  "releaseGroups": {
+    "contracts": { "policy": "schemas carry their own versions; every consumer refuses major mismatches" },
+    "core-train": { "policy": "one shared semver train — a 'core release' covers all engine packages and authoring-core" },
+    "profile": { "policy": "independently versioned; each profile MUST declare sceneaxi.corePin (a semver range on the core train)" },
+    "cli-protocol": { "policy": "versions with its protocol envelope; output-schema changes are semver events" },
+    "importers": { "policy": "independently versioned" },
+    "apps": { "policy": "private, unpublished, unversioned beyond workspace bookkeeping" }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "@sceneaxi/schemas",
+  "version": "0.0.0",
+  "private": true,
+  "description": "SceneAxi schemas package (bootstrap stub) — ALL shared contracts; zero dependencies by rule",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "files": ["src", "contracts"],
+  "sceneaxi": { "releaseGroup": "contracts" },
+  "license": "UNLICENSED"
+}

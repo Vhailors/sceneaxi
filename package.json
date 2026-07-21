@@ -1,0 +1,19 @@
+{
+  "name": "sceneaxi",
+  "private": true,
+  "version": "0.0.0",
+  "description": "SceneAxi monorepo — agent-native interactive engine/library ecosystem",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node -e \"console.error('sceneaxi bootstrap: build not wired'); process.exit(1)\"",
+    "test": "node -e \"console.error('sceneaxi bootstrap: test not wired'); process.exit(1)\"",
+    "lint": "node -e \"console.error('sceneaxi bootstrap: lint not wired'); process.exit(1)\"",
+    "check:syntax": "node scripts/check-syntax.mjs",
+    "check:boundaries": "node scripts/check-boundaries.mjs",
+    "gate": "pnpm -s check:syntax && pnpm -s check:boundaries && pnpm -s build && pnpm -s test && pnpm -s lint"
+  },
+  "license": "UNLICENSED"
+}

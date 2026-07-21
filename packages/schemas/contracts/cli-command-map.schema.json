@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/cli-command-map/v1",
+  "title": "SceneAxi CLI command-to-held-key map (v1)",
+  "description": "Declares, per CLI verb, which captain decision keys gate it. Ships with the CLI and versions with the protocol envelope. A verb whose behavior depends on a held key MUST list it here; verbs composed of other verbs MUST list the union (dependency closure). Enforcement semantics: docs/held-key-enforcement.md.",
+  "type": "object",
+  "required": ["schemaVersion", "builtForRegistryEpoch", "cliVersion", "commands"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "builtForRegistryEpoch": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "The held-key registry epoch this map was authored against. Snapshot epoch mismatch at runtime → refusal."
+    },
+    "cliVersion": { "type": "string" },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["command", "heldKeys"],
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "type": "string",
+            "description": "Full verb path, e.g. 'project new' or 'catalog list'."
+          },
+          "heldKeys": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+            "description": "Every decision key whose openness must refuse this verb. Empty array is an explicit declaration that the verb is ungated — absence of a command from this map is NOT."
+          },
+          "composedOf": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Verbs this verb composes; its heldKeys must be a superset of theirs (checked in CI)."
+          }
+        }
+      }
+    }
+  }
+}

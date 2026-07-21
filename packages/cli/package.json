@@ -1,0 +1,15 @@
+{
+  "name": "@sceneaxi/cli",
+  "version": "0.0.0",
+  "private": true,
+  "description": "SceneAxi cli package (bootstrap stub) — thin agent-native protocol adapter (verbs + envelope) over authoring-core; no direct engine access",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "files": ["src"],
+  "dependencies": {
+    "@sceneaxi/schemas": "workspace:^",
+    "@sceneaxi/authoring-core": "workspace:^"
+  },
+  "sceneaxi": { "releaseGroup": "cli-protocol" },
+  "license": "UNLICENSED"
+}

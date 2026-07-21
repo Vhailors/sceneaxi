@@ -1,0 +1,18 @@
+{
+  "name": "@sceneaxi/profile-kids",
+  "version": "0.0.0",
+  "private": true,
+  "description": "SceneAxi profile-kids package (bootstrap stub) — Kids profile; fail-closed policy compiled in; nothing outside Kids surfaces may depend on it",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "files": ["src"],
+  "dependencies": {
+    "@sceneaxi/schemas": "workspace:^",
+    "@sceneaxi/authoring-core": "workspace:^",
+    "@sceneaxi/engine-kernel": "workspace:^",
+    "@sceneaxi/engine-presentation": "workspace:^",
+    "@sceneaxi/engine-orchestrator": "workspace:^"
+  },
+  "sceneaxi": { "releaseGroup": "profile", "corePin": "^0.0.0" },
+  "license": "UNLICENSED"
+}

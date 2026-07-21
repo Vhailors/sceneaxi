@@ -1,0 +1,15 @@
+{
+  "name": "@sceneaxi/importers",
+  "version": "0.0.0",
+  "private": true,
+  "description": "SceneAxi importers package (bootstrap stub) — external content/project adapters producing Core documents and Asset Packages via the authoring service",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "files": ["src"],
+  "dependencies": {
+    "@sceneaxi/schemas": "workspace:^",
+    "@sceneaxi/authoring-core": "workspace:^"
+  },
+  "sceneaxi": { "releaseGroup": "importers" },
+  "license": "UNLICENSED"
+}
