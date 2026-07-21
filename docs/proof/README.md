@@ -22,7 +22,7 @@ issue-transfer plan, each tracked by a SceneAxi issue:
 | Doc | From | Tracked by | Status |
 |---|---|---|---|
 | [Stage 0 engine-neutral acceptance-contract template](stage-0-acceptance-contract-template.md) (held fields flagged, nothing locked) | factories-helpers#50 | [sceneaxi#13](https://github.com/Vhailors/sceneaxi/issues/13) | **In tree** (unlocked template) |
-| Stage 1 counting and adjudication worksheet (recommendation only) | factories-helpers#51 | [sceneaxi#14](https://github.com/Vhailors/sceneaxi/issues/14) | Pending |
+| [Stage 1 counting and adjudication worksheet](stage-1-counting-adjudication-worksheet.md) (recommendation only) | factories-helpers#51 | [sceneaxi#14](https://github.com/Vhailors/sceneaxi/issues/14) | **In tree** (recommendation; hold `first-proof-kill-rubric` decides) |
 | Stage 1 paired-replicate run-sheet + pinned-config manifest (not a run authorization) | factories-helpers#52 | [sceneaxi#15](https://github.com/Vhailors/sceneaxi/issues/15) | Pending |
 
 ## Source of truth
