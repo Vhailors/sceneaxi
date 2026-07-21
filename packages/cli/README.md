@@ -4,14 +4,13 @@ Agent-native umbrella CLI for SceneAxi: a shared dispatcher that enforces a
 deterministic exit-code map, a versioned protocol envelope, and strict `--json`
 equivalence at every command nesting level.
 
-Verb bodies beyond protocol introspection are **skeletons** (later tickets plug
-real work in). Held-key currency enforcement (sceneaxi#7) is implemented in
-`src/held-keys/` and wired into the dispatcher for every verb; see
-[Held-key enforcement](#held-key-enforcement-sceneaxi7) below.
+Protocol introspection and E1 `project propose` / `project apply` are live;
+other verb bodies remain skeletons. Held-key currency enforcement (sceneaxi#7)
+is implemented in `src/held-keys/` and wired into the dispatcher for every verb;
+see [Held-key enforcement](#held-key-enforcement-sceneaxi7) below.
 
-**Boundaries:** imports only `@sceneaxi/schemas` (and may use
-`@sceneaxi/authoring-core` later). Direct engine imports are denied by
-`docs/dependency-matrix.json`.
+**Boundaries:** imports only `@sceneaxi/schemas` and `@sceneaxi/authoring-core`.
+Direct engine imports are denied by `docs/dependency-matrix.json`.
 
 ## Invocation
 
@@ -25,13 +24,18 @@ Command-first shape: `sceneaxi <group> <verb> [flags]`.
 
 | Group | Verbs (skeleton unless noted) |
 |---|---|
-| `project` | `new`, `dev`, `test`, `capture`, `report` (E1 surface) |
+| `project` | `new`, `dev`, `test`, `capture`, `report` (skeleton); **`propose`**, **`apply`** (E1 live) |
 | `asset` | `list` |
 | `profile` | `list` |
 | `catalog` | `list` |
 | `evidence` | `list` |
 | `demo` | `gated` (held-key protocol demo; gated by synthetic keys, fails closed) |
 | `protocol` | `version`, `inspect` (real introspection) |
+
+```bash
+sceneaxi project propose --document scene.json --pointer /data/x --value 1 --out edit.json
+sceneaxi project apply --proposal edit.json
+```
 
 Global flags: `--json`, `--help` / `-h`, `--version` / `-v` / `-V`.
 
@@ -43,8 +47,8 @@ no best-effort mutation path.
 | Code | Name | When |
 |---:|---|---|
 | 0 | `OK` | Command completed successfully |
-| 1 | `ERROR` | Operational / internal failure (`NOT_IMPLEMENTED`, `INTERNAL`) |
-| 2 | `USAGE` | Unknown command path at **any** depth, unknown flag, ambiguous/incomplete input |
+| 1 | `ERROR` | Operational / internal failure (`NOT_IMPLEMENTED`, `INTERNAL`, `CONFLICT`, `NOT_FOUND`) |
+| 2 | `USAGE` | Unknown command path at **any** depth, unknown flag, ambiguous/incomplete input, `VALIDATION` |
 | 3 | `HELD_KEY` | Held-key refusal: open captain hold or any failed currency/snapshot check (sceneaxi#7) |
 
 **Anti-pattern:** gh-axi historically exited `0` on some unknown
@@ -69,8 +73,8 @@ Every result (success or failure) is a versioned envelope:
 ```
 
 Failures use `ok: false` and
-`error: { code, message, path, heldKey?, heldKeyReason? }` instead of `result`.
-`help[]` is required on every result.
+`error: { code, message, path, heldKey?, heldKeyReason?, diagnostics? }`
+instead of `result`. `help[]` is required on every result.
 
 - Default stdout: axi-style typed/counted text (`help[n]:`, nested keys).
 - `--json`: the same envelope as JSON (strict equivalence).
@@ -120,6 +124,7 @@ Golden / protocol tests live under `packages/cli/test/`:
 - `envelope.snapshot.test.ts` — versioned snapshots + `help[]` on every result
 - `json-equivalence.test.ts` — strict `--json` same-data guarantee
 - `refusal.test.ts` — unknown flags / ambiguous input fail-closed
+- `project-propose-apply.test.ts` — E1 propose/apply protocol adapters
 - `held-keys.generator.test.ts` — snapshot generator + digest verification
 - `held-keys.command-map.test.ts` — shipped-map coverage + map validation
 - `held-keys.refusal-table.test.ts` — every refusal-table row, fixture-driven

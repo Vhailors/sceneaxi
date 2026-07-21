@@ -2,7 +2,7 @@
   "name": "@sceneaxi/authoring-core",
   "version": "0.0.0",
   "private": true,
-  "description": "SceneAxi authoring-core package (bootstrap stub) — the one agent-native runtime/authoring core: text-canonical document model, propose/apply application service, session orchestration, evidence hooks, Model Provider Port",
+  "description": "SceneAxi authoring-core — text-canonical document model, propose/apply application service (E1), session orchestration, evidence hooks, Model Provider Port",
   "type": "module",
   "exports": { ".": "./src/index.ts" },
   "files": ["src"],

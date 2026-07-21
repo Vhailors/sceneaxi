@@ -2,6 +2,13 @@
 
 Shared contracts home for SceneAxi. Zero internal dependencies by rule.
 
+## Document + propose/apply (sceneaxi#9)
+
+- `contracts/document.schema.json` — text-canonical SceneAxi document (v1)
+- `contracts/proposal.schema.json` — propose/apply proposal artifact (v1)
+- TypeScript validators: `validateDocument`, `validateProposal` (shared by
+  authoring-core direct edits and proposals)
+
 ## Catalog Item (sceneaxi#12)
 
 Versioned **Catalog Item** contract (`contracts/catalog-item.schema.json`) and a

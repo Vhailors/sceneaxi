@@ -1,19 +1,37 @@
 /**
  * Umbrella command tree: project | asset | profile | catalog | evidence | protocol.
  *
- * Verb bodies are skeleton stubs — real work lands in later tickets. The tree
- * itself is the protocol surface the shared dispatcher enforces at every depth.
+ * Most verb bodies are skeleton stubs — real work lands in later tickets.
+ * `project propose` / `project apply` are live (sceneaxi#9 / E1).
+ * The tree itself is the protocol surface the shared dispatcher enforces at every depth.
  */
 
 import { EXIT_CODE_TABLE } from "./exit-codes.js";
-import type { ResultPayload } from "./envelope.js";
+import type { CliOutcome, ResultPayload } from "./envelope.js";
+import {
+  projectApplyHelp,
+  projectProposeHelp,
+  runProjectApply,
+  runProjectPropose,
+} from "./project-verbs.js";
 import { CLI_VERSION, PROTOCOL_SCHEMA_VERSION } from "./version.js";
+
+export interface VerbContext {
+  readonly path: readonly string[];
+  readonly tokens: readonly string[];
+}
 
 export interface VerbNode {
   readonly kind: "verb";
   readonly name: string;
   readonly description: string;
-  readonly run: () => ResultPayload;
+  /**
+   * Run the verb. May return a plain success payload or a full CliOutcome
+   * (for typed failures from propose/apply).
+   */
+  readonly run: (ctx: VerbContext) => ResultPayload | CliOutcome;
+  /** Optional custom help payload (otherwise skeleton help). */
+  readonly helpPayload?: () => ResultPayload;
 }
 
 export interface GroupNode {
@@ -28,9 +46,13 @@ export type CommandNode = GroupNode | VerbNode;
 function verb(
   name: string,
   description: string,
-  run: () => ResultPayload = () => skeletonResult(name),
+  run: (ctx: VerbContext) => ResultPayload | CliOutcome = () =>
+    skeletonResult(name),
+  helpPayload?: () => ResultPayload,
 ): VerbNode {
-  return { kind: "verb", name, description, run };
+  return helpPayload === undefined
+    ? { kind: "verb", name, description, run }
+    : { kind: "verb", name, description, run, helpPayload };
 }
 
 function group(
@@ -50,13 +72,25 @@ function skeletonResult(verbPath: string): ResultPayload {
   });
 }
 
-/** E1 project verbs (authoring-contracts.md) — registered, bodies deferred. */
+/** E1 project verbs (authoring-contracts.md). propose/apply live; rest skeleton. */
 const projectGroup = group("project", "E1 authoring surface (source-first)", {
   new: verb("new", "Create a new project (skeleton)"),
   dev: verb("dev", "Dev / hot-reload loop (skeleton)"),
   test: verb("test", "Run project tests; emit evidence (skeleton)"),
   capture: verb("capture", "Capture evidence artifacts (skeleton)"),
   report: verb("report", "Report / summarize evidence (skeleton)"),
+  propose: verb(
+    "propose",
+    "Propose a JSON Pointer edit; emit unified diff + proposal",
+    (ctx) => runProjectPropose(ctx.path, ctx.tokens),
+    projectProposeHelp,
+  ),
+  apply: verb(
+    "apply",
+    "Apply a proposal all-or-nothing (content-hash conflicts refuse)",
+    (ctx) => runProjectApply(ctx.path, ctx.tokens),
+    projectApplyHelp,
+  ),
 });
 
 const assetGroup = group("asset", "Asset package operations (skeleton)", {
@@ -156,7 +190,7 @@ export function topLevelHelpPayload(): ResultPayload {
   return Object.freeze({
     bin: "sceneaxi",
     description:
-      "SceneAxi agent-native CLI — umbrella dispatcher over authoring-core (protocol skeleton)",
+      "SceneAxi agent-native CLI — umbrella dispatcher over authoring-core",
     commands: Object.freeze(
       Object.fromEntries(
         Object.entries(ROOT_COMMANDS).map(([name, node]) => [
@@ -192,6 +226,9 @@ export function verbHelpPayload(
   path: readonly string[],
   node: VerbNode,
 ): ResultPayload {
+  if (node.helpPayload !== undefined) {
+    return node.helpPayload();
+  }
   return Object.freeze({
     command: path.join(" "),
     description: node.description,

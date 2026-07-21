@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/document/v1",
+  "title": "SceneAxi text-canonical document (v1)",
+  "description": "Versioned text-canonical authoring document. schemaVersion is the contract major; consumers MUST refuse major mismatches rather than silently migrate. Body fields under data are addressable via JSON Pointer for propose/apply (E1). Behavioral semantics: docs/authoring-contracts.md; service: packages/authoring-core.",
+  "type": "object",
+  "required": ["schemaVersion", "kind", "id", "data"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 1,
+      "description": "Document contract major version. Major mismatch on load refuses."
+    },
+    "kind": {
+      "const": "sceneaxi.document",
+      "description": "Stable document kind discriminator."
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$",
+      "description": "Stable document identifier (slug)."
+    },
+    "title": {
+      "type": "string",
+      "description": "Optional human-readable title."
+    },
+    "data": {
+      "type": "object",
+      "description": "Authoring payload. Structure is free-form JSON so agents can address entities, materials, bindings, clips, and HUD via JSON Pointer. Deeper domain schemas may tighten this in later majors.",
+      "additionalProperties": true
+    }
+  }
+}

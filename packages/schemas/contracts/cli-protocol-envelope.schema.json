@@ -43,7 +43,10 @@
             "AMBIGUOUS_INPUT",
             "NOT_IMPLEMENTED",
             "INTERNAL",
-            "HELD_KEY"
+            "HELD_KEY",
+            "CONFLICT",
+            "VALIDATION",
+            "NOT_FOUND"
           ]
         },
         "message": { "type": "string" },
@@ -71,6 +74,21 @@
             "open-held-key"
           ],
           "description": "Machine-readable refusal-table row when code is HELD_KEY (docs/held-key-enforcement.md)."
+        },
+        "diagnostics": {
+          "type": "array",
+          "description": "Typed propose/apply diagnostics (sceneaxi#9). Present on CONFLICT/VALIDATION/NOT_FOUND apply failures.",
+          "items": {
+            "type": "object",
+            "required": ["code", "message"],
+            "additionalProperties": false,
+            "properties": {
+              "code": { "type": "string" },
+              "message": { "type": "string" },
+              "documentPath": { "type": "string" },
+              "reReadHint": { "type": "string" }
+            }
+          }
         }
       }
     }

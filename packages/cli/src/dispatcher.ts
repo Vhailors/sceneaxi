@@ -4,6 +4,10 @@
  * Anti-pattern (gh-axi wart): unknown sub-subcommands must never exit 0.
  * This dispatcher walks the command tree; any unknown or incomplete path
  * returns USAGE (exit 2) with a versioned envelope and help[].
+ *
+ * Global flags (--json, --help, --version) may appear anywhere. Verb-local
+ * flags (e.g. --document) are forwarded to the verb after the command path.
+ * Every verb invocation passes the held-key gate first (sceneaxi#7).
  */
 
 import {
@@ -37,7 +41,8 @@ const GLOBAL_FLAGS = new Set([
 ]);
 
 export interface ParsedArgv {
-  readonly positionals: readonly string[];
+  /** Non-global tokens in order (command path + verb-local flags/args). */
+  readonly tokens: readonly string[];
   readonly flags: ReadonlySet<string>;
   readonly format: OutputFormat;
   readonly wantsHelp: boolean;
@@ -45,33 +50,24 @@ export interface ParsedArgv {
 }
 
 /**
- * Parse argv into positionals + known global flags.
- * Unknown flags refuse (returned as a failure outcome by the caller).
+ * Parse argv into global flags + remaining tokens.
+ * Unknown *global-shaped* flags that are not verb-local are still forwarded
+ * as tokens so the verb (or path walker) can refuse them; only the six
+ * global protocol flags are stripped here.
  */
-export function parseArgv(argv: readonly string[]): ParsedArgv | CliOutcome {
-  const positionals: string[] = [];
+export function parseArgv(argv: readonly string[]): ParsedArgv {
+  const tokens: string[] = [];
   const flags = new Set<string>();
 
   for (const token of argv) {
     if (token.startsWith("-")) {
-      // Support --flag=value form only for unknown detection (no values yet).
       const flag = token.includes("=") ? token.slice(0, token.indexOf("=")) : token;
-      if (!GLOBAL_FLAGS.has(flag)) {
-        return failure("UNKNOWN_FLAG", `Unknown flag: ${flag}`, {
-          path: positionals,
-          help: [
-            `Unknown flag '${flag}' refused (fail-closed)`,
-            "Global flags: --json, --help, -h, -v, -V, --version",
-            positionals.length > 0
-              ? `Run \`sceneaxi ${positionals.join(" ")} --help\` for path help`
-              : "Run `sceneaxi --help` for usage",
-          ],
-        });
+      if (GLOBAL_FLAGS.has(flag)) {
+        flags.add(flag);
+        continue;
       }
-      flags.add(flag);
-      continue;
     }
-    positionals.push(token);
+    tokens.push(token);
   }
 
   const wantsHelp = flags.has("--help") || flags.has("-h");
@@ -80,7 +76,7 @@ export function parseArgv(argv: readonly string[]): ParsedArgv | CliOutcome {
   const format: OutputFormat = flags.has("--json") ? "json" : "text";
 
   return {
-    positionals: Object.freeze(positionals),
+    tokens: Object.freeze(tokens),
     flags,
     format,
     wantsHelp,
@@ -110,14 +106,10 @@ export function dispatch(
 } {
   const heldKeys = options.heldKeys ?? defaultHeldKeyRuntime();
   const parsed = parseArgv(argv);
-  if (isOutcome(parsed)) {
-    return { outcome: parsed, format: detectFormat(argv) };
-  }
-
-  const { positionals, format, wantsHelp, wantsVersion } = parsed;
+  const { tokens, format, wantsHelp, wantsVersion } = parsed;
 
   // Bare version flags (with or without --json).
-  if (wantsVersion && positionals.length === 0) {
+  if (wantsVersion && commandPathLength(tokens) === 0) {
     return {
       outcome: success(
         {
@@ -133,16 +125,19 @@ export function dispatch(
   }
 
   // Version flag combined with a path is ambiguous / invalid.
-  if (wantsVersion && positionals.length > 0) {
+  if (wantsVersion && commandPathLength(tokens) > 0) {
+    const pathOnly = leadingPath(tokens);
     return {
       outcome: failure(
         "AMBIGUOUS_INPUT",
         "Do not combine --version with a command path",
         {
-          path: positionals,
+          path: pathOnly,
           help: [
             "Run `sceneaxi --version` or `sceneaxi protocol version`",
-            `Run \`sceneaxi ${positionals.join(" ")} --help\` for path help`,
+            pathOnly.length > 0
+              ? `Run \`sceneaxi ${pathOnly.join(" ")} --help\` for path help`
+              : "Run `sceneaxi --help` for usage",
           ],
         },
       ),
@@ -151,7 +146,23 @@ export function dispatch(
   }
 
   // Top-level home: bare argv, --help, and/or --json with no command path.
-  if (positionals.length === 0) {
+  // Unknown non-global flags with no path refuse (fail-closed).
+  if (commandPathLength(tokens) === 0) {
+    const stray = tokens.find((t) => t.startsWith("-"));
+    if (stray !== undefined) {
+      const flag = stray.includes("=") ? stray.slice(0, stray.indexOf("=")) : stray;
+      return {
+        outcome: failure("UNKNOWN_FLAG", `Unknown flag: ${flag}`, {
+          path: [],
+          help: [
+            `Unknown flag '${flag}' refused (fail-closed)`,
+            "Global flags: --json, --help, -h, -v, -V, --version",
+            "Run `sceneaxi --help` for usage",
+          ],
+        }),
+        format,
+      };
+    }
     return {
       outcome: success(topLevelHelpPayload(), [
         "Run `sceneaxi <group> --help` for group verbs",
@@ -162,24 +173,70 @@ export function dispatch(
     };
   }
 
-  return { outcome: walk(positionals, wantsHelp, heldKeys), format };
+  return { outcome: walk(tokens, wantsHelp, heldKeys), format };
+}
+
+/** Count leading non-flag tokens (the command path prefix). */
+function commandPathLength(tokens: readonly string[]): number {
+  let n = 0;
+  for (const t of tokens) {
+    if (t.startsWith("-")) break;
+    n += 1;
+  }
+  return n;
+}
+
+function leadingPath(tokens: readonly string[]): string[] {
+  const path: string[] = [];
+  for (const t of tokens) {
+    if (t.startsWith("-")) break;
+    path.push(t);
+  }
+  return path;
 }
 
 function walk(
-  positionals: readonly string[],
+  tokens: readonly string[],
   wantsHelp: boolean,
   heldKeys: HeldKeyRuntime,
 ): CliOutcome {
   let node: CommandNode | undefined;
   let children: Readonly<Record<string, CommandNode>> = ROOT_COMMANDS;
   const walked: string[] = [];
+  let i = 0;
 
-  for (let i = 0; i < positionals.length; i++) {
-    const segment = positionals[i];
+  while (i < tokens.length) {
+    const segment = tokens[i];
     if (segment === undefined) {
-      return failure("INTERNAL", "Empty positional segment", {
-        path: walked,
-      });
+      return failure("INTERNAL", "Empty token segment", { path: walked });
+    }
+
+    // Flag before completing the command path → unknown at this depth
+    // (except we only get here when there is still path to walk).
+    if (segment.startsWith("-")) {
+      if (walked.length === 0) {
+        return failure("UNKNOWN_FLAG", `Unknown flag: ${segment}`, {
+          path: [],
+          help: [
+            `Unknown flag '${segment}' refused (fail-closed)`,
+            "Global flags: --json, --help, -h, -v, -V, --version",
+            "Run `sceneaxi --help` for usage",
+          ],
+        });
+      }
+      // Incomplete group path followed by flags.
+      return failure(
+        "AMBIGUOUS_INPUT",
+        `Incomplete command path: '${walked.join(" ")}' requires a verb`,
+        {
+          path: walked,
+          help: groupHelpLines(
+            // node must be the group we stopped on
+            node as GroupNode,
+            walked,
+          ),
+        },
+      );
     }
 
     const next: CommandNode | undefined = children[segment];
@@ -199,37 +256,30 @@ function walk(
 
     walked.push(segment);
     node = next;
+    i += 1;
 
     if (next.kind === "verb") {
-      const rest = positionals.slice(i + 1);
-      if (rest.length > 0) {
-        // Extra segments under a leaf verb → unknown path at this depth (non-zero).
-        return failure(
-          "UNKNOWN_COMMAND",
-          `Unknown command path: ${[...walked, ...rest].join(" ")}`,
-          {
-            path: [...walked, ...rest],
-            help: [
-              `'${walked.join(" ")}' takes no subcommands`,
-              `Run \`sceneaxi ${walked.join(" ")} --help\` for usage`,
-            ],
-          },
-        );
-      }
+      const rest = tokens.slice(i);
+      // Extra non-flag path segments under a leaf without allowing subcommands.
+      // Flags are OK and go to the verb; bare positionals that look like
+      // subcommands are still refused by the verb (or as unknown path if no flags).
       if (wantsHelp) {
+        // Help ignores verb-local tokens.
         return success(verbHelpPayload(walked, next), [
-          `Run \`sceneaxi ${walked.join(" ")}\` to invoke this verb (skeleton)`,
+          next.helpPayload
+            ? `Run \`sceneaxi ${walked.join(" ")}\` with the documented flags`
+            : `Run \`sceneaxi ${walked.join(" ")}\` to invoke this verb (skeleton)`,
           "Run `sceneaxi protocol inspect` for protocol details",
         ]);
       }
-      return invokeVerb(walked, next, heldKeys);
+      return invokeVerb(walked, next, rest, heldKeys);
     }
 
     // group
     children = next.children;
   }
 
-  // Exhausted positionals on a group node.
+  // Exhausted tokens on a group node.
   if (node === undefined) {
     return failure("INTERNAL", "Dispatcher walked an empty path", { path: [] });
   }
@@ -250,7 +300,7 @@ function walk(
   }
 
   // Leaf reached exactly (shouldn't hit — loop returns on verb).
-  return invokeVerb(walked, node, heldKeys);
+  return invokeVerb(walked, node, [], heldKeys);
 }
 
 /**
@@ -261,13 +311,14 @@ function walk(
 function invokeVerb(
   path: readonly string[],
   node: VerbNode,
+  tokens: readonly string[],
   heldKeys: HeldKeyRuntime,
 ): CliOutcome {
   const decision = evaluateHeldKeyGate(path.join(" "), heldKeys);
   if (!decision.allow) {
     return heldKeyRefusal(path, decision);
   }
-  return runVerb(path, node);
+  return runVerb(path, node, tokens);
 }
 
 function heldKeyRefusal(
@@ -285,9 +336,42 @@ function heldKeyRefusal(
   });
 }
 
-function runVerb(path: readonly string[], node: VerbNode): CliOutcome {
+function runVerb(
+  path: readonly string[],
+  node: VerbNode,
+  tokens: readonly string[],
+): CliOutcome {
   try {
-    const result = node.run();
+    // Skeleton verbs refuse any leftover tokens (flags or positionals).
+    if (node.helpPayload === undefined && tokens.length > 0) {
+      const first = tokens[0];
+      if (first !== undefined && first.startsWith("-")) {
+        return failure("UNKNOWN_FLAG", `Unknown flag: ${first}`, {
+          path,
+          help: [
+            `Unknown flag '${first}' refused (fail-closed)`,
+            "Global flags: --json, --help, -h, -v, -V, --version",
+            `Run \`sceneaxi ${path.join(" ")} --help\` for path help`,
+          ],
+        });
+      }
+      return failure(
+        "UNKNOWN_COMMAND",
+        `Unknown command path: ${[...path, ...tokens.filter((t) => !t.startsWith("-"))].join(" ")}`,
+        {
+          path: [...path, ...tokens.filter((t) => !t.startsWith("-"))],
+          help: [
+            `'${path.join(" ")}' takes no subcommands`,
+            `Run \`sceneaxi ${path.join(" ")} --help\` for usage`,
+          ],
+        },
+      );
+    }
+
+    const result = node.run({ path, tokens });
+    if (isOutcome(result)) {
+      return result;
+    }
     return success(result, [
       `Run \`sceneaxi ${path.join(" ")} --help\` for this verb`,
       "Run `sceneaxi protocol inspect` for the exit-code map",
@@ -296,6 +380,15 @@ function runVerb(path: readonly string[], node: VerbNode): CliOutcome {
     const message = err instanceof Error ? err.message : String(err);
     return failure("INTERNAL", message, { path });
   }
+}
+
+function isOutcome(value: unknown): value is CliOutcome {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "exitCode" in value &&
+    "envelope" in value
+  );
 }
 
 function unknownCommandHelp(
@@ -323,14 +416,4 @@ function groupHelpLines(node: GroupNode, walked: readonly string[]): string[] {
     `Run \`sceneaxi ${walked.join(" ")} <verb>\` to invoke a verb`,
     "Run `sceneaxi protocol inspect` for the exit-code map",
   ];
-}
-
-function isOutcome(value: ParsedArgv | CliOutcome): value is CliOutcome {
-  return "exitCode" in value && "envelope" in value;
-}
-
-function detectFormat(argv: readonly string[]): OutputFormat {
-  return argv.some((t) => t === "--json" || t.startsWith("--json="))
-    ? "json"
-    : "text";
 }
