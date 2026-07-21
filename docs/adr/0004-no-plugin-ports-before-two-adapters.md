@@ -1,4 +1,4 @@
-# ADR 0004: Seam discipline — no plugin ports before two real adapters
+# ADR 0004: Seam discipline — no plugin ports before two real adapters (charted Model Provider Port excepted)
 
 - **Status:** Accepted — settled by the Wayfinder design-it-twice process; this ADR records the decision, it does not re-decide it.
 - **Date recorded:** 2026-07-21
@@ -17,6 +17,13 @@ The Wayfinder settled a discipline rule instead.
 ## Decision
 
 **No plugin ports before two real adapters.**
+
+The one exception is the **Model Provider Port** charted by the product spec
+([sceneaxi#1](https://github.com/Vhailors/sceneaxi/issues/1)) in
+`authoring-core`: a deliberate, pre-declared thin port whose provider adapters
+remain delayed behind the open `llm-provider-policy` hold. The spec fixes the
+exception's scope; this ADR does not widen it. The two-real-adapters rule stays
+unqualified for every new port.
 
 - Internal seams may use concrete libraries directly (the proof program names
   Three, Rapier, Miniplex, IndexedDB, and Playwright as examples) **without
@@ -39,12 +46,9 @@ The Wayfinder settled a discipline rule instead.
   dependency-matrix slots — but **a matrix slot is not a port**: the slot
   reserves the boundary, and any abstraction inside it still hardens only on
   the second real adapter.
-- The **Model Provider Port** in `authoring-core` is charted by the product
-  spec ([sceneaxi#1](https://github.com/Vhailors/sceneaxi/issues/1)) as a
-  deliberately thin, pre-declared contract at the LLM seam; its provider
-  adapters remain delayed behind the open `llm-provider-policy` hold. Its
-  scope is fixed by the spec, not widened by this ADR, and this rule governs
-  when any such seam generalizes further.
+- For the explicit exception above, the **Model Provider Port** remains the
+  deliberately thin contract charted by the product spec. Its delayed provider
+  adapters do not widen that contract or create precedent for another port.
 
 ## Rejected alternatives
 
@@ -60,7 +64,7 @@ The Wayfinder settled a discipline rule instead.
 ## Settled here vs held elsewhere
 
 **Settled:** the discipline rule — internal concrete-library use is free
-behind seams; ports are earned by the second real adapter.
+behind seams; every new port is earned by the second real adapter.
 
 **Held, untouched by this ADR:** `llm-provider-policy` and `deepseek-adoption`
 — whether and which LLM provider adapters ever land; renderer composition —
