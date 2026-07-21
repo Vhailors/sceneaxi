@@ -1,2 +1,11 @@
-/** @sceneaxi/catalog-web — bootstrap stub; no implementation authorized yet. */
-export {};
+/**
+ * @sceneaxi/catalog-web — website-asset storefront over the catalog pipeline contracts only; commerce fields inert.
+ * Implementation arrives under its own ticket; this module is the package's
+ * public seam.
+ */
+import type { PackageSeam } from "@sceneaxi/schemas";
+
+export const seam: PackageSeam = Object.freeze({
+  name: "@sceneaxi/catalog-web",
+  releaseGroup: "apps",
+});
