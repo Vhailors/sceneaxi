@@ -15,7 +15,7 @@ SceneAxi = interactive engine/library + versioned profiles (Game, Web Experience
 
 ## Layout
 
-See root README package/app map and `docs/DEPENDENCY-MATRIX.md`. Prefer small public package interfaces (deep modules). The authoring core lives in `packages/authoring-core`; the CLI is a thin protocol adapter over it and may not import engine packages directly.
+See root README package/app map and `docs/DEPENDENCY-MATRIX.md`. Prefer small public package interfaces (deep modules). The authoring core lives in `packages/authoring-core`; the CLI is a thin protocol adapter over it and may not import engine packages directly. Settled engine/CLI design decisions live in `docs/adr/` — respect them without re-litigating; ADRs never touch open captain holds.
 
 ## Maintaining this file
 
