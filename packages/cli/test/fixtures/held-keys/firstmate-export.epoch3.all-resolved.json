@@ -1,0 +1,32 @@
+{
+  "format": "firstmate-structured-backlog",
+  "source": "firstmate/tasks-axi captain holds (synthetic wave3 fixture)",
+  "registryEpoch": 3,
+  "exportedAt": "2026-07-20T12:00:00.000Z",
+  "holds": [
+    {
+      "identity": "captain-decision-synthetic-demo-alpha",
+      "title": "Synthetic demo hold alpha (fixture only; not a real captain hold)",
+      "state": "resolved",
+      "registeredAt": "2026-07-18T09:00:00.000Z",
+      "resolvedAt": "2026-07-19T10:00:00.000Z",
+      "decisionRecord": "firstmate/decisions/synthetic-demo-alpha"
+    },
+    {
+      "identity": "captain-decision-synthetic-demo-beta",
+      "title": "Synthetic demo hold beta (fixture only; not a real captain hold)",
+      "state": "resolved",
+      "registeredAt": "2026-07-19T11:30:00.000Z",
+      "resolvedAt": "2026-07-20T09:00:00.000Z",
+      "decisionRecord": "firstmate/decisions/synthetic-demo-beta"
+    },
+    {
+      "identity": "spec-decision-synthetic-demo-gamma",
+      "title": "Synthetic demo hold gamma (fixture only; not a real captain hold)",
+      "state": "resolved",
+      "registeredAt": "2026-07-17T08:00:00.000Z",
+      "resolvedAt": "2026-07-18T08:30:00.000Z",
+      "decisionRecord": "firstmate/decisions/synthetic-demo-gamma"
+    }
+  ]
+}

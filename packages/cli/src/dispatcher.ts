@@ -19,6 +19,12 @@ import {
 } from "./commands.js";
 import { failure, success, type CliOutcome } from "./envelope.js";
 import type { OutputFormat } from "./format.js";
+import {
+  defaultHeldKeyRuntime,
+  evaluateHeldKeyGate,
+  type GateRefusal,
+  type HeldKeyRuntime,
+} from "./held-keys/gate.js";
 import { CLI_VERSION } from "./version.js";
 
 const GLOBAL_FLAGS = new Set([
@@ -82,14 +88,27 @@ export function parseArgv(argv: readonly string[]): ParsedArgv | CliOutcome {
   };
 }
 
+export interface DispatchOptions {
+  /**
+   * Held-key runtime (command map, registry snapshot, epoch authority, clock).
+   * Defaults to the shipped fail-closed runtime: no snapshot, no sentinel —
+   * every gated verb refuses. Injectable so tests are fixture-driven.
+   */
+  readonly heldKeys?: HeldKeyRuntime;
+}
+
 /**
  * Dispatch a command-line argv (without the binary name) to a protocol outcome.
  * Pure: no process.exit, no stdout — the runner formats and exits.
  */
-export function dispatch(argv: readonly string[]): {
+export function dispatch(
+  argv: readonly string[],
+  options: DispatchOptions = {},
+): {
   outcome: CliOutcome;
   format: OutputFormat;
 } {
+  const heldKeys = options.heldKeys ?? defaultHeldKeyRuntime();
   const parsed = parseArgv(argv);
   if (isOutcome(parsed)) {
     return { outcome: parsed, format: detectFormat(argv) };
@@ -143,10 +162,14 @@ export function dispatch(argv: readonly string[]): {
     };
   }
 
-  return { outcome: walk(positionals, wantsHelp), format };
+  return { outcome: walk(positionals, wantsHelp, heldKeys), format };
 }
 
-function walk(positionals: readonly string[], wantsHelp: boolean): CliOutcome {
+function walk(
+  positionals: readonly string[],
+  wantsHelp: boolean,
+  heldKeys: HeldKeyRuntime,
+): CliOutcome {
   let node: CommandNode | undefined;
   let children: Readonly<Record<string, CommandNode>> = ROOT_COMMANDS;
   const walked: string[] = [];
@@ -199,7 +222,7 @@ function walk(positionals: readonly string[], wantsHelp: boolean): CliOutcome {
           "Run `sceneaxi protocol inspect` for protocol details",
         ]);
       }
-      return runVerb(walked, next);
+      return invokeVerb(walked, next, heldKeys);
     }
 
     // group
@@ -227,7 +250,39 @@ function walk(positionals: readonly string[], wantsHelp: boolean): CliOutcome {
   }
 
   // Leaf reached exactly (shouldn't hit — loop returns on verb).
-  return runVerb(walked, node);
+  return invokeVerb(walked, node, heldKeys);
+}
+
+/**
+ * Every verb invocation passes the held-key gate first (sceneaxi#7).
+ * Explicitly ungated verbs (`heldKeys: []`) pass without a currency check;
+ * everything else fails closed per docs/held-key-enforcement.md.
+ */
+function invokeVerb(
+  path: readonly string[],
+  node: VerbNode,
+  heldKeys: HeldKeyRuntime,
+): CliOutcome {
+  const decision = evaluateHeldKeyGate(path.join(" "), heldKeys);
+  if (!decision.allow) {
+    return heldKeyRefusal(path, decision);
+  }
+  return runVerb(path, node);
+}
+
+function heldKeyRefusal(
+  path: readonly string[],
+  decision: GateRefusal,
+): CliOutcome {
+  return failure("HELD_KEY", decision.message, {
+    path,
+    ...(decision.heldKey === undefined ? {} : { heldKey: decision.heldKey }),
+    heldKeyReason: decision.reason,
+    help: [
+      `Refusal reason '${decision.reason}' — see the refusal table in docs/held-key-enforcement.md`,
+      "Held-key enforcement fails closed: no offline exception and no env-flag override for gated verbs",
+    ],
+  });
 }
 
 function runVerb(path: readonly string[], node: VerbNode): CliOutcome {

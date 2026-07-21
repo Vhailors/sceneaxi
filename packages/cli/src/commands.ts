@@ -75,6 +75,29 @@ const evidenceGroup = group("evidence", "Evidence packet operations (skeleton)",
   list: verb("list", "List evidence packets (skeleton)"),
 });
 
+/**
+ * Held-key protocol demo (sceneaxi#7): gated by SYNTHETIC fixture keys only.
+ * With the shipped fail-closed runtime (no snapshot, no sentinel) this verb
+ * always refuses; tests inject fixture runtimes to exercise the full table.
+ */
+const demoGroup = group(
+  "demo",
+  "Held-key protocol demo (synthetic keys; fails closed)",
+  {
+    gated: verb(
+      "gated",
+      "Demo verb gated by synthetic captain holds — allowed only when every gating key is resolved and registry currency is established",
+      () =>
+        Object.freeze({
+          status: "held-keys-cleared",
+          verb: "demo gated",
+          message:
+            "Every gating key is resolved and the registry snapshot is current; the gated verb body ran.",
+        }),
+    ),
+  },
+);
+
 const protocolGroup = group(
   "protocol",
   "Protocol introspection (ungated; no product policy)",
@@ -111,6 +134,7 @@ export const ROOT_COMMANDS: Readonly<Record<string, CommandNode>> =
     profile: profileGroup,
     catalog: catalogGroup,
     evidence: evidenceGroup,
+    demo: demoGroup,
     protocol: protocolGroup,
   });
 

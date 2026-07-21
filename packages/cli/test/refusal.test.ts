@@ -37,7 +37,7 @@ describe("fail-closed validation (unknown flags / ambiguous input)", () => {
   });
 
   it("refuses incomplete group as ambiguous input", () => {
-    for (const group of ["project", "asset", "profile", "catalog", "evidence"]) {
+    for (const group of ["project", "asset", "profile", "catalog", "evidence", "demo"]) {
       const r = runCli([group]);
       expect(r.exitCode, group).toBe(ExitCode.USAGE);
       if (!r.envelope.ok) {
