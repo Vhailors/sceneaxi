@@ -3,6 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "description": "SceneAxi web-shell app (bootstrap stub) — human authoring surface; protocol client of authoring-core, never a second authoring implementation",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
   "dependencies": {
     "@sceneaxi/schemas": "workspace:^",
     "@sceneaxi/authoring-core": "workspace:^"

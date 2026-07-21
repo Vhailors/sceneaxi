@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
- * Syntax check — every source stub must parse as an ES module.
- * Bootstrap-only stand-in until tsc is wired; stubs are TS-extension files with
- * plain-JS bodies, so `node --check` is a valid parser for them.
- * Fail-closed: zero files found, or any parse error, exits 1.
+ * Syntax check — every source file must parse as a TypeScript/ES module.
+ * Originally a `node --check` stand-in; now that tsc is wired it parses with the
+ * TypeScript compiler itself, so TS-only syntax (types, interfaces) is covered.
+ * Meaning unchanged: fail-closed — zero files found, or any parse error, exits 1.
  */
-import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
+import { readdirSync, existsSync, statSync } from "node:fs";
 import { join, dirname, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawnSync } from "node:child_process";
+import ts from "typescript";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -34,15 +34,28 @@ if (files.length === 0) {
   process.exit(1);
 }
 
+const program = ts.createProgram(files, {
+  allowJs: true,
+  noResolve: true,
+  noLib: true,
+  target: ts.ScriptTarget.Latest,
+});
+const format = {
+  getCanonicalFileName: (f) => f,
+  getCurrentDirectory: () => root,
+  getNewLine: () => "\n",
+};
+
 let failed = 0;
 for (const file of files) {
-  const res = spawnSync(process.execPath, ["--input-type=module", "--check"], {
-    input: readFileSync(file, "utf8"),
-    encoding: "utf8",
-  });
-  if (res.status !== 0) {
+  const source = program.getSourceFile(file);
+  const diagnostics = source ? program.getSyntacticDiagnostics(source) : [];
+  if (!source || diagnostics.length > 0) {
     failed++;
-    console.error(`syntax FAIL ${relative(root, file)}\n${(res.stderr || "").trim()}`);
+    const detail = source
+      ? ts.formatDiagnostics(diagnostics, format).trim()
+      : "file could not be read";
+    console.error(`syntax FAIL ${relative(root, file)}\n${detail}`);
   }
 }
 
@@ -50,4 +63,4 @@ if (failed > 0) {
   console.error(`syntax check FAILED — ${failed}/${files.length} file(s) do not parse`);
   process.exit(1);
 }
-console.log(`syntax check OK — ${files.length} source files parse as ES modules`);
+console.log(`syntax check OK — ${files.length} source files parse as TypeScript modules`);

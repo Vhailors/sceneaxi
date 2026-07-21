@@ -8,12 +8,21 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "node -e \"console.error('sceneaxi bootstrap: build not wired'); process.exit(1)\"",
-    "test": "node -e \"console.error('sceneaxi bootstrap: test not wired'); process.exit(1)\"",
-    "lint": "node -e \"console.error('sceneaxi bootstrap: lint not wired'); process.exit(1)\"",
+    "build": "tsc --build && tsc -p tsconfig.tests.json",
+    "test": "vitest run",
+    "lint": "eslint . --max-warnings 0",
     "check:syntax": "node scripts/check-syntax.mjs",
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "gate": "pnpm -s check:syntax && pnpm -s check:boundaries && pnpm -s build && pnpm -s test && pnpm -s lint"
   },
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.1.1",
+    "eslint": "^10.7.0",
+    "globals": "^17.7.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.65.0",
+    "vitest": "^4.1.10"
+  }
 }
