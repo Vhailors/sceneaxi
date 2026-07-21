@@ -29,6 +29,7 @@ export interface ProfileSeam extends PackageSeam {
 /** JSON-schema contracts shipped with this package, relative to its root. */
 export const contracts = Object.freeze({
   cliCommandMap: "contracts/cli-command-map.schema.json",
+  cliProtocolEnvelope: "contracts/cli-protocol-envelope.schema.json",
   heldKeyRegistry: "contracts/held-key-registry.schema.json",
 });
 

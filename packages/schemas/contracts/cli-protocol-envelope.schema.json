@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/cli-protocol-envelope/v1",
+  "title": "SceneAxi CLI protocol envelope (v1)",
+  "description": "Versioned machine-readable result envelope for every SceneAxi CLI invocation. Output-schema changes are semver events for the cli-protocol release group. Every success and every failure carries schemaVersion, cliVersion, ok, and help[].",
+  "type": "object",
+  "required": ["schemaVersion", "cliVersion", "ok", "help"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 1,
+      "description": "Envelope contract major version. Breaking shape changes bump this and the CLI major."
+    },
+    "cliVersion": {
+      "type": "string",
+      "description": "Package version of @sceneaxi/cli that produced this envelope."
+    },
+    "ok": {
+      "type": "boolean",
+      "description": "true on success; false on any refusal or failure."
+    },
+    "help": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "description": "Next-action affordances so the protocol is discoverable in-tool. Required on every result."
+    },
+    "result": {
+      "type": "object",
+      "description": "Present when ok is true. Command-specific payload."
+    },
+    "error": {
+      "type": "object",
+      "required": ["code", "message", "path"],
+      "additionalProperties": false,
+      "description": "Present when ok is false.",
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "UNKNOWN_COMMAND",
+            "UNKNOWN_FLAG",
+            "AMBIGUOUS_INPUT",
+            "NOT_IMPLEMENTED",
+            "INTERNAL",
+            "HELD_KEY"
+          ]
+        },
+        "message": { "type": "string" },
+        "path": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Command path segments attempted."
+        },
+        "heldKey": {
+          "type": "string",
+          "description": "Named captain hold when code is HELD_KEY (sceneaxi#7)."
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "ok": { "const": true } } },
+      "then": { "required": ["result"] }
+    },
+    {
+      "if": { "properties": { "ok": { "const": false } } },
+      "then": { "required": ["error"] }
+    }
+  ]
+}
