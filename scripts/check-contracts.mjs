@@ -63,11 +63,11 @@ const validate = (value, sch, path) => {
       return;
     }
     for (const key of sch.required ?? []) {
-      if (!(key in value)) fail(`${path}: missing required property "${key}"`);
+      if (!Object.hasOwn(value, key)) fail(`${path}: missing required property "${key}"`);
     }
+    const properties = sch.properties ?? {};
     for (const [key, sub] of Object.entries(value)) {
-      const propSchema = (sch.properties ?? {})[key];
-      if (propSchema) validate(sub, propSchema, `${path}.${key}`);
+      if (Object.hasOwn(properties, key)) validate(sub, properties[key], `${path}.${key}`);
       else if (sch.additionalProperties === false) fail(`${path}: unexpected property "${key}"`);
     }
   } else if (sch.type === "array") {

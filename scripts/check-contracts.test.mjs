@@ -192,6 +192,29 @@ const cases = [
     },
     expectedOutput: "additionalProperties must be boolean in the supported schema subset",
   },
+  ...["constructor", "toString", "__proto__"].map((property) => ({
+    name: `rejects the prototype-named extra property ${property}`,
+    mutate(sandbox) {
+      const fixtures = readFixtures(sandbox);
+      Object.defineProperty(fixtures, property, {
+        value: "unexpected",
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
+      writeFixtures(sandbox, fixtures);
+    },
+    expectedOutput: `unexpected property "${property}"`,
+  })),
+  {
+    name: "does not satisfy required fields through the prototype chain",
+    mutate(sandbox) {
+      const schema = readSchema(sandbox);
+      schema.required.push("constructor");
+      writeRawJson(sandbox, schemaRelativePath, schema);
+    },
+    expectedOutput: 'missing required property "constructor"',
+  },
 ];
 
 for (const scenario of cases) {
