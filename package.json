@@ -13,7 +13,8 @@
     "lint": "node -e \"console.error('sceneaxi bootstrap: lint not wired'); process.exit(1)\"",
     "check:syntax": "node scripts/check-syntax.mjs",
     "check:boundaries": "node scripts/check-boundaries.mjs",
-    "gate": "pnpm -s check:syntax && pnpm -s check:boundaries && pnpm -s build && pnpm -s test && pnpm -s lint"
+    "check:contracts": "node scripts/check-contracts.mjs",
+    "gate": "pnpm -s check:syntax && pnpm -s check:boundaries && pnpm -s check:contracts && pnpm -s build && pnpm -s test && pnpm -s lint"
   },
   "license": "UNLICENSED"
 }

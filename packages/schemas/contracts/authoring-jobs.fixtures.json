@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "transferredFrom": "factories-helpers#49",
+  "jobs": [
+    {
+      "id": "move-rotate-entity",
+      "title": "Move/rotate an entity",
+      "jobSummary": "Change the position and rotation of one existing scene entity to new values and see the result in the running scene.",
+      "editClass": "transform"
+    },
+    {
+      "id": "retune-material",
+      "title": "Retune a material",
+      "jobSummary": "Adjust scalar parameters of an existing material (e.g. roughness, emissive intensity) until the surface reads correctly.",
+      "editClass": "scalar-tune"
+    },
+    {
+      "id": "rebind-input-action",
+      "title": "Rebind an input action",
+      "jobSummary": "Point an existing named input action at a different physical control without changing the action's gameplay meaning.",
+      "editClass": "binding"
+    },
+    {
+      "id": "edit-clip-event-marker",
+      "title": "Edit a clip event marker",
+      "jobSummary": "Move an event marker on an existing animation clip to a different timestamp so the triggered effect lines up with the motion.",
+      "editClass": "timeline-marker"
+    },
+    {
+      "id": "resize-relayout-hud",
+      "title": "Resize/relayout a HUD element",
+      "jobSummary": "Change the size and anchoring of one existing HUD element so it fits a new layout without overlapping its neighbors.",
+      "editClass": "layout"
+    }
+  ]
+}
