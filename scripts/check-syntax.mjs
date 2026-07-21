@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 /**
- * Syntax check — every source file must parse as a TypeScript/ES module.
- * Originally a `node --check` stand-in; now that tsc is wired it parses with the
- * TypeScript compiler itself, so TS-only syntax (types, interfaces) is covered.
- * Meaning unchanged: fail-closed — zero files found, or any parse error, exits 1.
+ * Syntax check — every source file must parse as TypeScript.
+ * Use the TypeScript compiler so TS-only syntax (types, interfaces) is covered.
+ * Fail-closed: zero files found, or any parse error, exits 1.
  */
 import { readdirSync, existsSync, statSync } from "node:fs";
 import { join, dirname, resolve, relative } from "node:path";

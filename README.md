@@ -20,14 +20,22 @@ Package boundaries are executable: `docs/dependency-matrix.json` is the allow/de
 truth and `pnpm check:boundaries` enforces it (see `docs/DEPENDENCY-MATRIX.md`).
 Held captain decisions are a runtime contract: `docs/held-key-enforcement.md`.
 
+## Development
+
+Install the pinned workspace toolchain with `pnpm install`, then run `pnpm gate`
+for the repository's required build, test, lint, syntax, and boundary checks. The
+root `package.json` owns the exact command sequence; the referenced TypeScript,
+Vitest, ESLint, and boundary-checker configuration files own their respective
+contracts.
+
 ## Status
 
-**Frozen bootstrap draft**, prepared offline under the FirstMate home. The GitHub
-repository `Vhailors/sceneaxi` exists and is intentionally empty. This tree is
-applyable only after the post-FAIL remediations pass and a fresh independent
-non-Claude review PASS, and then only under the separated authorities in
-`docs/bootstrap.md` (apply, install, initial commit, push, transfer, proof, spend,
-and publication are each their own grant).
+**Early implementation seed.** The monorepo has a real fail-closed toolchain and
+minimal typed public seams for every seeded package and app. Domain implementations
+are intentionally deferred to later tickets; a green gate does not mean the engine,
+profiles, or applications are production-ready. Proof execution, spend, account
+creation, publication, and other external actions remain subject to the separated
+authorities in `docs/bootstrap.md`.
 
 ## Authority
 

@@ -15,12 +15,13 @@ SceneAxi = interactive engine/library + versioned profiles (Game, Web Experience
 
 ## Toolchain
 
-- `pnpm gate` = check:syntax → check:boundaries → build → test → lint; every stage
-  is fail-closed (empty surfaces refuse to pass) and exits non-zero on failure.
-  Build is strict tsc project references (`tsconfig.base.json` + per-package
-  tsconfigs + root `tsconfig.tests.json`); test is Vitest workspace-wide; lint is
-  ESLint flat config (`eslint.config.mjs`, `--max-warnings 0`). Never weaken the
-  gate: no skips, no `|| true`, no lint disables, no matrix allow-list widening.
+- `pnpm gate` is the required repository check; root `package.json` owns its exact
+  sequence. Syntax and test explicitly refuse empty surfaces, and every stage exits
+  non-zero on its configured failures. Never weaken the gate: no skips, no `|| true`,
+  no lint disables, no matrix allow-list widening.
+- Build uses strict tsc project references; package exports remain source-backed and
+  `dist` is only a gate artifact. Keep TypeScript on the pinned 5.9 line until
+  typescript-eslint supports the TypeScript 7 native preview.
 - Every package/app exports a frozen typed `seam` from `src/index.ts` (vocabulary
   in `@sceneaxi/schemas`) and owns a seam-level test in its `test/` dir that
   imports it by public package name — test external contracts, never internals.
