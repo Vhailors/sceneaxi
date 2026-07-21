@@ -1,0 +1,38 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`versioned protocol envelope > error envelope snapshot (versioned with CLI) 1`] = `
+{
+  "cliVersion": "0.0.0",
+  "error": {
+    "code": "UNKNOWN_COMMAND",
+    "message": "Unknown command path: project not-a-verb",
+    "path": [
+      "project",
+      "not-a-verb",
+    ],
+  },
+  "help": [
+    "Known under 'project': new, dev, test, capture, report",
+    "Run \`sceneaxi project --help\` for usage",
+  ],
+  "ok": false,
+  "schemaVersion": 1,
+}
+`;
+
+exports[`versioned protocol envelope > success envelope snapshot (versioned with CLI) 1`] = `
+{
+  "cliVersion": "0.0.0",
+  "help": [
+    "Run \`sceneaxi protocol version --help\` for this verb",
+    "Run \`sceneaxi protocol inspect\` for the exit-code map",
+  ],
+  "ok": true,
+  "result": {
+    "cliVersion": "0.0.0",
+    "releaseGroup": "cli-protocol",
+    "schemaVersion": 1,
+  },
+  "schemaVersion": 1,
+}
+`;
