@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/catalog-item/v1",
+  "title": "SceneAxi Catalog Item (v1)",
+  "description": "Versioned Catalog Item contract: Asset Package reference + rights, provenance, mandatory AI-generation disclosure, compatibility (core range \u00d7 profile list), moderation/pipeline state, and inert commerce fields. Policy SoT remains factories-helpers#47 (Asset Package interchange/acceptance/loss ledger) and factories-helpers#48 (untrusted-asset ingestion + supply-chain controls) \u2014 this schema implements types only, does not rewrite those policies. Topology-neutral: no storefront topology is encoded (catalog-storefront-topology held open). Commerce activation is structurally inactive until tier-6b marketplace holds open per storefront.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "itemId",
+    "assetPackage",
+    "rights",
+    "provenance",
+    "aiGenerationDisclosure",
+    "compatibility",
+    "moderation",
+    "commerce"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "itemId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$",
+      "description": "Stable catalog item id."
+    },
+    "assetPackage": {
+      "type": "object",
+      "description": "Reference to an Asset Package. Canonical/derived/never-canonical classification and acceptance transaction: factories-helpers#47.",
+      "required": ["packageId", "contentHash"],
+      "additionalProperties": false,
+      "properties": {
+        "packageId": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "contentHash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "rights": {
+      "type": "object",
+      "required": ["license", "rightsHolder", "commercialUseAllowed"],
+      "additionalProperties": false,
+      "properties": {
+        "license": { "type": "string" },
+        "rightsHolder": { "type": "string" },
+        "commercialUseAllowed": { "type": "boolean" }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "description": "Provenance record for intake under untrusted-asset controls (factories-helpers#48).",
+      "required": ["origin", "ingestedAt", "sourceDigest"],
+      "additionalProperties": false,
+      "properties": {
+        "origin": { "type": "string" },
+        "ingestedAt": { "type": "string" },
+        "sourceDigest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "aiGenerationDisclosure": {
+      "type": "object",
+      "description": "Mandatory AI-generation disclosure; listing refuses without it.",
+      "required": ["aiGenerated", "disclosureText"],
+      "additionalProperties": false,
+      "properties": {
+        "aiGenerated": { "type": "boolean" },
+        "tools": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "disclosureText": { "type": "string" }
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "description": "Compatibility as (core semver range \u00d7 profile id list). Topology- and Kids-neutral: Kids allowlist is not expressed here.",
+      "required": ["coreRange", "profiles"],
+      "additionalProperties": false,
+      "properties": {
+        "coreRange": { "type": "string" },
+        "profiles": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          }
+        }
+      }
+    },
+    "moderation": {
+      "type": "object",
+      "required": ["pipelineState", "history"],
+      "additionalProperties": false,
+      "properties": {
+        "pipelineState": {
+          "type": "string",
+          "enum": ["intake", "screening", "curation", "listed", "delisted"]
+        },
+        "history": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["from", "to", "reason", "at"],
+            "additionalProperties": false,
+            "properties": {
+              "from": {
+                "type": "string",
+                "enum": ["intake", "screening", "curation", "listed", "delisted"]
+              },
+              "to": {
+                "type": "string",
+                "enum": ["intake", "screening", "curation", "listed", "delisted"]
+              },
+              "reason": { "type": "string" },
+              "at": { "type": "string" },
+              "humanVerdict": {
+                "type": "object",
+                "description": "Human curation gate representation only \u2014 never simulated by the pipeline.",
+                "required": ["kind", "decision", "curatorId", "rationale", "recordedAt"],
+                "additionalProperties": false,
+                "properties": {
+                  "kind": { "const": "human" },
+                  "decision": { "type": "string", "enum": ["approve", "reject"] },
+                  "curatorId": { "type": "string" },
+                  "rationale": { "type": "string" },
+                  "recordedAt": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "commerce": {
+      "type": "object",
+      "description": "Commerce fields are present but structurally inert until tier-6b marketplace activation holds open (read per-storefront). No activation path opens in this contract version.",
+      "required": ["activation"],
+      "additionalProperties": false,
+      "properties": {
+        "activation": { "const": "inert" },
+        "price": {
+          "type": "object",
+          "required": ["amount", "currency"],
+          "additionalProperties": false,
+          "properties": {
+            "amount": { "type": "string" },
+            "currency": { "type": "string" }
+          }
+        },
+        "sku": { "type": "string" }
+      }
+    }
+  }
+}
