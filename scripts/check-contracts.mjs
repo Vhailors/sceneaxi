@@ -92,11 +92,104 @@ const validate = (value, sch, path) => {
   }
 };
 
+const schemaAnnotations = new Set([
+  "$schema",
+  "$id",
+  "$comment",
+  "title",
+  "description",
+  "default",
+  "examples",
+  "deprecated",
+  "readOnly",
+  "writeOnly",
+]);
+const schemaAssertions = new Set([
+  "type",
+  "required",
+  "properties",
+  "items",
+  "enum",
+  "const",
+  "pattern",
+  "additionalProperties",
+  "minItems",
+]);
+const supportedTypes = new Set(["object", "array", "string", "integer"]);
+
+const validateSchemaDefinition = (sch, path) => {
+  let supported = true;
+  const reject = (message) => {
+    fail(`${path}: ${message}`);
+    supported = false;
+  };
+
+  if (!isPlainObject(sch)) {
+    reject("expected a schema object");
+    return false;
+  }
+  for (const keyword of Object.keys(sch)) {
+    if (!schemaAnnotations.has(keyword) && !schemaAssertions.has(keyword)) {
+      reject(`unsupported JSON Schema keyword "${keyword}"`);
+    }
+  }
+  if ("type" in sch && !supportedTypes.has(sch.type)) {
+    reject(`unsupported type declaration ${JSON.stringify(sch.type)}`);
+  }
+  if ("required" in sch && (!Array.isArray(sch.required) || !sch.required.every((key) => typeof key === "string"))) {
+    reject("required must be an array of strings");
+  }
+  if ("enum" in sch && !Array.isArray(sch.enum)) {
+    reject("enum must be an array");
+  }
+  if ("pattern" in sch) {
+    if (typeof sch.pattern !== "string") {
+      reject("pattern must be a string");
+    } else {
+      try {
+        new RegExp(sch.pattern);
+      } catch (error) {
+        reject(`pattern is not a valid regular expression: ${error.message}`);
+      }
+    }
+  }
+  if ("additionalProperties" in sch && typeof sch.additionalProperties !== "boolean") {
+    reject("additionalProperties must be boolean in the supported schema subset");
+  }
+  if ("minItems" in sch && (!Number.isInteger(sch.minItems) || sch.minItems < 0)) {
+    reject("minItems must be a non-negative integer");
+  }
+  if (["required", "properties", "additionalProperties"].some((keyword) => keyword in sch) && sch.type !== "object") {
+    reject("object assertion keywords require type \"object\" in the supported schema subset");
+  }
+  if (["items", "minItems"].some((keyword) => keyword in sch) && sch.type !== "array") {
+    reject("array assertion keywords require type \"array\" in the supported schema subset");
+  }
+  if ("pattern" in sch && sch.type !== "string") {
+    reject("pattern requires type \"string\" in the supported schema subset");
+  }
+  if ("properties" in sch) {
+    if (!isPlainObject(sch.properties)) {
+      reject("properties must be an object of schemas");
+    } else {
+      for (const [property, propertySchema] of Object.entries(sch.properties)) {
+        if (!validateSchemaDefinition(propertySchema, `${path}.properties.${property}`)) supported = false;
+      }
+    }
+  }
+  if ("items" in sch && !validateSchemaDefinition(sch.items, `${path}.items`)) {
+    supported = false;
+  }
+  return supported;
+};
+
+const schemaUsesSupportedSubset = schemaIsObject && validateSchemaDefinition(schema, "schema");
+
 if (schemaIsObject && fixturesIsObject) {
   if (typeof schema.$id !== "string" || !schema.$id.includes("authoring-jobs")) {
     fail(`${relative(root, schemaPath)}: $id does not identify the authoring-jobs contract`);
   }
-  validate(fixtures, schema, "fixtures");
+  if (schemaUsesSupportedSubset) validate(fixtures, schema, "fixtures");
 
   const jobs = Array.isArray(fixtures.jobs) ? fixtures.jobs : [];
   const ids = jobs.map((j) => j?.id).filter(Boolean);

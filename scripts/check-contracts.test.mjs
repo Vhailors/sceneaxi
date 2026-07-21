@@ -30,6 +30,7 @@ const runChecker = (sandbox) =>
 
 const readDoc = (sandbox) => readFileSync(join(sandbox, docRelativePath), "utf8");
 const writeDoc = (sandbox, doc) => writeFileSync(join(sandbox, docRelativePath), doc);
+const readSchema = (sandbox) => JSON.parse(readFileSync(join(sandbox, schemaRelativePath), "utf8"));
 const readFixtures = (sandbox) => JSON.parse(readFileSync(join(sandbox, fixturesRelativePath), "utf8"));
 const writeFixtures = (sandbox, fixtures) =>
   writeFileSync(join(sandbox, fixturesRelativePath), `${JSON.stringify(fixtures, null, 2)}\n`);
@@ -141,6 +142,55 @@ const cases = [
       writeDoc(sandbox, " \n\t\n");
     },
     expectedOutput: "authoring-contracts.md: document is empty or whitespace-only",
+  },
+  {
+    name: "rejects an unsupported root schema keyword",
+    mutate(sandbox) {
+      const schema = readSchema(sandbox);
+      schema.maxItems = 5;
+      writeRawJson(sandbox, schemaRelativePath, schema);
+    },
+    expectedOutput: 'schema: unsupported JSON Schema keyword "maxItems"',
+  },
+  {
+    name: "rejects an unsupported nested schema keyword",
+    mutate(sandbox) {
+      const schema = readSchema(sandbox);
+      schema.properties.jobs.items.properties.title.minLength = 1;
+      writeRawJson(sandbox, schemaRelativePath, schema);
+    },
+    expectedOutput: 'schema.properties.jobs.items.properties.title: unsupported JSON Schema keyword "minLength"',
+  },
+  {
+    name: "allows property names that resemble schema keywords",
+    mutate(sandbox) {
+      const schema = readSchema(sandbox);
+      const fixtures = readFixtures(sandbox);
+      schema.properties.maxItems = { type: "string" };
+      fixtures.maxItems = "fixture property";
+      writeRawJson(sandbox, schemaRelativePath, schema);
+      writeFixtures(sandbox, fixtures);
+    },
+    expectedStatus: 0,
+    expectedOutput: "contract check OK",
+  },
+  {
+    name: "rejects an unsupported type declaration",
+    mutate(sandbox) {
+      const schema = readSchema(sandbox);
+      schema.properties.jobs.type = ["array", "null"];
+      writeRawJson(sandbox, schemaRelativePath, schema);
+    },
+    expectedOutput: "unsupported type declaration",
+  },
+  {
+    name: "rejects schema-valued additional properties",
+    mutate(sandbox) {
+      const schema = readSchema(sandbox);
+      schema.additionalProperties = { type: "string" };
+      writeRawJson(sandbox, schemaRelativePath, schema);
+    },
+    expectedOutput: "additionalProperties must be boolean in the supported schema subset",
   },
 ];
 
