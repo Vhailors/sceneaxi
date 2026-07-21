@@ -19,6 +19,9 @@ This monorepo is the packaging home for:
 Package boundaries are executable: `docs/dependency-matrix.json` is the allow/deny
 truth and `pnpm check:boundaries` enforces it (see `docs/DEPENDENCY-MATRIX.md`).
 Held captain decisions are a runtime contract: `docs/held-key-enforcement.md`.
+Authoring-interface behavioral contracts (E1/E2) are SceneAxi-owned:
+`docs/authoring-contracts.md`, with the shared authoring-jobs fixture list in
+`packages/schemas/contracts/` enforced by `pnpm check:contracts`.
 
 ## Development
 
