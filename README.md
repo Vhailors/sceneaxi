@@ -22,12 +22,20 @@ Held captain decisions are a runtime contract: `docs/held-key-enforcement.md`.
 
 ## Status
 
-**Frozen bootstrap draft**, prepared offline under the FirstMate home. The GitHub
-repository `Vhailors/sceneaxi` exists and is intentionally empty. This tree is
-applyable only after the post-FAIL remediations pass and a fresh independent
-non-Claude review PASS, and then only under the separated authorities in
-`docs/bootstrap.md` (apply, install, initial commit, push, transfer, proof, spend,
-and publication are each their own grant).
+Main holds the **landed bootstrap tree** (commit `f0a5b90`): the seam-only monorepo
+skeleton that passed the independent non-Claude **v4 review PASS** (2026-07-21) and
+was applied, installed, committed, and pushed under the separated bootstrap
+authorities in `docs/bootstrap.md`. The tree has **zero engine behavior by design** —
+packages are seams and contracts only, and `pnpm gate` fails while build/test/lint
+are unwired (a passing gate on this tree would mean the gate was tampered with).
+
+The canonical product spec is [#1](https://github.com/Vhailors/sceneaxi/issues/1),
+mirrored in-tree at `docs/program/SPEC.md`. The engine-core proof program stays on
+factories-helpers [#41](https://github.com/Vhailors/factories-helpers/issues/41)
+(pointer: `docs/program/spec-41.md`); proof-prep docs land under `docs/proof/`,
+double-gated and never a run authorization. Bootstrap authorities 1–5 have been
+exercised for this tree; every future change re-earns its own grants
+(PASS ≠ commit ≠ push ≠ merge).
 
 ## Authority
 
