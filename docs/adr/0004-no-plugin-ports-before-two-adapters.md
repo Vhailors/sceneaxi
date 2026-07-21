@@ -7,7 +7,7 @@
 
 ## Context
 
-SceneAxi is built as deep modules with narrow external seams (ADRs
+SceneAxi is designed as deep modules with narrow external seams (ADRs
 [0001](0001-game-kernel-command-snapshot-session.md),
 [0002](0002-presentation-runtime-deep-seam.md)). The recurring temptation in
 engine ecosystems is to design plugin ports up front — renderer plugins,

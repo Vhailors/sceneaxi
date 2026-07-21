@@ -29,7 +29,7 @@ fixture list.
 - **Text documents stay canonical under any editor.** No editor may become a
   proprietary data silo.
 
-The E1/E2 behavioral contracts are adopted in this repo by
+Implementation of the E1/E2 behavioral contracts is tracked in this repo by
 [sceneaxi#5](https://github.com/Vhailors/sceneaxi/issues/5) (continuing
 factories-helpers [#49](https://github.com/Vhailors/factories-helpers/issues/49));
 E1's verbs transfer as the CLI `project` command group

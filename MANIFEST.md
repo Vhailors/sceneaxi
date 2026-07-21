@@ -1,11 +1,12 @@
-# Bootstrap draft manifest
+# Initial bootstrap manifest
 
 Produced: 2026-07-21 (remediated same day after the non-Claude review FAIL)  
-Location: FirstMate data only — **not** applied to `Vhailors/sceneaxi` or `projects/sceneaxi`.
+Original location: FirstMate data before application to `Vhailors/sceneaxi` as
+commit `f0a5b90`.
 
-**FROZEN — not applyable** until the post-FAIL remediations pass is complete **and** a
-fresh independent non-Claude review passes over the amended chart and this exact tree.
-Application then still requires its own separated authorities (`docs/bootstrap.md`).
+This is a historical inventory of the reviewed bootstrap input, not the current
+repository manifest. See [`README.md`](README.md) for current status and
+[`docs/bootstrap.md`](docs/bootstrap.md) for the authority record.
 
 ## Contents
 
@@ -24,7 +25,7 @@ Application then still requires its own separated authorities (`docs/bootstrap.m
   held-key runtime protocol and versioned registry/command-map contracts
 - `docs/bootstrap.md` — application procedure with separated authorities
 
-## Explicitly excluded from this draft
+## Explicitly excluded from the original draft
 
 - Lockfiles, node_modules, external (registry) dependencies
 - CI workflows that publish packages

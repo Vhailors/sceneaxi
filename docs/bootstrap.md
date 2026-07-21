@@ -1,27 +1,31 @@
-# Bootstrap application procedure (every authority separate)
+# Bootstrap authority record (every authority separate)
 
-**FROZEN:** this tree is applyable only after (a) the post-FAIL remediations pass is
-complete and (b) a **fresh independent non-Claude review PASS** over the amended chart
-and this exact tree. A PASS is a prerequisite for everything below and **grants no
-authority by itself**.
+The initial bootstrap was applied in commit `f0a5b90` after its prerequisite
+review. This document preserves that application record and the still-operative
+rule that one authority never implies another. Completing bootstrap granted no
+standing authority for later pushes, issue operations, proof execution, spend,
+account creation, or publication.
 
 ## Distinct authorities — none implies another
 
 | # | Authority | Covers | Explicitly does NOT cover |
 |---|---|---|---|
-| 1 | Review PASS (non-Claude) | Eligibility to request the authorities below | Any action |
-| 2 | Apply | Copying this tree into a clean local clone of `projects/sceneaxi` | Install, commit, push |
-| 3 | Install | `pnpm install`, lockfile creation | Commit, push |
-| 4 | Initial commit | One local commit of the applied tree | Push |
-| 5 | Push | Pushing to `Vhailors/sceneaxi` | Issue creation, publication |
-| 6 | Issue transfer/creation | **Not part of bootstrap.** Owned entirely by the issue-transfer plan (FirstMate program archive) under its own explicit transfer authority | — |
+| 1 | Initial review PASS (historical) | Eligibility to request the initial bootstrap authorities | Any action |
+| 2 | Initial apply (historical) | Copying the reviewed tree into the SceneAxi checkout | Install, commit, push |
+| 3 | Initial install (historical) | `pnpm install` and lockfile creation | Commit, push |
+| 4 | Initial commit (historical) | The local bootstrap commit | Push |
+| 5 | Initial push (historical) | Publishing the bootstrap commit to `Vhailors/sceneaxi` | Issue creation, publication |
+| 6 | Issue transfer/creation | Each issue operation under its own explicit transfer authority | Any other issue operation or later authority |
 | 7 | Proof execution | Stage 1+ runs — dual-gated (tier-3 captain decisions AND explicit run authorization) | — |
 | 8 | Spend / accounts | Any paid service or account creation | — |
 | 9 | Publication | Package publishing, public visibility, docs sites | — |
 
-## Procedure (each step only under its own authority)
+## Historical initial application procedure
 
-1. **Pre-flight (no authority needed):** in this tree, `pnpm check:syntax` and
+The initial bootstrap used the following sequence. It is retained as provenance,
+not as a claim that the repository is still awaiting application.
+
+1. **Pre-flight (no authority needed):** `pnpm check:syntax` and
    `pnpm check:boundaries` must PASS, and `pnpm gate` must **FAIL** (build/test/lint
    are intentionally fail-closed until wired — a passing gate here means the gate has
    been tampered with).

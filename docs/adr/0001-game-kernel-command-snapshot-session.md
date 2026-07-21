@@ -9,11 +9,11 @@
 
 The simulation kernel (`packages/engine-kernel`, layer L1) is a deep module
 whose external interface is the test surface for determinism, replay stability,
-and save migration. The proof program (factories-helpers #41) and the Profile
-Conformance suite both test at this seam, so its shape had to be settled before
-any kernel work. The Wayfinder ran a design-it-twice pass over candidate
-external interfaces: a command/snapshot session (Design A), an exposed ECS, and
-a scene/component lifecycle. Design A won.
+and save migration. The proof program (factories-helpers #41) and the planned
+Profile Conformance suite are specified to test at this seam, so its shape had
+to be settled before any kernel work. The Wayfinder ran a design-it-twice pass
+over candidate external interfaces: a command/snapshot session (Design A), an
+exposed ECS, and a scene/component lifecycle. Design A won.
 
 ## Decision
 
@@ -55,8 +55,9 @@ const replay = session.recording()
   contract; no test may assert kernel internals).
 - State layout, scheduling, physics, and any internal ECS remain replaceable
   without a breaking external change.
-- The Kernel Session contract lives in `packages/schemas` per the shared
-  contract registry; the kernel implementation
+- Schema ownership for the Kernel Session contract is assigned to
+  `packages/schemas` per the shared contract registry; this ADR does not
+  implement it. The kernel implementation
   ([sceneaxi#8](https://github.com/Vhailors/sceneaxi/issues/8)) and the Profile
   Conformance suite
   ([sceneaxi#10](https://github.com/Vhailors/sceneaxi/issues/10)) target it.

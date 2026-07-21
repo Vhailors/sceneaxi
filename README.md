@@ -22,18 +22,22 @@ Held captain decisions are a runtime contract: `docs/held-key-enforcement.md`.
 
 ## Status
 
-**Frozen bootstrap draft**, prepared offline under the FirstMate home. The GitHub
-repository `Vhailors/sceneaxi` exists and is intentionally empty. This tree is
-applyable only after the post-FAIL remediations pass and a fresh independent
-non-Claude review PASS, and then only under the separated authorities in
-`docs/bootstrap.md` (apply, install, initial commit, push, transfer, proof, spend,
-and publication are each their own grant).
+**Early bootstrap scaffold.** The repository contains package and app stubs,
+shared contracts, executable syntax and dependency-boundary checks, and the
+settled engine/CLI decisions indexed in [`docs/adr/`](docs/adr/README.md). It
+does not yet contain a shipped runtime: build, test, and lint remain intentionally
+fail-closed until they are wired. The separated-authority rules that still apply
+are recorded in [`docs/bootstrap.md`](docs/bootstrap.md).
 
 ## Authority
 
-- Program chart: FirstMate factories secondmate, Wayfinder origin `threejs-bgf-ecosystem-wayfinder-v1` (chart report, map, tickets, and the issue-transfer plan live there, outside this repo by design until transfer authority exists).
+- Program chart: FirstMate factories secondmate, Wayfinder origin
+  `threejs-bgf-ecosystem-wayfinder-v1`. Settled engine/CLI decisions transferred
+  from that program are recorded in [`docs/adr/`](docs/adr/README.md); each ADR
+  carries its source and split lineage.
 - Prior proof program: factories-helpers [#41](https://github.com/Vhailors/factories-helpers/issues/41)
-- Issue transfer: governed by the issue-transfer plan in the FirstMate program archive; **no issue creation is part of bootstrap**.
+- Issue creation and transfer remain separate authorities; a completed transfer
+  grants no authority for another issue operation.
 
 ## Boundaries
 

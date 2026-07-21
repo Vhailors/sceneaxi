@@ -7,8 +7,9 @@
 
 ## Context
 
-Presentation (`packages/engine-presentation`, layer L1) renders kernel
-snapshots. The design question was whether SceneAxi should build a universal
+Presentation (`packages/engine-presentation`, layer L1) is responsible for
+rendering kernel snapshots. The design question was whether SceneAxi should
+build a universal
 renderer-agnostic abstraction spanning candidate backends, or a single deep
 Presentation Runtime that hides whichever backend sits inside it. The
 design-it-twice pass settled on the deep runtime. The renderer composition
