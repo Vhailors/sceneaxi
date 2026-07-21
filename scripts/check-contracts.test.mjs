@@ -33,6 +33,8 @@ const writeDoc = (sandbox, doc) => writeFileSync(join(sandbox, docRelativePath),
 const readFixtures = (sandbox) => JSON.parse(readFileSync(join(sandbox, fixturesRelativePath), "utf8"));
 const writeFixtures = (sandbox, fixtures) =>
   writeFileSync(join(sandbox, fixturesRelativePath), `${JSON.stringify(fixtures, null, 2)}\n`);
+const writeRawJson = (sandbox, relativePath, value) =>
+  writeFileSync(join(sandbox, relativePath), `${JSON.stringify(value)}\n`);
 
 const cases = [
   {
@@ -104,6 +106,41 @@ const cases = [
       writeFixtures(sandbox, fixtures);
     },
     expectedOutput: "unexpected property",
+  },
+  {
+    name: "rejects a null schema",
+    mutate(sandbox) {
+      writeRawJson(sandbox, schemaRelativePath, null);
+    },
+    expectedOutput: "authoring-jobs.schema.json: expected a plain JSON object",
+  },
+  {
+    name: "distinguishes a malformed schema from a non-object schema",
+    mutate(sandbox) {
+      writeFileSync(join(sandbox, schemaRelativePath), "{");
+    },
+    expectedOutput: "cannot load packages/schemas/contracts/authoring-jobs.schema.json",
+  },
+  {
+    name: "rejects null fixtures",
+    mutate(sandbox) {
+      writeRawJson(sandbox, fixturesRelativePath, null);
+    },
+    expectedOutput: "authoring-jobs.fixtures.json: expected a plain JSON object",
+  },
+  {
+    name: "rejects array fixtures",
+    mutate(sandbox) {
+      writeRawJson(sandbox, fixturesRelativePath, []);
+    },
+    expectedOutput: "authoring-jobs.fixtures.json: expected a plain JSON object",
+  },
+  {
+    name: "rejects a whitespace-only contract document",
+    mutate(sandbox) {
+      writeDoc(sandbox, " \n\t\n");
+    },
+    expectedOutput: "authoring-contracts.md: document is empty or whitespace-only",
   },
 ];
 

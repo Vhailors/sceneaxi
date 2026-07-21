@@ -17,6 +17,7 @@ const fail = (msg) => errors.push(msg);
 const schemaPath = join(root, "packages", "schemas", "contracts", "authoring-jobs.schema.json");
 const fixturesPath = join(root, "packages", "schemas", "contracts", "authoring-jobs.fixtures.json");
 const docPath = join(root, "docs", "authoring-contracts.md");
+const loadFailed = Symbol("loadFailed");
 
 const load = (path, parse) => {
   try {
@@ -24,13 +25,27 @@ const load = (path, parse) => {
     return parse ? JSON.parse(text) : text;
   } catch (e) {
     fail(`cannot load ${relative(root, path)}: ${e.message}`);
-    return null;
+    return loadFailed;
   }
 };
 
 const schema = load(schemaPath, true);
 const fixtures = load(fixturesPath, true);
 const doc = load(docPath, false);
+const isPlainObject = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+const schemaIsObject = schema !== loadFailed && isPlainObject(schema);
+const fixturesIsObject = fixtures !== loadFailed && isPlainObject(fixtures);
+const docHasContent = doc !== loadFailed && doc.trim().length > 0;
+
+if (schema !== loadFailed && !schemaIsObject) {
+  fail(`${relative(root, schemaPath)}: expected a plain JSON object`);
+}
+if (fixtures !== loadFailed && !fixturesIsObject) {
+  fail(`${relative(root, fixturesPath)}: expected a plain JSON object`);
+}
+if (doc !== loadFailed && !docHasContent) {
+  fail(`${relative(root, docPath)}: document is empty or whitespace-only`);
+}
 
 // --- minimal JSON Schema subset validator (type/required/properties/items/enum/const/pattern/additionalProperties/minItems) ---
 const validate = (value, sch, path) => {
@@ -77,7 +92,7 @@ const validate = (value, sch, path) => {
   }
 };
 
-if (schema && fixtures) {
+if (schemaIsObject && fixturesIsObject) {
   if (typeof schema.$id !== "string" || !schema.$id.includes("authoring-jobs")) {
     fail(`${relative(root, schemaPath)}: $id does not identify the authoring-jobs contract`);
   }
@@ -89,7 +104,7 @@ if (schema && fixtures) {
   if (dupes.length > 0) fail(`fixtures: duplicate job id(s): ${[...new Set(dupes)].join(", ")}`);
 
   // --- doc cross-checks: one shared table matching the JSON, both contracts bound to it ---
-  if (doc) {
+  if (docHasContent) {
     const tableStart = "<!-- authoring-jobs:list -->";
     const tableEnd = "<!-- /authoring-jobs:list -->";
     const tableStarts = doc.split(tableStart).length - 1;
