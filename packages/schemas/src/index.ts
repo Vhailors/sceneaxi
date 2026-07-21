@@ -30,9 +30,24 @@ export interface ProfileSeam extends PackageSeam {
 export const contracts = Object.freeze({
   cliCommandMap: "contracts/cli-command-map.schema.json",
   heldKeyRegistry: "contracts/held-key-registry.schema.json",
+  kernelSession: "contracts/kernel-session.schema.json",
 });
 
 export const seam: PackageSeam = Object.freeze({
   name: "@sceneaxi/schemas",
   releaseGroup: "contracts",
 });
+
+export {
+  KERNEL_SESSION_SCHEMA_VERSION,
+  type ProductManifest,
+  type ProductEntitySeed,
+  type Axis2,
+  type Position2,
+  type KernelCommand,
+  type FrameClock,
+  type SnapshotEntity,
+  type KernelSnapshot,
+  type KernelSessionEvent,
+  type KernelSessionSaveArtifact,
+} from "./kernel-session.js";
