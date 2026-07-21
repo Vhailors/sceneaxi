@@ -36,6 +36,44 @@ export type {
   TransitionResult,
 } from "./catalog.js";
 
+export {
+  DOCUMENT_KIND,
+  DOCUMENT_SCHEMA_VERSION,
+  createDocument,
+  parseDocumentText,
+  serializeDocument,
+  validateDocument,
+} from "./document.js";
+export type {
+  DocumentValidationOk,
+  DocumentValidationRefuse,
+  DocumentValidationResult,
+  SceneDocument,
+} from "./document.js";
+
+export {
+  CONTENT_HASH_PREFIX,
+  PROPOSAL_KIND,
+  PROPOSAL_SCHEMA_VERSION,
+  createProposal,
+  parseProposalText,
+  serializeProposal,
+  validateProposal,
+} from "./proposal.js";
+export type {
+  ApplyDiagnostic,
+  ApplyDiagnosticCode,
+  ApplyOk,
+  ApplyReject,
+  ApplyResult,
+  Proposal,
+  ProposalDiff,
+  ProposalEdit,
+  ProposalValidationOk,
+  ProposalValidationRefuse,
+  ProposalValidationResult,
+} from "./proposal.js";
+
 /** Release groups defined by docs/dependency-matrix.json. */
 export type ReleaseGroup =
   | "contracts"
@@ -64,6 +102,8 @@ export const contracts = Object.freeze({
   heldKeyRegistry: "contracts/held-key-registry.schema.json",
   kernelSession: "contracts/kernel-session.schema.json",
   catalogItem: "contracts/catalog-item.schema.json",
+  document: "contracts/document.schema.json",
+  proposal: "contracts/proposal.schema.json",
 });
 
 export const seam: PackageSeam = Object.freeze({

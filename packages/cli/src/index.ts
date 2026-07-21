@@ -3,8 +3,9 @@
  * authoring-core; no direct engine access.
  *
  * This package implements the umbrella dispatcher, deterministic exit-code map,
- * versioned envelope, and strict `--json` equivalence (sceneaxi#6). Verb bodies
- * beyond protocol introspection are skeletons; held-key currency is sceneaxi#7.
+ * versioned envelope, and strict `--json` equivalence (sceneaxi#6). E1
+ * `project propose` / `project apply` are live (sceneaxi#9). Held-key currency
+ * is sceneaxi#7.
  */
 
 import type { PackageSeam } from "@sceneaxi/schemas";

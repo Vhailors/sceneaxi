@@ -6,6 +6,7 @@
  * version. Both appear on every success and every failure.
  */
 
+import type { ApplyDiagnostic } from "@sceneaxi/authoring-core";
 import type { FailureClass } from "./exit-codes.js";
 import { ExitCode, exitCodeForFailure, type ExitCodeValue } from "./exit-codes.js";
 import { CLI_VERSION, PROTOCOL_SCHEMA_VERSION } from "./version.js";
@@ -20,6 +21,8 @@ export interface CliErrorBody {
   readonly path: readonly string[];
   /** Present when code is HELD_KEY (sceneaxi#7); omitted otherwise. */
   readonly heldKey?: string;
+  /** Typed diagnostics from propose/apply rejections (sceneaxi#9). */
+  readonly diagnostics?: readonly ApplyDiagnostic[];
 }
 
 interface EnvelopeBase {
@@ -71,16 +74,24 @@ export function failure(
     readonly path?: readonly string[];
     readonly help?: readonly string[];
     readonly heldKey?: string;
+    readonly diagnostics?: readonly ApplyDiagnostic[];
   } = {},
 ): CliOutcome {
   const path = Object.freeze([...(options.path ?? [])]);
   const help = Object.freeze([
     ...(options.help ?? defaultHelpForFailure(code, path)),
   ]);
-  const error: CliErrorBody =
-    options.heldKey === undefined
-      ? { code, message, path }
-      : { code, message, path, heldKey: options.heldKey };
+
+  let error: CliErrorBody = { code, message, path };
+  if (options.heldKey !== undefined) {
+    error = { ...error, heldKey: options.heldKey };
+  }
+  if (options.diagnostics !== undefined) {
+    error = {
+      ...error,
+      diagnostics: Object.freeze([...options.diagnostics]),
+    };
+  }
 
   return {
     exitCode: exitCodeForFailure(code),
@@ -126,6 +137,22 @@ function defaultHelpForFailure(
     case "NOT_IMPLEMENTED":
       return [
         "This verb path is registered but has no body yet; later tickets plug real work in",
+      ];
+    case "CONFLICT":
+      return [
+        "Re-read the document and re-propose against current content",
+        "Content-hash conflicts refuse the whole proposal (all-or-nothing)",
+      ];
+    case "VALIDATION":
+      return [
+        joined
+          ? `Run \`sceneaxi ${joined} --help\` for usage`
+          : "Run `sceneaxi --help` for usage",
+        "Schema major mismatches and invalid pointers refuse (fail-closed)",
+      ];
+    case "NOT_FOUND":
+      return [
+        "Check document/proposal paths relative to --cwd (default: process cwd)",
       ];
     case "INTERNAL":
     default:

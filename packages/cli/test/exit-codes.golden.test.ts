@@ -19,6 +19,9 @@ const GOLDEN_FAILURE_EXIT: Record<FailureClass, number> = {
   NOT_IMPLEMENTED: 1,
   INTERNAL: 1,
   HELD_KEY: 3,
+  CONFLICT: 1,
+  VALIDATION: 2,
+  NOT_FOUND: 1,
 };
 
 describe("deterministic exit-code map", () => {

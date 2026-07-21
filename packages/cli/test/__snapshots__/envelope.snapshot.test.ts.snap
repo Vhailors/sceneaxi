@@ -12,7 +12,7 @@ exports[`versioned protocol envelope > error envelope snapshot (versioned with C
     ],
   },
   "help": [
-    "Known under 'project': new, dev, test, capture, report",
+    "Known under 'project': new, dev, test, capture, report, propose, apply",
     "Run \`sceneaxi project --help\` for usage",
   ],
   "ok": false,

@@ -6,6 +6,7 @@
  * typed failure class (`error.code`) for finer discrimination.
  *
  * Normative source for this ticket: sceneaxi#6 / docs in packages/cli/README.md.
+ * Propose/apply failure classes added for sceneaxi#9.
  */
 
 /** Process exit codes — the agent-facing branch table. */
@@ -38,7 +39,13 @@ export type FailureClass =
   | "AMBIGUOUS_INPUT"
   | "NOT_IMPLEMENTED"
   | "INTERNAL"
-  | "HELD_KEY";
+  | "HELD_KEY"
+  /** Concurrent content-hash conflict on apply (E1). */
+  | "CONFLICT"
+  /** Schema / pointer / proposal / document validation refusal. */
+  | "VALIDATION"
+  /** Document or proposal path not found. */
+  | "NOT_FOUND";
 
 /** Documented failure-class → exit-code map (golden-tested). */
 export const FAILURE_EXIT_CODE: Readonly<Record<FailureClass, ExitCodeValue>> =
@@ -49,6 +56,9 @@ export const FAILURE_EXIT_CODE: Readonly<Record<FailureClass, ExitCodeValue>> =
     NOT_IMPLEMENTED: ExitCode.ERROR,
     INTERNAL: ExitCode.ERROR,
     HELD_KEY: ExitCode.HELD_KEY,
+    CONFLICT: ExitCode.ERROR,
+    VALIDATION: ExitCode.USAGE,
+    NOT_FOUND: ExitCode.ERROR,
   });
 
 export function exitCodeForFailure(code: FailureClass): ExitCodeValue {
@@ -69,13 +79,14 @@ export const EXIT_CODE_TABLE: ReadonlyArray<{
   {
     code: ExitCode.ERROR,
     name: "ERROR",
-    meaning: "Operational or internal failure",
+    meaning:
+      "Operational or internal failure (including apply conflicts and missing paths)",
   },
   {
     code: ExitCode.USAGE,
     name: "USAGE",
     meaning:
-      "Unknown command path (any depth), unknown flag, or ambiguous/incomplete input",
+      "Unknown command path (any depth), unknown flag, ambiguous/incomplete input, or validation refusal",
   },
   {
     code: ExitCode.HELD_KEY,

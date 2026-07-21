@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/proposal/v1",
+  "title": "SceneAxi propose/apply proposal (v1)",
+  "description": "Versioned proposal artifact produced by propose() and consumed by apply(). Carries base content hashes for conflict detection, JSON Pointer edits, and unified diffs for review. Multi-document proposals apply all-or-nothing. Behavioral semantics: docs/authoring-contracts.md (E1).",
+  "type": "object",
+  "required": ["schemaVersion", "kind", "edits", "diffs"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 1,
+      "description": "Proposal contract major version. Major mismatch on apply refuses."
+    },
+    "kind": {
+      "const": "sceneaxi.proposal",
+      "description": "Stable proposal kind discriminator."
+    },
+    "edits": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Ordered pointer edits. Apply is all-or-nothing across every edit.",
+      "items": {
+        "type": "object",
+        "required": [
+          "documentPath",
+          "baseContentHash",
+          "jsonPointer",
+          "oldValue",
+          "newValue"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "documentPath": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Path to the text-canonical document relative to the apply working directory, or absolute."
+          },
+          "baseContentHash": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "description": "Content hash of the base document bytes at propose time. Apply refuses on mismatch."
+          },
+          "jsonPointer": {
+            "type": "string",
+            "pattern": "^(/([^/~]|~[01])*)*$",
+            "description": "RFC 6901 JSON Pointer into the document (empty string addresses the whole document)."
+          },
+          "oldValue": {
+            "description": "Value at the pointer on the base document (any JSON type, including null)."
+          },
+          "newValue": {
+            "description": "Replacement value (any JSON type, including null)."
+          }
+        }
+      }
+    },
+    "diffs": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Unified diffs per touched document path (review surface).",
+      "items": {
+        "type": "object",
+        "required": ["documentPath", "unifiedDiff"],
+        "additionalProperties": false,
+        "properties": {
+          "documentPath": { "type": "string", "minLength": 1 },
+          "unifiedDiff": {
+            "type": "string",
+            "description": "Unified diff (---/+++/@@ hunks) of the text-canonical document before → after."
+          }
+        }
+      }
+    }
+  }
+}
