@@ -5,6 +5,37 @@
  * arrive under their own tickets.
  */
 
+export {
+  CATALOG_ITEM_SCHEMA_VERSION,
+  CATALOG_POLICY_CITES,
+  COMMERCE_ACTIVATION_GATE,
+  PIPELINE_STATES,
+  attemptCommerceActivation,
+  createCatalogItemAtIntake,
+  isCommerceActive,
+  legalSuccessors,
+  missingMandatoryMetadata,
+  transitionCatalogItem,
+} from "./catalog.js";
+export type {
+  AiGenerationDisclosure,
+  AssetPackageRef,
+  CatalogItem,
+  CommerceActivationResult,
+  CommerceFields,
+  Compatibility,
+  HumanCurationVerdict,
+  ModerationState,
+  PipelineState,
+  ProvenanceRecord,
+  RightsRecord,
+  TransitionOk,
+  TransitionRecord,
+  TransitionRefuse,
+  TransitionRequest,
+  TransitionResult,
+} from "./catalog.js";
+
 /** Release groups defined by docs/dependency-matrix.json. */
 export type ReleaseGroup =
   | "contracts"
@@ -30,6 +61,7 @@ export interface ProfileSeam extends PackageSeam {
 export const contracts = Object.freeze({
   cliCommandMap: "contracts/cli-command-map.schema.json",
   heldKeyRegistry: "contracts/held-key-registry.schema.json",
+  catalogItem: "contracts/catalog-item.schema.json",
 });
 
 export const seam: PackageSeam = Object.freeze({
