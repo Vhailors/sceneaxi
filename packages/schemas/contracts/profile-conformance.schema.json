@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/profile-conformance/v1",
+  "title": "SceneAxi Profile Conformance claim (v1)",
+  "description": "Versioned claim that a profile package consumes the shared agent-native core. A development-consumer claim is exercised by the shared Profile Conformance suite (kernel session + document propose/apply + evidence-hook presence). This contract does NOT authorize shipping, publication, or resolution of the open held key profile-rollout-order — shippingClaim MUST be false. Behavioral suite: packages/schemas/src/profile-conformance-suite.ts; first development consumer: packages/profile-game (sceneaxi#10).",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "kind",
+    "profile",
+    "claimStatus",
+    "corePin",
+    "suiteVersion",
+    "evidenceHooks",
+    "heldKeysCited",
+    "shippingClaim"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 1,
+      "description": "Profile Conformance contract major version. Major mismatch refuses."
+    },
+    "kind": {
+      "const": "sceneaxi.profile-conformance",
+      "description": "Stable claim kind discriminator."
+    },
+    "profile": {
+      "type": "string",
+      "pattern": "^@sceneaxi/profile-[a-z][a-z0-9-]*$",
+      "description": "Workspace profile package name this claim is about."
+    },
+    "claimStatus": {
+      "type": "string",
+      "enum": ["development-consumer", "not-yet-claimed"],
+      "description": "development-consumer = first (or later) development consumer of the shared suite; not-yet-claimed = profile exists but makes no conformance claim (must not fail the suite). Neither status is a shipping readiness claim."
+    },
+    "corePin": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[\\^~>=<0-9xX*\\.\\s\\|-]+$",
+      "description": "Semver range of the core train this profile pins (must match sceneaxi.corePin on the package manifest and ProfileSeam.corePin)."
+    },
+    "suiteVersion": {
+      "const": 1,
+      "description": "Shared conformance suite major version this claim targets."
+    },
+    "evidenceHooks": {
+      "type": "object",
+      "required": ["present", "hooks"],
+      "additionalProperties": false,
+      "description": "Evidence-hook presence declaration. Full Evidence Packet emission remains later tickets; presence of declared hooks is what the suite checks today.",
+      "properties": {
+        "present": {
+          "const": true,
+          "description": "Hooks must be declared present for a development-consumer claim."
+        },
+        "hooks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["name", "status"],
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]*$",
+                "description": "Stable hook id (e.g. kernel-session-save, document-apply)."
+              },
+              "status": {
+                "type": "string",
+                "enum": ["declared"],
+                "description": "declared = hook surface exists; active emission is a later ticket."
+              }
+            }
+          }
+        }
+      }
+    },
+    "heldKeysCited": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "description": "Open captain holds this claim explicitly does not answer. MUST include profile-rollout-order."
+    },
+    "shippingClaim": {
+      "const": false,
+      "description": "MUST be false. This contract never authorizes shipping or publication of a profile."
+    }
+  }
+}
