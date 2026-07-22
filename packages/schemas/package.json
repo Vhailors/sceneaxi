@@ -8,7 +8,8 @@
     ".": "./src/index.ts",
     "./contracts/catalog-item.schema.json": "./contracts/catalog-item.schema.json",
     "./contracts/catalog-metadata-unavailable-tombstone.schema.json": "./contracts/catalog-metadata-unavailable-tombstone.schema.json",
-    "./contracts/delivery-handoff.schema.json": "./contracts/delivery-handoff.schema.json"
+    "./contracts/delivery-handoff.schema.json": "./contracts/delivery-handoff.schema.json",
+    "./contracts/plugin-manifest.schema.json": "./contracts/plugin-manifest.schema.json"
   },
   "files": ["src", "contracts"],
   "sceneaxi": { "releaseGroup": "contracts" },
