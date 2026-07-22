@@ -451,6 +451,30 @@ describe("fail-closed catalog pipeline state machine", () => {
     }
   });
 
+  it("refuses moderation history supplied through inherited array slots", () => {
+    const listed = advanceToListed(syntheticAsset());
+    const inheritedHistory = new Array<unknown>(3);
+    Object.setPrototypeOf(inheritedHistory, {
+      0: listed.moderation.history[0],
+      1: listed.moderation.history[1],
+      2: listed.moderation.history[2],
+    });
+    const malformed = {
+      ...listed,
+      moderation: {
+        pipelineState: "listed" as const,
+        history: inheritedHistory,
+      },
+    } as unknown as CatalogItem;
+
+    const result = transitionCatalogItem(malformed, {
+      to: "delisted",
+      reason: "attempt inherited history",
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("invalid-moderation-history");
+  });
+
   it("enforces the shared Catalog date-time definition at runtime", () => {
     const invalidTransition = transitionCatalogItem(syntheticAsset(), {
       to: "screening",
@@ -690,6 +714,37 @@ describe("fail-closed catalog pipeline state machine", () => {
     if (!result.ok) expect(result.code).toBe("missing-mandatory-metadata");
   });
 
+  it("returns deep-normalized metadata snapshots", () => {
+    const intake = syntheticAsset();
+    let licenseReads = 0;
+    let originReads = 0;
+    Object.defineProperty(intake.rights, "license", {
+      get() {
+        licenseReads += 1;
+        return licenseReads === 1 ? "CC-BY-4.0" : "";
+      },
+    });
+    Object.defineProperty(intake.provenance, "origin", {
+      get() {
+        originReads += 1;
+        return originReads === 1 ? "synthetic-fixture" : "";
+      },
+    });
+
+    const result = transitionCatalogItem(intake, {
+      to: "screening",
+      reason: "snapshot nested metadata",
+    });
+    expect(result.ok).toBe(true);
+    expect(licenseReads).toBe(1);
+    expect(originReads).toBe(1);
+    if (result.ok) {
+      expect(result.item.rights.license).toBe("CC-BY-4.0");
+      expect(result.item.provenance.origin).toBe("synthetic-fixture");
+      expect(missingMandatoryMetadata(result.item)).toEqual([]);
+    }
+  });
+
   it("refuses non-v1 runtime catalog items", () => {
     const intake = syntheticAsset();
     Object.assign(intake, { schemaVersion: 2 });
@@ -812,6 +867,18 @@ describe("commerce fields inert (no 6b activation path)", () => {
       expect(result.item.moderation.pipelineState).toBe("delisted");
       expect(result.item.commerce.activation).toBe("inert");
       expect(result.item.moderation.history).toHaveLength(4);
+      expect(result.item.rights).toEqual({
+        license: "unavailable-after-takedown",
+        rightsHolder: "unavailable-after-takedown",
+        commercialUseAllowed: false,
+      });
+      expect(result.item.provenance).toEqual({
+        origin: "unavailable-after-takedown",
+        ingestedAt: result.transition.at,
+        sourceDigest:
+          "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      });
+      expect(missingMandatoryMetadata(result.item)).toEqual([]);
     }
   });
 

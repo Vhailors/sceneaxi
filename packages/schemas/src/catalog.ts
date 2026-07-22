@@ -203,90 +203,215 @@ function validProfiles(value: unknown): value is readonly string[] {
   return true;
 }
 
+function normalizeStringArray(value: unknown): readonly string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+
+  const normalized: string[] = [];
+  for (let index = 0; index < value.length; index += 1) {
+    if (!Object.hasOwn(value, index)) return undefined;
+    const entry = value[index];
+    if (typeof entry !== "string") return undefined;
+    normalized.push(entry);
+  }
+  return normalized;
+}
+
+type CatalogMetadata = Omit<CatalogItem, "moderation">;
+
+const TOMBSTONE_DIGEST =
+  "sha256:0000000000000000000000000000000000000000000000000000000000000000";
+const TOMBSTONE_DATE_TIME = "1970-01-01T00:00:00.000Z";
+
+function normalizeCatalogMetadata(
+  item: unknown,
+  tombstoneAt = TOMBSTONE_DATE_TIME,
+): { readonly metadata: CatalogMetadata; readonly missing: string[] } {
+  const missing: string[] = [];
+  const itemRecord = isRecord(item) ? item : undefined;
+  if (itemRecord === undefined) missing.push("catalogItem");
+
+  const schemaVersion = itemRecord?.["schemaVersion"];
+  if (schemaVersion !== CATALOG_ITEM_SCHEMA_VERSION) {
+    missing.push("schemaVersion");
+  }
+
+  const rawItemId = itemRecord?.["itemId"];
+  if (!validId(rawItemId)) missing.push("itemId");
+
+  const rawAssetPackage = itemRecord?.["assetPackage"];
+  const assetPackage = isRecord(rawAssetPackage) ? rawAssetPackage : undefined;
+  if (assetPackage === undefined) missing.push("assetPackage");
+  const rawPackageId = assetPackage?.["packageId"];
+  const rawContentHash = assetPackage?.["contentHash"];
+  if (assetPackage !== undefined && !validId(rawPackageId)) {
+    missing.push("assetPackage.packageId");
+  }
+  if (assetPackage !== undefined && !validSha256(rawContentHash)) {
+    missing.push("assetPackage.contentHash");
+  }
+
+  const rawRights = itemRecord?.["rights"];
+  const rights = isRecord(rawRights) ? rawRights : undefined;
+  if (rights === undefined) missing.push("rights");
+  const rawLicense = rights?.["license"];
+  const rawRightsHolder = rights?.["rightsHolder"];
+  const rawCommercialUseAllowed = rights?.["commercialUseAllowed"];
+  if (rights !== undefined && !nonEmptyString(rawLicense)) {
+    missing.push("rights.license");
+  }
+  if (rights !== undefined && !nonEmptyString(rawRightsHolder)) {
+    missing.push("rights.rightsHolder");
+  }
+  if (rights !== undefined && typeof rawCommercialUseAllowed !== "boolean") {
+    missing.push("rights.commercialUseAllowed");
+  }
+
+  const rawProvenance = itemRecord?.["provenance"];
+  const provenance = isRecord(rawProvenance) ? rawProvenance : undefined;
+  if (provenance === undefined) missing.push("provenance");
+  const rawOrigin = provenance?.["origin"];
+  const rawIngestedAt = provenance?.["ingestedAt"];
+  const rawSourceDigest = provenance?.["sourceDigest"];
+  if (provenance !== undefined && !nonEmptyString(rawOrigin)) {
+    missing.push("provenance.origin");
+  }
+  if (provenance !== undefined && !validDateTime(rawIngestedAt)) {
+    missing.push("provenance.ingestedAt");
+  }
+  if (provenance !== undefined && !validSha256(rawSourceDigest)) {
+    missing.push("provenance.sourceDigest");
+  }
+
+  const rawDisclosure = itemRecord?.["aiGenerationDisclosure"];
+  const disclosure = isRecord(rawDisclosure) ? rawDisclosure : undefined;
+  if (disclosure === undefined) missing.push("aiGenerationDisclosure");
+  const rawAiGenerated = disclosure?.["aiGenerated"];
+  const rawDisclosureText = disclosure?.["disclosureText"];
+  const rawTools = disclosure?.["tools"];
+  const tools =
+    rawTools === undefined ? undefined : normalizeStringArray(rawTools);
+  if (disclosure !== undefined && typeof rawAiGenerated !== "boolean") {
+    missing.push("aiGenerationDisclosure.aiGenerated");
+  }
+  if (disclosure !== undefined && !nonEmptyString(rawDisclosureText)) {
+    missing.push("aiGenerationDisclosure.disclosureText");
+  }
+  if (disclosure !== undefined && rawTools !== undefined && tools === undefined) {
+    missing.push("aiGenerationDisclosure.tools");
+  }
+
+  const rawCompatibility = itemRecord?.["compatibility"];
+  const compatibility = isRecord(rawCompatibility)
+    ? rawCompatibility
+    : undefined;
+  if (compatibility === undefined) missing.push("compatibility");
+  const rawCoreRange = compatibility?.["coreRange"];
+  const rawProfiles = compatibility?.["profiles"];
+  if (compatibility !== undefined && !nonEmptyString(rawCoreRange)) {
+    missing.push("compatibility.coreRange");
+  }
+  if (compatibility !== undefined && !validProfiles(rawProfiles)) {
+    missing.push("compatibility.profiles");
+  }
+  const profiles: string[] = [];
+  if (validProfiles(rawProfiles)) {
+    for (let index = 0; index < rawProfiles.length; index += 1) {
+      profiles.push(rawProfiles[index] as string);
+    }
+  }
+
+  const rawCommerce = itemRecord?.["commerce"];
+  const commerce = isRecord(rawCommerce) ? rawCommerce : undefined;
+  if (commerce === undefined) missing.push("commerce");
+  const rawActivation = commerce?.["activation"];
+  if (commerce !== undefined && rawActivation !== "inert") {
+    missing.push("commerce.activation");
+  }
+  const rawPrice = commerce?.["price"];
+  const price = isRecord(rawPrice) ? rawPrice : undefined;
+  const rawAmount = price?.["amount"];
+  const rawCurrency = price?.["currency"];
+  if (
+    commerce !== undefined &&
+    rawPrice !== undefined &&
+    (price === undefined ||
+      typeof rawAmount !== "string" ||
+      typeof rawCurrency !== "string")
+  ) {
+    missing.push("commerce.price");
+  }
+  const rawSku = commerce?.["sku"];
+  if (commerce !== undefined && rawSku !== undefined && typeof rawSku !== "string") {
+    missing.push("commerce.sku");
+  }
+
+  const normalizedPrice =
+    typeof rawAmount === "string" && typeof rawCurrency === "string"
+      ? { amount: rawAmount, currency: rawCurrency }
+      : undefined;
+  const normalizedSku = typeof rawSku === "string" ? rawSku : undefined;
+
+  return {
+    missing,
+    metadata: {
+      schemaVersion: CATALOG_ITEM_SCHEMA_VERSION,
+      itemId: validId(rawItemId) ? rawItemId : "takedown-tombstone",
+      assetPackage: {
+        packageId: validId(rawPackageId) ? rawPackageId : "takedown-tombstone",
+        contentHash: validSha256(rawContentHash)
+          ? rawContentHash
+          : TOMBSTONE_DIGEST,
+      },
+      rights: {
+        license: nonEmptyString(rawLicense)
+          ? rawLicense
+          : "unavailable-after-takedown",
+        rightsHolder: nonEmptyString(rawRightsHolder)
+          ? rawRightsHolder
+          : "unavailable-after-takedown",
+        commercialUseAllowed:
+          typeof rawCommercialUseAllowed === "boolean"
+            ? rawCommercialUseAllowed
+            : false,
+      },
+      provenance: {
+        origin: nonEmptyString(rawOrigin)
+          ? rawOrigin
+          : "unavailable-after-takedown",
+        ingestedAt: validDateTime(rawIngestedAt) ? rawIngestedAt : tombstoneAt,
+        sourceDigest: validSha256(rawSourceDigest)
+          ? rawSourceDigest
+          : TOMBSTONE_DIGEST,
+      },
+      aiGenerationDisclosure: {
+        aiGenerated: typeof rawAiGenerated === "boolean" ? rawAiGenerated : false,
+        disclosureText: nonEmptyString(rawDisclosureText)
+          ? rawDisclosureText
+          : "Metadata unavailable after takedown.",
+        ...(tools === undefined ? {} : { tools }),
+      },
+      compatibility: {
+        coreRange: nonEmptyString(rawCoreRange)
+          ? rawCoreRange
+          : "unavailable-after-takedown",
+        profiles: profiles.length > 0 ? profiles : ["tombstone"],
+      },
+      commerce: {
+        activation: "inert",
+        ...(normalizedPrice === undefined ? {} : { price: normalizedPrice }),
+        ...(normalizedSku === undefined ? {} : { sku: normalizedSku }),
+      },
+    },
+  };
+}
+
 /**
  * Fail-closed mandatory-metadata check used before leaving intake quarantine
  * (screening gate). Aligns with rights/provenance/AI-disclosure screening in
  * the program catalog pipeline; deeper #48 controls stay factories-helpers SoT.
  */
 export function missingMandatoryMetadata(item: unknown): string[] {
-  const missing: string[] = [];
-  if (!isRecord(item)) return ["catalogItem"];
-
-  if (item["schemaVersion"] !== CATALOG_ITEM_SCHEMA_VERSION) {
-    missing.push("schemaVersion");
-  }
-  if (!validId(item["itemId"])) missing.push("itemId");
-
-  const assetPackage = item["assetPackage"];
-  if (!isRecord(assetPackage)) {
-    missing.push("assetPackage");
-  } else {
-    if (!validId(assetPackage["packageId"])) {
-      missing.push("assetPackage.packageId");
-    }
-    if (!validSha256(assetPackage["contentHash"])) {
-      missing.push("assetPackage.contentHash");
-    }
-  }
-
-  const rights = item["rights"];
-  if (!isRecord(rights)) {
-    missing.push("rights");
-  } else {
-    if (!nonEmptyString(rights["license"])) missing.push("rights.license");
-    if (!nonEmptyString(rights["rightsHolder"])) {
-      missing.push("rights.rightsHolder");
-    }
-    if (typeof rights["commercialUseAllowed"] !== "boolean") {
-      missing.push("rights.commercialUseAllowed");
-    }
-  }
-
-  const provenance = item["provenance"];
-  if (!isRecord(provenance)) {
-    missing.push("provenance");
-  } else {
-    if (!nonEmptyString(provenance["origin"])) missing.push("provenance.origin");
-    if (!validDateTime(provenance["ingestedAt"])) {
-      missing.push("provenance.ingestedAt");
-    }
-    if (!validSha256(provenance["sourceDigest"])) {
-      missing.push("provenance.sourceDigest");
-    }
-  }
-
-  const disclosure = item["aiGenerationDisclosure"];
-  if (!isRecord(disclosure)) {
-    missing.push("aiGenerationDisclosure");
-  } else {
-    if (!nonEmptyString(disclosure["disclosureText"])) {
-      missing.push("aiGenerationDisclosure.disclosureText");
-    }
-    if (typeof disclosure["aiGenerated"] !== "boolean") {
-      missing.push("aiGenerationDisclosure.aiGenerated");
-    }
-  }
-
-  const compatibility = item["compatibility"];
-  if (!isRecord(compatibility)) {
-    missing.push("compatibility");
-  } else {
-    if (!nonEmptyString(compatibility["coreRange"])) {
-      missing.push("compatibility.coreRange");
-    }
-    if (!validProfiles(compatibility["profiles"])) {
-      missing.push("compatibility.profiles");
-    }
-  }
-
-  const commerce = item["commerce"];
-  if (!isRecord(commerce)) {
-    missing.push("commerce");
-  } else if (commerce["activation"] !== "inert") {
-    missing.push("commerce.activation");
-  }
-
-  return missing;
+  return normalizeCatalogMetadata(item).missing;
 }
 
 type HumanVerdictNormalization =
@@ -451,6 +576,19 @@ function normalizeModerationHistory(item: unknown): ModerationNormalization {
   const normalizedHistory: TransitionRecord[] = [];
   for (let index = 0; index < required.length; index += 1) {
     const expected = required[index];
+    if (!Object.hasOwn(history, index)) {
+      return {
+        ok: false,
+        refusal: {
+          ok: false,
+          code: "invalid-moderation-history",
+          message:
+            "Moderation history record " +
+            String(index) +
+            " is invalid or out of sequence.",
+        },
+      };
+    }
     const record = history[index];
     if (!isRecord(record)) {
       return {
@@ -529,26 +667,6 @@ function normalizeModerationHistory(item: unknown): ModerationNormalization {
   return {
     ok: true,
     moderation: { pipelineState, history: normalizedHistory },
-  };
-}
-
-function inertCommerceSnapshot(value: unknown): CommerceFields {
-  if (!isRecord(value)) return { activation: "inert" };
-
-  const rawPrice = value["price"];
-  const amount = isRecord(rawPrice) ? rawPrice["amount"] : undefined;
-  const currency = isRecord(rawPrice) ? rawPrice["currency"] : undefined;
-  const price =
-    typeof amount === "string" && typeof currency === "string"
-      ? { amount, currency }
-      : undefined;
-  const rawSku = value["sku"];
-  const sku = typeof rawSku === "string" ? rawSku : undefined;
-
-  return {
-    activation: "inert",
-    ...(price === undefined ? {} : { price }),
-    ...(sku === undefined ? {} : { sku }),
   };
 }
 
@@ -658,17 +776,6 @@ export function transitionCatalogItem(
     };
   }
 
-  if (to !== "delisted") {
-    const missing = missingMandatoryMetadata(itemSnapshot);
-    if (missing.length > 0) {
-      return {
-        ok: false,
-        code: "missing-mandatory-metadata",
-        message: "Mandatory catalog metadata missing: " + missing.join(", ") + ".",
-      };
-    }
-  }
-
   let humanVerdict: HumanCurationVerdict | undefined;
   if (to === "listed") {
     const verdict = normalizeHumanVerdict(rawHumanVerdict);
@@ -684,24 +791,28 @@ export function transitionCatalogItem(
       message: "Pipeline transition timestamp must be a valid date-time.",
     };
   }
+  const normalizedMetadata = normalizeCatalogMetadata(itemSnapshot, at);
+  if (to !== "delisted" && normalizedMetadata.missing.length > 0) {
+    return {
+      ok: false,
+      code: "missing-mandatory-metadata",
+      message:
+        "Mandatory catalog metadata missing: " +
+        normalizedMetadata.missing.join(", ") +
+        ".",
+    };
+  }
   const transition: TransitionRecord =
     humanVerdict === undefined
       ? { from, to, reason, at }
       : { from, to, reason, at, humanVerdict };
 
   const next: CatalogItem = {
-    schemaVersion: CATALOG_ITEM_SCHEMA_VERSION,
-    itemId: itemSnapshot.itemId,
-    assetPackage: itemSnapshot.assetPackage,
-    rights: itemSnapshot.rights,
-    provenance: itemSnapshot.provenance,
-    aiGenerationDisclosure: itemSnapshot.aiGenerationDisclosure,
-    compatibility: itemSnapshot.compatibility,
+    ...normalizedMetadata.metadata,
     moderation: {
       pipelineState: to,
       history: [...moderation.moderation.history, transition],
     },
-    commerce: inertCommerceSnapshot(itemSnapshot.commerce),
   };
 
   return { ok: true, item: next, transition };
