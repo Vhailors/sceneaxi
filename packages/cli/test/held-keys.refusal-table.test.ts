@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   ExitCode,
   SHIPPED_COMMAND_MAP,
@@ -82,6 +82,22 @@ describe("held-key refusal table (docs/held-key-enforcement.md), row by row", ()
         authority: unavailableEpochAuthority("sentinel unreachable (test double)"),
       }),
     });
+    expectHeldKeyRefusal(r, "currency-unavailable");
+  });
+
+  it("establishes currency before evaluating the local snapshot", () => {
+    const probe = vi.fn(() => ({
+      available: false as const,
+      reason: "sentinel unreachable (test double)",
+    }));
+    const r = runCli(["demo", "gated"], {
+      heldKeys: runtime({
+        snapshot: loadFixture("snapshot.schema-invalid.json"),
+        authority: { description: "ordered probe", probe },
+      }),
+    });
+
+    expect(probe).toHaveBeenCalledOnce();
     expectHeldKeyRefusal(r, "currency-unavailable");
   });
 
@@ -200,9 +216,13 @@ describe("held-key refusal table (docs/held-key-enforcement.md), row by row", ()
 
 describe("ungated verbs and the default runtime", () => {
   it("ungated verbs (explicit heldKeys: []) skip the currency check entirely", () => {
+    const probe = vi.fn(() => ({
+      available: false as const,
+      reason: "offline (test double)",
+    }));
     const offline = runtime({
       snapshot: undefined,
-      authority: unavailableEpochAuthority("offline (test double)"),
+      authority: { description: "must not be called", probe },
     });
     for (const path of [
       ["protocol", "version"],
@@ -212,6 +232,7 @@ describe("ungated verbs and the default runtime", () => {
       const r = runCli(path, { heldKeys: offline });
       expect(r.exitCode, path.join(" ")).toBe(ExitCode.OK);
     }
+    expect(probe).not.toHaveBeenCalled();
   });
 
   it("the default runtime is fail-closed: demo gated refuses out of the box (no sentinel wired)", () => {

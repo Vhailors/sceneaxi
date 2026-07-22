@@ -187,6 +187,40 @@ describe("registry snapshot generator (fixture-driven)", () => {
       generateRegistrySnapshot({ ...epoch2Export, registryEpoch: 1.5 }).ok,
     ).toBe(false);
   });
+
+  it("enforces RFC 3339 timestamps before emitting a snapshot", () => {
+    for (const exportedAt of [
+      "2026-07-20T12:00:00",
+      "2026-02-29T12:00:00Z",
+      "2026-07-20T12:00:00+24:00",
+      "2026-07-20T12:00:00Z\n",
+      "2026-07-20T12:00:00Z\r",
+      "2026-07-20T12:00:00Z\r\n",
+    ]) {
+      expect(
+        generateRegistrySnapshot({ ...epoch2Export, exportedAt }).ok,
+        exportedAt,
+      ).toBe(false);
+    }
+
+    expect(
+      generateRegistrySnapshot({
+        ...epoch2Export,
+        exportedAt: "2026-07-20T14:00:00+02:00",
+      }).ok,
+    ).toBe(true);
+
+    expect(
+      generateRegistrySnapshot({
+        ...epoch2Export,
+        holds: epoch2Export.holds.map((hold, index) =>
+          index === 0
+            ? { ...hold, registeredAt: "2026-07-18T09:00:00" }
+            : hold,
+        ),
+      }).ok,
+    ).toBe(false);
+  });
 });
 
 describe("snapshot validator (fail-closed)", () => {
