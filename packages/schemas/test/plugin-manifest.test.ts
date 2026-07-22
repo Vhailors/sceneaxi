@@ -175,8 +175,9 @@ const validateWithSchemaSubset = (value: unknown, schema: SchemaSubset) => {
       }
       const properties = definition.properties ?? {};
       for (const [field, fieldValue] of Object.entries(candidate)) {
-        if (Object.hasOwn(properties, field)) {
-          visit(fieldValue, properties[field]!, `${path}.${field}`);
+        const fieldDefinition = properties[field];
+        if (Object.hasOwn(properties, field) && fieldDefinition !== undefined) {
+          visit(fieldValue, fieldDefinition, `${path}.${field}`);
         } else if (definition.additionalProperties === false) {
           errors.push(`${path}: unexpected ${field}`);
         }
@@ -197,9 +198,10 @@ const validateWithSchemaSubset = (value: unknown, schema: SchemaSubset) => {
       ) {
         errors.push(`${path}: expected unique items`);
       }
-      if (definition.items !== undefined) {
+      const itemDefinition = definition.items;
+      if (itemDefinition !== undefined) {
         candidate.forEach((item, index) =>
-          visit(item, definition.items!, `${path}[${index}]`),
+          visit(item, itemDefinition, `${path}[${index}]`),
         );
       }
       return;
@@ -255,7 +257,7 @@ const missingRequiredFieldCases = requiredManifestFields.map((field) => {
   const value: Record<string, unknown> = {
     ...inertPluginManifestFixture(),
   };
-  delete value[field];
+  Reflect.deleteProperty(value, field);
   return {
     field,
     name: `missing required field ${field}`,

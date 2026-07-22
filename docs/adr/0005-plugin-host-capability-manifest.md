@@ -29,16 +29,18 @@ exactly those claimed capabilities.
 
 ### Manifest shape
 
-The normative JSON Schema and inferred TypeScript types will live in
-`@sceneaxi/schemas`. At design level, a v1 manifest contains:
+The normative JSON Schema and its aligned TypeScript contract live in
+`@sceneaxi/schemas`; its [package README](../../packages/schemas/README.md)
+lists the exported schema path and validation API. At design level, a v1
+manifest contains:
 
 | Field | Meaning |
 |---|---|
 | `$schema` | Canonical URI of the exact JSON Schema; tooling hint that must agree with `schemaVersion`. |
 | `schemaVersion` | Exact version of the plugin-manifest schema. V1 starts at `1.0.0`. |
-| `pluginId` | Stable public identity of the plugin package. It must be unique in one host load set. |
+| `pluginId` | Stable reverse-DNS public identity of the plugin package. It must be unique in one host load set. |
 | `pluginVersion` | Semver version of the plugin implementation. |
-| `hostApi` | Semver range of Plugin Host API versions the package accepts. |
+| `hostApi` | Plugin Host API compatibility range in the exact v1 dialect published by `@sceneaxi/schemas`. |
 | `registryVersion` | Exact capability-registry version against which the claims were authored. |
 | `entrypoint` | Package-relative module entrypoint; it must resolve inside the plugin package root. |
 | `capabilities` | A set of unique public capability ID strings. No hook names, inline port definitions, or engine-private imports may be declared here. |
