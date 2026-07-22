@@ -96,6 +96,24 @@ export type {
   DeliveryHandoffValidationResult,
   DeliveryTargetPlatform,
 } from "./delivery-handoff.js";
+
+export {
+  PLUGIN_MANIFEST_HOST_API_DIALECT,
+  PLUGIN_MANIFEST_PATH,
+  PLUGIN_MANIFEST_SCHEMA_URI,
+  PLUGIN_MANIFEST_SCHEMA_VERSION,
+  inertPluginManifestFixture,
+  parsePluginManifestText,
+  validatePluginManifest,
+} from "./plugin.js";
+export type {
+  PluginManifest,
+  PluginManifestDiagnostic,
+  PluginManifestDiagnosticCode,
+  PluginManifestValidationOk,
+  PluginManifestValidationRefuse,
+  PluginManifestValidationResult,
+} from "./plugin.js";
 export type {
   ApplyDiagnostic,
   ApplyDiagnosticCode,
@@ -147,6 +165,8 @@ export const contracts = Object.freeze({
   deliveryHandoff: "contracts/delivery-handoff.schema.json",
   /** Profile Conformance claim (sceneaxi#10) — shared suite + development consumers. */
   profileConformance: "contracts/profile-conformance.schema.json",
+  /** Plugin Manifest descriptor (sceneaxi#20 / ADR 0005) — shape only; host is #22. */
+  pluginManifest: "contracts/plugin-manifest.schema.json",
 });
 
 export const seam: PackageSeam = Object.freeze({

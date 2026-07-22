@@ -58,8 +58,11 @@ root. The seed registry may be empty, so the smallest honest example is inert:
 
 This manifest may validate and appear in the host's plugin list, but it exposes
 no behavior. Future examples replace the empty array only with IDs already in
-the public registry. The schema fixture for this example must validate in CI,
-so prose and executable contracts cannot drift.
+the public registry. The same inert value is exported as
+`inertPluginManifestFixture`, and its schema and parser validation run in CI.
+The JSON Schema and TypeScript validator own the exact field grammar; use the
+package-exported schema and validation API listed in the
+[`@sceneaxi/schemas` README](../packages/schemas/README.md).
 
 ## Isolation and non-goals
 

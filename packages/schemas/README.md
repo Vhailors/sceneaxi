@@ -14,6 +14,15 @@ Shared contracts home for SceneAxi. Zero internal dependencies by rule.
 See [`docs/delivery-handoff.md`](../../docs/delivery-handoff.md) for digest
 semantics and the SceneAxi-versus-adapter boundary.
 
+## Plugin Manifest (sceneaxi#20 / ADR 0005)
+
+- `contracts/plugin-manifest.schema.json` — v1 capability-manifest descriptor
+- TypeScript: `PluginManifest`, `validatePluginManifest`, `parsePluginManifestText`,
+  `inertPluginManifestFixture`
+- Shape-only contract; host runtime, registry seed, and isolation are #21–#23
+- Fixed package path: `sceneaxi.plugin.manifest.json` (`PLUGIN_MANIFEST_PATH`)
+- Agent overview: [`docs/plugins.md`](../../docs/plugins.md)
+
 ## Profile Conformance (sceneaxi#10)
 
 - `contracts/profile-conformance.schema.json` — versioned claim document

@@ -29,8 +29,10 @@ exactly those claimed capabilities.
 
 ### Manifest shape
 
-The normative JSON Schema and inferred TypeScript types will live in
-`@sceneaxi/schemas`. At design level, a v1 manifest contains:
+The normative JSON Schema and its aligned TypeScript contract live in
+`@sceneaxi/schemas`; its [package README](../../packages/schemas/README.md)
+lists the exported schema path and validation API. At design level, a v1
+manifest contains:
 
 | Field | Meaning |
 |---|---|

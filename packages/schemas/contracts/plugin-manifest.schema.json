@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/plugin-manifest/v1",
+  "$comment": "$id names the contract document; manifest $schema names the exact public schema version.",
+  "title": "SceneAxi Plugin Manifest (v1)",
+  "description": "Versioned capability-manifest descriptor for SceneAxi plugins (ADR 0005). Read as data from the fixed package-root path sceneaxi.plugin.manifest.json; never obtained by importing plugin code. Claims only public capability IDs present in the exact registryVersion named here. Empty capabilities is valid and inert. Unknown properties refuse. Host runtime and registry seed are separate contracts (#21+).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "pluginId",
+    "pluginVersion",
+    "hostApi",
+    "registryVersion",
+    "entrypoint",
+    "capabilities"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://sceneaxi.dev/schemas/plugin-manifest-1.0.0.json",
+      "description": "Canonical URI of this exact JSON Schema; must agree with schemaVersion."
+    },
+    "schemaVersion": {
+      "const": "1.0.0",
+      "description": "Exact plugin-manifest schema version. V1 is 1.0.0; mismatches refuse."
+    },
+    "pluginId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z0-9][a-z0-9-]*)+(?![\\s\\S])",
+      "description": "Stable public identity of the plugin package (reverse-DNS). Unique within one host load set."
+    },
+    "pluginVersion": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?(?![\\s\\S])",
+      "description": "Semver version of the plugin implementation."
+    },
+    "hostApi": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?:(?:\\^|~|>=|<=|>|<|=)?(?:(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)(?:-(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(?:\\+[0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*)?|(?:[xX*]|(?:0|[1-9]\\d*)(?:\\.(?:[xX*]|(?:0|[1-9]\\d*)(?:\\.[xX*])?))?))(?: (?:\\^|~|>=|<=|>|<|=)?(?:(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)(?:-(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(?:\\+[0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*)?|(?:[xX*]|(?:0|[1-9]\\d*)(?:\\.(?:[xX*]|(?:0|[1-9]\\d*)(?:\\.[xX*])?))?)))*|(?:(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)(?:-(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(?:\\+[0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*)?|(?:0|[1-9]\\d*)(?:\\.(?:0|[1-9]\\d*))?) - (?:(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)(?:-(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(?:\\+[0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*)?|(?:0|[1-9]\\d*)(?:\\.(?:0|[1-9]\\d*))?))(?: \\|\\| (?:(?:\\^|~|>=|<=|>|<|=)?(?:(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)(?:-(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(?:\\+[0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*)?|(?:[xX*]|(?:0|[1-9]\\d*)(?:\\.(?:[xX*]|(?:0|[1-9]\\d*)(?:\\.[xX*])?))?))(?: (?:\\^|~|>=|<=|>|<|=)?(?:(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)(?:-(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(?:\\+[0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*)?|(?:[xX*]|(?:0|[1-9]\\d*)(?:\\.(?:[xX*]|(?:0|[1-9]\\d*)(?:\\.[xX*])?))?)))*|(?:(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)(?:-(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(?:\\+[0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*)?|(?:0|[1-9]\\d*)(?:\\.(?:0|[1-9]\\d*))?) - (?:(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)(?:-(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(?:\\+[0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*)?|(?:0|[1-9]\\d*)(?:\\.(?:0|[1-9]\\d*))?)))*(?![\\s\\S])",
+      "description": "V1 range dialect: space-separated comparator terms over full semver, partial, or x-range versions; OR joined by ' || '; or simple hyphen ranges 'A - B' over full or partial versions."
+    },
+    "registryVersion": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?(?![\\s\\S])",
+      "description": "Exact capability-registry version against which the claims were authored."
+    },
+    "entrypoint": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?:\\./)?(?:(?!\\.\\.?(?:/|(?![\\s\\S])))[A-Za-z0-9._-]+/)*(?!\\.\\.?(?:/|(?![\\s\\S])))[A-Za-z0-9._-]+(?![\\s\\S])",
+      "description": "Package-relative module entrypoint. Must resolve inside the plugin package root; absolute paths and parent-segment escapes refuse."
+    },
+    "capabilities": {
+      "type": "array",
+      "uniqueItems": true,
+      "description": "Set of unique public capability ID strings claimed by this plugin. Empty is valid and inert. Unknown IDs (absent from the named registry) are a host concern, not a schema-shape concern.",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}
