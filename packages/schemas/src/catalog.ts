@@ -461,9 +461,10 @@ function normalizeCatalogMetadata(item: unknown): {
 }
 
 /**
- * Fail-closed mandatory-metadata check used before leaving intake quarantine
- * (screening gate). Aligns with rights/provenance/AI-disclosure screening in
- * the program catalog pipeline; deeper #48 controls stay factories-helpers SoT.
+ * Fail-closed mandatory-metadata check used at every transition except the
+ * explicit metadata-unavailable delisting path. Aligns with
+ * rights/provenance/AI-disclosure screening in the program catalog pipeline;
+ * deeper #48 controls stay factories-helpers SoT.
  */
 export function missingMandatoryMetadata(item: unknown): string[] {
   return normalizeCatalogMetadata(item).missing;
@@ -666,6 +667,8 @@ function normalizeModerationHistory(item: unknown): ModerationNormalization {
     const rawHumanVerdict = record["humanVerdict"];
     if (
       expected === undefined ||
+      !isPipelineState(from) ||
+      !isPipelineState(to) ||
       from !== expected[0] ||
       to !== expected[1] ||
       !nonEmptyString(reason) ||
@@ -727,7 +730,7 @@ function normalizeModerationHistory(item: unknown): ModerationNormalization {
 
 /**
  * Attempt a fail-closed pipeline transition. Every successful transition is
- * recorded with a reason on the item's moderation history.
+ * recorded with a reason on the returned item or tombstone's moderation history.
  */
 export function transitionCatalogItem(
   item: CatalogItem,
