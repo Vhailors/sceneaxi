@@ -22,6 +22,7 @@ import {
   contentHash,
   createDocument,
   createProposal,
+  editDirect,
   propose,
   proposeMany,
   recoverIncompleteApplies,
@@ -609,6 +610,32 @@ describe("E1 apply journal", () => {
     expect(readFileSync(path, "utf8")).toBe("after\n");
   });
 
+  it("reclaims stale locks for long document names", () => {
+    const cwd = fixtureDir();
+    const path = join(cwd, `${"a".repeat(100)}.json`);
+    writeFileSync(path, "before\n", "utf8");
+    const lockSet = acquireAtomicWriteLocks([path]);
+    const lockName = readdirSync(cwd).find((name) =>
+      name.startsWith(".sceneaxi-lock-"),
+    );
+    expect(lockName).toBeDefined();
+    releaseAtomicWriteLocks(lockSet);
+    if (lockName === undefined) return;
+    writeFileSync(
+      join(cwd, lockName),
+      JSON.stringify({
+        pid: process.pid,
+        identity: "stale-reused-pid",
+        token: "stale",
+      }),
+      "utf8",
+    );
+
+    atomicWriteAll([{ path, contents: "after\n" }]);
+
+    expect(readFileSync(path, "utf8")).toBe("after\n");
+  });
+
   it("recovers an interrupted stale-lock reclamation", () => {
     const cwd = fixtureDir();
     const path = join(cwd, "scene.json");
@@ -852,6 +879,25 @@ describe("E1 apply journal", () => {
         state: string;
       }).state,
     ).toBe("prepared");
+    const pendingBytes = readFileSync(path, "utf8");
+
+    const direct = editDirect({
+      cwd,
+      documentPath: "scene.json",
+      jsonPointer: "/data/x",
+      newValue: 3,
+    });
+    expect(direct.ok).toBe(false);
+
+    const written = writeDocumentFile(
+      path,
+      createDocument({ id: "scene", data: { x: 4 } }),
+    );
+    expect(written.ok).toBe(false);
+
+    const undone = undoLastApply({ cwd });
+    expect(undone.ok).toBe(false);
+    expect(readFileSync(path, "utf8")).toBe(pendingBytes);
 
     rmdirSync(journalPath);
     expect(recoverIncompleteApplies({ cwd }).ok).toBe(true);

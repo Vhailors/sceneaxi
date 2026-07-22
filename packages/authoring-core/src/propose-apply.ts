@@ -7,7 +7,7 @@
  * - Atomic tmp-then-rename writes; multi-document all-or-nothing.
  */
 
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import {
   createProposal,
   parseDocumentText,
@@ -29,7 +29,6 @@ import {
   AtomicWriteError,
   AtomicWriteLockError,
   atomicWriteAll,
-  atomicWriteFile,
   canonicalPath,
   fileExists,
   readTextFile,
@@ -46,6 +45,8 @@ import {
   prepareApplyJournal,
   recoverPreparedApply,
   recoverIncompleteApplies,
+  journalRecoveryPendingDiagnostics,
+  writeCanonicalDocument,
 } from "./apply-journal.js";
 
 export type ProposeInput = {
@@ -124,7 +125,10 @@ function jsonValuesEqual(left: unknown, right: unknown): boolean {
 
 function recoveryDiagnostics(cwd: string): readonly ApplyDiagnostic[] | null {
   const recovered = recoverIncompleteApplies({ cwd });
-  return recovered.ok ? null : recovered.diagnostics;
+  if (!recovered.ok) return recovered.diagnostics;
+  return recovered.journalRecoveryPending === true
+    ? journalRecoveryPendingDiagnostics()
+    : null;
 }
 
 function loadDocument(
@@ -507,9 +511,13 @@ export function editDirect(input: DirectEditInput): DirectEditResult {
   }
 
   try {
-    atomicWriteFile(abs, mutated.text, {
+    const written = writeCanonicalDocument({
+      cwd,
+      path: abs,
+      contents: mutated.text,
       expectedContentHash: loaded.hash,
     });
+    if (!written.ok) return written;
   } catch (error) {
     if (error instanceof AtomicWriteConflictError) {
       const current = error.currentContentHash ?? "missing";
@@ -940,10 +948,16 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
           return {
             ok: true,
             appliedPaths: plans.map((plan) => plan.documentPath),
-            journalRecoveryPending: true,
+            ...(recovered.journalRecoveryPending === true
+              ? { journalRecoveryPending: true }
+              : {}),
           };
         }
-        return recovered;
+        return {
+          ok: true,
+          appliedPaths: plans.map((plan) => plan.documentPath),
+          journalRecoveryPending: true,
+        };
       }
       if (error instanceof AtomicWriteConflictError) {
         const plan = plans.find((candidate) => candidate.path === error.path);
@@ -1043,6 +1057,7 @@ export function readProposalFile(path: string): {
 export function writeDocumentFile(
   path: string,
   document: SceneDocument,
+  options: { readonly cwd?: string } = {},
 ):
   | { ok: true; contentHash: string }
   | { ok: false; diagnostics: readonly ApplyDiagnostic[] } {
@@ -1063,7 +1078,12 @@ export function writeDocumentFile(
     };
   }
   const text = serializeDocument(validated.document);
-  atomicWriteFile(path, text);
+  const written = writeCanonicalDocument({
+    cwd: options.cwd ?? dirname(resolve(path)),
+    path,
+    contents: text,
+  });
+  if (!written.ok) return written;
   return { ok: true, contentHash: contentHash(text) };
 }
 

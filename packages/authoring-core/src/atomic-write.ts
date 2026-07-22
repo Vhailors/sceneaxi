@@ -172,9 +172,11 @@ function processIsAlive(pid: number): boolean {
   }
 }
 
+type ProcessIdentityMethod = "linux-proc" | "posix-ps" | "windows-cim";
+
 function processIdentity(
   pid: number,
-  method?: "linux-proc" | "posix-ps" | "windows-cim",
+  method?: ProcessIdentityMethod,
 ): string | null {
   if (!Number.isInteger(pid) || pid <= 0) return null;
   if (
@@ -237,6 +239,25 @@ function processIdentity(
 
 const CURRENT_PROCESS_IDENTITY = processIdentity(process.pid);
 
+function processIdentityMethod(
+  identity: string,
+): ProcessIdentityMethod | undefined {
+  return identity.startsWith("linux-proc:")
+    ? "linux-proc"
+    : identity.startsWith("windows-cim:")
+      ? "windows-cim"
+      : identity.startsWith("posix-ps:")
+        ? "posix-ps"
+        : undefined;
+}
+
+function identityFingerprint(identity: string): string {
+  return createHash("sha256")
+    .update(identity, "utf8")
+    .digest("hex")
+    .slice(0, 16);
+}
+
 type LockOwner = {
   readonly pid: number;
   readonly identity: string;
@@ -276,41 +297,76 @@ function lockOwnerIsStale(owner: LockOwner): boolean {
     return owner.identity !== CURRENT_PROCESS_IDENTITY;
   }
   if (!processIsAlive(owner.pid)) return true;
-  const method = owner.identity.startsWith("linux-proc:")
-    ? "linux-proc"
-    : owner.identity.startsWith("windows-cim:")
-      ? "windows-cim"
-      : owner.identity.startsWith("posix-ps:")
-        ? "posix-ps"
-        : undefined;
+  const method = processIdentityMethod(owner.identity);
   if (method === undefined) return false;
   const liveIdentity = processIdentity(owner.pid, method);
   return liveIdentity !== null && liveIdentity !== owner.identity;
 }
 
 function reclaimWorkPrefix(lockPath: string): string {
-  return `${basename(lockPath)}.reclaim.working-`;
+  const digest = createHash("sha256")
+    .update(lockPath, "utf8")
+    .digest("hex")
+    .slice(0, 16);
+  return `.sceneaxi-reclaim-working-${digest}-`;
 }
 
-function reclaimWorkOwner(lockPath: string, name: string): LockOwner | null {
+type ReclaimWorkOwner = {
+  readonly pid: number;
+  readonly method: ProcessIdentityMethod;
+  readonly identityFingerprint: string;
+};
+
+function reclaimMethodCode(method: ProcessIdentityMethod): "l" | "p" | "w" {
+  return method === "linux-proc" ? "l" : method === "posix-ps" ? "p" : "w";
+}
+
+function reclaimMethodFromCode(
+  code: string,
+): ProcessIdentityMethod | undefined {
+  return code === "l"
+    ? "linux-proc"
+    : code === "p"
+      ? "posix-ps"
+      : code === "w"
+        ? "windows-cim"
+        : undefined;
+}
+
+function reclaimWorkOwner(
+  lockPath: string,
+  name: string,
+): ReclaimWorkOwner | null {
   const prefix = reclaimWorkPrefix(lockPath);
   if (!name.startsWith(prefix)) return null;
-  const match = /^(\d+)-([A-Za-z0-9_-]+)-([0-9a-f]{32})$/.exec(
+  const match = /^(\d+)-([lpw])-([0-9a-f]{16})-([0-9a-f]{32})$/.exec(
     name.slice(prefix.length),
   );
   if (match === null) return null;
   const pid = Number(match[1]);
-  const encodedIdentity = match[2] as string;
-  const identity = Buffer.from(encodedIdentity, "base64url").toString("utf8");
-  if (
-    !Number.isInteger(pid) ||
-    pid <= 0 ||
-    identity.length === 0 ||
-    Buffer.from(identity, "utf8").toString("base64url") !== encodedIdentity
-  ) {
-    return null;
+  const method = reclaimMethodFromCode(match[2] as string);
+  if (!Number.isInteger(pid) || pid <= 0 || method === undefined) return null;
+  return {
+    pid,
+    method,
+    identityFingerprint: match[3] as string,
+  };
+}
+
+function reclaimWorkOwnerIsStale(owner: ReclaimWorkOwner): boolean {
+  if (owner.pid === process.pid) {
+    return (
+      CURRENT_PROCESS_IDENTITY !== null &&
+      identityFingerprint(CURRENT_PROCESS_IDENTITY) !==
+        owner.identityFingerprint
+    );
   }
-  return { pid, identity, token: match[3] as string };
+  if (!processIsAlive(owner.pid)) return true;
+  const liveIdentity = processIdentity(owner.pid, owner.method);
+  return (
+    liveIdentity !== null &&
+    identityFingerprint(liveIdentity) !== owner.identityFingerprint
+  );
 }
 
 function clearStaleReclaimWork(lockPath: string): boolean {
@@ -325,7 +381,7 @@ function clearStaleReclaimWork(lockPath: string): boolean {
   let removed = false;
   for (const name of names) {
     const owner = reclaimWorkOwner(lockPath, name);
-    if (owner === null || !lockOwnerIsStale(owner)) return false;
+    if (owner === null || !reclaimWorkOwnerIsStale(owner)) return false;
     try {
       unlinkSync(join(directory, name));
       removed = true;
@@ -354,6 +410,8 @@ function removeStaleLock(lockPath: string): boolean {
   ) {
     return false;
   }
+  const currentMethod = processIdentityMethod(CURRENT_PROCESS_IDENTITY);
+  if (currentMethod === undefined) return false;
   const claimPath = `${lockPath}.reclaim`;
   if (!existsSync(claimPath)) {
     try {
@@ -367,10 +425,13 @@ function removeStaleLock(lockPath: string): boolean {
       if (code !== "EEXIST") return false;
     }
   }
-  const workPath = `${claimPath}.working-${String(process.pid)}-${Buffer.from(
-    CURRENT_PROCESS_IDENTITY,
-    "utf8",
-  ).toString("base64url")}-${randomBytes(16).toString("hex")}`;
+  const workPath = join(
+    dirname(lockPath),
+    `${reclaimWorkPrefix(lockPath)}${String(process.pid)}-${reclaimMethodCode(
+      currentMethod,
+    )}-${identityFingerprint(CURRENT_PROCESS_IDENTITY)}-${randomBytes(16)
+      .toString("hex")}`,
+  );
   try {
     renameSync(claimPath, workPath);
     syncDirectory(dirname(lockPath));

@@ -72,6 +72,18 @@ export type RecoveryOperationResult =
   | RecoveryOperationOk
   | { readonly ok: false; readonly diagnostics: readonly ApplyDiagnostic[] };
 
+export function journalRecoveryPendingDiagnostics(): readonly ApplyDiagnostic[] {
+  return [
+    {
+      code: "apply-in-progress",
+      message:
+        "Canonical documents are consistent, but journal finalization is pending.",
+      reReadHint:
+        "Resolve the journal storage error and complete recovery before another authoring operation.",
+    },
+  ];
+}
+
 const TRANSACTION_ID_RE = /^\d{13}-[0-9a-f]{16}$/;
 const JOURNAL_KEYS = new Set([
   "schemaVersion",
@@ -598,6 +610,78 @@ export function recoverIncompleteApplies(
   }
 }
 
+export function writeCanonicalDocument(input: {
+  readonly cwd: string;
+  readonly path: string;
+  readonly contents: string;
+  readonly expectedContentHash?: string;
+}):
+  | { readonly ok: true }
+  | { readonly ok: false; readonly diagnostics: readonly ApplyDiagnostic[] } {
+  let operationLock: AtomicWriteLockSet;
+  try {
+    operationLock = acquireAtomicWriteLocks([
+      journalOperationResource(input.cwd),
+    ]);
+  } catch (error) {
+    if (error instanceof AtomicWriteLockError) {
+      return {
+        ok: false,
+        diagnostics: [
+          {
+            code: "apply-in-progress",
+            message: "Another apply or journal operation is in progress.",
+            reReadHint: "Retry after the active authoring operation completes.",
+          },
+        ],
+      };
+    }
+    throw error;
+  }
+  try {
+    const recovered = recoverIncompleteAppliesLocked(input.cwd);
+    if (!recovered.ok) return recovered;
+    if (recovered.journalRecoveryPending === true) {
+      return {
+        ok: false,
+        diagnostics: journalRecoveryPendingDiagnostics(),
+      };
+    }
+
+    let documentLock: AtomicWriteLockSet;
+    try {
+      documentLock = acquireAtomicWriteLocks([input.path]);
+    } catch (error) {
+      if (error instanceof AtomicWriteLockError) {
+        return {
+          ok: false,
+          diagnostics: [
+            {
+              code: "apply-in-progress",
+              message: "Another document write is in progress.",
+              reReadHint: "Retry after the active authoring operation completes.",
+            },
+          ],
+        };
+      }
+      throw error;
+    }
+    try {
+      atomicWriteFile(input.path, input.contents, {
+        ...(input.expectedContentHash === undefined
+          ? {}
+          : { expectedContentHash: input.expectedContentHash }),
+        lockSet: documentLock,
+      });
+    } finally {
+      releaseAtomicWriteLocks(documentLock);
+    }
+    return { ok: true };
+  } finally {
+    releaseAtomicWriteLocks(operationLock);
+  }
+}
+
 /** Restore the exact prior bytes from the most recent completed apply. */
 export function undoLastApply(
   input: { readonly cwd?: string } = {},
@@ -635,6 +719,12 @@ export function undoLastApply(
   try {
     const recovered = recoverIncompleteAppliesLocked(cwd);
     if (!recovered.ok) return recovered;
+    if (recovered.journalRecoveryPending === true) {
+      return {
+        ok: false,
+        diagnostics: journalRecoveryPendingDiagnostics(),
+      };
+    }
     const journals = readJournals(cwd);
     if (!journals.ok) return journals;
 
