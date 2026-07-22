@@ -21,9 +21,11 @@ remain independent and integrations remain light.
 ## Decision
 
 SceneAxi v1 has a first-class **capability-manifest Plugin Host**. A plugin is
-an isolated package that presents one versioned manifest. The manifest may
-claim only IDs already present in SceneAxi's public capability registry, and
-the package may implement exactly those claimed capabilities.
+an isolated package that presents one versioned manifest as a separately
+inspectable data descriptor. The host reads that descriptor without importing
+or evaluating the plugin entrypoint. The manifest may claim only IDs already
+present in SceneAxi's public capability registry, and the package may implement
+exactly those claimed capabilities.
 
 ### Manifest shape
 
@@ -63,27 +65,34 @@ quietly create a renderer, physics, storage, or other internal-library port.
 
 The host receives an explicit set of plugin package locators; it never scans
 the filesystem, environment, or dependency graph for implicit plugins.
-Candidates are evaluated in stable lexical locator order, and public listings
+Candidates are processed in stable lexical locator order, and public listings
 are sorted by `pluginId`, then `pluginVersion`, then capability ID.
 
-For each candidate, the host applies this precedence before exposing an
-implementation:
+For each candidate, the host first applies this pre-evaluation descriptor
+phase:
 
 1. Parse the manifest and validate it against the exact supported schema.
 2. Require a supported `schemaVersion`, a compatible `hostApi` range, and the
    exact loaded `registryVersion`.
-3. Refuse duplicate plugin IDs, duplicate capability claims, and every
-   capability ID absent from that registry.
+3. Refuse a `pluginId` repeated in the host load set, a capability ID repeated
+   within this manifest, and every capability ID absent from that registry.
 4. Resolve `entrypoint` inside the package root and enforce the package
-   isolation rules below before evaluating plugin code.
-5. Require the implementation table to match the declared capability set
-   exactly. Missing and undeclared implementations both refuse.
+   isolation rules below using only the descriptor and inspectable package
+   metadata or artifacts. If an isolation rule cannot be established without
+   module evaluation, the candidate refuses.
+
+Failure in this phase refuses the candidate without evaluating its entrypoint.
+Only after every pre-evaluation check passes does the host intentionally load
+and evaluate the entrypoint. It then performs one post-evaluation integrity
+check before exposure: the implementation table must match the declared
+capability set exactly. Missing and undeclared implementations both refuse.
 
 Every refusal is reported with a stable machine-readable reason and identifies
-the candidate without evaluating or exposing it. One refused package does not
-make its capabilities partially available. Multiple implementations of the
-same registered capability may coexist; the host does not choose an implicit
-winner, and callers address an implementation by `pluginId`.
+the candidate. A post-evaluation integrity refusal never exposes the evaluated
+implementation, and no refused package makes any of its capabilities partially
+available. Repeating a capability ID within one manifest refuses; separate
+plugins may implement the same registered capability. The host does not choose
+an implicit winner, and callers address an implementation by `pluginId`.
 
 ### Package isolation
 

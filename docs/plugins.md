@@ -13,8 +13,14 @@ engine internals.
    the manifest.
 3. Implement exactly that declared set behind one package-local entrypoint.
 4. Expect deterministic refusal for unknown capabilities, incompatible
-   versions, duplicate identities or claims, entrypoint escape, forbidden
-   imports, or declaration/implementation mismatch.
+   versions, plugin IDs repeated in one load set, capability IDs repeated in
+   one manifest, entrypoint escape, forbidden imports, or
+   declaration/implementation mismatch.
+
+The host decides descriptor and isolation refusals before evaluating the
+entrypoint. Only a candidate that passes those checks is intentionally loaded;
+an implementation-table mismatch then refuses as a post-evaluation integrity
+failure before any capability is exposed.
 
 If the registry does not contain the capability you need, stop. Adding a
 manifest string is not how a capability is created. Propose a public semantic
