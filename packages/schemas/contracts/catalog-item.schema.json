@@ -16,6 +16,104 @@
     "commerce"
   ],
   "additionalProperties": false,
+  "$defs": {
+    "dateTime": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|02-(?:0[1-9]|1\\d|2[0-8])))|(?:(?:\\d{2}(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29))[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)(?![\\s\\S])"
+    },
+    "transitionRecord": {
+      "type": "object",
+      "required": ["from", "to", "reason", "at"],
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "type": "string",
+          "enum": ["intake", "screening", "curation", "listed", "delisted"]
+        },
+        "to": {
+          "type": "string",
+          "enum": ["intake", "screening", "curation", "listed", "delisted"]
+        },
+        "reason": { "type": "string", "minLength": 1, "pattern": "\\S" },
+        "at": { "$ref": "#/$defs/dateTime" },
+        "humanVerdict": {
+          "type": "object",
+          "description": "Human curation gate representation only \u2014 never simulated by the pipeline.",
+          "required": ["kind", "decision", "curatorId", "rationale", "recordedAt"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "human" },
+            "decision": { "type": "string", "enum": ["approve", "reject"] },
+            "curatorId": { "type": "string", "minLength": 1, "pattern": "\\S" },
+            "rationale": { "type": "string", "minLength": 1, "pattern": "\\S" },
+            "recordedAt": { "$ref": "#/$defs/dateTime" }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "to": { "const": "listed" } },
+            "required": ["to"]
+          },
+          "then": {
+            "required": ["humanVerdict"],
+            "properties": {
+              "humanVerdict": {
+                "properties": { "decision": { "const": "approve" } }
+              }
+            }
+          },
+          "else": { "not": { "required": ["humanVerdict"] } }
+        }
+      ]
+    },
+    "intakeToScreening": {
+      "allOf": [
+        { "$ref": "#/$defs/transitionRecord" },
+        {
+          "properties": {
+            "from": { "const": "intake" },
+            "to": { "const": "screening" }
+          }
+        }
+      ]
+    },
+    "screeningToCuration": {
+      "allOf": [
+        { "$ref": "#/$defs/transitionRecord" },
+        {
+          "properties": {
+            "from": { "const": "screening" },
+            "to": { "const": "curation" }
+          }
+        }
+      ]
+    },
+    "curationToListed": {
+      "allOf": [
+        { "$ref": "#/$defs/transitionRecord" },
+        {
+          "properties": {
+            "from": { "const": "curation" },
+            "to": { "const": "listed" }
+          }
+        }
+      ]
+    },
+    "listedToDelisted": {
+      "allOf": [
+        { "$ref": "#/$defs/transitionRecord" },
+        {
+          "properties": {
+            "from": { "const": "listed" },
+            "to": { "const": "delisted" }
+          }
+        }
+      ]
+    }
+  },
   "properties": {
     "schemaVersion": { "const": 1 },
     "itemId": {
@@ -35,7 +133,7 @@
         },
         "contentHash": {
           "type": "string",
-          "pattern": "^sha256:[0-9a-f]{64}$"
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
         }
       }
     },
@@ -56,10 +154,10 @@
       "additionalProperties": false,
       "properties": {
         "origin": { "type": "string", "minLength": 1, "pattern": "\\S" },
-        "ingestedAt": { "type": "string", "minLength": 1, "pattern": "\\S" },
+        "ingestedAt": { "$ref": "#/$defs/dateTime" },
         "sourceDigest": {
           "type": "string",
-          "pattern": "^sha256:[0-9a-f]{64}$"
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
         }
       }
     },
@@ -105,55 +203,92 @@
         },
         "history": {
           "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["from", "to", "reason", "at"],
-            "additionalProperties": false,
+          "items": { "$ref": "#/$defs/transitionRecord" }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "pipelineState": { "const": "intake" } },
+            "required": ["pipelineState"]
+          },
+          "then": {
+            "properties": { "history": { "maxItems": 0 } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "pipelineState": { "const": "screening" } },
+            "required": ["pipelineState"]
+          },
+          "then": {
             "properties": {
-              "from": {
-                "type": "string",
-                "enum": ["intake", "screening", "curation", "listed", "delisted"]
-              },
-              "to": {
-                "type": "string",
-                "enum": ["intake", "screening", "curation", "listed", "delisted"]
-              },
-              "reason": { "type": "string", "minLength": 1, "pattern": "\\S" },
-              "at": { "type": "string", "minLength": 1, "pattern": "\\S" },
-              "humanVerdict": {
-                "type": "object",
-                "description": "Human curation gate representation only \u2014 never simulated by the pipeline.",
-                "required": ["kind", "decision", "curatorId", "rationale", "recordedAt"],
-                "additionalProperties": false,
-                "properties": {
-                  "kind": { "const": "human" },
-                  "decision": { "type": "string", "enum": ["approve", "reject"] },
-                  "curatorId": { "type": "string", "minLength": 1, "pattern": "\\S" },
-                  "rationale": { "type": "string", "minLength": 1, "pattern": "\\S" },
-                  "recordedAt": { "type": "string", "minLength": 1, "pattern": "\\S" }
-                }
+              "history": {
+                "minItems": 1,
+                "maxItems": 1,
+                "prefixItems": [{ "$ref": "#/$defs/intakeToScreening" }]
               }
-            },
-            "allOf": [
-              {
-                "if": {
-                  "properties": { "to": { "const": "listed" } },
-                  "required": ["to"]
-                },
-                "then": {
-                  "required": ["humanVerdict"],
-                  "properties": {
-                    "humanVerdict": {
-                      "properties": { "decision": { "const": "approve" } }
-                    }
-                  }
-                },
-                "else": { "not": { "required": ["humanVerdict"] } }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "pipelineState": { "const": "curation" } },
+            "required": ["pipelineState"]
+          },
+          "then": {
+            "properties": {
+              "history": {
+                "minItems": 2,
+                "maxItems": 2,
+                "prefixItems": [
+                  { "$ref": "#/$defs/intakeToScreening" },
+                  { "$ref": "#/$defs/screeningToCuration" }
+                ]
               }
-            ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "pipelineState": { "const": "listed" } },
+            "required": ["pipelineState"]
+          },
+          "then": {
+            "properties": {
+              "history": {
+                "minItems": 3,
+                "maxItems": 3,
+                "prefixItems": [
+                  { "$ref": "#/$defs/intakeToScreening" },
+                  { "$ref": "#/$defs/screeningToCuration" },
+                  { "$ref": "#/$defs/curationToListed" }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "pipelineState": { "const": "delisted" } },
+            "required": ["pipelineState"]
+          },
+          "then": {
+            "properties": {
+              "history": {
+                "minItems": 4,
+                "maxItems": 4,
+                "prefixItems": [
+                  { "$ref": "#/$defs/intakeToScreening" },
+                  { "$ref": "#/$defs/screeningToCuration" },
+                  { "$ref": "#/$defs/curationToListed" },
+                  { "$ref": "#/$defs/listedToDelisted" }
+                ]
+              }
+            }
           }
         }
-      }
+      ]
     },
     "commerce": {
       "type": "object",

@@ -25,6 +25,9 @@ export const CATALOG_POLICY_CITES = Object.freeze({
 /** Contract schema version for Catalog Item. */
 export const CATALOG_ITEM_SCHEMA_VERSION = 1 as const;
 
+export const CATALOG_DATE_TIME_PATTERN =
+  "^(?:(?:\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|02-(?:0[1-9]|1\\d|2[0-8])))|(?:(?:\\d{2}(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29))[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)(?![\\s\\S])";
+
 /**
  * Fail-closed pipeline states.
  * intake (quarantine) → screening → curation → listed → delisted
@@ -158,7 +161,8 @@ export type TransitionRequest = {
   readonly humanVerdict?: HumanCurationVerdict;
 };
 
-const SHA256_RE = /^sha256:[0-9a-f]{64}$/;
+const DATE_TIME_RE = new RegExp(CATALOG_DATE_TIME_PATTERN);
+const SHA256_RE = /^sha256:[0-9a-f]{64}(?![\s\S])/;
 const ID_RE = /^[a-z0-9][a-z0-9-]*(?![\s\S])/;
 
 function nonEmptyString(value: unknown): value is string {
@@ -167,6 +171,22 @@ function nonEmptyString(value: unknown): value is string {
 
 function validId(value: unknown): value is string {
   return typeof value === "string" && ID_RE.test(value);
+}
+
+function validSha256(value: unknown): value is string {
+  return typeof value === "string" && SHA256_RE.test(value);
+}
+
+function validDateTime(value: unknown): value is string {
+  return typeof value === "string" && DATE_TIME_RE.test(value);
+}
+
+function validProfiles(value: unknown): value is readonly string[] {
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    Array.from(value).every((profile) => validId(profile))
+  );
 }
 
 /**
@@ -180,14 +200,16 @@ export function missingMandatoryMetadata(item: CatalogItem): string[] {
   if (!validId(item.assetPackage.packageId)) {
     missing.push("assetPackage.packageId");
   }
-  if (!SHA256_RE.test(item.assetPackage.contentHash)) {
+  if (!validSha256(item.assetPackage.contentHash)) {
     missing.push("assetPackage.contentHash");
   }
   if (!nonEmptyString(item.rights.license)) missing.push("rights.license");
   if (!nonEmptyString(item.rights.rightsHolder)) missing.push("rights.rightsHolder");
   if (!nonEmptyString(item.provenance.origin)) missing.push("provenance.origin");
-  if (!nonEmptyString(item.provenance.ingestedAt)) missing.push("provenance.ingestedAt");
-  if (!SHA256_RE.test(item.provenance.sourceDigest)) {
+  if (!validDateTime(item.provenance.ingestedAt)) {
+    missing.push("provenance.ingestedAt");
+  }
+  if (!validSha256(item.provenance.sourceDigest)) {
     missing.push("provenance.sourceDigest");
   }
   if (!nonEmptyString(item.aiGenerationDisclosure.disclosureText)) {
@@ -196,11 +218,7 @@ export function missingMandatoryMetadata(item: CatalogItem): string[] {
   if (!nonEmptyString(item.compatibility.coreRange)) {
     missing.push("compatibility.coreRange");
   }
-  if (
-    !Array.isArray(item.compatibility.profiles) ||
-    item.compatibility.profiles.length === 0 ||
-    item.compatibility.profiles.some((profile) => !validId(profile))
-  ) {
+  if (!validProfiles(item.compatibility.profiles)) {
     missing.push("compatibility.profiles");
   }
   if (item.commerce.activation !== "inert") {
@@ -234,10 +252,7 @@ function validateHumanVerdict(
       message: "Human verdict requires non-empty curatorId and rationale.",
     };
   }
-  if (
-    !nonEmptyString(verdict.recordedAt) ||
-    !Number.isFinite(Date.parse(verdict.recordedAt))
-  ) {
+  if (!validDateTime(verdict.recordedAt)) {
     return {
       ok: false,
       code: "invalid-human-verdict",
@@ -301,8 +316,7 @@ function validateModerationHistory(item: CatalogItem): TransitionRefuse | null {
       record.from !== expected[0] ||
       record.to !== expected[1] ||
       !nonEmptyString(record.reason) ||
-      !nonEmptyString(record.at) ||
-      !Number.isFinite(Date.parse(record.at))
+      !validDateTime(record.at)
     ) {
       return {
         ok: false,
@@ -404,7 +418,7 @@ export function transitionCatalogItem(
   }
 
   const at = request.at ?? new Date().toISOString();
-  if (!Number.isFinite(Date.parse(at))) {
+  if (!validDateTime(at)) {
     return {
       ok: false,
       code: "invalid-moderation-history",

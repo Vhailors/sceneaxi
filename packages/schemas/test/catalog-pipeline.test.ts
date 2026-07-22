@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  CATALOG_DATE_TIME_PATTERN,
   CATALOG_ITEM_SCHEMA_VERSION,
   CATALOG_POLICY_CITES,
   COMMERCE_ACTIVATION_GATE,
@@ -19,6 +20,61 @@ import {
 
 const HASH =
   "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+type HistoryShape = {
+  minItems?: number;
+  maxItems?: number;
+  prefixItems?: Array<{ $ref?: string }>;
+};
+
+type ModerationRule = {
+  if?: {
+    properties?: { pipelineState?: { const?: PipelineState } };
+  };
+  then?: {
+    properties?: { history?: HistoryShape };
+  };
+};
+
+type CatalogSchema = {
+  $id?: string;
+  $defs?: {
+    dateTime?: { format?: string; pattern?: string };
+    transitionRecord?: {
+      properties?: {
+        reason?: { pattern?: string };
+        at?: { $ref?: string };
+        humanVerdict?: {
+          properties?: { recordedAt?: { $ref?: string } };
+        };
+      };
+      allOf?: unknown[];
+    };
+  };
+  properties?: {
+    assetPackage?: {
+      properties?: { contentHash?: { pattern?: string } };
+    };
+    provenance?: {
+      properties?: {
+        ingestedAt?: { $ref?: string };
+        sourceDigest?: { pattern?: string };
+      };
+    };
+    aiGenerationDisclosure?: {
+      required?: string[];
+      properties?: { disclosureText?: { pattern?: string } };
+    };
+    compatibility?: {
+      properties?: {
+        profiles?: { items?: { pattern?: string } };
+      };
+    };
+    moderation?: {
+      allOf?: ModerationRule[];
+    };
+  };
+};
 
 function syntheticAsset(
   overrides: Partial<Parameters<typeof createCatalogItemAtIntake>[0]> = {},
@@ -111,30 +167,7 @@ describe("Catalog Item contract + policy cites", () => {
         ),
         "utf8",
       ),
-    ) as {
-      $id?: string;
-      properties?: {
-        aiGenerationDisclosure?: {
-          required?: string[];
-          properties?: { disclosureText?: { pattern?: string } };
-        };
-        compatibility?: {
-          properties?: {
-            profiles?: { items?: { pattern?: string } };
-          };
-        };
-        moderation?: {
-          properties?: {
-            history?: {
-              items?: {
-                properties?: { reason?: { pattern?: string } };
-                allOf?: unknown[];
-              };
-            };
-          };
-        };
-      };
-    };
+    ) as CatalogSchema;
 
     expect(schema.$id).toBe("https://sceneaxi.invalid/contracts/catalog-item/v1");
     expect(schema.properties?.aiGenerationDisclosure?.required).toEqual([
@@ -143,9 +176,7 @@ describe("Catalog Item contract + policy cites", () => {
     ]);
     const disclosurePattern =
       schema.properties?.aiGenerationDisclosure?.properties?.disclosureText?.pattern;
-    const reasonPattern =
-      schema.properties?.moderation?.properties?.history?.items?.properties?.reason
-        ?.pattern;
+    const reasonPattern = schema.$defs?.transitionRecord?.properties?.reason?.pattern;
     const profilePattern =
       schema.properties?.compatibility?.properties?.profiles?.items?.pattern;
     expect(new RegExp(disclosurePattern ?? "").test("   ")).toBe(false);
@@ -156,9 +187,7 @@ describe("Catalog Item contract + policy cites", () => {
     expect(new RegExp(reasonPattern ?? "").test("Screened.")).toBe(true);
     expect(new RegExp(profilePattern ?? "").test("game\n")).toBe(false);
     expect(new RegExp(profilePattern ?? "").test("game")).toBe(true);
-    expect(
-      schema.properties?.moderation?.properties?.history?.items?.allOf,
-    ).toEqual([
+    expect(schema.$defs?.transitionRecord?.allOf).toEqual([
       {
         if: {
           properties: { to: { const: "listed" } },
@@ -175,6 +204,77 @@ describe("Catalog Item contract + policy cites", () => {
         else: { not: { required: ["humanVerdict"] } },
       },
     ]);
+    expect(schema.$defs?.dateTime).toEqual({
+      type: "string",
+      format: "date-time",
+      pattern: CATALOG_DATE_TIME_PATTERN,
+    });
+    expect(schema.$defs?.transitionRecord?.properties?.at?.$ref).toBe(
+      "#/$defs/dateTime",
+    );
+    expect(
+      schema.$defs?.transitionRecord?.properties?.humanVerdict?.properties
+        ?.recordedAt?.$ref,
+    ).toBe("#/$defs/dateTime");
+    expect(schema.properties?.provenance?.properties?.ingestedAt?.$ref).toBe(
+      "#/$defs/dateTime",
+    );
+
+    const historyShape = (state: PipelineState) =>
+      schema.properties?.moderation?.allOf?.find(
+        (rule) => rule.if?.properties?.pipelineState?.const === state,
+      )?.then?.properties?.history;
+    expect(historyShape("intake")).toEqual({ maxItems: 0 });
+    expect(historyShape("screening")).toEqual({
+      minItems: 1,
+      maxItems: 1,
+      prefixItems: [{ $ref: "#/$defs/intakeToScreening" }],
+    });
+    expect(historyShape("curation")).toEqual({
+      minItems: 2,
+      maxItems: 2,
+      prefixItems: [
+        { $ref: "#/$defs/intakeToScreening" },
+        { $ref: "#/$defs/screeningToCuration" },
+      ],
+    });
+    expect(historyShape("listed")).toEqual({
+      minItems: 3,
+      maxItems: 3,
+      prefixItems: [
+        { $ref: "#/$defs/intakeToScreening" },
+        { $ref: "#/$defs/screeningToCuration" },
+        { $ref: "#/$defs/curationToListed" },
+      ],
+    });
+    expect(historyShape("delisted")).toEqual({
+      minItems: 4,
+      maxItems: 4,
+      prefixItems: [
+        { $ref: "#/$defs/intakeToScreening" },
+        { $ref: "#/$defs/screeningToCuration" },
+        { $ref: "#/$defs/curationToListed" },
+        { $ref: "#/$defs/listedToDelisted" },
+      ],
+    });
+
+    const dateTimeRegex = new RegExp(CATALOG_DATE_TIME_PATTERN);
+    for (const invalid of [
+      "2026-07-22",
+      "2026-02-29T12:00:00Z",
+      "2026-07-22T12:00:00Z\n",
+      "not-a-date",
+    ]) {
+      expect(dateTimeRegex.test(invalid)).toBe(false);
+    }
+    expect(dateTimeRegex.test("2024-02-29T12:00:00.000Z")).toBe(true);
+
+    const contentHashPattern =
+      schema.properties?.assetPackage?.properties?.contentHash?.pattern;
+    const sourceDigestPattern =
+      schema.properties?.provenance?.properties?.sourceDigest?.pattern;
+    expect(new RegExp(contentHashPattern ?? "").test(HASH + "\n")).toBe(false);
+    expect(new RegExp(sourceDigestPattern ?? "").test(HASH + "\n")).toBe(false);
   });
 
   it("starts at intake (quarantine) with empty history and inert commerce", () => {
@@ -265,6 +365,50 @@ describe("fail-closed catalog pipeline state machine", () => {
     });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("missing-reason");
+  });
+
+  it("enforces the shared Catalog date-time definition at runtime", () => {
+    const invalidTransition = transitionCatalogItem(syntheticAsset(), {
+      to: "screening",
+      reason: "invalid timestamp",
+      at: "2026-07-22",
+    });
+    expect(invalidTransition.ok).toBe(false);
+    if (!invalidTransition.ok) {
+      expect(invalidTransition.code).toBe("invalid-moderation-history");
+    }
+
+    const invalidProvenance = syntheticAsset({
+      provenance: {
+        origin: "synthetic-fixture",
+        ingestedAt: "2026-02-29T12:00:00Z",
+        sourceDigest: HASH,
+      },
+    });
+    expect(missingMandatoryMetadata(invalidProvenance)).toContain(
+      "provenance.ingestedAt",
+    );
+
+    const listed = advanceToListed(syntheticAsset());
+    const atCuration: CatalogItem = {
+      ...listed,
+      moderation: {
+        pipelineState: "curation",
+        history: listed.moderation.history.slice(0, 2),
+      },
+    };
+    const invalidVerdict = transitionCatalogItem(atCuration, {
+      to: "listed",
+      reason: "invalid verdict timestamp",
+      humanVerdict: {
+        ...approveVerdict(),
+        recordedAt: "not-a-date",
+      },
+    });
+    expect(invalidVerdict.ok).toBe(false);
+    if (!invalidVerdict.ok) {
+      expect(invalidVerdict.code).toBe("invalid-human-verdict");
+    }
   });
 
   it("refuses listing without a human curation verdict (never simulated)", () => {
@@ -373,14 +517,41 @@ describe("fail-closed catalog pipeline state machine", () => {
     if (!result.ok) expect(result.code).toBe("missing-mandatory-metadata");
   });
 
-  it("refuses non-string and true-end-invalid compatibility profiles", () => {
-    const malformedProfiles: unknown[] = ["", "game\n", 123, null];
+  it("refuses digests with trailing line terminators", () => {
+    const malformed = syntheticAsset({
+      assetPackage: {
+        packageId: "pkg-prop-crate",
+        contentHash: HASH + "\n",
+      },
+      provenance: {
+        origin: "synthetic-fixture",
+        ingestedAt: "2026-07-21T12:00:00.000Z",
+        sourceDigest: HASH + "\n",
+      },
+    });
 
-    for (const profile of malformedProfiles) {
+    expect(missingMandatoryMetadata(malformed)).toEqual(
+      expect.arrayContaining([
+        "assetPackage.contentHash",
+        "provenance.sourceDigest",
+      ]),
+    );
+  });
+
+  it("refuses non-string and true-end-invalid compatibility profiles", () => {
+    const malformedProfileSets: unknown[][] = [
+      [""],
+      ["game\n"],
+      [123],
+      [null],
+      new Array<unknown>(1),
+    ];
+
+    for (const profiles of malformedProfileSets) {
       const malformed = syntheticAsset({
         compatibility: {
           coreRange: "^0.0.0",
-          profiles: [profile] as readonly string[],
+          profiles: profiles as readonly string[],
         },
       });
 
