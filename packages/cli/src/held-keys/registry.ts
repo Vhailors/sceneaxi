@@ -15,6 +15,8 @@ export const HELD_KEY_SCHEMA_VERSION = 1 as const;
 /** Key/origin naming rule shared by both contracts. */
 const KEY_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 const DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/;
+const RFC3339_DATE_TIME =
+  /^(\d{4})-(\d{2})-(\d{2})[Tt](\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:[Zz]|[+-](\d{2}):(\d{2}))$/;
 
 export type HeldKeyState = "open" | "resolved";
 
@@ -90,10 +92,59 @@ export function isRegistryEpoch(value: unknown): value is number {
 }
 
 export function isDateTimeString(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+
+  const match = RFC3339_DATE_TIME.exec(value);
+  if (match === null) return false;
+
+  const [
+    ,
+    yearText,
+    monthText,
+    dayText,
+    hourText,
+    minuteText,
+    secondText,
+    offsetHourText = "0",
+    offsetMinuteText = "0",
+  ] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  const second = Number(secondText);
+  const offsetHour = Number(offsetHourText);
+  const offsetMinute = Number(offsetMinuteText);
+
+  const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysInMonth = [
+    31,
+    leapYear ? 29 : 28,
+    31,
+    30,
+    31,
+    30,
+    31,
+    31,
+    30,
+    31,
+    30,
+    31,
+  ];
+
   return (
-    typeof value === "string" &&
-    /^\d{4}-\d{2}-\d{2}T/.test(value) &&
-    !Number.isNaN(Date.parse(value))
+    month >= 1 &&
+    month <= 12 &&
+    day >= 1 &&
+    day <= (daysInMonth[month - 1] ?? 0) &&
+    hour <= 23 &&
+    minute <= 59 &&
+    // Leap seconds fail closed because the runtime freshness clock cannot
+    // compare them portably with Date.parse.
+    second <= 59 &&
+    offsetHour <= 23 &&
+    offsetMinute <= 59
   );
 }
 
