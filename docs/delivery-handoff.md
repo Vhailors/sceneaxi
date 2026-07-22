@@ -29,6 +29,10 @@ A v1 handoff records:
 
 Delivery Handoff v1 uses a non-leap RFC 3339 timestamp subset: seconds must be
 `00` through `59`. A `:60` leap-second value refuses; v1 carries no leap table.
+The JSON Schema pattern independently asserts Gregorian calendar, clock, and
+offset ranges. A consumer claiming full conformance must also enable Draft
+2020-12 `format` assertion or use the published `validateDeliveryHandoff`
+validator; treating `format` as annotation-only is insufficient.
 
 Artifact paths are relative to the export-package root. Absolute paths,
 backslashes, control characters, line terminators, empty path segments, `.`

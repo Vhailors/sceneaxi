@@ -67,7 +67,10 @@ describe("delivery handoff contract", () => {
       $id?: string;
       additionalProperties?: boolean;
       required?: string[];
-      $defs?: Record<string, { additionalProperties?: boolean }>;
+      $defs?: Record<
+        string,
+        { type?: string; additionalProperties?: boolean }
+      >;
       properties?: {
         artifacts?: {
           type?: string;
@@ -98,9 +101,11 @@ describe("delivery handoff contract", () => {
       ]),
     );
     expect(
-      Object.values(schema.$defs ?? {}).every(
-        (definition) => definition.additionalProperties === false,
-      ),
+      Object.values(schema.$defs ?? {})
+        .filter((definition) => definition.type === "object")
+        .every(
+          (definition) => definition.additionalProperties === false,
+        ),
     ).toBe(true);
     expect(schema.properties?.artifacts).toEqual(
       expect.objectContaining({ type: "object", minProperties: 1 }),
@@ -310,12 +315,16 @@ describe("delivery handoff contract", () => {
   });
 
   it("uses one non-leap RFC 3339 timestamp subset", () => {
-    for (const createdAt of [
+    const invalidTimestamps = [
       "2026-07-22T24:00:00Z",
       "2025-02-29T12:00:00Z",
+      "1900-02-29T12:00:00Z",
+      "2026-04-31T12:00:00Z",
       "1990-12-31T23:59:60Z",
       "1991-01-01T05:29:60+05:30",
-    ]) {
+      "2026-99-99T99:99:59+99:99",
+    ];
+    for (const createdAt of invalidTimestamps) {
       expect(
         validateDeliveryHandoff({
           ...minimalHandoff(),
@@ -324,12 +333,20 @@ describe("delivery handoff contract", () => {
       ).toBe(false);
     }
 
-    expect(
-      validateDeliveryHandoff({
-        ...minimalHandoff(),
-        provenance: { createdAt: "1991-01-01t05:29:59+05:30" },
-      }).ok,
-    ).toBe(true);
+    const validTimestamps = [
+      "1991-01-01t05:29:59+05:30",
+      "2024-02-29T23:59:59Z",
+      "2000-02-29t00:00:00.1+23:59",
+      "2026-04-30T12:00:00-00:00",
+    ];
+    for (const createdAt of validTimestamps) {
+      expect(
+        validateDeliveryHandoff({
+          ...minimalHandoff(),
+          provenance: { createdAt },
+        }).ok,
+      ).toBe(true);
+    }
 
     const ordered = validateDeliveryHandoff({
       ...minimalHandoff(),
@@ -373,30 +390,37 @@ describe("delivery handoff contract", () => {
       ),
     ) as {
       $defs?: {
+        dateTime?: { format?: string; pattern?: string };
         build?: {
           properties?: {
-            startedAt?: { pattern?: string };
-            completedAt?: { pattern?: string };
+            startedAt?: { $ref?: string };
+            completedAt?: { $ref?: string };
           };
         };
         provenance?: {
-          properties?: { createdAt?: { pattern?: string } };
+          properties?: { createdAt?: { $ref?: string } };
         };
       };
     };
-    const timestampPatterns = [
-      schema.$defs?.build?.properties?.startedAt?.pattern,
-      schema.$defs?.build?.properties?.completedAt?.pattern,
-      schema.$defs?.provenance?.properties?.createdAt?.pattern,
+    expect(schema.$defs?.dateTime?.format).toBe("date-time");
+    const timestampReferences = [
+      schema.$defs?.build?.properties?.startedAt?.$ref,
+      schema.$defs?.build?.properties?.completedAt?.$ref,
+      schema.$defs?.provenance?.properties?.createdAt?.$ref,
     ];
-    for (const pattern of timestampPatterns) {
-      expect(pattern).toBeTypeOf("string");
-      expect(new RegExp(pattern ?? "").test("1990-12-31T23:59:60Z")).toBe(
-        false,
-      );
-      expect(new RegExp(pattern ?? "").test("1990-12-31T23:59:59Z")).toBe(
-        true,
-      );
+    expect(timestampReferences).toEqual([
+      "#/$defs/dateTime",
+      "#/$defs/dateTime",
+      "#/$defs/dateTime",
+    ]);
+    const timestampPattern = schema.$defs?.dateTime?.pattern;
+    expect(timestampPattern).toBeTypeOf("string");
+    const timestampRegex = new RegExp(timestampPattern ?? "");
+    for (const timestamp of invalidTimestamps) {
+      expect(timestampRegex.test(timestamp)).toBe(false);
+    }
+    for (const timestamp of validTimestamps) {
+      expect(timestampRegex.test(timestamp)).toBe(true);
     }
   });
 
