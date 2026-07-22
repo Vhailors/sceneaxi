@@ -517,6 +517,25 @@ describe("fail-closed catalog pipeline state machine", () => {
     if (!result.ok) expect(result.code).toBe("missing-mandatory-metadata");
   });
 
+  it("requires runtime rights and AI disclosure booleans", () => {
+    const malformed = syntheticAsset();
+    Object.assign(malformed.rights, { commercialUseAllowed: "yes" });
+    Reflect.deleteProperty(malformed.aiGenerationDisclosure, "aiGenerated");
+
+    expect(missingMandatoryMetadata(malformed)).toEqual(
+      expect.arrayContaining([
+        "rights.commercialUseAllowed",
+        "aiGenerationDisclosure.aiGenerated",
+      ]),
+    );
+    const result = transitionCatalogItem(malformed, {
+      to: "screening",
+      reason: "attempt incomplete boolean metadata",
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("missing-mandatory-metadata");
+  });
+
   it("refuses digests with trailing line terminators", () => {
     const malformed = syntheticAsset({
       assetPackage: {
@@ -539,12 +558,19 @@ describe("fail-closed catalog pipeline state machine", () => {
   });
 
   it("refuses non-string and true-end-invalid compatibility profiles", () => {
+    const iteratorBypass = [""];
+    Object.defineProperty(iteratorBypass, Symbol.iterator, {
+      value: function* () {
+        yield "game";
+      },
+    });
     const malformedProfileSets: unknown[][] = [
       [""],
       ["game\n"],
       [123],
       [null],
       new Array<unknown>(1),
+      iteratorBypass,
     ];
 
     for (const profiles of malformedProfileSets) {

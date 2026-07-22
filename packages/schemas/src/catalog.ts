@@ -182,11 +182,11 @@ function validDateTime(value: unknown): value is string {
 }
 
 function validProfiles(value: unknown): value is readonly string[] {
-  return (
-    Array.isArray(value) &&
-    value.length > 0 &&
-    Array.from(value).every((profile) => validId(profile))
-  );
+  if (!Array.isArray(value) || value.length === 0) return false;
+  for (let index = 0; index < value.length; index += 1) {
+    if (!Object.hasOwn(value, index) || !validId(value[index])) return false;
+  }
+  return true;
 }
 
 /**
@@ -205,6 +205,9 @@ export function missingMandatoryMetadata(item: CatalogItem): string[] {
   }
   if (!nonEmptyString(item.rights.license)) missing.push("rights.license");
   if (!nonEmptyString(item.rights.rightsHolder)) missing.push("rights.rightsHolder");
+  if (typeof item.rights.commercialUseAllowed !== "boolean") {
+    missing.push("rights.commercialUseAllowed");
+  }
   if (!nonEmptyString(item.provenance.origin)) missing.push("provenance.origin");
   if (!validDateTime(item.provenance.ingestedAt)) {
     missing.push("provenance.ingestedAt");
@@ -214,6 +217,9 @@ export function missingMandatoryMetadata(item: CatalogItem): string[] {
   }
   if (!nonEmptyString(item.aiGenerationDisclosure.disclosureText)) {
     missing.push("aiGenerationDisclosure.disclosureText");
+  }
+  if (typeof item.aiGenerationDisclosure.aiGenerated !== "boolean") {
+    missing.push("aiGenerationDisclosure.aiGenerated");
   }
   if (!nonEmptyString(item.compatibility.coreRange)) {
     missing.push("compatibility.coreRange");
