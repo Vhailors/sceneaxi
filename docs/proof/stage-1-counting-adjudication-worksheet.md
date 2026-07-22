@@ -53,8 +53,10 @@ approval, Stage 0 lock, or Stage 1 authorization.
 
 When an authorized Stage 1 run completes, adjudicators fill this worksheet with
 measured values and walk the decision-rule flowchart in order. Every branch
-yields a **final valid outcome** (material winner, split verdict, no material
-winner, arm kill, arm downgrade, or void). No mid-flight reweighting.
+yields a terminal disposition: a **final valid outcome** (material winner,
+split verdict, no material winner, arm kill, arm downgrade, inconclusive, or
+void) or **INVALID RUN**, which requires a corrected run before adjudication can
+complete. No mid-flight reweighting.
 
 Primary arms only:
 
@@ -234,7 +236,7 @@ under this rule (W may be equal or better; ties on a counter are not "higher").
 |---|---|
 | Counter legitimately **0** on both arms | Counter is **comparable**; 0 is not incomplete |
 | Counter **0** on one arm, positive on the other | Comparable; relative "% higher" uses the positive side as baseline only when the other is higher — a zero is not ">25% higher" than a positive; a positive **is** higher than zero (and if positive > 0, the ratio is treated as exceeding 25% for that counter) |
-| Counter **missing / incomplete** on either arm | That counter is **dropped from the ≥2 tally** for *both* arms; record the drop. If fewer than **2** counters remain comparable, dependency/security **cannot** support a material-winner claim (outcome falls to split / no-winner paths that require no-worse — see §8) |
+| Counter **missing / incomplete** on either arm | That counter is **dropped from the ≥2 tally** for *both* arms; record the drop. If fewer than **2** counters remain comparable, the run is **INVALID RUN** and requires a corrected rerun before adjudication can complete; do not record pass, fail, no-worse, or a winner (see §8) |
 | Divergent measurement method between arms | **Classification / evidence defect** → stop at adjudication audit; do not invent crosswalks mid-flight |
 
 ---
@@ -260,7 +262,7 @@ arm X is WORSE than arm Y on migration
 |---|---|
 | Counter **0** both arms | Comparable |
 | Counter **0** one arm only | Same as §4.2 relative rule |
-| Drill not run / hours missing | M2/M3 **incomplete** → drop those counters for both arms; if fewer than **2** migration counters remain comparable, migration **cannot** support a material-winner claim |
+| Drill not run / hours missing | M2/M3 **incomplete** → drop those counters for both arms; if fewer than **2** migration counters remain comparable, the run is **INVALID RUN** and requires a corrected rerun before adjudication can complete |
 | Backend-import measurement undefined for an arm | M1 incomplete → same drop rule |
 
 ---
@@ -317,15 +319,23 @@ in a ratio, kill condition comparing A vs B throughput, or no-worse tally.
     NO  → VOID / return to classification (final until re-audit)
     YES → continue
 
-[1] HARD KILLS (per primary arm, independently)
-    1a. Zero qualifying replicates?
+[1] COUNTER COMPARABILITY
+    1a. Are at least 2 dependency/security counters comparable (§4.2)?
+    1b. Are at least 2 migration counters comparable (§5.2)?
+    Either NO → INVALID RUN (terminal for this run). Correct the evidence and
+                rerun before adjudication can complete. This is not pass, fail,
+                no-worse, split, no-winner, or a win.
+    BOTH YES → continue
+
+[2] HARD KILLS (per primary arm, independently)
+    2a. Zero qualifying replicates?
         YES → that arm KILLED (final)
-    1b. Pooled glue share > 35%?
+    2b. Pooled glue share > 35%?
         YES → that arm KILLED (final)
-    1c. Blind human craft/fun/originality/comfort median < 3?
+    2c. Blind human craft/fun/originality/comfort median < 3?
         (exactly 3.0 passes; <3 fails)
         YES → that arm KILLED on human eligibility (final)
-    1d. Source-first arm requires a hosted service/account to meet the brief?
+    2d. Source-first arm requires a hosted service/account to meet the brief?
         YES → that arm KILLED (final)
     If both arms killed → NO MATERIAL WINNER (double kill; final)
     If one arm killed → remaining arm is NOT auto-winner; still must clear
@@ -334,28 +344,30 @@ in a ratio, kill condition comparing A vs B throughput, or no-worse tally.
         (peer absent), unless program rules later authorize a one-arm pilot
         (out of scope here). Default: NO MATERIAL WINNER (final).
 
-[2] Both primary arms have ≥ 2 qualifying replicates?
+[3] Both primary arms have ≥ 2 qualifying replicates?
     NO  → for any arm with <2 qualifying replicates:
           THROUGHPUT DOWNGRADED TO NON-DECISIVE PILOT EVIDENCE (final for
           that arm's winner path). No material winner from Stage 1 ratios.
     YES → continue
 
-[3] Both arms pass ≤ 40% within-arm dispersion (§6)?
+[4] Both arms pass ≤ 40% within-arm dispersion (§6)?
     NO  → dispersion failure is FINAL; no material winner
     YES → continue
 
-[4] Mean throughput comparison
+[5] Mean throughput comparison
     Let r = mean_throughput(A) / mean_throughput(B)   (B/A symmetric)
     Candidate W = arm with higher mean; L = the other.
 
-    4a. Is max(mean_A, mean_B) / min(mean_A, mean_B) ≥ 1.25
-        AND replicate throughput ranges non-overlapping?
-        NO  → if ratio < 1.25 in both directions → NO MATERIAL WINNER (final)
-        YES → continue with candidate W
+    5a. Is max(mean_A, mean_B) / min(mean_A, mean_B) ≥ 1.25?
+        NO  → NO MATERIAL WINNER (final)
+        YES → continue
+    5b. Do the replicate throughput ranges overlap?
+        YES → INCONCLUSIVE (final); no material-win or pass claim
+        NO  → continue with candidate W
 
-[5] No-worse on BOTH counted dimensions
-    5a. Is W no-worse than L on dependency/security (§4)?
-    5b. Is W no-worse than L on migration (§5)?
+[6] No-worse on BOTH counted dimensions
+    6a. Is W no-worse than L on dependency/security (§4)?
+    6b. Is W no-worse than L on migration (§5)?
     BOTH yes → MATERIAL WINNER = W (final)
     Either no → SPLIT VERDICT — NO OVERALL WINNER (final)
                (throughput favored W; counted dimension blocked overall win)
@@ -368,7 +380,9 @@ in a ratio, kill condition comparing A vs B throughput, or no-worse tally.
 | **Material winner = A or B** | Cleared hard kills, 2+ quals each, dispersion, ≥1.25× non-overlapping means, no-worse on both dimensions |
 | **Split verdict — no overall winner** | Throughput candidate exists but fails no-worse on dependency/security and/or migration |
 | **No material winner** | <1.25× both ways, peer absent after kill, dispersion fail, or double kill |
-| **Arm killed** | Hard kill 1a–1d |
+| **Inconclusive** | Estimated throughput is ≥1.25× but replicate throughput ranges overlap; no material-win or pass claim |
+| **Invalid run** | Fewer than 2 comparable dependency/security counters or fewer than 2 comparable migration counters; corrected rerun required before adjudication can complete; not pass/fail/win |
+| **Arm killed** | Hard kill 2a–2d |
 | **Throughput downgraded (pilot only)** | <2 qualifying replicates on that arm |
 | **Void** | Rules defect, audit fail, or Stage 0 hash drift |
 
@@ -385,8 +399,10 @@ migration tally, or material-winner claim may include Arm C.
 1. **No dimension may be added, dropped, or reweighted after Stage 0 lock.**
    A rules defect **voids the run** rather than being patched mid-flight.
 2. **Adjudication is audited before any cross-arm ratio** (§7).
-3. **Downgrade, dispersion failure, range overlap, split, and no-winner
-   outcomes are final** — not mid-flight repair opportunities.
+3. **Downgrade, dispersion failure, INCONCLUSIVE range overlap, split, and
+   no-winner outcomes are final** — not mid-flight repair opportunities.
+   **INVALID RUN** is terminal for the current run and requires a corrected new
+   run before adjudication can complete; correction is not a mid-flight repair.
 4. **Overscope stop** (both block-1 replicates accept under 50% of locked
    criteria → "contract defect — rerun required") is owned by Stage 0 §3.2; it
    is a no-fault contract outcome, not an arm failure under this worksheet.
@@ -430,8 +446,9 @@ not count it in either arm's `>25%` total.
 | **Comparable count / worse tally** | — | — | _ of 6 | A: _ | B: _ | |
 
 If the comparable count is under 2, mark dependency/security as
-**insufficient for a material-winner claim** rather than treating either arm
-as no-worse.
+**insufficient** and the terminal disposition as **INVALID RUN**. A corrected
+rerun is required before adjudication can complete; do not record pass, fail,
+no-worse, split, no-winner, or a win.
 
 ### 10.4 Migration
 
@@ -445,22 +462,34 @@ Apply §5.2 before tallying, using the same comparable/drop discipline as
 | M3 Drill logged hours | | | | | | |
 | **Comparable count / worse tally** | — | — | _ of 3 | A: _ | B: _ | |
 
-If the comparable count is under 2, mark migration as **insufficient for a
-material-winner claim** rather than treating either arm as no-worse.
+If the comparable count is under 2, mark migration as **insufficient** and the
+terminal disposition as **INVALID RUN**. A corrected rerun is required before
+adjudication can complete; do not record pass, fail, no-worse, split,
+no-winner, or a win.
 
 ### 10.5 Flowchart result
 
 | Step | Result |
 |---|---|
 | Audit §7 | pass / fail |
+| Dependency/security comparability | sufficient (≥2) / insufficient (<2) |
+| Migration comparability | sufficient (≥2) / insufficient (<2) |
 | Hard kills | |
 | Qualifying counts | A: _ B: _ |
 | Dispersion | A: _ B: _ |
 | Mean throughput ratio | |
-| Range overlap? | yes / no |
-| No-worse dep/sec | yes / no |
-| No-worse migration | yes / no |
+| Ratio ≥1.25×? | yes / no / not reached |
+| Range overlap? | yes / no / not reached |
+| No-worse dep/sec | yes / no / not reached |
+| No-worse migration | yes / no / not reached |
 | **Terminal outcome** | |
+
+The table is complete only when **Terminal outcome** matches the first
+applicable §8 leaf. Any `insufficient` comparability entry requires **INVALID
+RUN** and a corrected rerun before adjudication can complete. A `yes` ratio of
+≥1.25× with `yes` range overlap requires **INCONCLUSIVE** with no
+material-win or pass claim. For either terminal disposition, later flowchart
+fields are `not reached`; never coerce them to yes/no.
 
 ---
 
