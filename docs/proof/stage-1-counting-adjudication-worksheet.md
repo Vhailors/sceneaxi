@@ -179,7 +179,7 @@ throughput(replicate) =
 
 Pooled glue share is computed **across all replicate authoring time for the
 arm**, with the **upgrade drill excluded** (drill hours/files live only on the
-migration counters in §6).
+migration counters in §5).
 
 **Arm A — two replicates, drill excluded:**
 
@@ -415,24 +415,38 @@ migration tally, or material-winner claim may include Arm C.
 
 ### 10.3 Dependency / security
 
-| Counter | Arm A | Arm B | A >25% higher? | B >25% higher? | Incomplete? |
-|---|---:|---:|---|---|---|
-| D1 Direct deps | | | | | |
-| D2 Transitive deps | | | | | |
-| D3 Installed bytes | | | | | |
-| D4 Script-enabled pkgs | | | | | |
-| D5 Native/WASM | | | | | |
-| D6 OSV advisories | | | | | |
-| **Worse on ≥2?** | — | — | A worse? | B worse? | |
+Apply §4.2 before tallying. A row is comparable only when both arms have a
+complete value measured by the same recipe; record every dropped row and do
+not count it in either arm's `>25%` total.
+
+| Counter | Arm A | Arm B | Comparable? | A >25% higher? | B >25% higher? | Drop reason (if any) |
+|---|---:|---:|---|---|---|---|
+| D1 Direct deps | | | | | | |
+| D2 Transitive deps | | | | | | |
+| D3 Installed bytes | | | | | | |
+| D4 Script-enabled pkgs | | | | | | |
+| D5 Native/WASM | | | | | | |
+| D6 OSV advisories | | | | | | |
+| **Comparable count / worse tally** | — | — | _ of 6 | A: _ | B: _ | |
+
+If the comparable count is under 2, mark dependency/security as
+**insufficient for a material-winner claim** rather than treating either arm
+as no-worse.
 
 ### 10.4 Migration
 
-| Counter | Arm A | Arm B | A >25% higher? | B >25% higher? | Incomplete? |
-|---|---:|---:|---|---|---|
-| M1 Backend-import share | | | | | |
-| M2 Drill files touched | | | | | |
-| M3 Drill logged hours | | | | | |
-| **Worse on ≥2 of 3?** | — | — | A worse? | B worse? | |
+Apply §5.2 before tallying, using the same comparable/drop discipline as
+§10.3.
+
+| Counter | Arm A | Arm B | Comparable? | A >25% higher? | B >25% higher? | Drop reason (if any) |
+|---|---:|---:|---|---|---|---|
+| M1 Backend-import share | | | | | | |
+| M2 Drill files touched | | | | | | |
+| M3 Drill logged hours | | | | | | |
+| **Comparable count / worse tally** | — | — | _ of 3 | A: _ | B: _ | |
+
+If the comparable count is under 2, mark migration as **insufficient for a
+material-winner claim** rather than treating either arm as no-worse.
 
 ### 10.5 Flowchart result
 
