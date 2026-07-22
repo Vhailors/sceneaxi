@@ -385,6 +385,72 @@ describe("fail-closed catalog pipeline state machine", () => {
     }
   });
 
+  it("normalizes transition inputs and indexed history once", () => {
+    const reasonRequest = {
+      to: "screening" as const,
+      reason: "placeholder",
+    };
+    let reasonReads = 0;
+    Object.defineProperty(reasonRequest, "reason", {
+      get() {
+        reasonReads += 1;
+        if (reasonReads > 1) throw new Error("reason re-read");
+        return "snapshot reason";
+      },
+    });
+    const screening = transitionCatalogItem(syntheticAsset(), reasonRequest);
+    expect(screening.ok).toBe(true);
+    expect(reasonReads).toBe(1);
+
+    const listed = advanceToListed(syntheticAsset());
+    const atCuration: CatalogItem = {
+      ...listed,
+      moderation: {
+        pipelineState: "curation",
+        history: listed.moderation.history.slice(0, 2),
+      },
+    };
+    const verdictRequest = {
+      to: "listed" as const,
+      reason: "snapshot verdict",
+      humanVerdict: approveVerdict(),
+    };
+    let verdictReads = 0;
+    Object.defineProperty(verdictRequest, "humanVerdict", {
+      get() {
+        verdictReads += 1;
+        return verdictReads === 1 ? approveVerdict() : null;
+      },
+    });
+    const relisted = transitionCatalogItem(atCuration, verdictRequest);
+    expect(relisted.ok).toBe(true);
+    expect(verdictReads).toBe(1);
+    if (relisted.ok) {
+      expect(relisted.transition.humanVerdict?.decision).toBe("approve");
+    }
+
+    Object.defineProperty(listed.moderation.history, Symbol.iterator, {
+      value: function* () {
+        yield {
+          from: "listed",
+          to: "delisted",
+          reason: "iterator injection",
+          at: "2026-07-21T14:00:00.000Z",
+        };
+      },
+    });
+    const delisted = transitionCatalogItem(listed, {
+      to: "delisted",
+      reason: "indexed history snapshot",
+    });
+    expect(delisted.ok).toBe(true);
+    if (delisted.ok) {
+      expect(delisted.item.moderation.history).toHaveLength(4);
+      expect(delisted.item.moderation.history[0]?.from).toBe("intake");
+      expect(delisted.item.moderation.history[3]?.to).toBe("delisted");
+    }
+  });
+
   it("enforces the shared Catalog date-time definition at runtime", () => {
     const invalidTransition = transitionCatalogItem(syntheticAsset(), {
       to: "screening",
@@ -624,6 +690,31 @@ describe("fail-closed catalog pipeline state machine", () => {
     if (!result.ok) expect(result.code).toBe("missing-mandatory-metadata");
   });
 
+  it("refuses non-v1 runtime catalog items", () => {
+    const intake = syntheticAsset();
+    Object.assign(intake, { schemaVersion: 2 });
+    expect(missingMandatoryMetadata(intake)).toContain("schemaVersion");
+    const screening = transitionCatalogItem(intake, {
+      to: "screening",
+      reason: "attempt version drift",
+    });
+    expect(screening.ok).toBe(false);
+    if (!screening.ok) {
+      expect(screening.code).toBe("missing-mandatory-metadata");
+    }
+
+    const listed = advanceToListed(syntheticAsset());
+    Reflect.deleteProperty(listed, "schemaVersion");
+    const delisted = transitionCatalogItem(listed, {
+      to: "delisted",
+      reason: "attempt versionless takedown",
+    });
+    expect(delisted.ok).toBe(false);
+    if (!delisted.ok) {
+      expect(delisted.code).toBe("missing-mandatory-metadata");
+    }
+  });
+
   it("refuses digests with trailing line terminators", () => {
     const malformed = syntheticAsset({
       assetPackage: {
@@ -706,16 +797,22 @@ describe("commerce fields inert (no 6b activation path)", () => {
     });
   });
 
-  it("refuses delisting when commerce has drifted active", () => {
+  it("keeps takedown available and forces commerce inert", () => {
     const listed = advanceToListed(syntheticAsset());
+    Object.assign(listed, { rights: null });
+    Reflect.deleteProperty(listed, "provenance");
     Object.assign(listed.commerce, { activation: "active" });
 
     const result = transitionCatalogItem(listed, {
       to: "delisted",
       reason: "attempt takedown with active commerce",
     });
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.code).toBe("missing-mandatory-metadata");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.item.moderation.pipelineState).toBe("delisted");
+      expect(result.item.commerce.activation).toBe("inert");
+      expect(result.item.moderation.history).toHaveLength(4);
+    }
   });
 
   it("refuses commerce activation for listed items with price fields populated", () => {

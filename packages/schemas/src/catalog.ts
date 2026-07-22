@@ -212,6 +212,9 @@ export function missingMandatoryMetadata(item: unknown): string[] {
   const missing: string[] = [];
   if (!isRecord(item)) return ["catalogItem"];
 
+  if (item["schemaVersion"] !== CATALOG_ITEM_SCHEMA_VERSION) {
+    missing.push("schemaVersion");
+  }
   if (!validId(item["itemId"])) missing.push("itemId");
 
   const assetPackage = item["assetPackage"];
@@ -286,56 +289,95 @@ export function missingMandatoryMetadata(item: unknown): string[] {
   return missing;
 }
 
-function validateHumanVerdict(
-  verdict: unknown,
-): TransitionRefuse | null {
+type HumanVerdictNormalization =
+  | { readonly ok: true; readonly verdict: HumanCurationVerdict }
+  | { readonly ok: false; readonly refusal: TransitionRefuse };
+
+function normalizeHumanVerdict(verdict: unknown): HumanVerdictNormalization {
   if (verdict === undefined) {
     return {
       ok: false,
-      code: "missing-human-verdict",
-      message:
-        "Human curation verdict is required before listing; the pipeline represents the gate and never simulates it.",
+      refusal: {
+        ok: false,
+        code: "missing-human-verdict",
+        message:
+          "Human curation verdict is required before listing; the pipeline represents the gate and never simulates it.",
+      },
     };
   }
-  if (!isRecord(verdict) || verdict["kind"] !== "human") {
+  if (!isRecord(verdict)) {
     return {
       ok: false,
-      code: "invalid-human-verdict",
-      message: "Curation verdict kind must be \"human\"; automated verdicts are refused.",
+      refusal: {
+        ok: false,
+        code: "invalid-human-verdict",
+        message: "Curation verdict kind must be \"human\"; automated verdicts are refused.",
+      },
+    };
+  }
+
+  const kind = verdict["kind"];
+  const decision = verdict["decision"];
+  const curatorId = verdict["curatorId"];
+  const rationale = verdict["rationale"];
+  const recordedAt = verdict["recordedAt"];
+  if (kind !== "human") {
+    return {
+      ok: false,
+      refusal: {
+        ok: false,
+        code: "invalid-human-verdict",
+        message: "Curation verdict kind must be \"human\"; automated verdicts are refused.",
+      },
     };
   }
   if (
-    !nonEmptyString(verdict["curatorId"]) ||
-    !nonEmptyString(verdict["rationale"])
+    !nonEmptyString(curatorId) ||
+    !nonEmptyString(rationale)
   ) {
     return {
       ok: false,
-      code: "invalid-human-verdict",
-      message: "Human verdict requires non-empty curatorId and rationale.",
+      refusal: {
+        ok: false,
+        code: "invalid-human-verdict",
+        message: "Human verdict requires non-empty curatorId and rationale.",
+      },
     };
   }
-  if (!validDateTime(verdict["recordedAt"])) {
+  if (!validDateTime(recordedAt)) {
     return {
       ok: false,
-      code: "invalid-human-verdict",
-      message: "Human verdict requires recordedAt timestamp.",
+      refusal: {
+        ok: false,
+        code: "invalid-human-verdict",
+        message: "Human verdict requires recordedAt timestamp.",
+      },
     };
   }
-  if (verdict["decision"] === "reject") {
+  if (decision === "reject") {
     return {
       ok: false,
-      code: "human-verdict-rejected",
-      message: "Human curator rejected the item; listing is refused.",
+      refusal: {
+        ok: false,
+        code: "human-verdict-rejected",
+        message: "Human curator rejected the item; listing is refused.",
+      },
     };
   }
-  if (verdict["decision"] !== "approve") {
+  if (decision !== "approve") {
     return {
       ok: false,
-      code: "invalid-human-verdict",
-      message: "Human verdict decision must be approve or reject.",
+      refusal: {
+        ok: false,
+        code: "invalid-human-verdict",
+        message: "Human verdict decision must be approve or reject.",
+      },
     };
   }
-  return null;
+  return {
+    ok: true,
+    verdict: { kind, decision, curatorId, rationale, recordedAt },
+  };
 }
 
 const REQUIRED_HISTORY: Readonly<
@@ -360,12 +402,19 @@ const REQUIRED_HISTORY: Readonly<
   ],
 });
 
-function validateModerationHistory(item: unknown): TransitionRefuse | null {
+type ModerationNormalization =
+  | { readonly ok: true; readonly moderation: ModerationState }
+  | { readonly ok: false; readonly refusal: TransitionRefuse };
+
+function normalizeModerationHistory(item: unknown): ModerationNormalization {
   if (!isRecord(item)) {
     return {
       ok: false,
-      code: "invalid-moderation-history",
-      message: "Catalog item must contain a valid moderation history.",
+      refusal: {
+        ok: false,
+        code: "invalid-moderation-history",
+        message: "Catalog item must contain a valid moderation history.",
+      },
     };
   }
 
@@ -377,8 +426,11 @@ function validateModerationHistory(item: unknown): TransitionRefuse | null {
   ) {
     return {
       ok: false,
-      code: "invalid-moderation-history",
-      message: "Catalog item must contain a valid moderation history.",
+      refusal: {
+        ok: false,
+        code: "invalid-moderation-history",
+        message: "Catalog item must contain a valid moderation history.",
+      },
     };
   }
 
@@ -388,46 +440,116 @@ function validateModerationHistory(item: unknown): TransitionRefuse | null {
   if (history.length !== required.length) {
     return {
       ok: false,
-      code: "invalid-moderation-history",
-      message: "Moderation history does not prove the path to " + pipelineState + ".",
+      refusal: {
+        ok: false,
+        code: "invalid-moderation-history",
+        message: "Moderation history does not prove the path to " + pipelineState + ".",
+      },
     };
   }
 
+  const normalizedHistory: TransitionRecord[] = [];
   for (let index = 0; index < required.length; index += 1) {
     const expected = required[index];
     const record = history[index];
+    if (!isRecord(record)) {
+      return {
+        ok: false,
+        refusal: {
+          ok: false,
+          code: "invalid-moderation-history",
+          message:
+            "Moderation history record " +
+            String(index) +
+            " is invalid or out of sequence.",
+        },
+      };
+    }
+
+    const from = record["from"];
+    const to = record["to"];
+    const reason = record["reason"];
+    const at = record["at"];
+    const rawHumanVerdict = record["humanVerdict"];
     if (
       expected === undefined ||
-      !isRecord(record) ||
-      record["from"] !== expected[0] ||
-      record["to"] !== expected[1] ||
-      !nonEmptyString(record["reason"]) ||
-      !validDateTime(record["at"])
+      from !== expected[0] ||
+      to !== expected[1] ||
+      !nonEmptyString(reason) ||
+      !validDateTime(at)
     ) {
       return {
         ok: false,
-        code: "invalid-moderation-history",
-        message: `Moderation history record ${String(index)} is invalid or out of sequence.`,
-      };
-    }
-    if (record["to"] === "listed") {
-      const verdictError = validateHumanVerdict(record["humanVerdict"]);
-      if (verdictError !== null) {
-        return {
+        refusal: {
           ok: false,
           code: "invalid-moderation-history",
-          message: "Moderation history lacks a valid human approval for listing.",
-        };
-      }
-    } else if (record["humanVerdict"] !== undefined) {
-      return {
-        ok: false,
-        code: "invalid-moderation-history",
-        message: "Human curation verdicts may only be recorded on listing transitions.",
+          message:
+            "Moderation history record " +
+            String(index) +
+            " is invalid or out of sequence.",
+        },
       };
     }
+
+    if (to === "listed") {
+      const verdict = normalizeHumanVerdict(rawHumanVerdict);
+      if (!verdict.ok) {
+        return {
+          ok: false,
+          refusal: {
+            ok: false,
+            code: "invalid-moderation-history",
+            message: "Moderation history lacks a valid human approval for listing.",
+          },
+        };
+      }
+      normalizedHistory.push({
+        from,
+        to,
+        reason,
+        at,
+        humanVerdict: verdict.verdict,
+      });
+    } else {
+      if (rawHumanVerdict !== undefined) {
+        return {
+          ok: false,
+          refusal: {
+            ok: false,
+            code: "invalid-moderation-history",
+            message:
+              "Human curation verdicts may only be recorded on listing transitions.",
+          },
+        };
+      }
+      normalizedHistory.push({ from, to, reason, at });
+    }
   }
-  return null;
+
+  return {
+    ok: true,
+    moderation: { pipelineState, history: normalizedHistory },
+  };
+}
+
+function inertCommerceSnapshot(value: unknown): CommerceFields {
+  if (!isRecord(value)) return { activation: "inert" };
+
+  const rawPrice = value["price"];
+  const amount = isRecord(rawPrice) ? rawPrice["amount"] : undefined;
+  const currency = isRecord(rawPrice) ? rawPrice["currency"] : undefined;
+  const price =
+    typeof amount === "string" && typeof currency === "string"
+      ? { amount, currency }
+      : undefined;
+  const rawSku = value["sku"];
+  const sku = typeof rawSku === "string" ? rawSku : undefined;
+
+  return {
+    activation: "inert",
+    ...(price === undefined ? {} : { price }),
+    ...(sku === undefined ? {} : { sku }),
+  };
 }
 
 /**
@@ -439,53 +561,96 @@ export function transitionCatalogItem(
   request: TransitionRequest,
 ): TransitionResult {
   const requestValue: unknown = request;
-  if (!isRecord(requestValue) || !nonEmptyString(requestValue["reason"])) {
+  if (!isRecord(requestValue)) {
     return {
       ok: false,
       code: "missing-reason",
       message: "Every pipeline transition requires a non-empty reason.",
     };
   }
-  const reason = requestValue["reason"].trim();
 
-  const missing = missingMandatoryMetadata(item);
-  if (missing.length > 0) {
+  const rawReason = requestValue["reason"];
+  const rawTo = requestValue["to"];
+  const rawHumanVerdict = requestValue["humanVerdict"];
+  const rawAt = requestValue["at"];
+  if (!nonEmptyString(rawReason)) {
+    return {
+      ok: false,
+      code: "missing-reason",
+      message: "Every pipeline transition requires a non-empty reason.",
+    };
+  }
+  const reason = rawReason.trim();
+
+  const itemValue: unknown = item;
+  if (!isRecord(itemValue)) {
     return {
       ok: false,
       code: "missing-mandatory-metadata",
-      message: "Mandatory catalog metadata missing: " + missing.join(", ") + ".",
+      message: "Mandatory catalog metadata missing: catalogItem.",
     };
   }
 
-  const itemValue: unknown = item;
-  const moderation = isRecord(itemValue) ? itemValue["moderation"] : undefined;
-  if (!isRecord(moderation) || !isPipelineState(moderation["pipelineState"])) {
+  const rawModeration = itemValue["moderation"];
+  const moderationSnapshot = isRecord(rawModeration)
+    ? {
+        pipelineState: rawModeration["pipelineState"],
+        history: rawModeration["history"],
+      }
+    : rawModeration;
+  const itemSnapshot = {
+    schemaVersion: itemValue["schemaVersion"],
+    itemId: itemValue["itemId"],
+    assetPackage: itemValue["assetPackage"],
+    rights: itemValue["rights"],
+    provenance: itemValue["provenance"],
+    aiGenerationDisclosure: itemValue["aiGenerationDisclosure"],
+    compatibility: itemValue["compatibility"],
+    moderation: moderationSnapshot,
+    commerce: itemValue["commerce"],
+  } as unknown as CatalogItem;
+
+  if (itemSnapshot.schemaVersion !== CATALOG_ITEM_SCHEMA_VERSION) {
+    return {
+      ok: false,
+      code: "missing-mandatory-metadata",
+      message: "Mandatory catalog metadata missing: schemaVersion.",
+    };
+  }
+
+  if (
+    !isRecord(moderationSnapshot) ||
+    !isPipelineState(moderationSnapshot["pipelineState"])
+  ) {
     return {
       ok: false,
       code: "invalid-moderation-history",
       message: "Catalog item must contain a valid moderation history.",
     };
   }
-
-  const from = moderation["pipelineState"];
-  const to = requestValue["to"];
-  if (!isPipelineState(to)) {
+  const from = moderationSnapshot["pipelineState"];
+  if (!isPipelineState(rawTo)) {
     return {
       ok: false,
       code: "illegal-transition",
       message: "Pipeline transition target is invalid (fail-closed).",
     };
   }
+  const to = rawTo;
   const allowed = LEGAL_TRANSITIONS.get(from);
   if (!allowed?.has(to)) {
     return {
       ok: false,
       code: "illegal-transition",
-      message: `Illegal pipeline transition ${from} → ${to} (fail-closed).`,
+      message:
+        "Illegal pipeline transition " + from + " → " + to + " (fail-closed).",
     };
   }
 
-  if (to !== "listed" && requestValue["humanVerdict"] !== undefined) {
+  const moderation = normalizeModerationHistory(itemSnapshot);
+  if (!moderation.ok) return moderation.refusal;
+
+  if (to !== "listed" && rawHumanVerdict !== undefined) {
     return {
       ok: false,
       code: "invalid-human-verdict",
@@ -493,17 +658,25 @@ export function transitionCatalogItem(
     };
   }
 
-  const historyError = validateModerationHistory(item);
-  if (historyError !== null) return historyError;
+  if (to !== "delisted") {
+    const missing = missingMandatoryMetadata(itemSnapshot);
+    if (missing.length > 0) {
+      return {
+        ok: false,
+        code: "missing-mandatory-metadata",
+        message: "Mandatory catalog metadata missing: " + missing.join(", ") + ".",
+      };
+    }
+  }
 
   let humanVerdict: HumanCurationVerdict | undefined;
   if (to === "listed") {
-    const verdictError = validateHumanVerdict(requestValue["humanVerdict"]);
-    if (verdictError) return verdictError;
-    humanVerdict = request.humanVerdict;
+    const verdict = normalizeHumanVerdict(rawHumanVerdict);
+    if (!verdict.ok) return verdict.refusal;
+    humanVerdict = verdict.verdict;
   }
 
-  const at = requestValue["at"] ?? new Date().toISOString();
+  const at = rawAt ?? new Date().toISOString();
   if (!validDateTime(at)) {
     return {
       ok: false,
@@ -517,11 +690,18 @@ export function transitionCatalogItem(
       : { from, to, reason, at, humanVerdict };
 
   const next: CatalogItem = {
-    ...item,
+    schemaVersion: CATALOG_ITEM_SCHEMA_VERSION,
+    itemId: itemSnapshot.itemId,
+    assetPackage: itemSnapshot.assetPackage,
+    rights: itemSnapshot.rights,
+    provenance: itemSnapshot.provenance,
+    aiGenerationDisclosure: itemSnapshot.aiGenerationDisclosure,
+    compatibility: itemSnapshot.compatibility,
     moderation: {
       pipelineState: to,
-      history: [...item.moderation.history, transition],
+      history: [...moderation.moderation.history, transition],
     },
+    commerce: inertCommerceSnapshot(itemSnapshot.commerce),
   };
 
   return { ok: true, item: next, transition };
