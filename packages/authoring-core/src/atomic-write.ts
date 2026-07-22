@@ -23,8 +23,12 @@ export type AtomicWritePlan = {
 /**
  * Write a single file atomically via tmp-then-rename in the destination directory.
  */
-export function atomicWriteFile(path: string, contents: string): void {
-  atomicWriteAll([{ path, contents }]);
+export function atomicWriteFile(
+  path: string,
+  contents: string,
+  options: { readonly token?: string } = {},
+): void {
+  atomicWriteAll([{ path, contents }], options);
 }
 
 /**
@@ -39,10 +43,18 @@ export function atomicWriteFile(path: string, contents: string): void {
  *
  * Mid-write, the canonical path never holds a partial body (only whole renames).
  */
-export function atomicWriteAll(plans: readonly AtomicWritePlan[]): void {
+export function atomicWriteAll(
+  plans: readonly AtomicWritePlan[],
+  options: { readonly token?: string } = {},
+): void {
   if (plans.length === 0) return;
 
-  const token = randomBytes(8).toString("hex");
+  const token = options.token ?? randomBytes(8).toString("hex");
+  if (!/^[a-zA-Z0-9-]+$/.test(token)) {
+    throw new Error(
+      "Atomic write token must contain only letters, digits, or hyphens.",
+    );
+  }
   const staged: Array<{
     path: string;
     tmp: string;

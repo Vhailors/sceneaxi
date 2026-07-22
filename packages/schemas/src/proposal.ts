@@ -305,15 +305,18 @@ export type ApplyDiagnosticCode =
   | "invalid-pointer"
   | "document-not-found"
   | "validation-failed"
-  | "parse-error";
+  | "parse-error"
+  | "journal-invalid"
+  | "journal-not-found"
+  | "journal-conflict";
 
 export type ApplyDiagnostic = {
   readonly code: ApplyDiagnosticCode;
   readonly message: string;
   readonly documentPath?: string;
   /**
-   * Present on content-hash conflicts: re-read the document and re-propose
-   * against current content (E1 clause 4).
+   * Present when a safe retry needs fresh document state, including content
+   * hash and journal conflicts (E1 clauses 4-5).
    */
   readonly reReadHint?: string;
 };

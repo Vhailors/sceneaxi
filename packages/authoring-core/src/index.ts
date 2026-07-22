@@ -3,8 +3,9 @@
  * text-canonical document model, propose/apply application service, session
  * orchestration, evidence hooks, Model Provider Port.
  *
- * This ticket (sceneaxi#9) lands the document model + propose/apply service.
- * Session / evidence / provider port remain later tickets.
+ * Sceneaxi#9 lands the document model, propose/apply service, and E1 durable
+ * apply journal with crash recovery and undo. Session / evidence / provider
+ * port remain later tickets.
  */
 import type { PackageSeam } from "@sceneaxi/schemas";
 
@@ -53,6 +54,19 @@ export {
 } from "./json-pointer.js";
 
 export { unifiedDiff } from "./unified-diff.js";
+
+export {
+  APPLY_JOURNAL_KIND,
+  APPLY_JOURNAL_SCHEMA_VERSION,
+  recoverIncompleteApplies,
+  undoLastApply,
+  type ApplyJournalDocument,
+  type ApplyJournalEntry,
+  type JournalOperationOk,
+  type JournalOperationResult,
+  type RecoveryOperationOk,
+  type RecoveryOperationResult,
+} from "./apply-journal.js";
 
 // Re-export document/proposal types from schemas for adapter convenience.
 export type {

@@ -30,6 +30,11 @@ import {
 import { contentHash } from "./content-hash.js";
 import { getAtPointer, setAtPointer } from "./json-pointer.js";
 import { unifiedDiff } from "./unified-diff.js";
+import {
+  completeApplyJournal,
+  prepareApplyJournal,
+  recoverIncompleteApplies,
+} from "./apply-journal.js";
 
 export type ProposeInput = {
   readonly documentPath: string;
@@ -75,6 +80,11 @@ export type ApplyInput = {
 
 function resolvePath(cwd: string, documentPath: string): string {
   return resolve(cwd, documentPath);
+}
+
+function recoveryDiagnostics(cwd: string): readonly ApplyDiagnostic[] | null {
+  const recovered = recoverIncompleteApplies({ cwd });
+  return recovered.ok ? null : recovered.diagnostics;
 }
 
 function loadDocument(
@@ -177,6 +187,10 @@ export function applyPointerEditInMemory(
  */
 export function propose(input: ProposeInput): ProposeResult {
   const cwd = input.cwd ?? process.cwd();
+  const recoveryFailure = recoveryDiagnostics(cwd);
+  if (recoveryFailure !== null) {
+    return { ok: false, diagnostics: recoveryFailure };
+  }
   const abs = resolvePath(cwd, input.documentPath);
   const loaded = loadDocument(abs, input.documentPath);
   if (!loaded.ok) return loaded;
@@ -255,6 +269,10 @@ export function proposeMany(inputs: readonly ProposeInput[]): ProposeResult {
   // Track in-memory post-edit text per document so chained edits on the same
   // file share one base → final diff and a single base hash.
   const cwd = inputs[0]?.cwd ?? process.cwd();
+  const recoveryFailure = recoveryDiagnostics(cwd);
+  if (recoveryFailure !== null) {
+    return { ok: false, diagnostics: recoveryFailure };
+  }
   const workingText = new Map<string, string>();
   const baseHash = new Map<string, string>();
   const baseText = new Map<string, string>();
@@ -372,6 +390,10 @@ export function proposeMany(inputs: readonly ProposeInput[]): ProposeResult {
  */
 export function editDirect(input: DirectEditInput): DirectEditResult {
   const cwd = input.cwd ?? process.cwd();
+  const recoveryFailure = recoveryDiagnostics(cwd);
+  if (recoveryFailure !== null) {
+    return { ok: false, diagnostics: recoveryFailure };
+  }
   const abs = resolvePath(cwd, input.documentPath);
   const loaded = loadDocument(abs, input.documentPath);
   if (!loaded.ok) return loaded;
@@ -406,6 +428,10 @@ export function editDirect(input: DirectEditInput): DirectEditResult {
  */
 export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResult {
   const cwd = input.cwd ?? process.cwd();
+  const recoveryFailure = recoveryDiagnostics(cwd);
+  if (recoveryFailure !== null) {
+    return { ok: false, diagnostics: recoveryFailure };
+  }
 
   let proposal: Proposal;
   if (typeof input.proposal === "string") {
@@ -476,8 +502,12 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
     byDoc.set(edit.documentPath, list);
   }
 
-  const plans: Array<{ path: string; contents: string; documentPath: string }> =
-    [];
+  const plans: Array<{
+    path: string;
+    contents: string;
+    beforeContent: string;
+    documentPath: string;
+  }> = [];
 
   for (const [documentPath, edits] of byDoc) {
     const abs = resolvePath(cwd, documentPath);
@@ -565,12 +595,27 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
     plans.push({
       path: abs,
       contents: serializeDocument(current),
+      beforeContent: loaded.text,
       documentPath,
     });
   }
 
+  // E1 clause 5: persist undo/recovery bytes before any canonical commit.
+  const journal = prepareApplyJournal(
+    cwd,
+    plans.map((plan) => ({
+      documentPath: plan.documentPath,
+      beforeContent: plan.beforeContent,
+      afterContent: plan.contents,
+    })),
+  );
+
   // All-or-nothing atomic write across every touched document.
-  atomicWriteAll(plans.map((p) => ({ path: p.path, contents: p.contents })));
+  atomicWriteAll(
+    plans.map((p) => ({ path: p.path, contents: p.contents })),
+    { token: journal.transactionId },
+  );
+  completeApplyJournal(cwd, journal);
 
   return {
     ok: true,

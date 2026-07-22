@@ -17,6 +17,8 @@ import {
   propose,
   apply,
   editDirect,
+  recoverIncompleteApplies,
+  undoLastApply,
   writeDocumentFile,
   createDocument,
 } from "@sceneaxi/authoring-core";
@@ -32,6 +34,12 @@ const p = propose({
 // apply(proposal) → ok | reject(typed diagnostics)
 const r = apply({ proposal: p.ok ? p.proposal : "", cwd: projectRoot });
 
+// Service entrypoints recover first; hosts may also recover explicitly at startup.
+const recovered = recoverIncompleteApplies({ cwd: projectRoot });
+
+// Undo restores exact prior bytes from the latest completed journal entry.
+const undone = undoLastApply({ cwd: projectRoot });
+
 // Direct edit uses the same validator + serializer as the proposal path
 // (byte-identical after the same change).
 ```
@@ -42,7 +50,13 @@ Contract clauses (E1 / `docs/authoring-contracts.md`):
 2. Atomic tmp-then-rename writes
 3. All-or-nothing multi-document proposals
 4. Content-hash conflict rejection with re-read hint
-5. Schema major-mismatch refusal (no silent migration)
+5. Apply journal persisted before commit, recover-forward after interruption,
+   and undo from journaled prior bytes
+6. Schema major-mismatch refusal (no silent migration)
+
+Apply journals are versioned JSON under `.sceneaxi/journal/`. Recovery and undo
+fail closed if a journal is corrupt or if current document bytes match neither
+the expected before- nor after-image; they never overwrite an unrelated edit.
 
 Schemas: `packages/schemas/contracts/document.schema.json` and
 `proposal.schema.json`. CLI surface: `sceneaxi project propose|apply`.
