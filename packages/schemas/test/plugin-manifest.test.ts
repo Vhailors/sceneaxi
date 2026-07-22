@@ -240,10 +240,29 @@ const pluginManifestSchema = JSON.parse(
   ),
 ) as SchemaSubset & { readonly $id?: string };
 
-const missingPluginId: Record<string, unknown> = {
-  ...inertPluginManifestFixture(),
-};
-delete missingPluginId["pluginId"];
+const requiredManifestFields = [
+  "$schema",
+  "schemaVersion",
+  "pluginId",
+  "pluginVersion",
+  "hostApi",
+  "registryVersion",
+  "entrypoint",
+  "capabilities",
+] as const;
+
+const missingRequiredFieldCases = requiredManifestFields.map((field) => {
+  const value: Record<string, unknown> = {
+    ...inertPluginManifestFixture(),
+  };
+  delete value[field];
+  return {
+    field,
+    name: `missing required field ${field}`,
+    value,
+    valid: false,
+  };
+});
 
 const manifestCorpus: ReadonlyArray<{
   readonly name: string;
@@ -283,7 +302,7 @@ const manifestCorpus: ReadonlyArray<{
     valid: true,
   },
   { name: "non-object", value: null, valid: false },
-  { name: "missing required field", value: missingPluginId, valid: false },
+  ...missingRequiredFieldCases,
   {
     name: "unexpected field",
     value: { ...inertPluginManifestFixture(), hooks: ["onLoad"] },
@@ -387,6 +406,7 @@ const manifestCorpus: ReadonlyArray<{
 describe("plugin manifest contract", () => {
   it("keeps the TypeScript validator aligned with the JSON Schema corpus", () => {
     expect(schemaDefinitionErrors(pluginManifestSchema)).toEqual([]);
+    expect(pluginManifestSchema.required).toEqual(requiredManifestFields);
 
     for (const testCase of manifestCorpus) {
       const validatorAccepted = validatePluginManifest(testCase.value).ok;
@@ -402,6 +422,25 @@ describe("plugin manifest contract", () => {
       });
     }
   });
+
+  it.each(missingRequiredFieldCases)(
+    "refuses missing required field $field consistently",
+    ({ field, value }) => {
+      const result = validatePluginManifest(value);
+
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.diagnostics[0]).toEqual(
+        expect.objectContaining({
+          code: "missing-field",
+          path: `$.${field}`,
+        }),
+      );
+      expect(
+        validateWithSchemaSubset(value, pluginManifestSchema),
+      ).not.toEqual([]);
+    },
+  );
 
   it("accepts the documented inert capabilities:[] fixture", () => {
     const fixture = inertPluginManifestFixture();
@@ -445,18 +484,7 @@ describe("plugin manifest contract", () => {
     expect(pluginManifestSchema.properties?.capabilities?.uniqueItems).toBe(
       true,
     );
-    expect(pluginManifestSchema.required).toEqual(
-      expect.arrayContaining([
-        "$schema",
-        "schemaVersion",
-        "pluginId",
-        "pluginVersion",
-        "hostApi",
-        "registryVersion",
-        "entrypoint",
-        "capabilities",
-      ]),
-    );
+    expect(pluginManifestSchema.required).toEqual(requiredManifestFields);
   });
 
   it("refuses unknown properties (hooks / ports / extra fields)", () => {
