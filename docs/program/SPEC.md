@@ -213,9 +213,15 @@ This spec **does not answer** any of the following. Each is a registered structu
 | 7 | `website-catalog-scope` | Scope of the website-asset storefront |
 | 8 | `llm-provider-policy` | Provider port posture: first-party direct vs aggregation conditions |
 | 9 | `deepseek-adoption` | Whether/how DeepSeek V4 is adoptable (re-verify post-GA; never official endpoint for Kids/user data) |
-| 10 | `site-domain-topology` | Umbrella domain vs split domains; Kids origin separation |
 
 Resolved anchor: `core-product-name` = **SceneAxi** (captain, durable). The **24 existing holds** (origin `threejs-factory-wayfinder-v1`, tiers 1–6b — including `capability-name`, `kernel-name`, the 6a kids-safety branch, the 6b marketplace activation/scope gates, hosted-accounts/telemetry boundaries, and the tier-5 license hold) remain open, unmodified, and authoritative; the registry ticket is factories-helpers #42.
+
+Locked decision: `site-domain-topology` uses the hybrid topology recorded in
+[`site-domain-topology.md`](site-domain-topology.md): an umbrella domain for the
+core product and docs, distinct game-asset and website-asset storefront domains,
+and a fully separate Kids domain/origin. Exact domain strings and purchases are
+out of scope. This human-readable record does not replace the authoritative
+FirstMate registry snapshot required by `docs/held-key-enforcement.md`.
 
 ## Testing Decisions
 

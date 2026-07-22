@@ -33,6 +33,10 @@ The first-class v1 Plugin Host contract is documented in
 [`docs/plugins.md`](docs/plugins.md): plugins are isolated packages that claim
 only versioned public capability IDs, never arbitrary hooks or engine-internal
 ports.
+The locked hybrid [`site and domain topology`](docs/program/site-domain-topology.md)
+assigns canonical ownership across the umbrella product/docs site, two distinct
+asset storefronts, and the fully isolated Kids domain/origin; exact domain names
+and purchases remain outside its scope.
 
 ## Development
 
