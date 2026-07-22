@@ -142,7 +142,7 @@ the path-resolved line table, then apply the same proportional split.
 |---|---|
 | Eligible time | **Harness-logged agent-hours only** |
 | Self-reported time | **Never** eligible for throughput or glue share |
-| Missing harness log for a window | Treat window hours as **incomplete** (§5 / §6 edge handling pattern: incomplete dimension cannot support a "no-worse" claim favoring the incomplete arm — see §5.2) |
+| Missing harness log for a throughput or glue-share window | The adjudication audit cannot pass; stop before cross-arm ratios (§7) |
 
 ### 3.2 Accepted product work
 
@@ -189,7 +189,7 @@ migration counters in §5).
 |---|---:|---:|---:|---|
 | Replicate A1 authoring | 5.0 | 2.0 | 1.0 | |
 | Replicate A2 authoring | 4.0 | 3.0 | 0.5 | |
-| Upgrade drill (excluded) | 0.0 | 0.0 | 0.0 | drill product/glue not in pool; drill tracked in §6 |
+| Upgrade drill (excluded) | 0.0 | 0.0 | 0.0 | drill product/glue not in pool; drill tracked in §5 |
 | **Pool** | **9.0** | **5.0** | (harness not in glue pool) | |
 
 ```text
@@ -298,8 +298,9 @@ audit and records a signed checklist:
 4. Harness logs complete for all windows used in throughput and glue share.
 5. Upgrade-drill time excluded from glue pool; present on migration counters.
 6. Human medians recorded blind; eligibility floor applied without winner pick.
-7. Six dependency/security and three migration counters measured with the same
-   recipe both arms; zero/incomplete handling applied per §4.2 / §5.2.
+7. All six dependency/security and all three migration counters are either
+   measured with the same recipe for both arms or explicitly marked incomplete;
+   zero/incomplete handling is applied per §4.2 / §5.2.
 8. Qualifying-replicate set frozen (Stage 0 gates); no post-hoc disqualification
    to steer a ratio.
 9. Arm C data, if any, **quarantined** from every ratio field.
@@ -311,7 +312,7 @@ steered winner. Audit **pass** → proceed to §8 in order.
 
 ## 8. Decision-rule flowchart (ordered)
 
-Walk **top to bottom**. First matching terminal leaf wins. Arm C never appears
+Walk **top to bottom**. The first matching terminal leaf controls. Arm C never appears
 in a ratio, kill condition comparing A vs B throughput, or no-worse tally.
 
 ```text
@@ -373,11 +374,11 @@ in a ratio, kill condition comparing A vs B throughput, or no-worse tally.
                (throughput favored W; counted dimension blocked overall win)
 ```
 
-### 8.1 Terminal outcomes (all final and valid)
+### 8.1 Terminal dispositions
 
-| Outcome | Meaning |
+| Disposition | Meaning |
 |---|---|
-| **Material winner = A or B** | Cleared hard kills, 2+ quals each, dispersion, ≥1.25× non-overlapping means, no-worse on both dimensions |
+| **Material winner = A or B** | Cleared hard kills, 2+ quals each, dispersion, ≥1.25× means with non-overlapping replicate ranges, and no-worse on both dimensions |
 | **Split verdict — no overall winner** | Throughput candidate exists but fails no-worse on dependency/security and/or migration |
 | **No material winner** | <1.25× both ways, peer absent after kill, dispersion fail, or double kill |
 | **Inconclusive** | Estimated throughput is ≥1.25× but replicate throughput ranges overlap; no material-win or pass claim |
@@ -482,9 +483,9 @@ pass, fail, no-worse, split, no-winner, or a win.
 | Migration comparability | sufficient (≥2) / insufficient (<2) / not reached |
 | No-worse dep/sec | yes / no / not reached |
 | No-worse migration | yes / no / not reached |
-| **Terminal outcome** | |
+| **Terminal disposition** | |
 
-The table is complete only when **Terminal outcome** matches the first
+The table is complete only when **Terminal disposition** matches the first
 applicable §8 leaf. If counter comparability is reached, any `insufficient`
 entry requires **INVALID RUN** and a corrected rerun before adjudication can
 complete. A `yes` ratio of ≥1.25× with `yes` range overlap requires
