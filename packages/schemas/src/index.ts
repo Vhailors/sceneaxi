@@ -70,6 +70,7 @@ export {
   DELIVERY_HANDOFF_KIND,
   DELIVERY_HANDOFF_SCHEMA_VERSION,
   DELIVERY_TARGET_PLATFORMS,
+  computeDeliveryArtifactSetDigest,
   parseDeliveryHandoffText,
   validateDeliveryHandoff,
 } from "./delivery-handoff.js";
@@ -78,6 +79,7 @@ export type {
   DeliveryBuildMetadata,
   DeliveryHandoff,
   DeliveryHandoffArtifact,
+  DeliveryHandoffArtifacts,
   DeliveryHandoffDiagnostic,
   DeliveryHandoffDiagnosticCode,
   DeliveryHandoffProduct,
