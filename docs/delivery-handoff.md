@@ -42,6 +42,8 @@ Schema major mismatches, missing or malformed fields, malformed digests,
 invalid artifact paths, aggregate digest mismatches, and unknown properties
 refuse with typed diagnostics. Contract objects are closed; the `artifacts`
 record admits only path keys whose values match the closed artifact descriptor.
+JSON text with duplicate member names refuses before value validation so every
+path and digest input has one interoperable I-JSON meaning.
 
 ## Adapter boundary
 

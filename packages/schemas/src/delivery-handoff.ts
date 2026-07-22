@@ -78,6 +78,7 @@ export type DeliveryHandoffDiagnosticCode =
   | "unexpected-field"
   | "invalid-field"
   | "invalid-digest"
+  | "duplicate-json-member"
   | "artifact-set-digest-mismatch";
 
 export type DeliveryHandoffDiagnostic = {
@@ -188,6 +189,7 @@ type Rfc3339Instant = {
   readonly value: string;
   readonly wholeSeconds: number;
   readonly fraction: string;
+  readonly leapSecond: boolean;
 };
 
 function daysInMonth(year: number, month: number) {
@@ -210,6 +212,31 @@ function daysFromCivil(year: number, month: number, day: number) {
     Math.floor(yearOfEra / 100) +
     dayOfYear;
   return era * 146_097 + dayOfEra - 719_468;
+}
+
+function civilFromDays(days: number) {
+  const adjustedDays = days + 719_468;
+  const era = Math.floor(adjustedDays / 146_097);
+  const dayOfEra = adjustedDays - era * 146_097;
+  const yearOfEra = Math.floor(
+    (dayOfEra -
+      Math.floor(dayOfEra / 1_460) +
+      Math.floor(dayOfEra / 36_524) -
+      Math.floor(dayOfEra / 146_096)) /
+      365,
+  );
+  let year = yearOfEra + era * 400;
+  const dayOfYear =
+    dayOfEra -
+    (365 * yearOfEra +
+      Math.floor(yearOfEra / 4) -
+      Math.floor(yearOfEra / 100));
+  const adjustedMonth = Math.floor((5 * dayOfYear + 2) / 153);
+  const day =
+    dayOfYear - Math.floor((153 * adjustedMonth + 2) / 5) + 1;
+  const month = adjustedMonth + (adjustedMonth < 10 ? 3 : -9);
+  if (month <= 2) year += 1;
+  return { year, month, day };
 }
 
 function parseRfc3339Instant(value: unknown): Rfc3339Instant | null {
@@ -250,8 +277,7 @@ function parseRfc3339Instant(value: unknown): Rfc3339Instant | null {
     day > daysInMonth(year, month) ||
     hour > 23 ||
     minute > 59 ||
-    second > 60 ||
-    (second === 60 && minute !== 59)
+    second > 60
   ) {
     return null;
   }
@@ -265,21 +291,33 @@ function parseRfc3339Instant(value: unknown): Rfc3339Instant | null {
     offsetSeconds = direction * (offsetHour * 3_600 + offsetMinute * 60);
   }
 
-  return {
-    value,
-    wholeSeconds:
-      daysFromCivil(year, month, day) * 86_400 +
-      hour * 3_600 +
-      minute * 60 +
-      second -
-      offsetSeconds,
-    fraction,
-  };
+  const leapSecond = second === 60;
+  const wholeSeconds =
+    daysFromCivil(year, month, day) * 86_400 +
+    hour * 3_600 +
+    minute * 60 +
+    Math.min(second, 59) -
+    offsetSeconds;
+  if (leapSecond) {
+    const utcSecondOfDay = ((wholeSeconds % 86_400) + 86_400) % 86_400;
+    const utcDate = civilFromDays(Math.floor(wholeSeconds / 86_400));
+    if (
+      utcSecondOfDay !== 86_399 ||
+      utcDate.day !== daysInMonth(utcDate.year, utcDate.month)
+    ) {
+      return null;
+    }
+  }
+
+  return { value, wholeSeconds, fraction, leapSecond };
 }
 
 function compareRfc3339Instants(left: Rfc3339Instant, right: Rfc3339Instant) {
   if (left.wholeSeconds !== right.wholeSeconds) {
     return left.wholeSeconds - right.wholeSeconds;
+  }
+  if (left.leapSecond !== right.leapSecond) {
+    return left.leapSecond ? 1 : -1;
   }
   const width = Math.max(left.fraction.length, right.fraction.length);
   const leftFraction = left.fraction.padEnd(width, "0");
@@ -303,11 +341,23 @@ function hasUnpairedSurrogate(value: string) {
   return false;
 }
 
+function codePointLength(value: string) {
+  return [...value].length;
+}
+
+function isNonBlankStringAtMost(value: unknown, maximum: number): value is string {
+  return (
+    typeof value === "string" &&
+    value.trim().length > 0 &&
+    codePointLength(value) <= maximum
+  );
+}
+
 function isPortableRelativePath(value: unknown): value is string {
   if (
     typeof value !== "string" ||
     value.length === 0 ||
-    [...value].length > 1024
+    codePointLength(value) > 1024
   ) {
     return false;
   }
@@ -464,11 +514,7 @@ function validateProduct(
     );
   }
   const displayName = value["displayName"];
-  if (
-    typeof displayName !== "string" ||
-    displayName.trim().length === 0 ||
-    displayName.length > 200
-  ) {
+  if (!isNonBlankStringAtMost(displayName, 200)) {
     return refuse(
       "invalid-field",
       "$.product.displayName",
@@ -476,11 +522,7 @@ function validateProduct(
     );
   }
   const version = value["version"];
-  if (
-    typeof version !== "string" ||
-    version.trim().length === 0 ||
-    version.length > 100
-  ) {
+  if (!isNonBlankStringAtMost(version, 100)) {
     return refuse(
       "invalid-field",
       "$.product.version",
@@ -604,7 +646,7 @@ function validateBuild(
   if (unexpected !== null) return unexpected;
 
   const id = value["id"];
-  if (typeof id !== "string" || id.trim().length === 0 || id.length > 200) {
+  if (!isNonBlankStringAtMost(id, 200)) {
     return refuse(
       "invalid-field",
       "$.provenance.build.id",
@@ -614,7 +656,7 @@ function validateBuild(
   const tool = value["tool"];
   if (
     Object.hasOwn(value, "tool") &&
-    (typeof tool !== "string" || tool.trim().length === 0 || tool.length > 200)
+    !isNonBlankStringAtMost(tool, 200)
   ) {
     return refuse(
       "invalid-field",
@@ -822,7 +864,7 @@ export function validateDeliveryHandoff(
   const notes = value["notes"];
   if (
     Object.hasOwn(value, "notes") &&
-    (typeof notes !== "string" || notes.trim().length === 0 || notes.length > 10_000)
+    !isNonBlankStringAtMost(notes, 10_000)
   ) {
     return refuse(
       "invalid-field",
@@ -846,6 +888,188 @@ export function validateDeliveryHandoff(
   };
 }
 
+type JsonToken =
+  | {
+      readonly kind: "punctuation";
+      readonly value: "{" | "}" | "[" | "]" | ":" | ",";
+    }
+  | { readonly kind: "string"; readonly value: string }
+  | { readonly kind: "primitive" };
+
+type JsonObjectFrame = {
+  readonly kind: "object";
+  readonly path: string;
+  readonly keys: Set<string>;
+  state: "key-or-end" | "colon" | "value" | "comma-or-end";
+  pendingKey: string | null;
+};
+
+type JsonArrayFrame = {
+  readonly kind: "array";
+  readonly path: string;
+  state: "value-or-end" | "comma-or-end";
+  index: number;
+};
+
+type JsonContainerFrame = JsonObjectFrame | JsonArrayFrame;
+
+function nextJsonToken(
+  text: string,
+  start: number,
+): { readonly token: JsonToken; readonly nextIndex: number } | null {
+  let index = start;
+  while (
+    text[index] === " " ||
+    text[index] === "\t" ||
+    text[index] === "\n" ||
+    text[index] === "\r"
+  ) {
+    index += 1;
+  }
+  if (index >= text.length) return null;
+
+  const character = text[index];
+  if (
+    character === "{" ||
+    character === "}" ||
+    character === "[" ||
+    character === "]" ||
+    character === ":" ||
+    character === ","
+  ) {
+    return {
+      token: { kind: "punctuation", value: character } satisfies JsonToken,
+      nextIndex: index + 1,
+    };
+  }
+
+  if (character === '"') {
+    let cursor = index + 1;
+    while (cursor < text.length) {
+      if (text[cursor] === "\\") {
+        cursor += 2;
+      } else if (text[cursor] === '"') {
+        const raw = text.slice(index, cursor + 1);
+        const value = JSON.parse(raw) as unknown;
+        if (typeof value !== "string") return null;
+        return {
+          token: { kind: "string", value } satisfies JsonToken,
+          nextIndex: cursor + 1,
+        };
+      } else {
+        cursor += 1;
+      }
+    }
+    return null;
+  }
+
+  let cursor = index + 1;
+  while (
+    cursor < text.length &&
+    text[cursor] !== " " &&
+    text[cursor] !== "\t" &&
+    text[cursor] !== "\n" &&
+    text[cursor] !== "\r" &&
+    text[cursor] !== "{" &&
+    text[cursor] !== "}" &&
+    text[cursor] !== "[" &&
+    text[cursor] !== "]" &&
+    text[cursor] !== ":" &&
+    text[cursor] !== ","
+  ) {
+    cursor += 1;
+  }
+  return {
+    token: { kind: "primitive" } satisfies JsonToken,
+    nextIndex: cursor,
+  };
+}
+
+function jsonMemberPath(parent: string, member: string) {
+  return /^[A-Za-z_][A-Za-z0-9_]*$/.test(member)
+    ? `${parent}.${member}`
+    : `${parent}[${JSON.stringify(member)}]`;
+}
+
+function findDuplicateJsonMember(text: string) {
+  const stack: JsonContainerFrame[] = [];
+  let index = 0;
+  let rootConsumed = false;
+
+  const beginValue = (token: JsonToken, path: string) => {
+    if (token.kind !== "punctuation") return;
+    if (token.value === "{") {
+      stack.push({
+        kind: "object",
+        path,
+        keys: new Set<string>(),
+        state: "key-or-end",
+        pendingKey: null,
+      });
+    } else if (token.value === "[") {
+      stack.push({ kind: "array", path, state: "value-or-end", index: 0 });
+    }
+  };
+
+  while (true) {
+    const next = nextJsonToken(text, index);
+    if (next === null) return null;
+    index = next.nextIndex;
+    const token = next.token;
+    const frame = stack.at(-1);
+
+    if (frame === undefined) {
+      if (rootConsumed) return null;
+      rootConsumed = true;
+      beginValue(token, "$");
+      continue;
+    }
+
+    if (frame.kind === "object") {
+      if (frame.state === "key-or-end") {
+        if (token.kind === "punctuation" && token.value === "}") {
+          stack.pop();
+          continue;
+        }
+        if (token.kind !== "string") return null;
+        const path = jsonMemberPath(frame.path, token.value);
+        if (frame.keys.has(token.value)) return path;
+        frame.keys.add(token.value);
+        frame.pendingKey = token.value;
+        frame.state = "colon";
+      } else if (frame.state === "colon") {
+        frame.state = "value";
+      } else if (frame.state === "value") {
+        if (frame.pendingKey === null) return null;
+        const path = jsonMemberPath(frame.path, frame.pendingKey);
+        frame.pendingKey = null;
+        frame.state = "comma-or-end";
+        beginValue(token, path);
+      } else if (token.kind === "punctuation" && token.value === ",") {
+        frame.state = "key-or-end";
+      } else {
+        stack.pop();
+      }
+      continue;
+    }
+
+    if (frame.state === "value-or-end") {
+      if (token.kind === "punctuation" && token.value === "]") {
+        stack.pop();
+        continue;
+      }
+      const path = `${frame.path}[${frame.index}]`;
+      frame.index += 1;
+      frame.state = "comma-or-end";
+      beginValue(token, path);
+    } else if (token.kind === "punctuation" && token.value === ",") {
+      frame.state = "value-or-end";
+    } else {
+      stack.pop();
+    }
+  }
+}
+
 /** Parse JSON text then validate it as a public delivery handoff. */
 export function parseDeliveryHandoffText(
   text: string,
@@ -859,6 +1083,14 @@ export function parseDeliveryHandoffText(
       "parse-error",
       "$",
       `Delivery handoff JSON parse failed: ${message}`,
+    );
+  }
+  const duplicateMemberPath = findDuplicateJsonMember(text);
+  if (duplicateMemberPath !== null) {
+    return refuse(
+      "duplicate-json-member",
+      duplicateMemberPath,
+      "Duplicate JSON member names are refused.",
     );
   }
   return validateDeliveryHandoff(value);

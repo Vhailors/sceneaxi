@@ -303,6 +303,7 @@ describe("delivery handoff contract", () => {
     const pattern = schema.properties?.artifacts?.propertyNames?.pattern;
     expect(pattern).toBeTypeOf("string");
     expect(new RegExp(pattern ?? "").test("a\n/../../outside.zip")).toBe(false);
+    expect(new RegExp(pattern ?? "").test("artifacts/")).toBe(false);
     expect(new RegExp(pattern ?? "").test("artifacts/demo-game.zip")).toBe(
       true,
     );
@@ -312,7 +313,8 @@ describe("delivery handoff contract", () => {
     for (const createdAt of [
       "2026-07-22T24:00:00Z",
       "2025-02-29T12:00:00Z",
-      "2026-07-22T12:58:60Z",
+      "1990-12-31T12:59:60Z",
+      "1990-12-30T23:59:60Z",
     ]) {
       expect(
         validateDeliveryHandoff({
@@ -325,9 +327,111 @@ describe("delivery handoff contract", () => {
     expect(
       validateDeliveryHandoff({
         ...minimalHandoff(),
-        provenance: { createdAt: "1990-12-31t23:59:60z" },
+        provenance: { createdAt: "1991-01-01t05:29:60+05:30" },
       }).ok,
     ).toBe(true);
+
+    const ordered = validateDeliveryHandoff({
+      ...minimalHandoff(),
+      provenance: {
+        createdAt: "1990-12-31T23:59:59Z",
+        build: {
+          id: "leap-build",
+          startedAt: "1990-12-31T23:59:60Z",
+          completedAt: "1991-01-01T00:00:00Z",
+        },
+      },
+    });
+    expect(ordered.ok).toBe(true);
+
+    const reversed = validateDeliveryHandoff({
+      ...minimalHandoff(),
+      provenance: {
+        createdAt: "1990-12-31T23:59:59Z",
+        build: {
+          id: "leap-build",
+          startedAt: "1991-01-01T00:00:00Z",
+          completedAt: "1990-12-31T23:59:60Z",
+        },
+      },
+    });
+    expect(reversed.ok).toBe(false);
+    if (!reversed.ok) {
+      expect(reversed.diagnostics[0]?.path).toBe(
+        "$.provenance.build.completedAt",
+      );
+    }
+  });
+
+  it("counts string limits by Unicode code point like JSON Schema", () => {
+    const astral = "😀";
+    const boundary = validateDeliveryHandoff({
+      ...minimalHandoff(),
+      product: {
+        ...minimalHandoff().product,
+        displayName: astral.repeat(200),
+        version: astral.repeat(100),
+      },
+      provenance: {
+        ...minimalHandoff().provenance,
+        build: {
+          id: astral.repeat(200),
+          tool: astral.repeat(200),
+        },
+      },
+      notes: astral.repeat(10_000),
+    });
+    expect(boundary.ok).toBe(true);
+
+    const overBoundary = validateDeliveryHandoff({
+      ...minimalHandoff(),
+      product: {
+        ...minimalHandoff().product,
+        displayName: astral.repeat(201),
+      },
+    });
+    expect(overBoundary.ok).toBe(false);
+    if (!overBoundary.ok) {
+      expect(overBoundary.diagnostics[0]?.path).toBe("$.product.displayName");
+    }
+  });
+
+  it("refuses duplicate JSON member names before value validation", () => {
+    const handoff = minimalHandoff();
+    const descriptor = JSON.stringify(
+      handoff.artifacts["artifacts/demo-game.zip"],
+    );
+    const duplicateArtifactPath = JSON.stringify(handoff).replace(
+      `"artifacts":${JSON.stringify(handoff.artifacts)}`,
+      `"artifacts":{"artifacts/demo-game.zip":${descriptor},"artifacts/demo-game.zip":${descriptor}}`,
+    );
+    const duplicateArtifactResult = parseDeliveryHandoffText(
+      duplicateArtifactPath,
+    );
+    expect(duplicateArtifactResult.ok).toBe(false);
+    if (!duplicateArtifactResult.ok) {
+      expect(duplicateArtifactResult.diagnostics[0]).toEqual(
+        expect.objectContaining({
+          code: "duplicate-json-member",
+          path: '$.artifacts["artifacts/demo-game.zip"]',
+        }),
+      );
+    }
+
+    const duplicateRoot = JSON.stringify(handoff).replace(
+      '"target":"web"',
+      '"target":"web","target":"ios"',
+    );
+    const duplicateRootResult = parseDeliveryHandoffText(duplicateRoot);
+    expect(duplicateRootResult.ok).toBe(false);
+    if (!duplicateRootResult.ok) {
+      expect(duplicateRootResult.diagnostics[0]).toEqual(
+        expect.objectContaining({
+          code: "duplicate-json-member",
+          path: "$.target",
+        }),
+      );
+    }
   });
 
   it("refuses malformed JSON with a parse diagnostic", () => {
