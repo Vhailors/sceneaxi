@@ -116,7 +116,7 @@ names in the program are not answers.
 pinned_worker_config:
   manifest_version: <semver or date-id>
   fields:
-    P1..P12: <value or HELD-ref>
+    P1..P12: <filled value>
   content_bytes_uri: <path or blob id of canonical serialization>
   content_hash:
     algorithm: <e.g. sha256>
@@ -124,14 +124,15 @@ pinned_worker_config:
   locked_at: <ISO-8601 timestamp>
   locked_under: <Stage 0 authorization reference>
   decision_key_refs:
-    first-proof-brief: <backlog ref or "open">
-    first-proof-budget: <backlog ref or "open">
-    first-proof-kill-rubric: <backlog ref or "open">
+    first-proof-brief: <recorded backlog ref + version>
+    first-proof-budget: <recorded backlog ref + version>
+    first-proof-kill-rubric: <recorded backlog ref + version>
 ```
 
 Canonical serialization must be **stable** (sorted keys, LF newlines, no
 volatile timestamps inside the hashed bytes). Algorithm and digest are
-recorded beside the Stage 0 contract hash (Stage 0 template §7).
+recorded beside the Stage 0 contract hash (Stage 0 template §7). An open
+decision key describes a draft, not a completed lock record.
 
 ### 2.3 Hash-recording protocol
 
@@ -142,9 +143,9 @@ decisions are recorded:
 2. Compute the collision-resistant digest; record algorithm + digest.
 3. Record the same digest in the Stage 0 lock record next to the filled
    acceptance-contract hash.
-4. Before **each** worker start (A1, B1, A2, B2), re-hash the live
-   configuration surface the worker will actually use and compare to the
-   pinned digest.
+4. Before **each** authoring-worker or drill start (A1, B1, A2, B2, Drill A,
+   Drill B), re-hash the live configuration surface the worker will actually
+   use and compare to the pinned digest.
 5. **Any mismatch → void the run** (or refuse to start that worker). Do not
    "re-pin mid-flight," patch a worker, or continue with a drifted config.
 
@@ -155,7 +156,7 @@ decisions are recorded:
 | Live worker config hash ≠ pinned digest | **Void** (or hard stop before that replicate starts) |
 | Mid-run tool/skill/permission change | **Void** |
 | Arm-specific model upgrade not in pin | **Void** |
-| Silent warm-cache rescue that changes effective tooling | Treat as drift / reproducibility defect → disqualify or void per §6 |
+| Silent warm-cache rescue that changes effective tooling | Treat as drift / reproducibility defect → disqualify or void per §5.5 |
 
 Drift is never reinterpreted as "minor" or "favoring neither arm." Void is
 final for that authorization; a clean re-run requires a new authorization
@@ -265,7 +266,7 @@ brief patch. Block 2 does not proceed under the defective contract.
 |---|---|
 | Eligible time | **Harness-logged agent-hours only** |
 | Self-reported time | **Never** eligible for caps, throughput, glue share, or drill counters |
-| Missing harness log for a window | Window is **incomplete** — cannot support a "no-worse" claim favoring that arm (worksheet §3.1 / §5.2) |
+| Missing harness log for a throughput or glue-share window | Adjudication audit cannot pass; stop before cross-arm ratios (worksheet §3.1 / §7) |
 
 The harness starts/stops the clock on defined events (§5.3). Workers cannot
 edit their own hour totals.
@@ -332,7 +333,7 @@ windows to product / glue / harness / drill.
 | Fails fresh-checkout reproducibility | Replicate **does not qualify** (Stage 0 §5) |
 | Fails 100-seed digest on any of 30/60/120 | Replicate **does not qualify** |
 | Fails named-device WebGL2 gate | Replicate **does not qualify** |
-| Missing harness log for throughput window | Incomplete; cannot support no-worse favoring that arm |
+| Missing harness log for throughput window | Adjudication audit fails; stop before cross-arm ratios |
 | Block-order draw not recorded before start | Ordering defect → operator audit / likely void |
 | Mid-flight brief, rubric, or criteria edit | **Void** (rules defect) |
 
@@ -346,8 +347,9 @@ throughput to non-decisive pilot evidence (Stage 0 §5 / worksheet §8).
 
 Each primary replicate (A1, B1, A2, B2) produces an evidence packet. Capture
 points below map to packet requirements. Measurement recipes must be
-**identical across arms** (same harness pins). Missing measurements demote
-related claims; they never round up
+**identical across arms** (same harness pins). Missing measurements take only
+the qualification, audit, or adjudication disposition owned by the Stage 0
+contract and Stage 1 worksheet; they never round up
 ([factories-helpers#44](https://github.com/Vhailors/factories-helpers/issues/44)
 by reference).
 
@@ -384,10 +386,10 @@ masked until ratings are sealed.
 | Glue pool per arm (drill excluded) | After both replicates' hour logs sealed |
 | Migration counters M1–M3 | After upgrade drill (§8) |
 | Mean throughput, dispersion | Adjudication (worksheet) |
-| Material winner / split / kill | Adjudication flowchart only after §7 audit |
+| Terminal disposition | Stage 1 worksheet §8, only after its §7 audit |
 
-This run-sheet does **not** compute winners. Operators hand sealed packets to
-adjudicators using the Stage 1 worksheet.
+This run-sheet does **not** adjudicate terminal dispositions. Operators hand
+sealed packets to adjudicators using the Stage 1 worksheet.
 
 ---
 
@@ -428,7 +430,7 @@ decisions. Stage 0 lock + pin hashes must already exist.
 
 [7] Hand packets to independent adjudicator (worksheet §7 audit → §8 flowchart)
 
-[8] Record terminal outcome; no mid-flight reweight
+[8] Record terminal disposition; no mid-flight reweight
 ```
 
 ---
@@ -581,14 +583,15 @@ evidence for or against hosted authoring.
 
 ### B.1 Pin freeze
 
+The authoritative Stage 0 lock-record form is in the Stage 0 template §7.
+Reference that completed record here instead of copying its fields.
+
 | Field | Value |
 |---|---|
-| Contract hash (alg + digest) | |
-| Worker-config hash (alg + digest) | |
-| Asset Package pin | |
-| Stage 0 authorization ref | |
+| Stage 0 lock-record URI / path | |
+| Stage 0 lock-record status | complete / refused |
+| Asset Package pin verified against manifest P9? | |
 | Stage 1 run authorization ref | |
-| Locked at (UTC) | |
 
 ### B.2 Block draws
 
@@ -599,16 +602,42 @@ evidence for or against hosted authoring.
 
 ### B.3 Worker pre-start hash checks
 
-| Slot | Live hash == pin? | Started at | Stopped at | Logged h |
-|---|---|---|---|---:|
-| W-A1 | | | | |
-| W-B1 | | | | |
-| W-A2 | | | | |
-| W-B2 | | | | |
-| Drill A | | | | |
-| Drill B | | | | |
+Record digests, not only a pass/fail assertion. The pinned and live values are
+the evidence for the comparison required by §2.3.
 
-### B.4 Replicate qualification (operator view)
+| Slot | Pinned digest | Live digest | Match? | Checked by | Started at | Stopped at | Logged h |
+|---|---|---|---|---|---|---|---:|
+| W-A1 | | | | | | | |
+| W-B1 | | | | | | | |
+| W-A2 | | | | | | | |
+| W-B2 | | | | | | | |
+| Drill A | | | | | | | |
+| Drill B | | | | | | | |
+
+### B.4 Evidence-packet seal
+
+Use `complete`, `incomplete`, or `not-run` for every capture point. Any value
+other than `complete` requires a reason in the packet; sealing records the gap
+and never upgrades it into evidence.
+
+| Capture point (§6.1) | A1 | B1 | A2 | B2 |
+|---|---|---|---|---|
+| E1 Contract hash | | | | |
+| E2 Pinned-config hash | | | | |
+| E3 Block order record | | | | |
+| E4 Work-Class log + path rules | | | | |
+| E5 Harness hour log | | | | |
+| E6 Fresh-checkout reproduction | | | | |
+| E7 100-seed digest (30/60/120) | | | | |
+| E8 Named-device WebGL2 run | | | | |
+| E9 Verified captures | | | | |
+| E10 Criteria matrix | | | | |
+| E11 Dependency/security counters | | | | |
+| E12 Human-verdict binding | | | | |
+| E13 Limitations | | | | |
+| E14 Asset Package pin + ingestion rejects | | | | |
+
+### B.5 Replicate qualification (operator view)
 
 | Arm | Rep | Fresh checkout | Digest 30/60/120 | Device gate | Qualifying? |
 |---|---|---|---|---|---|
@@ -617,7 +646,7 @@ evidence for or against hosted authoring.
 | A | 2 | | | | |
 | B | 2 | | | | |
 
-### B.5 Overscope stop
+### B.6 Overscope stop
 
 | Block-1 A accepted % | Block-1 B accepted % | Both &lt; 50%? | Outcome |
 |---|---|---|---|

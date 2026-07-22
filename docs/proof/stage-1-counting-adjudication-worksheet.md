@@ -53,8 +53,10 @@ approval, Stage 0 lock, or Stage 1 authorization.
 
 When an authorized Stage 1 run completes, adjudicators fill this worksheet with
 measured values and walk the decision-rule flowchart in order. Every branch
-yields a **final valid outcome** (material winner, split verdict, no material
-winner, arm kill, arm downgrade, or void). No mid-flight reweighting.
+yields a terminal disposition: a **final valid outcome** (material winner,
+split verdict, no material winner, arm kill, arm downgrade, inconclusive, or
+void) or **INVALID RUN**, which requires a corrected run before adjudication can
+complete. No mid-flight reweighting.
 
 Primary arms only:
 
@@ -140,7 +142,7 @@ the path-resolved line table, then apply the same proportional split.
 |---|---|
 | Eligible time | **Harness-logged agent-hours only** |
 | Self-reported time | **Never** eligible for throughput or glue share |
-| Missing harness log for a window | Treat window hours as **incomplete** (§5 / §6 edge handling pattern: incomplete dimension cannot support a "no-worse" claim favoring the incomplete arm — see §5.2) |
+| Missing harness log for a throughput or glue-share window | The adjudication audit cannot pass; stop before cross-arm ratios (§7) |
 
 ### 3.2 Accepted product work
 
@@ -179,7 +181,7 @@ throughput(replicate) =
 
 Pooled glue share is computed **across all replicate authoring time for the
 arm**, with the **upgrade drill excluded** (drill hours/files live only on the
-migration counters in §6).
+migration counters in §5).
 
 **Arm A — two replicates, drill excluded:**
 
@@ -187,7 +189,7 @@ migration counters in §6).
 |---|---:|---:|---:|---|
 | Replicate A1 authoring | 5.0 | 2.0 | 1.0 | |
 | Replicate A2 authoring | 4.0 | 3.0 | 0.5 | |
-| Upgrade drill (excluded) | 0.0 | 0.0 | 0.0 | drill product/glue not in pool; drill tracked in §6 |
+| Upgrade drill (excluded) | 0.0 | 0.0 | 0.0 | drill product/glue not in pool; drill tracked in §5 |
 | **Pool** | **9.0** | **5.0** | (harness not in glue pool) | |
 
 ```text
@@ -234,7 +236,7 @@ under this rule (W may be equal or better; ties on a counter are not "higher").
 |---|---|
 | Counter legitimately **0** on both arms | Counter is **comparable**; 0 is not incomplete |
 | Counter **0** on one arm, positive on the other | Comparable; relative "% higher" uses the positive side as baseline only when the other is higher — a zero is not ">25% higher" than a positive; a positive **is** higher than zero (and if positive > 0, the ratio is treated as exceeding 25% for that counter) |
-| Counter **missing / incomplete** on either arm | That counter is **dropped from the ≥2 tally** for *both* arms; record the drop. If fewer than **2** counters remain comparable, dependency/security **cannot** support a material-winner claim (outcome falls to split / no-winner paths that require no-worse — see §8) |
+| Counter **missing / incomplete** on either arm | That counter is **dropped from the ≥2 tally** for *both* arms; record the drop. If the §8 counter-comparability step is reached and fewer than **2** counters remain comparable, the run is **INVALID RUN** and requires a corrected rerun before adjudication can complete; do not record pass, fail, no-worse, or a winner |
 | Divergent measurement method between arms | **Classification / evidence defect** → stop at adjudication audit; do not invent crosswalks mid-flight |
 
 ---
@@ -260,7 +262,7 @@ arm X is WORSE than arm Y on migration
 |---|---|
 | Counter **0** both arms | Comparable |
 | Counter **0** one arm only | Same as §4.2 relative rule |
-| Drill not run / hours missing | M2/M3 **incomplete** → drop those counters for both arms; if fewer than **2** migration counters remain comparable, migration **cannot** support a material-winner claim |
+| Drill not run / hours missing | M2/M3 **incomplete** → drop those counters for both arms; if the §8 counter-comparability step is reached and fewer than **2** migration counters remain comparable, the run is **INVALID RUN** and requires a corrected rerun before adjudication can complete |
 | Backend-import measurement undefined for an arm | M1 incomplete → same drop rule |
 
 ---
@@ -296,8 +298,9 @@ audit and records a signed checklist:
 4. Harness logs complete for all windows used in throughput and glue share.
 5. Upgrade-drill time excluded from glue pool; present on migration counters.
 6. Human medians recorded blind; eligibility floor applied without winner pick.
-7. Six dependency/security and three migration counters measured with the same
-   recipe both arms; zero/incomplete handling applied per §4.2 / §5.2.
+7. All six dependency/security and all three migration counters are either
+   measured with the same recipe for both arms or explicitly marked incomplete;
+   zero/incomplete handling is applied per §4.2 / §5.2.
 8. Qualifying-replicate set frozen (Stage 0 gates); no post-hoc disqualification
    to steer a ratio.
 9. Arm C data, if any, **quarantined** from every ratio field.
@@ -309,7 +312,7 @@ steered winner. Audit **pass** → proceed to §8 in order.
 
 ## 8. Decision-rule flowchart (ordered)
 
-Walk **top to bottom**. First matching terminal leaf wins. Arm C never appears
+Walk **top to bottom**. The first matching terminal leaf controls. Arm C never appears
 in a ratio, kill condition comparing A vs B throughput, or no-worse tally.
 
 ```text
@@ -348,26 +351,38 @@ in a ratio, kill condition comparing A vs B throughput, or no-worse tally.
     Let r = mean_throughput(A) / mean_throughput(B)   (B/A symmetric)
     Candidate W = arm with higher mean; L = the other.
 
-    4a. Is max(mean_A, mean_B) / min(mean_A, mean_B) ≥ 1.25
-        AND replicate throughput ranges non-overlapping?
-        NO  → if ratio < 1.25 in both directions → NO MATERIAL WINNER (final)
-        YES → continue with candidate W
+    4a. Is max(mean_A, mean_B) / min(mean_A, mean_B) ≥ 1.25?
+        NO  → NO MATERIAL WINNER (final)
+        YES → continue
+    4b. Do the replicate throughput ranges overlap?
+        YES → INCONCLUSIVE (final); no material-win or pass claim
+        NO  → continue with candidate W
 
-[5] No-worse on BOTH counted dimensions
-    5a. Is W no-worse than L on dependency/security (§4)?
-    5b. Is W no-worse than L on migration (§5)?
+[5] COUNTER COMPARABILITY
+    5a. Are at least 2 dependency/security counters comparable (§4.2)?
+    5b. Are at least 2 migration counters comparable (§5.2)?
+    Either NO → INVALID RUN (terminal for this run). Correct the evidence and
+                rerun before adjudication can complete. This is not pass, fail,
+                no-worse, split, no-winner, or a win.
+    BOTH YES → continue
+
+[6] No-worse on BOTH counted dimensions
+    6a. Is W no-worse than L on dependency/security (§4)?
+    6b. Is W no-worse than L on migration (§5)?
     BOTH yes → MATERIAL WINNER = W (final)
     Either no → SPLIT VERDICT — NO OVERALL WINNER (final)
                (throughput favored W; counted dimension blocked overall win)
 ```
 
-### 8.1 Terminal outcomes (all final and valid)
+### 8.1 Terminal dispositions
 
-| Outcome | Meaning |
+| Disposition | Meaning |
 |---|---|
-| **Material winner = A or B** | Cleared hard kills, 2+ quals each, dispersion, ≥1.25× non-overlapping means, no-worse on both dimensions |
+| **Material winner = A or B** | Cleared hard kills, 2+ quals each, dispersion, ≥1.25× means with non-overlapping replicate ranges, and no-worse on both dimensions |
 | **Split verdict — no overall winner** | Throughput candidate exists but fails no-worse on dependency/security and/or migration |
 | **No material winner** | <1.25× both ways, peer absent after kill, dispersion fail, or double kill |
+| **Inconclusive** | Estimated throughput is ≥1.25× but replicate throughput ranges overlap; no material-win or pass claim |
+| **Invalid run** | Fewer than 2 comparable dependency/security counters or fewer than 2 comparable migration counters; corrected rerun required before adjudication can complete; not pass/fail/win |
 | **Arm killed** | Hard kill 1a–1d |
 | **Throughput downgraded (pilot only)** | <2 qualifying replicates on that arm |
 | **Void** | Rules defect, audit fail, or Stage 0 hash drift |
@@ -385,8 +400,10 @@ migration tally, or material-winner claim may include Arm C.
 1. **No dimension may be added, dropped, or reweighted after Stage 0 lock.**
    A rules defect **voids the run** rather than being patched mid-flight.
 2. **Adjudication is audited before any cross-arm ratio** (§7).
-3. **Downgrade, dispersion failure, range overlap, split, and no-winner
-   outcomes are final** — not mid-flight repair opportunities.
+3. **Downgrade, dispersion failure, INCONCLUSIVE range overlap, split, and
+   no-winner outcomes are final** — not mid-flight repair opportunities.
+   **INVALID RUN** is terminal for the current run and requires a corrected new
+   run before adjudication can complete; correction is not a mid-flight repair.
 4. **Overscope stop** (both block-1 replicates accept under 50% of locked
    criteria → "contract defect — rerun required") is owned by Stage 0 §3.2; it
    is a no-fault contract outcome, not an arm failure under this worksheet.
@@ -415,24 +432,41 @@ migration tally, or material-winner claim may include Arm C.
 
 ### 10.3 Dependency / security
 
-| Counter | Arm A | Arm B | A >25% higher? | B >25% higher? | Incomplete? |
-|---|---:|---:|---|---|---|
-| D1 Direct deps | | | | | |
-| D2 Transitive deps | | | | | |
-| D3 Installed bytes | | | | | |
-| D4 Script-enabled pkgs | | | | | |
-| D5 Native/WASM | | | | | |
-| D6 OSV advisories | | | | | |
-| **Worse on ≥2?** | — | — | A worse? | B worse? | |
+Apply §4.2 before tallying. A row is comparable only when both arms have a
+complete value measured by the same recipe; record every dropped row and do
+not count it in either arm's `>25%` total.
+
+| Counter | Arm A | Arm B | Comparable? | A >25% higher? | B >25% higher? | Drop reason (if any) |
+|---|---:|---:|---|---|---|---|
+| D1 Direct deps | | | | | | |
+| D2 Transitive deps | | | | | | |
+| D3 Installed bytes | | | | | | |
+| D4 Script-enabled pkgs | | | | | | |
+| D5 Native/WASM | | | | | | |
+| D6 OSV advisories | | | | | | |
+| **Comparable count / worse tally** | — | — | _ of 6 | A: _ | B: _ | |
+
+If §8 reaches counter comparability and the comparable count is under 2, mark
+dependency/security as **insufficient** and the terminal disposition as
+**INVALID RUN**. A corrected rerun is required before adjudication can complete;
+do not record pass, fail, no-worse, split, no-winner, or a win.
 
 ### 10.4 Migration
 
-| Counter | Arm A | Arm B | A >25% higher? | B >25% higher? | Incomplete? |
-|---|---:|---:|---|---|---|
-| M1 Backend-import share | | | | | |
-| M2 Drill files touched | | | | | |
-| M3 Drill logged hours | | | | | |
-| **Worse on ≥2 of 3?** | — | — | A worse? | B worse? | |
+Apply §5.2 before tallying, using the same comparable/drop discipline as
+§10.3.
+
+| Counter | Arm A | Arm B | Comparable? | A >25% higher? | B >25% higher? | Drop reason (if any) |
+|---|---:|---:|---|---|---|---|
+| M1 Backend-import share | | | | | | |
+| M2 Drill files touched | | | | | | |
+| M3 Drill logged hours | | | | | | |
+| **Comparable count / worse tally** | — | — | _ of 3 | A: _ | B: _ | |
+
+If §8 reaches counter comparability and the comparable count is under 2, mark
+migration as **insufficient** and the terminal disposition as **INVALID RUN**. A
+corrected rerun is required before adjudication can complete; do not record
+pass, fail, no-worse, split, no-winner, or a win.
 
 ### 10.5 Flowchart result
 
@@ -443,10 +477,21 @@ migration tally, or material-winner claim may include Arm C.
 | Qualifying counts | A: _ B: _ |
 | Dispersion | A: _ B: _ |
 | Mean throughput ratio | |
-| Range overlap? | yes / no |
-| No-worse dep/sec | yes / no |
-| No-worse migration | yes / no |
-| **Terminal outcome** | |
+| Ratio ≥1.25×? | yes / no / not reached |
+| Range overlap? | yes / no / not reached |
+| Dependency/security comparability | sufficient (≥2) / insufficient (<2) / not reached |
+| Migration comparability | sufficient (≥2) / insufficient (<2) / not reached |
+| No-worse dep/sec | yes / no / not reached |
+| No-worse migration | yes / no / not reached |
+| **Terminal disposition** | |
+
+The table is complete only when **Terminal disposition** matches the first
+applicable §8 leaf. If counter comparability is reached, any `insufficient`
+entry requires **INVALID RUN** and a corrected rerun before adjudication can
+complete. A `yes` ratio of ≥1.25× with `yes` range overlap requires
+**INCONCLUSIVE** with no material-win or pass claim. For either terminal
+disposition, later flowchart fields are `not reached`; never coerce them to
+yes/no.
 
 ---
 
