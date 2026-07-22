@@ -293,7 +293,14 @@ describe("Catalog Item contract + policy cites", () => {
       ),
     ) as {
       $id?: string;
-      properties?: { kind?: { const?: string } };
+      properties?: {
+        kind?: { const?: string };
+        moderation?: {
+          properties?: {
+            history?: { prefixItems?: Array<{ $ref?: string }> };
+          };
+        };
+      };
     };
     expect(CATALOG_METADATA_UNAVAILABLE_TOMBSTONE_SCHEMA_VERSION).toBe(1);
     expect(schema.$id).toBe(
@@ -302,6 +309,15 @@ describe("Catalog Item contract + policy cites", () => {
     expect(schema.properties?.kind?.const).toBe(
       "catalog-metadata-unavailable-tombstone",
     );
+    expect(JSON.stringify(schema)).not.toMatch(/"\$ref":"https?:/);
+    expect(
+      schema.properties?.moderation?.properties?.history?.prefixItems,
+    ).toEqual([
+      { $ref: "#/$defs/intakeToScreening" },
+      { $ref: "#/$defs/screeningToCuration" },
+      { $ref: "#/$defs/curationToListed" },
+      { $ref: "#/$defs/listedToDelisted" },
+    ]);
   });
 
   it("starts at intake (quarantine) with empty history and inert commerce", () => {
@@ -925,7 +941,7 @@ describe("commerce fields inert (no 6b activation path)", () => {
         schemaVersion: CATALOG_METADATA_UNAVAILABLE_TOMBSTONE_SCHEMA_VERSION,
         kind: "catalog-metadata-unavailable-tombstone",
         itemId: listed.itemId,
-        unavailableMetadata: ["rights", "provenance", "commerce.activation"],
+        unavailableMetadata: ["rights", "provenance"],
         moderation: {
           pipelineState: "delisted",
           history: [...listed.moderation.history, result.transition],
@@ -934,6 +950,45 @@ describe("commerce fields inert (no 6b activation path)", () => {
       });
       expect(result.tombstone).not.toHaveProperty("assetPackage");
       expect(result.tombstone).not.toHaveProperty("aiGenerationDisclosure");
+    }
+  });
+
+  it("normalizes commerce-only drift without discarding catalog metadata", () => {
+    const corruptions: Array<(item: CatalogItem) => void> = [
+      (item) => Object.assign(item.commerce, { activation: "active" }),
+      (item) => Reflect.deleteProperty(item, "commerce"),
+      (item) =>
+        Object.assign(item, {
+          commerce: {
+            activation: "active",
+            price: { amount: 42, currency: null },
+            sku: 42,
+          },
+        }),
+    ];
+
+    for (const corrupt of corruptions) {
+      const listed = advanceToListed(syntheticAsset());
+      corrupt(listed);
+
+      const result = transitionCatalogItem(listed, {
+        to: "delisted",
+        reason: "normalize commerce during takedown",
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok) continue;
+      expect(result.kind).toBe("catalog-item");
+      if (result.kind !== "catalog-item") continue;
+      expect(result.item).toMatchObject({
+        itemId: listed.itemId,
+        assetPackage: listed.assetPackage,
+        rights: listed.rights,
+        provenance: listed.provenance,
+        aiGenerationDisclosure: listed.aiGenerationDisclosure,
+        compatibility: listed.compatibility,
+        commerce: { activation: "inert" },
+      });
+      expect(result.item.commerce).toEqual({ activation: "inert" });
     }
   });
 

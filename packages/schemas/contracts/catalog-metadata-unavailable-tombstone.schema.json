@@ -13,6 +13,96 @@
     "commerce"
   ],
   "additionalProperties": false,
+  "$defs": {
+    "dateTime": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|02-(?:0[1-9]|1\\d|2[0-8])))|(?:(?:\\d{2}(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29))[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)(?![\\s\\S])"
+    },
+    "transitionRecord": {
+      "type": "object",
+      "required": ["from", "to", "reason", "at"],
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "type": "string",
+          "enum": ["intake", "screening", "curation", "listed", "delisted"]
+        },
+        "to": {
+          "type": "string",
+          "enum": ["intake", "screening", "curation", "listed", "delisted"]
+        },
+        "reason": { "type": "string", "minLength": 1, "pattern": "\\S" },
+        "at": { "$ref": "#/$defs/dateTime" },
+        "humanVerdict": {
+          "type": "object",
+          "required": ["kind", "decision", "curatorId", "rationale", "recordedAt"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "human" },
+            "decision": { "const": "approve" },
+            "curatorId": { "type": "string", "minLength": 1, "pattern": "\\S" },
+            "rationale": { "type": "string", "minLength": 1, "pattern": "\\S" },
+            "recordedAt": { "$ref": "#/$defs/dateTime" }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "to": { "const": "listed" } },
+            "required": ["to"]
+          },
+          "then": { "required": ["humanVerdict"] },
+          "else": { "not": { "required": ["humanVerdict"] } }
+        }
+      ]
+    },
+    "intakeToScreening": {
+      "allOf": [
+        { "$ref": "#/$defs/transitionRecord" },
+        {
+          "properties": {
+            "from": { "const": "intake" },
+            "to": { "const": "screening" }
+          }
+        }
+      ]
+    },
+    "screeningToCuration": {
+      "allOf": [
+        { "$ref": "#/$defs/transitionRecord" },
+        {
+          "properties": {
+            "from": { "const": "screening" },
+            "to": { "const": "curation" }
+          }
+        }
+      ]
+    },
+    "curationToListed": {
+      "allOf": [
+        { "$ref": "#/$defs/transitionRecord" },
+        {
+          "properties": {
+            "from": { "const": "curation" },
+            "to": { "const": "listed" }
+          }
+        }
+      ]
+    },
+    "listedToDelisted": {
+      "allOf": [
+        { "$ref": "#/$defs/transitionRecord" },
+        {
+          "properties": {
+            "from": { "const": "listed" },
+            "to": { "const": "delisted" }
+          }
+        }
+      ]
+    }
+  },
   "properties": {
     "schemaVersion": { "const": 1 },
     "kind": { "const": "catalog-metadata-unavailable-tombstone" },
@@ -27,14 +117,23 @@
       "items": { "type": "string", "minLength": 1, "pattern": "\\S" }
     },
     "moderation": {
-      "allOf": [
-        {
-          "$ref": "https://sceneaxi.invalid/contracts/catalog-item/v1#/properties/moderation"
-        },
-        {
-          "properties": { "pipelineState": { "const": "delisted" } }
+      "type": "object",
+      "required": ["pipelineState", "history"],
+      "additionalProperties": false,
+      "properties": {
+        "pipelineState": { "const": "delisted" },
+        "history": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "prefixItems": [
+            { "$ref": "#/$defs/intakeToScreening" },
+            { "$ref": "#/$defs/screeningToCuration" },
+            { "$ref": "#/$defs/curationToListed" },
+            { "$ref": "#/$defs/listedToDelisted" }
+          ]
         }
-      ]
+      }
     },
     "commerce": {
       "type": "object",

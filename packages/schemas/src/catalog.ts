@@ -417,10 +417,7 @@ function normalizeCatalogMetadata(item: unknown): {
     disclosureText === undefined ||
     (rawTools !== undefined && tools === undefined) ||
     coreRange === undefined ||
-    profiles === undefined ||
-    rawActivation !== "inert" ||
-    (rawPrice !== undefined && normalizedPrice === undefined) ||
-    (rawSku !== undefined && normalizedSku === undefined)
+    profiles === undefined
   ) {
     return { missing, ...(itemId === undefined ? {} : { itemId }) };
   }
@@ -895,7 +892,9 @@ export function transitionCatalogItem(
       schemaVersion: CATALOG_METADATA_UNAVAILABLE_TOMBSTONE_SCHEMA_VERSION,
       kind: "catalog-metadata-unavailable-tombstone",
       itemId: normalizedMetadata.itemId,
-      unavailableMetadata: normalizedMetadata.missing,
+      unavailableMetadata: normalizedMetadata.missing.filter(
+        (path) => path !== "commerce" && !path.startsWith("commerce."),
+      ),
       moderation: {
         pipelineState: "delisted",
         history: [...moderation.moderation.history, transition],
