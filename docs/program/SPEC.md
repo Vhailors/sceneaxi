@@ -262,4 +262,3 @@ Good tests here verify **external behavior at contracts and seams**, never imple
 - **README staleness: resolved.** The README Status refresh and this spec's in-repo mirror (`docs/program/SPEC.md`, this issue canonical) foreseen here landed under #3; the program/authoring contract status wording was further clarified by PR #33.
 - **Evidence trail:** Wayfinder chart + map + tickets 01–21, the FAIL→remediation→v4-PASS review chain, checksummed research captures (OpenRouter, DeepSeek V4, CLI patterns, naming), and the issue-transfer plan live in the FirstMate program archive (`data/threejs-bgf-ecosystem-wayfinder-v1*`), outside this repo by design until transfer authority exists.
 - **Benchmark posture:** no competing agent-first creation platform ships an Axi-grade deterministic authoring CLI; CLI v1 acceptance is charted to include an axi.md-style ergonomics benchmark so the claim is earned, not asserted.
-

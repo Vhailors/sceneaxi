@@ -121,7 +121,7 @@
     "@sceneaxi/provider-<name>": {
       "releaseGroup": "importers",
       "allow": ["@sceneaxi/schemas", "@sceneaxi/authoring-core"],
-      "arrives": "provider adapters behind the Model Provider Port, only after llm-provider-policy is resolved"
+      "arrives": "provider adapters behind the Model Provider Port under the locked llm-provider-policy; ordinary ticketed work only"
     }
   },
   "releaseGroups": {

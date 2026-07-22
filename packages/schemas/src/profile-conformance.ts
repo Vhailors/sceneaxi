@@ -4,8 +4,8 @@
  *
  * A claim is versioned data; the shared suite that exercises kernel session,
  * document propose/apply, and evidence-hook presence lives in
- * profile-conformance-suite.ts. Shipping / rollout order remains the open
- * held key `profile-rollout-order` — never answered here.
+ * profile-conformance-suite.ts. The rollout decision is owned by the canonical
+ * product spec; this contract does not grant shipping authority.
  */
 
 import type {
@@ -26,7 +26,7 @@ export const PROFILE_CONFORMANCE_KIND = "sceneaxi.profile-conformance" as const;
 /** Shared suite major version a claim targets. */
 export const PROFILE_CONFORMANCE_SUITE_VERSION = 1 as const;
 
-/** Open held key this contract cites and never answers. */
+/** Decision key retained as provenance by this contract. */
 export const PROFILE_ROLLOUT_ORDER_HELD_KEY = "profile-rollout-order" as const;
 
 export type ProfileClaimStatus = "development-consumer" | "not-yet-claimed";
@@ -65,7 +65,7 @@ export type ProfileConformanceClaim = {
 export type ProfileConformanceRegistryEntry = {
   readonly profile: `@sceneaxi/profile-${string}`;
   readonly claimStatus: ProfileClaimStatus;
-  /** Always cites the open hold; never resolves it. */
+  /** Retains the rollout decision citation; never grants shipping authority. */
   readonly openHeldKey: typeof PROFILE_ROLLOUT_ORDER_HELD_KEY;
   readonly shippingClaim: false;
 };

@@ -2,10 +2,9 @@
  * @sceneaxi/profile-game — Game profile; pins a core range, compiles its policy in.
  *
  * First development consumer of the Profile Conformance suite (sceneaxi#10).
- * This is NOT a shipping/publication claim: held key `profile-rollout-order`
- * remains open. The package exposes a conformance surface so the shared suite
- * exercises kernel session + document propose/apply through this profile's
- * pinned core, plus evidence-hook presence.
+ * This is NOT a shipping/publication claim. The package exposes a conformance
+ * surface so the shared suite exercises kernel session + document propose/apply
+ * through this profile's pinned core, plus evidence-hook presence.
  */
 import {
   BOM_VERSION,
@@ -55,8 +54,8 @@ export const evidenceHooks: ProfileEvidenceHooks = Object.freeze({
 });
 
 /**
- * Versioned development-consumer claim. shippingClaim is false; cites
- * profile-rollout-order as open. Not a readiness or publication claim.
+ * Versioned development-consumer claim. shippingClaim is false; retains the
+ * profile-rollout-order decision citation. Not a readiness or publication claim.
  */
 export const claim = createProfileConformanceClaim({
   profile: "@sceneaxi/profile-game",

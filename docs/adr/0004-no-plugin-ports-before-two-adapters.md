@@ -24,7 +24,7 @@ There are exactly two charted exceptions:
 1. The **Model Provider Port** charted by the product spec
    ([sceneaxi#1](https://github.com/Vhailors/sceneaxi/issues/1)) in
    `authoring-core`: a deliberate, pre-declared thin port whose provider
-   adapters remain delayed behind the open `llm-provider-policy` hold.
+   adapters remain delayed and must follow the locked `llm-provider-policy`.
 2. The first-class v1 **Plugin Host / capability registry** defined by ADR
    [0005](0005-plugin-host-capability-manifest.md): a manifest-driven host for
    registered public capability IDs, not a route for plugins to declare new
@@ -88,8 +88,9 @@ behind seams; every new internal-library port is earned by the second real
 adapter. The two narrow exceptions are the Model Provider Port and the v1
 Plugin Host / capability registry, each bounded by its own charted contract.
 
-**Held, untouched by this ADR:** `llm-provider-policy` and `deepseek-adoption`
-— whether and which LLM provider adapters ever land; renderer composition —
-Stage 1 of the proof program, double-gated under factories-helpers #41. This
-ADR neither authorizes nor forbids any specific adapter; it only governs when
-abstraction over adapters may exist.
+**Settled elsewhere:** `llm-provider-policy` and `deepseek-adoption` are
+recorded in the canonical product spec
+([sceneaxi#1](https://github.com/Vhailors/sceneaxi/issues/1)); this ADR does not
+duplicate or authorize those choices. **Held elsewhere:** renderer composition
+— Stage 1 of the proof program, double-gated under factories-helpers #41. This
+ADR only governs when abstraction over adapters may exist.

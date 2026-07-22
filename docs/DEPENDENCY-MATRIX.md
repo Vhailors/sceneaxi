@@ -66,8 +66,9 @@ Spec #41's six deep modules map to six engine packages. Seeded now: **engine-ker
 **engine-asset-compiler**, **engine-platform-host**, **engine-evidence**. Their intended
 allow lists are recorded in the matrix `delayed` section so they land into a declared
 slot, not an invented one. Provider adapters (`@sceneaxi/provider-<name>`) are likewise
-declared: behind the Model Provider Port in `authoring-core`, only after the
-`llm-provider-policy` hold is resolved.
+declared behind the Model Provider Port in `authoring-core`; the locked provider policy
+and its adapter conditions are owned by the canonical product spec
+([sceneaxi#1](https://github.com/Vhailors/sceneaxi/issues/1)).
 
 ## Release groups and pins
 
