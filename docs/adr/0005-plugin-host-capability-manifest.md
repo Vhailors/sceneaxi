@@ -1,0 +1,140 @@
+# ADR 0005: Plugin Host uses versioned capability manifests
+
+- **Status:** Accepted — settled by captain decision `plugin-capability-model` (option A, locked 2026-07-22).
+- **Date recorded:** 2026-07-22
+- **Source:** `data/threejs-bgf-ecosystem-wayfinder-v1/decisions/plugin-capability-model.md`.
+- **Lineage:** Narrow amendment to ADR [0004](0004-no-plugin-ports-before-two-adapters.md); this is the charted v1 Plugin Host / capability registry exception, not a repeal of the two-real-adapters rule.
+
+## Context
+
+SceneAxi needs a first-class way for independently versioned packages to add
+public behavior without exposing engine internals or growing an arbitrary hook
+bus. ADR 0004 previously allowed only the charted Model Provider Port ahead of
+two real adapters. The captain selected a second, narrow exception: a v1 Plugin
+Host whose vocabulary is a versioned manifest plus a public capability ID
+registry.
+
+The host is intentionally smaller than a general plugin framework. Contracts,
+documentation, and validating examples carry the semantic language; packages
+remain independent and integrations remain light.
+
+## Decision
+
+SceneAxi v1 has a first-class **capability-manifest Plugin Host**. A plugin is
+an isolated package that presents one versioned manifest. The manifest may
+claim only IDs already present in SceneAxi's public capability registry, and
+the package may implement exactly those claimed capabilities.
+
+### Manifest shape
+
+The normative JSON Schema and inferred TypeScript types will live in
+`@sceneaxi/schemas`. At design level, a v1 manifest contains:
+
+| Field | Meaning |
+|---|---|
+| `$schema` | Canonical URI of the exact JSON Schema; tooling hint that must agree with `schemaVersion`. |
+| `schemaVersion` | Exact version of the plugin-manifest schema. V1 starts at `1.0.0`. |
+| `pluginId` | Stable public identity of the plugin package. It must be unique in one host load set. |
+| `pluginVersion` | Semver version of the plugin implementation. |
+| `hostApi` | Semver range of Plugin Host API versions the package accepts. |
+| `registryVersion` | Exact capability-registry version against which the claims were authored. |
+| `entrypoint` | Package-relative module entrypoint; it must resolve inside the plugin package root. |
+| `capabilities` | A set of unique public capability ID strings. No hook names, inline port definitions, or engine-private imports may be declared here. |
+
+Unknown properties refuse unless a later manifest schema explicitly defines
+them. An empty `capabilities` set is valid and inert, which lets the initial
+registry and conformance fixtures remain honest without inventing a renderer,
+physics, storage, or other engine port.
+
+### Public capability ID registry
+
+The registry is a versioned, reviewable public artifact owned beside the
+shared contracts. Each row binds one opaque capability ID to its public
+contract, contract version, owning package, and documentation. A capability ID
+is valid only when that row exists in the exact registry version named by the
+manifest. IDs are not inferred from exports, filenames, package names, or
+runtime behavior.
+
+The seed registry may be empty. Adding the first ID is a separate contract
+change with its own tests and package-boundary review; adding an ID cannot
+quietly create a renderer, physics, storage, or other internal-library port.
+
+### Deterministic load and refusal
+
+The host receives an explicit set of plugin package locators; it never scans
+the filesystem, environment, or dependency graph for implicit plugins.
+Candidates are evaluated in stable lexical locator order, and public listings
+are sorted by `pluginId`, then `pluginVersion`, then capability ID.
+
+For each candidate, the host applies this precedence before exposing an
+implementation:
+
+1. Parse the manifest and validate it against the exact supported schema.
+2. Require a supported `schemaVersion`, a compatible `hostApi` range, and the
+   exact loaded `registryVersion`.
+3. Refuse duplicate plugin IDs, duplicate capability claims, and every
+   capability ID absent from that registry.
+4. Resolve `entrypoint` inside the package root and enforce the package
+   isolation rules below before evaluating plugin code.
+5. Require the implementation table to match the declared capability set
+   exactly. Missing and undeclared implementations both refuse.
+
+Every refusal is reported with a stable machine-readable reason and identifies
+the candidate without evaluating or exposing it. One refused package does not
+make its capabilities partially available. Multiple implementations of the
+same registered capability may coexist; the host does not choose an implicit
+winner, and callers address an implementation by `pluginId`.
+
+### Package isolation
+
+- Each plugin is its own package, owns its dependencies, and exposes only the
+  manifest entrypoint.
+- The entrypoint and all package-relative resolution stay beneath that package
+  root; path traversal and private-subpath imports refuse.
+- Plugins may use only the public SceneAxi contract packages authorized by
+  their registered capabilities. Direct imports from engine packages, private
+  source paths, or another plugin package are isolation breaches.
+- The host passes only the capability-specific public contract surface. It
+  provides no engine container, private service locator, ambient hook bus, or
+  mutable engine internals.
+- Capability implementations are a declarative table keyed by declared IDs;
+  arbitrary lifecycle hooks and import-time registration side effects are not
+  part of the contract.
+
+These are dependency and interface isolation rules, not a security sandbox for
+hostile code. Trust, signing, or out-of-process execution would require a
+separate decision before untrusted plugins could load.
+
+## Consequences
+
+- Agents can reason from one JSON Schema, inferred types, a registry, stable
+  refusal behavior, and examples that validate in CI.
+- Plugins remain independently versioned packages rather than code absorbed by
+  a monolithic framework.
+- The host can begin with an empty registry and an inert example; public
+  capability design proceeds deliberately instead of manufacturing ports to
+  demonstrate the mechanism.
+- Every implementation must prove both success and fail-closed behavior across
+  the version, capability, and isolation matrix.
+
+## Rejected alternatives
+
+- **Arbitrary hooks or event-name registration** — hook strings invent hidden,
+  unversioned ports and cannot be checked against a public semantic contract.
+- **A monolithic plugin framework** — central ownership of plugin behavior and
+  dependencies defeats isolation and deep-module boundaries.
+- **Manifest-declared custom ports** — a plugin cannot promote an engine
+  internal into a public seam by naming it.
+- **Implicit discovery or load-order behavior** — filesystem and import-order
+  effects are not reproducible contracts.
+
+## Settled here vs held elsewhere
+
+**Settled:** the v1 Plugin Host exists; manifests, registry claims, loading,
+refusal, and package isolation follow the contract above.
+
+**Held or separately earned:** the initial non-empty capability IDs; any
+renderer, physics, storage, or other internal-library port (two real adapters
+still required by ADR 0004); trust/signing/sandbox policy; and any product
+rollout decisions already governed by held keys. This ADR authorizes no Stage 1
+proof run, package publication, account, spend, or deployment.

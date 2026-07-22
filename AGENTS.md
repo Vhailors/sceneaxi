@@ -42,6 +42,12 @@ See root README package/app map and `docs/DEPENDENCY-MATRIX.md`. Prefer small pu
 
 Delivery Handoff is the public, delivery-neutral export contract in `@sceneaxi/schemas` (`contracts/delivery-handoff.schema.json`, `src/delivery-handoff.ts`); its adapter boundary and digest semantics are authoritative in `docs/delivery-handoff.md`. Provider-specific delivery adapters, credentials, uploads, approvals, and releases stay outside SceneAxi core.
 
+First-class plugins follow `docs/plugins.md` and ADR 0005: manifests may claim
+only IDs from the versioned public capability registry; unknown IDs and
+isolation breaches refuse. This charted v1 host exception does not create
+renderer, physics, storage, or other engine-internal ports, which still require
+two real adapters under amended ADR 0004.
+
 ## Maintaining this file
 
 Rewrite when durable project-wide knowledge changes; prefer pointers over copied process.
