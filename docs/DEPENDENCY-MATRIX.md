@@ -52,10 +52,11 @@ Deliberate denials that carry design intent:
 ## Kids policy boundary (hard)
 
 `dependency-matrix.json → kidsBoundary`: no package or app may depend on or import
-`@sceneaxi/profile-kids`. `allowedDependents` starts **empty**; future Kids surfaces are
-added there explicitly and only under the `kids-surface-isolation` captain decision.
-The checker enforces this independently of the allow lists, so allow-list drift cannot
-silently open the Kids boundary.
+`@sceneaxi/profile-kids`. `allowedDependents` remains **empty** under the locked Kids
+isolation boundary. The checker enforces this independently of the allow lists, so
+allow-list drift cannot silently open the Kids boundary. The separate Kids surface and
+origin boundary is owned by
+[`docs/program/site-domain-topology.md`](program/site-domain-topology.md).
 
 ## Delayed packages (accounted, not seeded)
 

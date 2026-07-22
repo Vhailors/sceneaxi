@@ -5,7 +5,8 @@
 > specification)". This file is a **consumer copy**, mirrored into the repo so the spec is
 > readable in-tree. It grants nothing and decides nothing on its own. If this file and #1
 > disagree, **#1 wins**; later captain decisions win over both. Mirrored 2026-07-21 from
-> the issue body as of that date.
+> the issue body as of that date; later locked decisions are reflected here with
+> pointers to their owning documents.
 
 ---
 
