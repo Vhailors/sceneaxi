@@ -34,7 +34,7 @@ Creators — increasingly *agent* creators working alongside humans — have no 
 
 From the user's perspective:
 
-- The **agent-native CLI** is the primary authoring surface: deterministic exit codes, versioned machine-readable output, fail-closed validation, and evidence-emitting verbs. An agent can author, test, and prove work without parsing prose.
+- The **agent-native CLI** is one of four equal authoring surfaces — CLI, web shell, desktop shell, importers, under equal early investment over one shared versioned protocol (locked `authoring-surface-priority`, 2026-07-22): deterministic exit codes, versioned machine-readable output, fail-closed validation, and evidence-emitting verbs. An agent can author, test, and prove work without parsing prose.
 - **Web and desktop shells** give humans the same operations over the same protocol layer — one behavior, many faces. Anything a shell can do maps to a CLI/protocol operation; a propose→diff→apply edit made in the shell and one made by an agent produce identical documents.
 - **Profiles** select and configure core capabilities at build time and pin a core version range. The Kids profile compiles its safety policy in — absent capability is absent code, never a flag.
 - **Curated asset catalogs** (game-asset and website-asset storefronts over one shared pipeline) exist as dormant bounded apps until their activation gates open; curation is the product, provenance and AI-disclosure are mandatory metadata.
