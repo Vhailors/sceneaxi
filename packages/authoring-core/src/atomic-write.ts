@@ -130,11 +130,6 @@ function syncFile(path: string): void {
   }
 }
 
-function basenameSafe(path: string): string {
-  const base = path.split(/[/\\]/).pop() ?? "file";
-  return base.replace(/[^a-zA-Z0-9._-]/g, "_");
-}
-
 export function canonicalPath(path: string): string {
   let cursor = resolve(path);
   const suffix: string[] = [];
@@ -148,11 +143,10 @@ export function canonicalPath(path: string): string {
 }
 
 function artifactStem(path: string): string {
-  const digest = createHash("sha256")
+  return createHash("sha256")
     .update(canonicalPath(path), "utf8")
     .digest("hex")
-    .slice(0, 16);
-  return `${basenameSafe(path)}-${digest}`;
+    .slice(0, 32);
 }
 
 function lockPathFor(path: string): string {

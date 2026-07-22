@@ -331,11 +331,21 @@ export type ApplyDiagnostic = {
   readonly reReadHint?: string;
 };
 
-export type ApplyOk = {
+export type ApplyApplied = {
   readonly ok: true;
+  readonly applicationState?: never;
   readonly appliedPaths: readonly string[];
   readonly journalRecoveryPending?: true;
 };
+
+export type ApplyIndeterminate = {
+  readonly ok: true;
+  readonly applicationState: "indeterminate";
+  readonly journalRecoveryPending: true;
+  readonly appliedPaths?: never;
+};
+
+export type ApplyOk = ApplyApplied | ApplyIndeterminate;
 
 export type ApplyReject = {
   readonly ok: false;

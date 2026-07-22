@@ -12,7 +12,12 @@ import {
   type ShellEditInput,
 } from "./protocol-client.js";
 
-export type InspectorPhase = "idle" | "reviewing" | "applied" | "rejected";
+export type InspectorPhase =
+  | "idle"
+  | "reviewing"
+  | "applied"
+  | "pending"
+  | "rejected";
 
 export type InspectorSnapshot = {
   readonly phase: InspectorPhase;
@@ -111,6 +116,13 @@ export function createInspectorSession(options: {
       if (!result.ok) {
         phase = "reviewing";
         diagnostics = result.diagnostics;
+        return snap();
+      }
+      if (result.applicationState === "indeterminate") {
+        phase = "pending";
+        appliedPaths = null;
+        journalRecoveryPending = true;
+        diagnostics = null;
         return snap();
       }
       phase = "applied";

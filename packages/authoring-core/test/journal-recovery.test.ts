@@ -553,6 +553,15 @@ describe("E1 apply journal", () => {
     expect(readFileSync(questionPath, "utf8")).toBe("question\n");
   });
 
+  it("writes documents whose basenames approach filesystem limits", () => {
+    const cwd = fixtureDir();
+    const path = join(cwd, `${"a".repeat(220)}.json`);
+
+    atomicWriteAll([{ path, contents: "after\n" }]);
+
+    expect(readFileSync(path, "utf8")).toBe("after\n");
+  });
+
   it("uses one lock identity through symlinked directory aliases", () => {
     const cwd = fixtureDir();
     const realDirectory = join(cwd, "real");
@@ -837,16 +846,18 @@ describe("E1 apply journal", () => {
 
   it("reports journal finalization failures as recoverable state", () => {
     const cwd = fixtureDir();
-    const path = join(cwd, "scene.json");
+    const path = join(cwd, "scenes", "scene.json");
+    mkdirSync(join(cwd, "scenes"));
     expect(
       writeDocumentFile(
         path,
         createDocument({ id: "scene", data: { x: 1 } }),
+        { cwd },
       ).ok,
     ).toBe(true);
     const proposed = propose({
       cwd,
-      documentPath: "scene.json",
+      documentPath: "scenes/scene.json",
       jsonPointer: "/data/x",
       newValue: 2,
     });
@@ -883,7 +894,7 @@ describe("E1 apply journal", () => {
 
     const direct = editDirect({
       cwd,
-      documentPath: "scene.json",
+      documentPath: "scenes/scene.json",
       jsonPointer: "/data/x",
       newValue: 3,
     });

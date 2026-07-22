@@ -234,6 +234,20 @@ export function runProjectApply(
     return mapDiagnosticsToFailure(result.diagnostics, path);
   }
 
+  if (result.applicationState === "indeterminate") {
+    return success(
+      Object.freeze({
+        status: "pending",
+        applicationState: "indeterminate",
+        journalRecoveryPending: true,
+      }),
+      [
+        "Canonical apply state is indeterminate until journal recovery completes",
+        "Run `sceneaxi project apply --help` for usage",
+      ],
+    );
+  }
+
   return success(
     Object.freeze({
       status: "applied",

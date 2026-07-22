@@ -75,6 +75,8 @@ export {
 export type {
   ApplyDiagnostic,
   ApplyDiagnosticCode,
+  ApplyApplied,
+  ApplyIndeterminate,
   ApplyResult,
   JsonObject,
   JsonPrimitive,

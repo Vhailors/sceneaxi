@@ -41,11 +41,22 @@ export type ShellProposeResult = ShellProposeOk | ShellProposeReject;
 
 export type ShellRoundTripOk = {
   readonly ok: true;
+  readonly applicationState?: never;
   readonly proposal: Proposal;
   readonly unifiedDiff: string;
   readonly renderedDiff: string;
   readonly appliedPaths: readonly string[];
   readonly journalRecoveryPending?: true;
+};
+
+export type ShellRoundTripIndeterminate = {
+  readonly ok: true;
+  readonly proposal: Proposal;
+  readonly unifiedDiff: string;
+  readonly renderedDiff: string;
+  readonly applicationState: "indeterminate";
+  readonly journalRecoveryPending: true;
+  readonly appliedPaths?: never;
 };
 
 export type ShellRoundTripReject = {
@@ -54,7 +65,10 @@ export type ShellRoundTripReject = {
   readonly renderedDiff: string | null;
 };
 
-export type ShellRoundTripResult = ShellRoundTripOk | ShellRoundTripReject;
+export type ShellRoundTripResult =
+  | ShellRoundTripOk
+  | ShellRoundTripIndeterminate
+  | ShellRoundTripReject;
 
 /**
  * Render a unified diff for the minimal web-shell inspector.
@@ -116,6 +130,17 @@ export function shellProposeAndApply(
       ok: false,
       diagnostics: applied.diagnostics,
       renderedDiff: proposed.renderedDiff,
+    };
+  }
+
+  if (applied.applicationState === "indeterminate") {
+    return {
+      ok: true,
+      proposal: proposed.proposal,
+      unifiedDiff: proposed.unifiedDiff,
+      renderedDiff: proposed.renderedDiff,
+      applicationState: "indeterminate",
+      journalRecoveryPending: true,
     };
   }
 

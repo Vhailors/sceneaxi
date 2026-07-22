@@ -20,6 +20,7 @@ export {
   type ShellProposeOk,
   type ShellProposeReject,
   type ShellProposeResult,
+  type ShellRoundTripIndeterminate,
   type ShellRoundTripOk,
   type ShellRoundTripReject,
   type ShellRoundTripResult,

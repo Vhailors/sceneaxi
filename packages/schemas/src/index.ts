@@ -68,6 +68,8 @@ export {
 export type {
   ApplyDiagnostic,
   ApplyDiagnosticCode,
+  ApplyApplied,
+  ApplyIndeterminate,
   ApplyOk,
   ApplyReject,
   ApplyResult,

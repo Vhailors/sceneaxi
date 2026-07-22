@@ -7,7 +7,7 @@
  * - Atomic tmp-then-rename writes; multi-document all-or-nothing.
  */
 
-import { dirname, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import {
   createProposal,
   parseDocumentText,
@@ -29,6 +29,7 @@ import {
   AtomicWriteError,
   AtomicWriteLockError,
   atomicWriteAll,
+  atomicWriteFile,
   canonicalPath,
   fileExists,
   readTextFile,
@@ -955,7 +956,7 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
         }
         return {
           ok: true,
-          appliedPaths: plans.map((plan) => plan.documentPath),
+          applicationState: "indeterminate",
           journalRecoveryPending: true,
         };
       }
@@ -1054,6 +1055,18 @@ export function readProposalFile(path: string): {
 }
 
 /** Write a document through the shared serializer + atomic write. */
+function authoringRootForDocument(path: string, cwd?: string): string {
+  if (cwd !== undefined) return resolve(cwd);
+  const documentDirectory = dirname(resolve(path));
+  let cursor = documentDirectory;
+  while (true) {
+    if (fileExists(join(cursor, ".sceneaxi"))) return cursor;
+    const parent = dirname(cursor);
+    if (parent === cursor) return documentDirectory;
+    cursor = parent;
+  }
+}
+
 export function writeDocumentFile(
   path: string,
   document: SceneDocument,
@@ -1079,7 +1092,7 @@ export function writeDocumentFile(
   }
   const text = serializeDocument(validated.document);
   const written = writeCanonicalDocument({
-    cwd: options.cwd ?? dirname(resolve(path)),
+    cwd: authoringRootForDocument(path, options.cwd),
     path,
     contents: text,
   });
