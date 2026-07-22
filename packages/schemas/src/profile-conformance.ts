@@ -131,6 +131,7 @@ export type ProfileCoreAuthoring = {
   readonly writeDocumentFile: (
     path: string,
     document: SceneDocument,
+    options: { readonly cwd: string },
   ) => { readonly ok: boolean; readonly contentHash?: string };
   readonly propose: (input: {
     readonly documentPath: string;

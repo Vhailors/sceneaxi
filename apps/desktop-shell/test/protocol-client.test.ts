@@ -26,7 +26,7 @@ function writeScene(
 ): void {
   const path = join(dir, name);
   const doc = createDocument({ id: name.replace(/\.json$/, ""), data });
-  const result = writeDocumentFile(path, doc);
+  const result = writeDocumentFile(path, doc, { cwd: dir });
   expect(result.ok).toBe(true);
 }
 

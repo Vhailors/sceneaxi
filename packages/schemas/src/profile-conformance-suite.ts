@@ -230,7 +230,9 @@ export function runProfileConformanceSuite(
       data: { entities: [{ id: "hero", x: 0, y: 0 }] },
     });
     const abs = join(tempDir, docName);
-    const written = surface.core.authoring.writeDocumentFile(abs, doc);
+    const written = surface.core.authoring.writeDocumentFile(abs, doc, {
+      cwd: tempDir,
+    });
     checks.push(check("document-write", written.ok === true));
 
     const proposed = surface.core.authoring.propose({

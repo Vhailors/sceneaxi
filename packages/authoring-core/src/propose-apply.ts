@@ -7,7 +7,7 @@
  * - Atomic tmp-then-rename writes; multi-document all-or-nothing.
  */
 
-import { dirname, join, resolve } from "node:path";
+import { isAbsolute, relative, resolve, sep } from "node:path";
 import {
   createProposal,
   parseDocumentText,
@@ -1055,22 +1055,10 @@ export function readProposalFile(path: string): {
 }
 
 /** Write a document through the shared serializer + atomic write. */
-function authoringRootForDocument(path: string, cwd?: string): string {
-  if (cwd !== undefined) return resolve(cwd);
-  const documentDirectory = dirname(resolve(path));
-  let cursor = documentDirectory;
-  while (true) {
-    if (fileExists(join(cursor, ".sceneaxi"))) return cursor;
-    const parent = dirname(cursor);
-    if (parent === cursor) return documentDirectory;
-    cursor = parent;
-  }
-}
-
 export function writeDocumentFile(
   path: string,
   document: SceneDocument,
-  options: { readonly cwd?: string } = {},
+  options: { readonly cwd: string },
 ):
   | { ok: true; contentHash: string }
   | { ok: false; diagnostics: readonly ApplyDiagnostic[] } {
@@ -1090,10 +1078,42 @@ export function writeDocumentFile(
       ],
     };
   }
+  if (options?.cwd === undefined) {
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          code: "validation-failed",
+          message: "Document writes require an authoritative project root.",
+          documentPath: path,
+        },
+      ],
+    };
+  }
+  const cwd = canonicalPath(resolve(options.cwd));
+  const documentPath = canonicalPath(resolve(path));
+  const relativePath = relative(cwd, documentPath);
+  if (
+    relativePath === "" ||
+    relativePath === ".." ||
+    relativePath.startsWith(`..${sep}`) ||
+    isAbsolute(relativePath)
+  ) {
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          code: "validation-failed",
+          message: "Document path must be inside its authoritative project root.",
+          documentPath: path,
+        },
+      ],
+    };
+  }
   const text = serializeDocument(validated.document);
   const written = writeCanonicalDocument({
-    cwd: authoringRootForDocument(path, options.cwd),
-    path,
+    cwd,
+    path: documentPath,
     contents: text,
   });
   if (!written.ok) return written;

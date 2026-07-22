@@ -70,6 +70,7 @@ export function createInspectorSession(options: {
     snapshot: snap,
 
     proposeEdit(input: ShellEditInput): InspectorSnapshot {
+      if (phase === "pending") return snap();
       const cwd = input.cwd ?? options.cwd;
       const result = shellPropose({
         ...input,
@@ -98,6 +99,7 @@ export function createInspectorSession(options: {
     },
 
     accept(): InspectorSnapshot {
+      if (phase === "pending") return snap();
       if (phase !== "reviewing" || proposal === null) {
         diagnostics = [
           {
@@ -134,6 +136,7 @@ export function createInspectorSession(options: {
     },
 
     reject(): InspectorSnapshot {
+      if (phase === "pending") return snap();
       phase = "rejected";
       unifiedDiff = null;
       renderedDiff = null;

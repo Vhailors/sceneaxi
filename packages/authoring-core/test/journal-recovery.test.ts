@@ -54,12 +54,33 @@ function stageActiveJournal(
 }
 
 describe("E1 apply journal", () => {
+  it("requires an authoritative project root for document writes", () => {
+    const cwd = fixtureDir();
+    const directory = join(cwd, "scenes");
+    const path = join(directory, "scene.json");
+    mkdirSync(directory);
+    const document = createDocument({ id: "scene", data: { x: 1 } });
+
+    const refused = Reflect.apply(writeDocumentFile, undefined, [
+      path,
+      document,
+    ]);
+    const wrongRoot = writeDocumentFile(path, document, {
+      cwd: fixtureDir(),
+    });
+
+    expect(refused.ok).toBe(false);
+    expect(wrongRoot.ok).toBe(false);
+    expect(() => readFileSync(path, "utf8")).toThrow();
+    expect(writeDocumentFile(path, document, { cwd }).ok).toBe(true);
+  });
+
   it("undo restores the prior document bytes from a completed apply journal", () => {
     const cwd = fixtureDir();
     const documentPath = "scene.json";
     const absolutePath = join(cwd, documentPath);
     const document = createDocument({ id: "scene", data: { x: 1 } });
-    expect(writeDocumentFile(absolutePath, document).ok).toBe(true);
+    expect(writeDocumentFile(absolutePath, document, { cwd }).ok).toBe(true);
     const before = readFileSync(absolutePath, "utf8");
 
     const proposed = propose({
@@ -87,10 +108,14 @@ describe("E1 apply journal", () => {
     const aPath = join(cwd, "a.json");
     const bPath = join(cwd, "b.json");
     expect(
-      writeDocumentFile(aPath, createDocument({ id: "a", data: { n: 1 } })).ok,
+      writeDocumentFile(aPath, createDocument({ id: "a", data: { n: 1 } }), {
+        cwd,
+      }).ok,
     ).toBe(true);
     expect(
-      writeDocumentFile(bPath, createDocument({ id: "b", data: { n: 2 } })).ok,
+      writeDocumentFile(bPath, createDocument({ id: "b", data: { n: 2 } }), {
+        cwd,
+      }).ok,
     ).toBe(true);
     const beforeB = readFileSync(bPath, "utf8");
 
@@ -140,6 +165,7 @@ describe("E1 apply journal", () => {
       writeDocumentFile(
         absolutePath,
         createDocument({ id: "scene", data: { x: 1 } }),
+        { cwd },
       ).ok,
     ).toBe(true);
     const before = readFileSync(absolutePath, "utf8");
@@ -203,6 +229,7 @@ describe("E1 apply journal", () => {
       writeDocumentFile(
         absolutePath,
         createDocument({ id: "scene", data: { x: 1 } }),
+        { cwd },
       ).ok,
     ).toBe(true);
     const before = readFileSync(absolutePath, "utf8");
@@ -263,6 +290,7 @@ describe("E1 apply journal", () => {
       writeDocumentFile(
         absolutePath,
         createDocument({ id: "scene", data: { x: 1, y: 1 } }),
+        { cwd },
       ).ok,
     ).toBe(true);
     const proposed = proposeMany([
@@ -296,6 +324,7 @@ describe("E1 apply journal", () => {
       writeDocumentFile(
         absolutePath,
         createDocument({ id: "scene", data: { x: 1 } }),
+        { cwd },
       ).ok,
     ).toBe(true);
     const proposed = propose({
@@ -342,12 +371,14 @@ describe("E1 apply journal", () => {
       writeDocumentFile(
         join(firstCwd, "scene.json"),
         createDocument({ id: "scene", data: { x: 1 } }),
+        { cwd: firstCwd },
       ).ok,
     ).toBe(true);
     expect(
       writeDocumentFile(
         join(secondCwd, "scene.json"),
         createDocument({ id: "scene", data: { x: 1 } }),
+        { cwd: secondCwd },
       ).ok,
     ).toBe(true);
 
@@ -378,6 +409,7 @@ describe("E1 apply journal", () => {
       writeDocumentFile(
         absolutePath,
         createDocument({ id: "scene", data: { x: 1 } }),
+        { cwd },
       ).ok,
     ).toBe(true);
 
@@ -441,10 +473,14 @@ describe("E1 apply journal", () => {
     const aPath = join(cwd, "a.json");
     const bPath = join(cwd, "b.json");
     expect(
-      writeDocumentFile(aPath, createDocument({ id: "a", data: { n: 1 } })).ok,
+      writeDocumentFile(aPath, createDocument({ id: "a", data: { n: 1 } }), {
+        cwd,
+      }).ok,
     ).toBe(true);
     expect(
-      writeDocumentFile(bPath, createDocument({ id: "b", data: { n: 2 } })).ok,
+      writeDocumentFile(bPath, createDocument({ id: "b", data: { n: 2 } }), {
+        cwd,
+      }).ok,
     ).toBe(true);
     const beforeA = readFileSync(aPath, "utf8");
     const beforeB = readFileSync(bPath, "utf8");
@@ -488,6 +524,7 @@ describe("E1 apply journal", () => {
       writeDocumentFile(
         absolutePath,
         createDocument({ id: "scene", data: { x: 1 } }),
+        { cwd },
       ).ok,
     ).toBe(true);
     const before = readFileSync(absolutePath, "utf8");
@@ -744,6 +781,7 @@ describe("E1 apply journal", () => {
       writeDocumentFile(
         path,
         createDocument({ id: "scene", data: { x: 1 } }),
+        { cwd },
       ).ok,
     ).toBe(true);
     const first = propose({
@@ -782,6 +820,7 @@ describe("E1 apply journal", () => {
       writeDocumentFile(
         path,
         createDocument({ id: "scene", data: { x: 1 } }),
+        { cwd },
       ).ok,
     ).toBe(true);
     const before = readFileSync(path, "utf8");
@@ -813,6 +852,7 @@ describe("E1 apply journal", () => {
       writeDocumentFile(
         path,
         createDocument({ id: "scene", data: { x: 1 } }),
+        { cwd },
       ).ok,
     ).toBe(true);
     const before = readFileSync(path, "utf8");
@@ -903,6 +943,7 @@ describe("E1 apply journal", () => {
     const written = writeDocumentFile(
       path,
       createDocument({ id: "scene", data: { x: 4 } }),
+      { cwd },
     );
     expect(written.ok).toBe(false);
 
@@ -937,6 +978,7 @@ describe("E1 apply journal", () => {
       writeDocumentFile(
         join(cwd, "scene.json"),
         createDocument({ id: "scene", data: { "~2": 1 } }),
+        { cwd },
       ).ok,
     ).toBe(true);
 
@@ -982,6 +1024,7 @@ describe("E1 apply journal", () => {
       writeDocumentFile(
         path,
         createDocument({ id: "scene", data: { x: 1 } }),
+        { cwd },
       ).ok,
     ).toBe(true);
     const proposed = propose({

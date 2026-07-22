@@ -235,16 +235,25 @@ export function runProjectApply(
   }
 
   if (result.applicationState === "indeterminate") {
-    return success(
-      Object.freeze({
-        status: "pending",
-        applicationState: "indeterminate",
-        journalRecoveryPending: true,
-      }),
-      [
-        "Canonical apply state is indeterminate until journal recovery completes",
-        "Run `sceneaxi project apply --help` for usage",
-      ],
+    return failure(
+      "INTERNAL",
+      "Canonical apply state is indeterminate until journal recovery completes.",
+      {
+        path,
+        diagnostics: [
+          {
+            code: "apply-in-progress",
+            message:
+              "The apply outcome is pending durable journal recovery and is not yet successful.",
+            reReadHint:
+              "Recover the project journal before treating the proposal as applied.",
+          },
+        ],
+        help: [
+          "Recover the project journal before continuing automation",
+          "Run `sceneaxi project apply --help` for usage",
+        ],
+      },
     );
   }
 
