@@ -253,7 +253,8 @@ Good tests here verify **external behavior at contracts and seams**, never imple
 - **Stage 1 proof execution** — remains double-gated under #41's program; not started, scheduled, or resourced by this spec.
 - **AAA-scope engine ambitions** — the ecosystem's budgets and kill criteria come from the proof program; no console/AAA/general-purpose-engine expansion is chartered.
 - **Open/two-sided UGC marketplace** — catalogs stay curated-only and dormant until the existing 6b activation holds open per storefront; commerce fields inert until then.
-- **Kids launch** — nothing Kids-facing ships until the full 6a safety branch + `kids-surface-isolation` resolve; Kids never borrows readiness.
+- **Kids launch** — nothing Kids-facing ships until the residual 6a age, safety,
+  curriculum, and jurisdiction holds resolve; Kids never borrows readiness.
 - **CLI publication** — internal until `cli-audience` + tier-5 holds + Stage 7 evidence say otherwise.
 - **LLM provider adoption** — no provider adapter lands until `llm-provider-policy` (and for DeepSeek, `deepseek-adoption` post-GA re-verification) resolve.
 - **License selection** — `UNLICENSED` stands until the open tier-5 license hold resolves.
