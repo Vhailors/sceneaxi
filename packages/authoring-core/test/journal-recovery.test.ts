@@ -73,6 +73,17 @@ describe("E1 apply journal", () => {
     expect(wrongRoot.ok).toBe(false);
     expect(() => readFileSync(path, "utf8")).toThrow();
     expect(writeDocumentFile(path, document, { cwd }).ok).toBe(true);
+
+    const relative = writeDocumentFile(
+      "scenes/relative.json",
+      createDocument({ id: "relative", data: { x: 2 } }),
+      { cwd },
+    );
+
+    expect(relative.ok).toBe(true);
+    expect(readFileSync(join(cwd, "scenes", "relative.json"), "utf8")).toContain(
+      '"x": 2',
+    );
   });
 
   it("undo restores the prior document bytes from a completed apply journal", () => {

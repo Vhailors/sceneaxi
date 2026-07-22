@@ -955,9 +955,10 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
           };
         }
         return {
-          ok: true,
+          ok: false,
           applicationState: "indeterminate",
           journalRecoveryPending: true,
+          diagnostics: journalRecoveryPendingDiagnostics(),
         };
       }
       if (error instanceof AtomicWriteConflictError) {
@@ -1091,7 +1092,7 @@ export function writeDocumentFile(
     };
   }
   const cwd = canonicalPath(resolve(options.cwd));
-  const documentPath = canonicalPath(resolve(path));
+  const documentPath = canonicalPath(resolve(cwd, path));
   const relativePath = relative(cwd, documentPath);
   if (
     relativePath === "" ||

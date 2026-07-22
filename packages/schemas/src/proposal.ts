@@ -339,20 +339,22 @@ export type ApplyApplied = {
 };
 
 export type ApplyIndeterminate = {
-  readonly ok: true;
+  readonly ok: false;
   readonly applicationState: "indeterminate";
   readonly journalRecoveryPending: true;
+  readonly diagnostics: readonly ApplyDiagnostic[];
   readonly appliedPaths?: never;
 };
 
-export type ApplyOk = ApplyApplied | ApplyIndeterminate;
+export type ApplyOk = ApplyApplied;
 
 export type ApplyReject = {
   readonly ok: false;
+  readonly applicationState?: never;
   readonly diagnostics: readonly ApplyDiagnostic[];
 };
 
-export type ApplyResult = ApplyOk | ApplyReject;
+export type ApplyResult = ApplyOk | ApplyIndeterminate | ApplyReject;
 
 /** Re-export document major for consumers comparing versions. */
 export { DOCUMENT_SCHEMA_VERSION };

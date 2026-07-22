@@ -50,17 +50,19 @@ export type ShellRoundTripOk = {
 };
 
 export type ShellRoundTripIndeterminate = {
-  readonly ok: true;
+  readonly ok: false;
   readonly proposal: Proposal;
   readonly unifiedDiff: string;
   readonly renderedDiff: string;
   readonly applicationState: "indeterminate";
   readonly journalRecoveryPending: true;
+  readonly diagnostics: readonly ApplyDiagnostic[];
   readonly appliedPaths?: never;
 };
 
 export type ShellRoundTripReject = {
   readonly ok: false;
+  readonly applicationState?: never;
   readonly diagnostics: readonly ApplyDiagnostic[];
   readonly renderedDiff: string | null;
 };
@@ -125,22 +127,23 @@ export function shellProposeAndApply(
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {}),
   });
 
-  if (!applied.ok) {
-    return {
-      ok: false,
-      diagnostics: applied.diagnostics,
-      renderedDiff: proposed.renderedDiff,
-    };
-  }
-
   if (applied.applicationState === "indeterminate") {
     return {
-      ok: true,
+      ok: false,
       proposal: proposed.proposal,
       unifiedDiff: proposed.unifiedDiff,
       renderedDiff: proposed.renderedDiff,
       applicationState: "indeterminate",
       journalRecoveryPending: true,
+      diagnostics: applied.diagnostics,
+    };
+  }
+
+  if (!applied.ok) {
+    return {
+      ok: false,
+      diagnostics: applied.diagnostics,
+      renderedDiff: proposed.renderedDiff,
     };
   }
 

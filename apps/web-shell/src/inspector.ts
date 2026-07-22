@@ -5,7 +5,11 @@
  * Stub only: no DOM, no hosting, no deployment.
  */
 
-import type { ApplyDiagnostic, Proposal } from "@sceneaxi/authoring-core";
+import {
+  recoverIncompleteApplies,
+  type ApplyDiagnostic,
+  type Proposal,
+} from "@sceneaxi/authoring-core";
 import {
   shellApply,
   shellPropose,
@@ -38,6 +42,7 @@ export type InspectorSession = {
   accept(): InspectorSnapshot;
   /** Discard the pending proposal without writing. */
   reject(): InspectorSnapshot;
+  refreshRecovery(): InspectorSnapshot;
 };
 
 /**
@@ -66,11 +71,24 @@ export function createInspectorSession(options: {
       diagnostics,
     });
 
+  const pendingDiagnostics = (): readonly ApplyDiagnostic[] => [
+    {
+      code: "apply-in-progress",
+      message: "The apply outcome is pending journal recovery.",
+      reReadHint: "Call refreshRecovery() before another inspector action.",
+    },
+  ];
+
+  const refusePending = (): InspectorSnapshot => {
+    diagnostics = pendingDiagnostics();
+    return snap();
+  };
+
   return {
     snapshot: snap,
 
     proposeEdit(input: ShellEditInput): InspectorSnapshot {
-      if (phase === "pending") return snap();
+      if (phase === "pending") return refusePending();
       const cwd = input.cwd ?? options.cwd;
       const result = shellPropose({
         ...input,
@@ -99,7 +117,7 @@ export function createInspectorSession(options: {
     },
 
     accept(): InspectorSnapshot {
-      if (phase === "pending") return snap();
+      if (phase === "pending") return refusePending();
       if (phase !== "reviewing" || proposal === null) {
         diagnostics = [
           {
@@ -115,16 +133,16 @@ export function createInspectorSession(options: {
         proposal,
         ...(cwd !== undefined ? { cwd } : {}),
       });
-      if (!result.ok) {
-        phase = "reviewing";
-        diagnostics = result.diagnostics;
-        return snap();
-      }
       if (result.applicationState === "indeterminate") {
         phase = "pending";
         appliedPaths = null;
         journalRecoveryPending = true;
-        diagnostics = null;
+        diagnostics = result.diagnostics;
+        return snap();
+      }
+      if (!result.ok) {
+        phase = "reviewing";
+        diagnostics = result.diagnostics;
         return snap();
       }
       phase = "applied";
@@ -136,13 +154,35 @@ export function createInspectorSession(options: {
     },
 
     reject(): InspectorSnapshot {
-      if (phase === "pending") return snap();
+      if (phase === "pending") return refusePending();
       phase = "rejected";
       unifiedDiff = null;
       renderedDiff = null;
       proposal = null;
       pendingCwd = undefined;
       appliedPaths = null;
+      journalRecoveryPending = false;
+      diagnostics = null;
+      return snap();
+    },
+
+    refreshRecovery(): InspectorSnapshot {
+      if (phase !== "pending") return snap();
+      const recovered = recoverIncompleteApplies(
+        pendingCwd === undefined ? {} : { cwd: pendingCwd },
+      );
+      if (!recovered.ok) {
+        diagnostics = recovered.diagnostics;
+        return snap();
+      }
+      if (recovered.journalRecoveryPending === true) {
+        diagnostics = pendingDiagnostics();
+        return snap();
+      }
+      phase = "applied";
+      appliedPaths = [
+        ...new Set(proposal?.edits.map((edit) => edit.documentPath) ?? []),
+      ];
       journalRecoveryPending = false;
       diagnostics = null;
       return snap();
