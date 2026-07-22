@@ -169,6 +169,20 @@ function nonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isPipelineState(value: unknown): value is PipelineState {
+  return (
+    value === "intake" ||
+    value === "screening" ||
+    value === "curation" ||
+    value === "listed" ||
+    value === "delisted"
+  );
+}
+
 function validId(value: unknown): value is string {
   return typeof value === "string" && ID_RE.test(value);
 }
@@ -194,47 +208,86 @@ function validProfiles(value: unknown): value is readonly string[] {
  * (screening gate). Aligns with rights/provenance/AI-disclosure screening in
  * the program catalog pipeline; deeper #48 controls stay factories-helpers SoT.
  */
-export function missingMandatoryMetadata(item: CatalogItem): string[] {
+export function missingMandatoryMetadata(item: unknown): string[] {
   const missing: string[] = [];
-  if (!validId(item.itemId)) missing.push("itemId");
-  if (!validId(item.assetPackage.packageId)) {
-    missing.push("assetPackage.packageId");
+  if (!isRecord(item)) return ["catalogItem"];
+
+  if (!validId(item["itemId"])) missing.push("itemId");
+
+  const assetPackage = item["assetPackage"];
+  if (!isRecord(assetPackage)) {
+    missing.push("assetPackage");
+  } else {
+    if (!validId(assetPackage["packageId"])) {
+      missing.push("assetPackage.packageId");
+    }
+    if (!validSha256(assetPackage["contentHash"])) {
+      missing.push("assetPackage.contentHash");
+    }
   }
-  if (!validSha256(item.assetPackage.contentHash)) {
-    missing.push("assetPackage.contentHash");
+
+  const rights = item["rights"];
+  if (!isRecord(rights)) {
+    missing.push("rights");
+  } else {
+    if (!nonEmptyString(rights["license"])) missing.push("rights.license");
+    if (!nonEmptyString(rights["rightsHolder"])) {
+      missing.push("rights.rightsHolder");
+    }
+    if (typeof rights["commercialUseAllowed"] !== "boolean") {
+      missing.push("rights.commercialUseAllowed");
+    }
   }
-  if (!nonEmptyString(item.rights.license)) missing.push("rights.license");
-  if (!nonEmptyString(item.rights.rightsHolder)) missing.push("rights.rightsHolder");
-  if (typeof item.rights.commercialUseAllowed !== "boolean") {
-    missing.push("rights.commercialUseAllowed");
+
+  const provenance = item["provenance"];
+  if (!isRecord(provenance)) {
+    missing.push("provenance");
+  } else {
+    if (!nonEmptyString(provenance["origin"])) missing.push("provenance.origin");
+    if (!validDateTime(provenance["ingestedAt"])) {
+      missing.push("provenance.ingestedAt");
+    }
+    if (!validSha256(provenance["sourceDigest"])) {
+      missing.push("provenance.sourceDigest");
+    }
   }
-  if (!nonEmptyString(item.provenance.origin)) missing.push("provenance.origin");
-  if (!validDateTime(item.provenance.ingestedAt)) {
-    missing.push("provenance.ingestedAt");
+
+  const disclosure = item["aiGenerationDisclosure"];
+  if (!isRecord(disclosure)) {
+    missing.push("aiGenerationDisclosure");
+  } else {
+    if (!nonEmptyString(disclosure["disclosureText"])) {
+      missing.push("aiGenerationDisclosure.disclosureText");
+    }
+    if (typeof disclosure["aiGenerated"] !== "boolean") {
+      missing.push("aiGenerationDisclosure.aiGenerated");
+    }
   }
-  if (!validSha256(item.provenance.sourceDigest)) {
-    missing.push("provenance.sourceDigest");
+
+  const compatibility = item["compatibility"];
+  if (!isRecord(compatibility)) {
+    missing.push("compatibility");
+  } else {
+    if (!nonEmptyString(compatibility["coreRange"])) {
+      missing.push("compatibility.coreRange");
+    }
+    if (!validProfiles(compatibility["profiles"])) {
+      missing.push("compatibility.profiles");
+    }
   }
-  if (!nonEmptyString(item.aiGenerationDisclosure.disclosureText)) {
-    missing.push("aiGenerationDisclosure.disclosureText");
-  }
-  if (typeof item.aiGenerationDisclosure.aiGenerated !== "boolean") {
-    missing.push("aiGenerationDisclosure.aiGenerated");
-  }
-  if (!nonEmptyString(item.compatibility.coreRange)) {
-    missing.push("compatibility.coreRange");
-  }
-  if (!validProfiles(item.compatibility.profiles)) {
-    missing.push("compatibility.profiles");
-  }
-  if (item.commerce.activation !== "inert") {
+
+  const commerce = item["commerce"];
+  if (!isRecord(commerce)) {
+    missing.push("commerce");
+  } else if (commerce["activation"] !== "inert") {
     missing.push("commerce.activation");
   }
+
   return missing;
 }
 
 function validateHumanVerdict(
-  verdict: HumanCurationVerdict | undefined,
+  verdict: unknown,
 ): TransitionRefuse | null {
   if (verdict === undefined) {
     return {
@@ -244,35 +297,38 @@ function validateHumanVerdict(
         "Human curation verdict is required before listing; the pipeline represents the gate and never simulates it.",
     };
   }
-  if (verdict.kind !== "human") {
+  if (!isRecord(verdict) || verdict["kind"] !== "human") {
     return {
       ok: false,
       code: "invalid-human-verdict",
       message: "Curation verdict kind must be \"human\"; automated verdicts are refused.",
     };
   }
-  if (!nonEmptyString(verdict.curatorId) || !nonEmptyString(verdict.rationale)) {
+  if (
+    !nonEmptyString(verdict["curatorId"]) ||
+    !nonEmptyString(verdict["rationale"])
+  ) {
     return {
       ok: false,
       code: "invalid-human-verdict",
       message: "Human verdict requires non-empty curatorId and rationale.",
     };
   }
-  if (!validDateTime(verdict.recordedAt)) {
+  if (!validDateTime(verdict["recordedAt"])) {
     return {
       ok: false,
       code: "invalid-human-verdict",
       message: "Human verdict requires recordedAt timestamp.",
     };
   }
-  if (verdict.decision === "reject") {
+  if (verdict["decision"] === "reject") {
     return {
       ok: false,
       code: "human-verdict-rejected",
       message: "Human curator rejected the item; listing is refused.",
     };
   }
-  if (verdict.decision !== "approve") {
+  if (verdict["decision"] !== "approve") {
     return {
       ok: false,
       code: "invalid-human-verdict",
@@ -304,25 +360,49 @@ const REQUIRED_HISTORY: Readonly<
   ],
 });
 
-function validateModerationHistory(item: CatalogItem): TransitionRefuse | null {
-  const required = REQUIRED_HISTORY[item.moderation.pipelineState];
-  if (item.moderation.history.length !== required.length) {
+function validateModerationHistory(item: unknown): TransitionRefuse | null {
+  if (!isRecord(item)) {
     return {
       ok: false,
       code: "invalid-moderation-history",
-      message: `Moderation history does not prove the path to ${item.moderation.pipelineState}.`,
+      message: "Catalog item must contain a valid moderation history.",
     };
   }
+
+  const moderation = item["moderation"];
+  if (
+    !isRecord(moderation) ||
+    !isPipelineState(moderation["pipelineState"]) ||
+    !Array.isArray(moderation["history"])
+  ) {
+    return {
+      ok: false,
+      code: "invalid-moderation-history",
+      message: "Catalog item must contain a valid moderation history.",
+    };
+  }
+
+  const pipelineState = moderation["pipelineState"];
+  const history = moderation["history"];
+  const required = REQUIRED_HISTORY[pipelineState];
+  if (history.length !== required.length) {
+    return {
+      ok: false,
+      code: "invalid-moderation-history",
+      message: "Moderation history does not prove the path to " + pipelineState + ".",
+    };
+  }
+
   for (let index = 0; index < required.length; index += 1) {
     const expected = required[index];
-    const record = item.moderation.history[index];
+    const record = history[index];
     if (
       expected === undefined ||
-      record === undefined ||
-      record.from !== expected[0] ||
-      record.to !== expected[1] ||
-      !nonEmptyString(record.reason) ||
-      !validDateTime(record.at)
+      !isRecord(record) ||
+      record["from"] !== expected[0] ||
+      record["to"] !== expected[1] ||
+      !nonEmptyString(record["reason"]) ||
+      !validDateTime(record["at"])
     ) {
       return {
         ok: false,
@@ -330,8 +410,8 @@ function validateModerationHistory(item: CatalogItem): TransitionRefuse | null {
         message: `Moderation history record ${String(index)} is invalid or out of sequence.`,
       };
     }
-    if (record.to === "listed") {
-      const verdictError = validateHumanVerdict(record.humanVerdict);
+    if (record["to"] === "listed") {
+      const verdictError = validateHumanVerdict(record["humanVerdict"]);
       if (verdictError !== null) {
         return {
           ok: false,
@@ -339,7 +419,7 @@ function validateModerationHistory(item: CatalogItem): TransitionRefuse | null {
           message: "Moderation history lacks a valid human approval for listing.",
         };
       }
-    } else if (record.humanVerdict !== undefined) {
+    } else if (record["humanVerdict"] !== undefined) {
       return {
         ok: false,
         code: "invalid-moderation-history",
@@ -358,17 +438,44 @@ export function transitionCatalogItem(
   item: CatalogItem,
   request: TransitionRequest,
 ): TransitionResult {
-  const reason = request.reason.trim();
-  if (!nonEmptyString(reason)) {
+  const requestValue: unknown = request;
+  if (!isRecord(requestValue) || !nonEmptyString(requestValue["reason"])) {
     return {
       ok: false,
       code: "missing-reason",
       message: "Every pipeline transition requires a non-empty reason.",
     };
   }
+  const reason = requestValue["reason"].trim();
 
-  const from = item.moderation.pipelineState;
-  const to = request.to;
+  const missing = missingMandatoryMetadata(item);
+  if (missing.length > 0) {
+    return {
+      ok: false,
+      code: "missing-mandatory-metadata",
+      message: "Mandatory catalog metadata missing: " + missing.join(", ") + ".",
+    };
+  }
+
+  const itemValue: unknown = item;
+  const moderation = isRecord(itemValue) ? itemValue["moderation"] : undefined;
+  if (!isRecord(moderation) || !isPipelineState(moderation["pipelineState"])) {
+    return {
+      ok: false,
+      code: "invalid-moderation-history",
+      message: "Catalog item must contain a valid moderation history.",
+    };
+  }
+
+  const from = moderation["pipelineState"];
+  const to = requestValue["to"];
+  if (!isPipelineState(to)) {
+    return {
+      ok: false,
+      code: "illegal-transition",
+      message: "Pipeline transition target is invalid (fail-closed).",
+    };
+  }
   const allowed = LEGAL_TRANSITIONS.get(from);
   if (!allowed?.has(to)) {
     return {
@@ -378,7 +485,7 @@ export function transitionCatalogItem(
     };
   }
 
-  if (to !== "listed" && request.humanVerdict !== undefined) {
+  if (to !== "listed" && requestValue["humanVerdict"] !== undefined) {
     return {
       ok: false,
       code: "invalid-human-verdict",
@@ -389,41 +496,14 @@ export function transitionCatalogItem(
   const historyError = validateModerationHistory(item);
   if (historyError !== null) return historyError;
 
-  // Leaving quarantine: screening requires mandatory metadata.
-  if (from === "intake" && to === "screening") {
-    const missing = missingMandatoryMetadata(item);
-    if (missing.length > 0) {
-      return {
-        ok: false,
-        code: "missing-mandatory-metadata",
-        message: `Mandatory catalog metadata missing: ${missing.join(", ")}.`,
-      };
-    }
-  }
-
-  // Screening → curation also re-checks metadata (no silent drift).
-  if (
-    (from === "screening" && to === "curation") ||
-    (from === "curation" && to === "listed")
-  ) {
-    const missing = missingMandatoryMetadata(item);
-    if (missing.length > 0) {
-      return {
-        ok: false,
-        code: "missing-mandatory-metadata",
-        message: `Mandatory catalog metadata missing: ${missing.join(", ")}.`,
-      };
-    }
-  }
-
   let humanVerdict: HumanCurationVerdict | undefined;
   if (to === "listed") {
-    const verdictError = validateHumanVerdict(request.humanVerdict);
+    const verdictError = validateHumanVerdict(requestValue["humanVerdict"]);
     if (verdictError) return verdictError;
     humanVerdict = request.humanVerdict;
   }
 
-  const at = request.at ?? new Date().toISOString();
+  const at = requestValue["at"] ?? new Date().toISOString();
   if (!validDateTime(at)) {
     return {
       ok: false,

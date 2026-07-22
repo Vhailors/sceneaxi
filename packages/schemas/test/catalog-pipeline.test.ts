@@ -367,6 +367,24 @@ describe("fail-closed catalog pipeline state machine", () => {
     if (!result.ok) expect(result.code).toBe("missing-reason");
   });
 
+  it("refuses missing and non-string reasons without throwing", () => {
+    for (const rawReason of [undefined, null, 42, {}]) {
+      const request = {
+        to: "screening" as const,
+        reason: "placeholder",
+      };
+      if (rawReason === undefined) {
+        Reflect.deleteProperty(request, "reason");
+      } else {
+        Object.assign(request, { reason: rawReason });
+      }
+
+      const result = transitionCatalogItem(syntheticAsset(), request);
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.code).toBe("missing-reason");
+    }
+  });
+
   it("enforces the shared Catalog date-time definition at runtime", () => {
     const invalidTransition = transitionCatalogItem(syntheticAsset(), {
       to: "screening",
@@ -443,6 +461,30 @@ describe("fail-closed catalog pipeline state machine", () => {
     if (!reject.ok) expect(reject.code).toBe("human-verdict-rejected");
   });
 
+  it("refuses structurally invalid human verdicts without throwing", () => {
+    const listed = advanceToListed(syntheticAsset());
+    const atCuration: CatalogItem = {
+      ...listed,
+      moderation: {
+        pipelineState: "curation",
+        history: listed.moderation.history.slice(0, 2),
+      },
+    };
+
+    for (const malformedVerdict of [null, 42, "approve"]) {
+      const request = {
+        to: "listed" as const,
+        reason: "attempt malformed verdict",
+        humanVerdict: approveVerdict(),
+      };
+      Object.assign(request, { humanVerdict: malformedVerdict });
+
+      const result = transitionCatalogItem(atCuration, request);
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.code).toBe("invalid-human-verdict");
+    }
+  });
+
   it("refuses a human verdict outside the listing transition", () => {
     const result = transitionCatalogItem(syntheticAsset(), {
       to: "screening",
@@ -515,6 +557,52 @@ describe("fail-closed catalog pipeline state machine", () => {
     });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("missing-mandatory-metadata");
+  });
+
+  it("refuses malformed nested metadata without throwing", () => {
+    const corruptions: Array<{
+      path: string;
+      corrupt: (item: CatalogItem) => void;
+    }> = [
+      {
+        path: "assetPackage",
+        corrupt: (item) => Object.assign(item, { assetPackage: null }),
+      },
+      {
+        path: "rights",
+        corrupt: (item) => Object.assign(item, { rights: null }),
+      },
+      {
+        path: "provenance",
+        corrupt: (item) => Reflect.deleteProperty(item, "provenance"),
+      },
+      {
+        path: "aiGenerationDisclosure",
+        corrupt: (item) =>
+          Object.assign(item, { aiGenerationDisclosure: "missing" }),
+      },
+      {
+        path: "compatibility",
+        corrupt: (item) => Object.assign(item, { compatibility: null }),
+      },
+      {
+        path: "commerce",
+        corrupt: (item) => Object.assign(item, { commerce: null }),
+      },
+    ];
+
+    for (const { path, corrupt } of corruptions) {
+      const malformed = syntheticAsset();
+      corrupt(malformed);
+      expect(missingMandatoryMetadata(malformed)).toContain(path);
+
+      const result = transitionCatalogItem(malformed, {
+        to: "screening",
+        reason: "attempt malformed metadata",
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.code).toBe("missing-mandatory-metadata");
+    }
   });
 
   it("requires runtime rights and AI disclosure booleans", () => {
@@ -616,6 +704,18 @@ describe("commerce fields inert (no 6b activation path)", () => {
       price: { amount: "9.99", currency: "USD" },
       sku: "SKU-1",
     });
+  });
+
+  it("refuses delisting when commerce has drifted active", () => {
+    const listed = advanceToListed(syntheticAsset());
+    Object.assign(listed.commerce, { activation: "active" });
+
+    const result = transitionCatalogItem(listed, {
+      to: "delisted",
+      reason: "attempt takedown with active commerce",
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("missing-mandatory-metadata");
   });
 
   it("refuses commerce activation for listed items with price fields populated", () => {
