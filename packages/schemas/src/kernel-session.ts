@@ -62,7 +62,7 @@ export interface KernelSnapshot {
   readonly tick: number;
   readonly seed: number;
   readonly entities: ReadonlyArray<SnapshotEntity>;
-  /** Canonical digest: `sha256:` + hex of sorted entity state. */
+  /** Opaque canonical digest used for determinism and replay checks. */
   readonly digest: string;
 }
 
