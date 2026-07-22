@@ -31,8 +31,6 @@ The first-class v1 Plugin Host contract is documented in
 [`docs/plugins.md`](docs/plugins.md): plugins are isolated packages that claim
 only versioned public capability IDs, never arbitrary hooks or engine-internal
 ports.
-External web products follow the published-package support and pinning contract
-in [`docs/web-consumer.md`](docs/web-consumer.md).
 
 ## Development
 
@@ -47,7 +45,7 @@ their respective contracts.
 **Early implementation aggregate.** The monorepo has a real fail-closed toolchain,
 typed public seams for every package and app, and initial contract/tracer
 implementations for authoring, the CLI, the Game Kernel, Game profile conformance,
-shell protocol clients, and dormant catalogs. This
+the public Delivery Handoff, shell protocol clients, and dormant catalogs. This
 remains proof-oriented work, not a claim that the engine, profiles, or applications
 are production-ready. Proof
 execution, spend, account creation, publication, and other external actions remain
