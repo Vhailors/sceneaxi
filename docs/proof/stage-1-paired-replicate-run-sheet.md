@@ -599,16 +599,42 @@ evidence for or against hosted authoring.
 
 ### B.3 Worker pre-start hash checks
 
-| Slot | Live hash == pin? | Started at | Stopped at | Logged h |
-|---|---|---|---|---:|
-| W-A1 | | | | |
-| W-B1 | | | | |
-| W-A2 | | | | |
-| W-B2 | | | | |
-| Drill A | | | | |
-| Drill B | | | | |
+Record digests, not only a pass/fail assertion. The pinned and live values are
+the evidence for the comparison required by §2.3.
 
-### B.4 Replicate qualification (operator view)
+| Slot | Pinned digest | Live digest | Match? | Checked by | Started at | Stopped at | Logged h |
+|---|---|---|---|---|---|---|---:|
+| W-A1 | | | | | | | |
+| W-B1 | | | | | | | |
+| W-A2 | | | | | | | |
+| W-B2 | | | | | | | |
+| Drill A | | | | | | | |
+| Drill B | | | | | | | |
+
+### B.4 Evidence-packet seal
+
+Use `complete`, `incomplete`, or `not-run` for every capture point. Any value
+other than `complete` requires a reason in the packet; sealing records the gap
+and never upgrades it into evidence.
+
+| Capture point (§6.1) | A1 | B1 | A2 | B2 |
+|---|---|---|---|---|
+| E1 Contract hash | | | | |
+| E2 Pinned-config hash | | | | |
+| E3 Block order record | | | | |
+| E4 Work-Class log + path rules | | | | |
+| E5 Harness hour log | | | | |
+| E6 Fresh-checkout reproduction | | | | |
+| E7 100-seed digest (30/60/120) | | | | |
+| E8 Named-device WebGL2 run | | | | |
+| E9 Verified captures | | | | |
+| E10 Criteria matrix | | | | |
+| E11 Dependency/security counters | | | | |
+| E12 Human-verdict binding | | | | |
+| E13 Limitations | | | | |
+| E14 Asset Package pin + ingestion rejects | | | | |
+
+### B.5 Replicate qualification (operator view)
 
 | Arm | Rep | Fresh checkout | Digest 30/60/120 | Device gate | Qualifying? |
 |---|---|---|---|---|---|
@@ -617,7 +643,7 @@ evidence for or against hosted authoring.
 | A | 2 | | | | |
 | B | 2 | | | | |
 
-### B.5 Overscope stop
+### B.6 Overscope stop
 
 | Block-1 A accepted % | Block-1 B accepted % | Both &lt; 50%? | Outcome |
 |---|---|---|---|
