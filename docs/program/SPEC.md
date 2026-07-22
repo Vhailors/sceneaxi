@@ -174,7 +174,7 @@ One umbrella CLI with per-context command groups (`project|asset|profile|catalog
 
 Owned by `authoring-core`: complete/tool-call/stream + typed capability descriptors + per-profile policy filter, with provider adapters behind it in pre-declared delayed slots. Direct first-party adapters are the default posture; aggregation (e.g. OpenRouter) is an optional breadth adapter only under the chart's falsified conditions (pinned provider slug, contractual residency, `zdr:true`, `allow_fallbacks:false`, pinned params/quantization — ZDR is retention, not geography). **The Kids profile's policy filter denies third-party model routes by default.** Every evidence packet records the exact model descriptor (model, provider, quantization, version). Adoption itself is held (`llm-provider-policy`, `deepseek-adoption`).
 
-### Catalog pipeline (one platform, two storefronts — topology held)
+### Catalog pipeline (storefront topology held)
 
 `intake (quarantine, #48 controls) → screening (rights/provenance/AI-disclosure) → curation (human verdict — curation IS the product) → listing (compatibility badges) → delisting/takedown (recorded reason)`. Every transition recorded and fail-closed. Commerce fields exist but are **inert** until the existing 6b activation holds open (read per-storefront). Kids consumption is an allowlist over already-curated items — a consumer of the pipeline, never a fork.
 
@@ -214,24 +214,19 @@ This spec **does not answer** any of the following. Each is a registered structu
 | 7 | `llm-provider-policy` | Provider port posture: first-party direct vs aggregation conditions |
 | 8 | `deepseek-adoption` | Whether/how DeepSeek V4 is adoptable (re-verify post-GA; never official endpoint for Kids/user data) |
 
-Resolved anchors: `core-product-name` = **SceneAxi** and
-`kids-surface-isolation` = a fully separate Kids domain and origin with isolated
-identity, cookies, data, telemetry, and LLM routing (captain, durable). The
-residual Kids holds are only the 6a age, safety, curriculum, and jurisdiction
-decisions; they do not reopen the resolved surface topology. The **24 existing
-holds** (origin `threejs-factory-wayfinder-v1`, tiers 1–6b — including
-`capability-name`, `kernel-name`, the residual 6a Kids branch, the 6b marketplace
-activation/scope gates, hosted-accounts/telemetry boundaries, and the tier-5
-license hold) remain open, unmodified, and authoritative; the registry ticket is
-factories-helpers #42.
-
-Locked decision: `site-domain-topology` uses the hybrid topology recorded in
-[`site-domain-topology.md`](site-domain-topology.md): an umbrella domain for the
-core product and docs, distinct game-asset and website-asset storefront domains,
-and a fully separate Kids domain/origin. Exact domain strings and purchases are
-out of scope. This human-readable record does not replace the current
+Resolved anchors: `core-product-name` = **SceneAxi**. `site-domain-topology` and
+`kids-surface-isolation` are resolved by the locked decision recorded in
+[`site-domain-topology.md`](site-domain-topology.md), which owns the surface
+topology and isolation details. The residual Kids holds are only the 6a age,
+safety, curriculum, and jurisdiction decisions; they do not reopen the resolved
+surface topology. The **24 existing holds** (origin
+`threejs-factory-wayfinder-v1`, tiers 1–6b — including `capability-name`,
+`kernel-name`, the residual 6a Kids branch, the 6b marketplace activation/scope
+gates, hosted-accounts/telemetry boundaries, and the tier-5 license hold) remain
+open, unmodified, and authoritative; the registry ticket is factories-helpers
+#42. The human-readable decision record does not replace the current
 authoritative FirstMate registry snapshot required by
-`docs/held-key-enforcement.md` to resolve either key for CLI enforcement.
+`docs/held-key-enforcement.md` for CLI enforcement.
 
 ## Testing Decisions
 
