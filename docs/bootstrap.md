@@ -1,30 +1,48 @@
-# Bootstrap application procedure (every authority separate)
+# Bootstrap authority record (every authority separate)
 
-**FROZEN:** this tree is applyable only after (a) the post-FAIL remediations pass is
-complete and (b) a **fresh independent non-Claude review PASS** over the amended chart
-and this exact tree. A PASS is a prerequisite for everything below and **grants no
-authority by itself**.
+The initial bootstrap was applied in commit `f0a5b90` after its prerequisite
+review. This document preserves that application record and the still-operative
+rule that one authority never implies another. Completing bootstrap granted no
+standing authority for later pushes, issue operations, proof execution, spend,
+account creation, or publication.
+
+A successful review and a passing repository gate are prerequisites for external
+actions, but **grant no authority by themselves**. Each action below requires its
+own matching authority.
 
 ## Distinct authorities — none implies another
 
 | # | Authority | Covers | Explicitly does NOT cover |
 |---|---|---|---|
-| 1 | Review PASS (non-Claude) | Eligibility to request the authorities below | Any action |
-| 2 | Apply | Copying this tree into a clean local clone of `projects/sceneaxi` | Install, commit, push |
-| 3 | Install | `pnpm install`, lockfile creation | Commit, push |
-| 4 | Initial commit | One local commit of the applied tree | Push |
-| 5 | Push | Pushing to `Vhailors/sceneaxi` | Issue creation, publication |
-| 6 | Issue transfer/creation | **Not part of bootstrap.** Owned entirely by the issue-transfer plan (FirstMate program archive) under its own explicit transfer authority | — |
-| 7 | Proof execution | Stage 1+ runs — dual-gated (tier-3 captain decisions AND explicit run authorization) | — |
-| 8 | Spend / accounts | Any paid service or account creation | — |
-| 9 | Publication | Package publishing, public visibility, docs sites | — |
+| 1 | Initial review PASS (historical) | Eligibility to request the initial bootstrap authorities | Any action |
+| 2 | Initial apply (historical) | Copying the reviewed tree into the SceneAxi checkout | Install, commit, push |
+| 3 | Initial install (historical) | `pnpm install` and lockfile creation | Commit, push |
+| 4 | Initial commit (historical) | The local bootstrap commit | Push |
+| 5 | Initial push (historical) | Publishing the bootstrap commit to `Vhailors/sceneaxi` | Issue creation, publication |
+| 6 | Ongoing review PASS (non-Claude) | Eligibility to request later external authorities | Any action |
+| 7 | Push | Pushing later branches or tags to `Vhailors/sceneaxi` | Issue creation, publication |
+| 8 | Issue transfer/creation | Each issue operation under its own explicit transfer authority | Any other issue operation or later authority |
+| 9 | Proof execution | Stage 1+ runs — dual-gated (tier-3 captain decisions AND explicit run authorization) | — |
+| 10 | Spend / accounts | Any paid service or account creation | — |
+| 11 | Publication | Package publishing, public visibility, docs sites | — |
 
-## Procedure (each step only under its own authority)
+## Local pre-flight (current)
 
-1. **Pre-flight (no authority needed):** in this tree, `pnpm check:syntax` and
-   `pnpm check:boundaries` must PASS, and `pnpm gate` must **FAIL** (build/test/lint
-   are intentionally fail-closed until wired — a passing gate here means the gate has
-   been tampered with).
+1. `pnpm gate` must pass before any external action is requested.
+2. Replace `UNLICENSED` only after the license captain decision (open tier-5 hold).
+3. Do **not** infer engine readiness, commercial validation, or Kids safety from a
+   passing gate, and do not infer issue, proof, spend, account, push, or publication
+   authority from local verification.
+
+## Historical initial application procedure
+
+The initial bootstrap used the following sequence. It is retained as provenance,
+not as a claim that the repository is still awaiting application or that the gate
+is still intentionally unwired.
+
+1. **Pre-flight (no authority needed):** at bootstrap time, `pnpm check:syntax` and
+   `pnpm check:boundaries` had to PASS, and `pnpm gate` had to **FAIL** because
+   build/test/lint were intentionally fail-closed until wired.
 2. **[apply]** Copy this directory tree into a clean clone of `projects/sceneaxi`
    (or a `git checkout --orphan` initial tree) without rewriting any other repo's
    history.

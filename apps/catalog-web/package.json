@@ -3,6 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "description": "SceneAxi catalog-web app (bootstrap stub) — website-asset storefront over the catalog pipeline contracts only; commerce fields inert",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
   "dependencies": {
     "@sceneaxi/schemas": "workspace:^"
   },

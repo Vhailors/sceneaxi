@@ -1,0 +1,19 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/schemas" },
+    { "path": "packages/engine-kernel" },
+    { "path": "packages/engine-presentation" },
+    { "path": "packages/engine-orchestrator" },
+    { "path": "packages/authoring-core" },
+    { "path": "packages/profile-game" },
+    { "path": "packages/profile-web" },
+    { "path": "packages/profile-kids" },
+    { "path": "packages/cli" },
+    { "path": "packages/importers" },
+    { "path": "apps/web-shell" },
+    { "path": "apps/desktop-shell" },
+    { "path": "apps/catalog-game" },
+    { "path": "apps/catalog-web" }
+  ]
+}

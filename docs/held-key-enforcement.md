@@ -64,6 +64,12 @@ Ungated verbs (`heldKeys: []` explicit) may run without a currency check. They m
 
 Any claim that “a new hold can never be silently ignored” is only valid under this protocol. Designs that allow offline gated verbs with a lagged signed marker must **not** claim fail-closed held-key enforcement.
 
-## Bootstrap seed note
+## Implementation status
 
-This bootstrap ships **schemas and this protocol only**. Runtime currency fetch implementation is deferred until CLI wiring is authorized — but acceptance for any held-key-gated CLI **must** include both regressions above (N/N vs N+1, and offline unavailable).
+The CLI runtime implementation lives in `packages/cli/src/held-keys/` and is
+wired into the dispatcher for every verb. The shipped command map explicitly
+declares every verb; only `demo gated` uses synthetic held keys. The default
+runtime has no snapshot or epoch sentinel, so that demo refuses with
+`currency-unavailable` until real authority wiring is separately authorized.
+The refusal table and both mandatory regressions above are fixture-tested under
+`packages/cli/test/held-keys.*.test.ts`.

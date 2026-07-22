@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/kernel-session/v1",
+  "title": "SceneAxi Kernel Session save/replay artifact (v1)",
+  "description": "Versioned save/replay artifact for the Game Kernel command/snapshot session (ADR 0001 Design A). Carries schema + kernel/BOM versions. Consumers MUST refuse major schemaVersion mismatches. Behavioral semantics: packages/engine-kernel; normative invariants in docs/adr/0001-game-kernel-command-snapshot-session.md.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "kernelVersion",
+    "bomVersion",
+    "productManifest",
+    "events",
+    "terminalDigest"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 1,
+      "description": "Kernel Session contract major version. Major mismatch on load refuses."
+    },
+    "kernelVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "engine-kernel package version that produced the artifact."
+    },
+    "bomVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Core-train BOM version stamped at save time."
+    },
+    "productManifest": {
+      "type": "object",
+      "required": ["productId", "seed"],
+      "additionalProperties": false,
+      "properties": {
+        "productId": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "seed": {
+          "type": "integer",
+          "description": "Determinism seed; identical seed + event sequence yields identical digests."
+        },
+        "entities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "x", "y"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+              "x": { "type": "integer" },
+              "y": { "type": "integer" }
+            }
+          }
+        }
+      }
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind"],
+        "properties": {
+          "kind": { "type": "string", "enum": ["dispatch", "advance"] },
+          "command": {
+            "type": "object",
+            "required": ["type"],
+            "properties": {
+              "type": { "type": "string", "enum": ["move", "spawn"] },
+              "actor": { "type": "string" },
+              "axis": {
+                "type": "array",
+                "minItems": 2,
+                "items": { "type": "integer" }
+              },
+              "position": {
+                "type": "array",
+                "minItems": 2,
+                "items": { "type": "integer" }
+              }
+            }
+          },
+          "timestampMs": { "type": "integer" },
+          "clock": {
+            "type": "object",
+            "required": ["tick", "deltaMs"],
+            "additionalProperties": false,
+            "properties": {
+              "tick": { "type": "integer" },
+              "deltaMs": { "type": "integer" }
+            }
+          }
+        }
+      }
+    },
+    "terminalDigest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "Canonical snapshot digest after replaying all events; currency of determinism tests."
+    }
+  }
+}

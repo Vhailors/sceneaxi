@@ -1,13 +1,30 @@
-# Bootstrap draft manifest
+# Repository manifest
+
+The authoritative package and app inventory, implementation status, and common
+development command are maintained in `README.md`.
+
+- `package.json` owns the executable toolchain commands and declared development
+  dependencies; `pnpm-lock.yaml` owns their resolved versions.
+- `docs/dependency-matrix.json` owns package boundaries, release groups, and profile
+  core pins; `docs/DEPENDENCY-MATRIX.md` explains that schema-backed contract.
+- `docs/held-key-enforcement.md` and `packages/schemas/contracts/*.schema.json` own
+  the held-key runtime protocol and its versioned schemas.
+- `docs/bootstrap.md` owns the separated authority requirements that remain in force.
+- `docs/adr/` indexes settled engine/CLI design decisions transferred into this repo.
+- `docs/program/` and `docs/proof/` hold program-spec mirrors and proof-prep docs only.
+
+## Historical bootstrap inventory
 
 Produced: 2026-07-21 (remediated same day after the non-Claude review FAIL)  
-Location: FirstMate data only — **not** applied to `Vhailors/sceneaxi` or `projects/sceneaxi`.
+Original location: FirstMate data before application to `Vhailors/sceneaxi` as
+commit `f0a5b90`.
 
-**FROZEN — not applyable** until the post-FAIL remediations pass is complete **and** a
-fresh independent non-Claude review passes over the amended chart and this exact tree.
-Application then still requires its own separated authorities (`docs/bootstrap.md`).
+This section is a historical inventory of the reviewed bootstrap input, not the
+current live toolchain description. At bootstrap, `pnpm check:boundaries` and
+`pnpm check:syntax` were wired while build/test/lint remained intentionally
+fail-closed; the live gate is owned by root `package.json` today.
 
-## Contents
+### Contents of the original draft
 
 - Root README, AGENTS.md, .gitignore, pnpm-workspace, package.json, .env.example
 - Package stubs: engine-kernel, engine-presentation, engine-orchestrator,
@@ -18,13 +35,11 @@ Application then still requires its own separated authorities (`docs/bootstrap.m
 - `docs/dependency-matrix.json` + `docs/DEPENDENCY-MATRIX.md` — complete allow/deny
   matrix, Kids boundary, delayed-package slots, release groups, profile core pins
 - `scripts/check-boundaries.mjs`, `scripts/check-syntax.mjs` — executable checks
-  (`pnpm check:boundaries`, `pnpm check:syntax`); `pnpm gate` fails while
-  build/test/lint are unwired
 - `docs/held-key-enforcement.md` + `packages/schemas/contracts/*.schema.json` —
   held-key runtime protocol and versioned registry/command-map contracts
 - `docs/bootstrap.md` — application procedure with separated authorities
 
-## Explicitly excluded from this draft
+### Explicitly excluded from the original draft
 
 - Lockfiles, node_modules, external (registry) dependencies
 - CI workflows that publish packages

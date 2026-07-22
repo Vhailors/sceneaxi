@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "outDir": "dist" },
+  "include": ["src", "test"],
+  "references": [
+    { "path": "../../packages/schemas" },
+    { "path": "../../packages/authoring-core" }
+  ]
+}

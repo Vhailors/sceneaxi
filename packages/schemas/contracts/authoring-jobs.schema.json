@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/authoring-jobs/v1",
+  "title": "SceneAxi shared authoring-jobs fixture list (v1)",
+  "description": "The one canonical list of authoring jobs both authoring-interface contracts (E1 source-first surface, E2 schema-driven command editor) must satisfy on identical terms. Consumers MUST use this list verbatim — no per-contract additions, removals, or reorderings. Behavioral semantics: docs/authoring-contracts.md. Transferred from factories-helpers#49; SceneAxi is the source of truth from sceneaxi#5 on.",
+  "type": "object",
+  "required": ["schemaVersion", "transferredFrom", "jobs"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "transferredFrom": {
+      "const": "factories-helpers#49",
+      "description": "Origin ticket per the issue-transfer plan. Constant: the transfer happened once."
+    },
+    "jobs": {
+      "type": "array",
+      "minItems": 5,
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "jobSummary", "editClass"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$",
+            "description": "Stable job id, referenced by both contracts' acceptance suites."
+          },
+          "title": { "type": "string" },
+          "jobSummary": {
+            "type": "string",
+            "description": "What the author is trying to accomplish, interface-neutral — no E1/E2 verb or editor mechanics may leak in."
+          },
+          "editClass": {
+            "type": "string",
+            "enum": ["transform", "scalar-tune", "binding", "timeline-marker", "layout"],
+            "description": "Shape of the edit the job exercises. Document formats and concrete paths are deliberately NOT fixed here — they belong to the document-model ticket (sceneaxi#9), not this contract."
+          }
+        }
+      }
+    }
+  }
+}

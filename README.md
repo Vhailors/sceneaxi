@@ -19,21 +19,49 @@ This monorepo is the packaging home for:
 Package boundaries are executable: `docs/dependency-matrix.json` is the allow/deny
 truth and `pnpm check:boundaries` enforces it (see `docs/DEPENDENCY-MATRIX.md`).
 Held captain decisions are a runtime contract: `docs/held-key-enforcement.md`.
+Authoring-interface behavioral contracts (E1/E2) are SceneAxi-owned:
+`docs/authoring-contracts.md`, with the shared authoring-jobs fixture list in
+`packages/schemas/contracts/` enforced by `pnpm check:contracts`.
+
+## Development
+
+Install the pinned workspace toolchain with `pnpm install`, then run `pnpm gate`
+for the repository's required syntax, boundary, contract, build, test, and lint
+checks. The root `package.json` owns the exact command sequence; the referenced
+TypeScript, Vitest, ESLint, boundary, and contract-checker configuration files own
+their respective contracts.
 
 ## Status
 
-**Frozen bootstrap draft**, prepared offline under the FirstMate home. The GitHub
-repository `Vhailors/sceneaxi` exists and is intentionally empty. This tree is
-applyable only after the post-FAIL remediations pass and a fresh independent
-non-Claude review PASS, and then only under the separated authorities in
-`docs/bootstrap.md` (apply, install, initial commit, push, transfer, proof, spend,
-and publication are each their own grant).
+**Early implementation aggregate.** The monorepo has a real fail-closed toolchain,
+typed public seams for every package and app, and initial contract/tracer
+implementations for authoring, the CLI, the Game Kernel, Game profile conformance,
+shell protocol clients, and dormant catalogs. This remains proof-oriented work, not
+a claim that the engine, profiles, or applications are production-ready. Proof
+execution, spend, account creation, publication, and other external actions remain
+subject to the separated authorities in `docs/bootstrap.md`.
+
+Main landed the bootstrap tree at commit `f0a5b90` (independent non-Claude **v4
+review PASS**, 2026-07-21) under the separated bootstrap authorities in
+`docs/bootstrap.md`. Bootstrap authorities 1–5 have been exercised for that tree;
+every future change re-earns its own grants (PASS ≠ commit ≠ push ≠ merge).
+
+The canonical product spec is [#1](https://github.com/Vhailors/sceneaxi/issues/1),
+mirrored in-tree at `docs/program/SPEC.md`. The engine-core proof program stays on
+factories-helpers [#41](https://github.com/Vhailors/factories-helpers/issues/41)
+(pointer: `docs/program/spec-41.md`); proof-prep docs land under `docs/proof/`,
+double-gated and never a run authorization. Settled engine/CLI decisions are
+indexed in [`docs/adr/`](docs/adr/README.md).
 
 ## Authority
 
-- Program chart: FirstMate factories secondmate, Wayfinder origin `threejs-bgf-ecosystem-wayfinder-v1` (chart report, map, tickets, and the issue-transfer plan live there, outside this repo by design until transfer authority exists).
+- Program chart: FirstMate factories secondmate, Wayfinder origin
+  `threejs-bgf-ecosystem-wayfinder-v1`. Settled engine/CLI decisions transferred
+  from that program are recorded in [`docs/adr/`](docs/adr/README.md); each ADR
+  carries its source and split lineage.
 - Prior proof program: factories-helpers [#41](https://github.com/Vhailors/factories-helpers/issues/41)
-- Issue transfer: governed by the issue-transfer plan in the FirstMate program archive; **no issue creation is part of bootstrap**.
+- Issue creation and transfer remain separate authorities; a completed transfer
+  grants no authority for another issue operation.
 
 ## Boundaries
 
