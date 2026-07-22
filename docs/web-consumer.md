@@ -30,8 +30,11 @@ private applications, not reusable consumer packages.
   lockfile. Do not use `latest`, Git refs, branches, or floating ranges.
 - A profile release supports exactly the core semver range in its published
   `sceneaxi.corePin`, also exposed by `@sceneaxi/profile-web` as `seam.corePin`.
-  A directly installed core package outside that range is unsupported and the
-  integration must refuse to start.
+  Core-package mismatch refusal happens during dependency selection and
+  install/resolve in v1: reject an unresolved peer-dependency set or any exact
+  direct core pin outside that documented range. Do not start an integration
+  from an incompatible package set; v1 does not define runtime package-version
+  introspection.
 - Each versioned artifact is accepted only by a validator for its schema major.
   Missing, invalid, or different-major data is a refusal, never an implicit
   conversion. Upgrade the package set or run an explicit, reviewed migration.
