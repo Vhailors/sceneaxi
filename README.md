@@ -22,6 +22,8 @@ Held captain decisions are a runtime contract: `docs/held-key-enforcement.md`.
 Authoring-interface behavioral contracts (E1/E2) are SceneAxi-owned:
 `docs/authoring-contracts.md`, with the shared authoring-jobs fixture list in
 `packages/schemas/contracts/` enforced by `pnpm check:contracts`.
+External web products follow the published-package support and pinning contract
+in [`docs/web-consumer.md`](docs/web-consumer.md).
 
 ## Development
 
