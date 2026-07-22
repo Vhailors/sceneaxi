@@ -28,7 +28,7 @@ import {
 } from "./atomic-write.js";
 import { contentHash } from "./content-hash.js";
 
-export const APPLY_JOURNAL_SCHEMA_VERSION = 3 as const;
+export const APPLY_JOURNAL_SCHEMA_VERSION = 4 as const;
 export const APPLY_JOURNAL_KIND = "sceneaxi.authoring-apply-journal" as const;
 
 export type ApplyJournalDocument = {
@@ -108,6 +108,10 @@ function journalOperationResource(cwd: string): string {
   return join(journalDirectory(cwd), ".operation");
 }
 
+function activeJournalPath(cwd: string): string {
+  return join(journalDirectory(cwd), ".active");
+}
+
 function completionSequencePath(cwd: string): string {
   return join(journalDirectory(cwd), ".completion-sequence");
 }
@@ -138,6 +142,14 @@ function writeJournal(cwd: string, entry: ApplyJournalEntry): void {
   );
 }
 
+function writeActiveJournal(cwd: string, entry: ApplyJournalEntry | null): void {
+  atomicWriteFile(
+    activeJournalPath(cwd),
+    entry === null ? "null\n" : serializeJournal(entry),
+    { token: "active-journal" },
+  );
+}
+
 function parseJournal(text: string): ApplyJournalEntry | null {
   let value: unknown;
   try {
@@ -152,6 +164,7 @@ function parseJournal(text: string): ApplyJournalEntry | null {
   const state = String(raw["state"]);
   const isCompletedState =
     state === "completed" || state === "undoing" || state === "undone";
+  const hasReservedOrder = state === "prepared" || isCompletedState;
   if (
     raw["schemaVersion"] !== APPLY_JOURNAL_SCHEMA_VERSION ||
     raw["kind"] !== APPLY_JOURNAL_KIND ||
@@ -164,14 +177,14 @@ function parseJournal(text: string): ApplyJournalEntry | null {
     ) ||
     !Array.isArray(raw["documents"]) ||
     raw["documents"].length === 0 ||
+    (hasReservedOrder &&
+      (!Number.isInteger(raw["completionOrder"]) ||
+        (raw["completionOrder"] as number) <= 0)) ||
+    (!hasReservedOrder && Object.hasOwn(raw, "completionOrder")) ||
     (isCompletedState &&
       (typeof raw["completedAt"] !== "string" ||
-        !Number.isFinite(Date.parse(raw["completedAt"])) ||
-        !Number.isInteger(raw["completionOrder"]) ||
-        (raw["completionOrder"] as number) <= 0)) ||
-    (!isCompletedState &&
-      (Object.hasOwn(raw, "completedAt") ||
-        Object.hasOwn(raw, "completionOrder"))) ||
+        !Number.isFinite(Date.parse(raw["completedAt"])))) ||
+    (!isCompletedState && Object.hasOwn(raw, "completedAt")) ||
     !hasOnlyKeys(raw, JOURNAL_KEYS)
   ) {
     return null;
@@ -220,13 +233,43 @@ function parseJournal(text: string): ApplyJournalEntry | null {
     state: raw["state"] as ApplyJournalEntry["state"],
     documents,
   };
-  return isCompletedState
-    ? {
-        ...base,
-        completedAt: raw["completedAt"] as string,
-        completionOrder: raw["completionOrder"] as number,
-      }
+  if (isCompletedState) {
+    return {
+      ...base,
+      completedAt: raw["completedAt"] as string,
+      completionOrder: raw["completionOrder"] as number,
+    };
+  }
+  return hasReservedOrder
+    ? { ...base, completionOrder: raw["completionOrder"] as number }
     : base;
+}
+
+function readActiveJournal(
+  cwd: string,
+):
+  | { readonly ok: true; readonly entry: ApplyJournalEntry | null }
+  | { readonly ok: false; readonly diagnostics: readonly ApplyDiagnostic[] } {
+  const path = activeJournalPath(cwd);
+  if (!fileExists(path)) return { ok: true, entry: null };
+  const text = readFileSync(path, "utf8");
+  if (text.trim() === "null") return { ok: true, entry: null };
+  const entry = parseJournal(text);
+  if (
+    entry === null ||
+    (entry.state !== "prepared" && entry.state !== "undoing")
+  ) {
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          code: "journal-invalid",
+          message: "The active apply journal is invalid or corrupt.",
+        },
+      ],
+    };
+  }
+  return { ok: true, entry };
 }
 
 export function prepareApplyJournal(
@@ -240,13 +283,23 @@ export function prepareApplyJournal(
   if (documents.length === 0) {
     throw new Error("Apply journal requires at least one document.");
   }
+  const active = readActiveJournal(cwd);
+  if (!active.ok || active.entry !== null) {
+    throw new Error(
+      active.ok
+        ? "Another apply journal is already active."
+        : (active.diagnostics[0]?.message ?? "Apply journal is invalid."),
+    );
+  }
   const transactionId = `${Date.now()}-${randomBytes(8).toString("hex")}`;
+  const completionOrder = reserveCompletionOrder(cwd);
   const entry: ApplyJournalEntry = {
     schemaVersion: APPLY_JOURNAL_SCHEMA_VERSION,
     kind: APPLY_JOURNAL_KIND,
     transactionId,
     createdAt: new Date().toISOString(),
     state: "prepared",
+    completionOrder,
     documents: documents.map((document) => ({
       documentPath: document.documentPath,
       beforeContent: document.beforeContent,
@@ -255,7 +308,7 @@ export function prepareApplyJournal(
       afterContentHash: contentHash(document.afterContent),
     })),
   };
-  writeJournal(cwd, entry);
+  writeActiveJournal(cwd, entry);
   return entry;
 }
 
@@ -263,13 +316,15 @@ export function completeApplyJournal(
   cwd: string,
   entry: ApplyJournalEntry,
 ): void {
-  const completionOrder = reserveCompletionOrder(cwd);
+  if (entry.completionOrder === undefined) {
+    throw new Error("Apply journal completion order was not reserved.");
+  }
   writeJournal(cwd, {
     ...entry,
     state: "completed",
     completedAt: new Date().toISOString(),
-    completionOrder,
   });
+  writeActiveJournal(cwd, null);
 }
 
 function reserveCompletionOrder(cwd: string): number {
@@ -280,7 +335,7 @@ function reserveCompletionOrder(cwd: string): number {
     try {
       parsed = JSON.parse(readFileSync(path, "utf8")) as unknown;
     } catch {
-      throw new Error("Apply journal completion sequence is invalid.");
+      parsed = null;
     }
     if (
       parsed === null ||
@@ -293,10 +348,12 @@ function reserveCompletionOrder(cwd: string): number {
       !Number.isInteger((parsed as Record<string, unknown>)["value"]) ||
       ((parsed as Record<string, unknown>)["value"] as number) < 0
     ) {
-      throw new Error("Apply journal completion sequence is invalid.");
+      parsed = null;
+    } else {
+      current = (parsed as Record<string, unknown>)["value"] as number;
     }
-    current = (parsed as Record<string, unknown>)["value"] as number;
-  } else {
+  }
+  if (!fileExists(path) || current === 0) {
     const journals = readJournals(cwd);
     if (!journals.ok) {
       throw new Error(
@@ -337,6 +394,7 @@ export function abortApplyJournal(
     state: "aborted",
     documents: entry.documents,
   });
+  writeActiveJournal(cwd, null);
 }
 
 function readJournals(
@@ -355,7 +413,12 @@ function readJournals(
   for (const name of names) {
     const path = join(dir, name);
     const parsed = parseJournal(readFileSync(path, "utf8"));
-    if (parsed === null || `${parsed.transactionId}.json` !== name) {
+    if (
+      parsed === null ||
+      `${parsed.transactionId}.json` !== name ||
+      parsed.state === "prepared" ||
+      parsed.state === "undoing"
+    ) {
       return {
         ok: false,
         diagnostics: [
@@ -450,6 +513,7 @@ function recoverJournalEntry(
     completeApplyJournal(cwd, entry);
   } else {
     writeJournal(cwd, { ...entry, state: "undone" });
+    writeActiveJournal(cwd, null);
   }
   return {
     ok: true,
@@ -467,30 +531,21 @@ export function recoverPreparedApply(
 }
 
 function recoverIncompleteAppliesLocked(cwd: string): RecoveryOperationResult {
-  const journals = readJournals(cwd);
-  if (!journals.ok) return journals;
-  const incomplete = journals.entries
-    .filter(
-      (entry) => entry.state === "prepared" || entry.state === "undoing",
-    )
-    .sort((a, b) => a.transactionId.localeCompare(b.transactionId));
-  const recoveredTransactions: string[] = [];
-  const recoveredPaths: string[] = [];
-
-  for (const entry of incomplete) {
-    const recovered = recoverJournalEntry(
-      cwd,
-      entry,
-      entry.state === "prepared" ? "after" : "before",
-    );
-    if (!recovered.ok) return recovered;
-    recoveredTransactions.push(recovered.transactionId);
-    recoveredPaths.push(...recovered.documentPaths);
+  const active = readActiveJournal(cwd);
+  if (!active.ok) return active;
+  if (active.entry === null) {
+    return { ok: true, transactionIds: [], documentPaths: [] };
   }
+  const recovered = recoverJournalEntry(
+    cwd,
+    active.entry,
+    active.entry.state === "prepared" ? "after" : "before",
+  );
+  if (!recovered.ok) return recovered;
   return {
     ok: true,
-    transactionIds: recoveredTransactions,
-    documentPaths: recoveredPaths,
+    transactionIds: [recovered.transactionId],
+    documentPaths: recovered.documentPaths,
   };
 }
 
@@ -634,7 +689,7 @@ export function undoLastApply(
     }
     try {
       const undoing = { ...latest, state: "undoing" as const };
-      writeJournal(cwd, undoing);
+      writeActiveJournal(cwd, undoing);
       try {
         atomicWriteAll(plans, {
           token: latest.transactionId,
@@ -644,7 +699,7 @@ export function undoLastApply(
         if (error instanceof AtomicWriteError && !error.rollbackComplete) {
           return recoverJournalEntry(cwd, undoing, "before", documentLocks);
         }
-        writeJournal(cwd, latest);
+        writeActiveJournal(cwd, null);
         if (
           error instanceof AtomicWriteConflictError ||
           error instanceof AtomicWriteLockError ||
@@ -666,6 +721,7 @@ export function undoLastApply(
         throw error;
       }
       writeJournal(cwd, { ...undoing, state: "undone" });
+      writeActiveJournal(cwd, null);
       return {
         ok: true,
         transactionId: latest.transactionId,

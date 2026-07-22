@@ -4,8 +4,11 @@ import {
   readFileSync,
   readdirSync,
   symlinkSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
+import { spawn } from "node:child_process";
+import { once } from "node:events";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -32,8 +35,18 @@ function fixtureDir(): string {
 function preparedJournal(value: Record<string, unknown>): Record<string, unknown> {
   const prepared: Record<string, unknown> = { ...value, state: "prepared" };
   delete prepared["completedAt"];
-  delete prepared["completionOrder"];
   return prepared;
+}
+
+function stageActiveJournal(
+  journalDirectory: string,
+  value: Record<string, unknown>,
+): void {
+  writeFileSync(
+    join(journalDirectory, ".active"),
+    `${JSON.stringify(value, null, 2)}\n`,
+    "utf8",
+  );
 }
 
 describe("E1 apply journal", () => {
@@ -102,11 +115,7 @@ describe("E1 apply journal", () => {
     // Simulate a process crash after a.json committed but before b.json did and
     // before the prepared journal could be marked completed.
     writeFileSync(bPath, beforeB, "utf8");
-    writeFileSync(
-      journalPath,
-      `${JSON.stringify(preparedJournal(journal), null, 2)}\n`,
-      "utf8",
-    );
+    stageActiveJournal(journalDir, preparedJournal(journal));
 
     const recovered = recoverIncompleteApplies({ cwd });
     expect(recovered.ok).toBe(true);
@@ -152,14 +161,9 @@ describe("E1 apply journal", () => {
       unknown
     >;
     writeFileSync(absolutePath, before, "utf8");
-    writeFileSync(
-      journalPath,
-      `${JSON.stringify(
-        { ...preparedJournal(journal), transactionId: "../escape" },
-        null,
-        2,
-      )}\n`,
-      "utf8",
+    stageActiveJournal(
+      journalDir,
+      { ...preparedJournal(journal), transactionId: "../escape" },
     );
 
     const recovered = recoverIncompleteApplies({ cwd });
@@ -221,11 +225,7 @@ describe("E1 apply journal", () => {
       unknown
     >;
     writeFileSync(absolutePath, before, "utf8");
-    writeFileSync(
-      journalPath,
-      `${JSON.stringify(preparedJournal(journal), null, 2)}\n`,
-      "utf8",
-    );
+    stageActiveJournal(journalDir, preparedJournal(journal));
 
     const next = propose({
       cwd,
@@ -419,24 +419,7 @@ describe("E1 apply journal", () => {
     expect(latest).toBeDefined();
     if (latest === undefined) return;
     writeFileSync(absolutePath, afterFirst, "utf8");
-    writeFileSync(
-      join(journalDir, latest.name),
-      `${JSON.stringify(preparedJournal(latest.value), null, 2)}\n`,
-      "utf8",
-    );
-    writeFileSync(
-      join(journalDir, ".completion-sequence"),
-      `${JSON.stringify(
-        {
-          schemaVersion: 1,
-          kind: "sceneaxi.authoring-completion-sequence",
-          value: 1,
-        },
-        null,
-        2,
-      )}\n`,
-      "utf8",
-    );
+    stageActiveJournal(journalDir, preparedJournal(latest.value));
 
     const undone = undoLastApply({ cwd });
 
@@ -481,11 +464,7 @@ describe("E1 apply journal", () => {
       unknown
     >;
     writeFileSync(aPath, beforeA, "utf8");
-    writeFileSync(
-      journalPath,
-      `${JSON.stringify({ ...journal, state: "undoing" }, null, 2)}\n`,
-      "utf8",
-    );
+    stageActiveJournal(journalDir, { ...journal, state: "undoing" });
 
     const recovered = recoverIncompleteApplies({ cwd });
 
@@ -625,6 +604,133 @@ describe("E1 apply journal", () => {
     atomicWriteAll([{ path, contents: "after\n" }]);
 
     expect(readFileSync(path, "utf8")).toBe("after\n");
+  });
+
+  it("never evicts an aged lock owned by a live process", async () => {
+    const cwd = fixtureDir();
+    const path = join(cwd, "scene.json");
+    writeFileSync(path, "before\n", "utf8");
+    const lockSet = acquireAtomicWriteLocks([path]);
+    const lockName = readdirSync(cwd).find((name) =>
+      name.startsWith(".sceneaxi-lock-"),
+    );
+    expect(lockName).toBeDefined();
+    releaseAtomicWriteLocks(lockSet);
+    if (lockName === undefined) return;
+    const child = spawn(process.execPath, ["-e", "setTimeout(() => {}, 10000)"], {
+      stdio: "ignore",
+    });
+    await once(child, "spawn");
+    expect(child.pid).toBeDefined();
+    if (child.pid === undefined) {
+      child.kill();
+      await once(child, "exit");
+      return;
+    }
+    try {
+      writeFileSync(
+        join(cwd, lockName),
+        JSON.stringify({ pid: child.pid, identity: null, token: "live" }),
+        "utf8",
+      );
+      const old = new Date(Date.now() - 60_000);
+      utimesSync(join(cwd, lockName), old, old);
+
+      expect(() => atomicWriteAll([{ path, contents: "after\n" }])).toThrow(
+        /progress/i,
+      );
+      expect(readFileSync(path, "utf8")).toBe("before\n");
+    } finally {
+      const exited = once(child, "exit");
+      child.kill();
+      await exited;
+    }
+  });
+
+  it("rebuilds a damaged completion sequence before canonical commit", () => {
+    const cwd = fixtureDir();
+    const path = join(cwd, "scene.json");
+    expect(
+      writeDocumentFile(
+        path,
+        createDocument({ id: "scene", data: { x: 1 } }),
+      ).ok,
+    ).toBe(true);
+    const first = propose({
+      cwd,
+      documentPath: "scene.json",
+      jsonPointer: "/data/x",
+      newValue: 2,
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    expect(apply({ cwd, proposal: first.proposal }).ok).toBe(true);
+    writeFileSync(
+      join(cwd, ".sceneaxi", "journal", ".completion-sequence"),
+      "corrupt\n",
+      "utf8",
+    );
+    const second = propose({
+      cwd,
+      documentPath: "scene.json",
+      jsonPointer: "/data/x",
+      newValue: 3,
+    });
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+
+    const applied = apply({ cwd, proposal: second.proposal });
+
+    expect(applied.ok).toBe(true);
+    expect(JSON.parse(readFileSync(path, "utf8")).data.x).toBe(3);
+  });
+
+  it("rejects an unwritable completion sequence before canonical commit", () => {
+    const cwd = fixtureDir();
+    const path = join(cwd, "scene.json");
+    expect(
+      writeDocumentFile(
+        path,
+        createDocument({ id: "scene", data: { x: 1 } }),
+      ).ok,
+    ).toBe(true);
+    const before = readFileSync(path, "utf8");
+    const proposed = propose({
+      cwd,
+      documentPath: "scene.json",
+      jsonPointer: "/data/x",
+      newValue: 2,
+    });
+    expect(proposed.ok).toBe(true);
+    if (!proposed.ok) return;
+    mkdirSync(
+      join(cwd, ".sceneaxi", "journal", ".completion-sequence"),
+      { recursive: true },
+    );
+
+    const applied = apply({ cwd, proposal: proposed.proposal });
+
+    expect(applied.ok).toBe(false);
+    if (applied.ok) return;
+    expect(applied.diagnostics[0]?.code).toBe("apply-failed");
+    expect(readFileSync(path, "utf8")).toBe(before);
+  });
+
+  it("checks only the active journal during recovery", () => {
+    const cwd = fixtureDir();
+    const journalDir = join(cwd, ".sceneaxi", "journal");
+    mkdirSync(journalDir, { recursive: true });
+    writeFileSync(
+      join(journalDir, "0000000000000-0000000000000000.json"),
+      "historical-corruption\n",
+      "utf8",
+    );
+
+    expect(recoverIncompleteApplies({ cwd })).toEqual({
+      ok: true,
+      transactionIds: [],
+      documentPaths: [],
+    });
   });
 
   it("rejects invalid JSON Pointer escapes before proposing", () => {

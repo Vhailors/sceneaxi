@@ -889,14 +889,28 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
       throw error;
     }
 
-    const journal = prepareApplyJournal(
-      cwd,
-      plans.map((plan) => ({
-        documentPath: plan.documentPath,
-        beforeContent: plan.beforeContent,
-        afterContent: plan.contents,
-      })),
-    );
+    let journal: ReturnType<typeof prepareApplyJournal>;
+    try {
+      journal = prepareApplyJournal(
+        cwd,
+        plans.map((plan) => ({
+          documentPath: plan.documentPath,
+          beforeContent: plan.beforeContent,
+          afterContent: plan.contents,
+        })),
+      );
+    } catch {
+      return {
+        ok: false,
+        diagnostics: [
+          {
+            code: "apply-failed",
+            message: "The durable apply journal could not be prepared.",
+            reReadHint: "Resolve the journal storage error before retrying.",
+          },
+        ],
+      };
+    }
 
     try {
       atomicWriteAll(atomicPlans, {
@@ -943,7 +957,14 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
         ],
       };
     }
-    completeApplyJournal(cwd, journal);
+    try {
+      completeApplyJournal(cwd, journal);
+    } catch {
+      return {
+        ok: true,
+        appliedPaths: plans.map((plan) => plan.documentPath),
+      };
+    }
     return {
       ok: true,
       appliedPaths: plans.map((plan) => plan.documentPath),

@@ -18,6 +18,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { createHash, randomBytes } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { basename, dirname, join, resolve } from "node:path";
 import { contentHash } from "./content-hash.js";
 
@@ -169,23 +170,70 @@ function processIsAlive(pid: number): boolean {
   }
 }
 
-function processIdentity(pid: number): string | null {
-  try {
-    const bootId = readFileSync("/proc/sys/kernel/random/boot_id", "utf8").trim();
-    const stat = readFileSync(`/proc/${String(pid)}/stat`, "utf8");
-    const fields = stat.slice(stat.lastIndexOf(")") + 2).split(" ");
-    const startTicks = fields[19];
-    return startTicks === undefined || bootId.length === 0
-      ? null
-      : `${bootId}:${String(pid)}:${startTicks}`;
-  } catch {
-    return null;
+function processIdentity(
+  pid: number,
+  method?: "linux-proc" | "posix-ps" | "windows-cim",
+): string | null {
+  if (!Number.isInteger(pid) || pid <= 0) return null;
+  if (
+    (method === undefined || method === "linux-proc") &&
+    process.platform === "linux"
+  ) {
+    try {
+      const bootId = readFileSync(
+        "/proc/sys/kernel/random/boot_id",
+        "utf8",
+      ).trim();
+      const stat = readFileSync(`/proc/${String(pid)}/stat`, "utf8");
+      const fields = stat.slice(stat.lastIndexOf(")") + 2).split(" ");
+      const startTicks = fields[19];
+      if (startTicks !== undefined && bootId.length > 0) {
+        return `linux-proc:${bootId}:${String(pid)}:${startTicks}`;
+      }
+    } catch {
+      if (method === "linux-proc") return null;
+    }
   }
+  if (
+    (method === undefined || method === "windows-cim") &&
+    process.platform === "win32"
+  ) {
+    try {
+      const createdAt = execFileSync(
+        "powershell.exe",
+        [
+          "-NoProfile",
+          "-NonInteractive",
+          "-Command",
+          `(Get-CimInstance Win32_Process -Filter \"ProcessId = ${String(pid)}\").CreationDate`,
+        ],
+        { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+      ).trim();
+      return createdAt.length === 0
+        ? null
+        : `windows-cim:${String(pid)}:${createdAt}`;
+    } catch {
+      return null;
+    }
+  }
+  if (method === undefined || method === "posix-ps") {
+    try {
+      const createdAt = execFileSync(
+        "ps",
+        ["-o", "lstart=", "-p", String(pid)],
+        { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+      ).trim();
+      return createdAt.length === 0
+        ? null
+        : `posix-ps:${String(pid)}:${createdAt}`;
+    } catch {
+      return null;
+    }
+  }
+  return null;
 }
 
-const CURRENT_PROCESS_IDENTITY =
-  processIdentity(process.pid) ??
-  `runtime:${String(process.pid)}:${randomBytes(16).toString("hex")}`;
+const CURRENT_PROCESS_IDENTITY = processIdentity(process.pid);
 
 function removeLockFile(lockPath: string): boolean {
   try {
@@ -212,25 +260,42 @@ function removeStaleLock(lockPath: string): boolean {
   } catch {
     return lockIsOld(lockPath) && removeLockFile(lockPath);
   }
+  const ownerPidValue =
+    owner !== null && typeof owner === "object"
+      ? (owner as { pid?: unknown }).pid
+      : undefined;
   if (
-    owner === null ||
-    typeof owner !== "object" ||
-    typeof (owner as { pid?: unknown }).pid !== "number" ||
-    typeof (owner as { identity?: unknown }).identity !== "string"
+    typeof ownerPidValue !== "number" ||
+    !Number.isInteger(ownerPidValue) ||
+    ownerPidValue <= 0
   ) {
     return lockIsOld(lockPath) && removeLockFile(lockPath);
   }
-  const ownerPid = (owner as { pid: number }).pid;
-  const ownerIdentity = (owner as { identity: string }).identity;
+  const ownerPid = ownerPidValue;
+  const ownerIdentity = (owner as { identity?: unknown }).identity;
+  if (
+    ownerIdentity !== undefined &&
+    ownerIdentity !== null &&
+    typeof ownerIdentity !== "string"
+  ) {
+    return false;
+  }
   if (ownerPid === process.pid) {
     return ownerIdentity !== CURRENT_PROCESS_IDENTITY && removeLockFile(lockPath);
   }
-  const liveIdentity = processIdentity(ownerPid);
+  if (!processIsAlive(ownerPid)) return removeLockFile(lockPath);
+  if (ownerIdentity === undefined || ownerIdentity === null) return false;
+  const method = ownerIdentity.startsWith("linux-proc:")
+    ? "linux-proc"
+    : ownerIdentity.startsWith("windows-cim:")
+      ? "windows-cim"
+      : ownerIdentity.startsWith("posix-ps:")
+        ? "posix-ps"
+        : undefined;
+  if (method === undefined) return false;
+  const liveIdentity = processIdentity(ownerPid, method);
   if (liveIdentity === ownerIdentity) return false;
-  if (liveIdentity !== null || !processIsAlive(ownerPid)) {
-    return removeLockFile(lockPath);
-  }
-  return lockIsOld(lockPath) && removeLockFile(lockPath);
+  return liveIdentity === null ? false : removeLockFile(lockPath);
 }
 
 function acquireLocks(paths: readonly string[]): readonly HeldLock[] {
