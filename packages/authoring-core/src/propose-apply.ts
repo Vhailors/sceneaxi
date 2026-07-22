@@ -924,12 +924,27 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
           return {
             ok: true,
             appliedPaths: plans.map((plan) => plan.documentPath),
+            ...(recovered.journalRecoveryPending === true
+              ? { journalRecoveryPending: true }
+              : {}),
           };
         }
         return recovered;
       }
 
-      abortApplyJournal(cwd, journal);
+      try {
+        abortApplyJournal(cwd, journal);
+      } catch {
+        const recovered = recoverPreparedApply(cwd, journal, transaction);
+        if (recovered.ok) {
+          return {
+            ok: true,
+            appliedPaths: plans.map((plan) => plan.documentPath),
+            journalRecoveryPending: true,
+          };
+        }
+        return recovered;
+      }
       if (error instanceof AtomicWriteConflictError) {
         const plan = plans.find((candidate) => candidate.path === error.path);
         const documentPath = plan?.documentPath ?? error.path;

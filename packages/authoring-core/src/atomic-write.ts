@@ -12,6 +12,7 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
+  readdirSync,
   realpathSync,
   renameSync,
   statSync,
@@ -287,21 +288,111 @@ function lockOwnerIsStale(owner: LockOwner): boolean {
   return liveIdentity !== null && liveIdentity !== owner.identity;
 }
 
-function removeStaleLock(lockPath: string): boolean {
-  const claimPath = `${lockPath}.reclaim`;
+function reclaimWorkPrefix(lockPath: string): string {
+  return `${basename(lockPath)}.reclaim.working-`;
+}
+
+function reclaimWorkOwner(lockPath: string, name: string): LockOwner | null {
+  const prefix = reclaimWorkPrefix(lockPath);
+  if (!name.startsWith(prefix)) return null;
+  const match = /^(\d+)-([A-Za-z0-9_-]+)-([0-9a-f]{32})$/.exec(
+    name.slice(prefix.length),
+  );
+  if (match === null) return null;
+  const pid = Number(match[1]);
+  const encodedIdentity = match[2] as string;
+  const identity = Buffer.from(encodedIdentity, "base64url").toString("utf8");
+  if (
+    !Number.isInteger(pid) ||
+    pid <= 0 ||
+    identity.length === 0 ||
+    Buffer.from(identity, "utf8").toString("base64url") !== encodedIdentity
+  ) {
+    return null;
+  }
+  return { pid, identity, token: match[3] as string };
+}
+
+function clearStaleReclaimWork(lockPath: string): boolean {
+  const directory = dirname(lockPath);
+  const prefix = reclaimWorkPrefix(lockPath);
+  let names: readonly string[];
   try {
-    linkSync(lockPath, claimPath);
+    names = readdirSync(directory).filter((name) => name.startsWith(prefix));
+  } catch {
+    return false;
+  }
+  let removed = false;
+  for (const name of names) {
+    const owner = reclaimWorkOwner(lockPath, name);
+    if (owner === null || !lockOwnerIsStale(owner)) return false;
+    try {
+      unlinkSync(join(directory, name));
+      removed = true;
+    } catch (error) {
+      const code =
+        error instanceof Error && "code" in error
+          ? (error as NodeJS.ErrnoException).code
+          : undefined;
+      if (code !== "ENOENT") return false;
+    }
+  }
+  if (removed) {
+    try {
+      syncDirectory(directory);
+    } catch {
+      return false;
+    }
+  }
+  return true;
+}
+
+function removeStaleLock(lockPath: string): boolean {
+  if (
+    CURRENT_PROCESS_IDENTITY === null ||
+    !clearStaleReclaimWork(lockPath)
+  ) {
+    return false;
+  }
+  const claimPath = `${lockPath}.reclaim`;
+  if (!existsSync(claimPath)) {
+    try {
+      linkSync(lockPath, claimPath);
+      syncDirectory(dirname(lockPath));
+    } catch (error) {
+      const code =
+        error instanceof Error && "code" in error
+          ? (error as NodeJS.ErrnoException).code
+          : undefined;
+      if (code !== "EEXIST") return false;
+    }
+  }
+  const workPath = `${claimPath}.working-${String(process.pid)}-${Buffer.from(
+    CURRENT_PROCESS_IDENTITY,
+    "utf8",
+  ).toString("base64url")}-${randomBytes(16).toString("hex")}`;
+  try {
+    renameSync(claimPath, workPath);
     syncDirectory(dirname(lockPath));
   } catch {
     return false;
   }
   let removed = false;
   try {
-    const owner = readLockOwner(claimPath);
+    const claimed = statSync(workPath);
+    let current: ReturnType<typeof statSync>;
+    try {
+      current = statSync(lockPath);
+    } catch (error) {
+      const code =
+        error instanceof Error && "code" in error
+          ? (error as NodeJS.ErrnoException).code
+          : undefined;
+      return code === "ENOENT";
+    }
+    if (claimed.dev !== current.dev || claimed.ino !== current.ino) return true;
+    const owner = readLockOwner(workPath);
     if (owner === null || !lockOwnerIsStale(owner)) return false;
-    const claimed = statSync(claimPath);
-    const current = statSync(lockPath);
-    if (claimed.dev !== current.dev || claimed.ino !== current.ino) return false;
     unlinkSync(lockPath);
     syncDirectory(dirname(lockPath));
     removed = true;
@@ -310,8 +401,8 @@ function removeStaleLock(lockPath: string): boolean {
     return false;
   } finally {
     try {
-      unlinkSync(claimPath);
-      syncDirectory(dirname(claimPath));
+      unlinkSync(workPath);
+      syncDirectory(dirname(workPath));
     } catch {
       if (removed) throw new AtomicWriteLockError(lockPath);
     }
@@ -342,7 +433,12 @@ function acquireLocks(paths: readonly string[]): readonly HeldLock[] {
       let acquired = false;
       try {
         for (let attempt = 0; attempt < 2 && !acquired; attempt += 1) {
-          if (existsSync(claimPath)) throw new AtomicWriteLockError(path);
+          if (!clearStaleReclaimWork(lockPath)) {
+            throw new AtomicWriteLockError(path);
+          }
+          if (existsSync(claimPath) && !removeStaleLock(lockPath)) {
+            throw new AtomicWriteLockError(path);
+          }
           try {
             linkSync(candidatePath, lockPath);
           } catch (error) {

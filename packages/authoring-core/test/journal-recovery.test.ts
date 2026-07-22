@@ -1,4 +1,5 @@
 import {
+  linkSync,
   mkdtempSync,
   mkdirSync,
   readFileSync,
@@ -608,6 +609,35 @@ describe("E1 apply journal", () => {
     expect(readFileSync(path, "utf8")).toBe("after\n");
   });
 
+  it("recovers an interrupted stale-lock reclamation", () => {
+    const cwd = fixtureDir();
+    const path = join(cwd, "scene.json");
+    writeFileSync(path, "before\n", "utf8");
+    const lockSet = acquireAtomicWriteLocks([path]);
+    const lockName = readdirSync(cwd).find((name) =>
+      name.startsWith(".sceneaxi-lock-"),
+    );
+    expect(lockName).toBeDefined();
+    releaseAtomicWriteLocks(lockSet);
+    if (lockName === undefined) return;
+    const lockPath = join(cwd, lockName);
+    writeFileSync(
+      lockPath,
+      JSON.stringify({
+        pid: process.pid,
+        identity: "stale-reused-pid",
+        token: "stale",
+      }),
+      "utf8",
+    );
+    linkSync(lockPath, `${lockPath}.reclaim`);
+    unlinkSync(lockPath);
+
+    atomicWriteAll([{ path, contents: "after\n" }]);
+
+    expect(readFileSync(path, "utf8")).toBe("after\n");
+  });
+
   it("never evicts an aged lock owned by a live process", async () => {
     const cwd = fixtureDir();
     const path = join(cwd, "scene.json");
@@ -812,11 +842,11 @@ describe("E1 apply journal", () => {
     unlinkSync(journalPath);
     mkdirSync(journalPath);
 
-    const failed = recoverIncompleteApplies({ cwd });
+    const pending = recoverIncompleteApplies({ cwd });
 
-    expect(failed.ok).toBe(false);
-    if (failed.ok) return;
-    expect(failed.diagnostics[0]?.code).toBe("apply-failed");
+    expect(pending.ok).toBe(true);
+    if (!pending.ok) return;
+    expect(pending.journalRecoveryPending).toBe(true);
     expect(
       (JSON.parse(readFileSync(join(journalDir, ".active"), "utf8")) as {
         state: string;

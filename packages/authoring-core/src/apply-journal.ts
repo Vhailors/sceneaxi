@@ -54,6 +54,7 @@ export type JournalOperationOk = {
   readonly ok: true;
   readonly transactionId: string;
   readonly documentPaths: readonly string[];
+  readonly journalRecoveryPending?: true;
 };
 
 export type JournalOperationResult =
@@ -64,6 +65,7 @@ export type RecoveryOperationOk = {
   readonly ok: true;
   readonly transactionIds: readonly string[];
   readonly documentPaths: readonly string[];
+  readonly journalRecoveryPending?: true;
 };
 
 export type RecoveryOperationResult =
@@ -521,16 +523,10 @@ function recoverJournalEntry(
     }
   } catch {
     return {
-      ok: false,
-      diagnostics: [
-        {
-          code: "apply-failed",
-          message:
-            "Canonical documents are consistent, but journal finalization is pending.",
-          reReadHint:
-            "Resolve the journal storage error, then retry recovery before another authoring operation.",
-        },
-      ],
+      ok: true,
+      transactionId: entry.transactionId,
+      documentPaths: entry.documents.map((document) => document.documentPath),
+      journalRecoveryPending: true,
     };
   }
   return {
@@ -564,6 +560,9 @@ function recoverIncompleteAppliesLocked(cwd: string): RecoveryOperationResult {
     ok: true,
     transactionIds: [recovered.transactionId],
     documentPaths: recovered.documentPaths,
+    ...(recovered.journalRecoveryPending === true
+      ? { journalRecoveryPending: true }
+      : {}),
   };
 }
 
@@ -738,8 +737,19 @@ export function undoLastApply(
         }
         throw error;
       }
-      writeJournal(cwd, { ...undoing, state: "undone" });
-      writeActiveJournal(cwd, null);
+      try {
+        writeJournal(cwd, { ...undoing, state: "undone" });
+        writeActiveJournal(cwd, null);
+      } catch {
+        return {
+          ok: true,
+          transactionId: latest.transactionId,
+          documentPaths: latest.documents.map(
+            (document) => document.documentPath,
+          ),
+          journalRecoveryPending: true,
+        };
+      }
       return {
         ok: true,
         transactionId: latest.transactionId,
