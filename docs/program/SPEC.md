@@ -224,7 +224,7 @@ Resolved anchor predating this table: `core-product-name` = **SceneAxi** (captai
 
 ## Open Captain Holds
 
-The **23** remaining factory-origin holds (origin `threejs-factory-wayfinder-v1`, tiers 1–6b — `kernel-name`, the proof approvals, v1 scoping, hosted-accounts/telemetry boundaries, the engine commercial holds including the tier-5 license hold, the 6a kids-safety branch, and the 6b marketplace activation/scope gates) remain open, unmodified, and authoritative; the registry ticket is factories-helpers #42. `capability-name` was closed 2026-07-22 as **superseded** by the SceneAxi name plus the four-route topology naming — hence 23 open factory holds, not 24. Also still undecided: exact storefront/Kids domain strings and purchases (explicitly deferred by `site-domain-topology`), and the DeepSeek post-GA re-verification (~2026-07-25) — a dated condition inside the locked `deepseek-adoption` decision, not an open key. Any CLI verb gated by an open hold still refuses and names the key, fail-closed on every degraded state.
+The **23** remaining factory-origin holds (origin `threejs-factory-wayfinder-v1`, tiers 1–6b — `kernel-name`, the proof approvals, v1 scoping, hosted-accounts/telemetry boundaries, the engine commercial holds including the tier-5 license hold, the 6a kids-safety branch, and the 6b marketplace activation/scope gates) remain open, unmodified, and authoritative; the registry ticket is factories-helpers #42. `capability-name` was closed 2026-07-22 as **superseded** by the SceneAxi name plus the four-route topology naming — hence 23 open factory holds, not 24. The DeepSeek post-GA re-verification (~2026-07-25) remains a dated condition inside the locked `deepseek-adoption` decision, not an open key. Any CLI verb gated by an open hold still refuses and names the key, fail-closed on every degraded state.
 
 ## Testing Decisions
 
@@ -248,7 +248,7 @@ Good tests here verify **external behavior at contracts and seams**, never imple
 - **AAA-scope engine ambitions** — the ecosystem's budgets and kill criteria come from the proof program; no console/AAA/general-purpose-engine expansion is chartered.
 - **Open/two-sided UGC marketplace** — catalogs stay curated-only and dormant until the existing 6b activation holds open per storefront; commerce fields inert until then.
 - **Kids launch** — nothing Kids-facing ships until the full 6a safety branch resolves (`kids-surface-isolation` is locked: full isolation); Kids never borrows readiness.
-- **CLI publication** — internal-first by locked decision (`cli-audience`, 2026-07-22); external publication deferred until engine demand/commercial proof, plus tier-5 holds + Stage 7 evidence.
+- **CLI publication** — internal-first, public-grade by locked decision (`cli-audience`, 2026-07-22); external publication deferred until engine demand/commercial proof, plus tier-5 holds + Stage 7 evidence.
 - **LLM provider adapters** — none chartered by this spec; adapters land as ordinary ticketed work behind the Model Provider Port under the locked `llm-provider-policy` posture, DeepSeek additionally under its conditional terms and post-GA re-verification (~2026-07-25).
 - **License selection** — `UNLICENSED` stands until the open tier-5 license hold resolves.
 - **Issue transfer execution** — creating/closing the remaining factories-helpers mirrors is owned by the issue-transfer plan under its own explicit transfer authority.
