@@ -4,10 +4,10 @@
  * Speaks only `@sceneaxi/schemas` catalog contracts (matrix-denied:
  * catalogs → authoring-core/engine/profiles). No storefront UI, no marketplace
  * activation, no spend. Commerce fields exist on Catalog Items but stay inert
- * until tier-6b holds open. website-catalog-scope remains an open held key.
+ * until tier-6b holds open. The website-catalog scope is locked in sceneaxi#1.
  *
  * Policy SoT (cite only): factories-helpers#47, factories-helpers#48.
- * Topology-neutral: catalog-storefront-topology remains open.
+ * This stub stays topology-neutral; the product topology is locked in sceneaxi#1.
  */
 import type { PackageSeam } from "@sceneaxi/schemas";
 import {
@@ -27,7 +27,7 @@ export const seam: PackageSeam = Object.freeze({
 export const catalogSurface = Object.freeze({
   dormant: true as const,
   storefrontLabel: "catalog-web",
-  /** No topology lock-in; held key catalog-storefront-topology stays open. */
+  /** This implementation does not encode the locked product topology. */
   topologyNeutral: true as const,
   policyCites: CATALOG_POLICY_CITES,
   commerceGate: COMMERCE_ACTIVATION_GATE,

@@ -38,9 +38,9 @@ E1's verbs transfer as the CLI `project` command group
 
 ## Consequences
 
-- v1 effort concentrates on the CLI and inspector; human and agent authoring
-  converge on one propose/apply path producing identical documents and
-  evidence.
+- Every v1 authoring surface converges on one propose/apply path producing
+  identical documents and evidence; this ADR does not set the investment order
+  across CLI, web shell, desktop shell, and importers.
 - Stage 6 compares two designed interfaces on the shared authoring-jobs
   fixture list. Building E2 earlier would invalidate the editor-need proof by
   making the comparison a sunk-cost defense.
@@ -65,8 +65,8 @@ E1's verbs transfer as the CLI `project` command group
 **Settled:** the E1-before-E2 sequencing; E2 specified-not-built pending
 Stage 6 evidence; text canonicality under any editor.
 
-**Held, untouched by this ADR:** `authoring-surface-priority` — the
-ship/investment order across CLI, web shell, desktop shell, and importers;
-this ADR sequences editor *generations*, it does not order those surfaces.
-`cli-audience` — internal-first vs public CLI. Stage 6 execution timing
-belongs to the proof program (factories-helpers #41), not to this record.
+**Settled elsewhere:** `authoring-surface-priority` and `cli-audience` are
+recorded in the canonical product spec
+([sceneaxi#1](https://github.com/Vhailors/sceneaxi/issues/1)); this ADR sequences
+editor *generations* and does not duplicate those decisions. Stage 6 execution
+timing belongs to the proof program (factories-helpers #41), not to this record.

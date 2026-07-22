@@ -18,7 +18,8 @@ semantics and the SceneAxi-versus-adapter boundary.
 
 - `contracts/profile-conformance.schema.json` — versioned claim document
 - Registry: `profileConformanceRegistry` (Game = development-consumer; Web/Kids =
-  not-yet-claimed; never a shipping claim; always cites `profile-rollout-order`)
+  not-yet-claimed; never a shipping claim; retains the
+  `profile-rollout-order` decision citation)
 - Shared suite: `runProfileConformanceSuite(surface)` — kernel session + document
   propose/apply through the profile's pinned core + evidence-hook presence
 - First development consumer: `@sceneaxi/profile-game` (exports `conformance`)
@@ -60,5 +61,7 @@ than inventing it.
 | Asset Package interchange, acceptance, loss ledger | [factories-helpers#47](https://github.com/Vhailors/factories-helpers/issues/47) |
 | Untrusted-asset ingestion + supply-chain controls | [factories-helpers#48](https://github.com/Vhailors/factories-helpers/issues/48) |
 
-Topology-neutral: `catalog-storefront-topology` remains open. Kids consumption
-is not implemented here.
+The contract remains topology-neutral; the locked storefront topology is owned
+by the canonical product spec
+([sceneaxi#1](https://github.com/Vhailors/sceneaxi/issues/1)). Kids consumption is
+not implemented here.

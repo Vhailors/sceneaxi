@@ -7,7 +7,7 @@
  * until tier-6b holds open.
  *
  * Policy SoT (cite only): factories-helpers#47, factories-helpers#48.
- * Topology-neutral: catalog-storefront-topology remains open.
+ * This stub stays topology-neutral; the product topology is locked in sceneaxi#1.
  */
 import type { PackageSeam } from "@sceneaxi/schemas";
 import {
@@ -27,7 +27,7 @@ export const seam: PackageSeam = Object.freeze({
 export const catalogSurface = Object.freeze({
   dormant: true as const,
   storefrontLabel: "catalog-game",
-  /** No topology lock-in; held key catalog-storefront-topology stays open. */
+  /** This implementation does not encode the locked product topology. */
   topologyNeutral: true as const,
   policyCites: CATALOG_POLICY_CITES,
   commerceGate: COMMERCE_ACTIVATION_GATE,

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://sceneaxi.invalid/contracts/catalog-item/v1",
   "title": "SceneAxi Catalog Item (v1)",
-  "description": "Versioned Catalog Item contract: Asset Package reference + rights, provenance, mandatory AI-generation disclosure, compatibility (core range \u00d7 profile list), moderation/pipeline state, and inert commerce fields. Policy SoT remains factories-helpers#47 (Asset Package interchange/acceptance/loss ledger) and factories-helpers#48 (untrusted-asset ingestion + supply-chain controls) \u2014 this schema implements types only, does not rewrite those policies. Topology-neutral: no storefront topology is encoded (catalog-storefront-topology held open). Commerce activation is structurally inactive until tier-6b marketplace holds open per storefront.",
+  "description": "Versioned Catalog Item contract: Asset Package reference + rights, provenance, mandatory AI-generation disclosure, compatibility (core range \u00d7 profile list), moderation/pipeline state, and inert commerce fields. Policy SoT remains factories-helpers#47 (Asset Package interchange/acceptance/loss ledger) and factories-helpers#48 (untrusted-asset ingestion + supply-chain controls) \u2014 this schema implements types only, does not rewrite those policies. Topology-neutral: this contract does not encode the locked storefront topology owned by sceneaxi#1. Commerce activation is structurally inactive until tier-6b marketplace holds open per storefront.",
   "type": "object",
   "required": [
     "schemaVersion",

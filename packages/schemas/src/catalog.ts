@@ -7,10 +7,10 @@
  * - factories-helpers#48 — untrusted-asset ingestion + supply-chain controls
  *   https://github.com/Vhailors/factories-helpers/issues/48
  *
- * Topology-neutral: no one-platform-two-storefronts (or any other) topology is
- * encoded; catalog-storefront-topology remains an open held key. Kids
- * consumption is not implemented here; anything → profile-kids remains denied
- * by the dependency matrix under the locked Kids isolation boundary.
+ * Topology-neutral: the locked one-platform/two-storefront product topology is
+ * not encoded in this contract. Kids consumption is not implemented here;
+ * anything → profile-kids remains denied by the dependency matrix under the
+ * locked Kids isolation boundary.
  *
  * Human curation is the product: the machine records a represented human
  * verdict; it never fabricates one.
