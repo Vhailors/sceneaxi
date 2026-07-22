@@ -109,7 +109,6 @@ const CONTENT_TYPE_RE =
   /^[a-z0-9][a-z0-9!#$&^_.+-]*\/[a-z0-9][a-z0-9!#$&^_.+-]*(?![\s\S])/i;
 const DATE_TIME_RE =
   /^(\d{4})-(\d{2})-(\d{2})[Tt](\d{2}):(\d{2}):([0-5]\d)(?:\.(\d+))?([Zz]|[+-]\d{2}:\d{2})(?![\s\S])/;
-const PATH_CONTROL_RE = /[\u0000-\u001F\u007F-\u009F\u2028\u2029]/;
 
 const SHA256_INITIAL_STATE = Uint32Array.from([
   0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c,
@@ -309,6 +308,22 @@ function codePointLength(value: string) {
   return [...value].length;
 }
 
+function hasPathControl(value: string) {
+  for (const character of value) {
+    const codePoint = character.codePointAt(0);
+    if (
+      codePoint !== undefined &&
+      (codePoint <= 0x1f ||
+        (codePoint >= 0x7f && codePoint <= 0x9f) ||
+        codePoint === 0x2028 ||
+        codePoint === 0x2029)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function isNonBlankStringAtMost(value: unknown, maximum: number): value is string {
   return (
     typeof value === "string" &&
@@ -329,7 +344,7 @@ function isPortableRelativePath(value: unknown): value is string {
   if (
     value.startsWith("/") ||
     value.includes("\\") ||
-    PATH_CONTROL_RE.test(value) ||
+    hasPathControl(value) ||
     hasUnpairedSurrogate(value)
   ) {
     return false;

@@ -41,8 +41,9 @@ their respective contracts.
 **Early implementation aggregate.** The monorepo has a real fail-closed toolchain,
 typed public seams for every package and app, and initial contract/tracer
 implementations for authoring, the CLI, the Game Kernel, Game profile conformance,
-shell protocol clients, and dormant catalogs. This remains proof-oriented work, not
-a claim that the engine, profiles, or applications are production-ready. Proof
+the public Delivery Handoff, shell protocol clients, and dormant catalogs. This
+remains proof-oriented work, not a claim that the engine, profiles, or applications
+are production-ready. Proof
 execution, spend, account creation, publication, and other external actions remain
 subject to the separated authorities in `docs/bootstrap.md`.
 
