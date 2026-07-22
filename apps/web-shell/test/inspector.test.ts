@@ -1,7 +1,13 @@
 /**
  * web-shell inspector: propose → rendered diff → accept/reject (sceneaxi#11).
  */
-import { mkdirSync, mkdtempSync, readFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  symlinkSync,
+  unlinkSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -169,6 +175,38 @@ describe("web-shell protocol client", () => {
     } finally {
       process.chdir(originalCwd);
     }
+  });
+
+  it("freezes the canonical project root while a proposal is reviewed", () => {
+    const root = fixtureDir();
+    const firstProject = join(root, "first");
+    const secondProject = join(root, "second");
+    const linkedProject = join(root, "current");
+    mkdirSync(firstProject);
+    mkdirSync(secondProject);
+    writeScene(firstProject, "scene.json", { n: 1 });
+    writeScene(secondProject, "scene.json", { n: 1 });
+    symlinkSync(firstProject, linkedProject, "dir");
+
+    const session = createInspectorSession({ cwd: linkedProject });
+    expect(
+      session.proposeEdit({
+        documentPath: "scene.json",
+        jsonPointer: "/data/n",
+        newValue: 2,
+      }).phase,
+    ).toBe("reviewing");
+
+    unlinkSync(linkedProject);
+    symlinkSync(secondProject, linkedProject, "dir");
+    expect(session.accept().phase).toBe("applied");
+    expect(
+      JSON.parse(readFileSync(join(firstProject, "scene.json"), "utf8")).data.n,
+    ).toBe(2);
+    expect(
+      JSON.parse(readFileSync(join(secondProject, "scene.json"), "utf8")).data
+        .n,
+    ).toBe(1);
   });
 
   it("shellProposeAndApply completes a full round-trip", () => {

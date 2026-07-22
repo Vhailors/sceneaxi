@@ -26,6 +26,7 @@ import {
   propose,
   proposeMany,
   recoverIncompleteApplies,
+  resolveApplyTransaction,
   releaseAtomicWriteLocks,
   serializeProposal,
   undoLastApply,
@@ -166,6 +167,17 @@ describe("E1 apply journal", () => {
     expect(
       (JSON.parse(readFileSync(journalPath, "utf8")) as { state: string }).state,
     ).toBe("completed");
+
+    const resolved = resolveApplyTransaction({
+      cwd,
+      transactionId: String(journal["transactionId"]),
+    });
+    expect(resolved).toEqual({
+      ok: true,
+      transactionId: journal["transactionId"],
+      state: "completed",
+      documentPaths: ["a.json", "b.json"],
+    });
   });
 
   it("recovery fails closed on tampered journal metadata", () => {

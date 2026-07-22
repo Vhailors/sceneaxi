@@ -72,6 +72,24 @@ export type RecoveryOperationResult =
   | RecoveryOperationOk
   | { readonly ok: false; readonly diagnostics: readonly ApplyDiagnostic[] };
 
+export type ApplyTransactionState =
+  | "pending"
+  | "completed"
+  | "aborted"
+  | "undone"
+  | "missing";
+
+export type ApplyTransactionResolutionOk = {
+  readonly ok: true;
+  readonly transactionId: string;
+  readonly state: ApplyTransactionState;
+  readonly documentPaths: readonly string[];
+};
+
+export type ApplyTransactionResolutionResult =
+  | ApplyTransactionResolutionOk
+  | { readonly ok: false; readonly diagnostics: readonly ApplyDiagnostic[] };
+
 export function journalRecoveryPendingDiagnostics(): readonly ApplyDiagnostic[] {
   return [
     {
@@ -576,6 +594,108 @@ function recoverIncompleteAppliesLocked(cwd: string): RecoveryOperationResult {
       ? { journalRecoveryPending: true }
       : {}),
   };
+}
+
+function readApplyTransactionLocked(
+  cwd: string,
+  transactionId: string,
+): ApplyTransactionResolutionResult {
+  const active = readActiveJournal(cwd);
+  if (!active.ok) return active;
+  if (active.entry?.transactionId === transactionId) {
+    return {
+      ok: true,
+      transactionId,
+      state: "pending",
+      documentPaths: active.entry.documents.map(
+        (document) => document.documentPath,
+      ),
+    };
+  }
+
+  const path = journalPath(cwd, transactionId);
+  if (!fileExists(path)) {
+    return {
+      ok: true,
+      transactionId,
+      state: "missing",
+      documentPaths: [],
+    };
+  }
+  const entry = parseJournal(readFileSync(path, "utf8"));
+  if (
+    entry === null ||
+    entry.transactionId !== transactionId ||
+    entry.state === "prepared" ||
+    entry.state === "undoing"
+  ) {
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          code: "journal-invalid",
+          message: `Apply journal is invalid or corrupt: ${transactionId}.json`,
+        },
+      ],
+    };
+  }
+  return {
+    ok: true,
+    transactionId,
+    state: entry.state,
+    documentPaths: entry.documents.map((document) => document.documentPath),
+  };
+}
+
+export function resolveApplyTransaction(input: {
+  readonly transactionId: string;
+  readonly cwd?: string;
+}): ApplyTransactionResolutionResult {
+  if (!TRANSACTION_ID_RE.test(input.transactionId)) {
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          code: "journal-invalid",
+          message: "The apply transaction ID is invalid.",
+        },
+      ],
+    };
+  }
+  const cwd = canonicalPath(resolve(input.cwd ?? process.cwd()));
+  if (!fileExists(journalDirectory(cwd))) {
+    return {
+      ok: true,
+      transactionId: input.transactionId,
+      state: "missing",
+      documentPaths: [],
+    };
+  }
+  let operationLock: AtomicWriteLockSet;
+  try {
+    operationLock = acquireAtomicWriteLocks([journalOperationResource(cwd)]);
+  } catch (error) {
+    if (error instanceof AtomicWriteLockError) {
+      return {
+        ok: false,
+        diagnostics: [
+          {
+            code: "apply-in-progress",
+            message: "Another apply or journal operation is in progress.",
+            reReadHint: "Retry after the active authoring operation completes.",
+          },
+        ],
+      };
+    }
+    throw error;
+  }
+  try {
+    const recovered = recoverIncompleteAppliesLocked(cwd);
+    if (!recovered.ok) return recovered;
+    return readApplyTransactionLocked(cwd, input.transactionId);
+  } finally {
+    releaseAtomicWriteLocks(operationLock);
+  }
 }
 
 export function recoverIncompleteApplies(

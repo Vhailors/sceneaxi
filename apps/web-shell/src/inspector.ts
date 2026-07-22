@@ -5,10 +5,9 @@
  * Stub only: no DOM, no hosting, no deployment.
  */
 
-import { resolve } from "node:path";
-
 import {
-  recoverIncompleteApplies,
+  canonicalPath,
+  resolveApplyTransaction,
   type ApplyDiagnostic,
   type Proposal,
 } from "@sceneaxi/authoring-core";
@@ -92,7 +91,7 @@ export function createInspectorSession(options: {
 
     proposeEdit(input: ShellEditInput): InspectorSnapshot {
       if (journalRecoveryPending) return refusePending();
-      const cwd = resolve(input.cwd ?? options.cwd ?? ".");
+      const cwd = canonicalPath(input.cwd ?? options.cwd ?? ".");
       const result = shellPropose({
         ...input,
         cwd,
@@ -178,18 +177,19 @@ export function createInspectorSession(options: {
       if (!journalRecoveryPending || pendingTransactionId === null) {
         return snap();
       }
-      const recovered = recoverIncompleteApplies(
-        pendingCwd === undefined ? {} : { cwd: pendingCwd },
-      );
-      if (!recovered.ok) {
-        diagnostics = recovered.diagnostics;
+      const resolved = resolveApplyTransaction({
+        transactionId: pendingTransactionId,
+        ...(pendingCwd === undefined ? {} : { cwd: pendingCwd }),
+      });
+      if (!resolved.ok) {
+        diagnostics = resolved.diagnostics;
         return snap();
       }
-      if (recovered.journalRecoveryPending === true) {
+      if (resolved.state === "pending") {
         diagnostics = pendingDiagnostics();
         return snap();
       }
-      if (!recovered.transactionIds.includes(pendingTransactionId)) {
+      if (resolved.state === "missing") {
         diagnostics = [
           {
             code: "journal-not-found",
@@ -200,11 +200,24 @@ export function createInspectorSession(options: {
         ];
         return snap();
       }
+      if (resolved.state !== "completed") {
+        phase = "reviewing";
+        appliedPaths = null;
+        journalRecoveryPending = false;
+        pendingTransactionId = null;
+        diagnostics = [
+          {
+            code: "journal-conflict",
+            message: `Pending transaction ${resolved.transactionId} is ${resolved.state}.`,
+            reReadHint:
+              "Re-read the affected documents before accepting another proposal.",
+          },
+        ];
+        return snap();
+      }
       if (phase === "pending") {
         phase = "applied";
-        appliedPaths = [
-          ...new Set(proposal?.edits.map((edit) => edit.documentPath) ?? []),
-        ];
+        appliedPaths = resolved.documentPaths;
       }
       journalRecoveryPending = false;
       pendingTransactionId = null;
