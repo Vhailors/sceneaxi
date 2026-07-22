@@ -18,6 +18,14 @@ export const PLUGIN_MANIFEST_SCHEMA_URI =
 /** Fixed package-root-relative descriptor path (ADR 0005). */
 export const PLUGIN_MANIFEST_PATH = "sceneaxi.plugin.manifest.json" as const;
 
+/**
+ * V1 hostApi grammar: comparator terms use exact core versions or x-ranges,
+ * terms use single-space separators, OR uses " || ", and hyphen ranges use
+ * exact cores in the form "A - B".
+ */
+export const PLUGIN_MANIFEST_HOST_API_DIALECT =
+  "space-separated comparator terms with optional ^, ~, >=, <=, >, <, or = prefixes and exact core versions or x-ranges; OR uses \" || \"; hyphen ranges use exact cores as \"A - B\"" as const;
+
 export type PluginManifest = {
   readonly $schema: typeof PLUGIN_MANIFEST_SCHEMA_URI;
   readonly schemaVersion: typeof PLUGIN_MANIFEST_SCHEMA_VERSION;
@@ -73,24 +81,33 @@ const REQUIRED_FIELDS = [
 const ALLOWED_FIELDS = REQUIRED_FIELDS;
 
 /** Reverse-DNS plugin identity (at least two segments). */
-const PLUGIN_ID_RE = /^[a-z][a-z0-9-]*(\.[a-z0-9][a-z0-9-]*)+$/;
+const PLUGIN_ID_RE =
+  /^[a-z][a-z0-9-]*(?:\.[a-z0-9][a-z0-9-]*)+(?![\s\S])/;
 
 /** Full semver (core + optional pre-release + optional build). */
 const SEMVER_RE =
-  /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/;
+  /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?(?![\s\S])/;
 
-/**
- * Host API range: one or more simple comparators / caret / tilde / exact / x-range
- * tokens separated by whitespace (npm-style partial).
- */
-const HOST_API_RANGE_RE =
-  /^(?:\^|~|>=|<=|>|<|=)?\s*(?:0|[1-9]\d*|x|X|\*)(?:\.(?:0|[1-9]\d*|x|X|\*)){0,2}(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\s+(?:\^|~|>=|<=|>|<|=)\s*(?:0|[1-9]\d*|x|X|\*)(?:\.(?:0|[1-9]\d*|x|X|\*)){0,2}(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?)*$/;
-
-/** Public capability ID strings (opaque, registry-owned). */
-const CAPABILITY_ID_RE = /^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$/;
+const CORE_VERSION_PATTERN =
+  String.raw`(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)`;
+const X_RANGE_PATTERN =
+  String.raw`(?:[xX*]|(?:0|[1-9]\d*)\.(?:[xX*]|(?:0|[1-9]\d*)\.[xX*]))`;
+const HOST_API_TERM_PATTERN =
+  String.raw`(?:\^|~|>=|<=|>|<|=)?(?:${CORE_VERSION_PATTERN}|${X_RANGE_PATTERN})`;
+const HOST_API_COMPARATOR_SET_PATTERN =
+  String.raw`${HOST_API_TERM_PATTERN}(?: ${HOST_API_TERM_PATTERN})*`;
+const HOST_API_HYPHEN_RANGE_PATTERN =
+  String.raw`${CORE_VERSION_PATTERN} - ${CORE_VERSION_PATTERN}`;
+const HOST_API_RANGE_ARM_PATTERN =
+  String.raw`(?:${HOST_API_COMPARATOR_SET_PATTERN}|${HOST_API_HYPHEN_RANGE_PATTERN})`;
+const HOST_API_RANGE_RE = new RegExp(
+  String.raw`^${HOST_API_RANGE_ARM_PATTERN}(?: \|\| ${HOST_API_RANGE_ARM_PATTERN})*(?![\s\S])`,
+);
 
 /** Single path segment for package-relative entrypoints. */
-const ENTRYPOINT_SEGMENT_RE = /^[A-Za-z0-9._-]+$/;
+const ENTRYPOINT_SEGMENT_RE = /^[A-Za-z0-9._-]+(?![\s\S])/;
+
+const TRAILING_LINE_TERMINATOR_RE = /[\r\n\u2028\u2029](?![\s\S])/;
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -213,7 +230,7 @@ export function validatePluginManifest(
     return refuse(
       "invalid-field",
       "$.hostApi",
-      "hostApi must be a non-empty semver range (e.g. ^1.0.0).",
+      `hostApi must use the v1 dialect: ${PLUGIN_MANIFEST_HOST_API_DIALECT}.`,
     );
   }
 
@@ -252,11 +269,15 @@ export function validatePluginManifest(
   for (let index = 0; index < capabilities.length; index += 1) {
     const capability = capabilities[index];
     const path = `$.capabilities[${index}]`;
-    if (typeof capability !== "string" || !CAPABILITY_ID_RE.test(capability)) {
+    if (
+      typeof capability !== "string" ||
+      capability.length === 0 ||
+      TRAILING_LINE_TERMINATOR_RE.test(capability)
+    ) {
       return refuse(
         "invalid-field",
         path,
-        "capability ID must match ^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$.",
+        "capability ID must be non-empty and must not end in a line terminator.",
       );
     }
     if (seen.has(capability)) {

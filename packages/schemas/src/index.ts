@@ -98,6 +98,7 @@ export type {
 } from "./delivery-handoff.js";
 
 export {
+  PLUGIN_MANIFEST_HOST_API_DIALECT,
   PLUGIN_MANIFEST_PATH,
   PLUGIN_MANIFEST_SCHEMA_URI,
   PLUGIN_MANIFEST_SCHEMA_VERSION,
