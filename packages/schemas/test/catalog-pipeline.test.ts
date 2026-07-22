@@ -118,10 +118,18 @@ describe("Catalog Item contract + policy cites", () => {
           required?: string[];
           properties?: { disclosureText?: { pattern?: string } };
         };
+        compatibility?: {
+          properties?: {
+            profiles?: { items?: { pattern?: string } };
+          };
+        };
         moderation?: {
           properties?: {
             history?: {
-              items?: { properties?: { reason?: { pattern?: string } } };
+              items?: {
+                properties?: { reason?: { pattern?: string } };
+                allOf?: unknown[];
+              };
             };
           };
         };
@@ -138,12 +146,35 @@ describe("Catalog Item contract + policy cites", () => {
     const reasonPattern =
       schema.properties?.moderation?.properties?.history?.items?.properties?.reason
         ?.pattern;
+    const profilePattern =
+      schema.properties?.compatibility?.properties?.profiles?.items?.pattern;
     expect(new RegExp(disclosurePattern ?? "").test("   ")).toBe(false);
     expect(new RegExp(disclosurePattern ?? "").test("No generative AI used.")).toBe(
       true,
     );
     expect(new RegExp(reasonPattern ?? "").test("\t")).toBe(false);
     expect(new RegExp(reasonPattern ?? "").test("Screened.")).toBe(true);
+    expect(new RegExp(profilePattern ?? "").test("game\n")).toBe(false);
+    expect(new RegExp(profilePattern ?? "").test("game")).toBe(true);
+    expect(
+      schema.properties?.moderation?.properties?.history?.items?.allOf,
+    ).toEqual([
+      {
+        if: {
+          properties: { to: { const: "listed" } },
+          required: ["to"],
+        },
+        then: {
+          required: ["humanVerdict"],
+          properties: {
+            humanVerdict: {
+              properties: { decision: { const: "approve" } },
+            },
+          },
+        },
+        else: { not: { required: ["humanVerdict"] } },
+      },
+    ]);
   });
 
   it("starts at intake (quarantine) with empty history and inert commerce", () => {
@@ -342,20 +373,27 @@ describe("fail-closed catalog pipeline state machine", () => {
     if (!result.ok) expect(result.code).toBe("missing-mandatory-metadata");
   });
 
-  it("refuses malformed profile compatibility metadata", () => {
-    const malformed = syntheticAsset({
-      compatibility: { coreRange: "^0.0.0", profiles: ["game", ""] },
-    });
+  it("refuses non-string and true-end-invalid compatibility profiles", () => {
+    const malformedProfiles: unknown[] = ["", "game\n", 123, null];
 
-    expect(missingMandatoryMetadata(malformed)).toContain(
-      "compatibility.profiles",
-    );
-    const result = transitionCatalogItem(malformed, {
-      to: "screening",
-      reason: "attempt malformed compatibility",
-    });
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.code).toBe("missing-mandatory-metadata");
+    for (const profile of malformedProfiles) {
+      const malformed = syntheticAsset({
+        compatibility: {
+          coreRange: "^0.0.0",
+          profiles: [profile] as readonly string[],
+        },
+      });
+
+      expect(missingMandatoryMetadata(malformed)).toContain(
+        "compatibility.profiles",
+      );
+      const result = transitionCatalogItem(malformed, {
+        to: "screening",
+        reason: "attempt malformed compatibility",
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.code).toBe("missing-mandatory-metadata");
+    }
   });
 
   it("exposes only legal successors per state", () => {
@@ -368,6 +406,21 @@ describe("fail-closed catalog pipeline state machine", () => {
 });
 
 describe("commerce fields inert (no 6b activation path)", () => {
+  it("forces intake commerce activation to inert", () => {
+    const injectedCommerce = {
+      activation: "active",
+      price: { amount: "9.99", currency: "USD" },
+      sku: "SKU-1",
+    };
+    const item = syntheticAsset({ commerce: injectedCommerce });
+
+    expect(item.commerce).toEqual({
+      activation: "inert",
+      price: { amount: "9.99", currency: "USD" },
+      sku: "SKU-1",
+    });
+  });
+
   it("refuses commerce activation for listed items with price fields populated", () => {
     const listed = advanceToListed(
       syntheticAsset({

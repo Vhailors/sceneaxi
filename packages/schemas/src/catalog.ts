@@ -159,10 +159,14 @@ export type TransitionRequest = {
 };
 
 const SHA256_RE = /^sha256:[0-9a-f]{64}$/;
-const ID_RE = /^[a-z0-9][a-z0-9-]*$/;
+const ID_RE = /^[a-z0-9][a-z0-9-]*(?![\s\S])/;
 
 function nonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+function validId(value: unknown): value is string {
+  return typeof value === "string" && ID_RE.test(value);
 }
 
 /**
@@ -172,8 +176,10 @@ function nonEmptyString(value: unknown): value is string {
  */
 export function missingMandatoryMetadata(item: CatalogItem): string[] {
   const missing: string[] = [];
-  if (!ID_RE.test(item.itemId)) missing.push("itemId");
-  if (!ID_RE.test(item.assetPackage.packageId)) missing.push("assetPackage.packageId");
+  if (!validId(item.itemId)) missing.push("itemId");
+  if (!validId(item.assetPackage.packageId)) {
+    missing.push("assetPackage.packageId");
+  }
   if (!SHA256_RE.test(item.assetPackage.contentHash)) {
     missing.push("assetPackage.contentHash");
   }
@@ -191,8 +197,9 @@ export function missingMandatoryMetadata(item: CatalogItem): string[] {
     missing.push("compatibility.coreRange");
   }
   if (
+    !Array.isArray(item.compatibility.profiles) ||
     item.compatibility.profiles.length === 0 ||
-    item.compatibility.profiles.some((profile) => !ID_RE.test(profile))
+    item.compatibility.profiles.some((profile) => !validId(profile))
   ) {
     missing.push("compatibility.profiles");
   }
@@ -429,7 +436,7 @@ export function createCatalogItemAtIntake(
   const commerce: CommerceFields =
     input.commerce === undefined
       ? { activation: "inert" }
-      : { activation: "inert", ...input.commerce };
+      : { ...input.commerce, activation: "inert" };
 
   return {
     schemaVersion: CATALOG_ITEM_SCHEMA_VERSION,
