@@ -35,6 +35,9 @@ semantics and the SceneAxi-versus-adapter boundary.
 Versioned **Catalog Item** contract (`contracts/catalog-item.schema.json`) and a
 fail-closed **pipeline state machine** stub (`src/catalog.ts`):
 
+The JSON Schema is exported at
+`@sceneaxi/schemas/contracts/catalog-item.schema.json` for package consumers.
+
 `intake (quarantine) → screening → curation → listed → delisted`
 
 - Every legal transition is recorded with a reason.

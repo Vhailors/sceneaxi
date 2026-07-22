@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   CATALOG_ITEM_SCHEMA_VERSION,
@@ -9,6 +11,7 @@ import {
   legalSuccessors,
   missingMandatoryMetadata,
   transitionCatalogItem,
+  contracts,
   type CatalogItem,
   type HumanCurationVerdict,
   type PipelineState,
@@ -97,6 +100,50 @@ describe("Catalog Item contract + policy cites", () => {
     expect(CATALOG_POLICY_CITES.untrustedAssetIngestion).toContain(
       "factories-helpers/issues/48",
     );
+  });
+
+  it("ships the Catalog Item JSON Schema through the public package export", () => {
+    expect(contracts.catalogItem).toBe("contracts/catalog-item.schema.json");
+    const schema = JSON.parse(
+      readFileSync(
+        fileURLToPath(
+          import.meta.resolve("@sceneaxi/schemas/contracts/catalog-item.schema.json"),
+        ),
+        "utf8",
+      ),
+    ) as {
+      $id?: string;
+      properties?: {
+        aiGenerationDisclosure?: {
+          required?: string[];
+          properties?: { disclosureText?: { pattern?: string } };
+        };
+        moderation?: {
+          properties?: {
+            history?: {
+              items?: { properties?: { reason?: { pattern?: string } } };
+            };
+          };
+        };
+      };
+    };
+
+    expect(schema.$id).toBe("https://sceneaxi.invalid/contracts/catalog-item/v1");
+    expect(schema.properties?.aiGenerationDisclosure?.required).toEqual([
+      "aiGenerated",
+      "disclosureText",
+    ]);
+    const disclosurePattern =
+      schema.properties?.aiGenerationDisclosure?.properties?.disclosureText?.pattern;
+    const reasonPattern =
+      schema.properties?.moderation?.properties?.history?.items?.properties?.reason
+        ?.pattern;
+    expect(new RegExp(disclosurePattern ?? "").test("   ")).toBe(false);
+    expect(new RegExp(disclosurePattern ?? "").test("No generative AI used.")).toBe(
+      true,
+    );
+    expect(new RegExp(reasonPattern ?? "").test("\t")).toBe(false);
+    expect(new RegExp(reasonPattern ?? "").test("Screened.")).toBe(true);
   });
 
   it("starts at intake (quarantine) with empty history and inert commerce", () => {
@@ -221,6 +268,17 @@ describe("fail-closed catalog pipeline state machine", () => {
     if (!reject.ok) expect(reject.code).toBe("human-verdict-rejected");
   });
 
+  it("refuses a human verdict outside the listing transition", () => {
+    const result = transitionCatalogItem(syntheticAsset(), {
+      to: "screening",
+      reason: "attempt to attach verdict before curation",
+      humanVerdict: approveVerdict(),
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("invalid-human-verdict");
+  });
+
   it("refuses listing when curation history is missing", () => {
     const forged: CatalogItem = {
       ...syntheticAsset(),
@@ -279,6 +337,22 @@ describe("fail-closed catalog pipeline state machine", () => {
     const result = transitionCatalogItem(incomplete, {
       to: "screening",
       reason: "try advance incomplete",
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("missing-mandatory-metadata");
+  });
+
+  it("refuses malformed profile compatibility metadata", () => {
+    const malformed = syntheticAsset({
+      compatibility: { coreRange: "^0.0.0", profiles: ["game", ""] },
+    });
+
+    expect(missingMandatoryMetadata(malformed)).toContain(
+      "compatibility.profiles",
+    );
+    const result = transitionCatalogItem(malformed, {
+      to: "screening",
+      reason: "attempt malformed compatibility",
     });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("missing-mandatory-metadata");

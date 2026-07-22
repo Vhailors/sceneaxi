@@ -190,7 +190,10 @@ export function missingMandatoryMetadata(item: CatalogItem): string[] {
   if (!nonEmptyString(item.compatibility.coreRange)) {
     missing.push("compatibility.coreRange");
   }
-  if (item.compatibility.profiles.length === 0) {
+  if (
+    item.compatibility.profiles.length === 0 ||
+    item.compatibility.profiles.some((profile) => !ID_RE.test(profile))
+  ) {
     missing.push("compatibility.profiles");
   }
   if (item.commerce.activation !== "inert") {
@@ -345,6 +348,14 @@ export function transitionCatalogItem(
       ok: false,
       code: "illegal-transition",
       message: `Illegal pipeline transition ${from} → ${to} (fail-closed).`,
+    };
+  }
+
+  if (to !== "listed" && request.humanVerdict !== undefined) {
+    return {
+      ok: false,
+      code: "invalid-human-verdict",
+      message: "Human curation verdicts may only be recorded on listing transitions.",
     };
   }
 

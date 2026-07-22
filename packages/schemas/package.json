@@ -6,6 +6,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./contracts/catalog-item.schema.json": "./contracts/catalog-item.schema.json",
     "./contracts/delivery-handoff.schema.json": "./contracts/delivery-handoff.schema.json"
   },
   "files": ["src", "contracts"],

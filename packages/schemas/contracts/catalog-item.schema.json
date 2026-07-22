@@ -44,8 +44,8 @@
       "required": ["license", "rightsHolder", "commercialUseAllowed"],
       "additionalProperties": false,
       "properties": {
-        "license": { "type": "string" },
-        "rightsHolder": { "type": "string" },
+        "license": { "type": "string", "minLength": 1, "pattern": "\\S" },
+        "rightsHolder": { "type": "string", "minLength": 1, "pattern": "\\S" },
         "commercialUseAllowed": { "type": "boolean" }
       }
     },
@@ -55,8 +55,8 @@
       "required": ["origin", "ingestedAt", "sourceDigest"],
       "additionalProperties": false,
       "properties": {
-        "origin": { "type": "string" },
-        "ingestedAt": { "type": "string" },
+        "origin": { "type": "string", "minLength": 1, "pattern": "\\S" },
+        "ingestedAt": { "type": "string", "minLength": 1, "pattern": "\\S" },
         "sourceDigest": {
           "type": "string",
           "pattern": "^sha256:[0-9a-f]{64}$"
@@ -74,7 +74,7 @@
           "type": "array",
           "items": { "type": "string" }
         },
-        "disclosureText": { "type": "string" }
+        "disclosureText": { "type": "string", "minLength": 1, "pattern": "\\S" }
       }
     },
     "compatibility": {
@@ -83,7 +83,7 @@
       "required": ["coreRange", "profiles"],
       "additionalProperties": false,
       "properties": {
-        "coreRange": { "type": "string" },
+        "coreRange": { "type": "string", "minLength": 1, "pattern": "\\S" },
         "profiles": {
           "type": "array",
           "minItems": 1,
@@ -118,8 +118,8 @@
                 "type": "string",
                 "enum": ["intake", "screening", "curation", "listed", "delisted"]
               },
-              "reason": { "type": "string" },
-              "at": { "type": "string" },
+              "reason": { "type": "string", "minLength": 1, "pattern": "\\S" },
+              "at": { "type": "string", "minLength": 1, "pattern": "\\S" },
               "humanVerdict": {
                 "type": "object",
                 "description": "Human curation gate representation only \u2014 never simulated by the pipeline.",
@@ -128,9 +128,9 @@
                 "properties": {
                   "kind": { "const": "human" },
                   "decision": { "type": "string", "enum": ["approve", "reject"] },
-                  "curatorId": { "type": "string" },
-                  "rationale": { "type": "string" },
-                  "recordedAt": { "type": "string" }
+                  "curatorId": { "type": "string", "minLength": 1, "pattern": "\\S" },
+                  "rationale": { "type": "string", "minLength": 1, "pattern": "\\S" },
+                  "recordedAt": { "type": "string", "minLength": 1, "pattern": "\\S" }
                 }
               }
             }
