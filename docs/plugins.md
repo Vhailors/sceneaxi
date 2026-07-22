@@ -8,11 +8,14 @@ engine internals.
 
 ## Mental model for agents
 
-1. Read the public capability registry owned with `@sceneaxi/schemas`.
-2. Declare only capability IDs present in the exact registry version named by
+1. Put the data descriptor at the fixed package-root path
+   `sceneaxi.plugin.manifest.json`; the host never imports code to discover it.
+2. Read the public capability registry owned with `@sceneaxi/schemas`.
+3. Declare only capability IDs present in the exact registry version named by
    the manifest.
-3. Implement exactly that declared set behind one package-local entrypoint.
-4. Expect deterministic refusal for unknown capabilities, incompatible
+4. Implement exactly that declared set behind one package-local entrypoint.
+5. Expect deterministic refusal for a missing or unreadable descriptor,
+   unknown capabilities, incompatible
    versions, plugin IDs repeated in one load set, capability IDs repeated in
    one manifest, entrypoint escape, forbidden imports, or
    declaration/implementation mismatch.
@@ -22,6 +25,13 @@ entrypoint. Only a candidate that passes those checks is intentionally loaded;
 an implementation-table mismatch then refuses as a post-evaluation integrity
 failure before any capability is exposed.
 
+Loaded-plugin listings sort by plugin ID, plugin version, and capability ID.
+Refused-candidate listings sort by locator, so malformed or unreadable
+descriptors cannot make report order ambiguous. Regression fixtures must prove
+that descriptor and isolation refusals never execute the entrypoint, while an
+implementation-table mismatch executes only after an intentional load and
+still exposes nothing.
+
 If the registry does not contain the capability you need, stop. Adding a
 manifest string is not how a capability is created. Propose a public semantic
 contract and its package boundary separately. Renderer, physics, storage, and
@@ -30,7 +40,8 @@ other internal-library ports still require two real adapters under ADR
 
 ## Minimal v1 manifest
 
-The seed registry may be empty, so the smallest honest example is inert:
+Save the descriptor below as `sceneaxi.plugin.manifest.json` at the package
+root. The seed registry may be empty, so the smallest honest example is inert:
 
 ```json
 {

@@ -43,6 +43,12 @@ The normative JSON Schema and inferred TypeScript types will live in
 | `entrypoint` | Package-relative module entrypoint; it must resolve inside the plugin package root. |
 | `capabilities` | A set of unique public capability ID strings. No hook names, inline port definitions, or engine-private imports may be declared here. |
 
+The descriptor has one fixed package-root-relative path:
+`sceneaxi.plugin.manifest.json`. A package locator resolves to the package root;
+the host reads that file as data and does not accept an alternate descriptor
+path or obtain the manifest by importing plugin code. A missing or unreadable
+descriptor refuses the candidate before entrypoint evaluation.
+
 Unknown properties refuse unless a later manifest schema explicitly defines
 them. An empty `capabilities` set is valid and inert, which lets the initial
 registry and conformance fixtures remain honest without inventing a renderer,
@@ -65,13 +71,17 @@ quietly create a renderer, physics, storage, or other internal-library port.
 
 The host receives an explicit set of plugin package locators; it never scans
 the filesystem, environment, or dependency graph for implicit plugins.
-Candidates are processed in stable lexical locator order, and public listings
-are sorted by `pluginId`, then `pluginVersion`, then capability ID.
+Candidates are processed in stable lexical locator order. Loaded-plugin
+listings are sorted by `pluginId`, then `pluginVersion`, then capability ID.
+Refused-candidate listings are sorted by locator, which remains available even
+when the descriptor cannot supply a valid plugin ID, version, or capability.
 
 For each candidate, the host first applies this pre-evaluation descriptor
 phase:
 
-1. Parse the manifest and validate it against the exact supported schema.
+1. Resolve the package root, read `sceneaxi.plugin.manifest.json`, and parse and
+   validate it against the exact supported schema. A missing, unreadable, or
+   invalid descriptor refuses here.
 2. Require a supported `schemaVersion`, a compatible `hostApi` range, and the
    exact loaded `registryVersion`.
 3. Refuse a `pluginId` repeated in the host load set, a capability ID repeated
@@ -93,6 +103,12 @@ implementation, and no refused package makes any of its capabilities partially
 available. Repeating a capability ID within one manifest refuses; separate
 plugins may implement the same registered capability. The host does not choose
 an implicit winner, and callers address an implementation by `pluginId`.
+
+The deterministic fixture matrix must distinguish the phases with observable
+execution evidence. Descriptor and isolation refusal fixtures prove that their
+entrypoints never execute. Implementation-table mismatch fixtures prove that
+the intentionally loaded entrypoint executes but that none of its capability
+implementations is exposed.
 
 ### Package isolation
 
