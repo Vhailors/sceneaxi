@@ -35,11 +35,20 @@ semantics and the SceneAxi-versus-adapter boundary.
 Versioned **Catalog Item** contract (`contracts/catalog-item.schema.json`) and a
 fail-closed **pipeline state machine** stub (`src/catalog.ts`):
 
+The JSON Schema is exported at
+`@sceneaxi/schemas/contracts/catalog-item.schema.json` for package consumers.
+Metadata-unavailable takedowns use the distinct, package-exported
+`catalog-metadata-unavailable-tombstone.schema.json` contract. Delisting can
+return this tombstone only when the item identity and valid listed moderation
+history remain; it records which authoritative metadata was unavailable rather
+than inventing it.
+
 `intake (quarantine) → screening → curation → listed → delisted`
 
 - Every legal transition is recorded with a reason.
-- Illegal transitions, missing reasons, missing mandatory metadata, and listing
-  without a **human** curation verdict refuse (fail-closed).
+- Illegal transitions, missing reasons, and missing mandatory metadata refuse
+  (fail-closed), except for the explicit metadata-unavailable delisting result
+  above. Listing also refuses without a **human** curation verdict.
 - The pipeline represents the human gate; it never simulates a verdict.
 - Commerce fields are present and **structurally inert** until tier-6b
   marketplace activation holds open (per-storefront).

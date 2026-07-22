@@ -5,7 +5,9 @@
  */
 
 export {
+  CATALOG_DATE_TIME_PATTERN,
   CATALOG_ITEM_SCHEMA_VERSION,
+  CATALOG_METADATA_UNAVAILABLE_TOMBSTONE_SCHEMA_VERSION,
   CATALOG_POLICY_CITES,
   COMMERCE_ACTIVATION_GATE,
   PIPELINE_STATES,
@@ -19,7 +21,12 @@ export {
 export type {
   AiGenerationDisclosure,
   AssetPackageRef,
+  CatalogDelistingResult,
   CatalogItem,
+  CatalogItemTransitionOk,
+  CatalogItemTransitionResult,
+  CatalogMetadataUnavailableTombstone,
+  CatalogTombstoneTransitionOk,
   CommerceActivationResult,
   CommerceFields,
   Compatibility,
@@ -133,6 +140,8 @@ export const contracts = Object.freeze({
   heldKeyRegistry: "contracts/held-key-registry.schema.json",
   kernelSession: "contracts/kernel-session.schema.json",
   catalogItem: "contracts/catalog-item.schema.json",
+  catalogMetadataUnavailableTombstone:
+    "contracts/catalog-metadata-unavailable-tombstone.schema.json",
   document: "contracts/document.schema.json",
   proposal: "contracts/proposal.schema.json",
   deliveryHandoff: "contracts/delivery-handoff.schema.json",
