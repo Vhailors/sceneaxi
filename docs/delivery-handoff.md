@@ -33,6 +33,9 @@ The JSON Schema pattern independently asserts Gregorian calendar, clock, and
 offset ranges. A consumer claiming full conformance must also enable Draft
 2020-12 `format` assertion or use the published `validateDeliveryHandoff`
 validator; treating `format` as annotation-only is insufficient.
+Anchored schema patterns use a cross-dialect true-end assertion. A validator
+that silently accepts a partial match before a trailing line terminator is not
+conforming to Delivery Handoff v1.
 
 Artifact paths are relative to the export-package root. Absolute paths,
 backslashes, control characters, line terminators, empty path segments, `.`

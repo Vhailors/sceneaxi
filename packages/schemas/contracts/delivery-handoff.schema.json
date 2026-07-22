@@ -27,14 +27,14 @@
       "minProperties": 1,
       "propertyNames": {
         "maxLength": 1024,
-        "pattern": "^(?!/)(?![\\s\\S]*/$)(?![\\s\\S]*//)(?![\\s\\S]*\\\\)(?!\\.\\.?(?:/|$))(?![\\s\\S]*/\\.\\.?(?:/|$))(?:(?:[^\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029\\uD800-\\uDFFF]|[\\uD800-\\uDBFF][\\uDC00-\\uDFFF]))+$"
+        "pattern": "^(?!/)(?![\\s\\S]*/(?![\\s\\S]))(?![\\s\\S]*//)(?![\\s\\S]*\\\\)(?!\\.\\.?(?:/|(?![\\s\\S])))(?![\\s\\S]*/\\.\\.?(?:/|(?![\\s\\S])))(?:(?:[^\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029\\uD800-\\uDFFF]|[\\uD800-\\uDBFF][\\uDC00-\\uDFFF]))+(?![\\s\\S])"
       },
       "additionalProperties": { "$ref": "#/$defs/artifact" }
     },
     "artifactSetDigest": {
       "description": "sha256 of the RFC 8785 canonical JSON representation of the artifacts object.",
       "type": "string",
-      "pattern": "^sha256:[0-9a-f]{64}$"
+      "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
     },
     "provenance": { "$ref": "#/$defs/provenance" },
     "notes": {
@@ -53,7 +53,7 @@
       "properties": {
         "id": {
           "type": "string",
-          "pattern": "^[a-z0-9][a-z0-9-]*$"
+          "pattern": "^[a-z0-9][a-z0-9-]*(?![\\s\\S])"
         },
         "displayName": {
           "allOf": [{ "$ref": "#/$defs/unicodeScalarString" }],
@@ -87,11 +87,11 @@
         },
         "contentType": {
           "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9!#$&^_.+-]*/[A-Za-z0-9][A-Za-z0-9!#$&^_.+-]*$"
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9!#$&^_.+-]*/[A-Za-z0-9][A-Za-z0-9!#$&^_.+-]*(?![\\s\\S])"
         },
         "digest": {
           "type": "string",
-          "pattern": "^sha256:[0-9a-f]{64}$"
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
         }
       }
     },
@@ -126,7 +126,7 @@
         "createdAt": { "$ref": "#/$defs/dateTime" },
         "sourceCommit": {
           "type": "string",
-          "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+          "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})(?![\\s\\S])"
         },
         "build": { "$ref": "#/$defs/build" }
       }
@@ -134,13 +134,13 @@
     "unicodeScalarString": {
       "description": "I-JSON-safe string containing only Unicode scalar values.",
       "type": "string",
-      "pattern": "^(?:(?:[^\\uD800-\\uDFFF]|[\\uD800-\\uDBFF][\\uDC00-\\uDFFF]))*$"
+      "pattern": "^(?:(?:[^\\uD800-\\uDFFF]|[\\uD800-\\uDBFF][\\uDC00-\\uDFFF]))*(?![\\s\\S])"
     },
     "dateTime": {
       "description": "Non-leap RFC 3339 date-time with independently asserted Gregorian calendar, clock, and offset ranges.",
       "type": "string",
       "format": "date-time",
-      "pattern": "^(?:(?:\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|02-(?:0[1-9]|1\\d|2[0-8])))|(?:(?:\\d{2}(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29))[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+      "pattern": "^(?:(?:\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|02-(?:0[1-9]|1\\d|2[0-8])))|(?:(?:\\d{2}(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29))[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)(?![\\s\\S])"
     }
   }
 }

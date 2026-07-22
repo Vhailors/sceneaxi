@@ -102,13 +102,13 @@ export type DeliveryHandoffValidationResult =
   | DeliveryHandoffValidationOk
   | DeliveryHandoffValidationRefuse;
 
-const PRODUCT_ID_RE = /^[a-z0-9][a-z0-9-]*$/;
-const SHA256_RE = /^sha256:[0-9a-f]{64}$/;
-const SOURCE_COMMIT_RE = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
+const PRODUCT_ID_RE = /^[a-z0-9][a-z0-9-]*(?![\s\S])/;
+const SHA256_RE = /^sha256:[0-9a-f]{64}(?![\s\S])/;
+const SOURCE_COMMIT_RE = /^(?:[0-9a-f]{40}|[0-9a-f]{64})(?![\s\S])/;
 const CONTENT_TYPE_RE =
-  /^[a-z0-9][a-z0-9!#$&^_.+-]*\/[a-z0-9][a-z0-9!#$&^_.+-]*$/i;
+  /^[a-z0-9][a-z0-9!#$&^_.+-]*\/[a-z0-9][a-z0-9!#$&^_.+-]*(?![\s\S])/i;
 const DATE_TIME_RE =
-  /^(\d{4})-(\d{2})-(\d{2})[Tt](\d{2}):(\d{2}):([0-5]\d)(?:\.(\d+))?([Zz]|[+-]\d{2}:\d{2})$/;
+  /^(\d{4})-(\d{2})-(\d{2})[Tt](\d{2}):(\d{2}):([0-5]\d)(?:\.(\d+))?([Zz]|[+-]\d{2}:\d{2})(?![\s\S])/;
 const PATH_CONTROL_RE = /[\u0000-\u001F\u007F-\u009F\u2028\u2029]/;
 
 const SHA256_INITIAL_STATE = Uint32Array.from([

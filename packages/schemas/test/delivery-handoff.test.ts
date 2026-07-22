@@ -309,9 +309,145 @@ describe("delivery handoff contract", () => {
     expect(pattern).toBeTypeOf("string");
     expect(new RegExp(pattern ?? "").test("a\n/../../outside.zip")).toBe(false);
     expect(new RegExp(pattern ?? "").test("artifacts/")).toBe(false);
+    expect(new RegExp(pattern ?? "").test("artifacts/demo-game.zip\n")).toBe(
+      false,
+    );
     expect(new RegExp(pattern ?? "").test("artifacts/demo-game.zip")).toBe(
       true,
     );
+  });
+
+  it("requires true-end matches for every anchored field", () => {
+    const newlineCases = [
+      {
+        value: {
+          ...minimalHandoff(),
+          product: { ...minimalHandoff().product, id: "demo-game\n" },
+        },
+        path: "$.product.id",
+      },
+      {
+        value: {
+          ...minimalHandoff(),
+          artifacts: {
+            "artifacts/demo-game.zip": {
+              ...minimalHandoff().artifacts["artifacts/demo-game.zip"],
+              contentType: "application/zip\n",
+            },
+          },
+        },
+        path: '$.artifacts["artifacts/demo-game.zip"].contentType',
+      },
+      {
+        value: {
+          ...minimalHandoff(),
+          artifacts: {
+            "artifacts/demo-game.zip": {
+              ...minimalHandoff().artifacts["artifacts/demo-game.zip"],
+              digest: `${SHA256}\n`,
+            },
+          },
+        },
+        path: '$.artifacts["artifacts/demo-game.zip"].digest',
+      },
+      {
+        value: {
+          ...minimalHandoff(),
+          artifactSetDigest: `${minimalHandoff().artifactSetDigest}\n`,
+        },
+        path: "$.artifactSetDigest",
+      },
+      {
+        value: {
+          ...minimalHandoff(),
+          provenance: {
+            ...minimalHandoff().provenance,
+            sourceCommit: `${"a".repeat(40)}\n`,
+          },
+        },
+        path: "$.provenance.sourceCommit",
+      },
+      {
+        value: {
+          ...minimalHandoff(),
+          provenance: {
+            createdAt: `${minimalHandoff().provenance.createdAt}\n`,
+          },
+        },
+        path: "$.provenance.createdAt",
+      },
+    ];
+
+    for (const newlineCase of newlineCases) {
+      const result = validateDeliveryHandoff(newlineCase.value);
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.diagnostics[0]?.path).toBe(newlineCase.path);
+      }
+    }
+
+    const schema = JSON.parse(
+      readFileSync(
+        fileURLToPath(
+          import.meta.resolve(
+            "@sceneaxi/schemas/contracts/delivery-handoff.schema.json",
+          ),
+        ),
+        "utf8",
+      ),
+    ) as {
+      properties?: {
+        artifacts?: { propertyNames?: { pattern?: string } };
+        artifactSetDigest?: { pattern?: string };
+      };
+      $defs?: {
+        product?: { properties?: { id?: { pattern?: string } } };
+        artifact?: {
+          properties?: {
+            contentType?: { pattern?: string };
+            digest?: { pattern?: string };
+          };
+        };
+        provenance?: {
+          properties?: { sourceCommit?: { pattern?: string } };
+        };
+        unicodeScalarString?: { pattern?: string };
+        dateTime?: { pattern?: string };
+      };
+    };
+    const patterns = [
+      schema.properties?.artifacts?.propertyNames?.pattern,
+      schema.properties?.artifactSetDigest?.pattern,
+      schema.$defs?.product?.properties?.id?.pattern,
+      schema.$defs?.artifact?.properties?.contentType?.pattern,
+      schema.$defs?.artifact?.properties?.digest?.pattern,
+      schema.$defs?.provenance?.properties?.sourceCommit?.pattern,
+      schema.$defs?.unicodeScalarString?.pattern,
+      schema.$defs?.dateTime?.pattern,
+    ];
+    expect(patterns.every((pattern) => pattern?.endsWith("(?![\\s\\S])"))).toBe(
+      true,
+    );
+
+    const restrictedPatterns = [
+      [schema.properties?.artifactSetDigest?.pattern, SHA256],
+      [schema.$defs?.product?.properties?.id?.pattern, "demo-game"],
+      [
+        schema.$defs?.artifact?.properties?.contentType?.pattern,
+        "application/zip",
+      ],
+      [schema.$defs?.artifact?.properties?.digest?.pattern, SHA256],
+      [
+        schema.$defs?.provenance?.properties?.sourceCommit?.pattern,
+        "a".repeat(40),
+      ],
+      [schema.$defs?.dateTime?.pattern, "2026-07-22T10:30:00.000Z"],
+    ] as const;
+    for (const [pattern, validValue] of restrictedPatterns) {
+      expect(pattern).toBeTypeOf("string");
+      expect(new RegExp(pattern ?? "").test(validValue)).toBe(true);
+      expect(new RegExp(pattern ?? "").test(`${validValue}\n`)).toBe(false);
+    }
   });
 
   it("uses one non-leap RFC 3339 timestamp subset", () => {
