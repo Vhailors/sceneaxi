@@ -193,6 +193,9 @@ describe("registry snapshot generator (fixture-driven)", () => {
       "2026-07-20T12:00:00",
       "2026-02-29T12:00:00Z",
       "2026-07-20T12:00:00+24:00",
+      "2026-07-20T12:00:00Z\n",
+      "2026-07-20T12:00:00Z\r",
+      "2026-07-20T12:00:00Z\r\n",
     ]) {
       expect(
         generateRegistrySnapshot({ ...epoch2Export, exportedAt }).ok,
