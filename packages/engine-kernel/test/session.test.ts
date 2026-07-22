@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
   KERNEL_SESSION_SCHEMA_VERSION,
@@ -114,6 +113,20 @@ describe("KernelSession — command/snapshot seam", () => {
     ).toThrow();
 
     expect(session.observe().digest).toBe(before);
+  });
+
+  it("refuses spawn actor IDs outside the manifest entity vocabulary", () => {
+    const session = open(manifest, fixedHost());
+
+    expect(() =>
+      session.dispatch({
+        type: "spawn",
+        actor: "Invalid Actor",
+        position: [0, 0],
+      }),
+    ).toThrow(/spawn\.actor/i);
+    session.advance({ tick: 1, deltaMs: 16 });
+    expect(session.observe().entities).toEqual([{ id: "player", x: 0, y: 0 }]);
   });
 
   it("validates actor state across the pending batch at dispatch", () => {
@@ -256,18 +269,9 @@ describe("KernelSession — command/snapshot seam", () => {
     session.advance({ tick: 1, deltaMs: 16 });
 
     const snap = session.observe();
-    const payload = JSON.stringify({
-      tick: 1,
-      seed: 42,
-      entities: [
-        { id: "a-entity", x: 3, y: 4 },
-        { id: "b-entity", x: 1, y: 2 },
-        { id: "player", x: 0, y: 0 },
-      ],
-    });
-    const expected =
-      "sha256:" + createHash("sha256").update(payload, "utf8").digest("hex");
-    expect(snap.digest).toBe(expected);
+    expect(snap.digest).toBe(
+      "sha256:a721c4fbbbc333921cd5bba28b3949cae5b9a6ec6dd9f8f97416e5a0a3b9eded",
+    );
   });
 });
 

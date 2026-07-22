@@ -68,7 +68,10 @@
             "required": ["type"],
             "properties": {
               "type": { "type": "string", "enum": ["move", "spawn"] },
-              "actor": { "type": "string" },
+              "actor": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]*$"
+              },
               "axis": {
                 "type": "array",
                 "minItems": 2,

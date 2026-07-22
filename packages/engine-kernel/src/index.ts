@@ -15,7 +15,6 @@ export {
   BOM_VERSION,
   KERNEL_VERSION,
   KernelSessionError,
-  computeDigest,
   open,
   replay,
   type KernelHost,

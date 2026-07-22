@@ -196,8 +196,8 @@ function validateCommand(command: KernelCommand): KernelCommand {
     throw new KernelSessionError("invalid command");
   }
   if (command.type === "move") {
-    if (typeof command.actor !== "string" || command.actor.length === 0) {
-      throw new KernelSessionError("move.actor is required");
+    if (typeof command.actor !== "string" || !ID_RE.test(command.actor)) {
+      throw new KernelSessionError("move.actor must be a valid entity id");
     }
     if (!isIntegerPair(command.axis)) {
       throw new KernelSessionError("move.axis must be an integer pair");
@@ -209,8 +209,8 @@ function validateCommand(command: KernelCommand): KernelCommand {
     });
   }
   if (command.type === "spawn") {
-    if (typeof command.actor !== "string" || command.actor.length === 0) {
-      throw new KernelSessionError("spawn.actor is required");
+    if (typeof command.actor !== "string" || !ID_RE.test(command.actor)) {
+      throw new KernelSessionError("spawn.actor must be a valid entity id");
     }
     if (!isIntegerPair(command.position)) {
       throw new KernelSessionError("spawn.position must be an integer pair");
@@ -260,7 +260,7 @@ function sortedEntities(entities: Map<string, MutableEntity>): SnapshotEntity[] 
 }
 
 /** Canonical digest: sha256 over JSON of {tick, seed, entities sorted by id}. */
-export function computeDigest(
+function computeDigest(
   tick: number,
   seed: number,
   entities: ReadonlyArray<SnapshotEntity>,
