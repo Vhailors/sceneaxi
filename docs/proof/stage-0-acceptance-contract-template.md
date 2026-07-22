@@ -291,6 +291,29 @@ decisions are recorded. The procedure is mechanical:
 - Not a substitute for the separate explicit **run authorization** gate
 - Not performed by merging this template
 
+### Lock-record form (blank; separately authorized Stage 0 only)
+
+This form records the result of the mechanical procedure above. Its presence
+does not fill a held field or authorize the procedure.
+
+| Field | Recorded value |
+|---|---|
+| Filled-contract URI / path | |
+| Contract hash algorithm | |
+| Contract hash digest | |
+| Pinned worker-config hash algorithm | |
+| Pinned worker-config hash digest | |
+| `first-proof-brief` decision reference + version | |
+| `first-proof-budget` decision reference + version | |
+| `first-proof-kill-rubric` decision reference + version | |
+| Stage 0 authorization reference | |
+| Locked at (UTC) | |
+| Recorded by | |
+
+Every row must be complete before the lock can be represented as complete.
+An open decision key, missing authorization reference, missing digest, or
+digest mismatch leaves Stage 0 unlocked and Stage 1 refusing to start.
+
 ---
 
 ## 8. What this document deliberately omits
