@@ -4,6 +4,8 @@
 
 **Source:** `data/threejs-bgf-ecosystem-wayfinder-v1/decisions/site-domain-topology.md`
 
+**Resolved held keys:** `site-domain-topology`, `kids-surface-isolation`
+
 ## Decision
 
 SceneAxi uses a hybrid site and domain topology:
@@ -56,6 +58,9 @@ surface. Its boundary requires:
 
 Cross-links into or out of Kids are ordinary links only. They must not carry
 identity, session, telemetry, prompt, or user-data context across the boundary.
+This fully resolves the Kids origin, app, and identity shape. The residual 6a
+Kids holds concern age, safety, curriculum, and jurisdiction policy only; they
+cannot weaken this isolation boundary.
 
 ## Out of scope
 
@@ -68,4 +73,5 @@ identity, session, telemetry, prompt, or user-data context across the boundary.
 The held-key runtime remains governed by
 [`docs/held-key-enforcement.md`](../held-key-enforcement.md). This document
 records the human product decision; only a current authoritative FirstMate
-registry snapshot can mark `site-domain-topology` resolved for CLI enforcement.
+registry snapshot can mark `site-domain-topology` and `kids-surface-isolation`
+resolved for CLI enforcement.

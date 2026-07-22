@@ -74,7 +74,7 @@ From the user's perspective:
 
 18. As a parent/guardian, I want the Kids product to be structurally isolated (own surface, no shared accounts/telemetry, no third-party LLM routes by default), so that safety is a property of the build, not a setting someone can flip.
 19. As a parent/guardian, I want Kids content drawn from an allowlist over already-curated items with Kids-specific screening, so that curation failures elsewhere cannot leak into the Kids surface.
-20. As the captain, I want nothing in the ecosystem able to depend on the Kids profile without an explicit decision (`kids-surface-isolation`), so that the Kids boundary cannot open by drift.
+20. As the captain, I want nothing in the ecosystem able to depend on the Kids profile, so that the fully isolated Kids boundary cannot open by drift.
 
 ### Asset catalog participants (dormant until gates open)
 
@@ -139,7 +139,7 @@ Deliberate denials that carry design intent:
 - **cli → engine packages denied** — makes it structurally impossible for the orbiting CLI to become the missing core.
 - **shells → cli denied** — shells are protocol *clients* of the application service, not spawners of a binary.
 - **catalogs → authoring-core/engine/profiles denied** — catalogs speak only the `schemas` catalog contracts.
-- **anything → profile-kids denied** — the Kids boundary is enforced independently of allow lists (`kidsBoundary`, `allowedDependents` starts empty; additions only under `kids-surface-isolation`).
+- **anything → profile-kids denied** — the fully isolated Kids boundary is enforced independently of allow lists (`kidsBoundary`; `allowedDependents` remains empty).
 - **profile → profile denied; anything → apps/cli denied** (leaves stay leaves).
 
 ### Versioning and release groups (checker-verified manifest stamps)
@@ -205,23 +205,32 @@ This spec **does not answer** any of the following. Each is a registered structu
 | # | Held key | Decides |
 |---|---|---|
 | 1 | `web-experience-profile-scope` | What the Web Experience profile is (and is not) |
-| 2 | `kids-surface-isolation` | The isolation shape of the Kids surface (origin/app/identity plane) |
-| 3 | `catalog-storefront-topology` | One catalog platform with two storefronts vs other topologies |
-| 4 | `cli-audience` | Internal-first vs public CLI; publication preconditions |
-| 5 | `authoring-surface-priority` | Order: CLI / web shell / desktop / importers |
-| 6 | `profile-rollout-order` | Which profile ships conformance first |
-| 7 | `website-catalog-scope` | Scope of the website-asset storefront |
-| 8 | `llm-provider-policy` | Provider port posture: first-party direct vs aggregation conditions |
-| 9 | `deepseek-adoption` | Whether/how DeepSeek V4 is adoptable (re-verify post-GA; never official endpoint for Kids/user data) |
+| 2 | `catalog-storefront-topology` | One catalog platform with two storefronts vs other topologies |
+| 3 | `cli-audience` | Internal-first vs public CLI; publication preconditions |
+| 4 | `authoring-surface-priority` | Order: CLI / web shell / desktop / importers |
+| 5 | `profile-rollout-order` | Which profile ships conformance first |
+| 6 | `website-catalog-scope` | Scope of the website-asset storefront |
+| 7 | `llm-provider-policy` | Provider port posture: first-party direct vs aggregation conditions |
+| 8 | `deepseek-adoption` | Whether/how DeepSeek V4 is adoptable (re-verify post-GA; never official endpoint for Kids/user data) |
 
-Resolved anchor: `core-product-name` = **SceneAxi** (captain, durable). The **24 existing holds** (origin `threejs-factory-wayfinder-v1`, tiers 1–6b — including `capability-name`, `kernel-name`, the 6a kids-safety branch, the 6b marketplace activation/scope gates, hosted-accounts/telemetry boundaries, and the tier-5 license hold) remain open, unmodified, and authoritative; the registry ticket is factories-helpers #42.
+Resolved anchors: `core-product-name` = **SceneAxi** and
+`kids-surface-isolation` = a fully separate Kids domain and origin with isolated
+identity, cookies, data, telemetry, and LLM routing (captain, durable). The
+residual Kids holds are only the 6a age, safety, curriculum, and jurisdiction
+decisions; they do not reopen the resolved surface topology. The **24 existing
+holds** (origin `threejs-factory-wayfinder-v1`, tiers 1–6b — including
+`capability-name`, `kernel-name`, the residual 6a Kids branch, the 6b marketplace
+activation/scope gates, hosted-accounts/telemetry boundaries, and the tier-5
+license hold) remain open, unmodified, and authoritative; the registry ticket is
+factories-helpers #42.
 
 Locked decision: `site-domain-topology` uses the hybrid topology recorded in
 [`site-domain-topology.md`](site-domain-topology.md): an umbrella domain for the
 core product and docs, distinct game-asset and website-asset storefront domains,
 and a fully separate Kids domain/origin. Exact domain strings and purchases are
-out of scope. This human-readable record does not replace the authoritative
-FirstMate registry snapshot required by `docs/held-key-enforcement.md`.
+out of scope. This human-readable record does not replace the current
+authoritative FirstMate registry snapshot required by
+`docs/held-key-enforcement.md` to resolve either key for CLI enforcement.
 
 ## Testing Decisions
 
