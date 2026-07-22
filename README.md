@@ -20,8 +20,10 @@ Package boundaries are executable: `docs/dependency-matrix.json` is the allow/de
 truth and `pnpm check:boundaries` enforces it (see `docs/DEPENDENCY-MATRIX.md`).
 Held captain decisions are a runtime contract: `docs/held-key-enforcement.md`.
 Authoring-interface behavioral contracts (E1/E2) are SceneAxi-owned:
-`docs/authoring-contracts.md`, with the shared authoring-jobs fixture list in
-`packages/schemas/contracts/` enforced by `pnpm check:contracts`.
+[`docs/authoring-contracts.md`](docs/authoring-contracts.md), with the shared
+authoring-jobs fixture list in
+[`packages/schemas/contracts/`](packages/schemas/contracts/) enforced by
+`pnpm check:contracts`.
 External web products follow the published-package support and pinning contract
 in [`docs/web-consumer.md`](docs/web-consumer.md).
 Portable product exports cross delivery boundaries through the public,
@@ -53,10 +55,15 @@ review PASS**, 2026-07-21) under the separated bootstrap authorities in
 every future change re-earns its own grants (PASS ≠ commit ≠ push ≠ merge).
 
 The canonical product spec is [#1](https://github.com/Vhailors/sceneaxi/issues/1),
-mirrored in-tree at `docs/program/SPEC.md`. The engine-core proof program stays on
+mirrored in-tree at [`docs/program/SPEC.md`](docs/program/SPEC.md). The
+engine-core proof program stays on
 factories-helpers [#41](https://github.com/Vhailors/factories-helpers/issues/41)
-(pointer: `docs/program/spec-41.md`); proof-prep docs land under `docs/proof/`,
-double-gated and never a run authorization. Settled engine/CLI decisions are
+(pointer: [`docs/program/spec-41.md`](docs/program/spec-41.md)); proof-prep docs
+land under [`docs/proof/`](docs/proof/README.md), double-gated and never a run
+authorization. E1 is the normative authoring contract; E2 remains specified but
+not built, and both bind to the same machine-readable
+[`authoring-jobs.fixtures.json`](packages/schemas/contracts/authoring-jobs.fixtures.json)
+list. Settled engine/CLI decisions are
 indexed in [`docs/adr/`](docs/adr/README.md).
 
 ## Authority
