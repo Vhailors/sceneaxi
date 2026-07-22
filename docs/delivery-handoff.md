@@ -27,6 +27,9 @@ A v1 handoff records:
   build metadata
 - optional human-readable `notes`
 
+Delivery Handoff v1 uses a non-leap RFC 3339 timestamp subset: seconds must be
+`00` through `59`. A `:60` leap-second value refuses; v1 carries no leap table.
+
 Artifact paths are relative to the export-package root. Absolute paths,
 backslashes, control characters, line terminators, empty path segments, `.`
 segments, and `..` segments refuse.

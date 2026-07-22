@@ -108,7 +108,7 @@ const SOURCE_COMMIT_RE = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
 const CONTENT_TYPE_RE =
   /^[a-z0-9][a-z0-9!#$&^_.+-]*\/[a-z0-9][a-z0-9!#$&^_.+-]*$/i;
 const DATE_TIME_RE =
-  /^(\d{4})-(\d{2})-(\d{2})[Tt](\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?([Zz]|[+-]\d{2}:\d{2})$/;
+  /^(\d{4})-(\d{2})-(\d{2})[Tt](\d{2}):(\d{2}):([0-5]\d)(?:\.(\d+))?([Zz]|[+-]\d{2}:\d{2})$/;
 const PATH_CONTROL_RE = /[\u0000-\u001F\u007F-\u009F\u2028\u2029]/;
 
 const SHA256_INITIAL_STATE = Uint32Array.from([
@@ -189,7 +189,6 @@ type Rfc3339Instant = {
   readonly value: string;
   readonly wholeSeconds: number;
   readonly fraction: string;
-  readonly leapSecond: boolean;
 };
 
 function daysInMonth(year: number, month: number) {
@@ -212,31 +211,6 @@ function daysFromCivil(year: number, month: number, day: number) {
     Math.floor(yearOfEra / 100) +
     dayOfYear;
   return era * 146_097 + dayOfEra - 719_468;
-}
-
-function civilFromDays(days: number) {
-  const adjustedDays = days + 719_468;
-  const era = Math.floor(adjustedDays / 146_097);
-  const dayOfEra = adjustedDays - era * 146_097;
-  const yearOfEra = Math.floor(
-    (dayOfEra -
-      Math.floor(dayOfEra / 1_460) +
-      Math.floor(dayOfEra / 36_524) -
-      Math.floor(dayOfEra / 146_096)) /
-      365,
-  );
-  let year = yearOfEra + era * 400;
-  const dayOfYear =
-    dayOfEra -
-    (365 * yearOfEra +
-      Math.floor(yearOfEra / 4) -
-      Math.floor(yearOfEra / 100));
-  const adjustedMonth = Math.floor((5 * dayOfYear + 2) / 153);
-  const day =
-    dayOfYear - Math.floor((153 * adjustedMonth + 2) / 5) + 1;
-  const month = adjustedMonth + (adjustedMonth < 10 ? 3 : -9);
-  if (month <= 2) year += 1;
-  return { year, month, day };
 }
 
 function parseRfc3339Instant(value: unknown): Rfc3339Instant | null {
@@ -276,8 +250,7 @@ function parseRfc3339Instant(value: unknown): Rfc3339Instant | null {
     day < 1 ||
     day > daysInMonth(year, month) ||
     hour > 23 ||
-    minute > 59 ||
-    second > 60
+    minute > 59
   ) {
     return null;
   }
@@ -291,33 +264,18 @@ function parseRfc3339Instant(value: unknown): Rfc3339Instant | null {
     offsetSeconds = direction * (offsetHour * 3_600 + offsetMinute * 60);
   }
 
-  const leapSecond = second === 60;
   const wholeSeconds =
     daysFromCivil(year, month, day) * 86_400 +
     hour * 3_600 +
     minute * 60 +
-    Math.min(second, 59) -
+    second -
     offsetSeconds;
-  if (leapSecond) {
-    const utcSecondOfDay = ((wholeSeconds % 86_400) + 86_400) % 86_400;
-    const utcDate = civilFromDays(Math.floor(wholeSeconds / 86_400));
-    if (
-      utcSecondOfDay !== 86_399 ||
-      utcDate.day !== daysInMonth(utcDate.year, utcDate.month)
-    ) {
-      return null;
-    }
-  }
-
-  return { value, wholeSeconds, fraction, leapSecond };
+  return { value, wholeSeconds, fraction };
 }
 
 function compareRfc3339Instants(left: Rfc3339Instant, right: Rfc3339Instant) {
   if (left.wholeSeconds !== right.wholeSeconds) {
     return left.wholeSeconds - right.wholeSeconds;
-  }
-  if (left.leapSecond !== right.leapSecond) {
-    return left.leapSecond ? 1 : -1;
   }
   const width = Math.max(left.fraction.length, right.fraction.length);
   const leftFraction = left.fraction.padEnd(width, "0");

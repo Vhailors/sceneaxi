@@ -309,12 +309,12 @@ describe("delivery handoff contract", () => {
     );
   });
 
-  it("matches RFC 3339 calendar, clock, and leap-second semantics", () => {
+  it("uses one non-leap RFC 3339 timestamp subset", () => {
     for (const createdAt of [
       "2026-07-22T24:00:00Z",
       "2025-02-29T12:00:00Z",
-      "1990-12-31T12:59:60Z",
-      "1990-12-30T23:59:60Z",
+      "1990-12-31T23:59:60Z",
+      "1991-01-01T05:29:60+05:30",
     ]) {
       expect(
         validateDeliveryHandoff({
@@ -327,7 +327,7 @@ describe("delivery handoff contract", () => {
     expect(
       validateDeliveryHandoff({
         ...minimalHandoff(),
-        provenance: { createdAt: "1991-01-01t05:29:60+05:30" },
+        provenance: { createdAt: "1991-01-01t05:29:59+05:30" },
       }).ok,
     ).toBe(true);
 
@@ -336,8 +336,8 @@ describe("delivery handoff contract", () => {
       provenance: {
         createdAt: "1990-12-31T23:59:59Z",
         build: {
-          id: "leap-build",
-          startedAt: "1990-12-31T23:59:60Z",
+          id: "ordered-build",
+          startedAt: "1990-12-31T23:59:59.999Z",
           completedAt: "1991-01-01T00:00:00Z",
         },
       },
@@ -349,9 +349,9 @@ describe("delivery handoff contract", () => {
       provenance: {
         createdAt: "1990-12-31T23:59:59Z",
         build: {
-          id: "leap-build",
+          id: "ordered-build",
           startedAt: "1991-01-01T00:00:00Z",
-          completedAt: "1990-12-31T23:59:60Z",
+          completedAt: "1990-12-31T23:59:59.999Z",
         },
       },
     });
@@ -359,6 +359,43 @@ describe("delivery handoff contract", () => {
     if (!reversed.ok) {
       expect(reversed.diagnostics[0]?.path).toBe(
         "$.provenance.build.completedAt",
+      );
+    }
+
+    const schema = JSON.parse(
+      readFileSync(
+        fileURLToPath(
+          import.meta.resolve(
+            "@sceneaxi/schemas/contracts/delivery-handoff.schema.json",
+          ),
+        ),
+        "utf8",
+      ),
+    ) as {
+      $defs?: {
+        build?: {
+          properties?: {
+            startedAt?: { pattern?: string };
+            completedAt?: { pattern?: string };
+          };
+        };
+        provenance?: {
+          properties?: { createdAt?: { pattern?: string } };
+        };
+      };
+    };
+    const timestampPatterns = [
+      schema.$defs?.build?.properties?.startedAt?.pattern,
+      schema.$defs?.build?.properties?.completedAt?.pattern,
+      schema.$defs?.provenance?.properties?.createdAt?.pattern,
+    ];
+    for (const pattern of timestampPatterns) {
+      expect(pattern).toBeTypeOf("string");
+      expect(new RegExp(pattern ?? "").test("1990-12-31T23:59:60Z")).toBe(
+        false,
+      );
+      expect(new RegExp(pattern ?? "").test("1990-12-31T23:59:59Z")).toBe(
+        true,
       );
     }
   });
