@@ -64,6 +64,29 @@ export {
   serializeProposal,
   validateProposal,
 } from "./proposal.js";
+
+export {
+  DELIVERY_ARTIFACT_ROLES,
+  DELIVERY_HANDOFF_KIND,
+  DELIVERY_HANDOFF_SCHEMA_VERSION,
+  DELIVERY_TARGET_PLATFORMS,
+  parseDeliveryHandoffText,
+  validateDeliveryHandoff,
+} from "./delivery-handoff.js";
+export type {
+  DeliveryArtifactRole,
+  DeliveryBuildMetadata,
+  DeliveryHandoff,
+  DeliveryHandoffArtifact,
+  DeliveryHandoffDiagnostic,
+  DeliveryHandoffDiagnosticCode,
+  DeliveryHandoffProduct,
+  DeliveryHandoffProvenance,
+  DeliveryHandoffValidationOk,
+  DeliveryHandoffValidationRefuse,
+  DeliveryHandoffValidationResult,
+  DeliveryTargetPlatform,
+} from "./delivery-handoff.js";
 export type {
   ApplyDiagnostic,
   ApplyDiagnosticCode,
@@ -110,6 +133,7 @@ export const contracts = Object.freeze({
   catalogItem: "contracts/catalog-item.schema.json",
   document: "contracts/document.schema.json",
   proposal: "contracts/proposal.schema.json",
+  deliveryHandoff: "contracts/delivery-handoff.schema.json",
   /** Profile Conformance claim (sceneaxi#10) — shared suite + development consumers. */
   profileConformance: "contracts/profile-conformance.schema.json",
 });

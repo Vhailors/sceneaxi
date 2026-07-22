@@ -24,6 +24,9 @@ Authoring-interface behavioral contracts (E1/E2) are SceneAxi-owned:
 `packages/schemas/contracts/` enforced by `pnpm check:contracts`.
 External web products follow the published-package support and pinning contract
 in [`docs/web-consumer.md`](docs/web-consumer.md).
+Portable product exports cross delivery boundaries through the public,
+delivery-neutral [`Delivery Handoff` contract](docs/delivery-handoff.md); provider
+credentials, uploads, approvals, and adapter implementation stay outside core.
 
 ## Development
 
