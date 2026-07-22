@@ -18,6 +18,7 @@ import {
   apply,
   editDirect,
   recoverIncompleteApplies,
+  resolveApplyTransaction,
   undoLastApply,
   writeDocumentFile,
   createDocument,
@@ -31,8 +32,22 @@ const p = propose({
   cwd: projectRoot,
 });
 
-// apply(proposal) → ok | reject(typed diagnostics)
-const r = apply({ proposal: p.ok ? p.proposal : "", cwd: projectRoot });
+// apply(proposal) → applied | indeterminate(transactionId) | reject
+if (p.ok) {
+  const r = apply({ proposal: p.proposal, cwd: projectRoot });
+  const transactionId =
+    r.applicationState === "indeterminate"
+      ? r.transactionId
+      : r.ok && r.journalRecoveryPending
+        ? r.transactionId
+        : null;
+  if (transactionId !== null) {
+    const resolved = resolveApplyTransaction({
+      transactionId,
+      cwd: projectRoot,
+    });
+  }
+}
 
 // Service entrypoints recover first; hosts may also recover explicitly at startup.
 const recovered = recoverIncompleteApplies({ cwd: projectRoot });
@@ -54,9 +69,13 @@ Contract clauses (E1 / `docs/authoring-contracts.md`):
    and undo from journaled prior bytes
 6. Schema major-mismatch refusal (no silent migration)
 
-Apply journals are versioned JSON under `.sceneaxi/journal/`. Recovery and undo
-fail closed if a journal is corrupt or if current document bytes match neither
-the expected before- nor after-image; they never overwrite an unrelated edit.
+Apply journals are versioned JSON under `.sceneaxi/journal/` beneath the supplied
+`cwd`. Use that same project root for apply, recovery, resolution, and undo.
+Recovery and undo fail closed if a journal is corrupt or if current document bytes
+match neither the expected before- nor after-image; they never overwrite an
+unrelated edit. A result with `journalRecoveryPending: true` includes a
+`transactionId`; call `resolveApplyTransaction()` and block further authoring until
+it reports a terminal state.
 
 Schemas: `packages/schemas/contracts/document.schema.json` and
 `proposal.schema.json`. CLI surface: `sceneaxi project propose|apply`.

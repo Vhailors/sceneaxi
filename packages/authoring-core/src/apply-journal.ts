@@ -380,7 +380,7 @@ function reserveCompletionOrder(cwd: string): number {
       !Number.isSafeInteger((parsed as Record<string, unknown>)["value"]) ||
       ((parsed as Record<string, unknown>)["value"] as number) < 0
     ) {
-      parsed = null;
+      // Fall back to the journal scan below.
     } else {
       current = (parsed as Record<string, unknown>)["value"] as number;
     }

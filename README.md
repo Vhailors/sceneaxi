@@ -26,19 +26,20 @@ Authoring-interface behavioral contracts (E1/E2) are SceneAxi-owned:
 ## Development
 
 Install the pinned workspace toolchain with `pnpm install`, then run `pnpm gate`
-for the repository's required build, test, lint, syntax, and boundary checks. The
-root `package.json` owns the exact command sequence; the referenced TypeScript,
-Vitest, ESLint, and boundary-checker configuration files own their respective
-contracts.
+for the repository's required syntax, boundary, contract, build, test, and lint
+checks. The root `package.json` owns the exact command sequence; the referenced
+TypeScript, Vitest, ESLint, boundary, and contract-checker configuration files own
+their respective contracts.
 
 ## Status
 
-**Early implementation seed.** The monorepo has a real fail-closed toolchain and
-minimal typed public seams for every seeded package and app. Domain implementations
-are intentionally deferred to later tickets; a green gate does not mean the engine,
-profiles, or applications are production-ready. Proof execution, spend, account
-creation, publication, and other external actions remain subject to the separated
-authorities in `docs/bootstrap.md`.
+**Early implementation aggregate.** The monorepo has a real fail-closed toolchain,
+typed public seams for every package and app, and initial contract/tracer
+implementations for authoring, the CLI, the Game Kernel, Game profile conformance,
+shell protocol clients, and dormant catalogs. This remains proof-oriented work, not
+a claim that the engine, profiles, or applications are production-ready. Proof
+execution, spend, account creation, publication, and other external actions remain
+subject to the separated authorities in `docs/bootstrap.md`.
 
 Main landed the bootstrap tree at commit `f0a5b90` (independent non-Claude **v4
 review PASS**, 2026-07-21) under the separated bootstrap authorities in

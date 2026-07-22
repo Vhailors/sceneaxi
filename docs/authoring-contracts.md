@@ -55,7 +55,7 @@ Five verbs: `project new`, `project dev`, `project test`, `project capture`,
 Inspector gizmo edits never write documents directly; they emit proposals:
 
 - `propose(documentPath, jsonPointer, newValue) → unified diff`
-- `apply(diff) → ok | reject(typed diagnostics)`
+- `apply(proposal) → applied | indeterminate(transactionId) | reject(typed diagnostics)`
 
 Contract clauses:
 
@@ -72,8 +72,10 @@ Contract clauses:
    the document, re-propose against current content).
 5. **Journaled undo and crash recovery.** Applies are journaled before commit;
    recovery after a crash rolls incomplete applies back (or forward) to a
-   consistent state, and undo restores prior document content from the
-   journal.
+   consistent state, and undo restores prior document content from the journal.
+   If canonical bytes are consistent but journal finalization is still pending,
+   the result exposes a transaction ID; callers must refuse further authoring
+   until that transaction resolves.
 6. **Schema-version headers.** Documents carry schema-version headers; on a
    **major** version mismatch the validator refuses rather than silently
    migrating.

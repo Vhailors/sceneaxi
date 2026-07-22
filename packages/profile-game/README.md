@@ -10,4 +10,4 @@ suite ([sceneaxi#10](https://github.com/Vhailors/sceneaxi/issues/10)).
 
 This is **not** a shipping or publication decision.
 
-Bootstrap stub. Boundaries enforced at monorepo package level.
+Boundaries are enforced at monorepo package level.

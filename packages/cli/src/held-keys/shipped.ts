@@ -3,8 +3,8 @@
  *
  * Every verb in the live command tree MUST be declared here — an undeclared
  * verb refuses at dispatch (tests enforce full coverage). `heldKeys: []` is an
- * explicit ungated declaration; the bootstrap skeleton verbs are ungated
- * because they encode no product policy. The only gated verb is the held-key
+ * explicit ungated declaration; the ungated verbs encode no product policy.
+ * The only gated verb is the held-key
  * protocol demo, gated by SYNTHETIC fixture keys: no real captain hold is
  * named, resolved, or invented here (the 24+10 real holds live in the
  * FirstMate backlog, exported per docs/held-key-enforcement.md).

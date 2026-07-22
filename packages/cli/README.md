@@ -37,6 +37,10 @@ sceneaxi project propose --document scene.json --pointer /data/x --value 1 --out
 sceneaxi project apply --proposal edit.json
 ```
 
+`project apply` journals before canonical commit. A successful apply whose
+journal still needs finalization returns `journalRecoveryPending: true` plus a
+`transactionId`; subsequent authoring entrypoints recover before proceeding.
+
 Global flags: `--json`, `--help` / `-h`, `--version` / `-v` / `-V`.
 
 Unknown flags and unknown/incomplete paths **refuse** (fail-closed). There is
@@ -85,36 +89,10 @@ JSON Schema: `packages/schemas/contracts/cli-protocol-envelope.schema.json`
 
 ## Held-key enforcement (sceneaxi#7)
 
-`src/held-keys/` implements the runtime protocol of
-`docs/held-key-enforcement.md` (normative) against the seeded contracts
-`held-key-registry.schema.json` and `cli-command-map.schema.json`:
-
-- **`registry.ts`** — typed contract mirrors + fail-closed validation.
-  `sourceDigest` is *verified* (sha256 of the canonicalized key set), not just
-  format-checked.
-- **`generate.ts`** — `generateRegistrySnapshot()`: FirstMate
-  structured-backlog export → schema-valid snapshot. Refuses raw text,
-  Markdown-looking sources, malformed hold identities, and non-monotonic
-  epochs. The factories-helpers #42 Markdown registry stays the human-facing
-  registry source of truth; it is **never** a runtime input.
-- **`shipped.ts`** — the command map shipped with this build. Every verb in
-  the tree is declared (coverage-tested); `heldKeys: []` is an explicit
-  ungated declaration. Only `demo gated` is gated, by **synthetic** keys.
-- **`gate.ts`** — `evaluateHeldKeyGate()`: for every gated verb the live
-  authoritative epoch is established **before** local checks (trusted epoch
-  sentinel; test doubles in fixtures). No offline exception, no
-  signed-offline-marker path, no env flag can reopen an allow path.
-
-Refusals exit `3` with `error.code: "HELD_KEY"`, a machine-readable
-`error.heldKeyReason` naming the refusal-table row, and — for open/unknown
-keys — `error.heldKey` naming the key. The full refusal table, the
-fresh-N/N-vs-authoritative-N+1 regression, and the offline regression are
-fixture-tested (`test/held-keys.*.test.ts`, `test/fixtures/held-keys/`).
-
-The default runtime ships **no snapshot and no sentinel**, so `demo gated`
-refuses out of the box (`currency-unavailable`) — fail-closed until real
-wiring is authorized. Any claim of fail-closed held-key enforcement is valid
-only under this protocol.
+The normative runtime protocol, implementation status, refusal table, and
+mandatory regressions are owned by
+[`docs/held-key-enforcement.md`](../../docs/held-key-enforcement.md). The local
+implementation is `src/held-keys/`; its fixture coverage is listed below.
 
 ## Testing
 

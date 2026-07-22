@@ -16,5 +16,9 @@ const result = shellProposeAndApply({
 });
 ```
 
+The round-trip result can report pending or indeterminate journal recovery with a
+`transactionId`. Resolve it through authoring-core's
+`resolveApplyTransaction()` before starting another authoring operation.
+
 Parity with the CLI and web-shell is a conformance test (same operation →
 byte-identical documents), not a habit. Stub only — no native packaging.

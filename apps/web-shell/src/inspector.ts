@@ -1,7 +1,9 @@
 /**
  * Minimal web-shell inspector session — propose → review rendered diff → accept/reject.
  *
- * Human path: proposeEdit() surfaces `renderedDiff`; accept() applies; reject() discards.
+ * Human path: proposeEdit() surfaces `renderedDiff`; accept() applies; reject()
+ * discards. A pending durable transaction blocks new actions until
+ * refreshRecovery() resolves that same transaction.
  * Stub only: no DOM, no hosting, no deployment.
  */
 

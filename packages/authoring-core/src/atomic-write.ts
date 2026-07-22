@@ -203,7 +203,7 @@ function processIdentity(
           "-NoProfile",
           "-NonInteractive",
           "-Command",
-          `(Get-CimInstance Win32_Process -Filter \"ProcessId = ${String(pid)}\").CreationDate`,
+          `(Get-CimInstance Win32_Process -Filter "ProcessId = ${String(pid)}").CreationDate`,
         ],
         { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
       ).trim();
@@ -397,6 +397,19 @@ function clearStaleReclaimWork(lockPath: string): boolean {
   return true;
 }
 
+function cleanReclaimWork(
+  workPath: string,
+  lockPath: string,
+  removed: boolean,
+): void {
+  try {
+    unlinkSync(workPath);
+    syncDirectory(dirname(workPath));
+  } catch {
+    if (removed) throw new AtomicWriteLockError(lockPath);
+  }
+}
+
 function removeStaleLock(lockPath: string): boolean {
   if (
     CURRENT_PROCESS_IDENTITY === null ||
@@ -455,12 +468,20 @@ function removeStaleLock(lockPath: string): boolean {
   } catch {
     return false;
   } finally {
-    try {
-      unlinkSync(workPath);
-      syncDirectory(dirname(workPath));
-    } catch {
-      if (removed) throw new AtomicWriteLockError(lockPath);
-    }
+    cleanReclaimWork(workPath, lockPath, removed);
+  }
+}
+
+function cleanLockCandidate(
+  candidatePath: string,
+  path: string,
+  acquired: boolean,
+): void {
+  try {
+    unlinkSync(candidatePath);
+    syncDirectory(dirname(candidatePath));
+  } catch {
+    if (!acquired) throw new AtomicWriteLockError(path);
   }
 }
 
@@ -511,12 +532,7 @@ function acquireLocks(paths: readonly string[]): readonly HeldLock[] {
           acquired = true;
         }
       } finally {
-        try {
-          unlinkSync(candidatePath);
-          syncDirectory(dirname(candidatePath));
-        } catch {
-          if (!acquired) throw new AtomicWriteLockError(path);
-        }
+        cleanLockCandidate(candidatePath, path, acquired);
       }
       if (!acquired) throw new AtomicWriteLockError(path);
     }

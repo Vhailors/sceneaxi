@@ -18,8 +18,14 @@ const review = session.proposeEdit({
   newValue: 42,
 });
 // review.renderedDiff is what the human sees before accepting
-session.accept(); // apply via authoring-core
+const accepted = session.accept(); // apply via authoring-core
+if (accepted.journalRecoveryPending) session.refreshRecovery();
 ```
+
+The inspector canonicalizes and retains the proposal's project root through
+review and recovery. While journal recovery is pending, it refuses new propose,
+accept, and reject actions; call `refreshRecovery()` until the transaction reaches
+a terminal state.
 
 Non-interactive path (agent parity): `shellProposeAndApply(...)`.
 

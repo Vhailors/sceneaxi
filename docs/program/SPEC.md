@@ -101,7 +101,7 @@ From the user's perspective:
 2. **Packaging:** a core ecosystem monorepo with strict package/app boundaries. Asset catalogs may incubate inside and split later. **Individual game products are never monorepo members** — they are separate repos consuming versioned releases.
 3. **Name:** SceneAxi / `sceneaxi` (captain-resolved key `core-product-name`). Registry-clean on every checked authority as of 2026-07-21; full trademark clearance remains a pre-launch gate (see Further Notes).
 
-### Monorepo package map (landed bootstrap; seam-only, zero engine behavior)
+### Monorepo package map
 
 | Layer | Package / app | Role |
 |---|---|---|
@@ -250,6 +250,5 @@ Good tests here verify **external behavior at contracts and seams**, never imple
 
 - **Transfer linkage:** this issue is the "new product-spec issue set" anchor foreseen by the issue-transfer plan (created after bootstrap landed, labeled `transferred-from: factories-helpers#41`). Per the plan, #41 should receive its single reconciliation comment when transfer authority is exercised; this task had read-only access to factories-helpers, so that comment is **pending** and owned by firstmate under transfer authority — record it when executing the plan.
 - **Naming residuals (pre-launch gates, not re-opened decisions):** full trademark clearance (USPTO/EUIPO class search, common-law, app stores) has not been performed; the "Axi" adjacency (Axi/AxiCorp trading brand, ARM AXI bus, the internal `*-axi` helper-CLI family) needs deliberate brand-copy separation before SceneAxi goes public. Fallback candidates from the verification screen are preserved in the chart should clearance fail.
-- **README staleness:** the landed README's Status section still describes the tree as a "frozen bootstrap draft" applied to an "intentionally empty" repository — true when written, stale now that the tree is main. A small docs refresh (under normal commit/push/merge grants) should update it and may mirror this spec as `docs/program/SPEC.md` with this issue as canonical.
 - **Evidence trail:** Wayfinder chart + map + tickets 01–21, the FAIL→remediation→v4-PASS review chain, checksummed research captures (OpenRouter, DeepSeek V4, CLI patterns, naming), and the issue-transfer plan live in the FirstMate program archive (`data/threejs-bgf-ecosystem-wayfinder-v1*`), outside this repo by design until transfer authority exists.
 - **Benchmark posture:** no competing agent-first creation platform ships an Axi-grade deterministic authoring CLI; CLI v1 acceptance is charted to include an axi.md-style ergonomics benchmark so the claim is earned, not asserted.

@@ -1,8 +1,7 @@
 /**
  * @sceneaxi/schemas — the shared contracts home: the seam vocabulary every
- * workspace package speaks, plus the versioned JSON-schema contracts shipped
- * under contracts/. Domain contracts (documents, sessions, catalog pipeline)
- * arrive under their own tickets.
+ * workspace package speaks, plus the versioned domain and JSON Schema contracts
+ * shipped under contracts/.
  */
 
 export {
