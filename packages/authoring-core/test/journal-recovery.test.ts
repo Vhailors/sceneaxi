@@ -3,6 +3,7 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -10,7 +11,10 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   apply,
+  atomicWriteAll,
+  contentHash,
   createDocument,
+  createProposal,
   propose,
   proposeMany,
   recoverIncompleteApplies,
@@ -222,5 +226,143 @@ describe("E1 apply journal", () => {
     expect(readFileSync(absolutePath, "utf8")).toBe(recoveredBase);
     expect(next.unifiedDiff).toMatch(/^-.*"x": 2/m);
     expect(next.unifiedDiff).toMatch(/^\+.*"x": 3/m);
+  });
+
+  it("validates object proposals before preparing a journal", () => {
+    const cwd = fixtureDir();
+    const invalid = createProposal({ edits: [], diffs: [] });
+
+    const result = apply({ cwd, proposal: invalid });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.diagnostics[0]?.code).toBe("invalid-proposal");
+    expect(readdirSync(cwd)).not.toContain(".sceneaxi");
+  });
+
+  it("rejects aliases for the same canonical proposal target", () => {
+    const cwd = fixtureDir();
+    const absolutePath = join(cwd, "scene.json");
+    expect(
+      writeDocumentFile(
+        absolutePath,
+        createDocument({ id: "scene", data: { x: 1, y: 1 } }),
+      ).ok,
+    ).toBe(true);
+    const proposed = proposeMany([
+      { cwd, documentPath: "scene.json", jsonPointer: "/data/x", newValue: 2 },
+      { cwd, documentPath: "scene.json", jsonPointer: "/data/y", newValue: 2 },
+    ]);
+    expect(proposed.ok).toBe(true);
+    if (!proposed.ok) return;
+    const aliased = {
+      ...proposed.proposal,
+      edits: proposed.proposal.edits.map((edit, index) =>
+        index === 1 ? { ...edit, documentPath: "./scene.json" } : edit,
+      ),
+    };
+
+    const result = apply({ cwd, proposal: aliased });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.diagnostics[0]?.code).toBe("invalid-proposal");
+    expect(JSON.parse(readFileSync(absolutePath, "utf8")).data).toEqual({
+      x: 1,
+      y: 1,
+    });
+  });
+
+  it("does not recover an apply that failed while another writer held the target", () => {
+    const cwd = fixtureDir();
+    const documentPath = "scene.json";
+    const absolutePath = join(cwd, documentPath);
+    expect(
+      writeDocumentFile(
+        absolutePath,
+        createDocument({ id: "scene", data: { x: 1 } }),
+      ).ok,
+    ).toBe(true);
+    const before = readFileSync(absolutePath, "utf8");
+    const proposed = propose({
+      cwd,
+      documentPath,
+      jsonPointer: "/data/x",
+      newValue: 2,
+    });
+    expect(proposed.ok).toBe(true);
+    if (!proposed.ok) return;
+    const lockPath = join(cwd, ".sceneaxi-lock-scene.json");
+    writeFileSync(
+      lockPath,
+      JSON.stringify({ pid: process.pid, token: "external-writer" }),
+      "utf8",
+    );
+
+    const failed = apply({ cwd, proposal: proposed.proposal });
+    expect(failed.ok).toBe(false);
+    if (failed.ok) return;
+    expect(failed.diagnostics[0]?.code).toBe("apply-in-progress");
+    unlinkSync(lockPath);
+
+    const next = propose({
+      cwd,
+      documentPath,
+      jsonPointer: "/data/x",
+      newValue: 3,
+    });
+    expect(next.ok).toBe(true);
+    expect(readFileSync(absolutePath, "utf8")).toBe(before);
+    const journalName = readdirSync(join(cwd, ".sceneaxi", "journal")).find(
+      (name) => name.endsWith(".json"),
+    );
+    expect(journalName).toBeDefined();
+    if (journalName === undefined) return;
+    expect(
+      (
+        JSON.parse(
+          readFileSync(join(cwd, ".sceneaxi", "journal", journalName), "utf8"),
+        ) as { state: string }
+      ).state,
+    ).toBe("aborted");
+  });
+
+  it("checks expected hashes while holding the atomic target lock", () => {
+    const cwd = fixtureDir();
+    const path = join(cwd, "scene.json");
+    writeFileSync(path, "before\n", "utf8");
+
+    expect(() =>
+      atomicWriteAll([
+        {
+          path,
+          contents: "after\n",
+          expectedContentHash: contentHash("different\n"),
+        },
+      ]),
+    ).toThrow(/precondition/i);
+    expect(readFileSync(path, "utf8")).toBe("before\n");
+    expect(contentHash(readFileSync(path, "utf8"))).toBe(contentHash("before\n"));
+  });
+
+  it("rejects invalid JSON Pointer escapes before proposing", () => {
+    const cwd = fixtureDir();
+    expect(
+      writeDocumentFile(
+        join(cwd, "scene.json"),
+        createDocument({ id: "scene", data: { "~2": 1 } }),
+      ).ok,
+    ).toBe(true);
+
+    const result = propose({
+      cwd,
+      documentPath: "scene.json",
+      jsonPointer: "/data/~2",
+      newValue: 2,
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.diagnostics[0]?.code).toBe("invalid-pointer");
   });
 });

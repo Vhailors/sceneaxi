@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   createDocument,
+  type JsonObject,
   writeDocumentFile,
 } from "@sceneaxi/authoring-core";
 import {
@@ -23,7 +24,7 @@ function fixtureDir(): string {
 function writeScene(
   dir: string,
   name: string,
-  data: Record<string, unknown>,
+  data: JsonObject,
 ): void {
   const path = join(dir, name);
   const doc = createDocument({ id: name.replace(/\.json$/, ""), data });
@@ -112,6 +113,31 @@ describe("web-shell protocol client", () => {
 
     const text = readFileSync(join(dir, "scene.json"), "utf8");
     expect(JSON.parse(text).data.n).toBe(1);
+  });
+
+  it("accepts in the working directory used for the pending proposal", () => {
+    const sessionDir = fixtureDir();
+    const proposalDir = fixtureDir();
+    writeScene(sessionDir, "scene.json", { n: 1 });
+    writeScene(proposalDir, "scene.json", { n: 10 });
+    const session = createInspectorSession({ cwd: sessionDir });
+
+    const reviewing = session.proposeEdit({
+      cwd: proposalDir,
+      documentPath: "scene.json",
+      jsonPointer: "/data/n",
+      newValue: 20,
+    });
+    expect(reviewing.phase).toBe("reviewing");
+    const applied = session.accept();
+
+    expect(applied.phase).toBe("applied");
+    expect(JSON.parse(readFileSync(join(sessionDir, "scene.json"), "utf8")).data.n).toBe(
+      1,
+    );
+    expect(JSON.parse(readFileSync(join(proposalDir, "scene.json"), "utf8")).data.n).toBe(
+      20,
+    );
   });
 
   it("shellProposeAndApply completes a full round-trip", () => {

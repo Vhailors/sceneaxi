@@ -143,7 +143,8 @@ export type TransitionRefuse = {
     | "missing-human-verdict"
     | "human-verdict-rejected"
     | "missing-mandatory-metadata"
-    | "invalid-human-verdict";
+    | "invalid-human-verdict"
+    | "invalid-moderation-history";
   readonly message: string;
 };
 
@@ -223,7 +224,10 @@ function validateHumanVerdict(
       message: "Human verdict requires non-empty curatorId and rationale.",
     };
   }
-  if (!nonEmptyString(verdict.recordedAt)) {
+  if (
+    !nonEmptyString(verdict.recordedAt) ||
+    !Number.isFinite(Date.parse(verdict.recordedAt))
+  ) {
     return {
       ok: false,
       code: "invalid-human-verdict",
@@ -243,6 +247,75 @@ function validateHumanVerdict(
       code: "invalid-human-verdict",
       message: "Human verdict decision must be approve or reject.",
     };
+  }
+  return null;
+}
+
+const REQUIRED_HISTORY: Readonly<
+  Record<PipelineState, readonly (readonly [PipelineState, PipelineState])[]>
+> = Object.freeze({
+  intake: [],
+  screening: [["intake", "screening"]],
+  curation: [
+    ["intake", "screening"],
+    ["screening", "curation"],
+  ],
+  listed: [
+    ["intake", "screening"],
+    ["screening", "curation"],
+    ["curation", "listed"],
+  ],
+  delisted: [
+    ["intake", "screening"],
+    ["screening", "curation"],
+    ["curation", "listed"],
+    ["listed", "delisted"],
+  ],
+});
+
+function validateModerationHistory(item: CatalogItem): TransitionRefuse | null {
+  const required = REQUIRED_HISTORY[item.moderation.pipelineState];
+  if (item.moderation.history.length !== required.length) {
+    return {
+      ok: false,
+      code: "invalid-moderation-history",
+      message: `Moderation history does not prove the path to ${item.moderation.pipelineState}.`,
+    };
+  }
+  for (let index = 0; index < required.length; index += 1) {
+    const expected = required[index];
+    const record = item.moderation.history[index];
+    if (
+      expected === undefined ||
+      record === undefined ||
+      record.from !== expected[0] ||
+      record.to !== expected[1] ||
+      !nonEmptyString(record.reason) ||
+      !nonEmptyString(record.at) ||
+      !Number.isFinite(Date.parse(record.at))
+    ) {
+      return {
+        ok: false,
+        code: "invalid-moderation-history",
+        message: `Moderation history record ${String(index)} is invalid or out of sequence.`,
+      };
+    }
+    if (record.to === "listed") {
+      const verdictError = validateHumanVerdict(record.humanVerdict);
+      if (verdictError !== null) {
+        return {
+          ok: false,
+          code: "invalid-moderation-history",
+          message: "Moderation history lacks a valid human approval for listing.",
+        };
+      }
+    } else if (record.humanVerdict !== undefined) {
+      return {
+        ok: false,
+        code: "invalid-moderation-history",
+        message: "Human curation verdicts may only be recorded on listing transitions.",
+      };
+    }
   }
   return null;
 }
@@ -275,6 +348,9 @@ export function transitionCatalogItem(
     };
   }
 
+  const historyError = validateModerationHistory(item);
+  if (historyError !== null) return historyError;
+
   // Leaving quarantine: screening requires mandatory metadata.
   if (from === "intake" && to === "screening") {
     const missing = missingMandatoryMetadata(item);
@@ -288,7 +364,10 @@ export function transitionCatalogItem(
   }
 
   // Screening → curation also re-checks metadata (no silent drift).
-  if (from === "screening" && to === "curation") {
+  if (
+    (from === "screening" && to === "curation") ||
+    (from === "curation" && to === "listed")
+  ) {
     const missing = missingMandatoryMetadata(item);
     if (missing.length > 0) {
       return {
@@ -307,6 +386,13 @@ export function transitionCatalogItem(
   }
 
   const at = request.at ?? new Date().toISOString();
+  if (!Number.isFinite(Date.parse(at))) {
+    return {
+      ok: false,
+      code: "invalid-moderation-history",
+      message: "Pipeline transition timestamp must be a valid date-time.",
+    };
+  }
   const transition: TransitionRecord =
     humanVerdict === undefined
       ? { from, to, reason, at }

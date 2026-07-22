@@ -15,7 +15,7 @@ import type {
   KernelSnapshot,
   ProductManifest,
 } from "./kernel-session.js";
-import type { SceneDocument } from "./document.js";
+import type { JsonObject, SceneDocument } from "./document.js";
 import type { ApplyResult, Proposal } from "./proposal.js";
 
 /** Contract major version (schema const). */
@@ -124,7 +124,7 @@ export type ProfileCoreKernel = {
 export type ProfileCoreAuthoring = {
   readonly createDocument: (input: {
     readonly id: string;
-    readonly data?: Readonly<Record<string, unknown>>;
+    readonly data?: JsonObject;
     readonly title?: string;
   }) => SceneDocument;
   readonly serializeDocument: (document: SceneDocument) => string;

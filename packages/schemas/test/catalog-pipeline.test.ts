@@ -221,6 +221,55 @@ describe("fail-closed catalog pipeline state machine", () => {
     if (!reject.ok) expect(reject.code).toBe("human-verdict-rejected");
   });
 
+  it("refuses listing when curation history is missing", () => {
+    const forged: CatalogItem = {
+      ...syntheticAsset(),
+      moderation: { pipelineState: "curation", history: [] },
+    };
+
+    const result = transitionCatalogItem(forged, {
+      to: "listed",
+      reason: "attempt forged listing",
+      humanVerdict: approveVerdict(),
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("invalid-moderation-history");
+  });
+
+  it("rechecks mandatory metadata at the listing boundary", () => {
+    const intake = syntheticAsset();
+    const screening = transitionCatalogItem(intake, {
+      to: "screening",
+      reason: "screened",
+      at: "2026-07-21T10:00:00.000Z",
+    });
+    expect(screening.ok).toBe(true);
+    if (!screening.ok) return;
+    const curation = transitionCatalogItem(screening.item, {
+      to: "curation",
+      reason: "curated",
+      at: "2026-07-21T11:00:00.000Z",
+    });
+    expect(curation.ok).toBe(true);
+    if (!curation.ok) return;
+    const drifted: CatalogItem = {
+      ...curation.item,
+      rights: { ...curation.item.rights, license: "" },
+    };
+
+    const result = transitionCatalogItem(drifted, {
+      to: "listed",
+      reason: "attempt listing after metadata drift",
+      humanVerdict: approveVerdict(),
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("missing-mandatory-metadata");
+  });
+
   it("refuses when mandatory metadata is missing", () => {
     const incomplete = syntheticAsset({
       rights: { license: "", rightsHolder: "X", commercialUseAllowed: false },

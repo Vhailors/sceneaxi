@@ -10,12 +10,18 @@ export const DOCUMENT_SCHEMA_VERSION = 1 as const;
 
 export const DOCUMENT_KIND = "sceneaxi.document" as const;
 
+export type JsonPrimitive = null | boolean | number | string;
+export interface JsonObject {
+  readonly [key: string]: JsonValue;
+}
+export type JsonValue = JsonPrimitive | JsonObject | readonly JsonValue[];
+
 export type SceneDocument = {
   readonly schemaVersion: typeof DOCUMENT_SCHEMA_VERSION;
   readonly kind: typeof DOCUMENT_KIND;
   readonly id: string;
   readonly title?: string;
-  readonly data: Readonly<Record<string, unknown>>;
+  readonly data: JsonObject;
 };
 
 export type DocumentValidationOk = {
@@ -39,6 +45,74 @@ export type DocumentValidationResult =
   | DocumentValidationRefuse;
 
 const ID_RE = /^[a-z0-9][a-z0-9-]*$/;
+
+export function isJsonValue(value: unknown): value is JsonValue {
+  return isJsonValueInner(value, new Set<object>());
+}
+
+export function isJsonObject(value: unknown): value is JsonObject {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    isJsonValue(value)
+  );
+}
+
+function isJsonValueInner(
+  value: unknown,
+  ancestors: Set<object>,
+): value is JsonValue {
+  if (value === null || typeof value === "string" || typeof value === "boolean") {
+    return true;
+  }
+  if (typeof value === "number") return Number.isFinite(value);
+  if (typeof value !== "object") return false;
+  if (ancestors.has(value)) return false;
+
+  ancestors.add(value);
+  try {
+    if (Array.isArray(value)) {
+      const ownKeys = Reflect.ownKeys(value);
+      if (
+        ownKeys.some(
+          (key) =>
+            key !== "length" &&
+            (typeof key !== "string" || !/^(0|[1-9][0-9]*)$/.test(key)),
+        )
+      ) {
+        return false;
+      }
+      for (let index = 0; index < value.length; index += 1) {
+        if (
+          !Object.hasOwn(value, index) ||
+          !isJsonValueInner(value[index], ancestors)
+        ) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    const prototype = Object.getPrototypeOf(value) as unknown;
+    if (prototype !== Object.prototype && prototype !== null) return false;
+    for (const key of Reflect.ownKeys(value)) {
+      if (typeof key !== "string") return false;
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (
+        descriptor === undefined ||
+        !descriptor.enumerable ||
+        !("value" in descriptor) ||
+        !isJsonValueInner(descriptor.value, ancestors)
+      ) {
+        return false;
+      }
+    }
+    return true;
+  } finally {
+    ancestors.delete(value);
+  }
+}
 
 /**
  * Validate an unknown value as a SceneAxi document.
@@ -99,7 +173,7 @@ export function validateDocument(value: unknown): DocumentValidationResult {
   }
 
   const data = raw["data"];
-  if (data === null || typeof data !== "object" || Array.isArray(data)) {
+  if (!isJsonObject(data)) {
     return {
       ok: false,
       code: "invalid-document",
@@ -133,13 +207,13 @@ export function validateDocument(value: unknown): DocumentValidationResult {
           kind: DOCUMENT_KIND,
           id,
           title: raw["title"],
-          data: data as Readonly<Record<string, unknown>>,
+          data,
         }
       : {
           schemaVersion: DOCUMENT_SCHEMA_VERSION,
           kind: DOCUMENT_KIND,
           id,
-          data: data as Readonly<Record<string, unknown>>,
+          data,
         };
 
   return { ok: true, document };
@@ -172,7 +246,7 @@ export function serializeDocument(document: SceneDocument): string {
 /** Build a valid v1 document (factory for fixtures and direct edits). */
 export function createDocument(input: {
   readonly id: string;
-  readonly data?: Readonly<Record<string, unknown>>;
+  readonly data?: JsonObject;
   readonly title?: string;
 }): SceneDocument {
   return input.title === undefined

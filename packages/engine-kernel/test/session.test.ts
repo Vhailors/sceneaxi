@@ -116,6 +116,27 @@ describe("KernelSession — command/snapshot seam", () => {
     expect(session.observe().digest).toBe(before);
   });
 
+  it("validates actor state across the pending batch at dispatch", () => {
+    const session = open(manifest, fixedHost());
+    const before = session.observe();
+
+    expect(() =>
+      session.dispatch({ type: "move", actor: "missing", axis: [1, 0] }),
+    ).toThrow(/does not exist/i);
+    session.dispatch({ type: "spawn", actor: "npc", position: [2, 3] });
+    session.dispatch({ type: "move", actor: "npc", axis: [1, 0] });
+    expect(() =>
+      session.dispatch({ type: "spawn", actor: "npc", position: [9, 9] }),
+    ).toThrow(/already exists/i);
+    expect(session.observe()).toEqual(before);
+
+    session.advance({ tick: 1, deltaMs: 16 });
+    expect(session.observe().entities).toEqual([
+      { id: "npc", x: 3, y: 3 },
+      { id: "player", x: 0, y: 0 },
+    ]);
+  });
+
   it("produces identical digests across independent runs of the same sequence", () => {
     const a = runSequence(fixedHost(500));
     const b = runSequence(fixedHost(9000));
@@ -171,6 +192,38 @@ describe("KernelSession — command/snapshot seam", () => {
     expect(() =>
       replay({ ...artifact, schemaVersion: 0 }, fixedHost()),
     ).toThrow(/schema|mismatch|version/i);
+  });
+
+  it("refuses replay artifacts with invalid required integrity fields", () => {
+    const session = open(manifest, fixedHost());
+    session.advance({ tick: 1, deltaMs: 0 });
+    const artifact = session.save();
+
+    expect(() =>
+      replay(
+        { ...artifact, terminalDigest: undefined as unknown as string },
+        fixedHost(),
+      ),
+    ).toThrow(/terminalDigest/i);
+    expect(() =>
+      replay({ ...artifact, terminalDigest: "not-a-digest" }, fixedHost()),
+    ).toThrow(/terminalDigest/i);
+    expect(() =>
+      replay({ ...artifact, kernelVersion: "latest" }, fixedHost()),
+    ).toThrow(/kernelVersion|bomVersion/i);
+
+    const dispatching = open(manifest, fixedHost());
+    dispatching.dispatch({ type: "move", actor: "player", axis: [1, 0] });
+    dispatching.advance({ tick: 1, deltaMs: 1 });
+    const withDispatch = dispatching.save();
+    const events = withDispatch.events.map((event) =>
+      event.kind === "dispatch"
+        ? { ...event, timestampMs: Number.NaN }
+        : event,
+    );
+    expect(() => replay({ ...withDispatch, events }, fixedHost())).toThrow(
+      /timestampMs/i,
+    );
   });
 
   it("digest is a canonical sha256 over sorted entity state", () => {

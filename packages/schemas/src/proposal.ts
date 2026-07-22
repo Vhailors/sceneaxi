@@ -7,6 +7,8 @@
 
 import {
   DOCUMENT_SCHEMA_VERSION,
+  isJsonValue,
+  type JsonValue,
   type SceneDocument,
 } from "./document.js";
 
@@ -22,8 +24,8 @@ export type ProposalEdit = {
   readonly documentPath: string;
   readonly baseContentHash: string;
   readonly jsonPointer: string;
-  readonly oldValue: unknown;
-  readonly newValue: unknown;
+  readonly oldValue: JsonValue;
+  readonly newValue: JsonValue;
 };
 
 export type ProposalDiff = {
@@ -98,6 +100,12 @@ function validateEdit(
     return {
       ok: false,
       message: `edits[${index}] requires oldValue and newValue.`,
+    };
+  }
+  if (!isJsonValue(value["oldValue"]) || !isJsonValue(value["newValue"])) {
+    return {
+      ok: false,
+      message: `edits[${index}].oldValue and newValue must be JSON values.`,
     };
   }
   const known = new Set([
@@ -308,7 +316,9 @@ export type ApplyDiagnosticCode =
   | "parse-error"
   | "journal-invalid"
   | "journal-not-found"
-  | "journal-conflict";
+  | "journal-conflict"
+  | "apply-failed"
+  | "apply-in-progress";
 
 export type ApplyDiagnostic = {
   readonly code: ApplyDiagnosticCode;

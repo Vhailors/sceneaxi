@@ -14,6 +14,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   createDocument,
+  type JsonObject,
   writeDocumentFile,
 } from "../../packages/authoring-core/src/index.ts";
 import { ExitCode, runCli } from "../../packages/cli/src/index.ts";
@@ -30,7 +31,7 @@ function fixtureDir(label: string): string {
 function writeScene(
   dir: string,
   name: string,
-  data: Record<string, unknown>,
+  data: JsonObject,
 ): void {
   const path = join(dir, name);
   const doc = createDocument({ id: name.replace(/\.json$/, ""), data });

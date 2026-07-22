@@ -40,6 +40,8 @@ export {
   DOCUMENT_KIND,
   DOCUMENT_SCHEMA_VERSION,
   createDocument,
+  isJsonObject,
+  isJsonValue,
   parseDocumentText,
   serializeDocument,
   validateDocument,
@@ -48,6 +50,9 @@ export type {
   DocumentValidationOk,
   DocumentValidationRefuse,
   DocumentValidationResult,
+  JsonObject,
+  JsonPrimitive,
+  JsonValue,
   SceneDocument,
 } from "./document.js";
 

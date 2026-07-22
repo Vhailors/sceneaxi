@@ -13,6 +13,7 @@ import {
   serializeDocument,
   writeDocumentFile,
   writeProposalFile,
+  type JsonObject,
 } from "@sceneaxi/authoring-core";
 import { ExitCode, runCli } from "@sceneaxi/cli";
 
@@ -23,7 +24,7 @@ function fixtureDir(): string {
 function writeScene(
   dir: string,
   name: string,
-  data: Record<string, unknown>,
+  data: JsonObject,
 ): string {
   const path = join(dir, name);
   const doc = createDocument({ id: name.replace(/\.json$/, ""), data });

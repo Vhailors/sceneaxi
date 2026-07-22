@@ -15,13 +15,19 @@ import {
   serializeDocument,
   serializeProposal,
   validateDocument,
+  validateProposal,
+  isJsonValue,
   type ApplyDiagnostic,
   type ApplyResult,
   type Proposal,
   type ProposalEdit,
+  type JsonValue,
   type SceneDocument,
 } from "@sceneaxi/schemas";
 import {
+  AtomicWriteConflictError,
+  AtomicWriteError,
+  AtomicWriteLockError,
   atomicWriteAll,
   atomicWriteFile,
   fileExists,
@@ -31,6 +37,7 @@ import { contentHash } from "./content-hash.js";
 import { getAtPointer, setAtPointer } from "./json-pointer.js";
 import { unifiedDiff } from "./unified-diff.js";
 import {
+  abortApplyJournal,
   completeApplyJournal,
   prepareApplyJournal,
   recoverIncompleteApplies,
@@ -146,6 +153,17 @@ export function applyPointerEditInMemory(
 ):
   | { ok: true; document: SceneDocument; text: string }
   | { ok: false; diagnostics: ApplyDiagnostic[] } {
+  if (!isJsonValue(newValue)) {
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          code: "validation-failed",
+          message: "Edited values must be finite, acyclic JSON values.",
+        },
+      ],
+    };
+  }
   const setResult = setAtPointer(document, jsonPointer, newValue);
   if (!setResult.ok) {
     return {
@@ -208,6 +226,18 @@ export function propose(input: ProposeInput): ProposeResult {
       ],
     };
   }
+  if (!isJsonValue(oldAt.value)) {
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          code: "invalid-document",
+          message: "Existing document value is not valid JSON.",
+          documentPath: input.documentPath,
+        },
+      ],
+    };
+  }
 
   const mutated = applyPointerEditInMemory(
     loaded.document,
@@ -230,7 +260,7 @@ export function propose(input: ProposeInput): ProposeResult {
     baseContentHash: loaded.hash,
     jsonPointer: input.jsonPointer,
     oldValue: oldAt.value,
-    newValue: input.newValue,
+    newValue: input.newValue as JsonValue,
   };
 
   const diffText = unifiedDiff(loaded.text, mutated.text, {
@@ -276,20 +306,23 @@ export function proposeMany(inputs: readonly ProposeInput[]): ProposeResult {
   const workingText = new Map<string, string>();
   const baseHash = new Map<string, string>();
   const baseText = new Map<string, string>();
+  const displayPath = new Map<string, string>();
 
   for (const input of inputs) {
     const abs = resolvePath(input.cwd ?? cwd, input.documentPath);
-    let text = workingText.get(input.documentPath);
-    let hash = baseHash.get(input.documentPath);
+    const documentPath = displayPath.get(abs) ?? input.documentPath;
+    displayPath.set(abs, documentPath);
+    let text = workingText.get(abs);
+    let hash = baseHash.get(abs);
 
     if (text === undefined) {
-      const loaded = loadDocument(abs, input.documentPath);
+      const loaded = loadDocument(abs, documentPath);
       if (!loaded.ok) return loaded;
       text = loaded.text;
       hash = loaded.hash;
-      workingText.set(input.documentPath, text);
-      baseHash.set(input.documentPath, hash);
-      baseText.set(input.documentPath, text);
+      workingText.set(abs, text);
+      baseHash.set(abs, hash);
+      baseText.set(abs, text);
     }
 
     const parsed = parseDocumentText(text);
@@ -303,7 +336,7 @@ export function proposeMany(inputs: readonly ProposeInput[]): ProposeResult {
                 ? "schema-major-mismatch"
                 : "invalid-document",
             message: parsed.message,
-            documentPath: input.documentPath,
+            documentPath,
           },
         ],
       };
@@ -317,7 +350,19 @@ export function proposeMany(inputs: readonly ProposeInput[]): ProposeResult {
           {
             code: "invalid-pointer",
             message: oldAt.message,
-            documentPath: input.documentPath,
+            documentPath,
+          },
+        ],
+      };
+    }
+    if (!isJsonValue(oldAt.value)) {
+      return {
+        ok: false,
+        diagnostics: [
+          {
+            code: "invalid-document",
+            message: "Existing document value is not valid JSON.",
+            documentPath,
           },
         ],
       };
@@ -333,7 +378,7 @@ export function proposeMany(inputs: readonly ProposeInput[]): ProposeResult {
         ok: false,
         diagnostics: mutated.diagnostics.map((d) =>
           d.documentPath === undefined
-            ? { ...d, documentPath: input.documentPath }
+            ? { ...d, documentPath }
             : d,
         ),
       };
@@ -345,26 +390,27 @@ export function proposeMany(inputs: readonly ProposeInput[]): ProposeResult {
         diagnostics: [
           {
             code: "invalid-document",
-            message: `Missing base hash for ${input.documentPath}`,
-            documentPath: input.documentPath,
+            message: `Missing base hash for ${documentPath}`,
+            documentPath,
           },
         ],
       };
     }
 
     edits.push({
-      documentPath: input.documentPath,
+      documentPath,
       baseContentHash: hash,
       jsonPointer: input.jsonPointer,
       oldValue: oldAt.value,
-      newValue: input.newValue,
+      newValue: input.newValue as JsonValue,
     });
 
-    workingText.set(input.documentPath, mutated.text);
+    workingText.set(abs, mutated.text);
   }
 
-  for (const [documentPath, finalText] of workingText) {
-    const original = baseText.get(documentPath) ?? "";
+  for (const [abs, finalText] of workingText) {
+    const documentPath = displayPath.get(abs) ?? abs;
+    const original = baseText.get(abs) ?? "";
     diffsByPath.set(
       documentPath,
       unifiedDiff(original, finalText, {
@@ -414,7 +460,40 @@ export function editDirect(input: DirectEditInput): DirectEditResult {
     };
   }
 
-  atomicWriteFile(abs, mutated.text);
+  try {
+    atomicWriteFile(abs, mutated.text, {
+      expectedContentHash: loaded.hash,
+    });
+  } catch (error) {
+    if (error instanceof AtomicWriteConflictError) {
+      const current = error.currentContentHash ?? "missing";
+      return {
+        ok: false,
+        diagnostics: [
+          {
+            code: "content-hash-conflict",
+            message: `Content hash mismatch for ${input.documentPath}: expected ${loaded.hash}, current ${current}.`,
+            documentPath: input.documentPath,
+            reReadHint: `Re-read ${input.documentPath} before retrying the direct edit.`,
+          },
+        ],
+      };
+    }
+    if (error instanceof AtomicWriteLockError) {
+      return {
+        ok: false,
+        diagnostics: [
+          {
+            code: "apply-in-progress",
+            message: `Another write is already in progress for ${input.documentPath}.`,
+            documentPath: input.documentPath,
+            reReadHint: `Retry after the active writer completes, then re-read ${input.documentPath}.`,
+          },
+        ],
+      };
+    }
+    throw error;
+  }
   return {
     ok: true,
     documentPath: input.documentPath,
@@ -491,15 +570,48 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
       proposal = parsed.proposal;
     }
   } else {
-    proposal = input.proposal;
+    const parsed = validateProposal(input.proposal);
+    if (!parsed.ok) {
+      return {
+        ok: false,
+        diagnostics: [
+          {
+            code:
+              parsed.code === "schema-major-mismatch"
+                ? "schema-major-mismatch"
+                : "invalid-proposal",
+            message: parsed.message,
+          },
+        ],
+      };
+    }
+    proposal = parsed.proposal;
   }
 
-  // Group edits by document path while preserving order within each document.
-  const byDoc = new Map<string, ProposalEdit[]>();
+  const byDoc = new Map<
+    string,
+    { readonly documentPath: string; readonly edits: ProposalEdit[] }
+  >();
   for (const edit of proposal.edits) {
-    const list = byDoc.get(edit.documentPath) ?? [];
-    list.push(edit);
-    byDoc.set(edit.documentPath, list);
+    const abs = resolvePath(cwd, edit.documentPath);
+    const existing = byDoc.get(abs);
+    if (existing !== undefined && existing.documentPath !== edit.documentPath) {
+      return {
+        ok: false,
+        diagnostics: [
+          {
+            code: "invalid-proposal",
+            message: `Proposal aliases one canonical document as both ${existing.documentPath} and ${edit.documentPath}.`,
+            documentPath: edit.documentPath,
+          },
+        ],
+      };
+    }
+    if (existing === undefined) {
+      byDoc.set(abs, { documentPath: edit.documentPath, edits: [edit] });
+    } else {
+      existing.edits.push(edit);
+    }
   }
 
   const plans: Array<{
@@ -507,10 +619,11 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
     contents: string;
     beforeContent: string;
     documentPath: string;
+    expectedContentHash: string;
   }> = [];
 
-  for (const [documentPath, edits] of byDoc) {
-    const abs = resolvePath(cwd, documentPath);
+  for (const [abs, grouped] of byDoc) {
+    const { documentPath, edits } = grouped;
     const loaded = loadDocument(abs, documentPath);
     if (!loaded.ok) return loaded;
 
@@ -597,6 +710,7 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
       contents: serializeDocument(current),
       beforeContent: loaded.text,
       documentPath,
+      expectedContentHash: loaded.hash,
     });
   }
 
@@ -610,11 +724,73 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
     })),
   );
 
-  // All-or-nothing atomic write across every touched document.
-  atomicWriteAll(
-    plans.map((p) => ({ path: p.path, contents: p.contents })),
-    { token: journal.transactionId },
-  );
+  try {
+    atomicWriteAll(
+      plans.map((plan) => ({
+        path: plan.path,
+        contents: plan.contents,
+        expectedContentHash: plan.expectedContentHash,
+      })),
+      { token: journal.transactionId },
+    );
+  } catch (error) {
+    if (error instanceof AtomicWriteError && !error.rollbackComplete) {
+      const recovered = recoverIncompleteApplies({ cwd });
+      if (
+        recovered.ok &&
+        recovered.transactionIds.includes(journal.transactionId)
+      ) {
+        return {
+          ok: true,
+          appliedPaths: plans.map((plan) => plan.documentPath),
+        };
+      }
+      if (!recovered.ok) return recovered;
+    }
+
+    abortApplyJournal(cwd, journal);
+    if (error instanceof AtomicWriteConflictError) {
+      const plan = plans.find((candidate) => candidate.path === error.path);
+      const documentPath = plan?.documentPath ?? error.path;
+      const current = error.currentContentHash ?? "missing";
+      return {
+        ok: false,
+        diagnostics: [
+          {
+            code: "content-hash-conflict",
+            message: `Content hash mismatch for ${documentPath}: proposal base ${error.expectedContentHash}, current ${current}.`,
+            documentPath,
+            reReadHint: `Re-read ${documentPath} and re-propose against current content.`,
+          },
+        ],
+      };
+    }
+    if (error instanceof AtomicWriteLockError) {
+      const plan = plans.find((candidate) => candidate.path === error.path);
+      return {
+        ok: false,
+        diagnostics: [
+          {
+            code: "apply-in-progress",
+            message: `Another write is already in progress for ${plan?.documentPath ?? error.path}.`,
+            ...(plan === undefined ? {} : { documentPath: plan.documentPath }),
+            reReadHint:
+              "Retry after the active writer completes, then re-read every proposed document.",
+          },
+        ],
+      };
+    }
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          code: "apply-failed",
+          message: "The apply failed and its canonical writes were rolled back.",
+          reReadHint: "Re-read every proposed document before retrying.",
+        },
+      ],
+    };
+  }
   completeApplyJournal(cwd, journal);
 
   return {

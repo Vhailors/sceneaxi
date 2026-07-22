@@ -66,6 +66,28 @@ describe("document contract", () => {
       }).ok,
     ).toBe(false);
   });
+
+  it("refuses non-JSON values and cycles anywhere in document data", () => {
+    const cyclic: Record<string, unknown> = {};
+    cyclic["self"] = cyclic;
+    const invalidValues: unknown[] = [
+      { value: undefined },
+      { value: 1n },
+      { value: Number.NaN },
+      { value: () => 1 },
+      cyclic,
+    ];
+
+    for (const data of invalidValues) {
+      const result = validateDocument({
+        schemaVersion: 1,
+        kind: DOCUMENT_KIND,
+        id: "invalid-json",
+        data,
+      });
+      expect(result.ok).toBe(false);
+    }
+  });
 });
 
 describe("proposal contract", () => {
@@ -130,6 +152,26 @@ describe("proposal contract", () => {
       diffs: [{ documentPath: "a.json", unifiedDiff: "" }],
     });
     expect(badHash.ok).toBe(false);
+  });
+
+  it("refuses proposal edit values outside the JSON domain", () => {
+    const result = validateProposal({
+      schemaVersion: 1,
+      kind: PROPOSAL_KIND,
+      edits: [
+        {
+          documentPath: "a.json",
+          baseContentHash:
+            "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          jsonPointer: "/data/x",
+          oldValue: 0,
+          newValue: undefined,
+        },
+      ],
+      diffs: [{ documentPath: "a.json", unifiedDiff: "" }],
+    });
+
+    expect(result.ok).toBe(false);
   });
 
   it("registers document and proposal contracts on the public contracts map", () => {

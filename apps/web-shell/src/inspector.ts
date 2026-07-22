@@ -44,6 +44,7 @@ export function createInspectorSession(options: {
   let unifiedDiff: string | null = null;
   let renderedDiff: string | null = null;
   let proposal: Proposal | null = null;
+  let pendingCwd: string | undefined;
   let appliedPaths: readonly string[] | null = null;
   let diagnostics: readonly ApplyDiagnostic[] | null = null;
 
@@ -71,6 +72,7 @@ export function createInspectorSession(options: {
         unifiedDiff = null;
         renderedDiff = null;
         proposal = null;
+        pendingCwd = undefined;
         appliedPaths = null;
         diagnostics = result.diagnostics;
         return snap();
@@ -79,6 +81,7 @@ export function createInspectorSession(options: {
       unifiedDiff = result.unifiedDiff;
       renderedDiff = result.renderedDiff;
       proposal = result.proposal;
+      pendingCwd = cwd;
       appliedPaths = null;
       diagnostics = null;
       return snap();
@@ -95,7 +98,7 @@ export function createInspectorSession(options: {
         ];
         return snap();
       }
-      const cwd = options.cwd;
+      const cwd = pendingCwd;
       const result = shellApply({
         proposal,
         ...(cwd !== undefined ? { cwd } : {}),
@@ -117,6 +120,7 @@ export function createInspectorSession(options: {
       unifiedDiff = null;
       renderedDiff = null;
       proposal = null;
+      pendingCwd = undefined;
       appliedPaths = null;
       diagnostics = null;
       return snap();

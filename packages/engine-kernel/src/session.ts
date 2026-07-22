@@ -20,6 +20,10 @@ export const KERNEL_VERSION = "0.0.0";
 /** Core-train BOM version stamped into save artifacts. */
 export const BOM_VERSION = "0.0.0";
 
+const VERSION_RE = /^[0-9]+\.[0-9]+\.[0-9]+$/;
+const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
+const ID_RE = /^[a-z0-9][a-z0-9-]*$/;
+
 /** Host services injected at open/replay — clock only for command timestamps. */
 export interface KernelHost {
   readonly nowMs: () => number;
@@ -72,17 +76,31 @@ export function replay(
       `schema major mismatch: artifact schemaVersion ${String(artifact.schemaVersion)} !== ${String(KERNEL_SESSION_SCHEMA_VERSION)}`,
     );
   }
-  if (typeof artifact.kernelVersion !== "string" || typeof artifact.bomVersion !== "string") {
-    throw new KernelSessionError("save artifact missing kernelVersion or bomVersion");
+  if (
+    typeof artifact.kernelVersion !== "string" ||
+    !VERSION_RE.test(artifact.kernelVersion) ||
+    typeof artifact.bomVersion !== "string" ||
+    !VERSION_RE.test(artifact.bomVersion)
+  ) {
+    throw new KernelSessionError("save artifact has invalid kernelVersion or bomVersion");
   }
   if (!Array.isArray(artifact.events)) {
     throw new KernelSessionError("save artifact missing events");
   }
   validateManifest(artifact.productManifest);
+  if (
+    typeof artifact.terminalDigest !== "string" ||
+    !DIGEST_RE.test(artifact.terminalDigest)
+  ) {
+    throw new KernelSessionError("save artifact has invalid terminalDigest");
+  }
 
   const session = new SessionImpl(cloneManifest(artifact.productManifest), host, []);
 
   for (const event of artifact.events) {
+    if (!event || typeof event !== "object") {
+      throw new KernelSessionError("invalid save artifact event");
+    }
     if (event.kind === "dispatch") {
       session.dispatchRecorded(event.command, event.timestampMs);
     } else if (event.kind === "advance") {
@@ -93,10 +111,7 @@ export function replay(
   }
 
   const terminal = session.observe().digest;
-  if (
-    typeof artifact.terminalDigest === "string" &&
-    artifact.terminalDigest !== terminal
-  ) {
+  if (artifact.terminalDigest !== terminal) {
     throw new KernelSessionError(
       `replay digest mismatch: expected ${artifact.terminalDigest}, got ${terminal}`,
     );
@@ -112,7 +127,11 @@ function validateHost(host: KernelHost): void {
 }
 
 function validateManifest(manifest: ProductManifest): void {
-  if (!manifest || typeof manifest.productId !== "string" || manifest.productId.length === 0) {
+  if (
+    !manifest ||
+    typeof manifest.productId !== "string" ||
+    !ID_RE.test(manifest.productId)
+  ) {
     throw new KernelSessionError("productManifest.productId is required");
   }
   if (!Number.isInteger(manifest.seed)) {
@@ -124,7 +143,7 @@ function validateManifest(manifest: ProductManifest): void {
     }
     const seen = new Set<string>();
     for (const e of manifest.entities) {
-      if (!e || typeof e.id !== "string" || e.id.length === 0) {
+      if (!e || typeof e.id !== "string" || !ID_RE.test(e.id)) {
         throw new KernelSessionError("entity id is required");
       }
       if (seen.has(e.id)) {
@@ -251,7 +270,7 @@ export function computeDigest(
 class SessionImpl implements KernelSession {
   private readonly manifest: ProductManifest;
   private readonly host: KernelHost;
-  private readonly entities: Map<string, MutableEntity>;
+  private entities: Map<string, MutableEntity>;
   private readonly pending: PendingDispatch[] = [];
   private readonly events: KernelSessionEvent[] = [];
   private tick = 0;
@@ -276,7 +295,11 @@ class SessionImpl implements KernelSession {
   }
 
   dispatchRecorded(command: KernelCommand, timestampMs: number): void {
+    if (!Number.isInteger(timestampMs)) {
+      throw new KernelSessionError("dispatch timestampMs must be an integer");
+    }
     const validated = validateCommand(command);
+    this.validateCommandState(validated);
     this.pending.push({ command: validated, timestampMs });
     this.events.push(
       Object.freeze({
@@ -289,9 +312,13 @@ class SessionImpl implements KernelSession {
 
   advance(clock: FrameClock): void {
     const validatedClock = validateClock(clock, this.tick);
+    const nextEntities = new Map(
+      [...this.entities].map(([id, entity]) => [id, { ...entity }]),
+    );
     for (const item of this.pending) {
-      this.applyCommand(item.command);
+      this.applyCommand(nextEntities, item.command);
     }
+    this.entities = nextEntities;
     this.pending.length = 0;
     this.tick = validatedClock.tick;
     this.events.push(
@@ -302,9 +329,29 @@ class SessionImpl implements KernelSession {
     );
   }
 
-  private applyCommand(command: KernelCommand): void {
+  private validateCommandState(command: KernelCommand): void {
+    const actorIds = new Set(this.entities.keys());
+    for (const item of this.pending) {
+      if (item.command.type === "spawn") actorIds.add(item.command.actor);
+    }
+    if (command.type === "move" && !actorIds.has(command.actor)) {
+      throw new KernelSessionError(
+        `move target actor "${command.actor}" does not exist`,
+      );
+    }
+    if (command.type === "spawn" && actorIds.has(command.actor)) {
+      throw new KernelSessionError(
+        `spawn actor "${command.actor}" already exists`,
+      );
+    }
+  }
+
+  private applyCommand(
+    entities: Map<string, MutableEntity>,
+    command: KernelCommand,
+  ): void {
     if (command.type === "move") {
-      const entity = this.entities.get(command.actor);
+      const entity = entities.get(command.actor);
       if (!entity) {
         throw new KernelSessionError(
           `move target actor "${command.actor}" does not exist`,
@@ -315,12 +362,12 @@ class SessionImpl implements KernelSession {
       return;
     }
     if (command.type === "spawn") {
-      if (this.entities.has(command.actor)) {
+      if (entities.has(command.actor)) {
         throw new KernelSessionError(
           `spawn actor "${command.actor}" already exists`,
         );
       }
-      this.entities.set(command.actor, {
+      entities.set(command.actor, {
         id: command.actor,
         x: command.position[0],
         y: command.position[1],

@@ -27,6 +27,7 @@ function unescapeToken(token: string): string {
 export function pointerTokens(pointer: string): string[] | null {
   if (pointer === "") return [];
   if (!pointer.startsWith("/")) return null;
+  if (/(?:~(?![01]))/.test(pointer)) return null;
   // Split on unescaped '/' — RFC 6901 segments cannot contain raw '/'.
   return pointer
     .slice(1)
