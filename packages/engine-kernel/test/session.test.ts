@@ -226,6 +226,29 @@ describe("KernelSession — command/snapshot seam", () => {
     );
   });
 
+  it("refuses replay artifacts with unadvanced dispatch commands", () => {
+    const session = open(manifest, fixedHost());
+    session.advance({ tick: 1, deltaMs: 0 });
+    const artifact = session.save();
+
+    expect(() =>
+      replay(
+        {
+          ...artifact,
+          events: [
+            ...artifact.events,
+            {
+              kind: "dispatch",
+              command: { type: "move", actor: "player", axis: [1, 0] },
+              timestampMs: 1_001,
+            },
+          ],
+        },
+        fixedHost(),
+      ),
+    ).toThrow(/unadvanced dispatch/i);
+  });
+
   it("digest is a canonical sha256 over sorted entity state", () => {
     const session = open(manifest, fixedHost());
     session.dispatch({ type: "spawn", actor: "b-entity", position: [1, 2] });

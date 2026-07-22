@@ -40,8 +40,11 @@ export {
 export {
   atomicWriteAll,
   atomicWriteFile,
+  acquireAtomicWriteLocks,
   fileExists,
   readTextFile,
+  releaseAtomicWriteLocks,
+  type AtomicWriteLockSet,
   type AtomicWritePlan,
 } from "./atomic-write.js";
 

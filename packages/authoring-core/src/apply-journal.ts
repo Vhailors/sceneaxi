@@ -16,13 +16,16 @@ import type { ApplyDiagnostic } from "@sceneaxi/schemas";
 import {
   AtomicWriteConflictError,
   AtomicWriteLockError,
+  acquireAtomicWriteLocks,
   atomicWriteAll,
   atomicWriteFile,
   fileExists,
+  releaseAtomicWriteLocks,
+  type AtomicWriteLockSet,
 } from "./atomic-write.js";
 import { contentHash } from "./content-hash.js";
 
-export const APPLY_JOURNAL_SCHEMA_VERSION = 1 as const;
+export const APPLY_JOURNAL_SCHEMA_VERSION = 2 as const;
 export const APPLY_JOURNAL_KIND = "sceneaxi.authoring-apply-journal" as const;
 
 export type ApplyJournalDocument = {
@@ -37,9 +40,10 @@ export type ApplyJournalEntry = {
   readonly schemaVersion: typeof APPLY_JOURNAL_SCHEMA_VERSION;
   readonly kind: typeof APPLY_JOURNAL_KIND;
   readonly transactionId: string;
-  readonly ownerPid: number;
   readonly createdAt: string;
   readonly state: "prepared" | "completed" | "undone" | "aborted";
+  readonly completedAt?: string;
+  readonly completionOrder?: number;
   readonly documents: readonly ApplyJournalDocument[];
 };
 
@@ -68,9 +72,10 @@ const JOURNAL_KEYS = new Set([
   "schemaVersion",
   "kind",
   "transactionId",
-  "ownerPid",
   "createdAt",
   "state",
+  "completedAt",
+  "completionOrder",
   "documents",
 ]);
 const JOURNAL_DOCUMENT_KEYS = new Set([
@@ -96,6 +101,24 @@ function journalPath(cwd: string, transactionId: string): string {
   return join(journalDirectory(cwd), `${transactionId}.json`);
 }
 
+function journalOperationResource(cwd: string): string {
+  return join(journalDirectory(cwd), ".operation");
+}
+
+export function beginApplyJournalTransaction(
+  cwd: string,
+  absoluteDocumentPaths: readonly string[],
+): AtomicWriteLockSet {
+  return acquireAtomicWriteLocks([
+    journalOperationResource(cwd),
+    ...absoluteDocumentPaths,
+  ]);
+}
+
+export function endApplyJournalTransaction(lockSet: AtomicWriteLockSet): void {
+  releaseAtomicWriteLocks(lockSet);
+}
+
 function serializeJournal(entry: ApplyJournalEntry): string {
   return `${JSON.stringify(entry, null, 2)}\n`;
 }
@@ -119,13 +142,13 @@ function parseJournal(text: string): ApplyJournalEntry | null {
     return null;
   }
   const raw = value as Record<string, unknown>;
+  const state = String(raw["state"]);
+  const isCompletedState = state === "completed" || state === "undone";
   if (
     raw["schemaVersion"] !== APPLY_JOURNAL_SCHEMA_VERSION ||
     raw["kind"] !== APPLY_JOURNAL_KIND ||
     typeof raw["transactionId"] !== "string" ||
     !TRANSACTION_ID_RE.test(raw["transactionId"]) ||
-    !Number.isInteger(raw["ownerPid"]) ||
-    (raw["ownerPid"] as number) <= 0 ||
     typeof raw["createdAt"] !== "string" ||
     !Number.isFinite(Date.parse(raw["createdAt"])) ||
     !["prepared", "completed", "undone", "aborted"].includes(
@@ -133,6 +156,14 @@ function parseJournal(text: string): ApplyJournalEntry | null {
     ) ||
     !Array.isArray(raw["documents"]) ||
     raw["documents"].length === 0 ||
+    (isCompletedState &&
+      (typeof raw["completedAt"] !== "string" ||
+        !Number.isFinite(Date.parse(raw["completedAt"])) ||
+        !Number.isInteger(raw["completionOrder"]) ||
+        (raw["completionOrder"] as number) <= 0)) ||
+    (!isCompletedState &&
+      (Object.hasOwn(raw, "completedAt") ||
+        Object.hasOwn(raw, "completionOrder"))) ||
     !hasOnlyKeys(raw, JOURNAL_KEYS)
   ) {
     return null;
@@ -173,15 +204,21 @@ function parseJournal(text: string): ApplyJournalEntry | null {
     documentPaths.add(document["documentPath"]);
   }
 
-  return {
+  const base = {
     schemaVersion: APPLY_JOURNAL_SCHEMA_VERSION,
     kind: APPLY_JOURNAL_KIND,
     transactionId: raw["transactionId"],
-    ownerPid: raw["ownerPid"] as number,
     createdAt: raw["createdAt"],
     state: raw["state"] as ApplyJournalEntry["state"],
     documents,
   };
+  return isCompletedState
+    ? {
+        ...base,
+        completedAt: raw["completedAt"] as string,
+        completionOrder: raw["completionOrder"] as number,
+      }
+    : base;
 }
 
 export function prepareApplyJournal(
@@ -200,7 +237,6 @@ export function prepareApplyJournal(
     schemaVersion: APPLY_JOURNAL_SCHEMA_VERSION,
     kind: APPLY_JOURNAL_KIND,
     transactionId,
-    ownerPid: process.pid,
     createdAt: new Date().toISOString(),
     state: "prepared",
     documents: documents.map((document) => ({
@@ -219,14 +255,33 @@ export function completeApplyJournal(
   cwd: string,
   entry: ApplyJournalEntry,
 ): void {
-  writeJournal(cwd, { ...entry, state: "completed" });
+  const journals = readJournals(cwd);
+  if (!journals.ok) {
+    throw new Error(journals.diagnostics[0]?.message ?? "Apply journal is invalid.");
+  }
+  const completionOrder =
+    Math.max(0, ...journals.entries.map((candidate) => candidate.completionOrder ?? 0)) +
+    1;
+  writeJournal(cwd, {
+    ...entry,
+    state: "completed",
+    completedAt: new Date().toISOString(),
+    completionOrder,
+  });
 }
 
 export function abortApplyJournal(
   cwd: string,
   entry: ApplyJournalEntry,
 ): void {
-  writeJournal(cwd, { ...entry, state: "aborted" });
+  writeJournal(cwd, {
+    schemaVersion: entry.schemaVersion,
+    kind: entry.kind,
+    transactionId: entry.transactionId,
+    createdAt: entry.createdAt,
+    state: "aborted",
+    documents: entry.documents,
+  });
 }
 
 function readJournals(
@@ -261,177 +316,58 @@ function readJournals(
   return { ok: true, entries };
 }
 
-function processIsAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    return !(
-      error instanceof Error &&
-      "code" in error &&
-      (error as NodeJS.ErrnoException).code === "ESRCH"
-    );
-  }
-}
-
-/**
- * Finish every prepared transaction from its durable after-image. Current
- * bytes must match either the before- or after-image, so recovery never
- * overwrites an unrelated edit.
- */
-export function recoverIncompleteApplies(
-  input: { readonly cwd?: string } = {},
-): RecoveryOperationResult {
-  const cwd = input.cwd ?? process.cwd();
-  const journals = readJournals(cwd);
-  if (!journals.ok) return journals;
-
-  const prepared = journals.entries
-    .filter((entry) => entry.state === "prepared")
-    .sort((a, b) => a.transactionId.localeCompare(b.transactionId));
-  const recoveredTransactions: string[] = [];
-  const recoveredPaths: string[] = [];
-
-  for (const entry of prepared) {
-    if (entry.ownerPid !== process.pid && processIsAlive(entry.ownerPid)) {
+function recoverPreparedEntry(
+  cwd: string,
+  entry: ApplyJournalEntry,
+  lockSet?: AtomicWriteLockSet,
+): JournalOperationResult {
+  const expectedHashes = new Map<string, string>();
+  for (const document of entry.documents) {
+    const absolutePath = resolve(cwd, document.documentPath);
+    if (!fileExists(absolutePath)) {
       return {
         ok: false,
         diagnostics: [
           {
-            code: "apply-in-progress",
-            message: `Apply transaction ${entry.transactionId} is still owned by process ${String(entry.ownerPid)}.`,
-            reReadHint:
-              "Retry after the active apply completes; recovery will only adopt interrupted transactions.",
+            code: "journal-conflict",
+            message: `Cannot recover ${document.documentPath}: the canonical document is missing.`,
+            documentPath: document.documentPath,
+            reReadHint: `Restore or re-read ${document.documentPath}; recovery refused to guess its state.`,
           },
         ],
       };
     }
-    const expectedHashes = new Map<string, string>();
-    for (const document of entry.documents) {
-      const absolutePath = resolve(cwd, document.documentPath);
-      if (!fileExists(absolutePath)) {
-        return {
-          ok: false,
-          diagnostics: [
-            {
-              code: "journal-conflict",
-              message: `Cannot recover ${document.documentPath}: the canonical document is missing.`,
-              documentPath: document.documentPath,
-              reReadHint: `Restore or re-read ${document.documentPath}; recovery refused to guess its state.`,
-            },
-          ],
-        };
-      }
-      const currentHash = contentHash(readFileSync(absolutePath, "utf8"));
-      if (
-        currentHash !== document.beforeContentHash &&
-        currentHash !== document.afterContentHash
-      ) {
-        return {
-          ok: false,
-          diagnostics: [
-            {
-              code: "journal-conflict",
-              message: `Cannot recover ${document.documentPath}: current bytes match neither journal image.`,
-              documentPath: document.documentPath,
-              reReadHint: `Re-read ${document.documentPath}; recovery refused to overwrite newer content.`,
-            },
-          ],
-        };
-      }
-      expectedHashes.set(document.documentPath, currentHash);
-    }
-
-    try {
-      atomicWriteAll(
-        entry.documents.map((document) => ({
-          path: resolve(cwd, document.documentPath),
-          contents: document.afterContent,
-          expectedContentHash: expectedHashes.get(document.documentPath) as string,
-        })),
-        { token: entry.transactionId },
-      );
-    } catch (error) {
-      if (
-        error instanceof AtomicWriteConflictError ||
-        error instanceof AtomicWriteLockError
-      ) {
-        return {
-          ok: false,
-          diagnostics: [
-            {
-              code: "journal-conflict",
-              message: `Cannot recover ${entry.transactionId}: canonical documents changed or are busy.`,
-              reReadHint:
-                "Re-read the affected documents after the active writer completes; recovery refused to overwrite them.",
-            },
-          ],
-        };
-      }
-      throw error;
-    }
-    completeApplyJournal(cwd, entry);
-    recoveredTransactions.push(entry.transactionId);
-    recoveredPaths.push(...entry.documents.map((document) => document.documentPath));
-  }
-
-  return {
-    ok: true,
-    transactionIds: recoveredTransactions,
-    documentPaths: recoveredPaths,
-  };
-}
-
-/** Restore the exact prior bytes from the most recent completed apply. */
-export function undoLastApply(
-  input: { readonly cwd?: string } = {},
-): JournalOperationResult {
-  const cwd = input.cwd ?? process.cwd();
-  const journals = readJournals(cwd);
-  if (!journals.ok) return journals;
-
-  const latest = journals.entries
-    .filter((entry) => entry.state === "completed")
-    .sort((a, b) => b.transactionId.localeCompare(a.transactionId))[0];
-  if (latest === undefined) {
-    return {
-      ok: false,
-      diagnostics: [
-        {
-          code: "journal-not-found",
-          message: "No completed apply journal is available to undo.",
-        },
-      ],
-    };
-  }
-
-  for (const document of latest.documents) {
-    const absolutePath = resolve(cwd, document.documentPath);
+    const currentHash = contentHash(readFileSync(absolutePath, "utf8"));
     if (
-      !fileExists(absolutePath) ||
-      contentHash(readFileSync(absolutePath, "utf8")) !== document.afterContentHash
+      currentHash !== document.beforeContentHash &&
+      currentHash !== document.afterContentHash
     ) {
       return {
         ok: false,
         diagnostics: [
           {
             code: "journal-conflict",
-            message: `Cannot undo ${document.documentPath}: current bytes no longer match the completed apply.`,
+            message: `Cannot recover ${document.documentPath}: current bytes match neither journal image.`,
             documentPath: document.documentPath,
-            reReadHint: `Re-read ${document.documentPath}; undo refused to overwrite newer content.`,
+            reReadHint: `Re-read ${document.documentPath}; recovery refused to overwrite newer content.`,
           },
         ],
       };
     }
+    expectedHashes.set(document.documentPath, currentHash);
   }
 
   try {
     atomicWriteAll(
-      latest.documents.map((document) => ({
+      entry.documents.map((document) => ({
         path: resolve(cwd, document.documentPath),
-        contents: document.beforeContent,
-        expectedContentHash: document.afterContentHash,
+        contents: document.afterContent,
+        expectedContentHash: expectedHashes.get(document.documentPath) as string,
       })),
+      {
+        token: entry.transactionId,
+        ...(lockSet === undefined ? {} : { lockSet }),
+      },
     );
   } catch (error) {
     if (
@@ -443,21 +379,199 @@ export function undoLastApply(
         diagnostics: [
           {
             code: "journal-conflict",
-            message:
-              "Cannot undo the completed apply: canonical documents changed or are busy.",
+            message: `Cannot recover ${entry.transactionId}: canonical documents changed or are busy.`,
             reReadHint:
-              "Re-read the affected documents after the active writer completes; undo refused to overwrite them.",
+              "Re-read the affected documents after the active writer completes; recovery refused to overwrite them.",
           },
         ],
       };
     }
     throw error;
   }
-  writeJournal(cwd, { ...latest, state: "undone" });
-
+  completeApplyJournal(cwd, entry);
   return {
     ok: true,
-    transactionId: latest.transactionId,
-    documentPaths: latest.documents.map((document) => document.documentPath),
+    transactionId: entry.transactionId,
+    documentPaths: entry.documents.map((document) => document.documentPath),
   };
+}
+
+export function recoverPreparedApply(
+  cwd: string,
+  entry: ApplyJournalEntry,
+  lockSet: AtomicWriteLockSet,
+): JournalOperationResult {
+  return recoverPreparedEntry(cwd, entry, lockSet);
+}
+
+function recoverIncompleteAppliesLocked(cwd: string): RecoveryOperationResult {
+  const journals = readJournals(cwd);
+  if (!journals.ok) return journals;
+  const prepared = journals.entries
+    .filter((entry) => entry.state === "prepared")
+    .sort((a, b) => a.transactionId.localeCompare(b.transactionId));
+  const recoveredTransactions: string[] = [];
+  const recoveredPaths: string[] = [];
+
+  for (const entry of prepared) {
+    const recovered = recoverPreparedEntry(cwd, entry);
+    if (!recovered.ok) return recovered;
+    recoveredTransactions.push(recovered.transactionId);
+    recoveredPaths.push(...recovered.documentPaths);
+  }
+  return {
+    ok: true,
+    transactionIds: recoveredTransactions,
+    documentPaths: recoveredPaths,
+  };
+}
+
+export function recoverIncompleteApplies(
+  input: { readonly cwd?: string } = {},
+): RecoveryOperationResult {
+  const cwd = input.cwd ?? process.cwd();
+  if (!fileExists(journalDirectory(cwd))) {
+    return { ok: true, transactionIds: [], documentPaths: [] };
+  }
+  let operationLock: AtomicWriteLockSet;
+  try {
+    operationLock = acquireAtomicWriteLocks([journalOperationResource(cwd)]);
+  } catch (error) {
+    if (error instanceof AtomicWriteLockError) {
+      return {
+        ok: false,
+        diagnostics: [
+          {
+            code: "apply-in-progress",
+            message: "Another apply or journal operation is in progress.",
+            reReadHint: "Retry after the active authoring operation completes.",
+          },
+        ],
+      };
+    }
+    throw error;
+  }
+  try {
+    return recoverIncompleteAppliesLocked(cwd);
+  } finally {
+    releaseAtomicWriteLocks(operationLock);
+  }
+}
+
+/** Restore the exact prior bytes from the most recent completed apply. */
+export function undoLastApply(
+  input: { readonly cwd?: string } = {},
+): JournalOperationResult {
+  const cwd = input.cwd ?? process.cwd();
+  if (!fileExists(journalDirectory(cwd))) {
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          code: "journal-not-found",
+          message: "No completed apply journal is available to undo.",
+        },
+      ],
+    };
+  }
+  let operationLock: AtomicWriteLockSet;
+  try {
+    operationLock = acquireAtomicWriteLocks([journalOperationResource(cwd)]);
+  } catch (error) {
+    if (error instanceof AtomicWriteLockError) {
+      return {
+        ok: false,
+        diagnostics: [
+          {
+            code: "apply-in-progress",
+            message: "Another apply or journal operation is in progress.",
+            reReadHint: "Retry undo after the active authoring operation completes.",
+          },
+        ],
+      };
+    }
+    throw error;
+  }
+  try {
+    const recovered = recoverIncompleteAppliesLocked(cwd);
+    if (!recovered.ok) return recovered;
+    const journals = readJournals(cwd);
+    if (!journals.ok) return journals;
+
+    const latest = journals.entries
+      .filter((entry) => entry.state === "completed")
+      .sort(
+        (a, b) =>
+          (b.completionOrder ?? 0) - (a.completionOrder ?? 0),
+      )[0];
+    if (latest === undefined) {
+      return {
+        ok: false,
+        diagnostics: [
+          {
+            code: "journal-not-found",
+            message: "No completed apply journal is available to undo.",
+          },
+        ],
+      };
+    }
+
+    for (const document of latest.documents) {
+      const absolutePath = resolve(cwd, document.documentPath);
+      if (
+        !fileExists(absolutePath) ||
+        contentHash(readFileSync(absolutePath, "utf8")) !==
+          document.afterContentHash
+      ) {
+        return {
+          ok: false,
+          diagnostics: [
+            {
+              code: "journal-conflict",
+              message: `Cannot undo ${document.documentPath}: current bytes no longer match the completed apply.`,
+              documentPath: document.documentPath,
+              reReadHint: `Re-read ${document.documentPath}; undo refused to overwrite newer content.`,
+            },
+          ],
+        };
+      }
+    }
+
+    try {
+      atomicWriteAll(
+        latest.documents.map((document) => ({
+          path: resolve(cwd, document.documentPath),
+          contents: document.beforeContent,
+          expectedContentHash: document.afterContentHash,
+        })),
+      );
+    } catch (error) {
+      if (
+        error instanceof AtomicWriteConflictError ||
+        error instanceof AtomicWriteLockError
+      ) {
+        return {
+          ok: false,
+          diagnostics: [
+            {
+              code: "journal-conflict",
+              message:
+                "Cannot undo the completed apply: canonical documents changed or are busy.",
+              reReadHint:
+                "Re-read the affected documents after the active writer completes; undo refused to overwrite them.",
+            },
+          ],
+        };
+      }
+      throw error;
+    }
+    writeJournal(cwd, { ...latest, state: "undone" });
+    return {
+      ok: true,
+      transactionId: latest.transactionId,
+      documentPaths: latest.documents.map((document) => document.documentPath),
+    };
+  } finally {
+    releaseAtomicWriteLocks(operationLock);
+  }
 }

@@ -96,6 +96,7 @@ export function replay(
   }
 
   const session = new SessionImpl(cloneManifest(artifact.productManifest), host, []);
+  let hasPendingDispatch = false;
 
   for (const event of artifact.events) {
     if (!event || typeof event !== "object") {
@@ -103,11 +104,18 @@ export function replay(
     }
     if (event.kind === "dispatch") {
       session.dispatchRecorded(event.command, event.timestampMs);
+      hasPendingDispatch = true;
     } else if (event.kind === "advance") {
       session.advance(event.clock);
+      hasPendingDispatch = false;
     } else {
       throw new KernelSessionError("invalid save artifact event kind");
     }
+  }
+  if (hasPendingDispatch) {
+    throw new KernelSessionError(
+      "save artifact ends with unadvanced dispatch commands",
+    );
   }
 
   const terminal = session.observe().digest;

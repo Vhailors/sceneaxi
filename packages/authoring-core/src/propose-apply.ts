@@ -8,6 +8,7 @@
  */
 
 import { resolve } from "node:path";
+import { isDeepStrictEqual } from "node:util";
 import {
   createProposal,
   parseDocumentText,
@@ -38,8 +39,11 @@ import { getAtPointer, setAtPointer } from "./json-pointer.js";
 import { unifiedDiff } from "./unified-diff.js";
 import {
   abortApplyJournal,
+  beginApplyJournalTransaction,
   completeApplyJournal,
+  endApplyJournalTransaction,
   prepareApplyJournal,
+  recoverPreparedApply,
   recoverIncompleteApplies,
 } from "./apply-journal.js";
 
@@ -298,7 +302,20 @@ export function proposeMany(inputs: readonly ProposeInput[]): ProposeResult {
   const diffsByPath = new Map<string, string>();
   // Track in-memory post-edit text per document so chained edits on the same
   // file share one base → final diff and a single base hash.
-  const cwd = inputs[0]?.cwd ?? process.cwd();
+  const cwd = resolve(inputs[0]?.cwd ?? process.cwd());
+  for (const input of inputs) {
+    if (resolve(input.cwd ?? cwd) !== cwd) {
+      return {
+        ok: false,
+        diagnostics: [
+          {
+            code: "invalid-proposal",
+            message: "proposeMany requires one shared working directory.",
+          },
+        ],
+      };
+    }
+  }
   const recoveryFailure = recoveryDiagnostics(cwd);
   if (recoveryFailure !== null) {
     return { ok: false, diagnostics: recoveryFailure };
@@ -687,8 +704,19 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
         };
       }
 
-      // Optional consistency: oldValue should match current (not required by E1,
-      // but hash already covers concurrent rewrite of the whole file).
+      if (!isDeepStrictEqual(oldAt.value, edit.oldValue)) {
+        return {
+          ok: false,
+          diagnostics: [
+            {
+              code: "invalid-proposal",
+              message: `Proposal oldValue does not match ${documentPath} at ${edit.jsonPointer}.`,
+              documentPath,
+            },
+          ],
+        };
+      }
+
       const mutated = applyPointerEditInMemory(
         current,
         edit.jsonPointer,
@@ -714,89 +742,150 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
     });
   }
 
-  // E1 clause 5: persist undo/recovery bytes before any canonical commit.
-  const journal = prepareApplyJournal(
-    cwd,
-    plans.map((plan) => ({
-      documentPath: plan.documentPath,
-      beforeContent: plan.beforeContent,
-      afterContent: plan.contents,
-    })),
-  );
-
-  try {
-    atomicWriteAll(
-      plans.map((plan) => ({
-        path: plan.path,
-        contents: plan.contents,
-        expectedContentHash: plan.expectedContentHash,
-      })),
-      { token: journal.transactionId },
-    );
-  } catch (error) {
-    if (error instanceof AtomicWriteError && !error.rollbackComplete) {
-      const recovered = recoverIncompleteApplies({ cwd });
-      if (
-        recovered.ok &&
-        recovered.transactionIds.includes(journal.transactionId)
-      ) {
-        return {
-          ok: true,
-          appliedPaths: plans.map((plan) => plan.documentPath),
-        };
-      }
-      if (!recovered.ok) return recovered;
-    }
-
-    abortApplyJournal(cwd, journal);
-    if (error instanceof AtomicWriteConflictError) {
-      const plan = plans.find((candidate) => candidate.path === error.path);
-      const documentPath = plan?.documentPath ?? error.path;
-      const current = error.currentContentHash ?? "missing";
+  const proposalDiffs = new Map<
+    string,
+    { readonly documentPath: string; readonly unifiedDiff: string }
+  >();
+  for (const diff of proposal.diffs) {
+    const abs = resolvePath(cwd, diff.documentPath);
+    const grouped = byDoc.get(abs);
+    if (
+      grouped === undefined ||
+      grouped.documentPath !== diff.documentPath ||
+      proposalDiffs.has(abs)
+    ) {
       return {
         ok: false,
         diagnostics: [
           {
-            code: "content-hash-conflict",
-            message: `Content hash mismatch for ${documentPath}: proposal base ${error.expectedContentHash}, current ${current}.`,
-            documentPath,
-            reReadHint: `Re-read ${documentPath} and re-propose against current content.`,
+            code: "invalid-proposal",
+            message: `Proposal diff target ${diff.documentPath} is missing, duplicated, or aliased.`,
+            documentPath: diff.documentPath,
           },
         ],
       };
     }
+    proposalDiffs.set(abs, diff);
+  }
+  if (proposalDiffs.size !== plans.length) {
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          code: "invalid-proposal",
+          message: "Proposal must contain exactly one diff for every edited document.",
+        },
+      ],
+    };
+  }
+  for (const plan of plans) {
+    const expectedDiff = unifiedDiff(plan.beforeContent, plan.contents, {
+      oldPath: `a/${plan.documentPath}`,
+      newPath: `b/${plan.documentPath}`,
+    });
+    if (proposalDiffs.get(plan.path)?.unifiedDiff !== expectedDiff) {
+      return {
+        ok: false,
+        diagnostics: [
+          {
+            code: "invalid-proposal",
+            message: `Proposal diff does not match the edits for ${plan.documentPath}.`,
+            documentPath: plan.documentPath,
+          },
+        ],
+      };
+    }
+  }
+
+  let transaction: ReturnType<typeof beginApplyJournalTransaction>;
+  try {
+    transaction = beginApplyJournalTransaction(
+      cwd,
+      plans.map((plan) => plan.path),
+    );
+  } catch (error) {
     if (error instanceof AtomicWriteLockError) {
-      const plan = plans.find((candidate) => candidate.path === error.path);
       return {
         ok: false,
         diagnostics: [
           {
             code: "apply-in-progress",
-            message: `Another write is already in progress for ${plan?.documentPath ?? error.path}.`,
-            ...(plan === undefined ? {} : { documentPath: plan.documentPath }),
+            message: "Another apply or document write is in progress.",
             reReadHint:
               "Retry after the active writer completes, then re-read every proposed document.",
           },
         ],
       };
     }
-    return {
-      ok: false,
-      diagnostics: [
-        {
-          code: "apply-failed",
-          message: "The apply failed and its canonical writes were rolled back.",
-          reReadHint: "Re-read every proposed document before retrying.",
-        },
-      ],
-    };
+    throw error;
   }
-  completeApplyJournal(cwd, journal);
+  try {
+    const journal = prepareApplyJournal(
+      cwd,
+      plans.map((plan) => ({
+        documentPath: plan.documentPath,
+        beforeContent: plan.beforeContent,
+        afterContent: plan.contents,
+      })),
+    );
 
-  return {
-    ok: true,
-    appliedPaths: plans.map((p) => p.documentPath),
-  };
+    try {
+      atomicWriteAll(
+        plans.map((plan) => ({
+          path: plan.path,
+          contents: plan.contents,
+          expectedContentHash: plan.expectedContentHash,
+        })),
+        { token: journal.transactionId, lockSet: transaction },
+      );
+    } catch (error) {
+      if (error instanceof AtomicWriteError && !error.rollbackComplete) {
+        const recovered = recoverPreparedApply(cwd, journal, transaction);
+        if (recovered.ok) {
+          return {
+            ok: true,
+            appliedPaths: plans.map((plan) => plan.documentPath),
+          };
+        }
+        return recovered;
+      }
+
+      abortApplyJournal(cwd, journal);
+      if (error instanceof AtomicWriteConflictError) {
+        const plan = plans.find((candidate) => candidate.path === error.path);
+        const documentPath = plan?.documentPath ?? error.path;
+        const current = error.currentContentHash ?? "missing";
+        return {
+          ok: false,
+          diagnostics: [
+            {
+              code: "content-hash-conflict",
+              message: `Content hash mismatch for ${documentPath}: proposal base ${error.expectedContentHash}, current ${current}.`,
+              documentPath,
+              reReadHint: `Re-read ${documentPath} and re-propose against current content.`,
+            },
+          ],
+        };
+      }
+      return {
+        ok: false,
+        diagnostics: [
+          {
+            code: "apply-failed",
+            message: "The apply failed and its canonical writes were rolled back.",
+            reReadHint: "Re-read every proposed document before retrying.",
+          },
+        ],
+      };
+    }
+    completeApplyJournal(cwd, journal);
+    return {
+      ok: true,
+      appliedPaths: plans.map((plan) => plan.documentPath),
+    };
+  } finally {
+    endApplyJournalTransaction(transaction);
+  }
 }
 
 /** Write a proposal artifact to disk (atomic). */
