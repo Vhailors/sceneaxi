@@ -14,9 +14,13 @@ Markdown decision registries (factories-helpers #42) document keys for humans; t
 ## Generation path
 
 1. Export from **authoritative** FirstMate structured captain holds (tasks-axi), not Markdown.
-2. Bump `registryEpoch` on any add/resolve of a hold key.
-3. Publish snapshot + regenerate command map for the same epoch.
-4. Ship both with the CLI (or fetch from a trusted channel).
+2. Require every export timestamp (`exportedAt`, `registeredAt`, and any
+   `resolvedAt`) to satisfy the registry schema's RFC 3339 `date-time` format,
+   including an explicit timezone. Timezone-less or invalid values refuse; the
+   generator never emits a snapshot from them.
+3. Bump `registryEpoch` on any add/resolve of a hold key.
+4. Publish snapshot + regenerate command map for the same epoch.
+5. Ship both with the CLI (or fetch from a trusted channel).
 
 ## Currency check (required for every held-key-gated invocation)
 
@@ -30,7 +34,8 @@ Before evaluating local snapshot/map rules, a gated verb must establish the **cu
 
 **There is no offline exception for gated verbs.** Matching local snapshot epoch N with local map epoch N is **never** sufficient. A signed offline marker path is **not** permitted for gated verbs: a fresh signed N marker can still lag an authoritative N+1 after a new hold is registered, which would re-open the stale-snapshot fail-open.
 
-Ungated verbs (`heldKeys: []` explicit) may run without a currency check. They must not encode product policy.
+Ungated verbs (`heldKeys: []` explicit) skip the currency check and must not
+probe the epoch authority. They must not encode product policy.
 
 ### Fresh-N/N vs authoritative-N+1 regression (must fail closed)
 

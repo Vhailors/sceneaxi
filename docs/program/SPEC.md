@@ -164,7 +164,8 @@ Fail-closed refusal semantics (the repository's held-key enforcement doc is norm
 
 - Every gated verb must establish the **live authoritative epoch** before local checks. **There is no offline exception for gated verbs**; a signed offline marker is not permitted (it can lag an authoritative epoch bump).
 - Refuse on: currency unavailable · authoritative epoch ≠ local · snapshot missing/schema-invalid/stale (24h budget) · map/snapshot epoch mismatch · undeclared verb · open gating key (refusal names the key) · unknown key. Allow only when all gating keys are resolved AND currency is OK.
-- Ungated verbs may skip the currency check but must not encode product policy.
+- Ungated-verb currency behavior and product-policy restrictions are owned by
+  the normative held-key enforcement protocol above.
 - Acceptance for any held-key-gated CLI MUST include both regressions: fresh N/N vs authoritative N+1, and offline/unavailable authority.
 
 ### Agent-native CLI protocol (normative properties)
