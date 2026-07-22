@@ -2,6 +2,18 @@
 
 Shared contracts home for SceneAxi. Zero internal dependencies by rule.
 
+## Delivery Handoff
+
+- `@sceneaxi/schemas/contracts/delivery-handoff.schema.json` — public,
+  package-exported portable manifest for independent delivery adapters
+- TypeScript: `DeliveryHandoff`, `computeDeliveryArtifactSetDigest`,
+  `validateDeliveryHandoff`, and `parseDeliveryHandoffText`
+- Adapter configuration, provider credentials, signing, uploads, approvals, and
+  releases are outside this closed contract
+
+See [`docs/delivery-handoff.md`](../../docs/delivery-handoff.md) for digest
+semantics and the SceneAxi-versus-adapter boundary.
+
 ## Profile Conformance (sceneaxi#10)
 
 - `contracts/profile-conformance.schema.json` — versioned claim document

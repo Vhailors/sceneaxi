@@ -24,6 +24,9 @@ Authoring-interface behavioral contracts (E1/E2) are SceneAxi-owned:
 `packages/schemas/contracts/` enforced by `pnpm check:contracts`.
 External web products follow the published-package support and pinning contract
 in [`docs/web-consumer.md`](docs/web-consumer.md).
+Portable product exports cross delivery boundaries through the public,
+delivery-neutral [`Delivery Handoff` contract](docs/delivery-handoff.md); provider
+credentials, uploads, approvals, and adapter implementation stay outside core.
 
 ## Development
 
@@ -38,8 +41,9 @@ their respective contracts.
 **Early implementation aggregate.** The monorepo has a real fail-closed toolchain,
 typed public seams for every package and app, and initial contract/tracer
 implementations for authoring, the CLI, the Game Kernel, Game profile conformance,
-shell protocol clients, and dormant catalogs. This remains proof-oriented work, not
-a claim that the engine, profiles, or applications are production-ready. Proof
+the public Delivery Handoff, shell protocol clients, and dormant catalogs. This
+remains proof-oriented work, not a claim that the engine, profiles, or applications
+are production-ready. Proof
 execution, spend, account creation, publication, and other external actions remain
 subject to the separated authorities in `docs/bootstrap.md`.
 
