@@ -3,6 +3,7 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -19,6 +20,7 @@ import {
   proposeMany,
   recoverIncompleteApplies,
   releaseAtomicWriteLocks,
+  serializeProposal,
   undoLastApply,
   writeDocumentFile,
 } from "@sceneaxi/authoring-core";
@@ -28,7 +30,7 @@ function fixtureDir(): string {
 }
 
 function preparedJournal(value: Record<string, unknown>): Record<string, unknown> {
-  const prepared = { ...value, state: "prepared" };
+  const prepared: Record<string, unknown> = { ...value, state: "prepared" };
   delete prepared["completedAt"];
   delete prepared["completionOrder"];
   return prepared;
@@ -422,6 +424,19 @@ describe("E1 apply journal", () => {
       `${JSON.stringify(preparedJournal(latest.value), null, 2)}\n`,
       "utf8",
     );
+    writeFileSync(
+      join(journalDir, ".completion-sequence"),
+      `${JSON.stringify(
+        {
+          schemaVersion: 1,
+          kind: "sceneaxi.authoring-completion-sequence",
+          value: 1,
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
 
     const undone = undoLastApply({ cwd });
 
@@ -432,6 +447,54 @@ describe("E1 apply journal", () => {
     ) as { state: string; completionOrder: number };
     expect(recoveredJournal.state).toBe("undone");
     expect(recoveredJournal.completionOrder).toBe(2);
+  });
+
+  it("recovers a crash-interrupted multi-document undo", () => {
+    const cwd = fixtureDir();
+    const aPath = join(cwd, "a.json");
+    const bPath = join(cwd, "b.json");
+    expect(
+      writeDocumentFile(aPath, createDocument({ id: "a", data: { n: 1 } })).ok,
+    ).toBe(true);
+    expect(
+      writeDocumentFile(bPath, createDocument({ id: "b", data: { n: 2 } })).ok,
+    ).toBe(true);
+    const beforeA = readFileSync(aPath, "utf8");
+    const beforeB = readFileSync(bPath, "utf8");
+    const proposed = proposeMany([
+      { cwd, documentPath: "a.json", jsonPointer: "/data/n", newValue: 10 },
+      { cwd, documentPath: "b.json", jsonPointer: "/data/n", newValue: 20 },
+    ]);
+    expect(proposed.ok).toBe(true);
+    if (!proposed.ok) return;
+    expect(apply({ cwd, proposal: proposed.proposal }).ok).toBe(true);
+
+    const journalDir = join(cwd, ".sceneaxi", "journal");
+    const journalName = readdirSync(journalDir).find((name) =>
+      /^\d{13}-[0-9a-f]{16}\.json$/.test(name),
+    );
+    expect(journalName).toBeDefined();
+    if (journalName === undefined) return;
+    const journalPath = join(journalDir, journalName);
+    const journal = JSON.parse(readFileSync(journalPath, "utf8")) as Record<
+      string,
+      unknown
+    >;
+    writeFileSync(aPath, beforeA, "utf8");
+    writeFileSync(
+      journalPath,
+      `${JSON.stringify({ ...journal, state: "undoing" }, null, 2)}\n`,
+      "utf8",
+    );
+
+    const recovered = recoverIncompleteApplies({ cwd });
+
+    expect(recovered.ok).toBe(true);
+    expect(readFileSync(aPath, "utf8")).toBe(beforeA);
+    expect(readFileSync(bPath, "utf8")).toBe(beforeB);
+    expect(
+      (JSON.parse(readFileSync(journalPath, "utf8")) as { state: string }).state,
+    ).toBe("undone");
   });
 
   it("does not prepare a journal before acquiring every target lock", () => {
@@ -507,6 +570,37 @@ describe("E1 apply journal", () => {
     expect(readFileSync(questionPath, "utf8")).toBe("question\n");
   });
 
+  it("uses one lock identity through symlinked directory aliases", () => {
+    const cwd = fixtureDir();
+    const realDirectory = join(cwd, "real");
+    const aliasDirectory = join(cwd, "alias");
+    mkdirSync(realDirectory);
+    symlinkSync(realDirectory, aliasDirectory, "dir");
+    const realPath = join(realDirectory, "scene.json");
+    const aliasPath = join(aliasDirectory, "scene.json");
+    writeFileSync(realPath, "before\n", "utf8");
+    const lockSet = acquireAtomicWriteLocks([realPath]);
+
+    expect(() => acquireAtomicWriteLocks([aliasPath])).toThrow(/progress/i);
+
+    releaseAtomicWriteLocks(lockSet);
+    atomicWriteAll([{ path: aliasPath, contents: "after\n" }]);
+    expect(readFileSync(realPath, "utf8")).toBe("after\n");
+  });
+
+  it("rejects released lock capabilities", () => {
+    const cwd = fixtureDir();
+    const path = join(cwd, "scene.json");
+    writeFileSync(path, "before\n", "utf8");
+    const lockSet = acquireAtomicWriteLocks([path]);
+    releaseAtomicWriteLocks(lockSet);
+
+    expect(() =>
+      atomicWriteAll([{ path, contents: "after\n" }], { lockSet }),
+    ).toThrow(/progress/i);
+    expect(readFileSync(path, "utf8")).toBe("before\n");
+  });
+
   it("reclaims a stale atomic lock after PID reuse", () => {
     const cwd = fixtureDir();
     const path = join(cwd, "scene.json");
@@ -552,5 +646,74 @@ describe("E1 apply journal", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.diagnostics[0]?.code).toBe("invalid-pointer");
+  });
+
+  it("accepts serialized proposals whose old value was negative zero", () => {
+    const cwd = fixtureDir();
+    const path = join(cwd, "scene.json");
+    writeFileSync(
+      path,
+      '{\n  "schemaVersion": 1,\n  "kind": "sceneaxi.document",\n  "id": "scene",\n  "data": {\n    "x": -0\n  }\n}\n',
+      "utf8",
+    );
+    const proposed = propose({
+      cwd,
+      documentPath: "scene.json",
+      jsonPointer: "/data/x",
+      newValue: 1,
+    });
+    expect(proposed.ok).toBe(true);
+    if (!proposed.ok) return;
+
+    const applied = apply({ cwd, proposal: serializeProposal(proposed.proposal) });
+
+    expect(applied.ok).toBe(true);
+    expect(JSON.parse(readFileSync(path, "utf8")).data.x).toBe(1);
+  });
+
+  it("rejects journals whose filename and transaction ID disagree", () => {
+    const cwd = fixtureDir();
+    const path = join(cwd, "scene.json");
+    expect(
+      writeDocumentFile(
+        path,
+        createDocument({ id: "scene", data: { x: 1 } }),
+      ).ok,
+    ).toBe(true);
+    const proposed = propose({
+      cwd,
+      documentPath: "scene.json",
+      jsonPointer: "/data/x",
+      newValue: 2,
+    });
+    expect(proposed.ok).toBe(true);
+    if (!proposed.ok) return;
+    expect(apply({ cwd, proposal: proposed.proposal }).ok).toBe(true);
+    const journalDir = join(cwd, ".sceneaxi", "journal");
+    const journalName = readdirSync(journalDir).find((name) =>
+      /^\d{13}-[0-9a-f]{16}\.json$/.test(name),
+    );
+    expect(journalName).toBeDefined();
+    if (journalName === undefined) return;
+    const journalPath = join(journalDir, journalName);
+    const journal = JSON.parse(readFileSync(journalPath, "utf8")) as Record<
+      string,
+      unknown
+    >;
+    writeFileSync(
+      journalPath,
+      `${JSON.stringify(
+        { ...journal, transactionId: "0000000000000-0000000000000000" },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
+
+    const undone = undoLastApply({ cwd });
+
+    expect(undone.ok).toBe(false);
+    if (undone.ok) return;
+    expect(undone.diagnostics[0]?.code).toBe("journal-invalid");
   });
 });

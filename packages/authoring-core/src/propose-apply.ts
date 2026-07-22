@@ -8,7 +8,6 @@
  */
 
 import { resolve } from "node:path";
-import { isDeepStrictEqual } from "node:util";
 import {
   createProposal,
   parseDocumentText,
@@ -31,8 +30,10 @@ import {
   AtomicWriteLockError,
   atomicWriteAll,
   atomicWriteFile,
+  canonicalPath,
   fileExists,
   readTextFile,
+  verifyAtomicWritePreconditions,
 } from "./atomic-write.js";
 import { contentHash } from "./content-hash.js";
 import { getAtPointer, setAtPointer } from "./json-pointer.js";
@@ -90,7 +91,35 @@ export type ApplyInput = {
 };
 
 function resolvePath(cwd: string, documentPath: string): string {
-  return resolve(cwd, documentPath);
+  return canonicalPath(resolve(cwd, documentPath));
+}
+
+function jsonValuesEqual(left: unknown, right: unknown): boolean {
+  if (typeof left === "number" && typeof right === "number") {
+    return left === right || (left === 0 && right === 0);
+  }
+  if (left === right) return true;
+  if (left === null || right === null) return false;
+  if (Array.isArray(left) || Array.isArray(right)) {
+    return (
+      Array.isArray(left) &&
+      Array.isArray(right) &&
+      left.length === right.length &&
+      left.every((value, index) => jsonValuesEqual(value, right[index]))
+    );
+  }
+  if (typeof left !== "object" || typeof right !== "object") return false;
+  const leftRecord = left as Record<string, unknown>;
+  const rightRecord = right as Record<string, unknown>;
+  const leftKeys = Object.keys(leftRecord);
+  return (
+    leftKeys.length === Object.keys(rightRecord).length &&
+    leftKeys.every(
+      (key) =>
+        Object.hasOwn(rightRecord, key) &&
+        jsonValuesEqual(leftRecord[key], rightRecord[key]),
+    )
+  );
 }
 
 function recoveryDiagnostics(cwd: string): readonly ApplyDiagnostic[] | null {
@@ -704,7 +733,7 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
         };
       }
 
-      if (!isDeepStrictEqual(oldAt.value, edit.oldValue)) {
+      if (!jsonValuesEqual(oldAt.value, edit.oldValue)) {
         return {
           ok: false,
           diagnostics: [
@@ -820,6 +849,46 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
     throw error;
   }
   try {
+    const atomicPlans = plans.map((plan) => ({
+      path: plan.path,
+      contents: plan.contents,
+      expectedContentHash: plan.expectedContentHash,
+    }));
+    try {
+      verifyAtomicWritePreconditions(atomicPlans, transaction);
+    } catch (error) {
+      if (error instanceof AtomicWriteConflictError) {
+        const plan = plans.find((candidate) => candidate.path === error.path);
+        const documentPath = plan?.documentPath ?? error.path;
+        const current = error.currentContentHash ?? "missing";
+        return {
+          ok: false,
+          diagnostics: [
+            {
+              code: "content-hash-conflict",
+              message: `Content hash mismatch for ${documentPath}: proposal base ${error.expectedContentHash}, current ${current}.`,
+              documentPath,
+              reReadHint: `Re-read ${documentPath} and re-propose against current content.`,
+            },
+          ],
+        };
+      }
+      if (error instanceof AtomicWriteLockError) {
+        return {
+          ok: false,
+          diagnostics: [
+            {
+              code: "apply-in-progress",
+              message: "The acquired document locks are no longer valid.",
+              reReadHint:
+                "Retry after the active writer completes, then re-read every proposed document.",
+            },
+          ],
+        };
+      }
+      throw error;
+    }
+
     const journal = prepareApplyJournal(
       cwd,
       plans.map((plan) => ({
@@ -830,14 +899,10 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
     );
 
     try {
-      atomicWriteAll(
-        plans.map((plan) => ({
-          path: plan.path,
-          contents: plan.contents,
-          expectedContentHash: plan.expectedContentHash,
-        })),
-        { token: journal.transactionId, lockSet: transaction },
-      );
+      atomicWriteAll(atomicPlans, {
+        token: journal.transactionId,
+        lockSet: transaction,
+      });
     } catch (error) {
       if (error instanceof AtomicWriteError && !error.rollbackComplete) {
         const recovered = recoverPreparedApply(cwd, journal, transaction);

@@ -11,13 +11,14 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   statSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { createHash, randomBytes } from "node:crypto";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { contentHash } from "./content-hash.js";
 
 export type AtomicWritePlan = {
@@ -69,10 +70,18 @@ type HeldLock = {
   readonly token: string;
 };
 
-export type AtomicWriteLockSet = {
+type LockSetState = {
   readonly targets: ReadonlySet<string>;
   readonly held: readonly HeldLock[];
+  active: boolean;
 };
+
+declare const atomicWriteLockSetBrand: unique symbol;
+export type AtomicWriteLockSet = {
+  readonly [atomicWriteLockSetBrand]: true;
+};
+
+const lockSetStates = new WeakMap<object, LockSetState>();
 
 function syncDirectory(path: string): void {
   const fd = openSync(path, "r");
@@ -123,9 +132,21 @@ function basenameSafe(path: string): string {
   return base.replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
+export function canonicalPath(path: string): string {
+  let cursor = resolve(path);
+  const suffix: string[] = [];
+  while (!existsSync(cursor)) {
+    const parent = dirname(cursor);
+    if (parent === cursor) break;
+    suffix.unshift(basename(cursor));
+    cursor = parent;
+  }
+  return resolve(realpathSync.native(cursor), ...suffix);
+}
+
 function artifactStem(path: string): string {
   const digest = createHash("sha256")
-    .update(resolve(path), "utf8")
+    .update(canonicalPath(path), "utf8")
     .digest("hex")
     .slice(0, 16);
   return `${basenameSafe(path)}-${digest}`;
@@ -205,13 +226,11 @@ function removeStaleLock(lockPath: string): boolean {
     return ownerIdentity !== CURRENT_PROCESS_IDENTITY && removeLockFile(lockPath);
   }
   const liveIdentity = processIdentity(ownerPid);
-  if (
-    liveIdentity === ownerIdentity ||
-    (liveIdentity === null && processIsAlive(ownerPid))
-  ) {
-    return false;
+  if (liveIdentity === ownerIdentity) return false;
+  if (liveIdentity !== null || !processIsAlive(ownerPid)) {
+    return removeLockFile(lockPath);
   }
-  return removeLockFile(lockPath);
+  return lockIsOld(lockPath) && removeLockFile(lockPath);
 }
 
 function acquireLocks(paths: readonly string[]): readonly HeldLock[] {
@@ -266,12 +285,23 @@ function acquireLocks(paths: readonly string[]): readonly HeldLock[] {
 export function acquireAtomicWriteLocks(
   paths: readonly string[],
 ): AtomicWriteLockSet {
-  const targets = new Set(paths.map((path) => resolve(path)));
-  return { targets, held: acquireLocks([...targets]) };
+  const targets = new Set(paths.map((path) => canonicalPath(path)));
+  const lockSet = Object.freeze({}) as AtomicWriteLockSet;
+  lockSetStates.set(lockSet, {
+    targets,
+    held: acquireLocks([...targets]),
+    active: true,
+  });
+  return lockSet;
 }
 
 export function releaseAtomicWriteLocks(lockSet: AtomicWriteLockSet): void {
-  releaseLocks(lockSet.held);
+  const state = lockSetStates.get(lockSet);
+  if (state === undefined || !state.active) {
+    throw new AtomicWriteLockError("lock capability");
+  }
+  state.active = false;
+  releaseLocks(state.held);
 }
 
 function releaseLocks(held: readonly HeldLock[]): void {
@@ -307,6 +337,53 @@ function currentHash(path: string): string | null {
   return existsSync(path) ? contentHash(readFileSync(path, "utf8")) : null;
 }
 
+function requireActiveLockSet(
+  lockSet: AtomicWriteLockSet,
+  targets: ReadonlySet<string>,
+): LockSetState {
+  const state = lockSetStates.get(lockSet);
+  if (state === undefined || !state.active) {
+    throw new AtomicWriteLockError("lock capability");
+  }
+  for (const target of targets) {
+    if (!state.targets.has(target)) throw new AtomicWriteLockError(target);
+  }
+  for (const lock of state.held) {
+    try {
+      const owner = JSON.parse(readFileSync(lock.path, "utf8")) as {
+        token?: unknown;
+      };
+      if (owner.token !== lock.token) throw new AtomicWriteLockError(lock.path);
+    } catch (error) {
+      if (error instanceof AtomicWriteLockError) throw error;
+      throw new AtomicWriteLockError(lock.path);
+    }
+  }
+  return state;
+}
+
+export function verifyAtomicWritePreconditions(
+  plans: readonly AtomicWritePlan[],
+  lockSet: AtomicWriteLockSet,
+): void {
+  const normalized = plans.map((plan) => ({
+    ...plan,
+    path: canonicalPath(plan.path),
+  }));
+  requireActiveLockSet(lockSet, new Set(normalized.map((plan) => plan.path)));
+  for (const plan of normalized) {
+    if (plan.expectedContentHash === undefined) continue;
+    const actual = currentHash(plan.path);
+    if (actual !== plan.expectedContentHash) {
+      throw new AtomicWriteConflictError(
+        plan.path,
+        plan.expectedContentHash,
+        actual,
+      );
+    }
+  }
+}
+
 export function atomicWriteFile(
   path: string,
   contents: string,
@@ -339,7 +416,10 @@ export function atomicWriteAll(
 ): void {
   if (plans.length === 0) return;
 
-  const normalized = plans.map((plan) => ({ ...plan, path: resolve(plan.path) }));
+  const normalized = plans.map((plan) => ({
+    ...plan,
+    path: canonicalPath(plan.path),
+  }));
   const targets = new Set<string>();
   for (const plan of normalized) {
     if (targets.has(plan.path)) {
@@ -359,18 +439,10 @@ export function atomicWriteAll(
     );
   }
 
-  for (const plan of normalized) {
-    if (
-      options.lockSet !== undefined &&
-      !options.lockSet.targets.has(plan.path)
-    ) {
-      throw new AtomicWriteLockError(plan.path);
-    }
-  }
-  const locks =
-    options.lockSet === undefined
-      ? acquireLocks(normalized.map((plan) => plan.path))
-      : null;
+  const lockSet =
+    options.lockSet ??
+    acquireAtomicWriteLocks(normalized.map((plan) => plan.path));
+  const ownsLockSet = options.lockSet === undefined;
   const staged: Array<{
     path: string;
     tmp: string;
@@ -380,18 +452,7 @@ export function atomicWriteAll(
   let committed = 0;
 
   try {
-    for (const plan of normalized) {
-      if (plan.expectedContentHash !== undefined) {
-        const actual = currentHash(plan.path);
-        if (actual !== plan.expectedContentHash) {
-          throw new AtomicWriteConflictError(
-            plan.path,
-            plan.expectedContentHash,
-            actual,
-          );
-        }
-      }
-    }
+    verifyAtomicWritePreconditions(normalized, lockSet);
 
     for (const plan of normalized) {
       const dir = dirname(plan.path);
@@ -484,7 +545,7 @@ export function atomicWriteAll(
       error,
     );
   } finally {
-    if (locks !== null) releaseLocks(locks);
+    if (ownsLockSet) releaseAtomicWriteLocks(lockSet);
   }
 }
 
