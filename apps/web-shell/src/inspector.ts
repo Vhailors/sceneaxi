@@ -20,6 +20,7 @@ export type InspectorSnapshot = {
   readonly renderedDiff: string | null;
   readonly proposal: Proposal | null;
   readonly appliedPaths: readonly string[] | null;
+  readonly journalRecoveryPending: boolean;
   readonly diagnostics: readonly ApplyDiagnostic[] | null;
 };
 
@@ -46,6 +47,7 @@ export function createInspectorSession(options: {
   let proposal: Proposal | null = null;
   let pendingCwd: string | undefined;
   let appliedPaths: readonly string[] | null = null;
+  let journalRecoveryPending = false;
   let diagnostics: readonly ApplyDiagnostic[] | null = null;
 
   const snap = (): InspectorSnapshot =>
@@ -55,6 +57,7 @@ export function createInspectorSession(options: {
       renderedDiff,
       proposal,
       appliedPaths,
+      journalRecoveryPending,
       diagnostics,
     });
 
@@ -74,6 +77,7 @@ export function createInspectorSession(options: {
         proposal = null;
         pendingCwd = undefined;
         appliedPaths = null;
+        journalRecoveryPending = false;
         diagnostics = result.diagnostics;
         return snap();
       }
@@ -83,6 +87,7 @@ export function createInspectorSession(options: {
       proposal = result.proposal;
       pendingCwd = cwd;
       appliedPaths = null;
+      journalRecoveryPending = false;
       diagnostics = null;
       return snap();
     },
@@ -110,6 +115,7 @@ export function createInspectorSession(options: {
       }
       phase = "applied";
       appliedPaths = result.appliedPaths;
+      journalRecoveryPending = result.journalRecoveryPending === true;
       diagnostics = null;
       // Keep renderedDiff visible after apply so the inspector can show what was accepted.
       return snap();
@@ -122,6 +128,7 @@ export function createInspectorSession(options: {
       proposal = null;
       pendingCwd = undefined;
       appliedPaths = null;
+      journalRecoveryPending = false;
       diagnostics = null;
       return snap();
     },

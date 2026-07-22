@@ -963,6 +963,7 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
       return {
         ok: true,
         appliedPaths: plans.map((plan) => plan.documentPath),
+        journalRecoveryPending: true,
       };
     }
     return {

@@ -238,6 +238,9 @@ export function runProjectApply(
     Object.freeze({
       status: "applied",
       appliedPaths: result.appliedPaths,
+      ...(result.journalRecoveryPending === true
+        ? { journalRecoveryPending: true }
+        : {}),
     }),
     [
       "Documents updated atomically via tmp-then-rename",

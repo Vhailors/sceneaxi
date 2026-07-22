@@ -3,7 +3,9 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  rmdirSync,
   symlinkSync,
+  unlinkSync,
   utimesSync,
   writeFileSync,
 } from "node:fs";
@@ -647,6 +649,28 @@ describe("E1 apply journal", () => {
     }
   });
 
+  it("never reclaims an incomplete lock owner record", () => {
+    const cwd = fixtureDir();
+    const path = join(cwd, "scene.json");
+    writeFileSync(path, "before\n", "utf8");
+    const lockSet = acquireAtomicWriteLocks([path]);
+    const lockName = readdirSync(cwd).find((name) =>
+      name.startsWith(".sceneaxi-lock-"),
+    );
+    expect(lockName).toBeDefined();
+    releaseAtomicWriteLocks(lockSet);
+    if (lockName === undefined) return;
+    const lockPath = join(cwd, lockName);
+    writeFileSync(lockPath, "", "utf8");
+    const old = new Date(Date.now() - 60_000);
+    utimesSync(lockPath, old, old);
+
+    expect(() => atomicWriteAll([{ path, contents: "after\n" }])).toThrow(
+      /progress/i,
+    );
+    expect(readFileSync(path, "utf8")).toBe("before\n");
+  });
+
   it("rebuilds a damaged completion sequence before canonical commit", () => {
     const cwd = fixtureDir();
     const path = join(cwd, "scene.json");
@@ -714,6 +738,93 @@ describe("E1 apply journal", () => {
     if (applied.ok) return;
     expect(applied.diagnostics[0]?.code).toBe("apply-failed");
     expect(readFileSync(path, "utf8")).toBe(before);
+  });
+
+  it("rejects completion sequence overflow before canonical commit", () => {
+    const cwd = fixtureDir();
+    const path = join(cwd, "scene.json");
+    expect(
+      writeDocumentFile(
+        path,
+        createDocument({ id: "scene", data: { x: 1 } }),
+      ).ok,
+    ).toBe(true);
+    const before = readFileSync(path, "utf8");
+    const proposed = propose({
+      cwd,
+      documentPath: "scene.json",
+      jsonPointer: "/data/x",
+      newValue: 2,
+    });
+    expect(proposed.ok).toBe(true);
+    if (!proposed.ok) return;
+    const journalDir = join(cwd, ".sceneaxi", "journal");
+    mkdirSync(journalDir, { recursive: true });
+    writeFileSync(
+      join(journalDir, ".completion-sequence"),
+      `${JSON.stringify({
+        schemaVersion: 1,
+        kind: "sceneaxi.authoring-completion-sequence",
+        value: Number.MAX_SAFE_INTEGER,
+      })}\n`,
+      "utf8",
+    );
+
+    const applied = apply({ cwd, proposal: proposed.proposal });
+
+    expect(applied.ok).toBe(false);
+    if (applied.ok) return;
+    expect(applied.diagnostics[0]?.code).toBe("apply-failed");
+    expect(readFileSync(path, "utf8")).toBe(before);
+  });
+
+  it("reports journal finalization failures as recoverable state", () => {
+    const cwd = fixtureDir();
+    const path = join(cwd, "scene.json");
+    expect(
+      writeDocumentFile(
+        path,
+        createDocument({ id: "scene", data: { x: 1 } }),
+      ).ok,
+    ).toBe(true);
+    const proposed = propose({
+      cwd,
+      documentPath: "scene.json",
+      jsonPointer: "/data/x",
+      newValue: 2,
+    });
+    expect(proposed.ok).toBe(true);
+    if (!proposed.ok) return;
+    expect(apply({ cwd, proposal: proposed.proposal }).ok).toBe(true);
+
+    const journalDir = join(cwd, ".sceneaxi", "journal");
+    const journalName = readdirSync(journalDir).find((name) =>
+      /^\d{13}-[0-9a-f]{16}\.json$/.test(name),
+    );
+    expect(journalName).toBeDefined();
+    if (journalName === undefined) return;
+    const journalPath = join(journalDir, journalName);
+    const journal = JSON.parse(readFileSync(journalPath, "utf8")) as Record<
+      string,
+      unknown
+    >;
+    stageActiveJournal(journalDir, preparedJournal(journal));
+    unlinkSync(journalPath);
+    mkdirSync(journalPath);
+
+    const failed = recoverIncompleteApplies({ cwd });
+
+    expect(failed.ok).toBe(false);
+    if (failed.ok) return;
+    expect(failed.diagnostics[0]?.code).toBe("apply-failed");
+    expect(
+      (JSON.parse(readFileSync(join(journalDir, ".active"), "utf8")) as {
+        state: string;
+      }).state,
+    ).toBe("prepared");
+
+    rmdirSync(journalPath);
+    expect(recoverIncompleteApplies({ cwd }).ok).toBe(true);
   });
 
   it("checks only the active journal during recovery", () => {

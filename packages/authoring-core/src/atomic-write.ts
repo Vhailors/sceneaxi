@@ -8,6 +8,7 @@ import {
   copyFileSync,
   existsSync,
   fsyncSync,
+  linkSync,
   mkdirSync,
   openSync,
   readFileSync,
@@ -235,67 +236,86 @@ function processIdentity(
 
 const CURRENT_PROCESS_IDENTITY = processIdentity(process.pid);
 
-function removeLockFile(lockPath: string): boolean {
+type LockOwner = {
+  readonly pid: number;
+  readonly identity: string;
+  readonly token: string;
+};
+
+function readLockOwner(lockPath: string): LockOwner | null {
   try {
-    unlinkSync(lockPath);
-    syncDirectory(dirname(lockPath));
-    return true;
+    const value = JSON.parse(readFileSync(lockPath, "utf8")) as unknown;
+    if (value === null || typeof value !== "object" || Array.isArray(value)) {
+      return null;
+    }
+    const owner = value as Record<string, unknown>;
+    if (
+      typeof owner["pid"] !== "number" ||
+      !Number.isInteger(owner["pid"]) ||
+      owner["pid"] <= 0 ||
+      typeof owner["identity"] !== "string" ||
+      owner["identity"].length === 0 ||
+      typeof owner["token"] !== "string" ||
+      owner["token"].length === 0
+    ) {
+      return null;
+    }
+    return {
+      pid: owner["pid"],
+      identity: owner["identity"],
+      token: owner["token"],
+    };
   } catch {
-    return false;
+    return null;
   }
 }
 
-function lockIsOld(lockPath: string): boolean {
-  try {
-    return Date.now() - statSync(lockPath).mtimeMs >= 30_000;
-  } catch {
-    return false;
+function lockOwnerIsStale(owner: LockOwner): boolean {
+  if (owner.pid === process.pid) {
+    return owner.identity !== CURRENT_PROCESS_IDENTITY;
   }
-}
-
-function removeStaleLock(lockPath: string): boolean {
-  let owner: unknown;
-  try {
-    owner = JSON.parse(readFileSync(lockPath, "utf8")) as unknown;
-  } catch {
-    return lockIsOld(lockPath) && removeLockFile(lockPath);
-  }
-  const ownerPidValue =
-    owner !== null && typeof owner === "object"
-      ? (owner as { pid?: unknown }).pid
-      : undefined;
-  if (
-    typeof ownerPidValue !== "number" ||
-    !Number.isInteger(ownerPidValue) ||
-    ownerPidValue <= 0
-  ) {
-    return lockIsOld(lockPath) && removeLockFile(lockPath);
-  }
-  const ownerPid = ownerPidValue;
-  const ownerIdentity = (owner as { identity?: unknown }).identity;
-  if (
-    ownerIdentity !== undefined &&
-    ownerIdentity !== null &&
-    typeof ownerIdentity !== "string"
-  ) {
-    return false;
-  }
-  if (ownerPid === process.pid) {
-    return ownerIdentity !== CURRENT_PROCESS_IDENTITY && removeLockFile(lockPath);
-  }
-  if (!processIsAlive(ownerPid)) return removeLockFile(lockPath);
-  if (ownerIdentity === undefined || ownerIdentity === null) return false;
-  const method = ownerIdentity.startsWith("linux-proc:")
+  if (!processIsAlive(owner.pid)) return true;
+  const method = owner.identity.startsWith("linux-proc:")
     ? "linux-proc"
-    : ownerIdentity.startsWith("windows-cim:")
+    : owner.identity.startsWith("windows-cim:")
       ? "windows-cim"
-      : ownerIdentity.startsWith("posix-ps:")
+      : owner.identity.startsWith("posix-ps:")
         ? "posix-ps"
         : undefined;
   if (method === undefined) return false;
-  const liveIdentity = processIdentity(ownerPid, method);
-  if (liveIdentity === ownerIdentity) return false;
-  return liveIdentity === null ? false : removeLockFile(lockPath);
+  const liveIdentity = processIdentity(owner.pid, method);
+  return liveIdentity !== null && liveIdentity !== owner.identity;
+}
+
+function removeStaleLock(lockPath: string): boolean {
+  const claimPath = `${lockPath}.reclaim`;
+  try {
+    linkSync(lockPath, claimPath);
+    syncDirectory(dirname(lockPath));
+  } catch {
+    return false;
+  }
+  let removed = false;
+  try {
+    const owner = readLockOwner(claimPath);
+    if (owner === null || !lockOwnerIsStale(owner)) return false;
+    const claimed = statSync(claimPath);
+    const current = statSync(lockPath);
+    if (claimed.dev !== current.dev || claimed.ino !== current.ino) return false;
+    unlinkSync(lockPath);
+    syncDirectory(dirname(lockPath));
+    removed = true;
+    return true;
+  } catch {
+    return false;
+  } finally {
+    try {
+      unlinkSync(claimPath);
+      syncDirectory(dirname(claimPath));
+    } catch {
+      if (removed) throw new AtomicWriteLockError(lockPath);
+    }
+  }
 }
 
 function acquireLocks(paths: readonly string[]): readonly HeldLock[] {
@@ -303,40 +323,49 @@ function acquireLocks(paths: readonly string[]): readonly HeldLock[] {
   const token = randomBytes(16).toString("hex");
   try {
     for (const path of [...new Set(paths)].sort()) {
+      if (CURRENT_PROCESS_IDENTITY === null) {
+        throw new AtomicWriteLockError(path);
+      }
       const lockPath = lockPathFor(path);
+      const claimPath = `${lockPath}.reclaim`;
+      const candidatePath = `${lockPath}.candidate-${token}`;
       ensureDirectory(dirname(lockPath));
+      writeDurableFile(
+        candidatePath,
+        JSON.stringify({
+          pid: process.pid,
+          identity: CURRENT_PROCESS_IDENTITY,
+          token,
+        }),
+      );
+      syncDirectory(dirname(lockPath));
       let acquired = false;
-      for (let attempt = 0; attempt < 2 && !acquired; attempt += 1) {
-        let fd: number;
-        try {
-          fd = openSync(lockPath, "wx");
-        } catch (error) {
-          const code =
-            error instanceof Error && "code" in error
-              ? (error as NodeJS.ErrnoException).code
-              : undefined;
-          if (code !== "EEXIST" || !removeStaleLock(lockPath)) {
-            throw new AtomicWriteLockError(path);
+      try {
+        for (let attempt = 0; attempt < 2 && !acquired; attempt += 1) {
+          if (existsSync(claimPath)) throw new AtomicWriteLockError(path);
+          try {
+            linkSync(candidatePath, lockPath);
+          } catch (error) {
+            const code =
+              error instanceof Error && "code" in error
+                ? (error as NodeJS.ErrnoException).code
+                : undefined;
+            if (code !== "EEXIST" || !removeStaleLock(lockPath)) {
+              throw new AtomicWriteLockError(path);
+            }
+            continue;
           }
-          continue;
+          held.push({ path: lockPath, token });
+          syncDirectory(dirname(lockPath));
+          acquired = true;
         }
-        held.push({ path: lockPath, token });
+      } finally {
         try {
-          writeFileSync(
-            fd,
-            JSON.stringify({
-              pid: process.pid,
-              identity: CURRENT_PROCESS_IDENTITY,
-              token,
-            }),
-            "utf8",
-          );
-          fsyncSync(fd);
-        } finally {
-          closeSync(fd);
+          unlinkSync(candidatePath);
+          syncDirectory(dirname(candidatePath));
+        } catch {
+          if (!acquired) throw new AtomicWriteLockError(path);
         }
-        syncDirectory(dirname(lockPath));
-        acquired = true;
       }
       if (!acquired) throw new AtomicWriteLockError(path);
     }

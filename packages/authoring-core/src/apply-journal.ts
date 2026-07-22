@@ -178,7 +178,7 @@ function parseJournal(text: string): ApplyJournalEntry | null {
     !Array.isArray(raw["documents"]) ||
     raw["documents"].length === 0 ||
     (hasReservedOrder &&
-      (!Number.isInteger(raw["completionOrder"]) ||
+      (!Number.isSafeInteger(raw["completionOrder"]) ||
         (raw["completionOrder"] as number) <= 0)) ||
     (!hasReservedOrder && Object.hasOwn(raw, "completionOrder")) ||
     (isCompletedState &&
@@ -345,7 +345,7 @@ function reserveCompletionOrder(cwd: string): number {
       (parsed as Record<string, unknown>)["schemaVersion"] !== 1 ||
       (parsed as Record<string, unknown>)["kind"] !==
         "sceneaxi.authoring-completion-sequence" ||
-      !Number.isInteger((parsed as Record<string, unknown>)["value"]) ||
+      !Number.isSafeInteger((parsed as Record<string, unknown>)["value"]) ||
       ((parsed as Record<string, unknown>)["value"] as number) < 0
     ) {
       parsed = null;
@@ -364,6 +364,9 @@ function reserveCompletionOrder(cwd: string): number {
       0,
       ...journals.entries.map((candidate) => candidate.completionOrder ?? 0),
     );
+  }
+  if (current >= Number.MAX_SAFE_INTEGER) {
+    throw new Error("Apply journal completion sequence is exhausted.");
   }
   const next = current + 1;
   atomicWriteFile(
@@ -509,11 +512,26 @@ function recoverJournalEntry(
     }
     throw error;
   }
-  if (target === "after") {
-    completeApplyJournal(cwd, entry);
-  } else {
-    writeJournal(cwd, { ...entry, state: "undone" });
-    writeActiveJournal(cwd, null);
+  try {
+    if (target === "after") {
+      completeApplyJournal(cwd, entry);
+    } else {
+      writeJournal(cwd, { ...entry, state: "undone" });
+      writeActiveJournal(cwd, null);
+    }
+  } catch {
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          code: "apply-failed",
+          message:
+            "Canonical documents are consistent, but journal finalization is pending.",
+          reReadHint:
+            "Resolve the journal storage error, then retry recovery before another authoring operation.",
+        },
+      ],
+    };
   }
   return {
     ok: true,

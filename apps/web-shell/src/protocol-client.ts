@@ -45,6 +45,7 @@ export type ShellRoundTripOk = {
   readonly unifiedDiff: string;
   readonly renderedDiff: string;
   readonly appliedPaths: readonly string[];
+  readonly journalRecoveryPending?: true;
 };
 
 export type ShellRoundTripReject = {
@@ -124,6 +125,9 @@ export function shellProposeAndApply(
     unifiedDiff: proposed.unifiedDiff,
     renderedDiff: proposed.renderedDiff,
     appliedPaths: applied.appliedPaths,
+    ...(applied.journalRecoveryPending === true
+      ? { journalRecoveryPending: true }
+      : {}),
   };
 }
 

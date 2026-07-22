@@ -334,6 +334,7 @@ export type ApplyDiagnostic = {
 export type ApplyOk = {
   readonly ok: true;
   readonly appliedPaths: readonly string[];
+  readonly journalRecoveryPending?: true;
 };
 
 export type ApplyReject = {
