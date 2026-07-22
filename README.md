@@ -31,6 +31,11 @@ The first-class v1 Plugin Host contract is documented in
 [`docs/plugins.md`](docs/plugins.md): plugins are isolated packages that claim
 only versioned public capability IDs, never arbitrary hooks or engine-internal
 ports.
+External web products follow the published-package support and pinning contract
+in [`docs/web-consumer.md`](docs/web-consumer.md).
+Portable product exports cross delivery boundaries through the public,
+delivery-neutral [`Delivery Handoff` contract](docs/delivery-handoff.md); provider
+credentials, uploads, approvals, and adapter implementation stay outside core.
 
 ## Development
 
