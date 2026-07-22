@@ -1,7 +1,7 @@
 /**
  * web-shell inspector: propose → rendered diff → accept/reject (sceneaxi#11).
  */
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -138,6 +138,37 @@ describe("web-shell protocol client", () => {
     expect(JSON.parse(readFileSync(join(proposalDir, "scene.json"), "utf8")).data.n).toBe(
       20,
     );
+  });
+
+  it("freezes a relative working directory while a proposal is reviewed", () => {
+    const originalCwd = process.cwd();
+    const root = fixtureDir();
+    const proposalDir = join(root, "proposal");
+    const otherDir = join(root, "other");
+    mkdirSync(proposalDir);
+    mkdirSync(otherDir);
+    writeScene(proposalDir, "scene.json", { n: 1 });
+
+    try {
+      process.chdir(root);
+      const session = createInspectorSession({ cwd: "proposal" });
+      expect(
+        session.proposeEdit({
+          documentPath: "scene.json",
+          jsonPointer: "/data/n",
+          newValue: 2,
+        }).phase,
+      ).toBe("reviewing");
+
+      process.chdir(otherDir);
+      expect(session.accept().phase).toBe("applied");
+      expect(
+        JSON.parse(readFileSync(join(proposalDir, "scene.json"), "utf8")).data
+          .n,
+      ).toBe(2);
+    } finally {
+      process.chdir(originalCwd);
+    }
   });
 
   it("shellProposeAndApply completes a full round-trip", () => {

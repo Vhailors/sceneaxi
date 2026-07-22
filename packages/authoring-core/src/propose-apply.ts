@@ -934,11 +934,20 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
             ok: true,
             appliedPaths: plans.map((plan) => plan.documentPath),
             ...(recovered.journalRecoveryPending === true
-              ? { journalRecoveryPending: true }
+              ? {
+                  journalRecoveryPending: true,
+                  transactionId: journal.transactionId,
+                }
               : {}),
           };
         }
-        return recovered;
+        return {
+          ok: false,
+          applicationState: "indeterminate",
+          journalRecoveryPending: true,
+          transactionId: journal.transactionId,
+          diagnostics: recovered.diagnostics,
+        };
       }
 
       try {
@@ -950,7 +959,10 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
             ok: true,
             appliedPaths: plans.map((plan) => plan.documentPath),
             ...(recovered.journalRecoveryPending === true
-              ? { journalRecoveryPending: true }
+              ? {
+                  journalRecoveryPending: true,
+                  transactionId: journal.transactionId,
+                }
               : {}),
           };
         }
@@ -958,6 +970,7 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
           ok: false,
           applicationState: "indeterminate",
           journalRecoveryPending: true,
+          transactionId: journal.transactionId,
           diagnostics: journalRecoveryPendingDiagnostics(),
         };
       }
@@ -995,6 +1008,7 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
         ok: true,
         appliedPaths: plans.map((plan) => plan.documentPath),
         journalRecoveryPending: true,
+        transactionId: journal.transactionId,
       };
     }
     return {

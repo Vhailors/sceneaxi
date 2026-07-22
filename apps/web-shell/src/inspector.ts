@@ -5,6 +5,8 @@
  * Stub only: no DOM, no hosting, no deployment.
  */
 
+import { resolve } from "node:path";
+
 import {
   recoverIncompleteApplies,
   type ApplyDiagnostic,
@@ -56,6 +58,7 @@ export function createInspectorSession(options: {
   let renderedDiff: string | null = null;
   let proposal: Proposal | null = null;
   let pendingCwd: string | undefined;
+  let pendingTransactionId: string | null = null;
   let appliedPaths: readonly string[] | null = null;
   let journalRecoveryPending = false;
   let diagnostics: readonly ApplyDiagnostic[] | null = null;
@@ -88,11 +91,11 @@ export function createInspectorSession(options: {
     snapshot: snap,
 
     proposeEdit(input: ShellEditInput): InspectorSnapshot {
-      if (phase === "pending") return refusePending();
-      const cwd = input.cwd ?? options.cwd;
+      if (journalRecoveryPending) return refusePending();
+      const cwd = resolve(input.cwd ?? options.cwd ?? ".");
       const result = shellPropose({
         ...input,
-        ...(cwd !== undefined ? { cwd } : {}),
+        cwd,
       });
       if (!result.ok) {
         phase = "idle";
@@ -100,6 +103,7 @@ export function createInspectorSession(options: {
         renderedDiff = null;
         proposal = null;
         pendingCwd = undefined;
+        pendingTransactionId = null;
         appliedPaths = null;
         journalRecoveryPending = false;
         diagnostics = result.diagnostics;
@@ -110,6 +114,7 @@ export function createInspectorSession(options: {
       renderedDiff = result.renderedDiff;
       proposal = result.proposal;
       pendingCwd = cwd;
+      pendingTransactionId = null;
       appliedPaths = null;
       journalRecoveryPending = false;
       diagnostics = null;
@@ -117,7 +122,7 @@ export function createInspectorSession(options: {
     },
 
     accept(): InspectorSnapshot {
-      if (phase === "pending") return refusePending();
+      if (journalRecoveryPending) return refusePending();
       if (phase !== "reviewing" || proposal === null) {
         diagnostics = [
           {
@@ -137,6 +142,7 @@ export function createInspectorSession(options: {
         phase = "pending";
         appliedPaths = null;
         journalRecoveryPending = true;
+        pendingTransactionId = result.transactionId;
         diagnostics = result.diagnostics;
         return snap();
       }
@@ -148,18 +154,20 @@ export function createInspectorSession(options: {
       phase = "applied";
       appliedPaths = result.appliedPaths;
       journalRecoveryPending = result.journalRecoveryPending === true;
+      pendingTransactionId = result.transactionId ?? null;
       diagnostics = null;
       // Keep renderedDiff visible after apply so the inspector can show what was accepted.
       return snap();
     },
 
     reject(): InspectorSnapshot {
-      if (phase === "pending") return refusePending();
+      if (journalRecoveryPending) return refusePending();
       phase = "rejected";
       unifiedDiff = null;
       renderedDiff = null;
       proposal = null;
       pendingCwd = undefined;
+      pendingTransactionId = null;
       appliedPaths = null;
       journalRecoveryPending = false;
       diagnostics = null;
@@ -167,7 +175,9 @@ export function createInspectorSession(options: {
     },
 
     refreshRecovery(): InspectorSnapshot {
-      if (phase !== "pending") return snap();
+      if (!journalRecoveryPending || pendingTransactionId === null) {
+        return snap();
+      }
       const recovered = recoverIncompleteApplies(
         pendingCwd === undefined ? {} : { cwd: pendingCwd },
       );
@@ -179,11 +189,25 @@ export function createInspectorSession(options: {
         diagnostics = pendingDiagnostics();
         return snap();
       }
-      phase = "applied";
-      appliedPaths = [
-        ...new Set(proposal?.edits.map((edit) => edit.documentPath) ?? []),
-      ];
+      if (!recovered.transactionIds.includes(pendingTransactionId)) {
+        diagnostics = [
+          {
+            code: "journal-not-found",
+            message: `Recovery did not resolve pending transaction ${pendingTransactionId}.`,
+            reReadHint:
+              "Re-read the affected documents and create a new inspector session before continuing.",
+          },
+        ];
+        return snap();
+      }
+      if (phase === "pending") {
+        phase = "applied";
+        appliedPaths = [
+          ...new Set(proposal?.edits.map((edit) => edit.documentPath) ?? []),
+        ];
+      }
       journalRecoveryPending = false;
+      pendingTransactionId = null;
       diagnostics = null;
       return snap();
     },

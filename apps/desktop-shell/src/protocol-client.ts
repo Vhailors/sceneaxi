@@ -47,8 +47,16 @@ export type ShellRoundTripOk = {
   readonly unifiedDiff: string;
   readonly renderedDiff: string;
   readonly appliedPaths: readonly string[];
-  readonly journalRecoveryPending?: true;
-};
+} & (
+  | {
+      readonly journalRecoveryPending: true;
+      readonly transactionId: string;
+    }
+  | {
+      readonly journalRecoveryPending?: never;
+      readonly transactionId?: never;
+    }
+);
 
 export type ShellRoundTripIndeterminate = {
   readonly ok: false;
@@ -57,6 +65,7 @@ export type ShellRoundTripIndeterminate = {
   readonly renderedDiff: string;
   readonly applicationState: "indeterminate";
   readonly journalRecoveryPending: true;
+  readonly transactionId: string;
   readonly diagnostics: readonly ApplyDiagnostic[];
   readonly appliedPaths?: never;
 };
@@ -127,6 +136,7 @@ export function shellProposeAndApply(
       renderedDiff: proposed.renderedDiff,
       applicationState: "indeterminate",
       journalRecoveryPending: true,
+      transactionId: applied.transactionId,
       diagnostics: applied.diagnostics,
     };
   }
@@ -146,7 +156,10 @@ export function shellProposeAndApply(
     renderedDiff: proposed.renderedDiff,
     appliedPaths: applied.appliedPaths,
     ...(applied.journalRecoveryPending === true
-      ? { journalRecoveryPending: true }
+      ? {
+          journalRecoveryPending: true,
+          transactionId: applied.transactionId,
+        }
       : {}),
   };
 }

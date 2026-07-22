@@ -335,13 +335,22 @@ export type ApplyApplied = {
   readonly ok: true;
   readonly applicationState?: never;
   readonly appliedPaths: readonly string[];
-  readonly journalRecoveryPending?: true;
-};
+} & (
+  | {
+      readonly journalRecoveryPending: true;
+      readonly transactionId: string;
+    }
+  | {
+      readonly journalRecoveryPending?: never;
+      readonly transactionId?: never;
+    }
+);
 
 export type ApplyIndeterminate = {
   readonly ok: false;
   readonly applicationState: "indeterminate";
   readonly journalRecoveryPending: true;
+  readonly transactionId: string;
   readonly diagnostics: readonly ApplyDiagnostic[];
   readonly appliedPaths?: never;
 };

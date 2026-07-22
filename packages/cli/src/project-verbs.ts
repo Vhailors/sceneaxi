@@ -239,7 +239,10 @@ export function runProjectApply(
       status: "applied",
       appliedPaths: result.appliedPaths,
       ...(result.journalRecoveryPending === true
-        ? { journalRecoveryPending: true }
+        ? {
+            journalRecoveryPending: true,
+            transactionId: result.transactionId,
+          }
         : {}),
     }),
     [

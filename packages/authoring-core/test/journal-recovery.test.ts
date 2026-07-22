@@ -935,6 +935,7 @@ describe("E1 apply journal", () => {
 
     expect(pending.ok).toBe(true);
     if (!pending.ok) return;
+    expect(pending.transactionIds).toEqual([journal["transactionId"]]);
     expect(pending.journalRecoveryPending).toBe(true);
     expect(
       (JSON.parse(readFileSync(join(journalDir, ".active"), "utf8")) as {
