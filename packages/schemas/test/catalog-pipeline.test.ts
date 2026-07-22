@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   CATALOG_DATE_TIME_PATTERN,
   CATALOG_ITEM_SCHEMA_VERSION,
+  CATALOG_METADATA_UNAVAILABLE_TOMBSTONE_SCHEMA_VERSION,
   CATALOG_POLICY_CITES,
   COMMERCE_ACTIVATION_GATE,
   attemptCommerceActivation,
@@ -277,6 +278,32 @@ describe("Catalog Item contract + policy cites", () => {
     expect(new RegExp(sourceDigestPattern ?? "").test(HASH + "\n")).toBe(false);
   });
 
+  it("ships an explicit metadata-unavailable tombstone contract", () => {
+    expect(contracts.catalogMetadataUnavailableTombstone).toBe(
+      "contracts/catalog-metadata-unavailable-tombstone.schema.json",
+    );
+    const schema = JSON.parse(
+      readFileSync(
+        fileURLToPath(
+          import.meta.resolve(
+            "@sceneaxi/schemas/contracts/catalog-metadata-unavailable-tombstone.schema.json",
+          ),
+        ),
+        "utf8",
+      ),
+    ) as {
+      $id?: string;
+      properties?: { kind?: { const?: string } };
+    };
+    expect(CATALOG_METADATA_UNAVAILABLE_TOMBSTONE_SCHEMA_VERSION).toBe(1);
+    expect(schema.$id).toBe(
+      "https://sceneaxi.invalid/contracts/catalog-metadata-unavailable-tombstone/v1",
+    );
+    expect(schema.properties?.kind?.const).toBe(
+      "catalog-metadata-unavailable-tombstone",
+    );
+  });
+
   it("starts at intake (quarantine) with empty history and inert commerce", () => {
     const item = syntheticAsset({
       commerce: { price: { amount: "9.99", currency: "USD" }, sku: "SKU-1" },
@@ -322,6 +349,8 @@ describe("fail-closed catalog pipeline state machine", () => {
     });
     expect(delisted.ok).toBe(true);
     if (!delisted.ok) return;
+    expect(delisted.kind).toBe("catalog-item");
+    if (delisted.kind !== "catalog-item") return;
     expect(delisted.item.moderation.pipelineState).toBe("delisted");
     expect(delisted.item.moderation.history).toHaveLength(4);
     expect(delisted.item.moderation.history[3]?.reason).toContain("Takedown");
@@ -445,6 +474,9 @@ describe("fail-closed catalog pipeline state machine", () => {
     });
     expect(delisted.ok).toBe(true);
     if (delisted.ok) {
+      expect(delisted.kind).toBe("catalog-item");
+    }
+    if (delisted.ok && delisted.kind === "catalog-item") {
       expect(delisted.item.moderation.history).toHaveLength(4);
       expect(delisted.item.moderation.history[0]?.from).toBe("intake");
       expect(delisted.item.moderation.history[3]?.to).toBe("delisted");
@@ -827,6 +859,28 @@ describe("fail-closed catalog pipeline state machine", () => {
     }
   });
 
+  it("captures compatibility profile slots exactly once", () => {
+    const profiles = ["game"];
+    let profileReads = 0;
+    Object.defineProperty(profiles, 0, {
+      get() {
+        profileReads += 1;
+        return profileReads <= 2 ? "game" : "game\n";
+      },
+    });
+    const item = syntheticAsset({
+      compatibility: { coreRange: "^0.0.0", profiles },
+    });
+
+    const result = transitionCatalogItem(item, {
+      to: "screening",
+      reason: "snapshot compatibility profiles",
+    });
+    expect(result.ok).toBe(true);
+    expect(profileReads).toBe(1);
+    if (result.ok) expect(result.item.compatibility.profiles).toEqual(["game"]);
+  });
+
   it("exposes only legal successors per state", () => {
     expect(legalSuccessors("intake")).toEqual(["screening"]);
     expect(legalSuccessors("screening")).toEqual(["curation"]);
@@ -864,21 +918,22 @@ describe("commerce fields inert (no 6b activation path)", () => {
     });
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.item.moderation.pipelineState).toBe("delisted");
-      expect(result.item.commerce.activation).toBe("inert");
-      expect(result.item.moderation.history).toHaveLength(4);
-      expect(result.item.rights).toEqual({
-        license: "unavailable-after-takedown",
-        rightsHolder: "unavailable-after-takedown",
-        commercialUseAllowed: false,
+      expect(result.kind).toBe("catalog-metadata-unavailable-tombstone");
+    }
+    if (result.ok && result.kind === "catalog-metadata-unavailable-tombstone") {
+      expect(result.tombstone).toEqual({
+        schemaVersion: CATALOG_METADATA_UNAVAILABLE_TOMBSTONE_SCHEMA_VERSION,
+        kind: "catalog-metadata-unavailable-tombstone",
+        itemId: listed.itemId,
+        unavailableMetadata: ["rights", "provenance", "commerce.activation"],
+        moderation: {
+          pipelineState: "delisted",
+          history: [...listed.moderation.history, result.transition],
+        },
+        commerce: { activation: "inert" },
       });
-      expect(result.item.provenance).toEqual({
-        origin: "unavailable-after-takedown",
-        ingestedAt: result.transition.at,
-        sourceDigest:
-          "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-      });
-      expect(missingMandatoryMetadata(result.item)).toEqual([]);
+      expect(result.tombstone).not.toHaveProperty("assetPackage");
+      expect(result.tombstone).not.toHaveProperty("aiGenerationDisclosure");
     }
   });
 

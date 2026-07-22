@@ -37,6 +37,8 @@ fail-closed **pipeline state machine** stub (`src/catalog.ts`):
 
 The JSON Schema is exported at
 `@sceneaxi/schemas/contracts/catalog-item.schema.json` for package consumers.
+Metadata-unavailable takedowns use the distinct, package-exported
+`catalog-metadata-unavailable-tombstone.schema.json` contract.
 
 `intake (quarantine) → screening → curation → listed → delisted`
 

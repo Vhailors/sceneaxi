@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/catalog-metadata-unavailable-tombstone/v1",
+  "title": "SceneAxi Catalog Metadata-Unavailable Tombstone (v1)",
+  "description": "Explicit delisting result used when authoritative Catalog Item metadata is unavailable. It records identity, unavailable fields, moderation history, and inert commerce without inventing rights, provenance, disclosure, compatibility, Asset Package, or digest facts governed by factories-helpers#47 and #48.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "kind",
+    "itemId",
+    "unavailableMetadata",
+    "moderation",
+    "commerce"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "kind": { "const": "catalog-metadata-unavailable-tombstone" },
+    "itemId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*(?![\\s\\S])"
+    },
+    "unavailableMetadata": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "pattern": "\\S" }
+    },
+    "moderation": {
+      "allOf": [
+        {
+          "$ref": "https://sceneaxi.invalid/contracts/catalog-item/v1#/properties/moderation"
+        },
+        {
+          "properties": { "pipelineState": { "const": "delisted" } }
+        }
+      ]
+    },
+    "commerce": {
+      "type": "object",
+      "required": ["activation"],
+      "additionalProperties": false,
+      "properties": { "activation": { "const": "inert" } }
+    }
+  }
+}

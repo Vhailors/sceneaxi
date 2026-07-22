@@ -25,6 +25,8 @@ export const CATALOG_POLICY_CITES = Object.freeze({
 /** Contract schema version for Catalog Item. */
 export const CATALOG_ITEM_SCHEMA_VERSION = 1 as const;
 
+export const CATALOG_METADATA_UNAVAILABLE_TOMBSTONE_SCHEMA_VERSION = 1 as const;
+
 export const CATALOG_DATE_TIME_PATTERN =
   "^(?:(?:\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|02-(?:0[1-9]|1\\d|2[0-8])))|(?:(?:\\d{2}(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29))[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)(?![\\s\\S])";
 
@@ -122,6 +124,16 @@ export type CatalogItem = {
   readonly commerce: CommerceFields;
 };
 
+export type CatalogMetadataUnavailableTombstone = {
+  readonly schemaVersion:
+    typeof CATALOG_METADATA_UNAVAILABLE_TOMBSTONE_SCHEMA_VERSION;
+  readonly kind: "catalog-metadata-unavailable-tombstone";
+  readonly itemId: string;
+  readonly unavailableMetadata: readonly string[];
+  readonly moderation: ModerationState & { readonly pipelineState: "delisted" };
+  readonly commerce: { readonly activation: "inert" };
+};
+
 /** Legal directed edges of the dormant pipeline. */
 const LEGAL_TRANSITIONS: ReadonlyMap<PipelineState, ReadonlySet<PipelineState>> =
   new Map([
@@ -132,11 +144,23 @@ const LEGAL_TRANSITIONS: ReadonlyMap<PipelineState, ReadonlySet<PipelineState>> 
     ["delisted", new Set<PipelineState>()],
   ]);
 
-export type TransitionOk = {
+export type CatalogItemTransitionOk = {
   readonly ok: true;
+  readonly kind: "catalog-item";
   readonly item: CatalogItem;
   readonly transition: TransitionRecord;
 };
+
+export type CatalogTombstoneTransitionOk = {
+  readonly ok: true;
+  readonly kind: "catalog-metadata-unavailable-tombstone";
+  readonly tombstone: CatalogMetadataUnavailableTombstone;
+  readonly transition: TransitionRecord;
+};
+
+export type TransitionOk =
+  | CatalogItemTransitionOk
+  | CatalogTombstoneTransitionOk;
 
 export type TransitionRefuse = {
   readonly ok: false;
@@ -152,6 +176,12 @@ export type TransitionRefuse = {
 };
 
 export type TransitionResult = TransitionOk | TransitionRefuse;
+
+export type CatalogItemTransitionResult =
+  | CatalogItemTransitionOk
+  | TransitionRefuse;
+
+export type CatalogDelistingResult = TransitionOk | TransitionRefuse;
 
 export type TransitionRequest = {
   readonly to: PipelineState;
@@ -195,12 +225,16 @@ function validDateTime(value: unknown): value is string {
   return typeof value === "string" && DATE_TIME_RE.test(value);
 }
 
-function validProfiles(value: unknown): value is readonly string[] {
-  if (!Array.isArray(value) || value.length === 0) return false;
+function normalizeProfiles(value: unknown): readonly string[] | undefined {
+  if (!Array.isArray(value) || value.length === 0) return undefined;
+  const normalized: string[] = [];
   for (let index = 0; index < value.length; index += 1) {
-    if (!Object.hasOwn(value, index) || !validId(value[index])) return false;
+    if (!Object.hasOwn(value, index)) return undefined;
+    const profile = value[index];
+    if (!validId(profile)) return undefined;
+    normalized.push(profile);
   }
-  return true;
+  return normalized;
 }
 
 function normalizeStringArray(value: unknown): readonly string[] | undefined {
@@ -218,109 +252,122 @@ function normalizeStringArray(value: unknown): readonly string[] | undefined {
 
 type CatalogMetadata = Omit<CatalogItem, "moderation">;
 
-const TOMBSTONE_DIGEST =
-  "sha256:0000000000000000000000000000000000000000000000000000000000000000";
-const TOMBSTONE_DATE_TIME = "1970-01-01T00:00:00.000Z";
-
-function normalizeCatalogMetadata(
-  item: unknown,
-  tombstoneAt = TOMBSTONE_DATE_TIME,
-): { readonly metadata: CatalogMetadata; readonly missing: string[] } {
+function normalizeCatalogMetadata(item: unknown): {
+  readonly metadata?: CatalogMetadata;
+  readonly itemId?: string;
+  readonly missing: string[];
+} {
   const missing: string[] = [];
-  const itemRecord = isRecord(item) ? item : undefined;
-  if (itemRecord === undefined) missing.push("catalogItem");
+  if (!isRecord(item)) return { missing: ["catalogItem"] };
 
-  const schemaVersion = itemRecord?.["schemaVersion"];
+  const schemaVersion = item["schemaVersion"];
   if (schemaVersion !== CATALOG_ITEM_SCHEMA_VERSION) {
     missing.push("schemaVersion");
   }
 
-  const rawItemId = itemRecord?.["itemId"];
-  if (!validId(rawItemId)) missing.push("itemId");
+  const rawItemId = item["itemId"];
+  const itemId = validId(rawItemId) ? rawItemId : undefined;
+  if (itemId === undefined) missing.push("itemId");
 
-  const rawAssetPackage = itemRecord?.["assetPackage"];
+  const rawAssetPackage = item["assetPackage"];
   const assetPackage = isRecord(rawAssetPackage) ? rawAssetPackage : undefined;
   if (assetPackage === undefined) missing.push("assetPackage");
   const rawPackageId = assetPackage?.["packageId"];
   const rawContentHash = assetPackage?.["contentHash"];
-  if (assetPackage !== undefined && !validId(rawPackageId)) {
+  const packageId = validId(rawPackageId) ? rawPackageId : undefined;
+  const contentHash = validSha256(rawContentHash) ? rawContentHash : undefined;
+  if (assetPackage !== undefined && packageId === undefined) {
     missing.push("assetPackage.packageId");
   }
-  if (assetPackage !== undefined && !validSha256(rawContentHash)) {
+  if (assetPackage !== undefined && contentHash === undefined) {
     missing.push("assetPackage.contentHash");
   }
 
-  const rawRights = itemRecord?.["rights"];
+  const rawRights = item["rights"];
   const rights = isRecord(rawRights) ? rawRights : undefined;
   if (rights === undefined) missing.push("rights");
   const rawLicense = rights?.["license"];
   const rawRightsHolder = rights?.["rightsHolder"];
   const rawCommercialUseAllowed = rights?.["commercialUseAllowed"];
-  if (rights !== undefined && !nonEmptyString(rawLicense)) {
+  const license = nonEmptyString(rawLicense) ? rawLicense : undefined;
+  const rightsHolder = nonEmptyString(rawRightsHolder)
+    ? rawRightsHolder
+    : undefined;
+  const commercialUseAllowed =
+    typeof rawCommercialUseAllowed === "boolean"
+      ? rawCommercialUseAllowed
+      : undefined;
+  if (rights !== undefined && license === undefined) {
     missing.push("rights.license");
   }
-  if (rights !== undefined && !nonEmptyString(rawRightsHolder)) {
+  if (rights !== undefined && rightsHolder === undefined) {
     missing.push("rights.rightsHolder");
   }
-  if (rights !== undefined && typeof rawCommercialUseAllowed !== "boolean") {
+  if (rights !== undefined && commercialUseAllowed === undefined) {
     missing.push("rights.commercialUseAllowed");
   }
 
-  const rawProvenance = itemRecord?.["provenance"];
+  const rawProvenance = item["provenance"];
   const provenance = isRecord(rawProvenance) ? rawProvenance : undefined;
   if (provenance === undefined) missing.push("provenance");
   const rawOrigin = provenance?.["origin"];
   const rawIngestedAt = provenance?.["ingestedAt"];
   const rawSourceDigest = provenance?.["sourceDigest"];
-  if (provenance !== undefined && !nonEmptyString(rawOrigin)) {
+  const origin = nonEmptyString(rawOrigin) ? rawOrigin : undefined;
+  const ingestedAt = validDateTime(rawIngestedAt) ? rawIngestedAt : undefined;
+  const sourceDigest = validSha256(rawSourceDigest)
+    ? rawSourceDigest
+    : undefined;
+  if (provenance !== undefined && origin === undefined) {
     missing.push("provenance.origin");
   }
-  if (provenance !== undefined && !validDateTime(rawIngestedAt)) {
+  if (provenance !== undefined && ingestedAt === undefined) {
     missing.push("provenance.ingestedAt");
   }
-  if (provenance !== undefined && !validSha256(rawSourceDigest)) {
+  if (provenance !== undefined && sourceDigest === undefined) {
     missing.push("provenance.sourceDigest");
   }
 
-  const rawDisclosure = itemRecord?.["aiGenerationDisclosure"];
+  const rawDisclosure = item["aiGenerationDisclosure"];
   const disclosure = isRecord(rawDisclosure) ? rawDisclosure : undefined;
   if (disclosure === undefined) missing.push("aiGenerationDisclosure");
   const rawAiGenerated = disclosure?.["aiGenerated"];
   const rawDisclosureText = disclosure?.["disclosureText"];
   const rawTools = disclosure?.["tools"];
+  const aiGenerated =
+    typeof rawAiGenerated === "boolean" ? rawAiGenerated : undefined;
+  const disclosureText = nonEmptyString(rawDisclosureText)
+    ? rawDisclosureText
+    : undefined;
   const tools =
     rawTools === undefined ? undefined : normalizeStringArray(rawTools);
-  if (disclosure !== undefined && typeof rawAiGenerated !== "boolean") {
+  if (disclosure !== undefined && aiGenerated === undefined) {
     missing.push("aiGenerationDisclosure.aiGenerated");
   }
-  if (disclosure !== undefined && !nonEmptyString(rawDisclosureText)) {
+  if (disclosure !== undefined && disclosureText === undefined) {
     missing.push("aiGenerationDisclosure.disclosureText");
   }
   if (disclosure !== undefined && rawTools !== undefined && tools === undefined) {
     missing.push("aiGenerationDisclosure.tools");
   }
 
-  const rawCompatibility = itemRecord?.["compatibility"];
+  const rawCompatibility = item["compatibility"];
   const compatibility = isRecord(rawCompatibility)
     ? rawCompatibility
     : undefined;
   if (compatibility === undefined) missing.push("compatibility");
   const rawCoreRange = compatibility?.["coreRange"];
   const rawProfiles = compatibility?.["profiles"];
-  if (compatibility !== undefined && !nonEmptyString(rawCoreRange)) {
+  const coreRange = nonEmptyString(rawCoreRange) ? rawCoreRange : undefined;
+  const profiles = normalizeProfiles(rawProfiles);
+  if (compatibility !== undefined && coreRange === undefined) {
     missing.push("compatibility.coreRange");
   }
-  if (compatibility !== undefined && !validProfiles(rawProfiles)) {
+  if (compatibility !== undefined && profiles === undefined) {
     missing.push("compatibility.profiles");
   }
-  const profiles: string[] = [];
-  if (validProfiles(rawProfiles)) {
-    for (let index = 0; index < rawProfiles.length; index += 1) {
-      profiles.push(rawProfiles[index] as string);
-    }
-  }
 
-  const rawCommerce = itemRecord?.["commerce"];
+  const rawCommerce = item["commerce"];
   const commerce = isRecord(rawCommerce) ? rawCommerce : undefined;
   if (commerce === undefined) missing.push("commerce");
   const rawActivation = commerce?.["activation"];
@@ -341,7 +388,11 @@ function normalizeCatalogMetadata(
     missing.push("commerce.price");
   }
   const rawSku = commerce?.["sku"];
-  if (commerce !== undefined && rawSku !== undefined && typeof rawSku !== "string") {
+  if (
+    commerce !== undefined &&
+    rawSku !== undefined &&
+    typeof rawSku !== "string"
+  ) {
     missing.push("commerce.sku");
   }
 
@@ -351,50 +402,57 @@ function normalizeCatalogMetadata(
       : undefined;
   const normalizedSku = typeof rawSku === "string" ? rawSku : undefined;
 
+  if (
+    schemaVersion !== CATALOG_ITEM_SCHEMA_VERSION ||
+    itemId === undefined ||
+    packageId === undefined ||
+    contentHash === undefined ||
+    license === undefined ||
+    rightsHolder === undefined ||
+    commercialUseAllowed === undefined ||
+    origin === undefined ||
+    ingestedAt === undefined ||
+    sourceDigest === undefined ||
+    aiGenerated === undefined ||
+    disclosureText === undefined ||
+    (rawTools !== undefined && tools === undefined) ||
+    coreRange === undefined ||
+    profiles === undefined ||
+    rawActivation !== "inert" ||
+    (rawPrice !== undefined && normalizedPrice === undefined) ||
+    (rawSku !== undefined && normalizedSku === undefined)
+  ) {
+    return { missing, ...(itemId === undefined ? {} : { itemId }) };
+  }
+
   return {
     missing,
+    itemId,
     metadata: {
       schemaVersion: CATALOG_ITEM_SCHEMA_VERSION,
-      itemId: validId(rawItemId) ? rawItemId : "takedown-tombstone",
+      itemId,
       assetPackage: {
-        packageId: validId(rawPackageId) ? rawPackageId : "takedown-tombstone",
-        contentHash: validSha256(rawContentHash)
-          ? rawContentHash
-          : TOMBSTONE_DIGEST,
+        packageId,
+        contentHash,
       },
       rights: {
-        license: nonEmptyString(rawLicense)
-          ? rawLicense
-          : "unavailable-after-takedown",
-        rightsHolder: nonEmptyString(rawRightsHolder)
-          ? rawRightsHolder
-          : "unavailable-after-takedown",
-        commercialUseAllowed:
-          typeof rawCommercialUseAllowed === "boolean"
-            ? rawCommercialUseAllowed
-            : false,
+        license,
+        rightsHolder,
+        commercialUseAllowed,
       },
       provenance: {
-        origin: nonEmptyString(rawOrigin)
-          ? rawOrigin
-          : "unavailable-after-takedown",
-        ingestedAt: validDateTime(rawIngestedAt) ? rawIngestedAt : tombstoneAt,
-        sourceDigest: validSha256(rawSourceDigest)
-          ? rawSourceDigest
-          : TOMBSTONE_DIGEST,
+        origin,
+        ingestedAt,
+        sourceDigest,
       },
       aiGenerationDisclosure: {
-        aiGenerated: typeof rawAiGenerated === "boolean" ? rawAiGenerated : false,
-        disclosureText: nonEmptyString(rawDisclosureText)
-          ? rawDisclosureText
-          : "Metadata unavailable after takedown.",
+        aiGenerated,
+        disclosureText,
         ...(tools === undefined ? {} : { tools }),
       },
       compatibility: {
-        coreRange: nonEmptyString(rawCoreRange)
-          ? rawCoreRange
-          : "unavailable-after-takedown",
-        profiles: profiles.length > 0 ? profiles : ["tombstone"],
+        coreRange,
+        profiles,
       },
       commerce: {
         activation: "inert",
@@ -676,6 +734,20 @@ function normalizeModerationHistory(item: unknown): ModerationNormalization {
  */
 export function transitionCatalogItem(
   item: CatalogItem,
+  request: TransitionRequest & {
+    readonly to: Exclude<PipelineState, "delisted">;
+  },
+): CatalogItemTransitionResult;
+export function transitionCatalogItem(
+  item: CatalogItem,
+  request: TransitionRequest & { readonly to: "delisted" },
+): CatalogDelistingResult;
+export function transitionCatalogItem(
+  item: CatalogItem,
+  request: TransitionRequest,
+): TransitionResult;
+export function transitionCatalogItem(
+  item: CatalogItem,
   request: TransitionRequest,
 ): TransitionResult {
   const requestValue: unknown = request;
@@ -791,7 +863,7 @@ export function transitionCatalogItem(
       message: "Pipeline transition timestamp must be a valid date-time.",
     };
   }
-  const normalizedMetadata = normalizeCatalogMetadata(itemSnapshot, at);
+  const normalizedMetadata = normalizeCatalogMetadata(itemSnapshot);
   if (to !== "delisted" && normalizedMetadata.missing.length > 0) {
     return {
       ok: false,
@@ -807,6 +879,38 @@ export function transitionCatalogItem(
       ? { from, to, reason, at }
       : { from, to, reason, at, humanVerdict };
 
+  if (normalizedMetadata.metadata === undefined) {
+    if (to !== "delisted" || normalizedMetadata.itemId === undefined) {
+      return {
+        ok: false,
+        code: "missing-mandatory-metadata",
+        message:
+          "Mandatory catalog metadata missing: " +
+          normalizedMetadata.missing.join(", ") +
+          ".",
+      };
+    }
+
+    const tombstone: CatalogMetadataUnavailableTombstone = {
+      schemaVersion: CATALOG_METADATA_UNAVAILABLE_TOMBSTONE_SCHEMA_VERSION,
+      kind: "catalog-metadata-unavailable-tombstone",
+      itemId: normalizedMetadata.itemId,
+      unavailableMetadata: normalizedMetadata.missing,
+      moderation: {
+        pipelineState: "delisted",
+        history: [...moderation.moderation.history, transition],
+      },
+      commerce: { activation: "inert" },
+    };
+
+    return {
+      ok: true,
+      kind: "catalog-metadata-unavailable-tombstone",
+      tombstone,
+      transition,
+    };
+  }
+
   const next: CatalogItem = {
     ...normalizedMetadata.metadata,
     moderation: {
@@ -815,7 +919,7 @@ export function transitionCatalogItem(
     },
   };
 
-  return { ok: true, item: next, transition };
+  return { ok: true, kind: "catalog-item", item: next, transition };
 }
 
 /** Create a Catalog Item at intake (quarantine). Commerce always starts inert. */
