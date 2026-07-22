@@ -19,12 +19,12 @@ export const PLUGIN_MANIFEST_SCHEMA_URI =
 export const PLUGIN_MANIFEST_PATH = "sceneaxi.plugin.manifest.json" as const;
 
 /**
- * V1 hostApi grammar: comparator terms use exact core versions or x-ranges,
- * terms use single-space separators, OR uses " || ", and hyphen ranges use
- * exact cores in the form "A - B".
+ * V1 hostApi grammar: comparator terms use full, partial, or x-range versions,
+ * terms use single-space separators, OR uses " || ", and simple hyphen ranges
+ * use full or partial versions in the form "A - B".
  */
 export const PLUGIN_MANIFEST_HOST_API_DIALECT =
-  "space-separated comparator terms with optional ^, ~, >=, <=, >, <, or = prefixes and exact core versions or x-ranges; OR uses \" || \"; hyphen ranges use exact cores as \"A - B\"" as const;
+  "space-separated comparator terms with optional ^, ~, >=, <=, >, <, or = prefixes and full semver, partial, or x-range versions; OR uses \" || \"; simple hyphen ranges use full or partial versions as \"A - B\"" as const;
 
 export type PluginManifest = {
   readonly $schema: typeof PLUGIN_MANIFEST_SCHEMA_URI;
@@ -88,16 +88,23 @@ const PLUGIN_ID_RE =
 const SEMVER_RE =
   /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?(?![\s\S])/;
 
-const CORE_VERSION_PATTERN =
-  String.raw`(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)`;
-const X_RANGE_PATTERN =
-  String.raw`(?:[xX*]|(?:0|[1-9]\d*)\.(?:[xX*]|(?:0|[1-9]\d*)\.[xX*]))`;
+const NUMERIC_IDENTIFIER_PATTERN = String.raw`(?:0|[1-9]\d*)`;
+const PRERELEASE_IDENTIFIER_PATTERN =
+  String.raw`(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)`;
+const FULL_VERSION_PATTERN =
+  String.raw`${NUMERIC_IDENTIFIER_PATTERN}\.${NUMERIC_IDENTIFIER_PATTERN}\.${NUMERIC_IDENTIFIER_PATTERN}(?:-${PRERELEASE_IDENTIFIER_PATTERN}(?:\.${PRERELEASE_IDENTIFIER_PATTERN})*)?(?:\+[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*)?`;
+const PARTIAL_OR_X_RANGE_PATTERN =
+  String.raw`(?:[xX*]|${NUMERIC_IDENTIFIER_PATTERN}(?:\.(?:[xX*]|${NUMERIC_IDENTIFIER_PATTERN}(?:\.[xX*])?))?)`;
+const HOST_API_VERSION_PATTERN =
+  String.raw`(?:${FULL_VERSION_PATTERN}|${PARTIAL_OR_X_RANGE_PATTERN})`;
+const HOST_API_HYPHEN_ENDPOINT_PATTERN =
+  String.raw`(?:${FULL_VERSION_PATTERN}|${NUMERIC_IDENTIFIER_PATTERN}(?:\.${NUMERIC_IDENTIFIER_PATTERN})?)`;
 const HOST_API_TERM_PATTERN =
-  String.raw`(?:\^|~|>=|<=|>|<|=)?(?:${CORE_VERSION_PATTERN}|${X_RANGE_PATTERN})`;
+  String.raw`(?:\^|~|>=|<=|>|<|=)?${HOST_API_VERSION_PATTERN}`;
 const HOST_API_COMPARATOR_SET_PATTERN =
   String.raw`${HOST_API_TERM_PATTERN}(?: ${HOST_API_TERM_PATTERN})*`;
 const HOST_API_HYPHEN_RANGE_PATTERN =
-  String.raw`${CORE_VERSION_PATTERN} - ${CORE_VERSION_PATTERN}`;
+  String.raw`${HOST_API_HYPHEN_ENDPOINT_PATTERN} - ${HOST_API_HYPHEN_ENDPOINT_PATTERN}`;
 const HOST_API_RANGE_ARM_PATTERN =
   String.raw`(?:${HOST_API_COMPARATOR_SET_PATTERN}|${HOST_API_HYPHEN_RANGE_PATTERN})`;
 const HOST_API_RANGE_RE = new RegExp(
@@ -106,8 +113,6 @@ const HOST_API_RANGE_RE = new RegExp(
 
 /** Single path segment for package-relative entrypoints. */
 const ENTRYPOINT_SEGMENT_RE = /^[A-Za-z0-9._-]+(?![\s\S])/;
-
-const TRAILING_LINE_TERMINATOR_RE = /[\r\n\u2028\u2029](?![\s\S])/;
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -269,15 +274,11 @@ export function validatePluginManifest(
   for (let index = 0; index < capabilities.length; index += 1) {
     const capability = capabilities[index];
     const path = `$.capabilities[${index}]`;
-    if (
-      typeof capability !== "string" ||
-      capability.length === 0 ||
-      TRAILING_LINE_TERMINATOR_RE.test(capability)
-    ) {
+    if (typeof capability !== "string" || capability.length === 0) {
       return refuse(
         "invalid-field",
         path,
-        "capability ID must be non-empty and must not end in a line terminator.",
+        "capability ID must be a non-empty string.",
       );
     }
     if (seen.has(capability)) {

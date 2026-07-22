@@ -303,6 +303,24 @@ const manifestCorpus: ReadonlyArray<{
     },
     valid: true,
   },
+  {
+    name: "pre-release caret and short partial OR range",
+    value: {
+      ...inertPluginManifestFixture(),
+      hostApi: "^1.0.0-beta.1 || ~2.4",
+    },
+    valid: true,
+  },
+  {
+    name: "partial comparator set",
+    value: { ...inertPluginManifestFixture(), hostApi: ">=1.2 <2" },
+    valid: true,
+  },
+  {
+    name: "partial hyphen range",
+    value: { ...inertPluginManifestFixture(), hostApi: "1.2 - 2.3.4" },
+    valid: true,
+  },
   { name: "non-object", value: null, valid: false },
   ...missingRequiredFieldCases,
   {
@@ -344,9 +362,9 @@ const manifestCorpus: ReadonlyArray<{
     valid: false,
   },
   {
-    name: "host API partial core",
+    name: "host API short form",
     value: { ...inertPluginManifestFixture(), hostApi: "1.2" },
-    valid: false,
+    valid: true,
   },
   {
     name: "host API malformed OR",
@@ -394,9 +412,9 @@ const manifestCorpus: ReadonlyArray<{
     valid: false,
   },
   {
-    name: "capability trailing newline",
+    name: "opaque multiline capability",
     value: { ...inertPluginManifestFixture(), capabilities: ["opaque\n"] },
-    valid: false,
+    valid: true,
   },
   {
     name: "duplicate capability",
@@ -486,6 +504,17 @@ describe("plugin manifest contract", () => {
     expect(pluginManifestSchema.properties?.capabilities?.uniqueItems).toBe(
       true,
     );
+    const stringPatterns = Object.values(
+      pluginManifestSchema.properties ?? {},
+    ).flatMap((property) =>
+      [property.pattern, property.items?.pattern].filter(
+        (pattern): pattern is string => pattern !== undefined,
+      ),
+    );
+    expect(stringPatterns).not.toEqual([]);
+    expect(
+      stringPatterns.every((pattern) => pattern.endsWith("(?![\\s\\S])")),
+    ).toBe(true);
     expect(pluginManifestSchema.required).toEqual(requiredManifestFields);
   });
 
