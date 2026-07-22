@@ -51,6 +51,9 @@ refuse with typed diagnostics. Contract objects are closed; the `artifacts`
 record admits only path keys whose values match the closed artifact descriptor.
 JSON text with duplicate member names refuses before value validation so every
 path and digest input has one interoperable I-JSON meaning.
+All free-text values must contain only Unicode scalar values. Literal or escaped
+unpaired UTF-16 surrogates refuse so standalone consumers receive I-JSON-safe
+text.
 
 ## Adapter boundary
 

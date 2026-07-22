@@ -457,6 +457,123 @@ describe("delivery handoff contract", () => {
     }
   });
 
+  it("refuses unpaired surrogates across all free-text fields", () => {
+    const invalidCases = [
+      {
+        value: {
+          ...minimalHandoff(),
+          product: { ...minimalHandoff().product, displayName: "\ud800" },
+        },
+        path: "$.product.displayName",
+      },
+      {
+        value: {
+          ...minimalHandoff(),
+          product: { ...minimalHandoff().product, version: "\udfff" },
+        },
+        path: "$.product.version",
+      },
+      {
+        value: {
+          ...minimalHandoff(),
+          provenance: {
+            ...minimalHandoff().provenance,
+            build: { id: "\ud800" },
+          },
+        },
+        path: "$.provenance.build.id",
+      },
+      {
+        value: {
+          ...minimalHandoff(),
+          provenance: {
+            ...minimalHandoff().provenance,
+            build: { id: "build-1", tool: "\udfff" },
+          },
+        },
+        path: "$.provenance.build.tool",
+      },
+      {
+        value: { ...minimalHandoff(), notes: "\ud800" },
+        path: "$.notes",
+      },
+    ];
+
+    for (const invalidCase of invalidCases) {
+      const result = validateDeliveryHandoff(invalidCase.value);
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.diagnostics[0]).toEqual(
+          expect.objectContaining({
+            code: "invalid-field",
+            path: invalidCase.path,
+          }),
+        );
+      }
+    }
+
+    const parsed = parseDeliveryHandoffText(
+      JSON.stringify({
+        ...minimalHandoff(),
+        product: { ...minimalHandoff().product, displayName: "\ud800" },
+      }),
+    );
+    expect(parsed.ok).toBe(false);
+    if (!parsed.ok) {
+      expect(parsed.diagnostics[0]).toEqual(
+        expect.objectContaining({
+          code: "invalid-field",
+          path: "$.product.displayName",
+        }),
+      );
+    }
+
+    const schema = JSON.parse(
+      readFileSync(
+        fileURLToPath(
+          import.meta.resolve(
+            "@sceneaxi/schemas/contracts/delivery-handoff.schema.json",
+          ),
+        ),
+        "utf8",
+      ),
+    ) as {
+      properties?: {
+        notes?: { allOf?: { $ref?: string }[] };
+      };
+      $defs?: {
+        unicodeScalarString?: { pattern?: string };
+        product?: {
+          properties?: {
+            displayName?: { allOf?: { $ref?: string }[] };
+            version?: { allOf?: { $ref?: string }[] };
+          };
+        };
+        build?: {
+          properties?: {
+            id?: { allOf?: { $ref?: string }[] };
+            tool?: { allOf?: { $ref?: string }[] };
+          };
+        };
+      };
+    };
+    const scalarReference = "#/$defs/unicodeScalarString";
+    expect([
+      schema.properties?.notes?.allOf?.[0]?.$ref,
+      schema.$defs?.product?.properties?.displayName?.allOf?.[0]?.$ref,
+      schema.$defs?.product?.properties?.version?.allOf?.[0]?.$ref,
+      schema.$defs?.build?.properties?.id?.allOf?.[0]?.$ref,
+      schema.$defs?.build?.properties?.tool?.allOf?.[0]?.$ref,
+    ]).toEqual(Array.from({ length: 5 }, () => scalarReference));
+
+    const scalarPattern = schema.$defs?.unicodeScalarString?.pattern;
+    expect(scalarPattern).toBeTypeOf("string");
+    const scalarRegex = new RegExp(scalarPattern ?? "");
+    expect(scalarRegex.test("plain 😀 text")).toBe(true);
+    expect(scalarRegex.test("\ud800")).toBe(false);
+    expect(scalarRegex.test("\udfff")).toBe(false);
+  });
+
   it("refuses duplicate JSON member names before value validation", () => {
     const handoff = minimalHandoff();
     const descriptor = JSON.stringify(
