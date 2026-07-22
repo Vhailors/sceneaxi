@@ -4,11 +4,12 @@
 > "Spec: SceneAxi — agent-native interactive engine/library ecosystem (canonical product
 > specification)". This file is a **consumer copy**, mirrored into the repo so the spec is
 > readable in-tree. It grants nothing and decides nothing on its own. If this file and #1
-> disagree, **#1 wins**; later captain decisions win over both. Mirrored 2026-07-21 from
-> the issue body as of that date; later locked decisions are reflected here with
-> pointers to their owning documents.
+> disagree, **#1 wins**; later captain decisions win over both. Mirrored 2026-07-22 from
+> the issue body as of that date (v2 — reconciled with the 2026-07-22 captain decisions).
 
 ---
+
+**Changelog:** **v2 — reconciled 2026-07-22** (issue #34, captain decision `canonical-spec-update-mode` Option A: edit in place, identity/history/sub-issue links preserved; v1 text lives in this issue's edit history). What changed: the ten formerly open ecosystem keys plus `plugin-capability-model` are locked and recorded in the Captain Decision Ledger below; the Model Provider Port posture is corrected to the locked OpenRouter-first default; the factory-origin hold count is corrected 24 → 23 (`capability-name` superseded); the stale "pending #41 reconciliation comment" claim is replaced with links to the posted comments.
 
 **Mode:** canonical product specification only. This issue authorizes **no** implementation beyond what its tracker workflow already covers: it does **not** authorize proof execution, install, merge, push beyond its own creation, deployment, accounts, spend, or publication. Every authority stays separate (see the Authority table below).
 **Author routing:** Claude + Fable 5 + xhigh (crewmate task `sceneaxi-to-spec-v1`).
@@ -68,14 +69,14 @@ From the user's perspective:
 
 ### Web-experience creators (Web Experience profile)
 
-16. As a web-experience creator, I want a profile scoped to interactive real-time web experiences, so that I get engine capabilities without game-specific baggage. *(Exact scope: held key `web-experience-profile-scope`.)*
+16. As a web-experience creator, I want a profile scoped to interactive real-time web experiences, so that I get engine capabilities without game-specific baggage. *(Scope locked 2026-07-22, `web-experience-profile-scope`: broader — general interactive site shells/chrome plus hero scenes, configurators, storytelling/microsites, data-driven real-time experiences; not a CMS, form/app builder, or conventional SaaS platform.)*
 17. As a web-experience creator, I want curated web/UI assets with compatibility badges (core range × profile), so that what I install is known to work with my profile version.
 
 ### Kids surface (Kids profile)
 
 18. As a parent/guardian, I want the Kids product to be structurally isolated (own surface, no shared accounts/telemetry, no third-party LLM routes by default), so that safety is a property of the build, not a setting someone can flip.
 19. As a parent/guardian, I want Kids content drawn from an allowlist over already-curated items with Kids-specific screening, so that curation failures elsewhere cannot leak into the Kids surface.
-20. As the captain, I want nothing in the ecosystem able to depend on the Kids profile, so that the fully isolated Kids boundary cannot open by drift.
+20. As the captain, I want nothing in the ecosystem able to depend on the Kids profile without an explicit captain decision, so that the Kids boundary cannot open by drift. *(`kids-surface-isolation` locked 2026-07-22: full isolation; any future dependent requires a new explicit decision.)*
 
 ### Asset catalog participants (dormant until gates open)
 
@@ -102,7 +103,7 @@ From the user's perspective:
 2. **Packaging:** a core ecosystem monorepo with strict package/app boundaries. Asset catalogs may incubate inside and split later. **Individual game products are never monorepo members** — they are separate repos consuming versioned releases.
 3. **Name:** SceneAxi / `sceneaxi` (captain-resolved key `core-product-name`). Registry-clean on every checked authority as of 2026-07-21; full trademark clearance remains a pre-launch gate (see Further Notes).
 
-### Monorepo package map
+### Monorepo package map (landed bootstrap; seam-only, zero engine behavior)
 
 | Layer | Package / app | Role |
 |---|---|---|
@@ -115,7 +116,7 @@ From the user's perspective:
 | L3 | `profile-game`, `profile-web`, `profile-kids` | Build-time versioned profiles; each pins a core range; Kids policy compiled in |
 | L3 | `cli` | Agent-native CLI — thin protocol adapter (verbs + envelope) over `authoring-core`; **denied direct engine access by the matrix** |
 | L3 | `importers` | External-content adapters (per-format packages later) |
-| L3 (delayed) | `provider-<name>` | LLM provider adapters behind the Model Provider Port; only after `llm-provider-policy` resolves |
+| L3 (delayed) | `provider-<name>` | LLM provider adapters behind the Model Provider Port; `llm-provider-policy` locked 2026-07-22 (OpenRouter-first) — adapters land as ordinary ticketed work, DeepSeek under its conditional terms |
 | L4 | `web-shell`, `desktop-shell` | Human authoring surfaces — protocol clients of `authoring-core` |
 | L4 | `catalog-game`, `catalog-web` | Dormant storefront apps; touch the Core only via `schemas` catalog contracts |
 
@@ -140,7 +141,7 @@ Deliberate denials that carry design intent:
 - **cli → engine packages denied** — makes it structurally impossible for the orbiting CLI to become the missing core.
 - **shells → cli denied** — shells are protocol *clients* of the application service, not spawners of a binary.
 - **catalogs → authoring-core/engine/profiles denied** — catalogs speak only the `schemas` catalog contracts.
-- **anything → profile-kids denied** — the fully isolated Kids boundary is enforced independently of allow lists (`kidsBoundary`; `allowedDependents` remains empty).
+- **anything → profile-kids denied** — the Kids boundary is enforced independently of allow lists (`kidsBoundary`, `allowedDependents` starts empty; `kids-surface-isolation` locked full isolation 2026-07-22 — additions only under a new explicit captain decision).
 - **profile → profile denied; anything → apps/cli denied** (leaves stay leaves).
 
 ### Versioning and release groups (checker-verified manifest stamps)
@@ -172,9 +173,11 @@ One umbrella CLI with per-context command groups (`project|asset|profile|catalog
 
 ### Model Provider Port
 
-Owned by `authoring-core`: complete/tool-call/stream + typed capability descriptors + per-profile policy filter, with provider adapters behind it in pre-declared delayed slots. Direct first-party adapters are the default posture; aggregation (e.g. OpenRouter) is an optional breadth adapter only under the chart's falsified conditions (pinned provider slug, contractual residency, `zdr:true`, `allow_fallbacks:false`, pinned params/quantization — ZDR is retention, not geography). **The Kids profile's policy filter denies third-party model routes by default.** Every evidence packet records the exact model descriptor (model, provider, quantization, version). Adoption itself is held (`llm-provider-policy`, `deepseek-adoption`).
+Owned by `authoring-core`: complete/tool-call/stream + typed capability descriptors + per-profile policy filter, with provider adapters behind it in pre-declared delayed slots. **Locked posture (`llm-provider-policy`, 2026-07-22): OpenRouter-first is the default production path for eligible non-Kids lanes** — aggregation is the default adapter behind the SceneAxi-owned port, and aggregation must not weaken policy filtering (profile and Kids filters still apply at the port). Locked constraints retained: typed capability descriptors for models/providers; pinned model/provider/quantization for production and eval-bearing traffic — no silent model swaps; deterministic no-fallback eval lanes (`allow_fallbacks: false` or equivalent); explicit privacy/retention/residency evidence recorded with traffic — ZDR is retention, not geography; residency requires a named contractually established region when claimed. **The Kids profile's policy filter denies third-party model routes by default** (Kids stays fully isolated, LLM traffic included). Every evidence packet records the exact model descriptor (model, provider, quantization, version). DeepSeek is conditionally adoptable (`deepseek-adoption`, locked 2026-07-22): V4-Flash/Pro, non-Kids lanes only, via a named provider with contractual US/EU residency plus zero retention (pins, fallbacks disabled) or self-hosted MIT weights; never the official PRC endpoint for user data; out of strict tool-calling lanes until in-house capability evidence exists; **re-verify after GA (~2026-07-25) before any hard production reliance**.
 
-### Catalog pipeline (storefront topology held)
+### Catalog pipeline (one platform, two storefronts — topology locked 2026-07-22)
+
+Topology locked (`catalog-storefront-topology`): **one modular catalog platform** — versioned intake/provenance/moderation/rights/billing machinery as bounded packages/contracts — under **two independently branded storefronts** with separate taxonomy, curation, branding, origins, and product surfaces, each independently operable. The website storefront sells general curated web/UI assets in standard formats with SceneAxi profile-compatibility badges (`website-catalog-scope`, locked 2026-07-22) — an independent asset product, not a CMS and not a Webapp Factory pipeline seam.
 
 `intake (quarantine, #48 controls) → screening (rights/provenance/AI-disclosure) → curation (human verdict — curation IS the product) → listing (compatibility badges) → delisting/takedown (recorded reason)`. Every transition recorded and fail-closed. Commerce fields exist but are **inert** until the existing 6b activation holds open (read per-storefront). Kids consumption is an allowlist over already-curated items — a consumer of the pipeline, never a fork.
 
@@ -199,34 +202,29 @@ The Stage 0–8 falsification program of factories-helpers **#41 transfers intac
 
 No grant implies another; a cross-brain review PASS grants **no** action. Bootstrap authorities 1–5 for the initial tree have been exercised (main holds the v4-PASSed tree); every future change re-earns its own grants.
 
-## Open Captain Decisions (held keys — listed, not answered)
+## Captain Decision Ledger (resolved ecosystem keys)
 
-This spec **does not answer** any of the following. Each is a registered structured hold (origin `threejs-bgf-ecosystem-wayfinder-v1`) with dependency edges enforcing one-at-a-time surfacing in this order; recommended answers live in the Wayfinder tickets and are recommendations, never resolutions. Any CLI verb touching one of these refuses until the captain resolves it.
+Every ecosystem key this spec originally listed as open is now **resolved** (all captain-locked 2026-07-22). One row per key: locked outcome in one line, decision date, durable record — decision files live in the FirstMate program archive under `data/threejs-bgf-ecosystem-wayfinder-v1/decisions/`. Later captain decisions still win over this table.
 
-| # | Held key | Decides |
-|---|---|---|
-| 1 | `web-experience-profile-scope` | What the Web Experience profile is (and is not) |
-| 2 | `catalog-storefront-topology` | One catalog platform with two storefronts vs other topologies |
-| 3 | `cli-audience` | Internal-first vs public CLI; publication preconditions |
-| 4 | `authoring-surface-priority` | Order: CLI / web shell / desktop / importers |
-| 5 | `profile-rollout-order` | Which profile ships conformance first |
-| 6 | `website-catalog-scope` | Scope of the website-asset storefront |
-| 7 | `llm-provider-policy` | Provider port posture: first-party direct vs aggregation conditions |
-| 8 | `deepseek-adoption` | Whether/how DeepSeek V4 is adoptable (re-verify post-GA; never official endpoint for Kids/user data) |
+| # | Key | Locked outcome (one line) | Date | Durable record |
+|---|---|---|---|---|
+| 1 | `web-experience-profile-scope` | Broader scope: general interactive site shells/chrome plus hero scenes, configurators, storytelling/microsites, data-driven real-time experiences; not CMS/form-builder/conventional SaaS (Webapp Factory keeps that lane) | 2026-07-22 | `decisions/web-experience-profile-scope.md` |
+| 2 | `kids-surface-isolation` | Full isolation: separate origin, app surface, identity/data plane, accounts, sessions, cookies, telemetry, and LLM traffic; policy compiled in; no runtime mode may weaken isolation | 2026-07-22 | `decisions/kids-surface-isolation.md` |
+| 3 | `catalog-storefront-topology` | One modular catalog platform (bounded packages/contracts for intake/provenance/moderation/rights/billing) under two independently branded storefronts, each independently operable | 2026-07-22 | `decisions/catalog-storefront-topology.md` |
+| 4 | `cli-audience` | Internal-first, public-grade; external publication deferred until engine demand and commercial assumptions are proven — a release, not a redesign | 2026-07-22 | `decisions/cli-audience.md` |
+| 5 | `authoring-surface-priority` | Equal early investment across CLI / web shell / desktop shell / importers, over one shared versioned protocol | 2026-07-22 | `decisions/authoring-surface-priority.md` |
+| 6 | `profile-rollout-order` | Derived: proof/activation order **Game → Web Experience → Kids** (Kids activation only via its 6a safety branch) | 2026-07-22 | `decisions/profile-rollout-order.md` |
+| 7 | `website-catalog-scope` | General curated web/UI assets in standard formats with SceneAxi profile-compatibility badges; independent asset product — not a CMS, not a Webapp Factory pipeline seam | 2026-07-22 | `decisions/website-catalog-scope.md` |
+| 8 | `llm-provider-policy` | **OpenRouter-first default** for eligible non-Kids production lanes behind the SceneAxi-owned Model Provider Port (typed descriptors, pins, no-fallback eval lanes, privacy/residency evidence; Kids deny-by-default) | 2026-07-22 | `decisions/llm-provider-policy.md` |
+| 9 | `deepseek-adoption` | Conditional: V4-Flash/Pro, non-Kids only, via named US/EU-residency zero-retention provider (pins, no fallbacks) or self-hosted MIT weights; never the PRC endpoint; out of strict tool-calling lanes; re-verify after GA (~2026-07-25) before hard production reliance | 2026-07-22 | `decisions/deepseek-adoption.md` |
+| 10 | `site-domain-topology` | Hybrid: SceneAxi umbrella domain (product + docs), distinct storefront domains with unique content, fully separate Kids domain/origin; exact domain strings/purchases explicitly deferred (docs slice owned by #29) | 2026-07-22 | `decisions/site-domain-topology.md` |
+| 11 | `plugin-capability-model` | First-class capability-manifest Plugin Host v1 (option A); ADR 0004 amended narrowly, not repealed — landed as ADR 0005 + `docs/plugins.md` | 2026-07-22 | `decisions/plugin-capability-model.md` |
 
-Resolved anchors: `core-product-name` = **SceneAxi**. `site-domain-topology` and
-`kids-surface-isolation` are resolved by the locked decision recorded in
-[`site-domain-topology.md`](site-domain-topology.md), which owns the surface
-topology and isolation details. The residual Kids holds are only the 6a age,
-safety, curriculum, and jurisdiction decisions; they do not reopen the resolved
-surface topology. The **24 existing holds** (origin
-`threejs-factory-wayfinder-v1`, tiers 1–6b — including `capability-name`,
-`kernel-name`, the residual 6a Kids branch, the 6b marketplace activation/scope
-gates, hosted-accounts/telemetry boundaries, and the tier-5 license hold) remain
-open, unmodified, and authoritative; the registry ticket is factories-helpers
-#42. The human-readable decision record does not replace the current
-authoritative FirstMate registry snapshot required by
-`docs/held-key-enforcement.md` for CLI enforcement.
+Resolved anchor predating this table: `core-product-name` = **SceneAxi** (captain, 2026-07-21, durable).
+
+## Open Captain Holds
+
+The **23** remaining factory-origin holds (origin `threejs-factory-wayfinder-v1`, tiers 1–6b — `kernel-name`, the proof approvals, v1 scoping, hosted-accounts/telemetry boundaries, the engine commercial holds including the tier-5 license hold, the 6a kids-safety branch, and the 6b marketplace activation/scope gates) remain open, unmodified, and authoritative; the registry ticket is factories-helpers #42. `capability-name` was closed 2026-07-22 as **superseded** by the SceneAxi name plus the four-route topology naming — hence 23 open factory holds, not 24. Also still undecided: exact storefront/Kids domain strings and purchases (explicitly deferred by `site-domain-topology`), and the DeepSeek post-GA re-verification (~2026-07-25) — a dated condition inside the locked `deepseek-adoption` decision, not an open key. Any CLI verb gated by an open hold still refuses and names the key, fail-closed on every degraded state.
 
 ## Testing Decisions
 
@@ -249,10 +247,9 @@ Good tests here verify **external behavior at contracts and seams**, never imple
 - **Stage 1 proof execution** — remains double-gated under #41's program; not started, scheduled, or resourced by this spec.
 - **AAA-scope engine ambitions** — the ecosystem's budgets and kill criteria come from the proof program; no console/AAA/general-purpose-engine expansion is chartered.
 - **Open/two-sided UGC marketplace** — catalogs stay curated-only and dormant until the existing 6b activation holds open per storefront; commerce fields inert until then.
-- **Kids launch** — nothing Kids-facing ships until the residual 6a age, safety,
-  curriculum, and jurisdiction holds resolve; Kids never borrows readiness.
-- **CLI publication** — internal until `cli-audience` + tier-5 holds + Stage 7 evidence say otherwise.
-- **LLM provider adoption** — no provider adapter lands until `llm-provider-policy` (and for DeepSeek, `deepseek-adoption` post-GA re-verification) resolve.
+- **Kids launch** — nothing Kids-facing ships until the full 6a safety branch resolves (`kids-surface-isolation` is locked: full isolation); Kids never borrows readiness.
+- **CLI publication** — internal-first by locked decision (`cli-audience`, 2026-07-22); external publication deferred until engine demand/commercial proof, plus tier-5 holds + Stage 7 evidence.
+- **LLM provider adapters** — none chartered by this spec; adapters land as ordinary ticketed work behind the Model Provider Port under the locked `llm-provider-policy` posture, DeepSeek additionally under its conditional terms and post-GA re-verification (~2026-07-25).
 - **License selection** — `UNLICENSED` stands until the open tier-5 license hold resolves.
 - **Issue transfer execution** — creating/closing the remaining factories-helpers mirrors is owned by the issue-transfer plan under its own explicit transfer authority.
 - **Game products in the monorepo** — never; separate repos by locked decision.
@@ -260,7 +257,8 @@ Good tests here verify **external behavior at contracts and seams**, never imple
 
 ## Further Notes
 
-- **Transfer linkage:** this issue is the "new product-spec issue set" anchor foreseen by the issue-transfer plan (created after bootstrap landed, labeled `transferred-from: factories-helpers#41`). Per the plan, #41 should receive its single reconciliation comment when transfer authority is exercised; this task had read-only access to factories-helpers, so that comment is **pending** and owned by firstmate under transfer authority — record it when executing the plan.
+- **Transfer linkage:** this issue is the "new product-spec issue set" anchor foreseen by the issue-transfer plan (created after bootstrap landed, labeled `transferred-from: factories-helpers#41`). The reconciliation comments on #41 were posted 2026-07-21: the [ecosystem-reconciliation comment](https://github.com/Vhailors/factories-helpers/issues/41#issuecomment-5034233116) (12:50 UTC) and the [transfer-reconciliation comment](https://github.com/Vhailors/factories-helpers/issues/41#issuecomment-5034447674) (13:09 UTC).
 - **Naming residuals (pre-launch gates, not re-opened decisions):** full trademark clearance (USPTO/EUIPO class search, common-law, app stores) has not been performed; the "Axi" adjacency (Axi/AxiCorp trading brand, ARM AXI bus, the internal `*-axi` helper-CLI family) needs deliberate brand-copy separation before SceneAxi goes public. Fallback candidates from the verification screen are preserved in the chart should clearance fail.
+- **README staleness: resolved.** The README Status refresh and this spec's in-repo mirror (`docs/program/SPEC.md`, this issue canonical) foreseen here landed under #3; the program/authoring contract status wording was further clarified by PR #33.
 - **Evidence trail:** Wayfinder chart + map + tickets 01–21, the FAIL→remediation→v4-PASS review chain, checksummed research captures (OpenRouter, DeepSeek V4, CLI patterns, naming), and the issue-transfer plan live in the FirstMate program archive (`data/threejs-bgf-ecosystem-wayfinder-v1*`), outside this repo by design until transfer authority exists.
 - **Benchmark posture:** no competing agent-first creation platform ships an Axi-grade deterministic authoring CLI; CLI v1 acceptance is charted to include an axi.md-style ergonomics benchmark so the claim is earned, not asserted.

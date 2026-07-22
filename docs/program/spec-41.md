@@ -44,8 +44,11 @@ default cash budget is $0.
 - **Transfer reconciliation:** recorded in the "Transfer reconciliation" section
   of [sceneaxi#3](https://github.com/Vhailors/sceneaxi/issues/3), continuing the
   issue-transfer plan's #41 anchor work (`transferred-from: factories-helpers#41`).
-  Per #1's Further Notes, the single reconciliation comment on #41 itself is
-  pending and owned by firstmate under transfer authority.
+  The reconciliation comments on #41 itself were posted 2026-07-21: the
+  [ecosystem-reconciliation comment](https://github.com/Vhailors/factories-helpers/issues/41#issuecomment-5034233116)
+  (12:50 UTC) and the
+  [transfer-reconciliation comment](https://github.com/Vhailors/factories-helpers/issues/41#issuecomment-5034447674)
+  (13:09 UTC).
 - factories-helpers **#42–#52 remain live** per the issue-transfer plan. The
   proof-prep docs (#50–#52) re-home to [`docs/proof/`](../proof/README.md)
   (tracked as sceneaxi [#13](https://github.com/Vhailors/sceneaxi/issues/13),
