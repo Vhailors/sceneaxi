@@ -90,6 +90,13 @@ const writePluginManifestInertExample = (sandbox, example) =>
     join(sandbox, pluginManifestInertExampleRelativePath),
     `${JSON.stringify(example, null, 2)}\n`,
   );
+const readPluginManifestSchema = (sandbox) =>
+  JSON.parse(readFileSync(join(sandbox, pluginManifestSchemaRelativePath), "utf8"));
+const writePluginManifestSchema = (sandbox, schema) =>
+  writeFileSync(
+    join(sandbox, pluginManifestSchemaRelativePath),
+    `${JSON.stringify(schema, null, 2)}\n`,
+  );
 const registrySeedState =
   "Registry seed state: `registryVersion` is `1.0.0`; `entries` is exactly `[]` (empty).";
 const inertExampleStart = "<!-- plugin-manifest:inert-example -->";
@@ -423,10 +430,40 @@ const cases = [
     mutate(sandbox) {
       const example = readPluginManifestInertExample(sandbox);
       example.schemaVersion = "9.9.9";
-      // Keep canonical field set shape but break schema const — also trips exact-match.
       writePluginManifestInertExample(sandbox, example);
     },
-    expectedOutput: "plugin-manifest.inert.example",
+    expectedOutput:
+      'plugin-manifest.inert.example.schemaVersion: expected const "1.0.0", got "9.9.9"',
+  },
+  {
+    name: "rejects an unsupported plugin-manifest schema keyword",
+    mutate(sandbox) {
+      const schema = readPluginManifestSchema(sandbox);
+      schema.properties.capabilities.maxItems = 5;
+      writePluginManifestSchema(sandbox, schema);
+    },
+    expectedOutput:
+      'plugin-manifest.schema.properties.capabilities: unsupported JSON Schema keyword "maxItems"',
+  },
+  {
+    name: "rejects a plugin-manifest schema $id that does not identify the contract",
+    mutate(sandbox) {
+      const schema = readPluginManifestSchema(sandbox);
+      schema.$id = "https://sceneaxi.invalid/contracts/renamed-contract/v1";
+      writePluginManifestSchema(sandbox, schema);
+    },
+    expectedOutput:
+      "plugin-manifest.schema.json: $id does not identify the plugin-manifest contract",
+  },
+  {
+    name: "rejects the inert example when the plugin-manifest schema tightens against it",
+    mutate(sandbox) {
+      const schema = readPluginManifestSchema(sandbox);
+      schema.properties.pluginId.pattern = "^refuse(?![\\s\\S])";
+      writePluginManifestSchema(sandbox, schema);
+    },
+    expectedOutput:
+      'plugin-manifest.inert.example.pluginId: "dev.sceneaxi.example.noop" does not match pattern',
   },
 ];
 
