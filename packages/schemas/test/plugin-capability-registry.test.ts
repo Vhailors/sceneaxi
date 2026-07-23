@@ -232,6 +232,16 @@ describe("plugin capability registry contract", () => {
     expect(validateWithSchemaSubset(value, registrySchema)).toEqual([]);
   });
 
+  it.each([
+    "https://sceneaxi.dev/contracts/a%20b",
+    "https://sceneaxi.dev/contracts/a?q=%2F#v%31",
+  ])("accepts valid HTTPS percent escapes in %s", (contractRef) => {
+    const value = registryWith([{ ...sampleEntry(), contractRef }]);
+
+    expect(validatePluginCapabilityRegistry(value).ok).toBe(true);
+    expect(validateWithSchemaSubset(value, registrySchema)).toEqual([]);
+  });
+
   it("lookup is exact and deterministic; unknown IDs return a typed miss", () => {
     const entryA = sampleEntry();
     const entryB: PluginCapabilityRegistryEntry = {
@@ -309,6 +319,8 @@ describe("plugin capability registry contract", () => {
       "https://sceneaxi.dev/contracts//private",
       "https://sceneaxi.dev/contracts/../private",
       "https://sceneaxi.dev/contracts/",
+      "https://sceneaxi.dev/contracts/a%",
+      "https://sceneaxi.dev/contracts/a?q=%ZZ",
     ]) {
       const value = registryWith([{ ...sampleEntry(), contractRef }]);
       const result = validatePluginCapabilityRegistry(value);

@@ -130,7 +130,7 @@ const ENTRY_ALLOWED_FIELDS = ENTRY_REQUIRED_FIELDS;
  * or https URI. Whitespace and other forms refuse as malformed.
  */
 const CONTRACT_REF_RE =
-  /^(?:@[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._-]*(?:\/[a-z0-9][a-z0-9._-]*)*|contracts\/[a-z0-9][a-z0-9._-]*(?:\/[a-z0-9][a-z0-9._-]*)*\.schema\.json|https:\/\/[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?(?::[0-9]+)?(?:\/[A-Za-z0-9](?:[A-Za-z0-9._~!$&'()*+,;=:@%-]*[A-Za-z0-9_~!$&'()*+,;=:@%-])?)*(?:\?[A-Za-z0-9._~!$&'()*+,;=:@%/?-]+)?(?:#[A-Za-z0-9._~!$&'()*+,;=:@%/?-]+)?)(?![\s\S])/;
+  /^(?:@[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._-]*(?:\/[a-z0-9][a-z0-9._-]*)*|contracts\/[a-z0-9][a-z0-9._-]*(?:\/[a-z0-9][a-z0-9._-]*)*\.schema\.json|https:\/\/(?![^\s]*%(?![0-9A-Fa-f]{2}))[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?(?::[0-9]+)?(?:\/[A-Za-z0-9](?:[A-Za-z0-9._~!$&'()*+,;=:@%-]*[A-Za-z0-9_~!$&'()*+,;=:@%-])?)*(?:\?[A-Za-z0-9._~!$&'()*+,;=:@%/?-]+)?(?:#[A-Za-z0-9._~!$&'()*+,;=:@%/?-]+)?)(?![\s\S])/;
 
 /** Owning package: scoped npm package name. */
 const OWNING_PACKAGE_RE =
