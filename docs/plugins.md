@@ -12,7 +12,7 @@ engine internals.
    `sceneaxi.plugin.manifest.json`; the host never imports code to discover it.
 2. Read the public capability registry owned with `@sceneaxi/schemas`
    (`contracts/plugin-capability-registry.schema.json` and the checked-in seed
-   `contracts/plugin-capability-registry.1.0.0.json`; v1 seed entries are empty).
+   `contracts/plugin-capability-registry.1.0.0.json`).
 3. Declare only capability IDs present in the exact registry version named by
    the manifest.
 4. Implement exactly that declared set behind one package-local entrypoint.
@@ -21,6 +21,10 @@ engine internals.
    versions, plugin IDs repeated in one load set, capability IDs repeated in
    one manifest, entrypoint escape, forbidden imports, or
    declaration/implementation mismatch.
+
+<!-- plugin-capability-registry:seed-state -->
+Registry seed state: `registryVersion` is `1.0.0`; `entries` is exactly `[]` (empty).
+<!-- /plugin-capability-registry:seed-state -->
 
 The host decides descriptor and isolation refusals before evaluating the
 entrypoint. Only a candidate that passes those checks is intentionally loaded;

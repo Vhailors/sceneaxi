@@ -300,11 +300,23 @@ describe("plugin capability registry contract", () => {
       "ftp://example.com/contract",
       "../private/port.ts",
       "engine/internal/renderer",
+      "@sceneaxi/schemas/../../engine/private",
+      "@sceneaxi/schemas/contracts//private",
+      "@sceneaxi/schemas/contracts/",
+      "contracts/a//private.schema.json",
+      "contracts/a/../private.schema.json",
+      "contracts/a/",
+      "https://sceneaxi.dev/contracts//private",
+      "https://sceneaxi.dev/contracts/../private",
+      "https://sceneaxi.dev/contracts/",
     ]) {
-      const result = validatePluginCapabilityRegistry(
-        registryWith([{ ...sampleEntry(), contractRef }]),
-      );
+      const value = registryWith([{ ...sampleEntry(), contractRef }]);
+      const result = validatePluginCapabilityRegistry(value);
       expect(result.ok, contractRef).toBe(false);
+      expect(
+        validateWithSchemaSubset(value, registrySchema),
+        contractRef,
+      ).not.toEqual([]);
       if (!result.ok) {
         expect(result.diagnostics[0]).toEqual(
           expect.objectContaining({

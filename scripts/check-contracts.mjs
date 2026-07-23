@@ -36,6 +36,7 @@ const pluginCapabilityRegistrySeedPath = join(
   "plugin-capability-registry.1.0.0.json",
 );
 const pluginsDocPath = join(root, "docs", "plugins.md");
+const schemasReadmePath = join(root, "packages", "schemas", "README.md");
 const loadFailed = Symbol("loadFailed");
 
 const load = (path, parse) => {
@@ -54,6 +55,7 @@ const doc = load(docPath, false);
 const pluginCapabilityRegistrySchema = load(pluginCapabilityRegistrySchemaPath, true);
 const pluginCapabilityRegistrySeed = load(pluginCapabilityRegistrySeedPath, true);
 const pluginsDoc = load(pluginsDocPath, false);
+const schemasReadme = load(schemasReadmePath, false);
 const isPlainObject = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 const schemaIsObject = schema !== loadFailed && isPlainObject(schema);
 const fixturesIsObject = fixtures !== loadFailed && isPlainObject(fixtures);
@@ -63,6 +65,8 @@ const pluginRegistrySchemaIsObject =
 const pluginRegistrySeedIsObject =
   pluginCapabilityRegistrySeed !== loadFailed && isPlainObject(pluginCapabilityRegistrySeed);
 const pluginsDocHasContent = pluginsDoc !== loadFailed && pluginsDoc.trim().length > 0;
+const schemasReadmeHasContent =
+  schemasReadme !== loadFailed && schemasReadme.trim().length > 0;
 
 if (schema !== loadFailed && !schemaIsObject) {
   fail(`${relative(root, schemaPath)}: expected a plain JSON object`);
@@ -81,6 +85,9 @@ if (pluginCapabilityRegistrySeed !== loadFailed && !pluginRegistrySeedIsObject) 
 }
 if (pluginsDoc !== loadFailed && !pluginsDocHasContent) {
   fail(`${relative(root, pluginsDocPath)}: document is empty or whitespace-only`);
+}
+if (schemasReadme !== loadFailed && !schemasReadmeHasContent) {
+  fail(`${relative(root, schemasReadmePath)}: document is empty or whitespace-only`);
 }
 
 // --- minimal JSON Schema subset validator (type/required/properties/items/enum/const/pattern/additionalProperties/minItems/minLength) ---
@@ -325,6 +332,36 @@ const FORBIDDEN_SEED_SUBSTRINGS = [
   "engine-internal",
   "service-locator",
 ];
+const REGISTRY_SEED_DOC_START = "<!-- plugin-capability-registry:seed-state -->";
+const REGISTRY_SEED_DOC_END = "<!-- /plugin-capability-registry:seed-state -->";
+
+const validateRegistrySeedDoc = (text, hasContent, path) => {
+  if (!hasContent) return;
+
+  const starts = text.split(REGISTRY_SEED_DOC_START).length - 1;
+  const ends = text.split(REGISTRY_SEED_DOC_END).length - 1;
+  const matches = [
+    ...text.matchAll(
+      /<!-- plugin-capability-registry:seed-state -->([\s\S]*?)<!-- \/plugin-capability-registry:seed-state -->/g,
+    ),
+  ];
+  if (starts !== 1 || ends !== 1 || matches.length !== 1) {
+    fail(
+      `${path}: expected exactly one ${REGISTRY_SEED_DOC_START} ... ${REGISTRY_SEED_DOC_END} block, found ${starts} start and ${ends} end marker(s)`,
+    );
+    return;
+  }
+
+  const expected =
+    `Registry seed state: \`registryVersion\` is \`${PLUGIN_CAPABILITY_REGISTRY_SEED_VERSION}\`; ` +
+    "`entries` is exactly `[]` (empty).";
+  const actual = matches[0][1].trim().replaceAll("\r\n", "\n");
+  if (actual !== expected) {
+    fail(
+      `${path}: registry seed state must exactly document registryVersion ${PLUGIN_CAPABILITY_REGISTRY_SEED_VERSION} and empty entries`,
+    );
+  }
+};
 
 const pluginRegistrySchemaUsesSupportedSubset =
   pluginRegistrySchemaIsObject &&
@@ -405,6 +442,12 @@ if (pluginsDocHasContent) {
     }
   }
 }
+validateRegistrySeedDoc(pluginsDoc, pluginsDocHasContent, "docs/plugins.md");
+validateRegistrySeedDoc(
+  schemasReadme,
+  schemasReadmeHasContent,
+  "packages/schemas/README.md",
+);
 
 if (errors.length > 0) {
   for (const e of errors) console.error(`contract check FAIL: ${e}`);

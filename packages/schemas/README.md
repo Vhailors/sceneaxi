@@ -26,13 +26,17 @@ semantics and the SceneAxi-versus-adapter boundary.
 ## Plugin Capability ID Registry (sceneaxi#21 / ADR 0005)
 
 - `contracts/plugin-capability-registry.schema.json` — versioned registry document shape
-- `contracts/plugin-capability-registry.1.0.0.json` — checked-in seed (`registryVersion`
-  `1.0.0`, **empty** `entries`; no demonstration or engine-internal ports)
+- `contracts/plugin-capability-registry.1.0.0.json` — checked-in seed with no
+  demonstration or engine-internal ports
 - TypeScript: `PluginCapabilityRegistry`, `validatePluginCapabilityRegistry`,
   `lookupPluginCapability`, `emptyPluginCapabilityRegistrySeed`
 - IDs are explicit registry keys only; lookup miss is typed
   (`reason: "unknown-capability"`) for host fail-closed refusal
 - Drift between schema, seed artifact, and docs is enforced by `pnpm check:contracts`
+
+<!-- plugin-capability-registry:seed-state -->
+Registry seed state: `registryVersion` is `1.0.0`; `entries` is exactly `[]` (empty).
+<!-- /plugin-capability-registry:seed-state -->
 
 ## Profile Conformance (sceneaxi#10)
 

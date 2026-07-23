@@ -9,6 +9,8 @@
  * empty; the first non-empty production capability is a separate reviewed change.
  */
 
+import { isExactSemver } from "./exact-semver.js";
+
 /** Exact registry-document schema version for v1. */
 export const PLUGIN_CAPABILITY_REGISTRY_SCHEMA_VERSION = "1.0.0" as const;
 
@@ -123,16 +125,12 @@ const ENTRY_REQUIRED_FIELDS = [
 const ALLOWED_FIELDS = REQUIRED_FIELDS;
 const ENTRY_ALLOWED_FIELDS = ENTRY_REQUIRED_FIELDS;
 
-/** Full semver (core + optional pre-release + optional build). */
-const SEMVER_RE =
-  /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?(?![\s\S])/;
-
 /**
  * Public contract reference: package export path, contracts/*.schema.json path,
  * or https URI. Whitespace and other forms refuse as malformed.
  */
 const CONTRACT_REF_RE =
-  /^(?:@[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._/-]*|contracts\/[a-z0-9][a-z0-9._/-]*\.schema\.json|https:\/\/[A-Za-z0-9][^\s]*)(?![\s\S])/;
+  /^(?:@[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._-]*(?:\/[a-z0-9][a-z0-9._-]*)*|contracts\/[a-z0-9][a-z0-9._-]*(?:\/[a-z0-9][a-z0-9._-]*)*\.schema\.json|https:\/\/[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?(?::[0-9]+)?(?:\/[A-Za-z0-9](?:[A-Za-z0-9._~!$&'()*+,;=:@%-]*[A-Za-z0-9_~!$&'()*+,;=:@%-])?)*(?:\?[A-Za-z0-9._~!$&'()*+,;=:@%/?-]+)?(?:#[A-Za-z0-9._~!$&'()*+,;=:@%/?-]+)?)(?![\s\S])/;
 
 /** Owning package: scoped npm package name. */
 const OWNING_PACKAGE_RE =
@@ -233,7 +231,10 @@ export function validatePluginCapabilityRegistry(
   }
 
   const registryVersion = value["registryVersion"];
-  if (typeof registryVersion !== "string" || !SEMVER_RE.test(registryVersion)) {
+  if (
+    typeof registryVersion !== "string" ||
+    !isExactSemver(registryVersion)
+  ) {
     return refuse(
       "invalid-field",
       "$.registryVersion",
@@ -327,7 +328,7 @@ export function validatePluginCapabilityRegistry(
     const contractVersion = entry["contractVersion"];
     if (
       typeof contractVersion !== "string" ||
-      !SEMVER_RE.test(contractVersion)
+      !isExactSemver(contractVersion)
     ) {
       return refuse(
         "invalid-field",

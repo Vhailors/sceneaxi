@@ -22,6 +22,7 @@ const pluginRegistrySeedRelativePath = join(
   "plugin-capability-registry.1.0.0.json",
 );
 const pluginsDocRelativePath = join("docs", "plugins.md");
+const schemasReadmeRelativePath = join("packages", "schemas", "README.md");
 const checkerRelativePath = join("scripts", "check-contracts.mjs");
 const sourcePaths = [
   docRelativePath,
@@ -30,6 +31,7 @@ const sourcePaths = [
   pluginRegistrySchemaRelativePath,
   pluginRegistrySeedRelativePath,
   pluginsDocRelativePath,
+  schemasReadmeRelativePath,
   checkerRelativePath,
 ];
 
@@ -63,6 +65,12 @@ const writePluginRegistrySeed = (sandbox, seed) =>
   writeFileSync(join(sandbox, pluginRegistrySeedRelativePath), `${JSON.stringify(seed, null, 2)}\n`);
 const readPluginsDoc = (sandbox) => readFileSync(join(sandbox, pluginsDocRelativePath), "utf8");
 const writePluginsDoc = (sandbox, doc) => writeFileSync(join(sandbox, pluginsDocRelativePath), doc);
+const readSchemasReadme = (sandbox) =>
+  readFileSync(join(sandbox, schemasReadmeRelativePath), "utf8");
+const writeSchemasReadme = (sandbox, doc) =>
+  writeFileSync(join(sandbox, schemasReadmeRelativePath), doc);
+const registrySeedState =
+  "Registry seed state: `registryVersion` is `1.0.0`; `entries` is exactly `[]` (empty).";
 
 const cases = [
   {
@@ -277,6 +285,58 @@ const cases = [
       );
     },
     expectedOutput: "plugin-capability-registry.1.0.0.json",
+  },
+  {
+    name: "rejects plugins.md registry version documentation drift",
+    mutate(sandbox) {
+      writePluginsDoc(
+        sandbox,
+        readPluginsDoc(sandbox).replace(
+          registrySeedState,
+          registrySeedState.replace("`1.0.0`", "`1.0.1`"),
+        ),
+      );
+    },
+    expectedOutput: "docs/plugins.md: registry seed state must exactly document registryVersion 1.0.0",
+  },
+  {
+    name: "rejects plugins.md empty-seed documentation drift",
+    mutate(sandbox) {
+      writePluginsDoc(
+        sandbox,
+        readPluginsDoc(sandbox).replace(
+          registrySeedState,
+          registrySeedState.replace("exactly `[]` (empty)", "non-empty"),
+        ),
+      );
+    },
+    expectedOutput: "docs/plugins.md: registry seed state must exactly document registryVersion 1.0.0",
+  },
+  {
+    name: "rejects schemas README registry version documentation drift",
+    mutate(sandbox) {
+      writeSchemasReadme(
+        sandbox,
+        readSchemasReadme(sandbox).replace(
+          registrySeedState,
+          registrySeedState.replace("`1.0.0`", "`1.0.1`"),
+        ),
+      );
+    },
+    expectedOutput: "packages/schemas/README.md: registry seed state must exactly document registryVersion 1.0.0",
+  },
+  {
+    name: "rejects schemas README empty-seed documentation drift",
+    mutate(sandbox) {
+      writeSchemasReadme(
+        sandbox,
+        readSchemasReadme(sandbox).replace(
+          registrySeedState,
+          registrySeedState.replace("exactly `[]` (empty)", "non-empty"),
+        ),
+      );
+    },
+    expectedOutput: "packages/schemas/README.md: registry seed state must exactly document registryVersion 1.0.0",
   },
 ];
 

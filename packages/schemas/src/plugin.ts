@@ -8,6 +8,8 @@
  * membership checks are separate contracts (#21+).
  */
 
+import { isExactSemver } from "./exact-semver.js";
+
 /** Exact plugin-manifest schema version for v1. */
 export const PLUGIN_MANIFEST_SCHEMA_VERSION = "1.0.0" as const;
 
@@ -83,10 +85,6 @@ const ALLOWED_FIELDS = REQUIRED_FIELDS;
 /** Reverse-DNS plugin identity (at least two segments). */
 const PLUGIN_ID_RE =
   /^[a-z][a-z0-9-]*(?:\.[a-z0-9][a-z0-9-]*)+(?![\s\S])/;
-
-/** Full semver (core + optional pre-release + optional build). */
-const SEMVER_RE =
-  /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?(?![\s\S])/;
 
 const NUMERIC_IDENTIFIER_PATTERN = String.raw`(?:0|[1-9]\d*)`;
 const PRERELEASE_IDENTIFIER_PATTERN =
@@ -218,7 +216,10 @@ export function validatePluginManifest(
   }
 
   const pluginVersion = value["pluginVersion"];
-  if (typeof pluginVersion !== "string" || !SEMVER_RE.test(pluginVersion)) {
+  if (
+    typeof pluginVersion !== "string" ||
+    !isExactSemver(pluginVersion)
+  ) {
     return refuse(
       "invalid-field",
       "$.pluginVersion",
@@ -242,7 +243,7 @@ export function validatePluginManifest(
   const registryVersion = value["registryVersion"];
   if (
     typeof registryVersion !== "string" ||
-    !SEMVER_RE.test(registryVersion)
+    !isExactSemver(registryVersion)
   ) {
     return refuse(
       "invalid-field",
