@@ -11,6 +11,7 @@
     { "path": "packages/profile-kids" },
     { "path": "packages/cli" },
     { "path": "packages/importers" },
+    { "path": "packages/plugin-host" },
     { "path": "apps/web-shell" },
     { "path": "apps/desktop-shell" },
     { "path": "apps/catalog-game" },

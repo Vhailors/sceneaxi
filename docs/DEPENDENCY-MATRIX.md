@@ -17,24 +17,25 @@ L1  engine packages    kernel ← presentation, orchestrator   (+ delayed: asset
 L2  authoring-core     the one agent-native runtime/authoring core (document model,
                        propose/apply service, session orchestration, evidence hooks,
                        Model Provider Port)
-L3  profiles · cli · importers
+L3  profiles · cli · importers · plugin-host
 L4  apps               (leaves; nothing depends on an app)
 ```
 
 ## Allow matrix (✓ = allowed; blank = denied)
 
-| From \ To | schemas | engine-kernel | engine-presentation | engine-orchestrator | authoring-core | profile-* | cli | importers | apps/* |
-|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| schemas | — | | | | | | | | |
-| engine-kernel | ✓ | — | | | | | | | |
-| engine-presentation | ✓ | ✓ | — | | | | | | |
-| engine-orchestrator | ✓ | ✓ | | — | | | | | |
-| authoring-core | ✓ | ✓ | ✓ | ✓ | — | | | | |
-| profile-game / profile-web / profile-kids | ✓ | ✓ | ✓ | ✓ | ✓ | — (never each other) | | | |
-| cli | ✓ | | | | ✓ | | — | | |
-| importers | ✓ | | | | ✓ | | | — | |
-| web-shell / desktop-shell | ✓ | | | | ✓ | | | | — |
-| catalog-game / catalog-web | ✓ | | | | | | | | — |
+| From \ To | schemas | engine-kernel | engine-presentation | engine-orchestrator | authoring-core | profile-* | cli | importers | plugin-host | apps/* |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| schemas | — | | | | | | | | | |
+| engine-kernel | ✓ | — | | | | | | | | |
+| engine-presentation | ✓ | ✓ | — | | | | | | | |
+| engine-orchestrator | ✓ | ✓ | | — | | | | | | |
+| authoring-core | ✓ | ✓ | ✓ | ✓ | — | | | | | |
+| profile-game / profile-web / profile-kids | ✓ | ✓ | ✓ | ✓ | ✓ | — (never each other) | | | | |
+| cli | ✓ | | | | ✓ | | — | | | |
+| importers | ✓ | | | | ✓ | | | — | | |
+| plugin-host | ✓ | | | | | | | | — | |
+| web-shell / desktop-shell | ✓ | | | | ✓ | | | | | — |
+| catalog-game / catalog-web | ✓ | | | | | | | | | — |
 
 Deliberate denials that carry design intent:
 
@@ -48,6 +49,9 @@ Deliberate denials that carry design intent:
 - **profile → profile: denied.** Profiles never import each other.
 - **anything → profile-kids: denied** (Kids boundary below).
 - **anything → apps, anything → cli: denied.** Apps and the CLI are leaves.
+- **plugin-host → engine packages / authoring-core / profiles: denied.** The Plugin
+  Host (ADR 0005) consumes only public contracts from `schemas`; it must not grow
+  an engine service locator or absorb engine internals.
 
 ## Kids policy boundary (hard)
 
@@ -82,4 +86,5 @@ Recorded in `dependency-matrix.json → releaseGroups` and stamped on every mani
   `^0.0.0`; becomes a real range at the first core release).
 - **cli-protocol** (`cli`): versions with its protocol envelope; output-schema changes
   are semver events.
-- **importers**, **apps**: independent / private.
+- **importers**, **plugin-host**, **apps**: independent / private.
+  `plugin-host` is independently versioned and may depend only on `schemas`.

@@ -117,6 +117,12 @@ importers:
         specifier: workspace:^
         version: link:../schemas
 
+  packages/plugin-host:
+    dependencies:
+      '@sceneaxi/schemas':
+        specifier: workspace:^
+        version: link:../schemas
+
   packages/profile-game:
     dependencies:
       '@sceneaxi/authoring-core':
