@@ -27,11 +27,15 @@ import {
 } from "@sceneaxi/plugin-host";
 import {
   emptyPluginCapabilityRegistrySeed,
+  lookupPluginCapability,
+  parsePluginCapabilityRegistryText,
   PLUGIN_CAPABILITY_REGISTRY_SCHEMA_URI,
   PLUGIN_CAPABILITY_REGISTRY_SCHEMA_VERSION,
+  PLUGIN_CAPABILITY_REGISTRY_VERSION,
   PLUGIN_MANIFEST_PATH,
   PLUGIN_MANIFEST_SCHEMA_URI,
   PLUGIN_MANIFEST_SCHEMA_VERSION,
+  validatePluginCapabilityRegistry,
   type PluginCapabilityRegistry,
   type PluginManifest,
 } from "@sceneaxi/schemas";
@@ -84,12 +88,16 @@ function tempRoot(label: string): string {
   return dir;
 }
 
+/**
+ * Test-only registry document — validated through the public #21 schemas API.
+ * Never written into the public seed artifact.
+ */
 function testOnlyRegistry(): PluginCapabilityRegistry {
-  return {
+  const candidate = {
     $schema: PLUGIN_CAPABILITY_REGISTRY_SCHEMA_URI,
     schemaVersion: PLUGIN_CAPABILITY_REGISTRY_SCHEMA_VERSION,
-    registryVersion: "1.0.0",
-    entries: Object.freeze([
+    registryVersion: PLUGIN_CAPABILITY_REGISTRY_VERSION,
+    entries: [
       {
         capabilityId: TEST_ONLY_CAPABILITY_ID,
         contractRef: "@sceneaxi/schemas",
@@ -97,8 +105,17 @@ function testOnlyRegistry(): PluginCapabilityRegistry {
         owningPackage: "@sceneaxi/schemas",
         documentationRef: "docs/plugins.md",
       },
-    ]),
+    ],
   };
+  const validated = validatePluginCapabilityRegistry(candidate, {
+    expectedRegistryVersion: PLUGIN_CAPABILITY_REGISTRY_VERSION,
+  });
+  if (!validated.ok) {
+    throw new Error(
+      `test-only registry fixture failed validation: ${validated.diagnostics[0]?.message ?? "unknown"}`,
+    );
+  }
+  return validated.registry;
 }
 
 function baseManifest(
@@ -1104,3 +1121,268 @@ export const capabilities = Object.freeze({
     ]);
   });
 });
+
+/**
+ * Captain integrated acceptance (#23): end-to-end #21 registry + #22 plugin-host.
+ * Public schemas APIs validate seed/fixture registries; host load/list/refuse uses
+ * only explicit locators; malformed/unauthorized refusals are deterministic and
+ * expose no partial capabilities.
+ */
+describe("integrated acceptance: #21 registry + #22 plugin-host E2E", () => {
+  it("binds the public empty seed (parsed via schemas) and refuses unauthorized claims safely", async () => {
+    const seedText = readFileSync(publicSeedPath, "utf8");
+    const parsed = parsePluginCapabilityRegistryText(seedText, {
+      expectedRegistryVersion: PLUGIN_CAPABILITY_REGISTRY_VERSION,
+    });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    expect(parsed.registry).toEqual(emptyPluginCapabilityRegistrySeed());
+    expect(parsed.registry.entries).toEqual([]);
+
+    // Typed lookup miss on the public seed — host must map this to unknown-capability.
+    const lookupMiss = lookupPluginCapability(
+      parsed.registry,
+      TEST_ONLY_CAPABILITY_ID,
+    );
+    expect(lookupMiss).toEqual({
+      ok: false,
+      capabilityId: TEST_ONLY_CAPABILITY_ID,
+      reason: "unknown-capability",
+    });
+
+    const root = tempRoot("e2e-seed");
+    const badMarker = join(root, "unauthorized-evaluated.txt");
+    const inert = writePackage({
+      root,
+      name: "z-inert",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.fixture.e2e.inert",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: emptyCapsEntrypoint,
+    });
+    const unauthorized = writePackage({
+      root,
+      name: "a-unauthorized",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.fixture.e2e.unauthorized",
+        entrypoint: "./plugin.js",
+        capabilities: Object.freeze([TEST_ONLY_CAPABILITY_ID]),
+      }),
+      entrypointSource: sentinelSource(
+        badMarker,
+        `export const capabilities = Object.freeze({
+  ${JSON.stringify(TEST_ONLY_CAPABILITY_ID)}: { leak: true },
+});`,
+      ),
+    });
+    const malformed = writePackage({
+      root,
+      name: "m-malformed",
+      manifestJson: "{ schemaVersion: not-json }",
+      entrypointRel: "plugin.js",
+      entrypointSource: sentinelSource(
+        badMarker,
+        "export const capabilities = Object.freeze({});",
+      ),
+    });
+
+    const host = openPluginHost({ registry: parsed.registry });
+    expect(host.registry).toEqual(emptyPluginCapabilityRegistrySeed());
+
+    const result = await host.load([unauthorized, malformed, inert]);
+    expect(result.loaded.map((p) => p.pluginId)).toEqual([
+      "dev.sceneaxi.fixture.e2e.inert",
+    ]);
+    expect(normalizeReport(result).refused).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          reason: "unknown-capability",
+          phase: "descriptor",
+          entrypointEvaluated: false,
+          pluginId: "dev.sceneaxi.fixture.e2e.unauthorized",
+          capabilityId: TEST_ONLY_CAPABILITY_ID,
+        }),
+        expect.objectContaining({
+          reason: "descriptor-invalid",
+          phase: "descriptor",
+          entrypointEvaluated: false,
+        }),
+      ]),
+    );
+    expect(result.refused).toHaveLength(2);
+    expect(existsSync(badMarker)).toBe(false);
+
+    // No partial exposure of refused plugins.
+    expect(
+      host.getImplementation(
+        "dev.sceneaxi.fixture.e2e.unauthorized",
+        TEST_ONLY_CAPABILITY_ID,
+      ).ok,
+    ).toBe(false);
+    expect(host.list().loaded.map((p) => p.pluginId)).toEqual([
+      "dev.sceneaxi.fixture.e2e.inert",
+    ]);
+  });
+
+  it("validates a test-only registry via schemas, loads providers, and keeps refusals deterministic", async () => {
+    const registry = testOnlyRegistry();
+    const hit = lookupPluginCapability(registry, TEST_ONLY_CAPABILITY_ID);
+    expect(hit.ok).toBe(true);
+    if (hit.ok) {
+      expect(hit.entry.capabilityId).toBe(TEST_ONLY_CAPABILITY_ID);
+      expect(hit.entry.owningPackage).toBe("@sceneaxi/schemas");
+    }
+    expect(
+      lookupPluginCapability(
+        registry,
+        "test.sceneaxi.fixture.capability.never-registered",
+      ).ok,
+    ).toBe(false);
+
+    // Seed artifact must remain empty / free of the test-only ID.
+    const seedArtifact = parsePluginCapabilityRegistryText(
+      readFileSync(publicSeedPath, "utf8"),
+      { expectedRegistryVersion: PLUGIN_CAPABILITY_REGISTRY_VERSION },
+    );
+    expect(seedArtifact.ok).toBe(true);
+    if (seedArtifact.ok) {
+      expect(seedArtifact.registry.entries).toEqual([]);
+      expect(
+        lookupPluginCapability(seedArtifact.registry, TEST_ONLY_CAPABILITY_ID)
+          .ok,
+      ).toBe(false);
+    }
+
+    const root = tempRoot("e2e-registry");
+    const refuseMarker = join(root, "refused-evaluated.txt");
+    const integrityMarker = join(root, "integrity-evaluated.txt");
+
+    const provider = writePackage({
+      root,
+      name: "provider",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.fixture.e2e.provider",
+        entrypoint: "./plugin.js",
+        capabilities: Object.freeze([TEST_ONLY_CAPABILITY_ID]),
+      }),
+      entrypointSource: `
+export const capabilities = Object.freeze({
+  ${JSON.stringify(TEST_ONLY_CAPABILITY_ID)}: { e2e: true },
+});
+`,
+      packageJson: {
+        dependencies: { "@sceneaxi/schemas": "workspace:^" },
+      },
+    });
+    const inert = writePackage({
+      root,
+      name: "inert",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.fixture.e2e.inert2",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: emptyCapsEntrypoint,
+    });
+    const forbidden = writePackage({
+      root,
+      name: "forbidden",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.fixture.e2e.forbidden",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: sentinelSource(
+        refuseMarker,
+        'import "@sceneaxi/engine-kernel";\nexport const capabilities = Object.freeze({});',
+      ),
+    });
+    const integrityMismatch = writePackage({
+      root,
+      name: "integrity",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.fixture.e2e.integrity",
+        entrypoint: "./plugin.js",
+        capabilities: Object.freeze([TEST_ONLY_CAPABILITY_ID]),
+      }),
+      entrypointSource: sentinelSource(
+        integrityMarker,
+        // Declared capability missing from export table.
+        "export const capabilities = Object.freeze({});",
+      ),
+      packageJson: {
+        dependencies: { "@sceneaxi/schemas": "workspace:^" },
+      },
+    });
+    const unsupported = writePackage({
+      root,
+      name: "unsupported-schema",
+      manifest: {
+        ...baseManifest({
+          pluginId: "dev.sceneaxi.fixture.e2e.schema",
+          entrypoint: "./plugin.js",
+        }),
+        schemaVersion: "2.0.0",
+      },
+      entrypointSource: sentinelSource(
+        refuseMarker,
+        "export const capabilities = Object.freeze({});",
+      ),
+    });
+
+    const host = openPluginHost({ registry });
+    const locatorsForward = [
+      forbidden,
+      integrityMismatch,
+      provider,
+      unsupported,
+      inert,
+    ];
+    const locatorsReversed = [...locatorsForward].reverse();
+
+    const first = await host.load(locatorsForward);
+    const listFirst = host.list();
+    const second = await openPluginHost({ registry }).load(locatorsReversed);
+
+    expect(normalizeReport(first)).toEqual(normalizeReport(second));
+    expect(listFirst.loaded.map((p) => p.pluginId)).toEqual([
+      "dev.sceneaxi.fixture.e2e.inert2",
+      "dev.sceneaxi.fixture.e2e.provider",
+    ]);
+    expect(
+      first.refused.map((r) => r.reason).sort(),
+    ).toEqual(
+      [
+        "forbidden-sceneaxi-import",
+        "implementation-table-mismatch",
+        "schema-version-unsupported",
+      ].sort(),
+    );
+
+    // Pre-evaluation refusals never run; integrity may run and still expose nothing.
+    expect(existsSync(refuseMarker)).toBe(false);
+    expect(existsSync(integrityMarker)).toBe(true);
+
+    const impl = host.getImplementation(
+      "dev.sceneaxi.fixture.e2e.provider",
+      TEST_ONLY_CAPABILITY_ID,
+    );
+    expect(impl.ok).toBe(true);
+    if (impl.ok) {
+      expect(impl.implementation).toEqual({ e2e: true });
+    }
+
+    for (const refusedId of [
+      "dev.sceneaxi.fixture.e2e.forbidden",
+      "dev.sceneaxi.fixture.e2e.integrity",
+      "dev.sceneaxi.fixture.e2e.schema",
+    ]) {
+      const miss = host.getImplementation(refusedId, TEST_ONLY_CAPABILITY_ID);
+      expect(miss.ok).toBe(false);
+      if (!miss.ok) {
+        expect(miss.reason).toBe("plugin-not-loaded");
+      }
+    }
+  });
+});
+
