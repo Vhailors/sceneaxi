@@ -76,6 +76,11 @@
       "releaseGroup": "importers",
       "allow": ["@sceneaxi/schemas", "@sceneaxi/authoring-core"]
     },
+    "@sceneaxi/plugin-host": {
+      "dir": "packages/plugin-host",
+      "releaseGroup": "plugin-host",
+      "allow": ["@sceneaxi/schemas"]
+    },
     "@sceneaxi/web-shell": {
       "dir": "apps/web-shell",
       "releaseGroup": "apps",
@@ -130,6 +135,9 @@
     "profile": { "policy": "independently versioned; each profile MUST declare sceneaxi.corePin (a semver range on the core train)" },
     "cli-protocol": { "policy": "versions with its protocol envelope; output-schema changes are semver events" },
     "importers": { "policy": "independently versioned" },
+    "plugin-host": {
+      "policy": "independently versioned; consumes only public contracts from schemas; never engine packages or service locators"
+    },
     "apps": { "policy": "private, unpublished, unversioned beyond workspace bookkeeping" }
   }
 }

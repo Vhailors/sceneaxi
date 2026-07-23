@@ -19,7 +19,9 @@ semantics and the SceneAxi-versus-adapter boundary.
 - `contracts/plugin-manifest.schema.json` — v1 capability-manifest descriptor
 - TypeScript: `PluginManifest`, `validatePluginManifest`, `parsePluginManifestText`,
   `inertPluginManifestFixture`
-- Shape-only contract; host runtime and isolation are #22–#23
+- Shape-only contract; host runtime lives in
+  [`@sceneaxi/plugin-host`](../plugin-host/README.md), while its deterministic
+  fixture matrix remains #23
 - Fixed package path: `sceneaxi.plugin.manifest.json` (`PLUGIN_MANIFEST_PATH`)
 - Agent overview: [`docs/plugins.md`](../../docs/plugins.md)
 

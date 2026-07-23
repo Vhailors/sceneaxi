@@ -45,6 +45,21 @@ describe("boundary check — injected violations", () => {
     );
   });
 
+  it("fails on a forbidden manifest dependency edge (plugin-host -> engine-kernel)", () => {
+    editManifest(fx, "packages/plugin-host/package.json", (m) => {
+      m.dependencies = {
+        ...m.dependencies,
+        "@sceneaxi/engine-kernel": "workspace:^",
+      };
+    });
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("boundary check FAILED");
+    expect(res.stderr).toContain(
+      "@sceneaxi/plugin-host: dependency @sceneaxi/engine-kernel is DENIED by the matrix",
+    );
+  });
+
   it("fails on a forbidden source import (cli src imports engine-kernel)", () => {
     appendTo(fx, "packages/cli/src/index.ts", '\nimport "@sceneaxi/engine-kernel";\n');
     const res = runCheck(fx, "check-boundaries.mjs");
