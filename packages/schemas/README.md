@@ -20,8 +20,8 @@ semantics and the SceneAxi-versus-adapter boundary.
 - TypeScript: `PluginManifest`, `validatePluginManifest`, `parsePluginManifestText`,
   `inertPluginManifestFixture`
 - Shape-only contract; host runtime lives in
-  [`@sceneaxi/plugin-host`](../plugin-host/README.md), while its deterministic
-  fixture matrix remains #23
+  [`@sceneaxi/plugin-host`](../plugin-host/README.md), which owns the
+  deterministic load/refuse fixture matrix (sceneaxi#23)
 - Fixed package path: `sceneaxi.plugin.manifest.json` (`PLUGIN_MANIFEST_PATH`)
 - Agent overview: [`docs/plugins.md`](../../docs/plugins.md)
 
