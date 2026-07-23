@@ -216,7 +216,7 @@ ${tableSource}
 `;
 }
 
-function normalizeReport(result: PluginHostLoadResult): unknown {
+function normalizeReport(result: PluginHostLoadResult) {
   return {
     loaded: result.loaded.map((p) => ({
       pluginId: p.pluginId,
