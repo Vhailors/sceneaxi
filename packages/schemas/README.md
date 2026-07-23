@@ -29,7 +29,8 @@ semantics and the SceneAxi-versus-adapter boundary.
 - `contracts/plugin-capability-registry.1.0.0.json` — checked-in seed with no
   demonstration or engine-internal ports
 - TypeScript: `PluginCapabilityRegistry`, `validatePluginCapabilityRegistry`,
-  `lookupPluginCapability`, `emptyPluginCapabilityRegistrySeed`
+  `parsePluginCapabilityRegistryText`, `lookupPluginCapability`,
+  `emptyPluginCapabilityRegistrySeed`
 - IDs are explicit registry keys only; lookup miss is typed
   (`reason: "unknown-capability"`) for host fail-closed refusal
 - Drift between schema, seed artifact, and docs is enforced by `pnpm check:contracts`
