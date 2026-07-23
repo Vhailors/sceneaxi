@@ -41,6 +41,7 @@ const BUILTIN_SPECIFIERS = new Set([
   ...builtinModules.map((name) => `node:${name}`),
 ]);
 const MODULE_BUILTIN_SPECIFIERS = new Set(["module", "node:module"]);
+const PROCESS_BUILTIN_SPECIFIERS = new Set(["process", "node:process"]);
 const MODULE_LOADER_EXPORTS = new Set([
   "Module",
   "createRequire",
@@ -465,10 +466,11 @@ function inspectModuleSource(file: string, text: string): ModuleInspection {
         );
         if (
           specifier !== null &&
-          MODULE_BUILTIN_SPECIFIERS.has(specifier) &&
-          staticEdgeAccessesModuleLoader(value)
+          ((MODULE_BUILTIN_SPECIFIERS.has(specifier) &&
+            staticEdgeAccessesModuleLoader(value)) ||
+            PROCESS_BUILTIN_SPECIFIERS.has(specifier))
         ) {
-          failure = `${file} exposes unsupported module-loader APIs from ${specifier}.`;
+          failure = `${file} exposes unsupported loader APIs from ${specifier}.`;
         }
       }
     } else if (type === "ImportExpression") {
@@ -479,9 +481,10 @@ function inspectModuleSource(file: string, text: string): ModuleInspection {
       );
       if (
         specifier !== null &&
-        MODULE_BUILTIN_SPECIFIERS.has(specifier)
+        (MODULE_BUILTIN_SPECIFIERS.has(specifier) ||
+          PROCESS_BUILTIN_SPECIFIERS.has(specifier))
       ) {
-        failure = `${file} dynamically imports unsupported module-loader APIs from ${specifier}.`;
+        failure = `${file} dynamically imports unsupported loader APIs from ${specifier}.`;
       }
     } else if (type === "CallExpression" && isRequireCallee(value["callee"])) {
       const args = value["arguments"];
@@ -491,9 +494,10 @@ function inspectModuleSource(file: string, text: string): ModuleInspection {
         const specifier = addStaticSource(args[0], "require()", "cjs");
         if (
           specifier !== null &&
-          MODULE_BUILTIN_SPECIFIERS.has(specifier)
+          (MODULE_BUILTIN_SPECIFIERS.has(specifier) ||
+            PROCESS_BUILTIN_SPECIFIERS.has(specifier))
         ) {
-          failure = `${file} requires unsupported module-loader APIs from ${specifier}.`;
+          failure = `${file} requires unsupported loader APIs from ${specifier}.`;
         }
       }
     }

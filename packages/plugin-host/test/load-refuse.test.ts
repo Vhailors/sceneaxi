@@ -24,17 +24,18 @@ import {
   type PluginManifest,
 } from "@sceneaxi/schemas";
 
-const statFailure = vi.hoisted(() => ({ path: null as string | null }));
+const statFailures = vi.hoisted(() => new Map<string, string>());
 
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs")>();
   return {
     ...actual,
     statSync(path: Parameters<typeof actual.statSync>[0]) {
-      if (String(path) === statFailure.path) {
-        statFailure.path = null;
+      const failureCode = statFailures.get(String(path));
+      if (failureCode !== undefined) {
+        statFailures.delete(String(path));
         throw Object.assign(new Error("simulated metadata race"), {
-          code: "ENOENT",
+          code: failureCode,
         });
       }
       return actual.statSync(path);
@@ -45,7 +46,7 @@ vi.mock("node:fs", async (importOriginal) => {
 const fixtures: string[] = [];
 
 afterEach(() => {
-  statFailure.path = null;
+  statFailures.clear();
   while (fixtures.length > 0) {
     const dir = fixtures.pop();
     if (dir && existsSync(dir)) {
@@ -225,7 +226,10 @@ describe("plugin host load / list / refuse", () => {
       }),
       entrypointSource: emptyCapsEntrypoint,
     });
-    statFailure.path = join(raced, "sceneaxi.plugin.manifest.json");
+    statFailures.set(
+      join(raced, "sceneaxi.plugin.manifest.json"),
+      "ENOENT",
+    );
 
     const result = await openPluginHost().load([healthy, raced]);
     expect(result.loaded.map((item) => item.pluginId)).toEqual([
@@ -235,6 +239,60 @@ describe("plugin host load / list / refuse", () => {
     expect(result.refused[0]?.reason).toBe("descriptor-missing");
     expect(result.refused[0]?.phase).toBe("descriptor");
     expect(result.refused[0]?.entrypointEvaluated).toBe(false);
+  });
+
+  it("classifies metadata access errors as unreadable and continues", async () => {
+    const root = tempRoot("metadata-unreadable");
+    const packageRootError = writePlugin({
+      root,
+      name: "a-package-root-error",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.rootmetadata",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: emptyCapsEntrypoint,
+    });
+    const descriptorError = writePlugin({
+      root,
+      name: "b-descriptor-error",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.descriptormetadata",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: emptyCapsEntrypoint,
+    });
+    const healthy = writePlugin({
+      root,
+      name: "z-healthy",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.aftermetadata",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: emptyCapsEntrypoint,
+    });
+    statFailures.set(packageRootError, "EACCES");
+    statFailures.set(
+      join(descriptorError, "sceneaxi.plugin.manifest.json"),
+      "EIO",
+    );
+
+    const result = await openPluginHost().load([
+      healthy,
+      descriptorError,
+      packageRootError,
+    ]);
+    expect(result.loaded.map((item) => item.pluginId)).toEqual([
+      "dev.sceneaxi.example.aftermetadata",
+    ]);
+    expect(result.refused).toHaveLength(2);
+    expect(
+      result.refused.every(
+        (item) =>
+          item.reason === "descriptor-unreadable" &&
+          item.phase === "descriptor" &&
+          !item.entrypointEvaluated,
+      ),
+    ).toBe(true);
   });
 
   it("refuses unknown capabilities before entrypoint evaluation", async () => {
@@ -747,6 +805,7 @@ require("node:fs").writeFileSync(${JSON.stringify(marker)}, "evaluated");
     const cases = [
       {
         name: "module-alias",
+        entrypoint: "./plugin.cjs",
         source: `
 const m = module;
 m.require("./provider.cjs");
@@ -755,6 +814,7 @@ exports.capabilities = Object.freeze({});
       },
       {
         name: "module-destructure",
+        entrypoint: "./plugin.cjs",
         source: `
 const { require: load } = module;
 load("./provider.cjs");
@@ -763,8 +823,29 @@ exports.capabilities = Object.freeze({});
       },
       {
         name: "process-builtin",
+        entrypoint: "./plugin.cjs",
         source: `
 const load = process.getBuiltinModule("module").createRequire(__filename);
+load("./provider.cjs");
+exports.capabilities = Object.freeze({});
+`,
+      },
+      {
+        name: "process-import",
+        entrypoint: "./plugin.js",
+        source: `
+import proc from "node:process";
+const load = proc.getBuiltinModule("node:module").createRequire(import.meta.url);
+load("./provider.cjs");
+export const capabilities = Object.freeze({});
+`,
+      },
+      {
+        name: "process-require",
+        entrypoint: "./plugin.cjs",
+        source: `
+const proc = require("node:process");
+const load = proc.getBuiltinModule("node:module").createRequire(__filename);
 load("./provider.cjs");
 exports.capabilities = Object.freeze({});
 `,
@@ -776,7 +857,7 @@ exports.capabilities = Object.freeze({});
         name: testCase.name,
         manifest: baseManifest({
           pluginId: `dev.sceneaxi.example.loaderacquisition${index}`,
-          entrypoint: "./plugin.cjs",
+          entrypoint: testCase.entrypoint,
         }),
         entrypointSource: testCase.source,
         extraFiles: {

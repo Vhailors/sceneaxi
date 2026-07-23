@@ -99,12 +99,40 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function pathHasType(path: string, type: "directory" | "file"): boolean {
+type PathTypeResult =
+  | { readonly ok: true }
+  | {
+      readonly ok: false;
+      readonly reason: "missing" | "unreadable";
+      readonly message: string;
+    };
+
+function inspectPathType(
+  path: string,
+  type: "directory" | "file",
+): PathTypeResult {
   try {
     const metadata = statSync(path);
-    return type === "directory" ? metadata.isDirectory() : metadata.isFile();
-  } catch {
-    return false;
+    const matches =
+      type === "directory" ? metadata.isDirectory() : metadata.isFile();
+    return matches
+      ? { ok: true }
+      : {
+          ok: false,
+          reason: "unreadable",
+          message: `Expected a ${type} at ${path}.`,
+        };
+  } catch (error) {
+    const code =
+      isRecord(error) && typeof error["code"] === "string"
+        ? error["code"]
+        : null;
+    return {
+      ok: false,
+      reason: code === "ENOENT" || code === "ENOTDIR" ? "missing" : "unreadable",
+      message:
+        error instanceof Error ? error.message : `Cannot inspect ${path}.`,
+    };
   }
 }
 
@@ -159,28 +187,36 @@ async function processCandidate(options: {
   const { locator, registry, hostApiVersion, seenPluginIds } = options;
   const packageRoot = resolve(locator);
 
-  if (!pathHasType(packageRoot, "directory")) {
+  const packageRootMetadata = inspectPathType(packageRoot, "directory");
+  if (!packageRootMetadata.ok) {
+    const unreadable = packageRootMetadata.reason === "unreadable";
     return {
       ok: false,
       refused: refuse({
         locator: packageRoot,
-        reason: "descriptor-missing",
+        reason: unreadable ? "descriptor-unreadable" : "descriptor-missing",
         phase: "descriptor",
-        message: `Plugin package root does not exist or is not a directory: ${packageRoot}`,
+        message: unreadable
+          ? `Cannot inspect plugin package root: ${packageRootMetadata.message}`
+          : `Plugin package root does not exist: ${packageRoot}`,
         entrypointEvaluated: false,
       }),
     };
   }
 
   const descriptorPath = join(packageRoot, PLUGIN_MANIFEST_PATH);
-  if (!pathHasType(descriptorPath, "file")) {
+  const descriptorMetadata = inspectPathType(descriptorPath, "file");
+  if (!descriptorMetadata.ok) {
+    const unreadable = descriptorMetadata.reason === "unreadable";
     return {
       ok: false,
       refused: refuse({
         locator: packageRoot,
-        reason: "descriptor-missing",
+        reason: unreadable ? "descriptor-unreadable" : "descriptor-missing",
         phase: "descriptor",
-        message: `Missing descriptor at ${PLUGIN_MANIFEST_PATH}.`,
+        message: unreadable
+          ? `Cannot inspect ${PLUGIN_MANIFEST_PATH}: ${descriptorMetadata.message}`
+          : `Missing descriptor at ${PLUGIN_MANIFEST_PATH}.`,
         entrypointEvaluated: false,
       }),
     };
