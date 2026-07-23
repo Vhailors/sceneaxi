@@ -2,7 +2,7 @@
  * Deterministic Plugin Host load pipeline (ADR 0005).
  */
 
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
@@ -99,6 +99,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+function pathHasType(path: string, type: "directory" | "file"): boolean {
+  try {
+    const metadata = statSync(path);
+    return type === "directory" ? metadata.isDirectory() : metadata.isFile();
+  } catch {
+    return false;
+  }
+}
+
 function extractCapabilityTable(
   moduleNamespace: unknown,
 ):
@@ -150,7 +159,7 @@ async function processCandidate(options: {
   const { locator, registry, hostApiVersion, seenPluginIds } = options;
   const packageRoot = resolve(locator);
 
-  if (!existsSync(packageRoot) || !statSync(packageRoot).isDirectory()) {
+  if (!pathHasType(packageRoot, "directory")) {
     return {
       ok: false,
       refused: refuse({
@@ -164,7 +173,7 @@ async function processCandidate(options: {
   }
 
   const descriptorPath = join(packageRoot, PLUGIN_MANIFEST_PATH);
-  if (!existsSync(descriptorPath) || !statSync(descriptorPath).isFile()) {
+  if (!pathHasType(descriptorPath, "file")) {
     return {
       ok: false,
       refused: refuse({

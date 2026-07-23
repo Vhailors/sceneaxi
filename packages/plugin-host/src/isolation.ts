@@ -252,23 +252,83 @@ function identifierName(value: unknown): string | null {
   return literalString(value);
 }
 
+function memberPropertyName(value: unknown): string | null {
+  if (!isRecord(value) || value["type"] !== "MemberExpression") return null;
+  const property = value["property"];
+  if (value["computed"] === true) return literalString(property);
+  return isRecord(property) &&
+    property["type"] === "Identifier" &&
+    typeof property["name"] === "string"
+    ? property["name"]
+    : null;
+}
+
+function isNamedMember(
+  value: unknown,
+  objectName: string,
+  propertyName: string,
+): boolean {
+  if (!isRecord(value) || value["type"] !== "MemberExpression") return false;
+  const object = value["object"];
+  return (
+    isRecord(object) &&
+    object["type"] === "Identifier" &&
+    object["name"] === objectName &&
+    memberPropertyName(value) === propertyName
+  );
+}
+
 function isRequireCallee(value: unknown): boolean {
   if (!isRecord(value)) return false;
   if (value["type"] === "Identifier" && value["name"] === "require") {
     return true;
   }
-  if (value["type"] !== "MemberExpression") return false;
-  const object = value["object"];
-  const property = value["property"];
+  return isNamedMember(value, "module", "require");
+}
+
+function isIdentifierSyntax(
+  parent: Record<string, unknown> | null,
+  parentKey: string | null,
+): boolean {
+  if (parent === null || parentKey === null) return false;
+  if (
+    parentKey === "property" &&
+    parent["type"] === "MemberExpression" &&
+    parent["computed"] === false
+  ) {
+    return true;
+  }
+  if (
+    parentKey === "key" &&
+    (parent["type"] === "Property" ||
+      parent["type"] === "MethodDefinition") &&
+    parent["computed"] === false
+  ) {
+    return true;
+  }
+  if (parent["type"] === "VariableDeclarator" && parentKey === "id") {
+    return true;
+  }
+  if (
+    (parent["type"] === "FunctionDeclaration" ||
+      parent["type"] === "FunctionExpression" ||
+      parent["type"] === "ArrowFunctionExpression") &&
+    (parentKey === "id" || parentKey === "params")
+  ) {
+    return true;
+  }
+  if (
+    (parent["type"] === "ImportSpecifier" ||
+      parent["type"] === "ImportDefaultSpecifier" ||
+      parent["type"] === "ImportNamespaceSpecifier") &&
+    parentKey === "local"
+  ) {
+    return true;
+  }
   return (
-    isRecord(object) &&
-    object["type"] === "Identifier" &&
-    object["name"] === "module" &&
-    ((value["computed"] === false &&
-      isRecord(property) &&
-      property["type"] === "Identifier" &&
-      property["name"] === "require") ||
-      (value["computed"] === true && literalString(property) === "require"))
+    (parent["type"] === "ClassDeclaration" ||
+      parent["type"] === "ClassExpression") &&
+    parentKey === "id"
   );
 }
 
@@ -306,7 +366,6 @@ function inspectModuleSource(file: string, text: string): ModuleInspection {
   } catch (moduleError) {
     try {
       ast = parse(text, {
-        allowAwaitOutsideFunction: true,
         allowHashBang: true,
         allowReturnOutsideFunction: true,
         ecmaVersion: "latest",
@@ -353,17 +412,27 @@ function inspectModuleSource(file: string, text: string): ModuleInspection {
     if (type === "Identifier" && value["name"] === "require") {
       const directCall =
         parent?.["type"] === "CallExpression" && parentKey === "callee";
-      const propertyName =
-        parentKey === "property" &&
-        parent?.["type"] === "MemberExpression" &&
-        parent["computed"] === false;
-      const objectKey =
-        parentKey === "key" &&
-        (parent?.["type"] === "Property" ||
-          parent?.["type"] === "MethodDefinition") &&
-        parent["computed"] === false;
-      if (!directCall && !propertyName && !objectKey) {
+      if (!directCall && !isIdentifierSyntax(parent, parentKey)) {
         failure = `${file} contains an unsupported indirect reference to require.`;
+        return;
+      }
+    }
+    if (type === "Identifier" && value["name"] === "module") {
+      const allowedMember =
+        parent?.["type"] === "MemberExpression" &&
+        parentKey === "object" &&
+        (memberPropertyName(parent) === "exports" ||
+          memberPropertyName(parent) === "require");
+      if (!allowedMember && !isIdentifierSyntax(parent, parentKey)) {
+        failure = `${file} contains an unsupported indirect reference to module.`;
+        return;
+      }
+    }
+    if (type === "Identifier" && value["name"] === "process") {
+      const directMember =
+        parent?.["type"] === "MemberExpression" && parentKey === "object";
+      if (!directMember && !isIdentifierSyntax(parent, parentKey)) {
+        failure = `${file} contains an unsupported indirect reference to process.`;
         return;
       }
     }
@@ -374,6 +443,13 @@ function inspectModuleSource(file: string, text: string): ModuleInspection {
         failure = `${file} contains an unsupported indirect reference to module.require.`;
         return;
       }
+    }
+    if (
+      type === "MemberExpression" &&
+      isNamedMember(value, "process", "getBuiltinModule")
+    ) {
+      failure = `${file} accesses unsupported process.getBuiltinModule loader APIs.`;
+      return;
     }
 
     if (
@@ -486,6 +562,51 @@ function readPackageIdentity(root: string): PackageIdentity | null {
   } catch {
     return null;
   }
+}
+
+function validateLocalResolvedBoundary(options: {
+  readonly packageRoot: string;
+  readonly resolved: string;
+}): IsolationResult {
+  let current = dirname(options.resolved);
+  while (current !== options.packageRoot) {
+    if (!isUnderPackageRoot(options.packageRoot, current)) {
+      return refuse(
+        "entrypoint-escape",
+        `${relative(options.packageRoot, options.resolved)} resolves outside the plugin package root.`,
+      );
+    }
+    if (existsSync(join(current, PLUGIN_MANIFEST_PATH))) {
+      return refuse(
+        "isolation-unverifiable",
+        `${relative(options.packageRoot, options.resolved)} resolves through a nested plugin package.`,
+      );
+    }
+    if (existsSync(join(current, "package.json"))) {
+      const identity = readPackageIdentity(current);
+      if (identity === null) {
+        return refuse(
+          "isolation-unverifiable",
+          `${relative(options.packageRoot, options.resolved)} has an ambiguous nested package boundary.`,
+        );
+      }
+      if (sceneaxiPackageName(identity.name) !== null) {
+        return refuse(
+          "forbidden-sceneaxi-import",
+          `${relative(options.packageRoot, options.resolved)} resolves through nested package ${identity.name}.`,
+        );
+      }
+    }
+    const parent = dirname(current);
+    if (parent === current) {
+      return refuse(
+        "isolation-unverifiable",
+        `${relative(options.packageRoot, options.resolved)} has an ambiguous package boundary.`,
+      );
+    }
+    current = parent;
+  }
+  return { ok: true };
 }
 
 function mappingUsesUnsupportedConditions(
@@ -780,6 +901,12 @@ function inspectModuleGraph(options: {
   readonly entrypointAbsolute: string;
   readonly authorizedSceneaxiPackages: ReadonlySet<string>;
 }): IsolationResult {
+  const entrypointBoundary = validateLocalResolvedBoundary({
+    packageRoot: options.packageRoot,
+    resolved: options.entrypointAbsolute,
+  });
+  if (!entrypointBoundary.ok) return entrypointBoundary;
+
   const pending = [options.entrypointAbsolute];
   const inspected = new Set<string>();
 
@@ -888,12 +1015,11 @@ function inspectModuleGraph(options: {
 
       const resolved = resolution.path;
       if (specifier.startsWith(".") || specifier.startsWith("#")) {
-        if (!isUnderPackageRoot(options.packageRoot, resolved)) {
-          return refuse(
-            "entrypoint-escape",
-            `${relative(options.packageRoot, file)} import ${specifier} resolves outside the plugin package root.`,
-          );
-        }
+        const localBoundary = validateLocalResolvedBoundary({
+          packageRoot: options.packageRoot,
+          resolved,
+        });
+        if (!localBoundary.ok) return localBoundary;
         pending.push(resolved);
         continue;
       }
@@ -918,12 +1044,11 @@ function inspectModuleGraph(options: {
 
       const identityRoot = identity.root;
       if (identityRoot === options.packageRoot) {
-        if (!isUnderPackageRoot(options.packageRoot, resolved)) {
-          return refuse(
-            "entrypoint-escape",
-            `${relative(options.packageRoot, file)} self import ${specifier} resolves outside the plugin package root.`,
-          );
-        }
+        const localBoundary = validateLocalResolvedBoundary({
+          packageRoot: options.packageRoot,
+          resolved,
+        });
+        if (!localBoundary.ok) return localBoundary;
         pending.push(resolved);
         continue;
       }

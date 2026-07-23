@@ -9,7 +9,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   PLUGIN_HOST_API_VERSION,
   openPluginHost,
@@ -24,9 +24,28 @@ import {
   type PluginManifest,
 } from "@sceneaxi/schemas";
 
+const statFailure = vi.hoisted(() => ({ path: null as string | null }));
+
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs")>();
+  return {
+    ...actual,
+    statSync(path: Parameters<typeof actual.statSync>[0]) {
+      if (String(path) === statFailure.path) {
+        statFailure.path = null;
+        throw Object.assign(new Error("simulated metadata race"), {
+          code: "ENOENT",
+        });
+      }
+      return actual.statSync(path);
+    },
+  };
+});
+
 const fixtures: string[] = [];
 
 afterEach(() => {
+  statFailure.path = null;
   while (fixtures.length > 0) {
     const dir = fixtures.pop();
     if (dir && existsSync(dir)) {
@@ -184,6 +203,38 @@ describe("plugin host load / list / refuse", () => {
     expect(result.refused[0]?.reason).toBe("descriptor-missing");
     expect(result.refused[0]?.entrypointEvaluated).toBe(false);
     expect(result.refused[0]?.phase).toBe("descriptor");
+  });
+
+  it("turns descriptor stat races into a refusal and continues", async () => {
+    const root = tempRoot("descriptor-race");
+    const raced = writePlugin({
+      root,
+      name: "a-raced",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.raced",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: emptyCapsEntrypoint,
+    });
+    const healthy = writePlugin({
+      root,
+      name: "z-healthy",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.afterrace",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: emptyCapsEntrypoint,
+    });
+    statFailure.path = join(raced, "sceneaxi.plugin.manifest.json");
+
+    const result = await openPluginHost().load([healthy, raced]);
+    expect(result.loaded.map((item) => item.pluginId)).toEqual([
+      "dev.sceneaxi.example.afterrace",
+    ]);
+    expect(result.refused).toHaveLength(1);
+    expect(result.refused[0]?.reason).toBe("descriptor-missing");
+    expect(result.refused[0]?.phase).toBe("descriptor");
+    expect(result.refused[0]?.entrypointEvaluated).toBe(false);
   });
 
   it("refuses unknown capabilities before entrypoint evaluation", async () => {
@@ -690,6 +741,86 @@ require("node:fs").writeFileSync(${JSON.stringify(marker)}, "evaluated");
     expect(existsSync(marker)).toBe(false);
   });
 
+  it("refuses indirect CommonJS loader acquisition before evaluation", async () => {
+    const root = tempRoot("loader-acquisition");
+    const marker = join(root, "evaluated.txt");
+    const cases = [
+      {
+        name: "module-alias",
+        source: `
+const m = module;
+m.require("./provider.cjs");
+exports.capabilities = Object.freeze({});
+`,
+      },
+      {
+        name: "module-destructure",
+        source: `
+const { require: load } = module;
+load("./provider.cjs");
+exports.capabilities = Object.freeze({});
+`,
+      },
+      {
+        name: "process-builtin",
+        source: `
+const load = process.getBuiltinModule("module").createRequire(__filename);
+load("./provider.cjs");
+exports.capabilities = Object.freeze({});
+`,
+      },
+    ] as const;
+    const packages = cases.map((testCase, index) =>
+      writePlugin({
+        root,
+        name: testCase.name,
+        manifest: baseManifest({
+          pluginId: `dev.sceneaxi.example.loaderacquisition${index}`,
+          entrypoint: "./plugin.cjs",
+        }),
+        entrypointSource: testCase.source,
+        extraFiles: {
+          "provider.cjs": `
+require("node:fs").writeFileSync(${JSON.stringify(marker)}, "evaluated");
+`,
+        },
+      }),
+    );
+
+    const result = await openPluginHost().load(packages);
+    expect(result.loaded).toEqual([]);
+    expect(result.refused).toHaveLength(cases.length);
+    expect(
+      result.refused.every(
+        (item) =>
+          item.reason === "isolation-unverifiable" &&
+          !item.entrypointEvaluated,
+      ),
+    ).toBe(true);
+    expect(existsSync(marker)).toBe(false);
+  });
+
+  it("passes CommonJS-only syntax through the isolation fallback", async () => {
+    const root = tempRoot("commonjs-fallback");
+    const pkg = writePlugin({
+      root,
+      name: "commonjs-fallback",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.commonjsfallback",
+        entrypoint: "./plugin.cjs",
+      }),
+      entrypointSource: `
+void new.target;
+exports.capabilities = Object.freeze({});
+`,
+    });
+
+    const result = await openPluginHost().load([pkg]);
+    expect(result.loaded.length + result.refused.length).toBe(1);
+    expect(result.refused.every((item) => item.phase !== "isolation")).toBe(true);
+    expect(result.refused.every((item) => item.entrypointEvaluated)).toBe(true);
+  });
+
   it("refuses package mappings with unsupported custom conditions", async () => {
     const root = tempRoot("custom-conditions");
     const pkg = writePlugin({
@@ -722,6 +853,77 @@ export const capabilities = Object.freeze({});
     expect(result.loaded).toEqual([]);
     expect(result.refused[0]?.reason).toBe("isolation-unverifiable");
     expect(result.refused[0]?.entrypointEvaluated).toBe(false);
+  });
+
+  it("refuses nested SceneAxi and plugin packages on local edges", async () => {
+    const root = tempRoot("nested-local-packages");
+    const marker = join(root, "evaluated.txt");
+    const nestedSceneaxi = writePlugin({
+      root,
+      name: "a-nested-sceneaxi",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.nestedlocalsceneaxi",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: `
+import "./nested/index.js";
+export const capabilities = Object.freeze({});
+`,
+      extraFiles: {
+        "nested/package.json": JSON.stringify({
+          name: "@sceneaxi/engine-kernel",
+          type: "module",
+        }),
+        "nested/index.js": `
+import { writeFileSync } from "node:fs";
+writeFileSync(${JSON.stringify(marker)}, "evaluated");
+`,
+      },
+    });
+    const nestedPlugin = writePlugin({
+      root,
+      name: "b-nested-plugin",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.nestedlocalplugin",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: `
+import "#nested";
+export const capabilities = Object.freeze({});
+`,
+      packageJson: {
+        imports: {
+          "#nested": "./nested/index.js",
+        },
+      },
+      extraFiles: {
+        "nested/sceneaxi.plugin.manifest.json": "{}\n",
+        "nested/index.js": `
+import { writeFileSync } from "node:fs";
+writeFileSync(${JSON.stringify(marker)}, "evaluated");
+`,
+      },
+    });
+
+    const result = await openPluginHost().load([
+      nestedPlugin,
+      nestedSceneaxi,
+    ]);
+    expect(result.loaded).toEqual([]);
+    expect(
+      result.refused.map((item) => [item.pluginId, item.reason]),
+    ).toEqual([
+      [
+        "dev.sceneaxi.example.nestedlocalsceneaxi",
+        "forbidden-sceneaxi-import",
+      ],
+      [
+        "dev.sceneaxi.example.nestedlocalplugin",
+        "isolation-unverifiable",
+      ],
+    ]);
+    expect(result.refused.every((item) => !item.entrypointEvaluated)).toBe(true);
+    expect(existsSync(marker)).toBe(false);
   });
 
   it("resolves authorized SceneAxi imports and refuses missing targets", async () => {
