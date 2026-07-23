@@ -127,10 +127,10 @@ function implementationKeysMatch(
   table: Readonly<Record<string, unknown>>,
 ): boolean {
   const declaredSet = new Set(declared);
-  const exportedKeys = Object.keys(table);
+  const exportedKeys = Reflect.ownKeys(table);
   if (exportedKeys.length !== declaredSet.size) return false;
   for (const key of exportedKeys) {
-    if (!declaredSet.has(key)) return false;
+    if (typeof key !== "string" || !declaredSet.has(key)) return false;
   }
   for (const id of declaredSet) {
     if (!Object.hasOwn(table, id)) return false;

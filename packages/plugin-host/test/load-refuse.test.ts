@@ -573,6 +573,202 @@ export const capabilities = Object.freeze({});
     expect(result.refused[0]?.entrypointEvaluated).toBe(false);
   });
 
+  it("resolves ESM and CJS edges with their matching conditions", async () => {
+    const root = tempRoot("resolve-conditions");
+    const packageJson = {
+      imports: {
+        "#branch": {
+          import: "./esm-branch.js",
+          require: "./cjs-branch.cjs",
+        },
+      },
+    };
+    const esm = writePlugin({
+      root,
+      name: "esm",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.conditions-esm",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: `
+import "#branch";
+export const capabilities = Object.freeze({});
+`,
+      packageJson,
+      extraFiles: {
+        "esm-branch.js": `import "@sceneaxi/engine-kernel";\n`,
+        "cjs-branch.cjs": `module.exports = {};\n`,
+      },
+    });
+    const cjs = writePlugin({
+      root,
+      name: "cjs",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.conditions-cjs",
+        entrypoint: "./plugin.cjs",
+      }),
+      entrypointSource: `
+require("#branch");
+exports.capabilities = Object.freeze({});
+`,
+      packageJson,
+      extraFiles: {
+        "esm-branch.js": `import "@sceneaxi/engine-kernel";\n`,
+        "cjs-branch.cjs": `module.exports = {};\n`,
+      },
+    });
+
+    const result = await openPluginHost().load([esm, cjs]);
+    expect(result.loaded.map((item) => item.pluginId)).toEqual([
+      "dev.sceneaxi.example.conditions-cjs",
+    ]);
+    expect(result.refused).toHaveLength(1);
+    expect(result.refused[0]?.pluginId).toBe(
+      "dev.sceneaxi.example.conditions-esm",
+    );
+    expect(result.refused[0]?.reason).toBe("forbidden-sceneaxi-import");
+    expect(result.refused[0]?.entrypointEvaluated).toBe(false);
+  });
+
+  it("refuses aliased module-loader construction before evaluation", async () => {
+    const root = tempRoot("loader-alias");
+    const marker = join(root, "evaluated.txt");
+    const pkg = writePlugin({
+      root,
+      name: "loader-alias",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.loaderalias",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: `
+import { createRequire as makeLoader } from "node:module";
+import { writeFileSync } from "node:fs";
+writeFileSync(${JSON.stringify(marker)}, "evaluated");
+const load = makeLoader(import.meta.url);
+load("@sceneaxi/engine-kernel");
+export const capabilities = Object.freeze({});
+`,
+    });
+
+    const result = await openPluginHost().load([pkg]);
+    expect(result.loaded).toEqual([]);
+    expect(result.refused[0]?.reason).toBe("isolation-unverifiable");
+    expect(result.refused[0]?.entrypointEvaluated).toBe(false);
+    expect(existsSync(marker)).toBe(false);
+  });
+
+  it("resolves authorized SceneAxi imports and refuses missing targets", async () => {
+    const root = tempRoot("authorized-resolution");
+    const registry = registryWithAlpha();
+    const capabilityId = "dev.sceneaxi.capability.alpha";
+    const resolved = writePlugin({
+      root,
+      name: "resolved",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.authorized",
+        entrypoint: "./plugin.js",
+        capabilities: Object.freeze([capabilityId]),
+      }),
+      entrypointSource: `
+import "@sceneaxi/schemas";
+export const capabilities = Object.freeze({
+  ${JSON.stringify(capabilityId)}: {},
+});
+`,
+      packageJson: {
+        dependencies: { "@sceneaxi/schemas": "0.0.0" },
+      },
+    });
+    const schemasRoot = join(
+      resolved,
+      "node_modules",
+      "@sceneaxi",
+      "schemas",
+    );
+    mkdirSync(schemasRoot, { recursive: true });
+    writeFileSync(
+      join(schemasRoot, "package.json"),
+      JSON.stringify({
+        name: "@sceneaxi/schemas",
+        type: "module",
+        exports: "./index.js",
+      }),
+      "utf8",
+    );
+    writeFileSync(join(schemasRoot, "index.js"), "export {};\n", "utf8");
+
+    const missing = writePlugin({
+      root,
+      name: "missing",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.missingauthorized",
+        entrypoint: "./plugin.js",
+        capabilities: Object.freeze([capabilityId]),
+      }),
+      entrypointSource: `
+import "@sceneaxi/schemas/contracts/missing.schema.json";
+export const capabilities = Object.freeze({
+  ${JSON.stringify(capabilityId)}: {},
+});
+`,
+      packageJson: {
+        dependencies: { "@sceneaxi/schemas": "0.0.0" },
+      },
+    });
+
+    const result = await openPluginHost({ registry }).load([
+      resolved,
+      missing,
+    ]);
+    expect(result.loaded.map((item) => item.pluginId)).toEqual([
+      "dev.sceneaxi.example.authorized",
+    ]);
+    expect(result.refused).toHaveLength(1);
+    expect(result.refused[0]?.pluginId).toBe(
+      "dev.sceneaxi.example.missingauthorized",
+    );
+    expect(result.refused[0]?.reason).toBe("isolation-unverifiable");
+    expect(result.refused[0]?.entrypointEvaluated).toBe(false);
+  });
+
+  it("classifies package aliases by resolved identity", async () => {
+    const root = tempRoot("package-alias");
+    const pkg = writePlugin({
+      root,
+      name: "consumer",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.packagealias",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: `
+import "safe-alias";
+export const capabilities = Object.freeze({});
+`,
+      packageJson: {
+        dependencies: {
+          "safe-alias": "npm:@sceneaxi/engine-kernel@0.0.0",
+        },
+      },
+    });
+    const aliasRoot = join(pkg, "node_modules", "safe-alias");
+    mkdirSync(aliasRoot, { recursive: true });
+    writeFileSync(
+      join(aliasRoot, "package.json"),
+      JSON.stringify({
+        name: "@sceneaxi/engine-kernel",
+        type: "module",
+        exports: "./index.js",
+      }),
+      "utf8",
+    );
+    writeFileSync(join(aliasRoot, "index.js"), "export {};\n", "utf8");
+
+    const result = await openPluginHost().load([pkg]);
+    expect(result.loaded).toEqual([]);
+    expect(result.refused[0]?.reason).toBe("forbidden-sceneaxi-import");
+    expect(result.refused[0]?.entrypointEvaluated).toBe(false);
+  });
+
   it("evaluates the complete hostApi v1 range dialect", async () => {
     const cases = [
       { range: "1.x", host: "1.9.0", accepted: true },
@@ -660,6 +856,51 @@ export const capabilities = new Proxy({}, {
     expect(result.refused[0]?.reason).toBe("implementation-table-mismatch");
     expect(result.refused[0]?.phase).toBe("integrity");
     expect(result.refused[0]?.entrypointEvaluated).toBe(true);
+  });
+
+  it("rejects hidden string and symbol implementation keys", async () => {
+    const root = tempRoot("hidden-keys");
+    const hiddenString = writePlugin({
+      root,
+      name: "hidden-string",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.hiddenstring",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: `
+const capabilities = {};
+Object.defineProperty(capabilities, "hidden", {
+  enumerable: false,
+  value: {},
+});
+export { capabilities };
+`,
+    });
+    const symbol = writePlugin({
+      root,
+      name: "symbol",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.symbol",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: `
+export const capabilities = {
+  [Symbol.for("hidden")]: {},
+};
+`,
+    });
+
+    const result = await openPluginHost().load([symbol, hiddenString]);
+    expect(result.loaded).toEqual([]);
+    expect(result.refused).toHaveLength(2);
+    expect(
+      result.refused.every(
+        (item) =>
+          item.reason === "implementation-table-mismatch" &&
+          item.phase === "integrity" &&
+          item.entrypointEvaluated,
+      ),
+    ).toBe(true);
   });
 
   it("refused packages expose no implementations via getImplementation", async () => {

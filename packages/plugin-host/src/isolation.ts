@@ -20,8 +20,9 @@ import {
   resolve,
   sep,
 } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { parse } from "acorn";
+import { resolve as resolveImportSpecifier } from "import-meta-resolve";
 
 const PLUGIN_MANIFEST_PATH = "sceneaxi.plugin.manifest.json";
 const INSPECTABLE_MODULE_EXTENSIONS = new Set([
@@ -38,6 +39,14 @@ const INSPECTABLE_MODULE_EXTENSIONS = new Set([
 const BUILTIN_SPECIFIERS = new Set([
   ...builtinModules,
   ...builtinModules.map((name) => `node:${name}`),
+]);
+const MODULE_BUILTIN_SPECIFIERS = new Set(["module", "node:module"]);
+const MODULE_LOADER_EXPORTS = new Set([
+  "Module",
+  "createRequire",
+  "default",
+  "register",
+  "registerHooks",
 ]);
 
 const DEP_FIELDS = [
@@ -217,8 +226,13 @@ function collectDeclaredSceneaxiDeps(
   return { ok: true, deps };
 }
 
+type ModuleEdge = {
+  readonly kind: "cjs" | "esm";
+  readonly specifier: string;
+};
+
 type ModuleInspection =
-  | { readonly ok: true; readonly specifiers: readonly string[] }
+  | { readonly ok: true; readonly edges: readonly ModuleEdge[] }
   | { readonly ok: false; readonly message: string };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -228,6 +242,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function literalString(value: unknown): string | null {
   if (!isRecord(value) || value["type"] !== "Literal") return null;
   return typeof value["value"] === "string" ? value["value"] : null;
+}
+
+function identifierName(value: unknown): string | null {
+  if (!isRecord(value)) return null;
+  if (value["type"] === "Identifier" && typeof value["name"] === "string") {
+    return value["name"];
+  }
+  return literalString(value);
 }
 
 function isRequireCallee(value: unknown): boolean {
@@ -248,6 +270,27 @@ function isRequireCallee(value: unknown): boolean {
       property["name"] === "require") ||
       (value["computed"] === true && literalString(property) === "require"))
   );
+}
+
+function staticEdgeAccessesModuleLoader(value: Record<string, unknown>): boolean {
+  if (value["type"] === "ExportAllDeclaration") return true;
+  const specifiers = value["specifiers"];
+  if (!Array.isArray(specifiers)) return true;
+  return specifiers.some((specifier) => {
+    if (!isRecord(specifier)) return true;
+    if (
+      specifier["type"] === "ImportDefaultSpecifier" ||
+      specifier["type"] === "ImportNamespaceSpecifier"
+    ) {
+      return true;
+    }
+    return (
+      (specifier["type"] === "ImportSpecifier" &&
+        MODULE_LOADER_EXPORTS.has(identifierName(specifier["imported"]) ?? "")) ||
+      (specifier["type"] === "ExportSpecifier" &&
+        MODULE_LOADER_EXPORTS.has(identifierName(specifier["local"]) ?? ""))
+    );
+  });
 }
 
 function inspectModuleSource(file: string, text: string): ModuleInspection {
@@ -277,16 +320,21 @@ function inspectModuleSource(file: string, text: string): ModuleInspection {
     }
   }
 
-  const specifiers = new Set<string>();
+  const edges = new Map<string, ModuleEdge>();
   let failure: string | null = null;
 
-  const addStaticSource = (value: unknown, syntax: string): void => {
+  const addStaticSource = (
+    value: unknown,
+    syntax: string,
+    kind: ModuleEdge["kind"],
+  ): string | null => {
     const specifier = literalString(value);
     if (specifier === null) {
       failure = `${file} contains ${syntax} with a non-literal module specifier.`;
-      return;
+      return null;
     }
-    specifiers.add(specifier);
+    edges.set(`${kind}\0${specifier}`, { kind, specifier });
+    return specifier;
   };
 
   const visit = (value: unknown): void => {
@@ -304,16 +352,43 @@ function inspectModuleSource(file: string, text: string): ModuleInspection {
       type === "ExportNamedDeclaration"
     ) {
       if (value["source"] !== null && value["source"] !== undefined) {
-        addStaticSource(value["source"], "an import or re-export");
+        const specifier = addStaticSource(
+          value["source"],
+          "an import or re-export",
+          "esm",
+        );
+        if (
+          specifier !== null &&
+          MODULE_BUILTIN_SPECIFIERS.has(specifier) &&
+          staticEdgeAccessesModuleLoader(value)
+        ) {
+          failure = `${file} exposes unsupported module-loader APIs from ${specifier}.`;
+        }
       }
     } else if (type === "ImportExpression") {
-      addStaticSource(value["source"], "a dynamic import");
+      const specifier = addStaticSource(
+        value["source"],
+        "a dynamic import",
+        "esm",
+      );
+      if (
+        specifier !== null &&
+        MODULE_BUILTIN_SPECIFIERS.has(specifier)
+      ) {
+        failure = `${file} dynamically imports unsupported module-loader APIs from ${specifier}.`;
+      }
     } else if (type === "CallExpression" && isRequireCallee(value["callee"])) {
       const args = value["arguments"];
       if (!Array.isArray(args) || args.length !== 1) {
         failure = `${file} contains require() with an unverifiable module specifier.`;
       } else {
-        addStaticSource(args[0], "require()");
+        const specifier = addStaticSource(args[0], "require()", "cjs");
+        if (
+          specifier !== null &&
+          MODULE_BUILTIN_SPECIFIERS.has(specifier)
+        ) {
+          failure = `${file} requires unsupported module-loader APIs from ${specifier}.`;
+        }
       }
     }
 
@@ -322,15 +397,36 @@ function inspectModuleSource(file: string, text: string): ModuleInspection {
 
   visit(ast);
   return failure === null
-    ? { ok: true, specifiers: [...specifiers] }
+    ? { ok: true, edges: [...edges.values()] }
     : { ok: false, message: failure };
 }
 
-function resolveModuleFile(importer: string, specifier: string): string | null {
+type ModuleResolution =
+  | { readonly kind: "builtin" }
+  | { readonly kind: "file"; readonly path: string }
+  | { readonly kind: "unsupported"; readonly target: string };
+
+function resolveModuleEdge(
+  importer: string,
+  edge: ModuleEdge,
+): ModuleResolution | null {
   try {
-    const require = createRequire(pathToFileURL(importer));
-    const resolved = require.resolve(specifier);
-    return canonicalFile(resolved);
+    const resolved =
+      edge.kind === "esm"
+        ? resolveImportSpecifier(edge.specifier, pathToFileURL(importer).href)
+        : createRequire(pathToFileURL(importer)).resolve(edge.specifier);
+    if (BUILTIN_SPECIFIERS.has(resolved) || resolved.startsWith("node:")) {
+      return { kind: "builtin" };
+    }
+    if (edge.kind === "esm") {
+      if (!resolved.startsWith("file:")) {
+        return { kind: "unsupported", target: resolved };
+      }
+      const canonical = canonicalFile(fileURLToPath(resolved));
+      return canonical === null ? null : { kind: "file", path: canonical };
+    }
+    const canonical = canonicalFile(resolved);
+    return canonical === null ? null : { kind: "file", path: canonical };
   } catch {
     return null;
   }
@@ -343,6 +439,25 @@ function containingPackageRoot(file: string): string | null {
     const parent = dirname(current);
     if (parent === current) return null;
     current = parent;
+  }
+}
+
+type PackageIdentity = {
+  readonly name: string;
+  readonly root: string;
+};
+
+function readPackageIdentity(file: string): PackageIdentity | null {
+  const root = containingPackageRoot(file);
+  if (root === null) return null;
+  const manifest = canonicalFile(join(root, "package.json"));
+  if (manifest === null || !isUnderPackageRoot(root, manifest)) return null;
+  try {
+    const value = JSON.parse(readFileSync(manifest, "utf8")) as unknown;
+    if (!isRecord(value) || typeof value["name"] !== "string") return null;
+    return { name: value["name"], root };
+  } catch {
+    return null;
   }
 }
 
@@ -370,6 +485,45 @@ function validateSceneaxiSpecifier(
     "forbidden-sceneaxi-import",
     `${relative(packageRoot, file)} imports private/non-public subpath ${specifier}.`,
   );
+}
+
+function validateResolvedPackageIdentity(options: {
+  readonly edge: ModuleEdge;
+  readonly file: string;
+  readonly identity: PackageIdentity;
+  readonly packageRoot: string;
+  readonly authorizedSceneaxiPackages: ReadonlySet<string>;
+}): IsolationResult {
+  const {
+    edge,
+    file,
+    identity,
+    packageRoot,
+    authorizedSceneaxiPackages,
+  } = options;
+  const spelledSceneaxiPackage = sceneaxiPackageName(edge.specifier);
+  const actualSceneaxiPackage = sceneaxiPackageName(identity.name);
+
+  if (
+    spelledSceneaxiPackage !== null &&
+    spelledSceneaxiPackage !== actualSceneaxiPackage
+  ) {
+    return refuse(
+      "forbidden-sceneaxi-import",
+      `${relative(packageRoot, file)} import ${edge.specifier} resolves to package ${identity.name}.`,
+    );
+  }
+  if (actualSceneaxiPackage === null) return { ok: true };
+  if (
+    spelledSceneaxiPackage === null ||
+    !authorizedSceneaxiPackages.has(actualSceneaxiPackage)
+  ) {
+    return refuse(
+      "forbidden-sceneaxi-import",
+      `${relative(packageRoot, file)} import ${edge.specifier} resolves to unauthorized package ${actualSceneaxiPackage}.`,
+    );
+  }
+  return { ok: true };
 }
 
 function inspectModuleGraph(options: {
@@ -426,7 +580,8 @@ function inspectModuleGraph(options: {
       return refuse("isolation-unverifiable", inspection.message);
     }
 
-    for (const specifier of inspection.specifiers) {
+    for (const edge of inspection.edges) {
+      const { specifier } = edge;
       if (specifier.startsWith("@sceneaxi/")) {
         const sceneaxi = validateSceneaxiSpecifier(
           options.packageRoot,
@@ -435,7 +590,6 @@ function inspectModuleGraph(options: {
           options.authorizedSceneaxiPackages,
         );
         if (!sceneaxi.ok) return sceneaxi;
-        continue;
       }
 
       if (BUILTIN_SPECIFIERS.has(specifier)) continue;
@@ -456,30 +610,69 @@ function inspectModuleGraph(options: {
         );
       }
 
-      const resolved = resolveModuleFile(file, specifier);
-      if (resolved === null) {
+      const resolution = resolveModuleEdge(file, edge);
+      if (resolution === null) {
         return refuse(
           "isolation-unverifiable",
           `${relative(options.packageRoot, file)} imports unresolvable specifier ${specifier}.`,
         );
       }
-      if (isUnderPackageRoot(options.packageRoot, resolved)) {
+      if (resolution.kind === "builtin") continue;
+      if (resolution.kind === "unsupported") {
+        return refuse(
+          "isolation-unverifiable",
+          `${relative(options.packageRoot, file)} import ${specifier} resolves to unsupported target ${resolution.target}.`,
+        );
+      }
+
+      const resolved = resolution.path;
+      if (specifier.startsWith(".") || specifier.startsWith("#")) {
+        if (!isUnderPackageRoot(options.packageRoot, resolved)) {
+          return refuse(
+            "entrypoint-escape",
+            `${relative(options.packageRoot, file)} import ${specifier} resolves outside the plugin package root.`,
+          );
+        }
         pending.push(resolved);
         continue;
       }
 
-      if (specifier.startsWith(".") || specifier.startsWith("#")) {
+      const identity = readPackageIdentity(resolved);
+      if (identity === null) {
         return refuse(
-          "entrypoint-escape",
-          `${relative(options.packageRoot, file)} import ${specifier} resolves outside the plugin package root.`,
+          "isolation-unverifiable",
+          `${relative(options.packageRoot, file)} import ${specifier} has no verifiable package identity.`,
         );
       }
 
-      const dependencyRoot = containingPackageRoot(resolved);
-      if (
-        dependencyRoot !== null &&
-        existsSync(join(dependencyRoot, PLUGIN_MANIFEST_PATH))
-      ) {
+      const identityCheck = validateResolvedPackageIdentity({
+        edge,
+        file,
+        identity,
+        packageRoot: options.packageRoot,
+        authorizedSceneaxiPackages: options.authorizedSceneaxiPackages,
+      });
+      if (!identityCheck.ok) return identityCheck;
+
+      const identityRoot = canonicalDirectory(identity.root);
+      if (identityRoot === null) {
+        return refuse(
+          "isolation-unverifiable",
+          `${relative(options.packageRoot, file)} import ${specifier} has no canonical package root.`,
+        );
+      }
+      if (identityRoot === options.packageRoot) {
+        if (!isUnderPackageRoot(options.packageRoot, resolved)) {
+          return refuse(
+            "entrypoint-escape",
+            `${relative(options.packageRoot, file)} self import ${specifier} resolves outside the plugin package root.`,
+          );
+        }
+        pending.push(resolved);
+        continue;
+      }
+
+      if (existsSync(join(identityRoot, PLUGIN_MANIFEST_PATH))) {
         return refuse(
           "isolation-unverifiable",
           `${relative(options.packageRoot, file)} imports another plugin package via ${specifier}.`,
