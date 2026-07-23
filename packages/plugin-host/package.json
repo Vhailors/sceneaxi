@@ -4,11 +4,22 @@
   "private": true,
   "description": "SceneAxi Plugin Host — deterministic load/list/refuse against capability manifests (ADR 0005)",
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
-  "files": ["src"],
-  "dependencies": {
-    "@sceneaxi/schemas": "workspace:^"
+  "exports": {
+    ".": "./src/index.ts"
   },
-  "sceneaxi": { "releaseGroup": "plugin-host" },
-  "license": "UNLICENSED"
+  "files": [
+    "src"
+  ],
+  "dependencies": {
+    "@sceneaxi/schemas": "workspace:^",
+    "acorn": "8.17.0",
+    "semver": "7.8.5"
+  },
+  "sceneaxi": {
+    "releaseGroup": "plugin-host"
+  },
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@types/semver": "7.7.1"
+  }
 }

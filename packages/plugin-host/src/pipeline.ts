@@ -385,41 +385,58 @@ async function processCandidate(options: {
     };
   }
 
-  const tableResult = extractCapabilityTable(moduleNamespace);
-  if (!tableResult.ok) {
-    return {
-      ok: false,
-      refused: refuse({
-        locator: packageRoot,
-        reason: "implementation-table-mismatch",
-        phase: "integrity",
-        message: tableResult.message,
-        pluginId: manifest.pluginId,
-        pluginVersion: manifest.pluginVersion,
-        entrypointEvaluated: true,
-      }),
-    };
-  }
-
-  if (!implementationKeysMatch(manifest.capabilities, tableResult.table)) {
-    return {
-      ok: false,
-      refused: refuse({
-        locator: packageRoot,
-        reason: "implementation-table-mismatch",
-        phase: "integrity",
-        message:
-          "Exported capability implementation keys must equal the manifest capabilities set exactly.",
-        pluginId: manifest.pluginId,
-        pluginVersion: manifest.pluginVersion,
-        entrypointEvaluated: true,
-      }),
-    };
-  }
-
   const implementations = new Map<string, unknown>();
-  for (const id of manifest.capabilities) {
-    implementations.set(id, tableResult.table[id]);
+  try {
+    const tableResult = extractCapabilityTable(moduleNamespace);
+    if (!tableResult.ok) {
+      return {
+        ok: false,
+        refused: refuse({
+          locator: packageRoot,
+          reason: "implementation-table-mismatch",
+          phase: "integrity",
+          message: tableResult.message,
+          pluginId: manifest.pluginId,
+          pluginVersion: manifest.pluginVersion,
+          entrypointEvaluated: true,
+        }),
+      };
+    }
+
+    if (!implementationKeysMatch(manifest.capabilities, tableResult.table)) {
+      return {
+        ok: false,
+        refused: refuse({
+          locator: packageRoot,
+          reason: "implementation-table-mismatch",
+          phase: "integrity",
+          message:
+            "Exported capability implementation keys must equal the manifest capabilities set exactly.",
+          pluginId: manifest.pluginId,
+          pluginVersion: manifest.pluginVersion,
+          entrypointEvaluated: true,
+        }),
+      };
+    }
+
+    for (const id of manifest.capabilities) {
+      implementations.set(id, tableResult.table[id]);
+    }
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "integrity inspection failed";
+    return {
+      ok: false,
+      refused: refuse({
+        locator: packageRoot,
+        reason: "implementation-table-mismatch",
+        phase: "integrity",
+        message: `Capability implementation table inspection failed: ${message}`,
+        pluginId: manifest.pluginId,
+        pluginVersion: manifest.pluginVersion,
+        entrypointEvaluated: true,
+      }),
+    };
   }
 
   const sortedCaps = [...manifest.capabilities].sort((a, b) =>

@@ -5,6 +5,7 @@ import {
   rmSync,
   existsSync,
   readFileSync,
+  symlinkSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -418,6 +419,247 @@ export const capabilities = Object.freeze({});
     expect(result.refused[0]?.reason).toBe("forbidden-sceneaxi-import");
     expect(result.refused[0]?.entrypointEvaluated).toBe(false);
     expect(existsSync(marker)).toBe(false);
+  });
+
+  it("canonicalizes entrypoint and relative-import symlinks before evaluation", async () => {
+    const root = tempRoot("symlinks");
+    const marker = join(root, "evaluated.txt");
+    const outside = join(root, "outside.js");
+    writeFileSync(
+      outside,
+      `
+import { writeFileSync } from "node:fs";
+writeFileSync(${JSON.stringify(marker)}, "evaluated");
+export const capabilities = Object.freeze({});
+`,
+      "utf8",
+    );
+
+    const entrypointLink = writePlugin({
+      root,
+      name: "entrypoint-link",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.entrypointlink",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: emptyCapsEntrypoint,
+    });
+    rmSync(join(entrypointLink, "plugin.js"));
+    symlinkSync(outside, join(entrypointLink, "plugin.js"));
+
+    const importLink = writePlugin({
+      root,
+      name: "import-link",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.importlink",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: `
+import "./helper.js";
+export const capabilities = Object.freeze({});
+`,
+      extraFiles: { "helper.js": emptyCapsEntrypoint },
+    });
+    rmSync(join(importLink, "helper.js"));
+    symlinkSync(outside, join(importLink, "helper.js"));
+
+    const result = await openPluginHost().load([entrypointLink, importLink]);
+    expect(result.loaded).toEqual([]);
+    expect(result.refused.map((item) => item.reason)).toEqual([
+      "entrypoint-escape",
+      "entrypoint-escape",
+    ]);
+    expect(result.refused.every((item) => !item.entrypointEvaluated)).toBe(true);
+    expect(existsSync(marker)).toBe(false);
+  });
+
+  it("inspects the complete package-local module graph before evaluation", async () => {
+    const root = tempRoot("module-graph");
+    const marker = join(root, "evaluated.txt");
+    const transitive = writePlugin({
+      root,
+      name: "transitive",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.transitive",
+        entrypoint: "./dist/plugin.js",
+      }),
+      entrypointSource: `
+import "./helper.js";
+import { writeFileSync } from "node:fs";
+writeFileSync(${JSON.stringify(marker)}, "evaluated");
+export const capabilities = Object.freeze({});
+`,
+      extraFiles: {
+        "dist/helper.js": `import "@sceneaxi/engine-kernel";\n`,
+      },
+    });
+    const dynamic = writePlugin({
+      root,
+      name: "dynamic",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.dynamic",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: `
+import { writeFileSync } from "node:fs";
+writeFileSync(${JSON.stringify(marker)}, "evaluated");
+const target = "./helper.js";
+void import(target);
+export const capabilities = Object.freeze({});
+`,
+      extraFiles: { "helper.js": emptyCapsEntrypoint },
+    });
+    const unresolved = writePlugin({
+      root,
+      name: "unresolved",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.unresolved",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: `
+import "./missing.js";
+export const capabilities = Object.freeze({});
+`,
+    });
+
+    const result = await openPluginHost().load([
+      transitive,
+      dynamic,
+      unresolved,
+    ]);
+    expect(result.loaded).toEqual([]);
+    expect(
+      result.refused.map((item) => [item.pluginId, item.reason]),
+    ).toEqual([
+      ["dev.sceneaxi.example.dynamic", "isolation-unverifiable"],
+      ["dev.sceneaxi.example.transitive", "forbidden-sceneaxi-import"],
+      ["dev.sceneaxi.example.unresolved", "isolation-unverifiable"],
+    ]);
+    expect(result.refused.every((item) => !item.entrypointEvaluated)).toBe(true);
+    expect(existsSync(marker)).toBe(false);
+  });
+
+  it("refuses direct imports of another plugin package", async () => {
+    const root = tempRoot("plugin-import");
+    const provider = writePlugin({
+      root,
+      name: "provider",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.provider",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: emptyCapsEntrypoint,
+      packageJson: { main: "./plugin.js" },
+    });
+    const consumer = writePlugin({
+      root,
+      name: "consumer",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.consumer",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: `
+import "provider";
+export const capabilities = Object.freeze({});
+`,
+      packageJson: { dependencies: { provider: "0.0.0" } },
+    });
+    mkdirSync(join(consumer, "node_modules"), { recursive: true });
+    symlinkSync(provider, join(consumer, "node_modules", "provider"), "dir");
+
+    const result = await openPluginHost().load([consumer]);
+    expect(result.loaded).toEqual([]);
+    expect(result.refused[0]?.reason).toBe("isolation-unverifiable");
+    expect(result.refused[0]?.entrypointEvaluated).toBe(false);
+  });
+
+  it("evaluates the complete hostApi v1 range dialect", async () => {
+    const cases = [
+      { range: "1.x", host: "1.9.0", accepted: true },
+      { range: "1.2.x", host: "1.2.9", accepted: true },
+      {
+        range: "1.2.x || >=2.0.0 <3.0.0",
+        host: "2.5.0",
+        accepted: true,
+      },
+      { range: ">=1.2 <2", host: "1.9.0", accepted: true },
+      { range: "1.2 - 2.3.4", host: "2.3.4", accepted: true },
+      { range: "1.2 - 2.3.4", host: "2.3.5", accepted: false },
+      { range: "^0.2", host: "0.2.9", accepted: true },
+      { range: "^0.2", host: "0.3.0", accepted: false },
+      {
+        range: "^1.0.0-beta.1 || ~2.4",
+        host: "1.0.0",
+        accepted: true,
+      },
+      {
+        range: "^1.0.0-beta.1 || ~2.4",
+        host: "2.4.9",
+        accepted: true,
+      },
+      { range: "~1", host: "1.9.0", accepted: true },
+      { range: "~1.2", host: "1.3.0", accepted: false },
+      { range: ">1.2", host: "1.2.9", accepted: false },
+      { range: ">1.2", host: "1.3.0", accepted: true },
+      { range: "<=1.2", host: "1.2.9", accepted: true },
+      { range: "<=1.2", host: "1.3.0", accepted: false },
+    ] as const;
+
+    for (const [index, testCase] of cases.entries()) {
+      const root = tempRoot(`host-api-${index}`);
+      const pkg = writePlugin({
+        root,
+        name: "plugin",
+        manifest: baseManifest({
+          pluginId: `dev.sceneaxi.example.range${index}`,
+          entrypoint: "./plugin.js",
+          hostApi: testCase.range,
+        }),
+        entrypointSource: emptyCapsEntrypoint,
+      });
+      const result = await openPluginHost({
+        hostApiVersion: testCase.host,
+      }).load([pkg]);
+      expect(result.loaded.length === 1).toBe(testCase.accepted);
+      expect(result.refused.length === 1).toBe(!testCase.accepted);
+    }
+  });
+
+  it("turns throwing implementation tables into one refusal and continues", async () => {
+    const root = tempRoot("throwing-table");
+    const throwing = writePlugin({
+      root,
+      name: "a-throwing",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.throwing",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: `
+export const capabilities = new Proxy({}, {
+  ownKeys() {
+    throw new Error("inspection blocked");
+  },
+});
+`,
+    });
+    const healthy = writePlugin({
+      root,
+      name: "z-healthy",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.healthy",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: emptyCapsEntrypoint,
+    });
+
+    const result = await openPluginHost().load([healthy, throwing]);
+    expect(result.loaded.map((item) => item.pluginId)).toEqual([
+      "dev.sceneaxi.example.healthy",
+    ]);
+    expect(result.refused).toHaveLength(1);
+    expect(result.refused[0]?.reason).toBe("implementation-table-mismatch");
+    expect(result.refused[0]?.phase).toBe("integrity");
+    expect(result.refused[0]?.entrypointEvaluated).toBe(true);
   });
 
   it("refused packages expose no implementations via getImplementation", async () => {
