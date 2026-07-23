@@ -10,7 +10,9 @@ engine internals.
 
 1. Put the data descriptor at the fixed package-root path
    `sceneaxi.plugin.manifest.json`; the host never imports code to discover it.
-2. Read the public capability registry owned with `@sceneaxi/schemas`.
+2. Read the public capability registry owned with `@sceneaxi/schemas`
+   (`contracts/plugin-capability-registry.schema.json` and the checked-in seed
+   `contracts/plugin-capability-registry.1.0.0.json`; v1 seed entries are empty).
 3. Declare only capability IDs present in the exact registry version named by
    the manifest.
 4. Implement exactly that declared set behind one package-local entrypoint.

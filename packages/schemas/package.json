@@ -9,7 +9,9 @@
     "./contracts/catalog-item.schema.json": "./contracts/catalog-item.schema.json",
     "./contracts/catalog-metadata-unavailable-tombstone.schema.json": "./contracts/catalog-metadata-unavailable-tombstone.schema.json",
     "./contracts/delivery-handoff.schema.json": "./contracts/delivery-handoff.schema.json",
-    "./contracts/plugin-manifest.schema.json": "./contracts/plugin-manifest.schema.json"
+    "./contracts/plugin-manifest.schema.json": "./contracts/plugin-manifest.schema.json",
+    "./contracts/plugin-capability-registry.schema.json": "./contracts/plugin-capability-registry.schema.json",
+    "./contracts/plugin-capability-registry.1.0.0.json": "./contracts/plugin-capability-registry.1.0.0.json"
   },
   "files": ["src", "contracts"],
   "sceneaxi": { "releaseGroup": "contracts" },

@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/plugin-capability-registry/v1",
+  "$comment": "$id names the contract document; registry instance $schema names the exact public schema version. Capability IDs are opaque registry keys only — never inferred from exports, filenames, package names, or runtime behavior (ADR 0005).",
+  "title": "SceneAxi Plugin Capability ID Registry (v1)",
+  "description": "Versioned public capability ID registry for SceneAxi plugins (ADR 0005 / sceneaxi#21). Each entry binds one opaque capability ID to its public contract reference and version, owning package, and documentation. Empty entries is valid for the seed registry. Unknown properties refuse. IDs are not inferred; host membership checks refuse unknown IDs fail-closed.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "registryVersion",
+    "entries"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://sceneaxi.dev/schemas/plugin-capability-registry-1.0.0.json",
+      "description": "Canonical URI of this exact JSON Schema; must agree with schemaVersion."
+    },
+    "schemaVersion": {
+      "const": "1.0.0",
+      "description": "Exact registry-document schema version. V1 is 1.0.0; mismatches refuse without silent migration."
+    },
+    "registryVersion": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?(?![\\s\\S])",
+      "description": "Exact capability-registry content version. Plugin manifests pin this value via registryVersion."
+    },
+    "entries": {
+      "type": "array",
+      "description": "Capability rows for this registryVersion. Empty is valid for the seed. Duplicate capabilityId values refuse (application-level uniqueness).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "capabilityId",
+          "contractRef",
+          "contractVersion",
+          "owningPackage",
+          "documentationRef"
+        ],
+        "properties": {
+          "capabilityId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque public capability ID. Exact registry key only; no inference from code layout or runtime."
+          },
+          "contractRef": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^(?:@[a-z0-9][a-z0-9._-]*\\/[a-z0-9][a-z0-9._\\/-]*|contracts\\/[a-z0-9][a-z0-9._\\/-]*\\.schema\\.json|https:\\/\\/[A-Za-z0-9][^\\s]*)(?![\\s\\S])",
+            "description": "Public contract reference: package export path, contracts/*.schema.json path, or https URI."
+          },
+          "contractVersion": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?(?![\\s\\S])",
+            "description": "Exact version of the public contract bound to this capability ID."
+          },
+          "owningPackage": {
+            "type": "string",
+            "pattern": "^@[a-z0-9][a-z0-9._-]*\\/[a-z0-9][a-z0-9._-]*(?![\\s\\S])",
+            "description": "npm package that owns the public capability contract surface."
+          },
+          "documentationRef": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^(?:docs\\/[A-Za-z0-9][A-Za-z0-9._\\/-]*\\.md|https:\\/\\/[A-Za-z0-9][^\\s]*)(?![\\s\\S])",
+            "description": "Human documentation pointer: repo docs/*.md path or https URI."
+          }
+        }
+      }
+    }
+  }
+}

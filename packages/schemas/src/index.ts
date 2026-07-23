@@ -114,6 +114,31 @@ export type {
   PluginManifestValidationRefuse,
   PluginManifestValidationResult,
 } from "./plugin.js";
+
+export {
+  PLUGIN_CAPABILITY_REGISTRY_SCHEMA_PATH,
+  PLUGIN_CAPABILITY_REGISTRY_SCHEMA_URI,
+  PLUGIN_CAPABILITY_REGISTRY_SCHEMA_VERSION,
+  PLUGIN_CAPABILITY_REGISTRY_SEED_PATH,
+  PLUGIN_CAPABILITY_REGISTRY_VERSION,
+  emptyPluginCapabilityRegistrySeed,
+  lookupPluginCapability,
+  parsePluginCapabilityRegistryText,
+  validatePluginCapabilityRegistry,
+} from "./plugin-capability-registry.js";
+export type {
+  PluginCapabilityLookupHit,
+  PluginCapabilityLookupMiss,
+  PluginCapabilityLookupResult,
+  PluginCapabilityRegistry,
+  PluginCapabilityRegistryDiagnostic,
+  PluginCapabilityRegistryDiagnosticCode,
+  PluginCapabilityRegistryEntry,
+  PluginCapabilityRegistryValidationOk,
+  PluginCapabilityRegistryValidationRefuse,
+  PluginCapabilityRegistryValidationResult,
+  ValidatePluginCapabilityRegistryOptions,
+} from "./plugin-capability-registry.js";
 export type {
   ApplyDiagnostic,
   ApplyDiagnosticCode,
@@ -167,6 +192,8 @@ export const contracts = Object.freeze({
   profileConformance: "contracts/profile-conformance.schema.json",
   /** Plugin Manifest descriptor (sceneaxi#20 / ADR 0005) — shape only; host is #22. */
   pluginManifest: "contracts/plugin-manifest.schema.json",
+  /** Plugin Capability ID registry schema (sceneaxi#21 / ADR 0005); seed path is PLUGIN_CAPABILITY_REGISTRY_SEED_PATH. */
+  pluginCapabilityRegistry: "contracts/plugin-capability-registry.schema.json",
 });
 
 export const seam: PackageSeam = Object.freeze({
