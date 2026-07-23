@@ -23,6 +23,18 @@ const pluginRegistrySeedRelativePath = join(
 );
 const pluginsDocRelativePath = join("docs", "plugins.md");
 const schemasReadmeRelativePath = join("packages", "schemas", "README.md");
+const pluginManifestSchemaRelativePath = join(
+  "packages",
+  "schemas",
+  "contracts",
+  "plugin-manifest.schema.json",
+);
+const pluginManifestInertExampleRelativePath = join(
+  "packages",
+  "schemas",
+  "contracts",
+  "plugin-manifest.inert.example.json",
+);
 const checkerRelativePath = join("scripts", "check-contracts.mjs");
 const sourcePaths = [
   docRelativePath,
@@ -30,6 +42,8 @@ const sourcePaths = [
   schemaRelativePath,
   pluginRegistrySchemaRelativePath,
   pluginRegistrySeedRelativePath,
+  pluginManifestSchemaRelativePath,
+  pluginManifestInertExampleRelativePath,
   pluginsDocRelativePath,
   schemasReadmeRelativePath,
   checkerRelativePath,
@@ -69,8 +83,17 @@ const readSchemasReadme = (sandbox) =>
   readFileSync(join(sandbox, schemasReadmeRelativePath), "utf8");
 const writeSchemasReadme = (sandbox, doc) =>
   writeFileSync(join(sandbox, schemasReadmeRelativePath), doc);
+const readPluginManifestInertExample = (sandbox) =>
+  JSON.parse(readFileSync(join(sandbox, pluginManifestInertExampleRelativePath), "utf8"));
+const writePluginManifestInertExample = (sandbox, example) =>
+  writeFileSync(
+    join(sandbox, pluginManifestInertExampleRelativePath),
+    `${JSON.stringify(example, null, 2)}\n`,
+  );
 const registrySeedState =
   "Registry seed state: `registryVersion` is `1.0.0`; `entries` is exactly `[]` (empty).";
+const inertExampleStart = "<!-- plugin-manifest:inert-example -->";
+const inertExampleEnd = "<!-- /plugin-manifest:inert-example -->";
 
 const cases = [
   {
@@ -337,6 +360,73 @@ const cases = [
       );
     },
     expectedOutput: "packages/schemas/README.md: registry seed state must exactly document registryVersion 1.0.0",
+  },
+  {
+    name: "rejects inert example fixture field drift",
+    mutate(sandbox) {
+      const example = readPluginManifestInertExample(sandbox);
+      example.pluginId = "dev.sceneaxi.example.drifted";
+      writePluginManifestInertExample(sandbox, example);
+    },
+    expectedOutput: "plugin-manifest.inert.example: value must exactly match the documented inert noop fixture",
+  },
+  {
+    name: "rejects inert example inventing a capability ID",
+    mutate(sandbox) {
+      const example = readPluginManifestInertExample(sandbox);
+      example.capabilities = ["dev.sceneaxi.capability.invented"];
+      writePluginManifestInertExample(sandbox, example);
+    },
+    expectedOutput: "plugin-manifest.inert.example: value must exactly match the documented inert noop fixture",
+  },
+  {
+    name: "rejects docs/plugins.md inert example drift from the checked-in fixture",
+    mutate(sandbox) {
+      const doc = readPluginsDoc(sandbox);
+      const drifted = doc.replace(
+        '"pluginId": "dev.sceneaxi.example.noop"',
+        '"pluginId": "dev.sceneaxi.example.docs-drift"',
+      );
+      writePluginsDoc(sandbox, drifted);
+    },
+    expectedOutput:
+      "docs/plugins.md: inert example JSON must exactly match packages/schemas/contracts/plugin-manifest.inert.example.json",
+  },
+  {
+    name: "rejects docs/plugins.md missing the inert example markers",
+    mutate(sandbox) {
+      writePluginsDoc(
+        sandbox,
+        readPluginsDoc(sandbox)
+          .replace(inertExampleStart, "")
+          .replace(inertExampleEnd, ""),
+      );
+    },
+    expectedOutput: "docs/plugins.md: expected exactly one <!-- plugin-manifest:inert-example -->",
+  },
+  {
+    name: "rejects schemas README missing the inert example fixture path",
+    mutate(sandbox) {
+      writeSchemasReadme(
+        sandbox,
+        readSchemasReadme(sandbox).replaceAll(
+          "plugin-manifest.inert.example.json",
+          "plugin-manifest.missing.example.json",
+        ),
+      );
+    },
+    expectedOutput:
+      "packages/schemas/README.md: does not name the inert example fixture path plugin-manifest.inert.example.json",
+  },
+  {
+    name: "rejects inert example schema validation failure",
+    mutate(sandbox) {
+      const example = readPluginManifestInertExample(sandbox);
+      example.schemaVersion = "9.9.9";
+      // Keep canonical field set shape but break schema const — also trips exact-match.
+      writePluginManifestInertExample(sandbox, example);
+    },
+    expectedOutput: "plugin-manifest.inert.example",
   },
 ];
 
