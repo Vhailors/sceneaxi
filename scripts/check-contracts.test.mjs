@@ -9,8 +9,31 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const docRelativePath = join("docs", "authoring-contracts.md");
 const fixturesRelativePath = join("packages", "schemas", "contracts", "authoring-jobs.fixtures.json");
 const schemaRelativePath = join("packages", "schemas", "contracts", "authoring-jobs.schema.json");
+const pluginRegistrySchemaRelativePath = join(
+  "packages",
+  "schemas",
+  "contracts",
+  "plugin-capability-registry.schema.json",
+);
+const pluginRegistrySeedRelativePath = join(
+  "packages",
+  "schemas",
+  "contracts",
+  "plugin-capability-registry.1.0.0.json",
+);
+const pluginsDocRelativePath = join("docs", "plugins.md");
+const schemasReadmeRelativePath = join("packages", "schemas", "README.md");
 const checkerRelativePath = join("scripts", "check-contracts.mjs");
-const sourcePaths = [docRelativePath, fixturesRelativePath, schemaRelativePath, checkerRelativePath];
+const sourcePaths = [
+  docRelativePath,
+  fixturesRelativePath,
+  schemaRelativePath,
+  pluginRegistrySchemaRelativePath,
+  pluginRegistrySeedRelativePath,
+  pluginsDocRelativePath,
+  schemasReadmeRelativePath,
+  checkerRelativePath,
+];
 
 const createSandbox = () => {
   const sandbox = mkdtempSync(join(root, ".check-contracts-test-"));
@@ -36,6 +59,18 @@ const writeFixtures = (sandbox, fixtures) =>
   writeFileSync(join(sandbox, fixturesRelativePath), `${JSON.stringify(fixtures, null, 2)}\n`);
 const writeRawJson = (sandbox, relativePath, value) =>
   writeFileSync(join(sandbox, relativePath), `${JSON.stringify(value)}\n`);
+const readPluginRegistrySeed = (sandbox) =>
+  JSON.parse(readFileSync(join(sandbox, pluginRegistrySeedRelativePath), "utf8"));
+const writePluginRegistrySeed = (sandbox, seed) =>
+  writeFileSync(join(sandbox, pluginRegistrySeedRelativePath), `${JSON.stringify(seed, null, 2)}\n`);
+const readPluginsDoc = (sandbox) => readFileSync(join(sandbox, pluginsDocRelativePath), "utf8");
+const writePluginsDoc = (sandbox, doc) => writeFileSync(join(sandbox, pluginsDocRelativePath), doc);
+const readSchemasReadme = (sandbox) =>
+  readFileSync(join(sandbox, schemasReadmeRelativePath), "utf8");
+const writeSchemasReadme = (sandbox, doc) =>
+  writeFileSync(join(sandbox, schemasReadmeRelativePath), doc);
+const registrySeedState =
+  "Registry seed state: `registryVersion` is `1.0.0`; `entries` is exactly `[]` (empty).";
 
 const cases = [
   {
@@ -156,10 +191,10 @@ const cases = [
     name: "rejects an unsupported nested schema keyword",
     mutate(sandbox) {
       const schema = readSchema(sandbox);
-      schema.properties.jobs.items.properties.title.minLength = 1;
+      schema.properties.jobs.items.properties.title.maxLength = 1;
       writeRawJson(sandbox, schemaRelativePath, schema);
     },
-    expectedOutput: 'schema.properties.jobs.items.properties.title: unsupported JSON Schema keyword "minLength"',
+    expectedOutput: 'schema.properties.jobs.items.properties.title: unsupported JSON Schema keyword "maxLength"',
   },
   {
     name: "allows property names that resemble schema keywords",
@@ -214,6 +249,94 @@ const cases = [
       writeRawJson(sandbox, schemaRelativePath, schema);
     },
     expectedOutput: 'missing required property "constructor"',
+  },
+  {
+    name: "rejects plugin capability registry seed version drift",
+    mutate(sandbox) {
+      const seed = readPluginRegistrySeed(sandbox);
+      seed.registryVersion = "1.0.1";
+      writePluginRegistrySeed(sandbox, seed);
+    },
+    expectedOutput: "registryVersion drift",
+  },
+  {
+    name: "rejects a non-empty plugin capability registry seed",
+    mutate(sandbox) {
+      const seed = readPluginRegistrySeed(sandbox);
+      seed.entries = [
+        {
+          capabilityId: "dev.sceneaxi.capability.demo",
+          contractRef: "contracts/plugin-manifest.schema.json",
+          contractVersion: "1.0.0",
+          owningPackage: "@sceneaxi/schemas",
+          documentationRef: "docs/plugins.md",
+        },
+      ];
+      writePluginRegistrySeed(sandbox, seed);
+    },
+    expectedOutput: "v1 seed entries must be empty",
+  },
+  {
+    name: "rejects plugins.md missing the registry seed path",
+    mutate(sandbox) {
+      writePluginsDoc(
+        sandbox,
+        readPluginsDoc(sandbox).replaceAll("plugin-capability-registry.1.0.0.json", "missing-seed.json"),
+      );
+    },
+    expectedOutput: "plugin-capability-registry.1.0.0.json",
+  },
+  {
+    name: "rejects plugins.md registry version documentation drift",
+    mutate(sandbox) {
+      writePluginsDoc(
+        sandbox,
+        readPluginsDoc(sandbox).replace(
+          registrySeedState,
+          registrySeedState.replace("`1.0.0`", "`1.0.1`"),
+        ),
+      );
+    },
+    expectedOutput: "docs/plugins.md: registry seed state must exactly document registryVersion 1.0.0",
+  },
+  {
+    name: "rejects plugins.md empty-seed documentation drift",
+    mutate(sandbox) {
+      writePluginsDoc(
+        sandbox,
+        readPluginsDoc(sandbox).replace(
+          registrySeedState,
+          registrySeedState.replace("exactly `[]` (empty)", "non-empty"),
+        ),
+      );
+    },
+    expectedOutput: "docs/plugins.md: registry seed state must exactly document registryVersion 1.0.0",
+  },
+  {
+    name: "rejects schemas README registry version documentation drift",
+    mutate(sandbox) {
+      writeSchemasReadme(
+        sandbox,
+        readSchemasReadme(sandbox).replace(
+          registrySeedState,
+          registrySeedState.replace("`1.0.0`", "`1.0.1`"),
+        ),
+      );
+    },
+    expectedOutput: "packages/schemas/README.md: registry seed state must exactly document registryVersion 1.0.0",
+  },
+  {
+    name: "rejects schemas README empty-seed documentation drift",
+    mutate(sandbox) {
+      writeSchemasReadme(
+        sandbox,
+        readSchemasReadme(sandbox).replace(
+          registrySeedState,
+          registrySeedState.replace("exactly `[]` (empty)", "non-empty"),
+        ),
+      );
+    },
+    expectedOutput: "packages/schemas/README.md: registry seed state must exactly document registryVersion 1.0.0",
   },
 ];
 

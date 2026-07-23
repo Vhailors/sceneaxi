@@ -19,9 +19,25 @@ semantics and the SceneAxi-versus-adapter boundary.
 - `contracts/plugin-manifest.schema.json` — v1 capability-manifest descriptor
 - TypeScript: `PluginManifest`, `validatePluginManifest`, `parsePluginManifestText`,
   `inertPluginManifestFixture`
-- Shape-only contract; host runtime, registry seed, and isolation are #21–#23
+- Shape-only contract; host runtime and isolation are #22–#23
 - Fixed package path: `sceneaxi.plugin.manifest.json` (`PLUGIN_MANIFEST_PATH`)
 - Agent overview: [`docs/plugins.md`](../../docs/plugins.md)
+
+## Plugin Capability ID Registry (sceneaxi#21 / ADR 0005)
+
+- `contracts/plugin-capability-registry.schema.json` — versioned registry document shape
+- `contracts/plugin-capability-registry.1.0.0.json` — checked-in seed with no
+  demonstration or engine-internal ports
+- TypeScript: `PluginCapabilityRegistry`, `validatePluginCapabilityRegistry`,
+  `parsePluginCapabilityRegistryText`, `lookupPluginCapability`,
+  `emptyPluginCapabilityRegistrySeed`
+- IDs are explicit registry keys only; lookup miss is typed
+  (`reason: "unknown-capability"`) for host fail-closed refusal
+- Drift between schema, seed artifact, and docs is enforced by `pnpm check:contracts`
+
+<!-- plugin-capability-registry:seed-state -->
+Registry seed state: `registryVersion` is `1.0.0`; `entries` is exactly `[]` (empty).
+<!-- /plugin-capability-registry:seed-state -->
 
 ## Profile Conformance (sceneaxi#10)
 

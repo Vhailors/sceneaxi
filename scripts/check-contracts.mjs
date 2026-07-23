@@ -1,10 +1,14 @@
 #!/usr/bin/env node
 /**
- * Contract check — validates the shared authoring-jobs fixture list against its
- * JSON Schema and enforces that the E1/E2 authoring contracts doc binds both
- * contracts to the one canonical list (identical jobs, no per-contract forks).
- * Fail-closed: missing files, schema violations, duplicate ids, or a doc whose
- * fixture table drifts from the canonical JSON all exit 1.
+ * Contract check — validates shared contract artifacts against their JSON
+ * Schemas and enforces doc/schema/artifact lockstep.
+ *
+ * Surfaces:
+ * 1. Authoring-jobs fixture list + E1/E2 doc binding
+ * 2. Plugin capability registry schema + checked-in 1.0.0 seed artifact
+ *
+ * Fail-closed: missing files, schema violations, duplicate ids, seed drift, or
+ * a doc whose fixture table drifts from the canonical JSON all exit 1.
  */
 import { readFileSync } from "node:fs";
 import { join, dirname, resolve, relative } from "node:path";
@@ -17,6 +21,22 @@ const fail = (msg) => errors.push(msg);
 const schemaPath = join(root, "packages", "schemas", "contracts", "authoring-jobs.schema.json");
 const fixturesPath = join(root, "packages", "schemas", "contracts", "authoring-jobs.fixtures.json");
 const docPath = join(root, "docs", "authoring-contracts.md");
+const pluginCapabilityRegistrySchemaPath = join(
+  root,
+  "packages",
+  "schemas",
+  "contracts",
+  "plugin-capability-registry.schema.json",
+);
+const pluginCapabilityRegistrySeedPath = join(
+  root,
+  "packages",
+  "schemas",
+  "contracts",
+  "plugin-capability-registry.1.0.0.json",
+);
+const pluginsDocPath = join(root, "docs", "plugins.md");
+const schemasReadmePath = join(root, "packages", "schemas", "README.md");
 const loadFailed = Symbol("loadFailed");
 
 const load = (path, parse) => {
@@ -32,10 +52,21 @@ const load = (path, parse) => {
 const schema = load(schemaPath, true);
 const fixtures = load(fixturesPath, true);
 const doc = load(docPath, false);
+const pluginCapabilityRegistrySchema = load(pluginCapabilityRegistrySchemaPath, true);
+const pluginCapabilityRegistrySeed = load(pluginCapabilityRegistrySeedPath, true);
+const pluginsDoc = load(pluginsDocPath, false);
+const schemasReadme = load(schemasReadmePath, false);
 const isPlainObject = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 const schemaIsObject = schema !== loadFailed && isPlainObject(schema);
 const fixturesIsObject = fixtures !== loadFailed && isPlainObject(fixtures);
 const docHasContent = doc !== loadFailed && doc.trim().length > 0;
+const pluginRegistrySchemaIsObject =
+  pluginCapabilityRegistrySchema !== loadFailed && isPlainObject(pluginCapabilityRegistrySchema);
+const pluginRegistrySeedIsObject =
+  pluginCapabilityRegistrySeed !== loadFailed && isPlainObject(pluginCapabilityRegistrySeed);
+const pluginsDocHasContent = pluginsDoc !== loadFailed && pluginsDoc.trim().length > 0;
+const schemasReadmeHasContent =
+  schemasReadme !== loadFailed && schemasReadme.trim().length > 0;
 
 if (schema !== loadFailed && !schemaIsObject) {
   fail(`${relative(root, schemaPath)}: expected a plain JSON object`);
@@ -46,8 +77,20 @@ if (fixtures !== loadFailed && !fixturesIsObject) {
 if (doc !== loadFailed && !docHasContent) {
   fail(`${relative(root, docPath)}: document is empty or whitespace-only`);
 }
+if (pluginCapabilityRegistrySchema !== loadFailed && !pluginRegistrySchemaIsObject) {
+  fail(`${relative(root, pluginCapabilityRegistrySchemaPath)}: expected a plain JSON object`);
+}
+if (pluginCapabilityRegistrySeed !== loadFailed && !pluginRegistrySeedIsObject) {
+  fail(`${relative(root, pluginCapabilityRegistrySeedPath)}: expected a plain JSON object`);
+}
+if (pluginsDoc !== loadFailed && !pluginsDocHasContent) {
+  fail(`${relative(root, pluginsDocPath)}: document is empty or whitespace-only`);
+}
+if (schemasReadme !== loadFailed && !schemasReadmeHasContent) {
+  fail(`${relative(root, schemasReadmePath)}: document is empty or whitespace-only`);
+}
 
-// --- minimal JSON Schema subset validator (type/required/properties/items/enum/const/pattern/additionalProperties/minItems) ---
+// --- minimal JSON Schema subset validator (type/required/properties/items/enum/const/pattern/additionalProperties/minItems/minLength) ---
 const validate = (value, sch, path) => {
   if (sch.const !== undefined && value !== sch.const) {
     fail(`${path}: expected const ${JSON.stringify(sch.const)}, got ${JSON.stringify(value)}`);
@@ -84,6 +127,9 @@ const validate = (value, sch, path) => {
       fail(`${path}: expected string`);
       return;
     }
+    if (sch.minLength !== undefined && [...value].length < sch.minLength) {
+      fail(`${path}: expected string length >= ${sch.minLength}, got ${[...value].length}`);
+    }
     if (sch.pattern && !new RegExp(sch.pattern).test(value)) {
       fail(`${path}: ${JSON.stringify(value)} does not match pattern ${sch.pattern}`);
     }
@@ -114,6 +160,7 @@ const schemaAssertions = new Set([
   "pattern",
   "additionalProperties",
   "minItems",
+  "minLength",
 ]);
 const supportedTypes = new Set(["object", "array", "string", "integer"]);
 
@@ -159,14 +206,17 @@ const validateSchemaDefinition = (sch, path) => {
   if ("minItems" in sch && (!Number.isInteger(sch.minItems) || sch.minItems < 0)) {
     reject("minItems must be a non-negative integer");
   }
+  if ("minLength" in sch && (!Number.isInteger(sch.minLength) || sch.minLength < 0)) {
+    reject("minLength must be a non-negative integer");
+  }
   if (["required", "properties", "additionalProperties"].some((keyword) => keyword in sch) && sch.type !== "object") {
     reject("object assertion keywords require type \"object\" in the supported schema subset");
   }
   if (["items", "minItems"].some((keyword) => keyword in sch) && sch.type !== "array") {
     reject("array assertion keywords require type \"array\" in the supported schema subset");
   }
-  if ("pattern" in sch && sch.type !== "string") {
-    reject("pattern requires type \"string\" in the supported schema subset");
+  if (["pattern", "minLength"].some((keyword) => keyword in sch) && sch.type !== "string") {
+    reject("string assertion keywords require type \"string\" in the supported schema subset");
   }
   if ("properties" in sch) {
     if (!isPlainObject(sch.properties)) {
@@ -184,6 +234,7 @@ const validateSchemaDefinition = (sch, path) => {
 };
 
 const schemaUsesSupportedSubset = schemaIsObject && validateSchemaDefinition(schema, "schema");
+let authoringJobCount = 0;
 
 if (schemaIsObject && fixturesIsObject) {
   if (typeof schema.$id !== "string" || !schema.$id.includes("authoring-jobs")) {
@@ -192,6 +243,7 @@ if (schemaIsObject && fixturesIsObject) {
   if (schemaUsesSupportedSubset) validate(fixtures, schema, "fixtures");
 
   const jobs = Array.isArray(fixtures.jobs) ? fixtures.jobs : [];
+  authoringJobCount = jobs.length;
   const ids = jobs.map((j) => j?.id).filter(Boolean);
   const dupes = ids.filter((id, i) => ids.indexOf(id) !== i);
   if (dupes.length > 0) fail(`fixtures: duplicate job id(s): ${[...new Set(dupes)].join(", ")}`);
@@ -268,11 +320,140 @@ if (schemaIsObject && fixturesIsObject) {
   }
 }
 
+// --- plugin capability registry seed (sceneaxi#21) ---
+const PLUGIN_CAPABILITY_REGISTRY_SEED_VERSION = "1.0.0";
+const PLUGIN_CAPABILITY_REGISTRY_SCHEMA_URI =
+  "https://sceneaxi.dev/schemas/plugin-capability-registry-1.0.0.json";
+const FORBIDDEN_SEED_SUBSTRINGS = [
+  "renderer",
+  "physics",
+  "storage",
+  "hook",
+  "engine-internal",
+  "service-locator",
+];
+const REGISTRY_SEED_DOC_START = "<!-- plugin-capability-registry:seed-state -->";
+const REGISTRY_SEED_DOC_END = "<!-- /plugin-capability-registry:seed-state -->";
+
+const validateRegistrySeedDoc = (text, hasContent, path) => {
+  if (!hasContent) return;
+
+  const starts = text.split(REGISTRY_SEED_DOC_START).length - 1;
+  const ends = text.split(REGISTRY_SEED_DOC_END).length - 1;
+  const matches = [
+    ...text.matchAll(
+      /<!-- plugin-capability-registry:seed-state -->([\s\S]*?)<!-- \/plugin-capability-registry:seed-state -->/g,
+    ),
+  ];
+  if (starts !== 1 || ends !== 1 || matches.length !== 1) {
+    fail(
+      `${path}: expected exactly one ${REGISTRY_SEED_DOC_START} ... ${REGISTRY_SEED_DOC_END} block, found ${starts} start and ${ends} end marker(s)`,
+    );
+    return;
+  }
+
+  const expected =
+    `Registry seed state: \`registryVersion\` is \`${PLUGIN_CAPABILITY_REGISTRY_SEED_VERSION}\`; ` +
+    "`entries` is exactly `[]` (empty).";
+  const actual = matches[0][1].trim().replaceAll("\r\n", "\n");
+  if (actual !== expected) {
+    fail(
+      `${path}: registry seed state must exactly document registryVersion ${PLUGIN_CAPABILITY_REGISTRY_SEED_VERSION} and empty entries`,
+    );
+  }
+};
+
+const pluginRegistrySchemaUsesSupportedSubset =
+  pluginRegistrySchemaIsObject &&
+  validateSchemaDefinition(pluginCapabilityRegistrySchema, "plugin-capability-registry.schema");
+
+if (pluginRegistrySchemaIsObject) {
+  if (
+    typeof pluginCapabilityRegistrySchema.$id !== "string" ||
+    !pluginCapabilityRegistrySchema.$id.includes("plugin-capability-registry")
+  ) {
+    fail(
+      `${relative(root, pluginCapabilityRegistrySchemaPath)}: $id does not identify the plugin-capability-registry contract`,
+    );
+  }
+}
+
+if (pluginRegistrySchemaIsObject && pluginRegistrySeedIsObject) {
+  if (pluginRegistrySchemaUsesSupportedSubset) {
+    validate(
+      pluginCapabilityRegistrySeed,
+      pluginCapabilityRegistrySchema,
+      "plugin-capability-registry.seed",
+    );
+  }
+
+  if (pluginCapabilityRegistrySeed.$schema !== PLUGIN_CAPABILITY_REGISTRY_SCHEMA_URI) {
+    fail(
+      `plugin-capability-registry.seed: $schema must be ${JSON.stringify(PLUGIN_CAPABILITY_REGISTRY_SCHEMA_URI)}`,
+    );
+  }
+  if (pluginCapabilityRegistrySeed.schemaVersion !== PLUGIN_CAPABILITY_REGISTRY_SEED_VERSION) {
+    fail(
+      `plugin-capability-registry.seed: schemaVersion drift — expected ${PLUGIN_CAPABILITY_REGISTRY_SEED_VERSION}, got ${JSON.stringify(pluginCapabilityRegistrySeed.schemaVersion)}`,
+    );
+  }
+  if (pluginCapabilityRegistrySeed.registryVersion !== PLUGIN_CAPABILITY_REGISTRY_SEED_VERSION) {
+    fail(
+      `plugin-capability-registry.seed: registryVersion drift — expected ${PLUGIN_CAPABILITY_REGISTRY_SEED_VERSION}, got ${JSON.stringify(pluginCapabilityRegistrySeed.registryVersion)}`,
+    );
+  }
+
+  const entries = Array.isArray(pluginCapabilityRegistrySeed.entries)
+    ? pluginCapabilityRegistrySeed.entries
+    : [];
+  if (entries.length !== 0) {
+    fail(
+      `plugin-capability-registry.seed: v1 seed entries must be empty (found ${entries.length}); first non-empty capability is a separate reviewed change`,
+    );
+  }
+
+  const capabilityIds = entries
+    .map((entry) => (isPlainObject(entry) ? entry.capabilityId : undefined))
+    .filter((id) => typeof id === "string");
+  const duplicateIds = capabilityIds.filter((id, index) => capabilityIds.indexOf(id) !== index);
+  if (duplicateIds.length > 0) {
+    fail(
+      `plugin-capability-registry.seed: duplicate capability id(s): ${[...new Set(duplicateIds)].join(", ")}`,
+    );
+  }
+
+  const seedText = JSON.stringify(pluginCapabilityRegistrySeed).toLowerCase();
+  for (const forbidden of FORBIDDEN_SEED_SUBSTRINGS) {
+    if (seedText.includes(forbidden)) {
+      fail(
+        `plugin-capability-registry.seed: forbidden engine-internal token "${forbidden}" present in seed artifact`,
+      );
+    }
+  }
+}
+
+if (pluginsDocHasContent) {
+  for (const path of [
+    "plugin-capability-registry.schema.json",
+    "plugin-capability-registry.1.0.0.json",
+  ]) {
+    if (!pluginsDoc.includes(path)) {
+      fail(`plugins.md: does not name registry contract path ${path}`);
+    }
+  }
+}
+validateRegistrySeedDoc(pluginsDoc, pluginsDocHasContent, "docs/plugins.md");
+validateRegistrySeedDoc(
+  schemasReadme,
+  schemasReadmeHasContent,
+  "packages/schemas/README.md",
+);
+
 if (errors.length > 0) {
   for (const e of errors) console.error(`contract check FAIL: ${e}`);
   console.error(`contract check FAILED — ${errors.length} error(s)`);
   process.exit(1);
 }
 console.log(
-  `contract check OK — ${fixtures.jobs.length} shared authoring jobs valid, doc table matches, E1+E2 bound to one list`
+  `contract check OK — ${authoringJobCount} shared authoring jobs valid, doc table matches, E1+E2 bound to one list; plugin capability registry 1.0.0 seed empty and schema-locked`,
 );
