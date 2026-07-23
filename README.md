@@ -10,7 +10,8 @@ This monorepo is the packaging home for:
 | Runtime/authoring core | `packages/authoring-core` (document model, propose/apply service, sessions, evidence hooks, Model Provider Port) |
 | Profiles | `packages/profile-*` |
 | Agent-first CLI | `packages/cli` (thin protocol adapter over authoring-core) |
-| Shared schemas / importers / plugin host | `packages/schemas`, `packages/importers`, `packages/plugin-host` |
+| Shared schemas / importers | `packages/schemas`, `packages/importers` |
+| Plugin host | `packages/plugin-host` (explicit capability-manifest loading and refusal) |
 | Web / desktop shells | `apps/web-shell`, `apps/desktop-shell` |
 | Asset catalogs (may split later) | `apps/catalog-game`, `apps/catalog-web` |
 
@@ -52,10 +53,11 @@ their respective contracts.
 typed public seams for every package and app, and initial contract/tracer
 implementations for authoring, the CLI, the Game Kernel, Game profile conformance,
 the Web Experience and Kids policy stubs, the public Delivery Handoff, shell
-protocol clients, and dormant catalogs. This remains proof-oriented work, not a
-claim that the engine, profiles, or applications are production-ready. Proof
-execution, spend, account creation, publication, and other external actions remain
-subject to the separated authorities in `docs/bootstrap.md`.
+protocol clients, the Plugin Host, and dormant catalogs. This remains
+proof-oriented work, not a claim that the engine, profiles, or applications are
+production-ready. Proof execution, spend, account creation, publication, and
+other external actions remain subject to the separated authorities in
+`docs/bootstrap.md`.
 
 Main landed the bootstrap tree at commit `f0a5b90` (independent non-Claude **v4
 review PASS**, 2026-07-21) under the separated bootstrap authorities in

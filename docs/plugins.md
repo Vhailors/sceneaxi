@@ -6,6 +6,9 @@ Plugin Host described by ADR
 versioned semantic contracts; they do not receive arbitrary hooks or access to
 engine internals.
 
+The runtime implementation and its public seam live in
+[`@sceneaxi/plugin-host`](../packages/plugin-host/README.md).
+
 ## Mental model for agents
 
 1. Put the data descriptor at the fixed package-root path

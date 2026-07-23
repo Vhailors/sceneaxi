@@ -44,11 +44,10 @@ Delivery Handoff is the public, delivery-neutral export contract in `@sceneaxi/s
 
 First-class plugins follow `docs/plugins.md` and ADR 0005: manifests may claim
 only IDs from the versioned public capability registry; unknown IDs and
-isolation breaches refuse. Host runtime is `@sceneaxi/plugin-host`
-(`packages/plugin-host`: explicit locators, load/list/refuse, address by
-`(pluginId, capabilityId)`); manifest + registry contracts stay in
-`@sceneaxi/schemas`. The host depends only on schemas — never engine packages
-or a service locator. This charted v1 host exception does not create renderer,
+isolation breaches refuse. Runtime API details live in
+`packages/plugin-host/README.md`; manifest + registry contracts stay in
+`@sceneaxi/schemas`. The host depends only on schemas — never engine packages or
+a service locator. This charted v1 host exception does not create renderer,
 physics, storage, or other engine-internal ports, which still require two real
 adapters under amended ADR 0004.
 

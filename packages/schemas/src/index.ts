@@ -191,7 +191,7 @@ export const contracts = Object.freeze({
   deliveryHandoff: "contracts/delivery-handoff.schema.json",
   /** Profile Conformance claim (sceneaxi#10) — shared suite + development consumers. */
   profileConformance: "contracts/profile-conformance.schema.json",
-  /** Plugin Manifest descriptor (sceneaxi#20 / ADR 0005) — shape only; host is #22. */
+  /** Plugin Manifest descriptor (sceneaxi#20 / ADR 0005); host runtime is @sceneaxi/plugin-host. */
   pluginManifest: "contracts/plugin-manifest.schema.json",
   /** Plugin Capability ID registry schema (sceneaxi#21 / ADR 0005); seed path is PLUGIN_CAPABILITY_REGISTRY_SEED_PATH. */
   pluginCapabilityRegistry: "contracts/plugin-capability-registry.schema.json",

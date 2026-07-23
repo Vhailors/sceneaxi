@@ -104,7 +104,8 @@ the candidate. A post-evaluation integrity refusal never exposes the evaluated
 implementation, and no refused package makes any of its capabilities partially
 available. Repeating a capability ID within one manifest refuses; separate
 plugins may implement the same registered capability. The host does not choose
-an implicit winner, and callers address an implementation by `pluginId`.
+an implicit winner, and callers address an implementation by
+`(pluginId, capabilityId)`.
 
 The deterministic fixture matrix must distinguish the phases with observable
 execution evidence. Descriptor and isolation refusal fixtures prove that their
