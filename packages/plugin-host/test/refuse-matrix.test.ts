@@ -46,22 +46,26 @@ const publicSeedPath = require.resolve(
 const TEST_ONLY_CAPABILITY_ID =
   "test.sceneaxi.fixture.capability.refuse-matrix-alpha" as const;
 
-const ALL_REFUSAL_REASONS = [
-  "descriptor-missing",
-  "descriptor-unreadable",
-  "descriptor-invalid",
-  "schema-version-unsupported",
-  "host-api-incompatible",
-  "registry-version-mismatch",
-  "duplicate-plugin-id",
-  "unknown-capability",
-  "entrypoint-escape",
-  "entrypoint-missing",
-  "forbidden-sceneaxi-import",
-  "isolation-unverifiable",
-  "entrypoint-evaluation-failed",
-  "implementation-table-mismatch",
-] as const satisfies readonly PluginRefusalReason[];
+/** Compile-time exhaustiveness: adding a PluginRefusalReason breaks this record. */
+const REFUSAL_REASON_UNION: Record<PluginRefusalReason, true> = {
+  "descriptor-missing": true,
+  "descriptor-unreadable": true,
+  "descriptor-invalid": true,
+  "schema-version-unsupported": true,
+  "host-api-incompatible": true,
+  "registry-version-mismatch": true,
+  "duplicate-plugin-id": true,
+  "unknown-capability": true,
+  "entrypoint-escape": true,
+  "entrypoint-missing": true,
+  "forbidden-sceneaxi-import": true,
+  "isolation-unverifiable": true,
+  "entrypoint-evaluation-failed": true,
+  "implementation-table-mismatch": true,
+};
+const ALL_REFUSAL_REASONS = Object.keys(
+  REFUSAL_REASON_UNION,
+) as readonly PluginRefusalReason[];
 
 const fixtures: string[] = [];
 
@@ -213,7 +217,7 @@ function normalizeReport(result: PluginHostLoadResult): unknown {
 }
 
 describe("v1 refuse matrix — every ADR 0005 refusal class", () => {
-  it.each([
+  const REFUSE_FIXTURES = [
     {
       name: "descriptor-missing",
       reason: "descriptor-missing" as const,
@@ -602,7 +606,9 @@ throw new Error("intentional entrypoint failure");
         return { locators: [pkg], registry: testOnlyRegistry() };
       },
     },
-  ])(
+  ];
+
+  it.each(REFUSE_FIXTURES)(
     "named fixture $name refuses with $reason",
     async ({ reason, phase, entrypointEvaluated, withSentinel, setup }) => {
       const root = tempRoot(reason);
@@ -646,20 +652,9 @@ throw new Error("intentional entrypoint failure");
   it("covers every PluginRefusalReason with at least one named fixture", async () => {
     // descriptor-unreadable and entrypoint-escape need specialized setup;
     // assert the table above plus these two dedicated fixtures exhaust the union.
-    const covered = new Set<PluginRefusalReason>([
-      "descriptor-missing",
-      "descriptor-invalid",
-      "schema-version-unsupported",
-      "host-api-incompatible",
-      "registry-version-mismatch",
-      "duplicate-plugin-id",
-      "unknown-capability",
-      "entrypoint-missing",
-      "forbidden-sceneaxi-import",
-      "isolation-unverifiable",
-      "entrypoint-evaluation-failed",
-      "implementation-table-mismatch",
-    ]);
+    const covered = new Set<PluginRefusalReason>(
+      REFUSE_FIXTURES.map((fixture) => fixture.reason),
+    );
 
     // descriptor-unreadable: non-file at descriptor path (directory).
     {
@@ -678,16 +673,8 @@ throw new Error("intentional entrypoint failure");
       covered.add("descriptor-unreadable");
     }
 
-    // entrypoint-escape: package-relative path that fails isolation after schema.
-    // Manifest schema rejects `..` and absolute paths; symlink-to-outside is
-    // covered in load-refuse. Here pin a null-byte-free path that is absolute
-    // only after resolve — use `entrypoint` that is schema-valid form but
-    // missing is separate. For escape, re-use backslash form rejected as escape
-    // when host isolation sees it after a schema-valid relative path that
-    // resolves outside via realpath is already covered; assert the reason code
-    // is reachable by constructing a package whose entrypoint is schema-valid
-    // `./plugin.js` then replacing the file with a directory (missing) is not
-    // escape. Symlink case:
+    // entrypoint-escape: schema-valid relative entrypoint replaced by a symlink
+    // whose target resolves outside the package root; isolation refuses it.
     {
       const root = tempRoot("escape-symlink");
       const outside = join(root, "outside.js");
@@ -782,9 +769,6 @@ describe("v1 refuse matrix — precedence, integrity, ordering, multi-provider",
     expect(result.loaded).toEqual([]);
     expect(existsSync(marker)).toBe(false);
 
-    const byId = new Map(
-      result.refused.map((r) => [r.pluginId ?? r.locator, r.reason]),
-    );
     // Refuse listings sort by locator; assert by pluginId / locator content.
     expect(
       result.refused.find((r) => r.locator === hostApiWins)?.reason,
@@ -795,7 +779,6 @@ describe("v1 refuse matrix — precedence, integrity, ordering, multi-provider",
     expect(
       result.refused.find((r) => r.locator === invalidWins)?.reason,
     ).toBe("descriptor-invalid");
-    expect(byId.size).toBeGreaterThan(0);
   });
 
   it("one refused candidate exposes nothing while unrelated valids stay deterministic", async () => {
