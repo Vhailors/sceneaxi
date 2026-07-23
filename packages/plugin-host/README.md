@@ -22,6 +22,11 @@ intentionally load the package-root entrypoint and require exact equality
 between declared capability IDs and the exported implementation table. A refused
 package exposes nothing.
 
+The complete refusal matrix — every stable refusal reason, refusal precedence,
+and execution-sentinel evidence for pre- vs post-evaluation refusals — is
+fixture-tested over the public seam in `test/refuse-matrix.test.ts` and
+`test/load-refuse.test.ts`; extend those when touching the pipeline.
+
 ## Non-goals
 
 No CLI/engine/profile wiring, renderer/physics/storage ports, lifecycle hook

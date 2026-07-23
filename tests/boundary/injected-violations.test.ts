@@ -68,6 +68,35 @@ describe("boundary check — injected violations", () => {
     expect(res.stderr).toContain("imports @sceneaxi/engine-kernel, DENIED by the matrix");
   });
 
+  it("fails on a forbidden source import (plugin-host src imports engine-kernel)", () => {
+    appendTo(
+      fx,
+      "packages/plugin-host/src/index.ts",
+      '\nimport "@sceneaxi/engine-kernel";\n',
+    );
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("boundary check FAILED");
+    expect(res.stderr).toContain(
+      "imports @sceneaxi/engine-kernel, DENIED by the matrix",
+    );
+  });
+
+  it("fails on a forbidden source import (plugin-host src imports another plugin package)", () => {
+    // plugin-host may only depend on schemas; any other SceneAxi package is denied.
+    appendTo(
+      fx,
+      "packages/plugin-host/src/index.ts",
+      '\nimport "@sceneaxi/cli";\n',
+    );
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("boundary check FAILED");
+    expect(res.stderr).toContain(
+      "imports @sceneaxi/cli, DENIED by the matrix",
+    );
+  });
+
   it("fails the Kids boundary on a manifest dependency (catalog-web -> profile-kids)", () => {
     editManifest(fx, "apps/catalog-web/package.json", (m) => {
       m.dependencies = { ...m.dependencies, "@sceneaxi/profile-kids": "workspace:^" };
