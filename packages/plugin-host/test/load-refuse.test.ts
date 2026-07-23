@@ -910,6 +910,16 @@ export const capabilities = Object.freeze({});
 `,
       },
       {
+        name: "destructured-process-builtin",
+        entrypoint: "./plugin.js",
+        source: `
+const { getBuiltinModule } = globalThis.process;
+const load = getBuiltinModule("module").createRequire(import.meta.url);
+load("./provider.cjs");
+export const capabilities = Object.freeze({});
+`,
+      },
+      {
         name: "process-import",
         entrypoint: "./plugin.js",
         source: `

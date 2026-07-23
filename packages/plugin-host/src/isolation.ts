@@ -452,6 +452,15 @@ function inspectModuleSource(file: string, text: string): ModuleInspection {
       failure = `${file} accesses unsupported getBuiltinModule loader APIs.`;
       return;
     }
+    if (
+      type === "CallExpression" &&
+      isRecord(value["callee"]) &&
+      value["callee"]["type"] === "Identifier" &&
+      value["callee"]["name"] === "getBuiltinModule"
+    ) {
+      failure = `${file} calls unsupported getBuiltinModule loader APIs.`;
+      return;
+    }
 
     if (
       type === "ImportDeclaration" ||
