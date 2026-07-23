@@ -337,15 +337,45 @@ function inspectModuleSource(file: string, text: string): ModuleInspection {
     return specifier;
   };
 
-  const visit = (value: unknown): void => {
+  const visit = (
+    value: unknown,
+    parent: Record<string, unknown> | null = null,
+    parentKey: string | null = null,
+  ): void => {
     if (failure !== null) return;
     if (Array.isArray(value)) {
-      for (const child of value) visit(child);
+      for (const child of value) visit(child, parent, parentKey);
       return;
     }
     if (!isRecord(value)) return;
 
     const type = value["type"];
+    if (type === "Identifier" && value["name"] === "require") {
+      const directCall =
+        parent?.["type"] === "CallExpression" && parentKey === "callee";
+      const propertyName =
+        parentKey === "property" &&
+        parent?.["type"] === "MemberExpression" &&
+        parent["computed"] === false;
+      const objectKey =
+        parentKey === "key" &&
+        (parent?.["type"] === "Property" ||
+          parent?.["type"] === "MethodDefinition") &&
+        parent["computed"] === false;
+      if (!directCall && !propertyName && !objectKey) {
+        failure = `${file} contains an unsupported indirect reference to require.`;
+        return;
+      }
+    }
+    if (type === "MemberExpression" && isRequireCallee(value)) {
+      const directCall =
+        parent?.["type"] === "CallExpression" && parentKey === "callee";
+      if (!directCall) {
+        failure = `${file} contains an unsupported indirect reference to module.require.`;
+        return;
+      }
+    }
+
     if (
       type === "ImportDeclaration" ||
       type === "ExportAllDeclaration" ||
@@ -392,7 +422,9 @@ function inspectModuleSource(file: string, text: string): ModuleInspection {
       }
     }
 
-    for (const child of Object.values(value)) visit(child);
+    for (const [key, child] of Object.entries(value)) {
+      visit(child, value, key);
+    }
   };
 
   visit(ast);
@@ -432,33 +464,250 @@ function resolveModuleEdge(
   }
 }
 
-function containingPackageRoot(file: string): string | null {
-  let current = dirname(file);
+type PackageIdentity = {
+  readonly name: string;
+  readonly root: string;
+  readonly manifest: Readonly<Record<string, unknown>>;
+};
+
+function readPackageIdentity(root: string): PackageIdentity | null {
+  const manifest = canonicalFile(join(root, "package.json"));
+  if (manifest === null || !isUnderPackageRoot(root, manifest)) return null;
+  try {
+    const value = JSON.parse(readFileSync(manifest, "utf8")) as unknown;
+    if (
+      !isRecord(value) ||
+      Array.isArray(value) ||
+      typeof value["name"] !== "string"
+    ) {
+      return null;
+    }
+    return { name: value["name"], root, manifest: value };
+  } catch {
+    return null;
+  }
+}
+
+function mappingUsesUnsupportedConditions(
+  value: unknown,
+  edgeKind: ModuleEdge["kind"],
+): boolean {
+  if (edgeKind === "cjs") return false;
+  if (Array.isArray(value)) {
+    return value.some((child) =>
+      mappingUsesUnsupportedConditions(child, edgeKind),
+    );
+  }
+  if (!isRecord(value)) return false;
+  const entries = Object.entries(value);
+  const subpathMap = entries.every(
+    ([key]) => key.startsWith(".") || key.startsWith("#"),
+  );
+  const allowedConditions = new Set(["default", "import", "node"]);
+  if (
+    !subpathMap &&
+    entries.some(([key]) => !allowedConditions.has(key))
+  ) {
+    return true;
+  }
+  return entries.some(([, child]) =>
+    mappingUsesUnsupportedConditions(child, edgeKind),
+  );
+}
+
+function packageUsesUnsupportedConditions(
+  identity: PackageIdentity,
+  edgeKind: ModuleEdge["kind"],
+): boolean {
+  return (
+    mappingUsesUnsupportedConditions(identity.manifest["exports"], edgeKind) ||
+    mappingUsesUnsupportedConditions(identity.manifest["imports"], edgeKind)
+  );
+}
+
+function barePackageName(specifier: string): string | null {
+  const parts = specifier.split("/");
+  if (specifier.startsWith("@")) {
+    return parts.length >= 2 ? `${parts[0]}/${parts[1]}` : null;
+  }
+  return parts[0] && !specifier.startsWith(".") && !specifier.startsWith("#")
+    ? parts[0]
+    : null;
+}
+
+function findBarePackageRoot(options: {
+  readonly importer: string;
+  readonly packageRoot: string;
+  readonly specifier: string;
+}): string | null {
+  const requestedName = barePackageName(options.specifier);
+  if (requestedName === null) return null;
+
+  const ownIdentity = readPackageIdentity(options.packageRoot);
+  if (ownIdentity?.name === requestedName) return options.packageRoot;
+
+  const packageSegments = requestedName.split("/");
+  let current = dirname(options.importer);
   while (true) {
-    if (existsSync(join(current, "package.json"))) return current;
+    const candidate = canonicalDirectory(
+      join(current, "node_modules", ...packageSegments),
+    );
+    if (
+      candidate !== null &&
+      canonicalFile(join(candidate, "package.json")) !== null
+    ) {
+      return candidate;
+    }
     const parent = dirname(current);
     if (parent === current) return null;
     current = parent;
   }
 }
 
-type PackageIdentity = {
-  readonly name: string;
-  readonly root: string;
-};
-
-function readPackageIdentity(file: string): PackageIdentity | null {
-  const root = containingPackageRoot(file);
-  if (root === null) return null;
-  const manifest = canonicalFile(join(root, "package.json"));
-  if (manifest === null || !isUnderPackageRoot(root, manifest)) return null;
-  try {
-    const value = JSON.parse(readFileSync(manifest, "utf8")) as unknown;
-    if (!isRecord(value) || typeof value["name"] !== "string") return null;
-    return { name: value["name"], root };
-  } catch {
-    return null;
+function packageBoundaryFor(options: {
+  readonly edge: ModuleEdge;
+  readonly file: string;
+  readonly packageRoot: string;
+  readonly resolved: string;
+}):
+  | { readonly ok: true; readonly identity: PackageIdentity }
+  | { readonly ok: false; readonly refusal: IsolationRefuse } {
+  const boundary = findBarePackageRoot({
+    importer: options.file,
+    packageRoot: options.packageRoot,
+    specifier: options.edge.specifier,
+  });
+  if (
+    boundary === null ||
+    !isUnderPackageRoot(boundary, options.resolved)
+  ) {
+    return {
+      ok: false,
+      refusal: refuse(
+        "isolation-unverifiable",
+        `${relative(options.packageRoot, options.file)} import ${options.edge.specifier} has an ambiguous package boundary.`,
+      ),
+    };
   }
+
+  const identity = readPackageIdentity(boundary);
+  if (identity === null) {
+    return {
+      ok: false,
+      refusal: refuse(
+        "isolation-unverifiable",
+        `${relative(options.packageRoot, options.file)} import ${options.edge.specifier} has no verifiable package identity.`,
+      ),
+    };
+  }
+  if (packageUsesUnsupportedConditions(identity, options.edge.kind)) {
+    return {
+      ok: false,
+      refusal: refuse(
+        "isolation-unverifiable",
+        `${relative(options.packageRoot, options.file)} import ${options.edge.specifier} uses unsupported resolution conditions.`,
+      ),
+    };
+  }
+
+  let current = dirname(options.resolved);
+  while (current !== boundary) {
+    if (!isUnderPackageRoot(boundary, current)) {
+      return {
+        ok: false,
+        refusal: refuse(
+          "isolation-unverifiable",
+          `${relative(options.packageRoot, options.file)} import ${options.edge.specifier} escapes its package boundary.`,
+        ),
+      };
+    }
+    if (existsSync(join(current, PLUGIN_MANIFEST_PATH))) {
+      return {
+        ok: false,
+        refusal: refuse(
+          "isolation-unverifiable",
+          `${relative(options.packageRoot, options.file)} import ${options.edge.specifier} resolves through a nested plugin package.`,
+        ),
+      };
+    }
+    if (existsSync(join(current, "package.json"))) {
+      const nested = readPackageIdentity(current);
+      return {
+        ok: false,
+        refusal: refuse(
+          nested !== null && sceneaxiPackageName(nested.name) !== null
+            ? "forbidden-sceneaxi-import"
+            : "isolation-unverifiable",
+          `${relative(options.packageRoot, options.file)} import ${options.edge.specifier} resolves through nested package ${nested?.name ?? current}.`,
+        ),
+      };
+    }
+    const parent = dirname(current);
+    if (parent === current) {
+      return {
+        ok: false,
+        refusal: refuse(
+          "isolation-unverifiable",
+          `${relative(options.packageRoot, options.file)} import ${options.edge.specifier} has an ambiguous package boundary.`,
+        ),
+      };
+    }
+    current = parent;
+  }
+
+  const boundaryIsCurrentPlugin = boundary === options.packageRoot;
+  if (
+    !boundaryIsCurrentPlugin &&
+    existsSync(join(boundary, PLUGIN_MANIFEST_PATH))
+  ) {
+    return {
+      ok: false,
+      refusal: refuse(
+        "isolation-unverifiable",
+        `${relative(options.packageRoot, options.file)} imports another plugin package via ${options.edge.specifier}.`,
+      ),
+    };
+  }
+
+  current = dirname(boundary);
+  while (
+    current !== options.packageRoot &&
+    current !== dirname(current)
+  ) {
+    if (existsSync(join(current, PLUGIN_MANIFEST_PATH))) {
+      return {
+        ok: false,
+        refusal: refuse(
+          "isolation-unverifiable",
+          `${relative(options.packageRoot, options.file)} import ${options.edge.specifier} is nested beneath another plugin package.`,
+        ),
+      };
+    }
+    if (existsSync(join(current, "package.json"))) {
+      const ancestor = readPackageIdentity(current);
+      if (ancestor === null) {
+        return {
+          ok: false,
+          refusal: refuse(
+            "isolation-unverifiable",
+            `${relative(options.packageRoot, options.file)} import ${options.edge.specifier} has an ambiguous ancestor package boundary.`,
+          ),
+        };
+      }
+      if (sceneaxiPackageName(ancestor.name) !== null) {
+        return {
+          ok: false,
+          refusal: refuse(
+            "forbidden-sceneaxi-import",
+            `${relative(options.packageRoot, options.file)} import ${options.edge.specifier} is nested beneath package ${ancestor.name}.`,
+          ),
+        };
+      }
+    }
+    current = dirname(current);
+  }
+
+  return { ok: true, identity };
 }
 
 function validateSceneaxiSpecifier(
@@ -609,6 +858,18 @@ function inspectModuleGraph(options: {
           `${relative(options.packageRoot, file)} imports unsupported URL specifier ${specifier}.`,
         );
       }
+      if (specifier.startsWith("#")) {
+        const ownIdentity = readPackageIdentity(options.packageRoot);
+        if (
+          ownIdentity === null ||
+          packageUsesUnsupportedConditions(ownIdentity, edge.kind)
+        ) {
+          return refuse(
+            "isolation-unverifiable",
+            `${relative(options.packageRoot, file)} import ${specifier} uses unverifiable package resolution conditions.`,
+          );
+        }
+      }
 
       const resolution = resolveModuleEdge(file, edge);
       if (resolution === null) {
@@ -637,13 +898,14 @@ function inspectModuleGraph(options: {
         continue;
       }
 
-      const identity = readPackageIdentity(resolved);
-      if (identity === null) {
-        return refuse(
-          "isolation-unverifiable",
-          `${relative(options.packageRoot, file)} import ${specifier} has no verifiable package identity.`,
-        );
-      }
+      const packageBoundary = packageBoundaryFor({
+        edge,
+        file,
+        packageRoot: options.packageRoot,
+        resolved,
+      });
+      if (!packageBoundary.ok) return packageBoundary.refusal;
+      const { identity } = packageBoundary;
 
       const identityCheck = validateResolvedPackageIdentity({
         edge,
@@ -654,13 +916,7 @@ function inspectModuleGraph(options: {
       });
       if (!identityCheck.ok) return identityCheck;
 
-      const identityRoot = canonicalDirectory(identity.root);
-      if (identityRoot === null) {
-        return refuse(
-          "isolation-unverifiable",
-          `${relative(options.packageRoot, file)} import ${specifier} has no canonical package root.`,
-        );
-      }
+      const identityRoot = identity.root;
       if (identityRoot === options.packageRoot) {
         if (!isUnderPackageRoot(options.packageRoot, resolved)) {
           return refuse(
@@ -670,13 +926,6 @@ function inspectModuleGraph(options: {
         }
         pending.push(resolved);
         continue;
-      }
-
-      if (existsSync(join(identityRoot, PLUGIN_MANIFEST_PATH))) {
-        return refuse(
-          "isolation-unverifiable",
-          `${relative(options.packageRoot, file)} imports another plugin package via ${specifier}.`,
-        );
       }
     }
   }

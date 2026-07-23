@@ -575,14 +575,6 @@ export const capabilities = Object.freeze({});
 
   it("resolves ESM and CJS edges with their matching conditions", async () => {
     const root = tempRoot("resolve-conditions");
-    const packageJson = {
-      imports: {
-        "#branch": {
-          import: "./esm-branch.js",
-          require: "./cjs-branch.cjs",
-        },
-      },
-    };
     const esm = writePlugin({
       root,
       name: "esm",
@@ -594,10 +586,16 @@ export const capabilities = Object.freeze({});
 import "#branch";
 export const capabilities = Object.freeze({});
 `,
-      packageJson,
+      packageJson: {
+        imports: {
+          "#branch": {
+            import: "./esm-branch.js",
+            default: "./esm-branch.js",
+          },
+        },
+      },
       extraFiles: {
         "esm-branch.js": `import "@sceneaxi/engine-kernel";\n`,
-        "cjs-branch.cjs": `module.exports = {};\n`,
       },
     });
     const cjs = writePlugin({
@@ -611,9 +609,15 @@ export const capabilities = Object.freeze({});
 require("#branch");
 exports.capabilities = Object.freeze({});
 `,
-      packageJson,
+      packageJson: {
+        imports: {
+          "#branch": {
+            require: "./cjs-branch.cjs",
+            default: "./cjs-branch.cjs",
+          },
+        },
+      },
       extraFiles: {
-        "esm-branch.js": `import "@sceneaxi/engine-kernel";\n`,
         "cjs-branch.cjs": `module.exports = {};\n`,
       },
     });
@@ -655,6 +659,69 @@ export const capabilities = Object.freeze({});
     expect(result.refused[0]?.reason).toBe("isolation-unverifiable");
     expect(result.refused[0]?.entrypointEvaluated).toBe(false);
     expect(existsSync(marker)).toBe(false);
+  });
+
+  it("refuses indirect require references before evaluation", async () => {
+    const root = tempRoot("require-alias");
+    const marker = join(root, "evaluated.txt");
+    const pkg = writePlugin({
+      root,
+      name: "require-alias",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.requirealias",
+        entrypoint: "./plugin.cjs",
+      }),
+      entrypointSource: `
+const load = require;
+load("./provider.cjs");
+exports.capabilities = Object.freeze({});
+`,
+      extraFiles: {
+        "provider.cjs": `
+require("node:fs").writeFileSync(${JSON.stringify(marker)}, "evaluated");
+`,
+      },
+    });
+
+    const result = await openPluginHost().load([pkg]);
+    expect(result.loaded).toEqual([]);
+    expect(result.refused[0]?.reason).toBe("isolation-unverifiable");
+    expect(result.refused[0]?.entrypointEvaluated).toBe(false);
+    expect(existsSync(marker)).toBe(false);
+  });
+
+  it("refuses package mappings with unsupported custom conditions", async () => {
+    const root = tempRoot("custom-conditions");
+    const pkg = writePlugin({
+      root,
+      name: "custom-conditions",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.customconditions",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: `
+import "#branch";
+export const capabilities = Object.freeze({});
+`,
+      packageJson: {
+        imports: {
+          "#branch": {
+            "review-custom": "./custom.js",
+            import: "./safe.js",
+            default: "./safe.js",
+          },
+        },
+      },
+      extraFiles: {
+        "custom.js": `import "@sceneaxi/engine-kernel";\n`,
+        "safe.js": `export {};\n`,
+      },
+    });
+
+    const result = await openPluginHost().load([pkg]);
+    expect(result.loaded).toEqual([]);
+    expect(result.refused[0]?.reason).toBe("isolation-unverifiable");
+    expect(result.refused[0]?.entrypointEvaluated).toBe(false);
   });
 
   it("resolves authorized SceneAxi imports and refuses missing targets", async () => {
@@ -766,6 +833,53 @@ export const capabilities = Object.freeze({});
     const result = await openPluginHost().load([pkg]);
     expect(result.loaded).toEqual([]);
     expect(result.refused[0]?.reason).toBe("forbidden-sceneaxi-import");
+    expect(result.refused[0]?.entrypointEvaluated).toBe(false);
+  });
+
+  it("refuses nested package boundaries that hide outer identity", async () => {
+    const root = tempRoot("nested-package");
+    const pkg = writePlugin({
+      root,
+      name: "consumer",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.nestedpackage",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: `
+import "safe-alias";
+export const capabilities = Object.freeze({});
+`,
+      packageJson: {
+        dependencies: {
+          "safe-alias": "npm:@sceneaxi/engine-kernel@0.0.0",
+        },
+      },
+    });
+    const aliasRoot = join(pkg, "node_modules", "safe-alias");
+    const nestedRoot = join(aliasRoot, "nested");
+    mkdirSync(nestedRoot, { recursive: true });
+    writeFileSync(
+      join(aliasRoot, "package.json"),
+      JSON.stringify({
+        name: "@sceneaxi/engine-kernel",
+        type: "module",
+        exports: "./nested/index.js",
+      }),
+      "utf8",
+    );
+    writeFileSync(
+      join(nestedRoot, "package.json"),
+      JSON.stringify({
+        name: "innocent-inner",
+        type: "module",
+      }),
+      "utf8",
+    );
+    writeFileSync(join(nestedRoot, "index.js"), "export {};\n", "utf8");
+
+    const result = await openPluginHost().load([pkg]);
+    expect(result.loaded).toEqual([]);
+    expect(result.refused[0]?.reason).toBe("isolation-unverifiable");
     expect(result.refused[0]?.entrypointEvaluated).toBe(false);
   });
 
