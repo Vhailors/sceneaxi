@@ -25,6 +25,7 @@ import {
 } from "@sceneaxi/schemas";
 
 const statFailures = vi.hoisted(() => new Map<string, string>());
+const readFailures = vi.hoisted(() => new Map<string, string>());
 
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs")>();
@@ -40,6 +41,16 @@ vi.mock("node:fs", async (importOriginal) => {
       }
       return actual.statSync(path);
     },
+    readFileSync(...args: Parameters<typeof actual.readFileSync>) {
+      const failureCode = readFailures.get(String(args[0]));
+      if (failureCode !== undefined) {
+        readFailures.delete(String(args[0]));
+        throw Object.assign(new Error("simulated descriptor read race"), {
+          code: failureCode,
+        });
+      }
+      return Reflect.apply(actual.readFileSync, actual, args);
+    },
   };
 });
 
@@ -47,6 +58,7 @@ const fixtures: string[] = [];
 
 afterEach(() => {
   statFailures.clear();
+  readFailures.clear();
   while (fixtures.length > 0) {
     const dir = fixtures.pop();
     if (dir && existsSync(dir)) {
@@ -293,6 +305,62 @@ describe("plugin host load / list / refuse", () => {
           !item.entrypointEvaluated,
       ),
     ).toBe(true);
+  });
+
+  it("classifies descriptor read races and continues", async () => {
+    const root = tempRoot("descriptor-read-races");
+    const missing = writePlugin({
+      root,
+      name: "a-missing",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.readmissing",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: emptyCapsEntrypoint,
+    });
+    const unreadable = writePlugin({
+      root,
+      name: "b-unreadable",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.readunreadable",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: emptyCapsEntrypoint,
+    });
+    const healthy = writePlugin({
+      root,
+      name: "z-healthy",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.afterreadrace",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: emptyCapsEntrypoint,
+    });
+    readFailures.set(
+      join(missing, "sceneaxi.plugin.manifest.json"),
+      "ENOENT",
+    );
+    readFailures.set(
+      join(unreadable, "sceneaxi.plugin.manifest.json"),
+      "EIO",
+    );
+
+    const result = await openPluginHost().load([
+      healthy,
+      unreadable,
+      missing,
+    ]);
+    expect(result.loaded.map((item) => item.pluginId)).toEqual([
+      "dev.sceneaxi.example.afterreadrace",
+    ]);
+    expect(result.refused).toHaveLength(2);
+    expect(
+      result.refused.find((item) => item.locator === missing)?.reason,
+    ).toBe("descriptor-missing");
+    expect(
+      result.refused.find((item) => item.locator === unreadable)?.reason,
+    ).toBe("descriptor-unreadable");
+    expect(result.refused.every((item) => !item.entrypointEvaluated)).toBe(true);
   });
 
   it("refuses unknown capabilities before entrypoint evaluation", async () => {
@@ -831,6 +899,17 @@ exports.capabilities = Object.freeze({});
 `,
       },
       {
+        name: "ambient-process-builtin",
+        entrypoint: "./plugin.js",
+        source: `
+const load = globalThis.process
+  .getBuiltinModule("module")
+  .createRequire(import.meta.url);
+load("./provider.cjs");
+export const capabilities = Object.freeze({});
+`,
+      },
+      {
         name: "process-import",
         entrypoint: "./plugin.js",
         source: `
@@ -871,6 +950,89 @@ require("node:fs").writeFileSync(${JSON.stringify(marker)}, "evaluated");
     const result = await openPluginHost().load(packages);
     expect(result.loaded).toEqual([]);
     expect(result.refused).toHaveLength(cases.length);
+    expect(
+      result.refused.every(
+        (item) =>
+          item.reason === "isolation-unverifiable" &&
+          !item.entrypointEvaluated,
+      ),
+    ).toBe(true);
+    expect(existsSync(marker)).toBe(false);
+  });
+
+  it("refuses package aliases to loader builtins", async () => {
+    const root = tempRoot("builtin-aliases");
+    const marker = join(root, "evaluated.txt");
+    const moduleAlias = writePlugin({
+      root,
+      name: "a-module-alias",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.modulebuiltinalias",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: `
+import { createRequire } from "#builtin";
+const load = createRequire(import.meta.url);
+load("./provider.cjs");
+export const capabilities = Object.freeze({});
+`,
+      packageJson: {
+        imports: { "#builtin": "module" },
+      },
+      extraFiles: {
+        "provider.cjs": `
+require("node:fs").writeFileSync(${JSON.stringify(marker)}, "evaluated");
+`,
+      },
+    });
+    const processAlias = writePlugin({
+      root,
+      name: "b-process-alias",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.processbuiltinalias",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: `
+import proc from "#builtin";
+const load = proc.getBuiltinModule("module").createRequire(import.meta.url);
+load("./provider.cjs");
+export const capabilities = Object.freeze({});
+`,
+      packageJson: {
+        imports: { "#builtin": "process" },
+      },
+      extraFiles: {
+        "provider.cjs": `
+require("node:fs").writeFileSync(${JSON.stringify(marker)}, "evaluated");
+`,
+      },
+    });
+    const safeAlias = writePlugin({
+      root,
+      name: "z-safe-alias",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.safebuiltinalias",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: `
+import { basename } from "#builtin";
+void basename;
+export const capabilities = Object.freeze({});
+`,
+      packageJson: {
+        imports: { "#builtin": "path" },
+      },
+    });
+
+    const result = await openPluginHost().load([
+      safeAlias,
+      processAlias,
+      moduleAlias,
+    ]);
+    expect(result.loaded.map((item) => item.pluginId)).toEqual([
+      "dev.sceneaxi.example.safebuiltinalias",
+    ]);
+    expect(result.refused).toHaveLength(2);
     expect(
       result.refused.every(
         (item) =>

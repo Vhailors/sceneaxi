@@ -447,9 +447,9 @@ function inspectModuleSource(file: string, text: string): ModuleInspection {
     }
     if (
       type === "MemberExpression" &&
-      isNamedMember(value, "process", "getBuiltinModule")
+      memberPropertyName(value) === "getBuiltinModule"
     ) {
-      failure = `${file} accesses unsupported process.getBuiltinModule loader APIs.`;
+      failure = `${file} accesses unsupported getBuiltinModule loader APIs.`;
       return;
     }
 
@@ -514,7 +514,7 @@ function inspectModuleSource(file: string, text: string): ModuleInspection {
 }
 
 type ModuleResolution =
-  | { readonly kind: "builtin" }
+  | { readonly kind: "builtin"; readonly specifier: string }
   | { readonly kind: "file"; readonly path: string }
   | { readonly kind: "unsupported"; readonly target: string };
 
@@ -528,7 +528,7 @@ function resolveModuleEdge(
         ? resolveImportSpecifier(edge.specifier, pathToFileURL(importer).href)
         : createRequire(pathToFileURL(importer)).resolve(edge.specifier);
     if (BUILTIN_SPECIFIERS.has(resolved) || resolved.startsWith("node:")) {
-      return { kind: "builtin" };
+      return { kind: "builtin", specifier: resolved };
     }
     if (edge.kind === "esm") {
       if (!resolved.startsWith("file:")) {
@@ -1009,7 +1009,18 @@ function inspectModuleGraph(options: {
           `${relative(options.packageRoot, file)} imports unresolvable specifier ${specifier}.`,
         );
       }
-      if (resolution.kind === "builtin") continue;
+      if (resolution.kind === "builtin") {
+        if (
+          MODULE_BUILTIN_SPECIFIERS.has(resolution.specifier) ||
+          PROCESS_BUILTIN_SPECIFIERS.has(resolution.specifier)
+        ) {
+          return refuse(
+            "isolation-unverifiable",
+            `${relative(options.packageRoot, file)} import ${specifier} resolves to unsupported loader builtin ${resolution.specifier}.`,
+          );
+        }
+        continue;
+      }
       if (resolution.kind === "unsupported") {
         return refuse(
           "isolation-unverifiable",

@@ -107,6 +107,14 @@ type PathTypeResult =
       readonly message: string;
     };
 
+function filesystemFailureReason(error: unknown): "missing" | "unreadable" {
+  const code =
+    isRecord(error) && typeof error["code"] === "string"
+      ? error["code"]
+      : null;
+  return code === "ENOENT" || code === "ENOTDIR" ? "missing" : "unreadable";
+}
+
 function inspectPathType(
   path: string,
   type: "directory" | "file",
@@ -123,13 +131,9 @@ function inspectPathType(
           message: `Expected a ${type} at ${path}.`,
         };
   } catch (error) {
-    const code =
-      isRecord(error) && typeof error["code"] === "string"
-        ? error["code"]
-        : null;
     return {
       ok: false,
-      reason: code === "ENOENT" || code === "ENOTDIR" ? "missing" : "unreadable",
+      reason: filesystemFailureReason(error),
       message:
         error instanceof Error ? error.message : `Cannot inspect ${path}.`,
     };
@@ -226,15 +230,18 @@ async function processCandidate(options: {
   try {
     text = readFileSync(descriptorPath, "utf8");
   } catch (error) {
+    const missing = filesystemFailureReason(error) === "missing";
     const message =
       error instanceof Error ? error.message : "descriptor read failed";
     return {
       ok: false,
       refused: refuse({
         locator: packageRoot,
-        reason: "descriptor-unreadable",
+        reason: missing ? "descriptor-missing" : "descriptor-unreadable",
         phase: "descriptor",
-        message: `Cannot read ${PLUGIN_MANIFEST_PATH}: ${message}`,
+        message: missing
+          ? `Missing descriptor at ${PLUGIN_MANIFEST_PATH}.`
+          : `Cannot read ${PLUGIN_MANIFEST_PATH}: ${message}`,
         entrypointEvaluated: false,
       }),
     };
