@@ -473,6 +473,36 @@ describe("plugin manifest contract", () => {
     expect(parsePluginManifestText(JSON.stringify(fixture))).toEqual(result);
   });
 
+  it("keeps the checked-in inert example lockstep with inertPluginManifestFixture", () => {
+    const checkedInPath = fileURLToPath(
+      import.meta.resolve(
+        "@sceneaxi/schemas/contracts/plugin-manifest.inert.example.json",
+      ),
+    );
+    const checkedIn = JSON.parse(readFileSync(checkedInPath, "utf8")) as unknown;
+    const fixture = inertPluginManifestFixture();
+    const parsed = parsePluginManifestText(JSON.stringify(checkedIn));
+    const subsetErrors = validateWithSchemaSubset(
+      checkedIn,
+      pluginManifestSchema,
+    );
+
+    expect(subsetErrors).toEqual([]);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.manifest).toEqual(fixture);
+    expect(checkedIn).toEqual({
+      $schema: fixture.$schema,
+      schemaVersion: fixture.schemaVersion,
+      pluginId: fixture.pluginId,
+      pluginVersion: fixture.pluginVersion,
+      hostApi: fixture.hostApi,
+      registryVersion: fixture.registryVersion,
+      entrypoint: fixture.entrypoint,
+      capabilities: [...fixture.capabilities],
+    });
+  });
+
   it("accepts a valid manifest with unique capability IDs", () => {
     const result = validatePluginManifest({
       ...inertPluginManifestFixture(),

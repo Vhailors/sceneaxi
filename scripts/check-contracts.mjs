@@ -6,6 +6,7 @@
  * Surfaces:
  * 1. Authoring-jobs fixture list + E1/E2 doc binding
  * 2. Plugin capability registry schema + checked-in 1.0.0 seed artifact
+ * 3. Plugin-manifest inert example fixture + docs/plugins.md lockstep (sceneaxi#24)
  *
  * Fail-closed: missing files, schema violations, duplicate ids, seed drift, or
  * a doc whose fixture table drifts from the canonical JSON all exit 1.
@@ -37,6 +38,20 @@ const pluginCapabilityRegistrySeedPath = join(
 );
 const pluginsDocPath = join(root, "docs", "plugins.md");
 const schemasReadmePath = join(root, "packages", "schemas", "README.md");
+const pluginManifestSchemaPath = join(
+  root,
+  "packages",
+  "schemas",
+  "contracts",
+  "plugin-manifest.schema.json",
+);
+const pluginManifestInertExamplePath = join(
+  root,
+  "packages",
+  "schemas",
+  "contracts",
+  "plugin-manifest.inert.example.json",
+);
 const loadFailed = Symbol("loadFailed");
 
 const load = (path, parse) => {
@@ -56,6 +71,8 @@ const pluginCapabilityRegistrySchema = load(pluginCapabilityRegistrySchemaPath, 
 const pluginCapabilityRegistrySeed = load(pluginCapabilityRegistrySeedPath, true);
 const pluginsDoc = load(pluginsDocPath, false);
 const schemasReadme = load(schemasReadmePath, false);
+const pluginManifestSchema = load(pluginManifestSchemaPath, true);
+const pluginManifestInertExample = load(pluginManifestInertExamplePath, true);
 const isPlainObject = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 const schemaIsObject = schema !== loadFailed && isPlainObject(schema);
 const fixturesIsObject = fixtures !== loadFailed && isPlainObject(fixtures);
@@ -67,6 +84,10 @@ const pluginRegistrySeedIsObject =
 const pluginsDocHasContent = pluginsDoc !== loadFailed && pluginsDoc.trim().length > 0;
 const schemasReadmeHasContent =
   schemasReadme !== loadFailed && schemasReadme.trim().length > 0;
+const pluginManifestSchemaIsObject =
+  pluginManifestSchema !== loadFailed && isPlainObject(pluginManifestSchema);
+const pluginManifestInertExampleIsObject =
+  pluginManifestInertExample !== loadFailed && isPlainObject(pluginManifestInertExample);
 
 if (schema !== loadFailed && !schemaIsObject) {
   fail(`${relative(root, schemaPath)}: expected a plain JSON object`);
@@ -89,8 +110,14 @@ if (pluginsDoc !== loadFailed && !pluginsDocHasContent) {
 if (schemasReadme !== loadFailed && !schemasReadmeHasContent) {
   fail(`${relative(root, schemasReadmePath)}: document is empty or whitespace-only`);
 }
+if (pluginManifestSchema !== loadFailed && !pluginManifestSchemaIsObject) {
+  fail(`${relative(root, pluginManifestSchemaPath)}: expected a plain JSON object`);
+}
+if (pluginManifestInertExample !== loadFailed && !pluginManifestInertExampleIsObject) {
+  fail(`${relative(root, pluginManifestInertExamplePath)}: expected a plain JSON object`);
+}
 
-// --- minimal JSON Schema subset validator (type/required/properties/items/enum/const/pattern/additionalProperties/minItems/minLength) ---
+// --- minimal JSON Schema subset validator (type/required/properties/items/enum/const/pattern/additionalProperties/minItems/minLength/uniqueItems) ---
 const validate = (value, sch, path) => {
   if (sch.const !== undefined && value !== sch.const) {
     fail(`${path}: expected const ${JSON.stringify(sch.const)}, got ${JSON.stringify(value)}`);
@@ -120,6 +147,17 @@ const validate = (value, sch, path) => {
     }
     if (sch.minItems !== undefined && value.length < sch.minItems) {
       fail(`${path}: expected at least ${sch.minItems} items, got ${value.length}`);
+    }
+    if (sch.uniqueItems === true) {
+      const seen = new Set();
+      for (let i = 0; i < value.length; i += 1) {
+        const key = JSON.stringify(value[i]);
+        if (seen.has(key)) {
+          fail(`${path}: duplicate item at index ${i} violates uniqueItems`);
+          break;
+        }
+        seen.add(key);
+      }
     }
     if (sch.items) value.forEach((item, i) => validate(item, sch.items, `${path}[${i}]`));
   } else if (sch.type === "string") {
@@ -161,6 +199,7 @@ const schemaAssertions = new Set([
   "additionalProperties",
   "minItems",
   "minLength",
+  "uniqueItems",
 ]);
 const supportedTypes = new Set(["object", "array", "string", "integer"]);
 
@@ -209,10 +248,13 @@ const validateSchemaDefinition = (sch, path) => {
   if ("minLength" in sch && (!Number.isInteger(sch.minLength) || sch.minLength < 0)) {
     reject("minLength must be a non-negative integer");
   }
+  if ("uniqueItems" in sch && typeof sch.uniqueItems !== "boolean") {
+    reject("uniqueItems must be boolean in the supported schema subset");
+  }
   if (["required", "properties", "additionalProperties"].some((keyword) => keyword in sch) && sch.type !== "object") {
     reject("object assertion keywords require type \"object\" in the supported schema subset");
   }
-  if (["items", "minItems"].some((keyword) => keyword in sch) && sch.type !== "array") {
+  if (["items", "minItems", "uniqueItems"].some((keyword) => keyword in sch) && sch.type !== "array") {
     reject("array assertion keywords require type \"array\" in the supported schema subset");
   }
   if (["pattern", "minLength"].some((keyword) => keyword in sch) && sch.type !== "string") {
@@ -449,11 +491,134 @@ validateRegistrySeedDoc(
   "packages/schemas/README.md",
 );
 
+// --- plugin-manifest inert example (sceneaxi#24) ---
+const PLUGIN_MANIFEST_SCHEMA_URI =
+  "https://sceneaxi.dev/schemas/plugin-manifest-1.0.0.json";
+const PLUGIN_MANIFEST_SCHEMA_VERSION = "1.0.0";
+const INERT_EXAMPLE_DOC_START = "<!-- plugin-manifest:inert-example -->";
+const INERT_EXAMPLE_DOC_END = "<!-- /plugin-manifest:inert-example -->";
+const INERT_EXAMPLE_CANONICAL = Object.freeze({
+  $schema: PLUGIN_MANIFEST_SCHEMA_URI,
+  schemaVersion: PLUGIN_MANIFEST_SCHEMA_VERSION,
+  pluginId: "dev.sceneaxi.example.noop",
+  pluginVersion: "0.1.0",
+  hostApi: "^1.0.0",
+  registryVersion: "1.0.0",
+  entrypoint: "./dist/plugin.js",
+  capabilities: Object.freeze([]),
+});
+
+const pluginManifestSchemaUsesSupportedSubset =
+  pluginManifestSchemaIsObject &&
+  validateSchemaDefinition(pluginManifestSchema, "plugin-manifest.schema");
+
+if (pluginManifestSchemaIsObject) {
+  if (
+    typeof pluginManifestSchema.$id !== "string" ||
+    !pluginManifestSchema.$id.includes("plugin-manifest")
+  ) {
+    fail(
+      `${relative(root, pluginManifestSchemaPath)}: $id does not identify the plugin-manifest contract`,
+    );
+  }
+}
+
+if (pluginManifestSchemaIsObject && pluginManifestInertExampleIsObject) {
+  if (pluginManifestSchemaUsesSupportedSubset) {
+    validate(
+      pluginManifestInertExample,
+      pluginManifestSchema,
+      "plugin-manifest.inert.example",
+    );
+  }
+
+  if (pluginManifestInertExample.$schema !== PLUGIN_MANIFEST_SCHEMA_URI) {
+    fail(
+      `plugin-manifest.inert.example: $schema must be ${JSON.stringify(PLUGIN_MANIFEST_SCHEMA_URI)}`,
+    );
+  }
+  if (pluginManifestInertExample.schemaVersion !== PLUGIN_MANIFEST_SCHEMA_VERSION) {
+    fail(
+      `plugin-manifest.inert.example: schemaVersion drift — expected ${PLUGIN_MANIFEST_SCHEMA_VERSION}, got ${JSON.stringify(pluginManifestInertExample.schemaVersion)}`,
+    );
+  }
+  if (JSON.stringify(pluginManifestInertExample) !== JSON.stringify(INERT_EXAMPLE_CANONICAL)) {
+    fail(
+      "plugin-manifest.inert.example: value must exactly match the documented inert noop fixture (empty capabilities; no invented ports)",
+    );
+  }
+
+  const inertText = JSON.stringify(pluginManifestInertExample).toLowerCase();
+  for (const forbidden of FORBIDDEN_SEED_SUBSTRINGS) {
+    if (inertText.includes(forbidden)) {
+      fail(
+        `plugin-manifest.inert.example: forbidden engine-internal token "${forbidden}" present in inert example`,
+      );
+    }
+  }
+}
+
+if (pluginsDocHasContent && pluginManifestInertExampleIsObject) {
+  const starts = pluginsDoc.split(INERT_EXAMPLE_DOC_START).length - 1;
+  const ends = pluginsDoc.split(INERT_EXAMPLE_DOC_END).length - 1;
+  const matches = [
+    ...pluginsDoc.matchAll(
+      /<!-- plugin-manifest:inert-example -->([\s\S]*?)<!-- \/plugin-manifest:inert-example -->/g,
+    ),
+  ];
+  if (starts !== 1 || ends !== 1 || matches.length !== 1) {
+    fail(
+      `docs/plugins.md: expected exactly one ${INERT_EXAMPLE_DOC_START} ... ${INERT_EXAMPLE_DOC_END} block, found ${starts} start and ${ends} end marker(s)`,
+    );
+  } else {
+    const block = matches[0][1].trim().replaceAll("\r\n", "\n");
+    const fence = block.match(/^```json\n([\s\S]*?)\n```$/);
+    if (!fence) {
+      fail(
+        "docs/plugins.md: inert example block must be a single ```json fenced code block",
+      );
+    } else {
+      let documented;
+      try {
+        documented = JSON.parse(fence[1]);
+      } catch (error) {
+        fail(
+          `docs/plugins.md: inert example JSON parse failed: ${error.message}`,
+        );
+        documented = loadFailed;
+      }
+      if (
+        documented !== loadFailed &&
+        JSON.stringify(documented) !== JSON.stringify(pluginManifestInertExample)
+      ) {
+        fail(
+          "docs/plugins.md: inert example JSON must exactly match packages/schemas/contracts/plugin-manifest.inert.example.json",
+        );
+      }
+    }
+  }
+
+  if (!pluginsDoc.includes("plugin-manifest.inert.example.json")) {
+    fail("docs/plugins.md: does not name the inert example fixture path plugin-manifest.inert.example.json");
+  }
+  if (!pluginsDoc.includes("plugin-manifest.schema.json")) {
+    fail("docs/plugins.md: does not name plugin-manifest.schema.json");
+  }
+}
+
+if (schemasReadmeHasContent) {
+  if (!schemasReadme.includes("plugin-manifest.inert.example.json")) {
+    fail(
+      "packages/schemas/README.md: does not name the inert example fixture path plugin-manifest.inert.example.json",
+    );
+  }
+}
+
 if (errors.length > 0) {
   for (const e of errors) console.error(`contract check FAIL: ${e}`);
   console.error(`contract check FAILED — ${errors.length} error(s)`);
   process.exit(1);
 }
 console.log(
-  `contract check OK — ${authoringJobCount} shared authoring jobs valid, doc table matches, E1+E2 bound to one list; plugin capability registry 1.0.0 seed empty and schema-locked`,
+  `contract check OK — ${authoringJobCount} shared authoring jobs valid, doc table matches, E1+E2 bound to one list; plugin capability registry 1.0.0 seed empty and schema-locked; plugin-manifest inert example schema-locked`,
 );

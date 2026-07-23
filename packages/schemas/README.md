@@ -17,13 +17,19 @@ semantics and the SceneAxi-versus-adapter boundary.
 ## Plugin Manifest (sceneaxi#20 / ADR 0005)
 
 - `contracts/plugin-manifest.schema.json` — v1 capability-manifest descriptor
+  (export: `@sceneaxi/schemas/contracts/plugin-manifest.schema.json`)
+- `contracts/plugin-manifest.inert.example.json` — checked-in inert noop example
+  matching `docs/plugins.md` (export:
+  `@sceneaxi/schemas/contracts/plugin-manifest.inert.example.json`)
 - TypeScript: `PluginManifest`, `validatePluginManifest`, `parsePluginManifestText`,
-  `inertPluginManifestFixture`
+  `inertPluginManifestFixture`, `PLUGIN_MANIFEST_PATH`, `PLUGIN_MANIFEST_SCHEMA_URI`
 - Shape-only contract; host runtime lives in
   [`@sceneaxi/plugin-host`](../plugin-host/README.md), which owns the
-  deterministic load/refuse fixture matrix (sceneaxi#23)
+  deterministic load/refuse fixture matrix (sceneaxi#23) and refusal guidance
+  (sceneaxi#24)
 - Fixed package path: `sceneaxi.plugin.manifest.json` (`PLUGIN_MANIFEST_PATH`)
 - Agent overview: [`docs/plugins.md`](../../docs/plugins.md)
+- Drift between schema, inert example, and docs is enforced by `pnpm check:contracts`
 
 ## Plugin Capability ID Registry (sceneaxi#21 / ADR 0005)
 
@@ -35,6 +41,10 @@ semantics and the SceneAxi-versus-adapter boundary.
   `emptyPluginCapabilityRegistrySeed`
 - IDs are explicit registry keys only; lookup miss is typed
   (`reason: "unknown-capability"`) for host fail-closed refusal
+- **Absent ID means stop.** Do not invent a manifest hook, renderer/physics/storage
+  port, engine-private import, or tutorial-only capability string. Propose a
+  public semantic contract and a reviewed registry row first; only then declare
+  the ID in a plugin manifest. See [`docs/plugins.md`](../../docs/plugins.md).
 - Drift between schema, seed artifact, and docs is enforced by `pnpm check:contracts`
 
 <!-- plugin-capability-registry:seed-state -->
