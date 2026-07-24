@@ -8,6 +8,7 @@ import {
   OBJECT_SCULPT_SPEC_KIND,
   SCULPT_ARTIFACT_KIND,
   SCULPT_SCHEMA_VERSION,
+  projectAnimationReadyHierarchy,
   type SculptArtifact,
 } from "@sceneaxi/schemas";
 
@@ -33,47 +34,56 @@ function artifact(): SculptArtifact {
       transform: { ...identity, translation: [0, 1.25, 0] },
     },
   ] as const;
+  const spec = {
+    schemaVersion: SCULPT_SCHEMA_VERSION,
+    kind: OBJECT_SCULPT_SPEC_KIND,
+    id: "kernel-fixture",
+    rootNodeId: "body-node",
+    complexityClass: "simple" as const,
+    passes: [
+      { id: "blockout", deterministic: true as const, steps: ["establish-volume"] },
+      { id: "structure", deterministic: true as const, steps: ["place-components"] },
+      { id: "materials", deterministic: true as const, steps: ["assign-materials"] },
+      { id: "sockets", deterministic: true as const, steps: ["bind-sockets"] },
+    ],
+    materials: [
+      { id: "main", baseColor: "#4488cc", metallic: 0.1, roughness: 0.6 },
+    ],
+    components: [
+      { id: "body", primitive: "box" as const, dimensions: [2, 2, 2] as const, materialId: "main" },
+      { id: "cap", primitive: "sphere" as const, dimensions: [1, 1, 1] as const, materialId: "main" },
+    ],
+    hierarchy,
+    sockets: [
+      {
+        id: "cap-bob",
+        nodeId: "cap-node",
+        kind: "animation" as const,
+        axis: "y" as const,
+        amplitude: 0.25,
+        frequencyHz: 1,
+      },
+      {
+        id: "cap-attachment",
+        nodeId: "cap-node",
+        kind: "attachment" as const,
+        axis: "y" as const,
+        amplitude: 0,
+        frequencyHz: 0,
+      },
+    ],
+  };
   return {
     schemaVersion: SCULPT_SCHEMA_VERSION,
     kind: SCULPT_ARTIFACT_KIND,
     artifactId: "kernel-fixture-artifact",
-    spec: {
-      schemaVersion: SCULPT_SCHEMA_VERSION,
-      kind: OBJECT_SCULPT_SPEC_KIND,
-      id: "kernel-fixture",
-      rootNodeId: "body-node",
-      complexityClass: "simple",
-      passes: [
-        { id: "blockout", deterministic: true, steps: ["establish-volume"] },
-        { id: "structure", deterministic: true, steps: ["place-components"] },
-        { id: "materials", deterministic: true, steps: ["assign-materials"] },
-        { id: "sockets", deterministic: true, steps: ["bind-sockets"] },
-      ],
-      materials: [
-        { id: "main", baseColor: "#4488cc", metallic: 0.1, roughness: 0.6 },
-      ],
-      components: [
-        { id: "body", primitive: "box", dimensions: [2, 2, 2], materialId: "main" },
-        { id: "cap", primitive: "sphere", dimensions: [1, 1, 1], materialId: "main" },
-      ],
-      hierarchy,
-      sockets: [
-        {
-          id: "cap-bob",
-          nodeId: "cap-node",
-          kind: "animation",
-          axis: "y",
-          amplitude: 0.25,
-          frequencyHz: 1,
-        },
-      ],
-    },
+    spec,
     proceduralModule: {
       moduleId: "sceneaxi/kernel-fixture",
       exportName: "buildKernelFixture",
       sourceDigest: digest("c"),
     },
-    runtimeHierarchy: { rootNodeId: "body-node", nodes: hierarchy },
+    runtimeHierarchy: projectAnimationReadyHierarchy(spec),
     evidence: {
       method: "structured-fixture",
       intakeDigest: digest("a"),
@@ -107,7 +117,9 @@ describe("kernel sculpt session", () => {
 
     session.advance({ tick: 1, deltaMs: 250 });
     const after = session.observe();
-    expect(after.sockets[0]?.value).not.toBe(before.sockets[0]?.value);
+    expect(after.sockets.find((socket) => socket.id === "cap-bob")?.value).not.toBe(
+      before.sockets.find((socket) => socket.id === "cap-bob")?.value,
+    );
     expect(after.tick).toBe(1);
     expect(after.elapsedMs).toBe(250);
   });

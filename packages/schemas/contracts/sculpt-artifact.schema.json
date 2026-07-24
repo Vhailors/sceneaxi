@@ -21,10 +21,17 @@
     },
     "runtimeHierarchy": {
       "type": "object", "additionalProperties": false,
-      "required": ["rootNodeId", "nodes"],
+      "required": ["schemaVersion", "kind", "rootNodeId", "nodes", "pivots", "sockets", "colliders", "materials", "attachments"],
       "properties": {
+        "schemaVersion": { "const": 1 },
+        "kind": { "const": "sceneaxi.animation-ready-hierarchy" },
         "rootNodeId": { "$ref": "#/$defs/id" },
-        "nodes": { "type": "array", "minItems": 1, "items": { "$ref": "https://sceneaxi.invalid/contracts/object-sculpt-spec/v1#/$defs/hierarchyNode" } }
+        "nodes": { "type": "array", "minItems": 1, "items": { "$ref": "https://sceneaxi.invalid/contracts/object-sculpt-spec/v1#/$defs/hierarchyNode" } },
+        "pivots": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/pivot" } },
+        "sockets": { "type": "array", "minItems": 1, "items": { "$ref": "https://sceneaxi.invalid/contracts/object-sculpt-spec/v1#/$defs/socket" } },
+        "colliders": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/collider" } },
+        "materials": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/materialBinding" } },
+        "attachments": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/attachment" } }
       }
     },
     "evidence": {
@@ -48,6 +55,61 @@
   },
   "$defs": {
     "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
-    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "vector3": {
+      "type": "array",
+      "prefixItems": [{ "type": "number" }, { "type": "number" }, { "type": "number" }],
+      "items": false,
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "positiveVector3": {
+      "type": "array",
+      "prefixItems": [
+        { "type": "number", "exclusiveMinimum": 0 },
+        { "type": "number", "exclusiveMinimum": 0 },
+        { "type": "number", "exclusiveMinimum": 0 }
+      ],
+      "items": false,
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "pivot": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "nodeId", "origin"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "nodeId": { "$ref": "#/$defs/id" },
+        "origin": { "$ref": "#/$defs/vector3" }
+      }
+    },
+    "collider": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "nodeId", "shape", "dimensions", "isTrigger"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "nodeId": { "$ref": "#/$defs/id" },
+        "shape": { "enum": ["box", "cylinder", "sphere"] },
+        "dimensions": { "$ref": "#/$defs/positiveVector3" },
+        "isTrigger": { "type": "boolean" }
+      }
+    },
+    "materialBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["nodeId", "materialId"],
+      "properties": {
+        "nodeId": { "$ref": "#/$defs/id" },
+        "materialId": { "$ref": "#/$defs/id" }
+      }
+    },
+    "attachment": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "nodeId", "socketId"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "nodeId": { "$ref": "#/$defs/id" },
+        "socketId": { "$ref": "#/$defs/id" }
+      }
+    }
   }
 }

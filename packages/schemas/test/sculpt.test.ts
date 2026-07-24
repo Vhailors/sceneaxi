@@ -6,6 +6,7 @@ import {
   SCULPT_INTAKE_KIND,
   SCULPT_SCHEMA_VERSION,
   contracts,
+  projectAnimationReadyHierarchy,
   validateObjectSculptSpec,
   validateSculptArtifact,
   validateSculptIntake,
@@ -60,6 +61,14 @@ const fixtureSpec = {
       amplitude: 30,
       frequencyHz: 0.5,
     },
+    {
+      id: "lid-attachment",
+      nodeId: "crate-lid",
+      kind: "attachment",
+      axis: "x",
+      amplitude: 0,
+      frequencyHz: 0,
+    },
   ],
 } as const satisfies ObjectSculptSpec;
 
@@ -105,10 +114,7 @@ function fixtureArtifact(): SculptArtifact {
       exportName: "buildFixtureCrate",
       sourceDigest: digest("c"),
     },
-    runtimeHierarchy: {
-      rootNodeId: fixtureSpec.rootNodeId,
-      nodes: fixtureSpec.hierarchy,
-    },
+    runtimeHierarchy: projectAnimationReadyHierarchy(fixtureSpec),
     evidence: {
       method: "structured-fixture",
       intakeDigest: digest("a"),
@@ -362,6 +368,22 @@ describe("hybrid sculpt contracts", () => {
   it("accepts a package whose runtime graph and evidence bind the spec", () => {
     const artifact = fixtureArtifact();
     expect(validateSculptArtifact(artifact)).toEqual({ ok: true, value: artifact });
+  });
+
+  it.each([
+    ["pivots", "missing-runtime-pivot"],
+    ["sockets", "missing-runtime-socket"],
+    ["colliders", "missing-runtime-collider"],
+    ["materials", "missing-runtime-material"],
+    ["attachments", "missing-runtime-attachment"],
+  ] as const)("refuses incomplete animation-ready %s with a stable code", (field, code) => {
+    const artifact = structuredClone(fixtureArtifact());
+    const result = validateSculptArtifact({
+      ...artifact,
+      runtimeHierarchy: { ...artifact.runtimeHierarchy, [field]: [] },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.diagnostics[0]?.code).toBe(code);
   });
 
   it("refuses runtime hierarchy drift and unpassed evidence", () => {

@@ -10,6 +10,9 @@ export const SCULPT_SCHEMA_VERSION = 1 as const;
 export const SCULPT_INTAKE_KIND = "sceneaxi.sculpt-intake" as const;
 export const OBJECT_SCULPT_SPEC_KIND = "sceneaxi.object-sculpt-spec" as const;
 export const SCULPT_ARTIFACT_KIND = "sceneaxi.sculpt-artifact" as const;
+export const ANIMATION_READY_HIERARCHY_VERSION = 1 as const;
+export const ANIMATION_READY_HIERARCHY_KIND =
+  "sceneaxi.animation-ready-hierarchy" as const;
 export const REQUIRED_SCULPT_PASSES = Object.freeze([
   "blockout",
   "structure",
@@ -140,9 +143,41 @@ export type SculptProceduralModuleRef = {
   readonly sourceDigest: string;
 };
 
+export type SculptPivot = {
+  readonly id: string;
+  readonly nodeId: string;
+  readonly origin: Vector3;
+};
+
+export type SculptCollider = {
+  readonly id: string;
+  readonly nodeId: string;
+  readonly shape: SculptComponent["primitive"];
+  readonly dimensions: Vector3;
+  readonly isTrigger: boolean;
+};
+
+export type SculptMaterialBinding = {
+  readonly nodeId: string;
+  readonly materialId: string;
+};
+
+export type SculptAttachmentPoint = {
+  readonly id: string;
+  readonly nodeId: string;
+  readonly socketId: string;
+};
+
 export type SculptRuntimeHierarchy = {
+  readonly schemaVersion: typeof ANIMATION_READY_HIERARCHY_VERSION;
+  readonly kind: typeof ANIMATION_READY_HIERARCHY_KIND;
   readonly rootNodeId: string;
   readonly nodes: ReadonlyArray<SculptHierarchyNode>;
+  readonly pivots: ReadonlyArray<SculptPivot>;
+  readonly sockets: ReadonlyArray<SculptSocket>;
+  readonly colliders: ReadonlyArray<SculptCollider>;
+  readonly materials: ReadonlyArray<SculptMaterialBinding>;
+  readonly attachments: ReadonlyArray<SculptAttachmentPoint>;
 };
 
 export type SculptQualityGateEvidence = {
@@ -185,7 +220,12 @@ export type SculptDiagnosticCode =
   | "empty-sculpt-pass"
   | "missing-detail-inventory"
   | "shallow-detail-inventory"
-  | "shallow-sculpt-spec";
+  | "shallow-sculpt-spec"
+  | "missing-runtime-pivot"
+  | "missing-runtime-socket"
+  | "missing-runtime-collider"
+  | "missing-runtime-material"
+  | "missing-runtime-attachment";
 
 export type SculptDiagnostic = {
   readonly code: SculptDiagnosticCode;
@@ -679,6 +719,51 @@ export function validateSculptIntake(value: unknown): SculptValidationResult<Scu
   return { ok: true, value: value as SculptIntake };
 }
 
+/** Project a validated sculpt spec into descriptive animation-ready runtime metadata. */
+export function projectAnimationReadyHierarchy(
+  spec: ObjectSculptSpec,
+): SculptRuntimeHierarchy {
+  const components = new Map(spec.components.map((component) => [component.id, component]));
+  const attachmentSockets = spec.sockets.filter((socket) => socket.kind === "attachment");
+  return {
+    schemaVersion: ANIMATION_READY_HIERARCHY_VERSION,
+    kind: ANIMATION_READY_HIERARCHY_KIND,
+    rootNodeId: spec.rootNodeId,
+    nodes: spec.hierarchy,
+    pivots: spec.hierarchy.map((node) => ({
+      id: `${node.id}-pivot`,
+      nodeId: node.id,
+      origin: [0, 0, 0],
+    })),
+    sockets: spec.sockets,
+    colliders: spec.hierarchy.map((node) => {
+      const component = components.get(node.componentId);
+      if (component === undefined) {
+        throw new Error(`Validated sculpt node "${node.id}" has no component.`);
+      }
+      return {
+        id: `${node.id}-collider`,
+        nodeId: node.id,
+        shape: component.primitive,
+        dimensions: component.dimensions,
+        isTrigger: false,
+      };
+    }),
+    materials: spec.hierarchy.map((node) => {
+      const component = components.get(node.componentId);
+      if (component === undefined) {
+        throw new Error(`Validated sculpt node "${node.id}" has no component.`);
+      }
+      return { nodeId: node.id, materialId: component.materialId };
+    }),
+    attachments: attachmentSockets.map((socket) => ({
+      id: `${socket.id}-point`,
+      nodeId: socket.nodeId,
+      socketId: socket.id,
+    })),
+  };
+}
+
 /** Validate a complete SceneAxi-owned Sculpt Artifact package. */
 export function validateSculptArtifact(value: unknown): SculptValidationResult<SculptArtifact> {
   if (!isJsonObject(value)) return refuse("not-object", "$", "Sculpt Artifact must be a JSON object.");
@@ -700,10 +785,66 @@ export function validateSculptArtifact(value: unknown): SculptValidationResult<S
 
   const runtime = value["runtimeHierarchy"];
   if (!isJsonObject(runtime)) return refuse("invalid-field", "$.runtimeHierarchy", "runtimeHierarchy must be an object.");
-  const runtimeFields = exactFields(runtime, ["rootNodeId", "nodes"], [], "$.runtimeHierarchy");
+  for (const [field, code] of [
+    ["pivots", "missing-runtime-pivot"],
+    ["sockets", "missing-runtime-socket"],
+    ["colliders", "missing-runtime-collider"],
+    ["materials", "missing-runtime-material"],
+    ["attachments", "missing-runtime-attachment"],
+  ] as const) {
+    if (!Object.hasOwn(runtime, field)) {
+      return refuse(code, `$.runtimeHierarchy.${field}`, `Animation-ready hierarchy requires ${field}.`);
+    }
+  }
+  const runtimeFields = exactFields(
+    runtime,
+    ["schemaVersion", "kind", "rootNodeId", "nodes", "pivots", "sockets", "colliders", "materials", "attachments"],
+    [],
+    "$.runtimeHierarchy",
+  );
   if (runtimeFields !== null) return { ok: false, diagnostics: [runtimeFields] };
+  if (runtime["schemaVersion"] !== ANIMATION_READY_HIERARCHY_VERSION) {
+    return refuse(
+      "schema-major-mismatch",
+      "$.runtimeHierarchy.schemaVersion",
+      `Animation-ready hierarchy schema major must be ${ANIMATION_READY_HIERARCHY_VERSION}.`,
+    );
+  }
+  if (runtime["kind"] !== ANIMATION_READY_HIERARCHY_KIND) {
+    return refuse(
+      "invalid-kind",
+      "$.runtimeHierarchy.kind",
+      `kind must be "${ANIMATION_READY_HIERARCHY_KIND}".`,
+    );
+  }
   if (runtime["rootNodeId"] !== spec.value.rootNodeId || JSON.stringify(runtime["nodes"]) !== JSON.stringify(spec.value.hierarchy)) {
     return refuse("invalid-hierarchy", "$.runtimeHierarchy", "Runtime hierarchy must exactly project the validated spec hierarchy.");
+  }
+  if (JSON.stringify(runtime["sockets"]) !== JSON.stringify(spec.value.sockets)) {
+    return refuse(
+      "missing-runtime-socket",
+      "$.runtimeHierarchy.sockets",
+      "Runtime sockets must exactly project the validated spec sockets.",
+    );
+  }
+  const expectedRuntime = projectAnimationReadyHierarchy(spec.value);
+  for (const [field, code] of [
+    ["pivots", "missing-runtime-pivot"],
+    ["colliders", "missing-runtime-collider"],
+    ["materials", "missing-runtime-material"],
+    ["attachments", "missing-runtime-attachment"],
+  ] as const) {
+    if (
+      !Array.isArray(runtime[field]) ||
+      runtime[field].length === 0 ||
+      JSON.stringify(runtime[field]) !== JSON.stringify(expectedRuntime[field])
+    ) {
+      return refuse(
+        code,
+        `$.runtimeHierarchy.${field}`,
+        `Runtime ${field} must exactly project the validated spec.`,
+      );
+    }
   }
 
   const evidence = value["evidence"];

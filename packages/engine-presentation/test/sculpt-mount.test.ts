@@ -13,6 +13,7 @@ import {
   OBJECT_SCULPT_SPEC_KIND,
   SCULPT_ARTIFACT_KIND,
   SCULPT_SCHEMA_VERSION,
+  projectAnimationReadyHierarchy,
   type SculptArtifact,
 } from "@sceneaxi/schemas";
 
@@ -33,38 +34,48 @@ function fixtureArtifact(): SculptArtifact {
       transform: { ...transform, translation: [0, 1.25, 0] },
     },
   ] as const;
+  const spec = {
+    schemaVersion: SCULPT_SCHEMA_VERSION,
+    kind: OBJECT_SCULPT_SPEC_KIND,
+    id: "fixture-crate",
+    rootNodeId: "crate",
+    complexityClass: "simple" as const,
+    passes: [
+      { id: "blockout", deterministic: true as const, steps: ["establish-volume"] },
+      { id: "structure", deterministic: true as const, steps: ["place-components"] },
+      { id: "materials", deterministic: true as const, steps: ["assign-materials"] },
+      { id: "sockets", deterministic: true as const, steps: ["bind-sockets"] },
+    ],
+    materials: [
+      { id: "wood", baseColor: "#885522", metallic: 0, roughness: 0.8 },
+    ],
+    components: [
+      { id: "body", primitive: "box" as const, dimensions: [2, 2, 2] as const, materialId: "wood" },
+      { id: "cap", primitive: "cylinder" as const, dimensions: [1, 0.5, 1] as const, materialId: "wood" },
+    ],
+    hierarchy,
+    sockets: [
+      {
+        id: "cap-attachment",
+        nodeId: "cap",
+        kind: "attachment" as const,
+        axis: "y" as const,
+        amplitude: 0,
+        frequencyHz: 0,
+      },
+    ],
+  };
   return {
     schemaVersion: SCULPT_SCHEMA_VERSION,
     kind: SCULPT_ARTIFACT_KIND,
     artifactId: "fixture-crate-artifact",
-    spec: {
-      schemaVersion: SCULPT_SCHEMA_VERSION,
-      kind: OBJECT_SCULPT_SPEC_KIND,
-      id: "fixture-crate",
-      rootNodeId: "crate",
-      complexityClass: "simple",
-      passes: [
-        { id: "blockout", deterministic: true, steps: ["establish-volume"] },
-        { id: "structure", deterministic: true, steps: ["place-components"] },
-        { id: "materials", deterministic: true, steps: ["assign-materials"] },
-        { id: "sockets", deterministic: true, steps: ["bind-sockets"] },
-      ],
-      materials: [
-        { id: "wood", baseColor: "#885522", metallic: 0, roughness: 0.8 },
-      ],
-      components: [
-        { id: "body", primitive: "box", dimensions: [2, 2, 2], materialId: "wood" },
-        { id: "cap", primitive: "cylinder", dimensions: [1, 0.5, 1], materialId: "wood" },
-      ],
-      hierarchy,
-      sockets: [],
-    },
+    spec,
     proceduralModule: {
       moduleId: "sceneaxi/fixture-crate",
       exportName: "buildFixtureCrate",
       sourceDigest: digest("c"),
     },
-    runtimeHierarchy: { rootNodeId: "crate", nodes: hierarchy },
+    runtimeHierarchy: projectAnimationReadyHierarchy(spec),
     evidence: {
       method: "structured-fixture",
       intakeDigest: digest("a"),

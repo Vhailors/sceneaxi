@@ -50,6 +50,14 @@ function fixtureSpec(): ObjectSculptSpec {
         amplitude: 0.1,
         frequencyHz: 1,
       },
+      {
+        id: "crate-attachment",
+        nodeId: "crate",
+        kind: "attachment",
+        axis: "y",
+        amplitude: 0,
+        frequencyHz: 0,
+      },
     ],
   };
 }
@@ -94,7 +102,8 @@ describe("SceneAxi sculpt reconstruction", () => {
     expect(result.artifact.artifactId).toBe("demo-lantern-artifact");
     expect(result.artifact.evidence.method).toBe("image-brief-reconstruction");
     expect(result.artifact.spec.hierarchy).toHaveLength(2);
-    expect(result.artifact.spec.sockets).toHaveLength(1);
+    expect(result.artifact.spec.sockets).toHaveLength(2);
+    expect(result.artifact.runtimeHierarchy.attachments).toHaveLength(1);
     expect(validateSculptArtifact(result.artifact).ok).toBe(true);
   });
 

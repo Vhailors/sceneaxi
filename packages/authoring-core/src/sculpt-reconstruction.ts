@@ -4,6 +4,7 @@ import {
   OBJECT_SCULPT_SPEC_KIND,
   SCULPT_ARTIFACT_KIND,
   SCULPT_SCHEMA_VERSION,
+  projectAnimationReadyHierarchy,
   validateSculptArtifact,
   validateSculptIntake,
   type JsonValue,
@@ -165,6 +166,14 @@ function specFromImageAndBrief(intake: Extract<SculptIntake, { mode: "image+brie
         amplitude: 0.2,
         frequencyHz: 1,
       },
+      {
+        id: "detail-attachment",
+        nodeId: detailId,
+        kind: "attachment",
+        axis: "y",
+        amplitude: 0,
+        frequencyHz: 0,
+      },
     ],
   };
 }
@@ -213,10 +222,7 @@ export function reconstructSculpt(intakeValue: unknown): SculptReconstructionRes
       exportName: PIPELINE_EXPORT_NAME,
       sourceDigest: moduleDigest,
     },
-    runtimeHierarchy: {
-      rootNodeId: spec.rootNodeId,
-      nodes: spec.hierarchy,
-    },
+    runtimeHierarchy: projectAnimationReadyHierarchy(spec),
     evidence: {
       method: intake.mode === "structured-spec" ? "structured-fixture" : "image-brief-reconstruction",
       intakeDigest: digestJson(intake as unknown as JsonValue),

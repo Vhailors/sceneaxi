@@ -45,6 +45,14 @@
         "axis": "y",
         "amplitude": 0.25,
         "frequencyHz": 1
+      },
+      {
+        "id": "cap-attachment",
+        "nodeId": "cap-node",
+        "kind": "attachment",
+        "axis": "y",
+        "amplitude": 0,
+        "frequencyHz": 0
       }
     ],
     "hierarchy": [

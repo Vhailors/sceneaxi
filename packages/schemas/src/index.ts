@@ -280,6 +280,8 @@ export {
 } from "./profile-conformance-suite.js";
 
 export {
+  ANIMATION_READY_HIERARCHY_KIND,
+  ANIMATION_READY_HIERARCHY_VERSION,
   OBJECT_SCULPT_SPEC_KIND,
   REQUIRED_SCULPT_PASSES,
   SCULPT_ARTIFACT_KIND,
@@ -288,6 +290,7 @@ export {
   SCULPT_SCHEMA_VERSION,
   isSculptIdentifier,
   isSculptTransform,
+  projectAnimationReadyHierarchy,
   validateObjectSculptSpec,
   validateSculptArtifact,
   validateSculptIntake,
@@ -295,8 +298,10 @@ export {
 export type {
   ObjectSculptSpec,
   RequiredSculptPassId,
+  SculptAttachmentPoint,
   SculptArtifact,
   SculptComponent,
+  SculptCollider,
   SculptDiagnostic,
   SculptDiagnosticCode,
   SculptDetailInventory,
@@ -306,7 +311,9 @@ export type {
   SculptIntake,
   SculptIntakeMode,
   SculptMaterial,
+  SculptMaterialBinding,
   SculptPass,
+  SculptPivot,
   SculptProceduralModuleRef,
   SculptQualityGateEvidence,
   SculptRuntimeHierarchy,
