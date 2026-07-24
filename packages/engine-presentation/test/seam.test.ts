@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { seam } from "@sceneaxi/engine-presentation";
+import {
+  createNullPresentationRuntime,
+  seam,
+} from "@sceneaxi/engine-presentation";
 
 const manifest = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf8"),
@@ -15,5 +18,9 @@ describe("@sceneaxi/engine-presentation public seam", () => {
   it("is immutable", () => {
     expect(typeof seam).toBe("object");
     expect(Object.isFrozen(seam)).toBe(true);
+  });
+
+  it("exports the null Presentation Runtime factory", () => {
+    expect(typeof createNullPresentationRuntime).toBe("function");
   });
 });

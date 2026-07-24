@@ -20,6 +20,9 @@ import {
   replay,
   type ProductManifest,
 } from "../../packages/engine-kernel/src/index.ts";
+import {
+  createNullPresentationRuntime,
+} from "../../packages/engine-presentation/src/index.ts";
 import { describe, expect, it } from "vitest";
 
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
@@ -36,6 +39,7 @@ const STEP_NAMES = Object.freeze([
   "kernel-open",
   "kernel-dispatch-advance",
   "kernel-observe",
+  "presentation-null-frame",
   "kernel-save-replay",
   "held-key-refuse-currency-unavailable",
   "emit-stable-evidence",
@@ -198,6 +202,14 @@ describe("issue #51 CLI golden path", () => {
         expect(snapshot.tick).toBe(1);
         expect(snapshot.entities).toEqual([{ id: "hero", x: 5, y: 0 }]);
         return snapshot;
+      });
+
+      namedStep("presentation-null-frame", () => {
+        const presenter = createNullPresentationRuntime();
+        presenter.mount();
+        presenter.present(terminalSnapshot, [], 0);
+        expect(presenter.capture()).toBeNull();
+        presenter.dispose();
       });
 
       const saved = namedStep("kernel-save-replay", () => {
