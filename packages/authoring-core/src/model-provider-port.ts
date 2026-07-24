@@ -133,10 +133,22 @@ export type CreateModelProviderPortOptions = Readonly<{
   ) => void | Promise<void>;
 }>;
 
-type ModelProviderPreflight<Request extends ModelProviderRequest> =
+type ModelProviderAdapterDispatch<
+  Request extends ModelProviderRequest,
+  Response,
+> = (
+  request: Request,
+) =>
+  | ModelProviderAdapterSuccess<Response>
+  | Promise<ModelProviderAdapterSuccess<Response>>;
+
+type ModelProviderPreflight<
+  Request extends ModelProviderRequest,
+  Response,
+> =
   | Readonly<{
       ok: true;
-      adapter: ModelProviderAdapter;
+      dispatch: ModelProviderAdapterDispatch<Request, Response> | undefined;
       request: Request;
     }>
   | ModelProviderRefuse;
@@ -258,9 +270,17 @@ function snapshotModelDescriptor(value: ModelDescriptor): ModelDescriptor {
   });
 }
 
-function snapshotCompleteRequest(
-  request: ModelCompleteRequest,
-): ModelCompleteRequest {
+type ModelPromptRequest<Operation extends "complete" | "stream"> = Readonly<{
+  schemaVersion: typeof MODEL_PROVIDER_PORT_SCHEMA_VERSION;
+  operation: Operation;
+  profile: ModelProviderProfile;
+  model: ModelDescriptor;
+  prompt: string;
+}>;
+
+function snapshotPromptRequest<Operation extends "complete" | "stream">(
+  request: ModelPromptRequest<Operation>,
+): ModelPromptRequest<Operation> {
   return Object.freeze({
     schemaVersion: request.schemaVersion,
     operation: request.operation,
@@ -293,13 +313,31 @@ function snapshotToolCallRequest(
   });
 }
 
-function snapshotStreamRequest(request: ModelStreamRequest): ModelStreamRequest {
+function snapshotCompleteResponse(
+  response: ModelCompleteResponse,
+): ModelCompleteResponse {
   return Object.freeze({
-    schemaVersion: request.schemaVersion,
-    operation: request.operation,
-    profile: request.profile,
-    model: snapshotModelDescriptor(request.model),
-    prompt: request.prompt,
+    schemaVersion: response.schemaVersion,
+    operation: response.operation,
+    text: response.text,
+    finishReason: response.finishReason,
+  });
+}
+
+function snapshotToolCallResponse(
+  response: ModelToolCallResponse,
+): ModelToolCallResponse {
+  return Object.freeze({
+    schemaVersion: response.schemaVersion,
+    operation: response.operation,
+    toolCalls: Object.freeze(
+      response.toolCalls.map((toolCall) =>
+        Object.freeze({
+          name: toolCall.name,
+          arguments: snapshotJsonObject(toolCall.arguments),
+        }),
+      ),
+    ),
   });
 }
 
@@ -477,29 +515,29 @@ function evidenceFor(
   request: ModelProviderRequest,
   executedModel: ModelDescriptor,
 ) {
-  const model = Object.freeze({
-    model: executedModel.model,
-    provider: executedModel.provider,
-    quantization: executedModel.quantization,
-    version: executedModel.version,
-  });
   return Object.freeze({
     schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
     kind: MODEL_PROVIDER_CALL_EVIDENCE_KIND,
     operation: request.operation,
     profile: request.profile,
-    model,
+    model: snapshotModelDescriptor(executedModel),
   }) satisfies ModelProviderCallEvidence;
 }
 
 export function createModelProviderPort(
   options: CreateModelProviderPortOptions,
 ): ModelProviderPort {
-  const preflight = async <Request extends ModelProviderRequest>(
+  const preflight = async <
+    Request extends ModelProviderRequest,
+    Response,
+  >(
     request: Request,
     expectedOperation: Request["operation"],
     snapshotRequest: (request: Request) => Request,
-  ): Promise<ModelProviderPreflight<Request>> => {
+    selectDispatch: (
+      adapter: ModelProviderAdapter,
+    ) => ModelProviderAdapterDispatch<Request, Response> | undefined,
+  ): Promise<ModelProviderPreflight<Request, Response>> => {
     if (!isRecord(request)) {
       return refuse(
         MODEL_PROVIDER_REFUSE_REASONS.requestInvalid,
@@ -558,6 +596,12 @@ export function createModelProviderPort(
     }
 
     const capabilities = snapshotCapabilities(adapterCapabilities);
+    const operationMethod = selectDispatch(adapter);
+    const dispatch =
+      operationMethod === undefined
+        ? undefined
+        : (requestToDispatch: Request) =>
+            operationMethod.call(adapter, requestToDispatch);
     const policy = Object.hasOwn(
       options.profilePolicies,
       validatedRequest.profile,
@@ -595,13 +639,14 @@ export function createModelProviderPort(
       );
     }
 
-    return Object.freeze({ ok: true, adapter, request: validatedRequest });
+    return Object.freeze({ ok: true, dispatch, request: validatedRequest });
   };
 
   const succeed = async <Response>(
     request: ModelProviderRequest,
     adapterResult: unknown,
     isResponse: (value: unknown) => value is Response,
+    snapshotResponse: (response: Response) => Response,
   ): Promise<ModelProviderResult<Response>> => {
     if (!isAdapterSuccess(adapterResult)) {
       return refuse(
@@ -615,11 +660,12 @@ export function createModelProviderPort(
         `The adapter returned an invalid '${request.operation}' response envelope; success refused.`,
       );
     }
+    const response = snapshotResponse(adapterResult.response);
     const evidence = evidenceFor(request, adapterResult.executedModel);
     await options.recordEvidence?.(evidence);
     return Object.freeze({
       ok: true,
-      response: adapterResult.response,
+      response,
       evidence,
     });
   };
@@ -695,11 +741,12 @@ export function createModelProviderPort(
       const ready = await preflight(
         request,
         "complete",
-        snapshotCompleteRequest,
+        snapshotPromptRequest,
+        (adapter) => adapter.complete,
       );
       if (!ready.ok) return ready;
-      const { adapter, request: validatedRequest } = ready;
-      if (adapter.complete === undefined) {
+      const { dispatch, request: validatedRequest } = ready;
+      if (dispatch === undefined) {
         return refuse(
           MODEL_PROVIDER_REFUSE_REASONS.capabilityUnsupported,
           "The configured adapter does not implement 'complete'.",
@@ -707,8 +754,9 @@ export function createModelProviderPort(
       }
       return succeed<ModelCompleteResponse>(
         validatedRequest,
-        await adapter.complete(validatedRequest),
+        await dispatch(validatedRequest),
         isCompleteResponse,
+        snapshotCompleteResponse,
       );
     },
 
@@ -717,10 +765,11 @@ export function createModelProviderPort(
         request,
         "tool-call",
         snapshotToolCallRequest,
+        (adapter) => adapter.toolCall,
       );
       if (!ready.ok) return ready;
-      const { adapter, request: validatedRequest } = ready;
-      if (adapter.toolCall === undefined) {
+      const { dispatch, request: validatedRequest } = ready;
+      if (dispatch === undefined) {
         return refuse(
           MODEL_PROVIDER_REFUSE_REASONS.capabilityUnsupported,
           "The configured adapter does not implement 'tool-call'.",
@@ -728,16 +777,22 @@ export function createModelProviderPort(
       }
       return succeed<ModelToolCallResponse>(
         validatedRequest,
-        await adapter.toolCall(validatedRequest),
+        await dispatch(validatedRequest),
         isToolCallResponse,
+        snapshotToolCallResponse,
       );
     },
 
     async stream(request) {
-      const ready = await preflight(request, "stream", snapshotStreamRequest);
+      const ready = await preflight(
+        request,
+        "stream",
+        snapshotPromptRequest,
+        (adapter) => adapter.stream,
+      );
       if (!ready.ok) return ready;
-      const { adapter, request: validatedRequest } = ready;
-      if (adapter.stream === undefined) {
+      const { dispatch, request: validatedRequest } = ready;
+      if (dispatch === undefined) {
         return refuse(
           MODEL_PROVIDER_REFUSE_REASONS.capabilityUnsupported,
           "The configured adapter does not implement 'stream'.",
@@ -745,7 +800,7 @@ export function createModelProviderPort(
       }
       return succeedStream(
         validatedRequest,
-        await adapter.stream(validatedRequest),
+        await dispatch(validatedRequest),
       );
     },
   });

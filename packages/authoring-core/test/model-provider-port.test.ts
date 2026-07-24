@@ -690,6 +690,180 @@ describe("Model Provider Port", () => {
     expect(Object.isFrozen(dispatched[0]?.model)).toBe(true);
   });
 
+  it("captures the authorized dispatch method before awaiting policy", async () => {
+    let releasePolicy = () => {};
+    let policyStarted = () => {};
+    const policyWaiting = new Promise<void>((resolve) => {
+      releasePolicy = resolve;
+    });
+    const started = new Promise<void>((resolve) => {
+      policyStarted = resolve;
+    });
+    const calls: string[] = [];
+    const adapter = {
+      ...fakeAdapter(),
+      async complete(request) {
+        calls.push("authorized");
+        return {
+          response: {
+            schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+            operation: "complete" as const,
+            text: `authorized:${request.prompt}`,
+            finishReason: "stop" as const,
+          },
+          executedModel: model,
+        };
+      },
+    } satisfies ModelProviderAdapter;
+    const port = createModelProviderPort({
+      adapter,
+      profilePolicies: {
+        "@sceneaxi/profile-game": async () => {
+          policyStarted();
+          await policyWaiting;
+          return { ok: true };
+        },
+      },
+    });
+
+    const resultPromise = port.complete({
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      operation: "complete",
+      profile: "@sceneaxi/profile-game",
+      model,
+      prompt: "dispatch snapshot",
+    });
+    await started;
+    adapter.complete = async (request) => {
+      calls.push("replacement");
+      return {
+        response: {
+          schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+          operation: "complete",
+          text: `replacement:${request.prompt}`,
+          finishReason: "stop",
+        },
+        executedModel: model,
+      };
+    };
+    releasePolicy();
+    const result = await resultPromise;
+
+    expect(result).toMatchObject({
+      ok: true,
+      response: { text: "authorized:dispatch snapshot" },
+    });
+    expect(calls).toEqual(["authorized"]);
+  });
+
+  it("returns deep response snapshots across evidence awaits", async () => {
+    let releaseCompleteEvidence = () => {};
+    let completeEvidenceStarted = () => {};
+    const completeEvidenceWaiting = new Promise<void>((resolve) => {
+      releaseCompleteEvidence = resolve;
+    });
+    const completeStarted = new Promise<void>((resolve) => {
+      completeEvidenceStarted = resolve;
+    });
+    let releaseToolEvidence = () => {};
+    let toolEvidenceStarted = () => {};
+    const toolEvidenceWaiting = new Promise<void>((resolve) => {
+      releaseToolEvidence = resolve;
+    });
+    const toolStarted = new Promise<void>((resolve) => {
+      toolEvidenceStarted = resolve;
+    });
+    const completeResponse = {
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      operation: "complete" as const,
+      text: "original complete",
+      finishReason: "stop" as const,
+    };
+    const toolCallResponse = {
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      operation: "tool-call" as const,
+      toolCalls: [
+        {
+          name: "original-tool",
+          arguments: { nested: { value: "original" } },
+        },
+      ],
+    };
+    let evidenceCall = 0;
+    const port = createModelProviderPort({
+      adapter: {
+        ...fakeAdapter(),
+        async complete() {
+          return { response: completeResponse, executedModel: model };
+        },
+        async toolCall() {
+          return { response: toolCallResponse, executedModel: model };
+        },
+      },
+      profilePolicies: { "@sceneaxi/profile-game": allow },
+      async recordEvidence() {
+        evidenceCall += 1;
+        if (evidenceCall === 1) {
+          completeEvidenceStarted();
+          await completeEvidenceWaiting;
+          return;
+        }
+        toolEvidenceStarted();
+        await toolEvidenceWaiting;
+      },
+    });
+
+    const completePromise = port.complete({
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      operation: "complete",
+      profile: "@sceneaxi/profile-game",
+      model,
+      prompt: "response snapshot",
+    });
+    await completeStarted;
+    completeResponse.text = "mutated complete";
+    releaseCompleteEvidence();
+    const complete = await completePromise;
+
+    const toolCallPromise = port.toolCall({
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      operation: "tool-call",
+      profile: "@sceneaxi/profile-game",
+      model,
+      prompt: "tool response snapshot",
+      tools: [],
+    });
+    await toolStarted;
+    toolCallResponse.toolCalls[0]!.name = "mutated-tool";
+    toolCallResponse.toolCalls[0]!.arguments.nested.value = "mutated";
+    releaseToolEvidence();
+    const toolCall = await toolCallPromise;
+
+    expect(complete).toMatchObject({
+      ok: true,
+      response: { text: "original complete" },
+    });
+    expect(toolCall).toMatchObject({
+      ok: true,
+      response: {
+        toolCalls: [
+          {
+            name: "original-tool",
+            arguments: { nested: { value: "original" } },
+          },
+        ],
+      },
+    });
+    if (!complete.ok || !toolCall.ok) return;
+    expect(Object.isFrozen(complete.response)).toBe(true);
+    expect(Object.isFrozen(toolCall.response)).toBe(true);
+    expect(Object.isFrozen(toolCall.response.toolCalls)).toBe(true);
+    expect(Object.isFrozen(toolCall.response.toolCalls[0])).toBe(true);
+    expect(
+      Object.isFrozen(toolCall.response.toolCalls[0]?.arguments.nested),
+    ).toBe(true);
+  });
+
   it("refuses malformed policy decisions before adapter dispatch", async () => {
     const malformedDecisions = [undefined, {}, { ok: "allow" }];
 
