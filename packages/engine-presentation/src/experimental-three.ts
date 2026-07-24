@@ -104,11 +104,19 @@ export function createExperimentalThreeSculptPresentationBackend(): SculptPresen
     scene.add(next);
   }
 
+  function updateTransform(instance: SculptMountedInstance) {
+    const root = roots.get(instance.instanceId);
+    if (root === undefined) {
+      throw new Error(`Mounted sculpt instance "${instance.instanceId}" disappeared.`);
+    }
+    applyTransform(root, instance.transform);
+  }
+
   return {
     id: "experimental-three",
     label: EXPERIMENTAL_THREE_NON_DECISION_LABEL,
     mount: replace,
-    update: replace,
+    update: updateTransform,
     unmount(instanceId) {
       const root = roots.get(instanceId);
       if (root === undefined) return;

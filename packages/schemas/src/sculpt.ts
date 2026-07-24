@@ -260,7 +260,12 @@ function validateImage(value: unknown, path: string): SculptDiagnostic | null {
 }
 
 function duplicate(values: readonly string[]) {
-  return values.find((value, index) => values.indexOf(value) !== index);
+  const seen = new Set<string>();
+  for (const value of values) {
+    if (seen.has(value)) return value;
+    seen.add(value);
+  }
+  return undefined;
 }
 
 function specFailure(
@@ -316,6 +321,7 @@ export function validateObjectSculptSpec(
   }
   const duplicateMaterial = duplicate(materialIds);
   if (duplicateMaterial !== undefined) return specFailure("duplicate-id", "$.materials", `Duplicate material id "${duplicateMaterial}".`);
+  const materialIdSet = new Set(materialIds);
 
   const components = value["components"];
   if (!Array.isArray(components) || components.length === 0) {
@@ -334,13 +340,14 @@ export function validateObjectSculptSpec(
     if (!isVector3(component["dimensions"], true)) {
       return specFailure("invalid-field", `${path}.dimensions`, "dimensions must contain three positive finite numbers.");
     }
-    if (!isSculptIdentifier(component["materialId"]) || !materialIds.includes(component["materialId"])) {
+    if (!isSculptIdentifier(component["materialId"]) || !materialIdSet.has(component["materialId"])) {
       return specFailure("invalid-reference", `${path}.materialId`, "Component must reference an existing material.");
     }
     componentIds.push(component["id"]);
   }
   const duplicateComponent = duplicate(componentIds);
   if (duplicateComponent !== undefined) return specFailure("duplicate-id", "$.components", `Duplicate component id "${duplicateComponent}".`);
+  const componentIdSet = new Set(componentIds);
 
   const hierarchy = value["hierarchy"];
   if (!Array.isArray(hierarchy) || hierarchy.length === 0) {
@@ -357,7 +364,7 @@ export function validateObjectSculptSpec(
     if (node["parentId"] !== null && !isSculptIdentifier(node["parentId"])) {
       return specFailure("invalid-field", `${path}.parentId`, "parentId must be null or a node id.");
     }
-    if (!isSculptIdentifier(node["componentId"]) || !componentIds.includes(node["componentId"])) {
+    if (!isSculptIdentifier(node["componentId"]) || !componentIdSet.has(node["componentId"])) {
       return specFailure("invalid-reference", `${path}.componentId`, "Node must reference an existing component.");
     }
     if (!isSculptTransform(node["transform"])) return specFailure("invalid-field", `${path}.transform`, "Node transform is invalid.");
@@ -366,20 +373,26 @@ export function validateObjectSculptSpec(
   }
   const duplicateNode = duplicate(nodeIds);
   if (duplicateNode !== undefined) return specFailure("duplicate-id", "$.hierarchy", `Duplicate node id "${duplicateNode}".`);
-  if (!nodeIds.includes(value["rootNodeId"])) return specFailure("invalid-reference", "$.rootNodeId", "rootNodeId must reference a hierarchy node.");
+  const nodeIdSet = new Set(nodeIds);
+  if (!nodeIdSet.has(value["rootNodeId"])) return specFailure("invalid-reference", "$.rootNodeId", "rootNodeId must reference a hierarchy node.");
   if (parents.get(value["rootNodeId"]) !== null) return specFailure("invalid-hierarchy", "$.rootNodeId", "Root node parentId must be null.");
   if ([...parents.values()].filter((parent) => parent === null).length !== 1) {
     return specFailure("invalid-hierarchy", "$.hierarchy", "Hierarchy must contain exactly one root.");
   }
   for (const [nodeId, parentId] of parents) {
-    if (parentId !== null && !nodeIds.includes(parentId)) return specFailure("invalid-reference", "$.hierarchy", `Node "${nodeId}" references missing parent "${parentId}".`);
-    const visited = new Set<string>();
+    if (parentId !== null && !nodeIdSet.has(parentId)) return specFailure("invalid-reference", "$.hierarchy", `Node "${nodeId}" references missing parent "${parentId}".`);
+  }
+  const resolvedNodeIds = new Set<string>();
+  for (const nodeId of nodeIds) {
+    if (resolvedNodeIds.has(nodeId)) continue;
+    const path = new Set<string>();
     let cursor: string | null | undefined = nodeId;
-    while (cursor !== null && cursor !== undefined) {
-      if (visited.has(cursor)) return specFailure("invalid-hierarchy", "$.hierarchy", `Hierarchy cycle includes "${cursor}".`);
-      visited.add(cursor);
+    while (cursor !== null && cursor !== undefined && !resolvedNodeIds.has(cursor)) {
+      if (path.has(cursor)) return specFailure("invalid-hierarchy", "$.hierarchy", `Hierarchy cycle includes "${cursor}".`);
+      path.add(cursor);
       cursor = parents.get(cursor);
     }
+    for (const resolvedNodeId of path) resolvedNodeIds.add(resolvedNodeId);
   }
 
   const sockets = value["sockets"];
@@ -391,7 +404,7 @@ export function validateObjectSculptSpec(
     const socketFields = exactFields(socket, ["id", "nodeId", "kind", "axis", "amplitude", "frequencyHz"], [], path);
     if (socketFields !== null) return { ok: false, diagnostics: [socketFields] };
     if (!isSculptIdentifier(socket["id"])) return specFailure("invalid-field", `${path}.id`, "Socket id is invalid.");
-    if (!isSculptIdentifier(socket["nodeId"]) || !nodeIds.includes(socket["nodeId"])) return specFailure("invalid-reference", `${path}.nodeId`, "Socket must reference an existing node.");
+    if (!isSculptIdentifier(socket["nodeId"]) || !nodeIdSet.has(socket["nodeId"])) return specFailure("invalid-reference", `${path}.nodeId`, "Socket must reference an existing node.");
     if (!["animation", "attachment"].includes(String(socket["kind"]))) return specFailure("invalid-field", `${path}.kind`, "Socket kind is invalid.");
     if (!["x", "y", "z"].includes(String(socket["axis"]))) return specFailure("invalid-field", `${path}.axis`, "Socket axis is invalid.");
     if (!isFiniteNumber(socket["amplitude"]) || socket["amplitude"] < 0 || !isFiniteNumber(socket["frequencyHz"]) || socket["frequencyHz"] < 0) {

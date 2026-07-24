@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, expectTypeOf, it } from "vitest";
+import { BufferGeometry, Material, Vector3 } from "three";
+import { describe, expect, expectTypeOf, it, vi } from "vitest";
 import {
   EXPERIMENTAL_THREE_NON_DECISION_LABEL,
   SculptMountError,
@@ -99,6 +100,33 @@ describe("Sculpt Mount API", () => {
     });
     expect(frame.label).toContain("non-decision");
     expect(frame.label).toContain("Stage 1 has not run");
+    mounts.dispose();
+  });
+
+  it("updates instance transforms without rebuilding mounted primitives", () => {
+    const geometryDispose = vi.spyOn(BufferGeometry.prototype, "dispose");
+    const materialDispose = vi.spyOn(Material.prototype, "dispose");
+    const vectorSet = vi.spyOn(Vector3.prototype, "set");
+    const mounts = createSculptMountApi(
+      createExperimentalThreeSculptPresentationBackend(),
+    );
+    mounts.mount({ instanceId: "crate-one", artifact: fixtureArtifact() });
+    vectorSet.mockClear();
+
+    mounts.updateTransform("crate-one", {
+      ...transform,
+      translation: [3, 0, -1],
+    });
+
+    expect(vectorSet).toHaveBeenCalledTimes(2);
+    expect(vectorSet).toHaveBeenNthCalledWith(1, 3, 0, -1);
+    expect(vectorSet).toHaveBeenNthCalledWith(2, 1, 1, 1);
+    expect(geometryDispose).not.toHaveBeenCalled();
+    expect(materialDispose).not.toHaveBeenCalled();
+
+    mounts.unmount("crate-one");
+    expect(geometryDispose).toHaveBeenCalledTimes(2);
+    expect(materialDispose).toHaveBeenCalledTimes(2);
     mounts.dispose();
   });
 

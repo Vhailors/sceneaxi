@@ -221,6 +221,29 @@ describe("hybrid sculpt contracts", () => {
     if (!cycleResult.ok) expect(cycleResult.diagnostics[0]?.code).toBe("invalid-hierarchy");
   });
 
+  it("validates a deep hierarchy without repeated ancestor walks", () => {
+    const deep = structuredClone(fixtureSpec) as unknown as {
+      rootNodeId: string;
+      hierarchy: Array<{
+        id: string;
+        parentId: string | null;
+        componentId: string;
+        transform: typeof transform;
+      }>;
+      sockets: [];
+    };
+    deep.rootNodeId = "node-0";
+    deep.hierarchy = Array.from({ length: 5_000 }, (_, index) => ({
+      id: `node-${index}`,
+      parentId: index === 0 ? null : `node-${index - 1}`,
+      componentId: "body",
+      transform,
+    }));
+    deep.sockets = [];
+
+    expect(validateObjectSculptSpec(deep)).toEqual({ ok: true, value: deep });
+  });
+
   it("accepts a package whose runtime graph and evidence bind the spec", () => {
     const artifact = fixtureArtifact();
     expect(validateSculptArtifact(artifact)).toEqual({ ok: true, value: artifact });
