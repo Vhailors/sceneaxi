@@ -8,6 +8,7 @@
 
 import {
   MODEL_PROVIDER_CALL_EVIDENCE_KIND,
+  MODEL_PROVIDER_OPERATIONS,
   MODEL_PROVIDER_PORT_SCHEMA_VERSION,
   type ModelCapabilityDescriptor,
   type ModelCompleteRequest,
@@ -26,10 +27,13 @@ import {
 
 export const MODEL_PROVIDER_REFUSE_REASONS = Object.freeze({
   schemaVersionUnsupported: "MODEL_PROVIDER_SCHEMA_VERSION_UNSUPPORTED",
+  operationMismatch: "MODEL_PROVIDER_OPERATION_MISMATCH",
   adapterMissing: "MODEL_PROVIDER_ADAPTER_MISSING",
   profilePolicyMissing: "MODEL_PROVIDER_PROFILE_POLICY_MISSING",
+  capabilityInvalid: "MODEL_PROVIDER_CAPABILITY_DESCRIPTOR_INVALID",
   capabilityUnsupported: "MODEL_PROVIDER_CAPABILITY_UNSUPPORTED",
   executedModelMissing: "MODEL_PROVIDER_EXECUTED_MODEL_MISSING",
+  responseInvalid: "MODEL_PROVIDER_RESPONSE_ENVELOPE_INVALID",
   kidsThirdPartyDenied: "THIRD_PARTY_LLM_DENIED_BY_DEFAULT",
   kidsRouteNotAllowed: "KIDS_LLM_ROUTE_NOT_ALLOWED",
 } as const);
@@ -125,6 +129,11 @@ type ModelProviderPreflight =
   | Readonly<{ ok: true; adapter: ModelProviderAdapter }>
   | ModelProviderRefuse;
 
+type AdapterSuccessEnvelope = Readonly<{
+  response: unknown;
+  executedModel: ModelDescriptor;
+}>;
+
 function refuse(reason: string, message: string): ModelProviderRefuse {
   return Object.freeze({ ok: false, reason, message });
 }
@@ -144,31 +153,170 @@ function kidsPolicyRefusal(
   );
 }
 
-function isModelDescriptor(value: unknown): value is ModelDescriptor {
-  if (typeof value !== "object" || value === null) return false;
-  const descriptor = value as Partial<Record<keyof ModelDescriptor, unknown>>;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function hasExactKeys(
+  value: Record<string, unknown>,
+  keys: ReadonlyArray<string>,
+) {
+  const actualKeys = Object.keys(value);
   return (
-    typeof descriptor.model === "string" &&
-    descriptor.model.length > 0 &&
-    typeof descriptor.provider === "string" &&
-    descriptor.provider.length > 0 &&
-    typeof descriptor.quantization === "string" &&
-    descriptor.quantization.length > 0 &&
-    typeof descriptor.version === "string" &&
-    descriptor.version.length > 0
+    actualKeys.length === keys.length &&
+    keys.every((key) => Object.hasOwn(value, key))
   );
 }
 
-function isAdapterSuccess<Response>(
-  value: unknown,
-): value is ModelProviderAdapterSuccess<Response> {
+function isModelDescriptor(value: unknown): value is ModelDescriptor {
+  if (!isRecord(value)) return false;
+  if (!hasExactKeys(value, ["model", "provider", "quantization", "version"])) {
+    return false;
+  }
   return (
-    typeof value === "object" &&
-    value !== null &&
-    "response" in value &&
-    "executedModel" in value &&
+    typeof value.model === "string" &&
+    value.model.length > 0 &&
+    typeof value.provider === "string" &&
+    value.provider.length > 0 &&
+    typeof value.quantization === "string" &&
+    value.quantization.length > 0 &&
+    typeof value.version === "string" &&
+    value.version.length > 0
+  );
+}
+
+function isCapabilityDescriptor(
+  value: unknown,
+): value is ModelCapabilityDescriptor {
+  if (!isRecord(value)) return false;
+  if (!hasExactKeys(value, ["schemaVersion", "operations"])) return false;
+  if (value.schemaVersion !== MODEL_PROVIDER_PORT_SCHEMA_VERSION) return false;
+  if (!Array.isArray(value.operations)) return false;
+  const supportedOperations = new Set<unknown>(MODEL_PROVIDER_OPERATIONS);
+  return (
+    new Set(value.operations).size === value.operations.length &&
+    value.operations.every((operation) => supportedOperations.has(operation))
+  );
+}
+
+function isAdapterSuccess(value: unknown): value is AdapterSuccessEnvelope {
+  return (
+    isRecord(value) &&
+    Object.hasOwn(value, "response") &&
+    Object.hasOwn(value, "executedModel") &&
     isModelDescriptor(value.executedModel)
   );
+}
+
+function isCompleteResponse(value: unknown): value is ModelCompleteResponse {
+  if (!isRecord(value)) return false;
+  if (
+    !hasExactKeys(value, [
+      "schemaVersion",
+      "operation",
+      "text",
+      "finishReason",
+    ])
+  ) {
+    return false;
+  }
+  return (
+    value.schemaVersion === MODEL_PROVIDER_PORT_SCHEMA_VERSION &&
+    value.operation === "complete" &&
+    typeof value.text === "string" &&
+    (value.finishReason === "stop" || value.finishReason === "length")
+  );
+}
+
+function isJsonValue(value: unknown, ancestors = new Set<object>()): boolean {
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "boolean"
+  ) {
+    return true;
+  }
+  if (typeof value === "number") return Number.isFinite(value);
+  if (typeof value !== "object") return false;
+  if (ancestors.has(value)) return false;
+  ancestors.add(value);
+  const valid = Array.isArray(value)
+    ? value.every((item) => isJsonValue(item, ancestors))
+    : Object.values(value).every((item) => isJsonValue(item, ancestors));
+  ancestors.delete(value);
+  return valid;
+}
+
+function isToolCallResponse(value: unknown): value is ModelToolCallResponse {
+  if (!isRecord(value)) return false;
+  if (!hasExactKeys(value, ["schemaVersion", "operation", "toolCalls"])) {
+    return false;
+  }
+  return (
+    value.schemaVersion === MODEL_PROVIDER_PORT_SCHEMA_VERSION &&
+    value.operation === "tool-call" &&
+    Array.isArray(value.toolCalls) &&
+    value.toolCalls.every(
+      (toolCall) =>
+        isRecord(toolCall) &&
+        hasExactKeys(toolCall, ["name", "arguments"]) &&
+        typeof toolCall.name === "string" &&
+        toolCall.name.length > 0 &&
+        isRecord(toolCall.arguments) &&
+        isJsonValue(toolCall.arguments),
+    )
+  );
+}
+
+function isStreamChunk(value: unknown): value is ModelStreamChunk {
+  if (!isRecord(value)) return false;
+  if (
+    !hasExactKeys(value, ["schemaVersion", "operation", "delta", "done"])
+  ) {
+    return false;
+  }
+  return (
+    value.schemaVersion === MODEL_PROVIDER_PORT_SCHEMA_VERSION &&
+    value.operation === "stream" &&
+    typeof value.delta === "string" &&
+    typeof value.done === "boolean"
+  );
+}
+
+function isAsyncIterable(value: unknown): value is AsyncIterable<unknown> {
+  if (
+    (typeof value !== "object" && typeof value !== "function") ||
+    value === null ||
+    !(Symbol.asyncIterator in value)
+  ) {
+    return false;
+  }
+  return typeof value[Symbol.asyncIterator] === "function";
+}
+
+async function collectStreamChunks(value: unknown) {
+  if (!isAsyncIterable(value)) return undefined;
+  const chunks: ModelStreamChunk[] = [];
+  for await (const chunk of value) {
+    if (!isStreamChunk(chunk)) return undefined;
+    chunks.push(
+      Object.freeze({
+        schemaVersion: chunk.schemaVersion,
+        operation: chunk.operation,
+        delta: chunk.delta,
+        done: chunk.done,
+      }),
+    );
+  }
+  return Object.freeze(chunks);
+}
+
+function replayStreamChunks(chunks: ReadonlyArray<ModelStreamChunk>) {
+  return Object.freeze({
+    async *[Symbol.asyncIterator]() {
+      yield* chunks;
+    },
+  });
 }
 
 function evidenceFor(
@@ -195,11 +343,19 @@ export function createModelProviderPort(
 ): ModelProviderPort {
   const preflight = async (
     request: ModelProviderRequest,
+    expectedOperation: ModelProviderOperation,
   ): Promise<ModelProviderPreflight> => {
     if (request.schemaVersion !== MODEL_PROVIDER_PORT_SCHEMA_VERSION) {
       return refuse(
         MODEL_PROVIDER_REFUSE_REASONS.schemaVersionUnsupported,
         `Model Provider request schema version '${String(request.schemaVersion)}' is unsupported; expected '${MODEL_PROVIDER_PORT_SCHEMA_VERSION}'.`,
+      );
+    }
+
+    if (request.operation !== expectedOperation) {
+      return refuse(
+        MODEL_PROVIDER_REFUSE_REASONS.operationMismatch,
+        `Model Provider operation '${String(request.operation)}' does not match the '${expectedOperation}' entrypoint.`,
       );
     }
 
@@ -213,6 +369,13 @@ export function createModelProviderPort(
 
     if (request.profile === "@sceneaxi/profile-kids") {
       return kidsPolicyRefusal(adapter.routeKind);
+    }
+
+    if (!isCapabilityDescriptor(adapter.capabilities)) {
+      return refuse(
+        MODEL_PROVIDER_REFUSE_REASONS.capabilityInvalid,
+        `The configured adapter capability descriptor is invalid or uses an unsupported schema version; expected '${MODEL_PROVIDER_PORT_SCHEMA_VERSION}'.`,
+      );
     }
 
     const policy = options.profilePolicies[request.profile];
@@ -245,11 +408,18 @@ export function createModelProviderPort(
   const succeed = async <Response>(
     request: ModelProviderRequest,
     adapterResult: unknown,
+    isResponse: (value: unknown) => value is Response,
   ): Promise<ModelProviderResult<Response>> => {
-    if (!isAdapterSuccess<Response>(adapterResult)) {
+    if (!isAdapterSuccess(adapterResult)) {
       return refuse(
         MODEL_PROVIDER_REFUSE_REASONS.executedModelMissing,
         "The adapter did not attest a valid executed model descriptor; success refused.",
+      );
+    }
+    if (!isResponse(adapterResult.response)) {
+      return refuse(
+        MODEL_PROVIDER_REFUSE_REASONS.responseInvalid,
+        `The adapter returned an invalid '${request.operation}' response envelope; success refused.`,
       );
     }
     const evidence = evidenceFor(request, adapterResult.executedModel);
@@ -261,9 +431,35 @@ export function createModelProviderPort(
     });
   };
 
+  const succeedStream = async (
+    request: ModelStreamRequest,
+    adapterResult: unknown,
+  ): Promise<ModelProviderResult<AsyncIterable<ModelStreamChunk>>> => {
+    if (!isAdapterSuccess(adapterResult)) {
+      return refuse(
+        MODEL_PROVIDER_REFUSE_REASONS.executedModelMissing,
+        "The adapter did not attest a valid executed model descriptor; success refused.",
+      );
+    }
+    const chunks = await collectStreamChunks(adapterResult.response);
+    if (chunks === undefined) {
+      return refuse(
+        MODEL_PROVIDER_REFUSE_REASONS.responseInvalid,
+        "The adapter returned an invalid 'stream' response envelope or chunk; success refused.",
+      );
+    }
+    const evidence = evidenceFor(request, adapterResult.executedModel);
+    await options.recordEvidence?.(evidence);
+    return Object.freeze({
+      ok: true,
+      response: replayStreamChunks(chunks),
+      evidence,
+    });
+  };
+
   return Object.freeze({
     async complete(request) {
-      const ready = await preflight(request);
+      const ready = await preflight(request, "complete");
       if (!ready.ok) return ready;
       const { adapter } = ready;
       if (adapter.complete === undefined) {
@@ -275,11 +471,12 @@ export function createModelProviderPort(
       return succeed<ModelCompleteResponse>(
         request,
         await adapter.complete(request),
+        isCompleteResponse,
       );
     },
 
     async toolCall(request) {
-      const ready = await preflight(request);
+      const ready = await preflight(request, "tool-call");
       if (!ready.ok) return ready;
       const { adapter } = ready;
       if (adapter.toolCall === undefined) {
@@ -291,11 +488,12 @@ export function createModelProviderPort(
       return succeed<ModelToolCallResponse>(
         request,
         await adapter.toolCall(request),
+        isToolCallResponse,
       );
     },
 
     async stream(request) {
-      const ready = await preflight(request);
+      const ready = await preflight(request, "stream");
       if (!ready.ok) return ready;
       const { adapter } = ready;
       if (adapter.stream === undefined) {
@@ -304,10 +502,7 @@ export function createModelProviderPort(
           "The configured adapter does not implement 'stream'.",
         );
       }
-      return succeed<AsyncIterable<ModelStreamChunk>>(
-        request,
-        await adapter.stream(request),
-      );
+      return succeedStream(request, await adapter.stream(request));
     },
   });
 }
