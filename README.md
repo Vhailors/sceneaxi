@@ -47,6 +47,11 @@ checks. The root `package.json` owns the exact command sequence; the referenced
 TypeScript, Vitest, ESLint, boundary, and contract-checker configuration files own
 their respective contracts.
 
+Run `pnpm test:golden` for the scripted MVP path from project creation through
+CLI propose/apply and kernel replay. A successful run writes deterministic
+evidence to `.sceneaxi/evidence/issue-51-cli-golden-path.json`; `pnpm gate` runs
+the same e2e through the complete test suite.
+
 ## Status
 
 **Early implementation aggregate.** The monorepo has a real fail-closed toolchain,
