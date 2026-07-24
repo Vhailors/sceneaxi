@@ -28,6 +28,25 @@ describe("catalog-web dormant MVP pipeline", () => {
     });
   });
 
+  it("deep-freezes the shared fixture item", () => {
+    expect(Object.isFrozen(listedFixtureItem)).toBe(true);
+    expect(Object.isFrozen(listedFixtureItem.assetPackage)).toBe(true);
+    expect(Object.isFrozen(listedFixtureItem.rights)).toBe(true);
+    expect(Object.isFrozen(listedFixtureItem.provenance)).toBe(true);
+    expect(Object.isFrozen(listedFixtureItem.aiGenerationDisclosure)).toBe(true);
+    expect(Object.isFrozen(listedFixtureItem.compatibility)).toBe(true);
+    expect(Object.isFrozen(listedFixtureItem.compatibility.profiles)).toBe(true);
+    expect(Object.isFrozen(listedFixtureItem.moderation)).toBe(true);
+    expect(Object.isFrozen(listedFixtureItem.moderation.history)).toBe(true);
+    expect(Object.isFrozen(listedFixtureItem.moderation.history[2])).toBe(true);
+    expect(
+      Object.isFrozen(
+        listedFixtureItem.moderation.history[2]?.humanVerdict,
+      ),
+    ).toBe(true);
+    expect(Object.isFrozen(listedFixtureItem.commerce)).toBe(true);
+  });
+
   it("keeps commerce, purchase, billing, and marketplace publish disabled", () => {
     expect(listedFixtureItem.commerce.activation).toBe("inert");
     expect(attemptCatalogPurchase(listedFixtureItem.itemId)).toMatchObject({

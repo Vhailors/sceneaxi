@@ -30,6 +30,16 @@ export const seam: PackageSeam = Object.freeze({
 const FIXTURE_HASH =
   "sha256:59bdf0f5b60c23a75f2218100972ab7868bf672be6b314340ef894f50284c62f";
 
+function deepFreeze<T extends object>(value: T): T {
+  const nestedValues: unknown[] = Object.values(value);
+  for (const nested of nestedValues) {
+    if (nested !== null && typeof nested === "object") {
+      deepFreeze(nested);
+    }
+  }
+  return Object.freeze(value);
+}
+
 function buildListedFixture(): CatalogItem {
   const intake = createCatalogItemAtIntake({
     itemId: "web-golden-fixture",
@@ -82,7 +92,7 @@ function buildListedFixture(): CatalogItem {
   return listed.item;
 }
 
-export const listedFixtureItem = Object.freeze(buildListedFixture());
+export const listedFixtureItem = deepFreeze(buildListedFixture());
 const listedItems = Object.freeze([listedFixtureItem] as const);
 
 export function listCatalogItems(): readonly CatalogItem[] {
