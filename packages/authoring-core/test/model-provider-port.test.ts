@@ -711,7 +711,7 @@ describe("Model Provider Port", () => {
     expect(calls).toEqual([]);
   });
 
-  it("refuses declared adapter operations whose dispatch is not callable", async () => {
+  it("refuses non-callable dispatch before policy evaluation", async () => {
     const calls: string[] = [];
     const filterCalls: string[] = [];
     const adapter = {
@@ -740,7 +740,7 @@ describe("Model Provider Port", () => {
       ok: false,
       reason: "MODEL_PROVIDER_CAPABILITY_UNSUPPORTED",
     });
-    expect(filterCalls).toEqual(["complete"]);
+    expect(filterCalls).toEqual([]);
     expect(calls).toEqual([]);
   });
 
@@ -1341,6 +1341,75 @@ describe("Model Provider Port", () => {
       ok: false,
       reason: "MODEL_PROVIDER_RESPONSE_ENVELOPE_INVALID",
     });
+  });
+
+  it("normalizes invalid lazy stream iterator construction and results", async () => {
+    const invalidResponses = [
+      {
+        [Symbol.asyncIterator]() {
+          throw new TypeError("iterator construction failed");
+        },
+      },
+      {
+        [Symbol.asyncIterator]() {
+          return {};
+        },
+      },
+      {
+        [Symbol.asyncIterator]() {
+          return Object.defineProperty({}, "next", {
+            get() {
+              throw new TypeError("next accessor failed");
+            },
+          });
+        },
+      },
+      {
+        [Symbol.asyncIterator]() {
+          return {
+            next() {
+              throw new TypeError("next call failed");
+            },
+          };
+        },
+      },
+      {
+        [Symbol.asyncIterator]() {
+          return {
+            next() {
+              return 1;
+            },
+          };
+        },
+      },
+    ];
+
+    for (const response of invalidResponses) {
+      const adapter = {
+        ...fakeAdapter(),
+        async stream() {
+          return { response, executedModel: model };
+        },
+      } as unknown as ModelProviderAdapter;
+      const result = await createModelProviderPort({
+        adapter,
+        profilePolicies: { "@sceneaxi/profile-game": allow },
+      }).stream({
+        schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+        operation: "stream",
+        profile: "@sceneaxi/profile-game",
+        model,
+        prompt: "invalid lazy iterator",
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) continue;
+      await expect(
+        result.response[Symbol.asyncIterator]().next(),
+      ).rejects.toMatchObject({
+        reason: "MODEL_PROVIDER_RESPONSE_ENVELOPE_INVALID",
+      });
+    }
   });
 
   it("validates stream chunks lazily and withholds evidence on failure", async () => {

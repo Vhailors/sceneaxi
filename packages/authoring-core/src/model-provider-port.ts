@@ -148,7 +148,7 @@ type ModelProviderPreflight<
 > =
   | Readonly<{
       ok: true;
-      dispatch: ModelProviderAdapterDispatch<Request, Response> | undefined;
+      dispatch: ModelProviderAdapterDispatch<Request, Response>;
       request: Request;
     }>
   | ModelProviderRefuse;
@@ -545,9 +545,76 @@ function captureAsyncIterable(value: unknown) {
   ) {
     return undefined;
   }
-  const iteratorMethod = capturedIteratorMethod.value.bind(value) as () =>
-    AsyncIterator<unknown>;
-  return Object.freeze({ [Symbol.asyncIterator]: iteratorMethod });
+  const iteratorMethod = capturedIteratorMethod.value;
+  return Object.freeze({
+    async *[Symbol.asyncIterator]() {
+      const capturedIterator = captureValue(() =>
+        iteratorMethod.call(value),
+      );
+      if (
+        !capturedIterator.ok ||
+        ((typeof capturedIterator.value !== "object" &&
+          typeof capturedIterator.value !== "function") ||
+          capturedIterator.value === null)
+      ) {
+        throw invalidStreamResponse(
+          "The adapter returned an invalid async stream iterator; stream refused.",
+        );
+      }
+      const iterator = capturedIterator.value as Record<PropertyKey, unknown>;
+      const capturedNext = captureValue(() => iterator.next);
+      if (!capturedNext.ok || typeof capturedNext.value !== "function") {
+        throw invalidStreamResponse(
+          "The adapter returned an async stream iterator without a callable next method; stream refused.",
+        );
+      }
+      const next = capturedNext.value;
+      while (true) {
+        let iterationResult: unknown;
+        try {
+          iterationResult = await next.call(iterator);
+        } catch {
+          throw invalidStreamResponse(
+            "The adapter async stream iterator failed; stream refused.",
+          );
+        }
+        if (
+          (typeof iterationResult !== "object" &&
+            typeof iterationResult !== "function") ||
+          iterationResult === null
+        ) {
+          throw invalidStreamResponse(
+            "The adapter async stream iterator returned an invalid result; stream refused.",
+          );
+        }
+        const result = iterationResult as Record<PropertyKey, unknown>;
+        const capturedDone = captureValue(() => result.done);
+        if (
+          !capturedDone.ok ||
+          (capturedDone.value !== undefined &&
+            typeof capturedDone.value !== "boolean")
+        ) {
+          throw invalidStreamResponse(
+            "The adapter async stream iterator returned an invalid result; stream refused.",
+          );
+        }
+        if (capturedDone.value === true) return;
+        const capturedValue = captureValue(() => result.value);
+        if (!capturedValue.ok) {
+          throw invalidStreamResponse(
+            "The adapter async stream iterator returned an invalid result; stream refused.",
+          );
+        }
+        yield capturedValue.value;
+      }
+    },
+  });
+}
+
+function invalidStreamResponse(message: string) {
+  return Object.assign(new TypeError(message), {
+    reason: MODEL_PROVIDER_REFUSE_REASONS.responseInvalid,
+  });
 }
 
 function evidenceFor(
@@ -643,14 +710,18 @@ export function createModelProviderPort(
 
     const capabilities = snapshotCapabilities(capturedCapabilities.value);
     const capturedOperationMethod = captureValue(() => selectDispatch(adapter));
-    const operationMethod = capturedOperationMethod.ok
-      ? capturedOperationMethod.value
-      : undefined;
-    const dispatch =
-      typeof operationMethod === "function"
-        ? (requestToDispatch: Request) =>
-            operationMethod.call(adapter, requestToDispatch)
-        : undefined;
+    if (
+      !capturedOperationMethod.ok ||
+      typeof capturedOperationMethod.value !== "function"
+    ) {
+      return refuse(
+        MODEL_PROVIDER_REFUSE_REASONS.capabilityUnsupported,
+        `The configured adapter does not implement '${validatedRequest.operation}'.`,
+      );
+    }
+    const operationMethod = capturedOperationMethod.value;
+    const dispatch = (requestToDispatch: Request) =>
+      operationMethod.call(adapter, requestToDispatch);
     const capturedPolicies = captureValue(
       () => options.profilePolicies as unknown,
     );
@@ -835,12 +906,6 @@ export function createModelProviderPort(
       );
       if (!ready.ok) return ready;
       const { dispatch, request: validatedRequest } = ready;
-      if (dispatch === undefined) {
-        return refuse(
-          MODEL_PROVIDER_REFUSE_REASONS.capabilityUnsupported,
-          "The configured adapter does not implement 'complete'.",
-        );
-      }
       return succeed<ModelCompleteResponse>(
         validatedRequest,
         await dispatch(validatedRequest),
@@ -858,12 +923,6 @@ export function createModelProviderPort(
       );
       if (!ready.ok) return ready;
       const { dispatch, request: validatedRequest } = ready;
-      if (dispatch === undefined) {
-        return refuse(
-          MODEL_PROVIDER_REFUSE_REASONS.capabilityUnsupported,
-          "The configured adapter does not implement 'tool-call'.",
-        );
-      }
       return succeed<ModelToolCallResponse>(
         validatedRequest,
         await dispatch(validatedRequest),
@@ -881,12 +940,6 @@ export function createModelProviderPort(
       );
       if (!ready.ok) return ready;
       const { dispatch, request: validatedRequest } = ready;
-      if (dispatch === undefined) {
-        return refuse(
-          MODEL_PROVIDER_REFUSE_REASONS.capabilityUnsupported,
-          "The configured adapter does not implement 'stream'.",
-        );
-      }
       return succeedStream(
         validatedRequest,
         await dispatch(validatedRequest),
