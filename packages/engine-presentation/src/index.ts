@@ -12,5 +12,6 @@ export const seam: PackageSeam = Object.freeze({
 export {
   PresentationRuntimeError,
   createNullPresentationRuntime,
+  type PresentationCaptureResult,
   type PresentationRuntime,
 } from "./runtime.js";

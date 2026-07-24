@@ -1,8 +1,10 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   createNullPresentationRuntime,
   seam,
+  type PresentationCaptureResult,
+  type PresentationRuntime,
 } from "@sceneaxi/engine-presentation";
 
 const manifest = JSON.parse(
@@ -22,5 +24,11 @@ describe("@sceneaxi/engine-presentation public seam", () => {
 
   it("exports the null Presentation Runtime factory", () => {
     expect(typeof createNullPresentationRuntime).toBe("function");
+  });
+
+  it("keeps capture results backend-neutral and nullable", () => {
+    expectTypeOf<ReturnType<PresentationRuntime["capture"]>>().toEqualTypeOf<
+      PresentationCaptureResult | null
+    >();
   });
 });

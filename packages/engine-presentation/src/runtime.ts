@@ -3,6 +3,11 @@ import type {
   KernelSnapshot,
 } from "@sceneaxi/engine-kernel";
 
+export interface PresentationCaptureResult {
+  readonly contentType: string;
+  readonly bytes: Uint8Array;
+}
+
 /**
  * Backend-hidden Presentation Runtime seam from ADR 0002.
  *
@@ -17,7 +22,7 @@ export interface PresentationRuntime {
     events: ReadonlyArray<KernelSessionEvent>,
     alpha: number,
   ): void;
-  capture(): null;
+  capture(): PresentationCaptureResult | null;
   dispose(): void;
 }
 
