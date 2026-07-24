@@ -76,6 +76,11 @@
       "releaseGroup": "importers",
       "allow": ["@sceneaxi/schemas", "@sceneaxi/authoring-core"]
     },
+    "@sceneaxi/provider-openrouter": {
+      "dir": "packages/provider-openrouter",
+      "releaseGroup": "importers",
+      "allow": ["@sceneaxi/schemas", "@sceneaxi/authoring-core"]
+    },
     "@sceneaxi/plugin-host": {
       "dir": "packages/plugin-host",
       "releaseGroup": "plugin-host",
@@ -126,7 +131,7 @@
     "@sceneaxi/provider-<name>": {
       "releaseGroup": "importers",
       "allow": ["@sceneaxi/schemas", "@sceneaxi/authoring-core"],
-      "arrives": "provider adapters behind the Model Provider Port under the locked llm-provider-policy; ordinary ticketed work only"
+      "arrives": "additional provider adapters behind the Model Provider Port under the locked llm-provider-policy; ordinary ticketed work only"
     }
   },
   "releaseGroups": {

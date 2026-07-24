@@ -193,6 +193,15 @@ importers:
         specifier: workspace:^
         version: link:../schemas
 
+  packages/provider-openrouter:
+    dependencies:
+      '@sceneaxi/authoring-core':
+        specifier: workspace:^
+        version: link:../authoring-core
+      '@sceneaxi/schemas':
+        specifier: workspace:^
+        version: link:../schemas
+
   packages/schemas: {}
 
 packages:

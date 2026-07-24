@@ -10,7 +10,7 @@ This monorepo is the packaging home for:
 | Runtime/authoring core | `packages/authoring-core` (document model, propose/apply service, sessions, evidence hooks, Model Provider Port) |
 | Profiles | `packages/profile-*` |
 | Agent-first CLI | `packages/cli` (thin protocol adapter over authoring-core) |
-| Shared schemas / importers | `packages/schemas`, `packages/importers` |
+| Shared schemas / importers | `packages/schemas`, `packages/importers`, `packages/provider-openrouter` |
 | Plugin host | `packages/plugin-host` (explicit capability-manifest loading and refusal) |
 | Web / desktop shells | `apps/web-shell`, `apps/desktop-shell` |
 | Asset catalogs (may split later) | `apps/catalog-game`, `apps/catalog-web` |
