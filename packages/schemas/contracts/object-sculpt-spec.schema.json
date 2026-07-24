@@ -25,8 +25,29 @@
   "allOf": [
     {
       "if": { "properties": { "complexityClass": { "const": "non-trivial" } } },
-      "then": { "required": ["detailInventory"] }
-    }
+      "then": {
+        "required": ["detailInventory"],
+        "properties": {
+          "components": { "minItems": 3 },
+          "materials": { "minItems": 2 },
+          "sockets": { "minItems": 1 },
+          "hierarchy": { "minItems": 3 },
+          "detailInventory": {
+            "properties": {
+              "silhouetteFeatures": { "minItems": 2 },
+              "structuralFeatures": { "minItems": 3 },
+              "surfaceFeatures": { "minItems": 2 },
+              "materialIds": { "minItems": 2 },
+              "socketIds": { "minItems": 1 }
+            }
+          }
+        }
+      }
+    },
+    { "properties": { "passes": { "contains": { "properties": { "id": { "const": "blockout" } }, "required": ["id"] } } } },
+    { "properties": { "passes": { "contains": { "properties": { "id": { "const": "structure" } }, "required": ["id"] } } } },
+    { "properties": { "passes": { "contains": { "properties": { "id": { "const": "materials" } }, "required": ["id"] } } } },
+    { "properties": { "passes": { "contains": { "properties": { "id": { "const": "sockets" } }, "required": ["id"] } } } }
   ],
   "$defs": {
     "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
@@ -63,7 +84,7 @@
         "steps": {
           "type": "array",
           "minItems": 1,
-          "items": { "type": "string", "minLength": 1 }
+          "items": { "type": "string", "pattern": "\\S" }
         }
       }
     },
@@ -82,7 +103,7 @@
     "featureList": {
       "type": "array",
       "uniqueItems": true,
-      "items": { "type": "string", "minLength": 1 }
+      "items": { "type": "string", "pattern": "^\\S(?:.*\\S)?$" }
     },
     "transform": {
       "type": "object",

@@ -17,7 +17,7 @@
         "moduleId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9./-]*$" },
         "exportName": { "type": "string", "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$" },
         "sourceDigest": { "$ref": "#/$defs/digest" },
-        "seed": { "type": "integer", "minimum": 0 },
+        "seed": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
         "emitDigest": { "$ref": "#/$defs/digest" }
       }
     },
