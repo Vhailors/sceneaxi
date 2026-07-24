@@ -40,6 +40,13 @@ assigns canonical ownership across the umbrella product/docs site, two distinct
 asset storefronts, and the fully isolated Kids domain/origin; exact domain names
 and purchases remain outside its scope.
 
+The post-MVP [hybrid sculpt vertical](CONTEXT.md) opens a versioned Sculpt
+Intake as a SceneAxi-owned Sculpt Artifact, mounts it through a backend-neutral
+API, runs it under kernel authority, and exposes the fixed Minimum E2 checklist.
+Its Three preview is explicitly experimental and a non-decision. Deterministic
+fixture and live-demo evidence lives at
+[`issue-73-hybrid-sculpt-golden.json`](.sceneaxi/evidence/issue-73-hybrid-sculpt-golden.json).
+
 ## Development
 
 Install the pinned workspace toolchain with `pnpm install`, then run `pnpm gate`
@@ -78,8 +85,9 @@ engine-core proof program stays on
 factories-helpers [#41](https://github.com/Vhailors/factories-helpers/issues/41)
 (pointer: [`docs/program/spec-41.md`](docs/program/spec-41.md)); proof-prep docs
 land under [`docs/proof/`](docs/proof/README.md), double-gated and never a run
-authorization. E1 is the normative authoring contract; E2 remains specified but
-not built, and both bind to the same machine-readable
+authorization. E1 is the normative authoring contract; general E2 remains
+specified but not built. ADR 0003 permits only the hybrid vertical's fixed
+Minimum E2 checklist, whose save/load still uses E1 propose/apply. Both bind to the same machine-readable
 [`authoring-jobs.fixtures.json`](packages/schemas/contracts/authoring-jobs.fixtures.json)
 list. Settled engine/CLI decisions are
 indexed in [`docs/adr/`](docs/adr/README.md).

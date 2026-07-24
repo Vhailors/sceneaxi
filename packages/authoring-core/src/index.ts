@@ -5,7 +5,9 @@
  *
  * Sceneaxi#9 lands the document model, propose/apply service, and E1 durable
  * apply journal with crash recovery and undo. Sceneaxi#45 adds the provider-
- * neutral Model Provider Port. Session orchestration remains later work.
+ * neutral Model Provider Port. The hybrid sculpt vertical adds deterministic
+ * reconstruction and bounded Minimum E2 orchestration; broader session
+ * orchestration remains later work.
  */
 import type { PackageSeam } from "@sceneaxi/schemas";
 
@@ -92,6 +94,28 @@ export {
   type ModelProviderResult,
   type ModelProviderSuccess,
 } from "./model-provider-port.js";
+
+export {
+  reconstructSculpt,
+  serializeSculptArtifact,
+} from "./sculpt-reconstruction.js";
+export type {
+  SculptReconstructionRefusalCode,
+  SculptReconstructionResult,
+} from "./sculpt-reconstruction.js";
+
+export {
+  MINIMUM_E2_STATE_VERSION,
+  MinimumE2Error,
+  createMinimumE2Editor,
+  type MinimumE2Editor,
+  type MinimumE2Inspector,
+  type MinimumE2LoadResult,
+  type MinimumE2PlayState,
+  type MinimumE2SaveResult,
+  type MinimumE2Snapshot,
+  type MinimumE2TreeNode,
+} from "./minimum-e2.js";
 
 // Re-export document/proposal types from schemas for adapter convenience.
 export type {

@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "kind": "sceneaxi.sculpt-intake",
+  "intakeId": "demo-lantern",
+  "mode": "image+brief",
+  "image": {
+    "mediaType": "image/png",
+    "uri": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+    "digest": "sha256:431ced6916a2a21a156e38701afe55bbd7f88969fbbfc56d7fe099d47f265460"
+  },
+  "brief": "A compact lantern with a warm cap that gently bobs."
+}

@@ -12,9 +12,10 @@ Wayfinder report §5.5 remains the analysis these contracts condense.
   authoring-core propose/apply service (`packages/authoring-core`).
   The ecosystem CLI is a superset of E1: E1's verbs transfer as the CLI
   `project` group **unchanged**.
-- **E2 is specified, not built.** It may be built only after Stage 6 friction
-  evidence (the source-first-CLI vs schema-editor comparison, Wayfinder
-  ticket 20). Nothing in this repo runs that comparison.
+- **General E2 is specified, not built.** The fixed Minimum E2 checklist for the
+  hybrid sculpt vertical is the sole exception authorized by ADR 0003's
+  2026-07-24 amendment; it still uses E1 propose/apply for persistence. Nothing
+  in this repo runs the Stage 6 comparison.
 
 **Not duplicated here:** the F1 factory-lifecycle contract stays owned by
 [factories-helpers#45](https://github.com/Vhailors/factories-helpers/issues/45)
@@ -89,11 +90,16 @@ Contract clauses:
 verbatim — every job must be completable through `project` verbs plus
 propose/apply alone.
 
-## E2 — schema-driven command editor (specified, not built)
+## E2 — schema-driven command editor (general surface specified, not built)
 
-Gate: **built only after Stage 6 friction evidence.** Until then this section
-is a precommitted design, kept so the Stage 6 comparison judges two *designed*
-interfaces instead of improvising one at prototype time.
+The hybrid vertical's implemented Minimum E2 subset is only the exception named
+in [ADR 0003's amendment](adr/0003-editor-sequencing-e1-first-e2-specified.md#2026-07-24-vertical-only-amendment).
+It does not activate the broader contract below.
+
+Gate for the general surface below: **built only after Stage 6 friction
+evidence.** Until then this section is a precommitted design, kept so the Stage
+6 comparison judges two *designed* interfaces instead of improvising one at
+prototype time.
 
 - `apply(command{type, target, payload, baseVersion}) → {patch, newVersion} | ConflictError`
 - **Undo/redo by inverse patches:** every applied command yields a patch and

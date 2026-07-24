@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "kind": "sceneaxi.sculpt-intake",
+  "intakeId": "golden-sculpt",
+  "mode": "structured-spec",
+  "structuredSpec": {
+    "schemaVersion": 1,
+    "kind": "sceneaxi.object-sculpt-spec",
+    "id": "golden-sculpt",
+    "rootNodeId": "body-node",
+    "components": [
+      {
+        "id": "body",
+        "primitive": "box",
+        "dimensions": [2, 2, 2],
+        "materialId": "main"
+      },
+      {
+        "id": "cap",
+        "primitive": "sphere",
+        "dimensions": [1, 1, 1],
+        "materialId": "main"
+      }
+    ],
+    "materials": [
+      {
+        "id": "main",
+        "baseColor": "#4488cc",
+        "metallic": 0.1,
+        "roughness": 0.6
+      }
+    ],
+    "sockets": [
+      {
+        "id": "cap-bob",
+        "nodeId": "cap-node",
+        "kind": "animation",
+        "axis": "y",
+        "amplitude": 0.25,
+        "frequencyHz": 1
+      }
+    ],
+    "hierarchy": [
+      {
+        "id": "body-node",
+        "parentId": null,
+        "componentId": "body",
+        "transform": {
+          "translation": [0, 3, 0],
+          "rotationEulerDegrees": [0, 0, 0],
+          "scale": [1, 1, 1]
+        }
+      },
+      {
+        "id": "cap-node",
+        "parentId": "body-node",
+        "componentId": "cap",
+        "transform": {
+          "translation": [0, 1.25, 0],
+          "rotationEulerDegrees": [0, 0, 0],
+          "scale": [1, 1, 1]
+        }
+      }
+    ]
+  }
+}

@@ -35,3 +35,9 @@ final bytes, and content hash are identical. This remains a protocol client,
 not a second editor, product UI, design system, or authentication surface.
 
 No hosting, no deployment, no public visibility.
+
+## Hybrid vertical: Minimum E2
+
+`createMinimumE2Editor()` exposes only the hybrid vertical exception defined by
+[ADR 0003's amendment](../../docs/adr/0003-editor-sequencing-e1-first-e2-specified.md#2026-07-24-vertical-only-amendment).
+Persistence stays on authoring-core propose/apply. It is not a full IDE surface.

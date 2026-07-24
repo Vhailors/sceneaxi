@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "sceneaxi.hybrid-sculpt-golden-evidence",
+  "artifactPath": ".sceneaxi/evidence/issue-73-hybrid-sculpt-golden.json",
+  "status": "passed",
+  "fixture": {
+    "intakePath": "tests/e2e/fixtures/hybrid-sculpt/structured-spec.intake.json",
+    "artifactId": "golden-sculpt-artifact",
+    "artifactDigest": "sha256:45ab3fa06c4abde02a5cb0efc1602c79fcc96a66f2ad2cdc3cf55375e682eba1",
+    "artifactBytesDigest": "sha256:45ab3fa06c4abde02a5cb0efc1602c79fcc96a66f2ad2cdc3cf55375e682eba1"
+  },
+  "mount": {
+    "backend": "experimental-three",
+    "label": "Experimental Three preview — non-decision; Stage 1 has not run.",
+    "drawCalls": 2,
+    "frameDigest": "sha256:3d76e42eb278bf6d934ad5b4f9df7a3622dc0ab58b01cb82424f82b7a573e7aa"
+  },
+  "kernel": {
+    "seed": 73,
+    "initialDigest": "sha256:f886fea3f979456bc304336d38fe3f936d107f53513c868f7b3ce128c867078e",
+    "terminalDigest": "sha256:9fa6434991f6c9986f784edd1f9cd6f7eb9bb0e8664d044a4e87bc1d8dca289d",
+    "socketValue": -0.249795,
+    "collisionCount": 2,
+    "replayDigest": "sha256:9fa6434991f6c9986f784edd1f9cd6f7eb9bb0e8664d044a4e87bc1d8dca289d",
+    "saveDigest": "sha256:18c7d03e4756ee022f5101f14964a615f06797a33731964b827b6e0177823449"
+  },
+  "editor": {
+    "treeSize": 3,
+    "previewDrawCalls": 2,
+    "proposalPointer": "/data",
+    "restoredIds": ["golden-one"],
+    "documentDigest": "sha256:a9202881253411549c53331d1ce4730b197e931fb4581e2e9c1a08ec6193fea3"
+  },
+  "liveDemo": {
+    "intakePath": "tests/e2e/fixtures/hybrid-sculpt/demo-image-brief.intake.json",
+    "artifactId": "demo-lantern-artifact",
+    "artifactDigest": "sha256:aaa039bf04302eb1323c74eb3d100f4329bce95fe6915696cb34212aae43a9bb",
+    "previewDrawCalls": 2,
+    "selectedArtifactId": "demo-lantern-artifact"
+  },
+  "refusal": {
+    "code": "invalid-intake"
+  },
+  "claims": {
+    "stage1Run": false,
+    "rendererWinner": null,
+    "experimentalThree": "non-decision"
+  }
+}

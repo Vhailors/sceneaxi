@@ -1,0 +1,147 @@
+import { describe, expect, it } from "vitest";
+import {
+  KernelSessionError,
+  openSculptKernelSession,
+  replaySculptKernelSession,
+} from "@sceneaxi/engine-kernel";
+import {
+  OBJECT_SCULPT_SPEC_KIND,
+  SCULPT_ARTIFACT_KIND,
+  SCULPT_SCHEMA_VERSION,
+  type SculptArtifact,
+} from "@sceneaxi/schemas";
+
+const digest = (character: string) => `sha256:${character.repeat(64)}`;
+const identity = {
+  translation: [0, 0, 0],
+  rotationEulerDegrees: [0, 0, 0],
+  scale: [1, 1, 1],
+} as const;
+
+function artifact(): SculptArtifact {
+  const hierarchy = [
+    {
+      id: "body-node",
+      parentId: null,
+      componentId: "body",
+      transform: { ...identity, translation: [0, 3, 0] },
+    },
+    {
+      id: "cap-node",
+      parentId: "body-node",
+      componentId: "cap",
+      transform: { ...identity, translation: [0, 1.25, 0] },
+    },
+  ] as const;
+  return {
+    schemaVersion: SCULPT_SCHEMA_VERSION,
+    kind: SCULPT_ARTIFACT_KIND,
+    artifactId: "kernel-fixture-artifact",
+    spec: {
+      schemaVersion: SCULPT_SCHEMA_VERSION,
+      kind: OBJECT_SCULPT_SPEC_KIND,
+      id: "kernel-fixture",
+      rootNodeId: "body-node",
+      materials: [
+        { id: "main", baseColor: "#4488cc", metallic: 0.1, roughness: 0.6 },
+      ],
+      components: [
+        { id: "body", primitive: "box", dimensions: [2, 2, 2], materialId: "main" },
+        { id: "cap", primitive: "sphere", dimensions: [1, 1, 1], materialId: "main" },
+      ],
+      hierarchy,
+      sockets: [
+        {
+          id: "cap-bob",
+          nodeId: "cap-node",
+          kind: "animation",
+          axis: "y",
+          amplitude: 0.25,
+          frequencyHz: 1,
+        },
+      ],
+    },
+    proceduralModule: {
+      moduleId: "sceneaxi/kernel-fixture",
+      exportName: "buildKernelFixture",
+      sourceDigest: digest("c"),
+    },
+    runtimeHierarchy: { rootNodeId: "body-node", nodes: hierarchy },
+    evidence: {
+      method: "structured-fixture",
+      intakeDigest: digest("a"),
+      specDigest: digest("b"),
+      proceduralModuleDigest: digest("c"),
+      qualityGates: [{ id: "contract", status: "passed", digest: digest("d") }],
+    },
+  };
+}
+
+describe("kernel sculpt session", () => {
+  it("projects the runtime hierarchy into frozen kernel observations", () => {
+    const session = openSculptKernelSession(artifact(), { seed: 73 });
+    const snapshot = session.observe();
+    expect(snapshot.nodes.map((node) => [node.id, node.parentId])).toEqual([
+      ["body-node", null],
+      ["cap-node", "body-node"],
+    ]);
+    expect(snapshot.nodes[0]?.transform.translation).toEqual([0, 3, 0]);
+    expect(Object.isFrozen(snapshot)).toBe(true);
+    expect(Object.isFrozen(snapshot.nodes)).toBe(true);
+    expect(Object.isFrozen(snapshot.nodes[0]?.transform)).toBe(true);
+    expect(Object.isFrozen(snapshot.nodes[0]?.transform.translation)).toBe(true);
+  });
+
+  it("advances animation sockets only with kernel advance", () => {
+    const session = openSculptKernelSession(artifact(), { seed: 73 });
+    const before = session.observe();
+    const repeatedObserve = session.observe();
+    expect(repeatedObserve).toEqual(before);
+
+    session.advance({ tick: 1, deltaMs: 250 });
+    const after = session.observe();
+    expect(after.sockets[0]?.value).not.toBe(before.sockets[0]?.value);
+    expect(after.tick).toBe(1);
+    expect(after.elapsedMs).toBe(250);
+  });
+
+  it("resolves toy ground collision deterministically for a fixed seed", () => {
+    const first = openSculptKernelSession(artifact(), { seed: 71 });
+    const second = openSculptKernelSession(artifact(), { seed: 71 });
+    for (let tick = 1; tick <= 12; tick += 1) {
+      const clock = { tick, deltaMs: 100 };
+      first.advance(clock);
+      second.advance(clock);
+    }
+    expect(first.observe()).toEqual(second.observe());
+    expect(first.observe().collisionCount).toBeGreaterThan(0);
+    expect(first.observe().nodes[0]?.transform.translation[1]).toBeGreaterThanOrEqual(1);
+
+    const otherSeed = openSculptKernelSession(artifact(), { seed: 72 });
+    otherSeed.advance({ tick: 1, deltaMs: 100 });
+    expect(otherSeed.observe().nodes[0]?.velocity[0]).not.toBe(
+      openSculptKernelSession(artifact(), { seed: 71 }).observe().nodes[0]?.velocity[0],
+    );
+  });
+
+  it("round-trips save/replay to the exact terminal digest", () => {
+    const session = openSculptKernelSession(artifact(), { seed: 99 });
+    session.advance({ tick: 1, deltaMs: 16 });
+    session.advance({ tick: 2, deltaMs: 16 });
+    const save = session.save();
+    const replayed = replaySculptKernelSession(save);
+    expect(replayed.observe()).toEqual(session.observe());
+    expect(replayed.save().terminalDigest).toBe(save.terminalDigest);
+  });
+
+  it("fails closed on invalid clocks and replay digest drift", () => {
+    const session = openSculptKernelSession(artifact(), { seed: 1 });
+    session.advance({ tick: 1, deltaMs: 16 });
+    expect(() => session.advance({ tick: 1, deltaMs: 16 })).toThrow(KernelSessionError);
+
+    const save = session.save();
+    expect(() =>
+      replaySculptKernelSession({ ...save, terminalDigest: digest("f") }),
+    ).toThrow(/sculpt replay digest mismatch/);
+  });
+});

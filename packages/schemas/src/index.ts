@@ -218,6 +218,9 @@ export const contracts = Object.freeze({
   proposal: "contracts/proposal.schema.json",
   deliveryHandoff: "contracts/delivery-handoff.schema.json",
   modelProviderPort: "contracts/model-provider-port.schema.json",
+  sculptIntake: "contracts/sculpt-intake.schema.json",
+  objectSculptSpec: "contracts/object-sculpt-spec.schema.json",
+  sculptArtifact: "contracts/sculpt-artifact.schema.json",
   /** Profile Conformance claim (sceneaxi#10) — shared suite + development consumers. */
   profileConformance: "contracts/profile-conformance.schema.json",
   /** Plugin Manifest descriptor (sceneaxi#20 / ADR 0005); host runtime is @sceneaxi/plugin-host. */
@@ -275,3 +278,36 @@ export {
   type ConformanceCheckResult,
   type ConformanceSuiteResult,
 } from "./profile-conformance-suite.js";
+
+export {
+  OBJECT_SCULPT_SPEC_KIND,
+  SCULPT_ARTIFACT_KIND,
+  SCULPT_INTAKE_KIND,
+  SCULPT_INTAKE_MODES,
+  SCULPT_SCHEMA_VERSION,
+  isSculptIdentifier,
+  isSculptTransform,
+  validateObjectSculptSpec,
+  validateSculptArtifact,
+  validateSculptIntake,
+} from "./sculpt.js";
+export type {
+  ObjectSculptSpec,
+  SculptArtifact,
+  SculptComponent,
+  SculptDiagnostic,
+  SculptDiagnosticCode,
+  SculptEvidence,
+  SculptHierarchyNode,
+  SculptImage,
+  SculptIntake,
+  SculptIntakeMode,
+  SculptMaterial,
+  SculptProceduralModuleRef,
+  SculptQualityGateEvidence,
+  SculptRuntimeHierarchy,
+  SculptSocket,
+  SculptTransform,
+  SculptValidationResult,
+  Vector3,
+} from "./sculpt.js";

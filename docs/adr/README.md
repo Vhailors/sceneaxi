@@ -43,6 +43,10 @@ naming its source.
 |---|---|
 | [0001](0001-game-kernel-command-snapshot-session.md) | Game Kernel external interface is a command/snapshot session (Design A) |
 | [0002](0002-presentation-runtime-deep-seam.md) | Presentation seam is a deep Presentation Runtime (backend hidden; Stage 1 decides composition) |
-| [0003](0003-editor-sequencing-e1-first-e2-specified.md) | Editor sequencing: E1 first, E2 specified-not-built |
+| [0003](0003-editor-sequencing-e1-first-e2-specified.md) | Editor sequencing: E1 first; general E2 specified-not-built; bounded hybrid exception |
 | [0004](0004-no-plugin-ports-before-two-adapters.md) | Seam discipline: no internal-library ports before two real adapters (Model Provider Port and v1 Plugin Host / capability registry excepted) |
 | [0005](0005-plugin-host-capability-manifest.md) | Plugin Host uses versioned capability manifests and a fail-closed public capability registry |
+| [0006](0006-hybrid-core-and-ai-sculpt.md) | Hybrid Godot-like core plus AI sculpt authoring is the post-MVP vertical direction |
+| [0007](0007-sceneaxi-owned-sculpt-artifacts.md) | SceneAxi owns Sculpt Intake, ObjectSculptSpec, reconstruction, and Sculpt Artifact contracts |
+| [0008](0008-experimental-three-preview-non-decision.md) | Three preview is experimental and explicitly not a Stage 1 decision |
+| [0009](0009-kernel-owned-toy-physics-animation.md) | Toy physics and animation sockets advance only under kernel authority |
