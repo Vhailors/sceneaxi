@@ -47,11 +47,12 @@ checks. The root `package.json` owns the exact command sequence; the referenced
 TypeScript, Vitest, ESLint, boundary, and contract-checker configuration files own
 their respective contracts.
 
-Run `pnpm test:golden` for the scripted MVP path from project creation through
-CLI propose/apply, kernel and presentation, sample-plugin load and named
-refusal, replay, and held-key refusal. A successful run writes deterministic
-evidence to `.sceneaxi/evidence/issue-51-cli-golden-path.json`; `pnpm gate` runs
-the same e2e through the complete test suite.
+Run `pnpm test:golden` for the scripted MVP path from Game profile selection
+through project creation, CLI propose/apply, kernel and presentation,
+sample-plugin load and named refusal, replay, and held-key refusal. A successful
+run writes deterministic evidence to
+`.sceneaxi/evidence/issue-51-cli-golden-path.json`; `pnpm gate` runs the same e2e
+through the complete test suite.
 
 ## Status
 
