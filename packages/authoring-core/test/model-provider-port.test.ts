@@ -781,11 +781,17 @@ describe("Model Provider Port", () => {
         },
       },
     });
+    const mutableModel: {
+      model: string;
+      provider: string;
+      quantization: string;
+      version: string;
+    } = { ...model };
     const request = {
       schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
       operation: "complete" as const,
       profile: "@sceneaxi/profile-game" as const,
-      model: { ...model },
+      model: mutableModel,
       prompt: "original prompt",
     };
 
@@ -960,8 +966,12 @@ describe("Model Provider Port", () => {
       tools: [],
     });
     await toolStarted;
-    toolCallResponse.toolCalls[0]!.name = "mutated-tool";
-    toolCallResponse.toolCalls[0]!.arguments.nested.value = "mutated";
+    const mutableToolCall = toolCallResponse.toolCalls[0];
+    if (mutableToolCall === undefined) {
+      throw new Error("Expected one mutable tool call fixture.");
+    }
+    mutableToolCall.name = "mutated-tool";
+    mutableToolCall.arguments.nested.value = "mutated";
     releaseToolEvidence();
     const toolCall = await toolCallPromise;
 

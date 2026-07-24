@@ -19,6 +19,11 @@ non-overridable Kids guard names `THIRD_PARTY_LLM_DENIED_BY_DEFAULT` for a
 third-party route and keeps every other Kids route closed until a later explicit
 Kids decision enables one.
 
+Stable prerequisite refusals are `MODEL_PROVIDER_ADAPTER_MISSING`,
+`MODEL_PROVIDER_PROFILE_POLICY_MISSING`, and
+`MODEL_PROVIDER_CAPABILITY_UNSUPPORTED`; malformed capability declarations use
+`MODEL_PROVIDER_CAPABILITY_DESCRIPTOR_INVALID`.
+
 The public v1 types cover `complete`, `tool-call`, and an async-iterable `stream`,
 plus capability and exact model descriptors. Successful calls return and may
 emit a stable `sceneaxi.model-provider-call-evidence` object containing the

@@ -166,6 +166,10 @@ type ValueCapture<Value> =
   | Readonly<{ ok: true; value: Value }>
   | Readonly<{ ok: false }>;
 
+type AsyncIteratorClose = (
+  this: Record<PropertyKey, unknown>,
+) => unknown;
+
 function refuse(reason: string, message: string): ModelProviderRefuse {
   return Object.freeze({ ok: false, reason, message });
 }
@@ -546,6 +550,28 @@ function captureAsyncIterable(value: unknown) {
     return undefined;
   }
   const iteratorMethod = capturedIteratorMethod.value;
+  const closeIterator = async (
+    iterator: Record<PropertyKey, unknown>,
+    close: AsyncIteratorClose,
+  ) => {
+    let closeResult: unknown;
+    try {
+      closeResult = await close.call(iterator);
+    } catch {
+      throw invalidStreamResponse(
+        "The adapter async stream iterator could not be closed; stream refused.",
+      );
+    }
+    if (
+      (typeof closeResult !== "object" &&
+        typeof closeResult !== "function") ||
+      closeResult === null
+    ) {
+      throw invalidStreamResponse(
+        "The adapter async stream iterator returned an invalid close result; stream refused.",
+      );
+    }
+  };
   return Object.freeze({
     async *[Symbol.asyncIterator]() {
       const capturedIterator = captureValue(() =>
@@ -579,7 +605,7 @@ function captureAsyncIterable(value: unknown) {
           "The adapter returned an async stream iterator with an invalid return method; stream refused.",
         );
       }
-      const close = capturedReturn.value;
+      const close = capturedReturn.value as AsyncIteratorClose | undefined;
       let completed = false;
       try {
         while (true) {
@@ -625,23 +651,7 @@ function captureAsyncIterable(value: unknown) {
         }
       } finally {
         if (!completed && close !== undefined) {
-          let closeResult: unknown;
-          try {
-            closeResult = await close.call(iterator);
-          } catch {
-            throw invalidStreamResponse(
-              "The adapter async stream iterator could not be closed; stream refused.",
-            );
-          }
-          if (
-            (typeof closeResult !== "object" &&
-              typeof closeResult !== "function") ||
-            closeResult === null
-          ) {
-            throw invalidStreamResponse(
-              "The adapter async stream iterator returned an invalid close result; stream refused.",
-            );
-          }
+          await closeIterator(iterator, close);
         }
       }
     },
@@ -768,8 +778,9 @@ export function createModelProviderPort(
         `No Model Provider policy filter is registered for '${validatedRequest.profile}'; dispatch refused.`,
       );
     }
+    const policies = capturedPolicies.value;
     const hasPolicy = captureValue(() =>
-      Object.hasOwn(capturedPolicies.value, validatedRequest.profile),
+      Object.hasOwn(policies, validatedRequest.profile),
     );
     if (!hasPolicy.ok || !hasPolicy.value) {
       return refuse(
@@ -778,7 +789,7 @@ export function createModelProviderPort(
       );
     }
     const capturedPolicy = captureValue(
-      () => capturedPolicies.value[validatedRequest.profile],
+      () => policies[validatedRequest.profile],
     );
     if (!capturedPolicy.ok || typeof capturedPolicy.value !== "function") {
       return refuse(
