@@ -47,6 +47,15 @@ Its Three preview is explicitly experimental and a non-decision. Deterministic
 fixture and live-demo evidence lives at
 [`issue-73-hybrid-sculpt-golden.json`](.sceneaxi/evidence/issue-73-hybrid-sculpt-golden.json).
 
+The additive [sculpt-quality v1 layer](docs/sculpt-quality.md) deepens that same
+path with deterministic multi-pass specs, detail-inventory refusals, a versioned
+animation-ready hierarchy, and a real seeded procedural emit. Its two committed
+demos and fixed digest ledger live under
+[`tests/e2e/fixtures/sculpt-quality/`](tests/e2e/fixtures/sculpt-quality/).
+This is contract and demo evidence only: it adds no Minimum E2 checklist item,
+Stage 1 result, renderer decision, production physics, provider spend, or
+engine-readiness claim.
+
 ## Development
 
 Install the pinned workspace toolchain with `pnpm install`, then run `pnpm gate`
@@ -55,12 +64,14 @@ checks. The root `package.json` owns the exact command sequence; the referenced
 TypeScript, Vitest, ESLint, boundary, and contract-checker configuration files own
 their respective contracts.
 
-Run `pnpm test:golden` for the scripted MVP path from Game profile selection
-through project creation, CLI propose/apply, kernel and presentation,
-sample-plugin load and named refusal, replay, and held-key refusal. A successful
-run writes deterministic evidence to
-`.sceneaxi/evidence/issue-51-cli-golden-path.json`; `pnpm gate` runs the same e2e
-through the complete test suite.
+Run `pnpm test:golden` for the scripted MVP path and both sculpt verticals. It
+covers Game profile selection through project creation, CLI propose/apply,
+kernel/presentation, sample-plugin load/refusal, replay, and held-key refusal;
+the hybrid sculpt path; and both fixed-seed sculpt-quality demos. Evidence is
+bound by `.sceneaxi/evidence/issue-51-cli-golden-path.json`,
+`.sceneaxi/evidence/issue-73-hybrid-sculpt-golden.json`, and
+`tests/e2e/fixtures/sculpt-quality/golden-digests.json`. `pnpm gate` runs the same
+e2e tests through the complete suite.
 
 ## Status
 

@@ -10,25 +10,158 @@
     "kind": { "const": "sceneaxi.sculpt-artifact" },
     "artifactId": { "$ref": "#/$defs/id" },
     "spec": { "$ref": "https://sceneaxi.invalid/contracts/object-sculpt-spec/v1" },
-    "proceduralModule": {
-      "type": "object", "additionalProperties": false,
+    "proceduralModule": { "type": "object" },
+    "runtimeHierarchy": { "type": "object" },
+    "evidence": { "$ref": "#/$defs/evidence" }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "spec": {
+          "allOf": [
+            { "$ref": "https://sceneaxi.invalid/contracts/object-sculpt-spec/v1" },
+            { "not": { "required": ["passes"] } }
+          ]
+        },
+        "proceduralModule": { "$ref": "#/$defs/legacyProceduralModule" },
+        "runtimeHierarchy": { "$ref": "#/$defs/legacyRuntimeHierarchy" }
+      }
+    },
+    {
+      "properties": {
+        "spec": {
+          "allOf": [
+            { "$ref": "https://sceneaxi.invalid/contracts/object-sculpt-spec/v1" },
+            { "required": ["passes", "complexityClass"] }
+          ]
+        },
+        "proceduralModule": { "$ref": "#/$defs/qualityProceduralModule" },
+        "runtimeHierarchy": { "$ref": "#/$defs/qualityRuntimeHierarchy" }
+      }
+    }
+  ],
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "moduleId": {
+      "type": "string",
+      "pattern": "^(?:@[a-z0-9-]+/[a-z0-9-]+|[a-z0-9][a-z0-9./-]*)$"
+    },
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "legacyProceduralModule": {
+      "type": "object",
+      "additionalProperties": false,
       "required": ["moduleId", "exportName", "sourceDigest"],
       "properties": {
-        "moduleId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9./-]*$" },
+        "moduleId": { "$ref": "#/$defs/moduleId" },
         "exportName": { "type": "string", "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$" },
         "sourceDigest": { "$ref": "#/$defs/digest" }
       }
     },
-    "runtimeHierarchy": {
-      "type": "object", "additionalProperties": false,
+    "qualityProceduralModule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["moduleId", "exportName", "sourceDigest", "seed", "emitDigest"],
+      "properties": {
+        "moduleId": { "const": "@sceneaxi/authoring-core" },
+        "exportName": { "const": "emitSculptProcedural" },
+        "sourceDigest": { "const": "sha256:4567224687d64ef69a4429380b52dd2217bf1342b3d535674cef7ad0621f99a1" },
+        "seed": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "emitDigest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "legacyRuntimeHierarchy": {
+      "type": "object",
+      "additionalProperties": false,
       "required": ["rootNodeId", "nodes"],
       "properties": {
         "rootNodeId": { "$ref": "#/$defs/id" },
-        "nodes": { "type": "array", "minItems": 1, "items": { "$ref": "https://sceneaxi.invalid/contracts/object-sculpt-spec/v1#/$defs/hierarchyNode" } }
+        "nodes": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "https://sceneaxi.invalid/contracts/object-sculpt-spec/v1#/$defs/hierarchyNode" }
+        }
+      }
+    },
+    "qualityRuntimeHierarchy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "kind", "rootNodeId", "nodes", "pivots", "sockets", "colliders", "materials", "attachments"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "kind": { "const": "sceneaxi.animation-ready-hierarchy" },
+        "rootNodeId": { "$ref": "#/$defs/id" },
+        "nodes": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "https://sceneaxi.invalid/contracts/object-sculpt-spec/v1#/$defs/hierarchyNode" }
+        },
+        "pivots": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "nodeId", "origin"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "nodeId": { "$ref": "#/$defs/id" },
+              "origin": { "$ref": "https://sceneaxi.invalid/contracts/object-sculpt-spec/v1#/$defs/vector3" }
+            }
+          }
+        },
+        "sockets": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "https://sceneaxi.invalid/contracts/object-sculpt-spec/v1#/$defs/socket" }
+        },
+        "colliders": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "nodeId", "shape", "dimensions", "isTrigger"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "nodeId": { "$ref": "#/$defs/id" },
+              "shape": { "enum": ["box", "cylinder", "sphere"] },
+              "dimensions": { "$ref": "https://sceneaxi.invalid/contracts/object-sculpt-spec/v1#/$defs/positiveVector3" },
+              "isTrigger": { "type": "boolean" }
+            }
+          }
+        },
+        "materials": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["nodeId", "materialId"],
+            "properties": {
+              "nodeId": { "$ref": "#/$defs/id" },
+              "materialId": { "$ref": "#/$defs/id" }
+            }
+          }
+        },
+        "attachments": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "nodeId", "socketId"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "nodeId": { "$ref": "#/$defs/id" },
+              "socketId": { "$ref": "#/$defs/id" }
+            }
+          }
+        }
       }
     },
     "evidence": {
-      "type": "object", "additionalProperties": false,
+      "type": "object",
+      "additionalProperties": false,
       "required": ["method", "intakeDigest", "specDigest", "proceduralModuleDigest", "qualityGates"],
       "properties": {
         "method": { "enum": ["image-brief-reconstruction", "structured-fixture"] },
@@ -36,18 +169,20 @@
         "specDigest": { "$ref": "#/$defs/digest" },
         "proceduralModuleDigest": { "$ref": "#/$defs/digest" },
         "qualityGates": {
-          "type": "array", "minItems": 1,
+          "type": "array",
+          "minItems": 1,
           "items": {
-            "type": "object", "additionalProperties": false,
+            "type": "object",
+            "additionalProperties": false,
             "required": ["id", "status", "digest"],
-            "properties": { "id": { "$ref": "#/$defs/id" }, "status": { "const": "passed" }, "digest": { "$ref": "#/$defs/digest" } }
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "status": { "const": "passed" },
+              "digest": { "$ref": "#/$defs/digest" }
+            }
           }
         }
       }
     }
-  },
-  "$defs": {
-    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
-    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
   }
 }

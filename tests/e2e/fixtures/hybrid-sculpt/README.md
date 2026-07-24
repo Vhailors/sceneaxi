@@ -2,7 +2,7 @@
 
 Stable CI paths for issue #73:
 
-- `structured-spec.intake.json` — deterministic golden path input.
+- `structured-spec.intake.json` — original PR #75 deterministic golden path input.
 - `demo-image-brief.intake.json` — self-contained one-pixel PNG plus the live
   demo brief; reconstructs to the openable `demo-lantern-artifact`.
 - `.sceneaxi/evidence/issue-73-hybrid-sculpt-golden.json` — checked-in expected

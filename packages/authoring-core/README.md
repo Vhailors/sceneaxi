@@ -41,12 +41,29 @@ test fixture only.
 canonical Sculpt Artifact bytes and a digest without a live provider.
 `structured-spec` is the deterministic fixture path and `image+brief` is the
 demo-grade reconstruction path. Valid `image` and `multi-view` envelopes remain
-unsupported by reconstruction v1 and refuse closed.
+unsupported by reconstruction v1 and refuse closed. Sculpt-quality v1 adds the
+public `emitSculptProcedural()` geometry/material/hierarchy factory; generated
+artifacts bind its module ID, public export, source digest, seed, and emitted
+plan digest.
 
 The stable refusal codes are `invalid-intake`, `unsupported-intake-mode`,
-`quality-gate-refused`, and `artifact-invalid`. Quality-gate refusals name the
-failed `component-budget`, `hierarchy-depth`, or `physical-extent` gate.
-Production model calls, provider spend, and `img2threejs` are absent.
+`quality-gate-refused`, `artifact-invalid`, `invalid-options`,
+`offline-agent-unavailable`, `offline-agent-invalid`, and
+`offline-agent-nondeterministic`. Quality-gate refusals name the failed
+`component-budget`, `hierarchy-depth`, or `physical-extent` gate.
+`enableOfflineAgent` defaults to false; when true it requires an injected
+offline adapter and identical canonical output across two runs. Production
+model calls, provider spend, and `img2threejs` are absent. Full sculpt-quality
+contract, demo, and evidence pointers are in
+[`docs/sculpt-quality.md`](../../docs/sculpt-quality.md).
+
+The public package-root `emitSculptProcedural` export is the resolvable module
+identity recorded in quality artifacts. With legacy input, the no-options
+`reconstructSculpt(intake)` overload preserves the PR #75 artifact branch.
+Quality input, any supplied options object (including `{}`), or
+`reconstructSculptQuality()` selects the quality branch and normalizes legacy
+input when needed. Artifact validation independently recomputes the canonical
+fixed-seed emit.
 
 `createMinimumE2Editor()` owns the bounded orchestration API authorized by
 [ADR 0003's vertical-only amendment](../../docs/adr/0003-editor-sequencing-e1-first-e2-specified.md#2026-07-24-vertical-only-amendment).

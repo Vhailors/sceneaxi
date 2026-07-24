@@ -73,7 +73,9 @@ describe("hybrid sculpt + Minimum E2 golden vertical", () => {
           session.advance({ tick, deltaMs: 100 });
         }
         const terminal = session.observe();
-        expect(terminal.sockets[0]?.value).not.toBe(initial.sockets[0]?.value);
+        expect(terminal.sockets.find((socket) => socket.id === "cap-bob")?.value).not.toBe(
+          initial.sockets.find((socket) => socket.id === "cap-bob")?.value,
+        );
         expect(terminal.collisionCount).toBeGreaterThan(0);
         const save = session.save();
         const replay = replaySculptKernelSession(save).observe();
@@ -174,7 +176,7 @@ describe("hybrid sculpt + Minimum E2 golden vertical", () => {
           seed: kernel.terminal.seed,
           initialDigest: kernel.initial.digest,
           terminalDigest: kernel.terminal.digest,
-          socketValue: kernel.terminal.sockets[0]?.value,
+          socketValue: kernel.terminal.sockets.find((socket) => socket.id === "cap-bob")?.value,
           collisionCount: kernel.terminal.collisionCount,
           replayDigest: kernel.replay.digest,
           saveDigest: digest(JSON.stringify(kernel.save)),

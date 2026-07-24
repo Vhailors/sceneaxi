@@ -13,8 +13,6 @@ import {
   MODEL_PROVIDER_ROUTE_KINDS,
   isJsonObject,
   isJsonValue,
-  type JsonObject,
-  type JsonValue,
   type ModelCapabilityDescriptor,
   type ModelCompleteRequest,
   type ModelCompleteResponse,
@@ -29,6 +27,7 @@ import {
   type ModelToolCallRequest,
   type ModelToolCallResponse,
 } from "@sceneaxi/schemas";
+import { snapshotJsonObject } from "./json-invariants.js";
 
 export const MODEL_PROVIDER_REFUSE_REASONS = Object.freeze({
   schemaVersionUnsupported: "MODEL_PROVIDER_SCHEMA_VERSION_UNSUPPORTED",
@@ -257,27 +256,6 @@ function isModelProviderProfile(
   return (
     typeof value === "string" &&
     /^@sceneaxi\/profile-[a-z][a-z0-9-]*$/.test(value)
-  );
-}
-
-function snapshotJsonValue(value: JsonValue): JsonValue {
-  if (Array.isArray(value)) {
-    return Object.freeze(value.map(snapshotJsonValue));
-  }
-  if (isJsonObject(value)) {
-    return snapshotJsonObject(value);
-  }
-  return value;
-}
-
-function snapshotJsonObject(value: JsonObject): JsonObject {
-  return Object.freeze(
-    Object.fromEntries(
-      Object.entries(value).map(([key, entry]) => [
-        key,
-        snapshotJsonValue(entry),
-      ]),
-    ),
   );
 }
 

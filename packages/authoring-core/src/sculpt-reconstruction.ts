@@ -4,25 +4,66 @@ import {
   OBJECT_SCULPT_SPEC_KIND,
   SCULPT_ARTIFACT_KIND,
   SCULPT_SCHEMA_VERSION,
+  isSculptQualityObjectSculptSpec,
+  normalizeObjectSculptSpec,
+  projectAnimationReadyHierarchy,
+  validateObjectSculptSpec,
   validateSculptArtifact,
   validateSculptIntake,
+  validateSculptQualityArtifact,
   type JsonValue,
+  type LegacyObjectSculptSpec,
+  type LegacySculptArtifact,
   type ObjectSculptSpec,
   type SculptArtifact,
   type SculptHierarchyNode,
   type SculptIntake,
+  type SculptQualityArtifact,
   type SculptQualityGateEvidence,
+  type SculptQualityObjectSculptSpec,
 } from "@sceneaxi/schemas";
+import {
+  SCULPT_PROCEDURAL_EXPORT_NAME,
+  SCULPT_PROCEDURAL_MODULE_ID,
+  SCULPT_PROCEDURAL_SOURCE_DIGEST,
+  emitSculptProcedural,
+} from "./sculpt-procedural-emit.js";
+import {
+  canonicalJson,
+  digestBytes,
+  digestJson,
+  snapshotJsonValue,
+} from "./json-invariants.js";
 
-const PIPELINE_MODULE_ID = "sceneaxi/sculpt-reconstruction-v1";
-const PIPELINE_EXPORT_NAME = "buildSculptArtifact";
-const PIPELINE_SOURCE = "sceneaxi-owned:sculpt-reconstruction:v1:primitive-hierarchy";
+const LEGACY_PIPELINE_MODULE_ID = "sceneaxi/sculpt-reconstruction-v1";
+const LEGACY_PIPELINE_EXPORT_NAME = "buildSculptArtifact";
+const LEGACY_PIPELINE_SOURCE =
+  "sceneaxi-owned:sculpt-reconstruction:v1:primitive-hierarchy";
 
 export type SculptReconstructionRefusalCode =
   | "invalid-intake"
   | "unsupported-intake-mode"
   | "quality-gate-refused"
   | "artifact-invalid";
+
+export type SculptQualityReconstructionRefusalCode =
+  | SculptReconstructionRefusalCode
+  | "invalid-options"
+  | "offline-agent-unavailable"
+  | "offline-agent-invalid"
+  | "offline-agent-nondeterministic";
+
+export type SculptOfflineAgent = {
+  readonly refine: (
+    spec: SculptQualityObjectSculptSpec,
+  ) => SculptQualityObjectSculptSpec;
+};
+
+export type SculptReconstructionOptions = {
+  readonly seed?: number;
+  readonly enableOfflineAgent?: boolean;
+  readonly offlineAgent?: SculptOfflineAgent;
+};
 
 export type SculptReconstructionResult =
   | {
@@ -38,18 +79,74 @@ export type SculptReconstructionResult =
       readonly message: string;
     };
 
-function canonicalJson(value: JsonValue): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map((item) => canonicalJson(item)).join(",")}]`;
-  const object = value as { readonly [key: string]: JsonValue };
-  return `{${Object.keys(object)
-    .sort()
-    .map((key) => `${JSON.stringify(key)}:${canonicalJson(object[key] ?? null)}`)
-    .join(",")}}`;
+export type SculptQualityReconstructionResult =
+  | {
+      readonly ok: true;
+      readonly artifact: SculptQualityArtifact;
+      readonly artifactBytes: string;
+      readonly artifactDigest: string;
+    }
+  | {
+      readonly ok: false;
+      readonly code: SculptQualityReconstructionRefusalCode;
+      readonly gate?: string;
+      readonly message: string;
+    };
+
+type AnySculptReconstructionResult =
+  | Extract<SculptReconstructionResult, { readonly ok: true }>
+  | Extract<SculptQualityReconstructionResult, { readonly ok: false }>;
+
+function snapshotObjectSculptSpec<Spec extends ObjectSculptSpec>(
+  spec: Spec,
+): Spec {
+  return snapshotJsonValue(spec);
 }
 
-function digestJson(value: JsonValue) {
-  return `sha256:${createHash("sha256").update(canonicalJson(value)).digest("hex")}`;
+function snapshotSculptArtifact<Artifact extends SculptArtifact>(
+  artifact: Artifact,
+): Artifact {
+  return snapshotJsonValue(artifact);
+}
+
+type OfflineProbeResult =
+  | { readonly ok: true; readonly spec: SculptQualityObjectSculptSpec }
+  | {
+      readonly ok: false;
+      readonly refusal: Extract<AnySculptReconstructionResult, { readonly ok: false }>;
+    };
+
+function probeOfflineAgent(
+  offlineAgent: SculptOfflineAgent,
+  spec: SculptQualityObjectSculptSpec,
+): OfflineProbeResult {
+  try {
+    const candidate = offlineAgent.refine(structuredClone(spec));
+    const validation = validateObjectSculptSpec(candidate);
+    if (
+      !validation.ok ||
+      !isSculptQualityObjectSculptSpec(validation.value)
+    ) {
+      return {
+        ok: false,
+        refusal: {
+          ok: false,
+          code: "offline-agent-invalid",
+          message: "Injected offline sculpt agent returned an invalid ObjectSculptSpec.",
+        },
+      };
+    }
+    return { ok: true, spec: snapshotObjectSculptSpec(validation.value) };
+  } catch {
+    return {
+      ok: false,
+      refusal: {
+        ok: false,
+        code: "offline-agent-invalid",
+        message: "Injected offline sculpt agent failed while refining the spec.",
+      },
+    };
+  }
 }
 
 /** Byte-canonical form used by fixture evidence and artifact digests. */
@@ -57,67 +154,95 @@ export function serializeSculptArtifact(artifact: SculptArtifact) {
   return `${canonicalJson(artifact as unknown as JsonValue)}\n`;
 }
 
-function digestBytes(value: string) {
-  return `sha256:${createHash("sha256").update(value).digest("hex")}`;
-}
-
-function hierarchyDepth(nodes: readonly SculptHierarchyNode[]) {
+function hierarchyDepth(
+  nodes: readonly SculptHierarchyNode[],
+  limit: number,
+) {
   const parents = new Map(nodes.map((node) => [node.id, node.parentId]));
+  const depths = new Map<string, number>();
   let maximum = 0;
   for (const node of nodes) {
-    let depth = 0;
+    const path: string[] = [];
     let cursor: string | null | undefined = node.id;
-    while (cursor !== null && cursor !== undefined) {
-      depth += 1;
+    while (
+      cursor !== null &&
+      cursor !== undefined &&
+      !depths.has(cursor)
+    ) {
+      path.push(cursor);
+      if (path.length > limit) return limit + 1;
       cursor = parents.get(cursor);
     }
-    maximum = Math.max(maximum, depth);
+    let depth = cursor === null || cursor === undefined
+      ? 0
+      : (depths.get(cursor) ?? 0);
+    for (let index = path.length - 1; index >= 0; index -= 1) {
+      depth += 1;
+      const nodeId = path[index];
+      if (nodeId !== undefined) depths.set(nodeId, depth);
+      if (depth > limit) return limit + 1;
+    }
+    if (depth > maximum) maximum = depth;
   }
   return maximum;
+}
+
+function qualityGateRefusal(id: string, value: number, limit: number) {
+  return {
+    ok: false as const,
+    gate: id,
+    message: `Sculpt quality gate "${id}" refused value ${value}; limit is ${limit}.`,
+  };
+}
+
+function qualityGatePass(id: string, value: number, limit: number) {
+  return {
+    id,
+    status: "passed" as const,
+    digest: digestJson({ id, limit, value }),
+  };
 }
 
 function qualityGateEvidence(spec: ObjectSculptSpec):
   | { readonly ok: true; readonly evidence: readonly SculptQualityGateEvidence[] }
   | { readonly ok: false; readonly gate: string; readonly message: string } {
-  const checks = [
-    {
-      id: "component-budget",
-      passed: spec.components.length <= 64,
-      value: spec.components.length,
-      limit: 64,
-    },
-    {
-      id: "hierarchy-depth",
-      passed: hierarchyDepth(spec.hierarchy) <= 16,
-      value: hierarchyDepth(spec.hierarchy),
-      limit: 16,
-    },
-    {
-      id: "physical-extent",
-      passed: spec.components.every((component) => component.dimensions.every((axis) => axis <= 100)),
-      value: Math.max(...spec.components.flatMap((component) => component.dimensions)),
-      limit: 100,
-    },
-  ] as const;
-  const failed = checks.find((check) => !check.passed);
-  if (failed !== undefined) {
-    return {
-      ok: false,
-      gate: failed.id,
-      message: `Sculpt quality gate "${failed.id}" refused value ${failed.value}; limit is ${failed.limit}.`,
-    };
+  const evidence: SculptQualityGateEvidence[] = [];
+  const componentCount = spec.components.length;
+  if (componentCount > 64) {
+    return qualityGateRefusal("component-budget", componentCount, 64);
   }
+  evidence.push(qualityGatePass("component-budget", componentCount, 64));
+
+  const depth = hierarchyDepth(spec.hierarchy, 16);
+  if (depth > 16) {
+    return qualityGateRefusal("hierarchy-depth", depth, 16);
+  }
+  evidence.push(qualityGatePass("hierarchy-depth", depth, 16));
+
+  let physicalExtent = 0;
+  for (const component of spec.components) {
+    for (const axis of component.dimensions) {
+      if (axis > physicalExtent) physicalExtent = axis;
+      if (physicalExtent > 100) {
+        return qualityGateRefusal(
+          "physical-extent",
+          physicalExtent,
+          100,
+        );
+      }
+    }
+  }
+  evidence.push(qualityGatePass("physical-extent", physicalExtent, 100));
+
   return {
     ok: true,
-    evidence: checks.map((check) => ({
-      id: check.id,
-      status: "passed" as const,
-      digest: digestJson({ id: check.id, limit: check.limit, value: check.value }),
-    })),
+    evidence,
   };
 }
 
-function specFromImageAndBrief(intake: Extract<SculptIntake, { mode: "image+brief" }>): ObjectSculptSpec {
+function specFromImageAndBrief(
+  intake: Extract<SculptIntake, { mode: "image+brief" }>,
+): LegacyObjectSculptSpec {
   const color = `#${intake.image.digest.slice("sha256:".length, "sha256:".length + 6)}`;
   const accent = `#${createHash("sha256").update(intake.brief).digest("hex").slice(0, 6)}`;
   const rootId = `${intake.intakeId}-body`;
@@ -162,11 +287,76 @@ function specFromImageAndBrief(intake: Extract<SculptIntake, { mode: "image+brie
   };
 }
 
+function reconstructLegacyArtifact(
+  intake: SculptIntake,
+  spec: LegacyObjectSculptSpec,
+): SculptReconstructionResult {
+  const gates = qualityGateEvidence(spec);
+  if (!gates.ok) {
+    return {
+      ok: false,
+      code: "quality-gate-refused",
+      gate: gates.gate,
+      message: gates.message,
+    };
+  }
+  const specSnapshot = snapshotObjectSculptSpec(spec);
+  const moduleDigest = digestBytes(LEGACY_PIPELINE_SOURCE);
+  const artifact: LegacySculptArtifact = {
+    schemaVersion: SCULPT_SCHEMA_VERSION,
+    kind: SCULPT_ARTIFACT_KIND,
+    artifactId: `${intake.intakeId}-artifact`,
+    spec: specSnapshot,
+    proceduralModule: {
+      moduleId: LEGACY_PIPELINE_MODULE_ID,
+      exportName: LEGACY_PIPELINE_EXPORT_NAME,
+      sourceDigest: moduleDigest,
+    },
+    runtimeHierarchy: {
+      rootNodeId: specSnapshot.rootNodeId,
+      nodes: specSnapshot.hierarchy,
+    },
+    evidence: {
+      method: intake.mode === "structured-spec"
+        ? "structured-fixture"
+        : "image-brief-reconstruction",
+      intakeDigest: digestJson(intake as unknown as JsonValue),
+      specDigest: digestJson(specSnapshot as unknown as JsonValue),
+      proceduralModuleDigest: moduleDigest,
+      qualityGates: gates.evidence,
+    },
+  };
+  const validatedArtifact = validateSculptArtifact(artifact);
+  if (!validatedArtifact.ok) {
+    return {
+      ok: false,
+      code: "artifact-invalid",
+      message:
+        validatedArtifact.diagnostics[0]?.message ??
+        "Generated Sculpt Artifact refused.",
+    };
+  }
+  const artifactSnapshot = snapshotSculptArtifact(
+    validatedArtifact.value as LegacySculptArtifact,
+  );
+  const artifactBytes = serializeSculptArtifact(artifactSnapshot);
+  return {
+    ok: true,
+    artifact: artifactSnapshot,
+    artifactBytes,
+    artifactDigest: digestBytes(artifactBytes),
+  };
+}
+
 /**
  * Reconstruct an openable Sculpt Artifact without a live provider dependency.
  * Image+brief is deliberately demo-grade; production spend requires a separate gate.
  */
-export function reconstructSculpt(intakeValue: unknown): SculptReconstructionResult {
+function reconstructSculptInternal(
+  intakeValue: unknown,
+  options: SculptReconstructionOptions,
+  forceQuality: boolean,
+): AnySculptReconstructionResult {
   const validatedIntake = validateSculptIntake(intakeValue);
   if (!validatedIntake.ok) {
     return {
@@ -184,7 +374,54 @@ export function reconstructSculpt(intakeValue: unknown): SculptReconstructionRes
     };
   }
 
-  const spec = intake.mode === "structured-spec" ? intake.structuredSpec : specFromImageAndBrief(intake);
+  const seed = options.seed ?? 0;
+  if (!Number.isSafeInteger(seed) || seed < 0) {
+    return {
+      ok: false,
+      code: "invalid-options",
+      message: "Sculpt reconstruction seed must be a non-negative safe integer.",
+    };
+  }
+  const inputSpec = intake.mode === "structured-spec"
+    ? intake.structuredSpec
+    : specFromImageAndBrief(intake);
+  const qualityRequested =
+    forceQuality ||
+    isSculptQualityObjectSculptSpec(inputSpec) ||
+    options.seed !== undefined ||
+    options.enableOfflineAgent === true;
+  if (!qualityRequested) {
+    return reconstructLegacyArtifact(
+      intake,
+      inputSpec as LegacyObjectSculptSpec,
+    );
+  }
+  let spec = normalizeObjectSculptSpec(inputSpec);
+  if (options.enableOfflineAgent === true) {
+    if (options.offlineAgent === undefined) {
+      return {
+        ok: false,
+        code: "offline-agent-unavailable",
+        message: "Offline sculpt agent flag is enabled but no injected offline adapter is available.",
+      };
+    }
+    const first = probeOfflineAgent(options.offlineAgent, spec);
+    if (!first.ok) return first.refusal;
+    const second = probeOfflineAgent(options.offlineAgent, spec);
+    if (!second.ok) return second.refusal;
+    if (
+      canonicalJson(first.spec as unknown as JsonValue) !==
+      canonicalJson(second.spec as unknown as JsonValue)
+    ) {
+      return {
+        ok: false,
+        code: "offline-agent-nondeterministic",
+        message: "Injected offline sculpt agent returned different results for identical input.",
+      };
+    }
+    spec = first.spec;
+  }
+  spec = snapshotObjectSculptSpec(spec);
   const gates = qualityGateEvidence(spec);
   if (!gates.ok) {
     return {
@@ -195,30 +432,32 @@ export function reconstructSculpt(intakeValue: unknown): SculptReconstructionRes
     };
   }
 
-  const moduleDigest = digestBytes(PIPELINE_SOURCE);
-  const artifact: SculptArtifact = {
+  const proceduralEmit = emitSculptProcedural(spec, { seed });
+  const artifact: SculptQualityArtifact = {
     schemaVersion: SCULPT_SCHEMA_VERSION,
     kind: SCULPT_ARTIFACT_KIND,
     artifactId: `${intake.intakeId}-artifact`,
     spec,
     proceduralModule: {
-      moduleId: PIPELINE_MODULE_ID,
-      exportName: PIPELINE_EXPORT_NAME,
-      sourceDigest: moduleDigest,
+      moduleId: SCULPT_PROCEDURAL_MODULE_ID,
+      exportName: SCULPT_PROCEDURAL_EXPORT_NAME,
+      sourceDigest: SCULPT_PROCEDURAL_SOURCE_DIGEST,
+      seed,
+      emitDigest: proceduralEmit.digest,
     },
-    runtimeHierarchy: {
-      rootNodeId: spec.rootNodeId,
-      nodes: spec.hierarchy,
-    },
+    runtimeHierarchy: projectAnimationReadyHierarchy(spec),
     evidence: {
       method: intake.mode === "structured-spec" ? "structured-fixture" : "image-brief-reconstruction",
       intakeDigest: digestJson(intake as unknown as JsonValue),
       specDigest: digestJson(spec as unknown as JsonValue),
-      proceduralModuleDigest: moduleDigest,
-      qualityGates: gates.evidence,
+      proceduralModuleDigest: SCULPT_PROCEDURAL_SOURCE_DIGEST,
+      qualityGates: [
+        ...gates.evidence,
+        { id: "procedural-emit", status: "passed", digest: proceduralEmit.digest },
+      ],
     },
   };
-  const validatedArtifact = validateSculptArtifact(artifact);
+  const validatedArtifact = validateSculptQualityArtifact(artifact);
   if (!validatedArtifact.ok) {
     return {
       ok: false,
@@ -226,11 +465,41 @@ export function reconstructSculpt(intakeValue: unknown): SculptReconstructionRes
       message: validatedArtifact.diagnostics[0]?.message ?? "Generated Sculpt Artifact refused.",
     };
   }
-  const artifactBytes = serializeSculptArtifact(validatedArtifact.value);
+  const artifactSnapshot = snapshotSculptArtifact(validatedArtifact.value);
+  const artifactBytes = serializeSculptArtifact(artifactSnapshot);
   return {
     ok: true,
-    artifact: validatedArtifact.value,
+    artifact: artifactSnapshot,
     artifactBytes,
     artifactDigest: digestBytes(artifactBytes),
   };
+}
+
+export function reconstructSculpt(
+  intakeValue: unknown,
+): SculptReconstructionResult;
+export function reconstructSculpt(
+  intakeValue: unknown,
+  options: SculptReconstructionOptions,
+): SculptQualityReconstructionResult;
+export function reconstructSculpt(
+  intakeValue: unknown,
+  options?: SculptReconstructionOptions,
+): SculptReconstructionResult | SculptQualityReconstructionResult {
+  return reconstructSculptInternal(
+    intakeValue,
+    options ?? {},
+    options !== undefined,
+  );
+}
+
+export function reconstructSculptQuality(
+  intakeValue: unknown,
+  options: SculptReconstructionOptions = {},
+): SculptQualityReconstructionResult {
+  return reconstructSculptInternal(
+    intakeValue,
+    options,
+    true,
+  ) as SculptQualityReconstructionResult;
 }

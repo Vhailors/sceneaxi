@@ -1,7 +1,7 @@
-# Captain authorization 2026-07-24 standing for this SceneAxi end-of-task ship:
+# Captain authorization 2026-07-24 standing for this sculpt-quality end-of-task ship:
 # allow up to three pipeline-owned repair rounds per automated step.
 # Keep this project-local; do not raise the global home configuration.
-# Authorized by the hybrid vertical launch brief.
+# Authorized by the sceneaxi-sculpt-quality-v1 launch brief.
 auto_fix:
   rebase: 3
   review: 3

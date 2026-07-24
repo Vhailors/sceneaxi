@@ -11,9 +11,15 @@ import {
 } from "@sceneaxi/engine-presentation";
 import {
   OBJECT_SCULPT_SPEC_KIND,
+  SCULPT_PROCEDURAL_EXPORT_NAME,
+  SCULPT_PROCEDURAL_MODULE_ID,
+  SCULPT_PROCEDURAL_SOURCE_DIGEST,
   SCULPT_ARTIFACT_KIND,
   SCULPT_SCHEMA_VERSION,
+  digestObjectSculptSpec,
+  projectAnimationReadyHierarchy,
   type SculptArtifact,
+  type SculptQualityArtifact,
 } from "@sceneaxi/schemas";
 
 const digest = (character: string) => `sha256:${character.repeat(64)}`;
@@ -23,7 +29,7 @@ const transform = {
   scale: [1, 1, 1],
 } as const;
 
-function fixtureArtifact(): SculptArtifact {
+function fixtureArtifact(): SculptQualityArtifact {
   const hierarchy = [
     { id: "crate", parentId: null, componentId: "body", transform },
     {
@@ -33,37 +39,61 @@ function fixtureArtifact(): SculptArtifact {
       transform: { ...transform, translation: [0, 1.25, 0] },
     },
   ] as const;
+  const spec = {
+    schemaVersion: SCULPT_SCHEMA_VERSION,
+    kind: OBJECT_SCULPT_SPEC_KIND,
+    id: "fixture-crate",
+    rootNodeId: "crate",
+    complexityClass: "simple" as const,
+    passes: [
+      { id: "blockout", deterministic: true as const, steps: ["establish-volume"] },
+      { id: "structure", deterministic: true as const, steps: ["place-components"] },
+      { id: "materials", deterministic: true as const, steps: ["assign-materials"] },
+      { id: "sockets", deterministic: true as const, steps: ["bind-sockets"] },
+    ],
+    materials: [
+      { id: "wood", baseColor: "#885522", metallic: 0, roughness: 0.8 },
+    ],
+    components: [
+      { id: "body", primitive: "box" as const, dimensions: [2, 2, 2] as const, materialId: "wood" },
+      { id: "cap", primitive: "cylinder" as const, dimensions: [1, 0.5, 1] as const, materialId: "wood" },
+    ],
+    hierarchy,
+    sockets: [
+      {
+        id: "cap-attachment",
+        nodeId: "cap",
+        kind: "attachment" as const,
+        axis: "y" as const,
+        amplitude: 0,
+        frequencyHz: 0,
+      },
+    ],
+  };
+  const emitDigest =
+    "sha256:5398cb8d19235d0c393c9d56f3958bd9c2700a90d2c0a03689753663a1192e08";
   return {
     schemaVersion: SCULPT_SCHEMA_VERSION,
     kind: SCULPT_ARTIFACT_KIND,
     artifactId: "fixture-crate-artifact",
-    spec: {
-      schemaVersion: SCULPT_SCHEMA_VERSION,
-      kind: OBJECT_SCULPT_SPEC_KIND,
-      id: "fixture-crate",
-      rootNodeId: "crate",
-      materials: [
-        { id: "wood", baseColor: "#885522", metallic: 0, roughness: 0.8 },
-      ],
-      components: [
-        { id: "body", primitive: "box", dimensions: [2, 2, 2], materialId: "wood" },
-        { id: "cap", primitive: "cylinder", dimensions: [1, 0.5, 1], materialId: "wood" },
-      ],
-      hierarchy,
-      sockets: [],
-    },
+    spec,
     proceduralModule: {
-      moduleId: "sceneaxi/fixture-crate",
-      exportName: "buildFixtureCrate",
-      sourceDigest: digest("c"),
+      moduleId: SCULPT_PROCEDURAL_MODULE_ID,
+      exportName: SCULPT_PROCEDURAL_EXPORT_NAME,
+      sourceDigest: SCULPT_PROCEDURAL_SOURCE_DIGEST,
+      seed: 0,
+      emitDigest,
     },
-    runtimeHierarchy: { rootNodeId: "crate", nodes: hierarchy },
+    runtimeHierarchy: projectAnimationReadyHierarchy(spec),
     evidence: {
       method: "structured-fixture",
       intakeDigest: digest("a"),
-      specDigest: digest("b"),
-      proceduralModuleDigest: digest("c"),
-      qualityGates: [{ id: "contract", status: "passed", digest: digest("d") }],
+      specDigest: digestObjectSculptSpec(spec),
+      proceduralModuleDigest: SCULPT_PROCEDURAL_SOURCE_DIGEST,
+      qualityGates: [
+        { id: "contract", status: "passed", digest: digest("d") },
+        { id: "procedural-emit", status: "passed", digest: emitDigest },
+      ],
     },
   };
 }

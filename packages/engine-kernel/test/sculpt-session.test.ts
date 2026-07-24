@@ -6,9 +6,14 @@ import {
 } from "@sceneaxi/engine-kernel";
 import {
   OBJECT_SCULPT_SPEC_KIND,
+  SCULPT_PROCEDURAL_EXPORT_NAME,
+  SCULPT_PROCEDURAL_MODULE_ID,
+  SCULPT_PROCEDURAL_SOURCE_DIGEST,
   SCULPT_ARTIFACT_KIND,
   SCULPT_SCHEMA_VERSION,
-  type SculptArtifact,
+  digestObjectSculptSpec,
+  projectAnimationReadyHierarchy,
+  type SculptQualityArtifact,
 } from "@sceneaxi/schemas";
 
 const digest = (character: string) => `sha256:${character.repeat(64)}`;
@@ -18,7 +23,7 @@ const identity = {
   scale: [1, 1, 1],
 } as const;
 
-function artifact(): SculptArtifact {
+function artifact(): SculptQualityArtifact {
   const hierarchy = [
     {
       id: "body-node",
@@ -33,46 +38,69 @@ function artifact(): SculptArtifact {
       transform: { ...identity, translation: [0, 1.25, 0] },
     },
   ] as const;
+  const spec = {
+    schemaVersion: SCULPT_SCHEMA_VERSION,
+    kind: OBJECT_SCULPT_SPEC_KIND,
+    id: "kernel-fixture",
+    rootNodeId: "body-node",
+    complexityClass: "simple" as const,
+    passes: [
+      { id: "blockout", deterministic: true as const, steps: ["establish-volume"] },
+      { id: "structure", deterministic: true as const, steps: ["place-components"] },
+      { id: "materials", deterministic: true as const, steps: ["assign-materials"] },
+      { id: "sockets", deterministic: true as const, steps: ["bind-sockets"] },
+    ],
+    materials: [
+      { id: "main", baseColor: "#4488cc", metallic: 0.1, roughness: 0.6 },
+    ],
+    components: [
+      { id: "body", primitive: "box" as const, dimensions: [2, 2, 2] as const, materialId: "main" },
+      { id: "cap", primitive: "sphere" as const, dimensions: [1, 1, 1] as const, materialId: "main" },
+    ],
+    hierarchy,
+    sockets: [
+      {
+        id: "cap-bob",
+        nodeId: "cap-node",
+        kind: "animation" as const,
+        axis: "y" as const,
+        amplitude: 0.25,
+        frequencyHz: 1,
+      },
+      {
+        id: "cap-attachment",
+        nodeId: "cap-node",
+        kind: "attachment" as const,
+        axis: "y" as const,
+        amplitude: 0,
+        frequencyHz: 0,
+      },
+    ],
+  };
+  const emitDigest =
+    "sha256:85bf6c1b59cf9f3e45649caf3cdb68bd0d46b933b47a515cfe5dedb69d783f00";
   return {
     schemaVersion: SCULPT_SCHEMA_VERSION,
     kind: SCULPT_ARTIFACT_KIND,
     artifactId: "kernel-fixture-artifact",
-    spec: {
-      schemaVersion: SCULPT_SCHEMA_VERSION,
-      kind: OBJECT_SCULPT_SPEC_KIND,
-      id: "kernel-fixture",
-      rootNodeId: "body-node",
-      materials: [
-        { id: "main", baseColor: "#4488cc", metallic: 0.1, roughness: 0.6 },
-      ],
-      components: [
-        { id: "body", primitive: "box", dimensions: [2, 2, 2], materialId: "main" },
-        { id: "cap", primitive: "sphere", dimensions: [1, 1, 1], materialId: "main" },
-      ],
-      hierarchy,
-      sockets: [
-        {
-          id: "cap-bob",
-          nodeId: "cap-node",
-          kind: "animation",
-          axis: "y",
-          amplitude: 0.25,
-          frequencyHz: 1,
-        },
-      ],
-    },
+    spec,
     proceduralModule: {
-      moduleId: "sceneaxi/kernel-fixture",
-      exportName: "buildKernelFixture",
-      sourceDigest: digest("c"),
+      moduleId: SCULPT_PROCEDURAL_MODULE_ID,
+      exportName: SCULPT_PROCEDURAL_EXPORT_NAME,
+      sourceDigest: SCULPT_PROCEDURAL_SOURCE_DIGEST,
+      seed: 0,
+      emitDigest,
     },
-    runtimeHierarchy: { rootNodeId: "body-node", nodes: hierarchy },
+    runtimeHierarchy: projectAnimationReadyHierarchy(spec),
     evidence: {
       method: "structured-fixture",
       intakeDigest: digest("a"),
-      specDigest: digest("b"),
-      proceduralModuleDigest: digest("c"),
-      qualityGates: [{ id: "contract", status: "passed", digest: digest("d") }],
+      specDigest: digestObjectSculptSpec(spec),
+      proceduralModuleDigest: SCULPT_PROCEDURAL_SOURCE_DIGEST,
+      qualityGates: [
+        { id: "contract", status: "passed", digest: digest("d") },
+        { id: "procedural-emit", status: "passed", digest: emitDigest },
+      ],
     },
   };
 }
@@ -100,7 +128,9 @@ describe("kernel sculpt session", () => {
 
     session.advance({ tick: 1, deltaMs: 250 });
     const after = session.observe();
-    expect(after.sockets[0]?.value).not.toBe(before.sockets[0]?.value);
+    expect(after.sockets.find((socket) => socket.id === "cap-bob")?.value).not.toBe(
+      before.sockets.find((socket) => socket.id === "cap-bob")?.value,
+    );
     expect(after.tick).toBe(1);
     expect(after.elapsedMs).toBe(250);
   });
