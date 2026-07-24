@@ -81,6 +81,12 @@ describe("shell ↔ CLI parity (conformance)", () => {
       "edit.json",
     ]);
     expect(proposed.exitCode).toBe(ExitCode.OK);
+    const cliProposal = JSON.parse(
+      readFileSync(join(dirCli, "edit.json"), "utf8"),
+    ) as { diffs: Array<{ unifiedDiff: string }> };
+    if (desktop.ok) {
+      expect(desktop.unifiedDiff).toBe(cliProposal.diffs[0]?.unifiedDiff);
+    }
     const applied = runCli([
       "project",
       "apply",
@@ -98,6 +104,9 @@ describe("shell ↔ CLI parity (conformance)", () => {
     expect(bytesWeb.equals(bytesDesktop)).toBe(true);
     expect(bytesWeb.equals(bytesCli)).toBe(true);
     expect(bytesDesktop.equals(bytesCli)).toBe(true);
+    expect(contentHash(bytesDesktop.toString("utf8"))).toBe(
+      contentHash(bytesCli.toString("utf8")),
+    );
 
     if (web.ok && desktop.ok) {
       expect(web.unifiedDiff).toBe(desktop.unifiedDiff);
