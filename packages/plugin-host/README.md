@@ -94,6 +94,13 @@ and execution-sentinel evidence for pre- vs post-evaluation refusals — is
 fixture-tested over the public seam in `test/refuse-matrix.test.ts` and
 `test/load-refuse.test.ts`; extend those when touching the pipeline.
 
+The repository golden path loads the checked-in inert sample (its empty claim
+set matches the current empty public registry) and names an illegal-claim
+refusal through this public seam in
+[`tests/e2e/cli-golden-path.test.ts`](../../tests/e2e/cli-golden-path.test.ts).
+Run it with `pnpm test:golden`; its fixtures live under
+`tests/e2e/fixtures/plugin-host/`.
+
 ## Stable refusal reasons
 
 Every `RefusedPlugin.reason` is a stable machine-readable code. Branch on
