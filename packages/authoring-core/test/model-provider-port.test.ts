@@ -1264,6 +1264,85 @@ describe("Model Provider Port", () => {
     expect(recorded).toEqual([]);
   });
 
+  it("captures the stream iterator method once before exposing success", async () => {
+    let iteratorReads = 0;
+    const response = Object.defineProperty({}, Symbol.asyncIterator, {
+      get() {
+        iteratorReads += 1;
+        if (iteratorReads > 1) return undefined;
+        return async function* () {
+          yield {
+            schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+            operation: "stream" as const,
+            delta: "captured iterator",
+            done: true,
+          };
+        };
+      },
+    });
+    const adapter = {
+      ...fakeAdapter(),
+      async stream() {
+        return { response, executedModel: model };
+      },
+    } as unknown as ModelProviderAdapter;
+
+    const result = await createModelProviderPort({
+      adapter,
+      profilePolicies: { "@sceneaxi/profile-game": allow },
+    }).stream({
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      operation: "stream",
+      profile: "@sceneaxi/profile-game",
+      model,
+      prompt: "capture iterator",
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const chunks = [];
+    for await (const chunk of result.response) chunks.push(chunk);
+    expect(chunks).toEqual([
+      {
+        schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+        operation: "stream",
+        delta: "captured iterator",
+        done: true,
+      },
+    ]);
+    expect(iteratorReads).toBe(1);
+  });
+
+  it("refuses throwing stream iterator accessors with the named reason", async () => {
+    const response = Object.defineProperty({}, Symbol.asyncIterator, {
+      get() {
+        throw new TypeError("invalid iterator accessor");
+      },
+    });
+    const adapter = {
+      ...fakeAdapter(),
+      async stream() {
+        return { response, executedModel: model };
+      },
+    } as unknown as ModelProviderAdapter;
+
+    const result = await createModelProviderPort({
+      adapter,
+      profilePolicies: { "@sceneaxi/profile-game": allow },
+    }).stream({
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      operation: "stream",
+      profile: "@sceneaxi/profile-game",
+      model,
+      prompt: "throwing iterator accessor",
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: "MODEL_PROVIDER_RESPONSE_ENVELOPE_INVALID",
+    });
+  });
+
   it("validates stream chunks lazily and withholds evidence on failure", async () => {
     const recorded: ModelProviderCallEvidence[] = [];
     const adapter = {

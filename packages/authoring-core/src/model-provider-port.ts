@@ -526,19 +526,28 @@ function isStreamChunk(value: unknown): value is ModelStreamChunk {
   );
 }
 
-function isAsyncIterable(value: unknown): value is AsyncIterable<unknown> {
+function captureAsyncIterable(value: unknown) {
   if (
     (typeof value !== "object" && typeof value !== "function") ||
-    value === null ||
-    !(Symbol.asyncIterator in value)
+    value === null
   ) {
-    return false;
+    return undefined;
   }
-  return typeof value[Symbol.asyncIterator] === "function";
-}
-
-function asAsyncIterable(value: unknown) {
-  return isAsyncIterable(value) ? value : undefined;
+  const capturedIteratorMethod = captureValue(
+    () =>
+      (value as { readonly [Symbol.asyncIterator]?: unknown })[
+        Symbol.asyncIterator
+      ],
+  );
+  if (
+    !capturedIteratorMethod.ok ||
+    typeof capturedIteratorMethod.value !== "function"
+  ) {
+    return undefined;
+  }
+  const iteratorMethod = capturedIteratorMethod.value.bind(value) as () =>
+    AsyncIterator<unknown>;
+  return Object.freeze({ [Symbol.asyncIterator]: iteratorMethod });
 }
 
 function evidenceFor(
@@ -760,7 +769,7 @@ export function createModelProviderPort(
       );
     }
     const { response: adapterResponse, executedModel } = capturedResult.value;
-    const stream = asAsyncIterable(adapterResponse);
+    const stream = captureAsyncIterable(adapterResponse);
     if (stream === undefined) {
       return refuse(
         MODEL_PROVIDER_REFUSE_REASONS.responseInvalid,
