@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "kind": "sceneaxi.sculpt-quality-minimal-support-evidence",
+  "issue": 81,
+  "decision": "not-needed",
+  "proofTest": "tests/e2e/sculpt-quality-golden.test.ts",
+  "demoIds": ["service-crate", "field-drone"],
+  "existingPath": [
+    "reconstructSculpt",
+    "createSculptMountApi",
+    "openSculptKernelSession",
+    "createMinimumE2Editor"
+  ],
+  "minimumE2ChecklistExpanded": false,
+  "engineAdapterAdded": false,
+  "physicsSuiteExpanded": false,
+  "stage1Run": false
+}

@@ -26,6 +26,8 @@ import {
 
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const GOLDEN_PATH = "tests/e2e/fixtures/sculpt-quality/golden-digests.json";
+const MINIMAL_SUPPORT_EVIDENCE_PATH =
+  "tests/e2e/fixtures/sculpt-quality/minimal-support-evidence.json";
 const DEMOS = [
   {
     id: "service-crate",
@@ -220,6 +222,24 @@ describe("sculpt-quality v1 golden demos", () => {
       };
 
       expect(actual).toEqual(readJson(GOLDEN_PATH));
+      expect({
+        schemaVersion: 1,
+        kind: "sceneaxi.sculpt-quality-minimal-support-evidence",
+        issue: 81,
+        decision: "not-needed",
+        proofTest: "tests/e2e/sculpt-quality-golden.test.ts",
+        demoIds: demos.map((demo) => demo.id),
+        existingPath: [
+          "reconstructSculpt",
+          "createSculptMountApi",
+          "openSculptKernelSession",
+          "createMinimumE2Editor",
+        ],
+        minimumE2ChecklistExpanded: false,
+        engineAdapterAdded: false,
+        physicsSuiteExpanded: false,
+        stage1Run: false,
+      }).toEqual(readJson(MINIMAL_SUPPORT_EVIDENCE_PATH));
     } finally {
       rmSync(projectRoot, { recursive: true, force: true });
     }
