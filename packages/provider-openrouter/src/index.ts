@@ -254,6 +254,7 @@ function parseToolCallArguments(value: unknown): JsonObject | undefined {
 function parseToolCall(
   payload: unknown,
   pinnedModel: ModelDescriptor,
+  offeredToolNames: ReadonlySet<string>,
 ): ModelToolCallResponse {
   const choice = parseChoice(payload, pinnedModel);
   if (choice.finishReason !== "tool_calls") {
@@ -275,7 +276,12 @@ function parseToolCall(
       : undefined;
     const name = fn?.["name"];
     const args = parseToolCallArguments(fn?.["arguments"]);
-    if (typeof name !== "string" || name.length === 0 || args === undefined) {
+    if (
+      typeof name !== "string" ||
+      name.length === 0 ||
+      !offeredToolNames.has(name) ||
+      args === undefined
+    ) {
       throw new OpenRouterAdapterError(
         OPENROUTER_ADAPTER_ERROR_CODES.responseInvalid,
         "OpenRouter returned an invalid tool call.",
@@ -313,11 +319,12 @@ export function createOpenRouterAdapter(
     },
     async toolCall(request) {
       assertPinnedRequest(request, pinnedModel);
+      const offeredToolNames = new Set(request.tools.map((tool) => tool.name));
       const payload = await options.transport(
         transportRequest(request, evalConfig),
       );
       return Object.freeze({
-        response: parseToolCall(payload, pinnedModel),
+        response: parseToolCall(payload, pinnedModel, offeredToolNames),
         executedModel: pinnedModel,
       });
     },

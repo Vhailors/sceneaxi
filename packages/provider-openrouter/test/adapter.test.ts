@@ -123,6 +123,49 @@ describe("@sceneaxi/provider-openrouter", () => {
     });
   });
 
+  it("refuses tool calls that were not offered in the request", async () => {
+    const adapter = createOpenRouterAdapter({
+      model: MODEL,
+      eval: EVAL,
+      transport: () => ({
+        ...fixture("tool-call") as Record<string, unknown>,
+        choices: [
+          {
+            finish_reason: "tool_calls",
+            message: {
+              tool_calls: [
+                {
+                  function: {
+                    name: "delete-project",
+                    arguments: "{}",
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    });
+
+    await expect(
+      adapter.toolCall?.({
+        schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+        operation: "tool-call",
+        profile: "@sceneaxi/profile-game",
+        model: MODEL,
+        prompt: "move the hero",
+        tools: [
+          {
+            name: "move-entity",
+            inputSchema: { type: "object" },
+          },
+        ],
+      }),
+    ).rejects.toMatchObject({
+      code: OPENROUTER_ADAPTER_ERROR_CODES.responseInvalid,
+    });
+  });
+
   it("refuses truncated tool calls even when their arguments are valid JSON", async () => {
     const adapter = createOpenRouterAdapter({
       model: MODEL,
