@@ -281,6 +281,7 @@ export {
 
 export {
   OBJECT_SCULPT_SPEC_KIND,
+  REQUIRED_SCULPT_PASSES,
   SCULPT_ARTIFACT_KIND,
   SCULPT_INTAKE_KIND,
   SCULPT_INTAKE_MODES,
@@ -293,16 +294,19 @@ export {
 } from "./sculpt.js";
 export type {
   ObjectSculptSpec,
+  RequiredSculptPassId,
   SculptArtifact,
   SculptComponent,
   SculptDiagnostic,
   SculptDiagnosticCode,
+  SculptDetailInventory,
   SculptEvidence,
   SculptHierarchyNode,
   SculptImage,
   SculptIntake,
   SculptIntakeMode,
   SculptMaterial,
+  SculptPass,
   SculptProceduralModuleRef,
   SculptQualityGateEvidence,
   SculptRuntimeHierarchy,

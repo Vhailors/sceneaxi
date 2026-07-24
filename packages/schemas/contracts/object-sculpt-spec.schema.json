@@ -4,17 +4,30 @@
   "title": "SceneAxi ObjectSculptSpec v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "kind", "id", "rootNodeId", "components", "materials", "sockets", "hierarchy"],
+  "required": ["schemaVersion", "kind", "id", "rootNodeId", "complexityClass", "passes", "components", "materials", "sockets", "hierarchy"],
   "properties": {
     "schemaVersion": { "const": 1 },
     "kind": { "const": "sceneaxi.object-sculpt-spec" },
     "id": { "$ref": "#/$defs/id" },
     "rootNodeId": { "$ref": "#/$defs/id" },
+    "complexityClass": { "enum": ["simple", "non-trivial"] },
+    "passes": {
+      "type": "array",
+      "minItems": 4,
+      "items": { "$ref": "#/$defs/pass" }
+    },
+    "detailInventory": { "$ref": "#/$defs/detailInventory" },
     "components": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/component" } },
     "materials": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/material" } },
     "sockets": { "type": "array", "items": { "$ref": "#/$defs/socket" } },
     "hierarchy": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/hierarchyNode" } }
   },
+  "allOf": [
+    {
+      "if": { "properties": { "complexityClass": { "const": "non-trivial" } } },
+      "then": { "required": ["detailInventory"] }
+    }
+  ],
   "$defs": {
     "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
     "finiteNumber": { "type": "number" },
@@ -39,6 +52,37 @@
       "items": false,
       "minItems": 3,
       "maxItems": 3
+    },
+    "pass": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "deterministic", "steps"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "deterministic": { "const": true },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "detailInventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["silhouetteFeatures", "structuralFeatures", "surfaceFeatures", "materialIds", "socketIds"],
+      "properties": {
+        "silhouetteFeatures": { "$ref": "#/$defs/featureList" },
+        "structuralFeatures": { "$ref": "#/$defs/featureList" },
+        "surfaceFeatures": { "$ref": "#/$defs/featureList" },
+        "materialIds": { "$ref": "#/$defs/featureList" },
+        "socketIds": { "$ref": "#/$defs/featureList" }
+      }
+    },
+    "featureList": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
     },
     "transform": {
       "type": "object",

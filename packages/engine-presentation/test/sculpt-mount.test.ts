@@ -42,6 +42,13 @@ function fixtureArtifact(): SculptArtifact {
       kind: OBJECT_SCULPT_SPEC_KIND,
       id: "fixture-crate",
       rootNodeId: "crate",
+      complexityClass: "simple",
+      passes: [
+        { id: "blockout", deterministic: true, steps: ["establish-volume"] },
+        { id: "structure", deterministic: true, steps: ["place-components"] },
+        { id: "materials", deterministic: true, steps: ["assign-materials"] },
+        { id: "sockets", deterministic: true, steps: ["bind-sockets"] },
+      ],
       materials: [
         { id: "wood", baseColor: "#885522", metallic: 0, roughness: 0.8 },
       ],

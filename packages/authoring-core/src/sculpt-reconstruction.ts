@@ -132,6 +132,13 @@ function specFromImageAndBrief(intake: Extract<SculptIntake, { mode: "image+brie
     kind: OBJECT_SCULPT_SPEC_KIND,
     id: `${intake.intakeId}-spec`,
     rootNodeId: rootId,
+    complexityClass: "simple",
+    passes: [
+      { id: "blockout", deterministic: true, steps: ["derive-primary-volume"] },
+      { id: "structure", deterministic: true, steps: ["place-body-and-detail"] },
+      { id: "materials", deterministic: true, steps: ["derive-hash-materials"] },
+      { id: "sockets", deterministic: true, steps: ["bind-detail-animation"] },
+    ],
     materials: [
       { id: "primary", baseColor: color, metallic: 0.1, roughness: 0.7 },
       { id: "accent", baseColor: accent, metallic: 0.3, roughness: 0.45 },

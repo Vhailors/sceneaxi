@@ -21,11 +21,20 @@ const transform = {
   scale: [1, 1, 1],
 } as const;
 
+const qualityPasses = [
+  { id: "blockout", deterministic: true, steps: ["establish-volume"] },
+  { id: "structure", deterministic: true, steps: ["place-components"] },
+  { id: "materials", deterministic: true, steps: ["assign-materials"] },
+  { id: "sockets", deterministic: true, steps: ["bind-sockets"] },
+] as const;
+
 const fixtureSpec = {
   schemaVersion: SCULPT_SCHEMA_VERSION,
   kind: OBJECT_SCULPT_SPEC_KIND,
   id: "fixture-crate",
   rootNodeId: "crate-body",
+  complexityClass: "simple",
+  passes: qualityPasses,
   materials: [
     { id: "wood", baseColor: "#9b6a3c", metallic: 0, roughness: 0.8 },
   ],
@@ -53,6 +62,37 @@ const fixtureSpec = {
     },
   ],
 } as const satisfies ObjectSculptSpec;
+
+function nonTrivialFixtureSpec(): ObjectSculptSpec {
+  return {
+    ...fixtureSpec,
+    complexityClass: "non-trivial",
+    materials: [
+      ...fixtureSpec.materials,
+      { id: "metal", baseColor: "#555b63", metallic: 0.8, roughness: 0.3 },
+    ],
+    components: [
+      ...fixtureSpec.components,
+      { id: "latch", primitive: "cylinder", dimensions: [0.2, 0.4, 0.2], materialId: "metal" },
+    ],
+    hierarchy: [
+      ...fixtureSpec.hierarchy,
+      {
+        id: "crate-latch",
+        parentId: "crate-lid",
+        componentId: "latch",
+        transform: { ...transform, translation: [0, 0, 1] },
+      },
+    ],
+    detailInventory: {
+      silhouetteFeatures: ["raised-lid", "front-latch"],
+      structuralFeatures: ["crate-body", "hinged-lid", "latch-housing"],
+      surfaceFeatures: ["wood-panels", "metal-latch"],
+      materialIds: ["wood", "metal"],
+      socketIds: ["lid-hinge"],
+    },
+  };
+}
 
 function fixtureArtifact(): SculptArtifact {
   return {
@@ -146,6 +186,81 @@ describe("hybrid sculpt contracts", () => {
       ok: true,
       value: fixtureSpec,
     });
+  });
+
+  it("accepts the required multi-pass order and a reference-checked non-trivial inventory", () => {
+    const base = nonTrivialFixtureSpec();
+    const spec = {
+      ...base,
+      passes: [
+        ...base.passes.slice(0, 3),
+        { id: "surface-detail", deterministic: true as const, steps: ["bevel-edges"] },
+        qualityPasses[3],
+      ],
+    };
+    expect(validateObjectSculptSpec(spec)).toEqual({ ok: true, value: spec });
+  });
+
+  it.each([
+    [
+      "missing pass ledger",
+      Object.fromEntries(
+        Object.entries(fixtureSpec).filter(([key]) => key !== "passes"),
+      ),
+      "missing-sculpt-pass",
+    ],
+    [
+      "missing required pass",
+      { ...fixtureSpec, passes: qualityPasses.slice(0, 3) },
+      "missing-sculpt-pass",
+    ],
+    [
+      "out-of-order required passes",
+      { ...fixtureSpec, passes: [...qualityPasses].reverse() },
+      "out-of-order-sculpt-pass",
+    ],
+    [
+      "empty pass",
+      {
+        ...fixtureSpec,
+        passes: qualityPasses.map((pass) =>
+          pass.id === "materials" ? { ...pass, steps: [] } : pass,
+        ),
+      },
+      "empty-sculpt-pass",
+    ],
+    [
+      "missing non-trivial inventory",
+      { ...fixtureSpec, complexityClass: "non-trivial" },
+      "missing-detail-inventory",
+    ],
+    [
+      "shallow non-trivial inventory",
+      {
+        ...nonTrivialFixtureSpec(),
+        detailInventory: {
+          silhouetteFeatures: ["raised-lid"],
+          structuralFeatures: ["crate-body"],
+          surfaceFeatures: ["wood-panels"],
+          materialIds: ["wood"],
+          socketIds: [],
+        },
+      },
+      "shallow-detail-inventory",
+    ],
+    [
+      "shallow non-trivial spec",
+      {
+        ...nonTrivialFixtureSpec(),
+        components: fixtureSpec.components,
+        hierarchy: fixtureSpec.hierarchy,
+      },
+      "shallow-sculpt-spec",
+    ],
+  ])("refuses %s with a stable quality code", (_name, spec, code) => {
+    const result = validateObjectSculptSpec(spec);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.diagnostics[0]?.code).toBe(code);
   });
 
   it.each([

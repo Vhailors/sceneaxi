@@ -10,6 +10,13 @@ export const SCULPT_SCHEMA_VERSION = 1 as const;
 export const SCULPT_INTAKE_KIND = "sceneaxi.sculpt-intake" as const;
 export const OBJECT_SCULPT_SPEC_KIND = "sceneaxi.object-sculpt-spec" as const;
 export const SCULPT_ARTIFACT_KIND = "sceneaxi.sculpt-artifact" as const;
+export const REQUIRED_SCULPT_PASSES = Object.freeze([
+  "blockout",
+  "structure",
+  "materials",
+  "sockets",
+] as const);
+export type RequiredSculptPassId = (typeof REQUIRED_SCULPT_PASSES)[number];
 
 export const SCULPT_INTAKE_MODES = Object.freeze([
   "image",
@@ -63,16 +70,43 @@ export type SculptHierarchyNode = {
   readonly transform: SculptTransform;
 };
 
-export type ObjectSculptSpec = {
+export type SculptPass = {
+  readonly id: string;
+  readonly deterministic: true;
+  readonly steps: ReadonlyArray<string>;
+};
+
+export type SculptDetailInventory = {
+  readonly silhouetteFeatures: ReadonlyArray<string>;
+  readonly structuralFeatures: ReadonlyArray<string>;
+  readonly surfaceFeatures: ReadonlyArray<string>;
+  readonly materialIds: ReadonlyArray<string>;
+  readonly socketIds: ReadonlyArray<string>;
+};
+
+type ObjectSculptSpecBase = {
   readonly schemaVersion: typeof SCULPT_SCHEMA_VERSION;
   readonly kind: typeof OBJECT_SCULPT_SPEC_KIND;
   readonly id: string;
   readonly rootNodeId: string;
+  readonly passes: ReadonlyArray<SculptPass>;
   readonly components: ReadonlyArray<SculptComponent>;
   readonly materials: ReadonlyArray<SculptMaterial>;
   readonly sockets: ReadonlyArray<SculptSocket>;
   readonly hierarchy: ReadonlyArray<SculptHierarchyNode>;
 };
+
+export type ObjectSculptSpec = ObjectSculptSpecBase &
+  (
+    | {
+        readonly complexityClass: "simple";
+        readonly detailInventory?: SculptDetailInventory;
+      }
+    | {
+        readonly complexityClass: "non-trivial";
+        readonly detailInventory: SculptDetailInventory;
+      }
+  );
 
 type SculptIntakeBase = {
   readonly schemaVersion: typeof SCULPT_SCHEMA_VERSION;
@@ -145,7 +179,13 @@ export type SculptDiagnosticCode =
   | "invalid-field"
   | "duplicate-id"
   | "invalid-reference"
-  | "invalid-hierarchy";
+  | "invalid-hierarchy"
+  | "missing-sculpt-pass"
+  | "out-of-order-sculpt-pass"
+  | "empty-sculpt-pass"
+  | "missing-detail-inventory"
+  | "shallow-detail-inventory"
+  | "shallow-sculpt-spec";
 
 export type SculptDiagnostic = {
   readonly code: SculptDiagnosticCode;
@@ -276,15 +316,51 @@ function specFailure(
   return refuse(code, path, message);
 }
 
+function validateFeatureList(
+  value: unknown,
+  path: string,
+): SculptDiagnostic | null {
+  if (
+    !Array.isArray(value) ||
+    value.some(
+      (feature) =>
+        typeof feature !== "string" ||
+        feature.trim().length === 0 ||
+        feature !== feature.trim(),
+    )
+  ) {
+    return {
+      code: "invalid-field",
+      path,
+      message: "Detail inventory entries must be non-empty, trimmed strings.",
+    };
+  }
+  if (duplicate(value as string[]) !== undefined) {
+    return {
+      code: "duplicate-id",
+      path,
+      message: "Detail inventory entries must be unique.",
+    };
+  }
+  return null;
+}
+
 /** Validate components, materials, sockets, and a connected rooted hierarchy. */
 export function validateObjectSculptSpec(
   value: unknown,
 ): SculptValidationResult<ObjectSculptSpec> {
   if (!isJsonObject(value)) return refuse("not-object", "$", "ObjectSculptSpec must be a JSON object.");
+  if (!Object.hasOwn(value, "passes")) {
+    return specFailure(
+      "missing-sculpt-pass",
+      "$.passes",
+      `ObjectSculptSpec must declare ${REQUIRED_SCULPT_PASSES.join(" -> ")}.`,
+    );
+  }
   const fields = exactFields(
     value,
-    ["schemaVersion", "kind", "id", "rootNodeId", "components", "materials", "sockets", "hierarchy"],
-    [],
+    ["schemaVersion", "kind", "id", "rootNodeId", "complexityClass", "passes", "components", "materials", "sockets", "hierarchy"],
+    ["detailInventory"],
     "$",
   );
   if (fields !== null) return { ok: false, diagnostics: [fields] };
@@ -296,6 +372,75 @@ export function validateObjectSculptSpec(
   }
   if (!isSculptIdentifier(value["id"]) || !isSculptIdentifier(value["rootNodeId"])) {
     return specFailure("invalid-field", "$.id", "Spec and root node ids must use lowercase slug identifiers.");
+  }
+  if (value["complexityClass"] !== "simple" && value["complexityClass"] !== "non-trivial") {
+    return specFailure(
+      "invalid-field",
+      "$.complexityClass",
+      'complexityClass must be "simple" or "non-trivial".',
+    );
+  }
+
+  const passes = value["passes"];
+  if (!Array.isArray(passes)) {
+    return specFailure("invalid-field", "$.passes", "passes must be an array.");
+  }
+  const passIds: string[] = [];
+  for (const [index, pass] of passes.entries()) {
+    const path = `$.passes[${index}]`;
+    if (!isJsonObject(pass)) {
+      return specFailure("invalid-field", path, "Sculpt pass must be an object.");
+    }
+    const passFields = exactFields(pass, ["id", "deterministic", "steps"], [], path);
+    if (passFields !== null) return { ok: false, diagnostics: [passFields] };
+    if (!isSculptIdentifier(pass["id"])) {
+      return specFailure("invalid-field", `${path}.id`, "Sculpt pass id is invalid.");
+    }
+    if (pass["deterministic"] !== true) {
+      return specFailure(
+        "invalid-field",
+        `${path}.deterministic`,
+        "Every sculpt pass must be deterministic.",
+      );
+    }
+    const steps = pass["steps"];
+    if (
+      !Array.isArray(steps) ||
+      steps.length === 0 ||
+      steps.some((step) => typeof step !== "string" || step.trim().length === 0)
+    ) {
+      return specFailure(
+        "empty-sculpt-pass",
+        `${path}.steps`,
+        `Sculpt pass "${String(pass["id"])}" must contain at least one named step.`,
+      );
+    }
+    passIds.push(pass["id"]);
+  }
+  const duplicatePass = duplicate(passIds);
+  if (duplicatePass !== undefined) {
+    return specFailure("duplicate-id", "$.passes", `Duplicate sculpt pass id "${duplicatePass}".`);
+  }
+  const requiredPositions = REQUIRED_SCULPT_PASSES.map((passId) => passIds.indexOf(passId));
+  const missingPassIndex = requiredPositions.findIndex((position) => position < 0);
+  if (missingPassIndex >= 0) {
+    return specFailure(
+      "missing-sculpt-pass",
+      "$.passes",
+      `Missing required sculpt pass "${String(REQUIRED_SCULPT_PASSES[missingPassIndex])}".`,
+    );
+  }
+  if (
+    requiredPositions.some(
+      (position, index) =>
+        index > 0 && position <= (requiredPositions[index - 1] ?? -1),
+    )
+  ) {
+    return specFailure(
+      "out-of-order-sculpt-pass",
+      "$.passes",
+      `Required sculpt passes must appear in order: ${REQUIRED_SCULPT_PASSES.join(" -> ")}.`,
+    );
   }
   const materials = value["materials"];
   if (!Array.isArray(materials) || materials.length === 0) {
@@ -414,6 +559,78 @@ export function validateObjectSculptSpec(
   }
   const duplicateSocket = duplicate(socketIds);
   if (duplicateSocket !== undefined) return specFailure("duplicate-id", "$.sockets", `Duplicate socket id "${duplicateSocket}".`);
+
+  const rawInventory = value["detailInventory"];
+  if (value["complexityClass"] === "non-trivial" && rawInventory === undefined) {
+    return specFailure(
+      "missing-detail-inventory",
+      "$.detailInventory",
+      "Non-trivial sculpts require a detail inventory.",
+    );
+  }
+  if (rawInventory !== undefined) {
+    if (!isJsonObject(rawInventory)) {
+      return specFailure("invalid-field", "$.detailInventory", "detailInventory must be an object.");
+    }
+    const inventoryFields = exactFields(
+      rawInventory,
+      ["silhouetteFeatures", "structuralFeatures", "surfaceFeatures", "materialIds", "socketIds"],
+      [],
+      "$.detailInventory",
+    );
+    if (inventoryFields !== null) return { ok: false, diagnostics: [inventoryFields] };
+    for (const key of [
+      "silhouetteFeatures",
+      "structuralFeatures",
+      "surfaceFeatures",
+      "materialIds",
+      "socketIds",
+    ] as const) {
+      const featureFailure = validateFeatureList(rawInventory[key], `$.detailInventory.${key}`);
+      if (featureFailure !== null) return { ok: false, diagnostics: [featureFailure] };
+    }
+    const inventoryMaterialIds = rawInventory["materialIds"] as string[];
+    if (inventoryMaterialIds.some((materialId) => !materialIdSet.has(materialId))) {
+      return specFailure(
+        "invalid-reference",
+        "$.detailInventory.materialIds",
+        "Detail inventory materialIds must reference spec materials.",
+      );
+    }
+    const socketIdSet = new Set(socketIds);
+    const inventorySocketIds = rawInventory["socketIds"] as string[];
+    if (inventorySocketIds.some((socketId) => !socketIdSet.has(socketId))) {
+      return specFailure(
+        "invalid-reference",
+        "$.detailInventory.socketIds",
+        "Detail inventory socketIds must reference spec sockets.",
+      );
+    }
+    if (
+      value["complexityClass"] === "non-trivial" &&
+      ((rawInventory["silhouetteFeatures"] as string[]).length < 2 ||
+        (rawInventory["structuralFeatures"] as string[]).length < 3 ||
+        (rawInventory["surfaceFeatures"] as string[]).length < 2 ||
+        inventoryMaterialIds.length < 2 ||
+        inventorySocketIds.length < 1)
+    ) {
+      return specFailure(
+        "shallow-detail-inventory",
+        "$.detailInventory",
+        "Non-trivial detail inventory requires 2 silhouette, 3 structural, 2 surface, 2 material, and 1 socket entries.",
+      );
+    }
+  }
+  if (
+    value["complexityClass"] === "non-trivial" &&
+    (components.length < 3 || materials.length < 2 || hierarchy.length < 3 || sockets.length < 1)
+  ) {
+    return specFailure(
+      "shallow-sculpt-spec",
+      "$",
+      "Non-trivial sculpts require at least 3 components, 2 materials, 3 hierarchy nodes, and 1 socket.",
+    );
+  }
 
   return { ok: true, value: value as ObjectSculptSpec };
 }
