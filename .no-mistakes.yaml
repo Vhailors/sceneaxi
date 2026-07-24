@@ -1,0 +1,10 @@
+# Captain standing for this repository ship: allow up to three pipeline-owned
+# repair rounds per automated step. Keep this project-local; do not raise the
+# global home configuration.
+auto_fix:
+  rebase: 3
+  review: 3
+  test: 3
+  document: 3
+  lint: 3
+  ci: 3
