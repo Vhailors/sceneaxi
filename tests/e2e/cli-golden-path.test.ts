@@ -23,6 +23,7 @@ import {
 import {
   createNullPresentationRuntime,
 } from "../../packages/engine-presentation/src/index.ts";
+import { openPluginHost } from "../../packages/plugin-host/src/index.ts";
 import { describe, expect, it } from "vitest";
 
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
@@ -31,6 +32,18 @@ const EVIDENCE_RELATIVE_PATH =
 const EVIDENCE_PATH = join(REPO_ROOT, EVIDENCE_RELATIVE_PATH);
 const DOCUMENT_PATH = "project.sceneaxi.json";
 const PROPOSAL_PATH = "hero-move.proposal.json";
+const SAMPLE_PLUGIN_ID = "dev.sceneaxi.sample.inert";
+const ILLEGAL_PLUGIN_ID = "dev.sceneaxi.sample.illegal-claim";
+const ILLEGAL_CAPABILITY_ID =
+  "test.sceneaxi.fixture.capability.issue-53-never-registered";
+const SAMPLE_PLUGIN_PATH = join(
+  REPO_ROOT,
+  "tests/e2e/fixtures/plugin-host/sample-inert",
+);
+const ILLEGAL_PLUGIN_PATH = join(
+  REPO_ROOT,
+  "tests/e2e/fixtures/plugin-host/illegal-claim",
+);
 
 const STEP_NAMES = Object.freeze([
   "create-open-project-fixture",
@@ -40,6 +53,8 @@ const STEP_NAMES = Object.freeze([
   "kernel-dispatch-advance",
   "kernel-observe",
   "presentation-null-frame",
+  "plugin-host-load-sample",
+  "plugin-host-refuse-illegal-capability-claim",
   "kernel-save-replay",
   "held-key-refuse-currency-unavailable",
   "emit-stable-evidence",
@@ -48,6 +63,20 @@ const STEP_NAMES = Object.freeze([
 function namedStep<T>(name: (typeof STEP_NAMES)[number], action: () => T) {
   try {
     return action();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Golden path step '${name}' failed: ${message}`, {
+      cause: error,
+    });
+  }
+}
+
+async function namedAsyncStep<T>(
+  name: (typeof STEP_NAMES)[number],
+  action: () => Promise<T>,
+) {
+  try {
+    return await action();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`Golden path step '${name}' failed: ${message}`, {
@@ -102,8 +131,8 @@ function productManifestFrom(value: unknown): ProductManifest {
   return { productId, seed, entities };
 }
 
-describe("issue #51 CLI golden path", () => {
-  it("runs create/open -> propose/apply -> kernel save/replay -> named held-key refusal -> evidence", () => {
+describe("MVP golden path", () => {
+  it("runs authoring -> kernel/presentation -> plugin load/refuse -> save/replay -> held-key refusal -> evidence", async () => {
     const projectRoot = mkdtempSync(join(tmpdir(), "sceneaxi-cli-golden-"));
     rmSync(EVIDENCE_PATH, { force: true });
 
@@ -212,6 +241,57 @@ describe("issue #51 CLI golden path", () => {
         presenter.dispose();
       });
 
+      const loadedPlugin = await namedAsyncStep(
+        "plugin-host-load-sample",
+        async () => {
+          const pluginHost = openPluginHost();
+          const result = await pluginHost.load([SAMPLE_PLUGIN_PATH]);
+          expect(result.refused).toEqual([]);
+          expect(result.loaded).toHaveLength(1);
+          expect(pluginHost.list()).toEqual(result);
+
+          const loaded = result.loaded[0];
+          if (loaded === undefined) {
+            throw new Error("sample plugin did not appear in the loaded list");
+          }
+          expect(loaded).toMatchObject({
+            pluginId: SAMPLE_PLUGIN_ID,
+            capabilities: [],
+          });
+          return loaded;
+        },
+      );
+
+      const illegalClaimRefusal = await namedAsyncStep(
+        "plugin-host-refuse-illegal-capability-claim",
+        async () => {
+          const pluginHost = openPluginHost();
+          const result = await pluginHost.load([ILLEGAL_PLUGIN_PATH]);
+          expect(result.loaded).toEqual([]);
+          expect(result.refused).toHaveLength(1);
+          expect(pluginHost.list()).toEqual(result);
+
+          const refusal = result.refused[0];
+          if (refusal === undefined) {
+            throw new Error("illegal capability claim was not refused");
+          }
+          expect(refusal).toMatchObject({
+            pluginId: ILLEGAL_PLUGIN_ID,
+            capabilityId: ILLEGAL_CAPABILITY_ID,
+            reason: "unknown-capability",
+            phase: "descriptor",
+            entrypointEvaluated: false,
+          });
+          expect(
+            pluginHost.getImplementation(
+              ILLEGAL_PLUGIN_ID,
+              ILLEGAL_CAPABILITY_ID,
+            ),
+          ).toMatchObject({ ok: false, reason: "plugin-not-loaded" });
+          return refusal;
+        },
+      );
+
       const saved = namedStep("kernel-save-replay", () => {
         const artifact = session.save();
         const replayed = replay(artifact, host).observe();
@@ -271,6 +351,18 @@ describe("issue #51 CLI golden path", () => {
             },
             replayDigest: saved.replayed.digest,
             replayMatches: saved.replayed.digest === terminalSnapshot.digest,
+          },
+          pluginHost: {
+            loadedPluginId: loadedPlugin.pluginId,
+            capabilities: [...loadedPlugin.capabilities],
+            refusal: {
+              name: "plugin-host-refuse-illegal-capability-claim",
+              pluginId: illegalClaimRefusal.pluginId,
+              capabilityId: illegalClaimRefusal.capabilityId,
+              reason: illegalClaimRefusal.reason,
+              phase: illegalClaimRefusal.phase,
+              entrypointEvaluated: illegalClaimRefusal.entrypointEvaluated,
+            },
           },
           heldKeyRefusal: {
             name: "held-key-refuse-currency-unavailable",
