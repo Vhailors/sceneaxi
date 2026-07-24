@@ -4,8 +4,8 @@
  * orchestration, evidence hooks, Model Provider Port.
  *
  * Sceneaxi#9 lands the document model, propose/apply service, and E1 durable
- * apply journal with crash recovery and undo. Session / evidence / provider
- * port remain later tickets.
+ * apply journal with crash recovery and undo. Sceneaxi#45 adds the provider-
+ * neutral Model Provider Port. Session orchestration remains later work.
  */
 import type { PackageSeam } from "@sceneaxi/schemas";
 
@@ -76,6 +76,22 @@ export {
   type RecoveryOperationResult,
 } from "./apply-journal.js";
 
+export {
+  MODEL_PROVIDER_REFUSE_REASONS,
+  createModelProviderPort,
+  type CreateModelProviderPortOptions,
+  type ModelProviderAdapter,
+  type ModelProviderPolicyAllow,
+  type ModelProviderPolicyContext,
+  type ModelProviderPolicyDecision,
+  type ModelProviderPolicyFilter,
+  type ModelProviderPolicyRefuse,
+  type ModelProviderPort,
+  type ModelProviderRefuse,
+  type ModelProviderResult,
+  type ModelProviderSuccess,
+} from "./model-provider-port.js";
+
 // Re-export document/proposal types from schemas for adapter convenience.
 export type {
   ApplyDiagnostic,
@@ -90,6 +106,22 @@ export type {
   ProposalDiff,
   ProposalEdit,
   SceneDocument,
+  ModelCapabilityDescriptor,
+  ModelCompleteRequest,
+  ModelCompleteResponse,
+  ModelDescriptor,
+  ModelProviderCallEvidence,
+  ModelProviderOperation,
+  ModelProviderProfile,
+  ModelProviderRequest,
+  ModelProviderRequestBase,
+  ModelProviderRouteKind,
+  ModelStreamChunk,
+  ModelStreamRequest,
+  ModelToolCall,
+  ModelToolCallRequest,
+  ModelToolCallResponse,
+  ModelToolDescriptor,
 } from "@sceneaxi/schemas";
 
 export {
@@ -97,6 +129,10 @@ export {
   DOCUMENT_SCHEMA_VERSION,
   PROPOSAL_KIND,
   PROPOSAL_SCHEMA_VERSION,
+  MODEL_PROVIDER_CALL_EVIDENCE_KIND,
+  MODEL_PROVIDER_OPERATIONS,
+  MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+  MODEL_PROVIDER_ROUTE_KINDS,
   createDocument,
   createProposal,
   parseDocumentText,

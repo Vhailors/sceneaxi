@@ -81,6 +81,31 @@ export {
   parseDeliveryHandoffText,
   validateDeliveryHandoff,
 } from "./delivery-handoff.js";
+
+export {
+  MODEL_PROVIDER_CALL_EVIDENCE_KIND,
+  MODEL_PROVIDER_OPERATIONS,
+  MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+  MODEL_PROVIDER_ROUTE_KINDS,
+} from "./model-provider.js";
+export type {
+  ModelCapabilityDescriptor,
+  ModelCompleteRequest,
+  ModelCompleteResponse,
+  ModelDescriptor,
+  ModelProviderCallEvidence,
+  ModelProviderOperation,
+  ModelProviderProfile,
+  ModelProviderRequest,
+  ModelProviderRequestBase,
+  ModelProviderRouteKind,
+  ModelStreamChunk,
+  ModelStreamRequest,
+  ModelToolCall,
+  ModelToolCallRequest,
+  ModelToolCallResponse,
+  ModelToolDescriptor,
+} from "./model-provider.js";
 export type {
   DeliveryArtifactRole,
   DeliveryBuildMetadata,
@@ -189,6 +214,7 @@ export const contracts = Object.freeze({
   document: "contracts/document.schema.json",
   proposal: "contracts/proposal.schema.json",
   deliveryHandoff: "contracts/delivery-handoff.schema.json",
+  modelProviderPort: "contracts/model-provider-port.schema.json",
   /** Profile Conformance claim (sceneaxi#10) — shared suite + development consumers. */
   profileConformance: "contracts/profile-conformance.schema.json",
   /** Plugin Manifest descriptor (sceneaxi#20 / ADR 0005); host runtime is @sceneaxi/plugin-host. */

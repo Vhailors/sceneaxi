@@ -61,6 +61,14 @@ Registry seed state: `registryVersion` is `1.0.0`; `entries` is exactly `[]` (em
   propose/apply through the profile's pinned core + evidence-hook presence
 - First development consumer: `@sceneaxi/profile-game` (exports `conformance`)
 
+## Model Provider Port (sceneaxi#45)
+
+- `contracts/model-provider-port.schema.json` — v1 model/capability descriptors,
+  complete/tool-call/stream envelopes, and successful-call evidence shape
+- TypeScript contract: `src/model-provider.ts`; executable policy and adapter
+  dispatch remain owned by `@sceneaxi/authoring-core`
+- Provider policy authority: [SPEC § Model Provider Port](../../docs/program/SPEC.md#model-provider-port)
+
 ## Document + propose/apply (sceneaxi#9)
 
 - `contracts/document.schema.json` — text-canonical SceneAxi document (v1)

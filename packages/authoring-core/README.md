@@ -8,7 +8,26 @@ consumes (locked topology decision). This package, not the CLI, owns:
 - **session orchestration** over the engine seams (open/dispatch/advance/
   observe/save/replay) — later tickets;
 - **evidence hooks** (Evidence Packet emission points) — later tickets;
-- the **Model Provider Port** — later tickets (provider policy held).
+- the provider-neutral **Model Provider Port** (sceneaxi#45).
+
+## Model Provider Port (sceneaxi#45)
+
+`createModelProviderPort()` accepts an injected adapter and a policy filter for
+each calling profile. The port refuses missing adapters, missing profile
+filters, denied policies, and undeclared capabilities before dispatch. Its
+non-overridable Kids guard names `THIRD_PARTY_LLM_DENIED_BY_DEFAULT` for a
+third-party route and keeps every other Kids route closed until a later explicit
+Kids decision enables one.
+
+The public v1 types cover `complete`, `tool-call`, and an async-iterable `stream`,
+plus capability and exact model descriptors. Successful calls return and may
+emit a stable `sceneaxi.model-provider-call-evidence` object containing the
+requested model, provider, quantization, and version. See
+`packages/schemas/contracts/model-provider-port.schema.json` and the canonical
+[SPEC Model Provider Port](../../docs/program/SPEC.md#model-provider-port)
+policy. This package contains no live provider adapter, credentials, fallback
+routing, network call, or production LLM-readiness claim; the fake adapter is a
+test fixture only.
 
 ## Propose / apply (sceneaxi#9)
 
