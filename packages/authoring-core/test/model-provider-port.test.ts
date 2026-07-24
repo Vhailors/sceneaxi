@@ -27,23 +27,29 @@ function fakeAdapter(calls: string[] = []) {
     async complete(request) {
       calls.push(`complete:${request.prompt}`);
       return {
-        schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
-        operation: "complete",
-        text: `fake:${request.prompt}`,
-        finishReason: "stop",
+        response: {
+          schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+          operation: "complete",
+          text: `fake:${request.prompt}`,
+          finishReason: "stop",
+        },
+        executedModel: model,
       };
     },
     async toolCall(request) {
       calls.push(`tool-call:${request.prompt}`);
       return {
-        schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
-        operation: "tool-call",
-        toolCalls: [
-          {
-            name: request.tools[0]?.name ?? "unknown",
-            arguments: { fixture: true },
-          },
-        ],
+        response: {
+          schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+          operation: "tool-call",
+          toolCalls: [
+            {
+              name: request.tools[0]?.name ?? "unknown",
+              arguments: { fixture: true },
+            },
+          ],
+        },
+        executedModel: model,
       };
     },
     async stream(request) {
@@ -62,7 +68,7 @@ function fakeAdapter(calls: string[] = []) {
           done: true,
         };
       }
-      return chunks();
+      return { response: chunks(), executedModel: model };
     },
   } satisfies ModelProviderAdapter;
 }
@@ -252,10 +258,30 @@ describe("Model Provider Port", () => {
     expect(calls).toEqual([]);
   });
 
-  it("stamps the exact model descriptor on stable evidence after success", async () => {
+  it("stamps the adapter-attested executed model on evidence after success", async () => {
     const recorded: ModelProviderCallEvidence[] = [];
+    const executedModel = Object.freeze({
+      model: "fake/executed-model",
+      provider: "fake-executing-provider",
+      quantization: "q8",
+      version: "runtime-v2",
+    }) satisfies ModelDescriptor;
+    const adapter = {
+      ...fakeAdapter(),
+      async complete(request) {
+        return {
+          response: {
+            schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+            operation: "complete",
+            text: `fake:${request.prompt}`,
+            finishReason: "stop",
+          },
+          executedModel,
+        };
+      },
+    } satisfies ModelProviderAdapter;
     const port = createModelProviderPort({
-      adapter: fakeAdapter(),
+      adapter,
       profilePolicies: { "@sceneaxi/profile-game": allow },
       recordEvidence(evidence) {
         recorded.push(evidence);
@@ -277,12 +303,103 @@ describe("Model Provider Port", () => {
         kind: "sceneaxi.model-provider-call-evidence",
         operation: "complete",
         profile: "@sceneaxi/profile-game",
-        model,
+        model: executedModel,
       },
     });
     expect(recorded).toHaveLength(1);
-    expect(recorded[0]?.model).toEqual(model);
-    expect(recorded[0]?.model).not.toBe(model);
+    expect(recorded[0]?.model).toEqual(executedModel);
+    expect(recorded[0]?.model).not.toBe(executedModel);
+  });
+
+  it("refuses adapter successes without an executed model attestation", async () => {
+    const calls: string[] = [];
+    const recorded: ModelProviderCallEvidence[] = [];
+    const adapter = {
+      ...fakeAdapter(calls),
+      async complete(
+        request: Parameters<
+          NonNullable<ModelProviderAdapter["complete"]>
+        >[0],
+      ) {
+        calls.push(`complete:${request.prompt}`);
+        return {
+          schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+          operation: "complete",
+          text: `fake:${request.prompt}`,
+          finishReason: "stop",
+        };
+      },
+    } as unknown as ModelProviderAdapter;
+    const port = createModelProviderPort({
+      adapter,
+      profilePolicies: { "@sceneaxi/profile-game": allow },
+      recordEvidence(evidence) {
+        recorded.push(evidence);
+      },
+    });
+
+    const result = await port.complete({
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      operation: "complete",
+      profile: "@sceneaxi/profile-game",
+      model,
+      prompt: "unattested execution",
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: "MODEL_PROVIDER_EXECUTED_MODEL_MISSING",
+    });
+    expect(calls).toEqual(["complete:unattested execution"]);
+    expect(recorded).toEqual([]);
+  });
+
+  it("refuses unsupported request versions before policy or dispatch for every operation", async () => {
+    const calls: string[] = [];
+    const filterCalls: string[] = [];
+    const port = createModelProviderPort({
+      adapter: fakeAdapter(calls),
+      profilePolicies: {
+        "@sceneaxi/profile-game": (context) => {
+          filterCalls.push(context.operation);
+          return { ok: true };
+        },
+      },
+    });
+    const invalidVersion =
+      2 as unknown as typeof MODEL_PROVIDER_PORT_SCHEMA_VERSION;
+
+    const complete = await port.complete({
+      schemaVersion: invalidVersion,
+      operation: "complete",
+      profile: "@sceneaxi/profile-game",
+      model,
+      prompt: "unsupported complete",
+    });
+    const toolCall = await port.toolCall({
+      schemaVersion: invalidVersion,
+      operation: "tool-call",
+      profile: "@sceneaxi/profile-game",
+      model,
+      prompt: "unsupported tool call",
+      tools: [],
+    });
+    const stream = await port.stream({
+      schemaVersion: invalidVersion,
+      operation: "stream",
+      profile: "@sceneaxi/profile-game",
+      model,
+      prompt: "unsupported stream",
+    });
+
+    for (const result of [complete, toolCall, stream]) {
+      expect(result).toMatchObject({
+        ok: false,
+        reason: "MODEL_PROVIDER_SCHEMA_VERSION_UNSUPPORTED",
+      });
+    }
+    expect(filterCalls).toEqual([]);
+    expect(calls).toEqual([]);
   });
 
   it("exposes a typed async stream without network or spend", async () => {

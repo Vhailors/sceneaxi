@@ -22,7 +22,7 @@ Kids decision enables one.
 The public v1 types cover `complete`, `tool-call`, and an async-iterable `stream`,
 plus capability and exact model descriptors. Successful calls return and may
 emit a stable `sceneaxi.model-provider-call-evidence` object containing the
-requested model, provider, quantization, and version. See
+adapter-attested executed model, provider, quantization, and version. See
 `packages/schemas/contracts/model-provider-port.schema.json` and the canonical
 [SPEC Model Provider Port](../../docs/program/SPEC.md#model-provider-port)
 policy. This package contains no live provider adapter, credentials, fallback

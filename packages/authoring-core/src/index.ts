@@ -81,6 +81,7 @@ export {
   createModelProviderPort,
   type CreateModelProviderPortOptions,
   type ModelProviderAdapter,
+  type ModelProviderAdapterSuccess,
   type ModelProviderPolicyAllow,
   type ModelProviderPolicyContext,
   type ModelProviderPolicyDecision,

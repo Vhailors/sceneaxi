@@ -12,6 +12,7 @@ import {
   type ModelCapabilityDescriptor,
   type ModelCompleteRequest,
   type ModelCompleteResponse,
+  type ModelDescriptor,
   type ModelProviderCallEvidence,
   type ModelProviderOperation,
   type ModelProviderProfile,
@@ -24,9 +25,11 @@ import {
 } from "@sceneaxi/schemas";
 
 export const MODEL_PROVIDER_REFUSE_REASONS = Object.freeze({
+  schemaVersionUnsupported: "MODEL_PROVIDER_SCHEMA_VERSION_UNSUPPORTED",
   adapterMissing: "MODEL_PROVIDER_ADAPTER_MISSING",
   profilePolicyMissing: "MODEL_PROVIDER_PROFILE_POLICY_MISSING",
   capabilityUnsupported: "MODEL_PROVIDER_CAPABILITY_UNSUPPORTED",
+  executedModelMissing: "MODEL_PROVIDER_EXECUTED_MODEL_MISSING",
   kidsThirdPartyDenied: "THIRD_PARTY_LLM_DENIED_BY_DEFAULT",
   kidsRouteNotAllowed: "KIDS_LLM_ROUTE_NOT_ALLOWED",
 } as const);
@@ -55,20 +58,29 @@ export type ModelProviderPolicyFilter = (
   context: ModelProviderPolicyContext,
 ) => ModelProviderPolicyDecision | Promise<ModelProviderPolicyDecision>;
 
+export type ModelProviderAdapterSuccess<Response> = Readonly<{
+  response: Response;
+  executedModel: ModelDescriptor;
+}>;
+
 export type ModelProviderAdapter = Readonly<{
   routeKind: ModelProviderRouteKind;
   capabilities: ModelCapabilityDescriptor;
   complete?: (
     request: ModelCompleteRequest,
-  ) => ModelCompleteResponse | Promise<ModelCompleteResponse>;
+  ) =>
+    | ModelProviderAdapterSuccess<ModelCompleteResponse>
+    | Promise<ModelProviderAdapterSuccess<ModelCompleteResponse>>;
   toolCall?: (
     request: ModelToolCallRequest,
-  ) => ModelToolCallResponse | Promise<ModelToolCallResponse>;
+  ) =>
+    | ModelProviderAdapterSuccess<ModelToolCallResponse>
+    | Promise<ModelProviderAdapterSuccess<ModelToolCallResponse>>;
   stream?: (
     request: ModelStreamRequest,
   ) =>
-    | AsyncIterable<ModelStreamChunk>
-    | Promise<AsyncIterable<ModelStreamChunk>>;
+    | ModelProviderAdapterSuccess<AsyncIterable<ModelStreamChunk>>
+    | Promise<ModelProviderAdapterSuccess<AsyncIterable<ModelStreamChunk>>>;
 }>;
 
 export type ModelProviderRefuse = Readonly<{
@@ -132,12 +144,42 @@ function kidsPolicyRefusal(
   );
 }
 
-function evidenceFor(request: ModelProviderRequest) {
+function isModelDescriptor(value: unknown): value is ModelDescriptor {
+  if (typeof value !== "object" || value === null) return false;
+  const descriptor = value as Partial<Record<keyof ModelDescriptor, unknown>>;
+  return (
+    typeof descriptor.model === "string" &&
+    descriptor.model.length > 0 &&
+    typeof descriptor.provider === "string" &&
+    descriptor.provider.length > 0 &&
+    typeof descriptor.quantization === "string" &&
+    descriptor.quantization.length > 0 &&
+    typeof descriptor.version === "string" &&
+    descriptor.version.length > 0
+  );
+}
+
+function isAdapterSuccess<Response>(
+  value: unknown,
+): value is ModelProviderAdapterSuccess<Response> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "response" in value &&
+    "executedModel" in value &&
+    isModelDescriptor(value.executedModel)
+  );
+}
+
+function evidenceFor(
+  request: ModelProviderRequest,
+  executedModel: ModelDescriptor,
+) {
   const model = Object.freeze({
-    model: request.model.model,
-    provider: request.model.provider,
-    quantization: request.model.quantization,
-    version: request.model.version,
+    model: executedModel.model,
+    provider: executedModel.provider,
+    quantization: executedModel.quantization,
+    version: executedModel.version,
   });
   return Object.freeze({
     schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
@@ -154,6 +196,13 @@ export function createModelProviderPort(
   const preflight = async (
     request: ModelProviderRequest,
   ): Promise<ModelProviderPreflight> => {
+    if (request.schemaVersion !== MODEL_PROVIDER_PORT_SCHEMA_VERSION) {
+      return refuse(
+        MODEL_PROVIDER_REFUSE_REASONS.schemaVersionUnsupported,
+        `Model Provider request schema version '${String(request.schemaVersion)}' is unsupported; expected '${MODEL_PROVIDER_PORT_SCHEMA_VERSION}'.`,
+      );
+    }
+
     const adapter = options.adapter;
     if (adapter === undefined) {
       return refuse(
@@ -194,16 +243,26 @@ export function createModelProviderPort(
   };
 
   const succeed = async <Response>(
-    evidence: ModelProviderCallEvidence,
-    response: Response,
-  ): Promise<ModelProviderSuccess<Response>> => {
+    request: ModelProviderRequest,
+    adapterResult: unknown,
+  ): Promise<ModelProviderResult<Response>> => {
+    if (!isAdapterSuccess<Response>(adapterResult)) {
+      return refuse(
+        MODEL_PROVIDER_REFUSE_REASONS.executedModelMissing,
+        "The adapter did not attest a valid executed model descriptor; success refused.",
+      );
+    }
+    const evidence = evidenceFor(request, adapterResult.executedModel);
     await options.recordEvidence?.(evidence);
-    return Object.freeze({ ok: true, response, evidence });
+    return Object.freeze({
+      ok: true,
+      response: adapterResult.response,
+      evidence,
+    });
   };
 
   return Object.freeze({
     async complete(request) {
-      const evidence = evidenceFor(request);
       const ready = await preflight(request);
       if (!ready.ok) return ready;
       const { adapter } = ready;
@@ -213,11 +272,13 @@ export function createModelProviderPort(
           "The configured adapter does not implement 'complete'.",
         );
       }
-      return succeed(evidence, await adapter.complete(request));
+      return succeed<ModelCompleteResponse>(
+        request,
+        await adapter.complete(request),
+      );
     },
 
     async toolCall(request) {
-      const evidence = evidenceFor(request);
       const ready = await preflight(request);
       if (!ready.ok) return ready;
       const { adapter } = ready;
@@ -227,11 +288,13 @@ export function createModelProviderPort(
           "The configured adapter does not implement 'tool-call'.",
         );
       }
-      return succeed(evidence, await adapter.toolCall(request));
+      return succeed<ModelToolCallResponse>(
+        request,
+        await adapter.toolCall(request),
+      );
     },
 
     async stream(request) {
-      const evidence = evidenceFor(request);
       const ready = await preflight(request);
       if (!ready.ok) return ready;
       const { adapter } = ready;
@@ -241,7 +304,10 @@ export function createModelProviderPort(
           "The configured adapter does not implement 'stream'.",
         );
       }
-      return succeed(evidence, await adapter.stream(request));
+      return succeed<AsyncIterable<ModelStreamChunk>>(
+        request,
+        await adapter.stream(request),
+      );
     },
   });
 }
