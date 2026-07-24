@@ -569,43 +569,80 @@ function captureAsyncIterable(value: unknown) {
         );
       }
       const next = capturedNext.value;
-      while (true) {
-        let iterationResult: unknown;
-        try {
-          iterationResult = await next.call(iterator);
-        } catch {
-          throw invalidStreamResponse(
-            "The adapter async stream iterator failed; stream refused.",
-          );
+      const capturedReturn = captureValue(() => iterator.return);
+      if (
+        !capturedReturn.ok ||
+        (capturedReturn.value !== undefined &&
+          typeof capturedReturn.value !== "function")
+      ) {
+        throw invalidStreamResponse(
+          "The adapter returned an async stream iterator with an invalid return method; stream refused.",
+        );
+      }
+      const close = capturedReturn.value;
+      let completed = false;
+      try {
+        while (true) {
+          let iterationResult: unknown;
+          try {
+            iterationResult = await next.call(iterator);
+          } catch {
+            throw invalidStreamResponse(
+              "The adapter async stream iterator failed; stream refused.",
+            );
+          }
+          if (
+            (typeof iterationResult !== "object" &&
+              typeof iterationResult !== "function") ||
+            iterationResult === null
+          ) {
+            throw invalidStreamResponse(
+              "The adapter async stream iterator returned an invalid result; stream refused.",
+            );
+          }
+          const result = iterationResult as Record<PropertyKey, unknown>;
+          const capturedDone = captureValue(() => result.done);
+          if (
+            !capturedDone.ok ||
+            (capturedDone.value !== undefined &&
+              typeof capturedDone.value !== "boolean")
+          ) {
+            throw invalidStreamResponse(
+              "The adapter async stream iterator returned an invalid result; stream refused.",
+            );
+          }
+          if (capturedDone.value === true) {
+            completed = true;
+            return;
+          }
+          const capturedValue = captureValue(() => result.value);
+          if (!capturedValue.ok) {
+            throw invalidStreamResponse(
+              "The adapter async stream iterator returned an invalid result; stream refused.",
+            );
+          }
+          yield capturedValue.value;
         }
-        if (
-          (typeof iterationResult !== "object" &&
-            typeof iterationResult !== "function") ||
-          iterationResult === null
-        ) {
-          throw invalidStreamResponse(
-            "The adapter async stream iterator returned an invalid result; stream refused.",
-          );
+      } finally {
+        if (!completed && close !== undefined) {
+          let closeResult: unknown;
+          try {
+            closeResult = await close.call(iterator);
+          } catch {
+            throw invalidStreamResponse(
+              "The adapter async stream iterator could not be closed; stream refused.",
+            );
+          }
+          if (
+            (typeof closeResult !== "object" &&
+              typeof closeResult !== "function") ||
+            closeResult === null
+          ) {
+            throw invalidStreamResponse(
+              "The adapter async stream iterator returned an invalid close result; stream refused.",
+            );
+          }
         }
-        const result = iterationResult as Record<PropertyKey, unknown>;
-        const capturedDone = captureValue(() => result.done);
-        if (
-          !capturedDone.ok ||
-          (capturedDone.value !== undefined &&
-            typeof capturedDone.value !== "boolean")
-        ) {
-          throw invalidStreamResponse(
-            "The adapter async stream iterator returned an invalid result; stream refused.",
-          );
-        }
-        if (capturedDone.value === true) return;
-        const capturedValue = captureValue(() => result.value);
-        if (!capturedValue.ok) {
-          throw invalidStreamResponse(
-            "The adapter async stream iterator returned an invalid result; stream refused.",
-          );
-        }
-        yield capturedValue.value;
       }
     },
   });

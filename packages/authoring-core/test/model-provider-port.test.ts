@@ -1527,6 +1527,59 @@ describe("Model Provider Port", () => {
     expect(recorded).toHaveLength(1);
   });
 
+  it("forwards early stream cancellation without recording success evidence", async () => {
+    const recorded: ModelProviderCallEvidence[] = [];
+    let cleanupCount = 0;
+    const adapter = {
+      ...fakeAdapter(),
+      async stream() {
+        async function* chunks() {
+          try {
+            yield {
+              schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+              operation: "stream" as const,
+              delta: "first",
+              done: false,
+            };
+            yield {
+              schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+              operation: "stream" as const,
+              delta: "second",
+              done: true,
+            };
+          } finally {
+            cleanupCount += 1;
+          }
+        }
+        return { response: chunks(), executedModel: model };
+      },
+    } satisfies ModelProviderAdapter;
+    const port = createModelProviderPort({
+      adapter,
+      profilePolicies: { "@sceneaxi/profile-game": allow },
+      recordEvidence(evidence) {
+        recorded.push(evidence);
+      },
+    });
+
+    const result = await port.stream({
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      operation: "stream",
+      profile: "@sceneaxi/profile-game",
+      model,
+      prompt: "cancel stream",
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    for await (const chunk of result.response) {
+      expect(chunk.delta).toBe("first");
+      break;
+    }
+    expect(cleanupCount).toBe(1);
+    expect(recorded).toEqual([]);
+  });
+
   it("exposes a typed async stream without network or spend", async () => {
     const port = createModelProviderPort({
       adapter: fakeAdapter(),
