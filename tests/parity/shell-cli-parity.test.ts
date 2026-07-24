@@ -13,6 +13,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  contentHash,
   createDocument,
   type JsonObject,
   writeDocumentFile,
@@ -104,7 +105,7 @@ describe("shell ↔ CLI parity (conformance)", () => {
     }
   });
 
-  it("web-shell inspector accept matches CLI apply for the same edit", () => {
+  it("web-shell inspector propose → diff → apply matches CLI hash/content", () => {
     const dirShell = fixtureDir("inspector");
     const dirCli = fixtureDir("inspector-cli");
     writeScene(dirShell, "scene.json", { ...SAMPLE });
@@ -114,6 +115,8 @@ describe("shell ↔ CLI parity (conformance)", () => {
     const review = session.proposeEdit({ ...EDIT });
     expect(review.phase).toBe("reviewing");
     expect(review.renderedDiff).toMatch(/"x": 7/);
+    expect(review.unifiedDiff).toMatch(/^--- a\/scene\.json/m);
+    expect(review.proposal).not.toBeNull();
     const accepted = session.accept();
     expect(accepted.phase).toBe("applied");
 
@@ -132,6 +135,10 @@ describe("shell ↔ CLI parity (conformance)", () => {
       "edit.json",
     ]);
     expect(proposed.exitCode).toBe(ExitCode.OK);
+    const cliProposal = JSON.parse(
+      readFileSync(join(dirCli, "edit.json"), "utf8"),
+    ) as { diffs: Array<{ unifiedDiff: string }> };
+    expect(cliProposal.diffs[0]?.unifiedDiff).toBe(review.unifiedDiff);
     const applied = runCli([
       "project",
       "apply",
@@ -145,6 +152,9 @@ describe("shell ↔ CLI parity (conformance)", () => {
     const bytesShell = readFileSync(join(dirShell, "scene.json"));
     const bytesCli = readFileSync(join(dirCli, "scene.json"));
     expect(bytesShell.equals(bytesCli)).toBe(true);
+    expect(contentHash(bytesShell.toString("utf8"))).toBe(
+      contentHash(bytesCli.toString("utf8")),
+    );
   });
 });
 
