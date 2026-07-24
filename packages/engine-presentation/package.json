@@ -2,7 +2,7 @@
   "name": "@sceneaxi/engine-presentation",
   "version": "0.0.0",
   "private": true,
-  "description": "SceneAxi engine-presentation package (bootstrap stub) — Presentation Runtime seam; backend hidden, Stage 1 decides composition",
+  "description": "SceneAxi Presentation Runtime seam with a null backend for kernel and end-to-end paths",
   "type": "module",
   "exports": { ".": "./src/index.ts" },
   "files": ["src"],
