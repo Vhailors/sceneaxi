@@ -16,25 +16,33 @@ paths are recorded in
 
 - **Hybrid core** — the Godot-like engine/library core plus AI sculpt
   authoring direction. It does not mean a full Godot editor.
-- **Sculpt Intake** — versioned multi-modal request envelope with `image`,
-  `image+brief`, `multi-view`, or `structured-spec` mode.
-- **ObjectSculptSpec** — renderer-neutral components, materials, sockets, and
-  rooted hierarchy that describe one sculpt.
-- **Sculpt Artifact** — SceneAxi-owned package binding an ObjectSculptSpec,
-  procedural module reference, runtime hierarchy, and evidence digests.
+- **Sculpt Intake** — versioned multi-modal request envelope; its authoritative
+  fields and modes live in
+  [`sculpt-intake.schema.json`](packages/schemas/contracts/sculpt-intake.schema.json).
+- **ObjectSculptSpec** — renderer-neutral description of one sculpt; its
+  authoritative shape lives in
+  [`object-sculpt-spec.schema.json`](packages/schemas/contracts/object-sculpt-spec.schema.json).
+- **Sculpt Artifact** — SceneAxi-owned openable package whose authoritative
+  shape lives in
+  [`sculpt-artifact.schema.json`](packages/schemas/contracts/sculpt-artifact.schema.json).
 - **Reconstruction pipeline** — SceneAxi-owned deterministic transformation
-  from supported intake to a Sculpt Artifact. v1 supports the fixture and
-  image+brief paths without production provider spend.
+  from supported intake to a Sculpt Artifact; the supported v1 paths and named
+  refusals are documented by
+  [`@sceneaxi/authoring-core`](packages/authoring-core/README.md#hybrid-sculpt-reconstruction-and-minimum-e2).
 - **Mount API** — backend-neutral instance boundary from Sculpt Artifact to
-  presentation. No Three types cross it.
+  presentation; its package contract is documented by
+  [`@sceneaxi/engine-presentation`](packages/engine-presentation/README.md#hybrid-sculpt-preview).
 - **Experimental Three preview** — implementation-private visual adapter for
   this vertical; explicitly not a Stage 1 result or winner claim.
-- **Minimum E2** — only viewport, scene tree, selection, numeric transform,
-  inspector, play/pause/step, add/remove sculpt, and propose/apply save/load.
+- **Minimum E2** — the vertical-only editor exception whose exact checklist is
+  owned by
+  [ADR 0003](docs/adr/0003-editor-sequencing-e1-first-e2-specified.md#2026-07-24-vertical-only-amendment).
 - **Toy physics** — deterministic ground collision behavior for this vertical,
-  not a production physics suite.
+  bounded by
+  [ADR 0009](docs/adr/0009-kernel-owned-toy-physics-animation.md).
 - **Animation socket** — named artifact socket whose value is advanced by the
-  kernel and observed by presentation; presentation never simulates it.
+  kernel and exposed through frozen observations under
+  [ADR 0009](docs/adr/0009-kernel-owned-toy-physics-animation.md).
 
 This vertical is proof-oriented. It does not claim engine readiness,
 commercial validation, Kids safety, marketplace readiness, or Stage 1

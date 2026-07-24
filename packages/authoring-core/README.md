@@ -5,8 +5,8 @@ consumes (locked topology decision). This package, not the CLI, owns:
 
 - the text-canonical **document model** and the **propose/apply application
   service** (one validator for edits and proposals, E1 discipline);
-- **session orchestration** over the engine seams (open/dispatch/advance/
-  observe/save/replay) — later tickets;
+- the bounded hybrid **Minimum E2 orchestration** over kernel and presentation
+  seams; broader session orchestration remains later work;
 - **evidence hooks** (Evidence Packet emission points) — later tickets;
 - the provider-neutral **Model Provider Port** (sceneaxi#45).
 
@@ -33,6 +33,26 @@ adapter-attested executed model, provider, quantization, and version. See
 policy. This package contains no live provider adapter, credentials, fallback
 routing, network call, or production LLM-readiness claim; the fake adapter is a
 test fixture only.
+
+## Hybrid sculpt reconstruction and Minimum E2
+
+`reconstructSculpt()` validates the versioned contracts in
+[`@sceneaxi/schemas`](../schemas/README.md#hybrid-sculpt-contracts) and produces
+canonical Sculpt Artifact bytes and a digest without a live provider.
+`structured-spec` is the deterministic fixture path and `image+brief` is the
+demo-grade reconstruction path. Valid `image` and `multi-view` envelopes remain
+unsupported by reconstruction v1 and refuse closed.
+
+The stable refusal codes are `invalid-intake`, `unsupported-intake-mode`,
+`quality-gate-refused`, and `artifact-invalid`. Quality-gate refusals name the
+failed `component-budget`, `hierarchy-depth`, or `physical-extent` gate.
+Production model calls, provider spend, and `img2threejs` are absent.
+
+`createMinimumE2Editor()` owns the bounded orchestration API authorized by
+[ADR 0003's vertical-only amendment](../../docs/adr/0003-editor-sequencing-e1-first-e2-specified.md#2026-07-24-vertical-only-amendment).
+Its save/load path persists through the same text-canonical propose/apply
+service below. The web-shell re-exports this API; it does not implement a second
+editor.
 
 ## Propose / apply (sceneaxi#9)
 

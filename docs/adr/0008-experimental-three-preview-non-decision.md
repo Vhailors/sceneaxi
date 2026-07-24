@@ -22,9 +22,11 @@ Three won and does not remove or prejudice another Stage 1 arm.
 
 ## Consequences
 
-- Minimum E2 can render an actual scene while contracts remain backend-hidden.
+- Minimum E2 can build and inspect an actual Three scene graph while contracts
+  remain backend-hidden.
 - Stage 1 can later select a different composition without changing Sculpt Artifact or Mount API.
-- Presentation consumes observations; it never advances simulation.
+- Kernel observations remain authoritative; presentation never advances
+  simulation.
 
 ## Rejected alternatives
 

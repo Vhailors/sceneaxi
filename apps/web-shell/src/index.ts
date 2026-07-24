@@ -2,8 +2,9 @@
  * @sceneaxi/web-shell — human authoring surface; protocol client of
  * authoring-core, never a second authoring implementation.
  *
- * sceneaxi#11: minimal propose→diff→apply inspector stub. No hosting, no
- * deployment, no CLI spawn (matrix-denied).
+ * Sceneaxi#11: minimal propose→diff→apply inspector stub. The hybrid sculpt
+ * vertical re-exports authoring-core's bounded Minimum E2 orchestration. No
+ * hosting, deployment, or CLI spawn (matrix-denied).
  */
 import type { PackageSeam } from "@sceneaxi/schemas";
 

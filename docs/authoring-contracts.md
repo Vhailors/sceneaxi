@@ -92,13 +92,14 @@ propose/apply alone.
 
 ## E2 — schema-driven command editor (general surface specified, not built)
 
-The hybrid vertical's implemented Minimum E2 subset is limited to viewport,
-tree, selection, numeric transform, inspector, play/pause/step, add/remove
-sculpt, and save/load. It does not activate the broader contract below.
+The hybrid vertical's implemented Minimum E2 subset is only the exception named
+in [ADR 0003's amendment](adr/0003-editor-sequencing-e1-first-e2-specified.md#2026-07-24-vertical-only-amendment).
+It does not activate the broader contract below.
 
-Gate: **built only after Stage 6 friction evidence.** Until then this section
-is a precommitted design, kept so the Stage 6 comparison judges two *designed*
-interfaces instead of improvising one at prototype time.
+Gate for the general surface below: **built only after Stage 6 friction
+evidence.** Until then this section is a precommitted design, kept so the Stage
+6 comparison judges two *designed* interfaces instead of improvising one at
+prototype time.
 
 - `apply(command{type, target, payload, baseVersion}) → {patch, newVersion} | ConflictError`
 - **Undo/redo by inverse patches:** every applied command yields a patch and

@@ -24,7 +24,8 @@ production physics suite or a new public engine-internal port.
 
 ## Consequences
 
-- Presentation can render current observations but cannot create simulation state.
+- Any presentation of simulation state consumes current observations; it cannot
+  create simulation state.
 - Golden tests bind animation, collision, save, and replay digests.
 - A future production physics implementation can replace internals while preserving kernel authority.
 

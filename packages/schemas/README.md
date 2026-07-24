@@ -2,6 +2,21 @@
 
 Shared contracts home for SceneAxi. Zero internal dependencies by rule.
 
+## Hybrid sculpt contracts
+
+The authoritative v1 shapes are the package-exported
+`contracts/sculpt-intake.schema.json`,
+`contracts/object-sculpt-spec.schema.json`, and
+`contracts/sculpt-artifact.schema.json`. Package-root exports include their
+constants and TypeScript types plus `validateSculptIntake`,
+`validateObjectSculptSpec`, and `validateSculptArtifact`.
+
+Reconstruction behavior belongs to
+[`@sceneaxi/authoring-core`](../authoring-core/README.md#hybrid-sculpt-reconstruction-and-minimum-e2);
+renderer mounting belongs to
+[`@sceneaxi/engine-presentation`](../engine-presentation/README.md#hybrid-sculpt-preview).
+The schemas contain neither provider credentials nor renderer types.
+
 ## Unambiguous JSON
 
 `parseUnambiguousJson` is the package-root parser for JSON text that must refuse

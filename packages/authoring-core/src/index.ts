@@ -5,7 +5,9 @@
  *
  * Sceneaxi#9 lands the document model, propose/apply service, and E1 durable
  * apply journal with crash recovery and undo. Sceneaxi#45 adds the provider-
- * neutral Model Provider Port. Session orchestration remains later work.
+ * neutral Model Provider Port. The hybrid sculpt vertical adds deterministic
+ * reconstruction and bounded Minimum E2 orchestration; broader session
+ * orchestration remains later work.
  */
 import type { PackageSeam } from "@sceneaxi/schemas";
 

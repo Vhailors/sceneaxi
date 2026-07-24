@@ -1,4 +1,4 @@
-# ADR 0003: Editor sequencing — E1 first, E2 specified-not-built
+# ADR 0003: Editor sequencing — E1 first, general E2 specified-not-built
 
 - **Status:** Accepted; amended 2026-07-24 for one bounded hybrid vertical.
 - **Date recorded:** 2026-07-21
@@ -10,10 +10,10 @@
 Two editor generations were designed via design-it-twice: **E1**, a
 source-first CLI plus browser inspector, and **E2**, a schema-driven command
 editor. The sequencing question — build which, when — was settled by the
-Wayfinder: friction evidence, not enthusiasm, decides whether E2 is ever built,
-and the proof program's Stage 6 (editor-need proof) exists to produce that
-evidence by comparing two *designed* interfaces on a shared authoring-jobs
-fixture list.
+Wayfinder: friction evidence, not enthusiasm, decides whether general E2 is ever
+built, and the proof program's Stage 6 (editor-need proof) exists to produce
+that evidence by comparing two *designed* interfaces on a shared
+authoring-jobs fixture list.
 
 ## Decision
 
@@ -21,11 +21,11 @@ fixture list.
   edits flow through the propose→diff→apply protocol over **text-canonical
   documents**, with one validator implementation for direct edits and
   proposals.
-- **E2 is specified, not built.** Its behavioral contract (command apply with
-  base-version conflict detection, undo/redo by inverse patches, explicit
-  replayable migrations) is designed now so that Stage 6 tests a designed
-  interface, not an improvised one — but E2 is built **only after Stage 6
-  friction evidence**.
+- **General E2 is specified, not built.** Its behavioral contract (command
+  apply with base-version conflict detection, undo/redo by inverse patches,
+  explicit replayable migrations) is designed now so that Stage 6 tests a
+  designed interface, not an improvised one — but general E2 is built **only
+  after Stage 6 friction evidence**.
 - **Text documents stay canonical under any editor.** No editor may become a
   proprietary data silo.
 
@@ -54,19 +54,21 @@ E1's verbs transfer as the CLI `project` command group
 - Every v1 authoring surface converges on one propose/apply path producing
   identical documents and evidence; this ADR does not set the investment order
   across CLI, web shell, desktop shell, and importers.
-- Stage 6 compares two designed interfaces on the shared authoring-jobs
-  fixture list. Building E2 earlier would invalidate the editor-need proof by
-  making the comparison a sunk-cost defense.
+- Stage 6 still compares two designed interfaces on the shared authoring-jobs
+  fixture list. The bounded Minimum E2 exception neither runs nor replaces that
+  comparison; building the general E2 surface earlier would invalidate the
+  editor-need proof by making it a sunk-cost defense.
 - Every future editor inherits text-canonical documents; migrations are
   explicit and replayable, never implicit format capture.
-- If Stage 6 evidence never justifies E2, it is never built — the designed
-  contract is the cost ceiling of the bet, apart from the named Minimum E2
-  exception above.
+- If Stage 6 evidence never justifies general E2, it is never built — the
+  designed contract is the cost ceiling of the bet, apart from the named
+  Minimum E2 exception above.
 
 ## Rejected alternatives
 
-- **E2 first, or E1 and E2 in parallel** — builds a speculative editor before
-  friction evidence exists; Stage 6 exists precisely to test that need.
+- **General E2 first, or E1 and general E2 in parallel** — builds a speculative
+  editor beyond the named exception before friction evidence exists; Stage 6
+  exists precisely to test that need.
 - **A GUI editor as the canonical authoring layer** — rejected because
   documents are text-canonical and shells are protocol clients; a
   canonical-GUI posture would fork human and agent behavior and create a data

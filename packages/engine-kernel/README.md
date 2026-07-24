@@ -6,8 +6,16 @@ Game Kernel seam: deterministic command/snapshot session
 
 - Only `advance` mutates authoritative state
 - `observe` returns deeply frozen snapshots with a canonical digest
-- Save/replay artifacts stamp schema + kernel/BOM versions; schema major mismatch refuses
+- Game-session save/replay artifacts stamp schema + kernel/BOM versions; schema
+  major mismatch refuses
 - Allowed dependency: `@sceneaxi/schemas` only (no presentation/backend types)
 
-This package is a tracer-bullet simulation domain (entity transforms under
-move/spawn). It does not claim engine-readiness and does not compose a renderer.
+The original tracer-bullet domain covers entity transforms under move/spawn.
+The hybrid sculpt vertical additionally exposes `openSculptKernelSession()` and
+`replaySculptKernelSession()` for kernel-owned hierarchy projection,
+deterministic animation sockets, and bounded toy ground collision under
+[ADR 0009](../../docs/adr/0009-kernel-owned-toy-physics-animation.md). Only
+`advance` changes that state; observe is frozen and save/replay binds the
+terminal digest.
+
+Neither domain claims engine readiness or composes a renderer.

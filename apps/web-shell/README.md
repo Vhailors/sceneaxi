@@ -38,7 +38,6 @@ No hosting, no deployment, no public visibility.
 
 ## Hybrid vertical: Minimum E2
 
-`createMinimumE2Editor()` exposes only the frozen checklist for the hybrid
-vertical: experimental preview viewport, scene tree, instance selection,
-numeric transform editing, inspector, play/pause/step, add/remove sculpt, and
-save/load through authoring-core propose/apply. It is not a full IDE surface.
+`createMinimumE2Editor()` exposes only the hybrid vertical exception defined by
+[ADR 0003's amendment](../../docs/adr/0003-editor-sequencing-e1-first-e2-specified.md#2026-07-24-vertical-only-amendment).
+Persistence stays on authoring-core propose/apply. It is not a full IDE surface.
