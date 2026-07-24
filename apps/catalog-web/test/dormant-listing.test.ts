@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   attemptCatalogMarketplacePublish,
@@ -16,7 +18,7 @@ describe("catalog-web dormant MVP pipeline", () => {
     expect(listedFixtureItem.moderation.history[2]?.humanVerdict).toMatchObject({
       kind: "human",
       decision: "approve",
-      curatorId: "fixture-human-curator",
+      curatorId: "Vhailors",
     });
     expect(showCatalogItem("web-golden-fixture")).toEqual({
       ok: true,
@@ -26,6 +28,30 @@ describe("catalog-web dormant MVP pipeline", () => {
       ok: false,
       code: "catalog-item-not-found",
     });
+  });
+
+  it("ties source provenance and human approval to committed fixture records", () => {
+    const sourcePath = new URL(
+      "../../../tests/e2e/fixtures/golden-project.ts",
+      import.meta.url,
+    );
+    const approvalPath = new URL(
+      "../fixtures/web-golden-fixture.human-verdict.json",
+      import.meta.url,
+    );
+    const sourceDigest = `sha256:${createHash("sha256")
+      .update(readFileSync(sourcePath))
+      .digest("hex")}`;
+    const approval: unknown = JSON.parse(readFileSync(approvalPath, "utf8"));
+
+    expect(listedFixtureItem.provenance).toMatchObject({
+      origin: "tests/e2e/fixtures/golden-project.ts",
+      sourceDigest,
+    });
+    expect(listedFixtureItem.assetPackage.contentHash).toBe(sourceDigest);
+    expect(listedFixtureItem.moderation.history[2]?.humanVerdict).toEqual(
+      approval,
+    );
   });
 
   it("deep-freezes the shared fixture item", () => {

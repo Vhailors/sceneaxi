@@ -28,7 +28,7 @@ export const seam: PackageSeam = Object.freeze({
 });
 
 const FIXTURE_HASH =
-  "sha256:59bdf0f5b60c23a75f2218100972ab7868bf672be6b314340ef894f50284c62f";
+  "sha256:ed96644f66eb3060a5d0fc1c814f6772eba0fa894dedb944ecdbf7edd8e37a8b";
 
 function deepFreeze<T extends object>(value: T): T {
   const nestedValues: unknown[] = Object.values(value);
@@ -53,7 +53,7 @@ function buildListedFixture(): CatalogItem {
       commercialUseAllowed: false,
     },
     provenance: {
-      origin: "tests/fixtures/catalog-web",
+      origin: "tests/e2e/fixtures/golden-project.ts",
       ingestedAt: "2026-07-24T12:00:00.000Z",
       sourceDigest: FIXTURE_HASH,
     },
@@ -78,8 +78,9 @@ function buildListedFixture(): CatalogItem {
   const verdict: HumanCurationVerdict = {
     kind: "human",
     decision: "approve",
-    curatorId: "fixture-human-curator",
-    rationale: "Listed only as deterministic dormant-pipeline evidence.",
+    curatorId: "Vhailors",
+    rationale:
+      "Approved only as dormant fixture evidence; recorded in apps/catalog-web/fixtures/web-golden-fixture.human-verdict.json.",
     recordedAt: "2026-07-24T12:03:00.000Z",
   };
   const listed = transitionCatalogItem(curated.item, {

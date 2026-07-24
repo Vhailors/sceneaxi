@@ -12,6 +12,8 @@ recorded in the canonical product spec
 ([#1](https://github.com/Vhailors/sceneaxi/issues/1)).
 
 For sceneaxi#59 the dormant API exposes one deterministic, human-approved
-fixture through `listCatalogItems()` and `showCatalogItem()`. Purchase/billing
+fixture through `listCatalogItems()` and `showCatalogItem()`. Its source points
+to `tests/e2e/fixtures/golden-project.ts`, and its represented human approval is
+recorded at `fixtures/web-golden-fixture.human-verdict.json`. Purchase/billing
 and marketplace publish calls return named refusals; there is no live
 marketplace or commerce activation path.

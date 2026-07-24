@@ -21,6 +21,7 @@ describe("engine-orchestrator MVP disposition", () => {
 
   it("removes aspirational runtime dependencies from every golden-path consumer", () => {
     for (const path of [
+      "packages/engine-orchestrator/package.json",
       "packages/authoring-core/package.json",
       "packages/profile-game/package.json",
       "packages/profile-web/package.json",
@@ -32,6 +33,14 @@ describe("engine-orchestrator MVP disposition", () => {
       expect(
         manifest.dependencies?.["@sceneaxi/engine-orchestrator"],
       ).toBeUndefined();
+      if (path === "packages/engine-orchestrator/package.json") {
+        expect(
+          manifest.dependencies?.["@sceneaxi/engine-kernel"],
+        ).toBeUndefined();
+        expect(manifest.dependencies).toEqual({
+          "@sceneaxi/schemas": "workspace:^",
+        });
+      }
     }
   });
 

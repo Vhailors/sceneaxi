@@ -33,6 +33,16 @@ function fixture(name: "complete" | "tool-call") {
   ) as unknown;
 }
 
+function attestedFixture(
+  name: "complete" | "tool-call",
+  executedModel: ModelDescriptor = MODEL,
+) {
+  return {
+    response: fixture(name),
+    executedModel,
+  };
+}
+
 describe("@sceneaxi/provider-openrouter", () => {
   it("exports a frozen importer-group seam", () => {
     expect(seam).toEqual({
@@ -49,7 +59,7 @@ describe("@sceneaxi/provider-openrouter", () => {
       eval: EVAL,
       transport(request) {
         requests.push(request);
-        return fixture("complete");
+        return attestedFixture("complete");
       },
     });
     const port = createModelProviderPort({
@@ -76,6 +86,7 @@ describe("@sceneaxi/provider-openrouter", () => {
       {
         schemaVersion: 1,
         operation: "complete",
+        modelDescriptor: MODEL,
         model: MODEL.model,
         messages: [{ role: "user", content: "fixture prompt" }],
         provider: { allow_fallbacks: false },
@@ -89,7 +100,7 @@ describe("@sceneaxi/provider-openrouter", () => {
     const adapter = createOpenRouterAdapter({
       model: MODEL,
       eval: EVAL,
-      transport: () => fixture("tool-call"),
+      transport: () => attestedFixture("tool-call"),
     });
     const port = createModelProviderPort({
       adapter,
@@ -128,22 +139,25 @@ describe("@sceneaxi/provider-openrouter", () => {
       model: MODEL,
       eval: EVAL,
       transport: () => ({
-        ...fixture("tool-call") as Record<string, unknown>,
-        choices: [
-          {
-            finish_reason: "tool_calls",
-            message: {
-              tool_calls: [
-                {
-                  function: {
-                    name: "delete-project",
-                    arguments: "{}",
+        response: {
+          ...fixture("tool-call") as Record<string, unknown>,
+          choices: [
+            {
+              finish_reason: "tool_calls",
+              message: {
+                tool_calls: [
+                  {
+                    function: {
+                      name: "delete-project",
+                      arguments: "{}",
+                    },
                   },
-                },
-              ],
+                ],
+              },
             },
-          },
-        ],
+          ],
+        },
+        executedModel: MODEL,
       }),
     });
 
@@ -171,22 +185,25 @@ describe("@sceneaxi/provider-openrouter", () => {
       model: MODEL,
       eval: EVAL,
       transport: () => ({
-        ...fixture("tool-call") as Record<string, unknown>,
-        choices: [
-          {
-            finish_reason: "length",
-            message: {
-              tool_calls: [
-                {
-                  function: {
-                    name: "move-entity",
-                    arguments: "{\"entity\":\"hero\",\"x\":2}",
+        response: {
+          ...fixture("tool-call") as Record<string, unknown>,
+          choices: [
+            {
+              finish_reason: "length",
+              message: {
+                tool_calls: [
+                  {
+                    function: {
+                      name: "move-entity",
+                      arguments: "{\"entity\":\"hero\",\"x\":2}",
+                    },
                   },
-                },
-              ],
+                ],
+              },
             },
-          },
-        ],
+          ],
+        },
+        executedModel: MODEL,
       }),
     });
 
@@ -214,13 +231,16 @@ describe("@sceneaxi/provider-openrouter", () => {
       model: MODEL,
       eval: EVAL,
       transport: () => ({
-        ...fixture("complete") as Record<string, unknown>,
-        choices: [
-          {
-            finish_reason: "tool_calls",
-            message: { content: "not a completion" },
-          },
-        ],
+        response: {
+          ...fixture("complete") as Record<string, unknown>,
+          choices: [
+            {
+              finish_reason: "tool_calls",
+              message: { content: "not a completion" },
+            },
+          ],
+        },
+        executedModel: MODEL,
       }),
     });
 
@@ -244,7 +264,7 @@ describe("@sceneaxi/provider-openrouter", () => {
       eval: EVAL,
       transport() {
         calls += 1;
-        return fixture("complete");
+        return attestedFixture("complete");
       },
     });
     const port = createModelProviderPort({
@@ -273,8 +293,11 @@ describe("@sceneaxi/provider-openrouter", () => {
       model: MODEL,
       eval: EVAL,
       transport: () => ({
-        ...fixture("complete") as Record<string, unknown>,
-        model: "openai/silent-substitute",
+        response: {
+          ...fixture("complete") as Record<string, unknown>,
+          model: "openai/silent-substitute",
+        },
+        executedModel: MODEL,
       }),
     });
 
@@ -290,11 +313,32 @@ describe("@sceneaxi/provider-openrouter", () => {
       code: OPENROUTER_ADAPTER_ERROR_CODES.responseModelMismatch,
     });
 
+    const unattestedAdapter = createOpenRouterAdapter({
+      model: MODEL,
+      eval: EVAL,
+      transport: () => attestedFixture("complete", {
+        ...MODEL,
+        quantization: "unattested-substitute",
+      }),
+    });
+
+    await expect(
+      unattestedAdapter.complete?.({
+        schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+        operation: "complete",
+        profile: "@sceneaxi/profile-web",
+        model: MODEL,
+        prompt: "fixture prompt",
+      }),
+    ).rejects.toMatchObject({
+      code: OPENROUTER_ADAPTER_ERROR_CODES.responseModelMismatch,
+    });
+
     expect(
       () => createOpenRouterAdapter({
         model: MODEL,
         eval: { ...EVAL, allowFallbacks: true } as never,
-        transport: () => fixture("complete"),
+        transport: () => attestedFixture("complete"),
       }),
     ).toThrowError(OpenRouterAdapterError);
   });

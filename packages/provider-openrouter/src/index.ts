@@ -40,6 +40,7 @@ export type OpenRouterEvalConfig = Readonly<{
 export type OpenRouterTransportRequest = Readonly<{
   schemaVersion: typeof OPENROUTER_ADAPTER_SCHEMA_VERSION;
   operation: "complete" | "tool-call";
+  modelDescriptor: ModelDescriptor;
   model: string;
   messages: readonly [
     Readonly<{ role: "user"; content: string }>,
@@ -59,9 +60,14 @@ export type OpenRouterTransportRequest = Readonly<{
   >;
 }>;
 
+export type OpenRouterTransportResult = Readonly<{
+  response: unknown;
+  executedModel: ModelDescriptor;
+}>;
+
 export type OpenRouterTransport = (
   request: OpenRouterTransportRequest,
-) => unknown | Promise<unknown>;
+) => OpenRouterTransportResult | Promise<OpenRouterTransportResult>;
 
 export type CreateOpenRouterAdapterOptions = Readonly<{
   model: ModelDescriptor;
@@ -96,6 +102,16 @@ const capabilities: ModelCapabilityDescriptor = Object.freeze({
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isModelDescriptor(value: unknown): value is ModelDescriptor {
+  return (
+    isRecord(value) &&
+    typeof value["model"] === "string" &&
+    typeof value["provider"] === "string" &&
+    typeof value["quantization"] === "string" &&
+    typeof value["version"] === "string"
+  );
 }
 
 function sameModel(left: ModelDescriptor, right: ModelDescriptor) {
@@ -145,6 +161,7 @@ function transportRequest(
   const base = {
     schemaVersion: OPENROUTER_ADAPTER_SCHEMA_VERSION,
     operation: request.operation,
+    modelDescriptor: Object.freeze({ ...request.model }),
     model: request.model.model,
     messages: Object.freeze([
       Object.freeze({ role: "user" as const, content: request.prompt }),
@@ -170,6 +187,26 @@ function transportRequest(
         }),
       ),
     ),
+  });
+}
+
+function parseTransportResult(
+  result: OpenRouterTransportResult,
+  pinnedModel: ModelDescriptor,
+) {
+  const executedModel = isRecord(result) ? result["executedModel"] : undefined;
+  if (
+    !isModelDescriptor(executedModel) ||
+    !sameModel(executedModel, pinnedModel)
+  ) {
+    throw new OpenRouterAdapterError(
+      OPENROUTER_ADAPTER_ERROR_CODES.responseModelMismatch,
+      "The OpenRouter transport did not attest the exact configured model descriptor.",
+    );
+  }
+  return Object.freeze({
+    response: result.response,
+    executedModel: Object.freeze({ ...executedModel }),
   });
 }
 
@@ -309,23 +346,29 @@ export function createOpenRouterAdapter(
     capabilities,
     async complete(request) {
       assertPinnedRequest(request, pinnedModel);
-      const payload = await options.transport(
-        transportRequest(request, evalConfig),
+      const transportResult = parseTransportResult(
+        await options.transport(transportRequest(request, evalConfig)),
+        pinnedModel,
       );
       return Object.freeze({
-        response: parseComplete(payload, pinnedModel),
-        executedModel: pinnedModel,
+        response: parseComplete(transportResult.response, pinnedModel),
+        executedModel: transportResult.executedModel,
       });
     },
     async toolCall(request) {
       assertPinnedRequest(request, pinnedModel);
       const offeredToolNames = new Set(request.tools.map((tool) => tool.name));
-      const payload = await options.transport(
-        transportRequest(request, evalConfig),
+      const transportResult = parseTransportResult(
+        await options.transport(transportRequest(request, evalConfig)),
+        pinnedModel,
       );
       return Object.freeze({
-        response: parseToolCall(payload, pinnedModel, offeredToolNames),
-        executedModel: pinnedModel,
+        response: parseToolCall(
+          transportResult.response,
+          pinnedModel,
+          offeredToolNames,
+        ),
+        executedModel: transportResult.executedModel,
       });
     },
   });

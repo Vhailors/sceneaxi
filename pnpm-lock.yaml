@@ -92,9 +92,6 @@ importers:
 
   packages/engine-orchestrator:
     dependencies:
-      '@sceneaxi/engine-kernel':
-        specifier: workspace:^
-        version: link:../engine-kernel
       '@sceneaxi/schemas':
         specifier: workspace:^
         version: link:../schemas

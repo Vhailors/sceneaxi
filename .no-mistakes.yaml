@@ -1,6 +1,6 @@
-# Captain standing for this repository ship: allow up to three pipeline-owned
-# repair rounds per automated step. Keep this project-local; do not raise the
-# global home configuration.
+# Captain authorization 2026-07-24 for the SceneAxi end-of-task ship:
+# allow up to three pipeline-owned repair rounds per automated step.
+# Keep this project-local; do not raise the global home configuration.
 auto_fix:
   rebase: 3
   review: 3

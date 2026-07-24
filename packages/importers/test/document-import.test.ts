@@ -95,4 +95,31 @@ describe("text-canonical SceneAxi document importer", () => {
       diagnostics: [{ code: "invalid-document" }],
     });
   });
+
+  it("fails closed on duplicate JSON members at every nesting level", () => {
+    const cwd = targetDir();
+    const source = fixture("source.sceneaxi.json");
+    const topLevelDuplicate = source.replace(
+      "\"schemaVersion\": 1,",
+      "\"schemaVersion\": 1, \"schemaVersion\": 1,",
+    );
+    const escapedNestedDuplicate = source.replace(
+      "\"source\": \"recorded-fixture\"",
+      "\"source\": \"recorded-fixture\", \"sour\\u0063e\": \"substitute\"",
+    );
+
+    for (const sourceText of [topLevelDuplicate, escapedNestedDuplicate]) {
+      expect(
+        proposeSceneDocumentImport({
+          sourceText,
+          targetDocumentPath: "project.sceneaxi.json",
+          cwd,
+        }),
+      ).toMatchObject({
+        ok: false,
+        stage: "validate",
+        diagnostics: [{ code: "parse-error" }],
+      });
+    }
+  });
 });
