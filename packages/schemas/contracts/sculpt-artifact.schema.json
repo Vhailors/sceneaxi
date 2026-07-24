@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/sculpt-artifact/v1",
+  "title": "SceneAxi Sculpt Artifact v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "kind", "artifactId", "spec", "proceduralModule", "runtimeHierarchy", "evidence"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "kind": { "const": "sceneaxi.sculpt-artifact" },
+    "artifactId": { "$ref": "#/$defs/id" },
+    "spec": { "$ref": "https://sceneaxi.invalid/contracts/object-sculpt-spec/v1" },
+    "proceduralModule": {
+      "type": "object", "additionalProperties": false,
+      "required": ["moduleId", "exportName", "sourceDigest"],
+      "properties": {
+        "moduleId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9./-]*$" },
+        "exportName": { "type": "string", "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$" },
+        "sourceDigest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "runtimeHierarchy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["rootNodeId", "nodes"],
+      "properties": {
+        "rootNodeId": { "$ref": "#/$defs/id" },
+        "nodes": { "type": "array", "minItems": 1, "items": { "$ref": "https://sceneaxi.invalid/contracts/object-sculpt-spec/v1#/$defs/hierarchyNode" } }
+      }
+    },
+    "evidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["method", "intakeDigest", "specDigest", "proceduralModuleDigest", "qualityGates"],
+      "properties": {
+        "method": { "enum": ["image-brief-reconstruction", "structured-fixture"] },
+        "intakeDigest": { "$ref": "#/$defs/digest" },
+        "specDigest": { "$ref": "#/$defs/digest" },
+        "proceduralModuleDigest": { "$ref": "#/$defs/digest" },
+        "qualityGates": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["id", "status", "digest"],
+            "properties": { "id": { "$ref": "#/$defs/id" }, "status": { "const": "passed" }, "digest": { "$ref": "#/$defs/digest" } }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}

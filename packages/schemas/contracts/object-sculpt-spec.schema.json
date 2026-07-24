@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/object-sculpt-spec/v1",
+  "title": "SceneAxi ObjectSculptSpec v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "kind", "id", "rootNodeId", "components", "materials", "sockets", "hierarchy"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "kind": { "const": "sceneaxi.object-sculpt-spec" },
+    "id": { "$ref": "#/$defs/id" },
+    "rootNodeId": { "$ref": "#/$defs/id" },
+    "components": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/component" } },
+    "materials": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/material" } },
+    "sockets": { "type": "array", "items": { "$ref": "#/$defs/socket" } },
+    "hierarchy": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/hierarchyNode" } }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "finiteNumber": { "type": "number" },
+    "vector3": {
+      "type": "array",
+      "prefixItems": [
+        { "$ref": "#/$defs/finiteNumber" },
+        { "$ref": "#/$defs/finiteNumber" },
+        { "$ref": "#/$defs/finiteNumber" }
+      ],
+      "items": false,
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "positiveVector3": {
+      "type": "array",
+      "prefixItems": [
+        { "type": "number", "exclusiveMinimum": 0 },
+        { "type": "number", "exclusiveMinimum": 0 },
+        { "type": "number", "exclusiveMinimum": 0 }
+      ],
+      "items": false,
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "transform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["translation", "rotationEulerDegrees", "scale"],
+      "properties": {
+        "translation": { "$ref": "#/$defs/vector3" },
+        "rotationEulerDegrees": { "$ref": "#/$defs/vector3" },
+        "scale": { "$ref": "#/$defs/positiveVector3" }
+      }
+    },
+    "material": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "baseColor", "metallic", "roughness"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "baseColor": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "metallic": { "type": "number", "minimum": 0, "maximum": 1 },
+        "roughness": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "primitive", "dimensions", "materialId"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "primitive": { "enum": ["box", "cylinder", "sphere"] },
+        "dimensions": { "$ref": "#/$defs/positiveVector3" },
+        "materialId": { "$ref": "#/$defs/id" }
+      }
+    },
+    "socket": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "nodeId", "kind", "axis", "amplitude", "frequencyHz"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "nodeId": { "$ref": "#/$defs/id" },
+        "kind": { "enum": ["animation", "attachment"] },
+        "axis": { "enum": ["x", "y", "z"] },
+        "amplitude": { "type": "number", "minimum": 0 },
+        "frequencyHz": { "type": "number", "minimum": 0 }
+      }
+    },
+    "hierarchyNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "parentId", "componentId", "transform"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "parentId": { "anyOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] },
+        "componentId": { "$ref": "#/$defs/id" },
+        "transform": { "$ref": "#/$defs/transform" }
+      }
+    }
+  }
+}

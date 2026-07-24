@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/sculpt-intake/v1",
+  "title": "SceneAxi Sculpt Intake v1",
+  "$defs": {
+    "base": {
+      "type": "object",
+      "required": ["schemaVersion", "kind", "intakeId", "mode"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "kind": { "const": "sceneaxi.sculpt-intake" },
+        "intakeId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "mode": { "enum": ["image", "image+brief", "multi-view", "structured-spec"] }
+      }
+    },
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mediaType", "uri", "digest"],
+      "properties": {
+        "mediaType": { "enum": ["image/jpeg", "image/png", "image/webp"] },
+        "uri": { "type": "string", "minLength": 1 },
+        "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "allOf": [{ "$ref": "#/$defs/base" }],
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "kind", "intakeId", "mode", "image"],
+      "properties": {
+        "schemaVersion": { "const": 1 }, "kind": { "const": "sceneaxi.sculpt-intake" },
+        "intakeId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" }, "mode": { "const": "image" },
+        "image": { "$ref": "#/$defs/image" }
+      }
+    },
+    {
+      "type": "object", "additionalProperties": false,
+      "required": ["schemaVersion", "kind", "intakeId", "mode", "image", "brief"],
+      "properties": {
+        "schemaVersion": { "const": 1 }, "kind": { "const": "sceneaxi.sculpt-intake" },
+        "intakeId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" }, "mode": { "const": "image+brief" },
+        "image": { "$ref": "#/$defs/image" }, "brief": { "type": "string", "minLength": 1 }
+      }
+    },
+    {
+      "type": "object", "additionalProperties": false,
+      "required": ["schemaVersion", "kind", "intakeId", "mode", "images"],
+      "properties": {
+        "schemaVersion": { "const": 1 }, "kind": { "const": "sceneaxi.sculpt-intake" },
+        "intakeId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" }, "mode": { "const": "multi-view" },
+        "images": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/image" } },
+        "brief": { "type": "string", "minLength": 1 }
+      }
+    },
+    {
+      "type": "object", "additionalProperties": false,
+      "required": ["schemaVersion", "kind", "intakeId", "mode", "structuredSpec"],
+      "properties": {
+        "schemaVersion": { "const": 1 }, "kind": { "const": "sceneaxi.sculpt-intake" },
+        "intakeId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" }, "mode": { "const": "structured-spec" },
+        "structuredSpec": { "$ref": "https://sceneaxi.invalid/contracts/object-sculpt-spec/v1" }
+      }
+    }
+  ]
+}
