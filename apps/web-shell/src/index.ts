@@ -33,3 +33,16 @@ export {
   type ShellRoundTripReject,
   type ShellRoundTripResult,
 } from "./protocol-client.js";
+
+export {
+  MINIMUM_E2_STATE_VERSION,
+  MinimumE2Error,
+  createMinimumE2Editor,
+  type MinimumE2Editor,
+  type MinimumE2Inspector,
+  type MinimumE2LoadResult,
+  type MinimumE2PlayState,
+  type MinimumE2SaveResult,
+  type MinimumE2Snapshot,
+  type MinimumE2TreeNode,
+} from "@sceneaxi/authoring-core";

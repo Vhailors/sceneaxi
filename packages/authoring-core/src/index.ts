@@ -102,6 +102,19 @@ export type {
   SculptReconstructionResult,
 } from "./sculpt-reconstruction.js";
 
+export {
+  MINIMUM_E2_STATE_VERSION,
+  MinimumE2Error,
+  createMinimumE2Editor,
+  type MinimumE2Editor,
+  type MinimumE2Inspector,
+  type MinimumE2LoadResult,
+  type MinimumE2PlayState,
+  type MinimumE2SaveResult,
+  type MinimumE2Snapshot,
+  type MinimumE2TreeNode,
+} from "./minimum-e2.js";
+
 // Re-export document/proposal types from schemas for adapter convenience.
 export type {
   ApplyDiagnostic,

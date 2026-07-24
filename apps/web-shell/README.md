@@ -35,3 +35,10 @@ final bytes, and content hash are identical. This remains a protocol client,
 not a second editor, product UI, design system, or authentication surface.
 
 No hosting, no deployment, no public visibility.
+
+## Hybrid vertical: Minimum E2
+
+`createMinimumE2Editor()` exposes only the frozen checklist for the hybrid
+vertical: experimental preview viewport, scene tree, instance selection,
+numeric transform editing, inspector, play/pause/step, add/remove sculpt, and
+save/load through authoring-core propose/apply. It is not a full IDE surface.
