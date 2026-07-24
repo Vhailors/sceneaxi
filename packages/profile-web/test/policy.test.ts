@@ -3,6 +3,7 @@ import {
   WEB_EXPERIENCE_REFUSED_SCOPES,
   WEB_EXPERIENCE_SCOPES,
   evaluateWebExperienceScope,
+  mvpGoldenPath,
   policy,
 } from "@sceneaxi/profile-web";
 
@@ -39,5 +40,12 @@ describe("@sceneaxi/profile-web compiled policy", () => {
     expect(Object.isFrozen(policy)).toBe(true);
     expect(Object.isFrozen(policy.scopes)).toBe(true);
     expect(Object.isFrozen(policy.refusedScopes)).toBe(true);
+  });
+
+  it("exports a non-shipping Web pin for the shared MVP fixture", () => {
+    expect(mvpGoldenPath.seam).toBeDefined();
+    expect(mvpGoldenPath.status.shippingClaim).toBe(false);
+    expect(mvpGoldenPath.status.productSurface).toBe("not-shipped");
+    expect(Object.isFrozen(mvpGoldenPath)).toBe(true);
   });
 });
