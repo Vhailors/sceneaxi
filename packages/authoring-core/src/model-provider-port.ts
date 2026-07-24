@@ -10,6 +10,9 @@ import {
   MODEL_PROVIDER_CALL_EVIDENCE_KIND,
   MODEL_PROVIDER_OPERATIONS,
   MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+  MODEL_PROVIDER_ROUTE_KINDS,
+  isJsonObject,
+  isJsonValue,
   type ModelCapabilityDescriptor,
   type ModelCompleteRequest,
   type ModelCompleteResponse,
@@ -28,7 +31,9 @@ import {
 export const MODEL_PROVIDER_REFUSE_REASONS = Object.freeze({
   schemaVersionUnsupported: "MODEL_PROVIDER_SCHEMA_VERSION_UNSUPPORTED",
   operationMismatch: "MODEL_PROVIDER_OPERATION_MISMATCH",
+  requestInvalid: "MODEL_PROVIDER_REQUEST_ENVELOPE_INVALID",
   adapterMissing: "MODEL_PROVIDER_ADAPTER_MISSING",
+  routeKindInvalid: "MODEL_PROVIDER_ROUTE_KIND_INVALID",
   profilePolicyMissing: "MODEL_PROVIDER_PROFILE_POLICY_MISSING",
   capabilityInvalid: "MODEL_PROVIDER_CAPABILITY_DESCRIPTOR_INVALID",
   capabilityUnsupported: "MODEL_PROVIDER_CAPABILITY_UNSUPPORTED",
@@ -169,7 +174,7 @@ function hasExactKeys(
 }
 
 function isModelDescriptor(value: unknown): value is ModelDescriptor {
-  if (!isRecord(value)) return false;
+  if (!isJsonObject(value)) return false;
   if (!hasExactKeys(value, ["model", "provider", "quantization", "version"])) {
     return false;
   }
@@ -188,15 +193,100 @@ function isModelDescriptor(value: unknown): value is ModelDescriptor {
 function isCapabilityDescriptor(
   value: unknown,
 ): value is ModelCapabilityDescriptor {
-  if (!isRecord(value)) return false;
+  if (!isJsonObject(value)) return false;
   if (!hasExactKeys(value, ["schemaVersion", "operations"])) return false;
   if (value.schemaVersion !== MODEL_PROVIDER_PORT_SCHEMA_VERSION) return false;
-  if (!Array.isArray(value.operations)) return false;
+  if (!Array.isArray(value.operations) || !isJsonValue(value.operations)) {
+    return false;
+  }
   const supportedOperations = new Set<unknown>(MODEL_PROVIDER_OPERATIONS);
   return (
     new Set(value.operations).size === value.operations.length &&
     value.operations.every((operation) => supportedOperations.has(operation))
   );
+}
+
+function isModelProviderRouteKind(
+  value: unknown,
+): value is ModelProviderRouteKind {
+  return MODEL_PROVIDER_ROUTE_KINDS.some((routeKind) => routeKind === value);
+}
+
+function isModelProviderProfile(
+  value: unknown,
+): value is ModelProviderProfile {
+  return (
+    typeof value === "string" &&
+    /^@sceneaxi\/profile-[a-z][a-z0-9-]*$/.test(value)
+  );
+}
+
+function hasRequiredAndOptionalKeys(
+  value: Record<string, unknown>,
+  required: ReadonlyArray<string>,
+  optional: ReadonlyArray<string>,
+) {
+  const allowed = new Set([...required, ...optional]);
+  return (
+    required.every((key) => Object.hasOwn(value, key)) &&
+    Object.keys(value).every((key) => allowed.has(key))
+  );
+}
+
+function isToolDescriptor(value: unknown) {
+  if (!isJsonObject(value)) return false;
+  if (
+    !hasRequiredAndOptionalKeys(
+      value,
+      ["name", "inputSchema"],
+      ["description"],
+    )
+  ) {
+    return false;
+  }
+  return (
+    typeof value.name === "string" &&
+    value.name.length > 0 &&
+    (!Object.hasOwn(value, "description") ||
+      typeof value.description === "string") &&
+    isJsonObject(value.inputSchema)
+  );
+}
+
+function isRequestEnvelope(
+  value: Record<string, unknown>,
+  expectedOperation: ModelProviderOperation,
+): boolean {
+  if (
+    !isJsonObject(value) ||
+    !isModelProviderProfile(value.profile) ||
+    !isModelDescriptor(value.model) ||
+    typeof value.prompt !== "string"
+  ) {
+    return false;
+  }
+  if (expectedOperation === "tool-call") {
+    return (
+      hasExactKeys(value, [
+        "schemaVersion",
+        "operation",
+        "profile",
+        "model",
+        "prompt",
+        "tools",
+      ]) &&
+      Array.isArray(value.tools) &&
+      isJsonValue(value.tools) &&
+      value.tools.every(isToolDescriptor)
+    );
+  }
+  return hasExactKeys(value, [
+    "schemaVersion",
+    "operation",
+    "profile",
+    "model",
+    "prompt",
+  ]);
 }
 
 function isAdapterSuccess(value: unknown): value is AdapterSuccessEnvelope {
@@ -209,7 +299,7 @@ function isAdapterSuccess(value: unknown): value is AdapterSuccessEnvelope {
 }
 
 function isCompleteResponse(value: unknown): value is ModelCompleteResponse {
-  if (!isRecord(value)) return false;
+  if (!isJsonObject(value)) return false;
   if (
     !hasExactKeys(value, [
       "schemaVersion",
@@ -228,27 +318,8 @@ function isCompleteResponse(value: unknown): value is ModelCompleteResponse {
   );
 }
 
-function isJsonValue(value: unknown, ancestors = new Set<object>()): boolean {
-  if (
-    value === null ||
-    typeof value === "string" ||
-    typeof value === "boolean"
-  ) {
-    return true;
-  }
-  if (typeof value === "number") return Number.isFinite(value);
-  if (typeof value !== "object") return false;
-  if (ancestors.has(value)) return false;
-  ancestors.add(value);
-  const valid = Array.isArray(value)
-    ? value.every((item) => isJsonValue(item, ancestors))
-    : Object.values(value).every((item) => isJsonValue(item, ancestors));
-  ancestors.delete(value);
-  return valid;
-}
-
 function isToolCallResponse(value: unknown): value is ModelToolCallResponse {
-  if (!isRecord(value)) return false;
+  if (!isJsonObject(value)) return false;
   if (!hasExactKeys(value, ["schemaVersion", "operation", "toolCalls"])) {
     return false;
   }
@@ -256,20 +327,20 @@ function isToolCallResponse(value: unknown): value is ModelToolCallResponse {
     value.schemaVersion === MODEL_PROVIDER_PORT_SCHEMA_VERSION &&
     value.operation === "tool-call" &&
     Array.isArray(value.toolCalls) &&
+    isJsonValue(value.toolCalls) &&
     value.toolCalls.every(
       (toolCall) =>
-        isRecord(toolCall) &&
+        isJsonObject(toolCall) &&
         hasExactKeys(toolCall, ["name", "arguments"]) &&
         typeof toolCall.name === "string" &&
         toolCall.name.length > 0 &&
-        isRecord(toolCall.arguments) &&
-        isJsonValue(toolCall.arguments),
+        isJsonObject(toolCall.arguments),
     )
   );
 }
 
 function isStreamChunk(value: unknown): value is ModelStreamChunk {
-  if (!isRecord(value)) return false;
+  if (!isJsonObject(value)) return false;
   if (
     !hasExactKeys(value, ["schemaVersion", "operation", "delta", "done"])
   ) {
@@ -294,29 +365,8 @@ function isAsyncIterable(value: unknown): value is AsyncIterable<unknown> {
   return typeof value[Symbol.asyncIterator] === "function";
 }
 
-async function collectStreamChunks(value: unknown) {
-  if (!isAsyncIterable(value)) return undefined;
-  const chunks: ModelStreamChunk[] = [];
-  for await (const chunk of value) {
-    if (!isStreamChunk(chunk)) return undefined;
-    chunks.push(
-      Object.freeze({
-        schemaVersion: chunk.schemaVersion,
-        operation: chunk.operation,
-        delta: chunk.delta,
-        done: chunk.done,
-      }),
-    );
-  }
-  return Object.freeze(chunks);
-}
-
-function replayStreamChunks(chunks: ReadonlyArray<ModelStreamChunk>) {
-  return Object.freeze({
-    async *[Symbol.asyncIterator]() {
-      yield* chunks;
-    },
-  });
+function asAsyncIterable(value: unknown) {
+  return isAsyncIterable(value) ? value : undefined;
 }
 
 function evidenceFor(
@@ -345,6 +395,13 @@ export function createModelProviderPort(
     request: ModelProviderRequest,
     expectedOperation: ModelProviderOperation,
   ): Promise<ModelProviderPreflight> => {
+    if (!isRecord(request)) {
+      return refuse(
+        MODEL_PROVIDER_REFUSE_REASONS.requestInvalid,
+        `The '${expectedOperation}' Model Provider request envelope is invalid; dispatch refused.`,
+      );
+    }
+
     if (request.schemaVersion !== MODEL_PROVIDER_PORT_SCHEMA_VERSION) {
       return refuse(
         MODEL_PROVIDER_REFUSE_REASONS.schemaVersionUnsupported,
@@ -359,11 +416,25 @@ export function createModelProviderPort(
       );
     }
 
+    if (!isRequestEnvelope(request, expectedOperation)) {
+      return refuse(
+        MODEL_PROVIDER_REFUSE_REASONS.requestInvalid,
+        `The '${expectedOperation}' Model Provider request envelope is invalid; dispatch refused.`,
+      );
+    }
+
     const adapter = options.adapter;
     if (adapter === undefined) {
       return refuse(
         MODEL_PROVIDER_REFUSE_REASONS.adapterMissing,
         "No Model Provider adapter is configured; dispatch refused.",
+      );
+    }
+
+    if (!isModelProviderRouteKind(adapter.routeKind)) {
+      return refuse(
+        MODEL_PROVIDER_REFUSE_REASONS.routeKindInvalid,
+        "The configured adapter route kind is invalid; dispatch refused.",
       );
     }
 
@@ -378,7 +449,9 @@ export function createModelProviderPort(
       );
     }
 
-    const policy = options.profilePolicies[request.profile];
+    const policy = Object.hasOwn(options.profilePolicies, request.profile)
+      ? options.profilePolicies[request.profile]
+      : undefined;
     if (policy === undefined) {
       return refuse(
         MODEL_PROVIDER_REFUSE_REASONS.profilePolicyMissing,
@@ -441,18 +514,42 @@ export function createModelProviderPort(
         "The adapter did not attest a valid executed model descriptor; success refused.",
       );
     }
-    const chunks = await collectStreamChunks(adapterResult.response);
-    if (chunks === undefined) {
+    const stream = asAsyncIterable(adapterResult.response);
+    if (stream === undefined) {
       return refuse(
         MODEL_PROVIDER_REFUSE_REASONS.responseInvalid,
         "The adapter returned an invalid 'stream' response envelope or chunk; success refused.",
       );
     }
     const evidence = evidenceFor(request, adapterResult.executedModel);
-    await options.recordEvidence?.(evidence);
+    let evidenceRecorded = false;
+    const response = Object.freeze({
+      async *[Symbol.asyncIterator]() {
+        for await (const chunk of stream) {
+          if (!isStreamChunk(chunk)) {
+            throw Object.assign(
+              new TypeError(
+                "The adapter returned an invalid 'stream' chunk; stream refused.",
+              ),
+              { reason: MODEL_PROVIDER_REFUSE_REASONS.responseInvalid },
+            );
+          }
+          yield Object.freeze({
+            schemaVersion: chunk.schemaVersion,
+            operation: chunk.operation,
+            delta: chunk.delta,
+            done: chunk.done,
+          });
+        }
+        if (!evidenceRecorded) {
+          evidenceRecorded = true;
+          await options.recordEvidence?.(evidence);
+        }
+      },
+    });
     return Object.freeze({
       ok: true,
-      response: replayStreamChunks(chunks),
+      response,
       evidence,
     });
   };

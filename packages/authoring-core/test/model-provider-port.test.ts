@@ -459,6 +459,121 @@ describe("Model Provider Port", () => {
     expect(calls).toEqual([]);
   });
 
+  it("refuses malformed request bodies before policy or dispatch", async () => {
+    const calls: string[] = [];
+    const filterCalls: string[] = [];
+    const port = createModelProviderPort({
+      adapter: fakeAdapter(calls),
+      profilePolicies: {
+        "@sceneaxi/profile-game": (context) => {
+          filterCalls.push(context.operation);
+          return { ok: true };
+        },
+      },
+    });
+    const malformedComplete = {
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      operation: "complete",
+      profile: "__proto__",
+      model,
+      prompt: "invalid profile",
+    };
+    const malformedToolCall = {
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      operation: "tool-call",
+      profile: "@sceneaxi/profile-game",
+      model,
+      prompt: "invalid tool schema",
+      tools: [{ name: "fixture", inputSchema: new Date() }],
+    };
+    const malformedStream = {
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      operation: "stream",
+      profile: "@sceneaxi/profile-game",
+      model: { ...model, provider: "" },
+      prompt: "invalid model",
+    };
+
+    const results = await Promise.all([
+      port.complete(
+        malformedComplete as unknown as Parameters<typeof port.complete>[0],
+      ),
+      port.toolCall(
+        malformedToolCall as unknown as Parameters<typeof port.toolCall>[0],
+      ),
+      port.stream(
+        malformedStream as unknown as Parameters<typeof port.stream>[0],
+      ),
+    ]);
+
+    for (const result of results) {
+      expect(result).toMatchObject({
+        ok: false,
+        reason: "MODEL_PROVIDER_REQUEST_ENVELOPE_INVALID",
+      });
+    }
+    expect(filterCalls).toEqual([]);
+    expect(calls).toEqual([]);
+  });
+
+  it("does not resolve profile policies through the prototype chain", async () => {
+    const calls: string[] = [];
+    const inheritedPolicies = Object.create({
+      "@sceneaxi/profile-game": allow,
+    }) as Record<string, ModelProviderPolicyFilter>;
+    const port = createModelProviderPort({
+      adapter: fakeAdapter(calls),
+      profilePolicies: inheritedPolicies,
+    });
+
+    const result = await port.complete({
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      operation: "complete",
+      profile: "@sceneaxi/profile-game",
+      model,
+      prompt: "inherited policy",
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: "MODEL_PROVIDER_PROFILE_POLICY_MISSING",
+    });
+    expect(calls).toEqual([]);
+  });
+
+  it("refuses invalid adapter route kinds before policy or dispatch", async () => {
+    const calls: string[] = [];
+    const filterCalls: string[] = [];
+    const adapter = {
+      ...fakeAdapter(calls),
+      routeKind: "first-party",
+    } as unknown as ModelProviderAdapter;
+    const port = createModelProviderPort({
+      adapter,
+      profilePolicies: {
+        "@sceneaxi/profile-game": (context) => {
+          filterCalls.push(context.operation);
+          return { ok: true };
+        },
+      },
+    });
+
+    const result = await port.complete({
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      operation: "complete",
+      profile: "@sceneaxi/profile-game",
+      model,
+      prompt: "invalid route kind",
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: "MODEL_PROVIDER_ROUTE_KIND_INVALID",
+    });
+    expect(filterCalls).toEqual([]);
+    expect(calls).toEqual([]);
+  });
+
   it("refuses invalid capability descriptors before policy or dispatch", async () => {
     const calls: string[] = [];
     const filterCalls: string[] = [];
@@ -570,41 +685,39 @@ describe("Model Provider Port", () => {
     expect(recorded).toEqual([]);
   });
 
-  it("refuses non-iterable streams and malformed chunks before evidence or success", async () => {
+  it("uses canonical JSON validation for tool-call arguments", async () => {
     const recorded: ModelProviderCallEvidence[] = [];
-    const invalidStreamResponses: unknown[] = [
-      undefined,
-      (async function* () {
-        yield {
-          schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
-          operation: "complete",
-          delta: "invalid",
-          done: true,
-        };
-      })(),
-    ];
+    const sparse = ["present"];
+    sparse.length = 2;
+    const invalidArguments = [new Date(), new Map(), { nested: sparse }];
 
-    for (const response of invalidStreamResponses) {
+    for (const argumentsValue of invalidArguments) {
       const adapter = {
         ...fakeAdapter(),
-        async stream() {
-          return { response, executedModel: model };
+        async toolCall() {
+          return {
+            response: {
+              schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+              operation: "tool-call",
+              toolCalls: [{ name: "fixture", arguments: argumentsValue }],
+            },
+            executedModel: model,
+          };
         },
       } as unknown as ModelProviderAdapter;
-      const port = createModelProviderPort({
+      const result = await createModelProviderPort({
         adapter,
         profilePolicies: { "@sceneaxi/profile-game": allow },
         recordEvidence(evidence) {
           recorded.push(evidence);
         },
-      });
-
-      const result = await port.stream({
+      }).toolCall({
         schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
-        operation: "stream",
+        operation: "tool-call",
         profile: "@sceneaxi/profile-game",
         model,
-        prompt: "invalid stream response",
+        prompt: "invalid arguments",
+        tools: [],
       });
 
       expect(result).toMatchObject({
@@ -613,6 +726,147 @@ describe("Model Provider Port", () => {
       });
     }
     expect(recorded).toEqual([]);
+  });
+
+  it("refuses non-iterable stream envelopes before evidence or success", async () => {
+    const recorded: ModelProviderCallEvidence[] = [];
+    const adapter = {
+      ...fakeAdapter(),
+      async stream() {
+        return { response: undefined, executedModel: model };
+      },
+    } as unknown as ModelProviderAdapter;
+    const port = createModelProviderPort({
+      adapter,
+      profilePolicies: { "@sceneaxi/profile-game": allow },
+      recordEvidence(evidence) {
+        recorded.push(evidence);
+      },
+    });
+
+    const result = await port.stream({
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      operation: "stream",
+      profile: "@sceneaxi/profile-game",
+      model,
+      prompt: "invalid stream response",
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: "MODEL_PROVIDER_RESPONSE_ENVELOPE_INVALID",
+    });
+    expect(recorded).toEqual([]);
+  });
+
+  it("validates stream chunks lazily and withholds evidence on failure", async () => {
+    const recorded: ModelProviderCallEvidence[] = [];
+    const adapter = {
+      ...fakeAdapter(),
+      async stream() {
+        async function* chunks() {
+          yield {
+            schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+            operation: "complete",
+            delta: "invalid",
+            done: true,
+          };
+        }
+        return { response: chunks(), executedModel: model };
+      },
+    } as unknown as ModelProviderAdapter;
+    const port = createModelProviderPort({
+      adapter,
+      profilePolicies: { "@sceneaxi/profile-game": allow },
+      recordEvidence(evidence) {
+        recorded.push(evidence);
+      },
+    });
+
+    const result = await port.stream({
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      operation: "stream",
+      profile: "@sceneaxi/profile-game",
+      model,
+      prompt: "invalid stream chunk",
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    await expect(
+      (async () => {
+        for await (const chunk of result.response) void chunk;
+      })(),
+    ).rejects.toMatchObject({
+      reason: "MODEL_PROVIDER_RESPONSE_ENVELOPE_INVALID",
+    });
+    expect(recorded).toEqual([]);
+  });
+
+  it("keeps stream delivery lazy and records evidence on clean completion", async () => {
+    const events: string[] = [];
+    const recorded: ModelProviderCallEvidence[] = [];
+    const adapter = {
+      ...fakeAdapter(),
+      async stream() {
+        async function* chunks() {
+          events.push("started");
+          yield {
+            schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+            operation: "stream" as const,
+            delta: "first",
+            done: false,
+          };
+          events.push("resumed");
+          yield {
+            schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+            operation: "stream" as const,
+            delta: "second",
+            done: true,
+          };
+        }
+        return { response: chunks(), executedModel: model };
+      },
+    } satisfies ModelProviderAdapter;
+    const port = createModelProviderPort({
+      adapter,
+      profilePolicies: { "@sceneaxi/profile-game": allow },
+      recordEvidence(evidence) {
+        recorded.push(evidence);
+      },
+    });
+
+    const result = await port.stream({
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      operation: "stream",
+      profile: "@sceneaxi/profile-game",
+      model,
+      prompt: "lazy stream",
+    });
+
+    expect(result.ok).toBe(true);
+    expect(events).toEqual([]);
+    expect(recorded).toEqual([]);
+    if (!result.ok) return;
+    const iterator = result.response[Symbol.asyncIterator]();
+    await expect(iterator.next()).resolves.toMatchObject({
+      value: { delta: "first" },
+      done: false,
+    });
+    expect(events).toEqual(["started"]);
+    expect(recorded).toEqual([]);
+    await expect(iterator.next()).resolves.toMatchObject({
+      value: { delta: "second" },
+      done: false,
+    });
+    expect(events).toEqual(["started", "resumed"]);
+    expect(recorded).toEqual([]);
+    await expect(iterator.next()).resolves.toEqual({
+      value: undefined,
+      done: true,
+    });
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]).toEqual(result.evidence);
   });
 
   it("exposes a typed async stream without network or spend", async () => {
