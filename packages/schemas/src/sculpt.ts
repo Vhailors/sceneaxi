@@ -766,6 +766,29 @@ export function projectAnimationReadyHierarchy(
   };
 }
 
+function jsonValuesEqual(left: unknown, right: unknown): boolean {
+  if (left === right) return true;
+  if (Array.isArray(left) || Array.isArray(right)) {
+    return (
+      Array.isArray(left) &&
+      Array.isArray(right) &&
+      left.length === right.length &&
+      left.every((entry, index) => jsonValuesEqual(entry, right[index]))
+    );
+  }
+  if (!isJsonObject(left) || !isJsonObject(right)) return false;
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  return (
+    leftKeys.length === rightKeys.length &&
+    leftKeys.every(
+      (key) =>
+        Object.hasOwn(right, key) &&
+        jsonValuesEqual(left[key], right[key]),
+    )
+  );
+}
+
 /** Validate a complete SceneAxi-owned Sculpt Artifact package. */
 export function validateSculptArtifact(value: unknown): SculptValidationResult<SculptArtifact> {
   if (!isJsonObject(value)) return refuse("not-object", "$", "Sculpt Artifact must be a JSON object.");
@@ -833,10 +856,13 @@ export function validateSculptArtifact(value: unknown): SculptValidationResult<S
       `kind must be "${ANIMATION_READY_HIERARCHY_KIND}".`,
     );
   }
-  if (runtime["rootNodeId"] !== spec.value.rootNodeId || JSON.stringify(runtime["nodes"]) !== JSON.stringify(spec.value.hierarchy)) {
+  if (
+    runtime["rootNodeId"] !== spec.value.rootNodeId ||
+    !jsonValuesEqual(runtime["nodes"], spec.value.hierarchy)
+  ) {
     return refuse("invalid-hierarchy", "$.runtimeHierarchy", "Runtime hierarchy must exactly project the validated spec hierarchy.");
   }
-  if (JSON.stringify(runtime["sockets"]) !== JSON.stringify(spec.value.sockets)) {
+  if (!jsonValuesEqual(runtime["sockets"], spec.value.sockets)) {
     return refuse(
       "missing-runtime-socket",
       "$.runtimeHierarchy.sockets",
@@ -853,7 +879,7 @@ export function validateSculptArtifact(value: unknown): SculptValidationResult<S
     if (
       !Array.isArray(runtime[field]) ||
       runtime[field].length === 0 ||
-      JSON.stringify(runtime[field]) !== JSON.stringify(expectedRuntime[field])
+      !jsonValuesEqual(runtime[field], expectedRuntime[field])
     ) {
       return refuse(
         code,

@@ -66,6 +66,29 @@ function canonicalJson(value: JsonValue): string {
     .join(",")}}`;
 }
 
+function snapshotJsonValue(value: JsonValue): JsonValue {
+  if (Array.isArray(value)) {
+    return Object.freeze(value.map((entry) => snapshotJsonValue(entry)));
+  }
+  if (value !== null && typeof value === "object") {
+    return Object.freeze(
+      Object.fromEntries(
+        Object.entries(value).map(([key, entry]) => [
+          key,
+          snapshotJsonValue(entry),
+        ]),
+      ),
+    );
+  }
+  return value;
+}
+
+function snapshotObjectSculptSpec(spec: ObjectSculptSpec): ObjectSculptSpec {
+  return snapshotJsonValue(
+    spec as unknown as JsonValue,
+  ) as unknown as ObjectSculptSpec;
+}
+
 function digestJson(value: JsonValue) {
   return `sha256:${createHash("sha256").update(canonicalJson(value)).digest("hex")}`;
 }
@@ -270,6 +293,7 @@ export function reconstructSculpt(
     }
     spec = firstValidation.value;
   }
+  spec = snapshotObjectSculptSpec(spec);
   const gates = qualityGateEvidence(spec);
   if (!gates.ok) {
     return {

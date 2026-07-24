@@ -222,6 +222,40 @@ describe("SceneAxi sculpt reconstruction", () => {
     });
   });
 
+  it("snapshots retained offline-agent output before artifact construction", () => {
+    const retained: ObjectSculptSpec[] = [];
+    const result = reconstructSculpt(
+      {
+        schemaVersion: 1,
+        kind: SCULPT_INTAKE_KIND,
+        intakeId: "retained-offline-crate",
+        mode: "structured-spec",
+        structuredSpec: fixtureSpec(),
+      },
+      {
+        enableOfflineAgent: true,
+        offlineAgent: {
+          refine(spec) {
+            retained.push(spec);
+            return spec;
+          },
+        },
+      },
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const retainedMaterial = retained[0]?.materials[0];
+    expect(retainedMaterial).toBeDefined();
+    if (retainedMaterial === undefined) return;
+
+    expect(Reflect.set(retainedMaterial, "baseColor", "#ffffff")).toBe(true);
+    expect(result.artifact.spec.materials[0]?.baseColor).toBe("#8b5a2b");
+    expect(serializeSculptArtifact(result.artifact)).toBe(result.artifactBytes);
+    expect(Object.isFrozen(result.artifact.spec)).toBe(true);
+    expect(Object.isFrozen(result.artifact.spec.materials)).toBe(true);
+    expect(Object.isFrozen(result.artifact.spec.materials[0])).toBe(true);
+  });
+
   it("refuses a nondeterministic injected offline agent by name", () => {
     let call = 0;
     const result = reconstructSculpt(

@@ -130,6 +130,10 @@ function fixtureArtifact(): SculptArtifact {
   };
 }
 
+function reverseMemberOrder<Value extends object>(value: Value): Value {
+  return Object.fromEntries(Object.entries(value).reverse()) as Value;
+}
+
 describe("hybrid sculpt contracts", () => {
   it("ships three versioned public JSON Schemas", () => {
     for (const [path, expectedId] of [
@@ -371,6 +375,40 @@ describe("hybrid sculpt contracts", () => {
   it("accepts a package whose runtime graph and evidence bind the spec", () => {
     const artifact = fixtureArtifact();
     expect(validateSculptArtifact(artifact)).toEqual({ ok: true, value: artifact });
+  });
+
+  it("accepts semantic runtime projections with reordered object members", () => {
+    const artifact = fixtureArtifact();
+    const runtimeHierarchy = {
+      ...artifact.runtimeHierarchy,
+      nodes: artifact.runtimeHierarchy.nodes.map((node) =>
+        reverseMemberOrder({
+          ...node,
+          transform: reverseMemberOrder({ ...node.transform }),
+        }),
+      ),
+      pivots: artifact.runtimeHierarchy.pivots.map((pivot) =>
+        reverseMemberOrder({ ...pivot }),
+      ),
+      sockets: artifact.runtimeHierarchy.sockets.map((socket) =>
+        reverseMemberOrder({ ...socket }),
+      ),
+      colliders: artifact.runtimeHierarchy.colliders.map((collider) =>
+        reverseMemberOrder({ ...collider }),
+      ),
+      materials: artifact.runtimeHierarchy.materials.map((material) =>
+        reverseMemberOrder({ ...material }),
+      ),
+      attachments: artifact.runtimeHierarchy.attachments.map((attachment) =>
+        reverseMemberOrder({ ...attachment }),
+      ),
+    };
+    const reordered = { ...artifact, runtimeHierarchy };
+
+    expect(validateSculptArtifact(reordered)).toEqual({
+      ok: true,
+      value: reordered,
+    });
   });
 
   it.each([
