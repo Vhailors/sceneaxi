@@ -1,4 +1,6 @@
 import {
+  isSculptIdentifier,
+  isSculptTransform,
   validateSculptArtifact,
   type SculptArtifact,
   type SculptTransform,
@@ -6,8 +8,6 @@ import {
 
 export const EXPERIMENTAL_THREE_NON_DECISION_LABEL =
   "Experimental Three preview — non-decision; Stage 1 has not run.";
-
-const ID_RE = /^[a-z0-9][a-z0-9-]*$/;
 
 export type SculptInstanceInput = {
   readonly instanceId: string;
@@ -80,17 +80,6 @@ function cloneTransform(transform: SculptTransform): SculptTransform {
   });
 }
 
-function isTransform(value: unknown): value is SculptTransform {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
-  const transform = value as Record<string, unknown>;
-  if (Object.keys(transform).some((key) => !["translation", "rotationEulerDegrees", "scale"].includes(key))) return false;
-  const vector = (candidate: unknown, positive: boolean) =>
-    Array.isArray(candidate) &&
-    candidate.length === 3 &&
-    candidate.every((axis) => typeof axis === "number" && Number.isFinite(axis) && (!positive || axis > 0));
-  return vector(transform["translation"], false) && vector(transform["rotationEulerDegrees"], false) && vector(transform["scale"], true);
-}
-
 function freezeInstance(input: SculptInstanceInput, transform: SculptTransform): SculptMountedInstance {
   return Object.freeze({
     instanceId: input.instanceId,
@@ -112,12 +101,12 @@ export function createSculptMountApi(backend: SculptPresentationBackend): Sculpt
   return {
     mount(input) {
       requireLive();
-      if (!ID_RE.test(input.instanceId)) throw new SculptMountError("invalid-instance-id", "instanceId must be a lowercase slug.");
+      if (!isSculptIdentifier(input.instanceId)) throw new SculptMountError("invalid-instance-id", "instanceId must be a lowercase slug.");
       if (instances.has(input.instanceId)) throw new SculptMountError("already-mounted", `Sculpt instance "${input.instanceId}" is already mounted.`);
       const artifact = validateSculptArtifact(input.artifact);
       if (!artifact.ok) throw new SculptMountError("invalid-artifact", artifact.diagnostics[0]?.message ?? "Sculpt Artifact refused.");
       const transform = input.transform ?? IDENTITY_TRANSFORM;
-      if (!isTransform(transform)) throw new SculptMountError("invalid-transform", "Instance transform is invalid.");
+      if (!isSculptTransform(transform)) throw new SculptMountError("invalid-transform", "Instance transform is invalid.");
       const mounted = freezeInstance({ ...input, artifact: artifact.value }, transform);
       backend.mount(mounted);
       instances.set(mounted.instanceId, mounted);
@@ -128,7 +117,7 @@ export function createSculptMountApi(backend: SculptPresentationBackend): Sculpt
       requireLive();
       const current = instances.get(instanceId);
       if (current === undefined) throw new SculptMountError("not-mounted", `Sculpt instance "${instanceId}" is not mounted.`);
-      if (!isTransform(transform)) throw new SculptMountError("invalid-transform", "Instance transform is invalid.");
+      if (!isSculptTransform(transform)) throw new SculptMountError("invalid-transform", "Instance transform is invalid.");
       const updated = freezeInstance({ instanceId, artifact: current.artifact }, transform);
       backend.update(updated);
       instances.set(instanceId, updated);

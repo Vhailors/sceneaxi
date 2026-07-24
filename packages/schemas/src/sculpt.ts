@@ -201,7 +201,7 @@ function exactFields(
   return null;
 }
 
-function isId(value: unknown): value is string {
+export function isSculptIdentifier(value: unknown): value is string {
   return typeof value === "string" && ID_RE.test(value);
 }
 
@@ -221,7 +221,7 @@ function isVector3(value: unknown, positive = false): value is Vector3 {
   );
 }
 
-function isTransform(value: unknown): value is SculptTransform {
+export function isSculptTransform(value: unknown): value is SculptTransform {
   if (!isJsonObject(value)) return false;
   const fields = exactFields(
     value,
@@ -289,7 +289,7 @@ export function validateObjectSculptSpec(
   if (value["kind"] !== OBJECT_SCULPT_SPEC_KIND) {
     return refuse("invalid-kind", "$.kind", `kind must be "${OBJECT_SCULPT_SPEC_KIND}".`);
   }
-  if (!isId(value["id"]) || !isId(value["rootNodeId"])) {
+  if (!isSculptIdentifier(value["id"]) || !isSculptIdentifier(value["rootNodeId"])) {
     return specFailure("invalid-field", "$.id", "Spec and root node ids must use lowercase slug identifiers.");
   }
   const materials = value["materials"];
@@ -302,7 +302,7 @@ export function validateObjectSculptSpec(
     if (!isJsonObject(material)) return specFailure("invalid-field", path, "Material must be an object.");
     const materialFields = exactFields(material, ["id", "baseColor", "metallic", "roughness"], [], path);
     if (materialFields !== null) return { ok: false, diagnostics: [materialFields] };
-    if (!isId(material["id"])) return specFailure("invalid-field", `${path}.id`, "Material id is invalid.");
+    if (!isSculptIdentifier(material["id"])) return specFailure("invalid-field", `${path}.id`, "Material id is invalid.");
     if (typeof material["baseColor"] !== "string" || !COLOR_RE.test(material["baseColor"])) {
       return specFailure("invalid-field", `${path}.baseColor`, "baseColor must be #RRGGBB.");
     }
@@ -327,14 +327,14 @@ export function validateObjectSculptSpec(
     if (!isJsonObject(component)) return specFailure("invalid-field", path, "Component must be an object.");
     const componentFields = exactFields(component, ["id", "primitive", "dimensions", "materialId"], [], path);
     if (componentFields !== null) return { ok: false, diagnostics: [componentFields] };
-    if (!isId(component["id"])) return specFailure("invalid-field", `${path}.id`, "Component id is invalid.");
+    if (!isSculptIdentifier(component["id"])) return specFailure("invalid-field", `${path}.id`, "Component id is invalid.");
     if (!["box", "cylinder", "sphere"].includes(String(component["primitive"]))) {
       return specFailure("invalid-field", `${path}.primitive`, "primitive must be box, cylinder, or sphere.");
     }
     if (!isVector3(component["dimensions"], true)) {
       return specFailure("invalid-field", `${path}.dimensions`, "dimensions must contain three positive finite numbers.");
     }
-    if (!isId(component["materialId"]) || !materialIds.includes(component["materialId"])) {
+    if (!isSculptIdentifier(component["materialId"]) || !materialIds.includes(component["materialId"])) {
       return specFailure("invalid-reference", `${path}.materialId`, "Component must reference an existing material.");
     }
     componentIds.push(component["id"]);
@@ -353,14 +353,14 @@ export function validateObjectSculptSpec(
     if (!isJsonObject(node)) return specFailure("invalid-field", path, "Hierarchy node must be an object.");
     const nodeFields = exactFields(node, ["id", "parentId", "componentId", "transform"], [], path);
     if (nodeFields !== null) return { ok: false, diagnostics: [nodeFields] };
-    if (!isId(node["id"])) return specFailure("invalid-field", `${path}.id`, "Node id is invalid.");
-    if (node["parentId"] !== null && !isId(node["parentId"])) {
+    if (!isSculptIdentifier(node["id"])) return specFailure("invalid-field", `${path}.id`, "Node id is invalid.");
+    if (node["parentId"] !== null && !isSculptIdentifier(node["parentId"])) {
       return specFailure("invalid-field", `${path}.parentId`, "parentId must be null or a node id.");
     }
-    if (!isId(node["componentId"]) || !componentIds.includes(node["componentId"])) {
+    if (!isSculptIdentifier(node["componentId"]) || !componentIds.includes(node["componentId"])) {
       return specFailure("invalid-reference", `${path}.componentId`, "Node must reference an existing component.");
     }
-    if (!isTransform(node["transform"])) return specFailure("invalid-field", `${path}.transform`, "Node transform is invalid.");
+    if (!isSculptTransform(node["transform"])) return specFailure("invalid-field", `${path}.transform`, "Node transform is invalid.");
     nodeIds.push(node["id"]);
     parents.set(node["id"], node["parentId"]);
   }
@@ -390,8 +390,8 @@ export function validateObjectSculptSpec(
     if (!isJsonObject(socket)) return specFailure("invalid-field", path, "Socket must be an object.");
     const socketFields = exactFields(socket, ["id", "nodeId", "kind", "axis", "amplitude", "frequencyHz"], [], path);
     if (socketFields !== null) return { ok: false, diagnostics: [socketFields] };
-    if (!isId(socket["id"])) return specFailure("invalid-field", `${path}.id`, "Socket id is invalid.");
-    if (!isId(socket["nodeId"]) || !nodeIds.includes(socket["nodeId"])) return specFailure("invalid-reference", `${path}.nodeId`, "Socket must reference an existing node.");
+    if (!isSculptIdentifier(socket["id"])) return specFailure("invalid-field", `${path}.id`, "Socket id is invalid.");
+    if (!isSculptIdentifier(socket["nodeId"]) || !nodeIds.includes(socket["nodeId"])) return specFailure("invalid-reference", `${path}.nodeId`, "Socket must reference an existing node.");
     if (!["animation", "attachment"].includes(String(socket["kind"]))) return specFailure("invalid-field", `${path}.kind`, "Socket kind is invalid.");
     if (!["x", "y", "z"].includes(String(socket["axis"]))) return specFailure("invalid-field", `${path}.axis`, "Socket axis is invalid.");
     if (!isFiniteNumber(socket["amplitude"]) || socket["amplitude"] < 0 || !isFiniteNumber(socket["frequencyHz"]) || socket["frequencyHz"] < 0) {
@@ -410,7 +410,7 @@ export function validateSculptIntake(value: unknown): SculptValidationResult<Scu
   if (!isJsonObject(value)) return refuse("not-object", "$", "Sculpt Intake must be a JSON object.");
   if (value["schemaVersion"] !== SCULPT_SCHEMA_VERSION) return refuse("schema-major-mismatch", "$.schemaVersion", `Sculpt schema major must be ${SCULPT_SCHEMA_VERSION}.`);
   if (value["kind"] !== SCULPT_INTAKE_KIND) return refuse("invalid-kind", "$.kind", `kind must be "${SCULPT_INTAKE_KIND}".`);
-  if (!isId(value["intakeId"])) return refuse("invalid-field", "$.intakeId", "intakeId must be a lowercase slug.");
+  if (!isSculptIdentifier(value["intakeId"])) return refuse("invalid-field", "$.intakeId", "intakeId must be a lowercase slug.");
   const mode = value["mode"];
   if (typeof mode !== "string" || !MODES.has(mode)) return refuse("invalid-mode", "$.mode", `mode must be one of ${SCULPT_INTAKE_MODES.join(", ")}.`);
 
@@ -456,7 +456,7 @@ export function validateSculptArtifact(value: unknown): SculptValidationResult<S
   if (fields !== null) return { ok: false, diagnostics: [fields] };
   if (value["schemaVersion"] !== SCULPT_SCHEMA_VERSION) return refuse("schema-major-mismatch", "$.schemaVersion", `Sculpt schema major must be ${SCULPT_SCHEMA_VERSION}.`);
   if (value["kind"] !== SCULPT_ARTIFACT_KIND) return refuse("invalid-kind", "$.kind", `kind must be "${SCULPT_ARTIFACT_KIND}".`);
-  if (!isId(value["artifactId"])) return refuse("invalid-field", "$.artifactId", "artifactId must be a lowercase slug.");
+  if (!isSculptIdentifier(value["artifactId"])) return refuse("invalid-field", "$.artifactId", "artifactId must be a lowercase slug.");
   const spec = validateObjectSculptSpec(value["spec"]);
   if (!spec.ok) return { ok: false, diagnostics: spec.diagnostics.map((diagnostic) => ({ ...diagnostic, path: `$.spec${diagnostic.path.slice(1)}` })) };
 
@@ -492,7 +492,7 @@ export function validateSculptArtifact(value: unknown): SculptValidationResult<S
     if (!isJsonObject(gate)) return refuse("invalid-field", path, "Quality gate evidence must be an object.");
     const gateFields = exactFields(gate, ["id", "status", "digest"], [], path);
     if (gateFields !== null) return { ok: false, diagnostics: [gateFields] };
-    if (!isId(gate["id"]) || gate["status"] !== "passed" || !isDigest(gate["digest"])) return refuse("invalid-field", path, "Quality gate evidence is invalid or not passed.");
+    if (!isSculptIdentifier(gate["id"]) || gate["status"] !== "passed" || !isDigest(gate["digest"])) return refuse("invalid-field", path, "Quality gate evidence is invalid or not passed.");
     gateIds.push(gate["id"]);
   }
   if (duplicate(gateIds) !== undefined) return refuse("duplicate-id", "$.evidence.qualityGates", "Quality gate ids must be unique.");

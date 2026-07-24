@@ -95,6 +95,52 @@ describe("hybrid sculpt contracts", () => {
     }
   });
 
+  it("keeps public non-blank intake strings aligned with runtime validation", () => {
+    const schema = JSON.parse(
+      readFileSync(new URL("../contracts/sculpt-intake.schema.json", import.meta.url), "utf8"),
+    ) as {
+      $defs: { image: { properties: { uri: { pattern: string } } } };
+      oneOf: Array<{ properties?: { brief?: { pattern: string } } }>;
+    };
+    expect(schema.$defs.image.properties.uri.pattern).toBe("\\S");
+    expect(
+      schema.oneOf.flatMap((variant) =>
+        variant.properties?.brief === undefined ? [] : [variant.properties.brief.pattern],
+      ),
+    ).toEqual(["\\S", "\\S"]);
+
+    for (const intake of [
+      {
+        schemaVersion: 1,
+        kind: SCULPT_INTAKE_KIND,
+        intakeId: "blank-uri",
+        mode: "image",
+        image: { mediaType: "image/png", uri: " \t ", digest: digest("1") },
+      },
+      {
+        schemaVersion: 1,
+        kind: SCULPT_INTAKE_KIND,
+        intakeId: "blank-brief",
+        mode: "image+brief",
+        image: { mediaType: "image/png", uri: "fixture.png", digest: digest("2") },
+        brief: "\n ",
+      },
+      {
+        schemaVersion: 1,
+        kind: SCULPT_INTAKE_KIND,
+        intakeId: "blank-multi-view-brief",
+        mode: "multi-view",
+        images: [
+          { mediaType: "image/png", uri: "front.png", digest: digest("3") },
+          { mediaType: "image/png", uri: "side.png", digest: digest("4") },
+        ],
+        brief: " ",
+      },
+    ]) {
+      expect(validateSculptIntake(intake).ok).toBe(false);
+    }
+  });
+
   it("accepts the complete ObjectSculptSpec component/material/socket/hierarchy graph", () => {
     expect(validateObjectSculptSpec(fixtureSpec)).toEqual({
       ok: true,

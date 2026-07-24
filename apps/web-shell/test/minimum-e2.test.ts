@@ -145,6 +145,64 @@ describe("Minimum E2 hybrid editor surface", () => {
     restored.dispose();
   });
 
+  it.each([
+    {
+      name: "invalid instance identifiers",
+      persistedInstance: (artifact: ReturnType<typeof demoArtifact>) => ({
+        instanceId: "Invalid_Instance",
+        artifact,
+        transform: {
+          translation: [0, 0, 0],
+          rotationEulerDegrees: [0, 0, 0],
+          scale: [1, 1, 1],
+        },
+      }),
+    },
+    {
+      name: "unexpected transform fields",
+      persistedInstance: (artifact: ReturnType<typeof demoArtifact>) => ({
+        instanceId: "replacement",
+        artifact,
+        transform: {
+          translation: [0, 0, 0],
+          rotationEulerDegrees: [0, 0, 0],
+          scale: [1, 1, 1],
+          skew: [0, 0, 0],
+        },
+      }),
+    },
+  ])("refuses $name without replacing the current scene", ({ persistedInstance }) => {
+    const dir = fixtureDir();
+    sceneFile(dir);
+    const artifact = demoArtifact();
+    const editor = createMinimumE2Editor({ cwd: dir, documentPath: "scene.json", backend: "null" });
+    editor.addSculpt({ instanceId: "current", artifact });
+    editor.select("current");
+
+    const written = writeDocumentFile(
+      "scene.json",
+      createDocument({
+        id: "minimum-e2-scene",
+        data: {
+          minimumE2: {
+            schemaVersion: 1,
+            selectedInstanceId: null,
+            instances: [persistedInstance(artifact)],
+          },
+        },
+      }),
+      { cwd: dir },
+    );
+    expect(written.ok).toBe(true);
+    expect(editor.load()).toMatchObject({ ok: false, code: "state-invalid" });
+    const unchanged = editor.snapshot();
+    expect(unchanged.selectedInstanceId).toBe("current");
+    expect(unchanged.sceneTree).toHaveLength(3);
+    expect(unchanged.sceneTree[0]?.id).toBe("current");
+    expect(unchanged.inspector?.instanceId).toBe("current");
+    editor.dispose();
+  });
+
   it("is a bounded checklist rather than a full editor clone", () => {
     const dir = fixtureDir();
     sceneFile(dir);

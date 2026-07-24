@@ -1,5 +1,8 @@
 /** Bounded Minimum E2 orchestration for the hybrid sculpt vertical. */
 import {
+  isJsonObject,
+  isSculptIdentifier,
+  isSculptTransform,
   parseDocumentText,
   validateSculptArtifact,
   type ApplyDiagnostic,
@@ -98,14 +101,9 @@ type PersistedInstance = {
   readonly transform: SculptTransform;
 };
 
-function isPersistedTransform(value: unknown): value is SculptTransform {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
-  const transform = value as Record<string, unknown>;
-  const vector = (candidate: unknown, positive: boolean) =>
-    Array.isArray(candidate) &&
-    candidate.length === 3 &&
-    candidate.every((axis) => typeof axis === "number" && Number.isFinite(axis) && (!positive || axis > 0));
-  return vector(transform["translation"], false) && vector(transform["rotationEulerDegrees"], false) && vector(transform["scale"], true);
+function hasExactFields(value: JsonObject, fields: readonly string[]) {
+  const keys = Object.keys(value);
+  return keys.length === fields.length && keys.every((key) => fields.includes(key));
 }
 
 function persistedState(instances: readonly SculptMountedInstance[], selectedInstanceId: string | null): JsonObject {
@@ -123,8 +121,11 @@ function persistedState(instances: readonly SculptMountedInstance[], selectedIns
 function validatePersistedState(value: unknown):
   | { readonly ok: true; readonly instances: readonly PersistedInstance[]; readonly selectedInstanceId: string | null }
   | { readonly ok: false; readonly message: string } {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) return { ok: false, message: "minimumE2 state must be an object." };
-  const state = value as Record<string, unknown>;
+  if (!isJsonObject(value)) return { ok: false, message: "minimumE2 state must be an object." };
+  const state = value;
+  if (!hasExactFields(state, ["schemaVersion", "selectedInstanceId", "instances"])) {
+    return { ok: false, message: "minimumE2 state has missing or unexpected fields." };
+  }
   if (state["schemaVersion"] !== MINIMUM_E2_STATE_VERSION || !Array.isArray(state["instances"])) {
     return { ok: false, message: `minimumE2 state must use schemaVersion ${MINIMUM_E2_STATE_VERSION} and an instances array.` };
   }
@@ -133,14 +134,17 @@ function validatePersistedState(value: unknown):
   const instances: PersistedInstance[] = [];
   const ids = new Set<string>();
   for (const [index, item] of state["instances"].entries()) {
-    if (item === null || typeof item !== "object" || Array.isArray(item)) return { ok: false, message: `instances[${index}] must be an object.` };
-    const instance = item as Record<string, unknown>;
+    if (!isJsonObject(item)) return { ok: false, message: `instances[${index}] must be an object.` };
+    const instance = item;
+    if (!hasExactFields(instance, ["instanceId", "artifact", "transform"])) {
+      return { ok: false, message: `instances[${index}] has missing or unexpected fields.` };
+    }
     const instanceId = instance["instanceId"];
-    if (typeof instanceId !== "string" || ids.has(instanceId)) return { ok: false, message: `instances[${index}].instanceId is invalid or duplicated.` };
+    if (!isSculptIdentifier(instanceId) || ids.has(instanceId)) return { ok: false, message: `instances[${index}].instanceId is invalid or duplicated.` };
     const artifact = validateSculptArtifact(instance["artifact"]);
     if (!artifact.ok) return { ok: false, message: `instances[${index}].artifact refused: ${artifact.diagnostics[0]?.message ?? "invalid artifact"}` };
     const transform = instance["transform"];
-    if (!isPersistedTransform(transform)) return { ok: false, message: `instances[${index}].transform is invalid.` };
+    if (!isSculptTransform(transform)) return { ok: false, message: `instances[${index}].transform is invalid.` };
     ids.add(instanceId);
     instances.push({ instanceId, artifact: artifact.value, transform });
   }
@@ -158,26 +162,38 @@ export function createMinimumE2Editor(options: {
   readonly backend?: "experimental-three" | "null";
   readonly seed?: number;
 }): MinimumE2Editor {
-  const mounts: SculptMountApi = createSculptMountApi(
-    options.backend === "null"
-      ? createNullSculptPresentationBackend()
-      : createExperimentalThreeSculptPresentationBackend(),
-  );
-  const sessions = new Map<string, SculptKernelSession>();
+  function createMounts() {
+    return createSculptMountApi(
+      options.backend === "null"
+        ? createNullSculptPresentationBackend()
+        : createExperimentalThreeSculptPresentationBackend(),
+    );
+  }
+
+  let mounts: SculptMountApi = createMounts();
+  let sessions = new Map<string, SculptKernelSession>();
   const seed = options.seed ?? 1;
   let selectedInstanceId: string | null = null;
   let playState: MinimumE2PlayState = "paused";
   let tick = 0;
   const documentFile = canonicalPath(resolve(options.cwd, options.documentPath));
 
-  function add(input: { readonly instanceId: string; readonly artifact: SculptArtifact; readonly transform?: SculptTransform }) {
-    mounts.mount(input);
+  function mountSculpt(
+    targetMounts: SculptMountApi,
+    targetSessions: Map<string, SculptKernelSession>,
+    input: { readonly instanceId: string; readonly artifact: SculptArtifact; readonly transform?: SculptTransform },
+  ) {
+    targetMounts.mount(input);
     try {
-      sessions.set(input.instanceId, openSculptKernelSession(input.artifact, { seed }));
+      targetSessions.set(input.instanceId, openSculptKernelSession(input.artifact, { seed }));
     } catch (error) {
-      mounts.unmount(input.instanceId);
+      targetMounts.unmount(input.instanceId);
       throw error;
     }
+  }
+
+  function add(input: { readonly instanceId: string; readonly artifact: SculptArtifact; readonly transform?: SculptTransform }) {
+    mountSculpt(mounts, sessions, input);
   }
 
   function advance(deltaMs: number) {
@@ -289,11 +305,24 @@ export function createMinimumE2Editor(options: {
       if (!parsed.ok) return { ok: false, code: "document-invalid", message: parsed.message };
       const state = validatePersistedState(parsed.document.data["minimumE2"]);
       if (!state.ok) return { ok: false, code: "state-invalid", message: state.message };
-      for (const instance of mounts.list()) {
-        mounts.unmount(instance.instanceId);
-        sessions.delete(instance.instanceId);
+      const stagedMounts = createMounts();
+      const stagedSessions = new Map<string, SculptKernelSession>();
+      try {
+        for (const instance of state.instances) {
+          mountSculpt(stagedMounts, stagedSessions, instance);
+        }
+      } catch (error) {
+        stagedMounts.dispose();
+        return {
+          ok: false,
+          code: "state-invalid",
+          message: error instanceof Error ? error.message : String(error),
+        };
       }
-      for (const instance of state.instances) add(instance);
+      mounts.dispose();
+      sessions.clear();
+      mounts = stagedMounts;
+      sessions = stagedSessions;
       selectedInstanceId = state.selectedInstanceId;
       playState = "paused";
       tick = 0;

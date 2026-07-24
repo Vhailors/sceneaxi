@@ -285,6 +285,8 @@ export {
   SCULPT_INTAKE_KIND,
   SCULPT_INTAKE_MODES,
   SCULPT_SCHEMA_VERSION,
+  isSculptIdentifier,
+  isSculptTransform,
   validateObjectSculptSpec,
   validateSculptArtifact,
   validateSculptIntake,
