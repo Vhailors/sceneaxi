@@ -124,14 +124,49 @@ export function evaluateKidsLlmRoute(
   });
 }
 
-function claimString(
-  claim: Record<string, unknown>,
-  key: "plane" | "profile" | "action" | "destination",
-) {
-  const value = claim[key];
+function claimString(value: unknown) {
   return typeof value === "string" && value.trim().length > 0
     ? value
     : undefined;
+}
+
+function claimProperty(
+  claim: object,
+  key: "plane" | "profile" | "action" | "destination",
+) {
+  try {
+    const descriptor = Object.getOwnPropertyDescriptor(claim, key);
+    if (descriptor === undefined) {
+      return { ok: true as const, value: undefined };
+    }
+    return "value" in descriptor
+      ? { ok: true as const, value: descriptor.value }
+      : { ok: false as const };
+  } catch {
+    return { ok: false as const };
+  }
+}
+
+function inspectBoundaryClaim(claim: unknown) {
+  try {
+    if (typeof claim !== "object" || claim === null || Array.isArray(claim)) {
+      return undefined;
+    }
+    const descriptor = Object.getOwnPropertyDescriptor(claim, "kind");
+    if (descriptor === undefined || !("value" in descriptor)) return undefined;
+    return { claim, kind: descriptor.value };
+  } catch {
+    return undefined;
+  }
+}
+
+function invalidBoundaryClaim(): KidsBoundaryRefusal {
+  return Object.freeze({
+    ok: false,
+    claimKind: null,
+    reason: KIDS_REFUSE_REASONS.claimInvalid,
+    message: "Malformed Kids boundary claim refused.",
+  });
 }
 
 /**
@@ -142,19 +177,14 @@ function claimString(
 export function evaluateKidsBoundaryClaim(
   claim: unknown,
 ): KidsBoundaryRefusal {
-  if (typeof claim !== "object" || claim === null || Array.isArray(claim)) {
-    return Object.freeze({
-      ok: false,
-      claimKind: null,
-      reason: KIDS_REFUSE_REASONS.claimInvalid,
-      message: "Malformed Kids boundary claim refused.",
-    });
-  }
-  const record = claim as Record<string, unknown>;
-  const kind = record["kind"];
+  const inspected = inspectBoundaryClaim(claim);
+  if (inspected === undefined) return invalidBoundaryClaim();
+  const { kind } = inspected;
 
   if (kind === "external-data-plane") {
-    const plane = claimString(record, "plane");
+    const property = claimProperty(inspected.claim, "plane");
+    if (!property.ok) return invalidBoundaryClaim();
+    const plane = claimString(property.value);
     return Object.freeze({
       ok: false,
       claimKind: kind,
@@ -170,7 +200,9 @@ export function evaluateKidsBoundaryClaim(
   }
 
   if (kind === "catalog") {
-    const profile = claimString(record, "profile");
+    const property = claimProperty(inspected.claim, "profile");
+    if (!property.ok) return invalidBoundaryClaim();
+    const profile = claimString(property.value);
     return Object.freeze({
       ok: false,
       claimKind: kind,
@@ -186,6 +218,8 @@ export function evaluateKidsBoundaryClaim(
   }
 
   if (kind === "commerce") {
+    const property = claimProperty(inspected.claim, "action");
+    if (!property.ok) return invalidBoundaryClaim();
     return Object.freeze({
       ok: false,
       claimKind: kind,
@@ -195,6 +229,8 @@ export function evaluateKidsBoundaryClaim(
   }
 
   if (kind === "network") {
+    const property = claimProperty(inspected.claim, "destination");
+    if (!property.ok) return invalidBoundaryClaim();
     return Object.freeze({
       ok: false,
       claimKind: kind,

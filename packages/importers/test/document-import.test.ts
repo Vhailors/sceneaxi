@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  apply,
   createDocument,
   parseDocumentText,
   writeDocumentFile,
@@ -121,5 +122,43 @@ describe("text-canonical SceneAxi document importer", () => {
         diagnostics: [{ code: "parse-error" }],
       });
     }
+  });
+
+  it("freezes reviewed import data before apply", () => {
+    const cwd = targetDir();
+    const result = proposeSceneDocumentImport({
+      sourceText: fixture("source.sceneaxi.json"),
+      targetDocumentPath: "project.sceneaxi.json",
+      cwd,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const proposedData = result.proposal.edits[0]?.newValue;
+    expect(Object.isFrozen(result.sourceDocument.data)).toBe(true);
+    expect(Object.isFrozen(result.sourceDocument.data.entities)).toBe(true);
+    expect(
+      proposedData !== null &&
+        typeof proposedData === "object" &&
+        Object.isFrozen(proposedData),
+    ).toBe(true);
+    expect(
+      Reflect.set(
+        result.sourceDocument.data as Record<string, unknown>,
+        "source",
+        "mutated-after-review",
+      ),
+    ).toBe(false);
+
+    const applied = apply({ proposal: result.proposal, cwd });
+    expect(applied.ok).toBe(true);
+    const parsed = parseDocumentText(
+      readFileSync(join(cwd, "project.sceneaxi.json"), "utf8"),
+    );
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.document.data.source).toBe("recorded-fixture");
+    expect(result.unifiedDiff).toContain("recorded-fixture");
+    expect(result.unifiedDiff).not.toContain("mutated-after-review");
   });
 });

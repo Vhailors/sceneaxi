@@ -242,6 +242,42 @@ describe("@sceneaxi/provider-openrouter", () => {
     });
   });
 
+  it("refuses async tool schemas before transport dispatch", async () => {
+    let calls = 0;
+    const adapter = createOpenRouterAdapter({
+      model: MODEL,
+      eval: EVAL,
+      transport: () => {
+        calls += 1;
+        return attestedFixture("tool-call");
+      },
+    });
+
+    await expect(
+      adapter.toolCall?.({
+        schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+        operation: "tool-call",
+        profile: "@sceneaxi/profile-game",
+        model: MODEL,
+        prompt: "move the hero",
+        tools: [
+          {
+            name: "move-entity",
+            inputSchema: {
+              $async: true,
+              type: "object",
+              required: ["entity"],
+              properties: { entity: { type: "string" } },
+            },
+          },
+        ],
+      }),
+    ).rejects.toMatchObject({
+      code: OPENROUTER_ADAPTER_ERROR_CODES.responseInvalid,
+    });
+    expect(calls).toBe(0);
+  });
+
   it("refuses truncated tool calls even when their arguments are valid JSON", async () => {
     const adapter = createOpenRouterAdapter({
       model: MODEL,

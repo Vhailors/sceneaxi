@@ -49,6 +49,47 @@ describe("Kids MVP dedicated refusal gate", () => {
     });
   });
 
+  it("refuses accessor-backed and throwing Proxy claims without throwing", () => {
+    const accessorKind = Object.defineProperty({}, "kind", {
+      get() {
+        throw new Error("must not execute");
+      },
+    });
+    const accessorProfile = Object.defineProperty(
+      { kind: "catalog" },
+      "profile",
+      {
+        get() {
+          throw new Error("must not execute");
+        },
+      },
+    );
+    const throwingProxy = new Proxy(
+      { kind: "catalog", profile: "web" },
+      {
+        getOwnPropertyDescriptor() {
+          throw new Error("uninspectable");
+        },
+      },
+    );
+    const revocable = Proxy.revocable({}, {});
+    revocable.revoke();
+
+    for (const claim of [
+      accessorKind,
+      accessorProfile,
+      throwingProxy,
+      revocable.proxy,
+    ]) {
+      expect(() => evaluateKidsBoundaryClaim(claim)).not.toThrow();
+      expect(evaluateKidsBoundaryClaim(claim)).toMatchObject({
+        ok: false,
+        claimKind: null,
+        reason: "KIDS_BOUNDARY_CLAIM_INVALID",
+      });
+    }
+  });
+
   it("documents refusal-only MVP scope with no product surface", () => {
     const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
     expect(readme).toContain("MVP = refuse/isolation only; no Kids UI/product");

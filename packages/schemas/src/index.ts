@@ -52,6 +52,9 @@ export {
   serializeDocument,
   validateDocument,
 } from "./document.js";
+
+export { parseUnambiguousJson } from "./unambiguous-json.js";
+export type { UnambiguousJsonParseResult } from "./unambiguous-json.js";
 export type {
   DocumentValidationOk,
   DocumentValidationRefuse,
