@@ -158,6 +158,14 @@ type AdapterSuccessEnvelope = Readonly<{
   executedModel: ModelDescriptor;
 }>;
 
+type AdapterSuccessCapture =
+  | Readonly<{ ok: true; value: AdapterSuccessEnvelope }>
+  | Readonly<{ ok: false; invalid: "executed-model" | "response" }>;
+
+type ValueCapture<Value> =
+  | Readonly<{ ok: true; value: Value }>
+  | Readonly<{ ok: false }>;
+
 function refuse(reason: string, message: string): ModelProviderRefuse {
   return Object.freeze({ ok: false, reason, message });
 }
@@ -179,6 +187,14 @@ function kidsPolicyRefusal(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function captureValue<Value>(read: () => Value): ValueCapture<Value> {
+  try {
+    return { ok: true, value: read() };
+  } catch {
+    return { ok: false };
+  }
 }
 
 function hasExactKeys(
@@ -418,13 +434,27 @@ function isRequestEnvelope(
   ]);
 }
 
-function isAdapterSuccess(value: unknown): value is AdapterSuccessEnvelope {
-  return (
-    isRecord(value) &&
-    Object.hasOwn(value, "response") &&
-    Object.hasOwn(value, "executedModel") &&
-    isModelDescriptor(value.executedModel)
-  );
+function captureAdapterSuccess(value: unknown): AdapterSuccessCapture {
+  if (!isRecord(value) || !Object.hasOwn(value, "executedModel")) {
+    return { ok: false, invalid: "executed-model" };
+  }
+  const executedModel = captureValue(() => value.executedModel);
+  if (!executedModel.ok || !isModelDescriptor(executedModel.value)) {
+    return { ok: false, invalid: "executed-model" };
+  }
+  const executedModelSnapshot = snapshotModelDescriptor(executedModel.value);
+  if (!Object.hasOwn(value, "response")) {
+    return { ok: false, invalid: "response" };
+  }
+  const response = captureValue(() => value.response);
+  if (!response.ok) return { ok: false, invalid: "response" };
+  return {
+    ok: true,
+    value: Object.freeze({
+      response: response.value,
+      executedModel: executedModelSnapshot,
+    }),
+  };
 }
 
 function isPolicyDecision(value: unknown): value is ModelProviderPolicyDecision {
@@ -538,7 +568,7 @@ export function createModelProviderPort(
       adapter: ModelProviderAdapter,
     ) => ModelProviderAdapterDispatch<Request, Response> | undefined,
   ): Promise<ModelProviderPreflight<Request, Response>> => {
-    if (!isRecord(request)) {
+    if (!isJsonObject(request)) {
       return refuse(
         MODEL_PROVIDER_REFUSE_REASONS.requestInvalid,
         `The '${expectedOperation}' Model Provider request envelope is invalid; dispatch refused.`,
@@ -575,55 +605,89 @@ export function createModelProviderPort(
       );
     }
 
-    const routeKind = adapter.routeKind;
-    if (!isModelProviderRouteKind(routeKind)) {
+    const capturedRouteKind = captureValue(() => adapter.routeKind);
+    if (
+      !capturedRouteKind.ok ||
+      !isModelProviderRouteKind(capturedRouteKind.value)
+    ) {
       return refuse(
         MODEL_PROVIDER_REFUSE_REASONS.routeKindInvalid,
         "The configured adapter route kind is invalid; dispatch refused.",
       );
     }
+    const routeKind = capturedRouteKind.value;
 
     if (validatedRequest.profile === "@sceneaxi/profile-kids") {
       return kidsPolicyRefusal(routeKind);
     }
 
-    const adapterCapabilities = adapter.capabilities;
-    if (!isCapabilityDescriptor(adapterCapabilities)) {
+    const capturedCapabilities = captureValue(() => adapter.capabilities);
+    if (
+      !capturedCapabilities.ok ||
+      !isCapabilityDescriptor(capturedCapabilities.value)
+    ) {
       return refuse(
         MODEL_PROVIDER_REFUSE_REASONS.capabilityInvalid,
         `The configured adapter capability descriptor is invalid or uses an unsupported schema version; expected '${MODEL_PROVIDER_PORT_SCHEMA_VERSION}'.`,
       );
     }
 
-    const capabilities = snapshotCapabilities(adapterCapabilities);
-    const operationMethod = selectDispatch(adapter);
-    const dispatch =
-      operationMethod === undefined
-        ? undefined
-        : (requestToDispatch: Request) =>
-            operationMethod.call(adapter, requestToDispatch);
-    const policy = Object.hasOwn(
-      options.profilePolicies,
-      validatedRequest.profile,
-    )
-      ? options.profilePolicies[validatedRequest.profile]
+    const capabilities = snapshotCapabilities(capturedCapabilities.value);
+    const capturedOperationMethod = captureValue(() => selectDispatch(adapter));
+    const operationMethod = capturedOperationMethod.ok
+      ? capturedOperationMethod.value
       : undefined;
-    if (policy === undefined) {
+    const dispatch =
+      typeof operationMethod === "function"
+        ? (requestToDispatch: Request) =>
+            operationMethod.call(adapter, requestToDispatch)
+        : undefined;
+    const capturedPolicies = captureValue(
+      () => options.profilePolicies as unknown,
+    );
+    if (!capturedPolicies.ok || !isRecord(capturedPolicies.value)) {
       return refuse(
         MODEL_PROVIDER_REFUSE_REASONS.profilePolicyMissing,
         `No Model Provider policy filter is registered for '${validatedRequest.profile}'; dispatch refused.`,
       );
     }
-
-    const decision = await policy(
-      Object.freeze({
-        profile: validatedRequest.profile,
-        operation: validatedRequest.operation,
-        model: validatedRequest.model,
-        routeKind,
-        capabilities,
-      }),
+    const hasPolicy = captureValue(() =>
+      Object.hasOwn(capturedPolicies.value, validatedRequest.profile),
     );
+    if (!hasPolicy.ok || !hasPolicy.value) {
+      return refuse(
+        MODEL_PROVIDER_REFUSE_REASONS.profilePolicyMissing,
+        `No Model Provider policy filter is registered for '${validatedRequest.profile}'; dispatch refused.`,
+      );
+    }
+    const capturedPolicy = captureValue(
+      () => capturedPolicies.value[validatedRequest.profile],
+    );
+    if (!capturedPolicy.ok || typeof capturedPolicy.value !== "function") {
+      return refuse(
+        MODEL_PROVIDER_REFUSE_REASONS.policyDecisionInvalid,
+        `The Model Provider policy filter for '${validatedRequest.profile}' is invalid; dispatch refused.`,
+      );
+    }
+    const policy = capturedPolicy.value as ModelProviderPolicyFilter;
+
+    let decision: unknown;
+    try {
+      decision = await policy(
+        Object.freeze({
+          profile: validatedRequest.profile,
+          operation: validatedRequest.operation,
+          model: validatedRequest.model,
+          routeKind,
+          capabilities,
+        }),
+      );
+    } catch {
+      return refuse(
+        MODEL_PROVIDER_REFUSE_REASONS.policyDecisionInvalid,
+        `The Model Provider policy filter for '${validatedRequest.profile}' failed; dispatch refused.`,
+      );
+    }
     if (!isPolicyDecision(decision)) {
       return refuse(
         MODEL_PROVIDER_REFUSE_REASONS.policyDecisionInvalid,
@@ -648,20 +712,28 @@ export function createModelProviderPort(
     isResponse: (value: unknown) => value is Response,
     snapshotResponse: (response: Response) => Response,
   ): Promise<ModelProviderResult<Response>> => {
-    if (!isAdapterSuccess(adapterResult)) {
+    const capturedResult = captureAdapterSuccess(adapterResult);
+    if (!capturedResult.ok && capturedResult.invalid === "executed-model") {
       return refuse(
         MODEL_PROVIDER_REFUSE_REASONS.executedModelMissing,
         "The adapter did not attest a valid executed model descriptor; success refused.",
       );
     }
-    if (!isResponse(adapterResult.response)) {
+    if (!capturedResult.ok) {
       return refuse(
         MODEL_PROVIDER_REFUSE_REASONS.responseInvalid,
         `The adapter returned an invalid '${request.operation}' response envelope; success refused.`,
       );
     }
-    const response = snapshotResponse(adapterResult.response);
-    const evidence = evidenceFor(request, adapterResult.executedModel);
+    const { response: adapterResponse, executedModel } = capturedResult.value;
+    if (!isResponse(adapterResponse)) {
+      return refuse(
+        MODEL_PROVIDER_REFUSE_REASONS.responseInvalid,
+        `The adapter returned an invalid '${request.operation}' response envelope; success refused.`,
+      );
+    }
+    const response = snapshotResponse(adapterResponse);
+    const evidence = evidenceFor(request, executedModel);
     await options.recordEvidence?.(evidence);
     return Object.freeze({
       ok: true,
@@ -674,20 +746,28 @@ export function createModelProviderPort(
     request: ModelStreamRequest,
     adapterResult: unknown,
   ): Promise<ModelProviderResult<AsyncIterable<ModelStreamChunk>>> => {
-    if (!isAdapterSuccess(adapterResult)) {
+    const capturedResult = captureAdapterSuccess(adapterResult);
+    if (!capturedResult.ok && capturedResult.invalid === "executed-model") {
       return refuse(
         MODEL_PROVIDER_REFUSE_REASONS.executedModelMissing,
         "The adapter did not attest a valid executed model descriptor; success refused.",
       );
     }
-    const stream = asAsyncIterable(adapterResult.response);
+    if (!capturedResult.ok) {
+      return refuse(
+        MODEL_PROVIDER_REFUSE_REASONS.responseInvalid,
+        "The adapter returned an invalid 'stream' response envelope or chunk; success refused.",
+      );
+    }
+    const { response: adapterResponse, executedModel } = capturedResult.value;
+    const stream = asAsyncIterable(adapterResponse);
     if (stream === undefined) {
       return refuse(
         MODEL_PROVIDER_REFUSE_REASONS.responseInvalid,
         "The adapter returned an invalid 'stream' response envelope or chunk; success refused.",
       );
     }
-    const evidence = evidenceFor(request, adapterResult.executedModel);
+    const evidence = evidenceFor(request, executedModel);
     let evidenceRecorded = false;
     const recordEvidenceOnce = async () => {
       if (evidenceRecorded) return;

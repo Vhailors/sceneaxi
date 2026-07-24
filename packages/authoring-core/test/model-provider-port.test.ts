@@ -516,6 +516,48 @@ describe("Model Provider Port", () => {
     expect(calls).toEqual([]);
   });
 
+  it("refuses accessor-backed request discriminators without throwing", async () => {
+    const calls: string[] = [];
+    const filterCalls: string[] = [];
+    const port = createModelProviderPort({
+      adapter: fakeAdapter(calls),
+      profilePolicies: {
+        "@sceneaxi/profile-game": (context) => {
+          filterCalls.push(context.operation);
+          return { ok: true };
+        },
+      },
+    });
+
+    for (const discriminator of ["schemaVersion", "operation"] as const) {
+      const request = {
+        schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+        operation: "complete",
+        profile: "@sceneaxi/profile-game",
+        model,
+        prompt: "accessor discriminator",
+      };
+      Object.defineProperty(request, discriminator, {
+        enumerable: true,
+        get() {
+          throw new Error(`unexpected ${discriminator} read`);
+        },
+      });
+
+      await expect(
+        port.complete(
+          request as unknown as Parameters<typeof port.complete>[0],
+        ),
+      ).resolves.toMatchObject({
+        ok: false,
+        reason: "MODEL_PROVIDER_REQUEST_ENVELOPE_INVALID",
+      });
+    }
+
+    expect(filterCalls).toEqual([]);
+    expect(calls).toEqual([]);
+  });
+
   it("does not resolve profile policies through the prototype chain", async () => {
     const calls: string[] = [];
     const inheritedPolicies = Object.create({
@@ -538,6 +580,57 @@ describe("Model Provider Port", () => {
       ok: false,
       reason: "MODEL_PROVIDER_PROFILE_POLICY_MISSING",
     });
+    expect(calls).toEqual([]);
+  });
+
+  it("refuses invalid policy registries and filters without throwing", async () => {
+    const calls: string[] = [];
+    const accessorRegistry = Object.defineProperty(
+      {},
+      "@sceneaxi/profile-game",
+      {
+        enumerable: true,
+        get() {
+          throw new Error("unexpected policy getter");
+        },
+      },
+    );
+    const cases = [
+      {
+        profilePolicies: undefined,
+        reason: "MODEL_PROVIDER_PROFILE_POLICY_MISSING",
+      },
+      {
+        profilePolicies: null,
+        reason: "MODEL_PROVIDER_PROFILE_POLICY_MISSING",
+      },
+      {
+        profilePolicies: { "@sceneaxi/profile-game": "allow" },
+        reason: "MODEL_PROVIDER_POLICY_DECISION_INVALID",
+      },
+      {
+        profilePolicies: accessorRegistry,
+        reason: "MODEL_PROVIDER_POLICY_DECISION_INVALID",
+      },
+    ];
+
+    for (const testCase of cases) {
+      const port = createModelProviderPort({
+        adapter: fakeAdapter(calls),
+        profilePolicies: testCase.profilePolicies,
+      } as unknown as Parameters<typeof createModelProviderPort>[0]);
+
+      await expect(
+        port.complete({
+          schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+          operation: "complete",
+          profile: "@sceneaxi/profile-game",
+          model,
+          prompt: "invalid policy registry",
+        }),
+      ).resolves.toMatchObject({ ok: false, reason: testCase.reason });
+    }
+
     expect(calls).toEqual([]);
   });
 
@@ -615,6 +708,39 @@ describe("Model Provider Port", () => {
       });
     }
     expect(filterCalls).toEqual([]);
+    expect(calls).toEqual([]);
+  });
+
+  it("refuses declared adapter operations whose dispatch is not callable", async () => {
+    const calls: string[] = [];
+    const filterCalls: string[] = [];
+    const adapter = {
+      ...fakeAdapter(calls),
+      complete: "not-callable",
+    } as unknown as ModelProviderAdapter;
+    const port = createModelProviderPort({
+      adapter,
+      profilePolicies: {
+        "@sceneaxi/profile-game": (context) => {
+          filterCalls.push(context.operation);
+          return { ok: true };
+        },
+      },
+    });
+
+    await expect(
+      port.complete({
+        schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+        operation: "complete",
+        profile: "@sceneaxi/profile-game",
+        model,
+        prompt: "non-callable dispatch",
+      }),
+    ).resolves.toMatchObject({
+      ok: false,
+      reason: "MODEL_PROVIDER_CAPABILITY_UNSUPPORTED",
+    });
+    expect(filterCalls).toEqual(["complete"]);
     expect(calls).toEqual([]);
   });
 
@@ -862,6 +988,110 @@ describe("Model Provider Port", () => {
     expect(
       Object.isFrozen(toolCall.response.toolCalls[0]?.arguments.nested),
     ).toBe(true);
+  });
+
+  it("captures adapter success response and model attestation exactly once", async () => {
+    const completeResponse = {
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      operation: "complete" as const,
+      text: "captured response",
+      finishReason: "stop" as const,
+    };
+    let completeResponseReads = 0;
+    let completeModelReads = 0;
+    const completeAdapter = {
+      ...fakeAdapter(),
+      async complete() {
+        return Object.defineProperties(
+          {},
+          {
+            response: {
+              enumerable: true,
+              get() {
+                completeResponseReads += 1;
+                return completeResponseReads === 1
+                  ? completeResponse
+                  : { invalid: true };
+              },
+            },
+            executedModel: {
+              enumerable: true,
+              get() {
+                completeModelReads += 1;
+                return completeModelReads === 1 ? model : { invalid: true };
+              },
+            },
+          },
+        );
+      },
+    } as unknown as ModelProviderAdapter;
+    const complete = await createModelProviderPort({
+      adapter: completeAdapter,
+      profilePolicies: { "@sceneaxi/profile-game": allow },
+    }).complete({
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      operation: "complete",
+      profile: "@sceneaxi/profile-game",
+      model,
+      prompt: "capture adapter result",
+    });
+
+    expect(complete).toMatchObject({
+      ok: true,
+      response: completeResponse,
+      evidence: { model },
+    });
+    expect(completeResponseReads).toBe(1);
+    expect(completeModelReads).toBe(1);
+
+    async function* chunks() {
+      yield {
+        schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+        operation: "stream" as const,
+        delta: "captured",
+        done: true,
+      };
+    }
+    let streamResponseReads = 0;
+    let streamModelReads = 0;
+    const streamAdapter = {
+      ...fakeAdapter(),
+      async stream() {
+        return Object.defineProperties(
+          {},
+          {
+            response: {
+              enumerable: true,
+              get() {
+                streamResponseReads += 1;
+                return streamResponseReads === 1 ? chunks() : undefined;
+              },
+            },
+            executedModel: {
+              enumerable: true,
+              get() {
+                streamModelReads += 1;
+                return streamModelReads === 1 ? model : { invalid: true };
+              },
+            },
+          },
+        );
+      },
+    } as unknown as ModelProviderAdapter;
+    const streamed = await createModelProviderPort({
+      adapter: streamAdapter,
+      profilePolicies: { "@sceneaxi/profile-game": allow },
+    }).stream({
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      operation: "stream",
+      profile: "@sceneaxi/profile-game",
+      model,
+      prompt: "capture stream adapter result",
+    });
+
+    expect(streamed).toMatchObject({ ok: true, evidence: { model } });
+    expect(streamResponseReads).toBe(1);
+    expect(streamModelReads).toBe(1);
   });
 
   it("refuses malformed policy decisions before adapter dispatch", async () => {
