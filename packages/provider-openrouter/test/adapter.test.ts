@@ -120,6 +120,8 @@ describe("@sceneaxi/provider-openrouter", () => {
           name: "move-entity",
           inputSchema: {
             type: "object",
+            additionalProperties: false,
+            required: ["entity", "x"],
             properties: { entity: { type: "string" }, x: { type: "number" } },
           },
         },
@@ -172,6 +174,66 @@ describe("@sceneaxi/provider-openrouter", () => {
           {
             name: "move-entity",
             inputSchema: { type: "object" },
+          },
+        ],
+      }),
+    ).rejects.toMatchObject({
+      code: OPENROUTER_ADAPTER_ERROR_CODES.responseInvalid,
+    });
+  });
+
+  it.each([
+    [
+      "duplicate JSON members",
+      '{"entity":"hero","entity":"villain","x":2}',
+    ],
+    ["arguments that violate the offered schema", '{"entity":"hero","x":"2"}'],
+  ])("refuses %s in tool-call arguments", async (_case, argumentsText) => {
+    const adapter = createOpenRouterAdapter({
+      model: MODEL,
+      eval: EVAL,
+      transport: () => ({
+        response: {
+          ...fixture("tool-call") as Record<string, unknown>,
+          choices: [
+            {
+              finish_reason: "tool_calls",
+              message: {
+                tool_calls: [
+                  {
+                    function: {
+                      name: "move-entity",
+                      arguments: argumentsText,
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+        executedModel: MODEL,
+      }),
+    });
+
+    await expect(
+      adapter.toolCall?.({
+        schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+        operation: "tool-call",
+        profile: "@sceneaxi/profile-game",
+        model: MODEL,
+        prompt: "move the hero",
+        tools: [
+          {
+            name: "move-entity",
+            inputSchema: {
+              type: "object",
+              additionalProperties: false,
+              required: ["entity", "x"],
+              properties: {
+                entity: { type: "string" },
+                x: { type: "number" },
+              },
+            },
           },
         ],
       }),

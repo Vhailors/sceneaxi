@@ -16,6 +16,7 @@
   "license": "UNLICENSED",
   "dependencies": {
     "@sceneaxi/authoring-core": "workspace:^",
-    "@sceneaxi/schemas": "workspace:^"
+    "@sceneaxi/schemas": "workspace:^",
+    "ajv": "^8.17.1"
   }
 }

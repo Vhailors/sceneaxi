@@ -15,6 +15,8 @@ import type {
   ModelToolCallRequest,
   ModelToolCallResponse,
 } from "@sceneaxi/authoring-core";
+import Ajv from "ajv";
+import type { ValidateFunction } from "ajv";
 import {
   MODEL_PROVIDER_PORT_SCHEMA_VERSION,
   isJsonObject,
@@ -102,6 +104,119 @@ const capabilities: ModelCapabilityDescriptor = Object.freeze({
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+type JsonMemberScan = Readonly<{
+  index: number;
+  duplicateKey: string | null;
+}>;
+
+function skipJsonWhitespace(source: string, index: number) {
+  let cursor = index;
+  while (
+    source[cursor] === " " ||
+    source[cursor] === "\t" ||
+    source[cursor] === "\n" ||
+    source[cursor] === "\r"
+  ) {
+    cursor += 1;
+  }
+  return cursor;
+}
+
+function scanJsonString(source: string, index: number) {
+  if (source[index] !== "\"") return undefined;
+  let cursor = index + 1;
+  while (cursor < source.length) {
+    const character = source[cursor];
+    if (character === "\"") {
+      const end = cursor + 1;
+      const value: unknown = JSON.parse(source.slice(index, end));
+      return typeof value === "string" ? { index: end, value } : undefined;
+    }
+    cursor += character === "\\" ? (source[cursor + 1] === "u" ? 6 : 2) : 1;
+  }
+  return undefined;
+}
+
+function scanJsonArray(source: string, index: number): JsonMemberScan | undefined {
+  let cursor = skipJsonWhitespace(source, index + 1);
+  let duplicateKey: string | null = null;
+  if (source[cursor] === "]") return { index: cursor + 1, duplicateKey };
+  while (cursor < source.length) {
+    const value = scanJsonValue(source, cursor);
+    if (value === undefined) return undefined;
+    duplicateKey ??= value.duplicateKey;
+    cursor = skipJsonWhitespace(source, value.index);
+    if (source[cursor] === "]") {
+      return { index: cursor + 1, duplicateKey };
+    }
+    if (source[cursor] !== ",") return undefined;
+    cursor = skipJsonWhitespace(source, cursor + 1);
+  }
+  return undefined;
+}
+
+function scanJsonObject(source: string, index: number): JsonMemberScan | undefined {
+  let cursor = skipJsonWhitespace(source, index + 1);
+  let duplicateKey: string | null = null;
+  const keys = new Set<string>();
+  if (source[cursor] === "}") return { index: cursor + 1, duplicateKey };
+  while (cursor < source.length) {
+    const key = scanJsonString(source, cursor);
+    if (key === undefined) return undefined;
+    if (keys.has(key.value)) duplicateKey ??= key.value;
+    keys.add(key.value);
+    cursor = skipJsonWhitespace(source, key.index);
+    if (source[cursor] !== ":") return undefined;
+    const value = scanJsonValue(source, skipJsonWhitespace(source, cursor + 1));
+    if (value === undefined) return undefined;
+    duplicateKey ??= value.duplicateKey;
+    cursor = skipJsonWhitespace(source, value.index);
+    if (source[cursor] === "}") {
+      return { index: cursor + 1, duplicateKey };
+    }
+    if (source[cursor] !== ",") return undefined;
+    cursor = skipJsonWhitespace(source, cursor + 1);
+  }
+  return undefined;
+}
+
+function scanJsonValue(source: string, index: number): JsonMemberScan | undefined {
+  const cursor = skipJsonWhitespace(source, index);
+  const character = source[cursor];
+  if (character === "{") return scanJsonObject(source, cursor);
+  if (character === "[") return scanJsonArray(source, cursor);
+  if (character === "\"") {
+    const value = scanJsonString(source, cursor);
+    return value === undefined
+      ? undefined
+      : { index: value.index, duplicateKey: null };
+  }
+  for (const literal of ["true", "false", "null"]) {
+    if (source.startsWith(literal, cursor)) {
+      return { index: cursor + literal.length, duplicateKey: null };
+    }
+  }
+  const number = source
+    .slice(cursor)
+    .match(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/);
+  return number?.[0] === undefined
+    ? undefined
+    : { index: cursor + number[0].length, duplicateKey: null };
+}
+
+function hasUniqueJsonMembers(source: string) {
+  try {
+    const result = scanJsonValue(source, 0);
+    return (
+      result !== undefined &&
+      result.duplicateKey === null &&
+      skipJsonWhitespace(source, result.index) === source.length
+    );
+  } catch {
+    return false;
+  }
 }
 
 function isModelDescriptor(value: unknown): value is ModelDescriptor {
@@ -279,7 +394,9 @@ function parseComplete(
 }
 
 function parseToolCallArguments(value: unknown): JsonObject | undefined {
-  if (typeof value !== "string") return undefined;
+  if (typeof value !== "string" || !hasUniqueJsonMembers(value)) {
+    return undefined;
+  }
   try {
     const parsed: unknown = JSON.parse(value);
     return isJsonObject(parsed) ? parsed : undefined;
@@ -288,10 +405,32 @@ function parseToolCallArguments(value: unknown): JsonObject | undefined {
   }
 }
 
+function compileToolValidators(tools: ModelToolCallRequest["tools"]) {
+  const compiler = new Ajv({ allErrors: false, strict: true });
+  const validators = new Map<string, ValidateFunction>();
+  for (const tool of tools) {
+    if (validators.has(tool.name)) {
+      throw new OpenRouterAdapterError(
+        OPENROUTER_ADAPTER_ERROR_CODES.responseInvalid,
+        "OpenRouter tool descriptors must have unique names.",
+      );
+    }
+    try {
+      validators.set(tool.name, compiler.compile(tool.inputSchema));
+    } catch {
+      throw new OpenRouterAdapterError(
+        OPENROUTER_ADAPTER_ERROR_CODES.responseInvalid,
+        "OpenRouter received an invalid tool input schema.",
+      );
+    }
+  }
+  return validators;
+}
+
 function parseToolCall(
   payload: unknown,
   pinnedModel: ModelDescriptor,
-  offeredToolNames: ReadonlySet<string>,
+  toolValidators: ReadonlyMap<string, ValidateFunction>,
 ): ModelToolCallResponse {
   const choice = parseChoice(payload, pinnedModel);
   if (choice.finishReason !== "tool_calls") {
@@ -313,11 +452,14 @@ function parseToolCall(
       : undefined;
     const name = fn?.["name"];
     const args = parseToolCallArguments(fn?.["arguments"]);
+    const validateArguments =
+      typeof name === "string" ? toolValidators.get(name) : undefined;
     if (
       typeof name !== "string" ||
       name.length === 0 ||
-      !offeredToolNames.has(name) ||
-      args === undefined
+      validateArguments === undefined ||
+      args === undefined ||
+      !validateArguments(args)
     ) {
       throw new OpenRouterAdapterError(
         OPENROUTER_ADAPTER_ERROR_CODES.responseInvalid,
@@ -357,7 +499,7 @@ export function createOpenRouterAdapter(
     },
     async toolCall(request) {
       assertPinnedRequest(request, pinnedModel);
-      const offeredToolNames = new Set(request.tools.map((tool) => tool.name));
+      const toolValidators = compileToolValidators(request.tools);
       const transportResult = parseTransportResult(
         await options.transport(transportRequest(request, evalConfig)),
         pinnedModel,
@@ -366,7 +508,7 @@ export function createOpenRouterAdapter(
         response: parseToolCall(
           transportResult.response,
           pinnedModel,
-          offeredToolNames,
+          toolValidators,
         ),
         executedModel: transportResult.executedModel,
       });

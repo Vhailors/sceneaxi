@@ -50,7 +50,7 @@ function buildListedFixture(): CatalogItem {
     rights: {
       license: "CC-BY-4.0",
       rightsHolder: "SceneAxi fixture",
-      commercialUseAllowed: false,
+      commercialUseAllowed: true,
     },
     provenance: {
       origin: "tests/e2e/fixtures/golden-project.ts",

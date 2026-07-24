@@ -74,6 +74,10 @@ describe("catalog-web dormant MVP pipeline", () => {
   });
 
   it("keeps commerce, purchase, billing, and marketplace publish disabled", () => {
+    expect(listedFixtureItem.rights).toMatchObject({
+      license: "CC-BY-4.0",
+      commercialUseAllowed: true,
+    });
     expect(listedFixtureItem.commerce.activation).toBe("inert");
     expect(attemptCatalogPurchase(listedFixtureItem.itemId)).toMatchObject({
       ok: false,
