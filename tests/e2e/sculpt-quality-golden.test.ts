@@ -21,7 +21,8 @@ import {
 import {
   validateObjectSculptSpec,
   validateSculptIntake,
-  type ObjectSculptSpec,
+  isSculptQualityObjectSculptSpec,
+  type SculptQualityObjectSculptSpec,
 } from "../../packages/schemas/src/index.ts";
 
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
@@ -62,9 +63,13 @@ function namedStep<T>(name: string, action: () => T): T {
   }
 }
 
-function structuredSpec(path: string): ObjectSculptSpec {
+function structuredSpec(path: string): SculptQualityObjectSculptSpec {
   const intake = validateSculptIntake(readJson(path));
-  if (!intake.ok || intake.value.mode !== "structured-spec") {
+  if (
+    !intake.ok ||
+    intake.value.mode !== "structured-spec" ||
+    !isSculptQualityObjectSculptSpec(intake.value.structuredSpec)
+  ) {
     throw new Error(`Demo fixture "${path}" is not a valid structured-spec intake.`);
   }
   return intake.value.structuredSpec;

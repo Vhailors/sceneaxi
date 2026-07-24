@@ -20,9 +20,10 @@ Incomplete or drifting projections refuse by the missing structure class.
 
 `emitSculptProcedural()` is the real SceneAxi-owned public module referenced by
 generated artifacts. Given a multi-pass spec and non-negative integer seed, it
-emits canonical geometry detail, material detail, and hierarchy binding plans.
-The artifact records the source digest, seed, and emit digest; quality evidence
-must bind that emit digest.
+emits canonical geometry detail, material detail, hierarchy parentage, and
+deterministic transforms. The artifact records the implementation-program
+digest, seed, and emit digest; validation independently recomputes the emit from
+the spec and seed.
 
 Collider entries are metadata for the existing toy path. This ADR does not add
 a production physics implementation or engine-internal plugin port.

@@ -5,6 +5,18 @@
  * vocabulary never exposes a renderer implementation type.
  */
 import { isJsonObject, type JsonObject } from "./document.js";
+import {
+  SCULPT_PROCEDURAL_EXPORT_NAME,
+  SCULPT_PROCEDURAL_MODULE_ID,
+  SCULPT_PROCEDURAL_SOURCE_DIGEST,
+  computeSculptProceduralEmit,
+} from "./sculpt-procedural.js";
+import {
+  digestSculptJson,
+  isDenseArray,
+  sculptJsonEqual,
+  snapshotSculptJson,
+} from "./sculpt-json.js";
 
 export const SCULPT_SCHEMA_VERSION = 1 as const;
 export const SCULPT_INTAKE_KIND = "sceneaxi.sculpt-intake" as const;
@@ -92,24 +104,35 @@ type ObjectSculptSpecBase = {
   readonly kind: typeof OBJECT_SCULPT_SPEC_KIND;
   readonly id: string;
   readonly rootNodeId: string;
-  readonly passes: ReadonlyArray<SculptPass>;
   readonly components: ReadonlyArray<SculptComponent>;
   readonly materials: ReadonlyArray<SculptMaterial>;
   readonly sockets: ReadonlyArray<SculptSocket>;
   readonly hierarchy: ReadonlyArray<SculptHierarchyNode>;
 };
 
-export type ObjectSculptSpec = ObjectSculptSpecBase &
+export type LegacyObjectSculptSpec = ObjectSculptSpecBase & {
+  readonly complexityClass?: never;
+  readonly passes?: never;
+  readonly detailInventory?: never;
+};
+
+export type SculptQualityObjectSculptSpec = ObjectSculptSpecBase &
   (
     | {
         readonly complexityClass: "simple";
+        readonly passes: ReadonlyArray<SculptPass>;
         readonly detailInventory?: SculptDetailInventory;
       }
     | {
         readonly complexityClass: "non-trivial";
+        readonly passes: ReadonlyArray<SculptPass>;
         readonly detailInventory: SculptDetailInventory;
       }
   );
+
+export type ObjectSculptSpec =
+  | LegacyObjectSculptSpec
+  | SculptQualityObjectSculptSpec;
 
 type SculptIntakeBase = {
   readonly schemaVersion: typeof SCULPT_SCHEMA_VERSION;
@@ -137,13 +160,25 @@ export type SculptIntake =
       readonly structuredSpec: ObjectSculptSpec;
     });
 
-export type SculptProceduralModuleRef = {
+export type LegacySculptProceduralModuleRef = {
   readonly moduleId: string;
   readonly exportName: string;
   readonly sourceDigest: string;
+  readonly seed?: never;
+  readonly emitDigest?: never;
+};
+
+export type SculptQualityProceduralModuleRef = {
+  readonly moduleId: typeof SCULPT_PROCEDURAL_MODULE_ID;
+  readonly exportName: typeof SCULPT_PROCEDURAL_EXPORT_NAME;
+  readonly sourceDigest: typeof SCULPT_PROCEDURAL_SOURCE_DIGEST;
   readonly seed: number;
   readonly emitDigest: string;
 };
+
+export type SculptProceduralModuleRef =
+  | LegacySculptProceduralModuleRef
+  | SculptQualityProceduralModuleRef;
 
 export type SculptPivot = {
   readonly id: string;
@@ -182,6 +217,11 @@ export type SculptRuntimeHierarchy = {
   readonly attachments: ReadonlyArray<SculptAttachmentPoint>;
 };
 
+export type LegacySculptRuntimeHierarchy = {
+  readonly rootNodeId: string;
+  readonly nodes: ReadonlyArray<SculptHierarchyNode>;
+};
+
 export type SculptQualityGateEvidence = {
   readonly id: string;
   readonly status: "passed";
@@ -196,15 +236,26 @@ export type SculptEvidence = {
   readonly qualityGates: ReadonlyArray<SculptQualityGateEvidence>;
 };
 
-export type SculptArtifact = {
+type SculptArtifactBase = {
   readonly schemaVersion: typeof SCULPT_SCHEMA_VERSION;
   readonly kind: typeof SCULPT_ARTIFACT_KIND;
   readonly artifactId: string;
-  readonly spec: ObjectSculptSpec;
-  readonly proceduralModule: SculptProceduralModuleRef;
-  readonly runtimeHierarchy: SculptRuntimeHierarchy;
   readonly evidence: SculptEvidence;
 };
+
+export type LegacySculptArtifact = SculptArtifactBase & {
+  readonly spec: LegacyObjectSculptSpec;
+  readonly proceduralModule: LegacySculptProceduralModuleRef;
+  readonly runtimeHierarchy: LegacySculptRuntimeHierarchy;
+};
+
+export type SculptQualityArtifact = SculptArtifactBase & {
+  readonly spec: SculptQualityObjectSculptSpec;
+  readonly proceduralModule: SculptQualityProceduralModuleRef;
+  readonly runtimeHierarchy: SculptRuntimeHierarchy;
+};
+
+export type SculptArtifact = LegacySculptArtifact | SculptQualityArtifact;
 
 export type SculptDiagnosticCode =
   | "not-object"
@@ -223,6 +274,7 @@ export type SculptDiagnosticCode =
   | "missing-detail-inventory"
   | "shallow-detail-inventory"
   | "shallow-sculpt-spec"
+  | "missing-attachment-socket"
   | "missing-runtime-pivot"
   | "missing-runtime-socket"
   | "missing-runtime-collider"
@@ -240,7 +292,8 @@ export type SculptValidationResult<T> =
   | { readonly ok: false; readonly diagnostics: readonly SculptDiagnostic[] };
 
 const ID_RE = /^[a-z0-9][a-z0-9-]*$/;
-const MODULE_ID_RE = /^[a-z0-9][a-z0-9./-]*$/;
+const MODULE_ID_RE =
+  /^(?:@[a-z0-9-]+\/[a-z0-9-]+|[a-z0-9][a-z0-9./-]*)$/;
 const EXPORT_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
 const COLOR_RE = /^#[0-9a-f]{6}$/i;
@@ -299,6 +352,7 @@ function isVector3(value: unknown, positive = false): value is Vector3 {
   return (
     Array.isArray(value) &&
     value.length === 3 &&
+    isDenseArray(value) &&
     value.every((item) => isFiniteNumber(item) && (!positive || item > 0))
   );
 }
@@ -364,6 +418,7 @@ function validateFeatureList(
 ): SculptDiagnostic | null {
   if (
     !Array.isArray(value) ||
+    !isDenseArray(value) ||
     value.some(
       (feature) =>
         typeof feature !== "string" ||
@@ -387,12 +442,66 @@ function validateFeatureList(
   return null;
 }
 
+function hasQualityFields(value: JsonObject) {
+  return (
+    Object.hasOwn(value, "complexityClass") ||
+    Object.hasOwn(value, "passes") ||
+    Object.hasOwn(value, "detailInventory")
+  );
+}
+
+export function isSculptQualityObjectSculptSpec(
+  value: ObjectSculptSpec,
+): value is SculptQualityObjectSculptSpec {
+  return Object.hasOwn(value, "passes");
+}
+
+function passSequenceFailure(
+  passIds: readonly string[],
+): SculptValidationResult<ObjectSculptSpec> | null {
+  const allowedSequences = [
+    REQUIRED_SCULPT_PASSES,
+    [
+      "blockout",
+      "structure",
+      "materials",
+      "surface-detail",
+      "sockets",
+    ],
+  ] as const;
+  if (
+    allowedSequences.some(
+      (sequence) =>
+        sequence.length === passIds.length &&
+        sequence.every((passId, index) => passIds[index] === passId),
+    )
+  ) {
+    return null;
+  }
+  const missing = REQUIRED_SCULPT_PASSES.find(
+    (passId) => !passIds.includes(passId),
+  );
+  if (missing !== undefined) {
+    return specFailure(
+      "missing-sculpt-pass",
+      "$.passes",
+      `Missing required sculpt pass "${missing}".`,
+    );
+  }
+  return specFailure(
+    "out-of-order-sculpt-pass",
+    "$.passes",
+    `Sculpt-quality v1 passes must be blockout -> structure -> materials -> sockets, with only the optional surface-detail pass before sockets.`,
+  );
+}
+
 /** Validate components, materials, sockets, and a connected rooted hierarchy. */
 export function validateObjectSculptSpec(
   value: unknown,
 ): SculptValidationResult<ObjectSculptSpec> {
   if (!isJsonObject(value)) return refuse("not-object", "$", "ObjectSculptSpec must be a JSON object.");
-  if (!Object.hasOwn(value, "passes")) {
+  const quality = hasQualityFields(value);
+  if (quality && !Object.hasOwn(value, "passes")) {
     return specFailure(
       "missing-sculpt-pass",
       "$.passes",
@@ -401,8 +510,10 @@ export function validateObjectSculptSpec(
   }
   const fields = exactFields(
     value,
-    ["schemaVersion", "kind", "id", "rootNodeId", "complexityClass", "passes", "components", "materials", "sockets", "hierarchy"],
-    ["detailInventory"],
+    quality
+      ? ["schemaVersion", "kind", "id", "rootNodeId", "complexityClass", "passes", "components", "materials", "sockets", "hierarchy"]
+      : ["schemaVersion", "kind", "id", "rootNodeId", "components", "materials", "sockets", "hierarchy"],
+    quality ? ["detailInventory"] : [],
     "$",
   );
   if (fields !== null) return { ok: false, diagnostics: [fields] };
@@ -415,7 +526,11 @@ export function validateObjectSculptSpec(
   if (!isSculptIdentifier(value["id"]) || !isSculptIdentifier(value["rootNodeId"])) {
     return specFailure("invalid-field", "$.id", "Spec and root node ids must use lowercase slug identifiers.");
   }
-  if (value["complexityClass"] !== "simple" && value["complexityClass"] !== "non-trivial") {
+  if (
+    quality &&
+    value["complexityClass"] !== "simple" &&
+    value["complexityClass"] !== "non-trivial"
+  ) {
     return specFailure(
       "invalid-field",
       "$.complexityClass",
@@ -423,69 +538,57 @@ export function validateObjectSculptSpec(
     );
   }
 
-  const passes = value["passes"];
-  if (!Array.isArray(passes)) {
-    return specFailure("invalid-field", "$.passes", "passes must be an array.");
-  }
-  const passIds: string[] = [];
-  for (const [index, pass] of passes.entries()) {
-    const path = `$.passes[${index}]`;
-    if (!isJsonObject(pass)) {
-      return specFailure("invalid-field", path, "Sculpt pass must be an object.");
+  if (quality) {
+    const passes = value["passes"];
+    if (!Array.isArray(passes) || !isDenseArray(passes)) {
+      return specFailure("invalid-field", "$.passes", "passes must be a dense array.");
     }
-    const passFields = exactFields(pass, ["id", "deterministic", "steps"], [], path);
-    if (passFields !== null) return { ok: false, diagnostics: [passFields] };
-    if (!isSculptIdentifier(pass["id"])) {
-      return specFailure("invalid-field", `${path}.id`, "Sculpt pass id is invalid.");
+    const passIds: string[] = [];
+    for (const [index, pass] of passes.entries()) {
+      const path = `$.passes[${index}]`;
+      if (!isJsonObject(pass)) {
+        return specFailure("invalid-field", path, "Sculpt pass must be an object.");
+      }
+      const passFields = exactFields(pass, ["id", "deterministic", "steps"], [], path);
+      if (passFields !== null) return { ok: false, diagnostics: [passFields] };
+      if (!isSculptIdentifier(pass["id"])) {
+        return specFailure("invalid-field", `${path}.id`, "Sculpt pass id is invalid.");
+      }
+      if (pass["deterministic"] !== true) {
+        return specFailure(
+          "invalid-field",
+          `${path}.deterministic`,
+          "Every sculpt pass must be deterministic.",
+        );
+      }
+      const steps = pass["steps"];
+      if (
+        !Array.isArray(steps) ||
+        steps.length === 0 ||
+        !isDenseArray(steps) ||
+        steps.some((step) => typeof step !== "string" || step.trim().length === 0)
+      ) {
+        return specFailure(
+          "empty-sculpt-pass",
+          `${path}.steps`,
+          `Sculpt pass "${String(pass["id"])}" must contain at least one named step.`,
+        );
+      }
+      passIds.push(pass["id"]);
     }
-    if (pass["deterministic"] !== true) {
-      return specFailure(
-        "invalid-field",
-        `${path}.deterministic`,
-        "Every sculpt pass must be deterministic.",
-      );
+    const duplicatePass = duplicate(passIds);
+    if (duplicatePass !== undefined) {
+      return specFailure("duplicate-id", "$.passes", `Duplicate sculpt pass id "${duplicatePass}".`);
     }
-    const steps = pass["steps"];
-    if (
-      !Array.isArray(steps) ||
-      steps.length === 0 ||
-      steps.some((step) => typeof step !== "string" || step.trim().length === 0)
-    ) {
-      return specFailure(
-        "empty-sculpt-pass",
-        `${path}.steps`,
-        `Sculpt pass "${String(pass["id"])}" must contain at least one named step.`,
-      );
-    }
-    passIds.push(pass["id"]);
-  }
-  const duplicatePass = duplicate(passIds);
-  if (duplicatePass !== undefined) {
-    return specFailure("duplicate-id", "$.passes", `Duplicate sculpt pass id "${duplicatePass}".`);
-  }
-  const requiredPositions = REQUIRED_SCULPT_PASSES.map((passId) => passIds.indexOf(passId));
-  const missingPassIndex = requiredPositions.findIndex((position) => position < 0);
-  if (missingPassIndex >= 0) {
-    return specFailure(
-      "missing-sculpt-pass",
-      "$.passes",
-      `Missing required sculpt pass "${String(REQUIRED_SCULPT_PASSES[missingPassIndex])}".`,
-    );
-  }
-  if (
-    requiredPositions.some(
-      (position, index) =>
-        index > 0 && position <= (requiredPositions[index - 1] ?? -1),
-    )
-  ) {
-    return specFailure(
-      "out-of-order-sculpt-pass",
-      "$.passes",
-      `Required sculpt passes must appear in order: ${REQUIRED_SCULPT_PASSES.join(" -> ")}.`,
-    );
+    const sequenceFailure = passSequenceFailure(passIds);
+    if (sequenceFailure !== null) return sequenceFailure;
   }
   const materials = value["materials"];
-  if (!Array.isArray(materials) || materials.length === 0) {
+  if (
+    !Array.isArray(materials) ||
+    materials.length === 0 ||
+    !isDenseArray(materials)
+  ) {
     return specFailure("invalid-field", "$.materials", "materials must be a non-empty array.");
   }
   const materialIds: string[] = [];
@@ -511,7 +614,11 @@ export function validateObjectSculptSpec(
   const materialIdSet = new Set(materialIds);
 
   const components = value["components"];
-  if (!Array.isArray(components) || components.length === 0) {
+  if (
+    !Array.isArray(components) ||
+    components.length === 0 ||
+    !isDenseArray(components)
+  ) {
     return specFailure("invalid-field", "$.components", "components must be a non-empty array.");
   }
   const componentIds: string[] = [];
@@ -537,7 +644,11 @@ export function validateObjectSculptSpec(
   const componentIdSet = new Set(componentIds);
 
   const hierarchy = value["hierarchy"];
-  if (!Array.isArray(hierarchy) || hierarchy.length === 0) {
+  if (
+    !Array.isArray(hierarchy) ||
+    hierarchy.length === 0 ||
+    !isDenseArray(hierarchy)
+  ) {
     return specFailure("invalid-hierarchy", "$.hierarchy", "hierarchy must be a non-empty array.");
   }
   const nodeIds: string[] = [];
@@ -583,7 +694,9 @@ export function validateObjectSculptSpec(
   }
 
   const sockets = value["sockets"];
-  if (!Array.isArray(sockets)) return specFailure("invalid-field", "$.sockets", "sockets must be an array.");
+  if (!Array.isArray(sockets) || !isDenseArray(sockets)) {
+    return specFailure("invalid-field", "$.sockets", "sockets must be a dense array.");
+  }
   const socketIds: string[] = [];
   for (const [index, socket] of sockets.entries()) {
     const path = `$.sockets[${index}]`;
@@ -601,9 +714,25 @@ export function validateObjectSculptSpec(
   }
   const duplicateSocket = duplicate(socketIds);
   if (duplicateSocket !== undefined) return specFailure("duplicate-id", "$.sockets", `Duplicate socket id "${duplicateSocket}".`);
+  if (
+    quality &&
+    !sockets.some(
+      (socket) => isJsonObject(socket) && socket["kind"] === "attachment",
+    )
+  ) {
+    return specFailure(
+      "missing-attachment-socket",
+      "$.sockets",
+      "Sculpt-quality v1 requires at least one attachment socket.",
+    );
+  }
 
   const rawInventory = value["detailInventory"];
-  if (value["complexityClass"] === "non-trivial" && rawInventory === undefined) {
+  if (
+    quality &&
+    value["complexityClass"] === "non-trivial" &&
+    rawInventory === undefined
+  ) {
     return specFailure(
       "missing-detail-inventory",
       "$.detailInventory",
@@ -649,6 +778,7 @@ export function validateObjectSculptSpec(
       );
     }
     if (
+      quality &&
       value["complexityClass"] === "non-trivial" &&
       ((rawInventory["silhouetteFeatures"] as string[]).length < 2 ||
         (rawInventory["structuralFeatures"] as string[]).length < 3 ||
@@ -664,6 +794,7 @@ export function validateObjectSculptSpec(
     }
   }
   if (
+    quality &&
     value["complexityClass"] === "non-trivial" &&
     (components.length < 3 || materials.length < 2 || hierarchy.length < 3 || sockets.length < 1)
   ) {
@@ -706,7 +837,13 @@ export function validateSculptIntake(value: unknown): SculptValidationResult<Scu
   }
   if (mode === "multi-view") {
     const images = value["images"];
-    if (!Array.isArray(images) || images.length < 2) return refuse("invalid-field", "$.images", "multi-view requires at least two images.");
+    if (
+      !Array.isArray(images) ||
+      images.length < 2 ||
+      !isDenseArray(images)
+    ) {
+      return refuse("invalid-field", "$.images", "multi-view requires at least two dense image entries.");
+    }
     for (const [index, image] of images.entries()) {
       const failure = validateImage(image, `$.images[${index}]`);
       if (failure !== null) return { ok: false, diagnostics: [failure] };
@@ -721,13 +858,74 @@ export function validateSculptIntake(value: unknown): SculptValidationResult<Scu
   return { ok: true, value: value as SculptIntake };
 }
 
+function legacyAttachmentId(spec: LegacyObjectSculptSpec) {
+  const existing = new Set(spec.sockets.map((socket) => socket.id));
+  const base = `${spec.rootNodeId}-attachment`;
+  if (!existing.has(base)) return base;
+  let suffix = 2;
+  while (existing.has(`${base}-${String(suffix)}`)) suffix += 1;
+  return `${base}-${String(suffix)}`;
+}
+
+export function normalizeObjectSculptSpec(
+  spec: ObjectSculptSpec,
+): SculptQualityObjectSculptSpec {
+  if (isSculptQualityObjectSculptSpec(spec)) {
+    return snapshotSculptJson(spec);
+  }
+  const sockets = spec.sockets.some((socket) => socket.kind === "attachment")
+    ? spec.sockets
+    : [
+        ...spec.sockets,
+        {
+          id: legacyAttachmentId(spec),
+          nodeId: spec.rootNodeId,
+          kind: "attachment" as const,
+          axis: "y" as const,
+          amplitude: 0,
+          frequencyHz: 0,
+        },
+      ];
+  return snapshotSculptJson({
+    ...spec,
+    complexityClass: "simple",
+    passes: [
+      {
+        id: "blockout",
+        deterministic: true,
+        steps: ["migrate-existing-volumes"],
+      },
+      {
+        id: "structure",
+        deterministic: true,
+        steps: ["migrate-existing-hierarchy"],
+      },
+      {
+        id: "materials",
+        deterministic: true,
+        steps: ["migrate-existing-materials"],
+      },
+      {
+        id: "sockets",
+        deterministic: true,
+        steps: ["migrate-existing-sockets"],
+      },
+    ],
+    sockets,
+  });
+}
+
+export function digestObjectSculptSpec(spec: ObjectSculptSpec) {
+  return digestSculptJson(spec as unknown as JsonObject);
+}
+
 /** Project a validated sculpt spec into descriptive animation-ready runtime metadata. */
 export function projectAnimationReadyHierarchy(
-  spec: ObjectSculptSpec,
+  spec: SculptQualityObjectSculptSpec,
 ): SculptRuntimeHierarchy {
   const components = new Map(spec.components.map((component) => [component.id, component]));
   const attachmentSockets = spec.sockets.filter((socket) => socket.kind === "attachment");
-  return snapshotJsonValue({
+  return snapshotSculptJson({
     schemaVersion: ANIMATION_READY_HIERARCHY_VERSION,
     kind: ANIMATION_READY_HIERARCHY_KIND,
     rootNodeId: spec.rootNodeId,
@@ -766,59 +964,6 @@ export function projectAnimationReadyHierarchy(
   });
 }
 
-function snapshotJsonValue<Value>(value: Value): Value {
-  if (Array.isArray(value)) {
-    return Object.freeze(
-      Array.from(value, (entry) => snapshotJsonValue(entry)),
-    ) as Value;
-  }
-  if (value !== null && typeof value === "object") {
-    return Object.freeze(
-      Object.fromEntries(
-        Object.entries(value).map(([key, entry]) => [
-          key,
-          snapshotJsonValue(entry),
-        ]),
-      ),
-    ) as Value;
-  }
-  return value;
-}
-
-function jsonValuesEqual(left: unknown, right: unknown): boolean {
-  if (left === right) return true;
-  if (Array.isArray(left) || Array.isArray(right)) {
-    if (
-      !Array.isArray(left) ||
-      !Array.isArray(right) ||
-      left.length !== right.length
-    ) {
-      return false;
-    }
-    for (let index = 0; index < left.length; index += 1) {
-      if (
-        !Object.hasOwn(left, index) ||
-        !Object.hasOwn(right, index) ||
-        !jsonValuesEqual(left[index], right[index])
-      ) {
-        return false;
-      }
-    }
-    return true;
-  }
-  if (!isJsonObject(left) || !isJsonObject(right)) return false;
-  const leftKeys = Object.keys(left);
-  const rightKeys = Object.keys(right);
-  return (
-    leftKeys.length === rightKeys.length &&
-    leftKeys.every(
-      (key) =>
-        Object.hasOwn(right, key) &&
-        jsonValuesEqual(left[key], right[key]),
-    )
-  );
-}
-
 /** Validate a complete SceneAxi-owned Sculpt Artifact package. */
 export function validateSculptArtifact(value: unknown): SculptValidationResult<SculptArtifact> {
   if (!isJsonObject(value)) return refuse("not-object", "$", "Sculpt Artifact must be a JSON object.");
@@ -829,12 +974,15 @@ export function validateSculptArtifact(value: unknown): SculptValidationResult<S
   if (!isSculptIdentifier(value["artifactId"])) return refuse("invalid-field", "$.artifactId", "artifactId must be a lowercase slug.");
   const spec = validateObjectSculptSpec(value["spec"]);
   if (!spec.ok) return { ok: false, diagnostics: spec.diagnostics.map((diagnostic) => ({ ...diagnostic, path: `$.spec${diagnostic.path.slice(1)}` })) };
+  const quality = isSculptQualityObjectSculptSpec(spec.value);
 
   const moduleRef = value["proceduralModule"];
   if (!isJsonObject(moduleRef)) return refuse("invalid-field", "$.proceduralModule", "proceduralModule must be an object.");
   const moduleFields = exactFields(
     moduleRef,
-    ["moduleId", "exportName", "sourceDigest", "seed", "emitDigest"],
+    quality
+      ? ["moduleId", "exportName", "sourceDigest", "seed", "emitDigest"]
+      : ["moduleId", "exportName", "sourceDigest"],
     [],
     "$.proceduralModule",
   );
@@ -844,78 +992,126 @@ export function validateSculptArtifact(value: unknown): SculptValidationResult<S
     !MODULE_ID_RE.test(moduleRef["moduleId"]) ||
     typeof moduleRef["exportName"] !== "string" ||
     !EXPORT_RE.test(moduleRef["exportName"]) ||
-    !isDigest(moduleRef["sourceDigest"]) ||
-    !Number.isSafeInteger(moduleRef["seed"]) ||
-    Number(moduleRef["seed"]) < 0 ||
-    !isDigest(moduleRef["emitDigest"])
+    !isDigest(moduleRef["sourceDigest"])
   ) {
     return refuse("invalid-field", "$.proceduralModule", "Procedural module reference is invalid.");
+  }
+  if (
+    quality &&
+    (moduleRef["moduleId"] !== SCULPT_PROCEDURAL_MODULE_ID ||
+      moduleRef["exportName"] !== SCULPT_PROCEDURAL_EXPORT_NAME ||
+      moduleRef["sourceDigest"] !== SCULPT_PROCEDURAL_SOURCE_DIGEST ||
+      !Number.isSafeInteger(moduleRef["seed"]) ||
+      Number(moduleRef["seed"]) < 0 ||
+      !isDigest(moduleRef["emitDigest"]))
+  ) {
+    return refuse(
+      "invalid-reference",
+      "$.proceduralModule",
+      "Sculpt-quality artifacts must bind the public SceneAxi procedural emitter.",
+    );
   }
 
   const runtime = value["runtimeHierarchy"];
   if (!isJsonObject(runtime)) return refuse("invalid-field", "$.runtimeHierarchy", "runtimeHierarchy must be an object.");
-  for (const [field, code] of [
-    ["pivots", "missing-runtime-pivot"],
-    ["sockets", "missing-runtime-socket"],
-    ["colliders", "missing-runtime-collider"],
-    ["materials", "missing-runtime-material"],
-    ["attachments", "missing-runtime-attachment"],
-  ] as const) {
-    if (!Object.hasOwn(runtime, field)) {
-      return refuse(code, `$.runtimeHierarchy.${field}`, `Animation-ready hierarchy requires ${field}.`);
+  if (!quality) {
+    const runtimeFields = exactFields(
+      runtime,
+      ["rootNodeId", "nodes"],
+      [],
+      "$.runtimeHierarchy",
+    );
+    if (runtimeFields !== null) {
+      return { ok: false, diagnostics: [runtimeFields] };
     }
-  }
-  const runtimeFields = exactFields(
-    runtime,
-    ["schemaVersion", "kind", "rootNodeId", "nodes", "pivots", "sockets", "colliders", "materials", "attachments"],
-    [],
-    "$.runtimeHierarchy",
-  );
-  if (runtimeFields !== null) return { ok: false, diagnostics: [runtimeFields] };
-  if (runtime["schemaVersion"] !== ANIMATION_READY_HIERARCHY_VERSION) {
-    return refuse(
-      "schema-major-mismatch",
-      "$.runtimeHierarchy.schemaVersion",
-      `Animation-ready hierarchy schema major must be ${ANIMATION_READY_HIERARCHY_VERSION}.`,
-    );
-  }
-  if (runtime["kind"] !== ANIMATION_READY_HIERARCHY_KIND) {
-    return refuse(
-      "invalid-kind",
-      "$.runtimeHierarchy.kind",
-      `kind must be "${ANIMATION_READY_HIERARCHY_KIND}".`,
-    );
-  }
-  if (
-    runtime["rootNodeId"] !== spec.value.rootNodeId ||
-    !jsonValuesEqual(runtime["nodes"], spec.value.hierarchy)
-  ) {
-    return refuse("invalid-hierarchy", "$.runtimeHierarchy", "Runtime hierarchy must exactly project the validated spec hierarchy.");
-  }
-  if (!jsonValuesEqual(runtime["sockets"], spec.value.sockets)) {
-    return refuse(
-      "missing-runtime-socket",
-      "$.runtimeHierarchy.sockets",
-      "Runtime sockets must exactly project the validated spec sockets.",
-    );
-  }
-  const expectedRuntime = projectAnimationReadyHierarchy(spec.value);
-  for (const [field, code] of [
-    ["pivots", "missing-runtime-pivot"],
-    ["colliders", "missing-runtime-collider"],
-    ["materials", "missing-runtime-material"],
-    ["attachments", "missing-runtime-attachment"],
-  ] as const) {
     if (
-      !Array.isArray(runtime[field]) ||
-      runtime[field].length === 0 ||
-      !jsonValuesEqual(runtime[field], expectedRuntime[field])
+      runtime["rootNodeId"] !== spec.value.rootNodeId ||
+      !Array.isArray(runtime["nodes"]) ||
+      runtime["nodes"].length === 0 ||
+      !isDenseArray(runtime["nodes"]) ||
+      !sculptJsonEqual(runtime["nodes"], spec.value.hierarchy)
     ) {
       return refuse(
-        code,
-        `$.runtimeHierarchy.${field}`,
-        `Runtime ${field} must exactly project the validated spec.`,
+        "invalid-hierarchy",
+        "$.runtimeHierarchy",
+        "Legacy runtime hierarchy must exactly project the validated spec hierarchy.",
       );
+    }
+  } else {
+    for (const [field, code] of [
+      ["pivots", "missing-runtime-pivot"],
+      ["sockets", "missing-runtime-socket"],
+      ["colliders", "missing-runtime-collider"],
+      ["materials", "missing-runtime-material"],
+      ["attachments", "missing-runtime-attachment"],
+    ] as const) {
+      if (!Object.hasOwn(runtime, field)) {
+        return refuse(code, `$.runtimeHierarchy.${field}`, `Animation-ready hierarchy requires ${field}.`);
+      }
+    }
+    const runtimeFields = exactFields(
+      runtime,
+      ["schemaVersion", "kind", "rootNodeId", "nodes", "pivots", "sockets", "colliders", "materials", "attachments"],
+      [],
+      "$.runtimeHierarchy",
+    );
+    if (runtimeFields !== null) return { ok: false, diagnostics: [runtimeFields] };
+    if (runtime["schemaVersion"] !== ANIMATION_READY_HIERARCHY_VERSION) {
+      return refuse(
+        "schema-major-mismatch",
+        "$.runtimeHierarchy.schemaVersion",
+        `Animation-ready hierarchy schema major must be ${ANIMATION_READY_HIERARCHY_VERSION}.`,
+      );
+    }
+    if (runtime["kind"] !== ANIMATION_READY_HIERARCHY_KIND) {
+      return refuse(
+        "invalid-kind",
+        "$.runtimeHierarchy.kind",
+        `kind must be "${ANIMATION_READY_HIERARCHY_KIND}".`,
+      );
+    }
+    if (
+      runtime["rootNodeId"] !== spec.value.rootNodeId ||
+      !Array.isArray(runtime["nodes"]) ||
+      !isDenseArray(runtime["nodes"]) ||
+      !sculptJsonEqual(runtime["nodes"], spec.value.hierarchy)
+    ) {
+      return refuse(
+        "invalid-hierarchy",
+        "$.runtimeHierarchy",
+        "Runtime hierarchy must exactly project the validated spec hierarchy.",
+      );
+    }
+    if (
+      !Array.isArray(runtime["sockets"]) ||
+      !isDenseArray(runtime["sockets"]) ||
+      !sculptJsonEqual(runtime["sockets"], spec.value.sockets)
+    ) {
+      return refuse(
+        "missing-runtime-socket",
+        "$.runtimeHierarchy.sockets",
+        "Runtime sockets must exactly project the validated spec sockets.",
+      );
+    }
+    const expectedRuntime = projectAnimationReadyHierarchy(spec.value);
+    for (const [field, code] of [
+      ["pivots", "missing-runtime-pivot"],
+      ["colliders", "missing-runtime-collider"],
+      ["materials", "missing-runtime-material"],
+      ["attachments", "missing-runtime-attachment"],
+    ] as const) {
+      if (
+        !Array.isArray(runtime[field]) ||
+        runtime[field].length === 0 ||
+        !isDenseArray(runtime[field]) ||
+        !sculptJsonEqual(runtime[field], expectedRuntime[field])
+      ) {
+        return refuse(
+          code,
+          `$.runtimeHierarchy.${field}`,
+          `Runtime ${field} must exactly project the validated spec.`,
+        );
+      }
     }
   }
 
@@ -928,7 +1124,13 @@ export function validateSculptArtifact(value: unknown): SculptValidationResult<S
     if (!isDigest(evidence[field])) return refuse("invalid-field", `$.evidence.${field}`, `${field} must be sha256:<64 lowercase hex>.`);
   }
   const gates = evidence["qualityGates"];
-  if (!Array.isArray(gates) || gates.length === 0) return refuse("invalid-field", "$.evidence.qualityGates", "At least one passed quality gate is required.");
+  if (
+    !Array.isArray(gates) ||
+    gates.length === 0 ||
+    !isDenseArray(gates)
+  ) {
+    return refuse("invalid-field", "$.evidence.qualityGates", "At least one dense passed quality gate is required.");
+  }
   const gateIds: string[] = [];
   for (const [index, gate] of gates.entries()) {
     const path = `$.evidence.qualityGates[${index}]`;
@@ -940,18 +1142,33 @@ export function validateSculptArtifact(value: unknown): SculptValidationResult<S
   }
   if (duplicate(gateIds) !== undefined) return refuse("duplicate-id", "$.evidence.qualityGates", "Quality gate ids must be unique.");
   if (evidence["proceduralModuleDigest"] !== moduleRef["sourceDigest"]) return refuse("invalid-reference", "$.evidence.proceduralModuleDigest", "Evidence must bind the referenced procedural module digest.");
-  const proceduralGate = gates.find(
-    (gate) => isJsonObject(gate) && gate["id"] === "procedural-emit",
-  );
-  if (
-    !isJsonObject(proceduralGate) ||
-    proceduralGate["digest"] !== moduleRef["emitDigest"]
-  ) {
-    return refuse(
-      "invalid-reference",
-      "$.evidence.qualityGates",
-      "Evidence must bind the deterministic procedural emit digest.",
+  if (quality) {
+    if (
+      evidence["specDigest"] !== digestObjectSculptSpec(spec.value)
+    ) {
+      return refuse(
+        "invalid-reference",
+        "$.evidence.specDigest",
+        "Evidence must bind the canonical sculpt spec digest.",
+      );
+    }
+    const expectedEmit = computeSculptProceduralEmit(spec.value, {
+      seed: Number(moduleRef["seed"]),
+    });
+    const proceduralGate = gates.find(
+      (gate) => isJsonObject(gate) && gate["id"] === "procedural-emit",
     );
+    if (
+      moduleRef["emitDigest"] !== expectedEmit.digest ||
+      !isJsonObject(proceduralGate) ||
+      proceduralGate["digest"] !== expectedEmit.digest
+    ) {
+      return refuse(
+        "invalid-reference",
+        "$.evidence.qualityGates",
+        "Evidence must independently bind the deterministic procedural emit.",
+      );
+    }
   }
   return { ok: true, value: value as SculptArtifact };
 }

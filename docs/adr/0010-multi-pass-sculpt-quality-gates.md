@@ -15,8 +15,8 @@ masquerade as detail.
 ## Decision
 
 ObjectSculptSpec requires a deterministic pass ledger containing, in order,
-`blockout`, `structure`, `materials`, and `sockets`. Additional passes are
-allowed when they are named, deterministic, non-empty, and preserve that order.
+`blockout`, `structure`, `materials`, and `sockets`. The closed v1 extension
+permits `surface-detail` immediately before `sockets`.
 
 Every spec declares `simple` or `non-trivial`. Non-trivial specs require a
 detail inventory covering silhouette, structural, surface, material, and
@@ -28,7 +28,8 @@ with stable diagnostic codes.
 ## Consequences
 
 - Quality stages and inventory depth are inspectable before reconstruction.
-- The existing hybrid intake and reconstruction entry points remain unchanged.
+- Legacy PR #75 v1 specs remain valid and normalize deterministically into the
+  stricter quality branch before reconstruction.
 - Future minima require an explicit contract revision; callers cannot silently
   reinterpret this v1 gate.
 
@@ -41,7 +42,8 @@ with stable diagnostic codes.
 
 ## Settled here vs held elsewhere
 
-**Settled:** the v1 pass order, detail inventory, minima, and named refusals.
+**Settled:** legacy normalization, the v1 pass order, detail inventory, minima,
+and named refusals.
 
 **Held elsewhere:** artistic quality scoring, production reconstruction policy,
 and any Stage 1 adjudication.

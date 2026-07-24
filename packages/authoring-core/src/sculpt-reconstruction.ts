@@ -4,16 +4,19 @@ import {
   OBJECT_SCULPT_SPEC_KIND,
   SCULPT_ARTIFACT_KIND,
   SCULPT_SCHEMA_VERSION,
+  isSculptQualityObjectSculptSpec,
+  normalizeObjectSculptSpec,
   projectAnimationReadyHierarchy,
   validateObjectSculptSpec,
   validateSculptArtifact,
   validateSculptIntake,
   type JsonValue,
-  type ObjectSculptSpec,
   type SculptArtifact,
   type SculptHierarchyNode,
   type SculptIntake,
+  type SculptQualityArtifact,
   type SculptQualityGateEvidence,
+  type SculptQualityObjectSculptSpec,
 } from "@sceneaxi/schemas";
 import {
   SCULPT_PROCEDURAL_EXPORT_NAME,
@@ -21,6 +24,12 @@ import {
   SCULPT_PROCEDURAL_SOURCE_DIGEST,
   emitSculptProcedural,
 } from "./sculpt-procedural-emit.js";
+import {
+  canonicalJson,
+  digestBytes,
+  digestJson,
+  snapshotJsonValue,
+} from "./json-invariants.js";
 
 export type SculptReconstructionRefusalCode =
   | "invalid-intake"
@@ -33,7 +42,9 @@ export type SculptReconstructionRefusalCode =
   | "offline-agent-nondeterministic";
 
 export type SculptOfflineAgent = {
-  readonly refine: (spec: ObjectSculptSpec) => ObjectSculptSpec;
+  readonly refine: (
+    spec: SculptQualityObjectSculptSpec,
+  ) => SculptQualityObjectSculptSpec;
 };
 
 export type SculptReconstructionOptions = {
@@ -45,7 +56,7 @@ export type SculptReconstructionOptions = {
 export type SculptReconstructionResult =
   | {
       readonly ok: true;
-      readonly artifact: SculptArtifact;
+      readonly artifact: SculptQualityArtifact;
       readonly artifactBytes: string;
       readonly artifactDigest: string;
     }
@@ -56,56 +67,25 @@ export type SculptReconstructionResult =
       readonly message: string;
     };
 
-function canonicalJson(value: JsonValue): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map((item) => canonicalJson(item)).join(",")}]`;
-  const object = value as { readonly [key: string]: JsonValue };
-  return `{${Object.keys(object)
-    .sort()
-    .map((key) => `${JSON.stringify(key)}:${canonicalJson(object[key] ?? null)}`)
-    .join(",")}}`;
-}
-
-function snapshotJsonValue(value: JsonValue): JsonValue {
-  if (Array.isArray(value)) {
-    return Object.freeze(value.map((entry) => snapshotJsonValue(entry)));
-  }
-  if (value !== null && typeof value === "object") {
-    return Object.freeze(
-      Object.fromEntries(
-        Object.entries(value).map(([key, entry]) => [
-          key,
-          snapshotJsonValue(entry),
-        ]),
-      ),
-    );
-  }
-  return value;
-}
-
-function snapshotObjectSculptSpec(spec: ObjectSculptSpec): ObjectSculptSpec {
+function snapshotObjectSculptSpec(
+  spec: SculptQualityObjectSculptSpec,
+): SculptQualityObjectSculptSpec {
   return snapshotJsonValue(
-    spec as unknown as JsonValue,
-  ) as unknown as ObjectSculptSpec;
+    spec,
+  );
 }
 
-function snapshotSculptArtifact(artifact: SculptArtifact): SculptArtifact {
+function snapshotSculptArtifact(
+  artifact: SculptQualityArtifact,
+): SculptQualityArtifact {
   return snapshotJsonValue(
-    artifact as unknown as JsonValue,
-  ) as unknown as SculptArtifact;
-}
-
-function digestJson(value: JsonValue) {
-  return `sha256:${createHash("sha256").update(canonicalJson(value)).digest("hex")}`;
+    artifact,
+  );
 }
 
 /** Byte-canonical form used by fixture evidence and artifact digests. */
 export function serializeSculptArtifact(artifact: SculptArtifact) {
   return `${canonicalJson(artifact as unknown as JsonValue)}\n`;
-}
-
-function digestBytes(value: string) {
-  return `sha256:${createHash("sha256").update(value).digest("hex")}`;
 }
 
 function hierarchyDepth(nodes: readonly SculptHierarchyNode[]) {
@@ -123,7 +103,7 @@ function hierarchyDepth(nodes: readonly SculptHierarchyNode[]) {
   return maximum;
 }
 
-function qualityGateEvidence(spec: ObjectSculptSpec):
+function qualityGateEvidence(spec: SculptQualityObjectSculptSpec):
   | { readonly ok: true; readonly evidence: readonly SculptQualityGateEvidence[] }
   | { readonly ok: false; readonly gate: string; readonly message: string } {
   const checks = [
@@ -164,7 +144,9 @@ function qualityGateEvidence(spec: ObjectSculptSpec):
   };
 }
 
-function specFromImageAndBrief(intake: Extract<SculptIntake, { mode: "image+brief" }>): ObjectSculptSpec {
+function specFromImageAndBrief(
+  intake: Extract<SculptIntake, { mode: "image+brief" }>,
+): SculptQualityObjectSculptSpec {
   const color = `#${intake.image.digest.slice("sha256:".length, "sha256:".length + 6)}`;
   const accent = `#${createHash("sha256").update(intake.brief).digest("hex").slice(0, 6)}`;
   const rootId = `${intake.intakeId}-body`;
@@ -257,7 +239,11 @@ export function reconstructSculpt(
       message: "Sculpt reconstruction seed must be a non-negative safe integer.",
     };
   }
-  let spec = intake.mode === "structured-spec" ? intake.structuredSpec : specFromImageAndBrief(intake);
+  let spec = normalizeObjectSculptSpec(
+    intake.mode === "structured-spec"
+      ? intake.structuredSpec
+      : specFromImageAndBrief(intake),
+  );
   if (options.enableOfflineAgent === true) {
     if (options.offlineAgent === undefined) {
       return {
@@ -266,11 +252,21 @@ export function reconstructSculpt(
         message: "Offline sculpt agent flag is enabled but no injected offline adapter is available.",
       };
     }
-    let first: ObjectSculptSpec;
-    let second: ObjectSculptSpec;
+    let first: SculptQualityObjectSculptSpec;
     try {
-      first = options.offlineAgent.refine(structuredClone(spec));
-      second = options.offlineAgent.refine(structuredClone(spec));
+      const firstCandidate = options.offlineAgent.refine(structuredClone(spec));
+      const firstValidation = validateObjectSculptSpec(firstCandidate);
+      if (
+        !firstValidation.ok ||
+        !isSculptQualityObjectSculptSpec(firstValidation.value)
+      ) {
+        return {
+          ok: false,
+          code: "offline-agent-invalid",
+          message: "Injected offline sculpt agent returned an invalid ObjectSculptSpec.",
+        };
+      }
+      first = snapshotObjectSculptSpec(firstValidation.value);
     } catch {
       return {
         ok: false,
@@ -278,18 +274,31 @@ export function reconstructSculpt(
         message: "Injected offline sculpt agent failed while refining the spec.",
       };
     }
-    const firstValidation = validateObjectSculptSpec(first);
-    const secondValidation = validateObjectSculptSpec(second);
-    if (!firstValidation.ok || !secondValidation.ok) {
+    let second: SculptQualityObjectSculptSpec;
+    try {
+      const secondCandidate = options.offlineAgent.refine(structuredClone(spec));
+      const secondValidation = validateObjectSculptSpec(secondCandidate);
+      if (
+        !secondValidation.ok ||
+        !isSculptQualityObjectSculptSpec(secondValidation.value)
+      ) {
+        return {
+          ok: false,
+          code: "offline-agent-invalid",
+          message: "Injected offline sculpt agent returned an invalid ObjectSculptSpec.",
+        };
+      }
+      second = snapshotObjectSculptSpec(secondValidation.value);
+    } catch {
       return {
         ok: false,
         code: "offline-agent-invalid",
-        message: "Injected offline sculpt agent returned an invalid ObjectSculptSpec.",
+        message: "Injected offline sculpt agent failed while refining the spec.",
       };
     }
     if (
-      canonicalJson(firstValidation.value as unknown as JsonValue) !==
-      canonicalJson(secondValidation.value as unknown as JsonValue)
+      canonicalJson(first as unknown as JsonValue) !==
+      canonicalJson(second as unknown as JsonValue)
     ) {
       return {
         ok: false,
@@ -297,7 +306,7 @@ export function reconstructSculpt(
         message: "Injected offline sculpt agent returned different results for identical input.",
       };
     }
-    spec = firstValidation.value;
+    spec = first;
   }
   spec = snapshotObjectSculptSpec(spec);
   const gates = qualityGateEvidence(spec);
@@ -311,7 +320,7 @@ export function reconstructSculpt(
   }
 
   const proceduralEmit = emitSculptProcedural(spec, { seed });
-  const artifact: SculptArtifact = {
+  const artifact: SculptQualityArtifact = {
     schemaVersion: SCULPT_SCHEMA_VERSION,
     kind: SCULPT_ARTIFACT_KIND,
     artifactId: `${intake.intakeId}-artifact`,
@@ -343,7 +352,9 @@ export function reconstructSculpt(
       message: validatedArtifact.diagnostics[0]?.message ?? "Generated Sculpt Artifact refused.",
     };
   }
-  const artifactSnapshot = snapshotSculptArtifact(validatedArtifact.value);
+  const artifactSnapshot = snapshotSculptArtifact(
+    validatedArtifact.value as SculptQualityArtifact,
+  );
   const artifactBytes = serializeSculptArtifact(artifactSnapshot);
   return {
     ok: true,

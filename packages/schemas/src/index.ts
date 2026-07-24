@@ -288,8 +288,11 @@ export {
   SCULPT_INTAKE_KIND,
   SCULPT_INTAKE_MODES,
   SCULPT_SCHEMA_VERSION,
+  digestObjectSculptSpec,
   isSculptIdentifier,
+  isSculptQualityObjectSculptSpec,
   isSculptTransform,
+  normalizeObjectSculptSpec,
   projectAnimationReadyHierarchy,
   validateObjectSculptSpec,
   validateSculptArtifact,
@@ -297,6 +300,10 @@ export {
 } from "./sculpt.js";
 export type {
   ObjectSculptSpec,
+  LegacyObjectSculptSpec,
+  LegacySculptArtifact,
+  LegacySculptProceduralModuleRef,
+  LegacySculptRuntimeHierarchy,
   RequiredSculptPassId,
   SculptAttachmentPoint,
   SculptArtifact,
@@ -316,9 +323,27 @@ export type {
   SculptPivot,
   SculptProceduralModuleRef,
   SculptQualityGateEvidence,
+  SculptQualityArtifact,
+  SculptQualityObjectSculptSpec,
+  SculptQualityProceduralModuleRef,
   SculptRuntimeHierarchy,
   SculptSocket,
   SculptTransform,
   SculptValidationResult,
   Vector3,
 } from "./sculpt.js";
+
+export {
+  SCULPT_PROCEDURAL_EMIT_KIND,
+  SCULPT_PROCEDURAL_EMIT_VERSION,
+  SCULPT_PROCEDURAL_EXPORT_NAME,
+  SCULPT_PROCEDURAL_MODULE_ID,
+  SCULPT_PROCEDURAL_SOURCE_DIGEST,
+  computeSculptProceduralEmit,
+} from "./sculpt-procedural.js";
+export type {
+  SculptProceduralEmit,
+  SculptProceduralGeometry,
+  SculptProceduralMaterial,
+  SculptProceduralNode,
+} from "./sculpt-procedural.js";

@@ -4,7 +4,7 @@
   "title": "SceneAxi ObjectSculptSpec v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "kind", "id", "rootNodeId", "complexityClass", "passes", "components", "materials", "sockets", "hierarchy"],
+  "required": ["schemaVersion", "kind", "id", "rootNodeId", "components", "materials", "sockets", "hierarchy"],
   "properties": {
     "schemaVersion": { "const": 1 },
     "kind": { "const": "sceneaxi.object-sculpt-spec" },
@@ -14,6 +14,8 @@
     "passes": {
       "type": "array",
       "minItems": 4,
+      "maxItems": 5,
+      "uniqueItems": true,
       "items": { "$ref": "#/$defs/pass" }
     },
     "detailInventory": { "$ref": "#/$defs/detailInventory" },
@@ -22,36 +24,87 @@
     "sockets": { "type": "array", "items": { "$ref": "#/$defs/socket" } },
     "hierarchy": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/hierarchyNode" } }
   },
-  "allOf": [
+  "oneOf": [
     {
-      "if": { "properties": { "complexityClass": { "const": "non-trivial" } } },
-      "then": {
-        "required": ["detailInventory"],
-        "properties": {
-          "components": { "minItems": 3 },
-          "materials": { "minItems": 2 },
-          "sockets": { "minItems": 1 },
-          "hierarchy": { "minItems": 3 },
-          "detailInventory": {
+      "not": {
+        "anyOf": [
+          { "required": ["complexityClass"] },
+          { "required": ["passes"] },
+          { "required": ["detailInventory"] }
+        ]
+      }
+    },
+    {
+      "required": ["complexityClass", "passes"],
+      "properties": {
+        "passes": {
+          "oneOf": [
+            {
+              "minItems": 4,
+              "maxItems": 4,
+              "prefixItems": [
+                { "$ref": "#/$defs/blockoutPass" },
+                { "$ref": "#/$defs/structurePass" },
+                { "$ref": "#/$defs/materialsPass" },
+                { "$ref": "#/$defs/socketsPass" }
+              ],
+              "items": false
+            },
+            {
+              "minItems": 5,
+              "maxItems": 5,
+              "prefixItems": [
+                { "$ref": "#/$defs/blockoutPass" },
+                { "$ref": "#/$defs/structurePass" },
+                { "$ref": "#/$defs/materialsPass" },
+                { "$ref": "#/$defs/surfaceDetailPass" },
+                { "$ref": "#/$defs/socketsPass" }
+              ],
+              "items": false
+            }
+          ]
+        },
+        "sockets": {
+          "contains": {
+            "type": "object",
+            "required": ["kind"],
+            "properties": { "kind": { "const": "attachment" } }
+          },
+          "minContains": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": ["complexityClass"],
+            "properties": { "complexityClass": { "const": "non-trivial" } }
+          },
+          "then": {
+            "required": ["detailInventory"],
             "properties": {
-              "silhouetteFeatures": { "minItems": 2 },
-              "structuralFeatures": { "minItems": 3 },
-              "surfaceFeatures": { "minItems": 2 },
-              "materialIds": { "minItems": 2 },
-              "socketIds": { "minItems": 1 }
+              "components": { "minItems": 3 },
+              "materials": { "minItems": 2 },
+              "hierarchy": { "minItems": 3 },
+              "sockets": { "minItems": 1 },
+              "detailInventory": {
+                "properties": {
+                  "silhouetteFeatures": { "minItems": 2 },
+                  "structuralFeatures": { "minItems": 3 },
+                  "surfaceFeatures": { "minItems": 2 },
+                  "materialIds": { "minItems": 2 },
+                  "socketIds": { "minItems": 1 }
+                }
+              }
             }
           }
         }
-      }
-    },
-    { "properties": { "passes": { "contains": { "properties": { "id": { "const": "blockout" } }, "required": ["id"] } } } },
-    { "properties": { "passes": { "contains": { "properties": { "id": { "const": "structure" } }, "required": ["id"] } } } },
-    { "properties": { "passes": { "contains": { "properties": { "id": { "const": "materials" } }, "required": ["id"] } } } },
-    { "properties": { "passes": { "contains": { "properties": { "id": { "const": "sockets" } }, "required": ["id"] } } } }
+      ]
+    }
   ],
   "$defs": {
     "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
     "finiteNumber": { "type": "number" },
+    "nonBlank": { "type": "string", "pattern": "\\S" },
     "vector3": {
       "type": "array",
       "prefixItems": [
@@ -74,6 +127,16 @@
       "minItems": 3,
       "maxItems": 3
     },
+    "transform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["translation", "rotationEulerDegrees", "scale"],
+      "properties": {
+        "translation": { "$ref": "#/$defs/vector3" },
+        "rotationEulerDegrees": { "$ref": "#/$defs/vector3" },
+        "scale": { "$ref": "#/$defs/positiveVector3" }
+      }
+    },
     "pass": {
       "type": "object",
       "additionalProperties": false,
@@ -84,35 +147,50 @@
         "steps": {
           "type": "array",
           "minItems": 1,
-          "items": { "type": "string", "pattern": "\\S" }
+          "items": { "$ref": "#/$defs/nonBlank" }
         }
       }
+    },
+    "blockoutPass": {
+      "allOf": [
+        { "$ref": "#/$defs/pass" },
+        { "properties": { "id": { "const": "blockout" } } }
+      ]
+    },
+    "structurePass": {
+      "allOf": [
+        { "$ref": "#/$defs/pass" },
+        { "properties": { "id": { "const": "structure" } } }
+      ]
+    },
+    "materialsPass": {
+      "allOf": [
+        { "$ref": "#/$defs/pass" },
+        { "properties": { "id": { "const": "materials" } } }
+      ]
+    },
+    "surfaceDetailPass": {
+      "allOf": [
+        { "$ref": "#/$defs/pass" },
+        { "properties": { "id": { "const": "surface-detail" } } }
+      ]
+    },
+    "socketsPass": {
+      "allOf": [
+        { "$ref": "#/$defs/pass" },
+        { "properties": { "id": { "const": "sockets" } } }
+      ]
     },
     "detailInventory": {
       "type": "object",
       "additionalProperties": false,
       "required": ["silhouetteFeatures", "structuralFeatures", "surfaceFeatures", "materialIds", "socketIds"],
       "properties": {
-        "silhouetteFeatures": { "$ref": "#/$defs/featureList" },
-        "structuralFeatures": { "$ref": "#/$defs/featureList" },
-        "surfaceFeatures": { "$ref": "#/$defs/featureList" },
-        "materialIds": { "$ref": "#/$defs/featureList" },
-        "socketIds": { "$ref": "#/$defs/featureList" }
-      }
-    },
-    "featureList": {
-      "type": "array",
-      "uniqueItems": true,
-      "items": { "type": "string", "pattern": "^\\S(?:.*\\S)?$" }
-    },
-    "transform": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["translation", "rotationEulerDegrees", "scale"],
-      "properties": {
-        "translation": { "$ref": "#/$defs/vector3" },
-        "rotationEulerDegrees": { "$ref": "#/$defs/vector3" },
-        "scale": { "$ref": "#/$defs/positiveVector3" }
+        "silhouetteFeatures": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/nonBlank" } },
+        "structuralFeatures": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/nonBlank" } },
+        "surfaceFeatures": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/nonBlank" } },
+        "materialIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+        "socketIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } }
       }
     },
     "material": {

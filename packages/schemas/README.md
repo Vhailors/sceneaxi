@@ -15,7 +15,11 @@ Sculpt-quality v1 makes the ObjectSculptSpec pass ledger and complexity class
 explicit, requires a detail inventory for non-trivial specs, and projects a
 versioned animation-ready runtime hierarchy with pivots, sockets, descriptive
 colliders, material bindings, and attachment points. Stable quality and
-incomplete-hierarchy diagnostics are part of the public TypeScript result. See
+incomplete-hierarchy diagnostics are part of the public TypeScript result.
+Legacy PR #75 v1 payloads remain accepted and can be upgraded with
+`normalizeObjectSculptSpec`; the stricter quality branch requires its ordered
+ledger and an attachment. Procedural evidence is recomputed from spec plus
+seed. See
 [`docs/sculpt-quality.md`](../../docs/sculpt-quality.md) and ADRs 0010–0013.
 
 Reconstruction behavior belongs to

@@ -13,7 +13,9 @@ import {
   SCULPT_INTAKE_KIND,
   SCULPT_SCHEMA_VERSION,
   validateSculptArtifact,
+  type LegacyObjectSculptSpec,
   type ObjectSculptSpec,
+  type SculptQualityObjectSculptSpec,
 } from "@sceneaxi/schemas";
 
 const digest = (character: string) => `sha256:${character.repeat(64)}`;
@@ -23,7 +25,7 @@ const transform = {
   scale: [1, 1, 1],
 } as const;
 
-function fixtureSpec(): ObjectSculptSpec {
+function fixtureSpec(): SculptQualityObjectSculptSpec {
   return {
     schemaVersion: SCULPT_SCHEMA_VERSION,
     kind: OBJECT_SCULPT_SPEC_KIND,
@@ -92,6 +94,8 @@ describe("SceneAxi sculpt reconstruction", () => {
     });
     expect(first.nodes[0]).toMatchObject({
       nodeId: "crate",
+      parentId: null,
+      transform,
       pivotId: "crate-pivot",
       colliderId: "crate-collider",
       materialId: "wood",
@@ -169,6 +173,35 @@ describe("SceneAxi sculpt reconstruction", () => {
     expect(validateSculptArtifact(result.artifact).ok).toBe(true);
   });
 
+  it("normalizes legacy hybrid specs without invalidating their intake path", () => {
+    const legacy = Object.fromEntries(
+      Object.entries(fixtureSpec()).filter(
+        ([key]) => key !== "complexityClass" && key !== "passes",
+      ),
+    ) as unknown as LegacyObjectSculptSpec;
+    const result = reconstructSculpt({
+      schemaVersion: 1,
+      kind: SCULPT_INTAKE_KIND,
+      intakeId: "legacy-crate",
+      mode: "structured-spec",
+      structuredSpec: {
+        ...legacy,
+        sockets: legacy.sockets.filter(
+          (socket) => socket.kind !== "attachment",
+        ),
+      },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.artifact.spec.passes.map((pass) => pass.id)).toEqual([
+      "blockout",
+      "structure",
+      "materials",
+      "sockets",
+    ]);
+    expect(result.artifact.runtimeHierarchy.attachments).toHaveLength(1);
+  });
+
   it("binds the real procedural export and its fixed-seed emit digest", () => {
     const spec = fixtureSpec();
     const result = reconstructSculpt(
@@ -204,7 +237,7 @@ describe("SceneAxi sculpt reconstruction", () => {
       mode: "structured-spec",
       structuredSpec: fixtureSpec(),
     } as const;
-    const refine = vi.fn((spec: ObjectSculptSpec) => spec);
+    const refine = vi.fn((spec: SculptQualityObjectSculptSpec) => spec);
     expect(reconstructSculpt(intake, { offlineAgent: { refine } }).ok).toBe(true);
     expect(refine).not.toHaveBeenCalled();
 
@@ -223,7 +256,7 @@ describe("SceneAxi sculpt reconstruction", () => {
   });
 
   it("snapshots retained offline-agent output before artifact construction", () => {
-    const retained: ObjectSculptSpec[] = [];
+    const retained: SculptQualityObjectSculptSpec[] = [];
     const result = reconstructSculpt(
       {
         schemaVersion: 1,
@@ -277,7 +310,7 @@ describe("SceneAxi sculpt reconstruction", () => {
       {
         enableOfflineAgent: true,
         offlineAgent: {
-          refine(spec): ObjectSculptSpec {
+          refine(spec): SculptQualityObjectSculptSpec {
             call += 1;
             return {
               ...spec,
@@ -287,6 +320,43 @@ describe("SceneAxi sculpt reconstruction", () => {
                   : pass,
               ),
             };
+          },
+        },
+      },
+    );
+    expect(result).toMatchObject({
+      ok: false,
+      code: "offline-agent-nondeterministic",
+    });
+  });
+
+  it("snapshots a shared offline result before the second refinement", () => {
+    const shared = structuredClone(fixtureSpec()) as {
+      passes: Array<{
+        id: string;
+        deterministic: true;
+        steps: string[];
+      }>;
+    } & SculptQualityObjectSculptSpec;
+    let call = 0;
+    const result = reconstructSculpt(
+      {
+        schemaVersion: 1,
+        kind: SCULPT_INTAKE_KIND,
+        intakeId: "shared-offline-crate",
+        mode: "structured-spec",
+        structuredSpec: fixtureSpec(),
+      },
+      {
+        enableOfflineAgent: true,
+        offlineAgent: {
+          refine() {
+            call += 1;
+            shared.passes[0] = {
+              ...shared.passes[0]!,
+              steps: [`offline-agent-${String(call)}`],
+            };
+            return shared;
           },
         },
       },

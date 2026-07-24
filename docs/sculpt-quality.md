@@ -6,9 +6,9 @@ Minimum E2 entry points.
 
 ## Shipped contract depth
 
-- `ObjectSculptSpec` requires deterministic `blockout → structure → materials
-  → sockets` passes. Extra deterministic passes are allowed between those
-  required stages.
+- The sculpt-quality branch of `ObjectSculptSpec` requires deterministic
+  `blockout → structure → materials → sockets` passes; the closed v1 extension
+  permits only `surface-detail` immediately before `sockets`.
 - Non-trivial specs require a reference-checked detail inventory and refuse
   shallow declared or structural depth with stable diagnostics.
 - Sculpt Artifacts carry a versioned animation-ready runtime hierarchy with
@@ -27,6 +27,13 @@ and
 [`sculpt-artifact.schema.json`](../packages/schemas/contracts/sculpt-artifact.schema.json).
 Runtime validators and public types live at `@sceneaxi/schemas`; reconstruction
 and procedural emit live at `@sceneaxi/authoring-core`.
+
+PR #75 ObjectSculptSpec and Sculpt Artifact v1 payloads remain valid as the
+legacy v1 branch. `normalizeObjectSculptSpec` deterministically adds the four
+quality passes and an attachment socket before reconstruction. Quality
+procedural evidence resolves through the public `@sceneaxi/authoring-core`
+`emitSculptProcedural` export and is recomputed from spec plus seed during
+artifact validation.
 
 ## Demos and evidence
 

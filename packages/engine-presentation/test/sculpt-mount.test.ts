@@ -11,10 +11,16 @@ import {
 } from "@sceneaxi/engine-presentation";
 import {
   OBJECT_SCULPT_SPEC_KIND,
+  SCULPT_PROCEDURAL_EXPORT_NAME,
+  SCULPT_PROCEDURAL_MODULE_ID,
+  SCULPT_PROCEDURAL_SOURCE_DIGEST,
   SCULPT_ARTIFACT_KIND,
   SCULPT_SCHEMA_VERSION,
+  computeSculptProceduralEmit,
+  digestObjectSculptSpec,
   projectAnimationReadyHierarchy,
   type SculptArtifact,
+  type SculptQualityArtifact,
 } from "@sceneaxi/schemas";
 
 const digest = (character: string) => `sha256:${character.repeat(64)}`;
@@ -24,7 +30,7 @@ const transform = {
   scale: [1, 1, 1],
 } as const;
 
-function fixtureArtifact(): SculptArtifact {
+function fixtureArtifact(): SculptQualityArtifact {
   const hierarchy = [
     { id: "crate", parentId: null, componentId: "body", transform },
     {
@@ -65,27 +71,28 @@ function fixtureArtifact(): SculptArtifact {
       },
     ],
   };
+  const emitted = computeSculptProceduralEmit(spec, { seed: 0 });
   return {
     schemaVersion: SCULPT_SCHEMA_VERSION,
     kind: SCULPT_ARTIFACT_KIND,
     artifactId: "fixture-crate-artifact",
     spec,
     proceduralModule: {
-      moduleId: "sceneaxi/fixture-crate",
-      exportName: "buildFixtureCrate",
-      sourceDigest: digest("c"),
+      moduleId: SCULPT_PROCEDURAL_MODULE_ID,
+      exportName: SCULPT_PROCEDURAL_EXPORT_NAME,
+      sourceDigest: SCULPT_PROCEDURAL_SOURCE_DIGEST,
       seed: 0,
-      emitDigest: digest("e"),
+      emitDigest: emitted.digest,
     },
     runtimeHierarchy: projectAnimationReadyHierarchy(spec),
     evidence: {
       method: "structured-fixture",
       intakeDigest: digest("a"),
-      specDigest: digest("b"),
-      proceduralModuleDigest: digest("c"),
+      specDigest: digestObjectSculptSpec(spec),
+      proceduralModuleDigest: SCULPT_PROCEDURAL_SOURCE_DIGEST,
       qualityGates: [
         { id: "contract", status: "passed", digest: digest("d") },
-        { id: "procedural-emit", status: "passed", digest: digest("e") },
+        { id: "procedural-emit", status: "passed", digest: emitted.digest },
       ],
     },
   };

@@ -6,8 +6,8 @@
   "fixture": {
     "intakePath": "tests/e2e/fixtures/hybrid-sculpt/structured-spec.intake.json",
     "artifactId": "golden-sculpt-artifact",
-    "artifactDigest": "sha256:98d01453b4d92fa8ccc847e32ffa48a80e8854d0994b125d5513858bbb5053a3",
-    "artifactBytesDigest": "sha256:98d01453b4d92fa8ccc847e32ffa48a80e8854d0994b125d5513858bbb5053a3"
+    "artifactDigest": "sha256:61071d7badf6cf6b2451324cfcf104673577b95b225872b55d345706e5c7831b",
+    "artifactBytesDigest": "sha256:61071d7badf6cf6b2451324cfcf104673577b95b225872b55d345706e5c7831b"
   },
   "mount": {
     "backend": "experimental-three",
@@ -22,19 +22,19 @@
     "socketValue": -0.249795,
     "collisionCount": 2,
     "replayDigest": "sha256:2169628da18aa04086fa1ad6ce7c3a8452858e0915bc6693346c4e678dd42152",
-    "saveDigest": "sha256:9598f0823356ed62d4933b11d7f40c0a8417d72d0c859a0b8e490ad06484462c"
+    "saveDigest": "sha256:269e0f9c99ae3792e3abe4d0823b3cc825654a9b97c914ddfb80de758f14547d"
   },
   "editor": {
     "treeSize": 3,
     "previewDrawCalls": 2,
     "proposalPointer": "/data",
     "restoredIds": ["golden-one"],
-    "documentDigest": "sha256:29e7e02a0f2b5e07df6d24055b3b7529db3390949980d759900e1077ef8a3335"
+    "documentDigest": "sha256:b6f710250b791d7f9487f0c0610f6e4f1ad67e643981e206be7c15e2b49a85a6"
   },
   "liveDemo": {
     "intakePath": "tests/e2e/fixtures/hybrid-sculpt/demo-image-brief.intake.json",
     "artifactId": "demo-lantern-artifact",
-    "artifactDigest": "sha256:1eac9183b7c89ba5fea2dc305c3da9db08c03ad1cb42b620d1bff84e9cd4718b",
+    "artifactDigest": "sha256:43300e158d804a042894d2358757e5b4c38d64bda9c6cdd02b045aa0da9f675b",
     "previewDrawCalls": 2,
     "selectedArtifactId": "demo-lantern-artifact"
   },

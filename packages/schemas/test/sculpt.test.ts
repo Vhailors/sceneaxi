@@ -2,16 +2,25 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   OBJECT_SCULPT_SPEC_KIND,
+  SCULPT_PROCEDURAL_EXPORT_NAME,
+  SCULPT_PROCEDURAL_MODULE_ID,
+  SCULPT_PROCEDURAL_SOURCE_DIGEST,
   SCULPT_ARTIFACT_KIND,
   SCULPT_INTAKE_KIND,
   SCULPT_SCHEMA_VERSION,
+  computeSculptProceduralEmit,
   contracts,
+  digestObjectSculptSpec,
+  normalizeObjectSculptSpec,
   projectAnimationReadyHierarchy,
   validateObjectSculptSpec,
   validateSculptArtifact,
   validateSculptIntake,
+  type LegacyObjectSculptSpec,
   type ObjectSculptSpec,
   type SculptArtifact,
+  type SculptQualityArtifact,
+  type SculptQualityObjectSculptSpec,
 } from "@sceneaxi/schemas";
 
 const digest = (character: string) => `sha256:${character.repeat(64)}`;
@@ -72,7 +81,7 @@ const fixtureSpec = {
   ],
 } as const satisfies ObjectSculptSpec;
 
-function nonTrivialFixtureSpec(): ObjectSculptSpec {
+function nonTrivialFixtureSpec(): SculptQualityObjectSculptSpec {
   return {
     ...fixtureSpec,
     complexityClass: "non-trivial",
@@ -103,28 +112,29 @@ function nonTrivialFixtureSpec(): ObjectSculptSpec {
   };
 }
 
-function fixtureArtifact(): SculptArtifact {
+function fixtureArtifact(): SculptQualityArtifact {
+  const emitted = computeSculptProceduralEmit(fixtureSpec, { seed: 0 });
   return {
     schemaVersion: SCULPT_SCHEMA_VERSION,
     kind: SCULPT_ARTIFACT_KIND,
     artifactId: "fixture-crate-artifact",
     spec: fixtureSpec,
     proceduralModule: {
-      moduleId: "sceneaxi/fixture-crate",
-      exportName: "buildFixtureCrate",
-      sourceDigest: digest("c"),
+      moduleId: SCULPT_PROCEDURAL_MODULE_ID,
+      exportName: SCULPT_PROCEDURAL_EXPORT_NAME,
+      sourceDigest: SCULPT_PROCEDURAL_SOURCE_DIGEST,
       seed: 0,
-      emitDigest: digest("e"),
+      emitDigest: emitted.digest,
     },
     runtimeHierarchy: projectAnimationReadyHierarchy(fixtureSpec),
     evidence: {
       method: "structured-fixture",
       intakeDigest: digest("a"),
-      specDigest: digest("b"),
-      proceduralModuleDigest: digest("c"),
+      specDigest: digestObjectSculptSpec(fixtureSpec),
+      proceduralModuleDigest: SCULPT_PROCEDURAL_SOURCE_DIGEST,
       qualityGates: [
         { id: "contract", status: "passed", digest: digest("d") },
-        { id: "procedural-emit", status: "passed", digest: digest("e") },
+        { id: "procedural-emit", status: "passed", digest: emitted.digest },
       ],
     },
   };
@@ -132,6 +142,12 @@ function fixtureArtifact(): SculptArtifact {
 
 function reverseMemberOrder<Value extends object>(value: Value): Value {
   return Object.fromEntries(Object.entries(value).reverse()) as Value;
+}
+
+function sparseCopy<Value>(values: readonly Value[]) {
+  const sparse = [...values];
+  Reflect.deleteProperty(sparse, 0);
+  return sparse;
 }
 
 describe("hybrid sculpt contracts", () => {
@@ -201,6 +217,93 @@ describe("hybrid sculpt contracts", () => {
     });
   });
 
+  it("preserves and explicitly normalizes legacy PR 75 specs", () => {
+    const legacy = Object.fromEntries(
+      Object.entries(fixtureSpec).filter(
+        ([key]) => key !== "complexityClass" && key !== "passes",
+      ),
+    ) as unknown as LegacyObjectSculptSpec;
+    expect(validateObjectSculptSpec(legacy)).toEqual({
+      ok: true,
+      value: legacy,
+    });
+
+    const normalized = normalizeObjectSculptSpec(legacy);
+    expect(normalized.passes.map((pass) => pass.id)).toEqual([
+      "blockout",
+      "structure",
+      "materials",
+      "sockets",
+    ]);
+    expect(normalized.complexityClass).toBe("simple");
+    expect(normalized.sockets.some((socket) => socket.kind === "attachment")).toBe(
+      true,
+    );
+
+    const legacyArtifact: SculptArtifact = {
+      schemaVersion: 1,
+      kind: SCULPT_ARTIFACT_KIND,
+      artifactId: "legacy-crate-artifact",
+      spec: legacy,
+      proceduralModule: {
+        moduleId: "sceneaxi/legacy-crate",
+        exportName: "buildLegacyCrate",
+        sourceDigest: digest("c"),
+      },
+      runtimeHierarchy: {
+        rootNodeId: legacy.rootNodeId,
+        nodes: legacy.hierarchy,
+      },
+      evidence: {
+        method: "structured-fixture",
+        intakeDigest: digest("a"),
+        specDigest: digest("b"),
+        proceduralModuleDigest: digest("c"),
+        qualityGates: [
+          { id: "contract", status: "passed", digest: digest("d") },
+        ],
+      },
+    };
+    expect(validateSculptArtifact(legacyArtifact)).toEqual({
+      ok: true,
+      value: legacyArtifact,
+    });
+  });
+
+  it("publishes closed ordered pass sequences in the authoritative schema", () => {
+    const schema = JSON.parse(
+      readFileSync(
+        new URL("../contracts/object-sculpt-spec.schema.json", import.meta.url),
+        "utf8",
+      ),
+    ) as {
+      oneOf: Array<{
+        properties?: {
+          passes?: {
+            oneOf?: Array<{
+              prefixItems: Array<{ $ref: string }>;
+            }>;
+          };
+        };
+      }>;
+    };
+    const sequences = schema.oneOf
+      .flatMap((branch) => branch.properties?.passes?.oneOf ?? [])
+      .map((sequence) =>
+        sequence.prefixItems.map((item) => item.$ref.split("/").at(-1)),
+      );
+    expect(sequences).toEqual([
+      ["blockoutPass", "structurePass", "materialsPass", "socketsPass"],
+      [
+        "blockoutPass",
+        "structurePass",
+        "materialsPass",
+        "surfaceDetailPass",
+        "socketsPass",
+      ],
+    ]);
+  });
+
   it("accepts the required multi-pass order and a reference-checked non-trivial inventory", () => {
     const base = nonTrivialFixtureSpec();
     const spec = {
@@ -243,6 +346,16 @@ describe("hybrid sculpt contracts", () => {
       "empty-sculpt-pass",
     ],
     [
+      "missing attachment socket",
+      {
+        ...fixtureSpec,
+        sockets: fixtureSpec.sockets.filter(
+          (socket) => socket.kind !== "attachment",
+        ),
+      },
+      "missing-attachment-socket",
+    ],
+    [
       "missing non-trivial inventory",
       { ...fixtureSpec, complexityClass: "non-trivial" },
       "missing-detail-inventory",
@@ -274,6 +387,41 @@ describe("hybrid sculpt contracts", () => {
     const result = validateObjectSculptSpec(spec);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.diagnostics[0]?.code).toBe(code);
+  });
+
+  it("refuses sparse holes in every required quality inventory", () => {
+    const sparsePasses = [...qualityPasses];
+    Reflect.deleteProperty(sparsePasses, 1);
+    const steps = ["establish-volume"];
+    Reflect.deleteProperty(steps, 0);
+    const sparseSteps = qualityPasses.map((pass, index) =>
+      index === 0 ? { ...pass, steps } : pass,
+    );
+    const sparseInventory = structuredClone(
+      nonTrivialFixtureSpec(),
+    ) as SculptQualityArtifact["spec"];
+    const silhouetteFeatures = [
+      ...(sparseInventory.detailInventory?.silhouetteFeatures ?? []),
+    ];
+    Reflect.deleteProperty(silhouetteFeatures, 0);
+
+    for (const spec of [
+      { ...fixtureSpec, passes: sparsePasses },
+      { ...fixtureSpec, passes: sparseSteps },
+      { ...fixtureSpec, materials: sparseCopy(fixtureSpec.materials) },
+      { ...fixtureSpec, components: sparseCopy(fixtureSpec.components) },
+      { ...fixtureSpec, hierarchy: sparseCopy(fixtureSpec.hierarchy) },
+      { ...fixtureSpec, sockets: sparseCopy(fixtureSpec.sockets) },
+      {
+        ...sparseInventory,
+        detailInventory: {
+          ...sparseInventory.detailInventory,
+          silhouetteFeatures,
+        },
+      },
+    ]) {
+      expect(validateObjectSculptSpec(spec).ok).toBe(false);
+    }
   });
 
   it.each([
@@ -358,7 +506,14 @@ describe("hybrid sculpt contracts", () => {
         componentId: string;
         transform: typeof transform;
       }>;
-      sockets: [];
+      sockets: Array<{
+        id: string;
+        nodeId: string;
+        kind: "attachment";
+        axis: "y";
+        amplitude: number;
+        frequencyHz: number;
+      }>;
     };
     deep.rootNodeId = "node-0";
     deep.hierarchy = Array.from({ length: 5_000 }, (_, index) => ({
@@ -367,7 +522,16 @@ describe("hybrid sculpt contracts", () => {
       componentId: "body",
       transform,
     }));
-    deep.sockets = [];
+    deep.sockets = [
+      {
+        id: "root-attachment",
+        nodeId: "node-0",
+        kind: "attachment",
+        axis: "y",
+        amplitude: 0,
+        frequencyHz: 0,
+      },
+    ];
 
     expect(validateObjectSculptSpec(deep)).toEqual({ ok: true, value: deep });
   });
@@ -513,6 +677,20 @@ describe("hybrid sculpt contracts", () => {
     });
     expect(emitResult.ok).toBe(false);
     if (!emitResult.ok) expect(emitResult.diagnostics[0]?.code).toBe("invalid-reference");
+
+    const fabricated = structuredClone(fixtureArtifact());
+    Reflect.set(fabricated.proceduralModule, "emitDigest", digest("f"));
+    const proceduralGate = fabricated.evidence.qualityGates.find(
+      (gate) => gate.id === "procedural-emit",
+    );
+    expect(proceduralGate).toBeDefined();
+    if (proceduralGate === undefined) return;
+    Reflect.set(proceduralGate, "digest", digest("f"));
+    const fabricatedResult = validateSculptArtifact(fabricated);
+    expect(fabricatedResult.ok).toBe(false);
+    if (!fabricatedResult.ok) {
+      expect(fabricatedResult.diagnostics[0]?.code).toBe("invalid-reference");
+    }
   });
 
   it("contains no renderer-specific public field vocabulary", () => {
