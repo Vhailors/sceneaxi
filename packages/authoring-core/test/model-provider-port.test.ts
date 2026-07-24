@@ -618,6 +618,107 @@ describe("Model Provider Port", () => {
     expect(calls).toEqual([]);
   });
 
+  it("uses one frozen request snapshot across policy, dispatch, and evidence", async () => {
+    let releasePolicy = () => {};
+    let policyStarted = () => {};
+    const policyWaiting = new Promise<void>((resolve) => {
+      releasePolicy = resolve;
+    });
+    const started = new Promise<void>((resolve) => {
+      policyStarted = resolve;
+    });
+    const dispatched: Parameters<
+      NonNullable<ModelProviderAdapter["complete"]>
+    >[0][] = [];
+    const adapter = {
+      ...fakeAdapter(),
+      async complete(request) {
+        dispatched.push(request);
+        return {
+          response: {
+            schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+            operation: "complete" as const,
+            text: request.prompt,
+            finishReason: "stop" as const,
+          },
+          executedModel: model,
+        };
+      },
+    } satisfies ModelProviderAdapter;
+    const port = createModelProviderPort({
+      adapter,
+      profilePolicies: {
+        "@sceneaxi/profile-game": async () => {
+          policyStarted();
+          await policyWaiting;
+          return { ok: true };
+        },
+      },
+    });
+    const request = {
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      operation: "complete" as const,
+      profile: "@sceneaxi/profile-game" as const,
+      model: { ...model },
+      prompt: "original prompt",
+    };
+
+    const resultPromise = port.complete(request);
+    await started;
+    request.profile = "@sceneaxi/profile-kids" as typeof request.profile;
+    request.model.provider = "mutated-provider";
+    request.prompt = "mutated prompt";
+    releasePolicy();
+    const result = await resultPromise;
+
+    expect(result).toMatchObject({
+      ok: true,
+      response: { text: "original prompt" },
+      evidence: {
+        profile: "@sceneaxi/profile-game",
+        model: { provider: "fake-provider" },
+      },
+    });
+    expect(dispatched).toHaveLength(1);
+    expect(dispatched[0]).not.toBe(request);
+    expect(dispatched[0]).toMatchObject({
+      profile: "@sceneaxi/profile-game",
+      prompt: "original prompt",
+      model: { provider: "fake-provider" },
+    });
+    expect(Object.isFrozen(dispatched[0])).toBe(true);
+    expect(Object.isFrozen(dispatched[0]?.model)).toBe(true);
+  });
+
+  it("refuses malformed policy decisions before adapter dispatch", async () => {
+    const malformedDecisions = [undefined, {}, { ok: "allow" }];
+
+    for (const decision of malformedDecisions) {
+      const calls: string[] = [];
+      const port = createModelProviderPort({
+        adapter: fakeAdapter(calls),
+        profilePolicies: {
+          "@sceneaxi/profile-game": (() =>
+            decision) as unknown as ModelProviderPolicyFilter,
+        },
+      });
+
+      const result = await port.complete({
+        schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+        operation: "complete",
+        profile: "@sceneaxi/profile-game",
+        model,
+        prompt: "invalid policy decision",
+      });
+
+      expect(result).toMatchObject({
+        ok: false,
+        reason: "MODEL_PROVIDER_POLICY_DECISION_INVALID",
+      });
+      expect(calls).toEqual([]);
+    }
+  });
+
   it("refuses malformed complete and tool-call response envelopes without evidence", async () => {
     const recorded: ModelProviderCallEvidence[] = [];
     const invalidCompleteAdapter = {
@@ -803,7 +904,7 @@ describe("Model Provider Port", () => {
     expect(recorded).toEqual([]);
   });
 
-  it("keeps stream delivery lazy and records evidence on clean completion", async () => {
+  it("keeps stream delivery lazy and records terminal evidence exactly once", async () => {
     const events: string[] = [];
     const recorded: ModelProviderCallEvidence[] = [];
     const adapter = {
@@ -823,6 +924,12 @@ describe("Model Provider Port", () => {
             operation: "stream" as const,
             delta: "second",
             done: true,
+          };
+          yield {
+            schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+            operation: "stream" as const,
+            delta: "after-terminal",
+            done: false,
           };
         }
         return { response: chunks(), executedModel: model };
@@ -860,13 +967,12 @@ describe("Model Provider Port", () => {
       done: false,
     });
     expect(events).toEqual(["started", "resumed"]);
-    expect(recorded).toEqual([]);
-    await expect(iterator.next()).resolves.toEqual({
-      value: undefined,
-      done: true,
-    });
     expect(recorded).toHaveLength(1);
     expect(recorded[0]).toEqual(result.evidence);
+    await expect(iterator.next()).rejects.toMatchObject({
+      reason: "MODEL_PROVIDER_RESPONSE_ENVELOPE_INVALID",
+    });
+    expect(recorded).toHaveLength(1);
   });
 
   it("exposes a typed async stream without network or spend", async () => {

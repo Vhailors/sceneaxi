@@ -13,6 +13,8 @@ import {
   MODEL_PROVIDER_ROUTE_KINDS,
   isJsonObject,
   isJsonValue,
+  type JsonObject,
+  type JsonValue,
   type ModelCapabilityDescriptor,
   type ModelCompleteRequest,
   type ModelCompleteResponse,
@@ -35,6 +37,7 @@ export const MODEL_PROVIDER_REFUSE_REASONS = Object.freeze({
   adapterMissing: "MODEL_PROVIDER_ADAPTER_MISSING",
   routeKindInvalid: "MODEL_PROVIDER_ROUTE_KIND_INVALID",
   profilePolicyMissing: "MODEL_PROVIDER_PROFILE_POLICY_MISSING",
+  policyDecisionInvalid: "MODEL_PROVIDER_POLICY_DECISION_INVALID",
   capabilityInvalid: "MODEL_PROVIDER_CAPABILITY_DESCRIPTOR_INVALID",
   capabilityUnsupported: "MODEL_PROVIDER_CAPABILITY_UNSUPPORTED",
   executedModelMissing: "MODEL_PROVIDER_EXECUTED_MODEL_MISSING",
@@ -130,8 +133,12 @@ export type CreateModelProviderPortOptions = Readonly<{
   ) => void | Promise<void>;
 }>;
 
-type ModelProviderPreflight =
-  | Readonly<{ ok: true; adapter: ModelProviderAdapter }>
+type ModelProviderPreflight<Request extends ModelProviderRequest> =
+  | Readonly<{
+      ok: true;
+      adapter: ModelProviderAdapter;
+      request: Request;
+    }>
   | ModelProviderRefuse;
 
 type AdapterSuccessEnvelope = Readonly<{
@@ -221,6 +228,90 @@ function isModelProviderProfile(
   );
 }
 
+function snapshotJsonValue(value: JsonValue): JsonValue {
+  if (Array.isArray(value)) {
+    return Object.freeze(value.map(snapshotJsonValue));
+  }
+  if (isJsonObject(value)) {
+    return snapshotJsonObject(value);
+  }
+  return value;
+}
+
+function snapshotJsonObject(value: JsonObject): JsonObject {
+  return Object.freeze(
+    Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [
+        key,
+        snapshotJsonValue(entry),
+      ]),
+    ),
+  );
+}
+
+function snapshotModelDescriptor(value: ModelDescriptor): ModelDescriptor {
+  return Object.freeze({
+    model: value.model,
+    provider: value.provider,
+    quantization: value.quantization,
+    version: value.version,
+  });
+}
+
+function snapshotCompleteRequest(
+  request: ModelCompleteRequest,
+): ModelCompleteRequest {
+  return Object.freeze({
+    schemaVersion: request.schemaVersion,
+    operation: request.operation,
+    profile: request.profile,
+    model: snapshotModelDescriptor(request.model),
+    prompt: request.prompt,
+  });
+}
+
+function snapshotToolCallRequest(
+  request: ModelToolCallRequest,
+): ModelToolCallRequest {
+  return Object.freeze({
+    schemaVersion: request.schemaVersion,
+    operation: request.operation,
+    profile: request.profile,
+    model: snapshotModelDescriptor(request.model),
+    prompt: request.prompt,
+    tools: Object.freeze(
+      request.tools.map((tool) =>
+        Object.freeze({
+          name: tool.name,
+          ...(tool.description === undefined
+            ? {}
+            : { description: tool.description }),
+          inputSchema: snapshotJsonObject(tool.inputSchema),
+        }),
+      ),
+    ),
+  });
+}
+
+function snapshotStreamRequest(request: ModelStreamRequest): ModelStreamRequest {
+  return Object.freeze({
+    schemaVersion: request.schemaVersion,
+    operation: request.operation,
+    profile: request.profile,
+    model: snapshotModelDescriptor(request.model),
+    prompt: request.prompt,
+  });
+}
+
+function snapshotCapabilities(
+  capabilities: ModelCapabilityDescriptor,
+): ModelCapabilityDescriptor {
+  return Object.freeze({
+    schemaVersion: capabilities.schemaVersion,
+    operations: Object.freeze([...capabilities.operations]),
+  });
+}
+
 function hasRequiredAndOptionalKeys(
   value: Record<string, unknown>,
   required: ReadonlyArray<string>,
@@ -295,6 +386,19 @@ function isAdapterSuccess(value: unknown): value is AdapterSuccessEnvelope {
     Object.hasOwn(value, "response") &&
     Object.hasOwn(value, "executedModel") &&
     isModelDescriptor(value.executedModel)
+  );
+}
+
+function isPolicyDecision(value: unknown): value is ModelProviderPolicyDecision {
+  if (!isJsonObject(value)) return false;
+  if (value.ok === true) return hasExactKeys(value, ["ok"]);
+  return (
+    value.ok === false &&
+    hasExactKeys(value, ["ok", "reason", "message"]) &&
+    typeof value.reason === "string" &&
+    value.reason.length > 0 &&
+    typeof value.message === "string" &&
+    value.message.length > 0
   );
 }
 
@@ -391,10 +495,11 @@ function evidenceFor(
 export function createModelProviderPort(
   options: CreateModelProviderPortOptions,
 ): ModelProviderPort {
-  const preflight = async (
-    request: ModelProviderRequest,
-    expectedOperation: ModelProviderOperation,
-  ): Promise<ModelProviderPreflight> => {
+  const preflight = async <Request extends ModelProviderRequest>(
+    request: Request,
+    expectedOperation: Request["operation"],
+    snapshotRequest: (request: Request) => Request,
+  ): Promise<ModelProviderPreflight<Request>> => {
     if (!isRecord(request)) {
       return refuse(
         MODEL_PROVIDER_REFUSE_REASONS.requestInvalid,
@@ -423,6 +528,7 @@ export function createModelProviderPort(
       );
     }
 
+    const validatedRequest = snapshotRequest(request);
     const adapter = options.adapter;
     if (adapter === undefined) {
       return refuse(
@@ -431,51 +537,65 @@ export function createModelProviderPort(
       );
     }
 
-    if (!isModelProviderRouteKind(adapter.routeKind)) {
+    const routeKind = adapter.routeKind;
+    if (!isModelProviderRouteKind(routeKind)) {
       return refuse(
         MODEL_PROVIDER_REFUSE_REASONS.routeKindInvalid,
         "The configured adapter route kind is invalid; dispatch refused.",
       );
     }
 
-    if (request.profile === "@sceneaxi/profile-kids") {
-      return kidsPolicyRefusal(adapter.routeKind);
+    if (validatedRequest.profile === "@sceneaxi/profile-kids") {
+      return kidsPolicyRefusal(routeKind);
     }
 
-    if (!isCapabilityDescriptor(adapter.capabilities)) {
+    const adapterCapabilities = adapter.capabilities;
+    if (!isCapabilityDescriptor(adapterCapabilities)) {
       return refuse(
         MODEL_PROVIDER_REFUSE_REASONS.capabilityInvalid,
         `The configured adapter capability descriptor is invalid or uses an unsupported schema version; expected '${MODEL_PROVIDER_PORT_SCHEMA_VERSION}'.`,
       );
     }
 
-    const policy = Object.hasOwn(options.profilePolicies, request.profile)
-      ? options.profilePolicies[request.profile]
+    const capabilities = snapshotCapabilities(adapterCapabilities);
+    const policy = Object.hasOwn(
+      options.profilePolicies,
+      validatedRequest.profile,
+    )
+      ? options.profilePolicies[validatedRequest.profile]
       : undefined;
     if (policy === undefined) {
       return refuse(
         MODEL_PROVIDER_REFUSE_REASONS.profilePolicyMissing,
-        `No Model Provider policy filter is registered for '${request.profile}'; dispatch refused.`,
+        `No Model Provider policy filter is registered for '${validatedRequest.profile}'; dispatch refused.`,
       );
     }
 
-    const decision = await policy({
-      profile: request.profile,
-      operation: request.operation,
-      model: request.model,
-      routeKind: adapter.routeKind,
-      capabilities: adapter.capabilities,
-    });
+    const decision = await policy(
+      Object.freeze({
+        profile: validatedRequest.profile,
+        operation: validatedRequest.operation,
+        model: validatedRequest.model,
+        routeKind,
+        capabilities,
+      }),
+    );
+    if (!isPolicyDecision(decision)) {
+      return refuse(
+        MODEL_PROVIDER_REFUSE_REASONS.policyDecisionInvalid,
+        `The Model Provider policy filter for '${validatedRequest.profile}' returned an invalid decision; dispatch refused.`,
+      );
+    }
     if (!decision.ok) return refuse(decision.reason, decision.message);
 
-    if (!adapter.capabilities.operations.includes(request.operation)) {
+    if (!capabilities.operations.includes(validatedRequest.operation)) {
       return refuse(
         MODEL_PROVIDER_REFUSE_REASONS.capabilityUnsupported,
-        `The configured adapter does not declare '${request.operation}' capability.`,
+        `The configured adapter does not declare '${validatedRequest.operation}' capability.`,
       );
     }
 
-    return { ok: true, adapter };
+    return Object.freeze({ ok: true, adapter, request: validatedRequest });
   };
 
   const succeed = async <Response>(
@@ -523,9 +643,23 @@ export function createModelProviderPort(
     }
     const evidence = evidenceFor(request, adapterResult.executedModel);
     let evidenceRecorded = false;
+    const recordEvidenceOnce = async () => {
+      if (evidenceRecorded) return;
+      evidenceRecorded = true;
+      await options.recordEvidence?.(evidence);
+    };
     const response = Object.freeze({
       async *[Symbol.asyncIterator]() {
+        let terminalAccepted = false;
         for await (const chunk of stream) {
+          if (terminalAccepted) {
+            throw Object.assign(
+              new TypeError(
+                "The adapter returned a 'stream' chunk after termination; stream refused.",
+              ),
+              { reason: MODEL_PROVIDER_REFUSE_REASONS.responseInvalid },
+            );
+          }
           if (!isStreamChunk(chunk)) {
             throw Object.assign(
               new TypeError(
@@ -534,17 +668,19 @@ export function createModelProviderPort(
               { reason: MODEL_PROVIDER_REFUSE_REASONS.responseInvalid },
             );
           }
-          yield Object.freeze({
+          const acceptedChunk = Object.freeze({
             schemaVersion: chunk.schemaVersion,
             operation: chunk.operation,
             delta: chunk.delta,
             done: chunk.done,
           });
+          if (acceptedChunk.done) {
+            terminalAccepted = true;
+            await recordEvidenceOnce();
+          }
+          yield acceptedChunk;
         }
-        if (!evidenceRecorded) {
-          evidenceRecorded = true;
-          await options.recordEvidence?.(evidence);
-        }
+        await recordEvidenceOnce();
       },
     });
     return Object.freeze({
@@ -556,9 +692,13 @@ export function createModelProviderPort(
 
   return Object.freeze({
     async complete(request) {
-      const ready = await preflight(request, "complete");
+      const ready = await preflight(
+        request,
+        "complete",
+        snapshotCompleteRequest,
+      );
       if (!ready.ok) return ready;
-      const { adapter } = ready;
+      const { adapter, request: validatedRequest } = ready;
       if (adapter.complete === undefined) {
         return refuse(
           MODEL_PROVIDER_REFUSE_REASONS.capabilityUnsupported,
@@ -566,16 +706,20 @@ export function createModelProviderPort(
         );
       }
       return succeed<ModelCompleteResponse>(
-        request,
-        await adapter.complete(request),
+        validatedRequest,
+        await adapter.complete(validatedRequest),
         isCompleteResponse,
       );
     },
 
     async toolCall(request) {
-      const ready = await preflight(request, "tool-call");
+      const ready = await preflight(
+        request,
+        "tool-call",
+        snapshotToolCallRequest,
+      );
       if (!ready.ok) return ready;
-      const { adapter } = ready;
+      const { adapter, request: validatedRequest } = ready;
       if (adapter.toolCall === undefined) {
         return refuse(
           MODEL_PROVIDER_REFUSE_REASONS.capabilityUnsupported,
@@ -583,23 +727,26 @@ export function createModelProviderPort(
         );
       }
       return succeed<ModelToolCallResponse>(
-        request,
-        await adapter.toolCall(request),
+        validatedRequest,
+        await adapter.toolCall(validatedRequest),
         isToolCallResponse,
       );
     },
 
     async stream(request) {
-      const ready = await preflight(request, "stream");
+      const ready = await preflight(request, "stream", snapshotStreamRequest);
       if (!ready.ok) return ready;
-      const { adapter } = ready;
+      const { adapter, request: validatedRequest } = ready;
       if (adapter.stream === undefined) {
         return refuse(
           MODEL_PROVIDER_REFUSE_REASONS.capabilityUnsupported,
           "The configured adapter does not implement 'stream'.",
         );
       }
-      return succeedStream(request, await adapter.stream(request));
+      return succeedStream(
+        validatedRequest,
+        await adapter.stream(validatedRequest),
+      );
     },
   });
 }
