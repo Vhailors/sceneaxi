@@ -32,3 +32,15 @@ export type {
 } from "@sceneaxi/schemas";
 
 export { KERNEL_SESSION_SCHEMA_VERSION } from "@sceneaxi/schemas";
+
+export {
+  SCULPT_KERNEL_SAVE_KIND,
+  openSculptKernelSession,
+  replaySculptKernelSession,
+  type SculptAnimationSocketSnapshot,
+  type SculptKernelNodeSnapshot,
+  type SculptKernelOptions,
+  type SculptKernelSaveArtifact,
+  type SculptKernelSession,
+  type SculptKernelSnapshot,
+} from "./sculpt-session.js";
