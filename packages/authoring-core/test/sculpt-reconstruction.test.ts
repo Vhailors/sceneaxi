@@ -68,9 +68,11 @@ function fixtureSpec(): ObjectSculptSpec {
 
 describe("SceneAxi sculpt reconstruction", () => {
   it("emits richer seeded geometry/material/hierarchy plans with stable digests", () => {
-    const first = emitSculptProcedural(fixtureSpec(), { seed: 79 });
+    const spec = fixtureSpec();
+    const first = emitSculptProcedural(spec, { seed: 79 });
     const repeated = emitSculptProcedural(structuredClone(fixtureSpec()), { seed: 79 });
     const differentSeed = emitSculptProcedural(fixtureSpec(), { seed: 80 });
+    const originalDigest = first.digest;
 
     expect(repeated).toEqual(first);
     expect(first.digest).toMatch(/^sha256:[0-9a-f]{64}$/);
@@ -94,6 +96,32 @@ describe("SceneAxi sculpt reconstruction", () => {
       colliderId: "crate-collider",
       materialId: "wood",
     });
+    expect(Reflect.set(spec.components[0]!.dimensions, 0, 99)).toBe(true);
+    expect(first.geometry[0]!.dimensions).toEqual([2, 2, 2]);
+    expect(Reflect.set(first.geometry[0]!.dimensions, 0, 99)).toBe(false);
+    expect(first.digest).toBe(originalDigest);
+    expect(Object.isFrozen(first)).toBe(true);
+    expect(Object.isFrozen(first.passIds)).toBe(true);
+    expect(Object.isFrozen(first.geometry)).toBe(true);
+    expect(Object.isFrozen(first.geometry[0])).toBe(true);
+    expect(Object.isFrozen(first.geometry[0]!.dimensions)).toBe(true);
+    expect(Object.isFrozen(first.materials)).toBe(true);
+    expect(Object.isFrozen(first.materials[0])).toBe(true);
+    expect(Object.isFrozen(first.nodes)).toBe(true);
+    expect(Object.isFrozen(first.nodes[0])).toBe(true);
+  });
+
+  it("does not use locale-sensitive collation for digest-bearing arrays", () => {
+    const localeCompare = vi
+      .spyOn(String.prototype, "localeCompare")
+      .mockImplementation(() => {
+        throw new Error("locale-sensitive comparison");
+      });
+    try {
+      expect(() => emitSculptProcedural(fixtureSpec(), { seed: 79 })).not.toThrow();
+    } finally {
+      localeCompare.mockRestore();
+    }
   });
 
   it("produces byte-stable fixture artifacts and digests", () => {

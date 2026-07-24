@@ -44,6 +44,12 @@ function rounded(value: number) {
   return Number(value.toFixed(6));
 }
 
+function compareCodeUnits(left: string, right: string) {
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
+}
+
 function geometryDetail(component: SculptComponent, seed: number) {
   const unit = seededUnit(seed, `geometry:${component.id}`);
   const radialSegments = 16 + Math.floor(unit * 4) * 4;
@@ -103,51 +109,65 @@ export function emitSculptProcedural(
   const componentById = new Map(
     spec.components.map((component) => [component.id, component]),
   );
-  const geometry = spec.components
-    .map((component) => ({
-      componentId: component.id,
-      primitive: component.primitive,
-      dimensions: component.dimensions,
-      ...geometryDetail(component, seed),
-    }))
-    .sort((left, right) => left.componentId.localeCompare(right.componentId));
-  const materials = spec.materials
-    .map((material) => {
-      const unit = seededUnit(seed, `material:${material.id}`);
-      return {
-        materialId: material.id,
-        baseColor: material.baseColor,
-        metallic: material.metallic,
-        roughness: material.roughness,
-        clearcoat: rounded(unit * 0.35),
-        microRoughness: rounded(Math.min(1, material.roughness + unit * 0.12)),
-      };
-    })
-    .sort((left, right) => left.materialId.localeCompare(right.materialId));
-  const nodes = spec.hierarchy
-    .map((node) => {
-      const component = componentById.get(node.componentId);
-      if (component === undefined) {
-        throw new Error(`Validated sculpt component "${node.componentId}" disappeared.`);
-      }
-      return {
-        nodeId: node.id,
-        componentId: node.componentId,
-        pivotId: `${node.id}-pivot`,
-        colliderId: `${node.id}-collider`,
-        materialId: component.materialId,
-      };
-    })
-    .sort((left, right) => left.nodeId.localeCompare(right.nodeId));
-  const payload = {
+  const geometry = Object.freeze(
+    spec.components
+      .map((component) =>
+        Object.freeze({
+          componentId: component.id,
+          primitive: component.primitive,
+          dimensions: Object.freeze([
+            component.dimensions[0],
+            component.dimensions[1],
+            component.dimensions[2],
+          ] as const),
+          ...geometryDetail(component, seed),
+        }),
+      )
+      .sort((left, right) => compareCodeUnits(left.componentId, right.componentId)),
+  );
+  const materials = Object.freeze(
+    spec.materials
+      .map((material) => {
+        const unit = seededUnit(seed, `material:${material.id}`);
+        return Object.freeze({
+          materialId: material.id,
+          baseColor: material.baseColor,
+          metallic: material.metallic,
+          roughness: material.roughness,
+          clearcoat: rounded(unit * 0.35),
+          microRoughness: rounded(Math.min(1, material.roughness + unit * 0.12)),
+        });
+      })
+      .sort((left, right) => compareCodeUnits(left.materialId, right.materialId)),
+  );
+  const nodes = Object.freeze(
+    spec.hierarchy
+      .map((node) => {
+        const component = componentById.get(node.componentId);
+        if (component === undefined) {
+          throw new Error(
+            `Validated sculpt component "${node.componentId}" disappeared.`,
+          );
+        }
+        return Object.freeze({
+          nodeId: node.id,
+          componentId: node.componentId,
+          pivotId: `${node.id}-pivot`,
+          colliderId: `${node.id}-collider`,
+          materialId: component.materialId,
+        });
+      })
+      .sort((left, right) => compareCodeUnits(left.nodeId, right.nodeId)),
+  );
+  const payload = Object.freeze({
     schemaVersion: SCULPT_PROCEDURAL_EMIT_VERSION,
     kind: SCULPT_PROCEDURAL_EMIT_KIND,
     seed,
-    passIds: spec.passes.map((pass) => pass.id),
+    passIds: Object.freeze(spec.passes.map((pass) => pass.id)),
     geometry,
     materials,
     nodes,
-  } as const;
+  });
   return Object.freeze({
     ...payload,
     digest: digest(canonicalJson(payload as unknown as JsonValue)),
