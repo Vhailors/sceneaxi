@@ -19,8 +19,8 @@ incomplete-hierarchy diagnostics are part of the public TypeScript result.
 Legacy PR #75 v1 payloads remain accepted and can be upgraded with
 `normalizeObjectSculptSpec`; the stricter quality branch requires its ordered
 ledger and an attachment. Procedural evidence is recomputed from spec plus
-seed. `validateSculptProceduralEmit` is the fail-closed contract bridge used by
-authoring-core; schemas does not package-export the concrete computation. See
+seed during artifact validation; schemas does not package-export a procedural
+emitter. See
 [`docs/sculpt-quality.md`](../../docs/sculpt-quality.md) and ADRs 0010–0013.
 
 Reconstruction behavior belongs to

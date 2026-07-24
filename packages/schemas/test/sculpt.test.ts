@@ -17,7 +17,6 @@ import {
   validateObjectSculptSpec,
   validateSculptArtifact,
   validateSculptIntake,
-  validateSculptProceduralEmit,
   validateSculptQualityArtifact,
   validateSculptQualityObjectSculptSpec,
   type LegacyObjectSculptSpec,
@@ -30,6 +29,7 @@ import {
   type SculptProceduralModuleRef,
   type SculptRuntimeHierarchy,
 } from "@sceneaxi/schemas";
+import { computeSculptProceduralEmit } from "../src/sculpt-procedural.js";
 
 interface LegacySculptArtifactExtension extends SculptArtifact {
   readonly consumerTag: string;
@@ -154,8 +154,7 @@ function nonTrivialFixtureSpec(): SculptQualityObjectSculptSpec {
 }
 
 function fixtureArtifact(): SculptQualityArtifact {
-  const emitted = validateSculptProceduralEmit(fixtureSpec, { seed: 0 });
-  if (!emitted.ok) throw new Error(emitted.diagnostics[0]?.message);
+  const emitted = computeSculptProceduralEmit(fixtureSpec, { seed: 0 });
   return {
     schemaVersion: SCULPT_SCHEMA_VERSION,
     kind: SCULPT_ARTIFACT_KIND,
@@ -166,7 +165,7 @@ function fixtureArtifact(): SculptQualityArtifact {
       exportName: SCULPT_PROCEDURAL_EXPORT_NAME,
       sourceDigest: SCULPT_PROCEDURAL_SOURCE_DIGEST,
       seed: 0,
-      emitDigest: emitted.value.digest,
+      emitDigest: emitted.digest,
     },
     runtimeHierarchy: projectAnimationReadyHierarchy(fixtureSpec),
     evidence: {
@@ -176,7 +175,7 @@ function fixtureArtifact(): SculptQualityArtifact {
       proceduralModuleDigest: SCULPT_PROCEDURAL_SOURCE_DIGEST,
       qualityGates: [
         { id: "contract", status: "passed", digest: digest("d") },
-        { id: "procedural-emit", status: "passed", digest: emitted.value.digest },
+        { id: "procedural-emit", status: "passed", digest: emitted.digest },
       ],
     },
   };
@@ -195,10 +194,7 @@ function sparseCopy<Value>(values: readonly Value[]) {
 describe("hybrid sculpt contracts", () => {
   it("keeps concrete procedural computation off the schemas package root", () => {
     expect("computeSculptProceduralEmit" in schemas).toBe(false);
-    expect(validateSculptProceduralEmit(fixtureSpec, { seed: -1 })).toMatchObject({
-      ok: false,
-      diagnostics: [{ code: "invalid-field", path: "$.seed" }],
-    });
+    expect("validateSculptProceduralEmit" in schemas).toBe(false);
   });
 
   it("ships three versioned public JSON Schemas", () => {

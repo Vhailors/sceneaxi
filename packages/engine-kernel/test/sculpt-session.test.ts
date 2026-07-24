@@ -13,7 +13,6 @@ import {
   SCULPT_SCHEMA_VERSION,
   digestObjectSculptSpec,
   projectAnimationReadyHierarchy,
-  validateSculptProceduralEmit,
   type SculptQualityArtifact,
 } from "@sceneaxi/schemas";
 
@@ -78,8 +77,8 @@ function artifact(): SculptQualityArtifact {
       },
     ],
   };
-  const emitted = validateSculptProceduralEmit(spec, { seed: 0 });
-  if (!emitted.ok) throw new Error(emitted.diagnostics[0]?.message);
+  const emitDigest =
+    "sha256:85bf6c1b59cf9f3e45649caf3cdb68bd0d46b933b47a515cfe5dedb69d783f00";
   return {
     schemaVersion: SCULPT_SCHEMA_VERSION,
     kind: SCULPT_ARTIFACT_KIND,
@@ -90,7 +89,7 @@ function artifact(): SculptQualityArtifact {
       exportName: SCULPT_PROCEDURAL_EXPORT_NAME,
       sourceDigest: SCULPT_PROCEDURAL_SOURCE_DIGEST,
       seed: 0,
-      emitDigest: emitted.value.digest,
+      emitDigest,
     },
     runtimeHierarchy: projectAnimationReadyHierarchy(spec),
     evidence: {
@@ -100,7 +99,7 @@ function artifact(): SculptQualityArtifact {
       proceduralModuleDigest: SCULPT_PROCEDURAL_SOURCE_DIGEST,
       qualityGates: [
         { id: "contract", status: "passed", digest: digest("d") },
-        { id: "procedural-emit", status: "passed", digest: emitted.value.digest },
+        { id: "procedural-emit", status: "passed", digest: emitDigest },
       ],
     },
   };

@@ -50,7 +50,7 @@ naming its source.
 | [0007](0007-sceneaxi-owned-sculpt-artifacts.md) | SceneAxi owns Sculpt Intake, ObjectSculptSpec, reconstruction, and Sculpt Artifact contracts |
 | [0008](0008-experimental-three-preview-non-decision.md) | Three preview is experimental and explicitly not a Stage 1 decision |
 | [0009](0009-kernel-owned-toy-physics-animation.md) | Toy physics and animation sockets advance only under kernel authority |
-| [0010](0010-multi-pass-sculpt-quality-gates.md) | ObjectSculptSpec requires deterministic pass order and non-trivial detail inventory |
-| [0011](0011-animation-ready-hierarchy-and-procedural-emit.md) | Sculpt Artifacts bind animation-ready hierarchy metadata and seeded procedural emit |
+| [0010](0010-multi-pass-sculpt-quality-gates.md) | Sculpt-quality ObjectSculptSpec branches require deterministic pass order and non-trivial detail inventory; preserved PR #75 branches do not |
+| [0011](0011-animation-ready-hierarchy-and-procedural-emit.md) | Sculpt-quality Artifact branches bind animation-ready hierarchy metadata and seeded procedural emit; preserved PR #75 branches do not |
 | [0012](0012-offline-agent-assistance-default-off.md) | Optional sculpt agent assistance is injected, offline, deterministic, and default-off |
 | [0013](0013-sculpt-quality-minimal-support-bound.md) | Sculpt-quality demos use existing Mount/kernel/Minimum E2 support without expansion |
