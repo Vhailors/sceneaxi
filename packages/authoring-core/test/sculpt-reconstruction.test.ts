@@ -251,9 +251,17 @@ describe("SceneAxi sculpt reconstruction", () => {
     expect(Reflect.set(retainedMaterial, "baseColor", "#ffffff")).toBe(true);
     expect(result.artifact.spec.materials[0]?.baseColor).toBe("#8b5a2b");
     expect(serializeSculptArtifact(result.artifact)).toBe(result.artifactBytes);
+    expect(Object.isFrozen(result.artifact)).toBe(true);
     expect(Object.isFrozen(result.artifact.spec)).toBe(true);
     expect(Object.isFrozen(result.artifact.spec.materials)).toBe(true);
     expect(Object.isFrozen(result.artifact.spec.materials[0])).toBe(true);
+    expect(Object.isFrozen(result.artifact.proceduralModule)).toBe(true);
+    expect(Object.isFrozen(result.artifact.runtimeHierarchy)).toBe(true);
+    expect(Object.isFrozen(result.artifact.runtimeHierarchy.pivots)).toBe(true);
+    expect(Object.isFrozen(result.artifact.runtimeHierarchy.pivots[0])).toBe(true);
+    expect(Object.isFrozen(result.artifact.evidence)).toBe(true);
+    expect(Object.isFrozen(result.artifact.evidence.qualityGates)).toBe(true);
+    expect(Object.isFrozen(result.artifact.evidence.qualityGates[0])).toBe(true);
   });
 
   it("refuses a nondeterministic injected offline agent by name", () => {

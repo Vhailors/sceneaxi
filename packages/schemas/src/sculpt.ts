@@ -727,7 +727,7 @@ export function projectAnimationReadyHierarchy(
 ): SculptRuntimeHierarchy {
   const components = new Map(spec.components.map((component) => [component.id, component]));
   const attachmentSockets = spec.sockets.filter((socket) => socket.kind === "attachment");
-  return {
+  return snapshotJsonValue({
     schemaVersion: ANIMATION_READY_HIERARCHY_VERSION,
     kind: ANIMATION_READY_HIERARCHY_KIND,
     rootNodeId: spec.rootNodeId,
@@ -763,18 +763,48 @@ export function projectAnimationReadyHierarchy(
       nodeId: socket.nodeId,
       socketId: socket.id,
     })),
-  };
+  });
+}
+
+function snapshotJsonValue<Value>(value: Value): Value {
+  if (Array.isArray(value)) {
+    return Object.freeze(
+      Array.from(value, (entry) => snapshotJsonValue(entry)),
+    ) as Value;
+  }
+  if (value !== null && typeof value === "object") {
+    return Object.freeze(
+      Object.fromEntries(
+        Object.entries(value).map(([key, entry]) => [
+          key,
+          snapshotJsonValue(entry),
+        ]),
+      ),
+    ) as Value;
+  }
+  return value;
 }
 
 function jsonValuesEqual(left: unknown, right: unknown): boolean {
   if (left === right) return true;
   if (Array.isArray(left) || Array.isArray(right)) {
-    return (
-      Array.isArray(left) &&
-      Array.isArray(right) &&
-      left.length === right.length &&
-      left.every((entry, index) => jsonValuesEqual(entry, right[index]))
-    );
+    if (
+      !Array.isArray(left) ||
+      !Array.isArray(right) ||
+      left.length !== right.length
+    ) {
+      return false;
+    }
+    for (let index = 0; index < left.length; index += 1) {
+      if (
+        !Object.hasOwn(left, index) ||
+        !Object.hasOwn(right, index) ||
+        !jsonValuesEqual(left[index], right[index])
+      ) {
+        return false;
+      }
+    }
+    return true;
   }
   if (!isJsonObject(left) || !isJsonObject(right)) return false;
   const leftKeys = Object.keys(left);

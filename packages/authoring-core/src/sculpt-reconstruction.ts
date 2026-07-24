@@ -89,6 +89,12 @@ function snapshotObjectSculptSpec(spec: ObjectSculptSpec): ObjectSculptSpec {
   ) as unknown as ObjectSculptSpec;
 }
 
+function snapshotSculptArtifact(artifact: SculptArtifact): SculptArtifact {
+  return snapshotJsonValue(
+    artifact as unknown as JsonValue,
+  ) as unknown as SculptArtifact;
+}
+
 function digestJson(value: JsonValue) {
   return `sha256:${createHash("sha256").update(canonicalJson(value)).digest("hex")}`;
 }
@@ -337,10 +343,11 @@ export function reconstructSculpt(
       message: validatedArtifact.diagnostics[0]?.message ?? "Generated Sculpt Artifact refused.",
     };
   }
-  const artifactBytes = serializeSculptArtifact(validatedArtifact.value);
+  const artifactSnapshot = snapshotSculptArtifact(validatedArtifact.value);
+  const artifactBytes = serializeSculptArtifact(artifactSnapshot);
   return {
     ok: true,
-    artifact: validatedArtifact.value,
+    artifact: artifactSnapshot,
     artifactBytes,
     artifactDigest: digestBytes(artifactBytes),
   };

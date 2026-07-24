@@ -411,6 +411,59 @@ describe("hybrid sculpt contracts", () => {
     });
   });
 
+  it("returns an immutable runtime projection detached from its spec", () => {
+    const mutableSpec = structuredClone(fixtureSpec);
+    const runtimeHierarchy = projectAnimationReadyHierarchy(mutableSpec);
+    const runtimeNode = runtimeHierarchy.nodes[0];
+    const runtimePivot = runtimeHierarchy.pivots[0];
+    const runtimeCollider = runtimeHierarchy.colliders[0];
+    expect(runtimeNode).toBeDefined();
+    expect(runtimePivot).toBeDefined();
+    expect(runtimeCollider).toBeDefined();
+    if (
+      runtimeNode === undefined ||
+      runtimePivot === undefined ||
+      runtimeCollider === undefined
+    ) {
+      return;
+    }
+
+    expect(Reflect.set(mutableSpec.hierarchy[0]!.transform.translation, 0, 99)).toBe(true);
+    expect(Reflect.set(mutableSpec.components[0]!.dimensions, 0, 99)).toBe(true);
+    expect(runtimeNode.transform.translation).toEqual([0, 0, 0]);
+    expect(runtimeCollider.dimensions).toEqual([2, 2, 2]);
+    expect(Reflect.set(runtimePivot.origin, 0, 99)).toBe(false);
+    expect(Object.isFrozen(runtimeHierarchy)).toBe(true);
+    expect(Object.isFrozen(runtimeHierarchy.nodes)).toBe(true);
+    expect(Object.isFrozen(runtimeNode)).toBe(true);
+    expect(Object.isFrozen(runtimeNode.transform)).toBe(true);
+    expect(Object.isFrozen(runtimeNode.transform.translation)).toBe(true);
+    expect(Object.isFrozen(runtimeHierarchy.pivots)).toBe(true);
+    expect(Object.isFrozen(runtimePivot)).toBe(true);
+    expect(Object.isFrozen(runtimePivot.origin)).toBe(true);
+    expect(Object.isFrozen(runtimeHierarchy.sockets)).toBe(true);
+    expect(Object.isFrozen(runtimeHierarchy.colliders)).toBe(true);
+    expect(Object.isFrozen(runtimeCollider)).toBe(true);
+    expect(Object.isFrozen(runtimeCollider.dimensions)).toBe(true);
+    expect(Object.isFrozen(runtimeHierarchy.materials)).toBe(true);
+    expect(Object.isFrozen(runtimeHierarchy.attachments)).toBe(true);
+  });
+
+  it("refuses sparse runtime projection arrays", () => {
+    const artifact = structuredClone(fixtureArtifact());
+    const sparsePivots = [...artifact.runtimeHierarchy.pivots];
+    delete sparsePivots[0];
+    const result = validateSculptArtifact({
+      ...artifact,
+      runtimeHierarchy: {
+        ...artifact.runtimeHierarchy,
+        pivots: sparsePivots,
+      },
+    });
+
+    expect(result.ok).toBe(false);
+  });
+
   it.each([
     ["pivots", "missing-runtime-pivot"],
     ["sockets", "missing-runtime-socket"],
