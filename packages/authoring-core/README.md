@@ -58,9 +58,10 @@ contract, demo, and evidence pointers are in
 [`docs/sculpt-quality.md`](../../docs/sculpt-quality.md).
 
 The public package-root `emitSculptProcedural` export is the resolvable module
-identity recorded in quality artifacts. Reconstruction normalizes legacy PR #75
-specs, and artifact validation independently recomputes the canonical
-fixed-seed emit.
+identity recorded in quality artifacts. Default reconstruction preserves legacy
+PR #75 specs and returns legacy artifacts; explicit sculpt-quality
+reconstruction normalizes those specs. Artifact validation independently
+recomputes the canonical fixed-seed emit.
 
 `createMinimumE2Editor()` owns the bounded orchestration API authorized by
 [ADR 0003's vertical-only amendment](../../docs/adr/0003-editor-sequencing-e1-first-e2-specified.md#2026-07-24-vertical-only-amendment).

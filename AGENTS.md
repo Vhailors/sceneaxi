@@ -44,6 +44,8 @@ The Model Provider Port (sceneaxi#45) is `packages/authoring-core/src/model-prov
 
 Delivery Handoff is the public, delivery-neutral export contract in `@sceneaxi/schemas` (`contracts/delivery-handoff.schema.json`, `src/delivery-handoff.ts`); its adapter boundary and digest semantics are authoritative in `docs/delivery-handoff.md`. Provider-specific delivery adapters, credentials, uploads, approvals, and releases stay outside SceneAxi core.
 
+Sculpt-quality ownership and compatibility are documented in `docs/sculpt-quality.md`: legacy PR #75 aggregate/result seams remain compatible, while strict multi-pass contracts and named refusals live on separate quality-specific paths.
+
 First-class plugins follow `docs/plugins.md` and ADR 0005: manifests may claim
 only IDs from the versioned public capability registry; unknown IDs and
 isolation breaches refuse. Runtime API details live in
