@@ -10,3 +10,8 @@ fields remain inert until tier-6b holds open. This stub remains
 topology-neutral; the locked storefront topology and website-catalog scope are
 recorded in the canonical product spec
 ([#1](https://github.com/Vhailors/sceneaxi/issues/1)).
+
+For sceneaxi#59 the dormant API exposes one deterministic, human-approved
+fixture through `listCatalogItems()` and `showCatalogItem()`. Purchase/billing
+and marketplace publish calls return named refusals; there is no live
+marketplace or commerce activation path.
