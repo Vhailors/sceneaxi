@@ -97,6 +97,17 @@ describe("sculpt-quality v1 golden demos", () => {
           kernel.advance({ tick, deltaMs: 100 });
         }
         const terminal = kernel.observe();
+        const animationSocket = spec.sockets.find(
+          (socket) => socket.kind === "animation",
+        );
+        if (animationSocket === undefined) {
+          throw new Error(`Demo "${demo.id}" has no animation socket.`);
+        }
+        expect(
+          terminal.sockets.find((socket) => socket.id === animationSocket.id)?.value,
+        ).not.toBe(
+          initial.sockets.find((socket) => socket.id === animationSocket.id)?.value,
+        );
         const save = kernel.save();
         const replay = replaySculptKernelSession(save).observe();
         expect(replay.digest).toBe(terminal.digest);
