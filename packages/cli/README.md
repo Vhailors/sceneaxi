@@ -96,7 +96,7 @@ implementation is `src/held-keys/`; its fixture coverage is listed below.
 
 ## Testing
 
-Golden / protocol tests live under `packages/cli/test/`:
+CLI protocol tests live under `packages/cli/test/`:
 
 - `exit-codes.golden.test.ts` — map + non-zero unknown paths at every depth
 - `envelope.snapshot.test.ts` — versioned snapshots + `help[]` on every result
