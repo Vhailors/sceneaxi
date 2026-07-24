@@ -123,6 +123,77 @@ describe("@sceneaxi/provider-openrouter", () => {
     });
   });
 
+  it("refuses truncated tool calls even when their arguments are valid JSON", async () => {
+    const adapter = createOpenRouterAdapter({
+      model: MODEL,
+      eval: EVAL,
+      transport: () => ({
+        ...fixture("tool-call") as Record<string, unknown>,
+        choices: [
+          {
+            finish_reason: "length",
+            message: {
+              tool_calls: [
+                {
+                  function: {
+                    name: "move-entity",
+                    arguments: "{\"entity\":\"hero\",\"x\":2}",
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    });
+
+    await expect(
+      adapter.toolCall?.({
+        schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+        operation: "tool-call",
+        profile: "@sceneaxi/profile-game",
+        model: MODEL,
+        prompt: "move the hero",
+        tools: [
+          {
+            name: "move-entity",
+            inputSchema: { type: "object" },
+          },
+        ],
+      }),
+    ).rejects.toMatchObject({
+      code: OPENROUTER_ADAPTER_ERROR_CODES.responseInvalid,
+    });
+  });
+
+  it("refuses tool-call finish reasons for completions", async () => {
+    const adapter = createOpenRouterAdapter({
+      model: MODEL,
+      eval: EVAL,
+      transport: () => ({
+        ...fixture("complete") as Record<string, unknown>,
+        choices: [
+          {
+            finish_reason: "tool_calls",
+            message: { content: "not a completion" },
+          },
+        ],
+      }),
+    });
+
+    await expect(
+      adapter.complete?.({
+        schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+        operation: "complete",
+        profile: "@sceneaxi/profile-web",
+        model: MODEL,
+        prompt: "fixture prompt",
+      }),
+    ).rejects.toMatchObject({
+      code: OPENROUTER_ADAPTER_ERROR_CODES.responseInvalid,
+    });
+  });
+
   it("cannot bypass the port's non-overridable Kids denial", async () => {
     let calls = 0;
     const adapter = createOpenRouterAdapter({

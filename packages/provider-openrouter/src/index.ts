@@ -174,7 +174,7 @@ function transportRequest(
 }
 
 type OpenRouterChoice = Readonly<{
-  finishReason: "stop" | "length";
+  finishReason: "stop" | "length" | "tool_calls";
   message: Record<string, unknown>;
 }>;
 
@@ -200,7 +200,12 @@ function parseChoice(payload: unknown, pinnedModel: ModelDescriptor) {
     );
   }
   const rawFinish = first["finish_reason"];
-  const finishReason = rawFinish === "length" ? "length" : rawFinish === "stop" || rawFinish === "tool_calls" ? "stop" : undefined;
+  const finishReason =
+    rawFinish === "stop" ||
+    rawFinish === "length" ||
+    rawFinish === "tool_calls"
+      ? rawFinish
+      : undefined;
   if (finishReason === undefined) {
     throw new OpenRouterAdapterError(
       OPENROUTER_ADAPTER_ERROR_CODES.responseInvalid,
@@ -215,6 +220,12 @@ function parseComplete(
   pinnedModel: ModelDescriptor,
 ): ModelCompleteResponse {
   const choice = parseChoice(payload, pinnedModel);
+  if (choice.finishReason === "tool_calls") {
+    throw new OpenRouterAdapterError(
+      OPENROUTER_ADAPTER_ERROR_CODES.responseInvalid,
+      "OpenRouter returned a tool-call finish reason for a completion.",
+    );
+  }
   const content = choice.message["content"];
   if (typeof content !== "string") {
     throw new OpenRouterAdapterError(
@@ -245,6 +256,12 @@ function parseToolCall(
   pinnedModel: ModelDescriptor,
 ): ModelToolCallResponse {
   const choice = parseChoice(payload, pinnedModel);
+  if (choice.finishReason !== "tool_calls") {
+    throw new OpenRouterAdapterError(
+      OPENROUTER_ADAPTER_ERROR_CODES.responseInvalid,
+      "OpenRouter returned an incomplete tool call.",
+    );
+  }
   const rawToolCalls = choice.message["tool_calls"];
   if (!Array.isArray(rawToolCalls) || rawToolCalls.length === 0) {
     throw new OpenRouterAdapterError(
