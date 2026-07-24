@@ -24,10 +24,20 @@ import {
   type SculptQualityArtifact,
   type SculptQualityObjectSculptSpec,
   type SculptQualityRuntimeHierarchy,
+  type SculptProceduralModuleRef,
   type SculptRuntimeHierarchy,
 } from "@sceneaxi/schemas";
 
 interface LegacySculptArtifactExtension extends SculptArtifact {
+  readonly consumerTag: string;
+}
+
+interface LegacyObjectSculptSpecExtension extends ObjectSculptSpec {
+  readonly consumerTag: string;
+}
+
+interface LegacySculptProceduralModuleRefExtension
+  extends SculptProceduralModuleRef {
   readonly consumerTag: string;
 }
 
@@ -240,6 +250,18 @@ describe("hybrid sculpt contracts", () => {
         ([key]) => key !== "complexityClass" && key !== "passes",
       ),
     ) as unknown as LegacyObjectSculptSpec;
+    const extendedLegacy: LegacyObjectSculptSpecExtension = {
+      ...legacy,
+      consumerTag: "legacy-consumer",
+    };
+    const extendedModule: LegacySculptProceduralModuleRefExtension = {
+      moduleId: "sceneaxi/procedural/crate",
+      exportName: "buildCrate",
+      sourceDigest: digest("b"),
+      consumerTag: "legacy-consumer",
+    };
+    expect(extendedLegacy.consumerTag).toBe("legacy-consumer");
+    expect(extendedModule.consumerTag).toBe("legacy-consumer");
     expect(validateObjectSculptSpec(legacy)).toEqual({
       ok: true,
       value: legacy,

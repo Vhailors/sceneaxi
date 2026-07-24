@@ -100,7 +100,7 @@ export type SculptDetailInventory = {
   readonly socketIds: ReadonlyArray<string>;
 };
 
-type ObjectSculptSpecBase = {
+export type ObjectSculptSpec = {
   readonly schemaVersion: typeof SCULPT_SCHEMA_VERSION;
   readonly kind: typeof OBJECT_SCULPT_SPEC_KIND;
   readonly id: string;
@@ -109,15 +109,18 @@ type ObjectSculptSpecBase = {
   readonly materials: ReadonlyArray<SculptMaterial>;
   readonly sockets: ReadonlyArray<SculptSocket>;
   readonly hierarchy: ReadonlyArray<SculptHierarchyNode>;
+  readonly complexityClass?: "simple" | "non-trivial";
+  readonly passes?: ReadonlyArray<SculptPass>;
+  readonly detailInventory?: SculptDetailInventory;
 };
 
-export type LegacyObjectSculptSpec = ObjectSculptSpecBase & {
+export type LegacyObjectSculptSpec = ObjectSculptSpec & {
   readonly complexityClass?: never;
   readonly passes?: never;
   readonly detailInventory?: never;
 };
 
-export type SculptQualityObjectSculptSpec = ObjectSculptSpecBase &
+export type SculptQualityObjectSculptSpec = ObjectSculptSpec &
   (
     | {
         readonly complexityClass: "simple";
@@ -130,10 +133,6 @@ export type SculptQualityObjectSculptSpec = ObjectSculptSpecBase &
         readonly detailInventory: SculptDetailInventory;
       }
   );
-
-export type ObjectSculptSpec =
-  | LegacyObjectSculptSpec
-  | SculptQualityObjectSculptSpec;
 
 type SculptIntakeBase = {
   readonly schemaVersion: typeof SCULPT_SCHEMA_VERSION;
@@ -161,25 +160,26 @@ export type SculptIntake =
       readonly structuredSpec: ObjectSculptSpec;
     });
 
-export type LegacySculptProceduralModuleRef = {
+export type SculptProceduralModuleRef = {
   readonly moduleId: string;
   readonly exportName: string;
   readonly sourceDigest: string;
+  readonly seed?: number;
+  readonly emitDigest?: string;
+};
+
+export type LegacySculptProceduralModuleRef = SculptProceduralModuleRef & {
   readonly seed?: never;
   readonly emitDigest?: never;
 };
 
-export type SculptQualityProceduralModuleRef = {
+export type SculptQualityProceduralModuleRef = SculptProceduralModuleRef & {
   readonly moduleId: typeof SCULPT_PROCEDURAL_MODULE_ID;
   readonly exportName: typeof SCULPT_PROCEDURAL_EXPORT_NAME;
   readonly sourceDigest: typeof SCULPT_PROCEDURAL_SOURCE_DIGEST;
   readonly seed: number;
   readonly emitDigest: string;
 };
-
-export type SculptProceduralModuleRef =
-  | LegacySculptProceduralModuleRef
-  | SculptQualityProceduralModuleRef;
 
 export type SculptPivot = {
   readonly id: string;
@@ -892,7 +892,9 @@ export function validateSculptIntake(value: unknown): SculptValidationResult<Scu
   return { ok: true, value: value as SculptIntake };
 }
 
-function legacyAttachmentId(spec: LegacyObjectSculptSpec) {
+function legacyAttachmentId(
+  spec: Pick<ObjectSculptSpec, "rootNodeId" | "sockets">,
+) {
   const existing = new Set(spec.sockets.map((socket) => socket.id));
   const base = `${spec.rootNodeId}-attachment`;
   if (!existing.has(base)) return base;
