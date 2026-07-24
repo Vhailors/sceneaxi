@@ -68,9 +68,6 @@ importers:
       '@sceneaxi/engine-kernel':
         specifier: workspace:^
         version: link:../engine-kernel
-      '@sceneaxi/engine-orchestrator':
-        specifier: workspace:^
-        version: link:../engine-orchestrator
       '@sceneaxi/engine-presentation':
         specifier: workspace:^
         version: link:../engine-presentation
@@ -147,9 +144,6 @@ importers:
       '@sceneaxi/engine-kernel':
         specifier: workspace:^
         version: link:../engine-kernel
-      '@sceneaxi/engine-orchestrator':
-        specifier: workspace:^
-        version: link:../engine-orchestrator
       '@sceneaxi/engine-presentation':
         specifier: workspace:^
         version: link:../engine-presentation
@@ -165,9 +159,6 @@ importers:
       '@sceneaxi/engine-kernel':
         specifier: workspace:^
         version: link:../engine-kernel
-      '@sceneaxi/engine-orchestrator':
-        specifier: workspace:^
-        version: link:../engine-orchestrator
       '@sceneaxi/engine-presentation':
         specifier: workspace:^
         version: link:../engine-presentation
@@ -183,9 +174,6 @@ importers:
       '@sceneaxi/engine-kernel':
         specifier: workspace:^
         version: link:../engine-kernel
-      '@sceneaxi/engine-orchestrator':
-        specifier: workspace:^
-        version: link:../engine-orchestrator
       '@sceneaxi/engine-presentation':
         specifier: workspace:^
         version: link:../engine-presentation

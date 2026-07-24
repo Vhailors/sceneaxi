@@ -9,8 +9,7 @@
   "dependencies": {
     "@sceneaxi/schemas": "workspace:^",
     "@sceneaxi/engine-kernel": "workspace:^",
-    "@sceneaxi/engine-presentation": "workspace:^",
-    "@sceneaxi/engine-orchestrator": "workspace:^"
+    "@sceneaxi/engine-presentation": "workspace:^"
   },
   "sceneaxi": { "releaseGroup": "core-train" },
   "license": "UNLICENSED"
