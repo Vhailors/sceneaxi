@@ -1,0 +1,22 @@
+{
+  "name": "@sceneaxi/provider-openrouter",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Thin fixture-tested OpenRouter adapter behind the SceneAxi Model Provider Port; non-Kids only",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "sceneaxi": {
+    "releaseGroup": "importers"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@sceneaxi/authoring-core": "workspace:^",
+    "@sceneaxi/schemas": "workspace:^",
+    "ajv": "^8.17.1"
+  }
+}

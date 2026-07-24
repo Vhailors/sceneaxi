@@ -22,3 +22,8 @@ The round-trip result can report pending or indeterminate journal recovery with 
 
 Parity with the CLI and web-shell is a conformance test (same operation →
 byte-identical documents), not a habit. Stub only — no native packaging.
+
+The issue #58 conformance case additionally pins the desktop wrapper's proposal
+diff and final content hash to the CLI result for the same fixture operations.
+It remains a thin protocol wrapper: no installer, offline store, or native
+product surface is implied.

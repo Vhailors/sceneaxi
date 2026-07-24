@@ -2,6 +2,12 @@
 
 Shared contracts home for SceneAxi. Zero internal dependencies by rule.
 
+## Unambiguous JSON
+
+`parseUnambiguousJson` is the package-root parser for JSON text that must refuse
+duplicate member names before contract validation. Delivery Handoff, external
+document import, and provider tool-call parsing share this one implementation.
+
 ## Delivery Handoff
 
 - `@sceneaxi/schemas/contracts/delivery-handoff.schema.json` — public,

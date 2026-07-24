@@ -41,6 +41,32 @@ export type KidsLlmRouteDecision = Readonly<{
   message: string;
 }>;
 
+export const KIDS_NETWORK_DESTINATION_ALLOWLIST = Object.freeze([] as const);
+
+export const KIDS_REFUSE_REASONS = Object.freeze({
+  claimInvalid: "KIDS_BOUNDARY_CLAIM_INVALID",
+  externalDataPlaneDenied: "EXTERNAL_DATA_PLANE_DENIED",
+  dataPlaneNotEnabled: "KIDS_DATA_PLANE_NOT_ENABLED",
+  nonKidsCatalogDenied: "NON_KIDS_CATALOG_DENIED",
+  catalogNotEnabled: "KIDS_CATALOG_NOT_ENABLED",
+  commerceNotEnabled: "KIDS_COMMERCE_NOT_ENABLED",
+  networkDestinationNotAllowlisted:
+    "KIDS_NETWORK_DESTINATION_NOT_ALLOWLISTED",
+} as const);
+
+export type KidsBoundaryClaim =
+  | Readonly<{ kind: "external-data-plane"; plane: string }>
+  | Readonly<{ kind: "catalog"; profile: string }>
+  | Readonly<{ kind: "commerce"; action: string }>
+  | Readonly<{ kind: "network"; destination: string }>;
+
+export type KidsBoundaryRefusal = Readonly<{
+  ok: false;
+  claimKind: KidsBoundaryClaim["kind"] | null;
+  reason: (typeof KIDS_REFUSE_REASONS)[keyof typeof KIDS_REFUSE_REASONS];
+  message: string;
+}>;
+
 const kidsIsolationPlaneSet = new Set<string>(KIDS_ISOLATION_PLANES);
 
 /**
@@ -98,6 +124,129 @@ export function evaluateKidsLlmRoute(
   });
 }
 
+function claimString(value: unknown) {
+  return typeof value === "string" && value.trim().length > 0
+    ? value
+    : undefined;
+}
+
+function claimProperty(
+  claim: object,
+  key: "plane" | "profile" | "action" | "destination",
+) {
+  try {
+    const descriptor = Object.getOwnPropertyDescriptor(claim, key);
+    if (descriptor === undefined) {
+      return { ok: true as const, value: undefined };
+    }
+    return "value" in descriptor
+      ? { ok: true as const, value: descriptor.value }
+      : { ok: false as const };
+  } catch {
+    return { ok: false as const };
+  }
+}
+
+function inspectBoundaryClaim(claim: unknown) {
+  try {
+    if (typeof claim !== "object" || claim === null || Array.isArray(claim)) {
+      return undefined;
+    }
+    const descriptor = Object.getOwnPropertyDescriptor(claim, "kind");
+    if (descriptor === undefined || !("value" in descriptor)) return undefined;
+    return { claim, kind: descriptor.value };
+  } catch {
+    return undefined;
+  }
+}
+
+function invalidBoundaryClaim(): KidsBoundaryRefusal {
+  return Object.freeze({
+    ok: false,
+    claimKind: null,
+    reason: KIDS_REFUSE_REASONS.claimInvalid,
+    message: "Malformed Kids boundary claim refused.",
+  });
+}
+
+/**
+ * Executable MVP refusal matrix for every non-model external route. No claim
+ * here enables a Kids surface, catalog, commerce flow, data plane, or network
+ * destination; an explicit future safety decision must add any allow path.
+ */
+export function evaluateKidsBoundaryClaim(
+  claim: unknown,
+): KidsBoundaryRefusal {
+  const inspected = inspectBoundaryClaim(claim);
+  if (inspected === undefined) return invalidBoundaryClaim();
+  const { kind } = inspected;
+
+  if (kind === "external-data-plane") {
+    const property = claimProperty(inspected.claim, "plane");
+    if (!property.ok) return invalidBoundaryClaim();
+    const plane = claimString(property.value);
+    return Object.freeze({
+      ok: false,
+      claimKind: kind,
+      reason:
+        plane === "external"
+          ? KIDS_REFUSE_REASONS.externalDataPlaneDenied
+          : KIDS_REFUSE_REASONS.dataPlaneNotEnabled,
+      message:
+        plane === "external"
+          ? "External data-plane access is denied for Kids."
+          : "No Kids data plane is enabled by the MVP policy.",
+    });
+  }
+
+  if (kind === "catalog") {
+    const property = claimProperty(inspected.claim, "profile");
+    if (!property.ok) return invalidBoundaryClaim();
+    const profile = claimString(property.value);
+    return Object.freeze({
+      ok: false,
+      claimKind: kind,
+      reason:
+        profile !== undefined && profile !== "kids"
+          ? KIDS_REFUSE_REASONS.nonKidsCatalogDenied
+          : KIDS_REFUSE_REASONS.catalogNotEnabled,
+      message:
+        profile !== undefined && profile !== "kids"
+          ? "Non-Kids catalog routes are denied for Kids."
+          : "No Kids catalog product surface is enabled.",
+    });
+  }
+
+  if (kind === "commerce") {
+    const property = claimProperty(inspected.claim, "action");
+    if (!property.ok) return invalidBoundaryClaim();
+    return Object.freeze({
+      ok: false,
+      claimKind: kind,
+      reason: KIDS_REFUSE_REASONS.commerceNotEnabled,
+      message: "Kids commerce paths are not enabled.",
+    });
+  }
+
+  if (kind === "network") {
+    const property = claimProperty(inspected.claim, "destination");
+    if (!property.ok) return invalidBoundaryClaim();
+    return Object.freeze({
+      ok: false,
+      claimKind: kind,
+      reason: KIDS_REFUSE_REASONS.networkDestinationNotAllowlisted,
+      message: "The requested network destination is not on the empty Kids MVP allowlist.",
+    });
+  }
+
+  return Object.freeze({
+    ok: false,
+    claimKind: null,
+    reason: KIDS_REFUSE_REASONS.claimInvalid,
+    message: "Unknown Kids boundary claim refused.",
+  });
+}
+
 export const policy = Object.freeze({
   version: KIDS_POLICY_VERSION,
   decisionKey: "kids-surface-isolation" as const,
@@ -105,6 +254,7 @@ export const policy = Object.freeze({
   defaultDecision: "refuse" as const,
   isolationPlanes: KIDS_ISOLATION_PLANES,
   allowedLlmRouteKinds: Object.freeze([]),
+  allowedNetworkDestinations: KIDS_NETWORK_DESTINATION_ALLOWLIST,
   thirdPartyLlmDefault: "deny" as const,
 });
 

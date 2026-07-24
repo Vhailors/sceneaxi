@@ -10,16 +10,18 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   parseDocumentText,
-  type JsonObject,
 } from "../../packages/authoring-core/src/index.ts";
 import { ExitCode, runCli } from "../../packages/cli/src/index.ts";
-import type { ProductManifest } from "../../packages/engine-kernel/src/index.ts";
 import {
   createNullPresentationRuntime,
 } from "../../packages/engine-presentation/src/index.ts";
 import { openPluginHost } from "../../packages/plugin-host/src/index.ts";
 import { conformance as gameProfile } from "@sceneaxi/profile-game";
 import { describe, expect, it } from "vitest";
+import {
+  GOLDEN_PROJECT_DOCUMENT_INPUT,
+  productManifestFrom,
+} from "./fixtures/golden-project.ts";
 
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const EVIDENCE_RELATIVE_PATH =
@@ -81,52 +83,6 @@ async function namedAsyncStep<T>(
   }
 }
 
-function isJsonObject(value: unknown): value is JsonObject {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-function productManifestFrom(value: unknown): ProductManifest {
-  if (!isJsonObject(value)) {
-    throw new Error("applied project is missing data.productManifest");
-  }
-
-  const productId = value["productId"];
-  const seed = value["seed"];
-  const rawEntities = value["entities"];
-  if (
-    typeof productId !== "string" ||
-    typeof seed !== "number" ||
-    !Number.isInteger(seed) ||
-    !Array.isArray(rawEntities)
-  ) {
-    throw new Error("applied project has an invalid product manifest");
-  }
-
-  const entities: NonNullable<ProductManifest["entities"]>[number][] =
-    rawEntities.map((raw, index) => {
-      if (!isJsonObject(raw)) {
-        throw new Error(
-          `product manifest entity ${String(index)} is not an object`,
-        );
-      }
-      const id = raw["id"];
-      const x = raw["x"];
-      const y = raw["y"];
-      if (
-        typeof id !== "string" ||
-        typeof x !== "number" ||
-        !Number.isInteger(x) ||
-        typeof y !== "number" ||
-        !Number.isInteger(y)
-      ) {
-        throw new Error(`product manifest entity ${String(index)} is invalid`);
-      }
-      return { id, x, y };
-    });
-
-  return { productId, seed, entities };
-}
-
 describe("MVP golden path", () => {
   it("runs Game profile -> authoring -> kernel/presentation -> plugin load/refuse -> save/replay -> held-key refusal -> evidence", async () => {
     const projectRoot = mkdtempSync(join(tmpdir(), "sceneaxi-cli-golden-"));
@@ -141,17 +97,9 @@ describe("MVP golden path", () => {
       });
 
       namedStep("create-open-project-fixture", () => {
-        const document = gameProfile.core.authoring.createDocument({
-          id: "golden-project",
-          title: "Issue 51 CLI golden path",
-          data: {
-            productManifest: {
-              productId: "golden-game",
-              seed: 51,
-              entities: [{ id: "hero", x: 0, y: 1 }],
-            },
-          },
-        });
+        const document = gameProfile.core.authoring.createDocument(
+          GOLDEN_PROJECT_DOCUMENT_INPUT,
+        );
         const written = gameProfile.core.authoring.writeDocumentFile(
           DOCUMENT_PATH,
           document,

@@ -1,0 +1,20 @@
+{
+  "id": "fixture-tool-call",
+  "model": "openai/gpt-fixture-2026-07-24",
+  "choices": [
+    {
+      "finish_reason": "tool_calls",
+      "message": {
+        "content": null,
+        "tool_calls": [
+          {
+            "function": {
+              "name": "move-entity",
+              "arguments": "{\"entity\":\"hero\",\"x\":2}"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

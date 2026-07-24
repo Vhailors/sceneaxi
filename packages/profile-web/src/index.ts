@@ -2,6 +2,15 @@
  * @sceneaxi/profile-web — Web Experience profile; pins a core range and
  * compiles the locked v1 scope boundary into its public seam.
  */
+import {
+  apply,
+  createDocument,
+  parseDocumentText,
+  propose,
+  writeDocumentFile,
+} from "@sceneaxi/authoring-core";
+import { open, replay } from "@sceneaxi/engine-kernel";
+import { createNullPresentationRuntime } from "@sceneaxi/engine-presentation";
 import type { ProfileSeam } from "@sceneaxi/schemas";
 
 export const WEB_EXPERIENCE_POLICY_VERSION = 1 as const;
@@ -87,4 +96,30 @@ export const seam: ProfileSeam = Object.freeze({
   name: "@sceneaxi/profile-web",
   releaseGroup: "profile",
   corePin: "^0.0.0",
+});
+
+/**
+ * Development-only Web profile pin for the shared MVP fixture. This is not a
+ * Profile Conformance registry claim and does not describe a shipped website.
+ */
+export const mvpGoldenPath = Object.freeze({
+  seam,
+  policy,
+  evaluateScope: evaluateWebExperienceScope,
+  status: Object.freeze({
+    developmentConsumer: true as const,
+    shippingClaim: false as const,
+    productSurface: "not-shipped" as const,
+  }),
+  core: Object.freeze({
+    authoring: Object.freeze({
+      createDocument,
+      parseDocumentText,
+      writeDocumentFile,
+      propose,
+      apply,
+    }),
+    kernel: Object.freeze({ open, replay }),
+    presentation: Object.freeze({ createNullPresentationRuntime }),
+  }),
 });

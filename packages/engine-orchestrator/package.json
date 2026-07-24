@@ -7,8 +7,7 @@
   "exports": { ".": "./src/index.ts" },
   "files": ["src"],
   "dependencies": {
-    "@sceneaxi/schemas": "workspace:^",
-    "@sceneaxi/engine-kernel": "workspace:^"
+    "@sceneaxi/schemas": "workspace:^"
   },
   "sceneaxi": { "releaseGroup": "core-train" },
   "license": "UNLICENSED"

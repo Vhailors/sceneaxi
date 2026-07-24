@@ -29,4 +29,9 @@ a terminal state.
 
 Non-interactive path (agent parity): `shellProposeAndApply(...)`.
 
+The issue #57 conformance case drives inspector propose → rendered diff →
+accept against the same canonical fixture and asserts the CLI proposal diff,
+final bytes, and content hash are identical. This remains a protocol client,
+not a second editor, product UI, design system, or authentication surface.
+
 No hosting, no deployment, no public visibility.

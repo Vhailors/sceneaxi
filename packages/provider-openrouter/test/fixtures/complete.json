@@ -1,0 +1,10 @@
+{
+  "id": "fixture-complete",
+  "model": "openai/gpt-fixture-2026-07-24",
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "message": { "content": "fixture completion" }
+    }
+  ]
+}
