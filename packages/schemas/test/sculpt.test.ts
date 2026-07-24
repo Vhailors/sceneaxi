@@ -17,6 +17,7 @@ import {
   validateSculptArtifact,
   validateSculptIntake,
   validateSculptProceduralEmit,
+  validateSculptQualityArtifact,
   type LegacyObjectSculptSpec,
   type ObjectSculptSpec,
   type SculptArtifact,
@@ -25,6 +26,10 @@ import {
   type SculptQualityRuntimeHierarchy,
   type SculptRuntimeHierarchy,
 } from "@sceneaxi/schemas";
+
+interface LegacySculptArtifactExtension extends SculptArtifact {
+  readonly consumerTag: string;
+}
 
 const digest = (character: string) => `sha256:${character.repeat(64)}`;
 
@@ -287,6 +292,34 @@ describe("hybrid sculpt contracts", () => {
       ok: true,
       value: legacyArtifact,
     });
+    const extended: LegacySculptArtifactExtension = {
+      ...legacyArtifact,
+      consumerTag: "legacy-consumer",
+    };
+    const annotatedSpec: SculptArtifact["spec"] = legacy;
+    const annotatedModule: SculptArtifact["proceduralModule"] =
+      legacyArtifact.proceduralModule;
+    const annotatedRuntime: SculptArtifact["runtimeHierarchy"] =
+      legacyRuntimeHierarchy;
+    expect([
+      extended.consumerTag,
+      annotatedSpec.id,
+      annotatedModule.moduleId,
+      annotatedRuntime.rootNodeId,
+    ]).toEqual([
+      "legacy-consumer",
+      "fixture-crate",
+      "sceneaxi/legacy-crate",
+      "crate-body",
+    ]);
+    expect(validateSculptQualityArtifact(legacyArtifact)).toMatchObject({
+      ok: false,
+      diagnostics: [{ code: "invalid-field", path: "$.spec" }],
+    });
+    expect(validateSculptQualityArtifact(fixtureArtifact())).toEqual({
+      ok: true,
+      value: fixtureArtifact(),
+    });
   });
 
   it("publishes closed ordered pass sequences in the authoritative schema", () => {
@@ -347,6 +380,7 @@ describe("hybrid sculpt contracts", () => {
         qualityProceduralModule: {
           properties: {
             seed: { type: string; minimum: number; maximum: number };
+            sourceDigest: { const: string };
           };
         };
       };
@@ -374,6 +408,9 @@ describe("hybrid sculpt contracts", () => {
       minimum: 0,
       maximum: Number.MAX_SAFE_INTEGER,
     });
+    expect(
+      artifactSchema.$defs.qualityProceduralModule.properties.sourceDigest,
+    ).toEqual({ const: SCULPT_PROCEDURAL_SOURCE_DIGEST });
   });
 
   it("accepts the required multi-pass order and a reference-checked non-trivial inventory", () => {

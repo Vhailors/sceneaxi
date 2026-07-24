@@ -13,6 +13,7 @@ import {
   SCULPT_INTAKE_KIND,
   SCULPT_SCHEMA_VERSION,
   validateSculptArtifact,
+  validateSculptQualityArtifact,
   type LegacyObjectSculptSpec,
   type ObjectSculptSpec,
   type SculptQualityObjectSculptSpec,
@@ -144,36 +145,45 @@ describe("SceneAxi sculpt reconstruction", () => {
 
     expect(first.artifactBytes).toBe(second.artifactBytes);
     expect(first.artifactDigest).toBe(second.artifactDigest);
-    expect(first.artifact.proceduralModule.seed).toBe(0);
+    const validated = validateSculptQualityArtifact(first.artifact);
+    expect(validated.ok).toBe(true);
+    if (!validated.ok) return;
+    expect(validated.value.proceduralModule.seed).toBe(0);
     expect(serializeSculptArtifact(first.artifact)).toBe(first.artifactBytes);
     expect(first.artifact.evidence.method).toBe("structured-fixture");
     expect(validateSculptArtifact(first.artifact).ok).toBe(true);
   });
 
   it("turns image+brief intake into an openable demo-grade artifact", () => {
-    const result = reconstructSculpt({
-      schemaVersion: 1,
-      kind: SCULPT_INTAKE_KIND,
-      intakeId: "demo-lantern",
-      mode: "image+brief",
-      image: {
-        mediaType: "image/png",
-        uri: "fixtures/demo-lantern.png",
-        digest: digest("a"),
+    const result = reconstructSculpt(
+      {
+        schemaVersion: 1,
+        kind: SCULPT_INTAKE_KIND,
+        intakeId: "demo-lantern",
+        mode: "image+brief",
+        image: {
+          mediaType: "image/png",
+          uri: "fixtures/demo-lantern.png",
+          digest: digest("a"),
+        },
+        brief: "A compact lantern with a warm cap that gently bobs.",
       },
-      brief: "A compact lantern with a warm cap that gently bobs.",
-    });
+      { seed: 0 },
+    );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.artifact.artifactId).toBe("demo-lantern-artifact");
     expect(result.artifact.evidence.method).toBe("image-brief-reconstruction");
     expect(result.artifact.spec.hierarchy).toHaveLength(2);
     expect(result.artifact.spec.sockets).toHaveLength(2);
-    expect(result.artifact.runtimeHierarchy.attachments).toHaveLength(1);
+    const validated = validateSculptQualityArtifact(result.artifact);
+    expect(validated.ok).toBe(true);
+    if (!validated.ok) return;
+    expect(validated.value.runtimeHierarchy.attachments).toHaveLength(1);
     expect(validateSculptArtifact(result.artifact).ok).toBe(true);
   });
 
-  it("normalizes legacy hybrid specs without invalidating their intake path", () => {
+  it("preserves legacy hybrid reconstruction unless quality is requested", () => {
     const legacy = Object.fromEntries(
       Object.entries(fixtureSpec()).filter(
         ([key]) => key !== "complexityClass" && key !== "passes",
@@ -193,13 +203,31 @@ describe("SceneAxi sculpt reconstruction", () => {
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.artifact.spec.passes.map((pass) => pass.id)).toEqual([
-      "blockout",
-      "structure",
-      "materials",
-      "sockets",
-    ]);
-    expect(result.artifact.runtimeHierarchy.attachments).toHaveLength(1);
+    expect(result.artifact.spec).toEqual({
+      ...legacy,
+      sockets: legacy.sockets.filter(
+        (socket) => socket.kind !== "attachment",
+      ),
+    });
+    expect(result.artifact.proceduralModule).not.toHaveProperty("seed");
+    expect(result.artifact.runtimeHierarchy).toEqual({
+      rootNodeId: legacy.rootNodeId,
+      nodes: legacy.hierarchy,
+    });
+
+    const migrated = reconstructSculpt(
+      {
+        schemaVersion: 1,
+        kind: SCULPT_INTAKE_KIND,
+        intakeId: "migrated-crate",
+        mode: "structured-spec",
+        structuredSpec: legacy,
+      },
+      { seed: 0 },
+    );
+    expect(migrated.ok).toBe(true);
+    if (!migrated.ok) return;
+    expect(validateSculptQualityArtifact(migrated.artifact).ok).toBe(true);
   });
 
   it("binds the real procedural export and its fixed-seed emit digest", () => {
@@ -223,10 +251,13 @@ describe("SceneAxi sculpt reconstruction", () => {
       seed: 79,
       emitDigest: emitSculptProcedural(spec, { seed: 79 }).digest,
     });
+    const validated = validateSculptQualityArtifact(result.artifact);
+    expect(validated.ok).toBe(true);
+    if (!validated.ok) return;
     expect(
-      result.artifact.evidence.qualityGates.find((gate) => gate.id === "procedural-emit")
+      validated.value.evidence.qualityGates.find((gate) => gate.id === "procedural-emit")
         ?.digest,
-    ).toBe(result.artifact.proceduralModule.emitDigest);
+    ).toBe(validated.value.proceduralModule.emitDigest);
   });
 
   it("keeps offline agent assistance default-off and deterministic when explicitly enabled", () => {
@@ -290,8 +321,11 @@ describe("SceneAxi sculpt reconstruction", () => {
     expect(Object.isFrozen(result.artifact.spec.materials[0])).toBe(true);
     expect(Object.isFrozen(result.artifact.proceduralModule)).toBe(true);
     expect(Object.isFrozen(result.artifact.runtimeHierarchy)).toBe(true);
-    expect(Object.isFrozen(result.artifact.runtimeHierarchy.pivots)).toBe(true);
-    expect(Object.isFrozen(result.artifact.runtimeHierarchy.pivots[0])).toBe(true);
+    const validated = validateSculptQualityArtifact(result.artifact);
+    expect(validated.ok).toBe(true);
+    if (!validated.ok) return;
+    expect(Object.isFrozen(validated.value.runtimeHierarchy.pivots)).toBe(true);
+    expect(Object.isFrozen(validated.value.runtimeHierarchy.pivots[0])).toBe(true);
     expect(Object.isFrozen(result.artifact.evidence)).toBe(true);
     expect(Object.isFrozen(result.artifact.evidence.qualityGates)).toBe(true);
     expect(Object.isFrozen(result.artifact.evidence.qualityGates[0])).toBe(true);
@@ -398,18 +432,27 @@ describe("SceneAxi sculpt reconstruction", () => {
       dimensions: [1, 1, 1],
       materialId: "wood",
     }));
-    const result = reconstructSculpt({
-      schemaVersion: 1,
-      kind: SCULPT_INTAKE_KIND,
-      intakeId: "too-many-components",
-      mode: "structured-spec",
-      structuredSpec: spec,
-    });
-    expect(result).toMatchObject({
-      ok: false,
-      code: "quality-gate-refused",
-      gate: "component-budget",
-    });
+    const flatMap = vi
+      .spyOn(Array.prototype, "flatMap")
+      .mockImplementation(() => {
+        throw new Error("later quality gates must not run");
+      });
+    try {
+      const result = reconstructSculpt({
+        schemaVersion: 1,
+        kind: SCULPT_INTAKE_KIND,
+        intakeId: "too-many-components",
+        mode: "structured-spec",
+        structuredSpec: spec,
+      });
+      expect(result).toMatchObject({
+        ok: false,
+        code: "quality-gate-refused",
+        gate: "component-budget",
+      });
+    } finally {
+      flatMap.mockRestore();
+    }
   });
 
   it("has no img2threejs product runtime dependency", () => {

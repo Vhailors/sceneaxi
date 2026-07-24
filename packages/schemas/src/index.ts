@@ -298,6 +298,7 @@ export {
   validateSculptArtifact,
   validateSculptIntake,
   validateSculptProceduralEmit,
+  validateSculptQualityArtifact,
 } from "./sculpt.js";
 export type {
   ObjectSculptSpec,

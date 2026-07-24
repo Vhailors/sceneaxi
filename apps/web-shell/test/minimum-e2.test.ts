@@ -69,7 +69,7 @@ describe("Minimum E2 hybrid editor surface", () => {
     expect(editor.snapshot().inspector).toMatchObject({
       instanceId: "lantern-one",
       componentCount: 2,
-      socketCount: 2,
+      socketCount: 1,
     });
     editor.setSelectedTransform({
       translation: [4, 1, -2],

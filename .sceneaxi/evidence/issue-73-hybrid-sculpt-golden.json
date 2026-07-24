@@ -6,8 +6,8 @@
   "fixture": {
     "intakePath": "tests/e2e/fixtures/hybrid-sculpt/structured-spec.intake.json",
     "artifactId": "golden-sculpt-artifact",
-    "artifactDigest": "sha256:61071d7badf6cf6b2451324cfcf104673577b95b225872b55d345706e5c7831b",
-    "artifactBytesDigest": "sha256:61071d7badf6cf6b2451324cfcf104673577b95b225872b55d345706e5c7831b"
+    "artifactDigest": "sha256:45ab3fa06c4abde02a5cb0efc1602c79fcc96a66f2ad2cdc3cf55375e682eba1",
+    "artifactBytesDigest": "sha256:45ab3fa06c4abde02a5cb0efc1602c79fcc96a66f2ad2cdc3cf55375e682eba1"
   },
   "mount": {
     "backend": "experimental-three",
@@ -17,24 +17,24 @@
   },
   "kernel": {
     "seed": 73,
-    "initialDigest": "sha256:663767588cd94671493e4f1f5350be25611aae624e1cb99981bff9e65b7cea04",
-    "terminalDigest": "sha256:2169628da18aa04086fa1ad6ce7c3a8452858e0915bc6693346c4e678dd42152",
+    "initialDigest": "sha256:f886fea3f979456bc304336d38fe3f936d107f53513c868f7b3ce128c867078e",
+    "terminalDigest": "sha256:9fa6434991f6c9986f784edd1f9cd6f7eb9bb0e8664d044a4e87bc1d8dca289d",
     "socketValue": -0.249795,
     "collisionCount": 2,
-    "replayDigest": "sha256:2169628da18aa04086fa1ad6ce7c3a8452858e0915bc6693346c4e678dd42152",
-    "saveDigest": "sha256:269e0f9c99ae3792e3abe4d0823b3cc825654a9b97c914ddfb80de758f14547d"
+    "replayDigest": "sha256:9fa6434991f6c9986f784edd1f9cd6f7eb9bb0e8664d044a4e87bc1d8dca289d",
+    "saveDigest": "sha256:18c7d03e4756ee022f5101f14964a615f06797a33731964b827b6e0177823449"
   },
   "editor": {
     "treeSize": 3,
     "previewDrawCalls": 2,
     "proposalPointer": "/data",
     "restoredIds": ["golden-one"],
-    "documentDigest": "sha256:b6f710250b791d7f9487f0c0610f6e4f1ad67e643981e206be7c15e2b49a85a6"
+    "documentDigest": "sha256:a9202881253411549c53331d1ce4730b197e931fb4581e2e9c1a08ec6193fea3"
   },
   "liveDemo": {
     "intakePath": "tests/e2e/fixtures/hybrid-sculpt/demo-image-brief.intake.json",
     "artifactId": "demo-lantern-artifact",
-    "artifactDigest": "sha256:43300e158d804a042894d2358757e5b4c38d64bda9c6cdd02b045aa0da9f675b",
+    "artifactDigest": "sha256:aaa039bf04302eb1323c74eb3d100f4329bce95fe6915696cb34212aae43a9bb",
     "previewDrawCalls": 2,
     "selectedArtifactId": "demo-lantern-artifact"
   },

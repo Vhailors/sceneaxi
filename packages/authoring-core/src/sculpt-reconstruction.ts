@@ -10,7 +10,11 @@ import {
   validateObjectSculptSpec,
   validateSculptArtifact,
   validateSculptIntake,
+  validateSculptQualityArtifact,
   type JsonValue,
+  type LegacyObjectSculptSpec,
+  type LegacySculptArtifact,
+  type ObjectSculptSpec,
   type SculptArtifact,
   type SculptHierarchyNode,
   type SculptIntake,
@@ -30,6 +34,11 @@ import {
   digestJson,
   snapshotJsonValue,
 } from "./json-invariants.js";
+
+const LEGACY_PIPELINE_MODULE_ID = "sceneaxi/sculpt-reconstruction-v1";
+const LEGACY_PIPELINE_EXPORT_NAME = "buildSculptArtifact";
+const LEGACY_PIPELINE_SOURCE =
+  "sceneaxi-owned:sculpt-reconstruction:v1:primitive-hierarchy";
 
 export type SculptReconstructionRefusalCode =
   | "invalid-intake"
@@ -56,7 +65,7 @@ export type SculptReconstructionOptions = {
 export type SculptReconstructionResult =
   | {
       readonly ok: true;
-      readonly artifact: SculptQualityArtifact;
+      readonly artifact: SculptArtifact;
       readonly artifactBytes: string;
       readonly artifactDigest: string;
     }
@@ -67,20 +76,16 @@ export type SculptReconstructionResult =
       readonly message: string;
     };
 
-function snapshotObjectSculptSpec(
-  spec: SculptQualityObjectSculptSpec,
-): SculptQualityObjectSculptSpec {
-  return snapshotJsonValue(
-    spec,
-  );
+function snapshotObjectSculptSpec<Spec extends ObjectSculptSpec>(
+  spec: Spec,
+): Spec {
+  return snapshotJsonValue(spec);
 }
 
-function snapshotSculptArtifact(
-  artifact: SculptQualityArtifact,
-): SculptQualityArtifact {
-  return snapshotJsonValue(
-    artifact,
-  );
+function snapshotSculptArtifact<Artifact extends SculptArtifact>(
+  artifact: Artifact,
+): Artifact {
+  return snapshotJsonValue(artifact);
 }
 
 type OfflineProbeResult =
@@ -128,65 +133,95 @@ export function serializeSculptArtifact(artifact: SculptArtifact) {
   return `${canonicalJson(artifact as unknown as JsonValue)}\n`;
 }
 
-function hierarchyDepth(nodes: readonly SculptHierarchyNode[]) {
+function hierarchyDepth(
+  nodes: readonly SculptHierarchyNode[],
+  limit: number,
+) {
   const parents = new Map(nodes.map((node) => [node.id, node.parentId]));
+  const depths = new Map<string, number>();
   let maximum = 0;
   for (const node of nodes) {
-    let depth = 0;
+    const path: string[] = [];
     let cursor: string | null | undefined = node.id;
-    while (cursor !== null && cursor !== undefined) {
-      depth += 1;
+    while (
+      cursor !== null &&
+      cursor !== undefined &&
+      !depths.has(cursor)
+    ) {
+      path.push(cursor);
+      if (path.length > limit) return limit + 1;
       cursor = parents.get(cursor);
     }
-    maximum = Math.max(maximum, depth);
+    let depth = cursor === null || cursor === undefined
+      ? 0
+      : (depths.get(cursor) ?? 0);
+    for (let index = path.length - 1; index >= 0; index -= 1) {
+      depth += 1;
+      const nodeId = path[index];
+      if (nodeId !== undefined) depths.set(nodeId, depth);
+      if (depth > limit) return limit + 1;
+    }
+    if (depth > maximum) maximum = depth;
   }
   return maximum;
 }
 
-function qualityGateEvidence(spec: SculptQualityObjectSculptSpec):
+function qualityGateRefusal(id: string, value: number, limit: number) {
+  return {
+    ok: false as const,
+    gate: id,
+    message: `Sculpt quality gate "${id}" refused value ${value}; limit is ${limit}.`,
+  };
+}
+
+function qualityGatePass(id: string, value: number, limit: number) {
+  return {
+    id,
+    status: "passed" as const,
+    digest: digestJson({ id, limit, value }),
+  };
+}
+
+function qualityGateEvidence(spec: ObjectSculptSpec):
   | { readonly ok: true; readonly evidence: readonly SculptQualityGateEvidence[] }
   | { readonly ok: false; readonly gate: string; readonly message: string } {
-  const checks = [
-    {
-      id: "component-budget",
-      passed: spec.components.length <= 64,
-      value: spec.components.length,
-      limit: 64,
-    },
-    {
-      id: "hierarchy-depth",
-      passed: hierarchyDepth(spec.hierarchy) <= 16,
-      value: hierarchyDepth(spec.hierarchy),
-      limit: 16,
-    },
-    {
-      id: "physical-extent",
-      passed: spec.components.every((component) => component.dimensions.every((axis) => axis <= 100)),
-      value: Math.max(...spec.components.flatMap((component) => component.dimensions)),
-      limit: 100,
-    },
-  ] as const;
-  const failed = checks.find((check) => !check.passed);
-  if (failed !== undefined) {
-    return {
-      ok: false,
-      gate: failed.id,
-      message: `Sculpt quality gate "${failed.id}" refused value ${failed.value}; limit is ${failed.limit}.`,
-    };
+  const evidence: SculptQualityGateEvidence[] = [];
+  const componentCount = spec.components.length;
+  if (componentCount > 64) {
+    return qualityGateRefusal("component-budget", componentCount, 64);
   }
+  evidence.push(qualityGatePass("component-budget", componentCount, 64));
+
+  const depth = hierarchyDepth(spec.hierarchy, 16);
+  if (depth > 16) {
+    return qualityGateRefusal("hierarchy-depth", depth, 16);
+  }
+  evidence.push(qualityGatePass("hierarchy-depth", depth, 16));
+
+  let physicalExtent = 0;
+  for (const component of spec.components) {
+    for (const axis of component.dimensions) {
+      if (axis > physicalExtent) physicalExtent = axis;
+      if (physicalExtent > 100) {
+        return qualityGateRefusal(
+          "physical-extent",
+          physicalExtent,
+          100,
+        );
+      }
+    }
+  }
+  evidence.push(qualityGatePass("physical-extent", physicalExtent, 100));
+
   return {
     ok: true,
-    evidence: checks.map((check) => ({
-      id: check.id,
-      status: "passed" as const,
-      digest: digestJson({ id: check.id, limit: check.limit, value: check.value }),
-    })),
+    evidence,
   };
 }
 
 function specFromImageAndBrief(
   intake: Extract<SculptIntake, { mode: "image+brief" }>,
-): SculptQualityObjectSculptSpec {
+): LegacyObjectSculptSpec {
   const color = `#${intake.image.digest.slice("sha256:".length, "sha256:".length + 6)}`;
   const accent = `#${createHash("sha256").update(intake.brief).digest("hex").slice(0, 6)}`;
   const rootId = `${intake.intakeId}-body`;
@@ -201,13 +236,6 @@ function specFromImageAndBrief(
     kind: OBJECT_SCULPT_SPEC_KIND,
     id: `${intake.intakeId}-spec`,
     rootNodeId: rootId,
-    complexityClass: "simple",
-    passes: [
-      { id: "blockout", deterministic: true, steps: ["derive-primary-volume"] },
-      { id: "structure", deterministic: true, steps: ["place-body-and-detail"] },
-      { id: "materials", deterministic: true, steps: ["derive-hash-materials"] },
-      { id: "sockets", deterministic: true, steps: ["bind-detail-animation"] },
-    ],
     materials: [
       { id: "primary", baseColor: color, metallic: 0.1, roughness: 0.7 },
       { id: "accent", baseColor: accent, metallic: 0.3, roughness: 0.45 },
@@ -234,15 +262,68 @@ function specFromImageAndBrief(
         amplitude: 0.2,
         frequencyHz: 1,
       },
-      {
-        id: "detail-attachment",
-        nodeId: detailId,
-        kind: "attachment",
-        axis: "y",
-        amplitude: 0,
-        frequencyHz: 0,
-      },
     ],
+  };
+}
+
+function reconstructLegacyArtifact(
+  intake: SculptIntake,
+  spec: LegacyObjectSculptSpec,
+): SculptReconstructionResult {
+  const gates = qualityGateEvidence(spec);
+  if (!gates.ok) {
+    return {
+      ok: false,
+      code: "quality-gate-refused",
+      gate: gates.gate,
+      message: gates.message,
+    };
+  }
+  const specSnapshot = snapshotObjectSculptSpec(spec);
+  const moduleDigest = digestBytes(LEGACY_PIPELINE_SOURCE);
+  const artifact: LegacySculptArtifact = {
+    schemaVersion: SCULPT_SCHEMA_VERSION,
+    kind: SCULPT_ARTIFACT_KIND,
+    artifactId: `${intake.intakeId}-artifact`,
+    spec: specSnapshot,
+    proceduralModule: {
+      moduleId: LEGACY_PIPELINE_MODULE_ID,
+      exportName: LEGACY_PIPELINE_EXPORT_NAME,
+      sourceDigest: moduleDigest,
+    },
+    runtimeHierarchy: {
+      rootNodeId: specSnapshot.rootNodeId,
+      nodes: specSnapshot.hierarchy,
+    },
+    evidence: {
+      method: intake.mode === "structured-spec"
+        ? "structured-fixture"
+        : "image-brief-reconstruction",
+      intakeDigest: digestJson(intake as unknown as JsonValue),
+      specDigest: digestJson(specSnapshot as unknown as JsonValue),
+      proceduralModuleDigest: moduleDigest,
+      qualityGates: gates.evidence,
+    },
+  };
+  const validatedArtifact = validateSculptArtifact(artifact);
+  if (!validatedArtifact.ok) {
+    return {
+      ok: false,
+      code: "artifact-invalid",
+      message:
+        validatedArtifact.diagnostics[0]?.message ??
+        "Generated Sculpt Artifact refused.",
+    };
+  }
+  const artifactSnapshot = snapshotSculptArtifact(
+    validatedArtifact.value as LegacySculptArtifact,
+  );
+  const artifactBytes = serializeSculptArtifact(artifactSnapshot);
+  return {
+    ok: true,
+    artifact: artifactSnapshot,
+    artifactBytes,
+    artifactDigest: digestBytes(artifactBytes),
   };
 }
 
@@ -279,11 +360,20 @@ export function reconstructSculpt(
       message: "Sculpt reconstruction seed must be a non-negative safe integer.",
     };
   }
-  let spec = normalizeObjectSculptSpec(
-    intake.mode === "structured-spec"
-      ? intake.structuredSpec
-      : specFromImageAndBrief(intake),
-  );
+  const inputSpec = intake.mode === "structured-spec"
+    ? intake.structuredSpec
+    : specFromImageAndBrief(intake);
+  const qualityRequested =
+    isSculptQualityObjectSculptSpec(inputSpec) ||
+    options.seed !== undefined ||
+    options.enableOfflineAgent === true;
+  if (!qualityRequested) {
+    return reconstructLegacyArtifact(
+      intake,
+      inputSpec as LegacyObjectSculptSpec,
+    );
+  }
+  let spec = normalizeObjectSculptSpec(inputSpec);
   if (options.enableOfflineAgent === true) {
     if (options.offlineAgent === undefined) {
       return {
@@ -344,7 +434,7 @@ export function reconstructSculpt(
       ],
     },
   };
-  const validatedArtifact = validateSculptArtifact(artifact);
+  const validatedArtifact = validateSculptQualityArtifact(artifact);
   if (!validatedArtifact.ok) {
     return {
       ok: false,
@@ -352,9 +442,7 @@ export function reconstructSculpt(
       message: validatedArtifact.diagnostics[0]?.message ?? "Generated Sculpt Artifact refused.",
     };
   }
-  const artifactSnapshot = snapshotSculptArtifact(
-    validatedArtifact.value as SculptQualityArtifact,
-  );
+  const artifactSnapshot = snapshotSculptArtifact(validatedArtifact.value);
   const artifactBytes = serializeSculptArtifact(artifactSnapshot);
   return {
     ok: true,

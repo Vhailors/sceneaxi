@@ -21,6 +21,7 @@ import {
 import {
   validateObjectSculptSpec,
   validateSculptIntake,
+  validateSculptQualityArtifact,
   isSculptQualityObjectSculptSpec,
   type SculptQualityObjectSculptSpec,
 } from "../../packages/schemas/src/index.ts";
@@ -85,16 +86,25 @@ describe("sculpt-quality v1 golden demos", () => {
         const reconstruction = reconstructSculpt(intake, { seed: demo.seed });
         expect(reconstruction.ok).toBe(true);
         if (!reconstruction.ok) throw new Error(reconstruction.message);
+        const qualityArtifact = validateSculptQualityArtifact(
+          reconstruction.artifact,
+        );
+        if (!qualityArtifact.ok) {
+          throw new Error(
+            qualityArtifact.diagnostics[0]?.message ??
+              `Demo "${demo.id}" did not reconstruct a sculpt-quality artifact.`,
+          );
+        }
 
         const mounts = createSculptMountApi(
           createExperimentalThreeSculptPresentationBackend(),
         );
-        mounts.mount({ instanceId: demo.id, artifact: reconstruction.artifact });
+        mounts.mount({ instanceId: demo.id, artifact: qualityArtifact.value });
         const frame = mounts.render();
         expect(frame.drawCalls).toBe(spec.components.length);
         mounts.dispose();
 
-        const kernel = openSculptKernelSession(reconstruction.artifact, {
+        const kernel = openSculptKernelSession(qualityArtifact.value, {
           seed: demo.seed,
         });
         const initial = kernel.observe();
@@ -134,7 +144,7 @@ describe("sculpt-quality v1 golden demos", () => {
           backend: "experimental-three",
           seed: demo.seed,
         });
-        editor.addSculpt({ instanceId: demo.id, artifact: reconstruction.artifact });
+        editor.addSculpt({ instanceId: demo.id, artifact: qualityArtifact.value });
         editor.select(demo.id);
         editor.play();
         editor.tick(100);
@@ -176,7 +186,7 @@ describe("sculpt-quality v1 golden demos", () => {
             sockets: inventory.socketIds.length,
           },
           artifactDigest: reconstruction.artifactDigest,
-          emitDigest: reconstruction.artifact.proceduralModule.emitDigest,
+          emitDigest: qualityArtifact.value.proceduralModule.emitDigest,
           mount: {
             drawCalls: frame.drawCalls,
             frameDigest: digest(JSON.stringify(frame)),

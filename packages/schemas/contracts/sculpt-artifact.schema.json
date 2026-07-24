@@ -64,7 +64,7 @@
       "properties": {
         "moduleId": { "const": "@sceneaxi/authoring-core" },
         "exportName": { "const": "emitSculptProcedural" },
-        "sourceDigest": { "$ref": "#/$defs/digest" },
+        "sourceDigest": { "const": "sha256:9b770455a8b6c738be39e5930f931405d25a6c2217af233f33f021a25a935cc8" },
         "seed": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
         "emitDigest": { "$ref": "#/$defs/digest" }
       }

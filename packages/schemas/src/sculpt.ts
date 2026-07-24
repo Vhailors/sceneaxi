@@ -246,19 +246,23 @@ type SculptArtifactBase = {
   readonly evidence: SculptEvidence;
 };
 
-export type LegacySculptArtifact = SculptArtifactBase & {
+export type SculptArtifact = SculptArtifactBase & {
+  readonly spec: ObjectSculptSpec;
+  readonly proceduralModule: SculptProceduralModuleRef;
+  readonly runtimeHierarchy: SculptRuntimeHierarchy;
+};
+
+export type LegacySculptArtifact = SculptArtifact & {
   readonly spec: LegacyObjectSculptSpec;
   readonly proceduralModule: LegacySculptProceduralModuleRef;
   readonly runtimeHierarchy: LegacySculptRuntimeHierarchy;
 };
 
-export type SculptQualityArtifact = SculptArtifactBase & {
+export type SculptQualityArtifact = SculptArtifact & {
   readonly spec: SculptQualityObjectSculptSpec;
   readonly proceduralModule: SculptQualityProceduralModuleRef;
   readonly runtimeHierarchy: SculptQualityRuntimeHierarchy;
 };
-
-export type SculptArtifact = LegacySculptArtifact | SculptQualityArtifact;
 
 export type SculptDiagnosticCode =
   | "not-object"
@@ -1201,4 +1205,19 @@ export function validateSculptArtifact(value: unknown): SculptValidationResult<S
     }
   }
   return { ok: true, value: value as SculptArtifact };
+}
+
+export function validateSculptQualityArtifact(
+  value: unknown,
+): SculptValidationResult<SculptQualityArtifact> {
+  const artifact = validateSculptArtifact(value);
+  if (!artifact.ok) return artifact;
+  if (!isSculptQualityObjectSculptSpec(artifact.value.spec)) {
+    return refuse(
+      "invalid-field",
+      "$.spec",
+      "Sculpt-quality artifacts require a sculpt-quality ObjectSculptSpec.",
+    );
+  }
+  return { ok: true, value: artifact.value as SculptQualityArtifact };
 }
