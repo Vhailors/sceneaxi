@@ -31,8 +31,10 @@ The two committed demos and their stable evidence are indexed by
 - **Sculpt Intake** — versioned multi-modal request envelope; its authoritative
   fields and modes live in
   [`sculpt-intake.schema.json`](packages/schemas/contracts/sculpt-intake.schema.json).
-- **ObjectSculptSpec** — renderer-neutral, deterministic multi-pass description
-  of one sculpt; its authoritative shape lives in
+- **ObjectSculptSpec** — renderer-neutral description of one sculpt. Its
+  sculpt-quality branch adds the deterministic multi-pass ledger and complexity
+  class; the legacy PR #75 branch remains valid without those fields. Its
+  authoritative shape lives in
   [`object-sculpt-spec.schema.json`](packages/schemas/contracts/object-sculpt-spec.schema.json).
 - **Detail inventory** — non-trivial spec evidence naming silhouette,
   structural, surface, material, and socket detail; shallow declarations refuse

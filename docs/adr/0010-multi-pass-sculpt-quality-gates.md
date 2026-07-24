@@ -14,16 +14,19 @@ masquerade as detail.
 
 ## Decision
 
-ObjectSculptSpec requires a deterministic pass ledger containing, in order,
-`blockout`, `structure`, `materials`, and `sockets`. The closed v1 extension
-permits `surface-detail` immediately before `sockets`.
+The sculpt-quality branch of ObjectSculptSpec requires a deterministic pass
+ledger containing, in order, `blockout`, `structure`, `materials`, and
+`sockets`. The closed v1 extension permits `surface-detail` immediately before
+`sockets`. The legacy PR #75 branch remains valid without a pass ledger or
+complexity class and normalizes into the sculpt-quality branch before
+reconstruction.
 
-Every spec declares `simple` or `non-trivial`. Non-trivial specs require a
-detail inventory covering silhouette, structural, surface, material, and
-socket detail. Inventory references bind to spec material/socket IDs, and both
-the declared inventory and actual component/material/hierarchy/socket depth
-must meet the v1 minima. Missing, empty, out-of-order, and shallow cases refuse
-with stable diagnostic codes.
+Every sculpt-quality spec declares `simple` or `non-trivial`. Non-trivial specs
+require a detail inventory covering silhouette, structural, surface, material,
+and socket detail. Inventory references bind to spec material/socket IDs, and
+both the declared inventory and actual component/material/hierarchy/socket
+depth must meet the v1 minima. Missing, empty, out-of-order, and shallow cases
+refuse with stable diagnostic codes.
 
 ## Consequences
 
