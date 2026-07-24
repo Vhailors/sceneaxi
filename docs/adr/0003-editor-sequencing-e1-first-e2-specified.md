@@ -1,6 +1,6 @@
 # ADR 0003: Editor sequencing — E1 first, E2 specified-not-built
 
-- **Status:** Accepted — settled by the Wayfinder design-it-twice process; this ADR records the decision, it does not re-decide it.
+- **Status:** Accepted; amended 2026-07-24 for one bounded hybrid vertical.
 - **Date recorded:** 2026-07-21
 - **Source:** Wayfinder design-it-twice pass (origin `threejs-bgf-ecosystem-wayfinder-v1`), condensed in factories-helpers [#41](https://github.com/Vhailors/factories-helpers/issues/41) §Editor and factory-pipeline interfaces.
 - **Lineage:** `transferred-from: factories-helpers#46` — engine/CLI half of the split, recorded per [sceneaxi#4](https://github.com/Vhailors/sceneaxi/issues/4); factory-side ADRs stay on factories-helpers [#46](https://github.com/Vhailors/factories-helpers/issues/46).
@@ -29,6 +29,19 @@ fixture list.
 - **Text documents stay canonical under any editor.** No editor may become a
   proprietary data silo.
 
+### 2026-07-24 vertical-only amendment
+
+[Sceneaxi#67](https://github.com/Vhailors/sceneaxi/issues/67)–[#74](https://github.com/Vhailors/sceneaxi/issues/74)
+authorize one exception: the hybrid sculpt vertical ships **Minimum E2**, and
+only this fixed checklist — viewport, scene tree, selection, numeric transform,
+inspector, play/pause/step, add/remove sculpt instance, and save/load through
+the existing propose/apply protocol.
+
+This amendment does not authorize general E2, a full Godot-like editor, or any
+additional editor subsystem. It does not run or replace Stage 6. The original
+E1-first rule remains controlling outside this vertical, and text-canonical
+documents remain authoritative inside it.
+
 Implementation of the E1/E2 behavioral contracts is tracked in this repo by
 [sceneaxi#5](https://github.com/Vhailors/sceneaxi/issues/5) (continuing
 factories-helpers [#49](https://github.com/Vhailors/factories-helpers/issues/49));
@@ -47,7 +60,8 @@ E1's verbs transfer as the CLI `project` command group
 - Every future editor inherits text-canonical documents; migrations are
   explicit and replayable, never implicit format capture.
 - If Stage 6 evidence never justifies E2, it is never built — the designed
-  contract is the cost ceiling of the bet.
+  contract is the cost ceiling of the bet, apart from the named Minimum E2
+  exception above.
 
 ## Rejected alternatives
 
@@ -62,8 +76,9 @@ E1's verbs transfer as the CLI `project` command group
 
 ## Settled here vs held elsewhere
 
-**Settled:** the E1-before-E2 sequencing; E2 specified-not-built pending
-Stage 6 evidence; text canonicality under any editor.
+**Settled:** the E1-before-E2 sequencing; general E2 specified-not-built pending
+Stage 6 evidence; the vertical-only Minimum E2 checklist; text canonicality
+under every editor.
 
 **Settled elsewhere:** `authoring-surface-priority` and `cli-audience` are
 recorded in the canonical product spec
