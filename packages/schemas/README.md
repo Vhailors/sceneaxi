@@ -11,6 +11,13 @@ The authoritative v1 shapes are the package-exported
 constants and TypeScript types plus `validateSculptIntake`,
 `validateObjectSculptSpec`, and `validateSculptArtifact`.
 
+Sculpt-quality v1 makes the ObjectSculptSpec pass ledger and complexity class
+explicit, requires a detail inventory for non-trivial specs, and projects a
+versioned animation-ready runtime hierarchy with pivots, sockets, descriptive
+colliders, material bindings, and attachment points. Stable quality and
+incomplete-hierarchy diagnostics are part of the public TypeScript result. See
+[`docs/sculpt-quality.md`](../../docs/sculpt-quality.md) and ADRs 0010–0013.
+
 Reconstruction behavior belongs to
 [`@sceneaxi/authoring-core`](../authoring-core/README.md#hybrid-sculpt-reconstruction-and-minimum-e2);
 renderer mounting belongs to
