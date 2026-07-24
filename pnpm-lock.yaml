@@ -11,6 +11,9 @@ importers:
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.7.0)
+      '@sceneaxi/profile-game':
+        specifier: workspace:^
+        version: link:packages/profile-game
       '@types/node':
         specifier: ^26.1.1
         version: 26.1.1

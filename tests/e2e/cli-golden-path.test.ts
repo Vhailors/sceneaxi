@@ -9,21 +9,16 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  createDocument,
   parseDocumentText,
-  writeDocumentFile,
   type JsonObject,
 } from "../../packages/authoring-core/src/index.ts";
 import { ExitCode, runCli } from "../../packages/cli/src/index.ts";
-import {
-  open,
-  replay,
-  type ProductManifest,
-} from "../../packages/engine-kernel/src/index.ts";
+import type { ProductManifest } from "../../packages/engine-kernel/src/index.ts";
 import {
   createNullPresentationRuntime,
 } from "../../packages/engine-presentation/src/index.ts";
 import { openPluginHost } from "../../packages/plugin-host/src/index.ts";
+import { conformance as gameProfile } from "@sceneaxi/profile-game";
 import { describe, expect, it } from "vitest";
 
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
@@ -46,6 +41,7 @@ const ILLEGAL_PLUGIN_PATH = join(
 );
 
 const STEP_NAMES = Object.freeze([
+  "profile-game-development-consumer",
   "create-open-project-fixture",
   "cli-project-propose",
   "cli-project-apply",
@@ -132,13 +128,20 @@ function productManifestFrom(value: unknown): ProductManifest {
 }
 
 describe("MVP golden path", () => {
-  it("runs authoring -> kernel/presentation -> plugin load/refuse -> save/replay -> held-key refusal -> evidence", async () => {
+  it("runs Game profile -> authoring -> kernel/presentation -> plugin load/refuse -> save/replay -> held-key refusal -> evidence", async () => {
     const projectRoot = mkdtempSync(join(tmpdir(), "sceneaxi-cli-golden-"));
     rmSync(EVIDENCE_PATH, { force: true });
 
     try {
+      namedStep("profile-game-development-consumer", () => {
+        expect(gameProfile.seam.name).toBe("@sceneaxi/profile-game");
+        expect(gameProfile.claim.claimStatus).toBe("development-consumer");
+        expect(gameProfile.claim.corePin).toBe(gameProfile.seam.corePin);
+        expect(gameProfile.claim.shippingClaim).toBe(false);
+      });
+
       namedStep("create-open-project-fixture", () => {
-        const document = createDocument({
+        const document = gameProfile.core.authoring.createDocument({
           id: "golden-project",
           title: "Issue 51 CLI golden path",
           data: {
@@ -149,9 +152,11 @@ describe("MVP golden path", () => {
             },
           },
         });
-        const written = writeDocumentFile(DOCUMENT_PATH, document, {
-          cwd: projectRoot,
-        });
+        const written = gameProfile.core.authoring.writeDocumentFile(
+          DOCUMENT_PATH,
+          document,
+          { cwd: projectRoot },
+        );
         expect(written.ok).toBe(true);
 
         const opened = parseDocumentText(
@@ -216,7 +221,7 @@ describe("MVP golden path", () => {
           parsed.document.data["productManifest"],
         );
         expect(manifest.entities?.[0]?.x).toBe(2);
-        return open(manifest, host);
+        return gameProfile.core.kernel.open(manifest, host);
       });
 
       const initialSnapshot = session.observe();
@@ -294,7 +299,9 @@ describe("MVP golden path", () => {
 
       const saved = namedStep("kernel-save-replay", () => {
         const artifact = session.save();
-        const replayed = replay(artifact, host).observe();
+        const replayed = gameProfile.core.kernel
+          .replay(artifact, host)
+          .observe();
         expect(replayed).toEqual(terminalSnapshot);
         expect(replayed.digest).toBe(artifact.terminalDigest);
         return { artifact, replayed };
@@ -338,6 +345,12 @@ describe("MVP golden path", () => {
             proposalPath: PROPOSAL_PATH,
             proposedStatus: proposed.envelope.result["status"],
             appliedStatus: applied.envelope.result["status"],
+          },
+          profile: {
+            name: gameProfile.seam.name,
+            claimStatus: gameProfile.claim.claimStatus,
+            corePin: gameProfile.claim.corePin,
+            shippingClaim: gameProfile.claim.shippingClaim,
           },
           kernel: {
             initialDigest: initialSnapshot.digest,
