@@ -93,6 +93,15 @@ export {
   type ModelProviderSuccess,
 } from "./model-provider-port.js";
 
+export {
+  reconstructSculpt,
+  serializeSculptArtifact,
+} from "./sculpt-reconstruction.js";
+export type {
+  SculptReconstructionRefusalCode,
+  SculptReconstructionResult,
+} from "./sculpt-reconstruction.js";
+
 // Re-export document/proposal types from schemas for adapter convenience.
 export type {
   ApplyDiagnostic,
