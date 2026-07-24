@@ -116,6 +116,28 @@ describe("SceneAxi sculpt reconstruction", () => {
     expect(Object.isFrozen(first.nodes[0])).toBe(true);
   });
 
+  it("keeps uint32 boundary values within declared geometry buckets", () => {
+    const radialSegments = [16, 20, 24, 28] as const;
+    const longitudinalSegments = [2, 3, 4] as const;
+    const maximumUnit = 0xffff_ffff / 0x1_0000_0000;
+
+    expect(maximumUnit).toBeLessThan(1);
+    expect(Math.floor(maximumUnit * radialSegments.length)).toBe(
+      radialSegments.length - 1,
+    );
+    expect(Math.floor(maximumUnit * longitudinalSegments.length)).toBe(
+      longitudinalSegments.length - 1,
+    );
+
+    for (const seed of [0, 0xffff_ffff, Number.MAX_SAFE_INTEGER]) {
+      const geometry = emitSculptProcedural(fixtureSpec(), { seed }).geometry;
+      for (const item of geometry) {
+        expect(radialSegments).toContain(item.radialSegments);
+        expect(longitudinalSegments).toContain(item.longitudinalSegments);
+      }
+    }
+  });
+
   it("does not use locale-sensitive collation for digest-bearing arrays", () => {
     const localeCompare = vi
       .spyOn(String.prototype, "localeCompare")

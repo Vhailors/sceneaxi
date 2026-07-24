@@ -16,8 +16,8 @@
         "materials": 3,
         "sockets": 2
       },
-      "artifactDigest": "sha256:1811e0fd36b232a6bb9b77e3f0fc2d62470b0f2332781a340d979337e761f44d",
-      "emitDigest": "sha256:8ba2394062b48cfa15ad121bf1d01c0b1c01b86724f2e5dda5457eaf08d89dcb",
+      "artifactDigest": "sha256:6ffc9935a898806eb7bccdecc5cf64e89d821ec67527aba780675db1bf904246",
+      "emitDigest": "sha256:891e1903675d93f80360f472dc0394e268261c49e1d2f930b745c49cf6c33408",
       "mount": {
         "drawCalls": 5,
         "frameDigest": "sha256:66ee71f27b7b3f519903718e45a12860b89017e06d45a9dc3939b275f3a4bca6"
@@ -27,7 +27,7 @@
         "terminalDigest": "sha256:ea92511519e974281a810f4b47374e71b235e7e4e2d4f191d519443b4f702b86",
         "replayDigest": "sha256:ea92511519e974281a810f4b47374e71b235e7e4e2d4f191d519443b4f702b86",
         "collisionCount": 6,
-        "saveDigest": "sha256:5f47e3b237cc7cf76f18919a7d47e7834385ef69361976f289ddd87a57b35aef"
+        "saveDigest": "sha256:6cfa0bd17ecbf3a29281237e49aa7cd8637d49a260da6a5d4a890505a4deff81"
       },
       "editor": {
         "treeSize": 6,
@@ -35,7 +35,7 @@
         "componentCount": 5,
         "socketCount": 2,
         "restoredIds": ["service-crate"],
-        "documentDigest": "sha256:e2b77600de7f647fc4cc7c5bb223e738577b3f60e130608caccbf77e7717066b"
+        "documentDigest": "sha256:c8c0db3cb0b359b9c41a08c40026e816c9e1d983460d32627f6be5d1fd3c8394"
       }
     },
     {
@@ -51,8 +51,8 @@
         "materials": 3,
         "sockets": 2
       },
-      "artifactDigest": "sha256:782f41955a38bec25e016527ab803a65772446182ee7ac49c1a71f1da215ac1b",
-      "emitDigest": "sha256:cf2eafa1b8f0825a4037b0625067bd4d4e3ec5dab26f12c374dff8decb9dca64",
+      "artifactDigest": "sha256:2b70fd1b80960b0f16014b7ddfb7af775bd4c579200554a62f04fd4a69238429",
+      "emitDigest": "sha256:e99c5d25b464699f770c16a3ec560d82e7800613018730ed61fc889ac4e84b5f",
       "mount": {
         "drawCalls": 7,
         "frameDigest": "sha256:49e38768c34c4062eb3e0c08f8a96624855a80e412786d217be7ec2a38309ec8"
@@ -62,7 +62,7 @@
         "terminalDigest": "sha256:efef5fc934533607c6262600ded21148d61515757ed25d44b3dfbec1dfd4536e",
         "replayDigest": "sha256:efef5fc934533607c6262600ded21148d61515757ed25d44b3dfbec1dfd4536e",
         "collisionCount": 1,
-        "saveDigest": "sha256:2aced4707583c99f589b67b69c557011f19c05770156023922f8b6a262623dfc"
+        "saveDigest": "sha256:7ddd8771775e3925e60facf365d8bb41628a951bf8ac2c0f2841ff177d8f02db"
       },
       "editor": {
         "treeSize": 8,
@@ -70,7 +70,7 @@
         "componentCount": 7,
         "socketCount": 2,
         "restoredIds": ["field-drone"],
-        "documentDigest": "sha256:b12677b5a6717c1994feb0799382dcbd1cc91157d1e95a658904379dd889fce7"
+        "documentDigest": "sha256:22b2a0bb07ec9adf6bf97672b074f88f56b0593b82c6ff2b7106efdb4d68af67"
       }
     }
   ],

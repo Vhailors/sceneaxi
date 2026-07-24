@@ -23,7 +23,11 @@ const SCULPT_PROCEDURAL_PROGRAM = snapshotSculptJson({
   canonicalization: "recursive-object-keys-code-unit",
   ordering: "identifier-code-unit",
   roundingDecimalPlaces: 6,
-  seedDerivation: "sha256:first-u32-be",
+  seedDerivation: {
+    hash: "sha256",
+    word: "first-u32-be",
+    uint32Range: 0x1_0000_0000,
+  },
   geometry: {
     seedNamespace: "geometry",
     bevelBasis: "minimum-dimension",
@@ -55,7 +59,10 @@ export const SCULPT_PROCEDURAL_SOURCE_DIGEST = digestSculptJson(
 
 function seededUnit(seed: number, namespace: string) {
   const hex = sculptSha256Hex(`${String(seed)}:${namespace}`);
-  return Number.parseInt(hex.slice(0, 8), 16) / 0xffff_ffff;
+  return (
+    Number.parseInt(hex.slice(0, 8), 16) /
+    SCULPT_PROCEDURAL_PROGRAM.seedDerivation.uint32Range
+  );
 }
 
 function rounded(value: number) {
