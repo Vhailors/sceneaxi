@@ -83,6 +83,46 @@ function snapshotSculptArtifact(
   );
 }
 
+type OfflineProbeResult =
+  | { readonly ok: true; readonly spec: SculptQualityObjectSculptSpec }
+  | {
+      readonly ok: false;
+      readonly refusal: Extract<SculptReconstructionResult, { readonly ok: false }>;
+    };
+
+function probeOfflineAgent(
+  offlineAgent: SculptOfflineAgent,
+  spec: SculptQualityObjectSculptSpec,
+): OfflineProbeResult {
+  try {
+    const candidate = offlineAgent.refine(structuredClone(spec));
+    const validation = validateObjectSculptSpec(candidate);
+    if (
+      !validation.ok ||
+      !isSculptQualityObjectSculptSpec(validation.value)
+    ) {
+      return {
+        ok: false,
+        refusal: {
+          ok: false,
+          code: "offline-agent-invalid",
+          message: "Injected offline sculpt agent returned an invalid ObjectSculptSpec.",
+        },
+      };
+    }
+    return { ok: true, spec: snapshotObjectSculptSpec(validation.value) };
+  } catch {
+    return {
+      ok: false,
+      refusal: {
+        ok: false,
+        code: "offline-agent-invalid",
+        message: "Injected offline sculpt agent failed while refining the spec.",
+      },
+    };
+  }
+}
+
 /** Byte-canonical form used by fixture evidence and artifact digests. */
 export function serializeSculptArtifact(artifact: SculptArtifact) {
   return `${canonicalJson(artifact as unknown as JsonValue)}\n`;
@@ -252,53 +292,13 @@ export function reconstructSculpt(
         message: "Offline sculpt agent flag is enabled but no injected offline adapter is available.",
       };
     }
-    let first: SculptQualityObjectSculptSpec;
-    try {
-      const firstCandidate = options.offlineAgent.refine(structuredClone(spec));
-      const firstValidation = validateObjectSculptSpec(firstCandidate);
-      if (
-        !firstValidation.ok ||
-        !isSculptQualityObjectSculptSpec(firstValidation.value)
-      ) {
-        return {
-          ok: false,
-          code: "offline-agent-invalid",
-          message: "Injected offline sculpt agent returned an invalid ObjectSculptSpec.",
-        };
-      }
-      first = snapshotObjectSculptSpec(firstValidation.value);
-    } catch {
-      return {
-        ok: false,
-        code: "offline-agent-invalid",
-        message: "Injected offline sculpt agent failed while refining the spec.",
-      };
-    }
-    let second: SculptQualityObjectSculptSpec;
-    try {
-      const secondCandidate = options.offlineAgent.refine(structuredClone(spec));
-      const secondValidation = validateObjectSculptSpec(secondCandidate);
-      if (
-        !secondValidation.ok ||
-        !isSculptQualityObjectSculptSpec(secondValidation.value)
-      ) {
-        return {
-          ok: false,
-          code: "offline-agent-invalid",
-          message: "Injected offline sculpt agent returned an invalid ObjectSculptSpec.",
-        };
-      }
-      second = snapshotObjectSculptSpec(secondValidation.value);
-    } catch {
-      return {
-        ok: false,
-        code: "offline-agent-invalid",
-        message: "Injected offline sculpt agent failed while refining the spec.",
-      };
-    }
+    const first = probeOfflineAgent(options.offlineAgent, spec);
+    if (!first.ok) return first.refusal;
+    const second = probeOfflineAgent(options.offlineAgent, spec);
+    if (!second.ok) return second.refusal;
     if (
-      canonicalJson(first as unknown as JsonValue) !==
-      canonicalJson(second as unknown as JsonValue)
+      canonicalJson(first.spec as unknown as JsonValue) !==
+      canonicalJson(second.spec as unknown as JsonValue)
     ) {
       return {
         ok: false,
@@ -306,7 +306,7 @@ export function reconstructSculpt(
         message: "Injected offline sculpt agent returned different results for identical input.",
       };
     }
-    spec = first;
+    spec = first.spec;
   }
   spec = snapshotObjectSculptSpec(spec);
   const gates = qualityGateEvidence(spec);

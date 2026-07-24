@@ -18,10 +18,10 @@ The additive quality path is:
 
 `multi-pass ObjectSculptSpec → deterministic procedural emit → animation-ready Sculpt Artifact → existing Mount / kernel / Minimum E2`
 
-The required passes are `blockout → structure → materials → sockets`; extra
-deterministic passes may appear without changing that order. Non-trivial specs
-must carry a reference-checked detail inventory. The two committed demos and
-their stable evidence are indexed by
+The accepted ledgers are `blockout → structure → materials → sockets`
+and that same sequence with one `surface-detail` pass immediately before
+`sockets`. Non-trivial specs must carry a reference-checked detail inventory.
+The two committed demos and their stable evidence are indexed by
 [`docs/sculpt-quality.md`](docs/sculpt-quality.md).
 
 ## Glossary

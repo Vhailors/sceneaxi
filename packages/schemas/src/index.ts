@@ -297,6 +297,7 @@ export {
   validateObjectSculptSpec,
   validateSculptArtifact,
   validateSculptIntake,
+  validateSculptProceduralEmit,
 } from "./sculpt.js";
 export type {
   ObjectSculptSpec,
@@ -340,7 +341,6 @@ export {
   SCULPT_PROCEDURAL_EXPORT_NAME,
   SCULPT_PROCEDURAL_MODULE_ID,
   SCULPT_PROCEDURAL_SOURCE_DIGEST,
-  computeSculptProceduralEmit,
 } from "./sculpt-procedural.js";
 export type {
   SculptProceduralEmit,

@@ -10,6 +10,7 @@ import {
   SCULPT_PROCEDURAL_MODULE_ID,
   SCULPT_PROCEDURAL_SOURCE_DIGEST,
   computeSculptProceduralEmit,
+  type SculptProceduralEmit,
 } from "./sculpt-procedural.js";
 import {
   digestSculptJson,
@@ -808,6 +809,33 @@ export function validateObjectSculptSpec(
   }
 
   return { ok: true, value: value as ObjectSculptSpec };
+}
+
+export function validateSculptProceduralEmit(
+  value: unknown,
+  options: { readonly seed?: number } = {},
+): SculptValidationResult<SculptProceduralEmit> {
+  const spec = validateObjectSculptSpec(value);
+  if (!spec.ok) return spec;
+  if (!isSculptQualityObjectSculptSpec(spec.value)) {
+    return refuse(
+      "missing-sculpt-pass",
+      "$.passes",
+      "Sculpt procedural emit requires a sculpt-quality ObjectSculptSpec.",
+    );
+  }
+  const seed = options.seed ?? 0;
+  if (!Number.isSafeInteger(seed) || seed < 0) {
+    return refuse(
+      "invalid-field",
+      "$.seed",
+      "Sculpt procedural seed must be a non-negative safe integer.",
+    );
+  }
+  return {
+    ok: true,
+    value: computeSculptProceduralEmit(spec.value, { seed }),
+  };
 }
 
 /** Validate an exact multi-modal intake envelope; mode-specific fields do not bleed across modes. */

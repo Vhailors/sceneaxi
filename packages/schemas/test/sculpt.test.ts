@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import * as schemas from "@sceneaxi/schemas";
 import {
   OBJECT_SCULPT_SPEC_KIND,
   SCULPT_PROCEDURAL_EXPORT_NAME,
@@ -8,7 +9,6 @@ import {
   SCULPT_ARTIFACT_KIND,
   SCULPT_INTAKE_KIND,
   SCULPT_SCHEMA_VERSION,
-  computeSculptProceduralEmit,
   contracts,
   digestObjectSculptSpec,
   normalizeObjectSculptSpec,
@@ -16,6 +16,7 @@ import {
   validateObjectSculptSpec,
   validateSculptArtifact,
   validateSculptIntake,
+  validateSculptProceduralEmit,
   type LegacyObjectSculptSpec,
   type ObjectSculptSpec,
   type SculptArtifact,
@@ -115,7 +116,8 @@ function nonTrivialFixtureSpec(): SculptQualityObjectSculptSpec {
 }
 
 function fixtureArtifact(): SculptQualityArtifact {
-  const emitted = computeSculptProceduralEmit(fixtureSpec, { seed: 0 });
+  const emitted = validateSculptProceduralEmit(fixtureSpec, { seed: 0 });
+  if (!emitted.ok) throw new Error(emitted.diagnostics[0]?.message);
   return {
     schemaVersion: SCULPT_SCHEMA_VERSION,
     kind: SCULPT_ARTIFACT_KIND,
@@ -126,7 +128,7 @@ function fixtureArtifact(): SculptQualityArtifact {
       exportName: SCULPT_PROCEDURAL_EXPORT_NAME,
       sourceDigest: SCULPT_PROCEDURAL_SOURCE_DIGEST,
       seed: 0,
-      emitDigest: emitted.digest,
+      emitDigest: emitted.value.digest,
     },
     runtimeHierarchy: projectAnimationReadyHierarchy(fixtureSpec),
     evidence: {
@@ -136,7 +138,7 @@ function fixtureArtifact(): SculptQualityArtifact {
       proceduralModuleDigest: SCULPT_PROCEDURAL_SOURCE_DIGEST,
       qualityGates: [
         { id: "contract", status: "passed", digest: digest("d") },
-        { id: "procedural-emit", status: "passed", digest: emitted.digest },
+        { id: "procedural-emit", status: "passed", digest: emitted.value.digest },
       ],
     },
   };
@@ -153,6 +155,14 @@ function sparseCopy<Value>(values: readonly Value[]) {
 }
 
 describe("hybrid sculpt contracts", () => {
+  it("keeps concrete procedural computation off the schemas package root", () => {
+    expect("computeSculptProceduralEmit" in schemas).toBe(false);
+    expect(validateSculptProceduralEmit(fixtureSpec, { seed: -1 })).toMatchObject({
+      ok: false,
+      diagnostics: [{ code: "invalid-field", path: "$.seed" }],
+    });
+  });
+
   it("ships three versioned public JSON Schemas", () => {
     for (const [path, expectedId] of [
       [contracts.sculptIntake, "https://sceneaxi.invalid/contracts/sculpt-intake/v1"],

@@ -4,9 +4,7 @@ import {
   SCULPT_PROCEDURAL_EXPORT_NAME,
   SCULPT_PROCEDURAL_MODULE_ID,
   SCULPT_PROCEDURAL_SOURCE_DIGEST,
-  computeSculptProceduralEmit,
-  isSculptQualityObjectSculptSpec,
-  validateObjectSculptSpec,
+  validateSculptProceduralEmit,
   type SculptProceduralEmit,
   type SculptProceduralGeometry,
   type SculptProceduralMaterial,
@@ -32,13 +30,11 @@ export function emitSculptProcedural(
   spec: SculptQualityObjectSculptSpec,
   options: { readonly seed?: number } = {},
 ): SculptProceduralEmit {
-  const validated = validateObjectSculptSpec(spec);
-  if (!validated.ok || !isSculptQualityObjectSculptSpec(validated.value)) {
+  const validated = validateSculptProceduralEmit(spec, options);
+  if (!validated.ok) {
     throw new Error(
-      validated.ok
-        ? "Sculpt procedural emit requires a sculpt-quality ObjectSculptSpec."
-        : validated.diagnostics[0]?.message ?? "Invalid ObjectSculptSpec.",
+      validated.diagnostics[0]?.message ?? "Invalid ObjectSculptSpec.",
     );
   }
-  return computeSculptProceduralEmit(validated.value, options);
+  return validated.value;
 }
