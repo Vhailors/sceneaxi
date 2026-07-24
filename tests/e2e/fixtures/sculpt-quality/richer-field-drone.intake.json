@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "kind": "sceneaxi.sculpt-intake",
+  "intakeId": "field-drone",
+  "mode": "structured-spec",
+  "structuredSpec": {
+    "schemaVersion": 1,
+    "kind": "sceneaxi.object-sculpt-spec",
+    "id": "field-drone",
+    "rootNodeId": "drone-core-node",
+    "complexityClass": "non-trivial",
+    "passes": [
+      { "id": "blockout", "deterministic": true, "steps": ["block-core-volume", "set-arm-span"] },
+      { "id": "structure", "deterministic": true, "steps": ["place-stabilizer-ring", "place-four-arms", "place-sensor-pod"] },
+      { "id": "materials", "deterministic": true, "steps": ["assign-composite-shell", "assign-arm-metal", "assign-optic-glass"] },
+      { "id": "surface-detail", "deterministic": true, "steps": ["bevel-arm-edges", "recess-sensor-aperture", "band-stabilizer-ring"] },
+      { "id": "sockets", "deterministic": true, "steps": ["bind-sensor-scan", "bind-payload-point"] }
+    ],
+    "detailInventory": {
+      "silhouetteFeatures": ["cross-arm-span", "central-stabilizer-ring", "underslung-sensor-pod"],
+      "structuralFeatures": ["core-shell", "stabilizer-ring", "north-arm", "east-arm", "south-arm", "west-arm", "sensor-pod"],
+      "surfaceFeatures": ["arm-edge-bevels", "sensor-aperture", "ring-band"],
+      "materialIds": ["composite-shell", "arm-metal", "optic-glass"],
+      "socketIds": ["sensor-scan", "payload-attachment"]
+    },
+    "materials": [
+      { "id": "composite-shell", "baseColor": "#53616f", "metallic": 0.22, "roughness": 0.46 },
+      { "id": "arm-metal", "baseColor": "#242b33", "metallic": 0.82, "roughness": 0.25 },
+      { "id": "optic-glass", "baseColor": "#38bde8", "metallic": 0.12, "roughness": 0.16 }
+    ],
+    "components": [
+      { "id": "core", "primitive": "sphere", "dimensions": [2.2, 1.4, 2.2], "materialId": "composite-shell" },
+      { "id": "ring", "primitive": "cylinder", "dimensions": [2.8, 0.24, 2.8], "materialId": "arm-metal" },
+      { "id": "north-arm", "primitive": "box", "dimensions": [0.34, 0.22, 2.1], "materialId": "arm-metal" },
+      { "id": "east-arm", "primitive": "box", "dimensions": [2.1, 0.22, 0.34], "materialId": "arm-metal" },
+      { "id": "south-arm", "primitive": "box", "dimensions": [0.34, 0.22, 2.1], "materialId": "arm-metal" },
+      { "id": "west-arm", "primitive": "box", "dimensions": [2.1, 0.22, 0.34], "materialId": "arm-metal" },
+      { "id": "sensor", "primitive": "sphere", "dimensions": [0.72, 0.72, 0.72], "materialId": "optic-glass" }
+    ],
+    "hierarchy": [
+      { "id": "drone-core-node", "parentId": null, "componentId": "core", "transform": { "translation": [0, 2.2, 0], "rotationEulerDegrees": [0, 0, 0], "scale": [1, 1, 1] } },
+      { "id": "drone-ring-node", "parentId": "drone-core-node", "componentId": "ring", "transform": { "translation": [0, 0, 0], "rotationEulerDegrees": [0, 0, 0], "scale": [1, 1, 1] } },
+      { "id": "drone-north-arm-node", "parentId": "drone-core-node", "componentId": "north-arm", "transform": { "translation": [0, 0, -1.7], "rotationEulerDegrees": [0, 0, 0], "scale": [1, 1, 1] } },
+      { "id": "drone-east-arm-node", "parentId": "drone-core-node", "componentId": "east-arm", "transform": { "translation": [1.7, 0, 0], "rotationEulerDegrees": [0, 0, 0], "scale": [1, 1, 1] } },
+      { "id": "drone-south-arm-node", "parentId": "drone-core-node", "componentId": "south-arm", "transform": { "translation": [0, 0, 1.7], "rotationEulerDegrees": [0, 0, 0], "scale": [1, 1, 1] } },
+      { "id": "drone-west-arm-node", "parentId": "drone-core-node", "componentId": "west-arm", "transform": { "translation": [-1.7, 0, 0], "rotationEulerDegrees": [0, 0, 0], "scale": [1, 1, 1] } },
+      { "id": "drone-sensor-node", "parentId": "drone-core-node", "componentId": "sensor", "transform": { "translation": [0, -0.95, 0.45], "rotationEulerDegrees": [0, 0, 0], "scale": [1, 1, 1] } }
+    ],
+    "sockets": [
+      { "id": "sensor-scan", "nodeId": "drone-sensor-node", "kind": "animation", "axis": "y", "amplitude": 0.18, "frequencyHz": 1.5 },
+      { "id": "payload-attachment", "nodeId": "drone-core-node", "kind": "attachment", "axis": "y", "amplitude": 0, "frequencyHz": 0 }
+    ]
+  }
+}

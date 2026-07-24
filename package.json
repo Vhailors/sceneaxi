@@ -11,7 +11,7 @@
   "scripts": {
     "build": "tsc --build && tsc -p tsconfig.tests.json",
     "test": "vitest run",
-    "test:golden": "vitest run tests/e2e/cli-golden-path.test.ts --reporter=verbose",
+    "test:golden": "vitest run tests/e2e/cli-golden-path.test.ts tests/e2e/hybrid-sculpt-golden.test.ts tests/e2e/sculpt-quality-golden.test.ts --reporter=verbose",
     "lint": "eslint . --max-warnings 0",
     "check:syntax": "node scripts/check-syntax.mjs",
     "check:boundaries": "node scripts/check-boundaries.mjs",

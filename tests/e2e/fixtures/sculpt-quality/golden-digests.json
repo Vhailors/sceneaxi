@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "kind": "sceneaxi.sculpt-quality-golden-evidence",
+  "status": "passed",
+  "demos": [
+    {
+      "id": "service-crate",
+      "category": "hard-surface-prop",
+      "intakePath": "tests/e2e/fixtures/sculpt-quality/hard-surface-service-crate.intake.json",
+      "seed": 8001,
+      "passes": ["blockout", "structure", "materials", "surface-detail", "sockets"],
+      "inventory": {
+        "silhouette": 3,
+        "structural": 5,
+        "surface": 3,
+        "materials": 3,
+        "sockets": 2
+      },
+      "artifactDigest": "sha256:3c824560679cd7ab323516323c092a4b4b6761474ce6972b9eccbdcbd3d73e26",
+      "emitDigest": "sha256:06ea904fb2fb7d9e36dec70a3958b3b086eac4562d897277a860dd8d2202ac77",
+      "mount": {
+        "drawCalls": 5,
+        "frameDigest": "sha256:66ee71f27b7b3f519903718e45a12860b89017e06d45a9dc3939b275f3a4bca6"
+      },
+      "kernel": {
+        "initialDigest": "sha256:9df04c06c7216e01287b736343d162c53b101dc41eef3a708bc98423b0ee80a9",
+        "terminalDigest": "sha256:ea92511519e974281a810f4b47374e71b235e7e4e2d4f191d519443b4f702b86",
+        "replayDigest": "sha256:ea92511519e974281a810f4b47374e71b235e7e4e2d4f191d519443b4f702b86",
+        "collisionCount": 6,
+        "saveDigest": "sha256:6b8f126c345cbbd28043216784112dab66be9ab8df12535737ff158c787e561f"
+      },
+      "editor": {
+        "treeSize": 6,
+        "previewDrawCalls": 5,
+        "componentCount": 5,
+        "socketCount": 2,
+        "restoredIds": ["service-crate"],
+        "documentDigest": "sha256:81d3d6332f30eabdd259bb45e8aff2d240a63aebea4e25f639678ab888f56bb3"
+      }
+    },
+    {
+      "id": "field-drone",
+      "category": "richer-object",
+      "intakePath": "tests/e2e/fixtures/sculpt-quality/richer-field-drone.intake.json",
+      "seed": 8002,
+      "passes": ["blockout", "structure", "materials", "surface-detail", "sockets"],
+      "inventory": {
+        "silhouette": 3,
+        "structural": 7,
+        "surface": 3,
+        "materials": 3,
+        "sockets": 2
+      },
+      "artifactDigest": "sha256:5586c7f2a034346f3be258d9a12f23138a3251af9c85b53e1b24e8be5564b9a0",
+      "emitDigest": "sha256:3e0cad6f39907c3c03aef079746806fb0bff69993740ae4dafc300f5c93f0ea4",
+      "mount": {
+        "drawCalls": 7,
+        "frameDigest": "sha256:49e38768c34c4062eb3e0c08f8a96624855a80e412786d217be7ec2a38309ec8"
+      },
+      "kernel": {
+        "initialDigest": "sha256:22b3e3b84b88d7bdc9ee9c9aa8e7f86c5cb9e98cf46fdcf5d9ff6cf156a73ce5",
+        "terminalDigest": "sha256:efef5fc934533607c6262600ded21148d61515757ed25d44b3dfbec1dfd4536e",
+        "replayDigest": "sha256:efef5fc934533607c6262600ded21148d61515757ed25d44b3dfbec1dfd4536e",
+        "collisionCount": 1,
+        "saveDigest": "sha256:7a5152e60811c5f28bc08e30862f8986265c274a7e5cc49e8bdd7cb653520681"
+      },
+      "editor": {
+        "treeSize": 8,
+        "previewDrawCalls": 7,
+        "componentCount": 7,
+        "socketCount": 2,
+        "restoredIds": ["field-drone"],
+        "documentDigest": "sha256:60061e2bf9f18a162cb0890dd404908b6d8625581b94fe837f16b5ed69d6e01c"
+      }
+    }
+  ],
+  "refusals": {
+    "missingPass": "missing-sculpt-pass",
+    "shallowInventory": "shallow-detail-inventory"
+  },
+  "claims": {
+    "stage1Run": false,
+    "minimumE2Expanded": false,
+    "visionScoreHardGate": false,
+    "productionSpend": false
+  }
+}
