@@ -11,7 +11,7 @@ suite ([sceneaxi#10](https://github.com/Vhailors/sceneaxi/issues/10)).
 - Retains the `profile-rollout-order` decision citation; `shippingClaim` is
   always false.
 
-This development-only path is **not production game-ready** and is not a
-shipping or publication decision.
+This development-only path is **not production game-ready** and is not
+publication, marketplace, or shipping authorization.
 
 Boundaries are enforced at monorepo package level.
