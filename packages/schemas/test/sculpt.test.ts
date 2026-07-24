@@ -11,6 +11,7 @@ import {
   SCULPT_SCHEMA_VERSION,
   contracts,
   digestObjectSculptSpec,
+  isSculptQualityObjectSculptSpec,
   normalizeObjectSculptSpec,
   projectAnimationReadyHierarchy,
   validateObjectSculptSpec,
@@ -342,6 +343,45 @@ describe("hybrid sculpt contracts", () => {
       ok: true,
       value: fixtureArtifact(),
     });
+  });
+
+  it("narrows only complete sculpt-quality field correlations", () => {
+    const nonTrivial = nonTrivialFixtureSpec();
+    const partials = [
+      Object.fromEntries(
+        Object.entries(fixtureSpec).filter(
+          ([key]) => key !== "complexityClass",
+        ),
+      ),
+      Object.fromEntries(
+        Object.entries(fixtureSpec).filter(([key]) => key !== "passes"),
+      ),
+      { ...fixtureSpec, complexityClass: "non-trivial" },
+      Object.fromEntries(
+        Object.entries(nonTrivial).filter(([key]) => key !== "passes"),
+      ),
+      Object.fromEntries(
+        Object.entries(nonTrivial).filter(
+          ([key]) => key !== "complexityClass",
+        ),
+      ),
+    ] as ObjectSculptSpec[];
+
+    expect(isSculptQualityObjectSculptSpec(fixtureSpec)).toBe(true);
+    expect(isSculptQualityObjectSculptSpec(nonTrivial)).toBe(true);
+
+    for (const partial of partials) {
+      expect(isSculptQualityObjectSculptSpec(partial)).toBe(false);
+      const normalized = normalizeObjectSculptSpec(partial);
+      expect(isSculptQualityObjectSculptSpec(normalized)).toBe(true);
+      expect(normalized.complexityClass).toBe("simple");
+      expect(normalized.passes.map((pass) => pass.id)).toEqual([
+        "blockout",
+        "structure",
+        "materials",
+        "sockets",
+      ]);
+    }
   });
 
   it("publishes closed ordered pass sequences in the authoritative schema", () => {

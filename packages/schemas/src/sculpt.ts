@@ -460,7 +460,19 @@ function hasQualityFields(value: JsonObject) {
 export function isSculptQualityObjectSculptSpec(
   value: ObjectSculptSpec,
 ): value is SculptQualityObjectSculptSpec {
-  return Object.hasOwn(value, "passes");
+  if (
+    !Object.hasOwn(value, "passes") ||
+    !Array.isArray(value.passes) ||
+    !Object.hasOwn(value, "complexityClass")
+  ) {
+    return false;
+  }
+  if (value.complexityClass === "simple") return true;
+  return (
+    value.complexityClass === "non-trivial" &&
+    Object.hasOwn(value, "detailInventory") &&
+    value.detailInventory !== undefined
+  );
 }
 
 function passSequenceFailure(
