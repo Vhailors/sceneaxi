@@ -206,6 +206,13 @@ export type SculptAttachmentPoint = {
 };
 
 export type SculptRuntimeHierarchy = {
+  readonly rootNodeId: string;
+  readonly nodes: ReadonlyArray<SculptHierarchyNode>;
+};
+
+export type LegacySculptRuntimeHierarchy = SculptRuntimeHierarchy;
+
+export type SculptQualityRuntimeHierarchy = {
   readonly schemaVersion: typeof ANIMATION_READY_HIERARCHY_VERSION;
   readonly kind: typeof ANIMATION_READY_HIERARCHY_KIND;
   readonly rootNodeId: string;
@@ -215,11 +222,6 @@ export type SculptRuntimeHierarchy = {
   readonly colliders: ReadonlyArray<SculptCollider>;
   readonly materials: ReadonlyArray<SculptMaterialBinding>;
   readonly attachments: ReadonlyArray<SculptAttachmentPoint>;
-};
-
-export type LegacySculptRuntimeHierarchy = {
-  readonly rootNodeId: string;
-  readonly nodes: ReadonlyArray<SculptHierarchyNode>;
 };
 
 export type SculptQualityGateEvidence = {
@@ -252,7 +254,7 @@ export type LegacySculptArtifact = SculptArtifactBase & {
 export type SculptQualityArtifact = SculptArtifactBase & {
   readonly spec: SculptQualityObjectSculptSpec;
   readonly proceduralModule: SculptQualityProceduralModuleRef;
-  readonly runtimeHierarchy: SculptRuntimeHierarchy;
+  readonly runtimeHierarchy: SculptQualityRuntimeHierarchy;
 };
 
 export type SculptArtifact = LegacySculptArtifact | SculptQualityArtifact;
@@ -922,7 +924,7 @@ export function digestObjectSculptSpec(spec: ObjectSculptSpec) {
 /** Project a validated sculpt spec into descriptive animation-ready runtime metadata. */
 export function projectAnimationReadyHierarchy(
   spec: SculptQualityObjectSculptSpec,
-): SculptRuntimeHierarchy {
+): SculptQualityRuntimeHierarchy {
   const components = new Map(spec.components.map((component) => [component.id, component]));
   const attachmentSockets = spec.sockets.filter((socket) => socket.kind === "attachment");
   return snapshotSculptJson({

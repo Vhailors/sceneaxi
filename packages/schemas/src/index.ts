@@ -326,6 +326,7 @@ export type {
   SculptQualityArtifact,
   SculptQualityObjectSculptSpec,
   SculptQualityProceduralModuleRef,
+  SculptQualityRuntimeHierarchy,
   SculptRuntimeHierarchy,
   SculptSocket,
   SculptTransform,

@@ -21,6 +21,8 @@ import {
   type SculptArtifact,
   type SculptQualityArtifact,
   type SculptQualityObjectSculptSpec,
+  type SculptQualityRuntimeHierarchy,
+  type SculptRuntimeHierarchy,
 } from "@sceneaxi/schemas";
 
 const digest = (character: string) => `sha256:${character.repeat(64)}`;
@@ -240,6 +242,16 @@ describe("hybrid sculpt contracts", () => {
       true,
     );
 
+    const legacyRuntimeHierarchy = {
+      rootNodeId: legacy.rootNodeId,
+      nodes: legacy.hierarchy,
+    } satisfies SculptRuntimeHierarchy;
+    const qualityRuntimeHierarchy: SculptQualityRuntimeHierarchy =
+      projectAnimationReadyHierarchy(normalized);
+    expect(qualityRuntimeHierarchy.kind).toBe(
+      "sceneaxi.animation-ready-hierarchy",
+    );
+
     const legacyArtifact: SculptArtifact = {
       schemaVersion: 1,
       kind: SCULPT_ARTIFACT_KIND,
@@ -250,10 +262,7 @@ describe("hybrid sculpt contracts", () => {
         exportName: "buildLegacyCrate",
         sourceDigest: digest("c"),
       },
-      runtimeHierarchy: {
-        rootNodeId: legacy.rootNodeId,
-        nodes: legacy.hierarchy,
-      },
+      runtimeHierarchy: legacyRuntimeHierarchy,
       evidence: {
         method: "structured-fixture",
         intakeDigest: digest("a"),
@@ -302,6 +311,59 @@ describe("hybrid sculpt contracts", () => {
         "socketsPass",
       ],
     ]);
+  });
+
+  it("aligns inventory strings and procedural seeds with runtime validation", () => {
+    const specSchema = JSON.parse(
+      readFileSync(
+        new URL("../contracts/object-sculpt-spec.schema.json", import.meta.url),
+        "utf8",
+      ),
+    ) as {
+      $defs: {
+        trimmedNonBlank: { pattern: string };
+        detailInventory: {
+          properties: Record<string, { items: { $ref: string } }>;
+        };
+      };
+    };
+    const artifactSchema = JSON.parse(
+      readFileSync(
+        new URL("../contracts/sculpt-artifact.schema.json", import.meta.url),
+        "utf8",
+      ),
+    ) as {
+      $defs: {
+        qualityProceduralModule: {
+          properties: {
+            seed: { type: string; minimum: number; maximum: number };
+          };
+        };
+      };
+    };
+    const trimmedNonBlank = new RegExp(
+      specSchema.$defs.trimmedNonBlank.pattern,
+    );
+
+    expect(trimmedNonBlank.test("raised lid")).toBe(true);
+    expect(trimmedNonBlank.test(" raised lid")).toBe(false);
+    expect(trimmedNonBlank.test("raised lid ")).toBe(false);
+    for (const field of [
+      "silhouetteFeatures",
+      "structuralFeatures",
+      "surfaceFeatures",
+    ]) {
+      expect(
+        specSchema.$defs.detailInventory.properties[field]?.items.$ref,
+      ).toBe("#/$defs/trimmedNonBlank");
+    }
+    expect(
+      artifactSchema.$defs.qualityProceduralModule.properties.seed,
+    ).toEqual({
+      type: "integer",
+      minimum: 0,
+      maximum: Number.MAX_SAFE_INTEGER,
+    });
   });
 
   it("accepts the required multi-pass order and a reference-checked non-trivial inventory", () => {

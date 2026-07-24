@@ -105,6 +105,7 @@
     "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
     "finiteNumber": { "type": "number" },
     "nonBlank": { "type": "string", "pattern": "\\S" },
+    "trimmedNonBlank": { "type": "string", "pattern": "^\\S(?:[\\s\\S]*\\S)?$" },
     "vector3": {
       "type": "array",
       "prefixItems": [
@@ -186,9 +187,9 @@
       "additionalProperties": false,
       "required": ["silhouetteFeatures", "structuralFeatures", "surfaceFeatures", "materialIds", "socketIds"],
       "properties": {
-        "silhouetteFeatures": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/nonBlank" } },
-        "structuralFeatures": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/nonBlank" } },
-        "surfaceFeatures": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/nonBlank" } },
+        "silhouetteFeatures": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/trimmedNonBlank" } },
+        "structuralFeatures": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/trimmedNonBlank" } },
+        "surfaceFeatures": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/trimmedNonBlank" } },
         "materialIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
         "socketIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } }
       }
