@@ -18,9 +18,10 @@ The sculpt-quality branch of ObjectSculptSpec requires a deterministic pass
 ledger containing, in order, `blockout`, `structure`, `materials`, and
 `sockets`. The closed v1 extension permits `surface-detail` immediately before
 `sockets`. The legacy PR #75 branch remains valid without a pass ledger or
-complexity class. Default reconstruction preserves that branch and returns a
-legacy artifact; only explicit sculpt-quality reconstruction normalizes it into
-the sculpt-quality branch.
+complexity class. Reconstruction preserves legacy input unless callers select
+the quality path, which normalizes legacy input into the sculpt-quality branch.
+The exact public entrypoint selection rules are owned by
+[`@sceneaxi/authoring-core`](../../packages/authoring-core/README.md#hybrid-sculpt-reconstruction-and-minimum-e2).
 
 Every sculpt-quality spec declares `simple` or `non-trivial`. Non-trivial specs
 require a detail inventory covering silhouette, structural, surface, material,
@@ -32,9 +33,8 @@ refuse with stable diagnostic codes.
 ## Consequences
 
 - Quality stages and inventory depth are inspectable before reconstruction.
-- Legacy PR #75 v1 specs remain valid and default reconstruction returns legacy
-  artifacts; explicit sculpt-quality reconstruction normalizes them
-  deterministically into the stricter quality branch.
+- Legacy PR #75 v1 specs remain valid; quality-path selection normalizes legacy
+  input deterministically into the stricter branch.
 - Future minima require an explicit contract revision; callers cannot silently
   reinterpret this v1 gate.
 

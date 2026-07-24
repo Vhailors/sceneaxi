@@ -27,10 +27,7 @@ import {
   type ModelToolCallRequest,
   type ModelToolCallResponse,
 } from "@sceneaxi/schemas";
-import {
-  snapshotJsonObject,
-  snapshotJsonValue,
-} from "./json-invariants.js";
+import { snapshotJsonObject } from "./json-invariants.js";
 
 export const MODEL_PROVIDER_REFUSE_REASONS = Object.freeze({
   schemaVersionUnsupported: "MODEL_PROVIDER_SCHEMA_VERSION_UNSUPPORTED",

@@ -119,15 +119,20 @@ describe("SceneAxi sculpt reconstruction", () => {
       colliderId: "crate-collider",
       materialId: "wood",
     });
-    expect(Reflect.set(spec.components[0]!.dimensions, 0, 99)).toBe(true);
-    expect(first.geometry[0]!.dimensions).toEqual([2, 2, 2]);
-    expect(Reflect.set(first.geometry[0]!.dimensions, 0, 99)).toBe(false);
+    const specComponent = spec.components[0];
+    const emittedGeometry = first.geometry[0];
+    expect(specComponent).toBeDefined();
+    expect(emittedGeometry).toBeDefined();
+    if (specComponent === undefined || emittedGeometry === undefined) return;
+    expect(Reflect.set(specComponent.dimensions, 0, 99)).toBe(true);
+    expect(emittedGeometry.dimensions).toEqual([2, 2, 2]);
+    expect(Reflect.set(emittedGeometry.dimensions, 0, 99)).toBe(false);
     expect(first.digest).toBe(originalDigest);
     expect(Object.isFrozen(first)).toBe(true);
     expect(Object.isFrozen(first.passIds)).toBe(true);
     expect(Object.isFrozen(first.geometry)).toBe(true);
     expect(Object.isFrozen(first.geometry[0])).toBe(true);
-    expect(Object.isFrozen(first.geometry[0]!.dimensions)).toBe(true);
+    expect(Object.isFrozen(emittedGeometry.dimensions)).toBe(true);
     expect(Object.isFrozen(first.materials)).toBe(true);
     expect(Object.isFrozen(first.materials[0])).toBe(true);
     expect(Object.isFrozen(first.nodes)).toBe(true);
@@ -447,8 +452,12 @@ describe("SceneAxi sculpt reconstruction", () => {
         offlineAgent: {
           refine() {
             call += 1;
+            const firstPass = shared.passes[0];
+            if (firstPass === undefined) {
+              throw new Error("Fixture lost its first sculpt pass.");
+            }
             shared.passes[0] = {
-              ...shared.passes[0]!,
+              ...firstPass,
               steps: [`offline-agent-${String(call)}`],
             };
             return shared;

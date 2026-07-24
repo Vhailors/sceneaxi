@@ -843,8 +843,13 @@ describe("hybrid sculpt contracts", () => {
       return;
     }
 
-    expect(Reflect.set(mutableSpec.hierarchy[0]!.transform.translation, 0, 99)).toBe(true);
-    expect(Reflect.set(mutableSpec.components[0]!.dimensions, 0, 99)).toBe(true);
+    const mutableNode = mutableSpec.hierarchy[0];
+    const mutableComponent = mutableSpec.components[0];
+    expect(mutableNode).toBeDefined();
+    expect(mutableComponent).toBeDefined();
+    if (mutableNode === undefined || mutableComponent === undefined) return;
+    expect(Reflect.set(mutableNode.transform.translation, 0, 99)).toBe(true);
+    expect(Reflect.set(mutableComponent.dimensions, 0, 99)).toBe(true);
     expect(runtimeNode.transform.translation).toEqual([0, 0, 0]);
     expect(runtimeCollider.dimensions).toEqual([2, 2, 2]);
     expect(Reflect.set(runtimePivot.origin, 0, 99)).toBe(false);

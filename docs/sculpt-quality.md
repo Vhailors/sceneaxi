@@ -29,10 +29,12 @@ Runtime validators and public types live at `@sceneaxi/schemas`; reconstruction
 and procedural emit live at `@sceneaxi/authoring-core`.
 
 PR #75 ObjectSculptSpec and Sculpt Artifact v1 payloads remain valid as the
-legacy v1 branch. Default reconstruction preserves that branch and returns a
-legacy artifact. Only explicit sculpt-quality reconstruction calls
-`normalizeObjectSculptSpec` to add the four quality passes and an attachment
-socket. Quality procedural evidence resolves through the public
+legacy v1 branch. The exact reconstruction selection and normalization rules
+are owned by
+[`@sceneaxi/authoring-core`](../packages/authoring-core/README.md#hybrid-sculpt-reconstruction-and-minimum-e2);
+the compatibility decision is recorded in
+[ADR 0010](adr/0010-multi-pass-sculpt-quality-gates.md). Quality procedural
+evidence resolves through the public
 `@sceneaxi/authoring-core` `emitSculptProcedural` export and is recomputed from
 spec plus seed during artifact validation.
 
