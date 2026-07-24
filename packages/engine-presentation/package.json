@@ -4,12 +4,22 @@
   "private": true,
   "description": "SceneAxi Presentation Runtime seam with a null backend for kernel and end-to-end paths",
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
-  "files": ["src"],
-  "dependencies": {
-    "@sceneaxi/schemas": "workspace:^",
-    "@sceneaxi/engine-kernel": "workspace:^"
+  "exports": {
+    ".": "./src/index.ts"
   },
-  "sceneaxi": { "releaseGroup": "core-train" },
-  "license": "UNLICENSED"
+  "files": [
+    "src"
+  ],
+  "dependencies": {
+    "@sceneaxi/engine-kernel": "workspace:^",
+    "@sceneaxi/schemas": "workspace:^",
+    "three": "^0.185.1"
+  },
+  "sceneaxi": {
+    "releaseGroup": "core-train"
+  },
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@types/three": "^0.185.1"
+  }
 }

@@ -15,3 +15,17 @@ export {
   type PresentationCaptureResult,
   type PresentationRuntime,
 } from "./runtime.js";
+
+export {
+  EXPERIMENTAL_THREE_NON_DECISION_LABEL,
+  SculptMountError,
+  createNullSculptPresentationBackend,
+  createSculptMountApi,
+  type SculptInstanceInput,
+  type SculptMountApi,
+  type SculptMountedInstance,
+  type SculptPresentationBackend,
+  type SculptPresentationFrame,
+} from "./sculpt-mount.js";
+
+export { createExperimentalThreeSculptPresentationBackend } from "./experimental-three.js";
