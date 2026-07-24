@@ -82,5 +82,6 @@ describe("@sceneaxi/profile-kids compiled isolation policy", () => {
     expect(Object.isFrozen(policy)).toBe(true);
     expect(Object.isFrozen(policy.isolationPlanes)).toBe(true);
     expect(Object.isFrozen(policy.allowedLlmRouteKinds)).toBe(true);
+    expect(Object.isFrozen(policy.allowedNetworkDestinations)).toBe(true);
   });
 });
