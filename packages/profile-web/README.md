@@ -10,7 +10,8 @@ Web Experience policy stub. It compiles the locked
 `evaluateWebExperienceScope` returns a frozen structured decision. This package
 does not implement a CMS, application builder, or Webapp Factory pipeline.
 
-`mvpGoldenPath` pins the same deterministic project fixture used by the Game/CLI
-golden path to Web policy and the public authoring, kernel, and null-presentation
-seams. It retains `shippingClaim: false`: this proves library behavior under the
-Web profile, not a shipped website product.
+The MVP conformance case runs the same deterministic project fixture used by
+the Game/CLI golden path through Web policy. `mvpGoldenPath` exposes only the
+public authoring, kernel, and null-presentation seams used by that case and
+retains `shippingClaim: false`: this proves library behavior under the Web
+profile, not a shipped website product.

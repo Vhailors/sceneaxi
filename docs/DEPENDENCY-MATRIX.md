@@ -17,13 +17,13 @@ L1  engine packages    kernel ← presentation, orchestrator   (+ delayed: asset
 L2  authoring-core     the one agent-native runtime/authoring core (document model,
                        propose/apply service, session orchestration, evidence hooks,
                        Model Provider Port)
-L3  profiles · cli · importers · plugin-host
+L3  profiles · cli · importers · provider adapters · plugin-host
 L4  apps               (leaves; nothing depends on an app)
 ```
 
 ## Allow matrix (✓ = allowed; blank = denied)
 
-| From \ To | schemas | engine-kernel | engine-presentation | engine-orchestrator | authoring-core | profile-* | cli | importers | plugin-host | apps/* |
+| From \ To | schemas | engine-kernel | engine-presentation | engine-orchestrator | authoring-core | profile-* | cli | external adapters | plugin-host | apps/* |
 |---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | schemas | — | | | | | | | | | |
 | engine-kernel | ✓ | — | | | | | | | | |
@@ -32,7 +32,7 @@ L4  apps               (leaves; nothing depends on an app)
 | authoring-core | ✓ | ✓ | ✓ | ✓ | — | | | | | |
 | profile-game / profile-web / profile-kids | ✓ | ✓ | ✓ | ✓ | ✓ | — (never each other) | | | | |
 | cli | ✓ | | | | ✓ | | — | | | |
-| importers | ✓ | | | | ✓ | | | — | | |
+| importers / provider-openrouter | ✓ | | | | ✓ | | | — | | |
 | plugin-host | ✓ | | | | | | | | — | |
 | web-shell / desktop-shell | ✓ | | | | ✓ | | | | | — |
 | catalog-game / catalog-web | ✓ | | | | | | | | | — |
@@ -69,9 +69,11 @@ Spec #41's six deep modules map to six engine packages. Seeded now: **engine-ker
 (Factory Orchestrator). Delayed, arriving with the proof program's landings:
 **engine-asset-compiler**, **engine-platform-host**, **engine-evidence**. Their intended
 allow lists are recorded in the matrix `delayed` section so they land into a declared
-slot, not an invented one. Provider adapters (`@sceneaxi/provider-<name>`) are likewise
-declared behind the Model Provider Port in `authoring-core`; the locked provider policy
-and its adapter conditions are owned by the canonical product spec
+slot, not an invented one. The fixture-tested **provider-openrouter** adapter is seeded
+behind the Model Provider Port in `authoring-core`; the generic
+`@sceneaxi/provider-<name>` delayed entry reserves the same boundary for additional
+adapters. The locked provider policy and its adapter conditions are owned by the
+canonical product spec
 ([sceneaxi#1](https://github.com/Vhailors/sceneaxi/issues/1)).
 
 ## Release groups and pins
@@ -86,5 +88,6 @@ Recorded in `dependency-matrix.json → releaseGroups` and stamped on every mani
   `^0.0.0`; becomes a real range at the first core release).
 - **cli-protocol** (`cli`): versions with its protocol envelope; output-schema changes
   are semver events.
-- **importers**, **plugin-host**, **apps**: independent / private.
+- **importers** (external importers and provider adapters), **plugin-host**,
+  **apps**: independent / private.
   `plugin-host` is independently versioned and may depend only on `schemas`.

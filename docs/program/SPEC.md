@@ -110,39 +110,23 @@ From the user's perspective:
 | L0 | `schemas` | ALL shared contracts, versioned, **zero dependencies** |
 | L1 | `engine-kernel` | Game Kernel seam (`open/dispatch/advance/observe/save/replay`; only `advance` mutates) |
 | L1 | `engine-presentation` | Presentation Runtime seam — renderer backend hidden; **Stage 1 proof decides composition** |
-| L1 | `engine-orchestrator` | Factory Orchestrator seam (per spec #41's module set) |
+| L1 | `engine-orchestrator` | Factory Orchestrator seam (per spec #41's module set); not used by the MVP golden paths |
 | L1 (delayed) | `engine-asset-compiler`, `engine-platform-host`, `engine-evidence` | Pre-declared matrix slots; arrive with proof-program landings |
 | L2 | `authoring-core` | The ONE agent-native runtime/authoring core: document model, propose/apply application service, session orchestration, evidence hooks, **Model Provider Port** |
 | L3 | `profile-game`, `profile-web`, `profile-kids` | Build-time versioned profiles; each pins a core range; Kids policy compiled in |
 | L3 | `cli` | Agent-native CLI — thin protocol adapter (verbs + envelope) over `authoring-core`; **denied direct engine access by the matrix** |
-| L3 | `importers` | External-content adapters (per-format packages later) |
-| L3 (delayed) | `provider-<name>` | LLM provider adapters behind the Model Provider Port; `llm-provider-policy` locked 2026-07-22 (OpenRouter-first) — adapters land as ordinary ticketed work, DeepSeek under its conditional terms |
+| L3 | `importers` | Text-canonical external SceneAxi document adapter; additional formats may land later |
+| L3 | `provider-openrouter` | Fixture-tested, injected-transport OpenRouter adapter behind the Model Provider Port; no credentials or production-readiness claim |
+| L3 (delayed) | `provider-<name>` | Additional LLM provider adapters behind the Model Provider Port; ordinary ticketed work only, with DeepSeek under its conditional terms |
 | L4 | `web-shell`, `desktop-shell` | Human authoring surfaces — protocol clients of `authoring-core` |
 | L4 | `catalog-game`, `catalog-web` | Dormant storefront apps; touch the Core only via `schemas` catalog contracts |
 
 ### Dependency matrix (executable allow/deny; everything not allowed is denied)
 
-Machine-readable truth is the repository's dependency-matrix JSON, enforced by the boundary check (`pnpm check:boundaries`); the prose document explains it, and when they disagree the JSON + checker win.
-
-| From \ To | schemas | kernel | presentation | orchestrator | authoring-core | profile-* | cli | importers | apps |
-|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| engine-kernel | ✓ | — | | | | | | | |
-| engine-presentation | ✓ | ✓ | — | | | | | | |
-| engine-orchestrator | ✓ | ✓ | | — | | | | | |
-| authoring-core | ✓ | ✓ | ✓ | ✓ | — | | | | |
-| profile-game/web/kids | ✓ | ✓ | ✓ | ✓ | ✓ | never each other | | | |
-| cli | ✓ | | | | ✓ | | — | | |
-| importers | ✓ | | | | ✓ | | | — | |
-| web/desktop shell | ✓ | | | | ✓ | | | | — |
-| catalog-game/web | ✓ | | | | | | | | — |
-
-Deliberate denials that carry design intent:
-
-- **cli → engine packages denied** — makes it structurally impossible for the orbiting CLI to become the missing core.
-- **shells → cli denied** — shells are protocol *clients* of the application service, not spawners of a binary.
-- **catalogs → authoring-core/engine/profiles denied** — catalogs speak only the `schemas` catalog contracts.
-- **anything → profile-kids denied** — the Kids boundary is enforced independently of allow lists (`kidsBoundary`, `allowedDependents` starts empty; `kids-surface-isolation` locked full isolation 2026-07-22 — additions only under a new explicit captain decision).
-- **profile → profile denied; anything → apps/cli denied** (leaves stay leaves).
+Machine-readable truth is [`docs/dependency-matrix.json`](../dependency-matrix.json),
+enforced by `pnpm check:boundaries`. The human explanation and deliberate
+denials live in [`docs/DEPENDENCY-MATRIX.md`](../DEPENDENCY-MATRIX.md); this
+specification does not duplicate mutable matrix rows.
 
 ### Versioning and release groups (checker-verified manifest stamps)
 
@@ -174,9 +158,9 @@ One umbrella CLI with per-context command groups (`project|asset|profile|catalog
 
 ### Model Provider Port
 
-Owned by `authoring-core`: complete/tool-call/stream + typed capability descriptors + per-profile policy filter, with provider adapters behind it in pre-declared delayed slots. **Locked posture (`llm-provider-policy`, 2026-07-22): OpenRouter-first is the default production path for eligible non-Kids lanes** — aggregation is the default adapter behind the SceneAxi-owned port, and aggregation must not weaken policy filtering (profile and Kids filters still apply at the port). Locked constraints retained: typed capability descriptors for models/providers; pinned model/provider/quantization for production and eval-bearing traffic — no silent model swaps; deterministic no-fallback eval lanes (`allow_fallbacks: false` or equivalent); explicit privacy/retention/residency evidence recorded with traffic — ZDR is retention, not geography; residency requires a named contractually established region when claimed. **The port's compiled, non-overridable Kids guard denies third-party model routes before injected policy or dispatch and keeps every other Kids route closed until an explicit Kids safety decision enables one** (Kids stays fully isolated, LLM traffic included). Every evidence packet records the exact model descriptor (model, provider, quantization, version). DeepSeek is conditionally adoptable (`deepseek-adoption`, locked 2026-07-22): V4-Flash/Pro, non-Kids lanes only, via a named provider with contractual US/EU residency plus zero retention (pins, fallbacks disabled) or self-hosted MIT weights; never the official PRC endpoint for user data; out of strict tool-calling lanes until in-house capability evidence exists; **re-verify after GA (~2026-07-25) before any hard production reliance**.
+Owned by `authoring-core`: complete/tool-call/stream + typed capability descriptors + per-profile policy filter, with provider adapters behind it. The seeded `provider-openrouter` package is fixture-tested adapter plumbing with an injected transport, no credentials, and no production-readiness claim; additional adapters retain pre-declared delayed slots. **Locked posture (`llm-provider-policy`, 2026-07-22): OpenRouter-first is the default production path for eligible non-Kids lanes** — aggregation is the default adapter behind the SceneAxi-owned port, and aggregation must not weaken policy filtering (profile and Kids filters still apply at the port). Locked constraints retained: typed capability descriptors for models/providers; pinned model/provider/quantization for production and eval-bearing traffic — no silent model swaps; deterministic no-fallback eval lanes (`allow_fallbacks: false` or equivalent); explicit privacy/retention/residency evidence recorded with traffic — ZDR is retention, not geography; residency requires a named contractually established region when claimed. **The port's compiled, non-overridable Kids guard denies third-party model routes before injected policy or dispatch and keeps every other Kids route closed until an explicit Kids safety decision enables one** (Kids stays fully isolated, LLM traffic included). Every evidence packet records the exact model descriptor (model, provider, quantization, version). DeepSeek is conditionally adoptable (`deepseek-adoption`, locked 2026-07-22): V4-Flash/Pro, non-Kids lanes only, via a named provider with contractual US/EU residency plus zero retention (pins, fallbacks disabled) or self-hosted MIT weights; never the official PRC endpoint for user data; out of strict tool-calling lanes until in-house capability evidence exists; **re-verify after GA (~2026-07-25) before any hard production reliance**.
 
-The executable provider-neutral v1 port surface and its no-live-provider boundary
+The executable provider-neutral v1 port surface and its no-embedded-adapter boundary
 are documented in [`@sceneaxi/authoring-core`](../../packages/authoring-core/README.md#model-provider-port-sceneaxi45);
 the shared envelope/evidence contract is
 [`model-provider-port.schema.json`](../../packages/schemas/contracts/model-provider-port.schema.json).

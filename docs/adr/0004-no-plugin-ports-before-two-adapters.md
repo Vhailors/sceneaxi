@@ -60,7 +60,7 @@ require two real adapters.
   reserves the boundary, and any abstraction inside it still hardens only on
   the second real adapter.
 - The **Model Provider Port** remains the deliberately thin contract charted by
-  the product spec. Its delayed provider adapters do not widen that contract.
+  the product spec. Its provider adapters do not widen that contract.
 - The **Plugin Host / capability registry** remains the deliberately narrow,
   manifest-driven contract in ADR 0005. It supports independent packages that
   implement registered capabilities; it does not turn internal libraries into

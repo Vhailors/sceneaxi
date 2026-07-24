@@ -15,8 +15,7 @@ import type {
   ModelToolCallRequest,
   ModelToolCallResponse,
 } from "@sceneaxi/authoring-core";
-import Ajv from "ajv";
-import type { ValidateFunction } from "ajv";
+import { Ajv, type ValidateFunction } from "ajv";
 import {
   MODEL_PROVIDER_PORT_SCHEMA_VERSION,
   isJsonObject,
@@ -299,7 +298,7 @@ function compileToolValidators(tools: ModelToolCallRequest["tools"]) {
     }
     try {
       const validator = compiler.compile(tool.inputSchema);
-      if (validator.$async === true) {
+      if ("$async" in validator && validator.$async === true) {
         throw new Error("Async tool input schemas are not supported.");
       }
       validators.set(tool.name, validator);
