@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "kind": "sceneaxi.document",
+  "id": "external-fixture",
+  "title": "External fixture source",
+  "data": {
+    "entities": [
+      { "id": "hero", "x": 4, "y": 7 }
+    ],
+    "source": "recorded-fixture"
+  }
+}

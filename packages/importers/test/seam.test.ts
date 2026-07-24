@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { seam } from "@sceneaxi/importers";
+import { proposeSceneDocumentImport, seam } from "@sceneaxi/importers";
 
 const manifest = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf8"),
@@ -15,5 +15,9 @@ describe("@sceneaxi/importers public seam", () => {
   it("is immutable", () => {
     expect(typeof seam).toBe("object");
     expect(Object.isFrozen(seam)).toBe(true);
+  });
+
+  it("exports a real external-content adapter beyond the package seam", () => {
+    expect(typeof proposeSceneDocumentImport).toBe("function");
   });
 });
