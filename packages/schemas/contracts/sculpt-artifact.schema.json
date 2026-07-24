@@ -12,11 +12,13 @@
     "spec": { "$ref": "https://sceneaxi.invalid/contracts/object-sculpt-spec/v1" },
     "proceduralModule": {
       "type": "object", "additionalProperties": false,
-      "required": ["moduleId", "exportName", "sourceDigest"],
+      "required": ["moduleId", "exportName", "sourceDigest", "seed", "emitDigest"],
       "properties": {
         "moduleId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9./-]*$" },
         "exportName": { "type": "string", "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$" },
-        "sourceDigest": { "$ref": "#/$defs/digest" }
+        "sourceDigest": { "$ref": "#/$defs/digest" },
+        "seed": { "type": "integer", "minimum": 0 },
+        "emitDigest": { "$ref": "#/$defs/digest" }
       }
     },
     "runtimeHierarchy": {

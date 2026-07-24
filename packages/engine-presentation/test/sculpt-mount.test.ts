@@ -74,6 +74,8 @@ function fixtureArtifact(): SculptArtifact {
       moduleId: "sceneaxi/fixture-crate",
       exportName: "buildFixtureCrate",
       sourceDigest: digest("c"),
+      seed: 0,
+      emitDigest: digest("e"),
     },
     runtimeHierarchy: projectAnimationReadyHierarchy(spec),
     evidence: {
@@ -81,7 +83,10 @@ function fixtureArtifact(): SculptArtifact {
       intakeDigest: digest("a"),
       specDigest: digest("b"),
       proceduralModuleDigest: digest("c"),
-      qualityGates: [{ id: "contract", status: "passed", digest: digest("d") }],
+      qualityGates: [
+        { id: "contract", status: "passed", digest: digest("d") },
+        { id: "procedural-emit", status: "passed", digest: digest("e") },
+      ],
     },
   };
 }

@@ -113,6 +113,8 @@ function fixtureArtifact(): SculptArtifact {
       moduleId: "sceneaxi/fixture-crate",
       exportName: "buildFixtureCrate",
       sourceDigest: digest("c"),
+      seed: 0,
+      emitDigest: digest("e"),
     },
     runtimeHierarchy: projectAnimationReadyHierarchy(fixtureSpec),
     evidence: {
@@ -122,6 +124,7 @@ function fixtureArtifact(): SculptArtifact {
       proceduralModuleDigest: digest("c"),
       qualityGates: [
         { id: "contract", status: "passed", digest: digest("d") },
+        { id: "procedural-emit", status: "passed", digest: digest("e") },
       ],
     },
   };
@@ -411,6 +414,14 @@ describe("hybrid sculpt contracts", () => {
     const gateResult = validateSculptArtifact(failedGate);
     expect(gateResult.ok).toBe(false);
     if (!gateResult.ok) expect(gateResult.diagnostics[0]?.code).toBe("invalid-field");
+
+    const emitDrift = structuredClone(fixtureArtifact());
+    const emitResult = validateSculptArtifact({
+      ...emitDrift,
+      proceduralModule: { ...emitDrift.proceduralModule, emitDigest: digest("f") },
+    });
+    expect(emitResult.ok).toBe(false);
+    if (!emitResult.ok) expect(emitResult.diagnostics[0]?.code).toBe("invalid-reference");
   });
 
   it("contains no renderer-specific public field vocabulary", () => {

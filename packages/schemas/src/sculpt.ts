@@ -141,6 +141,8 @@ export type SculptProceduralModuleRef = {
   readonly moduleId: string;
   readonly exportName: string;
   readonly sourceDigest: string;
+  readonly seed: number;
+  readonly emitDigest: string;
 };
 
 export type SculptPivot = {
@@ -777,9 +779,23 @@ export function validateSculptArtifact(value: unknown): SculptValidationResult<S
 
   const moduleRef = value["proceduralModule"];
   if (!isJsonObject(moduleRef)) return refuse("invalid-field", "$.proceduralModule", "proceduralModule must be an object.");
-  const moduleFields = exactFields(moduleRef, ["moduleId", "exportName", "sourceDigest"], [], "$.proceduralModule");
+  const moduleFields = exactFields(
+    moduleRef,
+    ["moduleId", "exportName", "sourceDigest", "seed", "emitDigest"],
+    [],
+    "$.proceduralModule",
+  );
   if (moduleFields !== null) return { ok: false, diagnostics: [moduleFields] };
-  if (typeof moduleRef["moduleId"] !== "string" || !MODULE_ID_RE.test(moduleRef["moduleId"]) || typeof moduleRef["exportName"] !== "string" || !EXPORT_RE.test(moduleRef["exportName"]) || !isDigest(moduleRef["sourceDigest"])) {
+  if (
+    typeof moduleRef["moduleId"] !== "string" ||
+    !MODULE_ID_RE.test(moduleRef["moduleId"]) ||
+    typeof moduleRef["exportName"] !== "string" ||
+    !EXPORT_RE.test(moduleRef["exportName"]) ||
+    !isDigest(moduleRef["sourceDigest"]) ||
+    !Number.isSafeInteger(moduleRef["seed"]) ||
+    Number(moduleRef["seed"]) < 0 ||
+    !isDigest(moduleRef["emitDigest"])
+  ) {
     return refuse("invalid-field", "$.proceduralModule", "Procedural module reference is invalid.");
   }
 
@@ -868,5 +884,18 @@ export function validateSculptArtifact(value: unknown): SculptValidationResult<S
   }
   if (duplicate(gateIds) !== undefined) return refuse("duplicate-id", "$.evidence.qualityGates", "Quality gate ids must be unique.");
   if (evidence["proceduralModuleDigest"] !== moduleRef["sourceDigest"]) return refuse("invalid-reference", "$.evidence.proceduralModuleDigest", "Evidence must bind the referenced procedural module digest.");
+  const proceduralGate = gates.find(
+    (gate) => isJsonObject(gate) && gate["id"] === "procedural-emit",
+  );
+  if (
+    !isJsonObject(proceduralGate) ||
+    proceduralGate["digest"] !== moduleRef["emitDigest"]
+  ) {
+    return refuse(
+      "invalid-reference",
+      "$.evidence.qualityGates",
+      "Evidence must bind the deterministic procedural emit digest.",
+    );
+  }
   return { ok: true, value: value as SculptArtifact };
 }

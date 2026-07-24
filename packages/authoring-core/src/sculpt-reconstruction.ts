@@ -5,6 +5,7 @@ import {
   SCULPT_ARTIFACT_KIND,
   SCULPT_SCHEMA_VERSION,
   projectAnimationReadyHierarchy,
+  validateObjectSculptSpec,
   validateSculptArtifact,
   validateSculptIntake,
   type JsonValue,
@@ -14,16 +15,32 @@ import {
   type SculptIntake,
   type SculptQualityGateEvidence,
 } from "@sceneaxi/schemas";
-
-const PIPELINE_MODULE_ID = "sceneaxi/sculpt-reconstruction-v1";
-const PIPELINE_EXPORT_NAME = "buildSculptArtifact";
-const PIPELINE_SOURCE = "sceneaxi-owned:sculpt-reconstruction:v1:primitive-hierarchy";
+import {
+  SCULPT_PROCEDURAL_EXPORT_NAME,
+  SCULPT_PROCEDURAL_MODULE_ID,
+  SCULPT_PROCEDURAL_SOURCE_DIGEST,
+  emitSculptProcedural,
+} from "./sculpt-procedural-emit.js";
 
 export type SculptReconstructionRefusalCode =
   | "invalid-intake"
   | "unsupported-intake-mode"
   | "quality-gate-refused"
-  | "artifact-invalid";
+  | "artifact-invalid"
+  | "invalid-options"
+  | "offline-agent-unavailable"
+  | "offline-agent-invalid"
+  | "offline-agent-nondeterministic";
+
+export type SculptOfflineAgent = {
+  readonly refine: (spec: ObjectSculptSpec) => ObjectSculptSpec;
+};
+
+export type SculptReconstructionOptions = {
+  readonly seed?: number;
+  readonly enableOfflineAgent?: boolean;
+  readonly offlineAgent?: SculptOfflineAgent;
+};
 
 export type SculptReconstructionResult =
   | {
@@ -182,7 +199,10 @@ function specFromImageAndBrief(intake: Extract<SculptIntake, { mode: "image+brie
  * Reconstruct an openable Sculpt Artifact without a live provider dependency.
  * Image+brief is deliberately demo-grade; production spend requires a separate gate.
  */
-export function reconstructSculpt(intakeValue: unknown): SculptReconstructionResult {
+export function reconstructSculpt(
+  intakeValue: unknown,
+  options: SculptReconstructionOptions = {},
+): SculptReconstructionResult {
   const validatedIntake = validateSculptIntake(intakeValue);
   if (!validatedIntake.ok) {
     return {
@@ -200,7 +220,56 @@ export function reconstructSculpt(intakeValue: unknown): SculptReconstructionRes
     };
   }
 
-  const spec = intake.mode === "structured-spec" ? intake.structuredSpec : specFromImageAndBrief(intake);
+  const seed = options.seed ?? 0;
+  if (!Number.isSafeInteger(seed) || seed < 0) {
+    return {
+      ok: false,
+      code: "invalid-options",
+      message: "Sculpt reconstruction seed must be a non-negative safe integer.",
+    };
+  }
+  let spec = intake.mode === "structured-spec" ? intake.structuredSpec : specFromImageAndBrief(intake);
+  if (options.enableOfflineAgent === true) {
+    if (options.offlineAgent === undefined) {
+      return {
+        ok: false,
+        code: "offline-agent-unavailable",
+        message: "Offline sculpt agent flag is enabled but no injected offline adapter is available.",
+      };
+    }
+    let first: ObjectSculptSpec;
+    let second: ObjectSculptSpec;
+    try {
+      first = options.offlineAgent.refine(structuredClone(spec));
+      second = options.offlineAgent.refine(structuredClone(spec));
+    } catch {
+      return {
+        ok: false,
+        code: "offline-agent-invalid",
+        message: "Injected offline sculpt agent failed while refining the spec.",
+      };
+    }
+    const firstValidation = validateObjectSculptSpec(first);
+    const secondValidation = validateObjectSculptSpec(second);
+    if (!firstValidation.ok || !secondValidation.ok) {
+      return {
+        ok: false,
+        code: "offline-agent-invalid",
+        message: "Injected offline sculpt agent returned an invalid ObjectSculptSpec.",
+      };
+    }
+    if (
+      canonicalJson(firstValidation.value as unknown as JsonValue) !==
+      canonicalJson(secondValidation.value as unknown as JsonValue)
+    ) {
+      return {
+        ok: false,
+        code: "offline-agent-nondeterministic",
+        message: "Injected offline sculpt agent returned different results for identical input.",
+      };
+    }
+    spec = firstValidation.value;
+  }
   const gates = qualityGateEvidence(spec);
   if (!gates.ok) {
     return {
@@ -211,24 +280,29 @@ export function reconstructSculpt(intakeValue: unknown): SculptReconstructionRes
     };
   }
 
-  const moduleDigest = digestBytes(PIPELINE_SOURCE);
+  const proceduralEmit = emitSculptProcedural(spec, { seed });
   const artifact: SculptArtifact = {
     schemaVersion: SCULPT_SCHEMA_VERSION,
     kind: SCULPT_ARTIFACT_KIND,
     artifactId: `${intake.intakeId}-artifact`,
     spec,
     proceduralModule: {
-      moduleId: PIPELINE_MODULE_ID,
-      exportName: PIPELINE_EXPORT_NAME,
-      sourceDigest: moduleDigest,
+      moduleId: SCULPT_PROCEDURAL_MODULE_ID,
+      exportName: SCULPT_PROCEDURAL_EXPORT_NAME,
+      sourceDigest: SCULPT_PROCEDURAL_SOURCE_DIGEST,
+      seed,
+      emitDigest: proceduralEmit.digest,
     },
     runtimeHierarchy: projectAnimationReadyHierarchy(spec),
     evidence: {
       method: intake.mode === "structured-spec" ? "structured-fixture" : "image-brief-reconstruction",
       intakeDigest: digestJson(intake as unknown as JsonValue),
       specDigest: digestJson(spec as unknown as JsonValue),
-      proceduralModuleDigest: moduleDigest,
-      qualityGates: gates.evidence,
+      proceduralModuleDigest: SCULPT_PROCEDURAL_SOURCE_DIGEST,
+      qualityGates: [
+        ...gates.evidence,
+        { id: "procedural-emit", status: "passed", digest: proceduralEmit.digest },
+      ],
     },
   };
   const validatedArtifact = validateSculptArtifact(artifact);

@@ -82,6 +82,8 @@ function artifact(): SculptArtifact {
       moduleId: "sceneaxi/kernel-fixture",
       exportName: "buildKernelFixture",
       sourceDigest: digest("c"),
+      seed: 0,
+      emitDigest: digest("e"),
     },
     runtimeHierarchy: projectAnimationReadyHierarchy(spec),
     evidence: {
@@ -89,7 +91,10 @@ function artifact(): SculptArtifact {
       intakeDigest: digest("a"),
       specDigest: digest("b"),
       proceduralModuleDigest: digest("c"),
-      qualityGates: [{ id: "contract", status: "passed", digest: digest("d") }],
+      qualityGates: [
+        { id: "contract", status: "passed", digest: digest("d") },
+        { id: "procedural-emit", status: "passed", digest: digest("e") },
+      ],
     },
   };
 }

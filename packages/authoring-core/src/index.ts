@@ -99,7 +99,22 @@ export {
   reconstructSculpt,
   serializeSculptArtifact,
 } from "./sculpt-reconstruction.js";
+
+export {
+  SCULPT_PROCEDURAL_EMIT_KIND,
+  SCULPT_PROCEDURAL_EMIT_VERSION,
+  SCULPT_PROCEDURAL_EXPORT_NAME,
+  SCULPT_PROCEDURAL_MODULE_ID,
+  SCULPT_PROCEDURAL_SOURCE_DIGEST,
+  emitSculptProcedural,
+  type SculptProceduralEmit,
+  type SculptProceduralGeometry,
+  type SculptProceduralMaterial,
+  type SculptProceduralNode,
+} from "./sculpt-procedural-emit.js";
 export type {
+  SculptOfflineAgent,
+  SculptReconstructionOptions,
   SculptReconstructionRefusalCode,
   SculptReconstructionResult,
 } from "./sculpt-reconstruction.js";
