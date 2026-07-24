@@ -29,7 +29,6 @@ import {
   type SculptProceduralModuleRef,
   type SculptRuntimeHierarchy,
 } from "@sceneaxi/schemas";
-import { computeSculptProceduralEmit } from "../src/sculpt-procedural.js";
 
 interface LegacySculptArtifactExtension extends SculptArtifact {
   readonly consumerTag: string;
@@ -65,6 +64,12 @@ function exhaustLegacySculptDiagnostic(code: SculptDiagnosticCode) {
 }
 
 const digest = (character: string) => `sha256:${character.repeat(64)}`;
+
+const fixtureProceduralEmitEvidence = {
+  seed: 0,
+  emitDigest:
+    "sha256:9a80ed9ac2bd6602900c40a6c6f6320a9986d76d7cbdaa4d81d5fd2382bfbef1",
+} as const;
 
 const transform = {
   translation: [0, 0, 0],
@@ -154,7 +159,6 @@ function nonTrivialFixtureSpec(): SculptQualityObjectSculptSpec {
 }
 
 function fixtureArtifact(): SculptQualityArtifact {
-  const emitted = computeSculptProceduralEmit(fixtureSpec, { seed: 0 });
   return {
     schemaVersion: SCULPT_SCHEMA_VERSION,
     kind: SCULPT_ARTIFACT_KIND,
@@ -164,8 +168,8 @@ function fixtureArtifact(): SculptQualityArtifact {
       moduleId: SCULPT_PROCEDURAL_MODULE_ID,
       exportName: SCULPT_PROCEDURAL_EXPORT_NAME,
       sourceDigest: SCULPT_PROCEDURAL_SOURCE_DIGEST,
-      seed: 0,
-      emitDigest: emitted.digest,
+      seed: fixtureProceduralEmitEvidence.seed,
+      emitDigest: fixtureProceduralEmitEvidence.emitDigest,
     },
     runtimeHierarchy: projectAnimationReadyHierarchy(fixtureSpec),
     evidence: {
@@ -175,7 +179,11 @@ function fixtureArtifact(): SculptQualityArtifact {
       proceduralModuleDigest: SCULPT_PROCEDURAL_SOURCE_DIGEST,
       qualityGates: [
         { id: "contract", status: "passed", digest: digest("d") },
-        { id: "procedural-emit", status: "passed", digest: emitted.digest },
+        {
+          id: "procedural-emit",
+          status: "passed",
+          digest: fixtureProceduralEmitEvidence.emitDigest,
+        },
       ],
     },
   };
@@ -195,6 +203,37 @@ describe("hybrid sculpt contracts", () => {
   it("keeps concrete procedural computation off the schemas package root", () => {
     expect("computeSculptProceduralEmit" in schemas).toBe(false);
     expect("validateSculptProceduralEmit" in schemas).toBe(false);
+  });
+
+  it("validates fixed caller-supplied emit evidence and refuses tampering", () => {
+    const artifact = fixtureArtifact();
+    expect(validateSculptQualityArtifact(artifact)).toEqual({
+      ok: true,
+      value: artifact,
+    });
+
+    const tamperedDigest = digest("f");
+    const tampered = {
+      ...artifact,
+      proceduralModule: {
+        ...artifact.proceduralModule,
+        emitDigest: tamperedDigest,
+      },
+      evidence: {
+        ...artifact.evidence,
+        qualityGates: artifact.evidence.qualityGates.map((gate) =>
+          gate.id === "procedural-emit"
+            ? { ...gate, digest: tamperedDigest }
+            : gate,
+        ),
+      },
+    };
+    const result = validateSculptQualityArtifact(tampered);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.diagnostics[0]?.code).toBe("invalid-reference");
+    }
   });
 
   it("ships three versioned public JSON Schemas", () => {
@@ -882,27 +921,6 @@ describe("hybrid sculpt contracts", () => {
     expect(gateResult.ok).toBe(false);
     if (!gateResult.ok) expect(gateResult.diagnostics[0]?.code).toBe("invalid-field");
 
-    const emitDrift = structuredClone(fixtureArtifact());
-    const emitResult = validateSculptArtifact({
-      ...emitDrift,
-      proceduralModule: { ...emitDrift.proceduralModule, emitDigest: digest("f") },
-    });
-    expect(emitResult.ok).toBe(false);
-    if (!emitResult.ok) expect(emitResult.diagnostics[0]?.code).toBe("invalid-reference");
-
-    const fabricated = structuredClone(fixtureArtifact());
-    Reflect.set(fabricated.proceduralModule, "emitDigest", digest("f"));
-    const proceduralGate = fabricated.evidence.qualityGates.find(
-      (gate) => gate.id === "procedural-emit",
-    );
-    expect(proceduralGate).toBeDefined();
-    if (proceduralGate === undefined) return;
-    Reflect.set(proceduralGate, "digest", digest("f"));
-    const fabricatedResult = validateSculptArtifact(fabricated);
-    expect(fabricatedResult.ok).toBe(false);
-    if (!fabricatedResult.ok) {
-      expect(fabricatedResult.diagnostics[0]?.code).toBe("invalid-reference");
-    }
   });
 
   it("contains no renderer-specific public field vocabulary", () => {
