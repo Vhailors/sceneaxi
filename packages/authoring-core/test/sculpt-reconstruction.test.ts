@@ -6,7 +6,9 @@ import {
   SCULPT_PROCEDURAL_SOURCE_DIGEST,
   emitSculptProcedural,
   reconstructSculpt,
+  reconstructSculptQuality,
   serializeSculptArtifact,
+  type SculptReconstructionRefusalCode,
 } from "@sceneaxi/authoring-core";
 import {
   OBJECT_SCULPT_SPEC_KIND,
@@ -67,6 +69,22 @@ function fixtureSpec(): SculptQualityObjectSculptSpec {
       },
     ],
   };
+}
+
+function exhaustLegacyReconstructionRefusal(
+  code: SculptReconstructionRefusalCode,
+) {
+  switch (code) {
+    case "invalid-intake":
+    case "unsupported-intake-mode":
+    case "quality-gate-refused":
+    case "artifact-invalid":
+      return code;
+    default: {
+      const exhaustive: never = code;
+      return exhaustive;
+    }
+  }
 }
 
 describe("SceneAxi sculpt reconstruction", () => {
@@ -303,6 +321,27 @@ describe("SceneAxi sculpt reconstruction", () => {
     expect(refine).toHaveBeenCalledTimes(2);
 
     expect(reconstructSculpt(intake, { enableOfflineAgent: true })).toMatchObject({
+      ok: false,
+      code: "offline-agent-unavailable",
+    });
+  });
+
+  it("keeps legacy refusals exhaustive beside quality reconstruction results", () => {
+    expect(exhaustLegacyReconstructionRefusal("artifact-invalid")).toBe(
+      "artifact-invalid",
+    );
+    expect(
+      reconstructSculptQuality(
+        {
+          schemaVersion: 1,
+          kind: SCULPT_INTAKE_KIND,
+          intakeId: "quality-api-crate",
+          mode: "structured-spec",
+          structuredSpec: fixtureSpec(),
+        },
+        { enableOfflineAgent: true },
+      ),
+    ).toMatchObject({
       ok: false,
       code: "offline-agent-unavailable",
     });

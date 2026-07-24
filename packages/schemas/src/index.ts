@@ -299,6 +299,7 @@ export {
   validateSculptIntake,
   validateSculptProceduralEmit,
   validateSculptQualityArtifact,
+  validateSculptQualityObjectSculptSpec,
 } from "./sculpt.js";
 export type {
   ObjectSculptSpec,
@@ -325,10 +326,13 @@ export type {
   SculptPivot,
   SculptProceduralModuleRef,
   SculptQualityGateEvidence,
+  SculptQualityDiagnostic,
+  SculptQualityDiagnosticCode,
   SculptQualityArtifact,
   SculptQualityObjectSculptSpec,
   SculptQualityProceduralModuleRef,
   SculptQualityRuntimeHierarchy,
+  SculptQualityValidationResult,
   SculptRuntimeHierarchy,
   SculptSocket,
   SculptTransform,

@@ -97,6 +97,7 @@ export {
 
 export {
   reconstructSculpt,
+  reconstructSculptQuality,
   serializeSculptArtifact,
 } from "./sculpt-reconstruction.js";
 
@@ -117,6 +118,8 @@ export type {
   SculptReconstructionOptions,
   SculptReconstructionRefusalCode,
   SculptReconstructionResult,
+  SculptQualityReconstructionRefusalCode,
+  SculptQualityReconstructionResult,
 } from "./sculpt-reconstruction.js";
 
 export {

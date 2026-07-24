@@ -274,7 +274,10 @@ export type SculptDiagnosticCode =
   | "invalid-field"
   | "duplicate-id"
   | "invalid-reference"
-  | "invalid-hierarchy"
+  | "invalid-hierarchy";
+
+export type SculptQualityDiagnosticCode =
+  | SculptDiagnosticCode
   | "missing-sculpt-pass"
   | "out-of-order-sculpt-pass"
   | "empty-sculpt-pass"
@@ -294,9 +297,22 @@ export type SculptDiagnostic = {
   readonly message: string;
 };
 
+export type SculptQualityDiagnostic = {
+  readonly code: SculptQualityDiagnosticCode;
+  readonly path: string;
+  readonly message: string;
+};
+
 export type SculptValidationResult<T> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly diagnostics: readonly SculptDiagnostic[] };
+
+export type SculptQualityValidationResult<T> =
+  | { readonly ok: true; readonly value: T }
+  | {
+      readonly ok: false;
+      readonly diagnostics: readonly SculptQualityDiagnostic[];
+    };
 
 const ID_RE = /^[a-z0-9][a-z0-9-]*$/;
 const MODULE_ID_RE =
@@ -306,6 +322,42 @@ const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
 const COLOR_RE = /^#[0-9a-f]{6}$/i;
 const MEDIA_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MODES = new Set<string>(SCULPT_INTAKE_MODES);
+
+function refuseQuality<T>(
+  code: SculptQualityDiagnosticCode,
+  path: string,
+  message: string,
+): SculptQualityValidationResult<T> {
+  return { ok: false, diagnostics: [{ code, path, message }] };
+}
+
+const LEGACY_SCULPT_DIAGNOSTIC_CODES = new Set<SculptQualityDiagnosticCode>([
+  "not-object",
+  "schema-major-mismatch",
+  "invalid-kind",
+  "missing-field",
+  "unexpected-field",
+  "invalid-mode",
+  "invalid-field",
+  "duplicate-id",
+  "invalid-reference",
+  "invalid-hierarchy",
+]);
+
+function toLegacyValidationResult<T>(
+  result: SculptQualityValidationResult<T>,
+): SculptValidationResult<T> {
+  if (result.ok) return result;
+  return {
+    ok: false,
+    diagnostics: result.diagnostics.map((diagnostic) => ({
+      ...diagnostic,
+      code: LEGACY_SCULPT_DIAGNOSTIC_CODES.has(diagnostic.code)
+        ? (diagnostic.code as SculptDiagnosticCode)
+        : "invalid-field",
+    })),
+  };
+}
 
 function refuse<T>(
   code: SculptDiagnosticCode,
@@ -412,11 +464,11 @@ function duplicate(values: readonly string[]) {
 }
 
 function specFailure(
-  code: SculptDiagnosticCode,
+  code: SculptQualityDiagnosticCode,
   path: string,
   message: string,
-): SculptValidationResult<ObjectSculptSpec> {
-  return refuse(code, path, message);
+): SculptQualityValidationResult<ObjectSculptSpec> {
+  return refuseQuality(code, path, message);
 }
 
 function validateFeatureList(
@@ -477,7 +529,7 @@ export function isSculptQualityObjectSculptSpec(
 
 function passSequenceFailure(
   passIds: readonly string[],
-): SculptValidationResult<ObjectSculptSpec> | null {
+): SculptQualityValidationResult<ObjectSculptSpec> | null {
   const allowedSequences = [
     REQUIRED_SCULPT_PASSES,
     [
@@ -515,10 +567,10 @@ function passSequenceFailure(
 }
 
 /** Validate components, materials, sockets, and a connected rooted hierarchy. */
-export function validateObjectSculptSpec(
+function validateObjectSculptSpecInternal(
   value: unknown,
-): SculptValidationResult<ObjectSculptSpec> {
-  if (!isJsonObject(value)) return refuse("not-object", "$", "ObjectSculptSpec must be a JSON object.");
+): SculptQualityValidationResult<ObjectSculptSpec> {
+  if (!isJsonObject(value)) return refuseQuality("not-object", "$", "ObjectSculptSpec must be a JSON object.");
   const quality = hasQualityFields(value);
   if (quality && !Object.hasOwn(value, "passes")) {
     return specFailure(
@@ -537,10 +589,10 @@ export function validateObjectSculptSpec(
   );
   if (fields !== null) return { ok: false, diagnostics: [fields] };
   if (value["schemaVersion"] !== SCULPT_SCHEMA_VERSION) {
-    return refuse("schema-major-mismatch", "$.schemaVersion", `Sculpt schema major must be ${SCULPT_SCHEMA_VERSION}.`);
+    return refuseQuality("schema-major-mismatch", "$.schemaVersion", `Sculpt schema major must be ${SCULPT_SCHEMA_VERSION}.`);
   }
   if (value["kind"] !== OBJECT_SCULPT_SPEC_KIND) {
-    return refuse("invalid-kind", "$.kind", `kind must be "${OBJECT_SCULPT_SPEC_KIND}".`);
+    return refuseQuality("invalid-kind", "$.kind", `kind must be "${OBJECT_SCULPT_SPEC_KIND}".`);
   }
   if (!isSculptIdentifier(value["id"]) || !isSculptIdentifier(value["rootNodeId"])) {
     return specFailure("invalid-field", "$.id", "Spec and root node ids must use lowercase slug identifiers.");
@@ -827,22 +879,36 @@ export function validateObjectSculptSpec(
   return { ok: true, value: value as ObjectSculptSpec };
 }
 
+export function validateObjectSculptSpec(
+  value: unknown,
+): SculptValidationResult<ObjectSculptSpec> {
+  return toLegacyValidationResult(validateObjectSculptSpecInternal(value));
+}
+
+export function validateSculptQualityObjectSculptSpec(
+  value: unknown,
+): SculptQualityValidationResult<SculptQualityObjectSculptSpec> {
+  const spec = validateObjectSculptSpecInternal(value);
+  if (!spec.ok) return spec;
+  if (!isSculptQualityObjectSculptSpec(spec.value)) {
+    return refuseQuality(
+      "missing-sculpt-pass",
+      "$.passes",
+      "Sculpt-quality validation requires a complete sculpt pass ledger and complexity class.",
+    );
+  }
+  return { ok: true, value: spec.value };
+}
+
 export function validateSculptProceduralEmit(
   value: unknown,
   options: { readonly seed?: number } = {},
-): SculptValidationResult<SculptProceduralEmit> {
-  const spec = validateObjectSculptSpec(value);
+): SculptQualityValidationResult<SculptProceduralEmit> {
+  const spec = validateSculptQualityObjectSculptSpec(value);
   if (!spec.ok) return spec;
-  if (!isSculptQualityObjectSculptSpec(spec.value)) {
-    return refuse(
-      "missing-sculpt-pass",
-      "$.passes",
-      "Sculpt procedural emit requires a sculpt-quality ObjectSculptSpec.",
-    );
-  }
   const seed = options.seed ?? 0;
   if (!Number.isSafeInteger(seed) || seed < 0) {
-    return refuse(
+    return refuseQuality(
       "invalid-field",
       "$.seed",
       "Sculpt procedural seed must be a non-negative safe integer.",
@@ -1012,15 +1078,16 @@ export function projectAnimationReadyHierarchy(
   });
 }
 
-/** Validate a complete SceneAxi-owned Sculpt Artifact package. */
-export function validateSculptArtifact(value: unknown): SculptValidationResult<SculptArtifact> {
+function validateSculptArtifactInternal(
+  value: unknown,
+): SculptQualityValidationResult<SculptArtifact> {
   if (!isJsonObject(value)) return refuse("not-object", "$", "Sculpt Artifact must be a JSON object.");
   const fields = exactFields(value, ["schemaVersion", "kind", "artifactId", "spec", "proceduralModule", "runtimeHierarchy", "evidence"], [], "$");
   if (fields !== null) return { ok: false, diagnostics: [fields] };
   if (value["schemaVersion"] !== SCULPT_SCHEMA_VERSION) return refuse("schema-major-mismatch", "$.schemaVersion", `Sculpt schema major must be ${SCULPT_SCHEMA_VERSION}.`);
   if (value["kind"] !== SCULPT_ARTIFACT_KIND) return refuse("invalid-kind", "$.kind", `kind must be "${SCULPT_ARTIFACT_KIND}".`);
   if (!isSculptIdentifier(value["artifactId"])) return refuse("invalid-field", "$.artifactId", "artifactId must be a lowercase slug.");
-  const spec = validateObjectSculptSpec(value["spec"]);
+  const spec = validateObjectSculptSpecInternal(value["spec"]);
   if (!spec.ok) return { ok: false, diagnostics: spec.diagnostics.map((diagnostic) => ({ ...diagnostic, path: `$.spec${diagnostic.path.slice(1)}` })) };
   const quality = isSculptQualityObjectSculptSpec(spec.value);
 
@@ -1094,7 +1161,7 @@ export function validateSculptArtifact(value: unknown): SculptValidationResult<S
       ["attachments", "missing-runtime-attachment"],
     ] as const) {
       if (!Object.hasOwn(runtime, field)) {
-        return refuse(code, `$.runtimeHierarchy.${field}`, `Animation-ready hierarchy requires ${field}.`);
+        return refuseQuality(code, `$.runtimeHierarchy.${field}`, `Animation-ready hierarchy requires ${field}.`);
       }
     }
     const runtimeFields = exactFields(
@@ -1135,7 +1202,7 @@ export function validateSculptArtifact(value: unknown): SculptValidationResult<S
       !isDenseArray(runtime["sockets"]) ||
       !sculptJsonEqual(runtime["sockets"], spec.value.sockets)
     ) {
-      return refuse(
+      return refuseQuality(
         "missing-runtime-socket",
         "$.runtimeHierarchy.sockets",
         "Runtime sockets must exactly project the validated spec sockets.",
@@ -1154,7 +1221,7 @@ export function validateSculptArtifact(value: unknown): SculptValidationResult<S
         !isDenseArray(runtime[field]) ||
         !sculptJsonEqual(runtime[field], expectedRuntime[field])
       ) {
-        return refuse(
+        return refuseQuality(
           code,
           `$.runtimeHierarchy.${field}`,
           `Runtime ${field} must exactly project the validated spec.`,
@@ -1223,15 +1290,23 @@ export function validateSculptArtifact(value: unknown): SculptValidationResult<S
 
 export function validateSculptQualityArtifact(
   value: unknown,
-): SculptValidationResult<SculptQualityArtifact> {
-  const artifact = validateSculptArtifact(value);
+): SculptQualityValidationResult<SculptQualityArtifact> {
+  const artifact = validateSculptArtifactInternal(value);
   if (!artifact.ok) return artifact;
   if (!isSculptQualityObjectSculptSpec(artifact.value.spec)) {
-    return refuse(
+    return refuseQuality(
       "invalid-field",
       "$.spec",
       "Sculpt-quality artifacts require a sculpt-quality ObjectSculptSpec.",
     );
   }
   return { ok: true, value: artifact.value as SculptQualityArtifact };
+}
+
+
+/** Validate a complete SceneAxi-owned Sculpt Artifact package. */
+export function validateSculptArtifact(
+  value: unknown,
+): SculptValidationResult<SculptArtifact> {
+  return toLegacyValidationResult(validateSculptArtifactInternal(value));
 }

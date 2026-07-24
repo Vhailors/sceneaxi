@@ -19,9 +19,11 @@ import {
   validateSculptIntake,
   validateSculptProceduralEmit,
   validateSculptQualityArtifact,
+  validateSculptQualityObjectSculptSpec,
   type LegacyObjectSculptSpec,
   type ObjectSculptSpec,
   type SculptArtifact,
+  type SculptDiagnosticCode,
   type SculptQualityArtifact,
   type SculptQualityObjectSculptSpec,
   type SculptQualityRuntimeHierarchy,
@@ -40,6 +42,26 @@ interface LegacyObjectSculptSpecExtension extends ObjectSculptSpec {
 interface LegacySculptProceduralModuleRefExtension
   extends SculptProceduralModuleRef {
   readonly consumerTag: string;
+}
+
+function exhaustLegacySculptDiagnostic(code: SculptDiagnosticCode) {
+  switch (code) {
+    case "not-object":
+    case "schema-major-mismatch":
+    case "invalid-kind":
+    case "missing-field":
+    case "unexpected-field":
+    case "invalid-mode":
+    case "invalid-field":
+    case "duplicate-id":
+    case "invalid-reference":
+    case "invalid-hierarchy":
+      return code;
+    default: {
+      const exhaustive: never = code;
+      return exhaustive;
+    }
+  }
 }
 
 const digest = (character: string) => `sha256:${character.repeat(64)}`;
@@ -555,9 +577,32 @@ describe("hybrid sculpt contracts", () => {
       "shallow-sculpt-spec",
     ],
   ])("refuses %s with a stable quality code", (_name, spec, code) => {
-    const result = validateObjectSculptSpec(spec);
+    const result = validateSculptQualityObjectSculptSpec(spec);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.diagnostics[0]?.code).toBe(code);
+  });
+
+  it("keeps legacy diagnostics exhaustive beside quality diagnostics", () => {
+    expect(exhaustLegacySculptDiagnostic("invalid-hierarchy")).toBe(
+      "invalid-hierarchy",
+    );
+    const quality = validateSculptQualityObjectSculptSpec({
+      ...fixtureSpec,
+      passes: qualityPasses.slice(0, 3),
+    });
+    expect(quality).toMatchObject({
+      ok: false,
+      diagnostics: [{ code: "missing-sculpt-pass" }],
+    });
+    expect(
+      validateObjectSculptSpec({
+        ...fixtureSpec,
+        passes: qualityPasses.slice(0, 3),
+      }),
+    ).toMatchObject({
+      ok: false,
+      diagnostics: [{ code: "invalid-field" }],
+    });
   });
 
   it("refuses sparse holes in every required quality inventory", () => {
@@ -807,7 +852,7 @@ describe("hybrid sculpt contracts", () => {
     ["attachments", "missing-runtime-attachment"],
   ] as const)("refuses incomplete animation-ready %s with a stable code", (field, code) => {
     const artifact = structuredClone(fixtureArtifact());
-    const result = validateSculptArtifact({
+    const result = validateSculptQualityArtifact({
       ...artifact,
       runtimeHierarchy: { ...artifact.runtimeHierarchy, [field]: [] },
     });

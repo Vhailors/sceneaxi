@@ -44,7 +44,10 @@ export type SculptReconstructionRefusalCode =
   | "invalid-intake"
   | "unsupported-intake-mode"
   | "quality-gate-refused"
-  | "artifact-invalid"
+  | "artifact-invalid";
+
+export type SculptQualityReconstructionRefusalCode =
+  | SculptReconstructionRefusalCode
   | "invalid-options"
   | "offline-agent-unavailable"
   | "offline-agent-invalid"
@@ -76,6 +79,24 @@ export type SculptReconstructionResult =
       readonly message: string;
     };
 
+export type SculptQualityReconstructionResult =
+  | {
+      readonly ok: true;
+      readonly artifact: SculptQualityArtifact;
+      readonly artifactBytes: string;
+      readonly artifactDigest: string;
+    }
+  | {
+      readonly ok: false;
+      readonly code: SculptQualityReconstructionRefusalCode;
+      readonly gate?: string;
+      readonly message: string;
+    };
+
+type AnySculptReconstructionResult =
+  | Extract<SculptReconstructionResult, { readonly ok: true }>
+  | Extract<SculptQualityReconstructionResult, { readonly ok: false }>;
+
 function snapshotObjectSculptSpec<Spec extends ObjectSculptSpec>(
   spec: Spec,
 ): Spec {
@@ -92,7 +113,7 @@ type OfflineProbeResult =
   | { readonly ok: true; readonly spec: SculptQualityObjectSculptSpec }
   | {
       readonly ok: false;
-      readonly refusal: Extract<SculptReconstructionResult, { readonly ok: false }>;
+      readonly refusal: Extract<AnySculptReconstructionResult, { readonly ok: false }>;
     };
 
 function probeOfflineAgent(
@@ -331,10 +352,11 @@ function reconstructLegacyArtifact(
  * Reconstruct an openable Sculpt Artifact without a live provider dependency.
  * Image+brief is deliberately demo-grade; production spend requires a separate gate.
  */
-export function reconstructSculpt(
+function reconstructSculptInternal(
   intakeValue: unknown,
-  options: SculptReconstructionOptions = {},
-): SculptReconstructionResult {
+  options: SculptReconstructionOptions,
+  forceQuality: boolean,
+): AnySculptReconstructionResult {
   const validatedIntake = validateSculptIntake(intakeValue);
   if (!validatedIntake.ok) {
     return {
@@ -364,6 +386,7 @@ export function reconstructSculpt(
     ? intake.structuredSpec
     : specFromImageAndBrief(intake);
   const qualityRequested =
+    forceQuality ||
     isSculptQualityObjectSculptSpec(inputSpec) ||
     options.seed !== undefined ||
     options.enableOfflineAgent === true;
@@ -450,4 +473,33 @@ export function reconstructSculpt(
     artifactBytes,
     artifactDigest: digestBytes(artifactBytes),
   };
+}
+
+export function reconstructSculpt(
+  intakeValue: unknown,
+): SculptReconstructionResult;
+export function reconstructSculpt(
+  intakeValue: unknown,
+  options: SculptReconstructionOptions,
+): SculptQualityReconstructionResult;
+export function reconstructSculpt(
+  intakeValue: unknown,
+  options?: SculptReconstructionOptions,
+): SculptReconstructionResult | SculptQualityReconstructionResult {
+  return reconstructSculptInternal(
+    intakeValue,
+    options ?? {},
+    options !== undefined,
+  );
+}
+
+export function reconstructSculptQuality(
+  intakeValue: unknown,
+  options: SculptReconstructionOptions = {},
+): SculptQualityReconstructionResult {
+  return reconstructSculptInternal(
+    intakeValue,
+    options,
+    true,
+  ) as SculptQualityReconstructionResult;
 }

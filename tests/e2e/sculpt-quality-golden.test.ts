@@ -19,7 +19,7 @@ import {
   createSculptMountApi,
 } from "../../packages/engine-presentation/src/index.ts";
 import {
-  validateObjectSculptSpec,
+  validateSculptQualityObjectSculptSpec,
   validateSculptIntake,
   validateSculptQualityArtifact,
   isSculptQualityObjectSculptSpec,
@@ -212,11 +212,11 @@ describe("sculpt-quality v1 golden demos", () => {
       }));
 
       const hardSurfaceSpec = structuredSpec(DEMOS[0].path);
-      const missingPass = validateObjectSculptSpec({
+      const missingPass = validateSculptQualityObjectSculptSpec({
         ...hardSurfaceSpec,
         passes: hardSurfaceSpec.passes.filter((pass) => pass.id !== "materials"),
       });
-      const shallowInventory = validateObjectSculptSpec({
+      const shallowInventory = validateSculptQualityObjectSculptSpec({
         ...hardSurfaceSpec,
         detailInventory: {
           ...hardSurfaceSpec.detailInventory,
