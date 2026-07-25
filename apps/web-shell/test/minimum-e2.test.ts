@@ -53,14 +53,14 @@ describe("Minimum E2 hybrid editor surface", () => {
     const editor = createMinimumE2Editor({
       cwd: dir,
       documentPath: "scene.json",
-      backend: "experimental-three",
+      backend: "three",
       seed: 72,
     });
     const artifact = demoArtifact();
 
     editor.addSculpt({ instanceId: "lantern-one", artifact });
     expect(editor.viewport()).toMatchObject({
-      backend: "experimental-three",
+      backend: "three",
       drawCalls: 2,
     });
     expect(editor.snapshot().sceneTree).toHaveLength(3);

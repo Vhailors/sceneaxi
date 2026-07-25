@@ -10,9 +10,11 @@
  * readiness). shippingClaim is never true (enforced by claim validation).
  */
 
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+// This suite is exported only from the explicit
+// @sceneaxi/schemas/node/profile-conformance-suite subpath.
+import * as nodeFs from "node:fs";
+import * as nodeOs from "node:os";
+import * as nodePath from "node:path";
 import {
   PROFILE_CONFORMANCE_SUITE_VERSION,
   PROFILE_ROLLOUT_ORDER_HELD_KEY,
@@ -223,13 +225,15 @@ export function runProfileConformanceSuite(
   // Document propose/apply through the profile's pinned core.
   let tempDir: string | undefined;
   try {
-    tempDir = mkdtempSync(join(tmpdir(), "sceneaxi-profile-conformance-"));
+    tempDir = nodeFs.mkdtempSync(
+      nodePath.join(nodeOs.tmpdir(), "sceneaxi-profile-conformance-"),
+    );
     const docName = "scene.json";
     const doc = surface.core.authoring.createDocument({
       id: "conformance-scene",
       data: { entities: [{ id: "hero", x: 0, y: 0 }] },
     });
-    const abs = join(tempDir, docName);
+    const abs = nodePath.join(tempDir, docName);
     const written = surface.core.authoring.writeDocumentFile(abs, doc, {
       cwd: tempDir,
     });
@@ -277,7 +281,7 @@ export function runProfileConformanceSuite(
       );
 
       if (applied.ok) {
-        const text = readFileSync(abs, "utf8");
+        const text = nodeFs.readFileSync(abs, "utf8");
         const parsed = parseDocumentText(text);
         checks.push(check("document-reparse", parsed.ok === true));
         if (parsed.ok) {
@@ -302,7 +306,7 @@ export function runProfileConformanceSuite(
   } finally {
     if (tempDir !== undefined) {
       try {
-        rmSync(tempDir, { recursive: true, force: true });
+        nodeFs.rmSync(tempDir, { recursive: true, force: true });
       } catch {
         // best-effort cleanup
       }

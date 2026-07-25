@@ -14,7 +14,7 @@ import {
   replaySceneKernelSession,
 } from "../../packages/engine-kernel/src/index.ts";
 import {
-  createExperimentalThreeSculptPresentationBackend,
+  createThreeSculptPresentationBackend,
   createSculptMountApi,
 } from "../../packages/engine-presentation/src/index.ts";
 import {
@@ -149,7 +149,7 @@ describe("scene composition v1 golden demo", () => {
       // transforms, so no presentation adapter is added for this vertical.
       const mount = namedStep("mount", () => {
         const mounts = createSculptMountApi(
-          createExperimentalThreeSculptPresentationBackend(),
+          createThreeSculptPresentationBackend(),
         );
         for (const instance of composed.scene.instances) {
           mounts.mount({

@@ -82,6 +82,8 @@ Recorded in `dependency-matrix.json → releaseGroups` and stamped on every mani
 `sceneaxi.releaseGroup` (checker-verified against the matrix):
 
 - **contracts** (`schemas`): own versions; consumers refuse major mismatches.
+  The package root stays browser-safe; Node-only executable suites use explicit
+  `node/*` export subpaths and are not re-exported from the root.
 - **core-train** (`engine-*`, `authoring-core`): one shared semver train — a "core release".
 - **profile** (`profile-*`): independently versioned; each manifest MUST carry
   `sceneaxi.corePin` — the semver range of the core train it supports (bootstrap value

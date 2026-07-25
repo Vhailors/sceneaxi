@@ -26,7 +26,7 @@ emitter. See
 Reconstruction behavior belongs to
 [`@sceneaxi/authoring-core`](../authoring-core/README.md#hybrid-sculpt-reconstruction-and-minimum-e2);
 renderer mounting belongs to
-[`@sceneaxi/engine-presentation`](../engine-presentation/README.md#hybrid-sculpt-preview).
+[`@sceneaxi/engine-presentation`](../engine-presentation/README.md#mount-api).
 The schemas contain neither provider credentials nor renderer types.
 
 ## Scene composition contracts (sceneaxi#85)
@@ -118,8 +118,11 @@ Registry seed state: `registryVersion` is `1.0.0`; `entries` is exactly `[]` (em
 - Registry: `profileConformanceRegistry` (Game = development-consumer; Web/Kids =
   not-yet-claimed; never a shipping claim; retains the
   `profile-rollout-order` decision citation)
-- Shared suite: `runProfileConformanceSuite(surface)` — kernel session + document
-  propose/apply through the profile's pinned core + evidence-hook presence
+- Node-only shared suite:
+  `@sceneaxi/schemas/node/profile-conformance-suite` exports
+  `runProfileConformanceSuite(surface)` — kernel session + document propose/apply
+  through the profile's pinned core + evidence-hook presence. The browser-facing
+  package root exports the contract and registry, not this filesystem-backed suite.
 - First development consumer: `@sceneaxi/profile-game` (exports `conformance`)
 
 ## Model Provider Port (sceneaxi#45)

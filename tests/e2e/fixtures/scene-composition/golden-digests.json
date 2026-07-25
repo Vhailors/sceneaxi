@@ -108,7 +108,7 @@
       "bay-stacked-crate",
       "bay-field-drone"
     ],
-    "frameDigest": "sha256:301971ec7efb20d9f73e0c4295eed53c6fd2a0df4511b64b6c80e31fd6533cec"
+    "frameDigest": "sha256:c6dfee1f08209ff8c94ebb1893c1cbb3bbb3ed0d10f8eb3a127de62c8e4ce5b4"
   },
   "kernel": {
     "initialDigest": "sha256:b58fff2cb716ffb6787c92999167aad9c5358b34444dcd4823d67135ac7a196e",

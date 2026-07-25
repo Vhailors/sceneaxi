@@ -38,7 +38,11 @@ From the user's perspective:
 - **Web and desktop shells** give humans the same operations over the same protocol layer — one behavior, many faces. Anything a shell can do maps to a CLI/protocol operation; a propose→diff→apply edit made in the shell and one made by an agent produce identical documents.
 - **Profiles** select and configure core capabilities at build time and pin a core version range. The Kids profile compiles its safety policy in — absent capability is absent code, never a flag.
 - **Curated asset catalogs** (game-asset and website-asset storefronts over one shared pipeline) exist as dormant bounded apps until their activation gates open; curation is the product, provenance and AI-disclosure are mandatory metadata.
-- The engine's renderer composition is **not assumed**: the Three-vs-PlayCanvas Stage 1 proof (factories-helpers #41 program) decides it under its own precommitted, double-gated rules.
+- Product presentation uses Three.js under the later captain decision recorded
+  in [ADR 0017](../adr/0017-three-product-presentation-core.md). The
+  Three-vs-PlayCanvas Stage 1 proof (factories-helpers #41 program) remains a
+  separate, double-gated hypothesis test: it neither blocks nor corroborates
+  that product decision, and no arm or result is assumed.
 - Product policy the captain has not decided is **structurally refusable**: any CLI verb gated by an open captain hold refuses and names the key, fail-closed on every degraded state.
 
 ## User Stories
@@ -92,7 +96,7 @@ From the user's perspective:
 27. As an engine maintainer, I want delayed packages (asset-compiler, platform-host, evidence, provider adapters) to land into pre-declared matrix slots, so that growth follows the charted architecture.
 28. As an independent reviewer, I want the quality gate to fail while build/test/lint are unwired, so that a passing gate can never be counterfeit ("a passing gate here means the gate has been tampered with").
 29. As the captain, I want every undecided choice registered as a structured hold with the CLI refusing on it, so that autonomy never converts my open decisions into accidental defaults.
-30. As the program owner, I want the Stage 1 renderer proof to stay double-gated (tier-3 captain decisions AND explicit run authorization), so that the monorepo's existence never pre-decides the engine composition.
+30. As the program owner, I want the Stage 1 renderer proof to stay double-gated (tier-3 captain decisions AND explicit run authorization), so that no product implementation is mistaken for a proof result.
 31. As a provider integrator, I want a thin Model Provider Port with per-profile policy filters, so that adding or swapping an LLM provider is an adapter, never a rewrite — and Kids routes stay denied by default.
 
 ## Implementation Decisions
@@ -103,13 +107,13 @@ From the user's perspective:
 2. **Packaging:** a core ecosystem monorepo with strict package/app boundaries. Asset catalogs may incubate inside and split later. **Individual game products are never monorepo members** — they are separate repos consuming versioned releases.
 3. **Name:** SceneAxi / `sceneaxi` (captain-resolved key `core-product-name`). Registry-clean on every checked authority as of 2026-07-21; full trademark clearance remains a pre-launch gate (see Further Notes).
 
-### Monorepo package map (landed bootstrap; seam-only, zero engine behavior)
+### Monorepo package map
 
 | Layer | Package / app | Role |
 |---|---|---|
 | L0 | `schemas` | ALL shared contracts, versioned, **zero dependencies** |
 | L1 | `engine-kernel` | Game Kernel seam (`open/dispatch/advance/observe/save/replay`; only `advance` mutates) |
-| L1 | `engine-presentation` | Presentation Runtime seam — renderer backend hidden; **Stage 1 proof decides composition** |
+| L1 | `engine-presentation` | Presentation Runtime seam — Three.js product core hidden behind ADR 0002; the separately gated Stage 1 proof remains unadjudicated |
 | L1 | `engine-orchestrator` | Factory Orchestrator seam (per spec #41's module set); not used by the MVP golden paths |
 | L1 (delayed) | `engine-asset-compiler`, `engine-platform-host`, `engine-evidence` | Pre-declared matrix slots; arrive with proof-program landings |
 | L2 | `authoring-core` | The ONE agent-native runtime/authoring core: document model, propose/apply application service, session orchestration, evidence hooks, **Model Provider Port** |
@@ -173,7 +177,7 @@ Topology locked (`catalog-storefront-topology`): **one modular catalog platform*
 
 ### Proof program (unchanged; referenced, not absorbed)
 
-The Stage 0–8 falsification program of factories-helpers **#41 transfers intact and stays its own source of truth**. Stage 1 (Three-vs-PlayCanvas renderer composition) remains **double-gated**: tier-3 captain decisions AND explicit run authorization — the monorepo is packaging, not proof, and nothing in this spec pre-decides the renderer. Stage 8 remains the readiness/claims gate. The single topology amendment already recorded: repository *creation* moved ahead of Stage 8 (captain authority); proof-prep docs (#50–#52) re-home to SceneAxi `docs/proof/` under the issue-transfer plan, with execution still double-gated. Readiness vocabulary is inherited: factory-ready ≠ engine-ready ≠ commercially validated ≠ kids-safe ≠ marketplace-ready; evidence never rounds up.
+The Stage 0–8 falsification program of factories-helpers **#41 transfers intact and stays its own source of truth**. Stage 1 (Three-vs-PlayCanvas renderer composition) remains **double-gated**: tier-3 captain decisions AND explicit run authorization — the monorepo is packaging, not proof, and nothing in this spec pre-decides the Stage 1 result. The later captain choice of Three.js as the product presentation core is recorded in [ADR 0017](../adr/0017-three-product-presentation-core.md); it neither removes a proof arm nor counts as Stage 1 evidence. Stage 8 remains the readiness/claims gate. The single topology amendment already recorded: repository *creation* moved ahead of Stage 8 (captain authority); proof-prep docs (#50–#52) re-home to SceneAxi `docs/proof/` under the issue-transfer plan, with execution still double-gated. Readiness vocabulary is inherited: factory-ready ≠ engine-ready ≠ commercially validated ≠ kids-safe ≠ marketplace-ready; evidence never rounds up.
 
 ### Authority table (non-transitive; PASS ≠ commit ≠ push ≠ merge)
 

@@ -60,5 +60,7 @@ default cash budget is $0.
 
 Stage 1 execution requires **both** recorded tier-3 captain decisions **and** a
 separate explicit run authorization. The monorepo is packaging, not proof;
-nothing in this repo — this pointer included — pre-decides the renderer
-composition or authorizes any proof run.
+nothing in this repo — this pointer included — pre-decides the Stage 1 result or
+authorizes any proof run. The product-core decision recorded in
+[ADR 0017](../adr/0017-three-product-presentation-core.md) neither removes a
+proof arm nor counts as Stage 1 evidence.

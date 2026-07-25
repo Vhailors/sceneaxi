@@ -2,11 +2,11 @@ import { readFileSync } from "node:fs";
 import { BufferGeometry, Material, Vector3 } from "three";
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
 import {
-  EXPERIMENTAL_THREE_NON_DECISION_LABEL,
   SculptMountError,
-  createExperimentalThreeSculptPresentationBackend,
+  THREE_HEADLESS_SURFACE_LABEL,
   createNullSculptPresentationBackend,
   createSculptMountApi,
+  createThreeSculptPresentationBackend,
   type SculptMountApi,
 } from "@sceneaxi/engine-presentation";
 import {
@@ -115,21 +115,21 @@ describe("Sculpt Mount API", () => {
     mounts.dispose();
   });
 
-  it("renders mounted primitives through an actual experimental Three scene", () => {
-    const mounts = createSculptMountApi(
-      createExperimentalThreeSculptPresentationBackend(),
-    );
+  it("renders mounted primitives through the Three core headless surface", () => {
+    const mounts = createSculptMountApi(createThreeSculptPresentationBackend());
     mounts.mount({ instanceId: "crate-one", artifact: fixtureArtifact() });
     const frame = mounts.render();
     expect(frame).toEqual({
-      backend: "experimental-three",
-      label: EXPERIMENTAL_THREE_NON_DECISION_LABEL,
+      backend: "three",
+      label: THREE_HEADLESS_SURFACE_LABEL,
       frame: 1,
       instanceIds: ["crate-one"],
       drawCalls: 2,
+      surface: "headless",
+      pixelsDrawn: false,
     });
-    expect(frame.label).toContain("non-decision");
-    expect(frame.label).toContain("Stage 1 has not run");
+    expect(frame.label).toContain("Three presentation core");
+    expect(frame.label).not.toContain("non-decision");
     mounts.dispose();
   });
 
@@ -137,9 +137,7 @@ describe("Sculpt Mount API", () => {
     const geometryDispose = vi.spyOn(BufferGeometry.prototype, "dispose");
     const materialDispose = vi.spyOn(Material.prototype, "dispose");
     const vectorSet = vi.spyOn(Vector3.prototype, "set");
-    const mounts = createSculptMountApi(
-      createExperimentalThreeSculptPresentationBackend(),
-    );
+    const mounts = createSculptMountApi(createThreeSculptPresentationBackend());
     mounts.mount({ instanceId: "crate-one", artifact: fixtureArtifact() });
     vectorSet.mockClear();
 

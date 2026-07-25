@@ -15,7 +15,7 @@ import {
   replaySculptKernelSession,
 } from "../../packages/engine-kernel/src/index.ts";
 import {
-  createExperimentalThreeSculptPresentationBackend,
+  createThreeSculptPresentationBackend,
   createSculptMountApi,
 } from "../../packages/engine-presentation/src/index.ts";
 
@@ -54,14 +54,14 @@ describe("hybrid sculpt + Minimum E2 golden vertical", () => {
         return result;
       });
 
-      const mountedFrame = namedStep("experimental-mount", () => {
+      const mountedFrame = namedStep("three-core-mount", () => {
         const mounts = createSculptMountApi(
-          createExperimentalThreeSculptPresentationBackend(),
+          createThreeSculptPresentationBackend(),
         );
         mounts.mount({ instanceId: "golden-one", artifact: fixture.artifact });
         const frame = mounts.render();
         expect(frame.drawCalls).toBe(2);
-        expect(frame.label).toContain("non-decision");
+        expect(frame.label).toContain("Three presentation core");
         mounts.dispose();
         return frame;
       });
@@ -93,7 +93,7 @@ describe("hybrid sculpt + Minimum E2 golden vertical", () => {
         const first = createMinimumE2Editor({
           cwd: projectRoot,
           documentPath: "hybrid.sceneaxi.json",
-          backend: "experimental-three",
+          backend: "three",
           seed: 73,
         });
         first.addSculpt({ instanceId: "golden-one", artifact: fixture.artifact });
@@ -137,7 +137,7 @@ describe("hybrid sculpt + Minimum E2 golden vertical", () => {
         const demo = createMinimumE2Editor({
           cwd: projectRoot,
           documentPath: "hybrid.sceneaxi.json",
-          backend: "experimental-three",
+          backend: "three",
         });
         demo.addSculpt({ instanceId: "demo-lantern", artifact: reconstructed.artifact });
         demo.select("demo-lantern");
@@ -201,7 +201,7 @@ describe("hybrid sculpt + Minimum E2 golden vertical", () => {
         claims: {
           stage1Run: false,
           rendererWinner: null,
-          experimentalThree: "non-decision",
+          threePresentationCore: "product-core",
         },
       };
 

@@ -14,9 +14,15 @@ respects them without re-litigating.
   registry: factories-helpers
   [#42](https://github.com/Vhailors/factories-helpers/issues/42)).
 - No ADR may presume the Three Kernel hypothesis wins Stage 1 of the proof
-  program. Stage 1 stays double-gated (tier-3 captain decisions **and** explicit
-  run authorization) under factories-helpers
-  [#41](https://github.com/Vhailors/factories-helpers/issues/41).
+  program, or cite the **product** choice of Three as Stage 1 evidence. Stage 1
+  stays double-gated (tier-3 captain decisions **and** explicit run
+  authorization) under factories-helpers
+  [#41](https://github.com/Vhailors/factories-helpers/issues/41). Three.js being
+  the product presentation core
+  ([ADR 0017](0017-three-product-presentation-core.md), captain product decision)
+  says nothing about that proof, removes no arm, and must never be quoted as its
+  outcome. The deep presentation seam
+  ([ADR 0002](0002-presentation-runtime-deep-seam.md)) is kept regardless.
 
 ## Split lineage (transferred-from: factories-helpers#46)
 
@@ -42,13 +48,13 @@ naming its source.
 | ADR | Decision |
 |---|---|
 | [0001](0001-game-kernel-command-snapshot-session.md) | Game Kernel external interface is a command/snapshot session (Design A) |
-| [0002](0002-presentation-runtime-deep-seam.md) | Presentation seam is a deep Presentation Runtime (backend hidden; Stage 1 decides composition) |
+| [0002](0002-presentation-runtime-deep-seam.md) | Presentation seam is a deep Presentation Runtime (backend hidden; this ADR chooses no backend) |
 | [0003](0003-editor-sequencing-e1-first-e2-specified.md) | Editor sequencing: E1 first; general E2 specified-not-built; bounded hybrid exception |
 | [0004](0004-no-plugin-ports-before-two-adapters.md) | Seam discipline: no internal-library ports before two real adapters (Model Provider Port and v1 Plugin Host / capability registry excepted) |
 | [0005](0005-plugin-host-capability-manifest.md) | Plugin Host uses versioned capability manifests and a fail-closed public capability registry |
 | [0006](0006-hybrid-core-and-ai-sculpt.md) | Hybrid Godot-like core plus AI sculpt authoring is the post-MVP vertical direction |
 | [0007](0007-sceneaxi-owned-sculpt-artifacts.md) | SceneAxi owns Sculpt Intake, ObjectSculptSpec, reconstruction, and Sculpt Artifact contracts |
-| [0008](0008-experimental-three-preview-non-decision.md) | Three preview is experimental and explicitly not a Stage 1 decision |
+| [0008](0008-experimental-three-preview-non-decision.md) | Three preview was experimental and not a Stage 1 decision — superseded for product surfaces by 0017 |
 | [0009](0009-kernel-owned-toy-physics-animation.md) | Toy physics and animation sockets advance only under kernel authority |
 | [0010](0010-multi-pass-sculpt-quality-gates.md) | Sculpt-quality ObjectSculptSpec branches require deterministic pass order and non-trivial detail inventory; preserved PR #75 branches do not |
 | [0011](0011-animation-ready-hierarchy-and-procedural-emit.md) | Sculpt-quality Artifact branches bind animation-ready hierarchy metadata and seeded procedural emit; preserved PR #75 branches do not |
@@ -57,3 +63,4 @@ naming its source.
 | [0014](0014-scene-composition-contract.md) | Scene composition is a SceneAxi-owned deterministic contract with axis-aligned placement and a fail-closed refuse matrix |
 | [0015](0015-scene-minimal-multi-object-open-path.md) | Scene composition adds one multi-object kernel session and no presentation adapter |
 | [0016](0016-portable-kernel-digest.md) | Kernel session digests come from a portable synchronous sha256, so sessions open in a browser |
+| [0017](0017-three-product-presentation-core.md) | Three.js is the product presentation core behind the unchanged ADR 0002 seam; Stage 1 unaffected |

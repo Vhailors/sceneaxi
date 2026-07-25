@@ -1,22 +1,47 @@
-/** Implementation-private Three scene adapter for the explicitly experimental preview. */
+/**
+ * Sculpt Mount backend on the Three presentation core.
+ *
+ * Given a canvas it draws mounted Sculpt Artifacts as real pixels through a
+ * `WebGLRenderer`; with no canvas it uses the deterministic headless surface for
+ * node gates. Either way no Three type crosses the Mount API seam.
+ */
 import {
+  Box3,
   BoxGeometry,
   CylinderGeometry,
   Group,
   Mesh,
   MeshStandardMaterial,
-  Scene,
+  Sphere,
   SphereGeometry,
   type BufferGeometry,
   type Material,
   type Object3D,
 } from "three";
 import type { SculptComponent, SculptMaterial, SculptTransform } from "@sceneaxi/schemas";
+import type { OrbitCameraControls } from "./orbit-camera.js";
 import {
-  EXPERIMENTAL_THREE_NON_DECISION_LABEL,
-  type SculptMountedInstance,
-  type SculptPresentationBackend,
+  createThreePresentationCore,
+  disposeSubtree,
+  type ThreePresentationCoreOptions,
+} from "./three-core.js";
+import type { ThreePresentationSurfaceKind } from "./three-surface.js";
+import type {
+  SculptMountedInstance,
+  SculptPresentationBackend,
 } from "./sculpt-mount.js";
+
+/** Sculpt backend plus the browser-facing controls the Mount API does not carry. */
+export interface ThreeSculptPresentationBackend extends SculptPresentationBackend {
+  readonly surface: ThreePresentationSurfaceKind;
+  /** Orbit/zoom control surface for the open-path consumer. */
+  readonly camera: OrbitCameraControls;
+  resize(width: number, height: number, pixelRatio?: number): void;
+  /** PNG bytes of the last drawn frame, or null on a surface that draws no pixels. */
+  capture(): Uint8Array | null;
+  /** Points the camera at the bounding sphere of everything currently mounted. */
+  frameMountedContent(): void;
+}
 
 function radians(degrees: number) {
   return (degrees * Math.PI) / 180;
@@ -49,15 +74,6 @@ function materialFor(material: SculptMaterial): Material {
   });
 }
 
-function disposeObject(root: Object3D) {
-  root.traverse((object) => {
-    if (!(object instanceof Mesh)) return;
-    object.geometry.dispose();
-    const materials = Array.isArray(object.material) ? object.material : [object.material];
-    for (const material of materials) material.dispose();
-  });
-}
-
 function buildInstance(instance: SculptMountedInstance) {
   const root = new Group();
   root.name = instance.instanceId;
@@ -85,23 +101,28 @@ function buildInstance(instance: SculptMountedInstance) {
 }
 
 /**
- * Experimental Three preview adapter. It builds and updates an actual Three
- * scene graph but makes no Stage 1 selection or production renderer claim.
+ * Creates the Three Sculpt Mount backend.
+ *
+ * Pass `canvas` for the real browser path (`WebGLRenderer`, perspective camera,
+ * orbit/zoom controls, PNG capture). Pass nothing for the headless gate surface,
+ * which flushes matrices and reports the meshes a renderer would draw without
+ * claiming pixels.
  */
-export function createExperimentalThreeSculptPresentationBackend(): SculptPresentationBackend {
-  const scene = new Scene();
+export function createThreeSculptPresentationBackend(
+  options: ThreePresentationCoreOptions = {},
+): ThreeSculptPresentationBackend {
+  const core = createThreePresentationCore(options);
   const roots = new Map<string, Group>();
-  let frame = 0;
 
   function replace(instance: SculptMountedInstance) {
     const previous = roots.get(instance.instanceId);
     if (previous !== undefined) {
-      scene.remove(previous);
-      disposeObject(previous);
+      core.content.remove(previous);
+      disposeSubtree(previous);
     }
     const next = buildInstance(instance);
     roots.set(instance.instanceId, next);
-    scene.add(next);
+    core.content.add(next);
   }
 
   function updateTransform(instance: SculptMountedInstance) {
@@ -113,36 +134,62 @@ export function createExperimentalThreeSculptPresentationBackend(): SculptPresen
   }
 
   return {
-    id: "experimental-three",
-    label: EXPERIMENTAL_THREE_NON_DECISION_LABEL,
+    id: "three",
+    label: core.label,
+    surface: core.surfaceKind,
+    camera: core.camera,
     mount: replace,
     update: updateTransform,
+
     unmount(instanceId) {
       const root = roots.get(instanceId);
       if (root === undefined) return;
-      scene.remove(root);
-      disposeObject(root);
+      core.content.remove(root);
+      disposeSubtree(root);
       roots.delete(instanceId);
     },
+
     render(instanceIds) {
-      frame += 1;
-      scene.updateMatrixWorld(true);
-      let drawCalls = 0;
-      scene.traverse((object) => {
-        if (object instanceof Mesh) drawCalls += 1;
-      });
+      const drawn = core.draw();
       return Object.freeze({
-        backend: "experimental-three",
-        label: EXPERIMENTAL_THREE_NON_DECISION_LABEL,
-        frame,
+        backend: "three",
+        label: core.label,
+        frame: drawn.frame,
         instanceIds: Object.freeze([...instanceIds]),
-        drawCalls,
+        drawCalls: drawn.drawCalls,
+        surface: drawn.surface,
+        pixelsDrawn: drawn.pixelsDrawn,
       });
     },
-    dispose() {
-      for (const root of roots.values()) disposeObject(root);
-      roots.clear();
-      scene.clear();
+
+    resize(width, height, pixelRatio) {
+      core.resize(width, height, pixelRatio);
     },
+
+    capture() {
+      return core.capture();
+    },
+
+    frameMountedContent() {
+      const bounds = boundingSphereOf(core.content);
+      if (bounds === null) return;
+      core.camera.frameSphere(bounds.center, bounds.radius);
+    },
+
+    dispose() {
+      roots.clear();
+      core.dispose();
+    },
+  };
+}
+
+function boundingSphereOf(root: Group) {
+  root.updateMatrixWorld(true);
+  const box = new Box3().setFromObject(root);
+  if (box.isEmpty()) return null;
+  const sphere = box.getBoundingSphere(new Sphere());
+  return {
+    center: [sphere.center.x, sphere.center.y, sphere.center.z] as const,
+    radius: Math.max(sphere.radius, 0.001),
   };
 }

@@ -16,9 +16,9 @@ import {
   type SculptKernelSnapshot,
 } from "@sceneaxi/engine-kernel";
 import {
-  createExperimentalThreeSculptPresentationBackend,
   createNullSculptPresentationBackend,
   createSculptMountApi,
+  createThreeSculptPresentationBackend,
   type SculptMountApi,
   type SculptMountedInstance,
   type SculptPresentationFrame,
@@ -159,14 +159,14 @@ function validatePersistedState(value: unknown):
 export function createMinimumE2Editor(options: {
   readonly cwd: string;
   readonly documentPath: string;
-  readonly backend?: "experimental-three" | "null";
+  readonly backend?: "three" | "null";
   readonly seed?: number;
 }): MinimumE2Editor {
   function createMounts() {
     return createSculptMountApi(
       options.backend === "null"
         ? createNullSculptPresentationBackend()
-        : createExperimentalThreeSculptPresentationBackend(),
+        : createThreeSculptPresentationBackend(),
     );
   }
 

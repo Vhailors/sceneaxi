@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { contracts, seam } from "@sceneaxi/schemas";
+import * as schemas from "@sceneaxi/schemas";
+import { runProfileConformanceSuite } from "@sceneaxi/schemas/node/profile-conformance-suite";
+
+const { contracts, seam } = schemas;
 
 const manifest = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf8"),
@@ -17,6 +20,11 @@ describe("@sceneaxi/schemas public seam", () => {
     expect(Object.isFrozen(seam)).toBe(true);
     expect(typeof contracts).toBe("object");
     expect(Object.isFrozen(contracts)).toBe(true);
+  });
+
+  it("keeps the Node-only conformance suite off the browser-facing root", () => {
+    expect("runProfileConformanceSuite" in schemas).toBe(false);
+    expect(typeof runProfileConformanceSuite).toBe("function");
   });
 
   it("ships every declared contract as versioned JSON Schema", () => {

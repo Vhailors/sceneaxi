@@ -43,7 +43,10 @@ and purchases remain outside its scope.
 The post-MVP [hybrid sculpt vertical](CONTEXT.md) opens a versioned Sculpt
 Intake as a SceneAxi-owned Sculpt Artifact, mounts it through a backend-neutral
 API, runs it under kernel authority, and exposes the fixed Minimum E2 checklist.
-Its Three preview is explicitly experimental and a non-decision. Deterministic
+Presentation is the [Three presentation core](docs/three-presentation-core.md):
+its browser surface draws real pixels through `WebGLRenderer` when a consumer
+supplies a canvas, while node gates use its deterministic headless surface.
+Umbrella/site wiring remains a separate consumer responsibility. Deterministic
 fixture and live-demo evidence lives at
 [`issue-73-hybrid-sculpt-golden.json`](.sceneaxi/evidence/issue-73-hybrid-sculpt-golden.json).
 

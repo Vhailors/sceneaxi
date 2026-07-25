@@ -34,12 +34,18 @@ Normative properties:
 - The runtime hides: scene graph, renderer backend, animation, camera, VFX,
   audio, DOM HUD, and resource management.
 
-**The seam *shape* is settled; the backend *hypothesis* is not.** Stage 1 of
+**The seam *shape* is settled here; this ADR chooses no backend.** Stage 1 of
 the proof program — double-gated (tier-3 captain decisions **and** explicit run
-authorization) under factories-helpers #41 — decides renderer composition.
-This ADR does not presume Three.js (or any backend) wins Stage 1. Within the
-proof, comparison arms satisfy the **same behavioral/evidence contract** rather
-than a shared facade.
+authorization) under factories-helpers #41 — remains the only thing that
+adjudicates the renderer *hypothesis*, and nothing in this ADR presumes any arm
+wins it. Within the proof, comparison arms satisfy the **same
+behavioral/evidence contract** rather than a shared facade.
+
+The **product** presentation core is a separate, captain-decided question,
+recorded in [ADR 0017](0017-three-product-presentation-core.md): Three.js sits
+behind this seam for product surfaces. That choice changes nothing here — seam
+shape, backend hiding, and the non-mutation invariant are identical — and it is
+not a Stage 1 result.
 
 ## Consequences
 
@@ -49,8 +55,9 @@ than a shared facade.
   without asserting scene-graph internals.
 - Device-performance recovery is **presentation-only scaling** — quality knobs
   never alter simulation truth.
-- Whichever backend Stage 1 selects lands **behind this same seam**; the seam
-  does not change with the verdict, so no consumer is exposed to the outcome.
+- Any later renderer change informed by a separately adjudicated Stage 1 result
+  lands **behind this same seam**; the seam does not change, so no consumer is
+  exposed to the outcome.
 - Stage 1 preparation docs re-home to `docs/proof/`
   ([sceneaxi#13](https://github.com/Vhailors/sceneaxi/issues/13)–[#15](https://github.com/Vhailors/sceneaxi/issues/15));
   execution stays separately authorized.
@@ -74,7 +81,10 @@ than a shared facade.
 **Settled:** the seam shape (`mount / present / capture / dispose`),
 backend-hiding, and the non-mutation invariant.
 
-**Held, untouched by this ADR:** renderer composition — Stage 1 of the proof
-program, double-gated under factories-helpers #41; `kernel-name` ("Three
-Kernel" is the working name of an open captain hold). This ADR must never be
-cited to justify any renderer choice, for or against any backend.
+**Held, untouched by this ADR:** the Stage 1 proof — run authorization and
+adjudication of the renderer hypothesis, double-gated under factories-helpers
+#41; `kernel-name` ("Three Kernel" is the working name of an open captain hold).
+This ADR must never be cited to justify any renderer choice, for or against any
+backend; the product-core choice lives in
+[ADR 0017](0017-three-product-presentation-core.md) and rests on a captain
+product decision, not on this seam or on Stage 1.

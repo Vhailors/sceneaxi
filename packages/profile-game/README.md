@@ -4,8 +4,8 @@ Game profile — first **development** consumer of the shared Profile Conformanc
 suite ([sceneaxi#10](https://github.com/Vhailors/sceneaxi/issues/10)).
 
 - Pins the core train via `sceneaxi.corePin` / `seam.corePin` (`^0.0.0`).
-- Exports `conformance` for the shared suite in `@sceneaxi/schemas`
-  (`runProfileConformanceSuite`).
+- Exports `conformance` for `runProfileConformanceSuite` from the Node-only
+  `@sceneaxi/schemas/node/profile-conformance-suite` subpath.
 - The gate-run MVP golden path selects that public `conformance` surface as its
   Game consumer policy (`pnpm test:golden`).
 - Retains the `profile-rollout-order` decision citation; `shippingClaim` is
