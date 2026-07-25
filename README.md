@@ -62,9 +62,9 @@ Intake as a SceneAxi-owned Sculpt Artifact, mounts it through a backend-neutral
 API, runs it under kernel authority, and exposes the fixed Minimum E2 checklist.
 Presentation is the [Three presentation core](docs/three-presentation-core.md):
 its browser surface draws real pixels through `WebGLRenderer` when a consumer
-supplies a canvas, while node gates use its deterministic headless surface.
-Umbrella/site wiring remains a separate consumer responsibility. Deterministic
-fixture and live-demo evidence lives at
+supplies a canvas, while node gates use its deterministic headless surface. The
+umbrella's public live open path (`/open`) is the shipped consumer of that canvas
+surface (ADR 0021). Deterministic fixture and live-demo evidence lives at
 [`issue-73-hybrid-sculpt-golden.json`](.sceneaxi/evidence/issue-73-hybrid-sculpt-golden.json).
 
 The additive [sculpt-quality v1 layer](docs/sculpt-quality.md) deepens that same
@@ -153,4 +153,4 @@ indexed in [`docs/adr/`](docs/adr/README.md).
 - Kids profile is separately safety-gated; nothing may depend on it (enforced).
 - Factory methodology remains owned by factories-helpers; SceneAxi consumes contracts, it does not absorb the factory.
 - No Stage 1 proof execution without dual gates (captain tier-3 decisions + explicit run authorization).
-- Three.js remains a falsifiable renderer hypothesis inside the engine, not the product name.
+- Three.js is the product presentation core behind the unchanged deep presentation seam ([ADR 0017](docs/adr/0017-three-product-presentation-core.md)) — not the product name. The Stage 1 Three-Kernel composition question stays a separate falsifiable hypothesis under its own held authority; no renderer winner is claimed.
