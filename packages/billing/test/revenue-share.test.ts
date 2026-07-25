@@ -475,15 +475,18 @@ describe("applyCreditsSale", () => {
       saleId: "sale_snapshot",
     });
     expect(applied.ok).toBe(true);
+    if (!applied.ok) return;
+    expect(applied.value.buyer.entry).toBeDefined();
+    expect(applied.value.creator?.entry).toBeDefined();
+    expect(applied.value.share).toBeDefined();
     if (
-      !applied.ok ||
       applied.value.buyer.entry === undefined ||
-      applied.value.creator?.entry === undefined
+      applied.value.creator?.entry === undefined ||
+      applied.value.share === undefined
     ) {
       return;
     }
 
-    if (applied.value.share === undefined) return;
     const buyerEntry = { ...applied.value.buyer.entry };
     const creatorEntry = { ...applied.value.creator.entry };
     const share = { ...applied.value.share };
@@ -536,6 +539,8 @@ describe("applyCreditsSale", () => {
     if (!applied.ok) return;
     const share = applied.value.share;
     const creatorEntry = applied.value.creator?.entry;
+    expect(share).toBeDefined();
+    expect(creatorEntry).toBeDefined();
     if (share === undefined || creatorEntry === undefined) return;
 
     const store = createInMemoryCreditStore({
@@ -591,11 +596,10 @@ describe("applyCreditsSale", () => {
       saleId: "sale_restored",
     });
     expect(first.ok).toBe(true);
-    if (
-      !first.ok ||
-      first.value.creator === undefined ||
-      first.value.share === undefined
-    ) {
+    if (!first.ok) return;
+    expect(first.value.creator).toBeDefined();
+    expect(first.value.share).toBeDefined();
+    if (first.value.creator === undefined || first.value.share === undefined) {
       return;
     }
 

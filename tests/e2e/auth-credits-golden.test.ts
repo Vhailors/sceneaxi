@@ -387,7 +387,9 @@ describe("auth + credits golden path", () => {
       surface: "web-shell",
     });
     expect(sale.ok).toBe(true);
-    if (!sale.ok || sale.value.share === undefined) return;
+    if (!sale.ok) return;
+    expect(sale.value.share).toBeDefined();
+    if (sale.value.share === undefined) return;
     const price = lantern.value.creditPrice ?? 0;
     expect(sale.value.buyer.entry?.delta).toBe(-price);
     expect(sale.value.creator?.entry?.delta).toBe(Math.floor(price / 2));
