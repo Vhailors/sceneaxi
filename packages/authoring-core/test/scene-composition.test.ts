@@ -9,95 +9,18 @@ import {
 } from "@sceneaxi/authoring-core";
 import {
   COMPOSED_SCENE_DOCUMENT_DATA_KEY,
-  OBJECT_SCULPT_SPEC_KIND,
   SCENE_COMPOSITION_INTAKE_KIND,
   SCENE_COMPOSITION_SCHEMA_VERSION,
-  SCULPT_ARTIFACT_KIND,
-  SCULPT_SCHEMA_VERSION,
   composedSceneFromDocumentData,
   validateComposedScene,
   type SceneCompositionIntake,
-  type SculptArtifact,
-  type SculptTransform,
 } from "@sceneaxi/schemas";
-
-const digest = (character: string) => `sha256:${character.repeat(64)}`;
-
-const identity: SculptTransform = {
-  translation: [0, 0, 0],
-  rotationEulerDegrees: [0, 0, 0],
-  scale: [1, 1, 1],
-};
-
-function transform(
-  translation: readonly [number, number, number],
-  scale: readonly [number, number, number] = [1, 1, 1],
-  rotationEulerDegrees: readonly [number, number, number] = [0, 0, 0],
-): SculptTransform {
-  return { translation, rotationEulerDegrees, scale };
-}
-
-function artifactFixture(artifactId: string): SculptArtifact {
-  const rootNodeId = `${artifactId}-root`;
-  const childNodeId = `${artifactId}-child`;
-  const hierarchy = [
-    { id: rootNodeId, parentId: null, componentId: "body", transform: identity },
-    {
-      id: childNodeId,
-      parentId: rootNodeId,
-      componentId: "cap",
-      transform: transform([0, 1.5, 0]),
-    },
-  ] as const;
-  const spec = {
-    schemaVersion: SCULPT_SCHEMA_VERSION,
-    kind: OBJECT_SCULPT_SPEC_KIND,
-    id: `${artifactId}-spec`,
-    rootNodeId,
-    materials: [
-      { id: "primary", baseColor: "#8899aa", metallic: 0.1, roughness: 0.7 },
-    ],
-    components: [
-      { id: "body", primitive: "box", dimensions: [2, 2, 2], materialId: "primary" },
-      {
-        id: "cap",
-        primitive: "cylinder",
-        dimensions: [0.5, 1, 0.5],
-        materialId: "primary",
-      },
-    ],
-    hierarchy,
-    sockets: [
-      {
-        id: `${artifactId}-bob`,
-        nodeId: childNodeId,
-        kind: "animation",
-        axis: "y",
-        amplitude: 0.25,
-        frequencyHz: 1,
-      },
-    ],
-  } as const;
-  return {
-    schemaVersion: SCULPT_SCHEMA_VERSION,
-    kind: SCULPT_ARTIFACT_KIND,
-    artifactId,
-    spec,
-    proceduralModule: {
-      moduleId: "sceneaxi/scene-composition-test-fixture",
-      exportName: "buildFixture",
-      sourceDigest: digest("b"),
-    },
-    runtimeHierarchy: { rootNodeId, nodes: hierarchy },
-    evidence: {
-      method: "structured-fixture",
-      intakeDigest: digest("a"),
-      specDigest: digest("c"),
-      proceduralModuleDigest: digest("b"),
-      qualityGates: [{ id: "contract", status: "passed", digest: digest("d") }],
-    },
-  } as SculptArtifact;
-}
+import {
+  sceneCompositionArtifactFixture as artifactFixture,
+  sceneCompositionFixtureDigest as digest,
+  sceneCompositionIdentityTransform as identity,
+  sceneCompositionTransformFixture as transform,
+} from "@sceneaxi/schemas/testing/scene-composition";
 
 const crateArtifact = artifactFixture("crate-artifact");
 const droneArtifact = artifactFixture("drone-artifact");
