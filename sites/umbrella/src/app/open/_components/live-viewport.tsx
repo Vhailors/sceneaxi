@@ -94,22 +94,39 @@ export function LiveViewport({ scene }: { readonly scene: LiveOpenScene }) {
         viewport: { ...measure(), pixelRatio },
         background: "#0b0e13",
       });
+      /**
+       * Renderer ownership moves with construction. The backend owns itself until
+       * `createSculptMountApi` takes it, after which `mounts.dispose()` is the single
+       * call that releases the WebGL renderer. Naming the owner makes that handoff one
+       * assignment, so unwinding can never double-dispose or leak the renderer.
+       */
+      let renderOwner: { dispose: () => void } = backend;
       cleanups.push(() => {
-        backend.dispose();
+        renderOwner.dispose();
       });
       const mounts = createSculptMountApi(backend);
-      cleanups.pop();
-      cleanups.push(() => {
-        mounts.dispose();
-      });
-      for (const instance of scene.instances) {
+      renderOwner = mounts;
+
+      /**
+       * The instances this viewport can actually draw, resolved once.
+       *
+       * Every later mount and unmount reads this one list, so the two directions can
+       * never disagree about whether an instance exists — an unmount of something that
+       * was never mounted refuses, and it would refuse inside the frame loop.
+       */
+      const placements = scene.instances.flatMap((instance) => {
         const artifact = scene.artifacts[instance.artifactId];
-        if (artifact === undefined) continue;
-        mounts.mount({
-          instanceId: instance.instanceId,
-          artifact,
-          transform: instance.worldTransform,
-        });
+        if (artifact === undefined) return [];
+        return [
+          {
+            instanceId: instance.instanceId,
+            artifact,
+            transform: instance.worldTransform,
+          },
+        ];
+      });
+      for (const placement of placements) {
+        mounts.mount(placement);
       }
       backend.frameMountedContent();
       const detachInput = backend.camera.attach(canvas);
@@ -118,6 +135,9 @@ export function LiveViewport({ scene }: { readonly scene: LiveOpenScene }) {
       // Mount and unmount the non-root instances to match the button, through the same
       // Mount API the page demonstrates. The renderer is never torn down to do it, and
       // the reconciliation is idempotent, so it converges from any starting state.
+      const optionalPlacements = placements.filter(
+        (placement) => placement.instanceId !== scene.rootInstanceId,
+      );
       let appliedRootOnly = false;
       let reportNextFrame = true;
       const reconcileMounts = () => {
@@ -125,19 +145,12 @@ export function LiveViewport({ scene }: { readonly scene: LiveOpenScene }) {
         appliedRootOnly = rootOnlyRef.current;
         // What is mounted just changed, so the report must not wait for its interval.
         reportNextFrame = true;
-        for (const instance of scene.instances) {
-          if (instance.instanceId === scene.rootInstanceId) continue;
+        for (const placement of optionalPlacements) {
           if (appliedRootOnly) {
-            mounts.unmount(instance.instanceId);
+            mounts.unmount(placement.instanceId);
             continue;
           }
-          const artifact = scene.artifacts[instance.artifactId];
-          if (artifact === undefined) continue;
-          mounts.mount({
-            instanceId: instance.instanceId,
-            artifact,
-            transform: instance.worldTransform,
-          });
+          mounts.mount(placement);
         }
       };
 

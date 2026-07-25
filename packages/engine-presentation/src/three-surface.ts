@@ -52,10 +52,19 @@ export interface ThreePresentationSurface {
  * Declared structurally instead of as `HTMLCanvasElement` so this package needs
  * no DOM lib and its emitted types stay consumable by node-only packages. A real
  * browser canvas satisfies it.
+ *
+ * The context lifecycle events are part of the contract, not an optional extra:
+ * a canvas surface subscribes to `webglcontextlost` / `webglcontextrestored` so
+ * it stops claiming pixels while its context is gone, and it refuses any target
+ * that cannot deliver them. The type states that requirement so a consumer of
+ * this contract learns it from the compiler rather than from a construction-time
+ * refusal.
  */
 export type ThreeCanvasTarget = {
   readonly width: number;
   readonly height: number;
+  addEventListener(type: string, listener: () => void): void;
+  removeEventListener(type: string, listener: () => void): void;
   toDataURL?(type?: string): string;
 };
 
@@ -69,11 +78,6 @@ export type WebGLCanvasSurfaceOptions = {
    */
   readonly preserveDrawingBuffer?: boolean;
   readonly alpha?: boolean;
-};
-
-type WebGLContextLifecycleTarget = {
-  addEventListener(type: string, listener: () => void): void;
-  removeEventListener(type: string, listener: () => void): void;
 };
 
 const BASE64_ALPHABET =
@@ -146,26 +150,25 @@ function asRenderTargets(
 export function createWebGLCanvasSurface(
   options: WebGLCanvasSurfaceOptions,
 ): ThreePresentationSurface {
-  const canvas = options.canvas;
-  if (canvas === null || typeof canvas !== "object") {
+  // The contract is typed, but an untyped JavaScript consumer can still hand over
+  // anything, so the requirement is enforced as well as declared.
+  const candidate = options.canvas as Partial<ThreeCanvasTarget> | null | undefined;
+  if (candidate === null || typeof candidate !== "object") {
     throw new ThreePresentationError(
       "invalid-canvas",
       "A canvas is required for the WebGL surface.",
     );
   }
-  const contextTarget = canvas as ThreeCanvasTarget &
-    Partial<WebGLContextLifecycleTarget>;
   if (
-    typeof contextTarget.addEventListener !== "function" ||
-    typeof contextTarget.removeEventListener !== "function"
+    typeof candidate.addEventListener !== "function" ||
+    typeof candidate.removeEventListener !== "function"
   ) {
     throw new ThreePresentationError(
       "invalid-canvas",
       "A WebGL canvas must support context lifecycle events.",
     );
   }
-  const contextEvents = contextTarget as ThreeCanvasTarget &
-    WebGLContextLifecycleTarget;
+  const canvas = options.canvas;
   const preserveDrawingBuffer = options.preserveDrawingBuffer ?? true;
   const renderer = new WebGLRenderer({
     // `ThreeCanvasTarget` is structural so this package needs no DOM lib. A consumer
@@ -191,11 +194,11 @@ export function createWebGLCanvasSurface(
     drawn = false;
   };
   try {
-    contextEvents.addEventListener("webglcontextlost", onContextLost);
-    contextEvents.addEventListener("webglcontextrestored", onContextRestored);
+    canvas.addEventListener("webglcontextlost", onContextLost);
+    canvas.addEventListener("webglcontextrestored", onContextRestored);
   } catch (error) {
-    contextEvents.removeEventListener("webglcontextlost", onContextLost);
-    contextEvents.removeEventListener("webglcontextrestored", onContextRestored);
+    canvas.removeEventListener("webglcontextlost", onContextLost);
+    canvas.removeEventListener("webglcontextrestored", onContextRestored);
     renderer.dispose();
     throw error;
   }
@@ -246,8 +249,8 @@ export function createWebGLCanvasSurface(
     },
 
     dispose() {
-      contextEvents.removeEventListener("webglcontextlost", onContextLost);
-      contextEvents.removeEventListener("webglcontextrestored", onContextRestored);
+      canvas.removeEventListener("webglcontextlost", onContextLost);
+      canvas.removeEventListener("webglcontextrestored", onContextRestored);
       renderer.dispose();
       drawn = false;
       contextAvailable = false;
