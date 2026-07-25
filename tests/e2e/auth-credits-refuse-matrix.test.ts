@@ -39,7 +39,11 @@ import {
   type BillingRefuseReason,
   type LedgerState,
 } from "@sceneaxi/billing";
-import type { CatalogListing, CreditAccount } from "@sceneaxi/schemas";
+import type {
+  CatalogListing,
+  CheckoutSessionIntent,
+  CreditAccount,
+} from "@sceneaxi/schemas";
 
 /**
  * The refuse matrix.
@@ -564,6 +568,17 @@ describe("billing refuse matrix", () => {
   });
 
   it("reaches every webhook refusal", () => {
+    const packIntent = createCheckoutSessionIntent({
+      catalog: packCatalog(),
+      packId: "starter",
+      userId: "usr_crew",
+      successUrl: "https://sceneaxi.example/ok",
+      cancelUrl: "https://sceneaxi.example/no",
+      idempotencyKey: "checkout:case",
+      now: NOW,
+    });
+    expect(packIntent.ok).toBe(true);
+    if (!packIntent.ok) return;
     const body = JSON.stringify({
       id: "evt_case",
       type: "checkout.session.completed",
@@ -571,11 +586,22 @@ describe("billing refuse matrix", () => {
       livemode: false,
       data: {
         object: {
+          payment_status: "paid",
+          amount_total: packIntent.value.unitAmount,
+          currency: packIntent.value.currency,
+          line_items: {
+            data: [
+              {
+                quantity: 1,
+                price: { id: packIntent.value.stripePriceId },
+              },
+            ],
+          },
           metadata: {
             [CHECKOUT_METADATA_KEYS.userId]: "usr_crew",
             [CHECKOUT_METADATA_KEYS.purpose]: "credit-pack",
             [CHECKOUT_METADATA_KEYS.itemId]: "starter",
-            [CHECKOUT_METADATA_KEYS.intentId]: "int_case",
+            [CHECKOUT_METADATA_KEYS.intentId]: packIntent.value.intentId,
           },
         },
       },
@@ -668,15 +694,39 @@ describe("billing refuse matrix", () => {
     );
 
     record(
-      parseCheckoutCompletedEvent({ payload: "not json", catalog: packCatalog() }),
+      parseCheckoutCompletedEvent({
+        payload: "not json",
+        intent: packIntent.value,
+        catalog: packCatalog(),
+      }),
     );
     record(
       parseCheckoutCompletedEvent({
         payload: JSON.stringify({ type: "payment_intent.succeeded" }),
+        intent: packIntent.value,
         catalog: packCatalog(),
       }),
     );
 
+    const harbour = listing("harbour-diorama");
+    const moneyPrice = harbour.moneyPrice;
+    if (moneyPrice === undefined) throw new Error("listing price missing");
+    const listingIntent: CheckoutSessionIntent = {
+      schemaVersion: 1,
+      kind: "sceneaxi.checkout-session-intent",
+      intentId: "int_listing",
+      userId: "usr_crew",
+      purpose: "catalog-listing",
+      itemId: harbour.listingId,
+      unitAmount: moneyPrice.unitAmount,
+      currency: moneyPrice.currency,
+      stripePriceId: moneyPrice.stripePriceId,
+      mode: "test",
+      successUrl: "https://sceneaxi.example/ok",
+      cancelUrl: "https://sceneaxi.example/no",
+      idempotencyKey: "checkout:listing",
+      createdAt: new Date(NOW).toISOString(),
+    };
     const listingEvent = parseCheckoutCompletedEvent({
       payload: JSON.stringify({
         id: "evt_listing",
@@ -685,6 +735,17 @@ describe("billing refuse matrix", () => {
         livemode: false,
         data: {
           object: {
+            payment_status: "paid",
+            amount_total: listingIntent.unitAmount,
+            currency: listingIntent.currency,
+            line_items: {
+              data: [
+                {
+                  quantity: 1,
+                  price: { id: listingIntent.stripePriceId },
+                },
+              ],
+            },
             metadata: {
               [CHECKOUT_METADATA_KEYS.userId]: "usr_crew",
               [CHECKOUT_METADATA_KEYS.purpose]: "catalog-listing",
@@ -694,6 +755,7 @@ describe("billing refuse matrix", () => {
           },
         },
       }),
+      intent: listingIntent,
       catalog: packCatalog(),
       listings: {
         schemaVersion: 1,
@@ -720,6 +782,7 @@ describe("billing refuse matrix", () => {
 
     const packEvent = parseCheckoutCompletedEvent({
       payload: body,
+      intent: packIntent.value,
       catalog: packCatalog(),
     });
     expect(packEvent.ok).toBe(true);

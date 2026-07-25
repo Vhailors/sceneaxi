@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   validateCheckoutSessionIntent,
+  type CheckoutSessionIntent,
   type CreditAccount,
   type CreditPackCatalog,
 } from "@sceneaxi/schemas";
@@ -48,8 +49,18 @@ const intentRequest = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-/** A Stripe-shaped checkout.session.completed body. */
-const eventBody = (overrides: Record<string, unknown> = {}) =>
+const checkoutIntent = (
+  overrides: Record<string, unknown> = {},
+): CheckoutSessionIntent => {
+  const result = createCheckoutSessionIntent(intentRequest(overrides) as never);
+  if (!result.ok) throw new Error(`intent fixture failed: ${result.message}`);
+  return result.value;
+};
+
+const eventBody = (
+  overrides: Record<string, unknown> = {},
+  intent = checkoutIntent(),
+) =>
   JSON.stringify({
     id: "evt_test_01",
     type: "checkout.session.completed",
@@ -58,11 +69,22 @@ const eventBody = (overrides: Record<string, unknown> = {}) =>
     data: {
       object: {
         id: "cs_test_01",
+        payment_status: "paid",
+        amount_total: intent.unitAmount,
+        currency: intent.currency,
+        line_items: {
+          data: [
+            {
+              quantity: 1,
+              price: { id: intent.stripePriceId },
+            },
+          ],
+        },
         metadata: {
-          [CHECKOUT_METADATA_KEYS.userId]: "usr_crew",
-          [CHECKOUT_METADATA_KEYS.purpose]: "credit-pack",
-          [CHECKOUT_METADATA_KEYS.itemId]: "starter",
-          [CHECKOUT_METADATA_KEYS.intentId]: "int_checkout-usr_crew-starter",
+          [CHECKOUT_METADATA_KEYS.userId]: intent.userId,
+          [CHECKOUT_METADATA_KEYS.purpose]: intent.purpose,
+          [CHECKOUT_METADATA_KEYS.itemId]: intent.itemId,
+          [CHECKOUT_METADATA_KEYS.intentId]: intent.intentId,
         },
       },
     },
@@ -194,6 +216,12 @@ describe("createCheckoutSessionIntent", () => {
     for (const forbidden of ["secret", "sk_", "whsec", "apiKey", "signature"]) {
       expect(serialized).not.toContain(forbidden);
     }
+  });
+
+  it("keeps intent ids distinct when keys sanitize alike", () => {
+    const colon = checkoutIntent({ idempotencyKey: "checkout:a:b" });
+    const dash = checkoutIntent({ idempotencyKey: "checkout:a-b" });
+    expect(colon.intentId).not.toBe(dash.intentId);
   });
 });
 
@@ -429,8 +457,10 @@ describe("verifyStripeWebhookSignature", () => {
 
 describe("parseCheckoutCompletedEvent", () => {
   it("normalizes a verified body into SceneAxi vocabulary", () => {
+    const intent = checkoutIntent();
     const result = parseCheckoutCompletedEvent({
-      payload: eventBody(),
+      payload: eventBody({}, intent),
+      intent,
       catalog: catalog(),
     });
     expect(result.ok).toBe(true);
@@ -443,28 +473,22 @@ describe("parseCheckoutCompletedEvent", () => {
   });
 
   it("takes credits from the catalog, never from the event", () => {
-    const inflated = JSON.stringify({
-      id: "evt_test_02",
-      type: "checkout.session.completed",
-      created: NOW_SECONDS,
-      livemode: false,
-      credits: 1_000_000,
+    const intent = checkoutIntent();
+    const inflated = JSON.parse(eventBody({}, intent)) as {
+      credits?: number;
       data: {
         object: {
-          id: "cs_test_02",
-          credits: 1_000_000,
-          metadata: {
-            [CHECKOUT_METADATA_KEYS.userId]: "usr_crew",
-            [CHECKOUT_METADATA_KEYS.purpose]: "credit-pack",
-            [CHECKOUT_METADATA_KEYS.itemId]: "starter",
-            [CHECKOUT_METADATA_KEYS.intentId]: "int_02",
-            credits: "1000000",
-          },
-        },
-      },
-    });
+          credits?: number;
+          metadata: Record<string, unknown>;
+        };
+      };
+    };
+    inflated.credits = 1_000_000;
+    inflated.data.object.credits = 1_000_000;
+    inflated.data.object.metadata["credits"] = "1000000";
     const result = parseCheckoutCompletedEvent({
-      payload: inflated,
+      payload: JSON.stringify(inflated),
+      intent,
       catalog: catalog(),
     });
     expect(result.ok).toBe(true);
@@ -476,8 +500,13 @@ describe("parseCheckoutCompletedEvent", () => {
   });
 
   it("maps livemode to the billing mode", () => {
+    const intent = checkoutIntent({
+      mode: "live",
+      liveModeAuthorized: true,
+    });
     const result = parseCheckoutCompletedEvent({
-      payload: eventBody({ livemode: true }),
+      payload: eventBody({ livemode: true }, intent),
+      intent,
       catalog: catalog(),
     });
     expect(result.ok).toBe(true);
@@ -485,14 +514,53 @@ describe("parseCheckoutCompletedEvent", () => {
     expect(result.value.mode).toBe("live");
   });
 
+  it("refuses unpaid or mismatched settlements", () => {
+    const intent = checkoutIntent();
+    const mutations = [
+      (session: Record<string, unknown>) => {
+        session["payment_status"] = "unpaid";
+      },
+      (session: Record<string, unknown>) => {
+        session["amount_total"] = intent.unitAmount - 1;
+      },
+      (session: Record<string, unknown>) => {
+        session["currency"] = "eur";
+      },
+      (session: Record<string, unknown>) => {
+        session["line_items"] = {
+          data: [{ quantity: 1, price: { id: "price_test_other" } }],
+        };
+      },
+    ];
+
+    for (const mutate of mutations) {
+      const body = JSON.parse(eventBody({}, intent)) as {
+        data: { object: Record<string, unknown> };
+      };
+      mutate(body.data.object);
+      const result = parseCheckoutCompletedEvent({
+        payload: JSON.stringify(body),
+        intent,
+        catalog: catalog(),
+      });
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.reason).toBe(BILLING_REFUSE_REASONS.webhookPayloadInvalid);
+    }
+  });
+
   it("refuses an absent livemode flag rather than assuming test", () => {
+    const intent = checkoutIntent();
     const body = Object.fromEntries(
-      Object.entries(JSON.parse(eventBody()) as Record<string, unknown>).filter(
+      Object.entries(
+        JSON.parse(eventBody({}, intent)) as Record<string, unknown>,
+      ).filter(
         ([name]) => name !== "livemode",
       ),
     );
     const result = parseCheckoutCompletedEvent({
       payload: JSON.stringify(body),
+      intent,
       catalog: catalog(),
     });
     expect(result.ok).toBe(false);
@@ -501,8 +569,10 @@ describe("parseCheckoutCompletedEvent", () => {
   });
 
   it("refuses any other event type", () => {
+    const intent = checkoutIntent();
     const result = parseCheckoutCompletedEvent({
-      payload: eventBody({ type: "payment_intent.succeeded" }),
+      payload: eventBody({ type: "payment_intent.succeeded" }, intent),
+      intent,
       catalog: catalog(),
     });
     expect(result.ok).toBe(false);
@@ -513,6 +583,7 @@ describe("parseCheckoutCompletedEvent", () => {
   });
 
   it("refuses non-JSON, a non-object, a missing id, and missing metadata", () => {
+    const intent = checkoutIntent();
     for (const payload of [
       "not json",
       "[]",
@@ -527,6 +598,7 @@ describe("parseCheckoutCompletedEvent", () => {
     ]) {
       const result = parseCheckoutCompletedEvent({
         payload,
+        intent,
         catalog: catalog(),
       });
       expect(result.ok).toBe(false);
@@ -534,8 +606,9 @@ describe("parseCheckoutCompletedEvent", () => {
   });
 
   it("refuses metadata missing any SceneAxi key", () => {
+    const intent = checkoutIntent();
     for (const drop of Object.values(CHECKOUT_METADATA_KEYS)) {
-      const body = JSON.parse(eventBody()) as {
+      const body = JSON.parse(eventBody({}, intent)) as {
         data: { object: { metadata: Record<string, unknown> } };
       };
       body.data.object.metadata = Object.fromEntries(
@@ -545,6 +618,7 @@ describe("parseCheckoutCompletedEvent", () => {
       );
       const result = parseCheckoutCompletedEvent({
         payload: JSON.stringify(body),
+        intent,
         catalog: catalog(),
       });
       expect(result.ok).toBe(false);
@@ -554,12 +628,16 @@ describe("parseCheckoutCompletedEvent", () => {
   });
 
   it("refuses an unknown pack in metadata", () => {
-    const body = JSON.parse(eventBody()) as {
+    const intent = {
+      ...checkoutIntent(),
+      itemId: "platinum",
+    } as CheckoutSessionIntent;
+    const body = JSON.parse(eventBody({}, intent)) as {
       data: { object: { metadata: Record<string, unknown> } };
     };
-    body.data.object.metadata[CHECKOUT_METADATA_KEYS.itemId] = "platinum";
     const result = parseCheckoutCompletedEvent({
       payload: JSON.stringify(body),
+      intent,
       catalog: catalog(),
     });
     expect(result.ok).toBe(false);
@@ -570,8 +648,14 @@ describe("parseCheckoutCompletedEvent", () => {
 
 describe("applyCheckoutCompletedGrant", () => {
   const parsed = (overrides: Record<string, unknown> = {}) => {
+    const intent = checkoutIntent(
+      overrides["livemode"] === true
+        ? { mode: "live", liveModeAuthorized: true }
+        : {},
+    );
     const result = parseCheckoutCompletedEvent({
-      payload: eventBody(overrides),
+      payload: eventBody(overrides, intent),
+      intent,
       catalog: catalog(),
     });
     if (!result.ok) throw new Error(`fixture parse failed: ${result.message}`);

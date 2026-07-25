@@ -251,6 +251,17 @@ describe("auth + credits golden path", () => {
       data: {
         object: {
           id: "cs_golden_01",
+          payment_status: "paid",
+          amount_total: intent.value.unitAmount,
+          currency: intent.value.currency,
+          line_items: {
+            data: [
+              {
+                quantity: 1,
+                price: { id: intent.value.stripePriceId },
+              },
+            ],
+          },
           metadata: {
             [CHECKOUT_METADATA_KEYS.userId]: "usr_crew",
             [CHECKOUT_METADATA_KEYS.purpose]: "credit-pack",
@@ -275,6 +286,7 @@ describe("auth + credits golden path", () => {
 
     const event = parseCheckoutCompletedEvent({
       payload: verified.value.payload,
+      intent: intent.value,
       catalog: creditPackCatalog(),
     });
     expect(event.ok).toBe(true);

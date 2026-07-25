@@ -12,6 +12,7 @@
  * configuration mistake, env var, or default can start charging real money.
  */
 
+import { createHash } from "node:crypto";
 import {
   DEFAULT_BILLING_MODE,
   isBillingMode,
@@ -98,7 +99,14 @@ export function assertModeAuthorized(
  * carry a `:`, which the identifier pattern excludes.
  */
 export function deriveIntentId(idempotencyKey: string): string {
-  return `int_${idempotencyKey.replace(/[^A-Za-z0-9._-]/g, "-")}`.slice(0, 128);
+  const readable = idempotencyKey
+    .replace(/[^A-Za-z0-9._-]/g, "-")
+    .slice(0, 96);
+  const digest = createHash("sha256")
+    .update(idempotencyKey, "utf8")
+    .digest("hex")
+    .slice(0, 12);
+  return `int_${readable}_${digest}`;
 }
 
 /** Build a checkout intent for a credit pack, or refuse. */
@@ -111,78 +119,24 @@ export function createCheckoutSessionIntent(
       "A checkout intent request must be a plain object.",
     );
   }
-  const {
-    catalog,
-    packId,
-    userId,
-    successUrl,
-    cancelUrl,
-    idempotencyKey,
-    now,
-    mode,
-    liveModeAuthorized,
-  } = request;
-
-  if (typeof now !== "number" || !Number.isFinite(now)) {
-    return billingRefuse(
-      BILLING_REFUSE_REASONS.clockInvalid,
-      "A checkout intent requires a finite epoch-millisecond clock.",
-    );
-  }
-  if (typeof userId !== "string" || !IDENTIFIER_RE.test(userId)) {
-    return billingRefuse(
-      BILLING_REFUSE_REASONS.requestInvalid,
-      "A checkout intent requires a url-safe user id.",
-    );
-  }
-  if (typeof idempotencyKey !== "string" || idempotencyKey.length === 0) {
-    return billingRefuse(
-      BILLING_REFUSE_REASONS.requestInvalid,
-      "A checkout intent requires a non-empty idempotency key.",
-    );
-  }
-  if (!isHttpsUrl(successUrl) || !isHttpsUrl(cancelUrl)) {
-    return billingRefuse(
-      BILLING_REFUSE_REASONS.redirectUrlInsecure,
-      "Checkout redirect URLs must be absolute https; a post-payment state transition is not upgraded from plaintext.",
-    );
-  }
-
-  const resolvedMode = assertModeAuthorized(
-    mode ?? DEFAULT_BILLING_MODE,
-    liveModeAuthorized,
-  );
-  if (!resolvedMode.ok) return resolvedMode;
-
-  const pack = lookupCreditPack(catalog, packId);
+  const pack = lookupCreditPack(request.catalog, request.packId);
   if (!pack.ok) return pack;
 
-  const candidate = {
-    schemaVersion: 1 as const,
-    kind: "sceneaxi.checkout-session-intent" as const,
-    intentId: deriveIntentId(idempotencyKey),
-    userId,
+  return createMoneyCheckoutIntent({
     purpose: "credit-pack" as const,
     itemId: pack.value.packId,
     credits: pack.value.credits,
     unitAmount: pack.value.unitAmount,
     currency: pack.value.currency,
     stripePriceId: pack.value.stripePriceId,
-    mode: resolvedMode.value,
-    successUrl,
-    cancelUrl,
-    idempotencyKey,
-    createdAt: new Date(now).toISOString(),
-  };
-
-  const intent = validateCheckoutSessionIntent(candidate);
-  if (!intent.ok) {
-    return billingRefuse(
-      BILLING_REFUSE_REASONS.checkoutIntentInvalid,
-      `The checkout intent would be invalid (${intent.code}): ${intent.message}`,
-    );
-  }
-  return billingOk(intent.value);
+    userId: request.userId,
+    successUrl: request.successUrl,
+    cancelUrl: request.cancelUrl,
+    idempotencyKey: request.idempotencyKey,
+    now: request.now,
+    mode: request.mode,
+    liveModeAuthorized: request.liveModeAuthorized,
+  });
 }
 
 /**
@@ -196,6 +150,12 @@ export function createCheckoutSessionIntent(
 export function createMoneyCheckoutIntent(
   request: CreateMoneyCheckoutIntentRequest,
 ): BillingOutcome<CheckoutSessionIntent> {
+  if (!isRecord(request)) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.requestInvalid,
+      "A checkout intent request must be a plain object.",
+    );
+  }
   const {
     purpose,
     itemId,
@@ -216,6 +176,12 @@ export function createMoneyCheckoutIntent(
     return billingRefuse(
       BILLING_REFUSE_REASONS.clockInvalid,
       "A checkout intent requires a finite epoch-millisecond clock.",
+    );
+  }
+  if (typeof userId !== "string" || !IDENTIFIER_RE.test(userId)) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.requestInvalid,
+      "A checkout intent requires a url-safe user id.",
     );
   }
   if (typeof idempotencyKey !== "string" || idempotencyKey.length === 0) {

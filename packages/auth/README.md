@@ -5,7 +5,7 @@ fail-closed role guards, and the identity port.
 
 Configuration (Better Auth wiring, Neon setup, environment variables) lives in
 [`docs/auth-credits.md`](../../docs/auth-credits.md). The adapter-boundary decision is
-recorded in ADR 0014.
+recorded in ADR 0016.
 
 ## What this package owns
 

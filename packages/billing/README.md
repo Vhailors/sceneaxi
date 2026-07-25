@@ -4,7 +4,7 @@ Credits and billing for the SceneAxi identity plane: the append-only credit ledg
 metering, entitlement enforcement, and the Stripe test-mode checkout and webhook paths.
 
 Configuration lives in [`docs/auth-credits.md`](../../docs/auth-credits.md); the
-adapter-boundary decision is ADR 0014.
+adapter-boundary decision is ADR 0016.
 
 Dependencies: `@sceneaxi/schemas` and the `@sceneaxi/auth` seam. Nothing else.
 

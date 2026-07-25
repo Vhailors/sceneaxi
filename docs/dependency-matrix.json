@@ -179,7 +179,7 @@
       "policy": "independently versioned; consumes only public contracts from schemas; never engine packages or service locators"
     },
     "identity": {
-      "policy": "independently versioned; the identity/credits/billing plane consumes only public contracts from schemas (and, for billing, the auth seam); never engine packages, profiles, the CLI, or a service locator. Better Auth, Neon, and the Stripe API stay injected adapters (ADR 0014)."
+      "policy": "independently versioned; the identity/credits/billing plane consumes only public contracts from schemas (and, for billing, the auth seam); never engine packages, profiles, the CLI, or a service locator. Better Auth, Neon, and the Stripe API stay injected adapters (ADR 0016)."
     },
     "apps": { "policy": "private, unpublished, unversioned beyond workspace bookkeeping" },
     "sites": {

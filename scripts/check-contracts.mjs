@@ -286,6 +286,90 @@ const validateSchemaDefinition = (sch, path) => {
   return supported;
 };
 
+const loadContractSurface = ({
+  contractName,
+  schemaFile,
+  fixturesFile,
+}) => {
+  const contractSchemaPath = join(
+    root,
+    "packages",
+    "schemas",
+    "contracts",
+    schemaFile,
+  );
+  const contractFixturesPath = join(
+    root,
+    "packages",
+    "schemas",
+    "contracts",
+    fixturesFile,
+  );
+  const contractSchema = load(contractSchemaPath, true);
+  const contractFixtures = load(contractFixturesPath, true);
+  const schemaReady =
+    contractSchema !== loadFailed && isPlainObject(contractSchema);
+  const fixturesReady =
+    contractFixtures !== loadFailed && isPlainObject(contractFixtures);
+
+  if (contractSchema !== loadFailed && !schemaReady) {
+    fail(`${relative(root, contractSchemaPath)}: expected a plain JSON object`);
+  }
+  if (contractFixtures !== loadFailed && !fixturesReady) {
+    fail(`${relative(root, contractFixturesPath)}: expected a plain JSON object`);
+  }
+
+  const supported =
+    schemaReady &&
+    validateSchemaDefinition(contractSchema, `${contractName}.schema`);
+  if (
+    schemaReady &&
+    (typeof contractSchema.$id !== "string" ||
+      !contractSchema.$id.includes(contractName))
+  ) {
+    fail(
+      `${relative(root, contractSchemaPath)}: $id does not identify the ${contractName} contract`,
+    );
+  }
+  if (schemaReady && fixturesReady && supported) {
+    validate(contractFixtures, contractSchema, `${contractName}.fixtures`);
+  }
+
+  return {
+    fixtures: contractFixtures,
+    ready: schemaReady && fixturesReady,
+  };
+};
+
+const duplicateFieldValues = (records, field) => {
+  const values = records
+    .map((record) => (isPlainObject(record) ? record[field] : undefined))
+    .filter((value) => typeof value === "string");
+  return [...new Set(values.filter((value, index) => values.indexOf(value) !== index))];
+};
+
+const documentBlock = ({ document, documentPath, start, end }) => {
+  const starts = document.split(start).length - 1;
+  const ends = document.split(end).length - 1;
+  const startIndex = document.indexOf(start);
+  const endIndex = document.indexOf(end);
+  if (
+    starts !== 1 ||
+    ends !== 1 ||
+    startIndex < 0 ||
+    endIndex < startIndex
+  ) {
+    fail(
+      `${relative(root, documentPath)}: expected exactly one ${start} ... ${end} block, found ${starts} start and ${ends} end marker(s)`,
+    );
+    return undefined;
+  }
+  return document
+    .slice(startIndex + start.length, endIndex)
+    .trim()
+    .replaceAll("\r\n", "\n");
+};
+
 const schemaUsesSupportedSubset = schemaIsObject && validateSchemaDefinition(schema, "schema");
 let authoringJobCount = 0;
 
@@ -629,85 +713,42 @@ if (schemasReadmeHasContent) {
 const CREDIT_PACKS_DOC_START = "<!-- credit-packs:list -->";
 const CREDIT_PACKS_DOC_END = "<!-- /credit-packs:list -->";
 
-const creditPacksSchemaPath = join(
-  root,
-  "packages",
-  "schemas",
-  "contracts",
-  "credit-packs.schema.json",
-);
-const creditPacksFixturesPath = join(
-  root,
-  "packages",
-  "schemas",
-  "contracts",
-  "credit-packs.fixtures.json",
-);
 const authCreditsDocPath = join(root, "docs", "auth-credits.md");
 
-const creditPacksSchema = load(creditPacksSchemaPath, true);
-const creditPacksFixtures = load(creditPacksFixturesPath, true);
+const creditPacksSurface = loadContractSurface({
+  contractName: "credit-packs",
+  schemaFile: "credit-packs.schema.json",
+  fixturesFile: "credit-packs.fixtures.json",
+});
+const creditPacksFixtures = creditPacksSurface.fixtures;
 const authCreditsDoc = load(authCreditsDocPath, false);
 
-const creditPacksSchemaIsObject =
-  creditPacksSchema !== loadFailed && isPlainObject(creditPacksSchema);
-const creditPacksFixturesIsObject =
-  creditPacksFixtures !== loadFailed && isPlainObject(creditPacksFixtures);
 const authCreditsDocHasContent =
   authCreditsDoc !== loadFailed && authCreditsDoc.trim().length > 0;
 
-if (creditPacksSchema !== loadFailed && !creditPacksSchemaIsObject) {
-  fail(`${relative(root, creditPacksSchemaPath)}: expected a plain JSON object`);
-}
-if (creditPacksFixtures !== loadFailed && !creditPacksFixturesIsObject) {
-  fail(`${relative(root, creditPacksFixturesPath)}: expected a plain JSON object`);
-}
 if (authCreditsDoc !== loadFailed && !authCreditsDocHasContent) {
   fail(`${relative(root, authCreditsDocPath)}: document is empty or whitespace-only`);
 }
 
 let creditPackCount = 0;
-const creditPacksSchemaUsesSupportedSubset =
-  creditPacksSchemaIsObject &&
-  validateSchemaDefinition(creditPacksSchema, "credit-packs.schema");
 
-if (creditPacksSchemaIsObject) {
-  if (
-    typeof creditPacksSchema.$id !== "string" ||
-    !creditPacksSchema.$id.includes("credit-packs")
-  ) {
-    fail(
-      `${relative(root, creditPacksSchemaPath)}: $id does not identify the credit-packs contract`,
-    );
-  }
-}
-
-if (creditPacksSchemaIsObject && creditPacksFixturesIsObject) {
-  if (creditPacksSchemaUsesSupportedSubset) {
-    validate(creditPacksFixtures, creditPacksSchema, "credit-packs.fixtures");
-  }
-
+if (creditPacksSurface.ready) {
   const packs = Array.isArray(creditPacksFixtures.packs)
     ? creditPacksFixtures.packs
     : [];
   creditPackCount = packs.length;
 
-  const packIds = packs
-    .map((pack) => (isPlainObject(pack) ? pack.packId : undefined))
-    .filter((id) => typeof id === "string");
-  const duplicatePackIds = packIds.filter((id, i) => packIds.indexOf(id) !== i);
+  const duplicatePackIds = duplicateFieldValues(packs, "packId");
   if (duplicatePackIds.length > 0) {
     fail(
-      `credit-packs.fixtures: duplicate packId(s): ${[...new Set(duplicatePackIds)].join(", ")}`,
+      `credit-packs.fixtures: duplicate packId(s): ${duplicatePackIds.join(", ")}`,
     );
   }
 
-  const duplicatePriceIds = packs
-    .map((pack) => (isPlainObject(pack) ? pack.stripePriceId : undefined))
-    .filter((id, i, all) => typeof id === "string" && all.indexOf(id) !== i);
+  const duplicatePriceIds = duplicateFieldValues(packs, "stripePriceId");
   if (duplicatePriceIds.length > 0) {
     fail(
-      `credit-packs.fixtures: duplicate stripePriceId(s): ${[...new Set(duplicatePriceIds)].join(", ")}`,
+      `credit-packs.fixtures: duplicate stripePriceId(s): ${duplicatePriceIds.join(", ")}`,
     );
   }
 
@@ -722,19 +763,13 @@ if (creditPacksSchemaIsObject && creditPacksFixturesIsObject) {
   }
 
   if (authCreditsDocHasContent) {
-    const starts = authCreditsDoc.split(CREDIT_PACKS_DOC_START).length - 1;
-    const ends = authCreditsDoc.split(CREDIT_PACKS_DOC_END).length - 1;
-    const matches = [
-      ...authCreditsDoc.matchAll(
-        /<!-- credit-packs:list -->([\s\S]*?)<!-- \/credit-packs:list -->/g,
-      ),
-    ];
-    if (starts !== 1 || ends !== 1 || matches.length !== 1) {
-      fail(
-        `docs/auth-credits.md: expected exactly one ${CREDIT_PACKS_DOC_START} ... ${CREDIT_PACKS_DOC_END} block, found ${starts} start and ${ends} end marker(s)`,
-      );
-    } else {
-      const actual = matches[0][1].trim().replaceAll("\r\n", "\n");
+    const actual = documentBlock({
+      document: authCreditsDoc,
+      documentPath: authCreditsDocPath,
+      start: CREDIT_PACKS_DOC_START,
+      end: CREDIT_PACKS_DOC_END,
+    });
+    if (actual !== undefined) {
       const expected = [
         "| pack | credits | price | stripe test price id |",
         "|---|---|---|---|",
@@ -760,69 +795,25 @@ if (creditPacksSchemaIsObject && creditPacksFixturesIsObject) {
 const ENTITLEMENT_DOC_START = "<!-- entitlement-matrix:list -->";
 const ENTITLEMENT_DOC_END = "<!-- /entitlement-matrix:list -->";
 
-const entitlementSchemaPath = join(
-  root,
-  "packages",
-  "schemas",
-  "contracts",
-  "entitlement-matrix.schema.json",
-);
-const entitlementFixturesPath = join(
-  root,
-  "packages",
-  "schemas",
-  "contracts",
-  "entitlement-matrix.fixtures.json",
-);
-
-const entitlementSchema = load(entitlementSchemaPath, true);
-const entitlementFixtures = load(entitlementFixturesPath, true);
-
-const entitlementSchemaIsObject =
-  entitlementSchema !== loadFailed && isPlainObject(entitlementSchema);
-const entitlementFixturesIsObject =
-  entitlementFixtures !== loadFailed && isPlainObject(entitlementFixtures);
-
-if (entitlementSchema !== loadFailed && !entitlementSchemaIsObject) {
-  fail(`${relative(root, entitlementSchemaPath)}: expected a plain JSON object`);
-}
-if (entitlementFixtures !== loadFailed && !entitlementFixturesIsObject) {
-  fail(`${relative(root, entitlementFixturesPath)}: expected a plain JSON object`);
-}
+const entitlementSurface = loadContractSurface({
+  contractName: "entitlement-matrix",
+  schemaFile: "entitlement-matrix.schema.json",
+  fixturesFile: "entitlement-matrix.fixtures.json",
+});
+const entitlementFixtures = entitlementSurface.fixtures;
 
 let entitlementCapabilityCount = 0;
-const entitlementSchemaUsesSupportedSubset =
-  entitlementSchemaIsObject &&
-  validateSchemaDefinition(entitlementSchema, "entitlement-matrix.schema");
 
-if (entitlementSchemaIsObject) {
-  if (
-    typeof entitlementSchema.$id !== "string" ||
-    !entitlementSchema.$id.includes("entitlement-matrix")
-  ) {
-    fail(
-      `${relative(root, entitlementSchemaPath)}: $id does not identify the entitlement-matrix contract`,
-    );
-  }
-}
-
-if (entitlementSchemaIsObject && entitlementFixturesIsObject) {
-  if (entitlementSchemaUsesSupportedSubset) {
-    validate(entitlementFixtures, entitlementSchema, "entitlement-matrix.fixtures");
-  }
-
+if (entitlementSurface.ready) {
   const capabilities = Array.isArray(entitlementFixtures.capabilities)
     ? entitlementFixtures.capabilities
     : [];
   entitlementCapabilityCount = capabilities.length;
 
-  const ids = capabilities
-    .map((entry) => (isPlainObject(entry) ? entry.capability : undefined))
-    .filter((id) => typeof id === "string");
-  const duplicateIds = ids.filter((id, i) => ids.indexOf(id) !== i);
+  const duplicateIds = duplicateFieldValues(capabilities, "capability");
   if (duplicateIds.length > 0) {
     fail(
-      `entitlement-matrix.fixtures: duplicate capability id(s): ${[...new Set(duplicateIds)].join(", ")}`,
+      `entitlement-matrix.fixtures: duplicate capability id(s): ${duplicateIds.join(", ")}`,
     );
   }
 
@@ -856,19 +847,13 @@ if (entitlementSchemaIsObject && entitlementFixturesIsObject) {
   }
 
   if (authCreditsDocHasContent) {
-    const starts = authCreditsDoc.split(ENTITLEMENT_DOC_START).length - 1;
-    const ends = authCreditsDoc.split(ENTITLEMENT_DOC_END).length - 1;
-    const matches = [
-      ...authCreditsDoc.matchAll(
-        /<!-- entitlement-matrix:list -->([\s\S]*?)<!-- \/entitlement-matrix:list -->/g,
-      ),
-    ];
-    if (starts !== 1 || ends !== 1 || matches.length !== 1) {
-      fail(
-        `docs/auth-credits.md: expected exactly one ${ENTITLEMENT_DOC_START} ... ${ENTITLEMENT_DOC_END} block, found ${starts} start and ${ends} end marker(s)`,
-      );
-    } else {
-      const actual = matches[0][1].trim().replaceAll("\r\n", "\n");
+    const actual = documentBlock({
+      document: authCreditsDoc,
+      documentPath: authCreditsDocPath,
+      start: ENTITLEMENT_DOC_START,
+      end: ENTITLEMENT_DOC_END,
+    });
+    if (actual !== undefined) {
       const expected = [
         "| capability | account | price |",
         "|---|---|---|",
@@ -896,69 +881,25 @@ if (entitlementSchemaIsObject && entitlementFixturesIsObject) {
 const LISTINGS_DOC_START = "<!-- catalog-listings:list -->";
 const LISTINGS_DOC_END = "<!-- /catalog-listings:list -->";
 
-const listingsSchemaPath = join(
-  root,
-  "packages",
-  "schemas",
-  "contracts",
-  "catalog-listings.schema.json",
-);
-const listingsFixturesPath = join(
-  root,
-  "packages",
-  "schemas",
-  "contracts",
-  "catalog-listings.fixtures.json",
-);
-
-const listingsSchema = load(listingsSchemaPath, true);
-const listingsFixtures = load(listingsFixturesPath, true);
-
-const listingsSchemaIsObject =
-  listingsSchema !== loadFailed && isPlainObject(listingsSchema);
-const listingsFixturesIsObject =
-  listingsFixtures !== loadFailed && isPlainObject(listingsFixtures);
-
-if (listingsSchema !== loadFailed && !listingsSchemaIsObject) {
-  fail(`${relative(root, listingsSchemaPath)}: expected a plain JSON object`);
-}
-if (listingsFixtures !== loadFailed && !listingsFixturesIsObject) {
-  fail(`${relative(root, listingsFixturesPath)}: expected a plain JSON object`);
-}
+const listingsSurface = loadContractSurface({
+  contractName: "catalog-listings",
+  schemaFile: "catalog-listings.schema.json",
+  fixturesFile: "catalog-listings.fixtures.json",
+});
+const listingsFixtures = listingsSurface.fixtures;
 
 let listingCount = 0;
-const listingsSchemaUsesSupportedSubset =
-  listingsSchemaIsObject &&
-  validateSchemaDefinition(listingsSchema, "catalog-listings.schema");
 
-if (listingsSchemaIsObject) {
-  if (
-    typeof listingsSchema.$id !== "string" ||
-    !listingsSchema.$id.includes("catalog-listings")
-  ) {
-    fail(
-      `${relative(root, listingsSchemaPath)}: $id does not identify the catalog-listings contract`,
-    );
-  }
-}
-
-if (listingsSchemaIsObject && listingsFixturesIsObject) {
-  if (listingsSchemaUsesSupportedSubset) {
-    validate(listingsFixtures, listingsSchema, "catalog-listings.fixtures");
-  }
-
+if (listingsSurface.ready) {
   const listings = Array.isArray(listingsFixtures.listings)
     ? listingsFixtures.listings
     : [];
   listingCount = listings.length;
 
-  const ids = listings
-    .map((entry) => (isPlainObject(entry) ? entry.listingId : undefined))
-    .filter((id) => typeof id === "string");
-  const duplicateIds = ids.filter((id, i) => ids.indexOf(id) !== i);
+  const duplicateIds = duplicateFieldValues(listings, "listingId");
   if (duplicateIds.length > 0) {
     fail(
-      `catalog-listings.fixtures: duplicate listingId(s): ${[...new Set(duplicateIds)].join(", ")}`,
+      `catalog-listings.fixtures: duplicate listingId(s): ${duplicateIds.join(", ")}`,
     );
   }
 
@@ -999,19 +940,13 @@ if (listingsSchemaIsObject && listingsFixturesIsObject) {
   }
 
   if (authCreditsDocHasContent) {
-    const starts = authCreditsDoc.split(LISTINGS_DOC_START).length - 1;
-    const ends = authCreditsDoc.split(LISTINGS_DOC_END).length - 1;
-    const matches = [
-      ...authCreditsDoc.matchAll(
-        /<!-- catalog-listings:list -->([\s\S]*?)<!-- \/catalog-listings:list -->/g,
-      ),
-    ];
-    if (starts !== 1 || ends !== 1 || matches.length !== 1) {
-      fail(
-        `docs/auth-credits.md: expected exactly one ${LISTINGS_DOC_START} ... ${LISTINGS_DOC_END} block, found ${starts} start and ${ends} end marker(s)`,
-      );
-    } else {
-      const actual = matches[0][1].trim().replaceAll("\r\n", "\n");
+    const actual = documentBlock({
+      document: authCreditsDoc,
+      documentPath: authCreditsDocPath,
+      start: LISTINGS_DOC_START,
+      end: LISTINGS_DOC_END,
+    });
+    if (actual !== undefined) {
       const expected = [
         "| listing | catalog | price mode | credits | money |",
         "|---|---|---|---|---|",

@@ -345,7 +345,6 @@ export function createAccountPanel(
 
     async signOut() {
       const sessionId = heldPrincipal?.session.sessionId;
-      heldPrincipal = undefined;
       if (sessionId !== undefined) {
         const result = await identityPort.signOut({ sessionId });
         if (!result.ok) {
@@ -355,6 +354,7 @@ export function createAccountPanel(
           return held;
         }
       }
+      heldPrincipal = undefined;
       held = anonymous();
       return held;
     },

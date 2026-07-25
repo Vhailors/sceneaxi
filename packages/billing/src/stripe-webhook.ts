@@ -18,8 +18,10 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import {
   isCheckoutPurpose,
   validateCheckoutCompletedEvent,
+  validateCheckoutSessionIntent,
   type BillingMode,
   type CheckoutCompletedEvent,
+  type CheckoutSessionIntent,
   type CreditPackCatalog,
 } from "@sceneaxi/schemas";
 import { assertModeAuthorized } from "./checkout.js";
@@ -219,6 +221,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  */
 export function parseCheckoutCompletedEvent(input: {
   readonly payload: string;
+  readonly intent: CheckoutSessionIntent | unknown;
   readonly catalog: CreditPackCatalog | unknown;
   /** Required to resolve a catalog-listing completion's price. */
   readonly listings?: unknown;
@@ -271,7 +274,13 @@ export function parseCheckoutCompletedEvent(input: {
 
   const data = raw["data"];
   const object = isRecord(data) ? data["object"] : undefined;
-  const metadata = isRecord(object) ? object["metadata"] : undefined;
+  if (!isRecord(object)) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.webhookPayloadInvalid,
+      "The checkout event carries no session object.",
+    );
+  }
+  const metadata = object["metadata"];
   if (!isRecord(metadata)) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.webhookPayloadInvalid,
@@ -296,6 +305,45 @@ export function parseCheckoutCompletedEvent(input: {
   }
 
   const mode: BillingMode = livemode ? "live" : "test";
+  const intent = validateCheckoutSessionIntent(input.intent);
+  if (!intent.ok) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.webhookPayloadInvalid,
+      `The persisted checkout intent is invalid (${intent.code}): ${intent.message}`,
+    );
+  }
+  if (
+    intent.value.intentId !== intentId ||
+    intent.value.userId !== userId ||
+    intent.value.purpose !== purpose ||
+    intent.value.itemId !== itemId ||
+    intent.value.mode !== mode
+  ) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.webhookPayloadInvalid,
+      "The checkout session metadata or mode does not match the persisted intent.",
+    );
+  }
+
+  const lineItems = object["line_items"];
+  const lines = isRecord(lineItems) ? lineItems["data"] : undefined;
+  const line = Array.isArray(lines) && lines.length === 1 ? lines[0] : undefined;
+  const price = isRecord(line) ? line["price"] : undefined;
+  if (
+    object["payment_status"] !== "paid" ||
+    object["amount_total"] !== intent.value.unitAmount ||
+    object["currency"] !== intent.value.currency ||
+    !isRecord(line) ||
+    line["quantity"] !== 1 ||
+    !isRecord(price) ||
+    price["id"] !== intent.value.stripePriceId
+  ) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.webhookPayloadInvalid,
+      "The checkout session is unpaid or its settled amount, currency, quantity, or Stripe price does not match the persisted intent.",
+    );
+  }
+
   const base = {
     schemaVersion: 1 as const,
     kind: "sceneaxi.checkout-completed-event" as const,
@@ -309,19 +357,26 @@ export function parseCheckoutCompletedEvent(input: {
     occurredAt: new Date(created * 1000).toISOString(),
   };
 
-  // For a credit pack, credits and the price are the CATALOG's word, never the
-  // event's: an attacker who could influence webhook metadata must not be able
-  // to name their own credit amount. A listing sale grants no credits, so the
-  // amount comes from the listing set instead.
   let candidate: Record<string, unknown>;
   if (purpose === "credit-pack") {
     const pack = lookupCreditPack(input.catalog, itemId);
     if (!pack.ok) return pack;
+    if (
+      intent.value.credits !== pack.value.credits ||
+      intent.value.unitAmount !== pack.value.unitAmount ||
+      intent.value.currency !== pack.value.currency ||
+      intent.value.stripePriceId !== pack.value.stripePriceId
+    ) {
+      return billingRefuse(
+        BILLING_REFUSE_REASONS.webhookPayloadInvalid,
+        "The persisted credit-pack intent no longer matches the canonical catalog.",
+      );
+    }
     candidate = {
       ...base,
-      credits: pack.value.credits,
-      unitAmount: pack.value.unitAmount,
-      currency: pack.value.currency,
+      credits: intent.value.credits,
+      unitAmount: intent.value.unitAmount,
+      currency: intent.value.currency,
     };
   } else {
     const listing = input.listings === undefined
@@ -341,10 +396,20 @@ export function parseCheckoutCompletedEvent(input: {
         `Listing "${itemId}" is not priced in money, so it cannot have been bought with money.`,
       );
     }
+    if (
+      intent.value.unitAmount !== moneyPrice.unitAmount ||
+      intent.value.currency !== moneyPrice.currency ||
+      intent.value.stripePriceId !== moneyPrice.stripePriceId
+    ) {
+      return billingRefuse(
+        BILLING_REFUSE_REASONS.webhookPayloadInvalid,
+        "The persisted catalog-listing intent no longer matches the canonical listing.",
+      );
+    }
     candidate = {
       ...base,
-      unitAmount: moneyPrice.unitAmount,
-      currency: moneyPrice.currency,
+      unitAmount: intent.value.unitAmount,
+      currency: intent.value.currency,
     };
   }
 

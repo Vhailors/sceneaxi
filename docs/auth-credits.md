@@ -129,7 +129,10 @@ Responsibility splits by what can be verified hermetically:
 Set the checkout session's metadata to the keys in `CHECKOUT_METADATA_KEYS`
 (`sceneaxiUserId`, `sceneaxiPurpose`, `sceneaxiItemId`, `sceneaxiIntentId`). Credits are
 resolved from the **catalog**, never from event metadata, so influencing the webhook body
-cannot name a credit amount.
+cannot name a credit amount. Persist the `CheckoutSessionIntent` before creating the
+hosted session. The completion parser requires that original intent and refuses unless
+the session is paid and its mode, metadata, `amount_total`, currency, one-unit line item,
+and Stripe price id all match it.
 
 Your webhook endpoint must pass the **raw request body**, not a re-serialised object —
 re-encoding the JSON changes the bytes and verification will (correctly) fail:
@@ -149,6 +152,18 @@ const verified = verifyStripeWebhookSignature({
   now: Date.now(),
 });
 if (!verified.ok) return respond(400, verified.reason);
+
+const intent = await checkoutIntentStore.findBySessionMetadata(
+  verified.value.payload,
+);
+const catalog = loadCreditPackCatalog();
+if (!catalog.ok) return respond(500, catalog.reason);
+const completed = parseCheckoutCompletedEvent({
+  payload: verified.value.payload,
+  intent,
+  catalog: catalog.value,
+});
+if (!completed.ok) return respond(400, completed.reason);
 ```
 
 **Live mode is unreachable by default.** `mode: "live"` refuses unless

@@ -373,7 +373,8 @@ describe("sign out", () => {
     expect(snapshot.creditBalance).toBeUndefined();
   });
 
-  it("does not look clean when the server-side sign-out failed", async () => {
+  it("retains the session for retry when server-side sign-out fails", async () => {
+    let deleteAttempts = 0;
     const panel = makePanel({
       identityPort: createIdentityPort({
         adapter: ADAPTER,
@@ -383,7 +384,8 @@ describe("sign out", () => {
           putSession: () => undefined,
           findSession: () => undefined,
           deleteSession() {
-            throw new Error("db down");
+            deleteAttempts += 1;
+            if (deleteAttempts === 1) throw new Error("db down");
           },
         }),
         admin,
@@ -399,6 +401,10 @@ describe("sign out", () => {
     const snapshot = await panel.signOut();
     expect(snapshot.phase).toBe("refused");
     expect(snapshot.refusal?.reason).toBe(AUTH_REFUSE_REASONS.storeFailed);
+
+    const retried = await panel.signOut();
+    expect(retried.phase).toBe("anonymous");
+    expect(deleteAttempts).toBe(2);
   });
 
   it("is a no-op from anonymous", async () => {
