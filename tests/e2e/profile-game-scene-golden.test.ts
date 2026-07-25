@@ -192,7 +192,7 @@ describe("Game profile multi-object scene golden path", () => {
 
       // Mount every instance through the profile's presentation seam.
       const mounts = sceneGoldenPath.core.presentation.createSculptMountApi(
-        sceneGoldenPath.core.presentation.createExperimentalThreeSculptPresentationBackend(),
+        sceneGoldenPath.core.presentation.createThreeSculptPresentationBackend(),
       );
       for (const instance of composed.scene.instances) {
         mounts.mount({

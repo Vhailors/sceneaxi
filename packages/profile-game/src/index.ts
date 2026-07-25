@@ -23,7 +23,7 @@ import {
   writeDocumentFile,
 } from "@sceneaxi/authoring-core";
 import {
-  createExperimentalThreeSculptPresentationBackend,
+  createThreeSculptPresentationBackend,
   createNullPresentationRuntime,
   createSculptMountApi,
 } from "@sceneaxi/engine-presentation";
@@ -135,7 +135,7 @@ export const sceneGoldenPath = Object.freeze({
     presentation: Object.freeze({
       createNullPresentationRuntime,
       createSculptMountApi,
-      createExperimentalThreeSculptPresentationBackend,
+      createThreeSculptPresentationBackend,
     }),
   }),
 });
