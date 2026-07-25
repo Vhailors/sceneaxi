@@ -28,10 +28,23 @@ import type { LiveOpenScene } from "../../../lib/live-open.js";
 const FRAME_REPORT_INTERVAL = 15;
 const MAX_PIXEL_RATIO = 2;
 
+type RefusalStage = "open" | "draw";
+
+const REFUSAL_COPY: Record<RefusalStage, { readonly heading: string; readonly body: string }> = {
+  open: {
+    heading: "The viewport could not open",
+    body: "The Three presentation core refused to build a WebGL surface in this browser, so nothing was drawn. Nothing is shown in its place.",
+  },
+  draw: {
+    heading: "The viewport stopped drawing",
+    body: "The Three presentation core failed while drawing a frame. The loop was stopped and the surface released, so a frozen image is never left on screen reporting itself as live.",
+  },
+};
+
 type ViewportStatus =
   | { readonly kind: "starting" }
   | { readonly kind: "running"; readonly frame: SculptPresentationFrame }
-  | { readonly kind: "refused"; readonly message: string };
+  | { readonly kind: "refused"; readonly stage: RefusalStage; readonly message: string };
 
 type LiveSession = {
   readonly backend: ThreeSculptPresentationBackend;
@@ -170,13 +183,25 @@ export function LiveViewport({ scene }: { readonly scene: LiveOpenScene }) {
       });
       observer.observe(canvas);
 
+      /**
+       * A frame that throws refuses in the open, exactly like a frame that never came.
+       *
+       * The loop cannot keep drawing after this, so releasing here is what stops the
+       * page from showing a stale frame report over a frozen image with no refusal.
+       */
       const loop = createThreeRenderLoop({
         onFrame: () => {
-          reconcileMounts();
-          const frame = mounts.render();
-          if (reportNextFrame || frame.frame % FRAME_REPORT_INTERVAL === 0) {
-            reportNextFrame = false;
-            setStatus({ kind: "running", frame });
+          try {
+            reconcileMounts();
+            const frame = mounts.render();
+            if (reportNextFrame || frame.frame % FRAME_REPORT_INTERVAL === 0) {
+              reportNextFrame = false;
+              setStatus({ kind: "running", frame });
+            }
+          } catch (error) {
+            sessionRef.current = null;
+            releaseAll(cleanups);
+            setStatus({ kind: "refused", stage: "draw", message: messageOf(error) });
           }
         },
       });
@@ -192,7 +217,7 @@ export function LiveViewport({ scene }: { readonly scene: LiveOpenScene }) {
       };
     } catch (error) {
       releaseAll(cleanups);
-      setStatus({ kind: "refused", message: messageOf(error) });
+      setStatus({ kind: "refused", stage: "open", message: messageOf(error) });
       return;
     }
 
@@ -214,13 +239,11 @@ export function LiveViewport({ scene }: { readonly scene: LiveOpenScene }) {
   const frame = status.kind === "running" ? status.frame : null;
 
   if (status.kind === "refused") {
+    const refusal = REFUSAL_COPY[status.stage];
     return (
       <section className="state state-deny">
-        <h3>The viewport could not open</h3>
-        <p>
-          The Three presentation core refused to build a WebGL surface in this browser,
-          so nothing was drawn. Nothing is shown in its place.
-        </p>
+        <h3>{refusal.heading}</h3>
+        <p>{refusal.body}</p>
         <code className="reason">{status.message}</code>
       </section>
     );
