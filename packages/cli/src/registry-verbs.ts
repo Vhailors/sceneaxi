@@ -154,7 +154,7 @@ export function runCatalogList(
       pipelineState: item.moderation.pipelineState,
       commerceActive: isCommerceActive(item),
       missingMandatoryMetadata: Object.freeze(missing),
-      listable: missing.length === 0,
+      metadataComplete: missing.length === 0,
     });
   });
 
@@ -170,7 +170,7 @@ export function runCatalogList(
     }),
     [
       "Commerce stays inert: this verb reports activation state and never changes it",
-      "Items missing mandatory metadata cannot reach the listed state",
+      "metadataComplete reports mandatory metadata only, not curation or listing readiness",
     ],
   );
 }
@@ -364,7 +364,7 @@ export function catalogListHelp(): ResultPayload {
   return Object.freeze({
     command: "catalog list",
     description:
-      "List catalog items in a directory with pipeline state and inert commerce activation",
+      "List catalog items with pipeline state, metadataComplete, and inert commerce activation; metadataComplete is not listing readiness",
     flags: Object.freeze({
       "--dir": `Directory containing *${CATALOG_ITEM_SUFFIX} files (required)`,
       "--cwd": "Working directory for relative paths",

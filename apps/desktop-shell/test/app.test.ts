@@ -189,6 +189,66 @@ describe("desktop shell commands", () => {
     }
   });
 
+  it("undoes repeated override-root applies in LIFO root order", () => {
+    const rootB = mkdtempSync(join(tmpdir(), "sceneaxi-desktop-root-b-"));
+    const rootC = mkdtempSync(join(tmpdir(), "sceneaxi-desktop-root-c-"));
+    try {
+      for (const root of [rootB, rootC]) {
+        expect(
+          writeDocumentFile(
+            join(root, "scene.json"),
+            createDocument({
+              id: "scene",
+              data: { entities: [{ id: "hero", x: 1 }] },
+            }),
+            { cwd: root },
+          ).ok,
+        ).toBe(true);
+      }
+
+      const baseBefore = readFileSync(join(cwd, "scene.json"), "utf8");
+      const beforeB = readFileSync(join(rootB, "scene.json"), "utf8");
+      const beforeC = readFileSync(join(rootC, "scene.json"), "utf8");
+      const session = createDesktopSession({ cwd });
+
+      for (const [root, value] of [
+        [rootB, 2],
+        [rootC, 3],
+      ] as const) {
+        expect(
+          session.proposeEdit({
+            documentPath: "scene.json",
+            jsonPointer: "/data/entities/0/x",
+            newValue: value,
+            cwd: root,
+          }).phase,
+        ).toBe("reviewing");
+        expect(session.accept().phase).toBe("applied");
+      }
+
+      expect(session.undo()).toEqual({
+        ok: true,
+        restoredPaths: ["scene.json"],
+      });
+      expect(readFileSync(join(rootC, "scene.json"), "utf8")).toBe(beforeC);
+      expect(readFileSync(join(rootB, "scene.json"), "utf8")).not.toBe(beforeB);
+      expect(readFileSync(join(cwd, "scene.json"), "utf8")).toBe(baseBefore);
+
+      expect(session.undo()).toEqual({
+        ok: true,
+        restoredPaths: ["scene.json"],
+      });
+      expect(readFileSync(join(rootB, "scene.json"), "utf8")).toBe(beforeB);
+      expect(readFileSync(join(cwd, "scene.json"), "utf8")).toBe(baseBefore);
+
+      expect(session.undo().ok).toBe(false);
+      expect(readFileSync(join(cwd, "scene.json"), "utf8")).toBe(baseBefore);
+    } finally {
+      rmSync(rootB, { recursive: true, force: true });
+      rmSync(rootC, { recursive: true, force: true });
+    }
+  });
+
   it("refuses undo when there is nothing to undo", () => {
     const r = run(["undo"]);
     expect(r.exitCode).toBe(DesktopExit.ERROR);

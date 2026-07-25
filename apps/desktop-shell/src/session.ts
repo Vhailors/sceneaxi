@@ -78,6 +78,17 @@ export type DesktopSession = {
   undo(): DesktopUndoResult;
 };
 
+export type DesktopSessionOperations = {
+  readonly applyProposal: typeof shellApply;
+  readonly resolveTransaction: typeof resolveApplyTransaction;
+  readonly undoLastApply: typeof undoLastApply;
+};
+
+export type DesktopSessionOptions = {
+  readonly cwd?: string;
+  readonly operations?: Partial<DesktopSessionOperations>;
+};
+
 const PENDING_DIAGNOSTICS: readonly ApplyDiagnostic[] = Object.freeze([
   Object.freeze({
     code: "apply-in-progress" as const,
@@ -88,9 +99,15 @@ const PENDING_DIAGNOSTICS: readonly ApplyDiagnostic[] = Object.freeze([
 
 /** Create a single-proposal desktop session bound to a working directory. */
 export function createDesktopSession(
-  options: { readonly cwd?: string } = {},
+  options: DesktopSessionOptions = {},
 ): DesktopSession {
   const sessionCwd = canonicalPath(options.cwd ?? ".");
+  const operations: DesktopSessionOperations = Object.freeze({
+    applyProposal: options.operations?.applyProposal ?? shellApply,
+    resolveTransaction:
+      options.operations?.resolveTransaction ?? resolveApplyTransaction,
+    undoLastApply: options.operations?.undoLastApply ?? undoLastApply,
+  });
 
   let phase: DesktopPhase = "idle";
   let unifiedDiff: string | null = null;
@@ -98,7 +115,8 @@ export function createDesktopSession(
   let proposal: Proposal | null = null;
   let pendingCwd: string | undefined;
   let pendingTransactionId: string | null = null;
-  let lastAppliedCwd: string | undefined;
+  const appliedCwdHistory: string[] = [];
+  let sessionApplyHistoryStarted = false;
   let appliedPaths: readonly string[] | null = null;
   let journalRecoveryPending = false;
   let diagnostics: readonly ApplyDiagnostic[] | null = null;
@@ -166,7 +184,7 @@ export function createDesktopSession(
       }
 
       const cwd = pendingCwd;
-      const result = shellApply({
+      const result = operations.applyProposal({
         proposal,
         ...(cwd !== undefined ? { cwd } : {}),
       });
@@ -187,7 +205,8 @@ export function createDesktopSession(
 
       phase = "applied";
       appliedPaths = result.appliedPaths;
-      lastAppliedCwd = cwd ?? sessionCwd;
+      appliedCwdHistory.push(cwd ?? sessionCwd);
+      sessionApplyHistoryStarted = true;
       journalRecoveryPending = result.journalRecoveryPending === true;
       pendingTransactionId = result.transactionId ?? null;
       diagnostics = null;
@@ -205,7 +224,7 @@ export function createDesktopSession(
       if (!journalRecoveryPending || pendingTransactionId === null) {
         return snap();
       }
-      const resolved = resolveApplyTransaction({
+      const resolved = operations.resolveTransaction({
         transactionId: pendingTransactionId,
         ...(pendingCwd === undefined ? {} : { cwd: pendingCwd }),
       });
@@ -247,7 +266,8 @@ export function createDesktopSession(
       if (phase === "pending") {
         phase = "applied";
         appliedPaths = resolved.documentPaths;
-        lastAppliedCwd = pendingCwd ?? sessionCwd;
+        appliedCwdHistory.push(pendingCwd ?? sessionCwd);
+        sessionApplyHistoryStarted = true;
       }
       journalRecoveryPending = false;
       pendingTransactionId = null;
@@ -299,11 +319,26 @@ export function createDesktopSession(
     },
 
     undo(): DesktopUndoResult {
-      const result = undoLastApply({ cwd: lastAppliedCwd ?? sessionCwd });
+      // Session-originated applies are undone LIFO by canonical root; once exhausted, this session never falls back to another root.
+      const appliedCwd = appliedCwdHistory.at(-1);
+      if (appliedCwd === undefined && sessionApplyHistoryStarted) {
+        return {
+          ok: false,
+          diagnostics: [
+            {
+              code: "journal-not-found",
+              message: "No completed session apply is available to undo.",
+            },
+          ],
+        };
+      }
+      const result = operations.undoLastApply({
+        cwd: appliedCwd ?? sessionCwd,
+      });
       if (!result.ok) {
         return { ok: false, diagnostics: result.diagnostics };
       }
-      lastAppliedCwd = undefined;
+      if (appliedCwd !== undefined) appliedCwdHistory.pop();
       clearProposal("idle");
       return { ok: true, restoredPaths: result.documentPaths };
     },

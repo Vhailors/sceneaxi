@@ -30,6 +30,8 @@ export {
   type DesktopDocumentStatus,
   type DesktopPhase,
   type DesktopSession,
+  type DesktopSessionOperations,
+  type DesktopSessionOptions,
   type DesktopSnapshot,
   type DesktopUndoResult,
 } from "./session.js";

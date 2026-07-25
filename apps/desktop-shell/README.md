@@ -16,10 +16,10 @@ pnpm build
 node apps/desktop-shell/bin/sceneaxi-desktop.mjs --help
 ```
 
-To get the command on `PATH` inside the workspace:
+From the repository root, keep using the verified binary path:
 
 ```bash
-pnpm --filter @sceneaxi/desktop-shell exec -- sceneaxi-desktop --help
+node apps/desktop-shell/bin/sceneaxi-desktop.mjs --help
 ```
 
 If the build output is missing, the shell says so and exits `1` rather than

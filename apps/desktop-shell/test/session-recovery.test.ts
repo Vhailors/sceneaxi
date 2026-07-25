@@ -5,38 +5,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 type ResolveApplyTransaction =
   typeof import("@sceneaxi/authoring-core").resolveApplyTransaction;
-type ShellApply = typeof import("../src/protocol-client.js").shellApply;
-
-const mocks = vi.hoisted(() => ({
-  resolveApplyTransaction: vi.fn<ResolveApplyTransaction>(),
-  shellApply: vi.fn<ShellApply>(),
-}));
-
-vi.mock("@sceneaxi/authoring-core", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@sceneaxi/authoring-core")>();
-  return {
-    ...actual,
-    resolveApplyTransaction: mocks.resolveApplyTransaction,
-  };
-});
-
-vi.mock("../src/protocol-client.js", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("../src/protocol-client.js")>();
-  return { ...actual, shellApply: mocks.shellApply };
-});
+type ShellApply = typeof import("@sceneaxi/desktop-shell").shellApply;
 
 import {
   createDocument,
   writeDocumentFile,
 } from "@sceneaxi/authoring-core";
-import { createDesktopSession } from "../src/session.js";
+import { createDesktopSession } from "@sceneaxi/desktop-shell";
 
 describe("desktop recovery state", () => {
   let cwd: string;
+  let resolveTransaction: ReturnType<
+    typeof vi.fn<ResolveApplyTransaction>
+  >;
+  let applyProposal: ReturnType<typeof vi.fn<ShellApply>>;
 
   beforeEach(() => {
+    resolveTransaction = vi.fn<ResolveApplyTransaction>();
+    applyProposal = vi.fn<ShellApply>();
     cwd = mkdtempSync(join(tmpdir(), "sceneaxi-desktop-recovery-"));
     const written = writeDocumentFile(
       join(cwd, "scene.json"),
@@ -44,7 +30,7 @@ describe("desktop recovery state", () => {
       { cwd },
     );
     expect(written.ok).toBe(true);
-    mocks.shellApply.mockReturnValue({
+    applyProposal.mockReturnValue({
       ok: false,
       applicationState: "indeterminate",
       journalRecoveryPending: true,
@@ -59,20 +45,22 @@ describe("desktop recovery state", () => {
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
     rmSync(cwd, { recursive: true, force: true });
   });
 
   it.each(["aborted", "undone"] as const)(
     "preserves the proposal after a %s transaction",
     (state) => {
-      mocks.resolveApplyTransaction.mockReturnValue({
+      resolveTransaction.mockReturnValue({
         ok: true,
         transactionId: "0000000000000-0000000000000000",
         state,
         documentPaths: ["scene.json"],
       });
-      const session = createDesktopSession({ cwd });
+      const session = createDesktopSession({
+        cwd,
+        operations: { applyProposal, resolveTransaction },
+      });
       const proposed = session.proposeEdit({
         documentPath: "scene.json",
         jsonPointer: "/data/x",

@@ -109,12 +109,15 @@ describe("catalog list / asset list", () => {
       file: string;
       itemId: string;
       pipelineState: string;
+      metadataComplete: boolean;
     }>;
     expect(items.map((i) => i.file)).toEqual([
       "alpha-item.catalog-item.json",
       "beta-item.catalog-item.json",
     ]);
     expect(items.map((i) => i.pipelineState)).toEqual(["intake", "intake"]);
+    expect(items.map((i) => i.metadataComplete)).toEqual([true, true]);
+    expect(items.every((i) => !Object.hasOwn(i, "listable"))).toBe(true);
   });
 
   it("reports commerce as inert and never activates it", () => {

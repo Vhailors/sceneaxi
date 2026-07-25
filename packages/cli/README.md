@@ -28,10 +28,10 @@ pnpm build
 node packages/cli/bin/sceneaxi.mjs --help
 ```
 
-To get a `sceneaxi` command on `PATH` inside the workspace:
+From the repository root, keep using the verified binary path:
 
 ```bash
-pnpm --filter @sceneaxi/cli exec -- sceneaxi --help
+node packages/cli/bin/sceneaxi.mjs --help
 ```
 
 Re-run `pnpm build` after changing any package source. If the build output is
@@ -93,7 +93,9 @@ These are behaviour, not gaps:
 - `project dev --watch` refuses. This CLI ships no hot-reload loop, and
   pretending otherwise would be a false runnable claim; `project dev` is
   one-shot.
-- `catalog list` reports commerce activation and can never change it.
+- `catalog list` reports commerce activation and `metadataComplete`; the latter
+  means only that mandatory metadata exists, never that screening, curation, or
+  human approval has made the item listing-ready.
 - `scene compose` fails closed on the named refuse matrix
   (`docs/scene-composition.md`) rather than composing a partial scene.
 
