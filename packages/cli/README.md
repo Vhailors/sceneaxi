@@ -25,13 +25,13 @@ The workspace keeps source-backed package exports, so the binary runs the
 pnpm install
 pnpm build
 
-node packages/cli/bin/sceneaxi.mjs --help
+pnpm sceneaxi --help
 ```
 
-From the repository root, keep using the verified binary path:
+From the repository root, keep using the verified root script:
 
 ```bash
-node packages/cli/bin/sceneaxi.mjs --help
+pnpm sceneaxi --help
 ```
 
 Re-run `pnpm build` after changing any package source. If the build output is
@@ -45,7 +45,7 @@ const { exitCode, envelope, stdout } = runCli(["protocol", "inspect", "--json"])
 
 ## Commands
 
-Command-first shape: `sceneaxi <group> <verb> [flags]`.
+Command-first shape: `pnpm sceneaxi <group> <verb> [flags]`.
 
 | Group | Verbs |
 |---|---|
@@ -61,19 +61,19 @@ Command-first shape: `sceneaxi <group> <verb> [flags]`.
 A full authoring round-trip:
 
 ```bash
-sceneaxi project new --document scene.json --data '{"entities":[]}'
-sceneaxi project propose --document scene.json --pointer /data/entities --value '[1,2]' --out edit.json
-sceneaxi project apply --proposal edit.json
-sceneaxi project test --document scene.json
-sceneaxi project capture --document scene.json --out run.evidence.json
-sceneaxi project report --evidence run.evidence.json
-sceneaxi evidence list --dir .
+pnpm sceneaxi project new --document scene.json --data '{"entities":[]}'
+pnpm sceneaxi project propose --document scene.json --pointer /data/entities --value '[1,2]' --out edit.json
+pnpm sceneaxi project apply --proposal edit.json
+pnpm sceneaxi project test --document scene.json
+pnpm sceneaxi project capture --document scene.json --out run.evidence.json
+pnpm sceneaxi project report --evidence run.evidence.json
+pnpm sceneaxi evidence list --dir .
 ```
 
 Composing several Sculpt Artifacts into one openable scene (`--artifact` repeats):
 
 ```bash
-sceneaxi scene compose \
+pnpm sceneaxi scene compose \
   --intake workshop-bay.scene.json \
   --artifact crate.artifact.json \
   --artifact drone.artifact.json \

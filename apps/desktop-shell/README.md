@@ -13,13 +13,13 @@ The workspace keeps source-backed package exports, so the shell runs the
 pnpm install
 pnpm build
 
-node apps/desktop-shell/bin/sceneaxi-desktop.mjs --help
+pnpm sceneaxi-desktop --help
 ```
 
-From the repository root, keep using the verified binary path:
+From the repository root, keep using the verified root script:
 
 ```bash
-node apps/desktop-shell/bin/sceneaxi-desktop.mjs --help
+pnpm sceneaxi-desktop --help
 ```
 
 If the build output is missing, the shell says so and exits `1` rather than
@@ -41,10 +41,10 @@ Exit codes match the CLI protocol so scripts branch identically: `0` success,
 `1` operational refusal (typed diagnostics), `2` usage.
 
 ```bash
-sceneaxi-desktop status  --document scene.json
-sceneaxi-desktop propose --document scene.json --pointer /data/entities/0/x --value 7
-sceneaxi-desktop apply   --document scene.json --pointer /data/entities/0/x --value 7
-sceneaxi-desktop undo
+pnpm sceneaxi-desktop status --document scene.json
+pnpm sceneaxi-desktop propose --document scene.json --pointer /data/entities/0 --value 7
+pnpm sceneaxi-desktop apply --document scene.json --pointer /data/entities/0 --value 7
+pnpm sceneaxi-desktop undo
 ```
 
 ## Session API
