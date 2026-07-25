@@ -29,6 +29,27 @@ SceneAxi = interactive engine/library + versioned profiles (Game, Web Experience
   `tests/boundary/injected-violations.test.ts` injects forbidden edges into a
   temp fixture and asserts `check-boundaries.mjs` fails; `tests/syntax/` does the
   same for the syntax gate. Extend those fixtures when you extend the checkers.
+- Package exports are source-backed, which Node cannot follow at runtime, so the
+  workspace binaries run `tsc --build` output through the shared resolver
+  `scripts/workspace-dist-resolver.mjs` (mapping derived from the dependency
+  matrix). **`pnpm build` is a prerequisite for running any binary.** Note the
+  gate's own blind spots: `check-syntax` and the boundary checker scan only
+  `<pkg>/src`, so nothing under `bin/` is covered by either.
+
+## Runnable surfaces
+
+`docs/runnable-surfaces.md` is the map of what can actually be started and where
+each claim is proven; keep it truthful when a surface changes level. "Runnable"
+is R2 startable (`bin` + a smoke test that spawns it), R1 driveable (golden e2e),
+or R0 refuse-only (executable refuse matrix + an explicit no-product-surface
+assertion). Startable today: `@sceneaxi/cli`, `@sceneaxi/desktop-shell`.
+`apps/web-shell` is still library-only.
+
+Adding a CLI verb means three things together, or dispatch refuses: a node in
+`ROOT_COMMANDS`, a declaration in `SHIPPED_COMMAND_MAP`, and — for any verb that
+parses flags — `takesArgs: true`, which is what makes the verb (not the
+dispatcher) responsible for refusing unknown flags. `pnpm test:golden` must cover
+every surface claimed runnable.
 
 ## Program docs
 

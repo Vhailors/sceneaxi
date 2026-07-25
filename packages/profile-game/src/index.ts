@@ -10,15 +10,23 @@ import {
   BOM_VERSION,
   KERNEL_VERSION,
   open,
+  openSceneKernelSession,
   replay,
+  replaySceneKernelSession,
 } from "@sceneaxi/engine-kernel";
 import {
   apply,
+  composeScene,
   createDocument,
   propose,
   serializeDocument,
   writeDocumentFile,
 } from "@sceneaxi/authoring-core";
+import {
+  createExperimentalThreeSculptPresentationBackend,
+  createNullPresentationRuntime,
+  createSculptMountApi,
+} from "@sceneaxi/engine-presentation";
 import {
   createProfileConformanceClaim,
   type ProfileConformanceSurface,
@@ -86,5 +94,48 @@ export const conformance: ProfileConformanceSurface = Object.freeze({
       apply,
     }),
     evidenceHooks,
+  }),
+});
+
+/**
+ * Development-only multi-object scene path for the Game profile.
+ *
+ * The Profile Conformance surface above is a fixed contract shape and stays
+ * single-object; this is the separate pin that lets the Game profile drive the
+ * composition vertical (sceneaxi#113) end to end: compose Sculpt Artifacts →
+ * project a document → mount N instances → open, advance, save, and replay a
+ * scene kernel session.
+ *
+ * Like `@sceneaxi/profile-web`'s `mvpGoldenPath`, this is **not** a Profile
+ * Conformance registry claim and describes no shipped product: `shippingClaim`
+ * stays false. Everything reachable from here is offline and deterministic —
+ * no provider, no network, no seed drawn at runtime.
+ */
+export const sceneGoldenPath = Object.freeze({
+  seam,
+  status: Object.freeze({
+    developmentConsumer: true as const,
+    shippingClaim: false as const,
+    productSurface: "not-shipped" as const,
+  }),
+  core: Object.freeze({
+    authoring: Object.freeze({
+      composeScene,
+      createDocument,
+      writeDocumentFile,
+      propose,
+      apply,
+    }),
+    kernel: Object.freeze({
+      openSceneKernelSession,
+      replaySceneKernelSession,
+      KERNEL_VERSION,
+      BOM_VERSION,
+    }),
+    presentation: Object.freeze({
+      createNullPresentationRuntime,
+      createSculptMountApi,
+      createExperimentalThreeSculptPresentationBackend,
+    }),
   }),
 });

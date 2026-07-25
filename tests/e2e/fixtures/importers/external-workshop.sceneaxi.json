@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "kind": "sceneaxi.document",
+  "id": "external-workshop",
+  "title": "External workshop scene (recorded fixture)",
+  "data": {
+    "productManifest": {
+      "productId": "imported-workshop",
+      "seed": 119,
+      "entities": [
+        { "id": "hero", "x": 2, "y": 3 },
+        { "id": "crate", "x": -1, "y": 0 }
+      ]
+    },
+    "source": "recorded-fixture"
+  }
+}

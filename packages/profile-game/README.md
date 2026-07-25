@@ -11,6 +11,21 @@ suite ([sceneaxi#10](https://github.com/Vhailors/sceneaxi/issues/10)).
 - Retains the `profile-rollout-order` decision citation; `shippingClaim` is
   always false.
 
+## `sceneGoldenPath` — the multi-object path
+
+`ProfileConformanceSurface` is a fixed contract shape and stays single-object.
+`sceneGoldenPath` is the separate development-only pin that lets the Game
+profile drive the composition vertical
+([scene-composition.md](../../docs/scene-composition.md)) end to end: compose
+Sculpt Artifacts → project a document → mount N instances → open, advance, save,
+and replay a scene kernel session.
+
+Like `@sceneaxi/profile-web`'s `mvpGoldenPath`, it is **not** a Profile
+Conformance registry claim and describes no shipped product — `shippingClaim`
+stays false. Everything reachable from it is offline and deterministic: no
+provider, no network, no seed drawn at runtime. Proven by
+`tests/e2e/profile-game-scene-golden.test.ts` (`pnpm test:golden`).
+
 This development-only path is **not production game-ready** and is not
 publication, marketplace, or shipping authorization.
 
