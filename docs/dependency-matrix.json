@@ -110,6 +110,21 @@
       "dir": "packages/site-kit",
       "releaseGroup": "sites",
       "allow": ["@sceneaxi/schemas", "@sceneaxi/authoring-core"]
+    },
+    "@sceneaxi/site-umbrella": {
+      "dir": "sites/umbrella",
+      "releaseGroup": "sites",
+      "allow": ["@sceneaxi/site-kit"]
+    },
+    "@sceneaxi/site-catalog-game": {
+      "dir": "sites/catalog-game",
+      "releaseGroup": "sites",
+      "allow": ["@sceneaxi/site-kit"]
+    },
+    "@sceneaxi/site-catalog-web": {
+      "dir": "sites/catalog-web",
+      "releaseGroup": "sites",
+      "allow": ["@sceneaxi/site-kit"]
     }
   },
   "kidsBoundary": {

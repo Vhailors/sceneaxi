@@ -5,7 +5,7 @@
  * wired, and stops a reachable refusal from losing its covering case. Adding a key
  * to `SITE_REFUSALS` without a case here fails the gate.
  */
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -25,6 +25,7 @@ import {
   ok,
   parseEditorDeepLink,
   parseEditorDeepLinkParams,
+  readEngineSdkOffer,
   showSiteListing,
   webEditorStarterArtifact,
 } from "@sceneaxi/site-kit";
@@ -220,6 +221,13 @@ const CASES: Readonly<Record<SiteRefusalReason, () => Promise<unknown> | unknown
     parseEditorDeepLink("https://umbrella.vercel.app/editor?source=catalog-game"),
   DEEP_LINK_UNKNOWN_PARAMETER: () =>
     parseEditorDeepLinkParams({ source: "catalog-game", item: "x", token: "abc" }),
+  ENGINE_SDK_ARTIFACT_MISSING: () => readEngineSdkOffer(workspace()),
+  ENGINE_SDK_MANIFEST_INVALID: () => {
+    const siteRoot = workspace();
+    mkdirSync(join(siteRoot, "public", "engine-sdk"), { recursive: true });
+    writeFileSync(join(siteRoot, "public", "engine-sdk", "sdk-manifest.json"), "{ not json");
+    return readEngineSdkOffer(siteRoot);
+  },
   EDITOR_SESSION_DISPOSED: () => {
     const created = createWebEditorSession({ workspaceRoot: workspace(), backend: "null" });
     if (!created.ok) return created;

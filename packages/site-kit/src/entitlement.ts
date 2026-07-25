@@ -214,3 +214,62 @@ export function decideCapability(input: {
   }
   return Object.freeze({ allowed: true as const, capability, tier: "paid" as const });
 }
+
+/**
+ * The editor preview flag.
+ *
+ * Server environment only, absent by default. It exists because the identity plane
+ * (`sceneaxi-auth-credits-v1`) has not landed, so without it the Minimum E2 surface
+ * would be undemonstrable on a production deploy. A client cannot set it — a site
+ * reads it from `process.env` and never from a request — and it is removed once
+ * entitlement can actually be resolved.
+ */
+export function readEditorPreviewFlag(
+  env: Readonly<Record<string, string | undefined>>,
+): boolean {
+  return env["SCENEAXI_SITE_EDITOR_PREVIEW"]?.trim() === "1";
+}
+
+export type EditorAccessDecision =
+  | {
+      readonly granted: true;
+      /** `preview` is banner-marked in the UI so it is never mistaken for entitlement. */
+      readonly mode: "entitled" | "preview";
+      readonly basis: EntitlementBasis | "preview-flag";
+    }
+  | {
+      readonly granted: false;
+      readonly reason: SiteRefusalReason;
+      readonly message: string;
+    };
+
+/**
+ * Decide whether an editor session may be constructed.
+ *
+ * Entitlement wins when present; the preview flag is the only other way in, and its
+ * absence is a refusal. There is no third path and no client-supplied override.
+ */
+export function decideEditorAccess(input: {
+  readonly entitlement: EditorEntitlementDecision;
+  readonly previewEnabled: boolean;
+}): EditorAccessDecision {
+  if (input.entitlement.entitled) {
+    return Object.freeze({
+      granted: true as const,
+      mode: "entitled" as const,
+      basis: input.entitlement.basis,
+    });
+  }
+  if (input.previewEnabled) {
+    return Object.freeze({
+      granted: true as const,
+      mode: "preview" as const,
+      basis: "preview-flag" as const,
+    });
+  }
+  return Object.freeze({
+    granted: false as const,
+    reason: input.entitlement.reason,
+    message: input.entitlement.message,
+  });
+}

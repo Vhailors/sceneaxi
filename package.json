@@ -2,7 +2,7 @@
   "name": "sceneaxi",
   "private": true,
   "version": "0.0.0",
-  "description": "SceneAxi monorepo — agent-native interactive engine/library ecosystem",
+  "description": "SceneAxi monorepo \u2014 agent-native interactive engine/library ecosystem",
   "type": "module",
   "packageManager": "pnpm@9.15.0",
   "engines": {
@@ -18,7 +18,9 @@
     "check:syntax": "node scripts/check-syntax.mjs",
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "check:contracts": "node scripts/check-contracts.mjs",
-    "gate": "pnpm -s check:syntax && pnpm -s check:boundaries && pnpm -s check:contracts && pnpm -s build && pnpm -s test && pnpm -s lint"
+    "gate": "pnpm -s check:syntax && pnpm -s check:boundaries && pnpm -s check:contracts && pnpm -s check:sites && pnpm -s build && pnpm -s test && pnpm -s lint",
+    "check:sites": "node scripts/check-sites.mjs",
+    "build:sdk": "node scripts/build-engine-sdk.mjs --out dist-sdk"
   },
   "license": "UNLICENSED",
   "devDependencies": {

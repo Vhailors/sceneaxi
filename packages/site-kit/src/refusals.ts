@@ -69,6 +69,12 @@ export const SITE_REFUSALS = Object.freeze({
   DEEP_LINK_ITEM_MISSING: "The deep link carries no catalog item id.",
   DEEP_LINK_UNKNOWN_PARAMETER: "The deep link carries a parameter outside the published contract.",
 
+  // --- public engine SDK offer (see engine-sdk-offer.ts) ---
+  ENGINE_SDK_ARTIFACT_MISSING:
+    "The engine SDK archive or its manifest is not present in this build.",
+  ENGINE_SDK_MANIFEST_INVALID:
+    "The engine SDK manifest is malformed, so no download or checksum can be offered.",
+
   // --- bounded web editor session (see web-editor.ts) ---
   EDITOR_SESSION_DISPOSED: "The editor session has been disposed.",
   EDITOR_WORKSPACE_ESCAPE: "The document path escapes the session workspace root.",

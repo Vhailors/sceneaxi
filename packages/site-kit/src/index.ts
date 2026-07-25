@@ -23,6 +23,36 @@ export const seam: PackageSeam = Object.freeze({
   releaseGroup: "sites",
 });
 
+/**
+ * Contract vocabulary re-exported for the `sites/` tier.
+ *
+ * A site depends on `@sceneaxi/site-kit` alone (matrix-enforced), so the shapes its
+ * pages render travel through this seam rather than each site reaching into
+ * `@sceneaxi/schemas` and `@sceneaxi/authoring-core` directly.
+ */
+export { COMMERCE_ACTIVATION_GATE } from "@sceneaxi/schemas";
+export type {
+  AiGenerationDisclosure,
+  AssetPackageRef,
+  CatalogItem,
+  Compatibility,
+  ModerationState,
+  PackageSeam,
+  PipelineState,
+  ProvenanceRecord,
+  RightsRecord,
+  SculptTransform,
+  TransitionRecord,
+  Vector3,
+} from "@sceneaxi/schemas";
+export type {
+  MinimumE2Inspector,
+  MinimumE2SaveResult,
+  MinimumE2Snapshot,
+  MinimumE2TreeNode,
+  SceneCompositionResult,
+} from "@sceneaxi/authoring-core";
+
 export {
   SITE_REFUSALS,
   SITE_REFUSAL_REASONS,
@@ -63,6 +93,15 @@ export {
   type SiteSurface,
   type SiteUser,
 } from "./ports.js";
+
+export {
+  SDK_MANIFEST_FILE,
+  SDK_PUBLIC_DIR,
+  formatByteSize,
+  hashServedArchive,
+  readEngineSdkOffer,
+  type EngineSdkOffer,
+} from "./engine-sdk-offer.js";
 
 export {
   WEB_EDITOR_DOCUMENT_PATH,
@@ -116,9 +155,12 @@ export {
   SITE_CAPABILITY_IDS,
   SITE_STARTER_CREDIT_ALLOTMENT,
   decideCapability,
+  decideEditorAccess,
   decideEditorEntitlement,
+  readEditorPreviewFlag,
   resolveEditorAccess,
   type CapabilityDecision,
+  type EditorAccessDecision,
   type EditorEntitlementDecision,
   type EditorEntitlementInput,
   type EntitlementBasis,

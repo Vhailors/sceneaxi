@@ -30,9 +30,11 @@ const allowOf = matrix.packages ?? {};
 const kids = matrix.kidsBoundary ?? { kidsPackages: [], allowedDependents: [] };
 const releaseGroups = matrix.releaseGroups ?? {};
 
-// --- discover workspace packages from pnpm-workspace globs (packages/*, apps/*) ---
+// --- discover packages (packages/*, apps/*) plus the deployable sites/ tier ---
+// `sites/*` are separate install roots rather than pnpm-workspace members, but their
+// @sceneaxi/* edges are governed by the same exhaustive allow lists.
 const pkgDirs = [];
-for (const parent of ["packages", "apps"]) {
+for (const parent of ["packages", "apps", "sites"]) {
   const parentDir = join(root, parent);
   if (!existsSync(parentDir)) continue;
   for (const entry of readdirSync(parentDir)) {
