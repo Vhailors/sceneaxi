@@ -118,6 +118,41 @@ Catalog **browse and purchase UI** is coordinated with `sceneaxi-websites-deploy
 vertical owns the ledger and the enforcement. The `catalog-game` and `catalog-web` apps
 stay dormant.
 
+## Creator publish and revenue share
+
+Publishing is **free but account-gated** (`creator-publish` in the matrix above). On a
+sale, the creator earns **50%**.
+
+The split is **integer arithmetic on basis points** — `floor(gross × 5000 / 10000)` to the
+creator, remainder to the platform — so it is exactly reproducible in any language and can
+never mint a fractional credit or lose a minor unit. Both record contracts assert
+`creator + platform === gross`, so a split that created or destroyed value cannot be
+persisted at all.
+
+The remainder always lands with the **platform**. Rounding in the platform's favour by at
+most one unit is defensible and auditable; rounding up to the creator would let a stream
+of 1-credit sales pay out more than came in.
+
+| sale | who pays | creator gets | platform keeps | recorded as |
+|---|---|---|---|---|
+| credits | buyer's ledger debit | grant into the creator's own ledger | remainder | `CreatorShareRecord` |
+| money | Stripe (test) | bookkeeping balance only | remainder | `MoneySplitRecord` |
+
+A credits sale is **atomic in effect**: `applyCreditsSale` computes both ledger appends and
+returns them only if both succeed, so a failure anywhere leaves the buyer's balance
+untouched. That falls out of the ledger being pure — there is no half-applied intermediate
+state to roll back. Creator earnings land in the creator's own append-only ledger, not a
+separate mutable balance store.
+
+**Money sales are bookkeeping only.** No payout, no Stripe Connect, no transfer. The
+`MoneySplitRecord` contract *refuses* any field that could describe a payout
+(`payout`, `transfer`, `destination`, `connectAccountId`, …) — a record shaped like a
+payout instruction would invite one to be attempted. **Real cash payouts to creators are a
+later captain gate.**
+
+Both paths are idempotent on the sale id (`sale:<saleId>:buyer` / `:creator`), so a replay
+moves nothing.
+
 ## Held keys are unchanged
 
 This plane is **product** user authentication. It does not replace, weaken, or interact

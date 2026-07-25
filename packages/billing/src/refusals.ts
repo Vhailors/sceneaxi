@@ -63,6 +63,9 @@ export const BILLING_REFUSE_REASONS = Object.freeze({
   listingPriceModeMismatch: "LISTING_PRICE_MODE_MISMATCH",
   listingCurrencyNotListed: "LISTING_CURRENCY_NOT_LISTED",
   listingSelfPurchaseDenied: "LISTING_SELF_PURCHASE_DENIED",
+
+  // --- creator revenue share ---
+  revenueShareInvalid: "REVENUE_SHARE_INVALID",
 } as const);
 
 export type BillingRefuseReason =

@@ -98,3 +98,16 @@ export {
   type VerifiedWebhook,
   type VerifyStripeWebhookSignatureRequest,
 } from "./stripe-webhook.js";
+
+export {
+  CREATOR_SHARE_BASIS_POINTS,
+  applyCreditsSale,
+  authorizeCreatorPublish,
+  recordMoneySale,
+  splitCredits,
+  splitMoneyMinorUnits,
+  type ApplyCreditsSaleRequest,
+  type CreditsSaleOutcome,
+  type RecordMoneySaleRequest,
+  type Split,
+} from "./revenue-share.js";

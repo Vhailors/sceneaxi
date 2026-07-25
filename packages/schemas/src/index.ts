@@ -196,6 +196,26 @@ export type {
   ListingPriceMode,
 } from "./catalog-listing.js";
 
+export {
+  BASIS_POINTS_TOTAL,
+  CREATOR_SHARE_BASIS_POINTS,
+  CREATOR_SHARE_RECORD_KIND,
+  FORBIDDEN_PAYOUT_KEYS,
+  MONEY_SPLIT_RECORD_KIND,
+  REVENUE_SHARE_REFUSE_CODES,
+  REVENUE_SHARE_SCHEMA_VERSION,
+  validateCreatorShareRecord,
+  validateMoneySplitRecord,
+} from "./revenue-share.js";
+export type {
+  CreatorShareRecord,
+  MoneySplitRecord,
+  RevenueShareRefuseCode,
+  RevenueShareValidationOk,
+  RevenueShareValidationRefuse,
+  RevenueShareValidationResult,
+} from "./revenue-share.js";
+
 export { parseUnambiguousJson } from "./unambiguous-json.js";
 export type { UnambiguousJsonParseResult } from "./unambiguous-json.js";
 export type {
