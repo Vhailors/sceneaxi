@@ -5,11 +5,7 @@
  * browser (see `./portable-digest.ts` and docs/kernel-browser-open.md).
  */
 import { KernelSessionError } from "./errors.js";
-import {
-  prefixedDigest,
-  resolveKernelDigest,
-  type KernelDigest,
-} from "./portable-digest.js";
+import { prefixedDigest } from "./portable-digest.js";
 import {
   KERNEL_SESSION_SCHEMA_VERSION,
   type FrameClock,
@@ -31,14 +27,9 @@ const VERSION_RE = /^[0-9]+\.[0-9]+\.[0-9]+$/;
 const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
 const ID_RE = /^[a-z0-9][a-z0-9-]*$/;
 
-/**
- * Host services injected at open/replay: a clock for command timestamps and an
- * optional synchronous digest. Omitting `digest` uses the portable pure-JS
- * sha256, so no host has to supply a Node builtin.
- */
+/** Host services injected at open/replay. */
 export interface KernelHost {
   readonly nowMs: () => number;
-  readonly digest?: KernelDigest;
 }
 
 export interface KernelSession {
@@ -268,7 +259,6 @@ function sortedEntities(entities: Map<string, MutableEntity>): SnapshotEntity[] 
 
 /** Canonical digest: sha256 over JSON of {tick, seed, entities sorted by id}. */
 function computeDigest(
-  digest: KernelDigest,
   tick: number,
   seed: number,
   entities: ReadonlyArray<SnapshotEntity>,
@@ -278,13 +268,12 @@ function computeDigest(
     seed,
     entities: entities.map((e) => ({ id: e.id, x: e.x, y: e.y })),
   });
-  return prefixedDigest(digest, payload);
+  return prefixedDigest(payload);
 }
 
 class SessionImpl implements KernelSession {
   private readonly manifest: ProductManifest;
   private readonly host: KernelHost;
-  private readonly digest: KernelDigest;
   private entities: Map<string, MutableEntity>;
   private readonly pending: PendingDispatch[] = [];
   private readonly events: KernelSessionEvent[] = [];
@@ -297,7 +286,6 @@ class SessionImpl implements KernelSession {
   ) {
     this.manifest = manifest;
     this.host = host;
-    this.digest = resolveKernelDigest(host.digest);
     this.entities = seedEntities(manifest);
     this.events.push(...initialEvents);
   }
@@ -395,7 +383,6 @@ class SessionImpl implements KernelSession {
   observe(): KernelSnapshot {
     const entities = Object.freeze(sortedEntities(this.entities));
     const digest = computeDigest(
-      this.digest,
       this.tick,
       this.manifest.seed,
       entities,

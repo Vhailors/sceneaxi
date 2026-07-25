@@ -26,13 +26,6 @@ with no dependency and no Node builtin. It is byte-identical to `node:crypto`
 sha256 over the same UTF-8 input, so every landed snapshot digest, save
 artifact, and checked-in golden is unchanged by this ship.
 
-A host that wants a native or wasm hash may inject a **synchronous** digest at
-session open (`host.digest`). The injected function is verified against the
-portable default over fixed probes — empty, ASCII, multi-byte/astral UTF-8, an
-embedded NUL, and a multi-block input — and **refused** on any disagreement or
-wrong output shape. An injected digest is a performance choice, never a change
-of digest semantics.
-
 The digest is not versioned and no contract changes: the algorithm, the canonical
 `sha256:<hex>` form, and the bytes hashed are all exactly what they were.
 
@@ -46,7 +39,7 @@ server-kernel → browser-presentation transport also works and is tested
   and no Node global.
 - Presentation can open a session locally or receive snapshots over the wire; both
   produce the same digests.
-- Digest divergence is a refusal, not a silent golden rewrite.
+- Every session uses the same digest implementation and digest semantics.
 - The kernel owns a cryptographic primitive implementation, which is small,
   frozen, and oracle-tested against `node:crypto` at every block and padding
   boundary.
@@ -55,8 +48,10 @@ server-kernel → browser-presentation transport also works and is tested
 
 - **Web Crypto (`SubtleCrypto.digest`)** — asynchronous; would force `observe()`
   to become async and reopen ADR 0001.
-- **A required host-injected digest with no default** — every consumer would have
-  to supply a hash, and each one could pick a different (or wrong) algorithm.
+- **An optional host-injected digest** — verifying only at open cannot bind
+  later calls, while a validating wrapper would compute the portable hash on
+  every call and be strictly slower than portable-only. With zero real adapters,
+  ADR 0004 does not justify the port.
 - **A runtime `typeof process` branch selecting `node:crypto` or a fallback** — a
   scattered conditional that still leaves the Node specifier in the browser
   bundle graph.
@@ -68,8 +63,7 @@ server-kernel → browser-presentation transport also works and is tested
 ## Settled here vs held elsewhere
 
 **Settled:** where kernel digests come from, that they are synchronous and
-portable, that injection is allowed but verified, and that digest bytes do not
-change.
+portable, and that digest bytes do not change.
 
 **Held elsewhere:** renderer selection and Stage 1 (still double-gated), any
 presentation composition decision, and whether other packages become

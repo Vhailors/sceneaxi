@@ -17,6 +17,8 @@ Digest bytes did not change. The portable implementation is byte-identical to
 `node:crypto` sha256 over the same UTF-8 input, so every landed digest, save
 artifact, and checked-in golden is untouched.
 
+The kernel has one digest implementation and no host digest hook.
+
 ## Opening in the browser (option A: portable digest)
 
 Nothing extra is required — the portable digest is the default:
@@ -29,29 +31,11 @@ session.advance({ tick: 1, deltaMs: 16 });
 const snapshot = session.observe(); // frozen, digest-bound, plain data
 ```
 
-A host that wants a native or wasm hash injects a **synchronous** digest at open:
-
-```ts
-const session = openSceneKernelSession(composedScene, { seed: 9101 }, {
-  digest: (utf8Input) => myNativeSha256Hex(utf8Input), // 64 lowercase hex chars
-});
-```
-
-The injected function is verified against the portable digest over fixed probes
-and **refused** on any disagreement or wrong output shape, because a divergent
-digest would silently break replay and every golden. Web Crypto's
-`SubtleCrypto.digest` cannot be injected: it is asynchronous and `observe()` is
-synchronous by ADR 0001.
-
-Surface added by this ship (all optional, all backwards compatible):
+Surface added by this ship:
 
 | Export | Meaning |
 |---|---|
-| `KernelDigest` | `(utf8Input: string) => string` — synchronous sha256, 64 lowercase hex chars |
-| `KernelDigestHost` | `{ digest?: KernelDigest }` — third argument of the sculpt/scene open and replay functions |
-| `KernelHost.digest` | Same optional digest on the entity session host |
-| `portableKernelDigest` | The default implementation |
-| `resolveKernelDigest` | The verify-or-refuse resolution used at open |
+| `portableKernelDigest` | The kernel's portable synchronous sha256 implementation |
 
 ## Server kernel to browser presentation (option B: snapshot transport)
 
@@ -74,8 +58,7 @@ this same JSON encoding, so it cannot move.
 - Session state reaches presentation only through frozen `observe()` snapshots or
   a transported save artifact; presentation never mutates kernel state
   (ADR 0001, ADR 0002).
-- `openSculptKernelSession` / `openSceneKernelSession` signatures are unchanged
-  except for the optional trailing host argument.
+- `openSculptKernelSession` / `openSceneKernelSession` signatures are unchanged.
 - Multi-object scene snapshots keep their deterministic instance order, per-instance
   world transforms, and scene digest ([`docs/scene-composition.md`](scene-composition.md)).
 
@@ -85,11 +68,11 @@ this same JSON encoding, so it cannot move.
   — no Node builtin import and no Node-only global anywhere under
   `packages/engine-kernel/src`; entity, sculpt, and multi-object scene sessions
   open, play, save, and replay with `Buffer`/`require` removed; a `node:crypto`
-  import anywhere in the kernel graph fails the file at load; wire round-trip and
-  injected-digest equality and refusals.
+  import anywhere in the kernel graph fails the file at load; wire round-trip
+  and independent-session determinism.
 - [`packages/engine-kernel/test/portable-digest.test.ts`](../packages/engine-kernel/test/portable-digest.test.ts)
   — `node:crypto` parity across every block and padding boundary, published SHA-256
-  vectors, seed derivation parity, and the injected-digest refusal matrix.
+  vectors, seed derivation parity, and non-string input refusal.
 - The existing golden suites (`pnpm test:golden`) still pass on their checked-in
   digests, which is the real proof that digest bytes did not move.
 

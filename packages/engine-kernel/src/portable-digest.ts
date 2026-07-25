@@ -3,26 +3,11 @@
  *
  * `observe()` is synchronous and digest-bound, so the digest function must be
  * synchronous too — Web Crypto's `SubtleCrypto.digest` is async and cannot
- * satisfy that contract. The kernel therefore defaults to this dependency-free
- * pure-JS SHA-256, which runs identically in Node and in a browser and is what
- * removes the `node:crypto` barrier from every session path.
- *
- * A host that wants a native or wasm implementation injects one at open; the
- * injected function is checked against the portable default over fixed probes
- * and refused on any mismatch, because a divergent digest would silently break
- * replay and every checked-in golden.
+ * satisfy that contract under ADR 0001. Every kernel digest therefore comes
+ * from this one dependency-free pure-JS SHA-256, which runs identically in Node
+ * and in a browser and removes the `node:crypto` barrier from every session path.
  */
 import { KernelSessionError } from "./errors.js";
-
-/** Synchronous SHA-256 over a UTF-8 string, returned as 64 lowercase hex chars. */
-export type KernelDigest = (utf8Input: string) => string;
-
-/** Optional host services a caller may inject at session open. */
-export interface KernelDigestHost {
-  readonly digest?: KernelDigest;
-}
-
-const HEX_RE = /^[0-9a-f]{64}$/;
 
 const ROUND_CONSTANTS = new Uint32Array([
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4,
@@ -131,51 +116,14 @@ function sha256Hex(utf8Input: string): string {
 }
 
 /** Browser-safe default digest; byte-identical to `node:crypto` sha256 of the same UTF-8 input. */
-export const portableKernelDigest: KernelDigest = sha256Hex;
-
-/**
- * Probes an injected digest must reproduce: empty, ASCII, multi-byte/astral
- * UTF-8, an embedded NUL, and an input long enough to span several blocks.
- */
-const PROBES: readonly string[] = Object.freeze([
-  "",
-  "abc",
-  "sceneaxi.kernel.digest.probe:\u0000 ünïcode:🎬",
-  "a".repeat(1000),
-]);
-
-/**
- * Resolve the digest a session will use, refusing anything that does not agree
- * with the portable default — an injected digest is a performance choice, never
- * a change of digest semantics.
- */
-export function resolveKernelDigest(digest?: KernelDigest): KernelDigest {
-  if (digest === undefined) return portableKernelDigest;
-  if (typeof digest !== "function") {
-    throw new KernelSessionError("injected digest must be a function");
-  }
-  for (const probe of PROBES) {
-    const produced: unknown = digest(probe);
-    if (typeof produced !== "string" || !HEX_RE.test(produced)) {
-      throw new KernelSessionError(
-        "injected digest must return 64 lowercase hex characters",
-      );
-    }
-    if (produced !== portableKernelDigest(probe)) {
-      throw new KernelSessionError(
-        "injected digest disagrees with the portable sha256 digest",
-      );
-    }
-  }
-  return digest;
-}
+export const portableKernelDigest = sha256Hex;
 
 /** Canonical `sha256:<hex>` form used by every kernel snapshot and save artifact. */
-export function prefixedDigest(digest: KernelDigest, utf8Input: string): string {
-  return `sha256:${digest(utf8Input)}`;
+export function prefixedDigest(utf8Input: string): string {
+  return `sha256:${portableKernelDigest(utf8Input)}`;
 }
 
 /** First four digest bytes as a big-endian uint32 — the kernel's seed derivation. */
-export function digestUint32(digest: KernelDigest, utf8Input: string): number {
-  return Number.parseInt(digest(utf8Input).slice(0, 8), 16);
+export function digestUint32(utf8Input: string): number {
+  return Number.parseInt(portableKernelDigest(utf8Input).slice(0, 8), 16);
 }

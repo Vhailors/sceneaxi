@@ -5,13 +5,9 @@
  */
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import {
-  portableKernelDigest,
-  resolveKernelDigest,
-  type KernelDigest,
-} from "@sceneaxi/engine-kernel";
+import { portableKernelDigest } from "@sceneaxi/engine-kernel";
 
-const nodeDigest: KernelDigest = (input) =>
+const nodeDigest = (input: string) =>
   createHash("sha256").update(input, "utf8").digest("hex");
 
 /** Lengths around every SHA-256 block/padding boundary, in bytes. */
@@ -72,56 +68,6 @@ describe("portable kernel digest", () => {
   it("refuses a non-string input", () => {
     expect(() => portableKernelDigest(7 as unknown as string)).toThrow(
       /digest input must be a string/,
-    );
-  });
-});
-
-describe("resolveKernelDigest", () => {
-  it("defaults to the portable digest when no host digest is injected", () => {
-    expect(resolveKernelDigest()).toBe(portableKernelDigest);
-    expect(resolveKernelDigest(undefined)).toBe(portableKernelDigest);
-  });
-
-  it("accepts an injected digest that agrees with the portable one", () => {
-    expect(resolveKernelDigest(nodeDigest)).toBe(nodeDigest);
-  });
-
-  it("refuses a non-function digest", () => {
-    expect(() => resolveKernelDigest("sha256" as unknown as KernelDigest)).toThrow(
-      /injected digest must be a function/,
-    );
-  });
-
-  it("refuses a digest with the wrong output shape", () => {
-    const uppercase: KernelDigest = (input) => nodeDigest(input).toUpperCase();
-    const truncated: KernelDigest = (input) => nodeDigest(input).slice(0, 32);
-    const prefixed: KernelDigest = (input) => `sha256:${nodeDigest(input)}`;
-    for (const bad of [uppercase, truncated, prefixed]) {
-      expect(() => resolveKernelDigest(bad)).toThrow(
-        /injected digest must return 64 lowercase hex characters/,
-      );
-    }
-  });
-
-  it("refuses a digest that disagrees with the portable digest", () => {
-    const md5Shaped: KernelDigest = (input) =>
-      createHash("sha512").update(input, "utf8").digest("hex").slice(0, 64);
-    expect(() => resolveKernelDigest(md5Shaped)).toThrow(
-      /disagrees with the portable sha256 digest/,
-    );
-  });
-
-  it("refuses a digest that only diverges on multi-byte or long inputs", () => {
-    const asciiOnly: KernelDigest = (input) =>
-      nodeDigest(input.replace(/[^\u0020-\u007e]/g, "?"));
-    expect(() => resolveKernelDigest(asciiOnly)).toThrow(
-      /disagrees with the portable sha256 digest/,
-    );
-
-    const shortOnly: KernelDigest = (input) =>
-      input.length > 100 ? nodeDigest(input.slice(0, 100)) : nodeDigest(input);
-    expect(() => resolveKernelDigest(shortOnly)).toThrow(
-      /disagrees with the portable sha256 digest/,
     );
   });
 });

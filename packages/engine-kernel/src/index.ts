@@ -19,12 +19,7 @@ export const seam: PackageSeam = Object.freeze({
   releaseGroup: "core-train",
 });
 
-export {
-  portableKernelDigest,
-  resolveKernelDigest,
-  type KernelDigest,
-  type KernelDigestHost,
-} from "./portable-digest.js";
+export { portableKernelDigest } from "./portable-digest.js";
 
 export {
   BOM_VERSION,

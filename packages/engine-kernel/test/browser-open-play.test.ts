@@ -16,12 +16,9 @@ import {
   open,
   openSceneKernelSession,
   openSculptKernelSession,
-  portableKernelDigest,
   replay,
   replaySceneKernelSession,
   replaySculptKernelSession,
-  type KernelDigest,
-  type KernelDigestHost,
   type KernelHost,
 } from "@sceneaxi/engine-kernel";
 import {
@@ -274,42 +271,16 @@ describe("sessions open and play without Node globals", () => {
 });
 
 describe("server kernel and browser kernel agree", () => {
-  it("produces identical scene digests with and without an injected digest", () => {
+  it("produces identical save artifacts across independent sessions", () => {
     const scene = sceneFixture();
-    const play = (host?: KernelDigestHost) => {
-      const session = openSceneKernelSession(scene, { seed: 9101 }, host);
+    const play = () => {
+      const session = openSceneKernelSession(scene, { seed: 9101 });
       for (let tick = 1; tick <= 4; tick += 1) session.advance({ tick, deltaMs: 100 });
       return session.save();
     };
-    // A host may supply its own synchronous sha256; digests must not move.
-    let calls = 0;
-    const hostDigest: KernelDigest = (input) => {
-      calls += 1;
-      return portableKernelDigest(input);
-    };
-    const injected = play({ digest: hostDigest });
-    const portable = play();
-    expect(calls).toBeGreaterThan(0);
-    expect(injected.terminalDigest).toBe(portable.terminalDigest);
-    expect(JSON.stringify(injected)).toBe(JSON.stringify(portable));
-  });
-
-  it("refuses a scene session whose injected digest disagrees", () => {
-    expect(() =>
-      openSceneKernelSession(
-        sceneFixture(),
-        { seed: 9101 },
-        { digest: () => "0".repeat(64) },
-      ),
-    ).toThrow(/disagrees with the portable sha256 digest/);
-  });
-
-  it("refuses an entity session whose injected digest disagrees", () => {
-    expect(() =>
-      open(
-        { productId: "browser-demo", seed: 11 },
-        { nowMs: () => 1_000, digest: () => "0".repeat(64) },
-      ),
-    ).toThrow(/disagrees with the portable sha256 digest/);
+    const first = play();
+    const second = play();
+    expect(first.terminalDigest).toBe(second.terminalDigest);
+    expect(JSON.stringify(first)).toBe(JSON.stringify(second));
   });
 });
