@@ -94,11 +94,16 @@ and execution-sentinel evidence for pre- vs post-evaluation refusals — is
 fixture-tested over the public seam in `test/refuse-matrix.test.ts` and
 `test/load-refuse.test.ts`; extend those when touching the pipeline.
 
-The repository golden path loads the checked-in inert sample (its empty claim
-set matches the current empty public registry) and names an illegal-claim
-refusal through this public seam in
-[`tests/e2e/cli-golden-path.test.ts`](../../tests/e2e/cli-golden-path.test.ts).
-Run it with `pnpm test:golden`; its fixtures live under
+Repository golden coverage uses this public seam in two paths. The CLI golden
+loads the checked-in inert sample and names an illegal-claim refusal. The
+importers/plugin golden binds a test-only registry to the capability sample,
+asserts addressed lookup hits and misses, then proves that the same claim
+refuses against the empty public seed. Neither path adds a public capability ID.
+See
+[`tests/e2e/cli-golden-path.test.ts`](../../tests/e2e/cli-golden-path.test.ts)
+and
+[`tests/e2e/importers-plugin-golden.test.ts`](../../tests/e2e/importers-plugin-golden.test.ts).
+Run both with `pnpm test:golden`; their fixtures live under
 `tests/e2e/fixtures/plugin-host/`.
 
 ## Stable refusal reasons

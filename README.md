@@ -75,24 +75,27 @@ checks. The root `package.json` owns the exact command sequence; the referenced
 TypeScript, Vitest, ESLint, boundary, and contract-checker configuration files own
 their respective contracts.
 
-Run `pnpm test:golden` for the scripted MVP path and every sculpt vertical. It
-covers Game profile selection through project creation, CLI propose/apply,
-kernel/presentation, sample-plugin load/refusal, replay, and held-key refusal;
-the hybrid sculpt path; both fixed-seed sculpt-quality demos; and the
-multi-object scene composition demo. Evidence is bound by
-`.sceneaxi/evidence/issue-51-cli-golden-path.json`,
-`.sceneaxi/evidence/issue-73-hybrid-sculpt-golden.json`,
-`tests/e2e/fixtures/sculpt-quality/golden-digests.json`, and
-`tests/e2e/fixtures/scene-composition/golden-digests.json`. `pnpm gate` runs the
-same e2e tests through the complete suite.
+After building, start the two terminal surfaces from the repository root:
+
+```bash
+pnpm build
+pnpm sceneaxi --help
+pnpm sceneaxi-desktop --help
+```
+
+Run `pnpm test:golden` for the focused product/profile and sculpt paths.
+[`docs/runnable-surfaces.md`](docs/runnable-surfaces.md) owns the complete
+surface inventory, levels, invocation requirements, and proof locations.
+`pnpm gate` runs the same e2e tests through the complete suite.
 
 ## Status
 
 **Early implementation aggregate.** The monorepo has a real fail-closed toolchain,
 typed public seams for every package and app, and initial contract/tracer
 implementations for authoring, the CLI, the Game Kernel, Game profile conformance,
-the Web Experience and Kids policy stubs, the public Delivery Handoff, shell
-protocol clients, the Plugin Host, and dormant catalogs. This remains
+the Web Experience and Kids policy stubs, the public Delivery Handoff, a
+startable desktop protocol shell, the library-only web shell, the Plugin Host,
+and dormant catalogs. This remains
 proof-oriented work, not a claim that the engine, profiles, or applications are
 production-ready. Proof execution, spend, account creation, publication, and
 other external actions remain subject to the separated authorities in

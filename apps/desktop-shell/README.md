@@ -37,8 +37,10 @@ failing obscurely.
 `--cwd <dir>` sets the working directory; `--json` emits the machine envelope
 with exactly the same data as the text rendering.
 
-Exit codes match the CLI protocol so scripts branch identically: `0` success,
-`1` operational refusal (typed diagnostics), `2` usage.
+Exit codes use the CLI protocol's compatible subset so scripts branch
+identically for shared outcomes: `0` success, `1` operational refusal (typed
+diagnostics), `2` usage. The desktop shell has no held-key-gated verb, so it
+does not emit the CLI's `3` (`HELD_KEY`).
 
 ```bash
 pnpm sceneaxi-desktop status --document scene.json

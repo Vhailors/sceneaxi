@@ -66,10 +66,13 @@ lives in `authoring-core`.
 
 ## Deliberate refusals
 
-Behaviour, not gaps. Changing any of these is a product decision:
+These are intentional fail-closed behaviors in runnable-surfaces v1. Their
+authoritative contract determines whether each is a permanent boundary or a
+still-unimplemented target:
 
-- `project dev --watch` refuses — there is no hot-reload loop, and faking one
-  would be a false runnable claim. `project dev` is one-shot.
+- `project dev --watch` refuses because the normative E1 hot-reload loop is not
+  implemented; `project dev` is currently one-shot. The target remains owned by
+  `docs/authoring-contracts.md`.
 - `project new` refuses to overwrite an existing document without `--force`.
 - `catalog list` reports commerce activation and `metadataComplete`, which means
   mandatory metadata exists but does not imply screening, curation, human

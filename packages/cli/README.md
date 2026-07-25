@@ -85,14 +85,14 @@ Composition is offline and fixed — no provider, no network, no seed — so
 identical inputs always yield identical bytes and the same `sceneDigest`.
 Placement is a projection: a source Sculpt Artifact is never rewritten.
 
-### Deliberate refusals
+### Current refusals
 
-These are behaviour, not gaps:
+These paths fail closed in runnable-surfaces v1:
 
 - `project new` refuses to overwrite an existing document without `--force`.
-- `project dev --watch` refuses. This CLI ships no hot-reload loop, and
-  pretending otherwise would be a false runnable claim; `project dev` is
-  one-shot.
+- `project dev --watch` refuses because the normative E1 hot-reload loop is not
+  implemented; `project dev` is currently one-shot. The target remains owned by
+  [`docs/authoring-contracts.md`](../../docs/authoring-contracts.md).
 - `catalog list` reports commerce activation and `metadataComplete`; the latter
   means only that mandatory metadata exists, never that screening, curation, or
   human approval has made the item listing-ready.

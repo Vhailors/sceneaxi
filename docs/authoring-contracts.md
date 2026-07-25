@@ -51,6 +51,12 @@ Five verbs: `project new`, `project dev`, `project test`, `project capture`,
   command map (`packages/schemas/contracts/cli-command-map.schema.json`) and
   refuses per `docs/held-key-enforcement.md` — an undeclared verb refuses.
 
+**Current implementation status:** `project dev` provides an honest one-shot
+document status in runnable-surfaces v1 and explicitly refuses every form of
+`--watch` ([sceneaxi#115](https://github.com/Vhailors/sceneaxi/issues/115)).
+That bounded R2 behavior does not satisfy or retire performance clause 7 below:
+the normative hot-reload loop remains unimplemented.
+
 ### Propose/apply flow (inspector gizmo edits)
 
 Inspector gizmo edits never write documents directly; they emit proposals:

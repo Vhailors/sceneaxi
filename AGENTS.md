@@ -38,12 +38,9 @@ SceneAxi = interactive engine/library + versioned profiles (Game, Web Experience
 
 ## Runnable surfaces
 
-`docs/runnable-surfaces.md` is the map of what can actually be started and where
-each claim is proven; keep it truthful when a surface changes level. "Runnable"
-is R2 startable (`bin` + a smoke test that spawns it), R1 driveable (golden e2e),
-or R0 refuse-only (executable refuse matrix + an explicit no-product-surface
-assertion). Startable today: `@sceneaxi/cli`, `@sceneaxi/desktop-shell`.
-`apps/web-shell` is still library-only.
+`docs/runnable-surfaces.md` is the authoritative map of what can actually be
+started, each surface's level, and the proof behind the claim. Update that owner
+when a surface changes level instead of copying its current inventory here.
 
 Adding a CLI verb means three things together, or dispatch refuses: a node in
 `ROOT_COMMANDS`, a declaration in `SHIPPED_COMMAND_MAP`, and — for any verb that
