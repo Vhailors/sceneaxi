@@ -253,6 +253,19 @@ describe("live open copy stays honest about the presentation core", () => {
     "umbrella/src/lib/live-open.ts",
   ] as const;
 
+  const RETIRED_FRAMING = [
+    ...LIVE_OPEN_PRESENTATION.retiredLabels,
+    "multi-renderer",
+    "stage 1 has not run",
+  ].map((label) => label.toLowerCase());
+
+  it("reads its banned framing from the shipped registry", () => {
+    expect(LIVE_OPEN_PRESENTATION.retiredLabels.length).toBeGreaterThan(0);
+    for (const retired of LIVE_OPEN_PRESENTATION.retiredLabels) {
+      expect(RETIRED_FRAMING).toContain(retired.toLowerCase());
+    }
+  });
+
   it("names the product presentation core the way ADR 0017 requires", () => {
     expect(LIVE_OPEN_PRESENTATION.coreLabel).toBe("Three presentation core");
     expect(LIVE_OPEN_COPY.lede).toContain("Three presentation core");
@@ -280,12 +293,7 @@ describe("live open copy stays honest about the presentation core", () => {
         new URL(`../../sites/${relative}`, import.meta.url),
         "utf8",
       ).toLowerCase();
-      for (const retired of [
-        "experimental three preview",
-        "non-decision",
-        "multi-renderer",
-        "stage 1 has not run",
-      ]) {
+      for (const retired of RETIRED_FRAMING) {
         expect(source).not.toContain(retired);
       }
     },
