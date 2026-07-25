@@ -29,6 +29,33 @@ renderer mounting belongs to
 [`@sceneaxi/engine-presentation`](../engine-presentation/README.md#hybrid-sculpt-preview).
 The schemas contain neither provider credentials nor renderer types.
 
+## Scene composition contracts (sceneaxi#85)
+
+`contracts/scene-composition.schema.json` is the authoritative v1 shape for both
+the **Scene Composition Intake** (several Sculpt Artifacts placed relative to one
+another) and the resolved **ComposedScene**. Package-root exports add
+`validateSceneCompositionIntake`, `validateComposedScene`,
+`resolveScenePlacements`, `composeSculptTransforms`,
+`projectSceneInstanceHierarchy`, the `digest*` helpers, and their types.
+
+Placement composition is axis-aligned in v1: scales multiply, rotations add and
+wrap into `[0, 360)`, and a child offset is scaled by its parent but never
+rotated. Because that would mis-nest children, a non-leaf instance carrying a
+non-zero rotation refuses (`rotated-parent-unsupported`) rather than
+approximating; leaf instances rotate freely.
+
+Placement is a **projection, never an artifact rewrite**. A Sculpt Artifact's
+evidence binds its exact spec bytes, so `projectSceneInstanceHierarchy` composes
+the world transform into the instance's root node only and leaves the artifact —
+and its digests — untouched.
+
+`validateComposedScene` recomputes instance order, depths, world transforms, the
+placement digest, every embedded artifact digest, and the scene digest, so a
+tampered scene refuses instead of opening. The composition pipeline itself lives
+in [`@sceneaxi/authoring-core`](../authoring-core/README.md#scene-composition);
+the multi-object open path lives in
+[`@sceneaxi/engine-kernel`](../engine-kernel/README.md#scene-kernel-sessions).
+
 ## Unambiguous JSON
 
 `parseUnambiguousJson` is the package-root parser for JSON text that must refuse

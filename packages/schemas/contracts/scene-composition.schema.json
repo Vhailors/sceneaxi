@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/scene-composition/v1",
+  "title": "SceneAxi Scene Composition v1",
+  "description": "Scene Composition Intake and ComposedScene. Placement is axis-aligned in v1: a non-leaf instance carrying a non-zero rotation refuses rather than mis-nesting its children. Placement never rewrites a Sculpt Artifact; scene-space hierarchy is a projection.",
+  "$defs": {
+    "identifier": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "vector3": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "type": "number" }
+    },
+    "transform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["translation", "rotationEulerDegrees", "scale"],
+      "properties": {
+        "translation": { "$ref": "#/$defs/vector3" },
+        "rotationEulerDegrees": { "$ref": "#/$defs/vector3" },
+        "scale": { "$ref": "#/$defs/vector3" }
+      }
+    },
+    "placement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["instanceId", "artifactId", "parentInstanceId", "transform"],
+      "properties": {
+        "instanceId": { "$ref": "#/$defs/identifier" },
+        "artifactId": {
+          "$ref": "#/$defs/identifier",
+          "description": "Reuse across placements is legal instancing."
+        },
+        "parentInstanceId": {
+          "description": "Exactly one placement declares null, and it must be rootInstanceId.",
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/identifier" }]
+        },
+        "transform": { "$ref": "#/$defs/transform" }
+      }
+    },
+    "intake": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "kind",
+        "sceneId",
+        "rootInstanceId",
+        "placements"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "kind": { "const": "sceneaxi.scene-composition-intake" },
+        "sceneId": { "$ref": "#/$defs/identifier" },
+        "rootInstanceId": { "$ref": "#/$defs/identifier" },
+        "placements": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/placement" }
+        }
+      }
+    },
+    "instance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "instanceId",
+        "artifactId",
+        "parentInstanceId",
+        "depth",
+        "localTransform",
+        "worldTransform",
+        "artifact"
+      ],
+      "properties": {
+        "instanceId": { "$ref": "#/$defs/identifier" },
+        "artifactId": { "$ref": "#/$defs/identifier" },
+        "parentInstanceId": {
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/identifier" }]
+        },
+        "depth": { "type": "integer", "minimum": 0, "maximum": 8 },
+        "localTransform": { "$ref": "#/$defs/transform" },
+        "worldTransform": {
+          "$ref": "#/$defs/transform",
+          "description": "Deterministic composition of the parent world transform with localTransform; recomputed and compared during validation."
+        },
+        "artifact": {
+          "type": "object",
+          "description": "A complete Sculpt Artifact as defined by sculpt-artifact.schema.json, embedded unmodified so its own evidence digests stay verifiable."
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "intakeDigest",
+        "placementDigest",
+        "artifactDigests",
+        "sceneDigest"
+      ],
+      "properties": {
+        "intakeDigest": { "$ref": "#/$defs/digest" },
+        "placementDigest": { "$ref": "#/$defs/digest" },
+        "artifactDigests": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["instanceId", "artifactDigest"],
+            "properties": {
+              "instanceId": { "$ref": "#/$defs/identifier" },
+              "artifactDigest": { "$ref": "#/$defs/digest" }
+            }
+          }
+        },
+        "sceneDigest": {
+          "$ref": "#/$defs/digest",
+          "description": "Canonical digest of the ComposedScene with evidence.sceneDigest omitted, so it is independently recomputable and tamper-evident."
+        }
+      }
+    },
+    "composedScene": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "kind",
+        "sceneId",
+        "rootInstanceId",
+        "instances",
+        "evidence"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "kind": { "const": "sceneaxi.composed-scene" },
+        "sceneId": { "$ref": "#/$defs/identifier" },
+        "rootInstanceId": { "$ref": "#/$defs/identifier" },
+        "instances": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 32,
+          "description": "Ordered by ascending depth, then ascending instanceId.",
+          "items": { "$ref": "#/$defs/instance" }
+        },
+        "evidence": { "$ref": "#/$defs/evidence" }
+      }
+    }
+  },
+  "oneOf": [{ "$ref": "#/$defs/intake" }, { "$ref": "#/$defs/composedScene" }]
+}

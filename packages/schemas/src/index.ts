@@ -221,6 +221,8 @@ export const contracts = Object.freeze({
   sculptIntake: "contracts/sculpt-intake.schema.json",
   objectSculptSpec: "contracts/object-sculpt-spec.schema.json",
   sculptArtifact: "contracts/sculpt-artifact.schema.json",
+  /** Scene Composition Intake + ComposedScene (sceneaxi#85); pipeline is @sceneaxi/authoring-core. */
+  sceneComposition: "contracts/scene-composition.schema.json",
   /** Profile Conformance claim (sceneaxi#10) — shared suite + development consumers. */
   profileConformance: "contracts/profile-conformance.schema.json",
   /** Plugin Manifest descriptor (sceneaxi#20 / ADR 0005); host runtime is @sceneaxi/plugin-host. */
@@ -338,6 +340,39 @@ export type {
   SculptValidationResult,
   Vector3,
 } from "./sculpt.js";
+
+export {
+  COMPOSED_SCENE_DOCUMENT_DATA_KEY,
+  COMPOSED_SCENE_KIND,
+  SCENE_COMPOSITION_INTAKE_KIND,
+  SCENE_COMPOSITION_SCHEMA_VERSION,
+  SCENE_MAXIMUM_DEPTH,
+  SCENE_MAXIMUM_INSTANCES,
+  SCENE_MINIMUM_INSTANCES,
+  composeSculptTransforms,
+  composedSceneFromDocumentData,
+  digestComposedScene,
+  digestSceneArtifact,
+  digestScenePlacements,
+  identitySculptTransform,
+  projectSceneInstanceHierarchy,
+  resolveScenePlacements,
+  validateComposedScene,
+  validateSceneCompositionIntake,
+} from "./scene-composition.js";
+export type {
+  ComposedScene,
+  ComposedSceneArtifactDigest,
+  ComposedSceneEvidence,
+  ComposedSceneInstance,
+  PlacedSceneInstanceHierarchy,
+  ResolvedScenePlacement,
+  SceneCompositionDiagnostic,
+  SceneCompositionDiagnosticCode,
+  SceneCompositionIntake,
+  SceneCompositionValidationResult,
+  ScenePlacement,
+} from "./scene-composition.js";
 
 export {
   SCULPT_PROCEDURAL_EMIT_KIND,
