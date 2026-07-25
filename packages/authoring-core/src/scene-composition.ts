@@ -60,6 +60,47 @@ function refuse(
   return { ok: false, code, path, message };
 }
 
+function remapComposedScenePath(
+  path: string,
+  instances: readonly ComposedSceneInstance[],
+  placementIndexByInstanceId: ReadonlyMap<string, number>,
+  artifactIndexByArtifactId: ReadonlyMap<string, number>,
+) {
+  if (path === "$.instances") return "$.placements";
+  const match = /^\$\.instances\[(\d+)\](.*)$/.exec(path);
+  if (match === null) return path;
+  const instance = instances[Number(match[1])];
+  if (instance === undefined) return path;
+  const suffix = match[2] ?? "";
+  if (suffix === ".artifact" || suffix.startsWith(".artifact.")) {
+    const artifactIndex = artifactIndexByArtifactId.get(instance.artifactId);
+    if (artifactIndex === undefined) return path;
+    return `$.artifacts[${String(artifactIndex)}]${suffix.slice(".artifact".length)}`;
+  }
+  const placementIndex = placementIndexByInstanceId.get(instance.instanceId);
+  if (placementIndex === undefined) return path;
+  if (
+    suffix === ".localTransform" ||
+    suffix.startsWith(".localTransform.")
+  ) {
+    return `$.placements[${String(placementIndex)}].transform${suffix.slice(".localTransform".length)}`;
+  }
+  if (
+    suffix === ".worldTransform" ||
+    suffix.startsWith(".worldTransform.")
+  ) {
+    return `$.placements[${String(placementIndex)}].transform`;
+  }
+  if (
+    suffix === ".instanceId" ||
+    suffix === ".artifactId" ||
+    suffix === ".parentInstanceId"
+  ) {
+    return `$.placements[${String(placementIndex)}]${suffix}`;
+  }
+  return `$.placements[${String(placementIndex)}]`;
+}
+
 /** Byte-canonical form used by scene evidence and golden fixtures. */
 export function serializeComposedScene(scene: ComposedScene) {
   return `${canonicalJson(scene as unknown as JsonValue)}\n`;
@@ -142,6 +183,7 @@ export function composeScene(
   }
 
   const artifacts = new Map<string, SculptArtifact>();
+  const artifactIndexByArtifactId = new Map<string, number>();
   for (const [index, artifactValue] of artifactValues.entries()) {
     const artifact = validateSculptArtifact(artifactValue);
     if (!artifact.ok) {
@@ -159,6 +201,7 @@ export function composeScene(
       );
     }
     artifacts.set(artifact.value.artifactId, artifact.value);
+    artifactIndexByArtifactId.set(artifact.value.artifactId, index);
   }
 
   const resolved = resolveScenePlacements(intake.value);
@@ -229,7 +272,14 @@ export function composeScene(
     const diagnostic = validated.diagnostics[0];
     return refuse(
       diagnostic?.code ?? "invalid-field",
-      diagnostic?.path ?? "$",
+      diagnostic === undefined
+        ? "$"
+        : remapComposedScenePath(
+            diagnostic.path,
+            instances,
+            intakeIndexByInstanceId,
+            artifactIndexByArtifactId,
+          ),
       diagnostic?.message ?? "Composed scene refused its own validator.",
     );
   }

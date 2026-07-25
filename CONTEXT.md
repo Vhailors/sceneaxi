@@ -92,7 +92,9 @@ three-instance demo, and stable evidence are indexed by
   transform with an instance's local transform. Child offsets are scaled but
   never rotated, so a rotating parent refuses instead of mis-nesting its
   children; placement projects an instance into scene space and never rewrites
-  its artifact. See [ADR 0014](docs/adr/0014-scene-composition-contract.md).
+  its artifact. Composable artifacts carry an identity runtime root so this
+  projection remains renderer-neutral. See
+  [ADR 0014](docs/adr/0014-scene-composition-contract.md).
 - **Scene kernel session** — the multi-object open path
   (`openSceneKernelSession` / `replaySceneKernelSession`) that runs the existing
   single-object simulation once per placed instance, bounded by

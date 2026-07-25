@@ -24,7 +24,9 @@ The path is:
 - **Placement is a projection, never an artifact rewrite.** A Sculpt Artifact's
   evidence binds its exact spec bytes, so `projectSceneInstanceHierarchy()`
   composes the world transform into the root node only and leaves the artifact —
-  and its digests — verifiable.
+  and its digests — verifiable. The runtime hierarchy root must carry the exact
+  identity transform, a renderer-neutral invariant that keeps the projected root
+  equal to the instance world transform.
 - Composition **fails closed** through a named refuse matrix. Nothing is dropped
   in either direction: an unsupplied artifact reference refuses
   `unknown-artifact-reference`, and a supplied-but-unplaced artifact refuses

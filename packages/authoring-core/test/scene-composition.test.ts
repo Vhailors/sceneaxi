@@ -285,7 +285,7 @@ describe("scene composition pipeline", () => {
     ).toThrow(TypeError);
   });
 
-  it("refuses valid artifacts whose roots cannot match the Mount path", () => {
+  it("reports renderer-neutral root refusals at the supplied artifact path", () => {
     const offsetDrone = artifactFixture(
       "drone-artifact",
       transform([1, 0, 0]),
@@ -297,7 +297,7 @@ describe("scene composition pipeline", () => {
       ),
     ).toEqual({
       code: "invalid-artifact",
-      path: "$.instances[2].artifact.runtimeHierarchy.nodes[0].transform",
+      path: "$.artifacts[1].runtimeHierarchy.nodes[0].transform",
     });
   });
 

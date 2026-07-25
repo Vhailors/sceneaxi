@@ -47,7 +47,9 @@ approximating; leaf instances rotate freely.
 Placement is a **projection, never an artifact rewrite**. A Sculpt Artifact's
 evidence binds its exact spec bytes, so `projectSceneInstanceHierarchy` composes
 the world transform into the instance's root node only and leaves the artifact —
-and its digests — untouched.
+and its digests — untouched. A composable artifact must carry the exact identity
+transform on its runtime hierarchy root, keeping this projection invariant
+renderer-neutral.
 
 `validateComposedScene` recomputes instance order, depths, world transforms, the
 placement digest, every embedded artifact digest, and the scene digest, so a

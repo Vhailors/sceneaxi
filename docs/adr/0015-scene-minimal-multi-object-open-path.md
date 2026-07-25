@@ -29,7 +29,8 @@ without its artifact being rewritten. The single-object simulation is extracted
 and shared rather than duplicated, so `openSculptKernelSession()` behavior and
 every landed sculpt and sculpt-quality digest are unchanged. Two instances of the
 same artifact are different objects and receive independent seeds derived from
-the scene seed and their instance ids.
+the scene seed and their instance ids. Scene-composable artifacts carry identity
+runtime roots under ADR 0014, so this projection stays renderer-neutral.
 
 **No presentation adapter is added.** `createSculptMountApi()` already mounts N
 instances with per-instance transforms, so the golden demo mounts all three scene

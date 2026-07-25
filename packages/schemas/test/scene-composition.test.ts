@@ -162,8 +162,18 @@ describe("scene composition contracts", () => {
             scale: { $ref: "#/$defs/positiveVector3" },
           },
         },
+        resolvedTransform: {
+          properties: {
+            translation: { $ref: "#/$defs/quantizedVector3" },
+            rotationEulerDegrees: {
+              $ref: "#/$defs/normalizedDegreesVector3",
+            },
+            scale: { $ref: "#/$defs/quantizedPositiveVector3" },
+          },
+        },
         instance: {
           properties: {
+            worldTransform: { $ref: "#/$defs/resolvedTransform" },
             artifact: {
               $ref: "https://sceneaxi.invalid/contracts/sculpt-artifact/v1",
             },
@@ -635,7 +645,7 @@ describe("scene composition contracts", () => {
     ).toMatchObject({ code: "invalid-kind", path: "$.kind" });
   });
 
-  it("uses composed-scene field paths and requires mount-compatible roots", () => {
+  it("uses composed-scene field paths and requires identity artifact roots", () => {
     const scene = composedSceneFixture();
     const rotatedRoot = {
       ...scene,
@@ -659,22 +669,33 @@ describe("scene composition contracts", () => {
       path: "$.instances[0].localTransform.rotationEulerDegrees",
     });
 
-    const offsetArtifact = artifactFixture(
-      "drone-artifact",
+    for (const rootTransform of [
       transform([1, 0, 0]),
-    );
-    expect(validateSculptArtifact(offsetArtifact).ok).toBe(true);
-    const offsetRoot = {
-      ...scene,
-      instances: scene.instances.map((instance, index) =>
-        index === 2 ? { ...instance, artifact: offsetArtifact } : instance,
-      ),
-    };
-    expect(
-      refusalOf(validateComposedScene(offsetRoot), "offset artifact root"),
-    ).toMatchObject({
-      code: "invalid-artifact",
-      path: "$.instances[2].artifact.runtimeHierarchy.nodes[0].transform",
-    });
+      transform([0, 0, 0], [2, 1, 1]),
+      transform([0, 0, 0], [1, 1, 1], [0, 1, 0]),
+    ]) {
+      const transformedArtifact = artifactFixture(
+        "drone-artifact",
+        rootTransform,
+      );
+      expect(validateSculptArtifact(transformedArtifact).ok).toBe(true);
+      const transformedRoot = {
+        ...scene,
+        instances: scene.instances.map((instance, index) =>
+          index === 2
+            ? { ...instance, artifact: transformedArtifact }
+            : instance,
+        ),
+      };
+      expect(
+        refusalOf(
+          validateComposedScene(transformedRoot),
+          "transformed artifact root",
+        ),
+      ).toMatchObject({
+        code: "invalid-artifact",
+        path: "$.instances[2].artifact.runtimeHierarchy.nodes[0].transform",
+      });
+    }
   });
 });

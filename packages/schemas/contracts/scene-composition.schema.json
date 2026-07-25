@@ -16,6 +16,24 @@
       "minimum": 0.000001,
       "maximum": 9007199254
     },
+    "quantizedBoundedNumber": {
+      "type": "number",
+      "minimum": -9007199254,
+      "maximum": 9007199254,
+      "multipleOf": 0.000001
+    },
+    "quantizedPositiveNumber": {
+      "type": "number",
+      "minimum": 0.000001,
+      "maximum": 9007199254,
+      "multipleOf": 0.000001
+    },
+    "normalizedDegrees": {
+      "type": "number",
+      "minimum": 0,
+      "exclusiveMaximum": 360,
+      "multipleOf": 0.000001
+    },
     "vector3": {
       "type": "array",
       "minItems": 3,
@@ -38,6 +56,39 @@
       ],
       "items": false
     },
+    "quantizedVector3": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "prefixItems": [
+        { "$ref": "#/$defs/quantizedBoundedNumber" },
+        { "$ref": "#/$defs/quantizedBoundedNumber" },
+        { "$ref": "#/$defs/quantizedBoundedNumber" }
+      ],
+      "items": false
+    },
+    "quantizedPositiveVector3": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "prefixItems": [
+        { "$ref": "#/$defs/quantizedPositiveNumber" },
+        { "$ref": "#/$defs/quantizedPositiveNumber" },
+        { "$ref": "#/$defs/quantizedPositiveNumber" }
+      ],
+      "items": false
+    },
+    "normalizedDegreesVector3": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "prefixItems": [
+        { "$ref": "#/$defs/normalizedDegrees" },
+        { "$ref": "#/$defs/normalizedDegrees" },
+        { "$ref": "#/$defs/normalizedDegrees" }
+      ],
+      "items": false
+    },
     "transform": {
       "type": "object",
       "additionalProperties": false,
@@ -46,6 +97,18 @@
         "translation": { "$ref": "#/$defs/vector3" },
         "rotationEulerDegrees": { "$ref": "#/$defs/vector3" },
         "scale": { "$ref": "#/$defs/positiveVector3" }
+      }
+    },
+    "resolvedTransform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["translation", "rotationEulerDegrees", "scale"],
+      "properties": {
+        "translation": { "$ref": "#/$defs/quantizedVector3" },
+        "rotationEulerDegrees": {
+          "$ref": "#/$defs/normalizedDegreesVector3"
+        },
+        "scale": { "$ref": "#/$defs/quantizedPositiveVector3" }
       }
     },
     "placement": {
@@ -109,12 +172,12 @@
         "depth": { "type": "integer", "minimum": 0, "maximum": 8 },
         "localTransform": { "$ref": "#/$defs/transform" },
         "worldTransform": {
-          "$ref": "#/$defs/transform",
+          "$ref": "#/$defs/resolvedTransform",
           "description": "Deterministic composition of the parent world transform with localTransform; recomputed and compared during validation."
         },
         "artifact": {
           "$ref": "https://sceneaxi.invalid/contracts/sculpt-artifact/v1",
-          "description": "A complete Sculpt Artifact as defined by sculpt-artifact.schema.json, embedded unmodified so its own evidence digests stay verifiable."
+          "description": "A complete Sculpt Artifact as defined by sculpt-artifact.schema.json, embedded unmodified so its own evidence digests stay verifiable. Its runtimeHierarchy root node must carry the exact identity transform for renderer-neutral scene projection."
         }
       }
     },

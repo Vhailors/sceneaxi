@@ -244,81 +244,6 @@ function tryComposeSculptTransforms(
   };
 }
 
-function transformMatrix(transform: SculptTransform) {
-  const [xDegrees, yDegrees, zDegrees] = transform.rotationEulerDegrees;
-  const x = (xDegrees * Math.PI) / 180;
-  const y = (yDegrees * Math.PI) / 180;
-  const z = (zDegrees * Math.PI) / 180;
-  const a = Math.cos(x);
-  const b = Math.sin(x);
-  const c = Math.cos(y);
-  const d = Math.sin(y);
-  const e = Math.cos(z);
-  const f = Math.sin(z);
-  const ae = a * e;
-  const af = a * f;
-  const be = b * e;
-  const bf = b * f;
-  const [scaleX, scaleY, scaleZ] = transform.scale;
-  const [translationX, translationY, translationZ] = transform.translation;
-  return [
-    c * e * scaleX,
-    (af + be * d) * scaleX,
-    (bf - ae * d) * scaleX,
-    0,
-    -c * f * scaleY,
-    (ae - bf * d) * scaleY,
-    (be + af * d) * scaleY,
-    0,
-    d * scaleZ,
-    -b * c * scaleZ,
-    a * c * scaleZ,
-    0,
-    translationX,
-    translationY,
-    translationZ,
-    1,
-  ] as const;
-}
-
-function multiplyMatrices(
-  left: readonly number[],
-  right: readonly number[],
-) {
-  return Array.from({ length: 16 }, (_unused, index) => {
-    const column = Math.floor(index / 4);
-    const row = index % 4;
-    let value = 0;
-    for (let offset = 0; offset < 4; offset += 1) {
-      value +=
-        (left[offset * 4 + row] ?? 0) *
-        (right[column * 4 + offset] ?? 0);
-    }
-    return value;
-  });
-}
-
-function hasMountCompatibleProjection(
-  worldTransform: SculptTransform,
-  rootTransform: SculptTransform,
-) {
-  const projected = tryComposeSculptTransforms(worldTransform, rootTransform);
-  if (!projected.ok) return false;
-  const mounted = multiplyMatrices(
-    transformMatrix(worldTransform),
-    transformMatrix(rootTransform),
-  );
-  const flattened = transformMatrix(projected.value);
-  return mounted.every((value, index) => {
-    const projectedValue = flattened[index];
-    return (
-      projectedValue !== undefined &&
-      Number.isFinite(value) &&
-      Math.abs(value - projectedValue) <= SCENE_MINIMUM_SCALE
-    );
-  });
-}
-
 const IDENTITY_TRANSFORM: SculptTransform = Object.freeze({
   translation: vector([0, 0, 0]),
   rotationEulerDegrees: vector([0, 0, 0]),
@@ -328,6 +253,14 @@ const IDENTITY_TRANSFORM: SculptTransform = Object.freeze({
 /** The neutral parent every scene root composes against. */
 export function identitySculptTransform(): SculptTransform {
   return IDENTITY_TRANSFORM;
+}
+
+function isIdentityTransform(transform: SculptTransform) {
+  return (
+    transform.translation.every((component) => component === 0) &&
+    transform.rotationEulerDegrees.every((component) => component === 0) &&
+    transform.scale.every((component) => component === 1)
+  );
 }
 
 function isRotated(transform: SculptTransform) {
@@ -879,15 +812,12 @@ function validateInstanceEntries(
     const rootNode = artifact.value.runtimeHierarchy.nodes[rootNodeIndex];
     if (
       rootNode === undefined ||
-      !hasMountCompatibleProjection(
-        transforms.get("worldTransform") ?? IDENTITY_TRANSFORM,
-        rootNode.transform,
-      )
+      !isIdentityTransform(rootNode.transform)
     ) {
       return refuse(
         "invalid-artifact",
         `${path}.artifact.runtimeHierarchy.nodes[${String(rootNodeIndex)}].transform`,
-        "Artifact root transform cannot be projected consistently with the Mount path.",
+        "Artifact root transform must be identity for renderer-neutral scene projection.",
       );
     }
     const localTransform = transforms.get("localTransform");
