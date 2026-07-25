@@ -14,6 +14,8 @@
 
 import { createHash } from "node:crypto";
 import {
+  isEpochMilliseconds,
+  isPlainRecord,
   validateCreditLedgerEntry,
   type CreditAccount,
   type CreditLedgerEntry,
@@ -54,10 +56,6 @@ export type AppendOutcome = Readonly<{
    */
   replayed: boolean;
 }>;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 /**
  * Derive a contract-valid entry id from an idempotency key.
@@ -162,7 +160,8 @@ export function loadLedgerState(
     );
   }
   const foreign = entries.find(
-    (entry) => isRecord(entry) && entry["accountId"] !== account.accountId,
+    (entry) =>
+      isPlainRecord(entry) && entry["accountId"] !== account.accountId,
   );
   if (foreign !== undefined) {
     return billingRefuse(
@@ -220,8 +219,8 @@ export function appendCreditEntry(
   request: unknown,
 ): BillingOutcome<AppendOutcome> {
   if (
-    !isRecord(state) ||
-    !isRecord(state["account"]) ||
+    !isPlainRecord(state) ||
+    !isPlainRecord(state["account"]) ||
     !Array.isArray(state["entries"]) ||
     typeof state["balance"] !== "number"
   ) {
@@ -232,7 +231,7 @@ export function appendCreditEntry(
   }
   const current = state as unknown as LedgerState;
 
-  if (!isRecord(request)) {
+  if (!isPlainRecord(request)) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.requestInvalid,
       "A ledger append request must be a plain object.",
@@ -247,10 +246,10 @@ export function appendCreditEntry(
     now,
   } = request as Partial<AppendCreditEntryRequest>;
 
-  if (typeof now !== "number" || !Number.isFinite(now)) {
+  if (!isEpochMilliseconds(now)) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.clockInvalid,
-      "A ledger append requires a finite epoch-millisecond clock.",
+      "A ledger append requires valid epoch milliseconds.",
     );
   }
   if (

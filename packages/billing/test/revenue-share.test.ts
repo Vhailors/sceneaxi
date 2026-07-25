@@ -474,6 +474,23 @@ describe("recordMoneySale", () => {
     expect(record({ grossMinor: 0 }).ok).toBe(false);
     expect(record({ grossMinor: -5 }).ok).toBe(false);
   });
+
+  it("keeps sale ids distinct from user ids", () => {
+    expect(record({ saleId: "sale:stream:1" }).ok).toBe(true);
+    const colonUser = record({ buyerUserId: "buyer:1" });
+    expect(colonUser.ok).toBe(false);
+    if (!colonUser.ok) {
+      expect(colonUser.reason).toBe(BILLING_REFUSE_REASONS.revenueShareInvalid);
+    }
+    expect(record({ buyerUserId: "u".repeat(129) }).ok).toBe(false);
+  });
+
+  it("refuses an epoch outside the Date range", () => {
+    const result = record({ now: Number.MAX_VALUE });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.clockInvalid);
+  });
 });
 
 describe("split records refuse an unbalanced split", () => {

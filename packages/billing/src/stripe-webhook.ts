@@ -16,7 +16,9 @@
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 import {
+  isEpochMilliseconds,
   isCheckoutPurpose,
+  isPlainRecord,
   validateCheckoutCompletedEvent,
   validateCheckoutSessionIntent,
   type BillingMode,
@@ -91,6 +93,12 @@ function hexEquals(expected: string, presented: string): boolean {
 export function verifyStripeWebhookSignature(
   request: VerifyStripeWebhookSignatureRequest,
 ): BillingOutcome<VerifiedWebhook> {
+  if (!isPlainRecord(request)) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.requestInvalid,
+      "A webhook verification request must be a plain object.",
+    );
+  }
   const { payload, header, secret, now, toleranceSeconds } = request;
 
   if (typeof secret !== "string" || secret.length === 0) {
@@ -99,10 +107,10 @@ export function verifyStripeWebhookSignature(
       "No Stripe webhook secret is configured; verification refuses rather than accepting an unsigned event.",
     );
   }
-  if (typeof now !== "number" || !Number.isFinite(now)) {
+  if (!isEpochMilliseconds(now)) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.clockInvalid,
-      "Webhook verification requires a finite epoch-millisecond clock.",
+      "Webhook verification requires valid epoch milliseconds.",
     );
   }
   if (typeof header !== "string" || header.trim().length === 0) {
@@ -207,10 +215,6 @@ export const CHECKOUT_METADATA_KEYS = Object.freeze({
   intentId: "sceneaxiIntentId",
 } as const);
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 /**
  * Normalize a verified `checkout.session.completed` body into SceneAxi
  * vocabulary.
@@ -226,6 +230,12 @@ export function parseCheckoutCompletedEvent(input: {
   /** Required to resolve a catalog-listing completion's price. */
   readonly listings?: unknown;
 }): BillingOutcome<CheckoutCompletedEvent> {
+  if (!isPlainRecord(input)) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.requestInvalid,
+      "A checkout event parse request must be a plain object.",
+    );
+  }
   let raw: unknown;
   try {
     raw = JSON.parse(input.payload) as unknown;
@@ -236,7 +246,7 @@ export function parseCheckoutCompletedEvent(input: {
       `The webhook payload is not JSON: ${detail}`,
     );
   }
-  if (!isRecord(raw)) {
+  if (!isPlainRecord(raw)) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.webhookPayloadInvalid,
       "The webhook payload must be a JSON object.",
@@ -259,10 +269,12 @@ export function parseCheckoutCompletedEvent(input: {
       "The webhook event carries no id; idempotency would be impossible.",
     );
   }
-  if (typeof created !== "number" || !Number.isFinite(created)) {
+  const occurredAtEpoch =
+    typeof created === "number" ? created * 1_000 : Number.NaN;
+  if (!isEpochMilliseconds(occurredAtEpoch)) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.webhookPayloadInvalid,
-      "The webhook event carries no numeric created timestamp.",
+      "The webhook event carries no valid created timestamp.",
     );
   }
   if (typeof livemode !== "boolean") {
@@ -273,15 +285,15 @@ export function parseCheckoutCompletedEvent(input: {
   }
 
   const data = raw["data"];
-  const object = isRecord(data) ? data["object"] : undefined;
-  if (!isRecord(object)) {
+  const object = isPlainRecord(data) ? data["object"] : undefined;
+  if (!isPlainRecord(object)) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.webhookPayloadInvalid,
       "The checkout event carries no session object.",
     );
   }
   const metadata = object["metadata"];
-  if (!isRecord(metadata)) {
+  if (!isPlainRecord(metadata)) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.webhookPayloadInvalid,
       "The checkout session carries no metadata object.",
@@ -326,16 +338,16 @@ export function parseCheckoutCompletedEvent(input: {
   }
 
   const lineItems = object["line_items"];
-  const lines = isRecord(lineItems) ? lineItems["data"] : undefined;
+  const lines = isPlainRecord(lineItems) ? lineItems["data"] : undefined;
   const line = Array.isArray(lines) && lines.length === 1 ? lines[0] : undefined;
-  const price = isRecord(line) ? line["price"] : undefined;
+  const price = isPlainRecord(line) ? line["price"] : undefined;
   if (
     object["payment_status"] !== "paid" ||
     object["amount_total"] !== intent.value.unitAmount ||
     object["currency"] !== intent.value.currency ||
-    !isRecord(line) ||
+    !isPlainRecord(line) ||
     line["quantity"] !== 1 ||
-    !isRecord(price) ||
+    !isPlainRecord(price) ||
     price["id"] !== intent.value.stripePriceId
   ) {
     return billingRefuse(
@@ -354,7 +366,7 @@ export function parseCheckoutCompletedEvent(input: {
     userId,
     purpose,
     itemId,
-    occurredAt: new Date(created * 1000).toISOString(),
+    occurredAt: new Date(occurredAtEpoch).toISOString(),
   };
 
   let candidate: Record<string, unknown>;
@@ -443,6 +455,12 @@ export type ApplyCheckoutCompletedGrantRequest = Readonly<{
 export function applyCheckoutCompletedGrant(
   request: ApplyCheckoutCompletedGrantRequest,
 ): BillingOutcome<AppendOutcome> {
+  if (!isPlainRecord(request)) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.requestInvalid,
+      "A checkout grant request must be a plain object.",
+    );
+  }
   const { state, event, now, liveModeAuthorized } = request;
 
   const validated = validateCheckoutCompletedEvent(event);
@@ -456,8 +474,8 @@ export function applyCheckoutCompletedGrant(
   if (!mode.ok) return mode;
 
   if (
-    !isRecord(state) ||
-    !isRecord(state["account"]) ||
+    !isPlainRecord(state) ||
+    !isPlainRecord(state["account"]) ||
     !Array.isArray(state["entries"])
   ) {
     return billingRefuse(

@@ -1,9 +1,6 @@
 /**
- * Internal record-validation helpers shared by the identity, credits, and
- * billing contracts.
- *
- * Not part of the public seam: every consumer goes through the per-contract
- * validators so a refusal always carries a named contract code.
+ * Record-validation helpers shared by the identity, credits, and billing
+ * contracts and their untrusted adapter boundaries.
  */
 
 import { CATALOG_DATE_TIME_PATTERN } from "./catalog.js";
@@ -39,23 +36,27 @@ export function refuseWith<Code extends string>(
 export function isPlainRecord(
   value: unknown,
 ): value is Record<string, unknown> {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) {
-    return false;
-  }
-  const prototype = Object.getPrototypeOf(value) as unknown;
-  if (prototype !== Object.prototype && prototype !== null) return false;
-  for (const key of Reflect.ownKeys(value)) {
-    if (typeof key !== "string") return false;
-    const descriptor = Object.getOwnPropertyDescriptor(value, key);
-    if (
-      descriptor === undefined ||
-      !descriptor.enumerable ||
-      !("value" in descriptor)
-    ) {
+  try {
+    if (value === null || typeof value !== "object" || Array.isArray(value)) {
       return false;
     }
+    const prototype = Object.getPrototypeOf(value) as unknown;
+    if (prototype !== Object.prototype && prototype !== null) return false;
+    for (const key of Reflect.ownKeys(value)) {
+      if (typeof key !== "string") return false;
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (
+        descriptor === undefined ||
+        !descriptor.enumerable ||
+        !("value" in descriptor)
+      ) {
+        return false;
+      }
+    }
+    return true;
+  } catch {
+    return false;
   }
-  return true;
 }
 
 export function isNonEmptyString(value: unknown): value is string {
@@ -69,6 +70,14 @@ export function isDateTime(value: unknown): value is string {
 /** A safe integer — rejects NaN, Infinity, and fractional values. */
 export function isSafeInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value);
+}
+
+export function isEpochMilliseconds(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    Number.isFinite(new Date(value).getTime())
+  );
 }
 
 /** The first required key absent from the record, or undefined. */

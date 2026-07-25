@@ -15,6 +15,7 @@ import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 import {
   CATALOG_LISTINGS_FIXTURES_PATH,
+  isEpochMilliseconds,
   priceModeIncludesCredits,
   priceModeIncludesMoney,
   validateCatalogListingSet,
@@ -171,10 +172,10 @@ export function purchaseListingWithCredits(
 ): BillingOutcome<ListingPurchaseOutcome> {
   const { principal, listing, buyerState, now, saleId, surface } = request;
 
-  if (typeof now !== "number" || !Number.isFinite(now)) {
+  if (!isEpochMilliseconds(now)) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.clockInvalid,
-      "A listing purchase requires a finite epoch-millisecond clock.",
+      "A listing purchase requires valid epoch milliseconds.",
     );
   }
   if (typeof saleId !== "string" || saleId.length === 0) {

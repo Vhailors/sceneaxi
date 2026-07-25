@@ -212,6 +212,23 @@ describe("authenticated phase", () => {
     expect(snapshot.creditBalance).toBe(33);
   });
 
+  it("refuses a ledger belonging to another user", async () => {
+    const panel = makePanel({
+      credits: Object.freeze({
+        ledgerFor: () => ledgerFor("usr_other", 900),
+      }),
+    });
+    const snapshot = await panel.submitCredentials({
+      email: "crew@example.com",
+      password: "pw",
+    });
+    expect(snapshot.phase).toBe("refused");
+    expect(snapshot.refusal?.reason).toBe(
+      ACCOUNT_PANEL_REASONS.ledgerOwnerMismatch,
+    );
+    expect(snapshot.creditBalance).toBeUndefined();
+  });
+
   it("shows admin as unlimited rather than quoting a credit cost", async () => {
     const panel = makePanel(
       {},
@@ -290,6 +307,20 @@ describe("role is never client-claimable", () => {
     expect(snapshot.phase).toBe("authenticated");
     expect(snapshot.surface).toBe("web-shell");
   });
+
+  it("refuses accessor-bearing credentials without invoking getters", async () => {
+    const credentials = { password: "pw" } as Record<string, unknown>;
+    Object.defineProperty(credentials, "email", {
+      enumerable: true,
+      get() {
+        throw new Error("untrusted getter");
+      },
+    });
+
+    const snapshot = await makePanel().submitCredentials(credentials);
+    expect(snapshot.phase).toBe("refused");
+    expect(snapshot.refusal?.reason).toBe(AUTH_REFUSE_REASONS.requestInvalid);
+  });
 });
 
 describe("refused phase", () => {
@@ -351,7 +382,7 @@ describe("refused phase", () => {
 
   it("reports a clock failure", async () => {
     const panel = makePanel({
-      clock: () => Number.NaN,
+      clock: () => Number.MAX_VALUE,
     });
     const snapshot = panel.snapshot();
     expect(snapshot.phase).toBe("refused");

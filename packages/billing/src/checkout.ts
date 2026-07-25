@@ -15,8 +15,10 @@
 import { createHash } from "node:crypto";
 import {
   DEFAULT_BILLING_MODE,
+  isEpochMilliseconds,
   isBillingMode,
   isHttpsUrl,
+  isPlainRecord,
   validateCheckoutSessionIntent,
   type BillingMode,
   type CheckoutPurpose,
@@ -66,10 +68,6 @@ export type CreateCheckoutSessionIntentRequest = Readonly<{
 
 const IDENTIFIER_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 /**
  * Guard the billing mode. Shared by checkout and grant application so the
  * go-live gate is enforced at both ends: creating a live intent and honoring a
@@ -113,7 +111,7 @@ export function deriveIntentId(idempotencyKey: string): string {
 export function createCheckoutSessionIntent(
   request: CreateCheckoutSessionIntentRequest,
 ): BillingOutcome<CheckoutSessionIntent> {
-  if (!isRecord(request)) {
+  if (!isPlainRecord(request)) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.requestInvalid,
       "A checkout intent request must be a plain object.",
@@ -150,7 +148,7 @@ export function createCheckoutSessionIntent(
 export function createMoneyCheckoutIntent(
   request: CreateMoneyCheckoutIntentRequest,
 ): BillingOutcome<CheckoutSessionIntent> {
-  if (!isRecord(request)) {
+  if (!isPlainRecord(request)) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.requestInvalid,
       "A checkout intent request must be a plain object.",
@@ -172,10 +170,10 @@ export function createMoneyCheckoutIntent(
     liveModeAuthorized,
   } = request;
 
-  if (typeof now !== "number" || !Number.isFinite(now)) {
+  if (!isEpochMilliseconds(now)) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.clockInvalid,
-      "A checkout intent requires a finite epoch-millisecond clock.",
+      "A checkout intent requires valid epoch milliseconds.",
     );
   }
   if (typeof userId !== "string" || !IDENTIFIER_RE.test(userId)) {

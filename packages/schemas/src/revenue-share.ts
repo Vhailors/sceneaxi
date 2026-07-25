@@ -112,7 +112,8 @@ export type RevenueShareValidationResult<Value> =
   | RevenueShareValidationOk<Value>
   | RevenueShareValidationRefuse;
 
-const IDENTIFIER_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/;
+const SALE_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/;
+const USER_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const CURRENCY_RE = /^[a-z]{3}$/;
 
@@ -184,7 +185,7 @@ function checkParties(
   label: string,
 ): RevenueShareValidationRefuse | undefined {
   const saleId = record["saleId"];
-  if (typeof saleId !== "string" || !IDENTIFIER_RE.test(saleId)) {
+  if (typeof saleId !== "string" || !SALE_ID_RE.test(saleId)) {
     return invalid(`${label} saleId must be a url-safe identifier.`);
   }
   const listingId = record["listingId"];
@@ -193,7 +194,7 @@ function checkParties(
   }
   for (const key of ["buyerUserId", "creatorUserId"]) {
     const value = record[key];
-    if (typeof value !== "string" || !IDENTIFIER_RE.test(value)) {
+    if (typeof value !== "string" || !USER_ID_RE.test(value)) {
       return invalid(`${label} ${key} must be a url-safe identifier.`);
     }
   }

@@ -213,6 +213,24 @@ describe("identity port — sign-in", () => {
     }
   });
 
+  it("refuses accessor-bearing requests without invoking getters", async () => {
+    const request = {
+      email: "crew@example.com",
+      password: "pw",
+    } as Record<string, unknown>;
+    Object.defineProperty(request, "surface", {
+      enumerable: true,
+      get() {
+        throw new Error("untrusted getter");
+      },
+    });
+
+    const result = await makePort().signIn(request);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(AUTH_REFUSE_REASONS.requestInvalid);
+  });
+
   it("distinguishes rejected credentials from a broken provider", async () => {
     const rejected = await makePort().signIn({
       surface: "web-shell",
@@ -330,6 +348,7 @@ describe("identity port — sign-in", () => {
         throw new Error("no clock");
       },
       () => Number.NaN,
+      () => Number.MAX_VALUE,
       () => "now" as never,
     ]) {
       const result = await makePort({ clock: badClock }).signIn({

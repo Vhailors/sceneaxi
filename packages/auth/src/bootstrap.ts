@@ -9,7 +9,11 @@
  * UPDATE someone runs by hand.
  */
 
-import type { RoleAssignment, User } from "@sceneaxi/schemas";
+import {
+  isEpochMilliseconds,
+  type RoleAssignment,
+  type User,
+} from "@sceneaxi/schemas";
 import {
   resolveAdminIdentity,
   type AdminIdentity,
@@ -50,10 +54,10 @@ export function planAdminBootstrap(
   const admin = resolveAdminIdentity(input.env);
   if (!admin.ok) return admin;
 
-  if (!Number.isFinite(input.now)) {
+  if (!isEpochMilliseconds(input.now)) {
     return authRefuse(
       AUTH_REFUSE_REASONS.clockInvalid,
-      "The admin bootstrap requires a finite epoch-millisecond clock.",
+      "The admin bootstrap requires valid epoch milliseconds.",
     );
   }
 

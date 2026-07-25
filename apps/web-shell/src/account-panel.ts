@@ -18,6 +18,8 @@
 
 import {
   ENTITLEMENT_CAPABILITIES,
+  isEpochMilliseconds,
+  isPlainRecord,
   type EntitlementCapability,
   type EntitlementOutcome,
   type IdentityRole,
@@ -48,6 +50,7 @@ export const ACCOUNT_PANEL_REASONS = Object.freeze({
   surfaceInvalid: "PANEL_SURFACE_INVALID",
   creditsUnavailable: "PANEL_CREDITS_UNAVAILABLE",
   ledgerMissing: "PANEL_LEDGER_MISSING",
+  ledgerOwnerMismatch: "PANEL_LEDGER_OWNER_MISMATCH",
 } as const);
 
 export type AccountPanelReason =
@@ -213,7 +216,7 @@ export function createAccountPanel(
     } catch {
       return undefined;
     }
-    return typeof now === "number" && Number.isFinite(now) ? now : undefined;
+    return isEpochMilliseconds(now) ? now : undefined;
   };
 
   const anonymous = (): AccountPanelSnapshot => {
@@ -225,7 +228,7 @@ export function createAccountPanel(
         capabilities: Object.freeze([]),
         refusal: refusal(
           ACCOUNT_PANEL_REASONS.clockInvalid,
-          "The panel clock did not return finite epoch milliseconds.",
+          "The panel clock did not return valid epoch milliseconds.",
         ),
       });
     }
@@ -258,7 +261,7 @@ export function createAccountPanel(
       return refused(
         refusal(
           ACCOUNT_PANEL_REASONS.clockInvalid,
-          "The panel clock did not return finite epoch milliseconds.",
+          "The panel clock did not return valid epoch milliseconds.",
         ),
       );
     }
@@ -279,6 +282,18 @@ export function createAccountPanel(
         refusal(
           ACCOUNT_PANEL_REASONS.ledgerMissing,
           "No credit ledger exists for this user; the balance is unknown rather than zero.",
+        ),
+      );
+    }
+    if (
+      !isPlainRecord(state) ||
+      !isPlainRecord(state["account"]) ||
+      state["account"]["userId"] !== principal.user.userId
+    ) {
+      return refused(
+        refusal(
+          ACCOUNT_PANEL_REASONS.ledgerOwnerMismatch,
+          "The credits view returned a ledger for a different user; no balance is disclosed.",
         ),
       );
     }
@@ -314,8 +329,8 @@ export function createAccountPanel(
       const result = await identityPort.signIn(
         // The surface is the panel's, never the caller's, so a client cannot
         // ask to be signed in somewhere else.
-        typeof credentials === "object" && credentials !== null
-          ? { ...(credentials as Record<string, unknown>), surface }
+        isPlainRecord(credentials)
+          ? { ...credentials, surface }
           : credentials,
       );
       if (result.ok) {

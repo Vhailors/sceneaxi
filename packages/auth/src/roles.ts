@@ -12,7 +12,9 @@
  */
 
 import {
+  isEpochMilliseconds,
   isIdentityRole,
+  isPlainRecord,
   validatePrincipal,
   type IdentityRole,
   type IdentitySurface,
@@ -68,13 +70,12 @@ function checkPrincipal(
   options: GuardOptions,
 ): AuthResult<Principal> {
   if (
-    typeof options !== "object" ||
-    options === null ||
-    !Number.isFinite(options.now)
+    !isPlainRecord(options) ||
+    !isEpochMilliseconds(options["now"])
   ) {
     return authRefuse(
       AUTH_REFUSE_REASONS.clockInvalid,
-      "A role guard requires a finite epoch-millisecond clock; expiry cannot be checked without one.",
+      "A role guard requires valid epoch milliseconds; expiry cannot be checked without them.",
     );
   }
 

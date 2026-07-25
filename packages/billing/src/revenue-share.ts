@@ -23,6 +23,7 @@ import {
   CREATOR_SHARE_BASIS_POINTS,
   MONEY_SPLIT_RECORD_KIND,
   REVENUE_SHARE_SCHEMA_VERSION,
+  isEpochMilliseconds,
   validateCreatorShareRecord,
   validateMoneySplitRecord,
   type BillingMode,
@@ -250,6 +251,13 @@ export function recordMoneySale(
 
   const listed = assertCurrencyListed(listing, "money");
   if (!listed.ok) return listed;
+
+  if (!isEpochMilliseconds(now)) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.clockInvalid,
+      "A money sale record requires valid epoch milliseconds.",
+    );
+  }
 
   const split = splitMoneyMinorUnits(grossMinor);
   if (!split.ok) return split;

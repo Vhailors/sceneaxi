@@ -13,7 +13,12 @@
  */
 
 import { requireAuthenticated } from "@sceneaxi/auth";
-import type { CreditLedgerEntry, IdentitySurface } from "@sceneaxi/schemas";
+import {
+  isEpochMilliseconds,
+  isPlainRecord,
+  type CreditLedgerEntry,
+  type IdentitySurface,
+} from "@sceneaxi/schemas";
 import {
   appendCreditEntry,
   deriveEntryId,
@@ -48,15 +53,11 @@ export type MeterOutcome = Readonly<{
   replayed: boolean;
 }>;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 /** Debit an account for metered usage, or refuse without partial application. */
 export function meterCredits(
   request: MeterCreditsRequest,
 ): BillingOutcome<MeterOutcome> {
-  if (!isRecord(request)) {
+  if (!isPlainRecord(request)) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.requestInvalid,
       "A metering request must be a plain object.",
@@ -65,10 +66,10 @@ export function meterCredits(
   const { principal, state, amount, reason, idempotencyKey, now, surface } =
     request;
 
-  if (typeof now !== "number" || !Number.isFinite(now)) {
+  if (!isEpochMilliseconds(now)) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.clockInvalid,
-      "Metering requires a finite epoch-millisecond clock.",
+      "Metering requires valid epoch milliseconds.",
     );
   }
   if (!Number.isSafeInteger(amount) || amount < 1) {
@@ -90,8 +91,8 @@ export function meterCredits(
     );
   }
   if (
-    !isRecord(state) ||
-    !isRecord(state["account"]) ||
+    !isPlainRecord(state) ||
+    !isPlainRecord(state["account"]) ||
     !Array.isArray(state["entries"])
   ) {
     return billingRefuse(

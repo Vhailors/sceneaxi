@@ -17,7 +17,9 @@
 
 import {
   claimedRoleKey,
+  isEpochMilliseconds,
   isIdentitySurface,
+  isPlainRecord,
   validatePrincipal,
   validateSession,
   validateUser,
@@ -80,10 +82,6 @@ const SIGN_IN_KEYS = Object.freeze(["surface", "email", "password"]);
 const VERIFY_KEYS = Object.freeze(["surface", "sessionId", "token"]);
 const SIGN_OUT_KEYS = Object.freeze(["sessionId"]);
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 /**
  * Shape, role-claim, and Kids checks, in that order, for any inbound request.
  * Returns the record on success so callers read fields only after it passed.
@@ -93,7 +91,7 @@ function screenRequest(
   keys: ReadonlyArray<string>,
   requireSurface: boolean,
 ): AuthResult<Record<string, unknown>> {
-  if (!isRecord(request)) {
+  if (!isPlainRecord(request)) {
     return authRefuse(
       AUTH_REFUSE_REASONS.requestInvalid,
       "The identity request must be a plain object.",
@@ -163,10 +161,10 @@ function readClock(clock: (() => number) | undefined): AuthResult<number> {
       "The configured clock threw; the identity port refuses.",
     );
   }
-  if (typeof now !== "number" || !Number.isFinite(now)) {
+  if (!isEpochMilliseconds(now)) {
     return authRefuse(
       AUTH_REFUSE_REASONS.clockInvalid,
-      "The configured clock did not return finite epoch milliseconds.",
+      "The configured clock did not return valid epoch milliseconds.",
     );
   }
   return authOk(now);

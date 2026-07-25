@@ -14,7 +14,9 @@
  */
 
 import {
+  isEpochMilliseconds,
   isIdentitySurface,
+  isPlainRecord,
   type IdentitySurface,
   type Session,
 } from "@sceneaxi/schemas";
@@ -92,10 +94,6 @@ export function createBetterAuthIdentityAdapter(
 
 const IDENTIFIER_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function readExpiry(value: unknown): string | undefined {
   if (value instanceof Date) {
     const time = value.getTime();
@@ -126,12 +124,14 @@ export function mapBetterAuthAuthentication(input: {
   readonly issuedAt: number;
 }): MappedAuthentication | undefined {
   const { authentication, surface, issuedAt } = input;
-  if (!isIdentitySurface(surface) || !Number.isFinite(issuedAt)) return undefined;
-  if (!isRecord(authentication)) return undefined;
+  if (!isIdentitySurface(surface) || !isEpochMilliseconds(issuedAt)) {
+    return undefined;
+  }
+  if (!isPlainRecord(authentication)) return undefined;
 
   const user = authentication["user"];
   const session = authentication["session"];
-  if (!isRecord(user) || !isRecord(session)) return undefined;
+  if (!isPlainRecord(user) || !isPlainRecord(session)) return undefined;
 
   const providerUserId = user["id"];
   const email = user["email"];

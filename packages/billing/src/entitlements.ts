@@ -23,7 +23,9 @@ import {
   ENTITLEMENT_SCHEMA_VERSION,
   STARTER_CREDIT_GRANT,
   entitlementRuleFor,
+  isEpochMilliseconds,
   isEntitlementCapability,
+  isPlainRecord,
   type EntitlementCapability,
   type EntitlementDecision,
   type IdentitySurface,
@@ -66,10 +68,6 @@ export type EvaluateEntitlementRequest = Readonly<{
   surface?: IdentitySurface | undefined;
 }>;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 /**
  * Build a decision.
  *
@@ -108,7 +106,7 @@ function decide(
 export function evaluateEntitlement(
   request: EvaluateEntitlementRequest,
 ): BillingOutcome<EntitlementDecision> {
-  if (!isRecord(request)) {
+  if (!isPlainRecord(request)) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.requestInvalid,
       "An entitlement request must be a plain object.",
@@ -124,10 +122,10 @@ export function evaluateEntitlement(
     surface,
   } = request;
 
-  if (typeof now !== "number" || !Number.isFinite(now)) {
+  if (!isEpochMilliseconds(now)) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.clockInvalid,
-      "Entitlement evaluation requires a finite epoch-millisecond clock.",
+      "Entitlement evaluation requires valid epoch milliseconds.",
     );
   }
 
@@ -199,8 +197,8 @@ export function evaluateEntitlement(
   const amount = creditAmount as number;
 
   if (
-    !isRecord(state) ||
-    !isRecord(state["account"]) ||
+    !isPlainRecord(state) ||
+    !isPlainRecord(state["account"]) ||
     typeof state["balance"] !== "number"
   ) {
     return billingRefuse(
@@ -251,8 +249,8 @@ export function grantStarterCredits(
     );
   }
   if (
-    !isRecord(state) ||
-    !isRecord(state["account"]) ||
+    !isPlainRecord(state) ||
+    !isPlainRecord(state["account"]) ||
     !Array.isArray(state["entries"])
   ) {
     return billingRefuse(

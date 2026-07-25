@@ -201,11 +201,27 @@ describe("createCheckoutSessionIntent", () => {
       { userId: 42 },
       { idempotencyKey: "" },
       { now: Number.NaN },
+      { now: Number.MAX_VALUE },
     ]) {
       expect(createCheckoutSessionIntent(intentRequest(patch) as never).ok).toBe(
         false,
       );
     }
+  });
+
+  it("refuses accessor-bearing requests without invoking getters", () => {
+    const request = intentRequest() as Record<string, unknown>;
+    Object.defineProperty(request, "catalog", {
+      enumerable: true,
+      get() {
+        throw new Error("untrusted getter");
+      },
+    });
+
+    const result = createCheckoutSessionIntent(request as never);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.requestInvalid);
   });
 
   it("carries no secret-shaped field", () => {
@@ -441,7 +457,7 @@ describe("verifyStripeWebhookSignature", () => {
         payload,
         header: signed(payload),
         secret: SECRET,
-        now: Number.NaN,
+        now: Number.MAX_VALUE,
       }).ok,
     ).toBe(false);
     expect(
