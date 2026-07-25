@@ -21,7 +21,7 @@ L3  profiles · cli · importers · provider adapters · plugin-host · auth ←
                        (identity plane; schema in db/migrations)
 L4  apps               (leaves; nothing depends on an app)
 L4  sites              site-kit ← the three deployable sites (leaves; ADR 0018),
-                       plus one charted edge: umbrella ← engine-presentation,
+plus one charted edge: engine-presentation ← umbrella,
                        the public viewport (ADR 0022)
 ```
 
