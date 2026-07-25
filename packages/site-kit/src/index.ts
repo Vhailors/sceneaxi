@@ -65,6 +65,37 @@ export {
 } from "./ports.js";
 
 export {
+  CATALOG_SURFACES,
+  CREATOR_SHARE_RULE,
+  SITE_CATALOG_POLICY_CITES,
+  attemptCatalogPurchase,
+  createPublishIntent,
+  creatorShare,
+  describeListingPrice,
+  listSiteCatalog,
+  showSiteListing,
+  submitPublishIntent,
+  type CatalogCommerceRefusal,
+  type CatalogPurchaseRequest,
+  type CatalogSurface,
+  type CreatorShare,
+  type PriceDisplay,
+  type PublishIntent,
+  type SiteListing,
+  type SiteListingPrice,
+  type SiteMoneyPrice,
+} from "./catalog.js";
+
+export {
+  EDITOR_DEEP_LINK_PARAMS,
+  EDITOR_DEEP_LINK_PATH,
+  buildEditorDeepLink,
+  parseEditorDeepLink,
+  parseEditorDeepLinkParams,
+  type EditorDeepLink,
+} from "./deep-link.js";
+
+export {
   SITE_CAPABILITIES,
   SITE_CAPABILITY_IDS,
   SITE_STARTER_CREDIT_ALLOTMENT,
