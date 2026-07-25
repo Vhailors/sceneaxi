@@ -91,6 +91,11 @@
       "releaseGroup": "identity",
       "allow": ["@sceneaxi/schemas"]
     },
+    "@sceneaxi/billing": {
+      "dir": "packages/billing",
+      "releaseGroup": "identity",
+      "allow": ["@sceneaxi/schemas", "@sceneaxi/auth"]
+    },
     "@sceneaxi/web-shell": {
       "dir": "apps/web-shell",
       "releaseGroup": "apps",

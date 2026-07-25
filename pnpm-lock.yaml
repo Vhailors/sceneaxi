@@ -81,6 +81,15 @@ importers:
         specifier: workspace:^
         version: link:../schemas
 
+  packages/billing:
+    dependencies:
+      '@sceneaxi/auth':
+        specifier: workspace:^
+        version: link:../auth
+      '@sceneaxi/schemas':
+        specifier: workspace:^
+        version: link:../schemas
+
   packages/cli:
     dependencies:
       '@sceneaxi/authoring-core':
