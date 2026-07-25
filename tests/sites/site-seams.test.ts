@@ -263,9 +263,14 @@ describe("live open copy stays honest about the presentation core", () => {
       "live frame report comes from the running presentation core",
     );
     expect(LIVE_OPEN_COPY.honesty).toContain(
-      "scene details below come from the composition pipeline",
+      "composition pipeline supplies the scene digest, instance count, hierarchy, depths, and world transforms",
     );
-    expect(LIVE_OPEN_COPY.honesty).toContain("neither is page-authored");
+    expect(LIVE_OPEN_COPY.honesty).toContain(
+      "site-kit supplies the Role labels as placement annotations",
+    );
+    expect(LIVE_OPEN_COPY.honesty).toContain(
+      "None of this evidence is page-authored",
+    );
   });
 
   it.each(SITE_SOURCE_FILES)(
