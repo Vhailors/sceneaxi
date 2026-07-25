@@ -8,6 +8,7 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+  LIVE_OPEN_INSTANCE_COUNT,
   LIVE_OPEN_PATH,
   LIVE_OPEN_PRESENTATION,
   LIVE_OPEN_SCENE_ID,
@@ -41,6 +42,8 @@ describe("live open scene", () => {
     const scene = opened();
     expect(scene.sceneId).toBe(LIVE_OPEN_SCENE_ID);
     expect(scene.instances.length).toBeGreaterThanOrEqual(2);
+    // The published count is what product copy states, so it must be the composed count.
+    expect(scene.instances.length).toBe(LIVE_OPEN_INSTANCE_COUNT);
     const roots = scene.instances.filter((instance) => instance.parentInstanceId === null);
     expect(roots.map((instance) => instance.instanceId)).toEqual([scene.rootInstanceId]);
     expect(new Set(scene.instances.map((instance) => instance.instanceId)).size).toBe(

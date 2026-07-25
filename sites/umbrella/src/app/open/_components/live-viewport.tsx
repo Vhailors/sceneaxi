@@ -18,7 +18,6 @@ import {
   createSculptMountApi,
   createThreeRenderLoop,
   createThreeSculptPresentationBackend,
-  type SculptMountApi,
   type SculptPresentationFrame,
   type ThreeSculptPresentationBackend,
 } from "@sceneaxi/engine-presentation";
@@ -48,7 +47,6 @@ type ViewportStatus =
 
 type LiveSession = {
   readonly backend: ThreeSculptPresentationBackend;
-  readonly mounts: SculptMountApi;
   readonly dispose: () => void;
 };
 
@@ -212,7 +210,6 @@ export function LiveViewport({ scene }: { readonly scene: LiveOpenScene }) {
 
       session = {
         backend,
-        mounts,
         dispose,
       };
     } catch (error) {

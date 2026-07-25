@@ -86,6 +86,14 @@ const LIVE_OPEN_PLACEMENTS = Object.freeze([
   }),
 ] as const);
 
+/**
+ * How many instances the live open scene places.
+ *
+ * Published because product copy states the count: derived from the placement list, it
+ * cannot describe a scene the pipeline no longer composes.
+ */
+export const LIVE_OPEN_INSTANCE_COUNT = LIVE_OPEN_PLACEMENTS.length;
+
 /** One instance the browser mounts, carrying the pipeline's own world transform. */
 export type LiveOpenInstance = {
   readonly instanceId: string;

@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   LIVE_OPEN_COPY,
+  LIVE_OPEN_INSTANCE_COUNT,
   LIVE_OPEN_PATH,
   LIVE_OPEN_PRESENTATION,
   UMBRELLA_BRAND,
@@ -306,6 +307,14 @@ describe("live open copy stays honest about the presentation core", () => {
   it("names the product presentation core the way ADR 0017 requires", () => {
     expect(LIVE_OPEN_PRESENTATION.coreLabel).toBe("Three presentation core");
     expect(LIVE_OPEN_COPY.lede).toContain("Three presentation core");
+  });
+
+  it("states an instance count the served scene actually has", () => {
+    const opened = resolveLiveOpenScene();
+    expect(opened.ok).toBe(true);
+    if (!opened.ok) return;
+    expect(LIVE_OPEN_INSTANCE_COUNT).toBe(opened.value.instances.length);
+    expect(LIVE_OPEN_COPY.lede).toContain(`places ${opened.value.instances.length} instances`);
   });
 
   it("attributes runtime and scene evidence to their actual producers", () => {

@@ -121,6 +121,7 @@ export {
 } from "./starter-artifact.js";
 
 export {
+  LIVE_OPEN_INSTANCE_COUNT,
   LIVE_OPEN_PATH,
   LIVE_OPEN_PRESENTATION,
   LIVE_OPEN_SCENE_ID,

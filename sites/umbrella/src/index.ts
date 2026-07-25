@@ -26,6 +26,7 @@ export {
 
 export {
   LIVE_OPEN_COPY,
+  LIVE_OPEN_INSTANCE_COUNT,
   LIVE_OPEN_PATH,
   LIVE_OPEN_PRESENTATION,
   describePlacement,

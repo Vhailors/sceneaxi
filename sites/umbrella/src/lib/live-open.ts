@@ -10,6 +10,7 @@
  * consumes no credits, and exposes no editing operation.
  */
 import {
+  LIVE_OPEN_INSTANCE_COUNT,
   LIVE_OPEN_PATH,
   LIVE_OPEN_PRESENTATION,
   liveOpenScene,
@@ -18,15 +19,19 @@ import {
   type SiteResult,
 } from "@sceneaxi/site-kit";
 
-export { LIVE_OPEN_PATH, LIVE_OPEN_PRESENTATION };
+export { LIVE_OPEN_INSTANCE_COUNT, LIVE_OPEN_PATH, LIVE_OPEN_PRESENTATION };
 export type { LiveOpenInstance, LiveOpenScene };
 
-/** Headline copy for the live open path, kept beside the brand rather than in JSX. */
+/**
+ * Headline copy for the live open path, kept beside the brand rather than in JSX.
+ *
+ * The instance count is read from site-kit rather than written into the sentence, so
+ * changing the placement list can never ship copy that miscounts the served scene.
+ */
 export const LIVE_OPEN_COPY = Object.freeze({
   eyebrow: "Live open path · public",
   title: "Open a real SceneAxi artifact",
-  lede:
-    "This page reconstructs a committed Sculpt Artifact, places three instances of it through the scene-composition pipeline, and draws the result in your browser with the Three presentation core. Drag to orbit, scroll to zoom.",
+  lede: `This page reconstructs a committed Sculpt Artifact, places ${LIVE_OPEN_INSTANCE_COUNT} instances of it through the scene-composition pipeline, and draws the result in your browser with the Three presentation core. Drag to orbit, scroll to zoom.`,
   honesty:
     "The live frame report comes from the running presentation core. The composition pipeline supplies the scene digest, instance count, hierarchy, depths, and world transforms below; site-kit supplies the Role labels as placement annotations. None of this evidence is page-authored. A frame states which draw surface produced it, so a frame counter can never imply pixels that were never drawn.",
 });
