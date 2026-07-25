@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "kind": "sceneaxi.profile-game-scene-golden-evidence",
+  "status": "passed",
+  "profile": {
+    "name": "@sceneaxi/profile-game",
+    "shippingClaim": false
+  },
+  "authoring": {
+    "documentPath": "workshop-bay.authoring.sceneaxi.json",
+    "proposalPointer": "/data/sceneIntake/placements/2/transform/translation",
+    "appliedPaths": [
+      "workshop-bay.authoring.sceneaxi.json"
+    ]
+  },
+  "scene": {
+    "intakePath": "tests/e2e/fixtures/scene-composition/workshop-bay.scene.json",
+    "sceneSeed": 9101,
+    "sceneId": "workshop-bay",
+    "instanceCount": 3,
+    "sceneDigest": "sha256:f9252322ad9f81adf0a7340cd218ae85af60801e0d3602f5a59a5f922f26e500",
+    "reopenedSceneDigest": "sha256:f9252322ad9f81adf0a7340cd218ae85af60801e0d3602f5a59a5f922f26e500"
+  },
+  "presentation": {
+    "drawCalls": 17,
+    "instanceIds": [
+      "bay-service-crate",
+      "bay-stacked-crate",
+      "bay-field-drone"
+    ]
+  },
+  "kernel": {
+    "initialDigest": "sha256:b58fff2cb716ffb6787c92999167aad9c5358b34444dcd4823d67135ac7a196e",
+    "terminalDigest": "sha256:cf192879ffa5634c80644ee1e0c6dcbe353bae8efaa783e3ea01ea7b70a2f0a0",
+    "replayDigest": "sha256:cf192879ffa5634c80644ee1e0c6dcbe353bae8efaa783e3ea01ea7b70a2f0a0"
+  }
+}

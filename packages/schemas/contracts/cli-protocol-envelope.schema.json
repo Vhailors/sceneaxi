@@ -89,6 +89,10 @@
               "reReadHint": { "type": "string" }
             }
           }
+        },
+        "details": {
+          "type": "object",
+          "description": "Command-specific state retained when a typed refusal has partial results."
         }
       }
     }

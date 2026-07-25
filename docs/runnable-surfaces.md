@@ -26,6 +26,14 @@ a marketing word.
 | `@sceneaxi/web-shell` | *library only* | — | not yet startable; see sceneaxi#120 |
 
 `pnpm gate` runs everything above. `pnpm test:golden` runs just the golden e2e set.
+The Game multi-object and Web Experience tests assert their replay digests against
+checked-in `golden-digests.json` evidence rather than values produced only within
+the same run.
+
+`asset list` deliberately reads Asset Package refs from Catalog Items'
+`assetPackage` fields. SceneAxi does not define a parallel document-backed asset
+schema: Asset Package and ingestion policy remain owned by
+factories-helpers#47/#48 and are cited here rather than rewritten.
 
 ## Why the binaries run built output
 

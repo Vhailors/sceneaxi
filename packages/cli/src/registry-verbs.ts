@@ -376,7 +376,7 @@ export function assetListHelp(): ResultPayload {
   return Object.freeze({
     command: "asset list",
     description:
-      "List Asset Package refs declared by catalog items (policy SoT: factories-helpers#47/#48)",
+      "Read Catalog Item assetPackage refs by design; no document-backed asset schema is defined here (policy SoT: factories-helpers#47/#48)",
     flags: Object.freeze({
       "--dir": `Directory containing *${CATALOG_ITEM_SUFFIX} files (required)`,
       "--cwd": "Working directory for relative paths",

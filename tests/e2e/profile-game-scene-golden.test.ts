@@ -4,14 +4,19 @@
  * The single-object MVP path is `cli-golden-path.test.ts`. This one proves the
  * Game profile can drive the composition vertical landed in #113 end to end:
  *
- *   compose artifacts -> project a document -> write + reopen it
- *   -> mount N instances -> open/advance/save/replay a scene kernel session
+ *   create -> propose/apply -> compose artifacts -> project + reopen a document
+ *   -> mount N instances -> open/advance/save/replay -> stable evidence
  *
  * Everything is offline: artifacts are reconstructed from checked-in intakes at
  * their landed seeds, and the scene opens at a fixed seed. No provider, no
  * network, no credential, no spend.
  */
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,6 +25,7 @@ import { reconstructSculpt } from "../../packages/authoring-core/src/index.ts";
 import {
   composedSceneFromDocumentData,
   validateDocument,
+  type JsonObject,
   type SceneCompositionIntake,
   type SculptArtifact,
 } from "../../packages/schemas/src/index.ts";
@@ -39,7 +45,13 @@ const SOURCES = [
   },
 ] as const;
 const SCENE_SEED = 9101;
+const GOLDEN_PATH =
+  "tests/e2e/fixtures/profile-game/golden-digests.json";
+const AUTHORING_DOCUMENT_PATH = "workshop-bay.authoring.sceneaxi.json";
 const DOCUMENT_PATH = "workshop-bay.game.sceneaxi.json";
+const EVIDENCE_PATH = "workshop-bay.game.evidence.json";
+const INTAKE_EDIT_POINTER =
+  "/data/sceneIntake/placements/2/transform/translation";
 
 function readJson(path: string): unknown {
   return JSON.parse(readFileSync(join(REPO_ROOT, path), "utf8")) as unknown;
@@ -58,7 +70,7 @@ function sourceArtifacts(): readonly SculptArtifact[] {
 }
 
 describe("Game profile multi-object scene golden path", () => {
-  it("composes, persists, mounts, opens, and replays a scene through the profile", () => {
+  it("authors, composes, mounts, replays, and emits stable evidence through the profile", () => {
     const cwd = mkdtempSync(join(tmpdir(), "sceneaxi-game-scene-golden-"));
     try {
       // The profile makes no shipping claim, before or after running this path.
@@ -70,8 +82,71 @@ describe("Game profile multi-object scene golden path", () => {
       });
 
       const artifacts = sourceArtifacts();
+      const targetIntake = readJson(
+        SCENE_INTAKE_PATH,
+      ) as SceneCompositionIntake;
+      const draftIntake = {
+        ...targetIntake,
+        placements: targetIntake.placements.map((placement, index) =>
+          index === 2
+            ? {
+                ...placement,
+                transform: {
+                  ...placement.transform,
+                  translation: [0, 0, 0] as const,
+                },
+              }
+            : placement,
+        ),
+      };
+      const authoringDocument =
+        sceneGoldenPath.core.authoring.createDocument({
+          id: "workshop-bay-game-authoring",
+          title: "Game profile multi-object authoring input",
+          data: { sceneIntake: draftIntake } as JsonObject,
+        });
+      const authoringWrite =
+        sceneGoldenPath.core.authoring.writeDocumentFile(
+          AUTHORING_DOCUMENT_PATH,
+          authoringDocument,
+          { cwd },
+        );
+      expect(authoringWrite.ok).toBe(true);
+
+      const targetTranslation =
+        targetIntake.placements[2]?.transform.translation;
+      if (targetTranslation === undefined) {
+        throw new Error("golden intake is missing its third placement");
+      }
+      const proposed = sceneGoldenPath.core.authoring.propose({
+        documentPath: AUTHORING_DOCUMENT_PATH,
+        jsonPointer: INTAKE_EDIT_POINTER,
+        newValue: targetTranslation,
+        cwd,
+      });
+      expect(proposed.ok).toBe(true);
+      if (!proposed.ok) {
+        throw new Error(proposed.diagnostics[0]?.message ?? "proposal refused");
+      }
+      const applied = sceneGoldenPath.core.authoring.apply({
+        proposal: proposed.proposal,
+        cwd,
+      });
+      expect(applied.ok).toBe(true);
+      if (!applied.ok) {
+        throw new Error(applied.diagnostics[0]?.message ?? "apply refused");
+      }
+
+      const authored = validateDocument(
+        JSON.parse(
+          readFileSync(join(cwd, AUTHORING_DOCUMENT_PATH), "utf8"),
+        ) as unknown,
+      );
+      expect(authored.ok).toBe(true);
+      if (!authored.ok) return;
+
       const composed = sceneGoldenPath.core.authoring.composeScene(
-        readJson(SCENE_INTAKE_PATH) as SceneCompositionIntake,
+        authored.document.data["sceneIntake"],
         artifacts,
         {
           documentId: "workshop-bay-game-scene",
@@ -154,6 +229,48 @@ describe("Game profile multi-object scene golden path", () => {
         .observe();
       expect(replayed.digest).toBe(terminal.digest);
       expect(replayed.instances).toHaveLength(3);
+
+      const evidence = {
+        schemaVersion: 1,
+        kind: "sceneaxi.profile-game-scene-golden-evidence",
+        status: "passed",
+        profile: {
+          name: sceneGoldenPath.seam.name,
+          shippingClaim: sceneGoldenPath.status.shippingClaim,
+        },
+        authoring: {
+          documentPath: AUTHORING_DOCUMENT_PATH,
+          proposalPointer: INTAKE_EDIT_POINTER,
+          appliedPaths: applied.appliedPaths,
+        },
+        scene: {
+          intakePath: SCENE_INTAKE_PATH,
+          sceneSeed: SCENE_SEED,
+          sceneId: composed.scene.sceneId,
+          instanceCount: composed.scene.instances.length,
+          sceneDigest: composed.sceneDigest,
+          reopenedSceneDigest: reopenedScene.value.evidence.sceneDigest,
+        },
+        presentation: {
+          drawCalls: frame.drawCalls,
+          instanceIds: composed.scene.instances.map(
+            (instance) => instance.instanceId,
+          ),
+        },
+        kernel: {
+          initialDigest: initial.digest,
+          terminalDigest: terminal.digest,
+          replayDigest: replayed.digest,
+        },
+      };
+      writeFileSync(
+        join(cwd, EVIDENCE_PATH),
+        `${JSON.stringify(evidence, null, 2)}\n`,
+        "utf8",
+      );
+      expect(
+        JSON.parse(readFileSync(join(cwd, EVIDENCE_PATH), "utf8")) as unknown,
+      ).toEqual(readJson(GOLDEN_PATH));
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
@@ -169,7 +286,11 @@ describe("Game profile multi-object scene golden path", () => {
     );
     expect(first.ok && second.ok).toBe(true);
     if (!first.ok || !second.ok) return;
-    expect(second.sceneDigest).toBe(first.sceneDigest);
+    const golden = readJson(GOLDEN_PATH) as {
+      scene: { sceneDigest: string };
+    };
+    expect(first.sceneDigest).toBe(golden.scene.sceneDigest);
+    expect(second.sceneDigest).toBe(golden.scene.sceneDigest);
     expect(second.sceneBytes).toBe(first.sceneBytes);
   });
 

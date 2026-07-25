@@ -260,6 +260,33 @@ export function runProjectTest(
   if (!loaded.ok) return loaded.outcome;
 
   const checks = documentChecks(loaded.document, loaded.text);
+  const refused = checks.filter((check) => check.status === "refuse");
+  if (refused.length > 0) {
+    return failure(
+      "VALIDATION",
+      "Project validation checks refused the document.",
+      {
+        path,
+        diagnostics: refused.map((check) => ({
+          code: "validation-failed",
+          message: `${check.name}: ${check.detail}`,
+          documentPath,
+        })),
+        details: Object.freeze({
+          status: "refused",
+          documentPath,
+          documentId: loaded.document.id,
+          contentHash: contentHash(loaded.text),
+          checks,
+        }),
+        help: [
+          "Re-write the document through the authoring propose/apply boundary",
+          TEST_USAGE,
+        ],
+      },
+    );
+  }
+
   return success(
     Object.freeze({
       status: "passed",

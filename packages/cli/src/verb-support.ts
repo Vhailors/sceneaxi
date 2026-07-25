@@ -31,6 +31,19 @@ export function refuseUnknownArgs(
   const usage = `Run \`sceneaxi ${path.join(" ")} --help\` for usage`;
 
   for (const name of args.flags.keys()) {
+    if (allowedSwitches.has(name)) {
+      return failure(
+        "AMBIGUOUS_INPUT",
+        `Boolean switch ${name} does not accept a value.`,
+        {
+          path,
+          help: [
+            `Pass '${name}' without '=value' or a following value`,
+            usage,
+          ],
+        },
+      );
+    }
     if (!allowed.has(name) && !allowedSwitches.has(name)) {
       return failure("UNKNOWN_FLAG", `Unknown flag: ${name}`, {
         path,

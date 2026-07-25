@@ -1,4 +1,5 @@
 import {
+  existsSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -195,6 +196,26 @@ describe("project lifecycle verbs", () => {
         expect(r.envelope.error.code).toBe("NOT_IMPLEMENTED");
       }
     });
+
+    it.each([["--watch=true"], ["--watch", "true"]])(
+      "refuses valued watch form %j at the shared argument boundary",
+      (...watchArgs) => {
+        create();
+        const r = runCli([
+          "project",
+          "dev",
+          "--document",
+          "scene.json",
+          ...watchArgs,
+          "--cwd",
+          cwd,
+        ]);
+        expect(r.exitCode).toBe(ExitCode.USAGE);
+        if (!r.envelope.ok) {
+          expect(r.envelope.error.code).toBe("AMBIGUOUS_INPUT");
+        }
+      },
+    );
   });
 
   describe("project test", () => {
@@ -239,6 +260,49 @@ describe("project lifecycle verbs", () => {
       if (!r.envelope.ok) {
         expect(r.envelope.error.code).toBe("VALIDATION");
         expect(r.envelope.error.diagnostics?.length).toBeGreaterThan(0);
+      }
+    });
+
+    it("refuses a noncanonical document and retains every check", () => {
+      const document = {
+        schemaVersion: 1,
+        kind: "sceneaxi.document",
+        id: "noncanonical",
+        data: {},
+      };
+      writeFileSync(
+        join(cwd, "noncanonical.json"),
+        JSON.stringify(document, null, 4),
+        "utf8",
+      );
+      const r = runCli([
+        "project",
+        "test",
+        "--document",
+        "noncanonical.json",
+        "--cwd",
+        cwd,
+      ]);
+      expect(r.exitCode).toBe(ExitCode.USAGE);
+      if (!r.envelope.ok) {
+        expect(r.envelope.error.code).toBe("VALIDATION");
+        expect(r.envelope.error.diagnostics?.[0]?.code).toBe(
+          "validation-failed",
+        );
+        expect(r.envelope.error.details?.["status"]).toBe("refused");
+        expect(r.envelope.error.details?.["checks"]).toEqual([
+          {
+            name: "document-schema",
+            status: "pass",
+            detail: "Validated against document schema v1.",
+          },
+          {
+            name: "text-canonical-form",
+            status: "refuse",
+            detail:
+              "On-disk bytes differ from the canonical serialization; re-write via propose/apply.",
+          },
+        ]);
       }
     });
 
@@ -449,6 +513,18 @@ describe("project lifecycle verbs", () => {
       expect(r.exitCode).toBe(ExitCode.USAGE);
     });
   });
+
+  it.each([["--force=true"], ["--force", "true"]])(
+    "refuses valued force form %j at the shared argument boundary",
+    (...forceArgs) => {
+      const r = create(forceArgs);
+      expect(r.exitCode).toBe(ExitCode.USAGE);
+      if (!r.envelope.ok) {
+        expect(r.envelope.error.code).toBe("AMBIGUOUS_INPUT");
+      }
+      expect(existsSync(join(cwd, "scene.json"))).toBe(false);
+    },
+  );
 
   it("round-trips new → propose → apply → capture → report", () => {
     // `propose` replaces an existing pointer, so the seed document declares the

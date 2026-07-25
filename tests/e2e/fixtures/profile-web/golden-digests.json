@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "kind": "sceneaxi.profile-web-golden-evidence",
+  "status": "passed",
+  "profile": {
+    "name": "@sceneaxi/profile-web",
+    "policyVersion": 1,
+    "shippingClaim": false
+  },
+  "policy": {
+    "allowedScope": "interactive-experience",
+    "refusedScopes": [
+      "cms",
+      "form-builder",
+      "app-builder",
+      "conventional-next-trpc-saas"
+    ]
+  },
+  "authoring": {
+    "documentPath": "project.sceneaxi.json",
+    "entityX": 2
+  },
+  "kernel": {
+    "terminalDigest": "sha256:1dae7ae847365be08467f923350f1a164b3cf29849fc4180a4907bf96dbace90",
+    "replayDigest": "sha256:1dae7ae847365be08467f923350f1a164b3cf29849fc4180a4907bf96dbace90"
+  },
+  "presentation": {
+    "capture": null
+  }
+}
