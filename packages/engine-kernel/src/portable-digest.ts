@@ -9,6 +9,12 @@
  */
 import { KernelSessionError } from "./errors.js";
 
+export type KernelDigest = (utf8Input: string) => string;
+
+export interface KernelDigestHost {
+  readonly digest?: KernelDigest;
+}
+
 const ROUND_CONSTANTS = new Uint32Array([
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4,
   0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe,
@@ -116,14 +122,62 @@ function sha256Hex(utf8Input: string): string {
 }
 
 /** Browser-safe default digest; byte-identical to `node:crypto` sha256 of the same UTF-8 input. */
-export const portableKernelDigest = sha256Hex;
+export const portableKernelDigest: KernelDigest = sha256Hex;
+
+const DIGEST_RE = /^[0-9a-f]{64}$/;
+const DIGEST_PROBES = Object.freeze([
+  "",
+  "sceneaxi-kernel-digest",
+  "sceneaxi:\u{1f680}",
+  "sceneaxi\u0000kernel",
+  "sceneaxi-multi-block:".repeat(8),
+]);
+
+/**
+ * Resolve an optional host digest after proving it has the portable digest's
+ * shape and semantics. Injection can improve performance but cannot change
+ * snapshot or save-artifact bytes.
+ */
+export function resolveKernelDigest(
+  injected?: KernelDigest,
+): KernelDigest {
+  if (injected === undefined) return portableKernelDigest;
+  if (typeof injected !== "function") {
+    throw new KernelSessionError("injected digest must be a function");
+  }
+  for (const probe of DIGEST_PROBES) {
+    let actual: unknown;
+    try {
+      actual = injected(probe);
+    } catch {
+      throw new KernelSessionError("injected digest failed verification");
+    }
+    if (typeof actual !== "string" || !DIGEST_RE.test(actual)) {
+      throw new KernelSessionError(
+        "injected digest must return 64 lowercase hex characters",
+      );
+    }
+    if (actual !== portableKernelDigest(probe)) {
+      throw new KernelSessionError(
+        "injected digest disagrees with the portable sha256 digest",
+      );
+    }
+  }
+  return injected;
+}
 
 /** Canonical `sha256:<hex>` form used by every kernel snapshot and save artifact. */
-export function prefixedDigest(utf8Input: string): string {
-  return `sha256:${portableKernelDigest(utf8Input)}`;
+export function prefixedDigest(
+  utf8Input: string,
+  digest: KernelDigest = portableKernelDigest,
+): string {
+  return `sha256:${digest(utf8Input)}`;
 }
 
 /** First four digest bytes as a big-endian uint32 — the kernel's seed derivation. */
-export function digestUint32(utf8Input: string): number {
-  return Number.parseInt(portableKernelDigest(utf8Input).slice(0, 8), 16);
+export function digestUint32(
+  utf8Input: string,
+  digest: KernelDigest = portableKernelDigest,
+): number {
+  return Number.parseInt(digest(utf8Input).slice(0, 8), 16);
 }

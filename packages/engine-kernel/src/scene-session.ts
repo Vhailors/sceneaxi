@@ -3,6 +3,9 @@ import { KernelSessionError } from "./errors.js";
 import {
   digestUint32,
   prefixedDigest,
+  resolveKernelDigest,
+  type KernelDigest,
+  type KernelDigestHost,
 } from "./portable-digest.js";
 import {
   SCENE_COMPOSITION_SCHEMA_VERSION,
@@ -69,6 +72,17 @@ export function deriveSceneInstanceSeed(
   return digestUint32(`sceneaxi.scene-instance:${String(seed)}:${instanceId}`);
 }
 
+function deriveSceneInstanceSeedWithDigest(
+  seed: number,
+  instanceId: string,
+  digest: KernelDigest,
+) {
+  return digestUint32(
+    `sceneaxi.scene-instance:${String(seed)}:${instanceId}`,
+    digest,
+  );
+}
+
 type SceneInstanceRuntime = {
   readonly instanceId: string;
   readonly artifactId: string;
@@ -78,13 +92,15 @@ type SceneInstanceRuntime = {
 
 function digestSnapshot(
   value: Omit<SceneKernelSnapshot, "digest">,
+  digest: KernelDigest,
 ) {
-  return prefixedDigest(JSON.stringify(value));
+  return prefixedDigest(JSON.stringify(value), digest);
 }
 
 class SceneSessionImpl implements SceneKernelSession {
   private readonly scene: ComposedScene;
   private readonly options: Required<SceneKernelOptions>;
+  private readonly digest: KernelDigest;
   private readonly instances: readonly SceneInstanceRuntime[];
   private readonly advances: FrameClock[] = [];
   private tick = 0;
@@ -93,9 +109,11 @@ class SceneSessionImpl implements SceneKernelSession {
   constructor(
     scene: ComposedScene,
     options: Required<SceneKernelOptions>,
+    digest: KernelDigest,
   ) {
     this.scene = scene;
     this.options = options;
+    this.digest = digest;
     this.instances = scene.instances.map((instance) => {
       const placed = projectSceneInstanceHierarchy(instance);
       return {
@@ -110,8 +128,13 @@ class SceneSessionImpl implements SceneKernelSession {
           },
           {
             ...options,
-            seed: deriveSceneInstanceSeed(options.seed, instance.instanceId),
+            seed: deriveSceneInstanceSeedWithDigest(
+              options.seed,
+              instance.instanceId,
+              digest,
+            ),
           },
+          digest,
         ),
       };
     });
@@ -147,7 +170,10 @@ class SceneSessionImpl implements SceneKernelSession {
       ),
       instances,
     });
-    return Object.freeze({ ...payload, digest: digestSnapshot(payload) });
+    return Object.freeze({
+      ...payload,
+      digest: digestSnapshot(payload, this.digest),
+    });
   }
 
   save(): SceneKernelSaveArtifact {
@@ -171,6 +197,7 @@ class SceneSessionImpl implements SceneKernelSession {
 export function openSceneKernelSession(
   sceneValue: unknown,
   options: SceneKernelOptions,
+  host?: KernelDigestHost,
 ): SceneKernelSession {
   const scene = validateComposedScene(sceneValue);
   if (!scene.ok) {
@@ -181,12 +208,14 @@ export function openSceneKernelSession(
   return new SceneSessionImpl(
     scene.value,
     normalizeSculptKernelOptions(options),
+    resolveKernelDigest(host?.digest),
   );
 }
 
 /** Re-run every recorded advance and refuse if the terminal scene digest drifts. */
 export function replaySceneKernelSession(
   save: SceneKernelSaveArtifact,
+  host?: KernelDigestHost,
 ): SceneKernelSession {
   if (save === null || typeof save !== "object") {
     throw new KernelSessionError("invalid scene save artifact");
@@ -206,7 +235,7 @@ export function replaySceneKernelSession(
   ) {
     throw new KernelSessionError("invalid scene save advances or terminal digest");
   }
-  const session = openSceneKernelSession(save.scene, save.options);
+  const session = openSceneKernelSession(save.scene, save.options, host);
   for (const clock of save.advances) session.advance(clock);
   const terminal = session.observe().digest;
   if (terminal !== save.terminalDigest) {

@@ -16,9 +16,12 @@ import {
   open,
   openSceneKernelSession,
   openSculptKernelSession,
+  portableKernelDigest,
   replay,
   replaySceneKernelSession,
   replaySculptKernelSession,
+  type KernelDigest,
+  type KernelDigestHost,
   type KernelHost,
 } from "@sceneaxi/engine-kernel";
 import {
@@ -271,16 +274,65 @@ describe("sessions open and play without Node globals", () => {
 });
 
 describe("server kernel and browser kernel agree", () => {
-  it("produces identical save artifacts across independent sessions", () => {
+  it("produces identical scene digests with and without an injected digest", () => {
     const scene = sceneFixture();
-    const play = () => {
-      const session = openSceneKernelSession(scene, { seed: 9101 });
+    const play = (host?: KernelDigestHost) => {
+      const session = openSceneKernelSession(scene, { seed: 9101 }, host);
       for (let tick = 1; tick <= 4; tick += 1) session.advance({ tick, deltaMs: 100 });
       return session.save();
     };
-    const first = play();
-    const second = play();
-    expect(first.terminalDigest).toBe(second.terminalDigest);
-    expect(JSON.stringify(first)).toBe(JSON.stringify(second));
+    let calls = 0;
+    const hostDigest: KernelDigest = (input) => {
+      calls += 1;
+      return portableKernelDigest(input);
+    };
+    const injected = play({ digest: hostDigest });
+    const portable = play();
+    expect(calls).toBeGreaterThan(0);
+    expect(injected.terminalDigest).toBe(portable.terminalDigest);
+    expect(JSON.stringify(injected)).toBe(JSON.stringify(portable));
+  });
+
+  it("uses an injected digest across entity and sculpt open paths", () => {
+    let entityCalls = 0;
+    const entityDigest: KernelDigest = (input) => {
+      entityCalls += 1;
+      return portableKernelDigest(input);
+    };
+    const entity = open(
+      { productId: "browser-demo", seed: 11 },
+      { nowMs: () => 1_000, digest: entityDigest },
+    );
+    entity.observe();
+    expect(entityCalls).toBeGreaterThan(0);
+
+    let sculptCalls = 0;
+    const sculptDigest: KernelDigest = (input) => {
+      sculptCalls += 1;
+      return portableKernelDigest(input);
+    };
+    const sculpt = openSculptKernelSession(
+      crate,
+      { seed: 4242 },
+      { digest: sculptDigest },
+    );
+    sculpt.observe();
+    expect(sculptCalls).toBeGreaterThan(0);
+  });
+
+  it("refuses entity, sculpt, and scene sessions whose injected digest disagrees", () => {
+    const badHost = { digest: () => "0".repeat(64) };
+    expect(() =>
+      open(
+        { productId: "browser-demo", seed: 11 },
+        { nowMs: () => 1_000, ...badHost },
+      ),
+    ).toThrow(/disagrees with the portable sha256 digest/);
+    expect(() =>
+      openSculptKernelSession(crate, { seed: 4242 }, badHost),
+    ).toThrow(/disagrees with the portable sha256 digest/);
+    expect(() =>
+      openSceneKernelSession(sceneFixture(), { seed: 9101 }, badHost),
+    ).toThrow(/disagrees with the portable sha256 digest/);
   });
 });

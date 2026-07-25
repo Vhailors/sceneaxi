@@ -5,7 +5,12 @@
  * browser (see `./portable-digest.ts` and docs/kernel-browser-open.md).
  */
 import { KernelSessionError } from "./errors.js";
-import { prefixedDigest } from "./portable-digest.js";
+import {
+  prefixedDigest,
+  resolveKernelDigest,
+  type KernelDigest,
+  type KernelDigestHost,
+} from "./portable-digest.js";
 import {
   KERNEL_SESSION_SCHEMA_VERSION,
   type FrameClock,
@@ -28,7 +33,7 @@ const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
 const ID_RE = /^[a-z0-9][a-z0-9-]*$/;
 
 /** Host services injected at open/replay. */
-export interface KernelHost {
+export interface KernelHost extends KernelDigestHost {
   readonly nowMs: () => number;
 }
 
@@ -58,7 +63,12 @@ export function open(
 ): KernelSession {
   validateManifest(productManifest);
   validateHost(host);
-  return new SessionImpl(cloneManifest(productManifest), host, []);
+  return new SessionImpl(
+    cloneManifest(productManifest),
+    host,
+    [],
+    resolveKernelDigest(host.digest),
+  );
 }
 
 export function replay(
@@ -93,7 +103,12 @@ export function replay(
     throw new KernelSessionError("save artifact has invalid terminalDigest");
   }
 
-  const session = new SessionImpl(cloneManifest(artifact.productManifest), host, []);
+  const session = new SessionImpl(
+    cloneManifest(artifact.productManifest),
+    host,
+    [],
+    resolveKernelDigest(host.digest),
+  );
   let hasPendingDispatch = false;
 
   for (const event of artifact.events) {
@@ -262,18 +277,20 @@ function computeDigest(
   tick: number,
   seed: number,
   entities: ReadonlyArray<SnapshotEntity>,
+  digest: KernelDigest,
 ): string {
   const payload = JSON.stringify({
     tick,
     seed,
     entities: entities.map((e) => ({ id: e.id, x: e.x, y: e.y })),
   });
-  return prefixedDigest(payload);
+  return prefixedDigest(payload, digest);
 }
 
 class SessionImpl implements KernelSession {
   private readonly manifest: ProductManifest;
   private readonly host: KernelHost;
+  private readonly digest: KernelDigest;
   private entities: Map<string, MutableEntity>;
   private readonly pending: PendingDispatch[] = [];
   private readonly events: KernelSessionEvent[] = [];
@@ -283,9 +300,11 @@ class SessionImpl implements KernelSession {
     manifest: ProductManifest,
     host: KernelHost,
     initialEvents: KernelSessionEvent[],
+    digest: KernelDigest,
   ) {
     this.manifest = manifest;
     this.host = host;
+    this.digest = digest;
     this.entities = seedEntities(manifest);
     this.events.push(...initialEvents);
   }
@@ -386,6 +405,7 @@ class SessionImpl implements KernelSession {
       this.tick,
       this.manifest.seed,
       entities,
+      this.digest,
     );
     return Object.freeze({
       tick: this.tick,
