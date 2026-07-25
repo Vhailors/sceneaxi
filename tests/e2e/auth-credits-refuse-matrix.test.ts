@@ -20,6 +20,7 @@ import {
   applyCreditsSale,
   assertModeAuthorized,
   createCheckoutSessionIntent,
+  createInMemoryCreditStore,
   createLedgerState,
   createListingCheckoutIntent,
   deriveBalance,
@@ -491,13 +492,18 @@ describe("billing refuse matrix", () => {
     }
   });
 
-  it("reaches every metering refusal", () => {
+  it("reaches every metering refusal", async () => {
     const state = funded(10);
-    const meter = (overrides: Record<string, unknown>) =>
+    const store = createInMemoryCreditStore({
+      accounts: [state.account],
+      entries: state.entries,
+    });
+    const meter = async (overrides: Record<string, unknown>) =>
       record(
-        meterCredits({
+        await meterCredits({
           principal: principal(),
           admin,
+          store,
           state,
           amount: 1,
           reason: "case",
@@ -506,12 +512,12 @@ describe("billing refuse matrix", () => {
           ...overrides,
         } as never),
       );
-    meter({ now: Number.NaN, admin });
-    meter({ amount: 0 });
-    meter({ reason: "" });
-    meter({ state: { entries: [] } });
-    meter({ principal: principal({ userId: "usr_other" }) });
-    meter({ amount: 1_000 });
+    await meter({ now: Number.NaN, admin });
+    await meter({ amount: 0 });
+    await meter({ reason: "" });
+    await meter({ state: { entries: [] } });
+    await meter({ principal: principal({ userId: "usr_other" }) });
+    await meter({ amount: 1_000 });
   });
 
   it("reaches every entitlement refusal", () => {

@@ -16,15 +16,18 @@ import { requireAuthenticated, type AdminIdentity } from "@sceneaxi/auth";
 import {
   isEpochMilliseconds,
   snapshotPlainRecord,
+  type CreditAccount,
   type CreditLedgerEntry,
   type IdentitySurface,
 } from "@sceneaxi/schemas";
 import {
   appendCreditEntry,
   deriveEntryId,
+  loadLedgerState,
   validateLedgerState,
   type LedgerState,
 } from "./ledger.js";
+import type { CreditStore } from "./store.js";
 import {
   BILLING_REFUSE_REASONS,
   billingOk,
@@ -36,6 +39,7 @@ export type MeterCreditsRequest = Readonly<{
   principal: unknown;
   /** The single resolved admin identity, used to re-derive the role at the guard. */
   admin: AdminIdentity;
+  store: CreditStore;
   state: LedgerState;
   /** Positive integer credits to burn. */
   amount: number;
@@ -57,9 +61,17 @@ export type MeterOutcome = Readonly<{
 }>;
 
 /** Debit an account for metered usage, or refuse without partial application. */
-export function meterCredits(
+function sameLedgerState(left: LedgerState, right: LedgerState): boolean {
+  return (
+    left.balance === right.balance &&
+    JSON.stringify(left.account) === JSON.stringify(right.account) &&
+    JSON.stringify(left.entries) === JSON.stringify(right.entries)
+  );
+}
+
+export async function meterCredits(
   request: MeterCreditsRequest,
-): BillingOutcome<MeterOutcome> {
+): Promise<BillingOutcome<MeterOutcome>> {
   const record = snapshotPlainRecord(request);
   if (record === undefined) {
     return billingRefuse(
@@ -68,8 +80,17 @@ export function meterCredits(
     );
   }
   const screened = record as MeterCreditsRequest;
-  const { principal, admin, state, amount, reason, idempotencyKey, now, surface } =
-    screened;
+  const {
+    principal,
+    admin,
+    store,
+    state,
+    amount,
+    reason,
+    idempotencyKey,
+    now,
+    surface,
+  } = screened;
 
   if (!isEpochMilliseconds(now)) {
     return billingRefuse(
@@ -113,20 +134,55 @@ export function meterCredits(
     );
   }
 
-  // The captain's unlimited allowance. Reported, not faked with a zero entry.
+  let persistedAccount: CreditAccount | undefined;
+  let persistedEntries: ReadonlyArray<CreditLedgerEntry>;
+  try {
+    persistedAccount = await store.findAccountById(
+      validatedState.value.account.accountId,
+    );
+    if (persistedAccount === undefined || persistedAccount === null) {
+      return billingRefuse(
+        BILLING_REFUSE_REASONS.ledgerStateInvalid,
+        "The credit account does not exist in persistence; metering refuses.",
+      );
+    }
+    persistedEntries = await store.listEntries(
+      validatedState.value.account.accountId,
+    );
+  } catch {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.storeFailed,
+      "The credit store failed while loading the metering account.",
+    );
+  }
+
+  const persistedState = loadLedgerState(persistedAccount, persistedEntries);
+  if (!persistedState.ok) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.ledgerStateInvalid,
+      `The persisted credit account is invalid: ${persistedState.message}`,
+    );
+  }
+  if (!sameLedgerState(validatedState.value, persistedState.value)) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.ledgerStateInvalid,
+      "The supplied ledger state is not the current persisted account state.",
+    );
+  }
+
   if (guarded.value.role.role === "admin") {
     return billingOk(
       Object.freeze({
-        state: validatedState.value,
+        state: persistedState.value,
         metered: false,
         entry: undefined,
-        balance: validatedState.value.balance,
+        balance: persistedState.value.balance,
         replayed: false,
       }),
     );
   }
 
-  const appended = appendCreditEntry(validatedState.value, {
+  const appended = appendCreditEntry(persistedState.value, {
     entryId: deriveEntryId(idempotencyKey),
     movement: "debit",
     delta: -amount,
@@ -135,6 +191,17 @@ export function meterCredits(
     now,
   });
   if (!appended.ok) return appended;
+
+  if (!appended.value.replayed && appended.value.entry !== undefined) {
+    try {
+      await store.appendEntry(appended.value.entry);
+    } catch {
+      return billingRefuse(
+        BILLING_REFUSE_REASONS.storeFailed,
+        "The credit store failed while persisting the metered debit.",
+      );
+    }
+  }
 
   return billingOk(
     Object.freeze({

@@ -307,5 +307,21 @@ describe("identity contract version", () => {
         additionalProperties: false,
       }),
     );
+    expect(schema.$defs["roleAssignment"]).toEqual(
+      expect.objectContaining({
+        allOf: [
+          {
+            if: {
+              properties: { role: { const: "admin" } },
+              required: ["role"],
+            },
+            then: {
+              properties: { source: { const: "admin-env" } },
+              required: ["source"],
+            },
+          },
+        ],
+      }),
+    );
   });
 });

@@ -452,6 +452,63 @@ describe("applyCreditsSale", () => {
     expect(store.shareRecordCount()).toBe(1);
   });
 
+  it("snapshots and freezes every atomic settlement record", async () => {
+    const target = listing("lantern-prop");
+    const buyerState = funded(100, BUYER);
+    const creatorAccount = account(target.sellerUserId, "acc_creator");
+    const applied = applyCreditsSale({
+      principal: principal(),
+      admin,
+      listing: target,
+      buyerState,
+      creatorState: createLedgerState(creatorAccount),
+      now: NOW,
+      saleId: "sale_snapshot",
+    });
+    expect(applied.ok).toBe(true);
+    if (
+      !applied.ok ||
+      applied.value.buyer.entry === undefined ||
+      applied.value.creator?.entry === undefined
+    ) {
+      return;
+    }
+
+    const buyerEntry = { ...applied.value.buyer.entry };
+    const creatorEntry = { ...applied.value.creator.entry };
+    const share = { ...applied.value.share };
+    const store = createInMemoryCreditStore({
+      accounts: [BUYER, creatorAccount],
+      entries: buyerState.entries,
+    });
+    const settled = await store.settleCreditsSale({
+      buyerEntry,
+      creatorEntry,
+      share,
+    });
+    expect(settled.replayed).toBe(false);
+
+    buyerEntry.reason = "rewritten buyer";
+    creatorEntry.reason = "rewritten creator";
+    share.creatorCredits = 0;
+
+    const storedBuyer = (await store.listEntries(BUYER.accountId)).at(-1);
+    const storedCreator = (await store.listEntries(creatorAccount.accountId)).at(
+      -1,
+    );
+    expect(storedBuyer?.reason).toBe(applied.value.buyer.entry.reason);
+    expect(storedCreator?.reason).toBe(applied.value.creator.entry.reason);
+    expect(Object.isFrozen(storedBuyer)).toBe(true);
+    expect(Object.isFrozen(storedCreator)).toBe(true);
+
+    const replay = await store.settleCreditsSale({
+      buyerEntry: applied.value.buyer.entry,
+      creatorEntry: applied.value.creator.entry,
+      share: applied.value.share,
+    });
+    expect(replay.replayed).toBe(true);
+  });
+
   it("refuses settlement entries that do not extend persisted ledger tails", async () => {
     const target = listing("lantern-prop");
     const persistedBuyerState = funded(10, BUYER);

@@ -401,6 +401,41 @@ describe("identity port — sign-in", () => {
     if (result.ok) return;
     expect(result.reason).toBe(AUTH_REFUSE_REASONS.storeFailed);
   });
+
+  it("refuses malformed stored users before reading their fields", async () => {
+    let getterRead = false;
+    const malformedUsers = [
+      null,
+      Object.defineProperty({}, "userId", {
+        enumerable: true,
+        get() {
+          getterRead = true;
+          throw new Error("untrusted getter");
+        },
+      }),
+    ];
+
+    for (const storedUser of malformedUsers) {
+      const result = await makePort(
+        {},
+        Object.freeze({
+          findUserByEmail: () => storedUser as never,
+          findUserById: () => undefined,
+          putSession: () => undefined,
+          findSession: () => undefined,
+          deleteSession: () => true,
+        }),
+      ).signIn({
+        surface: "web-shell",
+        email: "crew@example.com",
+        password: "pw",
+      });
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.reason).toBe(AUTH_REFUSE_REASONS.userRecordInvalid);
+    }
+    expect(getterRead).toBe(false);
+  });
 });
 
 describe("identity port — session verification", () => {

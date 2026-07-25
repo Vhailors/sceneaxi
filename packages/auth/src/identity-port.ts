@@ -335,9 +335,16 @@ export function createIdentityPort(
           "The identity provider authenticated an address with no SceneAxi user record.",
         );
       }
+      const storedUser = validateUser(found.value);
+      if (!storedUser.ok) {
+        return authRefuse(
+          AUTH_REFUSE_REASONS.userRecordInvalid,
+          `The stored user record is invalid (${storedUser.code}): ${storedUser.message}`,
+        );
+      }
       // The provider and the store must agree on identity, or the session would
       // be bound to a user the store never authorized.
-      if (found.value.userId !== mapped.providerUserId) {
+      if (storedUser.value.userId !== mapped.providerUserId) {
         return authRefuse(
           AUTH_REFUSE_REASONS.adapterUserMismatch,
           "The identity provider's user id does not match the stored SceneAxi user.",
@@ -345,7 +352,7 @@ export function createIdentityPort(
       }
 
       const principal = assemblePrincipal({
-        user: found.value,
+        user: storedUser.value,
         session: session.value,
         admin: admin.value,
         now: clock.value,

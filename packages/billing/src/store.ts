@@ -7,10 +7,14 @@
  * that the real trigger would catch could pass the whole test suite.
  */
 
-import type {
-  CreatorShareRecord,
-  CreditAccount,
-  CreditLedgerEntry,
+import {
+  snapshotPlainRecord,
+  validateCreatorShareRecord,
+  validateCreditAccount,
+  validateCreditLedgerEntry,
+  type CreatorShareRecord,
+  type CreditAccount,
+  type CreditLedgerEntry,
 } from "@sceneaxi/schemas";
 import type { Awaitable } from "@sceneaxi/auth";
 
@@ -55,6 +59,43 @@ export type InMemoryCreditStore = CreditStore &
     entryCount(accountId: string): number;
     shareRecordCount(): number;
   }>;
+
+const SALE_ENTRY_PREFIX = "sale:";
+
+function saleIdForEntryKey(key: string): string | undefined {
+  if (!key.startsWith(SALE_ENTRY_PREFIX)) return undefined;
+  if (key.endsWith(":buyer")) return key.slice(5, -6);
+  if (key.endsWith(":creator")) return key.slice(5, -8);
+  return "";
+}
+
+function fail(message: string): never {
+  throw new Error(`credit store: ${message}`);
+}
+
+function snapshotAccount(account: unknown): CreditAccount {
+  const validated = validateCreditAccount(account);
+  if (!validated.ok) {
+    return fail(`invalid account (${validated.code}): ${validated.message}`);
+  }
+  return validated.value;
+}
+
+function snapshotEntry(entry: unknown): CreditLedgerEntry {
+  const validated = validateCreditLedgerEntry(entry);
+  if (!validated.ok) {
+    return fail(`invalid entry (${validated.code}): ${validated.message}`);
+  }
+  return validated.value;
+}
+
+function snapshotShare(share: unknown): CreatorShareRecord {
+  const validated = validateCreatorShareRecord(share);
+  if (!validated.ok) {
+    return fail(`invalid share (${validated.code}): ${validated.message}`);
+  }
+  return validated.value;
+}
 
 function sameEntry(
   left: CreditLedgerEntry | undefined,
@@ -128,7 +169,14 @@ export function createInMemoryCreditStore(
   const shareRecords: CreatorShareRecord[] = [];
   const settlementsBySaleId = new Map<string, CreditsSaleSettlement>();
 
-  for (const account of options.accounts ?? []) {
+  for (const candidate of options.accounts ?? []) {
+    const account = snapshotAccount(candidate);
+    if (accountsById.has(account.accountId)) {
+      fail(`account ${account.accountId} already exists`);
+    }
+    if (accountsByUserId.has(account.userId)) {
+      fail(`user ${account.userId} already has a credit account`);
+    }
     accountsById.set(account.accountId, account);
     accountsByUserId.set(account.userId, account);
   }
@@ -162,7 +210,16 @@ export function createInMemoryCreditStore(
     }
   };
 
-  const append = (entry: CreditLedgerEntry): void => {
+  const assertKnownAccount = (entry: CreditLedgerEntry): CreditAccount => {
+    const account = accountsById.get(entry.accountId);
+    if (account === undefined) {
+      return fail(`account ${entry.accountId} does not exist`);
+    }
+    return account;
+  };
+
+  const appendSnapshot = (entry: CreditLedgerEntry): void => {
+    assertKnownAccount(entry);
     const list = listFor(entry.accountId);
     if (list.some((held) => held.sequence === entry.sequence)) {
       throw new Error(
@@ -185,33 +242,109 @@ export function createInMemoryCreditStore(
     list.push(entry);
   };
 
-  for (const entry of options.entries ?? []) append(entry);
-  for (const share of options.shareRecords ?? []) {
-    if (settlementsBySaleId.has(share.saleId)) {
-      throw new Error(
-        `credit store: share sale id ${share.saleId} already recorded`,
+  const append = (candidate: unknown): void => {
+    const entry = snapshotEntry(candidate);
+    if (entry.idempotencyKey.startsWith(SALE_ENTRY_PREFIX)) {
+      fail(
+        `sale entry ${entry.idempotencyKey} requires atomic settlement`,
       );
     }
-    const buyerEntry = entriesByIdempotencyKey.get(
-      `sale:${share.saleId}:buyer`,
-    );
-    const creatorEntry = entriesByIdempotencyKey.get(
-      `sale:${share.saleId}:creator`,
-    );
-    settlementsBySaleId.set(
-      share.saleId,
-      Object.freeze({
-        ...(buyerEntry === undefined ? {} : { buyerEntry }),
-        ...(creatorEntry === undefined ? {} : { creatorEntry }),
-        share,
-      }),
-    );
-    shareRecords.push(share);
+    appendSnapshot(entry);
+  };
+
+  for (const candidate of options.entries ?? []) {
+    appendSnapshot(snapshotEntry(candidate));
+  }
+
+  const snapshotSettlement = (
+    candidate: unknown,
+  ): CreditsSaleSettlement => {
+    const record = snapshotPlainRecord(candidate);
+    if (
+      record === undefined ||
+      !Object.hasOwn(record, "share") ||
+      Object.keys(record).some(
+        (key) =>
+          key !== "buyerEntry" && key !== "creatorEntry" && key !== "share",
+      )
+    ) {
+      return fail("a sale settlement must be a plain settlement object");
+    }
+    const share = snapshotShare(record["share"]);
+    const buyerEntry =
+      record["buyerEntry"] === undefined
+        ? undefined
+        : snapshotEntry(record["buyerEntry"]);
+    const creatorEntry =
+      record["creatorEntry"] === undefined
+        ? undefined
+        : snapshotEntry(record["creatorEntry"]);
+
+    if (
+      buyerEntry !== undefined &&
+      buyerEntry.idempotencyKey !== `sale:${share.saleId}:buyer`
+    ) {
+      return fail(`sale ${share.saleId} has an invalid buyer entry key`);
+    }
+    if (
+      creatorEntry !== undefined &&
+      creatorEntry.idempotencyKey !== `sale:${share.saleId}:creator`
+    ) {
+      return fail(`sale ${share.saleId} has an invalid creator entry key`);
+    }
+    if (
+      buyerEntry !== undefined &&
+      (buyerEntry.movement !== "debit" ||
+        buyerEntry.delta !== -share.grossCredits ||
+        assertKnownAccount(buyerEntry).userId !== share.buyerUserId)
+    ) {
+      return fail(`sale ${share.saleId} has an invalid buyer entry`);
+    }
+    if (
+      creatorEntry !== undefined &&
+      (creatorEntry.movement !== "grant" ||
+        creatorEntry.delta !== share.creatorCredits ||
+        assertKnownAccount(creatorEntry).userId !== share.creatorUserId)
+    ) {
+      return fail(`sale ${share.saleId} has an invalid creator entry`);
+    }
+    if (creatorEntry === undefined && share.creatorCredits !== 0) {
+      return fail(`sale ${share.saleId} is missing its creator entry`);
+    }
+
+    return Object.freeze({
+      ...(buyerEntry === undefined ? {} : { buyerEntry }),
+      ...(creatorEntry === undefined ? {} : { creatorEntry }),
+      share,
+    });
+  };
+
+  for (const candidate of options.shareRecords ?? []) {
+    const share = snapshotShare(candidate);
+    if (settlementsBySaleId.has(share.saleId)) {
+      fail(`share sale id ${share.saleId} already recorded`);
+    }
+    const settlement = snapshotSettlement({
+      buyerEntry: entriesByIdempotencyKey.get(`sale:${share.saleId}:buyer`),
+      creatorEntry: entriesByIdempotencyKey.get(
+        `sale:${share.saleId}:creator`,
+      ),
+      share,
+    });
+    settlementsBySaleId.set(share.saleId, settlement);
+    shareRecords.push(settlement.share);
+  }
+  for (const key of entriesByIdempotencyKey.keys()) {
+    const saleId = saleIdForEntryKey(key);
+    if (saleId !== undefined && !settlementsBySaleId.has(saleId)) {
+      fail(`sale entry ${key} has no atomic settlement record`);
+    }
   }
 
   const settle = (
-    settlement: CreditsSaleSettlement,
+    candidate: CreditsSaleSettlement,
   ): CreditsSaleSettlementOutcome => {
+    const settlement = snapshotSettlement(candidate);
     const existing = settlementsBySaleId.get(settlement.share.saleId);
     if (existing !== undefined) {
       if (!sameSettlement(existing, settlement)) {
@@ -225,14 +358,12 @@ export function createInMemoryCreditStore(
       settlement.buyerEntry,
       settlement.creatorEntry,
     ].filter((entry): entry is CreditLedgerEntry => entry !== undefined);
-    // Validate every entry against the current state and against its siblings
-    // first, so a violation on the creator side cannot leave an already-validated
-    // buyer debit committed, and two staged entries cannot collide with each other.
     const stagedSequences = new Set<string>();
     const stagedEntryIds = new Set<string>();
     const stagedIdempotencyKeys = new Set<string>();
     const stagedTails = new Map<string, CreditLedgerEntry>();
     for (const entry of entries) {
+      assertKnownAccount(entry);
       const sequenceKey = `${entry.accountId}:${entry.sequence}`;
       const list = listFor(entry.accountId);
       if (list.some((held) => held.sequence === entry.sequence)) {
@@ -274,13 +405,15 @@ export function createInMemoryCreditStore(
       stagedIdempotencyKeys.add(entry.idempotencyKey);
       stagedTails.set(entry.accountId, entry);
     }
-    // All validated: commit every entry and the share record together.
     for (const entry of entries) {
       entryIds.add(entry.entryId);
       entriesByIdempotencyKey.set(entry.idempotencyKey, entry);
       listFor(entry.accountId).push(entry);
     }
-    settlementsBySaleId.set(settlement.share.saleId, settlement);
+    settlementsBySaleId.set(
+      settlement.share.saleId,
+      Object.freeze(settlement),
+    );
     shareRecords.push(settlement.share);
     return Object.freeze({ replayed: false });
   };

@@ -161,6 +161,13 @@ export function loadLedgerState(
   account: CreditAccount,
   entries: unknown,
 ): BillingOutcome<LedgerState> {
+  const validatedAccount = validateCreditAccount(account);
+  if (!validatedAccount.ok) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.ledgerStateInvalid,
+      `The ledger account is invalid (${validatedAccount.code}): ${validatedAccount.message}`,
+    );
+  }
   const snapshot = snapshotPlainArray(entries);
   if (snapshot === undefined) {
     return billingRefuse(
@@ -170,7 +177,10 @@ export function loadLedgerState(
   }
   const foreign = snapshot.find((entry) => {
     const record = snapshotPlainRecord(entry);
-    return record !== undefined && record["accountId"] !== account.accountId;
+    return (
+      record !== undefined &&
+      record["accountId"] !== validatedAccount.value.accountId
+    );
   });
   if (foreign !== undefined) {
     return billingRefuse(
@@ -196,7 +206,7 @@ export function loadLedgerState(
 
   return billingOk(
     Object.freeze({
-      account,
+      account: validatedAccount.value,
       entries: Object.freeze(validated),
       balance: balance.value,
     }),

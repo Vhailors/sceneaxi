@@ -805,6 +805,35 @@ describe("applyCheckoutCompletedGrant", () => {
     expect(first.value.state.balance).toBe(parsed().credits);
   });
 
+  it("binds replay to the complete normalized completion", () => {
+    const completion = parsed();
+    const first = applyCheckoutCompletedGrant({
+      state: createLedgerState(ACCOUNT),
+      completion,
+      now: NOW,
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+
+    const mutations = [
+      { intentId: "intent_other" },
+      { unitAmount: completion.unitAmount + 1 },
+      { currency: "eur" },
+      { stripePriceId: "price_test_other" },
+      { occurredAt: "2026-07-25T10:00:01Z" },
+    ];
+    for (const mutation of mutations) {
+      const replay = applyCheckoutCompletedGrant({
+        state: first.value.state,
+        completion: { ...completion, ...mutation } as never,
+        now: NOW,
+      });
+      expect(replay.ok).toBe(false);
+      if (replay.ok) return;
+      expect(replay.reason).toBe(BILLING_REFUSE_REASONS.idempotencyConflict);
+    }
+  });
+
   it("refuses a live event without explicit go-live authorization", () => {
     const completion = parsed({ livemode: true });
     const refused = applyCheckoutCompletedGrant({

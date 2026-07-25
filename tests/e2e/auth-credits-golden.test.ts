@@ -15,6 +15,7 @@ import {
   applyCheckoutCompletedGrant,
   applyCreditsSale,
   createCheckoutSessionIntent,
+  createInMemoryCreditStore,
   createLedgerState,
   deriveBalance,
   evaluateEntitlement,
@@ -331,9 +332,14 @@ describe("auth + credits golden path", () => {
     const balanceAfterPurchase = crewLedger.balance;
 
     // ---- 10. a metered debit ----------------------------------------------
-    const metered = meterCredits({
+    const crewCreditStore = createInMemoryCreditStore({
+      accounts: [crewLedger.account],
+      entries: crewLedger.entries,
+    });
+    const metered = await meterCredits({
       principal: crew,
       admin: adminIdentity,
+      store: crewCreditStore,
       state: crewLedger,
       amount: 30,
       reason: "hosted assistant turn",
@@ -348,9 +354,10 @@ describe("auth + credits golden path", () => {
     expect(crewLedger.balance).toBe(balanceAfterPurchase - 30);
 
     // ---- 11. an over-balance debit refuses and appends nothing -------------
-    const overspend = meterCredits({
+    const overspend = await meterCredits({
       principal: crew,
       admin: adminIdentity,
+      store: crewCreditStore,
       state: crewLedger,
       amount: crewLedger.balance + 1,
       reason: "hosted assistant turn",
@@ -429,9 +436,12 @@ describe("auth + credits golden path", () => {
     if (!allowance.ok) return;
     expect(allowance.value.outcome).toBe("allow-unlimited");
 
-    const adminMeter = meterCredits({
+    const adminMeter = await meterCredits({
       principal: captain,
       admin: adminIdentity,
+      store: createInMemoryCreditStore({
+        accounts: [captainLedger.account],
+      }),
       state: captainLedger,
       amount: 1_000_000,
       reason: "hosted assistant turn",
@@ -476,15 +486,15 @@ describe("auth + credits golden path", () => {
     }
   });
 
-  it("is deterministic: two runs of the ledger path produce identical entries", () => {
-    const run = () => {
+  it("is deterministic: two runs of the ledger path produce identical entries", async () => {
+    const run = async () => {
       const first = grantStarterCredits({
         state: createLedgerState(account("usr_crew")),
         userId: "usr_crew",
         now: NOW,
       });
       if (!first.ok) throw new Error("run failed");
-      const second = meterCredits({
+      const second = await meterCredits({
         principal: {
           user: CREW,
           role: {
@@ -507,6 +517,10 @@ describe("auth + credits golden path", () => {
           },
         },
         admin: { email: CAPTAIN_EMAIL, source: ADMIN_EMAIL_ENV_VAR } as const,
+        store: createInMemoryCreditStore({
+          accounts: [first.value.state.account],
+          entries: first.value.state.entries,
+        }),
         state: first.value.state,
         amount: 10,
         reason: "hosted assistant turn",
@@ -516,7 +530,7 @@ describe("auth + credits golden path", () => {
       if (!second.ok) throw new Error("run failed");
       return second.value.state.entries;
     };
-    expect(JSON.stringify(run())).toBe(JSON.stringify(run()));
+    expect(JSON.stringify(await run())).toBe(JSON.stringify(await run()));
   });
 
   it("needs no ambient credential, and would notice if it did", () => {

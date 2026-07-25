@@ -387,4 +387,64 @@ describe("in-memory credit store", () => {
     expect(await store.findAccountByUserId("usr_crew")).toEqual(ACCOUNT);
     expect(await store.findAccountById("acc_missing")).toBeUndefined();
   });
+
+  it("reserves sale entries for atomic settlement", () => {
+    const state = seeded();
+    const entry = state.entries[0];
+    if (entry === undefined) throw new Error("expected an entry");
+    const store = createInMemoryCreditStore({ accounts: [ACCOUNT] });
+
+    expect(() =>
+      store.appendEntry({
+        ...entry,
+        idempotencyKey: "sale:sale_01:buyer",
+      }),
+    ).toThrow(/requires atomic settlement/);
+    expect(store.entryCount(ACCOUNT.accountId)).toBe(0);
+    expect(() =>
+      createInMemoryCreditStore({
+        accounts: [ACCOUNT],
+        entries: [
+          {
+            ...entry,
+            idempotencyKey: "sale:sale_01:buyer",
+          },
+        ],
+      }),
+    ).toThrow(/no atomic settlement record/);
+  });
+
+  it("snapshots and freezes appended entries", async () => {
+    const state = seeded();
+    const entry = state.entries[0];
+    if (entry === undefined) throw new Error("expected an entry");
+    const mutable = { ...entry };
+    const store = createInMemoryCreditStore({ accounts: [ACCOUNT] });
+
+    store.appendEntry(mutable);
+    mutable.reason = "rewritten";
+    mutable.idempotencyKey = "rewritten:key";
+
+    const stored = (await store.listEntries(ACCOUNT.accountId))[0];
+    expect(stored?.reason).toBe(entry.reason);
+    expect(stored?.idempotencyKey).toBe(entry.idempotencyKey);
+    expect(Object.isFrozen(stored)).toBe(true);
+    expect(() =>
+      store.appendEntry({
+        ...entry,
+        entryId: "ent_other",
+        sequence: 2,
+        balanceAfter: 200,
+      }),
+    ).toThrow(/idempotency key/);
+  });
+
+  it("refuses entries for an unknown account", () => {
+    const state = seeded();
+    const entry = state.entries[0];
+    if (entry === undefined) throw new Error("expected an entry");
+    const store = createInMemoryCreditStore();
+
+    expect(() => store.appendEntry(entry)).toThrow(/account acc_crew/);
+  });
 });

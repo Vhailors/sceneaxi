@@ -63,6 +63,18 @@
         "source",
         "assignedAt"
       ],
+      "allOf": [
+        {
+          "if": {
+            "properties": { "role": { "const": "admin" } },
+            "required": ["role"]
+          },
+          "then": {
+            "properties": { "source": { "const": "admin-env" } },
+            "required": ["source"]
+          }
+        }
+      ],
       "additionalProperties": false,
       "properties": {
         "schemaVersion": { "const": 1 },

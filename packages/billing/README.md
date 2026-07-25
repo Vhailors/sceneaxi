@@ -38,6 +38,10 @@ commit only one side.
 leaves the ledger untouched — reported explicitly rather than faked with a zero-credit
 entry, which would pollute the ledger with meaningless rows.
 
+**Metering is a persisted effect.** `meterCredits` loads the current account history from
+its injected `CreditStore`, refuses an absent or stale account, and appends the debit
+before it reports success.
+
 **Refusals keep their identity.** `BillingRefuseReason` includes `AuthRefuseReason`, so a
 guard refusal surfaces as `KIDS_IDENTITY_SURFACE_DENIED` or `AUTH_SESSION_EXPIRED` rather
 than being flattened into a generic "not permitted".

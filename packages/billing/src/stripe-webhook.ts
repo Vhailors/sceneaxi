@@ -14,7 +14,7 @@
  * must fail, which is why this function takes bytes and never an object.
  */
 
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import {
   isEpochMilliseconds,
   isCheckoutPurpose,
@@ -103,6 +103,28 @@ export type CheckoutSettlementPort = Readonly<{
 /** A checkout completion whose provenance is proven: parsed from a verified webhook. */
 export type VerifiedCheckoutCompletion = CheckoutCompletedEvent &
   Readonly<{ readonly [verifiedCompletionBrand]: true }>;
+
+function fingerprintCheckoutCompletion(
+  completion: CheckoutCompletedEvent,
+): string {
+  const canonical = JSON.stringify([
+    completion.schemaVersion,
+    completion.kind,
+    completion.eventId,
+    completion.type,
+    completion.mode,
+    completion.intentId,
+    completion.userId,
+    completion.purpose,
+    completion.itemId,
+    completion.credits ?? null,
+    completion.unitAmount,
+    completion.currency,
+    completion.stripePriceId,
+    completion.occurredAt,
+  ]);
+  return createHash("sha256").update(canonical, "utf8").digest("hex");
+}
 
 function toBuffer(payload: string | Uint8Array): Buffer {
   return typeof payload === "string"
@@ -464,8 +486,8 @@ export type ApplyCheckoutCompletedGrantRequest = Readonly<{
  *
  * Keyed on `stripe-event:<eventId>`, so Stripe's at-least-once delivery is safe:
  * an identical redelivery returns the existing entry and grants nothing, while
- * the same event id carrying different money is an idempotency conflict rather
- * than a second grant.
+ * the same event id carrying different normalized completion evidence is an
+ * idempotency conflict rather than a second grant.
  */
 export function applyCheckoutCompletedGrant(
   request: ApplyCheckoutCompletedGrantRequest,
@@ -522,11 +544,12 @@ export function applyCheckoutCompletedGrant(
   }
 
   const idempotencyKey = `${STRIPE_EVENT_IDEMPOTENCY_PREFIX}${validated.value.eventId}`;
+  const completionFingerprint = fingerprintCheckoutCompletion(validated.value);
   return appendCreditEntry(state, {
     entryId: deriveEntryId(idempotencyKey),
     movement: "grant",
     delta: credits,
-    reason: `credit pack ${validated.value.itemId} purchased (${validated.value.mode})`,
+    reason: `credit pack ${validated.value.itemId} purchased (${validated.value.mode}); completion-sha256:${completionFingerprint}`,
     idempotencyKey,
     now,
   });
