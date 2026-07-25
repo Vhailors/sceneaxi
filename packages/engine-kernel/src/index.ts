@@ -47,3 +47,15 @@ export {
   type SculptKernelSession,
   type SculptKernelSnapshot,
 } from "./sculpt-session.js";
+
+export {
+  SCENE_KERNEL_SAVE_KIND,
+  deriveSceneInstanceSeed,
+  openSceneKernelSession,
+  replaySceneKernelSession,
+  type SceneInstanceSnapshot,
+  type SceneKernelOptions,
+  type SceneKernelSaveArtifact,
+  type SceneKernelSession,
+  type SceneKernelSnapshot,
+} from "./scene-session.js";
