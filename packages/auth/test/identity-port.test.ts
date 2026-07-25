@@ -9,6 +9,7 @@ import {
   type IdentityAdapter,
   type IdentityStore,
 } from "@sceneaxi/auth";
+import type { User } from "@sceneaxi/schemas";
 
 const NOW = Date.parse("2026-07-25T10:00:00Z");
 const clock = () => NOW;
@@ -22,7 +23,7 @@ const CAPTAIN = {
   emailVerified: true,
   disabled: false,
   createdAt: "2026-07-25T09:00:00Z",
-} as never;
+} as const satisfies User;
 
 const CREW = {
   schemaVersion: 1,
@@ -32,7 +33,7 @@ const CREW = {
   emailVerified: true,
   disabled: false,
   createdAt: "2026-07-25T09:00:00Z",
-} as never;
+} as const satisfies User;
 
 const DISABLED = {
   schemaVersion: 1,
@@ -42,7 +43,7 @@ const DISABLED = {
   emailVerified: true,
   disabled: true,
   createdAt: "2026-07-25T09:00:00Z",
-} as never;
+} as const satisfies User;
 
 /** A Better-Auth-shaped adapter over a fixed table of credentials. */
 const fixtureAdapter = (

@@ -273,7 +273,7 @@ describe("contract to DDL lockstep", () => {
 
   it("retains every frozen v1 persisted field", () => {
     for (const [table, fields] of Object.entries(FROZEN_V1_FIELDS)) {
-      expect(CONTRACT_FIELDS[table]).toEqual(expect.arrayContaining(fields));
+      expect(CONTRACT_FIELDS[table]).toEqual(expect.arrayContaining([...fields]));
     }
   });
 });

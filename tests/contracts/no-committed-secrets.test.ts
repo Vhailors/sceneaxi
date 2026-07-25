@@ -51,17 +51,37 @@ const readText = (path: string): string | undefined => {
  * documentation naturally contain the variable names, so the patterns look for
  * values: a live-looking key body, a connection string with a host, an assignment
  * with something after the `=`.
+ *
+ * The assignment patterns use `[^\S\r\n]*` rather than `\s*` around the `=` on
+ * purpose: `\s` matches a newline, so `\s*\S+` would happily read the *next*
+ * line's text as the value and flag every `NAME=` placeholder in a committed
+ * `.env.example`. The value has to be on the same line to be a value.
  */
+const HSPACE = "[^\\S\\r\\n]*";
+const assignedTo = (name: string) =>
+  new RegExp(`^${HSPACE}${name}${HSPACE}=${HSPACE}\\S+`, "m");
+
 const FORBIDDEN: ReadonlyArray<readonly [string, RegExp]> = [
   ["a Stripe secret key", /\bsk_(?:test|live)_[A-Za-z0-9]{8,}/],
   ["a Stripe restricted key", /\brk_(?:test|live)_[A-Za-z0-9]{8,}/],
   ["a Stripe webhook secret", /\bwhsec_[A-Za-z0-9]{16,}/],
   ["a Postgres connection string", /\bpostgres(?:ql)?:\/\/[^\s"'`]+/],
   ["a Neon host", /\b[a-z0-9-]+\.[a-z0-9-]+\.neon\.tech\b/],
-  ["an assigned DATABASE_URL", /^\s*DATABASE_URL\s*=\s*\S+/m],
-  ["an assigned STRIPE_SECRET_KEY", /^\s*STRIPE_SECRET_KEY\s*=\s*\S+/m],
-  ["an assigned STRIPE_WEBHOOK_SECRET", /^\s*STRIPE_WEBHOOK_SECRET\s*=\s*\S+/m],
-  ["an assigned SCENEAXI_ADMIN_EMAIL", /^\s*SCENEAXI_ADMIN_EMAIL\s*=\s*\S+/m],
+  ["an assigned DATABASE_URL", assignedTo("DATABASE_URL")],
+  ["an assigned STRIPE_SECRET_KEY", assignedTo("STRIPE_SECRET_KEY")],
+  ["an assigned STRIPE_WEBHOOK_SECRET", assignedTo("STRIPE_WEBHOOK_SECRET")],
+  ["an assigned SCENEAXI_ADMIN_EMAIL", assignedTo("SCENEAXI_ADMIN_EMAIL")],
+];
+
+/**
+ * The few tracked files that must carry credential-shaped literals to do their
+ * job: this scan itself, and the injected-violation fixture that proves the site
+ * secret checker fails on a *planted* connection string. Nothing else is exempt,
+ * and each entry is asserted below to still be tracked, so an exemption cannot
+ * silently outlive the fixture that earned it.
+ */
+const CREDENTIAL_SHAPED_FIXTURES: ReadonlyArray<string> = [
+  "tests/boundary/injected-site-violations.test.ts",
 ];
 
 describe("no committed secrets", () => {
@@ -75,6 +95,9 @@ describe("no committed secrets", () => {
       const offenders = files.filter((file) => {
         // This file necessarily contains the patterns themselves.
         if (file === fileURLToPath(import.meta.url)) return false;
+        if (CREDENTIAL_SHAPED_FIXTURES.some((f) => file === join(repoRoot, f))) {
+          return false;
+        }
         const text = readText(file);
         if (text === undefined) return false;
         return pattern.test(text);
@@ -82,6 +105,34 @@ describe("no committed secrets", () => {
       expect(offenders.map((file) => file.slice(repoRoot.length))).toEqual([]);
     });
   }
+
+  it("exempts only fixtures that still exist and still need the exemption", () => {
+    for (const relative of CREDENTIAL_SHAPED_FIXTURES) {
+      expect(trackedFiles).toContain(relative);
+      // An exemption is only legitimate while the file actually carries a
+      // credential-shaped literal; otherwise it is a hole with no reason left.
+      const text = readText(join(repoRoot, relative));
+      expect(text).toBeDefined();
+      expect(FORBIDDEN.some(([, pattern]) => pattern.test(text ?? ""))).toBe(true);
+    }
+  });
+
+  it("keeps every committed .env.example to names only", () => {
+    const examples = trackedFiles.filter((relative) =>
+      relative.endsWith(".env.example"),
+    );
+    // Fail-closed: the sites and the root each ship one, so an empty list means
+    // the glob broke rather than that every example is clean.
+    expect(examples.length).toBeGreaterThan(1);
+    for (const relative of examples) {
+      const text = readText(join(repoRoot, relative)) ?? "";
+      for (const [label, pattern] of FORBIDDEN) {
+        expect(`${relative}: ${label}: ${pattern.test(text)}`).toBe(
+          `${relative}: ${label}: false`,
+        );
+      }
+    }
+  });
 
   it("keeps .env.example to names only", () => {
     const text = readFileSync(join(repoRoot, ".env.example"), "utf8");
