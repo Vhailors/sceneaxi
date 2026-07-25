@@ -151,7 +151,7 @@ describe("contract check — injected entitlement-matrix drift", () => {
     expect(res.stderr).toContain("duplicate capability id(s)");
   });
 
-  it("fails on a non-boolean accountRequired, now that the subset checks booleans", () => {
+  it("fails when an entry differs from the exact closed matrix", () => {
     const matrix = readMatrix(fx);
     (entryFor(matrix, "hosted-ai-assistant") as unknown as {
       accountRequired: unknown;
@@ -160,7 +160,9 @@ describe("contract check — injected entitlement-matrix drift", () => {
 
     const res = runCheck(fx, "check-contracts.mjs");
     expect(res.status).toBe(1);
-    expect(res.stderr).toContain("expected boolean");
+    expect(res.stderr).toContain(
+      "entitlement-matrix.fixtures.capabilities: expected const",
+    );
   });
 
   it("fails when the doc lockstep markers are missing", () => {

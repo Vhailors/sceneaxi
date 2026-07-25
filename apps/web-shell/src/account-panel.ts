@@ -18,10 +18,12 @@
 
 import {
   ENTITLEMENT_CAPABILITIES,
+  entitlementRuleFor,
   isEpochMilliseconds,
   snapshotPlainRecord,
   type EntitlementCapability,
   type EntitlementOutcome,
+  type EntitlementPriceKind,
   type IdentityRole,
   type IdentitySurface,
   type Principal,
@@ -34,6 +36,7 @@ import {
   type IdentityPort,
 } from "@sceneaxi/auth";
 import {
+  BILLING_REFUSE_REASONS,
   deriveBalance,
   evaluateEntitlement,
   type BillingRefuseReason,
@@ -68,6 +71,8 @@ export type AccountPanelReason =
 /** What the viewer may do, and at what cost. */
 export type CapabilityView = Readonly<{
   capability: EntitlementCapability;
+  availability?: "available";
+  price?: EntitlementPriceKind;
   outcome?: EntitlementOutcome;
   credits?: number;
   refusedReason?: AccountPanelRefusal["reason"];
@@ -149,6 +154,7 @@ function capabilityViews(
 ): ReadonlyArray<CapabilityView> {
   return Object.freeze(
     PANEL_CAPABILITIES.map((capability) => {
+      const rule = entitlementRuleFor(capability);
       const decision = evaluateEntitlement({
         capability,
         now,
@@ -156,15 +162,22 @@ function capabilityViews(
         surface,
         ...(principal === undefined ? {} : { principal }),
         ...(state === undefined ? {} : { state }),
-        // A credit-priced capability needs an amount to quote. The panel asks
-        // for one credit, which answers "may I spend at all?" without inventing
-        // a price the caller has not chosen yet.
-        creditAmount: 1,
         ...(capability === "catalog-asset-purchase"
           ? { payWith: "credits" as const }
           : {}),
       });
       if (!decision.ok) {
+        if (
+          decision.reason === BILLING_REFUSE_REASONS.creditAmountRequired &&
+          rule !== undefined &&
+          (rule.price === "credits" || rule.price === "credits-or-money")
+        ) {
+          return Object.freeze({
+            capability,
+            availability: "available" as const,
+            price: rule.price,
+          });
+        }
         return Object.freeze({ capability, refusedReason: decision.reason });
       }
       return Object.freeze(

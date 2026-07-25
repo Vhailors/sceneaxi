@@ -171,6 +171,28 @@ describe("credit pack catalog", () => {
       expect(result.ok).toBe(false);
     }
   });
+
+  it("publishes positive bounds for credits and unit amounts", () => {
+    const schema = JSON.parse(
+      readFileSync(
+        new URL("../contracts/credit-packs.schema.json", import.meta.url),
+        "utf8",
+      ),
+    ) as {
+      properties: {
+        packs: {
+          items: {
+            properties: {
+              credits: { minimum: number };
+              unitAmount: { minimum: number };
+            };
+          };
+        };
+      };
+    };
+    expect(schema.properties.packs.items.properties.credits.minimum).toBe(1);
+    expect(schema.properties.packs.items.properties.unitAmount.minimum).toBe(1);
+  });
 });
 
 describe("validateStripeCustomerLink", () => {

@@ -84,6 +84,53 @@ const makePort = (
     ...overrides,
   });
 
+describe("in-memory identity store", () => {
+  it("validates, snapshots, and freezes preloaded and written records", async () => {
+    const mutableUser = {
+      ...CREW,
+      email: String(CREW.email),
+      disabled: false,
+    };
+    const mutablePreloadedSession = {
+      schemaVersion: 1 as const,
+      kind: "sceneaxi.session" as const,
+      sessionId: "ses_preloaded",
+      userId: "usr_crew",
+      surface: "web-shell" as const,
+      issuedAt: "2026-07-25T09:00:00Z",
+      expiresAt: "2026-07-26T10:00:00Z",
+      tokenDigest: digestSessionToken("tok-preloaded"),
+    };
+    const mutableWrittenSession = {
+      ...mutablePreloadedSession,
+      sessionId: "ses_written",
+      tokenDigest: digestSessionToken("tok-written"),
+    };
+    const store = createInMemoryIdentityStore({
+      users: [mutableUser as never],
+      sessions: [mutablePreloadedSession],
+    });
+    await store.putSession(mutableWrittenSession);
+
+    mutableUser.email = "captain@example.com";
+    mutableUser.disabled = true;
+    mutablePreloadedSession.userId = "usr_other";
+    mutableWrittenSession.userId = "usr_other";
+
+    const storedUser = await store.findUserByEmail("crew@example.com");
+    const preloaded = await store.findSession("ses_preloaded");
+    const written = await store.findSession("ses_written");
+    expect(storedUser?.email).toBe("crew@example.com");
+    expect(storedUser?.disabled).toBe(false);
+    expect(await store.findUserByEmail("captain@example.com")).toBeUndefined();
+    expect(preloaded?.userId).toBe("usr_crew");
+    expect(written?.userId).toBe("usr_crew");
+    expect(Object.isFrozen(storedUser)).toBe(true);
+    expect(Object.isFrozen(preloaded)).toBe(true);
+    expect(Object.isFrozen(written)).toBe(true);
+  });
+});
+
 describe("identity port — sign-in", () => {
   it("signs the captain in as admin", async () => {
     const result = await makePort().signIn({
@@ -108,6 +155,84 @@ describe("identity port — sign-in", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.value.role.role).toBe("user");
+  });
+
+  it("requires provider and stored verification only for admin elevation", async () => {
+    const unverifiedProvider: IdentityAdapter = Object.freeze({
+      authenticate({ email }) {
+        return {
+          user: { id: "usr_captain", email, emailVerified: false },
+          session: {
+            id: "ses_unverified_provider",
+            token: "tok",
+            userId: "usr_captain",
+            expiresAt: "2026-07-26T10:00:00Z",
+          },
+        };
+      },
+    });
+    const providerStore = createInMemoryIdentityStore({ users: [CAPTAIN] });
+    const providerResult = await makePort(
+      { adapter: unverifiedProvider },
+      providerStore,
+    ).signIn({
+      surface: "web-shell",
+      email: "captain@example.com",
+      password: "pw",
+    });
+    expect(providerResult.ok).toBe(false);
+    if (!providerResult.ok) {
+      expect(providerResult.reason).toBe(
+        AUTH_REFUSE_REASONS.adminEmailUnverified,
+      );
+    }
+    expect(providerStore.sessionCount()).toBe(0);
+
+    const unverifiedCaptain = { ...CAPTAIN, emailVerified: false } as never;
+    const storedResult = await makePort(
+      {},
+      createInMemoryIdentityStore({ users: [unverifiedCaptain] }),
+    ).signIn({
+      surface: "web-shell",
+      email: "captain@example.com",
+      password: "pw",
+    });
+    expect(storedResult.ok).toBe(false);
+    if (!storedResult.ok) {
+      expect(storedResult.reason).toBe(
+        AUTH_REFUSE_REASONS.adminEmailUnverified,
+      );
+    }
+
+    const unverifiedCrew = { ...CREW, emailVerified: false } as never;
+    const ordinaryResult = await makePort(
+      {
+        adapter: Object.freeze({
+          authenticate: () => ({
+            user: {
+              id: "usr_crew",
+              email: "crew@example.com",
+              emailVerified: false,
+            },
+            session: {
+              id: "ses_unverified_crew",
+              token: "tok",
+              userId: "usr_crew",
+              expiresAt: "2026-07-26T10:00:00Z",
+            },
+          }),
+        }),
+      },
+      createInMemoryIdentityStore({ users: [unverifiedCrew] }),
+    ).signIn({
+      surface: "web-shell",
+      email: "crew@example.com",
+      password: "pw",
+    });
+    expect(ordinaryResult.ok).toBe(true);
+    if (ordinaryResult.ok) {
+      expect(ordinaryResult.value.role.role).toBe("user");
+    }
   });
 
   it("stores only the digest, never the raw token", async () => {
@@ -539,8 +664,13 @@ describe("identity port — session verification", () => {
   });
 
   it("refuses a corrupt stored session record", async () => {
-    const store = createInMemoryIdentityStore({ users: [CREW] });
-    await store.putSession({ sessionId: "ses_bad" } as never);
+    const store: IdentityStore = Object.freeze({
+      findUserByEmail: () => undefined,
+      findUserById: () => CREW,
+      putSession: () => undefined,
+      findSession: () => ({ sessionId: "ses_bad" }) as never,
+      deleteSession: () => true,
+    });
     const result = await makePort({}, store).verifySession({
       surface: "web-shell",
       sessionId: "ses_bad",

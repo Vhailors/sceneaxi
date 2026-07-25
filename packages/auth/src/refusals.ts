@@ -37,6 +37,7 @@ export const AUTH_REFUSE_REASONS = Object.freeze({
   userNotFound: "AUTH_USER_NOT_FOUND",
   userDisabled: "AUTH_USER_DISABLED",
   userRecordInvalid: "AUTH_USER_RECORD_INVALID",
+  adminEmailUnverified: "AUTH_ADMIN_EMAIL_UNVERIFIED",
   sessionNotFound: "AUTH_SESSION_NOT_FOUND",
   sessionExpired: "AUTH_SESSION_EXPIRED",
   sessionSurfaceMismatch: "AUTH_SESSION_SURFACE_MISMATCH",

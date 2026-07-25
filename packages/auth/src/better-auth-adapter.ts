@@ -109,6 +109,7 @@ export type MappedAuthentication = Readonly<{
   /** The provider's user id, cross-checked against the store's record. */
   providerUserId: string;
   email: string;
+  emailVerified: boolean;
   session: Session;
 }>;
 
@@ -170,6 +171,7 @@ export function mapBetterAuthAuthentication(input: {
   return Object.freeze({
     providerUserId,
     email: email.trim().toLowerCase(),
+    emailVerified,
     session: Object.freeze({
       schemaVersion: 1 as const,
       kind: "sceneaxi.session" as const,

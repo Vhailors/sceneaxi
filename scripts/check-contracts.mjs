@@ -121,7 +121,12 @@ if (pluginManifestInertExample !== loadFailed && !pluginManifestInertExampleIsOb
 }
 
 const schemaMatches = (value, sch) => {
-  if (sch.const !== undefined && value !== sch.const) return false;
+  if (
+    sch.const !== undefined &&
+    JSON.stringify(value) !== JSON.stringify(sch.const)
+  ) {
+    return false;
+  }
   if (sch.enum !== undefined && !sch.enum.includes(value)) return false;
   if (sch.type === "object") {
     if (!isPlainObject(value)) return false;
@@ -151,7 +156,10 @@ const schemaMatches = (value, sch) => {
 
 // --- minimal JSON Schema subset validator ---
 const validate = (value, sch, path) => {
-  if (sch.const !== undefined && value !== sch.const) {
+  if (
+    sch.const !== undefined &&
+    JSON.stringify(value) !== JSON.stringify(sch.const)
+  ) {
     fail(`${path}: expected const ${JSON.stringify(sch.const)}, got ${JSON.stringify(value)}`);
     return;
   }

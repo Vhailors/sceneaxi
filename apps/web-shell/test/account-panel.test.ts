@@ -251,7 +251,7 @@ describe("authenticated phase", () => {
     expect(paid?.credits).toBeUndefined();
   });
 
-  it("quotes a credit charge for a funded user", async () => {
+  it("shows credit-priced availability without inventing an exact quote", async () => {
     const panel = makePanel();
     const snapshot = await panel.submitCredentials({
       email: "crew@example.com",
@@ -260,8 +260,10 @@ describe("authenticated phase", () => {
     const paid = snapshot.capabilities.find(
       (held) => held.capability === "hosted-ai-assistant",
     );
-    expect(paid?.outcome).toBe("charge-credits");
-    expect(paid?.credits).toBe(1);
+    expect(paid?.availability).toBe("available");
+    expect(paid?.price).toBe("credits");
+    expect(paid?.outcome).toBeUndefined();
+    expect(paid?.credits).toBeUndefined();
   });
 
   it("re-reads the balance on refresh", async () => {

@@ -10,7 +10,12 @@
  * no database and no network.
  */
 
-import type { Session, User } from "@sceneaxi/schemas";
+import {
+  validateSession,
+  validateUser,
+  type Session,
+  type User,
+} from "@sceneaxi/schemas";
 
 export type Awaitable<Value> = Value | Promise<Value>;
 
@@ -46,6 +51,26 @@ function sameSession(left: Session, right: Session): boolean {
   );
 }
 
+function fail(message: string): never {
+  throw new Error(`identity store: ${message}`);
+}
+
+function snapshotUser(candidate: unknown): User {
+  const validated = validateUser(candidate);
+  if (!validated.ok) {
+    return fail(`invalid user (${validated.code}): ${validated.message}`);
+  }
+  return validated.value;
+}
+
+function snapshotSession(candidate: unknown): Session {
+  const validated = validateSession(candidate);
+  if (!validated.ok) {
+    return fail(`invalid session (${validated.code}): ${validated.message}`);
+  }
+  return validated.value;
+}
+
 /**
  * Reference store. Emails are keyed in normalized form so lookup matches the
  * one normalization the admin comparison uses.
@@ -57,11 +82,13 @@ export function createInMemoryIdentityStore(
   const usersByEmail = new Map<string, User>();
   const sessions = new Map<string, Session>();
 
-  for (const user of options.users ?? []) {
+  for (const candidate of options.users ?? []) {
+    const user = snapshotUser(candidate);
     usersById.set(user.userId, user);
     usersByEmail.set(user.email.trim().toLowerCase(), user);
   }
-  for (const session of options.sessions ?? []) {
+  for (const candidate of options.sessions ?? []) {
+    const session = snapshotSession(candidate);
     sessions.set(session.sessionId, session);
   }
 
@@ -72,7 +99,8 @@ export function createInMemoryIdentityStore(
     findUserById(userId) {
       return usersById.get(userId);
     },
-    putSession(session) {
+    putSession(candidate) {
+      const session = snapshotSession(candidate);
       sessions.set(session.sessionId, session);
     },
     findSession(sessionId) {

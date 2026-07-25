@@ -311,6 +311,34 @@ describe("auth refuse matrix", () => {
     record(
       await port().signIn({ ...CREDENTIALS, email: "gone@example.com" }),
     );
+    record(
+      await port(
+        {
+          adapter: Object.freeze({
+            authenticate: () => ({
+              user: {
+                id: "usr_captain",
+                email: CAPTAIN_EMAIL,
+                emailVerified: false,
+              },
+              session: {
+                id: "ses_unverified_admin",
+                token: "tok",
+                userId: "usr_captain",
+                expiresAt: "2026-07-26T10:00:00Z",
+              },
+            }),
+          }),
+        },
+        createInMemoryIdentityStore({
+          users: [user("usr_captain", CAPTAIN_EMAIL)],
+        }),
+      ).signIn({
+        surface: "web-shell",
+        email: CAPTAIN_EMAIL,
+        password: "pw",
+      }),
+    );
   });
 
   it("reaches every session-verification refusal", async () => {
@@ -345,8 +373,13 @@ describe("auth refuse matrix", () => {
       ).verifySession({ surface: "web-shell", sessionId, token: "tok" }),
     );
 
-    const corrupt = createInMemoryIdentityStore({ users: [CREW] });
-    await corrupt.putSession({ sessionId: "ses_bad" } as never);
+    const corrupt: IdentityStore = Object.freeze({
+      findUserByEmail: () => undefined,
+      findUserById: () => CREW,
+      putSession: () => undefined,
+      findSession: () => ({ sessionId: "ses_bad" }) as never,
+      deleteSession: () => true,
+    });
     record(
       await port({}, corrupt).verifySession({
         surface: "web-shell",

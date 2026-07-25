@@ -93,8 +93,8 @@ CREATE TABLE IF NOT EXISTS checkout_session_intents (
   purpose         text        NOT NULL,
   item_id         text        NOT NULL,
   -- Present exactly when purpose = 'credit-pack'; a listing sale grants none.
-  credits         integer,
-  unit_amount     integer     NOT NULL,
+  credits         bigint,
+  unit_amount     bigint      NOT NULL,
   currency        char(3)     NOT NULL,
   -- A public identifier, not a secret. API keys live only in the environment.
   stripe_price_id text        NOT NULL,
@@ -125,9 +125,9 @@ CREATE TABLE IF NOT EXISTS catalog_listings (
   title                  text        NOT NULL,
   price_mode             text        NOT NULL,
   -- Present exactly when price_mode includes credits.
-  credit_price           integer,
+  credit_price           bigint,
   -- Present exactly when price_mode includes money, all three together.
-  money_unit_amount      integer,
+  money_unit_amount      bigint,
   money_currency         char(3),
   money_stripe_price_id  text,
   published_at           timestamptz NOT NULL,

@@ -49,6 +49,26 @@ describe("entitlement matrix", () => {
     expect(fixture.starterCreditGrant).toBe(STARTER_CREDIT_GRANT);
   });
 
+  it("publishes the exact closed matrix in the versioned JSON Schema", () => {
+    const schema = JSON.parse(
+      readFileSync(
+        new URL(
+          "../contracts/entitlement-matrix.schema.json",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    ) as {
+      properties: {
+        starterCreditGrant: { const: number };
+        capabilities: { const: MatrixFixture["capabilities"] };
+      };
+    };
+    expect(schema.properties.starterCreditGrant.const).toBe(100);
+    expect(schema.properties.capabilities.const).toEqual(fixture.capabilities);
+    expect(schema.properties.capabilities.const).toHaveLength(8);
+  });
+
   it("keeps the free path free and account-free", () => {
     for (const capability of [
       "engine-sdk-download",

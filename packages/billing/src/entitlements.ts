@@ -185,12 +185,13 @@ export function evaluateEntitlement(
   );
   if (!guarded.ok) return billingRefuse(guarded.reason, guarded.message);
 
+  if (rule.price === "free") return decide(capability, "allow-free");
+
   // The captain's unlimited allowance covers every paid capability.
   if (guarded.value.role.role === "admin") {
     return decide(capability, "allow-unlimited");
   }
 
-  if (rule.price === "free") return decide(capability, "allow-free");
   if (rule.price === "money") return decide(capability, "allow-checkout");
 
   if (rule.price === "credits-or-money") {

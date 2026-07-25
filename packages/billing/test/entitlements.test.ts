@@ -90,8 +90,11 @@ const FREE_CAPABILITIES = [
   "byo-model-keys",
 ] as const;
 
-const PAID_CAPABILITIES = ENTITLEMENT_CAPABILITIES.filter(
+const ACCOUNT_REQUIRED_CAPABILITIES = ENTITLEMENT_CAPABILITIES.filter(
   (capability) => ENTITLEMENT_MATRIX[capability].accountRequired,
+);
+const PAID_CAPABILITIES = ENTITLEMENT_CAPABILITIES.filter(
+  (capability) => ENTITLEMENT_MATRIX[capability].price !== "free",
 );
 
 describe("the free path", () => {
@@ -139,7 +142,7 @@ describe("the free path", () => {
 
 describe("paid capabilities", () => {
   it("refuse an anonymous caller before reading any balance", () => {
-    for (const capability of PAID_CAPABILITIES) {
+    for (const capability of ACCOUNT_REQUIRED_CAPABILITIES) {
       const result = evaluateEntitlement({ capability, now: NOW });
       expect(result.ok).toBe(false);
       if (result.ok) return;
@@ -338,6 +341,18 @@ describe("admin allowance", () => {
     }
     expect(state.entries.length).toBe(0);
     expect(state.balance).toBe(0);
+  });
+
+  it("keeps account-gated free capabilities free for admin", () => {
+    const result = evaluateEntitlement({
+      capability: "creator-publish",
+      now: NOW,
+      principal: principal({ role: "admin" }),
+      admin,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.outcome).toBe("allow-free");
   });
 });
 

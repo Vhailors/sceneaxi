@@ -34,10 +34,12 @@
           },
           "credits": {
             "type": "integer",
+            "minimum": 1,
             "description": "Credits granted when a checkout for this pack completes."
           },
           "unitAmount": {
             "type": "integer",
+            "minimum": 1,
             "description": "Price in the currency's minor unit (e.g. cents), as Stripe expects."
           },
           "currency": {

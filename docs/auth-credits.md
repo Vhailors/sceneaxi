@@ -100,6 +100,11 @@ throwing mean different things — the port reports `AUTH_CREDENTIALS_REJECTED` 
 and `AUTH_ADAPTER_FAILED` for the second, so a wrong password is never confused with a
 broken provider.
 
+Admin elevation requires both the provider authentication and the stored SceneAxi user
+record to mark `emailVerified: true`. An unverified address matching
+`SCENEAXI_ADMIN_EMAIL` refuses with `AUTH_ADMIN_EMAIL_UNVERIFIED` before any session is
+persisted; unverified ordinary users retain the configured ordinary-user sign-in behavior.
+
 The **store**, not the provider, owns the SceneAxi `User` record and therefore owns
 `disabled`. That split is deliberate: disabling a user must take effect even if the upstream
 provider would still happily authenticate them. The port also cross-checks that the

@@ -359,6 +359,13 @@ describe("invariants the database enforces itself", () => {
     expect(sql).toContain("checkout_session_intents_credits_match_purpose");
   });
 
+  it("stores every runtime-safe financial amount as bigint", () => {
+    expect(sql).toMatch(/\bcredits\s+bigint,/);
+    expect(sql).toMatch(/\bunit_amount\s+bigint\s+NOT NULL,/);
+    expect(sql).toMatch(/\bcredit_price\s+bigint,/);
+    expect(sql).toMatch(/\bmoney_unit_amount\s+bigint,/);
+  });
+
   it("refuses a plaintext checkout redirect", () => {
     expect(sql).toContain("success_url LIKE 'https://%'");
     expect(sql).toContain("cancel_url LIKE 'https://%'");

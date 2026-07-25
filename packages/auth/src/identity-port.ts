@@ -191,6 +191,15 @@ function assemblePrincipal(input: {
       "The user is disabled; sign-in and session verification both refuse.",
     );
   }
+  if (
+    user.value.email.trim().toLowerCase() === input.admin.email &&
+    !user.value.emailVerified
+  ) {
+    return authRefuse(
+      AUTH_REFUSE_REASONS.adminEmailUnverified,
+      "The configured admin email is not verified in the SceneAxi user record; admin elevation refuses.",
+    );
+  }
 
   const role = resolveRole({
     user: user.value,
@@ -348,6 +357,15 @@ export function createIdentityPort(
         return authRefuse(
           AUTH_REFUSE_REASONS.adapterUserMismatch,
           "The identity provider's user id does not match the stored SceneAxi user.",
+        );
+      }
+      if (
+        storedUser.value.email.trim().toLowerCase() === admin.value.email &&
+        !mapped.emailVerified
+      ) {
+        return authRefuse(
+          AUTH_REFUSE_REASONS.adminEmailUnverified,
+          "The identity provider has not verified the configured admin email; admin elevation refuses.",
         );
       }
 
