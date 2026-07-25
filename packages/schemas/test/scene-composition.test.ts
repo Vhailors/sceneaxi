@@ -1,9 +1,11 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   COMPOSED_SCENE_DOCUMENT_DATA_KEY,
   COMPOSED_SCENE_KIND,
   SCENE_COMPOSITION_INTAKE_KIND,
   SCENE_COMPOSITION_SCHEMA_VERSION,
+  SCENE_MAXIMUM_COMPONENT_MAGNITUDE,
   SCENE_MAXIMUM_DEPTH,
   SCENE_MAXIMUM_INSTANCES,
   composeSculptTransforms,
@@ -142,6 +144,35 @@ describe("scene composition contracts", () => {
     );
   });
 
+  it("keeps the JSON Schema aligned with runtime transform and artifact rules", () => {
+    const schema: unknown = JSON.parse(
+      readFileSync(
+        new URL("../contracts/scene-composition.schema.json", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(schema).toMatchObject({
+      $defs: {
+        boundedPositiveNumber: {
+          minimum: 0.000001,
+          maximum: SCENE_MAXIMUM_COMPONENT_MAGNITUDE,
+        },
+        transform: {
+          properties: {
+            scale: { $ref: "#/$defs/positiveVector3" },
+          },
+        },
+        instance: {
+          properties: {
+            artifact: {
+              $ref: "https://sceneaxi.invalid/contracts/sculpt-artifact/v1",
+            },
+          },
+        },
+      },
+    });
+  });
+
   it("accepts a canonical multi-instance intake and freezes it", () => {
     const result = validateSceneCompositionIntake(intakeFixture());
     expect(result.ok).toBe(true);
@@ -180,6 +211,59 @@ describe("scene composition contracts", () => {
     );
     expect(level3.translation).toEqual([1.6, 0, 0]);
     expect(identitySculptTransform()).toEqual(identity);
+  });
+
+  it("normalizes after quantization and refuses non-representable transforms", () => {
+    expect(
+      composeSculptTransforms(
+        identity,
+        transform([0, 0, 0], [1, 1, 1], [359.9999996, 0, 0]),
+      ).rotationEulerDegrees,
+    ).toEqual([0, 0, 0]);
+
+    const underflow = {
+      ...intakeFixture(),
+      placements: intakeFixture().placements.map((placement, index) =>
+        index < 2
+          ? { ...placement, transform: transform([0, 0, 0], [0.0001, 1, 1]) }
+          : placement,
+      ),
+    };
+    expect(
+      refusalOf(validateSceneCompositionIntake(underflow), "scale underflow"),
+    ).toMatchObject({
+      code: "invalid-field",
+      path: "$.placements[1].transform.scale",
+    });
+    expect(() =>
+      composeSculptTransforms(
+        transform([0, 0, 0], [0.0001, 1, 1]),
+        transform([0, 0, 0], [0.0001, 1, 1]),
+      ),
+    ).toThrow(RangeError);
+
+    const overflow = {
+      ...intakeFixture(),
+      placements: intakeFixture().placements.map((placement, index) =>
+        index === 0
+          ? {
+              ...placement,
+              transform: transform(
+                [0, 0, 0],
+                [SCENE_MAXIMUM_COMPONENT_MAGNITUDE, 1, 1],
+              ),
+            }
+          : index === 1
+            ? { ...placement, transform: transform([0, 0, 0], [2, 1, 1]) }
+          : placement,
+      ),
+    };
+    expect(
+      refusalOf(validateSceneCompositionIntake(overflow), "scale overflow"),
+    ).toMatchObject({
+      code: "invalid-field",
+      path: "$.placements[1].transform.scale",
+    });
   });
 
   it("resolves depth, order, and world transforms", () => {
@@ -549,5 +633,48 @@ describe("scene composition contracts", () => {
     expect(
       refusalOf(validateComposedScene({ ...scene, kind: "sceneaxi.other" }), "kind"),
     ).toMatchObject({ code: "invalid-kind", path: "$.kind" });
+  });
+
+  it("uses composed-scene field paths and requires mount-compatible roots", () => {
+    const scene = composedSceneFixture();
+    const rotatedRoot = {
+      ...scene,
+      instances: scene.instances.map((instance, index) =>
+        index === 0
+          ? {
+              ...instance,
+              localTransform: transform(
+                instance.localTransform.translation,
+                instance.localTransform.scale,
+                [0, 1, 0],
+              ),
+            }
+          : instance,
+      ),
+    };
+    expect(
+      refusalOf(validateComposedScene(rotatedRoot), "rotated composed root"),
+    ).toMatchObject({
+      code: "rotated-parent-unsupported",
+      path: "$.instances[0].localTransform.rotationEulerDegrees",
+    });
+
+    const offsetArtifact = artifactFixture(
+      "drone-artifact",
+      transform([1, 0, 0]),
+    );
+    expect(validateSculptArtifact(offsetArtifact).ok).toBe(true);
+    const offsetRoot = {
+      ...scene,
+      instances: scene.instances.map((instance, index) =>
+        index === 2 ? { ...instance, artifact: offsetArtifact } : instance,
+      ),
+    };
+    expect(
+      refusalOf(validateComposedScene(offsetRoot), "offset artifact root"),
+    ).toMatchObject({
+      code: "invalid-artifact",
+      path: "$.instances[2].artifact.runtimeHierarchy.nodes[0].transform",
+    });
   });
 });

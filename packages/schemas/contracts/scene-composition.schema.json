@@ -6,11 +6,37 @@
   "$defs": {
     "identifier": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
     "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "boundedNumber": {
+      "type": "number",
+      "minimum": -9007199254,
+      "maximum": 9007199254
+    },
+    "boundedPositiveNumber": {
+      "type": "number",
+      "minimum": 0.000001,
+      "maximum": 9007199254
+    },
     "vector3": {
       "type": "array",
       "minItems": 3,
       "maxItems": 3,
-      "items": { "type": "number" }
+      "prefixItems": [
+        { "$ref": "#/$defs/boundedNumber" },
+        { "$ref": "#/$defs/boundedNumber" },
+        { "$ref": "#/$defs/boundedNumber" }
+      ],
+      "items": false
+    },
+    "positiveVector3": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "prefixItems": [
+        { "$ref": "#/$defs/boundedPositiveNumber" },
+        { "$ref": "#/$defs/boundedPositiveNumber" },
+        { "$ref": "#/$defs/boundedPositiveNumber" }
+      ],
+      "items": false
     },
     "transform": {
       "type": "object",
@@ -19,7 +45,7 @@
       "properties": {
         "translation": { "$ref": "#/$defs/vector3" },
         "rotationEulerDegrees": { "$ref": "#/$defs/vector3" },
-        "scale": { "$ref": "#/$defs/vector3" }
+        "scale": { "$ref": "#/$defs/positiveVector3" }
       }
     },
     "placement": {
@@ -87,7 +113,7 @@
           "description": "Deterministic composition of the parent world transform with localTransform; recomputed and compared during validation."
         },
         "artifact": {
-          "type": "object",
+          "$ref": "https://sceneaxi.invalid/contracts/sculpt-artifact/v1",
           "description": "A complete Sculpt Artifact as defined by sculpt-artifact.schema.json, embedded unmodified so its own evidence digests stay verifiable."
         }
       }

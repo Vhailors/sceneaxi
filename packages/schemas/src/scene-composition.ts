@@ -38,6 +38,8 @@ export const COMPOSED_SCENE_DOCUMENT_DATA_KEY = "composedScene" as const;
 export const SCENE_MINIMUM_INSTANCES = 2 as const;
 export const SCENE_MAXIMUM_INSTANCES = 32 as const;
 export const SCENE_MAXIMUM_DEPTH = 8 as const;
+export const SCENE_MINIMUM_SCALE = 0.000001 as const;
+export const SCENE_MAXIMUM_COMPONENT_MAGNITUDE = 9_007_199_254 as const;
 
 export type ScenePlacement = {
   readonly instanceId: string;
@@ -154,7 +156,8 @@ function round6(value: number) {
 }
 
 function normalizeDegrees(value: number) {
-  return round6(((value % 360) + 360) % 360);
+  const rounded = round6(((value % 360) + 360) % 360);
+  return rounded === 360 ? 0 : rounded;
 }
 
 function vector(values: readonly [number, number, number]): Vector3 {
@@ -169,24 +172,150 @@ export function composeSculptTransforms(
   parent: SculptTransform,
   local: SculptTransform,
 ): SculptTransform {
+  const result = tryComposeSculptTransforms(parent, local);
+  if (!result.ok) {
+    throw new RangeError(result.message);
+  }
+  return result.value;
+}
+
+type TransformCompositionResult =
+  | { readonly ok: true; readonly value: SculptTransform }
+  | {
+      readonly ok: false;
+      readonly field: "translation" | "scale";
+      readonly message: string;
+    };
+
+function tryComposeSculptTransforms(
+  parent: SculptTransform,
+  local: SculptTransform,
+): TransformCompositionResult {
   const axes = [0, 1, 2] as const;
-  const translation = axes.map((axis) =>
-    round6(
-      parent.translation[axis] + parent.scale[axis] * local.translation[axis],
-    ),
+  const rawTranslation = axes.map(
+    (axis) =>
+      parent.translation[axis] +
+      parent.scale[axis] * local.translation[axis],
   ) as [number, number, number];
+  if (
+    rawTranslation.some(
+      (value) =>
+        !Number.isFinite(value) ||
+        Math.abs(value) > SCENE_MAXIMUM_COMPONENT_MAGNITUDE,
+    )
+  ) {
+    return {
+      ok: false,
+      field: "translation",
+      message: "Composed translation exceeds the scene numeric domain.",
+    };
+  }
+  const translation = rawTranslation.map(round6) as [number, number, number];
   const rotation = axes.map((axis) =>
     normalizeDegrees(
       parent.rotationEulerDegrees[axis] + local.rotationEulerDegrees[axis],
     ),
   ) as [number, number, number];
-  const scale = axes.map((axis) =>
-    round6(parent.scale[axis] * local.scale[axis]),
+  const rawScale = axes.map(
+    (axis) => parent.scale[axis] * local.scale[axis],
   ) as [number, number, number];
-  return Object.freeze({
-    translation: vector(translation),
-    rotationEulerDegrees: vector(rotation),
-    scale: vector(scale),
+  if (
+    rawScale.some(
+      (value) =>
+        !Number.isFinite(value) ||
+        value < SCENE_MINIMUM_SCALE ||
+        value > SCENE_MAXIMUM_COMPONENT_MAGNITUDE,
+    )
+  ) {
+    return {
+      ok: false,
+      field: "scale",
+      message: "Composed scale exceeds the scene numeric domain.",
+    };
+  }
+  const scale = rawScale.map(round6) as [number, number, number];
+  return {
+    ok: true,
+    value: Object.freeze({
+      translation: vector(translation),
+      rotationEulerDegrees: vector(rotation),
+      scale: vector(scale),
+    }),
+  };
+}
+
+function transformMatrix(transform: SculptTransform) {
+  const [xDegrees, yDegrees, zDegrees] = transform.rotationEulerDegrees;
+  const x = (xDegrees * Math.PI) / 180;
+  const y = (yDegrees * Math.PI) / 180;
+  const z = (zDegrees * Math.PI) / 180;
+  const a = Math.cos(x);
+  const b = Math.sin(x);
+  const c = Math.cos(y);
+  const d = Math.sin(y);
+  const e = Math.cos(z);
+  const f = Math.sin(z);
+  const ae = a * e;
+  const af = a * f;
+  const be = b * e;
+  const bf = b * f;
+  const [scaleX, scaleY, scaleZ] = transform.scale;
+  const [translationX, translationY, translationZ] = transform.translation;
+  return [
+    c * e * scaleX,
+    (af + be * d) * scaleX,
+    (bf - ae * d) * scaleX,
+    0,
+    -c * f * scaleY,
+    (ae - bf * d) * scaleY,
+    (be + af * d) * scaleY,
+    0,
+    d * scaleZ,
+    -b * c * scaleZ,
+    a * c * scaleZ,
+    0,
+    translationX,
+    translationY,
+    translationZ,
+    1,
+  ] as const;
+}
+
+function multiplyMatrices(
+  left: readonly number[],
+  right: readonly number[],
+) {
+  return Array.from({ length: 16 }, (_unused, index) => {
+    const column = Math.floor(index / 4);
+    const row = index % 4;
+    let value = 0;
+    for (let offset = 0; offset < 4; offset += 1) {
+      value +=
+        (left[offset * 4 + row] ?? 0) *
+        (right[column * 4 + offset] ?? 0);
+    }
+    return value;
+  });
+}
+
+function hasMountCompatibleProjection(
+  worldTransform: SculptTransform,
+  rootTransform: SculptTransform,
+) {
+  const projected = tryComposeSculptTransforms(worldTransform, rootTransform);
+  if (!projected.ok) return false;
+  const mounted = multiplyMatrices(
+    transformMatrix(worldTransform),
+    transformMatrix(rootTransform),
+  );
+  const flattened = transformMatrix(projected.value);
+  return mounted.every((value, index) => {
+    const projectedValue = flattened[index];
+    return (
+      projectedValue !== undefined &&
+      Number.isFinite(value) &&
+      Math.abs(value - projectedValue) <= SCENE_MINIMUM_SCALE
+    );
   });
 }
 
@@ -233,7 +362,43 @@ type PlacementShape = {
   readonly artifactId: string;
   readonly parentInstanceId: string | null;
   readonly transform: SculptTransform;
+  readonly sourceIndex: number;
 };
+
+function validateSceneTransform(
+  value: unknown,
+  path: string,
+): SceneCompositionValidationResult<SculptTransform> {
+  if (!isSculptTransform(value)) {
+    return refuse("invalid-field", path, "Placement transform is invalid.");
+  }
+  for (const key of ["translation", "rotationEulerDegrees"] as const) {
+    const invalidIndex = value[key].findIndex(
+      (component) =>
+        Math.abs(component) > SCENE_MAXIMUM_COMPONENT_MAGNITUDE,
+    );
+    if (invalidIndex !== -1) {
+      return refuse(
+        "invalid-field",
+        `${path}.${key}[${String(invalidIndex)}]`,
+        `${key} exceeds the scene numeric domain.`,
+      );
+    }
+  }
+  const invalidScaleIndex = value.scale.findIndex(
+    (component) =>
+      component < SCENE_MINIMUM_SCALE ||
+      component > SCENE_MAXIMUM_COMPONENT_MAGNITUDE,
+  );
+  if (invalidScaleIndex !== -1) {
+    return refuse(
+      "invalid-field",
+      `${path}.scale[${String(invalidScaleIndex)}]`,
+      "scale exceeds the scene numeric domain.",
+    );
+  }
+  return { ok: true, value };
+}
 
 function validatePlacementEntries(
   placements: readonly unknown[],
@@ -274,18 +439,17 @@ function validatePlacementEntries(
         "parentInstanceId must be null or a lowercase slug.",
       );
     }
-    if (!isSculptTransform(placement["transform"])) {
-      return refuse(
-        "invalid-field",
-        `${entryPath}.transform`,
-        "Placement transform is invalid.",
-      );
-    }
+    const transform = validateSceneTransform(
+      placement["transform"],
+      `${entryPath}.transform`,
+    );
+    if (!transform.ok) return transform;
     entries.push({
       instanceId: placement["instanceId"],
       artifactId: placement["artifactId"],
       parentInstanceId,
-      transform: placement["transform"],
+      transform: transform.value,
+      sourceIndex: index,
     });
   }
   return { ok: true, value: entries };
@@ -299,6 +463,7 @@ function resolveGraph(
   placements: readonly PlacementShape[],
   rootInstanceId: string,
   path: string,
+  transformField: "transform" | "localTransform",
 ): SceneCompositionValidationResult<readonly ResolvedScenePlacement[]> {
   const duplicateInstance = duplicate(
     placements.map((placement) => placement.instanceId),
@@ -333,20 +498,20 @@ function resolveGraph(
     );
   }
 
-  for (const [index, placement] of placements.entries()) {
+  for (const placement of placements) {
     const parentInstanceId = placement.parentInstanceId;
     if (parentInstanceId === null) continue;
     if (parentInstanceId === placement.instanceId) {
       return refuse(
         "scene-hierarchy-cycle",
-        `${path}[${String(index)}].parentInstanceId`,
+        `${path}[${String(placement.sourceIndex)}].parentInstanceId`,
         `Scene instance "${placement.instanceId}" parents itself.`,
       );
     }
     if (!byId.has(parentInstanceId)) {
       return refuse(
         "missing-parent-instance",
-        `${path}[${String(index)}].parentInstanceId`,
+        `${path}[${String(placement.sourceIndex)}].parentInstanceId`,
         `Scene instance "${placement.instanceId}" references missing parent "${parentInstanceId}".`,
       );
     }
@@ -394,12 +559,12 @@ function resolveGraph(
         parentInstanceId !== null,
       ),
   );
-  for (const [index, placement] of placements.entries()) {
+  for (const placement of placements) {
     if (!parented.has(placement.instanceId)) continue;
     if (isRotated(placement.transform)) {
       return refuse(
         "rotated-parent-unsupported",
-        `${path}[${String(index)}].transform.rotationEulerDegrees`,
+        `${path}[${String(placement.sourceIndex)}].${transformField}.rotationEulerDegrees`,
         `Scene instance "${placement.instanceId}" has children and a non-zero rotation; v1 composition is axis-aligned and refuses rather than mis-nesting children.`,
       );
     }
@@ -432,11 +597,18 @@ function resolveGraph(
         `Scene instance "${entry.placement.instanceId}" resolved before its parent; parentage is not a tree.`,
       );
     }
-    const worldTransform = composeSculptTransforms(
+    const worldTransform = tryComposeSculptTransforms(
       parentTransform,
       entry.placement.transform,
     );
-    world.set(entry.placement.instanceId, worldTransform);
+    if (!worldTransform.ok) {
+      return refuse(
+        "invalid-field",
+        `${path}[${String(entry.placement.sourceIndex)}].${transformField}.${worldTransform.field}`,
+        worldTransform.message,
+      );
+    }
+    world.set(entry.placement.instanceId, worldTransform.value);
     resolved.push(
       snapshotSculptJson({
         instanceId: entry.placement.instanceId,
@@ -444,7 +616,7 @@ function resolveGraph(
         parentInstanceId,
         depth: entry.depth,
         localTransform: entry.placement.transform,
-        worldTransform,
+        worldTransform: worldTransform.value,
       }),
     );
   }
@@ -525,6 +697,7 @@ export function validateSceneCompositionIntake(
     entries.value,
     value["rootInstanceId"],
     "$.placements",
+    "transform",
   );
   if (!graph.ok) return graph;
   return {
@@ -543,9 +716,13 @@ export function resolveScenePlacements(
   const intake = validateSceneCompositionIntake(value);
   if (!intake.ok) return intake;
   return resolveGraph(
-    intake.value.placements,
+    intake.value.placements.map((placement, sourceIndex) => ({
+      ...placement,
+      sourceIndex,
+    })),
     intake.value.rootInstanceId,
     "$.placements",
+    "transform",
   );
 }
 
@@ -674,10 +851,11 @@ function validateInstanceEntries(
         `depth must be an integer between 0 and ${String(SCENE_MAXIMUM_DEPTH)}.`,
       );
     }
+    const transforms = new Map<"localTransform" | "worldTransform", SculptTransform>();
     for (const key of ["localTransform", "worldTransform"] as const) {
-      if (!isSculptTransform(instance[key])) {
-        return refuse("invalid-field", `${path}.${key}`, `${key} is invalid.`);
-      }
+      const transform = validateSceneTransform(instance[key], `${path}.${key}`);
+      if (!transform.ok) return transform;
+      transforms.set(key, transform.value);
     }
     const artifact = validateSculptArtifact(instance["artifact"]);
     if (!artifact.ok) {
@@ -695,13 +873,39 @@ function validateInstanceEntries(
         `Scene instance "${String(instance["instanceId"])}" names artifact "${String(instance["artifactId"])}" but embeds "${artifact.value.artifactId}".`,
       );
     }
+    const rootNodeIndex = artifact.value.runtimeHierarchy.nodes.findIndex(
+      (node) => node.id === artifact.value.runtimeHierarchy.rootNodeId,
+    );
+    const rootNode = artifact.value.runtimeHierarchy.nodes[rootNodeIndex];
+    if (
+      rootNode === undefined ||
+      !hasMountCompatibleProjection(
+        transforms.get("worldTransform") ?? IDENTITY_TRANSFORM,
+        rootNode.transform,
+      )
+    ) {
+      return refuse(
+        "invalid-artifact",
+        `${path}.artifact.runtimeHierarchy.nodes[${String(rootNodeIndex)}].transform`,
+        "Artifact root transform cannot be projected consistently with the Mount path.",
+      );
+    }
+    const localTransform = transforms.get("localTransform");
+    const worldTransform = transforms.get("worldTransform");
+    if (localTransform === undefined || worldTransform === undefined) {
+      return refuse(
+        "invalid-field",
+        path,
+        "Scene instance transforms are missing.",
+      );
+    }
     entries.push({
       instanceId: instance["instanceId"],
       artifactId: instance["artifactId"],
       parentInstanceId,
       depth: Number(depth),
-      localTransform: instance["localTransform"] as SculptTransform,
-      worldTransform: instance["worldTransform"] as SculptTransform,
+      localTransform,
+      worldTransform,
       artifact: artifact.value,
     });
   }
@@ -848,14 +1052,16 @@ export function validateComposedScene(
   if (!instances.ok) return instances;
 
   const resolved = resolveGraph(
-    instances.value.map((instance) => ({
+    instances.value.map((instance, sourceIndex) => ({
       instanceId: instance.instanceId,
       artifactId: instance.artifactId,
       parentInstanceId: instance.parentInstanceId,
       transform: instance.localTransform,
+      sourceIndex,
     })),
     value["rootInstanceId"],
     "$.instances",
+    "localTransform",
   );
   if (!resolved.ok) return resolved;
   if (resolved.value.length !== instances.value.length) {

@@ -96,11 +96,20 @@ describe("scene composition pipeline", () => {
   });
 
   it("refuses in both directions instead of dropping an artifact", () => {
+    const intake = intakeFixture();
+    const reordered = {
+      ...intake,
+      placements: [
+        intake.placements[0],
+        intake.placements[2],
+        intake.placements[1],
+      ],
+    };
     expect(
-      refusal(composeScene(intakeFixture(), [crateArtifact]), "missing artifact"),
+      refusal(composeScene(reordered, [crateArtifact]), "missing artifact"),
     ).toEqual({
       code: "unknown-artifact-reference",
-      path: "$.instances[2].artifactId",
+      path: "$.placements[1].artifactId",
     });
 
     expect(
@@ -259,6 +268,37 @@ describe("scene composition pipeline", () => {
       title: "Bay demo",
     });
     expect(titled).toMatchObject({ id: "bay-demo", title: "Bay demo" });
+
+    expect(
+      refusal(
+        composeScene(intakeFixture(), artifacts, { documentId: "Bad Id" }),
+        "invalid document id",
+      ),
+    ).toEqual({
+      code: "invalid-field",
+      path: "$.options.documentId",
+    });
+    expect(() =>
+      sceneDocumentFromComposedScene(composed.scene, {
+        documentId: "Bad Id",
+      }),
+    ).toThrow(TypeError);
+  });
+
+  it("refuses valid artifacts whose roots cannot match the Mount path", () => {
+    const offsetDrone = artifactFixture(
+      "drone-artifact",
+      transform([1, 0, 0]),
+    );
+    expect(
+      refusal(
+        composeScene(intakeFixture(), [crateArtifact, offsetDrone]),
+        "offset artifact root",
+      ),
+    ).toEqual({
+      code: "invalid-artifact",
+      path: "$.instances[2].artifact.runtimeHierarchy.nodes[0].transform",
+    });
   });
 
   it("is byte-deterministic across repeated composition", () => {

@@ -14,8 +14,10 @@ import {
   digestComposedScene,
   digestSceneArtifact,
   digestScenePlacements,
+  isSculptIdentifier,
   resolveScenePlacements,
   validateComposedScene,
+  validateDocument,
   validateSceneCompositionIntake,
   validateSculptArtifact,
   type ComposedScene,
@@ -68,15 +70,29 @@ export function sceneDocumentFromComposedScene(
   scene: ComposedScene,
   options: SceneCompositionOptions = {},
 ): SceneDocument {
+  if (
+    options.documentId !== undefined &&
+    !isSculptIdentifier(options.documentId)
+  ) {
+    throw new TypeError("Scene document id must be a lowercase slug.");
+  }
+  if (options.title !== undefined && typeof options.title !== "string") {
+    throw new TypeError("Scene document title must be a string.");
+  }
   const base = {
     id: options.documentId ?? `${scene.sceneId}-scene`,
     data: {
       [COMPOSED_SCENE_DOCUMENT_DATA_KEY]: scene as unknown as JsonValue,
     },
   } as const;
-  return options.title === undefined
+  const document = options.title === undefined
     ? createDocument(base)
     : createDocument({ ...base, title: options.title });
+  const validated = validateDocument(document);
+  if (!validated.ok) {
+    throw new TypeError(validated.message);
+  }
+  return validated.document;
 }
 
 /**
@@ -91,6 +107,30 @@ export function composeScene(
   artifactValues: readonly unknown[],
   options: SceneCompositionOptions = {},
 ): SceneCompositionResult {
+  if (options === null || typeof options !== "object" || Array.isArray(options)) {
+    return refuse(
+      "invalid-field",
+      "$.options",
+      "Scene composition options must be an object.",
+    );
+  }
+  if (
+    options.documentId !== undefined &&
+    !isSculptIdentifier(options.documentId)
+  ) {
+    return refuse(
+      "invalid-field",
+      "$.options.documentId",
+      "Scene document id must be a lowercase slug.",
+    );
+  }
+  if (options.title !== undefined && typeof options.title !== "string") {
+    return refuse(
+      "invalid-field",
+      "$.options.title",
+      "Scene document title must be a string.",
+    );
+  }
   const intake = validateSceneCompositionIntake(intakeValue);
   if (!intake.ok) {
     const diagnostic = intake.diagnostics[0];
@@ -132,13 +172,20 @@ export function composeScene(
   }
 
   const placedArtifactIds = new Set<string>();
+  const intakeIndexByInstanceId = new Map(
+    intake.value.placements.map((placement, index) => [
+      placement.instanceId,
+      index,
+    ]),
+  );
   const instances: ComposedSceneInstance[] = [];
-  for (const [index, placement] of resolved.value.entries()) {
+  for (const placement of resolved.value) {
     const artifact = artifacts.get(placement.artifactId);
     if (artifact === undefined) {
+      const intakeIndex = intakeIndexByInstanceId.get(placement.instanceId);
       return refuse(
         "unknown-artifact-reference",
-        `$.instances[${String(index)}].artifactId`,
+        `$.placements[${String(intakeIndex ?? 0)}].artifactId`,
         `Scene instance "${placement.instanceId}" references Sculpt Artifact "${placement.artifactId}", which was not supplied.`,
       );
     }

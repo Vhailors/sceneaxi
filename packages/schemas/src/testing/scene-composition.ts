@@ -25,6 +25,7 @@ export function sceneCompositionTransformFixture(
 
 export function sceneCompositionArtifactFixture(
   artifactId: string,
+  rootTransform: SculptTransform = sceneCompositionIdentityTransform,
 ): SculptArtifact {
   const rootNodeId = `${artifactId}-root`;
   const childNodeId = `${artifactId}-child`;
@@ -33,7 +34,7 @@ export function sceneCompositionArtifactFixture(
       id: rootNodeId,
       parentId: null,
       componentId: "body",
-      transform: sceneCompositionIdentityTransform,
+      transform: rootTransform,
     },
     {
       id: childNodeId,
