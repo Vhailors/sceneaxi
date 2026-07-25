@@ -26,6 +26,8 @@ export interface CliErrorBody {
   readonly heldKeyReason?: HeldKeyRefusalReason;
   /** Typed diagnostics from propose/apply rejections (sceneaxi#9). */
   readonly diagnostics?: readonly ApplyDiagnostic[];
+  /** Command-specific state retained when a typed refusal has partial results. */
+  readonly details?: ResultPayload;
 }
 
 interface EnvelopeBase {
@@ -79,6 +81,7 @@ export function failure(
     readonly heldKey?: string;
     readonly heldKeyReason?: HeldKeyRefusalReason;
     readonly diagnostics?: readonly ApplyDiagnostic[];
+    readonly details?: ResultPayload;
   } = {},
 ): CliOutcome {
   const path = Object.freeze([...(options.path ?? [])]);
@@ -98,6 +101,9 @@ export function failure(
       ...error,
       diagnostics: Object.freeze([...options.diagnostics]),
     };
+  }
+  if (options.details !== undefined) {
+    error = { ...error, details: Object.freeze({ ...options.details }) };
   }
 
   return {

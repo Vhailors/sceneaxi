@@ -54,7 +54,7 @@ describe("shipped CLI command map", () => {
     }
   });
 
-  it("declares every non-demo verb explicitly ungated (heldKeys: []) — skeletons encode no product policy", () => {
+  it("declares every non-demo verb explicitly ungated (heldKeys: []) — no shipped verb encodes product policy", () => {
     for (const entry of SHIPPED_COMMAND_MAP.commands) {
       if (entry.command === "demo gated") continue;
       expect(entry.heldKeys, entry.command).toEqual([]);

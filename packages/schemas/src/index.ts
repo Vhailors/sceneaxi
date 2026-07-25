@@ -17,12 +17,14 @@ export {
   legalSuccessors,
   missingMandatoryMetadata,
   transitionCatalogItem,
+  validateCatalogItem,
 } from "./catalog.js";
 export type {
   AiGenerationDisclosure,
   AssetPackageRef,
   CatalogDelistingResult,
   CatalogItem,
+  CatalogItemValidationResult,
   CatalogItemTransitionOk,
   CatalogItemTransitionResult,
   CatalogMetadataUnavailableTombstone,

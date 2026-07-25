@@ -12,7 +12,11 @@ import {
   type Proposal,
 } from "@sceneaxi/authoring-core";
 import { failure, success, type CliOutcome, type ResultPayload } from "./envelope.js";
-import { parseVerbArgs, requireFlag, type VerbArgs } from "./verb-args.js";
+import { parseVerbArgs, requireFlag } from "./verb-args.js";
+import {
+  diagnosticsToFailure as mapDiagnosticsToFailure,
+  refuseUnknownArgs,
+} from "./verb-support.js";
 
 const PROPOSE_FLAGS = new Set([
   "--document",
@@ -22,96 +26,6 @@ const PROPOSE_FLAGS = new Set([
   "--cwd",
 ]);
 const APPLY_FLAGS = new Set(["--proposal", "--cwd"]);
-
-function refuseUnknown(
-  args: VerbArgs,
-  allowed: ReadonlySet<string>,
-  path: readonly string[],
-): CliOutcome | null {
-  for (const name of args.flags.keys()) {
-    if (!allowed.has(name)) {
-      return failure("UNKNOWN_FLAG", `Unknown flag: ${name}`, {
-        path,
-        help: [
-          `Unknown flag '${name}' refused (fail-closed)`,
-          `Allowed: ${[...allowed].join(", ")}`,
-          `Run \`sceneaxi ${path.join(" ")} --help\` for usage`,
-        ],
-      });
-    }
-  }
-  for (const name of args.switches) {
-    return failure("UNKNOWN_FLAG", `Unknown flag: ${name}`, {
-      path,
-      help: [
-        `Unknown flag '${name}' refused (fail-closed)`,
-        `Allowed: ${[...allowed].join(", ")}`,
-        `Run \`sceneaxi ${path.join(" ")} --help\` for usage`,
-      ],
-    });
-  }
-  if (args.positionals.length > 0) {
-    return failure(
-      "AMBIGUOUS_INPUT",
-      `Unexpected positional arguments: ${args.positionals.join(" ")}`,
-      {
-        path,
-        help: [
-          `Run \`sceneaxi ${path.join(" ")} --help\` for usage`,
-          "Inputs are flags only (files and flags in).",
-        ],
-      },
-    );
-  }
-  return null;
-}
-
-function mapDiagnosticsToFailure(
-  diagnostics: readonly ApplyDiagnostic[],
-  path: readonly string[],
-): CliOutcome {
-  const primary = diagnostics[0];
-  const message =
-    primary?.message ?? "Proposal rejected with typed diagnostics.";
-  const help = [
-    ...diagnostics
-      .map((d) => d.reReadHint)
-      .filter((h): h is string => typeof h === "string" && h.length > 0),
-    `Run \`sceneaxi ${path.join(" ")} --help\` for usage`,
-    "Run `sceneaxi protocol inspect` for the exit-code map",
-  ];
-
-  const code = primary?.code;
-  if (code === "content-hash-conflict") {
-    return failure("CONFLICT", message, {
-      path,
-      help,
-      diagnostics,
-    });
-  }
-  if (
-    code === "schema-major-mismatch" ||
-    code === "invalid-document" ||
-    code === "invalid-proposal" ||
-    code === "invalid-pointer" ||
-    code === "validation-failed" ||
-    code === "parse-error"
-  ) {
-    return failure("VALIDATION", message, {
-      path,
-      help,
-      diagnostics,
-    });
-  }
-  if (code === "document-not-found") {
-    return failure("NOT_FOUND", message, {
-      path,
-      help,
-      diagnostics,
-    });
-  }
-  return failure("INTERNAL", message, { path, help, diagnostics });
-}
 
 function parseJsonValue(
   raw: string,
@@ -133,7 +47,7 @@ export function runProjectPropose(
   tokens: readonly string[],
 ): CliOutcome {
   const args = parseVerbArgs(tokens);
-  const unknown = refuseUnknown(args, PROPOSE_FLAGS, path);
+  const unknown = refuseUnknownArgs(args, PROPOSE_FLAGS, path);
   if (unknown) return unknown;
 
   const document = requireFlag(args, "--document");
@@ -211,7 +125,7 @@ export function runProjectApply(
   tokens: readonly string[],
 ): CliOutcome {
   const args = parseVerbArgs(tokens);
-  const unknown = refuseUnknown(args, APPLY_FLAGS, path);
+  const unknown = refuseUnknownArgs(args, APPLY_FLAGS, path);
   if (unknown) return unknown;
 
   const proposalFlag = requireFlag(args, "--proposal");

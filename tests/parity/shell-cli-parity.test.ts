@@ -8,7 +8,7 @@
  * Imports use relative paths into package sources so the root `tests/` tree
  * does not need hoisted `@sceneaxi/*` links (pnpm isolates workspace deps).
  */
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -19,7 +19,11 @@ import {
   writeDocumentFile,
 } from "../../packages/authoring-core/src/index.ts";
 import { ExitCode, runCli } from "../../packages/cli/src/index.ts";
-import { shellProposeAndApply as desktopRoundTrip } from "../../apps/desktop-shell/src/index.ts";
+import {
+  DesktopExit,
+  runDesktopShell,
+  shellProposeAndApply as desktopRoundTrip,
+} from "../../apps/desktop-shell/src/index.ts";
 import {
   createInspectorSession,
   shellProposeAndApply as webRoundTrip,
@@ -114,6 +118,57 @@ describe("shell ↔ CLI parity (conformance)", () => {
     }
   });
 
+  it("the runnable desktop command layer matches CLI bytes and hash", () => {
+    // The startable surface (sceneaxi#116), not just the library wrapper:
+    // `sceneaxi-desktop apply` and `sceneaxi project propose|apply` must agree.
+    const dirDesktop = fixtureDir("desktop-app");
+    const dirCli = fixtureDir("desktop-app-cli");
+    writeScene(dirDesktop, "scene.json", { ...SAMPLE });
+    writeScene(dirCli, "scene.json", { ...SAMPLE });
+
+    const applied = runDesktopShell([
+      "apply",
+      "--document",
+      EDIT.documentPath,
+      "--pointer",
+      EDIT.jsonPointer,
+      "--value",
+      JSON.stringify(EDIT.newValue),
+      "--cwd",
+      dirDesktop,
+    ]);
+    expect(applied.exitCode).toBe(DesktopExit.OK);
+    expect(applied.result["appliedPaths"]).toEqual([EDIT.documentPath]);
+
+    expect(
+      runCli([
+        "project",
+        "propose",
+        "--cwd",
+        dirCli,
+        "--document",
+        EDIT.documentPath,
+        "--pointer",
+        EDIT.jsonPointer,
+        "--value",
+        JSON.stringify(EDIT.newValue),
+        "--out",
+        "edit.json",
+      ]).exitCode,
+    ).toBe(ExitCode.OK);
+    expect(
+      runCli(["project", "apply", "--cwd", dirCli, "--proposal", "edit.json"])
+        .exitCode,
+    ).toBe(ExitCode.OK);
+
+    const bytesDesktop = readFileSync(join(dirDesktop, "scene.json"));
+    const bytesCli = readFileSync(join(dirCli, "scene.json"));
+    expect(bytesDesktop.equals(bytesCli)).toBe(true);
+    expect(contentHash(bytesDesktop.toString("utf8"))).toBe(
+      contentHash(bytesCli.toString("utf8")),
+    );
+  });
+
   it("web-shell inspector propose → diff → apply matches CLI hash/content", () => {
     const dirShell = fixtureDir("inspector");
     const dirCli = fixtureDir("inspector-cli");
@@ -181,14 +236,14 @@ describe("shell boundary discipline (source-level)", () => {
     ];
 
     for (const root of roots) {
-      const files = ["index.ts", "protocol-client.ts", "inspector.ts"];
+      // Enumerate the directory rather than listing filenames: a new shell
+      // source file must be covered the moment it lands, not when someone
+      // remembers to extend this list.
+      const files = readdirSync(root).filter((name) => name.endsWith(".ts"));
+      expect(files.length, `${root.pathname} has no sources`).toBeGreaterThan(0);
+
       for (const file of files) {
-        let text: string;
-        try {
-          text = readFileSync(new URL(file, root), "utf8");
-        } catch {
-          continue;
-        }
+        const text = readFileSync(new URL(file, root), "utf8");
         for (const pkg of forbidden) {
           expect(
             text,

@@ -8,7 +8,13 @@ export default defineConfig(
   js.configs.recommended,
   tseslint.configs.strict,
   {
-    files: ["scripts/**/*.mjs", "eslint.config.mjs"],
+    // Node-run tooling: gate scripts and the workspace binaries under bin/.
+    files: [
+      "scripts/**/*.mjs",
+      "packages/*/bin/**/*.mjs",
+      "apps/*/bin/**/*.mjs",
+      "eslint.config.mjs",
+    ],
     languageOptions: { globals: globals.node },
   },
 );

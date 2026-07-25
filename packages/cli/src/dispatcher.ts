@@ -44,6 +44,7 @@ export interface ParsedArgv {
   /** Non-global tokens in order (command path + verb-local flags/args). */
   readonly tokens: readonly string[];
   readonly flags: ReadonlySet<string>;
+  readonly valuedGlobalSwitch: string | null;
   readonly format: OutputFormat;
   readonly wantsHelp: boolean;
   readonly wantsVersion: boolean;
@@ -58,11 +59,16 @@ export interface ParsedArgv {
 export function parseArgv(argv: readonly string[]): ParsedArgv {
   const tokens: string[] = [];
   const flags = new Set<string>();
+  let valuedGlobalSwitch: string | null = null;
 
   for (const token of argv) {
     if (token.startsWith("-")) {
       const flag = token.includes("=") ? token.slice(0, token.indexOf("=")) : token;
       if (GLOBAL_FLAGS.has(flag)) {
+        if (token.includes("=")) {
+          valuedGlobalSwitch ??= flag;
+          continue;
+        }
         flags.add(flag);
         continue;
       }
@@ -78,6 +84,7 @@ export function parseArgv(argv: readonly string[]): ParsedArgv {
   return {
     tokens: Object.freeze(tokens),
     flags,
+    valuedGlobalSwitch,
     format,
     wantsHelp,
     wantsVersion,
@@ -106,7 +113,24 @@ export function dispatch(
 } {
   const heldKeys = options.heldKeys ?? defaultHeldKeyRuntime();
   const parsed = parseArgv(argv);
-  const { tokens, format, wantsHelp, wantsVersion } = parsed;
+  const { tokens, format, wantsHelp, wantsVersion, valuedGlobalSwitch } = parsed;
+
+  if (valuedGlobalSwitch !== null) {
+    return {
+      outcome: failure(
+        "AMBIGUOUS_INPUT",
+        `Boolean switch ${valuedGlobalSwitch} does not accept a value.`,
+        {
+          path: leadingPath(tokens),
+          help: [
+            `Pass '${valuedGlobalSwitch}' without '=value'`,
+            "Global switches: --json, --help, -h, -v, -V, --version",
+          ],
+        },
+      ),
+      format,
+    };
+  }
 
   // Bare version flags (with or without --json).
   if (wantsVersion && commandPathLength(tokens) === 0) {
@@ -266,9 +290,9 @@ function walk(
       if (wantsHelp) {
         // Help ignores verb-local tokens.
         return success(verbHelpPayload(walked, next), [
-          next.helpPayload
+          next.takesArgs === true
             ? `Run \`sceneaxi ${walked.join(" ")}\` with the documented flags`
-            : `Run \`sceneaxi ${walked.join(" ")}\` to invoke this verb (skeleton)`,
+            : `Run \`sceneaxi ${walked.join(" ")}\` — this verb takes no flags`,
           "Run `sceneaxi protocol inspect` for protocol details",
         ]);
       }
@@ -342,8 +366,9 @@ function runVerb(
   tokens: readonly string[],
 ): CliOutcome {
   try {
-    // Skeleton verbs refuse any leftover tokens (flags or positionals).
-    if (node.helpPayload === undefined && tokens.length > 0) {
+    // Argument-less verbs refuse any leftover token (flag or positional);
+    // verbs that parse their own flags refuse unknown ones themselves.
+    if (node.takesArgs !== true && tokens.length > 0) {
       const first = tokens[0];
       if (first !== undefined && first.startsWith("-")) {
         return failure("UNKNOWN_FLAG", `Unknown flag: ${first}`, {

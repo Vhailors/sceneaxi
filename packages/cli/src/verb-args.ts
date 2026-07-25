@@ -5,6 +5,12 @@
 
 export type VerbArgs = {
   readonly flags: ReadonlyMap<string, string>;
+  /**
+   * Every occurrence of each valued flag, in argv order. `flags` keeps the
+   * last occurrence (last-wins); verbs that accept a flag more than once
+   * (e.g. `--artifact`) read it from here instead.
+   */
+  readonly repeated: ReadonlyMap<string, readonly string[]>;
   /** Boolean-style flags present without a value (e.g. --force). */
   readonly switches: ReadonlySet<string>;
   readonly positionals: readonly string[];
@@ -18,8 +24,16 @@ export type VerbArgs = {
  */
 export function parseVerbArgs(tokens: readonly string[]): VerbArgs {
   const flags = new Map<string, string>();
+  const repeated = new Map<string, string[]>();
   const switches = new Set<string>();
   const positionals: string[] = [];
+
+  const record = (name: string, value: string): void => {
+    flags.set(name, value);
+    const seen = repeated.get(name);
+    if (seen === undefined) repeated.set(name, [value]);
+    else seen.push(value);
+  };
 
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
@@ -34,14 +48,14 @@ export function parseVerbArgs(tokens: readonly string[]): VerbArgs {
       const eq = token.indexOf("=");
       const name = token.slice(0, eq);
       const value = token.slice(eq + 1);
-      flags.set(name, value);
+      record(name, value);
       continue;
     }
 
     if (token.startsWith("--")) {
       const next = tokens[i + 1];
       if (next !== undefined && !next.startsWith("-")) {
-        flags.set(token, next);
+        record(token, next);
         i += 1;
       } else {
         switches.add(token);
@@ -60,9 +74,17 @@ export function parseVerbArgs(tokens: readonly string[]): VerbArgs {
 
   return {
     flags,
+    repeated: new Map(
+      [...repeated].map(([name, values]) => [name, Object.freeze(values)]),
+    ),
     switches,
     positionals: Object.freeze(positionals),
   };
+}
+
+/** Every occurrence of a repeatable valued flag, in argv order. */
+export function repeatedFlag(args: VerbArgs, name: string): readonly string[] {
+  return args.repeated.get(name) ?? [];
 }
 
 /** Require a string flag; return error message if missing (or empty unless allowed). */

@@ -5,6 +5,8 @@
   "description": "SceneAxi desktop-shell — thin wrapper over the same authoring-core protocol layer as web-shell",
   "type": "module",
   "exports": { ".": "./src/index.ts" },
+  "bin": { "sceneaxi-desktop": "./bin/sceneaxi-desktop.mjs" },
+  "files": ["src", "bin"],
   "dependencies": {
     "@sceneaxi/schemas": "workspace:^",
     "@sceneaxi/authoring-core": "workspace:^"

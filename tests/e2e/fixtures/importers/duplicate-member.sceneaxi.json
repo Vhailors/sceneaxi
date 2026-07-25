@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "kind": "sceneaxi.document",
+  "id": "duplicate-external",
+  "data": { "a": 1 },
+  "data": { "a": 2 }
+}

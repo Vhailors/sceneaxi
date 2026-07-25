@@ -1,15 +1,27 @@
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { mvpGoldenPath } from "../../packages/profile-web/src/index.ts";
+import {
+  WEB_EXPERIENCE_REFUSED_SCOPES,
+  mvpGoldenPath,
+} from "../../packages/profile-web/src/index.ts";
 import {
   GOLDEN_PROJECT_DOCUMENT_INPUT,
   productManifestFrom,
 } from "./fixtures/golden-project.ts";
 
+const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
+const GOLDEN_PATH =
+  "tests/e2e/fixtures/profile-web/golden-digests.json";
+
+function readJson(path: string): unknown {
+  return JSON.parse(readFileSync(join(REPO_ROOT, path), "utf8")) as unknown;
+}
+
 describe("Web profile MVP golden path", () => {
-  it("runs the same golden project under Web policy without a CMS claim", () => {
+  it("runs the same golden project under the fixed Web scope boundary", () => {
     const cwd = mkdtempSync(join(tmpdir(), "sceneaxi-web-golden-"));
     const documentPath = "project.sceneaxi.json";
     try {
@@ -17,9 +29,14 @@ describe("Web profile MVP golden path", () => {
         ok: true,
         scope: "interactive-experience",
       });
-      expect(mvpGoldenPath.evaluateScope("cms")).toMatchObject({
-        ok: false,
-        reason: "OUTSIDE_WEB_EXPERIENCE_SCOPE",
+      const refusedScopes = WEB_EXPERIENCE_REFUSED_SCOPES.map((scope) => {
+        const decision = mvpGoldenPath.evaluateScope(scope);
+        expect(decision).toMatchObject({
+          ok: false,
+          requestedScope: scope,
+          reason: "OUTSIDE_WEB_EXPERIENCE_SCOPE",
+        });
+        return scope;
       });
       expect(mvpGoldenPath.status).toEqual({
         developmentConsumer: true,
@@ -66,9 +83,10 @@ describe("Web profile MVP golden path", () => {
       session.advance({ tick: 1, deltaMs: 16 });
       const terminal = session.observe();
       expect(terminal.entities).toEqual([{ id: "hero", x: 5, y: 0 }]);
-      expect(
-        mvpGoldenPath.core.kernel.replay(session.save(), host).observe(),
-      ).toEqual(terminal);
+      const replayed = mvpGoldenPath.core.kernel
+        .replay(session.save(), host)
+        .observe();
+      expect(replayed).toEqual(terminal);
 
       const presenter =
         mvpGoldenPath.core.presentation.createNullPresentationRuntime();
@@ -76,6 +94,32 @@ describe("Web profile MVP golden path", () => {
       presenter.present(terminal, [], 0);
       expect(presenter.capture()).toBeNull();
       presenter.dispose();
+
+      expect({
+        schemaVersion: 1,
+        kind: "sceneaxi.profile-web-golden-evidence",
+        status: "passed",
+        profile: {
+          name: mvpGoldenPath.seam.name,
+          policyVersion: mvpGoldenPath.policy.version,
+          shippingClaim: mvpGoldenPath.status.shippingClaim,
+        },
+        policy: {
+          allowedScope: "interactive-experience",
+          refusedScopes,
+        },
+        authoring: {
+          documentPath,
+          entityX: manifest.entities?.[0]?.x,
+        },
+        kernel: {
+          terminalDigest: terminal.digest,
+          replayDigest: replayed.digest,
+        },
+        presentation: {
+          capture: null,
+        },
+      }).toEqual(readJson(GOLDEN_PATH));
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }

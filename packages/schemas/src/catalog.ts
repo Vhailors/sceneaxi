@@ -124,6 +124,10 @@ export type CatalogItem = {
   readonly commerce: CommerceFields;
 };
 
+export type CatalogItemValidationResult =
+  | { readonly ok: true; readonly item: CatalogItem }
+  | { readonly ok: false; readonly message: string };
+
 export type CatalogMetadataUnavailableTombstone = {
   readonly schemaVersion:
     typeof CATALOG_METADATA_UNAVAILABLE_TOMBSTONE_SCHEMA_VERSION;
@@ -726,6 +730,59 @@ function normalizeModerationHistory(item: unknown): ModerationNormalization {
     ok: true,
     moderation: { pipelineState, history: normalizedHistory },
   };
+}
+
+function sameCatalogValue(left: unknown, right: unknown): boolean {
+  if (left === right) return true;
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right)) return false;
+    if (left.length !== right.length) return false;
+    return left.every(
+      (value, index) =>
+        Object.hasOwn(right, index) &&
+        sameCatalogValue(value, right[index]),
+    );
+  }
+  if (!isRecord(left) || !isRecord(right)) return false;
+  const leftKeys = Object.keys(left).sort();
+  const rightKeys = Object.keys(right).sort();
+  if (
+    leftKeys.length !== rightKeys.length ||
+    leftKeys.some((key, index) => key !== rightKeys[index])
+  ) {
+    return false;
+  }
+  return leftKeys.every((key) => sameCatalogValue(left[key], right[key]));
+}
+
+export function validateCatalogItem(
+  value: unknown,
+): CatalogItemValidationResult {
+  const metadata = normalizeCatalogMetadata(value);
+  if (metadata.metadata === undefined || metadata.missing.length > 0) {
+    return {
+      ok: false,
+      message:
+        "Catalog item does not satisfy mandatory metadata: " +
+        metadata.missing.join(", ") +
+        ".",
+    };
+  }
+  const moderation = normalizeModerationHistory(value);
+  if (!moderation.ok) {
+    return { ok: false, message: moderation.refusal.message };
+  }
+  const item: CatalogItem = {
+    ...metadata.metadata,
+    moderation: moderation.moderation,
+  };
+  if (!sameCatalogValue(value, item)) {
+    return {
+      ok: false,
+      message: "Catalog item contains fields outside the v1 contract.",
+    };
+  }
+  return { ok: true, item };
 }
 
 /**
