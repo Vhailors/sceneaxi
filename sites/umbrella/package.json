@@ -1,0 +1,32 @@
+{
+  "name": "@sceneaxi/site-umbrella",
+  "version": "0.0.0",
+  "private": true,
+  "description": "SceneAxi umbrella site \u2014 product/docs, public engine SDK download, account surface, credit packs, entitled Minimum E2 web editor",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "build:sdk": "node ../../scripts/build-engine-sdk.mjs --out public/engine-sdk",
+    "prebuild": "pnpm run build:sdk",
+    "predev": "pnpm run build:sdk"
+  },
+  "dependencies": {
+    "@sceneaxi/site-kit": "link:../../packages/site-kit",
+    "next": "15.5.21",
+    "react": "19.1.1",
+    "react-dom": "19.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "26.1.1",
+    "@types/react": "19.1.9",
+    "@types/react-dom": "19.1.7",
+    "typescript": "5.9.3"
+  },
+  "sceneaxi": {
+    "releaseGroup": "sites"
+  },
+  "license": "UNLICENSED"
+}

@@ -16,7 +16,7 @@ SceneAxi = interactive engine/library + versioned profiles (Game, Web Experience
 ## Toolchain
 
 - `pnpm gate` is the required repository check; root `package.json` owns its exact
-  sequence. Syntax and test explicitly refuse empty surfaces, and every stage exits
+  sequence (syntax, boundaries, contracts, **sites**, build, test, lint). Syntax and test explicitly refuse empty surfaces, and every stage exits
   non-zero on its configured failures. Never weaken the gate: no skips, no `|| true`,
   no lint disables, no matrix allow-list widening.
 - Build uses strict tsc project references; package exports remain source-backed and
@@ -62,11 +62,30 @@ The Model Provider Port (sceneaxi#45) is `packages/authoring-core/src/model-prov
 
 Delivery Handoff is the public, delivery-neutral export contract in `@sceneaxi/schemas` (`contracts/delivery-handoff.schema.json`, `src/delivery-handoff.ts`); its adapter boundary and digest semantics are authoritative in `docs/delivery-handoff.md`. Provider-specific delivery adapters, credentials, uploads, approvals, and releases stay outside SceneAxi core.
 
-Three.js is the product presentation core (ADR 0017, captain product decision — not a Stage 1 result), hidden behind the unchanged ADR 0002 seam; the ownership map is `docs/three-presentation-core.md`. `packages/engine-presentation` holds one Three core on two draw surfaces: a real `WebGLRenderer` canvas surface that draws pixels and captures PNG, and a deterministic headless surface for node gates that never claims pixels. Keep the package free of `node:*` and DOM-lib types, and keep every Three type behind its exports (numeric camera controls, opaque renderable handles). Frames carry `surface`/`pixelsDrawn`; never let a frame counter imply pixels. The retired label "Experimental Three preview — non-decision" must not return for product surfaces. WebGL cannot run in node, so the canvas path is verified in a real browser and recorded in that doc; gate coverage goes through the injected-surface tests in `packages/engine-presentation/test/`.
+Three.js is the product presentation core (ADR 0019, captain product decision — not a Stage 1 result), hidden behind the unchanged ADR 0002 seam; the ownership map is `docs/three-presentation-core.md`. `packages/engine-presentation` holds one Three core on two draw surfaces: a real `WebGLRenderer` canvas surface that draws pixels and captures PNG, and a deterministic headless surface for node gates that never claims pixels. Keep the package free of `node:*` and DOM-lib types, and keep every Three type behind its exports (numeric camera controls, opaque renderable handles). Frames carry `surface`/`pixelsDrawn`; never let a frame counter imply pixels. The retired label "Experimental Three preview — non-decision" must not return for product surfaces. WebGL cannot run in node, so the canvas path is verified in a real browser and recorded in that doc; gate coverage goes through the injected-surface tests in `packages/engine-presentation/test/`.
 
 Sculpt-quality ownership and compatibility are documented in `docs/sculpt-quality.md`: legacy PR #75 aggregate/result seams remain compatible, while strict multi-pass contracts and named refusals live on separate quality-specific paths.
 
 Scene composition (multiple Sculpt Artifacts into one openable scene) is documented in `docs/scene-composition.md` and ADRs 0014–0015. Contracts and placement math are `packages/schemas/src/scene-composition.ts` (`contracts/scene-composition.schema.json`); the pipeline is `composeScene()` in `packages/authoring-core`; the multi-object open path is `openSceneKernelSession()` in `packages/engine-kernel`. Placement is axis-aligned in v1 and is a projection — never rewrite a Sculpt Artifact to place it, since its evidence binds its exact spec bytes. Composition fails closed on the named refuse matrix; extend `tests/e2e/scene-composition-golden.test.ts` and its checked-in digests when touching any of it.
+
+Deployable web surfaces live in a `sites/` tier (ADR 0019): `sites/umbrella`,
+`sites/catalog-game`, `sites/catalog-web`, all thin view layers over
+`packages/site-kit`, which owns every non-presentational behaviour and is where the gate
+tests it. Each site is its **own single-package pnpm workspace and install root with its
+own lockfile, outside the repository-root workspace**, so a web-framework dependency
+never moves the hermetic root lockfile or the gate runtime; `next`/`react`/provider SDKs
+belong in `sites/` only.
+`pnpm check:syntax`, `pnpm check:boundaries`, and `pnpm check:sites` all cover the tier —
+extend `tests/boundary/injected-site-violations.test.ts` when you extend any of them. Only
+`sites/*/src/app/**` may import React or Next; `src/index.ts` and `src/lib/**` stay pure
+TypeScript so the hermetic build type-checks them, and site seam tests live in
+`tests/sites/`. Deploy, the exact env var list, and the identity-plane activation steps are
+in `docs/websites-deploy.md`. The public engine SDK download is a deterministic zip plus
+SHA-256 (`pnpm build:sdk`, ADR 0020), never an npm publish, and it must never contain
+Kids. Web editor entitlement (credits, or the unused 100-credit starter allotment; admin
+unrestricted) is ADR 0020 and does not widen ADR 0003's general-E2 bound. Identity,
+credits, and billing stay owned by `sceneaxi-auth-credits-v1`; `site-kit` only declares
+fail-closed ports and `sites/umbrella/src/lib/identity-plane.ts` is the single plug point.
 
 First-class plugins follow `docs/plugins.md` and ADR 0005: manifests may claim
 only IDs from the versioned public capability registry; unknown IDs and

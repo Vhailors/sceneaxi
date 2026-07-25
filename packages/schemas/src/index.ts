@@ -193,7 +193,8 @@ export type ReleaseGroup =
   | "cli-protocol"
   | "importers"
   | "plugin-host"
-  | "apps";
+  | "apps"
+  | "sites";
 
 /** The self-description every SceneAxi package exposes at its public seam. */
 export interface PackageSeam {

@@ -15,7 +15,9 @@ import { fileURLToPath } from "node:url";
 
 export const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 
-const COPY_TOPS = ["docs", "packages", "apps", "scripts"];
+const COPY_TOPS = ["docs", "packages", "apps", "sites", "scripts"];
+/** Root files the gate scripts read (check-sites reads the manifest and workspace). */
+const COPY_FILES = ["package.json", "pnpm-workspace.yaml"];
 const SKIP_DIRS = new Set(["node_modules", "dist", "coverage", "test"]);
 
 /**
@@ -30,6 +32,9 @@ export function makeFixture(): string {
       recursive: true,
       filter: (src) => !SKIP_DIRS.has(basename(src)),
     });
+  }
+  for (const file of COPY_FILES) {
+    cpSync(join(repoRoot, file), join(root, file));
   }
   symlinkSync(join(repoRoot, "node_modules"), join(root, "node_modules"), "dir");
   return root;
@@ -69,7 +74,7 @@ export function writeTo(root: string, rel: string, text: string): void {
 
 export function runCheck(
   root: string,
-  script: "check-boundaries.mjs" | "check-syntax.mjs",
+  script: "check-boundaries.mjs" | "check-syntax.mjs" | "check-sites.mjs",
 ): { status: number | null; stdout: string; stderr: string } {
   return spawnSync(process.execPath, [join(root, "scripts", script)], {
     encoding: "utf8",

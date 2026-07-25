@@ -105,6 +105,26 @@
       "dir": "apps/catalog-web",
       "releaseGroup": "apps",
       "allow": ["@sceneaxi/schemas"]
+    },
+    "@sceneaxi/site-kit": {
+      "dir": "packages/site-kit",
+      "releaseGroup": "sites",
+      "allow": ["@sceneaxi/schemas", "@sceneaxi/authoring-core"]
+    },
+    "@sceneaxi/site-umbrella": {
+      "dir": "sites/umbrella",
+      "releaseGroup": "sites",
+      "allow": ["@sceneaxi/site-kit"]
+    },
+    "@sceneaxi/site-catalog-game": {
+      "dir": "sites/catalog-game",
+      "releaseGroup": "sites",
+      "allow": ["@sceneaxi/site-kit"]
+    },
+    "@sceneaxi/site-catalog-web": {
+      "dir": "sites/catalog-web",
+      "releaseGroup": "sites",
+      "allow": ["@sceneaxi/site-kit"]
     }
   },
   "kidsBoundary": {
@@ -143,6 +163,9 @@
     "plugin-host": {
       "policy": "independently versioned; consumes only public contracts from schemas; never engine packages or service locators"
     },
-    "apps": { "policy": "private, unpublished, unversioned beyond workspace bookkeeping" }
+    "apps": { "policy": "private, unpublished, unversioned beyond workspace bookkeeping" },
+    "sites": {
+      "policy": "first-party deployable web surfaces and their shared deployment-neutral logic; consume only public contracts and public authoring-core APIs; never engine packages, profiles, a service locator, or Kids; framework and provider SDKs stay in the sites/ tier and out of the hermetic package tier"
+    }
   }
 }

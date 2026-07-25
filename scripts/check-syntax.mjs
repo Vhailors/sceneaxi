@@ -19,7 +19,9 @@ const walk = (dir) => {
     else if (/\.(ts|tsx|js|mjs)$/.test(entry)) files.push(p);
   }
 };
-for (const parent of ["packages", "apps"]) {
+// `sites` is included with no extra tooling: this program runs with noResolve and
+// noLib, so a site's .tsx parses without React ever being installed.
+for (const parent of ["packages", "apps", "sites"]) {
   const parentDir = join(root, parent);
   if (!existsSync(parentDir)) continue;
   for (const entry of readdirSync(parentDir)) {

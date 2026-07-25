@@ -1,5 +1,7 @@
 node_modules/
 dist/
+dist-sdk/
+dist-sdk-again/
 build/
 .turbo/
 .cache/
@@ -13,3 +15,17 @@ coverage/
 .vscode/
 *.tsbuildinfo
 .sceneaxi/
+
+# sites/ are separate install roots (see docs/websites-deploy.md)
+sites/*/.next/
+sites/*/public/engine-sdk/
+sites/*/node_modules/
+sites/*/next-env.d.ts
+
+# Vercel CLI link state and pulled env, per site
+.vercel/
+sites/*/.vercel/
+.env.local
+sites/*/.env.local
+.vercel
+.env*

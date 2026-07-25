@@ -18,6 +18,11 @@ repository as source.
 | `@sceneaxi/schemas` | Small shared semantic language: types, validators, version constants, and versioned JSON contracts. Add it directly when product glue imports these APIs. | Pin an exact published contracts version accepted by the selected profile release. |
 | `@sceneaxi/authoring-core` | Optional text-canonical document and propose/apply API for products that need authoring. It is not required merely to render a Web Experience. | Pin an exact published core version within the profile's `seam.corePin`. |
 
+This contract governs **third-party products**. The first-party surfaces in this
+repository — `apps/*` and the deployable `sites/*` (ADR 0018) — are private applications,
+not external consumers, so their in-repo path dependencies are correct and change nothing
+here.
+
 Engine packages are profile implementation dependencies by default, not
 consumer entry points. Import one directly only when the selected published
 profile release documents that public use, and pin it to the same core train as

@@ -1,0 +1,55 @@
+name: engine-sdk
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  engine-sdk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      # The builder is dependency-free plain ESM, so no install step is needed.
+      - name: Build the public engine SDK archive
+        run: node scripts/build-engine-sdk.mjs --out dist-sdk
+
+      # Independent verification: a third-party reader must accept the archive, and
+      # the published checksum must match the bytes we are about to upload.
+      - name: Verify archive integrity and checksum
+        run: |
+          set -euo pipefail
+          unzip -t dist-sdk/*.zip
+          ( cd dist-sdk && sha256sum -c ./*.zip.sha256 )
+          cat dist-sdk/sdk-manifest.json
+
+      # Determinism is the property the published checksum rests on, so prove it in
+      # CI rather than trusting it.
+      - name: Prove the build is deterministic
+        run: |
+          set -euo pipefail
+          node scripts/build-engine-sdk.mjs --out dist-sdk-again
+          diff <(sha256sum dist-sdk/*.zip | cut -d' ' -f1) \
+               <(sha256sum dist-sdk-again/*.zip | cut -d' ' -f1)
+
+      - name: Refuse a Kids file in the archive
+        run: |
+          set -euo pipefail
+          if unzip -l dist-sdk/*.zip | grep -i kids; then
+            echo "Kids content reached the public SDK archive — isolation violation" >&2
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sceneaxi-engine-sdk
+          path: |
+            dist-sdk/*.zip
+            dist-sdk/*.zip.sha256
+            dist-sdk/sdk-manifest.json
+          if-no-files-found: error

@@ -1,0 +1,478 @@
+/*
+ * SceneAxi umbrella — a technical-document aesthetic.
+ *
+ * The product is contract-first, so the surface reads like a specification: precise
+ * type, tabular data, explicit state panels, and refusals that look like refusals
+ * rather than decoration. Light and dark both supported.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  --ink: #12151c;
+  --ink-soft: #4a5263;
+  --ink-faint: #767f92;
+  --paper: #fbfaf7;
+  --paper-raised: #ffffff;
+  --rule: #ddd9d0;
+  --rule-strong: #bdb8ac;
+
+  --accent: #1f5f4e;
+  --accent-ink: #ffffff;
+  --warn: #8a5a12;
+  --warn-bg: #fdf4e3;
+  --deny: #8e2f28;
+  --deny-bg: #fbeceb;
+  --ok: #1f5f4e;
+  --ok-bg: #e9f3ef;
+
+  --mono: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, monospace;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+
+  --measure: 68ch;
+  --shell: 76rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #e9e6df;
+    --ink-soft: #a8b0be;
+    --ink-faint: #79818f;
+    --paper: #0e1116;
+    --paper-raised: #151a21;
+    --rule: #262d37;
+    --rule-strong: #3a434f;
+
+    --accent: #5fd0ae;
+    --accent-ink: #08120f;
+    --warn: #e8b866;
+    --warn-bg: #241d10;
+    --deny: #f0938a;
+    --deny-bg: #26140f;
+    --ok: #5fd0ae;
+    --ok-bg: #0f1f1a;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+a {
+  color: inherit;
+  text-decoration-color: var(--rule-strong);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+a:hover {
+  text-decoration-color: var(--accent);
+}
+
+code,
+kbd,
+pre,
+.mono {
+  font-family: var(--mono);
+  font-size: 0.875em;
+}
+
+/* --- shell --- */
+
+.shell {
+  max-width: var(--shell);
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.masthead {
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper-raised);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.masthead-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.75rem 1.5rem;
+  padding: 0.9rem 1.5rem;
+  max-width: var(--shell);
+  margin: 0 auto;
+}
+
+.wordmark {
+  font-family: var(--mono);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-size: 1.05rem;
+  text-decoration: none;
+}
+
+.wordmark::before {
+  content: "◧ ";
+  color: var(--accent);
+}
+
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1.1rem;
+  margin-left: auto;
+  font-size: 0.9rem;
+}
+
+.nav a {
+  text-decoration: none;
+  color: var(--ink-soft);
+  padding-bottom: 2px;
+  border-bottom: 2px solid transparent;
+}
+
+.nav a:hover {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+
+main {
+  padding: 2.5rem 0 4rem;
+}
+
+footer {
+  border-top: 1px solid var(--rule);
+  color: var(--ink-faint);
+  font-size: 0.85rem;
+  padding: 1.75rem 0 3rem;
+}
+
+/* --- typography --- */
+
+h1 {
+  font-size: clamp(1.7rem, 1.2rem + 2vw, 2.5rem);
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  margin: 0 0 0.5rem;
+  font-weight: 620;
+}
+
+h2 {
+  font-size: 1.2rem;
+  letter-spacing: -0.01em;
+  margin: 2.75rem 0 0.85rem;
+  font-weight: 620;
+}
+
+h3 {
+  font-size: 0.95rem;
+  margin: 1.75rem 0 0.5rem;
+  font-weight: 620;
+}
+
+p,
+li {
+  max-width: var(--measure);
+}
+
+.lede {
+  font-size: 1.1rem;
+  color: var(--ink-soft);
+  max-width: var(--measure);
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 0.6rem;
+}
+
+/* --- layout helpers --- */
+
+.grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+}
+
+.grid > * {
+  min-width: 0;
+}
+
+.panel {
+  border: 1px solid var(--rule);
+  background: var(--paper-raised);
+  padding: 1.1rem 1.2rem;
+}
+
+.panel h3 {
+  margin-top: 0;
+}
+
+.panel p:last-child {
+  margin-bottom: 0;
+}
+
+.scroll-x {
+  overflow-x: auto;
+  border: 1px solid var(--rule);
+  background: var(--paper-raised);
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.9rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.55rem 0.85rem;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+th {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border-bottom-color: var(--rule-strong);
+}
+
+td.wrap,
+th.wrap {
+  white-space: normal;
+  min-width: 18ch;
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+pre {
+  margin: 0;
+  padding: 0.8rem 1rem;
+  overflow-x: auto;
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  line-height: 1.5;
+}
+
+/* --- state chips and panels --- */
+
+.chip {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+
+.chip-free {
+  color: var(--ok);
+}
+
+.chip-paid {
+  color: var(--warn);
+}
+
+.chip-deny {
+  color: var(--deny);
+}
+
+.state {
+  border-left: 3px solid var(--rule-strong);
+  padding: 0.9rem 1.1rem;
+  background: var(--paper-raised);
+  margin: 1.25rem 0;
+}
+
+.state h3 {
+  margin: 0 0 0.35rem;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+}
+
+.state p {
+  margin: 0.35rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+}
+
+.state-deny {
+  border-left-color: var(--deny);
+  background: var(--deny-bg);
+}
+
+.state-deny h3 {
+  color: var(--deny);
+}
+
+.state-warn {
+  border-left-color: var(--warn);
+  background: var(--warn-bg);
+}
+
+.state-warn h3 {
+  color: var(--warn);
+}
+
+.state-ok {
+  border-left-color: var(--ok);
+  background: var(--ok-bg);
+}
+
+.state-ok h3 {
+  color: var(--ok);
+}
+
+.reason {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  display: block;
+  margin-top: 0.4rem;
+  word-break: break-word;
+}
+
+/* --- actions --- */
+
+.button {
+  display: inline-block;
+  font: inherit;
+  font-weight: 560;
+  padding: 0.55rem 1.1rem;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button:hover {
+  filter: brightness(1.08);
+}
+
+.button-quiet {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--rule-strong);
+}
+
+.button[aria-disabled="true"] {
+  border-color: var(--rule-strong);
+  background: transparent;
+  color: var(--ink-faint);
+  cursor: not-allowed;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  margin: 1.25rem 0;
+}
+
+.dl {
+  display: grid;
+  grid-template-columns: minmax(9rem, max-content) 1fr;
+  gap: 0.3rem 1rem;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.dl dt {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding-top: 0.15rem;
+}
+
+.dl dd {
+  margin: 0;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.tree {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+}
+
+.tree li {
+  padding: 0.28rem 0;
+  border-bottom: 1px dotted var(--rule);
+  max-width: none;
+}
+
+.tree li:last-child {
+  border-bottom: none;
+}
+
+.tree .depth {
+  color: var(--ink-faint);
+}
+
+.field {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.field label {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.field input,
+.field select {
+  font: inherit;
+  font-family: var(--mono);
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--rule-strong);
+  background: var(--paper);
+  color: var(--ink);
+  min-width: 0;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  /* flex-end rather than end: wider browser support for the flex context. */
+  align-items: flex-end;
+}

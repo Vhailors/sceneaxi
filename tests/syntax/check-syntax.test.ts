@@ -44,8 +44,11 @@ describe("syntax check", () => {
   });
 
   it("refuses to pass on an empty source surface", () => {
-    rmSync(join(fx, "packages"), { recursive: true, force: true });
-    rmSync(join(fx, "apps"), { recursive: true, force: true });
+    // Every walked tier must be gone for the surface to be empty — `sites` joined
+    // `packages` and `apps` when the deployable sites tier landed.
+    for (const tier of ["packages", "apps", "sites"]) {
+      rmSync(join(fx, tier), { recursive: true, force: true });
+    }
     const res = runCheck(fx, "check-syntax.mjs");
     expect(res.status).toBe(1);
     expect(res.stderr).toContain("found zero source files");

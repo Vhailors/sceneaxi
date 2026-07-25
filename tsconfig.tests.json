@@ -6,11 +6,19 @@
     "declarationMap": false,
     "sourceMap": false,
     "noEmit": true,
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "@sceneaxi/site-kit": [
+        "./packages/site-kit/src/index.ts"
+      ]
+    },
+    "baseUrl": "."
   },
   "include": [
     "tests",
     "packages/*/src/**/*.ts",
-    "apps/*/src/**/*.ts"
+    "apps/*/src/**/*.ts",
+    "sites/*/src/index.ts",
+    "sites/*/src/lib/**/*.ts"
   ]
 }

@@ -1,0 +1,12 @@
+# This site is its own install root: its presence makes pnpm treat this directory as
+# the workspace root, so the site keeps its own lockfile and the hermetic repository
+# root install never moves for a site dependency.
+
+# sharp is Next's native image-optimization dependency. Approved explicitly so
+# `pnpm install` and `pnpm build` are clean and non-interactive locally, in CI, and on
+# Vercel — an unapproved build script makes pnpm's pre-run check exit non-zero.
+packages:
+  - "."
+
+allowBuilds:
+  sharp: true
