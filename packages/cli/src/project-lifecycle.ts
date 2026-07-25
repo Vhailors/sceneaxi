@@ -8,8 +8,9 @@
  */
 
 import { existsSync } from "node:fs";
-import { basename } from "node:path";
+import { basename, relative, sep } from "node:path";
 import {
+  canonicalPath,
   contentHash,
   createDocument,
   serializeDocument,
@@ -363,7 +364,7 @@ export function runProjectCapture(
   if (aliasRefusal) return aliasRefusal;
 
   const packet = buildEvidencePacket(
-    documentPath,
+    projectRelativeDocumentPath(documentPath, cwd),
     loaded.document,
     loaded.text,
   );
@@ -392,9 +393,21 @@ export function runProjectCapture(
     }),
     [
       `Run \`sceneaxi project report --evidence ${out}\` to summarize it`,
-      "Evidence is deterministic: identical document bytes yield identical evidence bytes",
+      "Evidence is deterministic for the same canonical project-relative path and document bytes",
     ],
   );
+}
+
+function projectRelativeDocumentPath(
+  documentPath: string,
+  cwd: string | undefined,
+): string {
+  const projectRoot = canonicalPath(cwd ?? process.cwd());
+  const absoluteDocument = canonicalPath(resolveUnderCwd(documentPath, cwd));
+  const normalized = relative(projectRoot, absoluteDocument)
+    .split(sep)
+    .join("/");
+  return normalized.length === 0 ? "." : normalized;
 }
 
 function buildEvidencePacket(

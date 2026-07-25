@@ -140,6 +140,55 @@ describe("desktop shell commands", () => {
     expect(readFileSync(join(cwd, "scene.json"), "utf8")).toBe(before);
   });
 
+  it("undoes in the working directory used by the completed apply", () => {
+    const overrideCwd = mkdtempSync(
+      join(tmpdir(), "sceneaxi-desktop-override-"),
+    );
+    try {
+      const overrideDocument = createDocument({
+        id: "scene",
+        data: { entities: [{ id: "hero", x: 1 }] },
+      });
+      expect(
+        writeDocumentFile(
+          join(overrideCwd, "scene.json"),
+          overrideDocument,
+          { cwd: overrideCwd },
+        ).ok,
+      ).toBe(true);
+
+      const baseBefore = readFileSync(join(cwd, "scene.json"), "utf8");
+      const overrideBefore = readFileSync(
+        join(overrideCwd, "scene.json"),
+        "utf8",
+      );
+      const session = createDesktopSession({ cwd });
+      expect(
+        session.proposeEdit({
+          documentPath: "scene.json",
+          jsonPointer: "/data/entities/0/x",
+          newValue: 7,
+          cwd: overrideCwd,
+        }).phase,
+      ).toBe("reviewing");
+      expect(session.accept().phase).toBe("applied");
+      expect(readFileSync(join(overrideCwd, "scene.json"), "utf8")).not.toBe(
+        overrideBefore,
+      );
+
+      expect(session.undo()).toEqual({
+        ok: true,
+        restoredPaths: ["scene.json"],
+      });
+      expect(readFileSync(join(overrideCwd, "scene.json"), "utf8")).toBe(
+        overrideBefore,
+      );
+      expect(readFileSync(join(cwd, "scene.json"), "utf8")).toBe(baseBefore);
+    } finally {
+      rmSync(overrideCwd, { recursive: true, force: true });
+    }
+  });
+
   it("refuses undo when there is nothing to undo", () => {
     const r = run(["undo"]);
     expect(r.exitCode).toBe(DesktopExit.ERROR);

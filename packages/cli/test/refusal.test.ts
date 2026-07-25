@@ -55,6 +55,21 @@ describe("fail-closed validation (unknown flags / ambiguous input)", () => {
     }
   });
 
+  it.each(["--json=false", "--help=false", "--version=false"])(
+    "refuses valued global boolean switch %s",
+    (flag) => {
+      const r = runCli([flag]);
+      expect(r.exitCode).toBe(ExitCode.USAGE);
+      expect(r.format).toBe("text");
+      if (!r.envelope.ok) {
+        expect(r.envelope.error.code).toBe("AMBIGUOUS_INPUT");
+        expect(r.envelope.error.message).toContain(
+          flag.slice(0, flag.indexOf("=")),
+        );
+      }
+    },
+  );
+
   it("does not best-effort accept partial unknown paths", () => {
     // `profile list` is valid; adding junk must not run the verb.
     const good = runCli(["profile", "list"]);

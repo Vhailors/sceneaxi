@@ -44,6 +44,7 @@ export interface ParsedArgv {
   /** Non-global tokens in order (command path + verb-local flags/args). */
   readonly tokens: readonly string[];
   readonly flags: ReadonlySet<string>;
+  readonly valuedGlobalSwitch: string | null;
   readonly format: OutputFormat;
   readonly wantsHelp: boolean;
   readonly wantsVersion: boolean;
@@ -58,11 +59,16 @@ export interface ParsedArgv {
 export function parseArgv(argv: readonly string[]): ParsedArgv {
   const tokens: string[] = [];
   const flags = new Set<string>();
+  let valuedGlobalSwitch: string | null = null;
 
   for (const token of argv) {
     if (token.startsWith("-")) {
       const flag = token.includes("=") ? token.slice(0, token.indexOf("=")) : token;
       if (GLOBAL_FLAGS.has(flag)) {
+        if (token.includes("=")) {
+          valuedGlobalSwitch ??= flag;
+          continue;
+        }
         flags.add(flag);
         continue;
       }
@@ -78,6 +84,7 @@ export function parseArgv(argv: readonly string[]): ParsedArgv {
   return {
     tokens: Object.freeze(tokens),
     flags,
+    valuedGlobalSwitch,
     format,
     wantsHelp,
     wantsVersion,
@@ -106,7 +113,24 @@ export function dispatch(
 } {
   const heldKeys = options.heldKeys ?? defaultHeldKeyRuntime();
   const parsed = parseArgv(argv);
-  const { tokens, format, wantsHelp, wantsVersion } = parsed;
+  const { tokens, format, wantsHelp, wantsVersion, valuedGlobalSwitch } = parsed;
+
+  if (valuedGlobalSwitch !== null) {
+    return {
+      outcome: failure(
+        "AMBIGUOUS_INPUT",
+        `Boolean switch ${valuedGlobalSwitch} does not accept a value.`,
+        {
+          path: leadingPath(tokens),
+          help: [
+            `Pass '${valuedGlobalSwitch}' without '=value'`,
+            "Global switches: --json, --help, -h, -v, -V, --version",
+          ],
+        },
+      ),
+      format,
+    };
+  }
 
   // Bare version flags (with or without --json).
   if (wantsVersion && commandPathLength(tokens) === 0) {

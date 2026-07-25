@@ -98,6 +98,7 @@ export function createDesktopSession(
   let proposal: Proposal | null = null;
   let pendingCwd: string | undefined;
   let pendingTransactionId: string | null = null;
+  let lastAppliedCwd: string | undefined;
   let appliedPaths: readonly string[] | null = null;
   let journalRecoveryPending = false;
   let diagnostics: readonly ApplyDiagnostic[] | null = null;
@@ -186,6 +187,7 @@ export function createDesktopSession(
 
       phase = "applied";
       appliedPaths = result.appliedPaths;
+      lastAppliedCwd = cwd ?? sessionCwd;
       journalRecoveryPending = result.journalRecoveryPending === true;
       pendingTransactionId = result.transactionId ?? null;
       diagnostics = null;
@@ -245,6 +247,7 @@ export function createDesktopSession(
       if (phase === "pending") {
         phase = "applied";
         appliedPaths = resolved.documentPaths;
+        lastAppliedCwd = pendingCwd ?? sessionCwd;
       }
       journalRecoveryPending = false;
       pendingTransactionId = null;
@@ -296,10 +299,11 @@ export function createDesktopSession(
     },
 
     undo(): DesktopUndoResult {
-      const result = undoLastApply({ cwd: sessionCwd });
+      const result = undoLastApply({ cwd: lastAppliedCwd ?? sessionCwd });
       if (!result.ok) {
         return { ok: false, diagnostics: result.diagnostics };
       }
+      lastAppliedCwd = undefined;
       clearProposal("idle");
       return { ok: true, restoredPaths: result.documentPaths };
     },

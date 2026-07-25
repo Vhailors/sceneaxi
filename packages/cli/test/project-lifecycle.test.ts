@@ -366,6 +366,31 @@ describe("project lifecycle verbs", () => {
       expect(bytes).not.toMatch(/\d{4}-\d{2}-\d{2}T/);
     });
 
+    it("normalizes equivalent document path spellings in evidence", () => {
+      create();
+      const direct = capture();
+      const aliased = runCli([
+        "project",
+        "capture",
+        "--document",
+        "./scene.json",
+        "--out",
+        "aliased.evidence.json",
+        "--cwd",
+        cwd,
+      ]);
+      expect(direct.exitCode).toBe(ExitCode.OK);
+      expect(aliased.exitCode).toBe(ExitCode.OK);
+      expect(readFileSync(join(cwd, "aliased.evidence.json"), "utf8")).toBe(
+        readFileSync(join(cwd, "run.evidence.json"), "utf8"),
+      );
+
+      const carrier = JSON.parse(
+        readFileSync(join(cwd, "aliased.evidence.json"), "utf8"),
+      ) as { data: { documentPath: string } };
+      expect(carrier.data.documentPath).toBe("scene.json");
+    });
+
     it("refuses direct and symlink evidence aliases of the source document", () => {
       create();
       const before = readFileSync(join(cwd, "scene.json"), "utf8");
