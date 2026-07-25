@@ -21,6 +21,7 @@ import {
   isNonEmptyString,
   isSafeInteger,
   refuseWith,
+  snapshotPlainArray,
   snapshotPlainRecord,
   type ContractRefuse,
 } from "./record-validation.js";
@@ -148,6 +149,7 @@ export type CheckoutCompletedEvent = {
   /** Gross amount paid, in the currency's minor unit. */
   readonly unitAmount: number;
   readonly currency: string;
+  readonly stripePriceId: string;
   readonly occurredAt: string;
 };
 
@@ -353,8 +355,8 @@ export function validateCreditPackCatalog(
       `credit pack catalog mode must be "${DEFAULT_BILLING_MODE}"; live price ids are not committed.`,
     );
   }
-  const packs = record["packs"];
-  if (!Array.isArray(packs) || packs.length === 0) {
+  const packs = snapshotPlainArray(record["packs"]);
+  if (packs === undefined || packs.length === 0) {
     return invalid("credit pack catalog packs must be a non-empty array.");
   }
 
@@ -619,6 +621,7 @@ const CHECKOUT_COMPLETED_EVENT_REQUIRED = Object.freeze([
   "itemId",
   "unitAmount",
   "currency",
+  "stripePriceId",
   "occurredAt",
 ]);
 
@@ -694,6 +697,11 @@ export function validateCheckoutCompletedEvent(
       "checkout completed event currency must be a lowercase three-letter ISO 4217 code.",
     );
   }
+  if (!isNonEmptyString(record["stripePriceId"])) {
+    return invalid(
+      "checkout completed event stripePriceId must be a non-empty string.",
+    );
+  }
   if (!isDateTime(record["occurredAt"])) {
     return invalid(
       "checkout completed event occurredAt must be an RFC 3339 date-time with an explicit timezone.",
@@ -712,6 +720,7 @@ export function validateCheckoutCompletedEvent(
     itemId,
     unitAmount,
     currency,
+    stripePriceId: record["stripePriceId"],
     occurredAt: record["occurredAt"],
   };
 

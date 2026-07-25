@@ -17,6 +17,7 @@ import {
   isEpochMilliseconds,
   snapshotPlainArray,
   snapshotPlainRecord,
+  validateCreditAccount,
   validateCreditLedgerEntry,
   type CreditAccount,
   type CreditLedgerEntry,
@@ -202,6 +203,83 @@ export function loadLedgerState(
   );
 }
 
+/**
+ * Validate a whole ledger state at the shared boundary every consumer crosses.
+ *
+ * Balance is derived from the entry history and compared to the stored `balance`,
+ * and every entry is bound to `state.account`, so a forged witness such as
+ * `{ entries: [], balance: 100 }` or a state mixing two accounts' histories is
+ * refused rather than trusted for a charge or a spend.
+ */
+export function validateLedgerState(
+  state: unknown,
+): BillingOutcome<LedgerState> {
+  const stateRecord = snapshotPlainRecord(state);
+  const accountRecord = snapshotPlainRecord(stateRecord?.["account"]);
+  const entries = snapshotPlainArray(stateRecord?.["entries"]);
+  if (
+    stateRecord === undefined ||
+    accountRecord === undefined ||
+    entries === undefined ||
+    typeof stateRecord["balance"] !== "number"
+  ) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.ledgerStateInvalid,
+      "The ledger state is not a valid ledger state.",
+    );
+  }
+  const account = validateCreditAccount(accountRecord);
+  if (!account.ok) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.ledgerStateInvalid,
+      `The ledger account is invalid (${account.code}): ${account.message}`,
+    );
+  }
+  for (const candidate of entries) {
+    const entryRecord = snapshotPlainRecord(candidate);
+    if (
+      entryRecord === undefined ||
+      entryRecord["accountId"] !== account.value.accountId
+    ) {
+      return billingRefuse(
+        BILLING_REFUSE_REASONS.ledgerStateInvalid,
+        "A ledger entry belongs to a different account.",
+      );
+    }
+  }
+  const derived = deriveBalance(entries);
+  if (!derived.ok) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.ledgerStateInvalid,
+      `The ledger history is invalid (${derived.reason}): ${derived.message}`,
+    );
+  }
+  if (derived.value !== stateRecord["balance"]) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.ledgerStateInvalid,
+      `The ledger balance ${stateRecord["balance"]} does not match the derived balance ${derived.value}; balance is derived, never stored as a source of truth.`,
+    );
+  }
+  const validated: CreditLedgerEntry[] = [];
+  for (const candidate of entries) {
+    const entry = validateCreditLedgerEntry(candidate);
+    if (!entry.ok) {
+      return billingRefuse(
+        BILLING_REFUSE_REASONS.entryInvalid,
+        `A ledger entry is invalid (${entry.code}): ${entry.message}`,
+      );
+    }
+    validated.push(entry.value);
+  }
+  return billingOk(
+    Object.freeze({
+      account: account.value,
+      entries: Object.freeze(validated),
+      balance: derived.value,
+    }),
+  );
+}
+
 function sameMovement(
   entry: CreditLedgerEntry,
   request: AppendCreditEntryRequest,
@@ -226,38 +304,9 @@ export function appendCreditEntry(
   state: unknown,
   request: unknown,
 ): BillingOutcome<AppendOutcome> {
-  const stateRecord = snapshotPlainRecord(state);
-  const accountRecord = snapshotPlainRecord(stateRecord?.["account"]);
-  const entries = snapshotPlainArray(stateRecord?.["entries"]);
-  if (
-    stateRecord === undefined ||
-    accountRecord === undefined ||
-    entries === undefined ||
-    typeof stateRecord["balance"] !== "number"
-  ) {
-    return billingRefuse(
-      BILLING_REFUSE_REASONS.ledgerStateInvalid,
-      "The ledger state is not a valid ledger state.",
-    );
-  }
-
-  // Balance is always derived: a stored `balance` that does not match the
-  // derived history is a forged witness, refused here rather than trusted for
-  // the arithmetic below.
-  const derivedBalance = deriveBalance(entries);
-  if (!derivedBalance.ok) {
-    return billingRefuse(
-      BILLING_REFUSE_REASONS.ledgerStateInvalid,
-      `The ledger history is invalid (${derivedBalance.reason}): ${derivedBalance.message}`,
-    );
-  }
-  if (derivedBalance.value !== stateRecord["balance"]) {
-    return billingRefuse(
-      BILLING_REFUSE_REASONS.ledgerStateInvalid,
-      `The ledger balance ${stateRecord["balance"]} does not match the derived balance ${derivedBalance.value}; balance is derived, never stored as a source of truth.`,
-    );
-  }
-  const current = stateRecord as unknown as LedgerState;
+  const validatedState = validateLedgerState(state);
+  if (!validatedState.ok) return validatedState;
+  const current = validatedState.value;
 
   const requestRecord = snapshotPlainRecord(request);
   if (requestRecord === undefined) {
@@ -353,7 +402,7 @@ export function appendCreditEntry(
     schemaVersion: 1 as const,
     kind: "sceneaxi.credit-ledger-entry" as const,
     entryId,
-    accountId: accountRecord["accountId"],
+    accountId: current.account.accountId,
     sequence: current.entries.length + 1,
     movement,
     delta,

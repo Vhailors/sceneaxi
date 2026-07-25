@@ -16,32 +16,34 @@ import { describe, expect, it } from "vitest";
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 
 const trackedFiles = (() => {
-  let stdout: string;
+  let stdout: Buffer;
   try {
-    stdout = execFileSync("git", ["ls-files"], {
-      cwd: repoRoot,
-      encoding: "utf8",
-    });
+    stdout = execFileSync("git", ["ls-files", "-z"], { cwd: repoRoot });
   } catch {
     return [];
   }
   return stdout
-    .split("\n")
-    .map((line) => line.trim())
+    .toString("utf8")
+    .split("\0")
     .filter((line) => line.length > 0);
 })();
 
 const files = trackedFiles.map((relative) => join(repoRoot, relative));
 
-/** Skip only confirmed binary content: a NUL byte means it is not text. */
-const isBinary = (path: string): boolean => {
-  let head: Buffer;
-  try {
-    head = Buffer.from(readFileSync(path).subarray(0, 8000));
-  } catch {
-    return true;
-  }
-  return head.includes(0);
+const textByFile = new Map<string, string | undefined>();
+
+/**
+ * Read a tracked file as text. Only confirmed binary content (a NUL byte in the
+ * first page) is skipped; any read error fails the scan rather than being
+ * silently treated as binary, so an unreadable tracked file cannot hide a key.
+ */
+const readText = (path: string): string | undefined => {
+  if (textByFile.has(path)) return textByFile.get(path);
+  const buffer = readFileSync(path);
+  const text =
+    buffer.subarray(0, 8000).includes(0) ? undefined : buffer.toString("utf8");
+  textByFile.set(path, text);
+  return text;
 };
 
 /**
@@ -73,8 +75,9 @@ describe("no committed secrets", () => {
       const offenders = files.filter((file) => {
         // This file necessarily contains the patterns themselves.
         if (file === fileURLToPath(import.meta.url)) return false;
-        if (isBinary(file)) return false;
-        return pattern.test(readFileSync(file, "utf8"));
+        const text = readText(file);
+        if (text === undefined) return false;
+        return pattern.test(text);
       });
       expect(offenders.map((file) => file.slice(repoRoot.length))).toEqual([]);
     });

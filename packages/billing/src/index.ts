@@ -33,6 +33,7 @@ export {
   deriveBalance,
   deriveEntryId,
   loadLedgerState,
+  validateLedgerState,
   type AppendCreditEntryRequest,
   type AppendOutcome,
   type LedgerState,

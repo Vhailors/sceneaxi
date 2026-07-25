@@ -141,6 +141,7 @@
         "itemId",
         "unitAmount",
         "currency",
+        "stripePriceId",
         "occurredAt"
       ],
       "additionalProperties": false,
@@ -157,6 +158,7 @@
         "credits": { "type": "integer", "minimum": 1 },
         "unitAmount": { "type": "integer", "minimum": 1 },
         "currency": { "$ref": "#/$defs/currency" },
+        "stripePriceId": { "type": "string", "minLength": 1 },
         "occurredAt": { "$ref": "#/$defs/dateTime" }
       },
       "allOf": [

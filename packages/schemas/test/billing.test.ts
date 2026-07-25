@@ -88,6 +88,7 @@ const EVENT = {
   credits: 100,
   unitAmount: 500,
   currency: "usd",
+  stripePriceId: "price_test_starter_100",
   occurredAt: "2026-07-25T10:05:00Z",
 } as const;
 

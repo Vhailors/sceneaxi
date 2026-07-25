@@ -26,10 +26,12 @@ import {
   type IdentitySurface,
   type Principal,
 } from "@sceneaxi/schemas";
-import type {
-  AdminIdentity,
-  AuthRefuseReason,
-  IdentityPort,
+import {
+  requireAuthenticated,
+  type AdminIdentity,
+  type AuthRefuseReason,
+  type AuthResult,
+  type IdentityPort,
 } from "@sceneaxi/auth";
 import {
   deriveBalance,
@@ -56,6 +58,7 @@ export const ACCOUNT_PANEL_REASONS = Object.freeze({
   creditsUnavailable: "PANEL_CREDITS_UNAVAILABLE",
   ledgerMissing: "PANEL_LEDGER_MISSING",
   ledgerOwnerMismatch: "PANEL_LEDGER_OWNER_MISMATCH",
+  sessionRevocationFailed: "PANEL_SESSION_REVOCATION_FAILED",
 } as const);
 
 export type AccountPanelReason =
@@ -298,6 +301,11 @@ export function createAccountPanel(
       );
     }
 
+    const guarded = requireAuthenticated(principal, { now, surface, admin });
+    if (!guarded.ok) {
+      return refused(refusal(guarded.reason, guarded.message));
+    }
+
     let state: LedgerState | undefined;
     try {
       state = await credits.ledgerFor(principal.user.userId);
@@ -357,14 +365,25 @@ export function createAccountPanel(
 
   /**
    * Revoke a session a superseded sign-in already persisted, so a signed-out panel
-   * never leaves a live server-side session behind. Best-effort: a revoke failure
-   * cannot be allowed to block the operation that superseded the sign-in.
+   * never leaves a live server-side session behind. A revocation that the identity
+   * port refuses or throws on is surfaced as a refusal rather than swallowed: the
+   * panel must not look anonymous while the server-side session may still be live.
    */
   const revokeSupersededSession = async (principal: Principal): Promise<void> => {
+    let result: AuthResult<null>;
     try {
-      await identityPort.signOut({ sessionId: principal.session.sessionId });
+      result = await identityPort.signOut({ sessionId: principal.session.sessionId });
     } catch {
-      // Best-effort revocation; a failure must not block the superseding operation.
+      held = refused(
+        refusal(
+          ACCOUNT_PANEL_REASONS.sessionRevocationFailed,
+          "A superseded sign-in session could not be revoked and may still be live.",
+        ),
+      );
+      return;
+    }
+    if (!result.ok) {
+      held = refused(refusal(result.reason, result.message));
     }
   };
 

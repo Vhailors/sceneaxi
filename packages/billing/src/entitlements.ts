@@ -37,6 +37,7 @@ import {
 import {
   appendCreditEntry,
   deriveEntryId,
+  validateLedgerState,
   type AppendOutcome,
   type LedgerState,
 } from "./ledger.js";
@@ -215,28 +216,23 @@ export function evaluateEntitlement(
   }
   const amount = creditAmount as number;
 
-  const stateRecord = snapshotPlainRecord(state);
-  const accountRecord = snapshotPlainRecord(stateRecord?.["account"]);
-  if (
-    stateRecord === undefined ||
-    accountRecord === undefined ||
-    typeof stateRecord["balance"] !== "number"
-  ) {
+  const validatedState = validateLedgerState(state);
+  if (!validatedState.ok) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.ledgerStateInvalid,
       `"${capability}" is credit-priced; a valid ledger state is required to check the balance.`,
     );
   }
-  if (accountRecord["userId"] !== guarded.value.user.userId) {
+  if (validatedState.value.account.userId !== guarded.value.user.userId) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.accountNotOwned,
       "The credit account belongs to a different user.",
     );
   }
-  if (stateRecord["balance"] < amount) {
+  if (validatedState.value.balance < amount) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.balanceInsufficient,
-      `"${capability}" costs ${amount} credits; the balance is ${stateRecord["balance"]}.`,
+      `"${capability}" costs ${amount} credits; the balance is ${validatedState.value.balance}.`,
     );
   }
 
@@ -277,19 +273,14 @@ export function grantStarterCredits(
       "The starter grant requires a user id.",
     );
   }
-  const stateRecord = snapshotPlainRecord(state);
-  const accountRecord = snapshotPlainRecord(stateRecord?.["account"]);
-  if (
-    stateRecord === undefined ||
-    accountRecord === undefined ||
-    !Array.isArray(stateRecord["entries"])
-  ) {
+  const validatedState = validateLedgerState(state);
+  if (!validatedState.ok) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.ledgerStateInvalid,
       "The starter grant requires a valid ledger state.",
     );
   }
-  if (accountRecord["userId"] !== userId) {
+  if (validatedState.value.account.userId !== userId) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.accountNotOwned,
       "The credit account belongs to a different user; the starter grant refuses.",

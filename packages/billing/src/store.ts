@@ -116,13 +116,23 @@ export function createInMemoryCreditStore(
       settlement.buyerEntry,
       settlement.creatorEntry,
     ].filter((entry): entry is CreditLedgerEntry => entry !== undefined);
-    // Validate every entry against the current state first, so a violation on
-    // the creator side cannot leave an already-validated buyer debit committed.
+    // Validate every entry against the current state and against its siblings
+    // first, so a violation on the creator side cannot leave an already-validated
+    // buyer debit committed, and two staged entries cannot collide with each other.
+    const stagedSequences = new Set<string>();
+    const stagedEntryIds = new Set<string>();
+    const stagedIdempotencyKeys = new Set<string>();
     for (const entry of entries) {
+      const sequenceKey = `${entry.accountId}:${entry.sequence}`;
       const list = listFor(entry.accountId);
       if (list.some((held) => held.sequence === entry.sequence)) {
         throw new Error(
           `credit store: sequence ${entry.sequence} already exists for ${entry.accountId} — the ledger is append-only`,
+        );
+      }
+      if (stagedSequences.has(sequenceKey)) {
+        throw new Error(
+          `credit store: sequence ${entry.sequence} already staged for ${entry.accountId} — the ledger is append-only`,
         );
       }
       if (list.some((held) => held.entryId === entry.entryId)) {
@@ -130,11 +140,24 @@ export function createInMemoryCreditStore(
           `credit store: entry ${entry.entryId} already exists — the ledger is append-only`,
         );
       }
+      if (stagedEntryIds.has(entry.entryId)) {
+        throw new Error(
+          `credit store: entry ${entry.entryId} already staged — the ledger is append-only`,
+        );
+      }
       if (idempotencyKeys.has(entry.idempotencyKey)) {
         throw new Error(
           `credit store: idempotency key ${entry.idempotencyKey} already applied`,
         );
       }
+      if (stagedIdempotencyKeys.has(entry.idempotencyKey)) {
+        throw new Error(
+          `credit store: idempotency key ${entry.idempotencyKey} already staged`,
+        );
+      }
+      stagedSequences.add(sequenceKey);
+      stagedEntryIds.add(entry.entryId);
+      stagedIdempotencyKeys.add(entry.idempotencyKey);
     }
     if (shareSaleIds.has(settlement.share.saleId)) {
       throw new Error(

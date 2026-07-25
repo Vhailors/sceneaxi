@@ -22,6 +22,7 @@ import {
   isNonEmptyString,
   isSafeInteger,
   refuseWith,
+  snapshotPlainArray,
   snapshotPlainRecord,
   type ContractRefuse,
 } from "./record-validation.js";
@@ -359,8 +360,8 @@ export function validateCatalogListingSet(
       'catalog listing set mode must be "test"; live price ids are not committed.',
     );
   }
-  const listings = record["listings"];
-  if (!Array.isArray(listings) || listings.length === 0) {
+  const listings = snapshotPlainArray(record["listings"]);
+  if (listings === undefined || listings.length === 0) {
     return invalid("catalog listing set listings must be a non-empty array.");
   }
 

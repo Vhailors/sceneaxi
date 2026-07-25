@@ -30,6 +30,7 @@ import { assertModeAuthorized } from "./checkout.js";
 import {
   appendCreditEntry,
   deriveEntryId,
+  validateLedgerState,
   type AppendOutcome,
   type LedgerState,
 } from "./ledger.js";
@@ -207,7 +208,10 @@ export function verifyStripeWebhookSignature(
 
   const tolerance =
     typeof toleranceSeconds === "number" && Number.isFinite(toleranceSeconds)
-      ? Math.abs(toleranceSeconds)
+      ? Math.min(
+          Math.abs(toleranceSeconds),
+          STRIPE_SIGNATURE_TOLERANCE_SECONDS,
+        )
       : STRIPE_SIGNATURE_TOLERANCE_SECONDS;
   const nowSeconds = Math.floor(now / 1000);
   if (nowSeconds - timestamp > tolerance) {
@@ -413,6 +417,7 @@ export function parseCheckoutCompletedEvent(input: {
     userId,
     purpose,
     itemId,
+    stripePriceId: intent.value.stripePriceId,
     occurredAt: new Date(occurredAtEpoch).toISOString(),
   };
 
@@ -485,19 +490,14 @@ export function applyCheckoutCompletedGrant(
   const mode = assertModeAuthorized(validated.value.mode, liveModeAuthorized);
   if (!mode.ok) return mode;
 
-  const stateRecord = snapshotPlainRecord(state);
-  const accountRecord = snapshotPlainRecord(stateRecord?.["account"]);
-  if (
-    stateRecord === undefined ||
-    accountRecord === undefined ||
-    !Array.isArray(stateRecord["entries"])
-  ) {
+  const validatedState = validateLedgerState(state);
+  if (!validatedState.ok) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.ledgerStateInvalid,
       "Granting credits requires a valid ledger state.",
     );
   }
-  if (accountRecord["userId"] !== validated.value.userId) {
+  if (validatedState.value.account.userId !== validated.value.userId) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.accountNotOwned,
       "The checkout event names a different user than the credit account; the grant refuses.",

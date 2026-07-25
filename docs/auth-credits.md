@@ -128,21 +128,23 @@ Responsibility splits by what can be verified hermetically:
 
 Set the checkout session's metadata to the keys in `CHECKOUT_METADATA_KEYS`
 (`sceneaxiUserId`, `sceneaxiPurpose`, `sceneaxiItemId`, `sceneaxiIntentId`). Credits are
-resolved from the **catalog**, never from event metadata, so influencing the webhook body
-cannot name a credit amount. Persist the `CheckoutSessionIntent` before creating the
-hosted session. The completion parser requires that original intent and refuses unless
-the session is paid and its mode, metadata, `amount_total`, currency, one-unit line item,
-and Stripe price id all match it.
+resolved from the **persisted intent**, never from event metadata, so influencing the
+webhook body cannot name a credit amount. Persist the `CheckoutSessionIntent` before
+creating the hosted session. Stripe webhook objects are minimal, so the completion parser
+takes settlement (paid status, amount, currency, quantity, Stripe price) that your adapter
+**retrieves separately** for that exact Checkout Session, and refuses unless it and the
+session's mode and metadata all match the persisted intent — the immutable price snapshot.
 
 Your webhook endpoint must pass the **raw request body**, not a re-serialised object —
 re-encoding the JSON changes the bytes and verification will (correctly) fail:
 
 ```ts
 import {
+  CHECKOUT_METADATA_KEYS,
   applyCheckoutCompletedGrant,
-  loadCreditPackCatalog,
   parseCheckoutCompletedEvent,
   verifyStripeWebhookSignature,
+  type CheckoutSettlementPort,
 } from "@sceneaxi/billing";
 
 const verified = verifyStripeWebhookSignature({
@@ -153,17 +155,33 @@ const verified = verifyStripeWebhookSignature({
 });
 if (!verified.ok) return respond(400, verified.reason);
 
-const intent = await checkoutIntentStore.findBySessionMetadata(
-  verified.value.payload,
+const event = JSON.parse(verified.value.payload) as {
+  data: { object: { id: string; metadata: Record<string, string> } };
+};
+const sessionId = event.data.object.id;
+const intentId = event.data.object.metadata[CHECKOUT_METADATA_KEYS.intentId];
+
+// The persisted intent is the immutable price snapshot; look it up by the id carried
+// in the session metadata. Your store owns this lookup.
+const intent = await checkoutIntentStore.findByIntentId(intentId);
+if (!intent) return respond(400, "unknown checkout intent");
+
+// Stripe webhook objects do not carry line items — retrieve settlement for this exact
+// Checkout Session through the injected adapter boundary.
+const settlement = await (settlementPort as CheckoutSettlementPort).retrieveSettlement(
+  sessionId,
 );
-const catalog = loadCreditPackCatalog();
-if (!catalog.ok) return respond(500, catalog.reason);
-const completed = parseCheckoutCompletedEvent({
-  payload: verified.value.payload,
-  intent,
-  catalog: catalog.value,
-});
+if (!settlement) return respond(400, "unpaid or unverified session");
+
+const completed = parseCheckoutCompletedEvent({ verified, intent, settlement });
 if (!completed.ok) return respond(400, completed.reason);
+
+const granted = applyCheckoutCompletedGrant({
+  state: await creditStore.loadState(completed.value.userId),
+  completion: completed.value,
+  now: Date.now(),
+});
+if (!granted.ok) return respond(400, granted.reason);
 ```
 
 **Live mode is unreachable by default.** `mode: "live"` refuses unless
