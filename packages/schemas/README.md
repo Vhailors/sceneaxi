@@ -174,3 +174,18 @@ The contract remains topology-neutral; the locked storefront topology is owned
 by the canonical product spec
 ([sceneaxi#1](https://github.com/Vhailors/sceneaxi/issues/1)). Kids consumption is
 not implemented here.
+
+## Identity, credits, and billing (sceneaxi#90)
+
+- `contracts/identity.schema.json`, `contracts/credit-ledger.schema.json`,
+  `contracts/billing-checkout.schema.json`, `contracts/credit-packs.schema.json`,
+  `contracts/entitlement-decision.schema.json`,
+  `contracts/entitlement-matrix.schema.json`,
+  `contracts/catalog-listings.schema.json`, `contracts/revenue-share.schema.json`
+- TypeScript contracts: `src/identity.ts`, `src/credits.ts`, `src/billing.ts`,
+  `src/entitlements.ts`, `src/catalog-listing.ts`, `src/revenue-share.ts`
+- Canonical fixtures (`credit-packs`, `entitlement-matrix`, `catalog-listings`) are
+  kept in lockstep with the tables in
+  [`docs/auth-credits.md`](../../docs/auth-credits.md) by `pnpm check:contracts` —
+  that document owns the shapes, invariants, and configuration; enforcement lives in
+  `@sceneaxi/auth` and `@sceneaxi/billing` (ADR 0021)
