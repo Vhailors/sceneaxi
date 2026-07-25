@@ -67,6 +67,7 @@
         },
         "delta": {
           "type": "integer",
+          "not": { "const": 0 },
           "description": "Non-zero credit delta. Sign is fixed by movement: grant is positive, debit is negative, adjustment may be either."
         },
         "balanceAfter": {
@@ -85,7 +86,27 @@
           "description": "Namespaced replay key, e.g. stripe-event:evt_1. The same key must never produce a second entry; the same key with a different payload refuses."
         },
         "occurredAt": { "$ref": "#/$defs/dateTime" }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "movement": { "const": "grant" } },
+            "required": ["movement"]
+          },
+          "then": {
+            "properties": { "delta": { "minimum": 1 } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "movement": { "const": "debit" } },
+            "required": ["movement"]
+          },
+          "then": {
+            "properties": { "delta": { "maximum": -1 } }
+          }
+        }
+      ]
     }
   }
 }

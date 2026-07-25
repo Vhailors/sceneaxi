@@ -452,6 +452,74 @@ describe("applyCreditsSale", () => {
     expect(store.shareRecordCount()).toBe(1);
   });
 
+  it("refuses settlement entries that do not extend persisted ledger tails", async () => {
+    const target = listing("lantern-prop");
+    const persistedBuyerState = funded(10, BUYER);
+    const submittedBuyerState = funded(100, BUYER);
+    const creatorAccount = account(target.sellerUserId, "acc_creator");
+    const store = createInMemoryCreditStore({
+      accounts: [BUYER, creatorAccount],
+      entries: persistedBuyerState.entries,
+    });
+    const result = await persistCreditsSale({
+      store,
+      principal: principal(),
+      admin,
+      listing: target,
+      buyerState: submittedBuyerState,
+      creatorState: createLedgerState(creatorAccount),
+      now: NOW,
+      saleId: "sale_wrong_tail",
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.storeFailed);
+    expect(store.entryCount(BUYER.accountId)).toBe(1);
+    expect(store.entryCount(creatorAccount.accountId)).toBe(0);
+    expect(store.shareRecordCount()).toBe(0);
+  });
+
+  it("replays a restored sale with its persisted ledger legs", async () => {
+    const target = listing("lantern-prop");
+    const creatorAccount = account(target.sellerUserId, "acc_creator");
+    const first = applyCreditsSale({
+      principal: principal(),
+      admin,
+      listing: target,
+      buyerState: funded(100, BUYER),
+      creatorState: createLedgerState(creatorAccount),
+      now: NOW,
+      saleId: "sale_restored",
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok || first.value.creator === undefined) return;
+
+    const store = createInMemoryCreditStore({
+      accounts: [BUYER, creatorAccount],
+      entries: [
+        ...first.value.buyer.state.entries,
+        ...first.value.creator.state.entries,
+      ],
+      shareRecords: [first.value.share],
+    });
+    const replay = await persistCreditsSale({
+      store,
+      principal: principal(),
+      admin,
+      listing: target,
+      buyerState: first.value.buyer.state,
+      creatorState: first.value.creator.state,
+      now: NOW + 60_000,
+      saleId: "sale_restored",
+    });
+    expect(replay.ok).toBe(true);
+    if (!replay.ok) return;
+    expect(replay.value.replayed).toBe(true);
+    expect(store.entryCount(BUYER.accountId)).toBe(2);
+    expect(store.entryCount(creatorAccount.accountId)).toBe(1);
+    expect(store.shareRecordCount()).toBe(1);
+  });
+
   it("replays an identical admin sale with absent ledger legs", async () => {
     const listed = listing("lantern-prop");
     const target = Object.freeze({

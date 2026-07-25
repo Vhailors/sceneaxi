@@ -124,7 +124,7 @@ export function createInMemoryCreditStore(
   const accountsByUserId = new Map<string, CreditAccount>();
   const entriesByAccount = new Map<string, CreditLedgerEntry[]>();
   const entryIds = new Set<string>();
-  const idempotencyKeys = new Set<string>();
+  const entriesByIdempotencyKey = new Map<string, CreditLedgerEntry>();
   const shareRecords: CreatorShareRecord[] = [];
   const settlementsBySaleId = new Map<string, CreditsSaleSettlement>();
 
@@ -141,6 +141,27 @@ export function createInMemoryCreditStore(
     return created;
   };
 
+  const assertExtendsTail = (
+    entry: CreditLedgerEntry,
+    previous: CreditLedgerEntry | undefined,
+  ): void => {
+    const expectedSequence = (previous?.sequence ?? 0) + 1;
+    if (entry.sequence !== expectedSequence) {
+      throw new Error(
+        `credit store: sequence ${entry.sequence} does not extend ${entry.accountId} at ${expectedSequence}`,
+      );
+    }
+    const expectedBalance = (previous?.balanceAfter ?? 0) + entry.delta;
+    if (
+      !Number.isSafeInteger(expectedBalance) ||
+      entry.balanceAfter !== expectedBalance
+    ) {
+      throw new Error(
+        `credit store: balance ${entry.balanceAfter} does not extend ${entry.accountId} at ${expectedBalance}`,
+      );
+    }
+  };
+
   const append = (entry: CreditLedgerEntry): void => {
     const list = listFor(entry.accountId);
     if (list.some((held) => held.sequence === entry.sequence)) {
@@ -153,13 +174,14 @@ export function createInMemoryCreditStore(
         `credit store: entry ${entry.entryId} already exists — the ledger is append-only`,
       );
     }
-    if (idempotencyKeys.has(entry.idempotencyKey)) {
+    if (entriesByIdempotencyKey.has(entry.idempotencyKey)) {
       throw new Error(
         `credit store: idempotency key ${entry.idempotencyKey} already applied`,
       );
     }
+    assertExtendsTail(entry, list.at(-1));
     entryIds.add(entry.entryId);
-    idempotencyKeys.add(entry.idempotencyKey);
+    entriesByIdempotencyKey.set(entry.idempotencyKey, entry);
     list.push(entry);
   };
 
@@ -170,7 +192,20 @@ export function createInMemoryCreditStore(
         `credit store: share sale id ${share.saleId} already recorded`,
       );
     }
-    settlementsBySaleId.set(share.saleId, Object.freeze({ share }));
+    const buyerEntry = entriesByIdempotencyKey.get(
+      `sale:${share.saleId}:buyer`,
+    );
+    const creatorEntry = entriesByIdempotencyKey.get(
+      `sale:${share.saleId}:creator`,
+    );
+    settlementsBySaleId.set(
+      share.saleId,
+      Object.freeze({
+        ...(buyerEntry === undefined ? {} : { buyerEntry }),
+        ...(creatorEntry === undefined ? {} : { creatorEntry }),
+        share,
+      }),
+    );
     shareRecords.push(share);
   }
 
@@ -196,6 +231,7 @@ export function createInMemoryCreditStore(
     const stagedSequences = new Set<string>();
     const stagedEntryIds = new Set<string>();
     const stagedIdempotencyKeys = new Set<string>();
+    const stagedTails = new Map<string, CreditLedgerEntry>();
     for (const entry of entries) {
       const sequenceKey = `${entry.accountId}:${entry.sequence}`;
       const list = listFor(entry.accountId);
@@ -219,7 +255,7 @@ export function createInMemoryCreditStore(
           `credit store: entry ${entry.entryId} already staged — the ledger is append-only`,
         );
       }
-      if (idempotencyKeys.has(entry.idempotencyKey)) {
+      if (entriesByIdempotencyKey.has(entry.idempotencyKey)) {
         throw new Error(
           `credit store: idempotency key ${entry.idempotencyKey} already applied`,
         );
@@ -229,14 +265,19 @@ export function createInMemoryCreditStore(
           `credit store: idempotency key ${entry.idempotencyKey} already staged`,
         );
       }
+      assertExtendsTail(
+        entry,
+        stagedTails.get(entry.accountId) ?? list.at(-1),
+      );
       stagedSequences.add(sequenceKey);
       stagedEntryIds.add(entry.entryId);
       stagedIdempotencyKeys.add(entry.idempotencyKey);
+      stagedTails.set(entry.accountId, entry);
     }
     // All validated: commit every entry and the share record together.
     for (const entry of entries) {
       entryIds.add(entry.entryId);
-      idempotencyKeys.add(entry.idempotencyKey);
+      entriesByIdempotencyKey.set(entry.idempotencyKey, entry);
       listFor(entry.accountId).push(entry);
     }
     settlementsBySaleId.set(settlement.share.saleId, settlement);

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   CREDITS_REFUSE_CODES,
@@ -125,6 +126,47 @@ describe("validateCreditLedgerEntry", () => {
       if (result.ok) return;
       expect(result.code).toBe(CREDITS_REFUSE_CODES.invalidProperty);
     }
+  });
+
+  it("publishes the runtime delta sign rules in JSON Schema", () => {
+    const schema: unknown = JSON.parse(
+      readFileSync(
+        new URL("../contracts/credit-ledger.schema.json", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect(schema).toMatchObject({
+      $defs: {
+        creditLedgerEntry: {
+          properties: {
+            delta: {
+              type: "integer",
+              not: { const: 0 },
+            },
+          },
+          allOf: [
+            {
+              if: {
+                properties: { movement: { const: "grant" } },
+                required: ["movement"],
+              },
+              then: {
+                properties: { delta: { minimum: 1 } },
+              },
+            },
+            {
+              if: {
+                properties: { movement: { const: "debit" } },
+                required: ["movement"],
+              },
+              then: {
+                properties: { delta: { maximum: -1 } },
+              },
+            },
+          ],
+        },
+      },
+    });
   });
 
   it("refuses a negative balanceAfter", () => {
