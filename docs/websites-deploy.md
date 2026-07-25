@@ -23,6 +23,14 @@ Design decisions behind this: [ADR 0017](adr/0017-sites-tier-three-vercel-one-ne
 One Vercel team (prefer `vhailpers-projects`). **`*.vercel.app` hostnames only** — no
 custom domain in this wave. **Kids is not deployed**, and no site links to it.
 
+Deployed production URLs:
+
+| Site | URL |
+|---|---|
+| Umbrella | <https://sceneaxi-umbrella.vercel.app> |
+| Game-asset catalog | <https://sceneaxi-catalog-game.vercel.app> |
+| Website-asset catalog | <https://sceneaxi-catalog-web.vercel.app> |
+
 Per project, in Vercel:
 
 | Setting | Value |
@@ -30,8 +38,17 @@ Per project, in Vercel:
 | Root Directory | the site's directory above |
 | Framework preset | Next.js |
 | Node version | 24 |
-| Install command | `pnpm install` (the site is its own install root; its own lockfile is committed) |
+| Install command | `cd ../.. && pnpm install --frozen-lockfile --ignore-scripts && cd <site dir> && pnpm install --frozen-lockfile` |
 | Build command | `pnpm run build` (the umbrella's `prebuild` also generates the SDK archive) |
+
+The install command provisions **both** roots, and it has to. A site installs
+`@sceneaxi/site-kit` through a `link:` specifier, but `site-kit`'s own dependencies
+(`@sceneaxi/schemas`, `@sceneaxi/authoring-core`) are workspace packages resolved from
+the repository root's `node_modules`. Installing only the site directory builds
+successfully on a developer machine that already has a root install and then fails on a
+clean Vercel builder with `Can't resolve '@sceneaxi/schemas'`. Root Directory must be set
+on the project so the whole repository uploads; a CLI deploy from inside the site
+directory uploads that directory alone and cannot work.
 
 ## Environment variables
 
@@ -58,6 +75,11 @@ Each site's `.env.example` lists exactly the names it reads, commented, with no 
 One project, one database, shared by all three sites. Capture the connection string as a
 Vercel secret; it appears in no committed file. Migration order and DDL belong to
 `sceneaxi-auth-credits-v1` (`db/migrations/`), not to this wave.
+
+Provisioned: Neon project `sceneaxi-prod` (`misty-king-68383952`, `aws-us-east-2`,
+database `neondb`). `DATABASE_URL` is set as an **encrypted** environment variable in all
+three Vercel projects and appears in no committed file. No code reads it yet — the
+identity plane that will belongs to `sceneaxi-auth-credits-v1`.
 
 ### Stripe
 
@@ -149,6 +171,23 @@ The site ports are structural projections of that vertical's contracts (`Princip
 `User`, `Session`, `CreditLedgerEntry`, `CreditPack`, `CheckoutSessionIntent`), so its
 exports satisfy them as injected adapters with no redefinition of identity or ledger
 semantics.
+
+## Outstanding captain secrets
+
+Everything free is live now. Two captain-held secrets are still absent, and were not
+invented or faked:
+
+| Variable | Blocks | Why it is not set |
+|---|---|---|
+| `STRIPE_SECRET_KEY` (test) | credit-pack checkout | captain-held; no Stripe test key is available to this worker |
+| `STRIPE_WEBHOOK_SECRET` | credit grants from checkout | captain-held; created with the webhook endpoint |
+| `SCENEAXI_ADMIN_BOOTSTRAP_SECRET` | first admin sign-in | captain-held credential material |
+
+`SCENEAXI_ADMIN_EMAIL` is known (`hajczuk.dominik@gmail.com`) but is only meaningful once
+`@sceneaxi/auth` exists to resolve it, so it is documented rather than set. None of these
+block anything shipped in this wave: the surfaces that need them refuse with named
+reasons today and would refuse identically with the keys present but the identity plane
+absent.
 
 ## What is not deployed or activated
 
