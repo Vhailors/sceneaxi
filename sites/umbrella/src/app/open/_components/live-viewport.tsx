@@ -76,10 +76,17 @@ export function LiveViewport({ scene }: { readonly scene: LiveOpenScene }) {
     const canvas = canvasRef.current;
     if (canvas === null) return;
 
-    const pixelRatio = Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO);
+    /**
+     * The canvas as it is right now: CSS size and device density together.
+     *
+     * Browser zoom and a move to a different-density display change the ratio as well as
+     * the box, so every caller resolves both from the live document rather than from
+     * whatever was true when the session was built.
+     */
     const measure = () => ({
       width: Math.max(1, Math.round(canvas.clientWidth)),
       height: Math.max(1, Math.round(canvas.clientHeight)),
+      pixelRatio: Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO),
     });
 
     const cleanups: Array<() => void> = [];
@@ -91,7 +98,7 @@ export function LiveViewport({ scene }: { readonly scene: LiveOpenScene }) {
     try {
       const backend = createThreeSculptPresentationBackend({
         canvas,
-        viewport: { ...measure(), pixelRatio },
+        viewport: measure(),
         background: "#0b0e13",
       });
       /**
@@ -156,7 +163,7 @@ export function LiveViewport({ scene }: { readonly scene: LiveOpenScene }) {
 
       const observer = new ResizeObserver(() => {
         const next = measure();
-        backend.resize(next.width, next.height, pixelRatio);
+        backend.resize(next.width, next.height, next.pixelRatio);
       });
       cleanups.push(() => {
         observer.disconnect();

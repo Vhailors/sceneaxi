@@ -7,7 +7,8 @@
  * root. The seams are imported by path instead; the rule they satisfy — every unit
  * exports a frozen typed seam with a covering test — is unchanged.
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
@@ -38,7 +39,36 @@ import {
 } from "../../sites/catalog-web/src/index.ts";
 
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
+const SITES_DIR = join(REPO_ROOT, "sites");
 const UMBRELLA_ORIGIN = "https://sceneaxi-umbrella.vercel.app";
+
+const SITE_SOURCE_SKIP = new Set(["node_modules", ".next", "dist", "coverage"]);
+
+/**
+ * Every committed TypeScript source under a site's `src`, discovered rather than listed.
+ *
+ * The copy scans below cover the whole tier, so a product surface added later is scanned
+ * on the day it lands instead of on the day someone remembers to name it.
+ */
+function collectSiteSources(dir: string, out: string[] = []): string[] {
+  for (const entry of readdirSync(dir).sort()) {
+    if (SITE_SOURCE_SKIP.has(entry)) continue;
+    const path = join(dir, entry);
+    if (statSync(path).isDirectory()) {
+      collectSiteSources(path, out);
+    } else if (entry.endsWith(".ts") || entry.endsWith(".tsx")) {
+      out.push(path);
+    }
+  }
+  return out;
+}
+
+const SITE_SOURCE_FILES: readonly string[] = readdirSync(SITES_DIR)
+  .sort()
+  .map((entry) => join(SITES_DIR, entry, "src"))
+  .filter((dir) => existsSync(dir) && statSync(dir).isDirectory())
+  .flatMap((dir) => collectSiteSources(dir))
+  .map((path) => relative(SITES_DIR, path).split(sep).join("/"));
 
 describe("site seams", () => {
   it.each([
@@ -246,13 +276,6 @@ describe("umbrella live open path", () => {
 });
 
 describe("live open copy stays honest about the presentation core", () => {
-  const SITE_SOURCE_FILES = [
-    "umbrella/src/app/open/page.tsx",
-    "umbrella/src/app/open/_components/live-viewport.tsx",
-    "umbrella/src/app/page.tsx",
-    "umbrella/src/lib/live-open.ts",
-  ] as const;
-
   const RETIRED_FRAMING = [
     ...LIVE_OPEN_PRESENTATION.retiredLabels,
     "multi-renderer",
@@ -263,6 +286,20 @@ describe("live open copy stays honest about the presentation core", () => {
     expect(LIVE_OPEN_PRESENTATION.retiredLabels.length).toBeGreaterThan(0);
     for (const retired of LIVE_OPEN_PRESENTATION.retiredLabels) {
       expect(RETIRED_FRAMING).toContain(retired.toLowerCase());
+    }
+  });
+
+  it("scans every committed site source, so a new surface cannot opt out", () => {
+    expect(SITE_SOURCE_FILES.length).toBeGreaterThan(0);
+    for (const covered of [
+      "umbrella/src/app/open/page.tsx",
+      "umbrella/src/app/open/_components/live-viewport.tsx",
+      "umbrella/src/app/page.tsx",
+      "umbrella/src/lib/live-open.ts",
+      "catalog-game/src/app/page.tsx",
+      "catalog-web/src/app/page.tsx",
+    ]) {
+      expect(SITE_SOURCE_FILES).toContain(covered);
     }
   });
 
