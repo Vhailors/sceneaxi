@@ -62,13 +62,13 @@ The Model Provider Port (sceneaxi#45) is `packages/authoring-core/src/model-prov
 
 Delivery Handoff is the public, delivery-neutral export contract in `@sceneaxi/schemas` (`contracts/delivery-handoff.schema.json`, `src/delivery-handoff.ts`); its adapter boundary and digest semantics are authoritative in `docs/delivery-handoff.md`. Provider-specific delivery adapters, credentials, uploads, approvals, and releases stay outside SceneAxi core.
 
-Three.js is the product presentation core (ADR 0019, captain product decision — not a Stage 1 result), hidden behind the unchanged ADR 0002 seam; the ownership map is `docs/three-presentation-core.md`. `packages/engine-presentation` holds one Three core on two draw surfaces: a real `WebGLRenderer` canvas surface that draws pixels and captures PNG, and a deterministic headless surface for node gates that never claims pixels. Keep the package free of `node:*` and DOM-lib types, and keep every Three type behind its exports (numeric camera controls, opaque renderable handles). Frames carry `surface`/`pixelsDrawn`; never let a frame counter imply pixels. The retired label "Experimental Three preview — non-decision" must not return for product surfaces. WebGL cannot run in node, so the canvas path is verified in a real browser and recorded in that doc; gate coverage goes through the injected-surface tests in `packages/engine-presentation/test/`.
+Three.js is the product presentation core (ADR 0017, captain product decision — not a Stage 1 result), hidden behind the unchanged ADR 0002 seam; the ownership map is `docs/three-presentation-core.md`. `packages/engine-presentation` holds one Three core on two draw surfaces: a real `WebGLRenderer` canvas surface that draws pixels and captures PNG, and a deterministic headless surface for node gates that never claims pixels. Keep the package free of `node:*` and DOM-lib types, and keep every Three type behind its exports (numeric camera controls, opaque renderable handles). Frames carry `surface`/`pixelsDrawn`; never let a frame counter imply pixels. The retired label "Experimental Three preview — non-decision" must not return for product surfaces. WebGL cannot run in node, so the canvas path is verified in a real browser and recorded in that doc; gate coverage goes through the injected-surface tests in `packages/engine-presentation/test/`.
 
 Sculpt-quality ownership and compatibility are documented in `docs/sculpt-quality.md`: legacy PR #75 aggregate/result seams remain compatible, while strict multi-pass contracts and named refusals live on separate quality-specific paths.
 
 Scene composition (multiple Sculpt Artifacts into one openable scene) is documented in `docs/scene-composition.md` and ADRs 0014–0015. Contracts and placement math are `packages/schemas/src/scene-composition.ts` (`contracts/scene-composition.schema.json`); the pipeline is `composeScene()` in `packages/authoring-core`; the multi-object open path is `openSceneKernelSession()` in `packages/engine-kernel`. Placement is axis-aligned in v1 and is a projection — never rewrite a Sculpt Artifact to place it, since its evidence binds its exact spec bytes. Composition fails closed on the named refuse matrix; extend `tests/e2e/scene-composition-golden.test.ts` and its checked-in digests when touching any of it.
 
-Deployable web surfaces live in a `sites/` tier (ADR 0019): `sites/umbrella`,
+Deployable web surfaces live in a `sites/` tier (ADR 0018): `sites/umbrella`,
 `sites/catalog-game`, `sites/catalog-web`, all thin view layers over
 `packages/site-kit`, which owns every non-presentational behaviour and is where the gate
 tests it. Each site is its **own single-package pnpm workspace and install root with its
@@ -81,7 +81,7 @@ extend `tests/boundary/injected-site-violations.test.ts` when you extend any of 
 TypeScript so the hermetic build type-checks them, and site seam tests live in
 `tests/sites/`. Deploy, the exact env var list, and the identity-plane activation steps are
 in `docs/websites-deploy.md`. The public engine SDK download is a deterministic zip plus
-SHA-256 (`pnpm build:sdk`, ADR 0020), never an npm publish, and it must never contain
+SHA-256 (`pnpm build:sdk`, ADR 0019), never an npm publish, and it must never contain
 Kids. Web editor entitlement (credits, or the unused 100-credit starter allotment; admin
 unrestricted) is ADR 0020 and does not widen ADR 0003's general-E2 bound. Identity,
 credits, and billing stay owned by `sceneaxi-auth-credits-v1`; `site-kit` only declares
@@ -107,6 +107,19 @@ JSON kept in lockstep with `docs/auth-credits.md` by `pnpm check:contracts` —
 extend `tests/contracts/` and `tests/db/schema-lockstep.test.ts` when touching any
 of it.
 
+The umbrella owns the **public viewport** and is the only site that may depend on
+`@sceneaxi/engine-presentation` (ADR 0022) — every other engine package stays denied to
+every site, and both catalogs keep `site-kit` only. The public live open path is
+`/open`: `packages/site-kit/src/live-open.ts` decides which committed fixture is opened
+and places it with `composeScene()`, so the whole decision is gate-tested without a
+browser, and only `sites/umbrella/src/app/open/_components/live-viewport.tsx` touches a
+renderer — through the ADR 0002 seam, naming no Three type. The path is public: no
+identity, no credits, no editing operation, so it widens neither ADR 0020 entitlement
+nor ADR 0003's general-E2 bound. `pnpm gate` proves it on the headless surface
+(`tests/e2e/umbrella-live-open-golden.test.ts`, in `test:golden`); the pixel claim is a
+recorded browser observation in `docs/three-presentation-core.md`, never a gate
+inference. Shipped presentation copy is asserted against `LIVE_OPEN_PRESENTATION`, so
+the retired "experimental preview" framing cannot return by review slip.
 First-class plugins follow `docs/plugins.md` and ADR 0005: manifests may claim
 only IDs from the versioned public capability registry; unknown IDs and
 isolation breaches refuse. Runtime API details live in

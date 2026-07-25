@@ -25,6 +25,17 @@ export {
 } from "./lib/site-config.js";
 
 export {
+  LIVE_OPEN_COPY,
+  LIVE_OPEN_INSTANCE_COUNT,
+  LIVE_OPEN_PATH,
+  LIVE_OPEN_PRESENTATION,
+  describePlacement,
+  resolveLiveOpenScene,
+  type LiveOpenInstance,
+  type LiveOpenScene,
+} from "./lib/live-open.js";
+
+export {
   IDENTITY_PLANE_DOC,
   IDENTITY_PLANE_PENDING_NOTE,
   createUmbrellaIdentityPlane,

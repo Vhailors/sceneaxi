@@ -19,6 +19,7 @@ This monorepo is the packaging home for:
 | Web / desktop shells | `apps/web-shell`, `apps/desktop-shell` |
 | Asset catalogs (may split later) | `apps/catalog-game`, `apps/catalog-web` |
 | Deployable web surfaces | `sites/umbrella`, `sites/catalog-game`, `sites/catalog-web` over `packages/site-kit` (ADR 0018; deploy details in [`docs/websites-deploy.md`](docs/websites-deploy.md)) |
+| Public live open path | `sites/umbrella/src/app/open/` — a committed Sculpt Artifact composed and drawn in a real WebGL canvas (ADR 0021) |
 
 **Not in this monorepo:** individual game products (separate repos).
 
@@ -27,7 +28,9 @@ own single-package pnpm workspace and install root with its own lockfile, so a
 web-framework dependency never moves the root lockfile or the gate runtime. The tier is
 still gated — `pnpm check:syntax`,
 `pnpm check:boundaries`, and `pnpm check:sites` all cover it, and all site logic lives in
-`packages/site-kit` where `pnpm gate` tests it.
+`packages/site-kit` where `pnpm gate` tests it. The tier's one engine edge is
+umbrella → `@sceneaxi/engine-presentation` for the public viewport (ADR 0021); every
+other engine package stays denied to every site.
 
 Package boundaries are executable: `docs/dependency-matrix.json` is the allow/deny
 truth and `pnpm check:boundaries` enforces it (see `docs/DEPENDENCY-MATRIX.md`).
@@ -59,9 +62,9 @@ Intake as a SceneAxi-owned Sculpt Artifact, mounts it through a backend-neutral
 API, runs it under kernel authority, and exposes the fixed Minimum E2 checklist.
 Presentation is the [Three presentation core](docs/three-presentation-core.md):
 its browser surface draws real pixels through `WebGLRenderer` when a consumer
-supplies a canvas, while node gates use its deterministic headless surface.
-Umbrella/site wiring remains a separate consumer responsibility. Deterministic
-fixture and live-demo evidence lives at
+supplies a canvas, while node gates use its deterministic headless surface. The
+umbrella's public live open path (`/open`) is the shipped consumer of that canvas
+surface (ADR 0021). Deterministic fixture and live-demo evidence lives at
 [`issue-73-hybrid-sculpt-golden.json`](.sceneaxi/evidence/issue-73-hybrid-sculpt-golden.json).
 
 The additive [sculpt-quality v1 layer](docs/sculpt-quality.md) deepens that same
@@ -150,4 +153,4 @@ indexed in [`docs/adr/`](docs/adr/README.md).
 - Kids profile is separately safety-gated; nothing may depend on it (enforced).
 - Factory methodology remains owned by factories-helpers; SceneAxi consumes contracts, it does not absorb the factory.
 - No Stage 1 proof execution without dual gates (captain tier-3 decisions + explicit run authorization).
-- Three.js remains a falsifiable renderer hypothesis inside the engine, not the product name.
+- Three.js is the product presentation core behind the unchanged deep presentation seam ([ADR 0017](docs/adr/0017-three-product-presentation-core.md)) — not the product name. The Stage 1 Three-Kernel composition question stays a separate falsifiable hypothesis under its own held authority; no renderer winner is claimed.

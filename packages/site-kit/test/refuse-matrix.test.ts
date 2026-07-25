@@ -15,6 +15,7 @@ import {
   type SiteRefusalReason,
   attemptCatalogPurchase,
   buildEditorDeepLink,
+  composeLiveOpenScene,
   createBillingPlane,
   createCreditsPlane,
   createIdentityPlane,
@@ -242,6 +243,9 @@ const CASES: Readonly<Record<SiteRefusalReason, () => Promise<unknown> | unknown
   // Reconstruction is injected here rather than corrupting the shipped module: the
   // reason must be reachable, and the shipped intake must stay valid.
   EDITOR_STARTER_ARTIFACT_INVALID: () => reconstructStarter({ kind: "not-an-intake" }),
+  // Same shape: the pipeline is handed an artifact it refuses, rather than the shipped
+  // placements being corrupted to prove the refusal is wired.
+  LIVE_OPEN_NOT_COMPOSABLE: () => composeLiveOpenScene({ artifactId: "not-an-artifact" }),
   ENGINE_SDK_ARTIFACT_MISSING: () => readEngineSdkOffer(workspace()),
   ENGINE_SDK_MANIFEST_INVALID: () => {
     const siteRoot = workspace();

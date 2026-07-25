@@ -77,6 +77,10 @@ export const SITE_REFUSALS = Object.freeze({
   EDITOR_STARTER_ARTIFACT_INVALID:
     "The starter sculpt intake did not reconstruct, so no editor scene can be opened.",
 
+  // --- public live open path (see live-open.ts) ---
+  LIVE_OPEN_NOT_COMPOSABLE:
+    "The scene-composition pipeline refused the live-open placements, so no scene is opened.",
+
   // --- public engine SDK offer (see engine-sdk-offer.ts) ---
   ENGINE_SDK_ARTIFACT_MISSING:
     "The engine SDK archive or its manifest is not present in this build.",

@@ -9,7 +9,13 @@
  * Renderable values cross this port as opaque handles: no Three type appears in
  * any exported signature, so ADR 0002 backend-hiding still holds.
  */
-import { Camera, Mesh, Object3D, WebGLRenderer } from "three";
+import {
+  Camera,
+  Mesh,
+  Object3D,
+  WebGLRenderer,
+  type WebGLRendererParameters,
+} from "three";
 import { ThreePresentationError } from "./three-presentation-error.js";
 
 /**
@@ -46,10 +52,19 @@ export interface ThreePresentationSurface {
  * Declared structurally instead of as `HTMLCanvasElement` so this package needs
  * no DOM lib and its emitted types stay consumable by node-only packages. A real
  * browser canvas satisfies it.
+ *
+ * The context lifecycle events are part of the contract, not an optional extra:
+ * a canvas surface subscribes to `webglcontextlost` / `webglcontextrestored` so
+ * it stops claiming pixels while its context is gone, and it refuses any target
+ * that cannot deliver them. The type states that requirement so a consumer of
+ * this contract learns it from the compiler rather than from a construction-time
+ * refusal.
  */
 export type ThreeCanvasTarget = {
   readonly width: number;
   readonly height: number;
+  addEventListener(type: string, listener: () => void): void;
+  removeEventListener(type: string, listener: () => void): void;
   toDataURL?(type?: string): string;
 };
 
@@ -135,21 +150,58 @@ function asRenderTargets(
 export function createWebGLCanvasSurface(
   options: WebGLCanvasSurfaceOptions,
 ): ThreePresentationSurface {
-  const canvas = options.canvas;
-  if (canvas === null || typeof canvas !== "object") {
+  // The contract is typed, but an untyped JavaScript consumer can still hand over
+  // anything, so the requirement is enforced as well as declared.
+  const candidate = options.canvas as Partial<ThreeCanvasTarget> | null | undefined;
+  if (candidate === null || typeof candidate !== "object") {
     throw new ThreePresentationError(
       "invalid-canvas",
       "A canvas is required for the WebGL surface.",
     );
   }
+  if (
+    typeof candidate.addEventListener !== "function" ||
+    typeof candidate.removeEventListener !== "function"
+  ) {
+    throw new ThreePresentationError(
+      "invalid-canvas",
+      "A WebGL canvas must support context lifecycle events.",
+    );
+  }
+  const canvas = options.canvas;
   const preserveDrawingBuffer = options.preserveDrawingBuffer ?? true;
   const renderer = new WebGLRenderer({
-    canvas,
+    // `ThreeCanvasTarget` is structural so this package needs no DOM lib. A consumer
+    // that *does* take the DOM lib — a site type-checking this source — sees the
+    // renderer's own `HTMLCanvasElement | OffscreenCanvas` here, which a structural
+    // supertype cannot satisfy on its own. Narrowing to the renderer's own parameter
+    // type states the fact the seam already guarantees: whatever reached
+    // `createWebGLCanvasSurface` is the real canvas its caller owns. Without this, the
+    // package compiles in node-only consumers and fails in every browser consumer.
+    canvas: canvas as NonNullable<WebGLRendererParameters["canvas"]>,
     antialias: options.antialias ?? true,
     preserveDrawingBuffer,
     alpha: options.alpha ?? false,
   });
   let drawn = false;
+  let contextAvailable = true;
+  const onContextLost = () => {
+    contextAvailable = false;
+    drawn = false;
+  };
+  const onContextRestored = () => {
+    contextAvailable = true;
+    drawn = false;
+  };
+  try {
+    canvas.addEventListener("webglcontextlost", onContextLost);
+    canvas.addEventListener("webglcontextrestored", onContextRestored);
+  } catch (error) {
+    canvas.removeEventListener("webglcontextlost", onContextLost);
+    canvas.removeEventListener("webglcontextrestored", onContextRestored);
+    renderer.dispose();
+    throw error;
+  }
 
   return {
     kind: "webgl-canvas",
@@ -165,6 +217,9 @@ export function createWebGLCanvasSurface(
 
     draw(sceneHandle, cameraHandle) {
       const targets = asRenderTargets(sceneHandle, cameraHandle);
+      if (!contextAvailable) {
+        return Object.freeze({ drawCalls: 0, pixelsDrawn: false });
+      }
       renderer.info.reset();
       renderer.render(targets.scene, targets.camera);
       drawn = true;
@@ -194,8 +249,11 @@ export function createWebGLCanvasSurface(
     },
 
     dispose() {
+      canvas.removeEventListener("webglcontextlost", onContextLost);
+      canvas.removeEventListener("webglcontextrestored", onContextRestored);
       renderer.dispose();
       drawn = false;
+      contextAvailable = false;
     },
   };
 }

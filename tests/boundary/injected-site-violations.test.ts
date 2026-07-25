@@ -63,6 +63,36 @@ describe("sites tier — injected violations", () => {
     expect(res.stderr).toContain("imports @sceneaxi/engine-kernel, DENIED by the matrix");
   });
 
+  it("boundary check allows the umbrella's one charted engine edge — the presentation seam", () => {
+    // ADR 0022: the umbrella owns the public viewport, so this edge must pass. It is
+    // asserted here beside the denials so widening and its bound are proven together.
+    appendTo(fx, "sites/umbrella/src/index.ts", '\nimport "@sceneaxi/engine-presentation";\n');
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status, `stderr: ${res.stderr}`).toBe(0);
+  });
+
+  it.each(["catalog-game", "catalog-web"])(
+    "boundary check still denies the presentation seam to sites/%s",
+    (site) => {
+      appendTo(fx, `sites/${site}/src/index.ts`, '\nimport "@sceneaxi/engine-presentation";\n');
+      const res = runCheck(fx, "check-boundaries.mjs");
+      expect(res.status).toBe(1);
+      expect(res.stderr).toContain("imports @sceneaxi/engine-presentation, DENIED by the matrix");
+    },
+  );
+
+  it.each([
+    "@sceneaxi/engine-kernel",
+    "@sceneaxi/engine-orchestrator",
+    "@sceneaxi/authoring-core",
+    "@sceneaxi/profile-game",
+  ])("boundary check keeps %s denied to the umbrella", (denied) => {
+    appendTo(fx, "sites/umbrella/src/index.ts", `\nimport "${denied}";\n`);
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(`imports ${denied}, DENIED by the matrix`);
+  });
+
   it("boundary check fails on a site importing the Kids package — the isolation boundary", () => {
     appendTo(fx, "sites/catalog-web/src/index.ts", '\nimport "@sceneaxi/profile-kids";\n');
     const res = runCheck(fx, "check-boundaries.mjs");

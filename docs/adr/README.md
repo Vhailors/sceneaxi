@@ -68,6 +68,7 @@ naming its source.
 | [0019](0019-public-engine-sdk-zip-not-npm.md) | The public engine download is a deterministic SDK zip with a checksum, not an npm publish |
 | [0020](0020-minimum-e2-web-editor-entitlement.md) | The Minimum E2 web editor is entitled by credits or the unused 100-credit starter allotment; admin unrestricted |
 | [0021](0021-identity-credits-injected-adapters.md) | The identity/credits plane ships as contracts and ports with injected Better Auth, Neon, and Stripe adapters; webhook verification stays in core; plain SQL over Drizzle |
+| [0022](0022-umbrella-owns-the-public-viewport.md) | The umbrella site owns the public viewport and is the only site allowed to consume `@sceneaxi/engine-presentation` |
 
 ## Number allocation
 

@@ -121,6 +121,17 @@ export {
 } from "./starter-artifact.js";
 
 export {
+  LIVE_OPEN_INSTANCE_COUNT,
+  LIVE_OPEN_PATH,
+  LIVE_OPEN_PRESENTATION,
+  LIVE_OPEN_SCENE_ID,
+  composeLiveOpenScene,
+  liveOpenScene,
+  type LiveOpenInstance,
+  type LiveOpenScene,
+} from "./live-open.js";
+
+export {
   CATALOG_SURFACES,
   CREATOR_SHARE_ROUNDING_NOTE,
   CREATOR_SHARE_RULE,

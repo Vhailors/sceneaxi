@@ -129,7 +129,8 @@
     "@sceneaxi/site-umbrella": {
       "dir": "sites/umbrella",
       "releaseGroup": "sites",
-      "allow": ["@sceneaxi/site-kit"]
+      "allow": ["@sceneaxi/site-kit", "@sceneaxi/engine-presentation"],
+      "note": "ADR 0022: the umbrella owns the public viewport, so it alone may consume the ADR 0002 presentation seam to draw a real artifact into a browser canvas. The edge stops there — no kernel, orchestrator, authoring-core, profile, or Kids package — and the two catalog sites keep site-kit only."
     },
     "@sceneaxi/site-catalog-game": {
       "dir": "sites/catalog-game",
@@ -183,7 +184,7 @@
     },
     "apps": { "policy": "private, unpublished, unversioned beyond workspace bookkeeping" },
     "sites": {
-      "policy": "first-party deployable web surfaces and their shared deployment-neutral logic; consume only public contracts and public authoring-core APIs; never engine packages, profiles, a service locator, or Kids; framework and provider SDKs stay in the sites/ tier and out of the hermetic package tier"
+      "policy": "first-party deployable web surfaces and their shared deployment-neutral logic; consume only public contracts and public authoring-core APIs; never profiles, a service locator, or Kids; the single charted engine edge is ADR 0022 — the umbrella site may consume @sceneaxi/engine-presentation to draw the public viewport, and no other engine package is reachable from any site; framework and provider SDKs stay in the sites/ tier and out of the hermetic package tier"
     }
   }
 }

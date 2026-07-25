@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { LIVE_OPEN_PATH } from "../lib/live-open.js";
 import { UMBRELLA_BRAND, resolveFamilyLinks } from "../lib/site-config.js";
 import "./globals.css";
 
@@ -9,6 +10,7 @@ export const metadata: Metadata = {
 
 const NAV = [
   { href: "/", label: "Overview" },
+  { href: LIVE_OPEN_PATH, label: "Open a scene" },
   { href: "/docs", label: "Docs" },
   { href: "/engine", label: "Engine SDK" },
   { href: "/pricing", label: "Pricing" },

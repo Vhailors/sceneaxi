@@ -7,14 +7,21 @@
  * root. The seams are imported by path instead; the rule they satisfy — every unit
  * exports a frozen typed seam with a covering test — is unchanged.
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  LIVE_OPEN_COPY,
+  LIVE_OPEN_INSTANCE_COUNT,
+  LIVE_OPEN_PATH,
+  LIVE_OPEN_PRESENTATION,
   UMBRELLA_BRAND,
   createUmbrellaIdentityPlane,
+  describePlacement,
   resolveBillingMode,
   resolveFamilyLinks,
+  resolveLiveOpenScene,
   resolveUmbrellaEditorAccess,
   seam as umbrellaSeam,
 } from "../../sites/umbrella/src/index.ts";
@@ -33,7 +40,36 @@ import {
 } from "../../sites/catalog-web/src/index.ts";
 
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
+const SITES_DIR = join(REPO_ROOT, "sites");
 const UMBRELLA_ORIGIN = "https://sceneaxi-umbrella.vercel.app";
+
+const SITE_SOURCE_SKIP = new Set(["node_modules", ".next", "dist", "coverage"]);
+
+/**
+ * Every committed TypeScript source under a site's `src`, discovered rather than listed.
+ *
+ * The copy scans below cover the whole tier, so a product surface added later is scanned
+ * on the day it lands instead of on the day someone remembers to name it.
+ */
+function collectSiteSources(dir: string, out: string[] = []): string[] {
+  for (const entry of readdirSync(dir).sort()) {
+    if (SITE_SOURCE_SKIP.has(entry)) continue;
+    const path = join(dir, entry);
+    if (statSync(path).isDirectory()) {
+      collectSiteSources(path, out);
+    } else if (entry.endsWith(".ts") || entry.endsWith(".tsx")) {
+      out.push(path);
+    }
+  }
+  return out;
+}
+
+const SITE_SOURCE_FILES: readonly string[] = readdirSync(SITES_DIR)
+  .sort()
+  .map((entry) => join(SITES_DIR, entry, "src"))
+  .filter((dir) => existsSync(dir) && statSync(dir).isDirectory())
+  .flatMap((dir) => collectSiteSources(dir))
+  .map((path) => relative(SITES_DIR, path).split(sep).join("/"));
 
 describe("site seams", () => {
   it.each([
@@ -172,6 +208,191 @@ describe("umbrella editor access", () => {
   });
 });
 
+
+describe("umbrella live open path", () => {
+  it("serves a composed scene the browser can mount", () => {
+    const scene = resolveLiveOpenScene();
+    expect(scene.ok).toBe(true);
+    if (!scene.ok) return;
+    expect(scene.value.instances.length).toBeGreaterThanOrEqual(2);
+    for (const instance of scene.value.instances) {
+      expect(scene.value.artifacts[instance.artifactId]).toBeDefined();
+      expect(describePlacement(instance)).toMatch(/^world \[.*\] · depth \d+$/);
+    }
+  });
+
+  it("is public: nothing about it reads identity, credits, or entitlement", () => {
+    const source = readFileSync(
+      new URL("../../sites/umbrella/src/app/open/page.tsx", import.meta.url),
+      "utf8",
+    );
+    for (const forbidden of [
+      "resolveUmbrellaEditorAccess",
+      "createUmbrellaIdentityPlane",
+      "readSessionToken",
+      "SCENEAXI_SITE_EDITOR_PREVIEW",
+    ]) {
+      expect(source).not.toContain(forbidden);
+    }
+  });
+
+  it("routes the path site-kit publishes and links it from the overview", () => {
+    expect(LIVE_OPEN_PATH).toBe("/open");
+    const overview = readFileSync(
+      new URL("../../sites/umbrella/src/app/page.tsx", import.meta.url),
+      "utf8",
+    );
+    expect(overview).toContain("LIVE_OPEN_PATH");
+    const layout = readFileSync(
+      new URL("../../sites/umbrella/src/app/layout.tsx", import.meta.url),
+      "utf8",
+    );
+    expect(layout).toContain("LIVE_OPEN_PATH");
+  });
+
+  it("declares its one engine edge in the manifest and the bundler config", () => {
+    const manifest = JSON.parse(
+      readFileSync(new URL("../../sites/umbrella/package.json", import.meta.url), "utf8"),
+    ) as { readonly dependencies: Record<string, string> };
+    expect(manifest.dependencies["@sceneaxi/engine-presentation"]).toBe(
+      "link:../../packages/engine-presentation",
+    );
+
+    const config = readFileSync(
+      new URL("../../sites/umbrella/next.config.ts", import.meta.url),
+      "utf8",
+    );
+    expect(config).toContain("@sceneaxi/engine-presentation");
+  });
+
+  it.each(["catalog-game", "catalog-web"])(
+    "keeps the presentation seam out of sites/%s, which draws nothing",
+    (site) => {
+      const manifest = JSON.parse(
+        readFileSync(new URL(`../../sites/${site}/package.json`, import.meta.url), "utf8"),
+      ) as { readonly dependencies: Record<string, string> };
+      expect(manifest.dependencies["@sceneaxi/engine-presentation"]).toBeUndefined();
+    },
+  );
+});
+
+/**
+ * A scene instance count written into prose instead of read from the placement list.
+ *
+ * `LIVE_OPEN_INSTANCE_COUNT` exists so shipped copy cannot miscount the served scene,
+ * which only holds while no surface spells the number out; an interpolated count reads
+ * as `} instances` in source and is deliberately not matched.
+ */
+const HARDCODED_INSTANCE_COUNT =
+  /\b(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|\d+)\s+instances\b/i;
+
+describe("live open copy stays honest about the presentation core", () => {
+  const RETIRED_FRAMING = [
+    ...LIVE_OPEN_PRESENTATION.retiredLabels,
+    "multi-renderer",
+    "stage 1 has not run",
+  ].map((label) => label.toLowerCase());
+
+  it("reads its banned framing from the shipped registry", () => {
+    expect(LIVE_OPEN_PRESENTATION.retiredLabels.length).toBeGreaterThan(0);
+    for (const retired of LIVE_OPEN_PRESENTATION.retiredLabels) {
+      expect(RETIRED_FRAMING).toContain(retired.toLowerCase());
+    }
+  });
+
+  it("scans every committed site source, so a new surface cannot opt out", () => {
+    expect(SITE_SOURCE_FILES.length).toBeGreaterThan(0);
+    for (const covered of [
+      "umbrella/src/app/open/page.tsx",
+      "umbrella/src/app/open/_components/live-viewport.tsx",
+      "umbrella/src/app/page.tsx",
+      "umbrella/src/lib/live-open.ts",
+      "catalog-game/src/app/page.tsx",
+      "catalog-web/src/app/page.tsx",
+    ]) {
+      expect(SITE_SOURCE_FILES).toContain(covered);
+    }
+  });
+
+  it("names the product presentation core the way ADR 0017 requires", () => {
+    expect(LIVE_OPEN_PRESENTATION.coreLabel).toBe("Three presentation core");
+    expect(LIVE_OPEN_COPY.lede).toContain("Three presentation core");
+  });
+
+  it("states an instance count the served scene actually has", () => {
+    const opened = resolveLiveOpenScene();
+    expect(opened.ok).toBe(true);
+    if (!opened.ok) return;
+    expect(LIVE_OPEN_INSTANCE_COUNT).toBe(opened.value.instances.length);
+    for (const sentence of [LIVE_OPEN_COPY.lede, LIVE_OPEN_COPY.teaser]) {
+      expect(sentence).toContain(`places ${opened.value.instances.length} instances`);
+    }
+  });
+
+  it("offers a teaser that claims no viewport and promises no gesture", () => {
+    expect(LIVE_OPEN_COPY.teaser).toContain(LIVE_OPEN_PRESENTATION.coreLabel);
+    expect(LIVE_OPEN_COPY.teaser).not.toContain("This page");
+    expect(LIVE_OPEN_COPY.lede).toContain("Drag to orbit, scroll to zoom");
+    for (const gesture of ["drag to orbit", "scroll to zoom"]) {
+      expect(LIVE_OPEN_COPY.teaser.toLowerCase()).not.toContain(gesture);
+    }
+  });
+
+  it("renders the first-person lede only where the viewport is actually mounted", () => {
+    const rendersLede = SITE_SOURCE_FILES.filter((relative) =>
+      readFileSync(new URL(`../../sites/${relative}`, import.meta.url), "utf8").includes(
+        "LIVE_OPEN_COPY.lede",
+      ),
+    );
+    expect(rendersLede.length).toBeGreaterThan(0);
+    for (const relative of rendersLede) {
+      const source = readFileSync(
+        new URL(`../../sites/${relative}`, import.meta.url),
+        "utf8",
+      );
+      expect(source).toContain("<LiveViewport");
+    }
+  });
+
+  it.each(SITE_SOURCE_FILES)(
+    "keeps a written-out instance count out of %s, so every count stays derived",
+    (relative) => {
+      const source = readFileSync(
+        new URL(`../../sites/${relative}`, import.meta.url),
+        "utf8",
+      );
+      expect(source).not.toMatch(HARDCODED_INSTANCE_COUNT);
+    },
+  );
+
+  it("attributes runtime and scene evidence to their actual producers", () => {
+    expect(LIVE_OPEN_COPY.honesty).toContain(
+      "live frame report comes from the running presentation core",
+    );
+    expect(LIVE_OPEN_COPY.honesty).toContain(
+      "composition pipeline supplies the scene digest, instance count, hierarchy, depths, and world transforms",
+    );
+    expect(LIVE_OPEN_COPY.honesty).toContain(
+      "site-kit supplies the Role labels as placement annotations",
+    );
+    expect(LIVE_OPEN_COPY.honesty).toContain(
+      "None of this evidence is page-authored",
+    );
+  });
+
+  it.each(SITE_SOURCE_FILES)(
+    "keeps the retired experimental framing out of %s",
+    (relative) => {
+      const source = readFileSync(
+        new URL(`../../sites/${relative}`, import.meta.url),
+        "utf8",
+      ).toLowerCase();
+      for (const retired of RETIRED_FRAMING) {
+        expect(source).not.toContain(retired);
+      }
+    },
+  );
+});
 
 describe("the sites tier keeps the hermetic root hermetic", () => {
   it("declares no framework dependency in the root manifest", () => {
