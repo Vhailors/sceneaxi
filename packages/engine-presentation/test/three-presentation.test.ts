@@ -236,6 +236,26 @@ describe("Three presentation core — sculpt backend", () => {
     ).toThrow(/webgl/i);
   });
 
+  it("validates camera options before allocating a WebGL surface", () => {
+    expect(() =>
+      createThreeSculptPresentationBackend({
+        canvas: {
+          width: 320,
+          height: 240,
+          getContext: () => null,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+        } as never,
+        camera: { distance: 0 },
+      }),
+    ).toThrow(
+      new ThreePresentationError(
+        "invalid-camera",
+        "distance must be greater than zero.",
+      ),
+    );
+  });
+
   it("refuses an invalid canvas and an invalid viewport", () => {
     expect(() => createThreeSculptPresentationBackend({ canvas: null as never })).toThrow(
       ThreePresentationError,
@@ -345,6 +365,7 @@ describe("Three Presentation Runtime (ADR 0002 seam)", () => {
 
     const moved = {
       ...first,
+      tick: first.tick + 1,
       entities: [
         { id: "hero", x: 10, y: 0 },
         { id: "crate", x: 4, y: 2 },
@@ -357,6 +378,32 @@ describe("Three Presentation Runtime (ADR 0002 seam)", () => {
     expect(scene.getObjectByName("entity:hero")?.position.toArray()).toEqual([5, 0.5, 0]);
     expect(JSON.stringify(moved)).toBe(frozen);
     expect(session.observe()).toEqual(first);
+    runtime.dispose();
+  });
+
+  it("keeps the prior tick stable across interpolated frames", () => {
+    const recorder = recordingSurface();
+    const runtime = createThreePresentationRuntime({ surface: recorder.surface });
+    const first = open(manifest, { nowMs: () => 1_753_420_800_000 }).observe();
+    const moved = {
+      ...first,
+      tick: first.tick + 1,
+      entities: [
+        { id: "hero", x: 10, y: 0 },
+        { id: "crate", x: 4, y: 2 },
+      ],
+    };
+    runtime.mount();
+    runtime.present(first, [], 1);
+    runtime.present(moved, [], 0.25);
+    expect(
+      sceneOf(recorder.draws[1]).getObjectByName("entity:hero")?.position.x,
+    ).toBe(2.5);
+    runtime.present(moved, [], 0.5);
+
+    expect(
+      sceneOf(recorder.draws[2]).getObjectByName("entity:hero")?.position.x,
+    ).toBe(5);
     runtime.dispose();
   });
 
@@ -484,6 +531,28 @@ describe("Three render loop", () => {
 
     expect(loop.running()).toBe(false);
     expect(host.pendingCount()).toBe(0);
+  });
+
+  it("stops and can restart after a frame callback throws", () => {
+    const host = fakeScheduler();
+    let shouldThrow = true;
+    const loop = createThreeRenderLoop({
+      scheduler: host.scheduler,
+      onFrame: () => {
+        if (shouldThrow) throw new Error("frame failed");
+      },
+    });
+    loop.start();
+
+    expect(() => host.tick(0)).toThrow("frame failed");
+    expect(loop.running()).toBe(false);
+    expect(host.pendingCount()).toBe(0);
+
+    shouldThrow = false;
+    loop.start();
+    expect(host.tick(16)).toBe(true);
+    expect(loop.running()).toBe(true);
+    loop.stop();
   });
 
   it("refuses when the host has no frame scheduler", () => {

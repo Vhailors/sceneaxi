@@ -123,7 +123,6 @@ export function createThreePresentationCore(
   options: ThreePresentationCoreOptions = {},
 ): ThreePresentationCore {
   const viewport = resolveViewport(options);
-  const surface = resolveSurface(options);
   const orbit = createOrbitCamera(options.camera ?? {});
   const scene = new Scene();
   const background = options.background === undefined ? "#101318" : options.background;
@@ -140,6 +139,7 @@ export function createThreePresentationCore(
   fill.position.set(-5, 2, -4);
   scene.add(ambient, key, fill);
 
+  const surface = resolveSurface(options);
   let frame = 0;
   let disposed = false;
 
@@ -153,7 +153,12 @@ export function createThreePresentationCore(
   }
 
   orbit.setViewport(viewport.width, viewport.height);
-  surface.resize(viewport.width, viewport.height, viewport.pixelRatio);
+  try {
+    surface.resize(viewport.width, viewport.height, viewport.pixelRatio);
+  } catch (error) {
+    if (options.surface === undefined) surface.dispose();
+    throw error;
+  }
 
   return {
     surfaceKind: surface.kind,

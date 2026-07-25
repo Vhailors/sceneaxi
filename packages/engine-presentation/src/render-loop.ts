@@ -78,7 +78,13 @@ export function createThreeRenderLoop(
       const deltaMs = lastTimeMs === null ? 0 : timeMs - lastTimeMs;
       lastTimeMs = timeMs;
       frames += 1;
-      options.onFrame(deltaMs, timeMs);
+      try {
+        options.onFrame(deltaMs, timeMs);
+      } catch (error) {
+        active = false;
+        lastTimeMs = null;
+        throw error;
+      }
       if (active) schedule();
     });
   }

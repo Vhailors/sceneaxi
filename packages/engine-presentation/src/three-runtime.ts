@@ -110,6 +110,8 @@ export function createThreePresentationRuntime(
   let core: ThreePresentationCore | null = null;
   let entities: Group | null = null;
   let previous = new Map<string, { x: number; y: number }>();
+  let current = new Map<string, { x: number; y: number }>();
+  let currentTick: number | null = null;
   let lastFrame: ThreePresentedFrame | null = null;
 
   function requireMounted() {
@@ -152,6 +154,8 @@ export function createThreePresentationRuntime(
       entities.name = "kernel-entities";
       core.content.add(entities);
       previous = new Map();
+      current = new Map();
+      currentTick = null;
       lastFrame = null;
     },
 
@@ -161,15 +165,27 @@ export function createThreePresentationRuntime(
       requireAlpha(alpha);
       void events;
 
+      const incoming = new Map(
+        snapshot.entities.map((entity) => [entity.id, { x: entity.x, y: entity.y }]),
+      );
+      if (currentTick === null) {
+        previous = incoming;
+      } else if (snapshot.tick !== currentTick) {
+        previous = current;
+      }
+      current = incoming;
+      currentTick = snapshot.tick;
+
       const seen = new Set<string>();
       for (const entity of snapshot.entities) {
         seen.add(entity.id);
         const marker = markerFor(live.entities, entity.id);
-        const from = previous.get(entity.id) ?? { x: entity.x, y: entity.y };
+        const target = current.get(entity.id) ?? { x: entity.x, y: entity.y };
+        const from = previous.get(entity.id) ?? target;
         marker.position.set(
-          lerp(from.x, entity.x, alpha),
+          lerp(from.x, target.x, alpha),
           entitySize / 2,
-          lerp(from.y, entity.y, alpha),
+          lerp(from.y, target.y, alpha),
         );
       }
       for (const child of [...live.entities.children]) {
@@ -180,9 +196,6 @@ export function createThreePresentationRuntime(
         live.entities.remove(child);
         disposeSubtree(child);
       }
-      previous = new Map(
-        snapshot.entities.map((entity) => [entity.id, { x: entity.x, y: entity.y }]),
-      );
 
       const drawn = live.core.draw();
       lastFrame = Object.freeze({
@@ -209,6 +222,8 @@ export function createThreePresentationRuntime(
       core = null;
       entities = null;
       previous = new Map();
+      current = new Map();
+      currentTick = null;
     },
 
     surface() {
