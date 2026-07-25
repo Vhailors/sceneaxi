@@ -1,8 +1,9 @@
 # Captain standing authorization, refreshed 2026-07-25 for the
-# sceneaxi-sculpt-scene-composition-v1 end-of-task ship: allow up to three
+# sceneaxi-runnable-surfaces-v1 end-of-task ship: allow up to three
 # pipeline-owned repair rounds per automated step.
 # Keep this project-local; do not raise the global home configuration.
-# Previously authorized by the sceneaxi-sculpt-quality-v1 launch brief.
+# Previously authorized by the sceneaxi-sculpt-scene-composition-v1 and
+# sceneaxi-sculpt-quality-v1 launch briefs.
 auto_fix:
   rebase: 3
   review: 3
