@@ -9,6 +9,7 @@
 import {
   COMPOSED_SCENE_DOCUMENT_DATA_KEY,
   COMPOSED_SCENE_KIND,
+  SCENE_MAXIMUM_INSTANCES,
   SCENE_COMPOSITION_SCHEMA_VERSION,
   createDocument,
   digestComposedScene,
@@ -72,7 +73,15 @@ type StableInputCapture =
       readonly ok: false;
       readonly path: string;
       readonly message: string;
+      readonly budgetExceeded?: true;
     };
+
+type StableInputCaptureBudget = {
+  remainingEntries: number;
+};
+
+const SCENE_CAPTURE_MAXIMUM_DEPTH = 64;
+const SCENE_CAPTURE_MAXIMUM_ENTRIES = 100_000;
 
 function refuse(
   code: SceneCompositionRefusalCode,
@@ -86,7 +95,19 @@ function captureStableInput(
   value: unknown,
   path: string,
   ancestors = new Set<object>(),
+  budget: StableInputCaptureBudget = {
+    remainingEntries: SCENE_CAPTURE_MAXIMUM_ENTRIES,
+  },
+  depth = 0,
 ): StableInputCapture {
+  if (depth > SCENE_CAPTURE_MAXIMUM_DEPTH) {
+    return {
+      ok: false,
+      path,
+      message: "Scene composition input exceeds the capture depth budget.",
+      budgetExceeded: true,
+    };
+  }
   if (value === null || typeof value !== "object") {
     return { ok: true, value };
   }
@@ -100,11 +121,9 @@ function captureStableInput(
 
   let array: boolean;
   let prototype: object | null;
-  let keys: readonly PropertyKey[];
   try {
     array = Array.isArray(value);
     prototype = Object.getPrototypeOf(value) as object | null;
-    keys = Reflect.ownKeys(value);
   } catch {
     return {
       ok: false,
@@ -124,34 +143,71 @@ function captureStableInput(
     };
   }
 
+  let arrayLength: number | undefined;
+  if (array) {
+    let lengthDescriptor: PropertyDescriptor | undefined;
+    try {
+      lengthDescriptor = Object.getOwnPropertyDescriptor(value, "length");
+    } catch {
+      return {
+        ok: false,
+        path,
+        message: "Scene composition input must expose stable data fields.",
+      };
+    }
+    const length =
+      lengthDescriptor !== undefined && "value" in lengthDescriptor
+        ? (lengthDescriptor.value as unknown)
+        : undefined;
+    if (
+      typeof length !== "number" ||
+      !Number.isSafeInteger(length) ||
+      length < 0
+    ) {
+      return {
+        ok: false,
+        path,
+        message: "Scene composition arrays must expose a stable length.",
+      };
+    }
+    const maximumLength =
+      path === "$.placements" || path === "$.artifacts"
+        ? SCENE_MAXIMUM_INSTANCES
+        : SCENE_CAPTURE_MAXIMUM_ENTRIES;
+    if (length > maximumLength) {
+      return {
+        ok: false,
+        path,
+        message: `Scene composition array length exceeds the capture maximum of ${String(maximumLength)}.`,
+        budgetExceeded: true,
+      };
+    }
+    arrayLength = length;
+  }
+
+  let keys: readonly PropertyKey[];
+  try {
+    keys = Reflect.ownKeys(value);
+  } catch {
+    return {
+      ok: false,
+      path,
+      message: "Scene composition input must expose stable data fields.",
+    };
+  }
+  if (keys.length > budget.remainingEntries) {
+    return {
+      ok: false,
+      path,
+      message: `Scene composition input exceeds the capture entry budget of ${String(SCENE_CAPTURE_MAXIMUM_ENTRIES)}.`,
+      budgetExceeded: true,
+    };
+  }
+  budget.remainingEntries -= keys.length;
+
   ancestors.add(value);
   try {
     if (array) {
-      let lengthDescriptor: PropertyDescriptor | undefined;
-      try {
-        lengthDescriptor = Object.getOwnPropertyDescriptor(value, "length");
-      } catch {
-        return {
-          ok: false,
-          path,
-          message: "Scene composition input must expose stable data fields.",
-        };
-      }
-      const length =
-        lengthDescriptor !== undefined && "value" in lengthDescriptor
-          ? (lengthDescriptor.value as unknown)
-          : undefined;
-      if (
-        typeof length !== "number" ||
-        !Number.isSafeInteger(length) ||
-        length < 0
-      ) {
-        return {
-          ok: false,
-          path,
-          message: "Scene composition arrays must expose a stable length.",
-        };
-      }
       if (
         keys.some(
           (key) =>
@@ -167,7 +223,7 @@ function captureStableInput(
       }
 
       const entries: unknown[] = [];
-      for (let index = 0; index < length; index += 1) {
+      for (let index = 0; index < (arrayLength ?? 0); index += 1) {
         let descriptor: PropertyDescriptor | undefined;
         try {
           descriptor = Object.getOwnPropertyDescriptor(value, String(index));
@@ -193,6 +249,8 @@ function captureStableInput(
           descriptor.value as unknown,
           `${path}[${String(index)}]`,
           ancestors,
+          budget,
+          depth + 1,
         );
         if (!captured.ok) return captured;
         entries.push(captured.value);
@@ -234,6 +292,8 @@ function captureStableInput(
         descriptor.value as unknown,
         `${path}.${key}`,
         ancestors,
+        budget,
+        depth + 1,
       );
       if (!captured.ok) return captured;
       entries.push([key, captured.value]);
@@ -436,7 +496,10 @@ export function composeScene(
   const capturedIntake = captureStableInput(intakeValue, "$");
   if (!capturedIntake.ok) {
     return refuse(
-      "invalid-field",
+      capturedIntake.budgetExceeded &&
+        capturedIntake.path === "$.placements"
+        ? "scene-budget-exceeded"
+        : "invalid-field",
       capturedIntake.path,
       capturedIntake.message,
     );
@@ -453,7 +516,11 @@ export function composeScene(
   const capturedArtifacts = captureStableInput(artifactValues, "$.artifacts");
   if (!capturedArtifacts.ok || !Array.isArray(capturedArtifacts.value)) {
     return refuse(
-      "invalid-artifact",
+      !capturedArtifacts.ok &&
+        capturedArtifacts.budgetExceeded &&
+        capturedArtifacts.path === "$.artifacts"
+        ? "scene-budget-exceeded"
+        : "invalid-artifact",
       capturedArtifacts.ok ? "$.artifacts" : capturedArtifacts.path,
       capturedArtifacts.ok
         ? "Sculpt Artifacts must be supplied as an array."

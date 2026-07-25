@@ -301,6 +301,37 @@ describe("scene composition pipeline", () => {
     expect(artifactReads).toBe(0);
   });
 
+  it("refuses oversized and deeply nested input during bounded capture", () => {
+    expect(
+      refusal(
+        composeScene(
+          {
+            ...intakeFixture(),
+            placements: new Array(100_001),
+          },
+          artifacts,
+        ),
+        "oversized placements",
+      ),
+    ).toEqual({
+      code: "scene-budget-exceeded",
+      path: "$.placements",
+    });
+
+    let nested: Record<string, unknown> = {};
+    for (let depth = 0; depth < 70; depth += 1) {
+      nested = { nested };
+    }
+    expect(
+      refusal(
+        composeScene({ ...intakeFixture(), extra: nested }, artifacts),
+        "deep unexpected field",
+      ),
+    ).toMatchObject({
+      code: "invalid-field",
+    });
+  });
+
   it("refuses accessor-backed options without reading them", () => {
     let reads = 0;
     const options: SceneCompositionOptions = {};

@@ -730,6 +730,7 @@ function validateInstanceEntries(
   instances: readonly unknown[],
 ): SceneCompositionValidationResult<readonly ComposedSceneInstance[]> {
   const entries: ComposedSceneInstance[] = [];
+  const digestByArtifactId = new Map<string, string>();
   for (const [index, instance] of instances.entries()) {
     const path = `$.instances[${String(index)}]`;
     if (!isJsonObject(instance)) {
@@ -806,6 +807,19 @@ function validateInstanceEntries(
         `Scene instance "${String(instance["instanceId"])}" names artifact "${String(instance["artifactId"])}" but embeds "${artifact.value.artifactId}".`,
       );
     }
+    const artifactDigest = digestSceneArtifact(artifact.value);
+    const priorArtifactDigest = digestByArtifactId.get(artifact.value.artifactId);
+    if (
+      priorArtifactDigest !== undefined &&
+      priorArtifactDigest !== artifactDigest
+    ) {
+      return refuse(
+        "invalid-artifact",
+        `${path}.artifact`,
+        `Every instance of Sculpt Artifact "${artifact.value.artifactId}" must embed the same artifact bytes.`,
+      );
+    }
+    digestByArtifactId.set(artifact.value.artifactId, artifactDigest);
     const rootNodeIndex = artifact.value.runtimeHierarchy.nodes.findIndex(
       (node) => node.id === artifact.value.runtimeHierarchy.rootNodeId,
     );
@@ -1056,5 +1070,15 @@ export function composedSceneFromDocumentData(
       `Document data must carry "${COMPOSED_SCENE_DOCUMENT_DATA_KEY}".`,
     );
   }
-  return validateComposedScene(data[COMPOSED_SCENE_DOCUMENT_DATA_KEY]);
+  const validated = validateComposedScene(
+    data[COMPOSED_SCENE_DOCUMENT_DATA_KEY],
+  );
+  if (validated.ok) return validated;
+  return {
+    ok: false,
+    diagnostics: validated.diagnostics.map((diagnostic) => ({
+      ...diagnostic,
+      path: `$.${COMPOSED_SCENE_DOCUMENT_DATA_KEY}${diagnostic.path.slice(1)}`,
+    })),
+  };
 }

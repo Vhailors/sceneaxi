@@ -99,6 +99,13 @@
         "scale": { "$ref": "#/$defs/positiveVector3" }
       }
     },
+    "identityTransform": {
+      "const": {
+        "translation": [0, 0, 0],
+        "rotationEulerDegrees": [0, 0, 0],
+        "scale": [1, 1, 1]
+      }
+    },
     "resolvedTransform": {
       "type": "object",
       "additionalProperties": false,
@@ -176,7 +183,37 @@
           "description": "Deterministic composition of the parent world transform with localTransform; recomputed and compared during validation."
         },
         "artifact": {
-          "$ref": "https://sceneaxi.invalid/contracts/sculpt-artifact/v1",
+          "allOf": [
+            {
+              "$ref": "https://sceneaxi.invalid/contracts/sculpt-artifact/v1"
+            },
+            {
+              "properties": {
+                "runtimeHierarchy": {
+                  "properties": {
+                    "nodes": {
+                      "items": {
+                        "if": {
+                          "required": ["parentId"],
+                          "properties": {
+                            "parentId": { "type": "null" }
+                          }
+                        },
+                        "then": {
+                          "required": ["transform"],
+                          "properties": {
+                            "transform": {
+                              "$ref": "#/$defs/identityTransform"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ],
           "description": "A complete Sculpt Artifact as defined by sculpt-artifact.schema.json, embedded unmodified so its own evidence digests stay verifiable. Its runtimeHierarchy root node must carry the exact identity transform for renderer-neutral scene projection."
         }
       }

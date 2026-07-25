@@ -175,7 +175,35 @@ describe("scene composition contracts", () => {
           properties: {
             worldTransform: { $ref: "#/$defs/resolvedTransform" },
             artifact: {
-              $ref: "https://sceneaxi.invalid/contracts/sculpt-artifact/v1",
+              allOf: [
+                {
+                  $ref: "https://sceneaxi.invalid/contracts/sculpt-artifact/v1",
+                },
+                {
+                  properties: {
+                    runtimeHierarchy: {
+                      properties: {
+                        nodes: {
+                          items: {
+                            if: {
+                              properties: {
+                                parentId: { type: "null" },
+                              },
+                            },
+                            then: {
+                              properties: {
+                                transform: {
+                                  $ref: "#/$defs/identityTransform",
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              ],
             },
           },
         },
@@ -539,6 +567,20 @@ describe("scene composition contracts", () => {
       code: "missing-field",
       path: `$.${COMPOSED_SCENE_DOCUMENT_DATA_KEY}`,
     });
+    expect(
+      refusalOf(
+        composedSceneFromDocumentData({
+          [COMPOSED_SCENE_DOCUMENT_DATA_KEY]: {
+            ...scene,
+            sceneId: "Bad Scene",
+          } as never,
+        }),
+        "invalid embedded scene",
+      ),
+    ).toMatchObject({
+      code: "invalid-field",
+      path: `$.${COMPOSED_SCENE_DOCUMENT_DATA_KEY}.sceneId`,
+    });
   });
 
   it("keeps digestComposedScene stable and sensitive", () => {
@@ -611,6 +653,30 @@ describe("scene composition contracts", () => {
     expect(
       refusalOf(validateComposedScene(brokenArtifact), "invalid artifact"),
     ).toMatchObject({ code: "invalid-artifact", path: "$.instances[0].artifact" });
+
+    const divergentCrateArtifact = artifactFixture(
+      "crate-artifact",
+      identity,
+      transform([0, 2, 0]),
+    );
+    expect(validateSculptArtifact(divergentCrateArtifact).ok).toBe(true);
+    const divergentInstance = {
+      ...scene,
+      instances: scene.instances.map((instance, index) =>
+        index === 1
+          ? { ...instance, artifact: divergentCrateArtifact }
+          : instance,
+      ),
+    };
+    expect(
+      refusalOf(
+        validateComposedScene(divergentInstance),
+        "divergent artifact instance",
+      ),
+    ).toMatchObject({
+      code: "invalid-artifact",
+      path: "$.instances[1].artifact",
+    });
 
     expect(
       refusalOf(
