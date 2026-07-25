@@ -1,0 +1,21 @@
+{
+  "name": "@sceneaxi/site-kit",
+  "version": "0.0.0",
+  "private": true,
+  "description": "SceneAxi site-kit — deployment-neutral logic for the first-party sites/ surfaces: fail-closed identity/credits/billing ports, editor entitlement, catalog view models, bounded Minimum E2 web editor session",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "dependencies": {
+    "@sceneaxi/schemas": "workspace:^",
+    "@sceneaxi/authoring-core": "workspace:^"
+  },
+  "sceneaxi": {
+    "releaseGroup": "sites"
+  },
+  "license": "UNLICENSED"
+}

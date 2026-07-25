@@ -1,0 +1,395 @@
+/**
+ * Site-side identity / credits / billing **ports**.
+ *
+ * These are the single seam between the deployable `sites/` surfaces and the
+ * identity plane owned by `sceneaxi-auth-credits-v1` (`@sceneaxi/auth`,
+ * `@sceneaxi/billing`). The shapes here are deliberate structural projections of
+ * that ship's contracts (`Principal`, `User`, `Session`, `CreditLedgerEntry`,
+ * `CreditPack`, `CheckoutSessionIntent`), so its exports satisfy these ports as
+ * injected adapters.
+ *
+ * This module implements **no identity and no ledger**. It does not resolve an
+ * admin email, does not derive a balance from ledger entries, and does not verify
+ * a Stripe signature — those stay owned by `@sceneaxi/auth` / `@sceneaxi/billing`.
+ * What it does own is the fail-closed boundary: unwired planes refuse, client role
+ * claims refuse, the Kids surface refuses, and adapter output is validated before
+ * a site is allowed to trust it.
+ */
+import { type SiteRefusal, type SiteResult, ok, refuse } from "./refusals.js";
+
+/** Deployable surfaces. `"kids"` exists only so it can be refused. */
+export const SITE_SURFACES = Object.freeze([
+  "umbrella",
+  "catalog-game",
+  "catalog-web",
+  "kids",
+] as const);
+
+export type SiteSurface = (typeof SITE_SURFACES)[number];
+
+export const SITE_ROLES = Object.freeze(["admin", "user"] as const);
+
+export type SiteRole = (typeof SITE_ROLES)[number];
+
+/**
+ * Property names that may never arrive from a client. A site that accepted any of
+ * these would become a client-claimable admin path.
+ */
+export const CLIENT_ROLE_CLAIM_KEYS = Object.freeze([
+  "role",
+  "roles",
+  "admin",
+  "isAdmin",
+] as const);
+
+export type SiteUser = {
+  readonly userId: string;
+  readonly email: string;
+  readonly emailVerified: boolean;
+  readonly disabled: boolean;
+};
+
+export type SiteSession = {
+  readonly sessionId: string;
+  readonly userId: string;
+  readonly surface: SiteSurface;
+  readonly issuedAt: string;
+  readonly expiresAt: string;
+};
+
+/** The only shape a site guard accepts. Mirrors auth-credits `Principal`. */
+export type SitePrincipal = {
+  readonly user: SiteUser;
+  readonly role: SiteRole;
+  readonly session: SiteSession;
+};
+
+export type SiteCreditBalance = {
+  readonly userId: string;
+  /** Derived by `@sceneaxi/billing` from the append-only ledger, never here. */
+  readonly balance: number;
+  readonly starterGrantConsumed: boolean;
+};
+
+export type SiteCreditPack = {
+  readonly packId: string;
+  readonly credits: number;
+  readonly unitAmount: number;
+  readonly currency: string;
+};
+
+export type SiteBillingMode = "test" | "live";
+
+export type SiteIdentityRequest = {
+  readonly surface: SiteSurface;
+  readonly sessionToken?: string | null;
+  /** Opaque to this package; scanned for client role claims, never interpreted. */
+  readonly credentials?: unknown;
+};
+
+export type SiteCheckoutRequest = {
+  readonly userId: string;
+  readonly packId: string;
+  readonly mode: SiteBillingMode;
+  readonly successUrl: string;
+  readonly cancelUrl: string;
+  readonly idempotencyKey: string;
+};
+
+/** Secret-free handoff a site may redirect to. Mirrors the checkout intent seam. */
+export type SiteCheckoutHandoff = {
+  readonly intentId: string;
+  readonly redirectUrl: string;
+  readonly mode: SiteBillingMode;
+};
+
+// --- adapter boundaries (satisfied by @sceneaxi/auth / @sceneaxi/billing) ---
+
+export interface SiteIdentityAdapter {
+  resolvePrincipal(request: SiteIdentityRequest): Promise<SiteResult<SitePrincipal>>;
+}
+
+export interface SiteCreditsAdapter {
+  readBalance(input: { readonly userId: string }): Promise<SiteResult<SiteCreditBalance>>;
+}
+
+export interface SiteBillingAdapter {
+  listCreditPacks(): Promise<SiteResult<readonly SiteCreditPack[]>>;
+  createCheckout(request: SiteCheckoutRequest): Promise<SiteResult<SiteCheckoutHandoff>>;
+}
+
+// --- ports ---
+
+export interface SiteIdentityPort {
+  resolvePrincipal(request: SiteIdentityRequest): Promise<SiteResult<SitePrincipal>>;
+}
+
+export interface SiteCreditsPort {
+  readBalance(input: { readonly userId: string }): Promise<SiteResult<SiteCreditBalance>>;
+}
+
+export interface SiteBillingPort {
+  readonly mode: SiteBillingMode;
+  listCreditPacks(): Promise<SiteResult<readonly SiteCreditPack[]>>;
+  createCheckout(
+    request: Omit<SiteCheckoutRequest, "mode">,
+  ): Promise<SiteResult<SiteCheckoutHandoff>>;
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const isNonEmptyString = (value: unknown): value is string =>
+  typeof value === "string" && value.trim().length > 0;
+
+const isIsoInstant = (value: unknown): value is string =>
+  isNonEmptyString(value) && !Number.isNaN(Date.parse(value));
+
+/**
+ * Whether a payload carries a client-supplied role claim, at any depth.
+ *
+ * Depth matters: a nested `{ user: { isAdmin: true } }` is the same attack as a
+ * top-level one, and a site must refuse both before dispatching to an adapter.
+ */
+export function hasClientRoleClaim(payload: unknown, depth = 0): boolean {
+  if (depth > 8 || !isRecord(payload)) return false;
+  for (const key of Object.keys(payload)) {
+    if ((CLIENT_ROLE_CLAIM_KEYS as readonly string[]).includes(key)) return true;
+    if (hasClientRoleClaim(payload[key], depth + 1)) return true;
+  }
+  return false;
+}
+
+function validateIdentityRequest(request: unknown): SiteRefusal | null {
+  if (!isRecord(request)) return refuse("SITE_REQUEST_MALFORMED");
+  const surface = request["surface"];
+  if (!(SITE_SURFACES as readonly unknown[]).includes(surface)) {
+    return refuse("SITE_SURFACE_UNKNOWN");
+  }
+  // Kids refuses before anything else touches an adapter or a store, and no
+  // option, env value, or adapter can override it.
+  if (surface === "kids") return refuse("KIDS_SURFACE_DENIED");
+  const token = request["sessionToken"];
+  if (token !== undefined && token !== null && !isNonEmptyString(token)) {
+    return refuse("SITE_REQUEST_MALFORMED");
+  }
+  if (hasClientRoleClaim(request)) return refuse("ROLE_CLAIM_FROM_CLIENT_DENIED");
+  return null;
+}
+
+function validatePrincipal(
+  value: unknown,
+  request: SiteIdentityRequest,
+  nowIso: string,
+): SiteResult<SitePrincipal> {
+  if (!isRecord(value)) return refuse("IDENTITY_ADAPTER_OUTPUT_INVALID");
+  const user = value["user"];
+  const session = value["session"];
+  const role = value["role"];
+  if (!isRecord(user) || !isRecord(session)) return refuse("IDENTITY_ADAPTER_OUTPUT_INVALID");
+  if (
+    !isNonEmptyString(user["userId"]) ||
+    !isNonEmptyString(user["email"]) ||
+    typeof user["emailVerified"] !== "boolean" ||
+    typeof user["disabled"] !== "boolean"
+  ) {
+    return refuse("IDENTITY_ADAPTER_OUTPUT_INVALID");
+  }
+  if (
+    !isNonEmptyString(session["sessionId"]) ||
+    !isNonEmptyString(session["userId"]) ||
+    !isIsoInstant(session["issuedAt"]) ||
+    !isIsoInstant(session["expiresAt"]) ||
+    session["userId"] !== user["userId"]
+  ) {
+    return refuse("IDENTITY_ADAPTER_OUTPUT_INVALID");
+  }
+  if (!(SITE_ROLES as readonly unknown[]).includes(role)) return refuse("IDENTITY_ROLE_UNKNOWN");
+  if (user["disabled"] === true) return refuse("IDENTITY_USER_DISABLED");
+  if (session["surface"] !== request.surface) return refuse("IDENTITY_SESSION_SURFACE_MISMATCH");
+  if (Date.parse(session["expiresAt"]) <= Date.parse(nowIso)) {
+    return refuse("IDENTITY_SESSION_EXPIRED");
+  }
+  return ok(
+    Object.freeze({
+      user: Object.freeze({
+        userId: user["userId"],
+        email: user["email"],
+        emailVerified: user["emailVerified"],
+        disabled: user["disabled"],
+      }),
+      role: role as SiteRole,
+      session: Object.freeze({
+        sessionId: session["sessionId"],
+        userId: session["userId"],
+        surface: session["surface"] as SiteSurface,
+        issuedAt: session["issuedAt"],
+        expiresAt: session["expiresAt"],
+      }),
+    }),
+  );
+}
+
+export type IdentityPlaneOptions = {
+  readonly adapter?: SiteIdentityAdapter | undefined;
+  /** Injected clock so session expiry is deterministic under test. */
+  readonly now?: (() => string) | undefined;
+};
+
+/**
+ * Create the identity port. With no adapter every call refuses
+ * `IDENTITY_PLANE_NOT_WIRED` — an unwired site is never an open site.
+ */
+export function createIdentityPlane(options: IdentityPlaneOptions = {}): SiteIdentityPort {
+  const nowIso = options.now ?? (() => new Date().toISOString());
+  return Object.freeze({
+    async resolvePrincipal(request: SiteIdentityRequest): Promise<SiteResult<SitePrincipal>> {
+      const invalid = validateIdentityRequest(request);
+      if (invalid !== null) return invalid;
+      if (options.adapter === undefined) return refuse("IDENTITY_PLANE_NOT_WIRED");
+      const result = await options.adapter.resolvePrincipal(request);
+      if (!isRecord(result)) return refuse("IDENTITY_ADAPTER_OUTPUT_INVALID");
+      if (result["ok"] !== true) {
+        return result["ok"] === false && typeof result["reason"] === "string"
+          ? (result as SiteRefusal)
+          : refuse("IDENTITY_ADAPTER_OUTPUT_INVALID");
+      }
+      return validatePrincipal(result["value"], request, nowIso());
+    },
+  });
+}
+
+export type CreditsPlaneOptions = { readonly adapter?: SiteCreditsAdapter | undefined };
+
+/** Create the credits port. Balance is read from the plane, never derived here. */
+export function createCreditsPlane(options: CreditsPlaneOptions = {}): SiteCreditsPort {
+  return Object.freeze({
+    async readBalance(input: {
+      readonly userId: string;
+    }): Promise<SiteResult<SiteCreditBalance>> {
+      if (!isRecord(input) || !isNonEmptyString(input.userId)) {
+        return refuse("SITE_REQUEST_MALFORMED");
+      }
+      if (options.adapter === undefined) return refuse("CREDITS_PLANE_NOT_WIRED");
+      const result = await options.adapter.readBalance({ userId: input.userId });
+      if (!isRecord(result)) return refuse("CREDIT_ADAPTER_OUTPUT_INVALID");
+      if (result["ok"] !== true) {
+        return result["ok"] === false && typeof result["reason"] === "string"
+          ? (result as SiteRefusal)
+          : refuse("CREDIT_ADAPTER_OUTPUT_INVALID");
+      }
+      const value = result["value"];
+      if (
+        !isRecord(value) ||
+        !isNonEmptyString(value["userId"]) ||
+        typeof value["starterGrantConsumed"] !== "boolean"
+      ) {
+        return refuse("CREDIT_ADAPTER_OUTPUT_INVALID");
+      }
+      const balance = value["balance"];
+      if (!Number.isSafeInteger(balance) || (balance as number) < 0) {
+        return refuse("CREDIT_BALANCE_INVALID");
+      }
+      return ok(
+        Object.freeze({
+          userId: value["userId"],
+          balance: balance as number,
+          starterGrantConsumed: value["starterGrantConsumed"],
+        }),
+      );
+    },
+  });
+}
+
+export type BillingPlaneOptions = {
+  readonly adapter?: SiteBillingAdapter | undefined;
+  readonly mode?: SiteBillingMode | undefined;
+  /** Live mode is inert unless a captain decision explicitly authorizes it. */
+  readonly liveModeAuthorized?: boolean | undefined;
+};
+
+const isHttpsUrl = (value: unknown): boolean => {
+  if (!isNonEmptyString(value)) return false;
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Create the billing port. Default mode is `test`; `live` refuses without an
+ * explicit authorization, so a production deploy cannot drift into live charges.
+ */
+export function createBillingPlane(options: BillingPlaneOptions = {}): SiteBillingPort {
+  const mode: SiteBillingMode = options.mode ?? "test";
+  const liveDenied = mode === "live" && options.liveModeAuthorized !== true;
+  return Object.freeze({
+    mode,
+    async listCreditPacks(): Promise<SiteResult<readonly SiteCreditPack[]>> {
+      if (liveDenied) return refuse("BILLING_LIVE_MODE_NOT_AUTHORIZED");
+      if (options.adapter === undefined) return refuse("BILLING_PLANE_NOT_WIRED");
+      const result = await options.adapter.listCreditPacks();
+      if (!isRecord(result)) return refuse("BILLING_ADAPTER_OUTPUT_INVALID");
+      if (result["ok"] !== true) {
+        return result["ok"] === false && typeof result["reason"] === "string"
+          ? (result as SiteRefusal)
+          : refuse("BILLING_ADAPTER_OUTPUT_INVALID");
+      }
+      const packs = result["value"];
+      if (!Array.isArray(packs)) return refuse("BILLING_ADAPTER_OUTPUT_INVALID");
+      for (const pack of packs) {
+        if (
+          !isRecord(pack) ||
+          !isNonEmptyString(pack["packId"]) ||
+          !Number.isSafeInteger(pack["credits"]) ||
+          !Number.isSafeInteger(pack["unitAmount"]) ||
+          !isNonEmptyString(pack["currency"])
+        ) {
+          return refuse("BILLING_ADAPTER_OUTPUT_INVALID");
+        }
+      }
+      return ok(Object.freeze([...(packs as readonly SiteCreditPack[])]));
+    },
+    async createCheckout(
+      request: Omit<SiteCheckoutRequest, "mode">,
+    ): Promise<SiteResult<SiteCheckoutHandoff>> {
+      if (liveDenied) return refuse("BILLING_LIVE_MODE_NOT_AUTHORIZED");
+      if (
+        !isRecord(request) ||
+        !isNonEmptyString(request.userId) ||
+        !isNonEmptyString(request.packId) ||
+        !isNonEmptyString(request.idempotencyKey)
+      ) {
+        return refuse("BILLING_CHECKOUT_REQUEST_INVALID");
+      }
+      if (!isHttpsUrl(request.successUrl) || !isHttpsUrl(request.cancelUrl)) {
+        return refuse("BILLING_URL_INSECURE");
+      }
+      if (options.adapter === undefined) return refuse("BILLING_PLANE_NOT_WIRED");
+      const result = await options.adapter.createCheckout({ ...request, mode });
+      if (!isRecord(result)) return refuse("BILLING_ADAPTER_OUTPUT_INVALID");
+      if (result["ok"] !== true) {
+        return result["ok"] === false && typeof result["reason"] === "string"
+          ? (result as SiteRefusal)
+          : refuse("BILLING_ADAPTER_OUTPUT_INVALID");
+      }
+      const handoff = result["value"];
+      if (
+        !isRecord(handoff) ||
+        !isNonEmptyString(handoff["intentId"]) ||
+        !isHttpsUrl(handoff["redirectUrl"]) ||
+        handoff["mode"] !== mode
+      ) {
+        return refuse("BILLING_ADAPTER_OUTPUT_INVALID");
+      }
+      return ok(
+        Object.freeze({
+          intentId: handoff["intentId"],
+          redirectUrl: handoff["redirectUrl"] as string,
+          mode,
+        }),
+      );
+    },
+  });
+}
