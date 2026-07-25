@@ -421,22 +421,139 @@ export function readEvidencePacket(
       message: `Evidence packet schemaVersion must be ${String(PROJECT_EVIDENCE_SCHEMA_VERSION)}; found ${String(raw["schemaVersion"])}.`,
     };
   }
-  for (const required of [
+
+  const known = new Set([
+    "schemaVersion",
+    "kind",
     "documentPath",
     "documentId",
     "documentContentHash",
-  ] as const) {
-    if (typeof raw[required] !== "string") {
+    "documentTitle",
+    "dataKeys",
+    "checks",
+  ]);
+  for (const key of Object.keys(raw)) {
+    if (!known.has(key)) {
       return {
         ok: false,
-        message: `Evidence packet missing required string field '${required}'.`,
+        message: `Evidence packet contains unexpected field '${key}'.`,
       };
     }
   }
-  if (!Array.isArray(raw["checks"])) {
-    return { ok: false, message: "Evidence packet 'checks' must be an array." };
+
+  const documentPath = raw["documentPath"];
+  if (typeof documentPath !== "string" || documentPath.length === 0) {
+    return {
+      ok: false,
+      message: "Evidence packet 'documentPath' must be a non-empty string.",
+    };
   }
-  return { ok: true, packet: raw as unknown as ProjectEvidencePacket };
+  const documentId = raw["documentId"];
+  if (
+    typeof documentId !== "string" ||
+    !/^[a-z0-9][a-z0-9-]*$/.test(documentId)
+  ) {
+    return {
+      ok: false,
+      message: "Evidence packet 'documentId' must be a valid document id.",
+    };
+  }
+  const documentContentHash = raw["documentContentHash"];
+  if (
+    typeof documentContentHash !== "string" ||
+    !/^sha256:[0-9a-f]{64}$/.test(documentContentHash)
+  ) {
+    return {
+      ok: false,
+      message:
+        "Evidence packet 'documentContentHash' must be a lowercase sha256 digest.",
+    };
+  }
+  const documentTitle = raw["documentTitle"];
+  if (
+    Object.hasOwn(raw, "documentTitle") &&
+    typeof documentTitle !== "string"
+  ) {
+    return {
+      ok: false,
+      message: "Evidence packet 'documentTitle' must be a string when present.",
+    };
+  }
+
+  const dataKeys = raw["dataKeys"];
+  if (
+    !Array.isArray(dataKeys) ||
+    !dataKeys.every((key) => typeof key === "string")
+  ) {
+    return {
+      ok: false,
+      message: "Evidence packet 'dataKeys' must be an array of strings.",
+    };
+  }
+
+  const rawChecks = raw["checks"];
+  if (!Array.isArray(rawChecks) || rawChecks.length === 0) {
+    return {
+      ok: false,
+      message: "Evidence packet 'checks' must be a non-empty array.",
+    };
+  }
+
+  const checks: ProjectEvidenceCheck[] = [];
+  for (const [index, value] of rawChecks.entries()) {
+    if (value === null || typeof value !== "object" || Array.isArray(value)) {
+      return {
+        ok: false,
+        message: `Evidence packet check ${String(index)} must be an object.`,
+      };
+    }
+    const check = value as Record<string, unknown>;
+    for (const key of Object.keys(check)) {
+      if (key !== "name" && key !== "status" && key !== "detail") {
+        return {
+          ok: false,
+          message: `Evidence packet check ${String(index)} contains unexpected field '${key}'.`,
+        };
+      }
+    }
+    if (typeof check["name"] !== "string" || check["name"].length === 0) {
+      return {
+        ok: false,
+        message: `Evidence packet check ${String(index)} requires a non-empty name.`,
+      };
+    }
+    if (check["status"] !== "pass" && check["status"] !== "refuse") {
+      return {
+        ok: false,
+        message: `Evidence packet check ${String(index)} has an invalid status.`,
+      };
+    }
+    if (typeof check["detail"] !== "string" || check["detail"].length === 0) {
+      return {
+        ok: false,
+        message: `Evidence packet check ${String(index)} requires non-empty detail.`,
+      };
+    }
+    checks.push(
+      Object.freeze({
+        name: check["name"],
+        status: check["status"],
+        detail: check["detail"],
+      }),
+    );
+  }
+
+  const packet: ProjectEvidencePacket = Object.freeze({
+    schemaVersion: PROJECT_EVIDENCE_SCHEMA_VERSION,
+    kind: PROJECT_EVIDENCE_KIND,
+    documentPath,
+    documentId,
+    documentContentHash,
+    ...(typeof documentTitle === "string" ? { documentTitle } : {}),
+    dataKeys: Object.freeze([...dataKeys]),
+    checks: Object.freeze(checks),
+  });
+  return { ok: true, packet };
 }
 
 /** `project report --evidence <path> [--cwd]` */

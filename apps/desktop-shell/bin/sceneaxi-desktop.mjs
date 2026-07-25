@@ -8,7 +8,7 @@
  */
 
 import { existsSync } from "node:fs";
-import { register, registerHooks } from "node:module";
+import * as nodeModule from "node:module";
 import { fileURLToPath } from "node:url";
 
 import {
@@ -35,10 +35,10 @@ if (ENTRYPOINT === undefined || !existsSync(fileURLToPath(ENTRYPOINT))) {
   process.exit(1);
 }
 
-if (typeof registerHooks === "function") {
-  registerHooks({ resolve });
+if (typeof nodeModule.registerHooks === "function") {
+  nodeModule.registerHooks({ resolve });
 } else {
-  register(RESOLVER_URL);
+  nodeModule.register(RESOLVER_URL);
 }
 
 const { main } = await import(ENTRYPOINT);

@@ -39,6 +39,7 @@ export type DesktopSnapshot = {
   readonly proposal: Proposal | null;
   readonly appliedPaths: readonly string[] | null;
   readonly journalRecoveryPending: boolean;
+  readonly transactionId: string | null;
   readonly diagnostics: readonly ApplyDiagnostic[] | null;
 };
 
@@ -109,6 +110,7 @@ export function createDesktopSession(
       proposal,
       appliedPaths,
       journalRecoveryPending,
+      transactionId: pendingTransactionId,
       diagnostics,
     });
 

@@ -10,6 +10,7 @@
  * store, hosting, or a design system.
  */
 
+import type { ApplyDiagnostic } from "@sceneaxi/authoring-core";
 import {
   createDesktopSession,
   type DesktopSession,
@@ -53,6 +54,23 @@ const USAGE_LINES: readonly string[] = Object.freeze([
   ),
   "",
   "Flags: --document <path> --pointer <json-pointer> --value <json> --cwd <dir> --json",
+]);
+
+const COMMAND_FLAGS: Readonly<Record<string, ReadonlySet<string>>> =
+  Object.freeze({
+    status: new Set(["--document", "--cwd"]),
+    propose: new Set(["--document", "--pointer", "--value", "--cwd"]),
+    apply: new Set(["--document", "--pointer", "--value", "--cwd"]),
+    undo: new Set(["--cwd"]),
+  });
+
+const VALIDATION_DIAGNOSTICS: ReadonlySet<ApplyDiagnostic["code"]> = new Set([
+  "schema-major-mismatch",
+  "invalid-document",
+  "invalid-proposal",
+  "invalid-pointer",
+  "validation-failed",
+  "parse-error",
 ]);
 
 type ParsedArgs = {
@@ -128,14 +146,17 @@ function refuse(
 
 function diagnosticsResult(
   command: string,
-  diagnostics: readonly { readonly code: string; readonly message: string }[],
+  diagnostics: readonly ApplyDiagnostic[],
+  extra: Readonly<Record<string, unknown>> = {},
 ): DesktopResult {
   const primary = diagnostics[0];
   return refuse(
     command,
-    DesktopExit.ERROR,
+    primary !== undefined && VALIDATION_DIAGNOSTICS.has(primary.code)
+      ? DesktopExit.USAGE
+      : DesktopExit.ERROR,
     primary?.message ?? "Operation refused with typed diagnostics.",
-    { diagnostics },
+    { ...extra, diagnostics },
     ["The operation refused; no document was written."],
   );
 }
@@ -146,6 +167,9 @@ function snapshotPayload(
   return {
     phase: snapshot.phase,
     journalRecoveryPending: snapshot.journalRecoveryPending,
+    ...(snapshot.transactionId === null
+      ? {}
+      : { transactionId: snapshot.transactionId }),
     ...(snapshot.renderedDiff === null
       ? {}
       : { renderedDiff: snapshot.renderedDiff }),
@@ -175,6 +199,32 @@ function need(
   return { ok: true, value };
 }
 
+function unknownArgs(
+  args: ParsedArgs,
+  command: string,
+  allowedFlags: ReadonlySet<string>,
+): DesktopResult | null {
+  for (const name of args.flags.keys()) {
+    if (!allowedFlags.has(name)) {
+      return refuse(
+        command,
+        DesktopExit.USAGE,
+        `Unknown flag: ${name}`,
+      );
+    }
+  }
+  for (const name of args.switches) {
+    if (name !== "--help") {
+      return refuse(
+        command,
+        DesktopExit.USAGE,
+        `Unknown flag: ${name}`,
+      );
+    }
+  }
+  return null;
+}
+
 /**
  * Execute one desktop command against a session.
  * Pure of process I/O so tests and the binary share one code path.
@@ -186,7 +236,9 @@ export function runDesktopCommand(
 ): DesktopResult {
   const args = parseArgs(argv);
 
-  if (args.command === null || args.switches.has("--help")) {
+  if (args.command === null) {
+    const unknown = unknownArgs(args, "help", new Set());
+    if (unknown !== null) return unknown;
     return ok(
       "help",
       {
@@ -206,6 +258,27 @@ export function runDesktopCommand(
       `Unknown command: ${args.command}`,
     );
   }
+
+  const command = args.command;
+  const allowedFlags = COMMAND_FLAGS[command];
+  if (allowedFlags === undefined) {
+    return refuse(command, DesktopExit.USAGE, `Unknown command: ${command}`);
+  }
+  const unknown = unknownArgs(args, command, allowedFlags);
+  if (unknown !== null) return unknown;
+
+  if (args.switches.has("--help")) {
+    return ok(
+      "help",
+      {
+        app: "sceneaxi-desktop",
+        command,
+        description: DESKTOP_COMMANDS[command as keyof typeof DESKTOP_COMMANDS],
+      },
+      USAGE_LINES,
+    );
+  }
+
   if (args.positionals.length > 0) {
     return refuse(
       args.command,
@@ -214,7 +287,6 @@ export function runDesktopCommand(
     );
   }
 
-  const command = args.command;
   const session = sessionFor(args.flags.get("--cwd"));
 
   if (command === "undo") {
@@ -280,7 +352,11 @@ export function runDesktopCommand(
 
   const accepted = session.accept();
   if (accepted.phase !== "applied") {
-    return diagnosticsResult(command, accepted.diagnostics ?? []);
+    return diagnosticsResult(
+      command,
+      accepted.diagnostics ?? [],
+      snapshotPayload(accepted),
+    );
   }
   return ok(command, snapshotPayload(accepted), [
     "Documents updated atomically via tmp-then-rename",

@@ -8,8 +8,8 @@
  * Artifact, whose evidence binds its exact spec bytes.
  */
 
-import { writeFileSync } from "node:fs";
 import {
+  atomicWriteAll,
   composeScene,
   serializeComposedScene,
   serializeDocument,
@@ -110,30 +110,47 @@ export function runSceneCompose(
     );
   }
 
-  const writtenPaths: string[] = [];
+  const writes: Array<{
+    readonly path: string;
+    readonly contents: string;
+    readonly displayPath: string;
+  }> = [];
   const outScene = args.flags.get("--out-scene");
   if (outScene !== undefined && outScene.length > 0) {
-    const write = writeTextOutput(
-      resolveUnderCwd(outScene, cwd),
-      serializeComposedScene(result.scene),
-      outScene,
-      path,
-    );
-    if (write !== null) return write;
-    writtenPaths.push(outScene);
+    writes.push({
+      path: resolveUnderCwd(outScene, cwd),
+      contents: serializeComposedScene(result.scene),
+      displayPath: outScene,
+    });
   }
 
   const outDocument = args.flags.get("--out-document");
   if (outDocument !== undefined && outDocument.length > 0) {
-    const write = writeTextOutput(
-      resolveUnderCwd(outDocument, cwd),
-      serializeDocument(result.document),
-      outDocument,
-      path,
-    );
-    if (write !== null) return write;
-    writtenPaths.push(outDocument);
+    writes.push({
+      path: resolveUnderCwd(outDocument, cwd),
+      contents: serializeDocument(result.document),
+      displayPath: outDocument,
+    });
   }
+
+  if (writes.length > 0) {
+    try {
+      atomicWriteAll(
+        writes.map((write) => ({
+          path: write.path,
+          contents: write.contents,
+        })),
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return failure(
+        "INTERNAL",
+        `Could not write ${writes.map((write) => write.displayPath).join(", ")}: ${message}`,
+        { path },
+      );
+    }
+  }
+  const writtenPaths = writes.map((write) => write.displayPath);
 
   return success(
     Object.freeze({
@@ -173,24 +190,6 @@ function readJsonInput(
   const parsed = parseJsonOrRefuse(read.text, inputPath, path);
   if (!parsed.ok) return { ok: false, outcome: parsed.outcome };
   return { ok: true, value: parsed.value };
-}
-
-/** Write an output artifact; returns a refusal outcome or null on success. */
-function writeTextOutput(
-  absolutePath: string,
-  text: string,
-  displayPath: string,
-  path: readonly string[],
-): CliOutcome | null {
-  try {
-    writeFileSync(absolutePath, text, "utf8");
-    return null;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return failure("INTERNAL", `Could not write ${displayPath}: ${message}`, {
-      path,
-    });
-  }
 }
 
 export function sceneComposeHelp(): ResultPayload {

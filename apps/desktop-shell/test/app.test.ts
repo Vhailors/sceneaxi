@@ -64,6 +64,39 @@ describe("desktop shell commands", () => {
     expect(r.ok).toBe(false);
   });
 
+  it("refuses undeclared command flags before creating a session", () => {
+    for (const argv of [
+      ["status", "--document", "scene.json", "--pointer", "/data/x"],
+      [
+        "propose",
+        "--document",
+        "scene.json",
+        "--pointer",
+        "/data/entities/0/x",
+        "--value",
+        "7",
+        "--force",
+      ],
+      [
+        "apply",
+        "--document",
+        "scene.json",
+        "--pointer",
+        "/data/entities/0/x",
+        "--value",
+        "7",
+        "--dry-run=true",
+      ],
+      ["undo", "--document", "scene.json"],
+    ]) {
+      const r = runDesktopShell(argv, () => {
+        throw new Error("session must not be created");
+      });
+      expect(r.exitCode, argv.join(" ")).toBe(DesktopExit.USAGE);
+      expect(r.result["message"], argv.join(" ")).toMatch(/^Unknown flag:/);
+    }
+  });
+
   it("proposes without writing anything", () => {
     const before = readFileSync(join(cwd, "scene.json"), "utf8");
     const r = run([
@@ -149,7 +182,7 @@ describe("desktop shell commands", () => {
       "--value",
       "1",
     ]);
-    expect(r.exitCode).toBe(DesktopExit.ERROR);
+    expect(r.exitCode).toBe(DesktopExit.USAGE);
     expect(Array.isArray(r.result["diagnostics"])).toBe(true);
   });
 
@@ -164,7 +197,44 @@ describe("desktop shell commands", () => {
       "--value",
       "1",
     ]);
+    expect(r.exitCode).toBe(DesktopExit.USAGE);
+  });
+
+  it("renders a pending recovery transaction identity", () => {
+    const session = createDesktopSession({ cwd });
+    const pending = {
+      phase: "pending" as const,
+      unifiedDiff: null,
+      renderedDiff: null,
+      proposal: null,
+      appliedPaths: null,
+      journalRecoveryPending: true,
+      transactionId: "0000000000000-0000000000000000",
+      diagnostics: [
+        {
+          code: "apply-in-progress" as const,
+          message: "Apply recovery is pending.",
+        },
+      ],
+    };
+    const r = runDesktopShell(
+      [
+        "apply",
+        "--document",
+        "scene.json",
+        "--pointer",
+        "/data/entities/0/x",
+        "--value",
+        "7",
+      ],
+      () => ({ ...session, accept: () => pending }),
+    );
     expect(r.exitCode).toBe(DesktopExit.ERROR);
+    expect(r.result["phase"]).toBe("pending");
+    expect(r.result["journalRecoveryPending"]).toBe(true);
+    expect(r.result["transactionId"]).toBe(
+      "0000000000000-0000000000000000",
+    );
   });
 
   describe("rendering", () => {

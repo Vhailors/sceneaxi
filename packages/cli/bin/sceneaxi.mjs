@@ -12,7 +12,7 @@
  */
 
 import { existsSync } from "node:fs";
-import { register, registerHooks } from "node:module";
+import * as nodeModule from "node:module";
 import { fileURLToPath } from "node:url";
 
 import {
@@ -42,10 +42,10 @@ if (CLI_ENTRYPOINT === undefined || !existsSync(fileURLToPath(CLI_ENTRYPOINT))) 
 // `registerHooks` is the synchronous in-thread API (Node >= 22.15); older
 // supported runtimes still have the off-thread `register`. Either resolves the
 // same specifiers, so prefer the current one and fall back rather than pinning.
-if (typeof registerHooks === "function") {
-  registerHooks({ resolve });
+if (typeof nodeModule.registerHooks === "function") {
+  nodeModule.registerHooks({ resolve });
 } else {
-  register(RESOLVER_URL);
+  nodeModule.register(RESOLVER_URL);
 }
 
 const { main } = await import(CLI_ENTRYPOINT);

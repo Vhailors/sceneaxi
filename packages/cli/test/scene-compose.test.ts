@@ -126,6 +126,18 @@ describe("scene compose", () => {
     expect(document.title).toBe("Workshop bay");
   });
 
+  it("does not commit either output when staging one output fails", () => {
+    writeFileSync(join(cwd, "blocked"), "not a directory", "utf8");
+    const r = compose([
+      "--out-scene",
+      "scene.json",
+      "--out-document",
+      "blocked/scene.document.json",
+    ]);
+    expect(r.exitCode).toBe(ExitCode.ERROR);
+    expect(() => readFileSync(join(cwd, "scene.json"), "utf8")).toThrow();
+  });
+
   it("never rewrites a source artifact", () => {
     const before = artifacts.map((name) =>
       readFileSync(join(cwd, name), "utf8"),

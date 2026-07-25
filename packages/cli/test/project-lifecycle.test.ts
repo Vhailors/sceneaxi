@@ -333,6 +333,65 @@ describe("project lifecycle verbs", () => {
       }
     });
 
+    it("refuses malformed evidence fields and check entries", () => {
+      const validPacket = {
+        schemaVersion: 1,
+        kind: "sceneaxi.project-evidence",
+        documentPath: "scene.json",
+        documentId: "scene",
+        documentContentHash: `sha256:${"a".repeat(64)}`,
+        dataKeys: ["entities"],
+        checks: [
+          {
+            name: "document-schema",
+            status: "pass",
+            detail: "Validated.",
+          },
+        ],
+      };
+      const invalidPackets = [
+        { ...validPacket, documentContentHash: "forged" },
+        { ...validPacket, documentTitle: 1 },
+        { ...validPacket, dataKeys: [null] },
+        { ...validPacket, checks: [] },
+        { ...validPacket, checks: [null] },
+        {
+          ...validPacket,
+          checks: [{ name: "document-schema", status: "pass", detail: null }],
+        },
+        { ...validPacket, unexpected: true },
+      ];
+
+      for (const [index, packet] of invalidPackets.entries()) {
+        writeFileSync(
+          join(cwd, "invalid.evidence.json"),
+          `${JSON.stringify(
+            {
+              schemaVersion: 1,
+              kind: "sceneaxi.document",
+              id: `invalid-evidence-${String(index)}`,
+              data: packet,
+            },
+            null,
+            2,
+          )}\n`,
+          "utf8",
+        );
+        const r = runCli([
+          "project",
+          "report",
+          "--evidence",
+          "invalid.evidence.json",
+          "--cwd",
+          cwd,
+        ]);
+        expect(r.exitCode, String(index)).toBe(ExitCode.USAGE);
+        if (!r.envelope.ok) {
+          expect(r.envelope.error.code, String(index)).toBe("VALIDATION");
+        }
+      }
+    });
+
     it("refuses capture without --out", () => {
       create();
       const r = runCli([
