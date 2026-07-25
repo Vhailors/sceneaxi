@@ -12,7 +12,7 @@
  *   the account record, not inferred from the caller passing the right state.
  */
 
-import { requireAuthenticated } from "@sceneaxi/auth";
+import { requireAuthenticated, type AdminIdentity } from "@sceneaxi/auth";
 import {
   isEpochMilliseconds,
   snapshotPlainRecord,
@@ -33,6 +33,8 @@ import {
 
 export type MeterCreditsRequest = Readonly<{
   principal: unknown;
+  /** The single resolved admin identity, used to re-derive the role at the guard. */
+  admin: AdminIdentity;
   state: LedgerState;
   /** Positive integer credits to burn. */
   amount: number;
@@ -65,7 +67,7 @@ export function meterCredits(
     );
   }
   const screened = record as MeterCreditsRequest;
-  const { principal, state, amount, reason, idempotencyKey, now, surface } =
+  const { principal, admin, state, amount, reason, idempotencyKey, now, surface } =
     screened;
 
   if (!isEpochMilliseconds(now)) {
@@ -107,7 +109,7 @@ export function meterCredits(
 
   const guarded = requireAuthenticated(
     principal,
-    surface === undefined ? { now } : { now, surface },
+    surface === undefined ? { now, admin } : { now, surface, admin },
   );
   if (!guarded.ok) {
     return billingRefuse(guarded.reason, guarded.message);

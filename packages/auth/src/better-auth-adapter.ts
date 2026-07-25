@@ -14,6 +14,7 @@
  */
 
 import {
+  claimedRoleKey,
   isEpochMilliseconds,
   isIdentitySurface,
   snapshotPlainRecord,
@@ -133,6 +134,11 @@ export function mapBetterAuthAuthentication(input: {
   const user = snapshotPlainRecord(authenticationRecord["user"]);
   const session = snapshotPlainRecord(authenticationRecord["session"]);
   if (user === undefined || session === undefined) return undefined;
+
+  // A provider user carrying a client-asserted role is an escalation
+  // attempt and is refused here rather than silently stripped: dropping the
+  // key would make the attempt look like a successful, ordinary login.
+  if (claimedRoleKey(user) !== undefined) return undefined;
 
   const providerUserId = user["id"];
   const email = user["email"];

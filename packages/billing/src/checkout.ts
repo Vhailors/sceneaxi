@@ -23,7 +23,9 @@ import {
   type BillingMode,
   type CheckoutPurpose,
   type CheckoutSessionIntent,
+  type IdentitySurface,
 } from "@sceneaxi/schemas";
+import { requireAuthenticated, type AdminIdentity } from "@sceneaxi/auth";
 import { lookupCreditPack } from "./credit-packs.js";
 import {
   BILLING_REFUSE_REASONS,
@@ -51,15 +53,20 @@ export type CreateMoneyCheckoutIntentRequest = Readonly<{
 }>;
 
 export type CreateCheckoutSessionIntentRequest = Readonly<{
+  /** The authenticated principal buying the pack; the guard re-derives its role. */
+  principal: unknown;
+  /** The single resolved admin identity, used to re-derive the role at the guard. */
+  admin: AdminIdentity;
   /** Injected catalog; `loadCreditPackCatalog()` provides the canonical one. */
   catalog: unknown;
   packId: string;
-  userId: string;
   successUrl: string;
   cancelUrl: string;
   idempotencyKey: string;
   /** Epoch milliseconds. */
   now: number;
+  /** When given, the principal's session must belong to this surface. */
+  surface?: IdentitySurface | undefined;
   /** Defaults to `test`. */
   mode?: BillingMode | undefined;
   /** The captain go-live gate. Absent or false means `live` refuses. */
@@ -107,7 +114,14 @@ export function deriveIntentId(idempotencyKey: string): string {
   return `int_${readable}_${digest}`;
 }
 
-/** Build a checkout intent for a credit pack, or refuse. */
+/**
+ * Build a checkout intent for a credit pack, or refuse.
+ *
+ * Account-gated and Kids-denied: a credit-pack purchase is a paid capability, so
+ * the principal is authenticated and re-derived at the guard before any intent
+ * is produced. The resolved-price builder (`createMoneyCheckoutIntent`) stays
+ * internal — it is shared construction, not a purchase entry point.
+ */
 export function createCheckoutSessionIntent(
   request: CreateCheckoutSessionIntentRequest,
 ): BillingOutcome<CheckoutSessionIntent> {
@@ -119,7 +133,22 @@ export function createCheckoutSessionIntent(
     );
   }
   const screened = record as CreateCheckoutSessionIntentRequest;
-  const pack = lookupCreditPack(screened.catalog, screened.packId);
+  const { principal, admin, catalog, packId, now, surface } = screened;
+
+  if (surface === "kids") {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.kidsCommerceDenied,
+      "Kids commerce is denied; no credit-pack purchase is offered on the Kids surface.",
+    );
+  }
+
+  const guarded = requireAuthenticated(
+    principal,
+    surface === undefined ? { now, admin } : { now, surface, admin },
+  );
+  if (!guarded.ok) return billingRefuse(guarded.reason, guarded.message);
+
+  const pack = lookupCreditPack(catalog, packId);
   if (!pack.ok) return pack;
 
   return createMoneyCheckoutIntent({
@@ -129,11 +158,11 @@ export function createCheckoutSessionIntent(
     unitAmount: pack.value.unitAmount,
     currency: pack.value.currency,
     stripePriceId: pack.value.stripePriceId,
-    userId: screened.userId,
+    userId: guarded.value.user.userId,
     successUrl: screened.successUrl,
     cancelUrl: screened.cancelUrl,
     idempotencyKey: screened.idempotencyKey,
-    now: screened.now,
+    now,
     mode: screened.mode,
     liveModeAuthorized: screened.liveModeAuthorized,
   });

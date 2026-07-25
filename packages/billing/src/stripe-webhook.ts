@@ -24,11 +24,9 @@ import {
   type BillingMode,
   type CheckoutCompletedEvent,
   type CheckoutSessionIntent,
-  type CreditPackCatalog,
 } from "@sceneaxi/schemas";
+import type { Awaitable } from "@sceneaxi/auth";
 import { assertModeAuthorized } from "./checkout.js";
-import { lookupCatalogListing } from "./catalog-listings.js";
-import { lookupCreditPack } from "./credit-packs.js";
 import {
   appendCreditEntry,
   deriveEntryId,
@@ -59,12 +57,51 @@ export type VerifyStripeWebhookSignatureRequest = Readonly<{
   toleranceSeconds?: number | undefined;
 }>;
 
+/**
+ * Compile-time provenance brands. A `VerifiedWebhook` can only be produced by
+ * `verifyStripeWebhookSignature`, and a `VerifiedCheckoutCompletion` only by
+ * `parseCheckoutCompletedEvent` from a verified webhook — so the public grant
+ * path cannot be reached with a structurally valid but fabricated event. The
+ * brands are type-level only and add no runtime property.
+ */
+declare const verifiedWebhookBrand: unique symbol;
+declare const verifiedCompletionBrand: unique symbol;
+
 export type VerifiedWebhook = Readonly<{
   /** Signature timestamp, epoch seconds. */
   timestamp: number;
   /** The verified body, decoded as UTF-8 for parsing. */
   payload: string;
+  readonly [verifiedWebhookBrand]: true;
 }>;
+
+/**
+ * Settlement evidence retrieved through the injected adapter boundary.
+ *
+ * Stripe webhook objects are minimal: `line_items` (and the per-line price) are
+ * expandable and are not present in a signed `checkout.session.completed` body.
+ * The authoritative settlement — paid status, amount, currency, quantity, and
+ * Stripe price — is retrieved separately and supplied here, so the parser never
+ * trusts embedded line items that a real webhook does not carry.
+ */
+export type CheckoutSettlement = Readonly<{
+  paymentStatus: "paid" | "unpaid" | "no_payment_required";
+  amountTotal: number;
+  currency: string;
+  quantity: number;
+  stripePriceId: string;
+}>;
+
+/** Injected retrieval of settlement evidence for a checkout session. */
+export type CheckoutSettlementPort = Readonly<{
+  retrieveSettlement(
+    sessionId: string,
+  ): Awaitable<CheckoutSettlement | undefined>;
+}>;
+
+/** A checkout completion whose provenance is proven: parsed from a verified webhook. */
+export type VerifiedCheckoutCompletion = CheckoutCompletedEvent &
+  Readonly<{ readonly [verifiedCompletionBrand]: true }>;
 
 function toBuffer(payload: string | Uint8Array): Buffer {
   return typeof payload === "string"
@@ -205,7 +242,10 @@ export function verifyStripeWebhookSignature(
   }
 
   return billingOk(
-    Object.freeze({ timestamp, payload: body.toString("utf8") }),
+    Object.freeze({
+      timestamp,
+      payload: body.toString("utf8"),
+    }) as VerifiedWebhook,
   );
 }
 
@@ -218,20 +258,22 @@ export const CHECKOUT_METADATA_KEYS = Object.freeze({
 } as const);
 
 /**
- * Normalize a verified `checkout.session.completed` body into SceneAxi
+ * Normalize a *verified* `checkout.session.completed` body into SceneAxi
  * vocabulary.
  *
- * `credits` comes from the **catalog**, never from the event: an attacker who
- * could influence event metadata must not be able to name their own credit
- * amount. The event only identifies which pack was bought.
+ * The `verified` argument is the branded output of `verifyStripeWebhookSignature`,
+ * so only a signature-checked body reaches this point. Settlement (paid status,
+ * amount, currency, quantity, Stripe price) comes from the injected adapter
+ * boundary — Stripe webhook objects are minimal and do not carry `line_items` —
+ * and is bound to the persisted intent, which is the immutable price snapshot.
+ * `credits` comes from that intent, never from the event: an attacker who could
+ * influence event metadata must not be able to name their own credit amount.
  */
 export function parseCheckoutCompletedEvent(input: {
-  readonly payload: string;
+  readonly verified: VerifiedWebhook;
   readonly intent: CheckoutSessionIntent | unknown;
-  readonly catalog: CreditPackCatalog | unknown;
-  /** Required to resolve a catalog-listing completion's price. */
-  readonly listings?: unknown;
-}): BillingOutcome<CheckoutCompletedEvent> {
+  readonly settlement: CheckoutSettlement | unknown;
+}): BillingOutcome<VerifiedCheckoutCompletion> {
   const inputRecord = snapshotPlainRecord(input);
   if (inputRecord === undefined) {
     return billingRefuse(
@@ -239,9 +281,10 @@ export function parseCheckoutCompletedEvent(input: {
       "A checkout event parse request must be a plain object.",
     );
   }
+  const verified = inputRecord["verified"] as VerifiedWebhook;
   let raw: unknown;
   try {
-    raw = JSON.parse(inputRecord["payload"] as string) as unknown;
+    raw = JSON.parse(verified.payload) as unknown;
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return billingRefuse(
@@ -342,24 +385,21 @@ export function parseCheckoutCompletedEvent(input: {
     );
   }
 
-  const lineItems = object["line_items"];
-  const lineItemsRecord = snapshotPlainRecord(lineItems);
-  const lines = lineItemsRecord?.["data"];
-  const line = Array.isArray(lines) && lines.length === 1 ? lines[0] : undefined;
-  const lineRecord = snapshotPlainRecord(line);
-  const price = snapshotPlainRecord(lineRecord?.["price"]);
+  // Settlement is retrieved through the injected adapter boundary (Stripe webhook
+  // objects are minimal and do not carry line items) and bound to the persisted
+  // intent — the immutable price snapshot — rather than to the mutable catalog.
+  const settlementRecord = snapshotPlainRecord(inputRecord["settlement"]);
   if (
-    object["payment_status"] !== "paid" ||
-    object["amount_total"] !== intent.value.unitAmount ||
-    object["currency"] !== intent.value.currency ||
-    lineRecord === undefined ||
-    lineRecord["quantity"] !== 1 ||
-    price === undefined ||
-    price["id"] !== intent.value.stripePriceId
+    settlementRecord === undefined ||
+    settlementRecord["paymentStatus"] !== "paid" ||
+    settlementRecord["amountTotal"] !== intent.value.unitAmount ||
+    settlementRecord["currency"] !== intent.value.currency ||
+    settlementRecord["quantity"] !== 1 ||
+    settlementRecord["stripePriceId"] !== intent.value.stripePriceId
   ) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.webhookPayloadInvalid,
-      "The checkout session is unpaid or its settled amount, currency, quantity, or Stripe price does not match the persisted intent.",
+      "The settlement is unpaid or its amount, currency, quantity, or Stripe price does not match the persisted intent.",
     );
   }
 
@@ -376,61 +416,19 @@ export function parseCheckoutCompletedEvent(input: {
     occurredAt: new Date(occurredAtEpoch).toISOString(),
   };
 
-  let candidate: Record<string, unknown>;
-  if (purpose === "credit-pack") {
-    const pack = lookupCreditPack(inputRecord["catalog"], itemId);
-    if (!pack.ok) return pack;
-    if (
-      intent.value.credits !== pack.value.credits ||
-      intent.value.unitAmount !== pack.value.unitAmount ||
-      intent.value.currency !== pack.value.currency ||
-      intent.value.stripePriceId !== pack.value.stripePriceId
-    ) {
-      return billingRefuse(
-        BILLING_REFUSE_REASONS.webhookPayloadInvalid,
-        "The persisted credit-pack intent no longer matches the canonical catalog.",
-      );
-    }
-    candidate = {
-      ...base,
-      credits: intent.value.credits,
-      unitAmount: intent.value.unitAmount,
-      currency: intent.value.currency,
-    };
-  } else {
-    const listing = inputRecord["listings"] === undefined
-      ? undefined
-      : lookupCatalogListing(inputRecord["listings"], itemId);
-    if (listing === undefined) {
-      return billingRefuse(
-        BILLING_REFUSE_REASONS.listingCatalogInvalid,
-        "A catalog-listing completion event needs the listing set to resolve its price.",
-      );
-    }
-    if (!listing.ok) return listing;
-    const moneyPrice = listing.value.moneyPrice;
-    if (moneyPrice === undefined) {
-      return billingRefuse(
-        BILLING_REFUSE_REASONS.listingCurrencyNotListed,
-        `Listing "${itemId}" is not priced in money, so it cannot have been bought with money.`,
-      );
-    }
-    if (
-      intent.value.unitAmount !== moneyPrice.unitAmount ||
-      intent.value.currency !== moneyPrice.currency ||
-      intent.value.stripePriceId !== moneyPrice.stripePriceId
-    ) {
-      return billingRefuse(
-        BILLING_REFUSE_REASONS.webhookPayloadInvalid,
-        "The persisted catalog-listing intent no longer matches the canonical listing.",
-      );
-    }
-    candidate = {
-      ...base,
-      unitAmount: intent.value.unitAmount,
-      currency: intent.value.currency,
-    };
-  }
+  const candidate: Record<string, unknown> =
+    purpose === "credit-pack"
+      ? {
+          ...base,
+          credits: intent.value.credits,
+          unitAmount: intent.value.unitAmount,
+          currency: intent.value.currency,
+        }
+      : {
+          ...base,
+          unitAmount: intent.value.unitAmount,
+          currency: intent.value.currency,
+        };
 
   const event = validateCheckoutCompletedEvent(candidate);
   if (!event.ok) {
@@ -439,12 +437,17 @@ export function parseCheckoutCompletedEvent(input: {
       `The normalized checkout event is invalid (${event.code}): ${event.message}`,
     );
   }
-  return billingOk(event.value);
+  return billingOk(event.value as VerifiedCheckoutCompletion);
 }
 
 export type ApplyCheckoutCompletedGrantRequest = Readonly<{
   state: LedgerState;
-  event: CheckoutCompletedEvent;
+  /**
+   * A checkout completion whose provenance is proven: the branded output of
+   * `parseCheckoutCompletedEvent`, which only accepts a signature-verified
+   * webhook. A fabricated event cannot satisfy this type.
+   */
+  completion: VerifiedCheckoutCompletion;
   /** Epoch milliseconds. */
   now: number;
   /** The captain go-live gate; a live event refuses without it. */
@@ -470,9 +473,9 @@ export function applyCheckoutCompletedGrant(
     );
   }
   const screened = record as ApplyCheckoutCompletedGrantRequest;
-  const { state, event, now, liveModeAuthorized } = screened;
+  const { state, completion, now, liveModeAuthorized } = screened;
 
-  const validated = validateCheckoutCompletedEvent(event);
+  const validated = validateCheckoutCompletedEvent(completion);
   if (!validated.ok) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.webhookPayloadInvalid,

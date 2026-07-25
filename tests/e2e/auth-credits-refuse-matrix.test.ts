@@ -63,6 +63,29 @@ const NOW_SECONDS = Math.floor(NOW / 1000);
 const clock = () => NOW;
 const CAPTAIN_EMAIL = "captain@example.com";
 const admin = { email: CAPTAIN_EMAIL, source: ADMIN_EMAIL_ENV_VAR } as const;
+
+const verifyBody = (body: string) => {
+  const result = verifyStripeWebhookSignature({
+    payload: body,
+    header: signStripeWebhookPayload({
+      payload: body,
+      secret: SECRET,
+      timestamp: NOW_SECONDS,
+    }),
+    secret: SECRET,
+    now: NOW,
+  });
+  if (!result.ok) throw new Error(`verify fixture failed: ${result.message}`);
+  return result.value;
+};
+
+const settlementFor = (intent: CheckoutSessionIntent) => ({
+  paymentStatus: "paid" as const,
+  amountTotal: intent.unitAmount,
+  currency: intent.currency,
+  quantity: 1,
+  stripePriceId: intent.stripePriceId,
+});
 const SECRET = "whsec_refuse_matrix_fixture";
 
 const observed = new Set<AuthRefuseReason | BillingRefuseReason>();
@@ -379,23 +402,25 @@ describe("auth refuse matrix", () => {
   });
 
   it("reaches every guard refusal", () => {
-    record(requireRole(undefined, "admin", { now: NOW }));
-    record(requireRole(principal(), "superadmin" as never, { now: NOW }));
-    record(requireRole(principal(), "admin", { now: NOW }));
-    record(requireRole(principal({ disabled: true }), "user", { now: NOW }));
+    record(requireRole(undefined, "admin", { now: NOW, admin }));
+    record(requireRole(principal(), "superadmin" as never, { now: NOW, admin }));
+    record(requireRole(principal(), "admin", { now: NOW, admin }));
+    record(requireRole(principal({ disabled: true }), "user", { now: NOW, admin }));
     record(
       requireRole(principal({ expiresAt: "2026-07-25T09:30:00Z" }), "user", {
         now: NOW,
+        admin,
       }),
     );
     record(
       requireRole(principal({ surface: "site" }), "user", {
         now: NOW,
         surface: "web-shell",
+        admin,
       }),
     );
-    record(requireRole(principal({ surface: "kids" }), "user", { now: NOW }));
-    record(requireRole(principal(), "user", { now: Number.NaN }));
+    record(requireRole(principal({ surface: "kids" }), "user", { now: NOW, admin }));
+    record(requireRole(principal(), "user", { now: Number.NaN, admin }));
   });
 
   it("reaches the bootstrap refusals", () => {
@@ -470,6 +495,7 @@ describe("billing refuse matrix", () => {
       record(
         meterCredits({
           principal: principal(),
+          admin,
           state,
           amount: 1,
           reason: "case",
@@ -478,7 +504,7 @@ describe("billing refuse matrix", () => {
           ...overrides,
         } as never),
       );
-    meter({ now: Number.NaN });
+    meter({ now: Number.NaN, admin });
     meter({ amount: 0 });
     meter({ reason: "" });
     meter({ state: { entries: [] } });
@@ -502,6 +528,7 @@ describe("billing refuse matrix", () => {
         capability: "catalog-asset-purchase",
         now: NOW,
         principal: principal(),
+        admin,
       }),
     );
     record(
@@ -509,6 +536,7 @@ describe("billing refuse matrix", () => {
         capability: "hosted-ai-assistant",
         now: NOW,
         principal: principal(),
+        admin,
         state: funded(10),
       }),
     );
@@ -517,6 +545,7 @@ describe("billing refuse matrix", () => {
         capability: "hosted-ai-assistant",
         now: NOW,
         principal: principal(),
+        admin,
         creditAmount: 5,
       }),
     );
@@ -525,6 +554,7 @@ describe("billing refuse matrix", () => {
         capability: "hosted-ai-assistant",
         now: NOW,
         principal: principal({ userId: "usr_other" }),
+        admin,
         state: funded(100),
         creditAmount: 5,
       }),
@@ -547,16 +577,17 @@ describe("billing refuse matrix", () => {
     record(assertModeAuthorized("barter" as never, true));
 
     const request = {
+      principal: principal(),
+      admin,
       catalog: packCatalog(),
       packId: "starter",
-      userId: "usr_crew",
       successUrl: "https://sceneaxi.example/ok",
       cancelUrl: "https://sceneaxi.example/no",
       idempotencyKey: "checkout:case",
       now: NOW,
     };
     record(createCheckoutSessionIntent({ ...request, now: Number.NaN }));
-    record(createCheckoutSessionIntent({ ...request, userId: "" }));
+    record(createCheckoutSessionIntent({ ...request, principal: null }));
     record(
       createCheckoutSessionIntent({
         ...request,
@@ -569,9 +600,10 @@ describe("billing refuse matrix", () => {
 
   it("reaches every webhook refusal", () => {
     const packIntent = createCheckoutSessionIntent({
+      principal: principal(),
+      admin,
       catalog: packCatalog(),
       packId: "starter",
-      userId: "usr_crew",
       successUrl: "https://sceneaxi.example/ok",
       cancelUrl: "https://sceneaxi.example/no",
       idempotencyKey: "checkout:case",
@@ -695,16 +727,18 @@ describe("billing refuse matrix", () => {
 
     record(
       parseCheckoutCompletedEvent({
-        payload: "not json",
+        verified: verifyBody("not json"),
         intent: packIntent.value,
-        catalog: packCatalog(),
+        settlement: settlementFor(packIntent.value),
       }),
     );
     record(
       parseCheckoutCompletedEvent({
-        payload: JSON.stringify({ type: "payment_intent.succeeded" }),
+        verified: verifyBody(
+          JSON.stringify({ type: "payment_intent.succeeded" }),
+        ),
         intent: packIntent.value,
-        catalog: packCatalog(),
+        settlement: settlementFor(packIntent.value),
       }),
     );
 
@@ -728,44 +762,26 @@ describe("billing refuse matrix", () => {
       createdAt: new Date(NOW).toISOString(),
     };
     const listingEvent = parseCheckoutCompletedEvent({
-      payload: JSON.stringify({
-        id: "evt_listing",
-        type: "checkout.session.completed",
-        created: NOW_SECONDS,
-        livemode: false,
-        data: {
-          object: {
-            payment_status: "paid",
-            amount_total: listingIntent.unitAmount,
-            currency: listingIntent.currency,
-            line_items: {
-              data: [
-                {
-                  quantity: 1,
-                  price: { id: listingIntent.stripePriceId },
-                },
-              ],
-            },
-            metadata: {
-              [CHECKOUT_METADATA_KEYS.userId]: "usr_crew",
-              [CHECKOUT_METADATA_KEYS.purpose]: "catalog-listing",
-              [CHECKOUT_METADATA_KEYS.itemId]: "harbour-diorama",
-              [CHECKOUT_METADATA_KEYS.intentId]: "int_listing",
+      verified: verifyBody(
+        JSON.stringify({
+          id: "evt_listing",
+          type: "checkout.session.completed",
+          created: NOW_SECONDS,
+          livemode: false,
+          data: {
+            object: {
+              metadata: {
+                [CHECKOUT_METADATA_KEYS.userId]: "usr_crew",
+                [CHECKOUT_METADATA_KEYS.purpose]: "catalog-listing",
+                [CHECKOUT_METADATA_KEYS.itemId]: "harbour-diorama",
+                [CHECKOUT_METADATA_KEYS.intentId]: "int_listing",
+              },
             },
           },
-        },
-      }),
+        }),
+      ),
       intent: listingIntent,
-      catalog: packCatalog(),
-      listings: {
-        schemaVersion: 1,
-        mode: "test",
-        listings: [
-          listing("lantern-prop"),
-          listing("harbour-diorama"),
-          listing("market-stall-kit"),
-        ],
-      },
+      settlement: settlementFor(listingIntent),
     });
     expect(listingEvent.ok).toBe(true);
     if (listingEvent.ok) {
@@ -774,37 +790,37 @@ describe("billing refuse matrix", () => {
       record(
         applyCheckoutCompletedGrant({
           state: funded(0),
-          event: listingEvent.value,
+          completion: listingEvent.value,
           now: NOW,
         }),
       );
     }
 
     const packEvent = parseCheckoutCompletedEvent({
-      payload: body,
+      verified: verifyBody(body),
       intent: packIntent.value,
-      catalog: packCatalog(),
+      settlement: settlementFor(packIntent.value),
     });
     expect(packEvent.ok).toBe(true);
     if (packEvent.ok) {
       record(
         applyCheckoutCompletedGrant({
           state: funded(0, account("usr_other")),
-          event: packEvent.value,
+          completion: packEvent.value,
           now: NOW,
         }),
       );
       record(
         applyCheckoutCompletedGrant({
           state: { entries: [] } as never,
-          event: packEvent.value,
+          completion: packEvent.value,
           now: NOW,
         }),
       );
       record(
         applyCheckoutCompletedGrant({
           state: funded(0),
-          event: { ...packEvent.value, mode: "live" },
+          completion: { ...packEvent.value, mode: "live" } as never,
           now: NOW,
         }),
       );
@@ -812,7 +828,7 @@ describe("billing refuse matrix", () => {
     record(
       applyCheckoutCompletedGrant({
         state: funded(0),
-        event: { eventId: "evt" } as never,
+        completion: { eventId: "evt" } as never,
         now: NOW,
       }),
     );
@@ -828,6 +844,7 @@ describe("billing refuse matrix", () => {
       record(
         purchaseListingWithCredits({
           principal: principal(),
+          admin,
           listing: listing("lantern-prop"),
           buyerState: funded(100),
           now: NOW,
@@ -835,7 +852,7 @@ describe("billing refuse matrix", () => {
           ...overrides,
         } as never),
       );
-    buy({ now: Number.NaN });
+    buy({ now: Number.NaN, admin });
     buy({ saleId: "" });
     buy({ surface: "kids" });
     buy({ listing: listing("harbour-diorama") });
@@ -849,6 +866,7 @@ describe("billing refuse matrix", () => {
     });
     buy({
       principal: principal({ userId: listing("lantern-prop").sellerUserId }),
+      admin,
       buyerState: funded(
         100,
         account(listing("lantern-prop").sellerUserId),
@@ -859,6 +877,7 @@ describe("billing refuse matrix", () => {
     record(
       createListingCheckoutIntent({
         principal: principal(),
+        admin,
         listing: listing("lantern-prop"),
         successUrl: "https://sceneaxi.example/ok",
         cancelUrl: "https://sceneaxi.example/no",
@@ -869,6 +888,7 @@ describe("billing refuse matrix", () => {
     record(
       createListingCheckoutIntent({
         principal: principal(),
+        admin,
         listing: listing("harbour-diorama"),
         successUrl: "https://sceneaxi.example/ok",
         cancelUrl: "https://sceneaxi.example/no",
@@ -885,6 +905,7 @@ describe("billing refuse matrix", () => {
     record(
       applyCreditsSale({
         principal: principal(),
+        admin,
         listing: target,
         buyerState: funded(100),
         creatorState: createLedgerState(account("usr_wrong")),
@@ -897,8 +918,6 @@ describe("billing refuse matrix", () => {
         listing: target,
         buyerUserId: "usr_crew",
         saleId: "sale_case_money",
-        grossMinor: 1_200,
-        currency: "usd",
         mode: "test",
         now: NOW,
       }),
@@ -909,8 +928,6 @@ describe("billing refuse matrix", () => {
         listing: listing("harbour-diorama"),
         buyerUserId: listing("harbour-diorama").sellerUserId,
         saleId: "sale_case_self",
-        grossMinor: 1_200,
-        currency: "usd",
         mode: "test",
         now: NOW,
       }),
@@ -921,6 +938,7 @@ describe("billing refuse matrix", () => {
         capability: "hosted-ai-assistant",
         now: NOW,
         principal: principal(),
+        admin,
         state: funded(100),
         creditAmount: Number.MAX_SAFE_INTEGER,
       }),

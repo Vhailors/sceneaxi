@@ -14,10 +14,10 @@
       "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
       "description": "Opaque server-issued identifier: url-safe, 1-128 characters."
     },
-    "packId": {
+    "slug": {
       "type": "string",
       "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
-      "description": "Credit pack slug from contracts/credit-packs.fixtures.json."
+      "description": "Lowercase slug: a credit pack id or a catalog listing id, per purpose."
     },
     "dateTime": {
       "type": "string",
@@ -29,11 +29,21 @@
       "enum": ["test", "live"],
       "description": "Billing mode. test is the default everywhere; live is never implicit."
     },
+    "purpose": {
+      "type": "string",
+      "enum": ["credit-pack", "catalog-listing"],
+      "description": "What a checkout is for. The two purposes settle differently, so the purpose is part of the contract rather than inferred from which optional field is present."
+    },
     "redirectUrl": {
       "type": "string",
       "format": "uri",
       "pattern": "^https://",
       "description": "Absolute https URL. A checkout redirect carries a post-payment state transition, so plaintext http refuses rather than being upgraded."
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[a-z]{3}$",
+      "description": "Lowercase three-letter ISO 4217 code."
     },
     "stripeCustomerLink": {
       "type": "object",
@@ -60,14 +70,17 @@
     "checkoutSessionIntent": {
       "type": "object",
       "title": "CheckoutSessionIntent",
-      "description": "Provider-neutral, secret-free description of a checkout to create. Carries no API key, signature, or customer-identifying field beyond userId.",
+      "description": "Provider-neutral, secret-free description of a checkout to create. Carries no API key, signature, or customer-identifying field beyond userId. `credits` is present exactly when purpose is credit-pack; a listing sale grants no credits, so the contract refuses a nominal one.",
       "required": [
         "schemaVersion",
         "kind",
         "intentId",
         "userId",
-        "packId",
-        "credits",
+        "purpose",
+        "itemId",
+        "unitAmount",
+        "currency",
+        "stripePriceId",
         "mode",
         "successUrl",
         "cancelUrl",
@@ -80,8 +93,12 @@
         "kind": { "const": "sceneaxi.checkout-session-intent" },
         "intentId": { "$ref": "#/$defs/identifier" },
         "userId": { "$ref": "#/$defs/identifier" },
-        "packId": { "$ref": "#/$defs/packId" },
+        "purpose": { "$ref": "#/$defs/purpose" },
+        "itemId": { "$ref": "#/$defs/slug" },
         "credits": { "type": "integer", "minimum": 1 },
+        "unitAmount": { "type": "integer", "minimum": 1 },
+        "currency": { "$ref": "#/$defs/currency" },
+        "stripePriceId": { "type": "string", "minLength": 1 },
         "mode": { "$ref": "#/$defs/mode" },
         "successUrl": { "$ref": "#/$defs/redirectUrl" },
         "cancelUrl": { "$ref": "#/$defs/redirectUrl" },
@@ -90,12 +107,28 @@
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$"
         },
         "createdAt": { "$ref": "#/$defs/dateTime" }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "purpose": { "const": "credit-pack" } },
+            "required": ["purpose"]
+          },
+          "then": { "required": ["credits"] }
+        },
+        {
+          "if": {
+            "properties": { "purpose": { "const": "catalog-listing" } },
+            "required": ["purpose"]
+          },
+          "then": { "not": { "required": ["credits"] } }
+        }
+      ]
     },
     "checkoutCompletedEvent": {
       "type": "object",
       "title": "CheckoutCompletedEvent",
-      "description": "A provider event normalized to SceneAxi vocabulary before it touches credits. Only reachable after webhook signature verification; the resulting grant is keyed on stripe-event:<eventId> so a replay grants nothing.",
+      "description": "A provider event normalized to SceneAxi vocabulary before it touches credits. Only reachable after webhook signature verification; the resulting grant is keyed on stripe-event:<eventId> so a replay grants nothing. `credits` is present exactly when purpose is credit-pack.",
       "required": [
         "schemaVersion",
         "kind",
@@ -104,8 +137,10 @@
         "mode",
         "intentId",
         "userId",
-        "packId",
-        "credits",
+        "purpose",
+        "itemId",
+        "unitAmount",
+        "currency",
         "occurredAt"
       ],
       "additionalProperties": false,
@@ -117,10 +152,29 @@
         "mode": { "$ref": "#/$defs/mode" },
         "intentId": { "$ref": "#/$defs/identifier" },
         "userId": { "$ref": "#/$defs/identifier" },
-        "packId": { "$ref": "#/$defs/packId" },
+        "purpose": { "$ref": "#/$defs/purpose" },
+        "itemId": { "$ref": "#/$defs/slug" },
         "credits": { "type": "integer", "minimum": 1 },
+        "unitAmount": { "type": "integer", "minimum": 1 },
+        "currency": { "$ref": "#/$defs/currency" },
         "occurredAt": { "$ref": "#/$defs/dateTime" }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "purpose": { "const": "credit-pack" } },
+            "required": ["purpose"]
+          },
+          "then": { "required": ["credits"] }
+        },
+        {
+          "if": {
+            "properties": { "purpose": { "const": "catalog-listing" } },
+            "required": ["purpose"]
+          },
+          "then": { "not": { "required": ["credits"] } }
+        }
+      ]
     }
   }
 }

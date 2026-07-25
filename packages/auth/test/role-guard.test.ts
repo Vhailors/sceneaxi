@@ -8,6 +8,7 @@ import {
 } from "@sceneaxi/auth";
 
 const NOW = Date.parse("2026-07-25T10:00:00Z");
+const admin = { email: "captain@example.com", source: "SCENEAXI_ADMIN_EMAIL" } as const;
 
 const principal = (overrides: {
   role?: string;
@@ -21,7 +22,10 @@ const principal = (overrides: {
       schemaVersion: 1,
       kind: "sceneaxi.user",
       userId: "usr_01",
-      email: "captain@example.com",
+      email:
+        overrides.role === "user"
+          ? "crew@example.com"
+          : "captain@example.com",
       emailVerified: true,
       disabled: overrides.disabled ?? false,
       createdAt: "2026-07-25T09:00:00Z",
@@ -48,7 +52,7 @@ const principal = (overrides: {
 
 describe("requireRole", () => {
   it("allows an admin principal sourced from the environment", () => {
-    const result = requireRole(principal(), "admin", { now: NOW });
+    const result = requireRole(principal(), "admin", { now: NOW, admin });
     expect(result.ok).toBe(true);
   });
 
@@ -56,7 +60,7 @@ describe("requireRole", () => {
     const result = requireRole(
       principal({ role: "user", source: "default-user" }),
       "admin",
-      { now: NOW },
+      { now: NOW, admin },
     );
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -67,7 +71,7 @@ describe("requireRole", () => {
     const result = requireRole(
       principal({ role: "admin", source: "default-user" }),
       "admin",
-      { now: NOW },
+      { now: NOW, admin },
     );
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -77,14 +81,14 @@ describe("requireRole", () => {
   });
 
   it("has no role hierarchy — admin does not satisfy a user guard", () => {
-    const result = requireRole(principal(), "user", { now: NOW });
+    const result = requireRole(principal(), "user", { now: NOW, admin });
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.reason).toBe(AUTH_REFUSE_REASONS.roleNotPermitted);
   });
 
   it("refuses an unknown required role rather than guessing", () => {
-    const result = requireRole(principal(), "superadmin" as never, { now: NOW });
+    const result = requireRole(principal(), "superadmin" as never, { now: NOW, admin });
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.reason).toBe(AUTH_REFUSE_REASONS.roleUnknown);
@@ -92,7 +96,7 @@ describe("requireRole", () => {
 
   it("refuses a missing or malformed principal", () => {
     for (const value of [undefined, null, {}, "admin", { user: {} }]) {
-      const result = requireRole(value, "admin", { now: NOW });
+      const result = requireRole(value, "admin", { now: NOW, admin });
       expect(result.ok).toBe(false);
       if (result.ok) return;
       expect(result.reason).toBe(AUTH_REFUSE_REASONS.principalInvalid);
@@ -102,6 +106,7 @@ describe("requireRole", () => {
   it("refuses a disabled user even at the admin role", () => {
     const result = requireRole(principal({ disabled: true }), "admin", {
       now: NOW,
+      admin,
     });
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -112,7 +117,7 @@ describe("requireRole", () => {
     const result = requireRole(
       principal({ expiresAt: "2026-07-25T09:59:59Z" }),
       "admin",
-      { now: NOW },
+      { now: NOW, admin },
     );
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -123,6 +128,7 @@ describe("requireRole", () => {
     const result = requireRole(principal({ surface: "site" }), "admin", {
       now: NOW,
       surface: "web-shell",
+          admin,
     });
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -131,8 +137,8 @@ describe("requireRole", () => {
 
   it("refuses a Kids session non-overridably, even for admin", () => {
     for (const options of [
-      { now: NOW },
-      { now: NOW, surface: "kids" as const },
+      { now: NOW, admin },
+      { now: NOW, surface: "kids" as const, admin },
     ]) {
       const result = requireRole(principal({ surface: "kids" }), "admin", options);
       expect(result.ok).toBe(false);
@@ -143,7 +149,7 @@ describe("requireRole", () => {
 
   it("refuses without a finite clock — expiry cannot be checked", () => {
     for (const now of [Number.NaN, Number.POSITIVE_INFINITY]) {
-      const result = requireRole(principal(), "admin", { now });
+      const result = requireRole(principal(), "admin", { now, admin });
       expect(result.ok).toBe(false);
       if (result.ok) return;
       expect(result.reason).toBe(AUTH_REFUSE_REASONS.clockInvalid);
@@ -153,25 +159,27 @@ describe("requireRole", () => {
 
 describe("requireAuthenticated", () => {
   it("allows any valid principal regardless of role", () => {
-    expect(requireAuthenticated(principal(), { now: NOW }).ok).toBe(true);
+    expect(requireAuthenticated(principal(), { now: NOW, admin }).ok).toBe(true);
     expect(
       requireAuthenticated(principal({ role: "user", source: "default-user" }), {
         now: NOW,
+        admin,
       }).ok,
     ).toBe(true);
   });
 
   it("still refuses disabled, expired, and Kids principals", () => {
     expect(
-      requireAuthenticated(principal({ disabled: true }), { now: NOW }).ok,
+      requireAuthenticated(principal({ disabled: true }), { now: NOW, admin }).ok,
     ).toBe(false);
     expect(
       requireAuthenticated(principal({ expiresAt: "2026-07-25T09:00:01Z" }), {
         now: NOW,
+        admin,
       }).ok,
     ).toBe(false);
     expect(
-      requireAuthenticated(principal({ surface: "kids" }), { now: NOW }).ok,
+      requireAuthenticated(principal({ surface: "kids" }), { now: NOW, admin }).ok,
     ).toBe(false);
   });
 });

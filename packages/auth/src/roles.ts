@@ -20,6 +20,7 @@ import {
   type IdentitySurface,
   type Principal,
   type RoleAssignment,
+  type RoleSource,
   type User,
 } from "@sceneaxi/schemas";
 import { normalizeEmail, type AdminIdentity } from "./admin.js";
@@ -56,6 +57,13 @@ export function resolveRole(input: ResolveRoleInput): RoleAssignment {
 export type GuardOptions = Readonly<{
   /** Epoch milliseconds. Required — a guard with no clock cannot check expiry. */
   now: number;
+  /**
+   * The single environment-resolved admin identity. Required — the guard
+   * re-derives the role from the principal's user record against this identity,
+   * so a structurally valid principal carrying a fabricated `admin` role can
+   * never satisfy a guard.
+   */
+  admin: AdminIdentity;
   /** When given, the principal's session must belong to this surface. */
   surface?: IdentitySurface;
 }>;
@@ -80,6 +88,19 @@ function checkPrincipal(
     );
   }
 
+  const adminRecord = snapshotPlainRecord(checkedOptions["admin"]);
+  if (
+    adminRecord === undefined ||
+    typeof adminRecord["email"] !== "string" ||
+    adminRecord["email"].length === 0
+  ) {
+    return authRefuse(
+      AUTH_REFUSE_REASONS.adminIdentityUnresolved,
+      "A role guard requires the single resolved admin identity, so the role can be re-derived rather than trusted off the principal.",
+    );
+  }
+  const adminEmail = adminRecord["email"];
+
   const validated = validatePrincipal(principal);
   if (!validated.ok) {
     return authRefuse(
@@ -88,6 +109,23 @@ function checkPrincipal(
     );
   }
   const value = validated.value;
+
+  // The role is *derived* here, never trusted off the inbound principal: a
+  // structurally valid principal carrying a fabricated `admin` role and
+  // `admin-env` source must not reach an admin-only path. The principal's
+  // claimed role must match the role this user would actually receive.
+  const derivedIsAdmin =
+    normalizeEmail(value.user.email) === adminEmail;
+  const derivedRole: IdentityRole = derivedIsAdmin ? "admin" : "user";
+  const derivedSource: RoleSource = derivedIsAdmin
+    ? "admin-env"
+    : "default-user";
+  if (value.role.role !== derivedRole || value.role.source !== derivedSource) {
+    return authRefuse(
+      AUTH_REFUSE_REASONS.principalInvalid,
+      "The principal's role is not the role derived from its user record and the configured admin identity; a fabricated role is refused.",
+    );
+  }
 
   if (value.session.surface === "kids") {
     return authRefuse(
@@ -134,9 +172,9 @@ export function requireAuthenticated(
 /**
  * Allow only a principal whose derived role is exactly `required`.
  *
- * `validatePrincipal` has already refused any `admin` assignment whose source
- * is not `admin-env`, so reaching an admin-guarded path without the environment
- * identity is impossible by contract, not by convention.
+ * `checkPrincipal` already re-derived the role against the configured admin, so
+ * reaching an admin-guarded path without the environment identity is impossible
+ * by derivation, not by convention.
  */
 export function requireRole(
   principal: unknown,

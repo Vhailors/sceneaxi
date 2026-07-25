@@ -24,6 +24,7 @@ import {
 } from "@sceneaxi/billing";
 
 const NOW = Date.parse("2026-07-25T10:00:00Z");
+const admin = { email: "captain@example.com", source: "SCENEAXI_ADMIN_EMAIL" } as const;
 
 const account = (userId: string, accountId: string) =>
   Object.freeze({
@@ -163,6 +164,7 @@ describe("authorizeCreatorPublish", () => {
     const result = authorizeCreatorPublish({
       now: NOW,
       principal: principal({ userId: "usr_creator_ada" }),
+      admin,
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -190,6 +192,7 @@ describe("applyCreditsSale", () => {
     const target = listing("lantern-prop");
     return applyCreditsSale({
       principal: principal(),
+      admin,
       listing: target,
       buyerState: funded(100, BUYER),
       creatorState: createLedgerState(
@@ -206,10 +209,10 @@ describe("applyCreditsSale", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     // 40 credits: 20 creator, 20 platform.
-    expect(result.value.buyer.entry.delta).toBe(-40);
+    expect(result.value.buyer.entry?.delta).toBe(-40);
     expect(result.value.buyer.state.balance).toBe(60);
-    expect(result.value.creator.entry.delta).toBe(20);
-    expect(result.value.creator.state.balance).toBe(20);
+    expect(result.value.creator?.entry?.delta).toBe(20);
+    expect(result.value.creator?.state.balance).toBe(20);
     expect(result.value.share.creatorCredits).toBe(20);
     expect(result.value.share.platformCredits).toBe(20);
     expect(result.value.share.grossCredits).toBe(40);
@@ -219,6 +222,7 @@ describe("applyCreditsSale", () => {
     const target = listing("odd-price-charm");
     const result = applyCreditsSale({
       principal: principal(),
+      admin,
       listing: target,
       buyerState: funded(100, BUYER),
       creatorState: createLedgerState(
@@ -230,8 +234,8 @@ describe("applyCreditsSale", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     // 7 credits: 3 creator, 4 platform.
-    expect(result.value.buyer.entry.delta).toBe(-7);
-    expect(result.value.creator.entry.delta).toBe(3);
+    expect(result.value.buyer.entry?.delta).toBe(-7);
+    expect(result.value.creator?.entry?.delta).toBe(3);
     expect(result.value.share.platformCredits).toBe(4);
     expect(
       result.value.share.creatorCredits + result.value.share.platformCredits,
@@ -242,9 +246,9 @@ describe("applyCreditsSale", () => {
     const result = sale();
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.creator.entry.movement).toBe("grant");
-    expect(result.value.creator.state.entries.length).toBe(1);
-    expect(result.value.creator.state.account.accountId).toBe("acc_creator");
+    expect(result.value.creator?.entry?.movement).toBe("grant");
+    expect(result.value.creator?.state.entries.length).toBe(1);
+    expect(result.value.creator?.state.account.accountId).toBe("acc_creator");
   });
 
   it("leaves the buyer untouched when the creator grant refuses", () => {
@@ -252,6 +256,7 @@ describe("applyCreditsSale", () => {
     const target = listing("lantern-prop");
     const result = applyCreditsSale({
       principal: principal(),
+      admin,
       listing: target,
       // A creator ledger whose account belongs to someone else.
       creatorState: createLedgerState(account("usr_someone", "acc_wrong")),
@@ -271,6 +276,7 @@ describe("applyCreditsSale", () => {
     const target = listing("lantern-prop");
     const result = applyCreditsSale({
       principal: principal(),
+      admin,
       listing: target,
       creatorState: {
         account: account(target.sellerUserId, "acc_creator"),
@@ -289,6 +295,7 @@ describe("applyCreditsSale", () => {
     const target = listing("lantern-prop");
     const result = applyCreditsSale({
       principal: principal({ userId: target.sellerUserId }),
+      admin,
       listing: target,
       buyerState: funded(100, account(target.sellerUserId, "acc_creator")),
       creatorState: createLedgerState(
@@ -308,6 +315,7 @@ describe("applyCreditsSale", () => {
     const target = listing("harbour-diorama");
     const result = applyCreditsSale({
       principal: principal(),
+      admin,
       listing: target,
       buyerState: funded(100, BUYER),
       creatorState: createLedgerState(
@@ -330,6 +338,7 @@ describe("applyCreditsSale", () => {
     );
     const result = applyCreditsSale({
       principal: principal(),
+      admin,
       listing: target,
       buyerState: funded(10, BUYER),
       creatorState,
@@ -358,9 +367,12 @@ describe("applyCreditsSale", () => {
     const target = listing("lantern-prop");
     const replay = applyCreditsSale({
       principal: principal(),
+      admin,
       listing: target,
       buyerState: first.value.buyer.state,
-      creatorState: first.value.creator.state,
+      creatorState:
+            first.value.creator?.state ??
+            createLedgerState(account(target.sellerUserId, "acc_creator")),
       now: NOW + 60_000,
       saleId: "sale_01",
     });
@@ -368,12 +380,12 @@ describe("applyCreditsSale", () => {
     if (!replay.ok) return;
     expect(replay.value.replayed).toBe(true);
     expect(replay.value.buyer.state.balance).toBe(60);
-    expect(replay.value.creator.state.balance).toBe(20);
+    expect(replay.value.creator?.state.balance).toBe(20);
     expect(replay.value.buyer.state.entries.length).toBe(
       first.value.buyer.state.entries.length,
     );
-    expect(replay.value.creator.state.entries.length).toBe(
-      first.value.creator.state.entries.length,
+    expect(replay.value.creator?.state.entries.length).toBe(
+      first.value.creator?.state.entries.length,
     );
   });
 
@@ -381,6 +393,7 @@ describe("applyCreditsSale", () => {
     const target = listing("lantern-prop");
     const result = applyCreditsSale({
       principal: principal({ role: "admin" }),
+      admin,
       listing: target,
       buyerState: funded(0, BUYER),
       creatorState: createLedgerState(
@@ -393,7 +406,7 @@ describe("applyCreditsSale", () => {
     if (!result.ok) return;
     expect(result.value.charged).toBe(false);
     expect(result.value.buyer.state.balance).toBe(0);
-    expect(result.value.creator.state.balance).toBe(20);
+    expect(result.value.creator?.state.balance).toBe(20);
   });
 });
 
@@ -406,21 +419,15 @@ describe("recordMoneySale", () => {
     }
   });
 
-  const record = (overrides: Record<string, unknown> = {}) => {
-    const target = listing("harbour-diorama");
-    const moneyPrice = target.moneyPrice;
-    if (moneyPrice === undefined) throw new Error("fixture has no money price");
-    return recordMoneySale({
-      listing: target,
+  const record = (overrides: Record<string, unknown> = {}) =>
+    recordMoneySale({
+      listing: listing("harbour-diorama"),
       buyerUserId: "usr_buyer",
       saleId: "sale_money_01",
-      grossMinor: moneyPrice.unitAmount,
-      currency: moneyPrice.currency,
       mode: "test",
       now: NOW,
       ...overrides,
     } as never);
-  };
 
   it("records a balanced 50/50 split", () => {
     const result = record();
@@ -435,13 +442,17 @@ describe("recordMoneySale", () => {
     expect(result.value.mode).toBe("test");
   });
 
-  it("balances every fixture amount, odd ones included", () => {
-    for (const grossMinor of [1, 2, 3, 333, 999, 1200, 2501]) {
-      const result = record({ grossMinor });
+  it("balances every money-priced fixture, odd ones included", () => {
+    for (const listingId of [
+      "harbour-diorama",
+      "market-stall-kit",
+      "odd-price-charm",
+    ]) {
+      const result = record({ listing: listing(listingId) });
       expect(result.ok).toBe(true);
       if (!result.ok) return;
       expect(result.value.creatorMinor + result.value.platformMinor).toBe(
-        grossMinor,
+        result.value.grossMinor,
       );
       expect(result.value.platformMinor).toBeGreaterThanOrEqual(
         result.value.creatorMinor,
@@ -492,11 +503,6 @@ describe("recordMoneySale", () => {
     expect(result.reason).toBe(
       BILLING_REFUSE_REASONS.listingCurrencyNotListed,
     );
-  });
-
-  it("refuses a non-positive gross", () => {
-    expect(record({ grossMinor: 0 }).ok).toBe(false);
-    expect(record({ grossMinor: -5 }).ok).toBe(false);
   });
 
   it("keeps sale ids distinct from user ids", () => {

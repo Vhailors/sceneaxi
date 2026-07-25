@@ -41,6 +41,7 @@ export {
 export {
   createInMemoryCreditStore,
   type CreditStore,
+  type CreditsSaleSettlement,
   type InMemoryCreditStore,
   type InMemoryCreditStoreOptions,
 } from "./store.js";
@@ -68,10 +69,8 @@ export {
 export {
   assertModeAuthorized,
   createCheckoutSessionIntent,
-  createMoneyCheckoutIntent,
   deriveIntentId,
   type CreateCheckoutSessionIntentRequest,
-  type CreateMoneyCheckoutIntentRequest,
 } from "./checkout.js";
 
 export {
@@ -95,6 +94,9 @@ export {
   signStripeWebhookPayload,
   verifyStripeWebhookSignature,
   type ApplyCheckoutCompletedGrantRequest,
+  type CheckoutSettlement,
+  type CheckoutSettlementPort,
+  type VerifiedCheckoutCompletion,
   type VerifiedWebhook,
   type VerifyStripeWebhookSignatureRequest,
 } from "./stripe-webhook.js";

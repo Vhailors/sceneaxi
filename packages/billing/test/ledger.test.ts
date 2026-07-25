@@ -78,7 +78,7 @@ describe("appendCreditEntry", () => {
       });
       expect(appended.ok).toBe(true);
       if (!appended.ok) return;
-      expect(appended.value.entry.sequence).toBe(i);
+      expect(appended.value.entry?.sequence).toBe(i);
       state = appended.value.state;
     }
     expect(state.balance).toBe(30);
@@ -94,7 +94,7 @@ describe("appendCreditEntry", () => {
     });
     expect(appended.ok).toBe(true);
     if (!appended.ok) return;
-    expect(appended.value.entry.balanceAfter).toBe(105);
+    expect(appended.value.entry?.balanceAfter).toBe(105);
   });
 
   it("enforces delta sign rules per movement", () => {
@@ -188,7 +188,7 @@ describe("appendCreditEntry", () => {
     expect(replay.value.state.entries.length).toBe(1);
     expect(replay.value.state.balance).toBe(100);
     // The original entry is returned, not the regenerated id.
-    expect(replay.value.entry.entryId).toBe("ent_01");
+    expect(replay.value.entry?.entryId).toBe("ent_01");
   });
 
   it("refuses the same key carrying different money — a mutated replay cannot top up", () => {

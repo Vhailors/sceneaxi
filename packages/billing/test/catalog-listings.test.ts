@@ -19,6 +19,7 @@ import {
 } from "@sceneaxi/billing";
 
 const NOW = Date.parse("2026-07-25T10:00:00Z");
+const admin = { email: "captain@example.com", source: "SCENEAXI_ADMIN_EMAIL" } as const;
 
 const account = (userId: string, accountId: string) =>
   Object.freeze({
@@ -185,6 +186,7 @@ describe("purchaseListingWithCredits", () => {
   const buy = (overrides: Record<string, unknown> = {}) =>
     purchaseListingWithCredits({
       principal: principal(),
+      admin,
       listing: listing("lantern-prop"),
       buyerState: funded(100),
       now: NOW,
@@ -205,7 +207,7 @@ describe("purchaseListingWithCredits", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.value.charged).toBe(true);
-    expect(result.value.buyer.entry.delta).toBe(-40);
+    expect(result.value.buyer.entry?.delta).toBe(-40);
     expect(result.value.buyer.state.balance).toBe(60);
   });
 
@@ -225,7 +227,7 @@ describe("purchaseListingWithCredits", () => {
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.buyer.entry.delta).toBe(-75);
+    expect(result.value.buyer.entry?.delta).toBe(-75);
   });
 
   it("refuses an insufficient balance and appends nothing", () => {
@@ -284,6 +286,7 @@ describe("purchaseListingWithCredits", () => {
     if (!first.ok) return;
     const replay = purchaseListingWithCredits({
       principal: principal(),
+          admin,
       listing: listing("lantern-prop"),
       buyerState: first.value.buyer.state,
       now: NOW + 1_000,
@@ -305,6 +308,7 @@ describe("createListingCheckoutIntent", () => {
   const checkout = (overrides: Record<string, unknown> = {}) =>
     createListingCheckoutIntent({
       principal: principal(),
+      admin,
       listing: listing("harbour-diorama"),
       successUrl: "https://sceneaxi.example/ok",
       cancelUrl: "https://sceneaxi.example/no",

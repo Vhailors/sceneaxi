@@ -17,7 +17,11 @@
  * before anything that could need identity.
  */
 
-import { requireAuthenticated } from "@sceneaxi/auth";
+import {
+  requireAuthenticated,
+  AUTH_REFUSE_REASONS as AUTH_REFUSE,
+  type AdminIdentity,
+} from "@sceneaxi/auth";
 import {
   ENTITLEMENT_DECISION_KIND,
   ENTITLEMENT_SCHEMA_VERSION,
@@ -52,6 +56,12 @@ export type EvaluateEntitlementRequest = Readonly<{
   capability: unknown;
   /** Epoch milliseconds. */
   now: number;
+  /**
+   * The single resolved admin identity. Required when a principal is evaluated
+   * (the guard re-derives the role from it); absent on the anonymous free path,
+   * which never reaches the guard.
+   */
+  admin?: AdminIdentity | undefined;
   /** Absent means anonymous — valid for the free path, refused for paid. */
   principal?: unknown;
   /** Required for a credit charge; the ledger the charge would land on. */
@@ -117,6 +127,7 @@ export function evaluateEntitlement(
   const {
     capability,
     now,
+    admin,
     principal,
     state,
     creditAmount,
@@ -158,10 +169,16 @@ export function evaluateEntitlement(
       `"${capability}" requires a SceneAxi account.`,
     );
   }
+  if (admin === undefined) {
+    return billingRefuse(
+      AUTH_REFUSE.adminIdentityUnresolved,
+      `"${capability}" requires the resolved admin identity so the principal's role can be re-derived.`,
+    );
+  }
 
   const guarded = requireAuthenticated(
     principal,
-    surface === undefined ? { now } : { now, surface },
+    surface === undefined ? { now, admin } : { now, surface, admin },
   );
   if (!guarded.ok) return billingRefuse(guarded.reason, guarded.message);
 

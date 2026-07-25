@@ -34,11 +34,13 @@ import {
   type IdentitySurface,
   type MoneySplitRecord,
 } from "@sceneaxi/schemas";
+import type { AdminIdentity } from "@sceneaxi/auth";
 import {
   LISTING_SALE_IDEMPOTENCY_PREFIX,
   assertCurrencyListed,
   purchaseListingWithCredits,
 } from "./catalog-listings.js";
+import { assertModeAuthorized } from "./checkout.js";
 import { evaluateEntitlement } from "./entitlements.js";
 import {
   appendCreditEntry,
@@ -99,6 +101,7 @@ export function splitMoneyMinorUnits(gross: number): BillingOutcome<Split> {
  */
 export function authorizeCreatorPublish(input: {
   readonly principal?: unknown;
+  readonly admin?: AdminIdentity | undefined;
   readonly now: number;
   readonly surface?: IdentitySurface | undefined;
 }): BillingOutcome<EntitlementDecision> {
@@ -111,12 +114,14 @@ export function authorizeCreatorPublish(input: {
   }
   const screened = record as {
     readonly principal?: unknown;
+    readonly admin?: AdminIdentity | undefined;
     readonly now: number;
     readonly surface?: IdentitySurface | undefined;
   };
   return evaluateEntitlement({
     capability: "creator-publish",
     now: screened.now,
+    ...(screened.admin === undefined ? {} : { admin: screened.admin }),
     ...(screened.principal === undefined
       ? {}
       : { principal: screened.principal }),
@@ -128,6 +133,8 @@ export function authorizeCreatorPublish(input: {
 
 export type ApplyCreditsSaleRequest = Readonly<{
   principal: unknown;
+  /** The single resolved admin identity, threaded to the buyer-side guard. */
+  admin: AdminIdentity;
   listing: CatalogListing;
   /** The buyer's ledger. */
   buyerState: LedgerState;
@@ -141,7 +148,11 @@ export type ApplyCreditsSaleRequest = Readonly<{
 
 export type CreditsSaleOutcome = Readonly<{
   buyer: AppendOutcome;
-  creator: AppendOutcome;
+  /**
+   * The creator's grant outcome. Absent when the floor split left the creator a
+   * zero share (a 1-credit sale), so a zero-value ledger row is never created.
+   */
+  creator?: AppendOutcome | undefined;
   share: CreatorShareRecord;
   /** False when the buyer was an admin and nothing was debited. */
   charged: boolean;
@@ -167,7 +178,7 @@ export function applyCreditsSale(
     );
   }
   const screened = record as ApplyCreditsSaleRequest;
-  const { principal, listing, buyerState, creatorState, now, saleId, surface } =
+  const { principal, admin, listing, buyerState, creatorState, now, saleId, surface } =
     screened;
 
   const listed = assertCurrencyListed(listing, "credits");
@@ -195,6 +206,7 @@ export function applyCreditsSale(
 
   const purchase = purchaseListingWithCredits({
     principal,
+    admin,
     listing: listed.value,
     buyerState,
     now,
@@ -206,18 +218,24 @@ export function applyCreditsSale(
   const split = splitCredits(grossCredits);
   if (!split.ok) return split;
 
+  // The floor split can leave the creator a zero share (a 1-credit sale rounds
+  // to creator 0 / platform 1). A zero-value ledger row is illegal, so the
+  // creator grant is omitted entirely and reported as a zero share instead.
   const creatorKey = `${LISTING_SALE_IDEMPOTENCY_PREFIX}${saleId}:creator`;
-  const creatorGrant = appendCreditEntry(creatorState, {
-    entryId: deriveEntryId(creatorKey),
-    movement: "grant",
-    delta: split.value.creator,
-    reason: `creator share for listing ${listed.value.listingId}`,
-    idempotencyKey: creatorKey,
-    now,
-  });
+  const creatorGrant =
+    split.value.creator === 0
+      ? undefined
+      : appendCreditEntry(creatorState, {
+          entryId: deriveEntryId(creatorKey),
+          movement: "grant",
+          delta: split.value.creator,
+          reason: `creator share for listing ${listed.value.listingId}`,
+          idempotencyKey: creatorKey,
+          now,
+        });
   // Nothing has been committed anywhere: the buyer's own state object is
   // untouched, so refusing here leaves no half-applied sale behind.
-  if (!creatorGrant.ok) return creatorGrant;
+  if (creatorGrant !== undefined && !creatorGrant.ok) return creatorGrant;
 
   const share = validateCreatorShareRecord({
     schemaVersion: REVENUE_SHARE_SCHEMA_VERSION,
@@ -242,10 +260,12 @@ export function applyCreditsSale(
   return billingOk(
     Object.freeze({
       buyer: purchase.value.buyer,
-      creator: creatorGrant.value,
+      ...(creatorGrant === undefined ? {} : { creator: creatorGrant.value }),
       share: share.value,
       charged: purchase.value.charged,
-      replayed: purchase.value.buyer.replayed && creatorGrant.value.replayed,
+      replayed:
+        purchase.value.buyer.replayed &&
+        (creatorGrant === undefined || creatorGrant.value.replayed),
     }),
   );
 }
@@ -254,10 +274,14 @@ export type RecordMoneySaleRequest = Readonly<{
   listing: CatalogListing;
   buyerUserId: string;
   saleId: string;
-  /** Gross paid, in the currency's minor unit. */
-  grossMinor: number;
-  currency: string;
+  /**
+   * The mode the settlement was paid in. The gross amount and currency are
+   * taken from the listing's own money price — the seller-selected price is the
+   * source of truth, never a caller-supplied figure.
+   */
   mode: BillingMode;
+  /** The captain go-live gate; a live record refuses without it. */
+  liveModeAuthorized?: boolean | undefined;
   /** Epoch milliseconds. */
   now: number;
 }>;
@@ -280,11 +304,21 @@ export function recordMoneySale(
     );
   }
   const screened = requestRecord as RecordMoneySaleRequest;
-  const { listing, buyerUserId, saleId, grossMinor, currency, mode, now } =
+  const { listing, buyerUserId, saleId, mode, liveModeAuthorized, now } =
     screened;
 
   const listed = assertCurrencyListed(listing, "money");
   if (!listed.ok) return listed;
+  const moneyPrice = listed.value.moneyPrice;
+  if (moneyPrice === undefined) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.listingPriceModeMismatch,
+      `Listing "${listed.value.listingId}" claims a money price mode but carries no moneyPrice.`,
+    );
+  }
+
+  const authorizedMode = assertModeAuthorized(mode, liveModeAuthorized);
+  if (!authorizedMode.ok) return authorizedMode;
 
   if (!isEpochMilliseconds(now)) {
     return billingRefuse(
@@ -293,7 +327,7 @@ export function recordMoneySale(
     );
   }
 
-  const split = splitMoneyMinorUnits(grossMinor);
+  const split = splitMoneyMinorUnits(moneyPrice.unitAmount);
   if (!split.ok) return split;
 
   const record = validateMoneySplitRecord({
@@ -303,12 +337,12 @@ export function recordMoneySale(
     listingId: listed.value.listingId,
     buyerUserId,
     creatorUserId: listed.value.sellerUserId,
-    grossMinor,
+    grossMinor: moneyPrice.unitAmount,
     creatorMinor: split.value.creator,
     platformMinor: split.value.platform,
-    currency,
+    currency: moneyPrice.currency,
     basisPoints: CREATOR_SHARE_BASIS_POINTS,
-    mode,
+    mode: authorizedMode.value,
     occurredAt: new Date(now).toISOString(),
   });
   if (!record.ok) {

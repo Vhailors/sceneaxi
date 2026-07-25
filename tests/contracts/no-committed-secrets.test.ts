@@ -1,4 +1,5 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -6,35 +7,42 @@ import { describe, expect, it } from "vitest";
 /**
  * A committed credential is the one defect in this vertical that no amount of
  * careful policy fixes after the fact, so it is asserted mechanically rather than
- * left to review. The scan walks the whole tracked tree, not just the identity
- * packages: a key pasted into an unrelated fixture is the likeliest accident.
+ * left to review. The scan walks the *whole* tracked tree via `git ls-files`, not
+ * a hand-picked extension allow-list: a key pasted into an unrelated `.toml`,
+ * `.sh`, extensionless file, or committed evidence JSON is the likeliest accident.
+ * Only confirmed binary content (a NUL byte in the first page) is skipped.
  */
 
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 
-const SKIP_DIRS = new Set([
-  "node_modules",
-  "dist",
-  "coverage",
-  ".git",
-  ".sceneaxi",
-  ".turbo",
-  ".cache",
-]);
-
-const TEXT_FILE = /\.(ts|tsx|js|mjs|cjs|json|md|sql|yaml|yml|example)$/;
-
-const walk = (dir: string, out: string[] = []): string[] => {
-  for (const entry of readdirSync(dir)) {
-    if (SKIP_DIRS.has(entry)) continue;
-    const path = join(dir, entry);
-    if (statSync(path).isDirectory()) walk(path, out);
-    else if (TEXT_FILE.test(entry)) out.push(path);
+const trackedFiles = (() => {
+  let stdout: string;
+  try {
+    stdout = execFileSync("git", ["ls-files"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    });
+  } catch {
+    return [];
   }
-  return out;
-};
+  return stdout
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+})();
 
-const files = walk(repoRoot);
+const files = trackedFiles.map((relative) => join(repoRoot, relative));
+
+/** Skip only confirmed binary content: a NUL byte means it is not text. */
+const isBinary = (path: string): boolean => {
+  let head: Buffer;
+  try {
+    head = Buffer.from(readFileSync(path).subarray(0, 8000));
+  } catch {
+    return true;
+  }
+  return head.includes(0);
+};
 
 /**
  * Each pattern matches a *real* credential shape, not a mention of one. Prose and
@@ -55,7 +63,7 @@ const FORBIDDEN: ReadonlyArray<readonly [string, RegExp]> = [
 ];
 
 describe("no committed secrets", () => {
-  it("scans a non-empty surface", () => {
+  it("scans a non-empty tracked surface", () => {
     // Fail-closed: a walk that found nothing would pass every check below.
     expect(files.length).toBeGreaterThan(50);
   });
@@ -65,6 +73,7 @@ describe("no committed secrets", () => {
       const offenders = files.filter((file) => {
         // This file necessarily contains the patterns themselves.
         if (file === fileURLToPath(import.meta.url)) return false;
+        if (isBinary(file)) return false;
         return pattern.test(readFileSync(file, "utf8"));
       });
       expect(offenders.map((file) => file.slice(repoRoot.length))).toEqual([]);

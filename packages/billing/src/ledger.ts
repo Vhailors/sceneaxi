@@ -15,6 +15,7 @@
 import { createHash } from "node:crypto";
 import {
   isEpochMilliseconds,
+  snapshotPlainArray,
   snapshotPlainRecord,
   validateCreditLedgerEntry,
   type CreditAccount,
@@ -48,7 +49,12 @@ export type AppendCreditEntryRequest = Readonly<{
 
 export type AppendOutcome = Readonly<{
   state: LedgerState;
-  entry: CreditLedgerEntry;
+  /**
+   * The appended entry. Absent when the operation recorded nothing — for example
+   * an admin's unlimited allowance, which is reported explicitly rather than faked
+   * with a zero-credit row.
+   */
+  entry?: CreditLedgerEntry | undefined;
   /**
    * True when the idempotency key had already been applied and this call
    * appended nothing. Callers that count entries rely on this flag rather than
@@ -93,10 +99,11 @@ export function createLedgerState(account: CreditAccount): LedgerState {
 export function deriveBalance(
   entries: unknown,
 ): BillingOutcome<number> {
-  if (!Array.isArray(entries)) {
+  const snapshot = snapshotPlainArray(entries);
+  if (snapshot === undefined) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.ledgerStateInvalid,
-      "A ledger entry list must be an array.",
+      "A ledger entry list must be a plain array.",
     );
   }
 
@@ -104,7 +111,7 @@ export function deriveBalance(
   let expectedSequence = 1;
   const seenKeys = new Set<string>();
 
-  for (const candidate of entries) {
+  for (const candidate of snapshot) {
     const entry = validateCreditLedgerEntry(candidate);
     if (!entry.ok) {
       return billingRefuse(
@@ -153,18 +160,17 @@ export function loadLedgerState(
   account: CreditAccount,
   entries: unknown,
 ): BillingOutcome<LedgerState> {
-  if (!Array.isArray(entries)) {
+  const snapshot = snapshotPlainArray(entries);
+  if (snapshot === undefined) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.ledgerStateInvalid,
-      "A ledger entry list must be an array.",
+      "A ledger entry list must be a plain array.",
     );
   }
-  const foreign = entries.find(
-    (entry) => {
-      const record = snapshotPlainRecord(entry);
-      return record !== undefined && record["accountId"] !== account.accountId;
-    },
-  );
+  const foreign = snapshot.find((entry) => {
+    const record = snapshotPlainRecord(entry);
+    return record !== undefined && record["accountId"] !== account.accountId;
+  });
   if (foreign !== undefined) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.ledgerStateInvalid,
@@ -172,11 +178,11 @@ export function loadLedgerState(
     );
   }
 
-  const balance = deriveBalance(entries);
+  const balance = deriveBalance(snapshot);
   if (!balance.ok) return balance;
 
   const validated: CreditLedgerEntry[] = [];
-  for (const candidate of entries) {
+  for (const candidate of snapshot) {
     const entry = validateCreditLedgerEntry(candidate);
     if (!entry.ok) {
       return billingRefuse(
@@ -222,15 +228,33 @@ export function appendCreditEntry(
 ): BillingOutcome<AppendOutcome> {
   const stateRecord = snapshotPlainRecord(state);
   const accountRecord = snapshotPlainRecord(stateRecord?.["account"]);
+  const entries = snapshotPlainArray(stateRecord?.["entries"]);
   if (
     stateRecord === undefined ||
     accountRecord === undefined ||
-    !Array.isArray(stateRecord["entries"]) ||
+    entries === undefined ||
     typeof stateRecord["balance"] !== "number"
   ) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.ledgerStateInvalid,
       "The ledger state is not a valid ledger state.",
+    );
+  }
+
+  // Balance is always derived: a stored `balance` that does not match the
+  // derived history is a forged witness, refused here rather than trusted for
+  // the arithmetic below.
+  const derivedBalance = deriveBalance(entries);
+  if (!derivedBalance.ok) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.ledgerStateInvalid,
+      `The ledger history is invalid (${derivedBalance.reason}): ${derivedBalance.message}`,
+    );
+  }
+  if (derivedBalance.value !== stateRecord["balance"]) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.ledgerStateInvalid,
+      `The ledger balance ${stateRecord["balance"]} does not match the derived balance ${derivedBalance.value}; balance is derived, never stored as a source of truth.`,
     );
   }
   const current = stateRecord as unknown as LedgerState;

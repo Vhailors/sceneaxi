@@ -26,7 +26,11 @@ import {
   type IdentitySurface,
   type Principal,
 } from "@sceneaxi/schemas";
-import type { AuthRefuseReason, IdentityPort } from "@sceneaxi/auth";
+import type {
+  AdminIdentity,
+  AuthRefuseReason,
+  IdentityPort,
+} from "@sceneaxi/auth";
 import {
   deriveBalance,
   evaluateEntitlement,
@@ -45,6 +49,7 @@ export type AccountPanelRefusal = Readonly<{
 export const ACCOUNT_PANEL_REASONS = Object.freeze({
   kidsSurfaceDenied: "KIDS_IDENTITY_SURFACE_DENIED",
   identityPortMissing: "PANEL_IDENTITY_PORT_MISSING",
+  adminIdentityMissing: "PANEL_ADMIN_IDENTITY_MISSING",
   creditsViewMissing: "PANEL_CREDITS_VIEW_MISSING",
   clockInvalid: "PANEL_CLOCK_INVALID",
   surfaceInvalid: "PANEL_SURFACE_INVALID",
@@ -92,6 +97,11 @@ export type CreateAccountPanelOptions = Readonly<{
   identityPort?: IdentityPort | undefined;
   credits?: AccountCreditsView | undefined;
   surface: IdentitySurface;
+  /**
+   * The single resolved admin identity. Threaded to the entitlement guard so the
+   * panel never evaluates a capability with a forgeable role.
+   */
+  admin: AdminIdentity;
   /** Epoch milliseconds. Injected so snapshots are deterministic. */
   clock?: (() => number) | undefined;
 }>;
@@ -127,6 +137,7 @@ function refusal(
  * the engine download and the CLI cost nothing.
  */
 function capabilityViews(
+  admin: AdminIdentity,
   surface: IdentitySurface,
   now: number,
   principal: Principal | undefined,
@@ -137,6 +148,7 @@ function capabilityViews(
       const decision = evaluateEntitlement({
         capability,
         now,
+        admin,
         surface,
         ...(principal === undefined ? {} : { principal }),
         ...(state === undefined ? {} : { state }),
@@ -214,6 +226,19 @@ export function createAccountPanel(
   const credits = optionRecord["credits"] as AccountCreditsView;
   const surface = optionRecord["surface"] as IdentitySurface;
   const clock = optionRecord["clock"] as () => number;
+  const adminRecord = snapshotPlainRecord(optionRecord["admin"]);
+  if (
+    adminRecord === undefined ||
+    typeof adminRecord["email"] !== "string" ||
+    adminRecord["email"].length === 0
+  ) {
+    return Object.freeze({
+      ok: false,
+      reason: ACCOUNT_PANEL_REASONS.adminIdentityMissing,
+      message: "The account panel requires the resolved admin identity.",
+    });
+  }
+  const admin = optionRecord["admin"] as AdminIdentity;
   let held: AccountPanelSnapshot;
 
   const readClock = (): number | undefined => {
@@ -242,7 +267,7 @@ export function createAccountPanel(
     return Object.freeze({
       phase: "anonymous" as const,
       surface,
-      capabilities: capabilityViews(surface, now, undefined, undefined),
+      capabilities: capabilityViews(admin, surface, now, undefined, undefined),
     });
   };
 
@@ -254,7 +279,7 @@ export function createAccountPanel(
       capabilities:
         now === undefined
           ? Object.freeze([])
-          : capabilityViews(surface, now, undefined, undefined),
+          : capabilityViews(admin, surface, now, undefined, undefined),
       refusal: value,
     });
   };
@@ -320,7 +345,7 @@ export function createAccountPanel(
       email: principal.user.email,
       role: principal.role.role,
       creditBalance: balance.value,
-      capabilities: capabilityViews(surface, now, principal, state),
+      capabilities: capabilityViews(admin, surface, now, principal, state),
     });
   };
 
@@ -329,6 +354,19 @@ export function createAccountPanel(
   let operationGeneration = 0;
 
   held = anonymous();
+
+  /**
+   * Revoke a session a superseded sign-in already persisted, so a signed-out panel
+   * never leaves a live server-side session behind. Best-effort: a revoke failure
+   * cannot be allowed to block the operation that superseded the sign-in.
+   */
+  const revokeSupersededSession = async (principal: Principal): Promise<void> => {
+    try {
+      await identityPort.signOut({ sessionId: principal.session.sessionId });
+    } catch {
+      // Best-effort revocation; a failure must not block the superseding operation.
+    }
+  };
 
   const panel: AccountPanel = Object.freeze({
     snapshot() {
@@ -345,10 +383,16 @@ export function createAccountPanel(
           ? credentials
           : { ...credentialRecord, surface },
       );
-      if (generation !== operationGeneration) return held;
+      if (generation !== operationGeneration) {
+        if (result.ok) await revokeSupersededSession(result.value);
+        return held;
+      }
       if (result.ok) {
         const next = await authenticated(result.value);
-        if (generation !== operationGeneration) return held;
+        if (generation !== operationGeneration) {
+          await revokeSupersededSession(result.value);
+          return held;
+        }
         heldPrincipal = result.value;
         held = next;
       } else {

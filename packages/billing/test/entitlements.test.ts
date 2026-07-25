@@ -18,6 +18,7 @@ import {
 } from "@sceneaxi/billing";
 
 const NOW = Date.parse("2026-07-25T10:00:00Z");
+const admin = { email: "captain@example.com", source: "SCENEAXI_ADMIN_EMAIL" } as const;
 
 const ACCOUNT = Object.freeze({
   schemaVersion: 1,
@@ -123,6 +124,7 @@ describe("the free path", () => {
       capability: "byo-model-keys",
       now: NOW,
       principal: principal(),
+      admin,
       state,
     });
     expect(result.ok).toBe(true);
@@ -150,6 +152,7 @@ describe("paid capabilities", () => {
       capability: "hosted-ai-assistant",
       now: NOW,
       principal: principal(),
+      admin,
       state: funded(100),
       creditAmount: 25,
     });
@@ -164,6 +167,7 @@ describe("paid capabilities", () => {
       capability: "hosted-ai-assistant",
       now: NOW,
       principal: principal(),
+      admin,
       state: funded(10),
       creditAmount: 25,
     });
@@ -177,6 +181,7 @@ describe("paid capabilities", () => {
       capability: "metered-model-port",
       now: NOW,
       principal: principal(),
+      admin,
       state: funded(25),
       creditAmount: 25,
     });
@@ -190,6 +195,7 @@ describe("paid capabilities", () => {
       capability: "hosted-ai-assistant",
       now: NOW,
       principal: principal(),
+      admin,
       state: funded(100),
     });
     expect(noAmount.ok).toBe(false);
@@ -203,6 +209,7 @@ describe("paid capabilities", () => {
       capability: "hosted-ai-assistant",
       now: NOW,
       principal: principal(),
+      admin,
       creditAmount: 5,
     });
     expect(noState.ok).toBe(false);
@@ -216,6 +223,7 @@ describe("paid capabilities", () => {
       capability: "hosted-ai-assistant",
       now: NOW,
       principal: principal({ userId: "usr_someone" }),
+      admin,
       state: funded(100),
       creditAmount: 5,
     });
@@ -229,6 +237,7 @@ describe("paid capabilities", () => {
       capability: "credit-pack-purchase",
       now: NOW,
       principal: principal(),
+      admin,
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -249,6 +258,7 @@ describe("paid capabilities", () => {
       capability: "creator-publish",
       now: NOW,
       principal: principal(),
+      admin,
     });
     expect(signedIn.ok).toBe(true);
     if (signedIn.ok) expect(signedIn.value.outcome).toBe("allow-free");
@@ -259,6 +269,7 @@ describe("paid capabilities", () => {
       capability: "catalog-asset-purchase",
       now: NOW,
       principal: principal(),
+      admin,
       state: funded(100),
       creditAmount: 10,
     });
@@ -273,6 +284,7 @@ describe("paid capabilities", () => {
       capability: "catalog-asset-purchase",
       now: NOW,
       principal: principal(),
+      admin,
       state: funded(100),
       creditAmount: 10,
       payWith: "credits",
@@ -286,6 +298,7 @@ describe("paid capabilities", () => {
       capability: "catalog-asset-purchase",
       now: NOW,
       principal: principal(),
+      admin,
       payWith: "money",
     });
     expect(withMoney.ok).toBe(true);
@@ -297,6 +310,7 @@ describe("paid capabilities", () => {
       capability: "catalog-asset-purchase",
       now: NOW,
       principal: principal(),
+      admin,
       payWith: "barter" as never,
     });
     expect(result.ok).toBe(false);
@@ -313,6 +327,7 @@ describe("admin allowance", () => {
         capability,
         now: NOW,
         principal: principal({ role: "admin" }),
+        admin,
         state,
         creditAmount: 1_000_000,
       });
@@ -346,6 +361,7 @@ describe("Kids commerce", () => {
       now: NOW,
       surface: "kids",
       principal: principal({ role: "admin", surface: "kids" }),
+      admin,
     });
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -357,6 +373,7 @@ describe("Kids commerce", () => {
       capability: "hosted-ai-assistant",
       now: NOW,
       principal: principal({ surface: "kids" }),
+      admin,
       state: funded(100),
       creditAmount: 5,
     });
@@ -399,6 +416,7 @@ describe("unknown capabilities and bad input", () => {
       capability: "hosted-ai-assistant",
       now: NOW,
       principal: principal({ disabled: true }),
+      admin,
       state: funded(100),
       creditAmount: 5,
     });
@@ -411,6 +429,7 @@ describe("unknown capabilities and bad input", () => {
       capability: "hosted-ai-assistant",
       now: NOW,
       principal: principal({ expiresAt: "2026-07-25T09:30:00Z" }),
+      admin,
       state: funded(100),
       creditAmount: 5,
     });
@@ -440,7 +459,7 @@ describe("grantStarterCredits", () => {
     if (!result.ok) return;
     expect(result.value.state.balance).toBe(STARTER_CREDIT_GRANT);
     expect(result.value.state.balance).toBe(100);
-    expect(result.value.entry.idempotencyKey).toBe(
+    expect(result.value.entry?.idempotencyKey).toBe(
       `${STARTER_IDEMPOTENCY_PREFIX}usr_crew`,
     );
     expect(result.value.replayed).toBe(false);

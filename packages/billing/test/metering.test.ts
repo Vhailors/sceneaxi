@@ -9,6 +9,7 @@ import {
   type LedgerState,
 } from "@sceneaxi/billing";
 const NOW = Date.parse("2026-07-25T10:00:00Z");
+const admin = { email: "captain@example.com", source: "SCENEAXI_ADMIN_EMAIL" } as const;
 
 const ACCOUNT = Object.freeze({
   schemaVersion: 1,
@@ -78,6 +79,7 @@ const funded = (credits = 100): LedgerState => {
 const meter = (overrides: Record<string, unknown> = {}) =>
   meterCredits({
     principal: principal(),
+    admin,
     state: funded(),
     amount: 10,
     reason: "hosted assistant turn",
@@ -101,6 +103,7 @@ describe("meterCredits", () => {
     const state = funded();
     const result = meterCredits({
       principal: principal({ role: "admin" }),
+      admin,
       state,
       amount: 10_000,
       reason: "hosted assistant turn",
@@ -120,6 +123,7 @@ describe("meterCredits", () => {
     const state = funded(5);
     const result = meterCredits({
       principal: principal(),
+      admin,
       state,
       amount: 6,
       reason: "hosted assistant turn",
@@ -149,6 +153,7 @@ describe("meterCredits", () => {
 
     const expired = meter({
       principal: principal({ expiresAt: "2026-07-25T09:30:00Z" }),
+      admin,
     });
     expect(expired.ok).toBe(false);
     if (!expired.ok) {
@@ -171,6 +176,7 @@ describe("meterCredits", () => {
   it("refuses a surface mismatch when a surface is demanded", () => {
     const result = meter({
       principal: principal({ surface: "site" }),
+      admin,
       surface: "web-shell",
     });
     expect(result.ok).toBe(false);
@@ -201,6 +207,7 @@ describe("meterCredits", () => {
 
     const replay = meterCredits({
       principal: principal(),
+      admin,
       state: first.value.state,
       amount: 10,
       reason: "hosted assistant turn",

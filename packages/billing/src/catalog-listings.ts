@@ -24,7 +24,7 @@ import {
   type CatalogListingSet,
   type IdentitySurface,
 } from "@sceneaxi/schemas";
-import { requireAuthenticated } from "@sceneaxi/auth";
+import { requireAuthenticated, type AdminIdentity } from "@sceneaxi/auth";
 import { createMoneyCheckoutIntent } from "./checkout.js";
 import {
   appendCreditEntry,
@@ -147,6 +147,8 @@ export function assertCurrencyListed(
 
 export type PurchaseListingWithCreditsRequest = Readonly<{
   principal: unknown;
+  /** The single resolved admin identity, used to re-derive the role at the guard. */
+  admin: AdminIdentity;
   listing: CatalogListing;
   /** The buyer's ledger. */
   buyerState: LedgerState;
@@ -179,7 +181,7 @@ export function purchaseListingWithCredits(
     );
   }
   const screened = record as PurchaseListingWithCreditsRequest;
-  const { principal, listing, buyerState, now, saleId, surface } = screened;
+  const { principal, admin, listing, buyerState, now, saleId, surface } = screened;
 
   if (!isEpochMilliseconds(now)) {
     return billingRefuse(
@@ -212,7 +214,7 @@ export function purchaseListingWithCredits(
 
   const guarded = requireAuthenticated(
     principal,
-    surface === undefined ? { now } : { now, surface },
+    surface === undefined ? { now, admin } : { now, surface, admin },
   );
   if (!guarded.ok) return billingRefuse(guarded.reason, guarded.message);
 
@@ -238,26 +240,15 @@ export function purchaseListingWithCredits(
 
   const idempotencyKey = `${LISTING_SALE_IDEMPOTENCY_PREFIX}${saleId}:buyer`;
 
-  // The captain's unlimited allowance: no debit, but the sale still happened, so
-  // the caller can still pay the creator.
+  // The captain's unlimited allowance: no debit is appended and none is
+  // faked. The sale still happened, so the caller can still pay the creator;
+  // the no-charge outcome is reported explicitly rather than as a ledger row.
   if (guarded.value.role.role === "admin") {
     return billingOk(
       Object.freeze({
         buyer: Object.freeze({
           state: buyerState,
-          entry: {
-            schemaVersion: 1 as const,
-            kind: "sceneaxi.credit-ledger-entry" as const,
-            entryId: deriveEntryId(idempotencyKey),
-            accountId: buyerState.account.accountId,
-            sequence: buyerState.entries.length + 1,
-            movement: "debit" as const,
-            delta: -creditPrice,
-            balanceAfter: buyerState.balance,
-            reason: `catalog listing ${listed.value.listingId} (admin allowance, not charged)`,
-            idempotencyKey,
-            occurredAt: new Date(now).toISOString(),
-          },
+          entry: undefined,
           replayed: false,
         }),
         listing: listed.value,
@@ -287,6 +278,8 @@ export function purchaseListingWithCredits(
 
 export type CreateListingCheckoutIntentRequest = Readonly<{
   principal: unknown;
+  /** The single resolved admin identity, used to re-derive the role at the guard. */
+  admin: AdminIdentity;
   listing: CatalogListing;
   successUrl: string;
   cancelUrl: string;
@@ -317,6 +310,7 @@ export function createListingCheckoutIntent(
   const screened = record as CreateListingCheckoutIntentRequest;
   const {
     principal,
+    admin,
     listing,
     successUrl,
     cancelUrl,
@@ -351,7 +345,7 @@ export function createListingCheckoutIntent(
 
   const guarded = requireAuthenticated(
     principal,
-    surface === undefined ? { now } : { now, surface },
+    surface === undefined ? { now, admin } : { now, surface, admin },
   );
   if (!guarded.ok) return billingRefuse(guarded.reason, guarded.message);
 

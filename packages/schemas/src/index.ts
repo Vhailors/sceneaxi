@@ -219,6 +219,7 @@ export type {
 export {
   isEpochMilliseconds,
   isPlainRecord,
+  snapshotPlainArray,
   snapshotPlainRecord,
 } from "./record-validation.js";
 

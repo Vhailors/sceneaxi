@@ -99,6 +99,7 @@ const makePanel = (
     }),
     credits: creditsView(ledgers),
     surface: "web-shell",
+    admin,
     clock,
     ...overrides,
   });
@@ -117,6 +118,7 @@ describe("account panel construction", () => {
       }),
       credits: creditsView({}),
       surface: "kids",
+      admin,
       clock,
     });
     expect(result.ok).toBe(false);

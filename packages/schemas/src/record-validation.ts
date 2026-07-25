@@ -64,6 +64,56 @@ export function snapshotPlainRecord(
   }
 }
 
+/**
+ * A plain, own-property-only array snapshot.
+ *
+ * Mirrors `snapshotPlainRecord` for arrays: a Proxy-wrapped array passes
+ * `Array.isArray` but can throw or lie during iteration, so every element is read
+ * through its own data descriptor before the snapshot is trusted. An accessor, a
+ * non-array prototype, or a throw returns `undefined` so the caller can fail closed.
+ */
+export function snapshotPlainArray(
+  value: unknown,
+): ReadonlyArray<unknown> | undefined {
+  try {
+    if (
+      value === null ||
+      typeof value !== "object" ||
+      Array.isArray(value) === false
+    ) {
+      return undefined;
+    }
+    if (Object.getPrototypeOf(value) !== Array.prototype) return undefined;
+    const lengthDescriptor = Object.getOwnPropertyDescriptor(value, "length");
+    if (
+      lengthDescriptor === undefined ||
+      !("value" in lengthDescriptor) ||
+      typeof lengthDescriptor.value !== "number"
+    ) {
+      return undefined;
+    }
+    const length = lengthDescriptor.value;
+    const snapshot: unknown[] = [];
+    for (let index = 0; index < length; index += 1) {
+      const descriptor = Object.getOwnPropertyDescriptor(
+        value,
+        String(index),
+      );
+      if (
+        descriptor === undefined ||
+        !descriptor.enumerable ||
+        !("value" in descriptor)
+      ) {
+        return undefined;
+      }
+      snapshot.push(descriptor.value);
+    }
+    return Object.freeze(snapshot);
+  } catch {
+    return undefined;
+  }
+}
+
 export function isPlainRecord(
   value: unknown,
 ): value is Record<string, unknown> {

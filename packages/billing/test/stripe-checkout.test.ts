@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { digestSessionToken } from "@sceneaxi/auth";
 import {
   validateCheckoutSessionIntent,
   type CheckoutSessionIntent,
@@ -38,10 +39,78 @@ const catalog = (): CreditPackCatalog => {
   return loaded.value;
 };
 
+const admin = {
+  email: "captain@example.com",
+  source: "SCENEAXI_ADMIN_EMAIL",
+} as const;
+
+/** A valid usr_crew principal; the guard re-derives its `user` role. */
+const principal = () =>
+  ({
+    user: {
+      schemaVersion: 1,
+      kind: "sceneaxi.user",
+      userId: "usr_crew",
+      email: "crew@example.com",
+      emailVerified: true,
+      disabled: false,
+      createdAt: "2026-07-25T09:00:00Z",
+    },
+    role: {
+      schemaVersion: 1,
+      kind: "sceneaxi.role-assignment",
+      userId: "usr_crew",
+      role: "user",
+      source: "default-user",
+      assignedAt: "2026-07-25T09:30:00Z",
+    },
+    session: {
+      schemaVersion: 1,
+      kind: "sceneaxi.session",
+      sessionId: "ses_crew",
+      userId: "usr_crew",
+      surface: "web-shell",
+      issuedAt: "2026-07-25T09:00:00Z",
+      expiresAt: "2026-07-26T10:00:00Z",
+      tokenDigest: digestSessionToken("tok"),
+    },
+  }) as unknown;
+
+/** Sign and verify a body, returning the branded verified webhook. */
+const verified = (body: string) => {
+  const result = verifyStripeWebhookSignature({
+    payload: body,
+    header: signStripeWebhookPayload({
+      payload: body,
+      secret: SECRET,
+      timestamp: NOW_SECONDS,
+    }),
+    secret: SECRET,
+    now: NOW,
+  });
+  if (!result.ok) throw new Error(`verify fixture failed: ${result.message}`);
+  return result.value;
+};
+
+/** Settlement evidence matching an intent, retrieved through the adapter boundary. */
+const settlementFor = (
+  intent: CheckoutSessionIntent,
+  overrides: Record<string, unknown> = {},
+) =>
+  ({
+    paymentStatus: "paid",
+    amountTotal: intent.unitAmount,
+    currency: intent.currency,
+    quantity: 1,
+    stripePriceId: intent.stripePriceId,
+    ...overrides,
+  }) as never;
+
 const intentRequest = (overrides: Record<string, unknown> = {}) => ({
+  principal: principal(),
+  admin,
   catalog: catalog(),
   packId: "starter",
-  userId: "usr_crew",
   successUrl: "https://sceneaxi.example/checkout/success",
   cancelUrl: "https://sceneaxi.example/checkout/cancel",
   idempotencyKey: "checkout:usr_crew:starter",
@@ -197,8 +266,8 @@ describe("createCheckoutSessionIntent", () => {
 
   it("refuses a missing user, a missing key, and a bad clock", () => {
     for (const patch of [
-      { userId: "" },
-      { userId: 42 },
+      { principal: null },
+      { principal: { user: {} } },
       { idempotencyKey: "" },
       { now: Number.NaN },
       { now: Number.MAX_VALUE },
@@ -485,9 +554,9 @@ describe("parseCheckoutCompletedEvent", () => {
   it("normalizes a verified body into SceneAxi vocabulary", () => {
     const intent = checkoutIntent();
     const result = parseCheckoutCompletedEvent({
-      payload: eventBody({}, intent),
+      verified: verified(eventBody({}, intent)),
       intent,
-      catalog: catalog(),
+      settlement: settlementFor(intent),
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -498,7 +567,7 @@ describe("parseCheckoutCompletedEvent", () => {
     expect(result.value.itemId).toBe("starter");
   });
 
-  it("takes credits from the catalog, never from the event", () => {
+  it("takes credits from the persisted intent, never from the event", () => {
     const intent = checkoutIntent();
     const inflated = JSON.parse(eventBody({}, intent)) as {
       credits?: number;
@@ -513,9 +582,9 @@ describe("parseCheckoutCompletedEvent", () => {
     inflated.data.object.credits = 1_000_000;
     inflated.data.object.metadata["credits"] = "1000000";
     const result = parseCheckoutCompletedEvent({
-      payload: JSON.stringify(inflated),
+      verified: verified(JSON.stringify(inflated)),
       intent,
-      catalog: catalog(),
+      settlement: settlementFor(intent),
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -531,9 +600,9 @@ describe("parseCheckoutCompletedEvent", () => {
       liveModeAuthorized: true,
     });
     const result = parseCheckoutCompletedEvent({
-      payload: eventBody({ livemode: true }, intent),
+      verified: verified(eventBody({ livemode: true }, intent)),
       intent,
-      catalog: catalog(),
+      settlement: settlementFor(intent),
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -542,32 +611,18 @@ describe("parseCheckoutCompletedEvent", () => {
 
   it("refuses unpaid or mismatched settlements", () => {
     const intent = checkoutIntent();
-    const mutations = [
-      (session: Record<string, unknown>) => {
-        session["payment_status"] = "unpaid";
-      },
-      (session: Record<string, unknown>) => {
-        session["amount_total"] = intent.unitAmount - 1;
-      },
-      (session: Record<string, unknown>) => {
-        session["currency"] = "eur";
-      },
-      (session: Record<string, unknown>) => {
-        session["line_items"] = {
-          data: [{ quantity: 1, price: { id: "price_test_other" } }],
-        };
-      },
+    const settlements = [
+      settlementFor(intent, { paymentStatus: "unpaid" }),
+      settlementFor(intent, { amountTotal: intent.unitAmount - 1 }),
+      settlementFor(intent, { currency: "eur" }),
+      settlementFor(intent, { stripePriceId: "price_test_other" }),
+      settlementFor(intent, { quantity: 2 }),
     ];
-
-    for (const mutate of mutations) {
-      const body = JSON.parse(eventBody({}, intent)) as {
-        data: { object: Record<string, unknown> };
-      };
-      mutate(body.data.object);
+    for (const settlement of settlements) {
       const result = parseCheckoutCompletedEvent({
-        payload: JSON.stringify(body),
+        verified: verified(eventBody({}, intent)),
         intent,
-        catalog: catalog(),
+        settlement,
       });
       expect(result.ok).toBe(false);
       if (result.ok) return;
@@ -585,9 +640,9 @@ describe("parseCheckoutCompletedEvent", () => {
       ),
     );
     const result = parseCheckoutCompletedEvent({
-      payload: JSON.stringify(body),
+      verified: verified(JSON.stringify(body)),
       intent,
-      catalog: catalog(),
+      settlement: settlementFor(intent),
     });
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -597,9 +652,9 @@ describe("parseCheckoutCompletedEvent", () => {
   it("refuses any other event type", () => {
     const intent = checkoutIntent();
     const result = parseCheckoutCompletedEvent({
-      payload: eventBody({ type: "payment_intent.succeeded" }, intent),
+      verified: verified(eventBody({ type: "payment_intent.succeeded" }, intent)),
       intent,
-      catalog: catalog(),
+      settlement: settlementFor(intent),
     });
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -623,9 +678,9 @@ describe("parseCheckoutCompletedEvent", () => {
       }),
     ]) {
       const result = parseCheckoutCompletedEvent({
-        payload,
+        verified: verified(payload),
         intent,
-        catalog: catalog(),
+        settlement: settlementFor(intent),
       });
       expect(result.ok).toBe(false);
     }
@@ -643,9 +698,9 @@ describe("parseCheckoutCompletedEvent", () => {
         ),
       );
       const result = parseCheckoutCompletedEvent({
-        payload: JSON.stringify(body),
+        verified: verified(JSON.stringify(body)),
         intent,
-        catalog: catalog(),
+        settlement: settlementFor(intent),
       });
       expect(result.ok).toBe(false);
       if (result.ok) return;
@@ -653,22 +708,19 @@ describe("parseCheckoutCompletedEvent", () => {
     }
   });
 
-  it("refuses an unknown pack in metadata", () => {
-    const intent = {
-      ...checkoutIntent(),
-      itemId: "platinum",
-    } as CheckoutSessionIntent;
-    const body = JSON.parse(eventBody({}, intent)) as {
-      data: { object: { metadata: Record<string, unknown> } };
-    };
+  it("refuses a settlement that does not match the persisted intent", () => {
+    // The persisted intent is the immutable price snapshot; a settlement naming a
+    // different Stripe price than the intent is refused even if it is internally
+    // consistent, so a repriced catalog cannot redirect a paid session.
+    const intent = checkoutIntent();
     const result = parseCheckoutCompletedEvent({
-      payload: JSON.stringify(body),
+      verified: verified(eventBody({}, intent)),
       intent,
-      catalog: catalog(),
+      settlement: settlementFor(intent, { stripePriceId: "price_test_other" }),
     });
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.reason).toBe(BILLING_REFUSE_REASONS.packUnknown);
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.webhookPayloadInvalid);
   });
 });
 
@@ -677,39 +729,41 @@ describe("applyCheckoutCompletedGrant", () => {
     const intent = checkoutIntent(
       overrides["livemode"] === true
         ? { mode: "live", liveModeAuthorized: true }
-        : {},
+        : overrides["packId"] === undefined
+          ? {}
+          : { packId: overrides["packId"] },
     );
     const result = parseCheckoutCompletedEvent({
-      payload: eventBody(overrides, intent),
+      verified: verified(eventBody(overrides, intent)),
       intent,
-      catalog: catalog(),
+      settlement: settlementFor(intent),
     });
     if (!result.ok) throw new Error(`fixture parse failed: ${result.message}`);
     return result.value;
   };
 
   it("grants exactly the pack's credits once", () => {
-    const event = parsed();
+    const completion = parsed();
     const result = applyCheckoutCompletedGrant({
       state: createLedgerState(ACCOUNT),
-      event,
+      completion,
       now: NOW,
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(event.credits).toBeDefined();
-    expect(result.value.state.balance).toBe(event.credits);
+    expect(completion.credits).toBeDefined();
+    expect(result.value.state.balance).toBe(completion.credits);
     expect(result.value.replayed).toBe(false);
-    expect(result.value.entry.idempotencyKey).toBe(
+    expect(result.value.entry?.idempotencyKey).toBe(
       `${STRIPE_EVENT_IDEMPOTENCY_PREFIX}evt_test_01`,
     );
   });
 
   it("grants nothing on an identical redelivery", () => {
-    const event = parsed();
+    const completion = parsed();
     const first = applyCheckoutCompletedGrant({
       state: createLedgerState(ACCOUNT),
-      event,
+      completion,
       now: NOW,
     });
     expect(first.ok).toBe(true);
@@ -717,44 +771,45 @@ describe("applyCheckoutCompletedGrant", () => {
 
     const replay = applyCheckoutCompletedGrant({
       state: first.value.state,
-      event,
+      completion,
       now: NOW + 5_000,
     });
     expect(replay.ok).toBe(true);
     if (!replay.ok) return;
     expect(replay.value.replayed).toBe(true);
-    expect(replay.value.state.balance).toBe(event.credits);
+    expect(replay.value.state.balance).toBe(completion.credits);
     expect(replay.value.state.entries.length).toBe(
       first.value.state.entries.length,
     );
   });
 
   it("refuses a mutated replay of the same event id", () => {
-    const event = parsed();
     const first = applyCheckoutCompletedGrant({
       state: createLedgerState(ACCOUNT),
-      event,
+      completion: parsed(),
       now: NOW,
     });
     expect(first.ok).toBe(true);
     if (!first.ok) return;
 
+    // Same event id, different credit amount: a second pack re-parsed against the
+    // same signed body carries the same stripe-event id but different money.
     const mutated = applyCheckoutCompletedGrant({
       state: first.value.state,
-      event: { ...event, credits: (event.credits ?? 0) + 1_000 },
+      completion: parsed({ packId: "maker" }),
       now: NOW,
     });
     expect(mutated.ok).toBe(false);
     if (mutated.ok) return;
     expect(mutated.reason).toBe(BILLING_REFUSE_REASONS.idempotencyConflict);
-    expect(first.value.state.balance).toBe(event.credits);
+    expect(first.value.state.balance).toBe(parsed().credits);
   });
 
   it("refuses a live event without explicit go-live authorization", () => {
-    const event = parsed({ livemode: true });
+    const completion = parsed({ livemode: true });
     const refused = applyCheckoutCompletedGrant({
       state: createLedgerState(ACCOUNT),
-      event,
+      completion,
       now: NOW,
     });
     expect(refused.ok).toBe(false);
@@ -764,7 +819,7 @@ describe("applyCheckoutCompletedGrant", () => {
 
     const gated = applyCheckoutCompletedGrant({
       state: createLedgerState(ACCOUNT),
-      event,
+      completion,
       now: NOW,
       liveModeAuthorized: true,
     });
@@ -772,10 +827,10 @@ describe("applyCheckoutCompletedGrant", () => {
   });
 
   it("refuses an event naming another user's account", () => {
-    const event = parsed();
+    const completion = parsed();
     const result = applyCheckoutCompletedGrant({
       state: createLedgerState({ ...ACCOUNT, userId: "usr_someone" }),
-      event,
+      completion,
       now: NOW,
     });
     expect(result.ok).toBe(false);
@@ -787,14 +842,14 @@ describe("applyCheckoutCompletedGrant", () => {
     expect(
       applyCheckoutCompletedGrant({
         state: createLedgerState(ACCOUNT),
-        event: { eventId: "evt" } as never,
+        completion: { eventId: "evt" } as never,
         now: NOW,
       }).ok,
     ).toBe(false);
     expect(
       applyCheckoutCompletedGrant({
         state: { entries: [] } as never,
-        event: parsed(),
+        completion: parsed(),
         now: NOW,
       }).ok,
     ).toBe(false);

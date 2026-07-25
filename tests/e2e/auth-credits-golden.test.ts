@@ -149,20 +149,21 @@ describe("auth + credits golden path", () => {
     expect(admin.ok).toBe(true);
     if (!admin.ok) return;
     expect(admin.value.email).toBe(CAPTAIN_EMAIL);
+    const adminIdentity = admin.value;
 
     // ---- 2. the captain signs in as admin and passes an admin guard ---------
     const captain = await signIn(CAPTAIN_EMAIL);
     expect(captain.role.role).toBe("admin");
     expect(captain.role.source).toBe("admin-env");
     expect(validatePrincipal(captain).ok).toBe(true);
-    expect(requireRole(captain, "admin", { now: NOW, surface: "web-shell" }).ok).toBe(
+    expect(requireRole(captain, "admin", { now: NOW, surface: "web-shell", admin: adminIdentity }).ok).toBe(
       true,
     );
 
     // ---- 3. an ordinary user is denied that same guard ----------------------
     const crew = await signIn("crew@example.com");
     expect(crew.role.role).toBe("user");
-    const denied = requireRole(crew, "admin", { now: NOW });
+    const denied = requireRole(crew, "admin", { now: NOW, admin: adminIdentity });
     expect(denied.ok).toBe(false);
     if (denied.ok) return;
     expect(denied.reason).toBe(AUTH_REFUSE_REASONS.roleNotPermitted);
@@ -193,7 +194,7 @@ describe("auth + credits golden path", () => {
     if (!starter.ok) return;
     crewLedger = starter.value.state;
     expect(crewLedger.balance).toBe(STARTER_CREDIT_GRANT);
-    expect(starter.value.entry.idempotencyKey).toBe(
+    expect(starter.value.entry?.idempotencyKey).toBe(
       `${STARTER_IDEMPOTENCY_PREFIX}usr_crew`,
     );
 
@@ -213,6 +214,7 @@ describe("auth + credits golden path", () => {
       capability: "byo-model-keys",
       now: NOW,
       principal: crew,
+      admin: adminIdentity,
       state: crewLedger,
     });
     expect(byo.ok).toBe(true);
@@ -228,9 +230,10 @@ describe("auth + credits golden path", () => {
     if (!pack.ok) return;
 
     const intent = createCheckoutSessionIntent({
+      principal: crew,
+      admin: adminIdentity,
       catalog: creditPackCatalog(),
       packId: "starter",
-      userId: "usr_crew",
       successUrl: "https://sceneaxi.example/checkout/success",
       cancelUrl: "https://sceneaxi.example/checkout/cancel",
       idempotencyKey: "checkout:usr_crew:starter",
@@ -285,9 +288,15 @@ describe("auth + credits golden path", () => {
     if (!verified.ok) return;
 
     const event = parseCheckoutCompletedEvent({
-      payload: verified.value.payload,
+      verified: verified.value,
       intent: intent.value,
-      catalog: creditPackCatalog(),
+      settlement: {
+        paymentStatus: "paid",
+        amountTotal: intent.value.unitAmount,
+        currency: intent.value.currency,
+        quantity: 1,
+        stripePriceId: intent.value.stripePriceId,
+      },
     });
     expect(event.ok).toBe(true);
     if (!event.ok) return;
@@ -298,7 +307,7 @@ describe("auth + credits golden path", () => {
     // ---- 9. the grant lands exactly once -----------------------------------
     const granted = applyCheckoutCompletedGrant({
       state: crewLedger,
-      event: event.value,
+      completion: event.value,
       now: NOW,
     });
     expect(granted.ok).toBe(true);
@@ -308,7 +317,7 @@ describe("auth + credits golden path", () => {
 
     const grantReplay = applyCheckoutCompletedGrant({
       state: crewLedger,
-      event: event.value,
+      completion: event.value,
       now: NOW + 5_000,
     });
     expect(grantReplay.ok).toBe(true);
@@ -324,6 +333,7 @@ describe("auth + credits golden path", () => {
     // ---- 10. a metered debit ----------------------------------------------
     const metered = meterCredits({
       principal: crew,
+      admin: adminIdentity,
       state: crewLedger,
       amount: 30,
       reason: "hosted assistant turn",
@@ -340,6 +350,7 @@ describe("auth + credits golden path", () => {
     // ---- 11. an over-balance debit refuses and appends nothing -------------
     const overspend = meterCredits({
       principal: crew,
+      admin: adminIdentity,
       state: crewLedger,
       amount: crewLedger.balance + 1,
       reason: "hosted assistant turn",
@@ -360,6 +371,7 @@ describe("auth + credits golden path", () => {
     let adaLedger: LedgerState = createLedgerState(account("usr_creator_ada"));
     const sale = applyCreditsSale({
       principal: crew,
+      admin: adminIdentity,
       listing: lantern.value,
       buyerState: crewLedger,
       creatorState: adaLedger,
@@ -370,14 +382,14 @@ describe("auth + credits golden path", () => {
     expect(sale.ok).toBe(true);
     if (!sale.ok) return;
     const price = lantern.value.creditPrice ?? 0;
-    expect(sale.value.buyer.entry.delta).toBe(-price);
-    expect(sale.value.creator.entry.delta).toBe(Math.floor(price / 2));
+    expect(sale.value.buyer.entry?.delta).toBe(-price);
+    expect(sale.value.creator?.entry?.delta).toBe(Math.floor(price / 2));
     expect(
       sale.value.share.creatorCredits + sale.value.share.platformCredits,
     ).toBe(price);
     expect(validateCreatorShareRecord(sale.value.share).ok).toBe(true);
     crewLedger = sale.value.buyer.state;
-    adaLedger = sale.value.creator.state;
+    adaLedger = sale.value.creator?.state ?? adaLedger;
     expect(adaLedger.balance).toBe(Math.floor(price / 2));
 
     // ---- 13. a money sale records a balanced 50/50 split -------------------
@@ -392,8 +404,6 @@ describe("auth + credits golden path", () => {
       listing: harbour.value,
       buyerUserId: "usr_crew",
       saleId: "sale_golden_money_01",
-      grossMinor: moneyPrice.unitAmount,
-      currency: moneyPrice.currency,
       mode: "test",
       now: NOW,
     });
@@ -411,6 +421,7 @@ describe("auth + credits golden path", () => {
       capability: "hosted-ai-assistant",
       now: NOW,
       principal: captain,
+      admin: adminIdentity,
       state: captainLedger,
       creditAmount: 1_000_000,
     });
@@ -420,6 +431,7 @@ describe("auth + credits golden path", () => {
 
     const adminMeter = meterCredits({
       principal: captain,
+      admin: adminIdentity,
       state: captainLedger,
       amount: 1_000_000,
       reason: "hosted assistant turn",
@@ -494,6 +506,7 @@ describe("auth + credits golden path", () => {
             tokenDigest: "a".repeat(64),
           },
         },
+        admin: { email: CAPTAIN_EMAIL, source: ADMIN_EMAIL_ENV_VAR } as const,
         state: first.value.state,
         amount: 10,
         reason: "hosted assistant turn",
