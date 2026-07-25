@@ -67,18 +67,29 @@ describe("exit codes at every nesting level (anti gh-axi wart)", () => {
     }
   });
 
-  it("unknown sub-subcommand under a leaf verb → USAGE (2), never 0", () => {
+  it("unknown sub-subcommand under an argument-less leaf verb → USAGE (2), never 0", () => {
     // The gh-axi wart: issue <unknown> exited 0. We must not.
-    const r = runCli(["project", "new", "extra-depth"]);
+    const r = runCli(["protocol", "version", "extra-depth"]);
     expect(r.exitCode).toBe(ExitCode.USAGE);
     expect(r.exitCode).not.toBe(0);
     if (!r.envelope.ok) {
       expect(r.envelope.error.code).toBe("UNKNOWN_COMMAND");
       expect(r.envelope.error.path).toEqual([
-        "project",
-        "new",
+        "protocol",
+        "version",
         "extra-depth",
       ]);
+    }
+  });
+
+  it("stray positional under a flag-parsing leaf verb → USAGE (2), never 0", () => {
+    // Same anti-wart guarantee where the verb, not the dispatcher, owns args.
+    const r = runCli(["project", "new", "extra-depth"]);
+    expect(r.exitCode).toBe(ExitCode.USAGE);
+    expect(r.exitCode).not.toBe(0);
+    if (!r.envelope.ok) {
+      expect(r.envelope.error.code).toBe("AMBIGUOUS_INPUT");
+      expect(r.envelope.error.path).toEqual(["project", "new"]);
     }
   });
 
@@ -106,23 +117,36 @@ describe("exit codes at every nesting level (anti gh-axi wart)", () => {
     }
   });
 
-  it("registered skeleton verbs exit 0", () => {
+  it("verbs that need no input exit 0", () => {
     for (const path of [
-      ["project", "new"],
-      ["project", "dev"],
-      ["project", "test"],
-      ["project", "capture"],
-      ["project", "report"],
-      ["asset", "list"],
       ["profile", "list"],
-      ["catalog", "list"],
-      ["evidence", "list"],
       ["protocol", "version"],
       ["protocol", "inspect"],
     ]) {
       const r = runCli(path);
       expect(r.exitCode, path.join(" ")).toBe(ExitCode.OK);
       expect(r.envelope.ok, path.join(" ")).toBe(true);
+    }
+  });
+
+  it("verbs that need input refuse with USAGE when it is missing — never 0", () => {
+    for (const path of [
+      ["project", "new"],
+      ["project", "dev"],
+      ["project", "test"],
+      ["project", "capture"],
+      ["project", "report"],
+      ["scene", "compose"],
+      ["asset", "list"],
+      ["catalog", "list"],
+      ["evidence", "list"],
+    ]) {
+      const r = runCli(path);
+      expect(r.exitCode, path.join(" ")).toBe(ExitCode.USAGE);
+      expect(r.envelope.ok, path.join(" ")).toBe(false);
+      if (!r.envelope.ok) {
+        expect(r.envelope.error.code, path.join(" ")).toBe("VALIDATION");
+      }
     }
   });
 

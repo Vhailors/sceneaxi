@@ -5,7 +5,8 @@
   "description": "SceneAxi cli package (bootstrap stub) — thin agent-native protocol adapter (verbs + envelope) over authoring-core; no direct engine access",
   "type": "module",
   "exports": { ".": "./src/index.ts" },
-  "files": ["src"],
+  "bin": { "sceneaxi": "./bin/sceneaxi.mjs" },
+  "files": ["src", "bin"],
   "dependencies": {
     "@sceneaxi/schemas": "workspace:^",
     "@sceneaxi/authoring-core": "workspace:^"

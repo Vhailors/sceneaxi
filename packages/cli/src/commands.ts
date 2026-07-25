@@ -1,19 +1,42 @@
 /**
- * Umbrella command tree: project | asset | profile | catalog | evidence | protocol.
+ * Umbrella command tree: project | scene | asset | profile | catalog | evidence | protocol.
  *
- * Most verb bodies are skeleton stubs — real work lands in later tickets.
- * `project propose` / `project apply` are live (sceneaxi#9 / E1).
- * The tree itself is the protocol surface the shared dispatcher enforces at every depth.
+ * Every verb below has a real body. The tree itself is the protocol surface the
+ * shared dispatcher enforces at every depth, and every verb path must also be
+ * declared in SHIPPED_COMMAND_MAP or it refuses at dispatch.
  */
 
 import { EXIT_CODE_TABLE } from "./exit-codes.js";
 import type { CliOutcome, ResultPayload } from "./envelope.js";
+import {
+  projectCaptureHelp,
+  projectDevHelp,
+  projectNewHelp,
+  projectReportHelp,
+  projectTestHelp,
+  runProjectCapture,
+  runProjectDev,
+  runProjectNew,
+  runProjectReport,
+  runProjectTest,
+} from "./project-lifecycle.js";
 import {
   projectApplyHelp,
   projectProposeHelp,
   runProjectApply,
   runProjectPropose,
 } from "./project-verbs.js";
+import {
+  assetListHelp,
+  catalogListHelp,
+  evidenceListHelp,
+  profileListHelp,
+  runAssetList,
+  runCatalogList,
+  runEvidenceList,
+  runProfileList,
+} from "./registry-verbs.js";
+import { runSceneCompose, sceneComposeHelp } from "./scene-verbs.js";
 import { CLI_VERSION, PROTOCOL_SCHEMA_VERSION } from "./version.js";
 
 export interface VerbContext {
@@ -30,8 +53,14 @@ export interface VerbNode {
    * (for typed failures from propose/apply).
    */
   readonly run: (ctx: VerbContext) => ResultPayload | CliOutcome;
-  /** Optional custom help payload (otherwise skeleton help). */
+  /** Optional custom help payload (otherwise a description-only payload). */
   readonly helpPayload?: () => ResultPayload;
+  /**
+   * True when the verb parses its own flags and is responsible for refusing
+   * unknown ones. Argument-less verbs leave this unset and the dispatcher
+   * refuses every leftover token on their behalf — fail-closed either way.
+   */
+  readonly takesArgs?: true;
 }
 
 export interface GroupNode {
@@ -43,16 +72,23 @@ export interface GroupNode {
 
 export type CommandNode = GroupNode | VerbNode;
 
+/** An argument-less verb: the dispatcher refuses any leftover token for it. */
 function verb(
   name: string,
   description: string,
-  run: (ctx: VerbContext) => ResultPayload | CliOutcome = () =>
-    skeletonResult(name),
-  helpPayload?: () => ResultPayload,
+  run: (ctx: VerbContext) => ResultPayload | CliOutcome,
 ): VerbNode {
-  return helpPayload === undefined
-    ? { kind: "verb", name, description, run }
-    : { kind: "verb", name, description, run, helpPayload };
+  return { kind: "verb", name, description, run };
+}
+
+/** A verb that parses its own flags and owns its unknown-flag refusals. */
+function argVerb(
+  name: string,
+  description: string,
+  run: (ctx: VerbContext) => ResultPayload | CliOutcome,
+  helpPayload: () => ResultPayload,
+): VerbNode {
+  return { kind: "verb", name, description, run, helpPayload, takesArgs: true };
 }
 
 function group(
@@ -63,29 +99,45 @@ function group(
   return { kind: "group", name, description, children: Object.freeze(children) };
 }
 
-function skeletonResult(verbPath: string): ResultPayload {
-  return Object.freeze({
-    status: "skeleton",
-    verb: verbPath,
-    message:
-      "Command path is registered; verb body arrives in a later ticket. Protocol dispatch succeeded.",
-  });
-}
-
-/** E1 project verbs (authoring-contracts.md). propose/apply live; rest skeleton. */
+/** E1 project verbs (authoring-contracts.md). */
 const projectGroup = group("project", "E1 authoring surface (source-first)", {
-  new: verb("new", "Create a new project (skeleton)"),
-  dev: verb("dev", "Dev / hot-reload loop (skeleton)"),
-  test: verb("test", "Run project tests; emit evidence (skeleton)"),
-  capture: verb("capture", "Capture evidence artifacts (skeleton)"),
-  report: verb("report", "Report / summarize evidence (skeleton)"),
-  propose: verb(
+  new: argVerb(
+    "new",
+    "Create a new project document (refuses to overwrite without --force)",
+    (ctx) => runProjectNew(ctx.path, ctx.tokens),
+    projectNewHelp,
+  ),
+  dev: argVerb(
+    "dev",
+    "One-shot project status (no hot-reload loop; --watch refuses)",
+    (ctx) => runProjectDev(ctx.path, ctx.tokens),
+    projectDevHelp,
+  ),
+  test: argVerb(
+    "test",
+    "Validate a document and report deterministic checks",
+    (ctx) => runProjectTest(ctx.path, ctx.tokens),
+    projectTestHelp,
+  ),
+  capture: argVerb(
+    "capture",
+    "Write a deterministic evidence packet for a document",
+    (ctx) => runProjectCapture(ctx.path, ctx.tokens),
+    projectCaptureHelp,
+  ),
+  report: argVerb(
+    "report",
+    "Summarize a captured evidence packet",
+    (ctx) => runProjectReport(ctx.path, ctx.tokens),
+    projectReportHelp,
+  ),
+  propose: argVerb(
     "propose",
     "Propose a JSON Pointer edit; emit unified diff + proposal",
     (ctx) => runProjectPropose(ctx.path, ctx.tokens),
     projectProposeHelp,
   ),
-  apply: verb(
+  apply: argVerb(
     "apply",
     "Apply a proposal all-or-nothing (content-hash conflicts refuse)",
     (ctx) => runProjectApply(ctx.path, ctx.tokens),
@@ -93,20 +145,57 @@ const projectGroup = group("project", "E1 authoring surface (source-first)", {
   ),
 });
 
-const assetGroup = group("asset", "Asset package operations (skeleton)", {
-  list: verb("list", "List assets (skeleton)"),
+const sceneGroup = group(
+  "scene",
+  "Deterministic multi-object scene composition (offline; no provider, no seed)",
+  {
+    compose: argVerb(
+      "compose",
+      "Compose Sculpt Artifacts into one openable scene + projected document",
+      (ctx) => runSceneCompose(ctx.path, ctx.tokens),
+      sceneComposeHelp,
+    ),
+  },
+);
+
+const assetGroup = group("asset", "Asset package operations (read-only)", {
+  list: argVerb(
+    "list",
+    "List Asset Package refs declared by catalog items",
+    (ctx) => runAssetList(ctx.path, ctx.tokens),
+    assetListHelp,
+  ),
 });
 
-const profileGroup = group("profile", "Profile operations (skeleton)", {
-  list: verb("list", "List profiles (skeleton)"),
+const profileGroup = group("profile", "Profile operations (read-only)", {
+  list: argVerb(
+    "list",
+    "List the versioned Profile Conformance registry",
+    (ctx) => runProfileList(ctx.path, ctx.tokens),
+    profileListHelp,
+  ),
 });
 
-const catalogGroup = group("catalog", "Catalog operations (skeleton)", {
-  list: verb("list", "List catalog items (skeleton)"),
-});
+const catalogGroup = group(
+  "catalog",
+  "Dormant catalog operations (commerce inert; never activated here)",
+  {
+    list: argVerb(
+      "list",
+      "List catalog items with pipeline state and commerce activation",
+      (ctx) => runCatalogList(ctx.path, ctx.tokens),
+      catalogListHelp,
+    ),
+  },
+);
 
-const evidenceGroup = group("evidence", "Evidence packet operations (skeleton)", {
-  list: verb("list", "List evidence packets (skeleton)"),
+const evidenceGroup = group("evidence", "Evidence packet operations (read-only)", {
+  list: argVerb(
+    "list",
+    "List evidence packets written by `project capture`",
+    (ctx) => runEvidenceList(ctx.path, ctx.tokens),
+    evidenceListHelp,
+  ),
 });
 
 /**
@@ -164,6 +253,7 @@ const protocolGroup = group(
 export const ROOT_COMMANDS: Readonly<Record<string, CommandNode>> =
   Object.freeze({
     project: projectGroup,
+    scene: sceneGroup,
     asset: assetGroup,
     profile: profileGroup,
     catalog: catalogGroup,
@@ -232,6 +322,6 @@ export function verbHelpPayload(
   return Object.freeze({
     command: path.join(" "),
     description: node.description,
-    status: "skeleton",
+    flags: Object.freeze({}),
   });
 }

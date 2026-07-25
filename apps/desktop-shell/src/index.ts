@@ -2,7 +2,9 @@
  * @sceneaxi/desktop-shell — thin wrapper over the same protocol layer as
  * web-shell (authoring-core propose/apply). No forked behavior, no CLI spawn.
  *
- * sceneaxi#11: protocol client stub only. No packaging, no native shell UI.
+ * sceneaxi#11 seeded the protocol client; sceneaxi#116 makes the shell
+ * startable (`bin/sceneaxi-desktop.mjs`) with a real session and command layer.
+ * Still protocol-thin: no native packaging, no installer, no offline store.
  */
 import type { PackageSeam } from "@sceneaxi/schemas";
 
@@ -10,6 +12,27 @@ export const seam: PackageSeam = Object.freeze({
   name: "@sceneaxi/desktop-shell",
   releaseGroup: "apps",
 });
+
+export {
+  DESKTOP_COMMANDS,
+  DesktopExit,
+  main,
+  renderDesktopResult,
+  runDesktopCommand,
+  runDesktopShell,
+  type DesktopExitCode,
+  type DesktopResult,
+  type DesktopRunResult,
+} from "./app.js";
+
+export {
+  createDesktopSession,
+  type DesktopDocumentStatus,
+  type DesktopPhase,
+  type DesktopSession,
+  type DesktopSnapshot,
+  type DesktopUndoResult,
+} from "./session.js";
 
 export {
   renderDiffForInspector,

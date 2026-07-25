@@ -226,12 +226,19 @@ describe("ungated verbs and the default runtime", () => {
     });
     for (const path of [
       ["protocol", "version"],
-      ["project", "new"],
-      ["asset", "list"],
+      ["protocol", "inspect"],
+      ["profile", "list"],
     ]) {
       const r = runCli(path, { heldKeys: offline });
       expect(r.exitCode, path.join(" ")).toBe(ExitCode.OK);
     }
+
+    // An ungated verb that refuses on its own usage rules must also never
+    // reach the currency probe: the gate runs before the verb body.
+    expect(runCli(["project", "new"], { heldKeys: offline }).exitCode).toBe(
+      ExitCode.USAGE,
+    );
+
     expect(probe).not.toHaveBeenCalled();
   });
 

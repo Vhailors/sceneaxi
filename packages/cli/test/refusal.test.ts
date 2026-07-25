@@ -56,9 +56,9 @@ describe("fail-closed validation (unknown flags / ambiguous input)", () => {
   });
 
   it("does not best-effort accept partial unknown paths", () => {
-    // `project new` is valid; adding junk must not run the verb.
-    const good = runCli(["project", "new"]);
-    const bad = runCli(["project", "new", "junk"]);
+    // `profile list` is valid; adding junk must not run the verb.
+    const good = runCli(["profile", "list"]);
+    const bad = runCli(["profile", "list", "junk"]);
     expect(good.exitCode).toBe(ExitCode.OK);
     expect(bad.exitCode).toBe(ExitCode.USAGE);
     expect(bad.envelope.ok).toBe(false);

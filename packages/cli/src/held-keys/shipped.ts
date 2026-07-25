@@ -4,7 +4,9 @@
  * Every verb in the live command tree MUST be declared here — an undeclared
  * verb refuses at dispatch (tests enforce full coverage). `heldKeys: []` is an
  * explicit ungated declaration; the ungated verbs encode no product policy.
- * The only gated verb is the held-key
+ * That stays true as verbs gain real bodies: authoring, composition, and the
+ * read-only listings are all free, offline, and unmetered, so none of them
+ * acquires a gate by becoming runnable. The only gated verb is the held-key
  * protocol demo, gated by SYNTHETIC fixture keys: no real captain hold is
  * named, resolved, or invented here (the 24+10 real holds live in the
  * FirstMate backlog, exported per docs/held-key-enforcement.md).
@@ -31,6 +33,7 @@ export const SHIPPED_COMMAND_MAP: CliCommandMap = Object.freeze({
     { command: "project report", heldKeys: [] },
     { command: "project propose", heldKeys: [] },
     { command: "project apply", heldKeys: [] },
+    { command: "scene compose", heldKeys: [] },
     { command: "asset list", heldKeys: [] },
     { command: "profile list", heldKeys: [] },
     { command: "catalog list", heldKeys: [] },

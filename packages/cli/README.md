@@ -4,38 +4,98 @@ Agent-native umbrella CLI for SceneAxi: a shared dispatcher that enforces a
 deterministic exit-code map, a versioned protocol envelope, and strict `--json`
 equivalence at every command nesting level.
 
-Protocol introspection and E1 `project propose` / `project apply` are live;
-other verb bodies remain skeletons. Held-key currency enforcement (sceneaxi#7)
-is implemented in `src/held-keys/` and wired into the dispatcher for every verb;
+Every verb has a real body. Held-key currency enforcement (sceneaxi#7) is
+implemented in `src/held-keys/` and wired into the dispatcher for every verb;
 see [Held-key enforcement](#held-key-enforcement-sceneaxi7) below.
 
 **Boundaries:** imports only `@sceneaxi/schemas` and `@sceneaxi/authoring-core`.
-Direct engine imports are denied by `docs/dependency-matrix.json`.
+Direct engine imports are denied by `docs/dependency-matrix.json`. That is why
+there are no kernel-session, presentation, or plugin verbs here — those paths
+are proven end to end in `tests/e2e/`, which may import any package.
 
-## Invocation
+**Cost:** free and BYO-AI. No verb reads a credential, opens a socket, or spends
+anything. Hosted AI (which does cost credits) is a shell concern, not a CLI one.
+
+## How to run
+
+The workspace keeps source-backed package exports, so the binary runs the
+`tsc --build` output. Build once, then invoke it:
 
 ```bash
-# Programmatic (tests and embedders)
+pnpm install
+pnpm build
+
+node packages/cli/bin/sceneaxi.mjs --help
+```
+
+To get a `sceneaxi` command on `PATH` inside the workspace:
+
+```bash
+pnpm --filter @sceneaxi/cli exec -- sceneaxi --help
+```
+
+Re-run `pnpm build` after changing any package source. If the build output is
+missing, the binary says so and exits `1` rather than failing obscurely.
+
+```bash
+# Programmatic (tests and embedders) — same dispatcher, no subprocess
 import { runCli, main } from "@sceneaxi/cli";
 const { exitCode, envelope, stdout } = runCli(["protocol", "inspect", "--json"]);
 ```
 
+## Commands
+
 Command-first shape: `sceneaxi <group> <verb> [flags]`.
 
-| Group | Verbs (skeleton unless noted) |
+| Group | Verbs |
 |---|---|
-| `project` | `new`, `dev`, `test`, `capture`, `report` (skeleton); **`propose`**, **`apply`** (E1 live) |
+| `project` | `new`, `dev`, `test`, `capture`, `report`, `propose`, `apply` |
+| `scene` | `compose` (deterministic multi-object composition) |
 | `asset` | `list` |
 | `profile` | `list` |
 | `catalog` | `list` |
 | `evidence` | `list` |
 | `demo` | `gated` (held-key protocol demo; gated by synthetic keys, fails closed) |
-| `protocol` | `version`, `inspect` (real introspection) |
+| `protocol` | `version`, `inspect` |
+
+A full authoring round-trip:
 
 ```bash
-sceneaxi project propose --document scene.json --pointer /data/x --value 1 --out edit.json
+sceneaxi project new --document scene.json --data '{"entities":[]}'
+sceneaxi project propose --document scene.json --pointer /data/entities --value '[1,2]' --out edit.json
 sceneaxi project apply --proposal edit.json
+sceneaxi project test --document scene.json
+sceneaxi project capture --document scene.json --out run.evidence.json
+sceneaxi project report --evidence run.evidence.json
+sceneaxi evidence list --dir .
 ```
+
+Composing several Sculpt Artifacts into one openable scene (`--artifact` repeats):
+
+```bash
+sceneaxi scene compose \
+  --intake workshop-bay.scene.json \
+  --artifact crate.artifact.json \
+  --artifact drone.artifact.json \
+  --out-scene workshop-bay.composed.json \
+  --out-document workshop-bay.document.json
+```
+
+Composition is offline and fixed — no provider, no network, no seed — so
+identical inputs always yield identical bytes and the same `sceneDigest`.
+Placement is a projection: a source Sculpt Artifact is never rewritten.
+
+### Deliberate refusals
+
+These are behaviour, not gaps:
+
+- `project new` refuses to overwrite an existing document without `--force`.
+- `project dev --watch` refuses. This CLI ships no hot-reload loop, and
+  pretending otherwise would be a false runnable claim; `project dev` is
+  one-shot.
+- `catalog list` reports commerce activation and can never change it.
+- `scene compose` fails closed on the named refuse matrix
+  (`docs/scene-composition.md`) rather than composing a partial scene.
 
 `project apply` journals before canonical commit. A successful apply whose
 journal still needs finalization returns `journalRecoveryPending: true` plus a
@@ -103,6 +163,10 @@ CLI protocol tests live under `packages/cli/test/`:
 - `json-equivalence.test.ts` — strict `--json` same-data guarantee
 - `refusal.test.ts` — unknown flags / ambiguous input fail-closed
 - `project-propose-apply.test.ts` — E1 propose/apply protocol adapters
+- `project-lifecycle.test.ts` — `new`/`dev`/`test`/`capture`/`report`, determinism
+- `scene-compose.test.ts` — multi-object composition + named refusals
+- `registry-verbs.test.ts` — profile/catalog/asset/evidence listings, commerce inert
+- `bin-smoke.test.ts` — the `sceneaxi` binary actually starts (spawned, not in-process)
 - `held-keys.generator.test.ts` — snapshot generator + digest verification
 - `held-keys.command-map.test.ts` — shipped-map coverage + map validation
 - `held-keys.refusal-table.test.ts` — every refusal-table row, fixture-driven

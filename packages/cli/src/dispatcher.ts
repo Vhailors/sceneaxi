@@ -266,9 +266,9 @@ function walk(
       if (wantsHelp) {
         // Help ignores verb-local tokens.
         return success(verbHelpPayload(walked, next), [
-          next.helpPayload
+          next.takesArgs === true
             ? `Run \`sceneaxi ${walked.join(" ")}\` with the documented flags`
-            : `Run \`sceneaxi ${walked.join(" ")}\` to invoke this verb (skeleton)`,
+            : `Run \`sceneaxi ${walked.join(" ")}\` — this verb takes no flags`,
           "Run `sceneaxi protocol inspect` for protocol details",
         ]);
       }
@@ -342,8 +342,9 @@ function runVerb(
   tokens: readonly string[],
 ): CliOutcome {
   try {
-    // Skeleton verbs refuse any leftover tokens (flags or positionals).
-    if (node.helpPayload === undefined && tokens.length > 0) {
+    // Argument-less verbs refuse any leftover token (flag or positional);
+    // verbs that parse their own flags refuse unknown ones themselves.
+    if (node.takesArgs !== true && tokens.length > 0) {
       const first = tokens[0];
       if (first !== undefined && first.startsWith("-")) {
         return failure("UNKNOWN_FLAG", `Unknown flag: ${first}`, {
