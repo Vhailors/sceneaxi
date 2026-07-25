@@ -1,8 +1,15 @@
 /**
  * Minimal deterministic command/snapshot session (ADR 0001 Design A).
  * Only `advance` mutates authoritative state. No presentation/backend types.
+ * No Node builtins either — the digest is portable so this session opens in a
+ * browser (see `./portable-digest.ts` and docs/kernel-browser-open.md).
  */
-import { createHash } from "node:crypto";
+import { KernelSessionError } from "./errors.js";
+import {
+  prefixedDigest,
+  resolveKernelDigest,
+  type KernelDigest,
+} from "./portable-digest.js";
 import {
   KERNEL_SESSION_SCHEMA_VERSION,
   type FrameClock,
@@ -24,9 +31,14 @@ const VERSION_RE = /^[0-9]+\.[0-9]+\.[0-9]+$/;
 const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
 const ID_RE = /^[a-z0-9][a-z0-9-]*$/;
 
-/** Host services injected at open/replay — clock only for command timestamps. */
+/**
+ * Host services injected at open/replay: a clock for command timestamps and an
+ * optional synchronous digest. Omitting `digest` uses the portable pure-JS
+ * sha256, so no host has to supply a Node builtin.
+ */
 export interface KernelHost {
   readonly nowMs: () => number;
+  readonly digest?: KernelDigest;
 }
 
 export interface KernelSession {
@@ -36,12 +48,7 @@ export interface KernelSession {
   save(): KernelSessionSaveArtifact;
 }
 
-export class KernelSessionError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "KernelSessionError";
-  }
-}
+export { KernelSessionError } from "./errors.js";
 
 interface MutableEntity {
   id: string;
@@ -261,6 +268,7 @@ function sortedEntities(entities: Map<string, MutableEntity>): SnapshotEntity[] 
 
 /** Canonical digest: sha256 over JSON of {tick, seed, entities sorted by id}. */
 function computeDigest(
+  digest: KernelDigest,
   tick: number,
   seed: number,
   entities: ReadonlyArray<SnapshotEntity>,
@@ -270,14 +278,13 @@ function computeDigest(
     seed,
     entities: entities.map((e) => ({ id: e.id, x: e.x, y: e.y })),
   });
-  return (
-    "sha256:" + createHash("sha256").update(payload, "utf8").digest("hex")
-  );
+  return prefixedDigest(digest, payload);
 }
 
 class SessionImpl implements KernelSession {
   private readonly manifest: ProductManifest;
   private readonly host: KernelHost;
+  private readonly digest: KernelDigest;
   private entities: Map<string, MutableEntity>;
   private readonly pending: PendingDispatch[] = [];
   private readonly events: KernelSessionEvent[] = [];
@@ -290,6 +297,7 @@ class SessionImpl implements KernelSession {
   ) {
     this.manifest = manifest;
     this.host = host;
+    this.digest = resolveKernelDigest(host.digest);
     this.entities = seedEntities(manifest);
     this.events.push(...initialEvents);
   }
@@ -386,7 +394,12 @@ class SessionImpl implements KernelSession {
 
   observe(): KernelSnapshot {
     const entities = Object.freeze(sortedEntities(this.entities));
-    const digest = computeDigest(this.tick, this.manifest.seed, entities);
+    const digest = computeDigest(
+      this.digest,
+      this.tick,
+      this.manifest.seed,
+      entities,
+    );
     return Object.freeze({
       tick: this.tick,
       seed: this.manifest.seed,
