@@ -50,3 +50,27 @@ export {
   type MeterCreditsRequest,
   type MeterOutcome,
 } from "./metering.js";
+
+export {
+  loadCreditPackCatalog,
+  lookupCreditPack,
+} from "./credit-packs.js";
+
+export {
+  assertModeAuthorized,
+  createCheckoutSessionIntent,
+  type CreateCheckoutSessionIntentRequest,
+} from "./checkout.js";
+
+export {
+  CHECKOUT_METADATA_KEYS,
+  STRIPE_EVENT_IDEMPOTENCY_PREFIX,
+  STRIPE_SIGNATURE_TOLERANCE_SECONDS,
+  applyCheckoutCompletedGrant,
+  parseCheckoutCompletedEvent,
+  signStripeWebhookPayload,
+  verifyStripeWebhookSignature,
+  type ApplyCheckoutCompletedGrantRequest,
+  type VerifiedWebhook,
+  type VerifyStripeWebhookSignatureRequest,
+} from "./stripe-webhook.js";

@@ -28,6 +28,26 @@ export const BILLING_REFUSE_REASONS = Object.freeze({
   accountNotOwned: "CREDIT_ACCOUNT_NOT_OWNED",
   amountInvalid: "CREDIT_AMOUNT_INVALID",
   storeFailed: "CREDIT_STORE_FAILED",
+
+  // --- credit packs and checkout ---
+  catalogInvalid: "BILLING_CATALOG_INVALID",
+  packUnknown: "STRIPE_CREDIT_PACK_UNKNOWN",
+  liveModeNotAuthorized: "STRIPE_LIVE_MODE_NOT_AUTHORIZED",
+  checkoutIntentInvalid: "STRIPE_CHECKOUT_INTENT_INVALID",
+  redirectUrlInsecure: "STRIPE_REDIRECT_URL_NOT_HTTPS",
+
+  // --- webhook signature verification ---
+  webhookSecretMissing: "STRIPE_WEBHOOK_SECRET_MISSING",
+  signatureHeaderMissing: "STRIPE_SIGNATURE_HEADER_MISSING",
+  signatureHeaderMalformed: "STRIPE_SIGNATURE_HEADER_MALFORMED",
+  signatureSchemeMissing: "STRIPE_SIGNATURE_SCHEME_MISSING",
+  signatureTimestampStale: "STRIPE_SIGNATURE_TIMESTAMP_STALE",
+  signatureTimestampFuture: "STRIPE_SIGNATURE_TIMESTAMP_IN_FUTURE",
+  signatureMismatch: "STRIPE_SIGNATURE_MISMATCH",
+
+  // --- webhook payload ---
+  webhookPayloadInvalid: "STRIPE_WEBHOOK_PAYLOAD_INVALID",
+  webhookEventTypeUnsupported: "STRIPE_WEBHOOK_EVENT_TYPE_UNSUPPORTED",
 } as const);
 
 export type BillingRefuseReason =
