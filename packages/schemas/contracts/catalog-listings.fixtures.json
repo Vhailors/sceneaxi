@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "mode": "test",
+  "listings": [
+    {
+      "schemaVersion": 1,
+      "kind": "sceneaxi.catalog-listing",
+      "listingId": "lantern-prop",
+      "catalog": "game",
+      "sellerUserId": "usr_creator_ada",
+      "title": "Hand-carved lantern prop",
+      "priceMode": "credits",
+      "creditPrice": 40,
+      "publishedAt": "2026-07-20T12:00:00Z"
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "sceneaxi.catalog-listing",
+      "listingId": "harbour-diorama",
+      "catalog": "web",
+      "sellerUserId": "usr_creator_ben",
+      "title": "Harbour diorama scene",
+      "priceMode": "money",
+      "moneyPrice": {
+        "unitAmount": 1200,
+        "currency": "usd",
+        "stripePriceId": "price_test_harbour_diorama"
+      },
+      "publishedAt": "2026-07-21T12:00:00Z"
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "sceneaxi.catalog-listing",
+      "listingId": "market-stall-kit",
+      "catalog": "game",
+      "sellerUserId": "usr_creator_ada",
+      "title": "Modular market stall kit",
+      "priceMode": "credits-and-money",
+      "creditPrice": 75,
+      "moneyPrice": {
+        "unitAmount": 2500,
+        "currency": "usd",
+        "stripePriceId": "price_test_market_stall_kit"
+      },
+      "publishedAt": "2026-07-22T12:00:00Z"
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "sceneaxi.catalog-listing",
+      "listingId": "odd-price-charm",
+      "catalog": "game",
+      "sellerUserId": "usr_creator_ben",
+      "title": "Odd-price charm (covers remainder rounding)",
+      "priceMode": "credits-and-money",
+      "creditPrice": 7,
+      "moneyPrice": {
+        "unitAmount": 333,
+        "currency": "usd",
+        "stripePriceId": "price_test_odd_price_charm"
+      },
+      "publishedAt": "2026-07-23T12:00:00Z"
+    }
+  ]
+}

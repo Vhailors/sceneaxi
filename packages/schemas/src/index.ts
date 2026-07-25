@@ -113,6 +113,7 @@ export {
   BILLING_MODES,
   BILLING_REFUSE_CODES,
   BILLING_SCHEMA_VERSION,
+  CHECKOUT_PURPOSES,
   CHECKOUT_COMPLETED_EVENT_KIND,
   CHECKOUT_COMPLETED_EVENT_TYPE,
   CHECKOUT_SESSION_INTENT_KIND,
@@ -120,6 +121,7 @@ export {
   DEFAULT_BILLING_MODE,
   STRIPE_CUSTOMER_LINK_KIND,
   isBillingMode,
+  isCheckoutPurpose,
   isHttpsUrl,
   validateCheckoutCompletedEvent,
   validateCheckoutSessionIntent,
@@ -134,6 +136,7 @@ export type {
   BillingValidationRefuse,
   BillingValidationResult,
   CheckoutCompletedEvent,
+  CheckoutPurpose,
   CheckoutSessionIntent,
   CreditPack,
   CreditPackCatalog,
@@ -166,6 +169,32 @@ export type {
   EntitlementValidationRefuse,
   EntitlementValidationResult,
 } from "./entitlements.js";
+
+export {
+  CATALOG_LISTINGS_FIXTURES_PATH,
+  CATALOG_LISTING_KIND,
+  CATALOG_LISTING_REFUSE_CODES,
+  CATALOG_LISTING_SCHEMA_VERSION,
+  LISTING_CATALOGS,
+  LISTING_PRICE_MODES,
+  isListingCatalog,
+  isListingPriceMode,
+  priceModeIncludesCredits,
+  priceModeIncludesMoney,
+  validateCatalogListing,
+  validateCatalogListingSet,
+} from "./catalog-listing.js";
+export type {
+  CatalogListing,
+  CatalogListingRefuseCode,
+  CatalogListingSet,
+  CatalogListingValidationOk,
+  CatalogListingValidationRefuse,
+  CatalogListingValidationResult,
+  ListingCatalog,
+  ListingMoneyPrice,
+  ListingPriceMode,
+} from "./catalog-listing.js";
 
 export { parseUnambiguousJson } from "./unambiguous-json.js";
 export type { UnambiguousJsonParseResult } from "./unambiguous-json.js";
@@ -351,6 +380,8 @@ export const contracts = Object.freeze({
   creditPacks: "contracts/credit-packs.schema.json",
   /** Free-vs-paid capability matrix (sceneaxi#99); data is ENTITLEMENT_MATRIX_FIXTURES_PATH. */
   entitlementMatrix: "contracts/entitlement-matrix.schema.json",
+  /** Catalog dual-price listings (sceneaxi#100); data is CATALOG_LISTINGS_FIXTURES_PATH. */
+  catalogListings: "contracts/catalog-listings.schema.json",
   /** Plugin Manifest descriptor (sceneaxi#20 / ADR 0005); host runtime is @sceneaxi/plugin-host. */
   pluginManifest: "contracts/plugin-manifest.schema.json",
   /** Plugin Capability ID registry schema (sceneaxi#21 / ADR 0005); seed path is PLUGIN_CAPABILITY_REGISTRY_SEED_PATH. */

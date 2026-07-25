@@ -56,6 +56,13 @@ export const BILLING_REFUSE_REASONS = Object.freeze({
   creditAmountRequired: "ENTITLEMENT_CREDIT_AMOUNT_REQUIRED",
   entitlementDecisionInvalid: "ENTITLEMENT_DECISION_INVALID",
   kidsCommerceDenied: "KIDS_COMMERCE_DENIED",
+
+  // --- catalog listings ---
+  listingCatalogInvalid: "LISTING_CATALOG_INVALID",
+  listingUnknown: "LISTING_UNKNOWN",
+  listingPriceModeMismatch: "LISTING_PRICE_MODE_MISMATCH",
+  listingCurrencyNotListed: "LISTING_CURRENCY_NOT_LISTED",
+  listingSelfPurchaseDenied: "LISTING_SELF_PURCHASE_DENIED",
 } as const);
 
 export type BillingRefuseReason =

@@ -60,7 +60,8 @@ const eventBody = (overrides: Record<string, unknown> = {}) =>
         id: "cs_test_01",
         metadata: {
           [CHECKOUT_METADATA_KEYS.userId]: "usr_crew",
-          [CHECKOUT_METADATA_KEYS.packId]: "starter",
+          [CHECKOUT_METADATA_KEYS.purpose]: "credit-pack",
+          [CHECKOUT_METADATA_KEYS.itemId]: "starter",
           [CHECKOUT_METADATA_KEYS.intentId]: "int_checkout-usr_crew-starter",
         },
       },
@@ -105,7 +106,8 @@ describe("createCheckoutSessionIntent", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.value.mode).toBe("test");
-    expect(result.value.packId).toBe("starter");
+    expect(result.value.purpose).toBe("credit-pack");
+    expect(result.value.itemId).toBe("starter");
     expect(result.value.credits).toBe(
       lookupCreditPack(catalog(), "starter").ok
         ? (lookupCreditPack(catalog(), "starter") as { value: { credits: number } })
@@ -436,7 +438,8 @@ describe("parseCheckoutCompletedEvent", () => {
     expect(result.value.eventId).toBe("evt_test_01");
     expect(result.value.mode).toBe("test");
     expect(result.value.userId).toBe("usr_crew");
-    expect(result.value.packId).toBe("starter");
+    expect(result.value.purpose).toBe("credit-pack");
+    expect(result.value.itemId).toBe("starter");
   });
 
   it("takes credits from the catalog, never from the event", () => {
@@ -452,7 +455,8 @@ describe("parseCheckoutCompletedEvent", () => {
           credits: 1_000_000,
           metadata: {
             [CHECKOUT_METADATA_KEYS.userId]: "usr_crew",
-            [CHECKOUT_METADATA_KEYS.packId]: "starter",
+            [CHECKOUT_METADATA_KEYS.purpose]: "credit-pack",
+            [CHECKOUT_METADATA_KEYS.itemId]: "starter",
             [CHECKOUT_METADATA_KEYS.intentId]: "int_02",
             credits: "1000000",
           },
@@ -553,7 +557,7 @@ describe("parseCheckoutCompletedEvent", () => {
     const body = JSON.parse(eventBody()) as {
       data: { object: { metadata: Record<string, unknown> } };
     };
-    body.data.object.metadata[CHECKOUT_METADATA_KEYS.packId] = "platinum";
+    body.data.object.metadata[CHECKOUT_METADATA_KEYS.itemId] = "platinum";
     const result = parseCheckoutCompletedEvent({
       payload: JSON.stringify(body),
       catalog: catalog(),
@@ -583,6 +587,7 @@ describe("applyCheckoutCompletedGrant", () => {
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
+    expect(event.credits).toBeDefined();
     expect(result.value.state.balance).toBe(event.credits);
     expect(result.value.replayed).toBe(false);
     expect(result.value.entry.idempotencyKey).toBe(
@@ -626,7 +631,7 @@ describe("applyCheckoutCompletedGrant", () => {
 
     const mutated = applyCheckoutCompletedGrant({
       state: first.value.state,
-      event: { ...event, credits: event.credits + 1_000 },
+      event: { ...event, credits: (event.credits ?? 0) + 1_000 },
       now: NOW,
     });
     expect(mutated.ok).toBe(false);

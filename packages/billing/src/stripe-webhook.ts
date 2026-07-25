@@ -16,12 +16,14 @@
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 import {
+  isCheckoutPurpose,
   validateCheckoutCompletedEvent,
   type BillingMode,
   type CheckoutCompletedEvent,
   type CreditPackCatalog,
 } from "@sceneaxi/schemas";
 import { assertModeAuthorized } from "./checkout.js";
+import { lookupCatalogListing } from "./catalog-listings.js";
 import { lookupCreditPack } from "./credit-packs.js";
 import {
   appendCreditEntry,
@@ -198,7 +200,8 @@ export function verifyStripeWebhookSignature(
 /** Metadata keys SceneAxi sets on the Stripe Checkout Session. */
 export const CHECKOUT_METADATA_KEYS = Object.freeze({
   userId: "sceneaxiUserId",
-  packId: "sceneaxiPackId",
+  purpose: "sceneaxiPurpose",
+  itemId: "sceneaxiItemId",
   intentId: "sceneaxiIntentId",
 } as const);
 
@@ -217,6 +220,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export function parseCheckoutCompletedEvent(input: {
   readonly payload: string;
   readonly catalog: CreditPackCatalog | unknown;
+  /** Required to resolve a catalog-listing completion's price. */
+  readonly listings?: unknown;
 }): BillingOutcome<CheckoutCompletedEvent> {
   let raw: unknown;
   try {
@@ -275,25 +280,23 @@ export function parseCheckoutCompletedEvent(input: {
   }
 
   const userId = metadata[CHECKOUT_METADATA_KEYS.userId];
-  const packId = metadata[CHECKOUT_METADATA_KEYS.packId];
+  const purpose = metadata[CHECKOUT_METADATA_KEYS.purpose];
+  const itemId = metadata[CHECKOUT_METADATA_KEYS.itemId];
   const intentId = metadata[CHECKOUT_METADATA_KEYS.intentId];
   if (
     typeof userId !== "string" ||
-    typeof packId !== "string" ||
-    typeof intentId !== "string"
+    typeof itemId !== "string" ||
+    typeof intentId !== "string" ||
+    !isCheckoutPurpose(purpose)
   ) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.webhookPayloadInvalid,
-      `The checkout session metadata must carry ${CHECKOUT_METADATA_KEYS.userId}, ${CHECKOUT_METADATA_KEYS.packId}, and ${CHECKOUT_METADATA_KEYS.intentId}.`,
+      `The checkout session metadata must carry ${CHECKOUT_METADATA_KEYS.userId}, a valid ${CHECKOUT_METADATA_KEYS.purpose}, ${CHECKOUT_METADATA_KEYS.itemId}, and ${CHECKOUT_METADATA_KEYS.intentId}.`,
     );
   }
 
-  // Credits are the catalog's word, not the event's.
-  const pack = lookupCreditPack(input.catalog, packId);
-  if (!pack.ok) return pack;
-
   const mode: BillingMode = livemode ? "live" : "test";
-  const candidate = {
+  const base = {
     schemaVersion: 1 as const,
     kind: "sceneaxi.checkout-completed-event" as const,
     eventId,
@@ -301,10 +304,49 @@ export function parseCheckoutCompletedEvent(input: {
     mode,
     intentId,
     userId,
-    packId: pack.value.packId,
-    credits: pack.value.credits,
+    purpose,
+    itemId,
     occurredAt: new Date(created * 1000).toISOString(),
   };
+
+  // For a credit pack, credits and the price are the CATALOG's word, never the
+  // event's: an attacker who could influence webhook metadata must not be able
+  // to name their own credit amount. A listing sale grants no credits, so the
+  // amount comes from the listing set instead.
+  let candidate: Record<string, unknown>;
+  if (purpose === "credit-pack") {
+    const pack = lookupCreditPack(input.catalog, itemId);
+    if (!pack.ok) return pack;
+    candidate = {
+      ...base,
+      credits: pack.value.credits,
+      unitAmount: pack.value.unitAmount,
+      currency: pack.value.currency,
+    };
+  } else {
+    const listing = input.listings === undefined
+      ? undefined
+      : lookupCatalogListing(input.listings, itemId);
+    if (listing === undefined) {
+      return billingRefuse(
+        BILLING_REFUSE_REASONS.listingCatalogInvalid,
+        "A catalog-listing completion event needs the listing set to resolve its price.",
+      );
+    }
+    if (!listing.ok) return listing;
+    const moneyPrice = listing.value.moneyPrice;
+    if (moneyPrice === undefined) {
+      return billingRefuse(
+        BILLING_REFUSE_REASONS.listingCurrencyNotListed,
+        `Listing "${itemId}" is not priced in money, so it cannot have been bought with money.`,
+      );
+    }
+    candidate = {
+      ...base,
+      unitAmount: moneyPrice.unitAmount,
+      currency: moneyPrice.currency,
+    };
+  }
 
   const event = validateCheckoutCompletedEvent(candidate);
   if (!event.ok) {
@@ -365,12 +407,29 @@ export function applyCheckoutCompletedGrant(
     );
   }
 
+  // Only a credit-pack purchase grants credits. A catalog-listing purchase
+  // transfers an asset and splits money; routing it here would mint credits
+  // nobody bought, so it refuses rather than being silently ignored.
+  if (validated.value.purpose !== "credit-pack") {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.webhookEventTypeUnsupported,
+      `A ${validated.value.purpose} completion grants no credits; use the revenue-share path instead.`,
+    );
+  }
+  const credits = validated.value.credits;
+  if (credits === undefined) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.webhookPayloadInvalid,
+      "A credit-pack completion event carries no credit amount.",
+    );
+  }
+
   const idempotencyKey = `${STRIPE_EVENT_IDEMPOTENCY_PREFIX}${validated.value.eventId}`;
   return appendCreditEntry(state, {
     entryId: deriveEntryId(idempotencyKey),
     movement: "grant",
-    delta: validated.value.credits,
-    reason: `credit pack ${validated.value.packId} purchased (${validated.value.mode})`,
+    delta: credits,
+    reason: `credit pack ${validated.value.itemId} purchased (${validated.value.mode})`,
     idempotencyKey,
     now,
   });

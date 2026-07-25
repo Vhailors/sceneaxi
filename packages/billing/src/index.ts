@@ -68,8 +68,23 @@ export {
 export {
   assertModeAuthorized,
   createCheckoutSessionIntent,
+  createMoneyCheckoutIntent,
+  deriveIntentId,
   type CreateCheckoutSessionIntentRequest,
+  type CreateMoneyCheckoutIntentRequest,
 } from "./checkout.js";
+
+export {
+  LISTING_SALE_IDEMPOTENCY_PREFIX,
+  assertCurrencyListed,
+  createListingCheckoutIntent,
+  loadCatalogListings,
+  lookupCatalogListing,
+  purchaseListingWithCredits,
+  type CreateListingCheckoutIntentRequest,
+  type ListingPurchaseOutcome,
+  type PurchaseListingWithCreditsRequest,
+} from "./catalog-listings.js";
 
 export {
   CHECKOUT_METADATA_KEYS,

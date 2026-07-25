@@ -9,6 +9,7 @@
  * 3. Plugin-manifest inert example fixture + docs/plugins.md lockstep (sceneaxi#24)
  * 4. Credit pack catalog fixture + docs/auth-credits.md lockstep (sceneaxi#91)
  * 5. Free-vs-paid entitlement matrix + docs/auth-credits.md lockstep (sceneaxi#99)
+ * 6. Catalog dual-price listings + docs/auth-credits.md lockstep (sceneaxi#100)
  *
  * Fail-closed: missing files, schema violations, duplicate ids, seed drift, or
  * a doc whose fixture table drifts from the canonical JSON all exit 1.
@@ -891,11 +892,158 @@ if (entitlementSchemaIsObject && entitlementFixturesIsObject) {
   }
 }
 
+// --- catalog listings + docs/auth-credits.md lockstep (sceneaxi#100) ---
+const LISTINGS_DOC_START = "<!-- catalog-listings:list -->";
+const LISTINGS_DOC_END = "<!-- /catalog-listings:list -->";
+
+const listingsSchemaPath = join(
+  root,
+  "packages",
+  "schemas",
+  "contracts",
+  "catalog-listings.schema.json",
+);
+const listingsFixturesPath = join(
+  root,
+  "packages",
+  "schemas",
+  "contracts",
+  "catalog-listings.fixtures.json",
+);
+
+const listingsSchema = load(listingsSchemaPath, true);
+const listingsFixtures = load(listingsFixturesPath, true);
+
+const listingsSchemaIsObject =
+  listingsSchema !== loadFailed && isPlainObject(listingsSchema);
+const listingsFixturesIsObject =
+  listingsFixtures !== loadFailed && isPlainObject(listingsFixtures);
+
+if (listingsSchema !== loadFailed && !listingsSchemaIsObject) {
+  fail(`${relative(root, listingsSchemaPath)}: expected a plain JSON object`);
+}
+if (listingsFixtures !== loadFailed && !listingsFixturesIsObject) {
+  fail(`${relative(root, listingsFixturesPath)}: expected a plain JSON object`);
+}
+
+let listingCount = 0;
+const listingsSchemaUsesSupportedSubset =
+  listingsSchemaIsObject &&
+  validateSchemaDefinition(listingsSchema, "catalog-listings.schema");
+
+if (listingsSchemaIsObject) {
+  if (
+    typeof listingsSchema.$id !== "string" ||
+    !listingsSchema.$id.includes("catalog-listings")
+  ) {
+    fail(
+      `${relative(root, listingsSchemaPath)}: $id does not identify the catalog-listings contract`,
+    );
+  }
+}
+
+if (listingsSchemaIsObject && listingsFixturesIsObject) {
+  if (listingsSchemaUsesSupportedSubset) {
+    validate(listingsFixtures, listingsSchema, "catalog-listings.fixtures");
+  }
+
+  const listings = Array.isArray(listingsFixtures.listings)
+    ? listingsFixtures.listings
+    : [];
+  listingCount = listings.length;
+
+  const ids = listings
+    .map((entry) => (isPlainObject(entry) ? entry.listingId : undefined))
+    .filter((id) => typeof id === "string");
+  const duplicateIds = ids.filter((id, i) => ids.indexOf(id) !== i);
+  if (duplicateIds.length > 0) {
+    fail(
+      `catalog-listings.fixtures: duplicate listingId(s): ${[...new Set(duplicateIds)].join(", ")}`,
+    );
+  }
+
+  // The cross-field price-mode rule, checked here too: the JSON Schema subset
+  // cannot express "required exactly when", and a dormant price is how a
+  // credits-only listing quietly acquires a money price.
+  for (const listing of listings) {
+    if (!isPlainObject(listing)) continue;
+    const mode = listing.priceMode;
+    const wantsCredits = mode === "credits" || mode === "credits-and-money";
+    const wantsMoney = mode === "money" || mode === "credits-and-money";
+    const hasCredits = Object.hasOwn(listing, "creditPrice");
+    const hasMoney = Object.hasOwn(listing, "moneyPrice");
+    if (wantsCredits !== hasCredits) {
+      fail(
+        `catalog-listings.fixtures: listing "${listing.listingId}" priceMode ${JSON.stringify(mode)} ${wantsCredits ? "requires" : "forbids"} creditPrice`,
+      );
+    }
+    if (wantsMoney !== hasMoney) {
+      fail(
+        `catalog-listings.fixtures: listing "${listing.listingId}" priceMode ${JSON.stringify(mode)} ${wantsMoney ? "requires" : "forbids"} moneyPrice`,
+      );
+    }
+  }
+
+  // Every price mode must be exercised, so a regression cannot pass by dropping
+  // the shape it breaks.
+  for (const mode of ["credits", "money", "credits-and-money"]) {
+    if (
+      !listings.some(
+        (listing) => isPlainObject(listing) && listing.priceMode === mode,
+      )
+    ) {
+      fail(
+        `catalog-listings.fixtures: no listing exercises priceMode "${mode}"; all three modes must stay covered`,
+      );
+    }
+  }
+
+  if (authCreditsDocHasContent) {
+    const starts = authCreditsDoc.split(LISTINGS_DOC_START).length - 1;
+    const ends = authCreditsDoc.split(LISTINGS_DOC_END).length - 1;
+    const matches = [
+      ...authCreditsDoc.matchAll(
+        /<!-- catalog-listings:list -->([\s\S]*?)<!-- \/catalog-listings:list -->/g,
+      ),
+    ];
+    if (starts !== 1 || ends !== 1 || matches.length !== 1) {
+      fail(
+        `docs/auth-credits.md: expected exactly one ${LISTINGS_DOC_START} ... ${LISTINGS_DOC_END} block, found ${starts} start and ${ends} end marker(s)`,
+      );
+    } else {
+      const actual = matches[0][1].trim().replaceAll("\r\n", "\n");
+      const expected = [
+        "| listing | catalog | price mode | credits | money |",
+        "|---|---|---|---|---|",
+        ...listings.map((listing) => {
+          const credits =
+            listing.creditPrice === undefined ? "—" : String(listing.creditPrice);
+          const money = isPlainObject(listing.moneyPrice)
+            ? `${listing.moneyPrice.unitAmount} ${String(listing.moneyPrice.currency).toUpperCase()} minor units`
+            : "—";
+          return `| \`${listing.listingId}\` | ${listing.catalog} | ${listing.priceMode} | ${credits} | ${money} |`;
+        }),
+      ].join("\n");
+      if (actual !== expected) {
+        fail(
+          "docs/auth-credits.md: catalog listing table does not exactly match catalog-listings.fixtures.json (listing, catalog, price mode, credits, money columns in order)",
+        );
+      }
+    }
+
+    if (!authCreditsDoc.includes("catalog-listings.fixtures.json")) {
+      fail(
+        "docs/auth-credits.md: does not name the canonical catalog listing fixture path",
+      );
+    }
+  }
+}
+
 if (errors.length > 0) {
   for (const e of errors) console.error(`contract check FAIL: ${e}`);
   console.error(`contract check FAILED — ${errors.length} error(s)`);
   process.exit(1);
 }
 console.log(
-  `contract check OK — ${authoringJobCount} shared authoring jobs valid, doc table matches, E1+E2 bound to one list; plugin capability registry 1.0.0 seed empty and schema-locked; plugin-manifest inert example schema-locked; ${creditPackCount} test-mode credit packs schema-locked and doc-bound; ${entitlementCapabilityCount} entitlement capabilities schema-locked, free path intact, doc-bound`,
+  `contract check OK — ${authoringJobCount} shared authoring jobs valid, doc table matches, E1+E2 bound to one list; plugin capability registry 1.0.0 seed empty and schema-locked; plugin-manifest inert example schema-locked; ${creditPackCount} test-mode credit packs schema-locked and doc-bound; ${entitlementCapabilityCount} entitlement capabilities schema-locked, free path intact, doc-bound; ${listingCount} test-mode catalog listings schema-locked, all price modes covered, doc-bound`,
 );

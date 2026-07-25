@@ -90,14 +90,41 @@ export type StripeCustomerLink = {
   readonly linkedAt: string;
 };
 
-/** Provider-neutral, secret-free description of a checkout to create. */
+/**
+ * What a checkout is for. The two purposes settle differently — a credit pack
+ * grants credits, a catalog listing transfers an asset and splits the money — so
+ * the purpose is part of the contract rather than something a consumer infers
+ * from which optional field happens to be present.
+ */
+export const CHECKOUT_PURPOSES = Object.freeze([
+  "credit-pack",
+  "catalog-listing",
+] as const);
+
+export type CheckoutPurpose = (typeof CHECKOUT_PURPOSES)[number];
+
+/**
+ * Provider-neutral, secret-free description of a checkout to create.
+ *
+ * `credits` is present exactly when the purpose is `credit-pack`; a listing sale
+ * grants no credits, so carrying a nominal one there would put a meaningless
+ * number in the ledger's line of sight. `stripePriceId` is a public identifier,
+ * not a secret — the adapter needs to know what to charge.
+ */
 export type CheckoutSessionIntent = {
   readonly schemaVersion: typeof BILLING_SCHEMA_VERSION;
   readonly kind: typeof CHECKOUT_SESSION_INTENT_KIND;
   readonly intentId: string;
   readonly userId: string;
-  readonly packId: string;
-  readonly credits: number;
+  readonly purpose: CheckoutPurpose;
+  /** The credit pack id or the catalog listing id, per `purpose`. */
+  readonly itemId: string;
+  /** Present exactly when `purpose` is `credit-pack`. */
+  readonly credits?: number;
+  /** Price in the currency's minor unit. */
+  readonly unitAmount: number;
+  readonly currency: string;
+  readonly stripePriceId: string;
   readonly mode: BillingMode;
   readonly successUrl: string;
   readonly cancelUrl: string;
@@ -114,8 +141,13 @@ export type CheckoutCompletedEvent = {
   readonly mode: BillingMode;
   readonly intentId: string;
   readonly userId: string;
-  readonly packId: string;
-  readonly credits: number;
+  readonly purpose: CheckoutPurpose;
+  readonly itemId: string;
+  /** Present exactly when `purpose` is `credit-pack`. */
+  readonly credits?: number;
+  /** Gross amount paid, in the currency's minor unit. */
+  readonly unitAmount: number;
+  readonly currency: string;
   readonly occurredAt: string;
 };
 
@@ -168,6 +200,7 @@ function checkEnvelope(
   kind: string,
   label: string,
   required: ReadonlyArray<string>,
+  optional: ReadonlyArray<string> = [],
 ): Record<string, unknown> | BillingValidationRefuse {
   if (!isPlainRecord(value)) {
     return refuseWith(
@@ -194,7 +227,7 @@ function checkEnvelope(
       `${label} is missing required property "${missing}".`,
     );
   }
-  const unexpected = firstUnexpectedKey(value, required);
+  const unexpected = firstUnexpectedKey(value, required, optional);
   if (unexpected !== undefined) {
     return refuseWith(
       BILLING_REFUSE_CODES.unexpectedProperty,
@@ -400,19 +433,55 @@ export function validateStripeCustomerLink(
   );
 }
 
-const CHECKOUT_SESSION_INTENT_KEYS = Object.freeze([
+const CHECKOUT_SESSION_INTENT_REQUIRED = Object.freeze([
   "schemaVersion",
   "kind",
   "intentId",
   "userId",
-  "packId",
-  "credits",
+  "purpose",
+  "itemId",
+  "unitAmount",
+  "currency",
+  "stripePriceId",
   "mode",
   "successUrl",
   "cancelUrl",
   "idempotencyKey",
   "createdAt",
 ]);
+
+export function isCheckoutPurpose(value: unknown): value is CheckoutPurpose {
+  return CHECKOUT_PURPOSES.some((purpose) => purpose === value);
+}
+
+/**
+ * Validate the `credits` field against the purpose.
+ *
+ * Shared by the intent and the completion event so the two can never disagree
+ * about whether a listing sale carries a credit amount.
+ */
+function checkPurposeCredits(
+  record: Record<string, unknown>,
+  purpose: CheckoutPurpose,
+  label: string,
+): BillingValidationRefuse | undefined {
+  const hasCredits = Object.hasOwn(record, "credits");
+  if (purpose === "credit-pack") {
+    const credits = record["credits"];
+    if (!hasCredits || !isSafeInteger(credits) || credits < 1) {
+      return invalid(
+        `${label} for a credit-pack purchase must carry a positive integer credits amount.`,
+      );
+    }
+    return undefined;
+  }
+  if (hasCredits) {
+    return invalid(
+      `${label} for a ${purpose} purchase must not carry a credits amount; a listing sale grants no credits.`,
+    );
+  }
+  return undefined;
+}
 
 export function validateCheckoutSessionIntent(
   value: unknown,
@@ -421,7 +490,8 @@ export function validateCheckoutSessionIntent(
     value,
     CHECKOUT_SESSION_INTENT_KIND,
     "checkout session intent",
-    CHECKOUT_SESSION_INTENT_KEYS,
+    CHECKOUT_SESSION_INTENT_REQUIRED,
+    ["credits"],
   );
   if (isRefuse(record)) return record;
 
@@ -437,16 +507,40 @@ export function validateCheckoutSessionIntent(
       "checkout session intent userId must be a url-safe identifier of 1-128 chars.",
     );
   }
-  const packId = record["packId"];
-  if (typeof packId !== "string" || !SLUG_RE.test(packId)) {
+  const purpose = record["purpose"];
+  if (!isCheckoutPurpose(purpose)) {
     return invalid(
-      "checkout session intent packId must be a lowercase slug of 1-64 chars.",
+      `checkout session intent purpose must be one of ${CHECKOUT_PURPOSES.join(", ")}.`,
     );
   }
-  const credits = record["credits"];
-  if (!isSafeInteger(credits) || credits < 1) {
+  const itemId = record["itemId"];
+  if (typeof itemId !== "string" || !SLUG_RE.test(itemId)) {
     return invalid(
-      "checkout session intent credits must be a positive safe integer.",
+      "checkout session intent itemId must be a lowercase slug of 1-64 chars.",
+    );
+  }
+  const creditsRefusal = checkPurposeCredits(
+    record,
+    purpose,
+    "checkout session intent",
+  );
+  if (creditsRefusal !== undefined) return creditsRefusal;
+
+  const unitAmount = record["unitAmount"];
+  if (!isSafeInteger(unitAmount) || unitAmount < 1) {
+    return invalid(
+      "checkout session intent unitAmount must be a positive safe integer in the currency's minor unit.",
+    );
+  }
+  const currency = record["currency"];
+  if (typeof currency !== "string" || !CURRENCY_RE.test(currency)) {
+    return invalid(
+      "checkout session intent currency must be a lowercase three-letter ISO 4217 code.",
+    );
+  }
+  if (!isNonEmptyString(record["stripePriceId"])) {
+    return invalid(
+      "checkout session intent stripePriceId must be a non-empty string.",
     );
   }
   const mode = record["mode"];
@@ -484,24 +578,33 @@ export function validateCheckoutSessionIntent(
     );
   }
 
+  const base = {
+    schemaVersion: BILLING_SCHEMA_VERSION,
+    kind: CHECKOUT_SESSION_INTENT_KIND,
+    intentId,
+    userId,
+    purpose,
+    itemId,
+    unitAmount,
+    currency,
+    stripePriceId: record["stripePriceId"],
+    mode,
+    successUrl,
+    cancelUrl,
+    idempotencyKey,
+    createdAt: record["createdAt"],
+  };
+
   return ok(
-    Object.freeze({
-      schemaVersion: BILLING_SCHEMA_VERSION,
-      kind: CHECKOUT_SESSION_INTENT_KIND,
-      intentId,
-      userId,
-      packId,
-      credits,
-      mode,
-      successUrl,
-      cancelUrl,
-      idempotencyKey,
-      createdAt: record["createdAt"],
-    }),
+    Object.freeze(
+      purpose === "credit-pack"
+        ? { ...base, credits: record["credits"] as number }
+        : base,
+    ),
   );
 }
 
-const CHECKOUT_COMPLETED_EVENT_KEYS = Object.freeze([
+const CHECKOUT_COMPLETED_EVENT_REQUIRED = Object.freeze([
   "schemaVersion",
   "kind",
   "eventId",
@@ -509,8 +612,10 @@ const CHECKOUT_COMPLETED_EVENT_KEYS = Object.freeze([
   "mode",
   "intentId",
   "userId",
-  "packId",
-  "credits",
+  "purpose",
+  "itemId",
+  "unitAmount",
+  "currency",
   "occurredAt",
 ]);
 
@@ -521,7 +626,8 @@ export function validateCheckoutCompletedEvent(
     value,
     CHECKOUT_COMPLETED_EVENT_KIND,
     "checkout completed event",
-    CHECKOUT_COMPLETED_EVENT_KEYS,
+    CHECKOUT_COMPLETED_EVENT_REQUIRED,
+    ["credits"],
   );
   if (isRefuse(record)) return record;
 
@@ -554,16 +660,35 @@ export function validateCheckoutCompletedEvent(
       "checkout completed event userId must be a url-safe identifier of 1-128 chars.",
     );
   }
-  const packId = record["packId"];
-  if (typeof packId !== "string" || !SLUG_RE.test(packId)) {
+  const purpose = record["purpose"];
+  if (!isCheckoutPurpose(purpose)) {
     return invalid(
-      "checkout completed event packId must be a lowercase slug of 1-64 chars.",
+      `checkout completed event purpose must be one of ${CHECKOUT_PURPOSES.join(", ")}.`,
     );
   }
-  const credits = record["credits"];
-  if (!isSafeInteger(credits) || credits < 1) {
+  const itemId = record["itemId"];
+  if (typeof itemId !== "string" || !SLUG_RE.test(itemId)) {
     return invalid(
-      "checkout completed event credits must be a positive safe integer.",
+      "checkout completed event itemId must be a lowercase slug of 1-64 chars.",
+    );
+  }
+  const creditsRefusal = checkPurposeCredits(
+    record,
+    purpose,
+    "checkout completed event",
+  );
+  if (creditsRefusal !== undefined) return creditsRefusal;
+
+  const unitAmount = record["unitAmount"];
+  if (!isSafeInteger(unitAmount) || unitAmount < 1) {
+    return invalid(
+      "checkout completed event unitAmount must be a positive safe integer in the currency's minor unit.",
+    );
+  }
+  const currency = record["currency"];
+  if (typeof currency !== "string" || !CURRENCY_RE.test(currency)) {
+    return invalid(
+      "checkout completed event currency must be a lowercase three-letter ISO 4217 code.",
     );
   }
   if (!isDateTime(record["occurredAt"])) {
@@ -572,18 +697,26 @@ export function validateCheckoutCompletedEvent(
     );
   }
 
+  const base = {
+    schemaVersion: BILLING_SCHEMA_VERSION,
+    kind: CHECKOUT_COMPLETED_EVENT_KIND,
+    eventId,
+    type: CHECKOUT_COMPLETED_EVENT_TYPE,
+    mode,
+    intentId,
+    userId,
+    purpose,
+    itemId,
+    unitAmount,
+    currency,
+    occurredAt: record["occurredAt"],
+  };
+
   return ok(
-    Object.freeze({
-      schemaVersion: BILLING_SCHEMA_VERSION,
-      kind: CHECKOUT_COMPLETED_EVENT_KIND,
-      eventId,
-      type: CHECKOUT_COMPLETED_EVENT_TYPE,
-      mode,
-      intentId,
-      userId,
-      packId,
-      credits,
-      occurredAt: record["occurredAt"],
-    }),
+    Object.freeze(
+      purpose === "credit-pack"
+        ? { ...base, credits: record["credits"] as number }
+        : base,
+    ),
   );
 }

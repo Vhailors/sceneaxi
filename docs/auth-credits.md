@@ -88,6 +88,36 @@ go-live decision.
 Price ids are public identifiers, not secrets. API keys are a different thing entirely and
 live only in the environment — see the configuration section.
 
+## Catalog listings (dual pricing)
+
+A seller decides what an asset costs and in which currency: **credits, money, or both**.
+`creditPrice` is required exactly when `priceMode` includes credits and `moneyPrice`
+exactly when it includes money; a price the mode *excludes* must be absent, because a
+dormant field is how a credits-only listing quietly acquires a money price later. A buyer
+cannot pay in a currency the seller did not list — that refuses rather than converting at
+a rate nobody agreed to.
+
+Canonical listings: `packages/schemas/contracts/catalog-listings.fixtures.json`, in
+lockstep with the table below. All three price modes must stay covered, so a regression
+cannot pass by dropping the shape it breaks. Test mode only.
+
+<!-- catalog-listings:list -->
+| listing | catalog | price mode | credits | money |
+|---|---|---|---|---|
+| `lantern-prop` | game | credits | 40 | — |
+| `harbour-diorama` | web | money | — | 1200 USD minor units |
+| `market-stall-kit` | game | credits-and-money | 75 | 2500 USD minor units |
+| `odd-price-charm` | game | credits-and-money | 7 | 333 USD minor units |
+<!-- /catalog-listings:list -->
+
+`odd-price-charm` exists so the odd-amount cases are always exercised: 7 credits splits
+3 to the creator and 4 to the platform, and 333 minor units splits 166/167. The remainder
+always lands with the platform, and no value is created or lost.
+
+Catalog **browse and purchase UI** is coordinated with `sceneaxi-websites-deploy-v1`; this
+vertical owns the ledger and the enforcement. The `catalog-game` and `catalog-web` apps
+stay dormant.
+
 ## Held keys are unchanged
 
 This plane is **product** user authentication. It does not replace, weaken, or interact

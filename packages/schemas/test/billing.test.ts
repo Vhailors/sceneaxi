@@ -44,12 +44,34 @@ const INTENT = {
   kind: CHECKOUT_SESSION_INTENT_KIND,
   intentId: "int_01",
   userId: "usr_01",
-  packId: "starter",
+  purpose: "credit-pack",
+  itemId: "starter",
   credits: 100,
+  unitAmount: 500,
+  currency: "usd",
+  stripePriceId: "price_test_starter_100",
   mode: "test",
   successUrl: "https://sceneaxi.example/checkout/success",
   cancelUrl: "https://sceneaxi.example/checkout/cancel",
   idempotencyKey: "checkout:int_01",
+  createdAt: "2026-07-25T10:00:00Z",
+} as const;
+
+/** A catalog-listing intent, which must carry no credits at all. */
+const LISTING_INTENT = {
+  schemaVersion: 1,
+  kind: CHECKOUT_SESSION_INTENT_KIND,
+  intentId: "int_02",
+  userId: "usr_01",
+  purpose: "catalog-listing",
+  itemId: "harbour-diorama",
+  unitAmount: 1200,
+  currency: "usd",
+  stripePriceId: "price_test_harbour_diorama",
+  mode: "test",
+  successUrl: "https://sceneaxi.example/checkout/success",
+  cancelUrl: "https://sceneaxi.example/checkout/cancel",
+  idempotencyKey: "sale:sale_02",
   createdAt: "2026-07-25T10:00:00Z",
 } as const;
 
@@ -61,8 +83,11 @@ const EVENT = {
   mode: "test",
   intentId: "int_01",
   userId: "usr_01",
-  packId: "starter",
+  purpose: "credit-pack",
+  itemId: "starter",
   credits: 100,
+  unitAmount: 500,
+  currency: "usd",
   occurredAt: "2026-07-25T10:05:00Z",
 } as const;
 
@@ -196,13 +221,47 @@ describe("validateCheckoutSessionIntent", () => {
     }
   });
 
-  it("refuses a missing idempotency key and a non-slug pack id", () => {
+  it("refuses a missing idempotency key and a non-slug item id", () => {
     expect(
       validateCheckoutSessionIntent(without(INTENT, "idempotencyKey")).ok,
     ).toBe(false);
     expect(
-      validateCheckoutSessionIntent({ ...INTENT, packId: "Starter Pack" }).ok,
+      validateCheckoutSessionIntent({ ...INTENT, itemId: "Starter Pack" }).ok,
     ).toBe(false);
+  });
+
+  it("accepts a catalog-listing intent that carries no credits", () => {
+    const result = validateCheckoutSessionIntent(LISTING_INTENT);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value).not.toHaveProperty("credits");
+  });
+
+  it("refuses a nominal credit amount on a listing sale", () => {
+    const result = validateCheckoutSessionIntent({
+      ...LISTING_INTENT,
+      credits: 1,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe(BILLING_REFUSE_CODES.invalidProperty);
+  });
+
+  it("refuses a credit-pack intent with no credits", () => {
+    const result = validateCheckoutSessionIntent(without(INTENT, "credits"));
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe(BILLING_REFUSE_CODES.invalidProperty);
+  });
+
+  it("refuses an unknown purpose", () => {
+    const result = validateCheckoutSessionIntent({
+      ...INTENT,
+      purpose: "donation",
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe(BILLING_REFUSE_CODES.invalidProperty);
   });
 });
 
@@ -227,6 +286,19 @@ describe("validateCheckoutCompletedEvent", () => {
         false,
       );
     }
+  });
+
+  it("accepts a catalog-listing completion with no credits and refuses one with them", () => {
+    const listingEvent = {
+      ...without(EVENT, "credits"),
+      purpose: "catalog-listing",
+      itemId: "harbour-diorama",
+      unitAmount: 1200,
+    };
+    expect(validateCheckoutCompletedEvent(listingEvent).ok).toBe(true);
+    expect(
+      validateCheckoutCompletedEvent({ ...listingEvent, credits: 1 }).ok,
+    ).toBe(false);
   });
 });
 
