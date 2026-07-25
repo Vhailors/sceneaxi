@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "kind": "sceneaxi.scene-composition-mount-support-evidence",
+  "issue": 87,
+  "decision": "not-needed",
+  "proofTest": "tests/e2e/scene-composition-golden.test.ts",
+  "sceneId": "workshop-bay",
+  "instanceIds": [
+    "bay-service-crate",
+    "bay-stacked-crate",
+    "bay-field-drone"
+  ],
+  "existingPath": [
+    "reconstructSculpt",
+    "composeScene",
+    "createSculptMountApi",
+    "openSceneKernelSession"
+  ],
+  "mountedInstanceCount": 3,
+  "mountDrawCalls": 17,
+  "presentationAdapterAdded": false,
+  "minimumE2ChecklistExpanded": false,
+  "engineAdapterAdded": false,
+  "physicsSuiteExpanded": false,
+  "stage1Run": false
+}
