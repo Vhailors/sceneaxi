@@ -20,7 +20,7 @@
       "emitDigest": "sha256:891e1903675d93f80360f472dc0394e268261c49e1d2f930b745c49cf6c33408",
       "mount": {
         "drawCalls": 5,
-        "frameDigest": "sha256:66ee71f27b7b3f519903718e45a12860b89017e06d45a9dc3939b275f3a4bca6"
+        "frameDigest": "sha256:16477a767e1d450ae16d0fa42d83d94d1e82fa4af80adb4cf032db070cc083b8"
       },
       "kernel": {
         "initialDigest": "sha256:9df04c06c7216e01287b736343d162c53b101dc41eef3a708bc98423b0ee80a9",
@@ -55,7 +55,7 @@
       "emitDigest": "sha256:e99c5d25b464699f770c16a3ec560d82e7800613018730ed61fc889ac4e84b5f",
       "mount": {
         "drawCalls": 7,
-        "frameDigest": "sha256:49e38768c34c4062eb3e0c08f8a96624855a80e412786d217be7ec2a38309ec8"
+        "frameDigest": "sha256:f4fca1f48e73bfcae2c91dad2254a8b6d896c6c4194e0b74e5810b8faab77df1"
       },
       "kernel": {
         "initialDigest": "sha256:22b3e3b84b88d7bdc9ee9c9aa8e7f86c5cb9e98cf46fdcf5d9ff6cf156a73ce5",

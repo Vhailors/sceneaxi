@@ -6,8 +6,7 @@ import {
   type SculptTransform,
 } from "@sceneaxi/schemas";
 
-export const EXPERIMENTAL_THREE_NON_DECISION_LABEL =
-  "Experimental Three preview — non-decision; Stage 1 has not run.";
+export const NULL_SCULPT_BACKEND_LABEL = "Null sculpt presentation backend";
 
 export type SculptInstanceInput = {
   readonly instanceId: string;
@@ -23,11 +22,15 @@ export type SculptMountedInstance = {
 };
 
 export type SculptPresentationFrame = {
-  readonly backend: "experimental-three" | "null";
+  readonly backend: "three" | "null";
   readonly label: string;
   readonly frame: number;
   readonly instanceIds: readonly string[];
   readonly drawCalls: number;
+  /** Which draw surface produced the frame; absent on the null backend. */
+  readonly surface?: "webgl-canvas" | "headless";
+  /** True only when the frame reached a real drawing buffer. */
+  readonly pixelsDrawn?: boolean;
 };
 
 /** Backend-neutral adapter contract; renderer objects never cross this boundary. */
@@ -155,7 +158,7 @@ export function createNullSculptPresentationBackend(): SculptPresentationBackend
   let frame = 0;
   return {
     id: "null",
-    label: "Null sculpt presentation backend",
+    label: NULL_SCULPT_BACKEND_LABEL,
     mount() {},
     update() {},
     unmount() {},
@@ -163,7 +166,7 @@ export function createNullSculptPresentationBackend(): SculptPresentationBackend
       frame += 1;
       return Object.freeze({
         backend: "null",
-        label: "Null sculpt presentation backend",
+        label: NULL_SCULPT_BACKEND_LABEL,
         frame,
         instanceIds: Object.freeze([...instanceIds]),
         drawCalls: 0,

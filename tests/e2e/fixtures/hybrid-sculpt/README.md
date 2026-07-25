@@ -9,5 +9,6 @@ Stable CI paths for issue #73:
   digests for reconstruction, mount, kernel animation/collision/replay, editor
   save/load, and live demo preview.
 
-The Three preview in this path is experimental and a non-decision. This fixture
+This path mounts through the Three presentation core on its deterministic
+headless surface, so the recorded frame draws no pixels. This fixture
 does not run Stage 1 or make a renderer winner claim.

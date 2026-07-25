@@ -15,8 +15,8 @@ import {
   replaySculptKernelSession,
 } from "../../packages/engine-kernel/src/index.ts";
 import {
-  createExperimentalThreeSculptPresentationBackend,
   createSculptMountApi,
+  createThreeSculptPresentationBackend,
 } from "../../packages/engine-presentation/src/index.ts";
 import {
   validateSculptQualityObjectSculptSpec,
@@ -97,7 +97,7 @@ describe("sculpt-quality v1 golden demos", () => {
         }
 
         const mounts = createSculptMountApi(
-          createExperimentalThreeSculptPresentationBackend(),
+          createThreeSculptPresentationBackend(),
         );
         mounts.mount({ instanceId: demo.id, artifact: qualityArtifact.value });
         const frame = mounts.render();
@@ -141,7 +141,7 @@ describe("sculpt-quality v1 golden demos", () => {
         const editor = createMinimumE2Editor({
           cwd: projectRoot,
           documentPath,
-          backend: "experimental-three",
+          backend: "three",
           seed: demo.seed,
         });
         editor.addSculpt({ instanceId: demo.id, artifact: qualityArtifact.value });

@@ -7,9 +7,11 @@ The post-MVP openable path is:
 `Sculpt Intake → Sculpt Artifact → Mount API → Minimum E2 → kernel play/step`
 
 The deterministic CI input is `structured-spec`; the demo happy path is
-`image+brief`. The experimental Three preview is a non-decision: Stage 1 has
-not run and no renderer winner is claimed. The golden evidence and stable input
-paths are recorded in
+`image+brief`. Presentation runs on the
+[Three presentation core](docs/three-presentation-core.md): node gates use its
+deterministic headless surface, and product surfaces draw real pixels through a
+`WebGLRenderer` canvas. Stage 1 has still not run and no renderer winner is
+claimed. The golden evidence and stable input paths are recorded in
 `.sceneaxi/evidence/issue-73-hybrid-sculpt-golden.json`.
 
 ## Sculpt-quality v1
@@ -66,8 +68,13 @@ three-instance demo, and stable evidence are indexed by
 - **Mount API** — backend-neutral instance boundary from Sculpt Artifact to
   presentation; its package contract is documented by
   [`@sceneaxi/engine-presentation`](packages/engine-presentation/README.md#hybrid-sculpt-preview).
-- **Experimental Three preview** — implementation-private visual adapter for
-  this vertical; explicitly not a Stage 1 result or winner claim.
+- **Three presentation core** — the product presentation/runtime core under
+  [ADR 0017](docs/adr/0017-three-product-presentation-core.md), hidden behind the
+  ADR 0002 deep seam. One core, two draw surfaces: a real `WebGLRenderer` canvas
+  surface that draws pixels, and a deterministic headless surface for non-visual
+  gates that never claims pixels. Choosing it is a captain product decision, not
+  a Stage 1 result or winner claim; see
+  [`docs/three-presentation-core.md`](docs/three-presentation-core.md).
 - **Minimum E2** — the vertical-only editor exception whose exact checklist is
   owned by
   [ADR 0003](docs/adr/0003-editor-sequencing-e1-first-e2-specified.md#2026-07-24-vertical-only-amendment).

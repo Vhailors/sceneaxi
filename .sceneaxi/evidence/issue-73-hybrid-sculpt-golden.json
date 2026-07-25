@@ -10,10 +10,10 @@
     "artifactBytesDigest": "sha256:45ab3fa06c4abde02a5cb0efc1602c79fcc96a66f2ad2cdc3cf55375e682eba1"
   },
   "mount": {
-    "backend": "experimental-three",
-    "label": "Experimental Three preview — non-decision; Stage 1 has not run.",
+    "backend": "three",
+    "label": "Three presentation core — headless surface, no pixels drawn",
     "drawCalls": 2,
-    "frameDigest": "sha256:3d76e42eb278bf6d934ad5b4f9df7a3622dc0ab58b01cb82424f82b7a573e7aa"
+    "frameDigest": "sha256:bccaddd2407625356ba595e8a4efc82ce4bd3fa30c6ab0040fb5a4f291b2fbe5"
   },
   "kernel": {
     "seed": 73,
@@ -44,6 +44,6 @@
   "claims": {
     "stage1Run": false,
     "rendererWinner": null,
-    "experimentalThree": "non-decision"
+    "threePresentationCore": "product-core"
   }
 }
