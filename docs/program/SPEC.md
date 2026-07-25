@@ -39,7 +39,7 @@ From the user's perspective:
 - **Profiles** select and configure core capabilities at build time and pin a core version range. The Kids profile compiles its safety policy in — absent capability is absent code, never a flag.
 - **Curated asset catalogs** (game-asset and website-asset storefronts over one shared pipeline) exist as dormant bounded apps until their activation gates open; curation is the product, provenance and AI-disclosure are mandatory metadata.
 - Product presentation uses Three.js under the later captain decision recorded
-  in [ADR 0016](../adr/0016-three-product-presentation-core.md). The
+  in [ADR 0017](../adr/0017-three-product-presentation-core.md). The
   Three-vs-PlayCanvas Stage 1 proof (factories-helpers #41 program) remains a
   separate, double-gated hypothesis test: it neither blocks nor corroborates
   that product decision, and no arm or result is assumed.
@@ -177,7 +177,7 @@ Topology locked (`catalog-storefront-topology`): **one modular catalog platform*
 
 ### Proof program (unchanged; referenced, not absorbed)
 
-The Stage 0–8 falsification program of factories-helpers **#41 transfers intact and stays its own source of truth**. Stage 1 (Three-vs-PlayCanvas renderer composition) remains **double-gated**: tier-3 captain decisions AND explicit run authorization — the monorepo is packaging, not proof, and nothing in this spec pre-decides the Stage 1 result. The later captain choice of Three.js as the product presentation core is recorded in [ADR 0016](../adr/0016-three-product-presentation-core.md); it neither removes a proof arm nor counts as Stage 1 evidence. Stage 8 remains the readiness/claims gate. The single topology amendment already recorded: repository *creation* moved ahead of Stage 8 (captain authority); proof-prep docs (#50–#52) re-home to SceneAxi `docs/proof/` under the issue-transfer plan, with execution still double-gated. Readiness vocabulary is inherited: factory-ready ≠ engine-ready ≠ commercially validated ≠ kids-safe ≠ marketplace-ready; evidence never rounds up.
+The Stage 0–8 falsification program of factories-helpers **#41 transfers intact and stays its own source of truth**. Stage 1 (Three-vs-PlayCanvas renderer composition) remains **double-gated**: tier-3 captain decisions AND explicit run authorization — the monorepo is packaging, not proof, and nothing in this spec pre-decides the Stage 1 result. The later captain choice of Three.js as the product presentation core is recorded in [ADR 0017](../adr/0017-three-product-presentation-core.md); it neither removes a proof arm nor counts as Stage 1 evidence. Stage 8 remains the readiness/claims gate. The single topology amendment already recorded: repository *creation* moved ahead of Stage 8 (captain authority); proof-prep docs (#50–#52) re-home to SceneAxi `docs/proof/` under the issue-transfer plan, with execution still double-gated. Readiness vocabulary is inherited: factory-ready ≠ engine-ready ≠ commercially validated ≠ kids-safe ≠ marketplace-ready; evidence never rounds up.
 
 ### Authority table (non-transitive; PASS ≠ commit ≠ push ≠ merge)
 
