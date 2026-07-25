@@ -64,3 +64,15 @@ naming its source.
 | [0015](0015-scene-minimal-multi-object-open-path.md) | Scene composition adds one multi-object kernel session and no presentation adapter |
 | [0016](0016-portable-kernel-digest.md) | Kernel session digests come from a portable synchronous sha256, so sessions open in a browser |
 | [0017](0017-three-product-presentation-core.md) | Three.js is the product presentation core behind the unchanged ADR 0002 seam; Stage 1 unaffected |
+| [0018](0018-sites-tier-three-vercel-one-neon.md) | A `sites/` tier of first-party deployable surfaces: three Vercel projects, one Neon database, framework deps out of the hermetic tier |
+| [0019](0019-public-engine-sdk-zip-not-npm.md) | The public engine download is a deterministic SDK zip with a checksum, not an npm publish |
+| [0020](0020-minimum-e2-web-editor-entitlement.md) | The Minimum E2 web editor is entitled by credits or the unused 100-credit starter allotment; admin unrestricted |
+
+## Number allocation
+
+Numbers are claimed at merge, not at draft time. Several verticals ran in parallel here
+and more than one drafted an ADR at the same number, so the websites-deploy wave was
+renumbered from `0017`-`0019` to `0018`-`0020` when it rebased onto the kernel-digest and
+presentation-core ADRs that merged first. If your branch's number is taken by the time
+you rebase, renumber yours and update every reference — a collision is worse than a
+late renumber.

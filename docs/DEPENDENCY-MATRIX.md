@@ -19,6 +19,7 @@ L2  authoring-core     the one agent-native runtime/authoring core (document mod
                        Model Provider Port)
 L3  profiles · cli · importers · provider adapters · plugin-host
 L4  apps               (leaves; nothing depends on an app)
+L4  sites              site-kit ← the three deployable sites (leaves; ADR 0017)
 ```
 
 ## Allow matrix (✓ = allowed; blank = denied)
@@ -52,6 +53,16 @@ Deliberate denials that carry design intent:
 - **plugin-host → engine packages / authoring-core / profiles: denied.** The Plugin
   Host (ADR 0005) consumes only public contracts from `schemas`; it must not grow
   an engine service locator or absorb engine internals.
+- **sites → anything but `site-kit`: denied.** Each deployable site
+  (`sites/umbrella`, `sites/catalog-game`, `sites/catalog-web`) reaches contract
+  vocabulary only through `@sceneaxi/site-kit`, which may consume `schemas` and
+  `authoring-core`. A site is a thin view layer; all testable behaviour lives in
+  `site-kit` so `pnpm gate` covers it (ADR 0017).
+- **framework and provider SDKs → the hermetic tier: denied.** `next`, `react`,
+  and provider clients live in `sites/` only. `pnpm check:sites` fails if one appears
+  in the root manifest, and if `pnpm-workspace.yaml` starts globbing `sites/` — the
+  sites are separate install roots so the hermetic root lockfile never moves for a
+  site dependency.
 
 ## Kids policy boundary (hard)
 
@@ -93,3 +104,8 @@ Recorded in `dependency-matrix.json → releaseGroups` and stamped on every mani
 - **importers** (external importers and provider adapters), **plugin-host**,
   **apps**: independent / private.
   `plugin-host` is independently versioned and may depend only on `schemas`.
+- **sites** (`site-kit` plus the three deployable sites): first-party deployable web
+  surfaces and their shared deployment-neutral logic. Consume only public contracts and
+  public `authoring-core` APIs; never engine packages, profiles, a service locator, or
+  Kids. Framework and provider SDKs stay in the `sites/` tier. Deploy and env details:
+  [`websites-deploy.md`](websites-deploy.md).

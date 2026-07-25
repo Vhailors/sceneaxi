@@ -15,8 +15,15 @@ This monorepo is the packaging home for:
 | Plugin host | `packages/plugin-host` (explicit capability-manifest loading and refusal) |
 | Web / desktop shells | `apps/web-shell`, `apps/desktop-shell` |
 | Asset catalogs (may split later) | `apps/catalog-game`, `apps/catalog-web` |
+| Deployable web surfaces | `sites/umbrella`, `sites/catalog-game`, `sites/catalog-web` over `packages/site-kit` (ADR 0017; deploy details in [`docs/websites-deploy.md`](docs/websites-deploy.md)) |
 
 **Not in this monorepo:** individual game products (separate repos).
+
+The `sites/` tier is deliberately outside the hermetic workspace: each site is its own
+install root with its own lockfile, so a web-framework dependency never moves the root
+lockfile or the gate runtime. The tier is still gated — `pnpm check:syntax`,
+`pnpm check:boundaries`, and `pnpm check:sites` all cover it, and all site logic lives in
+`packages/site-kit` where `pnpm gate` tests it.
 
 Package boundaries are executable: `docs/dependency-matrix.json` is the allow/deny
 truth and `pnpm check:boundaries` enforces it (see `docs/DEPENDENCY-MATRIX.md`).
@@ -27,7 +34,10 @@ authoring-jobs fixture list in
 [`packages/schemas/contracts/`](packages/schemas/contracts/) enforced by
 `pnpm check:contracts`.
 External web products follow the published-package support and pinning contract
-in [`docs/web-consumer.md`](docs/web-consumer.md).
+in [`docs/web-consumer.md`](docs/web-consumer.md); the in-repo `sites/` surfaces are
+first-party and are not governed by it.
+The public engine SDK archive is built by `pnpm build:sdk` — a deterministic zip plus
+SHA-256 checksum, not an npm publish (ADR 0018).
 Portable product exports cross delivery boundaries through the public,
 delivery-neutral [`Delivery Handoff` contract](docs/delivery-handoff.md); provider
 credentials, uploads, approvals, and adapter implementation stay outside core.
