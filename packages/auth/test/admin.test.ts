@@ -182,6 +182,17 @@ describe("planAdminBootstrap", () => {
     expect(result.reason).toBe(AUTH_REFUSE_REASONS.userDisabled);
   });
 
+  it("refuses to persist an admin whose email is unverified", () => {
+    const result = planAdminBootstrap({
+      env,
+      users: [user(CAPTAIN, { emailVerified: false })],
+      now: NOW,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(AUTH_REFUSE_REASONS.adminEmailUnverified);
+  });
+
   it("refuses a non-finite clock", () => {
     const result = planAdminBootstrap({
       env,

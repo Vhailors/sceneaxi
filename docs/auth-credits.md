@@ -104,6 +104,10 @@ Admin elevation requires both the provider authentication and the stored SceneAx
 record to mark `emailVerified: true`. An unverified address matching
 `SCENEAXI_ADMIN_EMAIL` refuses with `AUTH_ADMIN_EMAIL_UNVERIFIED` before any session is
 persisted; unverified ordinary users retain the configured ordinary-user sign-in behavior.
+The same precondition holds wherever an `admin` role is produced or accepted, not only at
+sign-in: `refuseUnverifiedAdmin` is the one predicate, and `planAdminBootstrap` and the role
+guards apply it too, so an unverified captain can neither be persisted as admin nor satisfy
+an admin guard through a principal the port did not issue.
 
 The **store**, not the provider, owns the SceneAxi `User` record and therefore owns
 `disabled`. That split is deliberate: disabling a user must take effect even if the upstream

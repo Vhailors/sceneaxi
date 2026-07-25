@@ -43,6 +43,7 @@ export {
 } from "./session-token.js";
 
 export {
+  refuseUnverifiedAdmin,
   requireAuthenticated,
   requireRole,
   resolveRole,

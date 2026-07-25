@@ -19,6 +19,7 @@ import {
   priceModeIncludesCredits,
   priceModeIncludesMoney,
   snapshotPlainRecord,
+  validateCatalogListing,
   validateCatalogListingSet,
   type CatalogListing,
   type CatalogListingSet,
@@ -111,24 +112,14 @@ export function assertCurrencyListed(
   listing: CatalogListing,
   payWith: EntitlementPaymentMethod,
 ): BillingOutcome<CatalogListing> {
-  const validated = validateCatalogListingSet({
-    schemaVersion: 1,
-    mode: "test",
-    listings: [listing],
-  });
+  const validated = validateCatalogListing(listing);
   if (!validated.ok) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.listingPriceModeMismatch,
       `The listing is invalid (${validated.code}): ${validated.message}`,
     );
   }
-  const checked = validated.value.listings[0];
-  if (checked === undefined) {
-    return billingRefuse(
-      BILLING_REFUSE_REASONS.listingUnknown,
-      "The listing could not be validated.",
-    );
-  }
+  const checked = validated.value;
 
   if (payWith !== "credits" && payWith !== "money") {
     return billingRefuse(

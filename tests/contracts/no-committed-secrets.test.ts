@@ -56,10 +56,37 @@ const readText = (path: string): string | undefined => {
  * purpose: `\s` matches a newline, so `\s*\S+` would happily read the *next*
  * line's text as the value and flag every `NAME=` placeholder in a committed
  * `.env.example`. The value has to be on the same line to be a value.
+ *
+ * A leading comment marker is part of the assignment, not a reason to skip it:
+ * the root `.env.example` writes every variable as `# NAME=`, so anchoring on the
+ * name alone would make a pasted `# DATABASE_URL=postgres://…` invisible in the
+ * one committed file whose whole job is to carry names without values.
  */
 const HSPACE = "[^\\S\\r\\n]*";
+const COMMENT = `${HSPACE}(?:#+|//+|\\*+)?${HSPACE}`;
 const assignedTo = (name: string) =>
-  new RegExp(`^${HSPACE}${name}${HSPACE}=${HSPACE}\\S+`, "m");
+  new RegExp(`^${COMMENT}${name}${HSPACE}=${HSPACE}\\S+`, "m");
+
+/** Names a committed `.env.example` must declare, and may never assign. */
+const DOCUMENTED_NAMES: ReadonlyArray<string> = [
+  "DATABASE_URL",
+  "STRIPE_SECRET_KEY",
+  "STRIPE_WEBHOOK_SECRET",
+  "SCENEAXI_ADMIN_EMAIL",
+  "SCENEAXI_ADMIN_BOOTSTRAP_SECRET",
+];
+
+/**
+ * Every name whose *assignment* is forbidden anywhere in the tree.
+ * `BETTER_AUTH_SECRET` belongs to the injected provider rather than to SceneAxi,
+ * so no committed example declares it — but a deployment still holds one, and
+ * `scripts/check-sites.mjs` only ever walks `sites/`, so this repo-wide scan is
+ * the only thing standing between a value pasted anywhere else and a commit.
+ */
+const ASSIGNED_NAMES: ReadonlyArray<string> = [
+  ...DOCUMENTED_NAMES,
+  "BETTER_AUTH_SECRET",
+];
 
 const FORBIDDEN: ReadonlyArray<readonly [string, RegExp]> = [
   ["a Stripe secret key", /\bsk_(?:test|live)_[A-Za-z0-9]{8,}/],
@@ -67,10 +94,9 @@ const FORBIDDEN: ReadonlyArray<readonly [string, RegExp]> = [
   ["a Stripe webhook secret", /\bwhsec_[A-Za-z0-9]{16,}/],
   ["a Postgres connection string", /\bpostgres(?:ql)?:\/\/[^\s"'`]+/],
   ["a Neon host", /\b[a-z0-9-]+\.[a-z0-9-]+\.neon\.tech\b/],
-  ["an assigned DATABASE_URL", assignedTo("DATABASE_URL")],
-  ["an assigned STRIPE_SECRET_KEY", assignedTo("STRIPE_SECRET_KEY")],
-  ["an assigned STRIPE_WEBHOOK_SECRET", assignedTo("STRIPE_WEBHOOK_SECRET")],
-  ["an assigned SCENEAXI_ADMIN_EMAIL", assignedTo("SCENEAXI_ADMIN_EMAIL")],
+  ...ASSIGNED_NAMES.map(
+    (name) => [`an assigned ${name}`, assignedTo(name)] as const,
+  ),
 ];
 
 /**
@@ -134,18 +160,16 @@ describe("no committed secrets", () => {
     }
   });
 
-  it("keeps .env.example to names only", () => {
-    const text = readFileSync(join(repoRoot, ".env.example"), "utf8");
-    for (const name of [
-      "SCENEAXI_ADMIN_EMAIL",
-      "DATABASE_URL",
-      "STRIPE_SECRET_KEY",
-      "STRIPE_WEBHOOK_SECRET",
-    ]) {
-      expect(text).toContain(name);
-      // Every occurrence is commented and carries no value.
-      const assigned = new RegExp(`^\\s*${name}\\s*=\\s*\\S`, "m");
-      expect(assigned.test(text)).toBe(false);
+  it("documents every SceneAxi-owned variable name in a committed .env.example", () => {
+    // The value half of the rule is covered by the scan above; what is unique
+    // here is presence — an operator has to be able to find the name it must
+    // set, whether it belongs to the root example or to one site's.
+    const examples = trackedFiles
+      .filter((relative) => relative.endsWith(".env.example"))
+      .map((relative) => readText(join(repoRoot, relative)) ?? "");
+    for (const name of DOCUMENTED_NAMES) {
+      const documented = examples.some((text) => text.includes(name));
+      expect(`${name}: ${documented}`).toBe(`${name}: true`);
     }
   });
 

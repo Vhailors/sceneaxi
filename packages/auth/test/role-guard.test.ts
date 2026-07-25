@@ -15,6 +15,7 @@ const principal = (overrides: {
   source?: string;
   surface?: string;
   disabled?: boolean;
+  emailVerified?: boolean;
   expiresAt?: string;
 } = {}) =>
   ({
@@ -26,7 +27,7 @@ const principal = (overrides: {
         overrides.role === "user"
           ? "crew@example.com"
           : "captain@example.com",
-      emailVerified: true,
+      emailVerified: overrides.emailVerified ?? true,
       disabled: overrides.disabled ?? false,
       createdAt: "2026-07-25T09:00:00Z",
     },
@@ -111,6 +112,26 @@ describe("requireRole", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.reason).toBe(AUTH_REFUSE_REASONS.userDisabled);
+  });
+
+  it("refuses an admin principal whose email is unverified", () => {
+    const result = requireRole(
+      principal({ emailVerified: false }),
+      "admin",
+      { now: NOW, admin },
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(AUTH_REFUSE_REASONS.adminEmailUnverified);
+  });
+
+  it("still allows an ordinary principal whose email is unverified", () => {
+    const result = requireRole(
+      principal({ role: "user", source: "default-user", emailVerified: false }),
+      "user",
+      { now: NOW, admin },
+    );
+    expect(result.ok).toBe(true);
   });
 
   it("refuses an expired session", () => {

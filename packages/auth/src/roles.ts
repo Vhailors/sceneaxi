@@ -28,6 +28,7 @@ import {
   AUTH_REFUSE_REASONS,
   authOk,
   authRefuse,
+  type AuthRefuse,
   type AuthResult,
 } from "./refusals.js";
 
@@ -52,6 +53,28 @@ export function resolveRole(input: ResolveRoleInput): RoleAssignment {
     source: isAdmin ? ("admin-env" as const) : ("default-user" as const),
     assignedAt: new Date(input.now).toISOString(),
   });
+}
+
+/**
+ * The extra precondition admin elevation carries beyond matching the configured
+ * email: the stored SceneAxi user record must mark that email verified.
+ *
+ * It lives beside `resolveRole` because every path that can produce or accept an
+ * `admin` role has to apply the same predicate — sign-in, session assembly, the
+ * persisted bootstrap, and the guards — and a second copy is how one of them
+ * ends up elevating an identity the others refuse. Returns the named refusal, or
+ * `undefined` when the user is not the admin or the admin email is verified.
+ */
+export function refuseUnverifiedAdmin(
+  user: Readonly<{ email: string; emailVerified: boolean }>,
+  adminEmail: string,
+): AuthRefuse | undefined {
+  if (normalizeEmail(user.email) !== adminEmail) return undefined;
+  if (user.emailVerified) return undefined;
+  return authRefuse(
+    AUTH_REFUSE_REASONS.adminEmailUnverified,
+    "The configured admin email is not verified in the SceneAxi user record; admin elevation refuses.",
+  );
 }
 
 export type GuardOptions = Readonly<{
@@ -150,6 +173,9 @@ function checkPrincipal(
       "The user is disabled; every role guard refuses, including admin.",
     );
   }
+
+  const unverifiedAdmin = refuseUnverifiedAdmin(value.user, adminEmail);
+  if (unverifiedAdmin !== undefined) return unverifiedAdmin;
 
   if (Date.parse(value.session.expiresAt) <= checkedOptions["now"]) {
     return authRefuse(

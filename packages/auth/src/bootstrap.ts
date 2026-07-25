@@ -19,7 +19,7 @@ import {
   type AdminIdentity,
   type EnvLike,
 } from "./admin.js";
-import { resolveRole } from "./roles.js";
+import { refuseUnverifiedAdmin, resolveRole } from "./roles.js";
 import {
   AUTH_REFUSE_REASONS,
   authOk,
@@ -90,6 +90,8 @@ export function planAdminBootstrap(
       "The configured admin user is disabled; the bootstrap refuses.",
     );
   }
+  const unverifiedAdmin = refuseUnverifiedAdmin(captain, admin.value.email);
+  if (unverifiedAdmin !== undefined) return unverifiedAdmin;
 
   const assignment = resolveRole({
     user: captain,

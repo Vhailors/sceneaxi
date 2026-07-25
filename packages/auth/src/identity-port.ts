@@ -32,7 +32,7 @@ import {
   mapBetterAuthAuthentication,
   type IdentityAdapter,
 } from "./better-auth-adapter.js";
-import { resolveRole } from "./roles.js";
+import { refuseUnverifiedAdmin, resolveRole } from "./roles.js";
 import {
   AUTH_REFUSE_REASONS,
   authOk,
@@ -191,15 +191,8 @@ function assemblePrincipal(input: {
       "The user is disabled; sign-in and session verification both refuse.",
     );
   }
-  if (
-    user.value.email.trim().toLowerCase() === input.admin.email &&
-    !user.value.emailVerified
-  ) {
-    return authRefuse(
-      AUTH_REFUSE_REASONS.adminEmailUnverified,
-      "The configured admin email is not verified in the SceneAxi user record; admin elevation refuses.",
-    );
-  }
+  const unverifiedAdmin = refuseUnverifiedAdmin(user.value, input.admin.email);
+  if (unverifiedAdmin !== undefined) return unverifiedAdmin;
 
   const role = resolveRole({
     user: user.value,
