@@ -129,6 +129,34 @@ describe("in-memory identity store", () => {
     expect(Object.isFrozen(preloaded)).toBe(true);
     expect(Object.isFrozen(written)).toBe(true);
   });
+
+  it("rejects duplicate user identifiers and normalized emails", () => {
+    expect(() =>
+      createInMemoryIdentityStore({
+        users: [
+          CREW,
+          {
+            ...CAPTAIN,
+            userId: CREW.userId,
+          } as never,
+        ],
+      }),
+    ).toThrow('identity store: duplicate userId "usr_crew"');
+
+    expect(() =>
+      createInMemoryIdentityStore({
+        users: [
+          CREW,
+          {
+            ...CAPTAIN,
+            email: "CREW@example.com",
+          } as never,
+        ],
+      }),
+    ).toThrow(
+      'identity store: duplicate normalized email "crew@example.com"',
+    );
+  });
 });
 
 describe("identity port — sign-in", () => {

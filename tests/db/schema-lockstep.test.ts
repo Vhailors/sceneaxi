@@ -374,6 +374,16 @@ describe("invariants the database enforces itself", () => {
   it("forces every split to balance at exactly 5000 basis points", () => {
     expect(sql).toContain("creator_credits + platform_credits = gross_credits");
     expect(sql).toContain("creator_minor + platform_minor = gross_minor");
+    expect(sql).toContain(
+      "creator_credits = floor((gross_credits::numeric * 5000) / 10000)",
+    );
+    expect(sql).toContain(
+      "platform_credits = gross_credits - creator_credits",
+    );
+    expect(sql).toContain(
+      "creator_minor = floor((gross_minor::numeric * 5000) / 10000)",
+    );
+    expect(sql).toContain("platform_minor = gross_minor - creator_minor");
     const basisChecks = sql.match(/basis_points = 5000/g) ?? [];
     expect(basisChecks.length).toBe(2);
   });

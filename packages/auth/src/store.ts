@@ -84,8 +84,15 @@ export function createInMemoryIdentityStore(
 
   for (const candidate of options.users ?? []) {
     const user = snapshotUser(candidate);
+    const normalizedEmail = user.email.trim().toLowerCase();
+    if (usersById.has(user.userId)) {
+      fail(`duplicate userId "${user.userId}"`);
+    }
+    if (usersByEmail.has(normalizedEmail)) {
+      fail(`duplicate normalized email "${normalizedEmail}"`);
+    }
     usersById.set(user.userId, user);
-    usersByEmail.set(user.email.trim().toLowerCase(), user);
+    usersByEmail.set(normalizedEmail, user);
   }
   for (const candidate of options.sessions ?? []) {
     const session = snapshotSession(candidate);

@@ -125,6 +125,26 @@ function invalid(detail: string): RevenueShareValidationRefuse {
   return refuseWith(REVENUE_SHARE_REFUSE_CODES.invalidProperty, detail);
 }
 
+function validateFixedSplit(
+  label: string,
+  gross: number,
+  creator: number,
+  platform: number,
+): RevenueShareValidationRefuse | undefined {
+  const expectedCreator = Number(
+    (BigInt(gross) * BigInt(CREATOR_SHARE_BASIS_POINTS)) /
+      BigInt(BASIS_POINTS_TOTAL),
+  );
+  const expectedPlatform = gross - expectedCreator;
+  if (creator !== expectedCreator || platform !== expectedPlatform) {
+    return refuseWith(
+      REVENUE_SHARE_REFUSE_CODES.splitDoesNotBalance,
+      `${label} must allocate ${expectedCreator} to the creator and ${expectedPlatform} to the platform at ${CREATOR_SHARE_BASIS_POINTS} basis points.`,
+    );
+  }
+  return undefined;
+}
+
 function screen(
   value: unknown,
   kind: string,
@@ -263,12 +283,13 @@ export function validateCreatorShareRecord(
       "creator share record platformCredits must be a non-negative safe integer.",
     );
   }
-  if (creatorCredits + platformCredits !== grossCredits) {
-    return refuseWith(
-      REVENUE_SHARE_REFUSE_CODES.splitDoesNotBalance,
-      `creator share record must balance: ${creatorCredits} + ${platformCredits} !== ${grossCredits}. A split may never create or destroy credits.`,
-    );
-  }
+  const split = validateFixedSplit(
+    "creator share record",
+    grossCredits,
+    creatorCredits,
+    platformCredits,
+  );
+  if (split !== undefined) return split;
 
   return ok(
     Object.freeze({
@@ -335,12 +356,13 @@ export function validateMoneySplitRecord(
       "money split record platformMinor must be a non-negative safe integer.",
     );
   }
-  if (creatorMinor + platformMinor !== grossMinor) {
-    return refuseWith(
-      REVENUE_SHARE_REFUSE_CODES.splitDoesNotBalance,
-      `money split record must balance: ${creatorMinor} + ${platformMinor} !== ${grossMinor}. A split may never create or destroy money.`,
-    );
-  }
+  const split = validateFixedSplit(
+    "money split record",
+    grossMinor,
+    creatorMinor,
+    platformMinor,
+  );
+  if (split !== undefined) return split;
   const currency = record["currency"];
   if (typeof currency !== "string" || !CURRENCY_RE.test(currency)) {
     return invalid(

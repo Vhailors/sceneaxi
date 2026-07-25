@@ -180,6 +180,10 @@ CREATE TABLE IF NOT EXISTS creator_share_records (
   CONSTRAINT creator_share_records_balances CHECK (
     creator_credits + platform_credits = gross_credits
   ),
+  CONSTRAINT creator_share_records_ratio CHECK (
+    creator_credits = floor((gross_credits::numeric * 5000) / 10000)
+    AND platform_credits = gross_credits - creator_credits
+  ),
   CONSTRAINT creator_share_records_basis_points CHECK (basis_points = 5000)
 );
 
@@ -207,6 +211,10 @@ CREATE TABLE IF NOT EXISTS money_split_records (
   -- A split may never create or destroy money.
   CONSTRAINT money_split_records_balances CHECK (
     creator_minor + platform_minor = gross_minor
+  ),
+  CONSTRAINT money_split_records_ratio CHECK (
+    creator_minor = floor((gross_minor::numeric * 5000) / 10000)
+    AND platform_minor = gross_minor - creator_minor
   ),
   CONSTRAINT money_split_records_basis_points CHECK (basis_points = 5000),
   CONSTRAINT money_split_records_mode_known CHECK (mode IN ('test', 'live'))
