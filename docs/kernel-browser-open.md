@@ -17,7 +17,9 @@ Digest bytes did not change. The portable implementation is byte-identical to
 `node:crypto` sha256 over the same UTF-8 input, so every landed digest, save
 artifact, and checked-in golden is untouched.
 
-The kernel has one digest implementation and no host digest hook.
+The portable implementation is the default. A host may optionally inject a
+synchronous implementation, but the kernel verifies it against the portable
+digest before opening the session and refuses disagreement.
 
 ## Opening in the browser (option A: portable digest)
 
@@ -36,6 +38,31 @@ Surface added by this ship:
 | Export | Meaning |
 |---|---|
 | `portableKernelDigest` | The kernel's portable synchronous sha256 implementation |
+| `KernelDigest` | A synchronous `(utf8Input: string) => string` digest function |
+| `KernelDigestHost` | Optional host container for a `digest` implementation |
+| `resolveKernelDigest` | Returns the portable default or verifies an injected digest |
+
+### Optional verified injection
+
+Injection is a performance choice only. `KernelHost.digest` supplies it to
+entity `open()` / `replay()` calls; sculpt and scene open/replay functions take
+an optional trailing `KernelDigestHost` argument:
+
+```ts
+const digestHost = { digest: acceleratedSynchronousSha256 };
+
+const sceneSession = openSceneKernelSession(
+  composedScene,
+  { seed: 9101 },
+  digestHost,
+);
+```
+
+`resolveKernelDigest` verifies empty, ASCII, astral UTF-8, embedded-NUL, and
+multi-block probes. Opening refuses if the function throws, returns anything
+other than 64 lowercase hexadecimal characters, or disagrees with
+`portableKernelDigest`. The verified function is then retained for all session
+digest calls; it cannot opt into different snapshot or save-artifact bytes.
 
 ## Server kernel to browser presentation (option B: snapshot transport)
 
@@ -58,7 +85,8 @@ this same JSON encoding, so it cannot move.
 - Session state reaches presentation only through frozen `observe()` snapshots or
   a transported save artifact; presentation never mutates kernel state
   (ADR 0001, ADR 0002).
-- `openSculptKernelSession` / `openSceneKernelSession` signatures are unchanged.
+- Existing `open` / `replay` calls remain valid; digest injection is an optional
+  `KernelHost.digest` property or trailing `KernelDigestHost` argument.
 - Multi-object scene snapshots keep their deterministic instance order, per-instance
   world transforms, and scene digest ([`docs/scene-composition.md`](scene-composition.md)).
 

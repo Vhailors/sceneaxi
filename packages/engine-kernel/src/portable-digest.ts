@@ -3,9 +3,10 @@
  *
  * `observe()` is synchronous and digest-bound, so the digest function must be
  * synchronous too — Web Crypto's `SubtleCrypto.digest` is async and cannot
- * satisfy that contract under ADR 0001. Every kernel digest therefore comes
- * from this one dependency-free pure-JS SHA-256, which runs identically in Node
- * and in a browser and removes the `node:crypto` barrier from every session path.
+ * satisfy that contract under ADR 0001. The dependency-free pure-JS SHA-256 is
+ * the default and semantic oracle for optional verified host implementations.
+ * It runs identically in Node and a browser and removes the `node:crypto`
+ * barrier from every session path.
  */
 import { KernelSessionError } from "./errors.js";
 

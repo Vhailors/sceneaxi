@@ -13,10 +13,12 @@ Game Kernel seam: deterministic command/snapshot session
 
 ## Browser open path
 
-Digests come from a portable synchronous sha256 (`src/portable-digest.ts`)
-instead of `node:crypto`, so a browser can open and play a session directly;
-snapshots and save artifacts are plain JSON, so a server kernel can instead send
-them to a browser presentation runtime. Digest bytes are unchanged.
+Digests use a portable synchronous sha256 (`src/portable-digest.ts`) by default
+instead of `node:crypto`, so a browser can open and play a session directly.
+Optional host implementations are verified against that portable default before
+use and cannot change digest semantics. Snapshots and save artifacts are plain
+JSON, so a server kernel can instead send them to a browser presentation
+runtime. Digest bytes are unchanged.
 
 See [ADR 0016](../../docs/adr/0016-portable-kernel-digest.md) and
 [docs/kernel-browser-open.md](../../docs/kernel-browser-open.md).

@@ -1,8 +1,8 @@
 /**
  * Minimal deterministic command/snapshot session (ADR 0001 Design A).
  * Only `advance` mutates authoritative state. No presentation/backend types.
- * No Node builtins either — the digest is portable so this session opens in a
- * browser (see `./portable-digest.ts` and docs/kernel-browser-open.md).
+ * No Node builtins either — portable digest semantics let this session open in
+ * a browser (see `./portable-digest.ts` and docs/kernel-browser-open.md).
  */
 import { KernelSessionError } from "./errors.js";
 import {

@@ -7,7 +7,7 @@
  * authority model for its bounded hierarchy, animation-socket, and toy-
  * collision vertical.
  *
- * Every session path is browser-runnable: digests come from a portable
+ * Every session path is browser-runnable: digest semantics come from a portable
  * synchronous sha256 rather than `node:crypto`, and snapshots/save artifacts
  * stay plain serializable data a presentation runtime can consume
  * (docs/kernel-browser-open.md).
