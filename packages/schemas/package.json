@@ -16,6 +16,8 @@
     "./contracts/billing-checkout.schema.json": "./contracts/billing-checkout.schema.json",
     "./contracts/credit-packs.schema.json": "./contracts/credit-packs.schema.json",
     "./contracts/credit-packs.fixtures.json": "./contracts/credit-packs.fixtures.json",
+    "./contracts/entitlement-matrix.schema.json": "./contracts/entitlement-matrix.schema.json",
+    "./contracts/entitlement-matrix.fixtures.json": "./contracts/entitlement-matrix.fixtures.json",
     "./contracts/model-provider-port.schema.json": "./contracts/model-provider-port.schema.json",
     "./contracts/sculpt-intake.schema.json": "./contracts/sculpt-intake.schema.json",
     "./contracts/object-sculpt-spec.schema.json": "./contracts/object-sculpt-spec.schema.json",

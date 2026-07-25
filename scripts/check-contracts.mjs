@@ -8,6 +8,7 @@
  * 2. Plugin capability registry schema + checked-in 1.0.0 seed artifact
  * 3. Plugin-manifest inert example fixture + docs/plugins.md lockstep (sceneaxi#24)
  * 4. Credit pack catalog fixture + docs/auth-credits.md lockstep (sceneaxi#91)
+ * 5. Free-vs-paid entitlement matrix + docs/auth-credits.md lockstep (sceneaxi#99)
  *
  * Fail-closed: missing files, schema violations, duplicate ids, seed drift, or
  * a doc whose fixture table drifts from the canonical JSON all exit 1.
@@ -174,6 +175,8 @@ const validate = (value, sch, path) => {
     }
   } else if (sch.type === "integer") {
     if (!Number.isInteger(value)) fail(`${path}: expected integer`);
+  } else if (sch.type === "boolean") {
+    if (typeof value !== "boolean") fail(`${path}: expected boolean`);
   }
 };
 
@@ -202,7 +205,13 @@ const schemaAssertions = new Set([
   "minLength",
   "uniqueItems",
 ]);
-const supportedTypes = new Set(["object", "array", "string", "integer"]);
+const supportedTypes = new Set([
+  "object",
+  "array",
+  "string",
+  "integer",
+  "boolean",
+]);
 
 const validateSchemaDefinition = (sch, path) => {
   let supported = true;
@@ -746,11 +755,147 @@ if (creditPacksSchemaIsObject && creditPacksFixturesIsObject) {
   }
 }
 
+// --- entitlement matrix + docs/auth-credits.md lockstep (sceneaxi#99) ---
+const ENTITLEMENT_DOC_START = "<!-- entitlement-matrix:list -->";
+const ENTITLEMENT_DOC_END = "<!-- /entitlement-matrix:list -->";
+
+const entitlementSchemaPath = join(
+  root,
+  "packages",
+  "schemas",
+  "contracts",
+  "entitlement-matrix.schema.json",
+);
+const entitlementFixturesPath = join(
+  root,
+  "packages",
+  "schemas",
+  "contracts",
+  "entitlement-matrix.fixtures.json",
+);
+
+const entitlementSchema = load(entitlementSchemaPath, true);
+const entitlementFixtures = load(entitlementFixturesPath, true);
+
+const entitlementSchemaIsObject =
+  entitlementSchema !== loadFailed && isPlainObject(entitlementSchema);
+const entitlementFixturesIsObject =
+  entitlementFixtures !== loadFailed && isPlainObject(entitlementFixtures);
+
+if (entitlementSchema !== loadFailed && !entitlementSchemaIsObject) {
+  fail(`${relative(root, entitlementSchemaPath)}: expected a plain JSON object`);
+}
+if (entitlementFixtures !== loadFailed && !entitlementFixturesIsObject) {
+  fail(`${relative(root, entitlementFixturesPath)}: expected a plain JSON object`);
+}
+
+let entitlementCapabilityCount = 0;
+const entitlementSchemaUsesSupportedSubset =
+  entitlementSchemaIsObject &&
+  validateSchemaDefinition(entitlementSchema, "entitlement-matrix.schema");
+
+if (entitlementSchemaIsObject) {
+  if (
+    typeof entitlementSchema.$id !== "string" ||
+    !entitlementSchema.$id.includes("entitlement-matrix")
+  ) {
+    fail(
+      `${relative(root, entitlementSchemaPath)}: $id does not identify the entitlement-matrix contract`,
+    );
+  }
+}
+
+if (entitlementSchemaIsObject && entitlementFixturesIsObject) {
+  if (entitlementSchemaUsesSupportedSubset) {
+    validate(entitlementFixtures, entitlementSchema, "entitlement-matrix.fixtures");
+  }
+
+  const capabilities = Array.isArray(entitlementFixtures.capabilities)
+    ? entitlementFixtures.capabilities
+    : [];
+  entitlementCapabilityCount = capabilities.length;
+
+  const ids = capabilities
+    .map((entry) => (isPlainObject(entry) ? entry.capability : undefined))
+    .filter((id) => typeof id === "string");
+  const duplicateIds = ids.filter((id, i) => ids.indexOf(id) !== i);
+  if (duplicateIds.length > 0) {
+    fail(
+      `entitlement-matrix.fixtures: duplicate capability id(s): ${[...new Set(duplicateIds)].join(", ")}`,
+    );
+  }
+
+  // The free path is a product guarantee: these three must stay account-free.
+  const FREE_WITHOUT_ACCOUNT = [
+    "engine-sdk-download",
+    "cli-authoring",
+    "byo-model-keys",
+  ];
+  for (const capability of FREE_WITHOUT_ACCOUNT) {
+    const entry = capabilities.find(
+      (candidate) => isPlainObject(candidate) && candidate.capability === capability,
+    );
+    if (entry === undefined) {
+      fail(
+        `entitlement-matrix.fixtures: free-path capability "${capability}" is missing; the free path is a captain product guarantee`,
+      );
+      continue;
+    }
+    if (entry.accountRequired !== false || entry.price !== "free") {
+      fail(
+        `entitlement-matrix.fixtures: "${capability}" must stay accountRequired false and price free; changing it needs a captain decision`,
+      );
+    }
+  }
+
+  if (entitlementFixtures.starterCreditGrant !== 100) {
+    fail(
+      `entitlement-matrix.fixtures: starterCreditGrant must be 100 (captain-frozen), got ${JSON.stringify(entitlementFixtures.starterCreditGrant)}`,
+    );
+  }
+
+  if (authCreditsDocHasContent) {
+    const starts = authCreditsDoc.split(ENTITLEMENT_DOC_START).length - 1;
+    const ends = authCreditsDoc.split(ENTITLEMENT_DOC_END).length - 1;
+    const matches = [
+      ...authCreditsDoc.matchAll(
+        /<!-- entitlement-matrix:list -->([\s\S]*?)<!-- \/entitlement-matrix:list -->/g,
+      ),
+    ];
+    if (starts !== 1 || ends !== 1 || matches.length !== 1) {
+      fail(
+        `docs/auth-credits.md: expected exactly one ${ENTITLEMENT_DOC_START} ... ${ENTITLEMENT_DOC_END} block, found ${starts} start and ${ends} end marker(s)`,
+      );
+    } else {
+      const actual = matches[0][1].trim().replaceAll("\r\n", "\n");
+      const expected = [
+        "| capability | account | price |",
+        "|---|---|---|",
+        ...capabilities.map(
+          (entry) =>
+            `| \`${entry.capability}\` | ${entry.accountRequired === true ? "required" : "not required"} | ${entry.price} |`,
+        ),
+      ].join("\n");
+      if (actual !== expected) {
+        fail(
+          "docs/auth-credits.md: entitlement matrix table does not exactly match entitlement-matrix.fixtures.json (capability, account, price columns in order)",
+        );
+      }
+    }
+
+    if (!authCreditsDoc.includes("entitlement-matrix.fixtures.json")) {
+      fail(
+        "docs/auth-credits.md: does not name the canonical entitlement matrix fixture path",
+      );
+    }
+  }
+}
+
 if (errors.length > 0) {
   for (const e of errors) console.error(`contract check FAIL: ${e}`);
   console.error(`contract check FAILED — ${errors.length} error(s)`);
   process.exit(1);
 }
 console.log(
-  `contract check OK — ${authoringJobCount} shared authoring jobs valid, doc table matches, E1+E2 bound to one list; plugin capability registry 1.0.0 seed empty and schema-locked; plugin-manifest inert example schema-locked; ${creditPackCount} test-mode credit packs schema-locked and doc-bound`,
+  `contract check OK — ${authoringJobCount} shared authoring jobs valid, doc table matches, E1+E2 bound to one list; plugin capability registry 1.0.0 seed empty and schema-locked; plugin-manifest inert example schema-locked; ${creditPackCount} test-mode credit packs schema-locked and doc-bound; ${entitlementCapabilityCount} entitlement capabilities schema-locked, free path intact, doc-bound`,
 );

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "starterCreditGrant": 100,
+  "capabilities": [
+    {
+      "capability": "engine-sdk-download",
+      "accountRequired": false,
+      "price": "free"
+    },
+    {
+      "capability": "cli-authoring",
+      "accountRequired": false,
+      "price": "free"
+    },
+    {
+      "capability": "byo-model-keys",
+      "accountRequired": false,
+      "price": "free"
+    },
+    {
+      "capability": "hosted-ai-assistant",
+      "accountRequired": true,
+      "price": "credits"
+    },
+    {
+      "capability": "metered-model-port",
+      "accountRequired": true,
+      "price": "credits"
+    },
+    {
+      "capability": "catalog-asset-purchase",
+      "accountRequired": true,
+      "price": "credits-or-money"
+    },
+    {
+      "capability": "creator-publish",
+      "accountRequired": true,
+      "price": "free"
+    },
+    {
+      "capability": "credit-pack-purchase",
+      "accountRequired": true,
+      "price": "money"
+    }
+  ]
+}

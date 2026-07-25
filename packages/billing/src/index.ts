@@ -57,6 +57,15 @@ export {
 } from "./credit-packs.js";
 
 export {
+  STARTER_IDEMPOTENCY_PREFIX,
+  evaluateEntitlement,
+  grantStarterCredits,
+  type EntitlementPaymentMethod,
+  type EvaluateEntitlementRequest,
+  type GrantStarterCreditsRequest,
+} from "./entitlements.js";
+
+export {
   assertModeAuthorized,
   createCheckoutSessionIntent,
   type CreateCheckoutSessionIntentRequest,

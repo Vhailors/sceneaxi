@@ -48,6 +48,14 @@ export const BILLING_REFUSE_REASONS = Object.freeze({
   // --- webhook payload ---
   webhookPayloadInvalid: "STRIPE_WEBHOOK_PAYLOAD_INVALID",
   webhookEventTypeUnsupported: "STRIPE_WEBHOOK_EVENT_TYPE_UNSUPPORTED",
+
+  // --- free-vs-paid enforcement ---
+  capabilityUnknown: "ENTITLEMENT_CAPABILITY_UNKNOWN",
+  accountRequired: "ENTITLEMENT_ACCOUNT_REQUIRED",
+  paymentMethodRequired: "ENTITLEMENT_PAYMENT_METHOD_REQUIRED",
+  creditAmountRequired: "ENTITLEMENT_CREDIT_AMOUNT_REQUIRED",
+  entitlementDecisionInvalid: "ENTITLEMENT_DECISION_INVALID",
+  kidsCommerceDenied: "KIDS_COMMERCE_DENIED",
 } as const);
 
 export type BillingRefuseReason =

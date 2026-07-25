@@ -25,6 +25,50 @@ Three shapes are load-bearing and should not be "fixed" later without reading wh
 - **`Session` stores a token digest**, never a raw token, so a leaked session row cannot be
   replayed as a credential.
 
+## Free vs paid enforcement matrix
+
+Captain commercial model (2026-07-25). Canonical data:
+`packages/schemas/contracts/entitlement-matrix.fixtures.json`, mirrored by
+`ENTITLEMENT_MATRIX` in `packages/schemas/src/entitlements.ts`. `pnpm check:contracts`
+keeps the JSON and this table in lockstep, a seam test binds the JSON to the TypeScript
+table, and the checker independently refuses any change that would put an account or a
+price on the three free-path capabilities.
+
+<!-- entitlement-matrix:list -->
+| capability | account | price |
+|---|---|---|
+| `engine-sdk-download` | not required | free |
+| `cli-authoring` | not required | free |
+| `byo-model-keys` | not required | free |
+| `hosted-ai-assistant` | required | credits |
+| `metered-model-port` | required | credits |
+| `catalog-asset-purchase` | required | credits-or-money |
+| `creator-publish` | required | free |
+| `credit-pack-purchase` | required | money |
+<!-- /entitlement-matrix:list -->
+
+**Free forever, and reachable with no account at all:** the public engine SDK download,
+CLI and local agent authoring, and bring-your-own AI keys. Bring-your-own keys never burn
+SceneAxi credits — the user is already paying their own provider, so charging twice would
+be indefensible. A test asserts that path appends no ledger entry even when a balance
+exists.
+
+**Account required:** SceneAxi-hosted AI, catalog purchases, creator publish, credit
+balance, and credit-pack purchase.
+
+**Admin** has an unlimited allowance and is never debited. **Kids commerce is denied** on
+every capability, free ones included, and the refusal is not overridable.
+
+The matrix is a **closed enumeration**, not a lookup with a default: an unknown capability
+refuses. There is no path where forgetting to register something makes it free, and none
+where forgetting makes it silently chargeable.
+
+## Starter credits
+
+Every new user receives exactly **100** credits, once, under idempotency key
+`starter:<userId>`. A second attempt grants nothing. The amount is captain-frozen and the
+contract check refuses a change to it.
+
 ## Credit packs
 
 Canonical list: `packages/schemas/contracts/credit-packs.fixtures.json`. The table below is

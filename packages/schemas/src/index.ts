@@ -140,6 +140,33 @@ export type {
   StripeCustomerLink,
 } from "./billing.js";
 
+export {
+  ENTITLEMENT_CAPABILITIES,
+  ENTITLEMENT_DECISION_KIND,
+  ENTITLEMENT_MATRIX,
+  ENTITLEMENT_MATRIX_FIXTURES_PATH,
+  ENTITLEMENT_OUTCOMES,
+  ENTITLEMENT_PRICE_KINDS,
+  ENTITLEMENT_REFUSE_CODES,
+  ENTITLEMENT_SCHEMA_VERSION,
+  STARTER_CREDIT_GRANT,
+  entitlementRuleFor,
+  isEntitlementCapability,
+  isEntitlementOutcome,
+  validateEntitlementDecision,
+} from "./entitlements.js";
+export type {
+  EntitlementCapability,
+  EntitlementDecision,
+  EntitlementOutcome,
+  EntitlementPriceKind,
+  EntitlementRefuseCode,
+  EntitlementRule,
+  EntitlementValidationOk,
+  EntitlementValidationRefuse,
+  EntitlementValidationResult,
+} from "./entitlements.js";
+
 export { parseUnambiguousJson } from "./unambiguous-json.js";
 export type { UnambiguousJsonParseResult } from "./unambiguous-json.js";
 export type {
@@ -322,6 +349,8 @@ export const contracts = Object.freeze({
   billingCheckout: "contracts/billing-checkout.schema.json",
   /** Credit pack catalog schema; canonical list is CREDIT_PACKS_FIXTURES_PATH. */
   creditPacks: "contracts/credit-packs.schema.json",
+  /** Free-vs-paid capability matrix (sceneaxi#99); data is ENTITLEMENT_MATRIX_FIXTURES_PATH. */
+  entitlementMatrix: "contracts/entitlement-matrix.schema.json",
   /** Plugin Manifest descriptor (sceneaxi#20 / ADR 0005); host runtime is @sceneaxi/plugin-host. */
   pluginManifest: "contracts/plugin-manifest.schema.json",
   /** Plugin Capability ID registry schema (sceneaxi#21 / ADR 0005); seed path is PLUGIN_CAPABILITY_REGISTRY_SEED_PATH. */
