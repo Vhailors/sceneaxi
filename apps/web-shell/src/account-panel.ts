@@ -37,8 +37,8 @@ import {
 } from "@sceneaxi/auth";
 import {
   BILLING_REFUSE_REASONS,
-  deriveBalance,
   evaluateEntitlement,
+  validateLedgerState,
   type BillingRefuseReason,
   type LedgerState,
 } from "@sceneaxi/billing";
@@ -339,13 +339,13 @@ export function createAccountPanel(
         ),
       );
     }
-    const stateRecord = snapshotPlainRecord(state);
-    const accountRecord = snapshotPlainRecord(stateRecord?.["account"]);
-    if (
-      stateRecord === undefined ||
-      accountRecord === undefined ||
-      accountRecord["userId"] !== principal.user.userId
-    ) {
+    const validatedState = validateLedgerState(state);
+    if (!validatedState.ok) {
+      return refused(
+        refusal(validatedState.reason, validatedState.message),
+      );
+    }
+    if (validatedState.value.account.userId !== principal.user.userId) {
       return refused(
         refusal(
           ACCOUNT_PANEL_REASONS.ledgerOwnerMismatch,
@@ -354,20 +354,19 @@ export function createAccountPanel(
       );
     }
 
-    // Derived, not read off a field: a balance that cannot be derived is a
-    // refusal, never a plausible-looking number.
-    const balance = deriveBalance(stateRecord["entries"]);
-    if (!balance.ok) {
-      return refused(refusal(balance.reason, balance.message));
-    }
-
     return Object.freeze({
       phase: "authenticated" as const,
       surface,
       email: principal.user.email,
       role: principal.role.role,
-      creditBalance: balance.value,
-      capabilities: capabilityViews(admin, surface, now, principal, state),
+      creditBalance: validatedState.value.balance,
+      capabilities: capabilityViews(
+        admin,
+        surface,
+        now,
+        principal,
+        validatedState.value,
+      ),
     });
   };
 

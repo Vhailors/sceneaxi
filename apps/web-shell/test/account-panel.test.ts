@@ -16,6 +16,7 @@ import {
 } from "@sceneaxi/auth";
 import {
   appendCreditEntry,
+  BILLING_REFUSE_REASONS,
   createLedgerState,
   type LedgerState,
 } from "@sceneaxi/billing";
@@ -229,6 +230,26 @@ describe("authenticated phase", () => {
     expect(snapshot.phase).toBe("refused");
     expect(snapshot.refusal?.reason).toBe(
       ACCOUNT_PANEL_REASONS.ledgerOwnerMismatch,
+    );
+    expect(snapshot.creditBalance).toBeUndefined();
+  });
+
+  it("refuses another account's entries under the user's account", async () => {
+    const own = ledgerFor("usr_crew", 0);
+    const foreign = ledgerFor("usr_other", 900);
+    const mixed = {
+      account: own.account,
+      entries: foreign.entries,
+      balance: foreign.balance,
+    } as LedgerState;
+    const panel = makePanel({}, { usr_crew: mixed });
+    const snapshot = await panel.submitCredentials({
+      email: "crew@example.com",
+      password: "pw",
+    });
+    expect(snapshot.phase).toBe("refused");
+    expect(snapshot.refusal?.reason).toBe(
+      BILLING_REFUSE_REASONS.ledgerStateInvalid,
     );
     expect(snapshot.creditBalance).toBeUndefined();
   });
