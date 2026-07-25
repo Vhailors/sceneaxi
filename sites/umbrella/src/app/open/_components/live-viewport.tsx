@@ -42,6 +42,19 @@ type LiveSession = {
 const messageOf = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
+function releaseAll(cleanups: Array<() => void>) {
+  let firstFailure: { readonly error: unknown } | null = null;
+  while (cleanups.length > 0) {
+    const cleanup = cleanups.pop();
+    try {
+      cleanup?.();
+    } catch (error) {
+      firstFailure ??= { error };
+    }
+  }
+  return firstFailure;
+}
+
 export function LiveViewport({ scene }: { readonly scene: LiveOpenScene }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const sessionRef = useRef<LiveSession | null>(null);
@@ -69,6 +82,11 @@ export function LiveViewport({ scene }: { readonly scene: LiveOpenScene }) {
       height: Math.max(1, Math.round(canvas.clientHeight)),
     });
 
+    const cleanups: Array<() => void> = [];
+    const dispose = () => {
+      const failure = releaseAll(cleanups);
+      if (failure !== null) throw failure.error;
+    };
     let session: LiveSession;
     try {
       const backend = createThreeSculptPresentationBackend({
@@ -76,7 +94,14 @@ export function LiveViewport({ scene }: { readonly scene: LiveOpenScene }) {
         viewport: { ...measure(), pixelRatio },
         background: "#0b0e13",
       });
+      cleanups.push(() => {
+        backend.dispose();
+      });
       const mounts = createSculptMountApi(backend);
+      cleanups.pop();
+      cleanups.push(() => {
+        mounts.dispose();
+      });
       for (const instance of scene.instances) {
         const artifact = scene.artifacts[instance.artifactId];
         if (artifact === undefined) continue;
@@ -88,6 +113,7 @@ export function LiveViewport({ scene }: { readonly scene: LiveOpenScene }) {
       }
       backend.frameMountedContent();
       const detachInput = backend.camera.attach(canvas);
+      cleanups.push(detachInput);
 
       // Mount and unmount the non-root instances to match the button, through the same
       // Mount API the page demonstrates. The renderer is never torn down to do it, and
@@ -115,6 +141,15 @@ export function LiveViewport({ scene }: { readonly scene: LiveOpenScene }) {
         }
       };
 
+      const observer = new ResizeObserver(() => {
+        const next = measure();
+        backend.resize(next.width, next.height, pixelRatio);
+      });
+      cleanups.push(() => {
+        observer.disconnect();
+      });
+      observer.observe(canvas);
+
       const loop = createThreeRenderLoop({
         onFrame: () => {
           reconcileMounts();
@@ -125,25 +160,18 @@ export function LiveViewport({ scene }: { readonly scene: LiveOpenScene }) {
           }
         },
       });
-
-      const observer = new ResizeObserver(() => {
-        const next = measure();
-        backend.resize(next.width, next.height, pixelRatio);
+      cleanups.push(() => {
+        loop.stop();
       });
-      observer.observe(canvas);
       loop.start();
 
       session = {
         backend,
         mounts,
-        dispose: () => {
-          loop.stop();
-          observer.disconnect();
-          detachInput();
-          mounts.dispose();
-        },
+        dispose,
       };
     } catch (error) {
+      releaseAll(cleanups);
       setStatus({ kind: "refused", message: messageOf(error) });
       return;
     }

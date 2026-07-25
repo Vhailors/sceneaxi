@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const rendererState = vi.hoisted(() => ({
+  disposals: 0,
   draws: 0,
   options: [] as unknown[],
 }));
@@ -28,7 +29,9 @@ vi.mock("three", async (importOriginal) => {
       this.info.render.calls = 1;
     }
 
-    dispose() {}
+    dispose() {
+      rendererState.disposals += 1;
+    }
   }
 
   return {
@@ -47,18 +50,40 @@ const manifest: ProductManifest = {
   entities: [{ id: "marker", x: 0, y: 0 }],
 };
 
+function eventCanvas() {
+  const listeners = new Map<string, Set<() => void>>();
+  return {
+    canvas: {
+      width: 320,
+      height: 240,
+      toDataURL: () => "data:image/png;base64,iVBORw==",
+      addEventListener(type: string, listener: () => void) {
+        const registered = listeners.get(type) ?? new Set();
+        registered.add(listener);
+        listeners.set(type, registered);
+      },
+      removeEventListener(type: string, listener: () => void) {
+        listeners.get(type)?.delete(listener);
+      },
+    },
+    emit(type: string) {
+      for (const listener of listeners.get(type) ?? []) listener();
+    },
+    listenerCount(type: string) {
+      return listeners.get(type)?.size ?? 0;
+    },
+  };
+}
+
 describe("Three canvas surface capture lifecycle", () => {
   beforeEach(() => {
+    rendererState.disposals = 0;
     rendererState.draws = 0;
     rendererState.options.length = 0;
   });
 
   it("forwards transparent clearing to the WebGL renderer alpha option", () => {
-    const canvas = {
-      width: 320,
-      height: 240,
-      toDataURL: () => "data:image/png;base64,iVBORw==",
-    };
+    const { canvas } = eventCanvas();
     const transparent = createThreePresentationRuntime({
       canvas,
       background: null,
@@ -81,13 +106,8 @@ describe("Three canvas surface capture lifecycle", () => {
   });
 
   it("invalidates the captured frame after a resize", () => {
-    const runtime = createThreePresentationRuntime({
-      canvas: {
-        width: 320,
-        height: 240,
-        toDataURL: () => "data:image/png;base64,iVBORw==",
-      },
-    });
+    const { canvas } = eventCanvas();
+    const runtime = createThreePresentationRuntime({ canvas });
     const snapshot = open(manifest, {
       nowMs: () => 1_753_420_800_000,
     }).observe();
@@ -100,5 +120,45 @@ describe("Three canvas surface capture lifecycle", () => {
     runtime.resize(640, 480);
     expect(runtime.capture()).toBeNull();
     runtime.dispose();
+  });
+
+  it("stops claiming pixels while its WebGL context is lost", () => {
+    const target = eventCanvas();
+    const runtime = createThreePresentationRuntime({ canvas: target.canvas });
+    const snapshot = open(manifest, {
+      nowMs: () => 1_753_420_800_000,
+    }).observe();
+    runtime.mount();
+    runtime.present(snapshot, [], 1);
+
+    expect(runtime.lastFrame()).toMatchObject({
+      drawCalls: 1,
+      pixelsDrawn: true,
+    });
+    expect(runtime.capture()?.bytes).toBeInstanceOf(Uint8Array);
+
+    target.emit("webglcontextlost");
+    runtime.present(snapshot, [], 1);
+
+    expect(runtime.lastFrame()).toMatchObject({
+      drawCalls: 0,
+      pixelsDrawn: false,
+    });
+    expect(runtime.capture()).toBeNull();
+    expect(rendererState.draws).toBe(1);
+
+    target.emit("webglcontextrestored");
+    runtime.present(snapshot, [], 1);
+
+    expect(runtime.lastFrame()).toMatchObject({
+      drawCalls: 1,
+      pixelsDrawn: true,
+    });
+    expect(rendererState.draws).toBe(2);
+
+    runtime.dispose();
+    expect(target.listenerCount("webglcontextlost")).toBe(0);
+    expect(target.listenerCount("webglcontextrestored")).toBe(0);
+    expect(rendererState.disposals).toBe(1);
   });
 });

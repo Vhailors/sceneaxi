@@ -71,6 +71,11 @@ export type WebGLCanvasSurfaceOptions = {
   readonly alpha?: boolean;
 };
 
+type WebGLContextLifecycleTarget = {
+  addEventListener(type: string, listener: () => void): void;
+  removeEventListener(type: string, listener: () => void): void;
+};
+
 const BASE64_ALPHABET =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -148,6 +153,19 @@ export function createWebGLCanvasSurface(
       "A canvas is required for the WebGL surface.",
     );
   }
+  const contextTarget = canvas as ThreeCanvasTarget &
+    Partial<WebGLContextLifecycleTarget>;
+  if (
+    typeof contextTarget.addEventListener !== "function" ||
+    typeof contextTarget.removeEventListener !== "function"
+  ) {
+    throw new ThreePresentationError(
+      "invalid-canvas",
+      "A WebGL canvas must support context lifecycle events.",
+    );
+  }
+  const contextEvents = contextTarget as ThreeCanvasTarget &
+    WebGLContextLifecycleTarget;
   const preserveDrawingBuffer = options.preserveDrawingBuffer ?? true;
   const renderer = new WebGLRenderer({
     // `ThreeCanvasTarget` is structural so this package needs no DOM lib. A consumer
@@ -163,6 +181,24 @@ export function createWebGLCanvasSurface(
     alpha: options.alpha ?? false,
   });
   let drawn = false;
+  let contextAvailable = true;
+  const onContextLost = () => {
+    contextAvailable = false;
+    drawn = false;
+  };
+  const onContextRestored = () => {
+    contextAvailable = true;
+    drawn = false;
+  };
+  try {
+    contextEvents.addEventListener("webglcontextlost", onContextLost);
+    contextEvents.addEventListener("webglcontextrestored", onContextRestored);
+  } catch (error) {
+    contextEvents.removeEventListener("webglcontextlost", onContextLost);
+    contextEvents.removeEventListener("webglcontextrestored", onContextRestored);
+    renderer.dispose();
+    throw error;
+  }
 
   return {
     kind: "webgl-canvas",
@@ -178,6 +214,9 @@ export function createWebGLCanvasSurface(
 
     draw(sceneHandle, cameraHandle) {
       const targets = asRenderTargets(sceneHandle, cameraHandle);
+      if (!contextAvailable) {
+        return Object.freeze({ drawCalls: 0, pixelsDrawn: false });
+      }
       renderer.info.reset();
       renderer.render(targets.scene, targets.camera);
       drawn = true;
@@ -207,8 +246,11 @@ export function createWebGLCanvasSurface(
     },
 
     dispose() {
+      contextEvents.removeEventListener("webglcontextlost", onContextLost);
+      contextEvents.removeEventListener("webglcontextrestored", onContextRestored);
       renderer.dispose();
       drawn = false;
+      contextAvailable = false;
     },
   };
 }
