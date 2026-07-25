@@ -1,0 +1,21 @@
+{
+  "name": "@sceneaxi/billing",
+  "version": "0.0.0",
+  "private": true,
+  "description": "SceneAxi credits and billing — append-only credit ledger, metering, entitlement enforcement, Stripe test-mode checkout intents and signed-webhook grants",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "dependencies": {
+    "@sceneaxi/schemas": "workspace:^",
+    "@sceneaxi/auth": "workspace:^"
+  },
+  "sceneaxi": {
+    "releaseGroup": "identity"
+  },
+  "license": "UNLICENSED"
+}

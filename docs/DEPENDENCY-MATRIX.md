@@ -17,7 +17,8 @@ L1  engine packages    kernel ← presentation, orchestrator   (+ delayed: asset
 L2  authoring-core     the one agent-native runtime/authoring core (document model,
                        propose/apply service, session orchestration, evidence hooks,
                        Model Provider Port)
-L3  profiles · cli · importers · provider adapters · plugin-host
+L3  profiles · cli · importers · provider adapters · plugin-host · auth ← billing
+                       (identity plane; schema in db/migrations)
 L4  apps               (leaves; nothing depends on an app)
 L4  sites              site-kit ← the three deployable sites (leaves; ADR 0018)
 ```
@@ -35,7 +36,10 @@ L4  sites              site-kit ← the three deployable sites (leaves; ADR 0018
 | cli | ✓ | | | | ✓ | | — | | | |
 | importers / provider-openrouter | ✓ | | | | ✓ | | | — | | |
 | plugin-host | ✓ | | | | | | | | — | |
-| web-shell / desktop-shell | ✓ | | | | ✓ | | | | | — |
+| auth | ✓ | | | | | | | | | |
+| billing | ✓ (+ auth) | | | | | | | | | |
+| web-shell | ✓ | | | | ✓ | | | | | — (+ auth, billing) |
+| desktop-shell | ✓ | | | | ✓ | | | | | — |
 | catalog-game / catalog-web | ✓ | | | | | | | | | — |
 
 Deliberate denials that carry design intent:
@@ -63,6 +67,14 @@ Deliberate denials that carry design intent:
   in the root manifest, and if `pnpm-workspace.yaml` starts globbing `sites/` — the
   sites are separate install roots so the hermetic root lockfile never moves for a
   site dependency.
+- **auth → anything but schemas: denied.** The identity plane (ADR 0021) is
+  contracts and policy only. Better Auth and Neon are injected adapters, so there
+  is nothing for it to depend on.
+- **billing → engine packages / authoring-core / profiles / cli: denied.** Billing
+  depends on `schemas` and the `auth` seam, because a credit charge needs a role
+  guard. It reaches the Stripe API and Neon only through injected adapters.
+- **auth → billing: denied.** Identity does not know about money. The dependency
+  runs one way, so a role guard can never be made to depend on a balance.
 
 ## Kids policy boundary (hard)
 
@@ -109,3 +121,7 @@ Recorded in `dependency-matrix.json → releaseGroups` and stamped on every mani
   public `authoring-core` APIs; never engine packages, profiles, a service locator, or
   Kids. Framework and provider SDKs stay in the `sites/` tier. Deploy and env details:
   [`websites-deploy.md`](websites-deploy.md).
+- **identity** (`auth`, `billing`): independently versioned; consumes only public
+  contracts from `schemas` (and, for `billing`, the `auth` seam); never engine
+  packages, profiles, the CLI, or a service locator. Better Auth, Neon, and the
+  Stripe API stay injected adapters (ADR 0021; `docs/auth-credits.md`).

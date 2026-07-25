@@ -14,6 +14,20 @@ export const seam: PackageSeam = Object.freeze({
 });
 
 export {
+  ACCOUNT_PANEL_REASONS,
+  createAccountPanel,
+  type AccountCreditsView,
+  type AccountPanel,
+  type AccountPanelPhase,
+  type AccountPanelReason,
+  type AccountPanelRefusal,
+  type AccountPanelSnapshot,
+  type CapabilityView,
+  type CreateAccountPanelOptions,
+  type CreateAccountPanelResult,
+} from "./account-panel.js";
+
+export {
   createInspectorSession,
   type InspectorPhase,
   type InspectorSession,

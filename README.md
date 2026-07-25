@@ -13,6 +13,9 @@ This monorepo is the packaging home for:
 | Shared schemas / external importers | `packages/schemas`, `packages/importers` |
 | Model-provider adapters | `packages/provider-openrouter` (fixture-tested, injected transport behind the Model Provider Port) |
 | Plugin host | `packages/plugin-host` (explicit capability-manifest loading and refusal) |
+| Identity plane | `packages/auth` (single-admin env resolution, fail-closed role guards, Kids-isolated identity port over an injected Better Auth adapter) |
+| Credits + billing | `packages/billing` (append-only credit ledger, metering, free-vs-paid enforcement, Stripe test-mode checkout and signed-webhook grants, creator revenue share) |
+| Neon schema | `db/migrations` (forward-only SQL; append-only ledger trigger, at-most-one-admin index) |
 | Web / desktop shells | `apps/web-shell`, `apps/desktop-shell` |
 | Asset catalogs (may split later) | `apps/catalog-game`, `apps/catalog-web` |
 | Deployable web surfaces | `sites/umbrella`, `sites/catalog-game`, `sites/catalog-web` over `packages/site-kit` (ADR 0018; deploy details in [`docs/websites-deploy.md`](docs/websites-deploy.md)) |

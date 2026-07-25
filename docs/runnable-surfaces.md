@@ -55,10 +55,12 @@ declared in `docs/dependency-matrix.json`. Consequences worth knowing:
 
 ## Why the CLI and shells have no kernel or plugin verbs
 
-`docs/dependency-matrix.json` allows `@sceneaxi/cli`, `@sceneaxi/web-shell`, and
+`docs/dependency-matrix.json` allows `@sceneaxi/cli` and
 `@sceneaxi/desktop-shell` to depend on `@sceneaxi/schemas` and
-`@sceneaxi/authoring-core` **only**. Kernel-session, presentation, and
-plugin-host verbs on those surfaces would require widening it.
+`@sceneaxi/authoring-core` **only**; `@sceneaxi/web-shell` additionally names
+`@sceneaxi/auth` and `@sceneaxi/billing` for its account/credits view model
+(`docs/auth-credits.md`). Kernel-session, presentation, and plugin-host verbs on
+any of those surfaces would still require widening the matrix.
 
 The boundary is not widened. Those paths are proven in `tests/e2e/`, which may
 import any package. `scene compose` *is* on the CLI because `composeScene()`
@@ -87,16 +89,18 @@ still-unimplemented target:
 The CLI is **free and BYO-AI**: no verb reads a credential, opens a socket, or
 spends anything, and no shipped verb is held-key gated (`SHIPPED_COMMAND_MAP`).
 
-Hosted AI is the metered surface and is **not implemented here**. Its contract —
-BYO-key never touches the ledger, hosted debits credits and refuses closed when
-the ledger is absent, stale, or short, and the Kids deny is evaluated before any
-metering or dispatch — is fixed in sceneaxi#121, which serializes behind the
-credits ledger.
+Hosted AI is the metered surface and is **not implemented here**. The free-vs-paid
+matrix it must obey — including BYO-key never touching the ledger and the
+non-overridable Kids deny — is owned by
+[`docs/auth-credits.md`](auth-credits.md). The credit ledger and metering it would
+debit now exist (`packages/billing`); the hosted assistant surface itself remains
+sceneaxi#121.
 
 ## Not runnable yet
 
 - **`apps/web-shell`** (sceneaxi#120) — a protocol client library with no dev
   server. Blocked on whether the websites/deploy work touches `apps/web-shell`.
-- **In-app AI assistant** (sceneaxi#121) — serialized behind the credits ledger.
+- **In-app AI assistant** (sceneaxi#121) — the credits ledger it was serialized
+  behind has landed; the assistant surface itself is still unbuilt.
 - **`apps/catalog-game`, `apps/catalog-web`** — dormant, owned by the
   websites/deploy track.

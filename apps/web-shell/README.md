@@ -32,9 +32,17 @@ Non-interactive path (agent parity): `shellProposeAndApply(...)`.
 The issue #57 conformance case drives inspector propose → rendered diff →
 accept against the same canonical fixture and asserts the CLI proposal diff,
 final bytes, and content hash are identical. This remains a protocol client,
-not a second editor, product UI, design system, or authentication surface.
+not a second editor, product UI, or design system.
 
 No hosting, no deployment, no public visibility.
+
+## Account panel
+
+`createAccountPanel()` is the login + credit-balance **view model** over injected
+`@sceneaxi/auth` and `@sceneaxi/billing` ports: it renders no markup and
+implements no authentication. Every decision it exposes was already made by the
+identity port and the entitlement matrix, whose contracts are owned by
+[`docs/auth-credits.md`](../../docs/auth-credits.md).
 
 ## Hybrid vertical: Minimum E2
 

@@ -55,6 +55,174 @@ export {
   validateDocument,
 } from "./document.js";
 
+export {
+  CLIENT_ROLE_CLAIM_KEYS,
+  IDENTITY_REFUSE_CODES,
+  IDENTITY_ROLES,
+  IDENTITY_SCHEMA_VERSION,
+  IDENTITY_SURFACES,
+  KIDS_IDENTITY_SURFACE,
+  ROLE_ASSIGNMENT_KIND,
+  ROLE_SOURCES,
+  SESSION_KIND,
+  USER_KIND,
+  claimedRoleKey,
+  isIdentityRole,
+  isIdentitySurface,
+  isRoleSource,
+  validatePrincipal,
+  validateRoleAssignment,
+  validateSession,
+  validateUser,
+} from "./identity.js";
+export type {
+  IdentityRefuseCode,
+  IdentityRole,
+  IdentitySurface,
+  IdentityValidationOk,
+  IdentityValidationRefuse,
+  IdentityValidationResult,
+  Principal,
+  RoleAssignment,
+  RoleSource,
+  Session,
+  User,
+} from "./identity.js";
+
+export {
+  CREDITS_REFUSE_CODES,
+  CREDITS_SCHEMA_VERSION,
+  CREDIT_ACCOUNT_KIND,
+  CREDIT_LEDGER_ENTRY_KIND,
+  CREDIT_MOVEMENTS,
+  isCreditMovement,
+  validateCreditAccount,
+  validateCreditLedgerEntry,
+} from "./credits.js";
+export type {
+  CreditAccount,
+  CreditLedgerEntry,
+  CreditMovement,
+  CreditsRefuseCode,
+  CreditsValidationOk,
+  CreditsValidationRefuse,
+  CreditsValidationResult,
+} from "./credits.js";
+
+export {
+  BILLING_MODES,
+  BILLING_REFUSE_CODES,
+  BILLING_SCHEMA_VERSION,
+  CHECKOUT_PURPOSES,
+  CHECKOUT_COMPLETED_EVENT_KIND,
+  CHECKOUT_COMPLETED_EVENT_TYPE,
+  CHECKOUT_SESSION_INTENT_KIND,
+  CREDIT_PACKS_FIXTURES_PATH,
+  DEFAULT_BILLING_MODE,
+  STRIPE_CUSTOMER_LINK_KIND,
+  isBillingMode,
+  isCheckoutPurpose,
+  isHttpsUrl,
+  validateCheckoutCompletedEvent,
+  validateCheckoutSessionIntent,
+  validateCreditPack,
+  validateCreditPackCatalog,
+  validateStripeCustomerLink,
+} from "./billing.js";
+export type {
+  BillingMode,
+  BillingRefuseCode,
+  BillingValidationOk,
+  BillingValidationRefuse,
+  BillingValidationResult,
+  CheckoutCompletedEvent,
+  CheckoutPurpose,
+  CheckoutSessionIntent,
+  CreditPack,
+  CreditPackCatalog,
+  StripeCustomerLink,
+} from "./billing.js";
+
+export {
+  ENTITLEMENT_CAPABILITIES,
+  ENTITLEMENT_DECISION_KIND,
+  ENTITLEMENT_MATRIX,
+  ENTITLEMENT_MATRIX_FIXTURES_PATH,
+  ENTITLEMENT_OUTCOMES,
+  ENTITLEMENT_PRICE_KINDS,
+  ENTITLEMENT_REFUSE_CODES,
+  ENTITLEMENT_SCHEMA_VERSION,
+  STARTER_CREDIT_GRANT,
+  entitlementRuleFor,
+  isEntitlementCapability,
+  isEntitlementOutcome,
+  validateEntitlementDecision,
+} from "./entitlements.js";
+export type {
+  EntitlementCapability,
+  EntitlementDecision,
+  EntitlementOutcome,
+  EntitlementPriceKind,
+  EntitlementRefuseCode,
+  EntitlementRule,
+  EntitlementValidationOk,
+  EntitlementValidationRefuse,
+  EntitlementValidationResult,
+} from "./entitlements.js";
+
+export {
+  CATALOG_LISTINGS_FIXTURES_PATH,
+  CATALOG_LISTING_KIND,
+  CATALOG_LISTING_REFUSE_CODES,
+  CATALOG_LISTING_SCHEMA_VERSION,
+  LISTING_CATALOGS,
+  LISTING_PRICE_MODES,
+  isListingCatalog,
+  isListingPriceMode,
+  priceModeIncludesCredits,
+  priceModeIncludesMoney,
+  validateCatalogListing,
+  validateCatalogListingSet,
+} from "./catalog-listing.js";
+export type {
+  CatalogListing,
+  CatalogListingRefuseCode,
+  CatalogListingSet,
+  CatalogListingValidationOk,
+  CatalogListingValidationRefuse,
+  CatalogListingValidationResult,
+  ListingCatalog,
+  ListingMoneyPrice,
+  ListingPriceMode,
+} from "./catalog-listing.js";
+
+export {
+  BASIS_POINTS_TOTAL,
+  CREATOR_SHARE_BASIS_POINTS,
+  CREATOR_SHARE_RECORD_KIND,
+  FORBIDDEN_PAYOUT_KEYS,
+  MONEY_SPLIT_RECORD_KIND,
+  REVENUE_SHARE_REFUSE_CODES,
+  REVENUE_SHARE_SCHEMA_VERSION,
+  validateCreatorShareRecord,
+  validateMoneySplitRecord,
+} from "./revenue-share.js";
+export type {
+  CreatorShareRecord,
+  MoneySplitRecord,
+  RevenueShareRefuseCode,
+  RevenueShareValidationOk,
+  RevenueShareValidationRefuse,
+  RevenueShareValidationResult,
+} from "./revenue-share.js";
+
+export {
+  isEpochMilliseconds,
+  isPlainRecord,
+  snapshotPlainArray,
+  snapshotPlainRecord,
+} from "./record-validation.js";
+
 export { parseUnambiguousJson } from "./unambiguous-json.js";
 export type { UnambiguousJsonParseResult } from "./unambiguous-json.js";
 export type {
@@ -193,6 +361,7 @@ export type ReleaseGroup =
   | "cli-protocol"
   | "importers"
   | "plugin-host"
+  | "identity"
   | "apps"
   | "sites";
 
@@ -228,6 +397,20 @@ export const contracts = Object.freeze({
   sceneComposition: "contracts/scene-composition.schema.json",
   /** Profile Conformance claim (sceneaxi#10) — shared suite + development consumers. */
   profileConformance: "contracts/profile-conformance.schema.json",
+  /** Identity plane records (sceneaxi#91); guards and ports live in @sceneaxi/auth. */
+  identity: "contracts/identity.schema.json",
+  /** Credit account + append-only ledger (sceneaxi#91); behavior in @sceneaxi/billing. */
+  creditLedger: "contracts/credit-ledger.schema.json",
+  /** Checkout intents, customer links, normalized completion events (sceneaxi#91). */
+  billingCheckout: "contracts/billing-checkout.schema.json",
+  /** Credit pack catalog schema; canonical list is CREDIT_PACKS_FIXTURES_PATH. */
+  creditPacks: "contracts/credit-packs.schema.json",
+  /** Free-vs-paid capability matrix (sceneaxi#99); data is ENTITLEMENT_MATRIX_FIXTURES_PATH. */
+  entitlementMatrix: "contracts/entitlement-matrix.schema.json",
+  entitlementDecision: "contracts/entitlement-decision.schema.json",
+  /** Catalog dual-price listings (sceneaxi#100); data is CATALOG_LISTINGS_FIXTURES_PATH. */
+  catalogListings: "contracts/catalog-listings.schema.json",
+  revenueShare: "contracts/revenue-share.schema.json",
   /** Plugin Manifest descriptor (sceneaxi#20 / ADR 0005); host runtime is @sceneaxi/plugin-host. */
   pluginManifest: "contracts/plugin-manifest.schema.json",
   /** Plugin Capability ID registry schema (sceneaxi#21 / ADR 0005); seed path is PLUGIN_CAPABILITY_REGISTRY_SEED_PATH. */

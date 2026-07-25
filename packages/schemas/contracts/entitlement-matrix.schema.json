@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/entitlement-matrix/v1",
+  "title": "SceneAxi free-vs-paid entitlement matrix (v1)",
+  "description": "The one canonical capability pricing table. A product boundary, so it is a closed enumeration rather than a lookup with a default: an unknown capability refuses, and there is no path where forgetting to register something makes it free. accountRequired false means the capability must work with no account at all — the free path (engine SDK download, CLI and local agent authoring, bring-your-own AI keys) is a product guarantee, and bring-your-own keys never burn SceneAxi credits. Mirrors packages/schemas/src/entitlements.ts ENTITLEMENT_MATRIX; pnpm check:contracts keeps the docs/auth-credits.md table in exact lockstep with this file, and a seam test asserts the TypeScript table and this fixture are identical. Deliberately expressed in the JSON Schema subset scripts/check-contracts.mjs supports.",
+  "type": "object",
+  "required": ["schemaVersion", "starterCreditGrant", "capabilities"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "starterCreditGrant": {
+      "const": 100,
+      "description": "Credits every new user receives exactly once, under idempotency key starter:<userId>."
+    },
+    "capabilities": {
+      "const": [
+        {
+          "capability": "engine-sdk-download",
+          "accountRequired": false,
+          "price": "free"
+        },
+        {
+          "capability": "cli-authoring",
+          "accountRequired": false,
+          "price": "free"
+        },
+        {
+          "capability": "byo-model-keys",
+          "accountRequired": false,
+          "price": "free"
+        },
+        {
+          "capability": "hosted-ai-assistant",
+          "accountRequired": true,
+          "price": "credits"
+        },
+        {
+          "capability": "metered-model-port",
+          "accountRequired": true,
+          "price": "credits"
+        },
+        {
+          "capability": "catalog-asset-purchase",
+          "accountRequired": true,
+          "price": "credits-or-money"
+        },
+        {
+          "capability": "creator-publish",
+          "accountRequired": true,
+          "price": "free"
+        },
+        {
+          "capability": "credit-pack-purchase",
+          "accountRequired": true,
+          "price": "money"
+        }
+      ],
+      "description": "The eight exact v1 capability rules in canonical order. No other capability, account rule, price rule, duplicate, omission, or reordering is valid."
+    }
+  }
+}

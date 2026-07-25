@@ -68,7 +68,7 @@ set them *before* deploying and redeploy after changing one.
 | `NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN` | both catalogs | this ship | editor deep links | https `*.vercel.app` umbrella origin; a missing or non-https value makes the catalog refuse to render the link |
 | `NEXT_PUBLIC_SCENEAXI_GAME_CATALOG_ORIGIN` | umbrella | this ship | optional | family cross-link |
 | `NEXT_PUBLIC_SCENEAXI_WEB_CATALOG_ORIGIN` | umbrella | this ship | optional | family cross-link |
-| `SCENEAXI_SITE_EDITOR_PREVIEW` | umbrella | captain | optional | `1` grants a banner-marked editor preview before the identity plane lands; absent means the editor refuses. Server-side only; a client value is ignored |
+| `SCENEAXI_SITE_EDITOR_PREVIEW` | umbrella | captain | optional | `1` grants a banner-marked editor preview while this site is unwired to the identity plane; absent means the editor refuses. Server-side only; a client value is ignored |
 
 Each site's `.env.example` lists only names assigned to that Vercel project, including
 the future identity-plane plug point names, and commits no values.
@@ -81,8 +81,9 @@ Vercel secret; it appears in no committed file. Migration order and DDL belong t
 
 Provisioned: Neon project `sceneaxi-prod` (`misty-king-68383952`, `aws-us-east-2`,
 database `neondb`). `DATABASE_URL` is set as an **encrypted** environment variable in all
-three Vercel projects and appears in no committed file. No code reads it yet — the
-identity plane that will belongs to `sceneaxi-auth-credits-v1`.
+three Vercel projects and appears in no committed file. No code reads it yet: the
+identity plane ships contracts, ports, and migrations only, and its Neon client is an
+injected adapter that lives outside this repository (ADR 0021).
 
 ### Stripe
 
@@ -151,13 +152,14 @@ sha256sum -c sceneaxi-engine-sdk-<version>.zip.sha256
 Sign-in, credit balances, and credit-pack checkout are owned by
 `sceneaxi-auth-credits-v1` ([#90](https://github.com/Vhailors/sceneaxi/issues/90)):
 single-admin resolution, fail-closed role guards, the append-only credit ledger, and
-Stripe webhook verification. This wave does **not** fork any of it. Until those packages
-exist, every plane is unwired and the umbrella refuses with named reasons
+Stripe webhook verification. This wave does **not** fork any of it. `packages/auth` and
+`packages/billing` have since landed (`docs/auth-credits.md`), but that vertical scoped
+its shell wiring to `apps/web-shell`: wiring **this** site is a separate change, so until
+it happens every plane here stays unwired and the umbrella refuses with named reasons
 (`IDENTITY_PLANE_NOT_WIRED`, `CREDITS_PLANE_NOT_WIRED`, `BILLING_PLANE_NOT_WIRED`) rather
 than showing an invented session, balance, or price.
 
-`sites/umbrella/src/lib/identity-plane.ts` is the **single** plug point. When that
-vertical merges:
+`sites/umbrella/src/lib/identity-plane.ts` is the **single** plug point. Activation:
 
 1. Add `@sceneaxi/auth` and `@sceneaxi/billing` to the `@sceneaxi/site-umbrella` allow
    list in `docs/dependency-matrix.json`. The boundary checker refuses the dependency
@@ -190,10 +192,10 @@ invented or faked:
 | `SCENEAXI_ADMIN_BOOTSTRAP_SECRET` | first admin sign-in | captain-held credential material |
 
 `SCENEAXI_ADMIN_EMAIL` is known (`hajczuk.dominik@gmail.com`) but is only meaningful once
-`@sceneaxi/auth` exists to resolve it, so it is documented rather than set. None of these
-block anything shipped in this wave: the surfaces that need them refuse with named
-reasons today and would refuse identically with the keys present but the identity plane
-absent.
+this site is wired to `@sceneaxi/auth` to resolve it, so it is documented rather than
+set. None of these block anything shipped in this wave: the surfaces that need them
+refuse with named reasons today and would refuse identically with the keys present but
+this site still unwired.
 
 ## What is not deployed or activated
 

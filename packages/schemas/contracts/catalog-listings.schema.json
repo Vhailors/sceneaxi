@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/catalog-listings/v1",
+  "title": "SceneAxi catalog listings with dual pricing (v1)",
+  "description": "Committed test-mode listing SKUs. A seller decides what an asset costs and in which currency: credits, money, or both. creditPrice is required exactly when priceMode includes credits and moneyPrice exactly when it includes money; a price the mode excludes must be absent, because a dormant field is how a credits-only listing quietly acquires a money price later. The JSON Schema and validateCatalogListing in packages/schemas/src/catalog-listing.ts enforce the same cross-field rule, and pnpm check:contracts keeps the docs/auth-credits.md table in exact lockstep with the fixture. Test mode only: live price ids are a separate captain go-live decision.",
+  "type": "object",
+  "required": ["schemaVersion", "mode", "listings"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "mode": {
+      "const": "test",
+      "description": "Constant: only test-mode listings are committed to the repository."
+    },
+    "listings": {
+      "type": "array",
+      "minItems": 3,
+      "uniqueItems": true,
+      "description": "At least three, so credits-only, money-only, and dual-price listings are all exercised.",
+      "items": {
+        "type": "object",
+        "required": [
+          "schemaVersion",
+          "kind",
+          "listingId",
+          "catalog",
+          "sellerUserId",
+          "title",
+          "priceMode",
+          "publishedAt"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "schemaVersion": { "const": 1 },
+          "kind": { "const": "sceneaxi.catalog-listing" },
+          "listingId": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+          },
+          "catalog": {
+            "type": "string",
+            "enum": ["game", "web"]
+          },
+          "sellerUserId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+            "description": "The creator who earns the revenue share on a sale."
+          },
+          "title": { "type": "string", "minLength": 1 },
+          "priceMode": {
+            "type": "string",
+            "enum": ["credits", "money", "credits-and-money"]
+          },
+          "creditPrice": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Present exactly when priceMode includes credits."
+          },
+          "moneyPrice": {
+            "type": "object",
+            "description": "Present exactly when priceMode includes money.",
+            "required": ["unitAmount", "currency", "stripePriceId"],
+            "additionalProperties": false,
+            "properties": {
+              "unitAmount": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Price in the currency's minor unit."
+              },
+              "currency": {
+                "type": "string",
+                "pattern": "^[a-z]{3}$"
+              },
+              "stripePriceId": {
+                "type": "string",
+                "pattern": "^price_test_[A-Za-z0-9_]+$",
+                "description": "Test-mode price id only. Price ids are public identifiers, unlike API keys, which live only in env."
+              }
+            }
+          },
+          "publishedAt": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt][0-2]\\d:[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:[Zz]|[+-][0-2]\\d:[0-5]\\d)$",
+            "description": "RFC 3339 date-time with an explicit timezone. validateCatalogListing applies the full shared expression; this is the gate-subset form."
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "type": "object",
+              "required": ["priceMode"],
+              "properties": { "priceMode": { "const": "credits" } }
+            },
+            "then": {
+              "type": "object",
+              "required": ["creditPrice"],
+              "not": { "type": "object", "required": ["moneyPrice"] }
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "required": ["priceMode"],
+              "properties": { "priceMode": { "const": "money" } }
+            },
+            "then": {
+              "type": "object",
+              "required": ["moneyPrice"],
+              "not": { "type": "object", "required": ["creditPrice"] }
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "required": ["priceMode"],
+              "properties": {
+                "priceMode": { "const": "credits-and-money" }
+              }
+            },
+            "then": {
+              "type": "object",
+              "required": ["creditPrice", "moneyPrice"]
+            }
+          }
+        ]
+      }
+    }
+  }
+}

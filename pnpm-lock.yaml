@@ -11,9 +11,18 @@ importers:
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.7.0)
+      '@sceneaxi/auth':
+        specifier: workspace:^
+        version: link:packages/auth
+      '@sceneaxi/billing':
+        specifier: workspace:^
+        version: link:packages/billing
       '@sceneaxi/profile-game':
         specifier: workspace:^
         version: link:packages/profile-game
+      '@sceneaxi/schemas':
+        specifier: workspace:^
+        version: link:packages/schemas
       '@types/node':
         specifier: ^26.1.1
         version: 26.1.1
@@ -56,12 +65,24 @@ importers:
 
   apps/web-shell:
     dependencies:
+      '@sceneaxi/auth':
+        specifier: workspace:^
+        version: link:../../packages/auth
       '@sceneaxi/authoring-core':
         specifier: workspace:^
         version: link:../../packages/authoring-core
+      '@sceneaxi/billing':
+        specifier: workspace:^
+        version: link:../../packages/billing
       '@sceneaxi/schemas':
         specifier: workspace:^
         version: link:../../packages/schemas
+
+  packages/auth:
+    dependencies:
+      '@sceneaxi/schemas':
+        specifier: workspace:^
+        version: link:../schemas
 
   packages/authoring-core:
     dependencies:
@@ -71,6 +92,15 @@ importers:
       '@sceneaxi/engine-presentation':
         specifier: workspace:^
         version: link:../engine-presentation
+      '@sceneaxi/schemas':
+        specifier: workspace:^
+        version: link:../schemas
+
+  packages/billing:
+    dependencies:
+      '@sceneaxi/auth':
+        specifier: workspace:^
+        version: link:../auth
       '@sceneaxi/schemas':
         specifier: workspace:^
         version: link:../schemas

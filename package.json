@@ -25,7 +25,10 @@
   "license": "UNLICENSED",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@sceneaxi/auth": "workspace:^",
+    "@sceneaxi/billing": "workspace:^",
     "@sceneaxi/profile-game": "workspace:^",
+    "@sceneaxi/schemas": "workspace:^",
     "@types/node": "^26.1.1",
     "eslint": "^10.7.0",
     "globals": "^17.7.0",

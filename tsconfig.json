@@ -14,6 +14,8 @@
     { "path": "packages/provider-openrouter" },
     { "path": "packages/plugin-host" },
     { "path": "packages/site-kit" },
+    { "path": "packages/auth" },
+    { "path": "packages/billing" },
     { "path": "apps/web-shell" },
     { "path": "apps/desktop-shell" },
     { "path": "apps/catalog-game" },

@@ -7,6 +7,9 @@
  * 1. Authoring-jobs fixture list + E1/E2 doc binding
  * 2. Plugin capability registry schema + checked-in 1.0.0 seed artifact
  * 3. Plugin-manifest inert example fixture + docs/plugins.md lockstep (sceneaxi#24)
+ * 4. Credit pack catalog fixture + docs/auth-credits.md lockstep (sceneaxi#91)
+ * 5. Free-vs-paid entitlement matrix + docs/auth-credits.md lockstep (sceneaxi#99)
+ * 6. Catalog dual-price listings + docs/auth-credits.md lockstep (sceneaxi#100)
  *
  * Fail-closed: missing files, schema violations, duplicate ids, seed drift, or
  * a doc whose fixture table drifts from the canonical JSON all exit 1.
@@ -117,9 +120,46 @@ if (pluginManifestInertExample !== loadFailed && !pluginManifestInertExampleIsOb
   fail(`${relative(root, pluginManifestInertExamplePath)}: expected a plain JSON object`);
 }
 
-// --- minimal JSON Schema subset validator (type/required/properties/items/enum/const/pattern/additionalProperties/minItems/minLength/uniqueItems) ---
+const schemaMatches = (value, sch) => {
+  if (
+    sch.const !== undefined &&
+    JSON.stringify(value) !== JSON.stringify(sch.const)
+  ) {
+    return false;
+  }
+  if (sch.enum !== undefined && !sch.enum.includes(value)) return false;
+  if (sch.type === "object") {
+    if (!isPlainObject(value)) return false;
+    for (const key of sch.required ?? []) {
+      if (!Object.hasOwn(value, key)) return false;
+    }
+    for (const [key, sub] of Object.entries(sch.properties ?? {})) {
+      if (Object.hasOwn(value, key) && !schemaMatches(value[key], sub)) return false;
+    }
+  } else if (sch.type === "array") {
+    if (!Array.isArray(value)) return false;
+  } else if (sch.type === "string") {
+    if (typeof value !== "string") return false;
+  } else if (sch.type === "integer") {
+    if (!Number.isInteger(value)) return false;
+    if (sch.minimum !== undefined && value < sch.minimum) return false;
+  } else if (sch.type === "boolean" && typeof value !== "boolean") {
+    return false;
+  }
+  if ((sch.allOf ?? []).some((sub) => !schemaMatches(value, sub))) return false;
+  if (sch.if !== undefined && schemaMatches(value, sch.if)) {
+    if (sch.then !== undefined && !schemaMatches(value, sch.then)) return false;
+  }
+  if (sch.not !== undefined && schemaMatches(value, sch.not)) return false;
+  return true;
+};
+
+// --- minimal JSON Schema subset validator ---
 const validate = (value, sch, path) => {
-  if (sch.const !== undefined && value !== sch.const) {
+  if (
+    sch.const !== undefined &&
+    JSON.stringify(value) !== JSON.stringify(sch.const)
+  ) {
     fail(`${path}: expected const ${JSON.stringify(sch.const)}, got ${JSON.stringify(value)}`);
     return;
   }
@@ -172,7 +212,24 @@ const validate = (value, sch, path) => {
       fail(`${path}: ${JSON.stringify(value)} does not match pattern ${sch.pattern}`);
     }
   } else if (sch.type === "integer") {
-    if (!Number.isInteger(value)) fail(`${path}: expected integer`);
+    if (!Number.isInteger(value)) {
+      fail(`${path}: expected integer`);
+    } else if (sch.minimum !== undefined && value < sch.minimum) {
+      fail(`${path}: expected integer >= ${sch.minimum}, got ${value}`);
+    }
+  } else if (sch.type === "boolean") {
+    if (typeof value !== "boolean") fail(`${path}: expected boolean`);
+  }
+  for (const sub of sch.allOf ?? []) validate(value, sub, path);
+  if (
+    sch.if !== undefined &&
+    schemaMatches(value, sch.if) &&
+    sch.then !== undefined
+  ) {
+    validate(value, sch.then, path);
+  }
+  if (sch.not !== undefined && schemaMatches(value, sch.not)) {
+    fail(`${path}: value matches a forbidden schema`);
   }
 };
 
@@ -200,8 +257,19 @@ const schemaAssertions = new Set([
   "minItems",
   "minLength",
   "uniqueItems",
+  "minimum",
+  "allOf",
+  "if",
+  "then",
+  "not",
 ]);
-const supportedTypes = new Set(["object", "array", "string", "integer"]);
+const supportedTypes = new Set([
+  "object",
+  "array",
+  "string",
+  "integer",
+  "boolean",
+]);
 
 const validateSchemaDefinition = (sch, path) => {
   let supported = true;
@@ -251,6 +319,9 @@ const validateSchemaDefinition = (sch, path) => {
   if ("uniqueItems" in sch && typeof sch.uniqueItems !== "boolean") {
     reject("uniqueItems must be boolean in the supported schema subset");
   }
+  if ("minimum" in sch && typeof sch.minimum !== "number") {
+    reject("minimum must be a number");
+  }
   if (["required", "properties", "additionalProperties"].some((keyword) => keyword in sch) && sch.type !== "object") {
     reject("object assertion keywords require type \"object\" in the supported schema subset");
   }
@@ -259,6 +330,9 @@ const validateSchemaDefinition = (sch, path) => {
   }
   if (["pattern", "minLength"].some((keyword) => keyword in sch) && sch.type !== "string") {
     reject("string assertion keywords require type \"string\" in the supported schema subset");
+  }
+  if ("minimum" in sch && sch.type !== "integer") {
+    reject("minimum requires type \"integer\" in the supported schema subset");
   }
   if ("properties" in sch) {
     if (!isPlainObject(sch.properties)) {
@@ -272,7 +346,110 @@ const validateSchemaDefinition = (sch, path) => {
   if ("items" in sch && !validateSchemaDefinition(sch.items, `${path}.items`)) {
     supported = false;
   }
+  if ("allOf" in sch) {
+    if (!Array.isArray(sch.allOf) || sch.allOf.length === 0) {
+      reject("allOf must be a non-empty array of schemas");
+    } else {
+      sch.allOf.forEach((sub, index) => {
+        if (!validateSchemaDefinition(sub, `${path}.allOf[${index}]`)) {
+          supported = false;
+        }
+      });
+    }
+  }
+  for (const keyword of ["if", "then", "not"]) {
+    if (keyword in sch && !validateSchemaDefinition(sch[keyword], `${path}.${keyword}`)) {
+      supported = false;
+    }
+  }
+  if ("then" in sch && !("if" in sch)) {
+    reject("then requires if in the supported schema subset");
+  }
   return supported;
+};
+
+const loadContractSurface = ({
+  contractName,
+  schemaFile,
+  fixturesFile,
+}) => {
+  const contractSchemaPath = join(
+    root,
+    "packages",
+    "schemas",
+    "contracts",
+    schemaFile,
+  );
+  const contractFixturesPath = join(
+    root,
+    "packages",
+    "schemas",
+    "contracts",
+    fixturesFile,
+  );
+  const contractSchema = load(contractSchemaPath, true);
+  const contractFixtures = load(contractFixturesPath, true);
+  const schemaReady =
+    contractSchema !== loadFailed && isPlainObject(contractSchema);
+  const fixturesReady =
+    contractFixtures !== loadFailed && isPlainObject(contractFixtures);
+
+  if (contractSchema !== loadFailed && !schemaReady) {
+    fail(`${relative(root, contractSchemaPath)}: expected a plain JSON object`);
+  }
+  if (contractFixtures !== loadFailed && !fixturesReady) {
+    fail(`${relative(root, contractFixturesPath)}: expected a plain JSON object`);
+  }
+
+  const supported =
+    schemaReady &&
+    validateSchemaDefinition(contractSchema, `${contractName}.schema`);
+  if (
+    schemaReady &&
+    (typeof contractSchema.$id !== "string" ||
+      !contractSchema.$id.includes(contractName))
+  ) {
+    fail(
+      `${relative(root, contractSchemaPath)}: $id does not identify the ${contractName} contract`,
+    );
+  }
+  if (schemaReady && fixturesReady && supported) {
+    validate(contractFixtures, contractSchema, `${contractName}.fixtures`);
+  }
+
+  return {
+    fixtures: contractFixtures,
+    ready: schemaReady && fixturesReady,
+  };
+};
+
+const duplicateFieldValues = (records, field) => {
+  const values = records
+    .map((record) => (isPlainObject(record) ? record[field] : undefined))
+    .filter((value) => typeof value === "string");
+  return [...new Set(values.filter((value, index) => values.indexOf(value) !== index))];
+};
+
+const documentBlock = ({ document, documentPath, start, end }) => {
+  const starts = document.split(start).length - 1;
+  const ends = document.split(end).length - 1;
+  const startIndex = document.indexOf(start);
+  const endIndex = document.indexOf(end);
+  if (
+    starts !== 1 ||
+    ends !== 1 ||
+    startIndex < 0 ||
+    endIndex < startIndex
+  ) {
+    fail(
+      `${relative(root, documentPath)}: expected exactly one ${start} ... ${end} block, found ${starts} start and ${ends} end marker(s)`,
+    );
+    return undefined;
+  }
+  return document
+    .slice(startIndex + start.length, endIndex)
+    .trim()
+    .replaceAll("\r\n", "\n");
 };
 
 const schemaUsesSupportedSubset = schemaIsObject && validateSchemaDefinition(schema, "schema");
@@ -614,11 +791,275 @@ if (schemasReadmeHasContent) {
   }
 }
 
+// --- credit pack catalog + docs/auth-credits.md lockstep (sceneaxi#91) ---
+const CREDIT_PACKS_DOC_START = "<!-- credit-packs:list -->";
+const CREDIT_PACKS_DOC_END = "<!-- /credit-packs:list -->";
+
+const authCreditsDocPath = join(root, "docs", "auth-credits.md");
+
+const creditPacksSurface = loadContractSurface({
+  contractName: "credit-packs",
+  schemaFile: "credit-packs.schema.json",
+  fixturesFile: "credit-packs.fixtures.json",
+});
+const creditPacksFixtures = creditPacksSurface.fixtures;
+const authCreditsDoc = load(authCreditsDocPath, false);
+
+const authCreditsDocHasContent =
+  authCreditsDoc !== loadFailed && authCreditsDoc.trim().length > 0;
+
+if (authCreditsDoc !== loadFailed && !authCreditsDocHasContent) {
+  fail(`${relative(root, authCreditsDocPath)}: document is empty or whitespace-only`);
+}
+
+let creditPackCount = 0;
+
+if (creditPacksSurface.ready) {
+  const packs = Array.isArray(creditPacksFixtures.packs)
+    ? creditPacksFixtures.packs
+    : [];
+  creditPackCount = packs.length;
+
+  const duplicatePackIds = duplicateFieldValues(packs, "packId");
+  if (duplicatePackIds.length > 0) {
+    fail(
+      `credit-packs.fixtures: duplicate packId(s): ${duplicatePackIds.join(", ")}`,
+    );
+  }
+
+  const duplicatePriceIds = duplicateFieldValues(packs, "stripePriceId");
+  if (duplicatePriceIds.length > 0) {
+    fail(
+      `credit-packs.fixtures: duplicate stripePriceId(s): ${duplicatePriceIds.join(", ")}`,
+    );
+  }
+
+  // Test-mode price ids only: a live price id must never be committed.
+  for (const pack of packs) {
+    if (!isPlainObject(pack) || typeof pack.stripePriceId !== "string") continue;
+    if (!pack.stripePriceId.includes("test")) {
+      fail(
+        `credit-packs.fixtures: stripePriceId ${JSON.stringify(pack.stripePriceId)} is not a test-mode id; live price ids are a separate captain go-live decision`,
+      );
+    }
+  }
+
+  if (authCreditsDocHasContent) {
+    const actual = documentBlock({
+      document: authCreditsDoc,
+      documentPath: authCreditsDocPath,
+      start: CREDIT_PACKS_DOC_START,
+      end: CREDIT_PACKS_DOC_END,
+    });
+    if (actual !== undefined) {
+      const expected = [
+        "| pack | credits | price | stripe test price id |",
+        "|---|---|---|---|",
+        ...packs.map(
+          (pack) =>
+            `| \`${pack.packId}\` | ${pack.credits} | ${pack.unitAmount} ${String(pack.currency).toUpperCase()} minor units | \`${pack.stripePriceId}\` |`,
+        ),
+      ].join("\n");
+      if (actual !== expected) {
+        fail(
+          "docs/auth-credits.md: credit pack table does not exactly match credit-packs.fixtures.json (pack id, credits, price, price id columns in order)",
+        );
+      }
+    }
+
+    if (!authCreditsDoc.includes("credit-packs.fixtures.json")) {
+      fail("docs/auth-credits.md: does not name the canonical credit pack fixture path");
+    }
+  }
+}
+
+// --- entitlement matrix + docs/auth-credits.md lockstep (sceneaxi#99) ---
+const ENTITLEMENT_DOC_START = "<!-- entitlement-matrix:list -->";
+const ENTITLEMENT_DOC_END = "<!-- /entitlement-matrix:list -->";
+
+const entitlementSurface = loadContractSurface({
+  contractName: "entitlement-matrix",
+  schemaFile: "entitlement-matrix.schema.json",
+  fixturesFile: "entitlement-matrix.fixtures.json",
+});
+const entitlementFixtures = entitlementSurface.fixtures;
+
+let entitlementCapabilityCount = 0;
+
+if (entitlementSurface.ready) {
+  const capabilities = Array.isArray(entitlementFixtures.capabilities)
+    ? entitlementFixtures.capabilities
+    : [];
+  entitlementCapabilityCount = capabilities.length;
+
+  const duplicateIds = duplicateFieldValues(capabilities, "capability");
+  if (duplicateIds.length > 0) {
+    fail(
+      `entitlement-matrix.fixtures: duplicate capability id(s): ${duplicateIds.join(", ")}`,
+    );
+  }
+
+  // The free path is a product guarantee: these three must stay account-free.
+  const FREE_WITHOUT_ACCOUNT = [
+    "engine-sdk-download",
+    "cli-authoring",
+    "byo-model-keys",
+  ];
+  for (const capability of FREE_WITHOUT_ACCOUNT) {
+    const entry = capabilities.find(
+      (candidate) => isPlainObject(candidate) && candidate.capability === capability,
+    );
+    if (entry === undefined) {
+      fail(
+        `entitlement-matrix.fixtures: free-path capability "${capability}" is missing; the free path is a captain product guarantee`,
+      );
+      continue;
+    }
+    if (entry.accountRequired !== false || entry.price !== "free") {
+      fail(
+        `entitlement-matrix.fixtures: "${capability}" must stay accountRequired false and price free; changing it needs a captain decision`,
+      );
+    }
+  }
+
+  if (entitlementFixtures.starterCreditGrant !== 100) {
+    fail(
+      `entitlement-matrix.fixtures: starterCreditGrant must be 100 (captain-frozen), got ${JSON.stringify(entitlementFixtures.starterCreditGrant)}`,
+    );
+  }
+
+  if (authCreditsDocHasContent) {
+    const actual = documentBlock({
+      document: authCreditsDoc,
+      documentPath: authCreditsDocPath,
+      start: ENTITLEMENT_DOC_START,
+      end: ENTITLEMENT_DOC_END,
+    });
+    if (actual !== undefined) {
+      const expected = [
+        "| capability | account | price |",
+        "|---|---|---|",
+        ...capabilities.map(
+          (entry) =>
+            `| \`${entry.capability}\` | ${entry.accountRequired === true ? "required" : "not required"} | ${entry.price} |`,
+        ),
+      ].join("\n");
+      if (actual !== expected) {
+        fail(
+          "docs/auth-credits.md: entitlement matrix table does not exactly match entitlement-matrix.fixtures.json (capability, account, price columns in order)",
+        );
+      }
+    }
+
+    if (!authCreditsDoc.includes("entitlement-matrix.fixtures.json")) {
+      fail(
+        "docs/auth-credits.md: does not name the canonical entitlement matrix fixture path",
+      );
+    }
+  }
+}
+
+// --- catalog listings + docs/auth-credits.md lockstep (sceneaxi#100) ---
+const LISTINGS_DOC_START = "<!-- catalog-listings:list -->";
+const LISTINGS_DOC_END = "<!-- /catalog-listings:list -->";
+
+const listingsSurface = loadContractSurface({
+  contractName: "catalog-listings",
+  schemaFile: "catalog-listings.schema.json",
+  fixturesFile: "catalog-listings.fixtures.json",
+});
+const listingsFixtures = listingsSurface.fixtures;
+
+let listingCount = 0;
+
+if (listingsSurface.ready) {
+  const listings = Array.isArray(listingsFixtures.listings)
+    ? listingsFixtures.listings
+    : [];
+  listingCount = listings.length;
+
+  const duplicateIds = duplicateFieldValues(listings, "listingId");
+  if (duplicateIds.length > 0) {
+    fail(
+      `catalog-listings.fixtures: duplicate listingId(s): ${duplicateIds.join(", ")}`,
+    );
+  }
+
+  // The cross-field price-mode rule is checked here too, with targeted errors
+  // for the lockstep fixture and documentation surface.
+  for (const listing of listings) {
+    if (!isPlainObject(listing)) continue;
+    const mode = listing.priceMode;
+    const wantsCredits = mode === "credits" || mode === "credits-and-money";
+    const wantsMoney = mode === "money" || mode === "credits-and-money";
+    const hasCredits = Object.hasOwn(listing, "creditPrice");
+    const hasMoney = Object.hasOwn(listing, "moneyPrice");
+    if (wantsCredits !== hasCredits) {
+      fail(
+        `catalog-listings.fixtures: listing "${listing.listingId}" priceMode ${JSON.stringify(mode)} ${wantsCredits ? "requires" : "forbids"} creditPrice`,
+      );
+    }
+    if (wantsMoney !== hasMoney) {
+      fail(
+        `catalog-listings.fixtures: listing "${listing.listingId}" priceMode ${JSON.stringify(mode)} ${wantsMoney ? "requires" : "forbids"} moneyPrice`,
+      );
+    }
+  }
+
+  // Every price mode must be exercised, so a regression cannot pass by dropping
+  // the shape it breaks.
+  for (const mode of ["credits", "money", "credits-and-money"]) {
+    if (
+      !listings.some(
+        (listing) => isPlainObject(listing) && listing.priceMode === mode,
+      )
+    ) {
+      fail(
+        `catalog-listings.fixtures: no listing exercises priceMode "${mode}"; all three modes must stay covered`,
+      );
+    }
+  }
+
+  if (authCreditsDocHasContent) {
+    const actual = documentBlock({
+      document: authCreditsDoc,
+      documentPath: authCreditsDocPath,
+      start: LISTINGS_DOC_START,
+      end: LISTINGS_DOC_END,
+    });
+    if (actual !== undefined) {
+      const expected = [
+        "| listing | catalog | price mode | credits | money |",
+        "|---|---|---|---|---|",
+        ...listings.map((listing) => {
+          const credits =
+            listing.creditPrice === undefined ? "—" : String(listing.creditPrice);
+          const money = isPlainObject(listing.moneyPrice)
+            ? `${listing.moneyPrice.unitAmount} ${String(listing.moneyPrice.currency).toUpperCase()} minor units`
+            : "—";
+          return `| \`${listing.listingId}\` | ${listing.catalog} | ${listing.priceMode} | ${credits} | ${money} |`;
+        }),
+      ].join("\n");
+      if (actual !== expected) {
+        fail(
+          "docs/auth-credits.md: catalog listing table does not exactly match catalog-listings.fixtures.json (listing, catalog, price mode, credits, money columns in order)",
+        );
+      }
+    }
+
+    if (!authCreditsDoc.includes("catalog-listings.fixtures.json")) {
+      fail(
+        "docs/auth-credits.md: does not name the canonical catalog listing fixture path",
+      );
+    }
+  }
+}
+
 if (errors.length > 0) {
   for (const e of errors) console.error(`contract check FAIL: ${e}`);
   console.error(`contract check FAILED — ${errors.length} error(s)`);
   process.exit(1);
 }
 console.log(
-  `contract check OK — ${authoringJobCount} shared authoring jobs valid, doc table matches, E1+E2 bound to one list; plugin capability registry 1.0.0 seed empty and schema-locked; plugin-manifest inert example schema-locked`,
+  `contract check OK — ${authoringJobCount} shared authoring jobs valid, doc table matches, E1+E2 bound to one list; plugin capability registry 1.0.0 seed empty and schema-locked; plugin-manifest inert example schema-locked; ${creditPackCount} test-mode credit packs schema-locked and doc-bound; ${entitlementCapabilityCount} entitlement capabilities schema-locked, free path intact, doc-bound; ${listingCount} test-mode catalog listings schema-locked, all price modes covered, doc-bound`,
 );

@@ -87,6 +87,26 @@ unrestricted) is ADR 0020 and does not widen ADR 0003's general-E2 bound. Identi
 credits, and billing stay owned by `sceneaxi-auth-credits-v1`; `site-kit` only declares
 fail-closed ports and `sites/umbrella/src/lib/identity-plane.ts` is the single plug point.
 
+The identity + credits plane is `packages/auth` (single-admin resolution, role
+guards, identity port) and `packages/billing` (append-only ledger, metering,
+free-vs-paid entitlements, Stripe test checkout, creator revenue share), release
+group `identity`; schema is forward-only SQL in `db/migrations`. Configuration and
+the ownership map are `docs/auth-credits.md`; the shape is settled by ADR 0021.
+Better Auth, Neon, and the Stripe API are **injected adapters** — never
+dependencies — while webhook signature verification stays in core because it is
+deterministic and fixture-testable. Load-bearing invariants: `User` has no role
+field so `admin` is unclaimable and comes only from `SCENEAXI_ADMIN_EMAIL`;
+`CreditAccount` has no balance because the ledger is the only source of truth; the
+ledger is append-only in both the pure code and a DB trigger; Stripe `live` refuses
+without an explicit `liveModeAuthorized` captain gate; money splits are
+bookkeeping-only (no Connect payouts); Kids commerce and Kids identity are refused
+by name at four independent points. Secrets are env-only. This plane is product
+user auth and does **not** replace held-key captain policy; it adds no CLI verb.
+The credit-pack, entitlement-matrix, and catalog-listing fixtures are canonical
+JSON kept in lockstep with `docs/auth-credits.md` by `pnpm check:contracts` —
+extend `tests/contracts/` and `tests/db/schema-lockstep.test.ts` when touching any
+of it.
+
 First-class plugins follow `docs/plugins.md` and ADR 0005: manifests may claim
 only IDs from the versioned public capability registry; unknown IDs and
 isolation breaches refuse. Runtime API details live in

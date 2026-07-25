@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/identity/v1",
+  "title": "SceneAxi identity records and principal (v1)",
+  "description": "User, RoleAssignment, Session, and Principal records for the SceneAxi identity plane. schemaVersion is the contract major; consumers MUST refuse major mismatches rather than silently migrate. Two shapes are load-bearing: a user record carries no role property, so the admin role is structurally unclaimable from a client; and a session stores only a SHA-256 token digest, never a raw token. Behavior lives in packages/auth; configuration in docs/auth-credits.md.",
+  "oneOf": [
+    { "$ref": "#/$defs/user" },
+    { "$ref": "#/$defs/roleAssignment" },
+    { "$ref": "#/$defs/session" },
+    { "$ref": "#/$defs/principal" }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+      "description": "Opaque server-issued identifier: url-safe, 1-128 characters."
+    },
+    "dateTime": {
+      "type": "string",
+      "format": "date-time",
+      "description": "RFC 3339 date-time with an explicit timezone. Timezone-less values refuse."
+    },
+    "user": {
+      "type": "object",
+      "title": "User",
+      "description": "An identity record. Deliberately carries NO role property: a role must never ride on a record a client can write. A payload containing role, roles, isAdmin, or admin is refused outright rather than sanitized, so a privilege-escalation attempt cannot look like success.",
+      "required": [
+        "schemaVersion",
+        "kind",
+        "userId",
+        "email",
+        "emailVerified",
+        "disabled",
+        "createdAt"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "kind": { "const": "sceneaxi.user" },
+        "userId": { "$ref": "#/$defs/identifier" },
+        "email": {
+          "type": "string",
+          "pattern": "^[^\\s@]+@[^\\s@.]+(?:\\.[^\\s@.]+)+$",
+          "description": "Address shape only. Ownership and verification are the injected Better Auth adapter's job."
+        },
+        "emailVerified": { "type": "boolean" },
+        "disabled": {
+          "type": "boolean",
+          "description": "A disabled user fails every role guard, including admin."
+        },
+        "createdAt": { "$ref": "#/$defs/dateTime" }
+      }
+    },
+    "roleAssignment": {
+      "type": "object",
+      "title": "RoleAssignment",
+      "description": "A server-derived role. Never accepted from a client payload. The admin role may only originate from the admin-env source, which resolves exactly one captain email from SCENEAXI_ADMIN_EMAIL.",
+      "required": [
+        "schemaVersion",
+        "kind",
+        "userId",
+        "role",
+        "source",
+        "assignedAt"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": { "role": { "const": "admin" } },
+            "required": ["role"]
+          },
+          "then": {
+            "properties": { "source": { "const": "admin-env" } },
+            "required": ["source"]
+          }
+        }
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "kind": { "const": "sceneaxi.role-assignment" },
+        "userId": { "$ref": "#/$defs/identifier" },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "user"],
+          "description": "The complete role vocabulary. There is no third role and no hierarchy."
+        },
+        "source": {
+          "type": "string",
+          "enum": ["admin-env", "default-user"],
+          "description": "How the role was arrived at. Only admin-env may yield admin."
+        },
+        "assignedAt": { "$ref": "#/$defs/dateTime" }
+      }
+    },
+    "session": {
+      "type": "object",
+      "title": "Session",
+      "description": "A session bound to exactly one surface. tokenDigest is a SHA-256 hex digest so a leaked session row cannot be replayed as a credential. The kids surface is enumerated so it can be refused by name; it is never served.",
+      "required": [
+        "schemaVersion",
+        "kind",
+        "sessionId",
+        "userId",
+        "surface",
+        "issuedAt",
+        "expiresAt",
+        "tokenDigest"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "kind": { "const": "sceneaxi.session" },
+        "sessionId": { "$ref": "#/$defs/identifier" },
+        "userId": { "$ref": "#/$defs/identifier" },
+        "surface": {
+          "type": "string",
+          "enum": ["web-shell", "desktop-shell", "site", "kids"],
+          "description": "Sessions never span surfaces. kids is listed only so the identity port can refuse it by name."
+        },
+        "issuedAt": { "$ref": "#/$defs/dateTime" },
+        "expiresAt": {
+          "$ref": "#/$defs/dateTime",
+          "description": "Must be strictly after issuedAt."
+        },
+        "tokenDigest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 hex digest of the session token. The fixed width means a raw token cannot land in this field by accident."
+        }
+      }
+    },
+    "principal": {
+      "type": "object",
+      "title": "Principal",
+      "description": "The only identity shape accepted by role guards. It is assembled server-side from a user, role assignment, and session. Runtime validation additionally requires all three records to name the same userId.",
+      "required": ["user", "role", "session"],
+      "additionalProperties": false,
+      "properties": {
+        "user": { "$ref": "#/$defs/user" },
+        "role": { "$ref": "#/$defs/roleAssignment" },
+        "session": { "$ref": "#/$defs/session" }
+      }
+    }
+  }
+}
