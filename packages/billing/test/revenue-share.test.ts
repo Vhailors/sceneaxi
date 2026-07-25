@@ -144,6 +144,14 @@ describe("basis-point splits", () => {
 });
 
 describe("authorizeCreatorPublish", () => {
+  it("refuses a malformed request envelope", () => {
+    const result = authorizeCreatorPublish(null as never);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe(BILLING_REFUSE_REASONS.requestInvalid);
+    }
+  });
+
   it("refuses an anonymous publish", () => {
     const result = authorizeCreatorPublish({ now: NOW });
     expect(result.ok).toBe(false);
@@ -170,6 +178,14 @@ describe("authorizeCreatorPublish", () => {
 });
 
 describe("applyCreditsSale", () => {
+  it("refuses a malformed request envelope", () => {
+    const result = applyCreditsSale(null as never);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe(BILLING_REFUSE_REASONS.requestInvalid);
+    }
+  });
+
   const sale = (overrides: Record<string, unknown> = {}) => {
     const target = listing("lantern-prop");
     return applyCreditsSale({
@@ -382,6 +398,14 @@ describe("applyCreditsSale", () => {
 });
 
 describe("recordMoneySale", () => {
+  it("refuses a malformed request envelope", () => {
+    const result = recordMoneySale(null as never);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe(BILLING_REFUSE_REASONS.requestInvalid);
+    }
+  });
+
   const record = (overrides: Record<string, unknown> = {}) => {
     const target = listing("harbour-diorama");
     const moneyPrice = target.moneyPrice;

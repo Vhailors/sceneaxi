@@ -15,9 +15,9 @@ import {
   firstUnexpectedKey,
   isDateTime,
   isNonEmptyString,
-  isPlainRecord,
   isSafeInteger,
   refuseWith,
+  snapshotPlainRecord,
   type ContractRefuse,
 } from "./record-validation.js";
 
@@ -117,39 +117,40 @@ function checkEnvelope(
   label: string,
   required: ReadonlyArray<string>,
 ): Record<string, unknown> | CreditsValidationRefuse {
-  if (!isPlainRecord(value)) {
+  const record = snapshotPlainRecord(value);
+  if (record === undefined) {
     return refuseWith(
       CREDITS_REFUSE_CODES.notObject,
       `A ${label} must be a plain JSON object.`,
     );
   }
-  if (value["schemaVersion"] !== CREDITS_SCHEMA_VERSION) {
+  if (record["schemaVersion"] !== CREDITS_SCHEMA_VERSION) {
     return refuseWith(
       CREDITS_REFUSE_CODES.schemaVersionMismatch,
       `${label} schemaVersion must be ${CREDITS_SCHEMA_VERSION}; silent migration is refused.`,
     );
   }
-  if (value["kind"] !== kind) {
+  if (record["kind"] !== kind) {
     return refuseWith(
       CREDITS_REFUSE_CODES.kindMismatch,
       `${label} kind must be "${kind}".`,
     );
   }
-  const missing = firstMissingKey(value, required);
+  const missing = firstMissingKey(record, required);
   if (missing !== undefined) {
     return refuseWith(
       CREDITS_REFUSE_CODES.missingProperty,
       `${label} is missing required property "${missing}".`,
     );
   }
-  const unexpected = firstUnexpectedKey(value, required);
+  const unexpected = firstUnexpectedKey(record, required);
   if (unexpected !== undefined) {
     return refuseWith(
       CREDITS_REFUSE_CODES.unexpectedProperty,
       `${label} has unexpected property "${unexpected}".`,
     );
   }
-  return value;
+  return record;
 }
 
 function isRefuse(

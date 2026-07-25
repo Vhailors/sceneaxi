@@ -216,7 +216,11 @@ export type {
   RevenueShareValidationResult,
 } from "./revenue-share.js";
 
-export { isEpochMilliseconds, isPlainRecord } from "./record-validation.js";
+export {
+  isEpochMilliseconds,
+  isPlainRecord,
+  snapshotPlainRecord,
+} from "./record-validation.js";
 
 export { parseUnambiguousJson } from "./unambiguous-json.js";
 export type { UnambiguousJsonParseResult } from "./unambiguous-json.js";

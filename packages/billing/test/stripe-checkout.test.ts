@@ -224,6 +224,16 @@ describe("createCheckoutSessionIntent", () => {
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.requestInvalid);
   });
 
+  it("uses one descriptor snapshot for proxy-backed requests", () => {
+    const request = new Proxy(intentRequest(), {
+      get() {
+        throw new Error("a later proxy read escaped the snapshot");
+      },
+    });
+    const result = createCheckoutSessionIntent(request as never);
+    expect(result.ok).toBe(true);
+  });
+
   it("carries no secret-shaped field", () => {
     const result = createCheckoutSessionIntent(intentRequest() as never);
     expect(result.ok).toBe(true);

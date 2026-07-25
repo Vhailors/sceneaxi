@@ -14,7 +14,7 @@
 import {
   isEpochMilliseconds,
   isIdentityRole,
-  isPlainRecord,
+  snapshotPlainRecord,
   validatePrincipal,
   type IdentityRole,
   type IdentitySurface,
@@ -69,9 +69,10 @@ function checkPrincipal(
   principal: unknown,
   options: GuardOptions,
 ): AuthResult<Principal> {
+  const checkedOptions = snapshotPlainRecord(options);
   if (
-    !isPlainRecord(options) ||
-    !isEpochMilliseconds(options["now"])
+    checkedOptions === undefined ||
+    !isEpochMilliseconds(checkedOptions["now"])
   ) {
     return authRefuse(
       AUTH_REFUSE_REASONS.clockInvalid,
@@ -95,10 +96,13 @@ function checkPrincipal(
     );
   }
 
-  if (options.surface !== undefined && value.session.surface !== options.surface) {
+  if (
+    checkedOptions["surface"] !== undefined &&
+    value.session.surface !== checkedOptions["surface"]
+  ) {
     return authRefuse(
       AUTH_REFUSE_REASONS.sessionSurfaceMismatch,
-      `The session belongs to the '${value.session.surface}' surface, not '${options.surface}'.`,
+      `The session belongs to the '${value.session.surface}' surface, not '${String(checkedOptions["surface"])}'.`,
     );
   }
 
@@ -109,7 +113,7 @@ function checkPrincipal(
     );
   }
 
-  if (Date.parse(value.session.expiresAt) <= options.now) {
+  if (Date.parse(value.session.expiresAt) <= checkedOptions["now"]) {
     return authRefuse(
       AUTH_REFUSE_REASONS.sessionExpired,
       "The session has expired.",

@@ -21,8 +21,8 @@ import {
   firstUnexpectedKey,
   isDateTime,
   isNonEmptyString,
-  isPlainRecord,
   refuseWith,
+  snapshotPlainRecord,
   type ContractRefuse,
 } from "./record-validation.js";
 
@@ -172,8 +172,9 @@ export function isRoleSource(value: unknown): value is RoleSource {
 
 /** True when a payload carries any client-asserted role property. */
 export function claimedRoleKey(value: unknown): string | undefined {
-  if (!isPlainRecord(value)) return undefined;
-  return CLIENT_ROLE_CLAIM_KEYS.find((key) => Object.hasOwn(value, key));
+  const record = snapshotPlainRecord(value);
+  if (record === undefined) return undefined;
+  return CLIENT_ROLE_CLAIM_KEYS.find((key) => Object.hasOwn(record, key));
 }
 
 function ok<Value>(value: Value): IdentityValidationOk<Value> {
@@ -186,39 +187,40 @@ function checkEnvelope(
   label: string,
   required: ReadonlyArray<string>,
 ): Record<string, unknown> | IdentityValidationRefuse {
-  if (!isPlainRecord(value)) {
+  const record = snapshotPlainRecord(value);
+  if (record === undefined) {
     return refuseWith(
       IDENTITY_REFUSE_CODES.notObject,
       `A ${label} must be a plain JSON object.`,
     );
   }
-  if (value["schemaVersion"] !== IDENTITY_SCHEMA_VERSION) {
+  if (record["schemaVersion"] !== IDENTITY_SCHEMA_VERSION) {
     return refuseWith(
       IDENTITY_REFUSE_CODES.schemaVersionMismatch,
       `${label} schemaVersion must be ${IDENTITY_SCHEMA_VERSION}; silent migration is refused.`,
     );
   }
-  if (value["kind"] !== kind) {
+  if (record["kind"] !== kind) {
     return refuseWith(
       IDENTITY_REFUSE_CODES.kindMismatch,
       `${label} kind must be "${kind}".`,
     );
   }
-  const missing = firstMissingKey(value, required);
+  const missing = firstMissingKey(record, required);
   if (missing !== undefined) {
     return refuseWith(
       IDENTITY_REFUSE_CODES.missingProperty,
       `${label} is missing required property "${missing}".`,
     );
   }
-  const unexpected = firstUnexpectedKey(value, required);
+  const unexpected = firstUnexpectedKey(record, required);
   if (unexpected !== undefined) {
     return refuseWith(
       IDENTITY_REFUSE_CODES.unexpectedProperty,
       `${label} has unexpected property "${unexpected}".`,
     );
   }
-  return value;
+  return record;
 }
 
 function isRefuse(
@@ -431,20 +433,21 @@ export function validateSession(
 export function validatePrincipal(
   value: unknown,
 ): IdentityValidationResult<Principal> {
-  if (!isPlainRecord(value)) {
+  const record = snapshotPlainRecord(value);
+  if (record === undefined) {
     return refuseWith(
       IDENTITY_REFUSE_CODES.notObject,
       "A principal must be a plain JSON object.",
     );
   }
-  const missing = firstMissingKey(value, ["user", "role", "session"]);
+  const missing = firstMissingKey(record, ["user", "role", "session"]);
   if (missing !== undefined) {
     return refuseWith(
       IDENTITY_REFUSE_CODES.missingProperty,
       `A principal is missing required property "${missing}".`,
     );
   }
-  const unexpected = firstUnexpectedKey(value, ["user", "role", "session"]);
+  const unexpected = firstUnexpectedKey(record, ["user", "role", "session"]);
   if (unexpected !== undefined) {
     return refuseWith(
       IDENTITY_REFUSE_CODES.unexpectedProperty,
@@ -452,11 +455,11 @@ export function validatePrincipal(
     );
   }
 
-  const user = validateUser(value["user"]);
+  const user = validateUser(record["user"]);
   if (!user.ok) return user;
-  const role = validateRoleAssignment(value["role"]);
+  const role = validateRoleAssignment(record["role"]);
   if (!role.ok) return role;
-  const session = validateSession(value["session"]);
+  const session = validateSession(record["session"]);
   if (!session.ok) return session;
 
   if (

@@ -18,6 +18,7 @@ import {
   isEpochMilliseconds,
   priceModeIncludesCredits,
   priceModeIncludesMoney,
+  snapshotPlainRecord,
   validateCatalogListingSet,
   type CatalogListing,
   type CatalogListingSet,
@@ -170,7 +171,15 @@ export const LISTING_SALE_IDEMPOTENCY_PREFIX = "sale:" as const;
 export function purchaseListingWithCredits(
   request: PurchaseListingWithCreditsRequest,
 ): BillingOutcome<ListingPurchaseOutcome> {
-  const { principal, listing, buyerState, now, saleId, surface } = request;
+  const record = snapshotPlainRecord(request);
+  if (record === undefined) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.requestInvalid,
+      "A listing purchase request must be a plain object.",
+    );
+  }
+  const screened = record as PurchaseListingWithCreditsRequest;
+  const { principal, listing, buyerState, now, saleId, surface } = screened;
 
   if (!isEpochMilliseconds(now)) {
     return billingRefuse(
@@ -214,10 +223,12 @@ export function purchaseListingWithCredits(
     );
   }
 
+  const buyerRecord = snapshotPlainRecord(buyerState);
+  const buyerAccount = snapshotPlainRecord(buyerRecord?.["account"]);
   if (
-    typeof buyerState !== "object" ||
-    buyerState === null ||
-    buyerState.account.userId !== guarded.value.user.userId
+    buyerRecord === undefined ||
+    buyerAccount === undefined ||
+    buyerAccount["userId"] !== guarded.value.user.userId
   ) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.accountNotOwned,
@@ -296,6 +307,14 @@ export type CreateListingCheckoutIntentRequest = Readonly<{
 export function createListingCheckoutIntent(
   request: CreateListingCheckoutIntentRequest,
 ) {
+  const record = snapshotPlainRecord(request);
+  if (record === undefined) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.requestInvalid,
+      "A listing checkout request must be a plain object.",
+    );
+  }
+  const screened = record as CreateListingCheckoutIntentRequest;
   const {
     principal,
     listing,
@@ -305,7 +324,7 @@ export function createListingCheckoutIntent(
     saleId,
     surface,
     liveModeAuthorized,
-  } = request;
+  } = screened;
 
   if (surface === "kids") {
     return billingRefuse(

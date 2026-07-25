@@ -15,7 +15,7 @@
 import { createHash } from "node:crypto";
 import {
   isEpochMilliseconds,
-  isPlainRecord,
+  snapshotPlainRecord,
   validateCreditLedgerEntry,
   type CreditAccount,
   type CreditLedgerEntry,
@@ -160,8 +160,10 @@ export function loadLedgerState(
     );
   }
   const foreign = entries.find(
-    (entry) =>
-      isPlainRecord(entry) && entry["accountId"] !== account.accountId,
+    (entry) => {
+      const record = snapshotPlainRecord(entry);
+      return record !== undefined && record["accountId"] !== account.accountId;
+    },
   );
   if (foreign !== undefined) {
     return billingRefuse(
@@ -218,20 +220,23 @@ export function appendCreditEntry(
   state: unknown,
   request: unknown,
 ): BillingOutcome<AppendOutcome> {
+  const stateRecord = snapshotPlainRecord(state);
+  const accountRecord = snapshotPlainRecord(stateRecord?.["account"]);
   if (
-    !isPlainRecord(state) ||
-    !isPlainRecord(state["account"]) ||
-    !Array.isArray(state["entries"]) ||
-    typeof state["balance"] !== "number"
+    stateRecord === undefined ||
+    accountRecord === undefined ||
+    !Array.isArray(stateRecord["entries"]) ||
+    typeof stateRecord["balance"] !== "number"
   ) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.ledgerStateInvalid,
       "The ledger state is not a valid ledger state.",
     );
   }
-  const current = state as unknown as LedgerState;
+  const current = stateRecord as unknown as LedgerState;
 
-  if (!isPlainRecord(request)) {
+  const requestRecord = snapshotPlainRecord(request);
+  if (requestRecord === undefined) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.requestInvalid,
       "A ledger append request must be a plain object.",
@@ -244,7 +249,7 @@ export function appendCreditEntry(
     reason,
     idempotencyKey,
     now,
-  } = request as Partial<AppendCreditEntryRequest>;
+  } = requestRecord;
 
   if (!isEpochMilliseconds(now)) {
     return billingRefuse(
@@ -324,7 +329,7 @@ export function appendCreditEntry(
     schemaVersion: 1 as const,
     kind: "sceneaxi.credit-ledger-entry" as const,
     entryId,
-    accountId: current.account.accountId,
+    accountId: accountRecord["accountId"],
     sequence: current.entries.length + 1,
     movement,
     delta,

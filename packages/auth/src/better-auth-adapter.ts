@@ -16,7 +16,7 @@
 import {
   isEpochMilliseconds,
   isIdentitySurface,
-  isPlainRecord,
+  snapshotPlainRecord,
   type IdentitySurface,
   type Session,
 } from "@sceneaxi/schemas";
@@ -127,11 +127,12 @@ export function mapBetterAuthAuthentication(input: {
   if (!isIdentitySurface(surface) || !isEpochMilliseconds(issuedAt)) {
     return undefined;
   }
-  if (!isPlainRecord(authentication)) return undefined;
+  const authenticationRecord = snapshotPlainRecord(authentication);
+  if (authenticationRecord === undefined) return undefined;
 
-  const user = authentication["user"];
-  const session = authentication["session"];
-  if (!isPlainRecord(user) || !isPlainRecord(session)) return undefined;
+  const user = snapshotPlainRecord(authenticationRecord["user"]);
+  const session = snapshotPlainRecord(authenticationRecord["session"]);
+  if (user === undefined || session === undefined) return undefined;
 
   const providerUserId = user["id"];
   const email = user["email"];

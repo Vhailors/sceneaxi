@@ -24,6 +24,7 @@ import {
   MONEY_SPLIT_RECORD_KIND,
   REVENUE_SHARE_SCHEMA_VERSION,
   isEpochMilliseconds,
+  snapshotPlainRecord,
   validateCreatorShareRecord,
   validateMoneySplitRecord,
   type BillingMode,
@@ -101,11 +102,27 @@ export function authorizeCreatorPublish(input: {
   readonly now: number;
   readonly surface?: IdentitySurface | undefined;
 }): BillingOutcome<EntitlementDecision> {
+  const record = snapshotPlainRecord(input);
+  if (record === undefined) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.requestInvalid,
+      "A creator publish request must be a plain object.",
+    );
+  }
+  const screened = record as {
+    readonly principal?: unknown;
+    readonly now: number;
+    readonly surface?: IdentitySurface | undefined;
+  };
   return evaluateEntitlement({
     capability: "creator-publish",
-    now: input.now,
-    ...(input.principal === undefined ? {} : { principal: input.principal }),
-    ...(input.surface === undefined ? {} : { surface: input.surface }),
+    now: screened.now,
+    ...(screened.principal === undefined
+      ? {}
+      : { principal: screened.principal }),
+    ...(screened.surface === undefined
+      ? {}
+      : { surface: screened.surface }),
   });
 }
 
@@ -142,8 +159,16 @@ export type CreditsSaleOutcome = Readonly<{
 export function applyCreditsSale(
   request: ApplyCreditsSaleRequest,
 ): BillingOutcome<CreditsSaleOutcome> {
+  const record = snapshotPlainRecord(request);
+  if (record === undefined) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.requestInvalid,
+      "A credits sale request must be a plain object.",
+    );
+  }
+  const screened = record as ApplyCreditsSaleRequest;
   const { principal, listing, buyerState, creatorState, now, saleId, surface } =
-    request;
+    screened;
 
   const listed = assertCurrencyListed(listing, "credits");
   if (!listed.ok) return listed;
@@ -155,11 +180,12 @@ export function applyCreditsSale(
     );
   }
 
+  const creatorRecord = snapshotPlainRecord(creatorState);
+  const creatorAccount = snapshotPlainRecord(creatorRecord?.["account"]);
   if (
-    typeof creatorState !== "object" ||
-    creatorState === null ||
-    typeof creatorState.account !== "object" ||
-    creatorState.account.userId !== listed.value.sellerUserId
+    creatorRecord === undefined ||
+    creatorAccount === undefined ||
+    creatorAccount["userId"] !== listed.value.sellerUserId
   ) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.accountNotOwned,
@@ -246,8 +272,16 @@ export type RecordMoneySaleRequest = Readonly<{
 export function recordMoneySale(
   request: RecordMoneySaleRequest,
 ): BillingOutcome<MoneySplitRecord> {
+  const requestRecord = snapshotPlainRecord(request);
+  if (requestRecord === undefined) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.requestInvalid,
+      "A money sale request must be a plain object.",
+    );
+  }
+  const screened = requestRecord as RecordMoneySaleRequest;
   const { listing, buyerUserId, saleId, grossMinor, currency, mode, now } =
-    request;
+    screened;
 
   const listed = assertCurrencyListed(listing, "money");
   if (!listed.ok) return listed;

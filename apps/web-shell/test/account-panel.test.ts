@@ -443,4 +443,37 @@ describe("sign out", () => {
     const snapshot = await panel.signOut();
     expect(snapshot.phase).toBe("anonymous");
   });
+
+  it("prevents a stale sign-in from restoring identity after sign-out", async () => {
+    let release!: () => void;
+    const delayedAdapter: IdentityAdapter = Object.freeze({
+      async authenticate(credentials) {
+        await new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        return ADAPTER.authenticate(credentials);
+      },
+    });
+    const panel = makePanel({
+      identityPort: createIdentityPort({
+        adapter: delayedAdapter,
+        store: createInMemoryIdentityStore({ users: [CREW] }),
+        admin,
+        clock,
+      }),
+    });
+
+    const pending = panel.submitCredentials({
+      email: "crew@example.com",
+      password: "pw",
+    });
+    await Promise.resolve();
+    const signedOut = await panel.signOut();
+    expect(signedOut.phase).toBe("anonymous");
+
+    release();
+    const stale = await pending;
+    expect(stale.phase).toBe("anonymous");
+    expect(panel.snapshot().phase).toBe("anonymous");
+  });
 });

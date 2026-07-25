@@ -19,7 +19,7 @@
 import {
   ENTITLEMENT_CAPABILITIES,
   isEpochMilliseconds,
-  isPlainRecord,
+  snapshotPlainRecord,
   type EntitlementCapability,
   type EntitlementOutcome,
   type IdentityRole,
@@ -167,7 +167,11 @@ function capabilityViews(
 export function createAccountPanel(
   options: CreateAccountPanelOptions,
 ): CreateAccountPanelResult {
-  if (!SURFACES.includes(options.surface)) {
+  const optionRecord = snapshotPlainRecord(options);
+  if (
+    optionRecord === undefined ||
+    !SURFACES.includes(optionRecord["surface"] as IdentitySurface)
+  ) {
     return Object.freeze({
       ok: false,
       reason: ACCOUNT_PANEL_REASONS.surfaceInvalid,
@@ -176,7 +180,7 @@ export function createAccountPanel(
   }
   // Kids never shares identity with another surface, so the panel refuses to
   // exist there at all — there is no signed-in state for a renderer to reach.
-  if (options.surface === "kids") {
+  if (optionRecord["surface"] === "kids") {
     return Object.freeze({
       ok: false,
       reason: ACCOUNT_PANEL_REASONS.kidsSurfaceDenied,
@@ -184,21 +188,21 @@ export function createAccountPanel(
         "Kids never shares identity or commerce with another SceneAxi surface; no account panel is offered.",
     });
   }
-  if (options.identityPort === undefined) {
+  if (optionRecord["identityPort"] === undefined) {
     return Object.freeze({
       ok: false,
       reason: ACCOUNT_PANEL_REASONS.identityPortMissing,
       message: "The account panel requires an identity port.",
     });
   }
-  if (options.credits === undefined) {
+  if (optionRecord["credits"] === undefined) {
     return Object.freeze({
       ok: false,
       reason: ACCOUNT_PANEL_REASONS.creditsViewMissing,
       message: "The account panel requires a credits view.",
     });
   }
-  if (typeof options.clock !== "function") {
+  if (typeof optionRecord["clock"] !== "function") {
     return Object.freeze({
       ok: false,
       reason: ACCOUNT_PANEL_REASONS.clockInvalid,
@@ -206,7 +210,10 @@ export function createAccountPanel(
     });
   }
 
-  const { identityPort, credits, surface, clock } = options;
+  const identityPort = optionRecord["identityPort"] as IdentityPort;
+  const credits = optionRecord["credits"] as AccountCreditsView;
+  const surface = optionRecord["surface"] as IdentitySurface;
+  const clock = optionRecord["clock"] as () => number;
   let held: AccountPanelSnapshot;
 
   const readClock = (): number | undefined => {
@@ -285,10 +292,12 @@ export function createAccountPanel(
         ),
       );
     }
+    const stateRecord = snapshotPlainRecord(state);
+    const accountRecord = snapshotPlainRecord(stateRecord?.["account"]);
     if (
-      !isPlainRecord(state) ||
-      !isPlainRecord(state["account"]) ||
-      state["account"]["userId"] !== principal.user.userId
+      stateRecord === undefined ||
+      accountRecord === undefined ||
+      accountRecord["userId"] !== principal.user.userId
     ) {
       return refused(
         refusal(
@@ -300,7 +309,7 @@ export function createAccountPanel(
 
     // Derived, not read off a field: a balance that cannot be derived is a
     // refusal, never a plausible-looking number.
-    const balance = deriveBalance(state.entries);
+    const balance = deriveBalance(stateRecord["entries"]);
     if (!balance.ok) {
       return refused(refusal(balance.reason, balance.message));
     }
@@ -317,6 +326,7 @@ export function createAccountPanel(
 
   /** Retained so a refresh can re-read the balance for the same principal. */
   let heldPrincipal: Principal | undefined;
+  let operationGeneration = 0;
 
   held = anonymous();
 
@@ -326,16 +336,21 @@ export function createAccountPanel(
     },
 
     async submitCredentials(credentials) {
+      const generation = ++operationGeneration;
+      const credentialRecord = snapshotPlainRecord(credentials);
       const result = await identityPort.signIn(
         // The surface is the panel's, never the caller's, so a client cannot
         // ask to be signed in somewhere else.
-        isPlainRecord(credentials)
-          ? { ...credentials, surface }
-          : credentials,
+        credentialRecord === undefined
+          ? credentials
+          : { ...credentialRecord, surface },
       );
+      if (generation !== operationGeneration) return held;
       if (result.ok) {
+        const next = await authenticated(result.value);
+        if (generation !== operationGeneration) return held;
         heldPrincipal = result.value;
-        held = await authenticated(result.value);
+        held = next;
       } else {
         heldPrincipal = undefined;
         held = refused(refusal(result.reason, result.message));
@@ -351,17 +366,22 @@ export function createAccountPanel(
      * and nothing else.
      */
     async refresh() {
-      held =
-        heldPrincipal === undefined
+      const generation = ++operationGeneration;
+      const principal = heldPrincipal;
+      const next =
+        principal === undefined
           ? anonymous()
-          : await authenticated(heldPrincipal);
+          : await authenticated(principal);
+      if (generation === operationGeneration) held = next;
       return held;
     },
 
     async signOut() {
+      const generation = ++operationGeneration;
       const sessionId = heldPrincipal?.session.sessionId;
       if (sessionId !== undefined) {
         const result = await identityPort.signOut({ sessionId });
+        if (generation !== operationGeneration) return held;
         if (!result.ok) {
           // A server-side sign-out that failed must not look like a clean one:
           // the session may still be live.
@@ -369,6 +389,7 @@ export function createAccountPanel(
           return held;
         }
       }
+      if (generation !== operationGeneration) return held;
       heldPrincipal = undefined;
       held = anonymous();
       return held;

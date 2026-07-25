@@ -192,6 +192,14 @@ describe("purchaseListingWithCredits", () => {
       ...overrides,
     } as never);
 
+  it("refuses a malformed request envelope", () => {
+    const result = purchaseListingWithCredits(null as never);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe(BILLING_REFUSE_REASONS.requestInvalid);
+    }
+  });
+
   it("debits exactly the listing's credit price", () => {
     const result = buy();
     expect(result.ok).toBe(true);
@@ -304,6 +312,14 @@ describe("createListingCheckoutIntent", () => {
       saleId: "sale_02",
       ...overrides,
     } as never);
+
+  it("refuses a malformed request envelope", () => {
+    const result = createListingCheckoutIntent(null as never);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe(BILLING_REFUSE_REASONS.requestInvalid);
+    }
+  });
 
   it("builds a test-mode intent at the listing's money price", () => {
     const result = checkout();

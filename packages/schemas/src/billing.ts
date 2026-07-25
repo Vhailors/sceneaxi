@@ -19,9 +19,9 @@ import {
   firstUnexpectedKey,
   isDateTime,
   isNonEmptyString,
-  isPlainRecord,
   isSafeInteger,
   refuseWith,
+  snapshotPlainRecord,
   type ContractRefuse,
 } from "./record-validation.js";
 
@@ -202,39 +202,40 @@ function checkEnvelope(
   required: ReadonlyArray<string>,
   optional: ReadonlyArray<string> = [],
 ): Record<string, unknown> | BillingValidationRefuse {
-  if (!isPlainRecord(value)) {
+  const record = snapshotPlainRecord(value);
+  if (record === undefined) {
     return refuseWith(
       BILLING_REFUSE_CODES.notObject,
       `A ${label} must be a plain JSON object.`,
     );
   }
-  if (value["schemaVersion"] !== BILLING_SCHEMA_VERSION) {
+  if (record["schemaVersion"] !== BILLING_SCHEMA_VERSION) {
     return refuseWith(
       BILLING_REFUSE_CODES.schemaVersionMismatch,
       `${label} schemaVersion must be ${BILLING_SCHEMA_VERSION}; silent migration is refused.`,
     );
   }
-  if (value["kind"] !== kind) {
+  if (record["kind"] !== kind) {
     return refuseWith(
       BILLING_REFUSE_CODES.kindMismatch,
       `${label} kind must be "${kind}".`,
     );
   }
-  const missing = firstMissingKey(value, required);
+  const missing = firstMissingKey(record, required);
   if (missing !== undefined) {
     return refuseWith(
       BILLING_REFUSE_CODES.missingProperty,
       `${label} is missing required property "${missing}".`,
     );
   }
-  const unexpected = firstUnexpectedKey(value, required, optional);
+  const unexpected = firstUnexpectedKey(record, required, optional);
   if (unexpected !== undefined) {
     return refuseWith(
       BILLING_REFUSE_CODES.unexpectedProperty,
       `${label} has unexpected property "${unexpected}".`,
     );
   }
-  return value;
+  return record;
 }
 
 function isRefuse(
@@ -254,20 +255,21 @@ const CREDIT_PACK_KEYS = Object.freeze([
 export function validateCreditPack(
   value: unknown,
 ): BillingValidationResult<CreditPack> {
-  if (!isPlainRecord(value)) {
+  const record = snapshotPlainRecord(value);
+  if (record === undefined) {
     return refuseWith(
       BILLING_REFUSE_CODES.notObject,
       "A credit pack must be a plain JSON object.",
     );
   }
-  const missing = firstMissingKey(value, CREDIT_PACK_KEYS);
+  const missing = firstMissingKey(record, CREDIT_PACK_KEYS);
   if (missing !== undefined) {
     return refuseWith(
       BILLING_REFUSE_CODES.missingProperty,
       `credit pack is missing required property "${missing}".`,
     );
   }
-  const unexpected = firstUnexpectedKey(value, CREDIT_PACK_KEYS);
+  const unexpected = firstUnexpectedKey(record, CREDIT_PACK_KEYS);
   if (unexpected !== undefined) {
     return refuseWith(
       BILLING_REFUSE_CODES.unexpectedProperty,
@@ -275,27 +277,27 @@ export function validateCreditPack(
     );
   }
 
-  const packId = value["packId"];
+  const packId = record["packId"];
   if (typeof packId !== "string" || !SLUG_RE.test(packId)) {
     return invalid("credit pack packId must be a lowercase slug of 1-64 chars.");
   }
-  const credits = value["credits"];
+  const credits = record["credits"];
   if (!isSafeInteger(credits) || credits < 1) {
     return invalid("credit pack credits must be a positive safe integer.");
   }
-  const unitAmount = value["unitAmount"];
+  const unitAmount = record["unitAmount"];
   if (!isSafeInteger(unitAmount) || unitAmount < 1) {
     return invalid(
       "credit pack unitAmount must be a positive safe integer in the currency's minor unit.",
     );
   }
-  const currency = value["currency"];
+  const currency = record["currency"];
   if (typeof currency !== "string" || !CURRENCY_RE.test(currency)) {
     return invalid(
       "credit pack currency must be a lowercase three-letter ISO 4217 code.",
     );
   }
-  if (!isNonEmptyString(value["stripePriceId"])) {
+  if (!isNonEmptyString(record["stripePriceId"])) {
     return invalid("credit pack stripePriceId must be a non-empty string.");
   }
 
@@ -305,7 +307,7 @@ export function validateCreditPack(
       credits,
       unitAmount,
       currency,
-      stripePriceId: value["stripePriceId"],
+      stripePriceId: record["stripePriceId"],
     }),
   );
 }
@@ -318,39 +320,40 @@ export function validateCreditPack(
 export function validateCreditPackCatalog(
   value: unknown,
 ): BillingValidationResult<CreditPackCatalog> {
-  if (!isPlainRecord(value)) {
+  const record = snapshotPlainRecord(value);
+  if (record === undefined) {
     return refuseWith(
       BILLING_REFUSE_CODES.notObject,
       "The credit pack catalog must be a plain JSON object.",
     );
   }
   const required = ["schemaVersion", "mode", "packs"];
-  const missing = firstMissingKey(value, required);
+  const missing = firstMissingKey(record, required);
   if (missing !== undefined) {
     return refuseWith(
       BILLING_REFUSE_CODES.missingProperty,
       `credit pack catalog is missing required property "${missing}".`,
     );
   }
-  const unexpected = firstUnexpectedKey(value, required);
+  const unexpected = firstUnexpectedKey(record, required);
   if (unexpected !== undefined) {
     return refuseWith(
       BILLING_REFUSE_CODES.unexpectedProperty,
       `credit pack catalog has unexpected property "${unexpected}".`,
     );
   }
-  if (value["schemaVersion"] !== BILLING_SCHEMA_VERSION) {
+  if (record["schemaVersion"] !== BILLING_SCHEMA_VERSION) {
     return refuseWith(
       BILLING_REFUSE_CODES.schemaVersionMismatch,
       `credit pack catalog schemaVersion must be ${BILLING_SCHEMA_VERSION}; silent migration is refused.`,
     );
   }
-  if (value["mode"] !== DEFAULT_BILLING_MODE) {
+  if (record["mode"] !== DEFAULT_BILLING_MODE) {
     return invalid(
       `credit pack catalog mode must be "${DEFAULT_BILLING_MODE}"; live price ids are not committed.`,
     );
   }
-  const packs = value["packs"];
+  const packs = record["packs"];
   if (!Array.isArray(packs) || packs.length === 0) {
     return invalid("credit pack catalog packs must be a non-empty array.");
   }

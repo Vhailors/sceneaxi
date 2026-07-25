@@ -22,9 +22,9 @@
 import {
   firstMissingKey,
   firstUnexpectedKey,
-  isPlainRecord,
   isSafeInteger,
   refuseWith,
+  snapshotPlainRecord,
   type ContractRefuse,
 } from "./record-validation.js";
 
@@ -170,19 +170,20 @@ export function entitlementRuleFor(
 export function validateEntitlementDecision(
   value: unknown,
 ): EntitlementValidationResult {
-  if (!isPlainRecord(value)) {
+  const record = snapshotPlainRecord(value);
+  if (record === undefined) {
     return refuseWith(
       ENTITLEMENT_REFUSE_CODES.notObject,
       "An entitlement decision must be a plain JSON object.",
     );
   }
-  if (value["schemaVersion"] !== ENTITLEMENT_SCHEMA_VERSION) {
+  if (record["schemaVersion"] !== ENTITLEMENT_SCHEMA_VERSION) {
     return refuseWith(
       ENTITLEMENT_REFUSE_CODES.schemaVersionMismatch,
       `entitlement decision schemaVersion must be ${ENTITLEMENT_SCHEMA_VERSION}; silent migration is refused.`,
     );
   }
-  if (value["kind"] !== ENTITLEMENT_DECISION_KIND) {
+  if (record["kind"] !== ENTITLEMENT_DECISION_KIND) {
     return refuseWith(
       ENTITLEMENT_REFUSE_CODES.kindMismatch,
       `entitlement decision kind must be "${ENTITLEMENT_DECISION_KIND}".`,
@@ -190,14 +191,14 @@ export function validateEntitlementDecision(
   }
 
   const required = ["schemaVersion", "kind", "capability", "outcome"];
-  const missing = firstMissingKey(value, required);
+  const missing = firstMissingKey(record, required);
   if (missing !== undefined) {
     return refuseWith(
       ENTITLEMENT_REFUSE_CODES.missingProperty,
       `entitlement decision is missing required property "${missing}".`,
     );
   }
-  const unexpected = firstUnexpectedKey(value, required, ["credits"]);
+  const unexpected = firstUnexpectedKey(record, required, ["credits"]);
   if (unexpected !== undefined) {
     return refuseWith(
       ENTITLEMENT_REFUSE_CODES.unexpectedProperty,
@@ -205,14 +206,14 @@ export function validateEntitlementDecision(
     );
   }
 
-  const capability = value["capability"];
+  const capability = record["capability"];
   if (!isEntitlementCapability(capability)) {
     return refuseWith(
       ENTITLEMENT_REFUSE_CODES.invalidProperty,
       `entitlement decision capability "${String(capability)}" is not in the matrix; the matrix is a closed enumeration.`,
     );
   }
-  const outcome = value["outcome"];
+  const outcome = record["outcome"];
   if (!isEntitlementOutcome(outcome)) {
     return refuseWith(
       ENTITLEMENT_REFUSE_CODES.invalidProperty,
@@ -220,9 +221,9 @@ export function validateEntitlementDecision(
     );
   }
 
-  const hasCredits = Object.hasOwn(value, "credits");
+  const hasCredits = Object.hasOwn(record, "credits");
   if (outcome === "charge-credits") {
-    const credits = value["credits"];
+    const credits = record["credits"];
     if (!hasCredits || !isSafeInteger(credits) || credits < 1) {
       return refuseWith(
         ENTITLEMENT_REFUSE_CODES.invalidProperty,

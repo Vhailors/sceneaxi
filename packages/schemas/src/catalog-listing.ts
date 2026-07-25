@@ -20,9 +20,9 @@ import {
   firstUnexpectedKey,
   isDateTime,
   isNonEmptyString,
-  isPlainRecord,
   isSafeInteger,
   refuseWith,
+  snapshotPlainRecord,
   type ContractRefuse,
 } from "./record-validation.js";
 
@@ -147,44 +147,45 @@ const LISTING_OPTIONAL = Object.freeze(["creditPrice", "moneyPrice"]);
 function validateMoneyPrice(
   value: unknown,
 ): CatalogListingValidationResult<ListingMoneyPrice> {
-  if (!isPlainRecord(value)) {
+  const record = snapshotPlainRecord(value);
+  if (record === undefined) {
     return invalid("listing moneyPrice must be a plain JSON object.");
   }
   const required = ["unitAmount", "currency", "stripePriceId"];
-  const missing = firstMissingKey(value, required);
+  const missing = firstMissingKey(record, required);
   if (missing !== undefined) {
     return refuseWith(
       CATALOG_LISTING_REFUSE_CODES.missingProperty,
       `listing moneyPrice is missing required property "${missing}".`,
     );
   }
-  const unexpected = firstUnexpectedKey(value, required);
+  const unexpected = firstUnexpectedKey(record, required);
   if (unexpected !== undefined) {
     return refuseWith(
       CATALOG_LISTING_REFUSE_CODES.unexpectedProperty,
       `listing moneyPrice has unexpected property "${unexpected}".`,
     );
   }
-  const unitAmount = value["unitAmount"];
+  const unitAmount = record["unitAmount"];
   if (!isSafeInteger(unitAmount) || unitAmount < 1) {
     return invalid(
       "listing moneyPrice unitAmount must be a positive safe integer in the currency's minor unit.",
     );
   }
-  const currency = value["currency"];
+  const currency = record["currency"];
   if (typeof currency !== "string" || !CURRENCY_RE.test(currency)) {
     return invalid(
       "listing moneyPrice currency must be a lowercase three-letter ISO 4217 code.",
     );
   }
-  if (!isNonEmptyString(value["stripePriceId"])) {
+  if (!isNonEmptyString(record["stripePriceId"])) {
     return invalid("listing moneyPrice stripePriceId must be a non-empty string.");
   }
   return ok(
     Object.freeze({
       unitAmount,
       currency,
-      stripePriceId: value["stripePriceId"],
+      stripePriceId: record["stripePriceId"],
     }),
   );
 }
@@ -192,32 +193,33 @@ function validateMoneyPrice(
 export function validateCatalogListing(
   value: unknown,
 ): CatalogListingValidationResult<CatalogListing> {
-  if (!isPlainRecord(value)) {
+  const record = snapshotPlainRecord(value);
+  if (record === undefined) {
     return refuseWith(
       CATALOG_LISTING_REFUSE_CODES.notObject,
       "A catalog listing must be a plain JSON object.",
     );
   }
-  if (value["schemaVersion"] !== CATALOG_LISTING_SCHEMA_VERSION) {
+  if (record["schemaVersion"] !== CATALOG_LISTING_SCHEMA_VERSION) {
     return refuseWith(
       CATALOG_LISTING_REFUSE_CODES.schemaVersionMismatch,
       `listing schemaVersion must be ${CATALOG_LISTING_SCHEMA_VERSION}; silent migration is refused.`,
     );
   }
-  if (value["kind"] !== CATALOG_LISTING_KIND) {
+  if (record["kind"] !== CATALOG_LISTING_KIND) {
     return refuseWith(
       CATALOG_LISTING_REFUSE_CODES.kindMismatch,
       `listing kind must be "${CATALOG_LISTING_KIND}".`,
     );
   }
-  const missing = firstMissingKey(value, LISTING_REQUIRED);
+  const missing = firstMissingKey(record, LISTING_REQUIRED);
   if (missing !== undefined) {
     return refuseWith(
       CATALOG_LISTING_REFUSE_CODES.missingProperty,
       `listing is missing required property "${missing}".`,
     );
   }
-  const unexpected = firstUnexpectedKey(value, LISTING_REQUIRED, LISTING_OPTIONAL);
+  const unexpected = firstUnexpectedKey(record, LISTING_REQUIRED, LISTING_OPTIONAL);
   if (unexpected !== undefined) {
     return refuseWith(
       CATALOG_LISTING_REFUSE_CODES.unexpectedProperty,
@@ -225,38 +227,38 @@ export function validateCatalogListing(
     );
   }
 
-  const listingId = value["listingId"];
+  const listingId = record["listingId"];
   if (typeof listingId !== "string" || !SLUG_RE.test(listingId)) {
     return invalid("listing listingId must be a lowercase slug of 1-64 chars.");
   }
-  if (!isListingCatalog(value["catalog"])) {
+  if (!isListingCatalog(record["catalog"])) {
     return invalid(
       `listing catalog must be one of ${LISTING_CATALOGS.join(", ")}.`,
     );
   }
-  const sellerUserId = value["sellerUserId"];
+  const sellerUserId = record["sellerUserId"];
   if (typeof sellerUserId !== "string" || !IDENTIFIER_RE.test(sellerUserId)) {
     return invalid(
       "listing sellerUserId must be a url-safe identifier of 1-128 chars.",
     );
   }
-  if (!isNonEmptyString(value["title"])) {
+  if (!isNonEmptyString(record["title"])) {
     return invalid("listing title must be a non-empty string.");
   }
-  const priceMode = value["priceMode"];
+  const priceMode = record["priceMode"];
   if (!isListingPriceMode(priceMode)) {
     return invalid(
       `listing priceMode must be one of ${LISTING_PRICE_MODES.join(", ")}.`,
     );
   }
-  if (!isDateTime(value["publishedAt"])) {
+  if (!isDateTime(record["publishedAt"])) {
     return invalid(
       "listing publishedAt must be an RFC 3339 date-time with an explicit timezone.",
     );
   }
 
-  const hasCreditPrice = Object.hasOwn(value, "creditPrice");
-  const hasMoneyPrice = Object.hasOwn(value, "moneyPrice");
+  const hasCreditPrice = Object.hasOwn(record, "creditPrice");
+  const hasMoneyPrice = Object.hasOwn(record, "moneyPrice");
   const wantsCredits = priceModeIncludesCredits(priceMode);
   const wantsMoney = priceModeIncludesMoney(priceMode);
 
@@ -287,7 +289,7 @@ export function validateCatalogListing(
 
   let creditPrice: number | undefined;
   if (wantsCredits) {
-    const candidate = value["creditPrice"];
+    const candidate = record["creditPrice"];
     if (!isSafeInteger(candidate) || candidate < 1) {
       return invalid("listing creditPrice must be a positive safe integer.");
     }
@@ -296,7 +298,7 @@ export function validateCatalogListing(
 
   let moneyPrice: ListingMoneyPrice | undefined;
   if (wantsMoney) {
-    const validated = validateMoneyPrice(value["moneyPrice"]);
+    const validated = validateMoneyPrice(record["moneyPrice"]);
     if (!validated.ok) return validated;
     moneyPrice = validated.value;
   }
@@ -305,11 +307,11 @@ export function validateCatalogListing(
     schemaVersion: CATALOG_LISTING_SCHEMA_VERSION,
     kind: CATALOG_LISTING_KIND,
     listingId,
-    catalog: value["catalog"],
+    catalog: record["catalog"],
     sellerUserId,
-    title: value["title"],
+    title: record["title"],
     priceMode,
-    publishedAt: value["publishedAt"],
+    publishedAt: record["publishedAt"],
   };
 
   return ok(
@@ -324,39 +326,40 @@ export function validateCatalogListing(
 export function validateCatalogListingSet(
   value: unknown,
 ): CatalogListingValidationResult<CatalogListingSet> {
-  if (!isPlainRecord(value)) {
+  const record = snapshotPlainRecord(value);
+  if (record === undefined) {
     return refuseWith(
       CATALOG_LISTING_REFUSE_CODES.notObject,
       "The catalog listing set must be a plain JSON object.",
     );
   }
   const required = ["schemaVersion", "mode", "listings"];
-  const missing = firstMissingKey(value, required);
+  const missing = firstMissingKey(record, required);
   if (missing !== undefined) {
     return refuseWith(
       CATALOG_LISTING_REFUSE_CODES.missingProperty,
       `catalog listing set is missing required property "${missing}".`,
     );
   }
-  const unexpected = firstUnexpectedKey(value, required);
+  const unexpected = firstUnexpectedKey(record, required);
   if (unexpected !== undefined) {
     return refuseWith(
       CATALOG_LISTING_REFUSE_CODES.unexpectedProperty,
       `catalog listing set has unexpected property "${unexpected}".`,
     );
   }
-  if (value["schemaVersion"] !== CATALOG_LISTING_SCHEMA_VERSION) {
+  if (record["schemaVersion"] !== CATALOG_LISTING_SCHEMA_VERSION) {
     return refuseWith(
       CATALOG_LISTING_REFUSE_CODES.schemaVersionMismatch,
       `catalog listing set schemaVersion must be ${CATALOG_LISTING_SCHEMA_VERSION}.`,
     );
   }
-  if (value["mode"] !== "test") {
+  if (record["mode"] !== "test") {
     return invalid(
       'catalog listing set mode must be "test"; live price ids are not committed.',
     );
   }
-  const listings = value["listings"];
+  const listings = record["listings"];
   if (!Array.isArray(listings) || listings.length === 0) {
     return invalid("catalog listing set listings must be a non-empty array.");
   }

@@ -21,9 +21,9 @@ import {
   firstMissingKey,
   firstUnexpectedKey,
   isDateTime,
-  isPlainRecord,
   isSafeInteger,
   refuseWith,
+  snapshotPlainRecord,
   type ContractRefuse,
 } from "./record-validation.js";
 import { BILLING_MODES, isBillingMode, type BillingMode } from "./billing.js";
@@ -131,46 +131,47 @@ function screen(
   label: string,
   required: ReadonlyArray<string>,
 ): Record<string, unknown> | RevenueShareValidationRefuse {
-  if (!isPlainRecord(value)) {
+  const record = snapshotPlainRecord(value);
+  if (record === undefined) {
     return refuseWith(
       REVENUE_SHARE_REFUSE_CODES.notObject,
       `A ${label} must be a plain JSON object.`,
     );
   }
-  const payout = FORBIDDEN_PAYOUT_KEYS.find((key) => Object.hasOwn(value, key));
+  const payout = FORBIDDEN_PAYOUT_KEYS.find((key) => Object.hasOwn(record, key));
   if (payout !== undefined) {
     return refuseWith(
       REVENUE_SHARE_REFUSE_CODES.payoutFieldForbidden,
       `A ${label} must not carry a payout field ("${payout}"); v1 records balances and performs no cash payout. Real payouts are a later captain gate.`,
     );
   }
-  if (value["schemaVersion"] !== REVENUE_SHARE_SCHEMA_VERSION) {
+  if (record["schemaVersion"] !== REVENUE_SHARE_SCHEMA_VERSION) {
     return refuseWith(
       REVENUE_SHARE_REFUSE_CODES.schemaVersionMismatch,
       `${label} schemaVersion must be ${REVENUE_SHARE_SCHEMA_VERSION}; silent migration is refused.`,
     );
   }
-  if (value["kind"] !== kind) {
+  if (record["kind"] !== kind) {
     return refuseWith(
       REVENUE_SHARE_REFUSE_CODES.kindMismatch,
       `${label} kind must be "${kind}".`,
     );
   }
-  const missing = firstMissingKey(value, required);
+  const missing = firstMissingKey(record, required);
   if (missing !== undefined) {
     return refuseWith(
       REVENUE_SHARE_REFUSE_CODES.missingProperty,
       `${label} is missing required property "${missing}".`,
     );
   }
-  const unexpected = firstUnexpectedKey(value, required);
+  const unexpected = firstUnexpectedKey(record, required);
   if (unexpected !== undefined) {
     return refuseWith(
       REVENUE_SHARE_REFUSE_CODES.unexpectedProperty,
       `${label} has unexpected property "${unexpected}".`,
     );
   }
-  return value;
+  return record;
 }
 
 function isRefuse(

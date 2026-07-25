@@ -422,6 +422,14 @@ describe("unknown capabilities and bad input", () => {
 });
 
 describe("grantStarterCredits", () => {
+  it("refuses a malformed request envelope", () => {
+    const result = grantStarterCredits(null as never);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe(BILLING_REFUSE_REASONS.requestInvalid);
+    }
+  });
+
   it("grants exactly 100 credits", () => {
     const result = grantStarterCredits({
       state: createLedgerState(ACCOUNT),

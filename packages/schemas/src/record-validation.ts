@@ -33,30 +33,41 @@ export function refuseWith<Code extends string>(
  * exotic objects are rejected so a getter or inherited property can never
  * decide a contract check.
  */
-export function isPlainRecord(
+export function snapshotPlainRecord(
   value: unknown,
-): value is Record<string, unknown> {
+): Readonly<Record<string, unknown>> | undefined {
   try {
     if (value === null || typeof value !== "object" || Array.isArray(value)) {
-      return false;
+      return undefined;
     }
     const prototype = Object.getPrototypeOf(value) as unknown;
-    if (prototype !== Object.prototype && prototype !== null) return false;
+    if (prototype !== Object.prototype && prototype !== null) return undefined;
+    const snapshot: Record<string, unknown> = Object.create(null) as Record<
+      string,
+      unknown
+    >;
     for (const key of Reflect.ownKeys(value)) {
-      if (typeof key !== "string") return false;
+      if (typeof key !== "string") return undefined;
       const descriptor = Object.getOwnPropertyDescriptor(value, key);
       if (
         descriptor === undefined ||
         !descriptor.enumerable ||
         !("value" in descriptor)
       ) {
-        return false;
+        return undefined;
       }
+      snapshot[key] = descriptor.value;
     }
-    return true;
+    return Object.freeze(snapshot);
   } catch {
-    return false;
+    return undefined;
   }
+}
+
+export function isPlainRecord(
+  value: unknown,
+): value is Record<string, unknown> {
+  return snapshotPlainRecord(value) !== undefined;
 }
 
 export function isNonEmptyString(value: unknown): value is string {

@@ -77,6 +77,18 @@ describe("validateUser", () => {
     expect(Object.isFrozen(result.value)).toBe(true);
   });
 
+  it("validates a descriptor snapshot without reading a proxy twice", () => {
+    const proxy = new Proxy(USER, {
+      get() {
+        throw new Error("a later proxy read escaped the snapshot");
+      },
+    });
+    const result = validateUser(proxy);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.userId).toBe(USER.userId);
+  });
+
   it("refuses any payload carrying a role — escalation is never silently dropped", () => {
     for (const key of ["role", "roles", "isAdmin", "admin"]) {
       const result = validateUser({ ...USER, [key]: "admin" });

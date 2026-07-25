@@ -18,7 +18,7 @@ import {
   isEpochMilliseconds,
   isBillingMode,
   isHttpsUrl,
-  isPlainRecord,
+  snapshotPlainRecord,
   validateCheckoutSessionIntent,
   type BillingMode,
   type CheckoutPurpose,
@@ -111,13 +111,15 @@ export function deriveIntentId(idempotencyKey: string): string {
 export function createCheckoutSessionIntent(
   request: CreateCheckoutSessionIntentRequest,
 ): BillingOutcome<CheckoutSessionIntent> {
-  if (!isPlainRecord(request)) {
+  const record = snapshotPlainRecord(request);
+  if (record === undefined) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.requestInvalid,
       "A checkout intent request must be a plain object.",
     );
   }
-  const pack = lookupCreditPack(request.catalog, request.packId);
+  const screened = record as CreateCheckoutSessionIntentRequest;
+  const pack = lookupCreditPack(screened.catalog, screened.packId);
   if (!pack.ok) return pack;
 
   return createMoneyCheckoutIntent({
@@ -127,13 +129,13 @@ export function createCheckoutSessionIntent(
     unitAmount: pack.value.unitAmount,
     currency: pack.value.currency,
     stripePriceId: pack.value.stripePriceId,
-    userId: request.userId,
-    successUrl: request.successUrl,
-    cancelUrl: request.cancelUrl,
-    idempotencyKey: request.idempotencyKey,
-    now: request.now,
-    mode: request.mode,
-    liveModeAuthorized: request.liveModeAuthorized,
+    userId: screened.userId,
+    successUrl: screened.successUrl,
+    cancelUrl: screened.cancelUrl,
+    idempotencyKey: screened.idempotencyKey,
+    now: screened.now,
+    mode: screened.mode,
+    liveModeAuthorized: screened.liveModeAuthorized,
   });
 }
 
@@ -148,12 +150,14 @@ export function createCheckoutSessionIntent(
 export function createMoneyCheckoutIntent(
   request: CreateMoneyCheckoutIntentRequest,
 ): BillingOutcome<CheckoutSessionIntent> {
-  if (!isPlainRecord(request)) {
+  const record = snapshotPlainRecord(request);
+  if (record === undefined) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.requestInvalid,
       "A checkout intent request must be a plain object.",
     );
   }
+  const screened = record as CreateMoneyCheckoutIntentRequest;
   const {
     purpose,
     itemId,
@@ -168,7 +172,7 @@ export function createMoneyCheckoutIntent(
     credits,
     mode,
     liveModeAuthorized,
-  } = request;
+  } = screened;
 
   if (!isEpochMilliseconds(now)) {
     return billingRefuse(

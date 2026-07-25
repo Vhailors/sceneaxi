@@ -19,7 +19,7 @@ import {
   claimedRoleKey,
   isEpochMilliseconds,
   isIdentitySurface,
-  isPlainRecord,
+  snapshotPlainRecord,
   validatePrincipal,
   validateSession,
   validateUser,
@@ -91,7 +91,8 @@ function screenRequest(
   keys: ReadonlyArray<string>,
   requireSurface: boolean,
 ): AuthResult<Record<string, unknown>> {
-  if (!isPlainRecord(request)) {
+  const record = snapshotPlainRecord(request);
+  if (record === undefined) {
     return authRefuse(
       AUTH_REFUSE_REASONS.requestInvalid,
       "The identity request must be a plain object.",
@@ -100,7 +101,7 @@ function screenRequest(
 
   // Before anything else that could touch a provider: a client-asserted role is
   // an escalation attempt and is refused, never stripped.
-  const claimed = claimedRoleKey(request);
+  const claimed = claimedRoleKey(record);
   if (claimed !== undefined) {
     return authRefuse(
       AUTH_REFUSE_REASONS.roleClaimFromClient,
@@ -110,14 +111,14 @@ function screenRequest(
 
   const allowed = new Set(keys);
   for (const key of keys) {
-    if (!Object.hasOwn(request, key)) {
+    if (!Object.hasOwn(record, key)) {
       return authRefuse(
         AUTH_REFUSE_REASONS.requestInvalid,
         `The identity request is missing required property "${key}".`,
       );
     }
   }
-  for (const key of Object.keys(request)) {
+  for (const key of Object.keys(record)) {
     if (!allowed.has(key)) {
       return authRefuse(
         AUTH_REFUSE_REASONS.requestInvalid,
@@ -127,7 +128,7 @@ function screenRequest(
   }
 
   if (requireSurface) {
-    const surface = request["surface"];
+    const surface = record["surface"];
     if (!isIdentitySurface(surface)) {
       return authRefuse(
         AUTH_REFUSE_REASONS.surfaceInvalid,
@@ -142,7 +143,7 @@ function screenRequest(
     }
   }
 
-  return authOk(request);
+  return authOk(record);
 }
 
 function readClock(clock: (() => number) | undefined): AuthResult<number> {

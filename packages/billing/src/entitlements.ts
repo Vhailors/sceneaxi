@@ -25,7 +25,7 @@ import {
   entitlementRuleFor,
   isEpochMilliseconds,
   isEntitlementCapability,
-  isPlainRecord,
+  snapshotPlainRecord,
   type EntitlementCapability,
   type EntitlementDecision,
   type IdentitySurface,
@@ -106,12 +106,14 @@ function decide(
 export function evaluateEntitlement(
   request: EvaluateEntitlementRequest,
 ): BillingOutcome<EntitlementDecision> {
-  if (!isPlainRecord(request)) {
+  const record = snapshotPlainRecord(request);
+  if (record === undefined) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.requestInvalid,
       "An entitlement request must be a plain object.",
     );
   }
+  const screened = record as EvaluateEntitlementRequest;
   const {
     capability,
     now,
@@ -120,7 +122,7 @@ export function evaluateEntitlement(
     creditAmount,
     payWith,
     surface,
-  } = request;
+  } = screened;
 
   if (!isEpochMilliseconds(now)) {
     return billingRefuse(
@@ -196,26 +198,28 @@ export function evaluateEntitlement(
   }
   const amount = creditAmount as number;
 
+  const stateRecord = snapshotPlainRecord(state);
+  const accountRecord = snapshotPlainRecord(stateRecord?.["account"]);
   if (
-    !isPlainRecord(state) ||
-    !isPlainRecord(state["account"]) ||
-    typeof state["balance"] !== "number"
+    stateRecord === undefined ||
+    accountRecord === undefined ||
+    typeof stateRecord["balance"] !== "number"
   ) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.ledgerStateInvalid,
       `"${capability}" is credit-priced; a valid ledger state is required to check the balance.`,
     );
   }
-  if (state.account.userId !== guarded.value.user.userId) {
+  if (accountRecord["userId"] !== guarded.value.user.userId) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.accountNotOwned,
       "The credit account belongs to a different user.",
     );
   }
-  if (state.balance < amount) {
+  if (stateRecord["balance"] < amount) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.balanceInsufficient,
-      `"${capability}" costs ${amount} credits; the balance is ${state.balance}.`,
+      `"${capability}" costs ${amount} credits; the balance is ${stateRecord["balance"]}.`,
     );
   }
 
@@ -240,7 +244,15 @@ export type GrantStarterCreditsRequest = Readonly<{
 export function grantStarterCredits(
   request: GrantStarterCreditsRequest,
 ): BillingOutcome<AppendOutcome> {
-  const { state, userId, now } = request;
+  const record = snapshotPlainRecord(request);
+  if (record === undefined) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.requestInvalid,
+      "A starter grant request must be a plain object.",
+    );
+  }
+  const screened = record as GrantStarterCreditsRequest;
+  const { state, userId, now } = screened;
 
   if (typeof userId !== "string" || userId.length === 0) {
     return billingRefuse(
@@ -248,17 +260,19 @@ export function grantStarterCredits(
       "The starter grant requires a user id.",
     );
   }
+  const stateRecord = snapshotPlainRecord(state);
+  const accountRecord = snapshotPlainRecord(stateRecord?.["account"]);
   if (
-    !isPlainRecord(state) ||
-    !isPlainRecord(state["account"]) ||
-    !Array.isArray(state["entries"])
+    stateRecord === undefined ||
+    accountRecord === undefined ||
+    !Array.isArray(stateRecord["entries"])
   ) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.ledgerStateInvalid,
       "The starter grant requires a valid ledger state.",
     );
   }
-  if (state.account.userId !== userId) {
+  if (accountRecord["userId"] !== userId) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.accountNotOwned,
       "The credit account belongs to a different user; the starter grant refuses.",

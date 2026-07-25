@@ -18,7 +18,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import {
   isEpochMilliseconds,
   isCheckoutPurpose,
-  isPlainRecord,
+  snapshotPlainRecord,
   validateCheckoutCompletedEvent,
   validateCheckoutSessionIntent,
   type BillingMode,
@@ -93,13 +93,15 @@ function hexEquals(expected: string, presented: string): boolean {
 export function verifyStripeWebhookSignature(
   request: VerifyStripeWebhookSignatureRequest,
 ): BillingOutcome<VerifiedWebhook> {
-  if (!isPlainRecord(request)) {
+  const record = snapshotPlainRecord(request);
+  if (record === undefined) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.requestInvalid,
       "A webhook verification request must be a plain object.",
     );
   }
-  const { payload, header, secret, now, toleranceSeconds } = request;
+  const screened = record as VerifyStripeWebhookSignatureRequest;
+  const { payload, header, secret, now, toleranceSeconds } = screened;
 
   if (typeof secret !== "string" || secret.length === 0) {
     return billingRefuse(
@@ -230,7 +232,8 @@ export function parseCheckoutCompletedEvent(input: {
   /** Required to resolve a catalog-listing completion's price. */
   readonly listings?: unknown;
 }): BillingOutcome<CheckoutCompletedEvent> {
-  if (!isPlainRecord(input)) {
+  const inputRecord = snapshotPlainRecord(input);
+  if (inputRecord === undefined) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.requestInvalid,
       "A checkout event parse request must be a plain object.",
@@ -238,7 +241,7 @@ export function parseCheckoutCompletedEvent(input: {
   }
   let raw: unknown;
   try {
-    raw = JSON.parse(input.payload) as unknown;
+    raw = JSON.parse(inputRecord["payload"] as string) as unknown;
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return billingRefuse(
@@ -246,23 +249,24 @@ export function parseCheckoutCompletedEvent(input: {
       `The webhook payload is not JSON: ${detail}`,
     );
   }
-  if (!isPlainRecord(raw)) {
+  const rawRecord = snapshotPlainRecord(raw);
+  if (rawRecord === undefined) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.webhookPayloadInvalid,
       "The webhook payload must be a JSON object.",
     );
   }
 
-  if (raw["type"] !== "checkout.session.completed") {
+  if (rawRecord["type"] !== "checkout.session.completed") {
     return billingRefuse(
       BILLING_REFUSE_REASONS.webhookEventTypeUnsupported,
-      `Webhook event type "${String(raw["type"])}" is not handled; only checkout.session.completed grants credits.`,
+      `Webhook event type "${String(rawRecord["type"])}" is not handled; only checkout.session.completed grants credits.`,
     );
   }
 
-  const eventId = raw["id"];
-  const created = raw["created"];
-  const livemode = raw["livemode"];
+  const eventId = rawRecord["id"];
+  const created = rawRecord["created"];
+  const livemode = rawRecord["livemode"];
   if (typeof eventId !== "string" || eventId.length === 0) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.webhookPayloadInvalid,
@@ -284,26 +288,27 @@ export function parseCheckoutCompletedEvent(input: {
     );
   }
 
-  const data = raw["data"];
-  const object = isPlainRecord(data) ? data["object"] : undefined;
-  if (!isPlainRecord(object)) {
+  const data = snapshotPlainRecord(rawRecord["data"]);
+  const object = snapshotPlainRecord(data?.["object"]);
+  if (object === undefined) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.webhookPayloadInvalid,
       "The checkout event carries no session object.",
     );
   }
   const metadata = object["metadata"];
-  if (!isPlainRecord(metadata)) {
+  const metadataRecord = snapshotPlainRecord(metadata);
+  if (metadataRecord === undefined) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.webhookPayloadInvalid,
       "The checkout session carries no metadata object.",
     );
   }
 
-  const userId = metadata[CHECKOUT_METADATA_KEYS.userId];
-  const purpose = metadata[CHECKOUT_METADATA_KEYS.purpose];
-  const itemId = metadata[CHECKOUT_METADATA_KEYS.itemId];
-  const intentId = metadata[CHECKOUT_METADATA_KEYS.intentId];
+  const userId = metadataRecord[CHECKOUT_METADATA_KEYS.userId];
+  const purpose = metadataRecord[CHECKOUT_METADATA_KEYS.purpose];
+  const itemId = metadataRecord[CHECKOUT_METADATA_KEYS.itemId];
+  const intentId = metadataRecord[CHECKOUT_METADATA_KEYS.intentId];
   if (
     typeof userId !== "string" ||
     typeof itemId !== "string" ||
@@ -317,7 +322,7 @@ export function parseCheckoutCompletedEvent(input: {
   }
 
   const mode: BillingMode = livemode ? "live" : "test";
-  const intent = validateCheckoutSessionIntent(input.intent);
+  const intent = validateCheckoutSessionIntent(inputRecord["intent"]);
   if (!intent.ok) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.webhookPayloadInvalid,
@@ -338,16 +343,18 @@ export function parseCheckoutCompletedEvent(input: {
   }
 
   const lineItems = object["line_items"];
-  const lines = isPlainRecord(lineItems) ? lineItems["data"] : undefined;
+  const lineItemsRecord = snapshotPlainRecord(lineItems);
+  const lines = lineItemsRecord?.["data"];
   const line = Array.isArray(lines) && lines.length === 1 ? lines[0] : undefined;
-  const price = isPlainRecord(line) ? line["price"] : undefined;
+  const lineRecord = snapshotPlainRecord(line);
+  const price = snapshotPlainRecord(lineRecord?.["price"]);
   if (
     object["payment_status"] !== "paid" ||
     object["amount_total"] !== intent.value.unitAmount ||
     object["currency"] !== intent.value.currency ||
-    !isPlainRecord(line) ||
-    line["quantity"] !== 1 ||
-    !isPlainRecord(price) ||
+    lineRecord === undefined ||
+    lineRecord["quantity"] !== 1 ||
+    price === undefined ||
     price["id"] !== intent.value.stripePriceId
   ) {
     return billingRefuse(
@@ -371,7 +378,7 @@ export function parseCheckoutCompletedEvent(input: {
 
   let candidate: Record<string, unknown>;
   if (purpose === "credit-pack") {
-    const pack = lookupCreditPack(input.catalog, itemId);
+    const pack = lookupCreditPack(inputRecord["catalog"], itemId);
     if (!pack.ok) return pack;
     if (
       intent.value.credits !== pack.value.credits ||
@@ -391,9 +398,9 @@ export function parseCheckoutCompletedEvent(input: {
       currency: intent.value.currency,
     };
   } else {
-    const listing = input.listings === undefined
+    const listing = inputRecord["listings"] === undefined
       ? undefined
-      : lookupCatalogListing(input.listings, itemId);
+      : lookupCatalogListing(inputRecord["listings"], itemId);
     if (listing === undefined) {
       return billingRefuse(
         BILLING_REFUSE_REASONS.listingCatalogInvalid,
@@ -455,13 +462,15 @@ export type ApplyCheckoutCompletedGrantRequest = Readonly<{
 export function applyCheckoutCompletedGrant(
   request: ApplyCheckoutCompletedGrantRequest,
 ): BillingOutcome<AppendOutcome> {
-  if (!isPlainRecord(request)) {
+  const record = snapshotPlainRecord(request);
+  if (record === undefined) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.requestInvalid,
       "A checkout grant request must be a plain object.",
     );
   }
-  const { state, event, now, liveModeAuthorized } = request;
+  const screened = record as ApplyCheckoutCompletedGrantRequest;
+  const { state, event, now, liveModeAuthorized } = screened;
 
   const validated = validateCheckoutCompletedEvent(event);
   if (!validated.ok) {
@@ -473,17 +482,19 @@ export function applyCheckoutCompletedGrant(
   const mode = assertModeAuthorized(validated.value.mode, liveModeAuthorized);
   if (!mode.ok) return mode;
 
+  const stateRecord = snapshotPlainRecord(state);
+  const accountRecord = snapshotPlainRecord(stateRecord?.["account"]);
   if (
-    !isPlainRecord(state) ||
-    !isPlainRecord(state["account"]) ||
-    !Array.isArray(state["entries"])
+    stateRecord === undefined ||
+    accountRecord === undefined ||
+    !Array.isArray(stateRecord["entries"])
   ) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.ledgerStateInvalid,
       "Granting credits requires a valid ledger state.",
     );
   }
-  if (state.account.userId !== validated.value.userId) {
+  if (accountRecord["userId"] !== validated.value.userId) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.accountNotOwned,
       "The checkout event names a different user than the credit account; the grant refuses.",

@@ -15,7 +15,7 @@
 import { requireAuthenticated } from "@sceneaxi/auth";
 import {
   isEpochMilliseconds,
-  isPlainRecord,
+  snapshotPlainRecord,
   type CreditLedgerEntry,
   type IdentitySurface,
 } from "@sceneaxi/schemas";
@@ -57,14 +57,16 @@ export type MeterOutcome = Readonly<{
 export function meterCredits(
   request: MeterCreditsRequest,
 ): BillingOutcome<MeterOutcome> {
-  if (!isPlainRecord(request)) {
+  const record = snapshotPlainRecord(request);
+  if (record === undefined) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.requestInvalid,
       "A metering request must be a plain object.",
     );
   }
+  const screened = record as MeterCreditsRequest;
   const { principal, state, amount, reason, idempotencyKey, now, surface } =
-    request;
+    screened;
 
   if (!isEpochMilliseconds(now)) {
     return billingRefuse(
@@ -90,10 +92,12 @@ export function meterCredits(
       "Metering requires a non-empty idempotency key.",
     );
   }
+  const stateRecord = snapshotPlainRecord(state);
+  const accountRecord = snapshotPlainRecord(stateRecord?.["account"]);
   if (
-    !isPlainRecord(state) ||
-    !isPlainRecord(state["account"]) ||
-    !Array.isArray(state["entries"])
+    stateRecord === undefined ||
+    accountRecord === undefined ||
+    !Array.isArray(stateRecord["entries"])
   ) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.ledgerStateInvalid,
@@ -109,7 +113,7 @@ export function meterCredits(
     return billingRefuse(guarded.reason, guarded.message);
   }
 
-  if (state.account.userId !== guarded.value.user.userId) {
+  if (accountRecord["userId"] !== guarded.value.user.userId) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.accountNotOwned,
       "The credit account belongs to a different user; metering refuses.",
