@@ -9,6 +9,9 @@ Ownership map and consumer snippets:
 No Three type crosses these exports: camera control is plain numbers, draw
 surfaces take renderables as opaque handles, and canvas/input targets are
 structural, so the package needs no DOM lib and keeps no `node:` import.
+The `@sceneaxi/schemas` root it consumes is browser-safe; the filesystem-backed
+Profile Conformance suite is available only from the explicit
+`@sceneaxi/schemas/node/profile-conformance-suite` subpath.
 
 ## Three presentation core
 
@@ -32,6 +35,8 @@ Both take one core options object:
 - `surface` — inject your own draw surface, for hosts that construct their own
   renderer; it is also how gates exercise the frame path without WebGL.
 - `viewport`, `camera`, `background`, `antialias`, `preserveDrawingBuffer`.
+  `background: null` also enables an alpha drawing buffer so captures preserve
+  the documented transparent clear.
 
 Every frame reports `surface` and `pixelsDrawn`, so a frame count can never be
 mistaken for pixels. UI-facing labels are `THREE_PRESENTATION_CORE_LABEL` and

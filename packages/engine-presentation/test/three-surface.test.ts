@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const rendererState = vi.hoisted(() => ({
   draws: 0,
+  options: [] as unknown[],
 }));
 
 vi.mock("three", async (importOriginal) => {
@@ -13,6 +14,10 @@ vi.mock("three", async (importOriginal) => {
         this.info.render.calls = 0;
       },
     };
+
+    constructor(options: unknown) {
+      rendererState.options.push(options);
+    }
 
     setPixelRatio() {}
 
@@ -43,6 +48,38 @@ const manifest: ProductManifest = {
 };
 
 describe("Three canvas surface capture lifecycle", () => {
+  beforeEach(() => {
+    rendererState.draws = 0;
+    rendererState.options.length = 0;
+  });
+
+  it("forwards transparent clearing to the WebGL renderer alpha option", () => {
+    const canvas = {
+      width: 320,
+      height: 240,
+      toDataURL: () => "data:image/png;base64,iVBORw==",
+    };
+    const transparent = createThreePresentationRuntime({
+      canvas,
+      background: null,
+    });
+    const colored = createThreePresentationRuntime({
+      canvas,
+      background: "#101318",
+    });
+
+    transparent.mount();
+    colored.mount();
+
+    expect(rendererState.options).toMatchObject([
+      { alpha: true },
+      { alpha: false },
+    ]);
+
+    transparent.dispose();
+    colored.dispose();
+  });
+
   it("invalidates the captured frame after a resize", () => {
     const runtime = createThreePresentationRuntime({
       canvas: {

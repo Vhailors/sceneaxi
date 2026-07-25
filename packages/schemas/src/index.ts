@@ -276,12 +276,6 @@ export type {
 } from "./profile-conformance.js";
 
 export {
-  runProfileConformanceSuite,
-  type ConformanceCheckResult,
-  type ConformanceSuiteResult,
-} from "./profile-conformance-suite.js";
-
-export {
   ANIMATION_READY_HIERARCHY_KIND,
   ANIMATION_READY_HIERARCHY_VERSION,
   OBJECT_SCULPT_SPEC_KIND,

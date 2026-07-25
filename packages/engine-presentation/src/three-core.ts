@@ -111,6 +111,7 @@ function resolveSurface(
   if (options.canvas === undefined) return createHeadlessThreeSurface();
   return createWebGLCanvasSurface({
     canvas: options.canvas,
+    alpha: options.background === null,
     ...(options.antialias === undefined ? {} : { antialias: options.antialias }),
     ...(options.preserveDrawingBuffer === undefined
       ? {}

@@ -4,10 +4,8 @@
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import {
-  PROFILE_ROLLOUT_ORDER_HELD_KEY,
-  runProfileConformanceSuite,
-} from "@sceneaxi/schemas";
+import { PROFILE_ROLLOUT_ORDER_HELD_KEY } from "@sceneaxi/schemas";
+import { runProfileConformanceSuite } from "@sceneaxi/schemas/node/profile-conformance-suite";
 import { claim, conformance, seam } from "@sceneaxi/profile-game";
 
 const manifest = JSON.parse(

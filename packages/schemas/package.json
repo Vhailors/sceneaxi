@@ -6,6 +6,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./node/profile-conformance-suite": "./src/profile-conformance-suite.ts",
     "./testing/scene-composition": "./src/testing/scene-composition.ts",
     "./contracts/catalog-item.schema.json": "./contracts/catalog-item.schema.json",
     "./contracts/catalog-metadata-unavailable-tombstone.schema.json": "./contracts/catalog-metadata-unavailable-tombstone.schema.json",

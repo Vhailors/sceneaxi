@@ -10,10 +10,8 @@
  * readiness). shippingClaim is never true (enforced by claim validation).
  */
 
-// Namespace imports, not named bindings: the suite is node-only, but this module
-// is reachable from the browser-facing presentation core through the package
-// root. Namespace access defers every node built-in touch to call time, so a
-// browser bundle can import the package without evaluating node APIs.
+// This suite is exported only from the explicit
+// @sceneaxi/schemas/node/profile-conformance-suite subpath.
 import * as nodeFs from "node:fs";
 import * as nodeOs from "node:os";
 import * as nodePath from "node:path";

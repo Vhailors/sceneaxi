@@ -135,7 +135,7 @@
     }
   },
   "releaseGroups": {
-    "contracts": { "policy": "schemas carry their own versions; every consumer refuses major mismatches" },
+    "contracts": { "policy": "schemas carry their own versions; the package root stays browser-safe while Node-only executable suites use explicit node subpaths; every consumer refuses major mismatches" },
     "core-train": { "policy": "one shared semver train — a 'core release' covers all engine packages and authoring-core" },
     "profile": { "policy": "independently versioned; each profile MUST declare sceneaxi.corePin (a semver range on the core train)" },
     "cli-protocol": { "policy": "versions with its protocol envelope; output-schema changes are semver events" },

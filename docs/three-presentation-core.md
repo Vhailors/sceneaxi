@@ -57,6 +57,9 @@ No Three type crosses the package exports:
 - Canvas and input targets are declared structurally, so the package needs no DOM
   lib and its types stay consumable by node-only packages.
 - The package keeps no `node:` import.
+- Its `@sceneaxi/schemas` dependency is browser-safe at the package root; the
+  filesystem-backed Profile Conformance runner lives only at
+  `@sceneaxi/schemas/node/profile-conformance-suite`.
 
 The Three `OrbitControls` addon is deliberately unused: it needs DOM lib types
 this package does not take, and it hands out the camera object itself, which
@@ -83,6 +86,9 @@ backend.camera.attach(canvas);      // drag to orbit, wheel to zoom
 const loop = createThreeRenderLoop({ onFrame: () => mounts.render() });
 loop.start();
 ```
+
+Pass `background: null` to request a transparent scene clear and an alpha-enabled
+WebGL drawing buffer; captured PNG pixels retain that transparency.
 
 Kernel snapshots to a canvas through the ADR 0002 seam:
 
