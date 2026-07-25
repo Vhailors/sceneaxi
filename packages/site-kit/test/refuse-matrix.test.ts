@@ -26,6 +26,7 @@ import {
   parseEditorDeepLink,
   parseEditorDeepLinkParams,
   readEngineSdkOffer,
+  reconstructStarter,
   showSiteListing,
   webEditorStarterArtifact,
 } from "@sceneaxi/site-kit";
@@ -221,6 +222,9 @@ const CASES: Readonly<Record<SiteRefusalReason, () => Promise<unknown> | unknown
     parseEditorDeepLink("https://umbrella.vercel.app/editor?source=catalog-game"),
   DEEP_LINK_UNKNOWN_PARAMETER: () =>
     parseEditorDeepLinkParams({ source: "catalog-game", item: "x", token: "abc" }),
+  // Reconstruction is injected here rather than corrupting the shipped module: the
+  // reason must be reachable, and the shipped intake must stay valid.
+  EDITOR_STARTER_ARTIFACT_INVALID: () => reconstructStarter({ kind: "not-an-intake" }),
   ENGINE_SDK_ARTIFACT_MISSING: () => readEngineSdkOffer(workspace()),
   ENGINE_SDK_MANIFEST_INVALID: () => {
     const siteRoot = workspace();

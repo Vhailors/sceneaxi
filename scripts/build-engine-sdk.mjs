@@ -203,7 +203,9 @@ CLI use and bringing your own AI provider.
 
 function main(argv) {
   const outIndex = argv.indexOf("--out");
-  const outDir = resolve(root, outIndex >= 0 ? (argv[outIndex + 1] ?? "dist-sdk") : "dist-sdk");
+  // Resolved against the caller's cwd, not the repo root, so a site can write into its
+  // own `public/` with a relative path.
+  const outDir = resolve(process.cwd(), outIndex >= 0 ? (argv[outIndex + 1] ?? "dist-sdk") : "dist-sdk");
   const built = buildEngineSdk();
   mkdirSync(outDir, { recursive: true });
   writeFileSync(join(outDir, built.fileName), built.archive);
@@ -211,7 +213,7 @@ function main(argv) {
   writeFileSync(join(outDir, "sdk-manifest.json"), `${JSON.stringify(built.manifest, null, 2)}\n`);
   process.stdout.write(
     `engine SDK OK — ${built.fileName} (${built.archive.length} bytes, ${built.manifest.entryCount} entries)\n` +
-      `  sha256 ${built.sha256}\n  out    ${relative(root, outDir)}\n`,
+      `  sha256 ${built.sha256}\n  out    ${outDir}\n`,
   );
 }
 

@@ -1,3 +1,15 @@
+/**
+ * The starter Sculpt Intake the web editor mounts.
+ *
+ * Held as a TypeScript module rather than a JSON file read at runtime: the sites are
+ * bundled for a serverless target, where a `readFileSync` against a package-relative
+ * path is not guaranteed to be traced into the deployment. A module is always bundled.
+ *
+ * Derived from the landed sculpt-quality service-crate demo, so it exercises the same
+ * multi-pass reconstruction path the engine tests cover.
+ */
+
+export const WEB_EDITOR_STARTER_INTAKE: unknown = Object.freeze(
 {
   "schemaVersion": 1,
   "kind": "sceneaxi.sculpt-intake",
@@ -285,3 +297,4 @@
     ]
   }
 }
+);

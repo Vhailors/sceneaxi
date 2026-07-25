@@ -114,8 +114,8 @@ export {
 } from "./web-editor.js";
 
 export {
-  WEB_EDITOR_STARTER_INTAKE_PATH,
   WEB_EDITOR_STARTER_SEED,
+  reconstructStarter,
   webEditorStarterArtifact,
 } from "./starter-artifact.js";
 

@@ -69,6 +69,10 @@ export const SITE_REFUSALS = Object.freeze({
   DEEP_LINK_ITEM_MISSING: "The deep link carries no catalog item id.",
   DEEP_LINK_UNKNOWN_PARAMETER: "The deep link carries a parameter outside the published contract.",
 
+  // --- starter artifact (see starter-artifact.ts) ---
+  EDITOR_STARTER_ARTIFACT_INVALID:
+    "The starter sculpt intake did not reconstruct, so no editor scene can be opened.",
+
   // --- public engine SDK offer (see engine-sdk-offer.ts) ---
   ENGINE_SDK_ARTIFACT_MISSING:
     "The engine SDK archive or its manifest is not present in this build.",

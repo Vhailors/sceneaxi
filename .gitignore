@@ -18,5 +18,6 @@ coverage/
 
 # sites/ are separate install roots (see docs/websites-deploy.md)
 sites/*/.next/
+sites/*/public/engine-sdk/
 sites/*/node_modules/
 sites/*/next-env.d.ts

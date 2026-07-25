@@ -2,7 +2,7 @@
   "name": "@sceneaxi/site-catalog-web",
   "version": "0.0.0",
   "private": true,
-  "description": "SceneAxi website-asset catalog site — browse/detail over listed fixtures with dual pricing and umbrella editor deep links",
+  "description": "SceneAxi website-asset catalog site \u2014 browse/detail over listed fixtures with dual pricing and umbrella editor deep links",
   "type": "module",
   "scripts": {
     "dev": "next dev",
