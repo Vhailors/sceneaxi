@@ -252,8 +252,10 @@ exists.
 **Account required:** SceneAxi-hosted AI, catalog purchases, creator publish, credit
 balance, and credit-pack purchase.
 
-**Admin** has an unlimited allowance and is never debited. **Kids commerce is denied** on
-every capability, free ones included, and the refusal is not overridable.
+**Admin** has an unlimited allowance and is never debited, and because nothing is
+collected, nothing downstream may be paid out of it either — see the revenue-share section.
+**Kids commerce is denied** on every capability, free ones included, and the refusal is not
+overridable.
 
 The matrix is a **closed enumeration**, not a lookup with a default: an unknown capability
 refuses. There is no path where forgetting to register something makes it free, and none
@@ -264,6 +266,17 @@ where forgetting makes it silently chargeable.
 Every new user receives exactly **100** credits, once, under idempotency key
 `starter:<userId>`. A second attempt grants nothing. The amount is captain-frozen and the
 contract check refuses a change to it.
+
+## Metering
+
+`meterCredits` namespaces the caller's idempotency key by account before it reaches the
+ledger: `usage:<accountId>:<callerKey>`. Replay is a *per-account* question in the pure
+ledger, but `idempotency_key` uniqueness is **global** in both the database and the
+in-memory store, so a bare caller key such as `usage:turn_01` would make one account's
+committed debit collide with a different account's legitimately distinct usage — refusing
+as a store failure rather than metering it. Every other producer in this plane already
+namespaces by identity (`starter:<userId>`, `sale:<saleId>:buyer`, `stripe-event:<id>`);
+metering is scoped the same way so the pure check and the persisted constraint agree.
 
 ## Credit packs
 
@@ -339,6 +352,14 @@ returns them only if both succeed, so a failure anywhere leaves the buyer's bala
 untouched. That falls out of the ledger being pure — there is no half-applied intermediate
 state to roll back. Creator earnings land in the creator's own append-only ledger, not a
 separate mutable balance store.
+
+**An uncharged sale pays nobody.** Admin's unlimited allowance debits no ledger, so there
+is no gross to split: `applyCreditsSale` returns `charged: false` with **no** creator grant
+and **no** `CreatorShareRecord`, and `persistCreditsSale` writes nothing. Granting the
+creator half of an uncollected gross would mint credits into the plane out of nothing and
+book a collection that never happened. `CreditStore.settleCreditsSale` enforces the same
+rule independently: a settlement whose non-zero `grossCredits` carries no buyer debit is
+refused, exactly as a non-zero `creatorCredits` with no creator grant already was.
 
 **Money sales are bookkeeping only.** No payout, no Stripe Connect, no transfer. The
 `MoneySplitRecord` contract *refuses* any field that could describe a payout

@@ -19,11 +19,12 @@ import {
 import type { Awaitable } from "@sceneaxi/auth";
 
 /**
- * The atomic result of a credits sale: the buyer debit and creator grant (either
- * may be absent — an admin buyer is not debited, a zero creator share is not
- * granted) plus the share record. `CreditStore.settleCreditsSale` commits all of
- * it or none of it, so a failure on the creator side can never leave the buyer
- * charged without their 50% share.
+ * The atomic result of a credits sale: the buyer debit, the creator grant (absent
+ * when the floor split left the creator a zero share, which is never granted as a
+ * zero-value row), and the share record. `CreditStore.settleCreditsSale` commits
+ * all of it or none of it, so a failure on the creator side can never leave the
+ * buyer charged without their 50% share — and a share record without the buyer's
+ * debit is refused, so no settlement can book a gross that was never collected.
  */
 export type CreditsSaleSettlement = Readonly<{
   buyerEntry?: CreditLedgerEntry | undefined;
@@ -120,7 +121,6 @@ function sameEntry(
 function sameShare(
   left: CreatorShareRecord,
   right: CreatorShareRecord,
-  ignoreOccurredAt: boolean,
 ): boolean {
   return (
     left.schemaVersion === right.schemaVersion &&
@@ -133,7 +133,7 @@ function sameShare(
     left.creatorCredits === right.creatorCredits &&
     left.platformCredits === right.platformCredits &&
     left.basisPoints === right.basisPoints &&
-    (ignoreOccurredAt || left.occurredAt === right.occurredAt)
+    left.occurredAt === right.occurredAt
   );
 }
 
@@ -141,15 +141,10 @@ function sameSettlement(
   left: CreditsSaleSettlement,
   right: CreditsSaleSettlement,
 ): boolean {
-  const noLedgerLegs =
-    left.buyerEntry === undefined &&
-    left.creatorEntry === undefined &&
-    right.buyerEntry === undefined &&
-    right.creatorEntry === undefined;
   return (
     sameEntry(left.buyerEntry, right.buyerEntry) &&
     sameEntry(left.creatorEntry, right.creatorEntry) &&
-    sameShare(left.share, right.share, noLedgerLegs)
+    sameShare(left.share, right.share)
   );
 }
 
@@ -310,6 +305,13 @@ export function createInMemoryCreditStore(
     }
     if (creatorEntry === undefined && share.creatorCredits !== 0) {
       return fail(`sale ${share.saleId} is missing its creator entry`);
+    }
+    // The symmetric rule, and the one that keeps a share record from asserting
+    // money that never moved: a non-zero gross must be evidenced by the buyer's
+    // debit. Without it a settlement could grant the creator their half of a
+    // gross nobody paid, minting credits into the plane.
+    if (buyerEntry === undefined && share.grossCredits !== 0) {
+      return fail(`sale ${share.saleId} is missing its buyer entry`);
     }
 
     return Object.freeze({

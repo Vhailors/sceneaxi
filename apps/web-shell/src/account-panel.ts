@@ -372,9 +372,32 @@ export function createAccountPanel(
 
   let heldPrincipal: Principal | undefined;
   const outstandingPrincipals = new Set<Principal>();
+  /**
+   * Sessions a revocation was attempted on and failed. Tracked apart from
+   * `heldPrincipal` because the two answer different questions: the principal is
+   * retained so the revocation can be retried, while the failure is what the
+   * panel must keep telling the reader. Without this, a refused sign-out would
+   * silently become a signed-in snapshot again on the very next refresh.
+   */
+  const unrevokedPrincipals = new Set<Principal>();
+  let revocationFailure: AccountPanelRefusal | undefined;
   let operationTail: Promise<void> = Promise.resolve();
 
   held = anonymous();
+
+  const recordRevocationFailure = (
+    principal: Principal,
+    value: AccountPanelRefusal,
+  ): AccountPanelRefusal => {
+    unrevokedPrincipals.add(principal);
+    revocationFailure = value;
+    return value;
+  };
+
+  const clearRevocationFailure = (principal: Principal): void => {
+    unrevokedPrincipals.delete(principal);
+    if (unrevokedPrincipals.size === 0) revocationFailure = undefined;
+  };
 
   const revokePrincipal = async (
     principal: Principal,
@@ -384,15 +407,22 @@ export function createAccountPanel(
     try {
       result = await identityPort.signOut({ principal });
     } catch {
-      return refusal(
-        ACCOUNT_PANEL_REASONS.sessionRevocationFailed,
-        "A session could not be revoked and may still be live.",
+      return recordRevocationFailure(
+        principal,
+        refusal(
+          ACCOUNT_PANEL_REASONS.sessionRevocationFailed,
+          "A session could not be revoked and may still be live.",
+        ),
       );
     }
     if (!result.ok) {
-      return refusal(result.reason, result.message);
+      return recordRevocationFailure(
+        principal,
+        refusal(result.reason, result.message),
+      );
     }
     outstandingPrincipals.delete(principal);
+    clearRevocationFailure(principal);
     if (heldPrincipal === principal) heldPrincipal = undefined;
     return undefined;
   };
@@ -413,6 +443,10 @@ export function createAccountPanel(
     for (const existing of outstandingPrincipals) {
       if (existing.session.sessionId === principal.session.sessionId) {
         outstandingPrincipals.delete(existing);
+        // The same session id is the same session, now held under a fresh
+        // principal that can still be revoked, so an earlier failure against it
+        // no longer describes a session the panel has lost hold of.
+        clearRevocationFailure(existing);
         if (heldPrincipal === existing) heldPrincipal = undefined;
       }
     }
@@ -483,6 +517,13 @@ export function createAccountPanel(
      */
     async refresh() {
       return serializeMutation(async () => {
+        // An outstanding failed revocation outranks the balance: a session the
+        // reader asked to end may still be live, and re-rendering them as
+        // signed-in would substitute a default for that failure.
+        if (revocationFailure !== undefined) {
+          held = refused(revocationFailure);
+          return held;
+        }
         const principal = heldPrincipal;
         held =
           principal === undefined

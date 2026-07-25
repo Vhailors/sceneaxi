@@ -14,6 +14,11 @@
  * buyer's balance untouched. That falls out of the ledger being pure — there is
  * no half-applied intermediate state to roll back.
  *
+ * A sale that charged nothing pays nothing. An admin buyer's unlimited allowance
+ * debits no ledger, so there is no gross to split: no creator grant is minted and
+ * no `CreatorShareRecord` is written, because a record asserting a gross nobody
+ * paid would describe credits that never moved.
+ *
  * Money sales record a `MoneySplitRecord` and nothing else. No payout, no Stripe
  * Connect: real cash payouts to creators are a later captain gate.
  */
@@ -154,10 +159,16 @@ export type CreditsSaleOutcome = Readonly<{
   buyer: AppendOutcome;
   /**
    * The creator's grant outcome. Absent when the floor split left the creator a
-   * zero share (a 1-credit sale), so a zero-value ledger row is never created.
+   * zero share (a 1-credit sale), so a zero-value ledger row is never created,
+   * and absent when nothing was charged at all.
    */
   creator?: AppendOutcome | undefined;
-  share: CreatorShareRecord;
+  /**
+   * The share record. Absent exactly when `charged` is false: no gross was
+   * collected, so there is no gross to split, and a record claiming one would
+   * describe credits that never moved.
+   */
+  share?: CreatorShareRecord | undefined;
   /** False when the buyer was an admin and nothing was debited. */
   charged: boolean;
   replayed: boolean;
@@ -221,6 +232,20 @@ export function applyCreditsSale(
     ...(surface === undefined ? {} : { surface }),
   });
   if (!purchase.ok) return purchase;
+
+  // An admin buyer's unlimited allowance debits nothing. Paying the creator
+  // their half of a gross nobody paid would mint credits out of nothing, and the
+  // share record would assert a collection that never happened, so the sale
+  // stops here: the admin gets the listing, and no ledger anywhere moves.
+  if (!purchase.value.charged) {
+    return billingOk(
+      Object.freeze({
+        buyer: purchase.value.buyer,
+        charged: false,
+        replayed: false,
+      }),
+    );
+  }
 
   const split = splitCredits(grossCredits);
   if (!split.ok) return split;
@@ -293,6 +318,10 @@ export async function persistCreditsSale(
   const { store, ...saleRequest } = record as PersistCreditsSaleRequest;
   const outcome = applyCreditsSale(saleRequest);
   if (!outcome.ok) return outcome;
+  // Nothing was collected and nothing was granted, so there is no settlement to
+  // commit; persisting a share record here would book an uncollected gross.
+  if (outcome.value.share === undefined) return outcome;
+  const share = outcome.value.share;
 
   try {
     const settled = await store.settleCreditsSale({
@@ -302,7 +331,7 @@ export async function persistCreditsSale(
       ...(outcome.value.creator?.entry === undefined
         ? {}
         : { creatorEntry: outcome.value.creator.entry }),
-      share: outcome.value.share,
+      share,
     });
     return billingOk(
       Object.freeze({

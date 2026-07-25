@@ -49,7 +49,9 @@ export {
 } from "./store.js";
 
 export {
+  METERING_IDEMPOTENCY_PREFIX,
   meterCredits,
+  meteringIdempotencyKey,
   type MeterCreditsRequest,
   type MeterOutcome,
 } from "./metering.js";

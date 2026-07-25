@@ -511,6 +511,49 @@ describe("sign out", () => {
     expect((await panel.signOut()).phase).toBe("anonymous");
   });
 
+  it("keeps a failed revocation refusal across a refresh", async () => {
+    const base = createIdentityPort({
+      adapter: ADAPTER,
+      store: createInMemoryIdentityStore({ users: [CREW] }),
+      admin,
+      clock,
+    });
+    let signOutCalls = 0;
+    const identityPort: IdentityPort = Object.freeze({
+      signIn: (request) => base.signIn(request),
+      verifySession: (request) => base.verifySession(request),
+      signOut(request) {
+        signOutCalls += 1;
+        if (signOutCalls === 1) throw new Error("transport down");
+        return base.signOut(request);
+      },
+    });
+    const panel = makePanel({ identityPort });
+    await panel.submitCredentials({
+      email: "crew@example.com",
+      password: "pw",
+    });
+
+    const failedSignOut = await panel.signOut();
+    expect(failedSignOut.refusal?.reason).toBe(
+      ACCOUNT_PANEL_REASONS.sessionRevocationFailed,
+    );
+
+    // A session the reader asked to end may still be live, so the refusal must
+    // not decay back into a signed-in balance on the next read.
+    const refreshed = await panel.refresh();
+    expect(refreshed.phase).toBe("refused");
+    expect(refreshed.refusal?.reason).toBe(
+      ACCOUNT_PANEL_REASONS.sessionRevocationFailed,
+    );
+    expect(refreshed.creditBalance).toBeUndefined();
+    expect(panel.snapshot().phase).toBe("refused");
+
+    // The principal is still retained, so the retry succeeds and clears it.
+    expect((await panel.signOut()).phase).toBe("anonymous");
+    expect((await panel.refresh()).phase).toBe("anonymous");
+  });
+
   it("revokes every superseded session and retains failed revocations", async () => {
     let sessionNumber = 0;
     const adapter: IdentityAdapter = Object.freeze({

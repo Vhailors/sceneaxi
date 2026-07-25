@@ -10,6 +10,13 @@
  *   which would pollute the ledger with meaningless rows.
  * - **A principal may only spend its own account.** Ownership is checked against
  *   the account record, not inferred from the caller passing the right state.
+ *
+ * The caller's idempotency key is namespaced by account before it reaches the
+ * ledger (`usage:<accountId>:<key>`), the way every other producer in this plane
+ * namespaces by identity. Replay is a per-account question, but the persisted
+ * `idempotency_key` uniqueness is global, so an un-namespaced caller key would
+ * let one account's `usage:turn_01` turn another account's distinct usage into an
+ * opaque store failure instead of a metered debit.
  */
 
 import { requireAuthenticated, type AdminIdentity } from "@sceneaxi/auth";
@@ -50,6 +57,17 @@ export type MeterCreditsRequest = Readonly<{
   /** When given, the principal's session must belong to this surface. */
   surface?: IdentitySurface | undefined;
 }>;
+
+/** Namespace for metering idempotency keys; scoped by account, never bare. */
+export const METERING_IDEMPOTENCY_PREFIX = "usage:" as const;
+
+/** Scope a caller-supplied metering key to the account that is being debited. */
+export function meteringIdempotencyKey(
+  accountId: string,
+  callerKey: string,
+): string {
+  return `${METERING_IDEMPOTENCY_PREFIX}${accountId}:${callerKey}`;
+}
 
 export type MeterOutcome = Readonly<{
   state: LedgerState;
@@ -182,12 +200,16 @@ export async function meterCredits(
     );
   }
 
+  const scopedKey = meteringIdempotencyKey(
+    persistedState.value.account.accountId,
+    idempotencyKey,
+  );
   const appended = appendCreditEntry(persistedState.value, {
-    entryId: deriveEntryId(idempotencyKey),
+    entryId: deriveEntryId(scopedKey),
     movement: "debit",
     delta: -amount,
     reason,
-    idempotencyKey,
+    idempotencyKey: scopedKey,
     now,
   });
   if (!appended.ok) return appended;

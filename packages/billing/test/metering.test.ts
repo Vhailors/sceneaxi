@@ -7,6 +7,7 @@ import {
   createInMemoryCreditStore,
   createLedgerState,
   meterCredits,
+  meteringIdempotencyKey,
   type LedgerState,
 } from "@sceneaxi/billing";
 const NOW = Date.parse("2026-07-25T10:00:00Z");
@@ -272,6 +273,72 @@ describe("meterCredits", () => {
     expect(replay.value.state.entries.length).toBe(
       first.value.state.entries.length,
     );
+  });
+
+  it("scopes the caller's key by account, so two accounts may share one key", async () => {
+    const MATE = Object.freeze({
+      schemaVersion: 1,
+      kind: "sceneaxi.credit-account",
+      accountId: "acc_mate",
+      userId: "usr_mate",
+      createdAt: "2026-07-25T09:00:00Z",
+    }) as CreditAccount;
+    const mateGrant = appendCreditEntry(createLedgerState(MATE), {
+      entryId: "ent_grant_mate",
+      movement: "grant",
+      delta: 100,
+      reason: "test funding",
+      idempotencyKey: "fixture:grant:mate",
+      now: NOW,
+    });
+    expect(mateGrant.ok).toBe(true);
+    if (!mateGrant.ok) return;
+    const crewState = funded();
+    const mateState = mateGrant.value.state;
+    // One store, so the global idempotency-key uniqueness the database enforces
+    // applies across both accounts exactly as it does in production.
+    const store = createInMemoryCreditStore({
+      accounts: [crewState.account, MATE],
+      entries: [...crewState.entries, ...mateState.entries],
+    });
+
+    const crew = await meterCredits({
+      principal: principal(),
+      admin,
+      store,
+      state: crewState,
+      amount: 10,
+      reason: "hosted assistant turn",
+      idempotencyKey: "usage:turn_01",
+      now: NOW,
+    });
+    expect(crew.ok).toBe(true);
+    if (!crew.ok) return;
+    expect(crew.value.entry?.idempotencyKey).toBe(
+      meteringIdempotencyKey("acc_crew", "usage:turn_01"),
+    );
+
+    // The same caller key on a different account is distinct usage, not a
+    // replay, and must not collide on the persisted unique index.
+    const mate = await meterCredits({
+      principal: principal({ userId: "usr_mate" }),
+      admin,
+      store,
+      state: mateState,
+      amount: 10,
+      reason: "hosted assistant turn",
+      idempotencyKey: "usage:turn_01",
+      now: NOW,
+    });
+    expect(mate.ok).toBe(true);
+    if (!mate.ok) return;
+    expect(mate.value.metered).toBe(true);
+    expect(mate.value.replayed).toBe(false);
+    expect(mate.value.balance).toBe(90);
+    expect(mate.value.entry?.idempotencyKey).toBe(
+      meteringIdempotencyKey("acc_mate", "usage:turn_01"),
+    );
+    expect(store.entryCount("acc_mate")).toBe(2);
   });
 
   it("refuses an unknown or stale persisted account", async () => {

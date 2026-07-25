@@ -38,9 +38,16 @@ commit only one side.
 leaves the ledger untouched — reported explicitly rather than faked with a zero-credit
 entry, which would pollute the ledger with meaningless rows.
 
+**Nothing collected means nothing paid.** An uncharged sale produces no creator grant and
+no share record, because paying out half of a gross nobody paid would mint credits from
+nothing. `settleCreditsSale` refuses a settlement whose non-zero gross has no buyer debit,
+so the rule holds at the persistence boundary too, not only in the pure path.
+
 **Metering is a persisted effect.** `meterCredits` loads the current account history from
 its injected `CreditStore`, refuses an absent or stale account, and appends the debit
-before it reports success.
+before it reports success. The caller's idempotency key is scoped to the account
+(`usage:<accountId>:<callerKey>`) so the ledger's per-account replay check and the store's
+global `idempotency_key` uniqueness cannot disagree.
 
 **Refusals keep their identity.** `BillingRefuseReason` includes `AuthRefuseReason`, so a
 guard refusal surfaces as `KIDS_IDENTITY_SURFACE_DENIED` or `AUTH_SESSION_EXPIRED` rather

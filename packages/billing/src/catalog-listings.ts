@@ -30,6 +30,7 @@ import { createMoneyCheckoutIntent } from "./checkout.js";
 import {
   appendCreditEntry,
   deriveEntryId,
+  validateLedgerState,
   type AppendOutcome,
   type LedgerState,
 } from "./ledger.js";
@@ -237,14 +238,18 @@ export function purchaseListingWithCredits(
 
   const idempotencyKey = `${LISTING_SALE_IDEMPOTENCY_PREFIX}${saleId}:buyer`;
 
-  // The captain's unlimited allowance: no debit is appended and none is
-  // faked. The sale still happened, so the caller can still pay the creator;
-  // the no-charge outcome is reported explicitly rather than as a ledger row.
+  // The captain's unlimited allowance: no debit is appended and none is faked.
+  // Nothing was collected, so `charged: false` is reported explicitly rather
+  // than as a ledger row, and callers must not book a gross against it. The
+  // state is still validated first, so the returned ledger is a checked
+  // snapshot on this path exactly as it is on the debited one.
   if (guarded.value.role.role === "admin") {
+    const validatedBuyerState = validateLedgerState(buyerState);
+    if (!validatedBuyerState.ok) return validatedBuyerState;
     return billingOk(
       Object.freeze({
         buyer: Object.freeze({
-          state: buyerState,
+          state: validatedBuyerState.value,
           entry: undefined,
           replayed: false,
         }),

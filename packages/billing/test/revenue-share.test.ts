@@ -232,9 +232,9 @@ describe("applyCreditsSale", () => {
     expect(result.value.buyer.state.balance).toBe(60);
     expect(result.value.creator?.entry?.delta).toBe(20);
     expect(result.value.creator?.state.balance).toBe(20);
-    expect(result.value.share.creatorCredits).toBe(20);
-    expect(result.value.share.platformCredits).toBe(20);
-    expect(result.value.share.grossCredits).toBe(40);
+    expect(result.value.share?.creatorCredits).toBe(20);
+    expect(result.value.share?.platformCredits).toBe(20);
+    expect(result.value.share?.grossCredits).toBe(40);
   });
 
   it("gives the platform the remainder on an odd price", () => {
@@ -255,9 +255,10 @@ describe("applyCreditsSale", () => {
     // 7 credits: 3 creator, 4 platform.
     expect(result.value.buyer.entry?.delta).toBe(-7);
     expect(result.value.creator?.entry?.delta).toBe(3);
-    expect(result.value.share.platformCredits).toBe(4);
+    expect(result.value.share?.platformCredits).toBe(4);
     expect(
-      result.value.share.creatorCredits + result.value.share.platformCredits,
+      (result.value.share?.creatorCredits ?? 0) +
+        (result.value.share?.platformCredits ?? 0),
     ).toBe(7);
   });
 
@@ -408,16 +409,17 @@ describe("applyCreditsSale", () => {
     );
   });
 
-  it("still pays the creator when the buyer is an admin", () => {
+  it("mints nothing for the creator when the admin buyer is not charged", () => {
     const target = listing("lantern-prop");
+    const creatorState = createLedgerState(
+      account(target.sellerUserId, "acc_creator"),
+    );
     const result = applyCreditsSale({
       principal: principal({ role: "admin" }),
       admin,
       listing: target,
       buyerState: funded(0, BUYER),
-      creatorState: createLedgerState(
-        account(target.sellerUserId, "acc_creator"),
-      ),
+      creatorState,
       now: NOW,
       saleId: "sale_admin",
     });
@@ -425,7 +427,14 @@ describe("applyCreditsSale", () => {
     if (!result.ok) return;
     expect(result.value.charged).toBe(false);
     expect(result.value.buyer.state.balance).toBe(0);
-    expect(result.value.creator?.state.balance).toBe(20);
+    expect(result.value.buyer.entry).toBeUndefined();
+    // No gross was collected, so there is no gross to split: granting the
+    // creator half of it would create credits nobody paid for.
+    expect(result.value.creator).toBeUndefined();
+    expect(creatorState.balance).toBe(0);
+    expect(creatorState.entries.length).toBe(0);
+    // And no record may assert a gross that never moved.
+    expect(result.value.share).toBeUndefined();
   });
 
   it("persists the debit, creator grant, and share in one atomic store call", async () => {
@@ -474,6 +483,7 @@ describe("applyCreditsSale", () => {
       return;
     }
 
+    if (applied.value.share === undefined) return;
     const buyerEntry = { ...applied.value.buyer.entry };
     const creatorEntry = { ...applied.value.creator.entry };
     const share = { ...applied.value.share };
@@ -507,6 +517,38 @@ describe("applyCreditsSale", () => {
       share: applied.value.share,
     });
     expect(replay.replayed).toBe(true);
+  });
+
+  it("refuses a settlement whose gross carries no buyer debit", () => {
+    const target = listing("lantern-prop");
+    const creatorAccount = account(target.sellerUserId, "acc_creator");
+    const buyerState = funded(100, BUYER);
+    const applied = applyCreditsSale({
+      principal: principal(),
+      admin,
+      listing: target,
+      buyerState,
+      creatorState: createLedgerState(creatorAccount),
+      now: NOW,
+      saleId: "sale_no_buyer_leg",
+    });
+    expect(applied.ok).toBe(true);
+    if (!applied.ok) return;
+    const share = applied.value.share;
+    const creatorEntry = applied.value.creator?.entry;
+    if (share === undefined || creatorEntry === undefined) return;
+
+    const store = createInMemoryCreditStore({
+      accounts: [BUYER, creatorAccount],
+      entries: buyerState.entries,
+    });
+    // Granting the creator their half without the buyer's debit would mint
+    // credits, so the persistence boundary refuses it independently.
+    expect(() => store.settleCreditsSale({ creatorEntry, share })).toThrow(
+      /missing its buyer entry/,
+    );
+    expect(store.shareRecordCount()).toBe(0);
+    expect(store.entryCount(creatorAccount.accountId)).toBe(0);
   });
 
   it("refuses settlement entries that do not extend persisted ledger tails", async () => {
@@ -549,7 +591,13 @@ describe("applyCreditsSale", () => {
       saleId: "sale_restored",
     });
     expect(first.ok).toBe(true);
-    if (!first.ok || first.value.creator === undefined) return;
+    if (
+      !first.ok ||
+      first.value.creator === undefined ||
+      first.value.share === undefined
+    ) {
+      return;
+    }
 
     const store = createInMemoryCreditStore({
       accounts: [BUYER, creatorAccount],
@@ -577,7 +625,7 @@ describe("applyCreditsSale", () => {
     expect(store.shareRecordCount()).toBe(1);
   });
 
-  it("replays an identical admin sale with absent ledger legs", async () => {
+  it("persists no settlement at all for an uncharged admin sale", async () => {
     const listed = listing("lantern-prop");
     const target = Object.freeze({
       ...listed,
@@ -590,38 +638,32 @@ describe("applyCreditsSale", () => {
     const store = createInMemoryCreditStore({
       accounts: [BUYER, creatorAccount],
     });
-    const first = await persistCreditsSale({
-      store,
-      principal: principal({ role: "admin" }),
-      admin,
-      listing: target,
-      buyerState,
-      creatorState,
-      now: NOW,
-      saleId: "sale_admin_replay",
-    });
+    const adminSale = () =>
+      persistCreditsSale({
+        store,
+        principal: principal({ role: "admin" }),
+        admin,
+        listing: target,
+        buyerState,
+        creatorState,
+        now: NOW,
+        saleId: "sale_admin_replay",
+      });
+    const first = await adminSale();
     expect(first.ok).toBe(true);
     if (!first.ok) return;
+    expect(first.value.charged).toBe(false);
     expect(first.value.buyer.entry).toBeUndefined();
     expect(first.value.creator).toBeUndefined();
-    expect(first.value.replayed).toBe(false);
+    expect(first.value.share).toBeUndefined();
 
-    const replay = await persistCreditsSale({
-      store,
-      principal: principal({ role: "admin" }),
-      admin,
-      listing: target,
-      buyerState,
-      creatorState,
-      now: NOW + 60_000,
-      saleId: "sale_admin_replay",
-    });
-    expect(replay.ok).toBe(true);
-    if (!replay.ok) return;
-    expect(replay.value.replayed).toBe(true);
+    // Repeating it is not a replay of something recorded — nothing was ever
+    // recorded, so no ledger row and no share record exists to mint from.
+    const again = await adminSale();
+    expect(again.ok).toBe(true);
     expect(store.entryCount(BUYER.accountId)).toBe(0);
     expect(store.entryCount(creatorAccount.accountId)).toBe(0);
-    expect(store.shareRecordCount()).toBe(1);
+    expect(store.shareRecordCount()).toBe(0);
   });
 
   it("returns one refusal when the atomic store settlement fails", async () => {

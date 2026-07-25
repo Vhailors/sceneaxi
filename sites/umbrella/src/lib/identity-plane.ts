@@ -6,23 +6,23 @@
  *
  * `sceneaxi-auth-credits-v1` (#90–#98) owns identity and billing: single-admin
  * resolution from `SCENEAXI_ADMIN_EMAIL`, fail-closed role guards, the append-only
- * credit ledger, and Stripe webhook verification. Its own SPEC states its v1 ships
- * no live signed-in browser session because that needs a hosted HTTP surface — this
- * site is that surface. It has no branch pushed yet, so its packages do not exist and
- * **cannot** be depended on here.
+ * credit ledger, and Stripe webhook verification. `packages/auth` and
+ * `packages/billing` now exist, but that vertical scopes its own shell wiring to
+ * `apps/web-shell`; wiring **this** site is a separate change, so the umbrella is
+ * deliberately still unwired here.
  *
  * Rather than fork auth, this module leaves the adapters unset. Every port then
  * refuses with its own named reason, so the umbrella tells the truth about being
  * unwired instead of minting a fake session or showing a fake balance.
  *
- * Activation, once that vertical lands, is three steps and touches no other site
- * file: widen this site's allow list in `docs/dependency-matrix.json` to include the
- * two identity-plane packages, add them to this site's manifest, and pass their
- * adapter factories into `createUmbrellaIdentityPlane` below. The step-by-step
- * procedure and the full env var list live in `docs/websites-deploy.md`.
+ * Activation is three steps and touches no other site file: widen this site's allow
+ * list in `docs/dependency-matrix.json` to include the two identity-plane packages,
+ * add them to this site's manifest, and pass their adapter factories into
+ * `createUmbrellaIdentityPlane` below. The step-by-step procedure and the full env
+ * var list live in `docs/websites-deploy.md`.
  *
- * The allow list is deliberately narrow until then, so the boundary checker refuses
- * an accidental early dependency rather than letting a half-wired plane ship.
+ * The allow list stays deliberately narrow until that change, so the boundary checker
+ * refuses an accidental early dependency rather than letting a half-wired plane ship.
  */
 import {
   createBillingPlane,
@@ -90,4 +90,4 @@ export function createUmbrellaIdentityPlane(
 export const IDENTITY_PLANE_DOC = "docs/websites-deploy.md";
 
 export const IDENTITY_PLANE_PENDING_NOTE =
-  "Sign-in, credit balances, and credit-pack checkout activate when the auth + credits vertical (sceneaxi#90) lands. Until then these surfaces refuse rather than showing an invented session or balance.";
+  "Sign-in, credit balances, and credit-pack checkout activate when this site is wired to the auth + credits plane (sceneaxi#90). Until then these surfaces refuse rather than showing an invented session or balance.";

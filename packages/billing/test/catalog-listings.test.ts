@@ -277,7 +277,7 @@ describe("purchaseListingWithCredits", () => {
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.kidsCommerceDenied);
   });
 
-  it("does not debit an admin, while still recording the sale", () => {
+  it("does not debit an admin, and appends no ledger row for one", () => {
     const state = funded(0);
     const result = buy({
       principal: principal({ role: "admin", userId: "usr_buyer" }),
