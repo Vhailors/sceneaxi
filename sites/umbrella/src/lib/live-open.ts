@@ -27,10 +27,15 @@ export type { LiveOpenInstance, LiveOpenScene };
  *
  * The instance count is read from site-kit rather than written into the sentence, so
  * changing the placement list can never ship copy that miscounts the served scene.
+ *
+ * `lede` speaks in the first person and names the input gestures, so it is only honest
+ * on the page that actually hosts the viewport; `teaser` is the third-person sentence
+ * every other surface links with.
  */
 export const LIVE_OPEN_COPY = Object.freeze({
   eyebrow: "Live open path · public",
   title: "Open a real SceneAxi artifact",
+  teaser: `The live open path reconstructs a committed Sculpt Artifact, places ${LIVE_OPEN_INSTANCE_COUNT} instances of it through the scene-composition pipeline, and draws the result in your browser with the Three presentation core.`,
   lede: `This page reconstructs a committed Sculpt Artifact, places ${LIVE_OPEN_INSTANCE_COUNT} instances of it through the scene-composition pipeline, and draws the result in your browser with the Three presentation core. Drag to orbit, scroll to zoom.`,
   honesty:
     "The live frame report comes from the running presentation core. The composition pipeline supplies the scene digest, instance count, hierarchy, depths, and world transforms below; site-kit supplies the Role labels as placement annotations. None of this evidence is page-authored. A frame states which draw surface produced it, so a frame counter can never imply pixels that were never drawn.",

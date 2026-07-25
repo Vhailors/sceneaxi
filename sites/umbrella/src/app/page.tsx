@@ -28,7 +28,7 @@ export default function OverviewPage() {
         </a>
       </div>
       <p style={{ color: "var(--ink-faint)", fontSize: "0.9rem" }}>
-        {LIVE_OPEN_COPY.lede}
+        {LIVE_OPEN_COPY.teaser}
       </p>
 
       <h2>What the engine is</h2>

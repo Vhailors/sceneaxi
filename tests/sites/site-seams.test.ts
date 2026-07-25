@@ -324,7 +324,34 @@ describe("live open copy stays honest about the presentation core", () => {
     expect(opened.ok).toBe(true);
     if (!opened.ok) return;
     expect(LIVE_OPEN_INSTANCE_COUNT).toBe(opened.value.instances.length);
-    expect(LIVE_OPEN_COPY.lede).toContain(`places ${opened.value.instances.length} instances`);
+    for (const sentence of [LIVE_OPEN_COPY.lede, LIVE_OPEN_COPY.teaser]) {
+      expect(sentence).toContain(`places ${opened.value.instances.length} instances`);
+    }
+  });
+
+  it("offers a teaser that claims no viewport and promises no gesture", () => {
+    expect(LIVE_OPEN_COPY.teaser).toContain(LIVE_OPEN_PRESENTATION.coreLabel);
+    expect(LIVE_OPEN_COPY.teaser).not.toContain("This page");
+    expect(LIVE_OPEN_COPY.lede).toContain("Drag to orbit, scroll to zoom");
+    for (const gesture of ["drag to orbit", "scroll to zoom"]) {
+      expect(LIVE_OPEN_COPY.teaser.toLowerCase()).not.toContain(gesture);
+    }
+  });
+
+  it("renders the first-person lede only where the viewport is actually mounted", () => {
+    const rendersLede = SITE_SOURCE_FILES.filter((relative) =>
+      readFileSync(new URL(`../../sites/${relative}`, import.meta.url), "utf8").includes(
+        "LIVE_OPEN_COPY.lede",
+      ),
+    );
+    expect(rendersLede.length).toBeGreaterThan(0);
+    for (const relative of rendersLede) {
+      const source = readFileSync(
+        new URL(`../../sites/${relative}`, import.meta.url),
+        "utf8",
+      );
+      expect(source).toContain("<LiveViewport");
+    }
   });
 
   it.each(SITE_SOURCE_FILES)(
