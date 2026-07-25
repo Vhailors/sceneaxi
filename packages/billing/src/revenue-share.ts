@@ -54,6 +54,7 @@ import {
   billingRefuse,
   type BillingOutcome,
 } from "./refusals.js";
+import type { CreditStore } from "./store.js";
 
 export { CREATOR_SHARE_BASIS_POINTS };
 
@@ -158,6 +159,9 @@ export type CreditsSaleOutcome = Readonly<{
   charged: boolean;
   replayed: boolean;
 }>;
+
+export type PersistCreditsSaleRequest = ApplyCreditsSaleRequest &
+  Readonly<{ store: CreditStore }>;
 
 /**
  * Apply a credits sale: debit the buyer, credit the creator 50%, platform keeps
@@ -268,6 +272,40 @@ export function applyCreditsSale(
         (creatorGrant === undefined || creatorGrant.value.replayed),
     }),
   );
+}
+
+export async function persistCreditsSale(
+  request: PersistCreditsSaleRequest,
+): Promise<BillingOutcome<CreditsSaleOutcome>> {
+  const record = snapshotPlainRecord(request);
+  if (record === undefined || record["store"] === undefined) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.requestInvalid,
+      "A persisted credits sale requires a credit store.",
+    );
+  }
+  const { store, ...saleRequest } = record as PersistCreditsSaleRequest;
+  const outcome = applyCreditsSale(saleRequest);
+  if (!outcome.ok || outcome.value.replayed) return outcome;
+
+  try {
+    await store.settleCreditsSale({
+      ...(outcome.value.buyer.replayed
+        ? {}
+        : { buyerEntry: outcome.value.buyer.entry }),
+      ...(outcome.value.creator === undefined ||
+      outcome.value.creator.replayed
+        ? {}
+        : { creatorEntry: outcome.value.creator.entry }),
+      share: outcome.value.share,
+    });
+  } catch {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.storeFailed,
+      "The credit store failed while atomically settling the sale; no partial settlement is accepted.",
+    );
+  }
+  return outcome;
 }
 
 export type RecordMoneySaleRequest = Readonly<{

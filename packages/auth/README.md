@@ -5,7 +5,7 @@ fail-closed role guards, and the identity port.
 
 Configuration (Better Auth wiring, Neon setup, environment variables) lives in
 [`docs/auth-credits.md`](../../docs/auth-credits.md). The adapter-boundary decision is
-recorded in ADR 0016.
+recorded in ADR 0021.
 
 ## What this package owns
 
@@ -20,6 +20,9 @@ recorded in ADR 0016.
 | `bootstrap.ts` | `planAdminBootstrap` — the one admin assignment to persist |
 
 Dependencies: `@sceneaxi/schemas` only. No engine package, no profile, no CLI.
+
+`signOut` accepts only the exact principal capability returned by `signIn` or
+`verifySession` on that port instance. A bare session id is not revocation authority.
 
 ## Why it is shaped this way
 

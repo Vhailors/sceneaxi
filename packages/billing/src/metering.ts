@@ -22,6 +22,7 @@ import {
 import {
   appendCreditEntry,
   deriveEntryId,
+  validateLedgerState,
   type LedgerState,
 } from "./ledger.js";
 import {
@@ -94,18 +95,8 @@ export function meterCredits(
       "Metering requires a non-empty idempotency key.",
     );
   }
-  const stateRecord = snapshotPlainRecord(state);
-  const accountRecord = snapshotPlainRecord(stateRecord?.["account"]);
-  if (
-    stateRecord === undefined ||
-    accountRecord === undefined ||
-    !Array.isArray(stateRecord["entries"])
-  ) {
-    return billingRefuse(
-      BILLING_REFUSE_REASONS.ledgerStateInvalid,
-      "Metering requires a valid ledger state.",
-    );
-  }
+  const validatedState = validateLedgerState(state);
+  if (!validatedState.ok) return validatedState;
 
   const guarded = requireAuthenticated(
     principal,
@@ -115,7 +106,7 @@ export function meterCredits(
     return billingRefuse(guarded.reason, guarded.message);
   }
 
-  if (accountRecord["userId"] !== guarded.value.user.userId) {
+  if (validatedState.value.account.userId !== guarded.value.user.userId) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.accountNotOwned,
       "The credit account belongs to a different user; metering refuses.",
@@ -126,16 +117,16 @@ export function meterCredits(
   if (guarded.value.role.role === "admin") {
     return billingOk(
       Object.freeze({
-        state,
+        state: validatedState.value,
         metered: false,
         entry: undefined,
-        balance: state.balance,
+        balance: validatedState.value.balance,
         replayed: false,
       }),
     );
   }
 
-  const appended = appendCreditEntry(state, {
+  const appended = appendCreditEntry(validatedState.value, {
     entryId: deriveEntryId(idempotencyKey),
     movement: "debit",
     delta: -amount,

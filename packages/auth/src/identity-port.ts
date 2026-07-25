@@ -55,7 +55,7 @@ export type VerifySessionRequest = Readonly<{
   token: string;
 }>;
 
-export type SignOutRequest = Readonly<{ sessionId: string }>;
+export type SignOutRequest = Readonly<{ principal: Principal }>;
 
 export type IdentityPort = Readonly<{
   signIn(request: unknown): Promise<AuthResult<Principal>>;
@@ -80,7 +80,7 @@ export type CreateIdentityPortOptions = Readonly<{
 
 const SIGN_IN_KEYS = Object.freeze(["surface", "email", "password"]);
 const VERIFY_KEYS = Object.freeze(["surface", "sessionId", "token"]);
-const SIGN_OUT_KEYS = Object.freeze(["sessionId"]);
+const SIGN_OUT_KEYS = Object.freeze(["principal"]);
 
 /**
  * Shape, role-claim, and Kids checks, in that order, for any inbound request.
@@ -230,6 +230,14 @@ async function callStore<Value>(
 export function createIdentityPort(
   options: CreateIdentityPortOptions,
 ): IdentityPort {
+  const issuedPrincipals = new WeakSet<object>();
+  const principalsBySessionId = new Map<string, Principal>();
+  const issuePrincipal = (principal: Principal): void => {
+    const previous = principalsBySessionId.get(principal.session.sessionId);
+    if (previous !== undefined) issuedPrincipals.delete(previous);
+    issuedPrincipals.add(principal);
+    principalsBySessionId.set(principal.session.sessionId, principal);
+  };
   const requireStore = (): AuthResult<IdentityStore> =>
     options.store === undefined
       ? authRefuse(
@@ -354,6 +362,7 @@ export function createIdentityPort(
       );
       if (!stored.ok) return stored;
 
+      issuePrincipal(principal.value);
       return principal;
     },
 
@@ -443,32 +452,40 @@ export function createIdentityPort(
         );
       }
 
-      return assemblePrincipal({
+      const principal = assemblePrincipal({
         user: user.value,
         session: session.value,
         admin: admin.value,
         now: clock.value,
       });
+      if (principal.ok) issuePrincipal(principal.value);
+      return principal;
     },
 
     async signOut(request) {
       const screened = screenRequest(request, SIGN_OUT_KEYS, false);
       if (!screened.ok) return screened;
-      const sessionId = screened.value["sessionId"];
-      if (typeof sessionId !== "string" || sessionId.length === 0) {
+      const principal = screened.value["principal"];
+      if (
+        (typeof principal !== "object" && typeof principal !== "function") ||
+        principal === null ||
+        !issuedPrincipals.has(principal)
+      ) {
         return authRefuse(
-          AUTH_REFUSE_REASONS.requestInvalid,
-          "Sign-out requires a non-empty session id.",
+          AUTH_REFUSE_REASONS.principalInvalid,
+          "Sign-out requires a principal issued or verified by this identity port.",
         );
       }
       const store = requireStore();
       if (!store.ok) return store;
 
       const removed = await callStore(
-        () => store.value.deleteSession(sessionId),
+        () => store.value.deleteSession((principal as Principal).session.sessionId),
         "deleting the session",
       );
       if (!removed.ok) return removed;
+      issuedPrincipals.delete(principal);
+      principalsBySessionId.delete((principal as Principal).session.sessionId);
       return authOk(null);
     },
   });

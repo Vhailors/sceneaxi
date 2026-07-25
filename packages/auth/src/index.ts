@@ -3,7 +3,7 @@
  *
  * Owns single-admin resolution from the environment, fail-closed role guards,
  * and the identity port. Better Auth and Neon are injected adapters, never
- * dependencies: see docs/auth-credits.md for the wiring, and ADR 0016 for why.
+ * dependencies: see docs/auth-credits.md for the wiring, and ADR 0021 for why.
  *
  * The plane depends only on `@sceneaxi/schemas`. It has no engine, profile, or
  * CLI dependency, and it does not touch held-key captain policy.

@@ -369,17 +369,19 @@ describe("Kids commerce", () => {
   });
 
   it("is denied when only the principal's session is Kids", () => {
-    const result = evaluateEntitlement({
-      capability: "hosted-ai-assistant",
-      now: NOW,
-      principal: principal({ surface: "kids" }),
-      admin,
-      state: funded(100),
-      creditAmount: 5,
-    });
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.reason).toBe(AUTH_REFUSE_REASONS.kidsSurfaceDenied);
+    for (const capability of ENTITLEMENT_CAPABILITIES) {
+      const result = evaluateEntitlement({
+        capability,
+        now: NOW,
+        principal: principal({ surface: "kids" }),
+        admin,
+        state: funded(100),
+        creditAmount: 5,
+      });
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.reason).toBe(BILLING_REFUSE_REASONS.kidsCommerceDenied);
+    }
   });
 });
 

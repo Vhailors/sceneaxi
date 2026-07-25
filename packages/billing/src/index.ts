@@ -5,7 +5,7 @@
  * the Stripe test-mode checkout and webhook paths. Neon and the Stripe API are
  * injected adapters, never dependencies; webhook *signature verification* is
  * implemented in-repo because it is the security boundary and is fully
- * deterministic. See docs/auth-credits.md and ADR 0016.
+ * deterministic. See docs/auth-credits.md and ADR 0021.
  *
  * Depends only on `@sceneaxi/schemas` and the `@sceneaxi/auth` seam.
  */
@@ -106,11 +106,13 @@ export {
   CREATOR_SHARE_BASIS_POINTS,
   applyCreditsSale,
   authorizeCreatorPublish,
+  persistCreditsSale,
   recordMoneySale,
   splitCredits,
   splitMoneyMinorUnits,
   type ApplyCreditsSaleRequest,
   type CreditsSaleOutcome,
+  type PersistCreditsSaleRequest,
   type RecordMoneySaleRequest,
   type Split,
 } from "./revenue-share.js";

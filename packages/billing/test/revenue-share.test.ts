@@ -14,13 +14,16 @@ import {
   applyCreditsSale,
   appendCreditEntry,
   authorizeCreatorPublish,
+  createInMemoryCreditStore,
   createLedgerState,
   loadCatalogListings,
   lookupCatalogListing,
+  persistCreditsSale,
   recordMoneySale,
   splitCredits,
   splitMoneyMinorUnits,
   type LedgerState,
+  type CreditStore,
 } from "@sceneaxi/billing";
 
 const NOW = Date.parse("2026-07-25T10:00:00Z");
@@ -407,6 +410,65 @@ describe("applyCreditsSale", () => {
     expect(result.value.charged).toBe(false);
     expect(result.value.buyer.state.balance).toBe(0);
     expect(result.value.creator?.state.balance).toBe(20);
+  });
+
+  it("persists the debit, creator grant, and share in one atomic store call", async () => {
+    const target = listing("lantern-prop");
+    const buyerState = funded(100, BUYER);
+    const creatorAccount = account(target.sellerUserId, "acc_creator");
+    const store = createInMemoryCreditStore({
+      accounts: [BUYER, creatorAccount],
+      entries: buyerState.entries,
+    });
+    const result = await persistCreditsSale({
+      store,
+      principal: principal(),
+      admin,
+      listing: target,
+      buyerState,
+      creatorState: createLedgerState(creatorAccount),
+      now: NOW,
+      saleId: "sale_persisted",
+    });
+    expect(result.ok).toBe(true);
+    expect(store.entryCount(BUYER.accountId)).toBe(2);
+    expect(store.entryCount(creatorAccount.accountId)).toBe(1);
+    expect(store.shareRecordCount()).toBe(1);
+  });
+
+  it("returns one refusal when the atomic store settlement fails", async () => {
+    let settlementCalls = 0;
+    let appendCalls = 0;
+    const store: CreditStore = Object.freeze({
+      findAccountByUserId: () => undefined,
+      findAccountById: () => undefined,
+      listEntries: () => [],
+      appendEntry() {
+        appendCalls += 1;
+      },
+      settleCreditsSale() {
+        settlementCalls += 1;
+        throw new Error("transaction rolled back");
+      },
+    });
+    const target = listing("lantern-prop");
+    const result = await persistCreditsSale({
+      store,
+      principal: principal(),
+      admin,
+      listing: target,
+      buyerState: funded(100, BUYER),
+      creatorState: createLedgerState(
+        account(target.sellerUserId, "acc_creator"),
+      ),
+      now: NOW,
+      saleId: "sale_store_failure",
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.storeFailed);
+    expect(settlementCalls).toBe(1);
+    expect(appendCalls).toBe(0);
   });
 });
 

@@ -91,7 +91,7 @@ The identity + credits plane is `packages/auth` (single-admin resolution, role
 guards, identity port) and `packages/billing` (append-only ledger, metering,
 free-vs-paid entitlements, Stripe test checkout, creator revenue share), release
 group `identity`; schema is forward-only SQL in `db/migrations`. Configuration and
-the ownership map are `docs/auth-credits.md`; the shape is settled by ADR 0016.
+the ownership map are `docs/auth-credits.md`; the shape is settled by ADR 0021.
 Better Auth, Neon, and the Stripe API are **injected adapters** — never
 dependencies — while webhook signature verification stays in core because it is
 deterministic and fixture-testable. Load-bearing invariants: `User` has no role

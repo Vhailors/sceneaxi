@@ -152,7 +152,9 @@ export function evaluateEntitlement(
   }
 
   // Kids commerce is a hard out — refused before anything else can allow.
-  if (surface === "kids") {
+  const principalRecord = snapshotPlainRecord(principal);
+  const principalSession = snapshotPlainRecord(principalRecord?.["session"]);
+  if (surface === "kids" || principalSession?.["surface"] === "kids") {
     return billingRefuse(
       BILLING_REFUSE_REASONS.kidsCommerceDenied,
       "Kids commerce is denied; no SceneAxi capability is offered or sold on the Kids surface.",

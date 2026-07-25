@@ -67,7 +67,7 @@ Deliberate denials that carry design intent:
   in the root manifest, and if `pnpm-workspace.yaml` starts globbing `sites/` — the
   sites are separate install roots so the hermetic root lockfile never moves for a
   site dependency.
-- **auth → anything but schemas: denied.** The identity plane (ADR 0016) is
+- **auth → anything but schemas: denied.** The identity plane (ADR 0021) is
   contracts and policy only. Better Auth and Neon are injected adapters, so there
   is nothing for it to depend on.
 - **billing → engine packages / authoring-core / profiles / cli: denied.** Billing
@@ -124,4 +124,4 @@ Recorded in `dependency-matrix.json → releaseGroups` and stamped on every mani
 - **identity** (`auth`, `billing`): independently versioned; consumes only public
   contracts from `schemas` (and, for `billing`, the `auth` seam); never engine
   packages, profiles, the CLI, or a service locator. Better Auth, Neon, and the
-  Stripe API stay injected adapters (ADR 0016; `docs/auth-credits.md`).
+  Stripe API stay injected adapters (ADR 0021; `docs/auth-credits.md`).

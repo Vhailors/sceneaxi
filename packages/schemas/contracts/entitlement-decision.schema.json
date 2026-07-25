@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/entitlement-decision/v1",
+  "title": "SceneAxi entitlement decision (v1)",
+  "description": "A versioned entitlement conclusion. A charge-credits outcome carries the exact positive integer credit amount; every other outcome carries no credits field.",
+  "type": "object",
+  "required": ["schemaVersion", "kind", "capability", "outcome"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "kind": { "const": "sceneaxi.entitlement-decision" },
+    "capability": {
+      "type": "string",
+      "enum": [
+        "engine-sdk-download",
+        "cli-authoring",
+        "byo-model-keys",
+        "hosted-ai-assistant",
+        "metered-model-port",
+        "catalog-asset-purchase",
+        "creator-publish",
+        "credit-pack-purchase"
+      ]
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "allow-free",
+        "allow-unlimited",
+        "charge-credits",
+        "allow-checkout"
+      ]
+    },
+    "credits": { "type": "integer", "minimum": 1 }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "outcome": { "const": "charge-credits" } },
+        "required": ["outcome"]
+      },
+      "then": { "required": ["credits"] },
+      "else": { "not": { "required": ["credits"] } }
+    }
+  ]
+}

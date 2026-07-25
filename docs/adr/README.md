@@ -63,11 +63,11 @@ naming its source.
 | [0014](0014-scene-composition-contract.md) | Scene composition is a SceneAxi-owned deterministic contract with axis-aligned placement and a fail-closed refuse matrix |
 | [0015](0015-scene-minimal-multi-object-open-path.md) | Scene composition adds one multi-object kernel session and no presentation adapter |
 | [0016](0016-portable-kernel-digest.md) | Kernel session digests come from a portable synchronous sha256, so sessions open in a browser |
-| [0016](0016-identity-credits-injected-adapters.md) | The identity/credits plane ships as contracts and ports with injected Better Auth, Neon, and Stripe adapters; webhook verification stays in core; plain SQL over Drizzle |
 | [0017](0017-three-product-presentation-core.md) | Three.js is the product presentation core behind the unchanged ADR 0002 seam; Stage 1 unaffected |
 | [0018](0018-sites-tier-three-vercel-one-neon.md) | A `sites/` tier of first-party deployable surfaces: three Vercel projects, one Neon database, framework deps out of the hermetic tier |
 | [0019](0019-public-engine-sdk-zip-not-npm.md) | The public engine download is a deterministic SDK zip with a checksum, not an npm publish |
 | [0020](0020-minimum-e2-web-editor-entitlement.md) | The Minimum E2 web editor is entitled by credits or the unused 100-credit starter allotment; admin unrestricted |
+| [0021](0021-identity-credits-injected-adapters.md) | The identity/credits plane ships as contracts and ports with injected Better Auth, Neon, and Stripe adapters; webhook verification stays in core; plain SQL over Drizzle |
 
 ## Number allocation
 

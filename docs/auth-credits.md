@@ -6,7 +6,7 @@ entitlement, and catalog-listing tables — all three kept in lockstep by
 `pnpm check:contracts`.
 
 The architecture decision behind the shape of this plane is
-[ADR 0016](adr/0016-identity-credits-injected-adapters.md).
+[ADR 0021](adr/0021-identity-credits-injected-adapters.md).
 
 ## Ownership map
 
@@ -65,7 +65,7 @@ if (!admin.ok) throw new Error(`${admin.reason}: ${admin.message}`);
 ## Better Auth
 
 Better Auth is **injected**, not depended on: it needs a running HTTP host and a live
-database instance, which SceneAxi core does not contain (ADR 0016). The boundary is typed
+database instance, which SceneAxi core does not contain (ADR 0021). The boundary is typed
 structurally against Better Auth's documented result, so a real instance drops in:
 
 ```ts
@@ -187,7 +187,7 @@ if (!granted.ok) return respond(400, granted.reason);
 **Live mode is unreachable by default.** `mode: "live"` refuses unless
 `liveModeAuthorized: true` is passed explicitly at the call site, enforced both when
 creating an intent and when honoring an event. **Live activation is not authorized today**
-and remains a captain decision (ADR 0016).
+and remains a captain decision (ADR 0021).
 
 ## Contracts
 
@@ -197,6 +197,8 @@ and remains a captain decision (ADR 0016).
 | `CreditAccount`, `CreditLedgerEntry` | `packages/schemas/src/credits.ts` | `contracts/credit-ledger.schema.json` |
 | `StripeCustomerLink`, `CheckoutSessionIntent`, `CheckoutCompletedEvent` | `packages/schemas/src/billing.ts` | `contracts/billing-checkout.schema.json` |
 | `CreditPack` catalog | `packages/schemas/src/billing.ts` | `contracts/credit-packs.schema.json` |
+| `EntitlementDecision` | `packages/schemas/src/entitlements.ts` | `contracts/entitlement-decision.schema.json` |
+| `CreatorShareRecord`, `MoneySplitRecord` | `packages/schemas/src/revenue-share.ts` | `contracts/revenue-share.schema.json` |
 
 Three shapes are load-bearing and should not be "fixed" later without reading why:
 

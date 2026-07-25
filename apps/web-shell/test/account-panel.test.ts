@@ -11,6 +11,8 @@ import {
   createIdentityPort,
   createInMemoryIdentityStore,
   type IdentityAdapter,
+  type IdentityPort,
+  type IdentityStore,
 } from "@sceneaxi/auth";
 import {
   appendCreditEntry,
@@ -438,6 +440,98 @@ describe("sign out", () => {
     const retried = await panel.signOut();
     expect(retried.phase).toBe("anonymous");
     expect(deleteAttempts).toBe(2);
+  });
+
+  it("converts thrown identity-port calls into retryable refusals", async () => {
+    const base = createIdentityPort({
+      adapter: ADAPTER,
+      store: createInMemoryIdentityStore({ users: [CREW] }),
+      admin,
+      clock,
+    });
+    let signInCalls = 0;
+    let signOutCalls = 0;
+    const identityPort: IdentityPort = Object.freeze({
+      signIn(request) {
+        signInCalls += 1;
+        if (signInCalls === 2) throw new Error("transport down");
+        return base.signIn(request);
+      },
+      verifySession: (request) => base.verifySession(request),
+      signOut(request) {
+        signOutCalls += 1;
+        if (signOutCalls === 1) throw new Error("transport down");
+        return base.signOut(request);
+      },
+    });
+    const panel = makePanel({ identityPort });
+    expect(
+      (
+        await panel.submitCredentials({
+          email: "crew@example.com",
+          password: "pw",
+        })
+      ).phase,
+    ).toBe("authenticated");
+    const failedSignIn = await panel.submitCredentials({
+      email: "crew@example.com",
+      password: "pw",
+    });
+    expect(failedSignIn.refusal?.reason).toBe(
+      ACCOUNT_PANEL_REASONS.identityPortFailed,
+    );
+    const failedSignOut = await panel.signOut();
+    expect(failedSignOut.refusal?.reason).toBe(
+      ACCOUNT_PANEL_REASONS.sessionRevocationFailed,
+    );
+    expect((await panel.signOut()).phase).toBe("anonymous");
+  });
+
+  it("revokes every superseded session and retains failed revocations", async () => {
+    let sessionNumber = 0;
+    const adapter: IdentityAdapter = Object.freeze({
+      authenticate({ email }) {
+        sessionNumber += 1;
+        return {
+          user: { id: "usr_crew", email, emailVerified: true },
+          session: {
+            id: `ses_${sessionNumber}`,
+            token: `tok_${sessionNumber}`,
+            userId: "usr_crew",
+            expiresAt: "2026-07-26T10:00:00Z",
+          },
+        };
+      },
+    });
+    const baseStore = createInMemoryIdentityStore({ users: [CREW] });
+    let deleteAttempts = 0;
+    const store: IdentityStore = Object.freeze({
+      findUserByEmail: (email) => baseStore.findUserByEmail(email),
+      findUserById: (userId) => baseStore.findUserById(userId),
+      putSession: (session) => baseStore.putSession(session),
+      findSession: (sessionId) => baseStore.findSession(sessionId),
+      deleteSession(sessionId) {
+        deleteAttempts += 1;
+        if (deleteAttempts === 1) throw new Error("db down");
+        return baseStore.deleteSession(sessionId);
+      },
+    });
+    const panel = makePanel({
+      identityPort: createIdentityPort({ adapter, store, admin, clock }),
+    });
+    await panel.submitCredentials({
+      email: "crew@example.com",
+      password: "pw",
+    });
+    const second = await panel.submitCredentials({
+      email: "crew@example.com",
+      password: "pw",
+    });
+    expect(second.phase).toBe("refused");
+    expect(baseStore.sessionCount()).toBe(2);
+    expect((await panel.signOut()).phase).toBe("anonymous");
+    expect(baseStore.sessionCount()).toBe(0);
+    expect(deleteAttempts).toBe(3);
   });
 
   it("is a no-op from anonymous", async () => {

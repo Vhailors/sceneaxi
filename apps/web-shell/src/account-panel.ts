@@ -51,6 +51,7 @@ export type AccountPanelRefusal = Readonly<{
 export const ACCOUNT_PANEL_REASONS = Object.freeze({
   kidsSurfaceDenied: "KIDS_IDENTITY_SURFACE_DENIED",
   identityPortMissing: "PANEL_IDENTITY_PORT_MISSING",
+  identityPortFailed: "PANEL_IDENTITY_PORT_FAILED",
   adminIdentityMissing: "PANEL_ADMIN_IDENTITY_MISSING",
   creditsViewMissing: "PANEL_CREDITS_VIEW_MISSING",
   clockInvalid: "PANEL_CLOCK_INVALID",
@@ -357,34 +358,52 @@ export function createAccountPanel(
     });
   };
 
-  /** Retained so a refresh can re-read the balance for the same principal. */
   let heldPrincipal: Principal | undefined;
+  const outstandingPrincipals = new Set<Principal>();
   let operationGeneration = 0;
 
   held = anonymous();
 
-  /**
-   * Revoke a session a superseded sign-in already persisted, so a signed-out panel
-   * never leaves a live server-side session behind. A revocation that the identity
-   * port refuses or throws on is surfaced as a refusal rather than swallowed: the
-   * panel must not look anonymous while the server-side session may still be live.
-   */
-  const revokeSupersededSession = async (principal: Principal): Promise<void> => {
+  const revokePrincipal = async (
+    principal: Principal,
+  ): Promise<AccountPanelRefusal | undefined> => {
     let result: AuthResult<null>;
     try {
-      result = await identityPort.signOut({ sessionId: principal.session.sessionId });
+      result = await identityPort.signOut({ principal });
     } catch {
-      held = refused(
-        refusal(
-          ACCOUNT_PANEL_REASONS.sessionRevocationFailed,
-          "A superseded sign-in session could not be revoked and may still be live.",
-        ),
+      return refusal(
+        ACCOUNT_PANEL_REASONS.sessionRevocationFailed,
+        "A session could not be revoked and may still be live.",
       );
-      return;
     }
     if (!result.ok) {
-      held = refused(refusal(result.reason, result.message));
+      return refusal(result.reason, result.message);
     }
+    outstandingPrincipals.delete(principal);
+    if (heldPrincipal === principal) heldPrincipal = undefined;
+    return undefined;
+  };
+
+  const revokeAllExcept = async (
+    retained: Principal | undefined,
+  ): Promise<AccountPanelRefusal | undefined> => {
+    let failure: AccountPanelRefusal | undefined;
+    for (const principal of [...outstandingPrincipals]) {
+      if (principal === retained) continue;
+      const result = await revokePrincipal(principal);
+      if (result !== undefined) failure = result;
+    }
+    return failure;
+  };
+
+  const trackPrincipal = (principal: Principal): void => {
+    for (const existing of outstandingPrincipals) {
+      if (existing.session.sessionId === principal.session.sessionId) {
+        outstandingPrincipals.delete(existing);
+        if (heldPrincipal === existing) heldPrincipal = undefined;
+      }
+    }
+    outstandingPrincipals.add(principal);
   };
 
   const panel: AccountPanel = Object.freeze({
@@ -395,27 +414,50 @@ export function createAccountPanel(
     async submitCredentials(credentials) {
       const generation = ++operationGeneration;
       const credentialRecord = snapshotPlainRecord(credentials);
-      const result = await identityPort.signIn(
-        // The surface is the panel's, never the caller's, so a client cannot
-        // ask to be signed in somewhere else.
-        credentialRecord === undefined
-          ? credentials
-          : { ...credentialRecord, surface },
-      );
+      let result: AuthResult<Principal>;
+      try {
+        result = await identityPort.signIn(
+          credentialRecord === undefined
+            ? credentials
+            : { ...credentialRecord, surface },
+        );
+      } catch {
+        if (generation === operationGeneration) {
+          held = refused(
+            refusal(
+              ACCOUNT_PANEL_REASONS.identityPortFailed,
+              "The identity port failed during sign-in; the prior session remains tracked.",
+            ),
+          );
+        }
+        return held;
+      }
       if (generation !== operationGeneration) {
-        if (result.ok) await revokeSupersededSession(result.value);
+        if (result.ok) {
+          trackPrincipal(result.value);
+          const failure = await revokePrincipal(result.value);
+          if (failure !== undefined) held = refused(failure);
+        }
         return held;
       }
       if (result.ok) {
+        trackPrincipal(result.value);
         const next = await authenticated(result.value);
         if (generation !== operationGeneration) {
-          await revokeSupersededSession(result.value);
+          const failure = await revokePrincipal(result.value);
+          if (failure !== undefined) held = refused(failure);
+          return held;
+        }
+        const failure = await revokeAllExcept(result.value);
+        if (generation !== operationGeneration) {
+          const staleFailure = await revokePrincipal(result.value);
+          const combinedFailure = staleFailure ?? failure;
+          if (combinedFailure !== undefined) held = refused(combinedFailure);
           return held;
         }
         heldPrincipal = result.value;
-        held = next;
+        held = failure === undefined ? next : refused(failure);
       } else {
-        heldPrincipal = undefined;
         held = refused(refusal(result.reason, result.message));
       }
       return held;
@@ -441,19 +483,12 @@ export function createAccountPanel(
 
     async signOut() {
       const generation = ++operationGeneration;
-      const sessionId = heldPrincipal?.session.sessionId;
-      if (sessionId !== undefined) {
-        const result = await identityPort.signOut({ sessionId });
-        if (generation !== operationGeneration) return held;
-        if (!result.ok) {
-          // A server-side sign-out that failed must not look like a clean one:
-          // the session may still be live.
-          held = refused(refusal(result.reason, result.message));
-          return held;
-        }
-      }
+      const failure = await revokeAllExcept(undefined);
       if (generation !== operationGeneration) return held;
-      heldPrincipal = undefined;
+      if (failure !== undefined) {
+        held = refused(failure);
+        return held;
+      }
       held = anonymous();
       return held;
     },

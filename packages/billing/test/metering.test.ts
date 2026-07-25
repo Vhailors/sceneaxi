@@ -119,6 +119,19 @@ describe("meterCredits", () => {
     expect(result.value.state.entries.length).toBe(state.entries.length);
   });
 
+  it("refuses a malformed admin ledger before applying unlimited allowance", () => {
+    const result = meter({
+      principal: principal({ role: "admin" }),
+      state: {
+        account: ACCOUNT,
+        entries: funded().entries,
+      },
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.ledgerStateInvalid);
+  });
+
   it("refuses a debit larger than the balance and appends nothing", () => {
     const state = funded(5);
     const result = meterCredits({

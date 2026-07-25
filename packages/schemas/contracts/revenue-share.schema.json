@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/revenue-share/v1",
+  "title": "SceneAxi creator revenue-share records (v1)",
+  "description": "Creator credit shares and money bookkeeping splits. Both records are bookkeeping evidence only and cannot carry payout, transfer, destination, or Connect fields. Runtime validation additionally requires each split to balance exactly.",
+  "oneOf": [
+    { "$ref": "#/$defs/creatorShareRecord" },
+    { "$ref": "#/$defs/moneySplitRecord" }
+  ],
+  "$defs": {
+    "saleId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$"
+    },
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+    },
+    "dateTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "creatorShareRecord": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "kind",
+        "saleId",
+        "listingId",
+        "buyerUserId",
+        "creatorUserId",
+        "grossCredits",
+        "creatorCredits",
+        "platformCredits",
+        "basisPoints",
+        "occurredAt"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "kind": { "const": "sceneaxi.creator-share-record" },
+        "saleId": { "$ref": "#/$defs/saleId" },
+        "listingId": { "$ref": "#/$defs/slug" },
+        "buyerUserId": { "$ref": "#/$defs/identifier" },
+        "creatorUserId": { "$ref": "#/$defs/identifier" },
+        "grossCredits": { "type": "integer", "minimum": 1 },
+        "creatorCredits": { "type": "integer", "minimum": 0 },
+        "platformCredits": { "type": "integer", "minimum": 0 },
+        "basisPoints": { "const": 5000 },
+        "occurredAt": { "$ref": "#/$defs/dateTime" }
+      }
+    },
+    "moneySplitRecord": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "kind",
+        "saleId",
+        "listingId",
+        "buyerUserId",
+        "creatorUserId",
+        "grossMinor",
+        "creatorMinor",
+        "platformMinor",
+        "currency",
+        "basisPoints",
+        "mode",
+        "occurredAt"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "kind": { "const": "sceneaxi.money-split-record" },
+        "saleId": { "$ref": "#/$defs/saleId" },
+        "listingId": { "$ref": "#/$defs/slug" },
+        "buyerUserId": { "$ref": "#/$defs/identifier" },
+        "creatorUserId": { "$ref": "#/$defs/identifier" },
+        "grossMinor": { "type": "integer", "minimum": 1 },
+        "creatorMinor": { "type": "integer", "minimum": 0 },
+        "platformMinor": { "type": "integer", "minimum": 0 },
+        "currency": {
+          "type": "string",
+          "pattern": "^[a-z]{3}$"
+        },
+        "basisPoints": { "const": 5000 },
+        "mode": {
+          "type": "string",
+          "enum": ["test", "live"]
+        },
+        "occurredAt": { "$ref": "#/$defs/dateTime" }
+      }
+    }
+  }
+}

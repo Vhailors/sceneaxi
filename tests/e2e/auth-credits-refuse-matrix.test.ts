@@ -31,12 +31,14 @@ import {
   lookupCreditPack,
   meterCredits,
   parseCheckoutCompletedEvent,
+  persistCreditsSale,
   purchaseListingWithCredits,
   recordMoneySale,
   signStripeWebhookPayload,
   splitCredits,
   verifyStripeWebhookSignature,
   type BillingRefuseReason,
+  type CreditStore,
   type LedgerState,
 } from "@sceneaxi/billing";
 import type {
@@ -899,7 +901,7 @@ describe("billing refuse matrix", () => {
     );
   });
 
-  it("reaches every revenue-share refusal", () => {
+  it("reaches every revenue-share refusal", async () => {
     record(splitCredits(0));
     const target = listing("lantern-prop");
     record(
@@ -911,6 +913,27 @@ describe("billing refuse matrix", () => {
         creatorState: createLedgerState(account("usr_wrong")),
         now: NOW,
         saleId: "sale_case_share",
+      }),
+    );
+    const failedStore: CreditStore = Object.freeze({
+      findAccountByUserId: () => undefined,
+      findAccountById: () => undefined,
+      listEntries: () => [],
+      appendEntry: () => undefined,
+      settleCreditsSale() {
+        throw new Error("transaction failed");
+      },
+    });
+    record(
+      await persistCreditsSale({
+        store: failedStore,
+        principal: principal(),
+        admin,
+        listing: target,
+        buyerState: funded(100),
+        creatorState: createLedgerState(account(target.sellerUserId)),
+        now: NOW,
+        saleId: "sale_case_store",
       }),
     );
     record(

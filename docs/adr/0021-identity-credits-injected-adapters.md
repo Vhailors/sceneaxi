@@ -1,4 +1,4 @@
-# ADR 0016: The identity/credits plane ships as contracts and ports with injected Better Auth, Neon, and Stripe adapters
+# ADR 0021: The identity/credits plane ships as contracts and ports with injected Better Auth, Neon, and Stripe adapters
 
 - **Status:** Accepted for auth + credits billing v1.
 - **Date recorded:** 2026-07-25

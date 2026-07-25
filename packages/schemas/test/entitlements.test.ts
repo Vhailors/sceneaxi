@@ -8,6 +8,7 @@ import {
   ENTITLEMENT_OUTCOMES,
   ENTITLEMENT_REFUSE_CODES,
   STARTER_CREDIT_GRANT,
+  contracts,
   entitlementRuleFor,
   isEntitlementCapability,
   validateEntitlementDecision,
@@ -169,5 +170,37 @@ describe("validateEntitlementDecision", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.code).toBe(ENTITLEMENT_REFUSE_CODES.invalidProperty);
+  });
+
+  it("ships the versioned entitlement decision JSON Schema", () => {
+    expect(contracts.entitlementDecision).toBe(
+      "contracts/entitlement-decision.schema.json",
+    );
+    const schema = JSON.parse(
+      readFileSync(
+        new URL("../contracts/entitlement-decision.schema.json", import.meta.url),
+        "utf8",
+      ),
+    ) as {
+      $id: string;
+      required: string[];
+      properties: {
+        capability: { enum: string[] };
+        outcome: { enum: string[] };
+      };
+    };
+    expect(schema.$id).toBe(
+      "https://sceneaxi.invalid/contracts/entitlement-decision/v1",
+    );
+    expect(schema.required).toEqual([
+      "schemaVersion",
+      "kind",
+      "capability",
+      "outcome",
+    ]);
+    expect(schema.properties.capability.enum).toEqual([
+      ...ENTITLEMENT_CAPABILITIES,
+    ]);
+    expect(schema.properties.outcome.enum).toEqual([...ENTITLEMENT_OUTCOMES]);
   });
 });

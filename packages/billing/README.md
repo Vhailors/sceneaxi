@@ -4,7 +4,7 @@ Credits and billing for the SceneAxi identity plane: the append-only credit ledg
 metering, entitlement enforcement, and the Stripe test-mode checkout and webhook paths.
 
 Configuration lives in [`docs/auth-credits.md`](../../docs/auth-credits.md); the
-adapter-boundary decision is ADR 0016.
+adapter-boundary decision is ADR 0021.
 
 Dependencies: `@sceneaxi/schemas` and the `@sceneaxi/auth` seam. Nothing else.
 
@@ -28,6 +28,11 @@ sum a corrupted list.
 (movement, delta, reason) and ignores `entryId`, because a retrying caller legitimately
 generates a fresh id. An identical retry returns the existing entry with `replayed: true`;
 the same key carrying different money is a conflict.
+
+**Credits sales persist atomically.** `applyCreditsSale` computes the buyer debit,
+creator grant, and share record without mutation. `persistCreditsSale` hands that complete
+settlement to `CreditStore.settleCreditsSale` once, so no supported persistence path can
+commit only one side.
 
 **Admin is never debited.** The captain's unlimited allowance returns `metered: false` and
 leaves the ledger untouched — reported explicitly rather than faked with a zero-credit

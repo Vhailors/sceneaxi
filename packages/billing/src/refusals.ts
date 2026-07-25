@@ -26,6 +26,7 @@ export const BILLING_REFUSE_REASONS = Object.freeze({
   // --- accounts and metering ---
   accountNotOwned: "CREDIT_ACCOUNT_NOT_OWNED",
   amountInvalid: "CREDIT_AMOUNT_INVALID",
+  storeFailed: "CREDIT_STORE_FAILED",
 
   // --- credit packs and checkout ---
   catalogInvalid: "BILLING_CATALOG_INVALID",

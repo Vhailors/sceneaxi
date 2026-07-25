@@ -61,12 +61,83 @@ const columnsOf = (table: string): string[] => {
 const snake = (camel: string): string =>
   camel.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
 
-/**
- * Contract field names per table. Written out rather than derived from a runtime
- * object so a *removed* contract field also fails here — deriving from the
- * current shape would silently follow the deletion.
- */
+type JsonObjectSchema = {
+  properties?: Record<string, JsonObjectSchema>;
+  items?: JsonObjectSchema;
+  $defs?: Record<string, JsonObjectSchema>;
+};
+
+const contractSchema = (name: string): JsonObjectSchema =>
+  JSON.parse(
+    readFileSync(
+      join(dbDir, "..", "packages", "schemas", "contracts", name),
+      "utf8",
+    ),
+  ) as JsonObjectSchema;
+
+const persistedDefinitionFields = (
+  schemaName: string,
+  definition: string,
+): string[] => {
+  const properties = contractSchema(schemaName).$defs?.[definition]?.properties;
+  if (properties === undefined) {
+    throw new Error(`missing ${definition} properties in ${schemaName}`);
+  }
+  return Object.keys(properties).filter(
+    (field) => field !== "schemaVersion" && field !== "kind",
+  );
+};
+
+const catalogListingFields = (): string[] => {
+  const properties = contractSchema("catalog-listings.schema.json").properties
+    ?.listings?.items?.properties;
+  if (properties === undefined) {
+    throw new Error("missing catalog listing item properties");
+  }
+  return Object.entries(properties).flatMap(([field, schema]) => {
+    if (field === "schemaVersion" || field === "kind") return [];
+    if (field !== "moneyPrice") return [field];
+    return Object.keys(schema.properties ?? {}).map(
+      (nested) => `money${nested[0]?.toUpperCase()}${nested.slice(1)}`,
+    );
+  });
+};
+
 const CONTRACT_FIELDS: Record<string, readonly string[]> = {
+  users: persistedDefinitionFields("identity.schema.json", "user"),
+  role_assignments: persistedDefinitionFields(
+    "identity.schema.json",
+    "roleAssignment",
+  ),
+  sessions: persistedDefinitionFields("identity.schema.json", "session"),
+  credit_accounts: persistedDefinitionFields(
+    "credit-ledger.schema.json",
+    "creditAccount",
+  ),
+  credit_ledger_entries: persistedDefinitionFields(
+    "credit-ledger.schema.json",
+    "creditLedgerEntry",
+  ),
+  stripe_customer_links: persistedDefinitionFields(
+    "billing-checkout.schema.json",
+    "stripeCustomerLink",
+  ),
+  checkout_session_intents: persistedDefinitionFields(
+    "billing-checkout.schema.json",
+    "checkoutSessionIntent",
+  ),
+  catalog_listings: catalogListingFields(),
+  creator_share_records: persistedDefinitionFields(
+    "revenue-share.schema.json",
+    "creatorShareRecord",
+  ),
+  money_split_records: persistedDefinitionFields(
+    "revenue-share.schema.json",
+    "moneySplitRecord",
+  ),
+};
+
+const FROZEN_V1_FIELDS: Record<string, readonly string[]> = {
   users: ["userId", "email", "emailVerified", "disabled", "createdAt"],
   role_assignments: ["userId", "role", "source", "assignedAt"],
   sessions: [
@@ -104,6 +175,18 @@ const CONTRACT_FIELDS: Record<string, readonly string[]> = {
     "cancelUrl",
     "idempotencyKey",
     "createdAt",
+  ],
+  catalog_listings: [
+    "listingId",
+    "catalog",
+    "sellerUserId",
+    "title",
+    "priceMode",
+    "creditPrice",
+    "moneyUnitAmount",
+    "moneyCurrency",
+    "moneyStripePriceId",
+    "publishedAt",
   ],
   creator_share_records: [
     "saleId",
@@ -188,23 +271,10 @@ describe("contract to DDL lockstep", () => {
     }
   });
 
-  it("declares catalog_listings with its flattened money price", () => {
-    // The money price is one nested object in the contract, so it flattens
-    // rather than mapping one-to-one; asserted explicitly for that reason.
-    expect(columnsOf("catalog_listings").sort()).toEqual(
-      [
-        "listing_id",
-        "catalog",
-        "seller_user_id",
-        "title",
-        "price_mode",
-        "credit_price",
-        "money_unit_amount",
-        "money_currency",
-        "money_stripe_price_id",
-        "published_at",
-      ].sort(),
-    );
+  it("retains every frozen v1 persisted field", () => {
+    for (const [table, fields] of Object.entries(FROZEN_V1_FIELDS)) {
+      expect(CONTRACT_FIELDS[table]).toEqual(expect.arrayContaining(fields));
+    }
   });
 });
 

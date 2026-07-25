@@ -561,7 +561,8 @@ describe("identity port — sign-out", () => {
     expect(signIn.ok).toBe(true);
     expect(store.sessionCount()).toBe(1);
 
-    const result = await port.signOut({ sessionId: "ses_usr_crew" });
+    if (!signIn.ok) return;
+    const result = await port.signOut({ principal: signIn.value });
     expect(result.ok).toBe(true);
     expect(store.sessionCount()).toBe(0);
   });
@@ -569,29 +570,53 @@ describe("identity port — sign-out", () => {
   it("refuses a malformed request and a client role claim", async () => {
     const port = makePort();
     expect((await port.signOut({})).ok).toBe(false);
-    expect((await port.signOut({ sessionId: "" })).ok).toBe(false);
-    const claim = await port.signOut({ sessionId: "ses_01", role: "admin" });
+    expect((await port.signOut({ principal: {} as never })).ok).toBe(false);
+    const claim = await port.signOut({ principal: {} as never, role: "admin" });
     expect(claim.ok).toBe(false);
     if (claim.ok) return;
     expect(claim.reason).toBe(AUTH_REFUSE_REASONS.roleClaimFromClient);
   });
 
   it("refuses when the store throws", async () => {
-    const result = await makePort(
+    const port = makePort(
       {},
       Object.freeze({
-        findUserByEmail: () => undefined,
-        findUserById: () => undefined,
+        findUserByEmail: () => CREW,
+        findUserById: () => CREW,
         putSession: () => undefined,
         findSession: () => undefined,
         deleteSession() {
           throw new Error("db down");
         },
       }),
-    ).signOut({ sessionId: "ses_01" });
+    );
+    const signIn = await port.signIn({
+      surface: "web-shell",
+      email: "crew@example.com",
+      password: "pw",
+    });
+    expect(signIn.ok).toBe(true);
+    if (!signIn.ok) return;
+    const result = await port.signOut({ principal: signIn.value });
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.reason).toBe(AUTH_REFUSE_REASONS.storeFailed);
+  });
+
+  it("refuses a principal issued by another port", async () => {
+    const first = makePort();
+    const second = makePort();
+    const signIn = await first.signIn({
+      surface: "web-shell",
+      email: "crew@example.com",
+      password: "pw",
+    });
+    expect(signIn.ok).toBe(true);
+    if (!signIn.ok) return;
+    const result = await second.signOut({ principal: signIn.value });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(AUTH_REFUSE_REASONS.principalInvalid);
   });
 });
 
