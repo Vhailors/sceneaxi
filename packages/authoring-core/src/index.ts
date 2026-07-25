@@ -123,6 +123,15 @@ export type {
 } from "./sculpt-reconstruction.js";
 
 export {
+  composeScene,
+  sceneDocumentFromComposedScene,
+  serializeComposedScene,
+  type SceneCompositionOptions,
+  type SceneCompositionRefusalCode,
+  type SceneCompositionResult,
+} from "./scene-composition.js";
+
+export {
   MINIMUM_E2_STATE_VERSION,
   MinimumE2Error,
   createMinimumE2Editor,

@@ -71,6 +71,33 @@ Its save/load path persists through the same text-canonical propose/apply
 service below. The web-shell re-exports this API; it does not implement a second
 editor.
 
+## Scene composition (sceneaxi#86)
+
+```ts
+import { composeScene } from "@sceneaxi/authoring-core";
+
+const composed = composeScene(sceneIntake, [crateArtifact, droneArtifact]);
+```
+
+`composeScene()` turns one Scene Composition Intake plus the Sculpt Artifacts it
+places into one `ComposedScene`, its canonical bytes and digest, and one
+text-canonical `SceneDocument` carrying the scene under the reserved
+`composedScene` data key. Contract shapes, placement math, and the refuse matrix
+belong to [`@sceneaxi/schemas`](../schemas/README.md#scene-composition-contracts-sceneaxi85);
+this package owns the pipeline.
+
+Composition is offline and seedless — no provider, no network, no credential —
+so identical input always produces identical `sceneBytes` and `sceneDigest`.
+
+Nothing is dropped in either direction: a placement naming an artifact that was
+not supplied refuses `unknown-artifact-reference`, and an artifact supplied but
+never placed refuses `unplaced-artifact`. One artifact placed at several
+instances is legal instancing and is supplied once.
+
+The composed scene is re-validated by `validateComposedScene()` before it is
+returned, so a scene that could not be re-opened is never handed back.
+`serializeComposedScene()` is the byte-canonical form used by golden fixtures.
+
 ## Propose / apply (sceneaxi#9)
 
 ```ts
