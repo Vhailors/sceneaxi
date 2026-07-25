@@ -56,3 +56,4 @@ naming its source.
 | [0013](0013-sculpt-quality-minimal-support-bound.md) | Sculpt-quality demos use existing Mount/kernel/Minimum E2 support without expansion |
 | [0014](0014-scene-composition-contract.md) | Scene composition is a SceneAxi-owned deterministic contract with axis-aligned placement and a fail-closed refuse matrix |
 | [0015](0015-scene-minimal-multi-object-open-path.md) | Scene composition adds one multi-object kernel session and no presentation adapter |
+| [0016](0016-portable-kernel-digest.md) | Kernel session digests come from a portable synchronous sha256, so sessions open in a browser |

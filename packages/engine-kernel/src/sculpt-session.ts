@@ -1,5 +1,12 @@
 /** Deterministic kernel-owned sculpt hierarchy, socket animation, and toy physics. */
-import { createHash } from "node:crypto";
+import { KernelSessionError } from "./errors.js";
+import {
+  digestUint32,
+  prefixedDigest,
+  resolveKernelDigest,
+  type KernelDigest,
+  type KernelDigestHost,
+} from "./portable-digest.js";
 import {
   SCULPT_SCHEMA_VERSION,
   validateSculptArtifact,
@@ -11,7 +18,6 @@ import {
   type SculptTransform,
   type Vector3,
 } from "@sceneaxi/schemas";
-import { KernelSessionError } from "./session.js";
 
 export const SCULPT_KERNEL_SAVE_KIND = "sceneaxi.sculpt-kernel-save" as const;
 
@@ -104,9 +110,8 @@ function round(value: number) {
   return Math.round(value * 1_000_000) / 1_000_000;
 }
 
-function seededUnit(seed: number, id: string) {
-  const bytes = createHash("sha256").update(`${seed}:${id}`).digest();
-  return bytes.readUInt32BE(0) / 0xffff_ffff;
+function seededUnit(seed: number, id: string, digest: KernelDigest) {
+  return digestUint32(`${seed}:${id}`, digest) / 0xffff_ffff;
 }
 
 function cloneTransform(transform: SculptTransform): MutableNode["transform"] {
@@ -139,8 +144,11 @@ function snapshotNode(node: MutableNode): SculptKernelNodeSnapshot {
   });
 }
 
-function digestSnapshot(value: Omit<SculptKernelSnapshot, "digest">) {
-  return `sha256:${createHash("sha256").update(JSON.stringify(value)).digest("hex")}`;
+function digestSnapshot(
+  value: Omit<SculptKernelSnapshot, "digest">,
+  digest: KernelDigest,
+) {
+  return prefixedDigest(JSON.stringify(value), digest);
 }
 
 export function validateSculptClock(clock: FrameClock, tick: number) {
@@ -157,16 +165,25 @@ export function validateSculptClock(clock: FrameClock, tick: number) {
 export class SculptNodeSimulation {
   private readonly input: SculptSimulationInput;
   private readonly options: Required<SculptKernelOptions>;
+  private readonly digest: KernelDigest;
   private readonly nodes: MutableNode[];
   private tick = 0;
   private elapsedMs = 0;
   private collisionCount = 0;
 
-  constructor(input: SculptSimulationInput, options: Required<SculptKernelOptions>) {
+  constructor(
+    input: SculptSimulationInput,
+    options: Required<SculptKernelOptions>,
+    digest: KernelDigest = resolveKernelDigest(),
+  ) {
     this.input = input;
     this.options = options;
+    this.digest = digest;
     this.nodes = input.nodes.map((node) => {
-      const drift = node.parentId === null ? (seededUnit(options.seed, node.id) - 0.5) * 0.4 : 0;
+      const drift =
+        node.parentId === null
+          ? (seededUnit(options.seed, node.id, digest) - 0.5) * 0.4
+          : 0;
       return {
         id: node.id,
         parentId: node.parentId,
@@ -216,7 +233,8 @@ export class SculptNodeSimulation {
     const sockets = Object.freeze(
       this.input.sockets
         .map((socket) => {
-          const phase = seededUnit(this.options.seed, socket.id) * Math.PI * 2;
+          const phase =
+            seededUnit(this.options.seed, socket.id, this.digest) * Math.PI * 2;
           const value = socket.kind === "animation"
             ? round(socket.amplitude * Math.sin(Math.PI * 2 * socket.frequencyHz * seconds + phase))
             : 0;
@@ -232,7 +250,10 @@ export class SculptNodeSimulation {
       nodes,
       sockets,
     });
-    return Object.freeze({ ...payload, digest: digestSnapshot(payload) });
+    return Object.freeze({
+      ...payload,
+      digest: digestSnapshot(payload, this.digest),
+    });
   }
 }
 
@@ -242,7 +263,11 @@ class SculptSessionImpl implements SculptKernelSession {
   private readonly simulation: SculptNodeSimulation;
   private readonly advances: FrameClock[] = [];
 
-  constructor(artifact: SculptArtifact, options: Required<SculptKernelOptions>) {
+  constructor(
+    artifact: SculptArtifact,
+    options: Required<SculptKernelOptions>,
+    digest: KernelDigest,
+  ) {
     this.artifact = artifact;
     this.options = options;
     this.simulation = new SculptNodeSimulation(
@@ -252,6 +277,7 @@ class SculptSessionImpl implements SculptKernelSession {
         sockets: artifact.spec.sockets,
       },
       options,
+      digest,
     );
   }
 
@@ -281,21 +307,29 @@ class SculptSessionImpl implements SculptKernelSession {
 export function openSculptKernelSession(
   artifactValue: unknown,
   options: SculptKernelOptions,
+  host?: KernelDigestHost,
 ): SculptKernelSession {
   const artifact = validateSculptArtifact(artifactValue);
   if (!artifact.ok) throw new KernelSessionError(artifact.diagnostics[0]?.message ?? "invalid Sculpt Artifact");
-  return new SculptSessionImpl(artifact.value, normalizeOptions(options));
+  return new SculptSessionImpl(
+    artifact.value,
+    normalizeOptions(options),
+    resolveKernelDigest(host?.digest),
+  );
 }
 
 /** Re-run every recorded advance and refuse if the terminal digest drifts. */
-export function replaySculptKernelSession(save: SculptKernelSaveArtifact): SculptKernelSession {
+export function replaySculptKernelSession(
+  save: SculptKernelSaveArtifact,
+  host?: KernelDigestHost,
+): SculptKernelSession {
   if (save === null || typeof save !== "object") throw new KernelSessionError("invalid sculpt save artifact");
   if (save.schemaVersion !== SCULPT_SCHEMA_VERSION) throw new KernelSessionError(`sculpt save schema major mismatch: ${save.schemaVersion}`);
   if (save.kind !== SCULPT_KERNEL_SAVE_KIND) throw new KernelSessionError("invalid sculpt save artifact kind");
   if (!Array.isArray(save.advances) || typeof save.terminalDigest !== "string" || !DIGEST_RE.test(save.terminalDigest)) {
     throw new KernelSessionError("invalid sculpt save advances or terminal digest");
   }
-  const session = openSculptKernelSession(save.artifact, save.options);
+  const session = openSculptKernelSession(save.artifact, save.options, host);
   for (const clock of save.advances) session.advance(clock);
   const terminal = session.observe().digest;
   if (terminal !== save.terminalDigest) throw new KernelSessionError(`sculpt replay digest mismatch: expected ${save.terminalDigest}, got ${terminal}`);

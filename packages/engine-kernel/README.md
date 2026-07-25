@@ -9,6 +9,19 @@ Game Kernel seam: deterministic command/snapshot session
 - Game-session save/replay artifacts stamp schema + kernel/BOM versions; schema
   major mismatch refuses
 - Allowed dependency: `@sceneaxi/schemas` only (no presentation/backend types)
+- No Node builtin and no Node-only global: every session path is browser-runnable
+
+## Browser open path
+
+Digests use a portable synchronous sha256 (`src/portable-digest.ts`) by default
+instead of `node:crypto`, so a browser can open and play a session directly.
+Optional host implementations are verified against that portable default before
+use and cannot change digest semantics. Snapshots and save artifacts are plain
+JSON, so a server kernel can instead send them to a browser presentation
+runtime. Digest bytes are unchanged.
+
+See [ADR 0016](../../docs/adr/0016-portable-kernel-digest.md) and
+[docs/kernel-browser-open.md](../../docs/kernel-browser-open.md).
 
 The original tracer-bullet domain covers entity transforms under move/spawn.
 The hybrid sculpt vertical additionally exposes `openSculptKernelSession()` and

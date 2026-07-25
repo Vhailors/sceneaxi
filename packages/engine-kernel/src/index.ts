@@ -6,6 +6,11 @@
  * closed major mismatch. The hybrid sculpt session preserves the same
  * authority model for its bounded hierarchy, animation-socket, and toy-
  * collision vertical.
+ *
+ * Every session path is browser-runnable: digest semantics come from a portable
+ * synchronous sha256 rather than `node:crypto`, and snapshots/save artifacts
+ * stay plain serializable data a presentation runtime can consume
+ * (docs/kernel-browser-open.md).
  */
 import type { PackageSeam } from "@sceneaxi/schemas";
 
@@ -13,6 +18,13 @@ export const seam: PackageSeam = Object.freeze({
   name: "@sceneaxi/engine-kernel",
   releaseGroup: "core-train",
 });
+
+export {
+  portableKernelDigest,
+  resolveKernelDigest,
+  type KernelDigest,
+  type KernelDigestHost,
+} from "./portable-digest.js";
 
 export {
   BOM_VERSION,
