@@ -6,7 +6,7 @@
  * the property these tests exist to hold.
  */
 import { createHash } from "node:crypto";
-import { cpSync, mkdtempSync, rmSync } from "node:fs";
+import { cpSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -199,6 +199,22 @@ describe("engine SDK archive", () => {
       cpSync(join(REPO_ROOT, pkgDir), join(repoRoot, pkgDir), { recursive: true });
     }
     expect(() => collectSdkEntries({ repoRoot })).toThrow(/required doc/);
+  });
+  it("refuses a symlink that points outside its package rather than archiving it", () => {
+    const repoRoot = fixtureRepo();
+    cpSync(join(REPO_ROOT, "package.json"), join(repoRoot, "package.json"));
+    for (const doc of SDK_DOCS) {
+      cpSync(join(REPO_ROOT, doc), join(repoRoot, doc), { recursive: true });
+    }
+    for (const pkgDir of SDK_PACKAGES) {
+      cpSync(join(REPO_ROOT, pkgDir), join(repoRoot, pkgDir), { recursive: true });
+    }
+    writeFileSync(join(repoRoot, "outside-secret.txt"), "leaked-by-symlink");
+    symlinkSync(
+      join(repoRoot, "outside-secret.txt"),
+      join(repoRoot, "packages/schemas/src/leak.ts"),
+    );
+    expect(() => collectSdkEntries({ repoRoot })).toThrow(/symlink|escape|outside/i);
   });
 });
 

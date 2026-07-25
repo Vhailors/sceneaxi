@@ -1,4 +1,4 @@
-import { CREATOR_SHARE_RULE, SITE_STARTER_CREDIT_ALLOTMENT } from "@sceneaxi/site-kit";
+import { CREATOR_SHARE_ROUNDING_NOTE, CREATOR_SHARE_RULE, SITE_STARTER_CREDIT_ALLOTMENT } from "@sceneaxi/site-kit";
 import { IDENTITY_PLANE_PENDING_NOTE, createUmbrellaIdentityPlane } from "../../lib/identity-plane.js";
 import { CapabilityTable } from "../_components/capability-table.js";
 import { StatePanel } from "../_components/state-panel.js";
@@ -51,9 +51,10 @@ export default async function PricingPage() {
                       {(pack.unitAmount / 100).toFixed(2)} {pack.currency.toUpperCase()}
                     </td>
                     <td>
-                      <a className="button" href={`/account?pack=${pack.packId}`}>
-                        Buy
-                      </a>
+                      <form method="post" action="/api/checkout">
+                        <input type="hidden" name="packId" value={pack.packId} />
+                        <button className="button" type="submit">Buy</button>
+                      </form>
                     </td>
                   </tr>
                 ))}
@@ -85,6 +86,9 @@ export default async function PricingPage() {
         and money sales are booked{" "}
         {CREATOR_SHARE_RULE.creatorPercent}/{CREATOR_SHARE_RULE.platformPercent}.{" "}
         {CREATOR_SHARE_RULE.note}
+      </p>
+      <p style={{ color: "var(--ink-faint)", fontSize: "0.9rem" }}>
+        {CREATOR_SHARE_ROUNDING_NOTE}
       </p>
 
       <StatePanel tone="warn" title="Catalog purchases are not open">

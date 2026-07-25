@@ -15,8 +15,8 @@
  * Usage: node scripts/build-engine-sdk.mjs [--out <dir>]
  */
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildZip } from "./lib/zip.mjs";
 
@@ -54,11 +54,34 @@ const readVersion = () => {
   return typeof version === "string" && version.length > 0 ? version : "0.0.0";
 };
 
-function walk(dir, out = []) {
+const containsPath = (parent, child) => {
+  const rel = relative(parent, child);
+  return rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
+};
+
+/**
+ * Walk a directory without ever following symlinks.
+ *
+ * The public archive must not be able to pull in a file outside its package: a symlink
+ * under `src/` (for example one pointed at the checkout's `.git/config`) is refused
+ * outright, and every collected entry is verified to stay beneath its package root.
+ */
+function walk(dir, packageRoot, out = []) {
   for (const entry of readdirSync(dir).sort()) {
     if (EXCLUDED_DIRECTORIES.includes(entry) || EXCLUDED_NAME_PATTERN.test(entry)) continue;
     const path = join(dir, entry);
-    if (statSync(path).isDirectory()) walk(path, out);
+    const stat = lstatSync(path);
+    if (stat.isSymbolicLink()) {
+      throw new Error(
+        `engine SDK: '${relative(root, path)}' is a symlink — the public archive refuses to follow symlinks so nothing outside the package can be pulled in`,
+      );
+    }
+    if (!containsPath(packageRoot, path)) {
+      throw new Error(
+        `engine SDK: '${relative(root, path)}' escapes its package root — refusing to pull outside files into the public archive`,
+      );
+    }
+    if (stat.isDirectory()) walk(path, packageRoot, out);
     else if (INCLUDED_EXTENSIONS.some((extension) => entry.endsWith(extension))) out.push(path);
   }
   return out;
@@ -93,7 +116,7 @@ export function collectSdkEntries(options = {}) {
     const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
     packages.push(manifest.name ?? pkgDir);
 
-    for (const file of [manifestPath, ...walk(srcDir)]) {
+    for (const file of [manifestPath, ...walk(srcDir, absolute)]) {
       entries.push({
         name: `sceneaxi-engine-sdk/${relative(repoRoot, file).split("\\").join("/")}`,
         data: readFileSync(file),
@@ -111,7 +134,7 @@ export function collectSdkEntries(options = {}) {
     // Shipped JSON Schema contracts travel with the contracts package.
     const contractsDir = join(absolute, "contracts");
     if (existsSync(contractsDir)) {
-      for (const file of walk(contractsDir)) {
+      for (const file of walk(contractsDir, absolute)) {
         entries.push({
           name: `sceneaxi-engine-sdk/${relative(repoRoot, file).split("\\").join("/")}`,
           data: readFileSync(file),
@@ -174,9 +197,9 @@ export function buildEngineSdk(options = {}) {
 function sdkReadme(version, packages) {
   return `# SceneAxi engine SDK ${version}
 
-Public, free source archive of the SceneAxi engine SDK. This is **not** an npm
-publish and not a dump of the monorepo — it is the public package surface plus the
-consumer contract docs.
+Public, free **source-available** archive of the SceneAxi engine SDK, provided for
+evaluation. This is **not** an npm publish and not a dump of the monorepo — it is the
+public package surface plus the consumer contract docs.
 
 ## Contents
 
@@ -198,6 +221,15 @@ These are private \`0.0.0\` bootstrap packages. There is no supported external
 install until matching versions are published to a registry; \`docs/web-consumer.md\`
 is authoritative on that. Reading and building against this source is free, as is
 CLI use and bringing your own AI provider.
+
+## Licence
+
+This archive is **source-available for evaluation, not open-source**. The packages
+are \`UNLICENSED\`, no licence file is included, and **no licence is granted** to use,
+modify, copy, or redistribute this source beyond reading and evaluating it here. It
+is not redistributable under MIT, Apache-2.0, BSL, or any other public licence. A
+grant of rights is a separate decision that has not been made; until then, treat this
+as evaluation-only source.
 `;
 }
 

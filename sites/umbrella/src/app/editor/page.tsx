@@ -1,14 +1,15 @@
-import { WEB_EDITOR_SESSION_OPERATIONS } from "@sceneaxi/site-kit";
-import { renderEditorState } from "../../lib/editor-session.js";
 import {
+  WEB_EDITOR_SESSION_OPERATIONS,
   EDITOR_MAX_OBJECTS,
   EDITOR_MIN_OBJECTS,
-  type SearchParams,
   editorHref,
+  renderEditorState,
   readEditorState,
-} from "../../lib/editor-state.js";
+  type SearchParams,
+} from "@sceneaxi/site-kit";
 import { createUmbrellaIdentityPlane } from "../../lib/identity-plane.js";
 import { resolveUmbrellaEditorAccess } from "../../lib/site-config.js";
+import { readSessionToken } from "../_session.js";
 import { StatePanel } from "../_components/state-panel.js";
 
 /**
@@ -28,7 +29,8 @@ export default async function EditorPage({
 }) {
   const params = await searchParams;
   const plane = createUmbrellaIdentityPlane(process.env);
-  const resolved = await resolveUmbrellaEditorAccess({ plane, env: process.env });
+  const sessionToken = await readSessionToken();
+  const resolved = await resolveUmbrellaEditorAccess({ plane, env: process.env, sessionToken });
 
   if (!resolved.decision.granted) {
     return (
@@ -89,12 +91,11 @@ export default async function EditorPage({
     );
   }
 
-  const { snapshot, save, composition, artifactId } = render.value;
+  const { snapshot, viewport, save, composition, artifactId } = render.value;
   const editor = state.value;
   const selected = editor.instances.find(
     (instance) => instance.instanceId === editor.selectedInstanceId,
   );
-  const translation = selected?.transform.translation ?? [0, 0, 0];
 
   return (
     <>
@@ -117,7 +118,9 @@ export default async function EditorPage({
       {editor.deepLink !== null && (
         <StatePanel tone="ok" title="Opened from a catalog">
           <p>
-            Source <code>{editor.deepLink.source}</code> · item{" "}
+            The catalog item is shown here as context only — every editor session opens
+            the shared starter scene, not that listing&rsquo;s own scene. Source{" "}
+            <code>{editor.deepLink.source}</code> · item{" "}
             <code>{editor.deepLink.itemId}</code>
             {editor.deepLink.artifactRef !== null && (
               <>
@@ -175,6 +178,24 @@ export default async function EditorPage({
         </section>
 
         <section className="panel">
+          <h3>Viewport</h3>
+          <dl className="dl">
+            <dt>Backend</dt>
+            <dd>
+              <code>{viewport.backend}</code>
+            </dd>
+            <dt>Label</dt>
+            <dd>{viewport.label}</dd>
+            <dt>Frame</dt>
+            <dd>{viewport.frame}</dd>
+            <dt>Draw calls</dt>
+            <dd>{viewport.drawCalls}</dd>
+            <dt>Instances</dt>
+            <dd>{viewport.instanceIds.length}</dd>
+          </dl>
+        </section>
+
+        <section className="panel">
           <h3>Session</h3>
           <dl className="dl">
             <dt>Play state</dt>
@@ -204,6 +225,16 @@ export default async function EditorPage({
             )}
           </>
         )}
+        {editor.instances
+          .filter((instance) => instance.instanceId !== editor.selectedInstanceId)
+          .map((instance) => (
+            <input
+              key={`tx-${instance.instanceId}`}
+              type="hidden"
+              name={`tx-${instance.instanceId}`}
+              value={instance.transform.translation.join(",")}
+            />
+          ))}
         <div className="row">
           <div className="field">
             <label htmlFor="sel">Selection</label>
@@ -217,7 +248,12 @@ export default async function EditorPage({
           </div>
           <div className="field">
             <label htmlFor="tx">Translation (x,y,z)</label>
-            <input id="tx" name="tx" defaultValue={translation.join(",")} size={14} />
+            <input
+              id="tx"
+              name={`tx-${editor.selectedInstanceId}`}
+              defaultValue={selected?.transform.translation.join(",") ?? "0,0,0"}
+              size={14}
+            />
           </div>
           <div className="field">
             <label htmlFor="objects">Objects</label>
@@ -331,9 +367,10 @@ export default async function EditorPage({
       <StatePanel tone="warn" title="Edits are not persisted">
         <p>
           The session is rebuilt per request in an ephemeral workspace and its state
-          lives in this URL, so the same link always renders the same scene. Persisting a
-          project needs a storage decision that has not been made, so nothing here
-          pretends to save your work.
+          lives in this URL, so the same link always renders the same scene. Each object
+          keeps its own translation, so switching selection never moves another object.
+          Persisting a project needs a storage decision that has not been made, so
+          nothing here pretends to save your work.
         </p>
       </StatePanel>
     </>

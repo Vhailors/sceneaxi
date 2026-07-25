@@ -207,6 +207,24 @@ export function decideCapability(input: {
       ? Object.freeze({ allowed: true as const, capability, tier: "paid" as const })
       : capabilityDenied(capability, "BILLING_PLANE_NOT_WIRED");
   }
+  if (capability === "hosted-ai") {
+    const aiAccess = input.access;
+    if (aiAccess === null) return capabilityDenied(capability, "EDITOR_ENTITLEMENT_UNAVAILABLE");
+    // Admin is unrestricted (captain: admin unlimited). A non-admin needs a positive
+    // credit balance; the unused starter allotment is deliberately not sufficient, so
+    // hosted AI cannot ride on editor entitlement.
+    if (aiAccess.principal !== null && aiAccess.principal.role === "admin") {
+      return Object.freeze({ allowed: true as const, capability, tier: "paid" as const });
+    }
+    const credits = aiAccess.credits;
+    if (credits === null || !credits.ok || credits.value.balance <= 0) {
+      return capabilityDenied(
+        capability,
+        credits !== null && !credits.ok ? credits.reason : "HOSTED_AI_REQUIRES_CREDITS",
+      );
+    }
+    return Object.freeze({ allowed: true as const, capability, tier: "paid" as const });
+  }
   const access = input.access;
   if (access === null) return capabilityDenied(capability, "EDITOR_ENTITLEMENT_UNAVAILABLE");
   if (!access.entitlement.entitled) {

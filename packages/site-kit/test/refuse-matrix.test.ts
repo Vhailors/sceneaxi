@@ -120,6 +120,10 @@ const CASES: Readonly<Record<SiteRefusalReason, () => Promise<unknown> | unknown
     identityWith(
       principal("user", { session: { expiresAt: "2026-07-25T11:00:01.000Z" } }),
     ).resolvePrincipal(umbrella),
+  IDENTITY_SESSION_NOT_YET_VALID: () =>
+    identityWith(
+      principal("user", { session: { issuedAt: "2026-07-25T12:30:00.000Z" } }),
+    ).resolvePrincipal(umbrella),
   IDENTITY_SESSION_SURFACE_MISMATCH: () =>
     identityWith(
       principal("user", { session: { surface: "catalog-game" } }),
@@ -154,6 +158,19 @@ const CASES: Readonly<Record<SiteRefusalReason, () => Promise<unknown> | unknown
   EDITOR_ENTITLEMENT_UNAVAILABLE: () =>
     decideEditorEntitlement({ principal: principal("user") as SitePrincipal, credits: null }),
   CAPABILITY_UNKNOWN: () => decideCapability({ capability: "teleport", access: null }),
+  HOSTED_AI_REQUIRES_CREDITS: () =>
+    decideCapability({
+      capability: "hosted-ai",
+      access: {
+        principal: principal("user") as SitePrincipal,
+        identity: ok(principal("user") as SitePrincipal),
+        credits: ok({ userId: "user-1", balance: 0, starterGrantConsumed: false }),
+        entitlement: decideEditorEntitlement({
+          principal: principal("user") as SitePrincipal,
+          credits: ok({ userId: "user-1", balance: 0, starterGrantConsumed: false }),
+        }),
+      },
+    }),
   BILLING_LIVE_MODE_NOT_AUTHORIZED: () =>
     createBillingPlane({ mode: "live" }).listCreditPacks(),
   BILLING_URL_INSECURE: () =>

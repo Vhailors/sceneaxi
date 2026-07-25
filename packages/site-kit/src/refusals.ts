@@ -29,6 +29,8 @@ export const SITE_REFUSALS = Object.freeze({
   IDENTITY_ROLE_UNKNOWN: "The identity adapter returned a role outside the known role set.",
   IDENTITY_USER_DISABLED: "The resolved user is disabled.",
   IDENTITY_SESSION_EXPIRED: "The resolved session has expired.",
+  IDENTITY_SESSION_NOT_YET_VALID:
+    "The resolved session was issued in the future, so it is not yet valid.",
   IDENTITY_SESSION_SURFACE_MISMATCH:
     "The resolved session belongs to a different surface than the request.",
   CREDIT_BALANCE_INVALID:
@@ -47,6 +49,8 @@ export const SITE_REFUSALS = Object.freeze({
 
   // --- capability matrix ---
   CAPABILITY_UNKNOWN: "The requested capability is not in the published site capability matrix.",
+  HOSTED_AI_REQUIRES_CREDITS:
+    "Hosted AI requires a positive credit balance for a non-admin; the unused starter allotment is not sufficient.",
 
   // --- billing ---
   BILLING_LIVE_MODE_NOT_AUTHORIZED:

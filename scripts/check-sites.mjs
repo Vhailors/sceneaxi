@@ -83,22 +83,74 @@ const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
 
 const ENV_REFERENCE_SOURCE =
   String.raw`(?:process\.env|env|environment)(?:\.[A-Za-z_$][\w$]*|\[(?:"[^"\r\n]+"|'[^'\r\n]+')\])`;
-const DIRECT_ENV_REFERENCE = new RegExp(`^${ENV_REFERENCE_SOURCE}$`);
-const DIRECT_ENV_TRAILING_SYNTAX =
-  /^\s*[\])}]*\s*[,;]?\s*(?:(?:\/\/|#).*)?$/;
+const ENV_OPERAND = new RegExp(`^${ENV_REFERENCE_SOURCE}`);
+
+/**
+ * Whether the value of an assignment starting at `start` is a committed secret.
+ *
+ * A complete assignment expression is inspected, including a value continued onto the
+ * following line — for example `STRIPE_SECRET_KEY = process.env.X` with `?? "committed"`
+ * on the next line. The assignment is safe only while every operand is a `process.env`
+ * reference; the moment a coalesce/fallback chain introduces a literal or any non-env
+ * operand, the assignment carries a committed value and is refused. Bracket env keys
+ * such as `process.env["NAME"]` are consumed as part of the operand, so their string key
+ * never reads as a committed literal.
+ */
+function rhsIsCommittedSecret(text, start) {
+  const len = text.length;
+  let i = start;
+  const skipTrivia = () => {
+    while (i < len) {
+      const ch = text[i];
+      if (ch === "/" && text[i + 1] === "/") {
+        while (i < len && text[i] !== "\n") i += 1;
+        continue;
+      }
+      if (ch === "#") {
+        while (i < len && text[i] !== "\n") i += 1;
+        continue;
+      }
+      if (ch === "/" && text[i + 1] === "*") {
+        i += 2;
+        while (i < len && !(text[i] === "*" && text[i + 1] === "/")) i += 1;
+        i += 2;
+        continue;
+      }
+      if (/\s/.test(ch)) {
+        i += 1;
+        continue;
+      }
+      break;
+    }
+  };
+  const readEnvOperand = () => {
+    const match = ENV_OPERAND.exec(text.slice(i));
+    if (match === null) return false;
+    i += match[0].length;
+    return true;
+  };
+  skipTrivia();
+  if (!readEnvOperand()) return true;
+  for (;;) {
+    skipTrivia();
+    const rest = text.slice(i);
+    if (rest === "" || /^[;),}\]].?/.test(rest)) return false;
+    const operator = /^(?:\?\?|\|\||&&|\?|:|\+)/.exec(rest);
+    if (operator === null) return false;
+    i += operator[0].length;
+    skipTrivia();
+    if (!readEnvOperand()) return true;
+  }
+}
 
 const assignsSecretValue = (text, name) => {
-  const assignment = new RegExp(
-    `(?:"${name}"|'${name}'|\`${name}\`|\\b${name}\\b)\\s*(?::|=(?!=))\\s*(${ENV_REFERENCE_SOURCE}|"[^"\\n]+"|'[^'\\n]+'|\`[^\`\\n]+\`|[^\\s#,;\\]}]+)`,
+  const header = new RegExp(
+    `(?:"${name}"|'${name}'|\`${name}\`|\\b${name}\\b)\\s*(?::|=(?!=))\\s*`,
     "g",
   );
-  for (const match of text.matchAll(assignment)) {
-    const value = match[1] ?? "";
-    if (!DIRECT_ENV_REFERENCE.test(value)) return true;
-    const trailing = text
-      .slice((match.index ?? 0) + match[0].length)
-      .split(/\r?\n/, 1)[0];
-    if (!DIRECT_ENV_TRAILING_SYNTAX.test(trailing)) return true;
+  for (const match of text.matchAll(header)) {
+    const valueStart = (match.index ?? 0) + match[0].length;
+    if (rhsIsCommittedSecret(text, valueStart)) return true;
   }
   return false;
 };

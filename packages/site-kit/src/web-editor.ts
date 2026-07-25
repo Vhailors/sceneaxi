@@ -63,6 +63,7 @@ export const WEB_EDITOR_SESSION_OPERATIONS = Object.freeze([
   "play",
   "pause",
   "step",
+  "viewport",
   "snapshot",
   "save",
   "load",
@@ -92,6 +93,8 @@ type ProjectedMount = {
   readonly transform: SculptTransform;
 };
 
+export type WebEditorViewportFrame = ReturnType<MinimumE2Editor["viewport"]>;
+
 export interface WebEditorSession {
   addSculpt(input: {
     readonly instanceId: string;
@@ -104,6 +107,7 @@ export interface WebEditorSession {
   play(): void;
   pause(): void;
   step(deltaMs?: number): void;
+  viewport(): WebEditorViewportFrame;
   snapshot(): MinimumE2Snapshot;
   save(): MinimumE2SaveResult;
   load(): MinimumE2LoadResult;
@@ -292,6 +296,10 @@ export function createWebEditorSession(
       live();
       if (deltaMs === undefined) editor.step();
       else editor.step(deltaMs);
+    },
+    viewport() {
+      live();
+      return editor.viewport();
     },
     snapshot() {
       live();

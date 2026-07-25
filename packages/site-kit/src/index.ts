@@ -111,6 +111,7 @@ export {
   type WebEditorMount,
   type WebEditorSession,
   type WebEditorSessionOptions,
+  type WebEditorViewportFrame,
 } from "./web-editor.js";
 
 export {
@@ -121,6 +122,7 @@ export {
 
 export {
   CATALOG_SURFACES,
+  CREATOR_SHARE_ROUNDING_NOTE,
   CREATOR_SHARE_RULE,
   SITE_CATALOG_POLICY_CITES,
   attemptCatalogPurchase,
@@ -168,3 +170,20 @@ export {
   type SiteCapability,
   type SiteCapabilityTier,
 } from "./entitlement.js";
+
+export {
+  EDITOR_MAX_OBJECTS,
+  EDITOR_MIN_OBJECTS,
+  EDITOR_STATE_PARAMS,
+  editorHref,
+  readEditorState,
+  type EditorInstanceState,
+  type EditorState,
+  type SearchParams,
+} from "./editor-state.js";
+
+export {
+  EDITOR_SEED,
+  renderEditorState,
+  type EditorRender,
+} from "./editor-session.js";

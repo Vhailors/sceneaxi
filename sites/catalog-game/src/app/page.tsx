@@ -1,4 +1,4 @@
-import { CREATOR_SHARE_RULE, describeListingPrice, listSiteCatalog } from "@sceneaxi/site-kit";
+import { CREATOR_SHARE_ROUNDING_NOTE, CREATOR_SHARE_RULE, describeListingPrice, listSiteCatalog } from "@sceneaxi/site-kit";
 import { CATALOG_SITE_BRAND, CATALOG_SITE_SURFACE, editorLinkFor } from "../lib/site-config.js";
 import { StatePanel } from "./_components/state-panel.js";
 
@@ -46,6 +46,9 @@ export default function CataloguePage() {
       <p>
         A listing may be priced in credits, in money, or both — you pick at purchase.
         Creators receive {CREATOR_SHARE_RULE.creatorPercent}% of the credits on a sale.
+      </p>
+      <p style={{ color: "var(--ink-faint)", fontSize: "0.9rem" }}>
+        {CREATOR_SHARE_ROUNDING_NOTE}
       </p>
 
       <StatePanel tone="warn" title="This catalogue is evaluation-only for now">

@@ -1,4 +1,4 @@
-import { CREATOR_SHARE_RULE, createPublishIntent, submitPublishIntent } from "@sceneaxi/site-kit";
+import { CREATOR_SHARE_ROUNDING_NOTE, CREATOR_SHARE_RULE, createPublishIntent, submitPublishIntent } from "@sceneaxi/site-kit";
 import { CATALOG_SITE_BRAND, CATALOG_SITE_SURFACE } from "../../lib/site-config.js";
 import { StatePanel } from "../_components/state-panel.js";
 
@@ -43,6 +43,9 @@ export default function PublishPage() {
         <p>The share preview is unavailable for this example.</p>
       )}
       <p>{CREATOR_SHARE_RULE.note}</p>
+      <p style={{ color: "var(--ink-faint)", fontSize: "0.9rem" }}>
+        {CREATOR_SHARE_ROUNDING_NOTE}
+      </p>
 
       <h2>What submission requires</h2>
       <ul>

@@ -260,8 +260,12 @@ export function creatorShare(total: number): SiteResult<CreatorShare> {
 export const CREATOR_SHARE_RULE = Object.freeze({
   creatorPercent: 50,
   platformPercent: 50,
-  note: "Creators receive 50% of the credits on a sale; money sales are booked 50/50. Payouts are not activated in this wave.",
+  note:
+    "Creators receive 50% of the credits on a sale; money sales are booked 50/50. Credit totals are split in whole units, so on an odd total the creator takes the floor (for example 17 of 35 credits) and the platform absorbs the single remaining unit rather than shorting either side. Payouts are not activated in this wave.",
 });
+
+export const CREATOR_SHARE_ROUNDING_NOTE =
+  "Credit shares are whole units: on an odd total the creator takes the floor and the platform absorbs the remainder, so the displayed creator share can read just below an exact 50%.";
 
 export type CatalogCommerceRefusal = SiteRefusal & {
   readonly gate: typeof COMMERCE_ACTIVATION_GATE;

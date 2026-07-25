@@ -224,6 +224,48 @@ describe("free-vs-paid capability matrix", () => {
     ).toMatchObject({ allowed: true });
   });
 
+  describe("hosted-ai requires a positive credit balance for a non-admin", () => {
+    const accessFor = (
+      role: "admin" | "user",
+      credits: ReturnType<typeof balance> | null,
+    ) => {
+      const p = principal(role);
+      return {
+        principal: p,
+        identity: ok(p),
+        credits,
+        entitlement: decideEditorEntitlement({ principal: p, credits }),
+      };
+    };
+
+    it("allows an admin without consulting a credit balance", () => {
+      expect(
+        decideCapability({ capability: "hosted-ai", access: accessFor("admin", null) }),
+      ).toMatchObject({ allowed: true });
+    });
+
+    it("allows a non-admin with a positive balance", () => {
+      expect(
+        decideCapability({ capability: "hosted-ai", access: accessFor("user", balance(5, true)) }),
+      ).toMatchObject({ allowed: true });
+    });
+
+    it("refuses a non-admin whose only eligibility is the unused starter allotment", () => {
+      const access = accessFor("user", balance(0, false));
+      expect(access.entitlement).toMatchObject({ entitled: true, basis: "starter-allotment" });
+      expect(decideCapability({ capability: "hosted-ai", access })).toMatchObject({
+        allowed: false,
+        reason: "HOSTED_AI_REQUIRES_CREDITS",
+      });
+    });
+
+    it("refuses when no credit reading is available for a non-admin", () => {
+      expect(
+        decideCapability({ capability: "hosted-ai", access: accessFor("user", null) }),
+      ).toMatchObject({ allowed: false, reason: "HOSTED_AI_REQUIRES_CREDITS" });
+    });
+  });
+
   it("publishes a frozen matrix covering exactly the documented capabilities", () => {
     expect(Object.isFrozen(SITE_CAPABILITIES)).toBe(true);
     expect([...SITE_CAPABILITY_IDS].sort()).toEqual(

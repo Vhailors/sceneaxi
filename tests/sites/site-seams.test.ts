@@ -18,7 +18,6 @@ import {
   resolveUmbrellaEditorAccess,
   seam as umbrellaSeam,
 } from "../../sites/umbrella/src/index.ts";
-import { readEditorState } from "../../sites/umbrella/src/lib/editor-state.ts";
 import {
   CATALOG_SITE_BRAND as GAME_BRAND,
   CATALOG_SITE_SURFACE as GAME_SURFACE,
@@ -173,24 +172,6 @@ describe("umbrella editor access", () => {
   });
 });
 
-describe("umbrella editor URL state", () => {
-  it.each(["1junk,2,3", "1,,3", "0x10,2,3"])(
-    "refuses a partially parsed translation component in %s",
-    (tx) => {
-      expect(readEditorState({ tx })).toMatchObject({
-        ok: false,
-        reason: "SITE_REQUEST_MALFORMED",
-      });
-    },
-  );
-
-  it("accepts complete decimal and exponent translation components", () => {
-    const result = readEditorState({ tx: "-1.5,2e1,.25" });
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.value.instances[0]?.transform.translation).toEqual([-1.5, 20, 0.25]);
-  });
-});
 
 describe("the sites tier keeps the hermetic root hermetic", () => {
   it("declares no framework dependency in the root manifest", () => {

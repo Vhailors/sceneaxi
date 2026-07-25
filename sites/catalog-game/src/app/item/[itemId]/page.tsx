@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { creatorShare, describeListingPrice, showSiteListing } from "@sceneaxi/site-kit";
+import { CREATOR_SHARE_ROUNDING_NOTE, creatorShare, describeListingPrice, showSiteListing } from "@sceneaxi/site-kit";
 import { CATALOG_SITE_SURFACE, editorLinkFor } from "../../../lib/site-config.js";
 import { CommerceNotice } from "../../_components/commerce-notice.js";
 import { StatePanel } from "../../_components/state-panel.js";
@@ -77,6 +77,9 @@ export default async function ItemPage({
         )}
       </dl>
 
+      <p style={{ color: "var(--ink-faint)", fontSize: "0.9rem" }}>
+        {CREATOR_SHARE_ROUNDING_NOTE}
+      </p>
       <h2>Rights</h2>
       <dl className="dl">
         <dt>Licence</dt>

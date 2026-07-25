@@ -149,8 +149,9 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0;
 
-const isIsoInstant = (value: unknown): value is string =>
-  isNonEmptyString(value) && !Number.isNaN(Date.parse(value));
+const isCanonicalIsoInstant = (value: unknown): value is string =>
+  isNonEmptyString(value) &&
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z$/.test(value);
 
 type ClientPayloadInspection = "safe" | "role-claim" | "malformed";
 
@@ -309,18 +310,21 @@ function validatePrincipal(
   if (
     !isNonEmptyString(session["sessionId"]) ||
     !isNonEmptyString(session["userId"]) ||
-    !isIsoInstant(session["issuedAt"]) ||
-    !isIsoInstant(session["expiresAt"]) ||
     session["userId"] !== user["userId"]
   ) {
+    return refuse("IDENTITY_ADAPTER_OUTPUT_INVALID");
+  }
+  const issuedAt = session["issuedAt"];
+  const expiresAt = session["expiresAt"];
+  if (!isCanonicalIsoInstant(issuedAt) || !isCanonicalIsoInstant(expiresAt)) {
     return refuse("IDENTITY_ADAPTER_OUTPUT_INVALID");
   }
   if (!(SITE_ROLES as readonly unknown[]).includes(role)) return refuse("IDENTITY_ROLE_UNKNOWN");
   if (user["disabled"] === true) return refuse("IDENTITY_USER_DISABLED");
   if (session["surface"] !== request.surface) return refuse("IDENTITY_SESSION_SURFACE_MISMATCH");
-  if (Date.parse(session["expiresAt"]) <= Date.parse(nowIso)) {
-    return refuse("IDENTITY_SESSION_EXPIRED");
-  }
+  const nowMs = Date.parse(nowIso);
+  if (Date.parse(issuedAt) > nowMs) return refuse("IDENTITY_SESSION_NOT_YET_VALID");
+  if (Date.parse(expiresAt) <= nowMs) return refuse("IDENTITY_SESSION_EXPIRED");
   return ok(
     Object.freeze({
       user: Object.freeze({
@@ -334,8 +338,8 @@ function validatePrincipal(
         sessionId: session["sessionId"],
         userId: session["userId"],
         surface: session["surface"] as SiteSurface,
-        issuedAt: session["issuedAt"],
-        expiresAt: session["expiresAt"],
+        issuedAt: issuedAt,
+        expiresAt: expiresAt,
       }),
     }),
   );
@@ -451,6 +455,8 @@ export function createBillingPlane(options: BillingPlaneOptions = {}): SiteBilli
           !isNonEmptyString(pack["packId"]) ||
           !Number.isSafeInteger(pack["credits"]) ||
           !Number.isSafeInteger(pack["unitAmount"]) ||
+          (pack["credits"] as number) <= 0 ||
+          (pack["unitAmount"] as number) <= 0 ||
           !isNonEmptyString(pack["currency"])
         ) {
           return refuse("BILLING_ADAPTER_OUTPUT_INVALID");

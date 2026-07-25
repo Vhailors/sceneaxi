@@ -105,6 +105,15 @@ export default function EnginePage() {
           your own AI provider.
         </p>
       </StatePanel>
+      <h2>Licence</h2>
+      <p>
+        This archive is <strong>source-available for evaluation, not open-source</strong>. The
+        packages are <code>UNLICENSED</code>, no licence file ships with the download, and
+        <strong>no licence is granted</strong> to use, modify, copy, or redistribute the source
+        beyond evaluating it here. It is not redistributable under MIT, Apache-2.0, BSL, or
+        any other public licence. A grant of rights is a separate decision that has not been
+        made.
+      </p>
     </>
   );
 }

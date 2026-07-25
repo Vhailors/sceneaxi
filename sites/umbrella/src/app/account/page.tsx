@@ -1,4 +1,5 @@
 import { SITE_STARTER_CREDIT_ALLOTMENT, resolveEditorAccess } from "@sceneaxi/site-kit";
+import { readSessionToken } from "../_session.js";
 import {
   IDENTITY_PLANE_DOC,
   IDENTITY_PLANE_PENDING_NOTE,
@@ -16,10 +17,11 @@ import { StatePanel } from "../_components/state-panel.js";
  */
 export default async function AccountPage() {
   const plane = createUmbrellaIdentityPlane(process.env);
+  const sessionToken = await readSessionToken();
   const resolved = await resolveEditorAccess({
     identity: plane.identity,
     credits: plane.credits,
-    request: { surface: "umbrella" },
+    request: { surface: "umbrella", sessionToken },
   });
 
   const phase = resolved.principal !== null ? "authenticated" : resolved.identity.ok ? "anonymous" : "refused";
