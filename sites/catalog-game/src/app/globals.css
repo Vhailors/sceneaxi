@@ -1,9 +1,9 @@
 /*
- * SceneAxi umbrella — a technical-document aesthetic.
+ * SceneAxi Forge — the game-asset storefront.
  *
- * The product is contract-first, so the surface reads like a specification: precise
- * type, tabular data, explicit state panels, and refusals that look like refusals
- * rather than decoration. Light and dark both supported.
+ * A workshop catalogue rather than a marketplace: warm amber accent, boxed listing
+ * cards with a visible grid, and provenance shown as data because a game builder needs
+ * rights and compatibility before they need marketing. Light and dark both supported.
  */
 
 :root {
@@ -17,7 +17,7 @@
   --rule: #ddd9d0;
   --rule-strong: #bdb8ac;
 
-  --accent: #1f5f4e;
+  --accent: #9a5b13;
   --accent-ink: #ffffff;
   --warn: #8a5a12;
   --warn-bg: #fdf4e3;
@@ -43,8 +43,8 @@
     --rule: #262d37;
     --rule-strong: #3a434f;
 
-    --accent: #5fd0ae;
-    --accent-ink: #08120f;
+    --accent: #f0a44a;
+    --accent-ink: #1a1206;
     --warn: #e8b866;
     --warn-bg: #241d10;
     --deny: #f0938a;
@@ -126,7 +126,7 @@ pre,
 }
 
 .wordmark::before {
-  content: "◧ ";
+  content: "⬢ ";
   color: var(--accent);
 }
 
@@ -475,4 +475,55 @@ pre {
   gap: 0.75rem;
   /* flex-end rather than end: wider browser support for the flex context. */
   align-items: flex-end;
+}
+
+/* --- storefront listing grid --- */
+
+.listings {
+  display: grid;
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+  margin: 1.5rem 0;
+}
+
+.listing {
+  background: var(--paper-raised);
+  padding: 1.1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.listing h3 {
+  margin: 0;
+  font-size: 1.02rem;
+}
+
+.listing p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  max-width: none;
+}
+
+.listing-price {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.listing-foot {
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  padding-top: 0.6rem;
+  border-top: 1px dotted var(--rule);
+  font-size: 0.8rem;
+  color: var(--ink-faint);
 }
