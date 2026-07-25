@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 1,
+  "kind": "sceneaxi.scene-composition-golden-evidence",
+  "status": "passed",
+  "sceneIntakePath": "tests/e2e/fixtures/scene-composition/workshop-bay.scene.json",
+  "sceneSeed": 9101,
+  "sources": [
+    {
+      "id": "service-crate",
+      "seed": 8001,
+      "artifactId": "service-crate-artifact",
+      "artifactDigest": "sha256:6ffc9935a898806eb7bccdecc5cf64e89d821ec67527aba780675db1bf904246"
+    },
+    {
+      "id": "field-drone",
+      "seed": 8002,
+      "artifactId": "field-drone-artifact",
+      "artifactDigest": "sha256:2b70fd1b80960b0f16014b7ddfb7af775bd4c579200554a62f04fd4a69238429"
+    }
+  ],
+  "scene": {
+    "sceneId": "workshop-bay",
+    "rootInstanceId": "bay-service-crate",
+    "instances": [
+      {
+        "instanceId": "bay-service-crate",
+        "artifactId": "service-crate-artifact",
+        "parentInstanceId": null,
+        "depth": 0,
+        "worldTransform": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotationEulerDegrees": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "instanceId": "bay-stacked-crate",
+        "artifactId": "service-crate-artifact",
+        "parentInstanceId": "bay-service-crate",
+        "depth": 1,
+        "worldTransform": {
+          "translation": [
+            0,
+            1.5,
+            0
+          ],
+          "rotationEulerDegrees": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            0.75,
+            0.75,
+            0.75
+          ]
+        }
+      },
+      {
+        "instanceId": "bay-field-drone",
+        "artifactId": "field-drone-artifact",
+        "parentInstanceId": "bay-stacked-crate",
+        "depth": 2,
+        "worldTransform": {
+          "translation": [
+            0.375,
+            3,
+            -0.375
+          ],
+          "rotationEulerDegrees": [
+            0,
+            30,
+            0
+          ],
+          "scale": [
+            0.75,
+            0.75,
+            0.75
+          ]
+        }
+      }
+    ],
+    "placementDigest": "sha256:ffe1d1a2208c1d7359a41c5de9aa0289c92369c9e014bd1d5c71b340c13f5335",
+    "sceneDigest": "sha256:f9252322ad9f81adf0a7340cd218ae85af60801e0d3602f5a59a5f922f26e500",
+    "sceneBytesDigest": "sha256:273626e11f0e04bb9ddd557071bff690a4ce327e9f47ff723e38c241c2e87501"
+  },
+  "document": {
+    "id": "workshop-bay-scene",
+    "documentDigest": "sha256:f992805103554f8814515121b87494d7c43e45c6cb89392ffc0fc72443edce6d",
+    "reopenedSceneDigest": "sha256:f9252322ad9f81adf0a7340cd218ae85af60801e0d3602f5a59a5f922f26e500"
+  },
+  "mount": {
+    "drawCalls": 17,
+    "instanceIds": [
+      "bay-service-crate",
+      "bay-stacked-crate",
+      "bay-field-drone"
+    ],
+    "frameDigest": "sha256:301971ec7efb20d9f73e0c4295eed53c6fd2a0df4511b64b6c80e31fd6533cec"
+  },
+  "kernel": {
+    "initialDigest": "sha256:b58fff2cb716ffb6787c92999167aad9c5358b34444dcd4823d67135ac7a196e",
+    "terminalDigest": "sha256:cf192879ffa5634c80644ee1e0c6dcbe353bae8efaa783e3ea01ea7b70a2f0a0",
+    "replayDigest": "sha256:cf192879ffa5634c80644ee1e0c6dcbe353bae8efaa783e3ea01ea7b70a2f0a0",
+    "collisionCount": 7,
+    "instanceSeeds": [
+      {
+        "instanceId": "bay-service-crate",
+        "seed": 1171396381
+      },
+      {
+        "instanceId": "bay-stacked-crate",
+        "seed": 1046957296
+      },
+      {
+        "instanceId": "bay-field-drone",
+        "seed": 271551584
+      }
+    ],
+    "saveDigest": "sha256:26320030bab45f1eb7b0d509607b8caafda83c5a8461d99373273410b24ecbc6"
+  },
+  "refusals": {
+    "notObject": "not-object",
+    "schemaMajorMismatch": "schema-major-mismatch",
+    "invalidKind": "invalid-kind",
+    "missingField": "missing-field",
+    "unexpectedField": "unexpected-field",
+    "invalidField": "invalid-field",
+    "instanceCountBelowMinimum": "instance-count-below-minimum",
+    "duplicateInstanceId": "duplicate-instance-id",
+    "missingParentInstance": "missing-parent-instance",
+    "invalidSceneRoot": "invalid-scene-root",
+    "sceneHierarchyCycle": "scene-hierarchy-cycle",
+    "rotatedParentUnsupported": "rotated-parent-unsupported",
+    "sceneBudgetExceeded": "scene-budget-exceeded",
+    "unknownArtifactReference": "unknown-artifact-reference",
+    "unplacedArtifact": "unplaced-artifact",
+    "invalidArtifact": "invalid-artifact"
+  },
+  "claims": {
+    "stage1Run": false,
+    "minimumE2Expanded": false,
+    "rendererDecided": false,
+    "productionSpend": false,
+    "offlineAgentUsed": false
+  }
+}

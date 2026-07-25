@@ -5,6 +5,9 @@ import {
   validateSculptArtifact,
   type FrameClock,
   type SculptArtifact,
+  type SculptComponent,
+  type SculptHierarchyNode,
+  type SculptSocket,
   type SculptTransform,
   type Vector3,
 } from "@sceneaxi/schemas";
@@ -75,6 +78,19 @@ function finite(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
+/** Everything one sculpt simulation needs, independent of where it came from. */
+export type SculptSimulationInput = {
+  readonly nodes: readonly SculptHierarchyNode[];
+  readonly components: readonly SculptComponent[];
+  readonly sockets: readonly SculptSocket[];
+};
+
+export function normalizeSculptKernelOptions(
+  options: SculptKernelOptions,
+): Required<SculptKernelOptions> {
+  return normalizeOptions(options);
+}
+
 function normalizeOptions(options: SculptKernelOptions): Required<SculptKernelOptions> {
   const gravity = options.gravity ?? -9.8;
   const restitution = options.restitution ?? 0.5;
@@ -127,26 +143,29 @@ function digestSnapshot(value: Omit<SculptKernelSnapshot, "digest">) {
   return `sha256:${createHash("sha256").update(JSON.stringify(value)).digest("hex")}`;
 }
 
-function validateClock(clock: FrameClock, tick: number) {
+export function validateSculptClock(clock: FrameClock, tick: number) {
   if (clock === null || typeof clock !== "object") throw new KernelSessionError("sculpt advance frame clock is required");
   if (!Number.isInteger(clock.tick) || clock.tick <= tick) throw new KernelSessionError(`sculpt advance.tick must be an integer greater than current tick ${tick}`);
   if (!Number.isInteger(clock.deltaMs) || clock.deltaMs < 0) throw new KernelSessionError("sculpt advance.deltaMs must be a non-negative integer");
   return Object.freeze({ tick: clock.tick, deltaMs: clock.deltaMs });
 }
 
-class SculptSessionImpl implements SculptKernelSession {
-  private readonly artifact: SculptArtifact;
+/**
+ * Deterministic node simulation for exactly one sculpt. Scene sessions run one
+ * of these per placed instance rather than reimplementing the toy path.
+ */
+export class SculptNodeSimulation {
+  private readonly input: SculptSimulationInput;
   private readonly options: Required<SculptKernelOptions>;
   private readonly nodes: MutableNode[];
-  private readonly advances: FrameClock[] = [];
   private tick = 0;
   private elapsedMs = 0;
   private collisionCount = 0;
 
-  constructor(artifact: SculptArtifact, options: Required<SculptKernelOptions>) {
-    this.artifact = artifact;
+  constructor(input: SculptSimulationInput, options: Required<SculptKernelOptions>) {
+    this.input = input;
     this.options = options;
-    this.nodes = artifact.runtimeHierarchy.nodes.map((node) => {
+    this.nodes = input.nodes.map((node) => {
       const drift = node.parentId === null ? (seededUnit(options.seed, node.id) - 0.5) * 0.4 : 0;
       return {
         id: node.id,
@@ -158,10 +177,18 @@ class SculptSessionImpl implements SculptKernelSession {
     });
   }
 
+  get currentTick() {
+    return this.tick;
+  }
+
   advance(clock: FrameClock) {
-    const nextClock = validateClock(clock, this.tick);
+    this.applyClock(validateSculptClock(clock, this.tick));
+  }
+
+  /** Apply an already-validated clock; scene sessions validate once for all instances. */
+  applyClock(nextClock: FrameClock) {
     const seconds = nextClock.deltaMs / 1_000;
-    const components = new Map(this.artifact.spec.components.map((component) => [component.id, component]));
+    const components = new Map(this.input.components.map((component) => [component.id, component]));
     for (const node of this.nodes) {
       if (node.parentId !== null) continue;
       const component = components.get(node.componentId);
@@ -181,14 +208,13 @@ class SculptSessionImpl implements SculptKernelSession {
     }
     this.tick = nextClock.tick;
     this.elapsedMs += nextClock.deltaMs;
-    this.advances.push(nextClock);
   }
 
   observe(): SculptKernelSnapshot {
     const nodes = Object.freeze(this.nodes.map(snapshotNode).sort((left, right) => left.id.localeCompare(right.id)));
     const seconds = this.elapsedMs / 1_000;
     const sockets = Object.freeze(
-      this.artifact.spec.sockets
+      this.input.sockets
         .map((socket) => {
           const phase = seededUnit(this.options.seed, socket.id) * Math.PI * 2;
           const value = socket.kind === "animation"
@@ -207,6 +233,36 @@ class SculptSessionImpl implements SculptKernelSession {
       sockets,
     });
     return Object.freeze({ ...payload, digest: digestSnapshot(payload) });
+  }
+}
+
+class SculptSessionImpl implements SculptKernelSession {
+  private readonly artifact: SculptArtifact;
+  private readonly options: Required<SculptKernelOptions>;
+  private readonly simulation: SculptNodeSimulation;
+  private readonly advances: FrameClock[] = [];
+
+  constructor(artifact: SculptArtifact, options: Required<SculptKernelOptions>) {
+    this.artifact = artifact;
+    this.options = options;
+    this.simulation = new SculptNodeSimulation(
+      {
+        nodes: artifact.runtimeHierarchy.nodes,
+        components: artifact.spec.components,
+        sockets: artifact.spec.sockets,
+      },
+      options,
+    );
+  }
+
+  advance(clock: FrameClock) {
+    const nextClock = validateSculptClock(clock, this.simulation.currentTick);
+    this.simulation.applyClock(nextClock);
+    this.advances.push(nextClock);
+  }
+
+  observe(): SculptKernelSnapshot {
+    return this.simulation.observe();
   }
 
   save(): SculptKernelSaveArtifact {

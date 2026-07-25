@@ -13,6 +13,7 @@ import {
 } from "./sculpt-procedural.js";
 import {
   digestSculptJson,
+  exactContractFields,
   isDenseArray,
   sculptJsonEqual,
   snapshotSculptJson,
@@ -372,26 +373,7 @@ function exactFields(
   optional: readonly string[],
   path: string,
 ): SculptDiagnostic | null {
-  for (const field of required) {
-    if (!Object.hasOwn(value, field)) {
-      return {
-        code: "missing-field",
-        path: `${path}.${field}`,
-        message: `Missing required field "${field}".`,
-      };
-    }
-  }
-  const allowed = new Set([...required, ...optional]);
-  for (const field of Object.keys(value)) {
-    if (!allowed.has(field)) {
-      return {
-        code: "unexpected-field",
-        path: `${path}.${field}`,
-        message: `Unexpected field "${field}".`,
-      };
-    }
-  }
-  return null;
+  return exactContractFields(value, required, optional, path);
 }
 
 export function isSculptIdentifier(value: unknown): value is string {

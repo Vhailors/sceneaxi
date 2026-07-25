@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "kind": "sceneaxi.scene-composition-intake",
+  "sceneId": "workshop-bay",
+  "rootInstanceId": "bay-service-crate",
+  "placements": [
+    {
+      "instanceId": "bay-service-crate",
+      "artifactId": "service-crate-artifact",
+      "parentInstanceId": null,
+      "transform": {
+        "translation": [0, 0, 0],
+        "rotationEulerDegrees": [0, 0, 0],
+        "scale": [1, 1, 1]
+      }
+    },
+    {
+      "instanceId": "bay-stacked-crate",
+      "artifactId": "service-crate-artifact",
+      "parentInstanceId": "bay-service-crate",
+      "transform": {
+        "translation": [0, 1.5, 0],
+        "rotationEulerDegrees": [0, 0, 0],
+        "scale": [0.75, 0.75, 0.75]
+      }
+    },
+    {
+      "instanceId": "bay-field-drone",
+      "artifactId": "field-drone-artifact",
+      "parentInstanceId": "bay-stacked-crate",
+      "transform": {
+        "translation": [0.5, 2, -0.5],
+        "rotationEulerDegrees": [0, 30, 0],
+        "scale": [1, 1, 1]
+      }
+    }
+  ]
+}

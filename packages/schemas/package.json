@@ -6,6 +6,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./testing/scene-composition": "./src/testing/scene-composition.ts",
     "./contracts/catalog-item.schema.json": "./contracts/catalog-item.schema.json",
     "./contracts/catalog-metadata-unavailable-tombstone.schema.json": "./contracts/catalog-metadata-unavailable-tombstone.schema.json",
     "./contracts/delivery-handoff.schema.json": "./contracts/delivery-handoff.schema.json",
@@ -13,6 +14,7 @@
     "./contracts/sculpt-intake.schema.json": "./contracts/sculpt-intake.schema.json",
     "./contracts/object-sculpt-spec.schema.json": "./contracts/object-sculpt-spec.schema.json",
     "./contracts/sculpt-artifact.schema.json": "./contracts/sculpt-artifact.schema.json",
+    "./contracts/scene-composition.schema.json": "./contracts/scene-composition.schema.json",
     "./contracts/plugin-manifest.schema.json": "./contracts/plugin-manifest.schema.json",
     "./contracts/plugin-manifest.inert.example.json": "./contracts/plugin-manifest.inert.example.json",
     "./contracts/plugin-capability-registry.schema.json": "./contracts/plugin-capability-registry.schema.json",

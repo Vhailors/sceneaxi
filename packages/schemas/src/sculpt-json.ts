@@ -1,4 +1,4 @@
-import type { JsonValue } from "./document.js";
+import type { JsonObject, JsonValue } from "./document.js";
 
 const SHA256_INITIAL = new Uint32Array([
   0x6a09e667,
@@ -39,6 +39,42 @@ export function isDenseArray(value: readonly unknown[]) {
     if (!Object.hasOwn(value, index)) return false;
   }
   return true;
+}
+
+/** Field-set failure shared by every exact-envelope contract in this package. */
+export type ContractFieldFailure = {
+  readonly code: "missing-field" | "unexpected-field";
+  readonly path: string;
+  readonly message: string;
+};
+
+/** Refuse envelopes whose field set is not exactly required ∪ optional. */
+export function exactContractFields(
+  value: JsonObject,
+  required: readonly string[],
+  optional: readonly string[],
+  path: string,
+): ContractFieldFailure | null {
+  for (const field of required) {
+    if (!Object.hasOwn(value, field)) {
+      return {
+        code: "missing-field",
+        path: `${path}.${field}`,
+        message: `Missing required field "${field}".`,
+      };
+    }
+  }
+  const allowed = new Set([...required, ...optional]);
+  for (const field of Object.keys(value)) {
+    if (!allowed.has(field)) {
+      return {
+        code: "unexpected-field",
+        path: `${path}.${field}`,
+        message: `Unexpected field "${field}".`,
+      };
+    }
+  }
+  return null;
 }
 
 export function canonicalSculptJson(value: JsonValue): string {
