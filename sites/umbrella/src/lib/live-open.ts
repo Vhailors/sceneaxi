@@ -28,7 +28,7 @@ export const LIVE_OPEN_COPY = Object.freeze({
   lede:
     "This page reconstructs a committed Sculpt Artifact, places three instances of it through the scene-composition pipeline, and draws the result in your browser with the Three presentation core. Drag to orbit, scroll to zoom.",
   honesty:
-    "Every number below comes from the running presentation core, not from this page. A frame states which draw surface produced it, so a frame counter can never imply pixels that were never drawn.",
+    "The live frame report comes from the running presentation core, and the scene details below come from the composition pipeline; neither is page-authored. A frame states which draw surface produced it, so a frame counter can never imply pixels that were never drawn.",
 });
 
 /**

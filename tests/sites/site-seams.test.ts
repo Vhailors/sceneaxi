@@ -258,6 +258,16 @@ describe("live open copy stays honest about the presentation core", () => {
     expect(LIVE_OPEN_COPY.lede).toContain("Three presentation core");
   });
 
+  it("attributes runtime and scene evidence to their actual producers", () => {
+    expect(LIVE_OPEN_COPY.honesty).toContain(
+      "live frame report comes from the running presentation core",
+    );
+    expect(LIVE_OPEN_COPY.honesty).toContain(
+      "scene details below come from the composition pipeline",
+    );
+    expect(LIVE_OPEN_COPY.honesty).toContain("neither is page-authored");
+  });
+
   it.each(SITE_SOURCE_FILES)(
     "keeps the retired experimental framing out of %s",
     (relative) => {
