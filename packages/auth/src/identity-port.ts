@@ -357,6 +357,12 @@ export function createIdentityPort(
           `The stored user record is invalid (${storedUser.code}): ${storedUser.message}`,
         );
       }
+      if (storedUser.value.email.trim().toLowerCase() !== mapped.email) {
+        return authRefuse(
+          AUTH_REFUSE_REASONS.adapterUserMismatch,
+          "The identity provider's email does not match the stored SceneAxi user.",
+        );
+      }
       // The provider and the store must agree on identity, or the session would
       // be bound to a user the store never authorized.
       if (storedUser.value.userId !== mapped.providerUserId) {

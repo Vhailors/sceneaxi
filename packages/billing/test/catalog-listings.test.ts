@@ -10,6 +10,7 @@ import {
 import {
   BILLING_REFUSE_REASONS,
   appendCreditEntry,
+  assertCurrencyListed,
   createLedgerState,
   createListingCheckoutIntent,
   loadCatalogListings,
@@ -132,6 +133,15 @@ describe("catalog listing set", () => {
 
 describe("price-mode cross-field rule", () => {
   const base = listing("lantern-prop");
+
+  it("refuses an unrecognised payment method", () => {
+    const result = assertCurrencyListed(base, "barter" as never);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(
+      BILLING_REFUSE_REASONS.listingCurrencyNotListed,
+    );
+  });
 
   it("refuses a credits listing with no credit price", () => {
     const result = validateCatalogListing(

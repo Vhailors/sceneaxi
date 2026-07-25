@@ -475,6 +475,33 @@ describe("identity port — sign-in", () => {
     expect(result.reason).toBe(AUTH_REFUSE_REASONS.adapterUserMismatch);
   });
 
+  it("refuses when the stored email disagrees with the provider", async () => {
+    const baseStore = createInMemoryIdentityStore({ users: [CREW] });
+    let sessionWrites = 0;
+    const store: IdentityStore = Object.freeze({
+      findUserByEmail: () => ({ ...CAPTAIN, userId: "usr_crew" }),
+      findUserById: (userId) => baseStore.findUserById(userId),
+      putSession(session) {
+        sessionWrites += 1;
+        return baseStore.putSession(session);
+      },
+      findSession: (sessionId) => baseStore.findSession(sessionId),
+      deleteSession: (session) => baseStore.deleteSession(session),
+    });
+
+    const result = await makePort({}, store).signIn({
+      surface: "web-shell",
+      email: "crew@example.com",
+      password: "pw",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(AUTH_REFUSE_REASONS.adapterUserMismatch);
+    expect(sessionWrites).toBe(0);
+    expect(baseStore.sessionCount()).toBe(0);
+  });
+
   it("binds the provider response to the submitted email", async () => {
     const baseStore = createInMemoryIdentityStore({ users: [CAPTAIN, CREW] });
     let userLookups = 0;

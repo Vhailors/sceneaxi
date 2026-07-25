@@ -623,7 +623,7 @@ describe("sign out", () => {
     expect(store.sessionCount()).toBe(0);
   });
 
-  it("prevents a stale sign-in from restoring identity after sign-out", async () => {
+  it("serializes sign-out after an in-flight sign-in", async () => {
     let release!: () => void;
     const delayedAdapter: IdentityAdapter = Object.freeze({
       async authenticate(credentials) {
@@ -633,10 +633,11 @@ describe("sign out", () => {
         return ADAPTER.authenticate(credentials);
       },
     });
+    const store = createInMemoryIdentityStore({ users: [CREW] });
     const panel = makePanel({
       identityPort: createIdentityPort({
         adapter: delayedAdapter,
-        store: createInMemoryIdentityStore({ users: [CREW] }),
+        store,
         admin,
         clock,
       }),
@@ -647,16 +648,22 @@ describe("sign out", () => {
       password: "pw",
     });
     await Promise.resolve();
-    const signedOut = await panel.signOut();
-    expect(signedOut.phase).toBe("anonymous");
+    let signOutCompleted = false;
+    const signOut = panel.signOut().then((snapshot) => {
+      signOutCompleted = true;
+      return snapshot;
+    });
+    await Promise.resolve();
+    expect(signOutCompleted).toBe(false);
 
     release();
-    const stale = await pending;
-    expect(stale.phase).toBe("anonymous");
+    expect((await pending).phase).toBe("authenticated");
+    expect((await signOut).phase).toBe("anonymous");
     expect(panel.snapshot().phase).toBe("anonymous");
+    expect(store.sessionCount()).toBe(0);
   });
 
-  it("does not let stale ledger completion overwrite a completed sign-out", async () => {
+  it("serializes sign-out after sign-in ledger loading", async () => {
     let releaseLedger = () => {};
     let signalLedgerStarted = () => {};
     const ledgerStarted = new Promise<void>((resolve) => {
@@ -695,11 +702,73 @@ describe("sign out", () => {
       password: "pw",
     });
     await ledgerStarted;
-    expect((await panel.signOut()).phase).toBe("anonymous");
+    let signOutCompleted = false;
+    const signOut = panel.signOut().then((snapshot) => {
+      signOutCompleted = true;
+      return snapshot;
+    });
+    await Promise.resolve();
+    expect(signOutCompleted).toBe(false);
 
     releaseLedger();
-    expect((await pending).phase).toBe("anonymous");
+    expect((await pending).phase).toBe("authenticated");
+    expect((await signOut).phase).toBe("anonymous");
     expect(panel.snapshot().phase).toBe("anonymous");
     expect(signOutCalls).toBe(1);
+  });
+
+  it("serializes sign-out after an in-flight refresh", async () => {
+    let releaseRefresh = () => {};
+    let signalRefreshStarted = () => {};
+    const refreshStarted = new Promise<void>((resolve) => {
+      signalRefreshStarted = resolve;
+    });
+    let ledgerCalls = 0;
+    const store = createInMemoryIdentityStore({ users: [CREW] });
+    const panel = makePanel({
+      identityPort: createIdentityPort({
+        adapter: ADAPTER,
+        store,
+        admin,
+        clock,
+      }),
+      credits: Object.freeze({
+        async ledgerFor() {
+          ledgerCalls += 1;
+          if (ledgerCalls === 2) {
+            signalRefreshStarted();
+            await new Promise<void>((resolve) => {
+              releaseRefresh = resolve;
+            });
+          }
+          return ledgerFor("usr_crew", 250);
+        },
+      }),
+    });
+
+    expect(
+      (
+        await panel.submitCredentials({
+          email: "crew@example.com",
+          password: "pw",
+        })
+      ).phase,
+    ).toBe("authenticated");
+
+    const refresh = panel.refresh();
+    await refreshStarted;
+    let signOutCompleted = false;
+    const signOut = panel.signOut().then((snapshot) => {
+      signOutCompleted = true;
+      return snapshot;
+    });
+    await Promise.resolve();
+    expect(signOutCompleted).toBe(false);
+
+    releaseRefresh();
+    expect((await refresh).phase).toBe("authenticated");
+    expect((await signOut).phase).toBe("anonymous");
+    expect(panel.snapshot().phase).toBe("anonymous");
+    expect(store.sessionCount()).toBe(0);
   });
 });

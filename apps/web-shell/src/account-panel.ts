@@ -372,12 +372,7 @@ export function createAccountPanel(
 
   let heldPrincipal: Principal | undefined;
   const outstandingPrincipals = new Set<Principal>();
-  const principalRevocations = new Map<
-    Principal,
-    Promise<AccountPanelRefusal | undefined>
-  >();
-  let operationGeneration = 0;
-  let credentialSubmissionTail: Promise<void> = Promise.resolve();
+  let operationTail: Promise<void> = Promise.resolve();
 
   held = anonymous();
 
@@ -385,35 +380,21 @@ export function createAccountPanel(
     principal: Principal,
   ): Promise<AccountPanelRefusal | undefined> => {
     if (!outstandingPrincipals.has(principal)) return undefined;
-    const pending = principalRevocations.get(principal);
-    if (pending !== undefined) return pending;
-
-    const revocation = (async () => {
-      let result: AuthResult<null>;
-      try {
-        result = await identityPort.signOut({ principal });
-      } catch {
-        return refusal(
-          ACCOUNT_PANEL_REASONS.sessionRevocationFailed,
-          "A session could not be revoked and may still be live.",
-        );
-      }
-      if (!result.ok) {
-        return refusal(result.reason, result.message);
-      }
-      outstandingPrincipals.delete(principal);
-      if (heldPrincipal === principal) heldPrincipal = undefined;
-      return undefined;
-    })();
-    principalRevocations.set(principal, revocation);
-
+    let result: AuthResult<null>;
     try {
-      return await revocation;
-    } finally {
-      if (principalRevocations.get(principal) === revocation) {
-        principalRevocations.delete(principal);
-      }
+      result = await identityPort.signOut({ principal });
+    } catch {
+      return refusal(
+        ACCOUNT_PANEL_REASONS.sessionRevocationFailed,
+        "A session could not be revoked and may still be live.",
+      );
     }
+    if (!result.ok) {
+      return refusal(result.reason, result.message);
+    }
+    outstandingPrincipals.delete(principal);
+    if (heldPrincipal === principal) heldPrincipal = undefined;
+    return undefined;
   };
 
   const revokeAllExcept = async (
@@ -438,40 +419,23 @@ export function createAccountPanel(
     outstandingPrincipals.add(principal);
   };
 
-  const submitCredentials = async (request: unknown, generation: number) => {
+  const submitCredentials = async (request: unknown) => {
     let result: AuthResult<Principal>;
     try {
       result = await identityPort.signIn(request);
     } catch {
-      if (generation === operationGeneration) {
-        held = refused(
-          refusal(
-            ACCOUNT_PANEL_REASONS.identityPortFailed,
-            "The identity port failed during sign-in; the prior session remains tracked.",
-          ),
-        );
-      }
-      return held;
-    }
-    if (generation !== operationGeneration) {
-      if (result.ok) {
-        trackPrincipal(result.value);
-        await revokePrincipal(result.value);
-      }
+      held = refused(
+        refusal(
+          ACCOUNT_PANEL_REASONS.identityPortFailed,
+          "The identity port failed during sign-in; the prior session remains tracked.",
+        ),
+      );
       return held;
     }
     if (result.ok) {
       trackPrincipal(result.value);
       const next = await authenticated(result.value);
-      if (generation !== operationGeneration) {
-        await revokePrincipal(result.value);
-        return held;
-      }
       const failure = await revokeAllExcept(result.value);
-      if (generation !== operationGeneration) {
-        await revokePrincipal(result.value);
-        return held;
-      }
       heldPrincipal = result.value;
       held = failure === undefined ? next : refused(failure);
     } else {
@@ -480,29 +444,34 @@ export function createAccountPanel(
     return held;
   };
 
+  const serializeMutation = async (
+    mutation: () => Promise<AccountPanelSnapshot>,
+  ): Promise<AccountPanelSnapshot> => {
+    const precedingOperation = operationTail;
+    let releaseOperation = () => {};
+    operationTail = new Promise<void>((resolve) => {
+      releaseOperation = resolve;
+    });
+    await precedingOperation;
+    try {
+      return await mutation();
+    } finally {
+      releaseOperation();
+    }
+  };
+
   const panel: AccountPanel = Object.freeze({
     snapshot() {
       return held;
     },
 
     async submitCredentials(credentials) {
-      const generation = ++operationGeneration;
       const credentialRecord = snapshotPlainRecord(credentials);
       const request =
         credentialRecord === undefined
           ? credentials
           : { ...credentialRecord, surface };
-      const precedingSubmission = credentialSubmissionTail;
-      let releaseSubmission = () => {};
-      credentialSubmissionTail = new Promise<void>((resolve) => {
-        releaseSubmission = resolve;
-      });
-      await precedingSubmission;
-      try {
-        return await submitCredentials(request, generation);
-      } finally {
-        releaseSubmission();
-      }
+      return serializeMutation(() => submitCredentials(request));
     },
 
     /**
@@ -513,26 +482,26 @@ export function createAccountPanel(
      * and nothing else.
      */
     async refresh() {
-      const generation = ++operationGeneration;
-      const principal = heldPrincipal;
-      const next =
-        principal === undefined
-          ? anonymous()
-          : await authenticated(principal);
-      if (generation === operationGeneration) held = next;
-      return held;
+      return serializeMutation(async () => {
+        const principal = heldPrincipal;
+        held =
+          principal === undefined
+            ? anonymous()
+            : await authenticated(principal);
+        return held;
+      });
     },
 
     async signOut() {
-      const generation = ++operationGeneration;
-      const failure = await revokeAllExcept(undefined);
-      if (generation !== operationGeneration) return held;
-      if (failure !== undefined) {
-        held = refused(failure);
+      return serializeMutation(async () => {
+        const failure = await revokeAllExcept(undefined);
+        if (failure !== undefined) {
+          held = refused(failure);
+          return held;
+        }
+        held = anonymous();
         return held;
-      }
-      held = anonymous();
-      return held;
+      });
     },
   });
 

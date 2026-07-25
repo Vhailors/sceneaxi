@@ -130,6 +130,12 @@ export function assertCurrencyListed(
     );
   }
 
+  if (payWith !== "credits" && payWith !== "money") {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.listingCurrencyNotListed,
+      `Listing "${checked.listingId}" received an unrecognised payment method.`,
+    );
+  }
   if (payWith === "credits" && !priceModeIncludesCredits(checked.priceMode)) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.listingCurrencyNotListed,

@@ -18,6 +18,7 @@ import {
   appendCreditEntry,
   applyCheckoutCompletedGrant,
   applyCreditsSale,
+  assertCurrencyListed,
   assertModeAuthorized,
   createCheckoutSessionIntent,
   createInMemoryCreditStore,
@@ -301,6 +302,18 @@ describe("auth refuse matrix", () => {
           }),
         }),
       }).signIn(CREDENTIALS),
+    );
+    record(
+      await port(
+        {},
+        Object.freeze({
+          findUserByEmail: () => user("usr_crew", CAPTAIN_EMAIL),
+          findUserById: () => undefined,
+          putSession: () => undefined,
+          findSession: () => undefined,
+          deleteSession: () => true,
+        }),
+      ).signIn(CREDENTIALS),
     );
     record(await port({}, throwingStore).signIn(CREDENTIALS));
     record(
@@ -877,6 +890,7 @@ describe("billing refuse matrix", () => {
 
   it("reaches every listing refusal", () => {
     record(lookupCatalogListing({ listings: [] }, "lantern-prop"));
+    record(assertCurrencyListed(listing("lantern-prop"), "barter" as never));
     const loaded = loadCatalogListings();
     expect(loaded.ok).toBe(true);
     if (loaded.ok) record(lookupCatalogListing(loaded.value, "nope"));
