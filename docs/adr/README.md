@@ -54,3 +54,5 @@ naming its source.
 | [0011](0011-animation-ready-hierarchy-and-procedural-emit.md) | Sculpt-quality Artifact branches bind animation-ready hierarchy metadata and seeded procedural emit; preserved PR #75 branches do not |
 | [0012](0012-offline-agent-assistance-default-off.md) | Optional sculpt agent assistance is injected, offline, deterministic, and default-off |
 | [0013](0013-sculpt-quality-minimal-support-bound.md) | Sculpt-quality demos use existing Mount/kernel/Minimum E2 support without expansion |
+| [0014](0014-scene-composition-contract.md) | Scene composition is a SceneAxi-owned deterministic contract with axis-aligned placement and a fail-closed refuse matrix |
+| [0015](0015-scene-minimal-multi-object-open-path.md) | Scene composition adds one multi-object kernel session and no presentation adapter |

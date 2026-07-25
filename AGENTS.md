@@ -46,6 +46,8 @@ Delivery Handoff is the public, delivery-neutral export contract in `@sceneaxi/s
 
 Sculpt-quality ownership and compatibility are documented in `docs/sculpt-quality.md`: legacy PR #75 aggregate/result seams remain compatible, while strict multi-pass contracts and named refusals live on separate quality-specific paths.
 
+Scene composition (multiple Sculpt Artifacts into one openable scene) is documented in `docs/scene-composition.md` and ADRs 0014–0015. Contracts and placement math are `packages/schemas/src/scene-composition.ts` (`contracts/scene-composition.schema.json`); the pipeline is `composeScene()` in `packages/authoring-core`; the multi-object open path is `openSceneKernelSession()` in `packages/engine-kernel`. Placement is axis-aligned in v1 and is a projection — never rewrite a Sculpt Artifact to place it, since its evidence binds its exact spec bytes. Composition fails closed on the named refuse matrix; extend `tests/e2e/scene-composition-golden.test.ts` and its checked-in digests when touching any of it.
+
 First-class plugins follow `docs/plugins.md` and ADR 0005: manifests may claim
 only IDs from the versioned public capability registry; unknown IDs and
 isolation breaches refuse. Runtime API details live in

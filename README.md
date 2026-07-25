@@ -56,6 +56,14 @@ This is contract and demo evidence only: it adds no Minimum E2 checklist item,
 Stage 1 result, renderer decision, production physics, provider spend, or
 engine-readiness claim.
 
+[Scene composition v1](docs/scene-composition.md) composes several of those
+quality artifacts into one openable multi-object scene: a deterministic
+axis-aligned placement contract that fails closed on a named refuse matrix, a
+projection into the existing text-canonical document, and one multi-object kernel
+session. Its committed three-instance demo and digest ledger live under
+[`tests/e2e/fixtures/scene-composition/`](tests/e2e/fixtures/scene-composition/),
+and it adds no presentation adapter, checklist item, renderer decision, or spend.
+
 ## Development
 
 Install the pinned workspace toolchain with `pnpm install`, then run `pnpm gate`
@@ -64,14 +72,16 @@ checks. The root `package.json` owns the exact command sequence; the referenced
 TypeScript, Vitest, ESLint, boundary, and contract-checker configuration files own
 their respective contracts.
 
-Run `pnpm test:golden` for the scripted MVP path and both sculpt verticals. It
+Run `pnpm test:golden` for the scripted MVP path and every sculpt vertical. It
 covers Game profile selection through project creation, CLI propose/apply,
 kernel/presentation, sample-plugin load/refusal, replay, and held-key refusal;
-the hybrid sculpt path; and both fixed-seed sculpt-quality demos. Evidence is
-bound by `.sceneaxi/evidence/issue-51-cli-golden-path.json`,
-`.sceneaxi/evidence/issue-73-hybrid-sculpt-golden.json`, and
-`tests/e2e/fixtures/sculpt-quality/golden-digests.json`. `pnpm gate` runs the same
-e2e tests through the complete suite.
+the hybrid sculpt path; both fixed-seed sculpt-quality demos; and the
+multi-object scene composition demo. Evidence is bound by
+`.sceneaxi/evidence/issue-51-cli-golden-path.json`,
+`.sceneaxi/evidence/issue-73-hybrid-sculpt-golden.json`,
+`tests/e2e/fixtures/sculpt-quality/golden-digests.json`, and
+`tests/e2e/fixtures/scene-composition/golden-digests.json`. `pnpm gate` runs the
+same e2e tests through the complete suite.
 
 ## Status
 

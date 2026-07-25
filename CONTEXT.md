@@ -22,6 +22,16 @@ The quality contracts, accepted ledger, two committed demos, and stable evidence
 are indexed by
 [`docs/sculpt-quality.md`](docs/sculpt-quality.md).
 
+## Scene composition v1
+
+The multi-object path is:
+
+`N quality Sculpt Artifacts + one Scene Composition Intake → one ComposedScene → one text-canonical SceneDocument → existing Mount API + one multi-object kernel session`
+
+The scene contracts, axis-aligned placement rule, named refuse matrix, committed
+three-instance demo, and stable evidence are indexed by
+[`docs/scene-composition.md`](docs/scene-composition.md).
+
 ## Glossary
 
 - **Hybrid core** — the Godot-like engine/library core plus AI sculpt
@@ -70,6 +80,23 @@ are indexed by
 - **Minimal support decision** — both quality demos already traverse existing
   Mount, kernel, and Minimum E2 seams, so no checklist or engine adapter was
   added; see [ADR 0013](docs/adr/0013-sculpt-quality-minimal-support-bound.md).
+- **Scene Composition Intake** — versioned request that places at least two
+  Sculpt Artifacts relative to one another; its authoritative fields live in
+  [`scene-composition.schema.json`](packages/schemas/contracts/scene-composition.schema.json).
+- **ComposedScene** — the resolved, digest-bound multi-object result, ordered by
+  ascending depth then instance id and projected into the existing text-canonical
+  `SceneDocument` under the reserved `composedScene` data key. The composition
+  pipeline is
+  [`@sceneaxi/authoring-core`](packages/authoring-core/README.md#scene-composition-sceneaxi86).
+- **Scene placement** — the axis-aligned v1 rule composing a parent world
+  transform with an instance's local transform. Child offsets are scaled but
+  never rotated, so a rotating parent refuses instead of mis-nesting its
+  children; placement projects an instance into scene space and never rewrites
+  its artifact. See [ADR 0014](docs/adr/0014-scene-composition-contract.md).
+- **Scene kernel session** — the multi-object open path
+  (`openSceneKernelSession` / `replaySceneKernelSession`) that runs the existing
+  single-object simulation once per placed instance, bounded by
+  [ADR 0015](docs/adr/0015-scene-minimal-multi-object-open-path.md).
 
 This vertical is proof-oriented. It does not claim engine readiness,
 commercial validation, Kids safety, marketplace readiness, or Stage 1
