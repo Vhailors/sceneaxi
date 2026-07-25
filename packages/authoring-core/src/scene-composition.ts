@@ -52,12 +52,91 @@ export type SceneCompositionResult =
       readonly message: string;
     };
 
+type SceneCompositionOptionsCapture =
+  | {
+      readonly ok: true;
+      readonly value: SceneCompositionOptions;
+    }
+  | {
+      readonly ok: false;
+      readonly path: string;
+      readonly message: string;
+    };
+
 function refuse(
   code: SceneCompositionRefusalCode,
   path: string,
   message: string,
 ): SceneCompositionResult {
   return { ok: false, code, path, message };
+}
+
+function captureSceneCompositionOptions(
+  value: unknown,
+): SceneCompositionOptionsCapture {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return {
+      ok: false,
+      path: "$.options",
+      message: "Scene composition options must be an object.",
+    };
+  }
+
+  let documentIdDescriptor: PropertyDescriptor | undefined;
+  let titleDescriptor: PropertyDescriptor | undefined;
+  try {
+    documentIdDescriptor = Object.getOwnPropertyDescriptor(value, "documentId");
+    titleDescriptor = Object.getOwnPropertyDescriptor(value, "title");
+  } catch {
+    return {
+      ok: false,
+      path: "$.options",
+      message: "Scene composition options must expose stable data fields.",
+    };
+  }
+
+  if (
+    documentIdDescriptor !== undefined &&
+    !("value" in documentIdDescriptor)
+  ) {
+    return {
+      ok: false,
+      path: "$.options.documentId",
+      message: "Scene document id must be a stable data field.",
+    };
+  }
+  if (titleDescriptor !== undefined && !("value" in titleDescriptor)) {
+    return {
+      ok: false,
+      path: "$.options.title",
+      message: "Scene document title must be a stable data field.",
+    };
+  }
+
+  const documentId = documentIdDescriptor?.value as unknown;
+  const title = titleDescriptor?.value as unknown;
+  if (documentId !== undefined && !isSculptIdentifier(documentId)) {
+    return {
+      ok: false,
+      path: "$.options.documentId",
+      message: "Scene document id must be a lowercase slug.",
+    };
+  }
+  if (title !== undefined && typeof title !== "string") {
+    return {
+      ok: false,
+      path: "$.options.title",
+      message: "Scene document title must be a string.",
+    };
+  }
+
+  return {
+    ok: true,
+    value: Object.freeze({
+      ...(documentId === undefined ? {} : { documentId }),
+      ...(title === undefined ? {} : { title }),
+    }),
+  };
 }
 
 function remapComposedScenePath(
@@ -111,24 +190,18 @@ export function sceneDocumentFromComposedScene(
   scene: ComposedScene,
   options: SceneCompositionOptions = {},
 ): SceneDocument {
-  if (
-    options.documentId !== undefined &&
-    !isSculptIdentifier(options.documentId)
-  ) {
-    throw new TypeError("Scene document id must be a lowercase slug.");
-  }
-  if (options.title !== undefined && typeof options.title !== "string") {
-    throw new TypeError("Scene document title must be a string.");
-  }
+  const capturedOptions = captureSceneCompositionOptions(options);
+  if (!capturedOptions.ok) throw new TypeError(capturedOptions.message);
+  const normalizedOptions = capturedOptions.value;
   const base = {
-    id: options.documentId ?? `${scene.sceneId}-scene`,
+    id: normalizedOptions.documentId ?? `${scene.sceneId}-scene`,
     data: {
       [COMPOSED_SCENE_DOCUMENT_DATA_KEY]: scene as unknown as JsonValue,
     },
   } as const;
-  const document = options.title === undefined
+  const document = normalizedOptions.title === undefined
     ? createDocument(base)
-    : createDocument({ ...base, title: options.title });
+    : createDocument({ ...base, title: normalizedOptions.title });
   const validated = validateDocument(document);
   if (!validated.ok) {
     throw new TypeError(validated.message);
@@ -148,28 +221,20 @@ export function composeScene(
   artifactValues: readonly unknown[],
   options: SceneCompositionOptions = {},
 ): SceneCompositionResult {
-  if (options === null || typeof options !== "object" || Array.isArray(options)) {
+  const capturedOptions = captureSceneCompositionOptions(options);
+  if (!capturedOptions.ok) {
     return refuse(
       "invalid-field",
-      "$.options",
-      "Scene composition options must be an object.",
+      capturedOptions.path,
+      capturedOptions.message,
     );
   }
-  if (
-    options.documentId !== undefined &&
-    !isSculptIdentifier(options.documentId)
-  ) {
+  const normalizedOptions = capturedOptions.value;
+  if (!Array.isArray(artifactValues)) {
     return refuse(
-      "invalid-field",
-      "$.options.documentId",
-      "Scene document id must be a lowercase slug.",
-    );
-  }
-  if (options.title !== undefined && typeof options.title !== "string") {
-    return refuse(
-      "invalid-field",
-      "$.options.title",
-      "Scene document title must be a string.",
+      "invalid-artifact",
+      "$.artifacts",
+      "Sculpt Artifacts must be supplied as an array.",
     );
   }
   const intake = validateSceneCompositionIntake(intakeValue);
@@ -289,6 +354,6 @@ export function composeScene(
     scene: validated.value,
     sceneBytes: serializeComposedScene(validated.value),
     sceneDigest: validated.value.evidence.sceneDigest,
-    document: sceneDocumentFromComposedScene(validated.value, options),
+    document: sceneDocumentFromComposedScene(validated.value, normalizedOptions),
   };
 }

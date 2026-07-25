@@ -4,6 +4,7 @@ import {
   sceneDocumentFromComposedScene,
   serializeComposedScene,
   validateDocument,
+  type SceneCompositionOptions,
   type SceneCompositionRefusalCode,
   type SceneCompositionResult,
 } from "@sceneaxi/authoring-core";
@@ -246,6 +247,44 @@ describe("scene composition pipeline", () => {
       code: "unknown-artifact-reference",
       path: "$.artifacts[2].artifactId",
     });
+  });
+
+  it("refuses invalid artifact containers without throwing", () => {
+    expect(
+      refusal(
+        composeScene(
+          intakeFixture(),
+          undefined as unknown as readonly unknown[],
+        ),
+        "missing artifact container",
+      ),
+    ).toEqual({
+      code: "invalid-artifact",
+      path: "$.artifacts",
+    });
+  });
+
+  it("refuses accessor-backed options without reading them", () => {
+    let reads = 0;
+    const options: SceneCompositionOptions = {};
+    Object.defineProperty(options, "title", {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return "Changed title";
+      },
+    });
+
+    expect(
+      refusal(
+        composeScene(intakeFixture(), artifacts, options),
+        "accessor-backed options",
+      ),
+    ).toEqual({
+      code: "invalid-field",
+      path: "$.options.title",
+    });
+    expect(reads).toBe(0);
   });
 
   it("projects the scene into a text-canonical SceneDocument", () => {
