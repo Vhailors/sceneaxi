@@ -56,9 +56,15 @@ importers:
 
   apps/web-shell:
     dependencies:
+      '@sceneaxi/auth':
+        specifier: workspace:^
+        version: link:../../packages/auth
       '@sceneaxi/authoring-core':
         specifier: workspace:^
         version: link:../../packages/authoring-core
+      '@sceneaxi/billing':
+        specifier: workspace:^
+        version: link:../../packages/billing
       '@sceneaxi/schemas':
         specifier: workspace:^
         version: link:../../packages/schemas

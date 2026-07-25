@@ -99,7 +99,12 @@
     "@sceneaxi/web-shell": {
       "dir": "apps/web-shell",
       "releaseGroup": "apps",
-      "allow": ["@sceneaxi/schemas", "@sceneaxi/authoring-core"]
+      "allow": [
+        "@sceneaxi/schemas",
+        "@sceneaxi/authoring-core",
+        "@sceneaxi/auth",
+        "@sceneaxi/billing"
+      ]
     },
     "@sceneaxi/desktop-shell": {
       "dir": "apps/desktop-shell",
