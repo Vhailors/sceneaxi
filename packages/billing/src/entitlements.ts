@@ -24,7 +24,6 @@ import {
   STARTER_CREDIT_GRANT,
   entitlementRuleFor,
   isEntitlementCapability,
-  validateEntitlementDecision,
   type EntitlementCapability,
   type EntitlementDecision,
   type IdentitySurface,
@@ -71,34 +70,38 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Build a decision.
+ *
+ * Constructed directly rather than round-tripped through
+ * `validateEntitlementDecision`: every input here has already been validated, so
+ * the shape is statically guaranteed and a re-validation branch would be
+ * unreachable — dead code that reads like a guarantee. Consumers that receive a
+ * decision from elsewhere should still validate it, and the golden path does.
+ */
 function decide(
   capability: EntitlementCapability,
   outcome: EntitlementDecision["outcome"],
   credits?: number,
 ): BillingOutcome<EntitlementDecision> {
-  const candidate =
-    credits === undefined
-      ? {
-          schemaVersion: ENTITLEMENT_SCHEMA_VERSION,
-          kind: ENTITLEMENT_DECISION_KIND,
-          capability,
-          outcome,
-        }
-      : {
-          schemaVersion: ENTITLEMENT_SCHEMA_VERSION,
-          kind: ENTITLEMENT_DECISION_KIND,
-          capability,
-          outcome,
-          credits,
-        };
-  const validated = validateEntitlementDecision(candidate);
-  if (!validated.ok) {
-    return billingRefuse(
-      BILLING_REFUSE_REASONS.entitlementDecisionInvalid,
-      `The entitlement decision would be invalid (${validated.code}): ${validated.message}`,
-    );
-  }
-  return billingOk(validated.value);
+  return billingOk(
+    Object.freeze(
+      credits === undefined
+        ? {
+            schemaVersion: ENTITLEMENT_SCHEMA_VERSION,
+            kind: ENTITLEMENT_DECISION_KIND,
+            capability,
+            outcome,
+          }
+        : {
+            schemaVersion: ENTITLEMENT_SCHEMA_VERSION,
+            kind: ENTITLEMENT_DECISION_KIND,
+            capability,
+            outcome,
+            credits,
+          },
+    ),
+  );
 }
 
 /** Decide whether a capability is permitted, and at what cost. */

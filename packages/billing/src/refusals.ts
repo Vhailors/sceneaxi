@@ -24,10 +24,8 @@ export const BILLING_REFUSE_REASONS = Object.freeze({
   clockInvalid: "CREDIT_CLOCK_INVALID",
 
   // --- accounts and metering ---
-  accountUnknown: "CREDIT_ACCOUNT_UNKNOWN",
   accountNotOwned: "CREDIT_ACCOUNT_NOT_OWNED",
   amountInvalid: "CREDIT_AMOUNT_INVALID",
-  storeFailed: "CREDIT_STORE_FAILED",
 
   // --- credit packs and checkout ---
   catalogInvalid: "BILLING_CATALOG_INVALID",
@@ -54,7 +52,6 @@ export const BILLING_REFUSE_REASONS = Object.freeze({
   accountRequired: "ENTITLEMENT_ACCOUNT_REQUIRED",
   paymentMethodRequired: "ENTITLEMENT_PAYMENT_METHOD_REQUIRED",
   creditAmountRequired: "ENTITLEMENT_CREDIT_AMOUNT_REQUIRED",
-  entitlementDecisionInvalid: "ENTITLEMENT_DECISION_INVALID",
   kidsCommerceDenied: "KIDS_COMMERCE_DENIED",
 
   // --- catalog listings ---
