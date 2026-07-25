@@ -41,14 +41,16 @@ Per project, in Vercel:
 | Install command | `cd ../.. && pnpm install --frozen-lockfile --ignore-scripts && cd <site dir> && pnpm install --frozen-lockfile` |
 | Build command | `pnpm run build` (the umbrella's `prebuild` also generates the SDK archive) |
 
-The install command provisions **both** roots, and it has to. A site installs
-`@sceneaxi/site-kit` through a `link:` specifier, but `site-kit`'s own dependencies
-(`@sceneaxi/schemas`, `@sceneaxi/authoring-core`) are workspace packages resolved from
-the repository root's `node_modules`. Installing only the site directory builds
-successfully on a developer machine that already has a root install and then fails on a
-clean Vercel builder with `Can't resolve '@sceneaxi/schemas'`. Root Directory must be set
-on the project so the whole repository uploads; a CLI deploy from inside the site
-directory uploads that directory alone and cannot work.
+The install command provisions **both** roots, and it has to. Each site is the sole
+member of its own pnpm workspace (`packages: ["."]`), not a member of the repository-root
+workspace. A site installs `@sceneaxi/site-kit` through a `link:` specifier, but
+`site-kit`'s own dependencies (`@sceneaxi/schemas`, `@sceneaxi/authoring-core`) are
+workspace packages resolved from the repository root's `node_modules`. Installing only
+the site directory builds successfully on a developer machine that already has a root
+install and then fails on a clean Vercel builder with `Can't resolve
+'@sceneaxi/schemas'`. Root Directory must be set on the project so the whole repository
+uploads; a CLI deploy from inside the site directory uploads that directory alone and
+cannot work.
 
 ## Environment variables
 
@@ -68,7 +70,8 @@ set them *before* deploying and redeploy after changing one.
 | `NEXT_PUBLIC_SCENEAXI_WEB_CATALOG_ORIGIN` | umbrella | this ship | optional | family cross-link |
 | `SCENEAXI_SITE_EDITOR_PREVIEW` | umbrella | captain | optional | `1` grants a banner-marked editor preview before the identity plane lands; absent means the editor refuses. Server-side only; a client value is ignored |
 
-Each site's `.env.example` lists exactly the names it reads, commented, with no values.
+Each site's `.env.example` lists only names assigned to that Vercel project, including
+the future identity-plane plug point names, and commits no values.
 
 ### Neon
 
@@ -177,7 +180,7 @@ catalog lookup, and deep links and are not identity surfaces.
 
 ## Outstanding captain secrets
 
-Everything free is live now. Two captain-held secrets are still absent, and were not
+Everything free is live now. Three captain-held secrets are still absent, and were not
 invented or faked:
 
 | Variable | Blocks | Why it is not set |

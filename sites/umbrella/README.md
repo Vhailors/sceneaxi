@@ -17,9 +17,10 @@ one wiring module.
 
 ## Separate install root
 
-This site is **not** a `pnpm-workspace` member. It keeps its own lockfile so the
-hermetic root install, root lockfile, `tsc --build` graph, and gate runtime stay
-untouched. `@sceneaxi/site-kit` is consumed with a `link:` specifier and transpiled
+This site is the sole member of its own pnpm workspace, not a member of the
+repository-root workspace. It keeps its own lockfile so the hermetic root install,
+root lockfile, `tsc --build` graph, and gate runtime stay untouched by site framework
+dependencies. `@sceneaxi/site-kit` is consumed with a `link:` specifier and transpiled
 by Next, because SceneAxi package exports are source-backed.
 
     pnpm install      # from this directory

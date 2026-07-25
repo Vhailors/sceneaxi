@@ -27,7 +27,8 @@ remain open. Prices and the creator share are displayed; purchase and publish re
 
 ## Separate install root
 
-Not a `pnpm-workspace` member; keeps its own lockfile.
+The sole member of its own pnpm workspace, not a member of the repository-root
+workspace; keeps its own lockfile.
 
     pnpm install      # from this directory
     pnpm dev

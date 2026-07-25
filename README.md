@@ -19,9 +19,10 @@ This monorepo is the packaging home for:
 
 **Not in this monorepo:** individual game products (separate repos).
 
-The `sites/` tier is deliberately outside the hermetic workspace: each site is its own
-install root with its own lockfile, so a web-framework dependency never moves the root
-lockfile or the gate runtime. The tier is still gated — `pnpm check:syntax`,
+The `sites/` tier is deliberately outside the hermetic root workspace: each site is its
+own single-package pnpm workspace and install root with its own lockfile, so a
+web-framework dependency never moves the root lockfile or the gate runtime. The tier is
+still gated — `pnpm check:syntax`,
 `pnpm check:boundaries`, and `pnpm check:sites` all cover it, and all site logic lives in
 `packages/site-kit` where `pnpm gate` tests it.
 
@@ -80,10 +81,10 @@ and it adds no presentation adapter, checklist item, renderer decision, or spend
 ## Development
 
 Install the pinned workspace toolchain with `pnpm install`, then run `pnpm gate`
-for the repository's required syntax, boundary, contract, build, test, and lint
-checks. The root `package.json` owns the exact command sequence; the referenced
-TypeScript, Vitest, ESLint, boundary, and contract-checker configuration files own
-their respective contracts.
+for the repository's required syntax, boundary, contract, site-structure, build, test,
+and lint checks. The root `package.json` owns the exact command sequence; the referenced
+TypeScript, Vitest, ESLint, boundary, contract, and site-checker configuration files
+own their respective contracts.
 
 After building, start the two terminal surfaces from the repository root:
 
@@ -105,11 +106,13 @@ typed public seams for every package and app, and initial contract/tracer
 implementations for authoring, the CLI, the Game Kernel, Game profile conformance,
 the Web Experience and Kids policy stubs, the public Delivery Handoff, a
 startable desktop protocol shell, the library-only web shell, the Plugin Host,
-and dormant catalogs. This remains
-proof-oriented work, not a claim that the engine, profiles, or applications are
-production-ready. Proof execution, spend, account creation, publication, and
-other external actions remain subject to the separated authorities in
-`docs/bootstrap.md`.
+dormant app-tier catalogs, and the gate-tested `site-kit` logic behind the three
+deployable sites. The engine, profiles, and dormant apps remain proof-oriented; the
+three first-party sites have the bounded, fail-closed deployment status recorded in
+[`docs/websites-deploy.md`](docs/websites-deploy.md). This is not a claim that the
+engine, profiles, or applications are production-ready. Proof execution, spend,
+account creation, publication, and other external actions remain subject to the
+separated authorities in `docs/bootstrap.md`.
 
 Main landed the bootstrap tree at commit `f0a5b90` (independent non-Claude **v4
 review PASS**, 2026-07-21) under the separated bootstrap authorities in

@@ -2,10 +2,10 @@
  * Seam and configuration tests for the three deployable sites.
  *
  * These live under `tests/` rather than each site's own `test/` because the sites are
- * separate install roots, not `pnpm-workspace` members, so `@sceneaxi/site-umbrella`
- * is not resolvable by public package name from the hermetic root. The seams are
- * imported by path instead; the rule they satisfy — every unit exports a frozen typed
- * seam with a covering test — is unchanged.
+ * separate single-package workspaces outside the repository-root workspace, so
+ * `@sceneaxi/site-umbrella` is not resolvable by public package name from the hermetic
+ * root. The seams are imported by path instead; the rule they satisfy — every unit
+ * exports a frozen typed seam with a covering test — is unchanged.
  */
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -190,6 +190,16 @@ describe("the sites tier keeps the hermetic root hermetic", () => {
     expect(workspace).toContain("packages/*");
     expect(workspace).toContain("apps/*");
     expect(/^\s*-\s*["']?sites\//m.test(workspace)).toBe(false);
+  });
+
+  it("makes each site a valid standalone pnpm workspace rooted at itself", () => {
+    for (const dir of ["umbrella", "catalog-game", "catalog-web"]) {
+      const workspace = readFileSync(
+        new URL(`../../sites/${dir}/pnpm-workspace.yaml`, import.meta.url),
+        "utf8",
+      );
+      expect(workspace).toMatch(/^packages:\s*\n\s*-\s*["']?\.["']?\s*$/m);
+    }
   });
 
   it("gives every site a link: dependency on site-kit rather than a workspace: one", () => {

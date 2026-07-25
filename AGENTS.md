@@ -71,9 +71,10 @@ Scene composition (multiple Sculpt Artifacts into one openable scene) is documen
 Deployable web surfaces live in a `sites/` tier (ADR 0017): `sites/umbrella`,
 `sites/catalog-game`, `sites/catalog-web`, all thin view layers over
 `packages/site-kit`, which owns every non-presentational behaviour and is where the gate
-tests it. Each site is its **own install root with its own lockfile and is not a
-pnpm-workspace member**, so a web-framework dependency never moves the hermetic root
-lockfile or the gate runtime; `next`/`react`/provider SDKs belong in `sites/` only.
+tests it. Each site is its **own single-package pnpm workspace and install root with its
+own lockfile, outside the repository-root workspace**, so a web-framework dependency
+never moves the hermetic root lockfile or the gate runtime; `next`/`react`/provider SDKs
+belong in `sites/` only.
 `pnpm check:syntax`, `pnpm check:boundaries`, and `pnpm check:sites` all cover the tier —
 extend `tests/boundary/injected-site-violations.test.ts` when you extend any of them. Only
 `sites/*/src/app/**` may import React or Next; `src/index.ts` and `src/lib/**` stay pure

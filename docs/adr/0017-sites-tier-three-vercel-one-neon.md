@@ -32,11 +32,12 @@ apps: `sites/umbrella`, `sites/catalog-game`, `sites/catalog-web`. They deploy a
 **three Vercel projects on one team**, on `*.vercel.app` hostnames only, sharing
 **one Neon database** for the identity/billing plane and catalog read models.
 
-Each site is **its own install root with its own lockfile, and deliberately not a
-`pnpm-workspace` member**, so the hermetic root install, the root lockfile, the
-`tsc --build` graph, and the gate runtime are untouched. A site consumes
-`@sceneaxi/site-kit` through a `link:` specifier and Next `transpilePackages`, because
-SceneAxi package exports are source-backed.
+Each site is **its own single-package pnpm workspace and install root with its own
+lockfile, and deliberately not a member of the repository-root workspace**, so the
+hermetic root install, the root lockfile, the `tsc --build` graph, and the gate runtime
+are untouched by site framework dependencies. Each site's `pnpm-workspace.yaml` lists
+only `"."`. A site consumes `@sceneaxi/site-kit` through a `link:` specifier and Next
+`transpilePackages`, because SceneAxi package exports are source-backed.
 
 The tier is still gated, and the gate gets stronger:
 
@@ -73,8 +74,8 @@ site behaviour is testable in `pnpm gate` with no browser and no network.
   origins into one surface, against the locked topology.
 - **Three isolated Neon databases** — splits one product identity and billing plane
   into three for no benefit this wave.
-- **Making `sites/*` pnpm-workspace members** — pulls a web framework into the
-  hermetic root lockfile and gate, disturbing every other lane.
+- **Adding `sites/*` to the repository-root pnpm workspace** — pulls a web framework
+  into the hermetic root lockfile and gate, disturbing every other lane.
 - **Putting site logic in the site apps** — leaves behaviour untested by the gate,
   since the sites are outside the hermetic build.
 - **Leaving `sites/` outside `check:syntax` / `check:boundaries`** — silently narrows

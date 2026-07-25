@@ -2,11 +2,12 @@
 /**
  * Sites check — structural gate for the `sites/` tier.
  *
- * The three deployable sites are separate install roots with their own lockfiles,
- * deliberately **not** `pnpm-workspace` members, so the hermetic root install, root
- * lockfile, `tsc --build` graph, and gate runtime stay untouched and no other lane's
- * `pnpm install --frozen-lockfile` moves. That isolation is exactly what this check
- * protects — plus the rule that no secret value is ever committed.
+ * The three deployable sites are separate single-package pnpm workspaces and install
+ * roots with their own lockfiles, deliberately outside the repository-root workspace,
+ * so the hermetic root install, root lockfile, `tsc --build` graph, and gate runtime
+ * stay untouched and no other lane's `pnpm install --frozen-lockfile` moves. That
+ * isolation is exactly what this check protects — plus the rule that no secret value
+ * is ever committed.
  *
  * Fail-closed: an empty `sites/` tree, a missing required file, a site that is not
  * matrix-listed, a framework dependency leaking into the hermetic root, or any
