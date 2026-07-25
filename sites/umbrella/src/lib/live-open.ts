@@ -1,5 +1,5 @@
 /**
- * The umbrella's public live open path (ADR 0021).
+ * The umbrella's public live open path (ADR 0022).
  *
  * The site owns the viewport; `@sceneaxi/site-kit` owns what is opened. This module is
  * the join: it resolves the served scene and the honest presentation copy the page

@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 };
 
 /**
- * The public live open path (ADR 0021).
+ * The public live open path (ADR 0022).
  *
  * The server resolves the scene — a committed fixture reconstructed and placed by the
  * scene-composition pipeline — and hands it to the client viewport as contract data.
