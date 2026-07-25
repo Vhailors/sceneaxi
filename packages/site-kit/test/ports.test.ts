@@ -110,6 +110,19 @@ describe("identity plane — fail closed", () => {
     expect(adapter.calls).toBe(0);
   });
 
+  it.each(["role=admin", "email=a%40b.c&role=admin", "opaque-token"])(
+    "refuses raw credential string %s before adapter dispatch",
+    async (credentials) => {
+      const adapter = adapterReturning(principal());
+      const result = await createIdentityPlane({ adapter, now }).resolvePrincipal({
+        surface: "umbrella",
+        credentials,
+      });
+      expect(result).toMatchObject({ ok: false, reason: "SITE_REQUEST_MALFORMED" });
+      expect(adapter.calls).toBe(0);
+    },
+  );
+
   it("finds role claims encoded as serialized JSON before adapter dispatch", async () => {
     const adapter = adapterReturning(principal());
     const credentials = JSON.stringify({ profile: { role: "admin" } });

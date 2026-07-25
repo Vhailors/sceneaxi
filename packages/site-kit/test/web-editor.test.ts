@@ -1,9 +1,10 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   WEB_EDITOR_SESSION_OPERATIONS,
+  WEB_EDITOR_DOCUMENT_PATH,
   WebEditorError,
   type WebEditorSession,
   createWebEditorSession,
@@ -329,6 +330,24 @@ describe("workspace confinement", () => {
     });
     expect(created.ok).toBe(true);
     if (created.ok) created.value.dispose();
+  });
+
+  it("refuses a document symlink that resolves outside the workspace", () => {
+    const outside = workspace();
+    const seeded = createWebEditorSession({ workspaceRoot: outside, backend: "null" });
+    expect(seeded.ok).toBe(true);
+    if (!seeded.ok) return;
+    seeded.value.dispose();
+
+    const root = workspace();
+    symlinkSync(
+      join(outside, WEB_EDITOR_DOCUMENT_PATH),
+      join(root, WEB_EDITOR_DOCUMENT_PATH),
+    );
+    expect(createWebEditorSession({ workspaceRoot: root, backend: "null" })).toMatchObject({
+      ok: false,
+      reason: "EDITOR_WORKSPACE_ESCAPE",
+    });
   });
 });
 

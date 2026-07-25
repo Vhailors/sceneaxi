@@ -200,6 +200,27 @@ describe("sites tier — injected violations", () => {
     expect(res.stderr).toContain("secrets are env-only, never committed");
   });
 
+  it("sites check rejects a committed fallback after an env reference", () => {
+    writeTo(
+      fx,
+      "sites/umbrella/src/lib/leak.ts",
+      'const SCENEAXI_ADMIN_BOOTSTRAP_SECRET = process.env.ADMIN_SECRET ?? "committed-fallback";\n',
+    );
+    const res = runCheck(fx, "check-sites.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("secrets are env-only, never committed");
+  });
+
+  it("sites check accepts a complete direct env reference", () => {
+    writeTo(
+      fx,
+      "sites/umbrella/src/lib/env.ts",
+      "const DATABASE_URL = process.env.DATABASE_URL;\nexport default DATABASE_URL;\n",
+    );
+    const res = runCheck(fx, "check-sites.mjs");
+    expect(res.status).toBe(0);
+  });
+
   it("sites check fails on an empty sites tree", () => {
     for (const dir of ["umbrella", "catalog-game", "catalog-web"]) {
       rmSync(join(fx, "sites", dir), { recursive: true, force: true });

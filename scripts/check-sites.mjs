@@ -81,14 +81,24 @@ const walk = (dir, out = []) => {
 
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
 
+const ENV_REFERENCE_SOURCE =
+  String.raw`(?:process\.env|env|environment)(?:\.[A-Za-z_$][\w$]*|\[(?:"[^"\r\n]+"|'[^'\r\n]+')\])`;
+const DIRECT_ENV_REFERENCE = new RegExp(`^${ENV_REFERENCE_SOURCE}$`);
+const DIRECT_ENV_TRAILING_SYNTAX =
+  /^\s*[\])}]*\s*[,;]?\s*(?:(?:\/\/|#).*)?$/;
+
 const assignsSecretValue = (text, name) => {
   const assignment = new RegExp(
-    `(?:"${name}"|'${name}'|\`${name}\`|\\b${name}\\b)\\s*(?::|=(?!=))\\s*("([^"\\n]+)"|'([^'\\n]+)'|\`([^\`\\n]+)\`|([^\\s#,;\\]}]+))`,
+    `(?:"${name}"|'${name}'|\`${name}\`|\\b${name}\\b)\\s*(?::|=(?!=))\\s*(${ENV_REFERENCE_SOURCE}|"[^"\\n]+"|'[^'\\n]+'|\`[^\`\\n]+\`|[^\\s#,;\\]}]+)`,
     "g",
   );
   for (const match of text.matchAll(assignment)) {
-    const value = match[2] ?? match[3] ?? match[4] ?? match[5] ?? "";
-    if (!/^(?:process\.env|env|environment)(?:\.|\[)/.test(value)) return true;
+    const value = match[1] ?? "";
+    if (!DIRECT_ENV_REFERENCE.test(value)) return true;
+    const trailing = text
+      .slice((match.index ?? 0) + match[0].length)
+      .split(/\r?\n/, 1)[0];
+    if (!DIRECT_ENV_TRAILING_SYNTAX.test(trailing)) return true;
   }
   return false;
 };

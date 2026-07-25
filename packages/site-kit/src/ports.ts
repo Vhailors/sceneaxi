@@ -219,6 +219,24 @@ function inspectClientPayload(payload: unknown): ClientPayloadInspection {
   return "safe";
 }
 
+function inspectCredentialsPayload(payload: unknown): ClientPayloadInspection {
+  if (payload === undefined || payload === null) return "safe";
+  if (typeof payload === "string") {
+    const trimmed = payload.trim();
+    if (
+      !(
+        (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+        (trimmed.startsWith("[") && trimmed.endsWith("]"))
+      )
+    ) {
+      return "malformed";
+    }
+  } else if (typeof payload !== "object") {
+    return "malformed";
+  }
+  return inspectClientPayload(payload);
+}
+
 /**
  * Whether a payload carries a client-supplied role claim, at any depth.
  *
@@ -262,6 +280,11 @@ function validateIdentityRequest(request: unknown): SiteRefusal | null {
   const inspection = inspectClientPayload(request);
   if (inspection === "role-claim") return refuse("ROLE_CLAIM_FROM_CLIENT_DENIED");
   if (inspection === "malformed") return refuse("SITE_REQUEST_MALFORMED");
+  const credentialsInspection = inspectCredentialsPayload(request["credentials"]);
+  if (credentialsInspection === "role-claim") {
+    return refuse("ROLE_CLAIM_FROM_CLIENT_DENIED");
+  }
+  if (credentialsInspection === "malformed") return refuse("SITE_REQUEST_MALFORMED");
   return null;
 }
 

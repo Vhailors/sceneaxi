@@ -24,6 +24,7 @@ import {
   type MinimumE2SaveResult,
   type MinimumE2Snapshot,
   type SceneCompositionResult,
+  canonicalPath,
   composeScene,
   createMinimumE2Editor,
   parseDocumentText,
@@ -154,6 +155,11 @@ function confinedDocumentPath(
   return ok(documentPath);
 }
 
+function isPathInside(root: string, target: string): boolean {
+  const rel = relative(root, target);
+  return rel !== "" && rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
+}
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
@@ -207,20 +213,25 @@ export function createWebEditorSession(
 
   const workspaceRoot = resolve(options.workspaceRoot);
   mkdirSync(workspaceRoot, { recursive: true });
+  const canonicalWorkspaceRoot = canonicalPath(workspaceRoot);
+  const documentFile = canonicalPath(resolve(canonicalWorkspaceRoot, confined.value));
+  if (!isPathInside(canonicalWorkspaceRoot, documentFile)) {
+    return refuse("EDITOR_WORKSPACE_ESCAPE");
+  }
 
   // Minimum E2 `save()` proposes an edit against an existing text-canonical
   // document, so an empty session needs one seeded before it can ever save.
-  if (!existsSync(resolve(workspaceRoot, confined.value))) {
+  if (!existsSync(documentFile)) {
     const seeded = writeDocumentFile(
       confined.value,
       createDocument({ id: options.sceneId ?? DEFAULT_SCENE_ID, data: {} }),
-      { cwd: workspaceRoot },
+      { cwd: canonicalWorkspaceRoot },
     );
     if (!seeded.ok) return refuse("EDITOR_WORKSPACE_INVALID");
   }
 
   const editor: MinimumE2Editor = createMinimumE2Editor({
-    cwd: workspaceRoot,
+    cwd: canonicalWorkspaceRoot,
     documentPath: confined.value,
     ...(options.backend === undefined ? {} : { backend: options.backend }),
     ...(options.seed === undefined ? {} : { seed: options.seed }),
@@ -292,7 +303,7 @@ export function createWebEditorSession(
     },
     load() {
       live();
-      const loadedMounts = readPersistedMounts(resolve(workspaceRoot, confined.value));
+      const loadedMounts = readPersistedMounts(documentFile);
       const result = editor.load();
       if (result.ok) {
         mounts.clear();
