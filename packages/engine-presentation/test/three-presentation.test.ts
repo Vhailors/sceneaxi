@@ -256,6 +256,19 @@ describe("Three presentation core — sculpt backend", () => {
     );
   });
 
+  it("refuses a degenerate perspective field of view", () => {
+    expect(() =>
+      createThreeSculptPresentationBackend({
+        camera: { fovDegrees: 180 },
+      }),
+    ).toThrow(
+      new ThreePresentationError(
+        "invalid-camera",
+        "fovDegrees must be smaller than 180.",
+      ),
+    );
+  });
+
   it("refuses an invalid canvas and an invalid viewport", () => {
     expect(() => createThreeSculptPresentationBackend({ canvas: null as never })).toThrow(
       ThreePresentationError,
@@ -553,6 +566,54 @@ describe("Three render loop", () => {
     expect(host.tick(16)).toBe(true);
     expect(loop.running()).toBe(true);
     loop.stop();
+  });
+
+  it("keeps one scheduled frame when restarted inside a callback", () => {
+    const host = fakeScheduler();
+    let restart = true;
+    const loop = createThreeRenderLoop({
+      scheduler: host.scheduler,
+      onFrame: () => {
+        if (!restart) return;
+        restart = false;
+        loop.stop();
+        loop.start();
+      },
+    });
+    loop.start();
+
+    host.tick(0);
+    expect(loop.running()).toBe(true);
+    expect(host.pendingCount()).toBe(1);
+
+    host.tick(16);
+    expect(loop.frames()).toBe(2);
+    expect(host.pendingCount()).toBe(1);
+    loop.stop();
+  });
+
+  it("stops when scheduling the next frame fails", () => {
+    let callback: ((timeMs: number) => void) | null = null;
+    let requests = 0;
+    const scheduler: FrameScheduler = {
+      request(next) {
+        requests += 1;
+        if (requests > 1) throw new Error("schedule failed");
+        callback = next;
+        return requests;
+      },
+      cancel() {
+        callback = null;
+      },
+    };
+    const loop = createThreeRenderLoop({
+      scheduler,
+      onFrame: () => {},
+    });
+    loop.start();
+
+    expect(() => callback?.(0)).toThrow("schedule failed");
+    expect(loop.running()).toBe(false);
   });
 
   it("refuses when the host has no frame scheduler", () => {

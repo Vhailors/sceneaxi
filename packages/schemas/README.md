@@ -26,7 +26,7 @@ emitter. See
 Reconstruction behavior belongs to
 [`@sceneaxi/authoring-core`](../authoring-core/README.md#hybrid-sculpt-reconstruction-and-minimum-e2);
 renderer mounting belongs to
-[`@sceneaxi/engine-presentation`](../engine-presentation/README.md#hybrid-sculpt-preview).
+[`@sceneaxi/engine-presentation`](../engine-presentation/README.md#mount-api).
 The schemas contain neither provider credentials nor renderer types.
 
 ## Scene composition contracts (sceneaxi#85)

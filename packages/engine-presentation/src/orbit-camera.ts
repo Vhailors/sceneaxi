@@ -171,6 +171,12 @@ export function createOrbitCamera(options: OrbitCameraOptions = {}): OrbitCamera
   const nearPlane = options.nearPlane ?? DEFAULTS.nearPlane;
   const farPlane = options.farPlane ?? DEFAULTS.farPlane;
   requirePositive(fovDegrees, "fovDegrees");
+  if (fovDegrees >= 180) {
+    throw new ThreePresentationError(
+      "invalid-camera",
+      "fovDegrees must be smaller than 180.",
+    );
+  }
   requirePositive(nearPlane, "nearPlane");
   requirePositive(farPlane, "farPlane");
   if (nearPlane >= farPlane) {

@@ -70,23 +70,40 @@ export function createThreeRenderLoop(
   let handle: number | null = null;
   let lastTimeMs: number | null = null;
   let frames = 0;
+  let generation = 0;
 
-  function schedule() {
-    handle = scheduler.request((timeMs) => {
-      handle = null;
-      if (!active) return;
-      const deltaMs = lastTimeMs === null ? 0 : timeMs - lastTimeMs;
-      lastTimeMs = timeMs;
-      frames += 1;
-      try {
-        options.onFrame(deltaMs, timeMs);
-      } catch (error) {
-        active = false;
-        lastTimeMs = null;
-        throw error;
+  function schedule(runGeneration: number) {
+    try {
+      const nextHandle = scheduler.request((timeMs) => {
+        if (!active || generation !== runGeneration) return;
+        handle = null;
+        const deltaMs = lastTimeMs === null ? 0 : timeMs - lastTimeMs;
+        lastTimeMs = timeMs;
+        frames += 1;
+        try {
+          options.onFrame(deltaMs, timeMs);
+        } catch (error) {
+          if (generation === runGeneration) {
+            active = false;
+            lastTimeMs = null;
+          }
+          throw error;
+        }
+        if (active && generation === runGeneration) schedule(runGeneration);
+      });
+      if (active && generation === runGeneration) {
+        handle = nextHandle;
+      } else {
+        scheduler.cancel(nextHandle);
       }
-      if (active) schedule();
-    });
+    } catch (error) {
+      if (generation === runGeneration) {
+        active = false;
+        handle = null;
+        lastTimeMs = null;
+      }
+      throw error;
+    }
   }
 
   return {
@@ -102,11 +119,13 @@ export function createThreeRenderLoop(
       if (active) return;
       active = true;
       lastTimeMs = null;
-      schedule();
+      generation += 1;
+      schedule(generation);
     },
 
     stop() {
       active = false;
+      generation += 1;
       if (handle !== null) scheduler.cancel(handle);
       handle = null;
       lastTimeMs = null;

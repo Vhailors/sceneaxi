@@ -155,6 +155,7 @@ export function createWebGLCanvasSurface(
       requirePositiveInteger(width, "width");
       requirePositiveInteger(height, "height");
       requireFiniteRatio(pixelRatio);
+      drawn = false;
       renderer.setPixelRatio(pixelRatio);
       renderer.setSize(width, height, false);
     },

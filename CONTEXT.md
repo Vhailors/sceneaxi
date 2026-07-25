@@ -67,7 +67,7 @@ three-instance demo, and stable evidence are indexed by
   [ADR 0012](docs/adr/0012-offline-agent-assistance-default-off.md).
 - **Mount API** — backend-neutral instance boundary from Sculpt Artifact to
   presentation; its package contract is documented by
-  [`@sceneaxi/engine-presentation`](packages/engine-presentation/README.md#hybrid-sculpt-preview).
+  [`@sceneaxi/engine-presentation`](packages/engine-presentation/README.md#mount-api).
 - **Three presentation core** — the product presentation/runtime core under
   [ADR 0017](docs/adr/0017-three-product-presentation-core.md), hidden behind the
   ADR 0002 deep seam. One core, two draw surfaces: a real `WebGLRenderer` canvas
