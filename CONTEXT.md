@@ -9,9 +9,10 @@ The post-MVP openable path is:
 The deterministic CI input is `structured-spec`; the demo happy path is
 `image+brief`. Presentation runs on the
 [Three presentation core](docs/three-presentation-core.md): node gates use its
-deterministic headless surface, and product surfaces draw real pixels through a
-`WebGLRenderer` canvas. Stage 1 has still not run and no renderer winner is
-claimed. The golden evidence and stable input paths are recorded in
+deterministic headless surface, and browser consumers can supply a canvas to
+draw real pixels through `WebGLRenderer`; this vertical does not wire a site.
+Stage 1 has still not run and no renderer winner is claimed. The golden evidence
+and stable input paths are recorded in
 `.sceneaxi/evidence/issue-73-hybrid-sculpt-golden.json`.
 
 ## Sculpt-quality v1

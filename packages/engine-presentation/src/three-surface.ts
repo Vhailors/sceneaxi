@@ -12,7 +12,10 @@
 import { Camera, Mesh, Object3D, WebGLRenderer } from "three";
 import { ThreePresentationError } from "./three-presentation-error.js";
 
-/** Opaque renderable handed to a surface. A surface passes it to its renderer and never inspects it. */
+/**
+ * Opaque renderable handed to a surface. Consumers cannot inspect it; a surface
+ * may validate and unwrap it privately without exporting the backend type.
+ */
 export type ThreeRenderableHandle = unknown;
 
 export type ThreePresentationSurfaceKind = "webgl-canvas" | "headless";

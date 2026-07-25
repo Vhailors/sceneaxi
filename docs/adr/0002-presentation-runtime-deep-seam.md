@@ -55,8 +55,9 @@ not a Stage 1 result.
   without asserting scene-graph internals.
 - Device-performance recovery is **presentation-only scaling** — quality knobs
   never alter simulation truth.
-- Whichever backend Stage 1 selects lands **behind this same seam**; the seam
-  does not change with the verdict, so no consumer is exposed to the outcome.
+- Any later renderer change informed by a separately adjudicated Stage 1 result
+  lands **behind this same seam**; the seam does not change, so no consumer is
+  exposed to the outcome.
 - Stage 1 preparation docs re-home to `docs/proof/`
   ([sceneaxi#13](https://github.com/Vhailors/sceneaxi/issues/13)–[#15](https://github.com/Vhailors/sceneaxi/issues/15));
   execution stays separately authorized.

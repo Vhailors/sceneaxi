@@ -45,7 +45,8 @@ Three won and does not remove or prejudice another Stage 1 arm.
 
 - Minimum E2 can build and inspect an actual Three scene graph while contracts
   remain backend-hidden.
-- Stage 1 can later select a different composition without changing Sculpt Artifact or Mount API.
+- Any later renderer change informed by a separately adjudicated Stage 1 result
+  can stay behind the unchanged Sculpt Artifact and Mount API seams.
 - Kernel observations remain authoritative; presentation never advances
   simulation.
 
