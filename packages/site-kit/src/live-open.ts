@@ -118,15 +118,22 @@ function placementTransform(translation: Vector3): SculptTransform {
 /**
  * The artifact id a placement must reference.
  *
- * Read structurally from an unknown value rather than asserted, so a value that is not
- * an artifact produces an intake the pipeline refuses instead of a cast that lies.
+ * Read from one stable own data field, so a value that is not an artifact produces an
+ * intake the pipeline refuses instead of invoking untrusted accessors.
  */
 function artifactIdOf(value: unknown): string {
-  return typeof value === "object" &&
-    value !== null &&
-    typeof (value as { readonly artifactId?: unknown }).artifactId === "string"
-    ? (value as { readonly artifactId: string }).artifactId
-    : "";
+  if (typeof value !== "object" || value === null) return "";
+
+  try {
+    const descriptor = Object.getOwnPropertyDescriptor(value, "artifactId");
+    return descriptor !== undefined &&
+      "value" in descriptor &&
+      typeof descriptor.value === "string"
+      ? descriptor.value
+      : "";
+  } catch {
+    return "";
+  }
 }
 
 /**

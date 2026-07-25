@@ -91,6 +91,33 @@ describe("live open scene", () => {
     });
   });
 
+  it("refuses accessor-backed and unstable artifact ids without invoking them", () => {
+    let accessorReads = 0;
+    const accessorBacked = Object.defineProperty({}, "artifactId", {
+      enumerable: true,
+      get() {
+        accessorReads += 1;
+        return "not-an-artifact";
+      },
+    });
+    const unstable = new Proxy(
+      {},
+      {
+        getOwnPropertyDescriptor() {
+          throw new Error("unstable descriptor");
+        },
+      },
+    );
+
+    for (const artifact of [accessorBacked, unstable]) {
+      expect(composeLiveOpenScene(artifact)).toMatchObject({
+        ok: false,
+        reason: "LIVE_OPEN_NOT_COMPOSABLE",
+      });
+    }
+    expect(accessorReads).toBe(0);
+  });
+
   it("serves the path the umbrella routes and the catalogs may link", () => {
     expect(LIVE_OPEN_PATH).toBe("/open");
   });
