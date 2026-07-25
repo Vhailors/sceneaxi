@@ -132,6 +132,39 @@ describe("edit → save → load round trip", () => {
     session.dispose();
   });
 
+  it("uses identity for a new sculpt when another selection has moved", () => {
+    const session = openSession();
+    session.addSculpt({ instanceId: "prop-a", artifact: starter(), transform: MOVED });
+    session.select("prop-a");
+    session.addSculpt({ instanceId: "prop-b", artifact: starter() });
+    const composed = session.composeSceneProjection({ rootInstanceId: "prop-a" });
+    expect(composed.ok).toBe(true);
+    if (!composed.ok) return;
+    const child = composed.scene.instances.find((instance) => instance.instanceId === "prop-b");
+    expect(child?.worldTransform.translation).toEqual(MOVED.translation);
+    session.dispose();
+  });
+
+  it("rebuilds projection transforms from the loaded editor state", () => {
+    const session = openSession();
+    session.addSculpt({ instanceId: "prop-a", artifact: starter() });
+    session.addSculpt({ instanceId: "prop-b", artifact: starter(), transform: MOVED });
+    expect(session.save().ok).toBe(true);
+    session.select("prop-b");
+    session.setSelectedTransform({
+      translation: [9, 9, 9],
+      rotationEulerDegrees: [0, 0, 0],
+      scale: [1, 1, 1],
+    });
+    expect(session.load().ok).toBe(true);
+    const composed = session.composeSceneProjection({ rootInstanceId: "prop-a" });
+    expect(composed.ok).toBe(true);
+    if (!composed.ok) return;
+    const child = composed.scene.instances.find((instance) => instance.instanceId === "prop-b");
+    expect(child?.worldTransform.translation).toEqual(MOVED.translation);
+    session.dispose();
+  });
+
   it("play and pause move the play state", () => {
     const session = openSession();
     expect(session.snapshot().playState).toBe("paused");

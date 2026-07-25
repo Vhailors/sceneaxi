@@ -91,6 +91,15 @@ describe("identity plane — fail closed", () => {
     expect(hasClientRoleClaim({ user: { email: "a@b.c" } })).toBe(false);
   });
 
+  it("finds claims at arbitrary depth and terminates on cycles", () => {
+    let nested: Record<string, unknown> = { role: "admin" };
+    for (let depth = 0; depth < 20; depth += 1) nested = { nested };
+    expect(hasClientRoleClaim(nested)).toBe(true);
+    const cyclic: Record<string, unknown> = {};
+    cyclic["self"] = cyclic;
+    expect(hasClientRoleClaim(cyclic)).toBe(false);
+  });
+
   it("refuses an unknown surface and a malformed request", async () => {
     const port = createIdentityPlane({ now });
     expect(
@@ -129,14 +138,36 @@ describe("identity plane — fail closed", () => {
     expect(result.ok === false && result.reason).toBe(reason);
   });
 
-  it("propagates an adapter refusal verbatim", async () => {
+  it("canonicalizes a known adapter refusal", async () => {
+    const forged = {
+      ok: false as const,
+      reason: "IDENTITY_SESSION_EXPIRED" as const,
+      message: "forged",
+    };
     const adapter: SiteIdentityAdapter = {
       async resolvePrincipal() {
-        return refuse("IDENTITY_SESSION_EXPIRED");
+        return forged;
       },
     };
     const result = await createIdentityPlane({ adapter, now }).resolvePrincipal(umbrella);
-    expect(result.ok === false && result.reason).toBe("IDENTITY_SESSION_EXPIRED");
+    expect(result).toEqual(refuse("IDENTITY_SESSION_EXPIRED"));
+    expect(result).not.toBe(forged);
+    expect(Object.isFrozen(result)).toBe(true);
+  });
+
+  it("refuses an unknown adapter refusal reason", async () => {
+    const adapter: SiteIdentityAdapter = {
+      async resolvePrincipal() {
+        return {
+          ok: false,
+          reason: "INVENTED_REASON",
+          message: "not registered",
+        } as never;
+      },
+    };
+    expect(await createIdentityPlane({ adapter, now }).resolvePrincipal(umbrella)).toMatchObject({
+      reason: "IDENTITY_ADAPTER_OUTPUT_INVALID",
+    });
   });
 });
 
@@ -154,6 +185,7 @@ describe("credits plane — reads a balance, never derives one", () => {
   it.each([
     ["CREDIT_BALANCE_INVALID", { userId: "user-1", balance: -1, starterGrantConsumed: false }],
     ["CREDIT_BALANCE_INVALID", { userId: "user-1", balance: 1.5, starterGrantConsumed: false }],
+    ["CREDIT_ADAPTER_OUTPUT_INVALID", { userId: "user-2", balance: 5, starterGrantConsumed: false }],
     ["CREDIT_ADAPTER_OUTPUT_INVALID", { userId: "user-1", balance: 5 }],
     ["CREDIT_ADAPTER_OUTPUT_INVALID", null],
   ])("validates adapter output and refuses %s", async (reason, value) => {
@@ -177,6 +209,32 @@ describe("credits plane — reads a balance, never derives one", () => {
     if (!result.ok) return;
     expect(result.value.balance).toBe(42);
     expect(Object.isFrozen(result.value)).toBe(true);
+  });
+
+  it("canonicalizes valid refusals and rejects unknown refusal reasons", async () => {
+    const known: SiteCreditsAdapter = {
+      async readBalance() {
+        return {
+          ok: false,
+          reason: "CREDIT_BALANCE_INVALID",
+          message: "forged",
+        };
+      },
+    };
+    const canonical = await createCreditsPlane({ adapter: known }).readBalance({
+      userId: "user-1",
+    });
+    expect(canonical).toEqual(refuse("CREDIT_BALANCE_INVALID"));
+    expect(Object.isFrozen(canonical)).toBe(true);
+
+    const unknown: SiteCreditsAdapter = {
+      async readBalance() {
+        return { ok: false, reason: "INVENTED_REASON", message: "forged" } as never;
+      },
+    };
+    expect(
+      await createCreditsPlane({ adapter: unknown }).readBalance({ userId: "user-1" }),
+    ).toMatchObject({ reason: "CREDIT_ADAPTER_OUTPUT_INVALID" });
   });
 });
 
@@ -265,6 +323,32 @@ describe("billing plane — test by default, live behind a captain gate", () => 
       },
     };
     expect(await createBillingPlane({ adapter: liar }).listCreditPacks()).toMatchObject({
+      reason: "BILLING_ADAPTER_OUTPUT_INVALID",
+    });
+  });
+
+  it("canonicalizes valid refusals and rejects unknown refusal reasons", async () => {
+    const known: SiteBillingAdapter = {
+      ...adapter,
+      async listCreditPacks() {
+        return {
+          ok: false,
+          reason: "BILLING_PLANE_NOT_WIRED",
+          message: "forged",
+        };
+      },
+    };
+    const canonical = await createBillingPlane({ adapter: known }).listCreditPacks();
+    expect(canonical).toEqual(refuse("BILLING_PLANE_NOT_WIRED"));
+    expect(Object.isFrozen(canonical)).toBe(true);
+
+    const unknown: SiteBillingAdapter = {
+      ...adapter,
+      async listCreditPacks() {
+        return { ok: false, reason: "INVENTED_REASON", message: "forged" } as never;
+      },
+    };
+    expect(await createBillingPlane({ adapter: unknown }).listCreditPacks()).toMatchObject({
       reason: "BILLING_ADAPTER_OUTPUT_INVALID",
     });
   });

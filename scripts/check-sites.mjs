@@ -12,7 +12,7 @@
  * matrix-listed, a framework dependency leaking into the hermetic root, or any
  * committed secret value exits 1.
  */
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -61,16 +61,20 @@ const SECRET_VALUE_PATTERNS = Object.freeze([
   /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
 ]);
 
-const SCANNED_EXTENSIONS = Object.freeze([".ts", ".tsx", ".js", ".mjs", ".json", ".md", ".example"]);
 const SKIP_DIRECTORIES = Object.freeze(["node_modules", ".next", "dist", "coverage"]);
 
 const walk = (dir, out = []) => {
   for (const entry of readdirSync(dir).sort()) {
     if (SKIP_DIRECTORIES.includes(entry)) continue;
     const path = join(dir, entry);
-    if (statSync(path).isDirectory()) walk(path, out);
-    else if (SCANNED_EXTENSIONS.some((ext) => entry.endsWith(ext)) || entry.startsWith(".env"))
+    const stat = lstatSync(path);
+    if (stat.isSymbolicLink()) {
+      fail(`${relative(root, path)} is a symbolic link — sites must be self-contained`);
+    } else if (stat.isDirectory()) {
+      walk(path, out);
+    } else if (stat.isFile()) {
       out.push(path);
+    }
   }
   return out;
 };

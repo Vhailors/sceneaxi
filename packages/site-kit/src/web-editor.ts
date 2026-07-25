@@ -26,6 +26,8 @@ import {
   type SceneCompositionResult,
   composeScene,
   createMinimumE2Editor,
+  parseDocumentText,
+  readTextFile,
   writeDocumentFile,
 } from "@sceneaxi/authoring-core";
 import {
@@ -33,9 +35,11 @@ import {
   SCENE_COMPOSITION_SCHEMA_VERSION,
   createDocument,
   identitySculptTransform,
+  isSculptTransform,
   type SceneCompositionIntake,
   type SculptArtifact,
   type SculptTransform,
+  validateSculptArtifact,
 } from "@sceneaxi/schemas";
 import { type SiteRefusalReason, type SiteResult, ok, refuse } from "./refusals.js";
 
@@ -78,6 +82,11 @@ export class WebEditorError extends Error {
 export type WebEditorMount = {
   readonly instanceId: string;
   readonly artifactId: string;
+  readonly transform: SculptTransform;
+};
+
+type ProjectedMount = {
+  readonly artifact: SculptArtifact;
   readonly transform: SculptTransform;
 };
 
@@ -144,6 +153,44 @@ function confinedDocumentPath(
   return ok(documentPath);
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const cloneTransform = (transform: SculptTransform): SculptTransform =>
+  Object.freeze({
+    translation: Object.freeze([...transform.translation] as [number, number, number]),
+    rotationEulerDegrees: Object.freeze([
+      ...transform.rotationEulerDegrees,
+    ] as [number, number, number]),
+    scale: Object.freeze([...transform.scale] as [number, number, number]),
+  });
+
+function readPersistedMounts(documentFile: string): Map<string, ProjectedMount> | null {
+  let parsed;
+  try {
+    parsed = parseDocumentText(readTextFile(documentFile));
+  } catch {
+    return null;
+  }
+  if (!parsed.ok) return null;
+  const state = parsed.document.data["minimumE2"];
+  if (!isRecord(state) || !Array.isArray(state["instances"])) return null;
+  const loaded = new Map<string, ProjectedMount>();
+  for (const value of state["instances"]) {
+    if (!isRecord(value) || typeof value["instanceId"] !== "string") return null;
+    const artifact = validateSculptArtifact(value["artifact"]);
+    const transform = value["transform"];
+    if (!artifact.ok || !isSculptTransform(transform) || loaded.has(value["instanceId"])) {
+      return null;
+    }
+    loaded.set(value["instanceId"], {
+      artifact: artifact.value,
+      transform: cloneTransform(transform),
+    });
+  }
+  return loaded;
+}
+
 /**
  * Create a bounded Minimum E2 editor session.
  *
@@ -180,7 +227,7 @@ export function createWebEditorSession(
 
   // Mounted placements are tracked here only so `composeSceneProjection` can build
   // a composition intake. The editor remains the single source of truth for state.
-  const mounts = new Map<string, { readonly artifact: SculptArtifact; transform: SculptTransform }>();
+  const mounts = new Map<string, ProjectedMount>();
   let disposed = false;
 
   const live = (): void => {
@@ -196,14 +243,11 @@ export function createWebEditorSession(
     addSculpt(input) {
       live();
       editor.addSculpt(input);
-      const snapshot = editor.snapshot();
-      const transform =
-        input.transform ??
-        snapshot.inspector?.transform ??
-        mounts.get(input.instanceId)?.transform;
+      const artifact = validateSculptArtifact(input.artifact);
+      if (!artifact.ok) throw new Error("The editor accepted an invalid Sculpt Artifact.");
       mounts.set(input.instanceId, {
-        artifact: input.artifact,
-        transform: transform ?? identitySculptTransform(),
+        artifact: artifact.value,
+        transform: cloneTransform(input.transform ?? identitySculptTransform()),
       });
     },
     removeSculpt(instanceId) {
@@ -221,7 +265,7 @@ export function createWebEditorSession(
       const selected = editor.snapshot().selectedInstanceId;
       const mount = selected === null ? undefined : mounts.get(selected);
       if (selected !== null && mount !== undefined) {
-        mounts.set(selected, { artifact: mount.artifact, transform });
+        mounts.set(selected, { artifact: mount.artifact, transform: cloneTransform(transform) });
       }
     },
     play() {
@@ -247,12 +291,18 @@ export function createWebEditorSession(
     },
     load() {
       live();
+      const loadedMounts = readPersistedMounts(resolve(workspaceRoot, confined.value));
       const result = editor.load();
       if (result.ok) {
-        // The editor owns reloaded state; drop projection bookkeeping for
-        // instances it no longer holds rather than reporting stale placements.
-        for (const instanceId of [...mounts.keys()]) {
-          if (!result.instanceIds.includes(instanceId)) mounts.delete(instanceId);
+        mounts.clear();
+        if (
+          loadedMounts !== null &&
+          loadedMounts.size === result.instanceIds.length &&
+          result.instanceIds.every((instanceId) => loadedMounts.has(instanceId))
+        ) {
+          for (const [instanceId, mount] of loadedMounts) {
+            mounts.set(instanceId, mount);
+          }
         }
       }
       return result;

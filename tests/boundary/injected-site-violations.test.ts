@@ -165,6 +165,20 @@ describe("sites tier — injected violations", () => {
     expect(res.stderr).toContain("secret-shaped material");
   });
 
+  it.each(["pem", "txt", "css", "yaml"])(
+    "sites check scans secret material in .%s files",
+    (extension) => {
+      writeTo(
+        fx,
+        `sites/umbrella/src/lib/leak.${extension}`,
+        "-----BEGIN PRIVATE KEY-----\nnot-a-real-key\n",
+      );
+      const res = runCheck(fx, "check-sites.mjs");
+      expect(res.status).toBe(1);
+      expect(res.stderr).toContain("secret-shaped material");
+    },
+  );
+
   it("sites check fails when a secret name is assigned a literal value", () => {
     writeFileSync(
       join(fx, "sites/umbrella/src/lib/leak.ts"),

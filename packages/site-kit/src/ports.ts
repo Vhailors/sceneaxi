@@ -15,7 +15,14 @@
  * claims refuse, the Kids surface refuses, and adapter output is validated before
  * a site is allowed to trust it.
  */
-import { type SiteRefusal, type SiteResult, ok, refuse } from "./refusals.js";
+import {
+  SITE_REFUSAL_REASONS,
+  type SiteRefusal,
+  type SiteRefusalReason,
+  type SiteResult,
+  ok,
+  refuse,
+} from "./refusals.js";
 
 /** Deployable surfaces. `"kids"` exists only so it can be refused. */
 export const SITE_SURFACES = Object.freeze([
@@ -151,13 +158,38 @@ const isIsoInstant = (value: unknown): value is string =>
  * Depth matters: a nested `{ user: { isAdmin: true } }` is the same attack as a
  * top-level one, and a site must refuse both before dispatching to an adapter.
  */
-export function hasClientRoleClaim(payload: unknown, depth = 0): boolean {
-  if (depth > 8 || !isRecord(payload)) return false;
-  for (const key of Object.keys(payload)) {
-    if ((CLIENT_ROLE_CLAIM_KEYS as readonly string[]).includes(key)) return true;
-    if (hasClientRoleClaim(payload[key], depth + 1)) return true;
+export function hasClientRoleClaim(payload: unknown): boolean {
+  if (!isRecord(payload)) return false;
+  const pending: Record<string, unknown>[] = [payload];
+  const visited = new WeakSet<object>();
+  while (pending.length > 0) {
+    const current = pending.pop();
+    if (current === undefined || visited.has(current)) continue;
+    visited.add(current);
+    for (const key of Object.keys(current)) {
+      if ((CLIENT_ROLE_CLAIM_KEYS as readonly string[]).includes(key)) return true;
+      const value = current[key];
+      if (isRecord(value)) pending.push(value);
+    }
   }
   return false;
+}
+
+function canonicalAdapterRefusal(
+  result: Record<string, unknown>,
+  invalidReason:
+    | "IDENTITY_ADAPTER_OUTPUT_INVALID"
+    | "CREDIT_ADAPTER_OUTPUT_INVALID"
+    | "BILLING_ADAPTER_OUTPUT_INVALID",
+): SiteRefusal {
+  const reason = result["reason"];
+  if (
+    result["ok"] !== false ||
+    !(SITE_REFUSAL_REASONS as readonly unknown[]).includes(reason)
+  ) {
+    return refuse(invalidReason);
+  }
+  return refuse(reason as SiteRefusalReason);
 }
 
 function validateIdentityRequest(request: unknown): SiteRefusal | null {
@@ -250,9 +282,7 @@ export function createIdentityPlane(options: IdentityPlaneOptions = {}): SiteIde
       const result = await options.adapter.resolvePrincipal(request);
       if (!isRecord(result)) return refuse("IDENTITY_ADAPTER_OUTPUT_INVALID");
       if (result["ok"] !== true) {
-        return result["ok"] === false && typeof result["reason"] === "string"
-          ? (result as SiteRefusal)
-          : refuse("IDENTITY_ADAPTER_OUTPUT_INVALID");
+        return canonicalAdapterRefusal(result, "IDENTITY_ADAPTER_OUTPUT_INVALID");
       }
       return validatePrincipal(result["value"], request, nowIso());
     },
@@ -274,14 +304,13 @@ export function createCreditsPlane(options: CreditsPlaneOptions = {}): SiteCredi
       const result = await options.adapter.readBalance({ userId: input.userId });
       if (!isRecord(result)) return refuse("CREDIT_ADAPTER_OUTPUT_INVALID");
       if (result["ok"] !== true) {
-        return result["ok"] === false && typeof result["reason"] === "string"
-          ? (result as SiteRefusal)
-          : refuse("CREDIT_ADAPTER_OUTPUT_INVALID");
+        return canonicalAdapterRefusal(result, "CREDIT_ADAPTER_OUTPUT_INVALID");
       }
       const value = result["value"];
       if (
         !isRecord(value) ||
         !isNonEmptyString(value["userId"]) ||
+        value["userId"] !== input.userId ||
         typeof value["starterGrantConsumed"] !== "boolean"
       ) {
         return refuse("CREDIT_ADAPTER_OUTPUT_INVALID");
@@ -332,9 +361,7 @@ export function createBillingPlane(options: BillingPlaneOptions = {}): SiteBilli
       const result = await options.adapter.listCreditPacks();
       if (!isRecord(result)) return refuse("BILLING_ADAPTER_OUTPUT_INVALID");
       if (result["ok"] !== true) {
-        return result["ok"] === false && typeof result["reason"] === "string"
-          ? (result as SiteRefusal)
-          : refuse("BILLING_ADAPTER_OUTPUT_INVALID");
+        return canonicalAdapterRefusal(result, "BILLING_ADAPTER_OUTPUT_INVALID");
       }
       const packs = result["value"];
       if (!Array.isArray(packs)) return refuse("BILLING_ADAPTER_OUTPUT_INVALID");
@@ -370,9 +397,7 @@ export function createBillingPlane(options: BillingPlaneOptions = {}): SiteBilli
       const result = await options.adapter.createCheckout({ ...request, mode });
       if (!isRecord(result)) return refuse("BILLING_ADAPTER_OUTPUT_INVALID");
       if (result["ok"] !== true) {
-        return result["ok"] === false && typeof result["reason"] === "string"
-          ? (result as SiteRefusal)
-          : refuse("BILLING_ADAPTER_OUTPUT_INVALID");
+        return canonicalAdapterRefusal(result, "BILLING_ADAPTER_OUTPUT_INVALID");
       }
       const handoff = result["value"];
       if (
