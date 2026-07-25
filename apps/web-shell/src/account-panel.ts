@@ -372,6 +372,10 @@ export function createAccountPanel(
 
   let heldPrincipal: Principal | undefined;
   const outstandingPrincipals = new Set<Principal>();
+  const principalRevocations = new Map<
+    Principal,
+    Promise<AccountPanelRefusal | undefined>
+  >();
   let operationGeneration = 0;
   let credentialSubmissionTail: Promise<void> = Promise.resolve();
 
@@ -380,21 +384,36 @@ export function createAccountPanel(
   const revokePrincipal = async (
     principal: Principal,
   ): Promise<AccountPanelRefusal | undefined> => {
-    let result: AuthResult<null>;
+    if (!outstandingPrincipals.has(principal)) return undefined;
+    const pending = principalRevocations.get(principal);
+    if (pending !== undefined) return pending;
+
+    const revocation = (async () => {
+      let result: AuthResult<null>;
+      try {
+        result = await identityPort.signOut({ principal });
+      } catch {
+        return refusal(
+          ACCOUNT_PANEL_REASONS.sessionRevocationFailed,
+          "A session could not be revoked and may still be live.",
+        );
+      }
+      if (!result.ok) {
+        return refusal(result.reason, result.message);
+      }
+      outstandingPrincipals.delete(principal);
+      if (heldPrincipal === principal) heldPrincipal = undefined;
+      return undefined;
+    })();
+    principalRevocations.set(principal, revocation);
+
     try {
-      result = await identityPort.signOut({ principal });
-    } catch {
-      return refusal(
-        ACCOUNT_PANEL_REASONS.sessionRevocationFailed,
-        "A session could not be revoked and may still be live.",
-      );
+      return await revocation;
+    } finally {
+      if (principalRevocations.get(principal) === revocation) {
+        principalRevocations.delete(principal);
+      }
     }
-    if (!result.ok) {
-      return refusal(result.reason, result.message);
-    }
-    outstandingPrincipals.delete(principal);
-    if (heldPrincipal === principal) heldPrincipal = undefined;
-    return undefined;
   };
 
   const revokeAllExcept = async (
@@ -437,8 +456,7 @@ export function createAccountPanel(
     if (generation !== operationGeneration) {
       if (result.ok) {
         trackPrincipal(result.value);
-        const failure = await revokePrincipal(result.value);
-        if (failure !== undefined) held = refused(failure);
+        await revokePrincipal(result.value);
       }
       return held;
     }
@@ -446,15 +464,12 @@ export function createAccountPanel(
       trackPrincipal(result.value);
       const next = await authenticated(result.value);
       if (generation !== operationGeneration) {
-        const failure = await revokePrincipal(result.value);
-        if (failure !== undefined) held = refused(failure);
+        await revokePrincipal(result.value);
         return held;
       }
       const failure = await revokeAllExcept(result.value);
       if (generation !== operationGeneration) {
-        const staleFailure = await revokePrincipal(result.value);
-        const combinedFailure = staleFailure ?? failure;
-        if (combinedFailure !== undefined) held = refused(combinedFailure);
+        await revokePrincipal(result.value);
         return held;
       }
       heldPrincipal = result.value;

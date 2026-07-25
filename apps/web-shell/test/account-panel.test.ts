@@ -655,4 +655,51 @@ describe("sign out", () => {
     expect(stale.phase).toBe("anonymous");
     expect(panel.snapshot().phase).toBe("anonymous");
   });
+
+  it("does not let stale ledger completion overwrite a completed sign-out", async () => {
+    let releaseLedger = () => {};
+    let signalLedgerStarted = () => {};
+    const ledgerStarted = new Promise<void>((resolve) => {
+      signalLedgerStarted = resolve;
+    });
+    const base = createIdentityPort({
+      adapter: ADAPTER,
+      store: createInMemoryIdentityStore({ users: [CREW] }),
+      admin,
+      clock,
+    });
+    let signOutCalls = 0;
+    const identityPort: IdentityPort = Object.freeze({
+      signIn: (request) => base.signIn(request),
+      verifySession: (request) => base.verifySession(request),
+      signOut(request) {
+        signOutCalls += 1;
+        return base.signOut(request);
+      },
+    });
+    const panel = makePanel({
+      identityPort,
+      credits: Object.freeze({
+        async ledgerFor() {
+          signalLedgerStarted();
+          await new Promise<void>((resolve) => {
+            releaseLedger = resolve;
+          });
+          return ledgerFor("usr_crew", 250);
+        },
+      }),
+    });
+
+    const pending = panel.submitCredentials({
+      email: "crew@example.com",
+      password: "pw",
+    });
+    await ledgerStarted;
+    expect((await panel.signOut()).phase).toBe("anonymous");
+
+    releaseLedger();
+    expect((await pending).phase).toBe("anonymous");
+    expect(panel.snapshot().phase).toBe("anonymous");
+    expect(signOutCalls).toBe(1);
+  });
 });

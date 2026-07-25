@@ -366,6 +366,15 @@ describe("createListingCheckoutIntent", () => {
     expect(result.value.mode).toBe("test");
   });
 
+  it("refuses an undeclared mode instead of downgrading it to test", () => {
+    const result = checkout({ mode: "live" });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(
+      BILLING_REFUSE_REASONS.listingCheckoutUnexpectedProperty,
+    );
+  });
+
   it("refuses a plaintext redirect, the Kids surface, a self purchase, and a missing sale id", () => {
     expect(checkout({ successUrl: "http://sceneaxi.example/ok" }).ok).toBe(false);
     const kids = checkout({ surface: "kids" });

@@ -290,6 +290,18 @@ export type CreateListingCheckoutIntentRequest = Readonly<{
   liveModeAuthorized?: boolean | undefined;
 }>;
 
+const LISTING_CHECKOUT_REQUEST_KEYS = new Set([
+  "principal",
+  "admin",
+  "listing",
+  "successUrl",
+  "cancelUrl",
+  "now",
+  "saleId",
+  "surface",
+  "liveModeAuthorized",
+]);
+
 /**
  * Build a money checkout intent for a listing.
  *
@@ -305,6 +317,15 @@ export function createListingCheckoutIntent(
     return billingRefuse(
       BILLING_REFUSE_REASONS.requestInvalid,
       "A listing checkout request must be a plain object.",
+    );
+  }
+  const unexpectedProperty = Object.keys(record).find(
+    (key) => !LISTING_CHECKOUT_REQUEST_KEYS.has(key),
+  );
+  if (unexpectedProperty !== undefined) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.listingCheckoutUnexpectedProperty,
+      `A listing checkout request has unexpected property "${unexpectedProperty}".`,
     );
   }
   const screened = record as CreateListingCheckoutIntentRequest;

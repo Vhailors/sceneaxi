@@ -938,6 +938,18 @@ describe("billing refuse matrix", () => {
         surface: "kids",
       }),
     );
+    record(
+      createListingCheckoutIntent({
+        principal: principal(),
+        admin,
+        listing: listing("harbour-diorama"),
+        successUrl: "https://sceneaxi.example/ok",
+        cancelUrl: "https://sceneaxi.example/no",
+        now: NOW,
+        saleId: "sale_case_money",
+        mode: "live",
+      } as never),
+    );
   });
 
   it("reaches every revenue-share refusal", async () => {
