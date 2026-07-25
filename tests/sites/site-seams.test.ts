@@ -276,6 +276,16 @@ describe("umbrella live open path", () => {
   );
 });
 
+/**
+ * A scene instance count written into prose instead of read from the placement list.
+ *
+ * `LIVE_OPEN_INSTANCE_COUNT` exists so shipped copy cannot miscount the served scene,
+ * which only holds while no surface spells the number out; an interpolated count reads
+ * as `} instances` in source and is deliberately not matched.
+ */
+const HARDCODED_INSTANCE_COUNT =
+  /\b(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|\d+)\s+instances\b/i;
+
 describe("live open copy stays honest about the presentation core", () => {
   const RETIRED_FRAMING = [
     ...LIVE_OPEN_PRESENTATION.retiredLabels,
@@ -316,6 +326,17 @@ describe("live open copy stays honest about the presentation core", () => {
     expect(LIVE_OPEN_INSTANCE_COUNT).toBe(opened.value.instances.length);
     expect(LIVE_OPEN_COPY.lede).toContain(`places ${opened.value.instances.length} instances`);
   });
+
+  it.each(SITE_SOURCE_FILES)(
+    "keeps a written-out instance count out of %s, so every count stays derived",
+    (relative) => {
+      const source = readFileSync(
+        new URL(`../../sites/${relative}`, import.meta.url),
+        "utf8",
+      );
+      expect(source).not.toMatch(HARDCODED_INSTANCE_COUNT);
+    },
+  );
 
   it("attributes runtime and scene evidence to their actual producers", () => {
     expect(LIVE_OPEN_COPY.honesty).toContain(

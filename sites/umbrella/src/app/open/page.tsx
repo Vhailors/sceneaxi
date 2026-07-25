@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import {
   LIVE_OPEN_COPY,
+  LIVE_OPEN_INSTANCE_COUNT,
   LIVE_OPEN_PRESENTATION,
   describePlacement,
   resolveLiveOpenScene,
@@ -67,8 +68,8 @@ export default function OpenPage() {
         <article className="panel">
           <h3>A real composition</h3>
           <p>
-            Three instances of that one artifact are placed by{" "}
-            <code>composeScene()</code>. Placement is a projection: a child transform
+            The scene places {LIVE_OPEN_INSTANCE_COUNT} instances of that one artifact
+            through <code>composeScene()</code>. Placement is a projection: a child transform
             reads relative to its parent, and no artifact is rewritten to place it,
             because its evidence binds its exact spec bytes.
           </p>
