@@ -278,6 +278,7 @@ export type ReleaseGroup =
   | "cli-protocol"
   | "importers"
   | "plugin-host"
+  | "identity"
   | "apps"
   | "sites";
 

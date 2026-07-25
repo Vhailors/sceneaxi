@@ -86,6 +86,11 @@
       "releaseGroup": "plugin-host",
       "allow": ["@sceneaxi/schemas"]
     },
+    "@sceneaxi/auth": {
+      "dir": "packages/auth",
+      "releaseGroup": "identity",
+      "allow": ["@sceneaxi/schemas"]
+    },
     "@sceneaxi/web-shell": {
       "dir": "apps/web-shell",
       "releaseGroup": "apps",
@@ -162,6 +167,9 @@
     "importers": { "policy": "independently versioned" },
     "plugin-host": {
       "policy": "independently versioned; consumes only public contracts from schemas; never engine packages or service locators"
+    },
+    "identity": {
+      "policy": "independently versioned; the identity/credits/billing plane consumes only public contracts from schemas (and, for billing, the auth seam); never engine packages, profiles, the CLI, or a service locator. Better Auth, Neon, and the Stripe API stay injected adapters (ADR 0014)."
     },
     "apps": { "policy": "private, unpublished, unversioned beyond workspace bookkeeping" },
     "sites": {

@@ -1,0 +1,614 @@
+import { describe, expect, it } from "vitest";
+import {
+  ADMIN_EMAIL_ENV_VAR,
+  AUTH_REFUSE_REASONS,
+  createBetterAuthIdentityAdapter,
+  createIdentityPort,
+  createInMemoryIdentityStore,
+  digestSessionToken,
+  type IdentityAdapter,
+  type IdentityStore,
+} from "@sceneaxi/auth";
+
+const NOW = Date.parse("2026-07-25T10:00:00Z");
+const clock = () => NOW;
+const admin = { email: "captain@example.com", source: ADMIN_EMAIL_ENV_VAR } as const;
+
+const CAPTAIN = {
+  schemaVersion: 1,
+  kind: "sceneaxi.user",
+  userId: "usr_captain",
+  email: "captain@example.com",
+  emailVerified: true,
+  disabled: false,
+  createdAt: "2026-07-25T09:00:00Z",
+} as never;
+
+const CREW = {
+  schemaVersion: 1,
+  kind: "sceneaxi.user",
+  userId: "usr_crew",
+  email: "crew@example.com",
+  emailVerified: true,
+  disabled: false,
+  createdAt: "2026-07-25T09:00:00Z",
+} as never;
+
+const DISABLED = {
+  schemaVersion: 1,
+  kind: "sceneaxi.user",
+  userId: "usr_gone",
+  email: "gone@example.com",
+  emailVerified: true,
+  disabled: true,
+  createdAt: "2026-07-25T09:00:00Z",
+} as never;
+
+/** A Better-Auth-shaped adapter over a fixed table of credentials. */
+const fixtureAdapter = (
+  table: Record<string, { userId: string; token: string; expiresAt?: string }>,
+): IdentityAdapter =>
+  Object.freeze({
+    authenticate({ email, password }) {
+      const entry = table[`${email}:${password}`];
+      if (entry === undefined) return undefined;
+      return {
+        user: { id: entry.userId, email, emailVerified: true },
+        session: {
+          id: `ses_${entry.userId}`,
+          token: entry.token,
+          userId: entry.userId,
+          expiresAt: entry.expiresAt ?? "2026-07-26T10:00:00Z",
+        },
+      };
+    },
+  });
+
+const ADAPTER = fixtureAdapter({
+  "captain@example.com:pw": { userId: "usr_captain", token: "tok-captain" },
+  "crew@example.com:pw": { userId: "usr_crew", token: "tok-crew" },
+  "gone@example.com:pw": { userId: "usr_gone", token: "tok-gone" },
+});
+
+const makePort = (
+  overrides: Partial<Parameters<typeof createIdentityPort>[0]> = {},
+  store: IdentityStore = createInMemoryIdentityStore({
+    users: [CAPTAIN, CREW, DISABLED],
+  }),
+) =>
+  createIdentityPort({
+    adapter: ADAPTER,
+    store,
+    admin,
+    clock,
+    ...overrides,
+  });
+
+describe("identity port — sign-in", () => {
+  it("signs the captain in as admin", async () => {
+    const result = await makePort().signIn({
+      surface: "web-shell",
+      email: "captain@example.com",
+      password: "pw",
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.role.role).toBe("admin");
+    expect(result.value.role.source).toBe("admin-env");
+    expect(result.value.session.surface).toBe("web-shell");
+    expect(result.value.session.tokenDigest).toBe(digestSessionToken("tok-captain"));
+  });
+
+  it("signs an ordinary user in as user", async () => {
+    const result = await makePort().signIn({
+      surface: "web-shell",
+      email: "crew@example.com",
+      password: "pw",
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.role.role).toBe("user");
+  });
+
+  it("stores only the digest, never the raw token", async () => {
+    const store = createInMemoryIdentityStore({ users: [CREW] });
+    const result = await makePort({}, store).signIn({
+      surface: "web-shell",
+      email: "crew@example.com",
+      password: "pw",
+    });
+    expect(result.ok).toBe(true);
+    const stored = await store.findSession("ses_usr_crew");
+    expect(stored?.tokenDigest).toBe(digestSessionToken("tok-crew"));
+    expect(JSON.stringify(stored)).not.toContain("tok-crew");
+  });
+
+  it("refuses a client-asserted role before touching the adapter or store", async () => {
+    let adapterCalled = false;
+    const spy: IdentityAdapter = Object.freeze({
+      authenticate() {
+        adapterCalled = true;
+        return undefined;
+      },
+    });
+    for (const key of ["role", "roles", "isAdmin", "admin"]) {
+      const result = await makePort({ adapter: spy }).signIn({
+        surface: "web-shell",
+        email: "crew@example.com",
+        password: "pw",
+        [key]: "admin",
+      });
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.reason).toBe(AUTH_REFUSE_REASONS.roleClaimFromClient);
+    }
+    expect(adapterCalled).toBe(false);
+  });
+
+  it("refuses the Kids surface before dispatch, minting nothing", async () => {
+    let adapterCalled = false;
+    const store = createInMemoryIdentityStore({ users: [CREW] });
+    const spy: IdentityAdapter = Object.freeze({
+      authenticate() {
+        adapterCalled = true;
+        return {
+          user: { id: "usr_crew", email: "crew@example.com", emailVerified: true },
+          session: {
+            id: "ses_kids",
+            token: "tok-kids",
+            userId: "usr_crew",
+            expiresAt: "2026-07-26T10:00:00Z",
+          },
+        };
+      },
+    });
+    const result = await makePort({ adapter: spy }, store).signIn({
+      surface: "kids",
+      email: "crew@example.com",
+      password: "pw",
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(AUTH_REFUSE_REASONS.kidsSurfaceDenied);
+    expect(adapterCalled).toBe(false);
+    expect(store.sessionCount()).toBe(0);
+  });
+
+  it("refuses even when an adapter tries to hand back a Kids session", async () => {
+    const store = createInMemoryIdentityStore({ users: [CREW] });
+    const result = await makePort({}, store).signIn({
+      surface: "kids",
+      email: "crew@example.com",
+      password: "pw",
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(AUTH_REFUSE_REASONS.kidsSurfaceDenied);
+    expect(store.sessionCount()).toBe(0);
+  });
+
+  it("refuses an unknown surface", async () => {
+    const result = await makePort().signIn({
+      surface: "mobile",
+      email: "crew@example.com",
+      password: "pw",
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(AUTH_REFUSE_REASONS.surfaceInvalid);
+  });
+
+  it("refuses a malformed request envelope", async () => {
+    const port = makePort();
+    for (const request of [
+      null,
+      "sign in",
+      { surface: "web-shell" },
+      { surface: "web-shell", email: "crew@example.com", password: "pw", extra: 1 },
+      { surface: "web-shell", email: "", password: "pw" },
+      { surface: "web-shell", email: "crew@example.com", password: "" },
+    ]) {
+      const result = await port.signIn(request);
+      expect(result.ok).toBe(false);
+    }
+  });
+
+  it("distinguishes rejected credentials from a broken provider", async () => {
+    const rejected = await makePort().signIn({
+      surface: "web-shell",
+      email: "crew@example.com",
+      password: "wrong",
+    });
+    expect(rejected.ok).toBe(false);
+    if (!rejected.ok) {
+      expect(rejected.reason).toBe(AUTH_REFUSE_REASONS.credentialsRejected);
+    }
+
+    const broken = await makePort({
+      adapter: Object.freeze({
+        authenticate() {
+          throw new Error("provider down");
+        },
+      }),
+    }).signIn({ surface: "web-shell", email: "crew@example.com", password: "pw" });
+    expect(broken.ok).toBe(false);
+    if (!broken.ok) {
+      expect(broken.reason).toBe(AUTH_REFUSE_REASONS.adapterFailed);
+    }
+  });
+
+  it("refuses an adapter envelope this boundary does not accept", async () => {
+    for (const authentication of [
+      {},
+      { user: {}, session: {} },
+      { user: { id: "usr_crew", email: "crew@example.com", emailVerified: true } },
+      {
+        user: { id: "usr_crew", email: "crew@example.com", emailVerified: true },
+        session: {
+          id: "ses_x",
+          token: "t",
+          userId: "someone_else",
+          expiresAt: "2026-07-26T10:00:00Z",
+        },
+      },
+      {
+        user: { id: "usr_crew", email: "crew@example.com", emailVerified: true },
+        session: {
+          id: "ses_x",
+          token: "t",
+          userId: "usr_crew",
+          expiresAt: "2026-07-25T09:00:00Z",
+        },
+      },
+    ]) {
+      const result = await makePort({
+        adapter: Object.freeze({ authenticate: () => authentication as never }),
+      }).signIn({ surface: "web-shell", email: "crew@example.com", password: "pw" });
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.reason).toBe(AUTH_REFUSE_REASONS.adapterEnvelopeInvalid);
+    }
+  });
+
+  it("refuses when the provider's user id disagrees with the store", async () => {
+    const result = await makePort({
+      adapter: fixtureAdapter({
+        "crew@example.com:pw": { userId: "usr_imposter", token: "tok" },
+      }),
+      store: createInMemoryIdentityStore({ users: [CREW] }),
+    }).signIn({ surface: "web-shell", email: "crew@example.com", password: "pw" });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(AUTH_REFUSE_REASONS.adapterUserMismatch);
+  });
+
+  it("refuses an authenticated address with no SceneAxi user record", async () => {
+    const result = await makePort(
+      {},
+      createInMemoryIdentityStore({ users: [CAPTAIN] }),
+    ).signIn({ surface: "web-shell", email: "crew@example.com", password: "pw" });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(AUTH_REFUSE_REASONS.userNotFound);
+  });
+
+  it("refuses a disabled user", async () => {
+    const result = await makePort().signIn({
+      surface: "web-shell",
+      email: "gone@example.com",
+      password: "pw",
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(AUTH_REFUSE_REASONS.userDisabled);
+  });
+
+  it("refuses rather than allowing when a dependency is missing", async () => {
+    const cases = [
+      [{ adapter: undefined }, AUTH_REFUSE_REASONS.adapterMissing],
+      [{ store: undefined }, AUTH_REFUSE_REASONS.storeMissing],
+      [{ admin: undefined }, AUTH_REFUSE_REASONS.adminIdentityUnresolved],
+      [{ clock: undefined }, AUTH_REFUSE_REASONS.clockInvalid],
+    ] as const;
+    for (const [overrides, reason] of cases) {
+      const result = await createIdentityPort({
+        adapter: ADAPTER,
+        store: createInMemoryIdentityStore({ users: [CREW] }),
+        admin,
+        clock,
+        ...overrides,
+      }).signIn({ surface: "web-shell", email: "crew@example.com", password: "pw" });
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.reason).toBe(reason);
+    }
+  });
+
+  it("refuses a clock that throws or returns nonsense", async () => {
+    for (const badClock of [
+      () => {
+        throw new Error("no clock");
+      },
+      () => Number.NaN,
+      () => "now" as never,
+    ]) {
+      const result = await makePort({ clock: badClock }).signIn({
+        surface: "web-shell",
+        email: "crew@example.com",
+        password: "pw",
+      });
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.reason).toBe(AUTH_REFUSE_REASONS.clockInvalid);
+    }
+  });
+
+  it("refuses when the store throws", async () => {
+    const result = await makePort(
+      {},
+      Object.freeze({
+        findUserByEmail() {
+          throw new Error("db down");
+        },
+        findUserById: () => undefined,
+        putSession: () => undefined,
+        findSession: () => undefined,
+        deleteSession: () => undefined,
+      }),
+    ).signIn({ surface: "web-shell", email: "crew@example.com", password: "pw" });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(AUTH_REFUSE_REASONS.storeFailed);
+  });
+});
+
+describe("identity port — session verification", () => {
+  const signedIn = async () => {
+    const store = createInMemoryIdentityStore({ users: [CAPTAIN, CREW] });
+    const port = makePort({}, store);
+    const result = await port.signIn({
+      surface: "web-shell",
+      email: "crew@example.com",
+      password: "pw",
+    });
+    if (!result.ok) throw new Error("fixture sign-in failed");
+    return { store, port, principal: result.value };
+  };
+
+  it("verifies a live session and re-derives the role", async () => {
+    const { port, principal } = await signedIn();
+    const result = await port.verifySession({
+      surface: "web-shell",
+      sessionId: principal.session.sessionId,
+      token: "tok-crew",
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.role.role).toBe("user");
+  });
+
+  it("refuses a wrong token", async () => {
+    const { port, principal } = await signedIn();
+    const result = await port.verifySession({
+      surface: "web-shell",
+      sessionId: principal.session.sessionId,
+      token: "tok-captain",
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(AUTH_REFUSE_REASONS.sessionTokenMismatch);
+  });
+
+  it("refuses an unknown session", async () => {
+    const { port } = await signedIn();
+    const result = await port.verifySession({
+      surface: "web-shell",
+      sessionId: "ses_nope",
+      token: "tok-crew",
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(AUTH_REFUSE_REASONS.sessionNotFound);
+  });
+
+  it("refuses a session from another surface", async () => {
+    const { port, principal } = await signedIn();
+    const result = await port.verifySession({
+      surface: "site",
+      sessionId: principal.session.sessionId,
+      token: "tok-crew",
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(AUTH_REFUSE_REASONS.sessionSurfaceMismatch);
+  });
+
+  it("refuses an expired session", async () => {
+    const { store, principal } = await signedIn();
+    const expired = makePort({ clock: () => Date.parse("2026-07-27T10:00:00Z") }, store);
+    const result = await expired.verifySession({
+      surface: "web-shell",
+      sessionId: principal.session.sessionId,
+      token: "tok-crew",
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(AUTH_REFUSE_REASONS.sessionExpired);
+  });
+
+  it("refuses a stored Kids session written by any other path", async () => {
+    const store = createInMemoryIdentityStore({
+      users: [CREW],
+      sessions: [
+        {
+          schemaVersion: 1,
+          kind: "sceneaxi.session",
+          sessionId: "ses_kids",
+          userId: "usr_crew",
+          surface: "kids",
+          issuedAt: "2026-07-25T09:00:00Z",
+          expiresAt: "2026-07-26T10:00:00Z",
+          tokenDigest: digestSessionToken("tok-kids"),
+        } as never,
+      ],
+    });
+    const result = await makePort({}, store).verifySession({
+      surface: "web-shell",
+      sessionId: "ses_kids",
+      token: "tok-kids",
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(AUTH_REFUSE_REASONS.kidsSurfaceDenied);
+  });
+
+  it("refuses a corrupt stored session record", async () => {
+    const store = createInMemoryIdentityStore({ users: [CREW] });
+    await store.putSession({ sessionId: "ses_bad" } as never);
+    const result = await makePort({}, store).verifySession({
+      surface: "web-shell",
+      sessionId: "ses_bad",
+      token: "tok-crew",
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(AUTH_REFUSE_REASONS.sessionRecordInvalid);
+  });
+
+  it("refuses when the session's user has gone away", async () => {
+    const store = createInMemoryIdentityStore({
+      users: [],
+      sessions: [
+        {
+          schemaVersion: 1,
+          kind: "sceneaxi.session",
+          sessionId: "ses_orphan",
+          userId: "usr_crew",
+          surface: "web-shell",
+          issuedAt: "2026-07-25T09:00:00Z",
+          expiresAt: "2026-07-26T10:00:00Z",
+          tokenDigest: digestSessionToken("tok-crew"),
+        } as never,
+      ],
+    });
+    const result = await makePort({}, store).verifySession({
+      surface: "web-shell",
+      sessionId: "ses_orphan",
+      token: "tok-crew",
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(AUTH_REFUSE_REASONS.userNotFound);
+  });
+
+  it("refuses a corrupt stored user record", async () => {
+    const store: IdentityStore = Object.freeze({
+      findUserByEmail: () => undefined,
+      findUserById: () => ({ userId: "usr_crew" }) as never,
+      putSession: () => undefined,
+      findSession: () =>
+        ({
+          schemaVersion: 1,
+          kind: "sceneaxi.session",
+          sessionId: "ses_01",
+          userId: "usr_crew",
+          surface: "web-shell",
+          issuedAt: "2026-07-25T09:00:00Z",
+          expiresAt: "2026-07-26T10:00:00Z",
+          tokenDigest: digestSessionToken("tok-crew"),
+        }) as never,
+      deleteSession: () => undefined,
+    });
+    const result = await makePort({}, store).verifySession({
+      surface: "web-shell",
+      sessionId: "ses_01",
+      token: "tok-crew",
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(AUTH_REFUSE_REASONS.userRecordInvalid);
+  });
+});
+
+describe("identity port — sign-out", () => {
+  it("removes the session", async () => {
+    const store = createInMemoryIdentityStore({ users: [CREW] });
+    const port = makePort({}, store);
+    const signIn = await port.signIn({
+      surface: "web-shell",
+      email: "crew@example.com",
+      password: "pw",
+    });
+    expect(signIn.ok).toBe(true);
+    expect(store.sessionCount()).toBe(1);
+
+    const result = await port.signOut({ sessionId: "ses_usr_crew" });
+    expect(result.ok).toBe(true);
+    expect(store.sessionCount()).toBe(0);
+  });
+
+  it("refuses a malformed request and a client role claim", async () => {
+    const port = makePort();
+    expect((await port.signOut({})).ok).toBe(false);
+    expect((await port.signOut({ sessionId: "" })).ok).toBe(false);
+    const claim = await port.signOut({ sessionId: "ses_01", role: "admin" });
+    expect(claim.ok).toBe(false);
+    if (claim.ok) return;
+    expect(claim.reason).toBe(AUTH_REFUSE_REASONS.roleClaimFromClient);
+  });
+
+  it("refuses when the store throws", async () => {
+    const result = await makePort(
+      {},
+      Object.freeze({
+        findUserByEmail: () => undefined,
+        findUserById: () => undefined,
+        putSession: () => undefined,
+        findSession: () => undefined,
+        deleteSession() {
+          throw new Error("db down");
+        },
+      }),
+    ).signOut({ sessionId: "ses_01" });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(AUTH_REFUSE_REASONS.storeFailed);
+  });
+});
+
+describe("createBetterAuthIdentityAdapter", () => {
+  it("wraps a Better Auth instance and normalizes null to undefined", async () => {
+    const adapter = createBetterAuthIdentityAdapter({
+      api: {
+        signInEmail({ body }) {
+          if (body.password !== "pw") return null;
+          return {
+            user: { id: "usr_crew", email: body.email, emailVerified: true },
+            session: {
+              id: "ses_usr_crew",
+              token: "tok-crew",
+              userId: "usr_crew",
+              expiresAt: new Date("2026-07-26T10:00:00Z"),
+            },
+          };
+        },
+      },
+    });
+
+    expect(
+      await adapter.authenticate({
+        surface: "web-shell",
+        email: "crew@example.com",
+        password: "nope",
+      }),
+    ).toBeUndefined();
+
+    const result = await makePort(
+      { adapter },
+      createInMemoryIdentityStore({ users: [CREW] }),
+    ).signIn({ surface: "web-shell", email: "crew@example.com", password: "pw" });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.session.expiresAt).toBe("2026-07-26T10:00:00.000Z");
+  });
+});
