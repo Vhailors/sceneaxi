@@ -29,6 +29,7 @@ import {
   type Principal,
 } from "@sceneaxi/schemas";
 import {
+  AUTH_REFUSE_REASONS,
   requireAuthenticated,
   type AdminIdentity,
   type AuthRefuseReason,
@@ -373,14 +374,17 @@ export function createAccountPanel(
   let heldPrincipal: Principal | undefined;
   const outstandingPrincipals = new Set<Principal>();
   /**
-   * Sessions a revocation was attempted on and failed. Tracked apart from
-   * `heldPrincipal` because the two answer different questions: the principal is
-   * retained so the revocation can be retried, while the failure is what the
-   * panel must keep telling the reader. Without this, a refused sign-out would
-   * silently become a signed-in snapshot again on the very next refresh.
+   * Sessions a revocation was attempted on and failed, each mapped to the
+   * refusal that describes it. Tracked apart from `heldPrincipal` because the
+   * two answer different questions: the principal is retained so the revocation
+   * can be retried, while the failure is what the panel must keep telling the
+   * reader. Without this, a refused sign-out would silently become a signed-in
+   * snapshot again on the very next refresh.
+   *
+   * Only failures a retry could still clear belong here. A port that *refuses*
+   * the principal has already settled the session — see `revokePrincipal`.
    */
-  const unrevokedPrincipals = new Set<Principal>();
-  let revocationFailure: AccountPanelRefusal | undefined;
+  const unrevokedPrincipals = new Map<Principal, AccountPanelRefusal>();
   let operationTail: Promise<void> = Promise.resolve();
 
   held = anonymous();
@@ -389,14 +393,24 @@ export function createAccountPanel(
     principal: Principal,
     value: AccountPanelRefusal,
   ): AccountPanelRefusal => {
-    unrevokedPrincipals.add(principal);
-    revocationFailure = value;
+    unrevokedPrincipals.set(principal, value);
     return value;
   };
 
   const clearRevocationFailure = (principal: Principal): void => {
     unrevokedPrincipals.delete(principal);
-    if (unrevokedPrincipals.size === 0) revocationFailure = undefined;
+  };
+
+  const outstandingRevocationFailure = (): AccountPanelRefusal | undefined => {
+    for (const value of unrevokedPrincipals.values()) return value;
+    return undefined;
+  };
+
+  const settleRevoked = (principal: Principal): undefined => {
+    outstandingPrincipals.delete(principal);
+    clearRevocationFailure(principal);
+    if (heldPrincipal === principal) heldPrincipal = undefined;
+    return undefined;
   };
 
   const revokePrincipal = async (
@@ -416,15 +430,19 @@ export function createAccountPanel(
       );
     }
     if (!result.ok) {
+      // `principalInvalid` is the port saying this principal no longer names a
+      // stored session — it was rotated away or already deleted. Nothing is left
+      // to revoke and a retry can only repeat the same answer, so holding the
+      // panel refused would strand it on a session that is provably gone.
+      if (result.reason === AUTH_REFUSE_REASONS.principalInvalid) {
+        return settleRevoked(principal);
+      }
       return recordRevocationFailure(
         principal,
         refusal(result.reason, result.message),
       );
     }
-    outstandingPrincipals.delete(principal);
-    clearRevocationFailure(principal);
-    if (heldPrincipal === principal) heldPrincipal = undefined;
-    return undefined;
+    return settleRevoked(principal);
   };
 
   const revokeAllExcept = async (
@@ -520,6 +538,7 @@ export function createAccountPanel(
         // An outstanding failed revocation outranks the balance: a session the
         // reader asked to end may still be live, and re-rendering them as
         // signed-in would substitute a default for that failure.
+        const revocationFailure = outstandingRevocationFailure();
         if (revocationFailure !== undefined) {
           held = refused(revocationFailure);
           return held;

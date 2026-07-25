@@ -554,6 +554,85 @@ describe("sign out", () => {
     expect((await panel.refresh()).phase).toBe("anonymous");
   });
 
+  it("settles a revocation the port refuses because the session is gone", async () => {
+    let tokenNumber = 0;
+    const adapter: IdentityAdapter = Object.freeze({
+      authenticate({ email }) {
+        tokenNumber += 1;
+        return {
+          user: { id: "usr_crew", email, emailVerified: true },
+          session: {
+            id: "ses_crew",
+            token: `tok_${tokenNumber}`,
+            userId: "usr_crew",
+            expiresAt: "2026-07-26T10:00:00Z",
+          },
+        };
+      },
+    });
+    const store = createInMemoryIdentityStore({ users: [CREW] });
+    const identityPort = createIdentityPort({ adapter, store, admin, clock });
+    const first = makePanel({ identityPort });
+    const second = makePanel({ identityPort });
+    const credentials = { email: "crew@example.com", password: "pw" };
+
+    expect((await first.submitCredentials(credentials)).phase).toBe(
+      "authenticated",
+    );
+    // The second panel rewrites the stored session under the same id, so the
+    // first panel now holds a principal the port can never delete.
+    expect((await second.submitCredentials(credentials)).phase).toBe(
+      "authenticated",
+    );
+
+    const signedOut = await first.signOut();
+    expect(signedOut.phase).toBe("anonymous");
+    expect(signedOut.refusal).toBeUndefined();
+    expect((await first.refresh()).phase).toBe("anonymous");
+    // A retry cannot change the port's answer, so the panel must not be held.
+    expect((await first.signOut()).phase).toBe("anonymous");
+  });
+
+  it("lets a fresh sign-in past a session the port can no longer revoke", async () => {
+    let sessionNumber = 0;
+    const adapter: IdentityAdapter = Object.freeze({
+      authenticate({ email }) {
+        sessionNumber += 1;
+        return {
+          user: { id: "usr_crew", email, emailVerified: true },
+          session: {
+            id: `ses_${sessionNumber}`,
+            token: `tok_${sessionNumber}`,
+            userId: "usr_crew",
+            expiresAt: "2026-07-26T10:00:00Z",
+          },
+        };
+      },
+    });
+    const store = createInMemoryIdentityStore({ users: [CREW] });
+    const panel = makePanel({
+      identityPort: createIdentityPort({ adapter, store, admin, clock }),
+    });
+    const credentials = { email: "crew@example.com", password: "pw" };
+    expect((await panel.submitCredentials(credentials)).phase).toBe(
+      "authenticated",
+    );
+
+    // The first session is reaped server-side, leaving the panel holding a
+    // ghost principal whose revocation is refused forever.
+    const stale = await store.findSession("ses_1");
+    expect(stale).toBeDefined();
+    if (stale === undefined) return;
+    expect(await store.deleteSession(stale)).toBe(true);
+
+    const resignedIn = await panel.submitCredentials(credentials);
+    expect(resignedIn.phase).toBe("authenticated");
+    expect(resignedIn.creditBalance).toBe(250);
+    expect((await panel.refresh()).phase).toBe("authenticated");
+    expect((await panel.signOut()).phase).toBe("anonymous");
+    expect(store.sessionCount()).toBe(0);
+  });
+
   it("revokes every superseded session and retains failed revocations", async () => {
     let sessionNumber = 0;
     const adapter: IdentityAdapter = Object.freeze({
