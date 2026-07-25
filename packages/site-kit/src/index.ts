@@ -65,6 +65,22 @@ export {
 } from "./ports.js";
 
 export {
+  WEB_EDITOR_DOCUMENT_PATH,
+  WEB_EDITOR_SESSION_OPERATIONS,
+  WebEditorError,
+  createWebEditorSession,
+  type WebEditorMount,
+  type WebEditorSession,
+  type WebEditorSessionOptions,
+} from "./web-editor.js";
+
+export {
+  WEB_EDITOR_STARTER_INTAKE_PATH,
+  WEB_EDITOR_STARTER_SEED,
+  webEditorStarterArtifact,
+} from "./starter-artifact.js";
+
+export {
   CATALOG_SURFACES,
   CREATOR_SHARE_RULE,
   SITE_CATALOG_POLICY_CITES,

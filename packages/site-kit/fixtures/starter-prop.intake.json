@@ -1,0 +1,287 @@
+{
+  "schemaVersion": 1,
+  "kind": "sceneaxi.sculpt-intake",
+  "intakeId": "starter-service-crate",
+  "mode": "structured-spec",
+  "structuredSpec": {
+    "schemaVersion": 1,
+    "kind": "sceneaxi.object-sculpt-spec",
+    "id": "starter-service-crate",
+    "rootNodeId": "crate-body-node",
+    "complexityClass": "non-trivial",
+    "passes": [
+      {
+        "id": "blockout",
+        "deterministic": true,
+        "steps": [
+          "block-primary-case",
+          "set-lid-profile"
+        ]
+      },
+      {
+        "id": "structure",
+        "deterministic": true,
+        "steps": [
+          "place-lid",
+          "place-latch",
+          "place-handles"
+        ]
+      },
+      {
+        "id": "materials",
+        "deterministic": true,
+        "steps": [
+          "assign-painted-steel",
+          "assign-rubber",
+          "assign-emissive-accent"
+        ]
+      },
+      {
+        "id": "surface-detail",
+        "deterministic": true,
+        "steps": [
+          "bevel-case-edges",
+          "recess-latch"
+        ]
+      },
+      {
+        "id": "sockets",
+        "deterministic": true,
+        "steps": [
+          "bind-lid-hinge",
+          "bind-carry-point"
+        ]
+      }
+    ],
+    "detailInventory": {
+      "silhouetteFeatures": [
+        "raised-lid-rim",
+        "paired-side-handles",
+        "front-latch-projection"
+      ],
+      "structuralFeatures": [
+        "reinforced-case",
+        "hinged-lid",
+        "front-latch",
+        "left-handle",
+        "right-handle"
+      ],
+      "surfaceFeatures": [
+        "beveled-case-edges",
+        "recessed-latch-bed",
+        "rubber-handle-grips"
+      ],
+      "materialIds": [
+        "painted-steel",
+        "rubber",
+        "status-light"
+      ],
+      "socketIds": [
+        "lid-hinge",
+        "carry-attachment"
+      ]
+    },
+    "materials": [
+      {
+        "id": "painted-steel",
+        "baseColor": "#39434f",
+        "metallic": 0.72,
+        "roughness": 0.34
+      },
+      {
+        "id": "rubber",
+        "baseColor": "#171a1f",
+        "metallic": 0.02,
+        "roughness": 0.86
+      },
+      {
+        "id": "status-light",
+        "baseColor": "#f2a93b",
+        "metallic": 0.18,
+        "roughness": 0.28
+      }
+    ],
+    "components": [
+      {
+        "id": "case",
+        "primitive": "box",
+        "dimensions": [
+          3.6,
+          1.8,
+          2.4
+        ],
+        "materialId": "painted-steel"
+      },
+      {
+        "id": "lid",
+        "primitive": "box",
+        "dimensions": [
+          3.45,
+          0.34,
+          2.25
+        ],
+        "materialId": "painted-steel"
+      },
+      {
+        "id": "latch",
+        "primitive": "cylinder",
+        "dimensions": [
+          0.36,
+          0.72,
+          0.36
+        ],
+        "materialId": "status-light"
+      },
+      {
+        "id": "left-handle",
+        "primitive": "cylinder",
+        "dimensions": [
+          0.32,
+          1.1,
+          0.32
+        ],
+        "materialId": "rubber"
+      },
+      {
+        "id": "right-handle",
+        "primitive": "cylinder",
+        "dimensions": [
+          0.32,
+          1.1,
+          0.32
+        ],
+        "materialId": "rubber"
+      }
+    ],
+    "hierarchy": [
+      {
+        "id": "crate-body-node",
+        "parentId": null,
+        "componentId": "case",
+        "transform": {
+          "translation": [
+            0,
+            1,
+            0
+          ],
+          "rotationEulerDegrees": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "id": "crate-lid-node",
+        "parentId": "crate-body-node",
+        "componentId": "lid",
+        "transform": {
+          "translation": [
+            0,
+            1.05,
+            0
+          ],
+          "rotationEulerDegrees": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "id": "crate-latch-node",
+        "parentId": "crate-lid-node",
+        "componentId": "latch",
+        "transform": {
+          "translation": [
+            0,
+            -0.1,
+            1.18
+          ],
+          "rotationEulerDegrees": [
+            90,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "id": "crate-left-handle-node",
+        "parentId": "crate-body-node",
+        "componentId": "left-handle",
+        "transform": {
+          "translation": [
+            -1.9,
+            0.1,
+            0
+          ],
+          "rotationEulerDegrees": [
+            0,
+            0,
+            90
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "id": "crate-right-handle-node",
+        "parentId": "crate-body-node",
+        "componentId": "right-handle",
+        "transform": {
+          "translation": [
+            1.9,
+            0.1,
+            0
+          ],
+          "rotationEulerDegrees": [
+            0,
+            0,
+            90
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        }
+      }
+    ],
+    "sockets": [
+      {
+        "id": "lid-hinge",
+        "nodeId": "crate-lid-node",
+        "kind": "animation",
+        "axis": "x",
+        "amplitude": 24,
+        "frequencyHz": 0.35
+      },
+      {
+        "id": "carry-attachment",
+        "nodeId": "crate-body-node",
+        "kind": "attachment",
+        "axis": "y",
+        "amplitude": 0,
+        "frequencyHz": 0
+      }
+    ]
+  }
+}
