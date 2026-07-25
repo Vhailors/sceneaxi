@@ -53,6 +53,7 @@ export default async function PricingPage() {
                     <td>
                       <form method="post" action="/api/checkout">
                         <input type="hidden" name="packId" value={pack.packId} />
+                        <input type="hidden" name="attempt" value={crypto.randomUUID()} autoComplete="off" />
                         <button className="button" type="submit">Buy</button>
                       </form>
                     </td>

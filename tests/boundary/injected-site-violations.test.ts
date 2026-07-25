@@ -222,6 +222,17 @@ describe("sites tier — injected violations", () => {
     expect(res.stderr).toContain("secrets are env-only, never committed");
   });
 
+  it("sites check rejects a committed fallback after a TypeScript non-null assertion", () => {
+    writeTo(
+      fx,
+      "sites/umbrella/src/lib/leak.ts",
+      'const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY! ?? "committed-fallback";\n',
+    );
+    const res = runCheck(fx, "check-sites.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("secrets are env-only, never committed");
+  });
+
   it("sites check accepts a complete direct env reference", () => {
     writeTo(
       fx,

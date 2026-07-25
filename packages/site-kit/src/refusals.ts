@@ -20,7 +20,7 @@ export const SITE_REFUSALS = Object.freeze({
     "The Kids surface has a separate identity plane. No session may be minted for or accepted from it.",
   ROLE_CLAIM_FROM_CLIENT_DENIED:
     "A role claim arrived from the client. Roles are server-derived only and never client-claimable.",
-  SITE_SURFACE_UNKNOWN: "The requested site surface is not a known SceneAxi surface.",
+  SITE_SURFACE_UNKNOWN: "The requested identity surface is not a known SceneAxi surface.",
   SITE_REQUEST_MALFORMED: "The identity request is malformed.",
 
   // --- adapter-output validation ---

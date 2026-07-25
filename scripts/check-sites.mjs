@@ -94,7 +94,11 @@ const ENV_OPERAND = new RegExp(`^${ENV_REFERENCE_SOURCE}`);
  * reference; the moment a coalesce/fallback chain introduces a literal or any non-env
  * operand, the assignment carries a committed value and is refused. Bracket env keys
  * such as `process.env["NAME"]` are consumed as part of the operand, so their string key
- * never reads as a committed literal.
+ * never reads as a committed literal. A TypeScript non-null assertion
+ * (`process.env.X!`) is a postfix on the operand and is consumed rather than treated as
+ * trailing syntax; any other trailing syntax that is neither an expression terminator
+ * nor a recognized binary operator is treated as a committed value, because the scanner
+ * cannot prove it does not introduce one.
  */
 function rhsIsCommittedSecret(text, start) {
   const len = text.length;
@@ -131,12 +135,23 @@ function rhsIsCommittedSecret(text, start) {
   };
   skipTrivia();
   if (!readEnvOperand()) return true;
+  const readPostfixAssertions = () => {
+    for (;;) {
+      skipTrivia();
+      if (text[i] === "!") {
+        i += 1;
+        continue;
+      }
+      break;
+    }
+  };
   for (;;) {
+    readPostfixAssertions();
     skipTrivia();
     const rest = text.slice(i);
     if (rest === "" || /^[;),}\]].?/.test(rest)) return false;
     const operator = /^(?:\?\?|\|\||&&|\?|:|\+)/.exec(rest);
-    if (operator === null) return false;
+    if (operator === null) return true;
     i += operator[0].length;
     skipTrivia();
     if (!readEnvOperand()) return true;

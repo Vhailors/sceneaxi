@@ -67,7 +67,7 @@ export {
 export {
   CLIENT_ROLE_CLAIM_KEYS,
   SITE_ROLES,
-  SITE_SURFACES,
+  IDENTITY_SURFACES,
   createBillingPlane,
   createCreditsPlane,
   createIdentityPlane,
@@ -149,7 +149,11 @@ export {
   buildEditorDeepLink,
   parseEditorDeepLink,
   parseEditorDeepLinkParams,
+  resolveEditorLinkFromEnv,
+  resolveFamilyLinks,
+  resolveUmbrellaEditorOrigin,
   type EditorDeepLink,
+  type FamilyLinks,
 } from "./deep-link.js";
 
 export {
@@ -161,10 +165,12 @@ export {
   decideEditorEntitlement,
   readEditorPreviewFlag,
   resolveEditorAccess,
+  resolveEditorSession,
   type CapabilityDecision,
   type EditorAccessDecision,
   type EditorEntitlementDecision,
   type EditorEntitlementInput,
+  type EditorSessionAccess,
   type EntitlementBasis,
   type SiteAccess,
   type SiteCapability,

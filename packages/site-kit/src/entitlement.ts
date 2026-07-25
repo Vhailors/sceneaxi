@@ -291,3 +291,40 @@ export function decideEditorAccess(input: {
     message: input.entitlement.message,
   });
 }
+
+export type EditorSessionAccess = {
+  readonly access: SiteAccess;
+  readonly decision: EditorAccessDecision;
+  readonly previewEnabled: boolean;
+};
+
+/**
+ * Resolve editor access for a request, including the preview-flag decision.
+ *
+ * This is the single orchestration over `resolveEditorAccess` + `decideEditorAccess` +
+ * `readEditorPreviewFlag`, so a site holds only routes and its identity-plane wiring module
+ * rather than duplicating it. The preview flag is read from the **server** environment
+ * only; a client value cannot reach it. Every deployable site maps onto the `"site"`
+ * identity surface.
+ */
+export async function resolveEditorSession(input: {
+  readonly identity: SiteIdentityPort;
+  readonly credits: SiteCreditsPort;
+  readonly env: Readonly<Record<string, string | undefined>>;
+  readonly sessionToken?: string | null;
+}): Promise<EditorSessionAccess> {
+  const access = await resolveEditorAccess({
+    identity: input.identity,
+    credits: input.credits,
+    request: {
+      surface: "site",
+      ...(input.sessionToken === undefined ? {} : { sessionToken: input.sessionToken }),
+    },
+  });
+  const previewEnabled = readEditorPreviewFlag(input.env);
+  return Object.freeze({
+    access,
+    decision: decideEditorAccess({ entitlement: access.entitlement, previewEnabled }),
+    previewEnabled,
+  });
+}

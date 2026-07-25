@@ -6,7 +6,7 @@
  * the property these tests exist to hold.
  */
 import { createHash } from "node:crypto";
-import { cpSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,6 +19,7 @@ import {
   SDK_PACKAGES,
   buildEngineSdk,
   collectSdkEntries,
+  eligibleSdkFiles,
 } from "../../scripts/build-engine-sdk.mjs";
 
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
@@ -215,6 +216,58 @@ describe("engine SDK archive", () => {
       join(repoRoot, "packages/schemas/src/leak.ts"),
     );
     expect(() => collectSdkEntries({ repoRoot })).toThrow(/symlink|escape|outside/i);
+  });
+
+  it("ships exactly the pinned public file list, plus the generated README", () => {
+    const built = build();
+    const list = JSON.parse(
+      readFileSync(new URL("../../scripts/engine-sdk-files.json", import.meta.url), "utf8"),
+    ) as readonly string[];
+    const shipped = built.entryNames
+      .filter((name) => name !== "sceneaxi-engine-sdk/SDK-README.md")
+      .map((name) => name.replace(/^sceneaxi-engine-sdk\//, ""))
+      .sort();
+    expect(shipped).toEqual([...list].sort());
+  });
+
+  it("keeps the pinned list equal to the eligible public surface on disk", () => {
+    const list = JSON.parse(
+      readFileSync(new URL("../../scripts/engine-sdk-files.json", import.meta.url), "utf8"),
+    ) as readonly string[];
+    expect(eligibleSdkFiles(REPO_ROOT)).toEqual([...list].sort());
+  });
+
+  it("fails the gate when a source file is added but not pinned", () => {
+    const repoRoot = fixtureRepo();
+    cpSync(join(REPO_ROOT, "package.json"), join(repoRoot, "package.json"));
+    for (const doc of SDK_DOCS) {
+      cpSync(join(REPO_ROOT, doc), join(repoRoot, doc), { recursive: true });
+    }
+    for (const pkgDir of SDK_PACKAGES) {
+      cpSync(join(REPO_ROOT, pkgDir), join(repoRoot, pkgDir), { recursive: true });
+    }
+    writeFileSync(join(repoRoot, "packages/schemas/src/unpinned.ts"), "export {};\n");
+    expect(() => collectSdkEntries({ repoRoot })).toThrow(
+      /pinned public surface does not match/,
+    );
+  });
+
+  it("refuses a symlinked non-walk candidate such as a package README", () => {
+    const repoRoot = fixtureRepo();
+    cpSync(join(REPO_ROOT, "package.json"), join(repoRoot, "package.json"));
+    for (const doc of SDK_DOCS) {
+      cpSync(join(REPO_ROOT, doc), join(repoRoot, doc), { recursive: true });
+    }
+    for (const pkgDir of SDK_PACKAGES) {
+      cpSync(join(REPO_ROOT, pkgDir), join(repoRoot, pkgDir), { recursive: true });
+    }
+    writeFileSync(join(repoRoot, "outside-secret.txt"), "leaked-by-symlink");
+    rmSync(join(repoRoot, "packages/schemas/README.md"), { force: true });
+    symlinkSync(
+      join(repoRoot, "outside-secret.txt"),
+      join(repoRoot, "packages/schemas/README.md"),
+    );
+    expect(() => collectSdkEntries({ repoRoot })).toThrow(/symlink/i);
   });
 });
 

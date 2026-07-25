@@ -36,3 +36,5 @@ export function collectSdkEntries(options?: EngineSdkBuildOptions): {
 };
 
 export function buildEngineSdk(options?: EngineSdkBuildOptions): BuiltEngineSdk;
+
+export function eligibleSdkFiles(repoRoot?: string): readonly string[];

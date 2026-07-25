@@ -170,7 +170,10 @@ vertical merges:
 The site ports are structural projections of that vertical's contracts (`Principal`,
 `User`, `Session`, `CreditLedgerEntry`, `CreditPack`, `CheckoutSessionIntent`), so its
 exports satisfy them as injected adapters with no redefinition of identity or ledger
-semantics.
+semantics. The ports speak that vertical's identity-surface vocabulary
+(`IDENTITY_SURFACES`): all three deployable sites map onto the `"site"` identity surface,
+while the umbrella / catalog-game / catalog-web identifiers stay for routing, branding,
+catalog lookup, and deep links and are not identity surfaces.
 
 ## Outstanding captain secrets
 

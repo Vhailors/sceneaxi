@@ -61,7 +61,7 @@ const principal = (role: string, overrides: Record<string, unknown> = {}): unkno
   session: {
     sessionId: "session-1",
     userId: "user-1",
-    surface: "umbrella",
+    surface: "site",
     issuedAt: "2026-07-25T11:00:00.000Z",
     expiresAt: "2026-07-25T13:00:00.000Z",
     ...(overrides["session"] as Record<string, unknown> | undefined),
@@ -78,7 +78,7 @@ const identityWith = (value: unknown) =>
     },
   });
 
-const umbrella: SiteIdentityRequest = { surface: "umbrella" };
+const umbrella: SiteIdentityRequest = { surface: "site" };
 
 const reasonOf = (value: unknown): string | null =>
   typeof value === "object" && value !== null && "reason" in value
@@ -103,7 +103,7 @@ const CASES: Readonly<Record<SiteRefusalReason, () => Promise<unknown> | unknown
   KIDS_SURFACE_DENIED: () => createIdentityPlane({ now }).resolvePrincipal({ surface: "kids" }),
   ROLE_CLAIM_FROM_CLIENT_DENIED: () =>
     createIdentityPlane({ now }).resolvePrincipal({
-      surface: "umbrella",
+      surface: "site",
       credentials: { isAdmin: true },
     }),
   SITE_SURFACE_UNKNOWN: () =>
@@ -126,7 +126,7 @@ const CASES: Readonly<Record<SiteRefusalReason, () => Promise<unknown> | unknown
     ).resolvePrincipal(umbrella),
   IDENTITY_SESSION_SURFACE_MISMATCH: () =>
     identityWith(
-      principal("user", { session: { surface: "catalog-game" } }),
+      principal("user", { session: { surface: "web-shell" } }),
     ).resolvePrincipal(umbrella),
   CREDIT_BALANCE_INVALID: () =>
     createCreditsPlane({

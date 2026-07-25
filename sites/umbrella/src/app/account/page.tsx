@@ -21,7 +21,7 @@ export default async function AccountPage() {
   const resolved = await resolveEditorAccess({
     identity: plane.identity,
     credits: plane.credits,
-    request: { surface: "umbrella", sessionToken },
+    request: { surface: "site", sessionToken },
   });
 
   const phase = resolved.principal !== null ? "authenticated" : resolved.identity.ok ? "anonymous" : "refused";

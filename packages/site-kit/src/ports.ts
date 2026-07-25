@@ -24,15 +24,22 @@ import {
   refuse,
 } from "./refusals.js";
 
-/** Deployable surfaces. `"kids"` exists only so it can be refused. */
-export const SITE_SURFACES = Object.freeze([
-  "umbrella",
-  "catalog-game",
-  "catalog-web",
+/**
+ * Identity surfaces, in the vocabulary `sceneaxi-auth-credits-v1` (#91) defines
+ * (`IDENTITY_SURFACES`). All three deployable sites map onto the `"site"` identity
+ * surface; `"web-shell"` and `"desktop-shell"` are the other shells that vertical knows,
+ * and `"kids"` is listed only so it can be refused before any adapter dispatch. The
+ * umbrella / catalog-game / catalog-web identifiers stay for routing, branding, catalog
+ * lookup, and deep links — they are not identity surfaces.
+ */
+export const IDENTITY_SURFACES = Object.freeze([
+  "web-shell",
+  "desktop-shell",
+  "site",
   "kids",
 ] as const);
 
-export type SiteSurface = (typeof SITE_SURFACES)[number];
+export type SiteSurface = (typeof IDENTITY_SURFACES)[number];
 
 export const SITE_ROLES = Object.freeze(["admin", "user"] as const);
 
@@ -268,7 +275,7 @@ function canonicalAdapterRefusal(
 function validateIdentityRequest(request: unknown): SiteRefusal | null {
   if (!isRecord(request)) return refuse("SITE_REQUEST_MALFORMED");
   const surface = request["surface"];
-  if (!(SITE_SURFACES as readonly unknown[]).includes(surface)) {
+  if (!(IDENTITY_SURFACES as readonly unknown[]).includes(surface)) {
     return refuse("SITE_SURFACE_UNKNOWN");
   }
   // Kids refuses before anything else touches an adapter or a store, and no
@@ -319,12 +326,17 @@ function validatePrincipal(
   if (!isCanonicalIsoInstant(issuedAt) || !isCanonicalIsoInstant(expiresAt)) {
     return refuse("IDENTITY_ADAPTER_OUTPUT_INVALID");
   }
+  const issuedAtMs = Date.parse(issuedAt);
+  const expiresAtMs = Date.parse(expiresAt);
+  if (!Number.isFinite(issuedAtMs) || !Number.isFinite(expiresAtMs)) {
+    return refuse("IDENTITY_ADAPTER_OUTPUT_INVALID");
+  }
   if (!(SITE_ROLES as readonly unknown[]).includes(role)) return refuse("IDENTITY_ROLE_UNKNOWN");
   if (user["disabled"] === true) return refuse("IDENTITY_USER_DISABLED");
   if (session["surface"] !== request.surface) return refuse("IDENTITY_SESSION_SURFACE_MISMATCH");
   const nowMs = Date.parse(nowIso);
-  if (Date.parse(issuedAt) > nowMs) return refuse("IDENTITY_SESSION_NOT_YET_VALID");
-  if (Date.parse(expiresAt) <= nowMs) return refuse("IDENTITY_SESSION_EXPIRED");
+  if (issuedAtMs > nowMs) return refuse("IDENTITY_SESSION_NOT_YET_VALID");
+  if (expiresAtMs <= nowMs) return refuse("IDENTITY_SESSION_EXPIRED");
   return ok(
     Object.freeze({
       user: Object.freeze({

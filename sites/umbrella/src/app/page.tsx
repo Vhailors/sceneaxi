@@ -1,4 +1,8 @@
-import { CREATOR_SHARE_RULE, SITE_STARTER_CREDIT_ALLOTMENT } from "@sceneaxi/site-kit";
+import {
+  CREATOR_SHARE_ROUNDING_NOTE,
+  CREATOR_SHARE_RULE,
+  SITE_STARTER_CREDIT_ALLOTMENT,
+} from "@sceneaxi/site-kit";
 import { UMBRELLA_BRAND, resolveFamilyLinks } from "../lib/site-config.js";
 import { CapabilityTable } from "./_components/capability-table.js";
 
@@ -68,6 +72,9 @@ export default function OverviewPage() {
         Two storefronts consume the same catalog pipeline with distinct positioning and
         content. Listings show a price in credits, in money, or both, and creators
         receive {CREATOR_SHARE_RULE.creatorPercent}% of the credits on a sale.
+      </p>
+      <p style={{ color: "var(--ink-faint)", fontSize: "0.9rem" }}>
+        {CREATOR_SHARE_ROUNDING_NOTE}
       </p>
       {family.gameCatalog === null && family.webCatalog === null ? (
         <p style={{ color: "var(--ink-faint)" }}>

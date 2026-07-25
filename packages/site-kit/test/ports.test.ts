@@ -34,7 +34,7 @@ const principal = (
   session: {
     sessionId: "session-1",
     userId: "user-1",
-    surface: overrides.surface ?? "umbrella",
+    surface: overrides.surface ?? "site",
     issuedAt: "2026-07-25T11:00:00.000Z",
     expiresAt: overrides.expiresAt ?? "2026-07-25T13:00:00.000Z",
   },
@@ -51,7 +51,7 @@ const adapterReturning = (value: unknown): SiteIdentityAdapter & { calls: number
   return adapter;
 };
 
-const umbrella: SiteIdentityRequest = { surface: "umbrella" };
+const umbrella: SiteIdentityRequest = { surface: "site" };
 
 describe("identity plane — fail closed", () => {
   it("refuses IDENTITY_PLANE_NOT_WIRED with no adapter, never an anonymous allow", async () => {
@@ -78,7 +78,7 @@ describe("identity plane — fail closed", () => {
       const adapter = adapterReturning(principal());
       const port = createIdentityPlane({ adapter, now });
       const result = await port.resolvePrincipal({
-        surface: "umbrella",
+        surface: "site",
         credentials: { email: "a@b.c", [key]: "admin" },
       });
       expect(result.ok === false && result.reason).toBe("ROLE_CLAIM_FROM_CLIENT_DENIED");
@@ -103,7 +103,7 @@ describe("identity plane — fail closed", () => {
   it("refuses opaque credentials before adapter dispatch", async () => {
     const adapter = adapterReturning(principal());
     const result = await createIdentityPlane({ adapter, now }).resolvePrincipal({
-      surface: "umbrella",
+      surface: "site",
       credentials: new URLSearchParams("role=admin"),
     });
     expect(result).toMatchObject({ ok: false, reason: "SITE_REQUEST_MALFORMED" });
@@ -115,7 +115,7 @@ describe("identity plane — fail closed", () => {
     async (credentials) => {
       const adapter = adapterReturning(principal());
       const result = await createIdentityPlane({ adapter, now }).resolvePrincipal({
-        surface: "umbrella",
+        surface: "site",
         credentials,
       });
       expect(result).toMatchObject({ ok: false, reason: "SITE_REQUEST_MALFORMED" });
@@ -128,7 +128,7 @@ describe("identity plane — fail closed", () => {
     const credentials = JSON.stringify({ profile: { role: "admin" } });
     expect(hasClientRoleClaim(credentials)).toBe(true);
     const result = await createIdentityPlane({ adapter, now }).resolvePrincipal({
-      surface: "umbrella",
+      surface: "site",
       credentials,
     });
     expect(result).toMatchObject({ ok: false, reason: "ROLE_CLAIM_FROM_CLIENT_DENIED" });
@@ -144,7 +144,7 @@ describe("identity plane — fail closed", () => {
       await port.resolvePrincipal(undefined as unknown as SiteIdentityRequest),
     ).toMatchObject({ reason: "SITE_REQUEST_MALFORMED" });
     expect(
-      await port.resolvePrincipal({ surface: "umbrella", sessionToken: 7 } as unknown as SiteIdentityRequest),
+      await port.resolvePrincipal({ surface: "site", sessionToken: 7 } as unknown as SiteIdentityRequest),
     ).toMatchObject({ reason: "SITE_REQUEST_MALFORMED" });
   });
 
@@ -163,7 +163,7 @@ describe("identity plane — fail closed", () => {
   it.each([
     ["IDENTITY_ROLE_UNKNOWN", principal({ role: "superuser" })],
     ["IDENTITY_USER_DISABLED", principal({ disabled: true })],
-    ["IDENTITY_SESSION_SURFACE_MISMATCH", principal({ surface: "catalog-game" })],
+    ["IDENTITY_SESSION_SURFACE_MISMATCH", principal({ surface: "web-shell" })],
     ["IDENTITY_SESSION_EXPIRED", principal({ expiresAt: "2026-07-25T11:59:59.000Z" })],
     ["IDENTITY_ADAPTER_OUTPUT_INVALID", { user: {}, role: "user", session: {} }],
     ["IDENTITY_ADAPTER_OUTPUT_INVALID", "not-an-object"],

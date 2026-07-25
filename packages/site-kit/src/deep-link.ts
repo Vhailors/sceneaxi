@@ -126,3 +126,55 @@ export function parseEditorDeepLinkParams(
     }),
   );
 }
+
+export type FamilyLinks = {
+  readonly gameCatalog: string | null;
+  readonly webCatalog: string | null;
+};
+
+/**
+ * Resolve family cross-links from the server environment.
+ *
+ * The umbrella links to its two catalog siblings. A non-https or malformed origin becomes
+ * `null` (no link rendered rather than a broken one), `http://localhost` is allowed for
+ * development, and these links never carry identity, session, or telemetry — and never
+ * point at Kids.
+ */
+export function resolveFamilyLinks(
+  env: Readonly<Record<string, string | undefined>>,
+): FamilyLinks {
+  return Object.freeze({
+    gameCatalog: normalizeOrigin(env["NEXT_PUBLIC_SCENEAXI_GAME_CATALOG_ORIGIN"] ?? ""),
+    webCatalog: normalizeOrigin(env["NEXT_PUBLIC_SCENEAXI_WEB_CATALOG_ORIGIN"] ?? ""),
+  });
+}
+
+/**
+ * Resolve the umbrella origin the editor deep links point at, from the server environment.
+ *
+ * A missing or non-https origin refuses, so a page renders a named reason instead of a
+ * link that would 404 for every visitor. The origin rule has exactly one definition: the
+ * origin is probed through the deep-link contract itself.
+ */
+export function resolveUmbrellaEditorOrigin(
+  env: Readonly<Record<string, string | undefined>>,
+): SiteResult<string> {
+  const origin = env["NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN"] ?? "";
+  const probe = buildEditorDeepLink({
+    umbrellaOrigin: origin,
+    source: "catalog-game",
+    itemId: "origin-probe",
+  });
+  return probe.ok ? ok(new URL(origin).origin) : probe;
+}
+
+/** Build a deep link for one listing from the server environment, or the named refusal. */
+export function resolveEditorLinkFromEnv(
+  env: Readonly<Record<string, string | undefined>>,
+  surface: CatalogSurface,
+  itemId: string,
+): SiteResult<string> {
+  const origin = resolveUmbrellaEditorOrigin(env);
+  if (!origin.ok) return origin;
+  return buildEditorDeepLink({ umbrellaOrigin: origin.value, source: surface, itemId });
+}

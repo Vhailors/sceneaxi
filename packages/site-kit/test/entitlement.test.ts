@@ -23,7 +23,7 @@ const principal = (role: "admin" | "user"): SitePrincipal => ({
   session: {
     sessionId: "session-1",
     userId: "user-1",
-    surface: "umbrella",
+    surface: "site",
     issuedAt: "2026-07-25T11:00:00.000Z",
     expiresAt: "2026-07-25T13:00:00.000Z",
   },
@@ -128,7 +128,7 @@ describe("resolveEditorAccess", () => {
     const access = await resolveEditorAccess({
       identity: identityFor("admin"),
       credits,
-      request: { surface: "umbrella" },
+      request: { surface: "site" },
     });
     expect(access.entitlement).toMatchObject({ entitled: true, basis: "admin-unrestricted" });
     expect(credits.calls).toBe(0);
@@ -139,7 +139,7 @@ describe("resolveEditorAccess", () => {
     const access = await resolveEditorAccess({
       identity: identityFor("user"),
       credits,
-      request: { surface: "umbrella" },
+      request: { surface: "site" },
     });
     expect(credits.calls).toBe(1);
     expect(access.entitlement).toMatchObject({ entitled: true, basis: "starter-allotment" });
@@ -149,7 +149,7 @@ describe("resolveEditorAccess", () => {
     const access = await resolveEditorAccess({
       identity: createIdentityPlane({ now: () => NOW }),
       credits: createCreditsPlane(),
-      request: { surface: "umbrella" },
+      request: { surface: "site" },
     });
     expect(access.principal).toBeNull();
     expect(access.entitlement).toMatchObject({
@@ -182,7 +182,7 @@ describe("free-vs-paid capability matrix", () => {
     const access = await resolveEditorAccess({
       identity: createIdentityPlane({ now: () => NOW }),
       credits: createCreditsPlane(),
-      request: { surface: "umbrella" },
+      request: { surface: "site" },
     });
     const paid = SITE_CAPABILITY_IDS.filter((id) => SITE_CAPABILITIES[id].tier === "paid");
     expect(paid.length).toBeGreaterThan(0);
@@ -202,7 +202,7 @@ describe("free-vs-paid capability matrix", () => {
         },
       }),
       credits: createCreditsPlane(),
-      request: { surface: "umbrella" },
+      request: { surface: "site" },
     });
     expect(access.entitlement.entitled).toBe(true);
     expect(decideCapability({ capability: "catalog-purchase", access })).toMatchObject({
