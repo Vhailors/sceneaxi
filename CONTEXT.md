@@ -26,7 +26,7 @@ are indexed by
 
 The multi-object path is:
 
-`N quality Sculpt Artifacts + one Scene Composition Intake → one ComposedScene → one text-canonical SceneDocument → existing Mount API + one multi-object kernel session`
+`N validated Sculpt Artifacts + one Scene Composition Intake → one ComposedScene → one text-canonical SceneDocument → existing Mount API + one multi-object kernel session`
 
 The scene contracts, axis-aligned placement rule, named refuse matrix, committed
 three-instance demo, and stable evidence are indexed by
@@ -92,8 +92,8 @@ three-instance demo, and stable evidence are indexed by
   transform with an instance's local transform. Child offsets are scaled but
   never rotated, so a rotating parent refuses instead of mis-nesting its
   children; placement projects an instance into scene space and never rewrites
-  its artifact. Composable artifacts carry an identity runtime root so this
-  projection remains renderer-neutral. See
+  its artifact. Existing artifact root-local transforms remain intact and are
+  composed after the instance world transform. See
   [ADR 0014](docs/adr/0014-scene-composition-contract.md).
 - **Scene kernel session** — the multi-object open path
   (`openSceneKernelSession` / `replaySceneKernelSession`) that runs the existing

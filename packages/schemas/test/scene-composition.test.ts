@@ -92,12 +92,14 @@ function intakeFixture(): SceneCompositionIntake {
   };
 }
 
-function composedSceneFixture(): ComposedScene {
+function composedSceneFixture(
+  sceneDroneArtifact: SculptArtifact = droneArtifact,
+): ComposedScene {
   const resolved = resolveScenePlacements(intakeFixture());
   if (!resolved.ok) throw new Error("fixture intake refused");
   const artifacts = new Map<string, SculptArtifact>([
     ["crate-artifact", crateArtifact],
-    ["drone-artifact", droneArtifact],
+    ["drone-artifact", sceneDroneArtifact],
   ]);
   const instances = resolved.value.map((placement): ComposedSceneInstance => {
     const artifact = artifacts.get(placement.artifactId);
@@ -175,35 +177,7 @@ describe("scene composition contracts", () => {
           properties: {
             worldTransform: { $ref: "#/$defs/resolvedTransform" },
             artifact: {
-              allOf: [
-                {
-                  $ref: "https://sceneaxi.invalid/contracts/sculpt-artifact/v1",
-                },
-                {
-                  properties: {
-                    runtimeHierarchy: {
-                      properties: {
-                        nodes: {
-                          items: {
-                            if: {
-                              properties: {
-                                parentId: { type: "null" },
-                              },
-                            },
-                            then: {
-                              properties: {
-                                transform: {
-                                  $ref: "#/$defs/identityTransform",
-                                },
-                              },
-                            },
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              ],
+              $ref: "https://sceneaxi.invalid/contracts/sculpt-artifact/v1",
             },
           },
         },
@@ -711,7 +685,7 @@ describe("scene composition contracts", () => {
     ).toMatchObject({ code: "invalid-kind", path: "$.kind" });
   });
 
-  it("uses composed-scene field paths and requires identity artifact roots", () => {
+  it("uses composed-scene field paths and accepts valid artifact root transforms", () => {
     const scene = composedSceneFixture();
     const rotatedRoot = {
       ...scene,
@@ -745,23 +719,37 @@ describe("scene composition contracts", () => {
         rootTransform,
       );
       expect(validateSculptArtifact(transformedArtifact).ok).toBe(true);
-      const transformedRoot = {
-        ...scene,
-        instances: scene.instances.map((instance, index) =>
-          index === 2
-            ? { ...instance, artifact: transformedArtifact }
-            : instance,
-        ),
-      };
+      const transformedRoot = composedSceneFixture(transformedArtifact);
+      expect(validateComposedScene(transformedRoot).ok).toBe(true);
+      const transformedInstance = transformedRoot.instances[2];
+      if (transformedInstance === undefined) {
+        throw new Error("transformed fixture instance missing");
+      }
+      const projected = projectSceneInstanceHierarchy(transformedInstance);
+      const projectedRoot = projected.nodes.find(
+        (node) => node.id === projected.rootNodeId,
+      );
+      expect(projectedRoot?.transform).toEqual(
+        composeSculptTransforms(transformedInstance.worldTransform, rootTransform),
+      );
       expect(
-        refusalOf(
-          validateComposedScene(transformedRoot),
-          "transformed artifact root",
-        ),
-      ).toMatchObject({
-        code: "invalid-artifact",
-        path: "$.instances[2].artifact.runtimeHierarchy.nodes[0].transform",
-      });
+        transformedInstance.artifact.runtimeHierarchy.nodes[0]?.transform,
+      ).toEqual(rootTransform);
     }
+
+    const overflowingArtifact = artifactFixture(
+      "drone-artifact",
+      transform([SCENE_MAXIMUM_COMPONENT_MAGNITUDE, 0, 0]),
+    );
+    expect(validateSculptArtifact(overflowingArtifact).ok).toBe(true);
+    expect(
+      refusalOf(
+        validateComposedScene(composedSceneFixture(overflowingArtifact)),
+        "unrepresentable projected artifact root",
+      ),
+    ).toMatchObject({
+      code: "invalid-artifact",
+      path: "$.instances[2].artifact.runtimeHierarchy.nodes[0].transform",
+    });
   });
 });

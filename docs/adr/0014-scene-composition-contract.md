@@ -33,10 +33,11 @@ Placement is a **projection, never an artifact rewrite**. A Sculpt Artifact's
 evidence binds its exact spec bytes under ADR 0011, so a rewritten artifact would
 correctly refuse its own validator. `projectSceneInstanceHierarchy()` composes the
 world transform into an instance's root node only and leaves the artifact intact.
-A composable artifact's runtime hierarchy root must carry the exact identity
-transform. This renderer-neutral invariant makes the projected root equal to the
-instance world transform without importing presentation semantics into the
-contract package.
+Existing root-local transforms remain part of the artifact and are composed
+after the instance world transform, preserving both placement and the artifact's
+own hierarchy semantics without importing presentation types into the contract
+package. If the combined root transform is outside the contract's representable
+bounds, composition refuses `invalid-artifact` rather than clipping it.
 
 Composition fails closed through a named refuse matrix with stable
 `{ code, path, message }` diagnostics. Nothing is dropped in either direction: a
@@ -55,8 +56,8 @@ contract is unchanged, so propose/apply remains the persistence authority.
 - A scene's bytes and digests are fixture-lockable under `pnpm gate`.
 - A tampered scene refuses instead of opening, and evidence can be re-derived by
   any consumer without trusting the producer.
-- A valid Sculpt Artifact with a non-identity runtime root remains valid as an
-  artifact but refuses scene composition until a later contract owns that case.
+- A valid Sculpt Artifact whose projected root remains representable is
+  composable without rewriting its hierarchy or invalidating its evidence.
 - Rotation-aware child placement requires an explicit contract revision; callers
   cannot silently reinterpret this v1 rule.
 - Scene semantics live in one owned contract rather than in demos or shells.

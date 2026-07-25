@@ -255,14 +255,6 @@ export function identitySculptTransform(): SculptTransform {
   return IDENTITY_TRANSFORM;
 }
 
-function isIdentityTransform(transform: SculptTransform) {
-  return (
-    transform.translation.every((component) => component === 0) &&
-    transform.rotationEulerDegrees.every((component) => component === 0) &&
-    transform.scale.every((component) => component === 1)
-  );
-}
-
 function isRotated(transform: SculptTransform) {
   return transform.rotationEulerDegrees.some(
     (degrees) => normalizeDegrees(degrees) !== 0,
@@ -820,20 +812,6 @@ function validateInstanceEntries(
       );
     }
     digestByArtifactId.set(artifact.value.artifactId, artifactDigest);
-    const rootNodeIndex = artifact.value.runtimeHierarchy.nodes.findIndex(
-      (node) => node.id === artifact.value.runtimeHierarchy.rootNodeId,
-    );
-    const rootNode = artifact.value.runtimeHierarchy.nodes[rootNodeIndex];
-    if (
-      rootNode === undefined ||
-      !isIdentityTransform(rootNode.transform)
-    ) {
-      return refuse(
-        "invalid-artifact",
-        `${path}.artifact.runtimeHierarchy.nodes[${String(rootNodeIndex)}].transform`,
-        "Artifact root transform must be identity for renderer-neutral scene projection.",
-      );
-    }
     const localTransform = transforms.get("localTransform");
     const worldTransform = transforms.get("worldTransform");
     if (localTransform === undefined || worldTransform === undefined) {
@@ -841,6 +819,20 @@ function validateInstanceEntries(
         "invalid-field",
         path,
         "Scene instance transforms are missing.",
+      );
+    }
+    const rootNodeIndex = artifact.value.runtimeHierarchy.nodes.findIndex(
+      (node) => node.id === artifact.value.runtimeHierarchy.rootNodeId,
+    );
+    const rootNode = artifact.value.runtimeHierarchy.nodes[rootNodeIndex];
+    if (
+      rootNode === undefined ||
+      !tryComposeSculptTransforms(worldTransform, rootNode.transform).ok
+    ) {
+      return refuse(
+        "invalid-artifact",
+        `${path}.artifact.runtimeHierarchy.nodes[${String(rootNodeIndex)}].transform`,
+        "Artifact root transform cannot be represented after scene projection.",
       );
     }
     entries.push({

@@ -7,7 +7,7 @@ output.
 
 The path is:
 
-`N quality Sculpt Artifacts + one Scene Composition Intake → one ComposedScene → one text-canonical SceneDocument → existing Mount API + one multi-object kernel session`
+`N validated Sculpt Artifacts + one Scene Composition Intake → one ComposedScene → one text-canonical SceneDocument → existing Mount API + one multi-object kernel session`
 
 ## Shipped contract depth
 
@@ -24,9 +24,8 @@ The path is:
 - **Placement is a projection, never an artifact rewrite.** A Sculpt Artifact's
   evidence binds its exact spec bytes, so `projectSceneInstanceHierarchy()`
   composes the world transform into the root node only and leaves the artifact —
-  and its digests — verifiable. The runtime hierarchy root must carry the exact
-  identity transform, a renderer-neutral invariant that keeps the projected root
-  equal to the instance world transform.
+  and its digests — verifiable. Existing root-local transforms remain part of
+  the artifact and are composed after the instance world transform.
 - Composition **fails closed** through a named refuse matrix. Nothing is dropped
   in either direction: an unsupplied artifact reference refuses
   `unknown-artifact-reference`, and a supplied-but-unplaced artifact refuses

@@ -92,9 +92,8 @@ so identical input always produces identical `sceneBytes` and `sceneDigest`.
 Nothing is dropped in either direction: a placement naming an artifact that was
 not supplied refuses `unknown-artifact-reference`, and an artifact supplied but
 never placed refuses `unplaced-artifact`. One artifact placed at several
-instances is legal instancing and is supplied once. Artifacts whose runtime
-hierarchy roots are not identity transforms refuse at their original
-`$.artifacts[index]` intake paths.
+instances is legal instancing and is supplied once. Every supplied artifact is
+validated through the existing Sculpt Artifact contract before composition.
 
 The composed scene is re-validated by `validateComposedScene()` before it is
 returned, so a scene that could not be re-opened is never handed back.

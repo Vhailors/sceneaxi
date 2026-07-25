@@ -18,7 +18,6 @@ import {
 } from "@sceneaxi/schemas";
 import {
   sceneCompositionArtifactFixture as artifactFixture,
-  sceneCompositionFixtureDigest as digest,
   sceneCompositionIdentityTransform as identity,
   sceneCompositionTransformFixture as transform,
 } from "@sceneaxi/schemas/testing/scene-composition";
@@ -392,20 +391,18 @@ describe("scene composition pipeline", () => {
     ).toThrow(TypeError);
   });
 
-  it("reports renderer-neutral root refusals at the supplied artifact path", () => {
+  it("composes valid non-identity artifact roots without rewriting them", () => {
     const offsetDrone = artifactFixture(
       "drone-artifact",
       transform([1, 0, 0]),
     );
-    expect(
-      refusal(
-        composeScene(intakeFixture(), [crateArtifact, offsetDrone]),
-        "offset artifact root",
-      ),
-    ).toEqual({
-      code: "invalid-artifact",
-      path: "$.artifacts[1].runtimeHierarchy.nodes[0].transform",
-    });
+    const composed = composeScene(intakeFixture(), [crateArtifact, offsetDrone]);
+    expect(composed.ok).toBe(true);
+    if (!composed.ok) return;
+    expect(composed.scene.instances[2]?.artifact).toEqual(offsetDrone);
+    expect(offsetDrone.runtimeHierarchy.nodes[0]?.transform).toEqual(
+      transform([1, 0, 0]),
+    );
   });
 
   it("is byte-deterministic across repeated composition", () => {

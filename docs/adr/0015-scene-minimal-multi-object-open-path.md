@@ -24,13 +24,13 @@ returns frozen digest-bound snapshots, and replay refuses on terminal digest
 drift.
 
 Each instance runs the **existing** single-object simulation over
-`projectSceneInstanceHierarchy()`, so it starts at its scene world transform
-without its artifact being rewritten. The single-object simulation is extracted
-and shared rather than duplicated, so `openSculptKernelSession()` behavior and
-every landed sculpt and sculpt-quality digest are unchanged. Two instances of the
-same artifact are different objects and receive independent seeds derived from
-the scene seed and their instance ids. Scene-composable artifacts carry identity
-runtime roots under ADR 0014, so this projection stays renderer-neutral.
+`projectSceneInstanceHierarchy()`, which composes the scene world transform
+before the artifact's root-local transform without rewriting the artifact. The
+single-object simulation is extracted and shared rather than duplicated, so
+`openSculptKernelSession()` behavior and every landed sculpt and sculpt-quality
+digest are unchanged. Two instances of the same artifact are different objects
+and receive independent seeds derived from the scene seed and their instance
+ids. Existing artifact root-local transforms remain intact under ADR 0014.
 
 **No presentation adapter is added.** `createSculptMountApi()` already mounts N
 instances with per-instance transforms, so the golden demo mounts all three scene

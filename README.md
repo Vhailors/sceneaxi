@@ -56,8 +56,8 @@ This is contract and demo evidence only: it adds no Minimum E2 checklist item,
 Stage 1 result, renderer decision, production physics, provider spend, or
 engine-readiness claim.
 
-[Scene composition v1](docs/scene-composition.md) composes several of those
-quality artifacts into one openable multi-object scene: a deterministic
+[Scene composition v1](docs/scene-composition.md) composes several validated
+Sculpt Artifacts into one openable multi-object scene: a deterministic
 axis-aligned placement contract that fails closed on a named refuse matrix, a
 projection into the existing text-canonical document, and one multi-object kernel
 session. Its committed three-instance demo and digest ledger live under
