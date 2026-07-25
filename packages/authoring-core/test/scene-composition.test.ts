@@ -264,6 +264,43 @@ describe("scene composition pipeline", () => {
     });
   });
 
+  it("refuses unstable intake and artifact fields without reading them", () => {
+    const throwingIntake = new Proxy(intakeFixture(), {
+      ownKeys() {
+        throw new Error("must not escape");
+      },
+    });
+    expect(
+      refusal(
+        composeScene(throwingIntake, artifacts),
+        "throwing intake reflection",
+      ),
+    ).toEqual({
+      code: "invalid-field",
+      path: "$",
+    });
+
+    let artifactReads = 0;
+    const throwingArtifacts: unknown[] = [crateArtifact, droneArtifact];
+    Object.defineProperty(throwingArtifacts, 1, {
+      enumerable: true,
+      get() {
+        artifactReads += 1;
+        throw new Error("must not escape");
+      },
+    });
+    expect(
+      refusal(
+        composeScene(intakeFixture(), throwingArtifacts),
+        "throwing artifact accessor",
+      ),
+    ).toEqual({
+      code: "invalid-artifact",
+      path: "$.artifacts[1]",
+    });
+    expect(artifactReads).toBe(0);
+  });
+
   it("refuses accessor-backed options without reading them", () => {
     let reads = 0;
     const options: SceneCompositionOptions = {};

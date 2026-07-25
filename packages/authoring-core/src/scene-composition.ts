@@ -63,6 +63,17 @@ type SceneCompositionOptionsCapture =
       readonly message: string;
     };
 
+type StableInputCapture =
+  | {
+      readonly ok: true;
+      readonly value: unknown;
+    }
+  | {
+      readonly ok: false;
+      readonly path: string;
+      readonly message: string;
+    };
+
 function refuse(
   code: SceneCompositionRefusalCode,
   path: string,
@@ -71,10 +82,185 @@ function refuse(
   return { ok: false, code, path, message };
 }
 
+function captureStableInput(
+  value: unknown,
+  path: string,
+  ancestors = new Set<object>(),
+): StableInputCapture {
+  if (value === null || typeof value !== "object") {
+    return { ok: true, value };
+  }
+  if (ancestors.has(value)) {
+    return {
+      ok: false,
+      path,
+      message: "Scene composition input must not contain cycles.",
+    };
+  }
+
+  let array: boolean;
+  let prototype: object | null;
+  let keys: readonly PropertyKey[];
+  try {
+    array = Array.isArray(value);
+    prototype = Object.getPrototypeOf(value) as object | null;
+    keys = Reflect.ownKeys(value);
+  } catch {
+    return {
+      ok: false,
+      path,
+      message: "Scene composition input must expose stable data fields.",
+    };
+  }
+
+  if (
+    (array && prototype !== Array.prototype) ||
+    (!array && prototype !== Object.prototype && prototype !== null)
+  ) {
+    return {
+      ok: false,
+      path,
+      message: "Scene composition input must use plain JSON containers.",
+    };
+  }
+
+  ancestors.add(value);
+  try {
+    if (array) {
+      let lengthDescriptor: PropertyDescriptor | undefined;
+      try {
+        lengthDescriptor = Object.getOwnPropertyDescriptor(value, "length");
+      } catch {
+        return {
+          ok: false,
+          path,
+          message: "Scene composition input must expose stable data fields.",
+        };
+      }
+      const length =
+        lengthDescriptor !== undefined && "value" in lengthDescriptor
+          ? (lengthDescriptor.value as unknown)
+          : undefined;
+      if (
+        typeof length !== "number" ||
+        !Number.isSafeInteger(length) ||
+        length < 0
+      ) {
+        return {
+          ok: false,
+          path,
+          message: "Scene composition arrays must expose a stable length.",
+        };
+      }
+      if (
+        keys.some(
+          (key) =>
+            key !== "length" &&
+            (typeof key !== "string" || !/^(0|[1-9][0-9]*)$/.test(key)),
+        )
+      ) {
+        return {
+          ok: false,
+          path,
+          message: "Scene composition arrays must contain only indexed data fields.",
+        };
+      }
+
+      const entries: unknown[] = [];
+      for (let index = 0; index < length; index += 1) {
+        let descriptor: PropertyDescriptor | undefined;
+        try {
+          descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+        } catch {
+          return {
+            ok: false,
+            path: `${path}[${String(index)}]`,
+            message: "Scene composition input must expose stable data fields.",
+          };
+        }
+        if (
+          descriptor === undefined ||
+          !descriptor.enumerable ||
+          !("value" in descriptor)
+        ) {
+          return {
+            ok: false,
+            path: `${path}[${String(index)}]`,
+            message: "Scene composition arrays must contain stable indexed data fields.",
+          };
+        }
+        const captured = captureStableInput(
+          descriptor.value as unknown,
+          `${path}[${String(index)}]`,
+          ancestors,
+        );
+        if (!captured.ok) return captured;
+        entries.push(captured.value);
+      }
+      return { ok: true, value: Object.freeze(entries) };
+    }
+
+    const entries: Array<readonly [string, unknown]> = [];
+    for (const key of keys) {
+      if (typeof key !== "string") {
+        return {
+          ok: false,
+          path,
+          message: "Scene composition objects must contain only string data fields.",
+        };
+      }
+      let descriptor: PropertyDescriptor | undefined;
+      try {
+        descriptor = Object.getOwnPropertyDescriptor(value, key);
+      } catch {
+        return {
+          ok: false,
+          path: `${path}.${key}`,
+          message: "Scene composition input must expose stable data fields.",
+        };
+      }
+      if (
+        descriptor === undefined ||
+        !descriptor.enumerable ||
+        !("value" in descriptor)
+      ) {
+        return {
+          ok: false,
+          path: `${path}.${key}`,
+          message: "Scene composition objects must contain stable data fields.",
+        };
+      }
+      const captured = captureStableInput(
+        descriptor.value as unknown,
+        `${path}.${key}`,
+        ancestors,
+      );
+      if (!captured.ok) return captured;
+      entries.push([key, captured.value]);
+    }
+    return {
+      ok: true,
+      value: Object.freeze(Object.fromEntries(entries)),
+    };
+  } finally {
+    ancestors.delete(value);
+  }
+}
+
 function captureSceneCompositionOptions(
   value: unknown,
 ): SceneCompositionOptionsCapture {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+  let array: boolean;
+  try {
+    array = Array.isArray(value);
+  } catch {
+    return {
+      ok: false,
+      path: "$.options",
+      message: "Scene composition options must expose stable data fields.",
+    };
+  }
+  if (value === null || typeof value !== "object" || array) {
     return {
       ok: false,
       path: "$.options",
@@ -230,14 +416,32 @@ export function composeScene(
     );
   }
   const normalizedOptions = capturedOptions.value;
-  if (!Array.isArray(artifactValues)) {
+  let artifactArray: boolean;
+  try {
+    artifactArray = Array.isArray(artifactValues);
+  } catch {
+    return refuse(
+      "invalid-artifact",
+      "$.artifacts",
+      "Sculpt Artifacts must expose a stable array.",
+    );
+  }
+  if (!artifactArray) {
     return refuse(
       "invalid-artifact",
       "$.artifacts",
       "Sculpt Artifacts must be supplied as an array.",
     );
   }
-  const intake = validateSceneCompositionIntake(intakeValue);
+  const capturedIntake = captureStableInput(intakeValue, "$");
+  if (!capturedIntake.ok) {
+    return refuse(
+      "invalid-field",
+      capturedIntake.path,
+      capturedIntake.message,
+    );
+  }
+  const intake = validateSceneCompositionIntake(capturedIntake.value);
   if (!intake.ok) {
     const diagnostic = intake.diagnostics[0];
     return refuse(
@@ -246,10 +450,21 @@ export function composeScene(
       diagnostic?.message ?? "Scene Composition Intake refused.",
     );
   }
+  const capturedArtifacts = captureStableInput(artifactValues, "$.artifacts");
+  if (!capturedArtifacts.ok || !Array.isArray(capturedArtifacts.value)) {
+    return refuse(
+      "invalid-artifact",
+      capturedArtifacts.ok ? "$.artifacts" : capturedArtifacts.path,
+      capturedArtifacts.ok
+        ? "Sculpt Artifacts must be supplied as an array."
+        : capturedArtifacts.message,
+    );
+  }
+  const normalizedArtifactValues = capturedArtifacts.value;
 
   const artifacts = new Map<string, SculptArtifact>();
   const artifactIndexByArtifactId = new Map<string, number>();
-  for (const [index, artifactValue] of artifactValues.entries()) {
+  for (const [index, artifactValue] of normalizedArtifactValues.entries()) {
     const artifact = validateSculptArtifact(artifactValue);
     if (!artifact.ok) {
       return refuse(
