@@ -13,6 +13,7 @@ import {
   isCommerceActive,
   missingMandatoryMetadata,
   profileConformanceRegistry,
+  validateCatalogItem,
   type CatalogItem,
 } from "@sceneaxi/schemas";
 import { failure, success, type CliOutcome, type ResultPayload } from "./envelope.js";
@@ -24,6 +25,7 @@ import { parseVerbArgs } from "./verb-args.js";
 import {
   missingFlag,
   parseJsonOrRefuse,
+  readDocumentOrRefuse,
   readTextOrRefuse,
   refuseUnknownArgs,
   resolveUnderCwd,
@@ -104,7 +106,7 @@ function scanCatalogDir(
     const parsed = parseJsonOrRefuse(read.text, file, path);
     if (!parsed.ok) return { ok: false, outcome: parsed.outcome };
 
-    const shaped = asCatalogItem(parsed.value);
+    const shaped = validateCatalogItem(parsed.value);
     if (!shaped.ok) {
       return {
         ok: false,
@@ -121,44 +123,6 @@ function scanCatalogDir(
   }
   items.sort((a, b) => (a.file < b.file ? -1 : a.file > b.file ? 1 : 0));
   return { ok: true, items: Object.freeze(items) };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-/**
- * Structural guard for the fields these verbs read. The Catalog Item contract
- * owns full validation; this only proves the shape is safe to inspect, so a
- * malformed file refuses instead of throwing on a missing nested field.
- */
-function asCatalogItem(
-  value: unknown,
-): { readonly ok: true; readonly item: CatalogItem } | { readonly ok: false; readonly message: string } {
-  if (!isRecord(value)) {
-    return { ok: false, message: "Catalog item must be a JSON object." };
-  }
-  if (typeof value["itemId"] !== "string") {
-    return { ok: false, message: "Catalog item missing string 'itemId'." };
-  }
-  if (!isRecord(value["assetPackage"])) {
-    return { ok: false, message: "Catalog item missing object 'assetPackage'." };
-  }
-  const moderation = value["moderation"];
-  if (!isRecord(moderation) || typeof moderation["pipelineState"] !== "string") {
-    return {
-      ok: false,
-      message: "Catalog item missing 'moderation.pipelineState'.",
-    };
-  }
-  const commerce = value["commerce"];
-  if (!isRecord(commerce) || typeof commerce["activation"] !== "string") {
-    return {
-      ok: false,
-      message: "Catalog item missing 'commerce.activation'.",
-    };
-  }
-  return { ok: true, item: value as unknown as CatalogItem };
 }
 
 /**
@@ -282,13 +246,14 @@ export function runEvidenceList(
 
   const packets: ResultPayload[] = [];
   for (const file of listed.files) {
-    const read = readTextOrRefuse(join(listed.absoluteDir, file), file, path);
-    if (!read.ok) return read.outcome;
-    const parsed = parseJsonOrRefuse(read.text, file, path);
-    if (!parsed.ok) return parsed.outcome;
+    const loaded = readDocumentOrRefuse(
+      join(listed.absoluteDir, file),
+      file,
+      path,
+    );
+    if (!loaded.ok) return loaded.outcome;
 
-    const carrier = parsed.value as { data?: unknown };
-    const packet = readEvidencePacket(carrier?.data);
+    const packet = readEvidencePacket(loaded.document.data);
     if (!packet.ok) {
       return failure("VALIDATION", `${file}: ${packet.message}`, {
         path,

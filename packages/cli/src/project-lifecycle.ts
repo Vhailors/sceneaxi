@@ -12,7 +12,6 @@ import { basename } from "node:path";
 import {
   contentHash,
   createDocument,
-  parseDocumentText,
   serializeDocument,
   writeDocumentFile,
   type JsonObject,
@@ -24,7 +23,8 @@ import {
   diagnosticsToFailure,
   missingFlag,
   parseJsonOrRefuse,
-  readTextOrRefuse,
+  readDocumentOrRefuse,
+  refusePathAliases,
   refuseUnknownArgs,
   resolveUnderCwd,
 } from "./verb-support.js";
@@ -93,29 +93,7 @@ function loadDocument(
   | { readonly ok: true; readonly document: SceneDocument; readonly text: string }
   | { readonly ok: false; readonly outcome: CliOutcome } {
   const absolute = resolveUnderCwd(documentPath, cwd);
-  const read = readTextOrRefuse(absolute, documentPath, path);
-  if (!read.ok) return { ok: false, outcome: read.outcome };
-
-  const validation = parseDocumentText(read.text);
-  if (!validation.ok) {
-    return {
-      ok: false,
-      outcome: diagnosticsToFailure(
-        [
-          {
-            code:
-              validation.code === "not-object"
-                ? "invalid-document"
-                : validation.code,
-            message: `${documentPath}: ${validation.message}`,
-          },
-        ],
-        path,
-      ),
-    };
-  }
-
-  return { ok: true, document: validation.document, text: read.text };
+  return readDocumentOrRefuse(absolute, documentPath, path);
 }
 
 /** `project new --document <path> [--id] [--title] [--data] [--cwd] [--force]` */
@@ -190,6 +168,7 @@ export function runProjectNew(
 
   const written = writeDocumentFile(absolute, document, {
     cwd: cwd ?? process.cwd(),
+    mustBeAbsent: !force,
   });
   if (!written.ok) return diagnosticsToFailure(written.diagnostics, path);
 
@@ -343,6 +322,18 @@ export function runProjectCapture(
   const cwd = args.flags.get("--cwd");
   const loaded = loadDocument(documentPath, cwd, path);
   if (!loaded.ok) return loaded.outcome;
+  const outputPath = resolveUnderCwd(out, cwd);
+  const aliasRefusal = refusePathAliases(
+    [
+      {
+        absolutePath: resolveUnderCwd(documentPath, cwd),
+        displayPath: documentPath,
+      },
+    ],
+    [{ absolutePath: outputPath, displayPath: out }],
+    path,
+  );
+  if (aliasRefusal) return aliasRefusal;
 
   const packet = buildEvidencePacket(
     documentPath,
@@ -357,7 +348,7 @@ export function runProjectCapture(
     title: `Evidence for ${loaded.document.id}`,
     data: packet as unknown as JsonObject,
   });
-  const written = writeDocumentFile(resolveUnderCwd(out, cwd), carrier, {
+  const written = writeDocumentFile(outputPath, carrier, {
     cwd: cwd ?? process.cwd(),
   });
   if (!written.ok) return diagnosticsToFailure(written.diagnostics, path);

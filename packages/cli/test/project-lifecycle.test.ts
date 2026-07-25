@@ -1,4 +1,10 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -294,6 +300,44 @@ describe("project lifecycle verbs", () => {
       expect(readFileSync(join(cwd, "run.evidence.json"), "utf8")).toBe(bytes);
       // Deterministic means no wall-clock anywhere in the artifact.
       expect(bytes).not.toMatch(/\d{4}-\d{2}-\d{2}T/);
+    });
+
+    it("refuses direct and symlink evidence aliases of the source document", () => {
+      create();
+      const before = readFileSync(join(cwd, "scene.json"), "utf8");
+
+      const direct = runCli([
+        "project",
+        "capture",
+        "--document",
+        "scene.json",
+        "--out",
+        "scene.json",
+        "--cwd",
+        cwd,
+      ]);
+      expect(direct.exitCode).toBe(ExitCode.ERROR);
+      if (!direct.envelope.ok) {
+        expect(direct.envelope.error.code).toBe("CONFLICT");
+      }
+      expect(readFileSync(join(cwd, "scene.json"), "utf8")).toBe(before);
+
+      symlinkSync("scene.json", join(cwd, "scene-alias.evidence.json"));
+      const alias = runCli([
+        "project",
+        "capture",
+        "--document",
+        "scene.json",
+        "--out",
+        "scene-alias.evidence.json",
+        "--cwd",
+        cwd,
+      ]);
+      expect(alias.exitCode).toBe(ExitCode.ERROR);
+      if (!alias.envelope.ok) {
+        expect(alias.envelope.error.code).toBe("CONFLICT");
+      }
+      expect(readFileSync(join(cwd, "scene.json"), "utf8")).toBe(before);
     });
 
     it("summarizes a captured packet", () => {

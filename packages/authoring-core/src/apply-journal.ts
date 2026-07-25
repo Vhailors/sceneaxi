@@ -735,6 +735,7 @@ export function writeCanonicalDocument(input: {
   readonly path: string;
   readonly contents: string;
   readonly expectedContentHash?: string;
+  readonly mustBeAbsent?: boolean;
 }):
   | { readonly ok: true }
   | { readonly ok: false; readonly diagnostics: readonly ApplyDiagnostic[] } {
@@ -791,6 +792,9 @@ export function writeCanonicalDocument(input: {
         ...(input.expectedContentHash === undefined
           ? {}
           : { expectedContentHash: input.expectedContentHash }),
+        ...(input.mustBeAbsent === undefined
+          ? {}
+          : { mustBeAbsent: input.mustBeAbsent }),
         lockSet: documentLock,
       });
     } finally {

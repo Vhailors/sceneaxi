@@ -8,7 +8,12 @@
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { ApplyDiagnostic } from "@sceneaxi/authoring-core";
+import {
+  canonicalPath,
+  parseDocumentText,
+  type ApplyDiagnostic,
+  type SceneDocument,
+} from "@sceneaxi/authoring-core";
 import { failure, type CliOutcome } from "./envelope.js";
 import type { VerbArgs } from "./verb-args.js";
 
@@ -112,6 +117,19 @@ export type FileReadResult =
   | { readonly ok: true; readonly text: string }
   | { readonly ok: false; readonly outcome: CliOutcome };
 
+export type DocumentReadResult =
+  | {
+      readonly ok: true;
+      readonly document: SceneDocument;
+      readonly text: string;
+    }
+  | { readonly ok: false; readonly outcome: CliOutcome };
+
+export type PathArgument = {
+  readonly absolutePath: string;
+  readonly displayPath: string;
+};
+
 /**
  * Read a UTF-8 file, converting a missing path into a NOT_FOUND refusal and
  * any other I/O error into INTERNAL. Verbs never throw raw fs errors at agents.
@@ -148,6 +166,88 @@ export function readTextOrRefuse(
       }),
     };
   }
+}
+
+export function readDocumentOrRefuse(
+  absolutePath: string,
+  displayPath: string,
+  verbPath: readonly string[],
+): DocumentReadResult {
+  const read = readTextOrRefuse(absolutePath, displayPath, verbPath);
+  if (!read.ok) return read;
+
+  const validation = parseDocumentText(read.text);
+  if (!validation.ok) {
+    return {
+      ok: false,
+      outcome: diagnosticsToFailure(
+        [
+          {
+            code:
+              validation.code === "not-object"
+                ? "invalid-document"
+                : validation.code,
+            message: `${displayPath}: ${validation.message}`,
+          },
+        ],
+        verbPath,
+      ),
+    };
+  }
+
+  return {
+    ok: true,
+    document: validation.document,
+    text: read.text,
+  };
+}
+
+export function refusePathAliases(
+  inputs: readonly PathArgument[],
+  outputs: readonly PathArgument[],
+  verbPath: readonly string[],
+): CliOutcome | null {
+  try {
+    const inputByPath = new Map<string, string>();
+    for (const input of inputs) {
+      inputByPath.set(canonicalPath(input.absolutePath), input.displayPath);
+    }
+    const outputByPath = new Map<string, string>();
+    for (const output of outputs) {
+      const outputPath = canonicalPath(output.absolutePath);
+      const input = inputByPath.get(outputPath);
+      if (input !== undefined) {
+        return failure(
+          "CONFLICT",
+          `Refusing output '${output.displayPath}' because it aliases input '${input}'.`,
+          {
+            path: verbPath,
+            help: ["Choose an output path distinct from every source path"],
+          },
+        );
+      }
+      const priorOutput = outputByPath.get(outputPath);
+      if (priorOutput !== undefined) {
+        return failure(
+          "CONFLICT",
+          `Refusing output '${output.displayPath}' because it aliases output '${priorOutput}'.`,
+          {
+            path: verbPath,
+            help: ["Choose distinct paths for each output"],
+          },
+        );
+      }
+      outputByPath.set(outputPath, output.displayPath);
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return failure(
+      "VALIDATION",
+      `Could not resolve input/output paths: ${message}`,
+      { path: verbPath },
+    );
+  }
+  return null;
 }
 
 /** Parse JSON, refusing with VALIDATION rather than throwing. */

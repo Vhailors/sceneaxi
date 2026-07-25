@@ -21,6 +21,7 @@ import {
   missingFlag,
   parseJsonOrRefuse,
   readTextOrRefuse,
+  refusePathAliases,
   refuseUnknownArgs,
   resolveUnderCwd,
 } from "./verb-support.js";
@@ -134,6 +135,25 @@ export function runSceneCompose(
   }
 
   if (writes.length > 0) {
+    const aliasRefusal = refusePathAliases(
+      [
+        {
+          absolutePath: resolveUnderCwd(intakePath, cwd),
+          displayPath: intakePath,
+        },
+        ...artifactPaths.map((artifactPath) => ({
+          absolutePath: resolveUnderCwd(artifactPath, cwd),
+          displayPath: artifactPath,
+        })),
+      ],
+      writes.map((write) => ({
+        absolutePath: write.path,
+        displayPath: write.displayPath,
+      })),
+      path,
+    );
+    if (aliasRefusal) return aliasRefusal;
+
     try {
       atomicWriteAll(
         writes.map((write) => ({

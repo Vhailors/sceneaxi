@@ -599,6 +599,17 @@ describe("E1 apply journal", () => {
     expect(contentHash(readFileSync(path, "utf8"))).toBe(contentHash("before\n"));
   });
 
+  it("checks absence while holding the atomic target lock", () => {
+    const cwd = fixtureDir();
+    const path = join(cwd, "scene.json");
+
+    atomicWriteAll([{ path, contents: "first\n", mustBeAbsent: true }]);
+    expect(() =>
+      atomicWriteAll([{ path, contents: "second\n", mustBeAbsent: true }]),
+    ).toThrow(/precondition/i);
+    expect(readFileSync(path, "utf8")).toBe("first\n");
+  });
+
   it("keeps atomic artifacts distinct for sanitized-name collisions", () => {
     const cwd = fixtureDir();
     const colonPath = join(cwd, "a:b.json");

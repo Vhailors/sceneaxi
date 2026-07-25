@@ -1073,7 +1073,7 @@ export function readProposalFile(path: string): {
 export function writeDocumentFile(
   path: string,
   document: SceneDocument,
-  options: { readonly cwd: string },
+  options: { readonly cwd: string; readonly mustBeAbsent?: boolean },
 ):
   | { ok: true; contentHash: string }
   | { ok: false; diagnostics: readonly ApplyDiagnostic[] } {
@@ -1126,11 +1126,37 @@ export function writeDocumentFile(
     };
   }
   const text = serializeDocument(validated.document);
-  const written = writeCanonicalDocument({
-    cwd,
-    path: documentPath,
-    contents: text,
-  });
+  let written:
+    | { readonly ok: true }
+    | { readonly ok: false; readonly diagnostics: readonly ApplyDiagnostic[] };
+  try {
+    written = writeCanonicalDocument({
+      cwd,
+      path: documentPath,
+      contents: text,
+      ...(options.mustBeAbsent === undefined
+        ? {}
+        : { mustBeAbsent: options.mustBeAbsent }),
+    });
+  } catch (error) {
+    if (error instanceof AtomicWriteConflictError) {
+      return {
+        ok: false,
+        diagnostics: [
+          {
+            code: "content-hash-conflict",
+            message:
+              options.mustBeAbsent === true
+                ? `Refusing to overwrite existing document: ${path}`
+                : `Atomic write precondition failed for ${path}.`,
+            documentPath: path,
+            reReadHint: "Re-read the document before retrying the write.",
+          },
+        ],
+      };
+    }
+    throw error;
+  }
   if (!written.ok) return written;
   return { ok: true, contentHash: contentHash(text) };
 }

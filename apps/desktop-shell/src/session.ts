@@ -228,7 +228,10 @@ export function createDesktopSession(
       }
       if (resolved.state !== "completed") {
         const staleId = resolved.transactionId;
-        clearProposal("reviewing");
+        phase = "reviewing";
+        appliedPaths = null;
+        journalRecoveryPending = false;
+        pendingTransactionId = null;
         diagnostics = [
           {
             code: "journal-conflict",

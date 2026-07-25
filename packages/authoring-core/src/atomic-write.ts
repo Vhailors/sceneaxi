@@ -28,6 +28,7 @@ export type AtomicWritePlan = {
   readonly path: string;
   readonly contents: string;
   readonly expectedContentHash?: string;
+  readonly mustBeAbsent?: boolean;
 };
 
 export class AtomicWriteConflictError extends Error {
@@ -633,8 +634,11 @@ export function verifyAtomicWritePreconditions(
   }));
   requireActiveLockSet(lockSet, new Set(normalized.map((plan) => plan.path)));
   for (const plan of normalized) {
-    if (plan.expectedContentHash === undefined) continue;
     const actual = currentHash(plan.path);
+    if (plan.mustBeAbsent === true && actual !== null) {
+      throw new AtomicWriteConflictError(plan.path, "absent", actual);
+    }
+    if (plan.expectedContentHash === undefined) continue;
     if (actual !== plan.expectedContentHash) {
       throw new AtomicWriteConflictError(
         plan.path,
@@ -651,6 +655,7 @@ export function atomicWriteFile(
   options: {
     readonly token?: string;
     readonly expectedContentHash?: string;
+    readonly mustBeAbsent?: boolean;
     readonly lockSet?: AtomicWriteLockSet;
   } = {},
 ): void {
@@ -662,6 +667,9 @@ export function atomicWriteFile(
         ...(options.expectedContentHash === undefined
           ? {}
           : { expectedContentHash: options.expectedContentHash }),
+        ...(options.mustBeAbsent === undefined
+          ? {}
+          : { mustBeAbsent: options.mustBeAbsent }),
       },
     ],
     options,

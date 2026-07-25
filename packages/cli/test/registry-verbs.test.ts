@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -144,6 +144,26 @@ describe("catalog list / asset list", () => {
     }
   });
 
+  it("validates the complete catalog contract before listing", () => {
+    writeFileSync(
+      join(cwd, "forged.catalog-item.json"),
+      `${JSON.stringify(
+        {
+          ...fixtureItem("forged"),
+          moderation: { pipelineState: "approved", history: [] },
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
+    const r = runCli(["catalog", "list", "--dir", ".", "--cwd", cwd]);
+    expect(r.exitCode).toBe(ExitCode.USAGE);
+    if (!r.envelope.ok) {
+      expect(r.envelope.error.code).toBe("VALIDATION");
+    }
+  });
+
   it("lists Asset Package refs declared by those catalog items", () => {
     const r = runCli(["asset", "list", "--dir", ".", "--cwd", cwd]);
     expect(r.exitCode).toBe(ExitCode.OK);
@@ -247,6 +267,54 @@ describe("evidence list", () => {
       )}\n`,
       "utf8",
     );
+    const r = runCli(["evidence", "list", "--dir", ".", "--cwd", cwd]);
+    expect(r.exitCode).toBe(ExitCode.USAGE);
+    if (!r.envelope.ok) {
+      expect(r.envelope.error.code).toBe("VALIDATION");
+    }
+  });
+
+  it("refuses a valid packet inside a malformed document carrier", () => {
+    expect(
+      runCli([
+        "project",
+        "new",
+        "--document",
+        "scene.json",
+        "--cwd",
+        cwd,
+      ]).exitCode,
+    ).toBe(ExitCode.OK);
+    expect(
+      runCli([
+        "project",
+        "capture",
+        "--document",
+        "scene.json",
+        "--out",
+        "valid.evidence.json",
+        "--cwd",
+        cwd,
+      ]).exitCode,
+    ).toBe(ExitCode.OK);
+    const valid = JSON.parse(
+      readFileSync(join(cwd, "valid.evidence.json"), "utf8"),
+    ) as { data: unknown };
+    writeFileSync(
+      join(cwd, "malformed.evidence.json"),
+      `${JSON.stringify(
+        {
+          schemaVersion: 2,
+          kind: "sceneaxi.document",
+          id: "malformed",
+          data: valid.data,
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
+
     const r = runCli(["evidence", "list", "--dir", ".", "--cwd", cwd]);
     expect(r.exitCode).toBe(ExitCode.USAGE);
     if (!r.envelope.ok) {

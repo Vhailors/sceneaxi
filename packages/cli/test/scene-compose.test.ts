@@ -1,4 +1,10 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -145,6 +151,26 @@ describe("scene compose", () => {
     expect(compose(["--out-scene", "scene.json"]).exitCode).toBe(ExitCode.OK);
     const after = artifacts.map((name) => readFileSync(join(cwd, name), "utf8"));
     expect(after).toEqual(before);
+  });
+
+  it("refuses direct and symlink output aliases of source artifacts", () => {
+    const artifact = artifacts[0] as string;
+    const before = readFileSync(join(cwd, artifact), "utf8");
+
+    const direct = compose(["--out-scene", artifact]);
+    expect(direct.exitCode).toBe(ExitCode.ERROR);
+    if (!direct.envelope.ok) {
+      expect(direct.envelope.error.code).toBe("CONFLICT");
+    }
+    expect(readFileSync(join(cwd, artifact), "utf8")).toBe(before);
+
+    symlinkSync(artifact, join(cwd, "artifact-alias.json"));
+    const alias = compose(["--out-document", "artifact-alias.json"]);
+    expect(alias.exitCode).toBe(ExitCode.ERROR);
+    if (!alias.envelope.ok) {
+      expect(alias.envelope.error.code).toBe("CONFLICT");
+    }
+    expect(readFileSync(join(cwd, artifact), "utf8")).toBe(before);
   });
 
   it("maps a malformed intake onto a named refusal (USAGE)", () => {
