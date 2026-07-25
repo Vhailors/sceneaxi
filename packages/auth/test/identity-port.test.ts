@@ -475,6 +475,51 @@ describe("identity port — sign-in", () => {
     expect(result.reason).toBe(AUTH_REFUSE_REASONS.adapterUserMismatch);
   });
 
+  it("binds the provider response to the submitted email", async () => {
+    const baseStore = createInMemoryIdentityStore({ users: [CAPTAIN, CREW] });
+    let userLookups = 0;
+    const store: IdentityStore = Object.freeze({
+      findUserByEmail(email) {
+        userLookups += 1;
+        return baseStore.findUserByEmail(email);
+      },
+      findUserById: (userId) => baseStore.findUserById(userId),
+      putSession: (session) => baseStore.putSession(session),
+      findSession: (sessionId) => baseStore.findSession(sessionId),
+      deleteSession: (session) => baseStore.deleteSession(session),
+    });
+    const result = await makePort(
+      {
+        adapter: Object.freeze({
+          authenticate: () => ({
+            user: {
+              id: "usr_captain",
+              email: "captain@example.com",
+              emailVerified: true,
+            },
+            session: {
+              id: "ses_wrong_email",
+              token: "tok",
+              userId: "usr_captain",
+              expiresAt: "2026-07-26T10:00:00Z",
+            },
+          }),
+        }),
+      },
+      store,
+    ).signIn({
+      surface: "web-shell",
+      email: "crew@example.com",
+      password: "pw",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(AUTH_REFUSE_REASONS.adapterUserMismatch);
+    expect(userLookups).toBe(0);
+    expect(baseStore.sessionCount()).toBe(0);
+  });
+
   it("refuses an authenticated address with no SceneAxi user record", async () => {
     const result = await makePort(
       {},
@@ -553,6 +598,39 @@ describe("identity port — sign-in", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.reason).toBe(AUTH_REFUSE_REASONS.storeFailed);
+  });
+
+  it("requires an exact boolean session deletion result", async () => {
+    let deletionResult: unknown = { deleted: false };
+    const port = makePort(
+      {},
+      Object.freeze({
+        findUserByEmail: () => CREW,
+        findUserById: () => CREW,
+        putSession: () => undefined,
+        findSession: () => undefined,
+        deleteSession: () => deletionResult as never,
+      }),
+    );
+    const signIn = await port.signIn({
+      surface: "web-shell",
+      email: "crew@example.com",
+      password: "pw",
+    });
+    expect(signIn.ok).toBe(true);
+    if (!signIn.ok) return;
+
+    const malformed = await port.signOut({ principal: signIn.value });
+    expect(malformed.ok).toBe(false);
+    if (!malformed.ok) {
+      expect(malformed.reason).toBe(AUTH_REFUSE_REASONS.principalInvalid);
+    }
+
+    deletionResult = true;
+    expect(await port.signOut({ principal: signIn.value })).toEqual({
+      ok: true,
+      value: null,
+    });
   });
 
   it("refuses malformed stored users before reading their fields", async () => {

@@ -373,6 +373,7 @@ export function createAccountPanel(
   let heldPrincipal: Principal | undefined;
   const outstandingPrincipals = new Set<Principal>();
   let operationGeneration = 0;
+  let credentialSubmissionTail: Promise<void> = Promise.resolve();
 
   held = anonymous();
 
@@ -418,6 +419,52 @@ export function createAccountPanel(
     outstandingPrincipals.add(principal);
   };
 
+  const submitCredentials = async (request: unknown, generation: number) => {
+    let result: AuthResult<Principal>;
+    try {
+      result = await identityPort.signIn(request);
+    } catch {
+      if (generation === operationGeneration) {
+        held = refused(
+          refusal(
+            ACCOUNT_PANEL_REASONS.identityPortFailed,
+            "The identity port failed during sign-in; the prior session remains tracked.",
+          ),
+        );
+      }
+      return held;
+    }
+    if (generation !== operationGeneration) {
+      if (result.ok) {
+        trackPrincipal(result.value);
+        const failure = await revokePrincipal(result.value);
+        if (failure !== undefined) held = refused(failure);
+      }
+      return held;
+    }
+    if (result.ok) {
+      trackPrincipal(result.value);
+      const next = await authenticated(result.value);
+      if (generation !== operationGeneration) {
+        const failure = await revokePrincipal(result.value);
+        if (failure !== undefined) held = refused(failure);
+        return held;
+      }
+      const failure = await revokeAllExcept(result.value);
+      if (generation !== operationGeneration) {
+        const staleFailure = await revokePrincipal(result.value);
+        const combinedFailure = staleFailure ?? failure;
+        if (combinedFailure !== undefined) held = refused(combinedFailure);
+        return held;
+      }
+      heldPrincipal = result.value;
+      held = failure === undefined ? next : refused(failure);
+    } else {
+      held = refused(refusal(result.reason, result.message));
+    }
+    return held;
+  };
+
   const panel: AccountPanel = Object.freeze({
     snapshot() {
       return held;
@@ -426,53 +473,21 @@ export function createAccountPanel(
     async submitCredentials(credentials) {
       const generation = ++operationGeneration;
       const credentialRecord = snapshotPlainRecord(credentials);
-      let result: AuthResult<Principal>;
+      const request =
+        credentialRecord === undefined
+          ? credentials
+          : { ...credentialRecord, surface };
+      const precedingSubmission = credentialSubmissionTail;
+      let releaseSubmission = () => {};
+      credentialSubmissionTail = new Promise<void>((resolve) => {
+        releaseSubmission = resolve;
+      });
+      await precedingSubmission;
       try {
-        result = await identityPort.signIn(
-          credentialRecord === undefined
-            ? credentials
-            : { ...credentialRecord, surface },
-        );
-      } catch {
-        if (generation === operationGeneration) {
-          held = refused(
-            refusal(
-              ACCOUNT_PANEL_REASONS.identityPortFailed,
-              "The identity port failed during sign-in; the prior session remains tracked.",
-            ),
-          );
-        }
-        return held;
+        return await submitCredentials(request, generation);
+      } finally {
+        releaseSubmission();
       }
-      if (generation !== operationGeneration) {
-        if (result.ok) {
-          trackPrincipal(result.value);
-          const failure = await revokePrincipal(result.value);
-          if (failure !== undefined) held = refused(failure);
-        }
-        return held;
-      }
-      if (result.ok) {
-        trackPrincipal(result.value);
-        const next = await authenticated(result.value);
-        if (generation !== operationGeneration) {
-          const failure = await revokePrincipal(result.value);
-          if (failure !== undefined) held = refused(failure);
-          return held;
-        }
-        const failure = await revokeAllExcept(result.value);
-        if (generation !== operationGeneration) {
-          const staleFailure = await revokePrincipal(result.value);
-          const combinedFailure = staleFailure ?? failure;
-          if (combinedFailure !== undefined) held = refused(combinedFailure);
-          return held;
-        }
-        heldPrincipal = result.value;
-        held = failure === undefined ? next : refused(failure);
-      } else {
-        held = refused(refusal(result.reason, result.message));
-      }
-      return held;
     },
 
     /**

@@ -564,6 +564,65 @@ describe("sign out", () => {
     expect(snapshot.phase).toBe("anonymous");
   });
 
+  it("serializes overlapping sign-ins that reuse a session id", async () => {
+    let releaseFirst = () => {};
+    let signalFirstStarted = () => {};
+    const firstStarted = new Promise<void>((resolve) => {
+      signalFirstStarted = resolve;
+    });
+    let calls = 0;
+    let activeCalls = 0;
+    let maximumActiveCalls = 0;
+    const adapter: IdentityAdapter = Object.freeze({
+      async authenticate({ email }) {
+        calls += 1;
+        const call = calls;
+        activeCalls += 1;
+        maximumActiveCalls = Math.max(maximumActiveCalls, activeCalls);
+        if (call === 1) {
+          signalFirstStarted();
+          await new Promise<void>((resolve) => {
+            releaseFirst = resolve;
+          });
+        }
+        activeCalls -= 1;
+        return {
+          user: { id: "usr_crew", email, emailVerified: true },
+          session: {
+            id: "ses_shared",
+            token: `tok_${call}`,
+            userId: "usr_crew",
+            expiresAt: "2026-07-26T10:00:00Z",
+          },
+        };
+      },
+    });
+    const store = createInMemoryIdentityStore({ users: [CREW] });
+    const panel = makePanel({
+      identityPort: createIdentityPort({ adapter, store, admin, clock }),
+    });
+
+    const first = panel.submitCredentials({
+      email: "crew@example.com",
+      password: "pw",
+    });
+    await firstStarted;
+    const second = panel.submitCredentials({
+      email: "crew@example.com",
+      password: "pw",
+    });
+    await Promise.resolve();
+    expect(calls).toBe(1);
+
+    releaseFirst();
+    await Promise.all([first, second]);
+    expect(maximumActiveCalls).toBe(1);
+    expect(panel.snapshot().phase).toBe("authenticated");
+    expect(store.sessionCount()).toBe(1);
+    expect((await panel.signOut()).phase).toBe("anonymous");
+    expect(store.sessionCount()).toBe(0);
+  });
+
   it("prevents a stale sign-in from restoring identity after sign-out", async () => {
     let release!: () => void;
     const delayedAdapter: IdentityAdapter = Object.freeze({

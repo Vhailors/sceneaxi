@@ -324,6 +324,12 @@ export function createIdentityPort(
           "The identity adapter returned an authentication envelope this boundary does not accept.",
         );
       }
+      if (mapped.email !== email.trim().toLowerCase()) {
+        return authRefuse(
+          AUTH_REFUSE_REASONS.adapterUserMismatch,
+          "The identity provider returned a different email than the one submitted for authentication.",
+        );
+      }
 
       const session = validateSession(mapped.session);
       if (!session.ok) {
@@ -506,7 +512,7 @@ export function createIdentityPort(
         "deleting the session",
       );
       if (!removed.ok) return removed;
-      if (!removed.value) {
+      if (removed.value !== true) {
         return authRefuse(
           AUTH_REFUSE_REASONS.principalInvalid,
           "The issued principal no longer names the current stored session version.",
