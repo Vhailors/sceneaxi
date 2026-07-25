@@ -9,6 +9,12 @@ Ownership map and consumer snippets:
 No Three type crosses these exports: camera control is plain numbers, draw
 surfaces take renderables as opaque handles, and canvas/input targets are
 structural, so the package needs no DOM lib and keeps no `node:` import.
+Because exports are source-backed, a browser consumer type-checks this source
+*with* the DOM lib, where the structural canvas and the renderer's own
+`HTMLCanvasElement | OffscreenCanvas` are no longer interchangeable — the one
+narrowing that reconciles them lives at the `WebGLRenderer` construction in
+`src/three-surface.ts`, and removing it breaks every browser consumer while node
+gates stay green.
 The `@sceneaxi/schemas` root it consumes is browser-safe; the filesystem-backed
 Profile Conformance suite is available only from the explicit
 `@sceneaxi/schemas/node/profile-conformance-suite` subpath.

@@ -1,0 +1,235 @@
+"use client";
+
+/**
+ * The public viewport: a real Sculpt Artifact drawn into a real WebGL canvas.
+ *
+ * This is the only file on the site that touches a renderer, and it touches it only
+ * through the ADR 0002 seam (ADR 0022). It builds the Three presentation core on a
+ * browser canvas, mounts the composed instances the server resolved through the Sculpt
+ * Mount API, attaches orbit/zoom, and runs the frame loop the package owns. No Three
+ * type is named here — the camera is plain numbers and the artifacts are contract data.
+ *
+ * WebGL can fail for reasons a page cannot control (no GPU, a blocked context, a
+ * headless crawler). That refuses in the open with the error the core produced, rather
+ * than leaving a blank rectangle that looks like a bug.
+ */
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  createSculptMountApi,
+  createThreeRenderLoop,
+  createThreeSculptPresentationBackend,
+  type SculptMountApi,
+  type SculptPresentationFrame,
+  type ThreeSculptPresentationBackend,
+} from "@sceneaxi/engine-presentation";
+import type { LiveOpenScene } from "../../../lib/live-open.js";
+
+/** Frames are published to React at this cadence; the loop still draws every frame. */
+const FRAME_REPORT_INTERVAL = 15;
+const MAX_PIXEL_RATIO = 2;
+
+type ViewportStatus =
+  | { readonly kind: "starting" }
+  | { readonly kind: "running"; readonly frame: SculptPresentationFrame }
+  | { readonly kind: "refused"; readonly message: string };
+
+type LiveSession = {
+  readonly backend: ThreeSculptPresentationBackend;
+  readonly mounts: SculptMountApi;
+  readonly dispose: () => void;
+};
+
+const messageOf = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
+
+export function LiveViewport({ scene }: { readonly scene: LiveOpenScene }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const sessionRef = useRef<LiveSession | null>(null);
+  const [status, setStatus] = useState<ViewportStatus>({ kind: "starting" });
+  const [rootOnly, setRootOnly] = useState(false);
+
+  /**
+   * The button's intent, readable from inside the frame loop.
+   *
+   * The loop reconciles mounts against this every frame, so a click can never land
+   * before or after the session exists and leave the button and the scene disagreeing.
+   */
+  const rootOnlyRef = useRef(rootOnly);
+  useEffect(() => {
+    rootOnlyRef.current = rootOnly;
+  }, [rootOnly]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (canvas === null) return;
+
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO);
+    const measure = () => ({
+      width: Math.max(1, Math.round(canvas.clientWidth)),
+      height: Math.max(1, Math.round(canvas.clientHeight)),
+    });
+
+    let session: LiveSession;
+    try {
+      const backend = createThreeSculptPresentationBackend({
+        canvas,
+        viewport: { ...measure(), pixelRatio },
+        background: "#0b0e13",
+      });
+      const mounts = createSculptMountApi(backend);
+      for (const instance of scene.instances) {
+        const artifact = scene.artifacts[instance.artifactId];
+        if (artifact === undefined) continue;
+        mounts.mount({
+          instanceId: instance.instanceId,
+          artifact,
+          transform: instance.worldTransform,
+        });
+      }
+      backend.frameMountedContent();
+      const detachInput = backend.camera.attach(canvas);
+
+      // Mount and unmount the non-root instances to match the button, through the same
+      // Mount API the page demonstrates. The renderer is never torn down to do it, and
+      // the reconciliation is idempotent, so it converges from any starting state.
+      let appliedRootOnly = false;
+      let reportNextFrame = true;
+      const reconcileMounts = () => {
+        if (rootOnlyRef.current === appliedRootOnly) return;
+        appliedRootOnly = rootOnlyRef.current;
+        // What is mounted just changed, so the report must not wait for its interval.
+        reportNextFrame = true;
+        for (const instance of scene.instances) {
+          if (instance.instanceId === scene.rootInstanceId) continue;
+          if (appliedRootOnly) {
+            mounts.unmount(instance.instanceId);
+            continue;
+          }
+          const artifact = scene.artifacts[instance.artifactId];
+          if (artifact === undefined) continue;
+          mounts.mount({
+            instanceId: instance.instanceId,
+            artifact,
+            transform: instance.worldTransform,
+          });
+        }
+      };
+
+      const loop = createThreeRenderLoop({
+        onFrame: () => {
+          reconcileMounts();
+          const frame = mounts.render();
+          if (reportNextFrame || frame.frame % FRAME_REPORT_INTERVAL === 0) {
+            reportNextFrame = false;
+            setStatus({ kind: "running", frame });
+          }
+        },
+      });
+
+      const observer = new ResizeObserver(() => {
+        const next = measure();
+        backend.resize(next.width, next.height, pixelRatio);
+      });
+      observer.observe(canvas);
+      loop.start();
+
+      session = {
+        backend,
+        mounts,
+        dispose: () => {
+          loop.stop();
+          observer.disconnect();
+          detachInput();
+          mounts.dispose();
+        },
+      };
+    } catch (error) {
+      setStatus({ kind: "refused", message: messageOf(error) });
+      return;
+    }
+
+    sessionRef.current = session;
+    return () => {
+      sessionRef.current = null;
+      session.dispose();
+    };
+    // The served scene is a per-request constant, so the session is built once.
+  }, [scene]);
+
+  const resetView = useCallback(() => {
+    const session = sessionRef.current;
+    if (session === null) return;
+    session.backend.camera.reset();
+    session.backend.frameMountedContent();
+  }, []);
+
+  const frame = status.kind === "running" ? status.frame : null;
+
+  if (status.kind === "refused") {
+    return (
+      <section className="state state-deny">
+        <h3>The viewport could not open</h3>
+        <p>
+          The Three presentation core refused to build a WebGL surface in this browser,
+          so nothing was drawn. Nothing is shown in its place.
+        </p>
+        <code className="reason">{status.message}</code>
+      </section>
+    );
+  }
+
+  return (
+    <>
+      <div className="viewport">
+        <canvas
+          ref={canvasRef}
+          className="viewport-canvas"
+          aria-label="Live SceneAxi viewport — drag to orbit, scroll to zoom"
+        />
+        {status.kind === "starting" && <p className="viewport-overlay">Opening the scene…</p>}
+      </div>
+
+      <div className="actions">
+        <button className="button button-quiet" type="button" onClick={resetView}>
+          Reset view
+        </button>
+        <button
+          className="button button-quiet"
+          type="button"
+          aria-pressed={rootOnly}
+          onClick={() => {
+            setRootOnly((previous) => !previous);
+          }}
+        >
+          {rootOnly ? "Mount every instance" : "Mount the root instance only"}
+        </button>
+      </div>
+
+      <h3>What the running core reports</h3>
+      <dl className="dl">
+        <dt>Backend</dt>
+        <dd>
+          <code>{frame?.backend ?? "…"}</code>
+        </dd>
+        <dt>Label</dt>
+        <dd>{frame?.label ?? "…"}</dd>
+        <dt>Draw surface</dt>
+        <dd>
+          <code>{frame?.surface ?? "…"}</code>
+        </dd>
+        <dt>Pixels drawn</dt>
+        <dd>
+          <code>{frame === null ? "…" : String(frame.pixelsDrawn)}</code>
+        </dd>
+        <dt>Frame</dt>
+        <dd>{frame?.frame ?? "…"}</dd>
+        <dt>Draw calls</dt>
+        <dd>{frame?.drawCalls ?? "…"}</dd>
+        <dt>Mounted</dt>
+        <dd>
+          <code>{frame?.instanceIds.join(", ") ?? "…"}</code>
+        </dd>
+      </dl>
+    </>
+  );
+}

@@ -19,6 +19,7 @@ This monorepo is the packaging home for:
 | Web / desktop shells | `apps/web-shell`, `apps/desktop-shell` |
 | Asset catalogs (may split later) | `apps/catalog-game`, `apps/catalog-web` |
 | Deployable web surfaces | `sites/umbrella`, `sites/catalog-game`, `sites/catalog-web` over `packages/site-kit` (ADR 0018; deploy details in [`docs/websites-deploy.md`](docs/websites-deploy.md)) |
+| Public live open path | `sites/umbrella/src/app/open/` — a committed Sculpt Artifact composed and drawn in a real WebGL canvas (ADR 0021) |
 
 **Not in this monorepo:** individual game products (separate repos).
 
@@ -27,7 +28,9 @@ own single-package pnpm workspace and install root with its own lockfile, so a
 web-framework dependency never moves the root lockfile or the gate runtime. The tier is
 still gated — `pnpm check:syntax`,
 `pnpm check:boundaries`, and `pnpm check:sites` all cover it, and all site logic lives in
-`packages/site-kit` where `pnpm gate` tests it.
+`packages/site-kit` where `pnpm gate` tests it. The tier's one engine edge is
+umbrella → `@sceneaxi/engine-presentation` for the public viewport (ADR 0021); every
+other engine package stays denied to every site.
 
 Package boundaries are executable: `docs/dependency-matrix.json` is the allow/deny
 truth and `pnpm check:boundaries` enforces it (see `docs/DEPENDENCY-MATRIX.md`).

@@ -16,6 +16,17 @@ package tier.
 | `catalog.ts` | catalog view models, dual price, creator share, fail-closed purchase intent |
 | `deep-link.ts` | catalog → umbrella editor deep-link contract |
 | `web-editor.ts` | bounded Minimum E2 web editor session over `@sceneaxi/authoring-core` |
+| `live-open.ts` | the public live open path: which committed fixture is opened, how it is placed by `composeScene()`, and the honest vocabulary a page may use for the presentation core |
+
+## The live open path
+
+`liveOpenScene()` returns a browser-ready descriptor — validated Sculpt Artifacts
+plus the composition pipeline's own world transforms and evidence digest. It draws
+nothing: rendering belongs to the umbrella site, the one surface allowed to consume
+`@sceneaxi/engine-presentation` (ADR 0022). Keeping the decision here is what lets
+`pnpm gate` test the whole path without a browser, and `LIVE_OPEN_PRESENTATION` is
+asserted so shipped copy cannot drift back to the retired "experimental preview"
+framing (ADR 0017).
 
 ## The identity-plane seam
 

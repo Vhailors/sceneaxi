@@ -11,10 +11,15 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  LIVE_OPEN_COPY,
+  LIVE_OPEN_PATH,
+  LIVE_OPEN_PRESENTATION,
   UMBRELLA_BRAND,
   createUmbrellaIdentityPlane,
+  describePlacement,
   resolveBillingMode,
   resolveFamilyLinks,
+  resolveLiveOpenScene,
   resolveUmbrellaEditorAccess,
   seam as umbrellaSeam,
 } from "../../sites/umbrella/src/index.ts";
@@ -172,6 +177,105 @@ describe("umbrella editor access", () => {
   });
 });
 
+
+describe("umbrella live open path", () => {
+  it("serves a composed scene the browser can mount", () => {
+    const scene = resolveLiveOpenScene();
+    expect(scene.ok).toBe(true);
+    if (!scene.ok) return;
+    expect(scene.value.instances.length).toBeGreaterThanOrEqual(2);
+    for (const instance of scene.value.instances) {
+      expect(scene.value.artifacts[instance.artifactId]).toBeDefined();
+      expect(describePlacement(instance)).toMatch(/^world \[.*\] · depth \d+$/);
+    }
+  });
+
+  it("is public: nothing about it reads identity, credits, or entitlement", () => {
+    const source = readFileSync(
+      new URL("../../sites/umbrella/src/app/open/page.tsx", import.meta.url),
+      "utf8",
+    );
+    for (const forbidden of [
+      "resolveUmbrellaEditorAccess",
+      "createUmbrellaIdentityPlane",
+      "readSessionToken",
+      "SCENEAXI_SITE_EDITOR_PREVIEW",
+    ]) {
+      expect(source).not.toContain(forbidden);
+    }
+  });
+
+  it("routes the path site-kit publishes and links it from the overview", () => {
+    expect(LIVE_OPEN_PATH).toBe("/open");
+    const overview = readFileSync(
+      new URL("../../sites/umbrella/src/app/page.tsx", import.meta.url),
+      "utf8",
+    );
+    expect(overview).toContain("LIVE_OPEN_PATH");
+    const layout = readFileSync(
+      new URL("../../sites/umbrella/src/app/layout.tsx", import.meta.url),
+      "utf8",
+    );
+    expect(layout).toContain("LIVE_OPEN_PATH");
+  });
+
+  it("declares its one engine edge in the manifest and the bundler config", () => {
+    const manifest = JSON.parse(
+      readFileSync(new URL("../../sites/umbrella/package.json", import.meta.url), "utf8"),
+    ) as { readonly dependencies: Record<string, string> };
+    expect(manifest.dependencies["@sceneaxi/engine-presentation"]).toBe(
+      "link:../../packages/engine-presentation",
+    );
+
+    const config = readFileSync(
+      new URL("../../sites/umbrella/next.config.ts", import.meta.url),
+      "utf8",
+    );
+    expect(config).toContain("@sceneaxi/engine-presentation");
+  });
+
+  it.each(["catalog-game", "catalog-web"])(
+    "keeps the presentation seam out of sites/%s, which draws nothing",
+    (site) => {
+      const manifest = JSON.parse(
+        readFileSync(new URL(`../../sites/${site}/package.json`, import.meta.url), "utf8"),
+      ) as { readonly dependencies: Record<string, string> };
+      expect(manifest.dependencies["@sceneaxi/engine-presentation"]).toBeUndefined();
+    },
+  );
+});
+
+describe("live open copy stays honest about the presentation core", () => {
+  const SITE_SOURCE_FILES = [
+    "umbrella/src/app/open/page.tsx",
+    "umbrella/src/app/open/_components/live-viewport.tsx",
+    "umbrella/src/app/page.tsx",
+    "umbrella/src/lib/live-open.ts",
+  ] as const;
+
+  it("names the product presentation core the way ADR 0017 requires", () => {
+    expect(LIVE_OPEN_PRESENTATION.coreLabel).toBe("Three presentation core");
+    expect(LIVE_OPEN_COPY.lede).toContain("Three presentation core");
+  });
+
+  it.each(SITE_SOURCE_FILES)(
+    "keeps the retired experimental framing out of %s",
+    (relative) => {
+      const source = readFileSync(
+        new URL(`../../sites/${relative}`, import.meta.url),
+        "utf8",
+      ).toLowerCase();
+      for (const retired of [
+        "experimental three preview",
+        "non-decision",
+        "multi-renderer",
+        "stage 1 has not run",
+      ]) {
+        expect(source).not.toContain(retired);
+      }
+    },
+  );
+});
 
 describe("the sites tier keeps the hermetic root hermetic", () => {
   it("declares no framework dependency in the root manifest", () => {

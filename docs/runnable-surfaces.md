@@ -23,6 +23,7 @@ a marketing word.
 | Web Experience profile | **R1** | `pnpm test:golden` | `tests/e2e/profile-web-golden-path.test.ts` |
 | Kids profile | **R0** | `pnpm test:golden` | `tests/e2e/profile-kids-refuse-golden.test.ts` |
 | Importers + plugin host | **R1** | `pnpm test:golden` | `tests/e2e/importers-plugin-golden.test.ts` |
+| Umbrella live open path (`/open`) | **R1** | `pnpm test:golden`; in a browser, `cd sites/umbrella && pnpm build && pnpm start` | `tests/e2e/umbrella-live-open-golden.test.ts` (headless surface, no pixel claim) + the browser record in `docs/three-presentation-core.md` |
 | `@sceneaxi/web-shell` | *library only* | — | not yet startable; see sceneaxi#120 |
 
 `pnpm gate` runs everything above. `pnpm test:golden` runs just the golden e2e set.
@@ -52,6 +53,10 @@ declared in `docs/dependency-matrix.json`. Consequences worth knowing:
   package was already allowed to name.
 - Adding a workspace package makes it resolvable automatically, because the
   mapping is derived from the matrix rather than hand-maintained.
+
+The live open path is **public**: no sign-in, no credits, no editing operation.
+Its node proof stops where node stops — the headless surface never claims pixels,
+so the pixel claim is a recorded browser observation, never a gate inference.
 
 ## Why the CLI and shells have no kernel or plugin verbs
 

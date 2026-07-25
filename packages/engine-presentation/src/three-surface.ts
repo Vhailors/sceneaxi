@@ -9,7 +9,13 @@
  * Renderable values cross this port as opaque handles: no Three type appears in
  * any exported signature, so ADR 0002 backend-hiding still holds.
  */
-import { Camera, Mesh, Object3D, WebGLRenderer } from "three";
+import {
+  Camera,
+  Mesh,
+  Object3D,
+  WebGLRenderer,
+  type WebGLRendererParameters,
+} from "three";
 import { ThreePresentationError } from "./three-presentation-error.js";
 
 /**
@@ -144,7 +150,14 @@ export function createWebGLCanvasSurface(
   }
   const preserveDrawingBuffer = options.preserveDrawingBuffer ?? true;
   const renderer = new WebGLRenderer({
-    canvas,
+    // `ThreeCanvasTarget` is structural so this package needs no DOM lib. A consumer
+    // that *does* take the DOM lib — a site type-checking this source — sees the
+    // renderer's own `HTMLCanvasElement | OffscreenCanvas` here, which a structural
+    // supertype cannot satisfy on its own. Narrowing to the renderer's own parameter
+    // type states the fact the seam already guarantees: whatever reached
+    // `createWebGLCanvasSurface` is the real canvas its caller owns. Without this, the
+    // package compiles in node-only consumers and fails in every browser consumer.
+    canvas: canvas as NonNullable<WebGLRendererParameters["canvas"]>,
     antialias: options.antialias ?? true,
     preserveDrawingBuffer,
     alpha: options.alpha ?? false,

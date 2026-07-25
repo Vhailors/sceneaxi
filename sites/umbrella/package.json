@@ -2,7 +2,7 @@
   "name": "@sceneaxi/site-umbrella",
   "version": "0.0.0",
   "private": true,
-  "description": "SceneAxi umbrella site \u2014 product/docs, public engine SDK download, account surface, credit packs, entitled Minimum E2 web editor",
+  "description": "SceneAxi umbrella site \u2014 product/docs, the public live open path, engine SDK download, account surface, credit packs, entitled Minimum E2 web editor",
   "type": "module",
   "scripts": {
     "dev": "next dev",
@@ -14,6 +14,7 @@
     "predev": "pnpm run build:sdk"
   },
   "dependencies": {
+    "@sceneaxi/engine-presentation": "link:../../packages/engine-presentation",
     "@sceneaxi/site-kit": "link:../../packages/site-kit",
     "next": "15.5.21",
     "react": "19.1.1",

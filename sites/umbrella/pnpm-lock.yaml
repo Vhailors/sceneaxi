@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@sceneaxi/engine-presentation':
+        specifier: link:../../packages/engine-presentation
+        version: link:../../packages/engine-presentation
       '@sceneaxi/site-kit':
         specifier: link:../../packages/site-kit
         version: link:../../packages/site-kit

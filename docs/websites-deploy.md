@@ -16,7 +16,7 @@ Design decisions behind this: [ADR 0018](adr/0018-sites-tier-three-vercel-one-ne
 
 | Site | Directory | Package | Vercel project | Owns |
 |---|---|---|---|---|
-| Umbrella | `sites/umbrella` | `@sceneaxi/site-umbrella` | `sceneaxi-umbrella` | product/docs, public engine SDK download, account, credit packs, Minimum E2 editor |
+| Umbrella | `sites/umbrella` | `@sceneaxi/site-umbrella` | `sceneaxi-umbrella` | product/docs, the public live open path (`/open`), engine SDK download, account, credit packs, Minimum E2 editor |
 | Game-asset catalog | `sites/catalog-game` | `@sceneaxi/site-catalog-game` | `sceneaxi-catalog-game` | game-asset browse/detail, dual pricing, creator share, editor deep links |
 | Website-asset catalog | `sites/catalog-web` | `@sceneaxi/site-catalog-web` | `sceneaxi-catalog-web` | website-asset browse/detail, same bar |
 
@@ -43,9 +43,10 @@ Per project, in Vercel:
 
 The install command provisions **both** roots, and it has to. Each site is the sole
 member of its own pnpm workspace (`packages: ["."]`), not a member of the repository-root
-workspace. A site installs `@sceneaxi/site-kit` through a `link:` specifier, but
-`site-kit`'s own dependencies (`@sceneaxi/schemas`, `@sceneaxi/authoring-core`) are
-workspace packages resolved from the repository root's `node_modules`. Installing only
+workspace. A site installs `@sceneaxi/site-kit` through a `link:` specifier — and the
+umbrella also links `@sceneaxi/engine-presentation`, its one engine edge (ADR 0021) —
+but those packages' own dependencies (`@sceneaxi/schemas`, `@sceneaxi/authoring-core`,
+`three`) are resolved from the repository root's `node_modules`. Installing only
 the site directory builds successfully on a developer machine that already has a root
 install and then fails on a clean Vercel builder with `Can't resolve
 '@sceneaxi/schemas'`. Root Directory must be set on the project so the whole repository
@@ -110,9 +111,14 @@ GAME=https://<game-catalog>.vercel.app
 WEB=https://<web-catalog>.vercel.app
 
 # Umbrella pages
-for p in / /docs /engine /pricing /account /editor; do
+for p in / /open /docs /engine /pricing /account /editor; do
   printf '%s %s\n' "$p" "$(curl -s -o /dev/null -w '%{http_code}' "$UMB$p")"
 done
+
+# The live open path serves a composed scene and names the product core honestly
+curl -s "$UMB/open" | grep -c 'Three presentation core'          # >= 1
+curl -s "$UMB/open" | grep -oE 'sha256:[0-9a-f]{64}' | head -1   # the scene digest
+curl -s "$UMB/open" | grep -c 'Experimental Three preview'       # 0
 
 # The served archive must hash to the published checksum
 curl -s "$UMB/engine" | grep -oE '[0-9a-f]{64}' | head -1
@@ -126,6 +132,12 @@ curl -s -o /dev/null -w '%{http_code}\n' "$GAME/item/game-lantern-prop"
 curl -s -o /dev/null -w '%{http_code}\n' "$GAME/item/nope"                # 404
 curl -s -o /dev/null -w '%{http_code}\n' "$WEB/item/game-lantern-prop"    # 404
 ```
+
+`/open` draws pixels only in a browser — WebGL cannot run in node or in `curl`. The
+curl checks above verify the served scene and its copy; the pixel claim is verified by
+opening the page and reading the frame report it renders (`surface webgl-canvas`,
+`pixelsDrawn true`), and the standing record is in
+[`three-presentation-core.md`](three-presentation-core.md).
 
 Expected: pages 200; the served zip's SHA-256 equal to the digest `/engine` publishes;
 an unknown item id 404; neither storefront resolving the other's ids; `/account`

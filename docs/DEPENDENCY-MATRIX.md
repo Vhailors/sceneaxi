@@ -20,7 +20,9 @@ L2  authoring-core     the one agent-native runtime/authoring core (document mod
 L3  profiles · cli · importers · provider adapters · plugin-host · auth ← billing
                        (identity plane; schema in db/migrations)
 L4  apps               (leaves; nothing depends on an app)
-L4  sites              site-kit ← the three deployable sites (leaves; ADR 0018)
+L4  sites              site-kit ← the three deployable sites (leaves; ADR 0018),
+                       plus one charted edge: umbrella ← engine-presentation,
+                       the public viewport (ADR 0022)
 ```
 
 ## Allow matrix (✓ = allowed; blank = denied)
@@ -41,6 +43,9 @@ L4  sites              site-kit ← the three deployable sites (leaves; ADR 0018
 | web-shell | ✓ | | | | ✓ | | | | | — (+ auth, billing) |
 | desktop-shell | ✓ | | | | ✓ | | | | | — |
 | catalog-game / catalog-web | ✓ | | | | | | | | | — |
+| site-kit | ✓ | | | | ✓ | | | | | |
+| site-umbrella (→ site-kit ✓) | | | ✓ | | | | | | | |
+| site-catalog-game / site-catalog-web (→ site-kit ✓) | | | | | | | | | | |
 
 Deliberate denials that carry design intent:
 
@@ -57,17 +62,23 @@ Deliberate denials that carry design intent:
 - **plugin-host → engine packages / authoring-core / profiles: denied.** The Plugin
   Host (ADR 0005) consumes only public contracts from `schemas`; it must not grow
   an engine service locator or absorb engine internals.
-- **sites → anything but `site-kit`: denied.** Each deployable site
-  (`sites/umbrella`, `sites/catalog-game`, `sites/catalog-web`) reaches contract
-  vocabulary only through `@sceneaxi/site-kit`, which may consume `schemas` and
-  `authoring-core`. A site is a thin view layer; all testable behaviour lives in
-  `site-kit` so `pnpm gate` covers it (ADR 0018).
+- **sites → anything but `site-kit`: denied, with one charted exception.** Each
+  deployable site (`sites/umbrella`, `sites/catalog-game`, `sites/catalog-web`) reaches
+  contract vocabulary only through `@sceneaxi/site-kit`, which may consume `schemas`
+  and `authoring-core`. A site is a thin view layer; all testable behaviour lives in
+  `site-kit` so `pnpm gate` covers it (ADR 0018). The exception is
+  **umbrella → `engine-presentation`** (ADR 0022): the umbrella owns the public
+  viewport, so it alone consumes the ADR 0002 presentation seam to draw a real
+  artifact into a browser canvas. Nothing widens past that — kernel, orchestrator,
+  authoring-core, profiles, and Kids stay denied to every site, and the two catalogs
+  keep `site-kit` only. `tests/boundary/injected-site-violations.test.ts` asserts both
+  the allowed edge and each denial.
 - **framework and provider SDKs → the hermetic tier: denied.** `next`, `react`,
   and provider clients live in `sites/` only. `pnpm check:sites` fails if one appears
   in the root manifest, and if `pnpm-workspace.yaml` starts globbing `sites/` — the
   sites are separate install roots so the hermetic root lockfile never moves for a
   site dependency.
-- **auth → anything but schemas: denied.** The identity plane (ADR 0021) is
+- **auth → anything but schemas: denied.** The identity plane (ADR 0022) is
   contracts and policy only. Better Auth and Neon are injected adapters, so there
   is nothing for it to depend on.
 - **billing → engine packages / authoring-core / profiles / cli: denied.** Billing
@@ -118,10 +129,12 @@ Recorded in `dependency-matrix.json → releaseGroups` and stamped on every mani
   `plugin-host` is independently versioned and may depend only on `schemas`.
 - **sites** (`site-kit` plus the three deployable sites): first-party deployable web
   surfaces and their shared deployment-neutral logic. Consume only public contracts and
-  public `authoring-core` APIs; never engine packages, profiles, a service locator, or
-  Kids. Framework and provider SDKs stay in the `sites/` tier. Deploy and env details:
+  public `authoring-core` APIs; never profiles, a service locator, or Kids. The single
+  engine edge is umbrella → `engine-presentation` for the public viewport (ADR 0022);
+  every other engine package stays denied to every site. Framework and provider SDKs
+  stay in the `sites/` tier. Deploy and env details:
   [`websites-deploy.md`](websites-deploy.md).
 - **identity** (`auth`, `billing`): independently versioned; consumes only public
   contracts from `schemas` (and, for `billing`, the `auth` seam); never engine
   packages, profiles, the CLI, or a service locator. Better Auth, Neon, and the
-  Stripe API stay injected adapters (ADR 0021; `docs/auth-credits.md`).
+  Stripe API stay injected adapters (ADR 0022; `docs/auth-credits.md`).

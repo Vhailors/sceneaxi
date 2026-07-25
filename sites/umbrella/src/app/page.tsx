@@ -3,6 +3,7 @@ import {
   CREATOR_SHARE_RULE,
   SITE_STARTER_CREDIT_ALLOTMENT,
 } from "@sceneaxi/site-kit";
+import { LIVE_OPEN_COPY, LIVE_OPEN_PATH } from "../lib/live-open.js";
 import { UMBRELLA_BRAND, resolveFamilyLinks } from "../lib/site-config.js";
 import { CapabilityTable } from "./_components/capability-table.js";
 
@@ -16,13 +17,19 @@ export default function OverviewPage() {
       <p className="lede">{UMBRELLA_BRAND.summary}</p>
 
       <div className="actions">
-        <a className="button" href="/engine">
+        <a className="button" href={LIVE_OPEN_PATH}>
+          Open a real artifact
+        </a>
+        <a className="button button-quiet" href="/engine">
           Download the engine SDK
         </a>
         <a className="button button-quiet" href="/docs">
           Read the contracts
         </a>
       </div>
+      <p style={{ color: "var(--ink-faint)", fontSize: "0.9rem" }}>
+        {LIVE_OPEN_COPY.lede}
+      </p>
 
       <h2>What the engine is</h2>
       <div className="grid">

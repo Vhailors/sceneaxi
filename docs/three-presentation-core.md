@@ -121,9 +121,22 @@ only, and presentation invents no state the kernel does not own.
   - the Presentation Runtime path drew and captured a 2581-byte PNG
   - screenshot showed the lit artifact (box plus cylinder cap), not a blank canvas
 
-Reproduce by serving a page that runs the consumer snippets above against a
-validated Sculpt Artifact; the umbrella live open path (T1) is the product home
-for that page.
+- **The shipped product surface**, the umbrella live open path (`/open`, ADR
+  0021), which is that page. Verified 2026-07-25 in Chrome against the production
+  build (`next build && next start`), SwiftShader ANGLE:
+  - frame report rendered on the page:
+    `backend three · label Three presentation core · surface webgl-canvas · pixelsDrawn true · drawCalls 15 · mounted service-crate-left, service-crate-root, service-crate-stacked`
+  - `toDataURL` of the live canvas: 82 062 bytes, 1 717 distinct colours, 101 278
+    of 763 730 pixels non-background — the three lit crates, not a cleared buffer
+  - pointer drag and wheel zoom changed the drawn pixels; **Reset view** returned
+    a byte-identical PNG to the opening framing
+  - the root-only toggle moved the live report to `drawCalls 5 · mounted
+    service-crate-root` and back, through the Mount API, without rebuilding the
+    renderer
+
+Reproduce the standalone snippets by serving a page that runs the consumer
+snippets above against a validated Sculpt Artifact; `sites/umbrella/src/app/open/`
+is the shipped version.
 
 ## Not claimed
 

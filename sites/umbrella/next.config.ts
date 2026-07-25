@@ -12,7 +12,16 @@ const nextConfig: NextConfig = {
   // This site keeps its own lockfile, so Next must be told which directory is the
   // deployment root rather than inferring it from the repository lockfile above.
   outputFileTracingRoot: dirname(fileURLToPath(import.meta.url)),
-  transpilePackages: ["@sceneaxi/site-kit", "@sceneaxi/schemas", "@sceneaxi/authoring-core"],
+  // `@sceneaxi/engine-presentation` is the umbrella's one engine edge (ADR 0022): it
+  // carries the Three presentation core the public live open path draws with. It is not
+  // accompanied by `@sceneaxi/engine-kernel`, whose only appearance there is a
+  // type-only import that erases before any bundle exists.
+  transpilePackages: [
+    "@sceneaxi/site-kit",
+    "@sceneaxi/schemas",
+    "@sceneaxi/authoring-core",
+    "@sceneaxi/engine-presentation",
+  ],
   reactStrictMode: true,
   turbopack: {
     resolveExtensions: [".ts", ".tsx", ".mjs", ".js", ".jsx", ".json"],
