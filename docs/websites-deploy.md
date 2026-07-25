@@ -7,10 +7,10 @@ values are set in the Vercel project by whoever holds them. `pnpm check:sites` f
 gate if a secret-shaped value or an assigned secret name is ever committed under
 `sites/`.
 
-Design decisions behind this: [ADR 0017](adr/0017-sites-tier-three-vercel-one-neon.md)
+Design decisions behind this: [ADR 0018](adr/0018-sites-tier-three-vercel-one-neon.md)
 (the `sites/` tier, three projects, one database),
-[ADR 0018](adr/0018-public-engine-sdk-zip-not-npm.md) (the SDK archive), and
-[ADR 0019](adr/0019-minimum-e2-web-editor-entitlement.md) (editor entitlement).
+[ADR 0019](adr/0019-public-engine-sdk-zip-not-npm.md) (the SDK archive), and
+[ADR 0020](adr/0020-minimum-e2-web-editor-entitlement.md) (editor entitlement).
 
 ## Vercel project map
 

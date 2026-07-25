@@ -1,4 +1,4 @@
-# ADR 0018: The public engine download is a deterministic SDK zip, not an npm publish
+# ADR 0019: The public engine download is a deterministic SDK zip, not an npm publish
 
 - **Status:** Accepted for websites-deploy v1.
 - **Date recorded:** 2026-07-25

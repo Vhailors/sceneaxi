@@ -1,4 +1,4 @@
-# ADR 0019: The Minimum E2 web editor is entitled by credits or the starter allotment
+# ADR 0020: The Minimum E2 web editor is entitled by credits or the starter allotment
 
 - **Status:** Accepted for websites-deploy v1.
 - **Date recorded:** 2026-07-25

@@ -1,4 +1,4 @@
-# ADR 0017: A `sites/` tier — three Vercel projects, one Neon database
+# ADR 0018: A `sites/` tier — three Vercel projects, one Neon database
 
 - **Status:** Accepted for websites-deploy v1.
 - **Date recorded:** 2026-07-25

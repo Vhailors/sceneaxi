@@ -5,7 +5,7 @@
  * decides *eligibility* for the 100-credit starter allotment and never appends a
  * ledger entry — the idempotent grant belongs to `@sceneaxi/billing`.
  *
- * ADR 0019 records the product decision. It does not authorize general E2
+ * ADR 0020 records the product decision. It does not authorize general E2
  * (ADR 0003 stands) and does not open tier-6b marketplace activation.
  */
 import {

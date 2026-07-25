@@ -130,7 +130,7 @@ export type WebEditorSessionOptions = {
   /** Absolute path to an ephemeral per-session workspace. */
   readonly workspaceRoot: string;
   readonly documentPath?: string;
-  readonly backend?: "experimental-three" | "null";
+  readonly backend?: "three" | "null";
   readonly seed?: number;
   /** Document id used when this session seeds a fresh document. */
   readonly sceneId?: string;

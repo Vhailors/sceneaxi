@@ -19,7 +19,7 @@ L2  authoring-core     the one agent-native runtime/authoring core (document mod
                        Model Provider Port)
 L3  profiles · cli · importers · provider adapters · plugin-host
 L4  apps               (leaves; nothing depends on an app)
-L4  sites              site-kit ← the three deployable sites (leaves; ADR 0017)
+L4  sites              site-kit ← the three deployable sites (leaves; ADR 0018)
 ```
 
 ## Allow matrix (✓ = allowed; blank = denied)
@@ -57,7 +57,7 @@ Deliberate denials that carry design intent:
   (`sites/umbrella`, `sites/catalog-game`, `sites/catalog-web`) reaches contract
   vocabulary only through `@sceneaxi/site-kit`, which may consume `schemas` and
   `authoring-core`. A site is a thin view layer; all testable behaviour lives in
-  `site-kit` so `pnpm gate` covers it (ADR 0017).
+  `site-kit` so `pnpm gate` covers it (ADR 0018).
 - **framework and provider SDKs → the hermetic tier: denied.** `next`, `react`,
   and provider clients live in `sites/` only. `pnpm check:sites` fails if one appears
   in the root manifest, and if `pnpm-workspace.yaml` starts globbing `sites/` — the

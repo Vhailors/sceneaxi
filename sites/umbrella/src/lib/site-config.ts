@@ -42,6 +42,8 @@ export async function resolveUmbrellaEditorAccess(input: {
     identity: input.plane.identity,
     credits: input.plane.credits,
     env: input.env,
-    sessionToken: input.sessionToken,
+    // Spread conditionally: under exactOptionalPropertyTypes an absent token is not
+    // the same as an explicit `undefined`.
+    ...(input.sessionToken === undefined ? {} : { sessionToken: input.sessionToken }),
   });
 }

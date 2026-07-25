@@ -19,7 +19,7 @@ repository as source.
 | `@sceneaxi/authoring-core` | Optional text-canonical document and propose/apply API for products that need authoring. It is not required merely to render a Web Experience. | Pin an exact published core version within the profile's `seam.corePin`. |
 
 This contract governs **third-party products**. The first-party surfaces in this
-repository — `apps/*` and the deployable `sites/*` (ADR 0017) — are private applications,
+repository — `apps/*` and the deployable `sites/*` (ADR 0018) — are private applications,
 not external consumers, so their in-repo path dependencies are correct and change nothing
 here.
 

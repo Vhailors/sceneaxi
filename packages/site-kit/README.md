@@ -46,5 +46,5 @@ Otherwise a positive balance, then an unused 100-credit starter allotment, then 
 named refusal. This package decides *eligibility* only — the idempotent starter
 grant append belongs to `@sceneaxi/billing`.
 
-ADR 0019 records the decision. It does not authorize general E2 (ADR 0003 stands)
+ADR 0020 records the decision. It does not authorize general E2 (ADR 0003 stands)
 and does not open tier-6b marketplace activation.
