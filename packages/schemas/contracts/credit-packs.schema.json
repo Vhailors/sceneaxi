@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/credit-packs/v1",
+  "title": "SceneAxi credit pack catalog (v1)",
+  "description": "The one canonical list of purchasable credit packs. Test mode only: live price ids belong to a later captain go-live decision and are not committed. The canonical artifact is contracts/credit-packs.fixtures.json; pnpm check:contracts keeps the docs/auth-credits.md table in exact lockstep with it. Deliberately expressed in the JSON Schema subset scripts/check-contracts.mjs supports, so the gate validates it directly.",
+  "type": "object",
+  "required": ["schemaVersion", "mode", "packs"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "mode": {
+      "const": "test",
+      "description": "Constant: only test-mode packs are committed to the repository."
+    },
+    "packs": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "required": [
+          "packId",
+          "credits",
+          "unitAmount",
+          "currency",
+          "stripePriceId"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "packId": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
+            "description": "Stable pack slug referenced by checkout intents and webhook events."
+          },
+          "credits": {
+            "type": "integer",
+            "description": "Credits granted when a checkout for this pack completes."
+          },
+          "unitAmount": {
+            "type": "integer",
+            "description": "Price in the currency's minor unit (e.g. cents), as Stripe expects."
+          },
+          "currency": {
+            "type": "string",
+            "pattern": "^[a-z]{3}$",
+            "description": "Lowercase ISO 4217 code."
+          },
+          "stripePriceId": {
+            "type": "string",
+            "pattern": "^price_[A-Za-z0-9_]+$",
+            "description": "Test-mode Stripe price id. Not a secret: price ids are public identifiers, unlike API keys, which live only in env."
+          }
+        }
+      }
+    }
+  }
+}

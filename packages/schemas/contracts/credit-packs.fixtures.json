@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "mode": "test",
+  "packs": [
+    {
+      "packId": "starter",
+      "credits": 100,
+      "unitAmount": 500,
+      "currency": "usd",
+      "stripePriceId": "price_test_starter_100"
+    },
+    {
+      "packId": "maker",
+      "credits": 500,
+      "unitAmount": 2000,
+      "currency": "usd",
+      "stripePriceId": "price_test_maker_500"
+    },
+    {
+      "packId": "studio",
+      "credits": 2000,
+      "unitAmount": 7000,
+      "currency": "usd",
+      "stripePriceId": "price_test_studio_2000"
+    }
+  ]
+}

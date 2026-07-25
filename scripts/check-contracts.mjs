@@ -7,6 +7,7 @@
  * 1. Authoring-jobs fixture list + E1/E2 doc binding
  * 2. Plugin capability registry schema + checked-in 1.0.0 seed artifact
  * 3. Plugin-manifest inert example fixture + docs/plugins.md lockstep (sceneaxi#24)
+ * 4. Credit pack catalog fixture + docs/auth-credits.md lockstep (sceneaxi#91)
  *
  * Fail-closed: missing files, schema violations, duplicate ids, seed drift, or
  * a doc whose fixture table drifts from the canonical JSON all exit 1.
@@ -614,11 +615,142 @@ if (schemasReadmeHasContent) {
   }
 }
 
+// --- credit pack catalog + docs/auth-credits.md lockstep (sceneaxi#91) ---
+const CREDIT_PACKS_DOC_START = "<!-- credit-packs:list -->";
+const CREDIT_PACKS_DOC_END = "<!-- /credit-packs:list -->";
+
+const creditPacksSchemaPath = join(
+  root,
+  "packages",
+  "schemas",
+  "contracts",
+  "credit-packs.schema.json",
+);
+const creditPacksFixturesPath = join(
+  root,
+  "packages",
+  "schemas",
+  "contracts",
+  "credit-packs.fixtures.json",
+);
+const authCreditsDocPath = join(root, "docs", "auth-credits.md");
+
+const creditPacksSchema = load(creditPacksSchemaPath, true);
+const creditPacksFixtures = load(creditPacksFixturesPath, true);
+const authCreditsDoc = load(authCreditsDocPath, false);
+
+const creditPacksSchemaIsObject =
+  creditPacksSchema !== loadFailed && isPlainObject(creditPacksSchema);
+const creditPacksFixturesIsObject =
+  creditPacksFixtures !== loadFailed && isPlainObject(creditPacksFixtures);
+const authCreditsDocHasContent =
+  authCreditsDoc !== loadFailed && authCreditsDoc.trim().length > 0;
+
+if (creditPacksSchema !== loadFailed && !creditPacksSchemaIsObject) {
+  fail(`${relative(root, creditPacksSchemaPath)}: expected a plain JSON object`);
+}
+if (creditPacksFixtures !== loadFailed && !creditPacksFixturesIsObject) {
+  fail(`${relative(root, creditPacksFixturesPath)}: expected a plain JSON object`);
+}
+if (authCreditsDoc !== loadFailed && !authCreditsDocHasContent) {
+  fail(`${relative(root, authCreditsDocPath)}: document is empty or whitespace-only`);
+}
+
+let creditPackCount = 0;
+const creditPacksSchemaUsesSupportedSubset =
+  creditPacksSchemaIsObject &&
+  validateSchemaDefinition(creditPacksSchema, "credit-packs.schema");
+
+if (creditPacksSchemaIsObject) {
+  if (
+    typeof creditPacksSchema.$id !== "string" ||
+    !creditPacksSchema.$id.includes("credit-packs")
+  ) {
+    fail(
+      `${relative(root, creditPacksSchemaPath)}: $id does not identify the credit-packs contract`,
+    );
+  }
+}
+
+if (creditPacksSchemaIsObject && creditPacksFixturesIsObject) {
+  if (creditPacksSchemaUsesSupportedSubset) {
+    validate(creditPacksFixtures, creditPacksSchema, "credit-packs.fixtures");
+  }
+
+  const packs = Array.isArray(creditPacksFixtures.packs)
+    ? creditPacksFixtures.packs
+    : [];
+  creditPackCount = packs.length;
+
+  const packIds = packs
+    .map((pack) => (isPlainObject(pack) ? pack.packId : undefined))
+    .filter((id) => typeof id === "string");
+  const duplicatePackIds = packIds.filter((id, i) => packIds.indexOf(id) !== i);
+  if (duplicatePackIds.length > 0) {
+    fail(
+      `credit-packs.fixtures: duplicate packId(s): ${[...new Set(duplicatePackIds)].join(", ")}`,
+    );
+  }
+
+  const duplicatePriceIds = packs
+    .map((pack) => (isPlainObject(pack) ? pack.stripePriceId : undefined))
+    .filter((id, i, all) => typeof id === "string" && all.indexOf(id) !== i);
+  if (duplicatePriceIds.length > 0) {
+    fail(
+      `credit-packs.fixtures: duplicate stripePriceId(s): ${[...new Set(duplicatePriceIds)].join(", ")}`,
+    );
+  }
+
+  // Test-mode price ids only: a live price id must never be committed.
+  for (const pack of packs) {
+    if (!isPlainObject(pack) || typeof pack.stripePriceId !== "string") continue;
+    if (!pack.stripePriceId.includes("test")) {
+      fail(
+        `credit-packs.fixtures: stripePriceId ${JSON.stringify(pack.stripePriceId)} is not a test-mode id; live price ids are a separate captain go-live decision`,
+      );
+    }
+  }
+
+  if (authCreditsDocHasContent) {
+    const starts = authCreditsDoc.split(CREDIT_PACKS_DOC_START).length - 1;
+    const ends = authCreditsDoc.split(CREDIT_PACKS_DOC_END).length - 1;
+    const matches = [
+      ...authCreditsDoc.matchAll(
+        /<!-- credit-packs:list -->([\s\S]*?)<!-- \/credit-packs:list -->/g,
+      ),
+    ];
+    if (starts !== 1 || ends !== 1 || matches.length !== 1) {
+      fail(
+        `docs/auth-credits.md: expected exactly one ${CREDIT_PACKS_DOC_START} ... ${CREDIT_PACKS_DOC_END} block, found ${starts} start and ${ends} end marker(s)`,
+      );
+    } else {
+      const actual = matches[0][1].trim().replaceAll("\r\n", "\n");
+      const expected = [
+        "| pack | credits | price | stripe test price id |",
+        "|---|---|---|---|",
+        ...packs.map(
+          (pack) =>
+            `| \`${pack.packId}\` | ${pack.credits} | ${pack.unitAmount} ${String(pack.currency).toUpperCase()} minor units | \`${pack.stripePriceId}\` |`,
+        ),
+      ].join("\n");
+      if (actual !== expected) {
+        fail(
+          "docs/auth-credits.md: credit pack table does not exactly match credit-packs.fixtures.json (pack id, credits, price, price id columns in order)",
+        );
+      }
+    }
+
+    if (!authCreditsDoc.includes("credit-packs.fixtures.json")) {
+      fail("docs/auth-credits.md: does not name the canonical credit pack fixture path");
+    }
+  }
+}
+
 if (errors.length > 0) {
   for (const e of errors) console.error(`contract check FAIL: ${e}`);
   console.error(`contract check FAILED — ${errors.length} error(s)`);
   process.exit(1);
 }
 console.log(
-  `contract check OK — ${authoringJobCount} shared authoring jobs valid, doc table matches, E1+E2 bound to one list; plugin capability registry 1.0.0 seed empty and schema-locked; plugin-manifest inert example schema-locked`,
+  `contract check OK — ${authoringJobCount} shared authoring jobs valid, doc table matches, E1+E2 bound to one list; plugin capability registry 1.0.0 seed empty and schema-locked; plugin-manifest inert example schema-locked; ${creditPackCount} test-mode credit packs schema-locked and doc-bound`,
 );

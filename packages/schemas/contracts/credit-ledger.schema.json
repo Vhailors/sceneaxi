@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/credit-ledger/v1",
+  "title": "SceneAxi credit account and append-only ledger (v1)",
+  "description": "CreditAccount and CreditLedgerEntry records. A credit account deliberately has NO balance property: a stored balance is a second source of truth that can drift, so the ledger is the only record and the balance is always derived from it. balanceAfter on each entry is a checkable witness of that derivation, not an independent store. Ledger behavior lives in packages/billing; the database enforces append-only in db/migrations.",
+  "oneOf": [
+    { "$ref": "#/$defs/creditAccount" },
+    { "$ref": "#/$defs/creditLedgerEntry" }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+      "description": "Opaque server-issued identifier: url-safe, 1-128 characters."
+    },
+    "dateTime": {
+      "type": "string",
+      "format": "date-time",
+      "description": "RFC 3339 date-time with an explicit timezone. Timezone-less values refuse."
+    },
+    "creditAccount": {
+      "type": "object",
+      "title": "CreditAccount",
+      "description": "One credit account per user. Carries no balance by design.",
+      "required": ["schemaVersion", "kind", "accountId", "userId", "createdAt"],
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "kind": { "const": "sceneaxi.credit-account" },
+        "accountId": { "$ref": "#/$defs/identifier" },
+        "userId": { "$ref": "#/$defs/identifier" },
+        "createdAt": { "$ref": "#/$defs/dateTime" }
+      }
+    },
+    "creditLedgerEntry": {
+      "type": "object",
+      "title": "CreditLedgerEntry",
+      "description": "One immutable ledger row. Entries are appended, never edited or removed — enforced in code by the pure append function and in the database by a BEFORE UPDATE OR DELETE trigger.",
+      "required": [
+        "schemaVersion",
+        "kind",
+        "entryId",
+        "accountId",
+        "sequence",
+        "movement",
+        "delta",
+        "balanceAfter",
+        "reason",
+        "idempotencyKey",
+        "occurredAt"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "kind": { "const": "sceneaxi.credit-ledger-entry" },
+        "entryId": { "$ref": "#/$defs/identifier" },
+        "accountId": { "$ref": "#/$defs/identifier" },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "1-based and strictly monotonic per account. Gaps, forks, and reuse all refuse."
+        },
+        "movement": {
+          "type": "string",
+          "enum": ["grant", "debit", "adjustment"],
+          "description": "grant adds (purchase, admin gift), debit subtracts (metered usage), adjustment is an admin correction in either direction."
+        },
+        "delta": {
+          "type": "integer",
+          "description": "Non-zero credit delta. Sign is fixed by movement: grant is positive, debit is negative, adjustment may be either."
+        },
+        "balanceAfter": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Derived balance witness: previous balance + delta. Never negative — an over-balance debit refuses and appends nothing."
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Every movement is attributable."
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$",
+          "description": "Namespaced replay key, e.g. stripe-event:evt_1. The same key must never produce a second entry; the same key with a different payload refuses."
+        },
+        "occurredAt": { "$ref": "#/$defs/dateTime" }
+      }
+    }
+  }
+}

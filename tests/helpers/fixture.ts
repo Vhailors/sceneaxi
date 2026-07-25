@@ -74,7 +74,11 @@ export function writeTo(root: string, rel: string, text: string): void {
 
 export function runCheck(
   root: string,
-  script: "check-boundaries.mjs" | "check-syntax.mjs" | "check-sites.mjs",
+  script:
+    | "check-boundaries.mjs"
+    | "check-syntax.mjs"
+    | "check-sites.mjs"
+    | "check-contracts.mjs",
 ): { status: number | null; stdout: string; stderr: string } {
   return spawnSync(process.execPath, [join(root, "scripts", script)], {
     encoding: "utf8",

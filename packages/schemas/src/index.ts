@@ -55,6 +55,91 @@ export {
   validateDocument,
 } from "./document.js";
 
+export {
+  CLIENT_ROLE_CLAIM_KEYS,
+  IDENTITY_REFUSE_CODES,
+  IDENTITY_ROLES,
+  IDENTITY_SCHEMA_VERSION,
+  IDENTITY_SURFACES,
+  KIDS_IDENTITY_SURFACE,
+  ROLE_ASSIGNMENT_KIND,
+  ROLE_SOURCES,
+  SESSION_KIND,
+  USER_KIND,
+  claimedRoleKey,
+  isIdentityRole,
+  isIdentitySurface,
+  isRoleSource,
+  validatePrincipal,
+  validateRoleAssignment,
+  validateSession,
+  validateUser,
+} from "./identity.js";
+export type {
+  IdentityRefuseCode,
+  IdentityRole,
+  IdentitySurface,
+  IdentityValidationOk,
+  IdentityValidationRefuse,
+  IdentityValidationResult,
+  Principal,
+  RoleAssignment,
+  RoleSource,
+  Session,
+  User,
+} from "./identity.js";
+
+export {
+  CREDITS_REFUSE_CODES,
+  CREDITS_SCHEMA_VERSION,
+  CREDIT_ACCOUNT_KIND,
+  CREDIT_LEDGER_ENTRY_KIND,
+  CREDIT_MOVEMENTS,
+  isCreditMovement,
+  validateCreditAccount,
+  validateCreditLedgerEntry,
+} from "./credits.js";
+export type {
+  CreditAccount,
+  CreditLedgerEntry,
+  CreditMovement,
+  CreditsRefuseCode,
+  CreditsValidationOk,
+  CreditsValidationRefuse,
+  CreditsValidationResult,
+} from "./credits.js";
+
+export {
+  BILLING_MODES,
+  BILLING_REFUSE_CODES,
+  BILLING_SCHEMA_VERSION,
+  CHECKOUT_COMPLETED_EVENT_KIND,
+  CHECKOUT_COMPLETED_EVENT_TYPE,
+  CHECKOUT_SESSION_INTENT_KIND,
+  CREDIT_PACKS_FIXTURES_PATH,
+  DEFAULT_BILLING_MODE,
+  STRIPE_CUSTOMER_LINK_KIND,
+  isBillingMode,
+  isHttpsUrl,
+  validateCheckoutCompletedEvent,
+  validateCheckoutSessionIntent,
+  validateCreditPack,
+  validateCreditPackCatalog,
+  validateStripeCustomerLink,
+} from "./billing.js";
+export type {
+  BillingMode,
+  BillingRefuseCode,
+  BillingValidationOk,
+  BillingValidationRefuse,
+  BillingValidationResult,
+  CheckoutCompletedEvent,
+  CheckoutSessionIntent,
+  CreditPack,
+  CreditPackCatalog,
+  StripeCustomerLink,
+} from "./billing.js";
+
 export { parseUnambiguousJson } from "./unambiguous-json.js";
 export type { UnambiguousJsonParseResult } from "./unambiguous-json.js";
 export type {
@@ -228,6 +313,14 @@ export const contracts = Object.freeze({
   sceneComposition: "contracts/scene-composition.schema.json",
   /** Profile Conformance claim (sceneaxi#10) — shared suite + development consumers. */
   profileConformance: "contracts/profile-conformance.schema.json",
+  /** Identity plane records (sceneaxi#91); guards and ports live in @sceneaxi/auth. */
+  identity: "contracts/identity.schema.json",
+  /** Credit account + append-only ledger (sceneaxi#91); behavior in @sceneaxi/billing. */
+  creditLedger: "contracts/credit-ledger.schema.json",
+  /** Checkout intents, customer links, normalized completion events (sceneaxi#91). */
+  billingCheckout: "contracts/billing-checkout.schema.json",
+  /** Credit pack catalog schema; canonical list is CREDIT_PACKS_FIXTURES_PATH. */
+  creditPacks: "contracts/credit-packs.schema.json",
   /** Plugin Manifest descriptor (sceneaxi#20 / ADR 0005); host runtime is @sceneaxi/plugin-host. */
   pluginManifest: "contracts/plugin-manifest.schema.json",
   /** Plugin Capability ID registry schema (sceneaxi#21 / ADR 0005); seed path is PLUGIN_CAPABILITY_REGISTRY_SEED_PATH. */
