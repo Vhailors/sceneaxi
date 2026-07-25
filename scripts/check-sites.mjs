@@ -81,6 +81,18 @@ const walk = (dir, out = []) => {
 
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
 
+const assignsSecretValue = (text, name) => {
+  const assignment = new RegExp(
+    `(?:"${name}"|'${name}'|\`${name}\`|\\b${name}\\b)\\s*(?::|=(?!=))\\s*("([^"\\n]+)"|'([^'\\n]+)'|\`([^\`\\n]+)\`|([^\\s#,;\\]}]+))`,
+    "g",
+  );
+  for (const match of text.matchAll(assignment)) {
+    const value = match[2] ?? match[3] ?? match[4] ?? match[5] ?? "";
+    if (!/^(?:process\.env|env|environment)(?:\.|\[)/.test(value)) return true;
+  }
+  return false;
+};
+
 // --- the tier must exist and be non-empty ---
 const sitesDir = join(root, "sites");
 if (!existsSync(sitesDir)) {
@@ -206,10 +218,7 @@ for (const file of walk(sitesDir)) {
   }
   if (rel.endsWith(".env.example")) continue;
   for (const name of SECRET_NAMES) {
-    // A name mentioned in prose or read from `process.env` is fine; a name given a
-    // literal value is not.
-    const assigned = new RegExp(`${name}\\s*[=:]\\s*["'\`][^"'\`\\n]+["'\`]`);
-    if (assigned.test(text)) {
+    if (assignsSecretValue(text, name)) {
       fail(`${rel} assigns a literal value to '${name}' — secrets are env-only, never committed`);
     }
   }

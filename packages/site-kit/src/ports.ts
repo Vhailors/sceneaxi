@@ -152,6 +152,73 @@ const isNonEmptyString = (value: unknown): value is string =>
 const isIsoInstant = (value: unknown): value is string =>
   isNonEmptyString(value) && !Number.isNaN(Date.parse(value));
 
+type ClientPayloadInspection = "safe" | "role-claim" | "malformed";
+
+function inspectClientPayload(payload: unknown): ClientPayloadInspection {
+  const pending: unknown[] = [payload];
+  const visited = new WeakSet<object>();
+  try {
+    while (pending.length > 0) {
+      const current = pending.pop();
+      if (
+        current === null ||
+        current === undefined ||
+        typeof current === "boolean" ||
+        (typeof current === "number" && Number.isFinite(current))
+      ) {
+        continue;
+      }
+      if (typeof current === "string") {
+        const trimmed = current.trim();
+        if (
+          (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+          (trimmed.startsWith("[") && trimmed.endsWith("]"))
+        ) {
+          pending.push(JSON.parse(trimmed) as unknown);
+        }
+        continue;
+      }
+      if (typeof current !== "object" || visited.has(current)) return "malformed";
+      visited.add(current);
+
+      if (Array.isArray(current)) {
+        if (Object.getPrototypeOf(current) !== Array.prototype) return "malformed";
+        const keys = Reflect.ownKeys(current);
+        if (
+          keys.some(
+            (key) =>
+              typeof key !== "string" ||
+              (key !== "length" && !/^(?:0|[1-9]\d*)$/.test(key)),
+          )
+        ) {
+          return "malformed";
+        }
+        for (let index = 0; index < current.length; index += 1) {
+          const descriptor = Object.getOwnPropertyDescriptor(current, String(index));
+          if (descriptor === undefined || !("value" in descriptor)) return "malformed";
+          pending.push(descriptor.value);
+        }
+        continue;
+      }
+
+      const prototype = Object.getPrototypeOf(current);
+      if (prototype !== Object.prototype && prototype !== null) return "malformed";
+      for (const key of Reflect.ownKeys(current)) {
+        if (typeof key !== "string") return "malformed";
+        if ((CLIENT_ROLE_CLAIM_KEYS as readonly string[]).includes(key)) {
+          return "role-claim";
+        }
+        const descriptor = Object.getOwnPropertyDescriptor(current, key);
+        if (descriptor === undefined || !("value" in descriptor)) return "malformed";
+        pending.push(descriptor.value);
+      }
+    }
+  } catch {
+    return "malformed";
+  }
+  return "safe";
+}
+
 /**
  * Whether a payload carries a client-supplied role claim, at any depth.
  *
@@ -159,20 +226,7 @@ const isIsoInstant = (value: unknown): value is string =>
  * top-level one, and a site must refuse both before dispatching to an adapter.
  */
 export function hasClientRoleClaim(payload: unknown): boolean {
-  if (!isRecord(payload)) return false;
-  const pending: Record<string, unknown>[] = [payload];
-  const visited = new WeakSet<object>();
-  while (pending.length > 0) {
-    const current = pending.pop();
-    if (current === undefined || visited.has(current)) continue;
-    visited.add(current);
-    for (const key of Object.keys(current)) {
-      if ((CLIENT_ROLE_CLAIM_KEYS as readonly string[]).includes(key)) return true;
-      const value = current[key];
-      if (isRecord(value)) pending.push(value);
-    }
-  }
-  return false;
+  return inspectClientPayload(payload) === "role-claim";
 }
 
 function canonicalAdapterRefusal(
@@ -205,7 +259,9 @@ function validateIdentityRequest(request: unknown): SiteRefusal | null {
   if (token !== undefined && token !== null && !isNonEmptyString(token)) {
     return refuse("SITE_REQUEST_MALFORMED");
   }
-  if (hasClientRoleClaim(request)) return refuse("ROLE_CLAIM_FROM_CLIENT_DENIED");
+  const inspection = inspectClientPayload(request);
+  if (inspection === "role-claim") return refuse("ROLE_CLAIM_FROM_CLIENT_DENIED");
+  if (inspection === "malformed") return refuse("SITE_REQUEST_MALFORMED");
   return null;
 }
 
@@ -365,6 +421,7 @@ export function createBillingPlane(options: BillingPlaneOptions = {}): SiteBilli
       }
       const packs = result["value"];
       if (!Array.isArray(packs)) return refuse("BILLING_ADAPTER_OUTPUT_INVALID");
+      const canonicalPacks: SiteCreditPack[] = [];
       for (const pack of packs) {
         if (
           !isRecord(pack) ||
@@ -375,8 +432,16 @@ export function createBillingPlane(options: BillingPlaneOptions = {}): SiteBilli
         ) {
           return refuse("BILLING_ADAPTER_OUTPUT_INVALID");
         }
+        canonicalPacks.push(
+          Object.freeze({
+            packId: pack["packId"],
+            credits: pack["credits"] as number,
+            unitAmount: pack["unitAmount"] as number,
+            currency: pack["currency"],
+          }),
+        );
       }
-      return ok(Object.freeze([...(packs as readonly SiteCreditPack[])]));
+      return ok(Object.freeze(canonicalPacks));
     },
     async createCheckout(
       request: Omit<SiteCheckoutRequest, "mode">,

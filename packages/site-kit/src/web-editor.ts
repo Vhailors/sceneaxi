@@ -34,6 +34,7 @@ import {
   SCENE_COMPOSITION_INTAKE_KIND,
   SCENE_COMPOSITION_SCHEMA_VERSION,
   createDocument,
+  digestSceneArtifact,
   identitySculptTransform,
   isSculptTransform,
   type SceneCompositionIntake,
@@ -341,13 +342,19 @@ export function createWebEditorSession(
         rootInstanceId,
         placements,
       };
-      // Artifacts are supplied once per distinct id: several instances may mount
-      // the same artifact, and the pipeline resolves placements against ids.
-      const artifacts = [
-        ...new Map(
-          mounted.map((entry) => [entry.mount.artifact.artifactId, entry.mount.artifact]),
-        ).values(),
-      ];
+      const artifacts: SculptArtifact[] = [];
+      const artifactDigests = new Map<string, string>();
+      for (const entry of mounted) {
+        const artifact = entry.mount.artifact;
+        const digest = digestSceneArtifact(artifact);
+        const priorDigest = artifactDigests.get(artifact.artifactId);
+        if (priorDigest === undefined) {
+          artifactDigests.set(artifact.artifactId, digest);
+          artifacts.push(artifact);
+        } else if (priorDigest !== digest) {
+          artifacts.push(artifact);
+        }
+      }
       return composeScene(intake, artifacts);
     },
   };

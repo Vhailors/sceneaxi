@@ -189,6 +189,17 @@ describe("sites tier — injected violations", () => {
     expect(res.stderr).toContain("secrets are env-only, never committed");
   });
 
+  it.each([
+    ["quoted JSON key", '{"SCENEAXI_ADMIN_BOOTSTRAP_SECRET":"committed-value"}\n'],
+    ["unquoted env value", "STRIPE_WEBHOOK_SECRET=committed-value\n"],
+    ["unquoted YAML value", "BETTER_AUTH_SECRET: committed-value\n"],
+  ])("sites check fails on a secret assigned through a %s", (_label, source) => {
+    writeTo(fx, "sites/umbrella/src/lib/leak.txt", source);
+    const res = runCheck(fx, "check-sites.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("secrets are env-only, never committed");
+  });
+
   it("sites check fails on an empty sites tree", () => {
     for (const dir of ["umbrella", "catalog-game", "catalog-web"]) {
       rmSync(join(fx, "sites", dir), { recursive: true, force: true });

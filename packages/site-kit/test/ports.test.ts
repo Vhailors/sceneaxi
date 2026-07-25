@@ -100,6 +100,28 @@ describe("identity plane — fail closed", () => {
     expect(hasClientRoleClaim(cyclic)).toBe(false);
   });
 
+  it("refuses opaque credentials before adapter dispatch", async () => {
+    const adapter = adapterReturning(principal());
+    const result = await createIdentityPlane({ adapter, now }).resolvePrincipal({
+      surface: "umbrella",
+      credentials: new URLSearchParams("role=admin"),
+    });
+    expect(result).toMatchObject({ ok: false, reason: "SITE_REQUEST_MALFORMED" });
+    expect(adapter.calls).toBe(0);
+  });
+
+  it("finds role claims encoded as serialized JSON before adapter dispatch", async () => {
+    const adapter = adapterReturning(principal());
+    const credentials = JSON.stringify({ profile: { role: "admin" } });
+    expect(hasClientRoleClaim(credentials)).toBe(true);
+    const result = await createIdentityPlane({ adapter, now }).resolvePrincipal({
+      surface: "umbrella",
+      credentials,
+    });
+    expect(result).toMatchObject({ ok: false, reason: "ROLE_CLAIM_FROM_CLIENT_DENIED" });
+    expect(adapter.calls).toBe(0);
+  });
+
   it("refuses an unknown surface and a malformed request", async () => {
     const port = createIdentityPlane({ now });
     expect(
@@ -325,6 +347,33 @@ describe("billing plane — test by default, live behind a captain gate", () => 
     expect(await createBillingPlane({ adapter: liar }).listCreditPacks()).toMatchObject({
       reason: "BILLING_ADAPTER_OUTPUT_INVALID",
     });
+  });
+
+  it("returns canonical frozen credit packs detached from adapter-owned records", async () => {
+    const retained = {
+      packId: "pack-100",
+      credits: 100,
+      unitAmount: 500,
+      currency: "usd",
+    };
+    const mutable: SiteBillingAdapter = {
+      ...adapter,
+      async listCreditPacks() {
+        return ok([retained]);
+      },
+    };
+    const result = await createBillingPlane({ adapter: mutable }).listCreditPacks();
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    retained.packId = "swapped";
+    retained.credits = 1;
+    expect(result.value[0]).toEqual({
+      packId: "pack-100",
+      credits: 100,
+      unitAmount: 500,
+      currency: "usd",
+    });
+    expect(Object.isFrozen(result.value[0])).toBe(true);
   });
 
   it("canonicalizes valid refusals and rejects unknown refusal reasons", async () => {

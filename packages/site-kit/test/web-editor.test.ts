@@ -11,6 +11,10 @@ import {
   webEditorStarterArtifact,
 } from "@sceneaxi/site-kit";
 import type { SculptTransform } from "@sceneaxi/schemas";
+import {
+  sceneCompositionArtifactFixture,
+  sceneCompositionTransformFixture,
+} from "@sceneaxi/schemas/testing/scene-composition";
 
 const workspaces: string[] = [];
 
@@ -204,6 +208,22 @@ describe("multi-object scene composition projection", () => {
     for (const instance of composed.scene.instances) {
       expect(instance.artifact).toEqual(artifact);
     }
+    session.dispose();
+  });
+
+  it("refuses conflicting artifacts that reuse one artifact id", () => {
+    const session = openSession();
+    const first = sceneCompositionArtifactFixture("shared-artifact");
+    const conflicting = sceneCompositionArtifactFixture(
+      "shared-artifact",
+      sceneCompositionTransformFixture([1, 0, 0]),
+    );
+    session.addSculpt({ instanceId: "prop-a", artifact: first });
+    session.addSculpt({ instanceId: "prop-b", artifact: conflicting, transform: MOVED });
+    expect(session.composeSceneProjection()).toMatchObject({
+      ok: false,
+      code: "unknown-artifact-reference",
+    });
     session.dispose();
   });
 

@@ -70,7 +70,13 @@ const defaultTransform = (index: number): SculptTransform =>
 function parseVector(raw: string): readonly [number, number, number] | null {
   const parts = raw.split(",");
   if (parts.length !== 3) return null;
-  const numbers = parts.map((part) => Number.parseFloat(part.trim()));
+  const numbers = parts.map((part) => {
+    const component = part.trim();
+    if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(component)) {
+      return Number.NaN;
+    }
+    return Number(component);
+  });
   if (!numbers.every((value) => Number.isFinite(value) && Math.abs(value) <= 1000)) return null;
   return [numbers[0] as number, numbers[1] as number, numbers[2] as number];
 }
@@ -98,7 +104,7 @@ export function readEditorState(params: SearchParams): SiteResult<EditorState> {
     deepLink = parsed.value;
   }
 
-  const requested = Number.parseInt(single(params["objects"]) ?? "", 10);
+  const requested = Number(single(params["objects"]) ?? "");
   const count = Number.isSafeInteger(requested)
     ? Math.min(Math.max(requested, EDITOR_MIN_OBJECTS), EDITOR_MAX_OBJECTS)
     : EDITOR_MIN_OBJECTS;
