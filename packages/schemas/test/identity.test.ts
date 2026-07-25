@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   IDENTITY_REFUSE_CODES,
@@ -287,5 +288,24 @@ describe("validatePrincipal", () => {
 describe("identity contract version", () => {
   it("is major version 1", () => {
     expect(IDENTITY_SCHEMA_VERSION).toBe(1);
+  });
+
+  it("publishes Principal in the versioned JSON Schema artifact", () => {
+    const schema = JSON.parse(
+      readFileSync(
+        new URL("../contracts/identity.schema.json", import.meta.url),
+        "utf8",
+      ),
+    ) as {
+      oneOf: ReadonlyArray<{ $ref: string }>;
+      $defs: Record<string, unknown>;
+    };
+    expect(schema.oneOf).toContainEqual({ $ref: "#/$defs/principal" });
+    expect(schema.$defs["principal"]).toEqual(
+      expect.objectContaining({
+        required: ["user", "role", "session"],
+        additionalProperties: false,
+      }),
+    );
   });
 });

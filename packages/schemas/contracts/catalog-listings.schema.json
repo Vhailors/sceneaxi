@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://sceneaxi.invalid/contracts/catalog-listings/v1",
   "title": "SceneAxi catalog listings with dual pricing (v1)",
-  "description": "Committed test-mode listing SKUs. A seller decides what an asset costs and in which currency: credits, money, or both. creditPrice is required exactly when priceMode includes credits and moneyPrice exactly when it includes money; a price the mode excludes must be absent, because a dormant field is how a credits-only listing quietly acquires a money price later. That cross-field rule is enforced by validateCatalogListing in packages/schemas/src/catalog-listing.ts — this schema states the per-field shape, and pnpm check:contracts keeps the docs/auth-credits.md table in exact lockstep with the fixture. Test mode only: live price ids are a separate captain go-live decision. Deliberately expressed in the JSON Schema subset scripts/check-contracts.mjs supports.",
+  "description": "Committed test-mode listing SKUs. A seller decides what an asset costs and in which currency: credits, money, or both. creditPrice is required exactly when priceMode includes credits and moneyPrice exactly when it includes money; a price the mode excludes must be absent, because a dormant field is how a credits-only listing quietly acquires a money price later. The JSON Schema and validateCatalogListing in packages/schemas/src/catalog-listing.ts enforce the same cross-field rule, and pnpm check:contracts keeps the docs/auth-credits.md table in exact lockstep with the fixture. Test mode only: live price ids are a separate captain go-live decision.",
   "type": "object",
   "required": ["schemaVersion", "mode", "listings"],
   "additionalProperties": false,
@@ -53,6 +53,7 @@
           },
           "creditPrice": {
             "type": "integer",
+            "minimum": 1,
             "description": "Present exactly when priceMode includes credits."
           },
           "moneyPrice": {
@@ -63,6 +64,7 @@
             "properties": {
               "unitAmount": {
                 "type": "integer",
+                "minimum": 1,
                 "description": "Price in the currency's minor unit."
               },
               "currency": {
@@ -81,7 +83,46 @@
             "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt][0-2]\\d:[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:[Zz]|[+-][0-2]\\d:[0-5]\\d)$",
             "description": "RFC 3339 date-time with an explicit timezone. validateCatalogListing applies the full shared expression; this is the gate-subset form."
           }
-        }
+        },
+        "allOf": [
+          {
+            "if": {
+              "type": "object",
+              "required": ["priceMode"],
+              "properties": { "priceMode": { "const": "credits" } }
+            },
+            "then": {
+              "type": "object",
+              "required": ["creditPrice"],
+              "not": { "type": "object", "required": ["moneyPrice"] }
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "required": ["priceMode"],
+              "properties": { "priceMode": { "const": "money" } }
+            },
+            "then": {
+              "type": "object",
+              "required": ["moneyPrice"],
+              "not": { "type": "object", "required": ["creditPrice"] }
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "required": ["priceMode"],
+              "properties": {
+                "priceMode": { "const": "credits-and-money" }
+              }
+            },
+            "then": {
+              "type": "object",
+              "required": ["creditPrice", "moneyPrice"]
+            }
+          }
+        ]
       }
     }
   }

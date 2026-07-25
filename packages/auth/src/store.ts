@@ -19,7 +19,7 @@ export type IdentityStore = Readonly<{
   findUserById(userId: string): Awaitable<User | undefined>;
   putSession(session: Session): Awaitable<void>;
   findSession(sessionId: string): Awaitable<Session | undefined>;
-  deleteSession(sessionId: string): Awaitable<void>;
+  deleteSession(session: Session): Awaitable<boolean>;
 }>;
 
 export type InMemoryIdentityStoreOptions = Readonly<{
@@ -32,6 +32,19 @@ export type InMemoryIdentityStore = IdentityStore &
     /** Sessions currently held, for assertions. */
     sessionCount(): number;
   }>;
+
+function sameSession(left: Session, right: Session): boolean {
+  return (
+    left.schemaVersion === right.schemaVersion &&
+    left.kind === right.kind &&
+    left.sessionId === right.sessionId &&
+    left.userId === right.userId &&
+    left.surface === right.surface &&
+    left.issuedAt === right.issuedAt &&
+    left.expiresAt === right.expiresAt &&
+    left.tokenDigest === right.tokenDigest
+  );
+}
 
 /**
  * Reference store. Emails are keyed in normalized form so lookup matches the
@@ -65,8 +78,10 @@ export function createInMemoryIdentityStore(
     findSession(sessionId) {
       return sessions.get(sessionId);
     },
-    deleteSession(sessionId) {
-      sessions.delete(sessionId);
+    deleteSession(session) {
+      const current = sessions.get(session.sessionId);
+      if (current === undefined || !sameSession(current, session)) return false;
+      return sessions.delete(session.sessionId);
     },
     sessionCount() {
       return sessions.size;

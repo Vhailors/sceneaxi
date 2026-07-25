@@ -1,12 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://sceneaxi.invalid/contracts/identity/v1",
-  "title": "SceneAxi identity records (v1)",
-  "description": "User, RoleAssignment, and Session records for the SceneAxi identity plane. schemaVersion is the contract major; consumers MUST refuse major mismatches rather than silently migrate. Two shapes are load-bearing: a user record carries no role property, so the admin role is structurally unclaimable from a client; and a session stores only a SHA-256 token digest, never a raw token. Behavior lives in packages/auth; configuration in docs/auth-credits.md.",
+  "title": "SceneAxi identity records and principal (v1)",
+  "description": "User, RoleAssignment, Session, and Principal records for the SceneAxi identity plane. schemaVersion is the contract major; consumers MUST refuse major mismatches rather than silently migrate. Two shapes are load-bearing: a user record carries no role property, so the admin role is structurally unclaimable from a client; and a session stores only a SHA-256 token digest, never a raw token. Behavior lives in packages/auth; configuration in docs/auth-credits.md.",
   "oneOf": [
     { "$ref": "#/$defs/user" },
     { "$ref": "#/$defs/roleAssignment" },
-    { "$ref": "#/$defs/session" }
+    { "$ref": "#/$defs/session" },
+    { "$ref": "#/$defs/principal" }
   ],
   "$defs": {
     "identifier": {
@@ -115,6 +116,18 @@
           "pattern": "^[0-9a-f]{64}$",
           "description": "SHA-256 hex digest of the session token. The fixed width means a raw token cannot land in this field by accident."
         }
+      }
+    },
+    "principal": {
+      "type": "object",
+      "title": "Principal",
+      "description": "The only identity shape accepted by role guards. It is assembled server-side from a user, role assignment, and session. Runtime validation additionally requires all three records to name the same userId.",
+      "required": ["user", "role", "session"],
+      "additionalProperties": false,
+      "properties": {
+        "user": { "$ref": "#/$defs/user" },
+        "role": { "$ref": "#/$defs/roleAssignment" },
+        "session": { "$ref": "#/$defs/session" }
       }
     }
   }

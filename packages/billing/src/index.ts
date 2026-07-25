@@ -43,6 +43,7 @@ export {
   createInMemoryCreditStore,
   type CreditStore,
   type CreditsSaleSettlement,
+  type CreditsSaleSettlementOutcome,
   type InMemoryCreditStore,
   type InMemoryCreditStoreOptions,
 } from "./store.js";

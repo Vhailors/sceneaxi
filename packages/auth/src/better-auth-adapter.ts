@@ -142,6 +142,7 @@ export function mapBetterAuthAuthentication(input: {
 
   const providerUserId = user["id"];
   const email = user["email"];
+  const emailVerified = user["emailVerified"];
   const sessionId = session["id"];
   const token = session["token"];
   const sessionUserId = session["userId"];
@@ -150,6 +151,7 @@ export function mapBetterAuthAuthentication(input: {
     !IDENTIFIER_RE.test(providerUserId) ||
     typeof email !== "string" ||
     email.trim().length === 0 ||
+    typeof emailVerified !== "boolean" ||
     typeof sessionId !== "string" ||
     !IDENTIFIER_RE.test(sessionId) ||
     typeof token !== "string" ||

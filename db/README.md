@@ -26,7 +26,7 @@ apply order is the one thing a migration set cannot get wrong.
 SceneAxi packages carry no runtime database dependency, exports are source-backed, and
 `pnpm gate` is hermetic — it runs with no `DATABASE_URL` and no network. Versioned SQL fits
 that; an ORM schema would put a driver in the dependency graph to describe tables no
-package connects to. Recorded in ADR 0016.
+package connects to. Recorded in ADR 0021.
 
 ## Invariants the database enforces itself
 

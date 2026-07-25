@@ -12,10 +12,9 @@ import {
  * Injected-drift regressions for the catalog-listing lockstep surface of
  * check-contracts.mjs.
  *
- * The checker re-states the price-mode cross-field rule that the JSON Schema
- * subset cannot express ("required exactly when"), and insists all three price
- * modes stay covered — otherwise a regression could pass by deleting the listing
- * shape it broke.
+ * The checker validates the JSON Schema price-mode rule and re-states it with
+ * targeted fixture errors. It also insists all three price modes stay covered,
+ * so a regression cannot pass by deleting the listing shape it broke.
  */
 
 const FIXTURES_REL = "packages/schemas/contracts/catalog-listings.fixtures.json";
@@ -100,6 +99,16 @@ describe("contract check — injected catalog-listing drift", () => {
     const res = runCheck(fx, "check-contracts.mjs");
     expect(res.status).toBe(1);
     expect(res.stderr).toContain("requires creditPrice");
+  });
+
+  it("fails when a listed price is not positive", () => {
+    const value = readListings(fx);
+    listingAt(value, "lantern-prop")["creditPrice"] = 0;
+    writeListings(fx, value);
+
+    const res = runCheck(fx, "check-contracts.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("expected integer >= 1");
   });
 
   it("fails when a price mode stops being covered", () => {

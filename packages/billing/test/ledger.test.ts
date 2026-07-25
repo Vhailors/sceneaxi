@@ -359,6 +359,28 @@ describe("in-memory credit store", () => {
     ).toThrow(/idempotency key/);
   });
 
+  it("enforces entry ids across every account", () => {
+    const state = seeded();
+    const entry = state.entries[0];
+    if (entry === undefined) throw new Error("expected an entry");
+    const other = Object.freeze({
+      ...ACCOUNT,
+      accountId: "acc_other",
+      userId: "usr_other",
+    });
+    const store = createInMemoryCreditStore({ accounts: [ACCOUNT, other] });
+    store.appendEntry(entry);
+
+    expect(() =>
+      store.appendEntry({
+        ...entry,
+        accountId: other.accountId,
+        sequence: 1,
+        idempotencyKey: "other-key",
+      }),
+    ).toThrow(/entry ent_01 already exists/);
+  });
+
   it("looks accounts up by id and by user", async () => {
     const store = createInMemoryCreditStore({ accounts: [ACCOUNT] });
     expect(await store.findAccountById("acc_crew")).toEqual(ACCOUNT);

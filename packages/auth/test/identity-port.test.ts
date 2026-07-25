@@ -259,6 +259,28 @@ describe("identity port — sign-in", () => {
     for (const authentication of [
       {},
       { user: {}, session: {} },
+      {
+        user: { id: "usr_crew", email: "crew@example.com" },
+        session: {
+          id: "ses_x",
+          token: "t",
+          userId: "usr_crew",
+          expiresAt: "2026-07-26T10:00:00Z",
+        },
+      },
+      {
+        user: {
+          id: "usr_crew",
+          email: "crew@example.com",
+          emailVerified: "yes",
+        },
+        session: {
+          id: "ses_x",
+          token: "t",
+          userId: "usr_crew",
+          expiresAt: "2026-07-26T10:00:00Z",
+        },
+      },
       { user: { id: "usr_crew", email: "crew@example.com", emailVerified: true } },
       {
         user: { id: "usr_crew", email: "crew@example.com", emailVerified: true },
@@ -372,7 +394,7 @@ describe("identity port — sign-in", () => {
         findUserById: () => undefined,
         putSession: () => undefined,
         findSession: () => undefined,
-        deleteSession: () => undefined,
+        deleteSession: () => true,
       }),
     ).signIn({ surface: "web-shell", email: "crew@example.com", password: "pw" });
     expect(result.ok).toBe(false);
@@ -536,7 +558,7 @@ describe("identity port — session verification", () => {
           expiresAt: "2026-07-26T10:00:00Z",
           tokenDigest: digestSessionToken("tok-crew"),
         }) as never,
-      deleteSession: () => undefined,
+      deleteSession: () => true,
     });
     const result = await makePort({}, store).verifySession({
       surface: "web-shell",
@@ -564,6 +586,73 @@ describe("identity port — sign-out", () => {
     if (!signIn.ok) return;
     const result = await port.signOut({ principal: signIn.value });
     expect(result.ok).toBe(true);
+    expect(store.sessionCount()).toBe(0);
+  });
+
+  it("keeps every principal for the same stored session valid", async () => {
+    const store = createInMemoryIdentityStore({ users: [CREW] });
+    const port = makePort({}, store);
+    const signIn = await port.signIn({
+      surface: "web-shell",
+      email: "crew@example.com",
+      password: "pw",
+    });
+    expect(signIn.ok).toBe(true);
+    if (!signIn.ok) return;
+    const verified = await port.verifySession({
+      surface: "web-shell",
+      sessionId: signIn.value.session.sessionId,
+      token: "tok-crew",
+    });
+    expect(verified.ok).toBe(true);
+
+    expect(await port.signOut({ principal: signIn.value })).toEqual({
+      ok: true,
+      value: null,
+    });
+    expect(store.sessionCount()).toBe(0);
+  });
+
+  it("cannot use an older principal to delete a rotated session", async () => {
+    let token = "tok-1";
+    const adapter: IdentityAdapter = Object.freeze({
+      authenticate({ email }) {
+        return {
+          user: { id: "usr_crew", email, emailVerified: true },
+          session: {
+            id: "ses_rotated",
+            token,
+            userId: "usr_crew",
+            expiresAt: "2026-07-26T10:00:00Z",
+          },
+        };
+      },
+    });
+    const store = createInMemoryIdentityStore({ users: [CREW] });
+    const port = makePort({ adapter }, store);
+    const first = await port.signIn({
+      surface: "web-shell",
+      email: "crew@example.com",
+      password: "pw",
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    token = "tok-2";
+    const second = await port.signIn({
+      surface: "web-shell",
+      email: "crew@example.com",
+      password: "pw",
+    });
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+
+    const stale = await port.signOut({ principal: first.value });
+    expect(stale.ok).toBe(false);
+    if (!stale.ok) {
+      expect(stale.reason).toBe(AUTH_REFUSE_REASONS.principalInvalid);
+    }
+    expect(store.sessionCount()).toBe(1);
+    expect((await port.signOut({ principal: second.value })).ok).toBe(true);
     expect(store.sessionCount()).toBe(0);
   });
 

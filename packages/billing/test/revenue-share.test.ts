@@ -135,6 +135,22 @@ describe("basis-point splits", () => {
     }
   });
 
+  it("stays exact across the safe-integer range", () => {
+    for (const [gross, creator, platform] of [
+      [9_007_199_254_740_986, 4_503_599_627_370_493, 4_503_599_627_370_493],
+      [Number.MAX_SAFE_INTEGER, 4_503_599_627_370_495, 4_503_599_627_370_496],
+    ] as const) {
+      expect(splitCredits(gross)).toEqual({
+        ok: true,
+        value: { creator, platform },
+      });
+      expect(splitMoneyMinorUnits(gross)).toEqual({
+        ok: true,
+        value: { creator, platform },
+      });
+    }
+  });
+
   it("refuse a non-positive, fractional, or non-finite gross", () => {
     for (const gross of [0, -10, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
       expect(splitCredits(gross).ok).toBe(false);
@@ -433,6 +449,53 @@ describe("applyCreditsSale", () => {
     expect(result.ok).toBe(true);
     expect(store.entryCount(BUYER.accountId)).toBe(2);
     expect(store.entryCount(creatorAccount.accountId)).toBe(1);
+    expect(store.shareRecordCount()).toBe(1);
+  });
+
+  it("replays an identical admin sale with absent ledger legs", async () => {
+    const listed = listing("lantern-prop");
+    const target = Object.freeze({
+      ...listed,
+      listingId: "one-credit",
+      creditPrice: 1,
+    });
+    const creatorAccount = account(target.sellerUserId, "acc_creator");
+    const buyerState = funded(0, BUYER);
+    const creatorState = createLedgerState(creatorAccount);
+    const store = createInMemoryCreditStore({
+      accounts: [BUYER, creatorAccount],
+    });
+    const first = await persistCreditsSale({
+      store,
+      principal: principal({ role: "admin" }),
+      admin,
+      listing: target,
+      buyerState,
+      creatorState,
+      now: NOW,
+      saleId: "sale_admin_replay",
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    expect(first.value.buyer.entry).toBeUndefined();
+    expect(first.value.creator).toBeUndefined();
+    expect(first.value.replayed).toBe(false);
+
+    const replay = await persistCreditsSale({
+      store,
+      principal: principal({ role: "admin" }),
+      admin,
+      listing: target,
+      buyerState,
+      creatorState,
+      now: NOW + 60_000,
+      saleId: "sale_admin_replay",
+    });
+    expect(replay.ok).toBe(true);
+    if (!replay.ok) return;
+    expect(replay.value.replayed).toBe(true);
+    expect(store.entryCount(BUYER.accountId)).toBe(0);
+    expect(store.entryCount(creatorAccount.accountId)).toBe(0);
     expect(store.shareRecordCount()).toBe(1);
   });
 

@@ -421,6 +421,7 @@ describe("sign out", () => {
           deleteSession() {
             deleteAttempts += 1;
             if (deleteAttempts === 1) throw new Error("db down");
+            return true;
           },
         }),
         admin,
@@ -510,10 +511,10 @@ describe("sign out", () => {
       findUserById: (userId) => baseStore.findUserById(userId),
       putSession: (session) => baseStore.putSession(session),
       findSession: (sessionId) => baseStore.findSession(sessionId),
-      deleteSession(sessionId) {
+      deleteSession(session) {
         deleteAttempts += 1;
         if (deleteAttempts === 1) throw new Error("db down");
-        return baseStore.deleteSession(sessionId);
+        return baseStore.deleteSession(session);
       },
     });
     const panel = makePanel({

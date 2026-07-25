@@ -120,7 +120,36 @@ if (pluginManifestInertExample !== loadFailed && !pluginManifestInertExampleIsOb
   fail(`${relative(root, pluginManifestInertExamplePath)}: expected a plain JSON object`);
 }
 
-// --- minimal JSON Schema subset validator (type/required/properties/items/enum/const/pattern/additionalProperties/minItems/minLength/uniqueItems) ---
+const schemaMatches = (value, sch) => {
+  if (sch.const !== undefined && value !== sch.const) return false;
+  if (sch.enum !== undefined && !sch.enum.includes(value)) return false;
+  if (sch.type === "object") {
+    if (!isPlainObject(value)) return false;
+    for (const key of sch.required ?? []) {
+      if (!Object.hasOwn(value, key)) return false;
+    }
+    for (const [key, sub] of Object.entries(sch.properties ?? {})) {
+      if (Object.hasOwn(value, key) && !schemaMatches(value[key], sub)) return false;
+    }
+  } else if (sch.type === "array") {
+    if (!Array.isArray(value)) return false;
+  } else if (sch.type === "string") {
+    if (typeof value !== "string") return false;
+  } else if (sch.type === "integer") {
+    if (!Number.isInteger(value)) return false;
+    if (sch.minimum !== undefined && value < sch.minimum) return false;
+  } else if (sch.type === "boolean" && typeof value !== "boolean") {
+    return false;
+  }
+  if ((sch.allOf ?? []).some((sub) => !schemaMatches(value, sub))) return false;
+  if (sch.if !== undefined && schemaMatches(value, sch.if)) {
+    if (sch.then !== undefined && !schemaMatches(value, sch.then)) return false;
+  }
+  if (sch.not !== undefined && schemaMatches(value, sch.not)) return false;
+  return true;
+};
+
+// --- minimal JSON Schema subset validator ---
 const validate = (value, sch, path) => {
   if (sch.const !== undefined && value !== sch.const) {
     fail(`${path}: expected const ${JSON.stringify(sch.const)}, got ${JSON.stringify(value)}`);
@@ -175,9 +204,24 @@ const validate = (value, sch, path) => {
       fail(`${path}: ${JSON.stringify(value)} does not match pattern ${sch.pattern}`);
     }
   } else if (sch.type === "integer") {
-    if (!Number.isInteger(value)) fail(`${path}: expected integer`);
+    if (!Number.isInteger(value)) {
+      fail(`${path}: expected integer`);
+    } else if (sch.minimum !== undefined && value < sch.minimum) {
+      fail(`${path}: expected integer >= ${sch.minimum}, got ${value}`);
+    }
   } else if (sch.type === "boolean") {
     if (typeof value !== "boolean") fail(`${path}: expected boolean`);
+  }
+  for (const sub of sch.allOf ?? []) validate(value, sub, path);
+  if (
+    sch.if !== undefined &&
+    schemaMatches(value, sch.if) &&
+    sch.then !== undefined
+  ) {
+    validate(value, sch.then, path);
+  }
+  if (sch.not !== undefined && schemaMatches(value, sch.not)) {
+    fail(`${path}: value matches a forbidden schema`);
   }
 };
 
@@ -205,6 +249,11 @@ const schemaAssertions = new Set([
   "minItems",
   "minLength",
   "uniqueItems",
+  "minimum",
+  "allOf",
+  "if",
+  "then",
+  "not",
 ]);
 const supportedTypes = new Set([
   "object",
@@ -262,6 +311,9 @@ const validateSchemaDefinition = (sch, path) => {
   if ("uniqueItems" in sch && typeof sch.uniqueItems !== "boolean") {
     reject("uniqueItems must be boolean in the supported schema subset");
   }
+  if ("minimum" in sch && typeof sch.minimum !== "number") {
+    reject("minimum must be a number");
+  }
   if (["required", "properties", "additionalProperties"].some((keyword) => keyword in sch) && sch.type !== "object") {
     reject("object assertion keywords require type \"object\" in the supported schema subset");
   }
@@ -270,6 +322,9 @@ const validateSchemaDefinition = (sch, path) => {
   }
   if (["pattern", "minLength"].some((keyword) => keyword in sch) && sch.type !== "string") {
     reject("string assertion keywords require type \"string\" in the supported schema subset");
+  }
+  if ("minimum" in sch && sch.type !== "integer") {
+    reject("minimum requires type \"integer\" in the supported schema subset");
   }
   if ("properties" in sch) {
     if (!isPlainObject(sch.properties)) {
@@ -282,6 +337,25 @@ const validateSchemaDefinition = (sch, path) => {
   }
   if ("items" in sch && !validateSchemaDefinition(sch.items, `${path}.items`)) {
     supported = false;
+  }
+  if ("allOf" in sch) {
+    if (!Array.isArray(sch.allOf) || sch.allOf.length === 0) {
+      reject("allOf must be a non-empty array of schemas");
+    } else {
+      sch.allOf.forEach((sub, index) => {
+        if (!validateSchemaDefinition(sub, `${path}.allOf[${index}]`)) {
+          supported = false;
+        }
+      });
+    }
+  }
+  for (const keyword of ["if", "then", "not"]) {
+    if (keyword in sch && !validateSchemaDefinition(sch[keyword], `${path}.${keyword}`)) {
+      supported = false;
+    }
+  }
+  if ("then" in sch && !("if" in sch)) {
+    reject("then requires if in the supported schema subset");
   }
   return supported;
 };
@@ -903,9 +977,8 @@ if (listingsSurface.ready) {
     );
   }
 
-  // The cross-field price-mode rule, checked here too: the JSON Schema subset
-  // cannot express "required exactly when", and a dormant price is how a
-  // credits-only listing quietly acquires a money price.
+  // The cross-field price-mode rule is checked here too, with targeted errors
+  // for the lockstep fixture and documentation surface.
   for (const listing of listings) {
     if (!isPlainObject(listing)) continue;
     const mode = listing.priceMode;

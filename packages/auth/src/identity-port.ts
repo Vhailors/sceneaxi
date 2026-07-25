@@ -231,12 +231,8 @@ export function createIdentityPort(
   options: CreateIdentityPortOptions,
 ): IdentityPort {
   const issuedPrincipals = new WeakSet<object>();
-  const principalsBySessionId = new Map<string, Principal>();
   const issuePrincipal = (principal: Principal): void => {
-    const previous = principalsBySessionId.get(principal.session.sessionId);
-    if (previous !== undefined) issuedPrincipals.delete(previous);
     issuedPrincipals.add(principal);
-    principalsBySessionId.set(principal.session.sessionId, principal);
   };
   const requireStore = (): AuthResult<IdentityStore> =>
     options.store === undefined
@@ -479,13 +475,19 @@ export function createIdentityPort(
       const store = requireStore();
       if (!store.ok) return store;
 
+      const issuedPrincipal = principal as Principal;
       const removed = await callStore(
-        () => store.value.deleteSession((principal as Principal).session.sessionId),
+        () => store.value.deleteSession(issuedPrincipal.session),
         "deleting the session",
       );
       if (!removed.ok) return removed;
+      if (!removed.value) {
+        return authRefuse(
+          AUTH_REFUSE_REASONS.principalInvalid,
+          "The issued principal no longer names the current stored session version.",
+        );
+      }
       issuedPrincipals.delete(principal);
-      principalsBySessionId.delete((principal as Principal).session.sessionId);
       return authOk(null);
     },
   });

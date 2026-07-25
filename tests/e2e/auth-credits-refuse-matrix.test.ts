@@ -234,7 +234,7 @@ const throwingStore: IdentityStore = Object.freeze({
   findUserById: () => undefined,
   putSession: () => undefined,
   findSession: () => undefined,
-  deleteSession: () => undefined,
+  deleteSession: () => true,
 });
 
 describe("auth refuse matrix", () => {
@@ -392,7 +392,7 @@ describe("auth refuse matrix", () => {
           expiresAt: "2026-07-26T10:00:00Z",
           tokenDigest: digestSessionToken("tok"),
         }) as never,
-      deleteSession: () => undefined,
+      deleteSession: () => true,
     });
     record(
       await port({}, badUserStore).verifySession({

@@ -68,7 +68,10 @@ export type Split = Readonly<{ creator: number; platform: number }>;
  * happen to agree.
  */
 function splitByBasisPoints(gross: number): Split {
-  const creator = Math.floor((gross * CREATOR_SHARE_BASIS_POINTS) / BASIS_POINTS_TOTAL);
+  const creator = Number(
+    (BigInt(gross) * BigInt(CREATOR_SHARE_BASIS_POINTS)) /
+      BigInt(BASIS_POINTS_TOTAL),
+  );
   return Object.freeze({ creator, platform: gross - creator });
 }
 
@@ -252,7 +255,10 @@ export function applyCreditsSale(
     creatorCredits: split.value.creator,
     platformCredits: split.value.platform,
     basisPoints: CREATOR_SHARE_BASIS_POINTS,
-    occurredAt: new Date(now).toISOString(),
+    occurredAt:
+      purchase.value.buyer.entry?.occurredAt ??
+      creatorGrant?.value.entry?.occurredAt ??
+      new Date(now).toISOString(),
   });
   if (!share.ok) {
     return billingRefuse(
@@ -286,26 +292,30 @@ export async function persistCreditsSale(
   }
   const { store, ...saleRequest } = record as PersistCreditsSaleRequest;
   const outcome = applyCreditsSale(saleRequest);
-  if (!outcome.ok || outcome.value.replayed) return outcome;
+  if (!outcome.ok) return outcome;
 
   try {
-    await store.settleCreditsSale({
-      ...(outcome.value.buyer.replayed
+    const settled = await store.settleCreditsSale({
+      ...(outcome.value.buyer.entry === undefined
         ? {}
         : { buyerEntry: outcome.value.buyer.entry }),
-      ...(outcome.value.creator === undefined ||
-      outcome.value.creator.replayed
+      ...(outcome.value.creator?.entry === undefined
         ? {}
         : { creatorEntry: outcome.value.creator.entry }),
       share: outcome.value.share,
     });
+    return billingOk(
+      Object.freeze({
+        ...outcome.value,
+        replayed: settled.replayed,
+      }),
+    );
   } catch {
     return billingRefuse(
       BILLING_REFUSE_REASONS.storeFailed,
       "The credit store failed while atomically settling the sale; no partial settlement is accepted.",
     );
   }
-  return outcome;
 }
 
 export type RecordMoneySaleRequest = Readonly<{
