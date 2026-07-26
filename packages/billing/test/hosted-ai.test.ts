@@ -93,6 +93,31 @@ const storeFor = (state: LedgerState) =>
   });
 
 /**
+ * Persist a debit the caller never learns about, the way a second surface
+ * spending the same account concurrently would. The `state` handed back to the
+ * caller is deliberately left untouched, so from here on it is the stale copy a
+ * real race leaves a caller holding.
+ */
+const spendBehindTheCaller = async (
+  state: LedgerState,
+  store: ReturnType<typeof storeFor>,
+  credits: number,
+) => {
+  const spent = appendCreditEntry(state, {
+    entryId: `ent_behind_${credits}`,
+    movement: "debit",
+    delta: -credits,
+    reason: "another surface's turn",
+    idempotencyKey: meteringIdempotencyKey(ACCOUNT.accountId, "other_turn"),
+    now: NOW,
+  });
+  if (!spent.ok || spent.value.entry === undefined) {
+    throw new Error("fixture concurrent debit failed");
+  }
+  await store.appendEntry(spent.value.entry);
+};
+
+/**
  * A provider fake that records every invocation.
  *
  * The call *count* is what most of these tests assert on: "refused before the
@@ -459,6 +484,101 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
     // The funding grant, and nothing else.
     expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
     expect(state.balance).toBe(6);
+  });
+
+  it("refuses a stale caller's fresh key against the real persisted balance", async () => {
+    // The caller's copy says 10 and a concurrent turn has already spent 8. A
+    // balance gate that trusted the copy would clear a 7-credit charge, pay the
+    // upstream provider, and only then collide with persistence — a completed
+    // model call impossible to charge for. The gate judges the ledger it loaded.
+    const state = funded(10);
+    const store = storeFor(state);
+    await spendBehindTheCaller(state, store, 8);
+    const provider = recordingProvider();
+
+    const result = await hostedCall(state, provider, {
+      store,
+      idempotencyKey: "turn_02",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.balanceInsufficient);
+    expect(provider.calls.length).toBe(0);
+    // The funding grant and the concurrent debit, and nothing else.
+    expect(store.entryCount(ACCOUNT.accountId)).toBe(2);
+    expect(state.balance).toBe(10);
+  });
+
+  it("charges a stale caller's fresh key against the persisted balance", async () => {
+    // Same stale copy, but the real balance does cover the charge, so the call is
+    // corrected rather than refused: the debit lands on the persisted history and
+    // the reported balance is the real one, not one derived from the stale view.
+    const state = funded(10);
+    const store = storeFor(state);
+    await spendBehindTheCaller(state, store, 1);
+    const provider = recordingProvider();
+
+    const result = await hostedCall(state, provider, {
+      store,
+      idempotencyKey: "turn_02",
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(provider.calls.length).toBe(1);
+    expect(result.value.metered).toBe(true);
+    expect(result.value.balance).toBe(2);
+    expect(result.value.entry?.delta).toBe(-7);
+    expect(store.entryCount(ACCOUNT.accountId)).toBe(3);
+  });
+
+  it("does not read the account store for a principal that cannot spend", async () => {
+    // The account id arrives inside a caller-supplied state, so an expired,
+    // disabled, or wrong-user principal must not be able to make persistence
+    // answer questions about it. The refusal still comes from the entitlement
+    // layer that owns identity vocabulary.
+    const state = funded(100);
+    for (const [overrides, reason] of [
+      [
+        { principal: principal({ expiresAt: "2026-07-25T09:30:00Z" }) },
+        AUTH_REFUSE_REASONS.sessionExpired,
+      ],
+      [
+        { principal: principal({ disabled: true }) },
+        AUTH_REFUSE_REASONS.userDisabled,
+      ],
+      [
+        { principal: principal({ userId: "usr_someone" }) },
+        BILLING_REFUSE_REASONS.accountNotOwned,
+      ],
+    ] as const) {
+      const reads: string[] = [];
+      const backing = storeFor(state);
+      const watchedStore = Object.freeze({
+        ...backing,
+        findAccountById(accountId: string) {
+          reads.push(accountId);
+          return backing.findAccountById(accountId);
+        },
+        listEntries(accountId: string) {
+          reads.push(accountId);
+          return backing.listEntries(accountId);
+        },
+      });
+      const provider = recordingProvider();
+
+      const result = await hostedCall(state, provider, {
+        store: watchedStore,
+        ...overrides,
+      });
+
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.reason).toBe(reason);
+      expect(reads).toEqual([]);
+      expect(provider.calls.length).toBe(0);
+    }
   });
 
   it("refuses an anonymous hosted call", async () => {

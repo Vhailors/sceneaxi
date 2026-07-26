@@ -10,8 +10,10 @@
  *   1. Kids                — denied by name before identity, provider, or ledger
  *   2. route               — `hosted` or `byo`, an enumeration with no default
  *   3. hosted opt-in       — off unless a caller explicitly enables it
- *   4. replay              — an already-charged key returns its prior debit
- *   5. entitlement         — capability, account, and **balance**, all pre-flight
+ *   4. replay              — the persisted ledger is resolved, and an
+ *                            already-charged key returns its prior debit
+ *   5. entitlement         — capability, account, and the **persisted balance**,
+ *                            all pre-flight
  *   6. metering readiness  — store, reason, and key checked before spending money
  *   7. provider            — the injected call, and only now
  *   8. debit               — exactly the credits the decision named
@@ -20,6 +22,15 @@
  * refused *before* the provider runs, so a zero balance costs nothing and appends
  * nothing. The inverse — call first, discover the balance after — is what
  * produces either an unpaid call or a ledger entry invented to cover it.
+ *
+ * That only holds if the balance being judged is the real one, so step 5 reads
+ * the ledger step 4 loaded from persistence — not the `state` the caller passed,
+ * which is a claim about it. A caller holding a stale copy would otherwise clear
+ * a balance gate it cannot actually afford, pay the provider, and only then
+ * collide with the debit path's own state check: a completed model call that is
+ * impossible to charge for, which is exactly what this ordering exists to make
+ * unreachable. The same resolved ledger is handed to `meterCredits`, so the
+ * balance that authorized the call is the balance the debit lands on.
  *
  * Step 4 is what makes a retry safe rather than merely non-duplicating. The
  * ledger's own idempotency sits at the *bottom* of the stack, below the balance
@@ -41,6 +52,14 @@
  * makes retry-safety independent of how fresh the caller's copy is, and it is why
  * a store that cannot be read refuses here rather than after the provider.
  *
+ * Reading persistence is itself privileged, so the authenticated identity is
+ * settled before the store is touched: the account id comes out of a caller-
+ * supplied state, and an expired, disabled, or wrong-user principal must not be
+ * able to drive a lookup against an account it has no claim to. Every identity
+ * refusal is still spoken by `evaluateEntitlement` immediately below, which owns
+ * that vocabulary — this step only declines to read, so one defect keeps one
+ * voice.
+ *
  * The provider is an injected thunk, deliberately not a Model Provider Port type.
  * Billing must not learn what a model is to charge for one, and the port lives
  * above this package in the dependency matrix; a caller wires the two together
@@ -56,7 +75,11 @@
  * free-without-account path and the ledger is not read, let alone written.
  */
 
-import type { AdminIdentity, Awaitable } from "@sceneaxi/auth";
+import {
+  requireAuthenticated,
+  type AdminIdentity,
+  type Awaitable,
+} from "@sceneaxi/auth";
 import {
   isEpochMilliseconds,
   snapshotPlainRecord,
@@ -161,12 +184,13 @@ export type RunMeteredModelCallRequest<Response> = Readonly<{
   /** Absent means anonymous — valid for BYO, refused for hosted. */
   principal?: unknown;
   /**
-   * The ledger the debit would land on. Hosted route only.
+   * Which credit account this call is charged against. Hosted route only.
    *
-   * `meterCredits` still requires this to be the current persisted state before
-   * it will append, so a stale copy cannot buy anything. It is only the *replay*
-   * question that is answered from persistence instead, so a caller holding a
-   * pre-debit view — the timed-out retry — is still recognised as a retry.
+   * Taken as a claim, not as an authority: the account id is read out of it and
+   * the history is then loaded from the store, so the balance gate, the replay
+   * lookup, and the debit all judge the persisted ledger. A stale copy is
+   * therefore corrected rather than believed, and cannot buy a call the real
+   * balance does not cover.
    */
   state?: LedgerState | undefined;
   /** Where the debit is persisted. Hosted route only. */
@@ -296,20 +320,23 @@ type HostedLedger = Readonly<{
  * The store read is what makes the answer authoritative: the caller's `state` is
  * a claim about the ledger, and the one retry this exists to protect is exactly
  * the caller whose claim is out of date. So the account id is the only thing
- * taken from the supplied state, and everything the replay decision rests on
- * comes back from the store. A store that cannot be read refuses here — before
- * the provider — because "we do not know whether this was already charged" is
- * not a licence to charge upstream again.
+ * taken from the supplied state, and everything the replay decision *and the
+ * balance gate above the provider* rest on comes back from the store. A store
+ * that cannot be read refuses here — before the provider — because "we do not
+ * know whether this was already charged" is not a licence to charge upstream
+ * again.
  *
  * The mutated-replay check mirrors the ledger's, so a key re-sent with a
  * different price or reason still conflicts here rather than quietly returning
  * the cheaper original.
  *
- * Returns `undefined` whenever the request is not yet known to be a well-formed
- * credit-priced call; entitlement and the metering-readiness checks own those
- * refusals, and duplicating them here would give the same defect two voices.
- * None of those shapes can reach the provider, so skipping the store read for
- * them costs no safety.
+ * Returns `undefined` whenever the request is not yet known to be a well-formed,
+ * authenticated, account-owning, credit-priced call; entitlement and the
+ * metering-readiness checks own those refusals, and duplicating them here would
+ * give the same defect two voices. None of those shapes can reach the provider,
+ * so declining the store read for them costs no safety — and for the identity
+ * ones it is the point: an unauthenticated caller cannot make persistence answer
+ * questions about an account id it merely named.
  */
 async function resolveHostedLedger(
   request: Readonly<{
@@ -318,9 +345,23 @@ async function resolveHostedLedger(
     reason: unknown;
     creditAmount: unknown;
     idempotencyKey: unknown;
+    principal: unknown;
+    admin: AdminIdentity | undefined;
+    now: number;
+    surface: IdentitySurface | undefined;
   }>,
 ): Promise<BillingOutcome<HostedLedger | undefined>> {
-  const { state, store, reason, creditAmount, idempotencyKey } = request;
+  const {
+    state,
+    store,
+    reason,
+    creditAmount,
+    idempotencyKey,
+    principal,
+    admin,
+    now,
+    surface,
+  } = request;
   if (typeof idempotencyKey !== "string" || idempotencyKey.length === 0) {
     return billingOk(undefined);
   }
@@ -333,6 +374,18 @@ async function resolveHostedLedger(
   if (!isCreditStore(store)) return billingOk(undefined);
   const supplied = validateLedgerState(state);
   if (!supplied.ok) return billingOk(undefined);
+
+  if (principal === undefined || principal === null || admin === undefined) {
+    return billingOk(undefined);
+  }
+  const guarded = requireAuthenticated(
+    principal,
+    surface === undefined ? { now, admin } : { now, surface, admin },
+  );
+  if (!guarded.ok) return billingOk(undefined);
+  if (supplied.value.account.userId !== guarded.value.user.userId) {
+    return billingOk(undefined);
+  }
 
   const accountId = supplied.value.account.accountId;
   let account: CreditAccount | undefined;
@@ -497,13 +550,24 @@ export async function runMeteredModelCall<Response>(
           reason,
           creditAmount,
           idempotencyKey,
+          principal,
+          admin,
+          now,
+          surface,
         })
       : billingOk(undefined);
   if (!resolution.ok) return resolution;
   const ledger = resolution.value;
   const replayed = ledger === undefined ? undefined : ledger.replayed;
 
-  const entitlementState = replayed === undefined ? state : replayed.priorState;
+  // Every ledger question from here on is asked of persistence when it could be
+  // resolved. Falling back to the caller's `state` only happens on requests the
+  // store was deliberately not read for — a malformed, unauthenticated, or
+  // not-yet-credit-priced call — and each of those is refused below without ever
+  // reaching the provider.
+  const ledgerState = ledger === undefined ? state : ledger.persisted;
+  const entitlementState =
+    replayed === undefined ? ledgerState : replayed.priorState;
   const decision = evaluateEntitlement({
     capability: routeCapability,
     now,
@@ -595,7 +659,7 @@ export async function runMeteredModelCall<Response>(
     principal,
     admin: admin as AdminIdentity,
     store: store as CreditStore,
-    state: state as LedgerState,
+    state: ledgerState as LedgerState,
     amount: charge,
     reason: reason as string,
     idempotencyKey: idempotencyKey as string,

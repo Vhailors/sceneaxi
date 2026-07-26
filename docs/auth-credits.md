@@ -289,9 +289,10 @@ provider abstraction — it fixes the order the two existing pieces run in:
 1. **Kids** — denied by name before identity, provider, or ledger, on both routes
 2. **Route** — `hosted` or `byo`, a closed enumeration with no default
 3. **Hosted opt-in** — off unless a caller explicitly passes `{ enabled: true }`
-4. **Replay** — the account-scoped key is looked up in the *persisted* ledger, before
-   the balance and the provider
-5. **Entitlement** — capability, account, and **balance**, all before the provider
+4. **Replay** — the *persisted* ledger is loaded and the account-scoped key looked up in
+   it, before the balance and the provider
+5. **Entitlement** — capability, account, and the **persisted balance**, all before the
+   provider
 6. **Metering readiness** — store, reason, and key, still before the provider
 7. **Provider** — the injected call, and only now
 8. **Debit** — exactly the credits the decision named, through `meterCredits`
@@ -327,9 +328,27 @@ collide at the bottom of the stack with an opaque `CREDIT_LEDGER_STATE_INVALID`.
 store is read here, a store that cannot be read refuses `CREDIT_STORE_FAILED` **before** the
 provider: not knowing whether a key was already charged is not a licence to charge upstream
 again. The replayed outcome hands back the *persisted* ledger and balance, so a caller
-holding a stale view is corrected rather than confirmed in it. Supplying the current
-persisted state is still required for the debit itself — `meterCredits` refuses to append
-against any other — and remains the caller's obligation on a first attempt.
+holding a stale view is corrected rather than confirmed in it.
+
+**The balance gate judges that same persisted ledger, and so does the debit.** The supplied
+`state` names the account; it does not establish the balance. Trusting it would leave the
+load-bearing ordering above holding only for a caller whose copy happens to be current: a
+stale or fabricated state with a *fresh* key would clear the balance gate, pay the upstream
+provider, and only then collide with `meterCredits`' own state check as an opaque
+`CREDIT_LEDGER_STATE_INVALID` — precisely the "completed model call that is impossible to
+charge for" this ordering exists to make unreachable. So step 5 reads the ledger step 4
+loaded, and `meterCredits` is handed the same one: a stale caller with a real balance that
+covers the charge is corrected and charged the real amount, and one whose real balance does
+not cover it refuses `CREDIT_BALANCE_INSUFFICIENT` with no provider execution. The narrow
+race left is a debit landing between the two store reads, which `meterCredits` still refuses
+outright rather than half-applying.
+
+**Identity is settled before persistence is read.** The account id arrives inside a
+caller-supplied state, so step 4 authenticates the principal and checks account ownership
+before it asks the store anything: an expired, disabled, or wrong-user principal cannot drive
+a lookup against an account it merely named. Those refusals are still spoken by
+`evaluateEntitlement` immediately below, which owns the identity vocabulary — step 4 only
+declines to read, so one defect keeps one refusal.
 
 **Only a throw is a provider failure.** The thunk is provider-neutral, so billing charges
 for any value it returns — it cannot tell a refusal envelope from a legitimate answer that
