@@ -30,10 +30,11 @@ SceneAxi = interactive engine/library + versioned profiles (Game, Web Experience
   temp fixture and asserts `check-boundaries.mjs` fails; `tests/syntax/` does the
   same for the syntax gate. Extend those fixtures when you extend the checkers.
   Those suites, and the `bin-smoke` ones, are process-level: they copy the tree
-  and spawn a real checker or binary. `vitest.config.ts` owns the one
-  `testTimeout` that keeps them from going red on host speed instead of on a
-  violation — a wall-clock allowance, never a skipped assertion, and not a place
-  to hide a slow test.
+  and spawn a real checker or binary, and their per-test fixture copy runs in a
+  hook. `vitest.config.ts` owns the one matched `testTimeout`/`hookTimeout` pair
+  that keeps them from going red on host speed instead of on a violation — a
+  wall-clock allowance covering both the body and its setup, never a skipped
+  assertion, and not a place to hide a slow test.
 - Package exports are source-backed, which Node cannot follow at runtime, so the
   workspace binaries run `tsc --build` output through the shared resolver
   `scripts/workspace-dist-resolver.mjs` (mapping derived from the dependency

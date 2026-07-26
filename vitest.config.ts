@@ -24,7 +24,13 @@ export default defineConfig({
     // host speed rather than on a violation. This raises the budget only: it
     // skips no test and allows no failure, and a suite that truly hangs still
     // fails the gate.
+    //
+    // `hookTimeout` carries the same allowance because the expensive half of
+    // those suites is their setup, not their body: `makeFixture()` copies the
+    // whole tree per test from `beforeEach`. Leaving it at the 10s default
+    // would reopen the identical host-speed failure through the setup path.
     testTimeout: 60_000,
+    hookTimeout: 60_000,
     include: [
       "packages/*/test/**/*.test.ts",
       "apps/*/test/**/*.test.ts",

@@ -179,25 +179,60 @@ describe("no committed secrets", () => {
     // last match wins — which is exactly how a trailing `.env*` once defeated
     // the negation while this test stayed green. Every path below is checked
     // with `--no-index`, so the answer is the pattern set's, not the index's.
-    const ignored = (relative: string): boolean => {
-      const result = spawnSync("git", ["check-ignore", "-q", "--no-index", "--", relative], {
+    //
+    // The verdict alone is not enough, though: git consults
+    // `$GIT_DIR/info/exclude` and `core.excludesFile` whenever no repository
+    // pattern matches, and `.env*` is a common global entry. Deleting these
+    // lines from `.gitignore` would then still read as ignored on the
+    // developer's machine while `.env` files became committable everywhere
+    // else. So each path is asked twice and both answers are asserted: the
+    // verdict, and the file that decided it, which has to be this repository's
+    // root `.gitignore`. The empty `core.excludesFile` drops the global file so
+    // the answer does not depend on who runs the gate.
+    const git = (args: readonly string[]) =>
+      spawnSync("git", ["-c", "core.excludesFile=", ...args], {
         cwd: repoRoot,
+        encoding: "utf8",
       });
+
+    const check = (relative: string): { ignored: boolean; source: string } => {
+      const verdict = git(["check-ignore", "-q", "--no-index", "--", relative]);
       // 0 = ignored, 1 = not ignored; anything else is a broken invocation.
-      expect([0, 1]).toContain(result.status);
-      return result.status === 0;
+      expect([0, 1]).toContain(verdict.status);
+
+      // `-v` cannot answer the verdict: it exits 0 whenever a pattern *matched*,
+      // and a negated `!.env.example` is a match. It is asked only for the
+      // source, in `<source>:<line>:<pattern>\t<pathname>` form.
+      const explained = git(["check-ignore", "-v", "--no-index", "--", relative]);
+      const first = explained.stdout.split("\n", 1)[0] ?? "";
+      const colon = first.indexOf(":");
+      return {
+        ignored: verdict.status === 0,
+        source: colon === -1 ? "(no pattern matched)" : first.slice(0, colon),
+      };
+    };
+
+    const describeCheck = (relative: string) => {
+      const { ignored, source } = check(relative);
+      return `${relative}: ignored=${ignored} by=${source}`;
     };
 
     for (const relative of [".env", ".env.local", "sites/umbrella/.env.local"]) {
-      expect(`${relative}: ${ignored(relative)}`).toBe(`${relative}: true`);
+      expect(describeCheck(relative)).toBe(
+        `${relative}: ignored=true by=.gitignore`,
+      );
     }
 
     // Every committed example, including each site's, has to survive the whole
-    // pattern set — an operator cannot edit a template git refuses to see.
+    // pattern set — an operator cannot edit a template git refuses to see. The
+    // deciding source is asserted here too, so the negation has to be the last
+    // matching pattern in this file rather than an absence of any pattern.
     const examples = trackedFiles.filter((relative) => relative.endsWith(".env.example"));
     expect(examples.length).toBeGreaterThan(1);
     for (const relative of examples) {
-      expect(`${relative}: ${ignored(relative)}`).toBe(`${relative}: false`);
+      expect(describeCheck(relative)).toBe(
+        `${relative}: ignored=false by=.gitignore`,
+      );
     }
   });
 });
