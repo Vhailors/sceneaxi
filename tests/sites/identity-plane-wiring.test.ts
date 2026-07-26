@@ -616,6 +616,55 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     expect(store.entryCount("acct-1")).toBe(1);
   });
 
+  it("names the failing step when a store read throws instead of escaping the plane", async () => {
+    const inner = webhookStore();
+    const throwOn = (method: "findAccountByUserId" | "listEntries") =>
+      Object.freeze({
+        ...inner,
+        [method]() {
+          throw new Error(`credit store: ${method} is unreachable`);
+        },
+      }) as ReturnType<typeof webhookStore>;
+
+    for (const method of ["findAccountByUserId", "listEntries"] as const) {
+      const outcome = await signedCall({
+        payload: eventBody(`evt_test_read_${method}`),
+        store: throwOn(method),
+      });
+      expect(outcome).toMatchObject({ ok: false, reason: "CREDIT_STORE_FAILED" });
+    }
+    expect(inner.entryCount("acct-1")).toBe(0);
+  });
+
+  it("names the failing step when the checkout evidence adapter throws", async () => {
+    const store = webhookStore();
+    const payload = eventBody("evt_test_evidence_down");
+    const outcome = await applyCreditPackWebhook({
+      payload,
+      signatureHeader: signStripeWebhookPayload({
+        payload,
+        secret: TEST_WEBHOOK_SECRET,
+        timestamp: Math.floor(NOW / 1000),
+      }),
+      secret: TEST_WEBHOOK_SECRET,
+      store,
+      evidence: {
+        findIntent() {
+          return INTENT;
+        },
+        retrieveSettlement() {
+          throw new Error("stripe: settlement retrieval failed");
+        },
+      },
+      now: NOW,
+    });
+    expect(outcome).toMatchObject({
+      ok: false,
+      reason: "STRIPE_CHECKOUT_EVIDENCE_UNAVAILABLE",
+    });
+    expect(store.entryCount("acct-1")).toBe(0);
+  });
+
   it("refuses an unsigned body without touching the ledger", async () => {
     const store = webhookStore();
     const outcome = await applyCreditPackWebhook({

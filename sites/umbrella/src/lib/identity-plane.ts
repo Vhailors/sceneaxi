@@ -589,8 +589,8 @@ function readCreditPackCatalog(
     try {
       loaded = loadCreditPackCatalog();
     } catch {
-      // The catalog is a committed contract fixture resolved through the package
-      // export map, so a read failure is a packaging fault, not an empty catalog.
+      // The catalog is a bundled module the billing package validates in-process, so
+      // a throw here is a packaging fault, not an empty or invalid catalog.
       return refuse("BILLING_PLANE_UNAVAILABLE");
     }
     if (!loaded.ok) return refuse(siteReasonForBillingReason(loaded.reason));

@@ -64,12 +64,33 @@ export type CreditWebhookOutcome =
 const refused = (reason: string, message: string): CreditWebhookOutcome =>
   Object.freeze({ ok: false as const, reason, message });
 
-/** Local reasons for the two failures that are this module's own, not a package's. */
+/** Local reasons for the failures that are this module's own, not a package's. */
 export const CREDIT_WEBHOOK_REASONS = Object.freeze({
   evidenceMissing: "STRIPE_CHECKOUT_EVIDENCE_MISSING",
+  evidenceUnavailable: "STRIPE_CHECKOUT_EVIDENCE_UNAVAILABLE",
   ledgerUnavailable: "CREDIT_LEDGER_UNAVAILABLE",
   storeFailed: "CREDIT_STORE_FAILED",
 } as const);
+
+/**
+ * Await an injected adapter call, reporting a throw rather than propagating it.
+ *
+ * Every port sequenced below — the checkout evidence adapter and the credit store —
+ * is a provider-backed handle this repository does not own, so each can throw on a
+ * transport failure the caller cannot see. This module answers with a named refusal
+ * for every failure, so no such throw may escape as an unnamed framework error: the
+ * endpoint must be able to say which step failed, and Stripe must see a non-2xx it
+ * retries rather than a crash.
+ */
+async function attempt<T>(
+  call: () => Promise<T> | T,
+): Promise<{ readonly ok: true; readonly value: T } | { readonly ok: false }> {
+  try {
+    return { ok: true as const, value: await call() };
+  } catch {
+    return { ok: false as const };
+  }
+}
 
 const asRecord = (value: unknown): Record<string, unknown> | undefined =>
   typeof value === "object" && value !== null ? (value as Record<string, unknown>) : undefined;
@@ -107,8 +128,9 @@ function lookupKeysOf(
  * Apply a Stripe credit-pack webhook to a user's ledger.
  *
  * Returns the plane's own named refusal for every failure — an absent secret, a bad
- * signature, a stale timestamp, evidence that does not match the intent — so the
- * endpoint never answers "ok" for a body it did not honour.
+ * signature, a stale timestamp, evidence that does not match the intent, an injected
+ * adapter that throws — so the endpoint never answers "ok" for a body it did not
+ * honour, and never answers an unnamed error for a step it can name.
  */
 export async function applyCreditPackWebhook(input: {
   /** The **raw** request body. Re-serialising it invalidates the signature, by design. */
@@ -136,8 +158,19 @@ export async function applyCreditPackWebhook(input: {
     );
   }
 
-  const intent = await input.evidence.findIntent(keys.intentId);
-  const settlement = await input.evidence.retrieveSettlement(keys.sessionId);
+  const read = await attempt(async () =>
+    Object.freeze({
+      intent: await input.evidence.findIntent(keys.intentId),
+      settlement: await input.evidence.retrieveSettlement(keys.sessionId),
+    }),
+  );
+  if (!read.ok) {
+    return refused(
+      CREDIT_WEBHOOK_REASONS.evidenceUnavailable,
+      "The persisted intent or the provider settlement could not be read, so the price snapshot this event must be bound to is unknown and no grant is attempted.",
+    );
+  }
+  const { intent, settlement } = read.value;
   if (intent === undefined || settlement === undefined) {
     return refused(
       CREDIT_WEBHOOK_REASONS.evidenceMissing,
@@ -152,14 +185,28 @@ export async function applyCreditPackWebhook(input: {
   });
   if (!completion.ok) return refused(completion.reason, completion.message);
 
-  const account = await input.store.findAccountByUserId(completion.value.userId);
+  const found = await attempt(() => input.store.findAccountByUserId(completion.value.userId));
+  if (!found.ok) {
+    return refused(
+      CREDIT_WEBHOOK_REASONS.storeFailed,
+      "The credit account for the purchasing user could not be read, so this event is unapplied and must be retried.",
+    );
+  }
+  const account = found.value;
   if (account === undefined) {
     return refused(
       CREDIT_WEBHOOK_REASONS.ledgerUnavailable,
       "The purchasing user has no credit account, so the grant refuses rather than creating one from a payment event.",
     );
   }
-  const state = loadLedgerState(account, await input.store.listEntries(account.accountId));
+  const entries = await attempt(() => input.store.listEntries(account.accountId));
+  if (!entries.ok) {
+    return refused(
+      CREDIT_WEBHOOK_REASONS.storeFailed,
+      "The ledger could not be read, so whether this event was already applied is unknown and no grant is attempted.",
+    );
+  }
+  const state = loadLedgerState(account, entries.value);
   if (!state.ok) return refused(state.reason, state.message);
 
   const granted = applyCheckoutCompletedGrant({
@@ -181,12 +228,8 @@ export async function applyCreditPackWebhook(input: {
       // tell them apart, so the re-read is checked for *this* event's key: present means
       // the grant is in the ledger and the replay answer is proven; absent means the
       // outcome is a failure the provider must retry, never a 2xx for credits nobody has.
-      let reread;
-      try {
-        reread = loadLedgerState(account, await input.store.listEntries(account.accountId));
-      } catch {
-        reread = undefined;
-      }
+      const rereadEntries = await attempt(() => input.store.listEntries(account.accountId));
+      const reread = rereadEntries.ok ? loadLedgerState(account, rereadEntries.value) : undefined;
       if (reread === undefined || !reread.ok) {
         return refused(
           CREDIT_WEBHOOK_REASONS.storeFailed,
