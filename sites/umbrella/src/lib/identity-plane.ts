@@ -286,6 +286,25 @@ export function parseSessionToken(
  *
  * The intent is built here from the committed pack catalog; only the provider
  * round-trip is injected, so no Stripe credential ever reaches this repository.
+ *
+ * Returning a URL is **not** the whole contract. The webhook grant is bound to the
+ * intent, not to the event, so an implementation that only creates a session takes
+ * money and then refuses every grant. Two obligations come with it, both consumed by
+ * `applyCreditPackWebhook`:
+ *
+ *   1. **Persist the intent** under `intent.intentId`, exactly as given, before the
+ *      buyer is redirected. `CheckoutEvidencePort.findIntent(intentId)` must return
+ *      that same record; it is the immutable price snapshot the credits are read
+ *      from. Not finding it refuses `STRIPE_CHECKOUT_EVIDENCE_MISSING`.
+ *   2. **Carry the identity on the session** as Stripe metadata under
+ *      `CHECKOUT_METADATA_KEYS` from `@sceneaxi/billing` — `sceneaxiUserId`,
+ *      `sceneaxiPurpose`, `sceneaxiItemId`, `sceneaxiIntentId`, taken from
+ *      `intent.userId` / `intent.purpose` / `intent.itemId` / `intent.intentId`.
+ *      `parseCheckoutCompletedEvent` cross-checks all four (and the mode) against
+ *      the persisted intent; a mismatched or missing key refuses the grant.
+ *
+ * Both failures are retried by Stripe until it gives up, so an unmet obligation is a
+ * paid-but-ungranted checkout, not a visible error at checkout time.
  */
 export type CheckoutSessionAdapter = {
   createCheckoutSession(

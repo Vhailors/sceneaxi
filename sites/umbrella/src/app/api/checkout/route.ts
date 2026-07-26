@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { NextResponse, type NextRequest } from "next/server";
 import { SITE_REFUSALS, resolveCheckoutRedirectOrigin } from "@sceneaxi/site-kit";
 import { createUmbrellaIdentityPlane } from "../../../lib/identity-plane.js";
@@ -70,5 +69,8 @@ export async function POST(request: NextRequest) {
   if (!checkout.ok) {
     return refusalResponse(checkout.reason, checkout.message);
   }
-  redirect(checkout.value.redirectUrl);
+  // 303 See Other, never 307: this handler answers a form POST, and a method-preserving
+  // redirect would re-issue that POST against the hosted checkout URL instead of
+  // navigating the buyer to it. The billing port has already proven the URL is https.
+  return NextResponse.redirect(checkout.value.redirectUrl, 303);
 }

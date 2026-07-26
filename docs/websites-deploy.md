@@ -208,6 +208,22 @@ than inventing a session, balance, or checkout.
    Neon-backed `CreditStore`, a `CheckoutSessionAdapter` that turns an intent into a
    hosted Stripe **test** checkout URL, and a `CheckoutEvidencePort` that reads the
    persisted intent and the Stripe settlement. No other site file changes.
+
+   The `CheckoutSessionAdapter` owes two things beyond the URL, because the grant is
+   bound to the intent rather than to the event, and an implementation that only creates
+   a session captures money and then refuses every grant — retried by Stripe until it
+   gives up:
+
+   - **Persist the intent** under `intent.intentId`, exactly as given, before redirecting.
+     `CheckoutEvidencePort.findIntent(intentId)` must return that same record; it is the
+     immutable price snapshot the credits come from, and an absent one refuses
+     `STRIPE_CHECKOUT_EVIDENCE_MISSING`.
+   - **Set the Stripe session metadata** to `CHECKOUT_METADATA_KEYS` from
+     `@sceneaxi/billing` — `sceneaxiUserId`, `sceneaxiPurpose`, `sceneaxiItemId`,
+     `sceneaxiIntentId` — copied from the intent's own `userId` / `purpose` / `itemId` /
+     `intentId`. `parseCheckoutCompletedEvent` cross-checks all four plus the mode against
+     the persisted intent, so a missing or mismatched key refuses the grant as an invalid
+     webhook payload.
 5. Run that vertical's Neon migrations against the shared database. The migrations create
    the `credit_accounts` table and insert **no rows**, and `CreditStore` exposes no
    account-creation method, so **provisioning a credit account per user is that store
