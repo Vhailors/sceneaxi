@@ -368,6 +368,39 @@ describe("publish-ready check — injected violations", () => {
     );
   });
 
+  it("fails when an SDK build is pointed at the repository root", () => {
+    // The repository root is inside the repository and nothing ignores it, so an output
+    // there is the most committable one of all — it must not read as "outside the tree".
+    editManifest(fx, "package.json", (m) => {
+      m.scripts = {
+        ...(m.scripts as Record<string, string>),
+        "build:sdk": "node scripts/build-engine-sdk.mjs --out .",
+      };
+    });
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "[sdk-output-ignored] .gitignore does not ignore the repository root, the SDK output directory package.json builds into",
+    );
+  });
+
+  it("fails when an SDK output is covered only by a root-anchored .gitignore pattern", () => {
+    // `/dist-sdk/` ignores one directory at the repository root, not a directory of that
+    // name at any depth, so a site pointed at its own `dist-sdk` is still committable.
+    writeTo(fx, ".gitignore", "node_modules/\n/dist-sdk/\ndist-sdk-again/\nsites/*/public/engine-sdk/\n");
+    editManifest(fx, "sites/umbrella/package.json", (m) => {
+      m.scripts = {
+        ...(m.scripts as Record<string, string>),
+        "build:sdk": "node ../../scripts/build-engine-sdk.mjs --out dist-sdk",
+      };
+    });
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "[sdk-output-ignored] .gitignore does not ignore 'sites/umbrella/dist-sdk/', the SDK output directory sites/umbrella/package.json builds into",
+    );
+  });
+
   it("fails when no SDK build invocation is left to derive an output directory from", () => {
     // An empty surface must refuse: with nothing pointed at the build script, the check
     // would otherwise pass by having nothing to prove.

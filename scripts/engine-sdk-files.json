@@ -1,5 +1,6 @@
 [
   "docs/DEPENDENCY-MATRIX.md",
+  "docs/publish-readiness.md",
   "docs/web-consumer.md",
   "packages/authoring-core/README.md",
   "packages/authoring-core/package.json",

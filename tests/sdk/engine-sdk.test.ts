@@ -16,12 +16,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import { buildZip, readZipCentralDirectory, type ZipInputEntry } from "../../scripts/lib/zip.mjs";
 import {
   SDK_DOCS,
-  SDK_GENERATED_FILES,
   SDK_PACKAGES,
   buildEngineSdk,
   collectSdkEntries,
   eligibleSdkFiles,
-  sdkReadinessDoc,
 } from "../../scripts/build-engine-sdk.mjs";
 // The same walker the publish-ready gate uses, so the archive test and the gate check
 // cannot disagree about what an export target is.
@@ -137,9 +135,7 @@ describe("engine SDK archive", () => {
     for (const doc of SDK_DOCS) {
       expect(names).toContain(`sceneaxi-engine-sdk/${doc}`);
     }
-    for (const generated of SDK_GENERATED_FILES) {
-      expect(names).toContain(`sceneaxi-engine-sdk/${generated}`);
-    }
+    expect(names).toContain("sceneaxi-engine-sdk/SDK-README.md");
 
     // Not a dump: nothing outside the SDK surface travels.
     for (const forbidden of [
@@ -244,64 +240,16 @@ describe("engine SDK archive", () => {
     expect(() => collectSdkEntries({ repoRoot })).toThrow(/symlink|escape|outside/i);
   });
 
-  it("ships exactly the pinned public file list, plus the generated archive-only files", () => {
+  it("ships exactly the pinned public file list, plus the generated README", () => {
     const built = build();
     const list = JSON.parse(
       readFileSync(new URL("../../scripts/engine-sdk-files.json", import.meta.url), "utf8"),
     ) as readonly string[];
-    const generated = new Set(SDK_GENERATED_FILES.map((name) => `sceneaxi-engine-sdk/${name}`));
     const shipped = built.entryNames
-      .filter((name) => !generated.has(name))
+      .filter((name) => name !== "sceneaxi-engine-sdk/SDK-README.md")
       .map((name) => name.replace(/^sceneaxi-engine-sdk\//, ""))
       .sort();
     expect(shipped).toEqual([...list].sort());
-  });
-
-  it("ships a readiness doc scoped to the archive, naming nothing it excludes", () => {
-    // The repository's own readiness doc is the full internal record. Shipping it verbatim
-    // would disclose every internal package and dangle links at files that never travel,
-    // so the archive carries a generated copy that describes only what it holds.
-    const { packageSummaries } = collectSdkEntries();
-    const doc = sdkReadinessDoc("0.0.0", packageSummaries);
-    const shipped = new Set(build().entryNames);
-
-    for (const summary of packageSummaries) {
-      expect(doc).toContain(summary.name);
-    }
-    for (const excluded of [
-      "@sceneaxi/cli",
-      "@sceneaxi/auth",
-      "@sceneaxi/billing",
-      "@sceneaxi/importers",
-      "@sceneaxi/plugin-host",
-      "@sceneaxi/provider-openrouter",
-      "@sceneaxi/site-kit",
-      "@sceneaxi/web-shell",
-      "@sceneaxi/profile-kids",
-      "scripts/check-publish-ready.mjs",
-      ".github/workflows",
-      "AGENTS.md",
-      "docs/bootstrap.md",
-    ]) {
-      // Matched with a trailing boundary, so `@sceneaxi/auth` does not read as a hit on
-      // the `@sceneaxi/authoring-core` the archive really ships.
-      const pattern = new RegExp(`${excluded.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\w-])`);
-      expect(
-        pattern.test(doc),
-        `the archive readiness doc names '${excluded}', which the archive excludes`,
-      ).toBe(false);
-    }
-
-    // Every link has to resolve inside the archive, relative to the doc's own `docs/` dir.
-    const links = [...doc.matchAll(/\]\(([^)]+)\)/g)].map((match) => match[1] as string);
-    expect(links.length).toBeGreaterThan(0);
-    for (const link of links) {
-      expect(link.startsWith("http")).toBe(false);
-      const target = link.split("#")[0] as string;
-      expect(shipped, `readiness doc links at '${link}', which the archive does not ship`).toContain(
-        `sceneaxi-engine-sdk/docs/${target}`,
-      );
-    }
   });
 
   it("keeps the pinned list equal to the eligible public surface on disk", () => {

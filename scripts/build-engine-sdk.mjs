@@ -25,7 +25,6 @@ import { createHash } from "node:crypto";
 import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { exportEntries } from "./lib/package-exports.mjs";
 import { buildZip } from "./lib/zip.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -49,25 +48,15 @@ export const SDK_PACKAGES = Object.freeze([
 ]);
 
 /**
- * Repo-level docs shipped verbatim with the SDK: the consumption contract and the
- * pinning matrix.
- *
- * `docs/publish-readiness.md` is deliberately not one of them. The repository document is
- * the full internal record — every workspace package, the enforcement script, the CI
- * workflow — so shipping it verbatim would name the fifteen packages this archive
- * excludes and link at files it does not carry. The archive gets a generated,
- * archive-scoped copy at the same path instead (`sdkReadinessDoc`).
+ * Repo-level docs shipped with the SDK: the consumption contract, the pinning matrix,
+ * and the publish-readiness checklist that states what `0.0.0` means and why there is
+ * no registry install.
  */
-export const SDK_DOCS = Object.freeze(["docs/web-consumer.md", "docs/DEPENDENCY-MATRIX.md"]);
-
-/**
- * Archive-only files written at build time rather than copied from the repository.
- *
- * They are the archive's own statement about itself, so they are derived from what it
- * actually ships and cannot name anything it excludes. Everything else in the archive
- * comes from the pinned file list, unchanged.
- */
-export const SDK_GENERATED_FILES = Object.freeze(["SDK-README.md", "docs/publish-readiness.md"]);
+export const SDK_DOCS = Object.freeze([
+  "docs/web-consumer.md",
+  "docs/DEPENDENCY-MATRIX.md",
+  "docs/publish-readiness.md",
+]);
 
 /** Never shipped, at any depth. */
 const EXCLUDED_DIRECTORIES = Object.freeze(["node_modules", "dist", ".git", ".turbo", "coverage"]);
@@ -192,14 +181,7 @@ function safeArchiveEntry(repoRoot, relPath) {
  * Collect the SDK's file entries from the pinned list.
  *
  * @param {{ readonly repoRoot?: string }} [options]
- * @returns {{
- *   entries: Array<{ name: string, data: Buffer }>,
- *   packages: string[],
- *   packageSummaries: Array<{
- *     dir: string, name: string, version: string | null, releaseGroup: string | null,
- *     corePin: string | null, rootExports: string[], subpaths: string[],
- *   }>,
- * }}
+ * @returns {{ entries: Array<{ name: string, data: Buffer }>, packages: string[] }}
  */
 export function collectSdkEntries(options = {}) {
   const repoRoot = options.repoRoot ?? root;
@@ -263,29 +245,16 @@ export function collectSdkEntries(options = {}) {
     );
   }
 
-  // Read from the archive's own manifest entries, never from the repository tree, so the
-  // statement the archive makes about itself is a statement about what it ships.
-  const packageSummaries = SDK_PACKAGES.map((pkg) => {
+  const packages = SDK_PACKAGES.map((pkg) => {
     const manifestEntry = entries.find((entry) => entry.name === `sceneaxi-engine-sdk/${pkg}/package.json`);
     if (manifestEntry === undefined) {
       throw new Error(`engine SDK: '${pkg}' has no package.json in the pinned public file list`);
     }
     const manifest = JSON.parse(manifestEntry.data.toString("utf8"));
-    const exported = exportEntries(manifest.exports);
-    const distinct = (values) => [...new Set(values)].sort();
-    return {
-      dir: pkg,
-      name: manifest.name ?? pkg,
-      version: manifest.version ?? null,
-      releaseGroup: manifest.sceneaxi?.releaseGroup ?? null,
-      corePin: manifest.sceneaxi?.corePin ?? null,
-      rootExports: distinct(exported.filter(([subpath]) => subpath === ".").map(([, target]) => target)),
-      subpaths: distinct(exported.map(([subpath]) => subpath).filter((subpath) => subpath !== ".")),
-    };
+    return manifest.name ?? pkg;
   });
-  const packages = packageSummaries.map((summary) => summary.name);
 
-  return { entries, packages, packageSummaries };
+  return { entries, packages };
 }
 
 /**
@@ -295,20 +264,9 @@ export function collectSdkEntries(options = {}) {
  */
 export function buildEngineSdk(options = {}) {
   const version = options.version ?? readVersion();
-  const { entries, packages, packageSummaries } = collectSdkEntries(options);
-  const generated = [
-    ["SDK-README.md", sdkReadme(version, packages)],
-    ["docs/publish-readiness.md", sdkReadinessDoc(version, packageSummaries)],
-  ];
-  if (generated.length !== SDK_GENERATED_FILES.length || generated.some(([name], index) => name !== SDK_GENERATED_FILES[index])) {
-    throw new Error("engine SDK: the generated archive files do not match SDK_GENERATED_FILES");
-  }
-  // A generated name colliding with a pinned one would silently replace a real file;
-  // `buildZip` refuses duplicate entry names, so the collision cannot pass unnoticed.
-  const all = [
-    ...entries,
-    ...generated.map(([name, text]) => ({ name: `sceneaxi-engine-sdk/${name}`, data: Buffer.from(text, "utf8") })),
-  ];
+  const { entries, packages } = collectSdkEntries(options);
+  const readme = sdkReadme(version, packages);
+  const all = [...entries, { name: "sceneaxi-engine-sdk/SDK-README.md", data: Buffer.from(readme, "utf8") }];
   const archive = buildZip(all);
   const sha256 = createHash("sha256").update(archive).digest("hex");
   const fileName = `sceneaxi-engine-sdk-${version}.zip`;
@@ -340,9 +298,8 @@ public package surface plus the consumer contract docs.
 ${packages.map((name) => `- \`${name}\``).join("\n")}
 
 Plus \`docs/web-consumer.md\` (the supported consumption and pinning contract),
-\`docs/DEPENDENCY-MATRIX.md\`, and \`docs/publish-readiness.md\` — what \`0.0.0\` means and
-the version plan, written for the packages above and generated from the manifests in
-this archive, so it describes exactly what you have here.
+\`docs/DEPENDENCY-MATRIX.md\`, and \`docs/publish-readiness.md\` (what \`0.0.0\` means,
+the version plan, and the checklist that keeps those docs equal to the real exports).
 
 ## Verify this archive
 
@@ -366,87 +323,6 @@ modify, copy, or redistribute this source beyond reading and evaluating it here.
 is not redistributable under MIT, Apache-2.0, BSL, or any other public licence. A
 grant of rights is a separate decision that has not been made; until then, treat this
 as evaluation-only source.
-`;
-}
-
-/** A doc table cell: a backticked value, or an em dash for "declared absent". */
-const docCell = (value) =>
-  value === null || value === undefined || value === "" ? "—" : `\`${value}\``;
-
-/**
- * The publish-readiness statement shipped inside the archive.
- *
- * Generated rather than copied from `docs/publish-readiness.md`, which is the
- * repository-wide record: it enumerates every internal package — including the fifteen
- * this archive deliberately excludes — and links at the enforcement script, the CI
- * workflow, and the agent notes, none of which travel. An outsider would read a
- * disclosure they did not need and follow links that dangle.
- *
- * This copy names only the packages in the archive, states every value from their shipped
- * manifests, and links only at documents sitting beside it, so it cannot drift from the
- * archive and cannot point outside it.
- */
-export function sdkReadinessDoc(version, packageSummaries) {
-  const versionRows = packageSummaries.map(
-    (pkg) =>
-      `| ${docCell(pkg.name)} | ${docCell(pkg.version)} | ${docCell(pkg.releaseGroup)} | ${docCell(pkg.corePin)} |`,
-  );
-  const exportRows = packageSummaries.map((pkg) => {
-    const roots = pkg.rootExports.map((target) => `\`${target}\``).join(", ");
-    const subpaths = pkg.subpaths.map((subpath) => `\`${subpath}\``).join(", ");
-    return `| ${docCell(pkg.name)} | ${roots === "" ? "—" : roots} | ${subpaths === "" ? "—" : subpaths} |`;
-  });
-
-  return `# Publish readiness — engine SDK ${version}
-
-**What this document is:** the publish-readiness statement for the packages **this
-archive ships**, generated when the archive was built, from the manifests inside it.
-
-**What it is not:** a publish authorization, and not the whole story. SceneAxi holds no
-registry publish authority: no package has ever been published to a registry, no registry
-credential exists, and this archive is not an npm publish. The full checklist, the gate
-that enforces it, and the version plan for every internal package stay in the SceneAxi
-repository — this copy is scoped to what you have here.
-
-## What \`0.0.0\` means
-
-Every package below is a private \`0.0.0\` bootstrap package on one shared plan value, so
-no package can drift into looking releasable on its own. \`0.0.0\` everywhere is the honest
-statement that nothing is released; the first real release moves every version and every
-profile core pin together, as one decision.
-
-Until then there is no supported external install. Read and build against this source, and
-wait for a published version before taking a dependency — substituting a Git, path,
-\`file:\`, or \`workspace:\` dependency is out of contract. See
-[\`web-consumer.md\`](web-consumer.md).
-
-## Version plan for the packages in this archive
-
-Release groups and their pinning rules are owned by
-[\`DEPENDENCY-MATRIX.md\`](DEPENDENCY-MATRIX.md); this table is the per-package instance of
-that plan. A profile's core pin is the core range that profile release supports.
-
-| Package | Version | Release group | Core pin |
-|---|---|---|---|
-${versionRows.join("\n")}
-
-## Export surface of the consumer packages
-
-Import through a package's declared \`exports\` only; an unexported deep path is not part
-of the contract. Every target below is a real file in this archive — before the archive is
-built, the repository gate proves each one resolves and each one ships.
-
-| Package | Root export | Subpaths |
-|---|---|---|
-${exportRows.join("\n")}
-
-## What this archive deliberately does not contain
-
-- **A registry tarball.** This zip is the packaging path; there is no second one.
-- **Built output.** Exports are source-backed, so \`dist/\` is a build artifact and never
-  ships here.
-- **The rest of the monorepo.** Applications, deployable sites, the CLI, and the internal
-  tooling that enforces the tables above stay in the repository.
 `;
 }
 

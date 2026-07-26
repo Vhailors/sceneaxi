@@ -291,10 +291,12 @@ function sdkOutputDirs(sources) {
       const flag = tokens.indexOf("--out");
       const declared = flag >= 0 ? (tokens[flag + 1] ?? SDK_DEFAULT_OUT) : SDK_DEFAULT_OUT;
       const abs = resolve(root, base, declared);
+      const rel = relative(root, abs);
       // An output outside the repository cannot be committed, so it is not this check's
-      // business; everything inside it must be ignored.
-      if (!containsPath(root, abs)) continue;
-      const dir = relative(root, abs);
+      // business; everything inside it must be ignored — and the repository root itself is
+      // inside it, which `containsPath` reports as false because `relative` returns "".
+      if (rel !== "" && !containsPath(root, abs)) continue;
+      const dir = rel === "" ? "." : rel;
       if (!outputs.has(dir)) outputs.set(dir, label);
     }
   }
@@ -304,10 +306,11 @@ function sdkOutputDirs(sources) {
 /**
  * Whether `.gitignore` ignores a repository-relative directory.
  *
- * A pattern with no slash matches any path segment at any depth; an anchored pattern
- * matches the directory or any of its parents. A negation is treated as un-ignoring
- * whatever it matches, without modelling gitignore's last-match-wins ordering, so an
- * ambiguous declaration fails this check rather than passing it.
+ * A pattern with no slash matches any path segment at any depth; an anchored pattern —
+ * one carrying a leading slash or an interior one — matches the directory or any of its
+ * parents, relative to the repository root. A negation is treated as un-ignoring whatever
+ * it matches, without modelling gitignore's last-match-wins ordering, so an ambiguous
+ * declaration fails this check rather than passing it.
  */
 function gitignoreIgnores(lines, dir) {
   const segments = dir.split("/");
@@ -318,10 +321,14 @@ function gitignoreIgnores(lines, dir) {
     const trimmed = line.trim();
     if (trimmed === "" || trimmed.startsWith("#")) continue;
     const negated = trimmed.startsWith("!");
-    const body = (negated ? trimmed.slice(1) : trimmed).replace(/^\/+/, "").replace(/\/+$/, "");
+    const raw = (negated ? trimmed.slice(1) : trimmed).replace(/\/+$/, "");
+    const body = raw.replace(/^\/+/, "");
     if (body === "") continue;
+    // A leading slash anchors a pattern to the repository root exactly as an interior slash
+    // does, so it decides how the pattern matches and must not be stripped away first.
+    const anchored = raw !== body || body.includes("/");
     const pattern = namespacePattern(body);
-    const hit = body.includes("/")
+    const hit = anchored
       ? ancestors.some((ancestor) => pattern.test(ancestor))
       : segments.some((segment) => pattern.test(segment));
     if (!hit) continue;
@@ -698,9 +705,10 @@ function checkSdkOutputIgnored(sources) {
   }
   for (const [label, dir] of outputs) {
     if (!gitignoreIgnores(gitignore, dir)) {
+      const where = dir === "." ? "the repository root" : `'${dir}/'`;
       fail(
         "sdk-output-ignored",
-        `.gitignore does not ignore '${dir}/', the SDK output directory ${label} builds into — a built archive must never be committed`,
+        `.gitignore does not ignore ${where}, the SDK output directory ${label} builds into — a built archive must never be committed`,
       );
     }
   }
