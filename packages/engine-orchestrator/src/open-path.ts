@@ -234,7 +234,7 @@ function resolveHost(host: OpenPathHost): OrchestratorResult<ResolvedHost> {
 
   return ok({
     digest,
-    kernelHost: { nowMs: host.nowMs, digest },
+    kernelHost: { nowMs: () => host.nowMs(), digest },
     openedAtMs,
   });
 }

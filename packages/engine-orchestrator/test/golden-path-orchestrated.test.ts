@@ -8,7 +8,7 @@
  * disposition right in the first place: a real open path, and still no job
  * system (ADR 0023).
  */
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import * as orchestrator from "@sceneaxi/engine-orchestrator";
 
@@ -17,6 +17,19 @@ const repoFile = (path: string) =>
 
 const packageFile = (path: string) =>
   readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+
+/**
+ * Every TypeScript source under `src/`, read off disk rather than listed here, so
+ * a file added later cannot escape the bound below by not being enumerated.
+ */
+function sourcePaths(directory = "src/"): string[] {
+  return readdirSync(new URL(`../${directory}`, import.meta.url), {
+    withFileTypes: true,
+  }).flatMap((entry) => {
+    if (entry.isDirectory()) return sourcePaths(`${directory}${entry.name}/`);
+    return entry.name.endsWith(".ts") ? [`${directory}${entry.name}`] : [];
+  });
+}
 
 const GOLDEN_PATH = "tests/e2e/profile-game-scene-golden.test.ts";
 
@@ -65,14 +78,19 @@ describe("engine-orchestrator open-path disposition", () => {
   });
 
   it("stays bounded: one session per handle, no scheduling machinery", () => {
-    const sources = ["src/index.ts", "src/open-path.ts", "src/refusals.ts"].map(
-      (path) => packageFile(path),
+    const paths = sourcePaths().sort();
+    expect(paths).toEqual(
+      expect.arrayContaining([
+        "src/index.ts",
+        "src/open-path.ts",
+        "src/refusals.ts",
+      ]),
     );
-    expect(sources).toHaveLength(3);
 
     // A job queue needs deferral, concurrency, or a worker. None of it is here,
     // and this is what stops "orchestrator" from growing into one by drift.
-    for (const source of sources) {
+    for (const path of paths) {
+      const source = packageFile(path);
       for (const banned of [
         "setTimeout",
         "setInterval",
@@ -83,9 +101,7 @@ describe("engine-orchestrator open-path disposition", () => {
         "Promise",
         "node:",
       ]) {
-        expect(source, `orchestrator source must not use ${banned}`).not.toContain(
-          banned,
-        );
+        expect(source, `${path} must not use ${banned}`).not.toContain(banned);
       }
     }
   });

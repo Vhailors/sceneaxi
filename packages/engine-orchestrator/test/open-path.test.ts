@@ -98,6 +98,30 @@ describe("open-path bootstrap over the product session", () => {
       opened.value.bootstrap.sessionId,
     );
   });
+
+  it("keeps a host clock bound to the host that owns it", () => {
+    const ownClockHost = {
+      reading: FIXED_NOW_MS,
+      nowMs(): number {
+        return this.reading;
+      },
+    };
+
+    const bootstrapped = bootstrapOpenPath(
+      { kind: "product", productManifest: productManifestFixture() },
+      ownClockHost,
+    );
+    if (!bootstrapped.ok) throw new Error(bootstrapped.reason);
+    expect(bootstrapped.value.bootstrap.openedAtMs).toBe(FIXED_NOW_MS);
+
+    const session = bootstrapped.value.session();
+    if (!session.ok) throw new Error(session.reason);
+    session.value.dispatch({ type: "move", actor: "hero", axis: [1, 0] });
+    session.value.advance({ tick: 1, deltaMs: 16 });
+    expect(session.value.save().events).toContainEqual(
+      expect.objectContaining({ kind: "dispatch", timestampMs: FIXED_NOW_MS }),
+    );
+  });
 });
 
 describe("open-path bootstrap over the sculpt and scene sessions", () => {
