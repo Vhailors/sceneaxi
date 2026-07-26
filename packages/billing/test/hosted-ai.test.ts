@@ -621,6 +621,62 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
     expect(provider.calls.length).toBe(0);
   });
 
+  it("refuses a fabricated claim on another user's account before reading its history", async () => {
+    // The supplied state is the caller's own writing, so claiming ownership of a
+    // stranger's account id validates. The account persistence returns is what
+    // settles it: the entries of an account the principal does not own are never
+    // loaded, so a guessed metering key cannot be answered from them.
+    const other = Object.freeze({
+      ...ACCOUNT,
+      accountId: "acc_other",
+      userId: "usr_other",
+    }) as CreditAccount;
+    const otherFunded = appendCreditEntry(createLedgerState(other), {
+      entryId: "ent_other_grant",
+      movement: "grant",
+      delta: 100,
+      reason: "another user's funding",
+      idempotencyKey: "fixture:other-grant",
+      now: NOW,
+    });
+    if (!otherFunded.ok) throw new Error("fixture funding failed");
+    const otherSpent = appendCreditEntry(otherFunded.value.state, {
+      entryId: "ent_other_turn",
+      movement: "debit",
+      delta: -3,
+      reason: "another user's turn",
+      idempotencyKey: meteringIdempotencyKey(other.accountId, "turn_01"),
+      now: NOW,
+    });
+    if (!otherSpent.ok) throw new Error("fixture debit failed");
+    const backing = createInMemoryCreditStore({
+      accounts: [other],
+      entries: otherSpent.value.state.entries,
+    });
+    const histories: string[] = [];
+    const store = Object.freeze({
+      ...backing,
+      listEntries(accountId: string) {
+        histories.push(accountId);
+        return backing.listEntries(accountId);
+      },
+    });
+    const provider = recordingProvider();
+
+    const result = await hostedCall(
+      { account: { ...other, userId: "usr_crew" }, entries: [], balance: 0 },
+      provider,
+      { store },
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.accountNotOwned);
+    expect(histories).toEqual([]);
+    expect(provider.calls.length).toBe(0);
+    expect(backing.entryCount(other.accountId)).toBe(2);
+  });
+
   it("refuses missing metering inputs before the provider runs", async () => {
     const state = funded(100);
     for (const overrides of [

@@ -202,7 +202,9 @@ answers a retry from the account-scoped debit that already exists — read from 
 holding a pre-debit copy is recognised as a retry instead of paying the provider
 twice — before the balance gate and before the provider, with no `response` to
 hand back, an unreadable store refusing there rather than after the call, and the
-principal authenticated before persistence is read at all. That same persisted
+principal authenticated before persistence is read at all — with the account
+persistence returns re-checked against that principal before its history is
+loaded or any metering key is compared. That same persisted
 ledger is what the balance gate and `meterCredits` judge: the caller's `state`
 names the account and never establishes the balance, so a stale copy cannot buy a
 call the real ledger would refuse only after the provider was paid; and

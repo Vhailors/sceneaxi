@@ -348,7 +348,11 @@ caller-supplied state, so step 4 authenticates the principal and checks account 
 before it asks the store anything: an expired, disabled, or wrong-user principal cannot drive
 a lookup against an account it merely named. Those refusals are still spoken by
 `evaluateEntitlement` immediately below, which owns the identity vocabulary — step 4 only
-declines to read, so one defect keeps one refusal.
+declines to read, so one defect keeps one refusal. The supplied ownership claim only earns
+the *first* read, though, since the caller wrote it: the account the store returns is itself
+re-checked against the guarded user and refuses `ENTITLEMENT_ACCOUNT_NOT_OWNED` before its
+history is loaded or any metering key is compared, so naming a stranger's account id cannot
+make persistence answer questions about that account's entries.
 
 **Only a throw is a provider failure.** The thunk is provider-neutral, so billing charges
 for any value it returns — it cannot tell a refusal envelope from a legitimate answer that

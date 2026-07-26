@@ -72,8 +72,10 @@ upstream provider a second time. That lookup reads the **persisted** ledger thro
 injected store rather than the `state` the caller passed, because the caller a timeout
 leaves holding a pre-debit copy is exactly the one the guarantee is for; an unreadable store
 therefore refuses `CREDIT_STORE_FAILED` before the provider rather than after it, and the
-authenticated identity is settled before that read so a principal who cannot spend the
-account cannot make persistence answer questions about it. The replayed outcome carries no
+authenticated identity is settled before that read — and re-checked against the account
+persistence actually returns, before its history is loaded or any key is compared — so a
+principal who cannot spend the account cannot make persistence answer questions about its
+entries. The replayed outcome carries no
 `response` field at all: the ledger records debits, never model answers, and the gate will
 not invent one.
 

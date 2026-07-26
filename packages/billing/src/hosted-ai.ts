@@ -336,7 +336,9 @@ type HostedLedger = Readonly<{
  * give the same defect two voices. None of those shapes can reach the provider,
  * so declining the store read for them costs no safety — and for the identity
  * ones it is the point: an unauthenticated caller cannot make persistence answer
- * questions about an account id it merely named.
+ * questions about an account id it merely named. An authenticated one gets no
+ * further: the account persistence returns must itself belong to the guarded
+ * user before its history is loaded or any metering key is compared.
  */
 async function resolveHostedLedger(
   request: Readonly<{
@@ -396,6 +398,17 @@ async function resolveHostedLedger(
       return billingRefuse(
         BILLING_REFUSE_REASONS.ledgerStateInvalid,
         "The credit account does not exist in persistence; the model call refuses before the provider.",
+      );
+    }
+    // Ownership is re-asked of the account persistence holds, not of the one the
+    // caller wrote down: the two agree for every real caller, and where they do
+    // not it is the caller that named an account id it does not own. Refusing
+    // here, before the history is loaded and before any key is compared, is what
+    // keeps that reach from turning another user's ledger into an oracle.
+    if (account.userId !== guarded.value.user.userId) {
+      return billingRefuse(
+        BILLING_REFUSE_REASONS.accountNotOwned,
+        "The credit account belongs to a different user; the model call refuses before the provider.",
       );
     }
     entries = await store.listEntries(accountId);
