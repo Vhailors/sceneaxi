@@ -135,7 +135,9 @@ Registry seed state: `registryVersion` is `1.0.0`; `entries` holds exactly 1 rev
 - `contracts/open-path-policy.schema.json` — the closed policy enumeration
 - Canonical data: `contracts/open-path-policy.fixtures.json`, mirrored by
   `OPEN_PATH_POLICY` in `src/open-path-policy.ts`; `pnpm check:contracts` keeps
-  both in lockstep with the `docs/open-path-policy.md` table
+  the fixture, the schema, and the `docs/open-path-policy.md` table in lockstep,
+  and the seam test `test/open-path-policy.test.ts` asserts the TypeScript table
+  and the fixture are identical
 - Shared decision function: `evaluateOpenPathDemo()`; shared surface payload:
   `openPathPolicyView()`; shared one-profile projection:
   `openPathPolicyViewFor()` — keeps the true `policyCount`, marks itself with

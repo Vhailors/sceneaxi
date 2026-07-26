@@ -396,6 +396,13 @@ export type OpenPathPolicyViewModel = Readonly<{
   notes: ReadonlyArray<string>;
 }>;
 
+/** The sentences every surface prints beside the policy. */
+export const OPEN_PATH_POLICY_NOTES: ReadonlyArray<string> = Object.freeze([
+  "Demo levels grade demonstrations only — no row is a shipping, publication, or production-readiness claim",
+  "Every level names the committed test that proves it; a level without evidence refuses",
+  `${OPEN_PATH_REFUSE_ONLY_PROFILE} is refuse-only: no open path, no UI, no commerce`,
+]);
+
 /**
  * The exact payload every surface reports.
  *
@@ -404,12 +411,6 @@ export type OpenPathPolicyViewModel = Readonly<{
  * cannot describe the policy differently without changing the policy. The root
  * parity suite asserts the three are identical.
  */
-export const OPEN_PATH_POLICY_NOTES: ReadonlyArray<string> = Object.freeze([
-  "Demo levels grade demonstrations only — no row is a shipping, publication, or production-readiness claim",
-  "Every level names the committed test that proves it; a level without evidence refuses",
-  `${OPEN_PATH_REFUSE_ONLY_PROFILE} is refuse-only: no open path, no UI, no commerce`,
-]);
-
 export function openPathPolicyView(): OpenPathPolicyViewModel {
   return Object.freeze({
     schemaVersion: OPEN_PATH_POLICY_SCHEMA_VERSION,

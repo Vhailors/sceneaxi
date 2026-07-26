@@ -256,11 +256,7 @@ function openPathResult(args: ParsedArgs): DesktopResult {
   });
   const notes = openPathSurfaceNotes(outcome);
 
-  if (outcome.kind === "policy") {
-    return ok(command, { policy: outcome.policy }, [...notes]);
-  }
-
-  if (outcome.kind === "projection") {
+  if (outcome.kind === "policy" || outcome.kind === "projection") {
     return ok(command, { policy: outcome.policy }, [...notes]);
   }
 
