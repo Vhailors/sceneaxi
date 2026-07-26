@@ -96,6 +96,7 @@ export {
   STRIPE_SIGNATURE_TOLERANCE_SECONDS,
   applyCheckoutCompletedGrant,
   checkoutPurposeGrantsCredits,
+  checkoutPurposeSettlesElsewhere,
   parseCheckoutCompletedEvent,
   signStripeWebhookPayload,
   verifyStripeWebhookSignature,

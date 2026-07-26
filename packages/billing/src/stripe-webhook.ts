@@ -294,6 +294,21 @@ export function checkoutPurposeGrantsCredits(
   return purpose === CREDIT_GRANTING_CHECKOUT_PURPOSE;
 }
 
+/**
+ * Whether a value names a *known* checkout purpose that settles somewhere other than
+ * the credit ledger.
+ *
+ * This is the routing form of the rule above, for a caller that holds only raw session
+ * metadata and has not yet read the evidence a completion must be bound to. It answers
+ * `false` for anything that is not one of `CHECKOUT_PURPOSES`, so an absent, malformed,
+ * or unknown purpose keeps its existing path and is still refused as an invalid payload
+ * by `parseCheckoutCompletedEvent` — this can only send a body *away* from the grant
+ * path, never admit one to it.
+ */
+export function checkoutPurposeSettlesElsewhere(purpose: unknown): boolean {
+  return isCheckoutPurpose(purpose) && !checkoutPurposeGrantsCredits(purpose);
+}
+
 /** Metadata keys SceneAxi sets on the Stripe Checkout Session. */
 export const CHECKOUT_METADATA_KEYS = Object.freeze({
   userId: "sceneaxiUserId",

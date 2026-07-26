@@ -23,9 +23,16 @@
  * revenue-share path — is acknowledged, never refused: no grant is owed, and a non-2xx
  * would ask Stripe to redeliver a condition redelivery cannot change. Each of those is
  * decided at the earliest point that can decide it, and never behind a read that may
- * fail: the event type from the verified body before any adapter is consulted, and the
- * purpose from the parsed completion before the ledger is read. An event this path owes
+ * fail: both the event type and a purpose that settles elsewhere are read from the
+ * verified body before any adapter or store is consulted. An event this path owes
  * nothing must not become a permanent retry because an unrelated port was unreachable.
+ *
+ * Only `checkout.session.completed` grants credits here, which keeps this endpoint's
+ * Checkout card-only: a delayed-notification payment method completes the session before
+ * the money confirms, and settling it would need grant and idempotency semantics this
+ * step does not have. That boundary is a scope decision, recorded in
+ * `docs/websites-deploy.md`, not an omission — the later confirmation event stays
+ * unhandled rather than being half-supported.
  *
  * `live` mode is never authorized from here. `applyCheckoutCompletedGrant` refuses a
  * livemode event without an explicit captain go-live decision, and this module has no
@@ -36,6 +43,7 @@ import {
   CHECKOUT_METADATA_KEYS,
   applyCheckoutCompletedGrant,
   checkoutPurposeGrantsCredits,
+  checkoutPurposeSettlesElsewhere,
   loadLedgerState,
   parseCheckoutCompletedEvent,
   verifyStripeWebhookSignature,
@@ -199,12 +207,16 @@ const asId = (value: unknown): string | undefined =>
  * What a verified body offers this endpoint: the two lookup keys, or the reason there
  * are none.
  *
- * The four non-key answers are deliberately distinct. A body whose type this path does
+ * The five non-key answers are deliberately distinct. A body whose type this path does
  * not handle owes no work regardless of what it carries, so it is decided here — before
  * an adapter is consulted — rather than after two provider reads that a non-completed
  * session cannot satisfy: an expired credit-pack checkout carries the same session id and
  * the same SceneAxi metadata as the completion, but no settlement, so diagnosing it later
- * turns an acknowledgeable event into a permanent retry. A signed body carrying no
+ * turns an acknowledgeable event into a permanent retry. A completion whose purpose
+ * settles on the revenue-share path owes this endpoint nothing for the same reason, and
+ * is decided here too: its intent lives in that path's own store and its settlement is
+ * still a provider read that can fail, so waiting for either would make an event that
+ * grants nothing depend on ports it never needed. A signed body carrying no
  * SceneAxi metadata key at all is simply an event this deployment did not create — the
  * same Stripe account may serve other products — so it too is acknowledged, not failed.
  * A body that *does* carry a SceneAxi key but cannot be routed is the opposite: this
@@ -218,6 +230,7 @@ const asId = (value: unknown): string | undefined =>
 type CheckoutLookup =
   | { readonly kind: "keys"; readonly intentId: string; readonly sessionId: string }
   | { readonly kind: "unhandledType"; readonly eventType: string }
+  | { readonly kind: "unhandledPurpose"; readonly purpose: string }
   | { readonly kind: "incomplete" }
   | { readonly kind: "unrelated" }
   | { readonly kind: "unreadable"; readonly detail: string };
@@ -251,10 +264,11 @@ const claimsSceneAxiCheckout = (metadata: Record<string, unknown> | undefined): 
  * amount, currency, price — comes from the persisted intent, so an attacker able to
  * influence event metadata still cannot name their own credit amount. These two are
  * only *lookup keys*, and a key that names the wrong intent fails the parser's own
- * metadata/mode cross-check immediately after. The event type is read at that same trust
- * level and for the same reason — to route, never to admit: it can only send a body away
- * from the grant path, and `parseCheckoutCompletedEvent` still owns the authoritative
- * check for the body that stays on it.
+ * metadata/mode cross-check immediately after. The event type and the purpose are read at
+ * that same trust level and for the same reason — to route, never to admit: each can only
+ * send a body away from the grant path, an unknown or absent purpose keeps its existing
+ * path, and `parseCheckoutCompletedEvent` still owns the authoritative check — including
+ * the purpose cross-check against the persisted intent — for every body that stays on it.
  */
 function lookupKeysOf(payload: string): CheckoutLookup {
   let raw: unknown;
@@ -286,6 +300,10 @@ function lookupKeysOf(payload: string): CheckoutLookup {
     return Object.freeze({
       kind: claimsSceneAxiCheckout(metadata) ? ("incomplete" as const) : ("unrelated" as const),
     });
+  }
+  const purpose = metadata?.[CHECKOUT_METADATA_KEYS.purpose];
+  if (typeof purpose === "string" && checkoutPurposeSettlesElsewhere(purpose)) {
+    return Object.freeze({ kind: "unhandledPurpose" as const, purpose });
   }
   return Object.freeze({ kind: "keys" as const, intentId, sessionId });
 }
@@ -326,6 +344,12 @@ export async function applyCreditPackWebhook(input: {
     return ignored(
       BILLING_REFUSE_REASONS.webhookEventTypeUnsupported,
       `Webhook event type "${lookup.eventType}" is not handled; only ${HANDLED_EVENT_TYPE} grants credits. Nothing was read or granted, and redelivery would not change that.`,
+    );
+  }
+  if (lookup.kind === "unhandledPurpose") {
+    return ignored(
+      BILLING_REFUSE_REASONS.webhookEventTypeUnsupported,
+      `A ${lookup.purpose} completion grants no credits and settles on the revenue-share path, so no intent, settlement, or ledger was read and redelivery would not change that.`,
     );
   }
   if (lookup.kind === "incomplete") {
@@ -369,10 +393,11 @@ export async function applyCreditPackWebhook(input: {
   });
   if (!completion.ok) return settle(completion.reason, completion.message);
 
-  // Whether the ledger owes this completion anything is knowable from the completion
-  // itself, so it is answered before the store is touched. A listing purchase settles on
-  // the revenue-share path; making its acknowledgement wait on a credit account the buyer
-  // may not have provisioned would retry, forever, an event that grants nothing.
+  // The routing above already sent every known non-crediting purpose to the acknowledged
+  // path, and the parser cross-checks the metadata purpose against the persisted intent,
+  // so a completion reaching here is a credit-pack one. This re-asks the same question of
+  // the parsed completion — the authoritative purpose — so that the ledger is never read
+  // for an event owed no credits even if those two ever diverge.
   // `applyCheckoutCompletedGrant` still owns the authoritative refusal for the purposes
   // that do reach it.
   if (!checkoutPurposeGrantsCredits(completion.value.purpose)) {

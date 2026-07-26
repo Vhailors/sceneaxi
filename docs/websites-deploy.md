@@ -241,9 +241,19 @@ than inventing a session, balance, or checkout.
    harmless: anything it is not built to act on — another event type, or a
    catalog-listing completion that settles on the revenue-share path — is acknowledged
    `200` with `ignored: true` and its named reason, because no grant is owed and no
-   redelivery could change that. Neither acknowledgement depends on an adapter or ledger
-   read succeeding, so an expired or foreign-typed session is never turned into a
+   redelivery could change that. Both acknowledgements are decided from the verified event
+   body alone, before the intent, the settlement, or the ledger is read, so an expired
+   session, a foreign-typed event, or a listing completion is never turned into a
    permanent retry by a settlement that cannot exist or an account nobody provisioned.
+
+   **Keep this Checkout card-only.** A delayed-notification payment method completes the
+   session before the money confirms, and the confirmation arrives later as
+   `checkout.session.async_payment_succeeded`, which this endpoint does not handle: it is
+   acknowledged like any other unhandled type and grants nothing, while the immediate
+   unpaid completion is refused as an invalid payload. Supporting it needs grant and
+   idempotency semantics this step deliberately does not add, so the boundary is a scope
+   decision rather than an omission — enabling such a method in the Stripe dashboard would
+   take payments this endpoint cannot settle.
 7. Remove `SCENEAXI_SITE_EDITOR_PREVIEW` from the umbrella project, since entitlement can
    now be resolved for real.
 
@@ -280,13 +290,16 @@ Load-bearing properties, each gate-tested in `tests/sites/identity-plane-wiring.
   `400`. An event the endpoint is not built to act on is neither: it answers `200` with
   `ignored: true`, so Stripe stops redelivering a condition redelivery cannot change.
   Only `ignored: false` means credits are in the ledger. Exactly three things are
-  acknowledged, each decided before the read that could otherwise fail: an event type
-  this path does not handle (from the verified body, before any adapter), a completion
-  whose purpose settles on the revenue-share path (from the parsed completion, before the
-  ledger), and a checkout session carrying no SceneAxi metadata key at all — another
-  product's event. A `checkout.session.completed` this deployment *did* create is never
-  acknowledged as another product's event: if it carries any SceneAxi key but cannot be
-  routed, it is refused and retried.
+  acknowledged, and all three are decided from the verified body before any adapter or
+  store is consulted: an event type this path does not handle, a completion whose
+  purpose settles on the revenue-share path, and a checkout session carrying no SceneAxi
+  metadata key at all — another product's event. The purpose is read from the session
+  metadata only to route *away* from the grant path — an absent, malformed, or unknown
+  one keeps its normal path, and `parseCheckoutCompletedEvent` still cross-checks the
+  purpose against the persisted intent for everything that stays on it. A
+  `checkout.session.completed` this deployment *did* create is never acknowledged as
+  another product's event: if it carries any SceneAxi key but cannot be routed, it is
+  refused and retried.
 - **The buyer is the verified principal**, not the `userId` the checkout form submitted;
   the submitted value is only cross-checked against it.
 - **Unknown is never zero.** A failed ledger read refuses `CREDITS_PLANE_UNAVAILABLE`

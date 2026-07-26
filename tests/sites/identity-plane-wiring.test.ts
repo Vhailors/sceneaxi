@@ -552,14 +552,15 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
   /**
    * An evidence port that fails the test if it is consulted. An event this endpoint owes
    * no work must be decided from the verified body, not behind a provider read that a
-   * non-completion cannot satisfy.
+   * non-completion cannot satisfy — and not behind one that can simply be down, since a
+   * throw here would otherwise become a 503 Stripe retries forever.
    */
   const unreachableEvidence: WebhookEvidence = Object.freeze({
     findIntent(): never {
-      throw new Error("the evidence port must not be consulted for an unhandled event type");
+      throw new Error("the evidence port must not be consulted for an event owed no work");
     },
     retrieveSettlement(): never {
-      throw new Error("the evidence port must not be consulted for an unhandled event type");
+      throw new Error("the evidence port must not be consulted for an event owed no work");
     },
   });
 
@@ -824,21 +825,69 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     expect(store.entryCount("acct-1")).toBe(0);
   });
 
-  it("acknowledges a catalog-listing completion, which settles on the revenue-share path", async () => {
-    // The reachable half of the same class: a well-formed, signature-verified, intent-bound
-    // completion that grants no credits by design. It must mint nothing and must not be
-    // retried forever.
+  it("acknowledges a catalog-listing completion without consulting any adapter", async () => {
+    // The reachable half of the same class: a well-formed, signature-verified completion
+    // that grants no credits by design. Its intent lives in the revenue-share path's own
+    // store and its settlement is still a provider read that can fail, so deciding it
+    // after either would turn an event owed nothing into a 503 retried until Stripe gives
+    // up. It must mint nothing, read nothing, and not be retried forever.
     const store = webhookStore();
     const outcome = await signedCall({
       payload: listingBody("evt_test_listing"),
       store,
-      evidence: listingEvidence,
+      evidence: unreachableEvidence,
     });
     expect(outcome).toMatchObject({
       ok: true,
       ignored: true,
       reason: "STRIPE_WEBHOOK_EVENT_TYPE_UNSUPPORTED",
     });
+    expect(store.entryCount("acct-1")).toBe(0);
+  });
+
+  it("acknowledges a catalog-listing completion whose intent this endpoint never held", async () => {
+    // A listing intent is persisted by the revenue-share path's own store, so the credit
+    // endpoint's evidence port legitimately answers "nothing here". That absence must not
+    // be reported as this deployment's unmet obligation: `STRIPE_CHECKOUT_EVIDENCE_MISSING`
+    // answers 503, which Stripe would retry until it gave up, for an event owed no grant.
+    const store = webhookStore();
+    const outcome = await signedCall({
+      payload: listingBody("evt_test_listing_no_intent"),
+      store,
+      evidence: {
+        findIntent() {
+          return undefined;
+        },
+        retrieveSettlement() {
+          return undefined;
+        },
+      },
+    });
+    expect(outcome).toMatchObject({
+      ok: true,
+      ignored: true,
+      reason: "STRIPE_WEBHOOK_EVENT_TYPE_UNSUPPORTED",
+    });
+    expect(store.entryCount("acct-1")).toBe(0);
+  });
+
+  it("still refuses a completion whose purpose is not one the contract names", async () => {
+    // Routing on the session's purpose may only send a body *away* from the grant path. An
+    // unknown value is not a purpose that settles elsewhere — it is a payload fault, and
+    // acknowledging it would let a malformed credit-pack completion strand a paid grant.
+    const store = webhookStore();
+    const outcome = await signedCall({
+      payload: eventBody("evt_test_unknown_purpose", {
+        metadata: {
+          sceneaxiUserId: "member-1",
+          sceneaxiPurpose: "creditpack",
+          sceneaxiItemId: PACK.packId,
+          sceneaxiIntentId: INTENT.intentId,
+        },
+      }),
+      store,
+    });
+    expect(outcome).toMatchObject({ ok: false, reason: "STRIPE_WEBHOOK_PAYLOAD_INVALID" });
     expect(store.entryCount("acct-1")).toBe(0);
   });
 
