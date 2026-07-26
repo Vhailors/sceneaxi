@@ -279,6 +279,17 @@ describe("the entitled editor draws through the same viewport boundary", () => {
     expect(Object.isFrozen(EDITOR_VIEWPORT_COPY)).toBe(true);
   });
 
+  it("names the no-pixel panel the page actually renders", () => {
+    // The page shows two frame reports with opposite `pixelsDrawn` values, so the copy
+    // that explains the no-pixel one must name that panel's own heading — otherwise a
+    // reader attaches it to the browser report directly above it, which does draw.
+    const noPixelPanel = "Server session frame";
+    expect(EDITOR_VIEWPORT_COPY.honesty).toContain(noPixelPanel);
+    expect(readSite(EDITOR_PAGE)).toContain(`<h3>${noPixelPanel}</h3>`);
+    // The report the browser surface publishes must not answer to that same name.
+    expect(readSite(EDITOR_VIEWPORT)).toContain('heading="Browser session frame"');
+  });
+
   it("does not turn the editor into the public path or the public path into an editor", () => {
     // The editor is entitled and the open path is public; neither borrows the other's
     // copy, so a reader is never told a page is open when it is gated, or vice versa.
