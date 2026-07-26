@@ -8,6 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@sceneaxi/auth':
+        specifier: link:../../packages/auth
+        version: link:../../packages/auth
+      '@sceneaxi/billing':
+        specifier: link:../../packages/billing
+        version: link:../../packages/billing
       '@sceneaxi/engine-presentation':
         specifier: link:../../packages/engine-presentation
         version: link:../../packages/engine-presentation

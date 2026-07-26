@@ -23,6 +23,16 @@ export const SITE_REFUSALS = Object.freeze({
   SITE_SURFACE_UNKNOWN: "The requested identity surface is not a known SceneAxi surface.",
   SITE_REQUEST_MALFORMED: "The identity request is malformed.",
 
+  // --- plane availability, distinct from "not wired" and from "no session" ---
+  IDENTITY_SESSION_ABSENT:
+    "No live session was resolved for this request. The visitor is signed out, which is not a failure.",
+  IDENTITY_PLANE_UNAVAILABLE:
+    "The identity adapter failed, so whether a session exists is unknown rather than absent.",
+  CREDITS_PLANE_UNAVAILABLE:
+    "The credits adapter failed, so the balance is unknown rather than zero.",
+  BILLING_PLANE_UNAVAILABLE:
+    "The billing adapter failed, so no pack list or checkout is offered.",
+
   // --- adapter-output validation ---
   IDENTITY_ADAPTER_OUTPUT_INVALID:
     "The identity adapter returned a value that is not a valid principal.",

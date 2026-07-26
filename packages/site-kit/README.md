@@ -50,7 +50,21 @@ Stripe signature. What it owns is the fail-closed boundary:
   by option, env, or adapter;
 - adapter output is validated before a site is allowed to trust it.
 
-Wiring instructions live in `docs/websites-deploy.md`.
+Three states are kept distinct on purpose, because collapsing them would make a
+site lie about what it knows:
+
+| State | Reason | Means |
+|---|---|---|
+| no adapter | `*_PLANE_NOT_WIRED` | this deployment cannot answer at all |
+| adapter reports no principal (`ok(null)`) | `IDENTITY_SESSION_ABSENT` | a signed-out visitor, which is not a failure |
+| adapter throws | `*_PLANE_UNAVAILABLE` | the answer is *unknown* — never "absent" and never zero |
+
+That last row is why an adapter exception becomes a named refusal rather than
+escaping the port: "you have no credits" and "we could not read your credits" must
+not look identical to a buyer.
+
+Wiring instructions live in `docs/websites-deploy.md`; the umbrella's live wiring
+is `sites/umbrella/src/lib/identity-plane.ts`.
 
 ## Entitlement
 

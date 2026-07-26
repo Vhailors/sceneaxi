@@ -113,6 +113,17 @@ Kids. Web editor entitlement (credits, or the unused 100-credit starter allotmen
 unrestricted) is ADR 0020 and does not widen ADR 0003's general-E2 bound. Identity,
 credits, and billing stay owned by `sceneaxi-auth-credits-v1`; `site-kit` only declares
 fail-closed ports and `sites/umbrella/src/lib/identity-plane.ts` is the single plug point.
+That plug point is now **wired** (sceneaxi#131): the umbrella alone may depend on
+`@sceneaxi/auth` + `@sceneaxi/billing`, and only from that file, which builds the site-kit
+adapters over them and maps their named refusals onto the site refusal registry — it
+implements no identity, no ledger, and no signature check. Provider clients (Better Auth,
+Neon, Stripe API) stay outside the repo per ADR 0021 and arrive through the one
+`umbrellaPlaneHandles()` function; while they are absent every dependent surface refuses
+by name and `IDENTITY_SESSION_ABSENT` means signed-out, not broken. Catalogs read identity
+through the same site-kit port with no second auth stack, and the matrix denies them both
+identity packages. The wiring invariants and the six acceptance properties are proven in
+`tests/sites/identity-plane-wiring.test.ts` — extend it, and the matrix cases in
+`tests/boundary/injected-site-violations.test.ts`, when touching any of this.
 
 The identity + credits plane is `packages/auth` (single-admin resolution, role
 guards, identity port) and `packages/billing` (append-only ledger, metering,

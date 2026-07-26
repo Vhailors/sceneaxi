@@ -16,11 +16,17 @@ const nextConfig: NextConfig = {
   // carries the Three presentation core the public live open path draws with. It is not
   // accompanied by `@sceneaxi/engine-kernel`, whose only appearance there is a
   // type-only import that erases before any bundle exists.
+  //
+  // `@sceneaxi/auth` and `@sceneaxi/billing` are the identity plane (sceneaxi#131),
+  // reached only from `src/lib/identity-plane.ts` on the server. They are listed here
+  // because they too export TypeScript source; neither ships a provider SDK.
   transpilePackages: [
     "@sceneaxi/site-kit",
     "@sceneaxi/schemas",
     "@sceneaxi/authoring-core",
     "@sceneaxi/engine-presentation",
+    "@sceneaxi/auth",
+    "@sceneaxi/billing",
   ],
   reactStrictMode: true,
   turbopack: {

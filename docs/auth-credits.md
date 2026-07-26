@@ -17,6 +17,7 @@ The architecture decision behind the shape of this plane is
 | Credit ledger, metering, entitlements, Stripe test checkout, revenue share | `packages/billing` |
 | Neon schema | `db/migrations` |
 | Login + balance view model | `apps/web-shell` (`createAccountPanel`) |
+| Deployable-site wiring | `sites/umbrella/src/lib/identity-plane.ts` (`docs/websites-deploy.md`) |
 
 Release group `identity`; both packages consume only public contracts. **Outside core:** a
 running Better Auth instance, a Neon connection, the Stripe API client, any HTTP surface,

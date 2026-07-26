@@ -38,8 +38,26 @@ export {
 export {
   IDENTITY_PLANE_DOC,
   IDENTITY_PLANE_PENDING_NOTE,
+  createAuthIdentityAdapter,
+  createBillingCheckoutAdapter,
+  createBillingCreditsAdapter,
   createUmbrellaIdentityPlane,
+  parseSessionToken,
   resolveBillingMode,
+  siteReasonForAuthReason,
+  siteReasonForBillingReason,
+  toSitePrincipal,
+  type CheckoutSessionAdapter,
   type IdentityPlaneAdapters,
+  type IdentityPlaneWiring,
   type UmbrellaIdentityPlane,
 } from "./lib/identity-plane.js";
+
+export {
+  CREDIT_WEBHOOK_REASONS,
+  STRIPE_SIGNATURE_HEADER,
+  STRIPE_WEBHOOK_SECRET_ENV,
+  applyCreditPackWebhook,
+  type CheckoutEvidencePort,
+  type CreditWebhookOutcome,
+} from "./lib/credit-webhook.js";

@@ -74,7 +74,7 @@ const identityWith = (value: unknown) =>
     now,
     adapter: {
       async resolvePrincipal() {
-        return ok(value as SitePrincipal);
+        return ok(value as SitePrincipal | null);
       },
     },
   });
@@ -113,6 +113,35 @@ const CASES: Readonly<Record<SiteRefusalReason, () => Promise<unknown> | unknown
     } as unknown as SiteIdentityRequest),
   SITE_REQUEST_MALFORMED: () =>
     createIdentityPlane({ now }).resolvePrincipal(null as unknown as SiteIdentityRequest),
+  IDENTITY_SESSION_ABSENT: () => identityWith(null).resolvePrincipal(umbrella),
+  IDENTITY_PLANE_UNAVAILABLE: () =>
+    createIdentityPlane({
+      now,
+      adapter: {
+        resolvePrincipal() {
+          throw new Error("the identity store is unreachable");
+        },
+      },
+    }).resolvePrincipal(umbrella),
+  CREDITS_PLANE_UNAVAILABLE: () =>
+    createCreditsPlane({
+      adapter: {
+        readBalance() {
+          throw new Error("the ledger is unreachable");
+        },
+      },
+    }).readBalance({ userId: "user-1" }),
+  BILLING_PLANE_UNAVAILABLE: () =>
+    createBillingPlane({
+      adapter: {
+        listCreditPacks() {
+          throw new Error("the pack catalog is unreachable");
+        },
+        async createCheckout() {
+          return ok({ intentId: "i", redirectUrl: "https://x.example/y", mode: "test" as const });
+        },
+      },
+    }).listCreditPacks(),
   IDENTITY_ADAPTER_OUTPUT_INVALID: () => identityWith("nope").resolvePrincipal(umbrella),
   IDENTITY_ROLE_UNKNOWN: () => identityWith(principal("superuser")).resolvePrincipal(umbrella),
   IDENTITY_USER_DISABLED: () =>

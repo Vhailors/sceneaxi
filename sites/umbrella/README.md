@@ -56,11 +56,17 @@ repository-root install, so a clean builder must provision both roots
 
 ## Identity plane
 
-`src/lib/identity-plane.ts` is the single plug point for `@sceneaxi/auth` and
-`@sceneaxi/billing`. Until that vertical lands its adapters are unset, so sign-in,
-balances, and checkout refuse with named reasons rather than showing an invented
-session or balance. `docs/websites-deploy.md` has the activation procedure and the
-env var list.
+`src/lib/identity-plane.ts` is the single plug point, and it is wired: it builds the
+`@sceneaxi/site-kit` identity, credits, and billing adapters over `@sceneaxi/auth` and
+`@sceneaxi/billing`, and maps their named refusals onto the site refusal registry. It
+implements no identity, no ledger, and no signature check of its own.
+
+The credit-pack list and admin resolution are live on any deployment. Session
+verification, balances, and the hosted checkout redirect still need provider handles —
+Better Auth, Neon, and the Stripe API, which ADR 0021 keeps outside this repository — and
+arrive through `umbrellaPlaneHandles()` in that same file. Until they do, those surfaces
+refuse with named reasons rather than showing an invented session, balance, or checkout.
+`docs/websites-deploy.md` has the remaining activation steps and the env var list.
 
 `SCENEAXI_SITE_EDITOR_PREVIEW=1` grants a banner-marked editor preview so the
 Minimum E2 surface is demonstrable before then. Absent by default; server-side only.

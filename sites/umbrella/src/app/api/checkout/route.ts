@@ -35,13 +35,16 @@ export async function POST(request: NextRequest) {
       : crypto.randomUUID();
 
   const origin = new URL(request.url).origin;
-  const plane = createUmbrellaIdentityPlane(process.env);
+  // The plane is bound to this request's session credential, so the billing port
+  // authorizes the purchase against the session the server verified rather than
+  // against the user id this form submitted.
+  const sessionToken = await readSessionToken();
+  const plane = createUmbrellaIdentityPlane(process.env, { sessionToken });
 
   if (!plane.wired.billing) {
     return refusalResponse("BILLING_PLANE_NOT_WIRED", SITE_REFUSALS.BILLING_PLANE_NOT_WIRED);
   }
 
-  const sessionToken = await readSessionToken();
   const principal = await plane.identity.resolvePrincipal({
     surface: "site",
     sessionToken,

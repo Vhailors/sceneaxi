@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { CREATOR_SHARE_ROUNDING_NOTE, creatorShare, describeListingPrice, showSiteListing } from "@sceneaxi/site-kit";
 import { CATALOG_SITE_SURFACE, editorLinkFor } from "../../../lib/site-config.js";
+import { createCatalogIdentityPlane, resolveCatalogViewer } from "../../../lib/identity-plane.js";
+import { readSessionToken } from "../../_session.js";
 import { CommerceNotice } from "../../_components/commerce-notice.js";
 import { StatePanel } from "../../_components/state-panel.js";
 
@@ -25,6 +27,12 @@ export default async function ItemPage({
   const price = describeListingPrice(listing.price);
   const share = listing.price.credits === null ? null : creatorShare(listing.price.credits);
   const link = editorLinkFor(process.env, listing.itemId);
+  // The storefront reads identity through the shared site-kit port and holds no auth
+  // stack of its own; unwired, this is a named refusal rather than an invented viewer.
+  const viewer = await resolveCatalogViewer(
+    createCatalogIdentityPlane(),
+    await readSessionToken(),
+  );
   const { item } = listing;
 
   return (
@@ -166,7 +174,7 @@ export default async function ItemPage({
         Current pipeline state: <code>{item.moderation.pipelineState}</code>
       </p>
 
-      <CommerceNotice surface={CATALOG_SITE_SURFACE} itemId={listing.itemId} />
+      <CommerceNotice surface={CATALOG_SITE_SURFACE} itemId={listing.itemId} viewer={viewer} />
     </>
   );
 }
