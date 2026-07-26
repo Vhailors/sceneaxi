@@ -223,9 +223,9 @@ than inventing a session, balance, or checkout.
      `sceneaxiIntentId` — copied from the intent's own `userId` / `purpose` / `itemId` /
      `intentId`. `parseCheckoutCompletedEvent` cross-checks all four plus the mode against
      the persisted intent, so a missing or mismatched key refuses the grant as an invalid
-     webhook payload — including `sceneaxiIntentId`, which the endpoint reads first to
-     route the event: a session carrying any SceneAxi key is refused and retried rather
-     than acknowledged as another product's event.
+     webhook payload — including `sceneaxiIntentId`, which the endpoint reads to route a
+     completion to its intent: a completed session carrying any SceneAxi key is refused
+     and retried rather than acknowledged as another product's event.
 5. Run that vertical's Neon migrations against the shared database. The migrations create
    the `credit_accounts` table and insert **no rows**, and `CreditStore` exposes no
    account-creation method, so **provisioning a credit account per user is that store
@@ -241,7 +241,9 @@ than inventing a session, balance, or checkout.
    harmless: anything it is not built to act on — another event type, or a
    catalog-listing completion that settles on the revenue-share path — is acknowledged
    `200` with `ignored: true` and its named reason, because no grant is owed and no
-   redelivery could change that.
+   redelivery could change that. Neither acknowledgement depends on an adapter or ledger
+   read succeeding, so an expired or foreign-typed session is never turned into a
+   permanent retry by a settlement that cannot exist or an account nobody provisioned.
 7. Remove `SCENEAXI_SITE_EDITOR_PREVIEW` from the umbrella project, since entitlement can
    now be resolved for real.
 
@@ -277,9 +279,14 @@ Load-bearing properties, each gate-tested in `tests/sites/identity-plane-wiring.
   refusal the request owns — signature, payload, an intent that does not match — answers
   `400`. An event the endpoint is not built to act on is neither: it answers `200` with
   `ignored: true`, so Stripe stops redelivering a condition redelivery cannot change.
-  Only `ignored: false` means credits are in the ledger. The acknowledgement is decided
-  by the *absence* of every SceneAxi metadata key, so a session this deployment did
-  create is always refused and retried, never silently accepted.
+  Only `ignored: false` means credits are in the ledger. Exactly three things are
+  acknowledged, each decided before the read that could otherwise fail: an event type
+  this path does not handle (from the verified body, before any adapter), a completion
+  whose purpose settles on the revenue-share path (from the parsed completion, before the
+  ledger), and a checkout session carrying no SceneAxi metadata key at all — another
+  product's event. A `checkout.session.completed` this deployment *did* create is never
+  acknowledged as another product's event: if it carries any SceneAxi key but cannot be
+  routed, it is refused and retried.
 - **The buyer is the verified principal**, not the `userId` the checkout form submitted;
   the submitted value is only cross-checked against it.
 - **Unknown is never zero.** A failed ledger read refuses `CREDITS_PLANE_UNAVAILABLE`

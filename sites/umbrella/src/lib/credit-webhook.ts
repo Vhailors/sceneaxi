@@ -18,10 +18,14 @@
  *   5. persist               — a store conflict re-reads and answers only what the
  *                              ledger proves, so an unapplied event is retried
  *
- * One endpoint receives every event Stripe is configured to send, so step 3 also decides
- * what is *not* this endpoint's work — another event type, or a completion whose purpose
- * settles on the revenue-share path. Those are acknowledged, never refused: no grant is
- * owed, and a non-2xx would ask Stripe to redeliver a condition redelivery cannot change.
+ * One endpoint receives every event Stripe is configured to send, so what is *not* this
+ * endpoint's work — another event type, or a completion whose purpose settles on the
+ * revenue-share path — is acknowledged, never refused: no grant is owed, and a non-2xx
+ * would ask Stripe to redeliver a condition redelivery cannot change. Each of those is
+ * decided at the earliest point that can decide it, and never behind a read that may
+ * fail: the event type from the verified body before any adapter is consulted, and the
+ * purpose from the parsed completion before the ledger is read. An event this path owes
+ * nothing must not become a permanent retry because an unrelated port was unreachable.
  *
  * `live` mode is never authorized from here. `applyCheckoutCompletedGrant` refuses a
  * livemode event without an explicit captain go-live decision, and this module has no
@@ -31,6 +35,7 @@ import {
   BILLING_REFUSE_REASONS,
   CHECKOUT_METADATA_KEYS,
   applyCheckoutCompletedGrant,
+  checkoutPurposeGrantsCredits,
   loadLedgerState,
   parseCheckoutCompletedEvent,
   verifyStripeWebhookSignature,
@@ -194,22 +199,34 @@ const asId = (value: unknown): string | undefined =>
  * What a verified body offers this endpoint: the two lookup keys, or the reason there
  * are none.
  *
- * `unrelated`, `incomplete`, and `unparseable` are deliberately distinct. A signed body
- * carrying no SceneAxi metadata key at all is simply an event this deployment did not
- * create — the same Stripe account may serve other products, and other event types carry
- * other objects — so it is acknowledged, not failed. A body that *does* carry a SceneAxi
- * key but cannot be routed is the opposite: this deployment created that checkout, money
- * moved, and acknowledging it would silently strand a paid-but-ungranted purchase Stripe
- * would never redeliver. It is refused exactly like the other three metadata keys, which
- * `parseCheckoutCompletedEvent` already refuses as an invalid payload, so one contract
- * does not have two opposite failure modes. A signed body that is not JSON at all is a
- * fault worth surfacing, because Stripe does not send one.
+ * The four non-key answers are deliberately distinct. A body whose type this path does
+ * not handle owes no work regardless of what it carries, so it is decided here — before
+ * an adapter is consulted — rather than after two provider reads that a non-completed
+ * session cannot satisfy: an expired credit-pack checkout carries the same session id and
+ * the same SceneAxi metadata as the completion, but no settlement, so diagnosing it later
+ * turns an acknowledgeable event into a permanent retry. A signed body carrying no
+ * SceneAxi metadata key at all is simply an event this deployment did not create — the
+ * same Stripe account may serve other products — so it too is acknowledged, not failed.
+ * A body that *does* carry a SceneAxi key but cannot be routed is the opposite: this
+ * deployment created that checkout, money moved, and acknowledging it would silently
+ * strand a paid-but-ungranted purchase Stripe would never redeliver. It is refused
+ * exactly like the other three metadata keys, which `parseCheckoutCompletedEvent` already
+ * refuses as an invalid payload, so one contract does not have two opposite failure
+ * modes. A signed body that is not a JSON event object, or carries no event type at all,
+ * is a fault worth surfacing, because Stripe does not send one.
  */
 type CheckoutLookup =
   | { readonly kind: "keys"; readonly intentId: string; readonly sessionId: string }
+  | { readonly kind: "unhandledType"; readonly eventType: string }
   | { readonly kind: "incomplete" }
   | { readonly kind: "unrelated" }
-  | { readonly kind: "unparseable" };
+  | { readonly kind: "unreadable"; readonly detail: string };
+
+/** The one event type that can carry a completed checkout this path grants credits for. */
+const HANDLED_EVENT_TYPE = "checkout.session.completed" as const;
+
+const unreadable = (detail: string): CheckoutLookup =>
+  Object.freeze({ kind: "unreadable" as const, detail });
 
 /** Every metadata key SceneAxi stamps on a checkout session it created. */
 const SCENEAXI_METADATA_KEYS: readonly string[] = Object.freeze(
@@ -234,18 +251,34 @@ const claimsSceneAxiCheckout = (metadata: Record<string, unknown> | undefined): 
  * amount, currency, price — comes from the persisted intent, so an attacker able to
  * influence event metadata still cannot name their own credit amount. These two are
  * only *lookup keys*, and a key that names the wrong intent fails the parser's own
- * metadata/mode cross-check immediately after. In particular, the event *type* is not
- * decided here: `parseCheckoutCompletedEvent` still owns that check, so a body whose
- * metadata happens to carry an intent id is routed, never trusted.
+ * metadata/mode cross-check immediately after. The event type is read at that same trust
+ * level and for the same reason — to route, never to admit: it can only send a body away
+ * from the grant path, and `parseCheckoutCompletedEvent` still owns the authoritative
+ * check for the body that stays on it.
  */
 function lookupKeysOf(payload: string): CheckoutLookup {
   let raw: unknown;
   try {
     raw = JSON.parse(payload) as unknown;
   } catch {
-    return Object.freeze({ kind: "unparseable" as const });
+    raw = undefined;
   }
-  const object = asRecord(asRecord(asRecord(raw)?.["data"])?.["object"]);
+  const event = asRecord(raw);
+  if (event === undefined) {
+    return unreadable(
+      "The verified body is not a JSON event object, so no persisted price snapshot can be bound to it.",
+    );
+  }
+  const eventType = event["type"];
+  if (typeof eventType !== "string" || eventType.length === 0) {
+    return unreadable(
+      "The verified event carries no type, so which path owes it work cannot be decided; Stripe does not send such a body.",
+    );
+  }
+  if (eventType !== HANDLED_EVENT_TYPE) {
+    return Object.freeze({ kind: "unhandledType" as const, eventType });
+  }
+  const object = asRecord(asRecord(event["data"])?.["object"]);
   const metadata = asRecord(object?.["metadata"]);
   const sessionId = asId(object?.["id"]);
   const intentId = asId(metadata?.[CHECKOUT_METADATA_KEYS.intentId]);
@@ -286,10 +319,13 @@ export async function applyCreditPackWebhook(input: {
   if (!verified.ok) return refused(verified.reason, verified.message);
 
   const lookup = lookupKeysOf(verified.value.payload);
-  if (lookup.kind === "unparseable") {
-    return refused(
-      BILLING_REFUSE_REASONS.webhookPayloadInvalid,
-      "The verified body is not a JSON event object, so no persisted price snapshot can be bound to it.",
+  if (lookup.kind === "unreadable") {
+    return refused(BILLING_REFUSE_REASONS.webhookPayloadInvalid, lookup.detail);
+  }
+  if (lookup.kind === "unhandledType") {
+    return ignored(
+      BILLING_REFUSE_REASONS.webhookEventTypeUnsupported,
+      `Webhook event type "${lookup.eventType}" is not handled; only ${HANDLED_EVENT_TYPE} grants credits. Nothing was read or granted, and redelivery would not change that.`,
     );
   }
   if (lookup.kind === "incomplete") {
@@ -332,6 +368,19 @@ export async function applyCreditPackWebhook(input: {
     settlement,
   });
   if (!completion.ok) return settle(completion.reason, completion.message);
+
+  // Whether the ledger owes this completion anything is knowable from the completion
+  // itself, so it is answered before the store is touched. A listing purchase settles on
+  // the revenue-share path; making its acknowledgement wait on a credit account the buyer
+  // may not have provisioned would retry, forever, an event that grants nothing.
+  // `applyCheckoutCompletedGrant` still owns the authoritative refusal for the purposes
+  // that do reach it.
+  if (!checkoutPurposeGrantsCredits(completion.value.purpose)) {
+    return ignored(
+      BILLING_REFUSE_REASONS.webhookEventTypeUnsupported,
+      `A ${completion.value.purpose} completion grants no credits and settles on the revenue-share path, so no ledger was read and redelivery would not change that.`,
+    );
+  }
 
   const found = await attempt(() => input.store.findAccountByUserId(completion.value.userId));
   if (!found.ok) {

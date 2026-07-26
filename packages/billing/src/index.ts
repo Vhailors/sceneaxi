@@ -91,9 +91,11 @@ export {
 
 export {
   CHECKOUT_METADATA_KEYS,
+  CREDIT_GRANTING_CHECKOUT_PURPOSE,
   STRIPE_EVENT_IDEMPOTENCY_PREFIX,
   STRIPE_SIGNATURE_TOLERANCE_SECONDS,
   applyCheckoutCompletedGrant,
+  checkoutPurposeGrantsCredits,
   parseCheckoutCompletedEvent,
   signStripeWebhookPayload,
   verifyStripeWebhookSignature,

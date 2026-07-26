@@ -547,6 +547,22 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     },
   });
 
+  type WebhookEvidence = Parameters<typeof applyCreditPackWebhook>[0]["evidence"];
+
+  /**
+   * An evidence port that fails the test if it is consulted. An event this endpoint owes
+   * no work must be decided from the verified body, not behind a provider read that a
+   * non-completion cannot satisfy.
+   */
+  const unreachableEvidence: WebhookEvidence = Object.freeze({
+    findIntent(): never {
+      throw new Error("the evidence port must not be consulted for an unhandled event type");
+    },
+    retrieveSettlement(): never {
+      throw new Error("the evidence port must not be consulted for an unhandled event type");
+    },
+  });
+
   const webhookStore = () =>
     createInMemoryCreditStore({ accounts: [account("acct-1", "member-1")] as never });
 
@@ -555,6 +571,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     readonly store: ReturnType<typeof webhookStore>;
     readonly secret?: string;
     readonly timestamp?: number;
+    readonly evidence?: WebhookEvidence;
   }) =>
     applyCreditPackWebhook({
       payload: input.payload,
@@ -565,9 +582,38 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       }),
       secret: input.secret ?? TEST_WEBHOOK_SECRET,
       store: input.store,
-      evidence,
+      evidence: input.evidence ?? evidence,
       now: NOW,
     });
+
+  /** A listing completion: signature-verified, intent-bound, and granting no credits. */
+  const { credits: _packCredits, ...listingBase } = INTENT;
+  const LISTING_INTENT = Object.freeze({
+    ...listingBase,
+    intentId: "int_listing_test_abc123456789",
+    purpose: "catalog-listing" as const,
+    itemId: "listing-widget",
+  });
+
+  const listingBody = (eventId: string): string =>
+    eventBody(eventId, {
+      sessionId: "cs_test_listing_1",
+      metadata: {
+        sceneaxiUserId: "member-1",
+        sceneaxiPurpose: "catalog-listing",
+        sceneaxiItemId: LISTING_INTENT.itemId,
+        sceneaxiIntentId: LISTING_INTENT.intentId,
+      },
+    });
+
+  const listingEvidence: WebhookEvidence = Object.freeze({
+    findIntent(intentId: string) {
+      return intentId === LISTING_INTENT.intentId ? LISTING_INTENT : undefined;
+    },
+    retrieveSettlement() {
+      return SETTLEMENT;
+    },
+  });
 
   it("grants the pack's credits through a signature-verified event", async () => {
     const store = webhookStore();
@@ -647,15 +693,18 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     expect(store.entryCount("acct-1")).toBe(0);
   });
 
-  it("acknowledges a signed event type it does not handle instead of asking for retries", async () => {
+  it("acknowledges a signed event type it does not handle without consulting any adapter", async () => {
     // One endpoint receives every event the dashboard is subscribed to. Refusing the ones
     // this path is not built to act on would make Stripe redeliver a condition no
     // redelivery can change, and those permanent failures count against the health of the
-    // same endpoint every real grant depends on.
+    // same endpoint every real grant depends on. The object here is a payment intent, so
+    // its id is a `pi_...` no settlement can ever be retrieved for: the acknowledgement
+    // must come from the verified body, not from an evidence read that happens to answer.
     const store = webhookStore();
     const outcome = await signedCall({
       payload: eventBody("evt_test_other_type", {
         type: "payment_intent.succeeded",
+        sessionId: "pi_test_payment_intent_1",
         metadata: {
           sceneaxiUserId: "member-1",
           sceneaxiPurpose: "credit-pack",
@@ -664,12 +713,55 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
         },
       }),
       store,
+      evidence: unreachableEvidence,
     });
     expect(outcome).toMatchObject({
       ok: true,
       ignored: true,
       reason: "STRIPE_WEBHOOK_EVENT_TYPE_UNSUPPORTED",
     });
+    expect(store.entryCount("acct-1")).toBe(0);
+  });
+
+  it("acknowledges an expired checkout, whose settlement can never exist", async () => {
+    // The reachable half of the same class: an abandoned credit-pack checkout carries the
+    // same session id and the same four SceneAxi keys as the completion, so metadata alone
+    // cannot tell them apart — only the type can. Diagnosing it after the evidence read
+    // would refuse `STRIPE_CHECKOUT_EVIDENCE_MISSING` (503) for a session that was never
+    // paid, and Stripe would retry it until it gave up.
+    const store = webhookStore();
+    const outcome = await signedCall({
+      payload: eventBody("evt_test_expired", { type: "checkout.session.expired" }),
+      store,
+      evidence: {
+        findIntent(intentId: string) {
+          return intentId === INTENT.intentId ? INTENT : undefined;
+        },
+        retrieveSettlement() {
+          return undefined;
+        },
+      },
+    });
+    expect(outcome).toMatchObject({
+      ok: true,
+      ignored: true,
+      reason: "STRIPE_WEBHOOK_EVENT_TYPE_UNSUPPORTED",
+    });
+    expect(store.entryCount("acct-1")).toBe(0);
+  });
+
+  it("still refuses a signed body that carries no event type", async () => {
+    // Acknowledging unhandled types must not become a blanket 2xx for anything unlabelled:
+    // Stripe always states the type, so a body without one is a fault, not a no-op.
+    const store = webhookStore();
+    const payload = JSON.stringify({
+      id: "evt_test_typeless",
+      created: Math.floor(NOW / 1000),
+      livemode: false,
+      data: { object: { id: "cs_test_session_1", metadata: {} } },
+    });
+    const outcome = await signedCall({ payload, store, evidence: unreachableEvidence });
+    expect(outcome).toMatchObject({ ok: false, reason: "STRIPE_WEBHOOK_PAYLOAD_INVALID" });
     expect(store.entryCount("acct-1")).toBe(0);
   });
 
@@ -736,41 +828,30 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     // The reachable half of the same class: a well-formed, signature-verified, intent-bound
     // completion that grants no credits by design. It must mint nothing and must not be
     // retried forever.
-    const { credits: _packCredits, ...listingBase } = INTENT;
-    const listingIntent = Object.freeze({
-      ...listingBase,
-      intentId: "int_listing_test_abc123456789",
-      purpose: "catalog-listing" as const,
-      itemId: "listing-widget",
-    });
-    const payload = eventBody("evt_test_listing", {
-      sessionId: "cs_test_listing_1",
-      metadata: {
-        sceneaxiUserId: "member-1",
-        sceneaxiPurpose: "catalog-listing",
-        sceneaxiItemId: listingIntent.itemId,
-        sceneaxiIntentId: listingIntent.intentId,
-      },
-    });
     const store = webhookStore();
-    const outcome = await applyCreditPackWebhook({
-      payload,
-      signatureHeader: signStripeWebhookPayload({
-        payload,
-        secret: TEST_WEBHOOK_SECRET,
-        timestamp: Math.floor(NOW / 1000),
-      }),
-      secret: TEST_WEBHOOK_SECRET,
+    const outcome = await signedCall({
+      payload: listingBody("evt_test_listing"),
       store,
-      evidence: {
-        findIntent(intentId: string) {
-          return intentId === listingIntent.intentId ? listingIntent : undefined;
-        },
-        retrieveSettlement() {
-          return SETTLEMENT;
-        },
-      },
-      now: NOW,
+      evidence: listingEvidence,
+    });
+    expect(outcome).toMatchObject({
+      ok: true,
+      ignored: true,
+      reason: "STRIPE_WEBHOOK_EVENT_TYPE_UNSUPPORTED",
+    });
+    expect(store.entryCount("acct-1")).toBe(0);
+  });
+
+  it("acknowledges a catalog-listing completion even when the buyer has no credit account", async () => {
+    // Provisioning credit accounts is the deployment's own store's job, so an unprovisioned
+    // buyer is a state this repository cannot fix. Deciding the acknowledgement from the
+    // completion's purpose keeps that state out of the answer: an event owed no credits
+    // must not become a permanent 503 retry because a ledger it never needed was absent.
+    const store = createInMemoryCreditStore();
+    const outcome = await signedCall({
+      payload: listingBody("evt_test_listing_unprovisioned"),
+      store,
+      evidence: listingEvidence,
     });
     expect(outcome).toMatchObject({
       ok: true,
