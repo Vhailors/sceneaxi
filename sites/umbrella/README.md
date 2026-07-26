@@ -61,11 +61,13 @@ repository-root install, so a clean builder must provision both roots
 `@sceneaxi/billing`, and maps their named refusals onto the site refusal registry. It
 implements no identity, no ledger, and no signature check of its own.
 
-The credit-pack list and admin resolution are live on any deployment. Session
-verification, balances, and the hosted checkout redirect still need provider handles —
-Better Auth, Neon, and the Stripe API, which ADR 0021 keeps outside this repository — and
-arrive through `umbrellaPlaneHandles()` in that same file. Until they do, those surfaces
-refuse with named reasons rather than showing an invented session, balance, or checkout.
+The credit-pack list and admin resolution are live on any deployment — the pack catalog
+is read from a bundled module rather than a file, so it survives serverless output
+tracing. Session verification, balances, and the hosted checkout redirect still need
+provider handles — Better Auth, Neon, and the Stripe API, which ADR 0021 keeps outside
+this repository — and arrive through `umbrellaPlaneHandles()` in that same file. Until
+they do, those surfaces refuse with named reasons rather than showing an invented
+session, balance, or checkout, and `/pricing` shows prices without a Buy control.
 `docs/websites-deploy.md` has the remaining activation steps and the env var list.
 
 `SCENEAXI_SITE_EDITOR_PREVIEW=1` grants a banner-marked editor preview so the

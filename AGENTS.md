@@ -120,8 +120,16 @@ implements no identity, no ledger, and no signature check. Provider clients (Bet
 Neon, Stripe API) stay outside the repo per ADR 0021 and arrive through the one
 `umbrellaPlaneHandles()` function; while they are absent every dependent surface refuses
 by name and `IDENTITY_SESSION_ABSENT` means signed-out, not broken. Catalogs read identity
-through the same site-kit port with no second auth stack, and the matrix denies them both
-identity packages. The wiring invariants and the six acceptance properties are proven in
+through the same site-kit port with no second auth stack — the storefront plane is
+`packages/site-kit/src/catalog-identity.ts`, one implementation both catalogs re-export —
+and the matrix denies them both identity packages. Two rules the sites tier cannot bend:
+the credit-pack catalog is loaded from a bundled module (`credit-packs.data.ts`, held in
+lockstep with the contract fixture by `pnpm check:contracts`), never a runtime file read a
+serverless bundle may not trace; and checkout redirect URLs come only from
+`NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN` via `resolveCheckoutRedirectOrigin`, never from a
+request `Host`. Credit accounts are provisioned by the deployment's own `CreditStore`, not
+by any migration or code in this repository — an absent account refuses, and is never
+invented. The wiring invariants and the six acceptance properties are proven in
 `tests/sites/identity-plane-wiring.test.ts` — extend it, and the matrix cases in
 `tests/boundary/injected-site-violations.test.ts`, when touching any of this.
 

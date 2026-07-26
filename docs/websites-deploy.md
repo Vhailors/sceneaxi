@@ -66,7 +66,7 @@ set them *before* deploying and redeploy after changing one.
 | `STRIPE_SECRET_KEY` | umbrella | captain | credit-pack checkout | **TEST** key (`sk_test_…`) only in this wave |
 | `STRIPE_WEBHOOK_SECRET` | umbrella | captain | credit grants | signing secret for `POST /api/stripe/webhook`; verification is owned by `@sceneaxi/billing`. Absent means the endpoint refuses `STRIPE_WEBHOOK_SECRET_MISSING` rather than accepting an unsigned event |
 | `SCENEAXI_BILLING_MODE` | umbrella | this ship | optional | `test` when unset; `live` still refuses without explicit live authorization |
-| `NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN` | both catalogs | this ship | editor deep links | https `*.vercel.app` umbrella origin; a missing or non-https value makes the catalog refuse to render the link |
+| `NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN` | all three | this ship | editor deep links, checkout redirects | https `*.vercel.app` umbrella origin; a missing or non-https value makes the catalog refuse to render the link. On the umbrella it is also the **only** source of the checkout success/cancel URLs — they are never derived from the request's `Host`, and a checkout POST arriving on any other origin refuses `BILLING_CHECKOUT_ORIGIN_UNTRUSTED` |
 | `NEXT_PUBLIC_SCENEAXI_GAME_CATALOG_ORIGIN` | umbrella | this ship | optional | family cross-link |
 | `NEXT_PUBLIC_SCENEAXI_WEB_CATALOG_ORIGIN` | umbrella | this ship | optional | family cross-link |
 | `SCENEAXI_SITE_EDITOR_PREVIEW` | umbrella | captain | optional | `1` grants a banner-marked editor preview while this site is unwired to the identity plane; absent means the editor refuses. Server-side only; a client value is ignored |
@@ -98,7 +98,8 @@ real charges on its own.
 2. Create the three Vercel projects on one team with the settings above.
 3. Set the environment variables per project (Production scope).
 4. Deploy each project; record its `*.vercel.app` production URL.
-5. Set `NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN` on both catalogs to the umbrella URL, and
+5. Set `NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN` on **all three** projects to the umbrella
+   URL — the umbrella needs its own canonical origin for checkout redirects — and
    optionally the two catalog origins on the umbrella, then **redeploy** those projects —
    these are build-time values.
 6. Run the verification below and record the output.
@@ -179,7 +180,8 @@ ADR 0021 keeps the provider clients — Better Auth, the Neon client, the Stripe
 
 | Capability | State | Why |
 |---|---|---|
-| Credit-pack list on `/pricing` | **live** | read from the committed contract fixture; needs no provider |
+| Credit-pack list on `/pricing` | **live** | read from the committed contract fixture's bundled module (`packages/schemas/src/credit-packs.data.ts`, held in lockstep by `pnpm check:contracts`); needs no provider and no traced file |
+| The **Buy** control on `/pricing` | hidden until billing is wired | prices stay informational rather than posting to a checkout that structurally refuses |
 | Admin identity (`SCENEAXI_ADMIN_EMAIL`) | **live** | resolved by `@sceneaxi/auth` from the environment |
 | Checkout intent, starter grant, webhook verification | **live as behaviour** | implemented in-repo and gate-tested |
 | Session verification on `/account`, `/editor` | refuses `IDENTITY_PLANE_NOT_WIRED` | needs an `IdentityPort` over a real store |
@@ -201,7 +203,15 @@ than inventing a session, balance, or checkout.
    Neon-backed `CreditStore`, a `CheckoutSessionAdapter` that turns an intent into a
    hosted Stripe **test** checkout URL, and a `CheckoutEvidencePort` that reads the
    persisted intent and the Stripe settlement. No other site file changes.
-5. Run that vertical's Neon migrations against the shared database.
+5. Run that vertical's Neon migrations against the shared database. The migrations create
+   the `credit_accounts` table and insert **no rows**, and `CreditStore` exposes no
+   account-creation method, so **provisioning a credit account per user is that store
+   implementation's job** — it belongs in step 4's Neon-backed `CreditStore`, alongside
+   sign-up. Nothing in this repository can create one: a site refuses
+   `CREDITS_PLANE_UNAVAILABLE` rather than inventing the account it failed to find, so
+   until the store provisions accounts, `/account` cannot show a balance, the 100-credit
+   starter grant never runs, and a paid webhook grant refuses `CREDIT_LEDGER_UNAVAILABLE`
+   and is retried by Stripe.
 6. Register the webhook endpoint `POST /api/stripe/webhook` in the Stripe **test**
    dashboard for `checkout.session.completed`, and set `STRIPE_WEBHOOK_SECRET` to the
    signing secret it issues.

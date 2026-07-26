@@ -67,6 +67,8 @@ export const SITE_REFUSALS = Object.freeze({
     "Live billing mode requires an explicit captain authorization. Test mode is the default.",
   BILLING_URL_INSECURE: "Checkout success and cancel URLs must be https.",
   BILLING_CHECKOUT_REQUEST_INVALID: "The checkout request is malformed.",
+  BILLING_CHECKOUT_ORIGIN_UNTRUSTED:
+    "The request origin is not the umbrella origin this deployment is configured with, so no checkout redirect is built from it.",
   BILLING_ADAPTER_OUTPUT_INVALID:
     "The billing adapter returned a value that is not a valid checkout handoff.",
 

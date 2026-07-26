@@ -889,6 +889,47 @@ if (creditPacksSurface.ready) {
       fail("docs/auth-credits.md: does not name the canonical credit pack fixture path");
     }
   }
+
+  // The bundled twin the deployable sites load must carry exactly this catalog. A
+  // serverless bundle is not guaranteed to trace the fixture file into the
+  // deployment, so the module is what actually ships — and it may never drift from
+  // the contract it copies.
+  const creditPacksModulePath = join(
+    root,
+    "packages",
+    "schemas",
+    "src",
+    "credit-packs.data.ts",
+  );
+  const creditPacksModule = load(creditPacksModulePath, false);
+  if (creditPacksModule === loadFailed) {
+    fail(
+      "packages/schemas/src/credit-packs.data.ts: the bundled credit pack catalog is missing",
+    );
+  } else {
+    const frozen = creditPacksModule.indexOf("Object.freeze(");
+    const start = frozen === -1 ? -1 : creditPacksModule.indexOf("{", frozen);
+    const end = creditPacksModule.lastIndexOf("}");
+    let bundled;
+    if (start !== -1 && end > start) {
+      try {
+        bundled = JSON.parse(creditPacksModule.slice(start, end + 1));
+      } catch {
+        bundled = undefined;
+      }
+    }
+    if (bundled === undefined) {
+      fail(
+        "packages/schemas/src/credit-packs.data.ts: the bundled credit pack catalog is not a parseable JSON literal",
+      );
+    } else if (
+      JSON.stringify(bundled, null, 2) !== JSON.stringify(creditPacksFixtures, null, 2)
+    ) {
+      fail(
+        "packages/schemas/src/credit-packs.data.ts: bundled credit pack catalog does not exactly match credit-packs.fixtures.json",
+      );
+    }
+  }
 }
 
 // --- entitlement matrix + docs/auth-credits.md lockstep (sceneaxi#99) ---
@@ -1187,5 +1228,5 @@ if (errors.length > 0) {
   process.exit(1);
 }
 console.log(
-  `contract check OK — ${authoringJobCount} shared authoring jobs valid, doc table matches, E1+E2 bound to one list; plugin capability registry 1.0.0 seed pinned to ${REGISTRY_SEED_ENTRIES.length} reviewed capability and schema-locked; plugin-manifest inert example schema-locked; ${creditPackCount} test-mode credit packs schema-locked and doc-bound; ${entitlementCapabilityCount} entitlement capabilities schema-locked, free path intact, doc-bound; ${listingCount} test-mode catalog listings schema-locked, all price modes covered, doc-bound; ${openPathProfileCount} open-path policy rows schema-locked, no shipping claim, Kids refuse-only, doc-bound`,
+  `contract check OK — ${authoringJobCount} shared authoring jobs valid, doc table matches, E1+E2 bound to one list; plugin capability registry 1.0.0 seed pinned to ${REGISTRY_SEED_ENTRIES.length} reviewed capability and schema-locked; plugin-manifest inert example schema-locked; ${creditPackCount} test-mode credit packs schema-locked, doc-bound, and bundled-module-bound; ${entitlementCapabilityCount} entitlement capabilities schema-locked, free path intact, doc-bound; ${listingCount} test-mode catalog listings schema-locked, all price modes covered, doc-bound; ${openPathProfileCount} open-path policy rows schema-locked, no shipping claim, Kids refuse-only, doc-bound`,
 );

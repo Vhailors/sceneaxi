@@ -18,6 +18,7 @@ import {
 
 const FIXTURES_REL = "packages/schemas/contracts/credit-packs.fixtures.json";
 const DOC_REL = "docs/auth-credits.md";
+const MODULE_REL = "packages/schemas/src/credit-packs.data.ts";
 
 interface PackCatalog {
   schemaVersion: number;
@@ -53,8 +54,29 @@ describe("contract check — injected credit-pack drift", () => {
     const res = runCheck(fx, "check-contracts.mjs");
     expect(res.stderr).toBe("");
     expect(res.stdout).toContain("contract check OK");
-    expect(res.stdout).toContain("credit packs schema-locked and doc-bound");
+    expect(res.stdout).toContain(
+      "credit packs schema-locked, doc-bound, and bundled-module-bound",
+    );
     expect(res.status).toBe(0);
+  });
+
+  it("fails when the bundled module drifts from the fixture", () => {
+    const module = readFileSync(join(fx, MODULE_REL), "utf8");
+    writeTo(fx, MODULE_REL, module.replace('"credits": 100', '"credits": 101'));
+
+    const res = runCheck(fx, "check-contracts.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "bundled credit pack catalog does not exactly match credit-packs.fixtures.json",
+    );
+  });
+
+  it("fails when the bundled module stops being a parseable catalog literal", () => {
+    writeTo(fx, MODULE_REL, "export const CREDIT_PACK_CATALOG_DATA: unknown = undefined;\n");
+
+    const res = runCheck(fx, "check-contracts.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("is not a parseable JSON literal");
   });
 
   it("fails when a pack changes in the fixture but not in the doc table", () => {

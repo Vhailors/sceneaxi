@@ -14,9 +14,10 @@ opened lives here.
 |---|---|
 | `refusals.ts` | the named refusal registry; every fail-closed path refuses with a key from it |
 | `ports.ts` | fail-closed identity / credits / billing ports — the single seam with the identity plane |
+| `catalog-identity.ts` | the storefront identity plane both catalogs read through, pinned to the `site` surface; a reader of identity, never an issuer |
 | `entitlement.ts` | free-vs-paid capability matrix, Minimum E2 editor entitlement |
 | `catalog.ts` | catalog view models, dual price, creator share, fail-closed purchase intent |
-| `deep-link.ts` | catalog → umbrella editor deep-link contract |
+| `deep-link.ts` | catalog → umbrella editor deep-link contract, and the one definition of the configured umbrella origin — including the checkout redirect origin, which is never taken from a request `Host` |
 | `web-editor.ts` | bounded Minimum E2 web editor session over `@sceneaxi/authoring-core` |
 | `live-open.ts` | the public live open path: which committed fixture is opened, how it is placed by `composeScene()`, and the honest vocabulary a page may use for the presentation core |
 

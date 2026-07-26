@@ -129,6 +129,7 @@ export {
   validateCreditPackCatalog,
   validateStripeCustomerLink,
 } from "./billing.js";
+export { CREDIT_PACK_CATALOG_DATA } from "./credit-packs.data.js";
 export type {
   BillingMode,
   BillingRefuseCode,

@@ -124,10 +124,17 @@ export default async function AccountPage() {
               ? "No session is present."
               : resolved.identity.message}
           </p>
-          {!signedOut && <p>{IDENTITY_PLANE_PENDING_NOTE}</p>}
+          {!signedOut && (
+            <>
+              <p>{IDENTITY_PLANE_PENDING_NOTE}</p>
+              <p>
+                The wiring steps and the exact environment variables are documented in{" "}
+                <code>{IDENTITY_PLANE_DOC}</code>.
+              </p>
+            </>
+          )}
           <p>
-            The wiring steps and the exact environment variables are documented in{" "}
-            <code>{IDENTITY_PLANE_DOC}</code>. Everything free stays available now:{" "}
+            Everything free stays available now:{" "}
             <a href="/engine">the engine SDK download</a>, <a href="/docs">the docs</a>,
             and browsing either catalog.
           </p>

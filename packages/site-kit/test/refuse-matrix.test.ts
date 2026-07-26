@@ -28,6 +28,7 @@ import {
   parseEditorDeepLinkParams,
   readEngineSdkOffer,
   reconstructStarter,
+  resolveCheckoutRedirectOrigin,
   showSiteListing,
   webEditorStarterArtifact,
 } from "@sceneaxi/site-kit";
@@ -228,6 +229,11 @@ const CASES: Readonly<Record<SiteRefusalReason, () => Promise<unknown> | unknown
       cancelUrl: "https://example.vercel.app/cancel",
       idempotencyKey: "idem-1",
     }),
+  BILLING_CHECKOUT_ORIGIN_UNTRUSTED: () =>
+    resolveCheckoutRedirectOrigin(
+      { NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN: "https://umbrella.vercel.app" },
+      "https://attacker.example",
+    ),
   BILLING_ADAPTER_OUTPUT_INVALID: () =>
     createBillingPlane({
       adapter: {

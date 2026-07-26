@@ -1,4 +1,4 @@
-import { CREATOR_SHARE_ROUNDING_NOTE, CREATOR_SHARE_RULE, SITE_STARTER_CREDIT_ALLOTMENT } from "@sceneaxi/site-kit";
+import { CREATOR_SHARE_ROUNDING_NOTE, CREATOR_SHARE_RULE, SITE_REFUSALS, SITE_STARTER_CREDIT_ALLOTMENT } from "@sceneaxi/site-kit";
 import { IDENTITY_PLANE_PENDING_NOTE, createUmbrellaIdentityPlane } from "../../lib/identity-plane.js";
 import { CapabilityTable } from "../_components/capability-table.js";
 import { StatePanel } from "../_components/state-panel.js";
@@ -60,11 +60,17 @@ export default async function PricingPage() {
                       {(pack.unitAmount / 100).toFixed(2)} {pack.currency.toUpperCase()}
                     </td>
                     <td>
-                      <form method="post" action="/api/checkout">
-                        <input type="hidden" name="packId" value={pack.packId} />
-                        <input type="hidden" name="attempt" value={crypto.randomUUID()} autoComplete="off" />
-                        <button className="button" type="submit">Buy</button>
-                      </form>
+                      {plane.wired.billing ? (
+                        <form method="post" action="/api/checkout">
+                          <input type="hidden" name="packId" value={pack.packId} />
+                          <input type="hidden" name="attempt" value={crypto.randomUUID()} autoComplete="off" />
+                          <button className="button" type="submit">Buy</button>
+                        </form>
+                      ) : (
+                        <span className="button" aria-disabled="true" title={SITE_REFUSALS.BILLING_PLANE_NOT_WIRED}>
+                          Not for sale yet
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -77,6 +83,13 @@ export default async function PricingPage() {
               deployment. Live charges need a separate captain decision, and the billing
               port refuses live mode without explicit authorization.
             </p>
+            {!plane.wired.billing && (
+              <p>
+                Buying is not open on this deployment: the hosted checkout round-trip is
+                not wired, so these prices are shown for information and no purchase is
+                offered. {IDENTITY_PLANE_PENDING_NOTE}
+              </p>
+            )}
           </StatePanel>
         </>
       ) : (

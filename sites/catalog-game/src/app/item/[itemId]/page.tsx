@@ -28,9 +28,13 @@ export default async function ItemPage({
   const link = editorLinkFor(process.env, listing.itemId);
   // The storefront reads identity through the shared site-kit port and holds no auth
   // stack of its own; unwired, this is a named refusal rather than an invented viewer.
+  // The cookie is read only when an adapter could act on it: `readSessionToken()` is a
+  // request API, so reading it unconditionally would opt every listing page out of the
+  // route cache to produce output that cannot vary.
+  const plane = createCatalogIdentityPlane();
   const viewer = await resolveCatalogViewer(
-    createCatalogIdentityPlane(),
-    await readSessionToken(),
+    plane,
+    plane.wired ? await readSessionToken() : null,
   );
   const { item } = listing;
 

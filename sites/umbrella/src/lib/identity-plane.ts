@@ -426,8 +426,12 @@ async function readLedgerState(
   userId: string,
 ): Promise<SiteResult<LedgerState>> {
   const account = await store.findAccountByUserId(userId);
-  // No account is not a zero balance: the account is provisioned by the identity
-  // plane's own migration, so its absence means the balance is unknown.
+  // No account is not a zero balance. Nothing in this repository provisions a credit
+  // account: the schema creates the table and inserts no row, and `CreditStore` exposes
+  // no account-creation method, so provisioning belongs to the deployment's own store
+  // implementation — the same one `umbrellaPlaneHandles()` supplies, and a named step in
+  // `docs/websites-deploy.md`. A site may not invent the account it failed to find, so
+  // an absent one means the balance is unknown and every dependent surface refuses.
   if (account === undefined) return refuse("CREDITS_PLANE_UNAVAILABLE");
   const state = loadLedgerState(account, await store.listEntries(account.accountId));
   if (!state.ok) return refuse(siteReasonForBillingReason(state.reason, "credits"));
