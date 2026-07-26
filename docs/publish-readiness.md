@@ -110,7 +110,7 @@ claim a guarantee the gate does not enforce.
 | `profile-core-pin` | Each profile's `sceneaxi.corePin` equals the plan pin and matches the `corePin` literal in its seam source. |
 | `sdk-covers-exports` | Every export target of every engine-SDK package is in the pinned SDK file list, so the archive is self-consistent. |
 | `sdk-consumer-packages` | Every documented consumer package ships in the SDK archive, and no Kids file is pinned into it. |
-| `sdk-output-ignored` | Every output directory `scripts/build-engine-sdk.mjs` is actually pointed at — derived from the `--out` of each invocation in a manifest script or CI workflow, resolved against the directory that declares it — is git-ignored, so a stale archive can never be committed. Moving a `--out` path does not escape the check. |
+| `sdk-output-ignored` | Every output directory `scripts/build-engine-sdk.mjs` is actually pointed at — derived from the `--out` of each invocation in a manifest script or CI workflow, resolved against the directory that declares it — is ignored by the **repository-root `.gitignore`**, so a stale archive cannot be committed through that path. Moving a `--out` path does not escape the check. A nested `.gitignore` deeper in the tree is deliberately out of scan, so a re-inclusion there (`!engine-sdk/`) is not proven against; the repository root file is the only one in the tree. |
 | `docs-consumer-surface` | Every package the consumer contract documents exists and declares a root export. |
 | `docs-export-namespaces` | The documented root exports and subpath namespaces exactly cover the real export maps. |
 | `docs-version-plan` | The version table above names every workspace package and matches its version, release group, and core pin. |

@@ -589,6 +589,9 @@ function checkNoRegistryPublish(sources) {
  * directories to prove that of are the ones `build-engine-sdk.mjs` is actually pointed
  * at — including the one the umbrella site writes from its own `prebuild`/`predev`
  * (`docs/websites-deploy.md`) — so moving a `--out` path cannot outrun this check.
+ * The bound is the repository-root `.gitignore`, the only one in the tree: a nested
+ * `.gitignore` re-inclusion deeper down is out of scan, as `docs/publish-readiness.md`
+ * states in the `sdk-output-ignored` row.
  */
 function checkSdkOutputIgnored(sources) {
   const gitignore = existsSync(join(root, ".gitignore"))
