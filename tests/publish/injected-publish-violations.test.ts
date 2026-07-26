@@ -296,8 +296,60 @@ describe("publish-ready check — injected violations", () => {
     const res = runCheck(fx, CHECK);
     expect(res.status).toBe(1);
     expect(res.stderr).toContain(
-      "[sdk-output-ignored] .gitignore does not ignore 'sites/*/public/engine-sdk/'",
+      "[sdk-output-ignored] .gitignore does not ignore 'sites/umbrella/public/engine-sdk/'",
     );
+  });
+
+  it("fails when an SDK build is pointed at a directory that is not git-ignored", () => {
+    // The output directories are derived from the real `--out` flags, so moving one to an
+    // un-ignored path is refused instead of silently leaving a committable archive.
+    editManifest(fx, "sites/umbrella/package.json", (m) => {
+      m.scripts = {
+        ...(m.scripts as Record<string, string>),
+        "build:sdk": "node ../../scripts/build-engine-sdk.mjs --out public/downloads",
+      };
+    });
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "[sdk-output-ignored] .gitignore does not ignore 'sites/umbrella/public/downloads/', the SDK output directory sites/umbrella/package.json builds into",
+    );
+  });
+
+  it("fails when no SDK build invocation is left to derive an output directory from", () => {
+    // An empty surface must refuse: with nothing pointed at the build script, the check
+    // would otherwise pass by having nothing to prove.
+    editManifest(fx, "package.json", (m) => {
+      const scripts = { ...(m.scripts as Record<string, string>) };
+      delete scripts["build:sdk"];
+      m.scripts = scripts;
+    });
+    editManifest(fx, "sites/umbrella/package.json", (m) => {
+      const scripts = { ...(m.scripts as Record<string, string>) };
+      delete scripts["build:sdk"];
+      delete scripts.prebuild;
+      delete scripts.predev;
+      m.scripts = scripts;
+    });
+    rmSync(join(fx, ".github/workflows/engine-sdk.yml"));
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "[sdk-output-ignored] no build-engine-sdk.mjs invocation found in any manifest script or workflow",
+    );
+  });
+
+  it("keeps reporting structural failures when a required doc is deleted", () => {
+    // A missing doc disables only the checks that read it; hiding every other refusal
+    // behind it would report one problem and conceal the rest.
+    rmSync(join(fx, "docs/publish-readiness.md"));
+    editManifest(fx, "packages/schemas/package.json", (m) => {
+      m.private = false;
+    });
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("[docs-checklist-ids] required doc 'docs/publish-readiness.md' is missing");
+    expect(res.stderr).toContain("[manifest-private] @sceneaxi/schemas is not private");
   });
 
   it("fails when a profile manifest pin and its seam pin disagree", () => {

@@ -82,11 +82,13 @@ const REGISTRY_COMMAND_HEADS = Object.freeze(["npm", "pnpm", "yarn", "bun", "npx
 const REGISTRY_PUBLISH_VERBS = Object.freeze(["publish", "unpublish", "dist-tag", "deprecate"]);
 
 /**
- * SDK build output must never be committed, so a stale archive cannot ship. Every
- * directory `scripts/build-engine-sdk.mjs` is pointed at belongs here, including the one
- * the umbrella site writes from its own `prebuild`/`predev` (`docs/websites-deploy.md`).
+ * The SDK build script, and the output directory it falls back to when an invocation
+ * passes no `--out`. Both mirror `scripts/build-engine-sdk.mjs` exactly, because the
+ * directories that must stay git-ignored are derived from real invocations rather than
+ * listed by hand.
  */
-const SDK_OUTPUT_IGNORES = Object.freeze(["dist-sdk/", "dist-sdk-again/", "sites/*/public/engine-sdk/"]);
+const SDK_BUILD_SCRIPT = "build-engine-sdk.mjs";
+const SDK_DEFAULT_OUT = "dist-sdk";
 
 /** The consumer-facing docs this check reads as machine-readable declarations. */
 const CONSUMER_DOC = "docs/web-consumer.md";
@@ -223,19 +225,101 @@ function namespacePattern(pattern) {
  */
 function registryPublishCommands(text) {
   const found = new Set();
+  for (const tokens of shellCommands(text)) {
+    const head = tokens.findIndex((token) => REGISTRY_COMMAND_HEADS.includes(token));
+    if (head < 0) continue;
+    const verb = tokens.slice(head + 1).find((token) => REGISTRY_PUBLISH_VERBS.includes(token));
+    if (verb !== undefined) found.add(`${tokens[head]} ${verb}`);
+  }
+  return [...found];
+}
+
+/**
+ * Split script or workflow text into individual commands, each as a token list.
+ *
+ * Shell line continuations are folded away first, because a command wrapped across lines
+ * is one command and splitting on raw newlines would separate its head from its
+ * arguments.
+ *
+ * @returns {string[][]} one token list per command found
+ */
+function shellCommands(text) {
+  const commands = [];
   for (const line of text.replace(/\\[ \t]*\r?\n/g, " ").split("\n")) {
     for (const command of line.split(/[;&|()`]+/)) {
       const tokens = command
         .split(/\s+/)
         .map((token) => token.replace(/^["']+|["']+$/g, ""))
         .filter((token) => token.length > 0);
-      const head = tokens.findIndex((token) => REGISTRY_COMMAND_HEADS.includes(token));
-      if (head < 0) continue;
-      const verb = tokens.slice(head + 1).find((token) => REGISTRY_PUBLISH_VERBS.includes(token));
-      if (verb !== undefined) found.add(`${tokens[head]} ${verb}`);
+      if (tokens.length > 0) commands.push(tokens);
     }
   }
-  return [...found];
+  return commands;
+}
+
+/**
+ * The `--out` targets every `build-engine-sdk.mjs` invocation writes into, as
+ * repository-relative directories.
+ *
+ * Derived rather than listed, because the guarantee is "every directory the SDK build is
+ * pointed at is git-ignored" — a hand-kept list of `.gitignore` lines goes stale the
+ * moment a `--out` path moves. Only the space-separated `--out <dir>` form is read,
+ * because that is the only form the build script itself parses; anything else falls back
+ * to its default output directory here exactly as it does there.
+ *
+ * Each target resolves against the directory that declares it, matching the build
+ * script's "resolve against the caller's cwd" behaviour: a manifest script runs in its
+ * own package directory, and a workflow step runs at the repository root.
+ *
+ * @returns {Array<[string, string]>} `[declaring source, repo-relative output dir]` pairs
+ */
+function sdkOutputDirs(sources) {
+  const outputs = new Map();
+  for (const [label, text] of sources) {
+    const base = label.includes("/") && label.endsWith("/package.json") ? dirname(label) : ".";
+    for (const tokens of shellCommands(text)) {
+      if (!tokens.some((token) => token === SDK_BUILD_SCRIPT || token.endsWith(`/${SDK_BUILD_SCRIPT}`))) continue;
+      const flag = tokens.indexOf("--out");
+      const declared = flag >= 0 ? (tokens[flag + 1] ?? SDK_DEFAULT_OUT) : SDK_DEFAULT_OUT;
+      const abs = resolve(root, base, declared);
+      // An output outside the repository cannot be committed, so it is not this check's
+      // business; everything inside it must be ignored.
+      if (!containsPath(root, abs)) continue;
+      const dir = relative(root, abs);
+      if (!outputs.has(dir)) outputs.set(dir, label);
+    }
+  }
+  return [...outputs].map(([dir, label]) => [label, dir]);
+}
+
+/**
+ * Whether `.gitignore` ignores a repository-relative directory.
+ *
+ * A pattern with no slash matches any path segment at any depth; an anchored pattern
+ * matches the directory or any of its parents. A negation is treated as un-ignoring
+ * whatever it matches, without modelling gitignore's last-match-wins ordering, so an
+ * ambiguous declaration fails this check rather than passing it.
+ */
+function gitignoreIgnores(lines, dir) {
+  const segments = dir.split("/");
+  const ancestors = segments.map((_, index) => segments.slice(0, index + 1).join("/"));
+  let ignored = false;
+  let unignored = false;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed === "" || trimmed.startsWith("#")) continue;
+    const negated = trimmed.startsWith("!");
+    const body = (negated ? trimmed.slice(1) : trimmed).replace(/^\/+/, "").replace(/\/+$/, "");
+    if (body === "") continue;
+    const pattern = namespacePattern(body);
+    const hit = body.includes("/")
+      ? ancestors.some((ancestor) => pattern.test(ancestor))
+      : segments.some((segment) => pattern.test(segment));
+    if (!hit) continue;
+    if (negated) unignored = true;
+    else ignored = true;
+  }
+  return ignored && !unignored;
 }
 
 // --- workspace manifests ----------------------------------------------------------
@@ -461,36 +545,69 @@ function checkRootManifest(rootManifest) {
   checkPublishRules(`${rootManifest.name ?? "package.json"} (repository root)`, rootManifest);
 }
 
-function checkNoRegistryPublish(manifests, rootManifest) {
+/**
+ * Every place in the repository that can run a command: the root manifest scripts, each
+ * workspace manifest's scripts, and every CI workflow body.
+ *
+ * One collector, because the publish scan and the SDK-output check ask two questions of
+ * the same population — what can reach a registry, and what the SDK build is pointed at.
+ *
+ * @returns {Array<[string, string]>} `[declaring file, command text]` pairs
+ */
+function commandSources(manifests, rootManifest) {
+  const sources = [["package.json", Object.values(rootManifest.scripts ?? {}).join("\n")]];
+  for (const { rel, json } of manifests.values()) {
+    sources.push([`${rel}/package.json`, Object.values(json.scripts ?? {}).join("\n")]);
+  }
+  const workflowDir = join(root, ".github/workflows");
+  if (existsSync(workflowDir)) {
+    for (const entry of readdirSync(workflowDir).sort()) {
+      if (!/\.ya?ml$/.test(entry)) continue;
+      sources.push([`.github/workflows/${entry}`, readFileSync(join(workflowDir, entry), "utf8")]);
+    }
+  }
+  return sources;
+}
+
+function checkNoRegistryPublish(sources) {
   if (PUBLISH_PLAN.registryPublishAuthorized) {
     fail("no-registry-publish", "PUBLISH_PLAN.registryPublishAuthorized is true, which no captain decision grants");
     return;
   }
-  const commandSources = [["package.json", Object.values(rootManifest.scripts ?? {}).join("\n")]];
-  for (const { rel, json } of manifests.values()) {
-    commandSources.push([`${rel}/package.json`, Object.values(json.scripts ?? {}).join("\n")]);
-  }
-  const workflowDir = join(root, ".github/workflows");
-  if (!existsSync(workflowDir)) {
+  if (!existsSync(join(root, ".github/workflows"))) {
     fail("no-registry-publish", ".github/workflows is missing — CI cannot be proven publish-free");
-  } else {
-    for (const entry of readdirSync(workflowDir).sort()) {
-      if (!/\.ya?ml$/.test(entry)) continue;
-      commandSources.push([`.github/workflows/${entry}`, readFileSync(join(workflowDir, entry), "utf8")]);
-    }
   }
-  for (const [label, text] of commandSources) {
+  for (const [label, text] of sources) {
     for (const command of registryPublishCommands(text)) {
       fail("no-registry-publish", `${label} can run a registry publish (${command}) — no publish authority exists`);
     }
   }
 }
 
-function checkSdkOutputIgnored() {
-  const gitignore = existsSync(join(root, ".gitignore")) ? readFileSync(join(root, ".gitignore"), "utf8") : "";
-  for (const ignored of SDK_OUTPUT_IGNORES) {
-    if (!gitignore.split("\n").some((line) => line.trim() === ignored)) {
-      fail("sdk-output-ignored", `.gitignore does not ignore '${ignored}' — a built archive must never be committed`);
+/**
+ * SDK build output must never be committed, so a stale archive cannot ship. The
+ * directories to prove that of are the ones `build-engine-sdk.mjs` is actually pointed
+ * at — including the one the umbrella site writes from its own `prebuild`/`predev`
+ * (`docs/websites-deploy.md`) — so moving a `--out` path cannot outrun this check.
+ */
+function checkSdkOutputIgnored(sources) {
+  const gitignore = existsSync(join(root, ".gitignore"))
+    ? readFileSync(join(root, ".gitignore"), "utf8").split("\n")
+    : [];
+  const outputs = sdkOutputDirs(sources);
+  if (outputs.length === 0) {
+    fail(
+      "sdk-output-ignored",
+      `no ${SDK_BUILD_SCRIPT} invocation found in any manifest script or workflow — refusing to pass on an empty surface`,
+    );
+    return;
+  }
+  for (const [label, dir] of outputs) {
+    if (!gitignoreIgnores(gitignore, dir)) {
+      fail(
+        "sdk-output-ignored",
+        `.gitignore does not ignore '${dir}/', the SDK output directory ${label} builds into — a built archive must never be committed`,
+      );
     }
   }
 }
@@ -722,10 +839,14 @@ function checkChecklistDoc() {
  */
 export function checkPublishReady() {
   errors.length = 0;
+  // A missing doc disables only the checks that read it. Returning here instead would
+  // hide every structural failure in the tree behind one line, which is exactly what
+  // `guard` exists to prevent.
+  const missingDocs = new Set();
   for (const [doc, id] of REQUIRED_DOCS) {
     if (!existsSync(join(root, doc))) {
+      missingDocs.add(doc);
       errors.push(`[${id}] required doc '${doc}' is missing`);
-      return [...errors];
     }
   }
   let rootManifest;
@@ -744,13 +865,18 @@ export function checkPublishReady() {
   }
   guard("manifest-hygiene", () => checkRootManifest(rootManifest));
   guard("manifest-hygiene", () => checkManifests(manifests));
-  guard("no-registry-publish", () => checkNoRegistryPublish(manifests, rootManifest));
-  guard("sdk-output-ignored", () => checkSdkOutputIgnored());
+  const sources = guard("no-registry-publish", () => commandSources(manifests, rootManifest)) ?? [];
+  guard("no-registry-publish", () => checkNoRegistryPublish(sources));
+  guard("sdk-output-ignored", () => checkSdkOutputIgnored(sources));
   guard("profile-core-pin", () => checkProfileCorePins(manifests));
-  const consumerPackages = guard("docs-consumer-surface", () => checkConsumerDoc(manifests)) ?? [];
-  guard("docs-export-namespaces", () => checkExportNamespaceDoc(manifests, consumerPackages));
-  guard("docs-version-plan", () => checkVersionPlanDoc(manifests));
-  guard("docs-checklist-ids", () => checkChecklistDoc());
+  const consumerPackages = missingDocs.has(CONSUMER_DOC)
+    ? []
+    : (guard("docs-consumer-surface", () => checkConsumerDoc(manifests)) ?? []);
+  if (!missingDocs.has(READINESS_DOC)) {
+    guard("docs-export-namespaces", () => checkExportNamespaceDoc(manifests, consumerPackages));
+    guard("docs-version-plan", () => checkVersionPlanDoc(manifests));
+    guard("docs-checklist-ids", () => checkChecklistDoc());
+  }
   guard("sdk-covers-exports", () => checkSdkCoverage(manifests, consumerPackages));
   return [...errors];
 }
