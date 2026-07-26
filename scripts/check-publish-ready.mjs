@@ -275,8 +275,14 @@ function readManifests() {
   return manifests;
 }
 
-/** Flatten an `exports` map to `[subpath, target]` pairs. */
-function exportEntries(exportsField) {
+/**
+ * Flatten an `exports` map to `[subpath, target]` pairs.
+ *
+ * Exported because the engine-SDK archive test asserts the other half of the same
+ * claim — that every one of these targets actually ships — and two copies of this
+ * walker could disagree about what an export target even is.
+ */
+export function exportEntries(exportsField) {
   const pairs = [];
   const walk = (value, subpath) => {
     if (typeof value === "string") pairs.push([subpath, value]);

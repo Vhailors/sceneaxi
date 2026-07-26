@@ -21,6 +21,9 @@ import {
   collectSdkEntries,
   eligibleSdkFiles,
 } from "../../scripts/build-engine-sdk.mjs";
+// The same walker the publish-ready gate uses, so the archive test and the gate check
+// cannot disagree about what an export target is.
+import { exportEntries } from "../../scripts/check-publish-ready.mjs";
 
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 
@@ -155,21 +158,12 @@ describe("engine SDK archive", () => {
     // `exports`. If a target is missing from the archive, the SDK looks complete and is
     // not — so this asserts against the archive's own entry names, not the pinned list.
     const shipped = new Set(build().entryNames);
-    // An `exports` value may be a conditional object rather than a flat string, so
-    // flatten to every real target instead of assuming one shape.
-    const exportTargets = (value: unknown, subpath = "."): Array<[string, string]> => {
-      if (typeof value === "string") return [[subpath, value]];
-      if (value === null || typeof value !== "object") return [];
-      return Object.entries(value).flatMap(([key, nested]) =>
-        exportTargets(nested, key.startsWith(".") ? key : subpath),
-      );
-    };
     let checked = 0;
     for (const pkgDir of SDK_PACKAGES) {
       const manifest = JSON.parse(readFileSync(join(REPO_ROOT, pkgDir, "package.json"), "utf8")) as {
         exports?: unknown;
       };
-      for (const [subpath, target] of exportTargets(manifest.exports ?? {})) {
+      for (const [subpath, target] of exportEntries(manifest.exports)) {
         const entry = `sceneaxi-engine-sdk/${pkgDir}/${target.replace(/^\.\//, "")}`;
         expect(shipped, `${pkgDir} export '${subpath}' is missing from the archive`).toContain(entry);
         checked += 1;
