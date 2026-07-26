@@ -1,8 +1,9 @@
 # @sceneaxi/billing
 
 Credits and billing for the SceneAxi identity plane: the append-only credit ledger,
-metering, entitlement enforcement, the default-off hosted-AI credit gate, and the Stripe
-test-mode checkout and webhook paths.
+metering, entitlement enforcement, the default-off hosted-AI credit gate, the Stripe
+test-mode checkout and webhook paths, and the bounded fixture-SKU commerce path over the
+committed catalog.
 
 Configuration lives in [`docs/auth-credits.md`](../../docs/auth-credits.md); the
 adapter-boundary decision is ADR 0021.
@@ -96,6 +97,19 @@ and no ledger, so "hosted AI is off here" can never be mistaken for "you cannot 
 prices free-without-account, so it resolves before identity and never reaches metering —
 even for a signed-in caller with a balance. Charging a user who is already paying their own
 provider would be charging twice.
+
+**An offer is a closed enumeration, not a value a caller hands in.** The primitives beneath
+`fixture-commerce.ts` take a `CatalogListing` value, which is right for a mechanism and wrong
+for an offer — a hand-built listing would transact against a SKU nobody published. No
+exported function on that path accepts a listing value: ids are resolved from
+`FIXTURE_COMMERCE_LISTING_IDS` against the committed set, so being in the catalog fixtures is
+not being for sale, and every other listing refuses
+`LISTING_FIXTURE_COMMERCE_NOT_ENABLED` — a distinct fact from `LISTING_UNKNOWN`. Test mode is
+structural for the same reason: nothing there accepts or forwards `liveModeAuthorized`, so a
+live intent has no expression rather than a default. The enumeration, the entitlement row it
+evaluates, the retry ordering it shares with the hosted-AI replay step, and the settlement
+binding that keeps bookkeeping attached to its own verified sale are documented in
+[`docs/auth-credits.md`](../../docs/auth-credits.md) under *Fixture commerce (sceneaxi#138)*.
 
 **Refusals keep their identity.** `BillingRefuseReason` includes `AuthRefuseReason`, so a
 guard refusal surfaces as `KIDS_IDENTITY_SURFACE_DENIED` or `AUTH_SESSION_EXPIRED` rather

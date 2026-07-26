@@ -67,6 +67,7 @@ export const BILLING_REFUSE_REASONS = Object.freeze({
   listingCurrencyNotListed: "LISTING_CURRENCY_NOT_LISTED",
   listingSelfPurchaseDenied: "LISTING_SELF_PURCHASE_DENIED",
   listingCheckoutUnexpectedProperty: "LISTING_CHECKOUT_UNEXPECTED_PROPERTY",
+  listingFixtureCommerceNotEnabled: "LISTING_FIXTURE_COMMERCE_NOT_ENABLED",
 
   // --- creator revenue share ---
   revenueShareInvalid: "REVENUE_SHARE_INVALID",

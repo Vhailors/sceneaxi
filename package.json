@@ -13,7 +13,7 @@
     "sceneaxi": "node packages/cli/bin/sceneaxi.mjs",
     "sceneaxi-desktop": "node apps/desktop-shell/bin/sceneaxi-desktop.mjs",
     "test": "vitest run",
-    "test:golden": "vitest run tests/e2e/cli-golden-path.test.ts tests/e2e/hybrid-sculpt-golden.test.ts tests/e2e/sculpt-quality-golden.test.ts tests/e2e/scene-composition-golden.test.ts tests/e2e/profile-game-scene-golden.test.ts tests/e2e/profile-web-golden-path.test.ts tests/e2e/profile-kids-refuse-golden.test.ts tests/e2e/importers-plugin-golden.test.ts tests/e2e/plugin-capability-golden.test.ts tests/e2e/umbrella-live-open-golden.test.ts tests/e2e/umbrella-editor-viewport-golden.test.ts packages/cli/test/bin-smoke.test.ts apps/desktop-shell/test/bin-smoke.test.ts tests/parity/shell-cli-parity.test.ts tests/parity/open-path-policy-parity.test.ts --reporter=verbose",
+    "test:golden": "vitest run tests/e2e/cli-golden-path.test.ts tests/e2e/hybrid-sculpt-golden.test.ts tests/e2e/sculpt-quality-golden.test.ts tests/e2e/scene-composition-golden.test.ts tests/e2e/profile-game-scene-golden.test.ts tests/e2e/profile-web-golden-path.test.ts tests/e2e/profile-kids-refuse-golden.test.ts tests/e2e/importers-plugin-golden.test.ts tests/e2e/plugin-capability-golden.test.ts tests/e2e/umbrella-live-open-golden.test.ts tests/e2e/umbrella-editor-viewport-golden.test.ts tests/e2e/catalog-fixture-commerce-golden.test.ts packages/cli/test/bin-smoke.test.ts apps/desktop-shell/test/bin-smoke.test.ts tests/parity/shell-cli-parity.test.ts tests/parity/open-path-policy-parity.test.ts --reporter=verbose",
     "lint": "eslint . --max-warnings 0",
     "check:syntax": "node scripts/check-syntax.mjs",
     "check:boundaries": "node scripts/check-boundaries.mjs",
