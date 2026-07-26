@@ -494,6 +494,7 @@ export {
   SCULPT_SCHEMA_VERSION,
   digestObjectSculptSpec,
   isSculptIdentifier,
+  isSculptIntakeMode,
   isSculptQualityObjectSculptSpec,
   isSculptTransform,
   normalizeObjectSculptSpec,

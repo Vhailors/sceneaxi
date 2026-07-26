@@ -19,6 +19,7 @@
 
 import {
   SCULPT_INTAKE_MODES,
+  isSculptIntakeMode,
   validateSculptIntake,
   type SculptIntake,
   type SculptIntakeMode,
@@ -46,6 +47,8 @@ export type SculptIntakeSourceRequest = {
 };
 
 export type SculptIntakeSourceRefusalReason =
+  /** Implementation does not satisfy the capability contract shape. */
+  | "source-invalid"
   /** Provider does not support the requested mode. */
   | "unsupported-mode"
   /** Provider rejected the request itself (e.g. unknown intake identity). */
@@ -98,8 +101,6 @@ export type SculptIntakeSourceContractCheckResult =
   | SculptIntakeSourceContractCheckOk
   | SculptIntakeSourceContractCheckRefuse;
 
-const MODES = new Set<string>(SCULPT_INTAKE_MODES);
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -142,7 +143,7 @@ export function checkSculptIntakeSourceImplementation(
   }
   const seen = new Set<string>();
   for (const mode of supportedModes) {
-    if (typeof mode !== "string" || !MODES.has(mode)) {
+    if (!isSculptIntakeMode(mode)) {
       return violation(
         `supportedModes entries must be Sculpt Intake modes (${SCULPT_INTAKE_MODES.join(", ")}).`,
       );
@@ -171,13 +172,21 @@ function refuse(
  * Call a loaded provider and validate its output against the public contract.
  *
  * Callers use this instead of invoking `produceIntake` directly: a provider can
- * refuse, throw, or answer with a malformed intake, and every one of those is a
- * typed refusal here rather than an invalid document downstream.
+ * be the wrong shape entirely, refuse, throw, or answer with a malformed intake,
+ * and every one of those is a typed refusal here rather than a throw or an
+ * invalid document downstream. The shape is re-checked here because a host that
+ * binds no contract check for the capability still hands back whatever the
+ * plugin exported.
  */
 export function requestSculptIntake(
   source: SculptIntakeSource,
   request: SculptIntakeSourceRequest,
 ): SculptIntakeSourceResult {
+  const contract = checkSculptIntakeSourceImplementation(source);
+  if (!contract.ok) {
+    return refuse("source-invalid", contract.message);
+  }
+
   if (!source.supportedModes.includes(request.mode)) {
     return refuse(
       "unsupported-mode",

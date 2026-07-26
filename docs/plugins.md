@@ -136,9 +136,11 @@ export const capabilities = Object.freeze({
 });
 ```
 
-Callers never invoke `produceIntake` directly. `requestSculptIntake` re-validates
-whatever the provider returns against the public Sculpt Intake contract and turns
-a throw, a refusal, or a malformed document into a typed refusal:
+Callers never invoke `produceIntake` directly. `requestSculptIntake` re-checks the
+implementation shape, re-validates whatever the provider returns against the public
+Sculpt Intake contract, and turns a wrong-shaped source, a throw, a refusal, or a
+malformed document into a typed refusal. Binding the contract check at load is
+optional, so the request path never assumes the host already ran it:
 
 ```ts
 import {

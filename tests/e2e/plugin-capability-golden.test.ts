@@ -261,6 +261,30 @@ describe("capability refusals stay closed", () => {
     expect(result.refused[0]?.entrypointEvaluated).toBe(false);
   });
 
+  it("still refuses at the request boundary when no contract check is bound", async () => {
+    // Binding a check is optional, so the broken provider becomes addressable
+    // here. The request path is the second closed door: a typed refusal, never
+    // a thrown TypeError on a shape the plugin never implemented.
+    const host = openPluginHost({ registry: pluginCapabilityRegistrySeed() });
+    const result = await host.load([BROKEN_PROVIDER_ROOT]);
+
+    expect(result.refused).toEqual([]);
+    const addressed = host.getImplementation(
+      BROKEN_PLUGIN_ID,
+      SCULPT_INTAKE_SOURCE_CAPABILITY_ID,
+    );
+    expect(addressed.ok).toBe(true);
+    if (!addressed.ok) return;
+
+    const produced = requestSculptIntake(
+      addressed.implementation as SculptIntakeSource,
+      { intakeId: "workshop-lantern", mode: "image+brief" },
+    );
+    expect(produced.ok).toBe(false);
+    if (produced.ok) return;
+    expect(produced.reason).toBe("source-invalid");
+  });
+
   it("loads a good provider and refuses a bad one in the same load set", async () => {
     const host = openSeededHost();
     const result = await host.load([PROVIDER_ROOT, BROKEN_PROVIDER_ROOT]);

@@ -380,6 +380,11 @@ export function isSculptIdentifier(value: unknown): value is string {
   return typeof value === "string" && ID_RE.test(value);
 }
 
+/** Single source of truth for "is this one of the registered intake modes". */
+export function isSculptIntakeMode(value: unknown): value is SculptIntakeMode {
+  return typeof value === "string" && MODES.has(value);
+}
+
 function isDigest(value: unknown): value is string {
   return typeof value === "string" && DIGEST_RE.test(value);
 }
@@ -888,7 +893,7 @@ export function validateSculptIntake(value: unknown): SculptValidationResult<Scu
   if (value["kind"] !== SCULPT_INTAKE_KIND) return refuse("invalid-kind", "$.kind", `kind must be "${SCULPT_INTAKE_KIND}".`);
   if (!isSculptIdentifier(value["intakeId"])) return refuse("invalid-field", "$.intakeId", "intakeId must be a lowercase slug.");
   const mode = value["mode"];
-  if (typeof mode !== "string" || !MODES.has(mode)) return refuse("invalid-mode", "$.mode", `mode must be one of ${SCULPT_INTAKE_MODES.join(", ")}.`);
+  if (!isSculptIntakeMode(mode)) return refuse("invalid-mode", "$.mode", `mode must be one of ${SCULPT_INTAKE_MODES.join(", ")}.`);
 
   const base = ["schemaVersion", "kind", "intakeId", "mode"];
   const shapes: Record<SculptIntakeMode, { required: string[]; optional: string[] }> = {
@@ -897,7 +902,7 @@ export function validateSculptIntake(value: unknown): SculptValidationResult<Scu
     "multi-view": { required: [...base, "images"], optional: ["brief"] },
     "structured-spec": { required: [...base, "structuredSpec"], optional: [] },
   };
-  const shape = shapes[mode as SculptIntakeMode];
+  const shape = shapes[mode];
   const fields = exactFields(value, shape.required, shape.optional, "$");
   if (fields !== null) return { ok: false, diagnostics: [fields] };
 

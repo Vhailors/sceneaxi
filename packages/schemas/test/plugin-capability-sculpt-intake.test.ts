@@ -175,4 +175,28 @@ describe("sculpt intake source capability contract", () => {
       expect(result.reason, label).toBe(reason);
     }
   });
+
+  it("refuses a source that never satisfied the contract instead of throwing", () => {
+    // A host that binds no contract check for the capability hands back
+    // whatever the plugin exported, so the request path re-checks the shape.
+    const request = { intakeId: "workshop-lantern", mode: "image+brief" } as const;
+    const impostors: readonly (readonly [string, unknown])[] = [
+      ["empty table entry", {}],
+      ["not an object", "sculpt-intake-source"],
+      ["no supportedModes", { ...source(() => ({ ok: true, intake: LANTERN })), supportedModes: undefined }],
+      ["no produceIntake", { ...source(() => ({ ok: true, intake: LANTERN })), produceIntake: undefined }],
+      ["wrong contractVersion", { ...source(() => ({ ok: true, intake: LANTERN })), contractVersion: "0.0.1" }],
+    ];
+
+    for (const [label, impostor] of impostors) {
+      const result = requestSculptIntake(
+        impostor as SculptIntakeSource,
+        request,
+      );
+      expect(result.ok, label).toBe(false);
+      if (result.ok) continue;
+      expect(result.reason, label).toBe("source-invalid");
+      expect(result.message.length, label).toBeGreaterThan(0);
+    }
+  });
 });
