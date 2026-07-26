@@ -223,9 +223,19 @@ than inventing a session, balance, or checkout.
      `sceneaxiIntentId` — copied from the intent's own `userId` / `purpose` / `itemId` /
      `intentId`. `parseCheckoutCompletedEvent` cross-checks all four plus the mode against
      the persisted intent, so a missing or mismatched key refuses the grant as an invalid
-     webhook payload — including `sceneaxiIntentId`, which the endpoint reads to route a
-     completion to its intent: a completed session carrying any SceneAxi key is refused
-     and retried rather than acknowledged as another product's event.
+     webhook payload.
+
+     Two of the four are *also* routing keys, read from the verified body before the
+     intent and the settlement are, because that decision must not depend on a read that
+     can fail. `sceneaxiIntentId` names the record to bind to: a completed session
+     carrying any SceneAxi key but no usable intent id is refused and retried rather than
+     acknowledged as another product's event. `sceneaxiPurpose` decides whether this
+     endpoint owes the completion any work at all, so it must be copied from
+     `intent.purpose` and never from a literal — a credit-pack checkout stamped with a
+     purpose that settles on the revenue-share path is acknowledged `200` with
+     `ignored: true` before the intent is read, which ends Stripe's retries and drops the
+     grant silently rather than refusing it. An absent, malformed, or unknown purpose does
+     not route: it stays on the grant path and meets the parser's cross-check.
 5. Run that vertical's Neon migrations against the shared database. The migrations create
    the `credit_accounts` table and insert **no rows**, and `CreditStore` exposes no
    account-creation method, so **provisioning a credit account per user is that store

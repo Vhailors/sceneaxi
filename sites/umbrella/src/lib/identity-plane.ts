@@ -303,8 +303,19 @@ export function parseSessionToken(
  *      `parseCheckoutCompletedEvent` cross-checks all four (and the mode) against
  *      the persisted intent; a mismatched or missing key refuses the grant.
  *
- * Both failures are retried by Stripe until it gives up, so an unmet obligation is a
- * paid-but-ungranted checkout, not a visible error at checkout time.
+ *      Two of them are also *routing* keys, read by `applyCreditPackWebhook` from
+ *      the verified body before the intent is: `sceneaxiIntentId` names the record
+ *      to bind to, and `sceneaxiPurpose` decides whether this endpoint owes the
+ *      completion any work before it reads the evidence the cross-check needs. Copy
+ *      the purpose from `intent.purpose` and never from a literal: a credit-pack
+ *      checkout stamped with a purpose that settles on the revenue-share path is
+ *      acknowledged `200` with `ignored: true` before the intent is read, so it never
+ *      reaches the cross-check that would refuse it.
+ *
+ * A key the parser refuses is retried by Stripe until it gives up, so an unmet
+ * obligation is a paid-but-ungranted checkout, not a visible error at checkout time. A
+ * mis-stamped purpose is worse: the acknowledgement ends the retries too, so the grant
+ * is dropped silently and permanently.
  */
 export type CheckoutSessionAdapter = {
   createCheckoutSession(
