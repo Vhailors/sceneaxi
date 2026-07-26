@@ -2,12 +2,13 @@
   "name": "@sceneaxi/engine-orchestrator",
   "version": "0.0.0",
   "private": true,
-  "description": "SceneAxi engine-orchestrator package (bootstrap stub) — Factory Orchestrator seam from spec #41's six deep modules",
+  "description": "SceneAxi engine-orchestrator package — the real open path above the Game Kernel: bootstrap, host contract, and session lifecycle (spec #41 Factory Orchestrator seam)",
   "type": "module",
   "exports": { ".": "./src/index.ts" },
   "files": ["src"],
   "dependencies": {
-    "@sceneaxi/schemas": "workspace:^"
+    "@sceneaxi/schemas": "workspace:^",
+    "@sceneaxi/engine-kernel": "workspace:^"
   },
   "sceneaxi": { "releaseGroup": "core-train" },
   "license": "UNLICENSED"

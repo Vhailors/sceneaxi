@@ -1,0 +1,131 @@
+/**
+ * The reversal of the sceneaxi#60 option-B stub disposition, made executable.
+ *
+ * The retired test in this slot asserted the opposite: that the package stayed a
+ * bare seam, that no golden path imported it, and that no consumer carried it as
+ * a runtime dependency. Ladder Step 6 (sceneaxi#134) reverses that disposition,
+ * so this file asserts the new one — and keeps the bound that made the old
+ * disposition right in the first place: a real open path, and still no job
+ * system (ADR 0023).
+ */
+import { readdirSync, readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+import * as orchestrator from "@sceneaxi/engine-orchestrator";
+
+const repoFile = (path: string) =>
+  readFileSync(new URL(`../../../${path}`, import.meta.url), "utf8");
+
+const packageFile = (path: string) =>
+  readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+
+/**
+ * Every TypeScript source under `src/`, read off disk rather than listed here, so
+ * a file added later cannot escape the bound below by not being enumerated.
+ */
+function sourcePaths(directory = "src/"): string[] {
+  return readdirSync(new URL(`../${directory}`, import.meta.url), {
+    withFileTypes: true,
+  }).flatMap((entry) => {
+    if (entry.isDirectory()) return sourcePaths(`${directory}${entry.name}/`);
+    return entry.name.endsWith(".ts") ? [`${directory}${entry.name}`] : [];
+  });
+}
+
+const GOLDEN_PATH = "tests/e2e/profile-game-scene-golden.test.ts";
+
+/** Globals a browser does not have, in the forms a source file can reach them. */
+const NODE_ONLY_GLOBAL_RE =
+  /\bBuffer\b|\bprocess\.|\brequire\(|\b__dirname\b|\b__filename\b/;
+
+describe("engine-orchestrator open-path disposition", () => {
+  it("exports a real open path, not only a boundary seam", () => {
+    expect(Object.keys(orchestrator).sort()).toEqual([
+      "OPEN_PATH_KINDS",
+      "ORCHESTRATOR_REFUSALS",
+      "ORCHESTRATOR_REFUSAL_REASONS",
+      "bootstrapOpenPath",
+      "resumeOpenPath",
+      "seam",
+    ]);
+    expect(typeof orchestrator.bootstrapOpenPath).toBe("function");
+    expect(typeof orchestrator.resumeOpenPath).toBe("function");
+  });
+
+  it("is the way the Game profile's landed scene golden path opens a session", () => {
+    const golden = repoFile(GOLDEN_PATH);
+    expect(golden).toContain("core.orchestrator.bootstrapOpenPath");
+    expect(golden).toContain("core.orchestrator.resumeOpenPath");
+
+    // The profile no longer pins a kernel scene entry point beside it, so the
+    // golden path cannot silently revert to opening the kernel directly.
+    const profile = repoFile("packages/profile-game/src/index.ts");
+    expect(profile).toContain("@sceneaxi/engine-orchestrator");
+    expect(profile).not.toContain("openSceneKernelSession");
+    expect(golden).not.toContain("openSceneKernelSession");
+  });
+
+  it("declares the kernel dependency it actually uses, in both manifests", () => {
+    const manifest = JSON.parse(packageFile("package.json")) as {
+      dependencies?: Record<string, string>;
+    };
+    expect(manifest.dependencies).toEqual({
+      "@sceneaxi/schemas": "workspace:^",
+      "@sceneaxi/engine-kernel": "workspace:^",
+    });
+
+    const profileManifest = JSON.parse(
+      repoFile("packages/profile-game/package.json"),
+    ) as { dependencies?: Record<string, string> };
+    expect(profileManifest.dependencies?.["@sceneaxi/engine-orchestrator"]).toBe(
+      "workspace:^",
+    );
+  });
+
+  it("stays bounded: one session per handle, no scheduling machinery", () => {
+    const paths = sourcePaths().sort();
+    expect(paths).toEqual(
+      expect.arrayContaining([
+        "src/index.ts",
+        "src/open-path.ts",
+        "src/refusals.ts",
+      ]),
+    );
+
+    // A job queue needs deferral, concurrency, or a worker. None of it is here,
+    // and this is what stops "orchestrator" from growing into one by drift.
+    for (const path of paths) {
+      const source = packageFile(path);
+      for (const banned of [
+        "setTimeout",
+        "setInterval",
+        "queueMicrotask",
+        "new Worker",
+        "async ",
+        "await ",
+        "Promise",
+        "node:",
+      ]) {
+        expect(source, `${path} must not use ${banned}`).not.toContain(banned);
+      }
+    }
+  });
+
+  it("stays browser-safe: no Node-only global under src", () => {
+    // The `node:` entry above covers the builtin-import half of browser safety;
+    // a Node global needs no import, so it is checked here over the same files.
+    const paths = sourcePaths().sort();
+    expect(paths.length).toBeGreaterThan(0);
+    const offenders = paths.filter((path) =>
+      NODE_ONLY_GLOBAL_RE.test(packageFile(path)),
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  it("records the reversed disposition in its README", () => {
+    const readme = packageFile("README.md");
+    expect(readme).toContain("Disposition: the real open path above the kernel");
+    expect(readme).toContain("supersedes");
+    expect(readme).toContain("sceneaxi#60");
+    expect(readme).not.toContain("MVP disposition: not in the golden path");
+  });
+});

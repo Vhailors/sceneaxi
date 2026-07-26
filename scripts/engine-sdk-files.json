@@ -27,6 +27,8 @@
   "packages/engine-orchestrator/README.md",
   "packages/engine-orchestrator/package.json",
   "packages/engine-orchestrator/src/index.ts",
+  "packages/engine-orchestrator/src/open-path.ts",
+  "packages/engine-orchestrator/src/refusals.ts",
   "packages/engine-presentation/README.md",
   "packages/engine-presentation/package.json",
   "packages/engine-presentation/src/index.ts",
