@@ -197,8 +197,11 @@ Hosted AI reaches a credit debit through exactly one path: `runMeteredModelCall(
 in `packages/billing/src/hosted-ai.ts`, whose fixed order (Kids → route → hosted
 opt-in → replay → entitlement incl. balance → metering readiness → provider →
 debit) is the contract, documented in `docs/auth-credits.md`. The replay step
-answers a retry from the account-scoped debit that already exists — before the
-balance gate and before the provider, and with no `response` to hand back — and
+answers a retry from the account-scoped debit that already exists — read from the
+**persisted** ledger, never from the caller's `state`, so a timed-out caller still
+holding a pre-debit copy is recognised as a retry instead of paying the provider
+twice — before the balance gate and before the provider, with no `response` to
+hand back and an unreadable store refusing there rather than after the call; and
 only a **throw** from the injected thunk is a provider failure, so a provider
 layer that refuses by value must translate it caller-side. Hosted is default-off
 (`HOSTED_AI_DEFAULT_CONFIG`) and a configured adapter or key never enables it; BYO

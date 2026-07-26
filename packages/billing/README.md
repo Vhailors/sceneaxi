@@ -64,8 +64,12 @@ plane.
 balance is judged and before the provider is entered, so a caller re-sending a timed-out
 turn gets `replayed: true` with the debit it already made, instead of being refused
 `CREDIT_BALANCE_INSUFFICIENT` out of the balance that very debit spent and paying the
-upstream provider a second time. The replayed outcome carries no `response` field at all:
-the ledger records debits, never model answers, and the gate will not invent one.
+upstream provider a second time. That lookup reads the **persisted** ledger through the
+injected store rather than the `state` the caller passed, because the caller a timeout
+leaves holding a pre-debit copy is exactly the one the guarantee is for; an unreadable store
+therefore refuses `CREDIT_STORE_FAILED` before the provider rather than after it. The
+replayed outcome carries no `response` field at all: the ledger records debits, never model
+answers, and the gate will not invent one.
 
 **Only a throw is a provider failure.** Billing charges for any value the thunk returns, so
 a provider layer that reports refusals as data — the Model Provider Port's

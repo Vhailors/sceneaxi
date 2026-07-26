@@ -289,7 +289,8 @@ provider abstraction — it fixes the order the two existing pieces run in:
 1. **Kids** — denied by name before identity, provider, or ledger, on both routes
 2. **Route** — `hosted` or `byo`, a closed enumeration with no default
 3. **Hosted opt-in** — off unless a caller explicitly passes `{ enabled: true }`
-4. **Replay** — the account-scoped key is looked up before the balance and the provider
+4. **Replay** — the account-scoped key is looked up in the *persisted* ledger, before
+   the balance and the provider
 5. **Entitlement** — capability, account, and **balance**, all before the provider
 6. **Metering readiness** — store, reason, and key, still before the provider
 7. **Provider** — the injected call, and only now
@@ -306,16 +307,29 @@ relying on it alone would break the retry it is supposed to protect: a caller th
 out and re-sent `turn_01` would be refused `CREDIT_BALANCE_INSUFFICIENT` out of the balance
 its own first attempt had already spent, and would have paid the upstream provider a second
 time for an answer no ledger row could cover. Step 4 looks `usage:<accountId>:<callerKey>`
-up in the supplied ledger first. On a hit the call returns `replayed: true` carrying the
-prior debit, the ledger, and the balance — **no provider execution and no second charge** —
-and entitlement is re-evaluated against the ledger as it stood immediately before that
-debit, so capability, identity, ownership, and the guard's own refusals still apply to a
-retry while the already-answered balance question is not asked again. A key re-sent with a
-different price or reason is still a `CREDIT_IDEMPOTENCY_KEY_CONFLICT`. The replayed
-outcome deliberately carries **no `response`**: the ledger persists debits, not model
-answers, so the original response is gone and the gate will not fabricate one — the
-`MeteredModelCallReplayed` shape has no field to read it from. The BYO route is excluded
-from step 4: it never appends a debit, and a free call is safe to simply run again.
+up first. On a hit the call returns `replayed: true` carrying the prior debit, the ledger,
+and the balance — **no provider execution and no second charge** — and entitlement is
+re-evaluated against the ledger as it stood immediately before that debit, so capability,
+identity, ownership, and the guard's own refusals still apply to a retry while the
+already-answered balance question is not asked again. A key re-sent with a different price
+or reason is still a `CREDIT_IDEMPOTENCY_KEY_CONFLICT`. The replayed outcome deliberately
+carries **no `response`**: the ledger persists debits, not model answers, so the original
+response is gone and the gate will not fabricate one — the `MeteredModelCallReplayed` shape
+has no field to read it from. The BYO route is excluded from step 4: it never appends a
+debit, and a free call is safe to simply run again.
+
+**The retry lookup reads persistence, not the caller's `state`.** The guarantee has to hold
+for the caller that never received the post-debit ledger — the timed-out turn is precisely
+that caller — so step 4 takes only the account id from the supplied state and loads the
+history back through the injected `CreditStore`. A lookup against a pre-debit copy would
+find no prior entry, run the provider a second time for real upstream money, and only then
+collide at the bottom of the stack with an opaque `CREDIT_LEDGER_STATE_INVALID`. Because the
+store is read here, a store that cannot be read refuses `CREDIT_STORE_FAILED` **before** the
+provider: not knowing whether a key was already charged is not a licence to charge upstream
+again. The replayed outcome hands back the *persisted* ledger and balance, so a caller
+holding a stale view is corrected rather than confirmed in it. Supplying the current
+persisted state is still required for the debit itself — `meterCredits` refuses to append
+against any other — and remains the caller's obligation on a first attempt.
 
 **Only a throw is a provider failure.** The thunk is provider-neutral, so billing charges
 for any value it returns — it cannot tell a refusal envelope from a legitimate answer that

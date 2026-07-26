@@ -310,6 +310,32 @@ describe("runMeteredModelCall — hosted route, funded", () => {
     expect(store.entryCount(ACCOUNT.accountId)).toBe(2);
   });
 
+  it("answers a retry that still holds the pre-debit ledger view", async () => {
+    // The caller that times out never receives the post-debit state, so the only
+    // ledger it can re-send is the one it had before the charge. Reading the key
+    // out of that copy would find nothing and pay the upstream provider again, so
+    // the lookup goes to persistence instead.
+    const state = funded(10);
+    const store = storeFor(state);
+    const provider = recordingProvider();
+    const first = await hostedCall(state, provider, { store });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+
+    const replay = await hostedCall(state, provider, { store });
+    expect(replay.ok).toBe(true);
+    if (!replay.ok) return;
+    expect(replay.value.replayed).toBe(true);
+    expect(provider.calls.length).toBe(1);
+    expect(store.entryCount(ACCOUNT.accountId)).toBe(2);
+    if (!replay.value.replayed) return;
+    // The stale copy is corrected, not confirmed: the ledger handed back is the
+    // persisted one, so the caller's next decision is made on the real balance.
+    expect(replay.value.balance).toBe(3);
+    expect(replay.value.state.balance).toBe(3);
+    expect(replay.value.entry.delta).toBe(-7);
+  });
+
   it("refuses a mutated replay rather than returning the cheaper original", async () => {
     const state = funded(100);
     const store = storeFor(state);
@@ -626,7 +652,7 @@ describe("runMeteredModelCall — failures do not half-apply", () => {
     const store = storeFor(state);
     const throwingStore = Object.freeze({
       ...store,
-      findAccountById() {
+      appendEntry() {
         throw new Error("db down");
       },
     });
@@ -639,6 +665,45 @@ describe("runMeteredModelCall — failures do not half-apply", () => {
     expect(provider.calls.length).toBe(1);
     expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
     expect(state.balance).toBe(100);
+  });
+
+  it("refuses an unreadable ledger before the provider is entered", async () => {
+    // "We cannot tell whether this key was already charged" is not a licence to
+    // pay the upstream provider on the chance that it was not.
+    const state = funded(100);
+    const provider = recordingProvider();
+    const store = storeFor(state);
+    const throwingStore = Object.freeze({
+      ...store,
+      findAccountById() {
+        throw new Error("db down");
+      },
+    });
+    const result = await hostedCall(state, provider, { store: throwingStore });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.storeFailed);
+    expect(provider.calls.length).toBe(0);
+    expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
+    expect(state.balance).toBe(100);
+  });
+
+  it("refuses an account persistence does not have, before the provider", async () => {
+    const state = funded(100);
+    const provider = recordingProvider();
+    const store = storeFor(state);
+    const emptyStore = Object.freeze({
+      ...store,
+      findAccountById() {
+        return undefined;
+      },
+    });
+    const result = await hostedCall(state, provider, { store: emptyStore });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.ledgerStateInvalid);
+    expect(provider.calls.length).toBe(0);
+    expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
   });
 });
 

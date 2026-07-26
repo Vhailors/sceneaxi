@@ -448,7 +448,22 @@ describe("hosted AI metering golden path", () => {
       }),
     ).toThrow(/OPENROUTER_FIXTURE_NOT_RECORDED|no openrouter fixture/i);
 
-    // No secret is read anywhere on this path.
-    expect(process.env["OPENROUTER_API_KEY"]).toBeUndefined();
+    // No credential is on this path, and that is a property of the code rather
+    // than of the shell the gate runs in: the adapter hands its transport exactly
+    // these pinned fields, none of which can carry a secret, and the transport
+    // itself is a pure function of the recorded envelope.
+    const stack = providerStack();
+    await stack.call();
+    expect(stack.transportRequests).toHaveLength(1);
+    expect(Object.keys(stack.transportRequests[0] ?? {}).sort()).toEqual([
+      "messages",
+      "model",
+      "modelDescriptor",
+      "operation",
+      "provider",
+      "schemaVersion",
+      "seed",
+      "temperature",
+    ]);
   });
 });

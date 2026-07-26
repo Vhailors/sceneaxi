@@ -32,6 +32,15 @@
  * The model's answer is *not* replayed — the ledger records debits, never
  * responses, and inventing one would be worse than admitting it is gone.
  *
+ * That lookup reads the **persisted** ledger through the injected store, not the
+ * `state` the caller passed in, because the retry this protects is precisely the
+ * one whose caller never received the post-debit state: a timed-out turn re-sent
+ * with the pre-debit view it still holds. A lookup against that view would find
+ * nothing, run the provider a second time for real upstream money, and only then
+ * discover the conflict at the bottom of the stack. Resolving persistence first
+ * makes retry-safety independent of how fresh the caller's copy is, and it is why
+ * a store that cannot be read refuses here rather than after the provider.
+ *
  * The provider is an injected thunk, deliberately not a Model Provider Port type.
  * Billing must not learn what a model is to charge for one, and the port lives
  * above this package in the dependency matrix; a caller wires the two together
@@ -51,13 +60,18 @@ import type { AdminIdentity, Awaitable } from "@sceneaxi/auth";
 import {
   isEpochMilliseconds,
   snapshotPlainRecord,
+  type CreditAccount,
   type CreditLedgerEntry,
   type EntitlementCapability,
   type EntitlementDecision,
   type IdentitySurface,
 } from "@sceneaxi/schemas";
 import { evaluateEntitlement } from "./entitlements.js";
-import { validateLedgerState, type LedgerState } from "./ledger.js";
+import {
+  loadLedgerState,
+  validateLedgerState,
+  type LedgerState,
+} from "./ledger.js";
 import { meterCredits, meteringIdempotencyKey } from "./metering.js";
 import type { CreditStore } from "./store.js";
 import {
@@ -146,7 +160,14 @@ export type RunMeteredModelCallRequest<Response> = Readonly<{
   admin?: AdminIdentity | undefined;
   /** Absent means anonymous — valid for BYO, refused for hosted. */
   principal?: unknown;
-  /** The ledger the debit would land on. Hosted route only. */
+  /**
+   * The ledger the debit would land on. Hosted route only.
+   *
+   * `meterCredits` still requires this to be the current persisted state before
+   * it will append, so a stale copy cannot buy anything. It is only the *replay*
+   * question that is answered from persistence instead, so a caller holding a
+   * pre-debit view — the timed-out retry — is still recognised as a retry.
+   */
   state?: LedgerState | undefined;
   /** Where the debit is persisted. Hosted route only. */
   store?: CreditStore | undefined;
@@ -247,8 +268,6 @@ function isCreditStore(value: unknown): value is CreditStore {
 type ReplayedDebit = Readonly<{
   /** The debit the caller's key already produced. */
   entry: CreditLedgerEntry;
-  /** The supplied ledger, validated. */
-  state: LedgerState;
   /**
    * The ledger as it stood immediately before that debit.
    *
@@ -264,29 +283,44 @@ type ReplayedDebit = Readonly<{
   priorState: LedgerState;
 }>;
 
+type HostedLedger = Readonly<{
+  /** The account history as persistence has it, not as the caller reported it. */
+  persisted: LedgerState;
+  /** Present when this call's account-scoped key has already been charged. */
+  replayed?: ReplayedDebit | undefined;
+}>;
+
 /**
- * Look up the caller's account-scoped metering key in the supplied ledger.
+ * Resolve the persisted ledger and look the account-scoped metering key up in it.
  *
- * Read from the caller's own state, not from the store: `meterCredits` already
- * refuses any state that is not the current persisted one, so this cannot reach a
- * conclusion the debit path would disagree with, and it discloses nothing the
- * caller did not pass in. The mutated-replay check mirrors the ledger's, so a key
- * re-sent with a different price or reason still conflicts here rather than
- * quietly returning the cheaper original.
+ * The store read is what makes the answer authoritative: the caller's `state` is
+ * a claim about the ledger, and the one retry this exists to protect is exactly
+ * the caller whose claim is out of date. So the account id is the only thing
+ * taken from the supplied state, and everything the replay decision rests on
+ * comes back from the store. A store that cannot be read refuses here — before
+ * the provider — because "we do not know whether this was already charged" is
+ * not a licence to charge upstream again.
+ *
+ * The mutated-replay check mirrors the ledger's, so a key re-sent with a
+ * different price or reason still conflicts here rather than quietly returning
+ * the cheaper original.
  *
  * Returns `undefined` whenever the request is not yet known to be a well-formed
  * credit-priced call; entitlement and the metering-readiness checks own those
  * refusals, and duplicating them here would give the same defect two voices.
+ * None of those shapes can reach the provider, so skipping the store read for
+ * them costs no safety.
  */
-function findReplayedDebit(
+async function resolveHostedLedger(
   request: Readonly<{
     state: unknown;
+    store: unknown;
     reason: unknown;
     creditAmount: unknown;
     idempotencyKey: unknown;
   }>,
-): BillingOutcome<ReplayedDebit | undefined> {
-  const { state, reason, creditAmount, idempotencyKey } = request;
+): Promise<BillingOutcome<HostedLedger | undefined>> {
+  const { state, store, reason, creditAmount, idempotencyKey } = request;
   if (typeof idempotencyKey !== "string" || idempotencyKey.length === 0) {
     return billingOk(undefined);
   }
@@ -296,17 +330,44 @@ function findReplayedDebit(
   if (!Number.isSafeInteger(creditAmount) || (creditAmount as number) < 1) {
     return billingOk(undefined);
   }
-  const validated = validateLedgerState(state);
-  if (!validated.ok) return billingOk(undefined);
+  if (!isCreditStore(store)) return billingOk(undefined);
+  const supplied = validateLedgerState(state);
+  if (!supplied.ok) return billingOk(undefined);
 
-  const scopedKey = meteringIdempotencyKey(
-    validated.value.account.accountId,
-    idempotencyKey,
-  );
-  const entry = validated.value.entries.find(
+  const accountId = supplied.value.account.accountId;
+  let account: CreditAccount | undefined;
+  let entries: ReadonlyArray<CreditLedgerEntry>;
+  try {
+    account = await store.findAccountById(accountId);
+    if (account === undefined || account === null) {
+      return billingRefuse(
+        BILLING_REFUSE_REASONS.ledgerStateInvalid,
+        "The credit account does not exist in persistence; the model call refuses before the provider.",
+      );
+    }
+    entries = await store.listEntries(accountId);
+  } catch {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.storeFailed,
+      "The credit store failed while loading the account this model call would be charged against.",
+    );
+  }
+
+  const persisted = loadLedgerState(account, entries);
+  if (!persisted.ok) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.ledgerStateInvalid,
+      `The persisted credit account is invalid: ${persisted.message}`,
+    );
+  }
+
+  const scopedKey = meteringIdempotencyKey(accountId, idempotencyKey);
+  const entry = persisted.value.entries.find(
     (candidate) => candidate.idempotencyKey === scopedKey,
   );
-  if (entry === undefined) return billingOk(undefined);
+  if (entry === undefined) {
+    return billingOk(Object.freeze({ persisted: persisted.value }));
+  }
 
   if (
     entry.movement !== "debit" ||
@@ -321,17 +382,19 @@ function findReplayedDebit(
 
   return billingOk(
     Object.freeze({
-      entry,
-      state: validated.value,
-      priorState: Object.freeze({
-        account: validated.value.account,
-        entries: Object.freeze(
-          validated.value.entries.slice(
-            0,
-            validated.value.entries.indexOf(entry),
+      persisted: persisted.value,
+      replayed: Object.freeze({
+        entry,
+        priorState: Object.freeze({
+          account: persisted.value.account,
+          entries: Object.freeze(
+            persisted.value.entries.slice(
+              0,
+              persisted.value.entries.indexOf(entry),
+            ),
           ),
-        ),
-        balance: entry.balanceAfter - entry.delta,
+          balance: entry.balanceAfter - entry.delta,
+        }),
       }),
     }),
   );
@@ -422,15 +485,23 @@ export async function runMeteredModelCall<Response>(
     );
   }
 
-  // Replay, before the balance is judged and before the provider is entered. The
-  // BYO route is excluded on purpose: it never appends a debit, so it has no
-  // prior charge to answer with and a free call is safe to simply run again.
-  const replay: BillingOutcome<ReplayedDebit | undefined> =
+  // Replay, resolved from persistence, before the balance is judged and before
+  // the provider is entered. The BYO route is excluded on purpose: it never
+  // appends a debit, so it has no prior charge to answer with and a free call is
+  // safe to simply run again.
+  const resolution: BillingOutcome<HostedLedger | undefined> =
     route === "hosted"
-      ? findReplayedDebit({ state, reason, creditAmount, idempotencyKey })
+      ? await resolveHostedLedger({
+          state,
+          store,
+          reason,
+          creditAmount,
+          idempotencyKey,
+        })
       : billingOk(undefined);
-  if (!replay.ok) return replay;
-  const replayed = replay.value;
+  if (!resolution.ok) return resolution;
+  const ledger = resolution.value;
+  const replayed = ledger === undefined ? undefined : ledger.replayed;
 
   const entitlementState = replayed === undefined ? state : replayed.priorState;
   const decision = evaluateEntitlement({
@@ -474,8 +545,10 @@ export async function runMeteredModelCall<Response>(
   }
 
   // The key already bought this call. Hand back the debit that exists — no
-  // second provider execution, no second charge, and no invented answer.
-  if (replayed !== undefined && charge !== undefined) {
+  // second provider execution, no second charge, and no invented answer. The
+  // ledger reported is the persisted one, so a caller retrying with a pre-debit
+  // view is corrected rather than confirmed in it.
+  if (ledger !== undefined && replayed !== undefined && charge !== undefined) {
     return billingOk(
       Object.freeze({
         replayed: true,
@@ -484,8 +557,8 @@ export async function runMeteredModelCall<Response>(
         decision: decision.value,
         metered: true,
         entry: replayed.entry,
-        state: replayed.state,
-        balance: replayed.state.balance,
+        state: ledger.persisted,
+        balance: ledger.persisted.balance,
       }),
     );
   }
@@ -531,10 +604,11 @@ export async function runMeteredModelCall<Response>(
   });
   if (!metered.ok) return metered;
 
-  // Not `metered.value.replayed`: a replay is settled above, against the same
-  // account-scoped key and the same supplied state that `meterCredits` requires
-  // to equal the persisted one. Reaching the ledger's own replay branch from here
-  // is impossible, so reporting it would be a guarantee no path can produce.
+  // Not `metered.value.replayed`: a replay is settled above against the persisted
+  // ledger, and `meterCredits` requires the supplied state to equal that same
+  // persisted ledger before it appends. Reaching the ledger's own replay branch
+  // from here is impossible, so reporting it would be a guarantee no path can
+  // produce.
   return billingOk(
     Object.freeze({
       replayed: false,
