@@ -44,7 +44,7 @@ Per project, in Vercel:
 The install command provisions **both** roots, and it has to. Each site is the sole
 member of its own pnpm workspace (`packages: ["."]`), not a member of the repository-root
 workspace. A site installs `@sceneaxi/site-kit` through a `link:` specifier — and the
-umbrella also links `@sceneaxi/engine-presentation`, its one engine edge (ADR 0021) —
+umbrella also links `@sceneaxi/engine-presentation`, its one engine edge (ADR 0022) —
 but those packages' own dependencies (`@sceneaxi/schemas`, `@sceneaxi/authoring-core`,
 `three`) are resolved from the repository root's `node_modules`. Installing only
 the site directory builds successfully on a developer machine that already has a root
