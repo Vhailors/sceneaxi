@@ -33,6 +33,10 @@ function sourcePaths(directory = "src/"): string[] {
 
 const GOLDEN_PATH = "tests/e2e/profile-game-scene-golden.test.ts";
 
+/** Globals a browser does not have, in the forms a source file can reach them. */
+const NODE_ONLY_GLOBAL_RE =
+  /\bBuffer\b|\bprocess\.|\brequire\(|\b__dirname\b|\b__filename\b/;
+
 describe("engine-orchestrator open-path disposition", () => {
   it("exports a real open path, not only a boundary seam", () => {
     expect(Object.keys(orchestrator).sort()).toEqual([
@@ -104,6 +108,17 @@ describe("engine-orchestrator open-path disposition", () => {
         expect(source, `${path} must not use ${banned}`).not.toContain(banned);
       }
     }
+  });
+
+  it("stays browser-safe: no Node-only global under src", () => {
+    // The `node:` entry above covers the builtin-import half of browser safety;
+    // a Node global needs no import, so it is checked here over the same files.
+    const paths = sourcePaths().sort();
+    expect(paths.length).toBeGreaterThan(0);
+    const offenders = paths.filter((path) =>
+      NODE_ONLY_GLOBAL_RE.test(packageFile(path)),
+    );
+    expect(offenders).toEqual([]);
   });
 
   it("records the reversed disposition in its README", () => {
