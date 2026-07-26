@@ -310,36 +310,45 @@ export function currentFrame(status: SculptViewportStatus): SculptPresentationFr
  * Draw surface and pixels drawn are the rows that keep a frame counter from reading as a
  * pixel claim, so both drawing surfaces render them from this one place rather than from
  * per-route copies that could drift apart into two different honesty stories.
+ *
+ * The heading is required rather than optional because a page may show more than one of
+ * these tables — the editor reports its server frame beside this browser one — and an
+ * unlabelled report is one a reader cannot attribute to a surface.
  */
 export function SculptFrameReport({
+  heading,
   frame,
 }: {
+  readonly heading: string;
   readonly frame: SculptPresentationFrame | null;
 }) {
   return (
-    <dl className="dl">
-      <dt>Backend</dt>
-      <dd>
-        <code>{frame?.backend ?? "…"}</code>
-      </dd>
-      <dt>Label</dt>
-      <dd>{frame?.label ?? "…"}</dd>
-      <dt>Draw surface</dt>
-      <dd>
-        <code>{frame?.surface ?? "…"}</code>
-      </dd>
-      <dt>Pixels drawn</dt>
-      <dd>
-        <code>{frame === null ? "…" : String(frame.pixelsDrawn)}</code>
-      </dd>
-      <dt>Frame</dt>
-      <dd>{frame?.frame ?? "…"}</dd>
-      <dt>Draw calls</dt>
-      <dd>{frame?.drawCalls ?? "…"}</dd>
-      <dt>Mounted</dt>
-      <dd>
-        <code>{frame?.instanceIds.join(", ") ?? "…"}</code>
-      </dd>
-    </dl>
+    <>
+      <h3>{heading}</h3>
+      <dl className="dl">
+        <dt>Backend</dt>
+        <dd>
+          <code>{frame?.backend ?? "…"}</code>
+        </dd>
+        <dt>Label</dt>
+        <dd>{frame?.label ?? "…"}</dd>
+        <dt>Draw surface</dt>
+        <dd>
+          <code>{frame?.surface ?? "…"}</code>
+        </dd>
+        <dt>Pixels drawn</dt>
+        <dd>
+          <code>{frame === null ? "…" : String(frame.pixelsDrawn)}</code>
+        </dd>
+        <dt>Frame</dt>
+        <dd>{frame?.frame ?? "…"}</dd>
+        <dt>Draw calls</dt>
+        <dd>{frame?.drawCalls ?? "…"}</dd>
+        <dt>Mounted</dt>
+        <dd>
+          <code>{frame?.instanceIds.join(", ") ?? "…"}</code>
+        </dd>
+      </dl>
+    </>
   );
 }

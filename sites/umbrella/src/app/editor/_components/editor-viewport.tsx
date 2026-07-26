@@ -84,7 +84,7 @@ export function EditorViewport({
         </button>
       </div>
 
-      <SculptFrameReport frame={frame} />
+      <SculptFrameReport heading="Browser session frame" frame={frame} />
     </>
   );
 }

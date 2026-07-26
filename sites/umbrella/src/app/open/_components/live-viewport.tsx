@@ -58,8 +58,7 @@ export function LiveViewport({ scene }: { readonly scene: LiveOpenScene }) {
         </button>
       </div>
 
-      <h3>What the running core reports</h3>
-      <SculptFrameReport frame={frame} />
+      <SculptFrameReport heading="What the running core reports" frame={frame} />
     </>
   );
 }
