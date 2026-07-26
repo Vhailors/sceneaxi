@@ -243,6 +243,132 @@ describe("sculpt intake source capability contract", () => {
     expect(result.reason).toBe("malformed-result");
   });
 
+  it("grades the answer against the request the caller made, not the provider's rewrite", () => {
+    const request = { intakeId: "workshop-lantern", mode: "image+brief" } as const;
+    let handed: Record<string, unknown> | undefined;
+    const rewriter = source((incoming) => {
+      handed = incoming as unknown as Record<string, unknown>;
+      handed["intakeId"] = "other-plate";
+      handed["mode"] = "multi-view";
+      return {
+        ok: true,
+        intake: { ...LANTERN, intakeId: "other-plate" },
+      } as unknown as SculptIntakeSourceResult;
+    });
+
+    const result = requestSculptIntake(rewriter, request);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(["provider-threw", "intake-mismatch"]).toContain(result.reason);
+    expect(request.intakeId).toBe("workshop-lantern");
+    expect(request.mode).toBe("image+brief");
+    expect(handed).not.toBe(request);
+  });
+
+  it("refuses a source whose declared fields throw instead of throwing", () => {
+    const request = { intakeId: "workshop-lantern", mode: "image+brief" } as const;
+    const base = () => source(() => ({ ok: true, intake: LANTERN }));
+    const hostiles: readonly (readonly [string, unknown])[] = [
+      [
+        "capabilityId",
+        {
+          ...base(),
+          get capabilityId(): never {
+            throw new Error("no reading capabilityId");
+          },
+        },
+      ],
+      [
+        "contractVersion",
+        {
+          ...base(),
+          get contractVersion(): never {
+            throw new Error("no reading contractVersion");
+          },
+        },
+      ],
+      [
+        "supportedModes",
+        {
+          ...base(),
+          get supportedModes(): never {
+            throw new Error("no reading supportedModes");
+          },
+        },
+      ],
+      [
+        "produceIntake",
+        {
+          ...base(),
+          get produceIntake(): never {
+            throw new Error("no reading produceIntake");
+          },
+        },
+      ],
+    ];
+
+    for (const [label, hostile] of hostiles) {
+      const result = requestSculptIntake(hostile as SculptIntakeSource, request);
+      expect(result.ok, label).toBe(false);
+      if (result.ok) continue;
+      expect(result.reason, label).toBe("source-invalid");
+    }
+  });
+
+  it("refuses a result envelope that throws or drifts instead of throwing", () => {
+    const request = { intakeId: "workshop-lantern", mode: "image+brief" } as const;
+
+    const throwingOk = requestSculptIntake(
+      source(
+        () =>
+          ({
+            get ok(): never {
+              throw new Error("no reading ok");
+            },
+          }) as unknown as SculptIntakeSourceResult,
+      ),
+      request,
+    );
+    expect(throwingOk.ok).toBe(false);
+    if (!throwingOk.ok) expect(throwingOk.reason).toBe("malformed-result");
+
+    const throwingMessage = requestSculptIntake(
+      source(
+        () =>
+          ({
+            ok: false,
+            get message(): never {
+              throw new Error("no reading message");
+            },
+          }) as unknown as SculptIntakeSourceResult,
+      ),
+      request,
+    );
+    expect(throwingMessage.ok).toBe(false);
+    if (!throwingMessage.ok) {
+      expect(throwingMessage.reason).toBe("malformed-result");
+    }
+
+    // `ok` is read once: an accessor cannot answer the gate and the branch
+    // differently.
+    let okReads = 0;
+    const drifting = requestSculptIntake(
+      source(
+        () =>
+          ({
+            get ok() {
+              okReads += 1;
+              return okReads === 1;
+            },
+            intake: LANTERN,
+          }) as unknown as SculptIntakeSourceResult,
+      ),
+      request,
+    );
+    expect(okReads).toBe(1);
+    expect(drifting).toEqual({ ok: true, intake: LANTERN });
+  });
+
   it("refuses a source that never satisfied the contract instead of throwing", () => {
     // A host that binds no contract check for the capability hands back
     // whatever the plugin exported, so the request path re-checks the shape.

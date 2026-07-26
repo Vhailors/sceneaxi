@@ -170,6 +170,30 @@ function refuse(
   return { ok: false, reason, message };
 }
 
+function describeError(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
+/**
+ * Read every provider-declared field of a candidate source exactly once.
+ *
+ * The declared fields may be accessors, so a later re-read can answer something
+ * the contract check never saw. Reading them into a plain snapshot here means
+ * the shape check, the mode gate, and the call all agree on one set of values.
+ * `produceIntake` is looked up through the candidate so a prototype-backed
+ * implementation still resolves, and is invoked with its own receiver below.
+ */
+function readSourceFields(candidate: unknown): unknown {
+  if (!isRecord(candidate)) return candidate;
+  const modes = candidate["supportedModes"];
+  return {
+    capabilityId: candidate["capabilityId"],
+    contractVersion: candidate["contractVersion"],
+    supportedModes: Array.isArray(modes) ? [...(modes as unknown[])] : modes,
+    produceIntake: candidate["produceIntake"],
+  };
+}
+
 /**
  * Call a loaded provider and validate its output against the public contract.
  *
@@ -184,41 +208,86 @@ function refuse(
  * contract accepts is exactly what the caller receives: accessors are collapsed
  * to the values they answered once, and the returned intake is frozen and
  * detached from any reference the provider kept.
+ *
+ * The request travels the same way in reverse. The provider is handed a frozen
+ * copy, never the caller's own object, and the echo invariant is enforced
+ * against the identity and mode captured before the call — so a provider cannot
+ * rewrite the question it is being graded against.
  */
 export function requestSculptIntake(
   source: SculptIntakeSource,
   request: SculptIntakeSourceRequest,
 ): SculptIntakeSourceResult {
-  const contract = checkSculptIntakeSourceImplementation(source);
+  const wanted: SculptIntakeSourceRequest = Object.freeze({
+    intakeId: request.intakeId,
+    mode: request.mode,
+  });
+
+  let declared: unknown;
+  try {
+    declared = readSourceFields(source);
+  } catch (error) {
+    return refuse(
+      "source-invalid",
+      `Capability implementation could not be inspected: ${describeError(error, "reading a declared field threw.")}`,
+    );
+  }
+
+  const contract = checkSculptIntakeSourceImplementation(declared);
   if (!contract.ok) {
     return refuse("source-invalid", contract.message);
   }
+  const fields = declared as {
+    readonly supportedModes: readonly SculptIntakeMode[];
+    readonly produceIntake: SculptIntakeSource["produceIntake"];
+  };
 
-  if (!source.supportedModes.includes(request.mode)) {
+  if (!fields.supportedModes.includes(wanted.mode)) {
     return refuse(
       "unsupported-mode",
-      `Provider does not support intake mode "${request.mode}".`,
+      `Provider does not support intake mode "${wanted.mode}".`,
     );
   }
 
   let produced: unknown;
   try {
-    produced = source.produceIntake(request);
+    produced = Reflect.apply(fields.produceIntake, source, [wanted]);
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "produceIntake threw.";
-    return refuse("provider-threw", `produceIntake threw: ${message}`);
+    return refuse(
+      "provider-threw",
+      `produceIntake threw: ${describeError(error, "produceIntake threw.")}`,
+    );
   }
 
-  if (!isRecord(produced) || typeof produced["ok"] !== "boolean") {
+  let envelope: {
+    readonly ok: unknown;
+    readonly message: unknown;
+    readonly intake: unknown;
+  };
+  try {
+    envelope = isRecord(produced)
+      ? {
+          ok: produced["ok"],
+          message: produced["message"],
+          intake: produced["intake"],
+        }
+      : { ok: undefined, message: undefined, intake: undefined };
+  } catch (error) {
+    return refuse(
+      "malformed-result",
+      `produceIntake result could not be read: ${describeError(error, "reading a result field threw.")}`,
+    );
+  }
+
+  if (typeof envelope.ok !== "boolean") {
     return refuse(
       "malformed-result",
       "produceIntake must return a { ok } result envelope.",
     );
   }
 
-  if (produced["ok"] === false) {
-    const message = produced["message"];
+  if (!envelope.ok) {
+    const message = envelope.message;
     return refuse(
       "request-refused",
       typeof message === "string" && message.length > 0
@@ -229,13 +298,11 @@ export function requestSculptIntake(
 
   let candidate: unknown;
   try {
-    candidate = snapshotSculptJson(produced["intake"]);
+    candidate = snapshotSculptJson(envelope.intake);
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "intake could not be captured.";
     return refuse(
       "malformed-result",
-      `Produced intake could not be captured as a plain document: ${message}`,
+      `Produced intake could not be captured as a plain document: ${describeError(error, "intake could not be captured.")}`,
     );
   }
 
@@ -248,16 +315,16 @@ export function requestSculptIntake(
     );
   }
 
-  if (validated.value.intakeId !== request.intakeId) {
+  if (validated.value.intakeId !== wanted.intakeId) {
     return refuse(
       "intake-mismatch",
-      `Produced intakeId "${validated.value.intakeId}" does not echo requested "${request.intakeId}".`,
+      `Produced intakeId "${validated.value.intakeId}" does not echo requested "${wanted.intakeId}".`,
     );
   }
-  if (validated.value.mode !== request.mode) {
+  if (validated.value.mode !== wanted.mode) {
     return refuse(
       "intake-mismatch",
-      `Produced mode "${validated.value.mode}" does not match requested "${request.mode}".`,
+      `Produced mode "${validated.value.mode}" does not match requested "${wanted.mode}".`,
     );
   }
 

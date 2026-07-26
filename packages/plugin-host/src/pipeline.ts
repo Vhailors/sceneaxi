@@ -511,35 +511,35 @@ async function processCandidate(options: {
     const check = capabilityContracts.get(capabilityId);
     if (check === undefined) continue;
 
-    let outcome: CapabilityContractCheckResult;
+    let violation: string | null;
     try {
-      outcome = check(implementations.get(capabilityId));
+      const outcome: unknown = check(implementations.get(capabilityId));
+      if (
+        outcome === null ||
+        typeof outcome !== "object" ||
+        typeof (outcome as { readonly ok?: unknown }).ok !== "boolean"
+      ) {
+        violation = `Capability contract check for "${capabilityId}" did not return a { ok } result envelope.`;
+      } else {
+        const result = outcome as CapabilityContractCheckResult;
+        violation = result.ok
+          ? null
+          : `Implementation of "${capabilityId}" violates its public capability contract: ${result.message}`;
+      }
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "contract check threw";
-      return {
-        ok: false,
-        refused: refuse({
-          locator: packageRoot,
-          reason: "capability-contract-violation",
-          phase: "integrity",
-          message: `Capability contract check threw for "${capabilityId}": ${message}`,
-          pluginId: manifest.pluginId,
-          pluginVersion: manifest.pluginVersion,
-          capabilityId,
-          entrypointEvaluated: true,
-        }),
-      };
+      violation = `Capability contract check threw for "${capabilityId}": ${message}`;
     }
 
-    if (!outcome.ok) {
+    if (violation !== null) {
       return {
         ok: false,
         refused: refuse({
           locator: packageRoot,
           reason: "capability-contract-violation",
           phase: "integrity",
-          message: `Implementation of "${capabilityId}" violates its public capability contract: ${outcome.message}`,
+          message: violation,
           pluginId: manifest.pluginId,
           pluginVersion: manifest.pluginVersion,
           capabilityId,

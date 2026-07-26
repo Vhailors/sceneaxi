@@ -1498,4 +1498,62 @@ export const capabilities = Object.freeze({
     );
     expect(hit.ok).toBe(false);
   });
+
+  it("refuses one plugin when its bound contract check answers with a non-envelope", async () => {
+    // A check is injected, so its own return value is untrusted input: a check
+    // that answers with junk must refuse that plugin, never abort the load set.
+    const root = tempRoot("check-non-envelope");
+    const broken = writePlugin({
+      root,
+      name: "broken-check",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.brokencheck",
+        entrypoint: "./plugin.js",
+        capabilities: Object.freeze(["dev.sceneaxi.capability.alpha"]),
+      }),
+      entrypointSource: `
+export const capabilities = Object.freeze({
+  "dev.sceneaxi.capability.alpha": { run() {} },
+});
+`,
+    });
+    const inert = writePlugin({
+      root,
+      name: "inert-neighbour",
+      manifest: baseManifest({
+        pluginId: "dev.sceneaxi.example.inertneighbour",
+        entrypoint: "./plugin.js",
+      }),
+      entrypointSource: emptyCapsEntrypoint,
+    });
+
+    const host = openPluginHost({
+      registry: registryWithAlpha(),
+      capabilityContracts: new Map([
+        [
+          "dev.sceneaxi.capability.alpha",
+          (() => undefined) as unknown as (
+            implementation: unknown,
+          ) => { readonly ok: true },
+        ],
+      ]),
+    });
+    const result = await host.load([broken, inert]);
+
+    expect(result.loaded.map((item) => item.pluginId)).toEqual([
+      "dev.sceneaxi.example.inertneighbour",
+    ]);
+    expect(result.refused).toHaveLength(1);
+    expect(result.refused[0]?.reason).toBe("capability-contract-violation");
+    expect(result.refused[0]?.phase).toBe("integrity");
+    expect(result.refused[0]?.capabilityId).toBe(
+      "dev.sceneaxi.capability.alpha",
+    );
+    expect(
+      host.getImplementation(
+        "dev.sceneaxi.example.brokencheck",
+        "dev.sceneaxi.capability.alpha",
+      ).ok,
+    ).toBe(false);
+  });
 });
