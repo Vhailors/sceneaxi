@@ -133,6 +133,19 @@ describe("publish-ready check — injected violations", () => {
     expect(res.stderr).toContain("[no-publish-hooks] sceneaxi (repository root) declares a 'prepublishOnly' script");
   });
 
+  it("fails when the repository root manifest leaves the workspace protocol", () => {
+    // The root names internal packages in devDependencies, so a registry range here would
+    // send `pnpm install` at the repo root looking for an unpublished 0.0.0 package.
+    editManifest(fx, "package.json", (m) => {
+      m.devDependencies = { ...(m.devDependencies as Record<string, string>), "@sceneaxi/schemas": "^1.2.3" };
+    });
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "[internal-deps-workspace] sceneaxi (repository root) declares @sceneaxi/schemas@'^1.2.3' in devDependencies",
+    );
+  });
+
   it("fails when a manifest drops a required hygiene field", () => {
     editManifest(fx, "packages/importers/package.json", (m) => {
       delete m.description;

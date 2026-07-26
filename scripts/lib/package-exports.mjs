@@ -1,11 +1,11 @@
 /**
  * The one walker that decides what an `exports` target is.
  *
- * Three owners ask that question — the publish-ready gate, the engine-SDK archive and its
- * test, and the readiness statement generated into that archive. Two copies could
- * disagree about which shapes even carry a root export, so the walker lives here rather
- * than inside any one of them: `check-publish-ready.mjs` already imports the archive
- * builder, so it cannot be the home without closing an import cycle.
+ * Two owners ask that question — the publish-ready gate, which checks every export target
+ * against the pinned SDK file list, and the engine-SDK archive test, which checks the
+ * same targets against the real archive. Two copies could disagree about which shapes
+ * even carry a root export, so the walker lives in its own module rather than inside
+ * either owner.
  *
  * Dependency-free plain ESM, like every other script beside it.
  */

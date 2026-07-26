@@ -486,8 +486,8 @@ function readManifests() {
 /**
  * Re-exported because the engine-SDK archive test asserts the other half of the same
  * claim — that every one of these targets actually ships — and reads the walker from the
- * gate it is verifying against. Its home is `./lib/package-exports.mjs` because the
- * archive builder asks the same question and this file already imports that builder.
+ * gate it is verifying against. Its home is `./lib/package-exports.mjs` so that neither
+ * owner of the question owns the answer.
  */
 export { exportEntries };
 
@@ -496,13 +496,14 @@ export { exportEntries };
 /**
  * The publish rules that hold for any npm manifest in this repository, workspace package
  * or repository root: private, on the pinned plan version, no registry publish
- * configuration, and no publish/pack lifecycle hook.
+ * configuration, no publish/pack lifecycle hook, and every internal `@sceneaxi/*`
+ * dependency resolving through the workspace rather than a registry.
  *
  * One owner on purpose — `docs/publish-readiness.md` states a single guarantee per check
  * ID covering "every workspace manifest and the repository root manifest", so the two
  * tiers must not be able to enforce different versions of the same documented row.
  */
-function checkPublishRules(label, json) {
+function checkPublishRules(label, json, consumable) {
   if (json.private !== true) {
     fail(
       "manifest-private",
@@ -523,6 +524,21 @@ function checkPublishRules(label, json) {
       fail("no-publish-hooks", `${label} declares a '${script}' script — publish lifecycle hooks are refused`);
     }
   }
+  for (const field of DEPENDENCY_FIELDS) {
+    for (const [dep, range] of Object.entries(json[field] ?? {})) {
+      if (!dep.startsWith("@sceneaxi/")) continue;
+      const allowed = consumable ? /^workspace:/ : /^link:\.\.\/\.\.\/packages\//;
+      if (typeof range !== "string" || !allowed.test(range)) {
+        const expected = consumable
+          ? "the workspace: protocol"
+          : "a link: path into packages/ (a site is its own install root, ADR 0018)";
+        fail(
+          "internal-deps-workspace",
+          `${label} declares ${dep}@'${range}' in ${field} — internal dependencies use ${expected} until a real release exists`,
+        );
+      }
+    }
+  }
 }
 
 function checkManifests(manifests) {
@@ -533,7 +549,7 @@ function checkManifests(manifests) {
     // structural rules are `pnpm check:sites`; the rules below that still apply to a
     // site apply unchanged.
     const consumable = tier !== "sites";
-    checkPublishRules(name, json);
+    checkPublishRules(name, json, consumable);
     if (json.type !== "module") fail("manifest-hygiene", `${name} must declare "type": "module"`);
     if (typeof json.license !== "string" || json.license.length === 0) {
       fail("manifest-hygiene", `${name} declares no license`);
@@ -614,33 +630,19 @@ function checkManifests(manifests) {
       }
     }
 
-    for (const field of DEPENDENCY_FIELDS) {
-      for (const [dep, range] of Object.entries(json[field] ?? {})) {
-        if (!dep.startsWith("@sceneaxi/")) continue;
-        const allowed = consumable ? /^workspace:/ : /^link:\.\.\/\.\.\/packages\//;
-        if (typeof range !== "string" || !allowed.test(range)) {
-          const expected = consumable
-            ? "the workspace: protocol"
-            : "a link: path into packages/ (a site is its own install root, ADR 0018)";
-          fail(
-            "internal-deps-workspace",
-            `${name} declares ${dep}@'${range}' in ${field} — internal dependencies use ${expected} until a real release exists`,
-          );
-        }
-      }
-    }
-
   }
 }
 
 /**
  * The repository root manifest is not a workspace package, but it is a publishable npm
  * package like any other: flipping its one `private` field would make `npm publish` at
- * the repo root ship the whole monorepo as `sceneaxi@0.0.0`. It carries the publish
- * rules that do not depend on being a consumable library.
+ * the repo root ship the whole monorepo as `sceneaxi@0.0.0`. It is also not
+ * dependency-free — it names internal packages in `devDependencies` — so it takes the
+ * consumable form of the rules, `workspace:` included: a registry range here would send
+ * `pnpm install` at the repo root looking for an unpublished `0.0.0` package.
  */
 function checkRootManifest(rootManifest) {
-  checkPublishRules(`${rootManifest.name ?? "package.json"} (repository root)`, rootManifest);
+  checkPublishRules(`${rootManifest.name ?? "package.json"} (repository root)`, rootManifest, true);
 }
 
 /**
