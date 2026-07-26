@@ -24,7 +24,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { buildZip } from "./lib/zip.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -342,7 +342,9 @@ function main(argv) {
   );
 }
 
-if (process.argv[1] !== undefined && import.meta.url === `file://${resolve(process.argv[1])}`) {
+// `pathToFileURL` percent-encodes exactly like `import.meta.url`, so a repository path
+// containing a space or a non-ASCII character cannot silently build nothing.
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     main(process.argv.slice(2));
   } catch (error) {

@@ -99,14 +99,14 @@ claim a guarantee the gate does not enforce.
 <!-- publish-ready:checklist -->
 | ID | What it proves |
 |---|---|
-| `manifest-private` | Every workspace manifest is `private: true`, so no package can be published even by accident. |
-| `manifest-version-plan` | Every manifest version equals the pinned plan version, so no package drifts off the shared plan. |
-| `manifest-hygiene` | Every manifest declares a name, description, `type: module`, licence, and `sceneaxi.releaseGroup`. |
-| `exports-resolve` | Every `exports` target is a real, non-symlink file inside its own package — no dangling public entry point. Every `packages/*` and `apps/*` manifest must declare one; a deployable site need not. |
-| `files-resolve` | Every `files` entry exists, so a packed tarball would carry what the manifest claims. |
+| `manifest-private` | Every workspace manifest **and the repository root manifest** is `private: true`, so nothing can be published even by accident. |
+| `manifest-version-plan` | Every manifest version, root included, equals the pinned plan version, so no package drifts off the shared plan. |
+| `manifest-hygiene` | Every workspace manifest declares a name, description, `type: module`, licence, and `sceneaxi.releaseGroup`. |
+| `exports-resolve` | Every `exports` target is an explicit, real, non-symlink file inside its own package — no dangling public entry point, and no subpath pattern, which could be proven neither to resolve nor to ship. Every `packages/*` and `apps/*` manifest must declare one; a deployable site need not. |
+| `files-resolve` | Every `files` entry exists — a glob is checked against the directory it can match inside — so a packed tarball would carry what the manifest claims. |
 | `internal-deps-workspace` | Every internal `@sceneaxi/*` dependency uses the `workspace:` protocol — except a deployable site, which is its own install root and uses a `link:` path into `packages/` (ADR 0018). Never `file:`, a Git ref, or a version range. |
-| `no-publish-hooks` | No package declares `publishConfig` or a publish/pack lifecycle script. |
-| `no-registry-publish` | No package script and no CI workflow can run `npm`/`pnpm`/`yarn publish`, `npm dist-tag`, or `changeset publish`. |
+| `no-publish-hooks` | No manifest, root included, declares `publishConfig` or a publish/pack lifecycle script. |
+| `no-registry-publish` | No package script and no CI workflow can run a registry-mutating verb (`publish`, `unpublish`, `dist-tag`, `deprecate`) through `npm`/`pnpm`/`yarn`/`bun`/`npx`/`changeset`, in any flag order — `pnpm -r publish` is caught exactly like `npm publish`. |
 | `profile-core-pin` | Each profile's `sceneaxi.corePin` equals the plan pin and matches the `corePin` literal in its seam source. |
 | `sdk-covers-exports` | Every export target of every engine-SDK package is in the pinned SDK file list, so the archive is self-consistent. |
 | `sdk-consumer-packages` | Every documented consumer package ships in the SDK archive, and no Kids file is pinned into it. |

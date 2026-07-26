@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { appendTo, editManifest, makeFixture, removeFixture, runCheck, writeTo } from "../helpers/fixture.ts";
@@ -61,6 +61,35 @@ describe("publish-ready check — injected violations", () => {
     expect(res.stderr).toContain("[manifest-private] @sceneaxi/schemas is not private");
   });
 
+  it("fails when the repository root manifest stops being private", () => {
+    // The root manifest is not a workspace package, so nothing else covers it — yet it
+    // is the one `npm publish` at the repo root would ship.
+    editManifest(fx, "package.json", (m) => {
+      m.private = false;
+    });
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("[manifest-private] sceneaxi (repository root) is not private");
+  });
+
+  it("fails when the repository root manifest grows a publish lifecycle hook", () => {
+    editManifest(fx, "package.json", (m) => {
+      m.scripts = { ...(m.scripts as Record<string, string>), prepublishOnly: "echo build" };
+    });
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("[no-publish-hooks] sceneaxi (repository root) declares a 'prepublishOnly' script");
+  });
+
+  it("fails when a manifest drops a required hygiene field", () => {
+    editManifest(fx, "packages/importers/package.json", (m) => {
+      delete m.description;
+    });
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("[manifest-hygiene] @sceneaxi/importers declares no description");
+  });
+
   it("fails when a package drifts off the pinned version plan", () => {
     editManifest(fx, "packages/engine-kernel/package.json", (m) => {
       m.version = "0.1.0";
@@ -81,6 +110,27 @@ describe("publish-ready check — injected violations", () => {
     expect(res.stderr).toContain("[exports-resolve] @sceneaxi/authoring-core export './gone' points at missing file");
   });
 
+  it("fails when an exports target is a symlink rather than a real file", () => {
+    symlinkSync(join(fx, "packages/schemas/src/index.ts"), join(fx, "packages/schemas/src/alias.ts"));
+    editManifest(fx, "packages/schemas/package.json", (m) => {
+      m.exports = { ...(m.exports as Record<string, string>), "./testing/alias.ts": "./src/alias.ts" };
+    });
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "[exports-resolve] @sceneaxi/schemas export './testing/alias.ts' is a symlink",
+    );
+  });
+
+  it("fails when an exports subpath is a pattern rather than an explicit target", () => {
+    editManifest(fx, "packages/schemas/package.json", (m) => {
+      m.exports = { ...(m.exports as Record<string, string>), "./testing/*": "./src/testing/*.ts" };
+    });
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("[exports-resolve] @sceneaxi/schemas export './testing/*' is a subpath pattern");
+  });
+
   it("fails when a files entry does not exist", () => {
     editManifest(fx, "packages/engine-kernel/package.json", (m) => {
       m.files = ["src", "no-such-dir"];
@@ -88,6 +138,17 @@ describe("publish-ready check — injected violations", () => {
     const res = runCheck(fx, CHECK);
     expect(res.status).toBe(1);
     expect(res.stderr).toContain("[files-resolve] @sceneaxi/engine-kernel declares files entry 'no-such-dir'");
+  });
+
+  it("fails when a files glob has no directory it could match inside", () => {
+    editManifest(fx, "packages/engine-kernel/package.json", (m) => {
+      m.files = ["src", "no-such-dir/**"];
+    });
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "[files-resolve] @sceneaxi/engine-kernel declares files entry 'no-such-dir/**', which does not exist (no 'no-such-dir' for it to match inside)",
+    );
   });
 
   it("fails when an internal dependency leaves the workspace protocol", () => {
@@ -126,11 +187,31 @@ describe("publish-ready check — injected violations", () => {
     expect(res.stderr).toContain("[no-registry-publish] package.json can run a registry publish");
   });
 
+  it("fails when a root script hides the publish verb behind a flag value", () => {
+    // Flag order is not a way out: the verb is matched as a token anywhere in the
+    // command, not only immediately after the package manager.
+    editManifest(fx, "package.json", (m) => {
+      m.scripts = { ...(m.scripts as Record<string, string>), ship: "npm --access public publish" };
+    });
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("[no-registry-publish] package.json can run a registry publish (npm publish)");
+  });
+
   it("fails when a CI workflow could run a registry publish", () => {
     appendTo(fx, ".github/workflows/gate.yml", "\n      - run: pnpm publish -r --no-git-checks\n");
     const res = runCheck(fx, CHECK);
     expect(res.status).toBe(1);
     expect(res.stderr).toContain("[no-registry-publish] .github/workflows/gate.yml can run a registry publish");
+  });
+
+  it("fails when a CI workflow uses the recursive publish form", () => {
+    appendTo(fx, ".github/workflows/gate.yml", "\n      - run: pnpm -r --filter ./packages publish\n");
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "[no-registry-publish] .github/workflows/gate.yml can run a registry publish (pnpm publish)",
+    );
   });
 
   it("fails when the SDK output directories stop being git-ignored", () => {
@@ -178,6 +259,18 @@ describe("publish-ready check — injected violations", () => {
     const res = runCheck(fx, CHECK);
     expect(res.status).toBe(1);
     expect(res.stderr).toContain("is Kids content — the Kids boundary is absolute");
+  });
+
+  it("fails when a documented consumer package does not ship in the SDK archive", () => {
+    editMarkedTable(fx, "docs/web-consumer.md", "consumer-surface", (rows) => [
+      ...rows,
+      "| `@sceneaxi/plugin-host` | a real package the archive does not carry | pin it |",
+    ]);
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "[sdk-consumer-packages] docs/web-consumer.md documents '@sceneaxi/plugin-host' as a consumer entry point, but the engine SDK archive does not ship it",
+    );
   });
 
   it("fails when the consumer contract documents a package that does not exist", () => {

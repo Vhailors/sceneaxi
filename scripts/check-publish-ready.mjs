@@ -24,7 +24,7 @@
  */
 import { existsSync, lstatSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { SDK_PACKAGES } from "./build-engine-sdk.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -57,14 +57,16 @@ const PUBLISH_LIFECYCLE_SCRIPTS = Object.freeze([
   "release",
 ]);
 
-/** Command shapes that would perform a real registry publish. */
-const REGISTRY_PUBLISH_PATTERNS = Object.freeze([
-  /\bnpm\s+publish\b/,
-  /\bpnpm\s+publish\b/,
-  /\byarn\s+publish\b/,
-  /\bnpm\s+dist-tag\b/,
-  /\bchangeset\s+publish\b/,
-]);
+/** Commands that can reach a registry at all. */
+const REGISTRY_COMMAND_HEADS = Object.freeze(["npm", "pnpm", "yarn", "bun", "npx", "changeset"]);
+
+/**
+ * Registry-mutating verbs. Matched as whole shell tokens anywhere after the command
+ * head in the same command, because flags may be interleaved in any order
+ * (`pnpm -r publish`, `npm --access public publish`) and a pattern anchored to the
+ * token right after the head would miss the canonical recursive form.
+ */
+const REGISTRY_PUBLISH_VERBS = Object.freeze(["publish", "unpublish", "dist-tag", "deprecate"]);
 
 /** SDK build output must never be committed, so a stale archive cannot ship. */
 const SDK_OUTPUT_IGNORES = Object.freeze(["dist-sdk/", "dist-sdk-again/"]);
@@ -176,7 +178,48 @@ function namespacePattern(pattern) {
   return new RegExp(`^${literals.join("[^/]+")}$`);
 }
 
+// --- shell command inspection -----------------------------------------------------
+
+/**
+ * The registry publish commands a script or workflow body can run.
+ *
+ * Each line is split into individual commands first, so a verb only counts against the
+ * command head it actually belongs to, and the verb is matched as a whole token
+ * anywhere in that command — flag order is not a way out.
+ *
+ * @returns {string[]} the distinct `<head> <verb>` shapes found
+ */
+function registryPublishCommands(text) {
+  const found = new Set();
+  for (const line of text.split("\n")) {
+    for (const command of line.split(/[;&|()`]+/)) {
+      const tokens = command
+        .split(/\s+/)
+        .map((token) => token.replace(/^["']+|["']+$/g, ""))
+        .filter((token) => token.length > 0);
+      const head = tokens.findIndex((token) => REGISTRY_COMMAND_HEADS.includes(token));
+      if (head < 0) continue;
+      const verb = tokens.slice(head + 1).find((token) => REGISTRY_PUBLISH_VERBS.includes(token));
+      if (verb !== undefined) found.add(`${tokens[head]} ${verb}`);
+    }
+  }
+  return [...found];
+}
+
 // --- workspace manifests ----------------------------------------------------------
+
+/** Glob metacharacters an npm `files` pattern may use. */
+const GLOB_CHARS = /[*?[\]{}]/;
+
+/**
+ * The literal directory a glob pattern can only match inside, so a pattern entry is
+ * still checked against the tree instead of being stat'd as though it were a file name.
+ */
+function globPrefixDir(pattern) {
+  const upTo = pattern.slice(0, pattern.search(GLOB_CHARS));
+  const cut = upTo.lastIndexOf("/");
+  return cut < 0 ? "." : upTo.slice(0, cut);
+}
 
 /** Every workspace manifest, keyed by package name. */
 function readManifests() {
@@ -257,6 +300,13 @@ function checkManifests(manifests) {
       fail("exports-resolve", `${name} declares no exports — an outsider has no entry point`);
     }
     for (const [subpath, target] of entries) {
+      if (subpath.includes("*") || target.includes("*")) {
+        fail(
+          "exports-resolve",
+          `${name} export '${subpath}' is a subpath pattern — this contract needs explicit export targets, because a pattern can be proven neither to resolve to a real file nor to ship in the pinned SDK archive`,
+        );
+        continue;
+      }
       if (!target.startsWith("./")) {
         fail("exports-resolve", `${name} export '${subpath}' target '${target}' is not a './' relative path`);
         continue;
@@ -280,9 +330,14 @@ function checkManifests(manifests) {
       }
     }
 
+    // `files` is a pattern list, not a path list: a negation prunes rather than
+    // claiming anything, and a glob claims only the directory it can match inside.
     for (const file of json.files ?? []) {
-      if (!existsSync(join(dir, file))) {
-        fail("files-resolve", `${name} declares files entry '${file}', which does not exist`);
+      if (file.startsWith("!")) continue;
+      const claimed = GLOB_CHARS.test(file) ? globPrefixDir(file) : file;
+      if (!existsSync(join(dir, claimed))) {
+        const detail = claimed === file ? "" : ` (no '${claimed}' for it to match inside)`;
+        fail("files-resolve", `${name} declares files entry '${file}', which does not exist${detail}`);
       }
     }
 
@@ -313,12 +368,41 @@ function checkManifests(manifests) {
   }
 }
 
-function checkNoRegistryPublish(manifests) {
+/**
+ * The repository root manifest is not a workspace package, but it is a publishable npm
+ * package like any other: flipping its one `private` field would make `npm publish` at
+ * the repo root ship the whole monorepo as `sceneaxi@0.0.0`. It carries the publish
+ * rules that do not depend on being a consumable library.
+ */
+function checkRootManifest(rootManifest) {
+  const label = `${rootManifest.name ?? "package.json"} (repository root)`;
+  if (rootManifest.private !== true) {
+    fail(
+      "manifest-private",
+      `${label} is not private — this repository holds no registry publish authority, so every manifest stays private:true`,
+    );
+  }
+  if (rootManifest.version !== PUBLISH_PLAN.bootstrapVersion) {
+    fail(
+      "manifest-version-plan",
+      `${label} is version '${rootManifest.version}', the pinned plan version is '${PUBLISH_PLAN.bootstrapVersion}'`,
+    );
+  }
+  if (rootManifest.publishConfig !== undefined) {
+    fail("no-publish-hooks", `${label} declares publishConfig — no manifest may carry registry publish configuration`);
+  }
+  for (const script of PUBLISH_LIFECYCLE_SCRIPTS) {
+    if (rootManifest.scripts?.[script] !== undefined) {
+      fail("no-publish-hooks", `${label} declares a '${script}' script — publish lifecycle hooks are refused`);
+    }
+  }
+}
+
+function checkNoRegistryPublish(manifests, rootManifest) {
   if (PUBLISH_PLAN.registryPublishAuthorized) {
     fail("no-registry-publish", "PUBLISH_PLAN.registryPublishAuthorized is true, which no captain decision grants");
     return;
   }
-  const rootManifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
   const commandSources = [["package.json", Object.values(rootManifest.scripts ?? {}).join("\n")]];
   for (const { rel, json } of manifests.values()) {
     commandSources.push([`${rel}/package.json`, Object.values(json.scripts ?? {}).join("\n")]);
@@ -333,13 +417,13 @@ function checkNoRegistryPublish(manifests) {
     }
   }
   for (const [label, text] of commandSources) {
-    for (const pattern of REGISTRY_PUBLISH_PATTERNS) {
-      if (pattern.test(text)) {
-        fail("no-registry-publish", `${label} can run a registry publish (${pattern}) — no publish authority exists`);
-      }
+    for (const command of registryPublishCommands(text)) {
+      fail("no-registry-publish", `${label} can run a registry publish (${command}) — no publish authority exists`);
     }
   }
+}
 
+function checkSdkOutputIgnored() {
   const gitignore = existsSync(join(root, ".gitignore")) ? readFileSync(join(root, ".gitignore"), "utf8") : "";
   for (const ignored of SDK_OUTPUT_IGNORES) {
     if (!gitignore.split("\n").some((line) => line.trim() === ignored)) {
@@ -469,11 +553,14 @@ function checkExportNamespaceDoc(manifests, consumerPackages) {
       continue;
     }
     const entries = exportEntries(manifest.json.exports);
-    const actualRoot = entries.find(([subpath]) => subpath === ".")?.[1] ?? null;
-    if (actualRoot !== rootExport) {
+    // One subpath can carry several targets (one per export condition), so the
+    // documented root must name one of them rather than whichever comes first.
+    const actualRoots = entries.filter(([subpath]) => subpath === ".").map(([, target]) => target);
+    const rootMatches = rootExport === null ? actualRoots.length === 0 : actualRoots.includes(rootExport);
+    if (!rootMatches) {
       fail(
         "docs-export-namespaces",
-        `${name} root export is '${actualRoot}', ${READINESS_DOC} documents '${rootExport}'`,
+        `${name} root export is '${actualRoots.join("', '") || "—"}', ${READINESS_DOC} documents '${rootExport ?? "—"}'`,
       );
     }
     const subpaths = entries.map(([subpath]) => subpath).filter((subpath) => subpath !== ".");
@@ -575,13 +662,24 @@ export function checkPublishReady() {
       return [...errors];
     }
   }
+  let rootManifest;
+  try {
+    rootManifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+  } catch (error) {
+    errors.push(
+      `[manifest-hygiene] the repository root package.json is unreadable: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return [...errors];
+  }
   const manifests = readManifests();
   if (manifests.size === 0) {
     errors.push("[manifest-hygiene] found zero workspace manifests — refusing to pass on an empty surface");
     return [...errors];
   }
+  guard("manifest-private", () => checkRootManifest(rootManifest));
   guard("manifest-hygiene", () => checkManifests(manifests));
-  guard("no-registry-publish", () => checkNoRegistryPublish(manifests));
+  guard("no-registry-publish", () => checkNoRegistryPublish(manifests, rootManifest));
+  guard("sdk-output-ignored", () => checkSdkOutputIgnored());
   guard("profile-core-pin", () => checkProfileCorePins(manifests));
   const consumerPackages = guard("docs-consumer-surface", () => checkConsumerDoc(manifests)) ?? [];
   guard("docs-export-namespaces", () => checkExportNamespaceDoc(manifests, consumerPackages));
@@ -604,6 +702,8 @@ function main() {
   );
 }
 
-if (process.argv[1] !== undefined && import.meta.url === `file://${resolve(process.argv[1])}`) {
+// `pathToFileURL` percent-encodes exactly like `import.meta.url`, so a repository path
+// containing a space or a non-ASCII character cannot silently skip every check.
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main();
 }
