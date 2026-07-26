@@ -289,15 +289,53 @@ provider abstraction — it fixes the order the two existing pieces run in:
 1. **Kids** — denied by name before identity, provider, or ledger, on both routes
 2. **Route** — `hosted` or `byo`, a closed enumeration with no default
 3. **Hosted opt-in** — off unless a caller explicitly passes `{ enabled: true }`
-4. **Entitlement** — capability, account, and **balance**, all before the provider
-5. **Metering readiness** — store, reason, and key, still before the provider
-6. **Provider** — the injected call, and only now
-7. **Debit** — exactly the credits the decision named, through `meterCredits`
+4. **Replay** — the account-scoped key is looked up before the balance and the provider
+5. **Entitlement** — capability, account, and **balance**, all before the provider
+6. **Metering readiness** — store, reason, and key, still before the provider
+7. **Provider** — the injected call, and only now
+8. **Debit** — exactly the credits the decision named, through `meterCredits`
 
-Steps 4 and 6 in that order are why a zero or insufficient balance costs nothing and
+Steps 5 and 7 in that order are why a zero or insufficient balance costs nothing and
 appends nothing: the refusal is `CREDIT_BALANCE_INSUFFICIENT`, produced before the provider
 runs. A provider throw is `HOSTED_AI_PROVIDER_FAILED` with no debit; a ledger or store
 failure keeps its own reason, and the debit is all-or-nothing either way.
+
+**A retry is answered from the debit it already made.** The ledger's own idempotency check
+lives at the bottom of the stack, *below* both the balance gate and the provider, so
+relying on it alone would break the retry it is supposed to protect: a caller that timed
+out and re-sent `turn_01` would be refused `CREDIT_BALANCE_INSUFFICIENT` out of the balance
+its own first attempt had already spent, and would have paid the upstream provider a second
+time for an answer no ledger row could cover. Step 4 looks `usage:<accountId>:<callerKey>`
+up in the supplied ledger first. On a hit the call returns `replayed: true` carrying the
+prior debit, the ledger, and the balance — **no provider execution and no second charge** —
+and entitlement is re-evaluated against the ledger as it stood immediately before that
+debit, so capability, identity, ownership, and the guard's own refusals still apply to a
+retry while the already-answered balance question is not asked again. A key re-sent with a
+different price or reason is still a `CREDIT_IDEMPOTENCY_KEY_CONFLICT`. The replayed
+outcome deliberately carries **no `response`**: the ledger persists debits, not model
+answers, so the original response is gone and the gate will not fabricate one — the
+`MeteredModelCallReplayed` shape has no field to read it from. The BYO route is excluded
+from step 4: it never appends a debit, and a free call is safe to simply run again.
+
+**Only a throw is a provider failure.** The thunk is provider-neutral, so billing charges
+for any value it returns — it cannot tell a refusal envelope from a legitimate answer that
+happens to contain `ok: false`. Provider layers that report refusals as data, the Model
+Provider Port's `{ ok: false, reason }` among them, must be translated in the caller's own
+provider integration:
+
+```ts
+const call = async () => {
+  const result = await port.complete(request);
+  if (!result.ok) throw new Error(result.reason);
+  return result;
+};
+```
+
+That converts a port refusal into `HOSTED_AI_PROVIDER_FAILED` with no debit, and it is the
+integration's obligation rather than the gate's precisely because billing must not learn
+the shape of a model refusal to charge for a model call.
+`tests/e2e/hosted-ai-metering-golden.test.ts` wires it that way and asserts the refused
+call is not billed.
 
 **Default-off is a switch, not an inference.** `HOSTED_AI_DEFAULT_CONFIG` is
 `{ enabled: false }`. A configured OpenRouter adapter or a present API key does not enable

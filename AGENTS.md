@@ -195,8 +195,12 @@ so the retired "experimental preview" framing cannot return by review slip.
 
 Hosted AI reaches a credit debit through exactly one path: `runMeteredModelCall()`
 in `packages/billing/src/hosted-ai.ts`, whose fixed order (Kids → route → hosted
-opt-in → entitlement incl. balance → metering readiness → provider → debit) is the
-contract, documented in `docs/auth-credits.md`. Hosted is default-off
+opt-in → replay → entitlement incl. balance → metering readiness → provider →
+debit) is the contract, documented in `docs/auth-credits.md`. The replay step
+answers a retry from the account-scoped debit that already exists — before the
+balance gate and before the provider, and with no `response` to hand back — and
+only a **throw** from the injected thunk is a provider failure, so a provider
+layer that refuses by value must translate it caller-side. Hosted is default-off
 (`HOSTED_AI_DEFAULT_CONFIG`) and a configured adapter or key never enables it; BYO
 bills `byo-model-keys` and stays free. The provider is an **injected thunk**, never
 a Model Provider Port type, so billing gains no engine edge — callers wire the port

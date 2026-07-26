@@ -52,12 +52,27 @@ global `idempotency_key` uniqueness cannot disagree.
 
 **Hosted AI is one ordering, not a convention.** `runMeteredModelCall` composes the two
 pieces that already exist — `evaluateEntitlement` and `meterCredits` — into the single
-sequence a hosted model call may happen in: Kids denial, route, hosted opt-in, entitlement
-(capability, account, **balance**), metering readiness, provider, debit. Balance before
-provider is the load-bearing step: an unfunded account refuses without the provider running
-and without a ledger row, so a zero balance costs nothing and appends nothing. The provider
-is an **injected thunk**, never a Model Provider Port type — billing does not learn what a
-model is in order to charge for one, and every credential stays outside the credit plane.
+sequence a hosted model call may happen in: Kids denial, route, hosted opt-in, replay,
+entitlement (capability, account, **balance**), metering readiness, provider, debit. Balance
+before provider is the load-bearing step: an unfunded account refuses without the provider
+running and without a ledger row, so a zero balance costs nothing and appends nothing. The
+provider is an **injected thunk**, never a Model Provider Port type — billing does not learn
+what a model is in order to charge for one, and every credential stays outside the credit
+plane.
+
+**A retry costs nothing twice.** The account-scoped metering key is looked up *before* the
+balance is judged and before the provider is entered, so a caller re-sending a timed-out
+turn gets `replayed: true` with the debit it already made, instead of being refused
+`CREDIT_BALANCE_INSUFFICIENT` out of the balance that very debit spent and paying the
+upstream provider a second time. The replayed outcome carries no `response` field at all:
+the ledger records debits, never model answers, and the gate will not invent one.
+
+**Only a throw is a provider failure.** Billing charges for any value the thunk returns, so
+a provider layer that reports refusals as data — the Model Provider Port's
+`{ ok: false, reason }` — must be translated by the caller's own integration
+(`if (!result.ok) throw new Error(result.reason)`) before it reaches the gate. Doing that
+translation here would mean billing learning the shape of a model refusal, which is the one
+thing the injected thunk exists to prevent. See `docs/auth-credits.md`.
 
 **Hosted AI is off until someone says otherwise.** `HOSTED_AI_DEFAULT_CONFIG` is
 `{ enabled: false }`, and the opt-in is a separate explicit switch rather than something

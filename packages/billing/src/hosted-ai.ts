@@ -10,21 +10,37 @@
  *   1. Kids                — denied by name before identity, provider, or ledger
  *   2. route               — `hosted` or `byo`, an enumeration with no default
  *   3. hosted opt-in       — off unless a caller explicitly enables it
- *   4. entitlement         — capability, account, and **balance**, all pre-flight
- *   5. metering readiness  — store, reason, and key checked before spending money
- *   6. provider            — the injected call, and only now
- *   7. debit               — exactly the credits the decision named
+ *   4. replay              — an already-charged key returns its prior debit
+ *   5. entitlement         — capability, account, and **balance**, all pre-flight
+ *   6. metering readiness  — store, reason, and key checked before spending money
+ *   7. provider            — the injected call, and only now
+ *   8. debit               — exactly the credits the decision named
  *
- * Steps 4 and 6 in that order are the load-bearing part: an unfunded account is
+ * Steps 5 and 7 in that order are the load-bearing part: an unfunded account is
  * refused *before* the provider runs, so a zero balance costs nothing and appends
  * nothing. The inverse — call first, discover the balance after — is what
  * produces either an unpaid call or a ledger entry invented to cover it.
+ *
+ * Step 4 is what makes a retry safe rather than merely non-duplicating. The
+ * ledger's own idempotency sits at the *bottom* of the stack, below the balance
+ * gate and below the provider, so a caller retrying a timed-out turn would be
+ * told "you cannot afford this" out of the balance the first attempt already
+ * spent, and would pay the upstream provider again for an answer it could never
+ * be charged for. Looking the account-scoped key up first answers the retry from
+ * the debit that already exists: the balance is judged as it stood when that
+ * debit was authorized, the provider is not run, and nothing is charged twice.
+ * The model's answer is *not* replayed — the ledger records debits, never
+ * responses, and inventing one would be worse than admitting it is gone.
  *
  * The provider is an injected thunk, deliberately not a Model Provider Port type.
  * Billing must not learn what a model is to charge for one, and the port lives
  * above this package in the dependency matrix; a caller wires the two together
  * (see `tests/e2e/hosted-ai-metering-golden.test.ts`). That also keeps every
- * credential and every network decision outside the credit plane.
+ * credential and every network decision outside the credit plane. Because the
+ * thunk is provider-neutral, only a **throw** means failure here: an adapter that
+ * reports refusals as a value (the Model Provider Port's `{ ok: false, reason }`
+ * among them) must be translated by the caller's own integration before it
+ * reaches this gate, or a refused call would be billed as a completed one.
  *
  * BYO keys are free and never reach step 7: the user already pays their own
  * provider, so `byo-model-keys` resolves on the entitlement matrix's
@@ -41,8 +57,8 @@ import {
   type IdentitySurface,
 } from "@sceneaxi/schemas";
 import { evaluateEntitlement } from "./entitlements.js";
-import type { LedgerState } from "./ledger.js";
-import { meterCredits } from "./metering.js";
+import { validateLedgerState, type LedgerState } from "./ledger.js";
+import { meterCredits, meteringIdempotencyKey } from "./metering.js";
 import type { CreditStore } from "./store.js";
 import {
   BILLING_REFUSE_REASONS,
@@ -94,6 +110,26 @@ export const HOSTED_AI_DEFAULT_CONFIG: HostedAiConfig = Object.freeze({
  *
  * Returns whatever the caller's provider layer returns; billing never inspects
  * it. A throw is a provider failure and refuses without a debit.
+ *
+ * That is the whole contract, and it puts one obligation on the caller: **a
+ * returned value is a completed call and will be charged for.** Provider layers
+ * that report refusals as data rather than as a throw — the Model Provider Port's
+ * `{ ok: false, reason }` is the one in this repo — must be translated by the
+ * caller's own provider integration:
+ *
+ * ```ts
+ * const call = async () => {
+ *   const result = await port.complete(request);
+ *   if (!result.ok) throw new Error(result.reason);
+ *   return result;
+ * };
+ * ```
+ *
+ * Billing cannot do that translation itself without learning the shape of a
+ * model refusal, which is exactly the coupling this thunk exists to avoid; and it
+ * cannot guess, because "false", "empty", and "`ok: false`" are ordinary
+ * successful answers for some other provider. So the translation is the
+ * integration's job, and an untranslated refusal is billed as a success.
  */
 export type HostedAiProviderCall<Response> = () => Awaitable<Response>;
 
@@ -124,7 +160,9 @@ export type RunMeteredModelCallRequest<Response> = Readonly<{
   surface?: IdentitySurface | undefined;
 }>;
 
-export type RunMeteredModelCallOutcome<Response> = Readonly<{
+/** A call that reached the provider: its answer is here. */
+export type MeteredModelCallCompleted<Response> = Readonly<{
+  replayed: false;
   route: HostedAiRoute;
   capability: EntitlementCapability;
   /** The entitlement conclusion this call was authorized under. */
@@ -142,9 +180,35 @@ export type RunMeteredModelCallOutcome<Response> = Readonly<{
   state?: LedgerState | undefined;
   /** The balance after the debit. Absent when nothing was metered. */
   balance?: number | undefined;
-  /** True when the idempotency key had already been applied. */
-  replayed: boolean;
 }>;
+
+/**
+ * A call whose account-scoped idempotency key had already been charged.
+ *
+ * There is deliberately no `response` field to read: the ledger persists debits,
+ * not model answers, so the original response is gone and this module will not
+ * fabricate one. Making that a compile-time fact rather than an `undefined` a
+ * caller might forget to check is the point of the separate shape.
+ */
+export type MeteredModelCallReplayed = Readonly<{
+  replayed: true;
+  route: HostedAiRoute;
+  capability: EntitlementCapability;
+  /** The entitlement conclusion the *original* call was authorized under. */
+  decision: EntitlementDecision;
+  /** Always true: a replay is only detected from a debit that exists. */
+  metered: true;
+  /** The debit the original call appended; nothing was appended now. */
+  entry: CreditLedgerEntry;
+  /** The current ledger, unchanged by this call. */
+  state: LedgerState;
+  /** The current balance, unchanged by this call. */
+  balance: number;
+}>;
+
+export type RunMeteredModelCallOutcome<Response> =
+  | MeteredModelCallCompleted<Response>
+  | MeteredModelCallReplayed;
 
 function isHostedAiRoute(value: unknown): value is HostedAiRoute {
   return HOSTED_AI_ROUTES.some((route) => route === value);
@@ -178,6 +242,99 @@ function isCreditStore(value: unknown): value is CreditStore {
   } catch {
     return false;
   }
+}
+
+type ReplayedDebit = Readonly<{
+  /** The debit the caller's key already produced. */
+  entry: CreditLedgerEntry;
+  /** The supplied ledger, validated. */
+  state: LedgerState;
+  /**
+   * The ledger as it stood immediately before that debit.
+   *
+   * Entitlement is re-evaluated against this rather than against the current
+   * balance, because the balance question for a retry is not "can this account
+   * afford the charge now" — it already paid it — but "was it entitled when it
+   * did". The prefix answers that from the ledger's own history instead of
+   * skipping the check, so capability, identity, ownership, and the guard's own
+   * refusals all still apply to a retry. A debit can never be the first entry
+   * (it would have driven the balance negative), so the prefix is never empty
+   * and its derived balance is exactly the balance that authorized the charge.
+   */
+  priorState: LedgerState;
+}>;
+
+/**
+ * Look up the caller's account-scoped metering key in the supplied ledger.
+ *
+ * Read from the caller's own state, not from the store: `meterCredits` already
+ * refuses any state that is not the current persisted one, so this cannot reach a
+ * conclusion the debit path would disagree with, and it discloses nothing the
+ * caller did not pass in. The mutated-replay check mirrors the ledger's, so a key
+ * re-sent with a different price or reason still conflicts here rather than
+ * quietly returning the cheaper original.
+ *
+ * Returns `undefined` whenever the request is not yet known to be a well-formed
+ * credit-priced call; entitlement and the metering-readiness checks own those
+ * refusals, and duplicating them here would give the same defect two voices.
+ */
+function findReplayedDebit(
+  request: Readonly<{
+    state: unknown;
+    reason: unknown;
+    creditAmount: unknown;
+    idempotencyKey: unknown;
+  }>,
+): BillingOutcome<ReplayedDebit | undefined> {
+  const { state, reason, creditAmount, idempotencyKey } = request;
+  if (typeof idempotencyKey !== "string" || idempotencyKey.length === 0) {
+    return billingOk(undefined);
+  }
+  if (typeof reason !== "string" || reason.trim().length === 0) {
+    return billingOk(undefined);
+  }
+  if (!Number.isSafeInteger(creditAmount) || (creditAmount as number) < 1) {
+    return billingOk(undefined);
+  }
+  const validated = validateLedgerState(state);
+  if (!validated.ok) return billingOk(undefined);
+
+  const scopedKey = meteringIdempotencyKey(
+    validated.value.account.accountId,
+    idempotencyKey,
+  );
+  const entry = validated.value.entries.find(
+    (candidate) => candidate.idempotencyKey === scopedKey,
+  );
+  if (entry === undefined) return billingOk(undefined);
+
+  if (
+    entry.movement !== "debit" ||
+    entry.delta !== -(creditAmount as number) ||
+    entry.reason !== reason
+  ) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.idempotencyConflict,
+      `Idempotency key "${scopedKey}" was already applied with a different movement; a mutated replay is refused.`,
+    );
+  }
+
+  return billingOk(
+    Object.freeze({
+      entry,
+      state: validated.value,
+      priorState: Object.freeze({
+        account: validated.value.account,
+        entries: Object.freeze(
+          validated.value.entries.slice(
+            0,
+            validated.value.entries.indexOf(entry),
+          ),
+        ),
+        balance: entry.balanceAfter - entry.delta,
+      }),
+    }),
+  );
 }
 
 /**
@@ -265,12 +422,23 @@ export async function runMeteredModelCall<Response>(
     );
   }
 
+  // Replay, before the balance is judged and before the provider is entered. The
+  // BYO route is excluded on purpose: it never appends a debit, so it has no
+  // prior charge to answer with and a free call is safe to simply run again.
+  const replay: BillingOutcome<ReplayedDebit | undefined> =
+    route === "hosted"
+      ? findReplayedDebit({ state, reason, creditAmount, idempotencyKey })
+      : billingOk(undefined);
+  if (!replay.ok) return replay;
+  const replayed = replay.value;
+
+  const entitlementState = replayed === undefined ? state : replayed.priorState;
   const decision = evaluateEntitlement({
     capability: routeCapability,
     now,
     ...(admin === undefined ? {} : { admin }),
     ...(principal === undefined ? {} : { principal }),
-    ...(state === undefined ? {} : { state }),
+    ...(entitlementState === undefined ? {} : { state: entitlementState }),
     ...(creditAmount === undefined ? {} : { creditAmount }),
     ...(surface === undefined ? {} : { surface }),
   });
@@ -305,6 +473,23 @@ export async function runMeteredModelCall<Response>(
     }
   }
 
+  // The key already bought this call. Hand back the debit that exists — no
+  // second provider execution, no second charge, and no invented answer.
+  if (replayed !== undefined && charge !== undefined) {
+    return billingOk(
+      Object.freeze({
+        replayed: true,
+        route,
+        capability: routeCapability,
+        decision: decision.value,
+        metered: true,
+        entry: replayed.entry,
+        state: replayed.state,
+        balance: replayed.state.balance,
+      }),
+    );
+  }
+
   let response: Response;
   try {
     response = await call();
@@ -320,6 +505,7 @@ export async function runMeteredModelCall<Response>(
   if (charge === undefined) {
     return billingOk(
       Object.freeze({
+        replayed: false,
         route,
         capability: routeCapability,
         decision: decision.value,
@@ -328,7 +514,6 @@ export async function runMeteredModelCall<Response>(
         entry: undefined,
         state: undefined,
         balance: undefined,
-        replayed: false,
       }),
     );
   }
@@ -346,8 +531,13 @@ export async function runMeteredModelCall<Response>(
   });
   if (!metered.ok) return metered;
 
+  // Not `metered.value.replayed`: a replay is settled above, against the same
+  // account-scoped key and the same supplied state that `meterCredits` requires
+  // to equal the persisted one. Reaching the ledger's own replay branch from here
+  // is impossible, so reporting it would be a guarantee no path can produce.
   return billingOk(
     Object.freeze({
+      replayed: false,
       route,
       capability: routeCapability,
       decision: decision.value,
@@ -356,7 +546,6 @@ export async function runMeteredModelCall<Response>(
       entry: metered.value.entry,
       state: metered.value.state,
       balance: metered.value.balance,
-      replayed: metered.value.replayed,
     }),
   );
 }

@@ -175,6 +175,8 @@ describe("runMeteredModelCall — hosted route, funded", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
+    expect(result.value.replayed).toBe(false);
+    if (result.value.replayed) return;
     expect(provider.calls.length).toBe(1);
     expect(result.value.response).toEqual({ text: "fixture answer" });
     expect(result.value.metered).toBe(true);
@@ -235,7 +237,7 @@ describe("runMeteredModelCall — hosted route, funded", () => {
     expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
   });
 
-  it("is replay-safe: the same key charges once", async () => {
+  it("is replay-safe: the same key charges once and calls the provider once", async () => {
     const state = funded(100);
     const store = storeFor(state);
     const provider = recordingProvider();
@@ -275,6 +277,79 @@ describe("runMeteredModelCall — hosted route, funded", () => {
     expect(replay.value.replayed).toBe(true);
     expect(replay.value.balance).toBe(93);
     expect(store.entryCount(ACCOUNT.accountId)).toBe(2);
+    // The retry is answered from the debit that already exists, so the upstream
+    // provider is not paid a second time for one charge.
+    expect(provider.calls.length).toBe(1);
+    if (!replay.value.replayed) return;
+    expect(replay.value.entry.idempotencyKey).toBe(
+      meteringIdempotencyKey(ACCOUNT.accountId, "turn_01"),
+    );
+    expect(replay.value.entry.delta).toBe(-7);
+    expect(replay.value.metered).toBe(true);
+  });
+
+  it("replays a charge the remaining balance can no longer afford", async () => {
+    // The account is funded for exactly one turn. After it, the balance is below
+    // the price — which is precisely when a timed-out caller retries, and exactly
+    // where a bottom-of-the-stack replay check would answer "you cannot afford
+    // this" for a turn the caller has already paid for.
+    const state = funded(10);
+    const store = storeFor(state);
+    const provider = recordingProvider();
+    const first = await hostedCall(state, provider, { store });
+    expect(first.ok).toBe(true);
+    if (!first.ok || first.value.state === undefined) return;
+    expect(first.value.balance).toBe(3);
+
+    const replay = await hostedCall(first.value.state, provider, { store });
+    expect(replay.ok).toBe(true);
+    if (!replay.ok) return;
+    expect(replay.value.replayed).toBe(true);
+    expect(replay.value.balance).toBe(3);
+    expect(provider.calls.length).toBe(1);
+    expect(store.entryCount(ACCOUNT.accountId)).toBe(2);
+  });
+
+  it("refuses a mutated replay rather than returning the cheaper original", async () => {
+    const state = funded(100);
+    const store = storeFor(state);
+    const provider = recordingProvider();
+    const first = await hostedCall(state, provider, { store });
+    expect(first.ok).toBe(true);
+    if (!first.ok || first.value.state === undefined) return;
+
+    for (const overrides of [
+      { creditAmount: 12 },
+      { reason: "a different turn entirely" },
+    ]) {
+      const mutated = await hostedCall(first.value.state, provider, {
+        store,
+        ...overrides,
+      });
+      expect(mutated.ok).toBe(false);
+      if (mutated.ok) return;
+      expect(mutated.reason).toBe(BILLING_REFUSE_REASONS.idempotencyConflict);
+      expect(provider.calls.length).toBe(1);
+      expect(store.entryCount(ACCOUNT.accountId)).toBe(2);
+    }
+  });
+
+  it("still applies the guard to a replay: a settled session refuses", async () => {
+    const state = funded(100);
+    const store = storeFor(state);
+    const provider = recordingProvider();
+    const first = await hostedCall(state, provider, { store });
+    expect(first.ok).toBe(true);
+    if (!first.ok || first.value.state === undefined) return;
+
+    const replay = await hostedCall(first.value.state, provider, {
+      store,
+      principal: principal({ expiresAt: "2026-07-25T09:30:00Z" }),
+    });
+    expect(replay.ok).toBe(false);
+    if (replay.ok) return;
+    expect(replay.reason).toBe(AUTH_REFUSE_REASONS.sessionExpired);
+    expect(provider.calls.length).toBe(1);
   });
 });
 
@@ -513,6 +588,38 @@ describe("runMeteredModelCall — failures do not half-apply", () => {
     expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
   });
 
+  it("charges nothing for a value-shaped refusal the integration translates", async () => {
+    // The documented caller obligation: a provider layer that reports refusals as
+    // data — the Model Provider Port's `{ ok: false, reason }` — converts them to
+    // a throw in its own integration, because the thunk is provider-neutral and a
+    // returned value is a completed call billing must pay for. Written out here
+    // in billing's own tests so the obligation is regressed at the seam that
+    // spends the money, without billing naming a provider type.
+    const state = funded(100);
+    const store = storeFor(state);
+    const calls: number[] = [];
+    const refusal = {
+      ok: false as const,
+      reason: "MODEL_PROVIDER_PROFILE_POLICY_MISSING",
+    };
+    const result = await hostedCall(state, recordingProvider(), {
+      store,
+      call: () => {
+        calls.push(calls.length + 1);
+        if (!refusal.ok) throw new Error(refusal.reason);
+        return refusal;
+      },
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.hostedAiProviderFailed);
+    expect(calls.length).toBe(1);
+    // The funding grant, and nothing else: a refused call is not a sold one.
+    expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
+    expect(state.balance).toBe(100);
+  });
+
   it("names a store failure and leaves no partial debit", async () => {
     const state = funded(100);
     const provider = recordingProvider();
@@ -546,6 +653,8 @@ describe("runMeteredModelCall — the BYO route stays free", () => {
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
+    expect(result.value.replayed).toBe(false);
+    if (result.value.replayed) return;
     expect(provider.calls.length).toBe(1);
     expect(result.value.response).toEqual({ text: "byo answer" });
     expect(result.value.metered).toBe(false);

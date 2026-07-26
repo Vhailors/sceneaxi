@@ -159,8 +159,10 @@ const providerStack = () => {
       model: MODEL,
       prompt: "fixture prompt",
     });
-    // The port reports a refusal rather than throwing, so the gate would happily
-    // charge for one unless the caller converts it. It becomes a provider failure.
+    // The documented integration obligation (docs/auth-credits.md, "Only a throw
+    // is a provider failure"): the port refuses by value, and a value the thunk
+    // returns is a completed call billing pays for, so the refusal is translated
+    // here — in the provider integration — rather than inside the credit plane.
     if (!result.ok) throw new Error(result.reason);
     return result;
   };
@@ -205,6 +207,8 @@ describe("hosted AI metering golden path", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
+    expect(result.value.replayed).toBe(false);
+    if (result.value.replayed) return;
 
     // Provider evidence: the deterministic adapter ran, pinned and no-fallback.
     expect(stack.transportRequests).toHaveLength(1);
@@ -246,6 +250,36 @@ describe("hosted AI metering golden path", () => {
     });
     expect(result.value.balance).toBe(6);
     expect(store.entryCount(ACCOUNT.accountId)).toBe(2);
+  });
+
+  it("answers a retry from the prior debit without re-entering the transport", async () => {
+    const state = funded(10);
+    const stack = providerStack();
+    const { request, store } = hostedRequest(state, stack);
+
+    const first = await runMeteredModelCall(request as never);
+    expect(first.ok).toBe(true);
+    if (!first.ok || first.value.state === undefined) return;
+    expect(first.value.balance).toBe(6);
+
+    const retry = await runMeteredModelCall({
+      ...request,
+      state: first.value.state,
+    } as never);
+
+    expect(retry.ok).toBe(true);
+    if (!retry.ok) return;
+    expect(retry.value.replayed).toBe(true);
+    expect(retry.value.balance).toBe(6);
+    // The claim the composition alone can make: one debit, and the provider stack
+    // entered exactly once for it. A retry that re-entered the transport would be
+    // real upstream spend with no ledger row to show for it.
+    expect(stack.transportRequests).toHaveLength(1);
+    expect(store.entryCount(ACCOUNT.accountId)).toBe(2);
+    if (!retry.value.replayed) return;
+    expect(retry.value.entry.idempotencyKey).toBe(
+      meteringIdempotencyKey(ACCOUNT.accountId, "turn_01"),
+    );
   });
 
   it("is default-off: the wired adapter alone does not enable hosted AI", async () => {

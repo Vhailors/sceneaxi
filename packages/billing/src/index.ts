@@ -79,6 +79,8 @@ export {
   type HostedAiConfig,
   type HostedAiProviderCall,
   type HostedAiRoute,
+  type MeteredModelCallCompleted,
+  type MeteredModelCallReplayed,
   type RunMeteredModelCallOutcome,
   type RunMeteredModelCallRequest,
 } from "./hosted-ai.js";
