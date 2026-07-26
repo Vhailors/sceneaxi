@@ -18,8 +18,9 @@
     "check:syntax": "node scripts/check-syntax.mjs",
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "check:contracts": "node scripts/check-contracts.mjs",
-    "gate": "pnpm -s check:syntax && pnpm -s check:boundaries && pnpm -s check:contracts && pnpm -s check:sites && pnpm -s build && pnpm -s test && pnpm -s lint",
+    "gate": "pnpm -s check:syntax && pnpm -s check:boundaries && pnpm -s check:contracts && pnpm -s check:sites && pnpm -s check:publish-ready && pnpm -s build && pnpm -s test && pnpm -s lint",
     "check:sites": "node scripts/check-sites.mjs",
+    "check:publish-ready": "node scripts/check-publish-ready.mjs",
     "build:sdk": "node scripts/build-engine-sdk.mjs --out dist-sdk"
   },
   "license": "UNLICENSED",

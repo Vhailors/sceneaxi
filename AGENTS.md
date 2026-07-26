@@ -16,7 +16,7 @@ SceneAxi = interactive engine/library + versioned profiles (Game, Web Experience
 ## Toolchain
 
 - `pnpm gate` is the required repository check; root `package.json` owns its exact
-  sequence (syntax, boundaries, contracts, **sites**, build, test, lint). Syntax and test explicitly refuse empty surfaces, and every stage exits
+  sequence (syntax, boundaries, contracts, **sites**, **publish-ready**, build, test, lint). Syntax and test explicitly refuse empty surfaces, and every stage exits
   non-zero on its configured failures. Never weaken the gate: no skips, no `|| true`,
   no lint disables, no matrix allow-list widening.
 - Build uses strict tsc project references; package exports remain source-backed and
@@ -133,6 +133,23 @@ by any migration or code in this repository — an absent account refuses, and i
 invented. The wiring invariants and the six acceptance properties are proven in
 `tests/sites/identity-plane-wiring.test.ts` — extend it, and the matrix cases in
 `tests/boundary/injected-site-violations.test.ts`, when touching any of this.
+
+Publish readiness is proven structurally, never by publishing: this repo holds no
+registry publish authority, so `docs/publish-readiness.md` owns the outsider-facing
+checklist, the shared `0.0.0` version plan, and the consumer export-namespace
+declaration, and `scripts/check-publish-ready.mjs` (`pnpm check:publish-ready`, in the
+gate) enforces both directions — a drifted manifest, export, or version fails, and so
+does a checklist row the script does not implement. The doc's marked tables
+(`<!-- publish-ready:versions|exports|checklist -->`, plus `consumer-surface` in
+`docs/web-consumer.md`) are machine-read declarations, so edit them as contracts. It is
+also what keeps `exports` maps honest — nothing else checks that an export target is a
+real file — and it shares one walker (`scripts/lib/package-exports.mjs`) with the
+engine-SDK archive test, so the gate and the archive cannot disagree about what an
+export target is or about the archive shipping it. Adding a check means
+adding its ID to `CHECK_IDS`, a row to the doc, and an injected-violation case to
+`tests/publish/injected-publish-violations.test.ts`. Sites are exempt from the
+consumable rules by tier (no root export, `link:` deps) because they are separate
+install roots (ADR 0018); `pnpm check:sites` owns them instead.
 
 The identity + credits plane is `packages/auth` (single-admin resolution, role
 guards, identity port) and `packages/billing` (append-only ledger, metering,

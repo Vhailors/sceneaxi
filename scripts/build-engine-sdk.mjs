@@ -24,7 +24,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { buildZip } from "./lib/zip.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -47,8 +47,16 @@ export const SDK_PACKAGES = Object.freeze([
   "packages/profile-web",
 ]);
 
-/** Repo-level docs shipped with the SDK. */
-export const SDK_DOCS = Object.freeze(["docs/web-consumer.md", "docs/DEPENDENCY-MATRIX.md"]);
+/**
+ * Repo-level docs shipped with the SDK: the consumption contract, the pinning matrix,
+ * and the publish-readiness checklist that states what `0.0.0` means and why there is
+ * no registry install.
+ */
+export const SDK_DOCS = Object.freeze([
+  "docs/web-consumer.md",
+  "docs/DEPENDENCY-MATRIX.md",
+  "docs/publish-readiness.md",
+]);
 
 /** Never shipped, at any depth. */
 const EXCLUDED_DIRECTORIES = Object.freeze(["node_modules", "dist", ".git", ".turbo", "coverage"]);
@@ -64,7 +72,7 @@ const readVersion = () => {
   return typeof version === "string" && version.length > 0 ? version : "0.0.0";
 };
 
-const containsPath = (parent, child) => {
+export const containsPath = (parent, child) => {
   const rel = relative(parent, child);
   return rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
 };
@@ -289,8 +297,9 @@ public package surface plus the consumer contract docs.
 
 ${packages.map((name) => `- \`${name}\``).join("\n")}
 
-Plus \`docs/web-consumer.md\` (the supported consumption and pinning contract) and
-\`docs/DEPENDENCY-MATRIX.md\`.
+Plus \`docs/web-consumer.md\` (the supported consumption and pinning contract),
+\`docs/DEPENDENCY-MATRIX.md\`, and \`docs/publish-readiness.md\` (what \`0.0.0\` means,
+the version plan, and the checklist that keeps those docs equal to the real exports).
 
 ## Verify this archive
 
@@ -333,7 +342,9 @@ function main(argv) {
   );
 }
 
-if (process.argv[1] !== undefined && import.meta.url === `file://${resolve(process.argv[1])}`) {
+// `pathToFileURL` percent-encodes exactly like `import.meta.url`, so a repository path
+// containing a space or a non-ASCII character cannot silently build nothing.
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     main(process.argv.slice(2));
   } catch (error) {

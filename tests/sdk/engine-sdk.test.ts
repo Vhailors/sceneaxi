@@ -21,6 +21,9 @@ import {
   collectSdkEntries,
   eligibleSdkFiles,
 } from "../../scripts/build-engine-sdk.mjs";
+// The same walker the publish-ready gate uses, so the archive test and the gate check
+// cannot disagree about what an export target is.
+import { exportEntries } from "../../scripts/check-publish-ready.mjs";
 
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 
@@ -148,6 +151,25 @@ describe("engine SDK archive", () => {
     ]) {
       expect(names.filter((name) => name.includes(forbidden))).toEqual([]);
     }
+  });
+
+  it("ships every file its packages' exports maps point at", () => {
+    // An outsider unzipping the archive resolves imports through each package's
+    // `exports`. If a target is missing from the archive, the SDK looks complete and is
+    // not — so this asserts against the archive's own entry names, not the pinned list.
+    const shipped = new Set(build().entryNames);
+    let checked = 0;
+    for (const pkgDir of SDK_PACKAGES) {
+      const manifest = JSON.parse(readFileSync(join(REPO_ROOT, pkgDir, "package.json"), "utf8")) as {
+        exports?: unknown;
+      };
+      for (const [subpath, target] of exportEntries(manifest.exports)) {
+        const entry = `sceneaxi-engine-sdk/${pkgDir}/${target.replace(/^\.\//, "")}`;
+        expect(shipped, `${pkgDir} export '${subpath}' is missing from the archive`).toContain(entry);
+        checked += 1;
+      }
+    }
+    expect(checked).toBeGreaterThan(0);
   });
 
   it("excludes Kids entirely — the isolation boundary holds in shared artifacts", () => {

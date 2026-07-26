@@ -15,7 +15,11 @@ jobs:
         with:
           node-version: 24
 
-      # The builder is dependency-free plain ESM, so no install step is needed.
+      # The builder and the publish-readiness checker are dependency-free plain ESM,
+      # so no install step is needed for either.
+      - name: Check publish readiness
+        run: node scripts/check-publish-ready.mjs
+
       - name: Build the public engine SDK archive
         run: node scripts/build-engine-sdk.mjs --out dist-sdk
 

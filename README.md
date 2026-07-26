@@ -47,7 +47,11 @@ External web products follow the published-package support and pinning contract
 in [`docs/web-consumer.md`](docs/web-consumer.md); the in-repo `sites/` surfaces are
 first-party and are not governed by it.
 The public engine SDK archive is built by `pnpm build:sdk` — a deterministic zip plus
-SHA-256 checksum, not an npm publish (ADR 0019).
+SHA-256 checksum, not an npm publish (ADR 0019). Publish readiness is proven
+structurally rather than by publishing: the version plan, the export surface, and the
+executable checklist behind them are
+[`docs/publish-readiness.md`](docs/publish-readiness.md), enforced by
+`pnpm check:publish-ready`.
 Portable product exports cross delivery boundaries through the public,
 delivery-neutral [`Delivery Handoff` contract](docs/delivery-handoff.md); provider
 credentials, uploads, approvals, and adapter implementation stay outside core.
@@ -90,10 +94,11 @@ and it adds no presentation adapter, checklist item, renderer decision, or spend
 ## Development
 
 Install the pinned workspace toolchain with `pnpm install`, then run `pnpm gate`
-for the repository's required syntax, boundary, contract, site-structure, build, test,
-and lint checks. The root `package.json` owns the exact command sequence; the referenced
-TypeScript, Vitest, ESLint, boundary, contract, and site-checker configuration files
-own their respective contracts.
+for the repository's required syntax, boundary, contract, site-structure,
+publish-readiness, build, test, and lint checks. The root `package.json` owns the exact
+command sequence; the referenced TypeScript, Vitest, ESLint, boundary, contract, and
+site-checker configuration files own their respective contracts, and
+[`docs/publish-readiness.md`](docs/publish-readiness.md) owns the publish-ready one.
 
 After building, start the two terminal surfaces from the repository root:
 
