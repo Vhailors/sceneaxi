@@ -3,7 +3,7 @@
  */
 
 import {
-  emptyPluginCapabilityRegistrySeed,
+  pluginCapabilityRegistrySeed,
   type PluginCapabilityRegistry,
 } from "@sceneaxi/schemas";
 import {
@@ -11,6 +11,7 @@ import {
   type InternalLoadedPlugin,
 } from "./pipeline.js";
 import type {
+  CapabilityContractChecks,
   PluginCapabilityImplementationResult,
   PluginHostListing,
   PluginHostLoadResult,
@@ -19,12 +20,18 @@ import { PLUGIN_HOST_API_VERSION } from "./types.js";
 
 export type PluginHostOptions = {
   /**
-   * Exact capability registry document. Defaults to the empty v1 seed.
+   * Exact capability registry document. Defaults to the checked-in v1 seed.
    * Host never invents capability IDs.
    */
   readonly registry?: PluginCapabilityRegistry;
   /** Override advertised host API version (tests only). Defaults to 1.0.0. */
   readonly hostApiVersion?: string;
+  /**
+   * Injected per-capability contract checks, keyed by registered capability ID.
+   * An implementation that fails its check refuses with
+   * `capability-contract-violation` and exposes nothing.
+   */
+  readonly capabilityContracts?: CapabilityContractChecks;
 };
 
 export type PluginHost = {
@@ -56,8 +63,10 @@ export type PluginHost = {
  * Does not discover plugins; callers pass explicit locators to `load`.
  */
 export function openPluginHost(options: PluginHostOptions = {}): PluginHost {
-  const registry = options.registry ?? emptyPluginCapabilityRegistrySeed();
+  const registry = options.registry ?? pluginCapabilityRegistrySeed();
   const hostApiVersion = options.hostApiVersion ?? PLUGIN_HOST_API_VERSION;
+  const capabilityContracts: CapabilityContractChecks =
+    options.capabilityContracts ?? new Map();
 
   let lastResult: PluginHostLoadResult = {
     loaded: Object.freeze([]),
@@ -73,6 +82,7 @@ export function openPluginHost(options: PluginHostOptions = {}): PluginHost {
         locators,
         registry,
         hostApiVersion,
+        capabilityContracts,
       });
       lastResult = outcome.result;
       internals = outcome.internals;

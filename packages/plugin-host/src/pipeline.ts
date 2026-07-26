@@ -19,6 +19,8 @@ import {
   resolveEntrypointPath,
 } from "./isolation.js";
 import type {
+  CapabilityContractCheckResult,
+  CapabilityContractChecks,
   LoadedPlugin,
   PluginHostLoadResult,
   PluginRefusalReason,
@@ -184,11 +186,18 @@ async function processCandidate(options: {
   readonly registry: PluginCapabilityRegistry;
   readonly hostApiVersion: string;
   readonly seenPluginIds: Set<string>;
+  readonly capabilityContracts: CapabilityContractChecks;
 }): Promise<
   | { ok: true; loaded: InternalLoadedPlugin }
   | { ok: false; refused: RefusedPlugin }
 > {
-  const { locator, registry, hostApiVersion, seenPluginIds } = options;
+  const {
+    locator,
+    registry,
+    hostApiVersion,
+    seenPluginIds,
+    capabilityContracts,
+  } = options;
   const packageRoot = resolve(locator);
 
   const packageRootMetadata = inspectPathType(packageRoot, "directory");
@@ -495,6 +504,51 @@ async function processCandidate(options: {
     a < b ? -1 : a > b ? 1 : 0,
   );
 
+  // Post-evaluation contract integrity: an implementation that claims a
+  // registered ID must satisfy that ID's public contract. Checked in sorted
+  // capability order so the reported violation is deterministic.
+  for (const capabilityId of sortedCaps) {
+    const check = capabilityContracts.get(capabilityId);
+    if (check === undefined) continue;
+
+    let outcome: CapabilityContractCheckResult;
+    try {
+      outcome = check(implementations.get(capabilityId));
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "contract check threw";
+      return {
+        ok: false,
+        refused: refuse({
+          locator: packageRoot,
+          reason: "capability-contract-violation",
+          phase: "integrity",
+          message: `Capability contract check threw for "${capabilityId}": ${message}`,
+          pluginId: manifest.pluginId,
+          pluginVersion: manifest.pluginVersion,
+          capabilityId,
+          entrypointEvaluated: true,
+        }),
+      };
+    }
+
+    if (!outcome.ok) {
+      return {
+        ok: false,
+        refused: refuse({
+          locator: packageRoot,
+          reason: "capability-contract-violation",
+          phase: "integrity",
+          message: `Implementation of "${capabilityId}" violates its public capability contract: ${outcome.message}`,
+          pluginId: manifest.pluginId,
+          pluginVersion: manifest.pluginVersion,
+          capabilityId,
+          entrypointEvaluated: true,
+        }),
+      };
+    }
+  }
+
   return {
     ok: true,
     loaded: {
@@ -512,11 +566,13 @@ export async function loadPluginCandidates(options: {
   readonly locators: readonly string[];
   readonly registry: PluginCapabilityRegistry;
   readonly hostApiVersion?: string;
+  readonly capabilityContracts?: CapabilityContractChecks;
 }): Promise<{
   readonly result: PluginHostLoadResult;
   readonly internals: readonly InternalLoadedPlugin[];
 }> {
   const hostApiVersion = options.hostApiVersion ?? PLUGIN_HOST_API_VERSION;
+  const capabilityContracts = options.capabilityContracts ?? new Map();
   const ordered = sortLocators(options.locators);
   const loaded: InternalLoadedPlugin[] = [];
   const refused: RefusedPlugin[] = [];
@@ -528,6 +584,7 @@ export async function loadPluginCandidates(options: {
       registry: options.registry,
       hostApiVersion,
       seenPluginIds,
+      capabilityContracts,
     });
     if (outcome.ok) {
       loaded.push(outcome.loaded);

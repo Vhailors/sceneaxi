@@ -1,0 +1,6 @@
+{
+  "name": "@sceneaxi-test/sculpt-intake-source-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module"
+}

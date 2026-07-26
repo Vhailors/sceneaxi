@@ -19,7 +19,7 @@ import {
   PLUGIN_CAPABILITY_REGISTRY_SCHEMA_VERSION,
   PLUGIN_MANIFEST_SCHEMA_URI,
   PLUGIN_MANIFEST_SCHEMA_VERSION,
-  emptyPluginCapabilityRegistrySeed,
+  pluginCapabilityRegistrySeed,
   type PluginCapabilityRegistry,
   type PluginManifest,
 } from "@sceneaxi/schemas";
@@ -196,7 +196,7 @@ describe("plugin host load / list / refuse", () => {
     const result = await host.load([]);
     expect(result.loaded).toEqual([]);
     expect(result.refused).toEqual([]);
-    expect(host.registry).toEqual(emptyPluginCapabilityRegistrySeed());
+    expect(host.registry).toEqual(pluginCapabilityRegistrySeed());
   });
 
   it("refuses a missing descriptor without evaluating anything", async () => {

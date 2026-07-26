@@ -27,7 +27,7 @@ live in [`@sceneaxi/schemas`](../packages/schemas/README.md).
    declaration/implementation mismatch.
 
 <!-- plugin-capability-registry:seed-state -->
-Registry seed state: `registryVersion` is `1.0.0`; `entries` is exactly `[]` (empty).
+Registry seed state: `registryVersion` is `1.0.0`; `entries` holds exactly 1 reviewed capability ID: `sceneaxi.sculpt.intake-source.v1`.
 <!-- /plugin-capability-registry:seed-state -->
 
 The host decides descriptor and isolation refusals before evaluating the
@@ -70,11 +70,11 @@ still exposes nothing (`packages/plugin-host/test/refuse-matrix.test.ts`,
 
    ```ts
    import {
-     emptyPluginCapabilityRegistrySeed,
+     pluginCapabilityRegistrySeed,
      lookupPluginCapability,
    } from "@sceneaxi/schemas";
 
-   const registry = emptyPluginCapabilityRegistrySeed();
+   const registry = pluginCapabilityRegistrySeed();
    const hit = lookupPluginCapability(registry, "some.capability.id");
    if (!hit.ok) {
      // hit.reason === "unknown-capability"
@@ -97,10 +97,10 @@ still exposes nothing (`packages/plugin-host/test/refuse-matrix.test.ts`,
 
    ```ts
    import { openPluginHost } from "@sceneaxi/plugin-host";
-   import { emptyPluginCapabilityRegistrySeed } from "@sceneaxi/schemas";
+   import { pluginCapabilityRegistrySeed } from "@sceneaxi/schemas";
 
    const host = openPluginHost({
-     registry: emptyPluginCapabilityRegistrySeed(),
+     registry: pluginCapabilityRegistrySeed(),
    });
    const report = await host.load(["/absolute/path/to/plugin-package"]);
    for (const refused of report.refused) {
@@ -112,6 +112,69 @@ still exposes nothing (`packages/plugin-host/test/refuse-matrix.test.ts`,
 
 5. **Address multiple providers** by `(pluginId, capabilityId)`. The host never
    picks an implicit default when two packages implement the same registered ID.
+
+## Registered capabilities
+
+### `sceneaxi.sculpt.intake-source.v1`
+
+The first — and so far only — registered capability. A provider turns its own
+reference material into a **Sculpt Intake**, the public pipeline entry document
+(`contracts/sculpt-intake.schema.json`). It is data in, data out: no lifecycle
+hook, no engine handle, and the host never calls a provider on its own, so a
+loaded plugin stays inert until a caller asks for an intake.
+
+Implement the table entry with the shape `@sceneaxi/schemas` publishes:
+
+```ts
+export const capabilities = Object.freeze({
+  "sceneaxi.sculpt.intake-source.v1": Object.freeze({
+    capabilityId: "sceneaxi.sculpt.intake-source.v1",
+    contractVersion: "1.0.0",
+    supportedModes: ["image+brief"],
+    produceIntake: (request) => ({ ok: true, intake: /* a Sculpt Intake */ }),
+  }),
+});
+```
+
+Callers never invoke `produceIntake` directly. `requestSculptIntake` re-validates
+whatever the provider returns against the public Sculpt Intake contract and turns
+a throw, a refusal, or a malformed document into a typed refusal:
+
+```ts
+import {
+  SCULPT_INTAKE_SOURCE_CAPABILITY_ID,
+  checkSculptIntakeSourceImplementation,
+  pluginCapabilityRegistrySeed,
+  requestSculptIntake,
+  type SculptIntakeSource,
+} from "@sceneaxi/schemas";
+import { openPluginHost } from "@sceneaxi/plugin-host";
+
+const host = openPluginHost({
+  registry: pluginCapabilityRegistrySeed(),
+  // Bind the capability's contract check so a wrong shape refuses at load.
+  capabilityContracts: new Map([
+    [SCULPT_INTAKE_SOURCE_CAPABILITY_ID, checkSculptIntakeSourceImplementation],
+  ]),
+});
+await host.load([packageRoot]);
+
+const found = host.getImplementation(pluginId, SCULPT_INTAKE_SOURCE_CAPABILITY_ID);
+if (found.ok) {
+  const produced = requestSculptIntake(found.implementation as SculptIntakeSource, {
+    intakeId: "workshop-lantern",
+    mode: "image+brief",
+  });
+  // produced.ok === false carries a typed reason, never a half-valid intake.
+}
+```
+
+Declaring a registered ID is not implementing it: an implementation that fails
+its bound contract check refuses with `capability-contract-violation` after
+evaluation and exposes nothing. The whole path — seed lookup, load, contract
+check, addressed call, golden intake — is proven in
+[`tests/e2e/plugin-capability-golden.test.ts`](../tests/e2e/plugin-capability-golden.test.ts)
+with fixtures under `tests/e2e/fixtures/plugin-host/`.
 
 ## Manifest fields (v1)
 

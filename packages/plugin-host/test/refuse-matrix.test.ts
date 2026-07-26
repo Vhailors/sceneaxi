@@ -22,16 +22,19 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   openPluginHost,
   PLUGIN_HOST_API_VERSION,
+  type CapabilityContractCheck,
+  type CapabilityContractChecks,
   type PluginHostLoadResult,
   type PluginRefusalReason,
 } from "@sceneaxi/plugin-host";
 import {
-  emptyPluginCapabilityRegistrySeed,
+  pluginCapabilityRegistrySeed,
   lookupPluginCapability,
   parsePluginCapabilityRegistryText,
   PLUGIN_CAPABILITY_REGISTRY_SCHEMA_URI,
   PLUGIN_CAPABILITY_REGISTRY_SCHEMA_VERSION,
   PLUGIN_CAPABILITY_REGISTRY_VERSION,
+  SHIPPED_PLUGIN_CAPABILITY_IDS,
   PLUGIN_MANIFEST_PATH,
   PLUGIN_MANIFEST_SCHEMA_URI,
   PLUGIN_MANIFEST_SCHEMA_VERSION,
@@ -66,6 +69,7 @@ const REFUSAL_REASON_UNION: Record<PluginRefusalReason, true> = {
   "isolation-unverifiable": true,
   "entrypoint-evaluation-failed": true,
   "implementation-table-mismatch": true,
+  "capability-contract-violation": true,
 };
 const ALL_REFUSAL_REASONS = Object.keys(
   REFUSAL_REASON_UNION,
@@ -623,6 +627,46 @@ throw new Error("intentional entrypoint failure");
         return { locators: [pkg], registry: testOnlyRegistry() };
       },
     },
+    {
+      // Declaring a registered ID is not implementing it: the injected contract
+      // check runs after an intentional load and still exposes nothing.
+      name: "capability-contract-violation",
+      reason: "capability-contract-violation" as const,
+      phase: "integrity" as const,
+      entrypointEvaluated: true,
+      withSentinel: true,
+      setup(root: string, marker: string) {
+        const pkg = writePackage({
+          root,
+          name: "contract-violation",
+          manifest: baseManifest({
+            pluginId: "dev.sceneaxi.fixture.contract-violation",
+            entrypoint: "./plugin.js",
+            capabilities: Object.freeze([TEST_ONLY_CAPABILITY_ID]),
+          }),
+          entrypointSource: sentinelSource(
+            marker,
+            `export const capabilities = Object.freeze({ ${JSON.stringify(TEST_ONLY_CAPABILITY_ID)}: { shape: "wrong" } });`,
+          ),
+          packageJson: {
+            dependencies: { "@sceneaxi/schemas": "workspace:^" },
+          },
+        });
+        return {
+          locators: [pkg],
+          registry: testOnlyRegistry(),
+          capabilityContracts: new Map<string, CapabilityContractCheck>([
+            [
+              TEST_ONLY_CAPABILITY_ID,
+              (implementation) =>
+                typeof (implementation as { run?: unknown })?.run === "function"
+                  ? { ok: true }
+                  : { ok: false, message: "fixture contract requires run()." },
+            ],
+          ]),
+        };
+      },
+    },
   ];
 
   it.each(REFUSE_FIXTURES)(
@@ -630,8 +674,16 @@ throw new Error("intentional entrypoint failure");
     async ({ reason, phase, entrypointEvaluated, withSentinel, setup }) => {
       const root = tempRoot(reason);
       const marker = join(root, "evaluated.txt");
-      const { locators, registry } = setup(root, marker);
-      const host = openPluginHost(registry ? { registry } : {});
+      const outcome: {
+        locators: string[];
+        registry: PluginCapabilityRegistry | undefined;
+        capabilityContracts?: CapabilityContractChecks;
+      } = setup(root, marker);
+      const { locators, registry, capabilityContracts } = outcome;
+      const host = openPluginHost({
+        ...(registry ? { registry } : {}),
+        ...(capabilityContracts ? { capabilityContracts } : {}),
+      });
       const result = await host.load(locators);
 
       const match = result.refused.find((r) => r.reason === reason);
@@ -1075,15 +1127,17 @@ export const capabilities = Object.freeze({
     expect(seedText).not.toContain(TEST_ONLY_CAPABILITY_ID);
     expect(seedText).not.toContain("test.sceneaxi.fixture");
 
-    const seed = emptyPluginCapabilityRegistrySeed();
-    expect(seed.entries).toEqual([]);
+    const seed = pluginCapabilityRegistrySeed();
+    expect(seed.entries.map((entry) => entry.capabilityId)).toEqual([
+      ...SHIPPED_PLUGIN_CAPABILITY_IDS,
+    ]);
     expect(
       seed.entries.some((e) => e.capabilityId === TEST_ONLY_CAPABILITY_ID),
     ).toBe(false);
 
-    // Host default registry remains the empty public seed.
+    // Host default registry remains the reviewed public seed.
     const host = openPluginHost();
-    expect(host.registry.entries).toEqual([]);
+    expect(host.registry).toEqual(seed);
     expect(JSON.stringify(host.registry)).not.toContain(TEST_ONLY_CAPABILITY_ID);
   });
 
@@ -1137,8 +1191,10 @@ describe("integrated acceptance: #21 registry + #22 plugin-host E2E", () => {
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
 
-    expect(parsed.registry).toEqual(emptyPluginCapabilityRegistrySeed());
-    expect(parsed.registry.entries).toEqual([]);
+    expect(parsed.registry).toEqual(pluginCapabilityRegistrySeed());
+    expect(parsed.registry.entries.map((entry) => entry.capabilityId)).toEqual([
+      ...SHIPPED_PLUGIN_CAPABILITY_IDS,
+    ]);
 
     // Typed lookup miss on the public seed — host must map this to unknown-capability.
     const lookupMiss = lookupPluginCapability(
@@ -1189,7 +1245,7 @@ describe("integrated acceptance: #21 registry + #22 plugin-host E2E", () => {
     });
 
     const host = openPluginHost({ registry: parsed.registry });
-    expect(host.registry).toEqual(emptyPluginCapabilityRegistrySeed());
+    expect(host.registry).toEqual(pluginCapabilityRegistrySeed());
 
     const result = await host.load([unauthorized, malformed, inert]);
     expect(result.loaded.map((p) => p.pluginId)).toEqual([
@@ -1241,14 +1297,16 @@ describe("integrated acceptance: #21 registry + #22 plugin-host E2E", () => {
       ).ok,
     ).toBe(false);
 
-    // Seed artifact must remain empty / free of the test-only ID.
+    // Seed artifact must remain free of the test-only ID.
     const seedArtifact = parsePluginCapabilityRegistryText(
       readFileSync(publicSeedPath, "utf8"),
       { expectedRegistryVersion: PLUGIN_CAPABILITY_REGISTRY_VERSION },
     );
     expect(seedArtifact.ok).toBe(true);
     if (seedArtifact.ok) {
-      expect(seedArtifact.registry.entries).toEqual([]);
+      expect(
+        seedArtifact.registry.entries.map((entry) => entry.capabilityId),
+      ).toEqual([...SHIPPED_PLUGIN_CAPABILITY_IDS]);
       expect(
         lookupPluginCapability(seedArtifact.registry, TEST_ONLY_CAPABILITY_ID)
           .ok,

@@ -127,7 +127,15 @@ isolation breaches refuse. Runtime API details live in
 `@sceneaxi/schemas`. The host depends only on schemas — never engine packages or
 a service locator. This charted v1 host exception does not create renderer,
 physics, storage, or other engine-internal ports, which still require two real
-adapters under amended ADR 0004.
+adapters under amended ADR 0004. The seed registry is no longer empty: capability
+rows are pinned in three places at once (seed JSON, `pluginCapabilityRegistrySeed()`,
+and `scripts/check-contracts.mjs`), so adding one is a deliberate contract change
+`pnpm check:contracts` enforces. A registered ID owns a public contract module in
+`@sceneaxi/schemas`; its shape check is **injected** into the host through
+`capabilityContracts` (the host holds no domain knowledge and still never calls a
+capability itself), and a declared-but-unimplemented contract refuses with
+`capability-contract-violation`. The golden for the whole path is
+`tests/e2e/plugin-capability-golden.test.ts`.
 
 ## Maintaining this file
 

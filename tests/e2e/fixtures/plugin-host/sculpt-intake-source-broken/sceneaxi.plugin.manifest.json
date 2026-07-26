@@ -1,0 +1,10 @@
+{
+  "$schema": "https://sceneaxi.dev/schemas/plugin-manifest-1.0.0.json",
+  "schemaVersion": "1.0.0",
+  "pluginId": "dev.sceneaxi.sample.intake-source-broken",
+  "pluginVersion": "0.1.0",
+  "hostApi": "^1.0.0",
+  "registryVersion": "1.0.0",
+  "entrypoint": "./plugin.js",
+  "capabilities": ["sceneaxi.sculpt.intake-source.v1"]
+}

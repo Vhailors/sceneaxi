@@ -242,14 +242,18 @@ describe("plugin-host golden demo", () => {
     expect(result.refused[0]?.pluginId).toBe(ILLEGAL_PLUGIN_ID);
   });
 
-  it("refuses the capability plugin under the shipped empty registry", async () => {
-    // The public v1 seed defines no capability IDs, so the same plugin that
+  it("refuses the capability plugin under the shipped registry", async () => {
+    // The shipped seed never carries a fixture ID, so the same plugin that
     // loads above must refuse here. This is what keeps the fixture registry
     // honest: it proves the hit came from a registered ID, not a weak check.
     const host = openPluginHost();
     const result = await host.load([join(PLUGIN_FIXTURES, "sample-capability")]);
 
-    expect(host.registry.entries).toEqual([]);
+    expect(
+      host.registry.entries.some(
+        (entry) => entry.capabilityId === DEMO_CAPABILITY_ID,
+      ),
+    ).toBe(false);
     expect(result.loaded).toEqual([]);
     expect(result.refused).toHaveLength(1);
     expect(result.refused[0]?.pluginId).toBe(CAPABILITY_PLUGIN_ID);
