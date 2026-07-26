@@ -158,14 +158,26 @@ function isKidsRequest(principal: unknown, surface: unknown): boolean {
   return session?.["surface"] === "kids";
 }
 
+/**
+ * The store is an injected persistence adapter, so its shape is duck-typed the
+ * way this repo duck-types every other injected adapter: a Neon-backed class
+ * instance carries `appendEntry` on its prototype, and `meterCredits` calls the
+ * three methods without caring where they live. Requiring a plain own-property
+ * object here would refuse a store the debit path itself would accept. A
+ * throwing accessor still fails closed.
+ */
 function isCreditStore(value: unknown): value is CreditStore {
-  const record = snapshotPlainRecord(value);
-  if (record === undefined) return false;
-  return (
-    typeof record["findAccountById"] === "function" &&
-    typeof record["listEntries"] === "function" &&
-    typeof record["appendEntry"] === "function"
-  );
+  if (value === null || typeof value !== "object") return false;
+  try {
+    const candidate = value as Record<string, unknown>;
+    return (
+      typeof candidate["findAccountById"] === "function" &&
+      typeof candidate["listEntries"] === "function" &&
+      typeof candidate["appendEntry"] === "function"
+    );
+  } catch {
+    return false;
+  }
 }
 
 /**

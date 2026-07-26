@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { AUTH_REFUSE_REASONS, digestSessionToken } from "@sceneaxi/auth";
-import type { CreditAccount } from "@sceneaxi/schemas";
+import type { CreditAccount, CreditLedgerEntry } from "@sceneaxi/schemas";
 import {
   BILLING_REFUSE_REASONS,
   HOSTED_AI_DEFAULT_CONFIG,
@@ -11,6 +11,8 @@ import {
   createLedgerState,
   meteringIdempotencyKey,
   runMeteredModelCall,
+  type CreditStore,
+  type CreditsSaleSettlement,
   type LedgerState,
 } from "@sceneaxi/billing";
 
@@ -413,6 +415,39 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
       expect(result.reason).toBe(BILLING_REFUSE_REASONS.requestInvalid);
       expect(provider.calls.length).toBe(0);
     }
+  });
+
+  it("accepts an injected store whose methods live on a prototype", async () => {
+    const state = funded(100);
+    const backing = storeFor(state);
+    class PrototypeCreditStore implements CreditStore {
+      findAccountByUserId(userId: string) {
+        return backing.findAccountByUserId(userId);
+      }
+      findAccountById(accountId: string) {
+        return backing.findAccountById(accountId);
+      }
+      listEntries(accountId: string) {
+        return backing.listEntries(accountId);
+      }
+      appendEntry(entry: CreditLedgerEntry) {
+        return backing.appendEntry(entry);
+      }
+      settleCreditsSale(settlement: CreditsSaleSettlement) {
+        return backing.settleCreditsSale(settlement);
+      }
+    }
+    const provider = recordingProvider();
+    const result = await hostedCall(state, provider, {
+      store: new PrototypeCreditStore(),
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.metered).toBe(true);
+    expect(result.value.balance).toBe(93);
+    expect(provider.calls.length).toBe(1);
+    expect(backing.entryCount(ACCOUNT.accountId)).toBe(2);
   });
 
   it("refuses a missing or non-positive credit amount", async () => {
