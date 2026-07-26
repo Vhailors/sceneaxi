@@ -169,6 +169,70 @@ describe("orchestrator refuse matrix", () => {
     ).toBe("OPEN_PATH_SUBJECT_UNIDENTIFIED");
   });
 
+  it("refuses a request whose own shape cannot be read without running code", () => {
+    const throwingKind = {
+      get kind(): string {
+        throw new Error("accessor must not run");
+      },
+    };
+    expect(reasonOf(bootstrapOpenPath(asOpenRequest(throwingKind), fixedHost))).toBe(
+      "OPEN_PATH_REQUEST_MALFORMED",
+    );
+    expect(reasonOf(resumeOpenPath(asResumeRequest(throwingKind), fixedHost))).toBe(
+      "OPEN_PATH_REQUEST_MALFORMED",
+    );
+
+    // A revoked proxy is still `typeof "object"`, and every read of it throws.
+    const revokedRequest = Proxy.revocable({ kind: "product" }, {});
+    revokedRequest.revoke();
+    expect(
+      reasonOf(bootstrapOpenPath(asOpenRequest(revokedRequest.proxy), fixedHost)),
+    ).toBe("OPEN_PATH_REQUEST_MALFORMED");
+
+    const throwingPayload = {
+      kind: "product",
+      get productManifest(): unknown {
+        throw new Error("accessor must not run");
+      },
+    };
+    expect(
+      reasonOf(bootstrapOpenPath(asOpenRequest(throwingPayload), fixedHost)),
+    ).toBe("OPEN_PATH_SUBJECT_UNIDENTIFIED");
+  });
+
+  it("refuses a host whose clock cannot be read without running code", () => {
+    expect(
+      reasonOf(
+        bootstrapOpenPath(
+          productRequest,
+          asHost({
+            get nowMs(): unknown {
+              throw new Error("clock unavailable");
+            },
+          }),
+        ),
+      ),
+    ).toBe("OPEN_PATH_HOST_INVALID");
+
+    const revokedHost = Proxy.revocable({ nowMs: () => 0 }, {});
+    revokedHost.revoke();
+    expect(
+      reasonOf(bootstrapOpenPath(productRequest, asHost(revokedHost.proxy))),
+    ).toBe("OPEN_PATH_HOST_INVALID");
+  });
+
+  it("keeps a clock that lives on the host prototype and depends on its receiver", () => {
+    class HostClock {
+      readonly base = 1_700_000_000_000;
+      nowMs(): number {
+        return this.base;
+      }
+    }
+    const opened = bootstrapOpenPath(productRequest, new HostClock());
+    if (!opened.ok) throw new Error(opened.reason);
+    expect(opened.value.bootstrap.openedAtMs).toBe(1_700_000_000_000);
+  });
+
   it("never invokes an accessor while identifying a subject", () => {
     const hostile = bootstrapOpenPath(
       asOpenRequest({

@@ -208,7 +208,14 @@ function resolveHost(host: OpenPathHost): OrchestratorResult<ResolvedHost> {
   if (typeof host !== "object" || host === null) {
     return refuse("OPEN_PATH_HOST_INVALID", "host is not an object");
   }
-  if (typeof host.nowMs !== "function") {
+
+  let clock: unknown;
+  try {
+    clock = host.nowMs;
+  } catch (error) {
+    return refuse("OPEN_PATH_HOST_INVALID", kernelMessage(error));
+  }
+  if (typeof clock !== "function") {
     return refuse("OPEN_PATH_HOST_INVALID", "host.nowMs is required");
   }
 
@@ -356,13 +363,12 @@ export function bootstrapOpenPath(
   request: OpenPathRequest,
   host: OpenPathHost,
 ): OrchestratorResult<AnyOpenPathHandle> {
-  if (typeof request !== "object" || request === null) {
-    return refuseRequest(request);
-  }
-
-  switch (request.kind) {
+  switch (ownField(request, "kind")) {
     case "product": {
-      const { productManifest } = request;
+      const productManifest = ownField(
+        request,
+        "productManifest",
+      ) as ProductManifest;
       return bootstrapWith(
         "product",
         host,
@@ -372,7 +378,8 @@ export function bootstrapOpenPath(
       );
     }
     case "sculpt": {
-      const { artifact, options } = request;
+      const artifact = ownField(request, "artifact");
+      const options = ownField(request, "options") as SculptKernelOptions;
       return bootstrapWith(
         "sculpt",
         host,
@@ -385,7 +392,8 @@ export function bootstrapOpenPath(
       );
     }
     case "scene": {
-      const { scene, options } = request;
+      const scene = ownField(request, "scene");
+      const options = ownField(request, "options") as SceneKernelOptions;
       return bootstrapWith(
         "scene",
         host,
@@ -427,13 +435,9 @@ export function resumeOpenPath(
   request: ResumeOpenPathRequest,
   host: OpenPathHost,
 ): OrchestratorResult<AnyOpenPathHandle> {
-  if (typeof request !== "object" || request === null) {
-    return refuseRequest(request);
-  }
-
-  switch (request.kind) {
+  switch (ownField(request, "kind")) {
     case "product": {
-      const { save } = request;
+      const save = ownField(request, "save") as KernelSessionSaveArtifact;
       return bootstrapWith(
         "product",
         host,
@@ -443,7 +447,7 @@ export function resumeOpenPath(
       );
     }
     case "sculpt": {
-      const { save } = request;
+      const save = ownField(request, "save") as SculptKernelSaveArtifact;
       return bootstrapWith(
         "sculpt",
         host,
@@ -454,7 +458,7 @@ export function resumeOpenPath(
       );
     }
     case "scene": {
-      const { save } = request;
+      const save = ownField(request, "save") as SceneKernelSaveArtifact;
       return bootstrapWith(
         "scene",
         host,
