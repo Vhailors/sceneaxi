@@ -86,6 +86,7 @@
   "packages/schemas/src/billing.ts",
   "packages/schemas/src/catalog-listing.ts",
   "packages/schemas/src/catalog.ts",
+  "packages/schemas/src/credit-packs.data.ts",
   "packages/schemas/src/credits.ts",
   "packages/schemas/src/delivery-handoff.ts",
   "packages/schemas/src/document.ts",

@@ -30,7 +30,10 @@ still gated — `pnpm check:syntax`,
 `pnpm check:boundaries`, and `pnpm check:sites` all cover it, and all site logic lives in
 `packages/site-kit` where `pnpm gate` tests it. The tier's one engine edge is
 umbrella → `@sceneaxi/engine-presentation` for the public viewport (ADR 0022); every
-other engine package stays denied to every site.
+other engine package stays denied to every site. The umbrella is also the one site wired
+to the identity plane (`@sceneaxi/auth` + `@sceneaxi/billing`, ADR 0021) and only through
+`sites/umbrella/src/lib/identity-plane.ts`; the catalogs read identity through the same
+`site-kit` ports and take no second auth stack.
 
 Package boundaries are executable: `docs/dependency-matrix.json` is the allow/deny
 truth and `pnpm check:boundaries` enforces it (see `docs/DEPENDENCY-MATRIX.md`).

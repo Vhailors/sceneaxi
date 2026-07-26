@@ -284,6 +284,14 @@ metering is scoped the same way so the pure check and the persisted constraint a
 Canonical list: `packages/schemas/contracts/credit-packs.fixtures.json`. The table below is
 kept in exact lockstep with it by `pnpm check:contracts` — edit the JSON, then the table.
 
+`loadCreditPackCatalog()` reads the fixture's bundled twin,
+`packages/schemas/src/credit-packs.data.ts` (`CREDIT_PACK_CATALOG_DATA`), rather than the
+JSON file: the same catalog is loaded inside a bundled serverless site, where a
+package-relative file read is not guaranteed to be traced into the deployment. That module
+is held byte-for-byte against the fixture by the same `pnpm check:contracts` run, so it is
+a third lockstep artifact, never a second source of truth — edit the JSON, then the table,
+then the module.
+
 Only **test-mode** price ids are committed. Live price ids belong to a later captain
 go-live decision.
 
@@ -401,9 +409,13 @@ Everything below is outside this vertical and needs a hosted HTTP surface, coord
 
 1. An HTTP app that mounts Better Auth's handler and holds the session cookie.
 2. `IdentityStore` and `CreditStore` implementations over a Neon client, and the migrations
-   applied to a Neon branch (needs credentials — separate authority).
-3. A Stripe adapter that turns a `CheckoutSessionIntent` into a hosted checkout URL, and a
-   webhook route that passes the **raw** body to `verifyStripeWebhookSignature`.
+   applied to a Neon branch (needs credentials — separate authority). The `CreditStore` also
+   owns provisioning a `CreditAccount` per user; nothing in this repository can create one.
+3. A Stripe adapter that turns a `CheckoutSessionIntent` into a hosted checkout URL. The
+   webhook route that passes the **raw** body to `verifyStripeWebhookSignature` has landed
+   on the umbrella (`sites/umbrella/src/app/api/stripe/webhook/route.ts`, sceneaxi#131).
 4. A renderer over `createAccountPanel`'s snapshots.
 
-None of it changes a contract or a policy in this plane; all four are adapters and glue.
+None of it changes a contract or a policy in this plane; all of it is adapters and glue.
+The deployable-site half of that glue — and which surfaces are already live versus still
+refusing — is owned by [`websites-deploy.md`](websites-deploy.md).

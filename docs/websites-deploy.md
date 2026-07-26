@@ -9,8 +9,10 @@ gate if a secret-shaped value or an assigned secret name is ever committed under
 
 Design decisions behind this: [ADR 0018](adr/0018-sites-tier-three-vercel-one-neon.md)
 (the `sites/` tier, three projects, one database),
-[ADR 0019](adr/0019-public-engine-sdk-zip-not-npm.md) (the SDK archive), and
-[ADR 0020](adr/0020-minimum-e2-web-editor-entitlement.md) (editor entitlement).
+[ADR 0019](adr/0019-public-engine-sdk-zip-not-npm.md) (the SDK archive),
+[ADR 0020](adr/0020-minimum-e2-web-editor-entitlement.md) (editor entitlement), and
+[ADR 0021](adr/0021-identity-credits-injected-adapters.md) (the identity plane's
+provider clients stay injected adapters outside this repository).
 
 ## Vercel project map
 
@@ -44,14 +46,15 @@ Per project, in Vercel:
 The install command provisions **both** roots, and it has to. Each site is the sole
 member of its own pnpm workspace (`packages: ["."]`), not a member of the repository-root
 workspace. A site installs `@sceneaxi/site-kit` through a `link:` specifier — and the
-umbrella also links `@sceneaxi/engine-presentation`, its one engine edge (ADR 0022) —
-but those packages' own dependencies (`@sceneaxi/schemas`, `@sceneaxi/authoring-core`,
-`three`) are resolved from the repository root's `node_modules`. Installing only
-the site directory builds successfully on a developer machine that already has a root
-install and then fails on a clean Vercel builder with `Can't resolve
-'@sceneaxi/schemas'`. Root Directory must be set on the project so the whole repository
-uploads; a CLI deploy from inside the site directory uploads that directory alone and
-cannot work.
+umbrella also links `@sceneaxi/engine-presentation`, its one engine edge (ADR 0022), plus
+`@sceneaxi/auth` and `@sceneaxi/billing`, the identity plane it alone is wired to
+(ADR 0021) — but those packages' own dependencies (`@sceneaxi/schemas`,
+`@sceneaxi/authoring-core`, `three`) are resolved from the repository root's
+`node_modules`. Installing only the site directory builds successfully on a developer
+machine that already has a root install and then fails on a clean Vercel builder with
+`Can't resolve '@sceneaxi/schemas'`. Root Directory must be set on the project so the
+whole repository uploads; a CLI deploy from inside the site directory uploads that
+directory alone and cannot work.
 
 ## Environment variables
 
@@ -69,10 +72,11 @@ set them *before* deploying and redeploy after changing one.
 | `NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN` | all three | this ship | editor deep links, checkout redirects | https `*.vercel.app` umbrella origin; a missing or non-https value makes the catalog refuse to render the link. On the umbrella it is also the **only** source of the checkout success/cancel URLs — they are never derived from the request's `Host`, and a checkout POST arriving on any other origin refuses `BILLING_CHECKOUT_ORIGIN_UNTRUSTED` |
 | `NEXT_PUBLIC_SCENEAXI_GAME_CATALOG_ORIGIN` | umbrella | this ship | optional | family cross-link |
 | `NEXT_PUBLIC_SCENEAXI_WEB_CATALOG_ORIGIN` | umbrella | this ship | optional | family cross-link |
-| `SCENEAXI_SITE_EDITOR_PREVIEW` | umbrella | captain | optional | `1` grants a banner-marked editor preview while this site is unwired to the identity plane; absent means the editor refuses. Server-side only; a client value is ignored |
+| `SCENEAXI_SITE_EDITOR_PREVIEW` | umbrella | captain | optional | `1` grants a banner-marked editor preview while the identity plane has no provider handles, so no real entitlement can be resolved; absent means the editor refuses. Server-side only; a client value is ignored |
 
 Each site's `.env.example` lists only names assigned to that Vercel project, including
-the future identity-plane plug point names, and commits no values.
+the identity-plane names that only take effect once its provider handles arrive, and
+commits no values.
 
 ### Neon
 
@@ -141,9 +145,10 @@ opening the page and reading the frame report it renders (`surface webgl-canvas`
 [`three-presentation-core.md`](three-presentation-core.md).
 
 Expected: pages 200; the served zip's SHA-256 equal to the digest `/engine` publishes;
-an unknown item id 404; neither storefront resolving the other's ids; `/account`
-rendering an honest refusal while the identity plane is unwired; and `/editor` refusing
-without the preview flag.
+an unknown item id 404; neither storefront resolving the other's ids; `/pricing` listing
+the three credit packs with no live Buy control; `/account` rendering an honest refusal
+while the identity plane has no provider handles; and `/editor` refusing without the
+preview flag.
 
 ## Building the SDK archive
 
@@ -181,7 +186,7 @@ ADR 0021 keeps the provider clients — Better Auth, the Neon client, the Stripe
 | Capability | State | Why |
 |---|---|---|
 | Credit-pack list on `/pricing` | **live** | read from the committed contract fixture's bundled module (`packages/schemas/src/credit-packs.data.ts`, held in lockstep by `pnpm check:contracts`); needs no provider and no traced file |
-| The **Buy** control on `/pricing` | hidden until billing is wired | prices stay informational rather than posting to a checkout that structurally refuses |
+| The **Buy** control on `/pricing` | replaced by a disabled "Not for sale yet" marker until billing is wired | prices stay informational rather than posting to a checkout that structurally refuses |
 | Admin identity (`SCENEAXI_ADMIN_EMAIL`) | **live** | resolved by `@sceneaxi/auth` from the environment |
 | Checkout intent, starter grant, webhook verification | **live as behaviour** | implemented in-repo and gate-tested |
 | Session verification on `/account`, `/editor` | refuses `IDENTITY_PLANE_NOT_WIRED` | needs an `IdentityPort` over a real store |

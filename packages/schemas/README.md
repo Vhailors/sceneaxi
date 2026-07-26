@@ -216,3 +216,8 @@ not implemented here.
   [`docs/auth-credits.md`](../../docs/auth-credits.md) by `pnpm check:contracts` —
   that document owns the shapes, invariants, and configuration; enforcement lives in
   `@sceneaxi/auth` and `@sceneaxi/billing` (ADR 0021)
+- `src/credit-packs.data.ts` (`CREDIT_PACK_CATALOG_DATA`) is the bundled twin of the
+  credit-pack fixture, exported from the package root because a bundled serverless site
+  cannot rely on tracing a package-relative JSON file. The same `pnpm check:contracts`
+  run holds it byte-for-byte against the fixture, so it is a copy that cannot drift, not
+  a second source of truth

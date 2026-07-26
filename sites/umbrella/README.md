@@ -7,8 +7,8 @@ entitled Minimum E2 sculpt/scene web editor.
 ## Shape
 
 A thin view + wiring layer over `@sceneaxi/site-kit`. Everything that is not
-presentation lives there and is tested in `pnpm gate` — this site holds routes and
-one wiring module.
+presentation lives there and is tested in `pnpm gate` — this site holds routes plus the
+pure wiring modules under `src/lib/`.
 
 - `src/index.ts` and `src/lib/**` are pure TypeScript, gate-typechecked and
   gate-tested. No React, no Next.
@@ -44,11 +44,11 @@ the two catalogs keep `site-kit` only.
 This site is the sole member of its own pnpm workspace, not a member of the
 repository-root workspace. It keeps its own lockfile so the hermetic root install,
 root lockfile, `tsc --build` graph, and gate runtime stay untouched by site framework
-dependencies. `@sceneaxi/site-kit` and `@sceneaxi/engine-presentation` are consumed
-with `link:` specifiers and transpiled by Next, because SceneAxi package exports are
-source-backed. Their own dependencies — including `three` — resolve from the
-repository-root install, so a clean builder must provision both roots
-(`docs/websites-deploy.md`).
+dependencies. `@sceneaxi/site-kit`, `@sceneaxi/engine-presentation`, `@sceneaxi/auth`,
+and `@sceneaxi/billing` are consumed with `link:` specifiers and transpiled by Next,
+because SceneAxi package exports are source-backed. None of them ships a provider SDK.
+Their own dependencies — including `three` — resolve from the repository-root install, so
+a clean builder must provision both roots (`docs/websites-deploy.md`).
 
     pnpm install      # from this directory
     pnpm dev
@@ -67,7 +67,8 @@ tracing. Session verification, balances, and the hosted checkout redirect still 
 provider handles — Better Auth, Neon, and the Stripe API, which ADR 0021 keeps outside
 this repository — and arrive through `umbrellaPlaneHandles()` in that same file. Until
 they do, those surfaces refuse with named reasons rather than showing an invented
-session, balance, or checkout, and `/pricing` shows prices without a Buy control.
+session, balance, or checkout, and `/pricing` lists the packs with the Buy control
+replaced by a disabled "Not for sale yet" marker.
 `docs/websites-deploy.md` has the remaining activation steps and the env var list.
 
 `SCENEAXI_SITE_EDITOR_PREVIEW=1` grants a banner-marked editor preview so the
