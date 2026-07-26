@@ -11,10 +11,8 @@
  * implementation regardless of who gets paid.
  */
 
-import { createRequire } from "node:module";
-import { readFileSync } from "node:fs";
 import {
-  CATALOG_LISTINGS_FIXTURES_PATH,
+  CATALOG_LISTINGS_DATA,
   isEpochMilliseconds,
   priceModeIncludesCredits,
   priceModeIncludesMoney,
@@ -44,26 +42,22 @@ import type { EntitlementPaymentMethod } from "./entitlements.js";
 
 let cached: CatalogListingSet | undefined;
 
-/** Load and validate the canonical committed test-mode listing set. */
+/**
+ * Load and validate the canonical committed test-mode listing set.
+ *
+ * Read from the contract owner's bundled module rather than from the filesystem,
+ * for the same reason `loadCreditPackCatalog` is: this module is reachable from a
+ * bundled `sites/` deployment, and a package-relative file read is neither
+ * guaranteed to be traced into that deployment nor even statically resolvable —
+ * a bundler rewrites the dynamic specifier into a stub that breaks the whole
+ * module, before any refusal here could run. `pnpm check:contracts` holds that
+ * module and the canonical fixture in lockstep, so the value cannot drift from
+ * the contract it is a copy of.
+ */
 export function loadCatalogListings(): BillingOutcome<CatalogListingSet> {
   if (cached !== undefined) return billingOk(cached);
 
-  let raw: unknown;
-  try {
-    const require = createRequire(import.meta.url);
-    const path = require.resolve(
-      `@sceneaxi/schemas/${CATALOG_LISTINGS_FIXTURES_PATH}`,
-    );
-    raw = JSON.parse(readFileSync(path, "utf8"));
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    return billingRefuse(
-      BILLING_REFUSE_REASONS.listingCatalogInvalid,
-      `The catalog listing set could not be read: ${detail}`,
-    );
-  }
-
-  const listings = validateCatalogListingSet(raw);
+  const listings = validateCatalogListingSet(CATALOG_LISTINGS_DATA);
   if (!listings.ok) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.listingCatalogInvalid,

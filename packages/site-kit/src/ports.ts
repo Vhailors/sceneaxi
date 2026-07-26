@@ -119,8 +119,17 @@ export type SiteCheckoutHandoff = {
 
 // --- adapter boundaries (satisfied by @sceneaxi/auth / @sceneaxi/billing) ---
 
+/**
+ * The identity adapter boundary.
+ *
+ * `null` is a first-class success: "this request carries no live session". It is
+ * distinct from a refusal, because a signed-out visitor is an ordinary state and
+ * must not be reported with the vocabulary of a broken plane.
+ */
 export interface SiteIdentityAdapter {
-  resolvePrincipal(request: SiteIdentityRequest): Promise<SiteResult<SitePrincipal>>;
+  resolvePrincipal(
+    request: SiteIdentityRequest,
+  ): Promise<SiteResult<SitePrincipal | null>>;
 }
 
 export interface SiteCreditsAdapter {
@@ -152,6 +161,25 @@ export interface SiteBillingPort {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
+
+/**
+ * Call an adapter, turning a throw into a named refusal.
+ *
+ * An adapter reaches a database or a provider, so it can fail in ways neither it
+ * nor this package predicted. Without this the exception would escape the port
+ * and become a 500 on a page whose whole contract is to answer with a named
+ * reason — and "unavailable" would be indistinguishable from "absent".
+ */
+async function callAdapter<Value>(
+  call: () => Promise<SiteResult<Value>>,
+  unavailable: SiteRefusalReason,
+): Promise<SiteResult<Value> | SiteRefusal> {
+  try {
+    return await call();
+  } catch {
+    return refuse(unavailable);
+  }
+}
 
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0;
@@ -374,11 +402,17 @@ export function createIdentityPlane(options: IdentityPlaneOptions = {}): SiteIde
       const invalid = validateIdentityRequest(request);
       if (invalid !== null) return invalid;
       if (options.adapter === undefined) return refuse("IDENTITY_PLANE_NOT_WIRED");
-      const result = await options.adapter.resolvePrincipal(request);
+      const adapter = options.adapter;
+      const result = await callAdapter(
+        () => adapter.resolvePrincipal(request),
+        "IDENTITY_PLANE_UNAVAILABLE",
+      );
       if (!isRecord(result)) return refuse("IDENTITY_ADAPTER_OUTPUT_INVALID");
       if (result["ok"] !== true) {
         return canonicalAdapterRefusal(result, "IDENTITY_ADAPTER_OUTPUT_INVALID");
       }
+      // A signed-out visitor is reported as such, never as a broken plane.
+      if (result["value"] === null) return refuse("IDENTITY_SESSION_ABSENT");
       return validatePrincipal(result["value"], request, nowIso());
     },
   });
@@ -396,7 +430,11 @@ export function createCreditsPlane(options: CreditsPlaneOptions = {}): SiteCredi
         return refuse("SITE_REQUEST_MALFORMED");
       }
       if (options.adapter === undefined) return refuse("CREDITS_PLANE_NOT_WIRED");
-      const result = await options.adapter.readBalance({ userId: input.userId });
+      const adapter = options.adapter;
+      const result = await callAdapter(
+        () => adapter.readBalance({ userId: input.userId }),
+        "CREDITS_PLANE_UNAVAILABLE",
+      );
       if (!isRecord(result)) return refuse("CREDIT_ADAPTER_OUTPUT_INVALID");
       if (result["ok"] !== true) {
         return canonicalAdapterRefusal(result, "CREDIT_ADAPTER_OUTPUT_INVALID");
@@ -453,7 +491,11 @@ export function createBillingPlane(options: BillingPlaneOptions = {}): SiteBilli
     async listCreditPacks(): Promise<SiteResult<readonly SiteCreditPack[]>> {
       if (liveDenied) return refuse("BILLING_LIVE_MODE_NOT_AUTHORIZED");
       if (options.adapter === undefined) return refuse("BILLING_PLANE_NOT_WIRED");
-      const result = await options.adapter.listCreditPacks();
+      const adapter = options.adapter;
+      const result = await callAdapter(
+        () => adapter.listCreditPacks(),
+        "BILLING_PLANE_UNAVAILABLE",
+      );
       if (!isRecord(result)) return refuse("BILLING_ADAPTER_OUTPUT_INVALID");
       if (result["ok"] !== true) {
         return canonicalAdapterRefusal(result, "BILLING_ADAPTER_OUTPUT_INVALID");
@@ -500,7 +542,11 @@ export function createBillingPlane(options: BillingPlaneOptions = {}): SiteBilli
         return refuse("BILLING_URL_INSECURE");
       }
       if (options.adapter === undefined) return refuse("BILLING_PLANE_NOT_WIRED");
-      const result = await options.adapter.createCheckout({ ...request, mode });
+      const adapter = options.adapter;
+      const result = await callAdapter(
+        () => adapter.createCheckout({ ...request, mode }),
+        "BILLING_PLANE_UNAVAILABLE",
+      );
       if (!isRecord(result)) return refuse("BILLING_ADAPTER_OUTPUT_INVALID");
       if (result["ok"] !== true) {
         return canonicalAdapterRefusal(result, "BILLING_ADAPTER_OUTPUT_INVALID");

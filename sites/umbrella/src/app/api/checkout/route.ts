@@ -1,6 +1,5 @@
-import { redirect } from "next/navigation";
 import { NextResponse, type NextRequest } from "next/server";
-import { SITE_REFUSALS } from "@sceneaxi/site-kit";
+import { SITE_REFUSALS, resolveCheckoutRedirectOrigin } from "@sceneaxi/site-kit";
 import { createUmbrellaIdentityPlane } from "../../../lib/identity-plane.js";
 import { readSessionToken } from "../../_session.js";
 
@@ -34,14 +33,25 @@ export async function POST(request: NextRequest) {
       ? attemptEntry.trim()
       : crypto.randomUUID();
 
-  const origin = new URL(request.url).origin;
-  const plane = createUmbrellaIdentityPlane(process.env);
+  // The plane is bound to this request's session credential, so the billing port
+  // authorizes the purchase against the session the server verified rather than
+  // against the user id this form submitted.
+  const sessionToken = await readSessionToken();
+  const plane = createUmbrellaIdentityPlane(process.env, { sessionToken });
 
   if (!plane.wired.billing) {
     return refusalResponse("BILLING_PLANE_NOT_WIRED", SITE_REFUSALS.BILLING_PLANE_NOT_WIRED);
   }
 
-  const sessionToken = await readSessionToken();
+  // Redirect targets come from the deployment's configured umbrella origin, never from
+  // this request's `Host`: a forwarded or aliased host must not be able to point the
+  // payment provider's post-payment redirect away from SceneAxi. Resolved after the
+  // wiring check, so an unwired deployment is not misdiagnosed as a misconfigured origin.
+  const origin = resolveCheckoutRedirectOrigin(process.env, new URL(request.url).origin);
+  if (!origin.ok) {
+    return refusalResponse(origin.reason, origin.message);
+  }
+
   const principal = await plane.identity.resolvePrincipal({
     surface: "site",
     sessionToken,
@@ -53,12 +63,15 @@ export async function POST(request: NextRequest) {
   const checkout = await plane.billing.createCheckout({
     userId: principal.value.user.userId,
     packId,
-    successUrl: `${origin}/account`,
-    cancelUrl: `${origin}/pricing`,
+    successUrl: `${origin.value}/account`,
+    cancelUrl: `${origin.value}/pricing`,
     idempotencyKey: `pack:${packId}:user:${principal.value.user.userId}:attempt:${attempt}`,
   });
   if (!checkout.ok) {
     return refusalResponse(checkout.reason, checkout.message);
   }
-  redirect(checkout.value.redirectUrl);
+  // 303 See Other, never 307: this handler answers a form POST, and a method-preserving
+  // redirect would re-issue that POST against the hosted checkout URL instead of
+  // navigating the buyer to it. The billing port has already proven the URL is https.
+  return NextResponse.redirect(checkout.value.redirectUrl, 303);
 }

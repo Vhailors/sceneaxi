@@ -28,8 +28,8 @@ export default async function EditorPage({
   readonly searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
-  const plane = createUmbrellaIdentityPlane(process.env);
   const sessionToken = await readSessionToken();
+  const plane = createUmbrellaIdentityPlane(process.env, { sessionToken });
   const resolved = await resolveUmbrellaEditorAccess({ plane, env: process.env, sessionToken });
 
   if (!resolved.decision.granted) {

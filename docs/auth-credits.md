@@ -17,14 +17,16 @@ The architecture decision behind the shape of this plane is
 | Credit ledger, metering, entitlements, Stripe test checkout, revenue share | `packages/billing` |
 | Neon schema | `db/migrations` |
 | Login + balance view model | `apps/web-shell` (`createAccountPanel`) |
+| Deployable-site wiring | `sites/umbrella/src/lib/identity-plane.ts` (`docs/websites-deploy.md`) |
 
 Release group `identity`; both packages consume only public contracts. **Outside core:** a
 running Better Auth instance, a Neon connection, the Stripe API client, any HTTP surface,
 and any UI. Those are injected adapters or other lanes' work — UI surfaces are coordinated
 with `sceneaxi-websites-deploy-v1`, which this vertical does not block.
 
-**What v1 does not deliver:** a live signed-in browser session. That needs a hosted HTTP
-surface this repo does not contain. See *Remaining wiring* at the end.
+**What v1 does not deliver:** a live signed-in browser session. The deployable HTTP surface
+has since landed on `sites/umbrella` and is wired to this plane, so what remains are the
+provider handles ADR 0021 keeps outside this repository. See *Remaining wiring* at the end.
 
 ## Environment
 
@@ -283,6 +285,14 @@ metering is scoped the same way so the pure check and the persisted constraint a
 Canonical list: `packages/schemas/contracts/credit-packs.fixtures.json`. The table below is
 kept in exact lockstep with it by `pnpm check:contracts` — edit the JSON, then the table.
 
+`loadCreditPackCatalog()` reads the fixture's bundled twin,
+`packages/schemas/src/credit-packs.data.ts` (`CREDIT_PACK_CATALOG_DATA`), rather than the
+JSON file: the same catalog is loaded inside a bundled serverless site, where a
+package-relative file read is not guaranteed to be traced into the deployment. That module
+is held byte-for-byte against the fixture by the same `pnpm check:contracts` run, so it is
+a third lockstep artifact, never a second source of truth — edit the JSON, then the table,
+then the module.
+
 Only **test-mode** price ids are committed. Live price ids belong to a later captain
 go-live decision.
 
@@ -309,6 +319,14 @@ a rate nobody agreed to.
 Canonical listings: `packages/schemas/contracts/catalog-listings.fixtures.json`, in
 lockstep with the table below. All three price modes must stay covered, so a regression
 cannot pass by dropping the shape it breaks. Test mode only.
+
+`loadCatalogListings()` reads the fixture's bundled twin,
+`packages/schemas/src/catalog-listings.data.ts` (`CATALOG_LISTINGS_DATA`), for the same
+reason `loadCreditPackCatalog()` does — and one more: this module is reachable from a
+deployed site through the `@sceneaxi/billing` package root, and a bundler cannot even
+statically resolve a package-relative read, so it rewrites the specifier into a stub that
+breaks the module before any refusal could run. That module is the third lockstep
+artifact here too — edit the JSON, then the table, then the module.
 
 <!-- catalog-listings:list -->
 | listing | catalog | price mode | credits | money |
@@ -395,14 +413,19 @@ this vertical adds no CLI verb. Machine/agent CLI behavior is untouched.
 
 ## Remaining wiring for a live signed-in session
 
-Everything below is outside this vertical and needs a hosted HTTP surface, coordinated with
-`sceneaxi-websites-deploy-v1`:
+Everything below is outside this vertical. The hosted HTTP surface it needed is now
+`sites/umbrella`, wired to this plane through one plug point:
 
-1. An HTTP app that mounts Better Auth's handler and holds the session cookie.
+1. Better Auth's own handler, mounted behind that surface to issue the session cookie the
+   umbrella already reads.
 2. `IdentityStore` and `CreditStore` implementations over a Neon client, and the migrations
-   applied to a Neon branch (needs credentials — separate authority).
-3. A Stripe adapter that turns a `CheckoutSessionIntent` into a hosted checkout URL, and a
-   webhook route that passes the **raw** body to `verifyStripeWebhookSignature`.
+   applied to a Neon branch (needs credentials — separate authority). The `CreditStore` also
+   owns provisioning a `CreditAccount` per user; nothing in this repository can create one.
+3. A Stripe adapter that turns a `CheckoutSessionIntent` into a hosted checkout URL. The
+   webhook route that passes the **raw** body to `verifyStripeWebhookSignature` has landed
+   on the umbrella (`sites/umbrella/src/app/api/stripe/webhook/route.ts`, sceneaxi#131).
 4. A renderer over `createAccountPanel`'s snapshots.
 
-None of it changes a contract or a policy in this plane; all four are adapters and glue.
+None of it changes a contract or a policy in this plane; all of it is adapters and glue.
+The deployable-site half of that glue — and which surfaces are already live versus still
+refusing — is owned by [`websites-deploy.md`](websites-deploy.md).

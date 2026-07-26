@@ -129,8 +129,8 @@
     "@sceneaxi/site-umbrella": {
       "dir": "sites/umbrella",
       "releaseGroup": "sites",
-      "allow": ["@sceneaxi/site-kit", "@sceneaxi/engine-presentation"],
-      "note": "ADR 0022: the umbrella owns the public viewport, so it alone may consume the ADR 0002 presentation seam to draw a real artifact into a browser canvas. The edge stops there — no kernel, orchestrator, authoring-core, profile, or Kids package — and the two catalog sites keep site-kit only."
+      "allow": ["@sceneaxi/site-kit", "@sceneaxi/engine-presentation", "@sceneaxi/auth", "@sceneaxi/billing"],
+      "note": "ADR 0022: the umbrella owns the public viewport, so it alone may consume the ADR 0002 presentation seam to draw a real artifact into a browser canvas. It is also the one site wired to the identity plane (sceneaxi#131), so it alone may consume @sceneaxi/auth and @sceneaxi/billing, and only through the single plug point src/lib/identity-plane.ts. The edge stops there — no kernel, orchestrator, authoring-core, profile, or Kids package — and the two catalog sites keep site-kit only, reaching identity through the same site-kit ports rather than a second auth stack."
     },
     "@sceneaxi/site-catalog-game": {
       "dir": "sites/catalog-game",

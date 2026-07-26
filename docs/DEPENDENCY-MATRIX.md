@@ -20,9 +20,10 @@ L2  authoring-core     the one agent-native runtime/authoring core (document mod
 L3  profiles · cli · importers · provider adapters · plugin-host · auth ← billing
                        (identity plane; schema in db/migrations)
 L4  apps               (leaves; nothing depends on an app)
-L4  sites              site-kit ← the three deployable sites (leaves; ADR 0018),
-plus one charted edge: engine-presentation ← umbrella,
-                       the public viewport (ADR 0022)
+L4  sites              site-kit ← the three deployable sites (leaves; ADR 0018), plus
+                       two charted edges the umbrella alone holds: engine-presentation
+                       for the public viewport (ADR 0022), and auth + billing for the
+                       identity plane (ADR 0021)
 ```
 
 ## Allow matrix (✓ = allowed; blank = denied)
@@ -44,7 +45,7 @@ plus one charted edge: engine-presentation ← umbrella,
 | desktop-shell | ✓ | | | | ✓ | | | | | — |
 | catalog-game / catalog-web | ✓ | | | | | | | | | — |
 | site-kit | ✓ | | | | ✓ | | | | | |
-| site-umbrella (→ site-kit ✓) | | | ✓ | | | | | | | |
+| site-umbrella (→ site-kit ✓, auth ✓, billing ✓) | | | ✓ | | | | | | | |
 | site-catalog-game / site-catalog-web (→ site-kit ✓) | | | | | | | | | | |
 
 Deliberate denials that carry design intent:
@@ -62,17 +63,20 @@ Deliberate denials that carry design intent:
 - **plugin-host → engine packages / authoring-core / profiles: denied.** The Plugin
   Host (ADR 0005) consumes only public contracts from `schemas`; it must not grow
   an engine service locator or absorb engine internals.
-- **sites → anything but `site-kit`: denied, with one charted exception.** Each
-  deployable site (`sites/umbrella`, `sites/catalog-game`, `sites/catalog-web`) reaches
-  contract vocabulary only through `@sceneaxi/site-kit`, which may consume `schemas`
-  and `authoring-core`. A site is a thin view layer; all testable behaviour lives in
-  `site-kit` so `pnpm gate` covers it (ADR 0018). The exception is
-  **umbrella → `engine-presentation`** (ADR 0022): the umbrella owns the public
-  viewport, so it alone consumes the ADR 0002 presentation seam to draw a real
-  artifact into a browser canvas. Nothing widens past that — kernel, orchestrator,
-  authoring-core, profiles, and Kids stay denied to every site, and the two catalogs
-  keep `site-kit` only. `tests/boundary/injected-site-violations.test.ts` asserts both
-  the allowed edge and each denial.
+- **sites → anything but `site-kit`: denied, with two charted exceptions, both the
+  umbrella's alone.** Each deployable site (`sites/umbrella`, `sites/catalog-game`,
+  `sites/catalog-web`) reaches contract vocabulary only through `@sceneaxi/site-kit`,
+  which may consume `schemas` and `authoring-core`. A site is a thin view layer; all
+  testable behaviour lives in `site-kit` so `pnpm gate` covers it (ADR 0018). The
+  exceptions are **umbrella → `engine-presentation`** (ADR 0022): the umbrella owns the
+  public viewport, so it alone consumes the ADR 0002 presentation seam to draw a real
+  artifact into a browser canvas; and **umbrella → `auth` + `billing`** (ADR 0021,
+  sceneaxi#131): it is the one site wired to the identity plane, and only through the
+  single plug point `sites/umbrella/src/lib/identity-plane.ts`. Nothing widens past that
+  — kernel, orchestrator, authoring-core, profiles, and Kids stay denied to every site,
+  and the two catalogs keep `site-kit` only, reading identity through the same site-kit
+  ports rather than a second auth stack. `tests/boundary/injected-site-violations.test.ts`
+  asserts both allowed edges and each denial.
 - **framework and provider SDKs → the hermetic tier: denied.** `next`, `react`,
   and provider clients live in `sites/` only. `pnpm check:sites` fails if one appears
   in the root manifest, and if `pnpm-workspace.yaml` starts globbing `sites/` — the
@@ -131,8 +135,9 @@ Recorded in `dependency-matrix.json → releaseGroups` and stamped on every mani
   surfaces and their shared deployment-neutral logic. Consume only public contracts and
   public `authoring-core` APIs; never profiles, a service locator, or Kids. The single
   engine edge is umbrella → `engine-presentation` for the public viewport (ADR 0022);
-  every other engine package stays denied to every site. Framework and provider SDKs
-  stay in the `sites/` tier. Deploy and env details:
+  every other engine package stays denied to every site. The umbrella additionally
+  consumes the `identity` group (`auth`, `billing`) from its one plug point; the catalogs
+  do not. Framework and provider SDKs stay in the `sites/` tier. Deploy and env details:
   [`websites-deploy.md`](websites-deploy.md).
 - **identity** (`auth`, `billing`): independently versioned; consumes only public
   contracts from `schemas` (and, for `billing`, the `auth` seam); never engine

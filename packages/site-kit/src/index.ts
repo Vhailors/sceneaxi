@@ -95,6 +95,14 @@ export {
 } from "./ports.js";
 
 export {
+  CATALOG_IDENTITY_SURFACE,
+  createCatalogIdentityPlane,
+  resolveCatalogViewer,
+  type CatalogIdentityPlane,
+  type CatalogIdentityPlaneOptions,
+} from "./catalog-identity.js";
+
+export {
   SDK_MANIFEST_FILE,
   SDK_PUBLIC_DIR,
   formatByteSize,
@@ -160,6 +168,7 @@ export {
   buildEditorDeepLink,
   parseEditorDeepLink,
   parseEditorDeepLinkParams,
+  resolveCheckoutRedirectOrigin,
   resolveEditorLinkFromEnv,
   resolveFamilyLinks,
   resolveUmbrellaEditorOrigin,

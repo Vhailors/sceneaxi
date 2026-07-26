@@ -19,6 +19,15 @@ The locked site/domain topology requires the two storefronts stay distinct in
 positioning and content even though they consume the same catalog pipeline. This
 surface does not publish the website catalog's or the umbrella's canonical pages.
 
+## Identity is read, never issued
+
+This storefront takes **no auth stack of its own**: `src/lib/identity-plane.ts` re-exports
+the shared `@sceneaxi/site-kit` storefront plane, and the item page shows what that plane
+says about the request — display only, with a server-derived role or a named refusal. The
+matrix denies this site `@sceneaxi/auth` and `@sceneaxi/billing`, and no adapter is
+supplied here, so an unwired deployment refuses rather than inventing a viewer. The plane
+and its activation are owned by [`docs/websites-deploy.md`](../../docs/websites-deploy.md).
+
 ## Commerce is inert
 
 `COMMERCE_ACTIVATION_GATE` always refuses while tier-6b marketplace activation keys

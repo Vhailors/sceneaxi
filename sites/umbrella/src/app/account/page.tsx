@@ -16,15 +16,20 @@ import { StatePanel } from "../_components/state-panel.js";
  * refused by the port before any adapter is consulted.
  */
 export default async function AccountPage() {
-  const plane = createUmbrellaIdentityPlane(process.env);
   const sessionToken = await readSessionToken();
+  const plane = createUmbrellaIdentityPlane(process.env, { sessionToken });
   const resolved = await resolveEditorAccess({
     identity: plane.identity,
     credits: plane.credits,
     request: { surface: "site", sessionToken },
   });
 
-  const phase = resolved.principal !== null ? "authenticated" : resolved.identity.ok ? "anonymous" : "refused";
+  // A signed-out visitor is its own phase. `IDENTITY_SESSION_ABSENT` is the plane
+  // saying "nobody is signed in here", which must not read like a broken deployment.
+  const signedOut =
+    !resolved.identity.ok && resolved.identity.reason === "IDENTITY_SESSION_ABSENT";
+  const phase =
+    resolved.principal !== null ? "authenticated" : signedOut ? "anonymous" : "refused";
 
   return (
     <>
@@ -111,7 +116,7 @@ export default async function AccountPage() {
       ) : (
         <StatePanel
           tone="deny"
-          title="Sign-in is not available on this deployment"
+          title={signedOut ? "You are not signed in" : "Sign-in is not available on this deployment"}
           reason={resolved.identity.ok ? undefined : resolved.identity.reason}
         >
           <p>
@@ -119,10 +124,17 @@ export default async function AccountPage() {
               ? "No session is present."
               : resolved.identity.message}
           </p>
-          <p>{IDENTITY_PLANE_PENDING_NOTE}</p>
+          {!signedOut && (
+            <>
+              <p>{IDENTITY_PLANE_PENDING_NOTE}</p>
+              <p>
+                The wiring steps and the exact environment variables are documented in{" "}
+                <code>{IDENTITY_PLANE_DOC}</code>.
+              </p>
+            </>
+          )}
           <p>
-            The wiring steps and the exact environment variables are documented in{" "}
-            <code>{IDENTITY_PLANE_DOC}</code>. Everything free stays available now:{" "}
+            Everything free stays available now:{" "}
             <a href="/engine">the engine SDK download</a>, <a href="/docs">the docs</a>,
             and browsing either catalog.
           </p>

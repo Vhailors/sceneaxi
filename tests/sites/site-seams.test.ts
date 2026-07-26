@@ -153,7 +153,7 @@ describe("umbrella family links never reach Kids", () => {
   });
 });
 
-describe("umbrella identity plane is unwired and honest about it", () => {
+describe("umbrella identity plane refuses honestly without provider handles", () => {
   it("reports every plane as unwired with no adapters", () => {
     const plane = createUmbrellaIdentityPlane({});
     expect(plane.wired).toEqual({ identity: false, credits: false, billing: false });

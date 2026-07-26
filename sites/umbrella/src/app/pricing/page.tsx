@@ -1,4 +1,4 @@
-import { CREATOR_SHARE_ROUNDING_NOTE, CREATOR_SHARE_RULE, SITE_STARTER_CREDIT_ALLOTMENT } from "@sceneaxi/site-kit";
+import { CREATOR_SHARE_ROUNDING_NOTE, CREATOR_SHARE_RULE, SITE_REFUSALS, SITE_STARTER_CREDIT_ALLOTMENT } from "@sceneaxi/site-kit";
 import { IDENTITY_PLANE_PENDING_NOTE, createUmbrellaIdentityPlane } from "../../lib/identity-plane.js";
 import { CapabilityTable } from "../_components/capability-table.js";
 import { StatePanel } from "../_components/state-panel.js";
@@ -9,7 +9,16 @@ import { StatePanel } from "../_components/state-panel.js";
  * The pack list comes from the billing plane, never from a constant here — pack
  * pricing is a product decision owned by `@sceneaxi/billing`, and inventing prices on
  * a page would be inventing that decision. Unwired, the page says so.
+ *
+ * The page is rendered per request because its checkout attempt token must be. A
+ * prerender would evaluate that token once at build time and serve every visitor the
+ * same one, which the checkout route folds into its idempotency key — so a second
+ * purchase of the same pack would derive the first purchase's intent id and hand back a
+ * completed session instead of a new checkout. The token is per render, so the render
+ * has to be per request.
  */
+export const dynamic = "force-dynamic";
+
 export default async function PricingPage() {
   const plane = createUmbrellaIdentityPlane(process.env);
   const packs = await plane.billing.listCreditPacks();
@@ -51,11 +60,17 @@ export default async function PricingPage() {
                       {(pack.unitAmount / 100).toFixed(2)} {pack.currency.toUpperCase()}
                     </td>
                     <td>
-                      <form method="post" action="/api/checkout">
-                        <input type="hidden" name="packId" value={pack.packId} />
-                        <input type="hidden" name="attempt" value={crypto.randomUUID()} autoComplete="off" />
-                        <button className="button" type="submit">Buy</button>
-                      </form>
+                      {plane.wired.billing ? (
+                        <form method="post" action="/api/checkout">
+                          <input type="hidden" name="packId" value={pack.packId} />
+                          <input type="hidden" name="attempt" value={crypto.randomUUID()} autoComplete="off" />
+                          <button className="button" type="submit">Buy</button>
+                        </form>
+                      ) : (
+                        <span className="button" aria-disabled="true" title={SITE_REFUSALS.BILLING_PLANE_NOT_WIRED}>
+                          Not for sale yet
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -68,6 +83,13 @@ export default async function PricingPage() {
               deployment. Live charges need a separate captain decision, and the billing
               port refuses live mode without explicit authorization.
             </p>
+            {!plane.wired.billing && (
+              <p>
+                Buying is not open on this deployment: the hosted checkout round-trip is
+                not wired, so these prices are shown for information and no purchase is
+                offered. {IDENTITY_PLANE_PENDING_NOTE}
+              </p>
+            )}
           </StatePanel>
         </>
       ) : (

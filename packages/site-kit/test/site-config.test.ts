@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import {
   createCreditsPlane,
   createIdentityPlane,
+  resolveCheckoutRedirectOrigin,
   resolveEditorLinkFromEnv,
   resolveEditorSession,
   resolveFamilyLinks,
@@ -61,6 +62,36 @@ describe("catalog umbrella origin resolution", () => {
         NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN: "http://localhost:3000",
       }).ok,
     ).toBe(true);
+  });
+
+  it("takes the checkout redirect origin from configuration, never from the request", () => {
+    const env = { NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN: "https://umbrella.vercel.app" };
+    expect(
+      resolveCheckoutRedirectOrigin(env, "https://umbrella.vercel.app"),
+    ).toMatchObject({ ok: true, value: "https://umbrella.vercel.app" });
+    // A forwarded or aliased host must not be able to redirect a paying buyer off-site.
+    for (const spoofed of [
+      "https://attacker.example",
+      "https://umbrella.vercel.app.attacker.example",
+      "http://umbrella.vercel.app",
+      "not-a-url",
+    ]) {
+      expect(resolveCheckoutRedirectOrigin(env, spoofed)).toMatchObject({
+        ok: false,
+        reason: "BILLING_CHECKOUT_ORIGIN_UNTRUSTED",
+      });
+    }
+  });
+
+  it("refuses a checkout redirect origin in billing vocabulary when none is configured", () => {
+    // A buyer on the payment path must not be handed a catalog deep-link reason, so the
+    // unconfigured case is renamed rather than propagated from the deep-link probe.
+    for (const env of [{}, { NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN: "http://evil.example" }]) {
+      expect(resolveCheckoutRedirectOrigin(env, "https://umbrella.vercel.app")).toMatchObject({
+        ok: false,
+        reason: "BILLING_CHECKOUT_ORIGIN_UNCONFIGURED",
+      });
+    }
   });
 
   it("builds a deep link that names its own source surface", () => {

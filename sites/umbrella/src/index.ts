@@ -7,7 +7,8 @@
  * them; only `src/app/` imports React or Next.
  *
  * `src/lib/identity-plane.ts` is the single documented plug point for
- * `@sceneaxi/auth` and `@sceneaxi/billing` when the identity plane lands.
+ * `@sceneaxi/auth` and `@sceneaxi/billing`, and is where the provider handles those
+ * packages need — Better Auth, Neon, the Stripe API — arrive when a deployment has them.
  */
 import type { PackageSeam } from "@sceneaxi/site-kit";
 
@@ -38,8 +39,28 @@ export {
 export {
   IDENTITY_PLANE_DOC,
   IDENTITY_PLANE_PENDING_NOTE,
+  createAuthIdentityAdapter,
+  createBillingCheckoutAdapter,
+  createBillingCreditsAdapter,
   createUmbrellaIdentityPlane,
+  parseSessionToken,
   resolveBillingMode,
+  siteReasonForAuthReason,
+  siteReasonForBillingReason,
+  toSitePrincipal,
+  type BillingReadPlane,
+  type CheckoutSessionAdapter,
   type IdentityPlaneAdapters,
+  type IdentityPlaneWiring,
   type UmbrellaIdentityPlane,
 } from "./lib/identity-plane.js";
+
+export {
+  CREDIT_WEBHOOK_REASONS,
+  STRIPE_SIGNATURE_HEADER,
+  STRIPE_WEBHOOK_SECRET_ENV,
+  applyCreditPackWebhook,
+  creditWebhookHttpStatus,
+  type CheckoutEvidencePort,
+  type CreditWebhookOutcome,
+} from "./lib/credit-webhook.js";

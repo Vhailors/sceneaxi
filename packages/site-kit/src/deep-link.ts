@@ -168,6 +168,35 @@ export function resolveUmbrellaEditorOrigin(
   return probe.ok ? ok(new URL(origin).origin) : probe;
 }
 
+/**
+ * The origin a checkout redirect may be built from.
+ *
+ * The umbrella's own success and cancel URLs must not be derived from the request's
+ * `Host`: a deployment reachable under an alias, or behind a proxy that forwards an
+ * attacker-influenced host, would otherwise hand the payment provider a redirect target
+ * pointing away from SceneAxi — and the buyer would land there carrying the appearance
+ * of a completed purchase. The origin therefore comes from the same server-configured
+ * value the catalogs already link to, and a request arriving on any other origin is
+ * refused rather than silently redirected to the configured one.
+ *
+ * Both failures answer in the billing vocabulary. The configured origin is probed through
+ * the deep-link contract because that is where the origin rule is defined once, but a
+ * buyer on the payment path must never be handed a catalog deep-link reason, so an absent
+ * or non-https configured origin is renamed here rather than propagated.
+ */
+export function resolveCheckoutRedirectOrigin(
+  env: Readonly<Record<string, string | undefined>>,
+  requestOrigin: string,
+): SiteResult<string> {
+  const configured = resolveUmbrellaEditorOrigin(env);
+  if (!configured.ok) return refuse("BILLING_CHECKOUT_ORIGIN_UNCONFIGURED");
+  const observed = normalizeOrigin(requestOrigin);
+  if (observed === null || observed !== configured.value) {
+    return refuse("BILLING_CHECKOUT_ORIGIN_UNTRUSTED");
+  }
+  return ok(configured.value);
+}
+
 /** Build a deep link for one listing from the server environment, or the named refusal. */
 export function resolveEditorLinkFromEnv(
   env: Readonly<Record<string, string | undefined>>,

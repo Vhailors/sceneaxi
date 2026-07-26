@@ -3,16 +3,15 @@
  *
  * The canonical list is a **contract fixture**
  * (`@sceneaxi/schemas/contracts/credit-packs.fixtures.json`), kept in lockstep
- * with `docs/auth-credits.md` by `pnpm check:contracts`. Reading it is isolated
- * in `loadCreditPackCatalog` so every other function takes the catalog as an
- * argument: the checkout path stays pure, injectable, and free of filesystem
- * access, and a test can pass a two-pack catalog without touching the repo's.
+ * with `docs/auth-credits.md` and with the bundled module below by
+ * `pnpm check:contracts`. Loading it is isolated in `loadCreditPackCatalog` so
+ * every other function takes the catalog as an argument: the checkout path stays
+ * pure, injectable, and a test can pass a two-pack catalog without touching the
+ * repo's.
  */
 
-import { createRequire } from "node:module";
-import { readFileSync } from "node:fs";
 import {
-  CREDIT_PACKS_FIXTURES_PATH,
+  CREDIT_PACK_CATALOG_DATA,
   validateCreditPackCatalog,
   type CreditPack,
   type CreditPackCatalog,
@@ -29,28 +28,16 @@ let cached: CreditPackCatalog | undefined;
 /**
  * Load and validate the canonical committed catalog, caching the result.
  *
- * Resolved through the package export map rather than a relative path, so the
- * fixture stays the contract owner's file and cannot drift into a local copy.
+ * Read from the contract owner's bundled module rather than from the filesystem:
+ * the same catalog is loaded inside a bundled serverless site, where a
+ * package-relative file read is not guaranteed to be traced into the deployment.
+ * `pnpm check:contracts` holds that module and the canonical fixture in lockstep,
+ * so the value here cannot drift from the contract it is a copy of.
  */
 export function loadCreditPackCatalog(): BillingOutcome<CreditPackCatalog> {
   if (cached !== undefined) return billingOk(cached);
 
-  let raw: unknown;
-  try {
-    const require = createRequire(import.meta.url);
-    const path = require.resolve(
-      `@sceneaxi/schemas/${CREDIT_PACKS_FIXTURES_PATH}`,
-    );
-    raw = JSON.parse(readFileSync(path, "utf8"));
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    return billingRefuse(
-      BILLING_REFUSE_REASONS.catalogInvalid,
-      `The credit pack catalog could not be read: ${detail}`,
-    );
-  }
-
-  const catalog = validateCreditPackCatalog(raw);
+  const catalog = validateCreditPackCatalog(CREDIT_PACK_CATALOG_DATA);
   if (!catalog.ok) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.catalogInvalid,

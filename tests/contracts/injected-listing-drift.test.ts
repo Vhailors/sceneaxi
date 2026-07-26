@@ -19,6 +19,7 @@ import {
 
 const FIXTURES_REL = "packages/schemas/contracts/catalog-listings.fixtures.json";
 const DOC_REL = "docs/auth-credits.md";
+const MODULE_REL = "packages/schemas/src/catalog-listings.data.ts";
 
 interface ListingFixture {
   schemaVersion: number;
@@ -55,7 +56,35 @@ describe("contract check — injected catalog-listing drift", () => {
     expect(res.stderr).toBe("");
     expect(res.stdout).toContain("catalog listings schema-locked");
     expect(res.stdout).toContain("all price modes covered");
+    expect(res.stdout).toContain("doc-bound, and bundled-module-bound");
     expect(res.status).toBe(0);
+  });
+
+  it("fails when the bundled module drifts from the fixture", () => {
+    const module = readFileSync(join(fx, MODULE_REL), "utf8");
+    writeTo(
+      fx,
+      MODULE_REL,
+      module.replace('"creditPrice": 40', '"creditPrice": 41'),
+    );
+
+    const res = runCheck(fx, "check-contracts.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "bundled catalog listing set does not exactly match catalog-listings.fixtures.json",
+    );
+  });
+
+  it("fails when the bundled module stops being a parseable listing literal", () => {
+    writeTo(
+      fx,
+      MODULE_REL,
+      "export const CATALOG_LISTINGS_DATA: unknown = undefined;\n",
+    );
+
+    const res = runCheck(fx, "check-contracts.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("is not a parseable JSON literal");
   });
 
   it("fails when a listing price changes in the fixture but not in the doc table", () => {

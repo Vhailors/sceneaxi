@@ -20,3 +20,11 @@ export {
   resolveUmbrellaOrigin,
   type UmbrellaOrigin,
 } from "./lib/site-config.js";
+
+export {
+  CATALOG_IDENTITY_SURFACE,
+  createCatalogIdentityPlane,
+  resolveCatalogViewer,
+  type CatalogIdentityPlane,
+  type CatalogIdentityPlaneOptions,
+} from "./lib/identity-plane.js";

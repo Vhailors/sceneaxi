@@ -12,6 +12,7 @@ import {
   STRIPE_EVENT_IDEMPOTENCY_PREFIX,
   STRIPE_SIGNATURE_TOLERANCE_SECONDS,
   applyCheckoutCompletedGrant,
+  checkoutPurposeSettlesElsewhere,
   createCheckoutSessionIntent,
   createLedgerState,
   loadCreditPackCatalog,
@@ -882,6 +883,22 @@ describe("applyCheckoutCompletedGrant", () => {
         now: NOW,
       }).ok,
     ).toBe(false);
+  });
+});
+
+describe("checkoutPurposeSettlesElsewhere", () => {
+  it("names only the known purposes the credit ledger does not settle", () => {
+    expect(checkoutPurposeSettlesElsewhere("catalog-listing")).toBe(true);
+    expect(checkoutPurposeSettlesElsewhere("credit-pack")).toBe(false);
+  });
+
+  it("claims nothing about a purpose it does not know", () => {
+    // A caller routes on this before reading any evidence, so it must only ever send a
+    // body away from the grant path. An absent, malformed, or unknown purpose therefore
+    // keeps its normal path and is still refused by `parseCheckoutCompletedEvent`.
+    for (const purpose of [undefined, null, "", "  ", "creditpack", 7, {}, ["catalog-listing"]]) {
+      expect(checkoutPurposeSettlesElsewhere(purpose)).toBe(false);
+    }
   });
 });
 

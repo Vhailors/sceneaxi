@@ -275,6 +275,40 @@ export function verifyStripeWebhookSignature(
   );
 }
 
+/**
+ * The one checkout purpose this path settles into the credit ledger.
+ *
+ * A catalog-listing purchase transfers an asset and splits money instead, so it
+ * grants no credits. `applyCheckoutCompletedGrant` remains the authority — it
+ * refuses any other purpose rather than silently ignoring it — and this constant
+ * plus its predicate exist so a caller *sequencing* the grant can tell, from a
+ * completion it already holds, that no ledger read is owed at all. An event that
+ * grants nothing by design must not depend on a store that may be unreachable.
+ */
+export const CREDIT_GRANTING_CHECKOUT_PURPOSE = "credit-pack" as const;
+
+/** Whether a completed checkout's purpose is one the credit ledger settles. */
+export function checkoutPurposeGrantsCredits(
+  purpose: unknown,
+): purpose is typeof CREDIT_GRANTING_CHECKOUT_PURPOSE {
+  return purpose === CREDIT_GRANTING_CHECKOUT_PURPOSE;
+}
+
+/**
+ * Whether a value names a *known* checkout purpose that settles somewhere other than
+ * the credit ledger.
+ *
+ * This is the routing form of the rule above, for a caller that holds only raw session
+ * metadata and has not yet read the evidence a completion must be bound to. It answers
+ * `false` for anything that is not one of `CHECKOUT_PURPOSES`, so an absent, malformed,
+ * or unknown purpose keeps its existing path and is still refused as an invalid payload
+ * by `parseCheckoutCompletedEvent` — this can only send a body *away* from the grant
+ * path, never admit one to it.
+ */
+export function checkoutPurposeSettlesElsewhere(purpose: unknown): boolean {
+  return isCheckoutPurpose(purpose) && !checkoutPurposeGrantsCredits(purpose);
+}
+
 /** Metadata keys SceneAxi sets on the Stripe Checkout Session. */
 export const CHECKOUT_METADATA_KEYS = Object.freeze({
   userId: "sceneaxiUserId",
@@ -529,7 +563,7 @@ export function applyCheckoutCompletedGrant(
   // Only a credit-pack purchase grants credits. A catalog-listing purchase
   // transfers an asset and splits money; routing it here would mint credits
   // nobody bought, so it refuses rather than being silently ignored.
-  if (validated.value.purpose !== "credit-pack") {
+  if (!checkoutPurposeGrantsCredits(validated.value.purpose)) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.webhookEventTypeUnsupported,
       `A ${validated.value.purpose} completion grants no credits; use the revenue-share path instead.`,

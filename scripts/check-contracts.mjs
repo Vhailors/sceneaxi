@@ -68,6 +68,53 @@ const load = (path, parse) => {
   }
 };
 
+// Read back the object literal a module freezes into one named export. The span
+// is anchored on that export and closed by counting braces (skipping string and
+// comment content), so a module that later grows a second frozen export or any
+// trailing code still yields this export's literal instead of a wrong span.
+const frozenObjectLiteral = (source, exportName) => {
+  const anchor = new RegExp(
+    `export\\s+const\\s+${exportName}\\s*(?::[^=]*)?=\\s*Object\\.freeze\\(\\s*`,
+  ).exec(source);
+  if (anchor === null) return undefined;
+
+  const start = anchor.index + anchor[0].length;
+  if (source[start] !== "{") return undefined;
+
+  let depth = 0;
+  for (let i = start; i < source.length; i += 1) {
+    const char = source[i];
+    if (char === '"' || char === "'" || char === "`") {
+      i += 1;
+      while (i < source.length && source[i] !== char) {
+        i += source[i] === "\\" ? 2 : 1;
+      }
+      continue;
+    }
+    if (char === "/" && source[i + 1] === "/") {
+      const newline = source.indexOf("\n", i);
+      if (newline === -1) return undefined;
+      i = newline;
+      continue;
+    }
+    if (char === "/" && source[i + 1] === "*") {
+      const close = source.indexOf("*/", i + 2);
+      if (close === -1) return undefined;
+      i = close + 1;
+      continue;
+    }
+    if (char === "{") {
+      depth += 1;
+      continue;
+    }
+    if (char === "}") {
+      depth -= 1;
+      if (depth === 0) return source.slice(start, i + 1);
+    }
+  }
+  return undefined;
+};
+
 const schema = load(schemaPath, true);
 const fixtures = load(fixturesPath, true);
 const doc = load(docPath, false);
@@ -889,6 +936,45 @@ if (creditPacksSurface.ready) {
       fail("docs/auth-credits.md: does not name the canonical credit pack fixture path");
     }
   }
+
+  // The bundled twin the deployable sites load must carry exactly this catalog. A
+  // serverless bundle is not guaranteed to trace the fixture file into the
+  // deployment, so the module is what actually ships — and it may never drift from
+  // the contract it copies.
+  const creditPacksModulePath = join(
+    root,
+    "packages",
+    "schemas",
+    "src",
+    "credit-packs.data.ts",
+  );
+  const creditPacksModule = load(creditPacksModulePath, false);
+  if (creditPacksModule === loadFailed) {
+    fail(
+      "packages/schemas/src/credit-packs.data.ts: the bundled credit pack catalog is missing",
+    );
+  } else {
+    const literal = frozenObjectLiteral(creditPacksModule, "CREDIT_PACK_CATALOG_DATA");
+    let bundled;
+    if (literal !== undefined) {
+      try {
+        bundled = JSON.parse(literal);
+      } catch {
+        bundled = undefined;
+      }
+    }
+    if (bundled === undefined) {
+      fail(
+        "packages/schemas/src/credit-packs.data.ts: the bundled credit pack catalog CREDIT_PACK_CATALOG_DATA is not a parseable JSON literal frozen into the module",
+      );
+    } else if (
+      JSON.stringify(bundled, null, 2) !== JSON.stringify(creditPacksFixtures, null, 2)
+    ) {
+      fail(
+        "packages/schemas/src/credit-packs.data.ts: bundled credit pack catalog does not exactly match credit-packs.fixtures.json",
+      );
+    }
+  }
 }
 
 // --- entitlement matrix + docs/auth-credits.md lockstep (sceneaxi#99) ---
@@ -1071,6 +1157,45 @@ if (listingsSurface.ready) {
       );
     }
   }
+
+  // The bundled twin the deployable sites load must carry exactly this listing
+  // set, for the same reason the credit-pack module must: a bundle cannot read
+  // the fixture file, so the module is what actually ships — and it may never
+  // drift from the contract it copies.
+  const listingsModulePath = join(
+    root,
+    "packages",
+    "schemas",
+    "src",
+    "catalog-listings.data.ts",
+  );
+  const listingsModule = load(listingsModulePath, false);
+  if (listingsModule === loadFailed) {
+    fail(
+      "packages/schemas/src/catalog-listings.data.ts: the bundled catalog listing set is missing",
+    );
+  } else {
+    const literal = frozenObjectLiteral(listingsModule, "CATALOG_LISTINGS_DATA");
+    let bundled;
+    if (literal !== undefined) {
+      try {
+        bundled = JSON.parse(literal);
+      } catch {
+        bundled = undefined;
+      }
+    }
+    if (bundled === undefined) {
+      fail(
+        "packages/schemas/src/catalog-listings.data.ts: the bundled catalog listing set CATALOG_LISTINGS_DATA is not a parseable JSON literal frozen into the module",
+      );
+    } else if (
+      JSON.stringify(bundled, null, 2) !== JSON.stringify(listingsFixtures, null, 2)
+    ) {
+      fail(
+        "packages/schemas/src/catalog-listings.data.ts: bundled catalog listing set does not exactly match catalog-listings.fixtures.json",
+      );
+    }
+  }
 }
 
 // --- open-path demo policy + docs/open-path-policy.md lockstep (sceneaxi#137) ---
@@ -1187,5 +1312,5 @@ if (errors.length > 0) {
   process.exit(1);
 }
 console.log(
-  `contract check OK — ${authoringJobCount} shared authoring jobs valid, doc table matches, E1+E2 bound to one list; plugin capability registry 1.0.0 seed pinned to ${REGISTRY_SEED_ENTRIES.length} reviewed capability and schema-locked; plugin-manifest inert example schema-locked; ${creditPackCount} test-mode credit packs schema-locked and doc-bound; ${entitlementCapabilityCount} entitlement capabilities schema-locked, free path intact, doc-bound; ${listingCount} test-mode catalog listings schema-locked, all price modes covered, doc-bound; ${openPathProfileCount} open-path policy rows schema-locked, no shipping claim, Kids refuse-only, doc-bound`,
+  `contract check OK — ${authoringJobCount} shared authoring jobs valid, doc table matches, E1+E2 bound to one list; plugin capability registry 1.0.0 seed pinned to ${REGISTRY_SEED_ENTRIES.length} reviewed capability and schema-locked; plugin-manifest inert example schema-locked; ${creditPackCount} test-mode credit packs schema-locked, doc-bound, and bundled-module-bound; ${entitlementCapabilityCount} entitlement capabilities schema-locked, free path intact, doc-bound; ${listingCount} test-mode catalog listings schema-locked, all price modes covered, doc-bound, and bundled-module-bound; ${openPathProfileCount} open-path policy rows schema-locked, no shipping claim, Kids refuse-only, doc-bound`,
 );
