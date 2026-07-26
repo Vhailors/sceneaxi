@@ -20,6 +20,9 @@ export {
 
 export {
   PLUGIN_HOST_API_VERSION,
+  type CapabilityContractCheck,
+  type CapabilityContractCheckResult,
+  type CapabilityContractChecks,
   type LoadedPlugin,
   type PluginCapabilityImplementationHit,
   type PluginCapabilityImplementationMiss,

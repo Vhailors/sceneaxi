@@ -95,11 +95,16 @@ semantics and the SceneAxi-versus-adapter boundary.
 ## Plugin Capability ID Registry (sceneaxi#21 / ADR 0005)
 
 - `contracts/plugin-capability-registry.schema.json` — versioned registry document shape
-- `contracts/plugin-capability-registry.1.0.0.json` — checked-in seed with no
-  demonstration or engine-internal ports
+- `contracts/plugin-capability-registry.1.0.0.json` — checked-in seed; reviewed
+  capability rows only, no demonstration or engine-internal ports
 - TypeScript: `PluginCapabilityRegistry`, `validatePluginCapabilityRegistry`,
   `parsePluginCapabilityRegistryText`, `lookupPluginCapability`,
-  `emptyPluginCapabilityRegistrySeed`
+  `pluginCapabilityRegistrySeed`, `emptyPluginCapabilityRegistry`,
+  `SHIPPED_PLUGIN_CAPABILITY_IDS`
+- Registered capability contracts live beside the registry; today that is
+  `sceneaxi.sculpt.intake-source.v1` (`SCULPT_INTAKE_SOURCE_CAPABILITY_ID`,
+  `checkSculptIntakeSourceImplementation`, `requestSculptIntake`), which produces
+  a Sculpt Intake and is documented in [`docs/plugins.md`](../../docs/plugins.md)
 - IDs are explicit registry keys only; lookup miss is typed
   (`reason: "unknown-capability"`) for host fail-closed refusal
 - **Absent ID means stop.** Do not invent a manifest hook, renderer/physics/storage
@@ -109,7 +114,7 @@ semantics and the SceneAxi-versus-adapter boundary.
 - Drift between schema, seed artifact, and docs is enforced by `pnpm check:contracts`
 
 <!-- plugin-capability-registry:seed-state -->
-Registry seed state: `registryVersion` is `1.0.0`; `entries` is exactly `[]` (empty).
+Registry seed state: `registryVersion` is `1.0.0`; `entries` holds exactly 1 reviewed capability ID: `sceneaxi.sculpt.intake-source.v1`.
 <!-- /plugin-capability-registry:seed-state -->
 
 ## Profile Conformance (sceneaxi#10)

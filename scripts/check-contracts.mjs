@@ -554,6 +554,26 @@ const FORBIDDEN_SEED_SUBSTRINGS = [
 const REGISTRY_SEED_DOC_START = "<!-- plugin-capability-registry:seed-state -->";
 const REGISTRY_SEED_DOC_END = "<!-- /plugin-capability-registry:seed-state -->";
 
+/**
+ * Exact rows the v1 seed ships, in order. Every row is a reviewed capability
+ * contract; adding one is a deliberate edit here plus the seed artifact plus the
+ * TypeScript fixture, so a capability cannot appear in only one of the three.
+ */
+const REGISTRY_SEED_ENTRIES = Object.freeze([
+  Object.freeze({
+    capabilityId: "sceneaxi.sculpt.intake-source.v1",
+    contractRef: "contracts/sculpt-intake.schema.json",
+    contractVersion: "1.0.0",
+    owningPackage: "@sceneaxi/schemas",
+    documentationRef: "docs/plugins.md",
+  }),
+]);
+
+const REGISTRY_SEED_DOC_STATE =
+  `Registry seed state: \`registryVersion\` is \`${PLUGIN_CAPABILITY_REGISTRY_SEED_VERSION}\`; ` +
+  `\`entries\` holds exactly ${REGISTRY_SEED_ENTRIES.length} reviewed capability ID: ` +
+  `${REGISTRY_SEED_ENTRIES.map((entry) => `\`${entry.capabilityId}\``).join(", ")}.`;
+
 const validateRegistrySeedDoc = (text, hasContent, path) => {
   if (!hasContent) return;
 
@@ -571,13 +591,10 @@ const validateRegistrySeedDoc = (text, hasContent, path) => {
     return;
   }
 
-  const expected =
-    `Registry seed state: \`registryVersion\` is \`${PLUGIN_CAPABILITY_REGISTRY_SEED_VERSION}\`; ` +
-    "`entries` is exactly `[]` (empty).";
   const actual = matches[0][1].trim().replaceAll("\r\n", "\n");
-  if (actual !== expected) {
+  if (actual !== REGISTRY_SEED_DOC_STATE) {
     fail(
-      `${path}: registry seed state must exactly document registryVersion ${PLUGIN_CAPABILITY_REGISTRY_SEED_VERSION} and empty entries`,
+      `${path}: registry seed state must exactly document registryVersion ${PLUGIN_CAPABILITY_REGISTRY_SEED_VERSION} and the shipped capability IDs`,
     );
   }
 };
@@ -625,9 +642,9 @@ if (pluginRegistrySchemaIsObject && pluginRegistrySeedIsObject) {
   const entries = Array.isArray(pluginCapabilityRegistrySeed.entries)
     ? pluginCapabilityRegistrySeed.entries
     : [];
-  if (entries.length !== 0) {
+  if (JSON.stringify(entries) !== JSON.stringify(REGISTRY_SEED_ENTRIES)) {
     fail(
-      `plugin-capability-registry.seed: v1 seed entries must be empty (found ${entries.length}); first non-empty capability is a separate reviewed change`,
+      "plugin-capability-registry.seed: entries must exactly match the reviewed capability rows pinned in scripts/check-contracts.mjs; every capability is a deliberate contract change",
     );
   }
 
@@ -1061,5 +1078,5 @@ if (errors.length > 0) {
   process.exit(1);
 }
 console.log(
-  `contract check OK — ${authoringJobCount} shared authoring jobs valid, doc table matches, E1+E2 bound to one list; plugin capability registry 1.0.0 seed empty and schema-locked; plugin-manifest inert example schema-locked; ${creditPackCount} test-mode credit packs schema-locked and doc-bound; ${entitlementCapabilityCount} entitlement capabilities schema-locked, free path intact, doc-bound; ${listingCount} test-mode catalog listings schema-locked, all price modes covered, doc-bound`,
+  `contract check OK — ${authoringJobCount} shared authoring jobs valid, doc table matches, E1+E2 bound to one list; plugin capability registry 1.0.0 seed pinned to ${REGISTRY_SEED_ENTRIES.length} reviewed capability and schema-locked; plugin-manifest inert example schema-locked; ${creditPackCount} test-mode credit packs schema-locked and doc-bound; ${entitlementCapabilityCount} entitlement capabilities schema-locked, free path intact, doc-bound; ${listingCount} test-mode catalog listings schema-locked, all price modes covered, doc-bound`,
 );

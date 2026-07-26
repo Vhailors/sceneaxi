@@ -319,9 +319,11 @@ export {
   PLUGIN_CAPABILITY_REGISTRY_SCHEMA_VERSION,
   PLUGIN_CAPABILITY_REGISTRY_SEED_PATH,
   PLUGIN_CAPABILITY_REGISTRY_VERSION,
-  emptyPluginCapabilityRegistrySeed,
+  SHIPPED_PLUGIN_CAPABILITY_IDS,
+  emptyPluginCapabilityRegistry,
   lookupPluginCapability,
   parsePluginCapabilityRegistryText,
+  pluginCapabilityRegistrySeed,
   validatePluginCapabilityRegistry,
 } from "./plugin-capability-registry.js";
 export type {
@@ -337,6 +339,26 @@ export type {
   PluginCapabilityRegistryValidationResult,
   ValidatePluginCapabilityRegistryOptions,
 } from "./plugin-capability-registry.js";
+
+export {
+  SCULPT_INTAKE_SOURCE_CAPABILITY_ID,
+  SCULPT_INTAKE_SOURCE_CONTRACT_REF,
+  SCULPT_INTAKE_SOURCE_CONTRACT_VERSION,
+  SCULPT_INTAKE_SOURCE_OWNING_PACKAGE,
+  checkSculptIntakeSourceImplementation,
+  requestSculptIntake,
+} from "./plugin-capability-sculpt-intake.js";
+export type {
+  SculptIntakeSource,
+  SculptIntakeSourceContractCheckOk,
+  SculptIntakeSourceContractCheckRefuse,
+  SculptIntakeSourceContractCheckResult,
+  SculptIntakeSourceOk,
+  SculptIntakeSourceRefusalReason,
+  SculptIntakeSourceRefuse,
+  SculptIntakeSourceRequest,
+  SculptIntakeSourceResult,
+} from "./plugin-capability-sculpt-intake.js";
 export type {
   ApplyDiagnostic,
   ApplyDiagnosticCode,
@@ -472,6 +494,7 @@ export {
   SCULPT_SCHEMA_VERSION,
   digestObjectSculptSpec,
   isSculptIdentifier,
+  isSculptIntakeMode,
   isSculptQualityObjectSculptSpec,
   isSculptTransform,
   normalizeObjectSculptSpec,

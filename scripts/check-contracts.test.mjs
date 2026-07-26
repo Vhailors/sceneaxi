@@ -98,7 +98,7 @@ const writePluginManifestSchema = (sandbox, schema) =>
     `${JSON.stringify(schema, null, 2)}\n`,
   );
 const registrySeedState =
-  "Registry seed state: `registryVersion` is `1.0.0`; `entries` is exactly `[]` (empty).";
+  "Registry seed state: `registryVersion` is `1.0.0`; `entries` holds exactly 1 reviewed capability ID: `sceneaxi.sculpt.intake-source.v1`.";
 const inertExampleStart = "<!-- plugin-manifest:inert-example -->";
 const inertExampleEnd = "<!-- /plugin-manifest:inert-example -->";
 
@@ -290,10 +290,11 @@ const cases = [
     expectedOutput: "registryVersion drift",
   },
   {
-    name: "rejects a non-empty plugin capability registry seed",
+    name: "rejects an unreviewed capability row added to the seed",
     mutate(sandbox) {
       const seed = readPluginRegistrySeed(sandbox);
       seed.entries = [
+        ...seed.entries,
         {
           capabilityId: "dev.sceneaxi.capability.demo",
           contractRef: "contracts/plugin-manifest.schema.json",
@@ -304,7 +305,16 @@ const cases = [
       ];
       writePluginRegistrySeed(sandbox, seed);
     },
-    expectedOutput: "v1 seed entries must be empty",
+    expectedOutput: "entries must exactly match the reviewed capability rows",
+  },
+  {
+    name: "rejects silently dropping a reviewed capability row from the seed",
+    mutate(sandbox) {
+      const seed = readPluginRegistrySeed(sandbox);
+      seed.entries = [];
+      writePluginRegistrySeed(sandbox, seed);
+    },
+    expectedOutput: "entries must exactly match the reviewed capability rows",
   },
   {
     name: "rejects plugins.md missing the registry seed path",

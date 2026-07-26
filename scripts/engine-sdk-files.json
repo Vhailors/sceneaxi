@@ -94,6 +94,7 @@
   "packages/schemas/src/kernel-session.ts",
   "packages/schemas/src/model-provider.ts",
   "packages/schemas/src/plugin-capability-registry.ts",
+  "packages/schemas/src/plugin-capability-sculpt-intake.ts",
   "packages/schemas/src/plugin.ts",
   "packages/schemas/src/profile-conformance-suite.ts",
   "packages/schemas/src/profile-conformance.ts",

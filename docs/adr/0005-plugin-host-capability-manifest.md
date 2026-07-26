@@ -65,9 +65,14 @@ is valid only when that row exists in the exact registry version named by the
 manifest. IDs are not inferred from exports, filenames, package names, or
 runtime behavior.
 
-The seed registry may be empty. Adding the first ID is a separate contract
-change with its own tests and package-boundary review; adding an ID cannot
-quietly create a renderer, physics, storage, or other internal-library port.
+The seed registry may start empty, and every ID arrives through its own
+contract change with its own tests and package-boundary review; adding an ID
+cannot quietly create a renderer, physics, storage, or other internal-library
+port. That first change has landed: registry `1.0.0` carries exactly one
+reviewed row, `sceneaxi.sculpt.intake-source.v1`, which is data in and data out
+over an already-public contract and creates no engine-internal port. The
+registry seed itself owns the current rows; [docs/plugins.md](../plugins.md)
+documents them for authors, so they are not restated here.
 
 ### Deterministic load and refusal
 
@@ -95,9 +100,14 @@ phase:
 
 Failure in this phase refuses the candidate without evaluating its entrypoint.
 Only after every pre-evaluation check passes does the host intentionally load
-and evaluate the entrypoint. It then performs one post-evaluation integrity
-check before exposure: the implementation table must match the declared
-capability set exactly. Missing and undeclared implementations both refuse.
+and evaluate the entrypoint. It then performs post-evaluation integrity checks
+before exposure: the implementation table must match the declared capability set
+exactly — missing and undeclared implementations both refuse — and an
+implementation must satisfy whatever contract check the caller injected for its
+capability ID. Those checks are supplied by the caller, never imported by the
+host, so the host still holds no domain knowledge and calls no capability
+itself. The stable reasons are normative in the
+[`@sceneaxi/plugin-host` README](../../packages/plugin-host/README.md#stable-refusal-reasons).
 
 Every refusal is reported with a stable machine-readable reason and identifies
 the candidate. A post-evaluation integrity refusal never exposes the evaluated
@@ -139,9 +149,11 @@ separate decision before untrusted plugins could load.
   refusal behavior, and examples that validate in CI.
 - Plugins remain independently versioned packages rather than code absorbed by
   a monolithic framework.
-- The host can begin with an empty registry and an inert example; public
+- The host could begin with an empty registry and an inert example, so public
   capability design proceeds deliberately instead of manufacturing ports to
-  demonstrate the mechanism.
+  demonstrate the mechanism. The first registered capability was earned that
+  way, by its own reviewed contract change, rather than invented to make the
+  host look non-empty.
 - Every implementation must prove both success and fail-closed behavior across
   the version, capability, and isolation matrix.
 
@@ -159,10 +171,13 @@ separate decision before untrusted plugins could load.
 ## Settled here vs held elsewhere
 
 **Settled:** the v1 Plugin Host exists; manifests, registry claims, loading,
-refusal, and package isolation follow the contract above.
+refusal, and package isolation follow the contract above. The first capability
+ID, `sceneaxi.sculpt.intake-source.v1`, has since been earned and landed by its
+own reviewed contract change
+([sceneaxi#135](https://github.com/Vhailors/sceneaxi/issues/135)).
 
-**Held or separately earned:** the initial non-empty capability IDs; any
-renderer, physics, storage, or other internal-library port (two real adapters
-still required by ADR 0004); trust/signing/sandbox policy; and any product
-rollout decisions already governed by held keys. This ADR authorizes no Stage 1
-proof run, package publication, account, spend, or deployment.
+**Held or separately earned:** every capability ID beyond that first earned
+row; any renderer, physics, storage, or other internal-library port (two real
+adapters still required by ADR 0004); trust/signing/sandbox policy; and any
+product rollout decisions already governed by held keys. This ADR authorizes no
+Stage 1 proof run, package publication, account, spend, or deployment.

@@ -5,11 +5,17 @@
  * Seed artifact: contracts/plugin-capability-registry.1.0.0.json
  *
  * Capability IDs are explicit registry keys only. They are never inferred from
- * exports, filenames, package names, or runtime behavior. The v1 seed starts
- * empty; the first non-empty production capability is a separate reviewed change.
+ * exports, filenames, package names, or runtime behavior. Every row is a reviewed
+ * contract change; the seed holds exactly the capabilities that have one.
  */
 
 import { isExactSemver } from "./exact-semver.js";
+import {
+  SCULPT_INTAKE_SOURCE_CAPABILITY_ID,
+  SCULPT_INTAKE_SOURCE_CONTRACT_REF,
+  SCULPT_INTAKE_SOURCE_CONTRACT_VERSION,
+  SCULPT_INTAKE_SOURCE_OWNING_PACKAGE,
+} from "./plugin-capability-sculpt-intake.js";
 
 /** Exact registry-document schema version for v1. */
 export const PLUGIN_CAPABILITY_REGISTRY_SCHEMA_VERSION = "1.0.0" as const;
@@ -420,9 +426,48 @@ export function lookupPluginCapability(
 }
 
 /**
- * Checked-in empty v1 seed registry (no demonstration or engine-internal ports).
+ * Capability IDs shipped in the checked-in v1 seed, in registry order.
+ * Every ID here owns a public contract; there are no demonstration rows and no
+ * engine-internal ports.
  */
-export function emptyPluginCapabilityRegistrySeed(): PluginCapabilityRegistry {
+export const SHIPPED_PLUGIN_CAPABILITY_IDS = Object.freeze([
+  SCULPT_INTAKE_SOURCE_CAPABILITY_ID,
+] as const);
+
+/**
+ * Checked-in v1 seed registry — must stay byte-equal to
+ * `contracts/plugin-capability-registry.1.0.0.json`. Adding or dropping a row
+ * means editing three pins: this fixture, that JSON artifact, and the row set in
+ * `scripts/check-contracts.mjs`. `pnpm check:contracts` compares the JSON
+ * artifact against the checker's own row set; this fixture is held against the
+ * artifact by the lockstep case in
+ * `packages/schemas/test/plugin-capability-registry.test.ts` (`pnpm test`).
+ */
+export function pluginCapabilityRegistrySeed(): PluginCapabilityRegistry {
+  return {
+    $schema: PLUGIN_CAPABILITY_REGISTRY_SCHEMA_URI,
+    schemaVersion: PLUGIN_CAPABILITY_REGISTRY_SCHEMA_VERSION,
+    registryVersion: PLUGIN_CAPABILITY_REGISTRY_VERSION,
+    entries: Object.freeze([
+      Object.freeze({
+        capabilityId: SCULPT_INTAKE_SOURCE_CAPABILITY_ID,
+        contractRef: SCULPT_INTAKE_SOURCE_CONTRACT_REF,
+        contractVersion: SCULPT_INTAKE_SOURCE_CONTRACT_VERSION,
+        owningPackage: SCULPT_INTAKE_SOURCE_OWNING_PACKAGE,
+        documentationRef: "docs/plugins.md",
+      }),
+    ]),
+  };
+}
+
+/**
+ * Registry document with no capability IDs at all.
+ *
+ * Kept as a public building block for callers that must prove a claim came from
+ * a registered ID rather than a weak check: the same plugin that loads against
+ * the seed refuses against this.
+ */
+export function emptyPluginCapabilityRegistry(): PluginCapabilityRegistry {
   return {
     $schema: PLUGIN_CAPABILITY_REGISTRY_SCHEMA_URI,
     schemaVersion: PLUGIN_CAPABILITY_REGISTRY_SCHEMA_VERSION,

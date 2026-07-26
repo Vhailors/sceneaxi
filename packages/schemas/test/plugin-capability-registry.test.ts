@@ -8,8 +8,9 @@ import {
   PLUGIN_CAPABILITY_REGISTRY_SCHEMA_VERSION,
   PLUGIN_CAPABILITY_REGISTRY_SEED_PATH,
   PLUGIN_CAPABILITY_REGISTRY_VERSION,
+  SHIPPED_PLUGIN_CAPABILITY_IDS,
   contracts,
-  emptyPluginCapabilityRegistrySeed,
+  pluginCapabilityRegistrySeed,
   lookupPluginCapability,
   parsePluginCapabilityRegistryText,
   validatePluginCapabilityRegistry,
@@ -141,7 +142,7 @@ const registryWith = (
   entries: readonly PluginCapabilityRegistryEntry[],
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown> => ({
-  ...emptyPluginCapabilityRegistrySeed(),
+  ...pluginCapabilityRegistrySeed(),
   entries: [...entries],
   ...overrides,
 });
@@ -157,7 +158,7 @@ const FORBIDDEN_SEED_SUBSTRINGS = [
 ] as const;
 
 describe("plugin capability registry contract", () => {
-  it("ships the public schema path and empty 1.0.0 seed artifact", () => {
+  it("ships the public schema path and 1.0.0 seed artifact", () => {
     expect(contracts.pluginCapabilityRegistry).toBe(
       "contracts/plugin-capability-registry.schema.json",
     );
@@ -178,8 +179,8 @@ describe("plugin capability registry contract", () => {
     expect(registrySchema.additionalProperties).toBe(false);
   });
 
-  it("accepts the checked-in empty seed and keeps TypeScript fixture in lockstep", () => {
-    const seed = emptyPluginCapabilityRegistrySeed();
+  it("accepts the checked-in seed and keeps TypeScript fixture in lockstep", () => {
+    const seed = pluginCapabilityRegistrySeed();
     const fromArtifact = validatePluginCapabilityRegistry(seedArtifact, {
       expectedRegistryVersion: PLUGIN_CAPABILITY_REGISTRY_VERSION,
     });
@@ -191,8 +192,12 @@ describe("plugin capability registry contract", () => {
     expect(fromFixture.ok).toBe(true);
     if (!fromArtifact.ok || !fromFixture.ok) return;
 
-    expect(fromArtifact.registry.entries).toEqual([]);
-    expect(fromFixture.registry.entries).toEqual([]);
+    expect(fromArtifact.registry.entries.map((e) => e.capabilityId)).toEqual([
+      ...SHIPPED_PLUGIN_CAPABILITY_IDS,
+    ]);
+    expect(fromFixture.registry.entries.map((e) => e.capabilityId)).toEqual([
+      ...SHIPPED_PLUGIN_CAPABILITY_IDS,
+    ]);
     expect(fromArtifact.registry).toEqual(seed);
     expect(fromFixture.registry).toEqual(seed);
     expect(seedArtifact).toEqual(seed);
@@ -207,8 +212,8 @@ describe("plugin capability registry contract", () => {
   });
 
   it("proves no renderer, physics, storage, hook, or engine-internal port is seeded", () => {
-    const seed = emptyPluginCapabilityRegistrySeed();
-    expect(seed.entries).toEqual([]);
+    const seed = pluginCapabilityRegistrySeed();
+    expect(seed.entries.length).toBe(SHIPPED_PLUGIN_CAPABILITY_IDS.length);
 
     const serialized = JSON.stringify(seedArtifact).toLowerCase();
     for (const forbidden of FORBIDDEN_SEED_SUBSTRINGS) {
@@ -280,7 +285,7 @@ describe("plugin capability registry contract", () => {
     });
 
     // Empty seed: every lookup is a typed miss.
-    const seed = emptyPluginCapabilityRegistrySeed();
+    const seed = pluginCapabilityRegistrySeed();
     expect(lookupPluginCapability(seed, "anything")).toEqual({
       ok: false,
       capabilityId: "anything",
@@ -342,7 +347,7 @@ describe("plugin capability registry contract", () => {
 
   it("refuses unknown fields at registry and entry level", () => {
     const top = validatePluginCapabilityRegistry({
-      ...emptyPluginCapabilityRegistrySeed(),
+      ...pluginCapabilityRegistrySeed(),
       hooks: ["onLoad"],
     });
     expect(top.ok).toBe(false);
@@ -371,7 +376,7 @@ describe("plugin capability registry contract", () => {
 
   it("refuses schema-version mismatch and registry-version drift", () => {
     const schemaMismatch = validatePluginCapabilityRegistry({
-      ...emptyPluginCapabilityRegistrySeed(),
+      ...pluginCapabilityRegistrySeed(),
       schemaVersion: "2.0.0",
     });
     expect(schemaMismatch.ok).toBe(false);
@@ -387,7 +392,7 @@ describe("plugin capability registry contract", () => {
 
     const drift = validatePluginCapabilityRegistry(
       {
-        ...emptyPluginCapabilityRegistrySeed(),
+        ...pluginCapabilityRegistrySeed(),
         registryVersion: "1.0.1",
       },
       { expectedRegistryVersion: "1.0.0" },
@@ -406,7 +411,7 @@ describe("plugin capability registry contract", () => {
 
   it("refuses missing required fields, non-objects, and parse errors", () => {
     const missing: Record<string, unknown> = {
-      ...emptyPluginCapabilityRegistrySeed(),
+      ...pluginCapabilityRegistrySeed(),
     };
     delete missing["entries"];
     const missingResult = validatePluginCapabilityRegistry(missing);

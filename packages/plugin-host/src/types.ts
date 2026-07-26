@@ -25,7 +25,8 @@ export type PluginRefusalReason =
   | "forbidden-sceneaxi-import"
   | "isolation-unverifiable"
   | "entrypoint-evaluation-failed"
-  | "implementation-table-mismatch";
+  | "implementation-table-mismatch"
+  | "capability-contract-violation";
 
 export type PluginHostLoadPhase =
   | "descriptor"
@@ -89,3 +90,26 @@ export type PluginCapabilityImplementationResult =
 export type PluginEntrypointModule = {
   readonly capabilities: Readonly<Record<string, unknown>>;
 };
+
+export type CapabilityContractCheckResult =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly message: string };
+
+/**
+ * Structural check of one capability implementation against the public contract
+ * that owns its registered ID.
+ *
+ * Checks are injected, never discovered: the host holds no domain knowledge and
+ * imports no contract-owning module beyond `@sceneaxi/schemas` vocabulary. A
+ * capability with no injected check still loads — the check narrows what is
+ * accepted, it never widens what may run.
+ */
+export type CapabilityContractCheck = (
+  implementation: unknown,
+) => CapabilityContractCheckResult;
+
+/** Injected checks keyed by registered capability ID. */
+export type CapabilityContractChecks = ReadonlyMap<
+  string,
+  CapabilityContractCheck
+>;

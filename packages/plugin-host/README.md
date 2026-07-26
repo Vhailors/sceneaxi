@@ -17,12 +17,15 @@ import {
   type PluginHostLoadResult,
   type PluginHostListing,
   type PluginCapabilityImplementationResult,
+  type CapabilityContractCheck,
+  type CapabilityContractCheckResult,
+  type CapabilityContractChecks,
   type PluginRefusalReason,
   type RefusedPlugin,
   type LoadedPlugin,
 } from "@sceneaxi/plugin-host";
 import {
-  emptyPluginCapabilityRegistrySeed,
+  pluginCapabilityRegistrySeed,
   type PluginCapabilityRegistry,
 } from "@sceneaxi/schemas";
 ```
@@ -33,11 +36,27 @@ import {
 function openPluginHost(options?: PluginHostOptions): PluginHost;
 
 type PluginHostOptions = {
-  /** Exact capability registry document. Defaults to the empty v1 seed. */
+  /** Exact capability registry document. Defaults to the checked-in v1 seed. */
   readonly registry?: PluginCapabilityRegistry;
   /** Override advertised host API version (tests only). Defaults to 1.0.0. */
   readonly hostApiVersion?: string;
+  /**
+   * Injected per-capability contract checks, keyed by registered capability ID.
+   * An implementation that fails its check refuses with
+   * `capability-contract-violation` and exposes nothing.
+   */
+  readonly capabilityContracts?: CapabilityContractChecks;
 };
+
+type CapabilityContractCheckResult =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly message: string };
+
+type CapabilityContractCheck = (
+  implementation: unknown,
+) => CapabilityContractCheckResult;
+
+type CapabilityContractChecks = ReadonlyMap<string, CapabilityContractCheck>;
 
 type PluginHost = {
   /**
@@ -83,8 +102,9 @@ import engine packages and never receives an engine service locator.
 Candidates process in stable lexical locator order. Descriptor and isolation
 checks run before entrypoint evaluation. Only after those pass does the host
 intentionally load the package-root entrypoint and require exact equality
-between declared capability IDs and the exported implementation table. A refused
-package exposes nothing.
+between declared capability IDs and the exported implementation table, followed
+by whatever capability-contract checks the caller injected. A refused package
+exposes nothing.
 
 Loaded listings sort by `pluginId`, then `pluginVersion`, then capability ID.
 Refused listings sort by locator.
@@ -94,16 +114,19 @@ and execution-sentinel evidence for pre- vs post-evaluation refusals — is
 fixture-tested over the public seam in `test/refuse-matrix.test.ts` and
 `test/load-refuse.test.ts`; extend those when touching the pipeline.
 
-Repository golden coverage uses this public seam in two paths. The CLI golden
+Repository golden coverage uses this public seam in three paths. The CLI golden
 loads the checked-in inert sample and names an illegal-claim refusal. The
-importers/plugin golden binds a test-only registry to the capability sample,
-asserts addressed lookup hits and misses, then proves that the same claim
-refuses against the empty public seed. Neither path adds a public capability ID.
+importers/plugin golden binds a test-only registry to the capability sample and
+asserts addressed lookup hits and misses. The capability golden drives the one
+**registered** capability (`sceneaxi.sculpt.intake-source.v1`) from the shipped
+seed through load, contract check, addressed call, and a golden Sculpt Intake —
+and proves the same provider refuses when the bound registry defines nothing.
 See
-[`tests/e2e/cli-golden-path.test.ts`](../../tests/e2e/cli-golden-path.test.ts)
+[`tests/e2e/cli-golden-path.test.ts`](../../tests/e2e/cli-golden-path.test.ts),
+[`tests/e2e/importers-plugin-golden.test.ts`](../../tests/e2e/importers-plugin-golden.test.ts),
 and
-[`tests/e2e/importers-plugin-golden.test.ts`](../../tests/e2e/importers-plugin-golden.test.ts).
-Run both with `pnpm test:golden`; their fixtures live under
+[`tests/e2e/plugin-capability-golden.test.ts`](../../tests/e2e/plugin-capability-golden.test.ts).
+Run them with `pnpm test:golden`; their fixtures live under
 `tests/e2e/fixtures/plugin-host/`.
 
 ## Stable refusal reasons
@@ -129,6 +152,7 @@ after an intentional load (integrity / evaluation failures).
 | `isolation-unverifiable` | isolation | Remove dynamic imports, loader aliases, plugin-to-plugin imports, or other edges the host cannot prove safe from inspectable artifacts alone. |
 | `entrypoint-evaluation-failed` | evaluation | Fix runtime errors thrown while loading the entrypoint after pre-evaluation checks passed. |
 | `implementation-table-mismatch` | integrity | Export `capabilities` keys that exactly match the manifest set (no missing and no undeclared IDs). |
+| `capability-contract-violation` | integrity | Make the implementation satisfy the public contract that owns the declared capability ID (checked only when the caller binds a check for that ID). |
 
 ### Package-isolation example (fixture-tested)
 
@@ -166,5 +190,6 @@ Agent overview and field glossary: [`docs/plugins.md`](../../docs/plugins.md).
 ## Non-goals
 
 No CLI/engine/profile wiring, renderer/physics/storage ports, lifecycle hook
-bus, hostile-code sandbox claim, or package publication. The seed registry may
-be empty; adding the first capability ID is a separate contract change.
+bus, hostile-code sandbox claim, or package publication. Adding a capability ID
+to the registry is a separate reviewed contract change, and the host still never
+calls a capability implementation itself — it only makes one addressable.
