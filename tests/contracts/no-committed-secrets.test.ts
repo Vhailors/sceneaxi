@@ -30,6 +30,15 @@ const trackedFiles = (() => {
 
 const files = trackedFiles.map((relative) => join(repoRoot, relative));
 
+/**
+ * The committed name-only templates: the root ships one and so does each site.
+ * Defined once so every rule below judges the same set, and guarded once in the
+ * first test — an empty list would silently satisfy all of them.
+ */
+const exampleFiles = trackedFiles.filter((relative) =>
+  relative.endsWith(".env.example"),
+);
+
 const textByFile = new Map<string, string | undefined>();
 
 /**
@@ -114,6 +123,7 @@ describe("no committed secrets", () => {
   it("scans a non-empty tracked surface", () => {
     // Fail-closed: a walk that found nothing would pass every check below.
     expect(files.length).toBeGreaterThan(50);
+    expect(exampleFiles.length).toBeGreaterThan(1);
   });
 
   for (const [label, pattern] of FORBIDDEN) {
@@ -144,13 +154,7 @@ describe("no committed secrets", () => {
   });
 
   it("keeps every committed .env.example to names only", () => {
-    const examples = trackedFiles.filter((relative) =>
-      relative.endsWith(".env.example"),
-    );
-    // Fail-closed: the sites and the root each ship one, so an empty list means
-    // the glob broke rather than that every example is clean.
-    expect(examples.length).toBeGreaterThan(1);
-    for (const relative of examples) {
+    for (const relative of exampleFiles) {
       const text = readText(join(repoRoot, relative)) ?? "";
       for (const [label, pattern] of FORBIDDEN) {
         expect(`${relative}: ${label}: ${pattern.test(text)}`).toBe(
@@ -164,11 +168,11 @@ describe("no committed secrets", () => {
     // The value half of the rule is covered by the scan above; what is unique
     // here is presence — an operator has to be able to find the name it must
     // set, whether it belongs to the root example or to one site's.
-    const examples = trackedFiles
-      .filter((relative) => relative.endsWith(".env.example"))
-      .map((relative) => readText(join(repoRoot, relative)) ?? "");
+    const texts = exampleFiles.map(
+      (relative) => readText(join(repoRoot, relative)) ?? "",
+    );
     for (const name of DOCUMENTED_NAMES) {
-      const documented = examples.some((text) => text.includes(name));
+      const documented = texts.some((text) => text.includes(name));
       expect(`${name}: ${documented}`).toBe(`${name}: true`);
     }
   });
@@ -217,7 +221,18 @@ describe("no committed secrets", () => {
       return `${relative}: ignored=${ignored} by=${source}`;
     };
 
-    for (const relative of [".env", ".env.local", "sites/umbrella/.env.local"]) {
+    // direnv's `.envrc` holds exported secrets as readily as `.env` does, and
+    // the repo-wide scan above is only a partial backstop — it knows a handful
+    // of names and vendor key shapes, so an `export SOME_API_KEY=…` in a
+    // committed `.envrc` would pass it. The glob has to cover the whole family.
+    for (const relative of [
+      ".env",
+      ".env.local",
+      ".envrc",
+      ".envrc.local",
+      "sites/umbrella/.env.local",
+      "sites/umbrella/.envrc",
+    ]) {
       expect(describeCheck(relative)).toBe(
         `${relative}: ignored=true by=.gitignore`,
       );
@@ -227,9 +242,7 @@ describe("no committed secrets", () => {
     // pattern set — an operator cannot edit a template git refuses to see. The
     // deciding source is asserted here too, so the negation has to be the last
     // matching pattern in this file rather than an absence of any pattern.
-    const examples = trackedFiles.filter((relative) => relative.endsWith(".env.example"));
-    expect(examples.length).toBeGreaterThan(1);
-    for (const relative of examples) {
+    for (const relative of exampleFiles) {
       expect(describeCheck(relative)).toBe(
         `${relative}: ignored=false by=.gitignore`,
       );

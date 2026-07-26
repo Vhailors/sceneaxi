@@ -26,10 +26,10 @@ sites/*/next-env.d.ts
 # Vercel CLI link state, at any depth (covers sites/*/.vercel/).
 .vercel/
 
-# Env files at any depth, including each site's. `.env.example` files are
-# committed name-only templates and must stay tracked, so nothing below may
-# re-ignore them: the last matching pattern wins in git, and a later `.env*`
-# here would silently defeat this negation.
-.env
-.env.*
+# Env files at any depth, including each site's: `.env`, `.env.local`, and
+# direnv's `.envrc`/`.envrc.local`, which export secrets just as readily.
+# `.env.example` files are committed name-only templates and must stay tracked,
+# so nothing below may re-ignore them: the last matching pattern wins in git,
+# and a second `.env*` after this negation would silently defeat it.
+.env*
 !.env.example
