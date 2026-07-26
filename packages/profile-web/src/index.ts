@@ -11,7 +11,13 @@ import {
 } from "@sceneaxi/authoring-core";
 import { open, replay } from "@sceneaxi/engine-kernel";
 import { createNullPresentationRuntime } from "@sceneaxi/engine-presentation";
-import type { ProfileSeam } from "@sceneaxi/schemas";
+import {
+  evaluateOpenPathDemo,
+  openPathPolicyRowFor,
+  type OpenPathDemoDecision,
+  type OpenPathPolicyRow,
+  type ProfileSeam,
+} from "@sceneaxi/schemas";
 
 export const WEB_EXPERIENCE_POLICY_VERSION = 1 as const;
 
@@ -99,6 +105,40 @@ export const seam: ProfileSeam = Object.freeze({
 });
 
 /**
+ * This profile's row in the shared open-path demo policy (sceneaxi#137).
+ *
+ * The row is *read*, never restated: the Web profile does not get to describe
+ * its own demo level in its own words, because the CLI and both shells report
+ * the same table and the parity suite compares them byte for byte. A missing
+ * row is a build-time failure rather than a silent fallback — the profile
+ * cannot exist outside the policy that governs it.
+ */
+export const openPathPolicy: OpenPathPolicyRow = (() => {
+  const row = openPathPolicyRowFor("@sceneaxi/profile-web");
+  if (row === undefined) {
+    throw new Error(
+      "@sceneaxi/profile-web has no row in the shared open-path demo policy.",
+    );
+  }
+  return row;
+})();
+
+/**
+ * Ask the shared policy whether this profile may demonstrate one open-path
+ * operation. Identical semantics on every surface: same function, same table.
+ */
+export function evaluateOpenPath(
+  operation: string,
+  claimsShipping = false,
+): OpenPathDemoDecision {
+  return evaluateOpenPathDemo({
+    profile: "@sceneaxi/profile-web",
+    operation,
+    claimsShipping,
+  });
+}
+
+/**
  * Development-only Web profile pin for the shared MVP fixture. This is not a
  * Profile Conformance registry claim and does not describe a shipped website.
  */
@@ -106,6 +146,10 @@ export const mvpGoldenPath = Object.freeze({
   seam,
   policy,
   evaluateScope: evaluateWebExperienceScope,
+  openPath: Object.freeze({
+    policy: openPathPolicy,
+    evaluate: evaluateOpenPath,
+  }),
   status: Object.freeze({
     developmentConsumer: true as const,
     shippingClaim: false as const,

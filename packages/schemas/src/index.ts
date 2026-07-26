@@ -419,6 +419,8 @@ export const contracts = Object.freeze({
   sceneComposition: "contracts/scene-composition.schema.json",
   /** Profile Conformance claim (sceneaxi#10) — shared suite + development consumers. */
   profileConformance: "contracts/profile-conformance.schema.json",
+  /** Open-path demo policy (sceneaxi#137); data is OPEN_PATH_POLICY_FIXTURES_PATH. */
+  openPathPolicy: "contracts/open-path-policy.schema.json",
   /** Identity plane records (sceneaxi#91); guards and ports live in @sceneaxi/auth. */
   identity: "contracts/identity.schema.json",
   /** Credit account + append-only ledger (sceneaxi#91); behavior in @sceneaxi/billing. */
@@ -482,6 +484,38 @@ export type {
   ProfileEvidenceHook,
   ProfileEvidenceHooks,
 } from "./profile-conformance.js";
+
+export {
+  OPEN_PATH_DEMO_DECISION_KIND,
+  OPEN_PATH_DEMO_LEVELS,
+  OPEN_PATH_DEMO_OPERATIONS,
+  OPEN_PATH_POLICY,
+  OPEN_PATH_POLICY_FIXTURES_PATH,
+  OPEN_PATH_POLICY_NOTES,
+  OPEN_PATH_POLICY_PROFILES,
+  OPEN_PATH_POLICY_SCHEMA_VERSION,
+  OPEN_PATH_REFUSE_CODES,
+  OPEN_PATH_REFUSE_ONLY_PROFILE,
+  OPEN_PATH_SESSION_KINDS,
+  evaluateOpenPathDemo,
+  isOpenPathDemoOperation,
+  openPathPolicyRowFor,
+  openPathPolicyView,
+  validateOpenPathDemoDecision,
+} from "./open-path-policy.js";
+export type {
+  OpenPathDemoAllowed,
+  OpenPathDemoDecision,
+  OpenPathDemoLevel,
+  OpenPathDemoOperation,
+  OpenPathDemoRefusal,
+  OpenPathDemoRequest,
+  OpenPathPolicyRow,
+  OpenPathPolicyViewModel,
+  OpenPathPolicyViewRow,
+  OpenPathRefuseCode,
+  OpenPathSessionKind,
+} from "./open-path-policy.js";
 
 export {
   ANIMATION_READY_HIERARCHY_KIND,

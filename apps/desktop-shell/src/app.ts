@@ -12,6 +12,11 @@
 
 import type { ApplyDiagnostic } from "@sceneaxi/authoring-core";
 import {
+  OPEN_PATH_REFUSE_ONLY_PROFILE,
+  evaluateOpenPathDemo,
+  openPathPolicyView,
+} from "@sceneaxi/schemas";
+import {
   createDesktopSession,
   type DesktopSession,
   type DesktopSnapshot,
@@ -44,6 +49,8 @@ export const DESKTOP_COMMANDS = Object.freeze({
   propose: "Propose a JSON Pointer edit and render the diff for review",
   apply: "Propose and accept an edit in one non-interactive step",
   undo: "Undo the last completed apply",
+  "open-path":
+    "Report the shared open-path demo policy, or evaluate one demo operation against it (demo only; never a shipping claim)",
 });
 
 const USAGE_LINES: readonly string[] = Object.freeze([
@@ -54,6 +61,7 @@ const USAGE_LINES: readonly string[] = Object.freeze([
   ),
   "",
   "Flags: --document <path> --pointer <json-pointer> --value <json> --cwd <dir> --json",
+  "open-path flags: --profile <@sceneaxi/profile-name> --operation <open|dispatch|advance|observe|save|replay>",
 ]);
 
 const COMMAND_FLAGS: Readonly<Record<string, ReadonlySet<string>>> =
@@ -62,6 +70,7 @@ const COMMAND_FLAGS: Readonly<Record<string, ReadonlySet<string>>> =
     propose: new Set(["--document", "--pointer", "--value", "--cwd"]),
     apply: new Set(["--document", "--pointer", "--value", "--cwd"]),
     undo: new Set(["--cwd"]),
+    "open-path": new Set(["--profile", "--operation"]),
   });
 
 const VALIDATION_DIAGNOSTICS: ReadonlySet<ApplyDiagnostic["code"]> = new Set([
@@ -226,6 +235,70 @@ function unknownArgs(
 }
 
 /**
+ * `open-path` — the shared open-path demo policy (sceneaxi#137).
+ *
+ * The reported payload is `openPathPolicyView()` verbatim, which is the same
+ * value the CLI verb reports, because parity between the surfaces should be a
+ * data identity a test can assert rather than two prose descriptions a reviewer
+ * has to keep aligned. Evaluation calls the same shared decision function, so
+ * the Kids refusal is the shell's refusal too — a non-zero exit, not an
+ * omission.
+ */
+function openPathResult(args: ParsedArgs): DesktopResult {
+  const command = "open-path";
+  const profile = args.flags.get("--profile");
+  const operation = args.flags.get("--operation");
+
+  if (operation !== undefined && (profile === undefined || profile.length === 0)) {
+    return refuse(
+      command,
+      DesktopExit.USAGE,
+      "--operation requires --profile: an operation is only meaningful against one profile's policy row.",
+    );
+  }
+
+  const view = openPathPolicyView();
+
+  if (profile === undefined || profile.length === 0) {
+    return ok(command, { policy: view }, [
+      "Demo levels are demonstrations, never a shipping or production-readiness claim",
+      `${OPEN_PATH_REFUSE_ONLY_PROFILE} is refuse-only and stays that way`,
+    ]);
+  }
+
+  const row = view.rows.find((entry) => entry.profile === profile);
+  if (row === undefined) {
+    return refuse(
+      command,
+      DesktopExit.USAGE,
+      `Profile ${JSON.stringify(profile)} is not in the open-path demo policy.`,
+    );
+  }
+
+  if (operation === undefined || operation.length === 0) {
+    return ok(
+      command,
+      { policy: { ...view, policyCount: 1, rows: [row] } },
+      [`Evidence for this row: ${row.evidence}`],
+    );
+  }
+
+  const decision = evaluateOpenPathDemo({ profile, operation });
+  if (!decision.ok) {
+    return refuse(command, DesktopExit.USAGE, decision.message, {
+      reason: decision.code,
+      profile: decision.profile,
+      operation,
+    });
+  }
+
+  return ok(command, { decision }, [
+    "The decision is a demo permission only; shippingClaim is false by contract",
+    `Evidence for this level: ${decision.evidence}`,
+  ]);
+}
+
+/**
  * Execute one desktop command against a session.
  * Pure of process I/O so tests and the binary share one code path.
  */
@@ -286,6 +359,9 @@ export function runDesktopCommand(
       `Unexpected arguments: ${args.positionals.join(" ")}`,
     );
   }
+
+  // Policy is contracts, not documents: this command opens no session at all.
+  if (command === "open-path") return openPathResult(args);
 
   const session = sessionFor(args.flags.get("--cwd"));
 

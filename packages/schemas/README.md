@@ -130,6 +130,19 @@ Registry seed state: `registryVersion` is `1.0.0`; `entries` holds exactly 1 rev
   package root exports the contract and registry, not this filesystem-backed suite.
 - First development consumer: `@sceneaxi/profile-game` (exports `conformance`)
 
+## Open-path demo policy (sceneaxi#137)
+
+- `contracts/open-path-policy.schema.json` — the closed policy enumeration
+- Canonical data: `contracts/open-path-policy.fixtures.json`, mirrored by
+  `OPEN_PATH_POLICY` in `src/open-path-policy.ts`; `pnpm check:contracts` keeps
+  both in lockstep with the `docs/open-path-policy.md` table
+- Shared decision function: `evaluateOpenPathDemo()`; shared surface payload:
+  `openPathPolicyView()`
+- Lives here because `schemas` is the only package the dependency matrix lets
+  both profiles, the CLI, and both shells name — so parity cost no boundary
+- `shippingClaim` is `false` structurally, and `@sceneaxi/profile-kids` is
+  refuse-only: neither is a convention this package can be talked out of
+
 ## Model Provider Port (sceneaxi#45)
 
 - `contracts/model-provider-port.schema.json` — v1 model/capability descriptors,

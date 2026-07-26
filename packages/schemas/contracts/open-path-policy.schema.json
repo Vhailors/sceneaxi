@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/open-path-policy/v1",
+  "title": "SceneAxi open-path demo policy (v1)",
+  "description": "The one canonical table saying how far each profile's open path may be demonstrated, and by what evidence. A product boundary, so it is a closed enumeration rather than a lookup with a default: a profile that is not listed refuses, and no row can be read as a shipping, publication, or production-readiness claim — shippingClaim is const false everywhere it appears. @sceneaxi/profile-kids stays refuse-only with an empty operation set. Mirrors packages/schemas/src/open-path-policy.ts OPEN_PATH_POLICY; pnpm check:contracts keeps the docs/open-path-policy.md table in exact lockstep with this file, and a seam test asserts the TypeScript table and this fixture are identical. Deliberately expressed in the JSON Schema subset scripts/check-contracts.mjs supports.",
+  "type": "object",
+  "required": ["schemaVersion", "refuseOnlyProfile", "profiles"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "refuseOnlyProfile": {
+      "const": "@sceneaxi/profile-kids",
+      "description": "The profile whose open-path policy is refusal. Named so no surface has to infer it, and asserted so it cannot quietly become driveable."
+    },
+    "profiles": {
+      "const": [
+        {
+          "profile": "@sceneaxi/profile-game",
+          "demoLevel": "demo-driveable",
+          "sessionKind": "scene-kernel-session",
+          "operations": [
+            "open",
+            "dispatch",
+            "advance",
+            "observe",
+            "save",
+            "replay"
+          ],
+          "evidence": "tests/e2e/profile-game-scene-golden.test.ts",
+          "shippingClaim": false,
+          "summary": "Opens a composed multi-object scene kernel session offline; a development demo, not a shippable game."
+        },
+        {
+          "profile": "@sceneaxi/profile-web",
+          "demoLevel": "demo-driveable",
+          "sessionKind": "kernel-session",
+          "operations": [
+            "open",
+            "dispatch",
+            "advance",
+            "observe",
+            "save",
+            "replay"
+          ],
+          "evidence": "tests/e2e/profile-web-golden-path.test.ts",
+          "shippingClaim": false,
+          "summary": "Opens a single-object kernel session inside the locked Web Experience scope; a development demo, not a shipped website."
+        },
+        {
+          "profile": "@sceneaxi/profile-kids",
+          "demoLevel": "refuse-only",
+          "sessionKind": "none",
+          "operations": [],
+          "evidence": "tests/e2e/profile-kids-refuse-golden.test.ts",
+          "shippingClaim": false,
+          "summary": "Refuses every open-path demo: the Kids product is an isolation boundary with no UI, commerce, identity, or third-party model route."
+        }
+      ],
+      "description": "The three exact v1 policy rows in canonical order. No other profile, demo level, session kind, operation, evidence path, duplicate, omission, or reordering is valid. Adding a profile is an explicit contract edit that moves this file, the TypeScript table, and the doc together."
+    }
+  }
+}

@@ -15,3 +15,15 @@ the Game/CLI golden path through Web policy. `mvpGoldenPath` exposes only the
 public authoring, kernel, and null-presentation seams used by that case and
 retains `shippingClaim: false`: this proves library behavior under the Web
 profile, not a shipped website product.
+
+## Open-path demo policy
+
+`openPathPolicy` and `evaluateOpenPath()` *read* this profile's row in the shared
+open-path demo policy — the same table the CLI and both shells report
+([`docs/open-path-policy.md`](../../docs/open-path-policy.md)). The profile does
+not author its own level: a missing row throws at module load rather than
+falling back. The row is `demo-driveable` on a `kernel-session`, evidenced by
+`tests/e2e/profile-web-golden-path.test.ts`, with `shippingClaim` false.
+
+Note that this is independent of Profile Conformance, which still lists Web as
+`not-yet-claimed` — the two grade different things.

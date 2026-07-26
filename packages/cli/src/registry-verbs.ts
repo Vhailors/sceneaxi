@@ -10,8 +10,11 @@
 import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
+  OPEN_PATH_REFUSE_ONLY_PROFILE,
+  evaluateOpenPathDemo,
   isCommerceActive,
   missingMandatoryMetadata,
+  openPathPolicyView,
   profileConformanceRegistry,
   validateCatalogItem,
   type CatalogItem,
@@ -32,11 +35,15 @@ import {
 } from "./verb-support.js";
 
 const PROFILE_LIST_FLAGS = new Set<string>([]);
+const PROFILE_OPEN_PATH_FLAGS = new Set(["--profile", "--operation"]);
 const CATALOG_LIST_FLAGS = new Set(["--dir", "--cwd"]);
 const ASSET_LIST_FLAGS = new Set(["--dir", "--cwd"]);
 const EVIDENCE_LIST_FLAGS = new Set(["--dir", "--cwd"]);
 
 const CATALOG_ITEM_SUFFIX = ".catalog-item.json";
+
+const PROFILE_OPEN_PATH_USAGE =
+  "Usage: sceneaxi profile open-path [--profile <@sceneaxi/profile-name>] [--operation <open|dispatch|advance|observe|save|replay>]";
 
 const CATALOG_LIST_USAGE =
   "Usage: sceneaxi catalog list --dir <directory of *.catalog-item.json> [--cwd <dir>]";
@@ -77,6 +84,100 @@ export function runProfileList(
       "Run `sceneaxi protocol inspect` for the protocol contract summary",
     ],
   );
+}
+
+/**
+ * `profile open-path` — the shared open-path demo policy (sceneaxi#137).
+ *
+ * With no flags this reports `openPathPolicyView()` **verbatim**: the same value
+ * the desktop shell and web shell render, so surface parity is a data identity
+ * the parity suite can assert rather than three prose descriptions a reviewer
+ * has to compare. With `--profile` and `--operation` it runs the shared decision
+ * function, so a refusal here is the same refusal every other surface gets —
+ * including the Kids one, which is a non-zero exit, not a quiet empty row.
+ *
+ * The CLI decides nothing about open paths. It cannot: the matrix allows it
+ * schemas and authoring-core only, and the policy is contracts.
+ */
+export function runProfileOpenPath(
+  path: readonly string[],
+  tokens: readonly string[],
+): CliOutcome {
+  const args = parseVerbArgs(tokens);
+  const unknown = refuseUnknownArgs(args, PROFILE_OPEN_PATH_FLAGS, path);
+  if (unknown) return unknown;
+
+  const profile = args.flags.get("--profile");
+  const operation = args.flags.get("--operation");
+
+  if (operation !== undefined && (profile === undefined || profile.length === 0)) {
+    return failure(
+      "AMBIGUOUS_INPUT",
+      "--operation requires --profile: an operation is only meaningful against one profile's policy row.",
+      { path, help: [PROFILE_OPEN_PATH_USAGE] },
+    );
+  }
+
+  const view = openPathPolicyView();
+
+  if (profile === undefined || profile.length === 0) {
+    return success(Object.freeze({ status: "listed", policy: view }), [
+      "Demo levels are demonstrations, never a shipping or production-readiness claim",
+      `${OPEN_PATH_REFUSE_ONLY_PROFILE} is refuse-only and stays that way`,
+      "Add --profile and --operation to evaluate one demo against the shared policy",
+    ]);
+  }
+
+  const row = view.rows.find((entry) => entry.profile === profile);
+  if (row === undefined) {
+    return failure(
+      "VALIDATION",
+      `Profile ${JSON.stringify(profile)} is not in the open-path demo policy.`,
+      {
+        path,
+        help: [
+          `Known profiles: ${view.rows.map((entry) => entry.profile).join(", ")}`,
+          PROFILE_OPEN_PATH_USAGE,
+        ],
+      },
+    );
+  }
+
+  if (operation === undefined || operation.length === 0) {
+    return success(
+      Object.freeze({
+        status: "listed",
+        policy: Object.freeze({ ...view, policyCount: 1, rows: Object.freeze([row]) }),
+      }),
+      [
+        "Demo levels are demonstrations, never a shipping or production-readiness claim",
+        `Evidence for this row: ${row.evidence}`,
+      ],
+    );
+  }
+
+  const decision = evaluateOpenPathDemo({ profile, operation });
+  if (!decision.ok) {
+    return failure("VALIDATION", decision.message, {
+      path,
+      details: Object.freeze({
+        reason: decision.code,
+        profile: decision.profile,
+        operation,
+      }),
+      help: [
+        `Operations in this profile's policy: ${
+          row.operations.length === 0 ? "(none — refuse-only)" : row.operations.join(", ")
+        }`,
+        PROFILE_OPEN_PATH_USAGE,
+      ],
+    });
+  }
+
+  return success(Object.freeze({ status: "evaluated", decision }), [
+    "The decision is a demo permission only; shippingClaim is false by contract",
+    `Evidence for this level: ${decision.evidence}`,
+  ]);
 }
 
 type CatalogScan =
@@ -357,6 +458,19 @@ export function profileListHelp(): ResultPayload {
     description:
       "List the versioned Profile Conformance registry (claim status is the registry's, not a readiness claim)",
     flags: Object.freeze({}),
+  });
+}
+
+export function profileOpenPathHelp(): ResultPayload {
+  return Object.freeze({
+    command: "profile open-path",
+    description:
+      "Report the shared open-path demo policy, or evaluate one profile's demo operation against it; demo levels are never a shipping or production-readiness claim",
+    flags: Object.freeze({
+      "--profile": "Limit the report (or the evaluation) to one profile package name",
+      "--operation":
+        "Kernel-seam operation to evaluate (open, dispatch, advance, observe, save, replay); requires --profile",
+    }),
   });
 }
 

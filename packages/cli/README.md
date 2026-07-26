@@ -52,7 +52,7 @@ Command-first shape: `pnpm sceneaxi <group> <verb> [flags]`.
 | `project` | `new`, `dev`, `test`, `capture`, `report`, `propose`, `apply` |
 | `scene` | `compose` (deterministic multi-object composition) |
 | `asset` | `list` |
-| `profile` | `list` |
+| `profile` | `list`, `open-path` |
 | `catalog` | `list` |
 | `evidence` | `list` |
 | `demo` | `gated` (held-key protocol demo; gated by synthetic keys, fails closed) |
@@ -85,6 +85,20 @@ Composition is offline and fixed — no provider, no network, no seed — so
 identical inputs always yield identical bytes and the same `sceneDigest`.
 Placement is a projection: a source Sculpt Artifact is never rewritten.
 
+Reporting the shared open-path demo policy, and evaluating one demo against it:
+
+```bash
+pnpm sceneaxi profile open-path
+pnpm sceneaxi profile open-path --profile @sceneaxi/profile-game --operation replay
+```
+
+The payload is the *same value* `sceneaxi-desktop open-path` and the web shell's
+`createOpenPathView()` report, so the surfaces stay in parity by construction
+([`docs/open-path-policy.md`](../../docs/open-path-policy.md)). The verb reports
+policy; it does not open a kernel session, which the dependency matrix would not
+allow it to do. Demo levels are demonstrations — never a shipping or
+production-readiness claim — and `@sceneaxi/profile-kids` refuses.
+
 ### Current refusals
 
 These paths fail closed in runnable-surfaces v1:
@@ -98,6 +112,9 @@ These paths fail closed in runnable-surfaces v1:
   human approval has made the item listing-ready.
 - `scene compose` fails closed on the named refuse matrix
   (`docs/scene-composition.md`) rather than composing a partial scene.
+- `profile open-path` refuses an unknown profile, an operation outside the closed
+  Kernel seam, `--operation` without `--profile`, and every Kids demo — the Kids
+  refusal is a non-zero exit, not an omitted row.
 
 `project apply` journals before canonical commit. A successful apply whose
 journal still needs finalization returns `journalRecoveryPending: true` plus a

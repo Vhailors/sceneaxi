@@ -42,6 +42,18 @@ SceneAxi = interactive engine/library + versioned profiles (Game, Web Experience
 started, each surface's level, and the proof behind the claim. Update that owner
 when a surface changes level instead of copying its current inventory here.
 
+How far each profile's open path may be **demonstrated** is a separate, shared
+contract: `docs/open-path-policy.md`, implemented in
+`packages/schemas/src/open-path-policy.ts` (+ `contracts/open-path-policy.*`) and
+read — never restated — by `profile-game`, `profile-web`, `sceneaxi profile
+open-path`, `sceneaxi-desktop open-path`, and web-shell's `createOpenPathView()`.
+It lives in `schemas` because that is the only package all five may name, so
+parity cost no matrix edge. `shippingClaim` is structurally `false` and Kids is
+refuse-only; parity is asserted as a data identity in
+`tests/parity/open-path-policy-parity.test.ts`, and doc/fixture/table drift is
+caught by `pnpm check:contracts` (regressed by
+`tests/contracts/injected-open-path-drift.test.ts`).
+
 Adding a CLI verb means three things together, or dispatch refuses: a node in
 `ROOT_COMMANDS`, a declaration in `SHIPPED_COMMAND_MAP`, and — for any verb that
 parses flags — `takesArgs: true`, which is what makes the verb (not the
