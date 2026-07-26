@@ -72,7 +72,7 @@ const readVersion = () => {
   return typeof version === "string" && version.length > 0 ? version : "0.0.0";
 };
 
-const containsPath = (parent, child) => {
+export const containsPath = (parent, child) => {
   const rel = relative(parent, child);
   return rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
 };

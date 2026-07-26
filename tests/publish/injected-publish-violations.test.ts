@@ -1,4 +1,4 @@
-import { readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { appendTo, editManifest, makeFixture, removeFixture, runCheck, writeTo } from "../helpers/fixture.ts";
@@ -129,6 +129,22 @@ describe("publish-ready check — injected violations", () => {
     expect(res.status).toBe(1);
     expect(res.stderr).toContain(
       "[exports-resolve] @sceneaxi/schemas export './testing/alias.ts' is a symlink",
+    );
+  });
+
+  it("fails when an exports target reaches outside the package through a symlinked directory", () => {
+    // Only the final path component is lstat'd; the kernel resolves every directory above
+    // it, so containment has to be proven on canonical paths rather than on the string.
+    mkdirSync(join(fx, "outside-package"), { recursive: true });
+    writeFileSync(join(fx, "outside-package/leaked.ts"), "export {};\n");
+    symlinkSync(join(fx, "outside-package"), join(fx, "packages/importers/vendor"), "dir");
+    editManifest(fx, "packages/importers/package.json", (m) => {
+      m.exports = { ...(m.exports as Record<string, string>), "./vendor/leaked.ts": "./vendor/leaked.ts" };
+    });
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "[exports-resolve] @sceneaxi/importers export './vendor/leaked.ts' resolves outside its package root",
     );
   });
 
@@ -264,6 +280,24 @@ describe("publish-ready check — injected violations", () => {
     const res = runCheck(fx, CHECK);
     expect(res.status).toBe(1);
     expect(res.stderr).toContain("[sdk-output-ignored] .gitignore does not ignore 'dist-sdk/'");
+  });
+
+  it("fails when the site SDK output directory stops being git-ignored", () => {
+    // The umbrella builds the SDK into its own `public/` from `prebuild`/`predev`, so that
+    // directory is a third real output path a stale archive could be committed from.
+    const path = join(fx, ".gitignore");
+    writeFileSync(
+      path,
+      readFileSync(path, "utf8")
+        .split("\n")
+        .filter((line) => line.trim() !== "sites/*/public/engine-sdk/")
+        .join("\n"),
+    );
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "[sdk-output-ignored] .gitignore does not ignore 'sites/*/public/engine-sdk/'",
+    );
   });
 
   it("fails when a profile manifest pin and its seam pin disagree", () => {
@@ -416,10 +450,30 @@ describe("publish-ready check — injected violations", () => {
     );
   });
 
-  it("fails closed when a required consumer doc is deleted", () => {
+  it("fails closed when a required consumer doc is emptied", () => {
     writeTo(fx, "docs/publish-readiness.md", "");
     const res = runCheck(fx, CHECK);
     expect(res.status).toBe(1);
     expect(res.stderr).toContain("declaration marker");
+  });
+
+  it("attributes a deleted doc to the check that doc backs", () => {
+    // The ID-to-guarantee mapping is the contract `docs-checklist-ids` enforces, so the
+    // refusal for a missing doc has to name the check that stopped being enforceable.
+    rmSync(join(fx, "docs/publish-readiness.md"));
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "[docs-checklist-ids] required doc 'docs/publish-readiness.md' is missing",
+    );
+  });
+
+  it("attributes a deleted consumer contract to the consumer-surface check", () => {
+    rmSync(join(fx, "docs/web-consumer.md"));
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "[docs-consumer-surface] required doc 'docs/web-consumer.md' is missing",
+    );
   });
 });

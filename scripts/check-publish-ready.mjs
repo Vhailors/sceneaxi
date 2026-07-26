@@ -22,10 +22,10 @@
  *
  * Usage: node scripts/check-publish-ready.mjs
  */
-import { existsSync, lstatSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, readdirSync, realpathSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { SDK_PACKAGES } from "./build-engine-sdk.mjs";
+import { SDK_PACKAGES, containsPath } from "./build-engine-sdk.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -81,12 +81,25 @@ const REGISTRY_COMMAND_HEADS = Object.freeze(["npm", "pnpm", "yarn", "bun", "npx
  */
 const REGISTRY_PUBLISH_VERBS = Object.freeze(["publish", "unpublish", "dist-tag", "deprecate"]);
 
-/** SDK build output must never be committed, so a stale archive cannot ship. */
-const SDK_OUTPUT_IGNORES = Object.freeze(["dist-sdk/", "dist-sdk-again/"]);
+/**
+ * SDK build output must never be committed, so a stale archive cannot ship. Every
+ * directory `scripts/build-engine-sdk.mjs` is pointed at belongs here, including the one
+ * the umbrella site writes from its own `prebuild`/`predev` (`docs/websites-deploy.md`).
+ */
+const SDK_OUTPUT_IGNORES = Object.freeze(["dist-sdk/", "dist-sdk-again/", "sites/*/public/engine-sdk/"]);
 
 /** The consumer-facing docs this check reads as machine-readable declarations. */
 const CONSUMER_DOC = "docs/web-consumer.md";
 const READINESS_DOC = "docs/publish-readiness.md";
+
+/**
+ * The required docs, each mapped to the check its absence is attributed to, so a deleted
+ * doc reports the guarantee that actually stopped being enforceable.
+ */
+const REQUIRED_DOCS = Object.freeze([
+  [CONSUMER_DOC, "docs-consumer-surface"],
+  [READINESS_DOC, "docs-checklist-ids"],
+]);
 
 /**
  * Every check this script implements. `docs/publish-readiness.md` must list exactly
@@ -298,6 +311,38 @@ export function exportEntries(exportsField) {
 
 // --- checks -----------------------------------------------------------------------
 
+/**
+ * The publish rules that hold for any npm manifest in this repository, workspace package
+ * or repository root: private, on the pinned plan version, no registry publish
+ * configuration, and no publish/pack lifecycle hook.
+ *
+ * One owner on purpose — `docs/publish-readiness.md` states a single guarantee per check
+ * ID covering "every workspace manifest and the repository root manifest", so the two
+ * tiers must not be able to enforce different versions of the same documented row.
+ */
+function checkPublishRules(label, json) {
+  if (json.private !== true) {
+    fail(
+      "manifest-private",
+      `${label} is not private — this repository holds no registry publish authority, so every manifest stays private:true`,
+    );
+  }
+  if (json.version !== PUBLISH_PLAN.bootstrapVersion) {
+    fail(
+      "manifest-version-plan",
+      `${label} is version '${json.version}', the pinned plan version is '${PUBLISH_PLAN.bootstrapVersion}'`,
+    );
+  }
+  if (json.publishConfig !== undefined) {
+    fail("no-publish-hooks", `${label} declares publishConfig — no manifest may carry registry publish configuration`);
+  }
+  for (const script of PUBLISH_LIFECYCLE_SCRIPTS) {
+    if (json.scripts?.[script] !== undefined) {
+      fail("no-publish-hooks", `${label} declares a '${script}' script — publish lifecycle hooks are refused`);
+    }
+  }
+}
+
 function checkManifests(manifests) {
   for (const { name, json, dir, rel, tier } of manifests.values()) {
     // The `sites/` tier is deployable, not consumable: each site is its own install
@@ -306,18 +351,7 @@ function checkManifests(manifests) {
     // structural rules are `pnpm check:sites`; the rules below that still apply to a
     // site apply unchanged.
     const consumable = tier !== "sites";
-    if (json.private !== true) {
-      fail(
-        "manifest-private",
-        `${name} is not private — this repository holds no registry publish authority, so every manifest stays private:true`,
-      );
-    }
-    if (json.version !== PUBLISH_PLAN.bootstrapVersion) {
-      fail(
-        "manifest-version-plan",
-        `${name} is version '${json.version}', the pinned plan version is '${PUBLISH_PLAN.bootstrapVersion}'`,
-      );
-    }
+    checkPublishRules(name, json);
     if (json.type !== "module") fail("manifest-hygiene", `${name} must declare "type": "module"`);
     if (typeof json.license !== "string" || json.license.length === 0) {
       fail("manifest-hygiene", `${name} declares no license`);
@@ -359,8 +393,31 @@ function checkManifests(manifests) {
       }
       if (stat.isSymbolicLink()) {
         fail("exports-resolve", `${name} export '${subpath}' is a symlink — a consumer entry point must be a real file`);
-      } else if (!stat.isFile()) {
+        continue;
+      }
+      if (!stat.isFile()) {
         fail("exports-resolve", `${name} export '${subpath}' is not a regular file`);
+        continue;
+      }
+      // The two checks above are not containment: the lexical test compares strings and
+      // `lstat` only refuses a symlink in the final path component, while the kernel
+      // resolves every intermediate one. A symlinked directory inside the package would
+      // otherwise let an export point at a real file outside it, so both sides are
+      // canonicalized — the same boundary `safeArchiveEntry` applies to the SDK archive.
+      let canonicalRoot;
+      let canonicalTarget;
+      try {
+        canonicalRoot = realpathSync(dir);
+        canonicalTarget = realpathSync(abs);
+      } catch {
+        fail("exports-resolve", `${name} export '${subpath}' cannot be resolved to a real path`);
+        continue;
+      }
+      if (!containsPath(canonicalRoot, canonicalTarget)) {
+        fail(
+          "exports-resolve",
+          `${name} export '${subpath}' resolves outside its package root — a consumer entry point must be a real file inside its own package`,
+        );
       }
     }
 
@@ -391,14 +448,6 @@ function checkManifests(manifests) {
       }
     }
 
-    if (json.publishConfig !== undefined) {
-      fail("no-publish-hooks", `${name} declares publishConfig — no package may carry registry publish configuration`);
-    }
-    for (const script of PUBLISH_LIFECYCLE_SCRIPTS) {
-      if (json.scripts?.[script] !== undefined) {
-        fail("no-publish-hooks", `${name} declares a '${script}' script — publish lifecycle hooks are refused`);
-      }
-    }
   }
 }
 
@@ -409,27 +458,7 @@ function checkManifests(manifests) {
  * rules that do not depend on being a consumable library.
  */
 function checkRootManifest(rootManifest) {
-  const label = `${rootManifest.name ?? "package.json"} (repository root)`;
-  if (rootManifest.private !== true) {
-    fail(
-      "manifest-private",
-      `${label} is not private — this repository holds no registry publish authority, so every manifest stays private:true`,
-    );
-  }
-  if (rootManifest.version !== PUBLISH_PLAN.bootstrapVersion) {
-    fail(
-      "manifest-version-plan",
-      `${label} is version '${rootManifest.version}', the pinned plan version is '${PUBLISH_PLAN.bootstrapVersion}'`,
-    );
-  }
-  if (rootManifest.publishConfig !== undefined) {
-    fail("no-publish-hooks", `${label} declares publishConfig — no manifest may carry registry publish configuration`);
-  }
-  for (const script of PUBLISH_LIFECYCLE_SCRIPTS) {
-    if (rootManifest.scripts?.[script] !== undefined) {
-      fail("no-publish-hooks", `${label} declares a '${script}' script — publish lifecycle hooks are refused`);
-    }
-  }
+  checkPublishRules(`${rootManifest.name ?? "package.json"} (repository root)`, rootManifest);
 }
 
 function checkNoRegistryPublish(manifests, rootManifest) {
@@ -559,7 +588,10 @@ function checkConsumerDoc(manifests) {
       fail("docs-consumer-surface", `${CONSUMER_DOC} documents '${name}', which is not a workspace package`);
       continue;
     }
-    if (manifest.json.exports?.["."] === undefined) {
+    // Through the shared walker, so "has a root export" means the same thing here as it
+    // does to `docs-export-namespaces` — `exports` string and condition sugar both carry
+    // a root export without ever putting a "." key in the map.
+    if (!exportEntries(manifest.json.exports).some(([subpath]) => subpath === ".")) {
       fail("docs-consumer-surface", `${name} is documented as a consumer entry point but declares no root export`);
     }
     names.push(name);
@@ -690,9 +722,9 @@ function checkChecklistDoc() {
  */
 export function checkPublishReady() {
   errors.length = 0;
-  for (const doc of [CONSUMER_DOC, READINESS_DOC]) {
+  for (const [doc, id] of REQUIRED_DOCS) {
     if (!existsSync(join(root, doc))) {
-      errors.push(`[docs-consumer-surface] required doc '${doc}' is missing`);
+      errors.push(`[${id}] required doc '${doc}' is missing`);
       return [...errors];
     }
   }
@@ -710,7 +742,7 @@ export function checkPublishReady() {
     errors.push("[manifest-hygiene] found zero workspace manifests — refusing to pass on an empty surface");
     return [...errors];
   }
-  guard("manifest-private", () => checkRootManifest(rootManifest));
+  guard("manifest-hygiene", () => checkRootManifest(rootManifest));
   guard("manifest-hygiene", () => checkManifests(manifests));
   guard("no-registry-publish", () => checkNoRegistryPublish(manifests, rootManifest));
   guard("sdk-output-ignored", () => checkSdkOutputIgnored());
