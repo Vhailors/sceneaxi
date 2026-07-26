@@ -5,6 +5,7 @@
   "references": [
     { "path": "../schemas" },
     { "path": "../engine-kernel" },
+    { "path": "../engine-orchestrator" },
     { "path": "../authoring-core" }
   ]
 }

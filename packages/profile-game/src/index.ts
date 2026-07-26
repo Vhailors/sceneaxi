@@ -10,10 +10,12 @@ import {
   BOM_VERSION,
   KERNEL_VERSION,
   open,
-  openSceneKernelSession,
   replay,
-  replaySceneKernelSession,
 } from "@sceneaxi/engine-kernel";
+import {
+  bootstrapOpenPath,
+  resumeOpenPath,
+} from "@sceneaxi/engine-orchestrator";
 import {
   apply,
   composeScene,
@@ -110,6 +112,12 @@ export const conformance: ProfileConformanceSurface = Object.freeze({
  * Conformance registry claim and describes no shipped product: `shippingClaim`
  * stays false. Everything reachable from here is offline and deterministic —
  * no provider, no network, no seed drawn at runtime.
+ *
+ * The scene session is opened through `@sceneaxi/engine-orchestrator` and no
+ * kernel scene entry point is pinned beside it, so this path cannot quietly
+ * revert to calling the kernel directly (sceneaxi#134, superseding the #60 stub
+ * disposition). Kernel authority is unchanged: the orchestrator hands back the
+ * kernel's own session.
  */
 export const sceneGoldenPath = Object.freeze({
   seam,
@@ -126,9 +134,11 @@ export const sceneGoldenPath = Object.freeze({
       propose,
       apply,
     }),
+    orchestrator: Object.freeze({
+      bootstrapOpenPath,
+      resumeOpenPath,
+    }),
     kernel: Object.freeze({
-      openSceneKernelSession,
-      replaySceneKernelSession,
       KERNEL_VERSION,
       BOM_VERSION,
     }),

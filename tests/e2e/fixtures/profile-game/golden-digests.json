@@ -29,6 +29,13 @@
       "bay-field-drone"
     ]
   },
+  "orchestrator": {
+    "kind": "scene",
+    "subjectId": "workshop-bay",
+    "openedAtMs": 1753334400000,
+    "sessionId": "sha256:567c47fcb8d8651c29f4930c7f007bb541888ec00b9622e404b43cffe4dcb815",
+    "resumedSessionId": "sha256:618c4a268045ce39ea81fe80608e2c83923f4b9c2dca5555a63f41c2742eb746"
+  },
   "kernel": {
     "initialDigest": "sha256:b58fff2cb716ffb6787c92999167aad9c5358b34444dcd4823d67135ac7a196e",
     "terminalDigest": "sha256:cf192879ffa5634c80644ee1e0c6dcbe353bae8efaa783e3ea01ea7b70a2f0a0",

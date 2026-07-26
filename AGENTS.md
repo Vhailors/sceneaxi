@@ -68,6 +68,21 @@ Sculpt-quality ownership and compatibility are documented in `docs/sculpt-qualit
 
 Scene composition (multiple Sculpt Artifacts into one openable scene) is documented in `docs/scene-composition.md` and ADRs 0014–0015. Contracts and placement math are `packages/schemas/src/scene-composition.ts` (`contracts/scene-composition.schema.json`); the pipeline is `composeScene()` in `packages/authoring-core`; the multi-object open path is `openSceneKernelSession()` in `packages/engine-kernel`. Placement is axis-aligned in v1 and is a projection — never rewrite a Sculpt Artifact to place it, since its evidence binds its exact spec bytes. Composition fails closed on the named refuse matrix; extend `tests/e2e/scene-composition-golden.test.ts` and its checked-in digests when touching any of it.
 
+`packages/engine-orchestrator` is the open path above the kernel (ADR 0023,
+superseding the sceneaxi#60 stub disposition): `bootstrapOpenPath()` /
+`resumeOpenPath()` select the kernel entry point for `product` | `sculpt` |
+`scene`, resolve one `OpenPathHost`, turn every kernel throw into a named
+refusal from `ORCHESTRATOR_REFUSALS`, stamp a deterministic bootstrap record,
+and own a close-once session handle. It hands back the kernel's own session —
+never a wrapper — so kernel authority and every digest stay unchanged, and it
+stays browser-safe like the kernel under it. The bound is load-bearing and
+asserted executably in `test/golden-path-orchestrated.test.ts`: one session per
+handle, no deferral, concurrency primitive, or Node builtin — no job queue,
+scheduler, durable job store, or plugin hook. The Game profile's
+`sceneGoldenPath` opens through it and pins no kernel scene entry point beside
+it; `tests/e2e/profile-game-scene-golden.test.ts` and its checked-in evidence
+carry the bootstrap record.
+
 Deployable web surfaces live in a `sites/` tier (ADR 0018): `sites/umbrella`,
 `sites/catalog-game`, `sites/catalog-web`, all thin view layers over
 `packages/site-kit`, which owns every non-presentational behaviour and is where the gate

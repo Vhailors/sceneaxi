@@ -122,6 +122,9 @@ importers:
 
   packages/engine-orchestrator:
     dependencies:
+      '@sceneaxi/engine-kernel':
+        specifier: workspace:^
+        version: link:../engine-kernel
       '@sceneaxi/schemas':
         specifier: workspace:^
         version: link:../schemas
@@ -178,6 +181,9 @@ importers:
       '@sceneaxi/engine-kernel':
         specifier: workspace:^
         version: link:../engine-kernel
+      '@sceneaxi/engine-orchestrator':
+        specifier: workspace:^
+        version: link:../engine-orchestrator
       '@sceneaxi/engine-presentation':
         specifier: workspace:^
         version: link:../engine-presentation

@@ -10,7 +10,8 @@
     "@sceneaxi/schemas": "workspace:^",
     "@sceneaxi/authoring-core": "workspace:^",
     "@sceneaxi/engine-kernel": "workspace:^",
-    "@sceneaxi/engine-presentation": "workspace:^"
+    "@sceneaxi/engine-presentation": "workspace:^",
+    "@sceneaxi/engine-orchestrator": "workspace:^"
   },
   "sceneaxi": { "releaseGroup": "profile", "corePin": "^0.0.0" },
   "license": "UNLICENSED"

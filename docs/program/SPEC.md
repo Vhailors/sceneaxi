@@ -114,7 +114,7 @@ From the user's perspective:
 | L0 | `schemas` | ALL shared contracts, versioned, **zero dependencies** |
 | L1 | `engine-kernel` | Game Kernel seam (`open/dispatch/advance/observe/save/replay`; only `advance` mutates) |
 | L1 | `engine-presentation` | Presentation Runtime seam — Three.js product core hidden behind ADR 0002; the separately gated Stage 1 proof remains unadjudicated |
-| L1 | `engine-orchestrator` | Factory Orchestrator seam (per spec #41's module set); not used by the MVP golden paths |
+| L1 | `engine-orchestrator` | Factory Orchestrator seam (per spec #41's module set); owns open-path bootstrap and per-handle session lifecycle above the kernel, and no job system (ADR 0023, superseding the sceneaxi#60 stub disposition) |
 | L1 (delayed) | `engine-asset-compiler`, `engine-platform-host`, `engine-evidence` | Pre-declared matrix slots; arrive with proof-program landings |
 | L2 | `authoring-core` | The ONE agent-native runtime/authoring core: document model, propose/apply application service, session orchestration, evidence hooks, **Model Provider Port** |
 | L3 | `profile-game`, `profile-web`, `profile-kids` | Build-time versioned profiles; each pins a core range; Kids policy compiled in |

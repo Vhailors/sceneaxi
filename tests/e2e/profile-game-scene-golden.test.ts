@@ -5,7 +5,11 @@
  * Game profile can drive the composition vertical landed in #113 end to end:
  *
  *   create -> propose/apply -> compose artifacts -> project + reopen a document
- *   -> mount N instances -> open/advance/save/replay -> stable evidence
+ *   -> mount N instances -> orchestrated open/advance/save/resume -> evidence
+ *
+ * The scene session is bootstrapped through `@sceneaxi/engine-orchestrator`
+ * (sceneaxi#134), which is why the evidence carries a bootstrap record beside
+ * the kernel digests.
  *
  * Everything is offline: artifacts are reconstructed from checked-in intakes at
  * their landed seeds, and the scene opens at a fixed seed. No provider, no
@@ -45,6 +49,11 @@ const SOURCES = [
   },
 ] as const;
 const SCENE_SEED = 9101;
+/**
+ * Fixed open-path host. The orchestrator stamps this reading into the bootstrap
+ * record, so the session ids below are golden values, not wall-clock noise.
+ */
+const OPEN_PATH_HOST = { nowMs: () => 1_753_334_400_000 };
 const GOLDEN_PATH =
   "tests/e2e/fixtures/profile-game/golden-digests.json";
 const AUTHORING_DOCUMENT_PATH = "workshop-bay.authoring.sceneaxi.json";
@@ -211,12 +220,26 @@ describe("Game profile multi-object scene golden path", () => {
       );
       mounts.dispose();
 
-      // Kernel session over the composed scene: advancing changes state, and
+      // Orchestrated open path: the profile bootstraps the scene session
+      // through @sceneaxi/engine-orchestrator, which selects the kernel entry
+      // point, stamps a deterministic bootstrap record, and owns the session
+      // lifecycle. Kernel authority is unchanged — advancing changes state and
       // replaying the save reproduces the terminal snapshot exactly.
-      const session = sceneGoldenPath.core.kernel.openSceneKernelSession(
-        composed.scene,
-        { seed: SCENE_SEED },
+      const bootstrapped = sceneGoldenPath.core.orchestrator.bootstrapOpenPath(
+        { kind: "scene", scene: composed.scene, options: { seed: SCENE_SEED } },
+        OPEN_PATH_HOST,
       );
+      if (!bootstrapped.ok) {
+        throw new Error(`open path refused: ${bootstrapped.reason}`);
+      }
+      const handle = bootstrapped.value;
+      expect(handle.status()).toBe("open");
+      expect(handle.bootstrap.subjectId).toBe(composed.scene.sceneId);
+      expect(handle.bootstrap.resumed).toBe(false);
+
+      const opened = handle.session();
+      if (!opened.ok) throw new Error(`session refused: ${opened.reason}`);
+      const session = opened.value;
       const initial = session.observe();
       for (let tick = 1; tick <= 8; tick += 1) {
         session.advance({ tick, deltaMs: 100 });
@@ -224,11 +247,30 @@ describe("Game profile multi-object scene golden path", () => {
       const terminal = session.observe();
       expect(terminal.digest).not.toBe(initial.digest);
 
-      const replayed = sceneGoldenPath.core.kernel
-        .replaySceneKernelSession(session.save())
-        .observe();
+      const resumedHandle = sceneGoldenPath.core.orchestrator.resumeOpenPath(
+        { kind: "scene", save: session.save() },
+        OPEN_PATH_HOST,
+      );
+      if (!resumedHandle.ok) {
+        throw new Error(`resume refused: ${resumedHandle.reason}`);
+      }
+      expect(resumedHandle.value.bootstrap.resumed).toBe(true);
+      const resumedSession = resumedHandle.value.session();
+      if (!resumedSession.ok) {
+        throw new Error(`resumed session refused: ${resumedSession.reason}`);
+      }
+      const replayed = resumedSession.value.observe();
       expect(replayed.digest).toBe(terminal.digest);
       expect(replayed.instances).toHaveLength(3);
+
+      // Closing the handle ends the profile's grant on the session.
+      handle.close();
+      resumedHandle.value.close();
+      expect(handle.status()).toBe("closed");
+      expect(handle.session()).toMatchObject({
+        ok: false,
+        reason: "OPEN_PATH_SESSION_CLOSED",
+      });
 
       const evidence = {
         schemaVersion: 1,
@@ -256,6 +298,13 @@ describe("Game profile multi-object scene golden path", () => {
           instanceIds: composed.scene.instances.map(
             (instance) => instance.instanceId,
           ),
+        },
+        orchestrator: {
+          kind: handle.bootstrap.kind,
+          subjectId: handle.bootstrap.subjectId,
+          openedAtMs: handle.bootstrap.openedAtMs,
+          sessionId: handle.bootstrap.sessionId,
+          resumedSessionId: resumedHandle.value.bootstrap.sessionId,
         },
         kernel: {
           initialDigest: initial.digest,
