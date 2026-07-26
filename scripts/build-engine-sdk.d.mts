@@ -2,6 +2,18 @@
 
 export const SDK_PACKAGES: readonly string[];
 export const SDK_DOCS: readonly string[];
+export const SDK_GENERATED_FILES: readonly string[];
+
+/** One archived package as its own shipped manifest describes it. */
+export type SdkPackageSummary = {
+  readonly dir: string;
+  readonly name: string;
+  readonly version: string | null;
+  readonly releaseGroup: string | null;
+  readonly corePin: string | null;
+  readonly rootExports: readonly string[];
+  readonly subpaths: readonly string[];
+};
 
 export type EngineSdkManifest = {
   readonly schemaVersion: 1;
@@ -33,8 +45,15 @@ export type EngineSdkBuildOptions = {
 export function collectSdkEntries(options?: EngineSdkBuildOptions): {
   readonly entries: ReadonlyArray<{ readonly name: string; readonly data: Buffer }>;
   readonly packages: readonly string[];
+  readonly packageSummaries: readonly SdkPackageSummary[];
 };
 
 export function buildEngineSdk(options?: EngineSdkBuildOptions): BuiltEngineSdk;
+
+/** The archive-scoped readiness statement generated into the archive at build time. */
+export function sdkReadinessDoc(
+  version: string,
+  packageSummaries: readonly SdkPackageSummary[],
+): string;
 
 export function eligibleSdkFiles(repoRoot?: string): readonly string[];

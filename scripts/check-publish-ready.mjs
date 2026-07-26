@@ -22,10 +22,11 @@
  *
  * Usage: node scripts/check-publish-ready.mjs
  */
-import { existsSync, lstatSync, readFileSync, readdirSync, realpathSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { SDK_PACKAGES, containsPath } from "./build-engine-sdk.mjs";
+import { exportEntries } from "./lib/package-exports.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -358,8 +359,9 @@ function globPrefixDir(pattern) {
  * file.
  *
  * Fail-closed: a missing workspace file, an unreadable entry, an entry whose top-level
- * directory is itself a glob, or a workspace that declares no packages all throw rather
- * than silently narrowing the surface.
+ * directory is itself a glob, an entry that places manifests at a depth this check does
+ * not read, or a workspace that declares no packages all throw rather than silently
+ * narrowing the surface.
  *
  * @returns {string[]} tier directory names
  */
@@ -389,10 +391,19 @@ function manifestTiers() {
     // An exclusion narrows a tier that another entry already declared; it never adds one.
     if (value.startsWith("!")) continue;
     globbed += 1;
-    const tier = value.replace(/^\.\//, "").split("/")[0];
+    const segments = value.replace(/^\.\//, "").replace(/\/+$/, "").split("/");
+    const tier = segments[0];
     if (tier === "" || tier === "." || GLOB_CHARS.test(tier)) {
       throw new Error(
         `${WORKSPACE_FILE}: workspace entry '${value}' has no literal top-level directory — this check cannot prove which manifests it covers`,
+      );
+    }
+    // Depth matters as much as the tier name: `readManifests` opens `<tier>/<entry>/package.json`
+    // and nothing deeper, so `packages/**` or `tools/*/*` would declare workspace members
+    // this check never looks at. Refused here rather than half-covered downstream.
+    if (segments.length !== 2 || segments[1] === "**") {
+      throw new Error(
+        `${WORKSPACE_FILE}: workspace entry '${value}' is not a '<tier>/<package>' path — this check reads manifests exactly one level below each tier, so it cannot prove which manifests it covers`,
       );
     }
     tiers.add(tier);
@@ -416,7 +427,27 @@ function readManifests() {
   for (const tier of tiers) {
     const tierDir = join(root, tier);
     if (!existsSync(tierDir)) continue;
-    for (const entry of readdirSync(tierDir).sort()) {
+    // The tiers come from editable file content, so a tier that is not a directory is
+    // reachable. It refuses like every other drift instead of dying on `readdir` with a
+    // raw stack trace that names no check and discards the errors already collected.
+    let tierEntries;
+    try {
+      if (!statSync(tierDir).isDirectory()) {
+        fail(
+          "manifest-hygiene",
+          `workspace tier '${tier}' is not a directory — this check cannot read the manifests it claims to cover`,
+        );
+        continue;
+      }
+      tierEntries = readdirSync(tierDir).sort();
+    } catch (error) {
+      fail(
+        "manifest-hygiene",
+        `workspace tier '${tier}' is unreadable: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      continue;
+    }
+    for (const entry of tierEntries) {
       const dir = join(tierDir, entry);
       const manifestPath = join(dir, "package.json");
       if (!existsSync(manifestPath)) continue;
@@ -446,25 +477,12 @@ function readManifests() {
 }
 
 /**
- * Flatten an `exports` map to `[subpath, target]` pairs.
- *
- * Exported because the engine-SDK archive test asserts the other half of the same
- * claim — that every one of these targets actually ships — and two copies of this
- * walker could disagree about what an export target even is.
+ * Re-exported because the engine-SDK archive test asserts the other half of the same
+ * claim — that every one of these targets actually ships — and reads the walker from the
+ * gate it is verifying against. Its home is `./lib/package-exports.mjs` because the
+ * archive builder asks the same question and this file already imports that builder.
  */
-export function exportEntries(exportsField) {
-  const pairs = [];
-  const walk = (value, subpath) => {
-    if (typeof value === "string") pairs.push([subpath, value]);
-    else if (value !== null && typeof value === "object") {
-      for (const [key, nested] of Object.entries(value)) {
-        walk(nested, key.startsWith(".") ? key : subpath);
-      }
-    }
-  };
-  walk(exportsField ?? {}, ".");
-  return pairs;
-}
+export { exportEntries };
 
 // --- checks -----------------------------------------------------------------------
 

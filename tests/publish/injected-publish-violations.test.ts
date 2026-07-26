@@ -75,6 +75,33 @@ describe("publish-ready check — injected violations", () => {
     expect(res.stderr).toContain("[manifest-private] @sceneaxi/publisher is not private");
   });
 
+  it("refuses a workspace glob whose depth it does not read", () => {
+    // Manifests are read exactly one level below each tier, so `packages/**` would declare
+    // workspace members this check never opens — a nested `private: false` package would
+    // sit in a repository whose gate printed OK. Refused instead of half-covered.
+    appendTo(fx, "pnpm-workspace.yaml", '  - "packages/**"\n');
+    writeTo(
+      fx,
+      "packages/group/publisher/package.json",
+      `${JSON.stringify({ name: "@sceneaxi/nested", private: false, version: "1.0.0" }, null, 2)}\n`,
+    );
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "[manifest-hygiene] pnpm-workspace.yaml: workspace entry 'packages/**' is not a '<tier>/<package>' path",
+    );
+  });
+
+  it("refuses a workspace tier that is a file rather than a directory", () => {
+    // The tiers come from editable file content now, so a non-directory tier is reachable
+    // and must refuse by name rather than dying on `readdir` with a raw stack trace.
+    appendTo(fx, "pnpm-workspace.yaml", '  - "package.json/*"\n');
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("publish-ready check FAILED");
+    expect(res.stderr).toContain("[manifest-hygiene] workspace tier 'package.json' is not a directory");
+  });
+
   it("fails when workspace membership cannot be derived", () => {
     // With no workspace file there is no way to know which manifests exist, and passing
     // on an unknowable surface would be the one failure this whole check exists to stop.
