@@ -15,15 +15,16 @@ import { fileURLToPath } from "node:url";
 
 export const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 
-const COPY_TOPS = ["docs", "packages", "apps", "sites", "scripts"];
+const COPY_TOPS = ["docs", "packages", "apps", "sites", "scripts", "tests"];
 /** Root files the gate scripts read (check-sites reads the manifest and workspace). */
 const COPY_FILES = ["package.json", "pnpm-workspace.yaml"];
 const SKIP_DIRS = new Set(["node_modules", "dist", "coverage", "test"]);
 
 /**
  * Copy the parts of the repo the gate scripts read (manifests, sources, matrix,
- * scripts) into a throwaway root, so violation injections never touch the real
- * tree. node_modules is linked, not copied, so scripts keep resolving deps.
+ * scripts, and the root `tests` tree whose files contracts name as evidence)
+ * into a throwaway root, so violation injections never touch the real tree.
+ * node_modules is linked, not copied, so scripts keep resolving deps.
  */
 export function makeFixture(): string {
   const root = mkdtempSync(join(tmpdir(), "sceneaxi-gate-fixture-"));

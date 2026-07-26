@@ -502,6 +502,7 @@ export {
   openPathPolicyRowFor,
   openPathPolicyView,
   openPathPolicyViewFor,
+  openPathSurfaceNotes,
   resolveOpenPathSurfaceRequest,
   validateOpenPathDemoDecision,
 } from "./open-path-policy.js";

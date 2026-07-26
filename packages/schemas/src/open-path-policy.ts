@@ -609,6 +609,54 @@ export function resolveOpenPathSurfaceRequest(
   return Object.freeze({ kind: "decision" as const, decision });
 }
 
+const OPEN_PATH_DEMO_LEVEL_NOTE =
+  "Demo levels are demonstrations, never a shipping or production-readiness claim";
+
+/**
+ * The sentences a report-and-evaluate surface prints beside a resolved outcome.
+ *
+ * The branch selection is already shared; these are the words for it, and they
+ * live here for the same reason. Two copies of "demo levels are not a shipping
+ * claim" in two packages is exactly the "the CLI says X, the shell says Y" drift
+ * this policy exists to remove, and the parity suite compares payloads, not
+ * prose. A surface may append its own usage lines — it may not restate the
+ * policy in its own words.
+ */
+export function openPathSurfaceNotes(
+  outcome: OpenPathSurfaceOutcome,
+): ReadonlyArray<string> {
+  switch (outcome.kind) {
+    case "policy":
+      return Object.freeze([
+        OPEN_PATH_DEMO_LEVEL_NOTE,
+        `${OPEN_PATH_REFUSE_ONLY_PROFILE} is refuse-only and stays that way`,
+      ]);
+    case "projection":
+      return Object.freeze([
+        OPEN_PATH_DEMO_LEVEL_NOTE,
+        `Projection of one row: filteredTo names it, policyCount stays the policy's ${outcome.policy.policyCount}`,
+        `Evidence for this row: ${outcome.policy.rows[0].evidence}`,
+      ]);
+    case "decision":
+      return Object.freeze([
+        "The decision is a demo permission only; shippingClaim is false by contract",
+        `Evidence for this level: ${outcome.decision.evidence}`,
+      ]);
+    default: {
+      const row = openPathPolicyRowFor(outcome.refusal.profile);
+      return Object.freeze([
+        row === undefined
+          ? `Known profiles: ${OPEN_PATH_POLICY_PROFILES.join(", ")}`
+          : `Operations in this profile's policy: ${
+              row.operations.length === 0
+                ? "(none — refuse-only)"
+                : row.operations.join(", ")
+            }`,
+      ]);
+    }
+  }
+}
+
 /**
  * Validate an untrusted record as a recorded open-path demo decision — the
  * shape a surface, log, or fixture may hand back across a process boundary.

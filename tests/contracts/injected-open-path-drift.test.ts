@@ -111,6 +111,25 @@ describe("contract check — injected open-path policy drift", () => {
     expect(res.stderr).toContain("names no committed evidence");
   });
 
+  it("fails when a row names evidence that no longer exists", () => {
+    const policy = readPolicy(fx);
+    const web = rowFor(policy, "@sceneaxi/profile-web");
+    web.evidence = "tests/e2e/profile-web-renamed-away.test.ts";
+    writePolicy(fx, policy);
+    writeTo(
+      fx,
+      DOC_REL,
+      readFileSync(join(fx, DOC_REL), "utf8").replaceAll(
+        "tests/e2e/profile-web-golden-path.test.ts",
+        web.evidence,
+      ),
+    );
+
+    const res = runCheck(fx, "check-contracts.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("names evidence that does not exist");
+  });
+
   it("fails when a row changes in the fixture but not in the doc table", () => {
     const policy = readPolicy(fx);
     rowFor(policy, "@sceneaxi/profile-web").sessionKind = "scene-kernel-session";

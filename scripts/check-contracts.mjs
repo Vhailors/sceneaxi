@@ -15,7 +15,7 @@
  * Fail-closed: missing files, schema violations, duplicate ids, seed drift, or
  * a doc whose fixture table drifts from the canonical JSON all exit 1.
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join, dirname, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -1121,6 +1121,14 @@ if (openPathSurface.ready) {
     if (typeof row.evidence !== "string" || row.evidence.trim().length === 0) {
       fail(
         `open-path-policy.fixtures: ${JSON.stringify(row.profile)} names no committed evidence for its demo level`,
+      );
+    } else if (!existsSync(join(root, row.evidence))) {
+      // "Every level names the committed test that proves it" is only an
+      // invariant if the name resolves; a non-empty string alone lets a rename
+      // or deletion leave a row pointing at nothing while surfaces keep
+      // printing the stale path as proof.
+      fail(
+        `open-path-policy.fixtures: ${JSON.stringify(row.profile)} names evidence that does not exist: ${row.evidence}`,
       );
     }
     const isKids = row.profile === openPathFixtures.refuseOnlyProfile;

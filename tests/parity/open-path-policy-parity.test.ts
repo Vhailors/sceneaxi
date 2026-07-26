@@ -21,6 +21,8 @@ import {
   OPEN_PATH_REFUSE_CODES,
   OPEN_PATH_REFUSE_ONLY_PROFILE,
   openPathPolicyView,
+  openPathSurfaceNotes,
+  resolveOpenPathSurfaceRequest,
 } from "../../packages/schemas/src/index.ts";
 import { runCli } from "../../packages/cli/src/index.ts";
 import { runDesktopCommand } from "../../apps/desktop-shell/src/index.ts";
@@ -149,6 +151,68 @@ describe("open-path policy parity (conformance)", () => {
       expect(web.policy.filteredTo).toBe(row.profile);
       expect(web.policy.rows).toHaveLength(1);
       expect(web.policy.policyCount).toBe(OPEN_PATH_POLICY.length);
+    }
+  });
+
+  it("both command surfaces print the shared policy sentences, not their own", () => {
+    const reported: ReadonlyArray<{
+      readonly request: { profile?: string; operation?: string };
+      readonly cli: readonly string[];
+      readonly desktop: readonly string[];
+    }> = [
+      { request: {}, cli: ["profile", "open-path"], desktop: ["open-path"] },
+      {
+        request: { profile: "@sceneaxi/profile-game" },
+        cli: ["profile", "open-path", "--profile", "@sceneaxi/profile-game"],
+        desktop: ["open-path", "--profile", "@sceneaxi/profile-game"],
+      },
+      {
+        request: { profile: "@sceneaxi/profile-web", operation: "open" },
+        cli: [
+          "profile",
+          "open-path",
+          "--profile",
+          "@sceneaxi/profile-web",
+          "--operation",
+          "open",
+        ],
+        desktop: [
+          "open-path",
+          "--profile",
+          "@sceneaxi/profile-web",
+          "--operation",
+          "open",
+        ],
+      },
+    ];
+
+    for (const { request, cli: cliArgv, desktop: desktopArgv } of reported) {
+      const shared = [
+        ...openPathSurfaceNotes(resolveOpenPathSurfaceRequest(request)),
+      ];
+      expect(shared.length).toBeGreaterThan(0);
+      expect([...runCli(cliArgv).envelope.help].slice(0, shared.length)).toEqual(
+        shared,
+      );
+      expect([...runDesktopCommand(desktopArgv).help]).toEqual(shared);
+    }
+
+    const kids = {
+      profile: OPEN_PATH_REFUSE_ONLY_PROFILE,
+      operation: "open",
+    };
+    const kidsHelp = runCli([
+      "profile",
+      "open-path",
+      "--profile",
+      kids.profile,
+      "--operation",
+      kids.operation,
+    ]).envelope.help;
+    for (const note of openPathSurfaceNotes(
+      resolveOpenPathSurfaceRequest(kids),
+    )) {
+      expect(kidsHelp).toContain(note);
     }
   });
 

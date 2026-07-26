@@ -12,7 +12,7 @@
 
 import type { ApplyDiagnostic } from "@sceneaxi/authoring-core";
 import {
-  OPEN_PATH_REFUSE_ONLY_PROFILE,
+  openPathSurfaceNotes,
   resolveOpenPathSurfaceRequest,
 } from "@sceneaxi/schemas";
 import {
@@ -243,9 +243,10 @@ function unknownArgs(
  * the Kids refusal is the shell's refusal too — a non-zero exit, not an
  * omission.
  *
- * The branch selection is shared too (`resolveOpenPathSurfaceRequest`), so this
- * command only renders a tagged outcome; an explicitly empty `--profile=` or
- * `--operation=` refuses there rather than reading as an absent flag here.
+ * The branch selection is shared too (`resolveOpenPathSurfaceRequest`), as are
+ * the sentences printed beside it (`openPathSurfaceNotes`), so this command only
+ * renders a tagged outcome; an explicitly empty `--profile=` or `--operation=`
+ * refuses there rather than reading as an absent flag here.
  */
 function openPathResult(args: ParsedArgs): DesktopResult {
   const command = "open-path";
@@ -253,26 +254,18 @@ function openPathResult(args: ParsedArgs): DesktopResult {
     profile: args.flags.get("--profile"),
     operation: args.flags.get("--operation"),
   });
+  const notes = openPathSurfaceNotes(outcome);
 
   if (outcome.kind === "policy") {
-    return ok(command, { policy: outcome.policy }, [
-      "Demo levels are demonstrations, never a shipping or production-readiness claim",
-      `${OPEN_PATH_REFUSE_ONLY_PROFILE} is refuse-only and stays that way`,
-    ]);
+    return ok(command, { policy: outcome.policy }, [...notes]);
   }
 
   if (outcome.kind === "projection") {
-    return ok(command, { policy: outcome.policy }, [
-      `Projection of one row: filteredTo names it, policyCount stays the policy's ${outcome.policy.policyCount}`,
-      `Evidence for this row: ${outcome.policy.rows[0].evidence}`,
-    ]);
+    return ok(command, { policy: outcome.policy }, [...notes]);
   }
 
   if (outcome.kind === "decision") {
-    return ok(command, { decision: outcome.decision }, [
-      "The decision is a demo permission only; shippingClaim is false by contract",
-      `Evidence for this level: ${outcome.decision.evidence}`,
-    ]);
+    return ok(command, { decision: outcome.decision }, [...notes]);
   }
 
   return refuse(command, DesktopExit.USAGE, outcome.refusal.message, {

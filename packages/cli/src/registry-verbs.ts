@@ -10,11 +10,9 @@
 import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
-  OPEN_PATH_POLICY_PROFILES,
-  OPEN_PATH_REFUSE_ONLY_PROFILE,
   isCommerceActive,
   missingMandatoryMetadata,
-  openPathPolicyRowFor,
+  openPathSurfaceNotes,
   profileConformanceRegistry,
   resolveOpenPathSurfaceRequest,
   validateCatalogItem,
@@ -98,9 +96,11 @@ export function runProfileList(
  * including the Kids one, which is a non-zero exit, not a quiet empty row.
  *
  * Which of those branches an invocation selects is itself shared
- * (`resolveOpenPathSurfaceRequest`), so this verb only maps a tagged outcome
- * onto the CLI envelope. In particular an explicitly empty `--profile=` or
- * `--operation=` refuses there rather than reading as an absent flag here.
+ * (`resolveOpenPathSurfaceRequest`), as are the sentences printed beside it
+ * (`openPathSurfaceNotes`), so this verb only maps a tagged outcome onto the CLI
+ * envelope and appends its own usage lines. In particular an explicitly empty
+ * `--profile=` or `--operation=` refuses there rather than reading as an absent
+ * flag here.
  *
  * The CLI decides nothing about open paths. It cannot: the matrix allows it
  * schemas and authoring-core only, and the policy is contracts.
@@ -118,37 +118,29 @@ export function runProfileOpenPath(
     operation: args.flags.get("--operation"),
   });
 
+  const notes = openPathSurfaceNotes(outcome);
+
   if (outcome.kind === "policy") {
     return success(Object.freeze({ status: "listed", policy: outcome.policy }), [
-      "Demo levels are demonstrations, never a shipping or production-readiness claim",
-      `${OPEN_PATH_REFUSE_ONLY_PROFILE} is refuse-only and stays that way`,
+      ...notes,
       "Add --profile and --operation to evaluate one demo against the shared policy",
     ]);
   }
 
   if (outcome.kind === "projection") {
-    return success(
-      Object.freeze({ status: "listed", policy: outcome.policy }),
-      [
-        "Demo levels are demonstrations, never a shipping or production-readiness claim",
-        `Projection of one row: filteredTo names it, policyCount stays the policy's ${outcome.policy.policyCount}`,
-        `Evidence for this row: ${outcome.policy.rows[0].evidence}`,
-      ],
-    );
+    return success(Object.freeze({ status: "listed", policy: outcome.policy }), [
+      ...notes,
+    ]);
   }
 
   if (outcome.kind === "decision") {
     return success(
       Object.freeze({ status: "evaluated", decision: outcome.decision }),
-      [
-        "The decision is a demo permission only; shippingClaim is false by contract",
-        `Evidence for this level: ${outcome.decision.evidence}`,
-      ],
+      [...notes],
     );
   }
 
   const { refusal, operation } = outcome;
-  const row = openPathPolicyRowFor(refusal.profile);
   return failure(
     outcome.source === "request" ? "AMBIGUOUS_INPUT" : "VALIDATION",
     refusal.message,
@@ -159,16 +151,7 @@ export function runProfileOpenPath(
         profile: refusal.profile,
         ...(operation === null ? {} : { operation }),
       }),
-      help: [
-        row === undefined
-          ? `Known profiles: ${OPEN_PATH_POLICY_PROFILES.join(", ")}`
-          : `Operations in this profile's policy: ${
-              row.operations.length === 0
-                ? "(none — refuse-only)"
-                : row.operations.join(", ")
-            }`,
-        PROFILE_OPEN_PATH_USAGE,
-      ],
+      help: [...notes, PROFILE_OPEN_PATH_USAGE],
     },
   );
 }

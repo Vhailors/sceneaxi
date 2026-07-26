@@ -73,7 +73,10 @@ Three properties are structural rather than documented:
    more.
 2. **A level without evidence refuses.** Every non-refusing row names the
    committed test that proves it, and `evaluateOpenPathDemo` refuses with
-   `OPEN_PATH_EVIDENCE_MISSING` rather than granting an unevidenced level. This
+   `OPEN_PATH_EVIDENCE_MISSING` rather than granting an unevidenced level.
+   `pnpm check:contracts` resolves each row's evidence path against the repo, so
+   a renamed or deleted test fails the gate instead of leaving a row pointing at
+   a path a surface still prints as proof. This
    is the same discipline `profileConformanceRegistry` applies to claim status —
    and note the two are independent: the Web profile is `not-yet-claimed` for
    Profile Conformance while being `demo-driveable` here, because those grade
@@ -125,6 +128,12 @@ was absent, while any provided value — including `--profile=` or `--operation=
 with nothing after the `=` — must name something, so an empty value refuses
 instead of selecting a *wider* branch than the caller asked for. A request to
 evaluate an operation can therefore never come back as a successful listing.
+
+The *sentences* printed beside each outcome are shared for the same reason:
+`openPathSurfaceNotes()` owns them, so neither command surface restates the
+policy in its own words. A surface may append its own usage lines — the CLI adds
+its flag hint and usage string — but "demo levels are never a shipping claim" has
+one source, and the parity suite asserts both surfaces render it.
 
 ### Where parity stops, and why
 
