@@ -15,7 +15,8 @@
  *   2. signature over bytes  — before the body is parsed as anything
  *   3. intent + settlement   — the price snapshot, not the event, names the credits
  *   4. grant, keyed by event — Stripe delivers at least once, so replay is expected
- *   5. persist               — a store conflict re-reads rather than assuming
+ *   5. persist               — a store conflict re-reads and answers only what the
+ *                              ledger proves, so an unapplied event is retried
  *
  * `live` mode is never authorized from here. `applyCheckoutCompletedGrant` refuses a
  * livemode event without an explicit captain go-live decision, and this module has no
@@ -173,14 +174,32 @@ export async function applyCreditPackWebhook(input: {
     try {
       await input.store.appendEntry(entry);
     } catch {
-      // Stripe delivers at least once and retries concurrently. A conflict means the
-      // same event id is already in the ledger, so the truthful answer is the stored
-      // balance, not a second grant and not a failure the provider would retry.
-      const reread = loadLedgerState(account, await input.store.listEntries(account.accountId));
-      if (!reread.ok) {
+      // Stripe delivers at least once and retries concurrently, so an append can lose a
+      // race with a redelivery of this same event. It can also fail for reasons that
+      // granted nothing — a sequence another writer took, a transport failure — and the
+      // store throws identically for all of them. The ledger is the only thing that can
+      // tell them apart, so the re-read is checked for *this* event's key: present means
+      // the grant is in the ledger and the replay answer is proven; absent means the
+      // outcome is a failure the provider must retry, never a 2xx for credits nobody has.
+      let reread;
+      try {
+        reread = loadLedgerState(account, await input.store.listEntries(account.accountId));
+      } catch {
+        reread = undefined;
+      }
+      if (reread === undefined || !reread.ok) {
         return refused(
           CREDIT_WEBHOOK_REASONS.storeFailed,
           "The ledger could not be re-read after an append conflict, so the outcome of this event is unknown.",
+        );
+      }
+      const persisted = reread.value.entries.some(
+        (held) => held.idempotencyKey === entry.idempotencyKey,
+      );
+      if (!persisted) {
+        return refused(
+          CREDIT_WEBHOOK_REASONS.storeFailed,
+          "The credit grant for this event could not be appended and is not in the ledger, so this event is unapplied and must be retried.",
         );
       }
       return Object.freeze({

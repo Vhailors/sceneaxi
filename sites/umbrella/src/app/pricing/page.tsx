@@ -9,7 +9,16 @@ import { StatePanel } from "../_components/state-panel.js";
  * The pack list comes from the billing plane, never from a constant here — pack
  * pricing is a product decision owned by `@sceneaxi/billing`, and inventing prices on
  * a page would be inventing that decision. Unwired, the page says so.
+ *
+ * The page is rendered per request because its checkout attempt token must be. A
+ * prerender would evaluate that token once at build time and serve every visitor the
+ * same one, which the checkout route folds into its idempotency key — so a second
+ * purchase of the same pack would derive the first purchase's intent id and hand back a
+ * completed session instead of a new checkout. The token is per render, so the render
+ * has to be per request.
  */
+export const dynamic = "force-dynamic";
+
 export default async function PricingPage() {
   const plane = createUmbrellaIdentityPlane(process.env);
   const packs = await plane.billing.listCreditPacks();

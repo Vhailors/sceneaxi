@@ -580,6 +580,42 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     expect(store.entryCount("acct-1")).toBe(1);
   });
 
+  /**
+   * A store whose `appendEntry` throws. `persists` decides whether the row is in the
+   * ledger anyway — the two outcomes the store reports identically: a redelivery of this
+   * same event that another writer already committed, and an append that granted nothing.
+   */
+  const throwingAppendStore = (persists: boolean) => {
+    const inner = webhookStore();
+    return Object.freeze({
+      ...inner,
+      appendEntry(entry: Parameters<typeof inner.appendEntry>[0]) {
+        if (persists) inner.appendEntry(entry);
+        throw new Error("credit store: sequence 1 already exists for acct-1");
+      },
+    });
+  };
+
+  it("refuses rather than reporting a replay when a failed append left nothing in the ledger", async () => {
+    const store = throwingAppendStore(false);
+    const outcome = await signedCall({
+      payload: eventBody("evt_test_append_lost"),
+      store: store as ReturnType<typeof webhookStore>,
+    });
+    expect(outcome).toMatchObject({ ok: false, reason: "CREDIT_STORE_FAILED" });
+    expect(store.entryCount("acct-1")).toBe(0);
+  });
+
+  it("reports a replay when a failed append raced a redelivery that did persist the grant", async () => {
+    const store = throwingAppendStore(true);
+    const outcome = await signedCall({
+      payload: eventBody("evt_test_append_raced"),
+      store: store as ReturnType<typeof webhookStore>,
+    });
+    expect(outcome).toMatchObject({ ok: true, replayed: true, balance: PACK.credits });
+    expect(store.entryCount("acct-1")).toBe(1);
+  });
+
   it("refuses an unsigned body without touching the ledger", async () => {
     const store = webhookStore();
     const outcome = await applyCreditPackWebhook({
