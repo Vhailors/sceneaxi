@@ -454,6 +454,22 @@ async function resolveHostedLedger(
 }
 
 /**
+ * Everything a debit needs, resolved before the provider is entered.
+ *
+ * It exists so the charging path cannot be assembled from a ledger the store was
+ * never asked about: `persisted` is the history the balance gate judged, and it
+ * is the same value handed to `meterCredits`, so the balance that authorized the
+ * call is the balance the debit lands on.
+ */
+type MeteringPlan = Readonly<{
+  persisted: LedgerState;
+  store: CreditStore;
+  reason: string;
+  idempotencyKey: string;
+  amount: number;
+}>;
+
+/**
  * Run one model call under the credit plane, or refuse without side effects.
  *
  * Every refusal keeps the identity of the layer that produced it — the guard's
@@ -560,14 +576,18 @@ export async function runMeteredModelCall<Response>(
   const ledger = resolution.value;
   const replayed = ledger === undefined ? undefined : ledger.replayed;
 
-  // Every ledger question from here on is asked of persistence when it could be
-  // resolved. Falling back to the caller's `state` only happens on requests the
-  // store was deliberately not read for — a malformed, unauthenticated, or
-  // not-yet-credit-priced call — and each of those is refused below without ever
-  // reaching the provider.
-  const ledgerState = ledger === undefined ? state : ledger.persisted;
+  // Every ledger question is asked of persistence once it has been resolved. The
+  // caller's `state` is used only where the store was deliberately not read — a
+  // malformed, unauthenticated, or not-yet-credit-priced request — so that the
+  // layer below speaks the refusal in its own vocabulary rather than having this
+  // one guess at it. No such request can be credit-priced, which the guard below
+  // enforces rather than assumes.
   const entitlementState =
-    replayed === undefined ? ledgerState : replayed.priorState;
+    replayed !== undefined
+      ? replayed.priorState
+      : ledger === undefined
+        ? state
+        : ledger.persisted;
   const decision = evaluateEntitlement({
     capability: routeCapability,
     now,
@@ -586,7 +606,11 @@ export async function runMeteredModelCall<Response>(
 
   // Metering inputs are validated *before* the provider runs. A missing store or
   // idempotency key is a caller defect, and discovering it after the call would
-  // mean a completed model call that can never be charged for.
+  // mean a completed model call that can never be charged for. Resolving them
+  // into one value is what makes "a charge is judged and landed on persistence"
+  // a property of the code: past this block a debit either carries the persisted
+  // ledger it was authorized against, or it does not exist.
+  let debit: MeteringPlan | undefined;
   if (charge !== undefined) {
     if (!isCreditStore(store)) {
       return billingRefuse(
@@ -606,13 +630,32 @@ export async function runMeteredModelCall<Response>(
         "A credit-priced model call requires a non-empty idempotency key.",
       );
     }
+    // Last, so every caller defect above still answers in its own vocabulary.
+    // No credit-priced request can reach here with the ledger unresolved — the
+    // shapes `resolveHostedLedger` declines to read the store for are exactly
+    // the ones entitlement and the three checks above refuse — but leaving that
+    // as an argument would make a later precondition added on either side of the
+    // pair silently reopen a charge judged on a caller's claim.
+    if (ledger === undefined) {
+      return billingRefuse(
+        BILLING_REFUSE_REASONS.ledgerStateInvalid,
+        "A credit-priced model call must be judged against the persisted ledger, which was not resolved for this request.",
+      );
+    }
+    debit = Object.freeze({
+      persisted: ledger.persisted,
+      store,
+      reason,
+      idempotencyKey,
+      amount: charge,
+    });
   }
 
   // The key already bought this call. Hand back the debit that exists — no
   // second provider execution, no second charge, and no invented answer. The
   // ledger reported is the persisted one, so a caller retrying with a pre-debit
   // view is corrected rather than confirmed in it.
-  if (ledger !== undefined && replayed !== undefined && charge !== undefined) {
+  if (replayed !== undefined && debit !== undefined) {
     return billingOk(
       Object.freeze({
         replayed: true,
@@ -621,8 +664,8 @@ export async function runMeteredModelCall<Response>(
         decision: decision.value,
         metered: true,
         entry: replayed.entry,
-        state: ledger.persisted,
-        balance: ledger.persisted.balance,
+        state: debit.persisted,
+        balance: debit.persisted.balance,
       }),
     );
   }
@@ -639,7 +682,7 @@ export async function runMeteredModelCall<Response>(
 
   // Free BYO, and the captain's unlimited allowance: no debit exists to append,
   // and saying so beats writing a zero-credit row that means nothing.
-  if (charge === undefined) {
+  if (debit === undefined) {
     return billingOk(
       Object.freeze({
         replayed: false,
@@ -658,11 +701,11 @@ export async function runMeteredModelCall<Response>(
   const metered = await meterCredits({
     principal,
     admin: admin as AdminIdentity,
-    store: store as CreditStore,
-    state: ledgerState as LedgerState,
-    amount: charge,
-    reason: reason as string,
-    idempotencyKey: idempotencyKey as string,
+    store: debit.store,
+    state: debit.persisted,
+    amount: debit.amount,
+    reason: debit.reason,
+    idempotencyKey: debit.idempotencyKey,
     now,
     ...(surface === undefined ? {} : { surface }),
   });
