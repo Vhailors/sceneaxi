@@ -252,7 +252,8 @@ be indefensible. A test asserts that path appends no ledger entry even when a ba
 exists.
 
 **Account required:** SceneAxi-hosted AI, catalog purchases, creator publish, credit
-balance, and credit-pack purchase.
+balance, and credit-pack purchase. `catalog-asset-purchase` is enforced by the bounded
+fixture-commerce path below, which evaluates it in both currencies.
 
 **Admin** has an unlimited allowance and is never debited, and because nothing is
 collected, nothing downstream may be paid out of it either — see the revenue-share section.
@@ -459,7 +460,8 @@ always lands with the platform, and no value is created or lost.
 
 Catalog **browse and purchase UI** is coordinated with `sceneaxi-websites-deploy-v1`; this
 vertical owns the ledger and the enforcement. The `catalog-game` and `catalog-web` apps
-stay dormant.
+stay dormant. A listing being *in* this set does not make it purchasable: what may actually
+be transacted is the separate, narrower enumeration in *Fixture commerce* below.
 
 ## Creator publish and revenue share
 
@@ -503,6 +505,65 @@ later captain gate.**
 
 Both paths are idempotent on the sale id (`sale:<saleId>:buyer` / `:creator`), so a replay
 moves nothing.
+
+## Fixture commerce (sceneaxi#138)
+
+The primitives above take a `CatalogListing` **value**, which is right for a mechanism and
+wrong for an offer: a caller holding a hand-built listing object could transact against a
+SKU nobody published, and `recordMoneySale` would book a split for it. What was missing was
+a statement of what is actually for sale. `packages/billing/src/fixture-commerce.ts` is that
+statement, and it is a closed enumeration of exactly **one** dual-priced fixture SKU.
+
+| | |
+|---|---|
+| Enabled SKU | `market-stall-kit` — the only member of `FIXTURE_COMMERCE_LISTING_IDS` |
+| Credits | 75 gross → **37** creator, **38** platform |
+| Money (test) | 2500 USD minor → **1250** creator, **1250** platform, bookkeeping only |
+| Mode | `test`, structurally — see below |
+
+Four properties are what the module adds over calling the primitives in order:
+
+1. **A listing is resolved by id from the committed set, never supplied.** No exported
+   function accepts a `CatalogListing`, so the purchasable assets are exactly the enumerated
+   ones. An unknown id, a fabricated listing, and every *other* committed fixture listing all
+   refuse `LISTING_FIXTURE_COMMERCE_NOT_ENABLED` — a reason distinct from `LISTING_UNKNOWN`,
+   because "exists in the catalog and is not for sale" is a different fact from "does not
+   exist". Adding a second id is a product decision, not a refactor: it is what turns one
+   proven fixture purchase into an open catalog.
+2. **The documented entitlement is actually evaluated.** `catalog-asset-purchase` was a row
+   in the matrix above that no purchase path read. Both entry points now evaluate it with the
+   currency the buyer chose, so an insufficient balance refuses before any ledger is appended
+   to, and the matrix governs a purchase instead of describing one.
+3. **A retry is answered from the debit it already made.** That balance gate sits *above* the
+   ledger's own idempotency check, so a naive version of it would break the retry it exists to
+   protect — a caller re-sending `sale_01` after a timeout holds a ledger that already paid,
+   and would be refused `CREDIT_BALANCE_INSUFFICIENT` out of its own proceeds. When the
+   supplied ledger already carries `sale:<saleId>:buyer`, the balance is judged against the
+   state that *preceded* that debit, so the question is asked exactly once while capability,
+   Kids, identity, ownership, and self-purchase are still re-checked. A *different* sale out
+   of the same depleted balance is still refused. Recognition reads the supplied ledger
+   because that is the same ledger `applyCreditsSale`'s own idempotency reads — the gate must
+   not be able to refuse a retry the layer beneath it would replay.
+4. **Money bookkeeping is bound to a settlement.** `settleFixtureListingMoneySale` takes only
+   the branded output of `parseCheckoutCompletedEvent` plus the persisted intent it was bound
+   to, and recovers the sale id from that intent's `sale:<saleId>` idempotency key rather than
+   accepting one. A `MoneySplitRecord` on this path can therefore only describe money a
+   signature-verified Stripe **test** settlement actually took, for an enabled SKU, at the
+   price the seller listed. A settled amount that differs from the listing refuses.
+
+**Test mode is structural, not a default.** No function here accepts or forwards
+`liveModeAuthorized`, so the captain go-live gate cannot be passed through this path at all:
+the checkout entry point can only emit a `test` intent, and a live settlement handed to the
+settlement function refuses `STRIPE_LIVE_MODE_NOT_AUTHORIZED`. The money path also grants no
+credits — `applyCheckoutCompletedGrant` refuses a `catalog-listing` completion — so the two
+currencies cannot cross.
+
+This adds no ledger, no second entitlement table, no publishing surface, and no catalog
+activation; it only narrows what the existing seams may be pointed at. The `catalog-game` and
+`catalog-web` apps and the `sites/` storefronts stay as they were. The whole path is proven
+in `tests/e2e/catalog-fixture-commerce-golden.test.ts` (in `pnpm test:golden`) with the exact
+figures above, and unit-tested in `packages/billing/test/fixture-commerce.test.ts`; both run
+with no Stripe key, no database, and no network.
 
 ## Kids isolation
 

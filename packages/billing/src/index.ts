@@ -2,8 +2,9 @@
  * @sceneaxi/billing — credits and billing for the SceneAxi identity plane.
  *
  * Owns the append-only credit ledger, metering, entitlement enforcement, the
- * default-off hosted-AI credit gate, and the Stripe test-mode checkout and
- * webhook paths. Neon, the Stripe API, and every model provider are
+ * default-off hosted-AI credit gate, the Stripe test-mode checkout and webhook
+ * paths, and the bounded fixture-SKU commerce path over the committed catalog.
+ * Neon, the Stripe API, and every model provider are
  * injected adapters, never dependencies; webhook *signature verification* is
  * implemented in-repo because it is the security boundary and is fully
  * deterministic. See docs/auth-credits.md and ADR 0021.
@@ -122,6 +123,23 @@ export {
   type VerifiedWebhook,
   type VerifyStripeWebhookSignatureRequest,
 } from "./stripe-webhook.js";
+
+export {
+  FIXTURE_COMMERCE_CAPABILITY,
+  FIXTURE_COMMERCE_CHECKOUT_PURPOSE,
+  FIXTURE_COMMERCE_LISTING_IDS,
+  FIXTURE_COMMERCE_MODE,
+  authorizeFixtureListingPurchase,
+  createFixtureListingCheckoutIntent,
+  purchaseFixtureListingWithCredits,
+  resolveFixtureCommerceListing,
+  settleFixtureListingMoneySale,
+  type AuthorizeFixtureListingPurchaseRequest,
+  type CreateFixtureListingCheckoutIntentRequest,
+  type FixtureListingAuthorization,
+  type PurchaseFixtureListingWithCreditsRequest,
+  type SettleFixtureListingMoneySaleRequest,
+} from "./fixture-commerce.js";
 
 export {
   CREATOR_SHARE_BASIS_POINTS,

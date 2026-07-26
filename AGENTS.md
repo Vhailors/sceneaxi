@@ -219,6 +219,23 @@ network, no credential). Adding a `BILLING_REFUSE_REASONS` entry requires a
 covering case in `tests/e2e/auth-credits-refuse-matrix.test.ts`, which asserts
 every reason is reachable.
 
+Catalog commerce is **offered** only through `packages/billing/src/fixture-commerce.ts`
+(sceneaxi#138): a closed enumeration of one dual-priced fixture SKU
+(`FIXTURE_COMMERCE_LISTING_IDS`), resolved by id from the committed listing set, so no
+exported function on that path accepts a caller-supplied `CatalogListing` and every other
+listing — committed, unknown, or fabricated — refuses
+`LISTING_FIXTURE_COMMERCE_NOT_ENABLED`. Being in `catalog-listings.fixtures.json` is not
+being for sale. It is also where the matrix's `catalog-asset-purchase` row is actually
+enforced, and where a credits retry is judged against the balance that preceded its own
+debit — the same hazard the hosted-AI replay step exists for, since this balance gate also
+sits above the ledger's idempotency check. Money bookkeeping is reachable only from a
+branded `parseCheckoutCompletedEvent` completion plus the persisted intent it was bound to,
+whose `sale:<saleId>` key names the sale, so a `MoneySplitRecord` cannot describe money no
+verified settlement took. No function there accepts or forwards `liveModeAuthorized`, which
+is what makes test mode structural rather than defaulted; this widens no marketplace,
+publishing, or catalog-app surface. The whole path is `tests/e2e/catalog-fixture-commerce-golden.test.ts`
+in `test:golden`.
+
 First-class plugins follow `docs/plugins.md` and ADR 0005: manifests may claim
 only IDs from the versioned public capability registry; unknown IDs and
 isolation breaches refuse. Runtime API details live in

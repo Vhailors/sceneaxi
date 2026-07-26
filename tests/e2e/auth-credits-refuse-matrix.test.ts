@@ -37,6 +37,7 @@ import {
   persistCreditsSale,
   purchaseListingWithCredits,
   recordMoneySale,
+  resolveFixtureCommerceListing,
   runMeteredModelCall,
   signStripeWebhookPayload,
   splitCredits,
@@ -923,6 +924,9 @@ describe("billing refuse matrix", () => {
   });
 
   it("reaches every listing refusal", () => {
+    // A listing that exists in the committed set but is not enabled for the
+    // bounded fixture-commerce path (sceneaxi#138).
+    record(resolveFixtureCommerceListing("lantern-prop"));
     record(lookupCatalogListing({ listings: [] }, "lantern-prop"));
     record(assertCurrencyListed(listing("lantern-prop"), "barter" as never));
     const loaded = loadCatalogListings();
