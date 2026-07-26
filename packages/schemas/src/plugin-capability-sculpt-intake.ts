@@ -9,14 +9,16 @@
  * - data in, data out — no lifecycle hook, no engine handle, no service locator;
  * - the host never calls a provider on its own, so loading stays inert until a
  *   caller asks for an intake;
- * - a provider's output is re-validated against the public Sculpt Intake contract
- *   here, so a malformed intake refuses at the boundary instead of entering the
- *   pipeline.
+ * - a provider's output is snapshotted and then re-validated against the public
+ *   Sculpt Intake contract here, so a malformed intake refuses at the boundary
+ *   instead of entering the pipeline, and a returned intake is a frozen document
+ *   the provider can no longer reach.
  *
  * Adding a capability is a reviewed contract change (see docs/plugins.md); this
  * module owns the one contract that exists.
  */
 
+import { snapshotSculptJson } from "./sculpt-json.js";
 import {
   SCULPT_INTAKE_MODES,
   isSculptIntakeMode,
@@ -177,6 +179,11 @@ function refuse(
  * invalid document downstream. The shape is re-checked here because a host that
  * binds no contract check for the capability still hands back whatever the
  * plugin exported.
+ *
+ * The provider's document is snapshotted before it is validated, so what the
+ * contract accepts is exactly what the caller receives: accessors are collapsed
+ * to the values they answered once, and the returned intake is frozen and
+ * detached from any reference the provider kept.
  */
 export function requestSculptIntake(
   source: SculptIntakeSource,
@@ -220,7 +227,19 @@ export function requestSculptIntake(
     );
   }
 
-  const validated = validateSculptIntake(produced["intake"]);
+  let candidate: unknown;
+  try {
+    candidate = snapshotSculptJson(produced["intake"]);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "intake could not be captured.";
+    return refuse(
+      "malformed-result",
+      `Produced intake could not be captured as a plain document: ${message}`,
+    );
+  }
+
+  const validated = validateSculptIntake(candidate);
   if (!validated.ok) {
     const first = validated.diagnostics[0];
     return refuse(

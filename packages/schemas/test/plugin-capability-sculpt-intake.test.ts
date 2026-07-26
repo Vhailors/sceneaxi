@@ -19,6 +19,8 @@ import {
   type SculptIntakeSourceResult,
 } from "@sceneaxi/schemas";
 
+const LANTERN_BRIEF = "Iron cage lantern with four glass panes.";
+
 const LANTERN: SculptIntake = {
   schemaVersion: 1,
   kind: "sceneaxi.sculpt-intake",
@@ -29,7 +31,7 @@ const LANTERN: SculptIntake = {
     uri: "asset://sceneaxi-demo/workshop-lantern/front.png",
     digest: `sha256:${"a".repeat(64)}`,
   },
-  brief: "Iron cage lantern with four glass panes.",
+  brief: LANTERN_BRIEF,
 };
 
 function source(
@@ -174,6 +176,71 @@ describe("sculpt intake source capability contract", () => {
       if (result.ok) continue;
       expect(result.reason, label).toBe(reason);
     }
+  });
+
+  it("hands back a document the provider can no longer reach", () => {
+    const request = { intakeId: "workshop-lantern", mode: "image+brief" } as const;
+    let handedOver: Record<string, unknown> | undefined;
+    const provider = source(() => {
+      if (handedOver) handedOver["brief"] = "poisoned";
+      handedOver = { ...LANTERN, image: { ...LANTERN.image } } as Record<
+        string,
+        unknown
+      >;
+      return { ok: true, intake: handedOver } as unknown as SculptIntakeSourceResult;
+    });
+
+    const first = requestSculptIntake(provider, request);
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+
+    requestSculptIntake(provider, request);
+    expect(first.intake).toEqual(LANTERN);
+    expect(() => {
+      (first.intake as unknown as Record<string, unknown>)["brief"] = "poisoned";
+    }).toThrow();
+    expect(first.intake).toEqual(LANTERN);
+  });
+
+  it("validates the same values it returns when a provider answers with accessors", () => {
+    const request = { intakeId: "workshop-lantern", mode: "image+brief" } as const;
+    let reads = 0;
+    const drifting = {
+      ...LANTERN,
+      get brief() {
+        reads += 1;
+        return reads === 1 ? LANTERN_BRIEF : "";
+      },
+    };
+
+    const result = requestSculptIntake(
+      source(() => ({ ok: true, intake: drifting })),
+      request,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.intake.mode).toBe("image+brief");
+    if (result.intake.mode !== "image+brief") return;
+    expect(result.intake.brief).toBe(LANTERN_BRIEF);
+    expect(result.intake).toEqual(LANTERN);
+  });
+
+  it("refuses an intake that cannot be captured instead of throwing", () => {
+    const request = { intakeId: "workshop-lantern", mode: "image+brief" } as const;
+    const hostile = {
+      ...LANTERN,
+      get brief(): string {
+        throw new Error("no reading that");
+      },
+    };
+
+    const result = requestSculptIntake(
+      source(() => ({ ok: true, intake: hostile })),
+      request,
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe("malformed-result");
   });
 
   it("refuses a source that never satisfied the contract instead of throwing", () => {

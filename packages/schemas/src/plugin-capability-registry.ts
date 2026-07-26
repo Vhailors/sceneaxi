@@ -436,7 +436,12 @@ export const SHIPPED_PLUGIN_CAPABILITY_IDS = Object.freeze([
 
 /**
  * Checked-in v1 seed registry — must stay byte-equal to
- * `contracts/plugin-capability-registry.1.0.0.json` (`pnpm check:contracts`).
+ * `contracts/plugin-capability-registry.1.0.0.json`. Adding or dropping a row
+ * means editing three pins: this fixture, that JSON artifact, and the row set in
+ * `scripts/check-contracts.mjs`. `pnpm check:contracts` compares the JSON
+ * artifact against the checker's own row set; this fixture is held against the
+ * artifact by the lockstep case in
+ * `packages/schemas/test/plugin-capability-registry.test.ts` (`pnpm test`).
  */
 export function pluginCapabilityRegistrySeed(): PluginCapabilityRegistry {
   return {
