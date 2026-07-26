@@ -464,9 +464,6 @@ export function createBillingCreditsAdapter(options: {
     }): Promise<SiteResult<SiteCreditBalance>> {
       const loaded = await readLedgerState(options.store, input.userId);
       if (!loaded.ok) return loaded;
-      if (loaded.value.entries.some((e) => e.idempotencyKey === starterKeyFor(input.userId))) {
-        return ok(balanceOf(loaded.value, input.userId));
-      }
 
       const granted = grantStarterCredits({
         state: loaded.value,
