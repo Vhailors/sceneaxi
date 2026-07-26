@@ -14,7 +14,7 @@ The architecture decision behind the shape of this plane is
 |---|---|
 | Contracts (User, Session, RoleAssignment, credits, billing, entitlements, listings, revenue share) | `packages/schemas` |
 | Single-admin resolution, role guards, identity port | `packages/auth` |
-| Credit ledger, metering, entitlements, hosted-AI credit gate, Stripe test checkout, revenue share | `packages/billing` |
+| Credit ledger, metering, entitlements, hosted-AI credit gate, Stripe test checkout, revenue share, fixture commerce | `packages/billing` |
 | Neon schema | `db/migrations` |
 | Login + balance view model | `apps/web-shell` (`createAccountPanel`) |
 | Deployable-site wiring | `sites/umbrella/src/lib/identity-plane.ts` (`docs/websites-deploy.md`) |
