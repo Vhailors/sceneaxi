@@ -164,8 +164,10 @@ it draws pixels through the ADR 0002 seam and is not governed by this table.
 
 Adding a profile, a level, or an operation is an explicit contract edit that
 moves `packages/schemas/src/open-path-policy.ts`,
-`packages/schemas/contracts/open-path-policy.fixtures.json`, and the table above
-in one commit — `pnpm check:contracts` fails otherwise, and
+`packages/schemas/contracts/open-path-policy.fixtures.json`,
+`packages/schemas/contracts/open-path-policy.schema.json` (which pins the whole
+`profiles` array as a `const`), and the table above in one commit —
+`pnpm check:contracts` fails otherwise, and
 `tests/contracts/injected-open-path-drift.test.ts` proves that check itself
 fails on injected drift.
 

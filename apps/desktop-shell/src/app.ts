@@ -268,11 +268,17 @@ function openPathResult(args: ParsedArgs): DesktopResult {
     return ok(command, { decision: outcome.decision }, [...notes]);
   }
 
-  return refuse(command, DesktopExit.USAGE, outcome.refusal.message, {
-    reason: outcome.refusal.code,
-    profile: outcome.refusal.profile,
-    ...(outcome.operation === null ? {} : { operation: outcome.operation }),
-  });
+  return refuse(
+    command,
+    DesktopExit.USAGE,
+    outcome.refusal.message,
+    {
+      reason: outcome.refusal.code,
+      profile: outcome.refusal.profile,
+      ...(outcome.operation === null ? {} : { operation: outcome.operation }),
+    },
+    [...notes, ...USAGE_LINES],
+  );
 }
 
 /**

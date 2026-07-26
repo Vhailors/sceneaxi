@@ -197,22 +197,37 @@ describe("open-path policy parity (conformance)", () => {
       expect([...runDesktopCommand(desktopArgv).help]).toEqual(shared);
     }
 
-    const kids = {
-      profile: OPEN_PATH_REFUSE_ONLY_PROFILE,
-      operation: "open",
-    };
-    const kidsHelp = runCli([
-      "profile",
-      "open-path",
-      "--profile",
-      kids.profile,
-      "--operation",
-      kids.operation,
-    ]).envelope.help;
-    for (const note of openPathSurfaceNotes(
-      resolveOpenPathSurfaceRequest(kids),
-    )) {
-      expect(kidsHelp).toContain(note);
+    const refused: ReadonlyArray<{ profile: string; operation: string }> = [
+      { profile: OPEN_PATH_REFUSE_ONLY_PROFILE, operation: "open" },
+      { profile: "@sceneaxi/profile-imaginary", operation: "open" },
+    ];
+
+    for (const request of refused) {
+      const shared = openPathSurfaceNotes(
+        resolveOpenPathSurfaceRequest(request),
+      );
+      expect(shared.length).toBeGreaterThan(0);
+
+      const cliHelp = runCli([
+        "profile",
+        "open-path",
+        "--profile",
+        request.profile,
+        "--operation",
+        request.operation,
+      ]).envelope.help;
+      const desktopHelp = runDesktopCommand([
+        "open-path",
+        "--profile",
+        request.profile,
+        "--operation",
+        request.operation,
+      ]).help;
+
+      for (const note of shared) {
+        expect(cliHelp).toContain(note);
+        expect(desktopHelp).toContain(note);
+      }
     }
   });
 
