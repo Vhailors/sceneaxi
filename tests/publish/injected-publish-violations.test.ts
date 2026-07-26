@@ -61,6 +61,31 @@ describe("publish-ready check — injected violations", () => {
     expect(res.stderr).toContain("[manifest-private] @sceneaxi/schemas is not private");
   });
 
+  it("covers a workspace tier that pnpm-workspace.yaml grows", () => {
+    // The tiers are derived from workspace membership, so a package in a tier added after
+    // this check was written is refused instead of never being looked at.
+    appendTo(fx, "pnpm-workspace.yaml", '  - "tools/*"\n');
+    writeTo(
+      fx,
+      "tools/publisher/package.json",
+      `${JSON.stringify({ name: "@sceneaxi/publisher", private: false, version: "1.0.0" }, null, 2)}\n`,
+    );
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("[manifest-private] @sceneaxi/publisher is not private");
+  });
+
+  it("fails when workspace membership cannot be derived", () => {
+    // With no workspace file there is no way to know which manifests exist, and passing
+    // on an unknowable surface would be the one failure this whole check exists to stop.
+    rmSync(join(fx, "pnpm-workspace.yaml"));
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "[manifest-hygiene] pnpm-workspace.yaml is missing — workspace membership cannot be derived",
+    );
+  });
+
   it("fails when the repository root manifest stops being private", () => {
     // The root manifest is not a workspace package, so nothing else covers it — yet it
     // is the one `npm publish` at the repo root would ship.

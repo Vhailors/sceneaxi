@@ -43,8 +43,16 @@ export const PUBLISH_PLAN = Object.freeze({
   registryPublishAuthorized: false,
 });
 
-/** Workspace tiers that carry a consumable or deployable manifest. */
-const MANIFEST_TIERS = Object.freeze(["packages", "apps", "sites"]);
+/** The file that owns workspace membership; the manifest tiers are derived from it. */
+const WORKSPACE_FILE = "pnpm-workspace.yaml";
+
+/**
+ * Tiers that carry a manifest without being a pnpm workspace member, so they cannot be
+ * derived from the workspace file. `sites/` are deliberately not globbed — each site is
+ * its own install root (ADR 0018) and `pnpm check:sites` owns its structure — but its
+ * manifests still answer to every publish rule below.
+ */
+const UNGLOBBED_MANIFEST_TIERS = Object.freeze(["sites"]);
 
 /**
  * Lifecycle script names that can reach a registry, directly or by hook. `prepare` is
@@ -337,10 +345,75 @@ function globPrefixDir(pattern) {
   return cut < 0 ? "." : upTo.slice(0, cut);
 }
 
+/**
+ * The top-level directories that hold manifests this check must cover: every tier
+ * `pnpm-workspace.yaml` globs, plus the tiers that carry manifests without being
+ * workspace members.
+ *
+ * Derived rather than listed, because the guarantee is "every manifest pnpm treats as a
+ * workspace package is checked". A hand-kept tier list stops covering a tier the moment
+ * one is added to the workspace file, and an uncovered tier could hold a genuinely
+ * publishable package while this check still reported OK. Parsed with a plain regex to
+ * keep the script dependency-free, exactly as `scripts/check-sites.mjs` reads the same
+ * file.
+ *
+ * Fail-closed: a missing workspace file, an unreadable entry, an entry whose top-level
+ * directory is itself a glob, or a workspace that declares no packages all throw rather
+ * than silently narrowing the surface.
+ *
+ * @returns {string[]} tier directory names
+ */
+function manifestTiers() {
+  const path = join(root, WORKSPACE_FILE);
+  if (!existsSync(path)) {
+    throw new Error(`${WORKSPACE_FILE} is missing — workspace membership cannot be derived`);
+  }
+  const tiers = new Set(UNGLOBBED_MANIFEST_TIERS);
+  let globbed = 0;
+  let inPackages = false;
+  for (const line of readFileSync(path, "utf8").split("\n")) {
+    const trimmed = line.trim();
+    if (/^packages:\s*(#.*)?$/.test(line)) {
+      inPackages = true;
+      continue;
+    }
+    if (!inPackages) continue;
+    if (trimmed === "" || trimmed.startsWith("#")) continue;
+    // A line that starts at column zero is the next top-level key, so the list is over.
+    if (!/^\s/.test(line)) break;
+    const entry = /^\s*-\s*["']?([^"'#\s]+)["']?/.exec(line);
+    if (entry === null) {
+      throw new Error(`${WORKSPACE_FILE}: cannot read workspace entry '${trimmed}'`);
+    }
+    const value = entry[1];
+    // An exclusion narrows a tier that another entry already declared; it never adds one.
+    if (value.startsWith("!")) continue;
+    globbed += 1;
+    const tier = value.replace(/^\.\//, "").split("/")[0];
+    if (tier === "" || tier === "." || GLOB_CHARS.test(tier)) {
+      throw new Error(
+        `${WORKSPACE_FILE}: workspace entry '${value}' has no literal top-level directory — this check cannot prove which manifests it covers`,
+      );
+    }
+    tiers.add(tier);
+  }
+  if (globbed === 0) {
+    throw new Error(`${WORKSPACE_FILE} declares no workspace packages — refusing to derive an empty tier list`);
+  }
+  return [...tiers];
+}
+
 /** Every workspace manifest, keyed by package name. */
 function readManifests() {
   const manifests = new Map();
-  for (const tier of MANIFEST_TIERS) {
+  let tiers;
+  try {
+    tiers = manifestTiers();
+  } catch (error) {
+    fail("manifest-hygiene", error instanceof Error ? error.message : String(error));
+    return manifests;
+  }
+  for (const tier of tiers) {
     const tierDir = join(root, tier);
     if (!existsSync(tierDir)) continue;
     for (const entry of readdirSync(tierDir).sort()) {
