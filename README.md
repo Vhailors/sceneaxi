@@ -91,10 +91,11 @@ and it adds no presentation adapter, checklist item, renderer decision, or spend
 ## Development
 
 Install the pinned workspace toolchain with `pnpm install`, then run `pnpm gate`
-for the repository's required syntax, boundary, contract, site-structure, build, test,
-and lint checks. The root `package.json` owns the exact command sequence; the referenced
-TypeScript, Vitest, ESLint, boundary, contract, and site-checker configuration files
-own their respective contracts.
+for the repository's required syntax, boundary, contract, site-structure,
+publish-readiness, build, test, and lint checks. The root `package.json` owns the exact
+command sequence; the referenced TypeScript, Vitest, ESLint, boundary, contract, and
+site-checker configuration files own their respective contracts, and
+[`docs/publish-readiness.md`](docs/publish-readiness.md) owns the publish-ready one.
 
 After building, start the two terminal surfaces from the repository root:
 

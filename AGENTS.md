@@ -122,8 +122,10 @@ gate) enforces both directions — a drifted manifest, export, or version fails,
 does a checklist row the script does not implement. The doc's marked tables
 (`<!-- publish-ready:versions|exports|checklist -->`, plus `consumer-surface` in
 `docs/web-consumer.md`) are machine-read declarations, so edit them as contracts. It is
-also the one place that keeps `exports` maps honest: nothing else checks that an export
-target is a real file or that the engine-SDK archive ships it. Adding a check means
+also what keeps `exports` maps honest — nothing else checks that an export target is a
+real file — and it shares one walker (`scripts/lib/package-exports.mjs`) with the
+engine-SDK archive test, so the gate and the archive cannot disagree about what an
+export target is or about the archive shipping it. Adding a check means
 adding its ID to `CHECK_IDS`, a row to the doc, and an injected-violation case to
 `tests/publish/injected-publish-violations.test.ts`. Sites are exempt from the
 consumable rules by tier (no root export, `link:` deps) because they are separate

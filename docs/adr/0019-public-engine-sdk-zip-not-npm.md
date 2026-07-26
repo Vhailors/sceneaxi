@@ -30,7 +30,8 @@ step, so the bytes the site serves and the bytes CI builds carry the same digest
 Contents are the public consumer surface — `schemas`, `engine-kernel`,
 `engine-presentation`, `engine-orchestrator`, `authoring-core`, `profile-game`,
 `profile-web` — plus their manifests, READMEs, shipped JSON Schema contracts,
-`docs/web-consumer.md`, `docs/DEPENDENCY-MATRIX.md`, and a generated `SDK-README.md`
+`docs/web-consumer.md`, `docs/DEPENDENCY-MATRIX.md`,
+[`docs/publish-readiness.md`](../publish-readiness.md), and a generated `SDK-README.md`
 that restates the support status. An exact entry-list snapshot pins that surface.
 
 The writer is dependency-free plain ESM (`scripts/lib/zip.mjs`) so a Vercel build can
