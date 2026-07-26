@@ -35,8 +35,10 @@ failing obscurely.
 | `undo` | Revert the last completed apply |
 | `open-path [--profile <p>] [--operation <op>]` | Report the shared open-path demo policy, or evaluate one demo operation against it — opens **no** session |
 
-`--cwd <dir>` sets the working directory; `--json` emits the machine envelope
-with exactly the same data as the text rendering.
+`--cwd <dir>` sets the working directory for the session commands above;
+`open-path` opens no session and takes only its own two flags, so `--cwd` refuses
+there as an unknown flag. `--json` works on every command and emits the machine
+envelope with exactly the same data as the text rendering.
 
 Exit codes use the CLI protocol's compatible subset so scripts branch
 identically for shared outcomes: `0` success, `1` operational refusal (typed

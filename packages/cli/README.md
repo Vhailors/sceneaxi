@@ -185,6 +185,7 @@ CLI protocol tests live under `packages/cli/test/`:
 - `project-lifecycle.test.ts` — `new`/`dev`/`test`/`capture`/`report`, determinism
 - `scene-compose.test.ts` — multi-object composition + named refusals
 - `registry-verbs.test.ts` — profile/catalog/asset/evidence listings, commerce inert
+- `profile-open-path.test.ts` — `profile open-path` reporting, projection, and refusals
 - `bin-smoke.test.ts` — the `sceneaxi` binary actually starts (spawned, not in-process)
 - `held-keys.generator.test.ts` — snapshot generator + digest verification
 - `held-keys.command-map.test.ts` — shipped-map coverage + map validation

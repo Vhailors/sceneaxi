@@ -22,8 +22,9 @@ profile, not a shipped website product.
 open-path demo policy — the same table the CLI and both shells report
 ([`docs/open-path-policy.md`](../../docs/open-path-policy.md)). The profile does
 not author its own level: a missing row throws at module load rather than
-falling back. The row is `demo-driveable` on a `kernel-session`, evidenced by
-`tests/e2e/profile-web-golden-path.test.ts`, with `shippingClaim` false.
+falling back. The row's level, session kind, evidence, and `shippingClaim` live
+in that table — schema-backed and kept in lockstep by `pnpm check:contracts` — so
+they are read from it here rather than copied into this page.
 
 Note that this is independent of Profile Conformance, which still lists Web as
 `not-yet-claimed` — the two grade different things.

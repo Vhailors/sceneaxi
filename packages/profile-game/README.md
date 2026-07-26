@@ -42,12 +42,13 @@ publication, marketplace, or shipping authorization.
 open-path demo policy — the same table the CLI and both shells report
 ([`docs/open-path-policy.md`](../../docs/open-path-policy.md)). The profile does
 not author its own level: a missing row throws at module load rather than
-falling back. The row is `demo-driveable` on a `scene-kernel-session`, evidenced
-by `tests/e2e/profile-game-scene-golden.test.ts`, with `shippingClaim` false.
+falling back. The row's level, session kind, evidence, and `shippingClaim` live
+in that table — schema-backed and kept in lockstep by `pnpm check:contracts` — so
+they are read from it here rather than copied into this page.
 
-That structure is why the sentence above stays true under review pressure: "the
-Game profile opens a real multi-object scene" and "the Game profile is a
-shippable game" are one careless sentence apart, so a demo that claims shipping
-refuses by name (`OPEN_PATH_SHIPPING_CLAIM_FORBIDDEN`) rather than by convention.
+That structure is what holds under review pressure: "the Game profile opens a
+real multi-object scene" and "the Game profile is a shippable game" are one
+careless sentence apart, so a demo that claims shipping refuses by name
+(`OPEN_PATH_SHIPPING_CLAIM_FORBIDDEN`) rather than by convention.
 
 Boundaries are enforced at monorepo package level.

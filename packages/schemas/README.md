@@ -141,6 +141,10 @@ Registry seed state: `registryVersion` is `1.0.0`; `entries` holds exactly 1 rev
   `openPathPolicyViewFor()` — keeps the true `policyCount`, marks itself with
   `filteredTo`, and refuses an off-policy profile with the same
   `OPEN_PATH_PROFILE_UNKNOWN` an evaluation gives
+- Shared command-surface helpers: `resolveOpenPathSurfaceRequest()` turns the two
+  optional flag values into one tagged report/project/evaluate/refuse outcome,
+  and `openPathSurfaceNotes()` owns the sentences printed beside it, so neither
+  command surface re-implements the branch table or restates the policy
 - Lives here because `schemas` is the only package the dependency matrix lets
   both profiles, the CLI, and both shells name — so parity cost no boundary
 - `shippingClaim` is `false` structurally, and `@sceneaxi/profile-kids` is
