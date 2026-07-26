@@ -90,6 +90,16 @@ describe("publish-ready check — injected violations", () => {
     expect(res.stderr).toContain("[manifest-hygiene] @sceneaxi/importers declares no description");
   });
 
+  it("fails with a structured refusal when a workspace manifest is unreadable", () => {
+    // A broken manifest must refuse like every other drift, not die with a raw stack
+    // trace that names no check.
+    writeTo(fx, "packages/importers/package.json", "{ not json");
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("publish-ready check FAILED");
+    expect(res.stderr).toContain("[manifest-hygiene] packages/importers/package.json is unreadable");
+  });
+
   it("fails when a package drifts off the pinned version plan", () => {
     editManifest(fx, "packages/engine-kernel/package.json", (m) => {
       m.version = "0.1.0";
@@ -160,6 +170,19 @@ describe("publish-ready check — injected violations", () => {
     expect(res.stderr).toContain("[internal-deps-workspace] @sceneaxi/profile-web declares @sceneaxi/schemas@'^1.2.3'");
   });
 
+  it("fails when an internal dependency hides in optionalDependencies", () => {
+    // npm and pnpm both install optional dependencies, so the field is not a way out of
+    // the workspace-protocol rule.
+    editManifest(fx, "packages/profile-web/package.json", (m) => {
+      m.optionalDependencies = { "@sceneaxi/schemas": "^1.2.3" };
+    });
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "[internal-deps-workspace] @sceneaxi/profile-web declares @sceneaxi/schemas@'^1.2.3' in optionalDependencies",
+    );
+  });
+
   it("fails when a package grows a publish lifecycle hook", () => {
     editManifest(fx, "packages/schemas/package.json", (m) => {
       m.scripts = { prepublishOnly: "echo build" };
@@ -167,6 +190,17 @@ describe("publish-ready check — injected violations", () => {
     const res = runCheck(fx, CHECK);
     expect(res.status).toBe(1);
     expect(res.stderr).toContain("[no-publish-hooks] @sceneaxi/schemas declares a 'prepublishOnly' script");
+  });
+
+  it("fails when a package grows a prepare hook", () => {
+    // npm runs `prepare` during both publish and pack, so it is a publish hook like the
+    // siblings around it.
+    editManifest(fx, "packages/schemas/package.json", (m) => {
+      m.scripts = { prepare: "echo build" };
+    });
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("[no-publish-hooks] @sceneaxi/schemas declares a 'prepare' script");
   });
 
   it("fails when a package declares publishConfig", () => {
@@ -211,6 +245,17 @@ describe("publish-ready check — injected violations", () => {
     expect(res.status).toBe(1);
     expect(res.stderr).toContain(
       "[no-registry-publish] .github/workflows/gate.yml can run a registry publish (pnpm publish)",
+    );
+  });
+
+  it("fails when a CI workflow wraps the publish across a line continuation", () => {
+    // A command split over two lines is still one command; folding continuations away is
+    // what keeps the head and its verb together.
+    appendTo(fx, ".github/workflows/gate.yml", "\n      - run: npm \\\n          publish --access public\n");
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "[no-registry-publish] .github/workflows/gate.yml can run a registry publish (npm publish)",
     );
   });
 

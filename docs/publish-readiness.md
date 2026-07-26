@@ -106,7 +106,7 @@ claim a guarantee the gate does not enforce.
 | `files-resolve` | Every `files` entry exists — a glob is checked against the directory it can match inside — so a packed tarball would carry what the manifest claims. |
 | `internal-deps-workspace` | Every internal `@sceneaxi/*` dependency uses the `workspace:` protocol — except a deployable site, which is its own install root and uses a `link:` path into `packages/` (ADR 0018). Never `file:`, a Git ref, or a version range. |
 | `no-publish-hooks` | No manifest, root included, declares `publishConfig` or a publish/pack lifecycle script. |
-| `no-registry-publish` | No package script and no CI workflow can run a registry-mutating verb (`publish`, `unpublish`, `dist-tag`, `deprecate`) through `npm`/`pnpm`/`yarn`/`bun`/`npx`/`changeset`, in any flag order — `pnpm -r publish` is caught exactly like `npm publish`. |
+| `no-registry-publish` | No package script and no CI workflow *directly invokes* a registry-mutating verb (`publish`, `unpublish`, `dist-tag`, `deprecate`) through `npm`/`pnpm`/`yarn`/`bun`/`npx`/`changeset`, in any flag order and across shell line continuations — `pnpm -r publish` is caught exactly like `npm publish`. A verb reached indirectly through an interpreter (`bash release.sh`) is deliberately out of scan; every manifest staying `private: true` is what covers that. |
 | `profile-core-pin` | Each profile's `sceneaxi.corePin` equals the plan pin and matches the `corePin` literal in its seam source. |
 | `sdk-covers-exports` | Every export target of every engine-SDK package is in the pinned SDK file list, so the archive is self-consistent. |
 | `sdk-consumer-packages` | Every documented consumer package ships in the SDK archive, and no Kids file is pinned into it. |

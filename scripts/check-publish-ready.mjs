@@ -46,15 +46,28 @@ export const PUBLISH_PLAN = Object.freeze({
 /** Workspace tiers that carry a consumable or deployable manifest. */
 const MANIFEST_TIERS = Object.freeze(["packages", "apps", "sites"]);
 
-/** Lifecycle script names that can reach a registry, directly or by hook. */
+/**
+ * Lifecycle script names that can reach a registry, directly or by hook. `prepare` is
+ * in the list because npm runs it during both `npm publish` and `npm pack`, so leaving
+ * it out would let a publish-time hook hide beside its refused siblings.
+ */
 const PUBLISH_LIFECYCLE_SCRIPTS = Object.freeze([
   "publish",
   "prepublish",
   "prepublishOnly",
   "postpublish",
+  "prepare",
   "prepack",
   "postpack",
   "release",
+]);
+
+/** Manifest fields whose values are dependency ranges. */
+const DEPENDENCY_FIELDS = Object.freeze([
+  "dependencies",
+  "devDependencies",
+  "peerDependencies",
+  "optionalDependencies",
 ]);
 
 /** Commands that can reach a registry at all. */
@@ -181,17 +194,23 @@ function namespacePattern(pattern) {
 // --- shell command inspection -----------------------------------------------------
 
 /**
- * The registry publish commands a script or workflow body can run.
+ * The registry publish commands a script or workflow body invokes directly.
  *
- * Each line is split into individual commands first, so a verb only counts against the
- * command head it actually belongs to, and the verb is matched as a whole token
- * anywhere in that command — flag order is not a way out.
+ * Shell line continuations are folded away first, because a command wrapped across
+ * lines is one command and splitting on raw newlines would separate its head from its
+ * verb. Each line is then split into individual commands, so a verb only counts against
+ * the command head it actually belongs to, and the verb is matched as a whole token
+ * anywhere in that command — flag order is not a way out either.
+ *
+ * This sees direct invocations only. A verb reached through an interpreter
+ * (`bash release.sh`) is out of scan by design — every manifest staying `private: true`
+ * is what covers that, and `docs/publish-readiness.md` states the bound.
  *
  * @returns {string[]} the distinct `<head> <verb>` shapes found
  */
 function registryPublishCommands(text) {
   const found = new Set();
-  for (const line of text.split("\n")) {
+  for (const line of text.replace(/\\[ \t]*\r?\n/g, " ").split("\n")) {
     for (const command of line.split(/[;&|()`]+/)) {
       const tokens = command
         .split(/\s+/)
@@ -231,7 +250,16 @@ function readManifests() {
       const dir = join(tierDir, entry);
       const manifestPath = join(dir, "package.json");
       if (!existsSync(manifestPath)) continue;
-      const json = JSON.parse(readFileSync(manifestPath, "utf8"));
+      let json;
+      try {
+        json = JSON.parse(readFileSync(manifestPath, "utf8"));
+      } catch (error) {
+        fail(
+          "manifest-hygiene",
+          `${relative(root, manifestPath)} is unreadable: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        continue;
+      }
       const name = json.name;
       if (typeof name !== "string" || name.length === 0) {
         fail("manifest-hygiene", `${relative(root, manifestPath)} has no package name`);
@@ -341,7 +369,7 @@ function checkManifests(manifests) {
       }
     }
 
-    for (const field of ["dependencies", "devDependencies", "peerDependencies"]) {
+    for (const field of DEPENDENCY_FIELDS) {
       for (const [dep, range] of Object.entries(json[field] ?? {})) {
         if (!dep.startsWith("@sceneaxi/")) continue;
         const allowed = consumable ? /^workspace:/ : /^link:\.\.\/\.\.\/packages\//;
