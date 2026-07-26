@@ -122,7 +122,7 @@ only, and presentation invents no state the kernel does not own.
   - screenshot showed the lit artifact (box plus cylinder cap), not a blank canvas
 
 - **The shipped product surface**, the umbrella live open path (`/open`, ADR
-  0021), which is that page. Verified 2026-07-25 in Chrome against the production
+  0022), which is that page. Verified 2026-07-25 in Chrome against the production
   build (`next build && next start`), SwiftShader ANGLE:
   - frame report rendered on the page:
     `backend three · label Three presentation core · surface webgl-canvas · pixelsDrawn true · drawCalls 15 · mounted service-crate-left, service-crate-root, service-crate-stacked`

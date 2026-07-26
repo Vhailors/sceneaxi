@@ -29,7 +29,8 @@ web-framework dependency never moves the root lockfile or the gate runtime. The 
 still gated — `pnpm check:syntax`,
 `pnpm check:boundaries`, and `pnpm check:sites` all cover it, and all site logic lives in
 `packages/site-kit` where `pnpm gate` tests it. The tier's one engine edge is
-umbrella → `@sceneaxi/engine-presentation` for the public viewport (ADR 0022); every
+umbrella → `@sceneaxi/engine-presentation` for every viewport the umbrella owns — the
+public `/open` surface and the entitled `/editor` surface alike (ADR 0022); every
 other engine package stays denied to every site. The umbrella is also the one site wired
 to the identity plane (`@sceneaxi/auth` + `@sceneaxi/billing`, ADR 0021) and only through
 `sites/umbrella/src/lib/identity-plane.ts`; the catalogs read identity through the same

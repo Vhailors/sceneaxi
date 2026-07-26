@@ -5,7 +5,7 @@ game-asset catalog, website-asset catalog). The three Next.js sites are thin
 view + wiring layers over this package, so every non-presentational site
 behaviour is testable in `pnpm gate` with no browser, no network, and no
 framework in the hermetic package tier. The one behaviour that needs a browser
-is the umbrella's viewport (ADR 0022), and even there the decision of what is
+is the umbrella's viewports (ADR 0022), and even there the decision of what is
 opened — and what may be drawn — lives here.
 
 ## What lives here
