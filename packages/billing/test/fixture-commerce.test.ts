@@ -15,6 +15,7 @@ import {
   FIXTURE_COMMERCE_CHECKOUT_PURPOSE,
   FIXTURE_COMMERCE_LISTING_IDS,
   FIXTURE_COMMERCE_MODE,
+  LISTING_SALE_IDEMPOTENCY_PREFIX,
   appendCreditEntry,
   applyCheckoutCompletedGrant,
   authorizeFixtureListingPurchase,
@@ -631,6 +632,36 @@ describe("the money purchase settles into bookkeeping only", () => {
     expect(refused.ok).toBe(false);
     if (refused.ok) return;
     expect(refused.reason).toBe(BILLING_REFUSE_REASONS.checkoutIntentInvalid);
+  });
+
+  it("refuses an in-namespace key renamed onto someone else's settlement", () => {
+    // The sale id is read out of the intent's key, and the completion pins
+    // every other field — so a key kept inside the "sale:" namespace is the
+    // only way bookkeeping could be re-attached to a sale nobody settled.
+    const intent = moneyIntent();
+    const completion = settleIntent(intent);
+    const renamed = {
+      ...intent,
+      idempotencyKey: `${LISTING_SALE_IDEMPOTENCY_PREFIX}sale_someone_elses`,
+    };
+    const refused = settleFixtureListingMoneySale({
+      completion,
+      intent: renamed,
+      now: NOW,
+    });
+    expect(refused.ok).toBe(false);
+    if (refused.ok) return;
+    expect(refused.reason).toBe(BILLING_REFUSE_REASONS.checkoutIntentInvalid);
+
+    // The genuine intent still settles, under its own sale id.
+    const settled = settleFixtureListingMoneySale({
+      completion,
+      intent,
+      now: NOW,
+    });
+    expect(settled.ok).toBe(true);
+    if (!settled.ok) return;
+    expect(settled.value.saleId).toBe("sale_fixture_money");
   });
 
   it("refuses a live settlement, having no way to authorize one", () => {

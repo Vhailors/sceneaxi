@@ -61,7 +61,7 @@ import {
   loadCatalogListings,
   lookupCatalogListing,
 } from "./catalog-listings.js";
-import { assertModeAuthorized } from "./checkout.js";
+import { assertModeAuthorized, deriveIntentId } from "./checkout.js";
 import {
   evaluateEntitlement,
   type EntitlementPaymentMethod,
@@ -498,6 +498,16 @@ export function settleFixtureListingMoneySale(
     return billingRefuse(
       BILLING_REFUSE_REASONS.checkoutIntentInvalid,
       `A listing settlement's intent must be keyed "${LISTING_SALE_IDEMPOTENCY_PREFIX}<saleId>"; the sale id is not supplied separately, so bookkeeping cannot be attached to a different sale after the fact.`,
+    );
+  }
+  // The completion pins `intentId`, and every real intent derives that id from
+  // its own idempotency key. Re-deriving it is what binds the key — and so the
+  // sale id read out of it below — to the verified settlement; without it the
+  // key is the one intent field a caller could rename after the fact.
+  if (deriveIntentId(intent.value.idempotencyKey) !== intent.value.intentId) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.checkoutIntentInvalid,
+      "The persisted checkout intent's idempotency key does not derive its intent id; the settled sale cannot be renamed.",
     );
   }
   const saleId = intent.value.idempotencyKey.slice(

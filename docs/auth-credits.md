@@ -547,7 +547,10 @@ Four properties are what the module adds over calling the primitives in order:
 4. **Money bookkeeping is bound to a settlement.** `settleFixtureListingMoneySale` takes only
    the branded output of `parseCheckoutCompletedEvent` plus the persisted intent it was bound
    to, and recovers the sale id from that intent's `sale:<saleId>` idempotency key rather than
-   accepting one. A `MoneySplitRecord` on this path can therefore only describe money a
+   accepting one. That key is itself bound to the settlement: `intentId` is the intent field
+   the completion pins, and every real intent derives it from its own idempotency key, so the
+   key is re-derived and compared before the sale id is read out of it — renaming the key onto
+   another sale refuses. A `MoneySplitRecord` on this path can therefore only describe money a
    signature-verified Stripe **test** settlement actually took, for an enabled SKU, at the
    price the seller listed. A settled amount that differs from the listing refuses.
 
