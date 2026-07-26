@@ -30,6 +30,7 @@ import {
   createUmbrellaIdentityPlane,
   parseSessionToken,
   siteReasonForAuthReason,
+  siteReasonForBillingReason,
 } from "../../sites/umbrella/src/index.ts";
 import {
   CATALOG_IDENTITY_SURFACE,
@@ -912,6 +913,49 @@ describe("acceptance 5 — an unwired deployment refuses by name", () => {
     expect(siteReasonForAuthReason("KIDS_IDENTITY_SURFACE_DENIED")).toBe("KIDS_SURFACE_DENIED");
     expect(siteReasonForAuthReason("AUTH_STORE_FAILED")).toBe("IDENTITY_PLANE_UNAVAILABLE");
     expect(siteReasonForAuthReason("AUTH_SESSION_NOT_FOUND")).toBe("IDENTITY_SESSION_ABSENT");
+  });
+
+  it("reports each billing refusal on the plane that was read, not on the checkout", () => {
+    // The pack catalog is a committed contract fixture. An unreadable one is the
+    // billing plane being unavailable, which is what the throw path already reports —
+    // never a checkout handoff that came back malformed.
+    expect(siteReasonForBillingReason("BILLING_CATALOG_INVALID")).toBe(
+      "BILLING_PLANE_UNAVAILABLE",
+    );
+    // Ledger reasons describe the balance wherever they surface.
+    for (const reason of [
+      "CREDIT_DELTA_SIGN_MISMATCH",
+      "CREDIT_AMOUNT_INVALID",
+      "CREDIT_ENTRY_INVALID",
+      "CREDIT_LEDGER_STATE_INVALID",
+    ] as const) {
+      expect(siteReasonForBillingReason(reason, "credits")).toBe("CREDIT_ADAPTER_OUTPUT_INVALID");
+      expect(siteReasonForBillingReason(reason)).toBe("CREDIT_ADAPTER_OUTPUT_INVALID");
+    }
+    // `@sceneaxi/billing` raises these from both the ledger and the checkout builder,
+    // so the plane the caller was reading decides which one is unavailable.
+    expect(siteReasonForBillingReason("CREDIT_CLOCK_INVALID", "credits")).toBe(
+      "CREDITS_PLANE_UNAVAILABLE",
+    );
+    expect(siteReasonForBillingReason("CREDIT_CLOCK_INVALID")).toBe("BILLING_PLANE_UNAVAILABLE");
+    expect(siteReasonForBillingReason("CREDIT_REQUEST_INVALID", "credits")).toBe(
+      "CREDITS_PLANE_UNAVAILABLE",
+    );
+    expect(siteReasonForBillingReason("CREDIT_REQUEST_INVALID")).toBe(
+      "BILLING_CHECKOUT_REQUEST_INVALID",
+    );
+    // Nothing read through the credits plane may claim a checkout failed.
+    expect(siteReasonForBillingReason("STRIPE_WEBHOOK_PAYLOAD_INVALID", "credits")).toBe(
+      "CREDITS_PLANE_UNAVAILABLE",
+    );
+    // Checkout reasons keep their own plane, and auth reasons still win outright.
+    expect(siteReasonForBillingReason("STRIPE_CREDIT_PACK_UNKNOWN")).toBe(
+      "BILLING_CHECKOUT_REQUEST_INVALID",
+    );
+    expect(siteReasonForBillingReason("KIDS_COMMERCE_DENIED")).toBe("KIDS_SURFACE_DENIED");
+    expect(siteReasonForBillingReason("AUTH_SESSION_EXPIRED", "credits")).toBe(
+      "IDENTITY_SESSION_EXPIRED",
+    );
   });
 });
 

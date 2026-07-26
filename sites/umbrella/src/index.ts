@@ -47,6 +47,7 @@ export {
   siteReasonForAuthReason,
   siteReasonForBillingReason,
   toSitePrincipal,
+  type BillingReadPlane,
   type CheckoutSessionAdapter,
   type IdentityPlaneAdapters,
   type IdentityPlaneWiring,

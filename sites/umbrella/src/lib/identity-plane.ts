@@ -163,11 +163,41 @@ export function siteReasonForAuthReason(reason: AuthRefuseReason): SiteRefusalRe
   }
 }
 
+/**
+ * Which plane a `@sceneaxi/billing` refusal was read through.
+ *
+ * One package owns both the ledger and the checkout builder, and several of its
+ * reasons are raised by both, so the reader names the plane rather than the reason
+ * carrying it. Without this, a balance that could not be read reports a checkout
+ * that could not be built, and the reverse.
+ */
+export type BillingReadPlane = "billing" | "credits";
+
+/**
+ * Billing reasons that describe the *ledger*, never a checkout.
+ *
+ * Grouped rather than enumerated case by case so a reason added to that group later
+ * cannot fall through to a checkout-shaped message on a page that never asked for
+ * a checkout.
+ */
+const CREDIT_LEDGER_REASONS: ReadonlyArray<BillingRefuseReason> = Object.freeze([
+  BILLING_REFUSE_REASONS.accountNotOwned,
+  BILLING_REFUSE_REASONS.amountInvalid,
+  BILLING_REFUSE_REASONS.ledgerStateInvalid,
+  BILLING_REFUSE_REASONS.ledgerOrderInvalid,
+  BILLING_REFUSE_REASONS.entryInvalid,
+  BILLING_REFUSE_REASONS.deltaSignMismatch,
+  BILLING_REFUSE_REASONS.balanceInsufficient,
+  BILLING_REFUSE_REASONS.idempotencyConflict,
+]);
+
 /** Map one `@sceneaxi/billing` reason onto the site refusal registry. */
 export function siteReasonForBillingReason(
   reason: BillingRefuseReason,
+  plane: BillingReadPlane = "billing",
 ): SiteRefusalReason {
   if (isAuthReason(reason)) return siteReasonForAuthReason(reason);
+  if (CREDIT_LEDGER_REASONS.includes(reason)) return "CREDIT_ADAPTER_OUTPUT_INVALID";
   switch (reason) {
     case BILLING_REFUSE_REASONS.kidsCommerceDenied:
       return "KIDS_SURFACE_DENIED";
@@ -176,21 +206,27 @@ export function siteReasonForBillingReason(
     case BILLING_REFUSE_REASONS.redirectUrlInsecure:
       return "BILLING_URL_INSECURE";
     case BILLING_REFUSE_REASONS.packUnknown:
-    case BILLING_REFUSE_REASONS.requestInvalid:
       return "BILLING_CHECKOUT_REQUEST_INVALID";
     case BILLING_REFUSE_REASONS.storeFailed:
       return "CREDITS_PLANE_UNAVAILABLE";
-    case BILLING_REFUSE_REASONS.accountNotOwned:
-    case BILLING_REFUSE_REASONS.ledgerStateInvalid:
-    case BILLING_REFUSE_REASONS.ledgerOrderInvalid:
-    case BILLING_REFUSE_REASONS.entryInvalid:
-    case BILLING_REFUSE_REASONS.balanceInsufficient:
-    case BILLING_REFUSE_REASONS.idempotencyConflict:
-      return "CREDIT_ADAPTER_OUTPUT_INVALID";
+    // Raised by the ledger and by the checkout builder alike, so which one is
+    // unavailable is a fact about the caller, not about the reason.
+    case BILLING_REFUSE_REASONS.requestInvalid:
+      return plane === "credits"
+        ? "CREDITS_PLANE_UNAVAILABLE"
+        : "BILLING_CHECKOUT_REQUEST_INVALID";
+    case BILLING_REFUSE_REASONS.clockInvalid:
+      return plane === "credits" ? "CREDITS_PLANE_UNAVAILABLE" : "BILLING_PLANE_UNAVAILABLE";
+    // The pack catalog is a committed contract fixture, so an unreadable or invalid
+    // one is the billing plane being unavailable — the same reading the throw path
+    // in `readCreditPackCatalog` already gives it, and never a checkout handoff that
+    // came back malformed, which is what the default below reports.
+    case BILLING_REFUSE_REASONS.catalogInvalid:
+      return "BILLING_PLANE_UNAVAILABLE";
     default:
       // Any other billing reason still reaches the reader as a refusal from the
-      // billing plane, never as a checkout that could not complete.
-      return "BILLING_ADAPTER_OUTPUT_INVALID";
+      // plane they were reading, never as a checkout that could not complete.
+      return plane === "credits" ? "CREDITS_PLANE_UNAVAILABLE" : "BILLING_ADAPTER_OUTPUT_INVALID";
   }
 }
 
@@ -394,7 +430,7 @@ async function readLedgerState(
   // plane's own migration, so its absence means the balance is unknown.
   if (account === undefined) return refuse("CREDITS_PLANE_UNAVAILABLE");
   const state = loadLedgerState(account, await store.listEntries(account.accountId));
-  if (!state.ok) return refuse(siteReasonForBillingReason(state.reason));
+  if (!state.ok) return refuse(siteReasonForBillingReason(state.reason, "credits"));
   return ok(state.value);
 }
 
@@ -437,7 +473,7 @@ export function createBillingCreditsAdapter(options: {
         userId: input.userId,
         now: options.clock(),
       });
-      if (!granted.ok) return refuse(siteReasonForBillingReason(granted.reason));
+      if (!granted.ok) return refuse(siteReasonForBillingReason(granted.reason, "credits"));
       const entry = granted.value.entry;
       if (granted.value.replayed || entry === undefined) {
         return ok(balanceOf(granted.value.state, input.userId));
