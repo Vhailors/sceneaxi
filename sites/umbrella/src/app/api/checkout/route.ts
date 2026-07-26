@@ -33,14 +33,6 @@ export async function POST(request: NextRequest) {
       ? attemptEntry.trim()
       : crypto.randomUUID();
 
-  // Redirect targets come from the deployment's configured umbrella origin, never from
-  // this request's `Host`: a forwarded or aliased host must not be able to point the
-  // payment provider's post-payment redirect away from SceneAxi.
-  const origin = resolveCheckoutRedirectOrigin(process.env, new URL(request.url).origin);
-  if (!origin.ok) {
-    return refusalResponse(origin.reason, origin.message);
-  }
-
   // The plane is bound to this request's session credential, so the billing port
   // authorizes the purchase against the session the server verified rather than
   // against the user id this form submitted.
@@ -49,6 +41,15 @@ export async function POST(request: NextRequest) {
 
   if (!plane.wired.billing) {
     return refusalResponse("BILLING_PLANE_NOT_WIRED", SITE_REFUSALS.BILLING_PLANE_NOT_WIRED);
+  }
+
+  // Redirect targets come from the deployment's configured umbrella origin, never from
+  // this request's `Host`: a forwarded or aliased host must not be able to point the
+  // payment provider's post-payment redirect away from SceneAxi. Resolved after the
+  // wiring check, so an unwired deployment is not misdiagnosed as a misconfigured origin.
+  const origin = resolveCheckoutRedirectOrigin(process.env, new URL(request.url).origin);
+  if (!origin.ok) {
+    return refusalResponse(origin.reason, origin.message);
   }
 
   const principal = await plane.identity.resolvePrincipal({

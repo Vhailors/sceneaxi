@@ -633,46 +633,60 @@ export function createUmbrellaIdentityPlane(
   const clock = wiring.clock ?? (() => Date.now());
   const resolvedAdmin = resolveAdminIdentity(env);
   const admin = resolvedAdmin.ok ? resolvedAdmin.value : null;
-  // Explicit wiring wins over the deployment's handles, so a test drives the plane
-  // without the ambient registry ever being consulted.
-  const handles = umbrellaPlaneHandles();
-  const identityPort = wiring.identityPort ?? handles.identityPort;
-  const creditStore = wiring.creditStore ?? handles.creditStore;
-  const checkoutSessions = wiring.checkoutSessions ?? handles.checkoutSessions;
+  // Explicit wiring wins over the deployment's handles, and a slot reaches for them only
+  // when nothing was injected for it, so a fully wired test drives the plane without the
+  // ambient registry — and whatever provider clients a deployment builds there — ever
+  // being reached.
+  let deployment: UmbrellaPlaneHandles | undefined;
+  const deploymentHandle = <Key extends keyof UmbrellaPlaneHandles>(
+    key: Key,
+  ): UmbrellaPlaneHandles[Key] => {
+    deployment ??= umbrellaPlaneHandles();
+    return deployment[key];
+  };
+  const identityPort = (): IdentityPort | undefined =>
+    wiring.identityPort ?? deploymentHandle("identityPort");
+  const checkoutSessions = (): CheckoutSessionAdapter | undefined =>
+    wiring.checkoutSessions ?? deploymentHandle("checkoutSessions");
 
-  const identityAdapter =
-    wiring.identity ??
-    (identityPort === undefined
-      ? undefined
-      : createAuthIdentityAdapter({
-          port: identityPort,
-          ...(wiring.sessionToken === undefined ? {} : { sessionToken: wiring.sessionToken }),
-        }));
+  const buildIdentityAdapter = (): SiteIdentityAdapter | undefined => {
+    const port = identityPort();
+    if (port === undefined) return undefined;
+    return createAuthIdentityAdapter({
+      port,
+      ...(wiring.sessionToken === undefined ? {} : { sessionToken: wiring.sessionToken }),
+    });
+  };
 
-  const creditsAdapter =
-    wiring.credits ??
-    (creditStore === undefined
-      ? undefined
-      : createBillingCreditsAdapter({ store: creditStore, clock }));
+  const buildCreditsAdapter = (): SiteCreditsAdapter | undefined => {
+    const store = wiring.creditStore ?? deploymentHandle("creditStore");
+    if (store === undefined) return undefined;
+    return createBillingCreditsAdapter({ store, clock });
+  };
 
-  const billingAdapter =
-    wiring.billing ??
-    createBillingCheckoutAdapter({
+  const buildBillingAdapter = (): SiteBillingAdapter => {
+    const port = identityPort();
+    return createBillingCheckoutAdapter({
       catalog: readCreditPackCatalog(wiring.creditPacks),
       admin,
       verifyBuyer:
-        identityPort === undefined
+        port === undefined
           ? null
           : () =>
               verifyCarriedSession({
-                port: identityPort,
+                port,
                 surface: "site",
                 sessionToken: wiring.sessionToken,
               }),
-      sessions: checkoutSessions ?? null,
+      sessions: checkoutSessions() ?? null,
       mode: billingMode,
       clock,
     });
+  };
+
+  const identityAdapter = wiring.identity ?? buildIdentityAdapter();
+  const creditsAdapter = wiring.credits ?? buildCreditsAdapter();
+  const billingAdapter = wiring.billing ?? buildBillingAdapter();
 
   return Object.freeze({
     // The port re-checks session validity against its own clock, so it is given the
@@ -689,7 +703,7 @@ export function createUmbrellaIdentityPlane(
       credits: creditsAdapter !== undefined,
       // Billing counts as wired only when a checkout can actually be created.
       // Listing packs works regardless, because the catalog is committed.
-      billing: wiring.billing !== undefined || checkoutSessions !== undefined,
+      billing: wiring.billing !== undefined || checkoutSessions() !== undefined,
     }),
     billingMode,
     admin,
