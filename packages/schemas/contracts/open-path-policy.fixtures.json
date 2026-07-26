@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "refuseOnlyProfile": "@sceneaxi/profile-kids",
+  "profiles": [
+    {
+      "profile": "@sceneaxi/profile-game",
+      "demoLevel": "demo-driveable",
+      "sessionKind": "scene-kernel-session",
+      "operations": [
+        "open",
+        "dispatch",
+        "advance",
+        "observe",
+        "save",
+        "replay"
+      ],
+      "evidence": "tests/e2e/profile-game-scene-golden.test.ts",
+      "shippingClaim": false,
+      "summary": "Opens a composed multi-object scene kernel session offline; a development demo, not a shippable game."
+    },
+    {
+      "profile": "@sceneaxi/profile-web",
+      "demoLevel": "demo-driveable",
+      "sessionKind": "kernel-session",
+      "operations": [
+        "open",
+        "dispatch",
+        "advance",
+        "observe",
+        "save",
+        "replay"
+      ],
+      "evidence": "tests/e2e/profile-web-golden-path.test.ts",
+      "shippingClaim": false,
+      "summary": "Opens a single-object kernel session inside the locked Web Experience scope; a development demo, not a shipped website."
+    },
+    {
+      "profile": "@sceneaxi/profile-kids",
+      "demoLevel": "refuse-only",
+      "sessionKind": "none",
+      "operations": [],
+      "evidence": "tests/e2e/profile-kids-refuse-golden.test.ts",
+      "shippingClaim": false,
+      "summary": "Refuses every open-path demo: the Kids product is an isolation boundary with no UI, commerce, identity, or third-party model route."
+    }
+  ]
+}

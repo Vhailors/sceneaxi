@@ -10,11 +10,12 @@
  * 4. Credit pack catalog fixture + docs/auth-credits.md lockstep (sceneaxi#91)
  * 5. Free-vs-paid entitlement matrix + docs/auth-credits.md lockstep (sceneaxi#99)
  * 6. Catalog dual-price listings + docs/auth-credits.md lockstep (sceneaxi#100)
+ * 7. Open-path demo policy + docs/open-path-policy.md lockstep (sceneaxi#137)
  *
  * Fail-closed: missing files, schema violations, duplicate ids, seed drift, or
  * a doc whose fixture table drifts from the canonical JSON all exit 1.
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join, dirname, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -1072,11 +1073,119 @@ if (listingsSurface.ready) {
   }
 }
 
+// --- open-path demo policy + docs/open-path-policy.md lockstep (sceneaxi#137) ---
+const OPEN_PATH_DOC_START = "<!-- open-path-policy:list -->";
+const OPEN_PATH_DOC_END = "<!-- /open-path-policy:list -->";
+
+const openPathDocPath = join(root, "docs", "open-path-policy.md");
+
+const openPathSurface = loadContractSurface({
+  contractName: "open-path-policy",
+  schemaFile: "open-path-policy.schema.json",
+  fixturesFile: "open-path-policy.fixtures.json",
+});
+const openPathFixtures = openPathSurface.fixtures;
+const openPathDoc = load(openPathDocPath, false);
+
+const openPathDocHasContent =
+  openPathDoc !== loadFailed && openPathDoc.trim().length > 0;
+
+if (openPathDoc !== loadFailed && !openPathDocHasContent) {
+  fail(`${relative(root, openPathDocPath)}: document is empty or whitespace-only`);
+}
+
+let openPathProfileCount = 0;
+
+if (openPathSurface.ready) {
+  const profiles = Array.isArray(openPathFixtures.profiles)
+    ? openPathFixtures.profiles
+    : [];
+  openPathProfileCount = profiles.length;
+
+  const duplicateProfiles = duplicateFieldValues(profiles, "profile");
+  if (duplicateProfiles.length > 0) {
+    fail(
+      `open-path-policy.fixtures: duplicate profile(s): ${duplicateProfiles.join(", ")}`,
+    );
+  }
+
+  // No row may claim shipping, and the Kids row must stay refuse-only with no
+  // operations — the two invariants the whole policy exists to hold.
+  for (const row of profiles) {
+    if (!isPlainObject(row)) continue;
+    if (row.shippingClaim !== false) {
+      fail(
+        `open-path-policy.fixtures: ${JSON.stringify(row.profile)} shippingClaim must be false; the open-path policy never authorizes shipping or publication`,
+      );
+    }
+    if (typeof row.evidence !== "string" || row.evidence.trim().length === 0) {
+      fail(
+        `open-path-policy.fixtures: ${JSON.stringify(row.profile)} names no committed evidence for its demo level`,
+      );
+    } else if (!existsSync(join(root, row.evidence))) {
+      // "Every level names the committed test that proves it" is only an
+      // invariant if the name resolves; a non-empty string alone lets a rename
+      // or deletion leave a row pointing at nothing while surfaces keep
+      // printing the stale path as proof.
+      fail(
+        `open-path-policy.fixtures: ${JSON.stringify(row.profile)} names evidence that does not exist: ${row.evidence}`,
+      );
+    }
+    const isKids = row.profile === openPathFixtures.refuseOnlyProfile;
+    if (isKids && (row.demoLevel !== "refuse-only" || row.sessionKind !== "none")) {
+      fail(
+        "open-path-policy.fixtures: the refuse-only profile must stay refuse-only with sessionKind none",
+      );
+    }
+    if (
+      isKids &&
+      (!Array.isArray(row.operations) || row.operations.length !== 0)
+    ) {
+      fail(
+        "open-path-policy.fixtures: the refuse-only profile must declare an empty operation set",
+      );
+    }
+  }
+
+  if (openPathDocHasContent) {
+    const actual = documentBlock({
+      document: openPathDoc,
+      documentPath: openPathDocPath,
+      start: OPEN_PATH_DOC_START,
+      end: OPEN_PATH_DOC_END,
+    });
+    if (actual !== undefined) {
+      const expected = [
+        "| profile | demo level | session kind | operations | evidence | shipping claim |",
+        "|---|---|---|---|---|---|",
+        ...profiles.map((row) => {
+          const operations =
+            Array.isArray(row.operations) && row.operations.length > 0
+              ? row.operations.map((op) => `\`${op}\``).join(", ")
+              : "—";
+          return `| \`${row.profile}\` | \`${row.demoLevel}\` | \`${row.sessionKind}\` | ${operations} | \`${row.evidence}\` | \`${row.shippingClaim}\` |`;
+        }),
+      ].join("\n");
+      if (actual !== expected) {
+        fail(
+          "docs/open-path-policy.md: policy table does not exactly match open-path-policy.fixtures.json (profile, demo level, session kind, operations, evidence, shipping claim columns in order)",
+        );
+      }
+    }
+
+    if (!openPathDoc.includes("open-path-policy.fixtures.json")) {
+      fail(
+        "docs/open-path-policy.md: does not name the canonical open-path policy fixture path",
+      );
+    }
+  }
+}
+
 if (errors.length > 0) {
   for (const e of errors) console.error(`contract check FAIL: ${e}`);
   console.error(`contract check FAILED — ${errors.length} error(s)`);
   process.exit(1);
 }
 console.log(
-  `contract check OK — ${authoringJobCount} shared authoring jobs valid, doc table matches, E1+E2 bound to one list; plugin capability registry 1.0.0 seed pinned to ${REGISTRY_SEED_ENTRIES.length} reviewed capability and schema-locked; plugin-manifest inert example schema-locked; ${creditPackCount} test-mode credit packs schema-locked and doc-bound; ${entitlementCapabilityCount} entitlement capabilities schema-locked, free path intact, doc-bound; ${listingCount} test-mode catalog listings schema-locked, all price modes covered, doc-bound`,
+  `contract check OK — ${authoringJobCount} shared authoring jobs valid, doc table matches, E1+E2 bound to one list; plugin capability registry 1.0.0 seed pinned to ${REGISTRY_SEED_ENTRIES.length} reviewed capability and schema-locked; plugin-manifest inert example schema-locked; ${creditPackCount} test-mode credit packs schema-locked and doc-bound; ${entitlementCapabilityCount} entitlement capabilities schema-locked, free path intact, doc-bound; ${listingCount} test-mode catalog listings schema-locked, all price modes covered, doc-bound; ${openPathProfileCount} open-path policy rows schema-locked, no shipping claim, Kids refuse-only, doc-bound`,
 );

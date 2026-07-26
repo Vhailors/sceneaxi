@@ -12,7 +12,9 @@ import { join } from "node:path";
 import {
   isCommerceActive,
   missingMandatoryMetadata,
+  openPathSurfaceNotes,
   profileConformanceRegistry,
+  resolveOpenPathSurfaceRequest,
   validateCatalogItem,
   type CatalogItem,
 } from "@sceneaxi/schemas";
@@ -32,11 +34,15 @@ import {
 } from "./verb-support.js";
 
 const PROFILE_LIST_FLAGS = new Set<string>([]);
+const PROFILE_OPEN_PATH_FLAGS = new Set(["--profile", "--operation"]);
 const CATALOG_LIST_FLAGS = new Set(["--dir", "--cwd"]);
 const ASSET_LIST_FLAGS = new Set(["--dir", "--cwd"]);
 const EVIDENCE_LIST_FLAGS = new Set(["--dir", "--cwd"]);
 
 const CATALOG_ITEM_SUFFIX = ".catalog-item.json";
+
+const PROFILE_OPEN_PATH_USAGE =
+  "Usage: sceneaxi profile open-path [--profile <@sceneaxi/profile-name>] [--operation <open|dispatch|advance|observe|save|replay>]";
 
 const CATALOG_LIST_USAGE =
   "Usage: sceneaxi catalog list --dir <directory of *.catalog-item.json> [--cwd <dir>]";
@@ -76,6 +82,77 @@ export function runProfileList(
       "Claim status is the registry's, not a readiness or publication claim",
       "Run `sceneaxi protocol inspect` for the protocol contract summary",
     ],
+  );
+}
+
+/**
+ * `profile open-path` — the shared open-path demo policy (sceneaxi#137).
+ *
+ * With no flags this reports `openPathPolicyView()` **verbatim**: the same value
+ * the desktop shell and web shell render, so surface parity is a data identity
+ * the parity suite can assert rather than three prose descriptions a reviewer
+ * has to compare. With `--profile` and `--operation` it runs the shared decision
+ * function, so a refusal here is the same refusal every other surface gets —
+ * including the Kids one, which is a non-zero exit, not a quiet empty row.
+ *
+ * Which of those branches an invocation selects is itself shared
+ * (`resolveOpenPathSurfaceRequest`), as are the sentences printed beside it
+ * (`openPathSurfaceNotes`), so this verb only maps a tagged outcome onto the CLI
+ * envelope and appends its own usage lines. In particular an explicitly empty
+ * `--profile=` or `--operation=` refuses there rather than reading as an absent
+ * flag here.
+ *
+ * The CLI decides nothing about open paths. It cannot: the matrix allows it
+ * schemas and authoring-core only, and the policy is contracts.
+ */
+export function runProfileOpenPath(
+  path: readonly string[],
+  tokens: readonly string[],
+): CliOutcome {
+  const args = parseVerbArgs(tokens);
+  const unknown = refuseUnknownArgs(args, PROFILE_OPEN_PATH_FLAGS, path);
+  if (unknown) return unknown;
+
+  const outcome = resolveOpenPathSurfaceRequest({
+    profile: args.flags.get("--profile"),
+    operation: args.flags.get("--operation"),
+  });
+
+  const notes = openPathSurfaceNotes(outcome);
+
+  if (outcome.kind === "policy") {
+    return success(Object.freeze({ status: "listed", policy: outcome.policy }), [
+      ...notes,
+      "Add --profile and --operation to evaluate one demo against the shared policy",
+    ]);
+  }
+
+  if (outcome.kind === "projection") {
+    return success(Object.freeze({ status: "listed", policy: outcome.policy }), [
+      ...notes,
+    ]);
+  }
+
+  if (outcome.kind === "decision") {
+    return success(
+      Object.freeze({ status: "evaluated", decision: outcome.decision }),
+      [...notes],
+    );
+  }
+
+  const { refusal, operation } = outcome;
+  return failure(
+    outcome.source === "request" ? "AMBIGUOUS_INPUT" : "VALIDATION",
+    refusal.message,
+    {
+      path,
+      details: Object.freeze({
+        reason: refusal.code,
+        profile: refusal.profile,
+        ...(operation === null ? {} : { operation }),
+      }),
+      help: [...notes, PROFILE_OPEN_PATH_USAGE],
+    },
   );
 }
 
@@ -357,6 +434,19 @@ export function profileListHelp(): ResultPayload {
     description:
       "List the versioned Profile Conformance registry (claim status is the registry's, not a readiness claim)",
     flags: Object.freeze({}),
+  });
+}
+
+export function profileOpenPathHelp(): ResultPayload {
+  return Object.freeze({
+    command: "profile open-path",
+    description:
+      "Report the shared open-path demo policy, or evaluate one profile's demo operation against it; demo levels are never a shipping or production-readiness claim",
+    flags: Object.freeze({
+      "--profile": "Limit the report (or the evaluation) to one profile package name",
+      "--operation":
+        "Kernel-seam operation to evaluate (open, dispatch, advance, observe, save, replay); requires --profile",
+    }),
   });
 }
 

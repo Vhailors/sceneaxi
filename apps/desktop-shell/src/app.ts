@@ -12,6 +12,10 @@
 
 import type { ApplyDiagnostic } from "@sceneaxi/authoring-core";
 import {
+  openPathSurfaceNotes,
+  resolveOpenPathSurfaceRequest,
+} from "@sceneaxi/schemas";
+import {
   createDesktopSession,
   type DesktopSession,
   type DesktopSnapshot,
@@ -44,6 +48,8 @@ export const DESKTOP_COMMANDS = Object.freeze({
   propose: "Propose a JSON Pointer edit and render the diff for review",
   apply: "Propose and accept an edit in one non-interactive step",
   undo: "Undo the last completed apply",
+  "open-path":
+    "Report the shared open-path demo policy, or evaluate one demo operation against it (demo only; never a shipping claim)",
 });
 
 const USAGE_LINES: readonly string[] = Object.freeze([
@@ -54,6 +60,7 @@ const USAGE_LINES: readonly string[] = Object.freeze([
   ),
   "",
   "Flags: --document <path> --pointer <json-pointer> --value <json> --cwd <dir> --json",
+  "open-path flags: --profile <@sceneaxi/profile-name> --operation <open|dispatch|advance|observe|save|replay>",
 ]);
 
 const COMMAND_FLAGS: Readonly<Record<string, ReadonlySet<string>>> =
@@ -62,6 +69,7 @@ const COMMAND_FLAGS: Readonly<Record<string, ReadonlySet<string>>> =
     propose: new Set(["--document", "--pointer", "--value", "--cwd"]),
     apply: new Set(["--document", "--pointer", "--value", "--cwd"]),
     undo: new Set(["--cwd"]),
+    "open-path": new Set(["--profile", "--operation"]),
   });
 
 const VALIDATION_DIAGNOSTICS: ReadonlySet<ApplyDiagnostic["code"]> = new Set([
@@ -226,6 +234,50 @@ function unknownArgs(
 }
 
 /**
+ * `open-path` — the shared open-path demo policy (sceneaxi#137).
+ *
+ * The reported payload is `openPathPolicyView()` verbatim, which is the same
+ * value the CLI verb reports, because parity between the surfaces should be a
+ * data identity a test can assert rather than two prose descriptions a reviewer
+ * has to keep aligned. Evaluation calls the same shared decision function, so
+ * the Kids refusal is the shell's refusal too — a non-zero exit, not an
+ * omission.
+ *
+ * The branch selection is shared too (`resolveOpenPathSurfaceRequest`), as are
+ * the sentences printed beside it (`openPathSurfaceNotes`), so this command only
+ * renders a tagged outcome; an explicitly empty `--profile=` or `--operation=`
+ * refuses there rather than reading as an absent flag here.
+ */
+function openPathResult(args: ParsedArgs): DesktopResult {
+  const command = "open-path";
+  const outcome = resolveOpenPathSurfaceRequest({
+    profile: args.flags.get("--profile"),
+    operation: args.flags.get("--operation"),
+  });
+  const notes = openPathSurfaceNotes(outcome);
+
+  if (outcome.kind === "policy" || outcome.kind === "projection") {
+    return ok(command, { policy: outcome.policy }, [...notes]);
+  }
+
+  if (outcome.kind === "decision") {
+    return ok(command, { decision: outcome.decision }, [...notes]);
+  }
+
+  return refuse(
+    command,
+    DesktopExit.USAGE,
+    outcome.refusal.message,
+    {
+      reason: outcome.refusal.code,
+      profile: outcome.refusal.profile,
+      ...(outcome.operation === null ? {} : { operation: outcome.operation }),
+    },
+    [...notes, ...USAGE_LINES],
+  );
+}
+
+/**
  * Execute one desktop command against a session.
  * Pure of process I/O so tests and the binary share one code path.
  */
@@ -286,6 +338,9 @@ export function runDesktopCommand(
       `Unexpected arguments: ${args.positionals.join(" ")}`,
     );
   }
+
+  // Policy is contracts, not documents: this command opens no session at all.
+  if (command === "open-path") return openPathResult(args);
 
   const session = sessionFor(args.flags.get("--cwd"));
 

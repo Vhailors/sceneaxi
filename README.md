@@ -19,7 +19,7 @@ This monorepo is the packaging home for:
 | Web / desktop shells | `apps/web-shell`, `apps/desktop-shell` |
 | Asset catalogs (may split later) | `apps/catalog-game`, `apps/catalog-web` |
 | Deployable web surfaces | `sites/umbrella`, `sites/catalog-game`, `sites/catalog-web` over `packages/site-kit` (ADR 0018; deploy details in [`docs/websites-deploy.md`](docs/websites-deploy.md)) |
-| Public live open path | `sites/umbrella/src/app/open/` — a committed Sculpt Artifact composed and drawn in a real WebGL canvas (ADR 0021) |
+| Public live open path | `sites/umbrella/src/app/open/` — a committed Sculpt Artifact composed and drawn in a real WebGL canvas (ADR 0022) |
 
 **Not in this monorepo:** individual game products (separate repos).
 
@@ -29,7 +29,7 @@ web-framework dependency never moves the root lockfile or the gate runtime. The 
 still gated — `pnpm check:syntax`,
 `pnpm check:boundaries`, and `pnpm check:sites` all cover it, and all site logic lives in
 `packages/site-kit` where `pnpm gate` tests it. The tier's one engine edge is
-umbrella → `@sceneaxi/engine-presentation` for the public viewport (ADR 0021); every
+umbrella → `@sceneaxi/engine-presentation` for the public viewport (ADR 0022); every
 other engine package stays denied to every site.
 
 Package boundaries are executable: `docs/dependency-matrix.json` is the allow/deny
@@ -64,7 +64,7 @@ Presentation is the [Three presentation core](docs/three-presentation-core.md):
 its browser surface draws real pixels through `WebGLRenderer` when a consumer
 supplies a canvas, while node gates use its deterministic headless surface. The
 umbrella's public live open path (`/open`) is the shipped consumer of that canvas
-surface (ADR 0021). Deterministic fixture and live-demo evidence lives at
+surface (ADR 0022). Deterministic fixture and live-demo evidence lives at
 [`issue-73-hybrid-sculpt-golden.json`](.sceneaxi/evidence/issue-73-hybrid-sculpt-golden.json).
 
 The additive [sculpt-quality v1 layer](docs/sculpt-quality.md) deepens that same

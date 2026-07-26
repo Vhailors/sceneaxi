@@ -26,6 +26,12 @@ a marketing word.
 | Umbrella live open path (`/open`) | **R1** | `pnpm test:golden`; in a browser, `cd sites/umbrella && pnpm build && pnpm start` | `tests/e2e/umbrella-live-open-golden.test.ts` (headless surface, no pixel claim) + the browser record in `docs/three-presentation-core.md` |
 | `@sceneaxi/web-shell` | *library only* | — | not yet startable; see sceneaxi#120 |
 
+How far each profile's open path may be *demonstrated*, and by what evidence, is
+owned by [`open-path-policy.md`](open-path-policy.md) — one shared contract the
+profiles, the CLI, and both shells all read. The levels there use this table's
+vocabulary deliberately: `demo-driveable` is R1, `refuse-only` is R0, and neither
+is a shipping claim.
+
 `pnpm gate` runs everything above. `pnpm test:golden` runs just the golden e2e set.
 The Game multi-object and Web Experience tests assert their replay digests against
 checked-in `golden-digests.json` evidence rather than values produced only within
@@ -70,6 +76,12 @@ any of those surfaces would still require widening the matrix.
 The boundary is not widened. Those paths are proven in `tests/e2e/`, which may
 import any package. `scene compose` *is* on the CLI because `composeScene()`
 lives in `authoring-core`.
+
+Same reasoning puts `profile open-path` (and the desktop shell's `open-path`) on
+the *policy* rather than the path: both surfaces report and evaluate the shared
+open-path demo contract, which is `schemas`, and neither opens a kernel session,
+which would not be. See [`open-path-policy.md`](open-path-policy.md), *"Where
+parity stops, and why"*.
 
 ## Deliberate refusals
 

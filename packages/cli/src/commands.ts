@@ -31,10 +31,12 @@ import {
   catalogListHelp,
   evidenceListHelp,
   profileListHelp,
+  profileOpenPathHelp,
   runAssetList,
   runCatalogList,
   runEvidenceList,
   runProfileList,
+  runProfileOpenPath,
 } from "./registry-verbs.js";
 import { runSceneCompose, sceneComposeHelp } from "./scene-verbs.js";
 import { CLI_VERSION, PROTOCOL_SCHEMA_VERSION } from "./version.js";
@@ -173,6 +175,12 @@ const profileGroup = group("profile", "Profile operations (read-only)", {
     "List the versioned Profile Conformance registry",
     (ctx) => runProfileList(ctx.path, ctx.tokens),
     profileListHelp,
+  ),
+  "open-path": argVerb(
+    "open-path",
+    "Report the shared open-path demo policy, or evaluate one demo operation against it (demo only; never a shipping claim)",
+    (ctx) => runProfileOpenPath(ctx.path, ctx.tokens),
+    profileOpenPathHelp,
   ),
 });
 

@@ -130,6 +130,28 @@ Registry seed state: `registryVersion` is `1.0.0`; `entries` holds exactly 1 rev
   package root exports the contract and registry, not this filesystem-backed suite.
 - First development consumer: `@sceneaxi/profile-game` (exports `conformance`)
 
+## Open-path demo policy (sceneaxi#137)
+
+- `contracts/open-path-policy.schema.json` — the closed policy enumeration
+- Canonical data: `contracts/open-path-policy.fixtures.json`, mirrored by
+  `OPEN_PATH_POLICY` in `src/open-path-policy.ts`; `pnpm check:contracts` keeps
+  the fixture, the schema, and the `docs/open-path-policy.md` table in lockstep,
+  and the seam test `test/open-path-policy.test.ts` asserts the TypeScript table
+  and the fixture are identical
+- Shared decision function: `evaluateOpenPathDemo()`; shared surface payload:
+  `openPathPolicyView()`; shared one-profile projection:
+  `openPathPolicyViewFor()` — keeps the true `policyCount`, marks itself with
+  `filteredTo`, and refuses an off-policy profile with the same
+  `OPEN_PATH_PROFILE_UNKNOWN` an evaluation gives
+- Shared command-surface helpers: `resolveOpenPathSurfaceRequest()` turns the two
+  optional flag values into one tagged report/project/evaluate/refuse outcome,
+  and `openPathSurfaceNotes()` owns the sentences printed beside it, so neither
+  command surface re-implements the branch table or restates the policy
+- Lives here because `schemas` is the only package the dependency matrix lets
+  both profiles, the CLI, and both shells name — so parity cost no boundary
+- `shippingClaim` is `false` structurally, and `@sceneaxi/profile-kids` is
+  refuse-only: neither is a convention this package can be talked out of
+
 ## Model Provider Port (sceneaxi#45)
 
 - `contracts/model-provider-port.schema.json` — v1 model/capability descriptors,

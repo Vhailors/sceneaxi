@@ -31,6 +31,10 @@ import {
 } from "@sceneaxi/engine-presentation";
 import {
   createProfileConformanceClaim,
+  evaluateOpenPathDemo,
+  openPathPolicyRowFor,
+  type OpenPathDemoDecision,
+  type OpenPathPolicyRow,
   type ProfileConformanceSurface,
   type ProfileEvidenceHooks,
   type ProfileSeam,
@@ -100,6 +104,41 @@ export const conformance: ProfileConformanceSurface = Object.freeze({
 });
 
 /**
+ * This profile's row in the shared open-path demo policy (sceneaxi#137).
+ *
+ * The Game profile's open path is the most capable one in the product, which is
+ * exactly why it reads its level from the shared table instead of asserting it:
+ * "the Game profile opens a real multi-object scene" and "the Game profile is a
+ * shippable game" are one careless sentence apart, and the policy keeps them
+ * apart structurally — `shippingClaim` is typed `false` and a demo that claims
+ * shipping refuses by name.
+ */
+export const openPathPolicy: OpenPathPolicyRow = (() => {
+  const row = openPathPolicyRowFor("@sceneaxi/profile-game");
+  if (row === undefined) {
+    throw new Error(
+      "@sceneaxi/profile-game has no row in the shared open-path demo policy.",
+    );
+  }
+  return row;
+})();
+
+/**
+ * Ask the shared policy whether this profile may demonstrate one open-path
+ * operation. Identical semantics on every surface: same function, same table.
+ */
+export function evaluateOpenPath(
+  operation: string,
+  claimsShipping = false,
+): OpenPathDemoDecision {
+  return evaluateOpenPathDemo({
+    profile: "@sceneaxi/profile-game",
+    operation,
+    claimsShipping,
+  });
+}
+
+/**
  * Development-only multi-object scene path for the Game profile.
  *
  * The Profile Conformance surface above is a fixed contract shape and stays
@@ -121,6 +160,10 @@ export const conformance: ProfileConformanceSurface = Object.freeze({
  */
 export const sceneGoldenPath = Object.freeze({
   seam,
+  openPath: Object.freeze({
+    policy: openPathPolicy,
+    evaluate: evaluateOpenPath,
+  }),
   status: Object.freeze({
     developmentConsumer: true as const,
     shippingClaim: false as const,

@@ -28,6 +28,11 @@ export {
 } from "./account-panel.js";
 
 export {
+  createOpenPathView,
+  type OpenPathView,
+} from "./open-path-view.js";
+
+export {
   createInspectorSession,
   type InspectorPhase,
   type InspectorSession,

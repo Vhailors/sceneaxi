@@ -33,9 +33,12 @@ failing obscurely.
 | `propose --document <path> --pointer <ptr> --value <json>` | Render the diff for review — **writes nothing** |
 | `apply --document <path> --pointer <ptr> --value <json>` | Propose and accept in one non-interactive step |
 | `undo` | Revert the last completed apply |
+| `open-path [--profile <p>] [--operation <op>]` | Report the shared open-path demo policy, or evaluate one demo operation against it — opens **no** session |
 
-`--cwd <dir>` sets the working directory; `--json` emits the machine envelope
-with exactly the same data as the text rendering.
+`--cwd <dir>` sets the working directory for the session commands above;
+`open-path` opens no session and takes only its own two flags, so `--cwd` refuses
+there as an unknown flag. `--json` works on every command and emits the machine
+envelope with exactly the same data as the text rendering.
 
 Exit codes use the CLI protocol's compatible subset so scripts branch
 identically for shared outcomes: `0` success, `1` operational refusal (typed
@@ -93,3 +96,11 @@ hashes — including through the runnable `sceneaxi-desktop apply` path (this is
 what issue #58 pinned for the library wrapper, now extended to the startable
 surface). `test/bin-smoke.test.ts` spawns the real binary so a broken
 entrypoint fails here rather than shipping as a "startable" claim.
+
+`open-path` extends that parity from documents to *policy*:
+`tests/parity/open-path-policy-parity.test.ts` asserts this shell, the CLI, and
+the web shell report one identical payload and reach the same verdict for every
+profile × operation, including the Kids refusal
+([`docs/open-path-policy.md`](../../docs/open-path-policy.md)). The command
+reports policy only — opening a kernel session would need `engine-kernel`, which
+the matrix denies this package.
