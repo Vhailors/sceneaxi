@@ -15,6 +15,16 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // Several suites here are process-level rather than unit-level: the
+    // injected-violation suites copy the tree and spawn a real gate checker
+    // (`check-syntax` alone parses every source file with the TypeScript
+    // compiler), and the `bin-smoke` suites spawn the built workspace binaries.
+    // Vitest's 5s default makes those a wall-clock budget, so the same
+    // assertions go red on a slower or contended machine — a gate failing on
+    // host speed rather than on a violation. This raises the budget only: it
+    // skips no test and allows no failure, and a suite that truly hangs still
+    // fails the gate.
+    testTimeout: 60_000,
     include: [
       "packages/*/test/**/*.test.ts",
       "apps/*/test/**/*.test.ts",

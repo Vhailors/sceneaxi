@@ -19,7 +19,9 @@ L2  authoring-core     the one agent-native runtime/authoring core (document mod
                        Model Provider Port)
 L3  profiles · cli · importers · provider adapters · plugin-host · auth ← billing
                        (identity plane; schema in db/migrations)
-L4  apps               (leaves; nothing depends on an app)
+L4  apps               (leaves; nothing depends on an app), plus one charted edge
+                       web-shell holds alone: auth + billing for its account /
+                       credit-balance view model
 L4  sites              site-kit ← the three deployable sites (leaves; ADR 0018), plus
                        two charted edges the umbrella alone holds: engine-presentation
                        for every viewport it owns — public /open and entitled /editor
@@ -55,6 +57,11 @@ Deliberate denials that carry design intent:
   impossible for the orbiting CLI to become the missing core (Sol review F2).
 - **shells → cli: denied.** Shells are protocol *clients* of `authoring-core`'s
   application service — one behavior, many faces — not spawners of the CLI binary.
+- **web-shell → `auth` + `billing`: allowed; desktop-shell → either: denied.** The
+  web shell's `createAccountPanel()` is a login / credit-balance **view model** over
+  those two seams, so it names them the way any other consumer does; it implements no
+  identity and no ledger. The desktop shell has no account surface and therefore no
+  such edge. Contracts and ownership: [`auth-credits.md`](auth-credits.md).
 - **catalogs → authoring-core/engine/profiles: denied.** Catalogs touch the Core only
   through the catalog pipeline contracts in `schemas`.
 - **profile → profile: denied.** Profiles never import each other.

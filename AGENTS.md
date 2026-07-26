@@ -29,6 +29,11 @@ SceneAxi = interactive engine/library + versioned profiles (Game, Web Experience
   `tests/boundary/injected-violations.test.ts` injects forbidden edges into a
   temp fixture and asserts `check-boundaries.mjs` fails; `tests/syntax/` does the
   same for the syntax gate. Extend those fixtures when you extend the checkers.
+  Those suites, and the `bin-smoke` ones, are process-level: they copy the tree
+  and spawn a real checker or binary. `vitest.config.ts` owns the one
+  `testTimeout` that keeps them from going red on host speed instead of on a
+  violation — a wall-clock allowance, never a skipped assertion, and not a place
+  to hide a slow test.
 - Package exports are source-backed, which Node cannot follow at runtime, so the
   workspace binaries run `tsc --build` output through the shared resolver
   `scripts/workspace-dist-resolver.mjs` (mapping derived from the dependency
@@ -164,7 +169,10 @@ field so `admin` is unclaimable and comes only from `SCENEAXI_ADMIN_EMAIL`;
 ledger is append-only in both the pure code and a DB trigger; Stripe `live` refuses
 without an explicit `liveModeAuthorized` captain gate; money splits are
 bookkeeping-only (no Connect payouts); Kids commerce and Kids identity are refused
-by name at four independent points. Secrets are env-only. This plane is product
+by name — `AUTH_REFUSE_REASONS.kidsSurfaceDenied` and
+`BILLING_REFUSE_REASONS.kidsCommerceDenied` — independently on every path that can
+reach identity or a charge, so adding a path means adding its deny, not relying on
+an upstream one. Secrets are env-only. This plane is product
 user auth and does **not** replace held-key captain policy; it adds no CLI verb.
 The credit-pack, entitlement-matrix, and catalog-listing fixtures are canonical
 JSON kept in lockstep with `docs/auth-credits.md` by `pnpm check:contracts` —

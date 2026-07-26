@@ -351,7 +351,7 @@ a lookup against an account it merely named. Those refusals are still spoken by
 `evaluateEntitlement` immediately below, which owns the identity vocabulary — step 4 only
 declines to read, so one defect keeps one refusal. The supplied ownership claim only earns
 the *first* read, though, since the caller wrote it: the account the store returns is itself
-re-checked against the guarded user and refuses `ENTITLEMENT_ACCOUNT_NOT_OWNED` before its
+re-checked against the guarded user and refuses `CREDIT_ACCOUNT_NOT_OWNED` before its
 history is loaded or any metering key is compared, so naming a stranger's account id cannot
 make persistence answer questions about that account's entries.
 

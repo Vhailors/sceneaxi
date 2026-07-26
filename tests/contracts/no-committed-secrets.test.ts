@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -174,8 +174,30 @@ describe("no committed secrets", () => {
   });
 
   it("ignores .env while tracking .env.example", () => {
-    const gitignore = readFileSync(join(repoRoot, ".gitignore"), "utf8");
-    expect(gitignore).toContain(".env");
-    expect(gitignore).toContain("!.env.example");
+    // Asked of git, not of the file's text. A substring assertion passes on a
+    // `.gitignore` whose *last* matching pattern re-ignores `.env.example` —
+    // last match wins — which is exactly how a trailing `.env*` once defeated
+    // the negation while this test stayed green. Every path below is checked
+    // with `--no-index`, so the answer is the pattern set's, not the index's.
+    const ignored = (relative: string): boolean => {
+      const result = spawnSync("git", ["check-ignore", "-q", "--no-index", "--", relative], {
+        cwd: repoRoot,
+      });
+      // 0 = ignored, 1 = not ignored; anything else is a broken invocation.
+      expect([0, 1]).toContain(result.status);
+      return result.status === 0;
+    };
+
+    for (const relative of [".env", ".env.local", "sites/umbrella/.env.local"]) {
+      expect(`${relative}: ${ignored(relative)}`).toBe(`${relative}: true`);
+    }
+
+    // Every committed example, including each site's, has to survive the whole
+    // pattern set — an operator cannot edit a template git refuses to see.
+    const examples = trackedFiles.filter((relative) => relative.endsWith(".env.example"));
+    expect(examples.length).toBeGreaterThan(1);
+    for (const relative of examples) {
+      expect(`${relative}: ${ignored(relative)}`).toBe(`${relative}: false`);
+    }
   });
 });

@@ -10,7 +10,10 @@ The deterministic CI input is `structured-spec`; the demo happy path is
 `image+brief`. Presentation runs on the
 [Three presentation core](docs/three-presentation-core.md): node gates use its
 deterministic headless surface, and browser consumers can supply a canvas to
-draw real pixels through `WebGLRenderer`; this vertical does not wire a site.
+draw real pixels through `WebGLRenderer`. This vertical wires no site of its own;
+the shipped browser consumer is the umbrella's public `/open` path
+([ADR 0022](docs/adr/0022-umbrella-owns-the-public-viewport.md)), which is a
+separate ship and adds no checklist item here.
 Stage 1 has still not run and no renderer winner is claimed. The golden evidence
 and stable input paths are recorded in
 `.sceneaxi/evidence/issue-73-hybrid-sculpt-golden.json`.
