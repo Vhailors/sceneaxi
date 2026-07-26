@@ -23,8 +23,9 @@ live in [`@sceneaxi/schemas`](../packages/schemas/README.md).
 5. Expect deterministic refusal for a missing or unreadable descriptor,
    unknown capabilities, incompatible
    versions, plugin IDs repeated in one load set, capability IDs repeated in
-   one manifest, entrypoint escape, forbidden imports, or
-   declaration/implementation mismatch.
+   one manifest, entrypoint escape, forbidden imports,
+   declaration/implementation mismatch, or an implementation that fails the
+   contract check the caller bound for its capability ID.
 
 <!-- plugin-capability-registry:seed-state -->
 Registry seed state: `registryVersion` is `1.0.0`; `entries` holds exactly 1 reviewed capability ID: `sceneaxi.sculpt.intake-source.v1`.
@@ -199,7 +200,8 @@ Unknown properties refuse. Shape validation is
 ## Minimal v1 manifest (checked-in fixture)
 
 Save the descriptor below as `sceneaxi.plugin.manifest.json` at the package
-root. The seed registry may be empty, so the smallest honest example is inert.
+root. The smallest honest example claims no capability at all, so it is inert;
+declare a registered ID only once the package actually implements it.
 The same JSON is the checked-in conformance fixture
 `packages/schemas/contracts/plugin-manifest.inert.example.json` and the
 TypeScript helper `inertPluginManifestFixture()`. `pnpm check:contracts`

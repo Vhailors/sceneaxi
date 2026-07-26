@@ -18,6 +18,7 @@ import {
   type PluginHostListing,
   type PluginCapabilityImplementationResult,
   type CapabilityContractCheck,
+  type CapabilityContractCheckResult,
   type CapabilityContractChecks,
   type PluginRefusalReason,
   type RefusedPlugin,
@@ -47,9 +48,13 @@ type PluginHostOptions = {
   readonly capabilityContracts?: CapabilityContractChecks;
 };
 
+type CapabilityContractCheckResult =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly message: string };
+
 type CapabilityContractCheck = (
   implementation: unknown,
-) => { readonly ok: true } | { readonly ok: false; readonly message: string };
+) => CapabilityContractCheckResult;
 
 type CapabilityContractChecks = ReadonlyMap<string, CapabilityContractCheck>;
 
@@ -97,8 +102,9 @@ import engine packages and never receives an engine service locator.
 Candidates process in stable lexical locator order. Descriptor and isolation
 checks run before entrypoint evaluation. Only after those pass does the host
 intentionally load the package-root entrypoint and require exact equality
-between declared capability IDs and the exported implementation table. A refused
-package exposes nothing.
+between declared capability IDs and the exported implementation table, followed
+by whatever capability-contract checks the caller injected. A refused package
+exposes nothing.
 
 Loaded listings sort by `pluginId`, then `pluginVersion`, then capability ID.
 Refused listings sort by locator.
