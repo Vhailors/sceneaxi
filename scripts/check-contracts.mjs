@@ -1157,6 +1157,45 @@ if (listingsSurface.ready) {
       );
     }
   }
+
+  // The bundled twin the deployable sites load must carry exactly this listing
+  // set, for the same reason the credit-pack module must: a bundle cannot read
+  // the fixture file, so the module is what actually ships — and it may never
+  // drift from the contract it copies.
+  const listingsModulePath = join(
+    root,
+    "packages",
+    "schemas",
+    "src",
+    "catalog-listings.data.ts",
+  );
+  const listingsModule = load(listingsModulePath, false);
+  if (listingsModule === loadFailed) {
+    fail(
+      "packages/schemas/src/catalog-listings.data.ts: the bundled catalog listing set is missing",
+    );
+  } else {
+    const literal = frozenObjectLiteral(listingsModule, "CATALOG_LISTINGS_DATA");
+    let bundled;
+    if (literal !== undefined) {
+      try {
+        bundled = JSON.parse(literal);
+      } catch {
+        bundled = undefined;
+      }
+    }
+    if (bundled === undefined) {
+      fail(
+        "packages/schemas/src/catalog-listings.data.ts: the bundled catalog listing set CATALOG_LISTINGS_DATA is not a parseable JSON literal frozen into the module",
+      );
+    } else if (
+      JSON.stringify(bundled, null, 2) !== JSON.stringify(listingsFixtures, null, 2)
+    ) {
+      fail(
+        "packages/schemas/src/catalog-listings.data.ts: bundled catalog listing set does not exactly match catalog-listings.fixtures.json",
+      );
+    }
+  }
 }
 
 // --- open-path demo policy + docs/open-path-policy.md lockstep (sceneaxi#137) ---
@@ -1273,5 +1312,5 @@ if (errors.length > 0) {
   process.exit(1);
 }
 console.log(
-  `contract check OK — ${authoringJobCount} shared authoring jobs valid, doc table matches, E1+E2 bound to one list; plugin capability registry 1.0.0 seed pinned to ${REGISTRY_SEED_ENTRIES.length} reviewed capability and schema-locked; plugin-manifest inert example schema-locked; ${creditPackCount} test-mode credit packs schema-locked, doc-bound, and bundled-module-bound; ${entitlementCapabilityCount} entitlement capabilities schema-locked, free path intact, doc-bound; ${listingCount} test-mode catalog listings schema-locked, all price modes covered, doc-bound; ${openPathProfileCount} open-path policy rows schema-locked, no shipping claim, Kids refuse-only, doc-bound`,
+  `contract check OK — ${authoringJobCount} shared authoring jobs valid, doc table matches, E1+E2 bound to one list; plugin capability registry 1.0.0 seed pinned to ${REGISTRY_SEED_ENTRIES.length} reviewed capability and schema-locked; plugin-manifest inert example schema-locked; ${creditPackCount} test-mode credit packs schema-locked, doc-bound, and bundled-module-bound; ${entitlementCapabilityCount} entitlement capabilities schema-locked, free path intact, doc-bound; ${listingCount} test-mode catalog listings schema-locked, all price modes covered, doc-bound, and bundled-module-bound; ${openPathProfileCount} open-path policy rows schema-locked, no shipping claim, Kids refuse-only, doc-bound`,
 );

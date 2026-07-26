@@ -123,9 +123,10 @@ by name and `IDENTITY_SESSION_ABSENT` means signed-out, not broken. Catalogs rea
 through the same site-kit port with no second auth stack — the storefront plane is
 `packages/site-kit/src/catalog-identity.ts`, one implementation both catalogs re-export —
 and the matrix denies them both identity packages. Two rules the sites tier cannot bend:
-the credit-pack catalog is loaded from a bundled module (`credit-packs.data.ts`, held in
-lockstep with the contract fixture by `pnpm check:contracts`), never a runtime file read a
-serverless bundle may not trace; and checkout redirect URLs come only from
+the credit-pack catalog and the catalog listing set are loaded from bundled modules
+(`credit-packs.data.ts`, `catalog-listings.data.ts`, held in lockstep with their contract
+fixtures by `pnpm check:contracts`), never a runtime file read a serverless bundle may not
+trace — or a bundler cannot even resolve; and checkout redirect URLs come only from
 `NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN` via `resolveCheckoutRedirectOrigin`, never from a
 request `Host`. Credit accounts are provisioned by the deployment's own `CreditStore`, not
 by any migration or code in this repository — an absent account refuses, and is never

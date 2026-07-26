@@ -185,6 +185,7 @@ export {
   validateCatalogListing,
   validateCatalogListingSet,
 } from "./catalog-listing.js";
+export { CATALOG_LISTINGS_DATA } from "./catalog-listings.data.js";
 export type {
   CatalogListing,
   CatalogListingRefuseCode,

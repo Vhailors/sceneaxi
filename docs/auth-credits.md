@@ -319,6 +319,14 @@ Canonical listings: `packages/schemas/contracts/catalog-listings.fixtures.json`,
 lockstep with the table below. All three price modes must stay covered, so a regression
 cannot pass by dropping the shape it breaks. Test mode only.
 
+`loadCatalogListings()` reads the fixture's bundled twin,
+`packages/schemas/src/catalog-listings.data.ts` (`CATALOG_LISTINGS_DATA`), for the same
+reason `loadCreditPackCatalog()` does — and one more: this module is reachable from a
+deployed site through the `@sceneaxi/billing` package root, and a bundler cannot even
+statically resolve a package-relative read, so it rewrites the specifier into a stub that
+breaks the module before any refusal could run. That module is the third lockstep
+artifact here too — edit the JSON, then the table, then the module.
+
 <!-- catalog-listings:list -->
 | listing | catalog | price mode | credits | money |
 |---|---|---|---|---|

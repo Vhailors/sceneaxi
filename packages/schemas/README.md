@@ -216,8 +216,10 @@ not implemented here.
   [`docs/auth-credits.md`](../../docs/auth-credits.md) by `pnpm check:contracts` —
   that document owns the shapes, invariants, and configuration; enforcement lives in
   `@sceneaxi/auth` and `@sceneaxi/billing` (ADR 0021)
-- `src/credit-packs.data.ts` (`CREDIT_PACK_CATALOG_DATA`) is the bundled twin of the
-  credit-pack fixture, exported from the package root because a bundled serverless site
-  cannot rely on tracing a package-relative JSON file. The same `pnpm check:contracts`
-  run holds it byte-for-byte against the fixture, so it is a copy that cannot drift, not
-  a second source of truth
+- `src/credit-packs.data.ts` (`CREDIT_PACK_CATALOG_DATA`) and
+  `src/catalog-listings.data.ts` (`CATALOG_LISTINGS_DATA`) are the bundled twins of the
+  credit-pack and catalog-listing fixtures, exported from the package root because a
+  bundled serverless site cannot rely on tracing a package-relative JSON file — a bundler
+  cannot even statically resolve the read. The same `pnpm check:contracts` run holds each
+  byte-for-byte against its fixture, so they are copies that cannot drift, not second
+  sources of truth
