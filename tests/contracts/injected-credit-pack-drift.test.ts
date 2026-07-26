@@ -79,6 +79,34 @@ describe("contract check — injected credit-pack drift", () => {
     expect(res.stderr).toContain("is not a parseable JSON literal");
   });
 
+  it("still reads the catalog export when the module grows a second frozen export", () => {
+    const module = readFileSync(join(fx, MODULE_REL), "utf8");
+    writeTo(
+      fx,
+      MODULE_REL,
+      `${module}\nexport const UNRELATED_DATA: unknown = Object.freeze({ note: "}" });\n`,
+    );
+
+    const res = runCheck(fx, "check-contracts.mjs");
+    expect(res.stderr).toBe("");
+    expect(res.status).toBe(0);
+  });
+
+  it("still detects drift when the module grows a second frozen export", () => {
+    const module = readFileSync(join(fx, MODULE_REL), "utf8");
+    writeTo(
+      fx,
+      MODULE_REL,
+      `${module.replace('"credits": 100', '"credits": 101')}\nexport const UNRELATED_DATA: unknown = Object.freeze({ note: "}" });\n`,
+    );
+
+    const res = runCheck(fx, "check-contracts.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "bundled credit pack catalog does not exactly match credit-packs.fixtures.json",
+    );
+  });
+
   it("fails when a pack changes in the fixture but not in the doc table", () => {
     const catalog = readCatalog(fx);
     const first = catalog.packs[0];

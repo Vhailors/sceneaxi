@@ -68,6 +68,53 @@ const load = (path, parse) => {
   }
 };
 
+// Read back the object literal a module freezes into one named export. The span
+// is anchored on that export and closed by counting braces (skipping string and
+// comment content), so a module that later grows a second frozen export or any
+// trailing code still yields this export's literal instead of a wrong span.
+const frozenObjectLiteral = (source, exportName) => {
+  const anchor = new RegExp(
+    `export\\s+const\\s+${exportName}\\s*(?::[^=]*)?=\\s*Object\\.freeze\\(\\s*`,
+  ).exec(source);
+  if (anchor === null) return undefined;
+
+  const start = anchor.index + anchor[0].length;
+  if (source[start] !== "{") return undefined;
+
+  let depth = 0;
+  for (let i = start; i < source.length; i += 1) {
+    const char = source[i];
+    if (char === '"' || char === "'" || char === "`") {
+      i += 1;
+      while (i < source.length && source[i] !== char) {
+        i += source[i] === "\\" ? 2 : 1;
+      }
+      continue;
+    }
+    if (char === "/" && source[i + 1] === "/") {
+      const newline = source.indexOf("\n", i);
+      if (newline === -1) return undefined;
+      i = newline;
+      continue;
+    }
+    if (char === "/" && source[i + 1] === "*") {
+      const close = source.indexOf("*/", i + 2);
+      if (close === -1) return undefined;
+      i = close + 1;
+      continue;
+    }
+    if (char === "{") {
+      depth += 1;
+      continue;
+    }
+    if (char === "}") {
+      depth -= 1;
+      if (depth === 0) return source.slice(start, i + 1);
+    }
+  }
+  return undefined;
+};
+
 const schema = load(schemaPath, true);
 const fixtures = load(fixturesPath, true);
 const doc = load(docPath, false);
@@ -907,20 +954,18 @@ if (creditPacksSurface.ready) {
       "packages/schemas/src/credit-packs.data.ts: the bundled credit pack catalog is missing",
     );
   } else {
-    const frozen = creditPacksModule.indexOf("Object.freeze(");
-    const start = frozen === -1 ? -1 : creditPacksModule.indexOf("{", frozen);
-    const end = creditPacksModule.lastIndexOf("}");
+    const literal = frozenObjectLiteral(creditPacksModule, "CREDIT_PACK_CATALOG_DATA");
     let bundled;
-    if (start !== -1 && end > start) {
+    if (literal !== undefined) {
       try {
-        bundled = JSON.parse(creditPacksModule.slice(start, end + 1));
+        bundled = JSON.parse(literal);
       } catch {
         bundled = undefined;
       }
     }
     if (bundled === undefined) {
       fail(
-        "packages/schemas/src/credit-packs.data.ts: the bundled credit pack catalog is not a parseable JSON literal",
+        "packages/schemas/src/credit-packs.data.ts: the bundled credit pack catalog CREDIT_PACK_CATALOG_DATA is not a parseable JSON literal frozen into the module",
       );
     } else if (
       JSON.stringify(bundled, null, 2) !== JSON.stringify(creditPacksFixtures, null, 2)
