@@ -6,7 +6,7 @@ view + wiring layers over this package, so every non-presentational site
 behaviour is testable in `pnpm gate` with no browser, no network, and no
 framework in the hermetic package tier. The one behaviour that needs a browser
 is the umbrella's viewport (ADR 0022), and even there the decision of what is
-opened lives here.
+opened — and what may be drawn — lives here.
 
 ## What lives here
 
@@ -19,17 +19,27 @@ opened lives here.
 | `catalog.ts` | catalog view models, dual price, creator share, fail-closed purchase intent |
 | `deep-link.ts` | catalog → umbrella editor deep-link contract, and the one definition of the configured umbrella origin — including the checkout redirect origin, which is never taken from a request `Host` |
 | `web-editor.ts` | bounded Minimum E2 web editor session over `@sceneaxi/authoring-core` |
+| `editor-session.ts` | driving that session from URL state, and projecting its composed scene for a browser |
+| `mountable-scene.ts` | the one payload shape a browser mounts, shared by both umbrella viewports |
 | `live-open.ts` | the public live open path: which committed fixture is opened, how it is placed by `composeScene()`, and the honest vocabulary a page may use for the presentation core |
 
-## The live open path
+## What a browser may draw
 
-`liveOpenScene()` returns a browser-ready descriptor — validated Sculpt Artifacts
-plus the composition pipeline's own world transforms and evidence digest. It draws
-nothing: rendering belongs to the umbrella site, the one surface allowed to consume
-`@sceneaxi/engine-presentation` (ADR 0022). Keeping the decision here is what lets
-`pnpm gate` test the whole path without a browser, and `LIVE_OPEN_PRESENTATION` is
-asserted so shipped copy cannot drift back to the retired "experimental preview"
-framing (ADR 0017).
+`MountableScene` is the single shape handed across to a canvas: validated Sculpt
+Artifacts, the composition pipeline's own world transforms and hierarchy, and its
+evidence digest. Both umbrella viewports receive it — the public path from
+`liveOpenScene()`, the entitled Minimum E2 editor from its session's own
+`composeSceneProjection()` — so what may be drawn is decided here and the two
+surfaces cannot drift apart.
+
+This package draws nothing: rendering belongs to the umbrella site, the one surface
+allowed to consume `@sceneaxi/engine-presentation` (ADR 0022). Keeping the decision
+here is what lets `pnpm gate` test both paths without a browser, and
+`LIVE_OPEN_PRESENTATION` is asserted so shipped copy cannot drift back to the
+retired "experimental preview" framing (ADR 0017).
+
+Placement stays a projection throughout: no artifact is rewritten to place it,
+because its evidence binds its exact spec bytes.
 
 ## The identity-plane seam
 

@@ -1,6 +1,9 @@
 # ADR 0022: The umbrella site owns the public viewport and consumes the presentation seam directly
 
-- **Status:** Accepted.
+- **Status:** Accepted — **Amended 2026-07-26** by Step-ladder Step 5
+  (`T1-min-e2-viewport`, [sceneaxi#133](https://github.com/Vhailors/sceneaxi/issues/133)):
+  the same one edge now also carries the **entitled** Minimum E2 editor viewport.
+  See *Amendment* below.
 - **Date recorded:** 2026-07-25
 - **Source:** Step-ladder Step 4 (`T1-live-open-path`) captain order — a public
   user must be able to open a real SceneAxi artifact in a live Three.js canvas on
@@ -80,6 +83,36 @@ Normative properties:
   catalog site importing the presentation seam still fails, and every other engine
   package is still denied to the umbrella.
 
+## Amendment — the entitled editor draws through the same edge (2026-07-26)
+
+Step 5 gave the Minimum E2 editor at `/editor` a real WebGL viewport. Nothing in
+the decision above changes: it is the same site, the same one matrix edge, the
+same ADR 0002 seam, and the same single Three core. What the amendment records is
+that "the umbrella owns the viewport" now covers **two** surfaces, one public and
+one entitled, and what stays true across both:
+
+- **One renderer-owning module.** `sites/umbrella/src/app/_components/sculpt-viewport.tsx`
+  is the only file on the whole `sites/` tier that constructs a backend; `/open`
+  and `/editor` are thin callers of it. A gate test asserts that list has exactly
+  one entry, so a third surface cannot quietly grow a second renderer.
+- **One browser payload.** Both surfaces hand the browser a `MountableScene` from
+  `@sceneaxi/site-kit` — validated Sculpt Artifacts plus `composeScene()` world
+  transforms. The editor's scene is its own session's composition projection, so
+  the canvas cannot draw a scene the editor did not compose.
+- **Drawing is not authoring.** The viewport consumes a composed snapshot. It
+  holds no kernel session, advances nothing, and adds no operation to the frozen
+  `WEB_EDITOR_SESSION_OPERATIONS` checklist. Selection, transform edits, and
+  play/pause/step remain server-side Minimum E2 operations. ADR 0003's
+  general-E2-specified-not-built bound is untouched.
+- **Entitlement is unchanged and still decided first.** ADR 0020 decides access
+  before a session is constructed, so a signed-out, unavailable, or
+  insufficient-entitlement request reaches no session, no composition, and no
+  canvas — it renders the plane's own named refusal. The public path stays public
+  and the entitled path stays entitled; neither borrows the other's copy.
+- **The server frame is honest.** A server has no drawing buffer, so the editor's
+  server-side session runs on the same core's headless surface and reports
+  `pixelsDrawn: false`. A frame counter never implies pixels.
+
 ## Rejected alternatives
 
 - **Re-export presentation through `site-kit`** — pushes `three` and a renderer
@@ -98,7 +131,9 @@ Normative properties:
 
 **Settled:** that the umbrella owns the public viewport, that its one engine edge
 is the presentation seam, that the opened scene is contract data produced by the
-composition pipeline, and that the page's presentation copy is gate-enforced.
+composition pipeline, and that the page's presentation copy is gate-enforced —
+and, per the amendment, that the entitled Minimum E2 viewport rides that same
+edge through one renderer-owning module without widening entitlement or E2.
 
 **Held elsewhere:** Stage 1 execution and adjudication; any renderer conclusion;
 general E2 (ADR 0003); Kids; marketplace activation; custom domains; and the

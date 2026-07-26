@@ -24,6 +24,7 @@ a marketing word.
 | Kids profile | **R0** | `pnpm test:golden` | `tests/e2e/profile-kids-refuse-golden.test.ts` |
 | Importers + plugin host | **R1** | `pnpm test:golden` | `tests/e2e/importers-plugin-golden.test.ts`, `tests/e2e/plugin-capability-golden.test.ts` (the one registered capability, `sceneaxi.sculpt.intake-source.v1`, from the shipped seed through load to an addressed call) |
 | Umbrella live open path (`/open`) | **R1** | `pnpm test:golden`; in a browser, `cd sites/umbrella && pnpm build && pnpm start` | `tests/e2e/umbrella-live-open-golden.test.ts` (headless surface, no pixel claim) + the browser record in `docs/three-presentation-core.md` |
+| Umbrella entitled Minimum E2 editor (`/editor`) | **R1** | `pnpm test:golden`; in a browser, `cd sites/umbrella && pnpm build && SCENEAXI_SITE_EDITOR_PREVIEW=1 pnpm start` | `tests/e2e/umbrella-editor-viewport-golden.test.ts` (headless surface, no pixel claim) + the browser record in `docs/three-presentation-core.md`. Without the preview flag, and until the identity plane is wired, the route is a named refusal and draws nothing |
 | `@sceneaxi/web-shell` | *library only* | — | not yet startable; see sceneaxi#120 |
 
 How far each profile's open path may be *demonstrated*, and by what evidence, is

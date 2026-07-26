@@ -129,6 +129,13 @@ export {
 } from "./starter-artifact.js";
 
 export {
+  mountableScene,
+  type ComposedSceneOk,
+  type MountableScene,
+  type MountableSceneInstance,
+} from "./mountable-scene.js";
+
+export {
   LIVE_OPEN_INSTANCE_COUNT,
   LIVE_OPEN_PATH,
   LIVE_OPEN_PRESENTATION,
@@ -209,6 +216,7 @@ export {
 } from "./editor-state.js";
 
 export {
+  EDITOR_SCENE_ID,
   EDITOR_SEED,
   renderEditorState,
   type EditorRender,

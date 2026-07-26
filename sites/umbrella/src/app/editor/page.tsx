@@ -8,9 +8,11 @@ import {
   type SearchParams,
 } from "@sceneaxi/site-kit";
 import { createUmbrellaIdentityPlane } from "../../lib/identity-plane.js";
+import { EDITOR_VIEWPORT_COPY } from "../../lib/editor-viewport.js";
 import { resolveUmbrellaEditorAccess } from "../../lib/site-config.js";
 import { readSessionToken } from "../_session.js";
 import { StatePanel } from "../_components/state-panel.js";
+import { EditorViewport } from "./_components/editor-viewport.js";
 
 /**
  * The Minimum E2 sculpt/scene web editor.
@@ -91,7 +93,7 @@ export default async function EditorPage({
     );
   }
 
-  const { snapshot, viewport, save, composition, artifactId } = render.value;
+  const { snapshot, viewport, save, composition, mountable, artifactId } = render.value;
   const editor = state.value;
   const selected = editor.instances.find(
     (instance) => instance.instanceId === editor.selectedInstanceId,
@@ -131,6 +133,19 @@ export default async function EditorPage({
           </p>
         </StatePanel>
       )}
+
+      <h2>Viewport</h2>
+      <p className="lede">{EDITOR_VIEWPORT_COPY.lede}</p>
+      {mountable === null ? (
+        <StatePanel tone="warn" title="No scene to draw">
+          <p>{EDITOR_VIEWPORT_COPY.notComposable}</p>
+        </StatePanel>
+      ) : (
+        <EditorViewport scene={mountable} selectedInstanceId={editor.selectedInstanceId} />
+      )}
+      <p style={{ color: "var(--ink-faint)", fontSize: "0.9rem" }}>
+        {EDITOR_VIEWPORT_COPY.honesty}
+      </p>
 
       <h2>Scene</h2>
       <div className="grid">
@@ -178,7 +193,7 @@ export default async function EditorPage({
         </section>
 
         <section className="panel">
-          <h3>Viewport</h3>
+          <h3>Server session frame</h3>
           <dl className="dl">
             <dt>Backend</dt>
             <dd>
@@ -186,6 +201,14 @@ export default async function EditorPage({
             </dd>
             <dt>Label</dt>
             <dd>{viewport.label}</dd>
+            <dt>Draw surface</dt>
+            <dd>
+              <code>{viewport.surface ?? "—"}</code>
+            </dd>
+            <dt>Pixels drawn</dt>
+            <dd>
+              <code>{String(viewport.pixelsDrawn ?? false)}</code>
+            </dd>
             <dt>Frame</dt>
             <dd>{viewport.frame}</dd>
             <dt>Draw calls</dt>
