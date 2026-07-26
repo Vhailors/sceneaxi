@@ -32,7 +32,7 @@ describe("desktop shell open-path", () => {
     expect(sessions).toBe(0);
   });
 
-  it("filters to one profile row", () => {
+  it("filters to one profile row, marked as a projection of the whole policy", () => {
     const result = runDesktopCommand([
       "open-path",
       "--profile",
@@ -40,11 +40,14 @@ describe("desktop shell open-path", () => {
     ]);
     const policy = result.result["policy"] as {
       policyCount: number;
+      filteredTo: string;
       rows: ReadonlyArray<{ profile: string; sessionKind: string }>;
     };
-    expect(policy.policyCount).toBe(1);
+    expect(policy.rows).toHaveLength(1);
     expect(policy.rows[0]?.profile).toBe("@sceneaxi/profile-game");
     expect(policy.rows[0]?.sessionKind).toBe("scene-kernel-session");
+    expect(policy.filteredTo).toBe("@sceneaxi/profile-game");
+    expect(policy.policyCount).toBe(openPathPolicyView().policyCount);
   });
 
   it("evaluates an allowed demo operation without claiming shipping", () => {
@@ -91,11 +94,28 @@ describe("desktop shell open-path", () => {
     );
   });
 
-  it("refuses an unknown profile, --operation without --profile, and unknown flags", () => {
-    expect(
-      runDesktopCommand(["open-path", "--profile", "@sceneaxi/profile-imaginary"])
-        .exitCode,
-    ).toBe(DesktopExit.USAGE);
+  it("refuses an unknown profile with the shared refusal code, with or without an operation", () => {
+    for (const argv of [
+      ["open-path", "--profile", "@sceneaxi/profile-imaginary"],
+      [
+        "open-path",
+        "--profile",
+        "@sceneaxi/profile-imaginary",
+        "--operation",
+        "open",
+      ],
+    ]) {
+      const result = runDesktopCommand(argv);
+      expect(result.ok).toBe(false);
+      expect(result.exitCode).toBe(DesktopExit.USAGE);
+      expect(result.result["reason"]).toBe(
+        OPEN_PATH_REFUSE_CODES.unknownProfile,
+      );
+      expect(result.result["profile"]).toBe("@sceneaxi/profile-imaginary");
+    }
+  });
+
+  it("refuses --operation without --profile, and unknown flags", () => {
     expect(
       runDesktopCommand(["open-path", "--operation", "open"]).exitCode,
     ).toBe(DesktopExit.USAGE);

@@ -20,6 +20,7 @@ import {
   evaluateOpenPathDemo,
   openPathPolicyRowFor,
   openPathPolicyView,
+  openPathPolicyViewFor,
   validateOpenPathDemoDecision,
 } from "@sceneaxi/schemas";
 
@@ -200,6 +201,65 @@ describe("openPathPolicyView", () => {
     for (const forbidden of ["shipping-ready", "production-ready", "ready to ship"]) {
       expect(text).not.toContain(forbidden);
     }
+  });
+});
+
+describe("openPathPolicyViewFor", () => {
+  it("projects one row while keeping the policy's true count and naming the filter", () => {
+    for (const row of OPEN_PATH_POLICY) {
+      const projection = openPathPolicyViewFor(row.profile);
+      expect(projection.ok).toBe(true);
+      if (!projection.ok) continue;
+      expect(projection.policy.rows).toHaveLength(1);
+      expect(projection.policy.rows[0]).toEqual(
+        openPathPolicyView().rows.find(
+          (entry) => entry.profile === row.profile,
+        ),
+      );
+      expect(projection.policy.filteredTo).toBe(row.profile);
+      expect(projection.policy.policyCount).toBe(OPEN_PATH_POLICY.length);
+      expect(projection.policy.shippingClaim).toBe(false);
+    }
+  });
+
+  it("lists the refuse-only row rather than hiding the boundary", () => {
+    const projection = openPathPolicyViewFor(OPEN_PATH_REFUSE_ONLY_PROFILE);
+    expect(projection.ok).toBe(true);
+    if (!projection.ok) return;
+    expect(projection.policy.rows[0].demoLevel).toBe("refuse-only");
+    expect(projection.policy.rows[0].operations).toEqual([]);
+  });
+
+  it("refuses an off-policy profile with the same code and message an evaluation gives", () => {
+    const profile = "@sceneaxi/profile-imaginary";
+    const projection = openPathPolicyViewFor(profile);
+    const evaluated = evaluateOpenPathDemo({ profile, operation: "open" });
+
+    expect(projection.ok).toBe(false);
+    expect(evaluated.ok).toBe(false);
+    if (projection.ok || evaluated.ok) return;
+    expect(projection.code).toBe(OPEN_PATH_REFUSE_CODES.unknownProfile);
+    expect(projection.code).toBe(evaluated.code);
+    expect(projection.message).toBe(evaluated.message);
+    expect(projection.profile).toBe(profile);
+  });
+
+  it("refuses a profile that is not a non-empty string", () => {
+    for (const value of [undefined, null, "", 7, {}]) {
+      const projection = openPathPolicyViewFor(value);
+      expect(projection.ok).toBe(false);
+      if (projection.ok) continue;
+      expect(projection.code).toBe(OPEN_PATH_REFUSE_CODES.invalidProperty);
+    }
+  });
+
+  it("is frozen, so a surface cannot mutate the projection it reports", () => {
+    const projection = openPathPolicyViewFor("@sceneaxi/profile-game");
+    expect(projection.ok).toBe(true);
+    if (!projection.ok) return;
+    expect(Object.isFrozen(projection)).toBe(true);
+    expect(Object.isFrozen(projection.policy)).toBe(true);
+    expect(Object.isFrozen(projection.policy.rows)).toBe(true);
   });
 });
 

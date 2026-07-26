@@ -15,6 +15,7 @@ import {
   OPEN_PATH_REFUSE_ONLY_PROFILE,
   evaluateOpenPathDemo,
   openPathPolicyView,
+  openPathPolicyViewFor,
 } from "@sceneaxi/schemas";
 import {
   createDesktopSession,
@@ -266,21 +267,19 @@ function openPathResult(args: ParsedArgs): DesktopResult {
     ]);
   }
 
-  const row = view.rows.find((entry) => entry.profile === profile);
-  if (row === undefined) {
-    return refuse(
-      command,
-      DesktopExit.USAGE,
-      `Profile ${JSON.stringify(profile)} is not in the open-path demo policy.`,
-    );
-  }
-
   if (operation === undefined || operation.length === 0) {
-    return ok(
-      command,
-      { policy: { ...view, policyCount: 1, rows: [row] } },
-      [`Evidence for this row: ${row.evidence}`],
-    );
+    const projection = openPathPolicyViewFor(profile);
+    if (!projection.ok) {
+      return refuse(command, DesktopExit.USAGE, projection.message, {
+        reason: projection.code,
+        profile: projection.profile,
+      });
+    }
+
+    return ok(command, { policy: projection.policy }, [
+      `Projection of one row: filteredTo names it, policyCount stays the policy's ${projection.policy.policyCount}`,
+      `Evidence for this row: ${projection.policy.rows[0].evidence}`,
+    ]);
   }
 
   const decision = evaluateOpenPathDemo({ profile, operation });

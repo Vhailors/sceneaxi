@@ -132,6 +132,86 @@ describe("open-path policy parity (conformance)", () => {
     }
   });
 
+  it("every surface projects one profile the same way, and keeps the true policy count", () => {
+    for (const row of OPEN_PATH_POLICY) {
+      const cli = cliPolicy(["profile", "open-path", "--profile", row.profile]);
+      const desktop = runDesktopCommand([
+        "open-path",
+        "--profile",
+        row.profile,
+      ]).result["policy"];
+      const web = createOpenPathView().policyFor(row.profile);
+
+      expect(web.ok).toBe(true);
+      if (!web.ok) continue;
+      expect(cli).toEqual(web.policy);
+      expect(desktop).toEqual(web.policy);
+      expect(web.policy.filteredTo).toBe(row.profile);
+      expect(web.policy.rows).toHaveLength(1);
+      expect(web.policy.policyCount).toBe(OPEN_PATH_POLICY.length);
+    }
+  });
+
+  it("an off-policy profile refuses identically on every surface", () => {
+    const unknown = "@sceneaxi/profile-imaginary";
+
+    for (const operation of ["open", "publish"]) {
+      const cli = runCli([
+        "profile",
+        "open-path",
+        "--profile",
+        unknown,
+        "--operation",
+        operation,
+      ]);
+      const desktop = runDesktopCommand([
+        "open-path",
+        "--profile",
+        unknown,
+        "--operation",
+        operation,
+      ]);
+      const web = createOpenPathView().evaluate(unknown, operation);
+
+      expect(web.ok).toBe(false);
+      if (web.ok) continue;
+      expect(web.code).toBe(OPEN_PATH_REFUSE_CODES.unknownProfile);
+      expect(cli.envelope.ok).toBe(false);
+      expect(desktop.ok).toBe(false);
+      expect(
+        cli.envelope.ok ? undefined : cli.envelope.error.details?.["reason"],
+      ).toBe(web.code);
+      expect(
+        cli.envelope.ok ? undefined : cli.envelope.error.message,
+      ).toBe(web.message);
+      expect(desktop.result["reason"]).toBe(web.code);
+      expect(desktop.result["message"]).toBe(web.message);
+    }
+  });
+
+  it("reporting an off-policy profile refuses with the same code as evaluating one", () => {
+    const unknown = "@sceneaxi/profile-imaginary";
+    const cli = runCli(["profile", "open-path", "--profile", unknown]);
+    const desktop = runDesktopCommand(["open-path", "--profile", unknown]);
+    const web = createOpenPathView().policyFor(unknown);
+
+    expect(web.ok).toBe(false);
+    if (web.ok) return;
+    expect(web.code).toBe(OPEN_PATH_REFUSE_CODES.unknownProfile);
+    expect(cli.envelope.ok).toBe(false);
+    expect(cli.exitCode).not.toBe(0);
+    expect(
+      cli.envelope.ok ? undefined : cli.envelope.error.details?.["reason"],
+    ).toBe(web.code);
+    expect(cli.envelope.ok ? undefined : cli.envelope.error.message).toBe(
+      web.message,
+    );
+    expect(desktop.ok).toBe(false);
+    expect(desktop.exitCode).not.toBe(0);
+    expect(desktop.result["reason"]).toBe(web.code);
+    expect(desktop.result["message"]).toBe(web.message);
+  });
+
   it("Kids refuses on every surface, and never as an empty result", () => {
     const cli = runCli([
       "profile",

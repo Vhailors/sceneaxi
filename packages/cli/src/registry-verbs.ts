@@ -14,7 +14,9 @@ import {
   evaluateOpenPathDemo,
   isCommerceActive,
   missingMandatoryMetadata,
+  openPathPolicyRowFor,
   openPathPolicyView,
+  openPathPolicyViewFor,
   profileConformanceRegistry,
   validateCatalogItem,
   type CatalogItem,
@@ -128,36 +130,36 @@ export function runProfileOpenPath(
     ]);
   }
 
-  const row = view.rows.find((entry) => entry.profile === profile);
-  if (row === undefined) {
-    return failure(
-      "VALIDATION",
-      `Profile ${JSON.stringify(profile)} is not in the open-path demo policy.`,
-      {
-        path,
-        help: [
-          `Known profiles: ${view.rows.map((entry) => entry.profile).join(", ")}`,
-          PROFILE_OPEN_PATH_USAGE,
-        ],
-      },
-    );
-  }
+  const knownProfiles = `Known profiles: ${view.rows
+    .map((entry) => entry.profile)
+    .join(", ")}`;
 
   if (operation === undefined || operation.length === 0) {
+    const projection = openPathPolicyViewFor(profile);
+    if (!projection.ok) {
+      return failure("VALIDATION", projection.message, {
+        path,
+        details: Object.freeze({
+          reason: projection.code,
+          profile: projection.profile,
+        }),
+        help: [knownProfiles, PROFILE_OPEN_PATH_USAGE],
+      });
+    }
+
     return success(
-      Object.freeze({
-        status: "listed",
-        policy: Object.freeze({ ...view, policyCount: 1, rows: Object.freeze([row]) }),
-      }),
+      Object.freeze({ status: "listed", policy: projection.policy }),
       [
         "Demo levels are demonstrations, never a shipping or production-readiness claim",
-        `Evidence for this row: ${row.evidence}`,
+        `Projection of one row: filteredTo names it, policyCount stays the policy's ${projection.policy.policyCount}`,
+        `Evidence for this row: ${projection.policy.rows[0].evidence}`,
       ],
     );
   }
 
   const decision = evaluateOpenPathDemo({ profile, operation });
   if (!decision.ok) {
+    const row = openPathPolicyRowFor(profile);
     return failure("VALIDATION", decision.message, {
       path,
       details: Object.freeze({
@@ -166,9 +168,13 @@ export function runProfileOpenPath(
         operation,
       }),
       help: [
-        `Operations in this profile's policy: ${
-          row.operations.length === 0 ? "(none — refuse-only)" : row.operations.join(", ")
-        }`,
+        row === undefined
+          ? knownProfiles
+          : `Operations in this profile's policy: ${
+              row.operations.length === 0
+                ? "(none — refuse-only)"
+                : row.operations.join(", ")
+            }`,
         PROFILE_OPEN_PATH_USAGE,
       ],
     });

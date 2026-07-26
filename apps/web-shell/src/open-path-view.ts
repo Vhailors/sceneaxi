@@ -21,7 +21,9 @@ import {
   OPEN_PATH_REFUSE_ONLY_PROFILE,
   evaluateOpenPathDemo,
   openPathPolicyView,
+  openPathPolicyViewFor,
   type OpenPathDemoDecision,
+  type OpenPathPolicyProjection,
   type OpenPathPolicyViewModel,
   type OpenPathPolicyViewRow,
 } from "@sceneaxi/schemas";
@@ -33,6 +35,12 @@ export type OpenPathView = Readonly<{
   refuseOnlyProfile: typeof OPEN_PATH_REFUSE_ONLY_PROFILE;
   /** One row, or undefined when the profile is not in the policy. */
   rowFor: (profile: string) => OpenPathPolicyViewRow | undefined;
+  /**
+   * The policy narrowed to one profile — the same projection the CLI and the
+   * desktop shell report, so an off-policy profile refuses here with the same
+   * named code instead of rendering as an absent row.
+   */
+  policyFor: (profile: string) => OpenPathPolicyProjection;
   /** Evaluate one demo operation through the shared policy. */
   evaluate: (profile: string, operation: string) => OpenPathDemoDecision;
 }>;
@@ -44,6 +52,7 @@ export function createOpenPathView(): OpenPathView {
     refuseOnlyProfile: OPEN_PATH_REFUSE_ONLY_PROFILE,
     rowFor: (profile: string) =>
       policy.rows.find((row) => row.profile === profile),
+    policyFor: (profile: string) => openPathPolicyViewFor(profile),
     evaluate: (profile: string, operation: string) =>
       evaluateOpenPathDemo({ profile, operation }),
   });

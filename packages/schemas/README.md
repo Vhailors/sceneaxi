@@ -137,7 +137,10 @@ Registry seed state: `registryVersion` is `1.0.0`; `entries` holds exactly 1 rev
   `OPEN_PATH_POLICY` in `src/open-path-policy.ts`; `pnpm check:contracts` keeps
   both in lockstep with the `docs/open-path-policy.md` table
 - Shared decision function: `evaluateOpenPathDemo()`; shared surface payload:
-  `openPathPolicyView()`
+  `openPathPolicyView()`; shared one-profile projection:
+  `openPathPolicyViewFor()` — keeps the true `policyCount`, marks itself with
+  `filteredTo`, and refuses an off-policy profile with the same
+  `OPEN_PATH_PROFILE_UNKNOWN` an evaluation gives
 - Lives here because `schemas` is the only package the dependency matrix lets
   both profiles, the CLI, and both shells name — so parity cost no boundary
 - `shippingClaim` is `false` structurally, and `@sceneaxi/profile-kids` is

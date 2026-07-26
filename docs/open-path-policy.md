@@ -105,6 +105,16 @@ Both profiles *read* their row rather than declaring one: a missing row throws a
 module load instead of falling back, so a profile cannot exist outside the policy
 that governs it.
 
+Narrowing a report to one profile is a **projection**, not a smaller policy.
+`openPathPolicyViewFor()` is the single function all three surfaces narrow
+through — the CLI's and the shell's `--profile`, and the web view's
+`policyFor()`. It keeps `policyCount` at the policy's true row count and adds
+`filteredTo`, so a stored payload can never be read back as "the policy has one
+row", and an off-policy profile refuses with the same `OPEN_PATH_PROFILE_UNKNOWN`
+whether it was evaluated or merely reported. No surface authors its own
+unknown-profile sentence; the parity suite asserts the refusal code and message
+are identical across all three.
+
 ### Where parity stops, and why
 
 The shells and the CLI report and evaluate the policy. They do **not** open a

@@ -227,6 +227,20 @@ function refuseDemo(
   return Object.freeze({ ...refuseWith(code, message), profile });
 }
 
+/**
+ * The one unknown-profile refusal. Every surface reaches it through this
+ * function — evaluating an operation or merely projecting the table — so no
+ * surface can author a different code or a different sentence for "that profile
+ * has no row".
+ */
+function refuseUnknownProfile(profile: string): OpenPathDemoRefusal {
+  return refuseDemo(
+    OPEN_PATH_REFUSE_CODES.unknownProfile,
+    `Profile ${JSON.stringify(profile)} is not in the open-path demo policy; policy expansion must be explicit.`,
+    profile,
+  );
+}
+
 /** The policy row for a profile, or undefined when it is not in the table. */
 export function openPathPolicyRowFor(
   profile: unknown,
@@ -303,13 +317,7 @@ export function evaluateOpenPathDemo(
   }
 
   const row = openPathPolicyRowFor(profile);
-  if (row === undefined) {
-    return refuseDemo(
-      OPEN_PATH_REFUSE_CODES.unknownProfile,
-      `Profile ${JSON.stringify(profile)} is not in the open-path demo policy; policy expansion must be explicit.`,
-      profile,
-    );
-  }
+  if (row === undefined) return refuseUnknownProfile(profile);
 
   const claimsShipping = record["claimsShipping"];
   if (claimsShipping !== undefined && typeof claimsShipping !== "boolean") {
@@ -422,6 +430,62 @@ export function openPathPolicyView(): OpenPathPolicyViewModel {
       ),
     ),
     notes: OPEN_PATH_POLICY_NOTES,
+  });
+}
+
+/**
+ * One profile's row rendered in the reporting shape, and marked as what it is.
+ *
+ * `policyCount` stays the policy's true row count and `filteredTo` names the
+ * profile the projection was taken for, so a stored payload can never be read
+ * back as "the policy has one row". A surface that narrows the report to one
+ * profile is projecting the table, not redefining it.
+ */
+export type OpenPathPolicyFilteredView = Readonly<{
+  schemaVersion: typeof OPEN_PATH_POLICY_SCHEMA_VERSION;
+  policyCount: number;
+  filteredTo: string;
+  refuseOnlyProfile: typeof OPEN_PATH_REFUSE_ONLY_PROFILE;
+  shippingClaim: false;
+  rows: readonly [OpenPathPolicyViewRow];
+  notes: ReadonlyArray<string>;
+}>;
+
+export type OpenPathPolicyProjection =
+  | Readonly<{ ok: true; policy: OpenPathPolicyFilteredView }>
+  | OpenPathDemoRefusal;
+
+/**
+ * The shared answer to "report the policy for just this profile".
+ *
+ * Reporting narrows to a row through the same closed table evaluation uses, so
+ * an off-policy profile refuses here with the same `OPEN_PATH_PROFILE_UNKNOWN`
+ * an evaluation would produce. The refuse-only profile is *not* refused here:
+ * listing the Kids row as `refuse-only` is exactly how a surface shows that the
+ * boundary exists — hiding it would be the failure mode.
+ */
+export function openPathPolicyViewFor(
+  profile: unknown,
+): OpenPathPolicyProjection {
+  if (!isNonEmptyString(profile)) {
+    return refuseDemo(
+      OPEN_PATH_REFUSE_CODES.invalidProperty,
+      "An open-path policy projection profile must be a non-empty string.",
+      null,
+    );
+  }
+
+  const view = openPathPolicyView();
+  const row = view.rows.find((entry) => entry.profile === profile);
+  if (row === undefined) return refuseUnknownProfile(profile);
+
+  return Object.freeze({
+    ok: true as const,
+    policy: Object.freeze({
+      ...view,
+      filteredTo: profile,
+      rows: Object.freeze([row] as const),
+    }),
   });
 }
 

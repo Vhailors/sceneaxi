@@ -501,6 +501,7 @@ export {
   isOpenPathDemoOperation,
   openPathPolicyRowFor,
   openPathPolicyView,
+  openPathPolicyViewFor,
   validateOpenPathDemoDecision,
 } from "./open-path-policy.js";
 export type {
@@ -510,6 +511,8 @@ export type {
   OpenPathDemoOperation,
   OpenPathDemoRefusal,
   OpenPathDemoRequest,
+  OpenPathPolicyFilteredView,
+  OpenPathPolicyProjection,
   OpenPathPolicyRow,
   OpenPathPolicyViewModel,
   OpenPathPolicyViewRow,

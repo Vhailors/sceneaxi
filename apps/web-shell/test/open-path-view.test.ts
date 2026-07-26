@@ -35,6 +35,27 @@ describe("web shell open-path view", () => {
     expect(view.rowFor("@sceneaxi/profile-imaginary")).toBeUndefined();
   });
 
+  it("projects one profile without claiming the policy has one row", () => {
+    const projection = createOpenPathView().policyFor("@sceneaxi/profile-game");
+    expect(projection.ok).toBe(true);
+    if (!projection.ok) return;
+    expect(projection.policy.filteredTo).toBe("@sceneaxi/profile-game");
+    expect(projection.policy.rows).toHaveLength(1);
+    expect(projection.policy.policyCount).toBe(
+      openPathPolicyView().policyCount,
+    );
+  });
+
+  it("refuses a projection of an off-policy profile by name", () => {
+    const projection = createOpenPathView().policyFor(
+      "@sceneaxi/profile-imaginary",
+    );
+    expect(projection.ok).toBe(false);
+    if (projection.ok) return;
+    expect(projection.code).toBe(OPEN_PATH_REFUSE_CODES.unknownProfile);
+    expect(projection.profile).toBe("@sceneaxi/profile-imaginary");
+  });
+
   it("evaluates through the shared policy, refusing Kids by name", () => {
     const view = createOpenPathView();
     const allowed = view.evaluate("@sceneaxi/profile-web", "save");

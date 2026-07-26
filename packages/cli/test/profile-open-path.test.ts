@@ -41,7 +41,7 @@ describe("profile open-path", () => {
     for (const row of policy.rows) expect(row.shippingClaim).toBe(false);
   });
 
-  it("filters to one profile row", () => {
+  it("filters to one profile row, marked as a projection of the whole policy", () => {
     const payload = result([
       "profile",
       "open-path",
@@ -50,12 +50,14 @@ describe("profile open-path", () => {
     ]);
     const policy = payload["policy"] as {
       policyCount: number;
+      filteredTo: string;
       rows: ReadonlyArray<{ profile: string; demoLevel: string }>;
     };
-    expect(policy.policyCount).toBe(1);
     expect(policy.rows).toHaveLength(1);
     expect(policy.rows[0]?.profile).toBe("@sceneaxi/profile-game");
     expect(policy.rows[0]?.demoLevel).toBe("demo-driveable");
+    expect(policy.filteredTo).toBe("@sceneaxi/profile-game");
+    expect(policy.policyCount).toBe(openPathPolicyView().policyCount);
   });
 
   it("evaluates an allowed demo operation", () => {
@@ -122,15 +124,28 @@ describe("profile open-path", () => {
     );
   });
 
-  it("refuses an unknown profile", () => {
-    const refused = error([
-      "profile",
-      "open-path",
-      "--profile",
-      "@sceneaxi/profile-imaginary",
-    ]);
-    expect(refused.exitCode).toBe(ExitCode.USAGE);
-    expect(refused.error.code).toBe("VALIDATION");
+  it("refuses an unknown profile with the shared refusal code, with or without an operation", () => {
+    for (const argv of [
+      ["profile", "open-path", "--profile", "@sceneaxi/profile-imaginary"],
+      [
+        "profile",
+        "open-path",
+        "--profile",
+        "@sceneaxi/profile-imaginary",
+        "--operation",
+        "open",
+      ],
+    ]) {
+      const refused = error(argv);
+      expect(refused.exitCode).toBe(ExitCode.USAGE);
+      expect(refused.error.code).toBe("VALIDATION");
+      expect(refused.error.details?.["reason"]).toBe(
+        OPEN_PATH_REFUSE_CODES.unknownProfile,
+      );
+      expect(refused.error.details?.["profile"]).toBe(
+        "@sceneaxi/profile-imaginary",
+      );
+    }
   });
 
   it("refuses --operation without --profile", () => {

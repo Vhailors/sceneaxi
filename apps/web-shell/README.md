@@ -50,7 +50,10 @@ identity port and the entitlement matrix, whose contracts are owned by
 policy: the same payload `sceneaxi profile open-path` and
 `sceneaxi-desktop open-path` report, rendered by nothing here because this
 package ships no markup. It reports the policy verbatim and surfaces the Kids
-refusal as a named refusal rather than an empty list. Contract and ownership:
+refusal as a named refusal rather than an empty list. `policyFor(profile)` is the
+same one-profile projection the two command surfaces report, so an off-policy
+profile refuses with `OPEN_PATH_PROFILE_UNKNOWN` instead of rendering as an
+absent row. Contract and ownership:
 [`docs/open-path-policy.md`](../../docs/open-path-policy.md).
 
 ## Hybrid vertical: Minimum E2
