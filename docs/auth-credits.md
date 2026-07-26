@@ -24,8 +24,9 @@ running Better Auth instance, a Neon connection, the Stripe API client, any HTTP
 and any UI. Those are injected adapters or other lanes' work — UI surfaces are coordinated
 with `sceneaxi-websites-deploy-v1`, which this vertical does not block.
 
-**What v1 does not deliver:** a live signed-in browser session. That needs a hosted HTTP
-surface this repo does not contain. See *Remaining wiring* at the end.
+**What v1 does not deliver:** a live signed-in browser session. The deployable HTTP surface
+has since landed on `sites/umbrella` and is wired to this plane, so what remains are the
+provider handles ADR 0021 keeps outside this repository. See *Remaining wiring* at the end.
 
 ## Environment
 
@@ -412,10 +413,11 @@ this vertical adds no CLI verb. Machine/agent CLI behavior is untouched.
 
 ## Remaining wiring for a live signed-in session
 
-Everything below is outside this vertical and needs a hosted HTTP surface, coordinated with
-`sceneaxi-websites-deploy-v1`:
+Everything below is outside this vertical. The hosted HTTP surface it needed is now
+`sites/umbrella`, wired to this plane through one plug point:
 
-1. An HTTP app that mounts Better Auth's handler and holds the session cookie.
+1. Better Auth's own handler, mounted behind that surface to issue the session cookie the
+   umbrella already reads.
 2. `IdentityStore` and `CreditStore` implementations over a Neon client, and the migrations
    applied to a Neon branch (needs credentials — separate authority). The `CreditStore` also
    owns provisioning a `CreditAccount` per user; nothing in this repository can create one.

@@ -587,13 +587,27 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       now: NOW,
     });
 
-  /** A listing completion: signature-verified, intent-bound, and granting no credits. */
-  const { credits: _packCredits, ...listingBase } = INTENT;
+  /**
+   * A listing completion: signature-verified, intent-bound, and granting no credits.
+   *
+   * Spelled out field by field rather than spread-with-`credits`-omitted, because a
+   * rest-sibling omit leaves an unused binding this repository's lint rules reject.
+   */
   const LISTING_INTENT = Object.freeze({
-    ...listingBase,
+    schemaVersion: INTENT.schemaVersion,
+    kind: INTENT.kind,
     intentId: "int_listing_test_abc123456789",
+    userId: INTENT.userId,
     purpose: "catalog-listing" as const,
     itemId: "listing-widget",
+    unitAmount: INTENT.unitAmount,
+    currency: INTENT.currency,
+    stripePriceId: INTENT.stripePriceId,
+    mode: INTENT.mode,
+    successUrl: INTENT.successUrl,
+    cancelUrl: INTENT.cancelUrl,
+    idempotencyKey: INTENT.idempotencyKey,
+    createdAt: INTENT.createdAt,
   });
 
   const listingBody = (eventId: string): string =>
