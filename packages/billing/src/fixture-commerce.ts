@@ -428,7 +428,7 @@ export type SettleFixtureListingMoneySaleRequest = Readonly<{
    * this bookkeeping belongs to, inside the idempotency key the checkout was
    * created under, so the recorded sale cannot be renamed after settlement.
    */
-  intent: CheckoutSessionIntent | unknown;
+  intent: CheckoutSessionIntent;
   /** Epoch milliseconds. */
   now: number;
 }>;
