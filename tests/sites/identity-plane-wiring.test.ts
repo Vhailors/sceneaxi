@@ -601,6 +601,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     // operator who never set STRIPE_WEBHOOK_SECRET owns that omission, so it belongs on
     // the 503 side however Stripe's own dashboard would otherwise read it.
     for (const reason of [
+      CREDIT_WEBHOOK_REASONS.evidenceMissing,
       CREDIT_WEBHOOK_REASONS.evidenceUnavailable,
       CREDIT_WEBHOOK_REASONS.ledgerUnavailable,
       CREDIT_WEBHOOK_REASONS.storeFailed,
@@ -613,7 +614,6 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       expect(creditWebhookHttpStatus(reason)).toBe(503);
     }
     for (const reason of [
-      CREDIT_WEBHOOK_REASONS.evidenceMissing,
       "STRIPE_SIGNATURE_HEADER_MISSING",
       "STRIPE_SIGNATURE_MISMATCH",
       "STRIPE_WEBHOOK_PAYLOAD_INVALID",
@@ -687,6 +687,48 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       ignored: true,
       reason: CREDIT_WEBHOOK_REASONS.eventUnrelated,
     });
+    expect(store.entryCount("acct-1")).toBe(0);
+  });
+
+  it("refuses a SceneAxi checkout whose metadata is missing the intent id", async () => {
+    // The buyer paid. Acknowledging this as "a checkout we never created" would make
+    // Stripe record a success and never redeliver, stranding the grant silently. The
+    // other three metadata keys are already refused as an invalid payload by
+    // `parseCheckoutCompletedEvent`, so all four of one contract fail the same way.
+    const store = webhookStore();
+    const outcome = await signedCall({
+      payload: eventBody("evt_test_partial_metadata", {
+        metadata: {
+          sceneaxiUserId: "member-1",
+          sceneaxiPurpose: "credit-pack",
+          sceneaxiItemId: PACK.packId,
+        },
+      }),
+      store,
+    });
+    expect(outcome).toMatchObject({ ok: false, reason: "STRIPE_WEBHOOK_PAYLOAD_INVALID" });
+    expect(outcome.ok).toBe(false);
+    if (!outcome.ok) expect(creditWebhookHttpStatus(outcome.reason)).toBe(400);
+    expect(store.entryCount("acct-1")).toBe(0);
+  });
+
+  it("refuses a SceneAxi checkout whose intent id is present but empty", async () => {
+    // Presence, not validity, decides whether the session is this deployment's: an empty
+    // value still claims the checkout, so it must not fall through to the foreign-event
+    // acknowledgement.
+    const store = webhookStore();
+    const outcome = await signedCall({
+      payload: eventBody("evt_test_blank_intent", {
+        metadata: {
+          sceneaxiUserId: "member-1",
+          sceneaxiPurpose: "credit-pack",
+          sceneaxiItemId: PACK.packId,
+          sceneaxiIntentId: "",
+        },
+      }),
+      store,
+    });
+    expect(outcome).toMatchObject({ ok: false, reason: "STRIPE_WEBHOOK_PAYLOAD_INVALID" });
     expect(store.entryCount("acct-1")).toBe(0);
   });
 
@@ -947,6 +989,10 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       now: NOW,
     });
     expect(outcome).toMatchObject({ ok: false, reason: "STRIPE_CHECKOUT_EVIDENCE_MISSING" });
+    expect(outcome.ok).toBe(false);
+    // Nothing about the request is wrong: this deployment's own checkout adapter never
+    // persisted the intent the grant must be bound to, so it answers on the server side.
+    if (!outcome.ok) expect(creditWebhookHttpStatus(outcome.reason)).toBe(503);
     expect(store.entryCount("acct-1")).toBe(0);
   });
 

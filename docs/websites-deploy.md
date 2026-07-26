@@ -223,7 +223,9 @@ than inventing a session, balance, or checkout.
      `sceneaxiIntentId` — copied from the intent's own `userId` / `purpose` / `itemId` /
      `intentId`. `parseCheckoutCompletedEvent` cross-checks all four plus the mode against
      the persisted intent, so a missing or mismatched key refuses the grant as an invalid
-     webhook payload.
+     webhook payload — including `sceneaxiIntentId`, which the endpoint reads first to
+     route the event: a session carrying any SceneAxi key is refused and retried rather
+     than acknowledged as another product's event.
 5. Run that vertical's Neon migrations against the shared database. The migrations create
    the `credit_accounts` table and insert **no rows**, and `CreditStore` exposes no
    account-creation method, so **provisioning a credit account per user is that store
@@ -270,12 +272,14 @@ Load-bearing properties, each gate-tested in `tests/sites/identity-plane-wiring.
   path to a grant that even type-checks. The credit amount comes from the persisted
   intent, never from the event.
 - **The webhook's answer names the failing side.** A refusal this deployment owns — no
-  signing secret, an unusable clock, an adapter that threw, its own ledger rows that do
-  not load — answers `503`; a refusal the request owns — signature, payload, an intent
-  that does not match — answers `400`. An event the endpoint is not built to act on is
-  neither: it answers `200` with `ignored: true`, so Stripe stops redelivering a
-  condition redelivery cannot change. Only `ignored: false` means credits are in the
-  ledger.
+  signing secret, an unusable clock, an adapter that threw, a persisted intent its own
+  checkout adapter never wrote, its own ledger rows that do not load — answers `503`; a
+  refusal the request owns — signature, payload, an intent that does not match — answers
+  `400`. An event the endpoint is not built to act on is neither: it answers `200` with
+  `ignored: true`, so Stripe stops redelivering a condition redelivery cannot change.
+  Only `ignored: false` means credits are in the ledger. The acknowledgement is decided
+  by the *absence* of every SceneAxi metadata key, so a session this deployment did
+  create is always refused and retried, never silently accepted.
 - **The buyer is the verified principal**, not the `userId` the checkout form submitted;
   the submitted value is only cross-checked against it.
 - **Unknown is never zero.** A failed ledger read refuses `CREDITS_PLANE_UNAVAILABLE`

@@ -120,14 +120,16 @@ const UNHANDLED_EVENT_REASONS: ReadonlySet<string> = Object.freeze(
  * The refusals that mean *this deployment* could not complete a well-formed event.
  *
  * The sender did nothing wrong in any of them: the endpoint has no signing secret
- * configured, its clock is unusable, an adapter threw, its own ledger rows do not load,
- * or the purchasing user has no provisioned credit account. They are separated from the
+ * configured, its clock is unusable, an adapter threw, its own checkout adapter never
+ * persisted the intent the grant must be bound to, its own ledger rows do not load, or
+ * the purchasing user has no provisioned credit account. They are separated from the
  * request-fault refusals so the transport can answer a status that names the failing
- * side — an operator who forgot `STRIPE_WEBHOOK_SECRET` must not see their own omission
- * reported as a bad request from Stripe.
+ * side — an operator who forgot `STRIPE_WEBHOOK_SECRET`, or whose adapter forgot to
+ * persist intents, must not see their own omission reported as a bad request from Stripe.
  */
 const SERVER_SIDE_REASONS: ReadonlySet<string> = Object.freeze(
   new Set<string>([
+    CREDIT_WEBHOOK_REASONS.evidenceMissing,
     CREDIT_WEBHOOK_REASONS.evidenceUnavailable,
     CREDIT_WEBHOOK_REASONS.ledgerUnavailable,
     CREDIT_WEBHOOK_REASONS.storeFailed,
@@ -192,16 +194,37 @@ const asId = (value: unknown): string | undefined =>
  * What a verified body offers this endpoint: the two lookup keys, or the reason there
  * are none.
  *
- * `unrelated` and `unparseable` are deliberately distinct. A signed body carrying no
- * SceneAxi intent id is simply an event this deployment did not create — the same
- * Stripe account may serve other products, and other event types carry other objects —
- * so it is acknowledged, not failed. A signed body that is not JSON at all is a fault
- * worth surfacing, because Stripe does not send one.
+ * `unrelated`, `incomplete`, and `unparseable` are deliberately distinct. A signed body
+ * carrying no SceneAxi metadata key at all is simply an event this deployment did not
+ * create — the same Stripe account may serve other products, and other event types carry
+ * other objects — so it is acknowledged, not failed. A body that *does* carry a SceneAxi
+ * key but cannot be routed is the opposite: this deployment created that checkout, money
+ * moved, and acknowledging it would silently strand a paid-but-ungranted purchase Stripe
+ * would never redeliver. It is refused exactly like the other three metadata keys, which
+ * `parseCheckoutCompletedEvent` already refuses as an invalid payload, so one contract
+ * does not have two opposite failure modes. A signed body that is not JSON at all is a
+ * fault worth surfacing, because Stripe does not send one.
  */
 type CheckoutLookup =
   | { readonly kind: "keys"; readonly intentId: string; readonly sessionId: string }
+  | { readonly kind: "incomplete" }
   | { readonly kind: "unrelated" }
   | { readonly kind: "unparseable" };
+
+/** Every metadata key SceneAxi stamps on a checkout session it created. */
+const SCENEAXI_METADATA_KEYS: readonly string[] = Object.freeze(
+  Object.values(CHECKOUT_METADATA_KEYS),
+);
+
+/**
+ * Whether a session's metadata claims this deployment created the checkout.
+ *
+ * Presence, not validity, is the question: a key stamped with an empty or malformed
+ * value still says the session is SceneAxi's, and must not be mistaken for a foreign
+ * product's event and permanently acknowledged.
+ */
+const claimsSceneAxiCheckout = (metadata: Record<string, unknown> | undefined): boolean =>
+  metadata !== undefined && SCENEAXI_METADATA_KEYS.some((key) => Object.hasOwn(metadata, key));
 
 /**
  * The two lookup keys a verified checkout body carries: which session to retrieve
@@ -223,10 +246,13 @@ function lookupKeysOf(payload: string): CheckoutLookup {
     return Object.freeze({ kind: "unparseable" as const });
   }
   const object = asRecord(asRecord(asRecord(raw)?.["data"])?.["object"]);
+  const metadata = asRecord(object?.["metadata"]);
   const sessionId = asId(object?.["id"]);
-  const intentId = asId(asRecord(object?.["metadata"])?.[CHECKOUT_METADATA_KEYS.intentId]);
+  const intentId = asId(metadata?.[CHECKOUT_METADATA_KEYS.intentId]);
   if (sessionId === undefined || intentId === undefined) {
-    return Object.freeze({ kind: "unrelated" as const });
+    return Object.freeze({
+      kind: claimsSceneAxiCheckout(metadata) ? ("incomplete" as const) : ("unrelated" as const),
+    });
   }
   return Object.freeze({ kind: "keys" as const, intentId, sessionId });
 }
@@ -266,10 +292,16 @@ export async function applyCreditPackWebhook(input: {
       "The verified body is not a JSON event object, so no persisted price snapshot can be bound to it.",
     );
   }
+  if (lookup.kind === "incomplete") {
+    return refused(
+      BILLING_REFUSE_REASONS.webhookPayloadInvalid,
+      "The verified event carries SceneAxi checkout metadata but no usable session id and intent id, so a checkout this deployment created cannot be bound to its persisted price snapshot.",
+    );
+  }
   if (lookup.kind === "unrelated") {
     return ignored(
       CREDIT_WEBHOOK_REASONS.eventUnrelated,
-      "The verified event names no session or SceneAxi intent id, so it is not a checkout this deployment created. Nothing was granted, and redelivery would not change that.",
+      "The verified event carries no SceneAxi checkout metadata, so it is not a checkout this deployment created. Nothing was granted, and redelivery would not change that.",
     );
   }
   const keys = lookup;
