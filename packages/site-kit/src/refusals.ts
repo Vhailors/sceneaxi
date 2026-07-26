@@ -69,6 +69,8 @@ export const SITE_REFUSALS = Object.freeze({
   BILLING_CHECKOUT_REQUEST_INVALID: "The checkout request is malformed.",
   BILLING_CHECKOUT_ORIGIN_UNTRUSTED:
     "The request origin is not the umbrella origin this deployment is configured with, so no checkout redirect is built from it.",
+  BILLING_CHECKOUT_ORIGIN_UNCONFIGURED:
+    "This deployment has no configured https umbrella origin, so no checkout success or cancel URL can be built.",
   BILLING_ADAPTER_OUTPUT_INVALID:
     "The billing adapter returned a value that is not a valid checkout handoff.",
 

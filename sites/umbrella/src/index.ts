@@ -60,6 +60,7 @@ export {
   STRIPE_SIGNATURE_HEADER,
   STRIPE_WEBHOOK_SECRET_ENV,
   applyCreditPackWebhook,
+  creditWebhookHttpStatus,
   type CheckoutEvidencePort,
   type CreditWebhookOutcome,
 } from "./lib/credit-webhook.js";

@@ -23,6 +23,7 @@
  * parameter that could supply one.
  */
 import {
+  CHECKOUT_METADATA_KEYS,
   applyCheckoutCompletedGrant,
   loadLedgerState,
   parseCheckoutCompletedEvent,
@@ -73,6 +74,34 @@ export const CREDIT_WEBHOOK_REASONS = Object.freeze({
 } as const);
 
 /**
+ * The refusals that mean *this deployment* could not complete a well-formed event.
+ *
+ * Every one of them is raised after the signature verified, so the sender did nothing
+ * wrong: an adapter threw, the ledger could not be read, or the purchasing user has no
+ * provisioned credit account. They are separated from the request-fault refusals so the
+ * transport can answer a status that names the failing side.
+ */
+const SERVER_SIDE_REASONS: ReadonlySet<string> = Object.freeze(
+  new Set<string>([
+    CREDIT_WEBHOOK_REASONS.evidenceUnavailable,
+    CREDIT_WEBHOOK_REASONS.ledgerUnavailable,
+    CREDIT_WEBHOOK_REASONS.storeFailed,
+  ]),
+);
+
+/**
+ * The HTTP status a refusal should be answered with.
+ *
+ * Stripe retries every non-2xx either way, so no grant depends on this — the status is
+ * a diagnostic. A forged signature and an unreachable database must not look identical
+ * in the provider dashboard or in status-code alerting, so the reasons this deployment
+ * owns answer 503 and the ones the request owns answer 400.
+ */
+export function creditWebhookHttpStatus(reason: string): 400 | 503 {
+  return SERVER_SIDE_REASONS.has(reason) ? 503 : 400;
+}
+
+/**
  * Await an injected adapter call, reporting a throw rather than propagating it.
  *
  * Every port sequenced below — the checkout evidence adapter and the credit store —
@@ -119,7 +148,7 @@ function lookupKeysOf(
   }
   const object = asRecord(asRecord(asRecord(raw)?.["data"])?.["object"]);
   const sessionId = asId(object?.["id"]);
-  const intentId = asId(asRecord(object?.["metadata"])?.["sceneaxiIntentId"]);
+  const intentId = asId(asRecord(object?.["metadata"])?.[CHECKOUT_METADATA_KEYS.intentId]);
   if (sessionId === undefined || intentId === undefined) return undefined;
   return Object.freeze({ intentId, sessionId });
 }

@@ -178,13 +178,18 @@ export function resolveUmbrellaEditorOrigin(
  * of a completed purchase. The origin therefore comes from the same server-configured
  * value the catalogs already link to, and a request arriving on any other origin is
  * refused rather than silently redirected to the configured one.
+ *
+ * Both failures answer in the billing vocabulary. The configured origin is probed through
+ * the deep-link contract because that is where the origin rule is defined once, but a
+ * buyer on the payment path must never be handed a catalog deep-link reason, so an absent
+ * or non-https configured origin is renamed here rather than propagated.
  */
 export function resolveCheckoutRedirectOrigin(
   env: Readonly<Record<string, string | undefined>>,
   requestOrigin: string,
 ): SiteResult<string> {
   const configured = resolveUmbrellaEditorOrigin(env);
-  if (!configured.ok) return configured;
+  if (!configured.ok) return refuse("BILLING_CHECKOUT_ORIGIN_UNCONFIGURED");
   const observed = normalizeOrigin(requestOrigin);
   if (observed === null || observed !== configured.value) {
     return refuse("BILLING_CHECKOUT_ORIGIN_UNTRUSTED");

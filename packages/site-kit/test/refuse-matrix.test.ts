@@ -234,6 +234,8 @@ const CASES: Readonly<Record<SiteRefusalReason, () => Promise<unknown> | unknown
       { NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN: "https://umbrella.vercel.app" },
       "https://attacker.example",
     ),
+  BILLING_CHECKOUT_ORIGIN_UNCONFIGURED: () =>
+    resolveCheckoutRedirectOrigin({}, "https://umbrella.vercel.app"),
   BILLING_ADAPTER_OUTPUT_INVALID: () =>
     createBillingPlane({
       adapter: {

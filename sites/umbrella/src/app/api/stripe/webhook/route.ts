@@ -3,6 +3,7 @@ import {
   STRIPE_SIGNATURE_HEADER,
   STRIPE_WEBHOOK_SECRET_ENV,
   applyCreditPackWebhook,
+  creditWebhookHttpStatus,
 } from "../../../../lib/credit-webhook.js";
 import { umbrellaPlaneHandles } from "../../../../lib/identity-plane.js";
 
@@ -18,6 +19,11 @@ import { umbrellaPlaneHandles } from "../../../../lib/identity-plane.js";
  * genuinely unprocessed event and this endpoint never reports success for a body it
  * did not honour. A *replayed* event is a success — the credits are already in the
  * ledger — because Stripe delivers at least once by design.
+ *
+ * Which non-2xx is a diagnostic, not a retry decision: `creditWebhookHttpStatus` answers
+ * 503 for the refusals this deployment owns and 400 for the ones the request owns, so a
+ * forged signature and an unreachable database are distinguishable in the provider
+ * dashboard and in status-code alerting.
  */
 export const dynamic = "force-dynamic";
 
@@ -47,7 +53,7 @@ export async function POST(request: NextRequest) {
   if (!outcome.ok) {
     return NextResponse.json(
       { ok: false, reason: outcome.reason, message: outcome.message },
-      { status: 400 },
+      { status: creditWebhookHttpStatus(outcome.reason) },
     );
   }
   return NextResponse.json({ ok: true, replayed: outcome.replayed }, { status: 200 });

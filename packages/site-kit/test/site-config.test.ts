@@ -83,8 +83,15 @@ describe("catalog umbrella origin resolution", () => {
     }
   });
 
-  it("refuses a checkout redirect origin when none is configured", () => {
-    expect(resolveCheckoutRedirectOrigin({}, "https://umbrella.vercel.app").ok).toBe(false);
+  it("refuses a checkout redirect origin in billing vocabulary when none is configured", () => {
+    // A buyer on the payment path must not be handed a catalog deep-link reason, so the
+    // unconfigured case is renamed rather than propagated from the deep-link probe.
+    for (const env of [{}, { NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN: "http://evil.example" }]) {
+      expect(resolveCheckoutRedirectOrigin(env, "https://umbrella.vercel.app")).toMatchObject({
+        ok: false,
+        reason: "BILLING_CHECKOUT_ORIGIN_UNCONFIGURED",
+      });
+    }
   });
 
   it("builds a deep link that names its own source surface", () => {

@@ -20,14 +20,17 @@ import {
   type IdentityAdapter,
 } from "@sceneaxi/auth";
 import {
+  CHECKOUT_METADATA_KEYS,
   createInMemoryCreditStore,
   signStripeWebhookPayload,
   type CheckoutSettlement,
 } from "@sceneaxi/billing";
 import { SITE_STARTER_CREDIT_ALLOTMENT } from "@sceneaxi/site-kit";
 import {
+  CREDIT_WEBHOOK_REASONS,
   applyCreditPackWebhook,
   createUmbrellaIdentityPlane,
+  creditWebhookHttpStatus,
   parseSessionToken,
   siteReasonForAuthReason,
   siteReasonForBillingReason,
@@ -569,6 +572,40 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       balance: PACK.credits,
     });
     expect(store.entryCount("acct-1")).toBe(1);
+  });
+
+  it("binds the fixture wire keys to the metadata contract the grant path reads", () => {
+    // The bodies above spell the wire keys out, and the plane reads them through
+    // `CHECKOUT_METADATA_KEYS`. Pinning the two together here makes a rename of the
+    // exported constant fail loudly instead of silently changing which signed bodies
+    // the endpoint can bind to an intent.
+    expect({ ...CHECKOUT_METADATA_KEYS }).toEqual({
+      userId: "sceneaxiUserId",
+      purpose: "sceneaxiPurpose",
+      itemId: "sceneaxiItemId",
+      intentId: "sceneaxiIntentId",
+    });
+  });
+
+  it("answers deployment failures with 503 and request faults with 400", () => {
+    // Stripe retries every non-2xx either way, so this is diagnosis: a forged signature
+    // and an unreachable database must not be indistinguishable in the dashboard.
+    for (const reason of [
+      CREDIT_WEBHOOK_REASONS.evidenceUnavailable,
+      CREDIT_WEBHOOK_REASONS.ledgerUnavailable,
+      CREDIT_WEBHOOK_REASONS.storeFailed,
+    ]) {
+      expect(creditWebhookHttpStatus(reason)).toBe(503);
+    }
+    for (const reason of [
+      CREDIT_WEBHOOK_REASONS.evidenceMissing,
+      "STRIPE_SIGNATURE_HEADER_MISSING",
+      "STRIPE_SIGNATURE_MISMATCH",
+      "STRIPE_WEBHOOK_SECRET_MISSING",
+      "STRIPE_WEBHOOK_PAYLOAD_INVALID",
+    ]) {
+      expect(creditWebhookHttpStatus(reason)).toBe(400);
+    }
   });
 
   it("grants nothing a second time when Stripe redelivers the same event", async () => {
