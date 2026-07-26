@@ -8,6 +8,7 @@ import {
 import {
   OPENROUTER_ADAPTER_ERROR_CODES,
   OpenRouterAdapterError,
+  createFixtureTransport,
   createOpenRouterAdapter,
   seam,
   type OpenRouterTransportRequest,
@@ -439,5 +440,129 @@ describe("@sceneaxi/provider-openrouter", () => {
         transport: () => attestedFixture("complete"),
       }),
     ).toThrowError(OpenRouterAdapterError);
+  });
+});
+
+describe("the fixture transport", () => {
+  it("drives the whole adapter path from recorded data alone", async () => {
+    const adapter = createOpenRouterAdapter({
+      model: MODEL,
+      eval: EVAL,
+      transport: createFixtureTransport({
+        model: MODEL,
+        responses: {
+          complete: fixture("complete"),
+          "tool-call": fixture("tool-call"),
+        },
+      }),
+    });
+
+    await expect(
+      adapter.complete?.({
+        schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+        operation: "complete",
+        profile: "@sceneaxi/profile-web",
+        model: MODEL,
+        prompt: "fixture prompt",
+      }),
+    ).resolves.toMatchObject({
+      response: { text: "fixture completion", finishReason: "stop" },
+      executedModel: MODEL,
+    });
+
+    await expect(
+      adapter.toolCall?.({
+        schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+        operation: "tool-call",
+        profile: "@sceneaxi/profile-web",
+        model: MODEL,
+        prompt: "move the hero",
+        tools: [
+          {
+            name: "move-entity",
+            inputSchema: {
+              type: "object",
+              additionalProperties: false,
+              required: ["entity", "x"],
+              properties: { entity: { type: "string" }, x: { type: "number" } },
+            },
+          },
+        ],
+      }),
+    ).resolves.toMatchObject({
+      response: {
+        toolCalls: [
+          { name: "move-entity", arguments: { entity: "hero", x: 2 } },
+        ],
+      },
+      executedModel: MODEL,
+    });
+  });
+
+  it("is deterministic: the same request replays byte-identically", () => {
+    const transport = createFixtureTransport({
+      model: MODEL,
+      responses: { complete: fixture("complete") },
+    });
+    const request: OpenRouterTransportRequest = {
+      schemaVersion: 1,
+      operation: "complete",
+      modelDescriptor: MODEL,
+      model: MODEL.model,
+      messages: [{ role: "user", content: "fixture prompt" }],
+      provider: { allow_fallbacks: false },
+      temperature: 0,
+      seed: EVAL.seed,
+    };
+    expect(transport(request)).toEqual(transport(request));
+  });
+
+  it("refuses an unrecorded operation rather than answering blank", () => {
+    const transport = createFixtureTransport({
+      model: MODEL,
+      responses: { complete: fixture("complete") },
+    });
+    let thrown: unknown;
+    try {
+      transport({
+        schemaVersion: 1,
+        operation: "tool-call",
+        modelDescriptor: MODEL,
+        model: MODEL.model,
+        messages: [{ role: "user", content: "fixture prompt" }],
+        provider: { allow_fallbacks: false },
+        temperature: 0,
+        seed: EVAL.seed,
+        tools: [],
+      });
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(OpenRouterAdapterError);
+    expect(thrown).toMatchObject({
+      code: OPENROUTER_ADAPTER_ERROR_CODES.fixtureNotRecorded,
+    });
+  });
+
+  it("attests the pin it was built with, so a mismatched pin still refuses", async () => {
+    const adapter = createOpenRouterAdapter({
+      model: MODEL,
+      eval: EVAL,
+      transport: createFixtureTransport({
+        model: { ...MODEL, version: "2026-01-01" },
+        responses: { complete: fixture("complete") },
+      }),
+    });
+    await expect(
+      adapter.complete?.({
+        schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+        operation: "complete",
+        profile: "@sceneaxi/profile-web",
+        model: MODEL,
+        prompt: "fixture prompt",
+      }),
+    ).rejects.toMatchObject({
+      code: OPENROUTER_ADAPTER_ERROR_CODES.responseModelMismatch,
+    });
   });
 });

@@ -14,7 +14,7 @@ The architecture decision behind the shape of this plane is
 |---|---|
 | Contracts (User, Session, RoleAssignment, credits, billing, entitlements, listings, revenue share) | `packages/schemas` |
 | Single-admin resolution, role guards, identity port | `packages/auth` |
-| Credit ledger, metering, entitlements, Stripe test checkout, revenue share | `packages/billing` |
+| Credit ledger, metering, entitlements, hosted-AI credit gate, Stripe test checkout, revenue share | `packages/billing` |
 | Neon schema | `db/migrations` |
 | Login + balance view model | `apps/web-shell` (`createAccountPanel`) |
 | Deployable-site wiring | `sites/umbrella/src/lib/identity-plane.ts` (`docs/websites-deploy.md`) |
@@ -279,6 +279,47 @@ committed debit collide with a different account's legitimately distinct usage �
 as a store failure rather than metering it. Every other producer in this plane already
 namespaces by identity (`starter:<userId>`, `sale:<saleId>:buyer`, `stripe-event:<id>`);
 metering is scoped the same way so the pure check and the persisted constraint agree.
+
+## Hosted AI (sceneaxi#139)
+
+`runMeteredModelCall` in `packages/billing/src/hosted-ai.ts` is the only path a hosted
+model call may take to a debit. It adds no ledger, no second entitlement table, and no
+provider abstraction — it fixes the order the two existing pieces run in:
+
+1. **Kids** — denied by name before identity, provider, or ledger, on both routes
+2. **Route** — `hosted` or `byo`, a closed enumeration with no default
+3. **Hosted opt-in** — off unless a caller explicitly passes `{ enabled: true }`
+4. **Entitlement** — capability, account, and **balance**, all before the provider
+5. **Metering readiness** — store, reason, and key, still before the provider
+6. **Provider** — the injected call, and only now
+7. **Debit** — exactly the credits the decision named, through `meterCredits`
+
+Steps 4 and 6 in that order are why a zero or insufficient balance costs nothing and
+appends nothing: the refusal is `CREDIT_BALANCE_INSUFFICIENT`, produced before the provider
+runs. A provider throw is `HOSTED_AI_PROVIDER_FAILED` with no debit; a ledger or store
+failure keeps its own reason, and the debit is all-or-nothing either way.
+
+**Default-off is a switch, not an inference.** `HOSTED_AI_DEFAULT_CONFIG` is
+`{ enabled: false }`. A configured OpenRouter adapter or a present API key does not enable
+hosted AI — possessing a key is not a decision to spend a user's credits. The
+`HOSTED_AI_NOT_ENABLED` refusal is reachable with no account and no ledger, so it can never
+be confused with a balance problem.
+
+**Which capability bills.** The `hosted` route bills `hosted-ai-assistant` or
+`metered-model-port`; the `byo` route bills `byo-model-keys`. The caller names it and a
+capability outside its route's list refuses — nothing is inferred from the route.
+
+**BYO stays free**, including for a signed-in caller with a balance: `byo-model-keys` is
+free-without-account in the matrix, so it resolves before identity and never reaches
+metering.
+
+The provider is an **injected thunk**, deliberately not a Model Provider Port type: billing
+must not learn what a model is to charge for one, and the port sits above this package in
+the dependency matrix. Callers wire the two.
+`tests/e2e/hosted-ai-metering-golden.test.ts` does exactly that with the real port, the
+real `@sceneaxi/provider-openrouter` adapter, and that package's recorded fixture transport
+(`createFixtureTransport`) — so the whole proof runs with no network, no credential, and no
+production spend.
 
 ## Credit packs
 

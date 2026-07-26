@@ -15,6 +15,7 @@ import {
 import {
   BILLING_REFUSE_REASONS,
   CHECKOUT_METADATA_KEYS,
+  HOSTED_AI_DEFAULT_CONFIG,
   appendCreditEntry,
   applyCheckoutCompletedGrant,
   applyCreditsSale,
@@ -36,6 +37,7 @@ import {
   persistCreditsSale,
   purchaseListingWithCredits,
   recordMoneySale,
+  runMeteredModelCall,
   signStripeWebhookPayload,
   splitCredits,
   verifyStripeWebhookSignature,
@@ -564,6 +566,38 @@ describe("billing refuse matrix", () => {
     await meter({ state: { entries: [] } });
     await meter({ principal: principal({ userId: "usr_other" }) });
     await meter({ amount: 1_000 });
+  });
+
+  it("reaches every hosted-AI routing refusal", async () => {
+    const state = funded(100);
+    const hosted = async (overrides: Record<string, unknown>) =>
+      record(
+        await runMeteredModelCall({
+          route: "hosted",
+          capability: "hosted-ai-assistant",
+          call: () => ({ text: "case" }),
+          now: NOW,
+          hostedAi: { enabled: true },
+          admin,
+          principal: principal(),
+          state,
+          store: createInMemoryCreditStore({
+            accounts: [state.account],
+            entries: state.entries,
+          }),
+          creditAmount: 1,
+          reason: "case",
+          idempotencyKey: "case:hosted",
+          ...overrides,
+        } as never),
+      );
+    await hosted({ route: "not-a-route" });
+    await hosted({ hostedAi: HOSTED_AI_DEFAULT_CONFIG });
+    await hosted({
+      call: () => {
+        throw new Error("provider down");
+      },
+    });
   });
 
   it("reaches every entitlement refusal", () => {

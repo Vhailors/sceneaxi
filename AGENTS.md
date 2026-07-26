@@ -192,6 +192,20 @@ headless surface (`tests/e2e/umbrella-live-open-golden.test.ts` and
 claim is a recorded browser observation in `docs/three-presentation-core.md`, never a
 gate inference. Shipped presentation copy is asserted against `LIVE_OPEN_PRESENTATION`,
 so the retired "experimental preview" framing cannot return by review slip.
+
+Hosted AI reaches a credit debit through exactly one path: `runMeteredModelCall()`
+in `packages/billing/src/hosted-ai.ts`, whose fixed order (Kids → route → hosted
+opt-in → entitlement incl. balance → metering readiness → provider → debit) is the
+contract, documented in `docs/auth-credits.md`. Hosted is default-off
+(`HOSTED_AI_DEFAULT_CONFIG`) and a configured adapter or key never enables it; BYO
+bills `byo-model-keys` and stays free. The provider is an **injected thunk**, never
+a Model Provider Port type, so billing gains no engine edge — callers wire the port
+themselves, as `tests/e2e/hosted-ai-metering-golden.test.ts` does over
+`createFixtureTransport` from `@sceneaxi/provider-openrouter` (recorded data, no
+network, no credential). Adding a `BILLING_REFUSE_REASONS` entry requires a
+covering case in `tests/e2e/auth-credits-refuse-matrix.test.ts`, which asserts
+every reason is reachable.
+
 First-class plugins follow `docs/plugins.md` and ADR 0005: manifests may claim
 only IDs from the versioned public capability registry; unknown IDs and
 isolation breaches refuse. Runtime API details live in

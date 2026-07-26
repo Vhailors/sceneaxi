@@ -1,7 +1,8 @@
 # @sceneaxi/billing
 
 Credits and billing for the SceneAxi identity plane: the append-only credit ledger,
-metering, entitlement enforcement, and the Stripe test-mode checkout and webhook paths.
+metering, entitlement enforcement, the default-off hosted-AI credit gate, and the Stripe
+test-mode checkout and webhook paths.
 
 Configuration lives in [`docs/auth-credits.md`](../../docs/auth-credits.md); the
 adapter-boundary decision is ADR 0021.
@@ -48,6 +49,26 @@ its injected `CreditStore`, refuses an absent or stale account, and appends the 
 before it reports success. The caller's idempotency key is scoped to the account
 (`usage:<accountId>:<callerKey>`) so the ledger's per-account replay check and the store's
 global `idempotency_key` uniqueness cannot disagree.
+
+**Hosted AI is one ordering, not a convention.** `runMeteredModelCall` composes the two
+pieces that already exist — `evaluateEntitlement` and `meterCredits` — into the single
+sequence a hosted model call may happen in: Kids denial, route, hosted opt-in, entitlement
+(capability, account, **balance**), metering readiness, provider, debit. Balance before
+provider is the load-bearing step: an unfunded account refuses without the provider running
+and without a ledger row, so a zero balance costs nothing and appends nothing. The provider
+is an **injected thunk**, never a Model Provider Port type — billing does not learn what a
+model is in order to charge for one, and every credential stays outside the credit plane.
+
+**Hosted AI is off until someone says otherwise.** `HOSTED_AI_DEFAULT_CONFIG` is
+`{ enabled: false }`, and the opt-in is a separate explicit switch rather than something
+derived from "an adapter is configured" or "a key is present" — possessing an OpenRouter
+key is not a decision to spend a user's credits. The refusal is reachable with no account
+and no ledger, so "hosted AI is off here" can never be mistaken for "you cannot afford it".
+
+**Bring-your-own keys stay free.** The `byo` route bills `byo-model-keys`, which the matrix
+prices free-without-account, so it resolves before identity and never reaches metering —
+even for a signed-in caller with a balance. Charging a user who is already paying their own
+provider would be charging twice.
 
 **Refusals keep their identity.** `BillingRefuseReason` includes `AuthRefuseReason`, so a
 guard refusal surfaces as `KIDS_IDENTITY_SURFACE_DENIED` or `AUTH_SESSION_EXPIRED` rather

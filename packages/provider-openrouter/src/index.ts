@@ -82,6 +82,7 @@ export const OPENROUTER_ADAPTER_ERROR_CODES = Object.freeze({
   requestModelNotPinned: "OPENROUTER_REQUEST_MODEL_NOT_PINNED",
   responseInvalid: "OPENROUTER_RESPONSE_INVALID",
   responseModelMismatch: "OPENROUTER_RESPONSE_MODEL_MISMATCH",
+  fixtureNotRecorded: "OPENROUTER_FIXTURE_NOT_RECORDED",
 } as const);
 
 export class OpenRouterAdapterError extends Error {
@@ -358,6 +359,43 @@ function parseToolCall(
     operation: "tool-call" as const,
     toolCalls: Object.freeze(toolCalls),
   });
+}
+
+export type OpenRouterFixtureTransportOptions = Readonly<{
+  model: ModelDescriptor;
+  /** Recorded OpenRouter response envelopes, keyed by operation. */
+  responses: Readonly<
+    Partial<Record<OpenRouterTransportRequest["operation"], unknown>>
+  >;
+}>;
+
+/**
+ * A transport that replays recorded responses and can reach no network.
+ *
+ * The point is structural, not conventional: this is an ordinary
+ * `OpenRouterTransport`, so a caller who wires it gets the whole adapter and port
+ * path — pinning, attestation, response parsing, tool-argument validation — with
+ * no credential, no `fetch`, and nothing that varies between runs. An operation
+ * with no recorded response *refuses* rather than returning an empty envelope,
+ * because a silent blank would read downstream as a model that answered nothing.
+ */
+export function createFixtureTransport(
+  options: OpenRouterFixtureTransportOptions,
+): OpenRouterTransport {
+  const pinnedModel = Object.freeze({ ...options.model });
+  const responses = Object.freeze({ ...options.responses });
+  return (request) => {
+    if (!Object.hasOwn(responses, request.operation)) {
+      throw new OpenRouterAdapterError(
+        OPENROUTER_ADAPTER_ERROR_CODES.fixtureNotRecorded,
+        `No OpenRouter fixture is recorded for the '${request.operation}' operation; the fixture transport refuses rather than inventing a response.`,
+      );
+    }
+    return Object.freeze({
+      response: responses[request.operation],
+      executedModel: pinnedModel,
+    });
+  };
 }
 
 /** Create an injected, non-Kids OpenRouter adapter with no ambient I/O. */
