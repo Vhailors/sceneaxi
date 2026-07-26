@@ -125,6 +125,10 @@ curl -s "$UMB/open" | grep -c 'Three presentation core'          # >= 1
 curl -s "$UMB/open" | grep -oE 'sha256:[0-9a-f]{64}' | head -1   # the scene digest
 curl -s "$UMB/open" | grep -c 'Experimental Three preview'       # 0
 
+# Without the preview flag the editor refuses and opens no canvas
+curl -s "$UMB/editor" | grep -c 'Not entitled'                   # >= 1
+curl -s "$UMB/editor" | grep -c 'viewport-canvas'                # 0
+
 # The served archive must hash to the published checksum
 curl -s "$UMB/engine" | grep -oE '[0-9a-f]{64}' | head -1
 curl -sL -o sdk.zip "$UMB/engine-sdk/sceneaxi-engine-sdk-<version>.zip"
@@ -138,11 +142,12 @@ curl -s -o /dev/null -w '%{http_code}\n' "$GAME/item/nope"                # 404
 curl -s -o /dev/null -w '%{http_code}\n' "$WEB/item/game-lantern-prop"    # 404
 ```
 
-`/open` draws pixels only in a browser — WebGL cannot run in node or in `curl`. The
-curl checks above verify the served scene and its copy; the pixel claim is verified by
-opening the page and reading the frame report it renders (`surface webgl-canvas`,
-`pixelsDrawn true`), and the standing record is in
-[`three-presentation-core.md`](three-presentation-core.md).
+`/open` and the entitled `/editor` draw pixels only in a browser — WebGL cannot run in
+node or in `curl`. The curl checks above verify the served scene and its copy; the pixel
+claim is verified by opening each page and reading the frame report it renders (`surface
+webgl-canvas`, `pixelsDrawn true`), and the standing record is in
+[`three-presentation-core.md`](three-presentation-core.md). `/editor` without the
+preview flag serves no canvas at all, which is what the refusal check below asserts.
 
 Expected: pages 200; the served zip's SHA-256 equal to the digest `/engine` publishes;
 an unknown item id 404; neither storefront resolving the other's ids; `/pricing` listing

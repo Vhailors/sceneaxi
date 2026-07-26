@@ -122,7 +122,7 @@ only, and presentation invents no state the kernel does not own.
   - screenshot showed the lit artifact (box plus cylinder cap), not a blank canvas
 
 - **The shipped product surface**, the umbrella live open path (`/open`, ADR
-  0021), which is that page. Verified 2026-07-25 in Chrome against the production
+  0022), which is that page. Verified 2026-07-25 in Chrome against the production
   build (`next build && next start`), SwiftShader ANGLE:
   - frame report rendered on the page:
     `backend three · label Three presentation core · surface webgl-canvas · pixelsDrawn true · drawCalls 15 · mounted service-crate-left, service-crate-root, service-crate-stacked`
@@ -134,9 +134,31 @@ only, and presentation invents no state the kernel does not own.
     service-crate-root` and back, through the Mount API, without rebuilding the
     renderer
 
+- **The entitled Minimum E2 editor** (`/editor`, ADR 0022), the umbrella's second
+  pixel-drawing surface. Verified 2026-07-26 in Chrome against the production
+  build (`next build && next start`), SwiftShader ANGLE, with the server-side
+  editor preview flag set:
+  - the canvas holds a real `webgl2` context (`WebGL 2.0 (OpenGL ES 3.0
+    Chromium)`); `toDataURL` returned 63 162 bytes, 2 234 distinct colours,
+    102 911 of 763 730 pixels non-background — lit crates, not a cleared buffer
+  - frame report rendered on the page:
+    `backend three · label Three presentation core · surface webgl-canvas ·
+    pixelsDrawn true · drawCalls 10 · mounted object-1, object-2`
+  - the isolate-selection control moved the live report to `drawCalls 5 · mounted
+    object-1` and back, through the Mount API, without rebuilding the renderer
+  - pointer drag changed the drawn pixels; **Reset view** returned a byte-identical
+    PNG to the opening framing
+  - with the preview flag unset the same build served **no canvas at all**: zero
+    `<canvas>` elements, no viewport section, and the named refusal
+    `Not entitled · reason: IDENTITY_PLANE_NOT_WIRED`
+  - the same session re-verified `/open` unchanged after both surfaces moved onto
+    the shared viewport boundary: `drawCalls 15`, 1 717 distinct colours, 101 278
+    non-background pixels — the figures recorded above, unmoved
+
 Reproduce the standalone snippets by serving a page that runs the consumer
 snippets above against a validated Sculpt Artifact; `sites/umbrella/src/app/open/`
-is the shipped version.
+and `sites/umbrella/src/app/editor/` are the shipped versions, both built on the
+site's one renderer-owning module, `src/app/_components/sculpt-viewport.tsx`.
 
 ## Not claimed
 

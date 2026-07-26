@@ -171,19 +171,27 @@ JSON kept in lockstep with `docs/auth-credits.md` by `pnpm check:contracts` —
 extend `tests/contracts/` and `tests/db/schema-lockstep.test.ts` when touching any
 of it.
 
-The umbrella owns the **public viewport** and is the only site that may depend on
-`@sceneaxi/engine-presentation` (ADR 0022) — every other engine package stays denied to
-every site, and both catalogs keep `site-kit` only. The public live open path is
-`/open`: `packages/site-kit/src/live-open.ts` decides which committed fixture is opened
-and places it with `composeScene()`, so the whole decision is gate-tested without a
-browser, and only `sites/umbrella/src/app/open/_components/live-viewport.tsx` touches a
-renderer — through the ADR 0002 seam, naming no Three type. The path is public: no
-identity, no credits, no editing operation, so it widens neither ADR 0020 entitlement
-nor ADR 0003's general-E2 bound. `pnpm gate` proves it on the headless surface
-(`tests/e2e/umbrella-live-open-golden.test.ts`, in `test:golden`); the pixel claim is a
-recorded browser observation in `docs/three-presentation-core.md`, never a gate
-inference. Shipped presentation copy is asserted against `LIVE_OPEN_PRESENTATION`, so
-the retired "experimental preview" framing cannot return by review slip.
+The umbrella owns **every viewport** and is the only site that may depend on
+`@sceneaxi/engine-presentation` (ADR 0022 + its 2026-07-26 amendment) — every other
+engine package stays denied to every site, and both catalogs keep `site-kit` only. Two
+surfaces draw pixels, the public `/open` and the entitled `/editor`, and exactly one
+module constructs a renderer for both:
+`sites/umbrella/src/app/_components/sculpt-viewport.tsx`, through the ADR 0002 seam,
+naming no Three type. A gate test asserts that owner list has exactly one entry. Both
+receive the same browser payload, `MountableScene`
+(`packages/site-kit/src/mountable-scene.ts`) — validated artifacts plus `composeScene()`
+world transforms — so what may be drawn is decided in `site-kit` and gate-tested without
+a browser: `live-open.ts` picks the public fixture, `editor-session.ts` projects the
+editor session's own composition. Drawing is not authoring: the viewport consumes a
+composed snapshot, advances no kernel session, and adds no operation to
+`WEB_EDITOR_SESSION_OPERATIONS`, so it widens neither ADR 0020 entitlement nor ADR
+0003's general-E2 bound; entitlement is still decided before a session exists, so a
+refused `/editor` request reaches no canvas at all. `pnpm gate` proves both paths on the
+headless surface (`tests/e2e/umbrella-live-open-golden.test.ts` and
+`tests/e2e/umbrella-editor-viewport-golden.test.ts`, both in `test:golden`); the pixel
+claim is a recorded browser observation in `docs/three-presentation-core.md`, never a
+gate inference. Shipped presentation copy is asserted against `LIVE_OPEN_PRESENTATION`,
+so the retired "experimental preview" framing cannot return by review slip.
 First-class plugins follow `docs/plugins.md` and ADR 0005: manifests may claim
 only IDs from the versioned public capability registry; unknown IDs and
 isolation breaches refuse. Runtime API details live in

@@ -12,6 +12,7 @@ import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  EDITOR_VIEWPORT_COPY,
   LIVE_OPEN_COPY,
   LIVE_OPEN_INSTANCE_COUNT,
   LIVE_OPEN_PATH,
@@ -209,6 +210,94 @@ describe("umbrella editor access", () => {
 });
 
 
+/**
+ * The umbrella's two pixel-drawing surfaces, and the one client module both are built
+ * from. Read once so every assertion below is about the shipped source.
+ */
+const readSite = (relativePath: string): string =>
+  readFileSync(new URL(`../../sites/${relativePath}`, import.meta.url), "utf8");
+
+const EDITOR_PAGE = "umbrella/src/app/editor/page.tsx";
+const EDITOR_VIEWPORT = "umbrella/src/app/editor/_components/editor-viewport.tsx";
+const LIVE_VIEWPORT = "umbrella/src/app/open/_components/live-viewport.tsx";
+const SCULPT_VIEWPORT = "umbrella/src/app/_components/sculpt-viewport.tsx";
+
+describe("the entitled editor draws through the same viewport boundary", () => {
+  it("mounts the editor viewport on the entitled route", () => {
+    const page = readSite(EDITOR_PAGE);
+    expect(page).toContain("<EditorViewport");
+    // The viewport is rendered from the session's own composed scene, so the canvas can
+    // never draw something the editor did not compose.
+    expect(page).toContain("scene={mountable}");
+  });
+
+  it("decides access before it decides anything about a viewport", () => {
+    const page = readSite(EDITOR_PAGE);
+    const accessAt = page.indexOf("resolveUmbrellaEditorAccess");
+    const refusalAt = page.indexOf("resolved.decision.granted");
+    const viewportAt = page.indexOf("<EditorViewport");
+    expect(accessAt).toBeGreaterThan(-1);
+    expect(refusalAt).toBeGreaterThan(accessAt);
+    // An unentitled request returns at the refusal above, so it never reaches a canvas.
+    expect(viewportAt).toBeGreaterThan(refusalAt);
+  });
+
+  it("keeps a refused composition from opening a canvas at all", () => {
+    const page = readSite(EDITOR_PAGE);
+    expect(page).toContain("mountable === null");
+    expect(page).toContain("EDITOR_VIEWPORT_COPY.notComposable");
+  });
+
+  it("routes both surfaces through one renderer boundary and no other", () => {
+    for (const surface of [EDITOR_VIEWPORT, LIVE_VIEWPORT]) {
+      const source = readSite(surface);
+      expect(source).toContain("useSculptViewport");
+      // Only the shared boundary may name the presentation seam.
+      expect(source).not.toContain("@sceneaxi/engine-presentation");
+    }
+
+    const boundary = readSite(SCULPT_VIEWPORT);
+    expect(boundary).toContain("@sceneaxi/engine-presentation");
+    // ADR 0002: no Three type crosses the seam into site code.
+    expect(boundary).not.toMatch(/\bfrom\s+["']three["']/);
+    expect(boundary).not.toMatch(/\bTHREE\./);
+  });
+
+  it("names exactly one renderer-owning module across the whole tier", () => {
+    const owners = SITE_SOURCE_FILES.filter((relative) =>
+      readSite(relative).includes("createThreeSculptPresentationBackend"),
+    );
+    expect(owners).toEqual([SCULPT_VIEWPORT]);
+  });
+
+  it("states that the viewport draws and never advances the session", () => {
+    expect(EDITOR_VIEWPORT_COPY.honesty).toContain("never advances a kernel session");
+    expect(EDITOR_VIEWPORT_COPY.honesty).toContain(
+      "run on the server",
+    );
+    expect(EDITOR_VIEWPORT_COPY.lede).toContain(LIVE_OPEN_PRESENTATION.coreLabel);
+    expect(Object.isFrozen(EDITOR_VIEWPORT_COPY)).toBe(true);
+  });
+
+  it("names the no-pixel panel the page actually renders", () => {
+    // The page shows two frame reports with opposite `pixelsDrawn` values, so the copy
+    // that explains the no-pixel one must name that panel's own heading — otherwise a
+    // reader attaches it to the browser report directly above it, which does draw.
+    const noPixelPanel = "Server session frame";
+    expect(EDITOR_VIEWPORT_COPY.honesty).toContain(noPixelPanel);
+    expect(readSite(EDITOR_PAGE)).toContain(`<h3>${noPixelPanel}</h3>`);
+    // The report the browser surface publishes must not answer to that same name.
+    expect(readSite(EDITOR_VIEWPORT)).toContain('heading="Browser session frame"');
+  });
+
+  it("does not turn the editor into the public path or the public path into an editor", () => {
+    // The editor is entitled and the open path is public; neither borrows the other's
+    // copy, so a reader is never told a page is open when it is gated, or vice versa.
+    expect(readSite(EDITOR_PAGE)).not.toContain("LIVE_OPEN_COPY");
+    expect(readSite("umbrella/src/app/open/page.tsx")).not.toContain("EDITOR_VIEWPORT_COPY");
+  });
+});
+
 describe("umbrella live open path", () => {
   it("serves a composed scene the browser can mount", () => {
     const scene = resolveLiveOpenScene();
@@ -304,9 +393,13 @@ describe("live open copy stays honest about the presentation core", () => {
     expect(SITE_SOURCE_FILES.length).toBeGreaterThan(0);
     for (const covered of [
       "umbrella/src/app/open/page.tsx",
-      "umbrella/src/app/open/_components/live-viewport.tsx",
+      LIVE_VIEWPORT,
+      SCULPT_VIEWPORT,
+      EDITOR_PAGE,
+      EDITOR_VIEWPORT,
       "umbrella/src/app/page.tsx",
       "umbrella/src/lib/live-open.ts",
+      "umbrella/src/lib/editor-viewport.ts",
       "catalog-game/src/app/page.tsx",
       "catalog-web/src/app/page.tsx",
     ]) {

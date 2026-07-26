@@ -22,8 +22,8 @@ L3  profiles · cli · importers · provider adapters · plugin-host · auth ←
 L4  apps               (leaves; nothing depends on an app)
 L4  sites              site-kit ← the three deployable sites (leaves; ADR 0018), plus
                        two charted edges the umbrella alone holds: engine-presentation
-                       for the public viewport (ADR 0022), and auth + billing for the
-                       identity plane (ADR 0021)
+                       for every viewport it owns — public /open and entitled /editor
+                       (ADR 0022) — and auth + billing for the identity plane (ADR 0021)
 ```
 
 ## Allow matrix (✓ = allowed; blank = denied)
@@ -68,9 +68,10 @@ Deliberate denials that carry design intent:
   `sites/catalog-web`) reaches contract vocabulary only through `@sceneaxi/site-kit`,
   which may consume `schemas` and `authoring-core`. A site is a thin view layer; all
   testable behaviour lives in `site-kit` so `pnpm gate` covers it (ADR 0018). The
-  exceptions are **umbrella → `engine-presentation`** (ADR 0022): the umbrella owns the
-  public viewport, so it alone consumes the ADR 0002 presentation seam to draw a real
-  artifact into a browser canvas; and **umbrella → `auth` + `billing`** (ADR 0021,
+  exceptions are **umbrella → `engine-presentation`** (ADR 0022, amended 2026-07-26): the
+  umbrella owns every viewport — the public `/open` surface and the entitled Minimum E2
+  `/editor` surface alike — so it alone consumes the ADR 0002 presentation seam to draw a
+  real artifact into a browser canvas; and **umbrella → `auth` + `billing`** (ADR 0021,
   sceneaxi#131): it is the one site wired to the identity plane, and only through the
   single plug point `sites/umbrella/src/lib/identity-plane.ts`. Nothing widens past that
   — kernel, orchestrator, authoring-core, profiles, and Kids stay denied to every site,
@@ -134,7 +135,8 @@ Recorded in `dependency-matrix.json → releaseGroups` and stamped on every mani
 - **sites** (`site-kit` plus the three deployable sites): first-party deployable web
   surfaces and their shared deployment-neutral logic. Consume only public contracts and
   public `authoring-core` APIs; never profiles, a service locator, or Kids. The single
-  engine edge is umbrella → `engine-presentation` for the public viewport (ADR 0022);
+  engine edge is umbrella → `engine-presentation` for every viewport the umbrella owns,
+  public `/open` and entitled `/editor` alike (ADR 0022);
   every other engine package stays denied to every site. The umbrella additionally
   consumes the `identity` group (`auth`, `billing`) from its one plug point; the catalogs
   do not. Framework and provider SDKs stay in the `sites/` tier. Deploy and env details:

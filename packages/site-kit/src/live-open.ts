@@ -22,10 +22,14 @@ import {
   SCENE_COMPOSITION_SCHEMA_VERSION,
   identitySculptTransform,
   type SceneCompositionIntake,
-  type SculptArtifact,
   type SculptTransform,
   type Vector3,
 } from "@sceneaxi/schemas";
+import {
+  mountableScene,
+  type MountableScene,
+  type MountableSceneInstance,
+} from "./mountable-scene.js";
 import { type SiteResult, ok, refuse } from "./refusals.js";
 import { webEditorStarterArtifact } from "./starter-artifact.js";
 
@@ -94,29 +98,15 @@ const LIVE_OPEN_PLACEMENTS = Object.freeze([
  */
 export const LIVE_OPEN_INSTANCE_COUNT = LIVE_OPEN_PLACEMENTS.length;
 
-/** One instance the browser mounts, carrying the pipeline's own world transform. */
-export type LiveOpenInstance = {
-  readonly instanceId: string;
-  readonly artifactId: string;
-  readonly parentInstanceId: string | null;
-  readonly depth: number;
-  readonly label: string;
-  readonly worldTransform: SculptTransform;
-};
-
 /**
- * Everything a browser needs to open the scene, and nothing else.
+ * What the browser mounts for this path.
  *
- * Artifacts are carried once and referenced by id rather than repeated per instance,
- * so mounting N instances of one artifact costs one artifact on the wire.
+ * The shape is the shared browser mount payload: the entitled Minimum E2 editor hands
+ * its own composed scene across in exactly the same form, so one viewport
+ * implementation serves both surfaces over one presentation core.
  */
-export type LiveOpenScene = {
-  readonly sceneId: string;
-  readonly rootInstanceId: string;
-  readonly sceneDigest: string;
-  readonly artifacts: Readonly<Record<string, SculptArtifact>>;
-  readonly instances: readonly LiveOpenInstance[];
-};
+export type LiveOpenInstance = MountableSceneInstance;
+export type LiveOpenScene = MountableScene;
 
 function placementTransform(translation: Vector3): SculptTransform {
   const placed: Vector3 = [translation[0], translation[1], translation[2]];
@@ -169,33 +159,11 @@ export function composeLiveOpenScene(artifactValue: unknown): SiteResult<LiveOpe
   const composed = composeScene(intake, [artifactValue]);
   if (!composed.ok) return refuse("LIVE_OPEN_NOT_COMPOSABLE");
 
-  const labels = new Map<string, string>(
-    LIVE_OPEN_PLACEMENTS.map((placement) => [placement.instanceId, placement.label]),
-  );
-  const artifacts: Record<string, SculptArtifact> = {};
-  for (const instance of composed.scene.instances) {
-    artifacts[instance.artifactId] = instance.artifact;
-  }
-
   return ok(
-    Object.freeze({
-      sceneId: composed.scene.sceneId,
-      rootInstanceId: composed.scene.rootInstanceId,
-      sceneDigest: composed.sceneDigest,
-      artifacts: Object.freeze(artifacts),
-      instances: Object.freeze(
-        composed.scene.instances.map((instance) =>
-          Object.freeze({
-            instanceId: instance.instanceId,
-            artifactId: instance.artifactId,
-            parentInstanceId: instance.parentInstanceId,
-            depth: instance.depth,
-            label: labels.get(instance.instanceId) ?? instance.instanceId,
-            worldTransform: instance.worldTransform,
-          }),
-        ),
-      ),
-    }),
+    mountableScene(
+      composed,
+      new Map(LIVE_OPEN_PLACEMENTS.map((placement) => [placement.instanceId, placement.label])),
+    ),
   );
 }
 

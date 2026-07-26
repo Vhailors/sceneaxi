@@ -25,6 +25,8 @@ export {
   type UmbrellaEditorAccess,
 } from "./lib/site-config.js";
 
+export { EDITOR_VIEWPORT_COPY } from "./lib/editor-viewport.js";
+
 export {
   LIVE_OPEN_COPY,
   LIVE_OPEN_INSTANCE_COUNT,

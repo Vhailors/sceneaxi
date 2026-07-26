@@ -15,29 +15,37 @@ pure wiring modules under `src/lib/`.
 - `src/app/**` is the only place a framework appears. It is syntax-gated by
   `pnpm check:syntax` and type-checked by `next build`.
 
-## The live open path (`/open`)
+## The viewports (`/open` and `/editor`)
 
-The umbrella owns the public viewport ([ADR 0022](../../docs/adr/0022-umbrella-owns-the-public-viewport.md)),
-so it is the one site allowed to depend on `@sceneaxi/engine-presentation`. Nothing
-else changes about the tier: no other engine package is reachable from any site, and
-the two catalogs keep `site-kit` only.
+The umbrella owns every viewport ([ADR 0022](../../docs/adr/0022-umbrella-owns-the-public-viewport.md)
+and its 2026-07-26 amendment), so it is the one site allowed to depend on
+`@sceneaxi/engine-presentation`. Nothing else changes about the tier: no other engine
+package is reachable from any site, and the two catalogs keep `site-kit` only.
 
-- The **server** resolves the scene — a committed Sculpt Artifact reconstructed
-  deterministically and placed by `composeScene()` — through
-  `src/lib/live-open.ts` over `@sceneaxi/site-kit`. It is contract data, not geometry
-  invented here.
-- The **client** (`src/app/open/_components/live-viewport.tsx`) is the only file on the
-  site that touches a renderer, and it touches it only through the ADR 0002 seam:
-  Sculpt Mount API, numeric orbit controls, and the package's own frame loop. No Three
-  type is named.
-- The path is **public**: no sign-in, no credits, no editing operation. The bounded
-  Minimum E2 editor at `/editor` is a separate, entitled surface and is not widened by
-  this one.
-- The page reports the running core's own frame record (`backend`, `label`, draw
+- `src/app/_components/sculpt-viewport.tsx` is the **only** file on the site that
+  constructs a renderer, and it touches it only through the ADR 0002 seam: Sculpt
+  Mount API, numeric orbit controls, and the package's own frame loop. No Three type
+  is named. Both routes are thin callers of it, and a gate test asserts that owner
+  list has exactly one entry.
+- The **server** resolves what may be drawn, as contract data rather than geometry
+  invented here: `src/lib/live-open.ts` for the public path, and the editor session's
+  own composition projection for `/editor`. Both arrive as one `MountableScene` —
+  validated Sculpt Artifacts plus `composeScene()` world transforms.
+- `/open` is **public**: no sign-in, no credits, no editing operation.
+- `/editor` is **entitled**, and access is decided before a session is constructed —
+  a signed-out, unavailable, or unentitled request reaches no session, no composition,
+  and no canvas, only the plane's own named refusal. Its viewport *draws* the composed
+  scene: selection, transform edits, and play/pause/step stay server-side Minimum E2
+  operations, so nothing here widens ADR 0020 entitlement or ADR 0003's general-E2
+  bound.
+- Each page reports the running core's own frame record (`backend`, `label`, draw
   surface, `pixelsDrawn`, draw calls, mounted instances), so a frame counter can never
-  imply pixels that were never drawn. `pnpm gate` proves the path on the headless
-  surface (`tests/e2e/umbrella-live-open-golden.test.ts`); the pixel claim is a
-  recorded browser observation in `docs/three-presentation-core.md`.
+  imply pixels that were never drawn. The editor additionally shows its *server*
+  session's frame, which runs on the same core's headless surface and reports no
+  pixels. `pnpm gate` proves both paths on that headless surface
+  (`tests/e2e/umbrella-live-open-golden.test.ts`,
+  `tests/e2e/umbrella-editor-viewport-golden.test.ts`); the pixel claims are recorded
+  browser observations in `docs/three-presentation-core.md`.
 
 ## Separate install root
 
