@@ -14,7 +14,7 @@ The architecture decision behind the shape of this plane is
 |---|---|
 | Contracts (User, Session, RoleAssignment, credits, billing, entitlements, listings, revenue share) | `packages/schemas` |
 | Single-admin resolution, role guards, identity port | `packages/auth` |
-| Credit ledger, metering, entitlements, Stripe test checkout, revenue share | `packages/billing` |
+| Credit ledger, metering, entitlements, hosted-AI credit gate, Stripe test checkout, revenue share | `packages/billing` |
 | Neon schema | `db/migrations` |
 | Login + balance view model | `apps/web-shell` (`createAccountPanel`) |
 | Deployable-site wiring | `sites/umbrella/src/lib/identity-plane.ts` (`docs/websites-deploy.md`) |
@@ -279,6 +279,122 @@ committed debit collide with a different account's legitimately distinct usage �
 as a store failure rather than metering it. Every other producer in this plane already
 namespaces by identity (`starter:<userId>`, `sale:<saleId>:buyer`, `stripe-event:<id>`);
 metering is scoped the same way so the pure check and the persisted constraint agree.
+
+## Hosted AI (sceneaxi#139)
+
+`runMeteredModelCall` in `packages/billing/src/hosted-ai.ts` is the only path a hosted
+model call may take to a debit. It adds no ledger, no second entitlement table, and no
+provider abstraction — it fixes the order the two existing pieces run in:
+
+1. **Kids** — denied by name before identity, provider, or ledger, on both routes
+2. **Route** — `hosted` or `byo`, a closed enumeration with no default
+3. **Hosted opt-in** — off unless a caller explicitly passes `{ enabled: true }`
+4. **Replay** — the *persisted* ledger is loaded and the account-scoped key looked up in
+   it, before the balance and the provider
+5. **Entitlement** — capability, account, and the **persisted balance**, all before the
+   provider
+6. **Metering readiness** — store, reason, and key, still before the provider
+7. **Provider** — the injected call, and only now
+8. **Debit** — exactly the credits the decision named, through `meterCredits`
+
+Steps 5 and 7 in that order are why a zero or insufficient balance costs nothing and
+appends nothing: the refusal is `CREDIT_BALANCE_INSUFFICIENT`, produced before the provider
+runs. A provider throw is `HOSTED_AI_PROVIDER_FAILED` with no debit; a ledger or store
+failure keeps its own reason, and the debit is all-or-nothing either way.
+
+**A retry is answered from the debit it already made.** The ledger's own idempotency check
+lives at the bottom of the stack, *below* both the balance gate and the provider, so
+relying on it alone would break the retry it is supposed to protect: a caller that timed
+out and re-sent `turn_01` would be refused `CREDIT_BALANCE_INSUFFICIENT` out of the balance
+its own first attempt had already spent, and would have paid the upstream provider a second
+time for an answer no ledger row could cover. Step 4 looks `usage:<accountId>:<callerKey>`
+up first. On a hit the call returns `replayed: true` carrying the prior debit, the ledger,
+and the balance — **no provider execution and no second charge** — and entitlement is
+re-evaluated against the ledger as it stood immediately before that debit, so capability,
+identity, ownership, and the guard's own refusals still apply to a retry while the
+already-answered balance question is not asked again. A key re-sent with a different price
+or reason is still a `CREDIT_IDEMPOTENCY_KEY_CONFLICT`. The replayed outcome deliberately
+carries **no `response`**: the ledger persists debits, not model answers, so the original
+response is gone and the gate will not fabricate one — the `MeteredModelCallReplayed` shape
+has no field to read it from. The BYO route is excluded from step 4: it never appends a
+debit, and a free call is safe to simply run again.
+
+**The retry lookup reads persistence, not the caller's `state`.** The guarantee has to hold
+for the caller that never received the post-debit ledger — the timed-out turn is precisely
+that caller — so step 4 takes only the account id from the supplied state and loads the
+history back through the injected `CreditStore`. A lookup against a pre-debit copy would
+find no prior entry, run the provider a second time for real upstream money, and only then
+collide at the bottom of the stack with an opaque `CREDIT_LEDGER_STATE_INVALID`. Because the
+store is read here, a store that cannot be read refuses `CREDIT_STORE_FAILED` **before** the
+provider: not knowing whether a key was already charged is not a licence to charge upstream
+again. The replayed outcome hands back the *persisted* ledger and balance, so a caller
+holding a stale view is corrected rather than confirmed in it.
+
+**The balance gate judges that same persisted ledger, and so does the debit.** The supplied
+`state` names the account; it does not establish the balance. Trusting it would leave the
+load-bearing ordering above holding only for a caller whose copy happens to be current: a
+stale or fabricated state with a *fresh* key would clear the balance gate, pay the upstream
+provider, and only then collide with `meterCredits`' own state check as an opaque
+`CREDIT_LEDGER_STATE_INVALID` — precisely the "completed model call that is impossible to
+charge for" this ordering exists to make unreachable. So step 5 reads the ledger step 4
+loaded, and `meterCredits` is handed the same one: a stale caller with a real balance that
+covers the charge is corrected and charged the real amount, and one whose real balance does
+not cover it refuses `CREDIT_BALANCE_INSUFFICIENT` with no provider execution. The narrow
+race left is a debit landing between the two store reads, which `meterCredits` still refuses
+outright rather than half-applying.
+
+**Identity is settled before persistence is read.** The account id arrives inside a
+caller-supplied state, so step 4 authenticates the principal and checks account ownership
+before it asks the store anything: an expired, disabled, or wrong-user principal cannot drive
+a lookup against an account it merely named. Those refusals are still spoken by
+`evaluateEntitlement` immediately below, which owns the identity vocabulary — step 4 only
+declines to read, so one defect keeps one refusal. The supplied ownership claim only earns
+the *first* read, though, since the caller wrote it: the account the store returns is itself
+re-checked against the guarded user and refuses `ENTITLEMENT_ACCOUNT_NOT_OWNED` before its
+history is loaded or any metering key is compared, so naming a stranger's account id cannot
+make persistence answer questions about that account's entries.
+
+**Only a throw is a provider failure.** The thunk is provider-neutral, so billing charges
+for any value it returns — it cannot tell a refusal envelope from a legitimate answer that
+happens to contain `ok: false`. Provider layers that report refusals as data, the Model
+Provider Port's `{ ok: false, reason }` among them, must be translated in the caller's own
+provider integration:
+
+```ts
+const call = async () => {
+  const result = await port.complete(request);
+  if (!result.ok) throw new Error(result.reason);
+  return result;
+};
+```
+
+That converts a port refusal into `HOSTED_AI_PROVIDER_FAILED` with no debit, and it is the
+integration's obligation rather than the gate's precisely because billing must not learn
+the shape of a model refusal to charge for a model call.
+`tests/e2e/hosted-ai-metering-golden.test.ts` wires it that way and asserts the refused
+call is not billed.
+
+**Default-off is a switch, not an inference.** `HOSTED_AI_DEFAULT_CONFIG` is
+`{ enabled: false }`. A configured OpenRouter adapter or a present API key does not enable
+hosted AI — possessing a key is not a decision to spend a user's credits. The
+`HOSTED_AI_NOT_ENABLED` refusal is reachable with no account and no ledger, so it can never
+be confused with a balance problem.
+
+**Which capability bills.** The `hosted` route bills `hosted-ai-assistant` or
+`metered-model-port`; the `byo` route bills `byo-model-keys`. The caller names it and a
+capability outside its route's list refuses — nothing is inferred from the route.
+
+**BYO stays free**, including for a signed-in caller with a balance: `byo-model-keys` is
+free-without-account in the matrix, so it resolves before identity and never reaches
+metering.
+
+The provider is an **injected thunk**, deliberately not a Model Provider Port type: billing
+must not learn what a model is to charge for one, and the port sits above this package in
+the dependency matrix. Callers wire the two.
+`tests/e2e/hosted-ai-metering-golden.test.ts` does exactly that with the real port, the
+real `@sceneaxi/provider-openrouter` adapter, and that package's recorded fixture transport
+(`createFixtureTransport`) — so the whole proof runs with no network, no credential, and no
+production spend.
 
 ## Credit packs
 

@@ -192,6 +192,33 @@ headless surface (`tests/e2e/umbrella-live-open-golden.test.ts` and
 claim is a recorded browser observation in `docs/three-presentation-core.md`, never a
 gate inference. Shipped presentation copy is asserted against `LIVE_OPEN_PRESENTATION`,
 so the retired "experimental preview" framing cannot return by review slip.
+
+Hosted AI reaches a credit debit through exactly one path: `runMeteredModelCall()`
+in `packages/billing/src/hosted-ai.ts`, whose fixed order (Kids → route → hosted
+opt-in → replay → entitlement incl. balance → metering readiness → provider →
+debit) is the contract, documented in `docs/auth-credits.md`. The replay step
+answers a retry from the account-scoped debit that already exists — read from the
+**persisted** ledger, never from the caller's `state`, so a timed-out caller still
+holding a pre-debit copy is recognised as a retry instead of paying the provider
+twice — before the balance gate and before the provider, with no `response` to
+hand back, an unreadable store refusing there rather than after the call, and the
+principal authenticated before persistence is read at all — with the account
+persistence returns re-checked against that principal before its history is
+loaded or any metering key is compared. That same persisted
+ledger is what the balance gate and `meterCredits` judge: the caller's `state`
+names the account and never establishes the balance, so a stale copy cannot buy a
+call the real ledger would refuse only after the provider was paid; and
+only a **throw** from the injected thunk is a provider failure, so a provider
+layer that refuses by value must translate it caller-side. Hosted is default-off
+(`HOSTED_AI_DEFAULT_CONFIG`) and a configured adapter or key never enables it; BYO
+bills `byo-model-keys` and stays free. The provider is an **injected thunk**, never
+a Model Provider Port type, so billing gains no engine edge — callers wire the port
+themselves, as `tests/e2e/hosted-ai-metering-golden.test.ts` does over
+`createFixtureTransport` from `@sceneaxi/provider-openrouter` (recorded data, no
+network, no credential). Adding a `BILLING_REFUSE_REASONS` entry requires a
+covering case in `tests/e2e/auth-credits-refuse-matrix.test.ts`, which asserts
+every reason is reachable.
+
 First-class plugins follow `docs/plugins.md` and ADR 0005: manifests may claim
 only IDs from the versioned public capability registry; unknown IDs and
 isolation breaches refuse. Runtime API details live in

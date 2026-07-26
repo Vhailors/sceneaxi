@@ -14,12 +14,18 @@ importers:
       '@sceneaxi/auth':
         specifier: workspace:^
         version: link:packages/auth
+      '@sceneaxi/authoring-core':
+        specifier: workspace:^
+        version: link:packages/authoring-core
       '@sceneaxi/billing':
         specifier: workspace:^
         version: link:packages/billing
       '@sceneaxi/profile-game':
         specifier: workspace:^
         version: link:packages/profile-game
+      '@sceneaxi/provider-openrouter':
+        specifier: workspace:^
+        version: link:packages/provider-openrouter
       '@sceneaxi/schemas':
         specifier: workspace:^
         version: link:packages/schemas

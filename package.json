@@ -2,7 +2,7 @@
   "name": "sceneaxi",
   "private": true,
   "version": "0.0.0",
-  "description": "SceneAxi monorepo \u2014 agent-native interactive engine/library ecosystem",
+  "description": "SceneAxi monorepo — agent-native interactive engine/library ecosystem",
   "type": "module",
   "packageManager": "pnpm@9.15.0",
   "engines": {
@@ -27,8 +27,10 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@sceneaxi/auth": "workspace:^",
+    "@sceneaxi/authoring-core": "workspace:^",
     "@sceneaxi/billing": "workspace:^",
     "@sceneaxi/profile-game": "workspace:^",
+    "@sceneaxi/provider-openrouter": "workspace:^",
     "@sceneaxi/schemas": "workspace:^",
     "@types/node": "^26.1.1",
     "eslint": "^10.7.0",

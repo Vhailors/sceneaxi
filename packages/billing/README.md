@@ -1,7 +1,8 @@
 # @sceneaxi/billing
 
 Credits and billing for the SceneAxi identity plane: the append-only credit ledger,
-metering, entitlement enforcement, and the Stripe test-mode checkout and webhook paths.
+metering, entitlement enforcement, the default-off hosted-AI credit gate, and the Stripe
+test-mode checkout and webhook paths.
 
 Configuration lives in [`docs/auth-credits.md`](../../docs/auth-credits.md); the
 adapter-boundary decision is ADR 0021.
@@ -48,6 +49,53 @@ its injected `CreditStore`, refuses an absent or stale account, and appends the 
 before it reports success. The caller's idempotency key is scoped to the account
 (`usage:<accountId>:<callerKey>`) so the ledger's per-account replay check and the store's
 global `idempotency_key` uniqueness cannot disagree.
+
+**Hosted AI is one ordering, not a convention.** `runMeteredModelCall` composes the two
+pieces that already exist — `evaluateEntitlement` and `meterCredits` — into the single
+sequence a hosted model call may happen in: Kids denial, route, hosted opt-in, replay,
+entitlement (capability, account, **balance**), metering readiness, provider, debit. Balance
+before provider is the load-bearing step: an unfunded account refuses without the provider
+running and without a ledger row, so a zero balance costs nothing and appends nothing. The
+balance judged there is the **persisted** one the replay step already loaded, not the `state`
+the caller supplied — that names the account, and believing its balance would let a stale or
+fabricated copy buy a call only persistence could refuse, after the provider had been paid.
+`meterCredits` is handed that same resolved ledger, so the balance that authorized the call
+is the balance the debit lands on. The provider is an **injected thunk**, never a Model
+Provider Port type — billing does not learn what a model is in order to charge for one, and
+every credential stays outside the credit plane.
+
+**A retry costs nothing twice.** The account-scoped metering key is looked up *before* the
+balance is judged and before the provider is entered, so a caller re-sending a timed-out
+turn gets `replayed: true` with the debit it already made, instead of being refused
+`CREDIT_BALANCE_INSUFFICIENT` out of the balance that very debit spent and paying the
+upstream provider a second time. That lookup reads the **persisted** ledger through the
+injected store rather than the `state` the caller passed, because the caller a timeout
+leaves holding a pre-debit copy is exactly the one the guarantee is for; an unreadable store
+therefore refuses `CREDIT_STORE_FAILED` before the provider rather than after it, and the
+authenticated identity is settled before that read — and re-checked against the account
+persistence actually returns, before its history is loaded or any key is compared — so a
+principal who cannot spend the account cannot make persistence answer questions about its
+entries. The replayed outcome carries no
+`response` field at all: the ledger records debits, never model answers, and the gate will
+not invent one.
+
+**Only a throw is a provider failure.** Billing charges for any value the thunk returns, so
+a provider layer that reports refusals as data — the Model Provider Port's
+`{ ok: false, reason }` — must be translated by the caller's own integration
+(`if (!result.ok) throw new Error(result.reason)`) before it reaches the gate. Doing that
+translation here would mean billing learning the shape of a model refusal, which is the one
+thing the injected thunk exists to prevent. See `docs/auth-credits.md`.
+
+**Hosted AI is off until someone says otherwise.** `HOSTED_AI_DEFAULT_CONFIG` is
+`{ enabled: false }`, and the opt-in is a separate explicit switch rather than something
+derived from "an adapter is configured" or "a key is present" — possessing an OpenRouter
+key is not a decision to spend a user's credits. The refusal is reachable with no account
+and no ledger, so "hosted AI is off here" can never be mistaken for "you cannot afford it".
+
+**Bring-your-own keys stay free.** The `byo` route bills `byo-model-keys`, which the matrix
+prices free-without-account, so it resolves before identity and never reaches metering —
+even for a signed-in caller with a balance. Charging a user who is already paying their own
+provider would be charging twice.
 
 **Refusals keep their identity.** `BillingRefuseReason` includes `AuthRefuseReason`, so a
 guard refusal surfaces as `KIDS_IDENTITY_SURFACE_DENIED` or `AUTH_SESSION_EXPIRED` rather

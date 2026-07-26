@@ -48,6 +48,11 @@ export const BILLING_REFUSE_REASONS = Object.freeze({
   webhookPayloadInvalid: "STRIPE_WEBHOOK_PAYLOAD_INVALID",
   webhookEventTypeUnsupported: "STRIPE_WEBHOOK_EVENT_TYPE_UNSUPPORTED",
 
+  // --- hosted AI routing ---
+  hostedAiRouteInvalid: "HOSTED_AI_ROUTE_INVALID",
+  hostedAiNotEnabled: "HOSTED_AI_NOT_ENABLED",
+  hostedAiProviderFailed: "HOSTED_AI_PROVIDER_FAILED",
+
   // --- free-vs-paid enforcement ---
   capabilityUnknown: "ENTITLEMENT_CAPABILITY_UNKNOWN",
   accountRequired: "ENTITLEMENT_ACCOUNT_REQUIRED",

@@ -14,7 +14,7 @@ This monorepo is the packaging home for:
 | Model-provider adapters | `packages/provider-openrouter` (fixture-tested, injected transport behind the Model Provider Port) |
 | Plugin host | `packages/plugin-host` (explicit capability-manifest loading and refusal) |
 | Identity plane | `packages/auth` (single-admin env resolution, fail-closed role guards, Kids-isolated identity port over an injected Better Auth adapter) |
-| Credits + billing | `packages/billing` (append-only credit ledger, metering, free-vs-paid enforcement, Stripe test-mode checkout and signed-webhook grants, creator revenue share) |
+| Credits + billing | `packages/billing` (append-only credit ledger, metering, free-vs-paid enforcement, default-off hosted-AI credit gate, Stripe test-mode checkout and signed-webhook grants, creator revenue share) |
 | Neon schema | `db/migrations` (forward-only SQL; append-only ledger trigger, at-most-one-admin index) |
 | Web / desktop shells | `apps/web-shell`, `apps/desktop-shell` |
 | Asset catalogs (may split later) | `apps/catalog-game`, `apps/catalog-web` |

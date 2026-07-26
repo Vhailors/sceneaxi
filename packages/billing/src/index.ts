@@ -1,8 +1,9 @@
 /**
  * @sceneaxi/billing — credits and billing for the SceneAxi identity plane.
  *
- * Owns the append-only credit ledger, metering, entitlement enforcement, and
- * the Stripe test-mode checkout and webhook paths. Neon and the Stripe API are
+ * Owns the append-only credit ledger, metering, entitlement enforcement, the
+ * default-off hosted-AI credit gate, and the Stripe test-mode checkout and
+ * webhook paths. Neon, the Stripe API, and every model provider are
  * injected adapters, never dependencies; webhook *signature verification* is
  * implemented in-repo because it is the security boundary and is fully
  * deterministic. See docs/auth-credits.md and ADR 0021.
@@ -69,6 +70,20 @@ export {
   type EvaluateEntitlementRequest,
   type GrantStarterCreditsRequest,
 } from "./entitlements.js";
+
+export {
+  HOSTED_AI_DEFAULT_CONFIG,
+  HOSTED_AI_ROUTES,
+  HOSTED_AI_ROUTE_CAPABILITIES,
+  runMeteredModelCall,
+  type HostedAiConfig,
+  type HostedAiProviderCall,
+  type HostedAiRoute,
+  type MeteredModelCallCompleted,
+  type MeteredModelCallReplayed,
+  type RunMeteredModelCallOutcome,
+  type RunMeteredModelCallRequest,
+} from "./hosted-ai.js";
 
 export {
   assertModeAuthorized,
