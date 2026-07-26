@@ -72,9 +72,13 @@ export type OpenPathKind = (typeof OPEN_PATH_KINDS)[number];
  *
  * `nowMs` is required even where the kernel does not ask for it: the bootstrap
  * record is stamped with the clock reading, so every opened session is
- * identified the same way regardless of which path opened it. `digest` stays
- * optional and is verified against the portable kernel digest before use, so an
- * injected implementation can change performance but never bytes.
+ * identified the same way regardless of which path opened it. It must return an
+ * integer millisecond reading, which is what the kernel's product session
+ * requires of every later reading too — in a browser that is `Date.now()` or
+ * `Math.floor(performance.now())`, never raw fractional `performance.now()`.
+ * `digest` stays optional and is verified against the portable kernel digest
+ * before use, so an injected implementation can change performance but never
+ * bytes.
  */
 export interface OpenPathHost {
   readonly nowMs: () => number;
@@ -201,8 +205,10 @@ type ResolvedHost = {
  * Prove the host before anything is opened.
  *
  * A digest that disagrees with the portable one, or a clock that does not return
- * a finite reading, refuses here rather than producing a session whose bytes or
- * bootstrap record cannot be trusted.
+ * an integer reading, refuses here rather than producing a session whose bytes or
+ * bootstrap record cannot be trusted. The integer requirement is the kernel's
+ * (`dispatch` throws on a fractional reading), so proving it here is what keeps a
+ * bootstrapped product session from failing at its first command instead.
  */
 function resolveHost(host: OpenPathHost): OrchestratorResult<ResolvedHost> {
   if (typeof host !== "object" || host === null) {
@@ -232,10 +238,10 @@ function resolveHost(host: OpenPathHost): OrchestratorResult<ResolvedHost> {
   } catch (error) {
     return refuse("OPEN_PATH_HOST_INVALID", kernelMessage(error));
   }
-  if (typeof openedAtMs !== "number" || !Number.isFinite(openedAtMs)) {
+  if (typeof openedAtMs !== "number" || !Number.isInteger(openedAtMs)) {
     return refuse(
       "OPEN_PATH_HOST_INVALID",
-      "host.nowMs must return a finite number",
+      "host.nowMs must return an integer number of milliseconds",
     );
   }
 
@@ -246,17 +252,41 @@ function resolveHost(host: OpenPathHost): OrchestratorResult<ResolvedHost> {
   });
 }
 
+const SESSION_ID_DIGEST_RE = /^[0-9a-f]{64}$/;
+
+/**
+ * Derive the bootstrap session id, proving the digest on the one input that
+ * matters here.
+ *
+ * The kernel proves an injected digest against a fixed set of probes, which
+ * cannot speak for an input it never saw: a digest that answers the probes and
+ * then throws — or returns a non-hex string — on the session-id input would
+ * otherwise escape as a raw throw or stamp a malformed id into a frozen record.
+ * Both are host failures, so both refuse by name.
+ */
 function sessionIdOf(
   kind: OpenPathKind,
   subjectId: string,
   openedAtMs: number,
   resumed: boolean,
   digest: KernelDigest,
-): string {
+): OrchestratorResult<string> {
   const mode = resumed ? "resume" : "open";
-  return `sha256:${digest(
-    `sceneaxi.open-path:${kind}:${subjectId}:${String(openedAtMs)}:${mode}`,
-  )}`;
+  let hex: unknown;
+  try {
+    hex = digest(
+      `sceneaxi.open-path:${kind}:${subjectId}:${String(openedAtMs)}:${mode}`,
+    );
+  } catch (error) {
+    return refuse("OPEN_PATH_HOST_INVALID", kernelMessage(error));
+  }
+  if (typeof hex !== "string" || !SESSION_ID_DIGEST_RE.test(hex)) {
+    return refuse(
+      "OPEN_PATH_HOST_INVALID",
+      "host digest must return 64 lowercase hex characters",
+    );
+  }
+  return ok(`sha256:${hex}`);
 }
 
 function createHandle<K extends OpenPathKind, S>(
@@ -297,6 +327,10 @@ function bootstrapWith<K extends OpenPathKind, S>(
     return refuse("OPEN_PATH_SUBJECT_UNIDENTIFIED", `${kind} request`);
   }
 
+  const { openedAtMs, digest } = resolved.value;
+  const sessionId = sessionIdOf(kind, subjectId, openedAtMs, resumed, digest);
+  if (!sessionId.ok) return sessionId;
+
   let kernelSession: S;
   try {
     kernelSession = openSession(resolved.value);
@@ -307,13 +341,12 @@ function bootstrapWith<K extends OpenPathKind, S>(
     );
   }
 
-  const { openedAtMs, digest } = resolved.value;
   return ok(
     createHandle(
       Object.freeze({
         kind,
         subjectId,
-        sessionId: sessionIdOf(kind, subjectId, openedAtMs, resumed, digest),
+        sessionId: sessionId.value,
         openedAtMs,
         resumed,
         kernelVersion: KERNEL_VERSION,

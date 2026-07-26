@@ -17,8 +17,12 @@ and nothing more.
   kernel entry point. Callers stop hand-picking between `open`,
   `openSculptKernelSession`, and `openSceneKernelSession`.
 - **One host contract.** `OpenPathHost` is `{ nowMs, digest? }`, resolved once
-  and verified before anything opens. An injected digest must agree with the
-  portable kernel digest, so injection can change performance and never bytes.
+  and verified before anything opens. `nowMs` must return an integer millisecond
+  reading — the kernel requires that of every reading it takes, so in a browser
+  pass `Date.now()` or `Math.floor(performance.now())`, never raw fractional
+  `performance.now()`. An injected digest must agree with the portable kernel
+  digest, so injection can change performance and never bytes; it is also proven
+  on the session-id input rather than trusted past the kernel's fixed probes.
 - **Fail-closed results, not throws.** Every failure is a named reason from
   `ORCHESTRATOR_REFUSALS`, with the kernel's own message as `detail` when the
   kernel is the refuser. Nothing throws across the package seam.

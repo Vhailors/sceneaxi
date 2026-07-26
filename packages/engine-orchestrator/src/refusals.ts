@@ -16,7 +16,7 @@ export const ORCHESTRATOR_REFUSALS = Object.freeze({
   OPEN_PATH_KIND_UNKNOWN:
     "The requested open path is not one of the kernel's landed open paths. Widening the set is an explicit edit, never an inference.",
   OPEN_PATH_HOST_INVALID:
-    "The host does not satisfy the open-path host contract (a nowMs clock, and a digest that agrees with the portable kernel digest when supplied).",
+    "The host does not satisfy the open-path host contract (a nowMs clock returning an integer millisecond reading, and a digest that agrees with the portable kernel digest when supplied).",
   OPEN_PATH_SUBJECT_UNIDENTIFIED:
     "The request carries no subject id (productId, artifactId, or sceneId), so the bootstrap record could not identify what is being opened.",
   OPEN_PATH_KERNEL_REFUSED:

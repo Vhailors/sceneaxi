@@ -18,6 +18,7 @@ import {
   type ProductResumeRequest,
   type ResumeOpenPathRequest,
 } from "@sceneaxi/engine-orchestrator";
+import { portableKernelDigest } from "@sceneaxi/engine-kernel";
 import { fixedHost, productManifestFixture } from "./fixtures.js";
 
 const asOpenRequest = (value: unknown) => value as OpenPathRequest;
@@ -219,6 +220,65 @@ describe("orchestrator refuse matrix", () => {
     expect(
       reasonOf(bootstrapOpenPath(productRequest, asHost(revokedHost.proxy))),
     ).toBe("OPEN_PATH_HOST_INVALID");
+  });
+
+  it("refuses a clock the kernel would reject on its first dispatch", () => {
+    // `performance.now()` is the browser-idiomatic clock and is fractional; the
+    // kernel throws on a non-integer reading, so the host proof refuses instead
+    // of handing back a session that fails at its first command.
+    const fractional = bootstrapOpenPath(productRequest, {
+      nowMs: () => 1_700_000_000_000.5,
+    });
+    expect(reasonOf(fractional)).toBe("OPEN_PATH_HOST_INVALID");
+    if (!fractional.ok) expect(fractional.detail).toContain("integer");
+
+    expect(
+      reasonOf(
+        bootstrapOpenPath(productRequest, { nowMs: () => Number.POSITIVE_INFINITY }),
+      ),
+    ).toBe("OPEN_PATH_HOST_INVALID");
+    expect(
+      reasonOf(bootstrapOpenPath(productRequest, asHost({ nowMs: () => "0" }))),
+    ).toBe("OPEN_PATH_HOST_INVALID");
+
+    // Floored, the same browser clock is accepted.
+    const floored = bootstrapOpenPath(productRequest, {
+      nowMs: () => Math.floor(1_700_000_000_000.5),
+    });
+    if (!floored.ok) throw new Error(floored.reason);
+    expect(floored.value.bootstrap.openedAtMs).toBe(1_700_000_000_000);
+  });
+
+  it("refuses a digest that only answers the kernel's verification probes", () => {
+    // `resolveKernelDigest` proves an injected digest against a fixed probe set,
+    // which cannot speak for the session-id input it never sees. A digest that
+    // passes the probes and then misbehaves is still a host failure, never a
+    // throw across the seam and never a malformed id in a frozen record.
+
+    const isSessionIdInput = (input: string) =>
+      input.startsWith("sceneaxi.open-path:");
+
+    const throwsOffProbe = bootstrapOpenPath(productRequest, {
+      nowMs: fixedHost.nowMs,
+      digest: (input: string) => {
+        if (isSessionIdInput(input)) throw new Error("digest unavailable");
+        return portableKernelDigest(input);
+      },
+    });
+    expect(reasonOf(throwsOffProbe)).toBe("OPEN_PATH_HOST_INVALID");
+    if (!throwsOffProbe.ok) {
+      expect(throwsOffProbe.detail).toContain("digest unavailable");
+    }
+
+    const malformedOffProbe = bootstrapOpenPath(productRequest, {
+      nowMs: fixedHost.nowMs,
+      digest: (input: string) =>
+        isSessionIdInput(input) ? "NOT-A-DIGEST" : portableKernelDigest(input),
+    });
+    expect(reasonOf(malformedOffProbe)).toBe("OPEN_PATH_HOST_INVALID");
+    if (!malformedOffProbe.ok) {
+      expect(malformedOffProbe.detail).toContain("hex");
+    }
   });
 
   it("keeps a clock that lives on the host prototype and depends on its receiver", () => {

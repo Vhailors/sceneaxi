@@ -45,9 +45,14 @@ five things:
    request (`product` | `sculpt` | `scene`) and selects the kernel entry point. The kind
    set is a frozen list; widening it is an explicit edit, never an inference.
 2. **One host contract.** `OpenPathHost` is `{ nowMs, digest? }` for all three kinds,
-   resolved and proven once before anything opens. An injected digest is verified against
-   the portable kernel digest (ADR 0016), so injection can change performance and never
-   bytes.
+   resolved and proven once before anything opens. `nowMs` must return an integer
+   millisecond reading — the same thing the kernel's product session requires of every
+   later reading, so a bootstrapped session cannot fail at its first command over a clock
+   the bootstrap already accepted. An injected digest is verified against the portable
+   kernel digest (ADR 0016), so injection can change performance and never bytes; because
+   that verification uses a fixed probe set, the orchestrator additionally proves the
+   digest on the session-id input it derives, and refuses `OPEN_PATH_HOST_INVALID` rather
+   than letting a probe-passing digest throw across the seam or stamp a malformed id.
 3. **Fail-closed results instead of throws.** Every failure — the orchestrator's own and
    the kernel's — becomes a named reason from a frozen refusal registry, carrying the
    kernel's message as `detail` when the kernel is the refuser. Nothing throws across the
