@@ -20,6 +20,13 @@ profile drive the composition vertical
 Sculpt Artifacts → project a document → mount N instances → open, advance, save,
 and replay a scene kernel session.
 
+That scene session is bootstrapped through `@sceneaxi/engine-orchestrator`
+(`bootstrapOpenPath` / `resumeOpenPath`, [ADR 0023](../../docs/adr/0023-open-path-bootstrap-and-session-lifecycle.md)),
+and the pinned surface deliberately carries **no** kernel scene entry point
+beside it, so the path cannot quietly revert to calling the kernel directly.
+Kernel authority is unchanged — the orchestrator hands back the kernel's own
+session.
+
 Like `@sceneaxi/profile-web`'s `mvpGoldenPath`, it is **not** a Profile
 Conformance registry claim and describes no shipped product — `shippingClaim`
 stays false. Everything reachable from it is offline and deterministic: no
