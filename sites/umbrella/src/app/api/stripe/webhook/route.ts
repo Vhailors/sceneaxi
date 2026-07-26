@@ -18,7 +18,9 @@ import { umbrellaPlaneHandles } from "../../../../lib/identity-plane.js";
  * Failures answer non-2xx with the plane's own named reason, so Stripe retries a
  * genuinely unprocessed event and this endpoint never reports success for a body it
  * did not honour. A *replayed* event is a success — the credits are already in the
- * ledger — because Stripe delivers at least once by design.
+ * ledger — because Stripe delivers at least once by design. An event this endpoint is
+ * not built to act on is also a success, carrying `ignored: true` and its reason: no
+ * grant is owed, and retrying it forever would only wear down the endpoint's health.
  *
  * Which non-2xx is a diagnostic, not a retry decision: `creditWebhookHttpStatus` answers
  * 503 for the refusals this deployment owns and 400 for the ones the request owns, so a
@@ -56,5 +58,14 @@ export async function POST(request: NextRequest) {
       { status: creditWebhookHttpStatus(outcome.reason) },
     );
   }
-  return NextResponse.json({ ok: true, replayed: outcome.replayed }, { status: 200 });
+  if (outcome.ignored) {
+    return NextResponse.json(
+      { ok: true, ignored: true, reason: outcome.reason, message: outcome.message },
+      { status: 200 },
+    );
+  }
+  return NextResponse.json(
+    { ok: true, ignored: false, replayed: outcome.replayed },
+    { status: 200 },
+  );
 }

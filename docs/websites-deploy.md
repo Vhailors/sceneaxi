@@ -67,7 +67,7 @@ set them *before* deploying and redeploy after changing one.
 | `SCENEAXI_ADMIN_EMAIL` | umbrella | captain | admin sign-in | sole admin identity (`hajczuk.dominik@gmail.com`), resolved by `@sceneaxi/auth` |
 | `SCENEAXI_ADMIN_BOOTSTRAP_SECRET` | umbrella | captain | first admin sign-in | first-run admin credential material; env-secret bootstrap only |
 | `STRIPE_SECRET_KEY` | umbrella | captain | credit-pack checkout | **TEST** key (`sk_test_…`) only in this wave |
-| `STRIPE_WEBHOOK_SECRET` | umbrella | captain | credit grants | signing secret for `POST /api/stripe/webhook`; verification is owned by `@sceneaxi/billing`. Absent means the endpoint refuses `STRIPE_WEBHOOK_SECRET_MISSING` rather than accepting an unsigned event |
+| `STRIPE_WEBHOOK_SECRET` | umbrella | captain | credit grants | signing secret for `POST /api/stripe/webhook`; verification is owned by `@sceneaxi/billing`. Absent means the endpoint refuses `STRIPE_WEBHOOK_SECRET_MISSING` rather than accepting an unsigned event, and answers `503` because the omission is this deployment's, not Stripe's |
 | `SCENEAXI_BILLING_MODE` | umbrella | this ship | optional | `test` when unset; `live` still refuses without explicit live authorization |
 | `NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN` | all three | this ship | editor deep links, checkout redirects | https `*.vercel.app` umbrella origin; a missing or non-https value makes the catalog refuse to render the link. On the umbrella it is also the **only** source of the checkout success/cancel URLs — they are never derived from the request's `Host`, and a checkout POST arriving on any other origin refuses `BILLING_CHECKOUT_ORIGIN_UNTRUSTED`. A missing or non-https value refuses `BILLING_CHECKOUT_ORIGIN_UNCONFIGURED` on that path — the umbrella must name one origin, so an alias domain or a per-build preview URL is not a checkout origin |
 | `NEXT_PUBLIC_SCENEAXI_GAME_CATALOG_ORIGIN` | umbrella | this ship | optional | family cross-link |
@@ -235,7 +235,11 @@ than inventing a session, balance, or checkout.
    and is retried by Stripe.
 6. Register the webhook endpoint `POST /api/stripe/webhook` in the Stripe **test**
    dashboard for `checkout.session.completed`, and set `STRIPE_WEBHOOK_SECRET` to the
-   signing secret it issues.
+   signing secret it issues. Subscribing the endpoint to more than that one event type is
+   harmless: anything it is not built to act on — another event type, or a
+   catalog-listing completion that settles on the revenue-share path — is acknowledged
+   `200` with `ignored: true` and its named reason, because no grant is owed and no
+   redelivery could change that.
 7. Remove `SCENEAXI_SITE_EDITOR_PREVIEW` from the umbrella project, since entitlement can
    now be resolved for real.
 
@@ -265,6 +269,13 @@ Load-bearing properties, each gate-tested in `tests/sites/identity-plane-wiring.
   branded output of `verifyStripeWebhookSignature` — an unsigned or forged body has no
   path to a grant that even type-checks. The credit amount comes from the persisted
   intent, never from the event.
+- **The webhook's answer names the failing side.** A refusal this deployment owns — no
+  signing secret, an unusable clock, an adapter that threw, its own ledger rows that do
+  not load — answers `503`; a refusal the request owns — signature, payload, an intent
+  that does not match — answers `400`. An event the endpoint is not built to act on is
+  neither: it answers `200` with `ignored: true`, so Stripe stops redelivering a
+  condition redelivery cannot change. Only `ignored: false` means credits are in the
+  ledger.
 - **The buyer is the verified principal**, not the `userId` the checkout form submitted;
   the submitted value is only cross-checked against it.
 - **Unknown is never zero.** A failed ledger read refuses `CREDITS_PLANE_UNAVAILABLE`

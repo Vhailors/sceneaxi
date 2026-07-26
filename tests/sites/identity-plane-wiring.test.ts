@@ -512,16 +512,23 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     stripePriceId: PACK.stripePriceId,
   });
 
-  const eventBody = (eventId: string): string =>
+  const eventBody = (
+    eventId: string,
+    overrides: Readonly<{
+      type?: string;
+      sessionId?: string;
+      metadata?: Record<string, unknown>;
+    }> = {},
+  ): string =>
     JSON.stringify({
       id: eventId,
-      type: "checkout.session.completed",
+      type: overrides.type ?? "checkout.session.completed",
       created: Math.floor(NOW / 1000),
       livemode: false,
       data: {
         object: {
-          id: "cs_test_session_1",
-          metadata: {
+          id: overrides.sessionId ?? "cs_test_session_1",
+          metadata: overrides.metadata ?? {
             sceneaxiUserId: "member-1",
             sceneaxiPurpose: "credit-pack",
             sceneaxiItemId: PACK.packId,
@@ -567,6 +574,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     const outcome = await signedCall({ payload: eventBody("evt_test_1"), store });
     expect(outcome).toMatchObject({
       ok: true,
+      ignored: false,
       replayed: false,
       credits: PACK.credits,
       balance: PACK.credits,
@@ -589,11 +597,18 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
 
   it("answers deployment failures with 503 and request faults with 400", () => {
     // Stripe retries every non-2xx either way, so this is diagnosis: a forged signature
-    // and an unreachable database must not be indistinguishable in the dashboard.
+    // and an unreachable database must not be indistinguishable in the dashboard. An
+    // operator who never set STRIPE_WEBHOOK_SECRET owns that omission, so it belongs on
+    // the 503 side however Stripe's own dashboard would otherwise read it.
     for (const reason of [
       CREDIT_WEBHOOK_REASONS.evidenceUnavailable,
       CREDIT_WEBHOOK_REASONS.ledgerUnavailable,
       CREDIT_WEBHOOK_REASONS.storeFailed,
+      "STRIPE_WEBHOOK_SECRET_MISSING",
+      "CREDIT_CLOCK_INVALID",
+      "CREDIT_LEDGER_STATE_INVALID",
+      "CREDIT_LEDGER_ORDER_INVALID",
+      "CREDIT_ENTRY_INVALID",
     ]) {
       expect(creditWebhookHttpStatus(reason)).toBe(503);
     }
@@ -601,11 +616,135 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       CREDIT_WEBHOOK_REASONS.evidenceMissing,
       "STRIPE_SIGNATURE_HEADER_MISSING",
       "STRIPE_SIGNATURE_MISMATCH",
-      "STRIPE_WEBHOOK_SECRET_MISSING",
       "STRIPE_WEBHOOK_PAYLOAD_INVALID",
+      "STRIPE_LIVE_MODE_NOT_AUTHORIZED",
     ]) {
       expect(creditWebhookHttpStatus(reason)).toBe(400);
     }
+  });
+
+  it("reports a missing signing secret as this deployment's failure, not the sender's", async () => {
+    // The refusal itself is unchanged — an unconfigured endpoint still never accepts an
+    // unsigned event. Only the surfaced status changes, so an operator investigating the
+    // Stripe dashboard is pointed at their own env var rather than at Stripe.
+    const store = webhookStore();
+    const payload = eventBody("evt_test_nosecret_status");
+    const outcome = await applyCreditPackWebhook({
+      payload,
+      signatureHeader: signStripeWebhookPayload({
+        payload,
+        secret: TEST_WEBHOOK_SECRET,
+        timestamp: Math.floor(NOW / 1000),
+      }),
+      secret: undefined,
+      store,
+      evidence,
+      now: NOW,
+    });
+    expect(outcome).toMatchObject({ ok: false, reason: "STRIPE_WEBHOOK_SECRET_MISSING" });
+    expect(outcome.ok).toBe(false);
+    if (!outcome.ok) expect(creditWebhookHttpStatus(outcome.reason)).toBe(503);
+    expect(store.entryCount("acct-1")).toBe(0);
+  });
+
+  it("acknowledges a signed event type it does not handle instead of asking for retries", async () => {
+    // One endpoint receives every event the dashboard is subscribed to. Refusing the ones
+    // this path is not built to act on would make Stripe redeliver a condition no
+    // redelivery can change, and those permanent failures count against the health of the
+    // same endpoint every real grant depends on.
+    const store = webhookStore();
+    const outcome = await signedCall({
+      payload: eventBody("evt_test_other_type", {
+        type: "payment_intent.succeeded",
+        metadata: {
+          sceneaxiUserId: "member-1",
+          sceneaxiPurpose: "credit-pack",
+          sceneaxiItemId: PACK.packId,
+          sceneaxiIntentId: INTENT.intentId,
+        },
+      }),
+      store,
+    });
+    expect(outcome).toMatchObject({
+      ok: true,
+      ignored: true,
+      reason: "STRIPE_WEBHOOK_EVENT_TYPE_UNSUPPORTED",
+    });
+    expect(store.entryCount("acct-1")).toBe(0);
+  });
+
+  it("acknowledges a checkout session this deployment never created", async () => {
+    const store = webhookStore();
+    const outcome = await signedCall({
+      payload: eventBody("evt_test_foreign_session", {
+        sessionId: "cs_test_someone_elses",
+        metadata: { someOtherProduct: "yes" },
+      }),
+      store,
+    });
+    expect(outcome).toMatchObject({
+      ok: true,
+      ignored: true,
+      reason: CREDIT_WEBHOOK_REASONS.eventUnrelated,
+    });
+    expect(store.entryCount("acct-1")).toBe(0);
+  });
+
+  it("acknowledges a catalog-listing completion, which settles on the revenue-share path", async () => {
+    // The reachable half of the same class: a well-formed, signature-verified, intent-bound
+    // completion that grants no credits by design. It must mint nothing and must not be
+    // retried forever.
+    const { credits: _packCredits, ...listingBase } = INTENT;
+    const listingIntent = Object.freeze({
+      ...listingBase,
+      intentId: "int_listing_test_abc123456789",
+      purpose: "catalog-listing" as const,
+      itemId: "listing-widget",
+    });
+    const payload = eventBody("evt_test_listing", {
+      sessionId: "cs_test_listing_1",
+      metadata: {
+        sceneaxiUserId: "member-1",
+        sceneaxiPurpose: "catalog-listing",
+        sceneaxiItemId: listingIntent.itemId,
+        sceneaxiIntentId: listingIntent.intentId,
+      },
+    });
+    const store = webhookStore();
+    const outcome = await applyCreditPackWebhook({
+      payload,
+      signatureHeader: signStripeWebhookPayload({
+        payload,
+        secret: TEST_WEBHOOK_SECRET,
+        timestamp: Math.floor(NOW / 1000),
+      }),
+      secret: TEST_WEBHOOK_SECRET,
+      store,
+      evidence: {
+        findIntent(intentId: string) {
+          return intentId === listingIntent.intentId ? listingIntent : undefined;
+        },
+        retrieveSettlement() {
+          return SETTLEMENT;
+        },
+      },
+      now: NOW,
+    });
+    expect(outcome).toMatchObject({
+      ok: true,
+      ignored: true,
+      reason: "STRIPE_WEBHOOK_EVENT_TYPE_UNSUPPORTED",
+    });
+    expect(store.entryCount("acct-1")).toBe(0);
+  });
+
+  it("still refuses a signed body that is not a JSON event object", async () => {
+    // Acknowledging unhandled events must not become a blanket 2xx: Stripe does not send
+    // this, so it is a fault worth surfacing rather than a no-op worth accepting.
+    const store = webhookStore();
+    const outcome = await signedCall({ payload: "not-json-at-all", store });
+    expect(outcome).toMatchObject({ ok: false, reason: "STRIPE_WEBHOOK_PAYLOAD_INVALID" });
+    expect(store.entryCount("acct-1")).toBe(0);
   });
 
   it("grants nothing a second time when Stripe redelivers the same event", async () => {
