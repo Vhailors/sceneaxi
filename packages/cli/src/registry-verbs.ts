@@ -10,14 +10,13 @@
 import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
+  OPEN_PATH_POLICY_PROFILES,
   OPEN_PATH_REFUSE_ONLY_PROFILE,
-  evaluateOpenPathDemo,
   isCommerceActive,
   missingMandatoryMetadata,
   openPathPolicyRowFor,
-  openPathPolicyView,
-  openPathPolicyViewFor,
   profileConformanceRegistry,
+  resolveOpenPathSurfaceRequest,
   validateCatalogItem,
   type CatalogItem,
 } from "@sceneaxi/schemas";
@@ -98,6 +97,11 @@ export function runProfileList(
  * function, so a refusal here is the same refusal every other surface gets —
  * including the Kids one, which is a non-zero exit, not a quiet empty row.
  *
+ * Which of those branches an invocation selects is itself shared
+ * (`resolveOpenPathSurfaceRequest`), so this verb only maps a tagged outcome
+ * onto the CLI envelope. In particular an explicitly empty `--profile=` or
+ * `--operation=` refuses there rather than reading as an absent flag here.
+ *
  * The CLI decides nothing about open paths. It cannot: the matrix allows it
  * schemas and authoring-core only, and the policy is contracts.
  */
@@ -109,67 +113,55 @@ export function runProfileOpenPath(
   const unknown = refuseUnknownArgs(args, PROFILE_OPEN_PATH_FLAGS, path);
   if (unknown) return unknown;
 
-  const profile = args.flags.get("--profile");
-  const operation = args.flags.get("--operation");
+  const outcome = resolveOpenPathSurfaceRequest({
+    profile: args.flags.get("--profile"),
+    operation: args.flags.get("--operation"),
+  });
 
-  if (operation !== undefined && (profile === undefined || profile.length === 0)) {
-    return failure(
-      "AMBIGUOUS_INPUT",
-      "--operation requires --profile: an operation is only meaningful against one profile's policy row.",
-      { path, help: [PROFILE_OPEN_PATH_USAGE] },
-    );
-  }
-
-  const view = openPathPolicyView();
-
-  if (profile === undefined || profile.length === 0) {
-    return success(Object.freeze({ status: "listed", policy: view }), [
+  if (outcome.kind === "policy") {
+    return success(Object.freeze({ status: "listed", policy: outcome.policy }), [
       "Demo levels are demonstrations, never a shipping or production-readiness claim",
       `${OPEN_PATH_REFUSE_ONLY_PROFILE} is refuse-only and stays that way`,
       "Add --profile and --operation to evaluate one demo against the shared policy",
     ]);
   }
 
-  const knownProfiles = `Known profiles: ${view.rows
-    .map((entry) => entry.profile)
-    .join(", ")}`;
-
-  if (operation === undefined || operation.length === 0) {
-    const projection = openPathPolicyViewFor(profile);
-    if (!projection.ok) {
-      return failure("VALIDATION", projection.message, {
-        path,
-        details: Object.freeze({
-          reason: projection.code,
-          profile: projection.profile,
-        }),
-        help: [knownProfiles, PROFILE_OPEN_PATH_USAGE],
-      });
-    }
-
+  if (outcome.kind === "projection") {
     return success(
-      Object.freeze({ status: "listed", policy: projection.policy }),
+      Object.freeze({ status: "listed", policy: outcome.policy }),
       [
         "Demo levels are demonstrations, never a shipping or production-readiness claim",
-        `Projection of one row: filteredTo names it, policyCount stays the policy's ${projection.policy.policyCount}`,
-        `Evidence for this row: ${projection.policy.rows[0].evidence}`,
+        `Projection of one row: filteredTo names it, policyCount stays the policy's ${outcome.policy.policyCount}`,
+        `Evidence for this row: ${outcome.policy.rows[0].evidence}`,
       ],
     );
   }
 
-  const decision = evaluateOpenPathDemo({ profile, operation });
-  if (!decision.ok) {
-    const row = openPathPolicyRowFor(profile);
-    return failure("VALIDATION", decision.message, {
+  if (outcome.kind === "decision") {
+    return success(
+      Object.freeze({ status: "evaluated", decision: outcome.decision }),
+      [
+        "The decision is a demo permission only; shippingClaim is false by contract",
+        `Evidence for this level: ${outcome.decision.evidence}`,
+      ],
+    );
+  }
+
+  const { refusal, operation } = outcome;
+  const row = openPathPolicyRowFor(refusal.profile);
+  return failure(
+    outcome.source === "request" ? "AMBIGUOUS_INPUT" : "VALIDATION",
+    refusal.message,
+    {
       path,
       details: Object.freeze({
-        reason: decision.code,
-        profile: decision.profile,
-        operation,
+        reason: refusal.code,
+        profile: refusal.profile,
+        ...(operation === null ? {} : { operation }),
       }),
       help: [
         row === undefined
-          ? knownProfiles
+          ? `Known profiles: ${OPEN_PATH_POLICY_PROFILES.join(", ")}`
           : `Operations in this profile's policy: ${
               row.operations.length === 0
                 ? "(none — refuse-only)"
@@ -177,13 +169,8 @@ export function runProfileOpenPath(
             }`,
         PROFILE_OPEN_PATH_USAGE,
       ],
-    });
-  }
-
-  return success(Object.freeze({ status: "evaluated", decision }), [
-    "The decision is a demo permission only; shippingClaim is false by contract",
-    `Evidence for this level: ${decision.evidence}`,
-  ]);
+    },
+  );
 }
 
 type CatalogScan =

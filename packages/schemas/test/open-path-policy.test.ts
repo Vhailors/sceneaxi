@@ -21,6 +21,7 @@ import {
   openPathPolicyRowFor,
   openPathPolicyView,
   openPathPolicyViewFor,
+  resolveOpenPathSurfaceRequest,
   validateOpenPathDemoDecision,
 } from "@sceneaxi/schemas";
 
@@ -320,5 +321,82 @@ describe("validateOpenPathDemoDecision", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.code).toBe(OPEN_PATH_REFUSE_CODES.kidsRefused);
+  });
+});
+
+describe("open-path surface request resolution", () => {
+  it("reports the whole policy when neither value was provided", () => {
+    const outcome = resolveOpenPathSurfaceRequest({});
+    expect(outcome.kind).toBe("policy");
+    if (outcome.kind !== "policy") return;
+    expect(outcome.policy).toEqual(openPathPolicyView());
+  });
+
+  it("projects one row when only a profile was provided", () => {
+    const outcome = resolveOpenPathSurfaceRequest({
+      profile: "@sceneaxi/profile-game",
+    });
+    expect(outcome.kind).toBe("projection");
+    if (outcome.kind !== "projection") return;
+    expect(outcome.policy.filteredTo).toBe("@sceneaxi/profile-game");
+    expect(outcome.policy.policyCount).toBe(OPEN_PATH_POLICY.length);
+  });
+
+  it("evaluates when both values were provided", () => {
+    const outcome = resolveOpenPathSurfaceRequest({
+      profile: "@sceneaxi/profile-web",
+      operation: "advance",
+    });
+    expect(outcome.kind).toBe("decision");
+    if (outcome.kind !== "decision") return;
+    expect(outcome.decision).toEqual(
+      evaluateOpenPathDemo({
+        profile: "@sceneaxi/profile-web",
+        operation: "advance",
+      }),
+    );
+  });
+
+  it("refuses an explicitly empty value rather than widening the branch", () => {
+    for (const request of [
+      { profile: "" },
+      { profile: "   " },
+      { profile: "@sceneaxi/profile-kids", operation: "" },
+      { profile: "@sceneaxi/profile-game", operation: "  " },
+    ]) {
+      const outcome = resolveOpenPathSurfaceRequest(request);
+      expect(outcome.kind).toBe("refusal");
+      if (outcome.kind !== "refusal") continue;
+      expect(outcome.source).toBe("request");
+      expect(outcome.refusal.code).toBe(OPEN_PATH_REFUSE_CODES.invalidProperty);
+    }
+  });
+
+  it("refuses an operation named without a profile", () => {
+    const outcome = resolveOpenPathSurfaceRequest({ operation: "open" });
+    expect(outcome.kind).toBe("refusal");
+    if (outcome.kind !== "refusal") return;
+    expect(outcome.source).toBe("request");
+    expect(outcome.refusal.code).toBe(OPEN_PATH_REFUSE_CODES.missingProperty);
+    expect(outcome.operation).toBe("open");
+  });
+
+  it("passes policy refusals through with their shared code", () => {
+    const unknown = resolveOpenPathSurfaceRequest({
+      profile: "@sceneaxi/profile-imaginary",
+    });
+    expect(unknown.kind).toBe("refusal");
+    if (unknown.kind !== "refusal") return;
+    expect(unknown.source).toBe("policy");
+    expect(unknown.refusal.code).toBe(OPEN_PATH_REFUSE_CODES.unknownProfile);
+
+    const kids = resolveOpenPathSurfaceRequest({
+      profile: OPEN_PATH_REFUSE_ONLY_PROFILE,
+      operation: "open",
+    });
+    expect(kids.kind).toBe("refusal");
+    if (kids.kind !== "refusal") return;
+    expect(kids.source).toBe("policy");
+    expect(kids.refusal.code).toBe(OPEN_PATH_REFUSE_CODES.kidsRefused);
   });
 });

@@ -502,6 +502,7 @@ export {
   openPathPolicyRowFor,
   openPathPolicyView,
   openPathPolicyViewFor,
+  resolveOpenPathSurfaceRequest,
   validateOpenPathDemoDecision,
 } from "./open-path-policy.js";
 export type {
@@ -518,6 +519,8 @@ export type {
   OpenPathPolicyViewRow,
   OpenPathRefuseCode,
   OpenPathSessionKind,
+  OpenPathSurfaceOutcome,
+  OpenPathSurfaceRequest,
 } from "./open-path-policy.js";
 
 export {

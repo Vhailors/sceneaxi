@@ -13,9 +13,7 @@
 import type { ApplyDiagnostic } from "@sceneaxi/authoring-core";
 import {
   OPEN_PATH_REFUSE_ONLY_PROFILE,
-  evaluateOpenPathDemo,
-  openPathPolicyView,
-  openPathPolicyViewFor,
+  resolveOpenPathSurfaceRequest,
 } from "@sceneaxi/schemas";
 import {
   createDesktopSession,
@@ -244,57 +242,44 @@ function unknownArgs(
  * has to keep aligned. Evaluation calls the same shared decision function, so
  * the Kids refusal is the shell's refusal too — a non-zero exit, not an
  * omission.
+ *
+ * The branch selection is shared too (`resolveOpenPathSurfaceRequest`), so this
+ * command only renders a tagged outcome; an explicitly empty `--profile=` or
+ * `--operation=` refuses there rather than reading as an absent flag here.
  */
 function openPathResult(args: ParsedArgs): DesktopResult {
   const command = "open-path";
-  const profile = args.flags.get("--profile");
-  const operation = args.flags.get("--operation");
+  const outcome = resolveOpenPathSurfaceRequest({
+    profile: args.flags.get("--profile"),
+    operation: args.flags.get("--operation"),
+  });
 
-  if (operation !== undefined && (profile === undefined || profile.length === 0)) {
-    return refuse(
-      command,
-      DesktopExit.USAGE,
-      "--operation requires --profile: an operation is only meaningful against one profile's policy row.",
-    );
-  }
-
-  const view = openPathPolicyView();
-
-  if (profile === undefined || profile.length === 0) {
-    return ok(command, { policy: view }, [
+  if (outcome.kind === "policy") {
+    return ok(command, { policy: outcome.policy }, [
       "Demo levels are demonstrations, never a shipping or production-readiness claim",
       `${OPEN_PATH_REFUSE_ONLY_PROFILE} is refuse-only and stays that way`,
     ]);
   }
 
-  if (operation === undefined || operation.length === 0) {
-    const projection = openPathPolicyViewFor(profile);
-    if (!projection.ok) {
-      return refuse(command, DesktopExit.USAGE, projection.message, {
-        reason: projection.code,
-        profile: projection.profile,
-      });
-    }
-
-    return ok(command, { policy: projection.policy }, [
-      `Projection of one row: filteredTo names it, policyCount stays the policy's ${projection.policy.policyCount}`,
-      `Evidence for this row: ${projection.policy.rows[0].evidence}`,
+  if (outcome.kind === "projection") {
+    return ok(command, { policy: outcome.policy }, [
+      `Projection of one row: filteredTo names it, policyCount stays the policy's ${outcome.policy.policyCount}`,
+      `Evidence for this row: ${outcome.policy.rows[0].evidence}`,
     ]);
   }
 
-  const decision = evaluateOpenPathDemo({ profile, operation });
-  if (!decision.ok) {
-    return refuse(command, DesktopExit.USAGE, decision.message, {
-      reason: decision.code,
-      profile: decision.profile,
-      operation,
-    });
+  if (outcome.kind === "decision") {
+    return ok(command, { decision: outcome.decision }, [
+      "The decision is a demo permission only; shippingClaim is false by contract",
+      `Evidence for this level: ${outcome.decision.evidence}`,
+    ]);
   }
 
-  return ok(command, { decision }, [
-    "The decision is a demo permission only; shippingClaim is false by contract",
-    `Evidence for this level: ${decision.evidence}`,
-  ]);
+  return refuse(command, DesktopExit.USAGE, outcome.refusal.message, {
+    reason: outcome.refusal.code,
+    profile: outcome.refusal.profile,
+    ...(outcome.operation === null ? {} : { operation: outcome.operation }),
+  });
 }
 
 /**

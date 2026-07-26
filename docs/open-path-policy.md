@@ -115,6 +115,17 @@ whether it was evaluated or merely reported. No surface authors its own
 unknown-profile sentence; the parity suite asserts the refusal code and message
 are identical across all three.
 
+Choosing *which* of those three things an invocation asked for is shared as well.
+`resolveOpenPathSurfaceRequest()` takes the two optional flag values and returns
+one tagged outcome — report, project, evaluate, or refuse — which the CLI verb
+and the shell command render into their own envelopes without deciding anything.
+A branch table copied into two packages is exactly where surfaces drift, so there
+is only one. It is fail-closed on the request itself: `undefined` means the flag
+was absent, while any provided value — including `--profile=` or `--operation=`
+with nothing after the `=` — must name something, so an empty value refuses
+instead of selecting a *wider* branch than the caller asked for. A request to
+evaluate an operation can therefore never come back as a successful listing.
+
 ### Where parity stops, and why
 
 The shells and the CLI report and evaluate the policy. They do **not** open a
@@ -138,7 +149,7 @@ it draws pixels through the ADR 0002 seam and is not governed by this table.
 | `OPEN_PATH_OPERATION_NOT_IN_DEMO_POLICY` | an operation outside the closed Kernel-seam set, or outside that row's set |
 | `OPEN_PATH_SHIPPING_CLAIM_FORBIDDEN` | `claimsShipping: true`, or a recorded decision with `shippingClaim` not `false` |
 | `OPEN_PATH_EVIDENCE_MISSING` | a claimed level whose evidence is absent or does not match the row |
-| `OPEN_PATH_RECORD_NOT_OBJECT`, `OPEN_PATH_SCHEMA_VERSION_MISMATCH`, `OPEN_PATH_KIND_MISMATCH`, `OPEN_PATH_REQUIRED_PROPERTY_MISSING`, `OPEN_PATH_UNEXPECTED_PROPERTY`, `OPEN_PATH_PROPERTY_INVALID` | malformed request or recorded decision |
+| `OPEN_PATH_RECORD_NOT_OBJECT`, `OPEN_PATH_SCHEMA_VERSION_MISMATCH`, `OPEN_PATH_KIND_MISMATCH`, `OPEN_PATH_REQUIRED_PROPERTY_MISSING`, `OPEN_PATH_UNEXPECTED_PROPERTY`, `OPEN_PATH_PROPERTY_INVALID` | malformed request or recorded decision — including a surface request whose provided flag value is empty (`OPEN_PATH_PROPERTY_INVALID`) or that names an operation with no profile (`OPEN_PATH_REQUIRED_PROPERTY_MISSING`) |
 
 ## Changing the policy
 

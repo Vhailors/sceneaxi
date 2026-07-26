@@ -159,6 +159,25 @@ describe("profile open-path", () => {
     expect(refused.error.code).toBe("AMBIGUOUS_INPUT");
   });
 
+  it("refuses an explicitly empty flag value instead of listing the wider policy", () => {
+    const emptyOperation = error([
+      "profile",
+      "open-path",
+      `--profile=${OPEN_PATH_REFUSE_ONLY_PROFILE}`,
+      "--operation=",
+    ]);
+    expect(emptyOperation.exitCode).toBe(ExitCode.USAGE);
+    expect(emptyOperation.error.details?.["reason"]).toBe(
+      OPEN_PATH_REFUSE_CODES.invalidProperty,
+    );
+
+    const emptyProfile = error(["profile", "open-path", "--profile="]);
+    expect(emptyProfile.exitCode).toBe(ExitCode.USAGE);
+    expect(emptyProfile.error.details?.["reason"]).toBe(
+      OPEN_PATH_REFUSE_CODES.invalidProperty,
+    );
+  });
+
   it("owns its unknown-flag refusal (takesArgs verbs must)", () => {
     const refused = error(["profile", "open-path", "--nope"]);
     expect(refused.exitCode).toBe(ExitCode.USAGE);

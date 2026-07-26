@@ -241,6 +241,50 @@ describe("open-path policy parity (conformance)", () => {
     if (!web.ok) expect(web.code).toBe(OPEN_PATH_REFUSE_CODES.kidsRefused);
   });
 
+  it("an explicitly empty flag value refuses identically on both command surfaces", () => {
+    const cases: ReadonlyArray<{
+      readonly cli: readonly string[];
+      readonly desktop: readonly string[];
+    }> = [
+      {
+        cli: ["profile", "open-path", "--profile="],
+        desktop: ["open-path", "--profile="],
+      },
+      {
+        cli: [
+          "profile",
+          "open-path",
+          `--profile=${OPEN_PATH_REFUSE_ONLY_PROFILE}`,
+          "--operation=",
+        ],
+        desktop: [
+          "open-path",
+          `--profile=${OPEN_PATH_REFUSE_ONLY_PROFILE}`,
+          "--operation=",
+        ],
+      },
+    ];
+
+    for (const { cli: cliArgv, desktop: desktopArgv } of cases) {
+      const cli = runCli(cliArgv);
+      const desktop = runDesktopCommand(desktopArgv);
+
+      expect(cli.envelope.ok).toBe(false);
+      expect(cli.exitCode).not.toBe(0);
+      expect(desktop.ok).toBe(false);
+      expect(desktop.exitCode).not.toBe(0);
+
+      const reason = cli.envelope.ok
+        ? undefined
+        : cli.envelope.error.details?.["reason"];
+      expect(reason).toBe(OPEN_PATH_REFUSE_CODES.invalidProperty);
+      expect(desktop.result["reason"]).toBe(reason);
+      expect(desktop.result["message"]).toBe(
+        cli.envelope.ok ? undefined : cli.envelope.error.message,
+      );
+    }
+  });
+
   it("no surface reports a shipping or production-readiness claim", () => {
     const payloads = [
       JSON.stringify(cliPolicy(["profile", "open-path"])),

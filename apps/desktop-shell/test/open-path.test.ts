@@ -124,6 +124,26 @@ describe("desktop shell open-path", () => {
     );
   });
 
+  it("refuses an explicitly empty flag value instead of listing the wider policy", () => {
+    const emptyOperation = runDesktopCommand([
+      "open-path",
+      `--profile=${OPEN_PATH_REFUSE_ONLY_PROFILE}`,
+      "--operation=",
+    ]);
+    expect(emptyOperation.ok).toBe(false);
+    expect(emptyOperation.exitCode).toBe(DesktopExit.USAGE);
+    expect(emptyOperation.result["reason"]).toBe(
+      OPEN_PATH_REFUSE_CODES.invalidProperty,
+    );
+
+    const emptyProfile = runDesktopCommand(["open-path", "--profile="]);
+    expect(emptyProfile.ok).toBe(false);
+    expect(emptyProfile.exitCode).toBe(DesktopExit.USAGE);
+    expect(emptyProfile.result["reason"]).toBe(
+      OPEN_PATH_REFUSE_CODES.invalidProperty,
+    );
+  });
+
   it("appears in the shell's own command list and help", () => {
     const help = runDesktopCommand([]);
     expect(help.ok).toBe(true);

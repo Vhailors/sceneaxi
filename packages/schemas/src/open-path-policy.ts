@@ -490,6 +490,126 @@ export function openPathPolicyViewFor(
 }
 
 /**
+ * What a report-and-evaluate surface (the CLI verb, the desktop shell command)
+ * was asked for, in the vocabulary those surfaces already have: two optional
+ * flag values.
+ *
+ * `undefined` means the flag was **absent**. Any string — including `""` — means
+ * it was **provided**, so an explicitly empty value refuses instead of quietly
+ * degrading to "not provided". A caller who asked to evaluate an operation must
+ * never get a successful listing back.
+ */
+export type OpenPathSurfaceRequest = Readonly<{
+  profile?: string | undefined;
+  operation?: string | undefined;
+}>;
+
+/**
+ * Which branch a surface request selects, tagged so each surface maps it onto
+ * its own envelope without re-deciding anything.
+ */
+export type OpenPathSurfaceOutcome =
+  | Readonly<{ kind: "policy"; policy: OpenPathPolicyViewModel }>
+  | Readonly<{
+      kind: "projection";
+      profile: string;
+      policy: OpenPathPolicyFilteredView;
+    }>
+  | Readonly<{ kind: "decision"; decision: OpenPathDemoAllowed }>
+  | Readonly<{
+      kind: "refusal";
+      /**
+       * `request` — the surface's own input was malformed before the policy was
+       * consulted; `policy` — the shared table refused. Surfaces whose protocol
+       * distinguishes a usage fault from a validation fault branch on this.
+       */
+      source: "request" | "policy";
+      refusal: OpenPathDemoRefusal;
+      operation: string | null;
+    }>;
+
+function refuseSurface(
+  source: "request" | "policy",
+  refusal: OpenPathDemoRefusal,
+  operation: string | null,
+): OpenPathSurfaceOutcome {
+  return Object.freeze({ kind: "refusal" as const, source, refusal, operation });
+}
+
+/**
+ * The one branch selection every report-and-evaluate surface makes: report the
+ * whole policy, project one row, evaluate one operation, or refuse.
+ *
+ * It lives here rather than in each surface because the surfaces are not allowed
+ * to differ — the parity suite asserts they do not — and a branch table copied
+ * into two packages is exactly where they drift. Fail-closed throughout: an
+ * empty provided value refuses rather than selecting a wider branch than the
+ * caller asked for.
+ */
+export function resolveOpenPathSurfaceRequest(
+  request: OpenPathSurfaceRequest = {},
+): OpenPathSurfaceOutcome {
+  const { profile, operation } = request;
+
+  if (profile !== undefined && !isNonEmptyString(profile)) {
+    return refuseSurface(
+      "request",
+      refuseDemo(
+        OPEN_PATH_REFUSE_CODES.invalidProperty,
+        "An open-path profile was provided with an empty value; name a profile package or omit it entirely.",
+        null,
+      ),
+      operation ?? null,
+    );
+  }
+
+  if (operation !== undefined && !isNonEmptyString(operation)) {
+    return refuseSurface(
+      "request",
+      refuseDemo(
+        OPEN_PATH_REFUSE_CODES.invalidProperty,
+        "An open-path operation was provided with an empty value; name a Kernel-seam operation or omit it entirely.",
+        profile ?? null,
+      ),
+      operation,
+    );
+  }
+
+  if (operation !== undefined && profile === undefined) {
+    return refuseSurface(
+      "request",
+      refuseDemo(
+        OPEN_PATH_REFUSE_CODES.missingProperty,
+        "An open-path operation is only meaningful against one profile's policy row; name a profile too.",
+        null,
+      ),
+      operation,
+    );
+  }
+
+  if (profile === undefined) {
+    return Object.freeze({
+      kind: "policy" as const,
+      policy: openPathPolicyView(),
+    });
+  }
+
+  if (operation === undefined) {
+    const projection = openPathPolicyViewFor(profile);
+    if (!projection.ok) return refuseSurface("policy", projection, null);
+    return Object.freeze({
+      kind: "projection" as const,
+      profile,
+      policy: projection.policy,
+    });
+  }
+
+  const decision = evaluateOpenPathDemo({ profile, operation });
+  if (!decision.ok) return refuseSurface("policy", decision, operation);
+  return Object.freeze({ kind: "decision" as const, decision });
+}
+
+/**
  * Validate an untrusted record as a recorded open-path demo decision — the
  * shape a surface, log, or fixture may hand back across a process boundary.
  */
