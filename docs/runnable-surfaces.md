@@ -110,15 +110,17 @@ spends anything, and no shipped verb is held-key gated (`SHIPPED_COMMAND_MAP`).
 Hosted AI is the metered surface and is **not implemented here**. The free-vs-paid
 matrix it must obey — including BYO-key never touching the ledger and the
 non-overridable Kids deny — is owned by
-[`docs/auth-credits.md`](auth-credits.md). The credit ledger and metering it would
-debit now exist (`packages/billing`); the hosted assistant surface itself remains
-sceneaxi#121.
+[`docs/auth-credits.md`](auth-credits.md). The credit ledger, metering, and the one
+default-off gate a hosted call must pass to reach a debit (`runMeteredModelCall`)
+now exist in `packages/billing`; nothing runnable calls it, and the hosted
+assistant surface itself remains sceneaxi#121.
 
 ## Not runnable yet
 
 - **`apps/web-shell`** (sceneaxi#120) — a protocol client library with no dev
   server. Blocked on whether the websites/deploy work touches `apps/web-shell`.
-- **In-app AI assistant** (sceneaxi#121) — the credits ledger it was serialized
-  behind has landed; the assistant surface itself is still unbuilt.
+- **In-app AI assistant** (sceneaxi#121) — the credits ledger and the metered
+  hosted-AI gate it was serialized behind have landed; the assistant surface
+  itself is still unbuilt.
 - **`apps/catalog-game`, `apps/catalog-web`** — dormant, owned by the
   websites/deploy track.
