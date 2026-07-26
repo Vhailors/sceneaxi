@@ -11,6 +11,7 @@
 import { useMemo, useState } from "react";
 import type { LiveOpenScene } from "../../../lib/live-open.js";
 import {
+  SculptFrameReport,
   SculptViewportSurface,
   currentFrame,
   useSculptViewport,
@@ -58,30 +59,7 @@ export function LiveViewport({ scene }: { readonly scene: LiveOpenScene }) {
       </div>
 
       <h3>What the running core reports</h3>
-      <dl className="dl">
-        <dt>Backend</dt>
-        <dd>
-          <code>{frame?.backend ?? "…"}</code>
-        </dd>
-        <dt>Label</dt>
-        <dd>{frame?.label ?? "…"}</dd>
-        <dt>Draw surface</dt>
-        <dd>
-          <code>{frame?.surface ?? "…"}</code>
-        </dd>
-        <dt>Pixels drawn</dt>
-        <dd>
-          <code>{frame === null ? "…" : String(frame.pixelsDrawn)}</code>
-        </dd>
-        <dt>Frame</dt>
-        <dd>{frame?.frame ?? "…"}</dd>
-        <dt>Draw calls</dt>
-        <dd>{frame?.drawCalls ?? "…"}</dd>
-        <dt>Mounted</dt>
-        <dd>
-          <code>{frame?.instanceIds.join(", ") ?? "…"}</code>
-        </dd>
-      </dl>
+      <SculptFrameReport frame={frame} />
     </>
   );
 }

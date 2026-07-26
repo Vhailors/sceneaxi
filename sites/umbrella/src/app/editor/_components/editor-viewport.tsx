@@ -17,6 +17,7 @@
 import { useMemo, useState } from "react";
 import type { MountableScene } from "@sceneaxi/site-kit";
 import {
+  SculptFrameReport,
   SculptViewportSurface,
   currentFrame,
   useSculptViewport,
@@ -83,30 +84,7 @@ export function EditorViewport({
         </button>
       </div>
 
-      <dl className="dl">
-        <dt>Backend</dt>
-        <dd>
-          <code>{frame?.backend ?? "…"}</code>
-        </dd>
-        <dt>Label</dt>
-        <dd>{frame?.label ?? "…"}</dd>
-        <dt>Draw surface</dt>
-        <dd>
-          <code>{frame?.surface ?? "…"}</code>
-        </dd>
-        <dt>Pixels drawn</dt>
-        <dd>
-          <code>{frame === null ? "…" : String(frame.pixelsDrawn)}</code>
-        </dd>
-        <dt>Frame</dt>
-        <dd>{frame?.frame ?? "…"}</dd>
-        <dt>Draw calls</dt>
-        <dd>{frame?.drawCalls ?? "…"}</dd>
-        <dt>Mounted</dt>
-        <dd>
-          <code>{frame?.instanceIds.join(", ") ?? "…"}</code>
-        </dd>
-      </dl>
+      <SculptFrameReport frame={frame} />
     </>
   );
 }
