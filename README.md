@@ -44,7 +44,11 @@ External web products follow the published-package support and pinning contract
 in [`docs/web-consumer.md`](docs/web-consumer.md); the in-repo `sites/` surfaces are
 first-party and are not governed by it.
 The public engine SDK archive is built by `pnpm build:sdk` — a deterministic zip plus
-SHA-256 checksum, not an npm publish (ADR 0019).
+SHA-256 checksum, not an npm publish (ADR 0019). Publish readiness is proven
+structurally rather than by publishing: the version plan, the export surface, and the
+executable checklist behind them are
+[`docs/publish-readiness.md`](docs/publish-readiness.md), enforced by
+`pnpm check:publish-ready`.
 Portable product exports cross delivery boundaries through the public,
 delivery-neutral [`Delivery Handoff` contract](docs/delivery-handoff.md); provider
 credentials, uploads, approvals, and adapter implementation stay outside core.

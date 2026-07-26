@@ -10,8 +10,15 @@ repository as source.
 > then, consumers must wait rather than substitute a Git, path, or workspace
 > dependency.
 
+Until a published version exists, the one supported way to read and evaluate this
+surface is the public engine SDK archive (`pnpm build:sdk`, ADR 0019), which ships
+these packages plus this contract. The version plan behind the `0.0.0` above, and the
+executable checklist that keeps this document equal to the real export maps, are
+[`publish-readiness.md`](publish-readiness.md).
+
 ## Supported package surface
 
+<!-- publish-ready:consumer-surface -->
 | Package | Web-consumer role | Pin rule |
 |---|---|---|
 | `@sceneaxi/profile-web` | Primary Web Experience profile and its compiled policy. Import only capabilities exported by its package root. | Pin an exact published profile version. That release supports only the core range exposed as `seam.corePin`. |
@@ -22,6 +29,14 @@ This contract governs **third-party products**. The first-party surfaces in this
 repository — `apps/*` and the deployable `sites/*` (ADR 0018) — are private applications,
 not external consumers, so their in-repo path dependencies are correct and change nothing
 here.
+
+Import through a package's declared `exports` only. Each of these packages exposes a
+root entry point; `@sceneaxi/schemas` additionally exposes explicit subpaths for its
+versioned JSON contracts, its fixture helpers, and its Node-only executable suites,
+which are deliberately kept off the browser-safe root. The exact namespaces are
+declared and gate-checked in
+[`publish-readiness.md`](publish-readiness.md#export-surface-of-the-consumer-packages);
+an unexported deep path is not part of this contract.
 
 Engine packages are profile implementation dependencies by default, not
 consumer entry points. Import one directly only when the selected published

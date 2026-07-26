@@ -47,8 +47,16 @@ export const SDK_PACKAGES = Object.freeze([
   "packages/profile-web",
 ]);
 
-/** Repo-level docs shipped with the SDK. */
-export const SDK_DOCS = Object.freeze(["docs/web-consumer.md", "docs/DEPENDENCY-MATRIX.md"]);
+/**
+ * Repo-level docs shipped with the SDK: the consumption contract, the pinning matrix,
+ * and the publish-readiness checklist that states what `0.0.0` means and why there is
+ * no registry install.
+ */
+export const SDK_DOCS = Object.freeze([
+  "docs/web-consumer.md",
+  "docs/DEPENDENCY-MATRIX.md",
+  "docs/publish-readiness.md",
+]);
 
 /** Never shipped, at any depth. */
 const EXCLUDED_DIRECTORIES = Object.freeze(["node_modules", "dist", ".git", ".turbo", "coverage"]);
@@ -289,8 +297,9 @@ public package surface plus the consumer contract docs.
 
 ${packages.map((name) => `- \`${name}\``).join("\n")}
 
-Plus \`docs/web-consumer.md\` (the supported consumption and pinning contract) and
-\`docs/DEPENDENCY-MATRIX.md\`.
+Plus \`docs/web-consumer.md\` (the supported consumption and pinning contract),
+\`docs/DEPENDENCY-MATRIX.md\`, and \`docs/publish-readiness.md\` (what \`0.0.0\` means,
+the version plan, and the checklist that keeps those docs equal to the real exports).
 
 ## Verify this archive
 
