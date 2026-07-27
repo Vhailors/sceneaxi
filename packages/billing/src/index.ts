@@ -147,6 +147,7 @@ export {
   CREATOR_SHARE_BASIS_POINTS,
   applyCreditsSale,
   authorizeCreatorPublish,
+  bindSettledIntent,
   persistCreditsSale,
   recordMoneySale,
   splitCredits,
@@ -155,5 +156,6 @@ export {
   type CreditsSaleOutcome,
   type PersistCreditsSaleRequest,
   type RecordMoneySaleRequest,
+  type SettledIntentBinding,
   type Split,
 } from "./revenue-share.js";

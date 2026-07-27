@@ -128,13 +128,14 @@
     "checkoutCompletedEvent": {
       "type": "object",
       "title": "CheckoutCompletedEvent",
-      "description": "A provider event normalized to SceneAxi vocabulary before it touches credits. Only reachable after webhook signature verification; the resulting grant is keyed on stripe-event:<eventId> so a replay grants nothing. `credits` is present exactly when purpose is credit-pack.",
+      "description": "A provider event normalized to SceneAxi vocabulary before it touches credits. Only reachable after webhook signature verification; the resulting grant is keyed on stripe-event:<eventId> so a replay grants nothing. `checkoutSessionId` is the provider Checkout Session this completion settles, so settlement evidence retrieved for another identically-priced paid session cannot validate it. `credits` is present exactly when purpose is credit-pack.",
       "required": [
         "schemaVersion",
         "kind",
         "eventId",
         "type",
         "mode",
+        "checkoutSessionId",
         "intentId",
         "userId",
         "purpose",
@@ -151,6 +152,7 @@
         "eventId": { "$ref": "#/$defs/identifier" },
         "type": { "const": "checkout.session.completed" },
         "mode": { "$ref": "#/$defs/mode" },
+        "checkoutSessionId": { "$ref": "#/$defs/identifier" },
         "intentId": { "$ref": "#/$defs/identifier" },
         "userId": { "$ref": "#/$defs/identifier" },
         "purpose": { "$ref": "#/$defs/purpose" },

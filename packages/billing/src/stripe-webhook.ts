@@ -120,8 +120,18 @@ export type VerifiedWebhook = Readonly<{
  * The authoritative settlement — paid status, amount, currency, quantity, and
  * Stripe price — is retrieved separately and supplied here, so the parser never
  * trusts embedded line items that a real webhook does not carry.
+ *
+ * `sessionId` is what makes the evidence *this event's*. Amount, currency, and
+ * price are shared by every session that bought the same thing, so without the
+ * session id a settlement retrieved for one genuinely paid session validates a
+ * different one's event. It is the id the retrieval was made for, echoed back by
+ * the adapter, and the parser refuses unless it equals the id in the verified
+ * body — so a caller that retrieved for the wrong session, or that reused a
+ * settlement across events, refuses instead of settling.
  */
 export type CheckoutSettlement = Readonly<{
+  /** The Checkout Session this settlement was retrieved for. */
+  sessionId: string;
   paymentStatus: "paid" | "unpaid" | "no_payment_required";
   amountTotal: number;
   currency: string;
@@ -129,7 +139,12 @@ export type CheckoutSettlement = Readonly<{
   stripePriceId: string;
 }>;
 
-/** Injected retrieval of settlement evidence for a checkout session. */
+/**
+ * Injected retrieval of settlement evidence for a checkout session.
+ *
+ * The adapter must answer for the id it was asked about and echo it back on
+ * `sessionId`; anything else refuses at the parser rather than being trusted.
+ */
 export type CheckoutSettlementPort = Readonly<{
   retrieveSettlement(
     sessionId: string,
@@ -149,6 +164,7 @@ function fingerprintCheckoutCompletion(
     completion.eventId,
     completion.type,
     completion.mode,
+    completion.checkoutSessionId,
     completion.intentId,
     completion.userId,
     completion.purpose,
@@ -365,6 +381,12 @@ export const CHECKOUT_METADATA_KEYS = Object.freeze({
  * and is bound to the persisted intent, which is the immutable price snapshot.
  * `credits` comes from that intent, never from the event: an attacker who could
  * influence event metadata must not be able to name their own credit amount.
+ *
+ * The event's Checkout Session id (`data.object.id`) is read here and compared
+ * against the settlement's own `sessionId` **inside this boundary**, so the
+ * comparison cannot be skipped by a caller that retrieved evidence for the wrong
+ * session. It is carried onto the completion, so every downstream grant and split
+ * names the exact session that paid rather than an identically-priced one.
  */
 export function parseCheckoutCompletedEvent(input: {
   readonly verified: VerifiedWebhook;
@@ -446,6 +468,18 @@ export function parseCheckoutCompletedEvent(input: {
       "The checkout event carries no session object.",
     );
   }
+  // The session's own id, before anything is compared. Every other figure the
+  // settlement carries — amount, currency, price — is shared by every session
+  // that bought the same thing, so this is the only field that can say *which*
+  // paid session this event is about.
+  const checkoutSessionId = object["id"];
+  if (typeof checkoutSessionId !== "string" || checkoutSessionId.length === 0) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.checkoutSessionIdMissing,
+      "The checkout event's session object carries no id, so no settlement can be bound to the session that was paid.",
+    );
+  }
+
   const metadata = object["metadata"];
   const metadataRecord = snapshotPlainRecord(metadata);
   if (metadataRecord === undefined) {
@@ -496,8 +530,17 @@ export function parseCheckoutCompletedEvent(input: {
   // objects are minimal and do not carry line items) and bound to the persisted
   // intent — the immutable price snapshot — rather than to the mutable catalog.
   const settlementRecord = snapshotPlainRecord(inputRecord["settlement"]);
+  // Which session it settles is asked first, and separately. Amount, currency,
+  // and price all match by construction between two genuinely paid sessions for
+  // the same item, so checking them first would let a settlement retrieved for
+  // another paid session validate this event and report only a payload problem.
+  if (settlementRecord?.["sessionId"] !== checkoutSessionId) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.settlementSessionMismatch,
+      `The settlement is not bound to Checkout Session "${checkoutSessionId}"; evidence from another session settles nothing here, however well its amount and currency match.`,
+    );
+  }
   if (
-    settlementRecord === undefined ||
     settlementRecord["paymentStatus"] !== "paid" ||
     settlementRecord["amountTotal"] !== intent.value.unitAmount ||
     settlementRecord["currency"] !== intent.value.currency ||
@@ -516,6 +559,7 @@ export function parseCheckoutCompletedEvent(input: {
     eventId,
     type: "checkout.session.completed" as const,
     mode,
+    checkoutSessionId,
     intentId,
     userId,
     purpose,

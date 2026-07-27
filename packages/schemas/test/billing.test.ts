@@ -81,6 +81,7 @@ const EVENT = {
   eventId: "evt_01",
   type: CHECKOUT_COMPLETED_EVENT_TYPE,
   mode: "test",
+  checkoutSessionId: "cs_test_01",
   intentId: "int_01",
   userId: "usr_01",
   purpose: "credit-pack",
@@ -308,6 +309,27 @@ describe("validateCheckoutCompletedEvent", () => {
       expect(validateCheckoutCompletedEvent({ ...EVENT, credits }).ok).toBe(
         false,
       );
+    }
+  });
+
+  it("requires the Checkout Session it settles", () => {
+    // Unbound evidence must not be representable: a completion that cannot name
+    // its session would let one paid session's settlement validate another's.
+    const missing = validateCheckoutCompletedEvent(
+      without(EVENT, "checkoutSessionId"),
+    );
+    expect(missing.ok).toBe(false);
+    if (missing.ok) return;
+    expect(missing.code).toBe(BILLING_REFUSE_CODES.missingProperty);
+
+    for (const checkoutSessionId of ["", "cs test 01", "c".repeat(129), 7]) {
+      const result = validateCheckoutCompletedEvent({
+        ...EVENT,
+        checkoutSessionId,
+      });
+      expect(result.ok, String(checkoutSessionId)).toBe(false);
+      if (result.ok) return;
+      expect(result.code).toBe(BILLING_REFUSE_CODES.invalidProperty);
     }
   });
 

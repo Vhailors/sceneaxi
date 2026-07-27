@@ -133,13 +133,23 @@ export type CheckoutSessionIntent = {
   readonly createdAt: string;
 };
 
-/** Provider event normalized to SceneAxi vocabulary before it touches credits. */
+/**
+ * Provider event normalized to SceneAxi vocabulary before it touches credits.
+ *
+ * `checkoutSessionId` is the provider's own Checkout Session id, read from the
+ * verified event body. It is what makes the settlement evidence *this* session's
+ * rather than any identically-priced one: without it, a paid session's retrieved
+ * settlement validates a different paid session's event. It is required, so a
+ * completion that cannot name the session it settles does not exist at all.
+ */
 export type CheckoutCompletedEvent = {
   readonly schemaVersion: typeof BILLING_SCHEMA_VERSION;
   readonly kind: typeof CHECKOUT_COMPLETED_EVENT_KIND;
   readonly eventId: string;
   readonly type: typeof CHECKOUT_COMPLETED_EVENT_TYPE;
   readonly mode: BillingMode;
+  /** The Stripe Checkout Session this completion settles. */
+  readonly checkoutSessionId: string;
   readonly intentId: string;
   readonly userId: string;
   readonly purpose: CheckoutPurpose;
@@ -615,6 +625,7 @@ const CHECKOUT_COMPLETED_EVENT_REQUIRED = Object.freeze([
   "eventId",
   "type",
   "mode",
+  "checkoutSessionId",
   "intentId",
   "userId",
   "purpose",
@@ -652,6 +663,15 @@ export function validateCheckoutCompletedEvent(
   if (!isBillingMode(mode)) {
     return invalid(
       `checkout completed event mode must be one of ${BILLING_MODES.join(", ")}.`,
+    );
+  }
+  const checkoutSessionId = record["checkoutSessionId"];
+  if (
+    typeof checkoutSessionId !== "string" ||
+    !IDENTIFIER_RE.test(checkoutSessionId)
+  ) {
+    return invalid(
+      "checkout completed event checkoutSessionId must be a url-safe identifier of 1-128 chars; a completion that cannot name its Checkout Session is unbound evidence.",
     );
   }
   const intentId = record["intentId"];
@@ -714,6 +734,7 @@ export function validateCheckoutCompletedEvent(
     eventId,
     type: CHECKOUT_COMPLETED_EVENT_TYPE,
     mode,
+    checkoutSessionId,
     intentId,
     userId,
     purpose,

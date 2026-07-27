@@ -90,7 +90,7 @@ Who issues, who checks, and what refuses:
 | --- | --- | --- | --- |
 | `AdminIdentity` | `resolveAdminIdentity(env)` | `requireRole`, `requireAuthenticated`, identity-port sign-in/session verification | `AUTH_ADMIN_IDENTITY_UNPROVEN` |
 | `VerifiedWebhook` | `verifyStripeWebhookSignature` | `parseCheckoutCompletedEvent` | `STRIPE_WEBHOOK_NOT_VERIFIED` |
-| `VerifiedCheckoutCompletion` | `parseCheckoutCompletedEvent` | `applyCheckoutCompletedGrant`, `settleFixtureListingMoneySale` | `STRIPE_COMPLETION_NOT_VERIFIED` |
+| `VerifiedCheckoutCompletion` | `parseCheckoutCompletedEvent` | `applyCheckoutCompletedGrant`, `recordMoneySale`, `settleFixtureListingMoneySale` | `STRIPE_COMPLETION_NOT_VERIFIED` |
 
 `hasAdminIdentityProvenance`, `hasVerifiedWebhookProvenance`, and
 `hasVerifiedCompletionProvenance` are exported so a caller sequencing its own route can
@@ -195,9 +195,28 @@ Set the checkout session's metadata to the keys in `CHECKOUT_METADATA_KEYS`
 resolved from the **persisted intent**, never from event metadata, so influencing the
 webhook body cannot name a credit amount. Persist the `CheckoutSessionIntent` before
 creating the hosted session. Stripe webhook objects are minimal, so the completion parser
-takes settlement (paid status, amount, currency, quantity, Stripe price) that your adapter
-**retrieves separately** for that exact Checkout Session, and refuses unless it and the
-session's mode and metadata all match the persisted intent — the immutable price snapshot.
+takes settlement (session id, paid status, amount, currency, quantity, Stripe price) that
+your adapter **retrieves separately** for that exact Checkout Session, and refuses unless it
+and the session's mode and metadata all match the persisted intent — the immutable price
+snapshot.
+
+**Settlement must name the session it settles** (sceneaxi#127). `CheckoutSettlement.sessionId`
+is required and must equal the Checkout Session id in the verified body (`data.object.id`),
+which the parser reads itself and carries onto the completion as `checkoutSessionId`. Amount,
+currency, and price are identical between any two genuinely paid sessions for the same item,
+so without this a settlement retrieved for one paid session would validate another one's
+event. The comparison happens *inside* the parser, before anything else about the settlement
+is read, so a caller that retrieved for the wrong session cannot skip it:
+
+| condition | refusal |
+|---|---|
+| the event's session object carries no usable `id` | `STRIPE_CHECKOUT_SESSION_ID_MISSING` |
+| settlement carries no `sessionId`, or a different one | `STRIPE_SETTLEMENT_SESSION_MISMATCH` |
+| settlement is unpaid, or its amount/currency/quantity/price ≠ the intent | `STRIPE_WEBHOOK_PAYLOAD_INVALID` |
+
+Your adapter must echo back the id it was asked about. The grant's completion fingerprint
+includes the session id too, so two sessions can never be mistaken for a redelivery of each
+other.
 
 Your webhook endpoint must pass the **raw request body**, not a re-serialised object —
 re-encoding the JSON changes the bytes and verification will (correctly) fail:
@@ -231,7 +250,9 @@ const intent = await checkoutIntentStore.findByIntentId(intentId);
 if (!intent) return respond(400, "unknown checkout intent");
 
 // Stripe webhook objects do not carry line items — retrieve settlement for this exact
-// Checkout Session through the injected adapter boundary.
+// Checkout Session through the injected adapter boundary. The retrieved evidence must
+// carry `sessionId`; the parser re-reads the id from the verified body and refuses
+// anything that does not match, so retrieving for the wrong session cannot settle.
 const settlement = await (settlementPort as CheckoutSettlementPort).retrieveSettlement(
   sessionId,
 );
@@ -643,16 +664,45 @@ refused, exactly as a non-zero `creatorCredits` with no creator grant already wa
 payout instruction would invite one to be attempted. **Real cash payouts to creators are a
 later captain gate.**
 
-Both paths are idempotent on the sale id (`sale:<saleId>:buyer` / `:creator`), so a replay
-moves nothing.
+**A money split is built from verified evidence, never from arguments** (sceneaxi#127).
+`recordMoneySale` takes exactly two things: a runtime-witnessed `VerifiedCheckoutCompletion`
+and the persisted `CheckoutSessionIntent` that completion was bound to. There is no
+parameter for a gross, a currency, a buyer, a mode, a listing, or a sale id, so a caller
+cannot book a split for a sale nobody paid — the older shape, which accepted an arbitrary
+listing plus a caller-asserted buyer and mode, could. Where each figure comes from:
+
+| field | source | if it disagrees |
+|---|---|---|
+| `grossMinor`, `currency` | the persisted intent — the immutable price snapshot | — |
+| `buyerUserId`, `mode`, `occurredAt` | the verified completion | — |
+| `saleId` | read out of the intent's `sale:<saleId>` idempotency key | `STRIPE_CHECKOUT_INTENT_INVALID` |
+| `listingId`, `creatorUserId` | the committed catalog, resolved by the completion's item id | `LISTING_UNKNOWN` |
+| the completion's provenance | `parseCheckoutCompletedEvent` | `STRIPE_COMPLETION_NOT_VERIFIED` |
+| the intent↔completion binding | all eight price-bearing fields compared | `STRIPE_CHECKOUT_INTENT_INVALID` |
+
+The key is itself bound to the settlement: `intentId` is the intent field the completion
+pins, and every real intent derives it from its own idempotency key, so the key is
+re-derived and compared before the sale id is read out of it — renaming the key onto
+another sale refuses. A listing the seller never priced in money refuses
+`LISTING_CURRENCY_NOT_LISTED`, and a `credit-pack` completion refuses
+`STRIPE_WEBHOOK_EVENT_TYPE_UNSUPPORTED` rather than booking a split for a purchase that
+settles on the ledger. `mode` comes from the completion and still passes
+`assertModeAuthorized`, so a live settlement refuses `STRIPE_LIVE_MODE_NOT_AUTHORIZED`
+without an explicit captain `liveModeAuthorized`. `occurredAt` is the settlement's own
+time rather than the recorder's clock, so re-recording the same completion produces an
+identical row.
+
+Both credits paths are idempotent on the sale id (`sale:<saleId>:buyer` / `:creator`), so a
+replay moves nothing. Money bookkeeping is pure and unpersisted in v1 — persisted atomic
+settlement is sceneaxi#128.
 
 ## Fixture commerce (sceneaxi#138)
 
-The primitives above take a `CatalogListing` **value**, which is right for a mechanism and
-wrong for an offer: a caller holding a hand-built listing object could transact against a
-SKU nobody published, and `recordMoneySale` would book a split for it. What was missing was
-a statement of what is actually for sale. `packages/billing/src/fixture-commerce.ts` is that
-statement, and it is a closed enumeration of exactly **one** dual-priced fixture SKU.
+The credits primitives above take a `CatalogListing` **value**, which is right for a
+mechanism and wrong for an offer: a caller holding a hand-built listing object could
+transact against a SKU nobody published. What was missing was a statement of what is
+actually for sale. `packages/billing/src/fixture-commerce.ts` is that statement, and it is a
+closed enumeration of exactly **one** dual-priced fixture SKU.
 
 | | |
 |---|---|
@@ -684,15 +734,16 @@ Four properties are what the module adds over calling the primitives in order:
    of the same depleted balance is still refused. Recognition reads the supplied ledger
    because that is the same ledger `applyCreditsSale`'s own idempotency reads — the gate must
    not be able to refuse a retry the layer beneath it would replay.
-4. **Money bookkeeping is bound to a settlement.** `settleFixtureListingMoneySale` takes only
-   the runtime-witnessed output of `parseCheckoutCompletedEvent` plus the persisted intent it was bound
-   to, and recovers the sale id from that intent's `sale:<saleId>` idempotency key rather than
-   accepting one. That key is itself bound to the settlement: `intentId` is the intent field
-   the completion pins, and every real intent derives it from its own idempotency key, so the
-   key is re-derived and compared before the sale id is read out of it — renaming the key onto
-   another sale refuses. A `MoneySplitRecord` on this path can therefore only describe money a
-   signature-verified Stripe **test** settlement actually took, for an enabled SKU, at the
-   price the seller listed. A settled amount that differs from the listing refuses.
+4. **Only an enumerated SKU, at the price it carries, may be settled.**
+   `settleFixtureListingMoneySale` takes the same two arguments `recordMoneySale` does — a
+   runtime-witnessed completion and the persisted intent it was bound to — and every check
+   that makes the record evidence-bound belongs to that primitive, not to a second copy here.
+   What this path adds is the offer: the settled item must be one of
+   `FIXTURE_COMMERCE_LISTING_IDS`, and the settled amount must be the price that listing
+   actually carries, so a real payment for an inert SKU still books nothing. A
+   `MoneySplitRecord` on this path can therefore only describe money a signature-verified
+   Stripe **test** settlement actually took, for an enabled SKU, at the price the seller
+   listed.
 
 **Test mode is structural, not a default.** No function here accepts or forwards
 `liveModeAuthorized`, so the captain go-live gate cannot be passed through this path at all:

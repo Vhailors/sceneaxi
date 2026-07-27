@@ -504,7 +504,10 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     createdAt: iso(-60_000),
   });
 
+  const SESSION_ID = "cs_test_session_1";
+
   const SETTLEMENT: CheckoutSettlement = Object.freeze({
+    sessionId: SESSION_ID,
     paymentStatus: "paid",
     amountTotal: PACK.unitAmount,
     currency: PACK.currency,
@@ -527,7 +530,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       livemode: false,
       data: {
         object: {
-          id: overrides.sessionId ?? "cs_test_session_1",
+          id: overrides.sessionId ?? SESSION_ID,
           metadata: overrides.metadata ?? {
             sceneaxiUserId: "member-1",
             sceneaxiPurpose: "credit-pack",
@@ -543,7 +546,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       return intentId === INTENT.intentId ? INTENT : undefined;
     },
     retrieveSettlement(sessionId: string) {
-      return sessionId === "cs_test_session_1" ? SETTLEMENT : undefined;
+      return sessionId === SESSION_ID ? SETTLEMENT : undefined;
     },
   });
 

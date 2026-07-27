@@ -100,12 +100,16 @@ const verified = (body: string) => {
   return result.value;
 };
 
+/** The Checkout Session id every fixture event body carries. */
+const SESSION_ID = "cs_test_01";
+
 /** Settlement evidence matching an intent, retrieved through the adapter boundary. */
 const settlementFor = (
   intent: CheckoutSessionIntent,
   overrides: Record<string, unknown> = {},
 ) =>
   ({
+    sessionId: SESSION_ID,
     paymentStatus: "paid",
     amountTotal: intent.unitAmount,
     currency: intent.currency,
@@ -615,6 +619,115 @@ describe("parseCheckoutCompletedEvent", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.value.mode).toBe("live");
+  });
+
+  it("carries the event's Checkout Session id onto the completion", () => {
+    const intent = checkoutIntent();
+    const result = parseCheckoutCompletedEvent({
+      verified: verified(eventBody({}, intent)),
+      intent,
+      settlement: settlementFor(intent),
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.checkoutSessionId).toBe(SESSION_ID);
+  });
+
+  it("refuses settlement from a different session even when the price matches", () => {
+    const intent = checkoutIntent();
+    // Two genuinely paid sessions for the same pack agree on amount, currency,
+    // quantity, and price. Only the session id can tell them apart.
+    const otherSession = settlementFor(intent, { sessionId: "cs_test_other" });
+    const result = parseCheckoutCompletedEvent({
+      verified: verified(eventBody({}, intent)),
+      intent,
+      settlement: otherSession,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(
+      BILLING_REFUSE_REASONS.settlementSessionMismatch,
+    );
+  });
+
+  it("refuses settlement that names no session at all", () => {
+    const intent = checkoutIntent();
+    const unbound = settlementFor(intent) as Record<string, unknown>;
+    delete unbound["sessionId"];
+    const result = parseCheckoutCompletedEvent({
+      verified: verified(eventBody({}, intent)),
+      intent,
+      settlement: unbound,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(
+      BILLING_REFUSE_REASONS.settlementSessionMismatch,
+    );
+  });
+
+  it("refuses an event whose session object carries no id", () => {
+    const intent = checkoutIntent();
+    const body = JSON.parse(eventBody({}, intent)) as {
+      data: { object: Record<string, unknown> };
+    };
+    delete body.data.object["id"];
+    const result = parseCheckoutCompletedEvent({
+      verified: verified(JSON.stringify(body)),
+      intent,
+      settlement: settlementFor(intent),
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(
+      BILLING_REFUSE_REASONS.checkoutSessionIdMissing,
+    );
+  });
+
+  it("refuses a session id that is not a usable identifier", () => {
+    const intent = checkoutIntent();
+    for (const sessionId of ["", "cs test 01", "c".repeat(129)]) {
+      const body = JSON.parse(eventBody({}, intent)) as {
+        data: { object: Record<string, unknown> };
+      };
+      body.data.object["id"] = sessionId;
+      const result = parseCheckoutCompletedEvent({
+        verified: verified(JSON.stringify(body)),
+        intent,
+        settlement: settlementFor(intent, { sessionId }),
+      });
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(
+        [
+          BILLING_REFUSE_REASONS.checkoutSessionIdMissing,
+          BILLING_REFUSE_REASONS.webhookPayloadInvalid,
+        ].includes(result.reason as never),
+      ).toBe(true);
+    }
+  });
+
+  it("keys the grant's fingerprint on the session, so two sessions never collide", () => {
+    const intent = checkoutIntent();
+    const first = parseCheckoutCompletedEvent({
+      verified: verified(eventBody({}, intent)),
+      intent,
+      settlement: settlementFor(intent),
+    });
+    const body = JSON.parse(eventBody({}, intent)) as {
+      data: { object: Record<string, unknown> };
+    };
+    body.data.object["id"] = "cs_test_second";
+    const second = parseCheckoutCompletedEvent({
+      verified: verified(JSON.stringify(body)),
+      intent,
+      settlement: settlementFor(intent, { sessionId: "cs_test_second" }),
+    });
+    expect(first.ok && second.ok).toBe(true);
+    if (!first.ok || !second.ok) return;
+    expect(first.value.checkoutSessionId).not.toBe(
+      second.value.checkoutSessionId,
+    );
   });
 
   it("refuses unpaid or mismatched settlements", () => {

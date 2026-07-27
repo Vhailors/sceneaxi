@@ -26,8 +26,10 @@ import {
   createLedgerState,
   createListingCheckoutIntent,
   deriveBalance,
+  deriveIntentId,
   evaluateEntitlement,
   grantStarterCredits,
+  LISTING_SALE_IDEMPOTENCY_PREFIX,
   loadCatalogListings,
   loadCreditPackCatalog,
   lookupCatalogListing,
@@ -92,7 +94,11 @@ const verifyBody = (body: string) => {
   return result.value;
 };
 
+/** Every fixture event body below stamps its session id from the intent it settles. */
+const sessionIdFor = (intent: CheckoutSessionIntent) => `cs_${intent.intentId}`;
+
 const settlementFor = (intent: CheckoutSessionIntent) => ({
+  sessionId: sessionIdFor(intent),
   paymentStatus: "paid" as const,
   amountTotal: intent.unitAmount,
   currency: intent.currency,
@@ -208,6 +214,78 @@ const listing = (listingId: string): CatalogListing => {
   const found = lookupCatalogListing(loaded.value, listingId);
   if (!found.ok) throw new Error(`missing fixture listing ${listingId}`);
   return found.value;
+};
+
+/**
+ * A persisted listing intent, keyed the way a real listing checkout keys it.
+ *
+ * Hand-built rather than produced by `createListingCheckoutIntent`, because the
+ * cases below need intents that entry point deliberately refuses to create — a
+ * credits-only listing, a seller buying their own SKU — and the money-sale path
+ * must still refuse each of them on its own evidence rather than by luck.
+ */
+const listingIntentFor = (
+  listingId: string,
+  userId: string,
+): CheckoutSessionIntent => {
+  const held = listing(listingId);
+  const price = held.moneyPrice ?? {
+    unitAmount: 1200,
+    currency: "usd",
+    stripePriceId: "price_test_unlisted",
+  };
+  const idempotencyKey = `${LISTING_SALE_IDEMPOTENCY_PREFIX}sale_case_${listingId}`;
+  return {
+    schemaVersion: 1,
+    kind: "sceneaxi.checkout-session-intent",
+    intentId: deriveIntentId(idempotencyKey),
+    userId,
+    purpose: "catalog-listing",
+    itemId: listingId,
+    unitAmount: price.unitAmount,
+    currency: price.currency,
+    stripePriceId: price.stripePriceId,
+    mode: "test",
+    successUrl: "https://sceneaxi.example/ok",
+    cancelUrl: "https://sceneaxi.example/no",
+    idempotencyKey,
+    createdAt: new Date(NOW).toISOString(),
+  };
+};
+
+/** A genuinely settled listing completion, signed and parsed like a real one. */
+const listingCompletion = (
+  overrides: { readonly listingId?: string; readonly userId?: string } = {},
+) => {
+  const listingId = overrides.listingId ?? "harbour-diorama";
+  const intent = listingIntentFor(listingId, overrides.userId ?? "usr_crew");
+  const parsed = parseCheckoutCompletedEvent({
+    verified: verifyBody(
+      JSON.stringify({
+        id: `evt_case_${listingId}`,
+        type: "checkout.session.completed",
+        created: NOW_SECONDS,
+        livemode: false,
+        data: {
+          object: {
+            id: sessionIdFor(intent),
+            metadata: {
+              [CHECKOUT_METADATA_KEYS.userId]: intent.userId,
+              [CHECKOUT_METADATA_KEYS.purpose]: intent.purpose,
+              [CHECKOUT_METADATA_KEYS.itemId]: intent.itemId,
+              [CHECKOUT_METADATA_KEYS.intentId]: intent.intentId,
+            },
+          },
+        },
+      }),
+    ),
+    intent,
+    settlement: settlementFor(intent),
+  });
+  if (!parsed.ok) {
+    throw new Error(`fixture completion failed: ${parsed.message}`);
+  }
+  return parsed.value;
 };
 
 const ADAPTER: IdentityAdapter = Object.freeze({
@@ -724,6 +802,7 @@ describe("billing refuse matrix", () => {
       livemode: false,
       data: {
         object: {
+          id: sessionIdFor(packIntent.value),
           payment_status: "paid",
           amount_total: packIntent.value.unitAmount,
           currency: packIntent.value.currency,
@@ -848,6 +927,35 @@ describe("billing refuse matrix", () => {
       }),
     );
 
+    // The session object carries no id, so nothing can say which paid session
+    // this event is about.
+    record(
+      parseCheckoutCompletedEvent({
+        verified: verifyBody(
+          JSON.stringify({
+            id: "evt_no_session",
+            type: "checkout.session.completed",
+            created: NOW_SECONDS,
+            livemode: false,
+            data: { object: { metadata: {} } },
+          }),
+        ),
+        intent: packIntent.value,
+        settlement: settlementFor(packIntent.value),
+      }),
+    );
+    // Settlement for a *different* paid session, matching on every other field.
+    record(
+      parseCheckoutCompletedEvent({
+        verified: verifyBody(body),
+        intent: packIntent.value,
+        settlement: {
+          ...settlementFor(packIntent.value),
+          sessionId: "cs_some_other_paid_session",
+        },
+      }),
+    );
+
     const harbour = listing("harbour-diorama");
     const moneyPrice = harbour.moneyPrice;
     if (moneyPrice === undefined) throw new Error("listing price missing");
@@ -876,6 +984,7 @@ describe("billing refuse matrix", () => {
           livemode: false,
           data: {
             object: {
+              id: sessionIdFor(listingIntent),
               metadata: {
                 [CHECKOUT_METADATA_KEYS.userId]: "usr_crew",
                 [CHECKOUT_METADATA_KEYS.purpose]: "catalog-listing",
@@ -949,6 +1058,7 @@ describe("billing refuse matrix", () => {
           livemode: true,
           data: {
             object: {
+              id: sessionIdFor(liveIntent),
               metadata: {
                 [CHECKOUT_METADATA_KEYS.userId]: "usr_crew",
                 [CHECKOUT_METADATA_KEYS.purpose]: "credit-pack",
@@ -1105,23 +1215,33 @@ describe("billing refuse matrix", () => {
         saleId: "sale_case_store",
       }),
     );
+    // Money bookkeeping accepts no listing, gross, buyer, or mode, so each of
+    // its refusals is reached by settling a real webhook whose evidence is wrong
+    // in exactly one way.
     record(
       recordMoneySale({
-        listing: target,
-        buyerUserId: "usr_crew",
-        saleId: "sale_case_money",
-        mode: "test",
-        now: NOW,
+        completion: { ...(listingCompletion() as object) } as never,
+        intent: listingIntentFor("harbour-diorama", "usr_crew"),
       }),
     );
-    // A gross the record contract rejects, reaching the record-invalid path.
     record(
       recordMoneySale({
-        listing: listing("harbour-diorama"),
-        buyerUserId: listing("harbour-diorama").sellerUserId,
-        saleId: "sale_case_self",
-        mode: "test",
-        now: NOW,
+        completion: listingCompletion(),
+        intent: listingIntentFor("harbour-diorama", "usr_other"),
+      }),
+    );
+    // A settled purchase of a listing the seller never priced in money.
+    record(
+      recordMoneySale({
+        completion: listingCompletion({ listingId: target.listingId }),
+        intent: listingIntentFor(target.listingId, "usr_crew"),
+      }),
+    );
+    // Buyer and seller are the same person, which the record contract rejects.
+    record(
+      recordMoneySale({
+        completion: listingCompletion({ userId: "usr_creator_ben" }),
+        intent: listingIntentFor("harbour-diorama", "usr_creator_ben"),
       }),
     );
     // An entitlement decision the contract rejects.

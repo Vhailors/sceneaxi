@@ -18,6 +18,7 @@ import {
   createCheckoutSessionIntent,
   createInMemoryCreditStore,
   createLedgerState,
+  createListingCheckoutIntent,
   deriveBalance,
   evaluateEntitlement,
   grantStarterCredits,
@@ -57,6 +58,10 @@ import {
 
 const NOW = Date.parse("2026-07-25T10:00:00Z");
 const NOW_SECONDS = Math.floor(NOW / 1000);
+
+/** The Checkout Session ids the two golden settlements are bound to. */
+const PACK_SESSION_ID = "cs_golden_pack_01";
+const MONEY_SESSION_ID = "cs_golden_money_01";
 const clock = () => NOW;
 
 const CAPTAIN_EMAIL = "captain@example.com";
@@ -271,7 +276,7 @@ describe("auth + credits golden path", () => {
       livemode: false,
       data: {
         object: {
-          id: "cs_golden_01",
+          id: PACK_SESSION_ID,
           payment_status: "paid",
           amount_total: intent.value.unitAmount,
           currency: intent.value.currency,
@@ -309,6 +314,7 @@ describe("auth + credits golden path", () => {
       verified: verified.value,
       intent: intent.value,
       settlement: {
+        sessionId: PACK_SESSION_ID,
         paymentStatus: "paid",
         amountTotal: intent.value.unitAmount,
         currency: intent.value.currency,
@@ -426,15 +432,79 @@ describe("auth + credits golden path", () => {
     expect(moneyPrice).toBeDefined();
     if (moneyPrice === undefined) return;
 
-    const split = recordMoneySale({
+    // The record is built from a settlement, never asserted: the intent is
+    // persisted first, its Checkout Session settles, and only that pair can
+    // produce a split. There is no parameter for the gross, the buyer, or the
+    // mode, so no caller can book a sale nobody paid for.
+    const moneyIntent = createListingCheckoutIntent({
+      principal: crew,
+      admin: adminIdentity,
       listing: harbour.value,
-      buyerUserId: "usr_crew",
-      saleId: "sale_golden_money_01",
-      mode: "test",
+      successUrl: "https://sceneaxi.example/checkout/success",
+      cancelUrl: "https://sceneaxi.example/checkout/cancel",
       now: NOW,
+      saleId: "sale_golden_money_01",
+      surface: "web-shell",
+    });
+    expect(moneyIntent.ok).toBe(true);
+    if (!moneyIntent.ok) return;
+
+    const moneyBody = JSON.stringify({
+      id: "evt_golden_money_01",
+      type: "checkout.session.completed",
+      created: NOW_SECONDS,
+      livemode: false,
+      data: {
+        object: {
+          id: MONEY_SESSION_ID,
+          metadata: {
+            [CHECKOUT_METADATA_KEYS.userId]: "usr_crew",
+            [CHECKOUT_METADATA_KEYS.purpose]: "catalog-listing",
+            [CHECKOUT_METADATA_KEYS.itemId]: "harbour-diorama",
+            [CHECKOUT_METADATA_KEYS.intentId]: moneyIntent.value.intentId,
+          },
+        },
+      },
+    });
+    const moneyVerified = verifyStripeWebhookSignature({
+      payload: moneyBody,
+      header: signStripeWebhookPayload({
+        payload: moneyBody,
+        secret: WEBHOOK_SECRET,
+        timestamp: NOW_SECONDS,
+      }),
+      secret: WEBHOOK_SECRET,
+      now: NOW,
+    });
+    expect(moneyVerified.ok).toBe(true);
+    if (!moneyVerified.ok) return;
+
+    const moneyCompletion = parseCheckoutCompletedEvent({
+      verified: moneyVerified.value,
+      intent: moneyIntent.value,
+      settlement: {
+        sessionId: MONEY_SESSION_ID,
+        paymentStatus: "paid",
+        amountTotal: moneyPrice.unitAmount,
+        currency: moneyPrice.currency,
+        quantity: 1,
+        stripePriceId: moneyPrice.stripePriceId,
+      },
+    });
+    expect(moneyCompletion.ok).toBe(true);
+    if (!moneyCompletion.ok) return;
+    expect(moneyCompletion.value.checkoutSessionId).toBe(MONEY_SESSION_ID);
+
+    const split = recordMoneySale({
+      completion: moneyCompletion.value,
+      intent: moneyIntent.value,
     });
     expect(split.ok).toBe(true);
     if (!split.ok) return;
+    expect(split.value.saleId).toBe("sale_golden_money_01");
+    expect(split.value.buyerUserId).toBe("usr_crew");
+    expect(split.value.creatorUserId).toBe(harbour.value.sellerUserId);
+    expect(split.value.grossMinor).toBe(moneyPrice.unitAmount);
     expect(split.value.creatorMinor + split.value.platformMinor).toBe(
       split.value.grossMinor,
     );

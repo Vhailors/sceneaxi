@@ -230,6 +230,13 @@ than inventing a session, balance, or checkout.
      `CheckoutEvidencePort.findIntent(intentId)` must return that same record; it is the
      immutable price snapshot the credits come from, and an absent one refuses
      `STRIPE_CHECKOUT_EVIDENCE_MISSING`.
+   - **Echo the session id on the settlement.** `CheckoutEvidencePort.retrieveSettlement`
+     is called with the Checkout Session id read from the verified body, and the
+     `CheckoutSettlement` it returns must carry that same id on `sessionId`.
+     `parseCheckoutCompletedEvent` compares the two before it reads anything else about the
+     settlement, so evidence retrieved for a *different* paid session refuses
+     `STRIPE_SETTLEMENT_SESSION_MISMATCH` even when its amount, currency, and price match
+     (sceneaxi#127). An adapter that omits the field refuses the same way.
    - **Set the Stripe session metadata** to `CHECKOUT_METADATA_KEYS` from
      `@sceneaxi/billing` — `sceneaxiUserId`, `sceneaxiPurpose`, `sceneaxiItemId`,
      `sceneaxiIntentId` — copied from the intent's own `userId` / `purpose` / `itemId` /
