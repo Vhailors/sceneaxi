@@ -70,6 +70,7 @@ every surface claimed runnable.
 
 - `docs/program/SPEC.md` — consumer copy of the canonical product spec ([sceneaxi#1](https://github.com/Vhailors/sceneaxi/issues/1); on disagreement #1 wins).
 - `docs/program/spec-41.md` — pointer to factories-helpers#41, source of truth for the Stage 0–8 engine-core proof program, plus the transfer classification.
+- `docs/program/NEXT-STEP.md` — evidence-based program position (main SHA, landed PRs, open decisions, deferred #126–#128) and the options under consideration. It authorizes nothing and owns no fact: where it disagrees with an ADR, doc, issue, or PR, that owner wins.
 - `docs/proof/` — proof-prep docs only; Stage 1 is double-gated and nothing in that directory is a run authorization.
 
 ## Layout
