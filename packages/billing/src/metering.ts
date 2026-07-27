@@ -79,7 +79,10 @@ export type MeterOutcome = Readonly<{
 }>;
 
 /** Debit an account for metered usage, or refuse without partial application. */
-function sameLedgerState(left: LedgerState, right: LedgerState): boolean {
+export function sameLedgerState(
+  left: LedgerState,
+  right: LedgerState,
+): boolean {
   return (
     left.balance === right.balance &&
     JSON.stringify(left.account) === JSON.stringify(right.account) &&

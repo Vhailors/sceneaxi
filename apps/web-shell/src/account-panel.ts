@@ -19,7 +19,6 @@
 import {
   ENTITLEMENT_CAPABILITIES,
   entitlementRuleFor,
-  isEpochMilliseconds,
   snapshotPlainRecord,
   type EntitlementCapability,
   type EntitlementOutcome,
@@ -39,10 +38,15 @@ import {
 import {
   BILLING_REFUSE_REASONS,
   evaluateEntitlement,
-  validateLedgerState,
   type BillingRefuseReason,
   type LedgerState,
 } from "@sceneaxi/billing";
+import {
+  PANEL_SURFACES,
+  createOperationQueue,
+  readEpochClock,
+  readOwnedLedger,
+} from "./panel-support.js";
 
 export type AccountPanelPhase = "anonymous" | "authenticated" | "refused";
 
@@ -120,13 +124,6 @@ export type CreateAccountPanelResult =
   | Readonly<{ ok: true; panel: AccountPanel }>
   | Readonly<{ ok: false; reason: AccountPanelReason; message: string }>;
 
-const SURFACES: ReadonlyArray<IdentitySurface> = [
-  "web-shell",
-  "desktop-shell",
-  "site",
-  "kids",
-];
-
 /** Capabilities the panel surfaces, in a stable order for rendering. */
 const PANEL_CAPABILITIES: ReadonlyArray<EntitlementCapability> = [
   ...ENTITLEMENT_CAPABILITIES,
@@ -200,7 +197,7 @@ export function createAccountPanel(
   const optionRecord = snapshotPlainRecord(options);
   if (
     optionRecord === undefined ||
-    !SURFACES.includes(optionRecord["surface"] as IdentitySurface)
+    !PANEL_SURFACES.includes(optionRecord["surface"] as IdentitySurface)
   ) {
     return Object.freeze({
       ok: false,
@@ -259,18 +256,8 @@ export function createAccountPanel(
   const admin = optionRecord["admin"] as AdminIdentity;
   let held: AccountPanelSnapshot;
 
-  const readClock = (): number | undefined => {
-    let now: unknown;
-    try {
-      now = clock();
-    } catch {
-      return undefined;
-    }
-    return isEpochMilliseconds(now) ? now : undefined;
-  };
-
   const anonymous = (): AccountPanelSnapshot => {
-    const now = readClock();
+    const now = readEpochClock(clock);
     if (now === undefined) {
       return Object.freeze({
         phase: "refused" as const,
@@ -290,7 +277,7 @@ export function createAccountPanel(
   };
 
   const refused = (value: AccountPanelRefusal): AccountPanelSnapshot => {
-    const now = readClock();
+    const now = readEpochClock(clock);
     return Object.freeze({
       phase: "refused" as const,
       surface,
@@ -306,7 +293,7 @@ export function createAccountPanel(
   const authenticated = async (
     principal: Principal,
   ): Promise<AccountPanelSnapshot> => {
-    const now = readClock();
+    const now = readEpochClock(clock);
     if (now === undefined) {
       return refused(
         refusal(
@@ -321,32 +308,27 @@ export function createAccountPanel(
       return refused(refusal(guarded.reason, guarded.message));
     }
 
-    let state: LedgerState | undefined;
-    try {
-      state = await credits.ledgerFor(principal.user.userId);
-    } catch {
-      return refused(
-        refusal(
-          ACCOUNT_PANEL_REASONS.creditsUnavailable,
-          "The credits view failed; the balance is unknown rather than zero.",
-        ),
-      );
-    }
-    if (state === undefined) {
-      return refused(
-        refusal(
-          ACCOUNT_PANEL_REASONS.ledgerMissing,
-          "No credit ledger exists for this user; the balance is unknown rather than zero.",
-        ),
-      );
-    }
-    const validatedState = validateLedgerState(state);
-    if (!validatedState.ok) {
-      return refused(
-        refusal(validatedState.reason, validatedState.message),
-      );
-    }
-    if (validatedState.value.account.userId !== principal.user.userId) {
+    const read = await readOwnedLedger(credits, principal.user.userId);
+    if (!read.ok) {
+      if (read.failure === "invalid") {
+        return refused(refusal(read.reason, read.message));
+      }
+      if (read.failure === "unavailable") {
+        return refused(
+          refusal(
+            ACCOUNT_PANEL_REASONS.creditsUnavailable,
+            "The credits view failed; the balance is unknown rather than zero.",
+          ),
+        );
+      }
+      if (read.failure === "missing") {
+        return refused(
+          refusal(
+            ACCOUNT_PANEL_REASONS.ledgerMissing,
+            "No credit ledger exists for this user; the balance is unknown rather than zero.",
+          ),
+        );
+      }
       return refused(
         refusal(
           ACCOUNT_PANEL_REASONS.ledgerOwnerMismatch,
@@ -360,14 +342,8 @@ export function createAccountPanel(
       surface,
       email: principal.user.email,
       role: principal.role.role,
-      creditBalance: validatedState.value.balance,
-      capabilities: capabilityViews(
-        admin,
-        surface,
-        now,
-        principal,
-        validatedState.value,
-      ),
+      creditBalance: read.state.balance,
+      capabilities: capabilityViews(admin, surface, now, principal, read.state),
     });
   };
 
@@ -385,7 +361,7 @@ export function createAccountPanel(
    * the principal has already settled the session — see `revokePrincipal`.
    */
   const unrevokedPrincipals = new Map<Principal, AccountPanelRefusal>();
-  let operationTail: Promise<void> = Promise.resolve();
+  const serializeMutation = createOperationQueue();
 
   held = anonymous();
 
@@ -494,22 +470,6 @@ export function createAccountPanel(
       held = refused(refusal(result.reason, result.message));
     }
     return held;
-  };
-
-  const serializeMutation = async (
-    mutation: () => Promise<AccountPanelSnapshot>,
-  ): Promise<AccountPanelSnapshot> => {
-    const precedingOperation = operationTail;
-    let releaseOperation = () => {};
-    operationTail = new Promise<void>((resolve) => {
-      releaseOperation = resolve;
-    });
-    await precedingOperation;
-    try {
-      return await mutation();
-    } finally {
-      releaseOperation();
-    }
   };
 
   const panel: AccountPanel = Object.freeze({

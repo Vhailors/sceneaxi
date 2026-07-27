@@ -211,19 +211,19 @@ so the retired "experimental preview" framing cannot return by review slip.
 
 Hosted AI reaches a credit debit through exactly one path: `runMeteredModelCall()`
 in `packages/billing/src/hosted-ai.ts`, whose fixed order (Kids → route → hosted
-opt-in → replay → entitlement incl. balance → metering readiness → provider →
-debit) is the contract, documented in `docs/auth-credits.md`. The replay step
-answers a retry from the account-scoped debit that already exists — read from the
-**persisted** ledger, never from the caller's `state`, so a timed-out caller still
-holding a pre-debit copy is recognised as a retry instead of paying the provider
-twice — before the balance gate and before the provider, with no `response` to
+opt-in → current ledger → replay → entitlement incl. balance → metering
+readiness → provider → debit) is the contract, documented in
+`docs/auth-credits.md`. The replay step
+answers a retry from the account-scoped debit that already exists after the
+caller refreshes its state; an absent or stale ledger refuses for every hosted
+principal, including admin, before the balance gate and provider, with no
+`response` to
 hand back, an unreadable store refusing there rather than after the call, and the
 principal authenticated before persistence is read at all — with the account
 persistence returns re-checked against that principal before its history is
 loaded or any metering key is compared. That same persisted
-ledger is what the balance gate and `meterCredits` judge: the caller's `state`
-names the account and never establishes the balance, so a stale copy cannot buy a
-call the real ledger would refuse only after the provider was paid; and
+ledger is what the balance gate and `meterCredits` judge, after equality with the
+caller's supplied state has been established; and
 only a **throw** from the injected thunk is a provider failure, so a provider
 layer that refuses by value must translate it caller-side. Hosted is default-off
 (`HOSTED_AI_DEFAULT_CONFIG`) and a configured adapter or key never enables it; BYO
@@ -234,6 +234,13 @@ themselves, as `tests/e2e/hosted-ai-metering-golden.test.ts` does over
 network, no credential). Adding a `BILLING_REFUSE_REASONS` entry requires a
 covering case in `tests/e2e/auth-credits-refuse-matrix.test.ts`, which asserts
 every reason is reachable.
+
+The in-app AI assistant composition seam is `createAssistantPanel()` in
+`apps/web-shell/src/assistant-panel.ts` (sceneaxi#121), the one matrix node that may
+name both the Model Provider Port and the credit plane. Its contract and refusal
+ordering are owned by `docs/auth-credits.md`; its runnable level is owned by
+`docs/runnable-surfaces.md`. Extend `apps/web-shell/test/assistant-panel.test.ts`
+and `tests/e2e/assistant-panel-golden.test.ts` when changing that seam.
 
 Catalog commerce is **offered** only through `packages/billing/src/fixture-commerce.ts`
 (sceneaxi#138): a closed enumeration of one dual-priced fixture SKU

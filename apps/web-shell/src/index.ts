@@ -28,6 +28,26 @@ export {
 } from "./account-panel.js";
 
 export {
+  ASSISTANT_DEBIT_REASON,
+  ASSISTANT_DEFAULT_MODE,
+  ASSISTANT_MODES,
+  ASSISTANT_MODE_BILLING,
+  ASSISTANT_PANEL_REASONS,
+  ASSISTANT_TURN_KEY_PREFIX,
+  createAssistantPanel,
+  type AssistantAskRequest,
+  type AssistantCreditsView,
+  type AssistantMode,
+  type AssistantPanel,
+  type AssistantPanelReason,
+  type AssistantPanelSnapshot,
+  type AssistantRefusal,
+  type AssistantTurn,
+  type CreateAssistantPanelOptions,
+  type CreateAssistantPanelResult,
+} from "./assistant-panel.js";
+
+export {
   createOpenPathView,
   type OpenPathView,
 } from "./open-path-view.js";

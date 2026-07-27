@@ -107,13 +107,17 @@ still-unimplemented target:
 The CLI is **free and BYO-AI**: no verb reads a credential, opens a socket, or
 spends anything, and no shipped verb is held-key gated (`SHIPPED_COMMAND_MAP`).
 
-Hosted AI is the metered surface and is **not implemented here**. The free-vs-paid
+Hosted AI is metered but is **not a runnable surface here**. The free-vs-paid
 matrix it must obey — including BYO-key never touching the ledger and the
 non-overridable Kids deny — is owned by
 [`docs/auth-credits.md`](auth-credits.md). The credit ledger, metering, and the one
 default-off gate a hosted call must pass to reach a debit (`runMeteredModelCall`)
-now exist in `packages/billing`; nothing runnable calls it, and the hosted
-assistant surface itself remains sceneaxi#121.
+exist in `packages/billing`, and the assistant that composes that gate with the
+Model Provider Port has landed as `createAssistantPanel()` in `apps/web-shell`
+(sceneaxi#121). It is a view model, not a startable surface: its host is a library
+(below), its default mode is the recorded fixture transport, and its hosted mode
+is off unless a caller explicitly enables it — so nothing runnable spends
+anything.
 
 ## Not runnable yet
 
@@ -122,8 +126,9 @@ assistant surface itself remains sceneaxi#121.
   deployable surfaces landed as their own `sites/` tier (ADR 0018) and left this
   package a library, so nothing here is waiting on that wave. Whether it becomes
   startable is still sceneaxi#120's own call, not a doc's.
-- **In-app AI assistant** (sceneaxi#121) — the credits ledger and the metered
-  hosted-AI gate it was serialized behind have landed; the assistant surface
-  itself is still unbuilt.
+- **In-app AI assistant** (sceneaxi#121) — built, as `createAssistantPanel()` in
+  `apps/web-shell`, and not runnable for the same reason that package is not: it
+  ships a view model and no renderer or dev server. Every transport is injected,
+  so nothing here can start one.
 - **`apps/catalog-game`, `apps/catalog-web`** — dormant, owned by the
   websites/deploy track.

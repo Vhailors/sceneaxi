@@ -17,6 +17,7 @@ The architecture decision behind the shape of this plane is
 | Credit ledger, metering, entitlements, hosted-AI credit gate, Stripe test checkout, revenue share, fixture commerce | `packages/billing` |
 | Neon schema | `db/migrations` |
 | Login + balance view model | `apps/web-shell` (`createAccountPanel`) |
+| In-app AI assistant view model | `apps/web-shell` (`createAssistantPanel`) |
 | Deployable-site wiring | `sites/umbrella/src/lib/identity-plane.ts` (`docs/websites-deploy.md`) |
 
 Release group `identity`; both packages consume only public contracts. **Outside core:** a
@@ -346,25 +347,27 @@ provider abstraction — it fixes the order the two existing pieces run in:
 1. **Kids** — denied by name before identity, provider, or ledger, on both routes
 2. **Route** — `hosted` or `byo`, a closed enumeration with no default
 3. **Hosted opt-in** — off unless a caller explicitly passes `{ enabled: true }`
-4. **Replay** — the *persisted* ledger is loaded and the account-scoped key looked up in
-   it, before the balance and the provider
-5. **Entitlement** — capability, account, and the **persisted balance**, all before the
-   provider
-6. **Metering readiness** — store, reason, and key, still before the provider
-7. **Provider** — the injected call, and only now
-8. **Debit** — exactly the credits the decision named, through `meterCredits`
+4. **Current ledger** — the supplied ledger is loaded from persistence; absent or stale
+   state refuses for every principal
+5. **Replay** — the account-scoped key is looked up before the balance and the provider
+6. **Entitlement** — capability, account, and the **current persisted balance**, all
+   before the provider
+7. **Metering readiness** — store, reason, and key, still before the provider
+8. **Provider** — the injected call, and only now
+9. **Debit** — exactly the credits the decision named, through `meterCredits`
 
-Steps 5 and 7 in that order are why a zero or insufficient balance costs nothing and
+Steps 6 and 8 in that order are why a zero or insufficient balance costs nothing and
 appends nothing: the refusal is `CREDIT_BALANCE_INSUFFICIENT`, produced before the provider
 runs. A provider throw is `HOSTED_AI_PROVIDER_FAILED` with no debit; a ledger or store
 failure keeps its own reason, and the debit is all-or-nothing either way.
 
-**A retry is answered from the debit it already made.** The ledger's own idempotency check
-lives at the bottom of the stack, *below* both the balance gate and the provider, so
+**A retry is answered from the debit it already made after refreshing the ledger.** The
+ledger's own idempotency check lives at the bottom of the stack, *below* both the balance
+gate and the provider, so
 relying on it alone would break the retry it is supposed to protect: a caller that timed
 out and re-sent `turn_01` would be refused `CREDIT_BALANCE_INSUFFICIENT` out of the balance
 its own first attempt had already spent, and would have paid the upstream provider a second
-time for an answer no ledger row could cover. Step 4 looks `usage:<accountId>:<callerKey>`
+time for an answer no ledger row could cover. Step 5 looks `usage:<accountId>:<callerKey>`
 up first. On a hit the call returns `replayed: true` carrying the prior debit, the ledger,
 and the balance — **no provider execution and no second charge** — and entitlement is
 re-evaluated against the ledger as it stood immediately before that debit, so capability,
@@ -373,32 +376,22 @@ already-answered balance question is not asked again. A key re-sent with a diffe
 or reason is still a `CREDIT_IDEMPOTENCY_KEY_CONFLICT`. The replayed outcome deliberately
 carries **no `response`**: the ledger persists debits, not model answers, so the original
 response is gone and the gate will not fabricate one — the `MeteredModelCallReplayed` shape
-has no field to read it from. The BYO route is excluded from step 4: it never appends a
+has no field to read it from. The BYO route is excluded from steps 4 and 5: it never appends a
 debit, and a free call is safe to simply run again.
 
-**The retry lookup reads persistence, not the caller's `state`.** The guarantee has to hold
-for the caller that never received the post-debit ledger — the timed-out turn is precisely
-that caller — so step 4 takes only the account id from the supplied state and loads the
-history back through the injected `CreditStore`. A lookup against a pre-debit copy would
-find no prior entry, run the provider a second time for real upstream money, and only then
-collide at the bottom of the stack with an opaque `CREDIT_LEDGER_STATE_INVALID`. Because the
-store is read here, a store that cannot be read refuses `CREDIT_STORE_FAILED` **before** the
-provider: not knowing whether a key was already charged is not a licence to charge upstream
-again. The replayed outcome hands back the *persisted* ledger and balance, so a caller
-holding a stale view is corrected rather than confirmed in it.
+**The retry lookup requires the caller's current persisted state.** Step 4 loads the
+supplied account through the injected `CreditStore` and compares the complete ledger before
+any key lookup. A timed-out caller still holding the pre-debit view must refresh before it
+retries; re-sending that stale view refuses `CREDIT_LEDGER_STATE_INVALID` before the
+provider.
+A store that cannot be read refuses `CREDIT_STORE_FAILED` at the same boundary. Once the
+state is current, step 5 can return the prior debit without dispatch or another charge.
 
-**The balance gate judges that same persisted ledger, and so does the debit.** The supplied
-`state` names the account; it does not establish the balance. Trusting it would leave the
-load-bearing ordering above holding only for a caller whose copy happens to be current: a
-stale or fabricated state with a *fresh* key would clear the balance gate, pay the upstream
-provider, and only then collide with `meterCredits`' own state check as an opaque
-`CREDIT_LEDGER_STATE_INVALID` — precisely the "completed model call that is impossible to
-charge for" this ordering exists to make unreachable. So step 5 reads the ledger step 4
-loaded, and `meterCredits` is handed the same one: a stale caller with a real balance that
-covers the charge is corrected and charged the real amount, and one whose real balance does
-not cover it refuses `CREDIT_BALANCE_INSUFFICIENT` with no provider execution. The narrow
-race left is a debit landing between the two store reads, which `meterCredits` still refuses
-outright rather than half-applying.
+**The balance gate and debit judge the same current ledger.** A stale or fabricated state
+refuses before either is reached, even when persistence still holds enough credits and even
+for the captain's unlimited allowance. `meterCredits` receives the state step 4 already
+matched to persistence. The narrow race left is a debit landing between the two store reads,
+which `meterCredits` still refuses outright rather than half-applying.
 
 **Identity is settled before persistence is read.** The account id arrives inside a
 caller-supplied state, so step 4 authenticates the principal and checks account ownership
@@ -452,6 +445,97 @@ the dependency matrix. Callers wire the two.
 real `@sceneaxi/provider-openrouter` adapter, and that package's recorded fixture transport
 (`createFixtureTransport`) — so the whole proof runs with no network, no credential, and no
 production spend.
+
+## In-app AI assistant (sceneaxi#121)
+
+`createAssistantPanel` in `apps/web-shell/src/assistant-panel.ts` is the assistant
+surface, and it is a **view model** like `createAccountPanel` beside it — no markup, no
+provider, no transport, no credential, no ledger, and no entitlement rule of its own. It
+lives in `web-shell` because that is the one node in the dependency matrix that may name
+both the Model Provider Port (`@sceneaxi/authoring-core`) and this plane; the port and the
+credit gate stay unaware of each other, exactly as ADR 0021 and the hosted-AI section above
+require.
+
+| Mode | Transport | Billing route | Metering | Default |
+|---|---|---|---|---|
+| `fixture` | recorded in-repo fixture | `byo` | none | **the default** |
+| `byo` | the user's own credential, direct to their provider | `byo` | none | opt-in |
+| `hosted` | SceneAxi-operated | `hosted` | `hosted-ai-assistant` credits | opt-in **and off** |
+
+All three reach a model through the *same* injected `ModelProviderPort` — the panel builds
+no adapter and cannot tell a recorded transport from a live one, so "live OpenRouter is
+opt-in" is structural: a live transport exists only if a caller wired one into `ports` for a
+mode it then selected, and the default mode is `fixture`. A mode whose port is missing — or
+present but unable to answer `complete` — refuses `ASSISTANT_TRANSPORT_MISSING` at the point
+it is wired or selected, rather than borrowing another mode's transport or surfacing a
+wiring defect as a per-turn `HOSTED_AI_PROVIDER_FAILED`.
+
+**The mode table is a projection, never a second credit policy.** `ASSISTANT_MODE_BILLING`
+maps each mode onto a route and capability that already exist in
+`HOSTED_AI_ROUTE_CAPABILITIES`, and both the seam test and the golden assert exactly that.
+`fixture` bills on the free `byo` route on purpose: the credit plane's only question is
+whether a call costs credits, a recorded fixture costs nothing, and keeping the test mode on
+the one gate is what makes the Kids ordering below hold in *every* mode rather than in every
+mode a charge happens to reach. Teaching billing a third route would be the alternative, and
+it would move test-mode knowledge inside the credit plane.
+
+**Kids is denied three times, and always before metering and before dispatch.** The panel
+refuses to *exist* for a `kids` surface (`KIDS_ASSISTANT_SURFACE_DENIED`) or a
+`@sceneaxi/profile-kids` profile (`KIDS_ASSISTANT_PROFILE_DENIED`) — checked before any
+other option is even validated, so a defect elsewhere cannot demote it. That is the deny
+that satisfies "before metering": the port's own Kids guard runs inside the provider thunk,
+which the credit gate enters *after* the ledger is judged. Below it, `runMeteredModelCall`
+still denies `KIDS_COMMERCE_DENIED` and the port still denies a Kids profile
+non-overridably. Three independent denies, per the invariant in *Kids isolation*.
+
+**A hosted balance is read, never remembered.** Each hosted turn re-reads the ledger through
+the injected credits view and hands it to the credit gate, which requires an exact match to
+persistence. An absent or stale ledger refuses `CREDIT_LEDGER_STATE_INVALID` before the
+transport for every principal, including the captain. A ledger the panel cannot
+read, or one that is invalid or owned by another user, is a named refusal
+(`ASSISTANT_CREDITS_UNAVAILABLE`, `CREDIT_LEDGER_STATE_INVALID`,
+`ASSISTANT_LEDGER_OWNER_MISMATCH`) and never `0`. Identity, entitlement, and metering
+refusals are left to the layer that owns their vocabulary: an anonymous hosted turn is
+`ENTITLEMENT_ACCOUNT_REQUIRED`, an expired session is `AUTH_SESSION_EXPIRED`, and a hosted
+turn with no `turnId` is `CREDIT_REQUEST_INVALID` — the panel repeats none of them.
+
+*No* ledger — no credits view wired, or the deployment's own `CreditStore` holding none for
+this user — is handed over with no `state` rather than restated as panel policy. The billing
+boundary refuses it in its own vocabulary for every hosted principal.
+
+That fall-through is why the panel reads a ledger only where the gate would reach one. The
+hosted route being off, Kids, and every identity refusal are all ordered *above*
+`resolveHostedLedger` inside `runMeteredModelCall`, so the panel asks `requireAuthenticated`
+— the same guard, on the same `{ now, surface, admin }` — purely to decide whether to read,
+never to refuse. Where it declines, no credits view is consulted and the turn is handed over
+with no `state`, so the controlling identity refusal is spoken by its owner instead of being
+buried under a panel-owned one. Every authenticated hosted principal proceeds to the shared
+current-ledger requirement.
+
+The balance a snapshot *reports* comes only from an outcome the gate derived from
+persistence, never from the view the panel was handed — otherwise a stale copy would be
+published next to the very refusal that proves it wrong, telling a buyer they hold credits
+the ledger says they already spent. Before a turn has been priced there is no authoritative
+balance and the panel reports none.
+
+**A retried turn is refused, not re-answered.** After the credits view refreshes, the gate
+replays the debit
+(`assistant-turn:<turnId>`, then account-scoped by `meterCredits`) with no provider
+execution and no second charge, and it carries no `response` because the ledger records
+debits, not model answers. The panel reports `ASSISTANT_TURN_ALREADY_CHARGED` and reports
+the current balance rather than fabricating the lost reply.
+
+**A port refusal is never billed as an answer.** The panel performs the documented
+integration translation — a `{ ok: false, reason }` from the port becomes a throw — so
+billing reports `HOSTED_AI_PROVIDER_FAILED` with no debit, and the panel carries the port's
+own reason alongside it in `refusal.providerReason` so a reader can tell "the model failed"
+from "the port refused the route".
+
+Proof: `apps/web-shell/test/assistant-panel.test.ts` (seam, including a reachability check
+over every `ASSISTANT_PANEL_REASONS` entry) and `tests/e2e/assistant-panel-golden.test.ts`
+in `pnpm test:golden`, which wires the real `@sceneaxi/provider-openrouter` adapter over
+that package's recorded `createFixtureTransport` — no network, no credential, no production
+spend.
 
 ## Credit packs
 
@@ -644,6 +728,8 @@ The structural points that hold whatever else is added:
   surface, the free ones included — and each commerce entry point above it (credit-pack
   checkout, catalog listings, fixture commerce, the hosted-AI gate) refuses on its own
   before it gets there.
+- The in-app AI assistant refuses to *exist* on the Kids surface or for the Kids profile, so
+  no assistant turn — in any mode, metered or not — can be attempted there at all.
 - The `sessions` table's surface check constraint omits `'kids'` entirely, so the row
   cannot exist.
 
