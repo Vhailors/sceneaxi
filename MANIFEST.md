@@ -11,7 +11,9 @@ development command are maintained in `README.md`.
   the held-key runtime protocol and its versioned schemas.
 - `docs/bootstrap.md` owns the separated authority requirements that remain in force.
 - `docs/adr/` indexes settled engine/CLI design decisions transferred into this repo.
-- `docs/program/` and `docs/proof/` hold program-spec mirrors and proof-prep docs only.
+- `docs/program/` and `docs/proof/` hold program docs (spec mirrors, the locked site
+  topology, the next-step brief) and proof-prep docs only; AGENTS.md § "Program docs"
+  names each owner.
 
 ## Historical bootstrap inventory
 
