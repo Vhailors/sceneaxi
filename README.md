@@ -34,7 +34,10 @@ public `/open` surface and the entitled `/editor` surface alike (ADR 0022); ever
 other engine package stays denied to every site. The umbrella is also the one site wired
 to the identity plane (`@sceneaxi/auth` + `@sceneaxi/billing`, ADR 0021) and only through
 `sites/umbrella/src/lib/identity-plane.ts`; the catalogs read identity through the same
-`site-kit` ports and take no second auth stack.
+`site-kit` ports and take no second auth stack. The visual layer those sites share —
+the Foundations v2 tokens, their measured contrast contract, and the Change Review
+primitive over a real propose/apply `Proposal` — also lives in `packages/site-kit` and is
+owned by [`docs/design-foundations.md`](docs/design-foundations.md).
 
 Package boundaries are executable: `docs/dependency-matrix.json` is the allow/deny
 truth and `pnpm check:boundaries` enforces it (see `docs/DEPENDENCY-MATRIX.md`).

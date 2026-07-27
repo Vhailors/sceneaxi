@@ -9,8 +9,10 @@
  * What lives here: fail-closed identity/credits/billing ports (the single seam
  * with the identity plane owned by `sceneaxi-auth-credits-v1`), the free-vs-paid
  * capability matrix, Minimum E2 editor entitlement, catalog view models over the
- * `@sceneaxi/schemas` Catalog Item contract, and a bounded Minimum E2 web editor
- * session over `@sceneaxi/authoring-core`.
+ * `@sceneaxi/schemas` Catalog Item contract, a bounded Minimum E2 web editor
+ * session over `@sceneaxi/authoring-core`, and the shared Foundations v2 visual
+ * layer — token data, CSS emitters, a framework-neutral element tree, and the
+ * Change Review primitive (owner: `docs/design-foundations.md`).
  *
  * What deliberately does not live here: any identity implementation, any credit
  * ledger, any Stripe signature verification, any second authoring implementation,
