@@ -59,10 +59,13 @@
  * ## A balance is read, never remembered
  *
  * Hosted turns re-read the ledger through the injected credits view on every ask
- * and hand it to the credit gate, which judges the *persisted* ledger regardless.
- * A ledger the panel cannot read, or one that is absent, invalid, or owned by
- * another user, is a named refusal — never `0` — because "you have no credits"
- * and "we could not read your credits" must not look identical to a buyer.
+ * the credit gate could reach a ledger for, and hand it to that gate, which judges
+ * the *persisted* ledger regardless. A ledger the panel cannot read, or one that is
+ * absent, invalid, or owned by another user, is a named refusal — never `0` —
+ * because "you have no credits" and "we could not read your credits" must not look
+ * identical to a buyer. Where the gate refuses above its own ledger read — hosted
+ * off, or Kids — no ledger is read here either, so the panel cannot pre-empt a
+ * refusal it does not own.
  *
  * The balance a snapshot *reports* comes only from an outcome the credit gate
  * derived from persistence, never from the view the panel was handed. The
@@ -284,6 +287,17 @@ const MODEL_DESCRIPTOR_KEYS = Object.freeze([
 
 function isAssistantMode(value: unknown): value is AssistantMode {
   return ASSISTANT_MODES.some((mode) => mode === value);
+}
+
+/**
+ * Whether the viewer is signed in on the Kids surface — asked only to *decline*
+ * to read a ledger, never to refuse. The deny itself stays with the credit gate,
+ * whose `KIDS_COMMERCE_DENIED` runs before it reads identity or persistence.
+ */
+function isKidsPrincipal(value: unknown): boolean {
+  const record = snapshotPlainRecord(value);
+  const session = snapshotPlainRecord(record?.["session"]);
+  return session?.["surface"] === "kids";
 }
 
 /**
@@ -554,8 +568,15 @@ export function createAssistantPanel(
     const billing = ASSISTANT_MODE_BILLING[activeMode];
     const hosted = billing.route === "hosted";
 
+    // The credit gate answers two things *above* its own ledger read — the hosted
+    // route being off, and Kids — and neither needs a balance. Reading persistence
+    // first would let a panel-owned reason pre-empt the controlling one ("we need a
+    // credits view" instead of "hosted AI is off"), and would touch the ledger of a
+    // Kids session the credit plane promises never to read. So the panel resolves a
+    // ledger only where the gate would reach one, and otherwise hands the turn over
+    // with no state so each refusal is spoken by the layer that owns it.
     let state: LedgerState | undefined;
-    if (hosted) {
+    if (hosted && hostedAi.enabled === true && !isKidsPrincipal(principal)) {
       const resolved = await resolveHostedLedger();
       if (!resolved.ok) return view(resolved.refusal);
       state = resolved.state;

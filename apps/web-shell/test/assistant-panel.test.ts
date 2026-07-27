@@ -348,6 +348,60 @@ describe("hosted mode debits through the existing ledger", () => {
     expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
   });
 
+  it("says hosted AI is off even with no credits view to read", async () => {
+    const { panel, stack } = hostedPanel(10, {
+      hostedAi: HOSTED_AI_DEFAULT_CONFIG,
+      credits: undefined,
+    });
+
+    const snapshot = await panel.ask({ prompt: "hosted turn", turnId: "t1" });
+
+    // The controlling fact is the route being off, which the gate answers without
+    // an account or a balance; a panel-owned "wire a credits view" would bury it.
+    expect(snapshot.refusal?.reason).toBe(
+      BILLING_REFUSE_REASONS.hostedAiNotEnabled,
+    );
+    expect(stack.prompts).toHaveLength(0);
+  });
+
+  it("reads no ledger at all when the gate refuses above its own ledger", async () => {
+    const reads: string[] = [];
+    const counting = (state: LedgerState): AssistantCreditsView =>
+      Object.freeze({
+        ledgerFor: (userId: string) => {
+          reads.push(userId);
+          return state;
+        },
+      });
+
+    const off = hostedPanel(10, {
+      hostedAi: HOSTED_AI_DEFAULT_CONFIG,
+      credits: counting(funded(10)),
+    });
+    expect(
+      (await off.panel.ask({ prompt: "hosted turn", turnId: "t1" })).refusal
+        ?.reason,
+    ).toBe(BILLING_REFUSE_REASONS.hostedAiNotEnabled);
+
+    const kids = hostedPanel(10, {
+      principal: {
+        ...PRINCIPAL,
+        session: { ...PRINCIPAL.session, surface: "kids" },
+      } as never as CreateAssistantPanelOptions["principal"],
+      credits: counting(funded(10)),
+    });
+    expect(
+      (await kids.panel.ask({ prompt: "hosted turn", turnId: "t1" })).refusal
+        ?.reason,
+    ).toBe(BILLING_REFUSE_REASONS.kidsCommerceDenied);
+
+    expect(reads).toEqual([]);
+    expect(off.stack.prompts).toHaveLength(0);
+    expect(kids.stack.prompts).toHaveLength(0);
+    expect(off.store.entryCount(ACCOUNT.accountId)).toBe(1);
+    expect(kids.store.entryCount(ACCOUNT.accountId)).toBe(1);
+  });
+
   it("debits exactly the configured credits for one turn", async () => {
     const { panel, store, stack } = hostedPanel(10);
 
