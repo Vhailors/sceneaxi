@@ -248,7 +248,8 @@ export function createIdentityPort(
       : authOk(options.store);
 
   const requireAdmin = (): AuthResult<AdminIdentity> => {
-    if (options.admin === undefined) {
+    const admin = options.admin;
+    if (admin === undefined) {
       return authRefuse(
         AUTH_REFUSE_REASONS.adminIdentityUnresolved,
         "The single admin identity is unresolved; the identity port refuses rather than treating the captain as an ordinary user.",
@@ -257,13 +258,13 @@ export function createIdentityPort(
     // The port derives every role against this identity, so a configured value
     // of merely the right shape would let whoever wired the port name the
     // admin without the environment saying so.
-    if (!hasAdminIdentityProvenance(options.admin)) {
+    if (!hasAdminIdentityProvenance(admin)) {
       return authRefuse(
         AUTH_REFUSE_REASONS.adminIdentityUnproven,
         "The configured admin identity was not issued by resolveAdminIdentity; the identity port refuses rather than deriving roles against a hand-built one.",
       );
     }
-    return authOk(options.admin);
+    return authOk(admin);
   };
 
   return Object.freeze({

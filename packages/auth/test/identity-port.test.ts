@@ -597,6 +597,30 @@ describe("identity port — sign-in", () => {
     }
   });
 
+  it("derives roles from the same admin identity whose provenance passed", async () => {
+    let adminReads = 0;
+    const result = await createIdentityPort({
+      adapter: ADAPTER,
+      store: createInMemoryIdentityStore({ users: [CREW] }),
+      clock,
+      get admin() {
+        adminReads += 1;
+        return adminReads < 3
+          ? admin
+          : { email: CREW.email, source: ADMIN_EMAIL_ENV_VAR };
+      },
+    }).signIn({
+      surface: "web-shell",
+      email: "crew@example.com",
+      password: "pw",
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.role.role).toBe("user");
+    expect(adminReads).toBe(1);
+  });
+
   it("refuses a clock that throws or returns nonsense", async () => {
     for (const badClock of [
       () => {
