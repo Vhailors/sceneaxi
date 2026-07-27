@@ -83,11 +83,14 @@ nothing. A frame counter is deliberately never allowed to imply pixels
 The pixel claim therefore rests on the existing evidence record, not on a gate
 inference: [`three-presentation-core.md` § "What is verified
 where"](../three-presentation-core.md#what-is-verified-where). That record holds
-manual Chrome observations against production builds — the standalone snippets
-and `/open` on 2026-07-25, and `/editor` plus a re-verification of `/open` on
-2026-07-26 — each with the frame report, `toDataURL` byte counts, distinct-colour
-and non-background pixel counts, and the byte-identical **Reset view** capture.
-Read that section for the figures; they are not duplicated here.
+manual Chrome observations at two different levels. The standalone snippets were
+verified on 2026-07-25 against a committed fixture artifact served through Vite,
+with a frame report and a `capture()` PNG byte count. The two shipped surfaces
+were verified against the production build (`next build && next start`) — `/open`
+on 2026-07-25, and `/editor` plus a re-verification of `/open` on 2026-07-26 —
+and those two each carry the frame report, `toDataURL` byte counts,
+distinct-colour and non-background pixel counts, and the byte-identical **Reset
+view** capture. Read that section for the figures; they are not duplicated here.
 
 Two facts from it are load-bearing for anything downstream: with the editor
 preview flag unset the same build serves **no canvas at all** and refuses
