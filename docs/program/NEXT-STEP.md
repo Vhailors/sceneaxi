@@ -140,9 +140,11 @@ Also open, not deferred from that gate:
   decision (open tier-5 hold, [`bootstrap.md`](../bootstrap.md)). The engine SDK
   archive is source-available for evaluation, not open-source.
 - **Tier-6b marketplace activation** — still an open captain decision, so
-  non-fixture catalog purchase and publish refuse `CATALOG_COMMERCE_INERT`
+  catalog purchase and publish refuse `CATALOG_COMMERCE_INERT` on every
+  storefront listing, the Step 10 fixture SKU included
   ([`websites-deploy.md`](../websites-deploy.md)). Step 10 opened exactly one
-  fixture SKU by closed enumeration; being listed is not being for sale.
+  fixture SKU by closed enumeration in `packages/billing`, which no storefront
+  imports; being listed is not being for sale.
 - **Three absent captain-held secrets** — `STRIPE_SECRET_KEY` (test),
   `STRIPE_WEBHOOK_SECRET`, `SCENEAXI_ADMIN_BOOTSTRAP_SECRET`. None blocks
   anything shipped: the dependent surfaces refuse by name today and would refuse
