@@ -28,9 +28,11 @@ export default function OpenPage() {
 
   if (!scene.ok) {
     return (
-      <>
-        <p className="eyebrow">{LIVE_OPEN_COPY.eyebrow}</p>
-        <h1>{LIVE_OPEN_COPY.title}</h1>
+      <div className="page">
+        <div className="page-head">
+          <p className="eyebrow">{LIVE_OPEN_COPY.eyebrow}</p>
+          <h1>{LIVE_OPEN_COPY.title}</h1>
+        </div>
         <StatePanel tone="deny" title="No scene to open" reason={scene.reason}>
           <p>{scene.message}</p>
           <p>
@@ -39,7 +41,7 @@ export default function OpenPage() {
             refusal the pipeline produced.
           </p>
         </StatePanel>
-      </>
+      </div>
     );
   }
 
@@ -47,15 +49,25 @@ export default function OpenPage() {
   const artifactIds = Object.keys(opened.artifacts);
 
   return (
-    <>
-      <p className="eyebrow">{LIVE_OPEN_COPY.eyebrow}</p>
-      <h1>{LIVE_OPEN_COPY.title}</h1>
-      <p className="lede">{LIVE_OPEN_COPY.lede}</p>
+    <div className="page">
+      <div className="page-head">
+        <p className="eyebrow">{LIVE_OPEN_COPY.eyebrow}</p>
+        <h1>{LIVE_OPEN_COPY.title}</h1>
+        <p className="lede">{LIVE_OPEN_COPY.lede}</p>
+      </div>
 
+      {/*
+        The viewport's own frame report is an `h3`, so the section needs its `h2` here —
+        on the entitled editor that heading is "Viewport", and without one this page
+        would jump from `h1` straight to `h3`.
+      */}
+      <h2>The live viewport</h2>
       <LiveViewport scene={opened} />
 
-      <h2>What you are looking at</h2>
-      <p>{LIVE_OPEN_COPY.honesty}</p>
+      <div className="stack">
+        <h2>What you are looking at</h2>
+        <p className="prose prose-wide">{LIVE_OPEN_COPY.honesty}</p>
+      </div>
       <div className="grid">
         <article className="panel">
           <h3>A real artifact</h3>
@@ -132,7 +144,7 @@ export default function OpenPage() {
           </tbody>
         </table>
       </div>
-      <p style={{ color: "var(--ink-faint)", fontSize: "0.9rem" }}>
+      <p className="note">
         The scene digest is deterministic, so this page opens the same scene on every
         request and on every deploy of the same commit.
       </p>
@@ -156,6 +168,6 @@ export default function OpenPage() {
           artifact here does not widen it.
         </p>
       </StatePanel>
-    </>
+    </div>
   );
 }

@@ -1,14 +1,23 @@
-import { CREATOR_SHARE_ROUNDING_NOTE, CREATOR_SHARE_RULE, SITE_REFUSALS, SITE_STARTER_CREDIT_ALLOTMENT } from "@sceneaxi/site-kit";
+import {
+  CREATOR_SHARE_ROUNDING_NOTE,
+  CREATOR_SHARE_RULE,
+  SITE_REFUSALS,
+  SITE_STARTER_CREDIT_ALLOTMENT,
+  type SiteCreditPack,
+} from "@sceneaxi/site-kit";
 import { IDENTITY_PLANE_PENDING_NOTE, createUmbrellaIdentityPlane } from "../../lib/identity-plane.js";
+import { PRICING_FAQ } from "../../lib/site-content.js";
 import { CapabilityTable } from "../_components/capability-table.js";
 import { StatePanel } from "../_components/state-panel.js";
 
 /**
  * Pricing: the free-vs-paid matrix and credit packs.
  *
- * The pack list comes from the billing plane, never from a constant here — pack
- * pricing is a product decision owned by `@sceneaxi/billing`, and inventing prices on
- * a page would be inventing that decision. Unwired, the page says so.
+ * The accepted screen prices three subscription tiers. SceneAxi does not sell seats —
+ * the billing vertical owns credit packs — so the tier-card layout is applied to the
+ * packs the billing plane actually returns. The pack list never comes from a constant
+ * here: pack pricing is a product decision owned by `@sceneaxi/billing`, and inventing
+ * prices on a page would be inventing that decision. Unwired, the page says so.
  *
  * The page is rendered per request because its checkout attempt token must be. A
  * prerender would evaluate that token once at build time and serve every visitor the
@@ -19,109 +28,177 @@ import { StatePanel } from "../_components/state-panel.js";
  */
 export const dynamic = "force-dynamic";
 
+/** Credits per unit of currency, used only to mark a strictly-best pack. */
+const rate = (pack: SiteCreditPack): number =>
+  pack.unitAmount === 0 ? Number.POSITIVE_INFINITY : pack.credits / pack.unitAmount;
+
 export default async function PricingPage() {
   const plane = createUmbrellaIdentityPlane(process.env);
   const packs = await plane.billing.listCreditPacks();
 
+  // The one flag on this page is arithmetic, not a recommendation: it appears only when
+  // a single pack gives strictly more credits per unit than every other pack offered.
+  const bestRatePackId = (() => {
+    if (!packs.ok || packs.value.length < 2) return null;
+    const sorted = [...packs.value].sort((a, b) => rate(b) - rate(a));
+    const [best, runnerUp] = sorted;
+    if (best === undefined || runnerUp === undefined) return null;
+    return rate(best) > rate(runnerUp) ? best.packId : null;
+  })();
+
   return (
-    <>
-      <p className="eyebrow">Pricing</p>
-      <h1>Free to build with. Credits for hosted work.</h1>
-      <p className="lede">
-        The engine SDK, the CLI, and bringing your own AI provider cost nothing. Hosted
-        AI and catalog assets are paid in credits or money. New accounts receive{" "}
-        {SITE_STARTER_CREDIT_ALLOTMENT} credits once.
-      </p>
+    <div className="page">
+      <div className="page-head page-head-center">
+        <p className="eyebrow">Pricing</p>
+        <h1>The engine is free. You pay for hosted work.</h1>
+        <p className="lede">
+          The engine SDK, the CLI, and bringing your own AI provider cost nothing. Hosted
+          AI and catalog assets are paid in credits. New accounts receive{" "}
+          {SITE_STARTER_CREDIT_ALLOTMENT} credits once.
+        </p>
+      </div>
 
-      <h2>What each capability requires</h2>
-      <CapabilityTable />
-
-      <h2>Credit packs</h2>
-      {packs.ok ? (
-        <>
-          <div className="scroll-x">
-            <table>
-              <thead>
-                <tr>
-                  <th>Pack</th>
-                  <th>Credits</th>
-                  <th>Price</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {packs.value.map((pack) => (
-                  <tr key={pack.packId}>
-                    <td>
-                      <code>{pack.packId}</code>
-                    </td>
-                    <td>{pack.credits}</td>
-                    <td>
-                      {(pack.unitAmount / 100).toFixed(2)} {pack.currency.toUpperCase()}
-                    </td>
-                    <td>
+      <div className="stack">
+        <h2>Credit packs</h2>
+        {packs.ok ? (
+          <>
+            <div className="grid grid-3">
+              {packs.value.map((pack) => {
+                const featured = pack.packId === bestRatePackId;
+                return (
+                  <article
+                    className={featured ? "tier tier-featured" : "tier"}
+                    key={pack.packId}
+                  >
+                    {featured && <p className="tier-flag">BEST RATE PER CREDIT</p>}
+                    <div className="tier-body">
+                      <h3>
+                        <code>{pack.packId}</code>
+                      </h3>
+                      <p className="tier-price">
+                        <span className="tier-amount">
+                          {(pack.unitAmount / 100).toFixed(2)}
+                        </span>
+                        <span className="tier-unit">
+                          {pack.currency.toUpperCase()} once
+                        </span>
+                      </p>
+                      <p className="body-copy">
+                        {pack.credits} credits, added to your ledger when the checkout
+                        settles. Credits do not expire and are never a subscription.
+                      </p>
+                      <hr className="tier-rule" />
+                      <ul className="checks panel-grow">
+                        <li>
+                          <span className="mark-box mark-yes" aria-hidden="true">
+                            ✓
+                          </span>
+                          Hosted AI generation
+                        </li>
+                        <li>
+                          <span className="mark-box mark-yes" aria-hidden="true">
+                            ✓
+                          </span>
+                          Minimum E2 web editor access
+                        </li>
+                        <li>
+                          <span className="mark-box mark-no" aria-hidden="true">
+                            ✕
+                          </span>
+                          Catalog asset purchase — not open
+                        </li>
+                      </ul>
                       {plane.wired.billing ? (
                         <form method="post" action="/api/checkout">
                           <input type="hidden" name="packId" value={pack.packId} />
-                          <input type="hidden" name="attempt" value={crypto.randomUUID()} autoComplete="off" />
-                          <button className="button" type="submit">Buy</button>
+                          <input
+                            type="hidden"
+                            name="attempt"
+                            value={crypto.randomUUID()}
+                            autoComplete="off"
+                          />
+                          <button className="button button-block" type="submit">
+                            Buy {pack.credits} credits
+                          </button>
                         </form>
                       ) : (
-                        <span className="button" aria-disabled="true" title={SITE_REFUSALS.BILLING_PLANE_NOT_WIRED}>
+                        <span
+                          className="button button-block"
+                          aria-disabled="true"
+                          title={SITE_REFUSALS.BILLING_PLANE_NOT_WIRED}
+                        >
                           Not for sale yet
                         </span>
                       )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <StatePanel tone="warn" title={`Billing mode: ${plane.billingMode}`}>
-            <p>
-              Checkout runs against Stripe <strong>test</strong> mode on this
-              deployment. Live charges need a separate captain decision, and the billing
-              port refuses live mode without explicit authorization.
-            </p>
-            {!plane.wired.billing && (
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+
+            <StatePanel tone="warn" title={`Billing mode: ${plane.billingMode}`}>
               <p>
-                Buying is not open on this deployment: the hosted checkout round-trip is
-                not wired, so these prices are shown for information and no purchase is
-                offered. {IDENTITY_PLANE_PENDING_NOTE}
+                Checkout runs against Stripe <strong>test</strong> mode on this
+                deployment. Live charges need a separate captain decision, and the
+                billing port refuses live mode without explicit authorization.
               </p>
-            )}
+              {!plane.wired.billing && (
+                <p>
+                  Buying is not open on this deployment: the hosted checkout round-trip
+                  is not wired, so these prices are shown for information and no purchase
+                  is offered. {IDENTITY_PLANE_PENDING_NOTE}
+                </p>
+              )}
+            </StatePanel>
+          </>
+        ) : (
+          <StatePanel tone="deny" title="No credit packs to offer yet" reason={packs.reason}>
+            <p>{packs.message}</p>
+            <p>{IDENTITY_PLANE_PENDING_NOTE}</p>
+            <p>
+              Pack contents and prices are a product decision owned by the billing
+              vertical, so this page shows nothing rather than inventing a price.
+            </p>
           </StatePanel>
-        </>
-      ) : (
-        <StatePanel tone="deny" title="No credit packs to offer yet" reason={packs.reason}>
-          <p>{packs.message}</p>
-          <p>{IDENTITY_PLANE_PENDING_NOTE}</p>
+        )}
+      </div>
+
+      <div className="stack">
+        <h2>What each capability requires</h2>
+        <CapabilityTable />
+      </div>
+
+      <div className="stack">
+        <h2>Selling your own assets</h2>
+        {/*
+          The split is stated once, by the rule that owns it. `CREATOR_SHARE_RULE.note`
+          already carries the percentages, so restating them above it would print the
+          same sentence twice.
+        */}
+        <p className="prose prose-wide">{CREATOR_SHARE_RULE.note}</p>
+        <p className="note">{CREATOR_SHARE_ROUNDING_NOTE}</p>
+
+        <StatePanel tone="warn" title="Catalog purchases are not open">
           <p>
-            Pack contents and prices are a product decision owned by the billing
-            vertical, so this page shows nothing rather than inventing a price.
+            Catalog listings display prices and the creator share, but buying an asset is
+            structurally inert while marketplace activation remains an open captain
+            decision. Both storefronts refuse a purchase with a named reason rather than
+            showing a checkout that cannot complete.
           </p>
         </StatePanel>
-      )}
+      </div>
 
-      <h2>Selling your own assets</h2>
-      <p>
-        Creators receive {CREATOR_SHARE_RULE.creatorPercent}% of the credits on a sale,
-        and money sales are booked{" "}
-        {CREATOR_SHARE_RULE.creatorPercent}/{CREATOR_SHARE_RULE.platformPercent}.{" "}
-        {CREATOR_SHARE_RULE.note}
-      </p>
-      <p style={{ color: "var(--ink-faint)", fontSize: "0.9rem" }}>
-        {CREATOR_SHARE_ROUNDING_NOTE}
-      </p>
-
-      <StatePanel tone="warn" title="Catalog purchases are not open">
-        <p>
-          Catalog listings display prices and the creator share, but buying an asset is
-          structurally inert while marketplace activation remains an open captain
-          decision. Both storefronts refuse a purchase with a named reason rather than
-          showing a checkout that cannot complete.
-        </p>
-      </StatePanel>
-    </>
+      <div className="stack">
+        <h2>Questions</h2>
+        <dl className="faq">
+          {PRICING_FAQ.map((entry) => (
+            <div className="faq-item" key={entry.q}>
+              <dt>{entry.q}</dt>
+              <dd>{entry.a}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </div>
   );
 }

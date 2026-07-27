@@ -36,9 +36,11 @@ export default async function EditorPage({
 
   if (!resolved.decision.granted) {
     return (
-      <>
-        <p className="eyebrow">Minimum E2 editor</p>
-        <h1>The editor is not open for this request</h1>
+      <div className="page">
+        <div className="page-head">
+          <p className="eyebrow">Minimum E2 editor</p>
+          <h1>The editor is not open for this request</h1>
+        </div>
         <StatePanel
           tone="deny"
           title="Not entitled"
@@ -55,16 +57,18 @@ export default async function EditorPage({
             <a href="/engine">The engine SDK is free and needs no account</a>
           </p>
         </StatePanel>
-      </>
+      </div>
     );
   }
 
   const state = readEditorState(params);
   if (!state.ok) {
     return (
-      <>
-        <p className="eyebrow">Minimum E2 editor</p>
-        <h1>That editor link was refused</h1>
+      <div className="page">
+        <div className="page-head">
+          <p className="eyebrow">Minimum E2 editor</p>
+          <h1>That editor link was refused</h1>
+        </div>
         <StatePanel tone="deny" title="Link refused" reason={state.reason}>
           <p>{state.message}</p>
           <p>
@@ -76,20 +80,22 @@ export default async function EditorPage({
             <a href="/editor">Open the editor without a link</a>
           </p>
         </StatePanel>
-      </>
+      </div>
     );
   }
 
   const render = renderEditorState(state.value);
   if (!render.ok) {
     return (
-      <>
-        <p className="eyebrow">Minimum E2 editor</p>
-        <h1>The editor session could not start</h1>
+      <div className="page">
+        <div className="page-head">
+          <p className="eyebrow">Minimum E2 editor</p>
+          <h1>The editor session could not start</h1>
+        </div>
         <StatePanel tone="deny" title="Session refused" reason={render.reason}>
           <p>{render.message}</p>
         </StatePanel>
-      </>
+      </div>
     );
   }
 
@@ -100,9 +106,11 @@ export default async function EditorPage({
   );
 
   return (
-    <>
-      <p className="eyebrow">Minimum E2 editor · sculpt and scene</p>
-      <h1>Editor</h1>
+    <div className="page">
+      <div className="page-head">
+        <p className="eyebrow">Minimum E2 editor · sculpt and scene</p>
+        <h1>Editor</h1>
+      </div>
 
       {resolved.decision.mode === "preview" ? (
         <StatePanel tone="warn" title="Preview — not an entitled session">
@@ -396,6 +404,6 @@ export default async function EditorPage({
           nothing here pretends to save your work.
         </p>
       </StatePanel>
-    </>
+    </div>
   );
 }

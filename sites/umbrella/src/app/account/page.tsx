@@ -32,15 +32,17 @@ export default async function AccountPage() {
     resolved.principal !== null ? "authenticated" : signedOut ? "anonymous" : "refused";
 
   return (
-    <>
-      <p className="eyebrow">Account</p>
-      <h1>Your SceneAxi account</h1>
-      <p className="lede">
-        Signing in unlocks the Minimum E2 web editor and hosted AI. New accounts receive{" "}
-        {SITE_STARTER_CREDIT_ALLOTMENT} credits once; the sole administrator is
-        bootstrapped from a server environment secret and can never be claimed by a
-        client.
-      </p>
+    <div className="page">
+      <div className="page-head">
+        <p className="eyebrow">Account</p>
+        <h1>Your SceneAxi account</h1>
+        <p className="lede">
+          Signing in unlocks the Minimum E2 web editor and hosted AI. New accounts
+          receive {SITE_STARTER_CREDIT_ALLOTMENT} credits once; the sole administrator is
+          bootstrapped from a server environment secret and can never be claimed by a
+          client.
+        </p>
+      </div>
 
       <dl className="dl">
         <dt>Phase</dt>
@@ -140,6 +142,6 @@ export default async function AccountPage() {
           </p>
         </StatePanel>
       )}
-    </>
+    </div>
   );
 }

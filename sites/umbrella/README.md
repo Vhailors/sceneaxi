@@ -15,6 +15,29 @@ pure wiring modules under `src/lib/`.
 - `src/app/**` is the only place a framework appears. It is syntax-gated by
   `pnpm check:syntax` and type-checked by `next build`.
 
+## The visual layer
+
+The site implements the captain-accepted `Umbrella Site` design screen (sceneaxi#157).
+Ownership is split so a marketing edit cannot become a product claim:
+
+- `src/app/globals.css` is the whole design system — tokens, primitives, and the three
+  breakpoints. Its header states the only three deliberate deviations from the accepted
+  screen (contrast-safe text greys, real links and buttons with a focus ring, and
+  reduced-motion support), and why.
+- `src/lib/site-content.ts` is the page **content**, in pure TypeScript so the hermetic
+  gate type-checks it. It derives every figure it can from the contract that owns it and
+  restates only the sculpt pass order and the CLI exit-code table, both of which
+  `tests/sites/umbrella-visual.test.ts` pins to `@sceneaxi/schemas` and `@sceneaxi/cli`.
+- `tests/sites/umbrella-visual.test.ts` also asserts what the surface may **not** claim —
+  no installer, size, or digest this repository does not build; no seat or subscription
+  price; no registry install; no shipping claim; and no Kids link — plus the
+  accessibility and responsive structure below.
+- `VISUAL-EVIDENCE.md` records the browser observations: viewports, Lighthouse
+  accessibility scores, and measured contrast.
+
+Adding a client component is a deliberate act here: `src/app/_components/site-nav.tsx`
+exists only to resolve `aria-current`, and the gate asserts the client-component list.
+
 ## The viewports (`/open` and `/editor`)
 
 The umbrella owns every viewport ([ADR 0022](../../docs/adr/0022-umbrella-owns-the-public-viewport.md)
