@@ -3,8 +3,11 @@
  * web-shell (authoring-core propose/apply). No forked behavior, no CLI spawn.
  *
  * sceneaxi#11 seeded the protocol client; sceneaxi#116 makes the shell
- * startable (`bin/sceneaxi-desktop.mjs`) with a real session and command layer.
- * Still protocol-thin: no native packaging, no installer, no offline store.
+ * startable (`bin/sceneaxi-desktop.mjs`) with a real session and command layer;
+ * sceneaxi#158 adds the accepted Engine Desktop visual surface as a view model
+ * (`visual-model.ts`) plus a document renderer (`chrome.ts`).
+ * Still protocol-thin: no native packaging, no installer, no offline store, no
+ * presentation runtime — the chrome draws no pixels.
  */
 import type { PackageSeam } from "@sceneaxi/schemas";
 
@@ -50,3 +53,69 @@ export {
   type ShellRoundTripReject,
   type ShellRoundTripResult,
 } from "./protocol-client.js";
+
+export {
+  ACCENT,
+  AXIS,
+  DEVIATIONS,
+  LINE,
+  METRICS,
+  SIGNAL,
+  SUPERSEDED_V1,
+  SURFACE,
+  TEXT,
+  TYPE,
+  VISUAL_SOURCE,
+} from "./visual-tokens.js";
+
+export {
+  CHANGE_REVIEW_ROWS,
+  DESKTOP_ASSISTANT_MODE_IDS,
+  DESKTOP_DOCK_TAB_IDS,
+  DESKTOP_MINIMUM_WINDOW,
+  DESKTOP_MODES,
+  DESKTOP_MODE_IDS,
+  DESKTOP_OVERLAY_IDS,
+  DESKTOP_PROFILE_IDS,
+  DESKTOP_PROFILE_PACKAGES,
+  DESKTOP_REFERENCE_WINDOW,
+  DESKTOP_REFUSAL_MESSAGES,
+  DESKTOP_VISUAL_REFUSALS,
+  PALETTE_GROUPS,
+  SCULPT_PASSES,
+  VIEWPORT_INERT_NOTE,
+  VIEWPORT_RENDERER_NOTE,
+  WINDOW_TIERS,
+  applyDesktopVisualAction,
+  createDesktopVisualState,
+  defaultDockTabFor,
+  desktopVisualView,
+  dockTabsFor,
+  resolveWindowTier,
+  type DesktopAssistantModeId,
+  type DesktopAssistantState,
+  type DesktopAssistantView,
+  type DesktopChangeReviewView,
+  type DesktopControl,
+  type DesktopControlKind,
+  type DesktopDockTabId,
+  type DesktopModeId,
+  type DesktopOverlayId,
+  type DesktopOverlayView,
+  type DesktopProfileChip,
+  type DesktopProfileId,
+  type DesktopSculptPhase,
+  type DesktopSculptView,
+  type DesktopVisualAction,
+  type DesktopVisualRefusal,
+  type DesktopVisualState,
+  type DesktopVisualView,
+  type DesktopWindowSize,
+  type DesktopWindowTierId,
+} from "./visual-model.js";
+
+export {
+  escapeHtml,
+  renderDesktopChrome,
+  type DesktopChromeOptions,
+} from "./chrome.js";

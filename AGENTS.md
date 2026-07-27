@@ -253,6 +253,24 @@ network, no credential). Adding a `BILLING_REFUSE_REASONS` entry requires a
 covering case in `tests/e2e/auth-credits-refuse-matrix.test.ts`, which asserts
 every reason is reachable.
 
+The Engine Desktop **visual** surface is `apps/desktop-shell` alone
+(sceneaxi#158): `src/visual-model.ts` decides (seven modes, mode-dependent dock
+tabs, profile switch, assistant states, Change Review, command palette,
+overlays, sculpt progress, window tiers, the closed `DESKTOP_VISUAL_REFUSALS`
+registry) and `src/chrome.ts` renders it as one self-contained HTML document via
+the `sceneaxi-desktop chrome` command — no remote asset, no framework, no DOM
+types. Three invariants: every control declares `view` | `review` | `inert`, and
+an inert one keeps its focus stop and names a refusal; the profile switch
+**projects** `openPathPolicyView()` rather than describing a profile, so parity
+with the CLI is a data identity; and the chrome mounts no presentation runtime
+and opens no kernel session, so it draws no pixels, invents no digest, byte
+size, frame rate, or timing, and reaches `authoring-core` on no path. The
+canonical archive digest, the `Engine Desktop v1.dc.html` supersession (amber
+accent, Space Grotesk/IBM Plex, fixed 2064×1400 launcher storyboard — none of it
+may return), every deviation from that archive, and the recorded browser
+evidence are owned by `docs/engine-desktop-surface.md`; that doc is the thing to
+update when the surface changes.
+
 The in-app AI assistant composition seam is `createAssistantPanel()` in
 `apps/web-shell/src/assistant-panel.ts` (sceneaxi#121), the one matrix node that may
 name both the Model Provider Port and the credit plane. Its contract and refusal
