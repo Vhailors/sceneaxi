@@ -273,6 +273,37 @@ function readBody(request: IncomingMessage): Promise<BodyRead> {
   });
 }
 
+/**
+ * Headers every response carries, whatever it is answering.
+ *
+ * The Host and Origin checks below close DNS rebinding and cross-origin
+ * scripted writes, but neither sees a direct `<iframe src="http://127.0.0.1:5180/">`:
+ * the browser sends the real bound authority and no `Origin` on the navigation,
+ * and the framed page mints its own `reviewToken`. Framing is therefore the one
+ * browser-driven path to the two visible buttons — Propose then Accept writes a
+ * file — so it is denied here rather than left to the request checks that
+ * structurally cannot refuse it. Denied twice on purpose: `frame-ancestors` is
+ * the rule, `x-frame-options` is what a browser that ignores CSP reads.
+ *
+ * The rest of the policy matches the page as served — inline style and inline
+ * script, same-origin `fetch`, no external asset of any kind — so the surface
+ * cannot grow a remote dependency without this line changing first.
+ */
+const RESPONSE_SECURITY_HEADERS: Readonly<Record<string, string>> = Object.freeze({
+  "content-security-policy": [
+    "default-src 'none'",
+    "style-src 'unsafe-inline'",
+    "script-src 'unsafe-inline'",
+    "connect-src 'self'",
+    "base-uri 'none'",
+    "form-action 'none'",
+    "frame-ancestors 'none'",
+  ].join("; "),
+  "x-frame-options": "DENY",
+  "x-content-type-options": "nosniff",
+  "referrer-policy": "no-referrer",
+});
+
 function writeResponse(
   response: ServerResponse,
   status: number,
@@ -288,6 +319,7 @@ function writeResponse(
     // A local authoring surface must never be served from a stale cache: the
     // diff on screen has to be the diff the session is holding.
     "cache-control": "no-store",
+    ...RESPONSE_SECURITY_HEADERS,
     ...(closeConnection ? { connection: "close" } : {}),
   });
   response.end(headOnly ? undefined : body);
@@ -302,17 +334,35 @@ function isResolvedLoopbackAddress(address: string): boolean {
   );
 }
 
+/**
+ * The authority a request must name, resolved once the socket is listening.
+ *
+ * The port is fixed the moment the OS accepts the bind and cannot change after,
+ * so this is a constant of the running server rather than something to re-derive
+ * per request — and re-deriving it is what produced the one authority that never
+ * existed: `server.address()` returns null while the socket is closing, and the
+ * `--port 0` fallback to the requested port then named `:0`.
+ */
+type BoundAuthority = {
+  readonly origin: string;
+  readonly host: string;
+};
+
+function boundAuthority(host: string, port: number): BoundAuthority {
+  const url = new URL(serverUrl(host, port));
+  return { origin: url.origin, host: url.host };
+}
+
 function requestBoundaryRefusal(
   request: IncomingMessage,
   method: string,
-  expectedOrigin: string,
+  expected: BoundAuthority,
 ): { readonly reason: WebShellRefusal; readonly message: string } | null {
-  const expectedHost = new URL(expectedOrigin).host;
   const host = request.headers.host;
-  if (host === undefined || host.toLowerCase() !== expectedHost.toLowerCase()) {
+  if (host === undefined || host.toLowerCase() !== expected.host.toLowerCase()) {
     return {
       reason: WEB_SHELL_REFUSALS.requestHostInvalid,
-      message: `Request Host must match the bound inspector authority: ${expectedHost}.`,
+      message: `Request Host must match the bound inspector authority: ${expected.host}.`,
     };
   }
 
@@ -321,11 +371,11 @@ function requestBoundaryRefusal(
   const origin = request.headers.origin;
   if (
     origin !== undefined &&
-    origin.toLowerCase() !== expectedOrigin.toLowerCase()
+    origin.toLowerCase() !== expected.origin.toLowerCase()
   ) {
     return {
       reason: WEB_SHELL_REFUSALS.requestOriginInvalid,
-      message: `Request Origin must match the inspector origin: ${expectedOrigin}.`,
+      message: `Request Origin must match the inspector origin: ${expected.origin}.`,
     };
   }
 
@@ -366,6 +416,10 @@ export function startInspectorDevServer(
 
   const app = createInspectorApp({ projectRoot: options.projectRoot });
 
+  // Resolved in `onListening`, which is the only place the bound port is known.
+  // Null until then, and a request cannot be accepted before the socket listens.
+  let authority: BoundAuthority | null = null;
+
   const server: Server = createServer((request, response) => {
     const method = (request.method ?? "GET").toUpperCase();
     const url = request.url ?? "/";
@@ -378,15 +432,22 @@ export function startInspectorDevServer(
     response.on("error", () => response.destroy());
 
     void (async () => {
-      const address = server.address();
-      const boundPort =
-        typeof address === "object" && address !== null ? address.port : options.port;
-      const expectedOrigin = new URL(serverUrl(options.host, boundPort)).origin;
-      const boundaryRefusal = requestBoundaryRefusal(
-        request,
-        method,
-        expectedOrigin,
-      );
+      if (authority === null) {
+        // Unreachable while serving, and refused rather than asserted: an
+        // authority that is not resolved is one no Host can be checked against.
+        writeResponse(
+          response,
+          403,
+          "application/json; charset=utf-8",
+          requestBoundaryRefusalBody(
+            WEB_SHELL_REFUSALS.requestHostInvalid,
+            "The inspector has no bound authority to check the request Host against.",
+          ),
+          headOnly,
+        );
+        return;
+      }
+      const boundaryRefusal = requestBoundaryRefusal(request, method, authority);
       if (boundaryRefusal !== null) {
         writeResponse(
           response,
@@ -484,6 +545,7 @@ export function startInspectorDevServer(
         return;
       }
       const port = address.port;
+      authority = boundAuthority(options.host, port);
       resolveServer({
         app,
         host: options.host,

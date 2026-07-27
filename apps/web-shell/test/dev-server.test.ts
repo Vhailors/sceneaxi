@@ -193,6 +193,22 @@ describe("the started server serves the inspector", () => {
     expect(await page.text()).toContain("SceneAxi inspector");
   });
 
+  it("denies framing on every response, page and API alike", async () => {
+    const dir = fixtureDir();
+    writeScene(dir, "scene.json", { entities: [] });
+    const server = await serve(dir);
+
+    for (const target of [server.url, `${server.url}api/state`]) {
+      const response = await fetch(target);
+      await response.text();
+      expect(response.headers.get("x-frame-options"), target).toBe("DENY");
+      expect(response.headers.get("content-security-policy"), target).toContain(
+        "frame-ancestors 'none'",
+      );
+      expect(response.headers.get("x-content-type-options"), target).toBe("nosniff");
+    }
+  });
+
   it("refuses a non-loopback host at the exported server boundary", async () => {
     const dir = fixtureDir();
     writeScene(dir, "scene.json", { entities: [] });

@@ -28,10 +28,16 @@ type Started = {
 
 describe("sceneaxi-web-shell binary", () => {
   let cwd: string;
-  let started: Started | null;
+  /**
+   * The spawned process, tracked from the spawn itself rather than from a
+   * successful start: this binary is a long-lived server, so a start that never
+   * reports its banner would otherwise leave it running and hold the worker's
+   * event loop open — turning one red assertion into a hung gate.
+   */
+  let spawned: DevProcess | null;
 
   beforeEach(() => {
-    started = null;
+    spawned = null;
     cwd = mkdtempSync(join(tmpdir(), "sceneaxi-web-shell-bin-"));
     const written = writeDocumentFile(
       join(cwd, "scene.json"),
@@ -42,7 +48,7 @@ describe("sceneaxi-web-shell binary", () => {
   });
 
   afterEach(async () => {
-    if (started !== null) await stop(started.child);
+    if (spawned !== null) await stop(spawned);
     rmSync(cwd, { recursive: true, force: true });
   });
 
@@ -53,6 +59,7 @@ describe("sceneaxi-web-shell binary", () => {
       [BIN, "--port", "0", "--cwd", cwd, ...extra],
       { cwd, stdio: ["ignore", "pipe", "pipe"] },
     );
+    spawned = child;
 
     const url = await new Promise<string>((resolveUrl, rejectUrl) => {
       let out = "";
@@ -78,8 +85,7 @@ describe("sceneaxi-web-shell binary", () => {
       });
     });
 
-    started = { child, url };
-    return started;
+    return { child, url };
   }
 
   async function stop(child: DevProcess): Promise<void> {
