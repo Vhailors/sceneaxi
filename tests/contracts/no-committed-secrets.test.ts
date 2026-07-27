@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -29,6 +29,15 @@ const trackedFiles = (() => {
 })();
 
 const files = trackedFiles.map((relative) => join(repoRoot, relative));
+
+/**
+ * The committed name-only templates: the root ships one and so does each site.
+ * Defined once so every rule below judges the same set, and guarded once in the
+ * first test — an empty list would silently satisfy all of them.
+ */
+const exampleFiles = trackedFiles.filter((relative) =>
+  relative.endsWith(".env.example"),
+);
 
 const textByFile = new Map<string, string | undefined>();
 
@@ -114,6 +123,7 @@ describe("no committed secrets", () => {
   it("scans a non-empty tracked surface", () => {
     // Fail-closed: a walk that found nothing would pass every check below.
     expect(files.length).toBeGreaterThan(50);
+    expect(exampleFiles.length).toBeGreaterThan(1);
   });
 
   for (const [label, pattern] of FORBIDDEN) {
@@ -144,13 +154,7 @@ describe("no committed secrets", () => {
   });
 
   it("keeps every committed .env.example to names only", () => {
-    const examples = trackedFiles.filter((relative) =>
-      relative.endsWith(".env.example"),
-    );
-    // Fail-closed: the sites and the root each ship one, so an empty list means
-    // the glob broke rather than that every example is clean.
-    expect(examples.length).toBeGreaterThan(1);
-    for (const relative of examples) {
+    for (const relative of exampleFiles) {
       const text = readText(join(repoRoot, relative)) ?? "";
       for (const [label, pattern] of FORBIDDEN) {
         expect(`${relative}: ${label}: ${pattern.test(text)}`).toBe(
@@ -164,18 +168,84 @@ describe("no committed secrets", () => {
     // The value half of the rule is covered by the scan above; what is unique
     // here is presence — an operator has to be able to find the name it must
     // set, whether it belongs to the root example or to one site's.
-    const examples = trackedFiles
-      .filter((relative) => relative.endsWith(".env.example"))
-      .map((relative) => readText(join(repoRoot, relative)) ?? "");
+    const texts = exampleFiles.map(
+      (relative) => readText(join(repoRoot, relative)) ?? "",
+    );
     for (const name of DOCUMENTED_NAMES) {
-      const documented = examples.some((text) => text.includes(name));
+      const documented = texts.some((text) => text.includes(name));
       expect(`${name}: ${documented}`).toBe(`${name}: true`);
     }
   });
 
   it("ignores .env while tracking .env.example", () => {
-    const gitignore = readFileSync(join(repoRoot, ".gitignore"), "utf8");
-    expect(gitignore).toContain(".env");
-    expect(gitignore).toContain("!.env.example");
+    // Asked of git, not of the file's text. A substring assertion passes on a
+    // `.gitignore` whose *last* matching pattern re-ignores `.env.example` —
+    // last match wins — which is exactly how a trailing `.env*` once defeated
+    // the negation while this test stayed green. Every path below is checked
+    // with `--no-index`, so the answer is the pattern set's, not the index's.
+    //
+    // The verdict alone is not enough, though: git consults
+    // `$GIT_DIR/info/exclude` and `core.excludesFile` whenever no repository
+    // pattern matches, and `.env*` is a common global entry. Deleting these
+    // lines from `.gitignore` would then still read as ignored on the
+    // developer's machine while `.env` files became committable everywhere
+    // else. So each path is asked twice and both answers are asserted: the
+    // verdict, and the file that decided it, which has to be this repository's
+    // root `.gitignore`. The empty `core.excludesFile` drops the global file so
+    // the answer does not depend on who runs the gate.
+    const git = (args: readonly string[]) =>
+      spawnSync("git", ["-c", "core.excludesFile=", ...args], {
+        cwd: repoRoot,
+        encoding: "utf8",
+      });
+
+    const check = (relative: string): { ignored: boolean; source: string } => {
+      const verdict = git(["check-ignore", "-q", "--no-index", "--", relative]);
+      // 0 = ignored, 1 = not ignored; anything else is a broken invocation.
+      expect([0, 1]).toContain(verdict.status);
+
+      // `-v` cannot answer the verdict: it exits 0 whenever a pattern *matched*,
+      // and a negated `!.env.example` is a match. It is asked only for the
+      // source, in `<source>:<line>:<pattern>\t<pathname>` form.
+      const explained = git(["check-ignore", "-v", "--no-index", "--", relative]);
+      const first = explained.stdout.split("\n", 1)[0] ?? "";
+      const colon = first.indexOf(":");
+      return {
+        ignored: verdict.status === 0,
+        source: colon === -1 ? "(no pattern matched)" : first.slice(0, colon),
+      };
+    };
+
+    const describeCheck = (relative: string) => {
+      const { ignored, source } = check(relative);
+      return `${relative}: ignored=${ignored} by=${source}`;
+    };
+
+    // direnv's `.envrc` holds exported secrets as readily as `.env` does, and
+    // the repo-wide scan above is only a partial backstop — it knows a handful
+    // of names and vendor key shapes, so an `export SOME_API_KEY=…` in a
+    // committed `.envrc` would pass it. The glob has to cover the whole family.
+    for (const relative of [
+      ".env",
+      ".env.local",
+      ".envrc",
+      ".envrc.local",
+      "sites/umbrella/.env.local",
+      "sites/umbrella/.envrc",
+    ]) {
+      expect(describeCheck(relative)).toBe(
+        `${relative}: ignored=true by=.gitignore`,
+      );
+    }
+
+    // Every committed example, including each site's, has to survive the whole
+    // pattern set — an operator cannot edit a template git refuses to see. The
+    // deciding source is asserted here too, so the negation has to be the last
+    // matching pattern in this file rather than an absence of any pattern.
+    for (const relative of exampleFiles) {
+      expect(describeCheck(relative)).toBe(
+        `${relative}: ignored=false by=.gitignore`,
+      );
+    }
   });
 });

@@ -351,7 +351,7 @@ a lookup against an account it merely named. Those refusals are still spoken by
 `evaluateEntitlement` immediately below, which owns the identity vocabulary — step 4 only
 declines to read, so one defect keeps one refusal. The supplied ownership claim only earns
 the *first* read, though, since the caller wrote it: the account the store returns is itself
-re-checked against the guarded user and refuses `ENTITLEMENT_ACCOUNT_NOT_OWNED` before its
+re-checked against the guarded user and refuses `CREDIT_ACCOUNT_NOT_OWNED` before its
 history is loaded or any metering key is compared, so naming a stranger's account id cannot
 make persistence answer questions about that account's entries.
 
@@ -570,17 +570,26 @@ with no Stripe key, no database, and no network.
 
 ## Kids isolation
 
-Kids never shares identity or commerce with another SceneAxi surface. The refusal is
-enforced at four independent points, none of them overridable:
+Kids never shares identity or commerce with another SceneAxi surface. The rule is an
+invariant rather than a fixed number of checkpoints: **every** path that can reach identity
+or a charge carries its own non-overridable deny — `AUTH_REFUSE_REASONS.kidsSurfaceDenied`
+or `BILLING_REFUSE_REASONS.kidsCommerceDenied` — instead of relying on an upstream one, so
+adding a path means adding its deny. Counting the current call sites here would go stale on
+the next path; `tests/e2e/auth-credits-refuse-matrix.test.ts` is what proves both reasons
+stay reachable.
 
-1. `signIn` refuses a `kids` surface **before** the adapter is called, so no adapter can
-   influence the outcome and no session or digest is produced.
-2. `verifySession` and the role guards refuse a **stored** `kids` session, so one written by
-   any other path cannot be redeemed.
-3. `evaluateEntitlement` refuses `KIDS_COMMERCE_DENIED` for **every** capability on the Kids
-   surface, the free ones included.
-4. The `sessions` table's surface check constraint omits `'kids'` entirely, so the row
-   cannot exist.
+The structural points that hold whatever else is added:
+
+- `signIn` refuses a `kids` surface **before** the adapter is called, so no adapter can
+  influence the outcome and no session or digest is produced.
+- `verifySession` and the role guards refuse a **stored** `kids` session, so one written by
+  any other path cannot be redeemed.
+- `evaluateEntitlement` refuses `KIDS_COMMERCE_DENIED` for **every** capability on the Kids
+  surface, the free ones included — and each commerce entry point above it (credit-pack
+  checkout, catalog listings, fixture commerce, the hosted-AI gate) refuses on its own
+  before it gets there.
+- The `sessions` table's surface check constraint omits `'kids'` entirely, so the row
+  cannot exist.
 
 Additionally, nothing depends on or imports `@sceneaxi/profile-kids`, enforced independently
 of allow lists by `pnpm check:boundaries`.

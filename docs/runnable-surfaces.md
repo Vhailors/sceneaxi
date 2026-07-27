@@ -118,7 +118,10 @@ assistant surface itself remains sceneaxi#121.
 ## Not runnable yet
 
 - **`apps/web-shell`** (sceneaxi#120) — a protocol client library with no dev
-  server. Blocked on whether the websites/deploy work touches `apps/web-shell`.
+  server. The websites/deploy question that blocked it is answered: the
+  deployable surfaces landed as their own `sites/` tier (ADR 0018) and left this
+  package a library, so nothing here is waiting on that wave. Whether it becomes
+  startable is still sceneaxi#120's own call, not a doc's.
 - **In-app AI assistant** (sceneaxi#121) — the credits ledger and the metered
   hosted-AI gate it was serialized behind have landed; the assistant surface
   itself is still unbuilt.

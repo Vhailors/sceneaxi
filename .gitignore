@@ -6,14 +6,15 @@ build/
 .turbo/
 .cache/
 coverage/
-.env
-.env.*
-!.env.example
 *.log
 .DS_Store
 .idea/
 .vscode/
 *.tsbuildinfo
+
+# Local project state, including the evidence a gate run regenerates. The few
+# committed evidence files under `.sceneaxi/evidence/` are already tracked and
+# stay tracked; adding another one is a deliberate `git add -f`.
 .sceneaxi/
 
 # sites/ are separate install roots (see docs/websites-deploy.md)
@@ -22,10 +23,13 @@ sites/*/public/engine-sdk/
 sites/*/node_modules/
 sites/*/next-env.d.ts
 
-# Vercel CLI link state and pulled env, per site
+# Vercel CLI link state, at any depth (covers sites/*/.vercel/).
 .vercel/
-sites/*/.vercel/
-.env.local
-sites/*/.env.local
-.vercel
+
+# Env files at any depth, including each site's: `.env`, `.env.local`, and
+# direnv's `.envrc`/`.envrc.local`, which export secrets just as readily.
+# `.env.example` files are committed name-only templates and must stay tracked,
+# so nothing below may re-ignore them: the last matching pattern wins in git,
+# and a second `.env*` after this negation would silently defeat it.
 .env*
+!.env.example
