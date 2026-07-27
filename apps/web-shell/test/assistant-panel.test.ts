@@ -39,6 +39,7 @@ import {
   ADMIN_EMAIL_ENV_VAR,
   AUTH_REFUSE_REASONS,
   digestSessionToken,
+  resolveAdminIdentity,
 } from "@sceneaxi/auth";
 import {
   BILLING_REFUSE_REASONS,
@@ -56,10 +57,14 @@ import type { CreditAccount, ModelDescriptor } from "@sceneaxi/schemas";
 
 const NOW = Date.parse("2026-07-27T10:00:00Z");
 const clock = () => NOW;
-const admin = {
-  email: "captain@example.com",
-  source: ADMIN_EMAIL_ENV_VAR,
-} as const;
+const adminResolution = resolveAdminIdentity({
+  [ADMIN_EMAIL_ENV_VAR]: "captain@example.com",
+});
+if (!adminResolution.ok) throw new Error(adminResolution.message);
+// Resolved, never hand-built: the guard behind the panel checks the identity's
+// runtime provenance, so a structurally identical `{ email, source }` literal
+// is refused `AUTH_ADMIN_IDENTITY_UNPROVEN` before any assistant work happens.
+const admin = adminResolution.value;
 
 const MODEL: ModelDescriptor = Object.freeze({
   model: "openai/gpt-fixture-2026-07-24",
@@ -791,6 +796,31 @@ describe("hosted mode debits through the existing ledger", () => {
     const snapshot = await panel.ask({ prompt: "hosted turn", turnId: "t1" });
 
     expect(snapshot.refusal?.reason).toBe(AUTH_REFUSE_REASONS.sessionExpired);
+    expect(stack.prompts).toHaveLength(0);
+    expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
+  });
+
+  it("refuses a hand-built admin identity the panel's shape check accepts", async () => {
+    // Regression: this panel's fixtures once hand-built `{ email, source }`,
+    // which the construction-time shape check accepts but the guard's runtime
+    // provenance check does not. Passing construction is therefore not evidence
+    // the identity is real, so the refusal must land at ask time — before the
+    // provider and before the ledger — rather than deriving a caller who named
+    // their own address into `admin`.
+    const unproven = {
+      email: admin.email,
+      source: ADMIN_EMAIL_ENV_VAR,
+    } as typeof admin;
+    const { panel, store, stack } = hostedPanel(10, {
+      admin: unproven,
+      principal: ADMIN_PRINCIPAL,
+    });
+
+    const snapshot = await panel.ask({ prompt: "hosted turn", turnId: "t1" });
+
+    expect(snapshot.refusal?.reason).toBe(
+      AUTH_REFUSE_REASONS.adminIdentityUnproven,
+    );
     expect(stack.prompts).toHaveLength(0);
     expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
   });
