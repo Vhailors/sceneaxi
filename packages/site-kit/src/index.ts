@@ -9,8 +9,10 @@
  * What lives here: fail-closed identity/credits/billing ports (the single seam
  * with the identity plane owned by `sceneaxi-auth-credits-v1`), the free-vs-paid
  * capability matrix, Minimum E2 editor entitlement, catalog view models over the
- * `@sceneaxi/schemas` Catalog Item contract, and a bounded Minimum E2 web editor
- * session over `@sceneaxi/authoring-core`.
+ * `@sceneaxi/schemas` Catalog Item contract, a bounded Minimum E2 web editor
+ * session over `@sceneaxi/authoring-core`, and the shared Foundations v2 visual
+ * layer — token data, CSS emitters, a framework-neutral element tree, and the
+ * Change Review primitive (owner: `docs/design-foundations.md`).
  *
  * What deliberately does not live here: any identity implementation, any credit
  * ledger, any Stripe signature verification, any second authoring implementation,
@@ -36,11 +38,15 @@ export type {
   AssetPackageRef,
   CatalogItem,
   Compatibility,
+  JsonValue,
   ModerationState,
   PackageSeam,
   PipelineState,
+  Proposal,
+  ProposalEdit,
   ProvenanceRecord,
   RightsRecord,
+  SceneDocument,
   SculptTransform,
   TransitionRecord,
   Vector3,
@@ -221,3 +227,70 @@ export {
   renderEditorState,
   type EditorRender,
 } from "./editor-session.js";
+
+export {
+  FOUNDATIONS_SOURCE,
+  FOUNDATIONS_VERSION,
+  FOUNDATION_ACCENT_RULE,
+  FOUNDATION_BUTTON_SIZES,
+  FOUNDATION_COLORS,
+  FOUNDATION_COLOR_LAWS,
+  FOUNDATION_CONTRAST_MINIMUMS,
+  FOUNDATION_CONTRAST_ROLES,
+  FOUNDATION_FONT_STACKS,
+  FOUNDATION_NEUTRAL_TOKENS,
+  FOUNDATION_RADII,
+  FOUNDATION_SPACING,
+  FOUNDATION_SPACING_RULE,
+  FOUNDATION_STATUSES,
+  FOUNDATION_SURFACES,
+  FOUNDATION_SURFACE_ACCENTS,
+  FOUNDATION_SURFACE_RULE,
+  FOUNDATION_TYPE_SCALE,
+  contrastRatio,
+  foundationsBaseCss,
+  foundationsCss,
+  foundationsStatusCss,
+  foundationsSurfacesCss,
+  foundationsVariablesCss,
+  meetsContrast,
+  resolveSurfaceAccent,
+  type FoundationColor,
+  type FoundationColorGroup,
+  type FoundationContrastRole,
+  type FoundationFamily,
+  type FoundationStatus,
+  type FoundationStatusId,
+  type FoundationSurface,
+  type FoundationSurfaceAccent,
+  type FoundationSurfaceAccentId,
+  type FoundationTypeStep,
+  type FoundationsCssOptions,
+} from "./design-tokens.js";
+
+export {
+  el,
+  escapeHtml,
+  renderSiteElementHtml,
+  type SiteElement,
+  type SiteElementProps,
+} from "./site-element.js";
+
+export {
+  CHANGE_REVIEW_BADGE_GLYPHS,
+  changeReviewCss,
+  changeReviewElement,
+  decideAllRows,
+  formatProposalValue,
+  resolveChangeReview,
+  reviewProposal,
+  shortDigest,
+  splitPointer,
+  type ChangeReview,
+  type ChangeReviewBadge,
+  type ChangeReviewDecision,
+  type ChangeReviewDocument,
+  type ChangeReviewInput,
+  type ChangeReviewResolution,
+  type ChangeReviewRow,
+} from "./change-review.js";

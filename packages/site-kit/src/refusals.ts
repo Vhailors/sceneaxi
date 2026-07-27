@@ -101,6 +101,24 @@ export const SITE_REFUSALS = Object.freeze({
   ENGINE_SDK_MANIFEST_INVALID:
     "The engine SDK manifest is malformed, so no download or checksum can be offered.",
 
+  // --- Foundations v2 tokens (see design-tokens.ts) ---
+  FOUNDATION_SURFACE_UNKNOWN:
+    "The requested surface is not in the published Foundations accent map, so no theme is emitted for it.",
+
+  // --- Change Review, the signature primitive (see change-review.ts) ---
+  CHANGE_REVIEW_PROPOSAL_INVALID:
+    "The proposal does not satisfy the propose/apply contract, so no diff is rendered from it.",
+  CHANGE_REVIEW_DOCUMENT_MISSING:
+    "A document the proposal edits was not supplied, so the review cannot show what the change is against.",
+  CHANGE_REVIEW_PROPOSAL_STALE:
+    "The document has moved since the proposal was made. A stale proposal is refused, never merged.",
+  CHANGE_REVIEW_PROJECTION_FAILED:
+    "The proposed edits do not project onto the supplied document, so no resulting digest is shown.",
+  CHANGE_REVIEW_DECISION_UNKNOWN_ROW:
+    "A decision names a row this review does not have.",
+  CHANGE_REVIEW_PARTIAL_ACCEPT_UNSUPPORTED:
+    "Accepting some rows and rejecting others would need a narrowed proposal, which apply (E1, all-or-nothing) does not take and this package does not author.",
+
   // --- bounded web editor session (see web-editor.ts) ---
   EDITOR_SESSION_DISPOSED: "The editor session has been disposed.",
   EDITOR_WORKSPACE_ESCAPE: "The document path escapes the session workspace root.",

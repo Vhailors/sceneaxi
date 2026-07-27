@@ -22,6 +22,27 @@ opened — and what may be drawn — lives here.
 | `editor-session.ts` | driving that session from URL state, and projecting its composed scene for a browser |
 | `mountable-scene.ts` | the one payload shape a browser mounts, shared by both umbrella viewports |
 | `live-open.ts` | the public live open path: which committed fixture is opened, how it is placed by `composeScene()`, and the honest vocabulary a page may use for the presentation core |
+| `design-tokens.ts` | the Foundations v2 visual tokens, the measured contrast contract, and the CSS emitters |
+| `site-element.ts` | a framework-neutral element tree plus an escaping HTML serializer |
+| `change-review.ts` | Change Review — the design system's signature primitive, over a real `Proposal` |
+
+## The shared visual layer
+
+Three sites currently carry near-identical copies of one stylesheet, and ADR 0018
+makes each of them a separate install root — so the only place a shared token layer
+can live without a new matrix edge is the package all three already depend on.
+`foundationsCss()` emits the palette, scale and shared parts under the design
+source's own token names; `foundationsCss({ surface })` shifts the accent pair only,
+which is exactly what Foundations §06 prescribes. Sites load the fonts themselves.
+
+Change Review is the signature component the `sites/` tier never had. It renders a
+real propose/apply `Proposal`: one row per `ProposalEdit`, a projected before → after
+document digest, and a stale proposal refused rather than merged. Per-row decisions
+function, and a *mixed* decision refuses by name — apply is all-or-nothing, and
+narrowing a proposal is authoring, which belongs to `@sceneaxi/authoring-core`.
+
+Ownership, the measured accessibility contract, the recorded archive ↔ contract
+differences, and the browser evidence are in `docs/design-foundations.md`.
 
 ## What a browser may draw
 

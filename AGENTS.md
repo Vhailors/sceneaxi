@@ -147,6 +147,18 @@ invented. The wiring invariants and the six acceptance properties are proven in
 `tests/sites/identity-plane-wiring.test.ts` — extend it, and the matrix cases in
 `tests/boundary/injected-site-violations.test.ts`, when touching any of this.
 
+The shared visual layer is `packages/site-kit` (`design-tokens.ts`, `site-element.ts`,
+`change-review.ts`), owned by `docs/design-foundations.md` (sceneaxi#155). It lives there
+because ADR 0018 makes each site its own install root and site-kit is the only package all
+three already depend on, so the tokens cost no matrix edge; the surface accent stays a
+per-site override. The package stays framework-free — it emits CSS text and a neutral
+`SiteElement` tree, never a component. Two rules that cannot bend: contrast is **measured**
+in `test/design-tokens.test.ts` against every neutral, so a token cannot be promoted to a
+readable role by editing a table; and a visual fact the design archive does not state is a
+decision recorded in that doc before it ships, never invented in code. Change Review
+renders a real `Proposal` — badges carry only what E1 can propose, a mixed accept refuses
+because apply is all-or-nothing, and Kids theming refuses by name.
+
 Publish readiness is proven structurally, never by publishing: this repo holds no
 registry publish authority, so `docs/publish-readiness.md` owns the outsider-facing
 checklist, the shared `0.0.0` version plan, and the consumer export-namespace

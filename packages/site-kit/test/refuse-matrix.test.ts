@@ -28,11 +28,22 @@ import {
   parseEditorDeepLinkParams,
   readEngineSdkOffer,
   reconstructStarter,
+  resolveChangeReview,
   resolveCheckoutRedirectOrigin,
+  resolveSurfaceAccent,
+  reviewProposal,
   showSiteListing,
   webEditorStarterArtifact,
 } from "@sceneaxi/site-kit";
-import type { CatalogSurface, SiteIdentityRequest, SitePrincipal } from "@sceneaxi/site-kit";
+import type {
+  CatalogSurface,
+  ChangeReview,
+  Proposal,
+  SceneDocument,
+  SiteIdentityRequest,
+  SitePrincipal,
+} from "@sceneaxi/site-kit";
+import { proposeMany, serializeDocument } from "@sceneaxi/authoring-core";
 
 const NOW = "2026-07-25T12:00:00.000Z";
 const now = () => NOW;
@@ -91,6 +102,35 @@ const reasonOf = (value: unknown): string | null =>
  * One case per named reason. Each returns the value that must carry that reason,
  * so the assertion is "this exact path produces this exact reason".
  */
+const REVIEW_DOCUMENT: SceneDocument = {
+  schemaVersion: 1,
+  kind: "sceneaxi.document",
+  id: "scene-refuse",
+  data: { objects: { drone: { x: 0, y: 0 } } },
+};
+
+/** A real two-edit proposal from `proposeMany()`, so the Change Review cases refuse against genuine E1 output. */
+const reviewFixture = (): {
+  proposal: Proposal;
+  documentPath: string;
+  review: ChangeReview;
+} => {
+  const cwd = workspace();
+  const documentPath = "scene.json";
+  writeFileSync(join(cwd, documentPath), serializeDocument(REVIEW_DOCUMENT), "utf8");
+  const proposed = proposeMany([
+    { documentPath, jsonPointer: "/data/objects/drone/x", newValue: 1, cwd },
+    { documentPath, jsonPointer: "/data/objects/drone/y", newValue: 2, cwd },
+  ]);
+  if (!proposed.ok) throw new Error("fixture proposal failed");
+  const reviewed = reviewProposal({
+    proposal: proposed.proposal,
+    documents: new Map([[documentPath, REVIEW_DOCUMENT]]),
+  });
+  if (!reviewed.ok) throw new Error(`fixture review refused: ${reviewed.reason}`);
+  return { proposal: proposed.proposal, documentPath, review: reviewed.value };
+};
+
 const CASES: Readonly<Record<SiteRefusalReason, () => Promise<unknown> | unknown>> = {
   IDENTITY_PLANE_NOT_WIRED: () => createIdentityPlane({ now }).resolvePrincipal(umbrella),
   CREDITS_PLANE_NOT_WIRED: () => createCreditsPlane().readBalance({ userId: "user-1" }),
@@ -309,6 +349,37 @@ const CASES: Readonly<Record<SiteRefusalReason, () => Promise<unknown> | unknown
     }),
   EDITOR_WORKSPACE_INVALID: () =>
     createWebEditorSession({ workspaceRoot: "not/absolute", backend: "null" }),
+  FOUNDATION_SURFACE_UNKNOWN: () => resolveSurfaceAccent("marketplace"),
+  CHANGE_REVIEW_PROPOSAL_INVALID: () =>
+    reviewProposal({ proposal: { kind: "not-a-proposal" }, documents: new Map() }),
+  CHANGE_REVIEW_DOCUMENT_MISSING: () =>
+    reviewProposal({ proposal: reviewFixture().proposal, documents: new Map() }),
+  CHANGE_REVIEW_PROPOSAL_STALE: () => {
+    const fixture = reviewFixture();
+    return reviewProposal({
+      proposal: fixture.proposal,
+      documents: new Map([[fixture.documentPath, { ...REVIEW_DOCUMENT, title: "moved" }]]),
+    });
+  },
+  CHANGE_REVIEW_PROJECTION_FAILED: () => {
+    const fixture = reviewFixture();
+    const first = fixture.proposal.edits[0];
+    if (first === undefined) return null;
+    return reviewProposal({
+      proposal: { ...fixture.proposal, edits: [{ ...first, jsonPointer: "/data/absent/leaf" }] },
+      documents: new Map([[fixture.documentPath, REVIEW_DOCUMENT]]),
+    });
+  },
+  CHANGE_REVIEW_DECISION_UNKNOWN_ROW: () =>
+    resolveChangeReview(reviewFixture().review, new Map([[42, "accepted"]])),
+  CHANGE_REVIEW_PARTIAL_ACCEPT_UNSUPPORTED: () =>
+    resolveChangeReview(
+      reviewFixture().review,
+      new Map([
+        [0, "accepted"],
+        [1, "rejected"],
+      ]),
+    ),
 };
 
 describe("refuse matrix", () => {
