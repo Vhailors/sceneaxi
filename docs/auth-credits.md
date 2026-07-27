@@ -17,6 +17,7 @@ The architecture decision behind the shape of this plane is
 | Credit ledger, metering, entitlements, hosted-AI credit gate, Stripe test checkout, revenue share, fixture commerce | `packages/billing` |
 | Neon schema | `db/migrations` |
 | Login + balance view model | `apps/web-shell` (`createAccountPanel`) |
+| In-app AI assistant view model | `apps/web-shell` (`createAssistantPanel`) |
 | Deployable-site wiring | `sites/umbrella/src/lib/identity-plane.ts` (`docs/websites-deploy.md`) |
 
 Release group `identity`; both packages consume only public contracts. **Outside core:** a
@@ -397,6 +398,81 @@ real `@sceneaxi/provider-openrouter` adapter, and that package's recorded fixtur
 (`createFixtureTransport`) — so the whole proof runs with no network, no credential, and no
 production spend.
 
+## In-app AI assistant (sceneaxi#121)
+
+`createAssistantPanel` in `apps/web-shell/src/assistant-panel.ts` is the assistant
+surface, and it is a **view model** like `createAccountPanel` beside it — no markup, no
+provider, no transport, no credential, no ledger, and no entitlement rule of its own. It
+lives in `web-shell` because that is the one node in the dependency matrix that may name
+both the Model Provider Port (`@sceneaxi/authoring-core`) and this plane; the port and the
+credit gate stay unaware of each other, exactly as ADR 0021 and the hosted-AI section above
+require.
+
+| Mode | Transport | Billing route | Metering | Default |
+|---|---|---|---|---|
+| `fixture` | recorded in-repo fixture | `byo` | none | **the default** |
+| `byo` | the user's own credential, direct to their provider | `byo` | none | opt-in |
+| `hosted` | SceneAxi-operated | `hosted` | `hosted-ai-assistant` credits | opt-in **and off** |
+
+All three reach a model through the *same* injected `ModelProviderPort` — the panel builds
+no adapter and cannot tell a recorded transport from a live one, so "live OpenRouter is
+opt-in" is structural: a live transport exists only if a caller wired one into `ports` for a
+mode it then selected, and the default mode is `fixture`. A mode with no injected port
+refuses `ASSISTANT_TRANSPORT_MISSING` rather than borrowing another mode's transport.
+
+**The mode table is a projection, never a second credit policy.** `ASSISTANT_MODE_BILLING`
+maps each mode onto a route and capability that already exist in
+`HOSTED_AI_ROUTE_CAPABILITIES`, and both the seam test and the golden assert exactly that.
+`fixture` bills on the free `byo` route on purpose: the credit plane's only question is
+whether a call costs credits, a recorded fixture costs nothing, and keeping the test mode on
+the one gate is what makes the Kids ordering below hold in *every* mode rather than in every
+mode a charge happens to reach. Teaching billing a third route would be the alternative, and
+it would move test-mode knowledge inside the credit plane.
+
+**Kids is denied three times, and always before metering and before dispatch.** The panel
+refuses to *exist* for a `kids` surface (`KIDS_ASSISTANT_SURFACE_DENIED`) or a
+`@sceneaxi/profile-kids` profile (`KIDS_ASSISTANT_PROFILE_DENIED`) — checked before any
+other option is even validated, so a defect elsewhere cannot demote it. That is the deny
+that satisfies "before metering": the port's own Kids guard runs inside the provider thunk,
+which the credit gate enters *after* the balance is judged. Below it, `runMeteredModelCall`
+still denies `KIDS_COMMERCE_DENIED` and the port still denies a Kids profile
+non-overridably. Three independent denies, per the invariant in *Kids isolation*.
+
+**A hosted balance is read, never remembered.** Each hosted turn re-reads the ledger through
+the injected credits view and hands it to the credit gate, which judges the *persisted*
+ledger regardless — so a stale copy is corrected rather than believed, and refuses
+`CREDIT_BALANCE_INSUFFICIENT` before the transport is entered. A ledger the panel cannot
+read, or one that is absent or owned by another user, is a named refusal
+(`ASSISTANT_CREDITS_UNAVAILABLE`, `ASSISTANT_LEDGER_MISSING`,
+`ASSISTANT_LEDGER_OWNER_MISMATCH`) and never `0`. Identity, entitlement, and metering
+refusals are left to the layer that owns their vocabulary: an anonymous hosted turn is
+`ENTITLEMENT_ACCOUNT_REQUIRED`, an expired session is `AUTH_SESSION_EXPIRED`, and a hosted
+turn with no `turnId` is `CREDIT_REQUEST_INVALID` — the panel repeats none of them.
+
+The balance a snapshot *reports* comes only from an outcome the gate derived from
+persistence, never from the view the panel was handed — otherwise a stale copy would be
+published next to the very refusal that proves it wrong, telling a buyer they hold credits
+the ledger says they already spent. Before a turn has been priced there is no authoritative
+balance and the panel reports none.
+
+**A retried turn is refused, not re-answered.** The gate replays the debit
+(`assistant-turn:<turnId>`, then account-scoped by `meterCredits`) with no provider
+execution and no second charge, and it carries no `response` because the ledger records
+debits, not model answers. The panel reports `ASSISTANT_TURN_ALREADY_CHARGED` and corrects
+the balance rather than fabricating the lost reply.
+
+**A port refusal is never billed as an answer.** The panel performs the documented
+integration translation — a `{ ok: false, reason }` from the port becomes a throw — so
+billing reports `HOSTED_AI_PROVIDER_FAILED` with no debit, and the panel carries the port's
+own reason alongside it in `refusal.providerReason` so a reader can tell "the model failed"
+from "the port refused the route".
+
+Proof: `apps/web-shell/test/assistant-panel.test.ts` (seam, including a reachability check
+over every `ASSISTANT_PANEL_REASONS` entry) and `tests/e2e/assistant-panel-golden.test.ts`
+in `pnpm test:golden`, which wires the real `@sceneaxi/provider-openrouter` adapter over
+that package's recorded `createFixtureTransport` — no network, no credential, no production
+spend.
+
 ## Credit packs
 
 Canonical list: `packages/schemas/contracts/credit-packs.fixtures.json`. The table below is
@@ -588,6 +664,8 @@ The structural points that hold whatever else is added:
   surface, the free ones included — and each commerce entry point above it (credit-pack
   checkout, catalog listings, fixture commerce, the hosted-AI gate) refuses on its own
   before it gets there.
+- The in-app AI assistant refuses to *exist* on the Kids surface or for the Kids profile, so
+  no assistant turn — in any mode, metered or not — can be attempted there at all.
 - The `sessions` table's surface check constraint omits `'kids'` entirely, so the row
   cannot exist.
 

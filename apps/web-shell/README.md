@@ -44,6 +44,20 @@ implements no authentication. Every decision it exposes was already made by the
 identity port and the entitlement matrix, whose contracts are owned by
 [`docs/auth-credits.md`](../../docs/auth-credits.md).
 
+## AI assistant panel
+
+`createAssistantPanel()` is the in-app assistant **view model** (sceneaxi#121). It composes
+two things that already exist and adds neither: the Model Provider Port for the model call,
+and `runMeteredModelCall` for the credit decision. It builds no adapter, holds no
+credential, and reads no ledger of its own — a `ModelProviderPort` per offered mode, a
+credits view, and a `CreditStore` are all injected.
+
+Three modes reach the model through the same port and differ only in metering: `fixture`
+(recorded data, the **default**), `byo` (the user's own credential, free) and `hosted`
+(SceneAxi-operated, credits, **off** unless explicitly enabled). Kids is refused at
+construction — surface *and* profile — so no turn in any mode can be metered or dispatched.
+Contract and ownership: [`docs/auth-credits.md`](../../docs/auth-credits.md).
+
 ## Open-path policy view
 
 `createOpenPathView()` is the **view model** for the shared open-path demo
