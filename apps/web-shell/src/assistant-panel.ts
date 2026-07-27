@@ -75,7 +75,6 @@
  */
 
 import {
-  isEpochMilliseconds,
   snapshotPlainRecord,
   type EntitlementCapability,
   type IdentitySurface,
@@ -95,13 +94,18 @@ import {
   BILLING_REFUSE_REASONS,
   HOSTED_AI_DEFAULT_CONFIG,
   runMeteredModelCall,
-  validateLedgerState,
   type BillingRefuseReason,
   type CreditStore,
   type HostedAiConfig,
   type HostedAiRoute,
   type LedgerState,
 } from "@sceneaxi/billing";
+import {
+  PANEL_SURFACES,
+  createOperationQueue,
+  readEpochClock,
+  readOwnedLedger,
+} from "./panel-support.js";
 
 /** How an assistant turn reaches a model. A closed enumeration. */
 export const ASSISTANT_MODES = Object.freeze([
@@ -267,26 +271,49 @@ export type CreateAssistantPanelResult =
   | Readonly<{ ok: true; panel: AssistantPanel }>
   | Readonly<{ ok: false; reason: AssistantPanelReason; message: string }>;
 
-const SURFACES: ReadonlyArray<IdentitySurface> = [
-  "web-shell",
-  "desktop-shell",
-  "site",
-  "kids",
-];
-
 const KIDS_PROFILE = "@sceneaxi/profile-kids";
 const PROFILE_PATTERN = /^@sceneaxi\/profile-[a-z][a-z0-9-]*$/;
+
+/** Exactly the fields a pinned model is, in the port's own order. */
+const MODEL_DESCRIPTOR_KEYS = Object.freeze([
+  "model",
+  "provider",
+  "quantization",
+  "version",
+] as const);
 
 function isAssistantMode(value: unknown): value is AssistantMode {
   return ASSISTANT_MODES.some((mode) => mode === value);
 }
 
+/**
+ * The *same* descriptor test the Model Provider Port applies, exact keys and
+ * all.
+ *
+ * A looser one here would not be a smaller check, it would be a misreported
+ * one: the port refuses an unpinned descriptor as an invalid request envelope
+ * from inside the provider thunk, which the credit gate reports as
+ * `HOSTED_AI_PROVIDER_FAILED` — so a caller-side options defect would reach the
+ * reader as "the model provider call failed", on every turn, from the check
+ * whose whole job is to catch it at construction.
+ */
 function isModelDescriptor(value: unknown): value is ModelDescriptor {
   const record = snapshotPlainRecord(value);
   if (record === undefined) return false;
-  return (["model", "provider", "quantization", "version"] as const).every(
+  if (Object.keys(record).length !== MODEL_DESCRIPTOR_KEYS.length) return false;
+  return MODEL_DESCRIPTOR_KEYS.every(
     (key) => typeof record[key] === "string" && record[key].length > 0,
   );
+}
+
+/** Pin the descriptor to those fields alone, exactly as the port snapshots it. */
+function snapshotModelDescriptor(value: ModelDescriptor): ModelDescriptor {
+  return Object.freeze({
+    model: value.model,
+    provider: value.provider,
+    quantization: value.quantization,
+    version: value.version,
+  });
 }
 
 function refusal(
@@ -323,7 +350,7 @@ export function createAssistantPanel(
       "The assistant panel needs a known SceneAxi surface.",
     );
   }
-  if (!SURFACES.includes(optionRecord["surface"] as IdentitySurface)) {
+  if (!PANEL_SURFACES.includes(optionRecord["surface"] as IdentitySurface)) {
     return createFailure(
       ASSISTANT_PANEL_REASONS.surfaceInvalid,
       "The assistant panel needs a known SceneAxi surface.",
@@ -401,9 +428,9 @@ export function createAssistantPanel(
 
   const surface = optionRecord["surface"] as IdentitySurface;
   const profile = optionRecord["profile"] as ModelProviderProfile;
-  const model = Object.freeze({
-    ...(optionRecord["model"] as ModelDescriptor),
-  });
+  const model = snapshotModelDescriptor(
+    optionRecord["model"] as ModelDescriptor,
+  );
   const ports = Object.freeze({ ...portRecord }) as Readonly<
     Partial<Record<AssistantMode, ModelProviderPort>>
   >;
@@ -422,7 +449,7 @@ export function createAssistantPanel(
   let mode: AssistantMode = initialMode;
   const turns: AssistantTurn[] = [];
   let creditBalance: number | undefined;
-  let operationTail: Promise<void> = Promise.resolve();
+  const serializeTurn = createOperationQueue();
 
   const view = (value?: AssistantRefusal): AssistantPanelSnapshot =>
     Object.freeze({
@@ -436,15 +463,8 @@ export function createAssistantPanel(
       ...(value === undefined ? {} : { refusal: value }),
     });
 
-  const readClock = (): number | undefined => {
-    let now: unknown;
-    try {
-      now = clock();
-    } catch {
-      return undefined;
-    }
-    return isEpochMilliseconds(now) ? now : undefined;
-  };
+  const refuseLedger = (value: AssistantRefusal): LedgerResolution =>
+    Object.freeze({ ok: false, refusal: value });
 
   /**
    * Read the hosted ledger the credit gate will re-derive from persistence.
@@ -455,61 +475,51 @@ export function createAssistantPanel(
    */
   const resolveHostedLedger = async (): Promise<LedgerResolution> => {
     if (credits === undefined) {
-      return Object.freeze({
-        ok: false,
-        refusal: refusal(
+      return refuseLedger(
+        refusal(
           ASSISTANT_PANEL_REASONS.creditsViewMissing,
           "A hosted assistant turn requires a credits view; the panel reads no ledger of its own.",
         ),
-      });
+      );
     }
-    if (principal === undefined) return Object.freeze({ ok: true, state: undefined });
+    if (principal === undefined) {
+      return Object.freeze({ ok: true, state: undefined });
+    }
 
-    let state: LedgerState | undefined;
-    try {
-      state = await credits.ledgerFor(principal.user.userId);
-    } catch {
-      return Object.freeze({
-        ok: false,
-        refusal: refusal(
+    const read = await readOwnedLedger(credits, principal.user.userId);
+    if (read.ok) return Object.freeze({ ok: true, state: read.state });
+    if (read.failure === "invalid") {
+      return refuseLedger(refusal(read.reason, read.message));
+    }
+    if (read.failure === "unavailable") {
+      return refuseLedger(
+        refusal(
           ASSISTANT_PANEL_REASONS.creditsUnavailable,
           "The credits view failed; the balance is unknown rather than zero and the turn refuses before the provider.",
         ),
-      });
+      );
     }
-    if (state === undefined) {
-      return Object.freeze({
-        ok: false,
-        refusal: refusal(
+    if (read.failure === "missing") {
+      return refuseLedger(
+        refusal(
           ASSISTANT_PANEL_REASONS.ledgerMissing,
           "No credit ledger exists for this user; a hosted turn refuses rather than assuming a zero or an unlimited balance.",
         ),
-      });
+      );
     }
-    const validated = validateLedgerState(state);
-    if (!validated.ok) {
-      return Object.freeze({
-        ok: false,
-        refusal: refusal(validated.reason, validated.message),
-      });
-    }
-    if (validated.value.account.userId !== principal.user.userId) {
-      return Object.freeze({
-        ok: false,
-        refusal: refusal(
-          ASSISTANT_PANEL_REASONS.ledgerOwnerMismatch,
-          "The credits view returned a ledger for a different user; no hosted turn is brokered against it.",
-        ),
-      });
-    }
-    return Object.freeze({ ok: true, state: validated.value });
+    return refuseLedger(
+      refusal(
+        ASSISTANT_PANEL_REASONS.ledgerOwnerMismatch,
+        "The credits view returned a ledger for a different user; no hosted turn is brokered against it.",
+      ),
+    );
   };
 
   const ask = async (
     request: AssistantAskRequest,
     activeMode: AssistantMode,
   ): Promise<AssistantPanelSnapshot> => {
-    const now = readClock();
+    const now = readEpochClock(clock);
     if (now === undefined) {
       return view(
         refusal(
@@ -688,17 +698,7 @@ export function createAssistantPanel(
      */
     async ask(request) {
       const requestedMode = mode;
-      const precedingOperation = operationTail;
-      let releaseOperation = () => {};
-      operationTail = new Promise<void>((resolve) => {
-        releaseOperation = resolve;
-      });
-      await precedingOperation;
-      try {
-        return await ask(request, requestedMode);
-      } finally {
-        releaseOperation();
-      }
+      return serializeTurn(() => ask(request, requestedMode));
     },
   });
 

@@ -758,6 +758,18 @@ describe("construction and request refusals", () => {
     );
   });
 
+  it("refuses a model descriptor carrying anything beyond the pinned fields", () => {
+    // The port takes exactly these four keys, so an extra one is refused here,
+    // at construction, rather than becoming a per-turn invalid request envelope
+    // the credit gate can only report as a provider failure.
+    expect(refusedWith({ model: { ...MODEL, temperature: "0.2" } })).toBe(
+      ASSISTANT_PANEL_REASONS.modelInvalid,
+    );
+    expect(refusedWith({ model: { model: MODEL.model } })).toBe(
+      ASSISTANT_PANEL_REASONS.modelInvalid,
+    );
+  });
+
   it("refuses with no port wired at all", () => {
     expect(refusedWith({ ports: {} })).toBe(
       ASSISTANT_PANEL_REASONS.transportMissing,
