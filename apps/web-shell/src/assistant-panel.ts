@@ -84,6 +84,7 @@
  */
 
 import {
+  MODEL_PROVIDER_CALL_EVIDENCE_KIND,
   snapshotPlainRecord,
   type EntitlementCapability,
   type IdentitySurface,
@@ -297,6 +298,16 @@ function isAssistantMode(value: unknown): value is AssistantMode {
   return ASSISTANT_MODES.some((mode) => mode === value);
 }
 
+function hasExactKeys(
+  value: Readonly<Record<string, unknown>>,
+  keys: ReadonlyArray<string>,
+) {
+  return (
+    Object.keys(value).length === keys.length &&
+    keys.every((key) => Object.hasOwn(value, key))
+  );
+}
+
 /**
  * Whether an injected value can actually answer the one operation this panel
  * calls.
@@ -328,22 +339,91 @@ function isAssistantPort(value: unknown): value is ModelProviderPort {
  * reader as "the model provider call failed", on every turn, from the check
  * whose whole job is to catch it at construction.
  */
-function isModelDescriptor(value: unknown): value is ModelDescriptor {
+function snapshotModelDescriptor(value: unknown): ModelDescriptor | undefined {
   const record = snapshotPlainRecord(value);
-  if (record === undefined) return false;
-  if (Object.keys(record).length !== MODEL_DESCRIPTOR_KEYS.length) return false;
-  return MODEL_DESCRIPTOR_KEYS.every(
-    (key) => typeof record[key] === "string" && record[key].length > 0,
-  );
+  if (
+    record === undefined ||
+    !hasExactKeys(record, MODEL_DESCRIPTOR_KEYS) ||
+    !MODEL_DESCRIPTOR_KEYS.every(
+      (key) => typeof record[key] === "string" && record[key].length > 0,
+    )
+  ) {
+    return undefined;
+  }
+  return Object.freeze({
+    model: record["model"] as string,
+    provider: record["provider"] as string,
+    quantization: record["quantization"] as string,
+    version: record["version"] as string,
+  });
 }
 
-/** Pin the descriptor to those fields alone, exactly as the port snapshots it. */
-function snapshotModelDescriptor(value: ModelDescriptor): ModelDescriptor {
+function snapshotPortSuccess(
+  value: unknown,
+  expectedProfile: ModelProviderProfile,
+): ModelProviderSuccess<ModelCompleteResponse> | undefined {
+  const result = snapshotPlainRecord(value);
+  if (
+    result === undefined ||
+    result["ok"] !== true ||
+    !hasExactKeys(result, ["ok", "response", "evidence"])
+  ) {
+    return undefined;
+  }
+
+  const response = snapshotPlainRecord(result["response"]);
+  if (
+    response === undefined ||
+    !hasExactKeys(response, [
+      "schemaVersion",
+      "operation",
+      "text",
+      "finishReason",
+    ]) ||
+    response["schemaVersion"] !== MODEL_PROVIDER_PORT_SCHEMA_VERSION ||
+    response["operation"] !== "complete" ||
+    typeof response["text"] !== "string" ||
+    (response["finishReason"] !== "stop" &&
+      response["finishReason"] !== "length")
+  ) {
+    return undefined;
+  }
+
+  const evidence = snapshotPlainRecord(result["evidence"]);
+  const executedModel = snapshotModelDescriptor(evidence?.["model"]);
+  if (
+    evidence === undefined ||
+    executedModel === undefined ||
+    !hasExactKeys(evidence, [
+      "schemaVersion",
+      "kind",
+      "operation",
+      "profile",
+      "model",
+    ]) ||
+    evidence["schemaVersion"] !== MODEL_PROVIDER_PORT_SCHEMA_VERSION ||
+    evidence["kind"] !== MODEL_PROVIDER_CALL_EVIDENCE_KIND ||
+    evidence["operation"] !== "complete" ||
+    evidence["profile"] !== expectedProfile
+  ) {
+    return undefined;
+  }
+
   return Object.freeze({
-    model: value.model,
-    provider: value.provider,
-    quantization: value.quantization,
-    version: value.version,
+    ok: true,
+    response: Object.freeze({
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      operation: "complete",
+      text: response["text"],
+      finishReason: response["finishReason"],
+    }),
+    evidence: Object.freeze({
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      kind: MODEL_PROVIDER_CALL_EVIDENCE_KIND,
+      operation: "complete",
+      profile: expectedProfile,
+      model: executedModel,
+    }),
   });
 }
 
@@ -410,7 +490,8 @@ export function createAssistantPanel(
       "The assistant panel needs a SceneAxi profile the Model Provider Port can evaluate a policy for.",
     );
   }
-  if (!isModelDescriptor(optionRecord["model"])) {
+  const model = snapshotModelDescriptor(optionRecord["model"]);
+  if (model === undefined) {
     return createFailure(
       ASSISTANT_PANEL_REASONS.modelInvalid,
       "The assistant panel needs the exact model descriptor its ports are pinned to.",
@@ -459,9 +540,6 @@ export function createAssistantPanel(
 
   const surface = optionRecord["surface"] as IdentitySurface;
   const profile = optionRecord["profile"] as ModelProviderProfile;
-  const model = snapshotModelDescriptor(
-    optionRecord["model"] as ModelDescriptor,
-  );
   const ports = Object.freeze({ ...portRecord }) as Readonly<
     Partial<Record<AssistantMode, ModelProviderPort>>
   >;
@@ -546,9 +624,12 @@ export function createAssistantPanel(
   };
 
   const ask = async (
-    request: AssistantAskRequest,
+    request: Readonly<Record<string, unknown>> | undefined,
     activeMode: AssistantMode,
   ): Promise<AssistantPanelSnapshot> => {
+    if (ASSISTANT_MODE_BILLING[activeMode].route === "hosted") {
+      creditBalance = undefined;
+    }
     const now = readEpochClock(clock);
     if (now === undefined) {
       return view(
@@ -559,8 +640,7 @@ export function createAssistantPanel(
       );
     }
 
-    const requestRecord = snapshotPlainRecord(request);
-    const prompt = requestRecord?.["prompt"];
+    const prompt = request?.["prompt"];
     if (typeof prompt !== "string" || prompt.trim().length === 0) {
       return view(
         refusal(
@@ -569,7 +649,7 @@ export function createAssistantPanel(
         ),
       );
     }
-    const turnId = requestRecord?.["turnId"];
+    const turnId = request?.["turnId"];
 
     const port = ports[activeMode];
     if (!isAssistantPort(port)) {
@@ -623,14 +703,34 @@ export function createAssistantPanel(
         model,
         prompt,
       });
-      if (!result.ok) {
+      const resultRecord = snapshotPlainRecord(result);
+      if (resultRecord?.["ok"] === false) {
+        const reason = resultRecord["reason"];
+        const message = resultRecord["message"];
+        if (
+          !hasExactKeys(resultRecord, ["ok", "reason", "message"]) ||
+          typeof reason !== "string" ||
+          reason.length === 0 ||
+          typeof message !== "string" ||
+          message.length === 0
+        ) {
+          throw new TypeError(
+            "The Model Provider Port returned an invalid refusal envelope.",
+          );
+        }
         portRefusal = Object.freeze({
-          reason: result.reason,
-          message: result.message,
+          reason,
+          message,
         });
-        throw new Error(result.reason);
+        throw new Error(reason);
       }
-      return result;
+      const success = snapshotPortSuccess(resultRecord, profile);
+      if (success === undefined) {
+        throw new TypeError(
+          "The Model Provider Port returned an invalid success envelope.",
+        );
+      }
+      return success;
     };
 
     const outcome = await runMeteredModelCall<
@@ -743,7 +843,8 @@ export function createAssistantPanel(
      */
     async ask(request) {
       const requestedMode = mode;
-      return serializeTurn(() => ask(request, requestedMode));
+      const requestSnapshot = snapshotPlainRecord(request);
+      return serializeTurn(() => ask(requestSnapshot, requestedMode));
     },
   });
 

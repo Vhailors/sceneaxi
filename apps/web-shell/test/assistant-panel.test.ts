@@ -453,6 +453,26 @@ describe("hosted mode debits through the existing ledger", () => {
     });
   });
 
+  it("pins queued request data before dispatch and metering", async () => {
+    const { panel, store, stack } = hostedPanel(10);
+    const request = { prompt: "original prompt", turnId: "original-turn" };
+
+    const inFlight = panel.ask(request);
+    request.prompt = "mutated prompt";
+    request.turnId = "mutated-turn";
+    const snapshot = await inFlight;
+
+    expect(snapshot.turns[0]?.prompt).toBe("original prompt");
+    expect(stack.prompts).toEqual(["original prompt"]);
+    const entries = await store.listEntries(ACCOUNT.accountId);
+    expect(entries[1]?.idempotencyKey).toBe(
+      meteringIdempotencyKey(
+        ACCOUNT.accountId,
+        `${ASSISTANT_TURN_KEY_PREFIX}:original-turn`,
+      ),
+    );
+  });
+
   it("answers a retried turn from the debit it already made", async () => {
     const { panel, store, stack } = hostedPanel(10);
 
@@ -548,6 +568,40 @@ describe("hosted mode debits through the existing ledger", () => {
 
     const charged = await panel.ask({ prompt: "hosted turn", turnId: "t1" });
     expect(charged.creditBalance).toBe(6);
+  });
+
+  it("drops a cached balance when a later hosted refusal disproves it", async () => {
+    const state = funded(10);
+    const store = createInMemoryCreditStore({
+      accounts: [state.account],
+      entries: state.entries,
+    });
+    const stack = providerStack();
+    const createPanel = () =>
+      panelFor(
+        { fixture: stack.port, hosted: stack.port },
+        {
+          mode: "hosted",
+          hostedAi: { enabled: true },
+          principal: PRINCIPAL,
+          credits: creditsView(state),
+          store,
+          hostedTurnCredits: 4,
+        },
+      );
+    const panel = createPanel();
+
+    expect(
+      (await panel.ask({ prompt: "first", turnId: "t1" })).creditBalance,
+    ).toBe(6);
+    await createPanel().ask({ prompt: "external", turnId: "t2" });
+    const refused = await panel.ask({ prompt: "third", turnId: "t3" });
+
+    expect(refused.refusal?.reason).toBe(
+      BILLING_REFUSE_REASONS.balanceInsufficient,
+    );
+    expect(refused.creditBalance).toBeUndefined();
+    expect(stack.prompts).toEqual(["first", "external"]);
   });
 
   it("keeps a turn on the mode it was asked in when the mode changes mid-flight", async () => {
@@ -785,6 +839,39 @@ describe("a port refusal is never billed as an answer", () => {
     const { panel } = hostedPanel(3);
     const snapshot = await panel.ask({ prompt: "hosted turn", turnId: "t1" });
     expect(snapshot.refusal?.providerReason).toBeUndefined();
+  });
+
+  it("rejects a malformed port success before a hosted debit", async () => {
+    const state = funded(10);
+    const store = createInMemoryCreditStore({
+      accounts: [state.account],
+      entries: state.entries,
+    });
+    const malformed = Object.freeze({
+      async complete() {
+        return Object.freeze({ ok: true });
+      },
+    }) as never as ModelProviderPort;
+    const panel = panelFor(
+      { fixture: malformed, hosted: malformed },
+      {
+        mode: "hosted",
+        hostedAi: { enabled: true },
+        principal: PRINCIPAL,
+        credits: creditsView(state),
+        store,
+        hostedTurnCredits: 4,
+      },
+    );
+
+    const snapshot = await panel.ask({ prompt: "hosted turn", turnId: "t1" });
+
+    expect(snapshot.refusal?.reason).toBe(
+      BILLING_REFUSE_REASONS.hostedAiProviderFailed,
+    );
+    expect(snapshot.turns).toHaveLength(0);
+    expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
+    expect(snapshot.creditBalance).toBeUndefined();
   });
 });
 
