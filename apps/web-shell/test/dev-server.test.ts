@@ -6,6 +6,7 @@
  * honest proof that "startable" is not just an exported function.
  */
 import { mkdtempSync, readFileSync } from "node:fs";
+import { request } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -51,6 +52,41 @@ async function serve(projectRoot: string): Promise<InspectorDevServer> {
   });
   running.push(server);
   return server;
+}
+
+function rawRequest(
+  server: InspectorDevServer,
+  options: {
+    readonly method: string;
+    readonly path: string;
+    readonly headers?: Readonly<Record<string, string>>;
+    readonly body?: string;
+  },
+): Promise<{ readonly status: number; readonly body: string }> {
+  return new Promise((resolveResponse, rejectResponse) => {
+    const outgoing = request(
+      {
+        hostname: server.host,
+        port: server.port,
+        method: options.method,
+        path: options.path,
+        headers: options.headers,
+      },
+      (incoming) => {
+        const chunks: Buffer[] = [];
+        incoming.on("data", (chunk: Buffer) => chunks.push(chunk));
+        incoming.on("end", () => {
+          resolveResponse({
+            status: incoming.statusCode ?? 0,
+            body: Buffer.concat(chunks).toString("utf8"),
+          });
+        });
+      },
+    );
+    outgoing.on("error", rejectResponse);
+    if (options.body !== undefined) outgoing.write(options.body);
+    outgoing.end();
+  });
 }
 
 afterEach(async () => {
@@ -184,6 +220,59 @@ describe("the started server serves the inspector", () => {
       ((await accepted.json()) as { snapshot: { phase: string } }).snapshot.phase,
     ).toBe("applied");
     expect(readFileSync(join(dir, "scene.json"), "utf8")).toContain('"x": 12');
+  });
+
+  it("rejects an unexpected Host before serving the inspector", async () => {
+    const dir = fixtureDir();
+    writeScene(dir, "scene.json", { entities: [{ id: "hero", x: 1 }] });
+    const server = await serve(dir);
+
+    const response = await rawRequest(server, {
+      method: "GET",
+      path: "/",
+      headers: { host: "attacker.example" },
+    });
+
+    expect(response.status).toBe(403);
+    expect((JSON.parse(response.body) as { reason: string }).reason).toBe(
+      WEB_SHELL_REFUSALS.requestHostInvalid,
+    );
+  });
+
+  it("rejects a cross-origin accept without changing the pending proposal", async () => {
+    const dir = fixtureDir();
+    writeScene(dir, "scene.json", { entities: [{ id: "hero", x: 1 }] });
+    const server = await serve(dir);
+    const before = readFileSync(join(dir, "scene.json"));
+
+    const proposed = await fetch(`${server.url}api/propose`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        origin: new URL(server.url).origin,
+      },
+      body: JSON.stringify({
+        documentPath: "scene.json",
+        jsonPointer: "/data/entities/0/x",
+        newValue: 12,
+      }),
+    });
+    expect(proposed.status).toBe(200);
+
+    const refused = await fetch(`${server.url}api/accept`, {
+      method: "POST",
+      headers: { origin: "https://attacker.example" },
+    });
+    expect(refused.status).toBe(403);
+    expect(((await refused.json()) as { reason: string }).reason).toBe(
+      WEB_SHELL_REFUSALS.requestOriginInvalid,
+    );
+
+    const state = await fetch(`${server.url}api/state`);
+    expect(
+      ((await state.json()) as { snapshot: { phase: string } }).snapshot.phase,
+    ).toBe("reviewing");
+    expect(readFileSync(join(dir, "scene.json")).equals(before)).toBe(true);
   });
 
   it("refuses an escaping document path over the socket too", async () => {

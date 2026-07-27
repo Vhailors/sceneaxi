@@ -66,6 +66,8 @@ rather than degrading.
 | `--cwd` is missing or not a directory | Refuses at launch (`project-root-unusable`, exit `2`). |
 | Unknown flag, bare argument, or valueless flag | Refuses at launch (`argument-invalid`, exit `2`). |
 | The port is already bound | Refuses (`listen-failed`, exit `1`). |
+| Request `Host` does not match the bound inspector authority | `403 request-host-invalid`. This rejects DNS-rebinding and misdirected requests before routing. |
+| A write request carries an `Origin` other than the inspector's own origin | `403 request-origin-invalid` before the body is read or any inspector action runs. Requests without `Origin`, such as local scripts, remain supported. |
 | `documentPath` resolves outside the served project root — `../`, an absolute path, or a symlink pointing out | `403 document-outside-project-root`. The root is the boundary of the served surface; the library path below has no such bound because a local caller already chose its own directory. |
 | Request body is not a JSON object | `400 request-body-not-json`. |
 | Request body exceeds 64 KiB | `413 request-body-too-large`; the server stops reading rather than buffering the rest. |

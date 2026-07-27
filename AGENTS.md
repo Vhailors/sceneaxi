@@ -71,13 +71,15 @@ inspector over `node:http`. The split is load-bearing —
 `src/inspector-app.ts` is transport-free and holds every route, `src/dev-server.ts`
 is the only module that owns a socket — and the app adds **no** authoring
 behaviour: `INSPECTOR_ACTIONS` names, per route, the `createInspectorSession`
-method it forwards to, and a test asserts each forward actually happens. Two
+method it forwards to, and a test asserts each forward actually happens. Three
 served-surface rules the library under it has no reason to carry: the bind is
-loopback-only because the inspector authenticates nobody, and every
-`documentPath` must canonicalize inside the `--cwd` root (`../`, absolute, and
-outward symlinks all refuse). Both, plus every `WEB_SHELL_REFUSALS` entry, are
-proven in `apps/web-shell/test/` — extend `refuse-matrix.test.ts` when adding a
-reason. This is local authoring, not the deployable `sites/` tier (ADR 0018).
+loopback-only because the inspector authenticates nobody, every request `Host`
+must match the bound authority and every unsafe request `Origin` must be absent
+or same-origin, and every `documentPath` must canonicalize inside the `--cwd`
+root (`../`, absolute, and outward symlinks all refuse). These rules, plus every
+`WEB_SHELL_REFUSALS` entry, are proven in `apps/web-shell/test/` — extend
+`refuse-matrix.test.ts` when adding a reason. This is local authoring, not the
+deployable `sites/` tier (ADR 0018).
 
 ## Program docs
 

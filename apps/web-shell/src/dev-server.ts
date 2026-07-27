@@ -268,6 +268,53 @@ function writeResponse(
   response.end(headOnly ? undefined : body);
 }
 
+function requestBoundaryRefusal(
+  request: IncomingMessage,
+  method: string,
+  expectedOrigin: string,
+): { readonly reason: WebShellRefusal; readonly message: string } | null {
+  const expectedHost = new URL(expectedOrigin).host;
+  const host = request.headers.host;
+  if (host === undefined || host.toLowerCase() !== expectedHost.toLowerCase()) {
+    return {
+      reason: WEB_SHELL_REFUSALS.requestHostInvalid,
+      message: `Request Host must match the bound inspector authority: ${expectedHost}.`,
+    };
+  }
+
+  if (method === "GET" || method === "HEAD" || method === "OPTIONS") return null;
+
+  const origin = request.headers.origin;
+  if (
+    origin !== undefined &&
+    origin.toLowerCase() !== expectedOrigin.toLowerCase()
+  ) {
+    return {
+      reason: WEB_SHELL_REFUSALS.requestOriginInvalid,
+      message: `Request Origin must match the inspector origin: ${expectedOrigin}.`,
+    };
+  }
+
+  return null;
+}
+
+function requestBoundaryRefusalBody(
+  reason: WebShellRefusal,
+  message: string,
+): string {
+  return `${JSON.stringify(
+    {
+      app: WEB_SHELL_APP,
+      ok: false,
+      action: "unknown",
+      reason,
+      message,
+    },
+    null,
+    2,
+  )}\n`;
+}
+
 /**
  * Bind the inspector and start serving. Resolves once the socket is listening,
  * with the port the OS actually chose.
@@ -283,6 +330,29 @@ export function startInspectorDevServer(
     const headOnly = method === "HEAD";
 
     void (async () => {
+      const address = server.address();
+      const boundPort =
+        typeof address === "object" && address !== null ? address.port : options.port;
+      const expectedOrigin = new URL(serverUrl(options.host, boundPort)).origin;
+      const boundaryRefusal = requestBoundaryRefusal(
+        request,
+        method,
+        expectedOrigin,
+      );
+      if (boundaryRefusal !== null) {
+        writeResponse(
+          response,
+          403,
+          "application/json; charset=utf-8",
+          requestBoundaryRefusalBody(
+            boundaryRefusal.reason,
+            boundaryRefusal.message,
+          ),
+          headOnly,
+        );
+        return;
+      }
+
       let body: string | undefined;
       if (method === "POST" || method === "PUT" || method === "PATCH") {
         const read = await readBody(request);

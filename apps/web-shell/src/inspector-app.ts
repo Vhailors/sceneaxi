@@ -51,6 +51,10 @@ export const WEB_SHELL_REFUSALS = Object.freeze({
   requestBodyNotJson: "request-body-not-json",
   /** The body exceeded `MAX_REQUEST_BODY_BYTES`. */
   requestBodyTooLarge: "request-body-too-large",
+  /** The request Host does not name the server's bound loopback authority. */
+  requestHostInvalid: "request-host-invalid",
+  /** An unsafe request names an Origin other than the server's own origin. */
+  requestOriginInvalid: "request-origin-invalid",
   /** A required edit field is missing or the wrong type. */
   editFieldInvalid: "edit-field-invalid",
   /** The document path resolves outside the served project root. */

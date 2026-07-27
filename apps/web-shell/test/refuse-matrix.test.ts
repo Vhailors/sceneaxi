@@ -7,6 +7,7 @@
  * requires of the billing plane.
  */
 import { mkdtempSync } from "node:fs";
+import { request } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -57,6 +58,45 @@ const EDIT = {
   newValue: 3,
 } as const;
 
+async function serveHeldProject(): Promise<InspectorDevServer> {
+  const { dir } = project();
+  const server = await startInspectorDevServer({
+    host: DEFAULT_HOST,
+    port: 0,
+    projectRoot: dir,
+  });
+  holding.push(server);
+  return server;
+}
+
+function rawRequestReason(
+  server: InspectorDevServer,
+  headers: Readonly<Record<string, string>>,
+): Promise<string> {
+  return new Promise((resolveReason, rejectReason) => {
+    const outgoing = request(
+      {
+        hostname: server.host,
+        port: server.port,
+        method: "POST",
+        path: "/api/accept",
+        headers,
+      },
+      (incoming) => {
+        const chunks: Buffer[] = [];
+        incoming.on("data", (chunk: Buffer) => chunks.push(chunk));
+        incoming.on("end", () => {
+          resolveReason(
+            reasonOf({ body: Buffer.concat(chunks).toString("utf8") }),
+          );
+        });
+      },
+    );
+    outgoing.on("error", rejectReason);
+    outgoing.end();
+  });
+}
+
 /**
  * One producer per reason. Async because the two launch-side reasons that need a
  * real bind cannot be produced any other way.
@@ -79,6 +119,19 @@ const PRODUCERS: Readonly<Record<WebShellRefusal, () => Promise<string>>> = {
         body: "x".repeat(MAX_REQUEST_BODY_BYTES + 1),
       }),
     ),
+
+  [WEB_SHELL_REFUSALS.requestHostInvalid]: async () => {
+    const server = await serveHeldProject();
+    return rawRequestReason(server, { host: "attacker.example" });
+  },
+
+  [WEB_SHELL_REFUSALS.requestOriginInvalid]: async () => {
+    const server = await serveHeldProject();
+    return rawRequestReason(server, {
+      host: new URL(server.url).host,
+      origin: "https://attacker.example",
+    });
+  },
 
   [WEB_SHELL_REFUSALS.editFieldInvalid]: async () =>
     reasonOf(
