@@ -432,7 +432,7 @@ export function foundationsVariablesCss(options: FoundationsCssOptions = {}): Si
   for (const color of FOUNDATION_COLORS) lines.push(`  ${color.token}: ${color.hex};`);
   for (const step of FOUNDATION_SPACING) lines.push(`  --${step.token}: ${`${step.px}px`};`);
   for (const radius of FOUNDATION_RADII) {
-    lines.push(`  --${radius.token}: ${radius.token === "radius-full" ? "999px" : `${radius.px}px`};`);
+    lines.push(`  --${radius.token}: ${`${radius.px}px`};`);
   }
   lines.push(`  --font-ui: ${FOUNDATION_FONT_STACKS.archivo};`);
   lines.push(`  --font-mono: ${FOUNDATION_FONT_STACKS.mono};`);
