@@ -294,10 +294,11 @@ Load-bearing properties, each gate-tested in `tests/sites/identity-plane-wiring.
   ledger, so the grant is safe to attempt on every balance read and a concurrent second
   reader cannot double it.
 - **Credits are granted only behind a verified webhook.** `applyCheckoutCompletedGrant`
-  accepts only the branded output of `parseCheckoutCompletedEvent`, which accepts only the
-  branded output of `verifyStripeWebhookSignature` — an unsigned or forged body has no
-  path to a grant that even type-checks. The credit amount comes from the persisted
-  intent, never from the event.
+  accepts only the output of `parseCheckoutCompletedEvent`, which accepts only the output
+  of `verifyStripeWebhookSignature` — checked at **runtime** by object identity, not only
+  by type (sceneaxi#126), so an unsigned or forged body has no path to a grant even from
+  JavaScript or through an `as` cast, and a copy of a genuine completion refuses too. The
+  credit amount comes from the persisted intent, never from the event.
 - **The webhook's answer names the failing side.** A refusal this deployment owns — no
   signing secret, an unusable clock, an adapter that threw, a persisted intent its own
   checkout adapter never wrote, its own ledger rows that do not load — answers `503`; a

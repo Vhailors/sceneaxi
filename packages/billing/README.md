@@ -111,6 +111,17 @@ evaluates, the retry ordering it shares with the hosted-AI replay step, and the 
 binding that keeps bookkeeping attached to its own verified sale are documented in
 [`docs/auth-credits.md`](../../docs/auth-credits.md) under *Fixture commerce (sceneaxi#138)*.
 
+**Verified means verified at runtime, not in the type.** A `VerifiedWebhook` and a
+`VerifiedCheckoutCompletion` both mean "a signature check produced me", and both have a
+public shape — so a type brand stops only a TypeScript caller, while JavaScript and `as`
+reach the same exported functions. Each is issued through a module-private provenance
+witness and checked by object identity at every consumer: `parseCheckoutCompletedEvent`
+refuses an unissued webhook with `STRIPE_WEBHOOK_NOT_VERIFIED`, and both
+`applyCheckoutCompletedGrant` and `settleFixtureListingMoneySale` refuse an unissued
+completion with `STRIPE_COMPLETION_NOT_VERIFIED` — *before* reading its contents, since
+the value's contents are the part anyone can fake. A copy of a genuine completion is a
+different object and refuses too. See `docs/auth-credits.md` under *Runtime provenance*.
+
 **Refusals keep their identity.** `BillingRefuseReason` includes `AuthRefuseReason`, so a
 guard refusal surfaces as `KIDS_IDENTITY_SURFACE_DENIED` or `AUTH_SESSION_EXPIRED` rather
 than being flattened into a generic "not permitted".

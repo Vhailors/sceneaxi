@@ -4,10 +4,11 @@
  * Every security-relevant step is owned by `@sceneaxi/billing` and merely *sequenced*
  * here — signature verification over the raw bytes, binding the event to the persisted
  * intent, and the idempotent grant. This module adds no verification of its own, and
- * deliberately cannot skip any: `applyCheckoutCompletedGrant` accepts only the branded
- * output of `parseCheckoutCompletedEvent`, which accepts only the branded output of
- * `verifyStripeWebhookSignature`. An unsigned or replayed body has no path to a grant
- * that type-checks.
+ * deliberately cannot skip any: `applyCheckoutCompletedGrant` accepts only the output of
+ * `parseCheckoutCompletedEvent`, which accepts only the output of
+ * `verifyStripeWebhookSignature` — each checked at runtime by object identity, not only
+ * by type (sceneaxi#126). An unsigned or replayed body has no path to a grant at all,
+ * and neither does a copy of a genuine completion.
  *
  * The order below is the security design, not a convenience:
  *

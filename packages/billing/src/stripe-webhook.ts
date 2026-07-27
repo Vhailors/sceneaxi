@@ -16,6 +16,7 @@
 
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import {
+  createProvenanceWitness,
   isEpochMilliseconds,
   isCheckoutPurpose,
   snapshotPlainRecord,
@@ -67,6 +68,41 @@ export type VerifyStripeWebhookSignatureRequest = Readonly<{
  */
 declare const verifiedWebhookBrand: unique symbol;
 declare const verifiedCompletionBrand: unique symbol;
+
+/**
+ * The runtime half of those brands, and the load-bearing half.
+ *
+ * A type brand stops a TypeScript caller; it stops neither a JavaScript one nor
+ * an `as` cast, and both of those reach the same exported functions. Credits are
+ * granted here, so "did a signature check actually produce this value" has to be
+ * a question the code asks at runtime, not one the compiler asks about the code.
+ *
+ * These witnesses are module-private, so the only way to hold a value they
+ * recognise is to have called the step that issues it — verification for a
+ * webhook, parsing-from-a-verified-webhook for a completion. Nothing is written
+ * onto the values, so every structural check downstream is unchanged.
+ */
+const verifiedWebhookProvenance = createProvenanceWitness<VerifiedWebhook>();
+const verifiedCompletionProvenance =
+  createProvenanceWitness<VerifiedCheckoutCompletion>();
+
+/**
+ * Whether a value is a webhook this module verified. Exported because a caller
+ * sequencing its own webhook route may want to assert it; checking provenance
+ * grants nothing, and issuing it is not exported at all.
+ */
+export function hasVerifiedWebhookProvenance(
+  value: unknown,
+): value is VerifiedWebhook {
+  return verifiedWebhookProvenance.holds(value);
+}
+
+/** Whether a value is a completion this module parsed from a verified webhook. */
+export function hasVerifiedCompletionProvenance(
+  value: unknown,
+): value is VerifiedCheckoutCompletion {
+  return verifiedCompletionProvenance.holds(value);
+}
 
 export type VerifiedWebhook = Readonly<{
   /** Signature timestamp, epoch seconds. */
@@ -268,10 +304,10 @@ export function verifyStripeWebhookSignature(
   }
 
   return billingOk(
-    Object.freeze({
+    verifiedWebhookProvenance.issue({
       timestamp,
       payload: body.toString("utf8"),
-    }) as VerifiedWebhook,
+    } as VerifiedWebhook),
   );
 }
 
@@ -321,8 +357,9 @@ export const CHECKOUT_METADATA_KEYS = Object.freeze({
  * Normalize a *verified* `checkout.session.completed` body into SceneAxi
  * vocabulary.
  *
- * The `verified` argument is the branded output of `verifyStripeWebhookSignature`,
- * so only a signature-checked body reaches this point. Settlement (paid status,
+ * The `verified` argument is the exact object `verifyStripeWebhookSignature`
+ * issued, checked at runtime below, so only a signature-checked body reaches this
+ * point. Settlement (paid status,
  * amount, currency, quantity, Stripe price) comes from the injected adapter
  * boundary — Stripe webhook objects are minimal and do not carry `line_items` —
  * and is bound to the persisted intent, which is the immutable price snapshot.
@@ -341,7 +378,17 @@ export function parseCheckoutCompletedEvent(input: {
       "A checkout event parse request must be a plain object.",
     );
   }
-  const verified = inputRecord["verified"] as VerifiedWebhook;
+  // Provenance before parsing: the whole meaning of `verified` is that a
+  // signature check produced it, and `{ timestamp, payload }` is a shape anyone
+  // can build. Asking the witness is what makes an unsigned body unable to
+  // reach the normalization below at all.
+  if (!hasVerifiedWebhookProvenance(inputRecord["verified"])) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.webhookNotVerified,
+      "The webhook was not produced by verifyStripeWebhookSignature; an unverified or hand-built body is refused before it is parsed.",
+    );
+  }
+  const verified = inputRecord["verified"];
   let raw: unknown;
   try {
     raw = JSON.parse(verified.payload) as unknown;
@@ -498,15 +545,20 @@ export function parseCheckoutCompletedEvent(input: {
       `The normalized checkout event is invalid (${event.code}): ${event.message}`,
     );
   }
-  return billingOk(event.value as VerifiedCheckoutCompletion);
+  return billingOk(
+    verifiedCompletionProvenance.issue(
+      event.value as VerifiedCheckoutCompletion,
+    ),
+  );
 }
 
 export type ApplyCheckoutCompletedGrantRequest = Readonly<{
   state: LedgerState;
   /**
-   * A checkout completion whose provenance is proven: the branded output of
-   * `parseCheckoutCompletedEvent`, which only accepts a signature-verified
-   * webhook. A fabricated event cannot satisfy this type.
+   * A checkout completion whose provenance is proven: the exact object
+   * `parseCheckoutCompletedEvent` returned, which it only returns for a
+   * signature-verified webhook. Checked at runtime, so neither a fabricated
+   * event, an `as` cast, nor a copy of a real completion satisfies it.
    */
   completion: VerifiedCheckoutCompletion;
   /** Epoch milliseconds. */
@@ -535,6 +587,16 @@ export function applyCheckoutCompletedGrant(
   }
   const screened = record as ApplyCheckoutCompletedGrantRequest;
   const { state, completion, now, liveModeAuthorized } = screened;
+
+  // This is the credit-minting step, so the provenance question comes before
+  // any structural one: a completion that reads perfectly but was never parsed
+  // from a verified webhook describes a purchase Stripe never settled.
+  if (!hasVerifiedCompletionProvenance(completion)) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.completionNotVerified,
+      "The checkout completion was not produced by parseCheckoutCompletedEvent from a verified webhook; no credits are granted.",
+    );
+  }
 
   const validated = validateCheckoutCompletedEvent(completion);
   if (!validated.ok) {

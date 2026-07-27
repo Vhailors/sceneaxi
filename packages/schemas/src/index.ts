@@ -225,6 +225,9 @@ export {
   snapshotPlainRecord,
 } from "./record-validation.js";
 
+export { createProvenanceWitness } from "./provenance.js";
+export type { ProvenanceWitness } from "./provenance.js";
+
 export { parseUnambiguousJson } from "./unambiguous-json.js";
 export type { UnambiguousJsonParseResult } from "./unambiguous-json.js";
 export type {

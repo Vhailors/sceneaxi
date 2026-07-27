@@ -64,6 +64,58 @@ const admin = resolveAdminIdentity(process.env);
 if (!admin.ok) throw new Error(`${admin.reason}: ${admin.message}`);
 ```
 
+## Runtime provenance (sceneaxi#126)
+
+Three values in this plane mean "a trusted step produced me", and their shapes are public:
+the resolved `AdminIdentity`, the `VerifiedWebhook` a signature check produces, and the
+`VerifiedCheckoutCompletion` parsed out of it. Structural validation and a TypeScript
+brand both stop only a
+TypeScript caller — neither stops JavaScript or an `as` cast, and both of those reach the
+same exported functions inside the server process. So all three carry **runtime**
+provenance, built on the one shared helper `createProvenanceWitness` in
+`@sceneaxi/schemas`.
+
+A witness remembers the *object identity* of every value its module issued, in a `WeakSet`
+no importer can reach. Nothing is written onto the value, so every structural check stays
+as it was — and because identity is what is remembered, a plain literal, a spread, an
+`Object.assign`, a `structuredClone`, a JSON round-trip, and a `Proxy` wrapper are all
+different objects and all refuse. A symbol-keyed brand would not do this: spread and
+`Object.assign` copy own enumerable symbol keys. The guarantee is in-process and
+non-transferable, which is exactly what "this process verified it" should mean; evidence
+that must cross a process boundary needs a signature instead.
+
+Who issues, who checks, and what refuses:
+
+| Value | Issued by | Checked at | Refusal |
+| --- | --- | --- | --- |
+| `AdminIdentity` | `resolveAdminIdentity(env)` | `requireRole`, `requireAuthenticated`, `createIdentityPort` | `AUTH_ADMIN_IDENTITY_UNPROVEN` |
+| `VerifiedWebhook` | `verifyStripeWebhookSignature` | `parseCheckoutCompletedEvent` | `STRIPE_WEBHOOK_NOT_VERIFIED` |
+| `VerifiedCheckoutCompletion` | `parseCheckoutCompletedEvent` | `applyCheckoutCompletedGrant`, `settleFixtureListingMoneySale` | `STRIPE_COMPLETION_NOT_VERIFIED` |
+
+`hasAdminIdentityProvenance`, `hasVerifiedWebhookProvenance`, and
+`hasVerifiedCompletionProvenance` are exported so a caller sequencing its own route can
+assert the same thing. Checking provenance grants nothing; *issuing* it is never exported.
+
+**Prefer bound guards.** `createRoleGuards(resolveAdminIdentity(env))` fixes "who is admin"
+at the point the guards are made, so no later call site supplies it as an argument at all:
+
+```ts
+import { createRoleGuards, resolveAdminIdentity } from "@sceneaxi/auth";
+
+const guards = createRoleGuards(resolveAdminIdentity(process.env));
+const guarded = guards.requireRole(principal, "admin", { now: Date.now() });
+```
+
+A refused resolution yields guards that return that same named refusal — the deployment
+has no admin, so nothing is admin. `requireRole`/`requireAuthenticated` stay exported for
+callers that already hold the resolved identity; they check its provenance, so keeping
+them costs nothing at the boundary.
+
+The whole boundary is proven in `tests/e2e/runtime-provenance-refusal.test.ts`, which
+builds every impostor listed above for each value and asserts the refusal by name, then
+asserts a genuine completion still grants exactly once and a redelivery still grants
+nothing.
+
 ## Better Auth
 
 Better Auth is **injected**, not depended on: it needs a running HTTP host and a live
@@ -184,7 +236,11 @@ const settlement = await (settlementPort as CheckoutSettlementPort).retrieveSett
 );
 if (!settlement) return respond(400, "unpaid or unverified session");
 
-const completed = parseCheckoutCompletedEvent({ verified, intent, settlement });
+const completed = parseCheckoutCompletedEvent({
+  verified: verified.value,                                // the issued webhook itself
+  intent,
+  settlement,
+});
 if (!completed.ok) return respond(400, completed.reason);
 
 const granted = applyCheckoutCompletedGrant({
@@ -545,7 +601,7 @@ Four properties are what the module adds over calling the primitives in order:
    because that is the same ledger `applyCreditsSale`'s own idempotency reads — the gate must
    not be able to refuse a retry the layer beneath it would replay.
 4. **Money bookkeeping is bound to a settlement.** `settleFixtureListingMoneySale` takes only
-   the branded output of `parseCheckoutCompletedEvent` plus the persisted intent it was bound
+   the runtime-witnessed output of `parseCheckoutCompletedEvent` plus the persisted intent it was bound
    to, and recovers the sale id from that intent's `sale:<saleId>` idempotency key rather than
    accepting one. That key is itself bound to the settlement: `intentId` is the intent field
    the completion pins, and every real intent derives it from its own idempotency key, so the

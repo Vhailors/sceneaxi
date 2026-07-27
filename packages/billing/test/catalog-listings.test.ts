@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { digestSessionToken } from "@sceneaxi/auth";
+import {
+  ADMIN_EMAIL_ENV_VAR,
+  digestSessionToken,
+  resolveAdminIdentity,
+} from "@sceneaxi/auth";
 import {
   LISTING_PRICE_MODES,
   validateCatalogListing,
@@ -20,7 +24,13 @@ import {
 } from "@sceneaxi/billing";
 
 const NOW = Date.parse("2026-07-25T10:00:00Z");
-const admin = { email: "captain@example.com", source: "SCENEAXI_ADMIN_EMAIL" } as const;
+const adminResolution = resolveAdminIdentity({
+  [ADMIN_EMAIL_ENV_VAR]: "captain@example.com",
+});
+if (!adminResolution.ok) throw new Error(adminResolution.message);
+// Resolved, never hand-built: guards check the identity's runtime provenance,
+// so a structurally identical `{ email, source }` literal is refused.
+const admin = adminResolution.value;
 
 const account = (userId: string, accountId: string) =>
   Object.freeze({

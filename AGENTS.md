@@ -180,6 +180,28 @@ JSON kept in lockstep with `docs/auth-credits.md` by `pnpm check:contracts` —
 extend `tests/contracts/` and `tests/db/schema-lockstep.test.ts` when touching any
 of it.
 
+Three values in that plane carry **runtime-unforgeable provenance**, not only a
+type brand (sceneaxi#126): the `AdminIdentity` issued by `resolveAdminIdentity`,
+the `VerifiedWebhook` issued by `verifyStripeWebhookSignature`, and the
+`VerifiedCheckoutCompletion` issued by `parseCheckoutCompletedEvent`. Their shapes
+are public, so structural validation alone lets an in-process caller supply both
+sides of the question — hence the one shared helper `createProvenanceWitness`
+(`packages/schemas/src/provenance.ts`), which remembers issued values by **object
+identity** in a module-private `WeakSet`. It writes nothing onto the value, so
+every existing structural check is untouched, and every copy — spread,
+`Object.assign`, `structuredClone`, JSON round-trip, `Proxy` — refuses. A
+symbol-keyed brand would not: spread copies symbol keys. Consumers check, never
+issue: role guards and `createIdentityPort` refuse
+`AUTH_ADMIN_IDENTITY_UNPROVEN`, `parseCheckoutCompletedEvent` refuses
+`STRIPE_WEBHOOK_NOT_VERIFIED`, and both `applyCheckoutCompletedGrant` and
+`settleFixtureListingMoneySale` refuse `STRIPE_COMPLETION_NOT_VERIFIED` before
+reading contents. Prefer `createRoleGuards(resolveAdminIdentity(env))` over
+passing `admin` per call. Fixtures must therefore *resolve* an admin identity;
+a hand-built `{ email, source }` no longer guards. The impostor matrix and the
+grants-exactly-once pairing live in
+`tests/e2e/runtime-provenance-refusal.test.ts` — extend it, and the refuse
+matrix, when adding a provenance-bearing value.
+
 The umbrella owns **every viewport** and is the only site that may depend on
 `@sceneaxi/engine-presentation` (ADR 0022 + its 2026-07-26 amendment) — every other
 engine package stays denied to every site, and both catalogs keep `site-kit` only. Two

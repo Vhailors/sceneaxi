@@ -113,6 +113,8 @@ export {
   applyCheckoutCompletedGrant,
   checkoutPurposeGrantsCredits,
   checkoutPurposeSettlesElsewhere,
+  hasVerifiedCompletionProvenance,
+  hasVerifiedWebhookProvenance,
   parseCheckoutCompletedEvent,
   signStripeWebhookPayload,
   verifyStripeWebhookSignature,

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { digestSessionToken } from "@sceneaxi/auth";
+import {
+  ADMIN_EMAIL_ENV_VAR,
+  digestSessionToken,
+  resolveAdminIdentity,
+} from "@sceneaxi/auth";
 import {
   validateCheckoutSessionIntent,
   type CheckoutSessionIntent,
@@ -40,10 +44,13 @@ const catalog = (): CreditPackCatalog => {
   return loaded.value;
 };
 
-const admin = {
-  email: "captain@example.com",
-  source: "SCENEAXI_ADMIN_EMAIL",
-} as const;
+const adminResolution = resolveAdminIdentity({
+  [ADMIN_EMAIL_ENV_VAR]: "captain@example.com",
+});
+if (!adminResolution.ok) throw new Error(adminResolution.message);
+// Resolved, never hand-built: guards check the identity's runtime provenance,
+// so a structurally identical `{ email, source }` literal is refused.
+const admin = adminResolution.value;
 
 /** A valid usr_crew principal; the guard re-derives its `user` role. */
 const principal = () =>
@@ -806,6 +813,32 @@ describe("applyCheckoutCompletedGrant", () => {
     expect(first.value.state.balance).toBe(parsed().credits);
   });
 
+  /**
+   * A genuinely re-parsed completion carrying the *same* event id but different
+   * normalized evidence — what a redelivery would produce if the intent or the
+   * signed body under it had changed.
+   *
+   * Hand-editing a real completion would test the wrong boundary now: provenance
+   * refuses a copy before the fingerprint is ever computed, so the fingerprint
+   * binding has to be exercised with completions the parser actually issued.
+   */
+  const reparsed = (
+    intentOverrides: Record<string, unknown>,
+    bodyOverrides: Record<string, unknown> = {},
+  ) => {
+    const intent = {
+      ...checkoutIntent(),
+      ...intentOverrides,
+    } as CheckoutSessionIntent;
+    const result = parseCheckoutCompletedEvent({
+      verified: verified(eventBody(bodyOverrides, intent)),
+      intent,
+      settlement: settlementFor(intent),
+    });
+    if (!result.ok) throw new Error(`fixture parse failed: ${result.message}`);
+    return result.value;
+  };
+
   it("binds replay to the complete normalized completion", () => {
     const completion = parsed();
     const first = applyCheckoutCompletedGrant({
@@ -816,23 +849,47 @@ describe("applyCheckoutCompletedGrant", () => {
     expect(first.ok).toBe(true);
     if (!first.ok) return;
 
-    const mutations = [
-      { intentId: "intent_other" },
-      { unitAmount: completion.unitAmount + 1 },
-      { currency: "eur" },
-      { stripePriceId: "price_test_other" },
-      { occurredAt: "2026-07-25T10:00:01Z" },
+    const variants = [
+      reparsed({ intentId: "intent_other" }),
+      reparsed({ unitAmount: completion.unitAmount + 1 }),
+      reparsed({ currency: "eur" }),
+      reparsed({ stripePriceId: "price_test_other" }),
+      reparsed({}, { created: NOW_SECONDS + 1 }),
     ];
-    for (const mutation of mutations) {
+    for (const variant of variants) {
+      expect(variant.eventId).toBe(completion.eventId);
       const replay = applyCheckoutCompletedGrant({
         state: first.value.state,
-        completion: { ...completion, ...mutation } as never,
+        completion: variant,
         now: NOW,
       });
       expect(replay.ok).toBe(false);
       if (replay.ok) return;
       expect(replay.reason).toBe(BILLING_REFUSE_REASONS.idempotencyConflict);
     }
+  });
+
+  it("refuses a copy of the completion it just granted", () => {
+    const completion = parsed();
+    const first = applyCheckoutCompletedGrant({
+      state: createLedgerState(ACCOUNT),
+      completion,
+      now: NOW,
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+
+    // Byte-identical to a completion this very call granted, and still refused:
+    // provenance is object identity, so no copy of verified evidence is verified
+    // evidence. `tests/e2e/runtime-provenance-refusal.test.ts` owns the matrix.
+    const replay = applyCheckoutCompletedGrant({
+      state: first.value.state,
+      completion: { ...completion } as never,
+      now: NOW,
+    });
+    expect(replay.ok).toBe(false);
+    if (replay.ok) return;
+    expect(replay.reason).toBe(BILLING_REFUSE_REASONS.completionNotVerified);
   });
 
   it("refuses a live event without explicit go-live authorization", () => {

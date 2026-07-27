@@ -11,8 +11,8 @@ recorded in ADR 0021.
 
 | Module | Owns |
 |---|---|
-| `admin.ts` | `resolveAdminIdentity` — exactly one captain email from `SCENEAXI_ADMIN_EMAIL` |
-| `roles.ts` | `resolveRole`, `requireRole`, `requireAuthenticated` |
+| `admin.ts` | `resolveAdminIdentity` — exactly one captain email from `SCENEAXI_ADMIN_EMAIL`, issued with runtime provenance |
+| `roles.ts` | `resolveRole`, `createRoleGuards`, `requireRole`, `requireAuthenticated` |
 | `session-token.ts` | SHA-256 digests and constant-time comparison |
 | `store.ts` | the `IdentityStore` port + in-memory reference implementation |
 | `better-auth-adapter.ts` | the injected Better Auth boundary and its mapping |
@@ -52,6 +52,16 @@ a byte-wise early return would leak how much of a guessed token was right.
 **No role hierarchy.** `requireRole` is an exact match; a guard that should accept any
 signed-in principal uses `requireAuthenticated`. That way "admin also counts as a user"
 never has to be inferred from the guard's name.
+
+**The admin identity is unforgeable at runtime, not just typed.** `{ email, source }` is a
+public shape, so a caller supplying both the principal *and* the `admin` option would be
+answering the guard's own question. Only the object `resolveAdminIdentity` issued counts —
+checked by object identity, so a spread, `structuredClone`, JSON round-trip, or `Proxy` of
+a real one refuses with `AUTH_ADMIN_IDENTITY_UNPROVEN`. Prefer
+`createRoleGuards(resolveAdminIdentity(env))`, which removes the argument entirely: the
+answer is fixed where the guards are made, and a refused resolution makes every bound guard
+return that same named refusal. The mechanism is `createProvenanceWitness` in
+`@sceneaxi/schemas`; see `docs/auth-credits.md`.
 
 ## Refusals
 

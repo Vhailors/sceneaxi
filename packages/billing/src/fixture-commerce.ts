@@ -30,7 +30,7 @@
  * 3. **Money bookkeeping is bound to a settlement, not asserted.**
  *    `recordMoneySale` will record a split for any listing handed to it, which
  *    is correct for a primitive and wrong for a ledger of what was collected.
- *    `settleFixtureListingMoneySale` takes only the branded output of
+ *    `settleFixtureListingMoneySale` takes only the runtime-witnessed output of
  *    `parseCheckoutCompletedEvent` plus the persisted intent it was bound to, so
  *    a `MoneySplitRecord` on this path can only describe money a
  *    signature-verified Stripe settlement actually took.
@@ -84,7 +84,10 @@ import {
   type LedgerState,
 } from "./ledger.js";
 import type { CreditStore } from "./store.js";
-import type { VerifiedCheckoutCompletion } from "./stripe-webhook.js";
+import {
+  hasVerifiedCompletionProvenance,
+  type VerifiedCheckoutCompletion,
+} from "./stripe-webhook.js";
 
 /**
  * Every listing that may be transacted on this path.
@@ -418,9 +421,9 @@ export function createFixtureListingCheckoutIntent(
 
 export type SettleFixtureListingMoneySaleRequest = Readonly<{
   /**
-   * A completion whose provenance is proven: the branded output of
-   * `parseCheckoutCompletedEvent`, which only accepts a signature-verified
-   * webhook body.
+   * A completion whose provenance is proven: the exact object
+   * `parseCheckoutCompletedEvent` returned for a signature-verified webhook
+   * body. Checked at runtime here, not merely typed.
    */
   completion: VerifiedCheckoutCompletion;
   /**
@@ -452,6 +455,16 @@ export function settleFixtureListingMoneySale(
     );
   }
   const screened = record as SettleFixtureListingMoneySaleRequest;
+
+  // A `MoneySplitRecord` asserts that money moved. That claim can only rest on
+  // a settlement this process verified, so provenance is checked before the
+  // completion's contents are read at all.
+  if (!hasVerifiedCompletionProvenance(screened.completion)) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.completionNotVerified,
+      "The checkout completion was not produced by parseCheckoutCompletedEvent from a verified webhook; no money sale is booked.",
+    );
+  }
 
   const completion = validateCheckoutCompletedEvent(screened.completion);
   if (!completion.ok) {

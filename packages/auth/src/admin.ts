@@ -9,8 +9,16 @@
  * A *plural* variable name is refused outright even when it holds one address:
  * accepting it would quietly normalize multi-admin into the codebase, and
  * multi-admin needs a captain decision this package does not have.
+ *
+ * `AdminIdentity` also carries **runtime provenance**: only the value this
+ * module issues from the environment counts, and only `hasAdminIdentityProvenance`
+ * is exported to check it. The shape `{ email, source }` is public, so without
+ * that a caller could hand a guard an identity naming their own address and be
+ * derived into `admin` by their own argument — the guard would be checking a
+ * claim the caller supplied on both sides.
  */
 
+import { createProvenanceWitness } from "@sceneaxi/schemas";
 import {
   AUTH_REFUSE_REASONS,
   authOk,
@@ -47,6 +55,26 @@ export type AdminIdentity = Readonly<{
 
 /** Env-shaped input. Accepts `process.env` without importing it. */
 export type EnvLike = Readonly<Record<string, string | undefined>>;
+
+/**
+ * The one authority to mint an `AdminIdentity`, held privately here.
+ * `resolveAdminIdentity` is the only caller, so "the admin identity" and "the
+ * value this module derived from the environment" are the same thing at runtime.
+ */
+const adminIdentityProvenance = createProvenanceWitness<AdminIdentity>();
+
+/**
+ * Whether a value is an `AdminIdentity` this module actually issued.
+ *
+ * Every guard that re-derives a role against the admin identity must ask this,
+ * not merely that the value has an `email`. Checking provenance is safe to
+ * export; issuing it is not.
+ */
+export function hasAdminIdentityProvenance(
+  value: unknown,
+): value is AdminIdentity {
+  return adminIdentityProvenance.holds(value);
+}
 
 /** Trim and lowercase, the one normalization every comparison uses. */
 export function normalizeEmail(email: string): string {
@@ -101,7 +129,7 @@ export function resolveAdminIdentity(env: EnvLike): AuthResult<AdminIdentity> {
   }
 
   return authOk(
-    Object.freeze({
+    adminIdentityProvenance.issue({
       email: normalizeEmail(raw),
       source: ADMIN_EMAIL_ENV_VAR,
     }),

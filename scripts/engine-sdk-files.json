@@ -105,6 +105,7 @@
   "packages/schemas/src/profile-conformance-suite.ts",
   "packages/schemas/src/profile-conformance.ts",
   "packages/schemas/src/proposal.ts",
+  "packages/schemas/src/provenance.ts",
   "packages/schemas/src/record-validation.ts",
   "packages/schemas/src/revenue-share.ts",
   "packages/schemas/src/scene-composition.ts",

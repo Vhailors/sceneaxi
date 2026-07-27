@@ -69,7 +69,13 @@ const NOW = Date.parse("2026-07-25T10:00:00Z");
 const NOW_SECONDS = Math.floor(NOW / 1000);
 const clock = () => NOW;
 const CAPTAIN_EMAIL = "captain@example.com";
-const admin = { email: CAPTAIN_EMAIL, source: ADMIN_EMAIL_ENV_VAR } as const;
+const adminResolution = resolveAdminIdentity({
+  [ADMIN_EMAIL_ENV_VAR]: CAPTAIN_EMAIL,
+});
+if (!adminResolution.ok) throw new Error(adminResolution.message);
+// Resolved, never hand-built: guards check the identity's runtime provenance,
+// so a structurally identical `{ email, source }` literal is refused.
+const admin = adminResolution.value;
 
 const verifyBody = (body: string) => {
   const result = verifyStripeWebhookSignature({
@@ -473,6 +479,17 @@ describe("auth refuse matrix", () => {
     );
     record(requireRole(principal({ surface: "kids" }), "user", { now: NOW, admin }));
     record(requireRole(principal(), "user", { now: Number.NaN, admin }));
+    record(
+      requireRole(principal(), "user", {
+        now: NOW,
+        admin: undefined as never,
+      }),
+    );
+    // Right shape, wrong provenance: a copy of the resolved identity is a
+    // different object, so it cannot decide who is admin.
+    record(
+      requireRole(principal(), "admin", { now: NOW, admin: { ...admin } }),
+    );
   });
 
   it("reaches the bootstrap refusals", () => {
@@ -906,19 +923,68 @@ describe("billing refuse matrix", () => {
           now: NOW,
         }),
       );
+      // A *copy* of a verified completion is not a verified completion, so the
+      // live-mode gate has to be reached with a genuinely parsed live one.
       record(
         applyCheckoutCompletedGrant({
           state: funded(0),
-          completion: { ...packEvent.value, mode: "live" } as never,
+          completion: { ...packEvent.value } as never,
           now: NOW,
         }),
       );
     }
+
+    const liveIntent: CheckoutSessionIntent = {
+      ...packIntent.value,
+      intentId: "int_live",
+      mode: "live",
+      idempotencyKey: "checkout:live",
+    };
+    const liveEvent = parseCheckoutCompletedEvent({
+      verified: verifyBody(
+        JSON.stringify({
+          id: "evt_live",
+          type: "checkout.session.completed",
+          created: NOW_SECONDS,
+          livemode: true,
+          data: {
+            object: {
+              metadata: {
+                [CHECKOUT_METADATA_KEYS.userId]: "usr_crew",
+                [CHECKOUT_METADATA_KEYS.purpose]: "credit-pack",
+                [CHECKOUT_METADATA_KEYS.itemId]: "starter",
+                [CHECKOUT_METADATA_KEYS.intentId]: "int_live",
+              },
+            },
+          },
+        }),
+      ),
+      intent: liveIntent,
+      settlement: settlementFor(liveIntent),
+    });
+    expect(liveEvent.ok).toBe(true);
+    if (liveEvent.ok) {
+      record(
+        applyCheckoutCompletedGrant({
+          state: funded(0),
+          completion: liveEvent.value,
+          now: NOW,
+        }),
+      );
+    }
+
     record(
       applyCheckoutCompletedGrant({
         state: funded(0),
         completion: { eventId: "evt" } as never,
         now: NOW,
+      }),
+    );
+    record(
+      parseCheckoutCompletedEvent({
+        verified: { timestamp: NOW_SECONDS, payload: body } as never,
+        intent: packIntent.value,
+        settlement: settlementFor(packIntent.value),
       }),
     );
   });
