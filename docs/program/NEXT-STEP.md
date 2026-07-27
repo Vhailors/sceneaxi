@@ -127,13 +127,13 @@ Also open, not deferred from that gate:
   that Step 5 did not settle this — it used umbrella editor ownership under
   [ADR 0022](../adr/0022-umbrella-owns-the-public-viewport.md), which is a
   different question.
-- [#121](https://github.com/Vhailors/sceneaxi/issues/121) — in-app AI assistant
-  over the Model Provider Port, serialized behind the credits ledger. Step 11
-  landed the metered *billing* path
-  ([#148](https://github.com/Vhailors/sceneaxi/pull/148)); no assistant surface
-  exists, and this brief does not decide its product scope.
+- [#121](https://github.com/Vhailors/sceneaxi/issues/121) — implemented as the
+  library-only `createAssistantPanel()` view model. Its contract is owned by
+  [`auth-credits.md`](../auth-credits.md), and its non-runnable level is owned by
+  [`runnable-surfaces.md`](../runnable-surfaces.md); this brief does not restate
+  either or decide the separate host ownership question in #120.
 - [#114](https://github.com/Vhailors/sceneaxi/issues/114) — the runnable-surfaces
-  epic, open only because #120 and #121 are.
+  epic; its issue graph owns the remaining closure dependencies.
 - [#1](https://github.com/Vhailors/sceneaxi/issues/1) — the canonical product
   spec, a standing issue rather than a work item.
 

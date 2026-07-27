@@ -107,7 +107,7 @@ still-unimplemented target:
 The CLI is **free and BYO-AI**: no verb reads a credential, opens a socket, or
 spends anything, and no shipped verb is held-key gated (`SHIPPED_COMMAND_MAP`).
 
-Hosted AI is the metered surface and is **not implemented here**. The free-vs-paid
+Hosted AI is metered but is **not a runnable surface here**. The free-vs-paid
 matrix it must obey — including BYO-key never touching the ledger and the
 non-overridable Kids deny — is owned by
 [`docs/auth-credits.md`](auth-credits.md). The credit ledger, metering, and the one

@@ -229,31 +229,12 @@ network, no credential). Adding a `BILLING_REFUSE_REASONS` entry requires a
 covering case in `tests/e2e/auth-credits-refuse-matrix.test.ts`, which asserts
 every reason is reachable.
 
-The in-app AI assistant is `createAssistantPanel()` in
-`apps/web-shell/src/assistant-panel.ts` (sceneaxi#121) — a view model, not markup,
-and the only place the Model Provider Port and the credit plane are composed,
-because `web-shell` is the one matrix node that may name both. It adds no
-provider, transport, credential, ledger, entitlement rule, or credit policy: its
-three modes (`fixture` — the default recorded transport — `byo`, and default-off
-`hosted`) all reach the model through the **same injected** `ModelProviderPort`,
-and `ASSISTANT_MODE_BILLING` is a projection onto billing's own
-`HOSTED_AI_ROUTE_CAPABILITIES` that the tests assert as such, never a second
-table. Kids is denied a third independent time here, at *construction* — surface
-and profile, ahead of every other option check — because the port's own Kids
-guard runs inside the provider thunk, which the credit gate enters after the
-ledger is judged; that is what makes "denied before metering" true in every
-mode. Hosted turns re-read the ledger each ask and let the gate require a current
-persisted match, so an absent or stale copy refuses for every principal; every
-identity,
-entitlement, and metering refusal is left to the layer that owns its vocabulary —
-including an absent ledger, which is handed over with no `state` for billing to
-refuse in its own vocabulary — and a port refusal is translated to a throw so it
-is never
-billed as an answer.
-Ownership is `docs/auth-credits.md`; the proofs are
-`apps/web-shell/test/assistant-panel.test.ts` (with a reachability check over
-every `ASSISTANT_PANEL_REASONS` entry) and
-`tests/e2e/assistant-panel-golden.test.ts` in `test:golden`.
+The in-app AI assistant composition seam is `createAssistantPanel()` in
+`apps/web-shell/src/assistant-panel.ts` (sceneaxi#121), the one matrix node that may
+name both the Model Provider Port and the credit plane. Its contract and refusal
+ordering are owned by `docs/auth-credits.md`; its runnable level is owned by
+`docs/runnable-surfaces.md`. Extend `apps/web-shell/test/assistant-panel.test.ts`
+and `tests/e2e/assistant-panel-golden.test.ts` when changing that seam.
 
 Catalog commerce is **offered** only through `packages/billing/src/fixture-commerce.ts`
 (sceneaxi#138): a closed enumeration of one dual-priced fixture SKU
