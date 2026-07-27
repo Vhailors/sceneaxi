@@ -145,7 +145,10 @@ specified but not built. ADR 0003 permits only the hybrid vertical's fixed
 Minimum E2 checklist, whose save/load still uses E1 propose/apply. Both bind to the same machine-readable
 [`authoring-jobs.fixtures.json`](packages/schemas/contracts/authoring-jobs.fixtures.json)
 list. Settled engine/CLI decisions are
-indexed in [`docs/adr/`](docs/adr/README.md).
+indexed in [`docs/adr/`](docs/adr/README.md). Where the program stands right now —
+landed PRs, the `main` SHA they are on, open decisions, deferred follow-ups, and the
+options under consideration — is
+[`docs/program/NEXT-STEP.md`](docs/program/NEXT-STEP.md), which authorizes nothing.
 
 ## Authority
 
