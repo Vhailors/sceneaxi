@@ -68,12 +68,11 @@ if (!admin.ok) throw new Error(`${admin.reason}: ${admin.message}`);
 
 Three values in this plane mean "a trusted step produced me", and their shapes are public:
 the resolved `AdminIdentity`, the `VerifiedWebhook` a signature check produces, and the
-`VerifiedCheckoutCompletion` parsed out of it. Structural validation and a TypeScript
-brand both stop only a
-TypeScript caller — neither stops JavaScript or an `as` cast, and both of those reach the
-same exported functions inside the server process. So all three carry **runtime**
-provenance, built on the one shared helper `createProvenanceWitness` in
-`@sceneaxi/schemas`.
+`VerifiedCheckoutCompletion` parsed out of it. Structural validation confirms only the
+public shape, while a TypeScript brand constrains only ordinary typed callers; neither
+proves trusted origin against JavaScript or an `as` cast. Both can reach the same exported
+functions inside the server process. So all three carry **runtime** provenance, built on
+the one shared helper `createProvenanceWitness` in `@sceneaxi/schemas`.
 
 A witness remembers the *object identity* of every value its module issued, in a `WeakSet`
 no importer can reach. Nothing is written onto the value, so every structural check stays
@@ -88,13 +87,14 @@ Who issues, who checks, and what refuses:
 
 | Value | Issued by | Checked at | Refusal |
 | --- | --- | --- | --- |
-| `AdminIdentity` | `resolveAdminIdentity(env)` | `requireRole`, `requireAuthenticated`, `createIdentityPort` | `AUTH_ADMIN_IDENTITY_UNPROVEN` |
+| `AdminIdentity` | `resolveAdminIdentity(env)` | `requireRole`, `requireAuthenticated`, identity-port sign-in/session verification | `AUTH_ADMIN_IDENTITY_UNPROVEN` |
 | `VerifiedWebhook` | `verifyStripeWebhookSignature` | `parseCheckoutCompletedEvent` | `STRIPE_WEBHOOK_NOT_VERIFIED` |
 | `VerifiedCheckoutCompletion` | `parseCheckoutCompletedEvent` | `applyCheckoutCompletedGrant`, `settleFixtureListingMoneySale` | `STRIPE_COMPLETION_NOT_VERIFIED` |
 
 `hasAdminIdentityProvenance`, `hasVerifiedWebhookProvenance`, and
 `hasVerifiedCompletionProvenance` are exported so a caller sequencing its own route can
-assert the same thing. Checking provenance grants nothing; *issuing* it is never exported.
+assert the same thing. Checking provenance grants nothing; each module's issuing witness
+stays private.
 
 **Prefer bound guards.** `createRoleGuards(resolveAdminIdentity(env))` fixes "who is admin"
 at the point the guards are made, so no later call site supplies it as an argument at all:

@@ -60,11 +60,11 @@ export type VerifyStripeWebhookSignatureRequest = Readonly<{
 }>;
 
 /**
- * Compile-time provenance brands. A `VerifiedWebhook` can only be produced by
- * `verifyStripeWebhookSignature`, and a `VerifiedCheckoutCompletion` only by
- * `parseCheckoutCompletedEvent` from a verified webhook — so the public grant
- * path cannot be reached with a structurally valid but fabricated event. The
- * brands are type-level only and add no runtime property.
+ * Compile-time provenance markers. They guide ordinary typed callers toward
+ * `verifyStripeWebhookSignature` and `parseCheckoutCompletedEvent`, but they are
+ * not a trust boundary: JavaScript and an `as` cast can fabricate either type.
+ * The runtime witnesses below enforce origin; these brands add no runtime
+ * property.
  */
 declare const verifiedWebhookBrand: unique symbol;
 declare const verifiedCompletionBrand: unique symbol;

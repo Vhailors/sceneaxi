@@ -84,7 +84,7 @@ const principal = () =>
     },
   }) as unknown;
 
-/** Sign and verify a body, returning the branded verified webhook. */
+/** Sign and verify a body, returning the runtime-witnessed webhook. */
 const verified = (body: string) => {
   const result = verifyStripeWebhookSignature({
     payload: body,

@@ -180,27 +180,11 @@ JSON kept in lockstep with `docs/auth-credits.md` by `pnpm check:contracts` —
 extend `tests/contracts/` and `tests/db/schema-lockstep.test.ts` when touching any
 of it.
 
-Three values in that plane carry **runtime-unforgeable provenance**, not only a
-type brand (sceneaxi#126): the `AdminIdentity` issued by `resolveAdminIdentity`,
-the `VerifiedWebhook` issued by `verifyStripeWebhookSignature`, and the
-`VerifiedCheckoutCompletion` issued by `parseCheckoutCompletedEvent`. Their shapes
-are public, so structural validation alone lets an in-process caller supply both
-sides of the question — hence the one shared helper `createProvenanceWitness`
-(`packages/schemas/src/provenance.ts`), which remembers issued values by **object
-identity** in a module-private `WeakSet`. It writes nothing onto the value, so
-every existing structural check is untouched, and every copy — spread,
-`Object.assign`, `structuredClone`, JSON round-trip, `Proxy` — refuses. A
-symbol-keyed brand would not: spread copies symbol keys. Consumers check, never
-issue: role guards and `createIdentityPort` refuse
-`AUTH_ADMIN_IDENTITY_UNPROVEN`, `parseCheckoutCompletedEvent` refuses
-`STRIPE_WEBHOOK_NOT_VERIFIED`, and both `applyCheckoutCompletedGrant` and
-`settleFixtureListingMoneySale` refuse `STRIPE_COMPLETION_NOT_VERIFIED` before
-reading contents. Prefer `createRoleGuards(resolveAdminIdentity(env))` over
-passing `admin` per call. Fixtures must therefore *resolve* an admin identity;
-a hand-built `{ email, source }` no longer guards. The impostor matrix and the
-grants-exactly-once pairing live in
-`tests/e2e/runtime-provenance-refusal.test.ts` — extend it, and the refuse
-matrix, when adding a provenance-bearing value.
+Runtime-unforgeable provenance for the identity + credits plane is owned by
+`docs/auth-credits.md` (sceneaxi#126). Preserve its object-identity witness: a
+structural or symbol-keyed brand does not satisfy the copy-refusal contract.
+When adding a provenance-bearing value or consumer, extend
+`tests/e2e/runtime-provenance-refusal.test.ts` and the refuse matrix.
 
 The umbrella owns **every viewport** and is the only site that may depend on
 `@sceneaxi/engine-presentation` (ADR 0022 + its 2026-07-26 amendment) — every other
@@ -260,9 +244,10 @@ being for sale. It is also where the matrix's `catalog-asset-purchase` row is ac
 enforced, and where a credits retry is judged against the balance that preceded its own
 debit — the same hazard the hosted-AI replay step exists for, since this balance gate also
 sits above the ledger's idempotency check. Money bookkeeping is reachable only from a
-branded `parseCheckoutCompletedEvent` completion plus the persisted intent it was bound to,
-whose `sale:<saleId>` key names the sale, so a `MoneySplitRecord` cannot describe money no
-verified settlement took. No function there accepts or forwards `liveModeAuthorized`, which
+runtime-witnessed `parseCheckoutCompletedEvent` completion plus the persisted intent it
+was bound to, whose `sale:<saleId>` key names the sale, so a `MoneySplitRecord` cannot
+describe money no verified settlement took. No function there accepts or forwards
+`liveModeAuthorized`, which
 is what makes test mode structural rather than defaulted; this widens no marketplace,
 publishing, or catalog-app surface. The whole path is `tests/e2e/catalog-fixture-commerce-golden.test.ts`
 in `test:golden`.
