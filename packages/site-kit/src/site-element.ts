@@ -29,16 +29,35 @@ export type SiteElementProps = {
   readonly text?: string;
 };
 
-/** Build a frozen element. Pass `text` for a leaf, `children` for a branch. */
+const TAG_NAME = /^[A-Za-z][A-Za-z0-9-]*$/;
+const ATTRIBUTE_NAME = /^[A-Za-z_:][-A-Za-z0-9_:.]*$/;
+
+/**
+ * Build a frozen element. Pass `text` for a leaf, `children` for a branch.
+ *
+ * A tag and an attribute name are structure, not content, so neither can be made
+ * safe by escaping: they are checked here instead, once, so no tree can exist
+ * that any consumer — this module's serializer or a site's own `createElement`
+ * mapping — could turn into markup its author did not write. A tag is mandatory
+ * structure, so an invalid one throws; an attribute is optional, so an invalid
+ * name is dropped rather than taking a page down with it.
+ */
 export function el(
   tag: string,
   props: SiteElementProps = {},
   children: readonly SiteElement[] = [],
 ): SiteElement {
+  if (!TAG_NAME.test(tag)) throw new Error(`Invalid SiteElement tag name: ${JSON.stringify(tag)}`);
+
+  const attributes: Record<string, string> = {};
+  for (const [name, value] of Object.entries(props.attributes ?? {})) {
+    if (ATTRIBUTE_NAME.test(name)) attributes[name] = value;
+  }
+
   return Object.freeze({
     tag,
     className: props.className ?? null,
-    attributes: Object.freeze({ ...(props.attributes ?? {}) }),
+    attributes: Object.freeze(attributes),
     text: props.text ?? null,
     children: Object.freeze([...children]),
   });
@@ -76,8 +95,10 @@ const VOID_TAGS: ReadonlySet<string> = new Set([
 /**
  * Serialize an element tree to HTML.
  *
- * Every text node and attribute value is escaped, so a document path, a pointer,
- * or a proposed value carried by a view model can never reach the page as markup.
+ * Every text node and attribute value is escaped, and `el()` has already refused
+ * or dropped any tag or attribute name escaping could not have made safe, so a
+ * document path, a pointer, or a proposed value carried by a view model can never
+ * reach the page as markup.
  */
 export function renderSiteElementHtml(element: SiteElement): string {
   const attributes = [

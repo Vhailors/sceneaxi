@@ -48,6 +48,20 @@ describe("site element tree", () => {
     expect(escapeHtml(`&<>"'`)).toBe("&amp;&lt;&gt;&quot;&#39;");
   });
 
+  it("drops an attribute name that escaping could not make safe", () => {
+    const element = el("div", {
+      attributes: { 'x" onmouseover="alert(1)': "y", "data-sx-row": "0", "aria-hidden": "true" },
+    });
+    expect(element.attributes).toEqual({ "data-sx-row": "0", "aria-hidden": "true" });
+    expect(renderSiteElementHtml(element)).toBe('<div data-sx-row="0" aria-hidden="true"></div>');
+  });
+
+  it("refuses a tag name that escaping could not make safe", () => {
+    expect(() => el('div onload="alert(1)"')).toThrow(/Invalid SiteElement tag name/);
+    expect(() => el("")).toThrow(/Invalid SiteElement tag name/);
+    expect(() => el("sx-change-review")).not.toThrow();
+  });
+
   it("does not close a void element", () => {
     expect(renderSiteElementHtml(el("br"))).toBe("<br>");
     expect(renderSiteElementHtml(el("img", { attributes: { alt: "" } }))).toBe('<img alt="">');
