@@ -18,6 +18,7 @@ a marketing word.
 |---|---|---|---|
 | `@sceneaxi/cli` | **R2** | `pnpm build && node packages/cli/bin/sceneaxi.mjs --help` | `packages/cli/test/bin-smoke.test.ts` + the rest of `packages/cli/test/` |
 | `@sceneaxi/desktop-shell` | **R2** | `pnpm build && node apps/desktop-shell/bin/sceneaxi-desktop.mjs --help` | `apps/desktop-shell/test/bin-smoke.test.ts`, `tests/parity/shell-cli-parity.test.ts` |
+| `@sceneaxi/web-shell` (local authoring inspector) | **R2** | `pnpm build && node apps/web-shell/bin/sceneaxi-web-shell.mjs --cwd <project>`, then open the printed loopback URL | `apps/web-shell/test/bin-smoke.test.ts` (spawns the binary and drives propose → accept over a socket), `apps/web-shell/test/refuse-matrix.test.ts`, `tests/parity/shell-cli-parity.test.ts` |
 | Game profile (single object) | **R1** | `pnpm test:golden` | `tests/e2e/cli-golden-path.test.ts` |
 | Game profile (multi-object scene) | **R1** | `pnpm test:golden` | `tests/e2e/profile-game-scene-golden.test.ts` |
 | Web Experience profile | **R1** | `pnpm test:golden` | `tests/e2e/profile-web-golden-path.test.ts` |
@@ -25,7 +26,6 @@ a marketing word.
 | Importers + plugin host | **R1** | `pnpm test:golden` | `tests/e2e/importers-plugin-golden.test.ts`, `tests/e2e/plugin-capability-golden.test.ts` (the one registered capability, `sceneaxi.sculpt.intake-source.v1`, from the shipped seed through load to an addressed call) |
 | Umbrella live open path (`/open`) | **R1** | `pnpm test:golden`; in a browser, `cd sites/umbrella && pnpm build && pnpm start` | `tests/e2e/umbrella-live-open-golden.test.ts` (headless surface, no pixel claim) + the browser record in `docs/three-presentation-core.md` |
 | Umbrella entitled Minimum E2 editor (`/editor`) | **R1** | `pnpm test:golden`; in a browser, `cd sites/umbrella && pnpm build && SCENEAXI_SITE_EDITOR_PREVIEW=1 pnpm start` | `tests/e2e/umbrella-editor-viewport-golden.test.ts` (headless surface, no pixel claim) + the browser record in `docs/three-presentation-core.md`. Without the preview flag, and until the identity plane is wired, the route is a named refusal and draws nothing |
-| `@sceneaxi/web-shell` | *library only* | — | not yet startable; see sceneaxi#120 |
 
 How far each profile's open path may be *demonstrated*, and by what evidence, is
 owned by [`open-path-policy.md`](open-path-policy.md) — one shared contract the
@@ -114,21 +114,33 @@ non-overridable Kids deny — is owned by
 default-off gate a hosted call must pass to reach a debit (`runMeteredModelCall`)
 exist in `packages/billing`, and the assistant that composes that gate with the
 Model Provider Port has landed as `createAssistantPanel()` in `apps/web-shell`
-(sceneaxi#121). It is a view model, not a startable surface: its host is a library
-(below), its default mode is the recorded fixture transport, and its hosted mode
+(sceneaxi#121). It is a view model, not a startable surface: its host's inspector
+server exposes it no route (below), its default mode is the recorded fixture
+transport, and its hosted mode
 is off unless a caller explicitly enables it — so nothing runnable spends
 anything.
 
+## Why the web shell serves loopback only
+
+`sceneaxi-web-shell` is a **local authoring** surface, not a deployment. It
+authenticates nobody and writes whatever files its process can write, so a
+routable bind would publish unauthenticated write access. A non-loopback
+`--host` therefore refuses at launch instead of being quietly rebound, and every
+served `documentPath` must resolve inside the `--cwd` project root — `../`, an
+absolute path, and a symlink pointing outward all refuse by name. The full
+refusal table is in [`../apps/web-shell/README.md`](../apps/web-shell/README.md),
+and `apps/web-shell/test/refuse-matrix.test.ts` proves each entry is reachable.
+
+The deployable web tier is `sites/` (ADR 0018) and is a separate thing: the shell
+adds a transport over the inspector phases it already had, no hosting, no domain,
+and no second authoring implementation.
+
 ## Not runnable yet
 
-- **`apps/web-shell`** (sceneaxi#120) — a protocol client library with no dev
-  server. The websites/deploy question that blocked it is answered: the
-  deployable surfaces landed as their own `sites/` tier (ADR 0018) and left this
-  package a library, so nothing here is waiting on that wave. Whether it becomes
-  startable is still sceneaxi#120's own call, not a doc's.
 - **In-app AI assistant** (sceneaxi#121) — built, as `createAssistantPanel()` in
-  `apps/web-shell`, and not runnable for the same reason that package is not: it
-  ships a view model and no renderer or dev server. Every transport is injected,
-  so nothing here can start one.
+  `apps/web-shell`, and still not runnable: it ships a view model and no
+  renderer, and the startable shell above serves it no route
+  (`INSPECTOR_ACTIONS` is the whole served vocabulary). Every transport is
+  injected, so nothing here can start one.
 - **`apps/catalog-game`, `apps/catalog-web`** — dormant, owned by the
   websites/deploy track.

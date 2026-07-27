@@ -1,0 +1,213 @@
+/**
+ * Every named refusal of the startable web shell is reachable (sceneaxi#120).
+ *
+ * A refusal registry is only fail-closed if each entry can actually be produced;
+ * an unreachable one is documentation. Adding a `WEB_SHELL_REFUSALS` entry means
+ * adding its case here, exactly as `tests/e2e/auth-credits-refuse-matrix.test.ts`
+ * requires of the billing plane.
+ */
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
+import {
+  createDocument,
+  writeDocumentFile,
+  type JsonObject,
+} from "@sceneaxi/authoring-core";
+import {
+  DEFAULT_HOST,
+  MAX_REQUEST_BODY_BYTES,
+  WEB_SHELL_REFUSALS,
+  WebShellExit,
+  createInspectorApp,
+  main,
+  parseDevServerArgs,
+  startInspectorDevServer,
+  type InspectorDevServer,
+  type WebShellRefusal,
+} from "@sceneaxi/web-shell";
+
+function fixtureDir(): string {
+  return mkdtempSync(join(tmpdir(), "sceneaxi-web-shell-refuse-"));
+}
+
+function writeScene(dir: string, name: string, data: JsonObject): void {
+  const result = writeDocumentFile(
+    join(dir, name),
+    createDocument({ id: name.replace(/\.json$/, ""), data }),
+    { cwd: dir },
+  );
+  expect(result.ok).toBe(true);
+}
+
+function project() {
+  const dir = fixtureDir();
+  writeScene(dir, "scene.json", { entities: [{ id: "hero", x: 1 }] });
+  return { dir, app: createInspectorApp({ projectRoot: dir }) };
+}
+
+function reasonOf(response: { body: string }): string {
+  return (JSON.parse(response.body) as { reason?: string }).reason ?? "";
+}
+
+const EDIT = {
+  documentPath: "scene.json",
+  jsonPointer: "/data/entities/0/x",
+  newValue: 3,
+} as const;
+
+/**
+ * One producer per reason. Async because the two launch-side reasons that need a
+ * real bind cannot be produced any other way.
+ */
+const PRODUCERS: Readonly<Record<WebShellRefusal, () => Promise<string>>> = {
+  [WEB_SHELL_REFUSALS.routeUnknown]: async () =>
+    reasonOf(project().app.handle({ method: "GET", url: "/api/nope" })),
+
+  [WEB_SHELL_REFUSALS.methodNotAllowed]: async () =>
+    reasonOf(project().app.handle({ method: "PUT", url: "/api/state" })),
+
+  [WEB_SHELL_REFUSALS.requestBodyNotJson]: async () =>
+    reasonOf(project().app.handle({ method: "POST", url: "/api/propose", body: "{" })),
+
+  [WEB_SHELL_REFUSALS.requestBodyTooLarge]: async () =>
+    reasonOf(
+      project().app.handle({
+        method: "POST",
+        url: "/api/propose",
+        body: "x".repeat(MAX_REQUEST_BODY_BYTES + 1),
+      }),
+    ),
+
+  [WEB_SHELL_REFUSALS.editFieldInvalid]: async () =>
+    reasonOf(
+      project().app.handle({
+        method: "POST",
+        url: "/api/propose",
+        body: JSON.stringify({ jsonPointer: "/data", newValue: 1 }),
+      }),
+    ),
+
+  [WEB_SHELL_REFUSALS.documentOutsideProjectRoot]: async () => {
+    const { dir, app } = project();
+    writeScene(dirname(dir), "outside.json", { entities: [] });
+    return reasonOf(
+      app.handle({
+        method: "POST",
+        url: "/api/propose",
+        body: JSON.stringify({ ...EDIT, documentPath: "../outside.json" }),
+      }),
+    );
+  },
+
+  [WEB_SHELL_REFUSALS.documentUnreadable]: async () =>
+    reasonOf(
+      project().app.handle({ method: "GET", url: "/api/document?path=absent.json" }),
+    ),
+
+  [WEB_SHELL_REFUSALS.inspectorRefused]: async () =>
+    reasonOf(project().app.handle({ method: "POST", url: "/api/accept", body: "{}" })),
+
+  [WEB_SHELL_REFUSALS.argumentInvalid]: async () => {
+    const parsed = parseDevServerArgs(["--frobnicate"]);
+    return parsed.ok ? "" : parsed.reason;
+  },
+
+  [WEB_SHELL_REFUSALS.projectRootUnusable]: async () => {
+    const parsed = parseDevServerArgs(["--cwd", join(fixtureDir(), "nowhere")]);
+    return parsed.ok ? "" : parsed.reason;
+  },
+
+  [WEB_SHELL_REFUSALS.hostNotLoopback]: async () => {
+    const parsed = parseDevServerArgs(["--host", "0.0.0.0"]);
+    return parsed.ok ? "" : parsed.reason;
+  },
+
+  [WEB_SHELL_REFUSALS.handlerFailed]: async () => {
+    // An injected session that throws stands in for any unexpected failure
+    // while routing: the surface must answer, not die.
+    const dir = fixtureDir();
+    writeScene(dir, "scene.json", { entities: [] });
+    const app = createInspectorApp({
+      projectRoot: dir,
+      session: {
+        snapshot: () => {
+          throw new Error("boom");
+        },
+        proposeEdit: () => {
+          throw new Error("boom");
+        },
+        accept: () => {
+          throw new Error("boom");
+        },
+        reject: () => {
+          throw new Error("boom");
+        },
+        refreshRecovery: () => {
+          throw new Error("boom");
+        },
+      },
+    });
+    const response = app.handle({ method: "GET", url: "/api/state" });
+    expect(response.status).toBe(500);
+    return reasonOf(response);
+  },
+
+  [WEB_SHELL_REFUSALS.listenFailed]: async () => {
+    // A port already bound is the reachable instance of a failed bind.
+    const dir = fixtureDir();
+    writeScene(dir, "scene.json", { entities: [] });
+    const held = await startInspectorDevServer({
+      host: DEFAULT_HOST,
+      port: 0,
+      projectRoot: dir,
+    });
+    holding.push(held);
+
+    const stderr: string[] = [];
+    const write = process.stderr.write.bind(process.stderr);
+    const previousExitCode = process.exitCode;
+    process.stderr.write = ((chunk: string | Uint8Array) => {
+      stderr.push(String(chunk));
+      return true;
+    }) as typeof process.stderr.write;
+    try {
+      const code = await main([
+        "--host",
+        DEFAULT_HOST,
+        "--port",
+        String(held.port),
+        "--cwd",
+        dir,
+      ]);
+      expect(code).toBe(WebShellExit.ERROR);
+    } finally {
+      process.stderr.write = write;
+      // `main` sets process.exitCode on refusal; leaving it set would fail the
+      // whole vitest run on a passing assertion.
+      process.exitCode = previousExitCode;
+    }
+    return /refused: ([\w-]+)/.exec(stderr.join(""))?.[1] ?? "";
+  },
+};
+
+const holding: InspectorDevServer[] = [];
+
+afterEach(async () => {
+  while (holding.length > 0) await holding.pop()?.close();
+});
+
+describe("web-shell refuse matrix", () => {
+  it("covers every declared refusal reason", () => {
+    expect(Object.keys(PRODUCERS).sort()).toEqual(
+      Object.values(WEB_SHELL_REFUSALS).slice().sort(),
+    );
+  });
+
+  for (const [reason, produce] of Object.entries(PRODUCERS)) {
+    it(`${reason} is reachable`, async () => {
+      expect(await produce()).toBe(reason);
+    });
+  }
+});

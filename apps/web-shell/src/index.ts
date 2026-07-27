@@ -3,7 +3,9 @@
  * authoring-core, never a second authoring implementation.
  *
  * Sceneaxi#11: minimal propose→diff→apply inspector stub. The hybrid sculpt
- * vertical re-exports authoring-core's bounded Minimum E2 orchestration. No
+ * vertical re-exports authoring-core's bounded Minimum E2 orchestration.
+ * Sceneaxi#120 makes the shell startable (`bin/sceneaxi-web-shell.mjs`): a
+ * loopback dev server serving those same inspector phases over HTTP. Still no
  * hosting, deployment, or CLI spawn (matrix-denied).
  */
 import type { PackageSeam } from "@sceneaxi/schemas";
@@ -58,6 +60,42 @@ export {
   type InspectorSession,
   type InspectorSnapshot,
 } from "./inspector.js";
+
+export {
+  INSPECTOR_ACTIONS,
+  MAX_REQUEST_BODY_BYTES,
+  WEB_SHELL_APP,
+  WEB_SHELL_REFUSALS,
+  createInspectorApp,
+  inspectorPageHtml,
+  resolveInsideProjectRoot,
+  type CreateInspectorAppOptions,
+  type InspectorAction,
+  type InspectorApp,
+  type InspectorHttpRequest,
+  type InspectorHttpResponse,
+  type WebShellRefusal,
+} from "./inspector-app.js";
+
+export {
+  DEFAULT_HOST,
+  DEFAULT_PORT,
+  LOOPBACK_HOSTS,
+  USAGE_LINES,
+  WebShellExit,
+  main,
+  parseDevServerArgs,
+  serverUrl,
+  startInspectorDevServer,
+  startupLines,
+  type DevServerArgsHelp,
+  type DevServerArgsOk,
+  type DevServerArgsRefusal,
+  type DevServerArgsResult,
+  type DevServerOptions,
+  type InspectorDevServer,
+  type WebShellExitCode,
+} from "./dev-server.js";
 
 export {
   renderDiffForInspector,
