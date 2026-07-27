@@ -258,6 +258,40 @@ describe("assistant mode table", () => {
     );
     expect(panel.snapshot().hostedEnabled).toBe(false);
   });
+
+  it("snapshots hosted enablement and fails closed on accessors", async () => {
+    const enabled = { enabled: true };
+    const wired = hostedPanel(10, { hostedAi: enabled });
+
+    enabled.enabled = false;
+    expect(wired.panel.snapshot().hostedEnabled).toBe(true);
+    expect(
+      (
+        await wired.panel.ask({
+          prompt: "hosted turn",
+          turnId: "snapshotted",
+        })
+      ).refusal,
+    ).toBeUndefined();
+
+    const throwing = Object.defineProperty({}, "enabled", {
+      enumerable: true,
+      get(): boolean {
+        throw new Error("untrusted hosted config getter");
+      },
+    }) as Readonly<{ enabled: boolean }>;
+    const refused = hostedPanel(10, { hostedAi: throwing });
+
+    expect(refused.panel.snapshot().hostedEnabled).toBe(false);
+    const snapshot = await refused.panel.ask({
+      prompt: "hosted turn",
+      turnId: "accessor",
+    });
+    expect(snapshot.refusal?.reason).toBe(
+      BILLING_REFUSE_REASONS.hostedAiNotEnabled,
+    );
+    expect(refused.stack.prompts).toHaveLength(0);
+  });
 });
 
 describe("fixture and BYO modes never touch the ledger", () => {

@@ -106,7 +106,6 @@ import {
 } from "@sceneaxi/auth";
 import {
   BILLING_REFUSE_REASONS,
-  HOSTED_AI_DEFAULT_CONFIG,
   runMeteredModelCall,
   type BillingRefuseReason,
   type CreditStore,
@@ -545,9 +544,10 @@ export function createAssistantPanel(
   >;
   const admin = optionRecord["admin"] as AdminIdentity;
   const clock = optionRecord["clock"] as () => number;
-  const hostedAi =
-    (optionRecord["hostedAi"] as HostedAiConfig | undefined) ??
-    HOSTED_AI_DEFAULT_CONFIG;
+  const hostedAiRecord = snapshotPlainRecord(optionRecord["hostedAi"]);
+  const hostedAi: HostedAiConfig = Object.freeze({
+    enabled: hostedAiRecord?.["enabled"] === true,
+  });
   const principal = optionRecord["principal"] as Principal | undefined;
   const credits = optionRecord["credits"] as AssistantCreditsView | undefined;
   const store = optionRecord["store"] as CreditStore | undefined;
