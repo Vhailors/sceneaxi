@@ -244,8 +244,11 @@ guard runs inside the provider thunk, which the credit gate enters after the
 balance is judged; that is what makes "denied before metering" true in every
 mode. Hosted turns re-read the ledger each ask and let the gate judge
 persistence, so a stale copy refuses rather than buys; every identity,
-entitlement, and metering refusal is left to the layer that owns its vocabulary,
-and a port refusal is translated to a throw so it is never billed as an answer.
+entitlement, and metering refusal is left to the layer that owns its vocabulary —
+including an absent ledger, which is handed over with no `state` rather than
+refused here, since the captain's unlimited allowance is granted before any
+balance is consulted — and a port refusal is translated to a throw so it is never
+billed as an answer.
 Ownership is `docs/auth-credits.md`; the proofs are
 `apps/web-shell/test/assistant-panel.test.ts` (with a reachability check over
 every `ASSISTANT_PANEL_REASONS` entry) and

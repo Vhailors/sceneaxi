@@ -337,8 +337,11 @@ describe("in-app AI assistant golden path", () => {
 
     const snapshot = await panel.ask({ prompt: "fixture prompt", turnId: "t1" });
 
+    // The panel hands the turn over with no state rather than restating an
+    // entitlement rule, so the credit gate refuses a credit-priced call it has
+    // no ledger to price — in its own vocabulary, before the transport.
     expect(snapshot.refusal?.reason).toBe(
-      ASSISTANT_PANEL_REASONS.ledgerMissing,
+      BILLING_REFUSE_REASONS.ledgerStateInvalid,
     );
     expect(snapshot.creditBalance).toBeUndefined();
     expect(wired.stack.transportRequests).toHaveLength(0);

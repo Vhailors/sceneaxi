@@ -61,12 +61,17 @@
  * Hosted turns re-read the ledger through the injected credits view on every ask
  * the credit gate could reach a ledger for, and hand it to that gate, which judges
  * the *persisted* ledger regardless. A ledger the panel cannot read, or one that is
- * absent, invalid, or owned by another user, is a named refusal — never `0` —
- * because "you have no credits" and "we could not read your credits" must not look
- * identical to a buyer. Where the gate refuses above its own ledger read — hosted
- * off, Kids, or any identity refusal, judged by that gate's own auth guard — no
- * ledger is read here either, so the panel can neither pre-empt a refusal it does
- * not own nor make persistence answer for a caller no guard has admitted.
+ * invalid or owned by another user, is a named refusal — never `0` — because "you
+ * have no credits" and "we could not read your credits" must not look identical to
+ * a buyer. But *no ledger at all* — no credits view wired, or none held for this
+ * user — is not a panel refusal, because whether a hosted turn needs a ledger is an
+ * entitlement question this module does not own: the captain's unlimited allowance
+ * is granted before a balance is ever consulted, and everyone else is refused by the
+ * gate in its own vocabulary. Such a turn is handed over with no state. Where the
+ * gate refuses above its own ledger read — hosted off, Kids, or any identity
+ * refusal, judged by that gate's own auth guard — no ledger is read here either, so
+ * the panel can neither pre-empt a refusal it does not own nor make persistence
+ * answer for a caller no guard has admitted.
  *
  * The balance a snapshot *reports* comes only from an outcome the credit gate
  * derived from persistence, never from the view the panel was handed. The
@@ -170,9 +175,7 @@ export const ASSISTANT_PANEL_REASONS = Object.freeze({
   adminIdentityMissing: "ASSISTANT_ADMIN_IDENTITY_MISSING",
   clockInvalid: "ASSISTANT_CLOCK_INVALID",
   promptInvalid: "ASSISTANT_PROMPT_INVALID",
-  creditsViewMissing: "ASSISTANT_CREDITS_VIEW_MISSING",
   creditsUnavailable: "ASSISTANT_CREDITS_UNAVAILABLE",
-  ledgerMissing: "ASSISTANT_LEDGER_MISSING",
   ledgerOwnerMismatch: "ASSISTANT_LEDGER_OWNER_MISMATCH",
   turnAlreadyCharged: "ASSISTANT_TURN_ALREADY_CHARGED",
 } as const);
@@ -497,24 +500,28 @@ export function createAssistantPanel(
   /**
    * Read the hosted ledger the credit gate will re-derive from persistence.
    *
-   * `undefined` state with no refusal means "there is no signed-in viewer": the
-   * gate answers that as `ENTITLEMENT_ACCOUNT_REQUIRED`, which is the layer that
-   * owns identity vocabulary, so the panel declines to say it a second time.
+   * `undefined` state means there is no ledger to hand over — no credits view is
+   * wired, or the deployment's own store holds none for this user. That is not a
+   * refusal here: whether a hosted turn needs a ledger at all is an entitlement
+   * question the credit gate owns, and it answers it above its own balance check
+   * — the captain's unlimited allowance is granted with no ledger, and everyone
+   * else is refused in the gate's own vocabulary. Inventing a panel refusal for
+   * it would restate an entitlement rule, and would deny the one caller the rule
+   * exists to allow.
+   *
+   * The three failures that *are* refused here are the ones that are panel-owned
+   * because none of them is an answer about this user's credits: a view that
+   * throws, a ledger that does not validate, and a ledger belonging to someone
+   * else.
    */
-  const resolveHostedLedger = async (): Promise<LedgerResolution> => {
-    if (principal === undefined) {
+  const resolveHostedLedger = async (
+    userId: string,
+  ): Promise<LedgerResolution> => {
+    if (credits === undefined) {
       return Object.freeze({ ok: true, state: undefined });
     }
-    if (credits === undefined) {
-      return refuseLedger(
-        refusal(
-          ASSISTANT_PANEL_REASONS.creditsViewMissing,
-          "A hosted assistant turn requires a credits view; the panel reads no ledger of its own.",
-        ),
-      );
-    }
 
-    const read = await readOwnedLedger(credits, principal.user.userId);
+    const read = await readOwnedLedger(credits, userId);
     if (read.ok) return Object.freeze({ ok: true, state: read.state });
     if (read.failure === "invalid") {
       return refuseLedger(refusal(read.reason, read.message));
@@ -528,12 +535,7 @@ export function createAssistantPanel(
       );
     }
     if (read.failure === "missing") {
-      return refuseLedger(
-        refusal(
-          ASSISTANT_PANEL_REASONS.ledgerMissing,
-          "No credit ledger exists for this user; a hosted turn refuses rather than assuming a zero or an unlimited balance.",
-        ),
-      );
+      return Object.freeze({ ok: true, state: undefined });
     }
     return refuseLedger(
       refusal(
@@ -585,22 +587,23 @@ export function createAssistantPanel(
     // The credit gate answers three things *above* its own ledger read — the
     // hosted route being off, Kids, and every identity refusal — and none of them
     // needs a balance. Reading persistence first would let a panel-owned reason
-    // pre-empt the controlling one ("no ledger exists for this user" instead of
-    // "the session expired"), would touch the ledger of a Kids session the credit
+    // pre-empt the controlling one ("the credits view failed" instead of "the
+    // session expired"), would touch the ledger of a Kids session the credit
     // plane promises never to read, and would make persistence answer questions
     // for a caller no guard has admitted yet — the exact read the gate declines on
     // its own side. So the panel asks the *same* guard, only to decide whether to
     // read, and where it declines it hands the turn over with no state so each
-    // refusal is spoken by the layer that owns its vocabulary.
+    // refusal is spoken by the layer that owns its vocabulary. An anonymous
+    // viewer never passes it, which is why the gate — not this module — is what
+    // says `ENTITLEMENT_ACCOUNT_REQUIRED`.
     let state: LedgerState | undefined;
-    if (
-      hosted &&
-      hostedAi.enabled === true &&
-      requireAuthenticated(principal, { now, surface, admin }).ok
-    ) {
-      const resolved = await resolveHostedLedger();
-      if (!resolved.ok) return view(resolved.refusal);
-      state = resolved.state;
+    if (hosted && hostedAi.enabled === true) {
+      const guarded = requireAuthenticated(principal, { now, surface, admin });
+      if (guarded.ok) {
+        const resolved = await resolveHostedLedger(guarded.value.user.userId);
+        if (!resolved.ok) return view(resolved.refusal);
+        state = resolved.state;
+      }
     }
 
     // The documented integration obligation (docs/auth-credits.md, "Only a throw

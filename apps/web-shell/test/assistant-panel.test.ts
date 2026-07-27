@@ -110,6 +110,22 @@ const PRINCIPAL = Object.freeze({
   },
 }) as never as CreateAssistantPanelOptions["principal"] & object;
 
+/** The captain, whose role the guard re-derives from the admin identity. */
+const ADMIN_PRINCIPAL = Object.freeze({
+  user: {
+    ...PRINCIPAL.user,
+    userId: "usr_captain",
+    email: admin.email,
+  },
+  role: {
+    ...PRINCIPAL.role,
+    userId: "usr_captain",
+    role: "admin",
+    source: "admin-env",
+  },
+  session: { ...PRINCIPAL.session, userId: "usr_captain" },
+}) as never as CreateAssistantPanelOptions["principal"] & object;
+
 const funded = (credits: number, account: CreditAccount = ACCOUNT) => {
   if (credits === 0) return createLedgerState(account);
   const appended = appendCreditEntry(createLedgerState(account), {
@@ -551,18 +567,47 @@ describe("hosted mode debits through the existing ledger", () => {
     expect(panel.snapshot().mode).toBe("fixture");
   });
 
-  it("refuses an absent ledger rather than reading it as a zero balance", async () => {
-    const { panel, stack } = hostedPanel(10, {
+  it("lets the credit gate judge a user no ledger was provisioned for", async () => {
+    const { panel, store, stack } = hostedPanel(10, {
       credits: creditsView(undefined),
     });
 
     const snapshot = await panel.ask({ prompt: "hosted turn", turnId: "t1" });
 
+    // "No ledger" is not a panel-owned refusal: whether a hosted turn needs one
+    // is an entitlement question, so the turn is handed over with no state and
+    // the gate answers a credit-priced call it cannot price in its own words.
     expect(snapshot.refusal?.reason).toBe(
-      ASSISTANT_PANEL_REASONS.ledgerMissing,
+      BILLING_REFUSE_REASONS.ledgerStateInvalid,
     );
     expect(stack.prompts).toHaveLength(0);
     expect(snapshot.creditBalance).toBeUndefined();
+    expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
+  });
+
+  it("still runs the captain's unlimited hosted turn with no ledger to read", async () => {
+    for (const credits of [undefined, creditsView(undefined)]) {
+      const { panel, store, stack } = hostedPanel(10, {
+        principal: ADMIN_PRINCIPAL,
+        credits,
+      });
+
+      const snapshot = await panel.ask({ prompt: "hosted turn", turnId: "t1" });
+
+      // The admin's allowance is decided before any balance is consulted, so a
+      // panel that refused an absent ledger would deny the one caller the rule
+      // exists to allow.
+      expect(snapshot.refusal).toBeUndefined();
+      expect(stack.prompts).toEqual(["hosted turn"]);
+      expect(snapshot.turns[0]).toMatchObject({
+        mode: "hosted",
+        text: "recorded: hosted turn",
+        metered: false,
+      });
+      expect(snapshot.turns[0]?.credits).toBeUndefined();
+      expect(snapshot.creditBalance).toBeUndefined();
+      expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
+    }
   });
 
   it("refuses an unreadable credits view rather than substituting a default", async () => {
@@ -607,15 +652,16 @@ describe("hosted mode debits through the existing ledger", () => {
     expect(stack.prompts).toHaveLength(0);
   });
 
-  it("requires a credits view before it will broker a hosted turn", async () => {
-    const { panel, stack } = hostedPanel(10, { credits: undefined });
+  it("hands a hosted turn over with no state when no credits view is wired", async () => {
+    const { panel, store, stack } = hostedPanel(10, { credits: undefined });
 
     const snapshot = await panel.ask({ prompt: "hosted turn", turnId: "t1" });
 
     expect(snapshot.refusal?.reason).toBe(
-      ASSISTANT_PANEL_REASONS.creditsViewMissing,
+      BILLING_REFUSE_REASONS.ledgerStateInvalid,
     );
     expect(stack.prompts).toHaveLength(0);
+    expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
   });
 
   it("lets the entitlement matrix speak for an anonymous hosted turn", async () => {
@@ -660,8 +706,8 @@ describe("hosted mode debits through the existing ledger", () => {
   it("reads no ledger for a viewer the gate's own auth guard refuses", async () => {
     // The identity refusals are ordered above the gate's ledger read too, so a
     // panel-owned reason must not be able to reach the reader first. This viewer
-    // is both expired *and* has no provisioned account, which is exactly the pair
-    // that would otherwise answer "no credit ledger exists for this user".
+    // is both expired *and* backed by a credits view that fails, which is exactly
+    // the pair that would otherwise answer "the credits view failed".
     const reads: string[] = [];
     const expired = {
       ...PRINCIPAL,
@@ -672,7 +718,7 @@ describe("hosted mode debits through the existing ledger", () => {
       credits: {
         ledgerFor: (userId: string) => {
           reads.push(userId);
-          return undefined;
+          throw new Error("neon unreachable");
         },
       },
     });
@@ -985,14 +1031,6 @@ describe("every panel refusal is reachable", () => {
     record((await panel.ask({ prompt: "" })).refusal?.reason);
     record(panel.setMode("hosted").refusal?.reason);
 
-    const hosted = hostedPanel(10, { credits: undefined });
-    record(
-      (await hosted.panel.ask({ prompt: "p", turnId: "t1" })).refusal?.reason,
-    );
-    const absent = hostedPanel(10, { credits: creditsView(undefined) });
-    record(
-      (await absent.panel.ask({ prompt: "p", turnId: "t1" })).refusal?.reason,
-    );
     const unreadable = hostedPanel(10, {
       credits: {
         ledgerFor() {

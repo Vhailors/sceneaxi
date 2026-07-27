@@ -444,12 +444,20 @@ non-overridably. Three independent denies, per the invariant in *Kids isolation*
 the injected credits view and hands it to the credit gate, which judges the *persisted*
 ledger regardless — so a stale copy is corrected rather than believed, and refuses
 `CREDIT_BALANCE_INSUFFICIENT` before the transport is entered. A ledger the panel cannot
-read, or one that is absent or owned by another user, is a named refusal
-(`ASSISTANT_CREDITS_UNAVAILABLE`, `ASSISTANT_LEDGER_MISSING`,
+read, or one that is invalid or owned by another user, is a named refusal
+(`ASSISTANT_CREDITS_UNAVAILABLE`, `CREDIT_LEDGER_STATE_INVALID`,
 `ASSISTANT_LEDGER_OWNER_MISMATCH`) and never `0`. Identity, entitlement, and metering
 refusals are left to the layer that owns their vocabulary: an anonymous hosted turn is
 `ENTITLEMENT_ACCOUNT_REQUIRED`, an expired session is `AUTH_SESSION_EXPIRED`, and a hosted
 turn with no `turnId` is `CREDIT_REQUEST_INVALID` — the panel repeats none of them.
+
+*No* ledger — no credits view wired, or the deployment's own `CreditStore` holding none for
+this user — is deliberately **not** a panel refusal either. Whether a hosted turn needs a
+ledger at all is an entitlement question, and the gate answers it above its own balance
+check: the captain's unlimited allowance is granted before a balance is ever consulted, so a
+panel-owned "no credit ledger exists for this user" would deny the one caller that rule
+exists to allow. Such a turn is handed over with no `state`, and the gate refuses everyone
+else in its own words.
 
 That fall-through is why the panel reads a ledger only where the gate would reach one. The
 hosted route being off, Kids, and every identity refusal are all ordered *above*
