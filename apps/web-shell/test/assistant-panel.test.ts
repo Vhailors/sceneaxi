@@ -47,7 +47,9 @@ import {
   appendCreditEntry,
   createInMemoryCreditStore,
   createLedgerState,
+  loadLedgerState,
   meteringIdempotencyKey,
+  type CreditStore,
   type LedgerState,
 } from "@sceneaxi/billing";
 import type { CreditAccount, ModelDescriptor } from "@sceneaxi/schemas";
@@ -180,6 +182,20 @@ const providerStack = (
 const creditsView = (state: LedgerState | undefined): AssistantCreditsView =>
   Object.freeze({ ledgerFor: () => state });
 
+const currentCreditsView = (store: CreditStore): AssistantCreditsView =>
+  Object.freeze({
+    async ledgerFor(userId: string) {
+      const account = await store.findAccountByUserId(userId);
+      if (account === undefined) return undefined;
+      const loaded = loadLedgerState(
+        account,
+        await store.listEntries(account.accountId),
+      );
+      if (!loaded.ok) throw new Error(loaded.message);
+      return loaded.value;
+    },
+  });
+
 type PanelOverrides = Partial<CreateAssistantPanelOptions>;
 
 const panelFor = (
@@ -213,7 +229,7 @@ const hostedPanel = (credits: number, overrides: PanelOverrides = {}) => {
       mode: "hosted",
       hostedAi: { enabled: true },
       principal: PRINCIPAL,
-      credits: creditsView(state),
+      credits: currentCreditsView(store),
       store,
       hostedTurnCredits: 4,
       ...overrides,
@@ -547,7 +563,7 @@ describe("hosted mode debits through the existing ledger", () => {
     expect(store.entryCount(ACCOUNT.accountId)).toBe(0);
   });
 
-  it("judges a stale ledger against persistence, not against the copy it was handed", async () => {
+  it("refuses a stale ledger even when persistence has enough credits", async () => {
     const state = funded(10);
     const store = createInMemoryCreditStore({
       accounts: [state.account],
@@ -567,27 +583,22 @@ describe("hosted mode debits through the existing ledger", () => {
         },
       );
 
-    const first = await spend(8, creditsView(state)).ask({
+    const first = await spend(1, currentCreditsView(store)).ask({
       prompt: "hosted turn",
       turnId: "t1",
     });
-    expect(first.creditBalance).toBe(2);
+    expect(first.creditBalance).toBe(9);
 
-    // A second panel still holding the pre-debit ledger, with a *fresh* key so
-    // the replay path cannot answer it. The stale copy says 10 and would clear
-    // the balance gate; persistence says 2, and that is what decides.
-    const stale = await spend(8, creditsView(state)).ask({
+    const stale = await spend(1, creditsView(state)).ask({
       prompt: "hosted turn again",
       turnId: "t2",
     });
 
     expect(stale.refusal?.reason).toBe(
-      BILLING_REFUSE_REASONS.balanceInsufficient,
+      BILLING_REFUSE_REASONS.ledgerStateInvalid,
     );
     expect(stack.prompts).toEqual(["hosted turn"]);
     expect(store.entryCount(ACCOUNT.accountId)).toBe(2);
-    // And it does not publish the stale copy's number beside that refusal: the
-    // panel has no gate-derived balance for this turn, so it reports none.
     expect(stale.creditBalance).toBeUndefined();
   });
 
@@ -618,7 +629,7 @@ describe("hosted mode debits through the existing ledger", () => {
           mode: "hosted",
           hostedAi: { enabled: true },
           principal: PRINCIPAL,
-          credits: creditsView(state),
+          credits: currentCreditsView(store),
           store,
           hostedTurnCredits: 4,
         },
@@ -662,9 +673,8 @@ describe("hosted mode debits through the existing ledger", () => {
 
     const snapshot = await panel.ask({ prompt: "hosted turn", turnId: "t1" });
 
-    // "No ledger" is not a panel-owned refusal: whether a hosted turn needs one
-    // is an entitlement question, so the turn is handed over with no state and
-    // the gate answers a credit-priced call it cannot price in its own words.
+    // "No ledger" is not restated as panel policy. The turn is handed over with
+    // no state and the shared billing boundary refuses it in its own vocabulary.
     expect(snapshot.refusal?.reason).toBe(
       BILLING_REFUSE_REASONS.ledgerStateInvalid,
     );
@@ -673,7 +683,7 @@ describe("hosted mode debits through the existing ledger", () => {
     expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
   });
 
-  it("still runs the captain's unlimited hosted turn with no ledger to read", async () => {
+  it("refuses the captain's hosted turn when the ledger is absent", async () => {
     for (const credits of [undefined, creditsView(undefined)]) {
       const { panel, store, stack } = hostedPanel(10, {
         principal: ADMIN_PRINCIPAL,
@@ -682,17 +692,11 @@ describe("hosted mode debits through the existing ledger", () => {
 
       const snapshot = await panel.ask({ prompt: "hosted turn", turnId: "t1" });
 
-      // The admin's allowance is decided before any balance is consulted, so a
-      // panel that refused an absent ledger would deny the one caller the rule
-      // exists to allow.
-      expect(snapshot.refusal).toBeUndefined();
-      expect(stack.prompts).toEqual(["hosted turn"]);
-      expect(snapshot.turns[0]).toMatchObject({
-        mode: "hosted",
-        text: "recorded: hosted turn",
-        metered: false,
-      });
-      expect(snapshot.turns[0]?.credits).toBeUndefined();
+      expect(snapshot.refusal?.reason).toBe(
+        BILLING_REFUSE_REASONS.ledgerStateInvalid,
+      );
+      expect(stack.prompts).toHaveLength(0);
+      expect(snapshot.turns).toHaveLength(0);
       expect(snapshot.creditBalance).toBeUndefined();
       expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
     }

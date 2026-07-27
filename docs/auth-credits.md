@@ -291,25 +291,27 @@ provider abstraction — it fixes the order the two existing pieces run in:
 1. **Kids** — denied by name before identity, provider, or ledger, on both routes
 2. **Route** — `hosted` or `byo`, a closed enumeration with no default
 3. **Hosted opt-in** — off unless a caller explicitly passes `{ enabled: true }`
-4. **Replay** — the *persisted* ledger is loaded and the account-scoped key looked up in
-   it, before the balance and the provider
-5. **Entitlement** — capability, account, and the **persisted balance**, all before the
-   provider
-6. **Metering readiness** — store, reason, and key, still before the provider
-7. **Provider** — the injected call, and only now
-8. **Debit** — exactly the credits the decision named, through `meterCredits`
+4. **Current ledger** — the supplied ledger is loaded from persistence; absent or stale
+   state refuses for every principal
+5. **Replay** — the account-scoped key is looked up before the balance and the provider
+6. **Entitlement** — capability, account, and the **current persisted balance**, all
+   before the provider
+7. **Metering readiness** — store, reason, and key, still before the provider
+8. **Provider** — the injected call, and only now
+9. **Debit** — exactly the credits the decision named, through `meterCredits`
 
-Steps 5 and 7 in that order are why a zero or insufficient balance costs nothing and
+Steps 6 and 8 in that order are why a zero or insufficient balance costs nothing and
 appends nothing: the refusal is `CREDIT_BALANCE_INSUFFICIENT`, produced before the provider
 runs. A provider throw is `HOSTED_AI_PROVIDER_FAILED` with no debit; a ledger or store
 failure keeps its own reason, and the debit is all-or-nothing either way.
 
-**A retry is answered from the debit it already made.** The ledger's own idempotency check
-lives at the bottom of the stack, *below* both the balance gate and the provider, so
+**A retry is answered from the debit it already made after refreshing the ledger.** The
+ledger's own idempotency check lives at the bottom of the stack, *below* both the balance
+gate and the provider, so
 relying on it alone would break the retry it is supposed to protect: a caller that timed
 out and re-sent `turn_01` would be refused `CREDIT_BALANCE_INSUFFICIENT` out of the balance
 its own first attempt had already spent, and would have paid the upstream provider a second
-time for an answer no ledger row could cover. Step 4 looks `usage:<accountId>:<callerKey>`
+time for an answer no ledger row could cover. Step 5 looks `usage:<accountId>:<callerKey>`
 up first. On a hit the call returns `replayed: true` carrying the prior debit, the ledger,
 and the balance — **no provider execution and no second charge** — and entitlement is
 re-evaluated against the ledger as it stood immediately before that debit, so capability,
@@ -318,32 +320,22 @@ already-answered balance question is not asked again. A key re-sent with a diffe
 or reason is still a `CREDIT_IDEMPOTENCY_KEY_CONFLICT`. The replayed outcome deliberately
 carries **no `response`**: the ledger persists debits, not model answers, so the original
 response is gone and the gate will not fabricate one — the `MeteredModelCallReplayed` shape
-has no field to read it from. The BYO route is excluded from step 4: it never appends a
+has no field to read it from. The BYO route is excluded from steps 4 and 5: it never appends a
 debit, and a free call is safe to simply run again.
 
-**The retry lookup reads persistence, not the caller's `state`.** The guarantee has to hold
-for the caller that never received the post-debit ledger — the timed-out turn is precisely
-that caller — so step 4 takes only the account id from the supplied state and loads the
-history back through the injected `CreditStore`. A lookup against a pre-debit copy would
-find no prior entry, run the provider a second time for real upstream money, and only then
-collide at the bottom of the stack with an opaque `CREDIT_LEDGER_STATE_INVALID`. Because the
-store is read here, a store that cannot be read refuses `CREDIT_STORE_FAILED` **before** the
-provider: not knowing whether a key was already charged is not a licence to charge upstream
-again. The replayed outcome hands back the *persisted* ledger and balance, so a caller
-holding a stale view is corrected rather than confirmed in it.
+**The retry lookup requires the caller's current persisted state.** Step 4 loads the
+supplied account through the injected `CreditStore` and compares the complete ledger before
+any key lookup. A timed-out caller still holding the pre-debit view must refresh before it
+retries; re-sending that stale view refuses `CREDIT_LEDGER_STATE_INVALID` before the
+provider.
+A store that cannot be read refuses `CREDIT_STORE_FAILED` at the same boundary. Once the
+state is current, step 5 can return the prior debit without dispatch or another charge.
 
-**The balance gate judges that same persisted ledger, and so does the debit.** The supplied
-`state` names the account; it does not establish the balance. Trusting it would leave the
-load-bearing ordering above holding only for a caller whose copy happens to be current: a
-stale or fabricated state with a *fresh* key would clear the balance gate, pay the upstream
-provider, and only then collide with `meterCredits`' own state check as an opaque
-`CREDIT_LEDGER_STATE_INVALID` — precisely the "completed model call that is impossible to
-charge for" this ordering exists to make unreachable. So step 5 reads the ledger step 4
-loaded, and `meterCredits` is handed the same one: a stale caller with a real balance that
-covers the charge is corrected and charged the real amount, and one whose real balance does
-not cover it refuses `CREDIT_BALANCE_INSUFFICIENT` with no provider execution. The narrow
-race left is a debit landing between the two store reads, which `meterCredits` still refuses
-outright rather than half-applying.
+**The balance gate and debit judge the same current ledger.** A stale or fabricated state
+refuses before either is reached, even when persistence still holds enough credits and even
+for the captain's unlimited allowance. `meterCredits` receives the state step 4 already
+matched to persistence. The narrow race left is a debit landing between the two store reads,
+which `meterCredits` still refuses outright rather than half-applying.
 
 **Identity is settled before persistence is read.** The account id arrives inside a
 caller-supplied state, so step 4 authenticates the principal and checks account ownership
@@ -436,14 +428,14 @@ refuses to *exist* for a `kids` surface (`KIDS_ASSISTANT_SURFACE_DENIED`) or a
 `@sceneaxi/profile-kids` profile (`KIDS_ASSISTANT_PROFILE_DENIED`) — checked before any
 other option is even validated, so a defect elsewhere cannot demote it. That is the deny
 that satisfies "before metering": the port's own Kids guard runs inside the provider thunk,
-which the credit gate enters *after* the balance is judged. Below it, `runMeteredModelCall`
+which the credit gate enters *after* the ledger is judged. Below it, `runMeteredModelCall`
 still denies `KIDS_COMMERCE_DENIED` and the port still denies a Kids profile
 non-overridably. Three independent denies, per the invariant in *Kids isolation*.
 
 **A hosted balance is read, never remembered.** Each hosted turn re-reads the ledger through
-the injected credits view and hands it to the credit gate, which judges the *persisted*
-ledger regardless — so a stale copy is corrected rather than believed, and refuses
-`CREDIT_BALANCE_INSUFFICIENT` before the transport is entered. A ledger the panel cannot
+the injected credits view and hands it to the credit gate, which requires an exact match to
+persistence. An absent or stale ledger refuses `CREDIT_LEDGER_STATE_INVALID` before the
+transport for every principal, including the captain. A ledger the panel cannot
 read, or one that is invalid or owned by another user, is a named refusal
 (`ASSISTANT_CREDITS_UNAVAILABLE`, `CREDIT_LEDGER_STATE_INVALID`,
 `ASSISTANT_LEDGER_OWNER_MISMATCH`) and never `0`. Identity, entitlement, and metering
@@ -452,21 +444,17 @@ refusals are left to the layer that owns their vocabulary: an anonymous hosted t
 turn with no `turnId` is `CREDIT_REQUEST_INVALID` — the panel repeats none of them.
 
 *No* ledger — no credits view wired, or the deployment's own `CreditStore` holding none for
-this user — is deliberately **not** a panel refusal either. Whether a hosted turn needs a
-ledger at all is an entitlement question, and the gate answers it above its own balance
-check: the captain's unlimited allowance is granted before a balance is ever consulted, so a
-panel-owned "no credit ledger exists for this user" would deny the one caller that rule
-exists to allow. Such a turn is handed over with no `state`, and the gate refuses everyone
-else in its own words.
+this user — is handed over with no `state` rather than restated as panel policy. The billing
+boundary refuses it in its own vocabulary for every hosted principal.
 
 That fall-through is why the panel reads a ledger only where the gate would reach one. The
 hosted route being off, Kids, and every identity refusal are all ordered *above*
 `resolveHostedLedger` inside `runMeteredModelCall`, so the panel asks `requireAuthenticated`
 — the same guard, on the same `{ now, surface, admin }` — purely to decide whether to read,
 never to refuse. Where it declines, no credits view is consulted and the turn is handed over
-with no `state`, so the controlling refusal is spoken by its owner instead of being buried
-under a panel-owned one, and persistence is never made to answer for a caller no guard has
-admitted.
+with no `state`, so the controlling identity refusal is spoken by its owner instead of being
+buried under a panel-owned one. Every authenticated hosted principal proceeds to the shared
+current-ledger requirement.
 
 The balance a snapshot *reports* comes only from an outcome the gate derived from
 persistence, never from the view the panel was handed — otherwise a stale copy would be
@@ -474,11 +462,12 @@ published next to the very refusal that proves it wrong, telling a buyer they ho
 the ledger says they already spent. Before a turn has been priced there is no authoritative
 balance and the panel reports none.
 
-**A retried turn is refused, not re-answered.** The gate replays the debit
+**A retried turn is refused, not re-answered.** After the credits view refreshes, the gate
+replays the debit
 (`assistant-turn:<turnId>`, then account-scoped by `meterCredits`) with no provider
 execution and no second charge, and it carries no `response` because the ledger records
-debits, not model answers. The panel reports `ASSISTANT_TURN_ALREADY_CHARGED` and corrects
-the balance rather than fabricating the lost reply.
+debits, not model answers. The panel reports `ASSISTANT_TURN_ALREADY_CHARGED` and reports
+the current balance rather than fabricating the lost reply.
 
 **A port refusal is never billed as an answer.** The panel performs the documented
 integration translation — a `{ ok: false, reason }` from the port becomes a throw — so

@@ -59,26 +59,22 @@
  * ## A balance is read, never remembered
  *
  * Hosted turns re-read the ledger through the injected credits view on every ask
- * the credit gate could reach a ledger for, and hand it to that gate, which judges
- * the *persisted* ledger regardless. A ledger the panel cannot read, or one that is
- * invalid or owned by another user, is a named refusal — never `0` — because "you
- * have no credits" and "we could not read your credits" must not look identical to
- * a buyer. But *no ledger at all* — no credits view wired, or none held for this
- * user — is not a panel refusal, because whether a hosted turn needs a ledger is an
- * entitlement question this module does not own: the captain's unlimited allowance
- * is granted before a balance is ever consulted, and everyone else is refused by the
- * gate in its own vocabulary. Such a turn is handed over with no state. Where the
- * gate refuses above its own ledger read — hosted off, Kids, or any identity
- * refusal, judged by that gate's own auth guard — no ledger is read here either, so
- * the panel can neither pre-empt a refusal it does not own nor make persistence
- * answer for a caller no guard has admitted.
+ * the credit gate could reach a ledger for. The gate checks that view against
+ * persistence and refuses an absent or stale ledger for every principal,
+ * including the captain. A ledger the panel cannot read, or one that is invalid
+ * or owned by another user, is a named refusal — never `0` — because "you have no
+ * credits" and "we could not read your credits" must not look identical to a
+ * buyer. Where the gate refuses above its own ledger read — hosted off, Kids, or
+ * any identity refusal — no ledger is read here either, so the panel can neither
+ * pre-empt a refusal it does not own nor make persistence answer for a caller no
+ * guard has admitted.
  *
  * The balance a snapshot *reports* comes only from an outcome the credit gate
  * derived from persistence, never from the view the panel was handed. The
  * difference is visible precisely when it matters: a caller holding a pre-debit
- * copy is refused `CREDIT_BALANCE_INSUFFICIENT` against the real ledger, and
- * publishing the copy's number beside that refusal would tell a buyer they have
- * credits the ledger says they already spent. Until a turn has been priced
+ * copy is refused `CREDIT_LEDGER_STATE_INVALID`, and publishing the copy's
+ * number beside that refusal would tell a buyer they have credits the ledger
+ * says they already spent. Until a turn has been priced
  * against persistence there is no authoritative balance here, and the panel says
  * nothing rather than something it cannot stand behind.
  */
@@ -236,9 +232,9 @@ export type AssistantAskRequest = Readonly<{
   /**
    * Caller-stable id for this turn, scoped to the account by the credit gate.
    *
-   * Required for a hosted turn so a timed-out retry is answered from the debit it
-   * already made instead of paying the provider twice. Its absence is refused by
-   * the credit gate in its own vocabulary rather than pre-empted here.
+   * Required for a hosted turn so a retry made after refreshing the ledger is
+   * answered from the debit it already made instead of paying the provider twice.
+   * Its absence is refused by the credit gate in its own vocabulary.
    */
   turnId?: string;
 }>;
@@ -579,13 +575,9 @@ export function createAssistantPanel(
    * Read the hosted ledger the credit gate will re-derive from persistence.
    *
    * `undefined` state means there is no ledger to hand over — no credits view is
-   * wired, or the deployment's own store holds none for this user. That is not a
-   * refusal here: whether a hosted turn needs a ledger at all is an entitlement
-   * question the credit gate owns, and it answers it above its own balance check
-   * — the captain's unlimited allowance is granted with no ledger, and everyone
-   * else is refused in the gate's own vocabulary. Inventing a panel refusal for
-   * it would restate an entitlement rule, and would deny the one caller the rule
-   * exists to allow.
+   * wired, or the deployment's own store holds none for this user. That is handed
+   * to the shared credit gate, which requires a current persisted ledger for
+   * every hosted principal and refuses it in billing's vocabulary.
    *
    * The three failures that *are* refused here are the ones that are panel-owned
    * because none of them is an answer about this user's credits: a view that
@@ -675,7 +667,8 @@ export function createAssistantPanel(
     // read, and where it declines it hands the turn over with no state so each
     // refusal is spoken by the layer that owns its vocabulary. An anonymous
     // viewer never passes it, which is why the gate — not this module — is what
-    // says `ENTITLEMENT_ACCOUNT_REQUIRED`.
+    // says `ENTITLEMENT_ACCOUNT_REQUIRED`. Every authenticated hosted principal
+    // must then supply a ledger the gate confirms is current.
     let state: LedgerState | undefined;
     if (hosted && hostedAi.enabled === true) {
       const guarded = requireAuthenticated(principal, { now, surface, admin });
@@ -773,7 +766,7 @@ export function createAssistantPanel(
 
     // The key already bought this turn. The ledger persists debits, not model
     // answers, so there is no response to replay and inventing one would be worse
-    // than saying it is gone. The balance is still corrected from persistence.
+    // than saying it is gone. The balance comes from the current ledger.
     if (outcome.value.replayed) {
       creditBalance = outcome.value.balance;
       return view(

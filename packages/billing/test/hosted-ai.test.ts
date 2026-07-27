@@ -262,6 +262,38 @@ describe("runMeteredModelCall — hosted route, funded", () => {
     expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
   });
 
+  it("refuses the captain when the hosted ledger is absent or stale", async () => {
+    const state = funded(100);
+    const store = storeFor(state);
+    const provider = recordingProvider();
+    const request = {
+      route: "hosted",
+      capability: "hosted-ai-assistant",
+      call: provider.call,
+      now: NOW,
+      hostedAi: hostedOn,
+      admin,
+      principal: principal({ role: "admin" }),
+      store,
+      creditAmount: 7,
+      reason: "hosted assistant turn",
+      idempotencyKey: "turn_admin",
+      surface: "web-shell",
+    } as const;
+
+    const absent = await runMeteredModelCall(request);
+    expect(absent.ok).toBe(false);
+    if (absent.ok) return;
+    expect(absent.reason).toBe(BILLING_REFUSE_REASONS.ledgerStateInvalid);
+
+    await spendBehindTheCaller(state, store, 1);
+    const stale = await runMeteredModelCall({ ...request, state });
+    expect(stale.ok).toBe(false);
+    if (stale.ok) return;
+    expect(stale.reason).toBe(BILLING_REFUSE_REASONS.ledgerStateInvalid);
+    expect(provider.calls).toHaveLength(0);
+  });
+
   it("is replay-safe: the same key charges once and calls the provider once", async () => {
     const state = funded(100);
     const store = storeFor(state);
@@ -335,11 +367,7 @@ describe("runMeteredModelCall — hosted route, funded", () => {
     expect(store.entryCount(ACCOUNT.accountId)).toBe(2);
   });
 
-  it("answers a retry that still holds the pre-debit ledger view", async () => {
-    // The caller that times out never receives the post-debit state, so the only
-    // ledger it can re-send is the one it had before the charge. Reading the key
-    // out of that copy would find nothing and pay the upstream provider again, so
-    // the lookup goes to persistence instead.
+  it("refuses a retry that still holds the pre-debit ledger view", async () => {
     const state = funded(10);
     const store = storeFor(state);
     const provider = recordingProvider();
@@ -348,17 +376,11 @@ describe("runMeteredModelCall — hosted route, funded", () => {
     if (!first.ok) return;
 
     const replay = await hostedCall(state, provider, { store });
-    expect(replay.ok).toBe(true);
-    if (!replay.ok) return;
-    expect(replay.value.replayed).toBe(true);
+    expect(replay.ok).toBe(false);
+    if (replay.ok) return;
+    expect(replay.reason).toBe(BILLING_REFUSE_REASONS.ledgerStateInvalid);
     expect(provider.calls.length).toBe(1);
     expect(store.entryCount(ACCOUNT.accountId)).toBe(2);
-    if (!replay.value.replayed) return;
-    // The stale copy is corrected, not confirmed: the ledger handed back is the
-    // persisted one, so the caller's next decision is made on the real balance.
-    expect(replay.value.balance).toBe(3);
-    expect(replay.value.state.balance).toBe(3);
-    expect(replay.value.entry.delta).toBe(-7);
   });
 
   it("refuses a mutated replay rather than returning the cheaper original", async () => {
@@ -486,11 +508,7 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
     expect(state.balance).toBe(6);
   });
 
-  it("refuses a stale caller's fresh key against the real persisted balance", async () => {
-    // The caller's copy says 10 and a concurrent turn has already spent 8. A
-    // balance gate that trusted the copy would clear a 7-credit charge, pay the
-    // upstream provider, and only then collide with persistence — a completed
-    // model call impossible to charge for. The gate judges the ledger it loaded.
+  it("refuses a stale caller's fresh key before judging its balance", async () => {
     const state = funded(10);
     const store = storeFor(state);
     await spendBehindTheCaller(state, store, 8);
@@ -503,17 +521,14 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
 
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.reason).toBe(BILLING_REFUSE_REASONS.balanceInsufficient);
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.ledgerStateInvalid);
     expect(provider.calls.length).toBe(0);
     // The funding grant and the concurrent debit, and nothing else.
     expect(store.entryCount(ACCOUNT.accountId)).toBe(2);
     expect(state.balance).toBe(10);
   });
 
-  it("charges a stale caller's fresh key against the persisted balance", async () => {
-    // Same stale copy, but the real balance does cover the charge, so the call is
-    // corrected rather than refused: the debit lands on the persisted history and
-    // the reported balance is the real one, not one derived from the stale view.
+  it("refuses a stale caller even when the persisted balance is sufficient", async () => {
     const state = funded(10);
     const store = storeFor(state);
     await spendBehindTheCaller(state, store, 1);
@@ -524,13 +539,11 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
       idempotencyKey: "turn_02",
     });
 
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(provider.calls.length).toBe(1);
-    expect(result.value.metered).toBe(true);
-    expect(result.value.balance).toBe(2);
-    expect(result.value.entry?.delta).toBe(-7);
-    expect(store.entryCount(ACCOUNT.accountId)).toBe(3);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.ledgerStateInvalid);
+    expect(provider.calls.length).toBe(0);
+    expect(store.entryCount(ACCOUNT.accountId)).toBe(2);
   });
 
   it("does not read the account store for a principal that cannot spend", async () => {
@@ -677,14 +690,24 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
     expect(backing.entryCount(other.accountId)).toBe(2);
   });
 
-  it("refuses missing metering inputs before the provider runs", async () => {
+  it("refuses an absent hosted ledger port before the provider runs", async () => {
     const state = funded(100);
     for (const overrides of [
       { store: undefined },
       { store: { findAccountById: 1 } },
-      { reason: "  " },
-      { idempotencyKey: "" },
     ]) {
+      const provider = recordingProvider();
+      const result = await hostedCall(state, provider, overrides);
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.reason).toBe(BILLING_REFUSE_REASONS.ledgerStateInvalid);
+      expect(provider.calls.length).toBe(0);
+    }
+  });
+
+  it("refuses missing debit attribution before the provider runs", async () => {
+    const state = funded(100);
+    for (const overrides of [{ reason: "  " }, { idempotencyKey: "" }]) {
       const provider = recordingProvider();
       const result = await hostedCall(state, provider, overrides);
       expect(result.ok).toBe(false);

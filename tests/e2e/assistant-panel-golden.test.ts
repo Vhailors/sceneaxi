@@ -43,6 +43,7 @@ import {
   appendCreditEntry,
   createInMemoryCreditStore,
   createLedgerState,
+  loadLedgerState,
   meteringIdempotencyKey,
   type LedgerState,
 } from "@sceneaxi/billing";
@@ -192,7 +193,18 @@ const assistant = (
     admin,
     clock,
     principal: PRINCIPAL,
-    credits: { ledgerFor: () => state },
+    credits: {
+      async ledgerFor(userId: string) {
+        const account = await store.findAccountByUserId(userId);
+        if (account === undefined) return undefined;
+        const loaded = loadLedgerState(
+          account,
+          await store.listEntries(account.accountId),
+        );
+        if (!loaded.ok) throw new Error(loaded.message);
+        return loaded.value;
+      },
+    },
     store,
     hostedTurnCredits: 4,
     ...overrides,
@@ -337,9 +349,8 @@ describe("in-app AI assistant golden path", () => {
 
     const snapshot = await panel.ask({ prompt: "fixture prompt", turnId: "t1" });
 
-    // The panel hands the turn over with no state rather than restating an
-    // entitlement rule, so the credit gate refuses a credit-priced call it has
-    // no ledger to price — in its own vocabulary, before the transport.
+    // The panel hands the turn over with no state rather than restating billing
+    // policy, so the credit gate refuses it before the transport.
     expect(snapshot.refusal?.reason).toBe(
       BILLING_REFUSE_REASONS.ledgerStateInvalid,
     );

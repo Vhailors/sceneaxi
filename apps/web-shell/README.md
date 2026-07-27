@@ -54,7 +54,8 @@ credits view, and a `CreditStore` are all injected.
 
 Three modes reach the model through the same port and differ only in metering: `fixture`
 (recorded data, the **default**), `byo` (the user's own credential, free) and `hosted`
-(SceneAxi-operated, credits, **off** unless explicitly enabled). Kids is refused at
+(SceneAxi-operated, credits, **off** unless explicitly enabled). Hosted requires a current
+persisted ledger for every principal; fixture and BYO never touch it. Kids is refused at
 construction — surface *and* profile — so no turn in any mode can be metered or dispatched.
 Contract and ownership: [`docs/auth-credits.md`](../../docs/auth-credits.md).
 

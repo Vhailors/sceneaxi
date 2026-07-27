@@ -53,15 +53,13 @@ global `idempotency_key` uniqueness cannot disagree.
 
 **Hosted AI is one ordering, not a convention.** `runMeteredModelCall` composes the two
 pieces that already exist — `evaluateEntitlement` and `meterCredits` — into the single
-sequence a hosted model call may happen in: Kids denial, route, hosted opt-in, replay,
-entitlement (capability, account, **balance**), metering readiness, provider, debit. Balance
-before provider is the load-bearing step: an unfunded account refuses without the provider
-running and without a ledger row, so a zero balance costs nothing and appends nothing. The
-balance judged there is the **persisted** one the replay step already loaded, not the `state`
-the caller supplied — that names the account, and believing its balance would let a stale or
-fabricated copy buy a call only persistence could refuse, after the provider had been paid.
-`meterCredits` is handed that same resolved ledger, so the balance that authorized the call
-is the balance the debit lands on. The provider is an **injected thunk**, never a Model
+sequence a hosted model call may happen in: Kids denial, route, hosted opt-in, current
+ledger, replay, entitlement (capability, account, **balance**), metering readiness,
+provider, debit. The current-ledger check refuses an absent or stale state for every
+principal. Balance before provider is the load-bearing step: an unfunded account refuses
+without the provider running and without a ledger row, so a zero balance costs nothing and
+appends nothing. `meterCredits` is handed the same current persisted ledger, so the balance
+that authorized the call is the balance the debit lands on. The provider is an **injected thunk**, never a Model
 Provider Port type — billing does not learn what a model is in order to charge for one, and
 every credential stays outside the credit plane.
 
@@ -69,10 +67,11 @@ every credential stays outside the credit plane.
 balance is judged and before the provider is entered, so a caller re-sending a timed-out
 turn gets `replayed: true` with the debit it already made, instead of being refused
 `CREDIT_BALANCE_INSUFFICIENT` out of the balance that very debit spent and paying the
-upstream provider a second time. That lookup reads the **persisted** ledger through the
-injected store rather than the `state` the caller passed, because the caller a timeout
-leaves holding a pre-debit copy is exactly the one the guarantee is for; an unreadable store
-therefore refuses `CREDIT_STORE_FAILED` before the provider rather than after it, and the
+upstream provider a second time. Hosted calls first require the caller's ledger to match
+the **persisted** ledger, including for admin; a timed-out caller holding a pre-debit copy
+must refresh it before retrying, while an absent or stale ledger refuses
+`CREDIT_LEDGER_STATE_INVALID` before the provider. An unreadable store therefore refuses
+`CREDIT_STORE_FAILED` before the provider rather than after it, and the
 authenticated identity is settled before that read — and re-checked against the account
 persistence actually returns, before its history is loaded or any key is compared — so a
 principal who cannot spend the account cannot make persistence answer questions about its

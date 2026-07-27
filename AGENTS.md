@@ -205,19 +205,19 @@ so the retired "experimental preview" framing cannot return by review slip.
 
 Hosted AI reaches a credit debit through exactly one path: `runMeteredModelCall()`
 in `packages/billing/src/hosted-ai.ts`, whose fixed order (Kids → route → hosted
-opt-in → replay → entitlement incl. balance → metering readiness → provider →
-debit) is the contract, documented in `docs/auth-credits.md`. The replay step
-answers a retry from the account-scoped debit that already exists — read from the
-**persisted** ledger, never from the caller's `state`, so a timed-out caller still
-holding a pre-debit copy is recognised as a retry instead of paying the provider
-twice — before the balance gate and before the provider, with no `response` to
+opt-in → current ledger → replay → entitlement incl. balance → metering
+readiness → provider → debit) is the contract, documented in
+`docs/auth-credits.md`. The replay step
+answers a retry from the account-scoped debit that already exists after the
+caller refreshes its state; an absent or stale ledger refuses for every hosted
+principal, including admin, before the balance gate and provider, with no
+`response` to
 hand back, an unreadable store refusing there rather than after the call, and the
 principal authenticated before persistence is read at all — with the account
 persistence returns re-checked against that principal before its history is
 loaded or any metering key is compared. That same persisted
-ledger is what the balance gate and `meterCredits` judge: the caller's `state`
-names the account and never establishes the balance, so a stale copy cannot buy a
-call the real ledger would refuse only after the provider was paid; and
+ledger is what the balance gate and `meterCredits` judge, after equality with the
+caller's supplied state has been established; and
 only a **throw** from the injected thunk is a provider failure, so a provider
 layer that refuses by value must translate it caller-side. Hosted is default-off
 (`HOSTED_AI_DEFAULT_CONFIG`) and a configured adapter or key never enables it; BYO
@@ -241,13 +241,14 @@ and `ASSISTANT_MODE_BILLING` is a projection onto billing's own
 table. Kids is denied a third independent time here, at *construction* — surface
 and profile, ahead of every other option check — because the port's own Kids
 guard runs inside the provider thunk, which the credit gate enters after the
-balance is judged; that is what makes "denied before metering" true in every
-mode. Hosted turns re-read the ledger each ask and let the gate judge
-persistence, so a stale copy refuses rather than buys; every identity,
+ledger is judged; that is what makes "denied before metering" true in every
+mode. Hosted turns re-read the ledger each ask and let the gate require a current
+persisted match, so an absent or stale copy refuses for every principal; every
+identity,
 entitlement, and metering refusal is left to the layer that owns its vocabulary —
-including an absent ledger, which is handed over with no `state` rather than
-refused here, since the captain's unlimited allowance is granted before any
-balance is consulted — and a port refusal is translated to a throw so it is never
+including an absent ledger, which is handed over with no `state` for billing to
+refuse in its own vocabulary — and a port refusal is translated to a throw so it
+is never
 billed as an answer.
 Ownership is `docs/auth-credits.md`; the proofs are
 `apps/web-shell/test/assistant-panel.test.ts` (with a reachability check over
