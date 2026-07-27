@@ -191,6 +191,19 @@ describe("the started server serves the inspector", () => {
     expect(await page.text()).toContain("SceneAxi inspector");
   });
 
+  it("refuses a non-loopback host at the exported server boundary", async () => {
+    const dir = fixtureDir();
+    writeScene(dir, "scene.json", { entities: [] });
+
+    await expect(
+      startInspectorDevServer({
+        host: "0.0.0.0",
+        port: 0,
+        projectRoot: dir,
+      }),
+    ).rejects.toThrow("serves loopback only");
+  });
+
   it("drives propose → rendered diff → accept over the socket", async () => {
     const dir = fixtureDir();
     writeScene(dir, "scene.json", { entities: [{ id: "hero", x: 1 }] });
@@ -208,13 +221,18 @@ describe("the started server serves the inspector", () => {
     });
     expect(proposed.status).toBe(200);
     const review = (await proposed.json()) as {
+      reviewToken: string;
       snapshot: { phase: string; renderedDiff: string };
     };
     expect(review.snapshot.phase).toBe("reviewing");
     expect(review.snapshot.renderedDiff).toContain('"x": 12');
     expect(readFileSync(join(dir, "scene.json")).equals(before)).toBe(true);
 
-    const accepted = await fetch(`${server.url}api/accept`, { method: "POST" });
+    const accepted = await fetch(`${server.url}api/accept`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ reviewToken: review.reviewToken }),
+    });
     expect(accepted.status).toBe(200);
     expect(
       ((await accepted.json()) as { snapshot: { phase: string } }).snapshot.phase,
@@ -305,11 +323,11 @@ describe("the started server serves the inspector", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: "x".repeat(256 * 1024),
-    }).catch(() => null);
-    // The server destroys the request mid-stream, so either the refusal lands or
-    // the socket closes first; both are the fail-closed outcome, neither applies
-    // an edit.
-    if (response !== null) expect(response.status).toBe(413);
+    });
+    expect(response.status).toBe(413);
+    expect(((await response.json()) as { reason: string }).reason).toBe(
+      WEB_SHELL_REFUSALS.requestBodyTooLarge,
+    );
     expect(readFileSync(join(dir, "scene.json"), "utf8")).toContain('"x": 1');
   });
 

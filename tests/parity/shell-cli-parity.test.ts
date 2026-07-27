@@ -256,12 +256,15 @@ describe("served web-shell ↔ CLI parity (sceneaxi#120)", () => {
     });
     expect(proposedOverHttp.status).toBe(200);
     const review = (await proposedOverHttp.json()) as {
+      reviewToken: string;
       snapshot: { phase: string; unifiedDiff: string };
     };
     expect(review.snapshot.phase).toBe("reviewing");
 
     const acceptedOverHttp = await fetch(new URL("/api/accept", server.url), {
       method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ reviewToken: review.reviewToken }),
     });
     expect(acceptedOverHttp.status).toBe(200);
 

@@ -43,8 +43,8 @@ routes are also a public export (`INSPECTOR_ACTIONS`), and each one names the
 | `GET /api/state` | `snapshot()` |
 | `GET /api/document?path=…` | — (read-only status: id, content hash, data keys) |
 | `POST /api/propose` | `proposeEdit()` |
-| `POST /api/accept` | `accept()` |
-| `POST /api/reject` | `reject()` |
+| `POST /api/accept` with the `reviewToken` returned by propose/state | `accept()` |
+| `POST /api/reject` with the `reviewToken` returned by propose/state | `reject()` |
 | `POST /api/recover` | `refreshRecovery()` |
 
 The server is a transport and nothing else. `createInspectorApp()` maps one
@@ -53,6 +53,10 @@ unchanged by this — still owns every phase, and `@sceneaxi/authoring-core` sti
 owns every write. That is why the same edit through this surface and through
 `sceneaxi project propose|apply` produces byte-identical documents and the same
 content hash, asserted in `tests/parity/shell-cli-parity.test.ts`.
+
+Each successful proposal returns an opaque `reviewToken`. Accept and reject must
+send that token, so one browser tab cannot act on a proposal that replaced the
+diff it reviewed.
 
 ### How it fails closed
 
@@ -68,12 +72,13 @@ rather than degrading.
 | The port is already bound | Refuses (`listen-failed`, exit `1`). |
 | Request `Host` does not match the bound inspector authority | `403 request-host-invalid`. This rejects DNS-rebinding and misdirected requests before routing. |
 | A write request carries an `Origin` other than the inspector's own origin | `403 request-origin-invalid` before the body is read or any inspector action runs. Requests without `Origin`, such as local scripts, remain supported. |
+| Accept or reject omits the current `reviewToken` or sends one from an older proposal | `409 review-token-invalid`; no inspector action runs. |
 | `documentPath` resolves outside the served project root — `../`, an absolute path, or a symlink pointing out | `403 document-outside-project-root`. The root is the boundary of the served surface; the library path below has no such bound because a local caller already chose its own directory. |
 | Request body is not a JSON object | `400 request-body-not-json`. |
-| Request body exceeds 64 KiB | `413 request-body-too-large`; the server stops reading rather than buffering the rest. |
+| Request body exceeds 64 KiB | `413 request-body-too-large`; the server stops buffering and discards the rest while preserving the refusal response. |
 | A required edit field is missing or the wrong type | `400 edit-field-invalid`. `newValue` must be present — send `null` explicitly to set null. |
 | The document is absent or is not a SceneAxi document | `404` / `422 document-unreadable`. |
-| `authoring-core` refuses (bad pointer, hash conflict, nothing to accept, recovery pending) | `409 inspector-refused`, carrying the typed diagnostics and the unchanged snapshot — never a `200` beside a refusal. |
+| `authoring-core` refuses (bad pointer, hash conflict, recovery pending) | `409 inspector-refused`, carrying the typed diagnostics and the unchanged snapshot — never a `200` beside a refusal. |
 | An unknown route or the wrong method | `404 route-unknown` / `405 method-not-allowed`. |
 
 Every reason above is an entry in `WEB_SHELL_REFUSALS`, and

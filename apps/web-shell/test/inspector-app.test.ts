@@ -55,6 +55,7 @@ type Payload = {
   action: string;
   reason?: string;
   message?: string;
+  reviewToken?: string | null;
   snapshot?: InspectorSnapshot;
   [key: string]: unknown;
 };
@@ -132,9 +133,12 @@ describe("served inspector protocol", () => {
 
   it("accept applies the reviewed proposal", () => {
     const { dir, app } = project();
-    expect(post(app, "/api/propose", EDIT).status).toBe(200);
+    const review = body(post(app, "/api/propose", EDIT));
+    expect(review.reviewToken).toMatch(/^sha256:[0-9a-f]{64}$/);
 
-    const accepted = body(post(app, "/api/accept", {}));
+    const accepted = body(
+      post(app, "/api/accept", { reviewToken: review.reviewToken }),
+    );
     expect(accepted.ok).toBe(true);
     expect(accepted.snapshot?.phase).toBe("applied");
     expect(accepted.snapshot?.appliedPaths).toEqual(["scene.json"]);
@@ -144,9 +148,11 @@ describe("served inspector protocol", () => {
   it("reject discards the proposal and leaves the document alone", () => {
     const { dir, app } = project();
     const before = readFileSync(join(dir, "scene.json"));
-    expect(post(app, "/api/propose", EDIT).status).toBe(200);
+    const review = body(post(app, "/api/propose", EDIT));
 
-    const rejected = body(post(app, "/api/reject", {}));
+    const rejected = body(
+      post(app, "/api/reject", { reviewToken: review.reviewToken }),
+    );
     expect(rejected.ok).toBe(true);
     expect(rejected.snapshot?.phase).toBe("rejected");
     expect(rejected.snapshot?.renderedDiff).toBeNull();
@@ -186,11 +192,15 @@ describe("served inspector drives the existing session, not a second protocol", 
     const app = createInspectorApp({ projectRoot: dir, session });
 
     app.handle({ method: "GET", url: INSPECTOR_ACTIONS.state.path });
-    post(app, INSPECTOR_ACTIONS.propose.path, EDIT);
-    post(app, INSPECTOR_ACTIONS.reject.path, {});
+    const firstReview = body(post(app, INSPECTOR_ACTIONS.propose.path, EDIT));
+    post(app, INSPECTOR_ACTIONS.reject.path, {
+      reviewToken: firstReview.reviewToken,
+    });
     post(app, INSPECTOR_ACTIONS.recover.path, {});
-    post(app, INSPECTOR_ACTIONS.propose.path, EDIT);
-    post(app, INSPECTOR_ACTIONS.accept.path, {});
+    const secondReview = body(post(app, INSPECTOR_ACTIONS.propose.path, EDIT));
+    post(app, INSPECTOR_ACTIONS.accept.path, {
+      reviewToken: secondReview.reviewToken,
+    });
 
     expect(calls).toEqual([
       INSPECTOR_ACTIONS.state.session,
@@ -338,11 +348,48 @@ describe("served inspector fails closed", () => {
 
   it("surfaces an authoring-core refusal as a refusal, not a 200", () => {
     const { app } = project();
+    const response = post(app, "/api/propose", {
+      ...EDIT,
+      jsonPointer: "/data/entities/0/missing/deeper",
+    });
+    expect(response.status).toBe(409);
+    const payload = body(response);
+    expect(payload.reason).toBe(WEB_SHELL_REFUSALS.inspectorRefused);
+    expect(payload.snapshot?.diagnostics?.[0]?.code).toBe("invalid-pointer");
+  });
+
+  it("binds accept and reject to the exact rendered review", () => {
+    const { dir, app } = project();
+    const before = readFileSync(join(dir, "scene.json"));
+    const first = body(post(app, "/api/propose", EDIT));
+    const second = body(post(app, "/api/propose", { ...EDIT, newValue: 17 }));
+
+    expect(first.reviewToken).not.toBe(second.reviewToken);
+    for (const action of ["accept", "reject"] as const) {
+      const stale = post(app, `/api/${action}`, {
+        reviewToken: first.reviewToken,
+      });
+      expect(stale.status, action).toBe(409);
+      expect(body(stale).reason, action).toBe(
+        WEB_SHELL_REFUSALS.reviewTokenInvalid,
+      );
+      expect(readFileSync(join(dir, "scene.json")).equals(before), action).toBe(
+        true,
+      );
+    }
+
+    const accepted = post(app, "/api/accept", {
+      reviewToken: second.reviewToken,
+    });
+    expect(accepted.status).toBe(200);
+    expect(readFileSync(join(dir, "scene.json"), "utf8")).toContain('"x": 17');
+  });
+
+  it("refuses accept without a reviewed proposal token", () => {
+    const { app } = project();
     const accepted = post(app, "/api/accept", {});
     expect(accepted.status).toBe(409);
-    const payload = body(accepted);
-    expect(payload.reason).toBe(WEB_SHELL_REFUSALS.inspectorRefused);
-    expect(payload.snapshot?.diagnostics?.[0]?.code).toBe("invalid-proposal");
+    expect(body(accepted).reason).toBe(WEB_SHELL_REFUSALS.reviewTokenInvalid);
   });
 
   it("refuses a pointer authoring-core rejects, keeping the session idle", () => {

@@ -158,6 +158,7 @@ describe("sceneaxi-web-shell binary", () => {
     });
     expect(proposed.status).toBe(200);
     const review = (await proposed.json()) as {
+      reviewToken: string;
       snapshot: { phase: string; renderedDiff: string };
     };
     expect(review.snapshot.phase).toBe("reviewing");
@@ -165,7 +166,11 @@ describe("sceneaxi-web-shell binary", () => {
     // Reviewing is not writing.
     expect(readFileSync(join(cwd, "scene.json")).equals(before)).toBe(true);
 
-    const accepted = await fetch(new URL("/api/accept", url), { method: "POST" });
+    const accepted = await fetch(new URL("/api/accept", url), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ reviewToken: review.reviewToken }),
+    });
     expect(accepted.status).toBe(200);
     expect(
       ((await accepted.json()) as { snapshot: { phase: string } }).snapshot.phase,

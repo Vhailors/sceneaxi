@@ -230,24 +230,36 @@ export function serverUrl(host: string, port: number): string {
 /**
  * Read a request body, refusing rather than buffering past the cap.
  *
- * The app checks the same limit, but only this side can stop reading: a served
- * surface must not accept an unbounded stream just to reject it afterwards.
+ * The app checks the same limit, but only this side can stop buffering: a served
+ * surface must not retain an unbounded stream just to reject it afterwards.
  */
 function readBody(request: IncomingMessage): Promise<string | null> {
   return new Promise((resolveBody) => {
     const chunks: Buffer[] = [];
     let size = 0;
+    let settled = false;
     request.on("data", (chunk: Buffer) => {
+      if (settled) return;
       size += chunk.length;
       if (size > MAX_REQUEST_BODY_BYTES) {
-        request.destroy();
+        settled = true;
+        chunks.length = 0;
+        request.resume();
         resolveBody(null);
         return;
       }
       chunks.push(chunk);
     });
-    request.on("end", () => resolveBody(Buffer.concat(chunks).toString("utf8")));
-    request.on("error", () => resolveBody(null));
+    request.on("end", () => {
+      if (settled) return;
+      settled = true;
+      resolveBody(Buffer.concat(chunks).toString("utf8"));
+    });
+    request.on("error", () => {
+      if (settled) return;
+      settled = true;
+      resolveBody(null);
+    });
   });
 }
 
@@ -257,15 +269,27 @@ function writeResponse(
   contentType: string,
   body: string,
   headOnly: boolean,
+  closeConnection = false,
 ): void {
+  if (closeConnection) response.shouldKeepAlive = false;
   response.writeHead(status, {
     "content-type": contentType,
     "content-length": Buffer.byteLength(body, "utf8"),
     // A local authoring surface must never be served from a stale cache: the
     // diff on screen has to be the diff the session is holding.
     "cache-control": "no-store",
+    ...(closeConnection ? { connection: "close" } : {}),
   });
   response.end(headOnly ? undefined : body);
+}
+
+function isResolvedLoopbackAddress(address: string): boolean {
+  const normalized = address.toLowerCase();
+  return (
+    normalized === "::1" ||
+    normalized.startsWith("127.") ||
+    normalized.startsWith("::ffff:127.")
+  );
 }
 
 function requestBoundaryRefusal(
@@ -322,6 +346,14 @@ function requestBoundaryRefusalBody(
 export function startInspectorDevServer(
   options: DevServerOptions,
 ): Promise<InspectorDevServer> {
+  if (!LOOPBACK_HOSTS.includes(options.host)) {
+    return Promise.reject(
+      new Error(
+        `Refusing to bind ${options.host}: the inspector serves loopback only.`,
+      ),
+    );
+  }
+
   const app = createInspectorApp({ projectRoot: options.projectRoot });
 
   const server: Server = createServer((request, response) => {
@@ -373,6 +405,7 @@ export function startInspectorDevServer(
               2,
             )}\n`,
             false,
+            true,
           );
           return;
         }
@@ -402,8 +435,26 @@ export function startInspectorDevServer(
     const onListening = (): void => {
       server.removeListener("error", onError);
       const address = server.address();
-      const port =
-        typeof address === "object" && address !== null ? address.port : options.port;
+      if (
+        typeof address !== "object" ||
+        address === null ||
+        !isResolvedLoopbackAddress(address.address)
+      ) {
+        const resolved =
+          typeof address === "object" && address !== null
+            ? address.address
+            : String(address);
+        server.close(() => {
+          rejectServer(
+            new Error(
+              `Refusing resolved bind address ${resolved}: the inspector serves loopback only.`,
+            ),
+          );
+        });
+        server.closeAllConnections();
+        return;
+      }
+      const port = address.port;
       resolveServer({
         app,
         host: options.host,

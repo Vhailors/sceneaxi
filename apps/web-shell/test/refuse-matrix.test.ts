@@ -133,6 +133,15 @@ const PRODUCERS: Readonly<Record<WebShellRefusal, () => Promise<string>>> = {
     });
   },
 
+  [WEB_SHELL_REFUSALS.reviewTokenInvalid]: async () =>
+    reasonOf(
+      project().app.handle({
+        method: "POST",
+        url: "/api/accept",
+        body: "{}",
+      }),
+    ),
+
   [WEB_SHELL_REFUSALS.editFieldInvalid]: async () =>
     reasonOf(
       project().app.handle({
@@ -160,7 +169,16 @@ const PRODUCERS: Readonly<Record<WebShellRefusal, () => Promise<string>>> = {
     ),
 
   [WEB_SHELL_REFUSALS.inspectorRefused]: async () =>
-    reasonOf(project().app.handle({ method: "POST", url: "/api/accept", body: "{}" })),
+    reasonOf(
+      project().app.handle({
+        method: "POST",
+        url: "/api/propose",
+        body: JSON.stringify({
+          ...EDIT,
+          jsonPointer: "/data/entities/0/missing/deeper",
+        }),
+      }),
+    ),
 
   [WEB_SHELL_REFUSALS.argumentInvalid]: async () => {
     const parsed = parseDevServerArgs(["--frobnicate"]);

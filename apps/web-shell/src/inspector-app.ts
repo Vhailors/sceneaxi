@@ -55,6 +55,8 @@ export const WEB_SHELL_REFUSALS = Object.freeze({
   requestHostInvalid: "request-host-invalid",
   /** An unsafe request names an Origin other than the server's own origin. */
   requestOriginInvalid: "request-origin-invalid",
+  /** Accept or reject did not name the exact proposal rendered for review. */
+  reviewTokenInvalid: "review-token-invalid",
   /** A required edit field is missing or the wrong type. */
   editFieldInvalid: "edit-field-invalid",
   /** The document path resolves outside the served project root. */
@@ -106,13 +108,13 @@ export const INSPECTOR_ACTIONS = Object.freeze({
     method: "POST",
     path: "/api/accept",
     session: "accept",
-    description: "Accept the reviewed proposal (apply via authoring-core)",
+    description: "Accept the exact reviewed proposal (apply via authoring-core)",
   }),
   reject: Object.freeze({
     method: "POST",
     path: "/api/reject",
     session: "reject",
-    description: "Discard the reviewed proposal without writing",
+    description: "Discard the exact reviewed proposal without writing",
   }),
   recover: Object.freeze({
     method: "POST",
@@ -284,8 +286,9 @@ function snapshotResponse(
   action: InspectorAction,
   snapshot: InspectorSnapshot,
   projectRoot: string,
+  reviewToken: string | null,
 ): InspectorHttpResponse {
-  const payload = { projectRoot, snapshot };
+  const payload = { projectRoot, reviewToken, snapshot };
   if (snapshot.diagnostics !== null && snapshot.diagnostics.length > 0) {
     return refuse(
       409,
@@ -315,6 +318,8 @@ export function createInspectorApp(
   const projectRoot = canonicalPath(options.projectRoot ?? ".");
   const session =
     options.session ?? createInspectorSession({ cwd: projectRoot });
+  let reviewGeneration = 0;
+  let activeReviewToken: string | null = null;
 
   const documentStatus = (path: unknown): InspectorHttpResponse => {
     const resolved = resolveInsideProjectRoot(projectRoot, path);
@@ -398,16 +403,62 @@ export function createInspectorApp(
     }
     // The session owns cwd resolution; passing the served root keeps a request
     // from selecting a different one.
-    return snapshotResponse(
-      "propose",
-      session.proposeEdit({
-        documentPath: resolved.documentPath,
-        jsonPointer,
-        newValue: parsed.value["newValue"],
-        cwd: projectRoot,
-      }),
-      projectRoot,
-    );
+    const snapshot = session.proposeEdit({
+      documentPath: resolved.documentPath,
+      jsonPointer,
+      newValue: parsed.value["newValue"],
+      cwd: projectRoot,
+    });
+    if (
+      snapshot.phase === "reviewing" &&
+      snapshot.proposal !== null &&
+      snapshot.diagnostics === null
+    ) {
+      reviewGeneration += 1;
+      activeReviewToken = contentHash(
+        JSON.stringify({
+          generation: reviewGeneration,
+          proposal: snapshot.proposal,
+        }),
+      );
+    } else {
+      activeReviewToken = null;
+    }
+    return snapshotResponse("propose", snapshot, projectRoot, activeReviewToken);
+  };
+
+  const reviewAction = (
+    action: "accept" | "reject",
+    body: string | undefined,
+  ): InspectorHttpResponse => {
+    const parsed = parseJsonObject(body);
+    if (!parsed.ok) {
+      return refuse(
+        parsed.reason === WEB_SHELL_REFUSALS.requestBodyTooLarge ? 413 : 400,
+        action,
+        parsed.reason,
+        parsed.message,
+      );
+    }
+    const reviewToken = parsed.value["reviewToken"];
+    if (
+      typeof reviewToken !== "string" ||
+      activeReviewToken === null ||
+      reviewToken !== activeReviewToken
+    ) {
+      return refuse(
+        409,
+        action,
+        WEB_SHELL_REFUSALS.reviewTokenInvalid,
+        "reviewToken must match the exact proposal rendered for this review.",
+      );
+    }
+
+    const snapshot = action === "accept" ? session.accept() : session.reject();
+    if (snapshot.phase !== "reviewing" || snapshot.proposal === null) {
+      activeReviewToken = null;
+    }
+    return snapshotResponse(action, snapshot, projectRoot, activeReviewToken);
   };
 
   const route = (request: InspectorHttpRequest): InspectorHttpResponse => {
@@ -462,17 +513,27 @@ export function createInspectorApp(
 
     switch (action) {
       case "state":
-        return snapshotResponse(action, session.snapshot(), projectRoot);
+        return snapshotResponse(
+          action,
+          session.snapshot(),
+          projectRoot,
+          activeReviewToken,
+        );
       case "document":
         return documentStatus(target.searchParams.get("path"));
       case "propose":
         return propose(request.body);
       case "accept":
-        return snapshotResponse(action, session.accept(), projectRoot);
+        return reviewAction(action, request.body);
       case "reject":
-        return snapshotResponse(action, session.reject(), projectRoot);
+        return reviewAction(action, request.body);
       case "recover":
-        return snapshotResponse(action, session.refreshRecovery(), projectRoot);
+        return snapshotResponse(
+          action,
+          session.refreshRecovery(),
+          projectRoot,
+          activeReviewToken,
+        );
     }
   };
 
@@ -579,16 +640,17 @@ export function inspectorPageHtml(projectRoot: string): string {
 
 <script>
 const $ = (id) => document.getElementById(id);
-const state = { phase: "idle" };
+const state = { phase: "idle", reviewToken: null };
 
 function render(payload) {
   const snapshot = payload.snapshot ?? { phase: state.phase, renderedDiff: null };
+  if (Object.hasOwn(payload, "reviewToken")) state.reviewToken = payload.reviewToken;
   state.phase = snapshot.phase ?? state.phase;
   $("phase").textContent = state.phase;
   $("note").textContent = payload.ok ? "" : " — refused: " + payload.message;
   $("note").className = payload.ok ? "" : "refused";
   if (snapshot.renderedDiff) $("diff").textContent = snapshot.renderedDiff;
-  const reviewing = state.phase === "reviewing";
+  const reviewing = state.phase === "reviewing" && typeof state.reviewToken === "string";
   $("accept").disabled = !reviewing;
   $("reject").disabled = !reviewing;
   $("recover").hidden = snapshot.journalRecoveryPending !== true;
@@ -619,8 +681,12 @@ $("edit").addEventListener("submit", (event) => {
     newValue,
   });
 });
-$("accept").addEventListener("click", () => void call("/api/accept", {}));
-$("reject").addEventListener("click", () => void call("/api/reject", {}));
+$("accept").addEventListener("click", () => void call("/api/accept", {
+  reviewToken: state.reviewToken,
+}));
+$("reject").addEventListener("click", () => void call("/api/reject", {
+  reviewToken: state.reviewToken,
+}));
 $("recover").addEventListener("click", () => void call("/api/recover", {}));
 void call("/api/state");
 </script>
