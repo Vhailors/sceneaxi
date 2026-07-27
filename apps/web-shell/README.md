@@ -21,6 +21,7 @@ sceneaxi-web-shell: serving the inspector
   url:          http://127.0.0.1:5180/
   project root: /path/to/your/project
   scope:        loopback only; nothing is written until a proposal is accepted
+Press Ctrl+C to stop.
 ```
 
 Open that URL and you get the inspector: type a document path, a JSON Pointer,
@@ -32,12 +33,13 @@ or **Reject**. Nothing is written to disk until you accept.
 | `--host <addr>` | `127.0.0.1` | Loopback address to bind (`127.0.0.1`, `::1`, `localhost`) |
 | `--port <n>` | `5180` | Port to bind; `0` asks the OS for a free one |
 | `--cwd <dir>` | current directory | The project root that is served |
-| `--help` | — | Usage, including the served route table |
+| `--help` / `-h` | — | Usage, including the served route table |
 
-`pnpm sceneaxi-web-shell --help` prints the same table plus every route. The
-routes are also a public export (`INSPECTOR_ACTIONS`): each authoring action
-names the `InspectorSession` method it forwards to, while the document-status
-route is explicitly read-only:
+`pnpm sceneaxi-web-shell --help` prints the same table plus every API route. The
+inspector page itself is `GET /`; every other path refuses `404 route-unknown`.
+The API routes are also a public export (`INSPECTOR_ACTIONS`): each authoring
+action names the `InspectorSession` method it forwards to, while the
+document-status route is explicitly read-only:
 
 | Route | Session method |
 |---|---|
@@ -85,6 +87,7 @@ rather than degrading.
 | `authoring-core` refuses (bad pointer, hash conflict, recovery pending) | `409 inspector-refused`, carrying the typed diagnostics and the unchanged snapshot — never a `200` beside a refusal. |
 | An unknown route or the wrong method | `404 route-unknown` / `405 method-not-allowed`. |
 | A route handler throws unexpectedly | `500 handler-failed`; the server returns a named refusal instead of terminating. |
+| The client abandons a request mid-body, or the listening socket errors | Neither ends the command. An unfinished body runs no inspector action and is not reported as a size refusal — there is no client left to read one, so the connection is simply dropped; a socket error is logged to stderr and the inspector keeps serving. |
 
 Every `WEB_SHELL_REFUSALS` reason appears above, and
 `test/refuse-matrix.test.ts` asserts each one is actually reachable. The binary
