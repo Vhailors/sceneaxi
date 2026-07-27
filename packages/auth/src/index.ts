@@ -19,6 +19,7 @@ export const seam: PackageSeam = Object.freeze({
 export {
   ADMIN_EMAIL_ENV_VAR,
   MULTI_ADMIN_ENV_VARS,
+  hasAdminIdentityProvenance,
   isPlausibleEmail,
   normalizeEmail,
   resolveAdminIdentity,
@@ -43,12 +44,15 @@ export {
 } from "./session-token.js";
 
 export {
+  createRoleGuards,
   refuseUnverifiedAdmin,
   requireAuthenticated,
   requireRole,
   resolveRole,
+  type BoundGuardOptions,
   type GuardOptions,
   type ResolveRoleInput,
+  type RoleGuards,
 } from "./roles.js";
 
 export {

@@ -181,6 +181,12 @@ JSON kept in lockstep with `docs/auth-credits.md` by `pnpm check:contracts` —
 extend `tests/contracts/` and `tests/db/schema-lockstep.test.ts` when touching any
 of it.
 
+Runtime-unforgeable provenance for the identity + credits plane is owned by
+`docs/auth-credits.md` (sceneaxi#126). Preserve its object-identity witness: a
+structural or symbol-keyed brand does not satisfy the copy-refusal contract.
+When adding a provenance-bearing value or consumer, extend
+`tests/e2e/runtime-provenance-refusal.test.ts` and the refuse matrix.
+
 The umbrella owns **every viewport** and is the only site that may depend on
 `@sceneaxi/engine-presentation` (ADR 0022 + its 2026-07-26 amendment) — every other
 engine package stays denied to every site, and both catalogs keep `site-kit` only. Two
@@ -239,9 +245,10 @@ being for sale. It is also where the matrix's `catalog-asset-purchase` row is ac
 enforced, and where a credits retry is judged against the balance that preceded its own
 debit — the same hazard the hosted-AI replay step exists for, since this balance gate also
 sits above the ledger's idempotency check. Money bookkeeping is reachable only from a
-branded `parseCheckoutCompletedEvent` completion plus the persisted intent it was bound to,
-whose `sale:<saleId>` key names the sale, so a `MoneySplitRecord` cannot describe money no
-verified settlement took. No function there accepts or forwards `liveModeAuthorized`, which
+runtime-witnessed `parseCheckoutCompletedEvent` completion plus the persisted intent it
+was bound to, whose `sale:<saleId>` key names the sale, so a `MoneySplitRecord` cannot
+describe money no verified settlement took. No function there accepts or forwards
+`liveModeAuthorized`, which
 is what makes test mode structural rather than defaulted; this widens no marketplace,
 publishing, or catalog-app surface. The whole path is `tests/e2e/catalog-fixture-commerce-golden.test.ts`
 in `test:golden`.

@@ -5,6 +5,7 @@ import {
   createBetterAuthIdentityAdapter,
   createIdentityPort,
   createInMemoryIdentityStore,
+  createRoleGuards,
   requireRole,
   resolveAdminIdentity,
   type IdentityPort,
@@ -110,6 +111,13 @@ const betterAuthLike = {
   },
 };
 
+/** Every fixture uses the environment-issued identity; guards accept no other. */
+const resolvedAdmin = () => {
+  const admin = resolveAdminIdentity(ENV);
+  if (!admin.ok) throw new Error(`fixture admin unresolved: ${admin.reason}`);
+  return admin.value;
+};
+
 const makePort = (): IdentityPort => {
   const admin = resolveAdminIdentity(ENV);
   if (!admin.ok) throw new Error(`fixture admin unresolved: ${admin.reason}`);
@@ -152,11 +160,20 @@ describe("auth + credits golden path", () => {
     expect(admin.value.email).toBe(CAPTAIN_EMAIL);
     const adminIdentity = admin.value;
 
+    // Guards are bound to that resolution, so no later call site supplies the
+    // answer to "who is admin" as an argument (sceneaxi#126).
+    const guards = createRoleGuards(admin);
+
     // ---- 2. the captain signs in as admin and passes an admin guard ---------
     const captain = await signIn(CAPTAIN_EMAIL);
     expect(captain.role.role).toBe("admin");
     expect(captain.role.source).toBe("admin-env");
     expect(validatePrincipal(captain).ok).toBe(true);
+    expect(
+      guards.requireRole(captain, "admin", { now: NOW, surface: "web-shell" }).ok,
+    ).toBe(true);
+    // The unbound form is still supported, and reaches the same verdict because
+    // it checks the identity's runtime provenance.
     expect(requireRole(captain, "admin", { now: NOW, surface: "web-shell", admin: adminIdentity }).ok).toBe(
       true,
     );
@@ -164,7 +181,7 @@ describe("auth + credits golden path", () => {
     // ---- 3. an ordinary user is denied that same guard ----------------------
     const crew = await signIn("crew@example.com");
     expect(crew.role.role).toBe("user");
-    const denied = requireRole(crew, "admin", { now: NOW, admin: adminIdentity });
+    const denied = guards.requireRole(crew, "admin", { now: NOW });
     expect(denied.ok).toBe(false);
     if (denied.ok) return;
     expect(denied.reason).toBe(AUTH_REFUSE_REASONS.roleNotPermitted);
@@ -518,7 +535,7 @@ describe("auth + credits golden path", () => {
             tokenDigest: "a".repeat(64),
           },
         },
-        admin: { email: CAPTAIN_EMAIL, source: ADMIN_EMAIL_ENV_VAR } as const,
+        admin: resolvedAdmin(),
         store: createInMemoryCreditStore({
           accounts: [first.value.state.account],
           entries: first.value.state.entries,

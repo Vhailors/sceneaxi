@@ -27,7 +27,7 @@ import {
   type Principal,
   type Session,
 } from "@sceneaxi/schemas";
-import type { AdminIdentity } from "./admin.js";
+import { hasAdminIdentityProvenance, type AdminIdentity } from "./admin.js";
 import {
   mapBetterAuthAuthentication,
   type IdentityAdapter,
@@ -72,7 +72,10 @@ export type IdentityPort = Readonly<{
 export type CreateIdentityPortOptions = Readonly<{
   adapter?: IdentityAdapter | undefined;
   store?: IdentityStore | undefined;
-  /** Resolved by `resolveAdminIdentity`; absent means the port refuses. */
+  /**
+   * Resolved by `resolveAdminIdentity`; absent means the port refuses, and a
+   * value of the right shape that it did not issue refuses too.
+   */
   admin?: AdminIdentity | undefined;
   /** Epoch milliseconds. Injected so sessions and role stamps are deterministic. */
   clock?: (() => number) | undefined;
@@ -244,13 +247,25 @@ export function createIdentityPort(
         )
       : authOk(options.store);
 
-  const requireAdmin = (): AuthResult<AdminIdentity> =>
-    options.admin === undefined
-      ? authRefuse(
-          AUTH_REFUSE_REASONS.adminIdentityUnresolved,
-          "The single admin identity is unresolved; the identity port refuses rather than treating the captain as an ordinary user.",
-        )
-      : authOk(options.admin);
+  const requireAdmin = (): AuthResult<AdminIdentity> => {
+    const admin = options.admin;
+    if (admin === undefined) {
+      return authRefuse(
+        AUTH_REFUSE_REASONS.adminIdentityUnresolved,
+        "The single admin identity is unresolved; the identity port refuses rather than treating the captain as an ordinary user.",
+      );
+    }
+    // The port derives every role against this identity, so a configured value
+    // of merely the right shape would let whoever wired the port name the
+    // admin without the environment saying so.
+    if (!hasAdminIdentityProvenance(admin)) {
+      return authRefuse(
+        AUTH_REFUSE_REASONS.adminIdentityUnproven,
+        "The configured admin identity was not issued by resolveAdminIdentity; the identity port refuses rather than deriving roles against a hand-built one.",
+      );
+    }
+    return authOk(admin);
+  };
 
   return Object.freeze({
     async signIn(request) {

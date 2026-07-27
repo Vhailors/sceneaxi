@@ -23,7 +23,11 @@ import {
   type RoleSource,
   type User,
 } from "@sceneaxi/schemas";
-import { normalizeEmail, type AdminIdentity } from "./admin.js";
+import {
+  hasAdminIdentityProvenance,
+  normalizeEmail,
+  type AdminIdentity,
+} from "./admin.js";
 import {
   AUTH_REFUSE_REASONS,
   authOk,
@@ -42,6 +46,12 @@ export type ResolveRoleInput = Readonly<{
 /**
  * Derive the role for a user. Returns `admin` only when the user's email
  * matches the single environment-resolved admin identity after normalization.
+ *
+ * This is arithmetic, not a trust boundary, so it checks no provenance: its
+ * answer is exactly as trustworthy as the identity handed in, and it cannot
+ * refuse — it returns a `RoleAssignment`. Every path that *acts* on a role
+ * re-derives it behind a guard, which does check provenance, so a role assigned
+ * here against a hand-built identity opens nothing.
  */
 export function resolveRole(input: ResolveRoleInput): RoleAssignment {
   const isAdmin = normalizeEmail(input.user.email) === input.admin.email;
@@ -85,6 +95,11 @@ export type GuardOptions = Readonly<{
    * re-derives the role from the principal's user record against this identity,
    * so a structurally valid principal carrying a fabricated `admin` role can
    * never satisfy a guard.
+   *
+   * It must be the value `resolveAdminIdentity` issued, not merely a value of
+   * that shape: the guard checks its runtime provenance. Prefer
+   * `createRoleGuards(resolveAdminIdentity(env))`, which removes the argument
+   * altogether.
    */
   admin: AdminIdentity;
   /** When given, the principal's session must belong to this surface. */
@@ -120,6 +135,19 @@ function checkPrincipal(
     return authRefuse(
       AUTH_REFUSE_REASONS.adminIdentityUnresolved,
       "A role guard requires the single resolved admin identity, so the role can be re-derived rather than trusted off the principal.",
+    );
+  }
+
+  // Shape is not provenance. `{ email, source }` is a public type, so a caller
+  // who supplied both the principal and this option would otherwise be
+  // answering the guard's own question: name your own address here and the
+  // guard derives `admin` for you. Only the identity `resolveAdminIdentity`
+  // issued from the environment counts, checked by object identity — a spread,
+  // clone, or JSON round-trip of a real one is a different object and refuses.
+  if (!hasAdminIdentityProvenance(checkedOptions["admin"])) {
+    return authRefuse(
+      AUTH_REFUSE_REASONS.adminIdentityUnproven,
+      "The supplied admin identity was not issued by resolveAdminIdentity; a hand-built or copied identity cannot decide who is admin.",
     );
   }
   const adminEmail = adminRecord["email"];
@@ -225,4 +253,91 @@ export function requireRole(
   }
 
   return checked;
+}
+
+/** What a bound guard still needs per call: the clock, and an optional surface. */
+export type BoundGuardOptions = Readonly<{
+  /** Epoch milliseconds. */
+  now: number;
+  /** When given, the principal's session must belong to this surface. */
+  surface?: IdentitySurface;
+}>;
+
+export type RoleGuards = Readonly<{
+  requireAuthenticated(
+    principal: unknown,
+    options: BoundGuardOptions,
+  ): AuthResult<Principal>;
+  requireRole(
+    principal: unknown,
+    required: IdentityRole,
+    options: BoundGuardOptions,
+  ): AuthResult<Principal>;
+}>;
+
+/**
+ * Bind role guards to one resolved admin identity: the preferred way to guard.
+ *
+ * `createRoleGuards(resolveAdminIdentity(env))` takes the *resolution*, not an
+ * identity, so the answer to "who is admin" is fixed by the environment at the
+ * point the guards are made and is not a parameter any later call site supplies.
+ * A refused resolution yields guards that return that same named refusal — the
+ * deployment has no admin, so nothing is admin, and the reason survives instead
+ * of being flattened.
+ *
+ * `requireRole`/`requireAuthenticated` remain exported for callers that already
+ * hold the resolved identity; they check its provenance, so keeping them costs
+ * nothing at the boundary.
+ */
+export function createRoleGuards(
+  resolved: AuthResult<AdminIdentity>,
+): RoleGuards {
+  const outcome = snapshotPlainRecord(resolved);
+  const resolution: AuthResult<AdminIdentity> =
+    outcome !== undefined &&
+    outcome["ok"] === true &&
+    hasAdminIdentityProvenance(outcome["value"])
+      ? authOk(outcome["value"])
+      : outcome !== undefined &&
+          outcome["ok"] === false &&
+          typeof outcome["reason"] === "string"
+        ? (resolved as AuthRefuse)
+        : authRefuse(
+            AUTH_REFUSE_REASONS.adminIdentityUnresolved,
+            "Role guards were built from something other than a resolveAdminIdentity result; every guard refuses.",
+          );
+
+  const bind = (options: BoundGuardOptions): AuthResult<GuardOptions> => {
+    if (!resolution.ok) return resolution;
+    const record = snapshotPlainRecord(options);
+    if (record === undefined) {
+      return authRefuse(
+        AUTH_REFUSE_REASONS.clockInvalid,
+        "A bound role guard requires a plain options object carrying epoch milliseconds.",
+      );
+    }
+    const screened = record as BoundGuardOptions;
+    return authOk(
+      screened.surface === undefined
+        ? { now: screened.now, admin: resolution.value }
+        : {
+            now: screened.now,
+            admin: resolution.value,
+            surface: screened.surface,
+          },
+    );
+  };
+
+  return Object.freeze({
+    requireAuthenticated(principal, options) {
+      const bound = bind(options);
+      if (!bound.ok) return bound;
+      return requireAuthenticated(principal, bound.value);
+    },
+    requireRole(principal, required, options) {
+      const bound = bind(options);
+      if (!bound.ok) return bound;
+      return requireRole(principal, required, bound.value);
+    },
+  });
 }

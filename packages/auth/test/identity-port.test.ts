@@ -6,6 +6,7 @@ import {
   createIdentityPort,
   createInMemoryIdentityStore,
   digestSessionToken,
+  resolveAdminIdentity,
   type IdentityAdapter,
   type IdentityStore,
 } from "@sceneaxi/auth";
@@ -13,7 +14,13 @@ import type { User } from "@sceneaxi/schemas";
 
 const NOW = Date.parse("2026-07-25T10:00:00Z");
 const clock = () => NOW;
-const admin = { email: "captain@example.com", source: ADMIN_EMAIL_ENV_VAR } as const;
+const adminResolution = resolveAdminIdentity({
+  [ADMIN_EMAIL_ENV_VAR]: "captain@example.com",
+});
+if (!adminResolution.ok) throw new Error(adminResolution.message);
+// Resolved, never hand-built: guards check the identity's runtime provenance,
+// so a structurally identical `{ email, source }` literal is refused.
+const admin = adminResolution.value;
 
 const CAPTAIN = {
   schemaVersion: 1,
@@ -588,6 +595,30 @@ describe("identity port — sign-in", () => {
       if (result.ok) return;
       expect(result.reason).toBe(reason);
     }
+  });
+
+  it("derives roles from the same admin identity whose provenance passed", async () => {
+    let adminReads = 0;
+    const result = await createIdentityPort({
+      adapter: ADAPTER,
+      store: createInMemoryIdentityStore({ users: [CREW] }),
+      clock,
+      get admin() {
+        adminReads += 1;
+        return adminReads < 3
+          ? admin
+          : { email: CREW.email, source: ADMIN_EMAIL_ENV_VAR };
+      },
+    }).signIn({
+      surface: "web-shell",
+      email: "crew@example.com",
+      password: "pw",
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.role.role).toBe("user");
+    expect(adminReads).toBe(1);
   });
 
   it("refuses a clock that throws or returns nonsense", async () => {

@@ -19,6 +19,7 @@ export const AUTH_REFUSE_REASONS = Object.freeze({
   storeMissing: "AUTH_STORE_MISSING",
   clockInvalid: "AUTH_CLOCK_INVALID",
   adminIdentityUnresolved: "AUTH_ADMIN_IDENTITY_UNRESOLVED",
+  adminIdentityUnproven: "AUTH_ADMIN_IDENTITY_UNPROVEN",
 
   // --- inbound request ---
   requestInvalid: "AUTH_REQUEST_ENVELOPE_INVALID",

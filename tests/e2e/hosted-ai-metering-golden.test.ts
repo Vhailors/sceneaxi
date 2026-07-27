@@ -30,7 +30,11 @@ import {
   createOpenRouterAdapter,
   type OpenRouterTransportRequest,
 } from "@sceneaxi/provider-openrouter";
-import { digestSessionToken } from "@sceneaxi/auth";
+import {
+  ADMIN_EMAIL_ENV_VAR,
+  digestSessionToken,
+  resolveAdminIdentity,
+} from "@sceneaxi/auth";
 import {
   BILLING_REFUSE_REASONS,
   HOSTED_AI_DEFAULT_CONFIG,
@@ -44,10 +48,13 @@ import {
 import type { CreditAccount } from "@sceneaxi/schemas";
 
 const NOW = Date.parse("2026-07-25T10:00:00Z");
-const admin = {
-  email: "captain@example.com",
-  source: "SCENEAXI_ADMIN_EMAIL",
-} as const;
+const adminResolution = resolveAdminIdentity({
+  [ADMIN_EMAIL_ENV_VAR]: "captain@example.com",
+});
+if (!adminResolution.ok) throw new Error(adminResolution.message);
+// Resolved, never hand-built: guards check the identity's runtime provenance,
+// so a structurally identical `{ email, source }` literal is refused.
+const admin = adminResolution.value;
 
 const MODEL: ModelDescriptor = Object.freeze({
   model: "openai/gpt-fixture-2026-07-24",
