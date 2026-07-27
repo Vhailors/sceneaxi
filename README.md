@@ -101,13 +101,18 @@ command sequence; the referenced TypeScript, Vitest, ESLint, boundary, contract,
 site-checker configuration files own their respective contracts, and
 [`docs/publish-readiness.md`](docs/publish-readiness.md) owns the publish-ready one.
 
-After building, start the two terminal surfaces from the repository root:
+After building, start the runnable surfaces from the repository root:
 
 ```bash
 pnpm build
 pnpm sceneaxi --help
 pnpm sceneaxi-desktop --help
+pnpm sceneaxi-web-shell --help
 ```
+
+`pnpm sceneaxi-web-shell --cwd <project>` serves the local authoring inspector on
+loopback and prints its URL; it refuses a non-loopback bind and writes nothing
+until a proposal is accepted ([`apps/web-shell/README.md`](apps/web-shell/README.md)).
 
 Run `pnpm test:golden` for the focused product/profile and sculpt paths.
 [`docs/runnable-surfaces.md`](docs/runnable-surfaces.md) owns the complete
@@ -119,8 +124,8 @@ surface inventory, levels, invocation requirements, and proof locations.
 **Early implementation aggregate.** The monorepo has a real fail-closed toolchain,
 typed public seams for every package and app, and initial contract/tracer
 implementations for authoring, the CLI, the Game Kernel, Game profile conformance,
-the Web Experience and Kids policy stubs, the public Delivery Handoff, a
-startable desktop protocol shell, the library-only web shell, the Plugin Host,
+the Web Experience and Kids policy stubs, the public Delivery Handoff, the
+startable desktop and web protocol shells, the Plugin Host,
 dormant app-tier catalogs, and the gate-tested `site-kit` logic behind the three
 deployable sites. The engine, profiles, and dormant apps remain proof-oriented; the
 three first-party sites have the bounded, fail-closed deployment status recorded in

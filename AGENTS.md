@@ -66,6 +66,12 @@ parses flags — `takesArgs: true`, which is what makes the verb (not the
 dispatcher) responsible for refusing unknown flags. `pnpm test:golden` must cover
 every surface claimed runnable.
 
+`apps/web-shell` is startable (sceneaxi#120) without adding a second authoring
+implementation: keep routes in transport-free `src/inspector-app.ts` and socket
+ownership in `src/dev-server.ts`. `apps/web-shell/README.md` owns its run and
+fail-closed contract; this remains local authoring, not the deployable `sites/`
+tier (ADR 0018).
+
 ## Program docs
 
 - `docs/program/SPEC.md` — consumer copy of the canonical product spec ([sceneaxi#1](https://github.com/Vhailors/sceneaxi/issues/1); on disagreement #1 wins).

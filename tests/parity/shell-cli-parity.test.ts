@@ -11,7 +11,7 @@
 import { mkdtempSync, readFileSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   contentHash,
   createDocument,
@@ -25,8 +25,11 @@ import {
   shellProposeAndApply as desktopRoundTrip,
 } from "../../apps/desktop-shell/src/index.ts";
 import {
+  DEFAULT_HOST,
   createInspectorSession,
   shellProposeAndApply as webRoundTrip,
+  startInspectorDevServer,
+  type InspectorDevServer,
 } from "../../apps/web-shell/src/index.ts";
 
 function fixtureDir(label: string): string {
@@ -219,6 +222,90 @@ describe("shell ↔ CLI parity (conformance)", () => {
     expect(contentHash(bytesShell.toString("utf8"))).toBe(
       contentHash(bytesCli.toString("utf8")),
     );
+  });
+});
+
+describe("served web-shell ↔ CLI parity (sceneaxi#120)", () => {
+  const running: InspectorDevServer[] = [];
+
+  afterEach(async () => {
+    while (running.length > 0) await running.pop()?.close();
+  });
+
+  it("the started dev server matches CLI bytes and content hash", async () => {
+    // The startable surface, not the library wrapper: this drives the same edit
+    // through a real loopback socket and through `sceneaxi project propose|apply`,
+    // and requires the two to agree on the bytes *and* on the hash each surface
+    // reports for them.
+    const dirShell = fixtureDir("served");
+    const dirCli = fixtureDir("served-cli");
+    writeScene(dirShell, "scene.json", { ...SAMPLE });
+    writeScene(dirCli, "scene.json", { ...SAMPLE });
+
+    const server = await startInspectorDevServer({
+      host: DEFAULT_HOST,
+      port: 0,
+      projectRoot: dirShell,
+    });
+    running.push(server);
+
+    const proposedOverHttp = await fetch(new URL("/api/propose", server.url), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(EDIT),
+    });
+    expect(proposedOverHttp.status).toBe(200);
+    const review = (await proposedOverHttp.json()) as {
+      reviewToken: string;
+      snapshot: { phase: string; unifiedDiff: string };
+    };
+    expect(review.snapshot.phase).toBe("reviewing");
+
+    const acceptedOverHttp = await fetch(new URL("/api/accept", server.url), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ reviewToken: review.reviewToken }),
+    });
+    expect(acceptedOverHttp.status).toBe(200);
+
+    const proposed = runCli([
+      "project",
+      "propose",
+      "--cwd",
+      dirCli,
+      "--document",
+      EDIT.documentPath,
+      "--pointer",
+      EDIT.jsonPointer,
+      "--value",
+      JSON.stringify(EDIT.newValue),
+      "--out",
+      "edit.json",
+    ]);
+    expect(proposed.exitCode).toBe(ExitCode.OK);
+    const cliProposal = JSON.parse(
+      readFileSync(join(dirCli, "edit.json"), "utf8"),
+    ) as { diffs: Array<{ unifiedDiff: string }> };
+    expect(review.snapshot.unifiedDiff).toBe(cliProposal.diffs[0]?.unifiedDiff);
+    expect(
+      runCli(["project", "apply", "--cwd", dirCli, "--proposal", "edit.json"])
+        .exitCode,
+    ).toBe(ExitCode.OK);
+
+    const bytesShell = readFileSync(join(dirShell, "scene.json"));
+    const bytesCli = readFileSync(join(dirCli, "scene.json"));
+    expect(bytesShell.equals(bytesCli)).toBe(true);
+
+    // The hash the served surface reports, not one recomputed beside it: the
+    // claim under test is that the shell and the CLI agree, so the shell has to
+    // be the one saying so.
+    const status = await fetch(
+      new URL("/api/document?path=scene.json", server.url),
+    );
+    expect(status.status).toBe(200);
+    const served = (await status.json()) as { contentHash: string };
+    expect(served.contentHash).toBe(contentHash(bytesCli.toString("utf8")));
+    expect(served.contentHash).toBe(contentHash(bytesShell.toString("utf8")));
   });
 });
 

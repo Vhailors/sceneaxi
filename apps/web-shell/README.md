@@ -3,10 +3,106 @@
 Human authoring surface — protocol *client* of `@sceneaxi/authoring-core`, never
 a second authoring implementation and never a CLI spawner (matrix-denied).
 
-## sceneaxi#11 stub
+## Run it locally (sceneaxi#120)
 
-Minimal inspector seed for one propose → review rendered diff → accept/reject
-round-trip:
+The package exports are source-backed, so the binary runs `tsc --build` output:
+**`pnpm build` is a prerequisite.** From the repository root:
+
+```bash
+pnpm install
+pnpm build
+pnpm sceneaxi-web-shell --cwd /path/to/your/project
+```
+
+It prints the URL it bound and stays in the foreground until `Ctrl+C`:
+
+```
+sceneaxi-web-shell: serving the inspector
+  url:          http://127.0.0.1:5180/
+  project root: /path/to/your/project
+  scope:        loopback only; nothing is written until a proposal is accepted
+Press Ctrl+C to stop.
+```
+
+Open that URL and you get the inspector: type a document path, a JSON Pointer,
+and a JSON value, press **Propose** to review the rendered diff, then **Accept**
+or **Reject**. Nothing is written to disk until you accept.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--host <addr>` | `127.0.0.1` | Loopback address to bind (`127.0.0.1`, `::1`, `localhost`) |
+| `--port <n>` | `5180` | Port to bind; `0` asks the OS for a free one |
+| `--cwd <dir>` | current directory | The project root that is served |
+| `--help` / `-h` | — | Usage, including the served route table |
+
+`pnpm sceneaxi-web-shell --help` prints the same table plus every API route. The
+inspector page itself is `GET /`; every other path refuses `404 route-unknown`.
+The API routes are also a public export (`INSPECTOR_ACTIONS`): each authoring
+action names the `InspectorSession` method it forwards to, while the
+document-status route is explicitly read-only:
+
+| Route | Session method |
+|---|---|
+| `GET /api/state` | `snapshot()` |
+| `GET /api/document?path=…` | — (read-only status: id, content hash, data keys) |
+| `POST /api/propose` | `proposeEdit()` |
+| `POST /api/accept` with the `reviewToken` returned by propose/state | `accept()` |
+| `POST /api/reject` with the `reviewToken` returned by propose/state | `reject()` |
+| `POST /api/recover` | `refreshRecovery()` |
+
+The server is a transport and nothing else. `createInspectorApp()` maps each
+authoring action onto one session call and keeps document status read-only;
+`createInspectorSession()` — documented below and unchanged by this — still owns
+every phase, and `@sceneaxi/authoring-core` still owns every write. That is why
+the same edit through this surface and through `sceneaxi project propose|apply`
+produces byte-identical documents and the same content hash, asserted in
+`tests/parity/shell-cli-parity.test.ts`.
+
+Each successful proposal returns an opaque `reviewToken`. Accept and reject must
+send that token, so one browser tab cannot act on a proposal that replaced the
+diff it reviewed. One app/server owns one session and therefore one pending
+proposal at a time, matching the session API's review-before-apply contract.
+
+### How it fails closed
+
+This is a **local development** surface: it authenticates nobody, and it writes
+whatever files the process that launched it can write. Every rule below refuses
+rather than degrading.
+
+| Situation | Behaviour |
+|---|---|
+| `--host` is not a loopback address | Refuses at launch (`host-not-loopback`, exit `2`). It is never silently rebound — a routable bind would hand unauthenticated write access to the network. |
+| The `--cwd` target does not exist or is not a directory | Refuses at launch (`project-root-unusable`, exit `2`). |
+| Unknown flag, bare argument, or valueless flag | Refuses at launch (`argument-invalid`, exit `2`). |
+| The port is already bound | Refuses (`listen-failed`, exit `1`). |
+| Request `Host` does not match the bound inspector authority | `403 request-host-invalid`. This rejects DNS-rebinding and misdirected requests before routing. |
+| A write request carries an `Origin` other than the inspector's own origin | `403 request-origin-invalid` before the body is read or any inspector action runs. Requests without `Origin`, such as local scripts, remain supported. |
+| Another page tries to frame the inspector | Denied by every response's `x-frame-options: DENY` and `frame-ancestors 'none'`. The `Host` and `Origin` checks structurally cannot see this — a direct iframe of the bound authority passes both — so framing is closed by header, and the buttons that write files cannot be clickjacked. |
+| Accept or reject omits the current `reviewToken` or sends one from an older proposal | `409 review-token-invalid`; no inspector action runs. |
+| `documentPath` resolves outside the served project root — `../`, an absolute path, or a symlink pointing out | `403 document-outside-project-root`. The root is the boundary of the served surface; the library path below has no such bound because a local caller already chose its own directory. |
+| Request body is not a JSON object | `400 request-body-not-json`. |
+| Request body exceeds 64 KiB | `413 request-body-too-large`; the server stops buffering and discards the rest while preserving the refusal response. |
+| A required edit field is missing or the wrong type | `400 edit-field-invalid`. `newValue` must be present — send `null` explicitly to set null. |
+| The document is absent or is not a SceneAxi document | `404` / `422 document-unreadable`. |
+| `authoring-core` refuses (bad pointer, hash conflict, recovery pending) | `409 inspector-refused`, carrying the typed diagnostics and the unchanged snapshot — never a `200` beside a refusal. |
+| An unknown route or the wrong method | `404 route-unknown` / `405 method-not-allowed`. |
+| A route handler throws unexpectedly | `500 handler-failed`; the server returns a named refusal instead of terminating. |
+| The client abandons a request mid-body, or the listening socket errors | Neither ends the command. An unfinished body runs no inspector action and is not reported as a size refusal — there is no client left to read one, so the connection is simply dropped; a socket error is logged to stderr and the inspector keeps serving. |
+
+Every `WEB_SHELL_REFUSALS` reason appears above, and
+`test/refuse-matrix.test.ts` asserts each one is actually reachable. The binary
+itself is proven to start by `test/bin-smoke.test.ts`, which spawns it and drives
+propose → accept over a real socket.
+
+It still does no remote hosting, deployment, TLS, process management, or domain
+work — that tier is `sites/`
+([ADR 0018](../../docs/adr/0018-sites-tier-three-vercel-one-neon.md)), and this
+is not it. It spawns no CLI and imports no engine package.
+
+## Inspector session API (sceneaxi#11)
+
+The underlying session API provides one propose → review rendered diff →
+accept/reject round-trip:
 
 ```ts
 import { createInspectorSession } from "@sceneaxi/web-shell";
@@ -34,7 +130,9 @@ accept against the same canonical fixture and asserts the CLI proposal diff,
 final bytes, and content hash are identical. This remains a protocol client,
 not a second editor, product UI, or design system.
 
-No hosting, no deployment, no public visibility.
+The session API itself opens no socket; the local dev command above is its only
+served transport. Neither surface adds remote hosting, deployment, or public
+visibility.
 
 ## Account panel
 
@@ -63,12 +161,12 @@ Contract and ownership: [`docs/auth-credits.md`](../../docs/auth-credits.md).
 
 `createOpenPathView()` is the **view model** for the shared open-path demo
 policy: the same payload `sceneaxi profile open-path` and
-`sceneaxi-desktop open-path` report, rendered by nothing here because this
-package ships no markup. It reports the policy verbatim and surfaces the Kids
-refusal as a named refusal rather than an empty list. `policyFor(profile)` is the
-same one-profile projection the two command surfaces report, so an off-policy
-profile refuses with `OPEN_PATH_PROFILE_UNKNOWN` instead of rendering as an
-absent row. Contract and ownership:
+`sceneaxi-desktop open-path` report. The inspector UI does not render this view
+model; consumers receive the policy verbatim, including the Kids refusal as a
+named refusal rather than an empty list. `policyFor(profile)` is the same
+one-profile projection the two command surfaces report, so an off-policy profile
+refuses with `OPEN_PATH_PROFILE_UNKNOWN` instead of rendering as an absent row.
+Contract and ownership:
 [`docs/open-path-policy.md`](../../docs/open-path-policy.md).
 
 ## Hybrid vertical: Minimum E2

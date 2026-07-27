@@ -2,11 +2,13 @@
   "name": "@sceneaxi/web-shell",
   "version": "0.0.0",
   "private": true,
-  "description": "SceneAxi web-shell \u2014 human authoring surface; protocol client of authoring-core (propose\u2192diff\u2192apply inspector stub)",
+  "description": "SceneAxi web-shell \u2014 human authoring surface; protocol client of authoring-core (startable propose\u2192diff\u2192apply inspector)",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
+  "bin": { "sceneaxi-web-shell": "./bin/sceneaxi-web-shell.mjs" },
+  "files": ["src", "bin"],
   "dependencies": {
     "@sceneaxi/schemas": "workspace:^",
     "@sceneaxi/authoring-core": "workspace:^",
