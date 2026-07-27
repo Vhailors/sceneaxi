@@ -227,6 +227,33 @@ describe("reviewProposal", () => {
     // same bytes propose() produced — so accepting it applies exactly what was shown.
     expect(serializeProposal(result.value.proposal)).toBe(serializeProposal(proposal));
   });
+
+  it("freezes the carried proposal, so no edit can be rewritten after the rows are read", () => {
+    const review = reviewOf([
+      { pointer: "/data/objects/field_drone/position", value: [0, 1.85, -2.3] },
+    ]);
+    const carried = review.proposal;
+    const edit = carried.edits[0];
+    if (edit === undefined) throw new Error("expected one edit");
+
+    expect(Object.isFrozen(carried)).toBe(true);
+    expect(Object.isFrozen(carried.edits)).toBe(true);
+    expect(Object.isFrozen(edit)).toBe(true);
+    expect(Object.isFrozen(edit.newValue)).toBe(true);
+    expect(Object.isFrozen(edit.oldValue)).toBe(true);
+    expect(Object.isFrozen(carried.diffs)).toBe(true);
+    expect(carried.diffs.every((diff) => Object.isFrozen(diff))).toBe(true);
+
+    const mutable = carried as unknown as { edits: Record<string, unknown>[] };
+    expect(() => mutable.edits.push({ ...edit, jsonPointer: "/data/objects/field_drone/label" }))
+      .toThrow(TypeError);
+    expect(() => {
+      const first = mutable.edits[0];
+      if (first !== undefined) first["jsonPointer"] = "/data/absent/leaf";
+    }).toThrow(TypeError);
+    expect(carried.edits).toHaveLength(1);
+    expect(carried.edits[0]?.jsonPointer).toBe("/data/objects/field_drone/position");
+  });
 });
 
 describe("resolveChangeReview", () => {

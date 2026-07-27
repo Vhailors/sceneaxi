@@ -92,7 +92,11 @@ export type ChangeReview = {
   readonly origin: string | null;
   readonly rows: readonly ChangeReviewRow[];
   readonly documents: readonly ChangeReviewDocument[];
-  /** The exact proposal reviewed, so an accepted review hands `apply()` the same bytes. */
+  /**
+   * The exact proposal reviewed, so an accepted review hands `apply()` the same
+   * bytes. Deeply frozen: a holder of the review cannot rewrite an edit between
+   * the rows being read and the decision being resolved.
+   */
   readonly proposal: Proposal;
 };
 
@@ -159,6 +163,13 @@ export function formatProposalValue(value: JsonValue): string {
   return JSON.stringify(value);
 }
 
+/** Freeze a value and everything under it, arrays and nested JSON included. */
+function deepFreeze<T>(value: T): T {
+  if (value === null || typeof value !== "object") return value;
+  for (const nested of Object.values(value) as unknown[]) deepFreeze(nested);
+  return Object.freeze(value);
+}
+
 function badgeOf(edit: ProposalEdit): ChangeReviewBadge {
   return JSON.stringify(edit.oldValue) === JSON.stringify(edit.newValue) ? "unchanged" : "modify";
 }
@@ -173,7 +184,7 @@ function badgeOf(edit: ProposalEdit): ChangeReviewBadge {
 export function reviewProposal(input: ChangeReviewInput): SiteResult<ChangeReview> {
   const validated = validateProposal(input.proposal);
   if (!validated.ok) return refuse("CHANGE_REVIEW_PROPOSAL_INVALID");
-  const proposal = validated.proposal;
+  const proposal = deepFreeze(validated.proposal);
 
   const editsByDocument = new Map<string, ProposalEdit[]>();
   for (const edit of proposal.edits) {
