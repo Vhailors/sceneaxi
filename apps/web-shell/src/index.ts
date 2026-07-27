@@ -74,6 +74,8 @@ export {
   type InspectorApp,
   type InspectorHttpRequest,
   type InspectorHttpResponse,
+  type RequestRefusal,
+  type RequestRefusalReason,
   type WebShellRefusal,
 } from "./inspector-app.js";
 

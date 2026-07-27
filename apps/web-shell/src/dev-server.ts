@@ -228,12 +228,22 @@ export function serverUrl(host: string, port: number): string {
 }
 
 /**
+ * The outcome of reading a request body. A body the client never finished
+ * sending is not a size violation, so the two failures stay distinguishable:
+ * only `too-large` is a refusal the caller can name back to a client that is
+ * still there to read it.
+ */
+type BodyRead =
+  | { readonly ok: true; readonly body: string }
+  | { readonly ok: false; readonly cause: "too-large" | "stream-failed" };
+
+/**
  * Read a request body, refusing rather than buffering past the cap.
  *
  * The app checks the same limit, but only this side can stop buffering: a served
  * surface must not retain an unbounded stream just to reject it afterwards.
  */
-function readBody(request: IncomingMessage): Promise<string | null> {
+function readBody(request: IncomingMessage): Promise<BodyRead> {
   return new Promise((resolveBody) => {
     const chunks: Buffer[] = [];
     let size = 0;
@@ -245,7 +255,7 @@ function readBody(request: IncomingMessage): Promise<string | null> {
         settled = true;
         chunks.length = 0;
         request.resume();
-        resolveBody(null);
+        resolveBody({ ok: false, cause: "too-large" });
         return;
       }
       chunks.push(chunk);
@@ -253,12 +263,12 @@ function readBody(request: IncomingMessage): Promise<string | null> {
     request.on("end", () => {
       if (settled) return;
       settled = true;
-      resolveBody(Buffer.concat(chunks).toString("utf8"));
+      resolveBody({ ok: true, body: Buffer.concat(chunks).toString("utf8") });
     });
     request.on("error", () => {
       if (settled) return;
       settled = true;
-      resolveBody(null);
+      resolveBody({ ok: false, cause: "stream-failed" });
     });
   });
 }
@@ -361,6 +371,12 @@ export function startInspectorDevServer(
     const url = request.url ?? "/";
     const headOnly = method === "HEAD";
 
+    // A socket the client dropped fails the *write*, asynchronously, which the
+    // catch below cannot see: an unhandled 'error' on either stream is thrown
+    // by EventEmitter and would end the dev server on a client's behalf.
+    request.on("error", () => response.destroy());
+    response.on("error", () => response.destroy());
+
     void (async () => {
       const address = server.address();
       const boundPort =
@@ -388,7 +404,11 @@ export function startInspectorDevServer(
       let body: string | undefined;
       if (method === "POST" || method === "PUT" || method === "PATCH") {
         const read = await readBody(request);
-        if (read === null) {
+        if (!read.ok) {
+          if (read.cause === "stream-failed") {
+            response.destroy();
+            return;
+          }
           writeResponse(
             response,
             413,
@@ -409,7 +429,7 @@ export function startInspectorDevServer(
           );
           return;
         }
-        body = read;
+        body = read.body;
       }
 
       const result = app.handle({
@@ -434,6 +454,15 @@ export function startInspectorDevServer(
     };
     const onListening = (): void => {
       server.removeListener("error", onError);
+      // Bind-time `onError` is one-shot, but the server keeps emitting 'error'
+      // for the whole life of the socket (fd exhaustion on accept, for one).
+      // Without a standing listener EventEmitter throws it and the dev command
+      // dies; a local authoring server logs and keeps serving instead.
+      server.on("error", (error: Error) => {
+        process.stderr.write(
+          `${WEB_SHELL_APP}: server error, still serving — ${error.message}\n`,
+        );
+      });
       const address = server.address();
       if (
         typeof address !== "object" ||

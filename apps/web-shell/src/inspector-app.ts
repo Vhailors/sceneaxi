@@ -200,6 +200,44 @@ function refuse(
 }
 
 /**
+ * The refusals the request-shaped checks below produce, and the one place each
+ * becomes an HTTP status.
+ *
+ * The mapping is a property of the reason, not of the call site: inlining it
+ * per caller is what lets two of them answer the same refusal differently.
+ */
+export type RequestRefusalReason =
+  | typeof WEB_SHELL_REFUSALS.requestBodyNotJson
+  | typeof WEB_SHELL_REFUSALS.requestBodyTooLarge
+  | typeof WEB_SHELL_REFUSALS.editFieldInvalid
+  | typeof WEB_SHELL_REFUSALS.documentOutsideProjectRoot;
+
+export type RequestRefusal = {
+  readonly reason: RequestRefusalReason;
+  readonly message: string;
+};
+
+const REQUEST_REFUSAL_STATUS: Readonly<Record<RequestRefusalReason, number>> =
+  Object.freeze({
+    [WEB_SHELL_REFUSALS.requestBodyNotJson]: 400,
+    [WEB_SHELL_REFUSALS.requestBodyTooLarge]: 413,
+    [WEB_SHELL_REFUSALS.editFieldInvalid]: 400,
+    [WEB_SHELL_REFUSALS.documentOutsideProjectRoot]: 403,
+  });
+
+function refuseRequest(
+  action: string,
+  refusal: RequestRefusal,
+): InspectorHttpResponse {
+  return refuse(
+    REQUEST_REFUSAL_STATUS[refusal.reason],
+    action,
+    refusal.reason,
+    refusal.message,
+  );
+}
+
+/**
  * Resolve a caller-supplied document path inside the served root.
  *
  * The library path below has no reason to bound this — a local caller already
@@ -213,7 +251,7 @@ export function resolveInsideProjectRoot(
   documentPath: unknown,
 ):
   | { readonly ok: true; readonly documentPath: string; readonly absolute: string }
-  | { readonly ok: false; readonly reason: WebShellRefusal; readonly message: string } {
+  | ({ readonly ok: false } & RequestRefusal) {
   if (typeof documentPath !== "string" || documentPath.length === 0) {
     return {
       ok: false,
@@ -244,7 +282,7 @@ function parseJsonObject(
   body: string | undefined,
 ):
   | { readonly ok: true; readonly value: Readonly<Record<string, unknown>> }
-  | { readonly ok: false; readonly reason: WebShellRefusal; readonly message: string } {
+  | ({ readonly ok: false } & RequestRefusal) {
   const text = body ?? "";
   if (Buffer.byteLength(text, "utf8") > MAX_REQUEST_BODY_BYTES) {
     return {
@@ -324,14 +362,7 @@ export function createInspectorApp(
 
   const documentStatus = (path: unknown): InspectorHttpResponse => {
     const resolved = resolveInsideProjectRoot(projectRoot, path);
-    if (!resolved.ok) {
-      return refuse(
-        resolved.reason === WEB_SHELL_REFUSALS.editFieldInvalid ? 400 : 403,
-        "document",
-        resolved.reason,
-        resolved.message,
-      );
-    }
+    if (!resolved.ok) return refuseRequest("document", resolved);
     let text: string;
     try {
       text = readFileSync(resolved.absolute, "utf8");
@@ -365,42 +396,25 @@ export function createInspectorApp(
 
   const propose = (body: string | undefined): InspectorHttpResponse => {
     const parsed = parseJsonObject(body);
-    if (!parsed.ok) {
-      return refuse(
-        parsed.reason === WEB_SHELL_REFUSALS.requestBodyTooLarge ? 413 : 400,
-        "propose",
-        parsed.reason,
-        parsed.message,
-      );
-    }
+    if (!parsed.ok) return refuseRequest("propose", parsed);
     const resolved = resolveInsideProjectRoot(
       projectRoot,
       parsed.value["documentPath"],
     );
-    if (!resolved.ok) {
-      return refuse(
-        resolved.reason === WEB_SHELL_REFUSALS.editFieldInvalid ? 400 : 403,
-        "propose",
-        resolved.reason,
-        resolved.message,
-      );
-    }
+    if (!resolved.ok) return refuseRequest("propose", resolved);
     const jsonPointer = parsed.value["jsonPointer"];
     if (typeof jsonPointer !== "string") {
-      return refuse(
-        400,
-        "propose",
-        WEB_SHELL_REFUSALS.editFieldInvalid,
-        "jsonPointer must be a string (the empty string addresses the whole document).",
-      );
+      return refuseRequest("propose", {
+        reason: WEB_SHELL_REFUSALS.editFieldInvalid,
+        message:
+          "jsonPointer must be a string (the empty string addresses the whole document).",
+      });
     }
     if (!Object.hasOwn(parsed.value, "newValue")) {
-      return refuse(
-        400,
-        "propose",
-        WEB_SHELL_REFUSALS.editFieldInvalid,
-        "newValue is required (send null explicitly to set a null value).",
-      );
+      return refuseRequest("propose", {
+        reason: WEB_SHELL_REFUSALS.editFieldInvalid,
+        message: "newValue is required (send null explicitly to set a null value).",
+      });
     }
     // The session owns cwd resolution; passing the served root keeps a request
     // from selecting a different one.
@@ -433,14 +447,7 @@ export function createInspectorApp(
     body: string | undefined,
   ): InspectorHttpResponse => {
     const parsed = parseJsonObject(body);
-    if (!parsed.ok) {
-      return refuse(
-        parsed.reason === WEB_SHELL_REFUSALS.requestBodyTooLarge ? 413 : 400,
-        action,
-        parsed.reason,
-        parsed.message,
-      );
-    }
+    if (!parsed.ok) return refuseRequest(action, parsed);
     const reviewToken = parsed.value["reviewToken"];
     if (
       typeof reviewToken !== "string" ||
@@ -525,7 +532,6 @@ export function createInspectorApp(
       case "propose":
         return propose(request.body);
       case "accept":
-        return reviewAction(action, request.body);
       case "reject":
         return reviewAction(action, request.body);
       case "recover":
