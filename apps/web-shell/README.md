@@ -35,8 +35,9 @@ or **Reject**. Nothing is written to disk until you accept.
 | `--help` | — | Usage, including the served route table |
 
 `pnpm sceneaxi-web-shell --help` prints the same table plus every route. The
-routes are also a public export (`INSPECTOR_ACTIONS`), and each one names the
-`InspectorSession` method it forwards to:
+routes are also a public export (`INSPECTOR_ACTIONS`): each authoring action
+names the `InspectorSession` method it forwards to, while the document-status
+route is explicitly read-only:
 
 | Route | Session method |
 |---|---|
@@ -47,16 +48,18 @@ routes are also a public export (`INSPECTOR_ACTIONS`), and each one names the
 | `POST /api/reject` with the `reviewToken` returned by propose/state | `reject()` |
 | `POST /api/recover` | `refreshRecovery()` |
 
-The server is a transport and nothing else. `createInspectorApp()` maps one
-request onto one session call; `createInspectorSession()` — documented below and
-unchanged by this — still owns every phase, and `@sceneaxi/authoring-core` still
-owns every write. That is why the same edit through this surface and through
-`sceneaxi project propose|apply` produces byte-identical documents and the same
-content hash, asserted in `tests/parity/shell-cli-parity.test.ts`.
+The server is a transport and nothing else. `createInspectorApp()` maps each
+authoring action onto one session call and keeps document status read-only;
+`createInspectorSession()` — documented below and unchanged by this — still owns
+every phase, and `@sceneaxi/authoring-core` still owns every write. That is why
+the same edit through this surface and through `sceneaxi project propose|apply`
+produces byte-identical documents and the same content hash, asserted in
+`tests/parity/shell-cli-parity.test.ts`.
 
 Each successful proposal returns an opaque `reviewToken`. Accept and reject must
 send that token, so one browser tab cannot act on a proposal that replaced the
-diff it reviewed.
+diff it reviewed. One app/server owns one session and therefore one pending
+proposal at a time, matching the session API's review-before-apply contract.
 
 ### How it fails closed
 
@@ -67,7 +70,7 @@ rather than degrading.
 | Situation | Behaviour |
 |---|---|
 | `--host` is not a loopback address | Refuses at launch (`host-not-loopback`, exit `2`). It is never silently rebound — a routable bind would hand unauthenticated write access to the network. |
-| `--cwd` is missing or not a directory | Refuses at launch (`project-root-unusable`, exit `2`). |
+| The `--cwd` target does not exist or is not a directory | Refuses at launch (`project-root-unusable`, exit `2`). |
 | Unknown flag, bare argument, or valueless flag | Refuses at launch (`argument-invalid`, exit `2`). |
 | The port is already bound | Refuses (`listen-failed`, exit `1`). |
 | Request `Host` does not match the bound inspector authority | `403 request-host-invalid`. This rejects DNS-rebinding and misdirected requests before routing. |
@@ -80,20 +83,22 @@ rather than degrading.
 | The document is absent or is not a SceneAxi document | `404` / `422 document-unreadable`. |
 | `authoring-core` refuses (bad pointer, hash conflict, recovery pending) | `409 inspector-refused`, carrying the typed diagnostics and the unchanged snapshot — never a `200` beside a refusal. |
 | An unknown route or the wrong method | `404 route-unknown` / `405 method-not-allowed`. |
+| A route handler throws unexpectedly | `500 handler-failed`; the server returns a named refusal instead of terminating. |
 
-Every reason above is an entry in `WEB_SHELL_REFUSALS`, and
+Every `WEB_SHELL_REFUSALS` reason appears above, and
 `test/refuse-matrix.test.ts` asserts each one is actually reachable. The binary
 itself is proven to start by `test/bin-smoke.test.ts`, which spawns it and drives
 propose → accept over a real socket.
 
-It still does no hosting, deployment, TLS, process management, or domain work —
-that tier is `sites/` ([ADR 0018](../../docs/adr/0018-sites-tier-three-vercel-one-neon.md)),
-and this is not it. It spawns no CLI and imports no engine package.
+It still does no remote hosting, deployment, TLS, process management, or domain
+work — that tier is `sites/`
+([ADR 0018](../../docs/adr/0018-sites-tier-three-vercel-one-neon.md)), and this
+is not it. It spawns no CLI and imports no engine package.
 
-## sceneaxi#11 stub
+## Inspector session API (sceneaxi#11)
 
-Minimal inspector seed for one propose → review rendered diff → accept/reject
-round-trip:
+The underlying session API provides one propose → review rendered diff →
+accept/reject round-trip:
 
 ```ts
 import { createInspectorSession } from "@sceneaxi/web-shell";
@@ -121,7 +126,9 @@ accept against the same canonical fixture and asserts the CLI proposal diff,
 final bytes, and content hash are identical. This remains a protocol client,
 not a second editor, product UI, or design system.
 
-No hosting, no deployment, no public visibility.
+The session API itself opens no socket; the local dev command above is its only
+served transport. Neither surface adds remote hosting, deployment, or public
+visibility.
 
 ## Account panel
 
@@ -150,12 +157,12 @@ Contract and ownership: [`docs/auth-credits.md`](../../docs/auth-credits.md).
 
 `createOpenPathView()` is the **view model** for the shared open-path demo
 policy: the same payload `sceneaxi profile open-path` and
-`sceneaxi-desktop open-path` report, rendered by nothing here because this
-package ships no markup. It reports the policy verbatim and surfaces the Kids
-refusal as a named refusal rather than an empty list. `policyFor(profile)` is the
-same one-profile projection the two command surfaces report, so an off-policy
-profile refuses with `OPEN_PATH_PROFILE_UNKNOWN` instead of rendering as an
-absent row. Contract and ownership:
+`sceneaxi-desktop open-path` report. The inspector UI does not render this view
+model; consumers receive the policy verbatim, including the Kids refusal as a
+named refusal rather than an empty list. `policyFor(profile)` is the same
+one-profile projection the two command surfaces report, so an off-policy profile
+refuses with `OPEN_PATH_PROFILE_UNKNOWN` instead of rendering as an absent row.
+Contract and ownership:
 [`docs/open-path-policy.md`](../../docs/open-path-policy.md).
 
 ## Hybrid vertical: Minimum E2

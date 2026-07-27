@@ -122,18 +122,11 @@ anything.
 
 ## Why the web shell serves loopback only
 
-`sceneaxi-web-shell` is a **local authoring** surface, not a deployment. It
-authenticates nobody and writes whatever files its process can write, so a
-routable bind would publish unauthenticated write access. A non-loopback
-`--host` therefore refuses at launch instead of being quietly rebound, and every
-served `documentPath` must resolve inside the `--cwd` project root — `../`, an
-absolute path, and a symlink pointing outward all refuse by name. The full
-refusal table is in [`../apps/web-shell/README.md`](../apps/web-shell/README.md),
-and `apps/web-shell/test/refuse-matrix.test.ts` proves each entry is reachable.
-
-The deployable web tier is `sites/` (ADR 0018) and is a separate thing: the shell
-adds a transport over the inspector phases it already had, no hosting, no domain,
-and no second authoring implementation.
+`sceneaxi-web-shell` is a **local authoring** surface, not a deployment. Its run
+instructions, security rationale, and authoritative refusal table live in
+[`../apps/web-shell/README.md`](../apps/web-shell/README.md); the shell adds only
+a transport over the inspector phases it already had. The deployable web tier
+remains the separate `sites/` tier (ADR 0018).
 
 ## Not runnable yet
 

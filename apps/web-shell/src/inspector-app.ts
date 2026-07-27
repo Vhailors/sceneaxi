@@ -8,9 +8,10 @@
  *
  * What it deliberately is not: a second authoring implementation. Every state
  * transition is `InspectorSession`'s, which is `@sceneaxi/authoring-core`'s;
- * `INSPECTOR_ACTIONS` is the whole vocabulary and each entry names the session
- * method it forwards to. No CLI spawn (matrix-denied), no engine import, no
- * hosting or deployment — that tier is `sites/` (ADR 0018).
+ * every authoring entry in `INSPECTOR_ACTIONS` names the session method it
+ * forwards to, while document status is explicitly read-only. No CLI spawn
+ * (matrix-denied), no engine import, no hosting or deployment — that tier is
+ * `sites/` (ADR 0018).
  *
  * Fail-closed everywhere a served surface differs from a local library call: a
  * request body that is not a JSON object, an oversized body, a malformed edit,
@@ -82,8 +83,8 @@ export type WebShellRefusal =
 
 /**
  * The served vocabulary. `session` names the `InspectorSession` method the
- * action forwards to — the reason this surface cannot drift into a second
- * protocol without the mapping changing in plain sight.
+ * authoring action forwards to. The read-only document projection declares
+ * `null`, so it cannot masquerade as an authoring transition.
  */
 export const INSPECTOR_ACTIONS = Object.freeze({
   state: Object.freeze({
