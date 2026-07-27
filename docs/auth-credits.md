@@ -417,8 +417,10 @@ require.
 All three reach a model through the *same* injected `ModelProviderPort` — the panel builds
 no adapter and cannot tell a recorded transport from a live one, so "live OpenRouter is
 opt-in" is structural: a live transport exists only if a caller wired one into `ports` for a
-mode it then selected, and the default mode is `fixture`. A mode with no injected port
-refuses `ASSISTANT_TRANSPORT_MISSING` rather than borrowing another mode's transport.
+mode it then selected, and the default mode is `fixture`. A mode whose port is missing — or
+present but unable to answer `complete` — refuses `ASSISTANT_TRANSPORT_MISSING` at the point
+it is wired or selected, rather than borrowing another mode's transport or surfacing a
+wiring defect as a per-turn `HOSTED_AI_PROVIDER_FAILED`.
 
 **The mode table is a projection, never a second credit policy.** `ASSISTANT_MODE_BILLING`
 maps each mode onto a route and capability that already exist in
@@ -448,6 +450,15 @@ read, or one that is absent or owned by another user, is a named refusal
 refusals are left to the layer that owns their vocabulary: an anonymous hosted turn is
 `ENTITLEMENT_ACCOUNT_REQUIRED`, an expired session is `AUTH_SESSION_EXPIRED`, and a hosted
 turn with no `turnId` is `CREDIT_REQUEST_INVALID` — the panel repeats none of them.
+
+That fall-through is why the panel reads a ledger only where the gate would reach one. The
+hosted route being off, Kids, and every identity refusal are all ordered *above*
+`resolveHostedLedger` inside `runMeteredModelCall`, so the panel asks `requireAuthenticated`
+— the same guard, on the same `{ now, surface, admin }` — purely to decide whether to read,
+never to refuse. Where it declines, no credits view is consulted and the turn is handed over
+with no `state`, so the controlling refusal is spoken by its owner instead of being buried
+under a panel-owned one, and persistence is never made to answer for a caller no guard has
+admitted.
 
 The balance a snapshot *reports* comes only from an outcome the gate derived from
 persistence, never from the view the panel was handed — otherwise a stale copy would be

@@ -64,8 +64,9 @@
  * absent, invalid, or owned by another user, is a named refusal — never `0` —
  * because "you have no credits" and "we could not read your credits" must not look
  * identical to a buyer. Where the gate refuses above its own ledger read — hosted
- * off, or Kids — no ledger is read here either, so the panel cannot pre-empt a
- * refusal it does not own.
+ * off, Kids, or any identity refusal, judged by that gate's own auth guard — no
+ * ledger is read here either, so the panel can neither pre-empt a refusal it does
+ * not own nor make persistence answer for a caller no guard has admitted.
  *
  * The balance a snapshot *reports* comes only from an outcome the credit gate
  * derived from persistence, never from the view the panel was handed. The
@@ -92,7 +93,11 @@ import {
   type ModelProviderPort,
   type ModelProviderSuccess,
 } from "@sceneaxi/authoring-core";
-import type { AdminIdentity, AuthRefuseReason } from "@sceneaxi/auth";
+import {
+  requireAuthenticated,
+  type AdminIdentity,
+  type AuthRefuseReason,
+} from "@sceneaxi/auth";
 import {
   BILLING_REFUSE_REASONS,
   HOSTED_AI_DEFAULT_CONFIG,
@@ -290,14 +295,23 @@ function isAssistantMode(value: unknown): value is AssistantMode {
 }
 
 /**
- * Whether the viewer is signed in on the Kids surface — asked only to *decline*
- * to read a ledger, never to refuse. The deny itself stays with the credit gate,
- * whose `KIDS_COMMERCE_DENIED` runs before it reads identity or persistence.
+ * Whether an injected value can actually answer the one operation this panel
+ * calls.
+ *
+ * A port that is merely *present* is not a wired transport: the panel enters
+ * `complete` inside the thunk the credit gate wraps in its own try, so a
+ * non-callable port becomes `HOSTED_AI_PROVIDER_FAILED` — "the model provider
+ * call failed" — on every turn, for a defect that exists at the moment the
+ * caller wired it. Duck-typing it here is the same shape billing applies to its
+ * own injected `CreditStore`, and it moves the refusal back to the wiring.
  */
-function isKidsPrincipal(value: unknown): boolean {
-  const record = snapshotPlainRecord(value);
-  const session = snapshotPlainRecord(record?.["session"]);
-  return session?.["surface"] === "kids";
+function isAssistantPort(value: unknown): value is ModelProviderPort {
+  if (value === null || typeof value !== "object") return false;
+  try {
+    return typeof (value as Record<string, unknown>)["complete"] === "function";
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -416,7 +430,7 @@ export function createAssistantPanel(
       `An assistant mode must be one of: ${ASSISTANT_MODES.join(", ")}.`,
     );
   }
-  if (portRecord[initialMode] === undefined) {
+  if (!isAssistantPort(portRecord[initialMode])) {
     return createFailure(
       ASSISTANT_PANEL_REASONS.transportMissing,
       `No Model Provider Port is wired for the '${initialMode}' assistant mode; it does not fall back to another mode's transport.`,
@@ -488,6 +502,9 @@ export function createAssistantPanel(
    * owns identity vocabulary, so the panel declines to say it a second time.
    */
   const resolveHostedLedger = async (): Promise<LedgerResolution> => {
+    if (principal === undefined) {
+      return Object.freeze({ ok: true, state: undefined });
+    }
     if (credits === undefined) {
       return refuseLedger(
         refusal(
@@ -495,9 +512,6 @@ export function createAssistantPanel(
           "A hosted assistant turn requires a credits view; the panel reads no ledger of its own.",
         ),
       );
-    }
-    if (principal === undefined) {
-      return Object.freeze({ ok: true, state: undefined });
     }
 
     const read = await readOwnedLedger(credits, principal.user.userId);
@@ -556,7 +570,7 @@ export function createAssistantPanel(
     const turnId = requestRecord?.["turnId"];
 
     const port = ports[activeMode];
-    if (port === undefined) {
+    if (!isAssistantPort(port)) {
       return view(
         refusal(
           ASSISTANT_PANEL_REASONS.transportMissing,
@@ -568,15 +582,22 @@ export function createAssistantPanel(
     const billing = ASSISTANT_MODE_BILLING[activeMode];
     const hosted = billing.route === "hosted";
 
-    // The credit gate answers two things *above* its own ledger read — the hosted
-    // route being off, and Kids — and neither needs a balance. Reading persistence
-    // first would let a panel-owned reason pre-empt the controlling one ("we need a
-    // credits view" instead of "hosted AI is off"), and would touch the ledger of a
-    // Kids session the credit plane promises never to read. So the panel resolves a
-    // ledger only where the gate would reach one, and otherwise hands the turn over
-    // with no state so each refusal is spoken by the layer that owns it.
+    // The credit gate answers three things *above* its own ledger read — the
+    // hosted route being off, Kids, and every identity refusal — and none of them
+    // needs a balance. Reading persistence first would let a panel-owned reason
+    // pre-empt the controlling one ("no ledger exists for this user" instead of
+    // "the session expired"), would touch the ledger of a Kids session the credit
+    // plane promises never to read, and would make persistence answer questions
+    // for a caller no guard has admitted yet — the exact read the gate declines on
+    // its own side. So the panel asks the *same* guard, only to decide whether to
+    // read, and where it declines it hands the turn over with no state so each
+    // refusal is spoken by the layer that owns its vocabulary.
     let state: LedgerState | undefined;
-    if (hosted && hostedAi.enabled === true && !isKidsPrincipal(principal)) {
+    if (
+      hosted &&
+      hostedAi.enabled === true &&
+      requireAuthenticated(principal, { now, surface, admin }).ok
+    ) {
       const resolved = await resolveHostedLedger();
       if (!resolved.ok) return view(resolved.refusal);
       state = resolved.state;
@@ -694,7 +715,7 @@ export function createAssistantPanel(
           ),
         );
       }
-      if (ports[next] === undefined) {
+      if (!isAssistantPort(ports[next])) {
         return view(
           refusal(
             ASSISTANT_PANEL_REASONS.transportMissing,

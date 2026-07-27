@@ -656,6 +656,48 @@ describe("hosted mode debits through the existing ledger", () => {
     expect(stack.prompts).toHaveLength(0);
     expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
   });
+
+  it("reads no ledger for a viewer the gate's own auth guard refuses", async () => {
+    // The identity refusals are ordered above the gate's ledger read too, so a
+    // panel-owned reason must not be able to reach the reader first. This viewer
+    // is both expired *and* has no provisioned account, which is exactly the pair
+    // that would otherwise answer "no credit ledger exists for this user".
+    const reads: string[] = [];
+    const expired = {
+      ...PRINCIPAL,
+      session: { ...PRINCIPAL.session, expiresAt: "2026-07-27T09:30:00Z" },
+    };
+    const { panel, store, stack } = hostedPanel(10, {
+      principal: expired as typeof PRINCIPAL,
+      credits: {
+        ledgerFor: (userId: string) => {
+          reads.push(userId);
+          return undefined;
+        },
+      },
+    });
+
+    const snapshot = await panel.ask({ prompt: "hosted turn", turnId: "t1" });
+
+    expect(snapshot.refusal?.reason).toBe(AUTH_REFUSE_REASONS.sessionExpired);
+    expect(reads).toEqual([]);
+    expect(stack.prompts).toHaveLength(0);
+    expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
+  });
+
+  it("lets the entitlement matrix speak for an anonymous turn with no credits view", async () => {
+    const { panel, stack } = hostedPanel(10, {
+      principal: undefined,
+      credits: undefined,
+    });
+
+    const snapshot = await panel.ask({ prompt: "hosted turn", turnId: "t1" });
+
+    expect(snapshot.refusal?.reason).toBe(
+      BILLING_REFUSE_REASONS.accountRequired,
+    );
+    expect(stack.prompts).toHaveLength(0);
+  });
 });
 
 describe("a port refusal is never billed as an answer", () => {
@@ -831,6 +873,34 @@ describe("construction and request refusals", () => {
     expect(refusedWith({ ports: undefined })).toBe(
       ASSISTANT_PANEL_REASONS.transportMissing,
     );
+  });
+
+  it("refuses a port that cannot answer a completion", () => {
+    // A present-but-uncallable port would otherwise reach the reader as
+    // HOSTED_AI_PROVIDER_FAILED on every turn — a wiring defect reported as a
+    // model failure — because the panel enters `complete` inside the thunk the
+    // credit gate wraps in its own try.
+    expect(refusedWith({ ports: { fixture: {} } })).toBe(
+      ASSISTANT_PANEL_REASONS.transportMissing,
+    );
+    expect(refusedWith({ ports: { fixture: { complete: "yes" } } })).toBe(
+      ASSISTANT_PANEL_REASONS.transportMissing,
+    );
+  });
+
+  it("refuses switching onto a port that cannot answer a completion", () => {
+    const live = providerStack();
+    const panel = panelFor({
+      fixture: live.port,
+      byo: {} as never as ModelProviderPort,
+    });
+
+    const switched = panel.setMode("byo");
+
+    expect(switched.refusal?.reason).toBe(
+      ASSISTANT_PANEL_REASONS.transportMissing,
+    );
+    expect(switched.mode).toBe("fixture");
   });
 
   it("refuses an unknown initial mode", () => {
