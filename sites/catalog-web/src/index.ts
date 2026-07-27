@@ -28,3 +28,27 @@ export {
   type CatalogIdentityPlane,
   type CatalogIdentityPlaneOptions,
 } from "./lib/identity-plane.js";
+
+export {
+  FAMILY_DOTS,
+  FAMILY_KEYS,
+  resolveFamilyBar,
+  resolveStoreDomain,
+  type FamilyEntry,
+  type FamilyKey,
+} from "./lib/family-bar.js";
+
+export {
+  digestSigil,
+  shortenDigest,
+  type DigestSigil,
+} from "./lib/digest-sigil.js";
+
+export {
+  catalogFacets,
+  curationTrail,
+  sameCreatorListings,
+  type CatalogFacet,
+  type CatalogFacetRow,
+  type CurationStep,
+} from "./lib/catalog-facts.js";

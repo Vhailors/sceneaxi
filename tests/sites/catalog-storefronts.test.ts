@@ -1,0 +1,448 @@
+/**
+ * The two Asset Storefronts, as implemented from the accepted design archive.
+ *
+ * These live under `tests/` for the same reason the other site suites do: the sites are
+ * separate single-package workspaces outside the repository-root workspace, so their
+ * seams are imported by path rather than by public package name.
+ *
+ * What is asserted here is what the design's own words demand and what the archive got
+ * wrong. The design says *"same skeleton, different accent and merchandising"*, so the
+ * shared stylesheet and the shared modules are held byte-identical and only the store
+ * identity block may differ. The archive is measurably not responsive (`scrollWidth 984`
+ * against `innerWidth 390`), pairs 8.5px type with a 2.1:1 colour, animates with no
+ * reduced-motion alternative, and merchandises invented digests, download counts and a
+ * cart — so each of those is a case below rather than a promise in a comment.
+ */
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { describe, expect, it } from "vitest";
+import { listSiteCatalog } from "@sceneaxi/site-kit";
+import * as game from "../../sites/catalog-game/src/index.ts";
+import * as web from "../../sites/catalog-web/src/index.ts";
+
+const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
+const siteDir = (site: string): string => join(REPO_ROOT, "sites", site);
+const readSite = (site: string, relative: string): string =>
+  readFileSync(join(siteDir(site), relative), "utf8");
+
+const STOREFRONTS = ["catalog-game", "catalog-web"] as const;
+
+const IDENTITY_OPEN =
+  "/* --- STORE IDENTITY — the only block that differs between the two storefronts --- */";
+const IDENTITY_CLOSE = "/* --- END STORE IDENTITY --- */";
+
+const css = Object.freeze({
+  "catalog-game": readSite("catalog-game", "src/app/globals.css"),
+  "catalog-web": readSite("catalog-web", "src/app/globals.css"),
+});
+
+/** The stylesheet below the store identity block — the part that must not diverge. */
+function sharedSkeleton(text: string): string {
+  const end = text.indexOf(IDENTITY_CLOSE);
+  expect(end).toBeGreaterThan(-1);
+  return text.slice(end + IDENTITY_CLOSE.length);
+}
+
+function identityBlock(text: string): string {
+  const start = text.indexOf(IDENTITY_OPEN);
+  const end = text.indexOf(IDENTITY_CLOSE);
+  expect(start).toBeGreaterThan(-1);
+  expect(end).toBeGreaterThan(start);
+  return text.slice(start, end);
+}
+
+/**
+ * Source with its comments removed.
+ *
+ * Every scan below asks what the storefront *ships*, and these files explain at length
+ * which parts of the archive were deliberately left out — so scanning the raw text would
+ * find "Add to cart" in the comment that says there is no Add to cart. Block comments go
+ * entirely; a line comment is only recognised when it starts the line, so a `https://`
+ * inside an expression survives.
+ */
+const stripComments = (text: string): string =>
+  text
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .split("\n")
+    .map((line) => (line.trimStart().startsWith("//") ? "" : line))
+    .join("\n");
+
+/** `--token: value;` declarations, last one wins, the way the cascade reads them. */
+function cssTokens(text: string): Readonly<Record<string, string>> {
+  const tokens: Record<string, string> = {};
+  for (const match of text.matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/g)) {
+    tokens[match[1] as string] = (match[2] as string).trim();
+  }
+  return tokens;
+}
+
+const relativeLuminance = (hex: string): number => {
+  const channels = [1, 3, 5].map((offset) => {
+    const value = Number.parseInt(hex.slice(offset, offset + 2), 16) / 255;
+    return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  }) as [number, number, number];
+  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+};
+
+/** WCAG 2.1 contrast ratio for two `#rrggbb` values. */
+const contrastRatio = (a: string, b: string): number => {
+  const first = relativeLuminance(a);
+  const second = relativeLuminance(b);
+  const [high, low] = first > second ? [first, second] : [second, first];
+  return (high + 0.05) / (low + 0.05);
+};
+
+/** Every committed source file under a site's `src`, discovered rather than listed. */
+function collectSources(dir: string, out: string[] = []): string[] {
+  for (const entry of readdirSync(dir).sort()) {
+    const path = join(dir, entry);
+    if (statSync(path).isDirectory()) collectSources(path, out);
+    else out.push(path);
+  }
+  return out;
+}
+
+const sourcesFor = (site: string): readonly { path: string; text: string }[] =>
+  collectSources(join(siteDir(site), "src")).map((path) => ({
+    path,
+    text: stripComments(readFileSync(path, "utf8")),
+  }));
+
+describe("the two storefronts share one skeleton and differ only in store identity", () => {
+  it("keeps every rule below the store identity block byte-identical", () => {
+    expect(sharedSkeleton(css["catalog-web"])).toBe(sharedSkeleton(css["catalog-game"]));
+  });
+
+  it("gives each store its own identity block", () => {
+    expect(identityBlock(css["catalog-web"])).not.toBe(identityBlock(css["catalog-game"]));
+  });
+
+  it("uses the Foundations v2 surface accents and nothing else", () => {
+    expect(cssTokens(identityBlock(css["catalog-game"]))["--accent"]).toBe("#e8544e");
+    expect(cssTokens(identityBlock(css["catalog-web"]))["--accent"]).toBe("#3fb8c9");
+  });
+
+  it("holds the stylesheet accent and the seam accent in lockstep", () => {
+    for (const [site, brand] of [
+      ["catalog-game", game.CATALOG_SITE_BRAND],
+      ["catalog-web", web.CATALOG_SITE_BRAND],
+    ] as const) {
+      const tokens = cssTokens(identityBlock(css[site]));
+      expect(tokens["--accent"]).toBe(brand.accent.toLowerCase());
+      expect(tokens["--mark-radius"]).toBe(brand.markRadius);
+    }
+  });
+
+  it("keeps the two stores distinct in mark, accent, and merchandising vocabulary", () => {
+    expect(game.CATALOG_SITE_BRAND.accent).not.toBe(web.CATALOG_SITE_BRAND.accent);
+    expect(game.CATALOG_SITE_BRAND.markRadius).not.toBe(web.CATALOG_SITE_BRAND.markRadius);
+    expect(game.CATALOG_SITE_BRAND.catalogueWord).not.toBe(
+      web.CATALOG_SITE_BRAND.catalogueWord,
+    );
+    expect(game.CATALOG_SITE_BRAND.heroKicker).not.toBe(web.CATALOG_SITE_BRAND.heroKicker);
+  });
+
+  it.each([
+    "src/lib/family-bar.ts",
+    "src/lib/digest-sigil.ts",
+    "src/lib/catalog-facts.ts",
+    "src/app/_components/family-bar.tsx",
+    "src/app/_components/digest-figure.tsx",
+    "src/app/_components/listing-card.tsx",
+    "src/app/_components/listing-tile.tsx",
+  ])("keeps %s identical on both storefronts", (relative) => {
+    expect(readSite("catalog-web", relative)).toBe(readSite("catalog-game", relative));
+  });
+});
+
+describe("the storefronts are responsive, which the archive is not", () => {
+  it.each(STOREFRONTS)("%s declares mobile-first breakpoints only", (site) => {
+    expect(css[site]).toContain("@media (min-width: 48rem)");
+    expect(css[site]).toContain("@media (min-width: 64rem)");
+    // A max-width query would mean the wide layout is the default and the narrow one an
+    // exception, which is how the archive's fixed grids overflow a phone in the first place.
+    expect(css[site]).not.toMatch(/@media[^{]*max-width/);
+  });
+
+  it.each(STOREFRONTS)("%s never masks horizontal overflow", (site) => {
+    expect(stripComments(css[site])).not.toMatch(/overflow-x:\s*hidden/);
+  });
+
+  it.each(STOREFRONTS)("%s ships no unconditional fixed-column grid", (site) => {
+    // The archive's browse grid is `repeat(4,1fr)` and its thumb strip `repeat(5,1fr)`,
+    // declared once with no narrow alternative. Every fixed track count here must be
+    // auto-sizing, and the one fixed pixel column must sit inside a breakpoint.
+    expect(css[site]).not.toMatch(/grid-template-columns:\s*repeat\(\s*\d/);
+    const desktop = css[site].slice(css[site].indexOf("@media (min-width: 64rem)"));
+    expect(desktop).toContain("216px minmax(0, 1fr)");
+    expect(css[site].slice(0, css[site].indexOf("@media (min-width: 48rem)"))).not.toContain(
+      "216px",
+    );
+  });
+});
+
+describe("accessibility corrections the archive needs", () => {
+  it.each(STOREFRONTS)("%s answers prefers-reduced-motion", (site) => {
+    const marker = "@media (prefers-reduced-motion: reduce)";
+    expect(css[site]).toContain(marker);
+    const block = css[site].slice(css[site].indexOf(marker));
+    expect(block).toContain("animation-duration: 0.001ms !important");
+    expect(block).toContain("animation-iteration-count: 1 !important");
+    // Every animation the sheet defines has to be inside the reach of that override.
+    for (const [, name] of css[site].matchAll(/@keyframes\s+([\w-]+)/g)) {
+      expect(css[site]).toContain(`animation: ${name as string}`);
+    }
+  });
+
+  it.each(STOREFRONTS)("%s meets 4.5:1 on every shipped text pairing", (site) => {
+    const tokens = cssTokens(css[site]);
+    const pairs: readonly (readonly [string, string])[] = [
+      ["--fg", "--bg-base"],
+      ["--fg-2", "--bg-base"],
+      ["--fg", "--bg-panel"],
+      ["--fg-2", "--bg-panel"],
+      ["--fg-2", "--bg-raised"],
+      ["--fg-2", "--bg-field"],
+      ["--fg-2", "--bg-row"],
+      ["--fg-2", "--bg-control"],
+      ["--ok", "--bg-panel"],
+      ["--ok", "--ok-bg"],
+      ["--warn", "--warn-bg"],
+      ["--danger", "--danger-bg"],
+      ["--fg-2", "--ok-bg"],
+      ["--fg-2", "--warn-bg"],
+      ["--fg-2", "--danger-bg"],
+      ["--accent", "--bg-base"],
+      ["--accent", "--accent-bg"],
+      ["--fg-2", "--accent-bg"],
+      // The primary button paints base-on-accent, so it is judged the same way.
+      ["--bg-base", "--accent"],
+    ];
+    for (const [fg, bg] of pairs) {
+      const foreground = tokens[fg];
+      const background = tokens[bg];
+      expect(foreground, `${fg} is declared`).toMatch(/^#[0-9a-f]{6}$/);
+      expect(background, `${bg} is declared`).toMatch(/^#[0-9a-f]{6}$/);
+      expect(
+        contrastRatio(foreground as string, background as string),
+        `${fg} on ${bg}`,
+      ).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it.each(STOREFRONTS)("%s never paints text with the sub-threshold --fg-4", (site) => {
+    // The archive's micro labels are `--fg-4` on a panel, about 2.1:1. The token stays
+    // declared as part of the sheet, but nothing may read through it.
+    const tokens = cssTokens(css[site]);
+    expect(
+      contrastRatio(tokens["--fg-4"] as string, tokens["--bg-base"] as string),
+    ).toBeLessThan(4.5);
+    expect(css[site]).not.toMatch(/color:\s*var\(--fg-4\)/);
+  });
+
+  it.each(STOREFRONTS)("%s offers a skip link and a visible focus ring", (site) => {
+    expect(css[site]).toContain(":focus-visible");
+    expect(css[site]).toContain(".skip-link");
+    expect(readSite(site, "src/app/layout.tsx")).toContain('className="skip-link"');
+  });
+
+  it.each(STOREFRONTS)("%s keeps micro type at 11px, not the archive's 8.5px", (site) => {
+    expect(cssTokens(css[site])["--micro"]).toBe("0.6875rem");
+  });
+});
+
+describe("the family bar resolves the archive's store switch into two origins", () => {
+  const ORIGINS = Object.freeze({
+    NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN: "https://umbrella.vercel.app",
+    NEXT_PUBLIC_SCENEAXI_GAME_CATALOG_ORIGIN: "https://game.vercel.app",
+    NEXT_PUBLIC_SCENEAXI_WEB_CATALOG_ORIGIN: "https://web.vercel.app",
+  });
+
+  it("has no Kids key to configure, so no env can produce a Kids link", () => {
+    expect([...game.FAMILY_KEYS]).toEqual(["engine", "catalog-game", "catalog-web"]);
+    expect(JSON.stringify(game.FAMILY_DOTS).toLowerCase()).not.toContain("kids");
+    const bar = game.resolveFamilyBar(
+      { ...ORIGINS, NEXT_PUBLIC_SCENEAXI_KIDS_ORIGIN: "https://kids.vercel.app" },
+      "catalog-game",
+    );
+    expect(JSON.stringify(bar).toLowerCase()).not.toContain("kids");
+  });
+
+  it("marks the current store rather than linking it", () => {
+    const bar = game.resolveFamilyBar(ORIGINS, "catalog-game");
+    const current = bar.find((entry) => entry.current);
+    expect(current?.key).toBe("catalog-game");
+    expect(current?.href).toBeNull();
+    expect(bar.filter((entry) => entry.current)).toHaveLength(1);
+    expect(bar.find((entry) => entry.key === "catalog-web")?.href).toBe(
+      "https://web.vercel.app",
+    );
+    expect(bar.find((entry) => entry.key === "engine")?.href).toBe(
+      "https://umbrella.vercel.app",
+    );
+  });
+
+  it("marks the other store current on the other storefront", () => {
+    const bar = web.resolveFamilyBar(ORIGINS, "catalog-web");
+    expect(bar.find((entry) => entry.current)?.key).toBe("catalog-web");
+    expect(bar.find((entry) => entry.key === "catalog-game")?.href).toBe(
+      "https://game.vercel.app",
+    );
+  });
+
+  it("renders an unconfigured or insecure sibling as text instead of a broken link", () => {
+    const bar = game.resolveFamilyBar(
+      { NEXT_PUBLIC_SCENEAXI_WEB_CATALOG_ORIGIN: "http://insecure.example" },
+      "catalog-game",
+    );
+    expect(bar.every((entry) => entry.href === null)).toBe(true);
+  });
+
+  it("prints a domain only for a configured own origin", () => {
+    expect(game.resolveStoreDomain(ORIGINS, "catalog-game")).toBe("game.vercel.app");
+    expect(web.resolveStoreDomain(ORIGINS, "catalog-web")).toBe("web.vercel.app");
+    expect(game.resolveStoreDomain({}, "catalog-game")).toBeNull();
+    expect(
+      game.resolveStoreDomain(
+        { NEXT_PUBLIC_SCENEAXI_GAME_CATALOG_ORIGIN: "http://insecure.example" },
+        "catalog-game",
+      ),
+    ).toBeNull();
+  });
+});
+
+describe("the card figure is a mark of a real digest, never a fake render", () => {
+  const DIGEST = listSiteCatalog("catalog-game")[0]?.item.assetPackage.contentHash as string;
+
+  it("is deterministic for one digest", () => {
+    expect(game.digestSigil(DIGEST)).toEqual(game.digestSigil(DIGEST));
+  });
+
+  it("differs between the digests the catalogue actually holds", () => {
+    const marks = [...listSiteCatalog("catalog-game"), ...listSiteCatalog("catalog-web")].map(
+      (listing) => JSON.stringify(game.digestSigil(listing.item.assetPackage.contentHash)),
+    );
+    expect(new Set(marks).size).toBe(marks.length);
+  });
+
+  it("refuses a digest it cannot read rather than defaulting one", () => {
+    for (const bad of ["", "not-a-digest", "sha256:", "sha256:zzzz1234", "sha512:abcdef12", "abcdef1234"]) {
+      expect(game.digestSigil(bad), bad).toBeNull();
+    }
+  });
+
+  it("bounds every field, so a hostile digest cannot reshape the layout", () => {
+    for (const listing of listSiteCatalog("catalog-game")) {
+      const sigil = game.digestSigil(listing.item.assetPackage.contentHash);
+      expect(sigil).not.toBeNull();
+      expect(sigil?.rotateDeg).toBeGreaterThanOrEqual(-9);
+      expect(sigil?.rotateDeg).toBeLessThanOrEqual(9);
+      expect(sigil?.widthPercent).toBeGreaterThanOrEqual(40);
+      expect(sigil?.widthPercent).toBeLessThanOrEqual(51);
+      expect(sigil?.heightPercent).toBeGreaterThanOrEqual(36);
+      expect(sigil?.heightPercent).toBeLessThanOrEqual(45);
+    }
+  });
+
+  it("shortens a real digest and leaves an unreadable one alone", () => {
+    expect(game.shortenDigest(DIGEST)).toMatch(/^[0-9a-f]{4}…[0-9a-f]{4}$/);
+    expect(game.shortenDigest("not-a-digest")).toBe("not-a-digest");
+  });
+
+  it("says on the page that the mark is not a render", () => {
+    for (const site of STOREFRONTS) {
+      expect(readSite(site, "src/app/page.tsx")).toContain("not a render of the");
+    }
+  });
+});
+
+describe("the rail counts real listings instead of the archive's invented facets", () => {
+  it.each(STOREFRONTS)("%s counts only the listings on its own surface", (surface) => {
+    const listings = listSiteCatalog(surface);
+    const facets = game.catalogFacets(listings);
+    expect(facets.length).toBeGreaterThan(0);
+    for (const facet of facets) {
+      const total = facet.rows.reduce((sum, row) => sum + row.count, 0);
+      expect(total).toBeGreaterThanOrEqual(listings.length);
+      expect(facet.rows.every((row) => row.count > 0)).toBe(true);
+    }
+    const licence = facets.find((facet) => facet.title === "Licence");
+    expect(licence?.rows.reduce((sum, row) => sum + row.count, 0)).toBe(listings.length);
+  });
+
+  it("drops every facet when there is nothing to describe", () => {
+    expect(game.catalogFacets([])).toEqual([]);
+  });
+
+  it("reads the curation trail off the contract's own history", () => {
+    const listing = listSiteCatalog("catalog-game")[0];
+    expect(listing).toBeDefined();
+    const trail = game.curationTrail((listing as NonNullable<typeof listing>).item);
+    expect(trail).toHaveLength(
+      (listing as NonNullable<typeof listing>).item.moderation.history.length,
+    );
+    expect(trail.map((step) => step.ordinal)).toEqual(
+      trail.map((_step, index) => String(index + 1).padStart(2, "0")),
+    );
+    expect(trail.at(-1)?.state).toBe(
+      (listing as NonNullable<typeof listing>).item.moderation.pipelineState,
+    );
+  });
+
+  it("relates only same-creator listings on the same surface, never itself", () => {
+    const listings = listSiteCatalog("catalog-game");
+    const current = listings[0] as NonNullable<(typeof listings)[number]>;
+    const related = game.sameCreatorListings(listings, current);
+    expect(related.some((listing) => listing.itemId === current.itemId)).toBe(false);
+    expect(related.every((listing) => listing.creatorId === current.creatorId)).toBe(true);
+    expect(related.every((listing) => listing.surface === "catalog-game")).toBe(true);
+  });
+});
+
+describe("commerce stays inert and the archive's merchandising does not ship", () => {
+  const ALL_SOURCES = STOREFRONTS.flatMap((site) => sourcesFor(site));
+
+  it.each([
+    ["a cart", /\bcarts?\b/i],
+    ["a checkout", /checkout/i],
+    ["a seller application", /apply as a seller/i],
+    ["a refund window", /refund/i],
+    ["a download count", /downloads/i],
+  ])("ships no %s anywhere in either storefront", (_label, pattern) => {
+    const offenders = ALL_SOURCES.filter((source) => pattern.test(source.text)).map(
+      (source) => source.path,
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  it.each([
+    ["an invented digest", /9f31|a4f2|b7d0|20740/],
+    ["an invented price", /\$\d/],
+    ["an invented triangle count", /\d+(\.\d+)?k\b\s*(tris|triangles)/i],
+  ])("copies no %s out of the archive", (_label, pattern) => {
+    const offenders = ALL_SOURCES.filter((source) => pattern.test(source.text)).map(
+      (source) => source.path,
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  it("renders the inert-commerce refusal where the design puts its cart button", () => {
+    for (const site of STOREFRONTS) {
+      const detail = readSite(site, "src/app/item/[itemId]/page.tsx");
+      expect(detail).toContain("<CommerceNotice");
+      expect(readSite(site, "src/app/_components/commerce-notice.tsx")).toContain(
+        "attemptCatalogPurchase",
+      );
+    }
+  });
+
+  it("keeps the detail page's only working action the editor deep link", () => {
+    for (const site of STOREFRONTS) {
+      const detail = readSite(site, "src/app/item/[itemId]/page.tsx");
+      expect(detail).toContain("Open in the SceneAxi editor");
+      expect(detail).toContain("editorLinkFor");
+      expect(detail).toContain("Editor link unavailable");
+    }
+  });
+});

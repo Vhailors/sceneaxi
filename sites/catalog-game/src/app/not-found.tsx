@@ -6,7 +6,7 @@
  */
 export default function NotFound() {
   return (
-    <>
+    <div className="shell page">
       <p className="eyebrow">Not found</p>
       <h1>No listing with that id</h1>
       <p className="lede">
@@ -18,6 +18,6 @@ export default function NotFound() {
           Back to the catalogue
         </a>
       </div>
-    </>
+    </div>
   );
 }

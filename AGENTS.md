@@ -159,6 +159,22 @@ decision recorded in that doc before it ships, never invented in code. Change Re
 renders a real `Proposal` — badges carry only what E1 can propose, a mixed accept refuses
 because apply is all-or-nothing, and Kids theming refuses by name.
 
+The two storefronts are **one design in two install roots** (sceneaxi#156, implementing
+`Asset Storefronts.dc.html` from the captain-accepted design archive). ADR 0018 forbids
+the archive's runtime store switch, so the shared skeleton is enforced instead of
+inherited: `src/app/globals.css` is byte-identical between `catalog-game` and
+`catalog-web` below the block marked `STORE IDENTITY` — the only per-store block — and so
+are `src/lib/{family-bar,digest-sigil,catalog-facts}.ts` and every file in
+`src/app/_components/`. Edit one and you must edit the other;
+`tests/sites/catalog-storefronts.test.ts` fails otherwise, and the same suite holds the
+stylesheet `--accent` in lockstep with `CATALOG_SITE_BRAND.accent`, computes a 4.5:1 floor
+on every shipped text pairing, and refuses the archive's invented digests, prices, cart,
+and download counts. Each storefront's README owns the archive-versus-contract table and
+the recorded browser measurements. The family bar is cross-origin links from
+`NEXT_PUBLIC_SCENEAXI_{GAME,WEB}_CATALOG_ORIGIN` (now read by all three sites) and has no
+Kids key to configure, which is what keeps the Kids denial structural rather than
+filtered.
+
 Publish readiness is proven structurally, never by publishing: this repo holds no
 registry publish authority, so `docs/publish-readiness.md` owns the outsider-facing
 checklist, the shared `0.0.0` version plan, and the consumer export-namespace
