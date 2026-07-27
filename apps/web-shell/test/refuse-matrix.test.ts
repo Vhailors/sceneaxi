@@ -6,7 +6,7 @@
  * adding its case here, exactly as `tests/e2e/auth-credits-refuse-matrix.test.ts`
  * requires of the billing plane.
  */
-import { mkdtempSync } from "node:fs";
+import { mkdirSync, mkdtempSync } from "node:fs";
 import { request } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -30,7 +30,9 @@ import {
 } from "@sceneaxi/web-shell";
 
 function fixtureDir(): string {
-  return mkdtempSync(join(tmpdir(), "sceneaxi-web-shell-refuse-"));
+  const dir = join(mkdtempSync(join(tmpdir(), "sceneaxi-web-shell-refuse-")), "root");
+  mkdirSync(dir);
+  return dir;
 }
 
 function writeScene(dir: string, name: string, data: JsonObject): void {

@@ -5,7 +5,7 @@
  * against a real loopback server on an ephemeral port, which is the cheapest
  * honest proof that "startable" is not just an exported function.
  */
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync } from "node:fs";
 import { request } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -30,7 +30,9 @@ import {
 } from "@sceneaxi/web-shell";
 
 function fixtureDir(): string {
-  return mkdtempSync(join(tmpdir(), "sceneaxi-web-shell-serve-"));
+  const dir = join(mkdtempSync(join(tmpdir(), "sceneaxi-web-shell-serve-")), "root");
+  mkdirSync(dir);
+  return dir;
 }
 
 function writeScene(dir: string, name: string, data: JsonObject): void {

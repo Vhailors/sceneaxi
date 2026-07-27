@@ -29,7 +29,9 @@ import {
 } from "@sceneaxi/web-shell";
 
 function fixtureDir(): string {
-  return mkdtempSync(join(tmpdir(), "sceneaxi-web-shell-app-"));
+  const dir = join(mkdtempSync(join(tmpdir(), "sceneaxi-web-shell-app-")), "root");
+  mkdirSync(dir);
+  return dir;
 }
 
 function writeScene(dir: string, name: string, data: JsonObject): void {
