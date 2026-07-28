@@ -506,8 +506,16 @@ state is current, step 5 can return the prior debit without dispatch or another 
 **The balance gate and debit judge the same current ledger.** A stale or fabricated state
 refuses before either is reached, even when persistence still holds enough credits and even
 for the captain's unlimited allowance. `meterCredits` receives the state step 4 already
-matched to persistence. The narrow race left is a debit landing between the two store reads,
-which `meterCredits` still refuses outright rather than half-applying.
+matched to persistence. The race left is this same key committing between step 4's read and
+step 9's append — two concurrent requests sharing one scoped key, each seeing no debit at
+step 5 and each entering the provider. Exactly one debit exists afterwards, because step 9
+commits through `appendOrReplayEntry` and reconciles a state that persistence has already
+moved past; the loser of that race is answered from the committed row rather than refused.
+Its outcome is still a `MeteredModelCallCompleted` — the provider *was* entered, so
+`replayed` stays `false` and the `response` is real — and the debit's own answer is reported
+separately as **`debitReplayed: true`**, so a caller can tell "this call appended the charge"
+from "this call's charge was already in the ledger". Nothing else about that shape changes:
+the `entry`, `state`, and `balance` reported are the ledger's own.
 
 **Identity is settled before persistence is read.** The account id arrives inside a
 caller-supplied state, so step 4 authenticates the principal and checks account ownership

@@ -55,7 +55,6 @@ import {
 } from "@sceneaxi/schemas";
 import type { AdminIdentity } from "@sceneaxi/auth";
 import {
-  LISTING_SALE_IDEMPOTENCY_PREFIX,
   createListingCheckoutIntent,
   loadCatalogListings,
   lookupCatalogListing,
@@ -81,7 +80,7 @@ import {
   validateLedgerState,
   type LedgerState,
 } from "./ledger.js";
-import type { CreditStore } from "./store.js";
+import { saleEntryKeys, type CreditStore } from "./store.js";
 import {
   hasVerifiedCompletionProvenance,
   type VerifiedCheckoutCompletion,
@@ -172,7 +171,7 @@ function ledgerBeforeSaleDebit(
   if (typeof saleId !== "string" || saleId.length === 0) return undefined;
   const validated = validateLedgerState(buyerState);
   if (!validated.ok) return undefined;
-  const key = `${LISTING_SALE_IDEMPOTENCY_PREFIX}${saleId}:buyer`;
+  const key = saleEntryKeys(saleId).buyer;
   const index = validated.value.entries.findIndex(
     (entry) => entry.idempotencyKey === key,
   );

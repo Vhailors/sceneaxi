@@ -217,6 +217,18 @@ export type MeteredModelCallCompleted<Response> = Readonly<{
   state?: LedgerState | undefined;
   /** The balance after the debit. Absent when nothing was metered. */
   balance?: number | undefined;
+  /**
+   * Whether `entry` was already in the ledger under this call's scoped key
+   * rather than appended by this call.
+   *
+   * Distinct from `replayed`, which answers whether the provider was entered at
+   * all: this call did enter it, so a response exists. True means a concurrent
+   * request carrying the same key committed the debit between this call's ledger
+   * read and its own append, so exactly one charge exists and it is not this
+   * request's row. Reported rather than assumed false, because the debit path
+   * has branches that reach it.
+   */
+  debitReplayed: boolean;
 }>;
 
 /**
@@ -706,6 +718,7 @@ export async function runMeteredModelCall<Response>(
         entry: undefined,
         state: undefined,
         balance: undefined,
+        debitReplayed: false,
       }),
     );
   }
@@ -723,11 +736,13 @@ export async function runMeteredModelCall<Response>(
   });
   if (!metered.ok) return metered;
 
-  // Not `metered.value.replayed`: a replay is settled above against the persisted
-  // ledger, and `meterCredits` requires the supplied state to equal that same
-  // persisted ledger before it appends. Reaching the ledger's own replay branch
-  // from here is impossible, so reporting it would be a guarantee no path can
-  // produce.
+  // `replayed: false` is a fact about *this* call, not about the debit: the
+  // provider was entered and `response` is its answer, which is exactly what
+  // `MeteredModelCallReplayed` promises it does not carry. The debit underneath
+  // it can still be a replay — `meterCredits` reaches that answer whenever a
+  // concurrent request carrying the same scoped key committed between this
+  // call's ledger read and its append — so the ledger's own answer is reported
+  // as `debitReplayed` rather than assumed.
   return billingOk(
     Object.freeze({
       replayed: false,
@@ -739,6 +754,7 @@ export async function runMeteredModelCall<Response>(
       entry: metered.value.entry,
       state: metered.value.state,
       balance: metered.value.balance,
+      debitReplayed: metered.value.replayed,
     }),
   );
 }

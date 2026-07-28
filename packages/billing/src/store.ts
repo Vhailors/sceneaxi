@@ -581,11 +581,10 @@ export function createInMemoryCreditStore(
     if (settlementsBySaleId.has(share.saleId)) {
       fail(`share sale id ${share.saleId} already recorded`);
     }
+    const keys = saleEntryKeys(share.saleId);
     const settlement = snapshotSettlement({
-      buyerEntry: entriesByIdempotencyKey.get(`sale:${share.saleId}:buyer`),
-      creatorEntry: entriesByIdempotencyKey.get(
-        `sale:${share.saleId}:creator`,
-      ),
+      buyerEntry: entriesByIdempotencyKey.get(keys.buyer),
+      creatorEntry: entriesByIdempotencyKey.get(keys.creator),
       share,
     });
     settlementsBySaleId.set(share.saleId, settlement);

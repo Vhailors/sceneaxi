@@ -67,7 +67,7 @@ import {
   billingRefuse,
   type BillingOutcome,
 } from "./refusals.js";
-import type { CreditStore } from "./store.js";
+import { saleEntryKeys, type CreditStore } from "./store.js";
 import {
   hasVerifiedCompletionProvenance,
   type VerifiedCheckoutCompletion,
@@ -265,7 +265,7 @@ export function applyCreditsSale(
   // The floor split can leave the creator a zero share (a 1-credit sale rounds
   // to creator 0 / platform 1). A zero-value ledger row is illegal, so the
   // creator grant is omitted entirely and reported as a zero share instead.
-  const creatorKey = `${LISTING_SALE_IDEMPOTENCY_PREFIX}${saleId}:creator`;
+  const creatorKey = saleEntryKeys(saleId).creator;
   const creatorGrant =
     split.value.creator === 0
       ? undefined
