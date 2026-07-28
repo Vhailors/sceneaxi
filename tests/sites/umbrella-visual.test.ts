@@ -170,11 +170,18 @@ describe("the marketing surface makes no claim the repository cannot stand behin
       open-path policy both type it `false`, and a surface that widened it would be
       claiming shipping in the one vocabulary the repository reserves for refusing to.
     */
-    const occurrences = [...ALL_SOURCE.matchAll(/shippingClaim([^,;)\n]*)/g)];
-    expect(occurrences.length).toBeGreaterThan(0);
-    for (const occurrence of occurrences) {
-      expect(occurrence[0]).toMatch(/shippingClaim(\?)?(:\s*(false|readonly false)|\b)/);
-      expect(occurrence[0]).not.toMatch(/:\s*true/);
+    const mentions = [...ALL_SOURCE.matchAll(/shippingClaim\b\??\s*(:|=)?\s*([^,;)\n]*)/g)];
+    expect(mentions.length).toBeGreaterThan(0);
+    /*
+      A mention with no `:` or `=` after it binds nothing — it is prose in a comment, and
+      prose may name the field. Every mention that *does* bind a type or a value has to
+      bind `false`, in whatever form: a type position, a `false as const`, or a JSX
+      `={false}`. Anything else — `true`, an identifier, an expression — fails.
+    */
+    const bindings = mentions.filter(([, operator]) => operator !== undefined);
+    expect(bindings.length).toBeGreaterThan(0);
+    for (const [, operator, bound] of bindings) {
+      expect(`${operator} ${bound.trim()}`).toMatch(/^[:=] \{?\s*(readonly\s+)?false\b/);
     }
   });
 
@@ -466,6 +473,15 @@ describe("the hero draws a real Sculpt Artifact", () => {
   it("refuses in the open when the pipeline cannot compose the scene", () => {
     expect(HOME).toContain("heroScene.ok ? (");
     expect(HOME).toContain("reason={heroScene.reason}");
+    /*
+      Both states of the hero slot sit directly under the page's `h1`, so both have to
+      name their own heading level — a refused deploy must not be the one that jumps
+      from `h1` to `h3`. The drawn branch passes it through the shared surface; the
+      refused branch passes it to the panel itself.
+    */
+    expect(read("src/app/_components/hero-viewport.tsx")).toContain("refusalLevel={2}");
+    const heroRefusal = HOME.match(/<StatePanel\b[^>]*heroScene\.reason[^>]*>/)?.[0];
+    expect(heroRefusal).toContain("level={2}");
   });
 });
 
@@ -595,7 +611,7 @@ describe("the visual layer adds no behaviour the site did not already have", () 
     }
   });
 
-  it("adds exactly one client component, and it only reads the pathname", () => {
+  it("pins the client-component list to the reviewed set", () => {
     const clients = UMBRELLA_SOURCES.filter((relativePath) =>
       read(relativePath).startsWith('"use client"'),
     ).sort();

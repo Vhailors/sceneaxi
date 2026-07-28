@@ -100,6 +100,7 @@ export default function OverviewPage() {
           ) : (
             <StatePanel
               tone="deny"
+              level={2}
               title="No artifact to draw"
               reason={heroScene.reason}
               evidence={[{ term: "Surface", value: "hero" }]}
