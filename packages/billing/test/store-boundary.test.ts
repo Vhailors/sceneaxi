@@ -174,6 +174,57 @@ describe("the reserved sale namespace", () => {
     expect([...rows.keys()].sort()).toEqual([keys.buyer, keys.creator].sort());
   });
 
+  it("refuses an adapter whose settlement outcome does not say whether it replayed", () => {
+    const { adapter } = naiveAdapter();
+    const keys = saleEntryKeys("sale_01");
+    const share = Object.freeze({
+      schemaVersion: 1,
+      kind: "sceneaxi.creator-share-record",
+      saleId: "sale_01",
+      listingId: "lantern-prop",
+      buyerUserId: "usr_crew",
+      creatorUserId: "usr_maker",
+      grossCredits: 40,
+      creatorCredits: 20,
+      platformCredits: 20,
+      basisPoints: 5000,
+      occurredAt: "2026-07-25T10:00:00Z",
+    }) as CreatorShareRecord;
+    const settlement = {
+      buyerEntry: entry({
+        movement: "debit",
+        delta: -40,
+        balanceAfter: 60,
+        reason: "listing purchase",
+        idempotencyKey: keys.buyer,
+        sequence: 2,
+      }),
+      creatorEntry: entry({
+        entryId: "ent_02",
+        accountId: "acc_maker",
+        delta: 20,
+        balanceAfter: 20,
+        reason: "creator share",
+        idempotencyKey: keys.creator,
+      }),
+      share,
+    };
+
+    // `replayed` reaches a public outcome typed boolean, so a truthy string is
+    // not a settlement answer, and neither is no answer at all.
+    for (const answer of [{ replayed: "yes" }, undefined]) {
+      const store = createCreditStore(
+        Object.freeze({
+          ...adapter,
+          settleCreditsSale: () => answer as never,
+        }),
+      );
+      expect(() => store.settleCreditsSale(settlement)).toThrow(
+        /returned no settlement outcome/,
+      );
+    }
+  });
+
   it("refuses a settlement whose legs are not that sale's own keys", () => {
     const { adapter, settlements } = naiveAdapter();
     const store = createCreditStore(adapter);
@@ -270,6 +321,63 @@ describe("append-or-replay at the shared boundary", () => {
     expect(() => store.appendOrReplayEntry(requested)).toThrow(
       /claims a fresh append it did not make/,
     );
+  });
+
+  it("refuses a replay of a row that landed on a ledger this request never read", () => {
+    const { adapter } = naiveAdapter();
+    const requested = entry({
+      movement: "debit",
+      delta: -10,
+      balanceAfter: 90,
+      sequence: 2,
+      reason: "hosted assistant turn",
+      idempotencyKey: "usage:acc_crew:turn_01",
+    });
+    // A concurrent writer committed this same debit, but on top of a grant this
+    // caller never saw: same money, different ledger position. The naive adapter
+    // calls that a replay — and both callers of this operation would report the
+    // committed row after the history they read, so the reported entries would
+    // skip a sequence and the reported balance would not be the ledger's.
+    const store = createCreditStore(
+      Object.freeze({
+        ...adapter,
+        appendOrReplayEntry: () => ({
+          entry: { ...requested, sequence: 3, balanceAfter: 140 },
+          replayed: true,
+        }),
+      }),
+    );
+    expect(() => store.appendOrReplayEntry(requested)).toThrow(
+      /does not extend the ledger this request read/,
+    );
+  });
+
+  it("accepts a replay that landed on exactly the ledger this request read", async () => {
+    const { adapter } = naiveAdapter();
+    const requested = entry({
+      movement: "debit",
+      delta: -10,
+      balanceAfter: 90,
+      sequence: 2,
+      reason: "hosted assistant turn",
+      idempotencyKey: "usage:acc_crew:turn_01",
+    });
+    const store = createCreditStore(
+      Object.freeze({
+        ...adapter,
+        appendOrReplayEntry: () => ({
+          entry: {
+            ...requested,
+            entryId: "ent_first",
+            occurredAt: "2026-07-25T11:00:00Z",
+          },
+          replayed: true,
+        }),
+      }),
+    );
+    const committed = await store.appendOrReplayEntry(requested);
+    expect(committed.replayed).toBe(true);
+    expect(committed.entry.entryId).toBe("ent_first");
   });
 
   it("refuses an adapter that answers with nothing at all", () => {

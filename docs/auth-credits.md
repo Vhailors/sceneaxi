@@ -192,8 +192,8 @@ is constructed the same way, so it is held to exactly the rules a Neon adapter w
 | operation | what the boundary guarantees |
 |---|---|
 | `appendEntry` | refuses a `sale:`-namespaced key before the adapter is reached |
-| `appendOrReplayEntry` | the committed entry answers for the key that was requested |
-| `settleCreditsSale` | each leg carries that sale's own reserved key, and no gross or creator share is booked without the entry that moved it |
+| `appendOrReplayEntry` | the committed entry answers for the key that was requested, at the ledger position it was requested for |
+| `settleCreditsSale` | each leg carries that sale's own reserved key, no gross or creator share is booked without the entry that moved it, and the adapter's outcome says whether it replayed |
 
 **`sale:` keys are reserved to atomic settlement.** A sale has two ledger legs in two
 different accounts. Any path that can append one on its own can leave a buyer charged for a

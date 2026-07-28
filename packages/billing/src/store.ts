@@ -288,6 +288,15 @@ function assertAppendable(candidate: unknown): CreditLedgerEntry {
  * entry that was handed over: the sequence and the balance witness were computed
  * from the ledger the caller read, and an adapter that renumbered them silently
  * would break the derivation the next reader performs.
+ *
+ * The sequence and balance witness are required of a *replay* too, and for the
+ * same reason. Both callers of this operation rebuild their reported state by
+ * placing the committed entry after the history they read, so a row that landed
+ * on a different ledger — the same key committed concurrently on top of entries
+ * this request never saw — would be reported with a gapped history and a balance
+ * that is not the ledger's. That divergence is refused here rather than
+ * flattened into a wrong answer, so the caller re-reads and replays against what
+ * is actually committed.
  */
 function assertCommittedEntry(
   requested: CreditLedgerEntry,
@@ -312,12 +321,41 @@ function assertCommittedEntry(
       `append-or-replay of ${requested.idempotencyKey} answered with a different entry`,
     );
   }
+  if (
+    entry.sequence !== requested.sequence ||
+    entry.balanceAfter !== requested.balanceAfter
+  ) {
+    return fail(
+      replayed
+        ? `append-or-replay of ${requested.idempotencyKey} replayed a row that does not extend the ledger this request read`
+        : `append-or-replay of ${requested.idempotencyKey} claims a fresh append it did not make`,
+    );
+  }
   if (!replayed && !sameEntry(entry, requested)) {
     return fail(
       `append-or-replay of ${requested.idempotencyKey} claims a fresh append it did not make`,
     );
   }
   return Object.freeze({ entry, replayed });
+}
+
+/**
+ * Hold an adapter to the settlement outcome contract.
+ *
+ * `persistCreditsSale` reports the adapter's answer as a public `replayed`
+ * boolean, so an adapter answering with something else — or with nothing —
+ * would put an unchecked value on a typed seam. Named here, it becomes a
+ * contract breach the caller turns into `CREDIT_STORE_FAILED`.
+ */
+function assertSettlementOutcome(
+  saleId: string,
+  outcome: unknown,
+): CreditsSaleSettlementOutcome {
+  const record = snapshotPlainRecord(outcome);
+  if (record === undefined || typeof record["replayed"] !== "boolean") {
+    return fail(`settlement of sale ${saleId} returned no settlement outcome`);
+  }
+  return Object.freeze({ replayed: record["replayed"] });
 }
 
 function isPromise<Value>(value: Awaitable<Value>): value is Promise<Value> {
@@ -341,11 +379,14 @@ function mapAwaitable<In, Out>(
  *   `settleCreditsSale` is the only way in, and it commits both legs and the
  *   share record together or not at all.
  * - **An append-or-replay must answer for what it was asked.** A replay is
- *   checked against the requested payload and a fresh append against the whole
- *   entry, so "already committed" can never quietly mean somebody else's row.
- * - **Settlement shape is checked once.** A settlement's legs must carry that
- *   sale's own reserved keys, and no collected gross or creator share may be
- *   booked without the entry that moved it.
+ *   checked against the requested payload and against the ledger position it was
+ *   asked for, and a fresh append against the whole entry, so "already
+ *   committed" can never quietly mean somebody else's row or a row that landed
+ *   on a ledger this request never read.
+ * - **Settlement shape is checked once, and so is its answer.** A settlement's
+ *   legs must carry that sale's own reserved keys, no collected gross or creator
+ *   share may be booked without the entry that moved it, and the adapter's
+ *   outcome must actually say whether it replayed.
  *
  * Guards run synchronously and throw, exactly as a database constraint rejects
  * before the write, so a refusal never depends on the adapter being awaited.
@@ -362,8 +403,12 @@ export function createCreditStore(adapter: CreditStoreAdapter): CreditStore {
         assertCommittedEntry(requested, committed),
       );
     },
-    settleCreditsSale: (settlement) =>
-      adapter.settleCreditsSale(snapshotSaleSettlement(settlement)),
+    settleCreditsSale(settlement) {
+      const requested = snapshotSaleSettlement(settlement);
+      return mapAwaitable(adapter.settleCreditsSale(requested), (outcome) =>
+        assertSettlementOutcome(requested.share.saleId, outcome),
+      );
+    },
   });
 }
 
