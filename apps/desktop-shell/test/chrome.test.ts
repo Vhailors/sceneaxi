@@ -5,6 +5,7 @@ import {
   DESKTOP_MODE_IDS,
   DESKTOP_REFUSAL_MESSAGES,
   DESKTOP_VISUAL_REFUSALS,
+  WINDOW_TIERS,
   applyDesktopVisualAction,
   createDesktopVisualState,
   defaultDockTabFor,
@@ -325,7 +326,7 @@ describe("engine desktop chrome — accessibility", () => {
       'id="mode-compose" data-kind="view" data-action="mode" data-value="compose" aria-pressed="true"',
     );
     expect(html).toContain(
-      '<button type="button" class="profile-chip" data-action="profile" data-value="web" aria-pressed="true"',
+      'id="profile-web" data-kind="view" data-action="profile" data-value="web" aria-pressed="true"',
     );
   });
 
@@ -380,6 +381,48 @@ describe("engine desktop chrome — accessibility", () => {
     }
     expect(html).toContain('<div class="dock-tablist" role="tablist" aria-label="Dock panel">');
     expect(html).toContain('<div class="view-tablist" role="tablist" aria-label="Viewport source">');
+  });
+
+  it("gives each overlay dismiss button its own modelled identity", () => {
+    // One `overlay-close` control could only ever be rendered onto one of the
+    // four buttons that dismiss the two dialogs, so each is minted separately.
+    const view = desktopVisualView(createDesktopVisualState());
+    const html = render();
+    expect(view.overlay.dismissals).toHaveLength(4);
+    const ids = view.overlay.dismissals.map((dismissal) => dismissal.control.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const dismissal of view.overlay.dismissals) {
+      expect(html).toContain(
+        `id="${dismissal.control.id}" data-kind="view" data-action="overlay" data-value="none"`,
+      );
+    }
+  });
+
+  it("offers the modelled cancel while a sculpt pass runs", () => {
+    // A running sculpt with no cancel affordance is a gap, not just an
+    // accounting one: the model declares a live control for it.
+    const running = render(
+      createDesktopVisualState({ mode: "sculpt", sculpt: "running" }),
+    );
+    expect(running).toMatch(
+      /<div class="sculpt-progress" role="status" data-sculpt-progress>/,
+    );
+    expect(running).toContain(
+      'id="sculpt-cancel" data-kind="view" data-action="sculpt-cancel"',
+    );
+    expect(running).toContain("Cancel after this pass");
+    // Idle still ships the region, hidden — the model's own cancel-sculpt state.
+    const idle = render(createDesktopVisualState({ mode: "sculpt" }));
+    expect(idle).toContain('data-sculpt-progress hidden>');
+    const script = /<script>(.*)<\/script>/s.exec(running)?.[1] ?? "";
+    expect(script).toContain("[data-sculpt-progress]");
+  });
+
+  it("draws the assistant thinking state the model can hold", () => {
+    expect(render(createDesktopVisualState({ assistantThinking: true }))).toContain(
+      '<p class="assistant-thinking" role="status" data-assistant-thinking>',
+    );
+    expect(render()).toContain("data-assistant-thinking hidden>");
   });
 
   it("gives every decision button an accessible name naming its pointer", () => {
@@ -460,6 +503,63 @@ describe("engine desktop chrome — responsive strategy", () => {
     expect(html).toContain('data-action="assistant"');
     expect(html).toContain('id="left-dock"');
     expect(html).toContain('id="inspector"');
+  });
+
+  it("derives every tier breakpoint from WINDOW_TIERS, on both axes", () => {
+    // A width-only breakpoint left the assistant docked at 1920x700, which
+    // `resolveWindowTier` calls `compact` — the stylesheet and the model have to
+    // change tier at the same numbers or one of them is describing a layout the
+    // other does not produce.
+    const html = render();
+    for (const tier of WINDOW_TIERS) {
+      if (tier.id === "minimum") continue;
+      expect(html, tier.id).toContain(
+        `@media (max-width:${tier.minWidth - 1}px),(max-height:${tier.minHeight - 1}px)`,
+      );
+    }
+  });
+
+  it("keeps a denied assistant a column at every tier, never a drawer", () => {
+    // The drawer gate hides the assistant until its toggle opens it — and on the
+    // refuse-only profile that toggle is inert, so undocking the column would put
+    // THIRD_PARTY_LLM_DENIED_BY_DEFAULT behind a control its own refusal disables.
+    const html = render(createDesktopVisualState({ profile: "kids" }));
+    expect(html).toContain(
+      '.shell:not([data-drawer-assistant="open"]) .assistant{display:none}',
+    );
+    expect(html).toContain(
+      '.shell[data-assistant="denied"] .assistant{position:static;display:flex;width:auto;box-shadow:none}',
+    );
+    expect(html).toContain(
+      '.shell[data-profile="kids"][data-assistant="denied"] .shell-body{grid-template-columns:var(--rail) minmax(0,1fr) var(--assistant-w)}',
+    );
+  });
+
+  it("never lights or presses the assistant toggle over a hidden column", () => {
+    // In a drawer tier the column is `open` and still not on screen, so both the
+    // pressed state and the accent styling read the drawer attribute instead.
+    const docked = render(createDesktopVisualState());
+    expect(docked).toContain('data-drawer-assistant="open"');
+    expect(docked).toMatch(/id="assistant-toggle"[^>]*aria-pressed="true"/);
+
+    const drawer = render(
+      createDesktopVisualState({ window: { width: 1280, height: 800 } }),
+    );
+    expect(drawer).toContain('data-drawer-assistant="closed"');
+    expect(drawer).toMatch(/id="assistant-toggle"[^>]*aria-pressed="false"/);
+    // Wide but short is a drawer tier too, which a width-only rule missed.
+    const short = render(
+      createDesktopVisualState({ window: { width: 1920, height: 700 } }),
+    );
+    expect(short).toContain('data-drawer-assistant="closed"');
+
+    expect(docked).toContain(
+      '.shell[data-drawer-assistant="open"] .assistant-toggle{',
+    );
+    const script = /<script>(.*)<\/script>/s.exec(drawer)?.[1] ?? "";
+    // One press opens the drawer rather than only turning the claim off.
+    expect(script).toContain("setAssistant(assistantOpen() ? 'closed' : 'open')");
+    expect(script).toContain("syncAssistantTier()");
   });
 
   it("scales nothing with a transform — the archive's fixed stage is gone", () => {
@@ -568,6 +668,7 @@ describe("engine desktop chrome — honesty", () => {
         toggle: chip.assistant.toggle.refusal,
         close: chip.assistant.close.refusal,
         send: chip.assistant.send.refusal,
+        modes: chip.assistant.modes[0]?.control.refusal ?? null,
       });
       expect(tables.modeRefusalByProfile[chip.id]).toBe(chip.refusal);
     }

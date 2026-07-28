@@ -135,6 +135,57 @@ export const DESKTOP_OVERLAY_IDS = Object.freeze([
 ] as const);
 export type DesktopOverlayId = (typeof DESKTOP_OVERLAY_IDS)[number];
 
+/**
+ * The buttons that dismiss an overlay.
+ *
+ * Held as data with one identity each because there are four of them across two
+ * dialogs, and a single shared `overlay-close` control cannot be rendered onto
+ * four elements: an id is unique or the `aria-describedby` and `getElementById`
+ * references in this document stop meaning anything.
+ */
+export const DESKTOP_OVERLAY_DISMISSALS: ReadonlyArray<
+  Readonly<{
+    id: string;
+    overlay: DesktopOverlayId;
+    label: string;
+    emphasis: "ghost" | "primary";
+  }>
+> = Object.freeze([
+  Object.freeze({ id: "refused-keep-draft", overlay: "refused" as const, label: "Keep draft", emphasis: "ghost" as const }),
+  Object.freeze({ id: "refused-edit-brief", overlay: "refused" as const, label: "Edit the brief", emphasis: "primary" as const }),
+  Object.freeze({ id: "conflict-discard", overlay: "conflict" as const, label: "Discard them", emphasis: "ghost" as const }),
+  Object.freeze({ id: "conflict-review", overlay: "conflict" as const, label: "Review against current", emphasis: "primary" as const }),
+]);
+
+/** The status bar's overlay shortcuts, in the order the archive draws them. */
+export const DESKTOP_OVERLAY_SHORTCUTS: ReadonlyArray<
+  Readonly<{ overlay: DesktopOverlayId; label: string }>
+> = Object.freeze([
+  Object.freeze({ overlay: "refused" as const, label: "REFUSED" }),
+  Object.freeze({ overlay: "conflict" as const, label: "CONFLICT" }),
+  Object.freeze({ overlay: "palette" as const, label: "⌘K" }),
+]);
+
+/**
+ * The two columns that get a title-bar opener once they undock.
+ *
+ * The assistant is not here: it undocks too, but its opener is the assistant
+ * toggle it already has at every tier.
+ */
+export const DESKTOP_DRAWER_IDS = Object.freeze(["left", "inspector"] as const);
+export type DesktopDrawerId = (typeof DESKTOP_DRAWER_IDS)[number];
+
+const DRAWER_LABELS: Readonly<Record<DesktopDrawerId, string>> = Object.freeze({
+  left: "Panels",
+  inspector: "Inspector",
+});
+
+/** The region id each drawer toggle controls. */
+const DRAWER_TARGETS: Readonly<Record<DesktopDrawerId, string>> = Object.freeze({
+  left: "left-dock",
+  inspector: "inspector",
+});
+
 export const DESKTOP_ASSISTANT_MODE_IDS = Object.freeze([
   "ask",
   "build",
@@ -759,6 +810,12 @@ export type DesktopProfileChip = Readonly<{
   label: string;
   packageName: string;
   active: boolean;
+  /**
+   * The chip itself. Live on every profile including the refuse-only one: the
+   * switch is how an operator leaves the refusal, so making it inert would turn
+   * a state you can exit into a dead end.
+   */
+  control: DesktopControl;
   /** The shared open-path policy row, verbatim. Never restated locally. */
   policy: OpenPathPolicyViewRow | null;
   refuseOnly: boolean;
@@ -780,16 +837,34 @@ export type DesktopAssistantProjection = Readonly<{
   /** Closes the column from inside it; inert wherever the toggle is. */
   close: DesktopControl;
   send: DesktopControl;
+  /** Ask / Build / Agent. Inert wherever the composer is denied. */
+  modes: ReadonlyArray<
+    Readonly<{ id: DesktopAssistantModeId; label: string; control: DesktopControl }>
+  >;
   refusal: DesktopVisualRefusal | null;
   refusalMessage: string | null;
   /** The named code the archive prints on the Kids lock screen. */
   refusalCode: string | null;
 }>;
 
-export type DesktopAssistantView = DesktopAssistantProjection &
+export type DesktopAssistantView = Omit<DesktopAssistantProjection, "modes"> &
   Readonly<{
     mode: DesktopAssistantModeId;
     thinking: boolean;
+    /**
+     * What the toggle may claim. In a tier where the assistant is a drawer the
+     * drawer starts closed, so an `open` state alone would have the toggle
+     * announce itself pressed over a column the document does not show.
+     */
+    togglePressed: boolean;
+    modes: ReadonlyArray<
+      Readonly<{
+        id: DesktopAssistantModeId;
+        label: string;
+        active: boolean;
+        control: DesktopControl;
+      }>
+    >;
   }>;
 
 /**
@@ -819,6 +894,18 @@ function assistantProjection(refuseOnly: boolean): DesktopAssistantProjection {
           "inert",
           DESKTOP_VISUAL_REFUSALS.noDocumentBound,
         ),
+    modes: Object.freeze(
+      DESKTOP_ASSISTANT_MODE_IDS.map((id) => {
+        const label = id.charAt(0).toUpperCase() + id.slice(1);
+        return Object.freeze({
+          id,
+          label,
+          control: refuseOnly
+            ? control(`assistant-mode-${id}`, label, "inert", denial.code)
+            : control(`assistant-mode-${id}`, label, "view"),
+        });
+      }),
+    ),
     refusal: refuseOnly ? denial.code : null,
     refusalMessage: refuseOnly ? denial.message : null,
     refusalCode: refuseOnly ? denial.lockCode : null,
@@ -872,7 +959,25 @@ export type DesktopSculptView = Readonly<{
 
 export type DesktopOverlayView = Readonly<{
   id: DesktopOverlayId | null;
-  close: DesktopControl;
+  /** The title bar's palette opener. */
+  search: DesktopControl;
+  /** The status bar's three overlay shortcuts. */
+  shortcuts: ReadonlyArray<
+    Readonly<{ overlay: DesktopOverlayId; label: string; control: DesktopControl }>
+  >;
+  /**
+   * One control per dismiss button, so the four buttons that close the two
+   * dialogs each carry their own identity instead of sharing one that could
+   * only ever be rendered once.
+   */
+  dismissals: ReadonlyArray<
+    Readonly<{
+      overlay: DesktopOverlayId;
+      label: string;
+      emphasis: "ghost" | "primary";
+      control: DesktopControl;
+    }>
+  >;
   paletteGroups: ReadonlyArray<
     Readonly<{
       title: string;
@@ -916,6 +1021,20 @@ export type DesktopVisualView = Readonly<{
   }> | null;
   dockedColumns: ReadonlyArray<string>;
   drawerColumns: ReadonlyArray<string>;
+  /**
+   * The title-bar openers for the two columns that undock into drawers. They
+   * exist at every tier — hidden by the stylesheet while their column is still
+   * docked — so the control accounting does not change with the window size.
+   */
+  drawers: ReadonlyArray<
+    Readonly<{
+      id: DesktopDrawerId;
+      label: string;
+      /** The id of the region this opener controls. */
+      target: string;
+      control: DesktopControl;
+    }>
+  >;
   dockHeight: number;
   /**
    * The application menu bar. Every entry is inert: this surface has no command
@@ -1032,11 +1151,20 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
     cancel: control("sculpt-cancel", "Cancel after this pass", "view"),
   });
 
+  const projection = assistantProjection(kids);
+  const assistantIsDrawer = (tierRow?.drawerColumns ?? []).includes("assistant");
+
   const assistant: DesktopAssistantView = Object.freeze({
-    ...assistantProjection(kids),
+    ...projection,
     state: state.assistant,
     mode: state.assistantMode,
     thinking: state.assistantThinking,
+    togglePressed: state.assistant === "open" && !assistantIsDrawer,
+    modes: Object.freeze(
+      projection.modes.map((row) =>
+        Object.freeze({ ...row, active: row.id === state.assistantMode }),
+      ),
+    ),
   });
 
   return Object.freeze({
@@ -1047,6 +1175,16 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
     profileRefusal: kids ? kidsProfileRefusal() : null,
     dockedColumns: Object.freeze([...(tierRow?.dockedColumns ?? [])]),
     drawerColumns: Object.freeze([...(tierRow?.drawerColumns ?? [])]),
+    drawers: Object.freeze(
+      DESKTOP_DRAWER_IDS.map((id) =>
+        Object.freeze({
+          id,
+          label: DRAWER_LABELS[id],
+          target: DRAWER_TARGETS[id],
+          control: control(`drawer-${id}`, DRAWER_LABELS[id], "view"),
+        }),
+      ),
+    ),
     dockHeight:
       state.mode === "animate" ? METRICS.dockHeightAnimate : METRICS.dockHeight,
 
@@ -1094,6 +1232,7 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
           label: PROFILE_LABELS[id],
           packageName,
           active: id === state.profile,
+          control: control(`profile-${id}`, PROFILE_LABELS[id], "view"),
           policy: row,
           refuseOnly,
           refusal: refuseOnly ? DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly : null,
@@ -1121,7 +1260,33 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
 
     overlay: Object.freeze({
       id: state.overlay,
-      close: control("overlay-close", "Close", "view"),
+      search: control("overlay-open-palette", "Search", "view"),
+      shortcuts: Object.freeze(
+        DESKTOP_OVERLAY_SHORTCUTS.map((shortcut) =>
+          Object.freeze({
+            ...shortcut,
+            control: control(
+              `status-overlay-${shortcut.overlay}`,
+              shortcut.label,
+              "view",
+            ),
+          }),
+        ),
+      ),
+      dismissals: Object.freeze(
+        DESKTOP_OVERLAY_DISMISSALS.map((dismissal) =>
+          Object.freeze({
+            overlay: dismissal.overlay,
+            label: dismissal.label,
+            emphasis: dismissal.emphasis,
+            control: control(
+              `overlay-close-${dismissal.id}`,
+              dismissal.label,
+              "view",
+            ),
+          }),
+        ),
+      ),
       paletteGroups: Object.freeze(
         PALETTE_GROUPS.map((group) =>
           Object.freeze({

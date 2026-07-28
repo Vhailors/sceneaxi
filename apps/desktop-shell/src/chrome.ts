@@ -39,6 +39,7 @@ import {
   DESKTOP_REFUSAL_MESSAGES,
   DESKTOP_VISUAL_REFUSALS,
   SCULPT_PASSES,
+  WINDOW_TIERS,
   dockTabsFor,
   kidsAssistantDenial,
   kidsProfileRefusal,
@@ -46,6 +47,7 @@ import {
   type DesktopDockTabId,
   type DesktopModeId,
   type DesktopVisualView,
+  type DesktopWindowTierId,
 } from "./visual-model.js";
 import {
   ACCENT,
@@ -61,6 +63,21 @@ import {
   VIEWPORT_GRADIENT,
   VISUAL_SOURCE,
 } from "./visual-tokens.js";
+
+/**
+ * The media condition that holds *below* a tier, derived from `WINDOW_TIERS`.
+ *
+ * The stylesheet and `resolveWindowTier()` have to change size at the same
+ * numbers, and on both axes: a 1920x700 window is `compact` to the model, so a
+ * width-only breakpoint would leave the assistant docked in a tier the model
+ * says undocks it. Every breakpoint in this sheet comes from here.
+ */
+function belowTier(id: DesktopWindowTierId): string {
+  const tier = WINDOW_TIERS.find((row) => row.id === id);
+  const width = (tier?.minWidth ?? 0) - 1;
+  const height = (tier?.minHeight ?? 0) - 1;
+  return `(max-width:${width}px),(max-height:${height}px)`;
+}
 
 /** HTML text escape. Applied to every interpolated value without exception. */
 export function escapeHtml(value: string): string {
@@ -209,16 +226,32 @@ function titleBar(view: DesktopVisualView): string {
         policy === null
           ? "not in the shared open-path policy"
           : `${policy.demoLevel} · ${policy.sessionKind}`;
-      return [
-        `<button type="button" class="profile-chip" data-action="profile" data-value="${escapeHtml(profile.id)}"`,
-        ` aria-pressed="${profile.active ? "true" : "false"}"`,
-        ` title="${escapeHtml(`${profile.packageName} — ${detail}`)}">`,
-        `<span class="dot" data-profile-dot="${escapeHtml(profile.id)}" aria-hidden="true"></span>`,
-        `<span>${escapeHtml(profile.label)}</span>`,
-        profile.refuseOnly ? `<span class="chip-tag">refuse-only</span>` : "",
-        `</button>`,
-      ].join("");
+      return button(
+        profile.control,
+        [
+          `<span class="dot" data-profile-dot="${escapeHtml(profile.id)}" aria-hidden="true"></span>`,
+          `<span>${escapeHtml(profile.label)}</span>`,
+          profile.refuseOnly ? `<span class="chip-tag">refuse-only</span>` : "",
+        ].join(""),
+        "profile-chip",
+        [
+          ` data-action="profile" data-value="${escapeHtml(profile.id)}"`,
+          ` aria-pressed="${profile.active ? "true" : "false"}"`,
+          ` title="${escapeHtml(`${profile.packageName} — ${detail}`)}"`,
+        ].join(""),
+      );
     })
+    .join("");
+
+  const drawers = view.drawers
+    .map((drawer) =>
+      button(
+        drawer.control,
+        escapeHtml(drawer.label),
+        "ghost-button drawer-toggle",
+        ` data-action="drawer" data-value="${escapeHtml(drawer.id)}" aria-expanded="false" aria-controls="${escapeHtml(drawer.target)}"`,
+      ),
+    )
     .join("");
 
   return `
@@ -234,16 +267,18 @@ function titleBar(view: DesktopVisualView): string {
     <span class="project-pill"><span class="dot dot-ok" aria-hidden="true"></span><span>No document open</span></span>
   </div>
   <div class="title-actions">
-    <button type="button" class="ghost-button drawer-toggle" data-action="drawer" data-value="left" aria-expanded="false" aria-controls="left-dock">Panels</button>
-    <button type="button" class="ghost-button drawer-toggle" data-action="drawer" data-value="inspector" aria-expanded="false" aria-controls="inspector">Inspector</button>
-    <button type="button" class="ghost-button" data-action="overlay" data-value="palette">
-      Search <kbd>⌘K</kbd>
-    </button>
+    ${drawers}
+    ${button(
+      view.overlay.search,
+      `${escapeHtml(view.overlay.search.label)} <kbd>⌘K</kbd>`,
+      "ghost-button",
+      ` data-action="overlay" data-value="palette"`,
+    )}
     ${button(
       view.assistant.toggle,
       `<span class="dot" data-assistant-dot aria-hidden="true"></span><span>Assistant</span>`,
       "assistant-toggle",
-      ` data-action="assistant" aria-pressed="${view.assistant.state === "open" ? "true" : "false"}"`,
+      ` data-action="assistant" aria-pressed="${view.assistant.togglePressed ? "true" : "false"}"`,
     )}
   </div>
 </header>`;
@@ -285,6 +320,15 @@ function leftDock(active: DesktopModeId): string {
   return `<aside class="left-dock" id="left-dock" aria-label="Scene and library">${panels}</aside>`;
 }
 
+/**
+ * The viewport, its source tabs, and the sculpt progress region.
+ *
+ * The progress region is emitted in every document and hidden when no pass is
+ * running, for the reason the assistant bodies and the Kids refusal region are:
+ * a region only some renders contain is a region whose modelled controls — here
+ * `sculpt.cancel` — exist in the view and in no document, which is exactly the
+ * accounting hole `test/control-accounting.test.ts` closes.
+ */
 function viewport(view: DesktopVisualView): string {
   const sculptRunning = view.sculpt.phase === "running";
   return `
@@ -311,18 +355,15 @@ function viewport(view: DesktopVisualView): string {
     <div class="axis-widget" aria-hidden="true">
       <i style="background:${AXIS.x}"></i><i style="background:${AXIS.y}"></i><i style="background:${AXIS.z}"></i>
     </div>
-    ${
-      sculptRunning
-        ? `<div class="sculpt-progress" role="status">
+    <div class="sculpt-progress" role="status" data-sculpt-progress${sculptRunning ? "" : " hidden"}>
       <p class="sculpt-label">${escapeHtml(view.sculpt.label)}</p>
       <div class="sculpt-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${view.sculpt.percent}" aria-label="${escapeHtml(`Pass ${view.sculpt.passIndex + 1} of ${view.sculpt.passCount}`)}">
         <span class="sculpt-fill" style="width:${view.sculpt.percent}%"></span>
         <span class="sculpt-sweep" aria-hidden="true"></span>
       </div>
       <p class="sculpt-detail">pass ${view.sculpt.passIndex + 1} of ${view.sculpt.passCount}</p>
-    </div>`
-        : ""
-    }
+      ${button(view.sculpt.cancel, escapeHtml(view.sculpt.cancel.label), "ghost-button", ` data-action="sculpt-cancel"`)}
+    </div>
   </div>
 </section>`;
 }
@@ -456,16 +497,21 @@ function assistant(view: DesktopVisualView): string {
   </div>
   <div class="assistant-body">
     <p class="panel-empty">No provider adapter is configured on this surface, so there is no thread and nothing is sent anywhere.</p>
+    <p class="assistant-thinking" role="status" data-assistant-thinking${view.assistant.thinking ? "" : " hidden"}><span class="dot" aria-hidden="true"></span>Thinking…</p>
     <p class="assistant-foot">Every edit it makes arrives as a proposal you review. It never writes to the scene directly.</p>
   </div>
   <div class="assistant-composer">
     <p class="composer-placeholder">Ask, or describe what to build…</p>
     <div class="composer-actions">
       <div class="assistant-modes" role="group" aria-label="Assistant mode">
-        ${["ask", "build", "agent"]
-          .map(
-            (mode) =>
-              `<button type="button" class="assistant-mode" data-action="assistant-mode" data-value="${escapeHtml(mode)}" aria-pressed="${mode === view.assistant.mode ? "true" : "false"}">${escapeHtml(mode.charAt(0).toUpperCase() + mode.slice(1))}</button>`,
+        ${view.assistant.modes
+          .map((mode) =>
+            button(
+              mode.control,
+              escapeHtml(mode.label),
+              "assistant-mode",
+              ` data-action="assistant-mode" data-value="${escapeHtml(mode.id)}" aria-pressed="${mode.active ? "true" : "false"}"`,
+            ),
           )
           .join("")}
       </div>
@@ -510,9 +556,16 @@ function statusBar(view: DesktopVisualView): string {
   <span class="divider" aria-hidden="true"></span>
   <span class="status-pin">${escapeHtml(view.profilePin)}</span>
   <span class="spacer"></span>
-  <button type="button" class="state-shortcut" data-action="overlay" data-value="refused">REFUSED</button>
-  <button type="button" class="state-shortcut" data-action="overlay" data-value="conflict">CONFLICT</button>
-  <button type="button" class="state-shortcut" data-action="overlay" data-value="palette">⌘K</button>
+  ${view.overlay.shortcuts
+    .map((shortcut) =>
+      button(
+        shortcut.control,
+        escapeHtml(shortcut.label),
+        "state-shortcut",
+        ` data-action="overlay" data-value="${escapeHtml(shortcut.overlay)}"`,
+      ),
+    )
+    .join("")}
 </footer>`;
 }
 
@@ -537,6 +590,22 @@ function overlays(view: DesktopVisualView): string {
   // bytes, so a screenshot of one state needs no script to have run.
   const shown = (id: string): string => (view.state.overlay === id ? "" : " hidden");
 
+  // One modelled control per dismiss button, so each of the four carries its own
+  // id and kind instead of four elements sharing a control that can only be
+  // rendered once.
+  const dismissals = (overlay: string): string =>
+    view.overlay.dismissals
+      .filter((dismissal) => dismissal.overlay === overlay)
+      .map((dismissal) =>
+        button(
+          dismissal.control,
+          escapeHtml(dismissal.label),
+          dismissal.emphasis === "primary" ? "primary-button" : "ghost-button",
+          ` data-action="overlay" data-value="none"`,
+        ),
+      )
+      .join("");
+
   return `
 <div class="overlay-layer" data-overlay-host>
   <div class="overlay" data-overlay="palette" role="dialog" aria-modal="true" aria-label="Command palette"${shown("palette")}>
@@ -555,10 +624,7 @@ function overlays(view: DesktopVisualView): string {
         <li><span class="mark mark-refuse">✕</span>Requested detail not visible in the supplied references</li>
         <li><span class="mark mark-refuse">✕</span>Requested wear clamped away by the hard-surface class</li>
       </ul>
-      <div class="overlay-actions">
-        <button type="button" class="ghost-button" data-action="overlay" data-value="none">Keep draft</button>
-        <button type="button" class="primary-button" data-action="overlay" data-value="none">Edit the brief</button>
-      </div>
+      <div class="overlay-actions">${dismissals("refused")}</div>
     </div>
   </div>
 
@@ -566,10 +632,7 @@ function overlays(view: DesktopVisualView): string {
     <div class="overlay-card overlay-conflict">
       <div class="overlay-head"><span class="overlay-mark mark-accent" aria-hidden="true">↺</span><h2 id="conflict-title">The document changed while you were reviewing</h2></div>
       <p class="overlay-body">A proposal is bound to the content hash it was written against. When that hash moves, apply refuses all-or-nothing rather than writing a partial edit — the same conflict the CLI reports.</p>
-      <div class="overlay-actions">
-        <button type="button" class="ghost-button" data-action="overlay" data-value="none">Discard them</button>
-        <button type="button" class="primary-button" data-action="overlay" data-value="none">Review against current</button>
-      </div>
+      <div class="overlay-actions">${dismissals("conflict")}</div>
     </div>
   </div>
 </div>`;
@@ -644,8 +707,12 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .primary-button.is-inert:hover{background:var(--accent)}
 .block-button{width:100%;height:32px;font-size:12px;margin-top:10px}
 .assistant-toggle{display:flex;align-items:center;gap:7px;height:22px;padding:0 10px;border-radius:4px;font-size:11px;font-weight:500;background:var(--header);border:1px solid var(--line-control);color:var(--dim)}
-.shell[data-assistant="open"] .assistant-toggle{background:${ACCENT.surface};border-color:${ACCENT.line};color:var(--accent)}
-.shell[data-assistant="open"] [data-assistant-dot]{background:var(--accent)}
+/* Lit from the drawer attribute rather than from the state, because those two
+   differ in the tiers where the assistant undocks: the column can be open and
+   still not on screen, and a toggle that lights up over nothing is a claim the
+   document does not honour. Above the drawer tiers the two always agree. */
+.shell[data-drawer-assistant="open"] .assistant-toggle{background:${ACCENT.surface};border-color:${ACCENT.line};color:var(--accent)}
+.shell[data-drawer-assistant="open"] [data-assistant-dot]{background:var(--accent)}
 .shell[data-assistant="denied"] [data-assistant-dot]{background:var(--scene)}
 
 .mode-rail{background:var(--well);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:9px 0;gap:2px}
@@ -737,6 +804,8 @@ code,kbd{font-family:var(--mono);font-size:.86em}
    this the later single-class rule wins and paints --dim on orange (1.1:1). */
 .primary-button.icon-button{color:var(--on-accent)}
 .assistant-body{flex:1;min-height:0;overflow-y:auto;padding:13px 12px}
+.assistant-thinking{display:flex;align-items:center;gap:8px;margin:12px 0 0;font-size:11px;color:var(--dim)}
+.assistant-thinking .dot{background:var(--accent)}
 .assistant-foot{font-size:10px;color:var(--dim);line-height:1.5;margin:12px 0 0}
 .assistant-composer{flex:none;border-top:1px solid var(--line);background:var(--panel);padding:9px 11px 11px;display:flex;flex-direction:column;gap:8px}
 .composer-placeholder{margin:0;background:var(--well);border:1px solid var(--line-raised);border-radius:6px;padding:9px 10px;min-height:56px;font-size:12px;color:var(--dim)}
@@ -818,18 +887,26 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 
 /* Compact: the assistant leaves the grid and becomes an overlay drawer. Its
    existing toggle opens and closes it, so nothing becomes unreachable. */
-@media (max-width:1439px){
+@media ${belowTier("regular")}{
   .shell-body,.shell[data-assistant="closed"] .shell-body,.shell[data-profile="kids"] .shell-body{grid-template-columns:var(--rail) var(--left) minmax(0,1fr) var(--inspector)}
   .shell[data-profile="kids"] .shell-body{grid-template-columns:var(--rail) minmax(0,1fr)}
   .assistant{position:absolute;top:var(--title-h);bottom:var(--status-h);right:0;width:min(var(--assistant-w),100%);z-index:40;box-shadow:0 0 60px -10px ${SCRIM.shadow}}
   /* An undocked assistant starts closed: a drawer nobody opened must not sit
      on top of the panel it undocked from. Its toggle still opens it. */
   .shell:not([data-drawer-assistant="open"]) .assistant{display:none}
+  /* Except a denied one, which never becomes a drawer at all. Its body is the
+     Kids lock screen — a named refusal — and the only control that could open a
+     drawer is the toggle that same refusal makes inert, so undocking it would
+     leave THIRD_PARTY_LLM_DENIED_BY_DEFAULT on no reachable surface. It keeps a
+     real column at every tier instead. */
+  .shell[data-assistant="denied"] .shell-body{grid-template-columns:var(--rail) var(--left) minmax(0,1fr) var(--inspector) var(--assistant-w)}
+  .shell[data-profile="kids"][data-assistant="denied"] .shell-body{grid-template-columns:var(--rail) minmax(0,1fr) var(--assistant-w)}
+  .shell[data-assistant="denied"] .assistant{position:static;display:flex;width:auto;box-shadow:none}
 }
 /* Narrow: the left dock and the inspector become drawers too, and the two
    title-bar toggles that open them appear. They start closed, because a drawer
    nobody opened should not be covering the viewport. */
-@media (max-width:1179px){
+@media ${belowTier("compact")}{
   .shell-body,.shell[data-assistant="closed"] .shell-body,.shell[data-profile="kids"] .shell-body{grid-template-columns:var(--rail) minmax(0,1fr)}
   .title-actions .drawer-toggle{display:inline-flex}
   .title-centre,.menu-bar{display:none}
@@ -840,6 +917,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
   .shell:not([data-drawer-inspector="open"]) .inspector{display:none}
   .change-row{grid-template-columns:22px minmax(0,1fr) 84px}
   .change-before,.change-arrow,.change-after{display:none}
+  .shell[data-assistant="denied"] .shell-body,.shell[data-profile="kids"][data-assistant="denied"] .shell-body{grid-template-columns:var(--rail) minmax(0,1fr) var(--assistant-w)}
 }
 /* Below the declared minimum the chrome refuses instead of laying out. The
    breakpoints are interpolated from DESKTOP_MINIMUM_WINDOW, so the CSS and the
@@ -882,9 +960,12 @@ function script(view: DesktopVisualView): string {
           toggle: profile.assistant.toggle.refusal,
           close: profile.assistant.close.refusal,
           send: profile.assistant.send.refusal,
+          modes: profile.assistant.modes[0]?.control.refusal ?? null,
         },
       ]),
     ),
+    /** The tier boundary the stylesheet undocks the assistant at. */
+    assistantDrawerQuery: belowTier("regular"),
     modeRefusalByProfile: Object.fromEntries(
       view.profiles.map((profile) => [profile.id, profile.refusal]),
     ),
@@ -1012,11 +1093,29 @@ if (shell) {
     if (stops.length > 0) stops[0].focus();
   };
 
+  // Below the regular tier the assistant is a drawer that starts closed, so the
+  // toggle reports the drawer rather than the column state: otherwise it would
+  // announce itself pressed over nothing, and its first press would only turn
+  // that claim off. One press opens the drawer at every tier.
+  const drawerQuery = window.matchMedia('${belowTier("regular")}');
+
+  const assistantOpen = () => shell.dataset.drawerAssistant === 'open';
+
   const setAssistant = (state) => {
     shell.dataset.assistant = state;
-    shell.dataset.drawerAssistant = state === 'open' ? 'open' : 'closed';
-    q('.assistant-toggle').forEach((el) => el.setAttribute('aria-pressed', String(state === 'open')));
+    const open = state === 'open';
+    shell.dataset.drawerAssistant = open ? 'open' : 'closed';
+    q('.assistant-toggle').forEach((el) => el.setAttribute('aria-pressed', String(open)));
   };
+
+  // Crossing into a drawer tier closes the drawer for the same reason it starts
+  // closed, and crossing back out restores the column's own state.
+  const syncAssistantTier = () => {
+    const open = drawerQuery.matches ? false : shell.dataset.assistant === 'open';
+    shell.dataset.drawerAssistant = open ? 'open' : 'closed';
+    q('.assistant-toggle').forEach((el) => el.setAttribute('aria-pressed', String(open)));
+  };
+  drawerQuery.addEventListener('change', syncAssistantTier);
 
   // An inert control keeps its focus stop and names its refusal, so a control
   // that becomes inert in the browser has to gain all of that, not just dim.
@@ -1043,10 +1142,14 @@ if (shell) {
     setRefusal(shell.querySelector('#assistant-toggle'), seat.toggle);
     setRefusal(shell.querySelector('#assistant-close'), seat.close);
     setRefusal(shell.querySelector('#assistant-send'), seat.send);
+    q('.assistant-mode').forEach((el) => setRefusal(el, seat.modes));
     // The refuse-only profile has no editor, so the rail refuses by name too:
     // no mode can be entered from behind the refusal region.
     const mode = T.modeRefusalByProfile[id];
     q('.rail-mode').forEach((el) => setRefusal(el, mode));
+    // The column the profile restores is still a drawer in the tiers that undock
+    // it, and leaving a refusal is not opening a drawer.
+    syncAssistantTier();
   };
 
   shell.addEventListener('click', (event) => {
@@ -1070,9 +1173,14 @@ if (shell) {
       setProfile(value);
     } else if (action === 'assistant') {
       if (shell.dataset.assistant === 'denied') return;
-      setAssistant(shell.dataset.assistant === 'open' ? 'closed' : 'open');
+      setAssistant(assistantOpen() ? 'closed' : 'open');
     } else if (action === 'assistant-mode' && value) {
       q('.assistant-mode').forEach((m) => m.setAttribute('aria-pressed', String(m.dataset.value === value)));
+    } else if (action === 'sculpt-cancel') {
+      // The model's cancel-sculpt takes the phase back to idle, which is the
+      // state this document renders with the progress region hidden.
+      const progress = shell.querySelector('[data-sculpt-progress]');
+      if (progress) progress.hidden = true;
     } else if (action === 'decide-change' && value !== undefined) {
       const row = shell.querySelector('.change-row[data-change-index="' + value + '"]');
       if (row) row.hidden = true;
@@ -1103,6 +1211,7 @@ if (shell) {
   });
 
   syncChanges();
+  syncAssistantTier();
 }
 `;
 }
@@ -1153,7 +1262,7 @@ export function renderDesktopChrome(
   <p>${escapeHtml(refusal.message)}</p>
   <p>Minimum: <code>${escapeHtml(`${refusal.minimum.width}×${refusal.minimum.height}`)}</code> · refusal <code>${escapeHtml(refusal.code)}</code></p>
 </div>
-<div class="shell" data-mode="${escapeHtml(view.state.mode)}" data-profile="${escapeHtml(view.state.profile)}" data-assistant="${escapeHtml(view.assistant.state)}" data-overlay="${escapeHtml(view.state.overlay ?? "none")}" data-tier="${escapeHtml(view.tier)}" data-drawer-left="closed" data-drawer-inspector="closed" data-drawer-assistant="closed">
+<div class="shell" data-mode="${escapeHtml(view.state.mode)}" data-profile="${escapeHtml(view.state.profile)}" data-assistant="${escapeHtml(view.assistant.state)}" data-overlay="${escapeHtml(view.state.overlay ?? "none")}" data-tier="${escapeHtml(view.tier)}" data-drawer-left="closed" data-drawer-inspector="closed" data-drawer-assistant="${view.assistant.togglePressed ? "open" : "closed"}">
 ${titleBar(view)}
 <div class="shell-body">
 ${modeRail(view)}

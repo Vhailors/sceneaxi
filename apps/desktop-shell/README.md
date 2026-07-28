@@ -74,6 +74,14 @@ nothing. Every control declares its kind — `view` changes visual state and wor
 `inert` keeps its focus stop and refuses by a name from
 `DESKTOP_VISUAL_REFUSALS`. Nothing on this path reaches `authoring-core`.
 
+That split is enforced rather than followed: `test/control-accounting.test.ts`
+walks the view for every control it can produce and fails if one is not in the
+document with its declared kind, if any `<button>` reached the document without
+going through the single `button(control, …)` helper, or if a named refusal
+resolves to `display: none` at any tier in `WINDOW_TIERS` — computed through the
+emitted stylesheet's own cascade, because a refusal nothing can reach at
+1280×800 is a hidden refusal.
+
 The document is self-contained: no remote font, script, style, or image. It
 mounts no presentation runtime, so it draws no pixels and says so on the surface.
 
