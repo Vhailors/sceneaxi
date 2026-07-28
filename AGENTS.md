@@ -51,7 +51,8 @@ when a surface changes level instead of copying its current inventory here.
 How far each profile's open path may be **demonstrated** is a separate, shared
 contract: `docs/open-path-policy.md`, implemented in
 `packages/schemas/src/open-path-policy.ts` (+ `contracts/open-path-policy.*`) and
-read — never restated — by `profile-game`, `profile-web`, `sceneaxi profile
+read — restated only in the one gate-locked mirror that doc records — by
+`profile-game`, `profile-web`, `sceneaxi profile
 open-path`, `sceneaxi-desktop open-path`, and web-shell's `createOpenPathView()`.
 It lives in `schemas` because that is the only package all five may name, so
 parity cost no matrix edge. `shippingClaim` is structurally `false` and Kids is
@@ -207,11 +208,11 @@ When adding a provenance-bearing value or consumer, extend
 
 The umbrella owns **every viewport** and is the only site that may depend on
 `@sceneaxi/engine-presentation` (ADR 0022 + its 2026-07-26 amendment) — every other
-engine package stays denied to every site, and both catalogs keep `site-kit` only. Two
-surfaces draw pixels, the public `/open` and the entitled `/editor`, and exactly one
-module constructs a renderer for both:
+engine package stays denied to every site, and both catalogs keep `site-kit` only. Every
+surface that draws pixels — inventoried in `docs/three-presentation-core.md` — goes
+through exactly one module that constructs a renderer:
 `sites/umbrella/src/app/_components/sculpt-viewport.tsx`, through the ADR 0002 seam,
-naming no Three type. A gate test asserts that owner list has exactly one entry. Both
+naming no Three type. A gate test asserts that owner list has exactly one entry. They all
 receive the same browser payload, `MountableScene`
 (`packages/site-kit/src/mountable-scene.ts`) — validated artifacts plus `composeScene()`
 world transforms — so what may be drawn is decided in `site-kit` and gate-tested without
@@ -220,8 +221,9 @@ editor session's own composition. Drawing is not authoring: the viewport consume
 composed snapshot, advances no kernel session, and adds no operation to
 `WEB_EDITOR_SESSION_OPERATIONS`, so it widens neither ADR 0020 entitlement nor ADR
 0003's general-E2 bound; entitlement is still decided before a session exists, so a
-refused `/editor` request reaches no canvas at all. `pnpm gate` proves both paths on the
-headless surface (`tests/e2e/umbrella-live-open-golden.test.ts` and
+refused `/editor` request reaches no canvas at all. `pnpm gate` proves both payload paths
+on the headless surface, the marketing hero included since it mounts the public one
+(`tests/e2e/umbrella-live-open-golden.test.ts` and
 `tests/e2e/umbrella-editor-viewport-golden.test.ts`, both in `test:golden`); the pixel
 claim is a recorded browser observation in `docs/three-presentation-core.md`, never a
 gate inference. Shipped presentation copy is asserted against `LIVE_OPEN_PRESENTATION`,
