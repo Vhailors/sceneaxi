@@ -43,6 +43,12 @@ Per project, in Vercel:
 | Install command | `cd ../.. && pnpm install --frozen-lockfile --ignore-scripts && cd <site dir> && pnpm install --frozen-lockfile` |
 | Build command | `pnpm run build` (the umbrella's `prebuild` also generates the SDK archive) |
 
+Both catalog builds fetch Archivo and JetBrains Mono over the network through
+`next/font/google`, which self-hosts them into the build output, so the deployed
+storefront issues no runtime third-party font request but the **builder** needs egress to
+Google Fonts. Why the sites load their own faces rather than take them from a package is
+owned by each storefront's README.
+
 The install command provisions **both** roots, and it has to. Each site is the sole
 member of its own pnpm workspace (`packages: ["."]`), not a member of the repository-root
 workspace. A site installs `@sceneaxi/site-kit` through a `link:` specifier — and the

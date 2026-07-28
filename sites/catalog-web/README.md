@@ -117,7 +117,9 @@ Each is a defect recorded against the design, not against the code:
   `prefers-reduced-motion`; this one does.
 - **Contrast.** The archive's micro labels are 8.5px `--fg-4` on a panel, about 2.1:1.
   `--fg-4` paints no text here, and no rule in this sheet sets text below 11px — the
-  gate reads the shipped `font-size` declarations, not just the `--micro` token.
+  gate reads the shipped `font-size` declarations, not just the `--micro` token. The
+  only declarations under that floor are `aria-hidden` marks rather than labels, named
+  and reasoned one by one in the gate test so the exemption cannot be a silent skip.
 - **Dark only.** The archive has no light variant anywhere, so this storefront no longer
   ships one. Inventing a light palette would be designing rather than implementing.
 - **Hero copy.** The archive's headline claims rig contents ("pivots, sockets, descriptive

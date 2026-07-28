@@ -18,8 +18,9 @@
  *         masked by it.
  *   Q-03  The archive's micro type is 8.5px mono in `--fg-4` on `--bg-panel`, which
  *         measures about 2.1:1. `--fg-4` is not used for text anywhere here, and no rule
- *         below sets text smaller than `--micro`, 11px —
- *         `tests/sites/catalog-storefronts.test.ts` reads the shipped `font-size`
+ *         below sets *text* smaller than `--micro`, 11px — the only sizes under that
+ *         floor are `aria-hidden` marks, named and reasoned one by one in
+ *         `tests/sites/catalog-storefronts.test.ts`, which reads the shipped `font-size`
  *         declarations for that floor and computes the contrast of every text pairing.
  *
  * The palette is dark only, as the archive is. There is no light variant anywhere in the
