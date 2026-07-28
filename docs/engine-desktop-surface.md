@@ -221,6 +221,16 @@ switch closes any drawer whose toggle it just made inert — read from the appli
 profile a second time. It is the reset the assistant toggle already did for its
 own drawer.
 
+Nor is the editor body the whole of the switch. The status bar **names** the
+profile the document is on (`view.profilePin`), which makes it the one place a
+stale value is not a cosmetic lag but the surface asserting a profile it is not
+on. The switch updates it from the same kind of serialized per-profile table it
+reads for the assistant seat and the controls — the model's own `profilePin` for
+each profile, projected exactly as a render of that profile would compute it, so
+the renderer decides nothing here either. Until this landed the pin was rendered
+correctly and then never updated, so clicking the Kids chip left a footer reading
+`game profile · core 0.0.0` under the full `OPEN_PATH_KIDS_REFUSED` lock screen.
+
 ### Refusal registry
 
 `DESKTOP_VISUAL_REFUSALS` is closed, and every entry is reachable from some state
@@ -427,7 +437,11 @@ sentence can return by review slip.
   hostile selection name that cannot close the script tag), landmarks, labels,
   `aria` wiring, roving tabindex, the reduced-motion rule, the focus ring, the
   breakpoints, and the absence of any remote reference, fabricated digest, byte
-  size, frame rate, or timing in **any** state. `apps/desktop-shell/test/bin-smoke.test.ts`
+  size, frame rate, or timing in **any** state. Each per-profile table the
+  emitted script reads is checked against the model's own projection for that
+  profile — the assistant seat, every control by id, and the status-bar pin,
+  which is asserted to be genuinely per profile so a table frozen on one value
+  fails rather than passing an identity vacuously. `apps/desktop-shell/test/bin-smoke.test.ts`
   spawns the real binary and renders a document from it.
 
 - **The model/renderer split is enforced, not conventional** —
@@ -481,8 +495,14 @@ sentence can return by review slip.
 - **Real browser, re-recorded 2026-07-28 against this branch's final HEAD.**
   Not inherited: the previous record was taken before the inert state stopped
   being an `opacity` and before the palette's dismiss action stopped being gated
-  on render-time kind, and it was re-run again after the inert hover paint and
-  the drawer reset below. **Every visibility claim below is
+  on render-time kind, it was re-run after the inert hover paint and the drawer
+  reset below, and this run is a full re-measurement against the head that
+  carries the status-bar profile pin through the switch. Every figure below was
+  re-measured; the element counts in the contrast sweep are **higher** than the
+  previous record's for the same documents because this sweep measures every
+  visible text-bearing element rather than the narrower set the earlier harness
+  walked — the ratios, which are the claim, are unchanged. **Every visibility
+  claim below is
   `getComputedStyle(...).display`**, not a `hidden` property, and **every
   contrast figure is composited** — each element's own group `opacity` and every
   ancestor's are folded into both sides of the ratio. Chrome via
@@ -552,13 +572,14 @@ sentence can return by review slip.
     colour against its resolved background, with `aria-hidden` subtrees skipped
     and **element `opacity` folded into both sides** — the step whose absence is
     corrected above. **0 failures below 4.5:1** in all thirteen measurements:
-    `build` (84 elements, worst 5.22:1), `sculpt` running (104, 5.22:1), `run`
-    (57, 5.22:1), `animate` (61, 5.22:1), the `palette` overlay (107, 5.11:1),
-    `kids` (48, **4.60:1** — the `refuse-only` chip at 8.5px, still the worst on
-    the surface), `build` at 1280×800 and 1920×700 (74, 5.22:1 each) and at
-    1024×700 (56, 5.22:1), and `kids` at 1280×800 (48, 4.60:1) and at 1024×700
-    and 1920×620 (41, 4.60:1 each). At 800×560 the shell is the refusal, so it
-    contributes no shell text.
+    `build` (99 elements, worst 5.22:1), `sculpt` running (119, 5.22:1), `run`
+    (72, 5.22:1), `animate` (76, 5.22:1), the `palette` overlay (122, 5.11:1),
+    `kids` (63, **4.60:1** — the `refuse-only` chip at 8.5px, still the worst on
+    the surface), `build` at 1280×800 and 1920×700 (89, 5.22:1 each) and at
+    1024×700 (71, 5.22:1), and `kids` at 1280×800 (63, 4.60:1) and at 1024×700
+    and 1920×620 (56, 4.60:1 each). At 800×560 the shell is the refusal, so it
+    contributes no shell text: the 20 elements measured there are the refusal's
+    own, worst 6.33:1.
   - **The inert state is measured, not assumed.** In every one of those
     measurements the sweep found **0** elements with a group `opacity` other than
     `1`, and enumerating the live stylesheet's rules found **0** `opacity`
@@ -634,6 +655,19 @@ sentence can return by review slip.
     `flex`, **one** toggle press opened the assistant drawer
     (`flex`, `aria-pressed="true"`, fill `rgb(25, 18, 7)`) and the next closed
     it. **0 dangling `aria-describedby`** at every step, in both tiers.
+  - **The status bar names the profile the switch actually landed on.** Driven
+    from the `game` document at **1680×1000, 1280×800, 1024×700 and 1920×620**,
+    reading the footer's own text node at each step: rendered
+    `game profile · core 0.0.0`; clicking **Kids** gave
+    `kids profile · refuse-only · separate origin` in the same tick as the editor
+    refusal resolved to `grid`, the assistant to `denied`, and the inert count to
+    **47**; clicking **Website** gave `web profile · core 0.0.0`; clicking
+    **Game** returned to `game profile · core 0.0.0`. **0 dangling
+    `aria-describedby`** at every step. Before the fix the pin was rendered
+    correctly and then never updated, so the footer read
+    `game profile · core 0.0.0` under the full `OPEN_PATH_KIDS_REFUSED` lock
+    screen — the one claim on this shell that is a profile assertion rather than
+    a panel.
   - **The toggle never claims a column the viewport does not show — including in
     a document rendered for another one.** The 1680×1000 `build.html` bytes ship
     `data-drawer-assistant="closed"`; opened at 1680×1000 the column resolved to

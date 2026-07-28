@@ -562,7 +562,7 @@ function statusBar(view: DesktopVisualView): string {
 <footer class="status-bar">
   <span class="status-text"><span class="dot dot-ok" aria-hidden="true"></span>${escapeHtml(view.statusText)}</span>
   <span class="divider" aria-hidden="true"></span>
-  <span class="status-pin">${escapeHtml(view.profilePin)}</span>
+  <span class="status-pin" data-profile-pin>${escapeHtml(view.profilePin)}</span>
   <span class="spacer"></span>
   ${view.overlay.shortcuts
     .map((shortcut) =>
@@ -1029,6 +1029,15 @@ function script(view: DesktopVisualView): string {
         },
       ]),
     ),
+    // The status bar names the profile the document is on, so a switch that
+    // leaves it behind has the surface asserting a profile it is not on — next
+    // to a refusal that says otherwise. The model's own pin, never a local copy.
+    pinByProfile: Object.fromEntries(
+      view.profiles.map((profile) => [
+        profile.id,
+        desktopVisualView({ ...view.state, profile: profile.id }).profilePin,
+      ]),
+    ),
     /** The tier boundary the stylesheet undocks the assistant at. */
     assistantDrawerQuery: belowTier("regular"),
     controlsByProfile: controlsByProfile(view),
@@ -1229,6 +1238,8 @@ if (shell) {
     if (!seat) return;
     setAssistant(seat.state);
     q('[data-assistant-model]').forEach((el) => { el.textContent = seat.modelLabel; });
+    const pin = T.pinByProfile[id];
+    if (pin) q('[data-profile-pin]').forEach((el) => { el.textContent = pin; });
     applyProfileControls();
     closeRefusedDrawers();
     // The column the profile restores is still a drawer in the tiers that undock

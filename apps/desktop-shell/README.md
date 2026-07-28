@@ -81,7 +81,11 @@ anywhere is behind the refusal by default, so forgetting fails closed; the
 eleven that are deliberately *not* behind it — the profile switch and the overlay
 open/close — say so by naming `outsideRefusal()`. The browser-side switch applies
 the same answer by sweeping every `[data-kind]` element against
-`view.controls`, never a selector list.
+`view.controls`, never a selector list. Everything else the switch changes comes
+from the same kind of serialized projection — the assistant seat, its model
+label, and the status-bar profile pin — so no per-profile value is recomputed in
+the browser, and the footer names the profile the switch landed on rather than
+the one the document was rendered for.
 
 That split is enforced rather than followed: `test/control-accounting.test.ts`
 walks the view for every control it can produce and fails if one is not in the

@@ -732,6 +732,39 @@ describe("engine desktop chrome — honesty", () => {
     expect(script).toContain("q('[data-kind]').forEach(applyControl)");
   });
 
+  it("carries the model's profile pin through a browser-side switch", () => {
+    // The server render was already honest; it was setProfile() that left the
+    // pin behind, so the footer still read `game profile · core 0.0.0` under the
+    // full Kids refusal — the surface asserting a profile it is not on, at the
+    // one place that names the profile.
+    const html = render();
+    const view = desktopVisualView(createDesktopVisualState());
+    expect(html).toContain(
+      `<span class="status-pin" data-profile-pin>${view.profilePin}</span>`,
+    );
+    const tables = JSON.parse(/const T = (\{.*?\});\n/s.exec(html)?.[1] ?? "{}") as {
+      pinByProfile: Record<string, string>;
+    };
+    const pins = new Set<string>();
+    for (const chip of view.profiles) {
+      const projected = desktopVisualView(
+        createDesktopVisualState({ profile: chip.id }),
+      );
+      expect(tables.pinByProfile[chip.id], chip.id).toBe(projected.profilePin);
+      pins.add(projected.profilePin);
+    }
+    // One pin per profile: a table that froze on a single value would satisfy
+    // the identity above only because every profile shares it.
+    expect(pins.size).toBe(view.profiles.length);
+    // And the switch writes the model's answer into the element the render
+    // marked, alongside the assistant seat and the controls.
+    const script = /<script>(.*)<\/script>/s.exec(html)?.[1] ?? "";
+    expect(script).toContain("const pin = T.pinByProfile[id];");
+    expect(script).toContain(
+      "q('[data-profile-pin]').forEach((el) => { el.textContent = pin; })",
+    );
+  });
+
   it("prints the closed refusal registry, one sentence per code", () => {
     // The legend is the accounting surface for the registry, and it is what every
     // `aria-describedby` resolves to — including one a client switch adds.
