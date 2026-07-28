@@ -221,10 +221,10 @@ than inventing a session, balance, or checkout.
    hosted Stripe **test** checkout URL, and a `CheckoutEvidencePort` that reads the
    persisted intent and the Stripe settlement. No other site file changes.
 
-   The `CheckoutSessionAdapter` owes two things beyond the URL, because the grant is
-   bound to the intent rather than to the event, and an implementation that only creates
-   a session captures money and then refuses every grant — retried by Stripe until it
-   gives up:
+   The `CheckoutSessionAdapter` and the `CheckoutEvidencePort` beside it owe three things
+   beyond the URL, because the grant is bound to the intent rather than to the event, and
+   an implementation that only creates a session captures money and then refuses every
+   grant — retried by Stripe until it gives up:
 
    - **Persist the intent** under `intent.intentId`, exactly as given, before redirecting.
      `CheckoutEvidencePort.findIntent(intentId)` must return that same record; it is the
@@ -323,13 +323,13 @@ Load-bearing properties, each gate-tested in `tests/sites/identity-plane-wiring.
   comparison come from one signature-verified body: the endpoint reads the session id out
   of the verified payload and asks its own `retrieveSettlement` for exactly that id, so
   only the adapter's answer can disagree, and a forged body is refused by signature
-  verification long before it. An event the endpoint is not built to act on is neither: it answers `200` with
-  `ignored: true`, so Stripe stops redelivering a condition redelivery cannot change.
-  Only `ignored: false` means credits are in the ledger. Exactly three things are
-  acknowledged, and all three are decided from the verified body before any adapter or
-  store is consulted: an event type this path does not handle, a completion whose
-  purpose settles on the revenue-share path, and a checkout session carrying no SceneAxi
-  metadata key at all — another product's event. The purpose is read from the session
+  verification long before it. An event the endpoint is not built to act on is neither: it
+  answers `200` with `ignored: true`, so Stripe stops redelivering a condition redelivery
+  cannot change. Only `ignored: false` means credits are in the ledger. Exactly three
+  things are acknowledged, and all three are decided from the verified body before any
+  adapter or store is consulted: an event type this path does not handle, a completion
+  whose purpose settles on the revenue-share path, and a checkout session carrying no
+  SceneAxi metadata key at all — another product's event. The purpose is read from the session
   metadata only to route *away* from the grant path — an absent, malformed, or unknown
   one keeps its normal path, and `parseCheckoutCompletedEvent` still cross-checks the
   purpose against the persisted intent for everything that stays on it. A

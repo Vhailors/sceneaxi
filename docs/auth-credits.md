@@ -206,7 +206,7 @@ which the parser reads itself and carries onto the completion as `checkoutSessio
 currency, and price are identical between any two genuinely paid sessions for the same item,
 so without this a settlement retrieved for one paid session would validate another one's
 event. The comparison happens *inside* the parser, before anything else about the settlement
-is read, so a caller that retrieved for the wrong session cannot skip it:
+is read, so a caller that retrieved for the wrong session cannot skip it.
 
 The session id is **provider-generated and opaque**, so it is held to presence only —
 not to the url-safe 1-128-char rule SceneAxi applies to the ids it mints itself
@@ -699,11 +699,12 @@ payout instruction would invite one to be attempted. **Real cash payouts to crea
 later captain gate.**
 
 **A money split is built from verified evidence, never from arguments** (sceneaxi#127).
-`recordMoneySale` takes exactly two things: a runtime-witnessed `VerifiedCheckoutCompletion`
-and the persisted `CheckoutSessionIntent` that completion was bound to. There is no
-parameter for a gross, a currency, a buyer, a mode, a listing, or a sale id, so a caller
-cannot book a split for a sale nobody paid — the older shape, which accepted an arbitrary
-listing plus a caller-asserted buyer and mode, could. Where each figure comes from:
+`recordMoneySale` takes exactly two pieces of evidence — a runtime-witnessed
+`VerifiedCheckoutCompletion` and the persisted `CheckoutSessionIntent` that completion was
+bound to — beside the captain `liveModeAuthorized` gate, which authorizes nothing else.
+There is no parameter for a gross, a currency, a buyer, a mode, a listing, or a sale id, so
+a caller cannot book a split for a sale nobody paid — the older shape, which accepted an
+arbitrary listing plus a caller-asserted buyer and mode, could. Where each figure comes from:
 
 | field | source | if it disagrees |
 |---|---|---|
