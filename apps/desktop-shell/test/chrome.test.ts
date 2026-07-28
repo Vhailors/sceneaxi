@@ -7,6 +7,7 @@ import {
   DESKTOP_VISUAL_REFUSALS,
   applyDesktopVisualAction,
   createDesktopVisualState,
+  defaultDockTabFor,
   desktopVisualView,
   dockTabsFor,
   escapeHtml,
@@ -123,6 +124,28 @@ describe("engine desktop chrome — regions and modes", () => {
         .map((match) => match[1]);
       expect(rendered, mode).toEqual([...dockTabsFor(mode)]);
     }
+  });
+
+  it("leaves exactly the panel the selected tab controls visible", () => {
+    // The tab strip is built from the model, so the panels must be too: a
+    // hardcoded visible panel shows Change Review in `run`, the one mode that
+    // has no Changes tab at all.
+    for (const mode of DESKTOP_MODE_IDS) {
+      const html = render(createDesktopVisualState({ mode }));
+      const visible = [...html.matchAll(/data-dock-panel="(\w+)"( hidden)?>/g)]
+        .filter((match) => match[2] === undefined)
+        .map((match) => match[1]);
+      expect(visible, mode).toEqual([defaultDockTabFor(mode)]);
+      expect(html, mode).toContain(
+        `aria-selected="true" aria-controls="dock-panel-${defaultDockTabFor(mode)}"`,
+      );
+    }
+  });
+
+  it("follows an explicit dock tab rather than the mode default", () => {
+    const html = render(createDesktopVisualState({ mode: "build", dockTab: "console" }));
+    expect(html).toContain(`data-dock-panel="console">`);
+    expect(html).toContain(`data-dock-panel="changes" hidden>`);
   });
 
   it("serializes the dock-tab table the script reads, matching the model", () => {
@@ -292,6 +315,16 @@ describe("engine desktop chrome — accessibility", () => {
 
   it("shows a visible focus ring on the accent", () => {
     expect(render()).toContain(":focus-visible{outline:2px solid var(--accent)");
+  });
+
+  it("keeps the viewport's image role off the progress and note subtree", () => {
+    // `role="img"` is Children Presentational: anything under it is pruned from
+    // the accessibility tree. It belongs on an empty backdrop, not on the box
+    // that also holds the live progress region and the two notes.
+    const html = render(createDesktopVisualState({ mode: "sculpt", sculpt: "running" }));
+    expect(html).toContain('<div class="viewport-backdrop" role="img"');
+    expect(html).not.toMatch(/<div class="viewport" [^>]*role="img"/);
+    expect(html).toMatch(/<div class="viewport">/);
   });
 
   it("announces live regions for progress and refusals", () => {

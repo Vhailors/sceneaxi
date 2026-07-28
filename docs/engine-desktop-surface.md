@@ -98,7 +98,9 @@ sheet hex exactly, that a *raised* token is only raised where the sheet value
 measurably fails the floor, that an *absent* token gives a reason, does not
 reappear under a different local name, **and does not appear in the emitted
 document**, that every hex the document ships comes from a token the table
-accounts for, and that the accent, near-black, and both families survive into the
+accounts for — including in decimal, since an `rgba()` copy of a token is the
+same drift in another notation and would survive an edit to the token it was
+copied from — and that the accent, near-black, and both families survive into the
 actually-emitted document. Editing a hex on either side
 without the other is a failing test.
 
@@ -120,7 +122,10 @@ asserted rather than remembered.
 The model decides and the renderer draws. `chrome.ts` contains no policy: every
 table its emitted script reads — which dock tabs a mode has, which dock height,
 which profile refuses — is serialized from the model at render time, so the
-document and the model cannot disagree about a state.
+document and the model cannot disagree about a state. That holds for the emitted
+bytes too, not just for what the script does afterwards: the visible dock
+tabpanel is `state.dockTab`, so `--mode run` opens on Console rather than on a
+hardcoded Change Review queue the mode does not even have a tab for.
 
 ## How to render it
 
@@ -241,6 +246,11 @@ Two rules keep this honest:
   from display text — two palette rows name the same CLI verb in the same mode,
   and a verb contains spaces. An `aria-describedby` reference is only meaningful
   if it resolves to exactly one element.
+- **The viewport's image role sits on an empty backdrop.** `role="img"` is
+  Children Presentational, so anything under it is pruned from the accessibility
+  tree. It is carried by a dedicated empty `.viewport-backdrop`, leaving the two
+  viewport notes and the sculpt `role="status"` / `role="progressbar"` region as
+  real siblings — otherwise the pass progress would be announced to nobody.
 - **Reduced motion**: `@media (prefers-reduced-motion:reduce)` collapses every
   animation and removes the sculpt sweep entirely.
 - **Contrast**: every text token clears 4.5:1 against every chrome surface, and

@@ -264,6 +264,22 @@ describe("foundations v2 alignment", () => {
     );
     expect(shipped.length).toBeGreaterThan(0);
     expect([...new Set(shipped)].filter((hex) => !declared.has(hex))).toEqual([]);
+
+    // A token written in decimal is the same drift wearing another notation: an
+    // `rgba()` copy would survive an edit to the token it was copied from.
+    const decimal = new Set(
+      [...declared].map((hex) =>
+        [1, 3, 5]
+          .map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16))
+          .join(","),
+      ),
+    );
+    const disguised = [
+      ...document.matchAll(/rgba?\((\d{1,3}),(\d{1,3}),(\d{1,3})/g),
+    ]
+      .map((match) => `${match[1]},${match[2]},${match[3]}`)
+      .filter((triple) => decimal.has(triple));
+    expect([...new Set(disguised)]).toEqual([]);
   });
 
   it("uses the sheet's two families as the first choice in each stack", () => {

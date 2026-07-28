@@ -32,6 +32,7 @@
 
 import {
   CHANGE_REVIEW_ROWS,
+  DESKTOP_DOCK_TAB_IDS,
   DESKTOP_MINIMUM_WINDOW,
   DESKTOP_MODES,
   DESKTOP_MODE_IDS,
@@ -41,6 +42,7 @@ import {
   dockTabsFor,
   kidsProfileRefusal,
   type DesktopControl,
+  type DesktopDockTabId,
   type DesktopModeId,
   type DesktopVisualView,
 } from "./visual-model.js";
@@ -298,7 +300,8 @@ function viewport(view: DesktopVisualView): string {
     <span class="spacer"></span>
     <span class="view-tools" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
   </div>
-  <div class="viewport" role="img" aria-label="${escapeHtml(view.viewport.inertNote)}">
+  <div class="viewport">
+    <div class="viewport-backdrop" role="img" aria-label="${escapeHtml(view.viewport.inertNote)}"></div>
     <p class="viewport-note viewport-note-inert">${escapeHtml(view.viewport.inertNote)}</p>
     <p class="viewport-note viewport-note-renderer"><span class="dot" style="background:${SIGNAL.info}" aria-hidden="true"></span>${escapeHtml(view.viewport.rendererNote)}</p>
     <div class="axis-widget" aria-hidden="true">
@@ -343,6 +346,23 @@ function dock(view: DesktopVisualView): string {
 </li>`;
   }).join("");
 
+  const bodies: Readonly<Record<DesktopDockTabId, string>> = {
+    changes: `
+      <p class="dock-caption">Fixture review queue. Deciding here changes this view only — no document is written and nothing reaches <code>authoring-core</code>.</p>
+      <ol class="change-list">${rows}</ol>
+      <p class="change-empty" data-change-empty${view.changeReview.empty ? "" : " hidden"}>Nothing waiting for review. Generated edits land here before they touch the scene.</p>
+    `,
+    assets: `<p class="panel-empty">No asset library is bound to this surface.</p>`,
+    console: `<p class="panel-empty">No session is running, so there is no console output to show.</p>`,
+    evidence: `<p class="panel-empty">No evidence packet has been captured here. Evidence digests are produced by <code>sceneaxi project capture</code>, never invented by a viewer.</p>`,
+    timeline: `<p class="panel-empty">No clip is loaded, so the timeline has no tracks.</p>`,
+  };
+
+  const panels = DESKTOP_DOCK_TAB_IDS.map(
+    (id) =>
+      `<div role="tabpanel" id="dock-panel-${escapeHtml(id)}" class="dock-tabpanel" data-dock-panel="${escapeHtml(id)}"${id === view.state.dockTab ? "" : " hidden"}>${bodies[id]}</div>`,
+  ).join("\n    ");
+
   return `
 <section class="dock" aria-label="Dock" style="--dock-h:${view.dockHeight}px">
   <div class="dock-tabs" role="tablist" aria-label="Dock panel">
@@ -355,23 +375,7 @@ function dock(view: DesktopVisualView): string {
   </div>
 
   <div class="dock-body">
-    <div role="tabpanel" id="dock-panel-changes" class="dock-tabpanel" data-dock-panel="changes">
-      <p class="dock-caption">Fixture review queue. Deciding here changes this view only — no document is written and nothing reaches <code>authoring-core</code>.</p>
-      <ol class="change-list">${rows}</ol>
-      <p class="change-empty" data-change-empty${view.changeReview.empty ? "" : " hidden"}>Nothing waiting for review. Generated edits land here before they touch the scene.</p>
-    </div>
-    <div role="tabpanel" id="dock-panel-assets" class="dock-tabpanel" data-dock-panel="assets" hidden>
-      <p class="panel-empty">No asset library is bound to this surface.</p>
-    </div>
-    <div role="tabpanel" id="dock-panel-console" class="dock-tabpanel" data-dock-panel="console" hidden>
-      <p class="panel-empty">No session is running, so there is no console output to show.</p>
-    </div>
-    <div role="tabpanel" id="dock-panel-evidence" class="dock-tabpanel" data-dock-panel="evidence" hidden>
-      <p class="panel-empty">No evidence packet has been captured here. Evidence digests are produced by <code>sceneaxi project capture</code>, never invented by a viewer.</p>
-    </div>
-    <div role="tabpanel" id="dock-panel-timeline" class="dock-tabpanel" data-dock-panel="timeline" hidden>
-      <p class="panel-empty">No clip is loaded, so the timeline has no tracks.</p>
-    </div>
+    ${panels}
   </div>
 </section>`;
 }
@@ -615,7 +619,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .shell[data-assistant="denied"] [data-assistant-dot]{background:var(--scene)}
 
 .mode-rail{background:var(--well);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:9px 0;gap:2px}
-.brand{width:28px;height:28px;border-radius:7px;background:var(--accent);margin-bottom:9px;display:grid;place-items:center;box-shadow:0 0 0 1px rgba(255,107,44,.3),0 5px 16px -5px rgba(255,107,44,.6)}
+.brand{width:28px;height:28px;border-radius:7px;background:var(--accent);margin-bottom:9px;display:grid;place-items:center;box-shadow:0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),0 5px 16px -5px color-mix(in srgb, var(--accent) 60%, transparent)}
 .brand::before{content:"";width:10px;height:10px;border:2px solid var(--on-accent);border-radius:1px;transform:rotate(45deg)}
 .rail-mode{width:44px;height:42px;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;position:relative;color:var(--faint)}
 .rail-mode:hover{background:var(--header)}
@@ -646,6 +650,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .view-tools{display:flex;align-items:center;gap:3px;padding:0 8px}
 .view-tools i{width:10px;height:10px;border:1.4px solid var(--faint);border-radius:1px}
 .viewport{flex:1;position:relative;min-height:0;overflow:hidden;background:radial-gradient(130% 95% at 50% 0%, ${VIEWPORT_GRADIENT.inner} 0%, ${VIEWPORT_GRADIENT.mid} 48%, ${SURFACE.canvas} 100%);display:grid;place-items:center}
+.viewport-backdrop{position:absolute;inset:0;pointer-events:none}
 .viewport-note{margin:0;font-size:11px;line-height:1.5;color:var(--dim);max-width:44ch;text-align:center}
 .viewport-note-renderer{position:absolute;left:11px;bottom:10px;display:flex;align-items:center;gap:7px;padding:5px 9px;background:${SIGNAL.infoSurface};border:1px solid ${SIGNAL.infoLine};border-radius:4px;color:${SIGNAL.info};font-size:10px;text-align:left;max-width:none}
 .axis-widget{position:absolute;right:12px;top:11px;display:flex;gap:4px}
