@@ -184,6 +184,19 @@ describe("engine desktop visual tokens", () => {
       contrast(ACCENT.on, ACCENT.base),
     );
 
+    // Paint is only the resting state: a single-class `:hover` that repaints a
+    // label outranks `button.is-inert`, so each control class whose hover sets a
+    // colour ships the inert answer beside it. Without these an inert control
+    // looks live under the pointer, which the sweep — a resting-state read —
+    // cannot see.
+    for (const override of [
+      ".ghost-button.is-inert:hover{border-color:var(--line-control);color:var(--inert)}",
+      ".primary-button.is-inert,.primary-button.is-inert:hover{color:var(--inert-on-accent)}",
+      ".decision.is-inert,.decision.is-inert:hover{background:none;border-color:var(--line-raised);color:var(--inert)}",
+    ]) {
+      expect(documents[0]).toContain(override);
+    }
+
     // The rail glyph is `aria-hidden` decoration, so it is a line value and is
     // deliberately not held to the text floor.
     expect(Object.values(LINE)).toContain(INERT.glyph);

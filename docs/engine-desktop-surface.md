@@ -212,6 +212,15 @@ selector list — a list of the controls to update is a list that has to be edit
 whenever a control is added, and the one that existed had never gained
 `.drawer-toggle`.
 
+Demoting a control is not the whole of the switch, though: a drawer **already
+open** when the profile changes has state of its own. Closing the toggle is not
+enough if `data-drawer-left` still says `open` and the toggle still says
+`aria-expanded="true"` over a region the refusal has taken off screen, so the
+switch closes any drawer whose toggle it just made inert — read from the applied
+`aria-disabled`, after the sweep, so it follows the model rather than naming a
+profile a second time. It is the reset the assistant toggle already did for its
+own drawer.
+
 ### Refusal registry
 
 `DESKTOP_VISUAL_REFUSALS` is closed, and every entry is reachable from some state
@@ -368,7 +377,12 @@ Two rules keep this honest:
   declares no `opacity` at all outside `@keyframes`, so the next dimmed control
   cannot walk into the same blind spot. `INERT.text` *is* `TEXT.faint` on
   purpose: the floor is the constraint, and `faint` is already the dimmest tier
-  that clears it everywhere.
+  that clears it everywhere. The paint has to hold **in every state, not only at
+  rest**: a single-class `:hover` outranks `button.is-inert` (0,2,0 against
+  0,1,1), so every control class whose hover repaints its label ships the inert
+  answer beside it — `.ghost-button`, `.primary-button`, and `.decision`. Miss
+  one and that control is indistinguishable from a live one under the pointer,
+  which is the same dimmed-by-nothing state the tokens replaced.
 
 ## Deviations from the archive, and why
 
@@ -467,7 +481,8 @@ sentence can return by review slip.
 - **Real browser, re-recorded 2026-07-28 against this branch's final HEAD.**
   Not inherited: the previous record was taken before the inert state stopped
   being an `opacity` and before the palette's dismiss action stopped being gated
-  on render-time kind. **Every visibility claim below is
+  on render-time kind, and it was re-run again after the inert hover paint and
+  the drawer reset below. **Every visibility claim below is
   `getComputedStyle(...).display`**, not a `hidden` property, and **every
   contrast figure is composited** — each element's own group `opacity` and every
   ancestor's are folded into both sides of the ratio. Chrome via
@@ -478,6 +493,15 @@ sentence can return by review slip.
   1920×620 (**wide but short** — tiers the model reaches on height alone),
   1024×700 (the Kids drawer tier), and 800×560, and it exercises the Kids switch
   at the drawer tiers, not only at 1680×1000.
+
+  **A second correction, on the same axis.** The earlier record read every
+  control **at rest**, and a resting read cannot see a `:hover` rule. A
+  single-class `:hover` outranks `button.is-inert`, so an inert `.ghost-button`
+  repainted to the live `--text` `#EDEFF2` and the live `--line-hover` border
+  under the pointer — visually identical to a live control, on the two Kids
+  drawer toggles that are the only inert ghost buttons a viewport ever shows.
+  Nothing recorded here was wrong about the resting state; the state was simply
+  never measured. It now is, with the pointer actually over the control.
 
   **A correction to the previous record, stated rather than quietly improved.**
   It reported "0 failures below 4.5:1" across every state. *That claim did not
@@ -543,6 +567,21 @@ sentence can return by review slip.
     `Assistant` toggle at 1680×1000, the `Panels` drawer toggle at the drawer
     tiers) — the values the previous record could not see were 3.67, 4.07, and
     2.16.
+  - **An inert control stays inert under the pointer.** Measured with a real
+    mouse move, not at rest. At 1024×700 on `kids` all **11** visible inert
+    controls — both drawer toggles, the assistant toggle, its ✕, and the seven
+    rail modes — resolve to `rgb(125, 134, 148)` (`--inert`), and hovering each
+    of them left every one of the eleven at that colour, the two ghost buttons
+    keeping the resting `rgb(32, 38, 46)` (`--line-control`) border. The control
+    for the reading is the live case at the same size: hovering the `game`
+    document's `Panels` resolved it to `rgb(237, 239, 242)` (`--text`) with a
+    `rgb(51, 58, 68)` (`--line-hover`) border, **15.88:1** — which is exactly
+    what the inert one showed before the fix, at the same size and on the same
+    control. Enumerating the live stylesheet found **6** rules with a `:hover`
+    that sets a colour; three of them (`.ghost-button`, `.primary-button`,
+    `.decision`) can match an inert control, and each now ships its `.is-inert`
+    answer beside it, while `.state-shortcut` and the palette rows never go
+    inert (`outsideRefusal`) and `.rail-mode:hover` sets only a background.
   - **A palette row keeps its dismiss action through a profile switch.** Opened
     on `--overlay palette`, `palette-sculpt-from-reference` renders
     `data-action="overlay"` in every profile. Clicking the Kids chip made it
@@ -570,6 +609,17 @@ sentence can return by review slip.
     at `closed` and `aria-expanded` at `false`, and `.left-dock` at
     `display: none`. Before the fix both were live `view` buttons that set
     `aria-expanded="true"` on a region the Kids rules keep shut at every size.
+  - **A drawer opened before the switch is closed by it.** The other order,
+    which the demotion alone did not cover. At 1024×700 on `game`, clicking
+    `Panels` gave `data-drawer-left="open"`, `aria-expanded="true"`, and
+    `.left-dock` `display: flex`; clicking **Kids** then left `data-drawer-left`
+    `closed`, `aria-expanded` `false`, the toggle `data-kind="inert"` with
+    `OPEN_PATH_KIDS_REFUSED`, and `.left-dock` `none`. Same at 1920×620 with
+    **both** drawers opened first — both reset. Clicking **Game** restored two
+    live `view` toggles at `aria-expanded="false"`, and `Panels` opened
+    `.left-dock` to `flex` again. Before the fix the attribute survived the
+    switch, so an inert toggle announced an expansion over a panel the refusal
+    had already taken off screen.
   - **The refuse-only decision holds through a client-side switch, in both
     drawer tiers.** Driven at **1280×800** and at **1024×700** from the default
     `game` document, computed style at each step: clicking the **Kids** chip gave

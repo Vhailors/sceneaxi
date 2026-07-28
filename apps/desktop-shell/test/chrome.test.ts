@@ -675,6 +675,10 @@ describe("engine desktop chrome — honesty", () => {
     const script = /<script>(.*)<\/script>/s.exec(game)?.[1] ?? "";
     expect(script).not.toContain("setRefusal(shell.querySelector(");
     expect(script).toContain("q('[data-kind]').forEach(applyControl)");
+    // And a drawer opened before the switch is closed by it, so no inert toggle
+    // is left announcing an expansion over a region the refusal removed.
+    expect(script).toContain("closeRefusedDrawers()");
+    expect(script).toContain(`el.setAttribute('aria-expanded', 'false')`);
   });
 
   it("locks the assistant on Kids and can be reached by a client switch", () => {

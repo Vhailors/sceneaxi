@@ -718,6 +718,11 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .title-actions .drawer-toggle{display:none}
 .ghost-button{display:flex;align-items:center;gap:7px;height:22px;padding:0 10px;border-radius:4px;background:var(--header);border:1px solid var(--line-control);font-size:11px;color:var(--dim)}
 .ghost-button:hover{border-color:var(--line-hover);color:var(--text)}
+/* A single-class :hover outranks button.is-inert, so every control class whose
+   hover repaints its label has to say what the inert one does under the pointer
+   — otherwise an inert control becomes indistinguishable from a live one there,
+   which is the same dimmed-by-nothing state the paint rule above replaced. */
+.ghost-button.is-inert:hover{border-color:var(--line-control);color:var(--inert)}
 .ghost-button kbd{background:var(--well);border:1px solid var(--line-control);border-radius:2px;padding:1px 4px;color:var(--faint)}
 .primary-button{background:var(--accent);color:var(--on-accent);font-weight:600;font-size:11px;border-radius:3px;height:22px;padding:0 11px}
 .primary-button:hover{background:var(--accent-hover)}
@@ -1207,12 +1212,25 @@ if (shell) {
 
   const applyProfileControls = () => q('[data-kind]').forEach(applyControl);
 
+  // A drawer opened before the switch must not keep announcing itself expanded
+  // over a region the new profile's refusal removes. Read after the controls are
+  // applied, so the toggle the profile just made inert is the one that closes —
+  // the same reset setAssistant() already does for its own drawer.
+  const closeRefusedDrawers = () => {
+    q('.drawer-toggle').forEach((el) => {
+      if (el.getAttribute('aria-disabled') !== 'true') return;
+      shell.dataset[el.dataset.value === 'left' ? 'drawerLeft' : 'drawerInspector'] = 'closed';
+      el.setAttribute('aria-expanded', 'false');
+    });
+  };
+
   const setProfile = (id) => {
     const seat = T.assistantByProfile[id];
     if (!seat) return;
     setAssistant(seat.state);
     q('[data-assistant-model]').forEach((el) => { el.textContent = seat.modelLabel; });
     applyProfileControls();
+    closeRefusedDrawers();
     // The column the profile restores is still a drawer in the tiers that undock
     // it, and leaving a refusal is not opening a drawer.
     syncAssistantTier();
