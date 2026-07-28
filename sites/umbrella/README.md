@@ -89,11 +89,17 @@ designed around that rather than around widening the contract.
   promises.
 - `snapshot` — what the hero mounts. No input is attached, the canvas keeps the touch
   gestures the page needs so a swipe that starts on the art still scrolls, and the loop
-  draws only until the frame **settles** and then stops, redrawing on a resize or a
-  device-pixel-ratio change. Settled is the core's own report — pixels reached a buffer,
-  reconciliation has nothing left to apply, every wanted instance is in the frame — so a
-  stopped hero is a finished one rather than one frozen part-way through opening, and its
-  provenance line is still the running core's, not the page's.
+  draws only until the frame **settles** and then stops. Settled is the core's own report
+  — pixels reached a buffer, reconciliation has nothing left to apply, every wanted
+  instance is in the frame — so a stopped hero is a finished one rather than one frozen
+  part-way through opening, and its provenance line is still the running core's, not the
+  page's. Because a stopped surface has no next frame to recover on, everything that can
+  invalidate the settled frame asks for another one by name: a resize, a
+  device-pixel-ratio change, a restored WebGL context, and a change to what the caller
+  wants mounted. A *lost* context drops the frame report first, so a provenance line
+  never outlives the pixels it describes. Being still art rather than a target, that
+  canvas is also the one that takes `role="img"`, which is what makes its label
+  dependable.
 
 - `src/app/_components/sculpt-viewport.tsx` is the **only** file on the site that
   constructs a renderer, and it touches it only through the ADR 0002 seam: Sculpt

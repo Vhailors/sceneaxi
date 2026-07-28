@@ -23,6 +23,13 @@
  * two travel together, a surface cannot end up orbitable but frozen, or still and
  * redrawing an unchanging image sixty times a second.
  *
+ * A stopped surface has no next frame to recover on, so everything that can invalidate
+ * the frame it settled on asks for a new one by name: a resize, a density change, a
+ * restored WebGL context, and a change to what the caller wants mounted. That is what
+ * keeps the two presentations telling the same story — an interactive surface converges
+ * because it is always drawing, and a snapshot converges because each of those draws
+ * once more and then settles again.
+ *
  * WebGL can fail for reasons a page cannot control (no GPU, a blocked context, a
  * headless crawler). That refuses in the open with the error the core produced, rather
  * than leaving a blank rectangle that looks like a bug.
@@ -128,8 +135,17 @@ export function useSculptViewport(input: {
    */
   const wantedKey = input.mountedInstanceIds.join("\u0000");
   const wantedRef = useRef(wantedKey);
+  /**
+   * Ask a stopped snapshot for one more frame. It is null while a surface is already
+   * drawing every frame, and null again once a session is released.
+   */
+  const redrawRef = useRef<(() => void) | null>(null);
   useEffect(() => {
     wantedRef.current = wantedKey;
+    // New intent has to reach the picture. An interactive surface reconciles on its very
+    // next frame; a settled snapshot has to be asked, or a mount would be recorded and
+    // then silently never drawn.
+    redrawRef.current?.();
   }, [wantedKey]);
 
   useEffect(() => {
@@ -278,6 +294,39 @@ export function useSculptViewport(input: {
       });
 
       /**
+       * The one thing a stopped surface cannot do on its own: come back from a lost
+       * WebGL context.
+       *
+       * A browser may take the GPU context away for reasons the page does not control,
+       * and an interactive surface recovers on its next frame because it always has one.
+       * A snapshot has to be asked. Losing the context drops the frame report first —
+       * the drawing buffer is cleared, so a provenance line still naming that frame's
+       * draw calls would outlive the pixels it describes — and a restored context asks
+       * for one more frame. Whether the pixels actually came back is the core's own
+       * report, not a guess here: the settle check keeps drawing until the surface says
+       * it drew, and stops again the moment it did.
+       */
+      if (snapshot) {
+        const redraw = () => {
+          loop.start();
+        };
+        const onSurfaceContextLost = () => {
+          loop.stop();
+          setStatus({ kind: "starting" });
+        };
+        canvas.addEventListener("webglcontextlost", onSurfaceContextLost);
+        canvas.addEventListener("webglcontextrestored", redraw);
+        cleanups.push(() => {
+          canvas.removeEventListener("webglcontextlost", onSurfaceContextLost);
+          canvas.removeEventListener("webglcontextrestored", redraw);
+        });
+        redrawRef.current = redraw;
+        cleanups.push(() => {
+          if (redrawRef.current === redraw) redrawRef.current = null;
+        });
+      }
+
+      /**
        * Re-measure and redraw. A snapshot has no loop running to pick the new size up on
        * its next frame, so it draws here instead — which is what keeps stopped art
        * correct rather than stretched.
@@ -390,14 +439,19 @@ export function SculptViewportSurface({
     The modifier is what keeps the two presentations from having to trust each other: a
     snapshot canvas takes no pointer gestures, so it never claims the touch the page
     needs to scroll, and it never advertises a drag the session behind it would ignore.
+
+    `canvas` carries no implicit ARIA role, so `aria-label` alone is not reliably a name.
+    Art can say what it is: a snapshot is an image and takes `role="img"`, which is what
+    makes its label dependable. The routed surfaces do not, because there the canvas is a
+    real interactive target and calling it an image would misdescribe it.
   */
+  const isSnapshot = presentation === "snapshot";
   return (
     <div className="viewport">
       <canvas
         ref={canvasRef}
-        className={
-          presentation === "snapshot" ? "viewport-canvas viewport-canvas-static" : "viewport-canvas"
-        }
+        className={isSnapshot ? "viewport-canvas viewport-canvas-static" : "viewport-canvas"}
+        role={isSnapshot ? "img" : undefined}
         aria-label={label}
       />
       {status.kind === "starting" && <p className="viewport-overlay">Opening the scene…</p>}

@@ -568,6 +568,28 @@ describe("the hero draws a real Sculpt Artifact", () => {
     // stays correct rather than stretched.
     expect(boundary).toMatch(/if \(snapshot\) drawFrame\(\);/);
     expect(boundary).toContain("dppx)`");
+
+    /*
+      A stopped surface has no next frame to recover on, so the rest of what can
+      invalidate the settled frame has to ask for one by name. A restored WebGL context
+      redraws — an interactive surface self-heals on its next frame and a snapshot would
+      otherwise stay blank for the visit — and a lost one drops the frame report first,
+      so the provenance line never outlives the pixels it describes. New mount intent
+      asks too, so the hook's idempotent reconciliation still converges on both
+      presentations rather than silently recording a mount it never draws.
+    */
+    expect(boundary).toContain('canvas.addEventListener("webglcontextrestored", redraw)');
+    expect(boundary).toMatch(
+      /const onSurfaceContextLost = \(\) => \{\s*loop\.stop\(\);\s*setStatus\(\{ kind: "starting" \}\);/,
+    );
+    expect(boundary).toMatch(/wantedRef\.current = wantedKey;[\s\S]{0,400}?redrawRef\.current\?\.\(\)/);
+
+    /*
+      `canvas` has no implicit ARIA role, so `aria-label` alone is not reliably an
+      accessible name. Only the snapshot takes `role="img"`: on the routed surfaces the
+      canvas is a genuine interactive target and calling it an image would misdescribe it.
+    */
+    expect(boundary).toContain('role={isSnapshot ? "img" : undefined}');
   });
 });
 
