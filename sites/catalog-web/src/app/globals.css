@@ -28,8 +28,8 @@
  * the surfaces and the status vocabulary are emitted by `@sceneaxi/site-kit` and served
  * by `layout.tsx` (`src/lib/foundations.ts`), which is the single home the captain's D2
  * decision gives the shared token layer. What remains below is what this storefront
- * itself owns: the per-store accent derivations marked STORE IDENTITY, four layout
- * measures, and its own components.
+ * itself owns: the per-store accent derivations marked STORE IDENTITY, the layout
+ * measures its own `:root` block below declares, and its own components.
  */
 
 /* --- STORE IDENTITY — the only block that differs between the two storefronts --- */
@@ -104,6 +104,14 @@
 html {
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
+  /*
+   * The masthead is sticky, so a fragment target scrolled to y=0 lands underneath it —
+   * including `#main`, which the skip link is the only way to reach. Pinning the scroll
+   * padding at the same offset the sticky columns use keeps every anchor destination,
+   * and the top of `<main>`, below the masthead rather than behind it. Independent of
+   * `scroll-behavior`, so it holds under reduced motion too.
+   */
+  scroll-padding-top: var(--sticky-top);
 }
 
 /*
@@ -1554,6 +1562,13 @@ p {
   .rail {
     display: flex;
     flex-direction: column;
+    /*
+     * Back to the base cross-axis behaviour: the 48rem rule's `align-items: start` is the
+     * only declaration of that property once this rule turns the rail back into a column,
+     * and in a column flex container it would size every group to its own content instead
+     * of to the 216px track `.browse` gives it.
+     */
+    align-items: stretch;
     position: sticky;
     top: var(--sticky-top);
     max-height: calc(100dvh - var(--sticky-top));

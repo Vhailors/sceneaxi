@@ -75,7 +75,7 @@ and this storefront consumes it rather than carrying a copy:
   triples as site-kit's `.sx-status-*` chips without writing one of their values.
 - What stays local is what site-kit does not publish: the archive's per-store washes
   (`--accent-bg`, `--accent-line`, `--hero-wash`, `--media-wash`), the store mark shape,
-  and four layout measures.
+  and the layout measures its own `:root` block declares.
 - Foundations names Archivo and JetBrains Mono but a package must not inject a network
   font, so the site loads both itself through `next/font`, which self-hosts them at build
   time. `--store-ui` / `--store-mono` prepend the loaded faces onto site-kit's
@@ -139,6 +139,12 @@ No route overflows at any of the five viewports, against the archive's 984-again
 same probe found no element whose right edge exceeded the document width on any of the
 twenty renders. In the same session the detail page's editor deep link resolved to
 `…/editor?source=catalog-web&item=web-hero-diorama`.
+
+The masthead is sticky, so a fragment target scrolled to `y=0` would land behind it.
+`html` carries `scroll-padding-top: var(--sticky-top)`, read from the served document as
+`88px`; at 1366x768 the hero's `#pricing` target put its `<h2>` top at 88 against a
+masthead bottom of 60, and the skip link's `#main` put the top of `<main>` at 88, flush
+with the masthead's bottom edge rather than under it.
 
 #### Sticky columns at short desktop heights
 
