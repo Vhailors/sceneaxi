@@ -315,9 +315,15 @@ Load-bearing properties, each gate-tested in `tests/sites/identity-plane-wiring.
   credit amount comes from the persisted intent, never from the event.
 - **The webhook's answer names the failing side.** A refusal this deployment owns — no
   signing secret, an unusable clock, an adapter that threw, a persisted intent its own
-  checkout adapter never wrote, its own ledger rows that do not load — answers `503`; a
-  refusal the request owns — signature, payload, an intent that does not match — answers
-  `400`. An event the endpoint is not built to act on is neither: it answers `200` with
+  checkout adapter never wrote, a settlement its own adapter returned for a different
+  Checkout Session or without the required `sessionId`, its own ledger rows that do not
+  load — answers `503`; a refusal the request owns — signature, payload, a session id the
+  verified body itself omits, an intent that does not match — answers `400`. The
+  settlement-session refusal sits on the deployment's side because both sides of that
+  comparison come from one signature-verified body: the endpoint reads the session id out
+  of the verified payload and asks its own `retrieveSettlement` for exactly that id, so
+  only the adapter's answer can disagree, and a forged body is refused by signature
+  verification long before it. An event the endpoint is not built to act on is neither: it answers `200` with
   `ignored: true`, so Stripe stops redelivering a condition redelivery cannot change.
   Only `ignored: false` means credits are in the ledger. Exactly three things are
   acknowledged, and all three are decided from the verified body before any adapter or

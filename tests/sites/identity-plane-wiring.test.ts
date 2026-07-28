@@ -20,6 +20,7 @@ import {
   type IdentityAdapter,
 } from "@sceneaxi/auth";
 import {
+  BILLING_REFUSE_REASONS,
   CHECKOUT_METADATA_KEYS,
   createInMemoryCreditStore,
   signStripeWebhookPayload,
@@ -685,6 +686,20 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     ]) {
       expect(creditWebhookHttpStatus(reason)).toBe(400);
     }
+  });
+
+  it("owns a settlement bound to the wrong session, and still disowns a bad signature", () => {
+    // Both sides of the session comparison come from one signature-verified body: this
+    // module reads the id out of the verified payload and asks its own retrieveSettlement
+    // for that same id. Only the adapter's answer can disagree — including the adapter
+    // that has not started echoing sessionId yet — so a 400 would report the deployment's
+    // own omission as a bad request from Stripe, and tell Stripe not to retry a settlement
+    // that is still recoverable.
+    expect(creditWebhookHttpStatus(BILLING_REFUSE_REASONS.settlementSessionMismatch)).toBe(503);
+    // The sender-owned side stays sender-owned: a forged or replayed body never reaches the
+    // comparison, and an id the verified body itself omits is a fault of that body.
+    expect(creditWebhookHttpStatus(BILLING_REFUSE_REASONS.signatureMismatch)).toBe(400);
+    expect(creditWebhookHttpStatus(BILLING_REFUSE_REASONS.checkoutSessionIdMissing)).toBe(400);
   });
 
   it("reports a missing signing secret as this deployment's failure, not the sender's", async () => {

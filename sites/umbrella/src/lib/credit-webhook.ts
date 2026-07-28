@@ -135,11 +135,19 @@ const UNHANDLED_EVENT_REASONS: ReadonlySet<string> = Object.freeze(
  *
  * The sender did nothing wrong in any of them: the endpoint has no signing secret
  * configured, its clock is unusable, an adapter threw, its own checkout adapter never
- * persisted the intent the grant must be bound to, its own ledger rows do not load, or
- * the purchasing user has no provisioned credit account. They are separated from the
- * request-fault refusals so the transport can answer a status that names the failing
- * side — an operator who forgot `STRIPE_WEBHOOK_SECRET`, or whose adapter forgot to
- * persist intents, must not see their own omission reported as a bad request from Stripe.
+ * persisted the intent the grant must be bound to, its own settlement adapter answered
+ * for a different Checkout Session than the one asked about or did not echo the session
+ * id at all, its own ledger rows do not load, or the purchasing user has no provisioned
+ * credit account. They are separated from the request-fault refusals so the transport can
+ * answer a status that names the failing side — an operator who forgot
+ * `STRIPE_WEBHOOK_SECRET`, or whose adapter forgot to persist intents, must not see their
+ * own omission reported as a bad request from Stripe.
+ *
+ * The settlement one is server-side because both sides of that comparison come from one
+ * signature-verified body: this module reads the session id out of the verified payload
+ * and asks its own `retrieveSettlement` for exactly that id, so only the adapter's answer
+ * can disagree. A sender cannot reach it — a forged or replayed body is refused by
+ * signature verification first, and that stays a request fault.
  */
 const SERVER_SIDE_REASONS: ReadonlySet<string> = Object.freeze(
   new Set<string>([
@@ -148,6 +156,7 @@ const SERVER_SIDE_REASONS: ReadonlySet<string> = Object.freeze(
     CREDIT_WEBHOOK_REASONS.ledgerUnavailable,
     CREDIT_WEBHOOK_REASONS.storeFailed,
     BILLING_REFUSE_REASONS.webhookSecretMissing,
+    BILLING_REFUSE_REASONS.settlementSessionMismatch,
     BILLING_REFUSE_REASONS.clockInvalid,
     BILLING_REFUSE_REASONS.storeFailed,
     BILLING_REFUSE_REASONS.ledgerStateInvalid,
