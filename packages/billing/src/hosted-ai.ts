@@ -262,10 +262,12 @@ function isKidsRequest(principal: unknown, surface: unknown): boolean {
 /**
  * The store is an injected persistence adapter, so its shape is duck-typed the
  * way this repo duck-types every other injected adapter: a Neon-backed class
- * instance carries `appendEntry` on its prototype, and `meterCredits` calls the
- * three methods without caring where they live. Requiring a plain own-property
- * object here would refuse a store the debit path itself would accept. A
- * throwing accessor still fails closed.
+ * instance carries `appendOrReplayEntry` on its prototype, and `meterCredits`
+ * calls the three methods without caring where they live. Requiring a plain
+ * own-property object here would refuse a store the debit path itself would
+ * accept. The three checked are exactly the three the debit path calls, so this
+ * cannot accept a store that would then crash mid-debit. A throwing accessor
+ * still fails closed.
  */
 function isCreditStore(value: unknown): value is CreditStore {
   if (value === null || typeof value !== "object") return false;
@@ -274,7 +276,7 @@ function isCreditStore(value: unknown): value is CreditStore {
     return (
       typeof candidate["findAccountById"] === "function" &&
       typeof candidate["listEntries"] === "function" &&
-      typeof candidate["appendEntry"] === "function"
+      typeof candidate["appendOrReplayEntry"] === "function"
     );
   } catch {
     return false;

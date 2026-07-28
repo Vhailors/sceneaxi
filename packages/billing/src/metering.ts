@@ -17,6 +17,11 @@
  * `idempotency_key` uniqueness is global, so an un-namespaced caller key would
  * let one account's `usage:turn_01` turn another account's distinct usage into an
  * opaque store failure instead of a metered debit.
+ *
+ * The debit itself goes through `CreditStore.appendOrReplayEntry`, and a stale
+ * state is reconciled against persistence before it is refused, so a debit whose
+ * first response was lost replays on retry rather than looking like a caller
+ * reasoning about an account that moved under it (sceneaxi#128).
  */
 
 import { requireAuthenticated, type AdminIdentity } from "@sceneaxi/auth";
@@ -34,7 +39,7 @@ import {
   validateLedgerState,
   type LedgerState,
 } from "./ledger.js";
-import type { CreditStore } from "./store.js";
+import type { CommittedEntry, CreditStore } from "./store.js";
 import {
   BILLING_REFUSE_REASONS,
   billingOk,
@@ -88,6 +93,52 @@ export function sameLedgerState(
     JSON.stringify(left.account) === JSON.stringify(right.account) &&
     JSON.stringify(left.entries) === JSON.stringify(right.entries)
   );
+}
+
+type CommittedAppendShape = Readonly<{
+  idempotencyKey: string;
+  movement: CreditLedgerEntry["movement"];
+  delta: number;
+  reason: string;
+}>;
+
+/**
+ * The committed entry that explains a stale state, or `undefined`.
+ *
+ * A lost response leaves one unmistakable trace: persistence holds exactly the
+ * caller's own history plus one more entry, and that entry is the debit this
+ * request is asking for. Anything else — a different account record, a different
+ * history, more than one extra entry, or an extra entry that is somebody else's
+ * movement — is a genuinely stale state and stays a refusal. The comparison is
+ * on the semantic payload the ledger's idempotency rule already uses, so a retry
+ * that legitimately regenerated `entryId` still reconciles.
+ */
+function reconcileCommittedAppend(
+  supplied: LedgerState,
+  persisted: LedgerState,
+  shape: CommittedAppendShape,
+): CreditLedgerEntry | undefined {
+  if (persisted.entries.length !== supplied.entries.length + 1) return undefined;
+  if (JSON.stringify(persisted.account) !== JSON.stringify(supplied.account)) {
+    return undefined;
+  }
+  if (
+    JSON.stringify(persisted.entries.slice(0, -1)) !==
+    JSON.stringify(supplied.entries)
+  ) {
+    return undefined;
+  }
+  const committed = persisted.entries.at(-1);
+  if (
+    committed === undefined ||
+    committed.idempotencyKey !== shape.idempotencyKey ||
+    committed.movement !== shape.movement ||
+    committed.delta !== shape.delta ||
+    committed.reason !== shape.reason
+  ) {
+    return undefined;
+  }
+  return committed;
 }
 
 export async function meterCredits(
@@ -184,10 +235,36 @@ export async function meterCredits(
       `The persisted credit account is invalid: ${persistedState.message}`,
     );
   }
+  const scopedKey = meteringIdempotencyKey(
+    persistedState.value.account.accountId,
+    idempotencyKey,
+  );
+
   if (!sameLedgerState(validatedState.value, persistedState.value)) {
-    return billingRefuse(
-      BILLING_REFUSE_REASONS.ledgerStateInvalid,
-      "The supplied ledger state is not the current persisted account state.",
+    // A stale state is usually a caller reasoning about an account that moved
+    // under it. But there is one benign shape: this very debit committed and its
+    // response was lost, so the caller retries with the state it had *before*
+    // its own entry. That is a replay, not a conflict — the retry must not be
+    // told the account is stale, and must not produce a second debit.
+    const committed = reconcileCommittedAppend(
+      validatedState.value,
+      persistedState.value,
+      { idempotencyKey: scopedKey, movement: "debit", delta: -amount, reason },
+    );
+    if (committed === undefined) {
+      return billingRefuse(
+        BILLING_REFUSE_REASONS.ledgerStateInvalid,
+        "The supplied ledger state is not the current persisted account state.",
+      );
+    }
+    return billingOk(
+      Object.freeze({
+        state: persistedState.value,
+        metered: true,
+        entry: committed,
+        balance: persistedState.value.balance,
+        replayed: true,
+      }),
     );
   }
 
@@ -203,10 +280,6 @@ export async function meterCredits(
     );
   }
 
-  const scopedKey = meteringIdempotencyKey(
-    persistedState.value.account.accountId,
-    idempotencyKey,
-  );
   const appended = appendCreditEntry(persistedState.value, {
     entryId: deriveEntryId(scopedKey),
     movement: "debit",
@@ -218,12 +291,34 @@ export async function meterCredits(
   if (!appended.ok) return appended;
 
   if (!appended.value.replayed && appended.value.entry !== undefined) {
+    let committed: CommittedEntry;
     try {
-      await store.appendEntry(appended.value.entry);
+      committed = await store.appendOrReplayEntry(appended.value.entry);
     } catch {
       return billingRefuse(
         BILLING_REFUSE_REASONS.storeFailed,
         "The credit store failed while persisting the metered debit.",
+      );
+    }
+    // The ledger read above showed no such key, so a replay here means a
+    // concurrent writer committed this same debit between the read and the
+    // write. Exactly one row exists; report the one that is in the ledger.
+    if (committed.replayed) {
+      return billingOk(
+        Object.freeze({
+          state: Object.freeze({
+            account: persistedState.value.account,
+            entries: Object.freeze([
+              ...persistedState.value.entries,
+              committed.entry,
+            ]),
+            balance: appended.value.state.balance,
+          }),
+          metered: true,
+          entry: committed.entry,
+          balance: appended.value.state.balance,
+          replayed: true,
+        }),
       );
     }
   }

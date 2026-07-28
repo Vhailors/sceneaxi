@@ -741,6 +741,9 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
       appendEntry(entry: CreditLedgerEntry) {
         return backing.appendEntry(entry);
       }
+      appendOrReplayEntry(entry: CreditLedgerEntry) {
+        return backing.appendOrReplayEntry(entry);
+      }
       settleCreditsSale(settlement: CreditsSaleSettlement) {
         return backing.settleCreditsSale(settlement);
       }
@@ -859,7 +862,7 @@ describe("runMeteredModelCall — failures do not half-apply", () => {
     const store = storeFor(state);
     const throwingStore = Object.freeze({
       ...store,
-      appendEntry() {
+      appendOrReplayEntry() {
         throw new Error("db down");
       },
     });

@@ -42,8 +42,14 @@ export {
 } from "./ledger.js";
 
 export {
+  SALE_ENTRY_KEY_PREFIX,
+  createCreditStore,
   createInMemoryCreditStore,
+  isSaleEntryKey,
+  saleEntryKeys,
+  type CommittedEntry,
   type CreditStore,
+  type CreditStoreAdapter,
   type CreditsSaleSettlement,
   type CreditsSaleSettlementOutcome,
   type InMemoryCreditStore,
@@ -116,9 +122,11 @@ export {
   hasVerifiedCompletionProvenance,
   hasVerifiedWebhookProvenance,
   parseCheckoutCompletedEvent,
+  persistCheckoutCompletedGrant,
   signStripeWebhookPayload,
   verifyStripeWebhookSignature,
   type ApplyCheckoutCompletedGrantRequest,
+  type PersistCheckoutCompletedGrantRequest,
   type CheckoutSettlement,
   type CheckoutSettlementPort,
   type VerifiedCheckoutCompletion,

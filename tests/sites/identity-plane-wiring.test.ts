@@ -355,6 +355,9 @@ describe("acceptance 2 — the starter allotment is granted exactly once", () =>
         appendEntry() {
           /* unreachable in this test */
         },
+        appendOrReplayEntry(entry) {
+          return { entry, replayed: false };
+        },
         settleCreditsSale() {
           return { replayed: false };
         },

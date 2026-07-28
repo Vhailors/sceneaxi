@@ -18,10 +18,12 @@ import {
   applyCheckoutCompletedGrant,
   checkoutPurposeSettlesElsewhere,
   createCheckoutSessionIntent,
+  createInMemoryCreditStore,
   createLedgerState,
   loadCreditPackCatalog,
   lookupCreditPack,
   parseCheckoutCompletedEvent,
+  persistCheckoutCompletedGrant,
   signStripeWebhookPayload,
   verifyStripeWebhookSignature,
 } from "@sceneaxi/billing";
@@ -886,24 +888,25 @@ describe("parseCheckoutCompletedEvent", () => {
   });
 });
 
-describe("applyCheckoutCompletedGrant", () => {
-  const parsed = (overrides: Record<string, unknown> = {}) => {
-    const intent = checkoutIntent(
-      overrides["livemode"] === true
-        ? { mode: "live", liveModeAuthorized: true }
-        : overrides["packId"] === undefined
-          ? {}
-          : { packId: overrides["packId"] },
-    );
-    const result = parseCheckoutCompletedEvent({
-      verified: verified(eventBody(overrides, intent)),
-      intent,
-      settlement: settlementFor(intent),
-    });
-    if (!result.ok) throw new Error(`fixture parse failed: ${result.message}`);
-    return result.value;
-  };
+/** A completion whose provenance is real: parsed from a signed fixture body. */
+const parsed = (overrides: Record<string, unknown> = {}) => {
+  const intent = checkoutIntent(
+    overrides["livemode"] === true
+      ? { mode: "live", liveModeAuthorized: true }
+      : overrides["packId"] === undefined
+        ? {}
+        : { packId: overrides["packId"] },
+  );
+  const result = parseCheckoutCompletedEvent({
+    verified: verified(eventBody(overrides, intent)),
+    intent,
+    settlement: settlementFor(intent),
+  });
+  if (!result.ok) throw new Error(`fixture parse failed: ${result.message}`);
+  return result.value;
+};
 
+describe("applyCheckoutCompletedGrant", () => {
   it("grants exactly the pack's credits once", () => {
     const completion = parsed();
     const result = applyCheckoutCompletedGrant({
@@ -1097,6 +1100,119 @@ describe("applyCheckoutCompletedGrant", () => {
         now: NOW,
       }).ok,
     ).toBe(false);
+  });
+});
+
+/**
+ * The persisted grant boundary (sceneaxi#128).
+ *
+ * `applyCheckoutCompletedGrant` decides and cannot commit. An endpoint that
+ * answered Stripe 2xx on its result alone would claim a purchase was honored
+ * against a ledger that never changed, and Stripe would never redeliver it.
+ */
+describe("persistCheckoutCompletedGrant", () => {
+  const storeWithAccount = () =>
+    createInMemoryCreditStore({ accounts: [ACCOUNT] });
+
+  it("reports success only after the grant is in the ledger", async () => {
+    const store = storeWithAccount();
+    const completion = parsed();
+    const result = await persistCheckoutCompletedGrant({
+      store,
+      state: createLedgerState(ACCOUNT),
+      completion,
+      now: NOW,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.replayed).toBe(false);
+    expect(result.value.state.balance).toBe(completion.credits);
+
+    const persisted = await store.listEntries(ACCOUNT.accountId);
+    expect(persisted.length).toBe(1);
+    expect(persisted[0]?.idempotencyKey).toBe(
+      `${STRIPE_EVENT_IDEMPOTENCY_PREFIX}evt_test_01`,
+    );
+    expect(persisted[0]?.delta).toBe(completion.credits);
+  });
+
+  it("names a store failure and grants nothing", async () => {
+    const backing = storeWithAccount();
+    let attempts = 0;
+    const store = Object.freeze({
+      ...backing,
+      appendOrReplayEntry() {
+        attempts += 1;
+        throw new Error("transaction rolled back");
+      },
+    });
+
+    const result = await persistCheckoutCompletedGrant({
+      store,
+      state: createLedgerState(ACCOUNT),
+      completion: parsed(),
+      now: NOW,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.storeFailed);
+    expect(attempts).toBe(1);
+    expect(backing.entryCount(ACCOUNT.accountId)).toBe(0);
+  });
+
+  it("replays a redelivery whose first response was lost, granting once", async () => {
+    const store = storeWithAccount();
+    const completion = parsed();
+    const request = {
+      store,
+      state: createLedgerState(ACCOUNT),
+      completion,
+      now: NOW,
+    };
+
+    const first = await persistCheckoutCompletedGrant(request);
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    expect(first.value.replayed).toBe(false);
+
+    // Stripe redelivers; this caller's ledger read still predates its own commit,
+    // so the pure path would append again and only the store can tell it not to.
+    const redelivery = await persistCheckoutCompletedGrant({
+      ...request,
+      now: NOW + 5_000,
+    });
+    expect(redelivery.ok).toBe(true);
+    if (!redelivery.ok) return;
+    expect(redelivery.value.replayed).toBe(true);
+    expect(redelivery.value.entry).toEqual(first.value.entry);
+    expect(redelivery.value.state.balance).toBe(completion.credits);
+    expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
+  });
+
+  it("commits nothing when the grant itself refuses", async () => {
+    const store = storeWithAccount();
+    const result = await persistCheckoutCompletedGrant({
+      store,
+      state: createLedgerState(ACCOUNT),
+      // A completion that was never parsed from a verified webhook.
+      completion: { ...parsed() } as never,
+      now: NOW,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.completionNotVerified);
+    expect(store.entryCount(ACCOUNT.accountId)).toBe(0);
+  });
+
+  it("requires a credit store", async () => {
+    const result = await persistCheckoutCompletedGrant({
+      state: createLedgerState(ACCOUNT),
+      completion: parsed(),
+      now: NOW,
+    } as never);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.requestInvalid);
   });
 });
 

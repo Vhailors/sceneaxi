@@ -1,10 +1,16 @@
 /**
- * The credit persistence port and an in-memory reference implementation.
+ * The credit persistence port, its shared boundary, and an in-memory reference
+ * implementation.
  *
  * The in-memory store enforces the same invariants the database does — global
  * `entryId`, unique `(accountId, sequence)`, unique `idempotencyKey`, and no
  * update or delete of an existing entry. If it were merely a `Map` push, a bug
  * that the real trigger would catch could pass the whole test suite.
+ *
+ * An adapter is never handed to a caller directly. `createCreditStore` wraps one
+ * and is where the invariants that must hold for *every* adapter live, so a
+ * future Neon adapter inherits them by construction instead of by remembering
+ * to re-implement them (sceneaxi#128).
  */
 
 import {
@@ -34,11 +40,31 @@ export type CreditsSaleSettlement = Readonly<{
 
 export type CreditsSaleSettlementOutcome = Readonly<{ replayed: boolean }>;
 
+/**
+ * The outcome of an atomic append-or-replay: the entry the ledger actually holds
+ * under the requested idempotency key, and whether it was already there.
+ */
+export type CommittedEntry = Readonly<{
+  entry: CreditLedgerEntry;
+  replayed: boolean;
+}>;
+
 export type CreditStore = Readonly<{
   findAccountByUserId(userId: string): Awaitable<CreditAccount | undefined>;
   findAccountById(accountId: string): Awaitable<CreditAccount | undefined>;
   listEntries(accountId: string): Awaitable<ReadonlyArray<CreditLedgerEntry>>;
   appendEntry(entry: CreditLedgerEntry): Awaitable<void>;
+  /**
+   * Append one entry, or hand back the entry already committed under its
+   * idempotency key.
+   *
+   * This is the operation a lost response needs. A caller whose append committed
+   * but whose answer never arrived retries and is told `replayed: true` rather
+   * than colliding with its own row, and exactly one entry exists either way.
+   * A committed entry carrying a different semantic payload under the same key
+   * is a conflict, never a second append.
+   */
+  appendOrReplayEntry(entry: CreditLedgerEntry): Awaitable<CommittedEntry>;
   /**
    * Persist a credits sale atomically: every entry and the share record commit
    * together, an identical settlement reports a replay, and a conflicting
@@ -48,6 +74,16 @@ export type CreditStore = Readonly<{
     settlement: CreditsSaleSettlement,
   ): Awaitable<CreditsSaleSettlementOutcome>;
 }>;
+
+/**
+ * The raw persistence operations one adapter implements.
+ *
+ * Structurally identical to `CreditStore`, and deliberately a separate name: an
+ * adapter is the thing that talks to storage, and a `CreditStore` is what
+ * `createCreditStore` returns after guarding it. Nothing in this package accepts
+ * an adapter where a store is required.
+ */
+export type CreditStoreAdapter = CreditStore;
 
 export type InMemoryCreditStoreOptions = Readonly<{
   accounts?: ReadonlyArray<CreditAccount>;
@@ -61,12 +97,43 @@ export type InMemoryCreditStore = CreditStore &
     shareRecordCount(): number;
   }>;
 
-const SALE_ENTRY_PREFIX = "sale:";
+/**
+ * The idempotency-key namespace reserved to atomic sale settlement.
+ *
+ * A sale has two ledger legs in two different accounts. Any path that can append
+ * one of them on its own can leave a buyer charged for a creator who was never
+ * paid, so the namespace is refused by `appendEntry` at the shared boundary and
+ * reaches persistence only through `settleCreditsSale`.
+ */
+export const SALE_ENTRY_KEY_PREFIX = "sale:" as const;
+
+const SALE_BUYER_SUFFIX = ":buyer";
+const SALE_CREATOR_SUFFIX = ":creator";
+
+/** The two reserved ledger keys of one credits sale. */
+export function saleEntryKeys(
+  saleId: string,
+): Readonly<{ buyer: string; creator: string }> {
+  return Object.freeze({
+    buyer: `${SALE_ENTRY_KEY_PREFIX}${saleId}${SALE_BUYER_SUFFIX}`,
+    creator: `${SALE_ENTRY_KEY_PREFIX}${saleId}${SALE_CREATOR_SUFFIX}`,
+  });
+}
+
+/** Whether a ledger idempotency key is reserved to atomic sale settlement. */
+export function isSaleEntryKey(idempotencyKey: string): boolean {
+  return idempotencyKey.startsWith(SALE_ENTRY_KEY_PREFIX);
+}
 
 function saleIdForEntryKey(key: string): string | undefined {
-  if (!key.startsWith(SALE_ENTRY_PREFIX)) return undefined;
-  if (key.endsWith(":buyer")) return key.slice(5, -6);
-  if (key.endsWith(":creator")) return key.slice(5, -8);
+  if (!isSaleEntryKey(key)) return undefined;
+  const rest = key.slice(SALE_ENTRY_KEY_PREFIX.length);
+  if (rest.endsWith(SALE_BUYER_SUFFIX)) {
+    return rest.slice(0, -SALE_BUYER_SUFFIX.length);
+  }
+  if (rest.endsWith(SALE_CREATOR_SUFFIX)) {
+    return rest.slice(0, -SALE_CREATOR_SUFFIX.length);
+  }
   return "";
 }
 
@@ -146,6 +213,158 @@ function sameSettlement(
     sameEntry(left.creatorEntry, right.creatorEntry) &&
     sameShare(left.share, right.share)
   );
+}
+
+/**
+ * Normalize a settlement and enforce the parts of its shape that belong to every
+ * adapter: the two legs carry the sale's own reserved keys, and neither a
+ * collected gross nor a creator's share is ever asserted without the entry that
+ * moved it.
+ *
+ * The symmetric rule is the one that keeps a share record from asserting money
+ * that never moved: a non-zero gross must be evidenced by the buyer's debit.
+ * Without it a settlement could grant the creator half of a gross nobody paid,
+ * minting credits into the plane.
+ */
+function snapshotSaleSettlement(candidate: unknown): CreditsSaleSettlement {
+  const record = snapshotPlainRecord(candidate);
+  if (
+    record === undefined ||
+    !Object.hasOwn(record, "share") ||
+    Object.keys(record).some(
+      (key) => key !== "buyerEntry" && key !== "creatorEntry" && key !== "share",
+    )
+  ) {
+    return fail("a sale settlement must be a plain settlement object");
+  }
+  const share = snapshotShare(record["share"]);
+  const keys = saleEntryKeys(share.saleId);
+  const buyerEntry =
+    record["buyerEntry"] === undefined
+      ? undefined
+      : snapshotEntry(record["buyerEntry"]);
+  const creatorEntry =
+    record["creatorEntry"] === undefined
+      ? undefined
+      : snapshotEntry(record["creatorEntry"]);
+
+  if (buyerEntry !== undefined && buyerEntry.idempotencyKey !== keys.buyer) {
+    return fail(`sale ${share.saleId} has an invalid buyer entry key`);
+  }
+  if (creatorEntry !== undefined && creatorEntry.idempotencyKey !== keys.creator) {
+    return fail(`sale ${share.saleId} has an invalid creator entry key`);
+  }
+  if (creatorEntry === undefined && share.creatorCredits !== 0) {
+    return fail(`sale ${share.saleId} is missing its creator entry`);
+  }
+  if (buyerEntry === undefined && share.grossCredits !== 0) {
+    return fail(`sale ${share.saleId} is missing its buyer entry`);
+  }
+
+  return Object.freeze({
+    ...(buyerEntry === undefined ? {} : { buyerEntry }),
+    ...(creatorEntry === undefined ? {} : { creatorEntry }),
+    share,
+  });
+}
+
+/** An entry an adapter may append on its own — never a reserved sale leg. */
+function assertAppendable(candidate: unknown): CreditLedgerEntry {
+  const entry = snapshotEntry(candidate);
+  if (isSaleEntryKey(entry.idempotencyKey)) {
+    return fail(
+      `sale entry ${entry.idempotencyKey} requires atomic settlement`,
+    );
+  }
+  return entry;
+}
+
+/**
+ * Hold an adapter to the append-or-replay contract.
+ *
+ * A replay answer is only trustworthy if it is a replay of *this* request, so the
+ * committed entry is checked against the requested one on the semantic payload
+ * the ledger's own idempotency rule compares. A fresh append must be exactly the
+ * entry that was handed over: the sequence and the balance witness were computed
+ * from the ledger the caller read, and an adapter that renumbered them silently
+ * would break the derivation the next reader performs.
+ */
+function assertCommittedEntry(
+  requested: CreditLedgerEntry,
+  committed: unknown,
+): CommittedEntry {
+  const record = snapshotPlainRecord(committed);
+  if (record === undefined || typeof record["replayed"] !== "boolean") {
+    return fail(
+      `append-or-replay of ${requested.idempotencyKey} returned no committed entry`,
+    );
+  }
+  const entry = snapshotEntry(record["entry"]);
+  const replayed = record["replayed"];
+  if (
+    entry.idempotencyKey !== requested.idempotencyKey ||
+    entry.accountId !== requested.accountId ||
+    entry.movement !== requested.movement ||
+    entry.delta !== requested.delta ||
+    entry.reason !== requested.reason
+  ) {
+    return fail(
+      `append-or-replay of ${requested.idempotencyKey} answered with a different entry`,
+    );
+  }
+  if (!replayed && !sameEntry(entry, requested)) {
+    return fail(
+      `append-or-replay of ${requested.idempotencyKey} claims a fresh append it did not make`,
+    );
+  }
+  return Object.freeze({ entry, replayed });
+}
+
+function isPromise<Value>(value: Awaitable<Value>): value is Promise<Value> {
+  return value instanceof Promise;
+}
+
+function mapAwaitable<In, Out>(
+  value: Awaitable<In>,
+  map: (resolved: In) => Out,
+): Awaitable<Out> {
+  return isPromise(value) ? value.then(map) : map(value);
+}
+
+/**
+ * The shared persistence boundary. Every `CreditStore` in this plane is built
+ * here, so the invariants below hold for an adapter that has never heard of
+ * them:
+ *
+ * - **`sale:` keys are reserved.** `appendEntry` refuses one before the adapter
+ *   is reached, so no adapter can append a single leg of a two-account sale;
+ *   `settleCreditsSale` is the only way in, and it commits both legs and the
+ *   share record together or not at all.
+ * - **An append-or-replay must answer for what it was asked.** A replay is
+ *   checked against the requested payload and a fresh append against the whole
+ *   entry, so "already committed" can never quietly mean somebody else's row.
+ * - **Settlement shape is checked once.** A settlement's legs must carry that
+ *   sale's own reserved keys, and no collected gross or creator share may be
+ *   booked without the entry that moved it.
+ *
+ * Guards run synchronously and throw, exactly as a database constraint rejects
+ * before the write, so a refusal never depends on the adapter being awaited.
+ */
+export function createCreditStore(adapter: CreditStoreAdapter): CreditStore {
+  return Object.freeze({
+    findAccountByUserId: (userId) => adapter.findAccountByUserId(userId),
+    findAccountById: (accountId) => adapter.findAccountById(accountId),
+    listEntries: (accountId) => adapter.listEntries(accountId),
+    appendEntry: (entry) => adapter.appendEntry(assertAppendable(entry)),
+    appendOrReplayEntry(entry) {
+      const requested = assertAppendable(entry);
+      return mapAwaitable(adapter.appendOrReplayEntry(requested), (committed) =>
+        assertCommittedEntry(requested, committed),
+      );
+    },
+    settleCreditsSale: (settlement) =>
+      adapter.settleCreditsSale(snapshotSaleSettlement(settlement)),
+  });
 }
 
 /**
@@ -237,56 +456,50 @@ export function createInMemoryCreditStore(
     list.push(entry);
   };
 
-  const append = (candidate: unknown): void => {
+  /**
+   * Append, or hand back the row this key already committed.
+   *
+   * The uniqueness that makes this atomic is the same one the DDL enforces —
+   * one row per `idempotency_key` — so the reconciliation happens against the
+   * committed entry rather than against anything the caller remembers. A key
+   * carrying different money is a conflict, mirroring the pure ledger's rule.
+   */
+  const appendOrReplay = (candidate: unknown): CommittedEntry => {
     const entry = snapshotEntry(candidate);
-    if (entry.idempotencyKey.startsWith(SALE_ENTRY_PREFIX)) {
-      fail(
-        `sale entry ${entry.idempotencyKey} requires atomic settlement`,
-      );
+    const existing = entriesByIdempotencyKey.get(entry.idempotencyKey);
+    if (existing !== undefined) {
+      if (
+        existing.accountId !== entry.accountId ||
+        existing.movement !== entry.movement ||
+        existing.delta !== entry.delta ||
+        existing.reason !== entry.reason
+      ) {
+        throw new Error(
+          `credit store: idempotency key ${entry.idempotencyKey} already applied with a different movement`,
+        );
+      }
+      return Object.freeze({ entry: existing, replayed: true });
     }
     appendSnapshot(entry);
+    return Object.freeze({ entry, replayed: false });
   };
 
   for (const candidate of options.entries ?? []) {
     appendSnapshot(snapshotEntry(candidate));
   }
 
+  /**
+   * The shape and key rules are the shared boundary's, so what is left here is
+   * what only a store holding accounts can answer: that each leg moves the
+   * credits its share record claims, out of the account belonging to the party
+   * the record names.
+   */
   const snapshotSettlement = (
     candidate: unknown,
   ): CreditsSaleSettlement => {
-    const record = snapshotPlainRecord(candidate);
-    if (
-      record === undefined ||
-      !Object.hasOwn(record, "share") ||
-      Object.keys(record).some(
-        (key) =>
-          key !== "buyerEntry" && key !== "creatorEntry" && key !== "share",
-      )
-    ) {
-      return fail("a sale settlement must be a plain settlement object");
-    }
-    const share = snapshotShare(record["share"]);
-    const buyerEntry =
-      record["buyerEntry"] === undefined
-        ? undefined
-        : snapshotEntry(record["buyerEntry"]);
-    const creatorEntry =
-      record["creatorEntry"] === undefined
-        ? undefined
-        : snapshotEntry(record["creatorEntry"]);
+    const settlement = snapshotSaleSettlement(candidate);
+    const { buyerEntry, creatorEntry, share } = settlement;
 
-    if (
-      buyerEntry !== undefined &&
-      buyerEntry.idempotencyKey !== `sale:${share.saleId}:buyer`
-    ) {
-      return fail(`sale ${share.saleId} has an invalid buyer entry key`);
-    }
-    if (
-      creatorEntry !== undefined &&
-      creatorEntry.idempotencyKey !== `sale:${share.saleId}:creator`
-    ) {
-      return fail(`sale ${share.saleId} has an invalid creator entry key`);
-    }
     if (
       buyerEntry !== undefined &&
       (buyerEntry.movement !== "debit" ||
@@ -303,22 +516,8 @@ export function createInMemoryCreditStore(
     ) {
       return fail(`sale ${share.saleId} has an invalid creator entry`);
     }
-    if (creatorEntry === undefined && share.creatorCredits !== 0) {
-      return fail(`sale ${share.saleId} is missing its creator entry`);
-    }
-    // The symmetric rule, and the one that keeps a share record from asserting
-    // money that never moved: a non-zero gross must be evidenced by the buyer's
-    // debit. Without it a settlement could grant the creator their half of a
-    // gross nobody paid, minting credits into the plane.
-    if (buyerEntry === undefined && share.grossCredits !== 0) {
-      return fail(`sale ${share.saleId} is missing its buyer entry`);
-    }
 
-    return Object.freeze({
-      ...(buyerEntry === undefined ? {} : { buyerEntry }),
-      ...(creatorEntry === undefined ? {} : { creatorEntry }),
-      share,
-    });
+    return settlement;
   };
 
   for (const candidate of options.shareRecords ?? []) {
@@ -420,7 +619,9 @@ export function createInMemoryCreditStore(
     return Object.freeze({ replayed: false });
   };
 
-  return Object.freeze({
+  // Built through the shared boundary rather than beside it, so the reference
+  // store is held to exactly the rules a Neon adapter will be.
+  const adapter: CreditStoreAdapter = Object.freeze({
     findAccountByUserId(userId) {
       return accountsByUserId.get(userId);
     },
@@ -431,11 +632,18 @@ export function createInMemoryCreditStore(
       return Object.freeze([...listFor(accountId)]);
     },
     appendEntry(entry) {
-      append(entry);
+      appendSnapshot(snapshotEntry(entry));
+    },
+    appendOrReplayEntry(entry) {
+      return appendOrReplay(entry);
     },
     settleCreditsSale(settlement) {
       return settle(settlement);
     },
+  });
+
+  return Object.freeze({
+    ...createCreditStore(adapter),
     entryCount(accountId) {
       return listFor(accountId).length;
     },

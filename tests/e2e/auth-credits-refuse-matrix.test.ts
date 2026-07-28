@@ -1199,6 +1199,7 @@ describe("billing refuse matrix", () => {
       findAccountById: () => undefined,
       listEntries: () => [],
       appendEntry: () => undefined,
+      appendOrReplayEntry: (entry) => ({ entry, replayed: false }),
       settleCreditsSale() {
         throw new Error("transaction failed");
       },

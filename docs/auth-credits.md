@@ -15,6 +15,7 @@ The architecture decision behind the shape of this plane is
 | Contracts (User, Session, RoleAssignment, credits, billing, entitlements, listings, revenue share) | `packages/schemas` |
 | Single-admin resolution, role guards, identity port | `packages/auth` |
 | Credit ledger, metering, entitlements, hosted-AI credit gate, Stripe test checkout, revenue share, fixture commerce | `packages/billing` |
+| Credit persistence boundary (`createCreditStore`) every adapter is built through | `packages/billing/src/store.ts` |
 | Neon schema | `db/migrations` |
 | Login + balance view model | `apps/web-shell` (`createAccountPanel`) |
 | In-app AI assistant view model | `apps/web-shell` (`createAssistantPanel`) |
@@ -180,6 +181,48 @@ your Neon client. The in-memory reference implementations mirror the database's 
 — unique `(account_id, sequence)`, unique `idempotency_key`, no update or delete — so a bug
 the real trigger would catch cannot pass the test suite.
 
+## The credit persistence boundary (sceneaxi#128)
+
+The pure layer guarantees the *arithmetic and the refusals*; it cannot guarantee the
+*commit*, because it owns none. `createCreditStore` is that commit boundary. **Build every
+adapter through it** — `createCreditStore(yourNeonAdapter)` — because it is where the
+invariants that must not be re-implemented per adapter live. The in-memory reference store
+is constructed the same way, so it is held to exactly the rules a Neon adapter will be.
+
+| operation | what the boundary guarantees |
+|---|---|
+| `appendEntry` | refuses a `sale:`-namespaced key before the adapter is reached |
+| `appendOrReplayEntry` | the committed entry answers for the key that was requested |
+| `settleCreditsSale` | each leg carries that sale's own reserved key, and no gross or creator share is booked without the entry that moved it |
+
+**`sale:` keys are reserved to atomic settlement.** A sale has two ledger legs in two
+different accounts. Any path that can append one on its own can leave a buyer charged for a
+creator who was never paid, so `appendEntry` refuses the namespace outright and
+`settleCreditsSale` is the only way in — committing both legs and the `CreatorShareRecord`
+together, or nothing. `saleEntryKeys(saleId)` names the two keys; `isSaleEntryKey` asks the
+question. The reservation lives at the shared boundary rather than in one adapter, so a new
+adapter inherits it by construction.
+
+**`appendOrReplayEntry` is what a lost response needs.** Given an idempotency key and a
+semantic payload it either appends or hands back the entry already committed under that
+key, atomically — one row per key, mirroring the DDL's unique `idempotency_key`. A caller
+whose append committed but whose answer never arrived is told `replayed: true` instead of
+colliding with its own row. A key carrying different money is a conflict, never a second
+append. The boundary then checks the answer: a replay must match the requested payload on
+the fields the ledger's own idempotency rule compares, and a fresh append must be exactly
+the entry handed over — an adapter that renumbered a sequence or balance witness would
+break the next reader's derivation.
+
+`meterCredits` goes further, because a lost response also makes the caller's state look
+stale: before refusing `CREDIT_LEDGER_STATE_INVALID` it asks whether persistence holds
+exactly the caller's own history **plus this very debit**. That shape, and only that shape,
+is a replay. A different account record, a different history, more than one extra entry, or
+an extra entry that is somebody else's movement stays a refusal — as does a retry that asks
+for different money under the same key.
+
+None of this needs a database to prove. The gate builds adapters in-process and asserts the
+contract against them; a live-database test is opt-in and never part of the default run.
+
 ## Stripe (test mode)
 
 Responsibility splits by what can be verified hermetically:
@@ -242,8 +285,8 @@ re-encoding the JSON changes the bytes and verification will (correctly) fail:
 import {
   BILLING_REFUSE_REASONS,
   CHECKOUT_METADATA_KEYS,
-  applyCheckoutCompletedGrant,
   parseCheckoutCompletedEvent,
+  persistCheckoutCompletedGrant,
   verifyStripeWebhookSignature,
   type CheckoutSettlementPort,
 } from "@sceneaxi/billing";
@@ -299,13 +342,26 @@ const completed = parseCheckoutCompletedEvent({
 // `retrieveSettlement` can disagree with a session id read from the verified body.
 if (!completed.ok) return respond(statusFor(completed.reason), completed.reason);
 
-const granted = applyCheckoutCompletedGrant({
+// The flow ends at the *persisted* call. `applyCheckoutCompletedGrant` decides and
+// cannot commit — it owns no persistence — so answering 2xx on its result alone would
+// tell Stripe the purchase was honored while the buyer's ledger was unchanged, and
+// Stripe would never redeliver it. `persistCheckoutCompletedGrant` reports success only
+// after the store holds the entry, and refuses `CREDIT_STORE_FAILED` with no grant if it
+// does not (sceneaxi#128).
+const granted = await persistCheckoutCompletedGrant({
+  store: creditStore,
   state: await creditStore.loadState(completed.value.userId),
   completion: completed.value,
   now: Date.now(),
 });
+// A commit failure is this deployment's own store, so it answers 503 and Stripe retries.
 if (!granted.ok) return respond(statusFor(granted.reason), granted.reason);
 ```
+
+The commit is `CreditStore.appendOrReplayEntry` on the event's own key
+(`stripe-event:<eventId>`), so at-least-once delivery is safe from both sides: the pure
+path answers a redelivery the ledger already shows, and the store answers one that landed
+after this caller read the ledger. Exactly one grant exists either way.
 
 **Live mode is unreachable by default.** `mode: "live"` refuses unless
 `liveModeAuthorized: true` is passed explicitly at the call site, enforced both when
@@ -392,6 +448,10 @@ committed debit collide with a different account's legitimately distinct usage �
 as a store failure rather than metering it. Every other producer in this plane already
 namespaces by identity (`starter:<userId>`, `sale:<saleId>:buyer`, `stripe-event:<id>`);
 metering is scoped the same way so the pure check and the persisted constraint agree.
+
+The debit itself is committed through `appendOrReplayEntry`, and a stale supplied state is
+reconciled against persistence before it is refused — see *The credit persistence boundary*
+above for what counts as a replay and what stays a refusal.
 
 ## Hosted AI (sceneaxi#139)
 
@@ -728,8 +788,10 @@ time rather than the recorder's clock, so re-recording the same completion produ
 identical row.
 
 Both credits paths are idempotent on the sale id (`sale:<saleId>:buyer` / `:creator`), so a
-replay moves nothing. Money bookkeeping is pure and unpersisted in v1 — persisted atomic
-settlement is sceneaxi#128.
+replay moves nothing, and neither key can reach persistence except through
+`settleCreditsSale` — see *The credit persistence boundary* above. **Money** bookkeeping
+remains pure and unpersisted: `recordMoneySale` returns a `MoneySplitRecord` and no store
+operation writes one, so a deployment that wants those rows durable owns that write.
 
 ## Fixture commerce (sceneaxi#138)
 
