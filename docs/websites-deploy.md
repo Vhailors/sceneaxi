@@ -18,7 +18,7 @@ provider clients stay injected adapters outside this repository).
 
 | Site | Directory | Package | Vercel project | Owns |
 |---|---|---|---|---|
-| Umbrella | `sites/umbrella` | `@sceneaxi/site-umbrella` | `sceneaxi-umbrella` | product/docs, the public live open path (`/open`), engine SDK download, account, credit packs, Minimum E2 editor |
+| Umbrella | `sites/umbrella` | `@sceneaxi/site-umbrella` | `sceneaxi-umbrella` | product/docs, the public live open path (`/open`), the profile capability matrix (`/profiles`), engine SDK download, account, credit packs, Minimum E2 editor |
 | Game-asset catalog | `sites/catalog-game` | `@sceneaxi/site-catalog-game` | `sceneaxi-catalog-game` | game-asset browse/detail, dual pricing, creator share, editor deep links |
 | Website-asset catalog | `sites/catalog-web` | `@sceneaxi/site-catalog-web` | `sceneaxi-catalog-web` | website-asset browse/detail, same bar |
 
@@ -116,7 +116,7 @@ GAME=https://<game-catalog>.vercel.app
 WEB=https://<web-catalog>.vercel.app
 
 # Umbrella pages
-for p in / /open /docs /engine /pricing /account /editor; do
+for p in / /open /docs /engine /pricing /profiles /account /editor; do
   printf '%s %s\n' "$p" "$(curl -s -o /dev/null -w '%{http_code}' "$UMB$p")"
 done
 
@@ -142,8 +142,9 @@ curl -s -o /dev/null -w '%{http_code}\n' "$GAME/item/nope"                # 404
 curl -s -o /dev/null -w '%{http_code}\n' "$WEB/item/game-lantern-prop"    # 404
 ```
 
-`/open` and the entitled `/editor` draw pixels only in a browser — WebGL cannot run in
-node or in `curl`. The curl checks above verify the served scene and its copy; the pixel
+Every umbrella viewport — the `/` hero, `/open`, and the entitled `/editor` — draws
+pixels only in a browser; WebGL cannot run in node or in `curl`. The curl checks above
+verify the served scene and its copy; the pixel
 claim is verified by opening each page and reading the frame report it renders (`surface
 webgl-canvas`, `pixelsDrawn true`), and the standing record is in
 [`three-presentation-core.md`](three-presentation-core.md). `/editor` without the

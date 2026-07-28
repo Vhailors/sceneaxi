@@ -153,7 +153,8 @@ column rather than reserving one:
 |---|---|---|
 | `/account`, `/editor` | `74.6094px 882.391px 192px` | 192px — the `12rem` bound |
 | `/profiles`, Kids | `81.4062px 944.797px 122.797px` | sized to a short key |
-| `/pricing`, `/engine`, `/open` | `108.609px 1040.39px 0px` | **0px** — no key, no reserved column |
+| `/pricing`, `/engine` | `108.609px 1040.39px 0px` | **0px** — no key, no reserved column |
+| `/open` | `88.2031px 1060.8px 0px` | **0px** — the same, behind its own narrower chip |
 | `/` hero, no WebGL | `74.6094px 222.219px 192px` | 192px, the sentence wrapping inside it |
 
 `tests/sites/umbrella-visual.test.ts` now fails on the pre-fix sheet — verified by

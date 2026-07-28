@@ -29,8 +29,9 @@ web-framework dependency never moves the root lockfile or the gate runtime. The 
 still gated — `pnpm check:syntax`,
 `pnpm check:boundaries`, and `pnpm check:sites` all cover it, and all site logic lives in
 `packages/site-kit` where `pnpm gate` tests it. The tier's one engine edge is
-umbrella → `@sceneaxi/engine-presentation` for every viewport the umbrella owns — the
-public `/open` surface and the entitled `/editor` surface alike (ADR 0022); every
+umbrella → `@sceneaxi/engine-presentation` for every viewport the umbrella owns
+(ADR 0022; the surfaces are inventoried in
+[`docs/three-presentation-core.md`](docs/three-presentation-core.md)); every
 other engine package stays denied to every site. The umbrella is also the one site wired
 to the identity plane (`@sceneaxi/auth` + `@sceneaxi/billing`, ADR 0021) and only through
 `sites/umbrella/src/lib/identity-plane.ts`; the catalogs read identity through the same
@@ -74,8 +75,9 @@ API, runs it under kernel authority, and exposes the fixed Minimum E2 checklist.
 Presentation is the [Three presentation core](docs/three-presentation-core.md):
 its browser surface draws real pixels through `WebGLRenderer` when a consumer
 supplies a canvas, while node gates use its deterministic headless surface. The
-umbrella's public live open path (`/open`) is the shipped consumer of that canvas
-surface (ADR 0022). Deterministic fixture and live-demo evidence lives at
+umbrella's viewports are the shipped consumers of that canvas surface (ADR 0022),
+the public live open path (`/open`) among them. Deterministic fixture and
+live-demo evidence lives at
 [`issue-73-hybrid-sculpt-golden.json`](.sceneaxi/evidence/issue-73-hybrid-sculpt-golden.json).
 
 The additive [sculpt-quality v1 layer](docs/sculpt-quality.md) deepens that same

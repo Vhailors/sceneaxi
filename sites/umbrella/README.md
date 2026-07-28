@@ -1,8 +1,8 @@
 # @sceneaxi/site-umbrella
 
 The deployable SceneAxi umbrella site: product and docs, the **public live open
-path**, the public engine SDK download, the account surface, credit packs, and the
-entitled Minimum E2 sculpt/scene web editor.
+path**, the profile capability matrix, the public engine SDK download, the account
+surface, credit packs, and the entitled Minimum E2 sculpt/scene web editor.
 
 ## Shape
 
