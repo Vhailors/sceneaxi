@@ -15,11 +15,25 @@ import {
   openPathSurfaceNotes,
   resolveOpenPathSurfaceRequest,
 } from "@sceneaxi/schemas";
+import { renderDesktopChrome } from "./chrome.js";
+import { DESKTOP_COMMANDS } from "./commands.js";
 import {
   createDesktopSession,
   type DesktopSession,
   type DesktopSnapshot,
 } from "./session.js";
+import {
+  DESKTOP_ASSISTANT_MODE_IDS,
+  DESKTOP_MODE_IDS,
+  DESKTOP_OVERLAY_IDS,
+  DESKTOP_PROFILE_IDS,
+  createDesktopVisualState,
+  desktopVisualView,
+  type DesktopAssistantModeId,
+  type DesktopModeId,
+  type DesktopOverlayId,
+  type DesktopProfileId,
+} from "./visual-model.js";
 
 /** Exit codes, matching the CLI protocol's map so scripts branch identically. */
 export const DesktopExit = {
@@ -43,24 +57,20 @@ export type DesktopRunResult = DesktopResult & {
   readonly format: "text" | "json";
 };
 
-export const DESKTOP_COMMANDS = Object.freeze({
-  status: "Report a document's id, content hash, and top-level data keys",
-  propose: "Propose a JSON Pointer edit and render the diff for review",
-  apply: "Propose and accept an edit in one non-interactive step",
-  undo: "Undo the last completed apply",
-  "open-path":
-    "Report the shared open-path demo policy, or evaluate one demo operation against it (demo only; never a shipping claim)",
-});
+export { DESKTOP_COMMANDS } from "./commands.js";
 
 const USAGE_LINES: readonly string[] = Object.freeze([
   "Usage: sceneaxi-desktop <command> [flags]",
   "",
   ...Object.entries(DESKTOP_COMMANDS).map(
-    ([name, description]) => `  ${name.padEnd(8)} ${description}`,
+    ([name, description]) => `  ${name.padEnd(9)} ${description}`,
   ),
   "",
   "Flags: --document <path> --pointer <json-pointer> --value <json> --cwd <dir> --json",
   "open-path flags: --profile <@sceneaxi/profile-name> --operation <open|dispatch|advance|observe|save|replay>",
+  "chrome flags: --mode <build|sculpt|compose|animate|run|ship|plugins> --profile <game|web|kids>",
+  "              --overlay <palette|refused|conflict> --assistant-mode <ask|build|agent>",
+  "              --sculpt <idle|running> --width <px> --height <px>",
 ]);
 
 const COMMAND_FLAGS: Readonly<Record<string, ReadonlySet<string>>> =
@@ -70,6 +80,15 @@ const COMMAND_FLAGS: Readonly<Record<string, ReadonlySet<string>>> =
     apply: new Set(["--document", "--pointer", "--value", "--cwd"]),
     undo: new Set(["--cwd"]),
     "open-path": new Set(["--profile", "--operation"]),
+    chrome: new Set([
+      "--mode",
+      "--profile",
+      "--overlay",
+      "--assistant-mode",
+      "--sculpt",
+      "--width",
+      "--height",
+    ]),
   });
 
 const VALIDATION_DIAGNOSTICS: ReadonlySet<ApplyDiagnostic["code"]> = new Set([
@@ -278,6 +297,110 @@ function openPathResult(args: ParsedArgs): DesktopResult {
 }
 
 /**
+ * Read one enumerated flag, refusing an unknown value by naming the whole set.
+ * A silent fallback to a default would make a typo look like a rendered state.
+ */
+function pick<Value extends string>(
+  args: ParsedArgs,
+  flag: string,
+  allowed: ReadonlyArray<Value>,
+  fallback: Value,
+): { readonly ok: true; readonly value: Value } | { readonly ok: false; readonly message: string } {
+  const raw = args.flags.get(flag);
+  if (raw === undefined) return { ok: true, value: fallback };
+  const match = allowed.find((candidate) => candidate === raw);
+  if (match === undefined) {
+    return {
+      ok: false,
+      message: `${flag} must be one of: ${allowed.join(", ")} (got ${JSON.stringify(raw)})`,
+    };
+  }
+  return { ok: true, value: match };
+}
+
+function pickSize(
+  args: ParsedArgs,
+  flag: string,
+  fallback: number,
+): { readonly ok: true; readonly value: number } | { readonly ok: false; readonly message: string } {
+  const raw = args.flags.get(flag);
+  if (raw === undefined) return { ok: true, value: fallback };
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0 || !Number.isInteger(parsed)) {
+    return { ok: false, message: `${flag} must be a positive integer number of CSS pixels` };
+  }
+  return { ok: true, value: parsed };
+}
+
+/**
+ * `chrome` — render the Engine Desktop editor chrome for one visual state.
+ *
+ * The document is the evidence artifact: a browser opens exactly the bytes the
+ * gate asserts. It renders one state because this package ships a view model
+ * and no application runtime — the emitted script only switches between states
+ * the model already decided, and mounts no renderer, so nothing here draws a
+ * pixel or reaches `authoring-core`.
+ */
+function chromeResult(args: ParsedArgs): DesktopResult {
+  const command = "chrome";
+  const mode = pick<DesktopModeId>(args, "--mode", DESKTOP_MODE_IDS, "build");
+  if (!mode.ok) return refuse(command, DesktopExit.USAGE, mode.message);
+  const profile = pick<DesktopProfileId>(args, "--profile", DESKTOP_PROFILE_IDS, "game");
+  if (!profile.ok) return refuse(command, DesktopExit.USAGE, profile.message);
+  const overlay = pick<DesktopOverlayId | "none">(
+    args,
+    "--overlay",
+    [...DESKTOP_OVERLAY_IDS, "none"],
+    "none",
+  );
+  if (!overlay.ok) return refuse(command, DesktopExit.USAGE, overlay.message);
+  const assistantMode = pick<DesktopAssistantModeId>(
+    args,
+    "--assistant-mode",
+    DESKTOP_ASSISTANT_MODE_IDS,
+    "build",
+  );
+  if (!assistantMode.ok) return refuse(command, DesktopExit.USAGE, assistantMode.message);
+  const sculpt = pick<"idle" | "running">(args, "--sculpt", ["idle", "running"], "idle");
+  if (!sculpt.ok) return refuse(command, DesktopExit.USAGE, sculpt.message);
+  const width = pickSize(args, "--width", 1680);
+  if (!width.ok) return refuse(command, DesktopExit.USAGE, width.message);
+  const height = pickSize(args, "--height", 1000);
+  if (!height.ok) return refuse(command, DesktopExit.USAGE, height.message);
+
+  const state = createDesktopVisualState({
+    mode: mode.value,
+    profile: profile.value,
+    overlay: overlay.value === "none" ? null : overlay.value,
+    assistantMode: assistantMode.value,
+    sculpt: sculpt.value,
+    ...(sculpt.value === "running" ? { sculptPass: 2, sculptPassFraction: 0.64 } : {}),
+    window: { width: width.value, height: height.value },
+  });
+  const view = desktopVisualView(state);
+
+  return ok(
+    command,
+    {
+      mode: view.state.mode,
+      profile: view.state.profile,
+      tier: view.tier,
+      dockTab: view.state.dockTab,
+      assistant: view.assistant.state,
+      overlay: view.state.overlay ?? "none",
+      pendingChanges: view.changeReview.count,
+      pixelsDrawn: view.viewport.pixelsDrawn,
+      ...(view.refusal === null ? {} : { refusal: view.refusal.code }),
+      html: renderDesktopChrome(view),
+    },
+    [
+      "Text output is the HTML document itself — redirect it to a file and open that file",
+      "This surface mounts no renderer and opens no kernel session: it draws no pixels",
+    ],
+  );
+}
+
+/**
  * Execute one desktop command against a session.
  * Pure of process I/O so tests and the binary share one code path.
  */
@@ -341,6 +464,8 @@ export function runDesktopCommand(
 
   // Policy is contracts, not documents: this command opens no session at all.
   if (command === "open-path") return openPathResult(args);
+  // Neither does the chrome: it is a projection of the visual model.
+  if (command === "chrome") return chromeResult(args);
 
   const session = sessionFor(args.flags.get("--cwd"));
 
@@ -436,6 +561,14 @@ export function renderDesktopResult(
       null,
       2,
     )}\n`;
+  }
+
+  // `chrome` renders a document, not a report: in text mode its stdout is the
+  // document itself, so `sceneaxi-desktop chrome > shell.html` opens directly.
+  // `--json` still gets the envelope, with the same bytes under `html`.
+  if (result.ok && result.command === "chrome") {
+    const html = result.result["html"];
+    if (typeof html === "string") return html;
   }
 
   const lines: string[] = [

@@ -87,6 +87,26 @@ describe("sceneaxi-desktop binary", () => {
     expect(readFileSync(join(cwd, "scene.json"), "utf8")).toBe(before);
   });
 
+  it("renders the editor chrome to stdout as a complete document", () => {
+    // The evidence artifact is produced by the real binary, not by an
+    // in-process helper, so `sceneaxi-desktop chrome > shell.html` is proven
+    // rather than assumed.
+    const r = desktop(["chrome", "--mode", "compose"], cwd);
+    expect(r.status).toBe(0);
+    expect(r.stdout.startsWith("<!doctype html>")).toBe(true);
+    expect(r.stdout.trimEnd().endsWith("</html>")).toBe(true);
+    expect(r.stdout).toContain('data-mode="compose"');
+    expect(r.stdout).toContain('content="false"');
+    expect(r.stderr).toBe("");
+  });
+
+  it("refuses an unknown chrome state with a usage exit and no document", () => {
+    const r = desktop(["chrome", "--profile", "grown-ups"], cwd);
+    expect(r.status).toBe(2);
+    expect(r.stdout).not.toContain("<!doctype html>");
+    expect(r.stdout).toContain("--profile must be one of");
+  });
+
   it("resolves relative paths against the process working directory", () => {
     // No --cwd flag: the shell must honour where it was launched from.
     const r = desktop(["status", "--document", "scene.json", "--json"], cwd);

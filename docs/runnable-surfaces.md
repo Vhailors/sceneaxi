@@ -17,7 +17,7 @@ a marketing word.
 | Surface | Level | How to run | Proof |
 |---|---|---|---|
 | `@sceneaxi/cli` | **R2** | `pnpm build && node packages/cli/bin/sceneaxi.mjs --help` | `packages/cli/test/bin-smoke.test.ts` + the rest of `packages/cli/test/` |
-| `@sceneaxi/desktop-shell` | **R2** | `pnpm build && node apps/desktop-shell/bin/sceneaxi-desktop.mjs --help` | `apps/desktop-shell/test/bin-smoke.test.ts`, `tests/parity/shell-cli-parity.test.ts` |
+| `@sceneaxi/desktop-shell` | **R2** | `pnpm build && node apps/desktop-shell/bin/sceneaxi-desktop.mjs --help`; for the editor chrome, `… chrome > shell.html` and open that file | `apps/desktop-shell/test/bin-smoke.test.ts` (including a spawned `chrome` render), `tests/parity/shell-cli-parity.test.ts`, `apps/desktop-shell/test/{visual-model,visual-tokens,chrome}.test.ts` + the browser record in [`engine-desktop-surface.md`](engine-desktop-surface.md) |
 | `@sceneaxi/web-shell` (local authoring inspector) | **R2** | `pnpm build && node apps/web-shell/bin/sceneaxi-web-shell.mjs --cwd <project>`, then open the printed loopback URL | `apps/web-shell/test/bin-smoke.test.ts` (spawns the binary and drives propose → accept over a socket), `apps/web-shell/test/refuse-matrix.test.ts`, `tests/parity/shell-cli-parity.test.ts` |
 | Game profile (single object) | **R1** | `pnpm test:golden` | `tests/e2e/cli-golden-path.test.ts` |
 | Game profile (multi-object scene) | **R1** | `pnpm test:golden` | `tests/e2e/profile-game-scene-golden.test.ts` |
@@ -100,7 +100,19 @@ still-unimplemented target:
 - `scene compose` fails closed on the named refuse matrix
   (`docs/scene-composition.md`) rather than composing a partial scene.
 - The Kids profile has **no** product surface: no UI, commerce, identity, or
-  third-party LLM route, and `kidsBoundary.allowedDependents` stays empty.
+  third-party LLM route, and `kidsBoundary.allowedDependents` stays empty. The
+  desktop shell's editor chrome honours that over its design source: on the
+  refuse-only profile the whole editor body is replaced by
+  `OPEN_PATH_KIDS_REFUSED` rather than rendered disabled, the mode rail refuses
+  by the same name, and the assistant shows its own named denial — all of it in
+  the emitted bytes and selected by state, so a browser-side profile switch
+  reaches the same refusals
+  ([`engine-desktop-surface.md`](engine-desktop-surface.md)).
+- `sceneaxi-desktop chrome` renders the editor chrome but mounts **no**
+  presentation runtime and opens **no** kernel session, so its viewport draws no
+  pixels, its `run` mode reports no tick, and every control that would author
+  something is inert with a named refusal. It is a view model with a renderer for
+  it, not a packaged desktop application: there is no installer here.
 
 ## Commercial model
 

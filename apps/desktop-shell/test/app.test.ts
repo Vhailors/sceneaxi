@@ -6,6 +6,8 @@ import {
   DESKTOP_COMMANDS,
   DesktopExit,
   createDesktopSession,
+  createDesktopVisualState,
+  desktopVisualView,
   runDesktopShell,
 } from "@sceneaxi/desktop-shell";
 import { createDocument, writeDocumentFile } from "@sceneaxi/authoring-core";
@@ -374,6 +376,156 @@ describe("desktop shell commands", () => {
       expect(text.format).toBe("text");
       expect(text.stdout.startsWith("{")).toBe(false);
       expect(text.stdout).toContain("ok: status");
+    });
+  });
+
+  /**
+   * `chrome` (sceneaxi#158) — the visual surface as a command.
+   *
+   * It opens no session and touches no document, so it is asserted without a
+   * fixture cwd. What matters here is that a bad flag refuses instead of
+   * rendering a state nobody asked for, and that text mode emits the document
+   * itself so `> shell.html` works.
+   */
+  describe("chrome", () => {
+    it("emits the document itself in text mode", () => {
+      const r = runDesktopShell(["chrome"]);
+      expect(r.exitCode).toBe(DesktopExit.OK);
+      expect(r.stdout.startsWith("<!doctype html>")).toBe(true);
+      expect(r.stdout).toBe(r.result["html"]);
+    });
+
+    it("emits the envelope with the same bytes under --json", () => {
+      const r = runDesktopShell(["chrome", "--json"]);
+      const parsed = JSON.parse(r.stdout) as {
+        ok: boolean;
+        result: { html: string; pixelsDrawn: boolean; tier: string };
+      };
+      expect(parsed.ok).toBe(true);
+      expect(parsed.result.html).toBe(runDesktopShell(["chrome"]).stdout);
+      expect(parsed.result.pixelsDrawn).toBe(false);
+      expect(parsed.result.tier).toBe("regular");
+    });
+
+    it("renders each mode with that mode's own dock tab", () => {
+      for (const [mode, tab] of [
+        ["build", "changes"],
+        ["animate", "timeline"],
+        ["run", "console"],
+        ["ship", "evidence"],
+      ] as const) {
+        const r = runDesktopShell(["chrome", "--mode", mode, "--json"]);
+        expect(r.result["mode"]).toBe(mode);
+        expect(r.result["dockTab"]).toBe(tab);
+      }
+    });
+
+    it("refuses an unknown enum value by naming the whole set", () => {
+      const r = runDesktopShell(["chrome", "--mode", "sculpting"]);
+      expect(r.exitCode).toBe(DesktopExit.USAGE);
+      expect(String(r.result["message"])).toContain("--mode must be one of");
+      expect(String(r.result["message"])).toContain("plugins");
+      expect(r.stdout).not.toContain("<!doctype html>");
+    });
+
+    it("refuses a non-integer or non-positive window size", () => {
+      for (const size of ["0", "-1", "12.5", "wide"]) {
+        const r = runDesktopShell(["chrome", "--width", size]);
+        expect(r.exitCode, size).toBe(DesktopExit.USAGE);
+      }
+    });
+
+    it("refuses an unknown flag rather than ignoring it", () => {
+      const r = runDesktopShell(["chrome", "--theme", "light"]);
+      expect(r.exitCode).toBe(DesktopExit.USAGE);
+      expect(r.result["message"]).toBe("Unknown flag: --theme");
+    });
+
+    it("reports the window refusal below the declared minimum", () => {
+      const r = runDesktopShell([
+        "chrome",
+        "--width",
+        "800",
+        "--height",
+        "560",
+        "--json",
+      ]);
+      expect(r.exitCode).toBe(DesktopExit.OK);
+      expect(r.result["tier"]).toBe("minimum");
+      expect(r.result["refusal"]).toBe("DESKTOP_WINDOW_BELOW_MINIMUM");
+      expect(String(r.result["html"])).toContain("Window below the minimum size");
+    });
+
+    it("refuses the editor body on the refuse-only profile", () => {
+      const r = runDesktopShell(["chrome", "--profile", "kids", "--json"]);
+      expect(r.result["assistant"]).toBe("denied");
+      expect(String(r.result["html"])).toContain("No editor on the Kids profile");
+      expect(String(r.result["html"])).toContain("OPEN_PATH_KIDS_REFUSED");
+    });
+
+    it("is a projection, not a session: it never touches a document", () => {
+      const before = readFileSync(join(cwd, "scene.json"), "utf8");
+      // `chrome` takes no --cwd, because it resolves nothing from disk. What
+      // proves that is the session factory: reaching it at all is the failure.
+      const r = runDesktopShell(["chrome"], () => {
+        throw new Error("chrome opened a session");
+      });
+      expect(r.exitCode).toBe(DesktopExit.OK);
+      expect(r.stdout.startsWith("<!doctype html>")).toBe(true);
+      expect(readFileSync(join(cwd, "scene.json"), "utf8")).toBe(before);
+    });
+  });
+
+  /**
+   * Shell to CLI parity, where the behaviour is shared.
+   *
+   * The chrome's profile switch and the `open-path` command must report the
+   * *same* open-path policy, because both read `openPathPolicyView()` from
+   * `@sceneaxi/schemas` — which is also what `sceneaxi profile open-path` and
+   * web-shell's `createOpenPathView()` report. Asserting the identity here is
+   * what keeps the visual layer from growing a second description of a profile.
+   */
+  describe("chrome / open-path parity", () => {
+    it("renders the same refuse-only profile the open-path command reports", () => {
+      const policy = runDesktopShell(["open-path", "--json"]);
+      const reported = policy.result["policy"] as {
+        refuseOnlyProfile: string;
+        rows: ReadonlyArray<{ profile: string; summary: string; demoLevel: string }>;
+      };
+      const view = desktopVisualView(createDesktopVisualState({ profile: "kids" }));
+
+      expect(view.policy).toEqual(reported);
+      expect(view.profileRefusal?.profile).toBe(reported.refuseOnlyProfile);
+      expect(view.profileRefusal?.summary).toBe(
+        reported.rows.find((row) => row.profile === reported.refuseOnlyProfile)
+          ?.summary,
+      );
+    });
+
+    it("names in the chrome exactly the profiles the policy covers", () => {
+      const reported = (
+        runDesktopShell(["open-path", "--json"]).result["policy"] as {
+          rows: ReadonlyArray<{ profile: string }>;
+        }
+      ).rows.map((row) => row.profile);
+      const view = desktopVisualView(createDesktopVisualState());
+      expect(view.profiles.map((chip) => chip.packageName).sort()).toEqual(
+        [...reported].sort(),
+      );
+    });
+
+    it("keeps the desktop command map and the palette's claims in step", () => {
+      // A palette row may only be driveable when it names a real command, and
+      // `chrome` itself must be one of them.
+      expect(Object.hasOwn(DESKTOP_COMMANDS, "chrome")).toBe(true);
+      const driveable = desktopVisualView(createDesktopVisualState())
+        .overlay.paletteGroups.flatMap((group) => group.items)
+        .filter((item) => item.control.kind === "view");
+      expect(driveable.length).toBeGreaterThan(0);
+      for (const item of driveable) {
+        const verb = item.cli.split(" ").at(-1) ?? "";
+        expect(Object.hasOwn(DESKTOP_COMMANDS, verb)).toBe(true);
+      }
     });
   });
 

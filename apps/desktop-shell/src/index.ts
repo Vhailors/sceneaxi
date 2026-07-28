@@ -3,8 +3,11 @@
  * web-shell (authoring-core propose/apply). No forked behavior, no CLI spawn.
  *
  * sceneaxi#11 seeded the protocol client; sceneaxi#116 makes the shell
- * startable (`bin/sceneaxi-desktop.mjs`) with a real session and command layer.
- * Still protocol-thin: no native packaging, no installer, no offline store.
+ * startable (`bin/sceneaxi-desktop.mjs`) with a real session and command layer;
+ * sceneaxi#158 adds the accepted Engine Desktop visual surface as a view model
+ * (`visual-model.ts`) plus a document renderer (`chrome.ts`).
+ * Still protocol-thin: no native packaging, no installer, no offline store, no
+ * presentation runtime — the chrome draws no pixels.
  */
 import type { PackageSeam } from "@sceneaxi/schemas";
 
@@ -50,3 +53,89 @@ export {
   type ShellRoundTripReject,
   type ShellRoundTripResult,
 } from "./protocol-client.js";
+
+export {
+  ACCENT,
+  AXIS,
+  DEVIATIONS,
+  FOUNDATIONS_V2_ALIGNMENT,
+  FOUNDATIONS_V2_COLORS,
+  FOUNDATIONS_V2_FAMILIES,
+  FOUNDATIONS_V2_SOURCE,
+  INERT,
+  LINE,
+  METRICS,
+  PROFILE_DOT,
+  SCRIM,
+  SIGNAL,
+  SUPERSEDED_V1,
+  SURFACE,
+  TEXT,
+  TYPE,
+  VIEWPORT_GRADIENT,
+  VISUAL_SOURCE,
+} from "./visual-tokens.js";
+
+export {
+  CHANGE_REVIEW_ROWS,
+  DESKTOP_ASSISTANT_MODE_IDS,
+  DESKTOP_DOCK_TAB_IDS,
+  DESKTOP_DRAWER_IDS,
+  DESKTOP_MENU_IDS,
+  DESKTOP_MINIMUM_WINDOW,
+  DESKTOP_MODES,
+  DESKTOP_MODE_IDS,
+  DESKTOP_OVERLAY_DISMISSALS,
+  DESKTOP_OVERLAY_IDS,
+  DESKTOP_OVERLAY_SHORTCUTS,
+  DESKTOP_PROFILE_IDS,
+  DESKTOP_PROFILE_PACKAGES,
+  DESKTOP_REFERENCE_WINDOW,
+  DESKTOP_REFUSAL_MESSAGES,
+  DESKTOP_VIEWPORT_SOURCE_IDS,
+  DESKTOP_VISUAL_REFUSALS,
+  KIDS_ASSISTANT_LOCK_CODE,
+  PALETTE_GROUPS,
+  SCULPT_PASSES,
+  VIEWPORT_INERT_NOTE,
+  WINDOW_TIERS,
+  applyDesktopVisualAction,
+  createDesktopVisualState,
+  defaultDockTabFor,
+  desktopVisualView,
+  dockTabsFor,
+  kidsAssistantDenial,
+  kidsProfileRefusal,
+  resolveWindowTier,
+  type DesktopAssistantModeId,
+  type DesktopAssistantProjection,
+  type DesktopAssistantState,
+  type DesktopAssistantView,
+  type DesktopChangeReviewRow,
+  type DesktopChangeReviewView,
+  type DesktopControl,
+  type DesktopControlKind,
+  type DesktopDockTabId,
+  type DesktopDrawerId,
+  type DesktopMenuId,
+  type DesktopModeId,
+  type DesktopOverlayId,
+  type DesktopOverlayView,
+  type DesktopProfileChip,
+  type DesktopProfileId,
+  type DesktopSculptPhase,
+  type DesktopSculptView,
+  type DesktopViewportSourceId,
+  type DesktopVisualAction,
+  type DesktopVisualRefusal,
+  type DesktopVisualState,
+  type DesktopVisualView,
+  type DesktopWindowSize,
+  type DesktopWindowTierId,
+} from "./visual-model.js";
+
+export {
+  escapeHtml,
+  renderDesktopChrome,
+  type DesktopChromeOptions,
+} from "./chrome.js";
