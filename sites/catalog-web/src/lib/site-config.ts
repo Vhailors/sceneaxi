@@ -12,8 +12,18 @@ import {
   type CatalogSurface,
   type SiteResult,
 } from "@sceneaxi/site-kit";
+import type { StorefrontSurface } from "./foundations.js";
 
 export const CATALOG_SITE_SURFACE: CatalogSurface = "catalog-web";
+
+/**
+ * Which row of the Foundations v2 surface → accent map this storefront themes with.
+ *
+ * The storefront names its surface; `@sceneaxi/site-kit` owns what that surface looks
+ * like. That is the whole of the per-site accent override Foundations §06 allows, and it
+ * is why no hex for `--accent` appears anywhere in this site.
+ */
+export const CATALOG_SITE_FOUNDATION_SURFACE: StorefrontSurface = "web-assets";
 
 export const CATALOG_SITE_BRAND = Object.freeze({
   /** Distinct positioning per the locked site/domain topology. */
@@ -21,7 +31,29 @@ export const CATALOG_SITE_BRAND = Object.freeze({
   tagline: "Interactive scenes for web pages, curated for the Web Experience profile.",
   audience:
     "For product and marketing teams embedding a real interactive surface in a page.",
-  accent: "#5b8def",
+  /**
+   * The design's per-store mark: a circle here, a squared corner on the game store.
+   *
+   * This is a shape, not a colour: the archive states it and the Foundations sheet does
+   * not, so it stays a per-store fact declared here and mirrored by `--mark-radius`.
+   * The accent itself is not here — see `CATALOG_SITE_FOUNDATION_SURFACE`.
+   */
+  markRadius: "50%",
+  /** Mono strapline under the wordmark, identical on both stores by design. */
+  storeTag: "SCENEAXI STORE",
+  /** Mono pill above the hero headline. */
+  heroKicker: "CURATED FOR THE WEB EXPERIENCE PROFILE",
+  heroCta: "Browse the showroom",
+  /**
+   * The design's second hero action is "How licensing works", pointing at a page this
+   * storefront does not have. It links to the pricing section this page already
+   * publishes instead of promising a route that would 404.
+   */
+  heroSecondaryCta: "How pricing reads",
+  /** Section words the two stores differ on, so the shared skeleton stays shared. */
+  catalogueWord: "Showroom",
+  listingWord: "scene",
+  listingWordPlural: "scenes",
 });
 
 export type UmbrellaOrigin = SiteResult<string>;

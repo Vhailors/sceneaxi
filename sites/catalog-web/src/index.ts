@@ -15,11 +15,18 @@ export const seam: PackageSeam = Object.freeze({
 
 export {
   CATALOG_SITE_BRAND,
+  CATALOG_SITE_FOUNDATION_SURFACE,
   CATALOG_SITE_SURFACE,
   editorLinkFor,
   resolveUmbrellaOrigin,
   type UmbrellaOrigin,
 } from "./lib/site-config.js";
+
+export {
+  foundationsStatusVariablesCss,
+  foundationsStylesheet,
+  type StorefrontSurface,
+} from "./lib/foundations.js";
 
 export {
   CATALOG_IDENTITY_SURFACE,
@@ -28,3 +35,27 @@ export {
   type CatalogIdentityPlane,
   type CatalogIdentityPlaneOptions,
 } from "./lib/identity-plane.js";
+
+export {
+  FAMILY_DOTS,
+  FAMILY_KEYS,
+  resolveFamilyBar,
+  resolveStoreDomain,
+  type FamilyEntry,
+  type FamilyKey,
+} from "./lib/family-bar.js";
+
+export {
+  digestSigil,
+  shortenDigest,
+  type DigestSigil,
+} from "./lib/digest-sigil.js";
+
+export {
+  catalogFacets,
+  curationTrail,
+  sameCreatorListings,
+  type CatalogFacet,
+  type CatalogFacetRow,
+  type CurationStep,
+} from "./lib/catalog-facts.js";
