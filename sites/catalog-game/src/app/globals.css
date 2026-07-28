@@ -162,7 +162,10 @@ html body {
  * a lighter tint for a storefront accent (`resolveSurfaceAccent`, recorded as D-3 in
  * `docs/design-foundations.md`). An inline link therefore answers hover with an underline
  * rather than a hue this design system does not publish. Every link that is really a
- * card, tab, or button answers it with its own surface change and opts back out below.
+ * card, tab, or button opts back out of that underline below, and all but one answer
+ * hover with a surface change of their own — a row fill, a sigil border, a button ring,
+ * a text level. The storemark is the exception: it holds its colour, because the archive
+ * gives the masthead wordmark no hover state and this sheet does not invent one.
  */
 a:hover {
   text-decoration: underline;
@@ -395,6 +398,13 @@ pre {
   color: var(--fg);
 }
 
+/*
+ * Load-bearing, not a repeat of the rule above: site-kit ships its own
+ * `a:hover { color: var(--accent-hi) }`, and the wordmark is a real link, so without this
+ * the accent would shift a mark the archive deliberately gives no hover state. Restating
+ * `--fg` at higher specificity suppresses that inherited change instead of minting a
+ * hover this design system does not publish. Do not delete it as redundant.
+ */
 .storemark:hover {
   color: var(--fg);
 }
