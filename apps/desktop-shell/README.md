@@ -34,7 +34,7 @@ failing obscurely.
 | `apply --document <path> --pointer <ptr> --value <json>` | Propose and accept in one non-interactive step |
 | `undo` | Revert the last completed apply |
 | `open-path [--profile <p>] [--operation <op>]` | Report the shared open-path demo policy, or evaluate one demo operation against it — opens **no** session |
-| `chrome [--mode …] [--profile …] [--overlay …] [--sculpt …] [--width/--height …]` | Render the Engine Desktop editor chrome for one visual state as a self-contained HTML document — mounts **no** renderer and draws **no** pixels |
+| `chrome [--mode …] [--profile …] [--overlay …] [--assistant-mode …] [--sculpt …] [--width/--height …]` | Render the Engine Desktop editor chrome for one visual state as a self-contained HTML document — mounts **no** renderer and draws **no** pixels |
 
 `--cwd <dir>` sets the working directory for the session commands above;
 `open-path` opens no session and takes only its own two flags, so `--cwd` refuses
