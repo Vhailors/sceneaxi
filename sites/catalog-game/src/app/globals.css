@@ -151,8 +151,7 @@ svg {
 
 code,
 kbd,
-pre,
-.mono {
+pre {
   font-family: var(--store-mono);
 }
 
@@ -480,12 +479,6 @@ p {
   gap: 0.9rem;
 }
 
-.stack {
-  display: flex;
-  flex-direction: column;
-  gap: 1.75rem;
-}
-
 /* --- hero --- */
 
 .hero {
@@ -649,12 +642,6 @@ p {
   font-weight: 600;
 }
 
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.375rem;
-}
-
 /* --- cards --- */
 
 .cards {
@@ -734,13 +721,6 @@ p {
   font-size: 0.6875rem;
   color: var(--fg-2);
   flex: none;
-}
-
-.card-summary {
-  font-size: 0.8125rem;
-  line-height: 1.6;
-  color: var(--fg-2);
-  text-wrap: pretty;
 }
 
 /* --- digest sigil: the card figure, drawn from a listing's real content hash --- */
@@ -1361,13 +1341,6 @@ p {
 
 .bullets li {
   margin-bottom: 0.35rem;
-}
-
-.scroll-x {
-  overflow-x: auto;
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius-lg);
-  background: var(--bg-panel);
 }
 
 /* --- footer --- */

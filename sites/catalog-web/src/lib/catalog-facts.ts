@@ -75,8 +75,6 @@ export type CurationStep = {
   readonly state: PipelineState;
   readonly reason: string;
   readonly at: string;
-  /** True once the item has reached this state, which is every recorded step. */
-  readonly reached: boolean;
 };
 
 /**
@@ -94,7 +92,6 @@ export function curationTrail(item: CatalogItem): readonly CurationStep[] {
         state: record.to,
         reason: record.reason,
         at: record.at,
-        reached: true,
       }),
     ),
   );
