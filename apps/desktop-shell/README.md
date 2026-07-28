@@ -93,6 +93,12 @@ its own profile keeps shut — all computed through the emitted stylesheet's own
 cascade, because a refusal nothing can reach at 1280×800 is a hidden refusal and
 a toggle over a permanently hidden panel is a control that lies.
 
+Those five properties are the whole claim. It does **not** cover markup a
+renderer conditions on a control's kind at render time: the last property probes
+`aria-controls` targets, so an attribute a row gets only while its control is
+live is outside it. Every control is emitted with the same attributes regardless
+of kind, and the browser-side switch relies on that, but nothing asserts it.
+
 The document is self-contained: no remote font, script, style, or image. It
 mounts no presentation runtime, so it draws no pixels and says so on the surface.
 

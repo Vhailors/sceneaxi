@@ -37,6 +37,13 @@ import {
  * 4. A control's declared kind tells the truth: nothing declares itself live
  *    over a region this profile keeps shut, and the assistant toggle never
  *    claims a column the viewport it is opened at does not show.
+ *
+ * What it does **not** cover, stated so the claim is not read wider than it is:
+ * markup a renderer conditions on a control's kind *at render time*. Property 4
+ * probes `aria-controls` targets, so an attribute a row is given only while its
+ * control happens to be live — and which the browser-side switch cannot add back
+ * when it promotes that control — is outside every probe here. Nothing else in
+ * this file reaches it either.
  */
 
 const render = (state: DesktopVisualState): string =>

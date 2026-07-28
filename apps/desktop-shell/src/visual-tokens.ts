@@ -278,6 +278,31 @@ export const TEXT = Object.freeze({
 });
 
 /**
+ * The inert state, expressed as paint rather than as compositing.
+ *
+ * An inert control is dimmed by drawing a dimmer value, never by element
+ * `opacity`. Opacity composites a whole control toward whatever is behind it,
+ * and every contrast check that guards this surface reads the *declared* colour
+ * — the token test compares `TEXT` against `SURFACE`, and a browser sweep reads
+ * `getComputedStyle().color` — so an opacity-dimmed label is a ratio neither of
+ * them can see. Painted values land where the existing measurement already
+ * looks.
+ *
+ * `text` is `TEXT.faint` deliberately: an inert control still has to be read, so
+ * the floor is the constraint, and `faint` is already the dimmest tier that
+ * clears 4.5:1 on every surface a control can sit on. Anything below it would be
+ * a refusal nobody can read.
+ */
+export const INERT = Object.freeze({
+  /** Inert label on any chrome surface. */
+  text: TEXT.faint,
+  /** Inert label on the accent fill: a primary button, a pressed assistant mode. */
+  onAccent: "#331A07",
+  /** The rail glyph inside an inert mode. Decorative and `aria-hidden`, so not text. */
+  glyph: LINE.hover,
+});
+
+/**
  * Archive text colours that were raised, and the ratio they had.
  * Recomputed by the test suite; edited here only alongside that evidence.
  */
@@ -318,6 +343,13 @@ export const DEVIATIONS = Object.freeze([
     shipped: "font-family stack, no remote request",
     reason:
       "the emitted document is self-contained and offline; the archive families are named first and the system stack renders when they are absent",
+  }),
+  Object.freeze({
+    id: "inert-dimming-not-opacity",
+    archive: "element opacity on a control that cannot be used",
+    shipped: "the painted INERT tokens; no opacity outside @keyframes",
+    reason:
+      "opacity composites a label toward its background, and every contrast check here reads the declared colour, so the dimming was measured by nothing: an inert view tab resolved to 3.67:1, an inert primary button to 4.07:1, and a Kids rail label to 2.16:1",
   }),
   Object.freeze({
     id: "fixed-stage-replaced",

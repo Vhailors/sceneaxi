@@ -3,6 +3,7 @@ import {
   ACCENT,
   AXIS,
   DEVIATIONS,
+  INERT,
   FOUNDATIONS_V2_ALIGNMENT,
   FOUNDATIONS_V2_COLORS,
   FOUNDATIONS_V2_FAMILIES,
@@ -134,6 +135,62 @@ describe("engine desktop visual tokens", () => {
     }
   });
 
+  /**
+   * The inert state, which the contrast block above could not see.
+   *
+   * Both checks that guard this surface read a *declared* colour: this file
+   * compares `TEXT` against `SURFACE`, and the recorded browser sweep reads
+   * `getComputedStyle().color`. Element `opacity` composites a control toward
+   * its background after both of them have looked, so `opacity:.72` on an inert
+   * button and `opacity:.5` on a Kids rail label shipped at 3.67:1, 4.07:1, and
+   * 2.16:1 under a recorded claim of zero failures. The fix is not a larger
+   * fraction — it is that the dimmed state is a painted token, so the floor is
+   * measured here, on the value that actually ships.
+   */
+  it("dims an inert control by paint, never by compositing", () => {
+    const documents = [
+      createDesktopVisualState(),
+      createDesktopVisualState({ profile: "kids" }),
+      createDesktopVisualState({ mode: "sculpt", sculpt: "running" }),
+      createDesktopVisualState({ overlay: "palette" }),
+    ].map((state) => renderDesktopChrome(desktopVisualView(state)));
+
+    for (const document of documents) {
+      // `@keyframes` is the one place a fraction is a transition rather than a
+      // permanent state, so it is stripped and everything else must be clean.
+      const declarations = document
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/@keyframes[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, "");
+      expect([...declarations.matchAll(/opacity\s*:[^;}]*/g)].map(([d]) => d)).toEqual(
+        [],
+      );
+    }
+
+    // A demotion, not a decoration: dimmer than the ordinary secondary tier...
+    expect(contrast(INERT.text, SURFACE.panel)).toBeLessThan(
+      contrast(TEXT.dim, SURFACE.panel),
+    );
+    // ...and still readable on every surface an inert control can sit on.
+    const failures = SURFACES.filter(
+      (surface) => contrast(INERT.text, surface) < 4.5,
+    ).map((surface) => `${INERT.text} on ${surface} = ${contrast(INERT.text, surface).toFixed(2)}:1`);
+    expect(failures).toEqual([]);
+
+    // The accent fill is the one background that is not a chrome surface: a
+    // primary button and a pressed assistant mode keep it while inert.
+    expect(contrast(INERT.onAccent, ACCENT.base)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(INERT.onAccent, ACCENT.hover)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(INERT.onAccent, ACCENT.base)).toBeLessThan(
+      contrast(ACCENT.on, ACCENT.base),
+    );
+
+    // The rail glyph is `aria-hidden` decoration, so it is a line value and is
+    // deliberately not held to the text floor.
+    expect(Object.values(LINE)).toContain(INERT.glyph);
+    expect(documents[0]).toContain("--inert:");
+    expect(documents[0]).toContain("--inert-on-accent:");
+  });
+
   it("names the archive families first and requests no remote font", () => {
     expect(TYPE.sans).toContain("Archivo");
     expect(TYPE.mono).toContain("JetBrains Mono");
@@ -234,6 +291,7 @@ describe("foundations v2 alignment", () => {
         ACCENT,
         SIGNAL,
         TEXT,
+        INERT,
         PROFILE_DOT,
         VIEWPORT_GRADIENT,
       });
@@ -255,6 +313,7 @@ describe("foundations v2 alignment", () => {
         ...Object.values(ACCENT),
         ...Object.values(SIGNAL),
         ...Object.values(TEXT),
+        ...Object.values(INERT),
         ...Object.values(AXIS),
         ...Object.values(PROFILE_DOT),
         ...Object.values(VIEWPORT_GRADIENT),

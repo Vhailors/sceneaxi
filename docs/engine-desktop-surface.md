@@ -355,6 +355,20 @@ Two rules keep this honest:
 - **Contrast**: every text token clears 4.5:1 against every chrome surface, and
   the focus ring clears 3:1. This is where the archive is departed from — see
   below.
+- **An inert control is dimmed by paint, not by `opacity`.** That is a contrast
+  rule, not a style one. Element opacity composites a whole control toward
+  whatever is behind it *after* every check on this surface has looked: the token
+  test compares `TEXT` against `SURFACE`, and a browser sweep reads
+  `getComputedStyle().color`, and neither sees compositing. The dimming that
+  shipped under those checks — `opacity:.72` on any inert button, `opacity:.5` on
+  a Kids rail label — resolved to 3.67:1 on an inert view tab, 4.07:1 on an inert
+  primary button, and **2.16:1** on a Kids rail label, i.e. a refusal that could
+  not be read. It is now the painted `INERT` tokens, which the same token test
+  measures directly, plus a structural assertion that the emitted document
+  declares no `opacity` at all outside `@keyframes`, so the next dimmed control
+  cannot walk into the same blind spot. `INERT.text` *is* `TEXT.faint` on
+  purpose: the floor is the constraint, and `faint` is already the dimmest tier
+  that clears it everywhere.
 
 ## Deviations from the archive, and why
 
@@ -364,6 +378,7 @@ Each row is also carried as data in `DEVIATIONS`.
 |---|---|---|---|
 | Dim text tiers collapsed | `#6E7681` (4.36:1), `#565E68` (3.05:1), `#3F464F` (2.10:1), `#333A42` (1.74:1) | two passing tiers, `#8A929C` and `#7D8694` | all four fail the 4.5:1 text floor on the surfaces they are used on. Lightening them monotonically would have produced four indistinguishable greys; two tiers keep a real hierarchy, and the archive's remaining separation is carried by size, weight, and letter-spacing, which is preserved. |
 | Struck-through review value | `#7A6448` (3.42:1) | `#A08663` | same floor |
+| Inert dimming | element `opacity` on a control that cannot be used | the painted `INERT` tokens, and no `opacity` outside `@keyframes` | opacity composites a label toward its background after every check here has read the declared colour, so the dimming was measured by nothing and shipped at 3.67:1, 4.07:1, and 2.16:1. Raising the fraction would have left the blind spot; a painted token is measured by the test that already exists. An inert control is deliberately not `disabled`, so its refusal has to stay readable. |
 | Web fonts | `fonts.googleapis.com` link for Archivo + JetBrains Mono | font-family stack, no remote request | the emitted document is self-contained and offline. The archive families are named first and render when installed; otherwise the system UI face does. |
 | Fixed stage | 1680×1000 scaled with a transform | fluid layout, four window tiers | see above |
 | Informational blue | the member carries both `#5B9CFF` and a lighter `#8FB7F5` for the same informational role | `#5B9CFF` | the two archive members disagree, so the shared sheet settles it: Foundations v2 canonicalises `--info` to `#5B9CFF`, D1 makes the sheet binding, and the value clears the text floor here anyway (6.16:1 at worst on `SURFACE`, 6.48:1 on the note's own fill) — so there is no accessibility reason to keep the member's lighter variant, and keeping it would be drift from the shared layer. |
@@ -440,14 +455,23 @@ sentence can return by review slip.
      document is opened at, not the one it was rendered at. Properties 3 and 4
      each fail on the defect they were added for — verified by reverting it.
 
+  Those four properties are the whole claim, and it is narrower than "the split
+  is enforced" sounds. It does **not** cover markup a renderer conditions on a
+  control's kind *at render time*: property 4 probes `aria-controls` targets, so
+  an attribute a row is given only while its control is live — and which the
+  browser-side switch cannot add back when it promotes that control — is outside
+  every probe in the file. That is how the palette's dismiss action was gated on
+  `kind === "view"` and still passed; it is now emitted unconditionally, and the
+  click handler's `aria-disabled` check is what keeps an inert row from acting.
+
 - **Real browser, re-recorded 2026-07-28 against this branch's final HEAD.**
-  Not inherited: the previous record was taken before the refuse-only profile's
-  central demotion, the drawer attribute that no longer follows the render size,
-  and the tier-scoped toggle rules — all three change what ships. **Every
-  visibility claim below is `getComputedStyle(...).display`**, not a `hidden`
-  property; that methodology flaw is what made an earlier "Accept all hid the
-  bulk actions" claim unsound. Chrome via `chrome-devtools-axi` in an isolated
-  session, documents rendered by
+  Not inherited: the previous record was taken before the inert state stopped
+  being an `opacity` and before the palette's dismiss action stopped being gated
+  on render-time kind. **Every visibility claim below is
+  `getComputedStyle(...).display`**, not a `hidden` property, and **every
+  contrast figure is composited** — each element's own group `opacity` and every
+  ancestor's are folded into both sides of the ratio. Chrome via
+  `chrome-devtools-axi` in an isolated session, documents rendered by
   `node apps/desktop-shell/bin/sceneaxi-desktop.mjs chrome`, opened from
   `file://`, at 1680×1000 unless a size is named. The sweep covers six window
   shapes rather than one: 1680×1000, 1280×800 (the drawer tier), 1920×700 and
@@ -455,17 +479,37 @@ sentence can return by review slip.
   1024×700 (the Kids drawer tier), and 800×560, and it exercises the Kids switch
   at the drawer tiers, not only at 1680×1000.
 
+  **A correction to the previous record, stated rather than quietly improved.**
+  It reported "0 failures below 4.5:1" across every state. *That claim did not
+  hold for inert controls.* The cause was the measurement, not a rounding
+  disagreement: the sweep read `getComputedStyle(el).color`, which returns the
+  **declared** colour, so the `opacity:.72` on every inert button and the
+  `opacity:.5` on a Kids rail label were never folded in — and the recorded
+  "`build` worst 5.42:1" was the *un*-composited `--faint` figure, on a document
+  that rendered 17 inert controls. Composited, the shipped values were **3.67:1**
+  on an inert view tab, **4.07:1** on an inert primary button, and **2.16:1** on
+  a Kids rail label, which is a refusal nobody could read. The token gate was
+  blind in the same way and for the same reason: it compares `TEXT` against
+  `SURFACE`, and compositing happens after both look. The fix is not a larger
+  fraction — the dimmed state is now a painted token (`INERT`), the token gate
+  measures it directly, and it asserts the document declares no `opacity` at all
+  outside `@keyframes`. The figures below are the re-measurement, with
+  compositing folded in.
+
   - **Region geometry at 1680×1000 is the archive's own, to the pixel**:
     title bar `36`, mode rail `56`, left dock `274`, inspector `326`, assistant
     `344`, view tabs `32`, dock `228`, status bar `27`, shell `1680×1000`.
   - **The adopted language is what the browser resolved**: `--accent` `#FF6B2C`,
-    `--info` `#5B9CFF`, shell `rgb(7, 8, 10)` (`#07080A`), title bar
-    `rgb(13, 15, 18)`, panel header `rgb(18, 21, 26)`, body font resolved to
-    `Archivo`.
+    `--info` `#5B9CFF`, `--inert` `#7D8694`, `--inert-on-accent` `#331A07`, shell
+    `rgb(7, 8, 10)` (`#07080A`), title bar `rgb(13, 15, 18)`, panel header
+    `rgb(18, 21, 26)`, body font resolved to `Archivo`. A Kids rail label
+    resolved to `rgb(125, 134, 148)` — the painted `--inert`, at full opacity —
+    and its `aria-hidden` glyph to `rgb(51, 58, 68)`, which is the one part of an
+    inert control that is still allowed to be a line colour.
   - **Exactly one network request** — the document itself
     (`GET file://…/build.html [200]`, and `performance.getEntriesByType(
     'resource')` empty). No font, script, style, or image was fetched.
-  - **Every button came from the helper.** Across the nine document/size
+  - **Every button came from the helper.** Across the thirteen document/size
     combinations audited, **0** buttons lacked the `id` + `data-kind` pair and
     **0** `aria-describedby` references dangled, in every state and after every
     interaction below. `build` renders 58 buttons, 53 focus stops, **0
@@ -480,15 +524,36 @@ sentence can return by review slip.
     measured, so the bulk accept/reject and the spacer are outside it.
   - **The viewport carries one note**, `VIEWPORT_INERT_NOTE`; the archive's
     "not the final choice" line is nowhere in the document (`indexOf` `-1`).
-  - **Rendered contrast sweep**, computing each visible text-bearing element's
-    colour against its resolved (alpha-composited) background and skipping
-    `aria-hidden` subtrees: **0 failures below 4.5:1** in all eleven states
-    measured — `build` (99 elements, worst 5.42:1), `sculpt` running (119,
-    5.42:1), `run` (72, 5.42:1), `animate` (76, 5.42:1), the `palette` overlay
-    (122, 5.11:1), `kids` (63, **4.60:1** — the `refuse-only` chip at 8.5px, the
-    worst on the surface), and the same at 1280×800 (89, 5.42:1), 1920×700 (89,
-    5.42:1), 1024×700 (71, 5.42:1), and Kids at 1024×700 and 1920×620 (56, 4.60:1
-    each).
+  - **Rendered contrast sweep, composited.** Each visible text-bearing element's
+    colour against its resolved background, with `aria-hidden` subtrees skipped
+    and **element `opacity` folded into both sides** — the step whose absence is
+    corrected above. **0 failures below 4.5:1** in all thirteen measurements:
+    `build` (84 elements, worst 5.22:1), `sculpt` running (104, 5.22:1), `run`
+    (57, 5.22:1), `animate` (61, 5.22:1), the `palette` overlay (107, 5.11:1),
+    `kids` (48, **4.60:1** — the `refuse-only` chip at 8.5px, still the worst on
+    the surface), `build` at 1280×800 and 1920×700 (74, 5.22:1 each) and at
+    1024×700 (56, 5.22:1), and `kids` at 1280×800 (48, 4.60:1) and at 1024×700
+    and 1920×620 (41, 4.60:1 each). At 800×560 the shell is the refusal, so it
+    contributes no shell text.
+  - **The inert state is measured, not assumed.** In every one of those
+    measurements the sweep found **0** elements with a group `opacity` other than
+    `1`, and enumerating the live stylesheet's rules found **0** `opacity`
+    declarations outside `@keyframes`. The worst *inert* label composited to
+    **5.22:1** on `build` (`File`, on the menu bar) and **4.97:1** on `kids` (the
+    `Assistant` toggle at 1680×1000, the `Panels` drawer toggle at the drawer
+    tiers) — the values the previous record could not see were 3.67, 4.07, and
+    2.16.
+  - **A palette row keeps its dismiss action through a profile switch.** Opened
+    on `--overlay palette`, `palette-sculpt-from-reference` renders
+    `data-action="overlay"` in every profile. Clicking the Kids chip made it
+    `data-kind="inert" aria-disabled="true"` and clicking it then left the
+    overlay open (`data-overlay` still `palette`, the dialog still
+    `display: grid`) — the `aria-disabled` guard, not a missing attribute.
+    Clicking Game promoted it back to `view`, and clicking it closed the palette
+    (`data-overlay` `none`, `display: none`). Before the fix the attribute was
+    emitted only when the control was live at render time, so a Kids-rendered
+    document had a row that announced itself live after the switch and did
+    nothing.
   - **The Kids lock screen is reachable at every tier.** Read from computed
     style at 1680×1000, 1280×800, 1024×700, and 1920×620: the shell body kept
     `mode-rail, profile-refusal, assistant` in flow, the editor refusal resolved

@@ -53,6 +53,7 @@ import {
 import {
   ACCENT,
   AXIS,
+  INERT,
   LINE,
   METRICS,
   PROFILE_DOT,
@@ -586,7 +587,7 @@ function overlays(view: DesktopVisualView): string {
               item.control,
               `<span class="palette-name">${escapeHtml(item.name)}</span><code class="palette-cli">${escapeHtml(item.cli)}</code>${item.shortcut === "" ? "" : `<kbd>${escapeHtml(item.shortcut)}</kbd>`}`,
               "palette-item",
-              item.control.kind === "view" ? ` data-action="overlay" data-value="none"` : "",
+              ` data-action="overlay" data-value="none"`,
             )}</li>`,
         )
         .join("")}</ul></li>`,
@@ -658,6 +659,7 @@ function styles(): string {
   --ok:${SIGNAL.ok};--refuse:${SIGNAL.refuse};--info:${SIGNAL.info};--scene:${SIGNAL.scene};
   --text:${TEXT.primary};--text-2:${TEXT.secondary};--text-3:${TEXT.label};
   --dim:${TEXT.dim};--faint:${TEXT.faint};--superseded:${TEXT.superseded};
+  --inert:${INERT.text};--inert-on-accent:${INERT.onAccent};--inert-glyph:${INERT.glyph};
   --rail:${METRICS.railWidth}px;--left:${METRICS.leftDockWidth}px;
   --inspector:${METRICS.inspectorWidth}px;--assistant-w:${METRICS.assistantWidth}px;
   --title-h:${METRICS.titleBarHeight}px;--tabs-h:${METRICS.viewTabsHeight}px;
@@ -674,7 +676,15 @@ body{background:var(--backdrop);color:var(--text);font-family:var(--sans);font-s
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
-button.is-inert{cursor:not-allowed;opacity:.72}
+/* An inert control is dimmed by paint, never by element opacity: opacity
+   composites the label toward whatever is behind it, and both the token gate and
+   a browser's getComputedStyle read the declared colour, so that dimming was
+   measured by nothing. --inert is the dimmest tier that still clears 4.5:1, so
+   the refusal stays readable. The [aria-pressed]/[aria-selected] pair is here
+   because an active tab or mode sets its own colour at a higher specificity. */
+button.is-inert{cursor:not-allowed;color:var(--inert)}
+button.is-inert[aria-pressed="true"],button.is-inert[aria-selected="true"]{color:var(--inert)}
+button.is-inert .rail-glyph{border-color:var(--inert-glyph)}
 code,kbd{font-family:var(--mono);font-size:.86em}
 
 .shell{display:grid;grid-template-rows:var(--title-h) 1fr var(--status-h);height:100dvh;min-height:100dvh;background:var(--canvas);position:relative;overflow:hidden}
@@ -711,6 +721,10 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .ghost-button kbd{background:var(--well);border:1px solid var(--line-control);border-radius:2px;padding:1px 4px;color:var(--faint)}
 .primary-button{background:var(--accent);color:var(--on-accent);font-weight:600;font-size:11px;border-radius:3px;height:22px;padding:0 11px}
 .primary-button:hover{background:var(--accent-hover)}
+/* The accent fill stays and only the mark on it is demoted: --inert on orange is
+   1.29:1, and the fill is what says which control this is. --inert-on-accent is
+   5.72:1 there against the live 7.05:1. */
+.primary-button.is-inert,.primary-button.is-inert:hover{color:var(--inert-on-accent)}
 .primary-button.is-inert:hover{background:var(--accent)}
 .block-button{width:100%;height:32px;font-size:12px;margin-top:10px}
 .assistant-toggle{display:flex;align-items:center;gap:7px;height:22px;padding:0 10px;border-radius:4px;font-size:11px;font-weight:500;background:var(--header);border:1px solid var(--line-control);color:var(--dim)}
@@ -800,6 +814,9 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .decision{width:24px;height:24px;border-radius:3px;border:1px solid var(--line-raised);color:var(--dim);display:grid;place-items:center;font-size:11px}
 .decision-accept{border-color:${SIGNAL.okLine};background:${SIGNAL.okSurface};color:var(--ok)}
 .decision-reject:hover{border-color:${SIGNAL.refuseLine};background:${SIGNAL.refuseSurface};color:var(--refuse)}
+/* An inert decision drops its semantic fill rather than wearing a green accept
+   badge it cannot honour; --inert is 4.42:1 on that fill and 5.06:1 off it. */
+.decision.is-inert,.decision.is-inert:hover{background:none;border-color:var(--line-raised);color:var(--inert)}
 .change-empty{margin:0;padding:34px 14px;text-align:center;font-size:12px;color:var(--dim)}
 
 .assistant{background:var(--assistant);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
@@ -814,6 +831,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 /* An icon button on the accent fill keeps the on-accent glyph colour: without
    this the later single-class rule wins and paints --dim on orange (1.1:1). */
 .primary-button.icon-button{color:var(--on-accent)}
+.primary-button.icon-button.is-inert{color:var(--inert-on-accent)}
 .assistant-body{flex:1;min-height:0;overflow-y:auto;padding:13px 12px}
 .assistant-thinking{display:flex;align-items:center;gap:8px;margin:12px 0 0;font-size:11px;color:var(--dim)}
 .assistant-thinking .dot{background:var(--accent)}
@@ -824,6 +842,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .assistant-modes{display:flex;background:var(--header);border:1px solid var(--line-control);border-radius:4px;padding:2px}
 .assistant-mode{height:21px;padding:0 9px;font-size:10px;color:var(--dim);border-radius:2px}
 .assistant-mode[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);font-weight:600}
+.assistant-mode.is-inert[aria-pressed="true"]{color:var(--inert-on-accent)}
 /* Both assistant bodies ship in every document and the state chooses between
    them, so a profile switched in the browser reaches the same named denial the
    model reports — the rule the editor body's refusal region already follows. */
@@ -843,7 +862,6 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .shell[data-profile="kids"] .inspector{display:none}
 .profile-refusal{display:none;place-items:center;padding:32px;background:var(--canvas);min-width:0}
 .shell[data-profile="kids"] .profile-refusal{display:grid}
-.shell[data-profile="kids"] .rail-mode{cursor:not-allowed;opacity:.5}
 .profile-refusal-card{max-width:46ch;text-align:center;background:${SIGNAL.sceneSurface};border:1px solid ${SIGNAL.sceneLine};border-radius:9px;padding:26px 28px}
 .profile-refusal-card h2{margin:12px 0;font-size:16px}
 .profile-refusal-card p{margin:0 0 10px;font-size:12px;line-height:1.65;color:${SIGNAL.sceneText}}
