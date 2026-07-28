@@ -217,8 +217,11 @@ than inventing a session, balance, or checkout.
 3. ~~Build the site-kit adapters over them in `identity-plane.ts`.~~ Done.
 4. Return the provider handles from `umbrellaPlaneHandles()`: an `IdentityPort`
    (`createIdentityPort` with a Neon-backed `IdentityStore` and a Better Auth adapter), a
-   Neon-backed `CreditStore`, a `CheckoutSessionAdapter` that turns an intent into a
-   hosted Stripe **test** checkout URL, and a `CheckoutEvidencePort` that reads the
+   Neon-backed credit store — a `CreditStoreAdapter` handed to `createCreditStore`, never a
+   `CreditStore` implemented directly, so it inherits the commit invariants
+   ([`auth-credits.md`](auth-credits.md#the-credit-persistence-boundary-sceneaxi128)) — a
+   `CheckoutSessionAdapter` that turns an intent into a hosted Stripe **test** checkout
+   URL, and a `CheckoutEvidencePort` that reads the
    persisted intent and the Stripe settlement. No other site file changes.
 
    The `CheckoutSessionAdapter` and the `CheckoutEvidencePort` beside it owe three things

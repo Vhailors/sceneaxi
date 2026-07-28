@@ -176,10 +176,12 @@ store never authorized.
 `DATABASE_URL` from the environment only. Apply `db/migrations` in numeric order; see
 [`db/README.md`](../db/README.md) for the full invariant table.
 
-Implement `IdentityStore` (`@sceneaxi/auth`) and `CreditStore` (`@sceneaxi/billing`) over
-your Neon client. The in-memory reference implementations mirror the database's constraints
-— unique `(account_id, sequence)`, unique `idempotency_key`, no update or delete — so a bug
-the real trigger would catch cannot pass the test suite.
+Implement `IdentityStore` (`@sceneaxi/auth`) over your Neon client, and a
+`CreditStoreAdapter` (`@sceneaxi/billing`) handed to `createCreditStore` — never a
+`CreditStore` implemented directly, for the reasons in *The credit persistence boundary*
+below. The in-memory reference implementations mirror the database's constraints — unique
+`(account_id, sequence)`, unique `idempotency_key`, no update or delete — so a bug the real
+trigger would catch cannot pass the test suite.
 
 ## The credit persistence boundary (sceneaxi#128)
 
@@ -906,9 +908,10 @@ Everything below is outside this vertical. The hosted HTTP surface it needed is 
 
 1. Better Auth's own handler, mounted behind that surface to issue the session cookie the
    umbrella already reads.
-2. `IdentityStore` and `CreditStore` implementations over a Neon client, and the migrations
-   applied to a Neon branch (needs credentials — separate authority). The `CreditStore` also
-   owns provisioning a `CreditAccount` per user; nothing in this repository can create one.
+2. An `IdentityStore` and a `CreditStoreAdapter` over a Neon client — the latter handed to
+   `createCreditStore` — and the migrations applied to a Neon branch (needs credentials —
+   separate authority). That adapter also owns provisioning a `CreditAccount` per user;
+   nothing in this repository can create one.
 3. A Stripe adapter that turns a `CheckoutSessionIntent` into a hosted checkout URL. The
    webhook route that passes the **raw** body to `verifyStripeWebhookSignature` has landed
    on the umbrella (`sites/umbrella/src/app/api/stripe/webhook/route.ts`, sceneaxi#131).
