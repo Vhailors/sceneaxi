@@ -100,6 +100,10 @@ export function curationTrail(item: CatalogItem): readonly CurationStep[] {
 /**
  * Other listings by the same creator on this surface — the design's "From the same
  * studio" row, with no cross-surface reach and no invented neighbours.
+ *
+ * The surface test is part of the filter rather than a caller's responsibility: a merged
+ * list would otherwise put the other store's listings under this store's item hrefs, and
+ * every href here names this surface's own route.
  */
 export function sameCreatorListings(
   listings: readonly SiteListing[],
@@ -108,7 +112,9 @@ export function sameCreatorListings(
   return Object.freeze(
     listings.filter(
       (listing) =>
-        listing.itemId !== current.itemId && listing.creatorId === current.creatorId,
+        listing.itemId !== current.itemId &&
+        listing.creatorId === current.creatorId &&
+        listing.surface === current.surface,
     ),
   );
 }

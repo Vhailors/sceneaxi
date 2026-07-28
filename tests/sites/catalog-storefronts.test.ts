@@ -119,6 +119,27 @@ function cssTokens(text: string): Readonly<Record<string, string>> {
   return tokens;
 }
 
+/**
+ * Everything one selector is declared to be in a stretch of stylesheet, as a property map.
+ *
+ * Parsed rather than string-matched so an assertion is about the declaration a browser
+ * ends up with: grouped selectors count, a later rule wins, and reformatting the source
+ * cannot turn a held property into a failure.
+ */
+function declarationsFor(text: string, selector: string): Readonly<Record<string, string>> {
+  const declarations: Record<string, string> = {};
+  for (const rule of text.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const selectors = (rule[1] as string).split(",").map((part) => part.trim());
+    if (!selectors.includes(selector)) continue;
+    for (const declaration of (rule[2] as string).split(";")) {
+      const colon = declaration.indexOf(":");
+      if (colon < 0) continue;
+      declarations[declaration.slice(0, colon).trim()] = declaration.slice(colon + 1).trim();
+    }
+  }
+  return declarations;
+}
+
 const relativeLuminance = (raw: string): number => {
   const hex = raw.toLowerCase();
   const channels = [1, 3, 5].map((offset) => {
@@ -364,6 +385,45 @@ describe("the storefronts are responsive, which the archive is not", () => {
       "216px",
     );
   });
+
+  /**
+   * A sticky column may not be taller than the space it pins into.
+   *
+   * Once a sticky box reaches its offset it stops moving with the page, so any part of it
+   * below the viewport edge is unreachable however far the document scrolls — at a 768px
+   * desktop height the detail column loses the end of the commerce notice and all of
+   * "Works with", and the missing-editor-link state adds a refusal panel above them. Being
+   * bounded and scrolling internally are one repair: a `max-height` with no `overflow-y`
+   * clips the tail outright instead, so the pair is asserted together, per column, per
+   * store — and both are expressed against the same offset token as `top`, so the height
+   * cannot be left behind when the offset moves.
+   */
+  it.each(STOREFRONTS)("%s bounds each sticky column instead of clipping it", (site) => {
+    const desktop = stripComments(css[site]).slice(
+      stripComments(css[site]).indexOf("@media (min-width: 64rem)"),
+    );
+    const offset = "var(--sticky-top)";
+    expect(cssTokens(css[site])["--sticky-top"]).toBe("5.5rem");
+    for (const selector of [".rail", ".detail-side"]) {
+      const rule = declarationsFor(desktop, selector);
+      expect(rule["position"], `${selector} keeps the archive's sticky column`).toBe("sticky");
+      expect(rule["top"], `${selector} pins below the masthead`).toBe(offset);
+      expect(rule["max-height"], `${selector} is bounded by the viewport`).toContain("dvh");
+      expect(rule["max-height"], `${selector} is bounded by the same offset it pins at`).toContain(
+        offset,
+      );
+      expect(rule["overflow-y"], `${selector} scrolls inside itself`).toBe("auto");
+    }
+  });
+
+  it.each(STOREFRONTS)("%s keeps each bounded column reachable from the keyboard", (site) => {
+    // Neither column ends in a focusable element, so an inner scroll that only a pointer
+    // can move would put the same content out of reach for a keyboard.
+    expect(readSite(site, "src/app/page.tsx")).toMatch(/className="rail"[^>]*tabIndex=\{0\}/);
+    expect(readSite(site, "src/app/item/[itemId]/page.tsx")).toMatch(
+      /className="detail-side"[^>]*tabIndex=\{0\}/,
+    );
+  });
 });
 
 describe("accessibility corrections the archive needs", () => {
@@ -593,9 +653,16 @@ describe("the rail counts real listings instead of the archive's invented facets
   });
 
   it("relates only same-creator listings on the same surface, never itself", () => {
-    const listings = listSiteCatalog("catalog-game");
-    const current = listings[0] as NonNullable<(typeof listings)[number]>;
-    const related = game.sameCreatorListings(listings, current);
+    // Fed the two surfaces at once, on purpose: every fixture listing shares one creator,
+    // so a list that is already single-surface would prove the fixture rather than the
+    // filter, and a caller that merged the catalogues would reach the other store's items
+    // through hrefs that only name this one.
+    const merged = [...listSiteCatalog("catalog-game"), ...listSiteCatalog("catalog-web")];
+    const current = merged[0] as NonNullable<(typeof merged)[number]>;
+    expect(current.surface).toBe("catalog-game");
+    expect(merged.some((listing) => listing.surface === "catalog-web")).toBe(true);
+    const related = game.sameCreatorListings(merged, current);
+    expect(related.length).toBeGreaterThan(0);
     expect(related.some((listing) => listing.itemId === current.itemId)).toBe(false);
     expect(related.every((listing) => listing.creatorId === current.creatorId)).toBe(true);
     expect(related.every((listing) => listing.surface === "catalog-game")).toBe(true);

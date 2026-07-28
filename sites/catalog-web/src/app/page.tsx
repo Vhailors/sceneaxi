@@ -63,7 +63,7 @@ export default function ShowroomPage() {
       </section>
 
       <div className="shell browse">
-        <aside className="rail" aria-label="What this showroom holds">
+        <aside className="rail" aria-label="What this showroom holds" tabIndex={0}>
           {facets.map((facet) => (
             <div className="rail-group" key={facet.title}>
               <h2 className="rail-title">{facet.title}</h2>

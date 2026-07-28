@@ -82,7 +82,7 @@ export default async function ItemPage({
           order a screen reader reads. The stylesheet moves this column to the right at
           the tablet breakpoint and makes it sticky at desktop.
         */}
-        <div className="detail-side">
+        <div className="detail-side" tabIndex={0}>
           <div className="buy">
             <div className="buy-body">
               <div>

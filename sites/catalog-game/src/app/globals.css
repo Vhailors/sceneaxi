@@ -73,6 +73,13 @@
   --shell: 1340px;
   --gutter: 1.25rem;
   --micro: 0.6875rem;
+
+  /*
+   * How far below the sticky masthead a sticky column pins, and therefore how much of the
+   * viewport is left for it. Declared once so the offset and the height that depends on it
+   * cannot drift apart into a column that clips its own tail.
+   */
+  --sticky-top: 5.5rem;
 }
 
 @media (min-width: 60rem) {
@@ -1533,16 +1540,42 @@ p {
     padding-bottom: 5.5rem;
   }
 
+  /*
+   * Both columns pin below the masthead, and both are bounded by the space that leaves.
+   * A sticky box taller than its scrollport stops moving once its top reaches the offset,
+   * so everything past the bottom edge would be unreachable at any short desktop height —
+   * on the detail page that is the end of the commerce notice and the whole "Works with"
+   * panel, and the deny state adds a refusal panel above them. Bounding the column and
+   * letting it scroll inside itself keeps the archive's sticky intent without hiding its
+   * own tail. `tabindex` is what makes that inner scroll reachable from the keyboard:
+   * neither column ends in a focusable element, so tabbing through the page alone would
+   * never bring the bottom into view.
+   */
   .rail {
     display: flex;
     flex-direction: column;
     position: sticky;
-    top: 5.5rem;
+    top: var(--sticky-top);
+    max-height: calc(100dvh - var(--sticky-top));
+    overflow-y: auto;
   }
 
   .detail-side {
     position: sticky;
-    top: 5.5rem;
+    top: var(--sticky-top);
+    max-height: calc(100dvh - var(--sticky-top));
+    overflow-y: auto;
+  }
+
+  /*
+   * Both columns are column flex containers, so a bounded height alone would make their
+   * children shrink into it instead of overflowing it — the buy panel clips its own tail
+   * and the container never scrolls at all. Holding the children at their content height
+   * is what turns the bound into a scroll rather than a crop.
+   */
+  .rail > *,
+  .detail-side > * {
+    flex-shrink: 0;
   }
 
   .footer-inner {

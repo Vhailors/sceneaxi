@@ -128,17 +128,48 @@ Each is a defect recorded against the design, not against the code:
 `pnpm build && pnpm start`, Chrome through `chrome-devtools-axi`, measuring
 `document.documentElement.scrollWidth` against `window.innerWidth`:
 
-| Route | 1440x1000 | 834x1112 | 390x844 |
-|---|---|---|---|
-| `/` | 1440 = 1440 | 834 = 834 | 390 = 390 |
-| `/item/game-lantern-prop` | 1440 = 1440 | 834 = 834 | 390 = 390 |
-| `/publish` | 1440 = 1440 | 834 = 834 | 390 = 390 |
-| 404 | 1440 = 1440 | 834 = 834 | 390 = 390 |
+| Route | 1440x1000 | 1366x768 | 1366x600 | 834x1112 | 390x844 |
+|---|---|---|---|---|---|
+| `/` | 1440 = 1440 | 1366 = 1366 | 1366 = 1366 | 834 = 834 | 390 = 390 |
+| `/item/game-lantern-prop` | 1440 = 1440 | 1366 = 1366 | 1366 = 1366 | 834 = 834 | 390 = 390 |
+| `/publish` | 1440 = 1440 | 1366 = 1366 | 1366 = 1366 | 834 = 834 | 390 = 390 |
+| 404 | 1440 = 1440 | 1366 = 1366 | 1366 = 1366 | 834 = 834 | 390 = 390 |
 
-No route overflows at any of the three widths, against the archive's 984-against-390. The
+No route overflows at any of the five viewports, against the archive's 984-against-390. The
 same probe found no element whose right edge exceeded the document width on any of the
-twelve renders. In the same session the detail page's editor deep link resolved to
+twenty renders. In the same session the detail page's editor deep link resolved to
 `…/editor?source=catalog-game&item=game-lantern-prop`.
+
+#### Sticky columns at short desktop heights
+
+Width alone cannot prove this page, and the two 1000px-tall desktop rows above are the
+heights at which it is least likely to show: above `64rem` the rail and the detail column
+pin below the masthead, and a sticky box taller than the space under its offset stops
+moving with the page, so whatever falls past the viewport edge is unreachable at any scroll
+position. Both columns are bounded to `calc(100dvh - var(--sticky-top))` and scroll inside
+themselves instead. Read from the same session — the computed bound, the column's own
+`scrollHeight`, where its inner scroll ends, and whether its last block is fully inside the
+column once it is scrolled there:
+
+| Viewport | Column | Bound | Content | Inner scroll | Last block reachable |
+|---|---|---|---|---|---|
+| 1440x1000 | `.detail-side` | 912 | 1122 | 210 | "Works with", fully |
+| 1366x768 | `.detail-side` | 680 | 1122 | 442 | "Works with", fully |
+| 1366x600 | `.detail-side` | 512 | 1122 | 610 | "Works with", fully |
+| 1440x1000 | `.detail-side`, editor link refused | 912 | 1241 | 329 | "Works with", fully |
+| 1366x768 | `.detail-side`, editor link refused | 680 | 1241 | 561 | "Works with", fully |
+| 1366x600 | `.detail-side`, editor link refused | 512 | 1241 | 729 | "Works with", fully |
+| 1440x1000 | `.rail` | 912 | 594 | fits, none needed | rail note, fully |
+| 1366x768 | `.rail` | 680 | 594 | fits, none needed | rail note, fully |
+| 1366x600 | `.rail` | 512 | 594 | 82 | rail note, fully |
+
+The refused rows were recorded with `NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN` unset, which
+renders the extra deny panel into the same column — the tallest state this page has. The
+commerce notice's own bottom edge was inside the column in every row. Focusing
+`.detail-side` and pressing `End` scrolled it to 442 of 442 at 1366x768 with "Works with"
+fully inside, so the inner scroll is not pointer-only. Below `64rem` neither column is
+sticky or bounded — the same probe read `position: static` and `max-height: none` at
+834x1112 and 390x844, where the page itself is the only scroller.
 
 Computed values from the served page, which is what proves the token layer arrives from
 site-kit rather than from this stylesheet — the storefront declares none of them:
@@ -160,6 +191,8 @@ equivalents.
 What a browser has to prove is recorded here. What the gate can prove — shared skeleton,
 mobile-first breakpoints only, no masked overflow, the reduced-motion answer, a computed
 4.5:1 on every shipped text pairing measured against the sheet the site actually serves,
+each sticky column being bounded and internally scrollable rather than clipped, and
+keyboard-reachable while it is,
 no redeclared Foundations token or pasted Foundations hex, digest-mark determinism, real
 facet counts, and the absence of every invented value above — is asserted in
 [`tests/sites/catalog-storefronts.test.ts`](../../tests/sites/catalog-storefronts.test.ts).
