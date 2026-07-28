@@ -685,9 +685,14 @@ describe("parseCheckoutCompletedEvent", () => {
     );
   });
 
-  it("refuses a session id that is empty or not a string", () => {
+  it("refuses a session id that is empty, blank, or not a string", () => {
+    // Blank counts as empty here because the completion contract says so, and
+    // the parser reads presence through that same predicate — otherwise a
+    // whitespace id would pass here, be compared against the settlement, and
+    // refuse later under a different name than the one the refusal table
+    // promises for an id-less event.
     const intent = checkoutIntent();
-    for (const sessionId of ["", 7, null]) {
+    for (const sessionId of ["", "   ", "\t\n", 7, null]) {
       const body = JSON.parse(eventBody({}, intent)) as {
         data: { object: Record<string, unknown> };
       };

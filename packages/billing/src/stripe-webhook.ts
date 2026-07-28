@@ -19,6 +19,7 @@ import {
   createProvenanceWitness,
   isEpochMilliseconds,
   isCheckoutPurpose,
+  isNonEmptyString,
   snapshotPlainRecord,
   validateCheckoutCompletedEvent,
   validateCheckoutSessionIntent,
@@ -473,13 +474,15 @@ export function parseCheckoutCompletedEvent(input: {
   // that bought the same thing, so this is the only field that can say *which*
   // paid session this event is about.
   const checkoutSessionId = object["id"];
-  // Presence only, matching the completion contract, and deliberately not
+  // Presence only, through the completion contract's own predicate rather than a
+  // second copy of it, so the two layers cannot disagree about what "present"
+  // means and name different refusals for the same id. Deliberately not
   // SceneAxi's IDENTIFIER_RE: the id is provider-generated and opaque, and
   // Stripe guarantees nothing about its length or charset, so a format rule here
   // would refuse a genuinely paid webhook for good. What the binding needs is an
   // id to compare — absent, it would equal a settlement carrying no sessionId
   // and pass — and the comparison itself is exact string equality.
-  if (typeof checkoutSessionId !== "string" || checkoutSessionId.length === 0) {
+  if (!isNonEmptyString(checkoutSessionId)) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.checkoutSessionIdMissing,
       "The checkout event's session object names no Checkout Session id, so no settlement can be bound to the session that was paid.",

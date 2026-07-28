@@ -221,6 +221,7 @@ export type {
 
 export {
   isEpochMilliseconds,
+  isNonEmptyString,
   isPlainRecord,
   snapshotPlainArray,
   snapshotPlainRecord,

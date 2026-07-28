@@ -217,7 +217,7 @@ exact string equality.
 
 | condition | refusal |
 |---|---|
-| the event's session object names no `id`, or an empty one | `STRIPE_CHECKOUT_SESSION_ID_MISSING` |
+| the event's session object names no `id`, or an empty or blank one | `STRIPE_CHECKOUT_SESSION_ID_MISSING` |
 | a retrieved settlement carries no `sessionId`, or a different one | `STRIPE_SETTLEMENT_SESSION_MISMATCH` |
 | no settlement was retrieved at all | `STRIPE_WEBHOOK_PAYLOAD_INVALID` |
 | settlement is unpaid, or its amount/currency/quantity/price ≠ the intent | `STRIPE_WEBHOOK_PAYLOAD_INVALID` |
@@ -240,6 +240,7 @@ re-encoding the JSON changes the bytes and verification will (correctly) fail:
 
 ```ts
 import {
+  BILLING_REFUSE_REASONS,
   CHECKOUT_METADATA_KEYS,
   applyCheckoutCompletedGrant,
   parseCheckoutCompletedEvent,
@@ -247,13 +248,26 @@ import {
   type CheckoutSettlementPort,
 } from "@sceneaxi/billing";
 
+// A refusal this deployment owns must not be reported as a bad request from Stripe.
+// Sketch only — `SERVER_SIDE_REASONS` / `creditWebhookHttpStatus` in
+// `sites/umbrella/src/lib/credit-webhook.ts` is the authoritative set, and
+// `docs/websites-deploy.md` owns the full status table.
+const serverSide = new Set<string>([
+  BILLING_REFUSE_REASONS.settlementSessionMismatch,
+  BILLING_REFUSE_REASONS.webhookSecretMissing,
+  BILLING_REFUSE_REASONS.clockInvalid,
+  // ...plus your own adapter failures; see the umbrella set for the rest.
+]);
+const statusFor = (reason: string) => (serverSide.has(reason) ? 503 : 400);
+
 const verified = verifyStripeWebhookSignature({
   payload: rawBodyBuffer,                                  // raw bytes
   header: request.headers["stripe-signature"],
   secret: process.env.STRIPE_WEBHOOK_SECRET,
   now: Date.now(),
 });
-if (!verified.ok) return respond(400, verified.reason);
+// A forged or replayed body is a genuine request fault, so it stays 400.
+if (!verified.ok) return respond(statusFor(verified.reason), verified.reason);
 
 const event = JSON.parse(verified.value.payload) as {
   data: { object: { id: string; metadata: Record<string, string> } };
@@ -273,21 +287,24 @@ if (!intent) return respond(400, "unknown checkout intent");
 const settlement = await (settlementPort as CheckoutSettlementPort).retrieveSettlement(
   sessionId,
 );
-if (!settlement) return respond(400, "unpaid or unverified session");
+// Your own adapter answered nothing, so this is server-side too.
+if (!settlement) return respond(503, "settlement evidence unavailable");
 
 const completed = parseCheckoutCompletedEvent({
   verified: verified.value,                                // the issued webhook itself
   intent,
   settlement,
 });
-if (!completed.ok) return respond(400, completed.reason);
+// `STRIPE_SETTLEMENT_SESSION_MISMATCH` lands here and answers 503: only your own
+// `retrieveSettlement` can disagree with a session id read from the verified body.
+if (!completed.ok) return respond(statusFor(completed.reason), completed.reason);
 
 const granted = applyCheckoutCompletedGrant({
   state: await creditStore.loadState(completed.value.userId),
   completion: completed.value,
   now: Date.now(),
 });
-if (!granted.ok) return respond(400, granted.reason);
+if (!granted.ok) return respond(statusFor(granted.reason), granted.reason);
 ```
 
 **Live mode is unreachable by default.** `mode: "live"` refuses unless
