@@ -18,7 +18,6 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import {
   createProvenanceWitness,
   isEpochMilliseconds,
-  isBillingIdentifier,
   isCheckoutPurpose,
   snapshotPlainRecord,
   validateCheckoutCompletedEvent,
@@ -474,13 +473,16 @@ export function parseCheckoutCompletedEvent(input: {
   // that bought the same thing, so this is the only field that can say *which*
   // paid session this event is about.
   const checkoutSessionId = object["id"];
-  // The same identifier rule the completion contract applies, asked here where
-  // the id is first read: a malformed id that travelled to the contract would
-  // refuse as a payload problem instead of naming the unbound session.
-  if (!isBillingIdentifier(checkoutSessionId)) {
+  // Presence only, matching the completion contract, and deliberately not
+  // SceneAxi's IDENTIFIER_RE: the id is provider-generated and opaque, and
+  // Stripe guarantees nothing about its length or charset, so a format rule here
+  // would refuse a genuinely paid webhook for good. What the binding needs is an
+  // id to compare — absent, it would equal a settlement carrying no sessionId
+  // and pass — and the comparison itself is exact string equality.
+  if (typeof checkoutSessionId !== "string" || checkoutSessionId.length === 0) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.checkoutSessionIdMissing,
-      "The checkout event's session object carries no usable id, so no settlement can be bound to the session that was paid.",
+      "The checkout event's session object names no Checkout Session id, so no settlement can be bound to the session that was paid.",
     );
   }
 

@@ -184,13 +184,13 @@ export function isBillingMode(value: unknown): value is BillingMode {
 }
 
 /**
- * The one url-safe identifier rule every billing identifier is held to.
+ * The one url-safe identifier rule every identifier SceneAxi *mints* is held to.
  *
- * Exported because boundary code reads identifiers out of untrusted bodies
- * before a record exists to validate — the checkout webhook parser reads the
- * Checkout Session id — and a boundary that applied a looser rule would let a
- * malformed id travel until a later validation refused it under some other
- * reason. One rule, applied wherever an identifier is first read.
+ * Exported so code that mints an id can hold it to the same rule the record
+ * validators will, rather than discovering a malformed id only when a later
+ * validation refuses it under some other reason. It deliberately does not
+ * govern provider-generated ids — `stripePriceId`, `stripeCustomerId`, and the
+ * Checkout Session id are opaque strings whose shape SceneAxi does not own.
  */
 export function isBillingIdentifier(value: unknown): value is string {
   return typeof value === "string" && IDENTIFIER_RE.test(value);
@@ -678,10 +678,16 @@ export function validateCheckoutCompletedEvent(
       `checkout completed event mode must be one of ${BILLING_MODES.join(", ")}.`,
     );
   }
+  // Deliberately not IDENTIFIER_RE: this id is provider-generated and opaque.
+  // Stripe guarantees nothing about the length or shape of a Checkout Session
+  // id, so imposing SceneAxi's 1-128-char url-safe rule on it would refuse
+  // genuinely paid webhooks. What binds the evidence is presence plus exact
+  // string equality with the settlement, neither of which needs a charset rule.
+  // IDENTIFIER_RE stays correct for the ids SceneAxi mints — intentId, userId.
   const checkoutSessionId = record["checkoutSessionId"];
-  if (!isBillingIdentifier(checkoutSessionId)) {
+  if (!isNonEmptyString(checkoutSessionId)) {
     return invalid(
-      "checkout completed event checkoutSessionId must be a url-safe identifier of 1-128 chars; a completion that cannot name its Checkout Session is unbound evidence.",
+      "checkout completed event checkoutSessionId must be a non-empty Checkout Session id; a completion that cannot name its Checkout Session is unbound evidence.",
     );
   }
   const intentId = record["intentId"];

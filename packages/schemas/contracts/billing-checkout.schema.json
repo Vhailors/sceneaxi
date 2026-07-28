@@ -152,7 +152,11 @@
         "eventId": { "$ref": "#/$defs/identifier" },
         "type": { "const": "checkout.session.completed" },
         "mode": { "$ref": "#/$defs/mode" },
-        "checkoutSessionId": { "$ref": "#/$defs/identifier" },
+        "checkoutSessionId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The provider Checkout Session this completion settles. Provider-generated and opaque, so it is held to presence only rather than the url-safe identifier rule SceneAxi applies to ids it mints."
+        },
         "intentId": { "$ref": "#/$defs/identifier" },
         "userId": { "$ref": "#/$defs/identifier" },
         "purpose": { "$ref": "#/$defs/purpose" },

@@ -323,7 +323,7 @@ describe("validateCheckoutCompletedEvent", () => {
     if (missing.ok) return;
     expect(missing.code).toBe(BILLING_REFUSE_CODES.missingProperty);
 
-    for (const checkoutSessionId of ["", "cs test 01", "c".repeat(129), 7]) {
+    for (const checkoutSessionId of ["", 7, null]) {
       const result = validateCheckoutCompletedEvent({
         ...EVENT,
         checkoutSessionId,
@@ -331,6 +331,36 @@ describe("validateCheckoutCompletedEvent", () => {
       expect(result.ok, String(checkoutSessionId)).toBe(false);
       if (result.ok) return;
       expect(result.code).toBe(BILLING_REFUSE_CODES.invalidProperty);
+    }
+  });
+
+  it("accepts a provider session id SceneAxi's own identifier rule would refuse", () => {
+    // The id is Stripe's, not ours: it guarantees no length and no charset, so
+    // holding it to IDENTIFIER_RE would refuse a genuinely paid completion.
+    for (const checkoutSessionId of [
+      `cs_live_${"a".repeat(240)}`,
+      "cs_test_a1B2/c3+d4=e5%f6",
+      "_leading_underscore",
+    ]) {
+      const result = validateCheckoutCompletedEvent({
+        ...EVENT,
+        checkoutSessionId,
+      });
+      expect(result.ok, checkoutSessionId).toBe(true);
+      if (!result.ok) return;
+      expect(result.value.checkoutSessionId).toBe(checkoutSessionId);
+    }
+  });
+
+  it("still holds the ids SceneAxi mints to the identifier rule", () => {
+    // Relaxing the provider id must not relax ours: intentId and userId are
+    // server-issued, so their shape stays SceneAxi's to enforce.
+    for (const field of ["intentId", "userId", "eventId"]) {
+      const result = validateCheckoutCompletedEvent({
+        ...EVENT,
+        [field]: `x${"y".repeat(200)}`,
+      });
+      expect(result.ok, field).toBe(false);
     }
   });
 
@@ -349,24 +379,36 @@ describe("validateCheckoutCompletedEvent", () => {
 });
 
 describe("isBillingIdentifier", () => {
-  it("is the same rule the completion contract applies to its identifiers", () => {
-    for (const usable of ["cs_test_01", "evt.1-2", "A", "c".repeat(128)]) {
+  it("is the same rule the completion contract applies to the ids SceneAxi mints", () => {
+    // Pinned against intentId, not checkoutSessionId: the session id is Stripe's
+    // and is deliberately held to presence alone.
+    for (const usable of ["int_test_01", "evt.1-2", "A", "c".repeat(128)]) {
       expect(isBillingIdentifier(usable), usable).toBe(true);
       expect(
-        validateCheckoutCompletedEvent({ ...EVENT, checkoutSessionId: usable })
-          .ok,
+        validateCheckoutCompletedEvent({ ...EVENT, intentId: usable }).ok,
         usable,
       ).toBe(true);
     }
-    for (const unusable of ["", "cs test 01", "_leading", "c".repeat(129), 7]) {
+    for (const unusable of ["", "int test 01", "_leading", "c".repeat(129), 7]) {
       expect(isBillingIdentifier(unusable), String(unusable)).toBe(false);
+      expect(
+        validateCheckoutCompletedEvent({ ...EVENT, intentId: unusable }).ok,
+        String(unusable),
+      ).toBe(false);
+    }
+  });
+
+  it("does not govern the provider ids on the same contract", () => {
+    for (const providerId of [`cs_live_${"a".repeat(240)}`, "_leading"]) {
+      expect(isBillingIdentifier(providerId), providerId).toBe(false);
       expect(
         validateCheckoutCompletedEvent({
           ...EVENT,
-          checkoutSessionId: unusable,
+          checkoutSessionId: providerId,
+          stripePriceId: providerId,
         }).ok,
-        String(unusable),
-      ).toBe(false);
+        providerId,
+      ).toBe(true);
     }
   });
 });

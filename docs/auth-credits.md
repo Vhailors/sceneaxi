@@ -208,9 +208,16 @@ so without this a settlement retrieved for one paid session would validate anoth
 event. The comparison happens *inside* the parser, before anything else about the settlement
 is read, so a caller that retrieved for the wrong session cannot skip it:
 
+The session id is **provider-generated and opaque**, so it is held to presence only —
+not to the url-safe 1-128-char rule SceneAxi applies to the ids it mints itself
+(`intentId`, `userId`). Stripe guarantees nothing about the length or charset of an
+object id, and a format rule here would refuse a genuinely paid webhook permanently.
+What binds the evidence is that an id is *there* to compare, and that the comparison is
+exact string equality.
+
 | condition | refusal |
 |---|---|
-| the event's session object carries no usable `id` | `STRIPE_CHECKOUT_SESSION_ID_MISSING` |
+| the event's session object names no `id`, or an empty one | `STRIPE_CHECKOUT_SESSION_ID_MISSING` |
 | a retrieved settlement carries no `sessionId`, or a different one | `STRIPE_SETTLEMENT_SESSION_MISMATCH` |
 | no settlement was retrieved at all | `STRIPE_WEBHOOK_PAYLOAD_INVALID` |
 | settlement is unpaid, or its amount/currency/quantity/price ≠ the intent | `STRIPE_WEBHOOK_PAYLOAD_INVALID` |
@@ -218,6 +225,15 @@ is read, so a caller that retrieved for the wrong session cannot skip it:
 Your adapter must echo back the id it was asked about. The grant's completion fingerprint
 includes the session id too, so two sessions can never be mistaken for a redelivery of each
 other.
+
+`STRIPE_SETTLEMENT_SESSION_MISMATCH` is a **deployment-side** fault, so a deployment must
+classify it as one: both sides of that comparison come from a single signature-verified
+body, which leaves only the deployment's own `retrieveSettlement` adapter able to disagree.
+The umbrella does this in `SERVER_SIDE_REASONS`
+(`sites/umbrella/src/lib/credit-webhook.ts`), and `docs/websites-deploy.md` owns the full
+status table. `STRIPE_CHECKOUT_SESSION_ID_MISSING` is deliberately *not* server-side: it
+reads the id out of the verified body itself, so an absent id means the inbound body
+lacked one.
 
 Your webhook endpoint must pass the **raw request body**, not a re-serialised object —
 re-encoding the JSON changes the bytes and verification will (correctly) fail:
