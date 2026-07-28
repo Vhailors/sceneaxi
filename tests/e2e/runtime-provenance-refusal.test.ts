@@ -354,6 +354,7 @@ describe("verified checkout completion provenance", () => {
       eventId: "evt_forged",
       type: "checkout.session.completed",
       mode: "test",
+      checkoutSessionId: SESSION_ID,
       intentId: INTENT.intentId,
       userId: INTENT.userId,
       purpose: "credit-pack",

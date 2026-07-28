@@ -693,8 +693,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     // module reads the id out of the verified payload and asks its own retrieveSettlement
     // for that same id. Only the adapter's answer can disagree — including the adapter
     // that has not started echoing sessionId yet — so a 400 would report the deployment's
-    // own omission as a bad request from Stripe, and tell Stripe not to retry a settlement
-    // that is still recoverable.
+    // own omission as a bad request from Stripe.
     expect(creditWebhookHttpStatus(BILLING_REFUSE_REASONS.settlementSessionMismatch)).toBe(503);
     // The sender-owned side stays sender-owned: a forged or replayed body never reaches the
     // comparison, and an id the verified body itself omits is a fault of that body.
