@@ -194,7 +194,9 @@ describe("the marketing surface makes no claim the repository cannot stand behin
     const bindings = mentions.filter(([, operator]) => operator !== undefined);
     expect(bindings.length).toBeGreaterThan(0);
     for (const [, operator, bound] of bindings) {
-      expect(`${operator} ${bound.trim()}`).toMatch(/^[:=] \{?\s*(readonly\s+)?false\b/);
+      expect(`${operator} ${(bound ?? "").trim()}`).toMatch(
+        /^[:=] \{?\s*(readonly\s+)?false\b/,
+      );
     }
   });
 
