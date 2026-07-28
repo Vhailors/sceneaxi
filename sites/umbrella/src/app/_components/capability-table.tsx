@@ -40,7 +40,7 @@ export function CapabilityTable() {
                 <td className="wrap">
                   {CAPABILITY_COPY[id] ?? id}
                   <br />
-                  <code style={{ color: "var(--ink-faint)" }}>{id}</code>
+                  <code className="note">{id}</code>
                 </td>
                 <td>
                   <span className={`chip chip-${spec.tier}`}>{spec.tier}</span>

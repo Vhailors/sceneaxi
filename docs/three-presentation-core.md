@@ -155,9 +155,19 @@ only, and presentation invents no state the kernel does not own.
     the shared viewport boundary: `drawCalls 15`, 1 717 distinct colours, 101 278
     non-background pixels — the figures recorded above, unmoved
 
+- **The marketing hero** on the umbrella's `/` (sceneaxi#157), the third
+  pixel-drawing surface and the only *snapshot* one: it attaches no camera input
+  and its loop stops once the frame settles, so it mounts a still of the same
+  composed scene `/open` serves rather than a driveable viewport. Verified
+  2026-07-28 in Chrome; the frame reports, the settle behaviour, and the
+  context-loss recovery are recorded in
+  [`../sites/umbrella/VISUAL-EVIDENCE.md`](../sites/umbrella/VISUAL-EVIDENCE.md),
+  which owns that surface's observations.
+
 Reproduce the standalone snippets by serving a page that runs the consumer
-snippets above against a validated Sculpt Artifact; `sites/umbrella/src/app/open/`
-and `sites/umbrella/src/app/editor/` are the shipped versions, both built on the
+snippets above against a validated Sculpt Artifact;
+`sites/umbrella/src/app/page.tsx`, `sites/umbrella/src/app/open/` and
+`sites/umbrella/src/app/editor/` are the shipped versions, all three built on the
 site's one renderer-owning module, `src/app/_components/sculpt-viewport.tsx`.
 
 ## Not claimed

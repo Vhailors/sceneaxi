@@ -149,6 +149,17 @@ The umbrella's public `/open` path (ADR 0022) is a separate, site-tier surface
 with its own owner, [`three-presentation-core.md`](three-presentation-core.md);
 it draws pixels through the ADR 0002 seam and is not governed by this table.
 
+The umbrella's `/profiles` page (sceneaxi#157) *presents* this table, and it is
+the one place the policy is restated rather than read: `docs/dependency-matrix.json`
+gives that site four edges and none of them reaches `@sceneaxi/schemas`, so the
+rows arrive as a bundled mirror in `sites/umbrella/src/lib/profile-matrix.ts`
+alongside `profileConformanceRegistry`. The mirror stores no verdict — every cell
+it shows is derived — and it is held to both contracts field by field by
+`tests/sites/umbrella-profile-matrix.test.ts`, which runs from the repository
+root where naming `schemas` is allowed, so a drifted mirror fails the gate. The
+durable home is a re-export from `@sceneaxi/site-kit`; until that exists the
+mirror is a recorded divergence, not a second source of truth.
+
 ## Refusal codes
 
 | Code | When |
@@ -166,8 +177,10 @@ Adding a profile, a level, or an operation is an explicit contract edit that
 moves `packages/schemas/src/open-path-policy.ts`,
 `packages/schemas/contracts/open-path-policy.fixtures.json`,
 `packages/schemas/contracts/open-path-policy.schema.json` (which pins the whole
-`profiles` array as a `const`), and the table above in one commit —
-`pnpm check:contracts` fails otherwise, and
+`profiles` array as a `const`), the bundled mirror
+`sites/umbrella/src/lib/profile-matrix.ts` (above), and the table above in one
+commit — `pnpm check:contracts` fails otherwise,
+`tests/sites/umbrella-profile-matrix.test.ts` fails on the unmoved mirror, and
 `tests/contracts/injected-open-path-drift.test.ts` proves that check itself
 fails on injected drift.
 
