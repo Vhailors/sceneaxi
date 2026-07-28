@@ -41,6 +41,67 @@ be reintroduced. It differed in kind, not in degree:
 or in a rendered document. A review slip is a failing test, not a judgement call
 — the same shape `LIVE_OPEN_PRESENTATION.retiredLabels` uses in `site-kit`.
 
+## Foundations v2, and why its tokens are duplicated here
+
+Foundations v2 — near-black `--bg-base #07080A`, signal orange `--accent
+#FF6B2C`, Archivo + JetBrains Mono — is the product visual language for **every**
+shipped surface, including this one (captain decision D1, recorded 2026-07-28).
+The shared token layer for it lives in `packages/site-kit` (decision D2).
+
+**This package cannot reach that layer, and the duplication below is forced by
+that, not chosen.** `docs/dependency-matrix.json` allows
+`@sceneaxi/desktop-shell` exactly:
+
+```
+"@sceneaxi/desktop-shell": { "allow": ["@sceneaxi/schemas", "@sceneaxi/authoring-core"] }
+```
+
+and the matrix's own `rule` states that *allow lists are exhaustive — any
+internal dependency or source import not listed here is a violation*. So
+`@sceneaxi/site-kit` is not a permitted dependency of this app, and importing it
+would fail `pnpm check:boundaries`. No edge was added and the matrix was not
+edited; the shared values are transcribed locally instead, into
+`FOUNDATIONS_V2_COLORS` in `apps/desktop-shell/src/visual-tokens.ts`.
+
+### What is duplicated
+
+All 24 colour tokens the Foundations v2 sheet prints, plus its two families.
+`packages/site-kit/src/design-tokens.ts` (`FOUNDATION_COLORS`) remains the
+**upstream** source of these values — this copy is downstream of it, not a second
+opinion about them.
+
+| Disposition | Tokens | Meaning |
+|---|---|---|
+| **carried** (20) | `--bg-base`, `--bg-panel`, `--bg-raised`, `--bg-control`, `--bg-field`, `--bg-row`, `--line-soft`, `--line`, `--fg`, `--fg-2`, `--accent`, `--accent-hi`, `--ok`, `--danger`, `--info`, `--axis-x`, `--axis-y`, `--axis-z`, `--kids`, and the `Archivo`/`JetBrains Mono` families | the sheet's hex, verbatim |
+| **raised** (2) | `--fg-4` `#3F464F` → `#7D8694`; `--stale` `#7A6448` → `#A08663` | below the 4.5:1 text floor on this surface's near-black chrome; each names its `DEVIATIONS` row |
+| **absent** (3) | `--line-strong`, `--store-game`, `--store-web` | named with a reason, not silently unused (see below) |
+
+`--line-strong` `#2C323B` is the one place the two archive members genuinely
+disagree: the Foundations sheet prints three line weights, but the implemented
+member `Engine Desktop.dc.html` draws its own six-step line scale and does not
+use `#2C323B` anywhere in the file. For a value the accepted surface itself
+specifies, that member wins. `--store-game` / `--store-web` are storefront
+accents; this app draws no storefront and no commerce.
+
+### What stops the two copies drifting
+
+Not an import — a shared anchor plus an executable check on each side. Both
+transcriptions name archive SHA-256 `ad5d6e39…c15159`, and each asserts its own
+transcription in `pnpm gate`. On this side that is
+`apps/desktop-shell/test/visual-tokens.test.ts`, which asserts the sheet is
+accounted for **in full** (every token has exactly one disposition, so a token
+added upstream cannot be silently ignored), that every *carried* token equals the
+sheet hex exactly, that a *raised* token is only raised where the sheet value
+measurably fails the floor, that an *absent* token gives a reason and does not
+reappear under a different local name, and that the accent, near-black, and both
+families survive into the actually-emitted document. Editing a hex on either side
+without the other is a failing test.
+
+If the matrix ever permits `@sceneaxi/site-kit` here, the thing to delete is
+`FOUNDATIONS_V2_COLORS` and its transcription tests — `FOUNDATIONS_V2_SOURCE
+.duplicationReason` is `"dependency-matrix-forbids-site-kit"` so that trigger is
+asserted rather than remembered.
+
 ## Ownership
 
 | Concern | Owner |
@@ -175,6 +236,7 @@ Each row is also carried as data in `DEVIATIONS`.
 | Struck-through review value | `#7A6448` (3.42:1) | `#A08663` | same floor |
 | Web fonts | `fonts.googleapis.com` link for Archivo + JetBrains Mono | font-family stack, no remote request | the emitted document is self-contained and offline. The archive families are named first and render when installed; otherwise the system UI face does. |
 | Fixed stage | 1680×1000 scaled with a transform | fluid layout, four window tiers | see above |
+| Informational blue | the member carries both `#5B9CFF` and a lighter `#8FB7F5` for the same renderer note | `#5B9CFF` | the two archive members disagree, so the shared sheet settles it: Foundations v2 canonicalises `--info` to `#5B9CFF`, D1 makes the sheet binding, and the value clears the text floor here anyway (6.16:1 at worst on `SURFACE`, 6.48:1 on the note's own fill) — so there is no accessibility reason to keep the member's lighter variant, and keeping it would be drift from the shared layer. |
 | Kids profile | a working editor with only the assistant locked | the **whole editor body** refuses | **contract conflict, resolved for the repository.** The Kids product is an isolation boundary with no UI (`open-path-policy.md`, `OPEN_PATH_KIDS_REFUSED`). An editor that merely looked disabled under a Kids badge would still be a Kids authoring UI. The rail goes inert too, so no mode can be entered from behind the refusal; the profile switch stays live so the refusal is a state you can leave. |
 | Panel inventory | fixture object trees, digests, byte sizes, fps, triangle counts, run timings, evidence rows | real structure with honest empty and inert states | a shell that mounts no renderer and opens no kernel session has no fps, no triangle count, and no `14.2 MB` artifact. Rendering the archive's fixtures would be inventing file sizes and hashes. Change Review is the one fixture queue kept — its interactions are in scope — and it says on the surface that deciding there writes no document. |
 
@@ -208,7 +270,9 @@ plainly that the viewport draws no pixels. The document also carries
   spawns the real binary and renders a document from it.
 
 - **Real browser.** Verified 2026-07-27 in Chrome (`chrome-devtools-axi`) against
-  documents rendered by the built binary and opened from `file://`:
+  documents rendered by the built binary and opened from `file://`, and
+  **re-verified 2026-07-28** on current `main` after the Foundations v2 alignment
+  (see that re-run at the end of this section):
 
   - **Region geometry at 1680×1000 is the archive's own, to the pixel**:
     title bar `36`, mode rail `56`, left dock `274`, inspector `326`, assistant
@@ -248,6 +312,30 @@ plainly that the viewport draws no pixels. The document also carries
     2 toggles visible; at 800×560 the editor was replaced by the
     `DESKTOP_WINDOW_BELOW_MINIMUM` refusal naming the `900×600` minimum.
 
+- **Foundations v2 re-verification, 2026-07-28.** The alignment above changed one
+  shipped value (`--info`), so the browser record was re-run on the current tree
+  rather than inherited. Chrome via `chrome-devtools-axi`, document rendered by
+  `node apps/desktop-shell/bin/sceneaxi-desktop.mjs chrome`, opened from `file://`
+  at 1680×1000:
+
+  - **The adopted language is what the browser actually resolved**: `--accent`
+    `#FF6B2C`, `--info` `#5B9CFF`, shell background `rgb(7, 8, 10)` (`#07080A`),
+    body font resolved to `Archivo`. The renderer note computed to
+    `rgb(91, 156, 255)` on `rgb(19, 24, 32)` — the Foundations blue, not the
+    member's lighter variant.
+  - **Rendered contrast sweep re-run across 13 states** — all seven modes, the
+    `web` and `kids` profiles, all three overlays, and the `agent` assistant mode
+    — computing each visible text element's colour against its resolved
+    background: **0 failures below 4.5:1** in every state. Worst observed ratio
+    **4.60:1**, the `refuse-only` chip in the Kids state; every other state
+    bottomed out at 5.11:1 or better.
+  - **Still exactly one network request** — the document itself. No font, script,
+    style, or image was fetched, so the Foundations families are named and never
+    downloaded.
+  - `<meta name="sceneaxi-pixels-drawn" content="false">` unchanged, and the
+    inert menu buttons still carry their `DESKTOP_NO_PRESENTATION_RUNTIME`
+    description in the accessibility tree.
+
 - **Not claimed, and not claimable here**: an installer, a packaged desktop
   application, real renderer finality, live commerce, any file size or hash, and
   any pixel drawn by an engine. None of those exist on this surface.
@@ -265,3 +353,9 @@ plainly that the viewport draws no pixels. The document also carries
   floor fails there rather than in review.
 - A new window tier means a row in `WINDOW_TIERS` **and** a matching breakpoint
   in the stylesheet; the browser record above is how that pair is checked.
+- A change to Foundations v2 upstream means updating `FOUNDATIONS_V2_COLORS`
+  **and** giving any new token a disposition in `FOUNDATIONS_V2_ALIGNMENT`; the
+  test asserts the sheet is accounted for in full, so a token added upstream and
+  ignored here fails rather than passing quietly. Do **not** resolve that by
+  importing `packages/site-kit` — the dependency matrix forbids it here, and the
+  duplication is deliberate and recorded above.

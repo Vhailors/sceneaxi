@@ -269,7 +269,12 @@ canonical archive digest, the `Engine Desktop v1.dc.html` supersession (amber
 accent, Space Grotesk/IBM Plex, fixed 2064×1400 launcher storyboard — none of it
 may return), every deviation from that archive, and the recorded browser
 evidence are owned by `docs/engine-desktop-surface.md`; that doc is the thing to
-update when the surface changes.
+update when the surface changes. It draws Foundations v2 like every other
+surface, but **duplicates** those tokens in `src/visual-tokens.ts` instead of
+consuming `packages/site-kit`, because the dependency matrix allows this app only
+`@sceneaxi/schemas` and `@sceneaxi/authoring-core` — do not resolve that by
+adding the edge; `FOUNDATIONS_V2_ALIGNMENT` and its test are what keep the copy
+honest, and the same doc records why.
 
 The in-app AI assistant composition seam is `createAssistantPanel()` in
 `apps/web-shell/src/assistant-panel.ts` (sceneaxi#121), the one matrix node that may

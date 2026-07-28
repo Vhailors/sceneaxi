@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   ACCENT,
   DEVIATIONS,
+  FOUNDATIONS_V2_ALIGNMENT,
+  FOUNDATIONS_V2_COLORS,
+  FOUNDATIONS_V2_FAMILIES,
+  FOUNDATIONS_V2_SOURCE,
   LINE,
   SIGNAL,
   SUPERSEDED_V1,
@@ -133,5 +137,105 @@ describe("engine desktop visual tokens", () => {
     expect(
       DEVIATIONS.some((row) => row.id === "webfont-not-fetched"),
     ).toBe(true);
+  });
+});
+
+/**
+ * Foundations v2 alignment (captain decision D1, 2026-07-28).
+ *
+ * `packages/site-kit` owns the shared token layer (D2) but the dependency matrix
+ * allows this package only `@sceneaxi/schemas` and `@sceneaxi/authoring-core`, so
+ * the sheet's values are duplicated here rather than imported. That duplication is
+ * only safe if it is *checked*, which is what this block is for: every token the
+ * sheet prints is accounted for, and every one this surface carries must equal the
+ * sheet's hex exactly. Editing a token on either side without the other now fails.
+ */
+describe("foundations v2 alignment", () => {
+  const sheetTokens = Object.keys(FOUNDATIONS_V2_COLORS);
+
+  it("is transcribed from the same archive site-kit transcribes", () => {
+    expect(FOUNDATIONS_V2_SOURCE.archiveSha256).toBe(VISUAL_SOURCE.sha256);
+    expect(FOUNDATIONS_V2_SOURCE.member).toBe("SceneAxi Foundations.dc.html");
+    expect(FOUNDATIONS_V2_SOURCE.upstream).toBe(
+      "packages/site-kit/src/design-tokens.ts",
+    );
+    // The duplication is boundary-forced, not preference. If site-kit ever becomes
+    // reachable, this reason is the thing that should stop being true.
+    expect(FOUNDATIONS_V2_SOURCE.duplicationReason).toBe(
+      "dependency-matrix-forbids-site-kit",
+    );
+  });
+
+  it("accounts for every token the sheet prints, exactly once", () => {
+    const aligned = FOUNDATIONS_V2_ALIGNMENT.map((row) => row.token);
+    expect([...aligned].sort()).toEqual([...sheetTokens].sort());
+    expect(new Set(aligned).size).toBe(aligned.length);
+  });
+
+  it("carries every adopted token at the sheet's exact hex", () => {
+    const carried = FOUNDATIONS_V2_ALIGNMENT.filter(
+      (row) => row.disposition === "carried",
+    );
+    // Guard against the table being emptied into vacuous success.
+    expect(carried.length).toBeGreaterThanOrEqual(18);
+    const drift = carried
+      .filter(
+        (row) =>
+          row.value !==
+          FOUNDATIONS_V2_COLORS[row.token as keyof typeof FOUNDATIONS_V2_COLORS],
+      )
+      .map(
+        (row) =>
+          `${row.token} sheet=${FOUNDATIONS_V2_COLORS[row.token as keyof typeof FOUNDATIONS_V2_COLORS]} ${row.local}=${row.value}`,
+      );
+    expect(drift).toEqual([]);
+  });
+
+  it("raises a sheet token only where the sheet value fails the text floor", () => {
+    const raised = FOUNDATIONS_V2_ALIGNMENT.filter(
+      (row) => row.disposition === "raised",
+    );
+    expect(raised.length).toBeGreaterThan(0);
+    for (const row of raised) {
+      const sheet =
+        FOUNDATIONS_V2_COLORS[row.token as keyof typeof FOUNDATIONS_V2_COLORS];
+      // The raise has to be earned: the sheet value must actually fail here...
+      expect(contrast(sheet, SURFACE.canvas)).toBeLessThan(4.5);
+      // ...the shipped value must pass everywhere...
+      for (const surface of SURFACES) {
+        expect(contrast(row.value as string, surface)).toBeGreaterThanOrEqual(4.5);
+      }
+      // ...and it must be a recorded deviation, not an unexplained edit.
+      expect(DEVIATIONS.map((d) => d.id)).toContain(row.deviation);
+    }
+  });
+
+  it("gives a reason for every sheet token it does not carry", () => {
+    for (const row of FOUNDATIONS_V2_ALIGNMENT.filter(
+      (entry) => entry.disposition === "absent",
+    )) {
+      expect(row.reason ?? "").not.toHaveLength(0);
+      // An absent token must not be smuggled in under a different local name.
+      const sheet =
+        FOUNDATIONS_V2_COLORS[row.token as keyof typeof FOUNDATIONS_V2_COLORS];
+      const tokens = JSON.stringify({ SURFACE, LINE, ACCENT, SIGNAL, TEXT });
+      expect(tokens).not.toContain(sheet);
+    }
+  });
+
+  it("uses the sheet's two families as the first choice in each stack", () => {
+    expect(TYPE.sans.startsWith(`'${FOUNDATIONS_V2_FAMILIES.sans}'`)).toBe(true);
+    expect(TYPE.mono.startsWith(`'${FOUNDATIONS_V2_FAMILIES.mono}'`)).toBe(true);
+  });
+
+  it("renders the adopted accent and near-black into the actual document", () => {
+    const document = renderDesktopChrome(
+      desktopVisualView(createDesktopVisualState()),
+    );
+    // The decision is about what ships, so assert the emitted surface, not tokens.
+    expect(document).toContain(FOUNDATIONS_V2_COLORS["--accent"]);
+    expect(document).toContain(FOUNDATIONS_V2_COLORS["--bg-base"]);
+    expect(document).toContain(FOUNDATIONS_V2_FAMILIES.sans);
+    expect(document).toContain(FOUNDATIONS_V2_FAMILIES.mono);
   });
 });

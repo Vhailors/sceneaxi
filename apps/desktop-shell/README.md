@@ -77,9 +77,18 @@ nothing. Every control declares its kind — `view` changes visual state and wor
 The document is self-contained: no remote font, script, style, or image. It
 mounts no presentation runtime, so it draws no pixels and says so on the surface.
 
+It draws **Foundations v2**, the product visual language for every surface. The
+shared token layer lives in `packages/site-kit`, but the dependency matrix allows
+this app only `@sceneaxi/schemas` and `@sceneaxi/authoring-core`, so those tokens
+are transcribed locally in `src/visual-tokens.ts` rather than imported. Do not
+resolve that by adding the edge: `FOUNDATIONS_V2_ALIGNMENT` gives every token the
+sheet prints exactly one disposition, and `test/visual-tokens.test.ts` fails if a
+carried value drifts from it or a new upstream token goes unaccounted for.
+
 The canonical archive, the `Engine Desktop v1.dc.html` supersession, every
 deviation from the archive (including the contrast floor and the Kids refusal),
-the responsive strategy, and the recorded browser evidence are owned by
+the boundary-forced token duplication, the responsive strategy, and the recorded
+browser evidence are owned by
 [`docs/engine-desktop-surface.md`](../../docs/engine-desktop-surface.md).
 
 ## Session API

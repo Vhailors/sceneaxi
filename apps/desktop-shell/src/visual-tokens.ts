@@ -35,6 +35,78 @@ export const VISUAL_SOURCE = Object.freeze({
 });
 
 /**
+ * Foundations v2 — the product visual language for **every** shipped surface
+ * (captain decision D1, recorded 2026-07-28), transcribed from the member
+ * `SceneAxi Foundations.dc.html` of the same archive named in `VISUAL_SOURCE`.
+ *
+ * ## Why this table is duplicated rather than imported
+ *
+ * D2 puts the shared token layer in `packages/site-kit`. That package is **not
+ * reachable from here**: `docs/dependency-matrix.json` allows
+ * `@sceneaxi/desktop-shell` exactly `@sceneaxi/schemas` and
+ * `@sceneaxi/authoring-core`, and the matrix `rule` states allow lists are
+ * exhaustive — so importing `@sceneaxi/site-kit` would fail
+ * `pnpm check:boundaries`. The values below are therefore duplicated, by
+ * contract, not by preference.
+ *
+ * `packages/site-kit/src/design-tokens.ts` stays the **upstream** source of these
+ * values. What keeps the two copies identical is not an import but a shared
+ * anchor: both transcribe archive sha256 `ad5d6e39…c15159`, and both assert their
+ * transcription in their own gate. `FOUNDATIONS_V2_ALIGNMENT` below is this
+ * package's half of that, and `docs/engine-desktop-surface.md` owns the record.
+ */
+export const FOUNDATIONS_V2_SOURCE = Object.freeze({
+  version: "v2",
+  archiveSha256:
+    "ad5d6e39215a4aee9c81b827308fc944784719168d3fba2db5d9e5ef8fc15159",
+  member: "SceneAxi Foundations.dc.html",
+  upstream: "packages/site-kit/src/design-tokens.ts",
+  /** Why the upstream is copied instead of imported. Asserted, not prose. */
+  duplicationReason: "dependency-matrix-forbids-site-kit",
+  decision: "D1 adopt Foundations v2 across all surfaces (2026-07-28)",
+});
+
+/**
+ * Every colour token the Foundations v2 sheet prints, with the hex it prints.
+ *
+ * This is the full sheet, not the subset this surface happens to use — a token
+ * left out of `FOUNDATIONS_V2_ALIGNMENT` is a failing assertion, so a value
+ * cannot be quietly dropped when the sheet gains one.
+ */
+export const FOUNDATIONS_V2_COLORS = Object.freeze({
+  "--bg-base": "#07080A",
+  "--bg-panel": "#0D0F12",
+  "--bg-raised": "#12151A",
+  "--bg-control": "#191D23",
+  "--bg-field": "#08090B",
+  "--bg-row": "#101318",
+  "--line-soft": "#14181E",
+  "--line": "#1C2129",
+  "--line-strong": "#2C323B",
+  "--fg": "#EDEFF2",
+  "--fg-2": "#8A929C",
+  "--fg-4": "#3F464F",
+  "--accent": "#FF6B2C",
+  "--accent-hi": "#FF8A54",
+  "--ok": "#5EEAD4",
+  "--danger": "#FF4D5E",
+  "--info": "#5B9CFF",
+  "--stale": "#7A6448",
+  "--axis-x": "#E0564F",
+  "--axis-y": "#7BC44C",
+  "--axis-z": "#4C8BE0",
+  "--kids": "#A78BFA",
+  "--store-game": "#E8544E",
+  "--store-web": "#3FB8C9",
+});
+
+/** The two Foundations v2 families. Compared by first family, not by stack. */
+export const FOUNDATIONS_V2_FAMILIES = Object.freeze({
+  sans: "Archivo",
+  mono: "JetBrains Mono",
+});
+
+/**
  * What `Engine Desktop v1.dc.html` carried that this surface must never adopt.
  * Kept as data so a review slip is a failing assertion, not a judgement call —
  * the same shape `LIVE_OPEN_PRESENTATION.retiredLabels` uses in `site-kit`.
@@ -118,7 +190,13 @@ export const SIGNAL = Object.freeze({
   refuse: "#FF4D5E",
   refuseSurface: "#211316",
   refuseLine: "#5A2B32",
-  info: "#8FB7F5",
+  /**
+   * Foundations v2 `--info`. The archive member also carries a lighter #8FB7F5
+   * for the same note; the shared sheet canonicalises the informational blue to
+   * this value, it clears 4.5:1 on every `SURFACE`, and D1 makes the sheet
+   * binding — so the shared value is the one that ships.
+   */
+  info: "#5B9CFF",
   infoSurface: "#131820",
   infoLine: "#223040",
   scene: "#A78BFA",
@@ -204,6 +282,77 @@ export const DEVIATIONS = Object.freeze([
     shipped: "fluid layout with four window tiers",
     reason:
       "a scaled mockup canvas is not a windowing strategy; see WINDOW_TIERS",
+  }),
+]);
+
+/**
+ * How every Foundations v2 colour token lands on this surface.
+ *
+ * Exactly one disposition per sheet token, so the sheet is accounted for in full:
+ *
+ * - `carried` — this surface uses the sheet's value verbatim. The test asserts
+ *   the two hexes are equal, so drift on either side of the boundary-forced copy
+ *   is a failing assertion rather than a review slip.
+ * - `raised` — the sheet's value is below the WCAG text floor on this surface's
+ *   near-black chrome, so it is raised. Each one names its `DEVIATIONS` row, and
+ *   the test re-measures both that the sheet value fails and the shipped one passes.
+ * - `absent` — the token addresses a surface this app does not draw. It is named
+ *   with a reason rather than silently unused.
+ */
+export const FOUNDATIONS_V2_ALIGNMENT = Object.freeze([
+  // Neutrals — the sheet's six fills are this surface's six chrome surfaces.
+  Object.freeze({ token: "--bg-base", disposition: "carried", local: "SURFACE.canvas", value: SURFACE.canvas }),
+  Object.freeze({ token: "--bg-panel", disposition: "carried", local: "SURFACE.panel", value: SURFACE.panel }),
+  Object.freeze({ token: "--bg-raised", disposition: "carried", local: "SURFACE.header", value: SURFACE.header }),
+  Object.freeze({ token: "--bg-control", disposition: "carried", local: "SURFACE.hover", value: SURFACE.hover }),
+  Object.freeze({ token: "--bg-field", disposition: "carried", local: "SURFACE.well", value: SURFACE.well }),
+  Object.freeze({ token: "--bg-row", disposition: "carried", local: "SURFACE.raised", value: SURFACE.raised }),
+  // Lines.
+  Object.freeze({ token: "--line-soft", disposition: "carried", local: "LINE.row", value: LINE.row }),
+  Object.freeze({ token: "--line", disposition: "carried", local: "LINE.card", value: LINE.card }),
+  Object.freeze({
+    token: "--line-strong",
+    disposition: "absent",
+    reason:
+      "the sheet prints three line weights; the Engine Desktop member draws its own six-step line scale and does not use #2C323B anywhere. Adopting it would change borders the accepted surface specifies, so the member's scale wins for a member-specific value",
+  }),
+  // Text.
+  Object.freeze({ token: "--fg", disposition: "carried", local: "TEXT.primary", value: TEXT.primary }),
+  Object.freeze({ token: "--fg-2", disposition: "carried", local: "TEXT.dim", value: TEXT.dim }),
+  Object.freeze({
+    token: "--fg-4",
+    disposition: "raised",
+    local: "TEXT.faint",
+    value: TEXT.faint,
+    deviation: "text-contrast-3F464F",
+  }),
+  // Accent and semantics.
+  Object.freeze({ token: "--accent", disposition: "carried", local: "ACCENT.base", value: ACCENT.base }),
+  Object.freeze({ token: "--accent-hi", disposition: "carried", local: "ACCENT.hover", value: ACCENT.hover }),
+  Object.freeze({ token: "--ok", disposition: "carried", local: "SIGNAL.ok", value: SIGNAL.ok }),
+  Object.freeze({ token: "--danger", disposition: "carried", local: "SIGNAL.refuse", value: SIGNAL.refuse }),
+  Object.freeze({ token: "--info", disposition: "carried", local: "SIGNAL.info", value: SIGNAL.info }),
+  Object.freeze({
+    token: "--stale",
+    disposition: "raised",
+    local: "TEXT.superseded",
+    value: TEXT.superseded,
+    deviation: "text-contrast-7A6448",
+  }),
+  // Axis and surface accents.
+  Object.freeze({ token: "--axis-x", disposition: "carried", local: "AXIS.x", value: AXIS.x }),
+  Object.freeze({ token: "--axis-y", disposition: "carried", local: "AXIS.y", value: AXIS.y }),
+  Object.freeze({ token: "--axis-z", disposition: "carried", local: "AXIS.z", value: AXIS.z }),
+  Object.freeze({ token: "--kids", disposition: "carried", local: "SIGNAL.scene", value: SIGNAL.scene }),
+  Object.freeze({
+    token: "--store-game",
+    disposition: "absent",
+    reason: "storefront accent; this app draws no storefront and no commerce",
+  }),
+  Object.freeze({
+    token: "--store-web",
+    disposition: "absent",
+    reason: "storefront / web-editor accent; neither surface is this app",
   }),
 ]);
 
