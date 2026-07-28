@@ -698,13 +698,22 @@ describe("parseCheckoutCompletedEvent", () => {
       });
       expect(result.ok).toBe(false);
       if (result.ok) return;
-      expect(
-        [
-          BILLING_REFUSE_REASONS.checkoutSessionIdMissing,
-          BILLING_REFUSE_REASONS.webhookPayloadInvalid,
-        ].includes(result.reason as never),
-      ).toBe(true);
+      expect(result.reason).toBe(
+        BILLING_REFUSE_REASONS.checkoutSessionIdMissing,
+      );
     }
+  });
+
+  it("refuses a wholly absent settlement as a payload fault, not a session mismatch", () => {
+    const intent = checkoutIntent();
+    const result = parseCheckoutCompletedEvent({
+      verified: verified(eventBody({}, intent)),
+      intent,
+      settlement: undefined,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.webhookPayloadInvalid);
   });
 
   it("keys the grant's fingerprint on the session, so two sessions never collide", () => {

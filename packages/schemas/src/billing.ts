@@ -184,6 +184,19 @@ export function isBillingMode(value: unknown): value is BillingMode {
 }
 
 /**
+ * The one url-safe identifier rule every billing identifier is held to.
+ *
+ * Exported because boundary code reads identifiers out of untrusted bodies
+ * before a record exists to validate — the checkout webhook parser reads the
+ * Checkout Session id — and a boundary that applied a looser rule would let a
+ * malformed id travel until a later validation refused it under some other
+ * reason. One rule, applied wherever an identifier is first read.
+ */
+export function isBillingIdentifier(value: unknown): value is string {
+  return typeof value === "string" && IDENTIFIER_RE.test(value);
+}
+
+/**
  * A redirect URL must be absolute https. Checkout redirects carry a
  * post-payment state transition, so plaintext http is refused rather than
  * upgraded.
@@ -414,7 +427,7 @@ export function validateStripeCustomerLink(
   if (isRefuse(record)) return record;
 
   const userId = record["userId"];
-  if (typeof userId !== "string" || !IDENTIFIER_RE.test(userId)) {
+  if (!isBillingIdentifier(userId)) {
     return invalid(
       "stripe customer link userId must be a url-safe identifier of 1-128 chars.",
     );
@@ -511,13 +524,13 @@ export function validateCheckoutSessionIntent(
   if (isRefuse(record)) return record;
 
   const intentId = record["intentId"];
-  if (typeof intentId !== "string" || !IDENTIFIER_RE.test(intentId)) {
+  if (!isBillingIdentifier(intentId)) {
     return invalid(
       "checkout session intent intentId must be a url-safe identifier of 1-128 chars.",
     );
   }
   const userId = record["userId"];
-  if (typeof userId !== "string" || !IDENTIFIER_RE.test(userId)) {
+  if (!isBillingIdentifier(userId)) {
     return invalid(
       "checkout session intent userId must be a url-safe identifier of 1-128 chars.",
     );
@@ -654,7 +667,7 @@ export function validateCheckoutCompletedEvent(
     );
   }
   const eventId = record["eventId"];
-  if (typeof eventId !== "string" || !IDENTIFIER_RE.test(eventId)) {
+  if (!isBillingIdentifier(eventId)) {
     return invalid(
       "checkout completed event eventId must be a url-safe identifier of 1-128 chars.",
     );
@@ -666,22 +679,19 @@ export function validateCheckoutCompletedEvent(
     );
   }
   const checkoutSessionId = record["checkoutSessionId"];
-  if (
-    typeof checkoutSessionId !== "string" ||
-    !IDENTIFIER_RE.test(checkoutSessionId)
-  ) {
+  if (!isBillingIdentifier(checkoutSessionId)) {
     return invalid(
       "checkout completed event checkoutSessionId must be a url-safe identifier of 1-128 chars; a completion that cannot name its Checkout Session is unbound evidence.",
     );
   }
   const intentId = record["intentId"];
-  if (typeof intentId !== "string" || !IDENTIFIER_RE.test(intentId)) {
+  if (!isBillingIdentifier(intentId)) {
     return invalid(
       "checkout completed event intentId must be a url-safe identifier of 1-128 chars.",
     );
   }
   const userId = record["userId"];
-  if (typeof userId !== "string" || !IDENTIFIER_RE.test(userId)) {
+  if (!isBillingIdentifier(userId)) {
     return invalid(
       "checkout completed event userId must be a url-safe identifier of 1-128 chars.",
     );

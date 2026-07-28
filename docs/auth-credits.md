@@ -211,7 +211,8 @@ is read, so a caller that retrieved for the wrong session cannot skip it:
 | condition | refusal |
 |---|---|
 | the event's session object carries no usable `id` | `STRIPE_CHECKOUT_SESSION_ID_MISSING` |
-| settlement carries no `sessionId`, or a different one | `STRIPE_SETTLEMENT_SESSION_MISMATCH` |
+| a retrieved settlement carries no `sessionId`, or a different one | `STRIPE_SETTLEMENT_SESSION_MISMATCH` |
+| no settlement was retrieved at all | `STRIPE_WEBHOOK_PAYLOAD_INVALID` |
 | settlement is unpaid, or its amount/currency/quantity/price ≠ the intent | `STRIPE_WEBHOOK_PAYLOAD_INVALID` |
 
 Your adapter must echo back the id it was asked about. The grant's completion fingerprint

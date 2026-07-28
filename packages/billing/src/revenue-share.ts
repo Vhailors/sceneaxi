@@ -494,8 +494,10 @@ export type SettledIntentBinding = Readonly<{
  * Bind a persisted intent to the completion that settled it, and read the sale
  * id out of it.
  *
- * Exported so the fixture-commerce path can state the same binding without a
- * second copy of it. Every price-bearing field is compared, so an intent that
+ * Exported as the one named statement of that binding, so any path that must
+ * attach settled money to a persisted intent uses this rule rather than a second
+ * copy of it, and the rule can be exercised directly instead of only through the
+ * recorder above. Every price-bearing field is compared, so an intent that
  * describes some other purchase cannot supply the gross; and the idempotency key
  * is re-derived into the intent id the completion pins, because the key is the
  * one intent field a caller could otherwise rewrite to attach settled money to a

@@ -10,6 +10,7 @@ import {
   CREDIT_PACKS_FIXTURES_PATH,
   DEFAULT_BILLING_MODE,
   STRIPE_CUSTOMER_LINK_KIND,
+  isBillingIdentifier,
   isHttpsUrl,
   validateCheckoutCompletedEvent,
   validateCheckoutSessionIntent,
@@ -344,6 +345,29 @@ describe("validateCheckoutCompletedEvent", () => {
     expect(
       validateCheckoutCompletedEvent({ ...listingEvent, credits: 1 }).ok,
     ).toBe(false);
+  });
+});
+
+describe("isBillingIdentifier", () => {
+  it("is the same rule the completion contract applies to its identifiers", () => {
+    for (const usable of ["cs_test_01", "evt.1-2", "A", "c".repeat(128)]) {
+      expect(isBillingIdentifier(usable), usable).toBe(true);
+      expect(
+        validateCheckoutCompletedEvent({ ...EVENT, checkoutSessionId: usable })
+          .ok,
+        usable,
+      ).toBe(true);
+    }
+    for (const unusable of ["", "cs test 01", "_leading", "c".repeat(129), 7]) {
+      expect(isBillingIdentifier(unusable), String(unusable)).toBe(false);
+      expect(
+        validateCheckoutCompletedEvent({
+          ...EVENT,
+          checkoutSessionId: unusable,
+        }).ok,
+        String(unusable),
+      ).toBe(false);
+    }
   });
 });
 

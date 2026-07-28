@@ -21,6 +21,7 @@ import {
   applyCreditsSale,
   appendCreditEntry,
   authorizeCreatorPublish,
+  bindSettledIntent,
   createInMemoryCreditStore,
   createLedgerState,
   deriveIntentId,
@@ -1100,6 +1101,26 @@ describe("recordMoneySale", () => {
     if (!first.ok || !second.ok) return;
     expect(second.value).toEqual(first.value);
     expect(first.value.occurredAt).toBe(completion.occurredAt);
+  });
+});
+
+describe("bindSettledIntent", () => {
+  it("binds a persisted intent to its completion and names the sale", () => {
+    const intent = listingIntent({ saleId: "sale_bound_01" });
+    const bound = bindSettledIntent(intent, settleIntent(intent));
+    expect(bound.ok).toBe(true);
+    if (!bound.ok) return;
+    expect(bound.value.saleId).toBe("sale_bound_01");
+    expect(bound.value.intent).toEqual(intent);
+  });
+
+  it("refuses an intent that describes some other purchase", () => {
+    const intent = listingIntent();
+    const other = listingIntent({ saleId: "sale_other_01" });
+    const bound = bindSettledIntent(other, settleIntent(intent));
+    expect(bound.ok).toBe(false);
+    if (bound.ok) return;
+    expect(bound.reason).toBe(BILLING_REFUSE_REASONS.checkoutIntentInvalid);
   });
 });
 

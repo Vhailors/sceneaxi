@@ -18,6 +18,7 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import {
   createProvenanceWitness,
   isEpochMilliseconds,
+  isBillingIdentifier,
   isCheckoutPurpose,
   snapshotPlainRecord,
   validateCheckoutCompletedEvent,
@@ -473,10 +474,13 @@ export function parseCheckoutCompletedEvent(input: {
   // that bought the same thing, so this is the only field that can say *which*
   // paid session this event is about.
   const checkoutSessionId = object["id"];
-  if (typeof checkoutSessionId !== "string" || checkoutSessionId.length === 0) {
+  // The same identifier rule the completion contract applies, asked here where
+  // the id is first read: a malformed id that travelled to the contract would
+  // refuse as a payload problem instead of naming the unbound session.
+  if (!isBillingIdentifier(checkoutSessionId)) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.checkoutSessionIdMissing,
-      "The checkout event's session object carries no id, so no settlement can be bound to the session that was paid.",
+      "The checkout event's session object carries no usable id, so no settlement can be bound to the session that was paid.",
     );
   }
 
@@ -530,11 +534,20 @@ export function parseCheckoutCompletedEvent(input: {
   // objects are minimal and do not carry line items) and bound to the persisted
   // intent — the immutable price snapshot — rather than to the mutable catalog.
   const settlementRecord = snapshotPlainRecord(inputRecord["settlement"]);
+  // No evidence at all is a different fault from evidence about another session,
+  // and saying so is what lets a caller tell a failed retrieval apart from a
+  // retrieval made for the wrong session.
+  if (settlementRecord === undefined) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.webhookPayloadInvalid,
+      "No settlement was supplied for the checkout session; nothing can be verified about what was paid.",
+    );
+  }
   // Which session it settles is asked first, and separately. Amount, currency,
   // and price all match by construction between two genuinely paid sessions for
   // the same item, so checking them first would let a settlement retrieved for
   // another paid session validate this event and report only a payload problem.
-  if (settlementRecord?.["sessionId"] !== checkoutSessionId) {
+  if (settlementRecord["sessionId"] !== checkoutSessionId) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.settlementSessionMismatch,
       `The settlement is not bound to Checkout Session "${checkoutSessionId}"; evidence from another session settles nothing here, however well its amount and currency match.`,

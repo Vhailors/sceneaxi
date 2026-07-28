@@ -120,6 +120,7 @@ export {
   CREDIT_PACKS_FIXTURES_PATH,
   DEFAULT_BILLING_MODE,
   STRIPE_CUSTOMER_LINK_KIND,
+  isBillingIdentifier,
   isBillingMode,
   isCheckoutPurpose,
   isHttpsUrl,
