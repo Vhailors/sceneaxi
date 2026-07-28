@@ -1801,6 +1801,18 @@ p code {
   cursor: grabbing;
 }
 
+/*
+ * A snapshot surface takes no camera input, so its canvas must not take the gestures
+ * either: `touch-action: none` would opt the element out of browser panning, and a swipe
+ * that starts on the marketing hero has to scroll the page. It also advertises no drag,
+ * because there is none to offer. The interactive surfaces above are untouched.
+ */
+.viewport-canvas-static,
+.viewport-canvas-static:active {
+  touch-action: auto;
+  cursor: default;
+}
+
 .viewport-overlay {
   position: absolute;
   inset: 0;

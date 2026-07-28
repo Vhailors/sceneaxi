@@ -15,6 +15,16 @@
  * advances no kernel session, and offers no control: this is a drawn snapshot beside a
  * headline, and the interactive path is one click away at the public open surface.
  *
+ * "Offers no control" is a property of the mount, not a description of one. D4 asked for
+ * a real Sculpt Artifact drawn through the existing renderer owner; it did not ask for an
+ * interactive toy on the marketing page, and the product already has a home for the
+ * interactive path at the public open surface. Keeping the hero as art preserves that
+ * distinction instead of blurring it, so this is a `snapshot` presentation: no orbit or
+ * zoom input is attached, the canvas leaves the browser its own panning so a swipe that
+ * starts on the art still scrolls the page, and the loop stops once the frame settles
+ * rather than redrawing an unchanging image for the rest of the visit. The provenance
+ * line below still comes from the running core — it reports the settled frame.
+ *
  * Refusal is designed rather than hidden. WebGL can fail for reasons a page cannot
  * control, and when it does the hero says so with the core's own message instead of
  * leaving a black rectangle behind the headline — the shared surface component already
@@ -36,7 +46,11 @@ export function HeroViewport({
     [scene],
   );
 
-  const viewport = useSculptViewport({ scene, mountedInstanceIds });
+  const viewport = useSculptViewport({
+    scene,
+    mountedInstanceIds,
+    presentation: "snapshot",
+  });
   const frame = currentFrame(viewport.status);
 
   return (

@@ -29,8 +29,12 @@ claim:
   refused is not one this site serves with its palette quietly missing.
 - `src/app/globals.css` is composition only. It declares no colour at all; a hex there
   would be a second source for a value site-kit already owns, and the gate asserts there
-  is none. The only invented colours on the site are the three entries in
-  `UMBRELLA_RECORDED_GAPS`, which the gate also pins.
+  is none. Across the whole site the gate scans every source for a colour literal and
+  allows exactly two declared lists: the three **invented** colours in
+  `UMBRELLA_RECORDED_GAPS`, each with the archive gap it fills, and the Foundations
+  values `src/lib/viewport-letterbox.ts` **restates** because the browser bundle cannot
+  value-import site-kit — those are pinned back to `FOUNDATION_COLORS`, so a repalletted
+  token fails rather than drifting.
 - `src/lib/site-content.ts` is the page **content**, in pure TypeScript so the hermetic
   gate type-checks it. It derives every figure it can from the contract that owns it and
   restates only the sculpt pass order and the CLI exit-code table, both of which
@@ -76,6 +80,20 @@ digest chain the gate proves. It mounts a snapshot and nothing more: no kernel s
 advanced, no control is offered, and the interactive path stays one click away at `/open`.
 What the hero can show is what a real artifact can express, and the composition is
 designed around that rather than around widening the contract.
+
+"No control is offered" is enforced rather than described. `useSculptViewport` takes a
+`presentation`, and the two are a product distinction, not a tuning knob:
+
+- `interactive` — what `/open` and `/editor` mount. Orbit and zoom are attached to the
+  canvas and the loop runs for the life of the mount, which is what their own copy
+  promises.
+- `snapshot` — what the hero mounts. No input is attached, the canvas keeps the touch
+  gestures the page needs so a swipe that starts on the art still scrolls, and the loop
+  draws only until the frame **settles** and then stops, redrawing on a resize or a
+  device-pixel-ratio change. Settled is the core's own report — pixels reached a buffer,
+  reconciliation has nothing left to apply, every wanted instance is in the frame — so a
+  stopped hero is a finished one rather than one frozen part-way through opening, and its
+  provenance line is still the running core's, not the page's.
 
 - `src/app/_components/sculpt-viewport.tsx` is the **only** file on the site that
   constructs a renderer, and it touches it only through the ADR 0002 seam: Sculpt

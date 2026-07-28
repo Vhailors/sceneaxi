@@ -53,6 +53,17 @@ import {
   UMBRELLA_RECORDED_GAPS,
   umbrellaFoundationsCss,
 } from "../../sites/umbrella/src/lib/foundations.ts";
+import {
+  UMBRELLA_RESTATED_FOUNDATION_COLORS,
+  VIEWPORT_LETTERBOX,
+} from "../../sites/umbrella/src/lib/viewport-letterbox.ts";
+
+/** The published hex for a Foundations token, or a failure naming the missing token. */
+const foundationHex = (token: string): string => {
+  const found = FOUNDATION_COLORS.find((color) => color.token === token);
+  if (found === undefined) throw new Error(`no Foundations token ${token}`);
+  return found.hex;
+};
 
 const UMBRELLA = fileURLToPath(new URL("../../sites/umbrella/", import.meta.url));
 
@@ -349,11 +360,7 @@ describe("accessibility structure", () => {
       the body floor on all of them. The recorded gap `--bg-band` is included, because it
       is a fill this site invented and therefore one this site has to prove.
     */
-    const hexOf = (token: string): string => {
-      const found = FOUNDATION_COLORS.find((color) => color.token === token);
-      if (found === undefined) throw new Error(`no Foundations token ${token}`);
-      return found.hex;
-    };
+    const hexOf = foundationHex;
     const bandGap = UMBRELLA_RECORDED_GAPS.find((gap) => gap.token === "--bg-band");
     expect(bandGap, "the marketing band fill must stay a recorded gap").toBeDefined();
 
@@ -426,15 +433,55 @@ describe("the token layer comes from site-kit and is not duplicated here", () =>
     }
   });
 
-  it("keeps every invented colour in one recorded-gap list", () => {
-    const module = read("src/lib/foundations.ts");
-    const literals = [...module.matchAll(/#[0-9A-Fa-f]{6}\b/g)].map((match) => match[0]);
-    expect(literals.sort()).toEqual(
-      UMBRELLA_RECORDED_GAPS.map((gap) => gap.value).sort(),
-    );
+  it("keeps every colour literal in the whole site down to two declared lists", () => {
+    /*
+      Scanned across every umbrella source rather than one module, because a hardcoded
+      colour hides in whatever file the scan does not reach — this guard used to read
+      `src/lib/foundations.ts` alone, and a WebGL clear colour sat outside it. A colour
+      literal is a quoted hex: `sceneaxi#157` in prose is an issue reference, not a
+      value, and the quotes are what tell them apart. `globals.css` is covered by its own
+      no-hex assertion above, and no colour *function* is allowed in a source either.
+    */
+    const declared = new Set([
+      ...UMBRELLA_RECORDED_GAPS.map((gap) => gap.value),
+      ...Object.values(UMBRELLA_RESTATED_FOUNDATION_COLORS),
+    ]);
+    const undeclared: string[] = [];
+    for (const relativePath of UMBRELLA_SOURCES) {
+      const source = read(relativePath);
+      for (const [, , literal] of source.matchAll(/(['"`])(#[0-9A-Fa-f]{3,8})\1/g)) {
+        if (literal !== undefined && !declared.has(literal)) {
+          undeclared.push(`${relativePath}: ${literal}`);
+        }
+      }
+      expect(source, `${relativePath} writes a colour function`).not.toMatch(
+        /\b(?:rgba?|hsla?|color-mix)\(/,
+      );
+    }
+    expect(undeclared).toEqual([]);
+
+    // Every literal in the first list is a value the archive does not state, and says so.
     for (const gap of UMBRELLA_RECORDED_GAPS) {
       expect(gap.gap.length).toBeGreaterThan(0);
+      expect(
+        FOUNDATION_COLORS.some((color) => color.hex === gap.value),
+        `${gap.token} restates a published Foundations colour and is not a gap`,
+      ).toBe(false);
     }
+
+    /*
+      Every literal in the second list is one it *does* state, restated only because the
+      browser bundle cannot value-import site-kit. This is the join that keeps the
+      restatement honest: a repalletted `--bg-base` fails here rather than leaving the
+      viewport letterbox on a colour nothing publishes any more.
+    */
+    for (const [token, value] of Object.entries(UMBRELLA_RESTATED_FOUNDATION_COLORS)) {
+      expect(value, `${token} drifted from Foundations`).toBe(foundationHex(token));
+    }
+    expect(VIEWPORT_LETTERBOX).toBe(foundationHex("--bg-base"));
+    expect(read("src/app/_components/sculpt-viewport.tsx")).toContain(
+      "background: background ?? VIEWPORT_LETTERBOX",
+    );
   });
 
   it("never redefines the two published font tokens from the framework", () => {
@@ -484,6 +531,43 @@ describe("the hero draws a real Sculpt Artifact", () => {
     expect(read("src/app/_components/hero-viewport.tsx")).toContain("refusalLevel={2}");
     const heroRefusal = HOME.match(/<StatePanel\b[^>]*heroScene\.reason[^>]*>/)?.[0];
     expect(heroRefusal).toContain("level={2}");
+  });
+
+  it("mounts a snapshot: no camera input, and no loop left running behind the page", () => {
+    /*
+      "Offers no control" has to be a property of the mount rather than a sentence about
+      it. The hero is the tier's one `snapshot` surface: the shared hook attaches orbit
+      and zoom only on the interactive path, and the canvas keeps `touch-action` so a
+      swipe that starts on the art still scrolls the landing page. The two routed
+      viewports are untouched — their "drag to orbit, scroll to zoom" copy stays true.
+    */
+    const hero = read("src/app/_components/hero-viewport.tsx");
+    const boundary = read("src/app/_components/sculpt-viewport.tsx");
+    expect(hero).toContain('presentation: "snapshot"');
+    for (const routed of [
+      "src/app/open/_components/live-viewport.tsx",
+      "src/app/editor/_components/editor-viewport.tsx",
+    ]) {
+      expect(read(routed)).not.toContain("snapshot");
+    }
+    expect(boundary).toMatch(/if \(!snapshot\) \{\s*const detachInput = backend\.camera\.attach\(/);
+    expect(CSS).toMatch(/\.viewport-canvas-static[^{]*\{[^}]*touch-action:\s*auto/);
+    expect(CSS).not.toMatch(/\.viewport-canvas-static[^{]*\{[^}]*cursor:\s*grab/);
+
+    /*
+      And the loop stops once the frame settles, so a static image on the site's
+      highest-traffic page is not redrawn for the rest of the visit. "Settled" is the
+      core's own report — the frame reached a real drawing buffer and issued draw calls
+      for what is mounted — so an unfinished frame keeps the loop running rather than
+      freezing the hero part-way through opening.
+    */
+    expect(boundary).toContain("frame.pixelsDrawn === true");
+    expect(boundary).toContain("frame.drawCalls > 0");
+    expect(boundary).toMatch(/if \(!settled\) \{\s*loop\.start\(\);/);
+    // A stopped loop still redraws on resize and on a density change, so stopped art
+    // stays correct rather than stretched.
+    expect(boundary).toMatch(/if \(snapshot\) drawFrame\(\);/);
+    expect(boundary).toContain("dppx)`");
   });
 });
 

@@ -14,6 +14,15 @@
  * caller's latest intent, so a click can never land before or after the session exists
  * and leave a control and the drawn scene disagreeing.
  *
+ * A surface is one of two presentations, and the difference is a product distinction
+ * rather than a tuning knob. An `interactive` surface is a session: orbit and zoom input
+ * is attached to its canvas and its loop runs for the life of the mount, which is what
+ * the routed open and editor paths promise in their own copy. A `snapshot` surface is
+ * art: no input is attached, the canvas keeps the touch gestures the page needs to
+ * scroll, and the loop draws only until the frame settles and then stops. Because the
+ * two travel together, a surface cannot end up orbitable but frozen, or still and
+ * redrawing an unchanging image sixty times a second.
+ *
  * WebGL can fail for reasons a page cannot control (no GPU, a blocked context, a
  * headless crawler). That refuses in the open with the error the core produced, rather
  * than leaving a blank rectangle that looks like a bug.
@@ -27,12 +36,15 @@ import {
   type ThreeSculptPresentationBackend,
 } from "@sceneaxi/engine-presentation";
 import type { MountableScene } from "@sceneaxi/site-kit";
+import { VIEWPORT_LETTERBOX } from "../../lib/viewport-letterbox.js";
 import { StatePanel } from "./state-panel.js";
 
-/** Frames are published to React at this cadence; the loop still draws every frame. */
+/**
+ * Frames are published to React at this cadence on an interactive surface; the loop
+ * still draws every frame. A snapshot publishes the one frame it settles on instead.
+ */
 const FRAME_REPORT_INTERVAL = 15;
 const MAX_PIXEL_RATIO = 2;
-const DEFAULT_BACKGROUND = "#0b0e13";
 
 type RefusalStage = "open" | "draw";
 
@@ -52,11 +64,19 @@ export type SculptViewportStatus =
   | { readonly kind: "running"; readonly frame: SculptPresentationFrame }
   | { readonly kind: "refused"; readonly stage: RefusalStage; readonly message: string };
 
+/** An orbitable session, or a still frame the page draws once and leaves alone. */
+export type SculptViewportPresentation = "interactive" | "snapshot";
+
 export type SculptViewport = {
   readonly canvasRef: RefObject<HTMLCanvasElement | null>;
   readonly status: SculptViewportStatus;
   /** Return the camera to the framing the session opened with. */
   readonly resetView: () => void;
+  /**
+   * What this surface is, carried back so the canvas element cannot disagree with the
+   * session behind it about whether it takes input.
+   */
+  readonly presentation: SculptViewportPresentation;
 };
 
 type LiveSession = {
@@ -91,8 +111,11 @@ export function useSculptViewport(input: {
   readonly scene: MountableScene;
   readonly mountedInstanceIds: readonly string[];
   readonly background?: string;
+  /** Defaults to the interactive session both routed viewports mount. */
+  readonly presentation?: SculptViewportPresentation;
 }): SculptViewport {
-  const { scene, background } = input;
+  const { scene, background, presentation = "interactive" } = input;
+  const snapshot = presentation === "snapshot";
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const sessionRef = useRef<LiveSession | null>(null);
   const [status, setStatus] = useState<SculptViewportStatus>({ kind: "starting" });
@@ -136,7 +159,7 @@ export function useSculptViewport(input: {
       const backend = createThreeSculptPresentationBackend({
         canvas,
         viewport: measure(),
-        background: background ?? DEFAULT_BACKGROUND,
+        background: background ?? VIEWPORT_LETTERBOX,
       });
       /**
        * Renderer ownership moves with construction. The backend owns itself until
@@ -176,9 +199,10 @@ export function useSculptViewport(input: {
       // Reconcile what is mounted against the caller's intent, through the same Mount
       // API the pages demonstrate. The renderer is never torn down to do it.
       const reconcileMounts = () => {
-        if (wantedRef.current === appliedKey) return;
-        appliedKey = wantedRef.current;
-        const wanted = new Set(appliedKey.length === 0 ? [] : appliedKey.split("\u0000"));
+        const applied = wantedRef.current;
+        if (applied === appliedKey) return;
+        appliedKey = applied;
+        const wanted = new Set(applied.length === 0 ? [] : applied.split("\u0000"));
         for (const placement of placements) {
           const shouldMount = wanted.has(placement.instanceId);
           if (shouldMount === mounted.has(placement.instanceId)) continue;
@@ -199,43 +223,100 @@ export function useSculptViewport(input: {
       // view" control returns to is the one the viewer actually saw.
       reconcileMounts();
       backend.frameMountedContent();
-      const detachInput = backend.camera.attach(canvas);
-      cleanups.push(detachInput);
+      // A snapshot takes no input at all. Attaching orbit and zoom to art that says it
+      // offers neither is the contradiction; taking the canvas out of the browser's own
+      // panning is the harm, because a swipe that starts on it would then scroll nothing.
+      if (!snapshot) {
+        const detachInput = backend.camera.attach(canvas);
+        cleanups.push(detachInput);
+      }
 
-      const observer = new ResizeObserver(() => {
+      /**
+       * One drawn frame, and the refusal every caller of it shares.
+       *
+       * A frame that throws refuses in the open, exactly like a frame that never came.
+       * The loop cannot keep drawing after this, so releasing here is what stops the
+       * page from showing a stale frame report over a frozen image with no refusal.
+       *
+       * A snapshot publishes the frame it *settled* on and nothing before it, and settled
+       * is the core's own report rather than a guess about elapsed time: the frame
+       * reached a real drawing buffer, and it issued draw calls whenever there is
+       * anything mounted to draw. Until both hold it keeps drawing — a blocked WebGL
+       * context, or a canvas measured before layout resolved, is a frame to draw again,
+       * not one to stop on — so a surface that stops is one that finished rather than one
+       * that froze part-way through opening.
+       */
+      const drawFrame = () => {
+        try {
+          reconcileMounts();
+          const frame = mounts.render();
+          if (snapshot) {
+            const settled =
+              frame.pixelsDrawn === true && (mounted.size === 0 || frame.drawCalls > 0);
+            if (!settled) {
+              loop.start();
+              return;
+            }
+            loop.stop();
+            setStatus({ kind: "running", frame });
+            return;
+          }
+          if (reportNextFrame || frame.frame % FRAME_REPORT_INTERVAL === 0) {
+            reportNextFrame = false;
+            setStatus({ kind: "running", frame });
+          }
+        } catch (error) {
+          sessionRef.current = null;
+          releaseAll(cleanups);
+          setStatus({ kind: "refused", stage: "draw", message: messageOf(error) });
+        }
+      };
+
+      const loop = createThreeRenderLoop({ onFrame: drawFrame });
+      cleanups.push(() => {
+        loop.stop();
+      });
+
+      /**
+       * Re-measure and redraw. A snapshot has no loop running to pick the new size up on
+       * its next frame, so it draws here instead — which is what keeps stopped art
+       * correct rather than stretched.
+       */
+      const applyViewport = () => {
         const next = measure();
         backend.resize(next.width, next.height, next.pixelRatio);
-      });
+        if (snapshot) drawFrame();
+      };
+
+      const observer = new ResizeObserver(applyViewport);
       cleanups.push(() => {
         observer.disconnect();
       });
       observer.observe(canvas);
 
       /**
-       * A frame that throws refuses in the open, exactly like a frame that never came.
-       *
-       * The loop cannot keep drawing after this, so releasing here is what stops the
-       * page from showing a stale frame report over a frozen image with no refusal.
+       * Density is the half a `ResizeObserver` cannot see: moving a window to a
+       * different-density display changes `devicePixelRatio` without changing the CSS
+       * box, so no entry ever arrives. The query has to be rebuilt after every change
+       * because it names the ratio it was built for.
        */
-      const loop = createThreeRenderLoop({
-        onFrame: () => {
-          try {
-            reconcileMounts();
-            const frame = mounts.render();
-            if (reportNextFrame || frame.frame % FRAME_REPORT_INTERVAL === 0) {
-              reportNextFrame = false;
-              setStatus({ kind: "running", frame });
-            }
-          } catch (error) {
-            sessionRef.current = null;
-            releaseAll(cleanups);
-            setStatus({ kind: "refused", stage: "draw", message: messageOf(error) });
-          }
-        },
-      });
+      let densityQuery: MediaQueryList | null = null;
+      const watchDensity = () => {
+        if (typeof window.matchMedia !== "function") return;
+        densityQuery?.removeEventListener("change", onDensityChange);
+        densityQuery = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+        densityQuery.addEventListener("change", onDensityChange);
+      };
+      const onDensityChange = () => {
+        applyViewport();
+        watchDensity();
+      };
+      watchDensity();
       cleanups.push(() => {
-        loop.stop();
+        densityQuery?.removeEventListener("change", onDensityChange);
+        densityQuery = null;
       });
+
       loop.start();
 
       session = {
@@ -254,7 +335,7 @@ export function useSculptViewport(input: {
       session.dispose();
     };
     // The served scene is a per-request constant, so the session is built once.
-  }, [scene, background]);
+  }, [scene, background, snapshot]);
 
   const resetView = useCallback(() => {
     const session = sessionRef.current;
@@ -263,7 +344,7 @@ export function useSculptViewport(input: {
     session.backend.frameMountedContent();
   }, []);
 
-  return { canvasRef, status, resetView };
+  return { canvasRef, status, resetView, presentation };
 }
 
 /**
@@ -288,7 +369,7 @@ export function SculptViewportSurface({
    */
   readonly refusalLevel?: 2 | 3;
 }) {
-  const { canvasRef, status } = viewport;
+  const { canvasRef, status, presentation } = viewport;
 
   if (status.kind === "refused") {
     const refusal = REFUSAL_COPY[status.stage];
@@ -305,9 +386,20 @@ export function SculptViewportSurface({
     );
   }
 
+  /*
+    The modifier is what keeps the two presentations from having to trust each other: a
+    snapshot canvas takes no pointer gestures, so it never claims the touch the page
+    needs to scroll, and it never advertises a drag the session behind it would ignore.
+  */
   return (
     <div className="viewport">
-      <canvas ref={canvasRef} className="viewport-canvas" aria-label={label} />
+      <canvas
+        ref={canvasRef}
+        className={
+          presentation === "snapshot" ? "viewport-canvas viewport-canvas-static" : "viewport-canvas"
+        }
+        aria-label={label}
+      />
       {status.kind === "starting" && <p className="viewport-overlay">Opening the scene…</p>}
     </div>
   );

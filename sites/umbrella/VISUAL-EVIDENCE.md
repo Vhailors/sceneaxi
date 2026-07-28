@@ -202,6 +202,13 @@ instances (`service-crate-left`, `service-crate-root`, `service-crate-stacked`),
 the point: there is one artifact, one composition, and one renderer behind both.
 `sculpt-viewport.tsx` remains the only module on the tier that constructs a renderer.
 
+The frame *number* above is from the revision whose hero ran a continuous loop. The hero
+is now a `snapshot` surface: it attaches no camera input, and its loop stops once the
+frame settles instead of redrawing an unchanging image for the rest of the visit, so the
+number it reports is the settled frame's rather than a running count. Every figure in
+this document is re-recorded from a real browser before push; the values here are the
+observation, not a prediction.
+
 ## Where the implementation departs from the mockup
 
 Each row is a place the accepted screen and a repository contract disagree, and the
@@ -241,11 +248,23 @@ Foundations token:
 | status line/fill pairs written out per tone | projected from `FOUNDATION_STATUSES` | Same six rows, now derived, so a status colour changed in site-kit changes here. |
 | `rgba(7, 8, 10, …)` / `rgba(255, 107, 44, …)` overlays | `color-mix(in srgb, var(--bg-base) …)` / `var(--accent)` | A translucent overlay restating a token is still a second source for it. Pure black and white veils stay literal, because they are opacity rather than palette. |
 
-Three values remain umbrella-local, listed in `UMBRELLA_RECORDED_GAPS` and asserted by the
-gate to be the *only* colour literals in this site: `--bg-band #090B0E` (Foundations
-prints no marketing-band fill) and `--store-web-line` / `--store-web-bg` (it prints a
-line/fill pair for the six statuses only — a gap `docs/design-foundations.md` already
-records for the storefront accents).
+Three values remain umbrella-local, listed in `UMBRELLA_RECORDED_GAPS`: `--bg-band
+#090B0E` (Foundations prints no marketing-band fill) and `--store-web-line` /
+`--store-web-bg` (it prints a line/fill pair for the six statuses only — a gap
+`docs/design-foundations.md` already records for the storefront accents).
+
+The gate scans **every** umbrella source for a colour literal, not just the module that
+holds those three, and allows one further list: `src/lib/viewport-letterbox.ts`, which
+*restates* published Foundations values the browser bundle cannot import. It has one
+entry, `--bg-base #07080A`, and it exists because the WebGL clear colour is a value
+handed to the presentation core rather than a custom property the sheet resolves, and the
+module that hands it over is a `"use client"` module. The gate pins each entry back to
+`FOUNDATION_COLORS`, so a restatement cannot drift from what the archive publishes.
+
+That widening is what caught the last hardcoded colour on this site: the viewport cleared
+its canvas to an invented `#0b0e13` while `.viewport` painted `--bg-base` behind it, and
+the old scan read only `src/lib/foundations.ts`, so it never looked. The letterbox is one
+colour now on every surface that mounts the viewport.
 
 ## One structural divergence, recorded
 

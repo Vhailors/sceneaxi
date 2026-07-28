@@ -12,7 +12,12 @@ import { REFUSAL_CODES } from "../../lib/site-content.js";
  */
 interface Contract {
   readonly id: string;
-  readonly group: string;
+  /**
+   * The rail group this row files under. Typed against `RAIL_GROUPS` below, because the
+   * rail renders a row only where the two agree: an unlisted group would compile and
+   * then render nowhere, which is a document silently missing from the index.
+   */
+  readonly group: (typeof RAIL_GROUPS)[number];
   readonly path: string;
   readonly title: string;
   readonly note: string;
