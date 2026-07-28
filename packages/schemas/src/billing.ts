@@ -133,13 +133,23 @@ export type CheckoutSessionIntent = {
   readonly createdAt: string;
 };
 
-/** Provider event normalized to SceneAxi vocabulary before it touches credits. */
+/**
+ * Provider event normalized to SceneAxi vocabulary before it touches credits.
+ *
+ * `checkoutSessionId` is the provider's own Checkout Session id, read from the
+ * verified event body. It is what makes the settlement evidence *this* session's
+ * rather than any identically-priced one: without it, a paid session's retrieved
+ * settlement validates a different paid session's event. It is required, so a
+ * completion that cannot name the session it settles does not exist at all.
+ */
 export type CheckoutCompletedEvent = {
   readonly schemaVersion: typeof BILLING_SCHEMA_VERSION;
   readonly kind: typeof CHECKOUT_COMPLETED_EVENT_KIND;
   readonly eventId: string;
   readonly type: typeof CHECKOUT_COMPLETED_EVENT_TYPE;
   readonly mode: BillingMode;
+  /** The Stripe Checkout Session this completion settles. */
+  readonly checkoutSessionId: string;
   readonly intentId: string;
   readonly userId: string;
   readonly purpose: CheckoutPurpose;
@@ -171,6 +181,19 @@ const CURRENCY_RE = /^[a-z]{3}$/;
 
 export function isBillingMode(value: unknown): value is BillingMode {
   return BILLING_MODES.some((mode) => mode === value);
+}
+
+/**
+ * The one url-safe identifier rule every identifier SceneAxi *mints* is held to.
+ *
+ * Exported so code that mints an id can hold it to the same rule the record
+ * validators will, rather than discovering a malformed id only when a later
+ * validation refuses it under some other reason. It deliberately does not
+ * govern provider-generated ids — `stripePriceId`, `stripeCustomerId`, and the
+ * Checkout Session id are opaque strings whose shape SceneAxi does not own.
+ */
+export function isBillingIdentifier(value: unknown): value is string {
+  return typeof value === "string" && IDENTIFIER_RE.test(value);
 }
 
 /**
@@ -404,7 +427,7 @@ export function validateStripeCustomerLink(
   if (isRefuse(record)) return record;
 
   const userId = record["userId"];
-  if (typeof userId !== "string" || !IDENTIFIER_RE.test(userId)) {
+  if (!isBillingIdentifier(userId)) {
     return invalid(
       "stripe customer link userId must be a url-safe identifier of 1-128 chars.",
     );
@@ -501,13 +524,13 @@ export function validateCheckoutSessionIntent(
   if (isRefuse(record)) return record;
 
   const intentId = record["intentId"];
-  if (typeof intentId !== "string" || !IDENTIFIER_RE.test(intentId)) {
+  if (!isBillingIdentifier(intentId)) {
     return invalid(
       "checkout session intent intentId must be a url-safe identifier of 1-128 chars.",
     );
   }
   const userId = record["userId"];
-  if (typeof userId !== "string" || !IDENTIFIER_RE.test(userId)) {
+  if (!isBillingIdentifier(userId)) {
     return invalid(
       "checkout session intent userId must be a url-safe identifier of 1-128 chars.",
     );
@@ -615,6 +638,7 @@ const CHECKOUT_COMPLETED_EVENT_REQUIRED = Object.freeze([
   "eventId",
   "type",
   "mode",
+  "checkoutSessionId",
   "intentId",
   "userId",
   "purpose",
@@ -643,7 +667,7 @@ export function validateCheckoutCompletedEvent(
     );
   }
   const eventId = record["eventId"];
-  if (typeof eventId !== "string" || !IDENTIFIER_RE.test(eventId)) {
+  if (!isBillingIdentifier(eventId)) {
     return invalid(
       "checkout completed event eventId must be a url-safe identifier of 1-128 chars.",
     );
@@ -654,14 +678,26 @@ export function validateCheckoutCompletedEvent(
       `checkout completed event mode must be one of ${BILLING_MODES.join(", ")}.`,
     );
   }
+  // Deliberately not IDENTIFIER_RE: this id is provider-generated and opaque.
+  // Stripe guarantees nothing about the length or shape of a Checkout Session
+  // id, so imposing SceneAxi's 1-128-char url-safe rule on it would refuse
+  // genuinely paid webhooks. What binds the evidence is presence plus exact
+  // string equality with the settlement, neither of which needs a charset rule.
+  // IDENTIFIER_RE stays correct for the ids SceneAxi mints — intentId, userId.
+  const checkoutSessionId = record["checkoutSessionId"];
+  if (!isNonEmptyString(checkoutSessionId)) {
+    return invalid(
+      "checkout completed event checkoutSessionId must be a non-empty Checkout Session id; a completion that cannot name its Checkout Session is unbound evidence.",
+    );
+  }
   const intentId = record["intentId"];
-  if (typeof intentId !== "string" || !IDENTIFIER_RE.test(intentId)) {
+  if (!isBillingIdentifier(intentId)) {
     return invalid(
       "checkout completed event intentId must be a url-safe identifier of 1-128 chars.",
     );
   }
   const userId = record["userId"];
-  if (typeof userId !== "string" || !IDENTIFIER_RE.test(userId)) {
+  if (!isBillingIdentifier(userId)) {
     return invalid(
       "checkout completed event userId must be a url-safe identifier of 1-128 chars.",
     );
@@ -714,6 +750,7 @@ export function validateCheckoutCompletedEvent(
     eventId,
     type: CHECKOUT_COMPLETED_EVENT_TYPE,
     mode,
+    checkoutSessionId,
     intentId,
     userId,
     purpose,

@@ -27,13 +27,13 @@
  *    describing one, and an insufficient balance refuses before any ledger is
  *    appended to.
  *
- * 3. **Money bookkeeping is bound to a settlement, not asserted.**
- *    `recordMoneySale` will record a split for any listing handed to it, which
- *    is correct for a primitive and wrong for a ledger of what was collected.
- *    `settleFixtureListingMoneySale` takes only the runtime-witnessed output of
- *    `parseCheckoutCompletedEvent` plus the persisted intent it was bound to, so
- *    a `MoneySplitRecord` on this path can only describe money a
- *    signature-verified Stripe settlement actually took.
+ * 3. **Only an enumerated SKU, at the price it carries, may be settled.**
+ *    `recordMoneySale` already refuses to book money that no verified settlement
+ *    took — it accepts nothing but a runtime-witnessed completion and the
+ *    persisted intent that completion was bound to (sceneaxi#127). What this path
+ *    adds on top is the offer: the settled item must be one of the enumerated
+ *    listings, and the amount it settled for must be the price that listing
+ *    actually carries, so a real payment for an inert SKU still books nothing.
  *
  * **Test mode only, structurally.** No function here accepts a
  * `liveModeAuthorized` flag, so the captain go-live gate cannot be passed
@@ -46,7 +46,6 @@
 import {
   snapshotPlainRecord,
   validateCheckoutCompletedEvent,
-  validateCheckoutSessionIntent,
   type CatalogListing,
   type CheckoutSessionIntent,
   type EntitlementCapability,
@@ -61,7 +60,6 @@ import {
   loadCatalogListings,
   lookupCatalogListing,
 } from "./catalog-listings.js";
-import { assertModeAuthorized, deriveIntentId } from "./checkout.js";
 import {
   evaluateEntitlement,
   type EntitlementPaymentMethod,
@@ -423,7 +421,8 @@ export type SettleFixtureListingMoneySaleRequest = Readonly<{
   /**
    * A completion whose provenance is proven: the exact object
    * `parseCheckoutCompletedEvent` returned for a signature-verified webhook
-   * body. Checked at runtime here, not merely typed.
+   * body whose settlement was bound to its own Checkout Session. Checked at
+   * runtime here, not merely typed.
    */
   completion: VerifiedCheckoutCompletion;
   /**
@@ -432,17 +431,22 @@ export type SettleFixtureListingMoneySaleRequest = Readonly<{
    * created under, so the recorded sale cannot be renamed after settlement.
    */
   intent: CheckoutSessionIntent;
-  /** Epoch milliseconds. */
-  now: number;
 }>;
 
 /**
  * Record the 50/50 money split for a settled fixture listing purchase.
  *
  * Bookkeeping only, exactly like `recordMoneySale` beneath it: no payout, no
- * transfer, no Stripe Connect. What this adds is that the record can only
- * describe money a verified Stripe test settlement actually took, for a SKU that
- * is enabled for sale, at the price the seller listed.
+ * transfer, no Stripe Connect. Every check that makes the record evidence-bound —
+ * provenance, the intent binding, the sale id read out of the intent's own
+ * idempotency key — belongs to `recordMoneySale` and is not restated here. What
+ * this adds is the two rules that are this path's own: the SKU must be one of the
+ * enumerated fixture listings, and the settled amount must be the price that
+ * listing actually carries.
+ *
+ * There is still no `liveModeAuthorized` parameter, and none is forwarded, so a
+ * live settlement refuses `STRIPE_LIVE_MODE_NOT_AUTHORIZED` on this path
+ * structurally rather than by a default.
  */
 export function settleFixtureListingMoneySale(
   request: SettleFixtureListingMoneySaleRequest,
@@ -458,7 +462,8 @@ export function settleFixtureListingMoneySale(
 
   // A `MoneySplitRecord` asserts that money moved. That claim can only rest on
   // a settlement this process verified, so provenance is checked before the
-  // completion's contents are read at all.
+  // completion's contents are read at all — including by the SKU rules below,
+  // which read the completion's own item id and amount.
   if (!hasVerifiedCompletionProvenance(screened.completion)) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.completionNotVerified,
@@ -480,65 +485,12 @@ export function settleFixtureListingMoneySale(
     );
   }
 
-  // No live authorization is accepted here, so a live settlement refuses by
-  // name rather than being recorded as a test one.
-  const mode = assertModeAuthorized(completion.value.mode, undefined);
-  if (!mode.ok) return mode;
-
-  const intent = validateCheckoutSessionIntent(screened.intent);
-  if (!intent.ok) {
-    return billingRefuse(
-      BILLING_REFUSE_REASONS.checkoutIntentInvalid,
-      `The persisted checkout intent is invalid (${intent.code}): ${intent.message}`,
-    );
-  }
-  if (
-    intent.value.intentId !== completion.value.intentId ||
-    intent.value.userId !== completion.value.userId ||
-    intent.value.purpose !== completion.value.purpose ||
-    intent.value.itemId !== completion.value.itemId ||
-    intent.value.mode !== completion.value.mode ||
-    intent.value.unitAmount !== completion.value.unitAmount ||
-    intent.value.currency !== completion.value.currency ||
-    intent.value.stripePriceId !== completion.value.stripePriceId
-  ) {
-    return billingRefuse(
-      BILLING_REFUSE_REASONS.checkoutIntentInvalid,
-      "The persisted checkout intent does not describe the settled completion.",
-    );
-  }
-  if (!intent.value.idempotencyKey.startsWith(LISTING_SALE_IDEMPOTENCY_PREFIX)) {
-    return billingRefuse(
-      BILLING_REFUSE_REASONS.checkoutIntentInvalid,
-      `A listing settlement's intent must be keyed "${LISTING_SALE_IDEMPOTENCY_PREFIX}<saleId>"; the sale id is not supplied separately, so bookkeeping cannot be attached to a different sale after the fact.`,
-    );
-  }
-  // The completion pins `intentId`, and every real intent derives that id from
-  // its own idempotency key. Re-deriving it is what binds the key — and so the
-  // sale id read out of it below — to the verified settlement; without it the
-  // key is the one intent field a caller could rename after the fact.
-  if (deriveIntentId(intent.value.idempotencyKey) !== intent.value.intentId) {
-    return billingRefuse(
-      BILLING_REFUSE_REASONS.checkoutIntentInvalid,
-      "The persisted checkout intent's idempotency key does not derive its intent id; the settled sale cannot be renamed.",
-    );
-  }
-  const saleId = intent.value.idempotencyKey.slice(
-    LISTING_SALE_IDEMPOTENCY_PREFIX.length,
-  );
-  if (saleId.length === 0) {
-    return billingRefuse(
-      BILLING_REFUSE_REASONS.checkoutIntentInvalid,
-      "The checkout intent's idempotency key names no sale id.",
-    );
-  }
-
   const listing = resolveFixtureCommerceListing(completion.value.itemId);
   if (!listing.ok) return listing;
 
-  // The seller's listed price is what `recordMoneySale` splits, so a settlement
-  // for some other amount must not be booked against it: the two figures would
-  // silently disagree about what was collected.
+  // The enumerated SKU's committed price is what this path offers, so a
+  // settlement for some other amount must not be booked against it: the offer
+  // and the collection would silently disagree about what was sold.
   const moneyPrice = listing.value.moneyPrice;
   if (
     moneyPrice === undefined ||
@@ -553,10 +505,7 @@ export function settleFixtureListingMoneySale(
   }
 
   return recordMoneySale({
-    listing: listing.value,
-    buyerUserId: completion.value.userId,
-    saleId,
-    mode: mode.value,
-    now: screened.now,
+    completion: screened.completion,
+    intent: screened.intent,
   });
 }

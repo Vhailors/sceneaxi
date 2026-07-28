@@ -221,15 +221,22 @@ than inventing a session, balance, or checkout.
    hosted Stripe **test** checkout URL, and a `CheckoutEvidencePort` that reads the
    persisted intent and the Stripe settlement. No other site file changes.
 
-   The `CheckoutSessionAdapter` owes two things beyond the URL, because the grant is
-   bound to the intent rather than to the event, and an implementation that only creates
-   a session captures money and then refuses every grant — retried by Stripe until it
-   gives up:
+   The `CheckoutSessionAdapter` and the `CheckoutEvidencePort` beside it owe three things
+   beyond the URL, because the grant is bound to the intent rather than to the event, and
+   an implementation that only creates a session captures money and then refuses every
+   grant — retried by Stripe until it gives up:
 
    - **Persist the intent** under `intent.intentId`, exactly as given, before redirecting.
      `CheckoutEvidencePort.findIntent(intentId)` must return that same record; it is the
      immutable price snapshot the credits come from, and an absent one refuses
      `STRIPE_CHECKOUT_EVIDENCE_MISSING`.
+   - **Echo the session id on the settlement.** `CheckoutEvidencePort.retrieveSettlement`
+     is called with the Checkout Session id read from the verified body, and the
+     `CheckoutSettlement` it returns must carry that same id on `sessionId`.
+     `parseCheckoutCompletedEvent` compares the two before it reads anything else about the
+     settlement, so evidence retrieved for a *different* paid session refuses
+     `STRIPE_SETTLEMENT_SESSION_MISMATCH` even when its amount, currency, and price match
+     (sceneaxi#127). An adapter that omits the field refuses the same way.
    - **Set the Stripe session metadata** to `CHECKOUT_METADATA_KEYS` from
      `@sceneaxi/billing` — `sceneaxiUserId`, `sceneaxiPurpose`, `sceneaxiItemId`,
      `sceneaxiIntentId` — copied from the intent's own `userId` / `purpose` / `itemId` /
@@ -308,15 +315,21 @@ Load-bearing properties, each gate-tested in `tests/sites/identity-plane-wiring.
   credit amount comes from the persisted intent, never from the event.
 - **The webhook's answer names the failing side.** A refusal this deployment owns — no
   signing secret, an unusable clock, an adapter that threw, a persisted intent its own
-  checkout adapter never wrote, its own ledger rows that do not load — answers `503`; a
-  refusal the request owns — signature, payload, an intent that does not match — answers
-  `400`. An event the endpoint is not built to act on is neither: it answers `200` with
-  `ignored: true`, so Stripe stops redelivering a condition redelivery cannot change.
-  Only `ignored: false` means credits are in the ledger. Exactly three things are
-  acknowledged, and all three are decided from the verified body before any adapter or
-  store is consulted: an event type this path does not handle, a completion whose
-  purpose settles on the revenue-share path, and a checkout session carrying no SceneAxi
-  metadata key at all — another product's event. The purpose is read from the session
+  checkout adapter never wrote, a settlement its own adapter returned for a different
+  Checkout Session or without the required `sessionId`, its own ledger rows that do not
+  load — answers `503`; a refusal the request owns — signature, payload, a session id the
+  verified body itself omits, an intent that does not match — answers `400`. The
+  settlement-session refusal sits on the deployment's side because both sides of that
+  comparison come from one signature-verified body: the endpoint reads the session id out
+  of the verified payload and asks its own `retrieveSettlement` for exactly that id, so
+  only the adapter's answer can disagree, and a forged body is refused by signature
+  verification long before it. An event the endpoint is not built to act on is neither: it
+  answers `200` with `ignored: true`, so Stripe stops redelivering a condition redelivery
+  cannot change. Only `ignored: false` means credits are in the ledger. Exactly three
+  things are acknowledged, and all three are decided from the verified body before any
+  adapter or store is consulted: an event type this path does not handle, a completion
+  whose purpose settles on the revenue-share path, and a checkout session carrying no
+  SceneAxi metadata key at all — another product's event. The purpose is read from the session
   metadata only to route *away* from the grant path — an absent, malformed, or unknown
   one keeps its normal path, and `parseCheckoutCompletedEvent` still cross-checks the
   purpose against the persisted intent for everything that stays on it. A

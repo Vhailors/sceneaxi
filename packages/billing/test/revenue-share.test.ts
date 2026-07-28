@@ -11,21 +11,29 @@ import {
   validateCreatorShareRecord,
   validateMoneySplitRecord,
   type CatalogListing,
+  type CheckoutSessionIntent,
   type CreditAccount,
 } from "@sceneaxi/schemas";
 import {
   BILLING_REFUSE_REASONS,
+  CHECKOUT_METADATA_KEYS,
+  LISTING_SALE_IDEMPOTENCY_PREFIX,
   applyCreditsSale,
   appendCreditEntry,
   authorizeCreatorPublish,
+  bindSettledIntent,
   createInMemoryCreditStore,
   createLedgerState,
+  deriveIntentId,
   loadCatalogListings,
   lookupCatalogListing,
+  parseCheckoutCompletedEvent,
   persistCreditsSale,
   recordMoneySale,
+  signStripeWebhookPayload,
   splitCredits,
   splitMoneyMinorUnits,
+  verifyStripeWebhookSignature,
   type LedgerState,
   type CreditStore,
 } from "@sceneaxi/billing";
@@ -716,6 +724,129 @@ describe("applyCreditsSale", () => {
   });
 });
 
+/**
+ * Money bookkeeping, built only from evidence this process verified (sceneaxi#127).
+ *
+ * `recordMoneySale` has no parameter for a gross, a currency, a buyer, a mode, or
+ * a sale id, so every fixture below has to produce a real settlement: a signed
+ * webhook body, parsed against the persisted intent it was created under, with
+ * settlement bound to that body's own Checkout Session.
+ */
+const SECRET = "whsec_revenue_share_fixture";
+const NOW_SECONDS = Math.floor(NOW / 1000);
+
+const listingIntent = (
+  overrides: {
+    readonly listingId?: string;
+    readonly userId?: string;
+    readonly saleId?: string;
+    readonly mode?: "test" | "live";
+  } = {},
+): CheckoutSessionIntent => {
+  const listingId = overrides.listingId ?? "harbour-diorama";
+  // A credits-only listing has no money price, so one is invented for the
+  // intent — which is exactly the case the money path must refuse on the
+  // listing, after the intent itself binds cleanly.
+  const price = listing(listingId).moneyPrice ?? {
+    unitAmount: 1200,
+    currency: "usd",
+    stripePriceId: "price_test_unlisted",
+  };
+  const idempotencyKey = `${LISTING_SALE_IDEMPOTENCY_PREFIX}${overrides.saleId ?? "sale_money_01"}`;
+  return {
+    schemaVersion: 1,
+    kind: "sceneaxi.checkout-session-intent",
+    intentId: deriveIntentId(idempotencyKey),
+    userId: overrides.userId ?? "usr_buyer",
+    purpose: "catalog-listing",
+    itemId: listingId,
+    unitAmount: price.unitAmount,
+    currency: price.currency,
+    stripePriceId: price.stripePriceId,
+    mode: overrides.mode ?? "test",
+    successUrl: "https://sceneaxi.example/ok",
+    cancelUrl: "https://sceneaxi.example/no",
+    idempotencyKey,
+    createdAt: new Date(NOW).toISOString(),
+  };
+};
+
+const packIntent = (): CheckoutSessionIntent => ({
+  schemaVersion: 1,
+  kind: "sceneaxi.checkout-session-intent",
+  intentId: deriveIntentId("checkout:pack_money"),
+  userId: "usr_buyer",
+  purpose: "credit-pack",
+  itemId: "starter",
+  credits: 100,
+  unitAmount: 900,
+  currency: "usd",
+  stripePriceId: "price_test_starter",
+  mode: "test",
+  successUrl: "https://sceneaxi.example/ok",
+  cancelUrl: "https://sceneaxi.example/no",
+  idempotencyKey: "checkout:pack_money",
+  createdAt: new Date(NOW).toISOString(),
+});
+
+const sessionIdFor = (intent: CheckoutSessionIntent) => `cs_${intent.intentId}`;
+
+/** The raw signed body a Stripe completion for this intent would carry. */
+const verifiedBodyFor = (intent: CheckoutSessionIntent, sessionId: string) => {
+  const body = JSON.stringify({
+    id: `evt_${intent.intentId}`,
+    type: "checkout.session.completed",
+    created: NOW_SECONDS,
+    livemode: intent.mode === "live",
+    data: {
+      object: {
+        id: sessionId,
+        metadata: {
+          [CHECKOUT_METADATA_KEYS.userId]: intent.userId,
+          [CHECKOUT_METADATA_KEYS.purpose]: intent.purpose,
+          [CHECKOUT_METADATA_KEYS.itemId]: intent.itemId,
+          [CHECKOUT_METADATA_KEYS.intentId]: intent.intentId,
+        },
+      },
+    },
+  });
+  const verified = verifyStripeWebhookSignature({
+    payload: body,
+    header: signStripeWebhookPayload({
+      payload: body,
+      secret: SECRET,
+      timestamp: NOW_SECONDS,
+    }),
+    secret: SECRET,
+    now: NOW,
+  });
+  if (!verified.ok) throw new Error("fixture signature failed");
+  return verified.value;
+};
+
+const settlementFor = (intent: CheckoutSessionIntent, sessionId: string) => ({
+  sessionId,
+  paymentStatus: "paid" as const,
+  amountTotal: intent.unitAmount,
+  currency: intent.currency,
+  quantity: 1,
+  stripePriceId: intent.stripePriceId,
+});
+
+/** A genuinely settled completion for an intent, through the real parser. */
+const settleIntent = (intent: CheckoutSessionIntent) => {
+  const sessionId = sessionIdFor(intent);
+  const completion = parseCheckoutCompletedEvent({
+    verified: verifiedBodyFor(intent, sessionId),
+    intent,
+    settlement: settlementFor(intent, sessionId),
+  });
+  if (!completion.ok) {
+    throw new Error(`fixture parse failed: ${completion.message}`);
+  }
+  return completion.value;
+};
+
 describe("recordMoneySale", () => {
   it("refuses a malformed request envelope", () => {
     const result = recordMoneySale(null as never);
@@ -725,17 +856,10 @@ describe("recordMoneySale", () => {
     }
   });
 
-  const record = (overrides: Record<string, unknown> = {}) =>
-    recordMoneySale({
-      listing: listing("harbour-diorama"),
-      buyerUserId: "usr_buyer",
-      saleId: "sale_money_01",
-      mode: "test",
-      now: NOW,
-      ...overrides,
-    } as never);
+  const record = (intent = listingIntent()) =>
+    recordMoneySale({ completion: settleIntent(intent), intent });
 
-  it("records a balanced 50/50 split", () => {
+  it("records a balanced 50/50 split from the settled intent", () => {
     const result = record();
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -746,6 +870,10 @@ describe("recordMoneySale", () => {
       result.value.grossMinor,
     );
     expect(result.value.mode).toBe("test");
+    expect(result.value.saleId).toBe("sale_money_01");
+    expect(result.value.listingId).toBe("harbour-diorama");
+    expect(result.value.buyerUserId).toBe("usr_buyer");
+    expect(result.value.creatorUserId).toBe("usr_creator_ben");
   });
 
   it("balances every money-priced fixture, odd ones included", () => {
@@ -754,9 +882,10 @@ describe("recordMoneySale", () => {
       "market-stall-kit",
       "odd-price-charm",
     ]) {
-      const result = record({ listing: listing(listingId) });
-      expect(result.ok).toBe(true);
+      const result = record(listingIntent({ listingId }));
+      expect(result.ok, listingId).toBe(true);
       if (!result.ok) return;
+      expect(result.value.grossMinor).toBe(listing(listingId).moneyPrice?.unitAmount);
       expect(result.value.creatorMinor + result.value.platformMinor).toBe(
         result.value.grossMinor,
       );
@@ -803,7 +932,7 @@ describe("recordMoneySale", () => {
   });
 
   it("refuses recording money for a credits-only listing", () => {
-    const result = record({ listing: listing("lantern-prop") });
+    const result = record(listingIntent({ listingId: "lantern-prop" }));
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.reason).toBe(
@@ -811,21 +940,187 @@ describe("recordMoneySale", () => {
     );
   });
 
-  it("keeps sale ids distinct from user ids", () => {
-    expect(record({ saleId: "sale:stream:1" }).ok).toBe(true);
-    const colonUser = record({ buyerUserId: "buyer:1" });
-    expect(colonUser.ok).toBe(false);
-    if (!colonUser.ok) {
-      expect(colonUser.reason).toBe(BILLING_REFUSE_REASONS.revenueShareInvalid);
+  it("refuses a completion it did not verify, however genuine it looks", () => {
+    const intent = listingIntent();
+    const completion = settleIntent(intent);
+    // A copy is a different object, so the runtime witness does not know it —
+    // which is the whole point: a caller cannot hand-build settled evidence.
+    for (const impostor of [
+      { ...completion },
+      structuredClone(completion),
+      JSON.parse(JSON.stringify(completion)) as typeof completion,
+    ]) {
+      const result = recordMoneySale({ completion: impostor, intent });
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.reason).toBe(
+        BILLING_REFUSE_REASONS.completionNotVerified,
+      );
     }
-    expect(record({ buyerUserId: "u".repeat(129) }).ok).toBe(false);
   });
 
-  it("refuses an epoch outside the Date range", () => {
-    const result = record({ now: Number.MAX_VALUE });
+  it("cannot be reached at all with settlement from another paid session", () => {
+    // Two paid sessions for the same listing agree on amount, currency, and
+    // price; only the session id separates them. The refusal lands at the
+    // parser, so no completion exists for the money path to record.
+    const intent = listingIntent();
+    const parsed = parseCheckoutCompletedEvent({
+      verified: verifiedBodyFor(intent, sessionIdFor(intent)),
+      intent,
+      settlement: settlementFor(intent, "cs_another_paid_session"),
+    });
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) return;
+    expect(parsed.reason).toBe(
+      BILLING_REFUSE_REASONS.settlementSessionMismatch,
+    );
+  });
+
+  it("names the exact Checkout Session on the evidence it records from", () => {
+    const intent = listingIntent();
+    const completion = settleIntent(intent);
+    expect(completion.checkoutSessionId).toBe(sessionIdFor(intent));
+  });
+
+  it("refuses a credit-pack completion, which books no money sale", () => {
+    const intent = packIntent();
+    const result = recordMoneySale({
+      completion: settleIntent(intent),
+      intent,
+    });
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.reason).toBe(BILLING_REFUSE_REASONS.clockInvalid);
+    expect(result.reason).toBe(
+      BILLING_REFUSE_REASONS.webhookEventTypeUnsupported,
+    );
+  });
+
+  it("refuses an intent that does not describe the settled completion", () => {
+    const intent = listingIntent();
+    const completion = settleIntent(intent);
+    for (const wrong of [
+      { ...intent, unitAmount: intent.unitAmount + 1 },
+      { ...intent, currency: "eur" },
+      { ...intent, userId: "usr_someone_else" },
+      { ...intent, stripePriceId: "price_test_other" },
+      { ...intent, itemId: "market-stall-kit" },
+    ]) {
+      const result = recordMoneySale({ completion, intent: wrong });
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.reason).toBe(
+        BILLING_REFUSE_REASONS.checkoutIntentInvalid,
+      );
+    }
+  });
+
+  it("refuses an intent keyed outside the listing-sale namespace", () => {
+    const renamed = {
+      ...listingIntent(),
+      idempotencyKey: "checkout:usr_buyer:harbour",
+    };
+    const rekeyed = { ...renamed, intentId: deriveIntentId(renamed.idempotencyKey) };
+    const result = recordMoneySale({
+      completion: settleIntent(rekeyed),
+      intent: rekeyed,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.checkoutIntentInvalid);
+  });
+
+  it("refuses an in-namespace key renamed onto someone else's settlement", () => {
+    // The sale id is read out of the intent's key, so a key kept inside the
+    // "sale:" namespace is the only way bookkeeping could be re-attached to a
+    // sale nobody settled. Re-deriving the intent id is what stops it.
+    const intent = listingIntent();
+    const completion = settleIntent(intent);
+    const renamed = {
+      ...intent,
+      idempotencyKey: `${LISTING_SALE_IDEMPOTENCY_PREFIX}sale_someone_elses`,
+    };
+    const result = recordMoneySale({ completion, intent: renamed });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.checkoutIntentInvalid);
+
+    // The genuine intent still settles, under its own sale id.
+    const genuine = recordMoneySale({ completion, intent });
+    expect(genuine.ok).toBe(true);
+    if (!genuine.ok) return;
+    expect(genuine.value.saleId).toBe("sale_money_01");
+  });
+
+  it("reads the sale id out of the key, colons and all", () => {
+    const result = record(listingIntent({ saleId: "stream:1" }));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.saleId).toBe("stream:1");
+    // The buyer id can never carry a colon: it comes from the completion, whose
+    // contract already refuses one, so the two id spaces cannot be confused.
+    expect(result.value.buyerUserId).not.toContain(":");
+  });
+
+  it("refuses a sale whose buyer is the seller", () => {
+    const result = record(
+      listingIntent({ userId: listing("harbour-diorama").sellerUserId }),
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.revenueShareInvalid);
+  });
+
+  it("keeps live mode behind the captain gate, test mode as the default", () => {
+    const live = listingIntent({ mode: "live" });
+    const completion = settleIntent(live);
+
+    const ungated = recordMoneySale({ completion, intent: live });
+    expect(ungated.ok).toBe(false);
+    if (ungated.ok) return;
+    expect(ungated.reason).toBe(BILLING_REFUSE_REASONS.liveModeNotAuthorized);
+
+    const gated = recordMoneySale({
+      completion,
+      intent: live,
+      liveModeAuthorized: true,
+    });
+    expect(gated.ok).toBe(true);
+    if (!gated.ok) return;
+    expect(gated.value.mode).toBe("live");
+
+    // The default is test, and it needs no gate.
+    expect(record().ok).toBe(true);
+  });
+
+  it("takes occurredAt from the settlement, so a replay records the same row", () => {
+    const intent = listingIntent();
+    const completion = settleIntent(intent);
+    const first = recordMoneySale({ completion, intent });
+    const second = recordMoneySale({ completion, intent });
+    expect(first.ok && second.ok).toBe(true);
+    if (!first.ok || !second.ok) return;
+    expect(second.value).toEqual(first.value);
+    expect(first.value.occurredAt).toBe(completion.occurredAt);
+  });
+});
+
+describe("bindSettledIntent", () => {
+  it("binds a persisted intent to its completion and names the sale", () => {
+    const intent = listingIntent({ saleId: "sale_bound_01" });
+    const bound = bindSettledIntent(intent, settleIntent(intent));
+    expect(bound.ok).toBe(true);
+    if (!bound.ok) return;
+    expect(bound.value.saleId).toBe("sale_bound_01");
+    expect(bound.value.intent).toEqual(intent);
+  });
+
+  it("refuses an intent that describes some other purchase", () => {
+    const intent = listingIntent();
+    const other = listingIntent({ saleId: "sale_other_01" });
+    const bound = bindSettledIntent(other, settleIntent(intent));
+    expect(bound.ok).toBe(false);
+    if (bound.ok) return;
+    expect(bound.reason).toBe(BILLING_REFUSE_REASONS.checkoutIntentInvalid);
   });
 });
 

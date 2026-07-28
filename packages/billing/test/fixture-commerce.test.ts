@@ -173,6 +173,7 @@ const settleIntent = (
     verified: verified.value,
     intent,
     settlement: {
+      sessionId: `cs_${intent.intentId}`,
       paymentStatus: "paid",
       amountTotal: overrides.amountTotal ?? intent.unitAmount,
       currency: intent.currency,
@@ -303,7 +304,6 @@ describe("the non-fixture marketplace stays inert", () => {
     const settled = settleFixtureListingMoneySale({
       completion: settleIntent(harbour.value),
       intent: harbour.value,
-      now: NOW,
     });
     expect(settled.ok).toBe(false);
     if (settled.ok) return;
@@ -546,7 +546,6 @@ describe("the money purchase settles into bookkeeping only", () => {
     const settled = settleFixtureListingMoneySale({
       completion: settleIntent(intent),
       intent,
-      now: NOW,
     });
     expect(settled.ok).toBe(true);
     if (!settled.ok) return;
@@ -606,7 +605,6 @@ describe("the money purchase settles into bookkeeping only", () => {
     const refused = settleFixtureListingMoneySale({
       completion: settleIntent(packIntent.value),
       intent: packIntent.value,
-      now: NOW,
     });
     expect(refused.ok).toBe(false);
     if (refused.ok) return;
@@ -620,7 +618,6 @@ describe("the money purchase settles into bookkeeping only", () => {
     const refused = settleFixtureListingMoneySale({
       completion: settleIntent(intent),
       intent: { ...intent, unitAmount: MONEY_MINOR + 1 },
-      now: NOW,
     });
     expect(refused.ok).toBe(false);
     if (refused.ok) return;
@@ -635,7 +632,6 @@ describe("the money purchase settles into bookkeeping only", () => {
     const refused = settleFixtureListingMoneySale({
       completion: settleIntent(renamed),
       intent: renamed,
-      now: NOW,
     });
     expect(refused.ok).toBe(false);
     if (refused.ok) return;
@@ -655,7 +651,6 @@ describe("the money purchase settles into bookkeeping only", () => {
     const refused = settleFixtureListingMoneySale({
       completion,
       intent: renamed,
-      now: NOW,
     });
     expect(refused.ok).toBe(false);
     if (refused.ok) return;
@@ -665,7 +660,6 @@ describe("the money purchase settles into bookkeeping only", () => {
     const settled = settleFixtureListingMoneySale({
       completion,
       intent,
-      now: NOW,
     });
     expect(settled.ok).toBe(true);
     if (!settled.ok) return;
@@ -680,7 +674,6 @@ describe("the money purchase settles into bookkeeping only", () => {
     const refused = settleFixtureListingMoneySale({
       completion: settleIntent(liveIntent),
       intent: liveIntent,
-      now: NOW,
     });
     expect(refused.ok).toBe(false);
     if (refused.ok) return;

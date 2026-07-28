@@ -176,7 +176,10 @@ const INTENT: CheckoutSessionIntent = Object.freeze({
   createdAt: "2026-07-25T09:00:00Z",
 }) as CheckoutSessionIntent;
 
+const SESSION_ID = "cs_provenance";
+
 const SETTLEMENT = Object.freeze({
+  sessionId: SESSION_ID,
   paymentStatus: "paid",
   amountTotal: INTENT.unitAmount,
   currency: INTENT.currency,
@@ -191,6 +194,7 @@ const EVENT_BODY = JSON.stringify({
   livemode: false,
   data: {
     object: {
+      id: SESSION_ID,
       metadata: {
         [CHECKOUT_METADATA_KEYS.userId]: INTENT.userId,
         [CHECKOUT_METADATA_KEYS.purpose]: INTENT.purpose,
@@ -350,6 +354,7 @@ describe("verified checkout completion provenance", () => {
       eventId: "evt_forged",
       type: "checkout.session.completed",
       mode: "test",
+      checkoutSessionId: SESSION_ID,
       intentId: INTENT.intentId,
       userId: INTENT.userId,
       purpose: "credit-pack",
@@ -392,7 +397,6 @@ describe("verified checkout completion provenance", () => {
       const settled = settleFixtureListingMoneySale({
         completion: impostor,
         intent: INTENT,
-        now: NOW,
       });
       expect(settled.ok, how).toBe(false);
       if (settled.ok) continue;

@@ -319,14 +319,31 @@ listing — committed, unknown, or fabricated — refuses
 being for sale. It is also where the matrix's `catalog-asset-purchase` row is actually
 enforced, and where a credits retry is judged against the balance that preceded its own
 debit — the same hazard the hosted-AI replay step exists for, since this balance gate also
-sits above the ledger's idempotency check. Money bookkeeping is reachable only from a
-runtime-witnessed `parseCheckoutCompletedEvent` completion plus the persisted intent it
-was bound to, whose `sale:<saleId>` key names the sale, so a `MoneySplitRecord` cannot
-describe money no verified settlement took. No function there accepts or forwards
-`liveModeAuthorized`, which
+sits above the ledger's idempotency check. What this path adds to money bookkeeping is only
+the *offer* — the SKU must be enumerated and the settled amount must be that listing's
+committed price; the evidence rules below belong to `recordMoneySale`, not to a second copy
+here. No function there accepts or forwards `liveModeAuthorized`, which
 is what makes test mode structural rather than defaulted; this widens no marketplace,
 publishing, or catalog-app surface. The whole path is `tests/e2e/catalog-fixture-commerce-golden.test.ts`
 in `test:golden`.
+
+Money bookkeeping is built from verified evidence, never from arguments (sceneaxi#127):
+`recordMoneySale()` in `packages/billing/src/revenue-share.ts` takes exactly a
+runtime-witnessed `parseCheckoutCompletedEvent` completion plus the persisted intent it was
+bound to, and has **no** parameter for a gross, currency, buyer, mode, listing, or sale id —
+gross and currency come from the intent, buyer/mode/`occurredAt` from the completion, the
+sale id is read out of the intent's `sale:<saleId>` key (re-derived into its `intentId`, so
+it cannot be renamed onto another sale), and the listing and its seller are resolved from the
+committed catalog. `MoneySplitRecord` itself is unchanged and still refuses every payout
+field. Settlement is bound to the **exact** Checkout Session: `CheckoutSettlement.sessionId`
+is required, the parser reads `data.object.id` from the verified body and compares them
+before anything else about the settlement, and carries it onto the completion as
+`checkoutSessionId` — so evidence from another identically-priced paid session refuses
+`STRIPE_SETTLEMENT_SESSION_MISMATCH` and an event that names no session refuses
+`STRIPE_CHECKOUT_SESSION_ID_MISSING`. Persisted, atomic money settlement is #128 and is not
+in this repo yet. Ownership map: `docs/auth-credits.md`; regressions live in
+`packages/billing/test/revenue-share.test.ts`, `packages/billing/test/stripe-checkout.test.ts`,
+and `tests/e2e/auth-credits-refuse-matrix.test.ts`.
 
 First-class plugins follow `docs/plugins.md` and ADR 0005: manifests may claim
 only IDs from the versioned public capability registry; unknown IDs and

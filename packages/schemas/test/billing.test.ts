@@ -10,6 +10,7 @@ import {
   CREDIT_PACKS_FIXTURES_PATH,
   DEFAULT_BILLING_MODE,
   STRIPE_CUSTOMER_LINK_KIND,
+  isBillingIdentifier,
   isHttpsUrl,
   validateCheckoutCompletedEvent,
   validateCheckoutSessionIntent,
@@ -81,6 +82,7 @@ const EVENT = {
   eventId: "evt_01",
   type: CHECKOUT_COMPLETED_EVENT_TYPE,
   mode: "test",
+  checkoutSessionId: "cs_test_01",
   intentId: "int_01",
   userId: "usr_01",
   purpose: "credit-pack",
@@ -311,6 +313,57 @@ describe("validateCheckoutCompletedEvent", () => {
     }
   });
 
+  it("requires the Checkout Session it settles", () => {
+    // Unbound evidence must not be representable: a completion that cannot name
+    // its session would let one paid session's settlement validate another's.
+    const missing = validateCheckoutCompletedEvent(
+      without(EVENT, "checkoutSessionId"),
+    );
+    expect(missing.ok).toBe(false);
+    if (missing.ok) return;
+    expect(missing.code).toBe(BILLING_REFUSE_CODES.missingProperty);
+
+    for (const checkoutSessionId of ["", 7, null]) {
+      const result = validateCheckoutCompletedEvent({
+        ...EVENT,
+        checkoutSessionId,
+      });
+      expect(result.ok, String(checkoutSessionId)).toBe(false);
+      if (result.ok) return;
+      expect(result.code).toBe(BILLING_REFUSE_CODES.invalidProperty);
+    }
+  });
+
+  it("accepts a provider session id SceneAxi's own identifier rule would refuse", () => {
+    // The id is Stripe's, not ours: it guarantees no length and no charset, so
+    // holding it to IDENTIFIER_RE would refuse a genuinely paid completion.
+    for (const checkoutSessionId of [
+      `cs_live_${"a".repeat(240)}`,
+      "cs_test_a1B2/c3+d4=e5%f6",
+      "_leading_underscore",
+    ]) {
+      const result = validateCheckoutCompletedEvent({
+        ...EVENT,
+        checkoutSessionId,
+      });
+      expect(result.ok, checkoutSessionId).toBe(true);
+      if (!result.ok) return;
+      expect(result.value.checkoutSessionId).toBe(checkoutSessionId);
+    }
+  });
+
+  it("still holds the ids SceneAxi mints to the identifier rule", () => {
+    // Relaxing the provider id must not relax ours: intentId and userId are
+    // server-issued, so their shape stays SceneAxi's to enforce.
+    for (const field of ["intentId", "userId", "eventId"]) {
+      const result = validateCheckoutCompletedEvent({
+        ...EVENT,
+        [field]: `x${"y".repeat(200)}`,
+      });
+      expect(result.ok, field).toBe(false);
+    }
+  });
+
   it("accepts a catalog-listing completion with no credits and refuses one with them", () => {
     const listingEvent = {
       ...without(EVENT, "credits"),
@@ -322,6 +375,41 @@ describe("validateCheckoutCompletedEvent", () => {
     expect(
       validateCheckoutCompletedEvent({ ...listingEvent, credits: 1 }).ok,
     ).toBe(false);
+  });
+});
+
+describe("isBillingIdentifier", () => {
+  it("is the same rule the completion contract applies to the ids SceneAxi mints", () => {
+    // Pinned against intentId, not checkoutSessionId: the session id is Stripe's
+    // and is deliberately held to presence alone.
+    for (const usable of ["int_test_01", "evt.1-2", "A", "c".repeat(128)]) {
+      expect(isBillingIdentifier(usable), usable).toBe(true);
+      expect(
+        validateCheckoutCompletedEvent({ ...EVENT, intentId: usable }).ok,
+        usable,
+      ).toBe(true);
+    }
+    for (const unusable of ["", "int test 01", "_leading", "c".repeat(129), 7]) {
+      expect(isBillingIdentifier(unusable), String(unusable)).toBe(false);
+      expect(
+        validateCheckoutCompletedEvent({ ...EVENT, intentId: unusable }).ok,
+        String(unusable),
+      ).toBe(false);
+    }
+  });
+
+  it("does not govern the provider ids on the same contract", () => {
+    for (const providerId of [`cs_live_${"a".repeat(240)}`, "_leading"]) {
+      expect(isBillingIdentifier(providerId), providerId).toBe(false);
+      expect(
+        validateCheckoutCompletedEvent({
+          ...EVENT,
+          checkoutSessionId: providerId,
+          stripePriceId: providerId,
+        }).ok,
+        providerId,
+      ).toBe(true);
+    }
   });
 });
 

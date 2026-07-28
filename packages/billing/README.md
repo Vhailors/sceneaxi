@@ -67,21 +67,24 @@ exported function on that path accepts a listing value: ids are resolved from
 not being for sale, and every other listing refuses
 `LISTING_FIXTURE_COMMERCE_NOT_ENABLED` — a distinct fact from `LISTING_UNKNOWN`. Test mode is
 structural for the same reason: nothing there accepts or forwards `liveModeAuthorized`, so a
-live intent has no expression rather than a default. The enumeration, the entitlement row it
-evaluates, the retry ordering it shares with the hosted-AI replay step, and the settlement
-binding that keeps bookkeeping attached to its own verified sale are documented in
-[`docs/auth-credits.md`](../../docs/auth-credits.md) under *Fixture commerce (sceneaxi#138)*.
+live intent has no expression rather than a default. What that path adds is only the offer:
+the binding that keeps bookkeeping attached to its own verified sale belongs to
+`recordMoneySale` beneath it, which accepts no gross, currency, buyer, mode, listing, or
+sale id at all (sceneaxi#127). The enumeration, the entitlement row it evaluates, and the
+retry ordering it shares with the hosted-AI replay step are documented in
+[`docs/auth-credits.md`](../../docs/auth-credits.md) under *Fixture commerce (sceneaxi#138)*,
+and the evidence rules under *Creator publish and revenue share*.
 
 **Verified means verified at runtime, not in the type.** A `VerifiedWebhook` and a
 `VerifiedCheckoutCompletion` both mean "a signature check produced me", and both have a
 public shape — so a type brand stops only a TypeScript caller, while JavaScript and `as`
 reach the same exported functions. Each is issued through a module-private provenance
 witness and checked by object identity at every consumer: `parseCheckoutCompletedEvent`
-refuses an unissued webhook with `STRIPE_WEBHOOK_NOT_VERIFIED`, and both
-`applyCheckoutCompletedGrant` and `settleFixtureListingMoneySale` refuse an unissued
-completion with `STRIPE_COMPLETION_NOT_VERIFIED` — *before* reading its contents, since
-the value's contents are the part anyone can fake. A copy of a genuine completion is a
-different object and refuses too. See `docs/auth-credits.md` under *Runtime provenance*.
+refuses an unissued webhook with `STRIPE_WEBHOOK_NOT_VERIFIED`, and every completion
+consumer refuses an unissued completion with `STRIPE_COMPLETION_NOT_VERIFIED` — *before*
+reading its contents, since the value's contents are the part anyone can fake. A copy of a
+genuine completion is a different object and refuses too. The consumer list and the
+issuing/checking table are owned by `docs/auth-credits.md` under *Runtime provenance*.
 
 **Refusals keep their identity.** `BillingRefuseReason` includes `AuthRefuseReason`, so a
 guard refusal surfaces as `KIDS_IDENTITY_SURFACE_DENIED` or `AUTH_SESSION_EXPIRED` rather

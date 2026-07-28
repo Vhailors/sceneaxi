@@ -20,7 +20,11 @@
  * paid would describe credits that never moved.
  *
  * Money sales record a `MoneySplitRecord` and nothing else. No payout, no Stripe
- * Connect: real cash payouts to creators are a later captain gate.
+ * Connect: real cash payouts to creators are a later captain gate. They are also
+ * the one path here that books money nobody in this process debited, so
+ * `recordMoneySale` accepts no gross, currency, buyer, mode, or sale id at all:
+ * it is built from a runtime-witnessed settlement plus the persisted intent that
+ * settlement was bound to, and refuses everything else by name (sceneaxi#127).
  */
 
 import {
@@ -28,12 +32,14 @@ import {
   CREATOR_SHARE_BASIS_POINTS,
   MONEY_SPLIT_RECORD_KIND,
   REVENUE_SHARE_SCHEMA_VERSION,
-  isEpochMilliseconds,
   snapshotPlainRecord,
+  validateCheckoutCompletedEvent,
+  validateCheckoutSessionIntent,
   validateCreatorShareRecord,
   validateMoneySplitRecord,
-  type BillingMode,
   type CatalogListing,
+  type CheckoutCompletedEvent,
+  type CheckoutSessionIntent,
   type CreatorShareRecord,
   type EntitlementDecision,
   type IdentitySurface,
@@ -43,9 +49,11 @@ import type { AdminIdentity } from "@sceneaxi/auth";
 import {
   LISTING_SALE_IDEMPOTENCY_PREFIX,
   assertCurrencyListed,
+  loadCatalogListings,
+  lookupCatalogListing,
   purchaseListingWithCredits,
 } from "./catalog-listings.js";
-import { assertModeAuthorized } from "./checkout.js";
+import { assertModeAuthorized, deriveIntentId } from "./checkout.js";
 import { evaluateEntitlement } from "./entitlements.js";
 import {
   appendCreditEntry,
@@ -60,6 +68,10 @@ import {
   type BillingOutcome,
 } from "./refusals.js";
 import type { CreditStore } from "./store.js";
+import {
+  hasVerifiedCompletionProvenance,
+  type VerifiedCheckoutCompletion,
+} from "./stripe-webhook.js";
 
 export { CREATOR_SHARE_BASIS_POINTS };
 
@@ -348,23 +360,40 @@ export async function persistCreditsSale(
 }
 
 export type RecordMoneySaleRequest = Readonly<{
-  listing: CatalogListing;
-  buyerUserId: string;
-  saleId: string;
   /**
-   * The mode the settlement was paid in. The gross amount and currency are
-   * taken from the listing's own money price — the seller-selected price is the
-   * source of truth, never a caller-supplied figure.
+   * A completion whose provenance is proven: the exact object
+   * `parseCheckoutCompletedEvent` returned for a signature-verified webhook whose
+   * settlement was bound to its own Checkout Session. Checked at runtime, so
+   * neither a fabricated completion, an `as` cast, nor a copy of a real one
+   * satisfies it.
    */
-  mode: BillingMode;
-  /** The captain go-live gate; a live record refuses without it. */
+  completion: VerifiedCheckoutCompletion;
+  /**
+   * The persisted intent that completion was bound to — the immutable price
+   * record. It supplies the gross and the currency, and its idempotency key
+   * names the sale, so none of those is a caller-supplied figure.
+   */
+  intent: CheckoutSessionIntent;
+  /** The captain go-live gate; a live settlement refuses without it. */
   liveModeAuthorized?: boolean | undefined;
-  /** Epoch milliseconds. */
-  now: number;
 }>;
 
 /**
- * Record a money sale's 50/50 split.
+ * Record a settled money sale's 50/50 split, from verified evidence only.
+ *
+ * Every figure in the record is read out of something this process verified. The
+ * gross and currency come from the persisted intent; the buyer and the billing
+ * mode come from the runtime-witnessed completion; the sale id is read out of the
+ * intent's own idempotency key, which is re-derived into its intent id so it
+ * cannot be renamed after settlement; the listing and its seller are resolved
+ * from the committed catalog by the completion's item id. Nothing is accepted as
+ * an assertion — there is no parameter for a gross, a currency, a buyer, a mode,
+ * or a sale id, so a caller cannot book a split for a sale nobody paid.
+ *
+ * The intent, not the catalog, is the price authority: it is the snapshot the
+ * checkout was actually created against, and the settlement was already bound to
+ * it upstream. The listing is consulted only to name the seller who is owed the
+ * creator half, and to refuse a listing the seller never priced in money.
  *
  * Bookkeeping only. This function performs no payout and the record it produces
  * has no field that could describe one — real cash payouts to creators are a
@@ -381,46 +410,70 @@ export function recordMoneySale(
     );
   }
   const screened = requestRecord as RecordMoneySaleRequest;
-  const { listing, buyerUserId, saleId, mode, liveModeAuthorized, now } =
-    screened;
 
-  const listed = assertCurrencyListed(listing, "money");
-  if (!listed.ok) return listed;
-  const moneyPrice = listed.value.moneyPrice;
-  if (moneyPrice === undefined) {
+  // A `MoneySplitRecord` asserts that money moved. That claim can only rest on a
+  // settlement this process verified, so provenance is asked before the
+  // completion's contents are read at all.
+  if (!hasVerifiedCompletionProvenance(screened.completion)) {
     return billingRefuse(
-      BILLING_REFUSE_REASONS.listingPriceModeMismatch,
-      `Listing "${listed.value.listingId}" claims a money price mode but carries no moneyPrice.`,
+      BILLING_REFUSE_REASONS.completionNotVerified,
+      "The checkout completion was not produced by parseCheckoutCompletedEvent from a verified webhook; no money sale is booked.",
     );
   }
 
-  const authorizedMode = assertModeAuthorized(mode, liveModeAuthorized);
+  const completion = validateCheckoutCompletedEvent(screened.completion);
+  if (!completion.ok) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.webhookPayloadInvalid,
+      `The checkout completion is invalid (${completion.code}): ${completion.message}`,
+    );
+  }
+  if (completion.value.purpose !== "catalog-listing") {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.webhookEventTypeUnsupported,
+      `A ${completion.value.purpose} completion books no money sale; it settles on the credit-grant path instead.`,
+    );
+  }
+
+  const authorizedMode = assertModeAuthorized(
+    completion.value.mode,
+    screened.liveModeAuthorized,
+  );
   if (!authorizedMode.ok) return authorizedMode;
 
-  if (!isEpochMilliseconds(now)) {
-    return billingRefuse(
-      BILLING_REFUSE_REASONS.clockInvalid,
-      "A money sale record requires valid epoch milliseconds.",
-    );
-  }
+  const bound = bindSettledIntent(screened.intent, completion.value);
+  if (!bound.ok) return bound;
 
-  const split = splitMoneyMinorUnits(moneyPrice.unitAmount);
+  const listings = loadCatalogListings();
+  if (!listings.ok) return listings;
+  const listing = lookupCatalogListing(
+    listings.value,
+    completion.value.itemId,
+  );
+  if (!listing.ok) return listing;
+  const listed = assertCurrencyListed(listing.value, "money");
+  if (!listed.ok) return listed;
+
+  const split = splitMoneyMinorUnits(bound.value.intent.unitAmount);
   if (!split.ok) return split;
 
   const record = validateMoneySplitRecord({
     schemaVersion: REVENUE_SHARE_SCHEMA_VERSION,
     kind: MONEY_SPLIT_RECORD_KIND,
-    saleId,
+    saleId: bound.value.saleId,
     listingId: listed.value.listingId,
-    buyerUserId,
+    buyerUserId: completion.value.userId,
     creatorUserId: listed.value.sellerUserId,
-    grossMinor: moneyPrice.unitAmount,
+    grossMinor: bound.value.intent.unitAmount,
     creatorMinor: split.value.creator,
     platformMinor: split.value.platform,
-    currency: moneyPrice.currency,
+    currency: bound.value.intent.currency,
     basisPoints: CREATOR_SHARE_BASIS_POINTS,
     mode: authorizedMode.value,
-    occurredAt: new Date(now).toISOString(),
+    // The settlement's own time, not the recorder's clock: re-recording the same
+    // completion must produce the same record, and the moment that matters is
+    // when the money moved.
+    occurredAt: completion.value.occurredAt,
   });
   if (!record.ok) {
     return billingRefuse(
@@ -429,4 +482,73 @@ export function recordMoneySale(
     );
   }
   return billingOk(record.value);
+}
+
+/** The persisted intent a completion settles, and the sale its key names. */
+export type SettledIntentBinding = Readonly<{
+  intent: CheckoutSessionIntent;
+  saleId: string;
+}>;
+
+/**
+ * Bind a persisted intent to the completion that settled it, and read the sale
+ * id out of it.
+ *
+ * Exported as the one named statement of that binding, so any path that must
+ * attach settled money to a persisted intent uses this rule rather than a second
+ * copy of it, and the rule can be exercised directly instead of only through the
+ * recorder above. Every price-bearing field is compared, so an intent that
+ * describes some other purchase cannot supply the gross; and the idempotency key
+ * is re-derived into the intent id the completion pins, because the key is the
+ * one intent field a caller could otherwise rewrite to attach settled money to a
+ * different sale.
+ */
+export function bindSettledIntent(
+  candidate: unknown,
+  completion: CheckoutCompletedEvent,
+): BillingOutcome<SettledIntentBinding> {
+  const intent = validateCheckoutSessionIntent(candidate);
+  if (!intent.ok) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.checkoutIntentInvalid,
+      `The persisted checkout intent is invalid (${intent.code}): ${intent.message}`,
+    );
+  }
+  if (
+    intent.value.intentId !== completion.intentId ||
+    intent.value.userId !== completion.userId ||
+    intent.value.purpose !== completion.purpose ||
+    intent.value.itemId !== completion.itemId ||
+    intent.value.mode !== completion.mode ||
+    intent.value.unitAmount !== completion.unitAmount ||
+    intent.value.currency !== completion.currency ||
+    intent.value.stripePriceId !== completion.stripePriceId
+  ) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.checkoutIntentInvalid,
+      "The persisted checkout intent does not describe the settled completion.",
+    );
+  }
+  if (!intent.value.idempotencyKey.startsWith(LISTING_SALE_IDEMPOTENCY_PREFIX)) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.checkoutIntentInvalid,
+      `A listing settlement's intent must be keyed "${LISTING_SALE_IDEMPOTENCY_PREFIX}<saleId>"; the sale id is not supplied separately, so bookkeeping cannot be attached to a different sale after the fact.`,
+    );
+  }
+  if (deriveIntentId(intent.value.idempotencyKey) !== intent.value.intentId) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.checkoutIntentInvalid,
+      "The persisted checkout intent's idempotency key does not derive its intent id; the settled sale cannot be renamed.",
+    );
+  }
+  const saleId = intent.value.idempotencyKey.slice(
+    LISTING_SALE_IDEMPOTENCY_PREFIX.length,
+  );
+  if (saleId.length === 0) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.checkoutIntentInvalid,
+      "The checkout intent's idempotency key names no sale id.",
+    );
+  }
+  return billingOk(Object.freeze({ intent: intent.value, saleId }));
 }

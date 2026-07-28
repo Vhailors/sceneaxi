@@ -100,12 +100,16 @@ const verified = (body: string) => {
   return result.value;
 };
 
+/** The Checkout Session id every fixture event body carries. */
+const SESSION_ID = "cs_test_01";
+
 /** Settlement evidence matching an intent, retrieved through the adapter boundary. */
 const settlementFor = (
   intent: CheckoutSessionIntent,
   overrides: Record<string, unknown> = {},
 ) =>
   ({
+    sessionId: SESSION_ID,
     paymentStatus: "paid",
     amountTotal: intent.unitAmount,
     currency: intent.currency,
@@ -137,6 +141,7 @@ const checkoutIntent = (
 const eventBody = (
   overrides: Record<string, unknown> = {},
   intent = checkoutIntent(),
+  sessionId: string = SESSION_ID,
 ) =>
   JSON.stringify({
     id: "evt_test_01",
@@ -145,7 +150,7 @@ const eventBody = (
     livemode: false,
     data: {
       object: {
-        id: "cs_test_01",
+        id: sessionId,
         payment_status: "paid",
         amount_total: intent.unitAmount,
         currency: intent.currency,
@@ -617,6 +622,155 @@ describe("parseCheckoutCompletedEvent", () => {
     expect(result.value.mode).toBe("live");
   });
 
+  it("carries the event's Checkout Session id onto the completion", () => {
+    const intent = checkoutIntent();
+    const result = parseCheckoutCompletedEvent({
+      verified: verified(eventBody({}, intent)),
+      intent,
+      settlement: settlementFor(intent),
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.checkoutSessionId).toBe(SESSION_ID);
+  });
+
+  it("refuses settlement from a different session even when the price matches", () => {
+    const intent = checkoutIntent();
+    // Two genuinely paid sessions for the same pack agree on amount, currency,
+    // quantity, and price. Only the session id can tell them apart.
+    const otherSession = settlementFor(intent, { sessionId: "cs_test_other" });
+    const result = parseCheckoutCompletedEvent({
+      verified: verified(eventBody({}, intent)),
+      intent,
+      settlement: otherSession,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(
+      BILLING_REFUSE_REASONS.settlementSessionMismatch,
+    );
+  });
+
+  it("refuses settlement that names no session at all", () => {
+    const intent = checkoutIntent();
+    const unbound = settlementFor(intent) as Record<string, unknown>;
+    delete unbound["sessionId"];
+    const result = parseCheckoutCompletedEvent({
+      verified: verified(eventBody({}, intent)),
+      intent,
+      settlement: unbound,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(
+      BILLING_REFUSE_REASONS.settlementSessionMismatch,
+    );
+  });
+
+  it("refuses an event whose session object carries no id", () => {
+    const intent = checkoutIntent();
+    const body = JSON.parse(eventBody({}, intent)) as {
+      data: { object: Record<string, unknown> };
+    };
+    delete body.data.object["id"];
+    const result = parseCheckoutCompletedEvent({
+      verified: verified(JSON.stringify(body)),
+      intent,
+      settlement: settlementFor(intent),
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(
+      BILLING_REFUSE_REASONS.checkoutSessionIdMissing,
+    );
+  });
+
+  it("refuses a session id that is empty, blank, or not a string", () => {
+    // Blank counts as empty here because the completion contract says so, and
+    // the parser reads presence through that same predicate — otherwise a
+    // whitespace id would pass here, be compared against the settlement, and
+    // refuse later under a different name than the one the refusal table
+    // promises for an id-less event.
+    const intent = checkoutIntent();
+    for (const sessionId of ["", "   ", "\t\n", 7, null]) {
+      const body = JSON.parse(eventBody({}, intent)) as {
+        data: { object: Record<string, unknown> };
+      };
+      body.data.object["id"] = sessionId;
+      const result = parseCheckoutCompletedEvent({
+        verified: verified(JSON.stringify(body)),
+        intent,
+        settlement: settlementFor(intent, { sessionId }),
+      });
+      expect(result.ok, String(sessionId)).toBe(false);
+      if (result.ok) return;
+      expect(result.reason).toBe(
+        BILLING_REFUSE_REASONS.checkoutSessionIdMissing,
+      );
+    }
+  });
+
+  it("accepts a long, opaque provider session id and binds settlement to it", () => {
+    // Stripe owns this id's shape and guarantees neither its length nor its
+    // charset, so a SceneAxi format rule here would refuse a genuinely paid
+    // webhook for good. Presence, and exact equality with the settlement, is
+    // the whole of what the binding needs.
+    const intent = checkoutIntent();
+    const sessionId = `cs_live_${"a".repeat(240)}/b+c=d%e`;
+    const result = parseCheckoutCompletedEvent({
+      verified: verified(eventBody({}, intent, sessionId)),
+      intent,
+      settlement: settlementFor(intent, { sessionId }),
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.checkoutSessionId).toBe(sessionId);
+
+    // The same id must still be the thing settlement is checked against: a
+    // settlement differing only in its last character refuses.
+    const mismatched = parseCheckoutCompletedEvent({
+      verified: verified(eventBody({}, intent, sessionId)),
+      intent,
+      settlement: settlementFor(intent, { sessionId: `${sessionId}x` }),
+    });
+    expect(mismatched.ok).toBe(false);
+    if (mismatched.ok) return;
+    expect(mismatched.reason).toBe(
+      BILLING_REFUSE_REASONS.settlementSessionMismatch,
+    );
+  });
+
+  it("refuses a wholly absent settlement as a payload fault, not a session mismatch", () => {
+    const intent = checkoutIntent();
+    const result = parseCheckoutCompletedEvent({
+      verified: verified(eventBody({}, intent)),
+      intent,
+      settlement: undefined,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.webhookPayloadInvalid);
+  });
+
+  it("carries the paid session's own id onto the completion", () => {
+    const intent = checkoutIntent();
+    const first = parseCheckoutCompletedEvent({
+      verified: verified(eventBody({}, intent)),
+      intent,
+      settlement: settlementFor(intent),
+    });
+    const second = parseCheckoutCompletedEvent({
+      verified: verified(eventBody({}, intent, "cs_test_second")),
+      intent,
+      settlement: settlementFor(intent, { sessionId: "cs_test_second" }),
+    });
+    expect(first.ok && second.ok).toBe(true);
+    if (!first.ok || !second.ok) return;
+    expect(first.value.checkoutSessionId).not.toBe(
+      second.value.checkoutSessionId,
+    );
+  });
+
   it("refuses unpaid or mismatched settlements", () => {
     const intent = checkoutIntent();
     const settlements = [
@@ -825,15 +979,16 @@ describe("applyCheckoutCompletedGrant", () => {
   const reparsed = (
     intentOverrides: Record<string, unknown>,
     bodyOverrides: Record<string, unknown> = {},
+    sessionId: string = SESSION_ID,
   ) => {
     const intent = {
       ...checkoutIntent(),
       ...intentOverrides,
     } as CheckoutSessionIntent;
     const result = parseCheckoutCompletedEvent({
-      verified: verified(eventBody(bodyOverrides, intent)),
+      verified: verified(eventBody(bodyOverrides, intent, sessionId)),
       intent,
-      settlement: settlementFor(intent),
+      settlement: settlementFor(intent, { sessionId }),
     });
     if (!result.ok) throw new Error(`fixture parse failed: ${result.message}`);
     return result.value;
@@ -855,6 +1010,8 @@ describe("applyCheckoutCompletedGrant", () => {
       reparsed({ currency: "eur" }),
       reparsed({ stripePriceId: "price_test_other" }),
       reparsed({}, { created: NOW_SECONDS + 1 }),
+      reparsed({}, {}, "cs_test_second"),
+      reparsed({}, {}, `cs_live_${"a".repeat(240)}/b+c=d%e`),
     ];
     for (const variant of variants) {
       expect(variant.eventId).toBe(completion.eventId);

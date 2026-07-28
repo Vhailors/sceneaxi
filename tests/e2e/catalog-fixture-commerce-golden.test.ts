@@ -68,6 +68,10 @@ const CAPTAIN_EMAIL = "captain@example.com";
 const ENV = Object.freeze({ [ADMIN_EMAIL_ENV_VAR]: CAPTAIN_EMAIL });
 const WEBHOOK_SECRET = "whsec_fixture_commerce_golden";
 
+/** The Checkout Sessions the two settlements below are bound to. */
+const MONEY_SESSION_ID = "cs_step10_money_01";
+const LIVE_SESSION_ID = "cs_step10_live";
+
 /** The single enabled SKU and its committed prices. */
 const LISTING_ID = "market-stall-kit";
 const SELLER_USER_ID = "usr_creator_ada";
@@ -312,7 +316,7 @@ describe("catalog fixture commerce golden path", () => {
       livemode: false,
       data: {
         object: {
-          id: "cs_step10_money_01",
+          id: MONEY_SESSION_ID,
           metadata: {
             [CHECKOUT_METADATA_KEYS.userId]: "usr_crew",
             [CHECKOUT_METADATA_KEYS.purpose]: FIXTURE_COMMERCE_CHECKOUT_PURPOSE,
@@ -339,6 +343,7 @@ describe("catalog fixture commerce golden path", () => {
       verified: verified.value,
       intent: intent.value,
       settlement: {
+        sessionId: MONEY_SESSION_ID,
         paymentStatus: "paid",
         amountTotal: MONEY_MINOR,
         currency: "usd",
@@ -357,7 +362,6 @@ describe("catalog fixture commerce golden path", () => {
     const settled = settleFixtureListingMoneySale({
       completion: completion.value,
       intent: intent.value,
-      now: NOW,
     });
     expect(settled.ok).toBe(true);
     if (!settled.ok) return;
@@ -529,7 +533,7 @@ describe("catalog fixture commerce golden path", () => {
       livemode: true,
       data: {
         object: {
-          id: "cs_step10_live",
+          id: LIVE_SESSION_ID,
           metadata: {
             [CHECKOUT_METADATA_KEYS.userId]: "usr_crew",
             [CHECKOUT_METADATA_KEYS.purpose]: FIXTURE_COMMERCE_CHECKOUT_PURPOSE,
@@ -555,6 +559,7 @@ describe("catalog fixture commerce golden path", () => {
       verified: liveVerified.value,
       intent: liveIntent,
       settlement: {
+        sessionId: LIVE_SESSION_ID,
         paymentStatus: "paid",
         amountTotal: MONEY_MINOR,
         currency: "usd",
@@ -569,7 +574,6 @@ describe("catalog fixture commerce golden path", () => {
     const liveSettled = settleFixtureListingMoneySale({
       completion: liveCompletion.value,
       intent: liveIntent,
-      now: NOW,
     });
     expect(liveSettled.ok).toBe(false);
     if (liveSettled.ok) return;

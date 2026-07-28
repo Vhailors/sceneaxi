@@ -48,6 +48,10 @@ export const BILLING_REFUSE_REASONS = Object.freeze({
   webhookPayloadInvalid: "STRIPE_WEBHOOK_PAYLOAD_INVALID",
   webhookEventTypeUnsupported: "STRIPE_WEBHOOK_EVENT_TYPE_UNSUPPORTED",
 
+  // --- settlement bound to the exact Checkout Session ---
+  checkoutSessionIdMissing: "STRIPE_CHECKOUT_SESSION_ID_MISSING",
+  settlementSessionMismatch: "STRIPE_SETTLEMENT_SESSION_MISMATCH",
+
   // --- webhook provenance, checked at runtime rather than only typed ---
   webhookNotVerified: "STRIPE_WEBHOOK_NOT_VERIFIED",
   completionNotVerified: "STRIPE_COMPLETION_NOT_VERIFIED",
