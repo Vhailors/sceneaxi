@@ -396,8 +396,9 @@ describe("append-or-replay at the shared boundary", () => {
   it("needs no database to prove any of this", () => {
     // The boundary is where a live store would plug in, so this is the suite
     // most likely to acquire a connection string. It must not: the gate proves
-    // the persistence contract against adapters it constructs itself, and a
-    // live-database test is opt-in and never part of the default run.
+    // the persistence contract against adapters it constructs itself, no
+    // live-database suite exists here, and any future one must stay opt-in and
+    // outside the default run.
     expect(process.env["DATABASE_URL"]).toBeUndefined();
   });
 

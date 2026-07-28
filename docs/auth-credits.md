@@ -221,7 +221,8 @@ an extra entry that is somebody else's movement stays a refusal — as does a re
 for different money under the same key.
 
 None of this needs a database to prove. The gate builds adapters in-process and asserts the
-contract against them; a live-database test is opt-in and never part of the default run.
+contract against them; there is no live-database suite in this repository, and any future
+one must stay opt-in and outside the default run, which is hermetic by rule (ADR 0021).
 
 ## Stripe (test mode)
 
