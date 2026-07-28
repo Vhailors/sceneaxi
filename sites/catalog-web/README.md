@@ -61,9 +61,11 @@ and this storefront consumes it rather than carrying a copy:
 - `src/lib/foundations.ts` composes `foundationsCss({ surface })` from
   `@sceneaxi/site-kit` and serves it from `src/app/layout.tsx`. `src/app/globals.css`
   declares **no** Foundations v2 token — no neutral, no radius, no font stack, no
-  semantic colour — and writes no Foundations palette value as a literal in any
-  notation, hex or `rgb()`/`rgba()`. Both are gate-asserted; a translucent overlay of a
-  Foundations colour is mixed from its token with `color-mix()` rather than re-encoded.
+  semantic colour — and neither it nor any module under `src/lib/` writes a Foundations
+  palette value as a literal in any notation, hex or `rgb()`/`rgba()`. Both are
+  gate-asserted; a translucent overlay of a Foundations colour is mixed from its token
+  with `color-mix()` rather than re-encoded, and the family bar's surface dots are read
+  from `resolveSurfaceAccent()` rather than transcribed.
 - The accent is an *argument*, not a redeclaration. This site sets
   `CATALOG_SITE_FOUNDATION_SURFACE = "web-assets"`; site-kit resolves `--store-web`
   (`#3FB8C9`) for it, so that hex has exactly one declaration in the repository. This is

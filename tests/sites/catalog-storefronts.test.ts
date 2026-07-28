@@ -14,7 +14,7 @@
  * cart — so each of those is a case below rather than a promise in a comment.
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
@@ -152,6 +152,17 @@ const sourcesFor = (site: string): readonly { path: string; text: string }[] =>
     text: stripComments(readFileSync(path, "utf8")),
   }));
 
+/** The shared component directory AGENTS.md holds identical, read rather than listed. */
+const componentFiles = (site: string): readonly string[] =>
+  readdirSync(join(siteDir(site), "src/app/_components")).sort();
+
+/** Every shared module a storefront could paint a colour from, with its site path. */
+const sharedModules = (site: string): readonly { relative: string; text: string }[] =>
+  collectSources(join(siteDir(site), "src/lib")).map((path) => ({
+    relative: relative(siteDir(site), path),
+    text: readFileSync(path, "utf8"),
+  }));
+
 describe("the two storefronts share one skeleton and differ only in store identity", () => {
   it("keeps every rule below the store identity block byte-identical", () => {
     expect(sharedSkeleton(css["catalog-web"])).toBe(sharedSkeleton(css["catalog-game"]));
@@ -197,15 +208,19 @@ describe("the two storefronts share one skeleton and differ only in store identi
     expect(game.CATALOG_SITE_BRAND.heroKicker).not.toBe(web.CATALOG_SITE_BRAND.heroKicker);
   });
 
+  it("holds the same component files on both storefronts", () => {
+    // The identity claim is about the whole directory, so the directory *listings* are
+    // compared before the bytes are: a component added to one store and not the other
+    // would otherwise be a file no case below happens to name.
+    expect(componentFiles("catalog-web")).toEqual(componentFiles("catalog-game"));
+  });
+
   it.each([
     "src/lib/family-bar.ts",
     "src/lib/digest-sigil.ts",
     "src/lib/catalog-facts.ts",
     "src/lib/foundations.ts",
-    "src/app/_components/family-bar.tsx",
-    "src/app/_components/digest-figure.tsx",
-    "src/app/_components/listing-card.tsx",
-    "src/app/_components/listing-tile.tsx",
+    ...componentFiles("catalog-game").map((entry) => `src/app/_components/${entry}`),
   ])("keeps %s identical on both storefronts", (relative) => {
     expect(readSite("catalog-web", relative)).toBe(readSite("catalog-game", relative));
   });
@@ -245,10 +260,20 @@ describe("the token layer comes from site-kit and is not copied into either site
     // pastes `#07080a` back in has recreated the duplication D2 removed, even if it also
     // consumes the emitter — and so has one that writes the same colour as
     // `rgba(7, 8, 10, 0.9)`, which is why the scan decodes rather than string-matches.
-    const shipped = new Set(colorLiterals(stripComments(css[site])));
-    const offenders = FOUNDATION_COLORS.map((color) => color.hex.toLowerCase()).filter((hex) =>
-      shipped.has(hex),
-    );
+    //
+    // The stylesheet is not the only place a palette value fits. A `src/lib` module that
+    // hardcodes an accent paints the same pixels and goes stale the same way, with the
+    // added reach of being a *seam* export, so every shared module is scanned here too.
+    const scanned: readonly (readonly [string, string])[] = [
+      ["src/app/globals.css", css[site]] as const,
+      ...sharedModules(site).map((module) => [module.relative, module.text] as const),
+    ];
+    const offenders = scanned.flatMap(([path, text]) => {
+      const shipped = new Set(colorLiterals(stripComments(text)));
+      return FOUNDATION_COLORS.filter((color) => shipped.has(color.hex.toLowerCase())).map(
+        (color) => `${path}: ${color.hex}`,
+      );
+    });
     expect(offenders).toEqual([]);
   });
 

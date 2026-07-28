@@ -133,7 +133,7 @@ a:hover {
 .tile:hover,
 .button:hover,
 .footer-col a:hover,
-.family-item a:hover,
+.family-item:hover,
 .skip-link:focus {
   text-decoration: none;
 }

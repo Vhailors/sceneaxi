@@ -168,8 +168,10 @@ are `src/lib/{family-bar,digest-sigil,catalog-facts,foundations}.ts` and every f
 `src/app/_components/`. Edit one and you must edit the other, or
 `tests/sites/catalog-storefronts.test.ts` fails. Neither storefront owns a token: both
 serve `foundationsCss({ surface })` from `site-kit` through `src/lib/foundations.ts`, and
-`globals.css` declares no Foundations token and writes no Foundations hex — the suite
-asserts both directions, so a copied palette cannot come back. A storefront names its
+`globals.css` declares no Foundations token, and neither it nor any `src/lib/` module
+writes a Foundations palette value in any notation — the suite asserts both directions
+over the sheet and the modules, so a copied palette cannot come back through a `.ts`
+file either. A storefront names its
 surface (`CATALOG_SITE_FOUNDATION_SURFACE`) and site-kit resolves the accent, which is why
 `--store-game` / `--store-web` each have exactly one declaration in the repository; where
 the archive's sheet and site-kit disagreed, site-kit won and the divergence is recorded in

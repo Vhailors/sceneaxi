@@ -15,8 +15,10 @@
  */
 import {
   resolveFamilyLinks,
+  resolveSurfaceAccent,
   resolveUmbrellaEditorOrigin,
   type CatalogSurface,
+  type FoundationSurfaceAccentId,
 } from "@sceneaxi/site-kit";
 
 /** Every surface this bar can name. Kids is absent by construction. */
@@ -25,14 +27,27 @@ export const FAMILY_KEYS = Object.freeze(["engine", "catalog-game", "catalog-web
 export type FamilyKey = (typeof FAMILY_KEYS)[number];
 
 /**
- * Surface dots, taken verbatim from the Foundations v2 "Axis & surface accents" sheet:
- * `--accent` for the engine, `--store-game`, `--store-web`. Fixed meanings, never
- * reassigned.
+ * The Foundations v2 "Axis & surface accents" sheet, read rather than transcribed.
+ *
+ * The meanings are the sheet's own and are never reassigned — `--accent` marks the
+ * engine, `--store-game` the game catalogue, `--store-web` the website catalogue — but
+ * the *values* live in `@sceneaxi/site-kit` alone, so a bar dot cannot drift away from
+ * the store it points at. A surface whose accent the shared layer refuses throws here
+ * rather than falling back to a literal: a colour key this module cannot resolve is not
+ * one it may invent.
  */
+function surfaceDot(surface: FoundationSurfaceAccentId): string {
+  const accent = resolveSurfaceAccent(surface);
+  if (!accent.ok) {
+    throw new Error(`Foundations accent unresolved for "${surface}": ${accent.reason}`);
+  }
+  return accent.value.accent;
+}
+
 export const FAMILY_DOTS: Readonly<Record<FamilyKey, string>> = Object.freeze({
-  engine: "#FF6B2C",
-  "catalog-game": "#E8544E",
-  "catalog-web": "#3FB8C9",
+  engine: surfaceDot("umbrella"),
+  "catalog-game": surfaceDot("game-assets"),
+  "catalog-web": surfaceDot("web-assets"),
 });
 
 const FAMILY_LABELS: Readonly<Record<FamilyKey, string>> = Object.freeze({
