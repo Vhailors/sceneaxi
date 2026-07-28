@@ -74,13 +74,24 @@ nothing. Every control declares its kind — `view` changes visual state and wor
 `inert` keeps its focus stop and refuses by a name from
 `DESKTOP_VISUAL_REFUSALS`. Nothing on this path reaches `authoring-core`.
 
+The refuse-only profile demotes in **one** place: every control is minted through
+one function inside `desktopVisualView()`, and on Kids that function makes each
+one inert unless it is already inert for a more specific reason. A control added
+anywhere is behind the refusal by default, so forgetting fails closed; the
+eleven that are deliberately *not* behind it — the profile switch and the overlay
+open/close — say so by naming `outsideRefusal()`. The browser-side switch applies
+the same answer by sweeping every `[data-kind]` element against
+`view.controls`, never a selector list.
+
 That split is enforced rather than followed: `test/control-accounting.test.ts`
 walks the view for every control it can produce and fails if one is not in the
-document with its declared kind, if any `<button>` reached the document without
-going through the single `button(control, …)` helper, or if a named refusal
-resolves to `display: none` at any tier in `WINDOW_TIERS` — computed through the
-emitted stylesheet's own cascade, because a refusal nothing can reach at
-1280×800 is a hidden refusal.
+document with its declared kind, if `view.controls` is not exactly that set, if
+any `<button>` reached the document without going through the single
+`button(control, …)` helper, if a named refusal resolves to `display: none` at
+any tier in `WINDOW_TIERS`, or if a control declares itself live over a region
+its own profile keeps shut — all computed through the emitted stylesheet's own
+cascade, because a refusal nothing can reach at 1280×800 is a hidden refusal and
+a toggle over a permanently hidden panel is a control that lies.
 
 The document is self-contained: no remote font, script, style, or image. It
 mounts no presentation runtime, so it draws no pixels and says so on the surface.

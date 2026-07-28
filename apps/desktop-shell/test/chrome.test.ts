@@ -536,23 +536,35 @@ describe("engine desktop chrome — responsive strategy", () => {
   });
 
   it("never lights or presses the assistant toggle over a hidden column", () => {
-    // In a drawer tier the column is `open` and still not on screen, so both the
-    // pressed state and the accent styling read the drawer attribute instead.
-    const docked = render(createDesktopVisualState());
-    expect(docked).toContain('data-drawer-assistant="open"');
-    expect(docked).toMatch(/id="assistant-toggle"[^>]*aria-pressed="true"/);
+    // The drawer starts closed in the bytes at every render size: a document
+    // rendered at one viewport can be opened at another, and a drawer nobody
+    // opened must not sit on the panel it undocked from before a script runs.
+    for (const window of [
+      { width: 1680, height: 1000 },
+      { width: 1280, height: 800 },
+      // Wide but short is a drawer tier too, which a width-only rule missed.
+      { width: 1920, height: 700 },
+    ]) {
+      expect(
+        render(createDesktopVisualState({ window })),
+        `${window.width}x${window.height}`,
+      ).toContain('data-drawer-assistant="closed"');
+    }
 
+    const docked = render(createDesktopVisualState());
+    expect(docked).toMatch(/id="assistant-toggle"[^>]*aria-pressed="true"/);
     const drawer = render(
       createDesktopVisualState({ window: { width: 1280, height: 800 } }),
     );
-    expect(drawer).toContain('data-drawer-assistant="closed"');
     expect(drawer).toMatch(/id="assistant-toggle"[^>]*aria-pressed="false"/);
-    // Wide but short is a drawer tier too, which a width-only rule missed.
-    const short = render(
-      createDesktopVisualState({ window: { width: 1920, height: 700 } }),
-    );
-    expect(short).toContain('data-drawer-assistant="closed"');
 
+    // Which rule lights the toggle is decided on the two complementary media
+    // conditions, so it follows the viewport rather than the render size.
+    const regular = WINDOW_TIERS.find((tier) => tier.id === "regular");
+    expect(docked).toContain(
+      `@media (min-width:${regular?.minWidth}px) and (min-height:${regular?.minHeight}px){`,
+    );
+    expect(docked).toContain('.shell[data-assistant="open"] .assistant-toggle{');
     expect(docked).toContain(
       '.shell[data-drawer-assistant="open"] .assistant-toggle{',
     );
@@ -632,6 +644,39 @@ describe("engine desktop chrome — honesty", () => {
     expect(html).toContain(`id="refusal-${DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly}"`);
   });
 
+  it("cannot open a panel the Kids refusal removed, at any drawer tier", () => {
+    // Below the compact tier the two title-bar drawer toggles appear, and on the
+    // refuse-only profile they name regions the Kids rules keep shut at every
+    // size — so they refuse rather than announcing an expansion that can never
+    // happen. The model demotes them in one place with every other control, so
+    // this cannot regress by a call site forgetting a profile branch.
+    for (const window of [
+      { width: 1024, height: 700 },
+      // Wide but short is a drawer tier too.
+      { width: 1920, height: 620 },
+    ]) {
+      const at = `${window.width}x${window.height}`;
+      const html = render(createDesktopVisualState({ profile: "kids", window }));
+      for (const drawer of ["left", "inspector"]) {
+        expect(html, `${at} ${drawer}`).toContain(
+          `id="drawer-${drawer}" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly}"`,
+        );
+      }
+      expect(html, at).toContain(".title-actions .drawer-toggle{display:inline-flex}");
+    }
+    // On a profile that has those panels the same toggles stay live.
+    const game = render(
+      createDesktopVisualState({ window: { width: 1024, height: 700 } }),
+    );
+    expect(game).toContain('id="drawer-left" data-kind="view"');
+    expect(game).toContain('id="drawer-inspector" data-kind="view"');
+    // And the browser-side switch reaches them through the same sweep, not a
+    // selector list that has to name each new control.
+    const script = /<script>(.*)<\/script>/s.exec(game)?.[1] ?? "";
+    expect(script).not.toContain("setRefusal(shell.querySelector(");
+    expect(script).toContain("q('[data-kind]').forEach(applyControl)");
+  });
+
   it("locks the assistant on Kids and can be reached by a client switch", () => {
     const kids = render(createDesktopVisualState({ profile: "kids" }));
     expect(kids).toContain("The assistant is off on Kids");
@@ -658,22 +703,29 @@ describe("engine desktop chrome — honesty", () => {
     const view = desktopVisualView(createDesktopVisualState());
     const script = /<script>(.*)<\/script>/s.exec(render())?.[1] ?? "";
     const tables = JSON.parse(/const T = (\{.*?\});\n/s.exec(render())?.[1] ?? "{}") as {
-      assistantByProfile: Record<string, Record<string, string | null>>;
-      modeRefusalByProfile: Record<string, string | null>;
+      assistantByProfile: Record<string, Record<string, string>>;
+      controlsByProfile: Record<string, Record<string, [string, string | null]>>;
     };
     for (const chip of view.profiles) {
       expect(tables.assistantByProfile[chip.id]).toEqual({
         state: chip.assistant.state,
         modelLabel: chip.assistant.modelLabel,
-        toggle: chip.assistant.toggle.refusal,
-        close: chip.assistant.close.refusal,
-        send: chip.assistant.send.refusal,
-        modes: chip.assistant.modes[0]?.control.refusal ?? null,
       });
-      expect(tables.modeRefusalByProfile[chip.id]).toBe(chip.refusal);
+      // Every control that profile would render, not the handful a selector
+      // list remembered: the list is what left the drawer toggles behind.
+      const seat = tables.controlsByProfile[chip.id] ?? {};
+      const projected = desktopVisualView(
+        createDesktopVisualState({ profile: chip.id }),
+      );
+      for (const control of projected.controls) {
+        expect(seat[control.id], `${chip.id} ${control.id}`).toEqual([
+          control.kind,
+          control.refusal,
+        ]);
+      }
     }
     expect(script).toContain("setProfile(value)");
-    expect(script).toContain("setRefusal(shell.querySelector('#assistant-toggle')");
+    expect(script).toContain("q('[data-kind]').forEach(applyControl)");
   });
 
   it("prints the closed refusal registry, one sentence per code", () => {

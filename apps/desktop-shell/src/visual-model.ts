@@ -779,30 +779,61 @@ export type DesktopControl = Readonly<{
   refusalMessage: string | null;
 }>;
 
-function control(
-  id: string,
-  label: string,
-  kind: Exclude<DesktopControlKind, "inert">,
-): DesktopControl;
-function control(
-  id: string,
-  label: string,
-  kind: "inert",
-  refusal: DesktopVisualRefusal,
-): DesktopControl;
-function control(
+function buildControl(
   id: string,
   label: string,
   kind: DesktopControlKind,
-  refusal?: DesktopVisualRefusal,
+  refusal: DesktopVisualRefusal | null,
 ): DesktopControl {
   return Object.freeze({
     id,
     label,
     kind,
-    refusal: refusal ?? null,
-    refusalMessage: refusal === undefined ? null : DESKTOP_REFUSAL_MESSAGES[refusal],
+    refusal,
+    refusalMessage: refusal === null ? null : DESKTOP_REFUSAL_MESSAGES[refusal],
   });
+}
+
+function liveControl(
+  id: string,
+  label: string,
+  kind: Exclude<DesktopControlKind, "inert">,
+): DesktopControl;
+function liveControl(
+  id: string,
+  label: string,
+  kind: "inert",
+  refusal: DesktopVisualRefusal,
+): DesktopControl;
+function liveControl(
+  id: string,
+  label: string,
+  kind: DesktopControlKind,
+  refusal?: DesktopVisualRefusal,
+): DesktopControl {
+  return buildControl(id, label, kind, refusal ?? null);
+}
+
+/** The mint every control in one projection is made through. */
+type DesktopControlMint = typeof liveControl;
+
+/**
+ * What the refuse-only profile does to one control.
+ *
+ * A control that is already inert keeps its own, more specific reason — the
+ * assistant's denial and the menus' "not a verb here" say more than
+ * `OPEN_PATH_KIDS_REFUSED` would, and one control must not carry two refusals.
+ * Everything else becomes inert and names the profile refusal.
+ */
+function refuseOnlyControl(built: DesktopControl): DesktopControl {
+  return built.kind === "inert"
+    ? built
+    : buildControl(
+        built.id,
+        built.label,
+        "inert",
+        DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly,
+      );
 }
 
 export type DesktopProfileChip = Readonly<{
@@ -872,8 +903,17 @@ export type DesktopAssistantView = Omit<DesktopAssistantProjection, "modes"> &
  * for the active profile and the column a profile switch moves to are the same
  * decision — `send` refuses for the profile's own reason rather than keeping the
  * one the document happened to be rendered with.
+ *
+ * `refuseOnly` is the profile being projected, not the active one, so this
+ * branch is not the per-call-site "is it Kids" the projection below removed: it
+ * is what every profile chip carries for the browser-side switch. The active
+ * column passes the projection's own mint, which is what puts its controls in
+ * `view.controls`; a chip's column is data, not markup, and keeps the default.
  */
-function assistantProjection(refuseOnly: boolean): DesktopAssistantProjection {
+function assistantProjection(
+  refuseOnly: boolean,
+  mint: DesktopControlMint = liveControl,
+): DesktopAssistantProjection {
   const denial = kidsAssistantDenial();
   return Object.freeze({
     state: refuseOnly ? "denied" : "open",
@@ -881,14 +921,14 @@ function assistantProjection(refuseOnly: boolean): DesktopAssistantProjection {
       ? ASSISTANT_MODEL_LABELS.denied
       : ASSISTANT_MODEL_LABELS.noProvider,
     toggle: refuseOnly
-      ? control("assistant-toggle", "Assistant", "inert", denial.code)
-      : control("assistant-toggle", "Assistant", "view"),
+      ? mint("assistant-toggle", "Assistant", "inert", denial.code)
+      : mint("assistant-toggle", "Assistant", "view"),
     close: refuseOnly
-      ? control("assistant-close", "Close assistant", "inert", denial.code)
-      : control("assistant-close", "Close assistant", "view"),
+      ? mint("assistant-close", "Close assistant", "inert", denial.code)
+      : mint("assistant-close", "Close assistant", "view"),
     send: refuseOnly
-      ? control("assistant-send", "Send", "inert", denial.code)
-      : control(
+      ? mint("assistant-send", "Send", "inert", denial.code)
+      : mint(
           "assistant-send",
           "Send",
           "inert",
@@ -901,8 +941,8 @@ function assistantProjection(refuseOnly: boolean): DesktopAssistantProjection {
           id,
           label,
           control: refuseOnly
-            ? control(`assistant-mode-${id}`, label, "inert", denial.code)
-            : control(`assistant-mode-${id}`, label, "view"),
+            ? mint(`assistant-mode-${id}`, label, "inert", denial.code)
+            : mint(`assistant-mode-${id}`, label, "view"),
         });
       }),
     ),
@@ -1065,6 +1105,16 @@ export type DesktopVisualView = Readonly<{
   }>;
   statusText: string;
   profilePin: string;
+  /**
+   * Every control this projection contains, in mint order.
+   *
+   * Recorded by the mint itself rather than assembled by hand, so it cannot be
+   * a subset of what the view holds. It is what lets the renderer apply a
+   * profile's own answer to each rendered control by id instead of to a
+   * selector list — the list that omitted the drawer toggles and left them live
+   * over regions the Kids refusal had already removed.
+   */
+  controls: ReadonlyArray<DesktopControl>;
 }>;
 
 const VISUAL_SOURCE_REF = Object.freeze({
@@ -1096,6 +1146,50 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
   const tierRow = WINDOW_TIERS.find((row) => row.id === tier) ?? WINDOW_TIERS[WINDOW_TIERS.length - 1];
   const policy = openPathPolicyView();
   const kids = state.profile === "kids";
+  const minted: DesktopControl[] = [];
+
+  /**
+   * Every control below is minted here, and on the refuse-only profile this is
+   * the single place the demotion happens. A control added anywhere in this
+   * projection is therefore behind the refusal by default: forgetting fails
+   * closed, which is the opposite of the per-call-site `kids ?` branch that let
+   * the drawer toggles stay live over panels the refusal had removed.
+   */
+  function control(
+    id: string,
+    label: string,
+    kind: Exclude<DesktopControlKind, "inert">,
+  ): DesktopControl;
+  function control(
+    id: string,
+    label: string,
+    kind: "inert",
+    refusal: DesktopVisualRefusal,
+  ): DesktopControl;
+  function control(
+    id: string,
+    label: string,
+    kind: DesktopControlKind,
+    refusal?: DesktopVisualRefusal,
+  ): DesktopControl {
+    const built = buildControl(id, label, kind, refusal ?? null);
+    const final = kids ? refuseOnlyControl(built) : built;
+    minted.push(final);
+    return final;
+  }
+
+  /**
+   * The controls that are *not* behind the refusal, so the demotion above must
+   * not reach them: the profile switch is how an operator leaves the Kids
+   * state, and the overlays this chrome opens and dismisses work on every
+   * profile. Marking a control that works as refusing is the same dishonesty in
+   * the other direction.
+   */
+  function outsideRefusal(id: string, label: string): DesktopControl {
+    const built = liveControl(id, label, "view");
+    minted.push(built);
+    return built;
+  }
 
   const refusal =
     tier === "minimum"
@@ -1151,7 +1245,7 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
     cancel: control("sculpt-cancel", "Cancel after this pass", "view"),
   });
 
-  const projection = assistantProjection(kids);
+  const projection = assistantProjection(kids, control);
   const assistantIsDrawer = (tierRow?.drawerColumns ?? []).includes("assistant");
 
   const assistant: DesktopAssistantView = Object.freeze({
@@ -1210,14 +1304,7 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
           label: mode.label,
           title: mode.title,
           active: mode.id === state.mode,
-          control: kids
-            ? control(
-                `mode-${mode.id}`,
-                mode.title,
-                "inert",
-                DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly,
-              )
-            : control(`mode-${mode.id}`, mode.title, "view"),
+          control: control(`mode-${mode.id}`, mode.title, "view"),
         }),
       ),
     ),
@@ -1232,7 +1319,7 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
           label: PROFILE_LABELS[id],
           packageName,
           active: id === state.profile,
-          control: control(`profile-${id}`, PROFILE_LABELS[id], "view"),
+          control: outsideRefusal(`profile-${id}`, PROFILE_LABELS[id]),
           policy: row,
           refuseOnly,
           refusal: refuseOnly ? DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly : null,
@@ -1260,15 +1347,14 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
 
     overlay: Object.freeze({
       id: state.overlay,
-      search: control("overlay-open-palette", "Search", "view"),
+      search: outsideRefusal("overlay-open-palette", "Search"),
       shortcuts: Object.freeze(
         DESKTOP_OVERLAY_SHORTCUTS.map((shortcut) =>
           Object.freeze({
             ...shortcut,
-            control: control(
+            control: outsideRefusal(
               `status-overlay-${shortcut.overlay}`,
               shortcut.label,
-              "view",
             ),
           }),
         ),
@@ -1279,10 +1365,9 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
             overlay: dismissal.overlay,
             label: dismissal.label,
             emphasis: dismissal.emphasis,
-            control: control(
+            control: outsideRefusal(
               `overlay-close-${dismissal.id}`,
               dismissal.label,
-              "view",
             ),
           }),
         ),
@@ -1345,5 +1430,7 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
     profilePin: kids
       ? "kids profile · refuse-only · separate origin"
       : `${state.profile} profile · core 0.0.0`,
+
+    controls: Object.freeze([...minted]),
   });
 }

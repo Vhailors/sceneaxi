@@ -40,6 +40,7 @@ import {
   DESKTOP_VISUAL_REFUSALS,
   SCULPT_PASSES,
   WINDOW_TIERS,
+  desktopVisualView,
   dockTabsFor,
   kidsAssistantDenial,
   kidsProfileRefusal,
@@ -77,6 +78,12 @@ function belowTier(id: DesktopWindowTierId): string {
   const width = (tier?.minWidth ?? 0) - 1;
   const height = (tier?.minHeight ?? 0) - 1;
   return `(max-width:${width}px),(max-height:${height}px)`;
+}
+
+/** The exact complement of `belowTier(id)`, so the two can never overlap. */
+function atTierOrAbove(id: DesktopWindowTierId): string {
+  const tier = WINDOW_TIERS.find((row) => row.id === id);
+  return `(min-width:${tier?.minWidth ?? 0}px) and (min-height:${tier?.minHeight ?? 0}px)`;
 }
 
 /** HTML text escape. Applied to every interpolated value without exception. */
@@ -707,12 +714,16 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .primary-button.is-inert:hover{background:var(--accent)}
 .block-button{width:100%;height:32px;font-size:12px;margin-top:10px}
 .assistant-toggle{display:flex;align-items:center;gap:7px;height:22px;padding:0 10px;border-radius:4px;font-size:11px;font-weight:500;background:var(--header);border:1px solid var(--line-control);color:var(--dim)}
-/* Lit from the drawer attribute rather than from the state, because those two
-   differ in the tiers where the assistant undocks: the column can be open and
-   still not on screen, and a toggle that lights up over nothing is a claim the
-   document does not honour. Above the drawer tiers the two always agree. */
-.shell[data-drawer-assistant="open"] .assistant-toggle{background:${ACCENT.surface};border-color:${ACCENT.line};color:var(--accent)}
-.shell[data-drawer-assistant="open"] [data-assistant-dot]{background:var(--accent)}
+/* Where the assistant is docked the toggle reads the column's own state; below
+   that tier the drawer rule takes over. Which one applies is a stylesheet
+   decision on the two complementary media conditions rather than an attribute
+   chosen at render time, because the document can be opened at a viewport the
+   render never saw and the toggle must never light up over a column that
+   viewport does not show. */
+@media ${atTierOrAbove("regular")}{
+  .shell[data-assistant="open"] .assistant-toggle{background:${ACCENT.surface};border-color:${ACCENT.line};color:var(--accent)}
+  .shell[data-assistant="open"] [data-assistant-dot]{background:var(--accent)}
+}
 .shell[data-assistant="denied"] [data-assistant-dot]{background:var(--scene)}
 
 .mode-rail{background:var(--well);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:9px 0;gap:2px}
@@ -892,8 +903,14 @@ code,kbd{font-family:var(--mono);font-size:.86em}
   .shell[data-profile="kids"] .shell-body{grid-template-columns:var(--rail) minmax(0,1fr)}
   .assistant{position:absolute;top:var(--title-h);bottom:var(--status-h);right:0;width:min(var(--assistant-w),100%);z-index:40;box-shadow:0 0 60px -10px ${SCRIM.shadow}}
   /* An undocked assistant starts closed: a drawer nobody opened must not sit
-     on top of the panel it undocked from. Its toggle still opens it. */
+     on top of the panel it undocked from. Its toggle still opens it. The
+     emitted bytes always carry a closed drawer, so this holds at every viewport
+     the document is opened at, script or no script. */
   .shell:not([data-drawer-assistant="open"]) .assistant{display:none}
+  /* And the toggle follows the drawer here, not the column state: an open
+     column that is not on screen must not leave the toggle lit. */
+  .shell[data-drawer-assistant="open"] .assistant-toggle{background:${ACCENT.surface};border-color:${ACCENT.line};color:var(--accent)}
+  .shell[data-drawer-assistant="open"] [data-assistant-dot]{background:var(--accent)}
   /* Except a denied one, which never becomes a drawer at all. Its body is the
      Kids lock screen — a named refusal — and the only control that could open a
      drawer is the toggle that same refusal makes inert, so undocking it would
@@ -934,6 +951,36 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 `;
 }
 
+/**
+ * Every control, on every profile, exactly as the model projects it.
+ *
+ * `[kind, refusal]` per control id, unioned across the modes because the dock
+ * tabs a mode has are part of that mode. The browser-side switch applies these
+ * by id, which is what replaced a hand-written selector list: the list had to be
+ * edited whenever a control was added, and it was not — the drawer toggles were
+ * missing from it and stayed live on a profile whose panels the refusal removes.
+ */
+function controlsByProfile(
+  view: DesktopVisualView,
+): Record<string, Record<string, readonly [string, string | null]>> {
+  const table: Record<string, Record<string, readonly [string, string | null]>> = {};
+  for (const profile of view.profiles) {
+    const merged: Record<string, readonly [string, string | null]> = {};
+    for (const mode of DESKTOP_MODE_IDS) {
+      const projected = desktopVisualView({
+        ...view.state,
+        profile: profile.id,
+        mode,
+      });
+      for (const control of projected.controls) {
+        merged[control.id] = [control.kind, control.refusal] as const;
+      }
+    }
+    table[profile.id] = merged;
+  }
+  return table;
+}
+
 /** The emitted behaviour script. Reads only tables serialized from the model. */
 function script(view: DesktopVisualView): string {
   const tables = {
@@ -948,7 +995,6 @@ function script(view: DesktopVisualView): string {
       ]),
     ),
     changeCount: CHANGE_REVIEW_ROWS.length,
-    dockTabKind: view.dockTabs[0]?.control.kind ?? "view",
     // Every per-profile answer below is the model's own projection, so a switch
     // in the browser lands on the same controls a render of that profile would.
     assistantByProfile: Object.fromEntries(
@@ -957,18 +1003,12 @@ function script(view: DesktopVisualView): string {
         {
           state: profile.assistant.state,
           modelLabel: profile.assistant.modelLabel,
-          toggle: profile.assistant.toggle.refusal,
-          close: profile.assistant.close.refusal,
-          send: profile.assistant.send.refusal,
-          modes: profile.assistant.modes[0]?.control.refusal ?? null,
         },
       ]),
     ),
     /** The tier boundary the stylesheet undocks the assistant at. */
     assistantDrawerQuery: belowTier("regular"),
-    modeRefusalByProfile: Object.fromEntries(
-      view.profiles.map((profile) => [profile.id, profile.refusal]),
-    ),
+    controlsByProfile: controlsByProfile(view),
   };
 
   return `
@@ -997,7 +1037,6 @@ if (shell) {
       b.type = 'button';
       b.className = 'dock-tab';
       b.id = 'dock-' + id;
-      b.dataset.kind = T.dockTabKind;
       b.setAttribute('role', 'tab');
       b.dataset.action = 'dock-tab';
       b.dataset.value = id;
@@ -1012,6 +1051,10 @@ if (shell) {
         badge.textContent = String(pendingCount());
         b.appendChild(badge);
       }
+      // A rebuilt tab is a rendered control like any other, so it takes the
+      // active profile's own kind and reason rather than the one the document
+      // happened to be rendered with.
+      applyControl(b);
       strip.appendChild(b);
     });
     selectDockTab(chosen);
@@ -1134,19 +1177,24 @@ if (shell) {
     }
   };
 
+  // Every rendered control, not a list of selectors: the model already decided
+  // what each control is on each profile, and a list of the ones to update is a
+  // list that has to be edited whenever a control is added.
+  const applyControl = (el) => {
+    const row = (T.controlsByProfile[shell.dataset.profile] || {})[el.id];
+    if (!row) return;
+    el.dataset.kind = row[0];
+    setRefusal(el, row[1]);
+  };
+
+  const applyProfileControls = () => q('[data-kind]').forEach(applyControl);
+
   const setProfile = (id) => {
     const seat = T.assistantByProfile[id];
     if (!seat) return;
     setAssistant(seat.state);
     q('[data-assistant-model]').forEach((el) => { el.textContent = seat.modelLabel; });
-    setRefusal(shell.querySelector('#assistant-toggle'), seat.toggle);
-    setRefusal(shell.querySelector('#assistant-close'), seat.close);
-    setRefusal(shell.querySelector('#assistant-send'), seat.send);
-    q('.assistant-mode').forEach((el) => setRefusal(el, seat.modes));
-    // The refuse-only profile has no editor, so the rail refuses by name too:
-    // no mode can be entered from behind the refusal region.
-    const mode = T.modeRefusalByProfile[id];
-    q('.rail-mode').forEach((el) => setRefusal(el, mode));
+    applyProfileControls();
     // The column the profile restores is still a drawer in the tiers that undock
     // it, and leaving a refusal is not opening a drawer.
     syncAssistantTier();
@@ -1262,7 +1310,7 @@ export function renderDesktopChrome(
   <p>${escapeHtml(refusal.message)}</p>
   <p>Minimum: <code>${escapeHtml(`${refusal.minimum.width}×${refusal.minimum.height}`)}</code> · refusal <code>${escapeHtml(refusal.code)}</code></p>
 </div>
-<div class="shell" data-mode="${escapeHtml(view.state.mode)}" data-profile="${escapeHtml(view.state.profile)}" data-assistant="${escapeHtml(view.assistant.state)}" data-overlay="${escapeHtml(view.state.overlay ?? "none")}" data-tier="${escapeHtml(view.tier)}" data-drawer-left="closed" data-drawer-inspector="closed" data-drawer-assistant="${view.assistant.togglePressed ? "open" : "closed"}">
+<div class="shell" data-mode="${escapeHtml(view.state.mode)}" data-profile="${escapeHtml(view.state.profile)}" data-assistant="${escapeHtml(view.assistant.state)}" data-overlay="${escapeHtml(view.state.overlay ?? "none")}" data-tier="${escapeHtml(view.tier)}" data-drawer-left="closed" data-drawer-inspector="closed" data-drawer-assistant="closed">
 ${titleBar(view)}
 <div class="shell-body">
 ${modeRail(view)}

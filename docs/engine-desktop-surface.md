@@ -175,11 +175,42 @@ always has a refusal and a live one never does.
 |---|---|---|
 | `view` | changes visual state; genuinely works | mode rail, dock tabs, profile switch, assistant open/close and its Ask/Build/Agent modes, the overlay openers and each of the four overlay dismiss buttons, the sculpt cancel, drawer toggles |
 | `review` | edits the fixture Change Review queue; **writes no document** | accept/reject a row, accept all, reject all |
-| `inert` | renders, keeps its focus stop, refuses by name | Sculpt object, assistant Send, menu bar, the three viewport-source tabs, the palette rows naming CLI-only verbs, and — on the refuse-only profile — the whole mode rail and the assistant's toggle and close |
+| `inert` | renders, keeps its focus stop, refuses by name | Sculpt object, assistant Send, menu bar, the three viewport-source tabs, the palette rows naming CLI-only verbs, and — on the refuse-only profile — every control except the eleven named below |
 
 There is no fourth kind. Nothing in the chrome reaches `@sceneaxi/authoring-core`,
 so it cannot write a document by accident, and `test/app.test.ts` proves a
 `chrome` invocation leaves a document byte-identical.
+
+### The refuse-only profile demotes in one place
+
+A `view` control on the refuse-only profile is decided **once**, not per call
+site. `desktopVisualView()` mints every control through one local function, and
+on Kids that function makes each one `inert` with `OPEN_PATH_KIDS_REFUSED` —
+unless the control is *already* inert, which keeps its own more specific reason
+(the assistant's denial, the menus' "not a verb here"), because one control must
+not carry two refusals. A control added anywhere in the projection is therefore
+behind the refusal by default: **forgetting fails closed.**
+
+That replaced a per-call-site `kids ?` branch, which is a pattern that only has
+to be forgotten once. It was: the mode rail and the assistant remembered it and
+the two drawer toggles did not, so at 1024×700 — and at 1920×620, which is the
+same tier on height alone — "Panels" and "Inspector" rendered as live `view`
+buttons that set `aria-expanded="true"` on regions
+`.shell[data-profile="kids"]` keeps shut at every size.
+
+Exactly eleven controls are exempt, and they are the ones **not behind** the
+refusal: the three profile chips (the switch is how an operator leaves the Kids
+state, so making it inert would turn a state you can exit into a dead end), the
+palette opener, the three status-bar overlay shortcuts, and the four overlay
+dismiss buttons. Those genuinely work on every profile, and marking a control
+that works as refusing is the same dishonesty pointing the other way.
+
+The browser-side switch applies the same decision the same way: it sweeps
+**every** `[data-kind]` element and applies the model's own `[kind, refusal]` for
+that control id, serialized per profile from `view.controls`. There is no
+selector list — a list of the controls to update is a list that has to be edited
+whenever a control is added, and the one that existed had never gained
+`.drawer-toggle`.
 
 ### Refusal registry
 
@@ -188,7 +219,7 @@ so it cannot write a document by accident, and `test/app.test.ts` proves a
 
 | Code | When |
 |---|---|
-| `OPEN_PATH_KIDS_REFUSED` | the refuse-only profile, and every mode on the rail behind it; the code comes from the shared open-path policy, not from here |
+| `OPEN_PATH_KIDS_REFUSED` | the refuse-only profile, and every control behind it that is not already refusing for a more specific reason — the mode rail, the dock tabs, the two drawer toggles, the Change Review decisions, the sculpt cancel, the driveable palette rows; the code comes from the shared open-path policy, not from here |
 | `DESKTOP_KIDS_ASSISTANT_DENIED` | assistant on Kids — its toggle, its close, its Send, and its three composer modes |
 | `DESKTOP_NO_PRESENTATION_RUNTIME` | the viewport: no renderer is mounted, so no pixels — and the three viewport-source tabs, because switching what a viewport shows needs the runtime that is missing |
 | `DESKTOP_NO_KERNEL_SESSION` | `run` mode: no session, so no tick, frame, or body |
@@ -238,12 +269,21 @@ Two rules keep this honest:
   inert — so undocking it would leave a named refusal on no reachable surface at
   1280×800 while the surface still claimed to state it. Hiding a refusal behind a
   breakpoint is hiding a refusal.
-- **The toggle reports what the tier actually shows.** Below `regular` the
-  assistant column can be `open` and still not on screen, so both the toggle's
-  `aria-pressed` and its accent styling read `data-drawer-assistant`, which the
-  model seeds from the tier (`assistant.togglePressed`) and the emitted script
-  keeps in step with a `matchMedia` listener. One press opens the drawer at every
-  tier; there is no first press that only turns off a claim nothing honoured.
+- **The toggle reports what the tier actually shows, and the bytes ship a closed
+  drawer.** Below `regular` the assistant column can be `open` and still not on
+  screen. Every emitted document therefore carries
+  `data-drawer-assistant="closed"` — never a value seeded from the *render*
+  size — because a document rendered at 1680×1000 can be opened at 1280×800, and
+  an attribute chosen at render time would put the drawer over the inspector at
+  first paint and keep it there with no script. Which rule lights the toggle is a
+  stylesheet decision on the two **complementary** media conditions
+  (`atTierOrAbove("regular")` and `belowTier("regular")`, both derived from
+  `WINDOW_TIERS`): where the assistant is docked the toggle reads
+  `data-assistant`, and below that tier it reads `data-drawer-assistant`. So the
+  lit state follows the viewport rather than the render size, `aria-pressed` is
+  brought to the viewport by `syncAssistantTier()` at load and on every
+  `matchMedia` change, and one press opens the drawer at every tier — there is no
+  first press that only turns off a claim nothing honoured.
 - **Every breakpoint in the stylesheet is derived, and covers both axes.** The
   two undocking breakpoints are interpolated from `WINDOW_TIERS`
   (`@media (max-width:1439px),(max-height:719px)` and
@@ -327,7 +367,7 @@ Each row is also carried as data in `DEVIATIONS`.
 | Web fonts | `fonts.googleapis.com` link for Archivo + JetBrains Mono | font-family stack, no remote request | the emitted document is self-contained and offline. The archive families are named first and render when installed; otherwise the system UI face does. |
 | Fixed stage | 1680×1000 scaled with a transform | fluid layout, four window tiers | see above |
 | Informational blue | the member carries both `#5B9CFF` and a lighter `#8FB7F5` for the same informational role | `#5B9CFF` | the two archive members disagree, so the shared sheet settles it: Foundations v2 canonicalises `--info` to `#5B9CFF`, D1 makes the sheet binding, and the value clears the text floor here anyway (6.16:1 at worst on `SURFACE`, 6.48:1 on the note's own fill) — so there is no accessibility reason to keep the member's lighter variant, and keeping it would be drift from the shared layer. |
-| Kids profile | a working editor with only the assistant locked | the **whole editor body** refuses | **contract conflict, resolved for the repository.** The Kids product is an isolation boundary with no UI (`open-path-policy.md`, `OPEN_PATH_KIDS_REFUSED`). An editor that merely looked disabled under a Kids badge would still be a Kids authoring UI. The rail goes inert too — in the emitted bytes, not only after a click — so no mode can be entered from behind the refusal; the profile switch stays live so the refusal is a state you can leave. |
+| Kids profile | a working editor with only the assistant locked | the **whole editor body** refuses | **contract conflict, resolved for the repository.** The Kids product is an isolation boundary with no UI (`open-path-policy.md`, `OPEN_PATH_KIDS_REFUSED`). An editor that merely looked disabled under a Kids badge would still be a Kids authoring UI. Every control behind the refusal goes inert — in the emitted bytes, not only after a click, and decided in one place rather than remembered per call site — so no mode can be entered and no removed panel can be opened from behind it; eleven chrome controls stay live so the refusal is a state you can leave. |
 | Panel inventory | fixture object trees, digests, byte sizes, fps, triangle counts, run timings, evidence rows | real structure with honest empty and inert states | a shell that mounts no renderer and opens no kernel session has no fps, no triangle count, and no `14.2 MB` artifact. Rendering the archive's fixtures would be inventing file sizes and hashes. Change Review is the one fixture queue kept — its interactions are in scope — and it says on the surface that deciding there writes no document. |
 
 ### The renderer note is deliberately dropped
@@ -362,41 +402,58 @@ sentence can return by review slip.
   spawns the real binary and renders a document from it.
 
 - **The model/renderer split is enforced, not conventional** —
-  `apps/desktop-shell/test/control-accounting.test.ts`. Four review rounds each
-  found the next instance of one family of fault: a control the model built and
-  the renderer never drew, a button the renderer drew that no control accounted
-  for, or a state the document reported untruthfully. The split itself was sound;
-  nothing checked it. That file checks three things across sixteen states, and
-  each is derived rather than listed, so a newly modelled control is covered the
-  moment it exists:
+  `apps/desktop-shell/test/control-accounting.test.ts`. Review round after review
+  round found the next instance of one family of fault: a control the model built
+  and the renderer never drew, a button the renderer drew that no control
+  accounted for, a state the document reported untruthfully, or a control
+  declaring itself live over a region its own profile removes. The split itself
+  was sound; nothing checked it. That file checks four things across eighteen
+  states, and each is derived rather than listed, so a newly modelled control is
+  covered the moment it exists:
   1. Every control reachable by walking `desktopVisualView()` is in the document
      with the kind it declares, and an inert one with its `data-refusal` and a
-     legend row its `aria-describedby` resolves to. The one deliberate exception
-     is `profiles[].assistant`, the projection of the *other* profiles that the
-     renderer serializes into the script's switch table instead of drawing.
+     legend row its `aria-describedby` resolves to; and `view.controls` — the
+     index the mint records and the renderer serializes for the browser-side
+     switch — is *exactly* that walked set, so an index missing a control (which
+     the switch would then silently skip) fails here. The one deliberate
+     exception is `profiles[].assistant`, the projection of the *other* profiles
+     that the renderer serializes instead of drawing.
   2. No `<button>` in the document lacks the `id` + `data-kind` pair only
      `button(control, …)` emits, every such id is one the model minted, and no
      other interactive element or focus stop exists at all.
   3. Every named refusal resolves to a visible region **at every window tier**,
-     computed through the emitted stylesheet's own cascade — media conditions,
-     selector matching, specificity, source order, and `!important` — rather than
-     by reading a `hidden` property. A companion case asserts the same helper
-     reports `display: none` for the docked assistant below the regular tier, so
-     the check cannot pass vacuously. This is the property the Kids lock screen
-     failed at 1280×800.
+     computed through the emitted stylesheet's own cascade — media conditions on
+     both axes and in both directions, selector matching, specificity, source
+     order, and `!important` — rather than by reading a `hidden` property. A
+     companion case asserts the same helper reports `display: none` for the
+     docked assistant below the regular tier, so the check cannot pass vacuously.
+     This is the property the Kids lock screen failed at 1280×800.
+  4. **A declared kind tells the truth.** No control declares itself `view` or
+     `review` while the region it names through `aria-controls` resolves to
+     `display: none` — judged with the control's *own* effect applied, since a
+     drawer opener naming a region the sheet keeps shut until it opens it is the
+     control working, not a region the profile removed. An `aria-controls` target
+     with no region mapping fails rather than being skipped. And the assistant
+     toggle is checked across the **cross product** of render size and open size:
+     every document ships a closed drawer, the column is shown exactly where the
+     tier docks it, and the lit fill agrees with the column at the viewport the
+     document is opened at, not the one it was rendered at. Properties 3 and 4
+     each fail on the defect they were added for — verified by reverting it.
 
 - **Real browser, re-recorded 2026-07-28 against this branch's final HEAD.**
-  Not inherited: the previous record was taken before the fixes for the Kids
-  drawer refusal, the assistant toggle's tier reporting, and the modelled
-  controls that were not being drawn, all three of which change what ships.
-  **Every visibility claim below is `getComputedStyle(...).display`**, not a
-  `hidden` property — the methodology flaw that made an earlier "Accept all hid
-  the bulk actions" claim unsound. Chrome via `chrome-devtools-axi`, documents
-  rendered by `node apps/desktop-shell/bin/sceneaxi-desktop.mjs chrome`, opened
-  from `file://`, at 1680×1000 unless a size is named. The sweep now covers three
-  window shapes rather than one: 1680×1000, 1280×800 (the drawer tier), 1920×700
-  (**wide but short** — a tier the model reaches on height alone), 1024×700, and
-  800×560.
+  Not inherited: the previous record was taken before the refuse-only profile's
+  central demotion, the drawer attribute that no longer follows the render size,
+  and the tier-scoped toggle rules — all three change what ships. **Every
+  visibility claim below is `getComputedStyle(...).display`**, not a `hidden`
+  property; that methodology flaw is what made an earlier "Accept all hid the
+  bulk actions" claim unsound. Chrome via `chrome-devtools-axi` in an isolated
+  session, documents rendered by
+  `node apps/desktop-shell/bin/sceneaxi-desktop.mjs chrome`, opened from
+  `file://`, at 1680×1000 unless a size is named. The sweep covers six window
+  shapes rather than one: 1680×1000, 1280×800 (the drawer tier), 1920×700 and
+  1920×620 (**wide but short** — tiers the model reaches on height alone),
+  1024×700 (the Kids drawer tier), and 800×560, and it exercises the Kids switch
+  at the drawer tiers, not only at 1680×1000.
 
   - **Region geometry at 1680×1000 is the archive's own, to the pixel**:
     title bar `36`, mode rail `56`, left dock `274`, inspector `326`, assistant
@@ -408,78 +465,95 @@ sentence can return by review slip.
   - **Exactly one network request** — the document itself
     (`GET file://…/build.html [200]`, and `performance.getEntriesByType(
     'resource')` empty). No font, script, style, or image was fetched.
-  - **Every button came from the helper.** In all ten documents measured,
-    **0** buttons lacked the `id` + `data-kind` pair, and **0**
-    `aria-describedby` references dangled. `build` renders 58 buttons, 53 plain
-    focus stops, **0 unlabelled**, 17 inert; `kids` renders 29 inert — the seven
-    rail modes, the assistant toggle and close, and the three assistant modes
-    join them, each with a resolving reason. The only inert controls outside the
-    plain Tab order are `viewport-source-game` and `viewport-source-sculpt-preview`,
-    which carry `tabindex="-1"` because the viewport strip uses roving tabindex,
-    and the arrow keys reach them.
-  - **Every `role="tablist"` owned only `role="tab"` children** in all ten
-    documents, so the bulk accept/reject and the spacer are outside it.
+  - **Every button came from the helper.** Across the nine document/size
+    combinations audited, **0** buttons lacked the `id` + `data-kind` pair and
+    **0** `aria-describedby` references dangled, in every state and after every
+    interaction below. `build` renders 58 buttons, 53 focus stops, **0
+    unlabelled**, 17 inert. `kids` renders the same 58 with **47** inert: the
+    live eleven are exactly the controls not behind the refusal —
+    `profile-game`, `profile-web`, `profile-kids`, `overlay-open-palette`, the
+    three `status-overlay-*`, and the four `overlay-close-*`. The only inert
+    controls outside the plain Tab order are `viewport-source-game` and
+    `viewport-source-sculpt-preview` on `build` (roving tabindex, and the arrow
+    keys reach them), joined on `kids` by the non-active dock tabs.
+  - **Every `role="tablist"` owned only `role="tab"` children** in every document
+    measured, so the bulk accept/reject and the spacer are outside it.
   - **The viewport carries one note**, `VIEWPORT_INERT_NOTE`; the archive's
-    "not the final choice" line is not in the document.
+    "not the final choice" line is nowhere in the document (`indexOf` `-1`).
   - **Rendered contrast sweep**, computing each visible text-bearing element's
-    colour against its resolved (alpha-composited) background, skipping
-    `aria-hidden` subtrees: **0 failures below 4.5:1** in every state measured —
-    `build` (84 elements, worst 5.42:1), `sculpt` running (104, 5.42:1), `run`
-    (57, 5.42:1), the `palette` overlay (107, 5.11:1), and `kids` (48, **4.60:1**
-    — the `refuse-only` chip at 8.5px, the worst on the surface), and the same at
-    1280×800, 1920×700, and 1024×700. This sweep is also what *found* a real
-    defect during implementation — an inert icon button on the accent fill
-    inherited `--dim` from a later equal-specificity rule and rendered at
-    **1.11:1**; it is fixed and the rule that fixes it is commented in place.
-  - **The Kids lock screen is reachable at every tier.** Rendered with
-    `--profile kids` and read from computed style: at 1680×1000, 1280×800,
-    1920×700, and 1024×700 the shell body kept `rail, profile-refusal, assistant`
-    in flow, the editor refusal resolved to `display: grid`, the assistant column
-    to `flex`, its lock panel to `flex`, and its body and composer to `none`, with
-    the model label `denied`. At 800×560 the shell resolved to `display: none` and
-    the `DESKTOP_WINDOW_BELOW_MINIMUM` refusal to `display: block`, naming the
-    `900×600` minimum. Before the fix this was `display: none` below 1440px with
-    no control able to open it.
-  - **The refuse-only decision holds through a client-side switch, in a drawer
-    tier.** Driven at **1280×800** from the default `game` document, computed
-    style at each step: clicking the **Kids** chip gave `data-assistant="denied"`,
-    the lock `flex` and the column `flex` (not a drawer), composer `none`, model
-    label `denied`, the editor refusal `grid`, all seven rail modes and all three
-    assistant modes `aria-disabled` with resolving reasons. **Clicking a mode from
-    behind the refusal did not change mode** (`data-mode` stayed `build`), and
-    clicking the denied toggle changed nothing. Clicking **Game** restored a
-    usable, correctly-closed column — lock `none`, label `no provider configured`,
-    rail and assistant modes live again — and then **one** toggle press opened the
-    drawer (`flex`, `aria-pressed="true"`) and the next closed it. **0 dangling
-    `aria-describedby`** at every step.
-  - **The toggle never claims a column the tier does not show.** At 1680×1000
-    `aria-pressed="true"` with the accent fill `rgb(25, 18, 7)` and the column at
-    `flex`; at 1280×800, 1920×700, and 1024×700 `aria-pressed="false"` with the
-    plain `rgb(18, 21, 26)` fill and the column at `none`.
+    colour against its resolved (alpha-composited) background and skipping
+    `aria-hidden` subtrees: **0 failures below 4.5:1** in all eleven states
+    measured — `build` (99 elements, worst 5.42:1), `sculpt` running (119,
+    5.42:1), `run` (72, 5.42:1), `animate` (76, 5.42:1), the `palette` overlay
+    (122, 5.11:1), `kids` (63, **4.60:1** — the `refuse-only` chip at 8.5px, the
+    worst on the surface), and the same at 1280×800 (89, 5.42:1), 1920×700 (89,
+    5.42:1), 1024×700 (71, 5.42:1), and Kids at 1024×700 and 1920×620 (56, 4.60:1
+    each).
+  - **The Kids lock screen is reachable at every tier.** Read from computed
+    style at 1680×1000, 1280×800, 1024×700, and 1920×620: the shell body kept
+    `mode-rail, profile-refusal, assistant` in flow, the editor refusal resolved
+    to `display: grid`, the assistant column to `flex` (never a drawer), its lock
+    panel to `flex`, its body and composer to `none`, and the model label to
+    `denied`. At 800×560 the shell resolved to `display: none` and the
+    `DESKTOP_WINDOW_BELOW_MINIMUM` refusal to `display: block`, naming `900×600`.
+  - **A Kids drawer toggle refuses instead of announcing an expansion it cannot
+    make.** At 1024×700 and 1920×620 — the tiers where
+    `.title-actions .drawer-toggle` resolves to `display: flex` — `drawer-left`
+    and `drawer-inspector` render `data-kind="inert"`, `aria-disabled="true"`,
+    `data-refusal="OPEN_PATH_KIDS_REFUSED"`, with an `aria-describedby` that
+    resolves. Clicking `Panels` from behind the refusal left `data-drawer-left`
+    at `closed` and `aria-expanded` at `false`, and `.left-dock` at
+    `display: none`. Before the fix both were live `view` buttons that set
+    `aria-expanded="true"` on a region the Kids rules keep shut at every size.
+  - **The refuse-only decision holds through a client-side switch, in both
+    drawer tiers.** Driven at **1280×800** and at **1024×700** from the default
+    `game` document, computed style at each step: clicking the **Kids** chip gave
+    `data-assistant="denied"`, the lock `flex` and the column `flex` (not a
+    drawer), composer `none`, label `denied`, the editor refusal `grid`, and
+    **7 rail modes plus 2 drawer toggles** `aria-disabled` with resolving
+    reasons. Clicking a mode and clicking `Panels` from behind the refusal
+    changed nothing (`data-mode` stayed `build`, `data-drawer-left` stayed
+    `closed`), and clicking the denied toggle changed nothing. Clicking **Game**
+    restored a usable column — lock `none`, label `no provider configured`, rail
+    and drawer toggles live again — after which `Panels` opened `.left-dock` to
+    `flex`, **one** toggle press opened the assistant drawer
+    (`flex`, `aria-pressed="true"`, fill `rgb(25, 18, 7)`) and the next closed
+    it. **0 dangling `aria-describedby`** at every step, in both tiers.
+  - **The toggle never claims a column the viewport does not show — including in
+    a document rendered for another one.** The 1680×1000 `build.html` bytes ship
+    `data-drawer-assistant="closed"`; opened at 1680×1000 the column resolved to
+    `flex` with `aria-pressed="true"` and the accent fill `rgb(25, 18, 7)`, and
+    the *same bytes* opened at 1280×800, 1920×700, and 1024×700 resolved to
+    `none` with `aria-pressed="false"` and the plain `rgb(18, 21, 26)` fill. That
+    is the case the previous attribute got wrong: seeded from the render size it
+    said `open`, and the drawer sat over the inspector until a script ran.
   - **Interactivity matches the model.** Switching to `animate` rebuilt the dock
-    tabs to `["timeline","changes","console"]`, each with an `id` and a
-    `data-kind`. Deciding one Change Review row moved the badge `3 → 2` and the
-    computed-visible row count to 2; **Accept all** took the badge to `0`, left
-    **0** visible rows, resolved the bulk actions to `display: none`, and the
-    empty state to `block`. In `run`, which has no Changes tab, the bulk actions
-    were already `none`.
+    tabs to `["timeline","changes","console"]`, each with an `id`, a `data-kind`,
+    and `dock-panel-timeline` the visible panel. Deciding one Change Review row
+    moved the badge `3 → 2` and the computed-visible row count to 2; **Accept
+    all** took the badge to `0`, left **0** visible rows, resolved the bulk
+    actions to `display: none` and the empty state to `block`. In `run`, which
+    has no Changes tab, the bulk actions were `none` and `dock-panel-console` was
+    the visible panel.
   - **Roving tabindex is a working pattern.** On the dock strip `ArrowRight`
     moved focus to `dock-assets`, moved `aria-selected` with it, and left
-    `dock-panel-assets` as the only panel with a computed display; `End` reached
-    `dock-evidence` and `Home` returned to `dock-changes`. On the viewport strip
-    `ArrowRight` focused `viewport-source-game`, which reports `data-kind="inert"`
-    and `data-refusal="DESKTOP_NO_PRESENTATION_RUNTIME"`, and the selection stayed
-    on `viewport-source-scene` — nothing is switched, because nothing can be.
+    `dock-panel-assets` as the only visible panel; `End` reached `dock-evidence`
+    and `Home` returned to `dock-changes`. On the viewport strip `ArrowRight`
+    focused `viewport-source-game`, which reports `data-kind="inert"` and
+    `data-refusal="DESKTOP_NO_PRESENTATION_RUNTIME"`, and the selection stayed on
+    `viewport-source-scene` — nothing is switched, because nothing can be.
   - **Reduced motion**, in a Chrome launched with `--force-prefers-reduced-motion`:
     `matchMedia('(prefers-reduced-motion: reduce)')` matched, the sculpt sweep
     resolved to `display: none`, and the progress animation collapsed to
     `1e-06s` while the `progressbar` kept `aria-valuenow="64"` and
-    `aria-label="Pass 3 of 5"` and the modelled `sculpt-cancel` stayed on screen.
+    `aria-label="Pass 3 of 5"` and the modelled `sculpt-cancel` stayed on screen
+    at `display: flex` with `data-kind="view"`.
   - **Window tiers match `WINDOW_TIERS` exactly**, measured as which children of
-    `.shell-body` are still in flow: 1680×1000 `rail, left dock, viewport,
-    inspector, assistant` with 0 drawer toggles visible; 1280×800 and 1920×700
-    `rail, left dock, viewport, inspector` with 0 toggles; 1024×700
-    `rail, viewport` with 2 toggles visible; 800×560 the refusal.
+    `.shell-body` are still in flow: 1680×1000 `mode-rail, left-dock,
+    viewport-column, inspector, assistant` with 0 drawer toggles visible;
+    1280×800 and 1920×700 `mode-rail, left-dock, viewport-column, inspector` with
+    0 toggles; 1024×700 `mode-rail, viewport-column` with 2 toggles visible;
+    800×560 the refusal.
   - `<meta name="sceneaxi-pixels-drawn" content="false">` unchanged.
 
 
@@ -498,6 +572,14 @@ sentence can return by review slip.
 - A new colour means a contrast check: `test/visual-tokens.test.ts` recomputes
   every text token against every surface, so a token added without clearing the
   floor fails there rather than in review.
+- A new **control** needs nothing extra to be safe on the refuse-only profile:
+  mint it through the projection's own `control()` and it is demoted with
+  everything else. Reaching for the exempt `outsideRefusal()` is the deliberate
+  act, and it needs a reason the control is not behind the refusal. Rendering it
+  through `button(control, …)` is likewise not optional —
+  `test/control-accounting.test.ts` fails in both directions, and if the control
+  names a region through `aria-controls`, that region needs a row in the test's
+  `REGION_CHAINS` or the test fails rather than skipping it.
 - A new window tier means a row in `WINDOW_TIERS` alone: the stylesheet
   interpolates its breakpoint from that table, on both axes, and
   `test/control-accounting.test.ts` then checks refusal reachability at the new
