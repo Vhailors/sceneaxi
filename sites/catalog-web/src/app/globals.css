@@ -1109,20 +1109,6 @@ p {
 
 .included-check {
   grid-row: span 2;
-}
-
-.included-key {
-  color: var(--fg);
-}
-
-.included-value {
-  font-family: var(--store-mono);
-  font-size: 0.6875rem;
-  color: var(--fg-2);
-  overflow-wrap: anywhere;
-}
-
-.included-check {
   width: 14px;
   height: 14px;
   border-radius: var(--radius-sm);
@@ -1134,6 +1120,17 @@ p {
   font-size: 0.5rem;
   font-weight: 700;
   flex: none;
+}
+
+.included-key {
+  color: var(--fg);
+}
+
+.included-value {
+  font-family: var(--store-mono);
+  font-size: 0.6875rem;
+  color: var(--fg-2);
+  overflow-wrap: anywhere;
 }
 
 .record {
