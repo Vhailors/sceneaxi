@@ -141,6 +141,7 @@ const checkoutIntent = (
 const eventBody = (
   overrides: Record<string, unknown> = {},
   intent = checkoutIntent(),
+  sessionId: string = SESSION_ID,
 ) =>
   JSON.stringify({
     id: "evt_test_01",
@@ -149,7 +150,7 @@ const eventBody = (
     livemode: false,
     data: {
       object: {
-        id: "cs_test_01",
+        id: sessionId,
         payment_status: "paid",
         amount_total: intent.unitAmount,
         currency: intent.currency,
@@ -687,12 +688,8 @@ describe("parseCheckoutCompletedEvent", () => {
   it("refuses a session id that is not a usable identifier", () => {
     const intent = checkoutIntent();
     for (const sessionId of ["", "cs test 01", "c".repeat(129)]) {
-      const body = JSON.parse(eventBody({}, intent)) as {
-        data: { object: Record<string, unknown> };
-      };
-      body.data.object["id"] = sessionId;
       const result = parseCheckoutCompletedEvent({
-        verified: verified(JSON.stringify(body)),
+        verified: verified(eventBody({}, intent, sessionId)),
         intent,
         settlement: settlementFor(intent, { sessionId }),
       });
@@ -716,19 +713,15 @@ describe("parseCheckoutCompletedEvent", () => {
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.webhookPayloadInvalid);
   });
 
-  it("keys the grant's fingerprint on the session, so two sessions never collide", () => {
+  it("carries the paid session's own id onto the completion", () => {
     const intent = checkoutIntent();
     const first = parseCheckoutCompletedEvent({
       verified: verified(eventBody({}, intent)),
       intent,
       settlement: settlementFor(intent),
     });
-    const body = JSON.parse(eventBody({}, intent)) as {
-      data: { object: Record<string, unknown> };
-    };
-    body.data.object["id"] = "cs_test_second";
     const second = parseCheckoutCompletedEvent({
-      verified: verified(JSON.stringify(body)),
+      verified: verified(eventBody({}, intent, "cs_test_second")),
       intent,
       settlement: settlementFor(intent, { sessionId: "cs_test_second" }),
     });
@@ -947,15 +940,16 @@ describe("applyCheckoutCompletedGrant", () => {
   const reparsed = (
     intentOverrides: Record<string, unknown>,
     bodyOverrides: Record<string, unknown> = {},
+    sessionId: string = SESSION_ID,
   ) => {
     const intent = {
       ...checkoutIntent(),
       ...intentOverrides,
     } as CheckoutSessionIntent;
     const result = parseCheckoutCompletedEvent({
-      verified: verified(eventBody(bodyOverrides, intent)),
+      verified: verified(eventBody(bodyOverrides, intent, sessionId)),
       intent,
-      settlement: settlementFor(intent),
+      settlement: settlementFor(intent, { sessionId }),
     });
     if (!result.ok) throw new Error(`fixture parse failed: ${result.message}`);
     return result.value;
@@ -977,6 +971,7 @@ describe("applyCheckoutCompletedGrant", () => {
       reparsed({ currency: "eur" }),
       reparsed({ stripePriceId: "price_test_other" }),
       reparsed({}, { created: NOW_SECONDS + 1 }),
+      reparsed({}, {}, "cs_test_second"),
     ];
     for (const variant of variants) {
       expect(variant.eventId).toBe(completion.eventId);
