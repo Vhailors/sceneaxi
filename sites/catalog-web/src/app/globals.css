@@ -333,7 +333,7 @@ pre,
   position: sticky;
   top: 0;
   z-index: 30;
-  background: rgba(7, 8, 10, 0.9);
+  background: color-mix(in srgb, var(--bg-base) 90%, transparent);
   backdrop-filter: blur(18px);
   border-bottom: 1px solid var(--line-soft);
 }
@@ -783,7 +783,7 @@ p {
 .sigil-scrim {
   position: absolute;
   inset: 0;
-  background: linear-gradient(transparent 58%, rgba(7, 8, 10, 0.78));
+  background: linear-gradient(transparent 58%, color-mix(in srgb, var(--bg-base) 78%, transparent));
 }
 
 .sigil-tl {
@@ -802,7 +802,7 @@ p {
   font-family: var(--store-mono);
   font-size: 0.6875rem;
   color: var(--fg-2);
-  background: rgba(7, 8, 10, 0.78);
+  background: color-mix(in srgb, var(--bg-base) 78%, transparent);
   border-radius: var(--radius-sm);
   padding: 1px 5px;
 }
@@ -915,7 +915,7 @@ p {
 
 .detail-stat {
   padding: 4px 8px;
-  background: rgba(13, 15, 18, 0.72);
+  background: color-mix(in srgb, var(--bg-panel) 72%, transparent);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   font-family: var(--store-mono);
@@ -1196,7 +1196,7 @@ p {
   padding: 0.15rem 0.45rem;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  background: rgba(7, 8, 10, 0.78);
+  background: color-mix(in srgb, var(--bg-base) 78%, transparent);
   color: var(--fg-2);
 }
 

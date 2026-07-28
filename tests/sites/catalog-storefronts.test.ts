@@ -73,6 +73,43 @@ const stripComments = (text: string): string =>
     .map((line) => (line.trimStart().startsWith("//") ? "" : line))
     .join("\n");
 
+/**
+ * Every colour literal in a stylesheet, in any notation, normalised to `#rrggbb`.
+ *
+ * `rgba(7, 8, 10, 0.9)` is the same copy of `--bg-base` that `#07080a` would be, so a
+ * scan that reads only hexes leaves the functional notation open as the way a palette
+ * value comes back. Both spellings are decoded here before anything is compared, and
+ * alpha is dropped on purpose: a translucent overlay of a Foundations colour is still
+ * that colour, and it still goes stale when site-kit moves the token.
+ */
+function colorLiterals(text: string): readonly string[] {
+  const found: string[] = [];
+  for (const match of text.matchAll(/#[0-9a-fA-F]{3,8}\b/g)) {
+    const digits = match[0].slice(1).toLowerCase();
+    const rgb =
+      digits.length <= 4
+        ? [...digits.slice(0, 3)].map((digit) => `${digit}${digit}`).join("")
+        : digits.slice(0, 6);
+    found.push(`#${rgb}`);
+  }
+  for (const match of text.matchAll(/rgba?\(([^)]*)\)/gi)) {
+    const channels = (match[1] as string)
+      .split(/[\s,/]+/)
+      .filter((part) => part.length > 0)
+      .slice(0, 3)
+      .map((part) =>
+        part.endsWith("%")
+          ? Math.round((Number.parseFloat(part) / 100) * 255)
+          : Number.parseInt(part, 10),
+      );
+    if (channels.length !== 3 || channels.some((channel) => !Number.isInteger(channel))) {
+      continue;
+    }
+    found.push(`#${channels.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`);
+  }
+  return found;
+}
+
 /** `--token: value;` declarations, last one wins, the way the cascade reads them. */
 function cssTokens(text: string): Readonly<Record<string, string>> {
   const tokens: Record<string, string> = {};
@@ -203,13 +240,14 @@ describe("the token layer comes from site-kit and is not copied into either site
     expect(redeclared).toEqual([]);
   });
 
-  it.each(STOREFRONTS)("%s ships no Foundations hex as a literal", (site) => {
-    // The palette hexes may appear in exactly one place in the repository. A site that
+  it.each(STOREFRONTS)("%s ships no Foundations colour as a literal, in any notation", (site) => {
+    // The palette values may appear in exactly one place in the repository. A site that
     // pastes `#07080a` back in has recreated the duplication D2 removed, even if it also
-    // consumes the emitter.
-    const shipped = stripComments(css[site]).toLowerCase();
-    const offenders = FOUNDATION_COLORS.map((color) => color.hex.toLowerCase()).filter(
-      (hex) => shipped.includes(hex),
+    // consumes the emitter — and so has one that writes the same colour as
+    // `rgba(7, 8, 10, 0.9)`, which is why the scan decodes rather than string-matches.
+    const shipped = new Set(colorLiterals(stripComments(css[site])));
+    const offenders = FOUNDATION_COLORS.map((color) => color.hex.toLowerCase()).filter((hex) =>
+      shipped.has(hex),
     );
     expect(offenders).toEqual([]);
   });
@@ -264,17 +302,15 @@ describe("the token layer comes from site-kit and is not copied into either site
   const ALLOWED_LITERALS: Readonly<Record<string, string>> = Object.freeze({
     "#0a0c0e": "the family bar's own bar fill, between --bg-base and --bg-panel",
     "#191e25": "the top stop of the digest sigil's radial wash",
-    "#000": "a pure-black drop shadow under the sigil chip, not a surface colour",
+    "#000000": "a pure-black drop shadow under the sigil chip, not a surface colour",
+    "#ffffff": "the sigil grid rule and the button's inner top highlight, both at low alpha",
   });
 
   it.each(STOREFRONTS)("%s writes a colour literal only where no token exists", (site) => {
-    const shared = stripComments(sharedSkeleton(css[site]));
-    const literals = [...shared.matchAll(/#[0-9a-fA-F]{3,8}\b/g)].map((match) =>
-      match[0].toLowerCase(),
-    );
-    const unexplained = [...new Set(literals)].filter(
-      (hex) => !(hex in ALLOWED_LITERALS),
-    );
+    // Normalised the same way as the Foundations scan above, so a value cannot escape
+    // this list by being spelled `rgba(...)` or as a three-digit hex.
+    const literals = colorLiterals(stripComments(sharedSkeleton(css[site])));
+    const unexplained = [...new Set(literals)].filter((hex) => !(hex in ALLOWED_LITERALS));
     expect(unexplained).toEqual([]);
   });
 });
