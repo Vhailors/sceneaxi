@@ -435,6 +435,79 @@ describe("the storefronts are responsive, which the archive is not", () => {
       /className="detail-side"[^>]*aria-label="Pricing and listing record"/,
     );
   });
+
+  /**
+   * The anchor offset has to clear the masthead it is compensating for, at every width.
+   *
+   * `.masthead-inner` wraps the nav onto a second row once the storemark and the links stop
+   * fitting on one, so the masthead is 102px there against 60px for a single row — while a
+   * fragment target scrolls to `y = 0`. An offset pinned at the one-row height puts `#main`,
+   * which the skip link is the only way to reach, back underneath it on a phone. So the
+   * wrapped height is the default and the one-row value is the widened exception, and the
+   * default is asserted against the measured wrapped height rather than against itself.
+   */
+  it.each(STOREFRONTS)("%s clears a wrapped masthead at every anchor", (site) => {
+    const WRAPPED_MASTHEAD_PX = 102;
+    expect(declarationsFor(stripComments(css[site]), "html")["scroll-padding-top"]).toBe(
+      "var(--sticky-top)",
+    );
+
+    const base = css[site].slice(0, css[site].indexOf("@media"));
+    const narrow = cssTokens(base)["--sticky-top"] as string;
+    expect(narrow, "the narrow default is the wrapped-masthead offset").toMatch(/^[\d.]+rem$/);
+    expect(Number.parseFloat(narrow) * 16).toBeGreaterThanOrEqual(WRAPPED_MASTHEAD_PX);
+
+    // ...and released to the one-row offset only where the nav fits, rather than charging
+    // every anchor on every viewport space no masthead occupies.
+    const oneRow = css[site].slice(
+      css[site].indexOf("@media (min-width: 36rem)"),
+      css[site].indexOf("@media (min-width: 60rem)"),
+    );
+    const released = declarationsFor(oneRow, ":root")["--sticky-top"] as string;
+    expect(released).toBe("5.5rem");
+    expect(Number.parseFloat(released) * 16).toBeLessThan(Number.parseFloat(narrow) * 16);
+  });
+
+  /**
+   * Recorded prose may not be placed in a track sized for an ordinal.
+   *
+   * `.record-row` is two tracks below `48rem` with four children, so auto placement puts the
+   * curation reason in the 2rem ordinal column, where `overflow-wrap: anywhere` breaks it to
+   * a few characters a line. That never widens the document, so the `scrollWidth` probe the
+   * README records cannot see it — the placement is asserted here instead, in both
+   * directions, since an unreset span would collapse the four-track tablet row the same way.
+   */
+  it.each(STOREFRONTS)("%s gives the curation reason a full row when narrow", (site) => {
+    const sheet = stripComments(css[site]);
+    const stacked = sheet.slice(0, sheet.indexOf("@media (min-width: 64rem)"));
+    const columns = sheet.slice(sheet.indexOf("@media (min-width: 64rem)"));
+
+    expect(
+      declarationsFor(stacked, ".record-row")["grid-template-columns"],
+      "the ordinal track stays an ordinal track",
+    ).toBe("2rem minmax(0, 1fr)");
+    for (const selector of [".record-detail", ".record-at"]) {
+      expect(declarationsFor(stacked, selector)["grid-column"], `${selector} takes the row`).toBe(
+        "1 / -1",
+      );
+      expect(
+        declarationsFor(columns, selector)["grid-column"],
+        `${selector} is a column again once the row has four tracks`,
+      ).toBe("auto");
+    }
+    // The four-column row belongs to the breakpoint that gives it the width, not to the one
+    // that halves `.detail-main` around it — at `48rem` the reason's `1fr` track resolves to
+    // nothing at all.
+    expect(
+      declarationsFor(
+        sheet.slice(
+          sheet.indexOf("@media (min-width: 48rem)"),
+          sheet.indexOf("@media (min-width: 64rem)"),
+        ),
+        ".record-row",
+      )["grid-template-columns"],
+    ).toBeUndefined();
+  });
 });
 
 describe("accessibility corrections the archive needs", () => {

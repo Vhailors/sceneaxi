@@ -140,11 +140,59 @@ same probe found no element whose right edge exceeded the document width on any 
 twenty renders. In the same session the detail page's editor deep link resolved to
 `…/editor?source=catalog-game&item=game-lantern-prop`.
 
-The masthead is sticky, so a fragment target scrolled to `y=0` would land behind it.
-`html` carries `scroll-padding-top: var(--sticky-top)`, read from the served document as
-`88px`; at 1366x768 the hero's `#pricing` target put its `<h2>` top at 88 against a
-masthead bottom of 60, and the skip link's `#main` put the top of `<main>` at 88, flush
-with the masthead's bottom edge rather than under it.
+#### The anchor offset against a masthead that wraps
+
+The masthead is sticky, so a fragment target scrolled to `y=0` would land behind it, and
+`html` carries `scroll-padding-top: var(--sticky-top)` to answer that. One number cannot:
+`.masthead-inner` wraps the nav onto its own row once the storemark and the three links
+stop fitting on one, and the masthead then measures 101.7 against 60.2 for a single row.
+So the offset is `8rem` by default and `5.5rem` from `36rem` up, and the breakpoint was
+placed from measurement rather than arithmetic. Read at the width where this store's
+masthead begins to wrap and at one width either side of it, with the clearance between the
+anchor destination and the masthead's bottom edge — negative would mean the target sits
+behind it:
+
+| Width | Masthead | `scroll-padding-top` | `#main` after the skip link | `#pricing` heading |
+|---|---|---|---|---|
+| 519 | 2 rows, 101.7 | 128px | flush, 0 under | 26.2 clear |
+| 520 | 2 rows, 101.7 | 128px | flush, 0 under | 26.3 clear |
+| 521 | 1 row, 60.2 | 128px | flush, 0 under | 68.3 clear |
+| 522 | 1 row, 60.2 | 128px | flush, 0 under | 68.2 clear |
+| 576 | 1 row, 60.2 | 88px | flush, 0 under | 27.4 clear |
+| 1366 | 1 row, 60.2 | 88px | flush, 0 under | 27.8 clear |
+
+This store's masthead is one row at 521 and wider; the web storefront's, whose store name
+is longer, at 538. `36rem` is the shared breakpoint above both, so neither store reaches
+the one-row offset while its own masthead is still two rows. The nav is left free to wrap
+where it genuinely does not fit — suppressing it would only trade this for clipped or
+overflowing navigation — and the probe above read no overflow at 520 or 537 either.
+
+#### What the overflow probe cannot see
+
+`scrollWidth` against `innerWidth` is a zero-overflow check, not a legibility check, and
+the two are not the same claim. Text carrying `overflow-wrap: anywhere` never widens the
+document: squeezed into a track far narrower than its content it wraps instead, so the
+probe reads `390 = 390` while the text renders as a column of two- and three-character
+lines. The curation record was exactly that — four children auto-placed into the two-track
+`.record-row`, which put the reason in the 2rem ordinal track — and every viewport in the
+table above passed while that section was unreadable. So it is read directly, as the
+rendered width and line count of `.record-detail` on `/item/game-lantern-prop`:
+
+| Viewport width | `.record-detail` width | Lines |
+|---|---|---|
+| 390 | 316 | 1 |
+| 520 | 446 | 1 |
+| 768 | 386 | 1 |
+| 840 | 429 | 1 |
+| 1023 | 527 | 1 |
+| 1024 | 132 | 2 |
+| 1366 | 322 | 1 |
+
+Below `64rem` the reason takes its own full-width row under the ordinal; from `64rem` the
+row has four columns and the width for them. The four-column form is at `64rem` rather
+than `48rem` because `48rem` also halves `.detail-main` around this row: measured before
+the change, the reason's `1fr` track resolved to 0 wide and 624 tall at a 768 viewport —
+the same defect as the phone case and a worse instance of it.
 
 #### Sticky columns at short desktop heights
 
@@ -191,14 +239,15 @@ site-kit rather than from this stylesheet — the storefront declares none of th
 | computed `body` font-family | `Archivo, "Archivo Fallback", Archivo, system-ui, sans-serif` |
 
 Lighthouse (navigation, desktop) scored **accessibility 100 with 0 failed audits** on `/`,
-`/item/game-lantern-prop` and `/publish`, and the same on both of the web storefront's
-equivalents.
+`/item/game-lantern-prop` and `/publish`, and the same on all three of the web
+storefront's equivalents — six routes in all.
 
 What a browser has to prove is recorded here. What the gate can prove — shared skeleton,
 mobile-first breakpoints only, no masked overflow, the reduced-motion answer, a computed
 4.5:1 on every shipped text pairing measured against the sheet the site actually serves,
 each sticky column being bounded and internally scrollable rather than clipped, and
-keyboard-reachable while it is,
+keyboard-reachable while it is, the anchor offset clearing a wrapped masthead, the curation
+reason taking a full row rather than the ordinal track,
 no redeclared Foundations token or pasted Foundations hex, digest-mark determinism, real
 facet counts, and the absence of every invented value above — is asserted in
 [`tests/sites/catalog-storefronts.test.ts`](../../tests/sites/catalog-storefronts.test.ts).
