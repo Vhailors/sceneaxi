@@ -140,6 +140,53 @@ function declarationsFor(text: string, selector: string): Readonly<Record<string
   return declarations;
 }
 
+/**
+ * Every `font-size` the stylesheet declares, with the selector that declares it.
+ *
+ * A rule inside a media query is read the same way as one outside it: a floor that only
+ * holds at some widths is not a floor, and every grouped selector is listed separately so
+ * an offender is named rather than hidden behind the group it shares a rule with.
+ */
+function fontSizeDeclarations(text: string): readonly { selector: string; value: string }[] {
+  const found: { selector: string; value: string }[] = [];
+  for (const rule of text.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const selectors = (rule[1] as string)
+      .split(",")
+      .map((part) => part.trim())
+      .filter((part) => part.length > 0);
+    for (const declaration of (rule[2] as string).split(";")) {
+      const colon = declaration.indexOf(":");
+      if (colon < 0 || declaration.slice(0, colon).trim() !== "font-size") continue;
+      const value = declaration.slice(colon + 1).trim();
+      for (const selector of selectors) found.push({ selector, value });
+    }
+  }
+  return found;
+}
+
+/**
+ * The smallest size a `font-size` value can compute to, in rem, or `null` when that cannot
+ * be read off the value.
+ *
+ * `var(--micro)` is resolved through the sheet's own tokens so the floor keeps one
+ * definition, and a `clamp()` is read at the smallest length it names, which is at or below
+ * the size it can reach. A value this cannot decode returns `null` and is reported rather
+ * than waved through — an unreadable size is exactly how a small one would come back.
+ */
+function smallestRem(value: string, tokens: Readonly<Record<string, string>>): number | null {
+  const VAR = /var\(\s*(--[a-z0-9-]+)\s*\)/gi;
+  if ([...value.matchAll(VAR)].some((match) => tokens[match[1] as string] === undefined)) {
+    return null;
+  }
+  const resolved = value.replace(VAR, (_match, token: string) => tokens[token] as string);
+  const lengths = [...resolved.matchAll(/(-?\d*\.?\d+)(rem|px)/g)].map(([, size, unit]) =>
+    unit === "px"
+      ? Number.parseFloat(size as string) / 16
+      : Number.parseFloat(size as string),
+  );
+  return lengths.length === 0 ? null : Math.min(...lengths);
+}
+
 const relativeLuminance = (raw: string): number => {
   const hex = raw.toLowerCase();
   const channels = [1, 3, 5].map((offset) => {
@@ -593,8 +640,33 @@ describe("accessibility corrections the archive needs", () => {
     expect(readSite(site, "src/app/layout.tsx")).toContain('className="skip-link"');
   });
 
+  /**
+   * The only selectors allowed below the micro floor, each with its reason.
+   *
+   * The floor is about what a reader has to read, so the exemption is for marks rather
+   * than for labels: `.included-check` is the tick inside an `aria-hidden` span, drawn at
+   * a size that centres it in a 14px chip. The list is named and reasoned for the same
+   * reason the colour-literal list above is — a silent skip is how a floor stops being one.
+   */
+  const NON_TEXT_FONT_SIZES: Readonly<Record<string, string>> = Object.freeze({
+    ".included-check": "the aria-hidden tick glyph in a 14px chip, a mark and not a label",
+  });
+
   it.each(STOREFRONTS)("%s keeps micro type at 11px, not the archive's 8.5px", (site) => {
-    expect(cssTokens(css[site])["--micro"]).toBe("0.6875rem");
+    const tokens = cssTokens(css[site]);
+    // The token is the floor's single definition — but reading only the token is what let
+    // a 9px storemark strapline and a 10px domain line ship under a case with this name,
+    // so the assertion is about every size the sheet declares, at every breakpoint.
+    expect(tokens["--micro"]).toBe("0.6875rem");
+    const floor = 0.6875;
+    const belowFloor = fontSizeDeclarations(stripComments(css[site]))
+      .filter(({ selector }) => !(selector in NON_TEXT_FONT_SIZES))
+      .filter(({ value }) => {
+        const rem = smallestRem(value, tokens);
+        return rem === null || rem < floor;
+      })
+      .map(({ selector, value }) => `${selector} { font-size: ${value} }`);
+    expect(belowFloor).toEqual([]);
   });
 });
 

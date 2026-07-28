@@ -17,9 +17,10 @@
  *         `overflow-x: hidden`, so an overflow would show up in a probe instead of being
  *         masked by it.
  *   Q-03  The archive's micro type is 8.5px mono in `--fg-4` on `--bg-panel`, which
- *         measures about 2.1:1. `--fg-4` is not used for text anywhere here; micro labels
- *         are `--fg-2` at 11px, and `tests/sites/catalog-storefronts.test.ts` computes the
- *         contrast of every shipped text pairing.
+ *         measures about 2.1:1. `--fg-4` is not used for text anywhere here, and no rule
+ *         below sets text smaller than `--micro`, 11px —
+ *         `tests/sites/catalog-storefronts.test.ts` reads the shipped `font-size`
+ *         declarations for that floor and computes the contrast of every text pairing.
  *
  * The palette is dark only, as the archive is. There is no light variant anywhere in the
  * accepted source, and inventing one would be designing rather than implementing.
@@ -82,7 +83,7 @@
    *
    * The masthead it compensates for is content-driven, not a fixed bar: `.masthead-inner`
    * wraps the nav onto a second row once the storemark and the links stop fitting on one,
-   * which measures 102px against 60px for a single row. This is the wrapped value, so the
+   * which measures 105px against 60px for a single row. This is the wrapped value, so the
    * narrow case — the one where an anchor would otherwise land behind the masthead — is
    * the default rather than the exception.
    */
@@ -361,7 +362,7 @@ pre {
 
 .family-domain {
   font-family: var(--store-mono);
-  font-size: 0.625rem;
+  font-size: var(--micro);
   color: var(--fg-2);
   margin-left: auto;
   overflow-wrap: anywhere;
@@ -432,7 +433,7 @@ pre {
 
 .storetag {
   font-family: var(--store-mono);
-  font-size: 0.5625rem;
+  font-size: var(--micro);
   letter-spacing: 0.1em;
   color: var(--accent);
 }
@@ -1206,7 +1207,7 @@ p {
  * which drops the reason — recorded contract prose at 13px with `overflow-wrap: anywhere`
  * — into the 2rem ordinal track, where it breaks to a few characters a line. Widening that
  * track would cost the state name its width, so the two text rows take the full row under
- * the ordinal pair instead. The `48rem` rule gives the row four real tracks and returns
+ * the ordinal pair instead. The `64rem` rule gives the row four real tracks and returns
  * these to auto placement.
  *
  * Nothing about this is visible to a `scrollWidth` probe: `overflow-wrap: anywhere` wraps

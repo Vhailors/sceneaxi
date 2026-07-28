@@ -116,7 +116,8 @@ Each is a defect recorded against the design, not against the code:
 - **Reduced motion.** None of the archive's seven screens answers
   `prefers-reduced-motion`; this one does.
 - **Contrast.** The archive's micro labels are 8.5px `--fg-4` on a panel, about 2.1:1.
-  `--fg-4` paints no text here and micro type is `--fg-2` at 11px.
+  `--fg-4` paints no text here, and no rule in this sheet sets text below 11px — the
+  gate reads the shipped `font-size` declarations, not just the `--micro` token.
 - **Dark only.** The archive has no light variant anywhere, so this storefront no longer
   ships one. Inventing a light palette would be designing rather than implementing.
 - **Hero copy.** The archive's headline claims rig contents ("pivots, sockets, descriptive
@@ -145,7 +146,7 @@ twenty renders. In the same session the detail page's editor deep link resolved 
 The masthead is sticky, so a fragment target scrolled to `y=0` would land behind it, and
 `html` carries `scroll-padding-top: var(--sticky-top)` to answer that. One number cannot:
 `.masthead-inner` wraps the nav onto its own row once the storemark and the three links
-stop fitting on one, and the masthead then measures 101.7 against 60.2 for a single row.
+stop fitting on one, and the masthead then measures 104.9 against 60.2 for a single row.
 So the offset is `8rem` by default and `5.5rem` from `36rem` up, and the breakpoint was
 placed from measurement rather than arithmetic. Read at the width where this store's
 masthead begins to wrap and at one width either side of it, with the clearance between the
@@ -154,8 +155,8 @@ behind it:
 
 | Width | Masthead | `scroll-padding-top` | `#main` after the skip link | `#pricing` heading |
 |---|---|---|---|---|
-| 519 | 2 rows, 101.7 | 128px | flush, 0 under | 26.2 clear |
-| 520 | 2 rows, 101.7 | 128px | flush, 0 under | 26.3 clear |
+| 519 | 2 rows, 104.9 | 128px | flush, 0 under | 23.2 clear |
+| 520 | 2 rows, 104.9 | 128px | flush, 0 under | 23.3 clear |
 | 521 | 1 row, 60.2 | 128px | flush, 0 under | 68.3 clear |
 | 522 | 1 row, 60.2 | 128px | flush, 0 under | 68.2 clear |
 | 576 | 1 row, 60.2 | 88px | flush, 0 under | 27.4 clear |

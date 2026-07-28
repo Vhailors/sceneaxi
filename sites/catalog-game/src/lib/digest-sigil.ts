@@ -87,7 +87,8 @@ export function digestSigil(digest: string): DigestSigil | null {
 }
 
 /**
- * `sha256:9f31…b0c4`, or the value unchanged when it is too short to shorten.
+ * `9f31…b0c4` — the digest's hex edges, without its `sha256:` marker — or the value
+ * unchanged when it is too short to shorten.
  *
  * Shortening is display only. The full digest stays on the page — the detail record
  * prints it in full and every truncated instance carries it in `title`.
