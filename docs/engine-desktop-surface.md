@@ -98,11 +98,13 @@ sheet hex exactly, that a *raised* token is only raised where the sheet value
 measurably fails the floor, that an *absent* token gives a reason, does not
 reappear under a different local name, **and does not appear in the emitted
 document**, that every hex the document ships comes from a token the table
-accounts for — including in decimal, since an `rgba()` copy of a token is the
-same drift in another notation and would survive an edit to the token it was
-copied from — and that the accent, near-black, and both families survive into the
-actually-emitted document. Editing a hex on either side
-without the other is a failing test.
+accounts for, that the document ships **no `rgb()`/`rgba()` at all** — decimal is
+the notation the hex scan cannot follow, and matching only exact copies of a token
+still let `rgba(4,5,7,.68)` ship next to `SURFACE.backdrop` #050607, so a
+translucent value is written as a `color-mix()` over a declared token's custom
+property (`SCRIM`) and moves when that token does — and that the accent,
+near-black, and both families survive into the actually-emitted document. Editing
+a hex on either side without the other is a failing test.
 
 If the matrix ever permits `@sceneaxi/site-kit` here, the thing to delete is
 `FOUNDATIONS_V2_COLORS` and its transcription tests — `FOUNDATIONS_V2_SOURCE
@@ -125,7 +127,14 @@ which profile refuses — is serialized from the model at render time, so the
 document and the model cannot disagree about a state. That holds for the emitted
 bytes too, not just for what the script does afterwards: the visible dock
 tabpanel is `state.dockTab`, so `--mode run` opens on Console rather than on a
-hardcoded Change Review queue the mode does not even have a tab for.
+hardcoded Change Review queue the mode does not even have a tab for. The bulk
+accept/reject in the tab strip follows the same rule — it belongs to the Changes
+tab, so `run` and `ship` do not offer it, and the emitted script re-applies that
+condition when the mode switches rather than only tracking the pending count.
+Because a region hidden by the model is hidden with the `hidden` attribute, the
+stylesheet declares `[hidden]{display:none !important}`: `.change-row` and
+`.dock-bulk` set their own `display`, and an author class outranks the UA sheet's
+`[hidden]` rule.
 
 ## How to render it
 
@@ -233,7 +242,12 @@ Two rules keep this honest:
   points at the paragraph carrying its refusal — a screen reader gets the reason,
   not just "dimmed". Every referenced reason exists in the same document.
 - **Roving tabindex** on both tablists, with `aria-selected` on the active tab
-  and `aria-pressed` on the active mode and profile.
+  and `aria-pressed` on the active mode and profile — **and the arrow keys that
+  make it a pattern rather than a lost focus stop.** Roving tabindex takes every
+  non-active tab out of the Tab order, so `ArrowLeft` / `ArrowRight` / `Home` /
+  `End` are the only way to reach them: on the dock strip they select the tab they
+  move to, and on the viewport strip they move focus, which is all a click does
+  there either.
 - **`aria-modal` is backed by a real trap.** An overlay declares
   `role="dialog" aria-modal="true"`, which tells assistive tech the rest of the
   document is inert, so keyboard focus must agree: opening one moves focus into

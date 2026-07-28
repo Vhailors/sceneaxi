@@ -142,6 +142,31 @@ describe("engine desktop chrome — regions and modes", () => {
     }
   });
 
+  it("offers a bulk decision only in a mode that has the Changes tab", () => {
+    for (const mode of DESKTOP_MODE_IDS) {
+      const html = render(createDesktopVisualState({ mode }));
+      const hidden = /data-change-bulk hidden>/.test(html);
+      // `run` and `ship` have no Changes tab, so accepting or rejecting the whole
+      // queue from their tab strip would decide a queue the mode cannot show.
+      expect(hidden, mode).toBe(!dockTabsFor(mode).includes("changes"));
+    }
+    // Empty still hides it in a mode that does have the tab.
+    const decided = applyDesktopVisualAction(createDesktopVisualState(), {
+      type: "decide-all-changes",
+    });
+    expect(render(decided)).toContain("data-change-bulk hidden>");
+    // And the script re-applies both conditions when the mode switches.
+    const script = /<script>(.*)<\/script>/s.exec(render())?.[1] ?? "";
+    expect(script).toContain(`shell.querySelector('.dock-tab[data-value="changes"]')`);
+    expect(script).toContain("bulk.hidden = n === 0 || changes === null");
+  });
+
+  it("hides what it marks hidden, whatever the layout class says", () => {
+    // `.change-row` and `.dock-bulk` declare a display, which outranks the UA
+    // sheet's `[hidden]` rule — so every model-driven `hidden` needs this one.
+    expect(render()).toContain("[hidden]{display:none !important}");
+  });
+
   it("follows an explicit dock tab rather than the mode default", () => {
     const html = render(createDesktopVisualState({ mode: "build", dockTab: "console" }));
     expect(html).toContain(`data-dock-panel="console">`);
@@ -269,6 +294,28 @@ describe("engine desktop chrome — accessibility", () => {
       .toBeGreaterThanOrEqual(2);
     for (const tag of tabs) {
       expect(tag).toMatch(/tabindex="(0|-1)"/);
+    }
+  });
+
+  it("backs roving tabindex with arrow keys, so a tab is reachable at all", () => {
+    // Roving tabindex takes every non-active tab out of the Tab order, so without
+    // an arrow-key handler a keyboard-only operator can never select another dock
+    // panel — the attributes alone are not the pattern.
+    const script = /<script>(.*)<\/script>/s.exec(render())?.[1] ?? "";
+    for (const key of ["ArrowRight", "ArrowLeft", "Home", "End"]) {
+      expect(script).toContain(`'${key}'`);
+    }
+    expect(script).toContain("moveTab(event)");
+    expect(script).toContain(`list.querySelectorAll('[role="tab"]')`);
+  });
+
+  it("renders every change decision through a modelled control", () => {
+    const view = desktopVisualView(createDesktopVisualState());
+    const html = render();
+    for (const row of view.changeReview.rows) {
+      for (const control of [row.accept, row.reject]) {
+        expect(html).toContain(`id="${control.id}" data-kind="${control.kind}"`);
+      }
     }
   });
 

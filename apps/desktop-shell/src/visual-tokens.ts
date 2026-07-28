@@ -224,6 +224,27 @@ export const PROFILE_DOT = Object.freeze({
   web: "#3FB8C9",
 });
 
+/**
+ * Translucent overlays: the dialog scrim, the drawer shadow, and the sculpt
+ * sweep's highlight.
+ *
+ * Each one is a **mix of a token already accounted for**, never a decimal triple
+ * of its own. The archive writes these as `rgba()` literals, and an `rgba()`
+ * literal is the one notation the alignment check cannot follow: `rgba(4,5,7,.68)`
+ * is a digit off `SURFACE.backdrop` and would survive any edit to it. Expressed
+ * as `color-mix()` over the custom property, a scrim moves with the token it is
+ * built from, which is why the drift test can require the emitted document to
+ * carry no `rgb()`/`rgba()` at all.
+ */
+export const SCRIM = Object.freeze({
+  /** Behind a modal dialog. Archive `rgba(4,5,7,.68)`. */
+  overlay: "color-mix(in srgb, var(--backdrop) 68%, transparent)",
+  /** Undocked-drawer and dialog drop shadow. Archive `rgba(0,0,0,.9)`. */
+  shadow: "color-mix(in srgb, var(--backdrop) 90%, transparent)",
+  /** The moving highlight on a running sculpt pass. Archive `rgba(255,255,255,.35)`. */
+  sheen: "color-mix(in srgb, var(--text) 35%, transparent)",
+});
+
 /** The viewport's radial base gradient, from the archive. Non-text. */
 export const VIEWPORT_GRADIENT = Object.freeze({
   inner: "#161A20",

@@ -9,6 +9,7 @@ import {
   FOUNDATIONS_V2_SOURCE,
   LINE,
   PROFILE_DOT,
+  SCRIM,
   SIGNAL,
   SUPERSEDED_V1,
   SURFACE,
@@ -265,21 +266,19 @@ describe("foundations v2 alignment", () => {
     expect(shipped.length).toBeGreaterThan(0);
     expect([...new Set(shipped)].filter((hex) => !declared.has(hex))).toEqual([]);
 
-    // A token written in decimal is the same drift wearing another notation: an
-    // `rgba()` copy would survive an edit to the token it was copied from.
-    const decimal = new Set(
-      [...declared].map((hex) =>
-        [1, 3, 5]
-          .map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16))
-          .join(","),
-      ),
+    // Decimal notation is where this check used to be blind: an `rgba()` triple
+    // one digit off a token passes a hex scan, and matching only *exact* copies
+    // of a token still let `rgba(4,5,7,.68)` ship beside `SURFACE.backdrop`
+    // #050607. So no `rgb()`/`rgba()` at all is allowed: a translucent value is
+    // written as a `color-mix()` over the custom property of a declared token
+    // (`SCRIM`), which moves when that token does.
+    expect([...document.matchAll(/rgba?\([^)]*\)/g)].map(([call]) => call)).toEqual(
+      [],
     );
-    const disguised = [
-      ...document.matchAll(/rgba?\((\d{1,3}),(\d{1,3}),(\d{1,3})/g),
-    ]
-      .map((match) => `${match[1]},${match[2]},${match[3]}`)
-      .filter((triple) => decimal.has(triple));
-    expect([...new Set(disguised)]).toEqual([]);
+    for (const value of Object.values(SCRIM)) {
+      expect(value).toMatch(/^color-mix\(in srgb, var\(--[a-z-]+\) \d{1,3}%, transparent\)$/);
+      expect(document).toContain(value);
+    }
   });
 
   it("uses the sheet's two families as the first choice in each stack", () => {

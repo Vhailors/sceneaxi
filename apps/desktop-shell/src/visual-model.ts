@@ -727,21 +727,32 @@ export type DesktopAssistantView = Readonly<{
   refusalCode: string | null;
 }>;
 
+export type DesktopChangeReviewRow = Readonly<{
+  index: number;
+  badge: string;
+  kind: "modified" | "added";
+  path: string;
+  directory: string;
+  leaf: string;
+  before: string;
+  after: string;
+  /** False once the operator has decided this row. */
+  pending: boolean;
+  accept: DesktopControl;
+  reject: DesktopControl;
+}>;
+
 export type DesktopChangeReviewView = Readonly<{
-  pending: ReadonlyArray<
-    Readonly<{
-      index: number;
-      badge: string;
-      kind: "modified" | "added";
-      path: string;
-      directory: string;
-      leaf: string;
-      before: string;
-      after: string;
-      accept: DesktopControl;
-      reject: DesktopControl;
-    }>
-  >;
+  /**
+   * Every fixture row, decided or not, each carrying its own pair of controls.
+   *
+   * The renderer draws the whole queue and hides the decided rows, so a row that
+   * exists in the document has to exist in the model too — otherwise its two
+   * buttons would be markup no control kind accounts for.
+   */
+  rows: ReadonlyArray<DesktopChangeReviewRow>;
+  /** The subset of `rows` still awaiting a decision, in queue order. */
+  pending: ReadonlyArray<DesktopChangeReviewRow>;
   count: number;
   empty: boolean;
   acceptAll: DesktopControl;
@@ -875,20 +886,21 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
     (index) => !state.decidedChanges.includes(index),
   );
 
-  const changeReview: DesktopChangeReviewView = Object.freeze({
-    pending: Object.freeze(
-      pendingIndexes.map((index) => {
-        const row = CHANGE_REVIEW_ROWS[index];
-        // `pendingIndexes` is derived from the same array, so this cannot miss.
-        if (row === undefined) throw new Error(`unreachable change row ${index}`);
-        return Object.freeze({
-          index,
-          ...row,
-          accept: control(`change-accept-${index}`, `Accept ${row.leaf}`, "review"),
-          reject: control(`change-reject-${index}`, `Reject ${row.leaf}`, "review"),
-        });
+  const changeRows: ReadonlyArray<DesktopChangeReviewRow> = Object.freeze(
+    CHANGE_REVIEW_ROWS.map((row, index) =>
+      Object.freeze({
+        index,
+        ...row,
+        pending: pendingIndexes.includes(index),
+        accept: control(`change-accept-${index}`, `Accept ${row.leaf}`, "review"),
+        reject: control(`change-reject-${index}`, `Reject ${row.leaf}`, "review"),
       }),
     ),
+  );
+
+  const changeReview: DesktopChangeReviewView = Object.freeze({
+    rows: changeRows,
+    pending: Object.freeze(changeRows.filter((row) => row.pending)),
     count: pendingIndexes.length,
     empty: pendingIndexes.length === 0,
     acceptAll: control("change-accept-all", "Accept all", "review"),

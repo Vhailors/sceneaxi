@@ -52,6 +52,7 @@ import {
   LINE,
   METRICS,
   PROFILE_DOT,
+  SCRIM,
   SIGNAL,
   SURFACE,
   TEXT,
@@ -331,20 +332,28 @@ function dock(view: DesktopVisualView): string {
     )
     .join("");
 
-  const rows = CHANGE_REVIEW_ROWS.map((row, index) => {
-    const pending = view.changeReview.pending.find((candidate) => candidate.index === index);
-    return `<li class="change-row" data-change-index="${index}"${pending === undefined ? ` hidden` : ""}>
+  const rows = view.changeReview.rows
+    .map((row) => {
+      const decide = (ctrl: DesktopControl, glyph: string, name: string, className: string): string =>
+        button(
+          ctrl,
+          glyph,
+          `decision ${className}`,
+          ` data-action="decide-change" data-value="${row.index}" aria-label="${escapeHtml(name)}"`,
+        );
+      return `<li class="change-row" data-change-index="${row.index}"${row.pending ? "" : ` hidden`}>
   <span class="change-badge" data-change-kind="${escapeHtml(row.kind)}">${escapeHtml(row.badge)}</span>
   <span class="change-path"><span class="dir">${escapeHtml(row.directory)}</span><span class="leaf">${escapeHtml(row.leaf)}</span></span>
   <span class="change-before">${escapeHtml(row.before)}</span>
   <span class="change-arrow" aria-hidden="true">→</span>
   <span class="change-after">${escapeHtml(row.after)}</span>
   <span class="change-actions">
-    <button type="button" class="decision decision-reject" data-action="decide-change" data-value="${index}" aria-label="${escapeHtml(`Reject ${row.path}`)}">✕</button>
-    <button type="button" class="decision decision-accept" data-action="decide-change" data-value="${index}" aria-label="${escapeHtml(`Accept ${row.path}`)}">✓</button>
+    ${decide(row.reject, "✕", `Reject ${row.path}`, "decision-reject")}
+    ${decide(row.accept, "✓", `Accept ${row.path}`, "decision-accept")}
   </span>
 </li>`;
-  }).join("");
+    })
+    .join("");
 
   const bodies: Readonly<Record<DesktopDockTabId, string>> = {
     changes: `
@@ -363,12 +372,17 @@ function dock(view: DesktopVisualView): string {
       `<div role="tabpanel" id="dock-panel-${escapeHtml(id)}" class="dock-tabpanel" data-dock-panel="${escapeHtml(id)}"${id === view.state.dockTab ? "" : " hidden"}>${bodies[id]}</div>`,
   ).join("\n    ");
 
+  // A bulk decision belongs to the Changes tab, so a mode without one must not
+  // offer it: `run` and `ship` would otherwise let the operator accept or reject
+  // a queue that mode cannot even show.
+  const hasChanges = view.dockTabs.some((tab) => tab.id === "changes");
+
   return `
 <section class="dock" aria-label="Dock" style="--dock-h:${view.dockHeight}px">
   <div class="dock-tabs" role="tablist" aria-label="Dock panel">
     ${tabs}
     <span class="spacer"></span>
-    <span class="dock-bulk" data-change-bulk${view.changeReview.empty ? " hidden" : ""}>
+    <span class="dock-bulk" data-change-bulk${hasChanges && !view.changeReview.empty ? "" : " hidden"}>
       ${button(view.changeReview.rejectAll, "Reject all", "ghost-button", ` data-action="decide-all"`)}
       ${button(view.changeReview.acceptAll, "Accept all", "primary-button", ` data-action="decide-all"`)}
     </span>
@@ -569,6 +583,10 @@ function styles(): string {
   --sans:${TYPE.sans};--mono:${TYPE.mono};
 }
 *{box-sizing:border-box}
+/* Every hidden region here is a model decision (a row decided, a panel its mode
+   does not show), so the attribute has to win over the class that lays it out —
+   a display rule on .change-row or .dock-bulk otherwise outranks the UA sheet. */
+[hidden]{display:none !important}
 html,body{margin:0;padding:0;height:100%}
 body{background:var(--backdrop);color:var(--text);font-family:var(--sans);font-size:13px;-webkit-font-smoothing:antialiased}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
@@ -660,7 +678,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .sculpt-label{margin:0;font-size:14px;font-weight:600}
 .sculpt-track{width:320px;height:3px;background:var(--hover);border-radius:2px;overflow:hidden;position:relative}
 .sculpt-fill{position:absolute;left:0;top:0;bottom:0;background:var(--accent)}
-.sculpt-sweep{position:absolute;inset:0;width:28%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);animation:sweep 1.1s linear infinite}
+.sculpt-sweep{position:absolute;inset:0;width:28%;background:linear-gradient(90deg,transparent,${SCRIM.sheen},transparent);animation:sweep 1.1s linear infinite}
 .sculpt-detail{margin:0;font-family:var(--mono);font-size:9px;color:var(--faint)}
 
 .dock{height:var(--dock-h);flex:none;background:var(--panel);border-top:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
@@ -737,9 +755,8 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .state-shortcut{font-family:var(--mono);font-size:9px;letter-spacing:.07em;color:var(--faint);border:1px solid var(--line-control);border-radius:3px;padding:2px 7px}
 .state-shortcut:hover{border-color:var(--line-hover);color:var(--text)}
 
-.overlay{position:absolute;inset:0;background:rgba(4,5,7,.68);display:grid;place-items:center;z-index:50;padding:24px}
-.overlay[hidden]{display:none}
-.overlay-card{width:min(620px,100%);max-height:80%;overflow:auto;background:var(--overlay);border:1px solid var(--line-raised);border-radius:9px;box-shadow:0 40px 90px -20px rgba(0,0,0,.9);animation:rise .16s ease-out}
+.overlay{position:absolute;inset:0;background:${SCRIM.overlay};display:grid;place-items:center;z-index:50;padding:24px}
+.overlay-card{width:min(620px,100%);max-height:80%;overflow:auto;background:var(--overlay);border:1px solid var(--line-raised);border-radius:9px;box-shadow:0 40px 90px -20px ${SCRIM.shadow};animation:rise .16s ease-out}
 .overlay-card.overlay-refused{border-color:${SIGNAL.refuseLine}}
 .overlay-card.overlay-conflict{border-color:${ACCENT.line}}
 .overlay-head{display:flex;align-items:center;gap:12px;padding:15px 18px;border-bottom:1px solid var(--line)}
@@ -781,7 +798,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 @media (max-width:1439px){
   .shell-body,.shell[data-assistant="closed"] .shell-body,.shell[data-profile="kids"] .shell-body{grid-template-columns:var(--rail) var(--left) minmax(0,1fr) var(--inspector)}
   .shell[data-profile="kids"] .shell-body{grid-template-columns:var(--rail) minmax(0,1fr)}
-  .assistant{position:absolute;top:var(--title-h);bottom:var(--status-h);right:0;width:min(var(--assistant-w),100%);z-index:40;box-shadow:0 0 60px -10px rgba(0,0,0,.9)}
+  .assistant{position:absolute;top:var(--title-h);bottom:var(--status-h);right:0;width:min(var(--assistant-w),100%);z-index:40;box-shadow:0 0 60px -10px ${SCRIM.shadow}}
   /* An undocked assistant starts closed: a drawer nobody opened must not sit
      on top of the panel it undocked from. Its toggle still opens it. */
   .shell:not([data-drawer-assistant="open"]) .assistant{display:none}
@@ -793,7 +810,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
   .shell-body,.shell[data-assistant="closed"] .shell-body,.shell[data-profile="kids"] .shell-body{grid-template-columns:var(--rail) minmax(0,1fr)}
   .title-actions .drawer-toggle{display:inline-flex}
   .title-centre,.menu-bar{display:none}
-  .left-dock,.inspector{position:absolute;top:var(--title-h);bottom:var(--status-h);z-index:35;box-shadow:0 0 60px -10px rgba(0,0,0,.9)}
+  .left-dock,.inspector{position:absolute;top:var(--title-h);bottom:var(--status-h);z-index:35;box-shadow:0 0 60px -10px ${SCRIM.shadow}}
   .left-dock{left:var(--rail);width:min(var(--left),calc(100% - var(--rail)))}
   .inspector{right:0;width:min(var(--inspector),100%)}
   .shell:not([data-drawer-left="open"]) .left-dock{display:none}
@@ -883,6 +900,9 @@ if (shell) {
       strip.insertBefore(b, anchor);
     });
     selectDockTab(chosen);
+    // The bulk actions belong to the Changes tab, so a mode without one loses
+    // them with the tab rather than keeping two live buttons over a hidden queue.
+    syncChanges();
   };
 
   const selectDockTab = (id) => {
@@ -902,7 +922,32 @@ if (shell) {
     const empty = shell.querySelector('[data-change-empty]');
     if (empty) empty.hidden = n !== 0;
     const bulk = shell.querySelector('[data-change-bulk]');
-    if (bulk) bulk.hidden = n === 0;
+    const changes = shell.querySelector('.dock-tab[data-value="changes"]');
+    if (bulk) bulk.hidden = n === 0 || changes === null;
+  };
+
+  // Roving tabindex takes the non-active tabs out of the Tab order, so the arrow
+  // keys are what makes them reachable at all. Dock tabs activate on move; the
+  // viewport tabs only take focus, which is all a click does there either.
+  const moveTab = (event) => {
+    const from = event.target instanceof Element ? event.target.closest('[role="tab"]') : null;
+    if (from === null) return;
+    const list = from.closest('[role="tablist"]');
+    if (list === null) return;
+    const stops = Array.from(list.querySelectorAll('[role="tab"]'));
+    const at = stops.indexOf(from);
+    if (at === -1) return;
+    let next = -1;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') next = (at + 1) % stops.length;
+    else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') next = (at - 1 + stops.length) % stops.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = stops.length - 1;
+    else return;
+    event.preventDefault();
+    const target = stops[next];
+    if (target.dataset.action === 'dock-tab' && target.dataset.value) selectDockTab(target.dataset.value);
+    else stops.forEach((el) => { el.tabIndex = el === target ? 0 : -1; });
+    target.focus();
   };
 
   // An overlay declares aria-modal, so the rest of the document must really be
@@ -984,7 +1029,7 @@ if (shell) {
   // still the ancestor, but a restored or lost focus must not silently drop the
   // Escape key, and the trap has to see every Tab.
   document.addEventListener('keydown', (event) => {
-    if (shell.dataset.overlay === 'none') return;
+    if (shell.dataset.overlay === 'none') { moveTab(event); return; }
     if (event.key === 'Escape') { setOverlay('none'); return; }
     if (event.key !== 'Tab') return;
     const stops = overlayStops();

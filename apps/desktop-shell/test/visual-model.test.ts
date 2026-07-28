@@ -238,6 +238,21 @@ describe("desktop visual model — change review", () => {
     expect(view.changeReview.pending).toEqual([]);
   });
 
+  it("keeps a control pair for every fixture row, decided or not", () => {
+    // The renderer draws the whole queue and hides the decided rows, so a row
+    // that only exists in `pending` would put two buttons in the document that
+    // no control kind accounts for.
+    const view = desktopVisualView(drive([{ type: "decide-all-changes" }]));
+    expect(view.changeReview.rows).toHaveLength(CHANGE_REVIEW_ROWS.length);
+    expect(view.changeReview.rows.every((row) => !row.pending)).toBe(true);
+    for (const row of view.changeReview.rows) {
+      expect(row.accept.id).toBe(`change-accept-${row.index}`);
+      expect(row.reject.kind).toBe("review");
+    }
+    const open = desktopVisualView(createDesktopVisualState());
+    expect(open.changeReview.pending).toEqual(open.changeReview.rows);
+  });
+
   it("marks every decision control `review`, never a writing kind", () => {
     const view = desktopVisualView(createDesktopVisualState());
     const controls = [
