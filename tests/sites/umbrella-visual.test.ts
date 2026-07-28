@@ -170,7 +170,9 @@ describe("the marketing surface makes no claim the repository cannot stand behin
       open-path policy both type it `false`, and a surface that widened it would be
       claiming shipping in the one vocabulary the repository reserves for refusing to.
     */
-    const mentions = [...ALL_SOURCE.matchAll(/shippingClaim\b\??\s*(:|=)?\s*([^,;)\n]*)/g)];
+    const mentions = [
+      ...ALL_SOURCE.matchAll(/shippingClaim\b["'`]?\??\s*(:|=)?\s*([^,;)\n]*)/g),
+    ];
     expect(mentions.length).toBeGreaterThan(0);
     /*
       A mention with no `:` or `=` after it binds nothing — it is prose in a comment, and
