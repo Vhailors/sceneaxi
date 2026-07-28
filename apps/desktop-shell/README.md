@@ -87,21 +87,14 @@ label, and the status-bar profile pin — so no per-profile value is recomputed 
 the browser, and the footer names the profile the switch landed on rather than
 the one the document was rendered for.
 
-That split is enforced rather than followed: `test/control-accounting.test.ts`
-walks the view for every control it can produce and fails if one is not in the
-document with its declared kind, if `view.controls` is not exactly that set, if
-any `<button>` reached the document without going through the single
-`button(control, …)` helper, if a named refusal resolves to `display: none` at
-any tier in `WINDOW_TIERS`, or if a control declares itself live over a region
-its own profile keeps shut — all computed through the emitted stylesheet's own
-cascade, because a refusal nothing can reach at 1280×800 is a hidden refusal and
-a toggle over a permanently hidden panel is a control that lies.
-
-Those five properties are the whole claim. It does **not** cover markup a
-renderer conditions on a control's kind at render time: the last property probes
-`aria-controls` targets, so an attribute a row gets only while its control is
-live is outside it. Every control is emitted with the same attributes regardless
-of kind, and the browser-side switch relies on that, but nothing asserts it.
+That split is enforced rather than followed, by `test/control-accounting.test.ts`
+in this package. Its four properties are *derived* from the view rather than
+listed, so a control added here is covered the moment it exists and there is no
+case list to extend alongside it. Exactly what those four properties claim — and
+the narrower thing they do **not** claim, markup a renderer conditions on a
+control's kind at render time — is owned by
+[`docs/engine-desktop-surface.md`](../../docs/engine-desktop-surface.md); read it
+there before widening any statement about what the guard covers.
 
 The document is self-contained: no remote font, script, style, or image. It
 mounts no presentation runtime, so it draws no pixels and says so on the surface.
