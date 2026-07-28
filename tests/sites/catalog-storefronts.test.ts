@@ -418,10 +418,21 @@ describe("the storefronts are responsive, which the archive is not", () => {
 
   it.each(STOREFRONTS)("%s keeps each bounded column reachable from the keyboard", (site) => {
     // Neither column ends in a focusable element, so an inner scroll that only a pointer
-    // can move would put the same content out of reach for a keyboard.
-    expect(readSite(site, "src/app/page.tsx")).toMatch(/className="rail"[^>]*tabIndex=\{0\}/);
-    expect(readSite(site, "src/app/item/[itemId]/page.tsx")).toMatch(
-      /className="detail-side"[^>]*tabIndex=\{0\}/,
+    // can move would put the same content out of reach for a keyboard. A tab stop is only
+    // legible once the thing it lands on is a named region: focus on a nameless generic
+    // container is the case a screen reader answers by reading the whole subtree out. So
+    // the stop, the role and the name are asserted together, per column, per store — the
+    // rail carries its own role as an <aside>, the detail column has to declare one. The
+    // rail's name is store copy ("catalogue" / "showroom"), so it is asserted as present
+    // and non-empty rather than as one string.
+    expect(readSite(site, "src/app/page.tsx")).toMatch(
+      /<aside\s+className="rail"[^>]*aria-label="[^"]+"[^>]*tabIndex=\{0\}/,
+    );
+    const detail = readSite(site, "src/app/item/[itemId]/page.tsx");
+    expect(detail).toMatch(/className="detail-side"[^>]*tabIndex=\{0\}/);
+    expect(detail).toMatch(/className="detail-side"[^>]*role="region"/);
+    expect(detail, "the focusable detail column is named, not a nameless blob").toMatch(
+      /className="detail-side"[^>]*aria-label="Pricing and listing record"/,
     );
   });
 });

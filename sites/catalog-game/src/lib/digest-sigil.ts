@@ -13,8 +13,11 @@
  * claims nothing about geometry the storefront has not seen. A digest this module cannot
  * read is refused rather than defaulted, so a malformed record draws no mark at all.
  *
- * The palette is the Foundations v2 neutral ramp only. Store accent is applied by the
- * stylesheet, which is why this module is byte-identical on both storefronts.
+ * The palette is the design archive's own tile fills, transcribed below: neutral greys the
+ * Foundations sheet does not publish, so they sit deliberately outside the shared token
+ * layer rather than being covered by it, and the token-provenance guard correctly matches
+ * none of them. Store accent is applied by the stylesheet, which is why this module is
+ * byte-identical on both storefronts.
  */
 
 /** The four hex characters at each end, the way the design prints a digest. */
