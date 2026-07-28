@@ -262,6 +262,76 @@ describe("the reserved sale namespace", () => {
     ).toThrow(/invalid buyer entry key/);
     expect(settlements.length).toBe(0);
   });
+
+  it("refuses legs that do not move the credits their share record claims", () => {
+    const { adapter, rows, settlements } = naiveAdapter();
+    const keys = saleEntryKeys("sale_01");
+    const share = Object.freeze({
+      schemaVersion: 1,
+      kind: "sceneaxi.creator-share-record",
+      saleId: "sale_01",
+      listingId: "lantern-prop",
+      buyerUserId: "usr_crew",
+      creatorUserId: "usr_maker",
+      grossCredits: 40,
+      creatorCredits: 20,
+      platformCredits: 20,
+      basisPoints: 5000,
+      occurredAt: "2026-07-25T10:00:00Z",
+    }) as CreatorShareRecord;
+    const creatorEntry = entry({
+      entryId: "ent_02",
+      accountId: "acc_maker",
+      delta: 20,
+      balanceAfter: 20,
+      reason: "creator share",
+      idempotencyKey: keys.creator,
+    });
+    // A buyer leg carrying this sale's own key, but moving one credit against a
+    // gross of forty: the creator is still granted their claimed half, so the
+    // difference is credits minted into the plane.
+    const underCharged = {
+      buyerEntry: entry({
+        movement: "debit",
+        delta: -1,
+        balanceAfter: 99,
+        reason: "listing purchase",
+        idempotencyKey: keys.buyer,
+        sequence: 2,
+      }),
+      creatorEntry,
+      share,
+    };
+
+    // The adapter commits it without a second thought — the amount check is not
+    // its knowledge to have.
+    adapter.settleCreditsSale(underCharged);
+    expect(settlements.length).toBe(1);
+    settlements.length = 0;
+    rows.clear();
+
+    const store = createCreditStore(adapter);
+    expect(() => store.settleCreditsSale(underCharged)).toThrow(
+      /invalid buyer entry/,
+    );
+    // ...and the creator's leg is held to the same rule from the other side.
+    expect(() =>
+      store.settleCreditsSale({
+        buyerEntry: entry({
+          movement: "debit",
+          delta: -40,
+          balanceAfter: 60,
+          reason: "listing purchase",
+          idempotencyKey: keys.buyer,
+          sequence: 2,
+        }),
+        creatorEntry: { ...creatorEntry, delta: 500, balanceAfter: 500 },
+        share,
+      }),
+    ).toThrow(/invalid creator entry/);
+    expect(settlements.length).toBe(0);
+    expect(rows.size).toBe(0);
+  });
 });
 
 describe("append-or-replay at the shared boundary", () => {

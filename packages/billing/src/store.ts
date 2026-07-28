@@ -217,14 +217,16 @@ function sameSettlement(
 
 /**
  * Normalize a settlement and enforce the parts of its shape that belong to every
- * adapter: the two legs carry the sale's own reserved keys, and neither a
- * collected gross nor a creator's share is ever asserted without the entry that
- * moved it.
+ * adapter: the two legs carry the sale's own reserved keys, neither a collected
+ * gross nor a creator's share is ever asserted without the entry that moved it,
+ * and each leg moves exactly the credits its share record claims.
  *
  * The symmetric rule is the one that keeps a share record from asserting money
  * that never moved: a non-zero gross must be evidenced by the buyer's debit.
  * Without it a settlement could grant the creator half of a gross nobody paid,
- * minting credits into the plane.
+ * minting credits into the plane. A present leg that moves some *other* amount
+ * mints the same way, and the comparison needs nothing but the settlement
+ * itself, so it belongs here rather than in whichever adapter remembered it.
  */
 function snapshotSaleSettlement(candidate: unknown): CreditsSaleSettlement {
   const record = snapshotPlainRecord(candidate);
@@ -259,6 +261,19 @@ function snapshotSaleSettlement(candidate: unknown): CreditsSaleSettlement {
   }
   if (buyerEntry === undefined && share.grossCredits !== 0) {
     return fail(`sale ${share.saleId} is missing its buyer entry`);
+  }
+  if (
+    buyerEntry !== undefined &&
+    (buyerEntry.movement !== "debit" || buyerEntry.delta !== -share.grossCredits)
+  ) {
+    return fail(`sale ${share.saleId} has an invalid buyer entry`);
+  }
+  if (
+    creatorEntry !== undefined &&
+    (creatorEntry.movement !== "grant" ||
+      creatorEntry.delta !== share.creatorCredits)
+  ) {
+    return fail(`sale ${share.saleId} has an invalid creator entry`);
   }
 
   return Object.freeze({
@@ -385,8 +400,9 @@ function mapAwaitable<In, Out>(
  *   on a ledger this request never read.
  * - **Settlement shape is checked once, and so is its answer.** A settlement's
  *   legs must carry that sale's own reserved keys, no collected gross or creator
- *   share may be booked without the entry that moved it, and the adapter's
- *   outcome must actually say whether it replayed.
+ *   share may be booked without the entry that moved it, each present leg must
+ *   move exactly the credits the share record claims, and the adapter's outcome
+ *   must actually say whether it replayed.
  *
  * Guards run synchronously and throw, exactly as a database constraint rejects
  * before the write, so a refusal never depends on the adapter being awaited.
@@ -534,10 +550,9 @@ export function createInMemoryCreditStore(
   }
 
   /**
-   * The shape and key rules are the shared boundary's, so what is left here is
-   * what only a store holding accounts can answer: that each leg moves the
-   * credits its share record claims, out of the account belonging to the party
-   * the record names.
+   * The shape, key, and amount rules are the shared boundary's, so what is left
+   * here is what only a store holding accounts can answer: that each leg moves
+   * out of the account belonging to the party the share record names.
    */
   const snapshotSettlement = (
     candidate: unknown,
@@ -547,19 +562,15 @@ export function createInMemoryCreditStore(
 
     if (
       buyerEntry !== undefined &&
-      (buyerEntry.movement !== "debit" ||
-        buyerEntry.delta !== -share.grossCredits ||
-        assertKnownAccount(buyerEntry).userId !== share.buyerUserId)
+      assertKnownAccount(buyerEntry).userId !== share.buyerUserId
     ) {
-      return fail(`sale ${share.saleId} has an invalid buyer entry`);
+      return fail(`sale ${share.saleId} is not the buyer's own account`);
     }
     if (
       creatorEntry !== undefined &&
-      (creatorEntry.movement !== "grant" ||
-        creatorEntry.delta !== share.creatorCredits ||
-        assertKnownAccount(creatorEntry).userId !== share.creatorUserId)
+      assertKnownAccount(creatorEntry).userId !== share.creatorUserId
     ) {
-      return fail(`sale ${share.saleId} has an invalid creator entry`);
+      return fail(`sale ${share.saleId} is not the creator's own account`);
     }
 
     return settlement;
