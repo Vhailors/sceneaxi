@@ -47,12 +47,46 @@ design itself asks for — *"same skeleton, different accent and merchandising"*
 
 - `src/app/globals.css` is byte-identical to `sites/catalog-web/src/app/globals.css`
   below the block marked `STORE IDENTITY`, which is the only place the two differ
-  (`--accent: #E8544E`, the Foundations v2 `--store-game`, and a
-  `1px` store mark).
+  (the storefront's own accent derivations and a `1px` store mark).
 - The family bar is three ordinary cross-origin links built by `src/lib/family-bar.ts`.
   The current store is marked, not linked; a sibling whose origin this deployment has
   not configured renders as text rather than a broken link; and `FAMILY_KEYS` has no
   Kids entry, so no configuration can produce a link into Kids.
+
+### The token layer comes from `packages/site-kit`
+
+Captain decision **D2** (2026-07-28) gives the shared token and component layer one home,
+and this storefront consumes it rather than carrying a copy:
+
+- `src/lib/foundations.ts` composes `foundationsCss({ surface })` from
+  `@sceneaxi/site-kit` and serves it from `src/app/layout.tsx`. `src/app/globals.css`
+  declares **no** Foundations v2 token — no neutral, no radius, no font stack, no
+  semantic colour — and writes no Foundations hex as a literal. Both are gate-asserted.
+- The accent is an *argument*, not a redeclaration. This site sets
+  `CATALOG_SITE_FOUNDATION_SURFACE = "game-assets"`; site-kit resolves `--store-game`
+  (`#E8544E`) for it, so that hex has exactly one declaration in the repository. This is
+  Foundations §06's "accent shifts only", implemented rather than restated.
+- The status vocabulary is re-projected as `--status-<id>-{fg,bg,line}` from
+  `FOUNDATION_STATUSES`, so the storefront's notice panels and rails read the same
+  triples as site-kit's `.sx-status-*` chips without writing one of their values.
+- What stays local is what site-kit does not publish: the archive's per-store washes
+  (`--accent-bg`, `--accent-line`, `--hero-wash`, `--media-wash`), the store mark shape,
+  and four layout measures.
+- Foundations names Archivo and JetBrains Mono but a package must not inject a network
+  font, so the site loads both itself through `next/font`, which self-hosts them at build
+  time. `--store-ui` / `--store-mono` prepend the loaded faces onto site-kit's
+  `--font-ui` / `--font-mono`; site-kit still owns *which* families those are.
+
+### Where site-kit and the carried implementation disagreed
+
+Site-kit wins, per the lane's terms. Three values the earlier implementation wrote are
+gone, and all three were things the design archive does not state:
+
+| Token | Was | Now | Why |
+|---|---|---|---|
+| `--accent-hi` | `#F0736E` | resolves to `#E8544E` | The Foundations sheet prints a hover shade for signal orange only. `resolveSurfaceAccent()` repeats the accent rather than inventing a tint (D-3 in [`docs/design-foundations.md`](../../docs/design-foundations.md)). Hover is answered by an underline on inline links and by a `--accent-line` ring on the primary button — neither is a new colour fact. |
+| `--danger` | `#FF6B7A` | `#FF4D5E` | site-kit's published refusal red, which is also the value the Asset Storefronts screen itself uses. Measures 5.71:1 on `--status-refused-bg`. |
+| `--warn` | `#FF9A5C` | `--status-needs-review-fg`, `#FF6B2C` | There is no `--warn` in Foundations; "needs review" is a published status. Measures 6.54:1 on its own background. |
 
 ### What the archive proposes and the contracts refuse
 
@@ -97,14 +131,33 @@ Each is a defect recorded against the design, not against the code:
 | `/publish` | 1440 = 1440 | 834 = 834 | 390 = 390 |
 | 404 | 1440 = 1440 | 834 = 834 | 390 = 390 |
 
-No route overflows at any of the three widths, against the archive's 984-against-390. In
-the same session the detail page's editor deep link resolved to
+No route overflows at any of the three widths, against the archive's 984-against-390. The
+same probe found no element whose right edge exceeded the document width on any of the
+twelve renders. In the same session the detail page's editor deep link resolved to
 `…/editor?source=catalog-game&item=game-lantern-prop`.
+
+Computed values from the served page, which is what proves the token layer arrives from
+site-kit rather than from this stylesheet — the storefront declares none of them:
+
+| Read from the live document | Value |
+|---|---|
+| `style[data-sceneaxi-foundations]` tags in `<head>` | 1 |
+| `--accent` | `#E8544E` |
+| `--accent-hi` | `#E8544E` (no invented hover tint) |
+| `--bg-base`, computed `body` background | `#07080A`, `rgb(7, 8, 10)` |
+| `--danger` | `#FF4D5E` |
+| `--status-refused-bg` | `#1A1113` |
+| computed `body` font-family | `Archivo, "Archivo Fallback", Archivo, system-ui, sans-serif` |
+
+Lighthouse (navigation, desktop) scored **accessibility 100 with 0 failed audits** on `/`,
+`/item/game-lantern-prop` and `/publish`, and the same on both of the web storefront's
+equivalents.
 
 What a browser has to prove is recorded here. What the gate can prove — shared skeleton,
 mobile-first breakpoints only, no masked overflow, the reduced-motion answer, a computed
-4.5:1 on every shipped text pairing, digest-mark determinism, real facet counts, and the
-absence of every invented value above — is asserted in
+4.5:1 on every shipped text pairing measured against the sheet the site actually serves,
+no redeclared Foundations token or pasted Foundations hex, digest-mark determinism, real
+facet counts, and the absence of every invented value above — is asserted in
 [`tests/sites/catalog-storefronts.test.ts`](../../tests/sites/catalog-storefronts.test.ts).
 
 ## Separate install root

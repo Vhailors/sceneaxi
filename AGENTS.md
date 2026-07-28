@@ -164,16 +164,23 @@ The two storefronts are **one design in two install roots** (sceneaxi#156, imple
 the archive's runtime store switch, so the shared skeleton is enforced instead of
 inherited: `src/app/globals.css` is byte-identical between `catalog-game` and
 `catalog-web` below the block marked `STORE IDENTITY` — the only per-store block — and so
-are `src/lib/{family-bar,digest-sigil,catalog-facts}.ts` and every file in
-`src/app/_components/`. Edit one and you must edit the other;
-`tests/sites/catalog-storefronts.test.ts` fails otherwise, and the same suite holds the
-stylesheet `--accent` in lockstep with `CATALOG_SITE_BRAND.accent`, computes a 4.5:1 floor
-on every shipped text pairing, and refuses the archive's invented digests, prices, cart,
-and download counts. Each storefront's README owns the archive-versus-contract table and
-the recorded browser measurements. The family bar is cross-origin links from
-`NEXT_PUBLIC_SCENEAXI_{GAME,WEB}_CATALOG_ORIGIN` (now read by all three sites) and has no
-Kids key to configure, which is what keeps the Kids denial structural rather than
-filtered.
+are `src/lib/{family-bar,digest-sigil,catalog-facts,foundations}.ts` and every file in
+`src/app/_components/`. Edit one and you must edit the other, or
+`tests/sites/catalog-storefronts.test.ts` fails. Neither storefront owns a token: both
+serve `foundationsCss({ surface })` from `site-kit` through `src/lib/foundations.ts`, and
+`globals.css` declares no Foundations token and writes no Foundations hex — the suite
+asserts both directions, so a copied palette cannot come back. A storefront names its
+surface (`CATALOG_SITE_FOUNDATION_SURFACE`) and site-kit resolves the accent, which is why
+`--store-game` / `--store-web` each have exactly one declaration in the repository; where
+the archive's sheet and site-kit disagreed, site-kit won and the divergence is recorded in
+each README (notably: storefront accents have **no** hover shade, because the sheet prints
+one only for signal orange). The same suite computes a 4.5:1 floor on every shipped text
+pairing against the sheet the site actually serves, and refuses the archive's invented
+digests, prices, cart, and download counts. Each storefront's README owns the
+archive-versus-contract table and the recorded browser measurements. The family bar is
+cross-origin links from `NEXT_PUBLIC_SCENEAXI_{GAME,WEB}_CATALOG_ORIGIN` (now read by all
+three sites) and has no Kids key to configure, which is what keeps the Kids denial
+structural rather than filtered.
 
 Publish readiness is proven structurally, never by publishing: this repo holds no
 registry publish authority, so `docs/publish-readiness.md` owns the outsider-facing

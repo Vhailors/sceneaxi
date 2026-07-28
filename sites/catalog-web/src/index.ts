@@ -15,11 +15,18 @@ export const seam: PackageSeam = Object.freeze({
 
 export {
   CATALOG_SITE_BRAND,
+  CATALOG_SITE_FOUNDATION_SURFACE,
   CATALOG_SITE_SURFACE,
   editorLinkFor,
   resolveUmbrellaOrigin,
   type UmbrellaOrigin,
 } from "./lib/site-config.js";
+
+export {
+  foundationsStatusVariablesCss,
+  foundationsStylesheet,
+  type StorefrontSurface,
+} from "./lib/foundations.js";
 
 export {
   CATALOG_IDENTITY_SURFACE,

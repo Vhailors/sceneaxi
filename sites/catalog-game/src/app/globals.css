@@ -23,70 +23,51 @@
  *
  * The palette is dark only, as the archive is. There is no light variant anywhere in the
  * accepted source, and inventing one would be designing rather than implementing.
+ *
+ * This sheet declares no Foundations v2 token. The palette, the type scale, the radii,
+ * the surfaces and the status vocabulary are emitted by `@sceneaxi/site-kit` and served
+ * by `layout.tsx` (`src/lib/foundations.ts`), which is the single home the captain's D2
+ * decision gives the shared token layer. What remains below is what this storefront
+ * itself owns: the per-store accent derivations marked STORE IDENTITY, four layout
+ * measures, and its own components.
  */
 
 /* --- STORE IDENTITY — the only block that differs between the two storefronts --- */
 
 :root {
-  /* `--store-game`, Foundations v2 "Axis & surface accents". */
-  --accent: #e8544e;
-  --accent-hi: #f0736e;
+  /*
+   * `--accent` and `--accent-hi` are *not* here. This storefront names its Foundations
+   * surface (`CATALOG_SITE_FOUNDATION_SURFACE` → `game-assets`) and site-kit resolves the
+   * accent for it, so `--store-game` has exactly one declaration in the repository.
+   *
+   * These are the storefront's own derivations, each transcribed from the Asset
+   * Storefronts screen, which the Foundations sheet does not publish. The glow is mixed
+   * from the resolved accent rather than restated as a second literal.
+   */
   --accent-bg: #20100f;
   --accent-line: #4e2523;
-  --accent-glow: rgba(232, 84, 78, 0.75);
+  --accent-glow: color-mix(in srgb, var(--accent) 75%, transparent);
   --hero-wash: linear-gradient(100deg, #120a09 0%, #0a0c0e 62%);
-  --media-wash: radial-gradient(120% 100% at 50% 8%, #1e1512, #08090b);
+  --media-wash: radial-gradient(120% 100% at 50% 8%, #1e1512, var(--bg-field));
   --mark-radius: 1px;
 }
 
 /* --- END STORE IDENTITY --- */
 
-/* --- Foundations v2 tokens --- */
+/* --- layout measures this storefront owns; the token layer arrives from site-kit --- */
 
 :root {
   color-scheme: dark;
 
-  /* Neutrals — the entire chrome, nine steps, no more. */
-  --bg-base: #07080a;
-  --bg-panel: #0d0f12;
-  --bg-raised: #12151a;
-  --bg-control: #191d23;
-  --bg-field: #08090b;
-  --bg-row: #101318;
-
-  /* Lines and text — four levels, three line weights. */
-  --line-soft: #14181e;
-  --line: #1c2129;
-  --line-strong: #2c323b;
-  --fg: #edeff2;
-  --fg-2: #8a929c;
   /*
-   * The design's disabled/units level. It measures ~2.1:1 on every surface here, so it
-   * is declared for completeness and used for no text and no meaningful boundary.
+   * The resolved font stacks. `--font-ui` and `--font-mono` are site-kit's tokens and name
+   * Archivo and JetBrains Mono; `--site-font-*` are the self-hosted faces `layout.tsx`
+   * loads through `next/font`, since a package must not inject a network font. Prepending
+   * the loaded face keeps site-kit the source of what the family *is* and leaves this site
+   * responsible only for having it available.
    */
-  --fg-4: #3f464f;
-
-  /* Semantics are state, never decoration. */
-  --ok: #5eead4;
-  --ok-bg: #0d2422;
-  --ok-line: #1e4a45;
-  --warn: #ff9a5c;
-  --warn-bg: #191207;
-  --warn-line: #4a3820;
-  --danger: #ff6b7a;
-  --danger-bg: #1a1113;
-  --danger-line: #3a2126;
-
-  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas,
-    monospace;
-  --sans: "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial,
-    sans-serif;
-
-  --radius-xs: 2px;
-  --radius-sm: 3px;
-  --radius-md: 5px;
-  --radius-lg: 9px;
-  --radius-full: 999px;
+  --store-ui: var(--site-font-ui), var(--font-ui);
+  --store-mono: var(--site-font-mono), var(--font-mono);
 
   --measure: 64ch;
   --shell: 1340px;
@@ -102,8 +83,14 @@
 
 /* --- base --- */
 
+/*
+ * The reset, the near-black canvas, the Archivo body text and the link colour all come
+ * from site-kit's `foundationsBaseCss()`. Only what that sheet does not state is here.
+ */
+
 * {
-  box-sizing: border-box;
+  /* Grid and flex children default to `min-width: auto`, which is how a long digest or a
+   * mono label pushes a track wider than its container and overflows the page. */
   min-width: 0;
 }
 
@@ -112,11 +99,14 @@ html {
   scroll-behavior: smooth;
 }
 
-body {
-  margin: 0;
-  background: var(--bg-base);
-  color: var(--fg);
-  font-family: var(--sans);
+/*
+ * `html body` rather than `body`: site-kit's Foundations sheet is served from `layout.tsx`
+ * and lands after this file, and it also sets `body { font-family: var(--font-ui) }`. One
+ * extra element in the selector makes this rule win by specificity instead of by load
+ * order, so the self-hosted faces are used whichever sheet the framework emits first.
+ */
+html body {
+  font-family: var(--store-ui);
   font-size: 1rem;
   line-height: 1.6;
   /*
@@ -125,17 +115,31 @@ body {
    */
 }
 
-a {
-  color: var(--accent);
+/*
+ * Foundations prints `--accent-hi` for signal orange only, and site-kit refuses to invent
+ * a lighter tint for a storefront accent (`resolveSurfaceAccent`, recorded as D-3 in
+ * `docs/design-foundations.md`). An inline link therefore answers hover with an underline
+ * rather than a hue this design system does not publish. Every link that is really a
+ * card, tab, or button answers it with its own surface change and opts back out below.
+ */
+a:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.nav a:hover,
+.storemark:hover,
+.card-link:hover,
+.tile:hover,
+.button:hover,
+.footer-col a:hover,
+.family-item a:hover,
+.skip-link:focus {
   text-decoration: none;
 }
 
-a:hover {
-  color: var(--accent-hi);
-}
-
 :focus-visible {
-  outline: 2px solid var(--accent-hi);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: var(--radius-xs);
 }
@@ -149,7 +153,7 @@ code,
 kbd,
 pre,
 .mono {
-  font-family: var(--mono);
+  font-family: var(--store-mono);
 }
 
 @keyframes sa-dot {
@@ -316,7 +320,7 @@ pre,
 }
 
 .family-domain {
-  font-family: var(--mono);
+  font-family: var(--store-mono);
   font-size: 0.625rem;
   color: var(--fg-2);
   margin-left: auto;
@@ -387,7 +391,7 @@ pre,
 }
 
 .storetag {
-  font-family: var(--mono);
+  font-family: var(--store-mono);
   font-size: 0.5625rem;
   letter-spacing: 0.1em;
   color: var(--accent);
@@ -463,7 +467,7 @@ p {
 
 .eyebrow,
 .micro {
-  font-family: var(--mono);
+  font-family: var(--store-mono);
   font-size: var(--micro);
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -513,7 +517,7 @@ p {
   background: var(--accent-bg);
   border-radius: var(--radius-full);
   width: fit-content;
-  font-family: var(--mono);
+  font-family: var(--store-mono);
   font-size: var(--micro);
   letter-spacing: 0.1em;
   color: var(--accent);
@@ -572,7 +576,7 @@ p {
 }
 
 .rail-title {
-  font-family: var(--mono);
+  font-family: var(--store-mono);
   font-size: var(--micro);
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -602,7 +606,7 @@ p {
 }
 
 .rail-count {
-  font-family: var(--mono);
+  font-family: var(--store-mono);
   font-size: 0.6875rem;
   color: var(--fg-2);
   flex: none;
@@ -706,7 +710,7 @@ p {
  * there is not, rather than crushing the title into three words per line.
  */
 .card-price {
-  font-family: var(--mono);
+  font-family: var(--store-mono);
   font-size: 0.75rem;
   color: var(--fg);
   flex: 0 1 auto;
@@ -726,7 +730,7 @@ p {
 }
 
 .card-licence {
-  font-family: var(--mono);
+  font-family: var(--store-mono);
   font-size: 0.6875rem;
   color: var(--fg-2);
   flex: none;
@@ -746,7 +750,7 @@ p {
   aspect-ratio: 4 / 3;
   border-radius: var(--radius-lg);
   border: 1px solid var(--line);
-  background: radial-gradient(120% 100% at 50% 12%, #191e25, #08090b);
+  background: radial-gradient(120% 100% at 50% 12%, #191e25, var(--bg-field));
   overflow: hidden;
 }
 
@@ -795,7 +799,7 @@ p {
   position: absolute;
   right: 8px;
   bottom: 8px;
-  font-family: var(--mono);
+  font-family: var(--store-mono);
   font-size: 0.6875rem;
   color: var(--fg-2);
   background: rgba(7, 8, 10, 0.78);
@@ -823,7 +827,7 @@ p {
   inset: 0;
   display: grid;
   place-items: center;
-  font-family: var(--mono);
+  font-family: var(--store-mono);
   font-size: var(--micro);
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -856,7 +860,7 @@ p {
 }
 
 .tile-meta {
-  font-family: var(--mono);
+  font-family: var(--store-mono);
   font-size: 0.6875rem;
   color: var(--fg-2);
 }
@@ -914,7 +918,7 @@ p {
   background: rgba(13, 15, 18, 0.72);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  font-family: var(--mono);
+  font-family: var(--store-mono);
   font-size: 0.6875rem;
   color: var(--fg-2);
   overflow-wrap: anywhere;
@@ -996,7 +1000,7 @@ p {
 }
 
 .buy-option-value {
-  font-family: var(--mono);
+  font-family: var(--store-mono);
   font-size: 0.75rem;
   color: var(--fg);
   overflow-wrap: anywhere;
@@ -1033,7 +1037,7 @@ p {
 
 .spec-row dd {
   margin: 0;
-  font-family: var(--mono);
+  font-family: var(--store-mono);
   font-size: 0.6875rem;
   color: var(--fg);
   overflow-wrap: anywhere;
@@ -1068,7 +1072,7 @@ p {
 }
 
 .side-row-note {
-  font-family: var(--mono);
+  font-family: var(--store-mono);
   font-size: 0.6875rem;
   color: var(--fg-2);
   margin-left: auto;
@@ -1112,7 +1116,7 @@ p {
 }
 
 .included-value {
-  font-family: var(--mono);
+  font-family: var(--store-mono);
   font-size: 0.6875rem;
   color: var(--fg-2);
   overflow-wrap: anywhere;
@@ -1122,8 +1126,8 @@ p {
   width: 14px;
   height: 14px;
   border-radius: var(--radius-sm);
-  background: var(--ok-bg);
-  border: 1px solid var(--ok-line);
+  background: var(--status-validated-bg);
+  border: 1px solid var(--status-validated-line);
   color: var(--ok);
   display: grid;
   place-items: center;
@@ -1156,7 +1160,7 @@ p {
 }
 
 .record-n {
-  font-family: var(--mono);
+  font-family: var(--store-mono);
   font-size: 0.6875rem;
   color: var(--fg-2);
 }
@@ -1173,7 +1177,7 @@ p {
 }
 
 .record-at {
-  font-family: var(--mono);
+  font-family: var(--store-mono);
   font-size: 0.6875rem;
   color: var(--ok);
   overflow-wrap: anywhere;
@@ -1185,7 +1189,7 @@ p {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  font-family: var(--mono);
+  font-family: var(--store-mono);
   font-size: 0.6875rem;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -1204,8 +1208,8 @@ p {
 
 .chip-ok {
   color: var(--ok);
-  border-color: var(--ok-line);
-  background: var(--ok-bg);
+  border-color: var(--status-validated-line);
+  background: var(--status-validated-bg);
 }
 
 .state {
@@ -1220,7 +1224,7 @@ p {
 }
 
 .state h3 {
-  font-family: var(--mono);
+  font-family: var(--store-mono);
   font-size: 0.8125rem;
   letter-spacing: 0.04em;
 }
@@ -1235,7 +1239,7 @@ p {
 
 .state-deny {
   border-left-color: var(--danger);
-  background: var(--danger-bg);
+  background: var(--status-refused-bg);
 }
 
 .state-deny h3 {
@@ -1243,17 +1247,17 @@ p {
 }
 
 .state-warn {
-  border-left-color: var(--warn);
-  background: var(--warn-bg);
+  border-left-color: var(--status-needs-review-fg);
+  background: var(--status-needs-review-bg);
 }
 
 .state-warn h3 {
-  color: var(--warn);
+  color: var(--status-needs-review-fg);
 }
 
 .state-ok {
   border-left-color: var(--ok);
-  background: var(--ok-bg);
+  background: var(--status-validated-bg);
 }
 
 .state-ok h3 {
@@ -1261,7 +1265,7 @@ p {
 }
 
 .reason {
-  font-family: var(--mono);
+  font-family: var(--store-mono);
   font-size: 0.75rem;
   color: var(--fg-2);
   overflow-wrap: anywhere;
@@ -1285,9 +1289,17 @@ p {
   cursor: pointer;
 }
 
+/*
+ * The primary button keeps its accent fill on hover. `--accent-hi` resolves to the accent
+ * itself on a storefront surface (site-kit states no hover shade outside signal orange),
+ * so the state change is a ring in the store's own `--accent-line` and a stronger top
+ * highlight — both values this storefront already owns — rather than an invented tint.
+ */
 .button:hover {
-  background: var(--accent-hi);
-  border-color: var(--accent-hi);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 0 0 3px var(--accent-bg),
+    0 0 0 4px var(--accent-line);
   color: var(--bg-base);
 }
 
@@ -1329,7 +1341,7 @@ p {
 }
 
 .dl dt {
-  font-family: var(--mono);
+  font-family: var(--store-mono);
   font-size: var(--micro);
   letter-spacing: 0.08em;
   text-transform: uppercase;

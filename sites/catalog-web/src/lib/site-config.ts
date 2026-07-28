@@ -12,8 +12,18 @@ import {
   type CatalogSurface,
   type SiteResult,
 } from "@sceneaxi/site-kit";
+import type { StorefrontSurface } from "./foundations.js";
 
 export const CATALOG_SITE_SURFACE: CatalogSurface = "catalog-web";
+
+/**
+ * Which row of the Foundations v2 surface → accent map this storefront themes with.
+ *
+ * The storefront names its surface; `@sceneaxi/site-kit` owns what that surface looks
+ * like. That is the whole of the per-site accent override Foundations §06 allows, and it
+ * is why no hex for `--accent` appears anywhere in this site.
+ */
+export const CATALOG_SITE_FOUNDATION_SURFACE: StorefrontSurface = "web-assets";
 
 export const CATALOG_SITE_BRAND = Object.freeze({
   /** Distinct positioning per the locked site/domain topology. */
@@ -22,12 +32,12 @@ export const CATALOG_SITE_BRAND = Object.freeze({
   audience:
     "For product and marketing teams embedding a real interactive surface in a page.",
   /**
-   * `--store-web` from the accepted Foundations v2 "Axis & surface accents" sheet.
-   * `globals.css` declares the same value as `--accent`, and a gate test holds the two
-   * in lockstep so the storefront cannot drift a second accent into existence.
+   * The design's per-store mark: a circle here, a squared corner on the game store.
+   *
+   * This is a shape, not a colour: the archive states it and the Foundations sheet does
+   * not, so it stays a per-store fact declared here and mirrored by `--mark-radius`.
+   * The accent itself is not here — see `CATALOG_SITE_FOUNDATION_SURFACE`.
    */
-  accent: "#3FB8C9",
-  /** The design's per-store mark: a circle here, a squared corner on the game store. */
   markRadius: "50%",
   /** Mono strapline under the wordmark, identical on both stores by design. */
   storeTag: "SCENEAXI STORE",

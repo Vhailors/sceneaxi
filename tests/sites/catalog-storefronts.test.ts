@@ -17,7 +17,12 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { listSiteCatalog } from "@sceneaxi/site-kit";
+import {
+  FOUNDATION_COLORS,
+  FOUNDATION_STATUSES,
+  listSiteCatalog,
+  resolveSurfaceAccent,
+} from "@sceneaxi/site-kit";
 import * as game from "../../sites/catalog-game/src/index.ts";
 import * as web from "../../sites/catalog-web/src/index.ts";
 
@@ -77,7 +82,8 @@ function cssTokens(text: string): Readonly<Record<string, string>> {
   return tokens;
 }
 
-const relativeLuminance = (hex: string): number => {
+const relativeLuminance = (raw: string): number => {
+  const hex = raw.toLowerCase();
   const channels = [1, 3, 5].map((offset) => {
     const value = Number.parseInt(hex.slice(offset, offset + 2), 16) / 255;
     return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
@@ -118,24 +124,35 @@ describe("the two storefronts share one skeleton and differ only in store identi
     expect(identityBlock(css["catalog-web"])).not.toBe(identityBlock(css["catalog-game"]));
   });
 
-  it("uses the Foundations v2 surface accents and nothing else", () => {
-    expect(cssTokens(identityBlock(css["catalog-game"]))["--accent"]).toBe("#e8544e");
-    expect(cssTokens(identityBlock(css["catalog-web"]))["--accent"]).toBe("#3fb8c9");
+  it("names a Foundations surface instead of restating an accent", () => {
+    expect(game.CATALOG_SITE_FOUNDATION_SURFACE).toBe("game-assets");
+    expect(web.CATALOG_SITE_FOUNDATION_SURFACE).toBe("web-assets");
+    // The accent the sites resolve is the one the sheet assigns to that surface.
+    expect(resolveSurfaceAccent("game-assets")).toMatchObject({
+      ok: true,
+      value: { accent: "#E8544E" },
+    });
+    expect(resolveSurfaceAccent("web-assets")).toMatchObject({
+      ok: true,
+      value: { accent: "#3FB8C9" },
+    });
   });
 
-  it("holds the stylesheet accent and the seam accent in lockstep", () => {
+  // The mark is a shape, not a colour: the archive states it and Foundations does not, so
+  // it stays a per-store fact and the stylesheet and the seam are held in lockstep on it.
+  it("holds the store mark in lockstep between the stylesheet and the seam", () => {
     for (const [site, brand] of [
       ["catalog-game", game.CATALOG_SITE_BRAND],
       ["catalog-web", web.CATALOG_SITE_BRAND],
     ] as const) {
-      const tokens = cssTokens(identityBlock(css[site]));
-      expect(tokens["--accent"]).toBe(brand.accent.toLowerCase());
-      expect(tokens["--mark-radius"]).toBe(brand.markRadius);
+      expect(cssTokens(identityBlock(css[site]))["--mark-radius"]).toBe(brand.markRadius);
     }
   });
 
-  it("keeps the two stores distinct in mark, accent, and merchandising vocabulary", () => {
-    expect(game.CATALOG_SITE_BRAND.accent).not.toBe(web.CATALOG_SITE_BRAND.accent);
+  it("keeps the two stores distinct in surface, mark, and merchandising vocabulary", () => {
+    expect(game.CATALOG_SITE_FOUNDATION_SURFACE).not.toBe(
+      web.CATALOG_SITE_FOUNDATION_SURFACE,
+    );
     expect(game.CATALOG_SITE_BRAND.markRadius).not.toBe(web.CATALOG_SITE_BRAND.markRadius);
     expect(game.CATALOG_SITE_BRAND.catalogueWord).not.toBe(
       web.CATALOG_SITE_BRAND.catalogueWord,
@@ -147,12 +164,118 @@ describe("the two storefronts share one skeleton and differ only in store identi
     "src/lib/family-bar.ts",
     "src/lib/digest-sigil.ts",
     "src/lib/catalog-facts.ts",
+    "src/lib/foundations.ts",
     "src/app/_components/family-bar.tsx",
     "src/app/_components/digest-figure.tsx",
     "src/app/_components/listing-card.tsx",
     "src/app/_components/listing-tile.tsx",
   ])("keeps %s identical on both storefronts", (relative) => {
     expect(readSite("catalog-web", relative)).toBe(readSite("catalog-game", relative));
+  });
+});
+
+/**
+ * Captain decision D2 (2026-07-28): the shared token layer lives in `packages/site-kit`.
+ *
+ * The point of these cases is that a storefront cannot go back to carrying its own copy.
+ * They assert the negative — no Foundations token is declared in a site — and the
+ * positive — the site serves site-kit's emitter and every colour it paints with is one the
+ * shared layer publishes.
+ */
+describe("the token layer comes from site-kit and is not copied into either site", () => {
+  /** Every token name `foundationsCss()` publishes, so a redeclaration is detectable. */
+  const FOUNDATION_TOKEN_NAMES = new Set<string>([
+    ...FOUNDATION_COLORS.map((color) => color.token),
+    "--font-ui",
+    "--font-mono",
+    "--radius-xs",
+    "--radius-sm",
+    "--radius-md",
+    "--radius-lg",
+    "--radius-xl",
+    "--radius-full",
+  ]);
+
+  it.each(STOREFRONTS)("%s declares no Foundations v2 token of its own", (site) => {
+    const redeclared = Object.keys(cssTokens(stripComments(css[site]))).filter((token) =>
+      FOUNDATION_TOKEN_NAMES.has(token),
+    );
+    expect(redeclared).toEqual([]);
+  });
+
+  it.each(STOREFRONTS)("%s ships no Foundations hex as a literal", (site) => {
+    // The palette hexes may appear in exactly one place in the repository. A site that
+    // pastes `#07080a` back in has recreated the duplication D2 removed, even if it also
+    // consumes the emitter.
+    const shipped = stripComments(css[site]).toLowerCase();
+    const offenders = FOUNDATION_COLORS.map((color) => color.hex.toLowerCase()).filter(
+      (hex) => shipped.includes(hex),
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  it.each(STOREFRONTS)("%s serves site-kit's emitted sheet from its layout", (site) => {
+    const layout = readSite(site, "src/app/layout.tsx");
+    expect(layout).toContain("foundationsStylesheet");
+    expect(layout).toContain("CATALOG_SITE_FOUNDATION_SURFACE");
+    // Fail-closed: a refusal must not fall through to an unthemed render.
+    expect(layout).toContain("foundations.ok");
+  });
+
+  it.each([
+    ["catalog-game", "game-assets"],
+    ["catalog-web", "web-assets"],
+  ] as const)("%s composes the sheet for its own surface", (site, surface) => {
+    const seam = site === "catalog-game" ? game : web;
+    const sheet = seam.foundationsStylesheet(surface);
+    expect(sheet.ok).toBe(true);
+    if (!sheet.ok) return;
+    const accent = resolveSurfaceAccent(surface);
+    expect(accent.ok).toBe(true);
+    if (!accent.ok) return;
+    expect(cssTokens(sheet.value)["--accent"]).toBe(accent.value.accent);
+    // Every status triple is projected, and none of them is written by the site.
+    for (const status of FOUNDATION_STATUSES) {
+      expect(sheet.value).toContain(`--status-${status.id}-fg: ${status.fg};`);
+      expect(sheet.value).toContain(`--status-${status.id}-bg: ${status.bg};`);
+      expect(sheet.value).toContain(`--status-${status.id}-line: ${status.line};`);
+    }
+  });
+
+  it("refuses a surface outside the storefront pair rather than theming it", () => {
+    // `kids` and an unknown id are the two ways this can be wrong, and both refuse in
+    // site-kit. The storefront type narrows them out, so this asserts the runtime floor.
+    expect(
+      game.foundationsStylesheet("kids" as unknown as game.StorefrontSurface),
+    ).toMatchObject({ ok: false, reason: "KIDS_SURFACE_DENIED" });
+    expect(
+      game.foundationsStylesheet("nope" as unknown as game.StorefrontSurface),
+    ).toMatchObject({ ok: false, reason: "FOUNDATION_SURFACE_UNKNOWN" });
+  });
+
+  /**
+   * The only hexes the shared skeleton may still write, each with its reason.
+   *
+   * A literal is allowed only where the Foundations sheet publishes no token for what is
+   * being painted. Every one of these is transcribed from the Asset Storefronts screen or
+   * is a pure-black shadow, and none of them is a Foundations colour — that is asserted
+   * separately, so this list cannot be used to smuggle a palette value back in.
+   */
+  const ALLOWED_LITERALS: Readonly<Record<string, string>> = Object.freeze({
+    "#0a0c0e": "the family bar's own bar fill, between --bg-base and --bg-panel",
+    "#191e25": "the top stop of the digest sigil's radial wash",
+    "#000": "a pure-black drop shadow under the sigil chip, not a surface colour",
+  });
+
+  it.each(STOREFRONTS)("%s writes a colour literal only where no token exists", (site) => {
+    const shared = stripComments(sharedSkeleton(css[site]));
+    const literals = [...shared.matchAll(/#[0-9a-fA-F]{3,8}\b/g)].map((match) =>
+      match[0].toLowerCase(),
+    );
+    const unexplained = [...new Set(literals)].filter(
+      (hex) => !(hex in ALLOWED_LITERALS),
+    );
+    expect(unexplained).toEqual([]);
   });
 });
 
@@ -195,8 +318,22 @@ describe("accessibility corrections the archive needs", () => {
     }
   });
 
-  it.each(STOREFRONTS)("%s meets 4.5:1 on every shipped text pairing", (site) => {
-    const tokens = cssTokens(css[site]);
+  it.each([
+    ["catalog-game", "game-assets"],
+    ["catalog-web", "web-assets"],
+  ] as const)("%s meets 4.5:1 on every shipped text pairing", (site, surface) => {
+    // Both halves of every pairing are resolved the way a browser resolves them: the shared
+    // tokens out of site-kit's emitted sheet for this surface, the storefront's own
+    // derivations out of its identity block. Measuring the sheet the site actually serves
+    // is what makes this a contrast check rather than a check of a copied table.
+    const seam = site === "catalog-game" ? game : web;
+    const sheet = seam.foundationsStylesheet(surface);
+    expect(sheet.ok).toBe(true);
+    if (!sheet.ok) return;
+    const tokens: Record<string, string> = {
+      ...cssTokens(sheet.value),
+      ...cssTokens(identityBlock(css[site])),
+    };
     const pairs: readonly (readonly [string, string])[] = [
       ["--fg", "--bg-base"],
       ["--fg-2", "--bg-base"],
@@ -207,12 +344,12 @@ describe("accessibility corrections the archive needs", () => {
       ["--fg-2", "--bg-row"],
       ["--fg-2", "--bg-control"],
       ["--ok", "--bg-panel"],
-      ["--ok", "--ok-bg"],
-      ["--warn", "--warn-bg"],
-      ["--danger", "--danger-bg"],
-      ["--fg-2", "--ok-bg"],
-      ["--fg-2", "--warn-bg"],
-      ["--fg-2", "--danger-bg"],
+      ["--ok", "--status-validated-bg"],
+      ["--status-needs-review-fg", "--status-needs-review-bg"],
+      ["--danger", "--status-refused-bg"],
+      ["--fg-2", "--status-validated-bg"],
+      ["--fg-2", "--status-needs-review-bg"],
+      ["--fg-2", "--status-refused-bg"],
       ["--accent", "--bg-base"],
       ["--accent", "--accent-bg"],
       ["--fg-2", "--accent-bg"],
@@ -222,8 +359,8 @@ describe("accessibility corrections the archive needs", () => {
     for (const [fg, bg] of pairs) {
       const foreground = tokens[fg];
       const background = tokens[bg];
-      expect(foreground, `${fg} is declared`).toMatch(/^#[0-9a-f]{6}$/);
-      expect(background, `${bg} is declared`).toMatch(/^#[0-9a-f]{6}$/);
+      expect(foreground, `${fg} is declared`).toMatch(/^#[0-9a-fA-F]{6}$/);
+      expect(background, `${bg} is declared`).toMatch(/^#[0-9a-fA-F]{6}$/);
       expect(
         contrastRatio(foreground as string, background as string),
         `${fg} on ${bg}`,
@@ -232,9 +369,13 @@ describe("accessibility corrections the archive needs", () => {
   });
 
   it.each(STOREFRONTS)("%s never paints text with the sub-threshold --fg-4", (site) => {
-    // The archive's micro labels are `--fg-4` on a panel, about 2.1:1. The token stays
-    // declared as part of the sheet, but nothing may read through it.
-    const tokens = cssTokens(css[site]);
+    // The archive's micro labels are `--fg-4` on a panel, about 2.1:1. site-kit still
+    // publishes the token — it is the sheet's disabled/units level — but nothing here may
+    // read through it, and the measurement is what keeps it demoted.
+    const sheet = game.foundationsStylesheet("game-assets");
+    expect(sheet.ok).toBe(true);
+    if (!sheet.ok) return;
+    const tokens = cssTokens(sheet.value);
     expect(
       contrastRatio(tokens["--fg-4"] as string, tokens["--bg-base"] as string),
     ).toBeLessThan(4.5);
