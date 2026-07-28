@@ -103,7 +103,10 @@ still-unimplemented target:
   third-party LLM route, and `kidsBoundary.allowedDependents` stays empty. The
   desktop shell's editor chrome honours that over its design source: on the
   refuse-only profile the whole editor body is replaced by
-  `OPEN_PATH_KIDS_REFUSED` rather than rendered disabled
+  `OPEN_PATH_KIDS_REFUSED` rather than rendered disabled, the mode rail refuses
+  by the same name, and the assistant shows its own named denial — all of it in
+  the emitted bytes and selected by state, so a browser-side profile switch
+  reaches the same refusals
   ([`engine-desktop-surface.md`](engine-desktop-surface.md)).
 - `sceneaxi-desktop chrome` renders the editor chrome but mounts **no**
   presentation runtime and opens **no** kernel session, so its viewport draws no

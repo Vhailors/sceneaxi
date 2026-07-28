@@ -322,11 +322,64 @@ describe("engine desktop chrome — accessibility", () => {
   it("marks the active mode and profile with aria-pressed", () => {
     const html = render(createDesktopVisualState({ mode: "compose", profile: "web" }));
     expect(html).toContain(
-      '<button type="button" class="rail-mode" data-action="mode" data-value="compose" aria-pressed="true"',
+      'id="mode-compose" data-kind="view" data-action="mode" data-value="compose" aria-pressed="true"',
     );
     expect(html).toContain(
       '<button type="button" class="profile-chip" data-action="profile" data-value="web" aria-pressed="true"',
     );
+  });
+
+  it("renders the mode rail through its modelled controls", () => {
+    // The rail was the last group to read `id`/`label`/`active` off the model
+    // and drop the control kind with it, which is what let a Kids document
+    // render seven live-looking buttons.
+    const view = desktopVisualView(createDesktopVisualState());
+    const html = render();
+    for (const mode of view.modes) {
+      expect(html).toContain(
+        `id="${mode.control.id}" data-kind="${mode.control.kind}"`,
+      );
+    }
+  });
+
+  it("renders every dock tab and viewport source through its modelled control", () => {
+    const view = desktopVisualView(createDesktopVisualState());
+    const html = render();
+    for (const control of [
+      ...view.dockTabs.map((tab) => tab.control),
+      ...view.viewport.sources.map((source) => source.control),
+    ]) {
+      expect(html).toContain(`id="${control.id}" data-kind="${control.kind}"`);
+    }
+  });
+
+  it("declares the viewport sources inert and names why they cannot switch", () => {
+    // They sit in a tablist that controls nothing, because switching what a
+    // viewport shows needs a renderer and this surface mounts none.
+    const html = render();
+    for (const id of ["scene", "game", "sculpt-preview"]) {
+      expect(html).toContain(
+        `id="viewport-source-${id}" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.noPresentationRuntime}"`,
+      );
+    }
+    expect(html).toContain('aria-selected="true"');
+  });
+
+  it("keeps every tablist owning nothing but its tabs", () => {
+    // ARIA restricts a tablist's children to tabs, and `moveTab()` enumerates
+    // them, so the bulk accept/reject and the spacer stay outside it.
+    const html = render();
+    for (const [, inner] of html.matchAll(
+      /<div class="(?:dock|view)-tablist" role="tablist"[^>]*>(.*?)<\/div>/gs,
+    )) {
+      const tags = [...(inner ?? "").matchAll(/<button\b[^>]*>/g)].map(([tag]) => tag);
+      expect(tags.length).toBeGreaterThan(0);
+      for (const tag of tags) expect(tag).toContain('role="tab"');
+      expect(inner).not.toContain("dock-bulk");
+      expect(inner).not.toContain("spacer");
+    }
+    expect(html).toContain('<div class="dock-tablist" role="tablist" aria-label="Dock panel">');
+    expect(html).toContain('<div class="view-tablist" role="tablist" aria-label="Viewport source">');
   });
 
   it("gives every decision button an accessible name naming its pointer", () => {
@@ -417,13 +470,17 @@ describe("engine desktop chrome — responsive strategy", () => {
 });
 
 describe("engine desktop chrome — honesty", () => {
-  it("prints the held renderer note beside a statement that nothing is drawn", () => {
-    const html = render();
-    expect(html).toContain("Preview renderer is experimental — not the final choice");
-    expect(html).toContain("the viewport is inert and draws no pixels");
-    // The labels ADR 0017 retired for product presentation copy never appear.
-    expect(html).not.toContain("Experimental Three preview");
-    expect(html).not.toContain("non-decision");
+  it("states that nothing is drawn and claims nothing about renderer finality", () => {
+    for (const [label, state] of ALL_STATES) {
+      const html = render(state);
+      expect(html, label).toContain("the viewport is inert and draws no pixels");
+      // The archive's "not the final choice" line is stale product copy now that
+      // the captain has settled Three as the product presentation core, and the
+      // two labels ADR 0017 retired by name never appear either.
+      expect(html, label).not.toContain("not the final choice");
+      expect(html, label).not.toContain("Experimental Three preview");
+      expect(html, label).not.toContain("non-decision");
+    }
   });
 
   it("never invents a digest, a byte size, a frame rate, or a timing", () => {
@@ -455,6 +512,83 @@ describe("engine desktop chrome — honesty", () => {
     // so a browser-side profile switch cannot walk around it.
     expect(render()).toContain('class="profile-refusal"');
     expect(html).toContain('.shell[data-profile="kids"] .profile-refusal{display:grid}');
+  });
+
+  it("cannot enter a mode from behind the Kids refusal, in the bytes", () => {
+    const html = render(createDesktopVisualState({ profile: "kids" }));
+    for (const mode of DESKTOP_MODE_IDS) {
+      expect(html).toContain(
+        `id="mode-${mode}" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly}"`,
+      );
+      expect(html).toContain(
+        `aria-describedby="refusal-${DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly}"`,
+      );
+    }
+    // The click handler's only guard is `aria-disabled`, so the attribute is what
+    // stops a server-rendered Kids document from switching mode.
+    const script = /<script>(.*)<\/script>/s.exec(html)?.[1] ?? "";
+    expect(script).toContain(`el.getAttribute('aria-disabled') === 'true'`);
+    // And the reason resolves: the legend prints the whole closed registry.
+    expect(html).toContain(`id="refusal-${DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly}"`);
+  });
+
+  it("locks the assistant on Kids and can be reached by a client switch", () => {
+    const kids = render(createDesktopVisualState({ profile: "kids" }));
+    expect(kids).toContain("The assistant is off on Kids");
+    expect(kids).toContain(
+      `id="assistant-toggle" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.kidsAssistantDenied}"`,
+    );
+    // Both bodies ship in every document and the state chooses, so switching
+    // profile in the browser cannot leave a live composer under a Kids badge —
+    // nor strand the column once the operator switches back.
+    for (const [label, state] of ALL_STATES) {
+      const html = render(state);
+      expect(html, label).toContain("THIRD_PARTY_LLM_DENIED_BY_DEFAULT");
+      expect(html, label).toContain('class="assistant-denied"');
+      expect(html, label).toContain('class="composer-placeholder"');
+      expect(html, label).toContain('id="assistant-close"');
+      expect(html, label).toContain(
+        '.shell[data-assistant="denied"] .assistant-denied{display:flex}',
+      );
+      expect(html, label).toContain(
+        '.shell[data-assistant="denied"] .assistant-body,\n.shell[data-assistant="denied"] .assistant-composer{display:none}',
+      );
+    }
+    // The switch applies the model's own projection for the profile it lands on.
+    const view = desktopVisualView(createDesktopVisualState());
+    const script = /<script>(.*)<\/script>/s.exec(render())?.[1] ?? "";
+    const tables = JSON.parse(/const T = (\{.*?\});\n/s.exec(render())?.[1] ?? "{}") as {
+      assistantByProfile: Record<string, Record<string, string | null>>;
+      modeRefusalByProfile: Record<string, string | null>;
+    };
+    for (const chip of view.profiles) {
+      expect(tables.assistantByProfile[chip.id]).toEqual({
+        state: chip.assistant.state,
+        modelLabel: chip.assistant.modelLabel,
+        toggle: chip.assistant.toggle.refusal,
+        close: chip.assistant.close.refusal,
+        send: chip.assistant.send.refusal,
+      });
+      expect(tables.modeRefusalByProfile[chip.id]).toBe(chip.refusal);
+    }
+    expect(script).toContain("setProfile(value)");
+    expect(script).toContain("setRefusal(shell.querySelector('#assistant-toggle')");
+  });
+
+  it("prints the closed refusal registry, one sentence per code", () => {
+    // The legend is the accounting surface for the registry, and it is what every
+    // `aria-describedby` resolves to — including one a client switch adds.
+    const html = render();
+    for (const code of Object.values(DESKTOP_VISUAL_REFUSALS)) {
+      expect(html).toContain(
+        `id="refusal-${code}"><code>${code}</code> ${DESKTOP_REFUSAL_MESSAGES[code]}`,
+      );
+    }
+    // One code, one sentence: the viewport's own note is not a second wording
+    // of DESKTOP_NO_PRESENTATION_RUNTIME in the legend.
+    expect(
+      html.split(`id="refusal-${DESKTOP_VISUAL_REFUSALS.noPresentationRuntime}"`),
+    ).toHaveLength(2);
   });
 
   it("renders the window refusal in the same document, at the same size", () => {

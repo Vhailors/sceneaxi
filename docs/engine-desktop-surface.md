@@ -123,8 +123,17 @@ asserted rather than remembered.
 
 The model decides and the renderer draws. `chrome.ts` contains no policy: every
 table its emitted script reads — which dock tabs a mode has, which dock height,
-which profile refuses — is serialized from the model at render time, so the
-document and the model cannot disagree about a state. That holds for the emitted
+what the assistant becomes on each profile and with which refusals, which
+refusal the rail takes — is serialized from the model at render time, so the
+document and the model cannot disagree about a state. **A state a client toggle
+can reach is a state the bytes already contain.** The Kids editor refusal, and
+now the Kids assistant lock, are emitted in *every* document and selected by a
+`[data-profile="kids"]` / `[data-assistant="denied"]` rule rather than by a
+server-side branch, because a refuse-only decision a browser-side profile switch
+could walk around is not a decision. The switch applies the model's own
+projection for the profile it lands on — state, model label, and the toggle,
+close, and Send refusals — so switching *back* restores a correct column instead
+of stranding one. That holds for the emitted
 bytes too, not just for what the script does afterwards: the visible dock
 tabpanel is `state.dockTab`, so `--mode run` opens on Console rather than on a
 hardcoded Change Review queue the mode does not even have a tab for. The bulk
@@ -166,7 +175,7 @@ always has a refusal and a live one never does.
 |---|---|---|
 | `view` | changes visual state; genuinely works | mode rail, dock tabs, profile switch, assistant open/close, overlays, drawer toggles |
 | `review` | edits the fixture Change Review queue; **writes no document** | accept/reject a row, accept all, reject all |
-| `inert` | renders, keeps its focus stop, refuses by name | Sculpt object, assistant Send, menu bar, the palette rows naming CLI-only verbs |
+| `inert` | renders, keeps its focus stop, refuses by name | Sculpt object, assistant Send, menu bar, the three viewport-source tabs, the palette rows naming CLI-only verbs, and — on the refuse-only profile — the whole mode rail and the assistant's toggle and close |
 
 There is no fourth kind. Nothing in the chrome reaches `@sceneaxi/authoring-core`,
 so it cannot write a document by accident, and `test/app.test.ts` proves a
@@ -179,9 +188,9 @@ so it cannot write a document by accident, and `test/app.test.ts` proves a
 
 | Code | When |
 |---|---|
-| `OPEN_PATH_KIDS_REFUSED` | the refuse-only profile; the code comes from the shared open-path policy, not from here |
-| `DESKTOP_KIDS_ASSISTANT_DENIED` | assistant on Kids |
-| `DESKTOP_NO_PRESENTATION_RUNTIME` | the viewport: no renderer is mounted, so no pixels |
+| `OPEN_PATH_KIDS_REFUSED` | the refuse-only profile, and every mode on the rail behind it; the code comes from the shared open-path policy, not from here |
+| `DESKTOP_KIDS_ASSISTANT_DENIED` | assistant on Kids — its toggle, its close, and its Send |
+| `DESKTOP_NO_PRESENTATION_RUNTIME` | the viewport: no renderer is mounted, so no pixels — and the three viewport-source tabs, because switching what a viewport shows needs the runtime that is missing |
 | `DESKTOP_NO_KERNEL_SESSION` | `run` mode: no session, so no tick, frame, or body |
 | `DESKTOP_NO_DOCUMENT_BOUND` | any control that would author something |
 | `DESKTOP_VERB_NOT_ON_THIS_SURFACE` | a palette row naming a CLI verb this shell has no command for, and every application-menu button — this surface has no command behind any of the archive's menus |
@@ -240,14 +249,30 @@ Two rules keep this honest:
 - **Inert controls stay reachable.** An inert control is marked `aria-disabled`
   rather than `disabled`, so it keeps its focus stop, and `aria-describedby`
   points at the paragraph carrying its refusal — a screen reader gets the reason,
-  not just "dimmed". Every referenced reason exists in the same document.
+  not just "dimmed". Every group of interactive elements the model owns is
+  rendered through the one `button(control, …)` helper, including the mode rail,
+  the dock tabs, and the viewport-source tabs, so a control cannot reach the
+  document without its kind. The refusal legend prints the **whole closed
+  registry**, one sentence per code taken from `DESKTOP_REFUSAL_MESSAGES`, for
+  two reasons: a code must not have two wordings in one document, and a control
+  that becomes inert *in the browser* — the profile switch does that to the rail
+  and to the assistant — needs its reason to already be there to point at.
 - **Roving tabindex** on both tablists, with `aria-selected` on the active tab
   and `aria-pressed` on the active mode and profile — **and the arrow keys that
   make it a pattern rather than a lost focus stop.** Roving tabindex takes every
   non-active tab out of the Tab order, so `ArrowLeft` / `ArrowRight` / `Home` /
   `End` are the only way to reach them: on the dock strip they select the tab they
-  move to, and on the viewport strip they move focus, which is all a click does
-  there either.
+  move to, and on the viewport strip they move focus without moving the
+  selection, because all three viewport sources are inert — a viewport source
+  cannot be switched on a surface that mounts no renderer, and they say so with
+  `DESKTOP_NO_PRESENTATION_RUNTIME` rather than looking switchable.
+- **A tablist owns nothing but its tabs.** ARIA restricts a `tablist`'s children
+  to `tab`, so `role="tablist"` sits on an inner wrapper holding only the tabs;
+  the spacer, the tool glyphs, and the Change Review bulk accept/reject stay
+  siblings in the same flex row. The bulk pair is the only way to decide the
+  whole queue at once, so it is the worst control in the strip to have dropped
+  from the exposed structure — and `moveTab()` enumerating `[role="tab"]` now
+  depends on the same boundary.
 - **`aria-modal` is backed by a real trap.** An overlay declares
   `role="dialog" aria-modal="true"`, which tells assistive tech the rest of the
   document is inert, so keyboard focus must agree: opening one moves focus into
@@ -281,25 +306,27 @@ Each row is also carried as data in `DEVIATIONS`.
 | Struck-through review value | `#7A6448` (3.42:1) | `#A08663` | same floor |
 | Web fonts | `fonts.googleapis.com` link for Archivo + JetBrains Mono | font-family stack, no remote request | the emitted document is self-contained and offline. The archive families are named first and render when installed; otherwise the system UI face does. |
 | Fixed stage | 1680×1000 scaled with a transform | fluid layout, four window tiers | see above |
-| Informational blue | the member carries both `#5B9CFF` and a lighter `#8FB7F5` for the same renderer note | `#5B9CFF` | the two archive members disagree, so the shared sheet settles it: Foundations v2 canonicalises `--info` to `#5B9CFF`, D1 makes the sheet binding, and the value clears the text floor here anyway (6.16:1 at worst on `SURFACE`, 6.48:1 on the note's own fill) — so there is no accessibility reason to keep the member's lighter variant, and keeping it would be drift from the shared layer. |
-| Kids profile | a working editor with only the assistant locked | the **whole editor body** refuses | **contract conflict, resolved for the repository.** The Kids product is an isolation boundary with no UI (`open-path-policy.md`, `OPEN_PATH_KIDS_REFUSED`). An editor that merely looked disabled under a Kids badge would still be a Kids authoring UI. The rail goes inert too, so no mode can be entered from behind the refusal; the profile switch stays live so the refusal is a state you can leave. |
+| Informational blue | the member carries both `#5B9CFF` and a lighter `#8FB7F5` for the same informational role | `#5B9CFF` | the two archive members disagree, so the shared sheet settles it: Foundations v2 canonicalises `--info` to `#5B9CFF`, D1 makes the sheet binding, and the value clears the text floor here anyway (6.16:1 at worst on `SURFACE`, 6.48:1 on the note's own fill) — so there is no accessibility reason to keep the member's lighter variant, and keeping it would be drift from the shared layer. |
+| Kids profile | a working editor with only the assistant locked | the **whole editor body** refuses | **contract conflict, resolved for the repository.** The Kids product is an isolation boundary with no UI (`open-path-policy.md`, `OPEN_PATH_KIDS_REFUSED`). An editor that merely looked disabled under a Kids badge would still be a Kids authoring UI. The rail goes inert too — in the emitted bytes, not only after a click — so no mode can be entered from behind the refusal; the profile switch stays live so the refusal is a state you can leave. |
 | Panel inventory | fixture object trees, digests, byte sizes, fps, triangle counts, run timings, evidence rows | real structure with honest empty and inert states | a shell that mounts no renderer and opens no kernel session has no fps, no triangle count, and no `14.2 MB` artifact. Rendering the archive's fixtures would be inventing file sizes and hashes. Change Review is the one fixture queue kept — its interactions are in scope — and it says on the surface that deciding there writes no document. |
 
-### The renderer note
+### The renderer note is deliberately dropped
 
 The archive's viewport carries **`Preview renderer is experimental — not the
-final choice`**, and it is preserved verbatim. It is not the framing ADR 0017
-retired: that ADR removed the labels `Experimental Three preview` and
-`non-decision` from *product presentation copy*, asserted against
-`LIVE_OPEN_PRESENTATION` on the umbrella's pixel-drawing surfaces. Neither string
-appears here.
+final choice`**. That sentence is **not** shipped. The archive is authority for
+purely visual facts; this is product copy asserting a product fact, and the
+captain has settled Three as the product presentation core, so the sentence is
+stale regardless of whether ADR 0017's pixel-surface scope formally reaches a
+surface that mounts no renderer at all. It was removed rather than reworded,
+because `VIEWPORT_INERT_NOTE` already says the only thing this viewport can
+honestly say — that no renderer is mounted here and no pixels are drawn — and
+the document carries `<meta name="sceneaxi-pixels-drawn" content="false">`
+beside it.
 
-This surface mounts **no** presentation runtime at all — the dependency matrix
-allows `@sceneaxi/desktop-shell` only `@sceneaxi/schemas` and
-`@sceneaxi/authoring-core` — so the sentence describes a renderer adjudication
-that remains a captain-held decision, beside `VIEWPORT_INERT_NOTE`, which states
-plainly that the viewport draws no pixels. The document also carries
-`<meta name="sceneaxi-pixels-drawn" content="false">`.
+The two labels ADR 0017 retired by name, `Experimental Three preview` and
+`non-decision`, **remain asserted absent** in `test/chrome.test.ts` and
+`test/visual-model.test.ts`, in every state, so neither they nor the dropped
+sentence can return by review slip.
 
 ## What is verified where
 
@@ -314,76 +341,83 @@ plainly that the viewport draws no pixels. The document also carries
   size, frame rate, or timing in **any** state. `apps/desktop-shell/test/bin-smoke.test.ts`
   spawns the real binary and renders a document from it.
 
-- **Real browser.** Verified 2026-07-27 in Chrome (`chrome-devtools-axi`) against
-  documents rendered by the built binary and opened from `file://`, and
-  **re-verified 2026-07-28** on current `main` after the Foundations v2 alignment
-  (see that re-run at the end of this section):
+- **Real browser, re-recorded 2026-07-28 against this branch's HEAD.** The
+  earlier record was taken before the review fixes on this branch and is not
+  inherited: it described a different document (the renderer note, the dock
+  tabpanels, the scrim values, and the viewport's `role="img"` all changed), and
+  its visibility claims were read from the DOM `hidden` property rather than
+  from computed style — which is exactly what a `.change-row{display:grid}`
+  class outranking the UA `[hidden]` rule could hide. **Every visibility claim
+  below is `getComputedStyle(...).display`.** Chrome via `chrome-devtools-axi`,
+  documents rendered by `node apps/desktop-shell/bin/sceneaxi-desktop.mjs
+  chrome`, opened from `file://` at 1680×1000 unless a size is named.
 
   - **Region geometry at 1680×1000 is the archive's own, to the pixel**:
     title bar `36`, mode rail `56`, left dock `274`, inspector `326`, assistant
     `344`, view tabs `32`, dock `228`, status bar `27`, shell `1680×1000`.
-  - **Computed colours are the archive's digits**: shell `rgb(7, 8, 10)`, panel
-    `rgb(13, 15, 18)`, panel header `rgb(18, 21, 26)`, accent fill and active
-    rail label `rgb(255, 107, 44)`. Body font resolved to the `Archivo` stack.
+  - **The adopted language is what the browser resolved**: `--accent` `#FF6B2C`,
+    `--info` `#5B9CFF`, shell `rgb(7, 8, 10)` (`#07080A`), title bar
+    `rgb(13, 15, 18)`, panel header `rgb(18, 21, 26)`, active rail label
+    `rgb(255, 107, 44)`, body font resolved to `Archivo`.
   - **Exactly one network request** — the document itself. No font, script,
     style, or image was fetched.
-  - **Controls**: 57 buttons, 52 focus stops, **0 unlabelled**. 14 inert buttons,
-    all 14 still focusable and all 14 carrying `aria-describedby` to their
-    refusal. Focus ring resolved to `rgb(255, 107, 44) 2px`. 29 landmarks.
-  - **Rendered contrast sweep**, computing each visible text element's colour
-    against its resolved background: **0 failures below 4.5:1** across `build`,
-    `sculpt` (running), `run`, `plugins`, `kids`, and all three overlays;
-    ~197 elements per state; worst observed ratio **4.60:1** (the `refuse-only`
-    chip at 8.5px). This sweep is also what *found* a real defect during
-    implementation — an inert icon button on the accent fill inherited `--dim`
-    from a later equal-specificity rule and rendered at **1.11:1**; it is fixed
-    and the rule that fixes it is commented in place.
+  - **Controls** (`build`): 57 buttons, 52 focus stops, **0 unlabelled**, 17
+    inert — all 17 focusable and all 17 with an `aria-describedby` that resolves
+    to an element in the same document. On `kids` it is 26 inert, again all 26
+    resolving: the seven rail modes and the assistant's toggle and close join
+    them. **0 dangling `aria-describedby`** at every step of the interaction
+    sequence below, including the ones a client-side profile switch adds.
+  - **Every `role="tablist"` owned only `role="tab"` children** in all five
+    states measured, so the bulk accept/reject and the spacer are outside it.
+  - **The viewport carries one note**, `VIEWPORT_INERT_NOTE`; the archive's
+    "not the final choice" line is not in the document.
+  - **Rendered contrast sweep**, computing each visible text-bearing element's
+    colour against its resolved (alpha-composited) background: **0 failures
+    below 4.5:1** in every state measured — `build` (102 elements, worst
+    5.22:1), `sculpt` running (121, 5.22:1), `run` (72, 5.42:1), the `palette`
+    overlay (125, 5.11:1), and `kids` (64, **4.60:1** — the `refuse-only` chip
+    at 8.5px, the worst on the surface). This sweep is also what *found* a real
+    defect during implementation — an inert icon button on the accent fill
+    inherited `--dim` from a later equal-specificity rule and rendered at
+    **1.11:1**; it is fixed and the rule that fixes it is commented in place.
+  - **The refuse-only decision holds through a client-side switch**, read from
+    computed style at each step. From the default `game` document: clicking the
+    **Kids** chip gave `data-assistant="denied"`, the assistant lock `display:
+    flex` with the composer and body at `none` and the model label at `denied`,
+    the editor refusal region at `display: grid`, all seven rail modes
+    `aria-disabled` and described by `refusal-OPEN_PATH_KIDS_REFUSED`, and the
+    assistant toggle and close `aria-disabled` and described by
+    `refusal-DESKTOP_KIDS_ASSISTANT_DENIED`. **Clicking a mode from behind the
+    refusal did not change mode** (`data-mode` stayed `build`). Clicking
+    **Game** restored a usable column — lock `none`, composer `flex`, label
+    `no provider configured`, rail and both assistant controls live again — and
+    the ✕ then closed the assistant and the toggle reopened it.
+  - **Interactivity matches the model.** Switching to `animate` rebuilt the dock
+    tabs to `["timeline","changes","console"]`. Deciding one Change Review row
+    moved the badge `3 → 2` and took the visible row count to 2; **Accept all**
+    took the badge to `0`, left **0** rows with a computed display other than
+    `none`, and resolved the bulk actions to `display: none`. In `run`, which
+    has no Changes tab, the bulk actions were already `display: none`.
+  - **Roving tabindex is a working pattern.** On the dock strip `ArrowRight`
+    moved focus from `changes` to `assets`, moved `aria-selected` with it, and
+    left `dock-panel-assets` as the only panel with a computed display; `End`
+    reached `evidence` and `Home` returned to `changes`. On the viewport strip
+    `ArrowRight` focused `Game`, which reports `data-kind="inert"` and
+    `data-refusal="DESKTOP_NO_PRESENTATION_RUNTIME"`, and the selection stayed
+    on `Scene` — nothing is switched, because nothing can be.
   - **Reduced motion**, in a Chrome launched with `--force-prefers-reduced-motion`:
     `matchMedia('(prefers-reduced-motion: reduce)')` matched, the sculpt sweep
     resolved to `display: none`, and the progress animation collapsed to
     `1e-06s` while the `progressbar` kept `aria-valuenow="64"` and
     `aria-label="Pass 3 of 5"`.
-  - **Interactivity matches the model.** Switching to `animate` rebuilt the dock
-    tabs to `["timeline","changes","console"]`, selected `timeline`, and moved
-    the dock height to `252px`. Deciding one Change Review row moved the badge
-    `3 → 2`; **Accept all** took it to `0`, showed the empty state, and hid the
-    bulk actions. Opening the palette set `data-overlay="palette"` and moved
-    focus into the dialog. Switching to Kids set `data-assistant="denied"`, made
-    the rail `aria-disabled`, and showed the refusal region.
   - **Window tiers match `WINDOW_TIERS` exactly**, measured as which children of
     `.shell-body` are still in flow: at 1680×1000 `rail, left dock, viewport,
     inspector, assistant` with 0 drawer toggles visible; at 1280×800 `rail, left
     dock, viewport, inspector` with 0 toggles; at 1024×700 `rail, viewport` with
-    2 toggles visible; at 800×560 the editor was replaced by the
-    `DESKTOP_WINDOW_BELOW_MINIMUM` refusal naming the `900×600` minimum.
-
-- **Foundations v2 re-verification, 2026-07-28.** The alignment above changed one
-  shipped value (`--info`), so the browser record was re-run on the current tree
-  rather than inherited. Chrome via `chrome-devtools-axi`, document rendered by
-  `node apps/desktop-shell/bin/sceneaxi-desktop.mjs chrome`, opened from `file://`
-  at 1680×1000:
-
-  - **The adopted language is what the browser actually resolved**: `--accent`
-    `#FF6B2C`, `--info` `#5B9CFF`, shell background `rgb(7, 8, 10)` (`#07080A`),
-    body font resolved to `Archivo`. The renderer note computed to
-    `rgb(91, 156, 255)` on `rgb(19, 24, 32)` — the Foundations blue, not the
-    member's lighter variant.
-  - **Rendered contrast sweep re-run across 13 states** — all seven modes, the
-    `web` and `kids` profiles, all three overlays, and the `agent` assistant mode
-    — computing each visible text element's colour against its resolved
-    background: **0 failures below 4.5:1** in every state. Worst observed ratio
-    **4.60:1**, the `refuse-only` chip in the Kids state; every other state
-    bottomed out at 5.11:1 or better.
-  - **Still exactly one network request** — the document itself. No font, script,
-    style, or image was fetched, so the Foundations families are named and never
-    downloaded.
-  - `<meta name="sceneaxi-pixels-drawn" content="false">` unchanged, and the
-    inert menu buttons still carry an `aria-describedby` refusal description in
-    the accessibility tree. (The code behind that description was
-    `DESKTOP_NO_PRESENTATION_RUNTIME` when this was recorded and is now
-    `DESKTOP_VERB_NOT_ON_THIS_SURFACE`, since the viewport's reason is about
-    pixels and a menu's is about commands; the node gates assert the current
-    code, and the browser observation above is left as what was seen.)
+    2 toggles visible; at 800×560 the shell resolved to `display: none` and the
+    `DESKTOP_WINDOW_BELOW_MINIMUM` refusal to `display: block`, naming the
+    `900×600` minimum.
+  - `<meta name="sceneaxi-pixels-drawn" content="false">` unchanged.
 
 - **Not claimed, and not claimable here**: an installer, a packaged desktop
   application, real renderer finality, live commerce, any file size or hash, and

@@ -619,21 +619,73 @@ export const PALETTE_GROUPS: ReadonlyArray<
 ]);
 
 /**
- * The archive's viewport status note, preserved verbatim.
+ * What this surface's viewport says about itself.
  *
- * It is *not* the retired "Experimental Three preview / non-decision" framing
- * ADR 0017 removed from product presentation copy: this shell mounts no
- * presentation runtime at all — the dependency matrix denies every engine
- * package to this one, presentation included — so the sentence describes a
- * renderer adjudication that is still a captain-held decision rather than
- * labelling a shipped product renderer. `VIEWPORT_INERT_NOTE` sits beside
- * it and says what this surface actually draws, which is nothing.
+ * The archive also draws a second line calling the preview renderer
+ * experimental and not the final choice. That sentence is not carried: the
+ * captain settled Three as the product presentation core (ADR 0017), so a
+ * product surface asserting the renderer choice is still open would be stale
+ * copy, and the archive is authority for purely visual facts rather than for
+ * product ones. The retired labels ADR 0017 names stay asserted absent.
  */
-export const VIEWPORT_RENDERER_NOTE =
-  "Preview renderer is experimental — not the final choice";
-
 export const VIEWPORT_INERT_NOTE =
   "No renderer is mounted on this surface — the viewport is inert and draws no pixels.";
+
+/**
+ * The viewport's source tabs.
+ *
+ * The archive draws three, and none of them can be honoured here: switching
+ * what a viewport shows needs a presentation runtime, and this surface mounts
+ * none. They are modelled as controls so all three declare a kind and name that
+ * reason, rather than being three tab-shaped elements nothing accounts for.
+ */
+export const DESKTOP_VIEWPORT_SOURCE_IDS = Object.freeze([
+  "scene",
+  "game",
+  "sculpt-preview",
+] as const);
+export type DesktopViewportSourceId =
+  (typeof DESKTOP_VIEWPORT_SOURCE_IDS)[number];
+
+const VIEWPORT_SOURCE_LABELS: Readonly<
+  Record<DesktopViewportSourceId, string>
+> = Object.freeze({
+  scene: "Scene",
+  game: "Game",
+  "sculpt-preview": "Sculpt preview",
+});
+
+/** The source the viewport shows; the other two cannot be entered. */
+const VIEWPORT_SHOWN_SOURCE: DesktopViewportSourceId = "scene";
+
+/** The named code the archive prints on the Kids assistant lock screen. */
+export const KIDS_ASSISTANT_LOCK_CODE = "THIRD_PARTY_LLM_DENIED_BY_DEFAULT";
+
+/**
+ * The refuse-only profile's assistant denial, independent of any state.
+ *
+ * Exported for the same reason as `kidsProfileRefusal()`: the renderer emits the
+ * lock screen in every document and shows it with a CSS rule, so a browser-side
+ * profile switch reaches the same named refusal the model reports instead of a
+ * client toggle walking around a server-side branch.
+ */
+export function kidsAssistantDenial(): Readonly<{
+  code: DesktopVisualRefusal;
+  message: string;
+  lockCode: typeof KIDS_ASSISTANT_LOCK_CODE;
+}> {
+  return Object.freeze({
+    code: DESKTOP_VISUAL_REFUSALS.kidsAssistantDenied,
+    message:
+      DESKTOP_REFUSAL_MESSAGES[DESKTOP_VISUAL_REFUSALS.kidsAssistantDenied],
+    lockCode: KIDS_ASSISTANT_LOCK_CODE,
+  });
+}
+
+const ASSISTANT_MODEL_LABELS = Object.freeze({
+  denied: "denied",
+  noProvider: "no provider configured",
+});
 
 /* -------------------------------------------------------------------------- */
 /* View projection                                                             */
@@ -711,21 +763,67 @@ export type DesktopProfileChip = Readonly<{
   policy: OpenPathPolicyViewRow | null;
   refuseOnly: boolean;
   refusal: DesktopVisualRefusal | null;
+  /**
+   * What the assistant becomes on this profile, decided here rather than by the
+   * renderer, so a browser-side profile switch applies the model's own answer to
+   * the column instead of only relabelling it.
+   */
+  assistant: DesktopAssistantProjection;
 }>;
 
-export type DesktopAssistantView = Readonly<{
+/** Everything about the assistant that a profile alone decides. */
+export type DesktopAssistantProjection = Readonly<{
   state: DesktopAssistantState;
-  mode: DesktopAssistantModeId;
-  thinking: boolean;
   /** Model label; `denied` on Kids, never a provider name. */
   modelLabel: string;
   toggle: DesktopControl;
+  /** Closes the column from inside it; inert wherever the toggle is. */
+  close: DesktopControl;
   send: DesktopControl;
   refusal: DesktopVisualRefusal | null;
   refusalMessage: string | null;
   /** The named code the archive prints on the Kids lock screen. */
   refusalCode: string | null;
 }>;
+
+export type DesktopAssistantView = DesktopAssistantProjection &
+  Readonly<{
+    mode: DesktopAssistantModeId;
+    thinking: boolean;
+  }>;
+
+/**
+ * The assistant a profile gets. One function, so the column the renderer shows
+ * for the active profile and the column a profile switch moves to are the same
+ * decision — `send` refuses for the profile's own reason rather than keeping the
+ * one the document happened to be rendered with.
+ */
+function assistantProjection(refuseOnly: boolean): DesktopAssistantProjection {
+  const denial = kidsAssistantDenial();
+  return Object.freeze({
+    state: refuseOnly ? "denied" : "open",
+    modelLabel: refuseOnly
+      ? ASSISTANT_MODEL_LABELS.denied
+      : ASSISTANT_MODEL_LABELS.noProvider,
+    toggle: refuseOnly
+      ? control("assistant-toggle", "Assistant", "inert", denial.code)
+      : control("assistant-toggle", "Assistant", "view"),
+    close: refuseOnly
+      ? control("assistant-close", "Close assistant", "inert", denial.code)
+      : control("assistant-close", "Close assistant", "view"),
+    send: refuseOnly
+      ? control("assistant-send", "Send", "inert", denial.code)
+      : control(
+          "assistant-send",
+          "Send",
+          "inert",
+          DESKTOP_VISUAL_REFUSALS.noDocumentBound,
+        ),
+    refusal: refuseOnly ? denial.code : null,
+    refusalMessage: refuseOnly ? denial.message : null,
+    refusalCode: refuseOnly ? denial.lockCode : null,
+  });
+}
 
 export type DesktopChangeReviewRow = Readonly<{
   index: number;
@@ -834,10 +932,17 @@ export type DesktopVisualView = Readonly<{
   sculpt: DesktopSculptView;
   overlay: DesktopOverlayView;
   viewport: Readonly<{
-    rendererNote: typeof VIEWPORT_RENDERER_NOTE;
     inertNote: typeof VIEWPORT_INERT_NOTE;
     refusal: DesktopVisualRefusal;
     pixelsDrawn: false;
+    sources: ReadonlyArray<
+      Readonly<{
+        id: DesktopViewportSourceId;
+        label: string;
+        active: boolean;
+        control: DesktopControl;
+      }>
+    >;
   }>;
   statusText: string;
   profilePin: string;
@@ -928,36 +1033,10 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
   });
 
   const assistant: DesktopAssistantView = Object.freeze({
+    ...assistantProjection(kids),
     state: state.assistant,
     mode: state.assistantMode,
     thinking: state.assistantThinking,
-    modelLabel: kids ? "denied" : "no provider configured",
-    toggle: kids
-      ? control(
-          "assistant-toggle",
-          "Assistant",
-          "inert",
-          DESKTOP_VISUAL_REFUSALS.kidsAssistantDenied,
-        )
-      : control("assistant-toggle", "Assistant", "view"),
-    send: kids
-      ? control(
-          "assistant-send",
-          "Send",
-          "inert",
-          DESKTOP_VISUAL_REFUSALS.kidsAssistantDenied,
-        )
-      : control(
-          "assistant-send",
-          "Send",
-          "inert",
-          DESKTOP_VISUAL_REFUSALS.noDocumentBound,
-        ),
-    refusal: kids ? DESKTOP_VISUAL_REFUSALS.kidsAssistantDenied : null,
-    refusalMessage: kids
-      ? DESKTOP_REFUSAL_MESSAGES[DESKTOP_VISUAL_REFUSALS.kidsAssistantDenied]
-      : null,
-    refusalCode: kids ? "THIRD_PARTY_LLM_DENIED_BY_DEFAULT" : null,
   });
 
   return Object.freeze({
@@ -1018,6 +1097,7 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
           policy: row,
           refuseOnly,
           refusal: refuseOnly ? DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly : null,
+          assistant: assistantProjection(refuseOnly),
         });
       }),
     ),
@@ -1071,10 +1151,24 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
     }),
 
     viewport: Object.freeze({
-      rendererNote: VIEWPORT_RENDERER_NOTE,
       inertNote: VIEWPORT_INERT_NOTE,
       refusal: DESKTOP_VISUAL_REFUSALS.noPresentationRuntime,
       pixelsDrawn: false as const,
+      sources: Object.freeze(
+        DESKTOP_VIEWPORT_SOURCE_IDS.map((id) =>
+          Object.freeze({
+            id,
+            label: VIEWPORT_SOURCE_LABELS[id],
+            active: id === VIEWPORT_SHOWN_SOURCE,
+            control: control(
+              `viewport-source-${id}`,
+              VIEWPORT_SOURCE_LABELS[id],
+              "inert",
+              DESKTOP_VISUAL_REFUSALS.noPresentationRuntime,
+            ),
+          }),
+        ),
+      ),
     }),
 
     statusText: running

@@ -10,16 +10,18 @@ import {
   DESKTOP_PROFILE_IDS,
   DESKTOP_PROFILE_PACKAGES,
   DESKTOP_REFUSAL_MESSAGES,
+  DESKTOP_VIEWPORT_SOURCE_IDS,
   DESKTOP_VISUAL_REFUSALS,
+  KIDS_ASSISTANT_LOCK_CODE,
   PALETTE_GROUPS,
   SCULPT_PASSES,
-  VIEWPORT_RENDERER_NOTE,
   WINDOW_TIERS,
   applyDesktopVisualAction,
   createDesktopVisualState,
   defaultDockTabFor,
   desktopVisualView,
   dockTabsFor,
+  kidsAssistantDenial,
   resolveWindowTier,
   type DesktopVisualAction,
   type DesktopVisualState,
@@ -461,6 +463,7 @@ describe("desktop visual model — refusals and honesty", () => {
     const view = desktopVisualView(createDesktopVisualState());
     const controls = [
       view.assistant.toggle,
+      view.assistant.close,
       view.assistant.send,
       view.sculpt.start,
       view.sculpt.cancel,
@@ -468,6 +471,7 @@ describe("desktop visual model — refusals and honesty", () => {
       ...view.menus.map((menu) => menu.control),
       ...view.modes.map((mode) => mode.control),
       ...view.dockTabs.map((tab) => tab.control),
+      ...view.viewport.sources.map((source) => source.control),
     ];
     for (const control of controls) {
       expect(control.refusal === null).toBe(control.kind !== "inert");
@@ -487,6 +491,7 @@ describe("desktop visual model — refusals and honesty", () => {
       const view = desktopVisualView(state);
       const ids = [
         view.assistant.toggle,
+        view.assistant.close,
         view.assistant.send,
         view.sculpt.start,
         view.sculpt.cancel,
@@ -497,6 +502,7 @@ describe("desktop visual model — refusals and honesty", () => {
         ...view.menus.map((menu) => menu.control),
         ...view.modes.map((mode) => mode.control),
         ...view.dockTabs.map((tab) => tab.control),
+        ...view.viewport.sources.map((source) => source.control),
         ...view.overlay.paletteGroups.flatMap((group) =>
           group.items.map((item) => item.control),
         ),
@@ -516,17 +522,62 @@ describe("desktop visual model — refusals and honesty", () => {
     }
   });
 
-  it("never claims pixels, and keeps the held renderer note verbatim", () => {
+  it("never claims pixels, and says nothing about which renderer is final", () => {
     const view = desktopVisualView(createDesktopVisualState());
     expect(view.viewport.pixelsDrawn).toBe(false);
-    expect(view.viewport.rendererNote).toBe(
-      "Preview renderer is experimental — not the final choice",
-    );
-    expect(VIEWPORT_RENDERER_NOTE).toBe(view.viewport.rendererNote);
-    // ADR 0017 retired these for product presentation copy; nothing here uses them.
-    expect(view.viewport.rendererNote).not.toContain("Experimental Three preview");
-    expect(view.viewport.rendererNote).not.toContain("non-decision");
     expect(view.viewport.inertNote).toContain("no pixels");
+    // The captain settled Three as the product presentation core, so the
+    // archive's "not the final choice" line is stale product copy and is not
+    // carried — along with the two labels ADR 0017 retired by name.
+    const notes = JSON.stringify(view.viewport);
+    expect(notes).not.toContain("not the final choice");
+    expect(notes).not.toContain("Experimental Three preview");
+    expect(notes).not.toContain("non-decision");
+  });
+
+  it("models the three viewport sources as inert controls with a reason", () => {
+    // A viewport source cannot be switched on a surface that mounts no renderer,
+    // so all three declare a kind and name that reason rather than being three
+    // tab-shaped elements no control kind accounts for.
+    const view = desktopVisualView(createDesktopVisualState());
+    expect(view.viewport.sources.map((source) => source.id)).toEqual([
+      ...DESKTOP_VIEWPORT_SOURCE_IDS,
+    ]);
+    for (const source of view.viewport.sources) {
+      expect(source.control.kind).toBe("inert");
+      expect(source.control.refusal).toBe(
+        DESKTOP_VISUAL_REFUSALS.noPresentationRuntime,
+      );
+      expect(source.control.id).toBe(`viewport-source-${source.id}`);
+    }
+    expect(view.viewport.sources.filter((source) => source.active)).toHaveLength(1);
+  });
+
+  it("decides per profile what the assistant column becomes", () => {
+    // The renderer serializes this table, so a browser-side profile switch lands
+    // on the model's own answer instead of only relabelling the column.
+    const view = desktopVisualView(createDesktopVisualState());
+    for (const chip of view.profiles) {
+      expect(chip.assistant.state).toBe(chip.refuseOnly ? "denied" : "open");
+      expect(chip.assistant.modelLabel).toBe(
+        chip.refuseOnly ? "denied" : "no provider configured",
+      );
+      for (const ctrl of [chip.assistant.toggle, chip.assistant.close]) {
+        expect(ctrl.kind).toBe(chip.refuseOnly ? "inert" : "view");
+      }
+      expect(chip.assistant.send.kind).toBe("inert");
+      expect(chip.assistant.send.refusal).toBe(
+        chip.refuseOnly
+          ? DESKTOP_VISUAL_REFUSALS.kidsAssistantDenied
+          : DESKTOP_VISUAL_REFUSALS.noDocumentBound,
+      );
+    }
+    // The active profile's column is that same projection, not a second one.
+    const kids = desktopVisualView(drive([{ type: "select-profile", profile: "kids" }]));
+    const chip = kids.profiles.find((candidate) => candidate.refuseOnly);
+    expect(kids.assistant.refusalCode).toBe(KIDS_ASSISTANT_LOCK_CODE);
+    expect(kids.assistant.close).toEqual(chip?.assistant.close);
+    expect(kids.assistant.refusal).toBe(kidsAssistantDenial().code);
   });
 
   it("says no kernel session runs instead of reporting a tick", () => {

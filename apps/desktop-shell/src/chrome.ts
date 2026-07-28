@@ -40,6 +40,7 @@ import {
   DESKTOP_VISUAL_REFUSALS,
   SCULPT_PASSES,
   dockTabsFor,
+  kidsAssistantDenial,
   kidsProfileRefusal,
   type DesktopControl,
   type DesktopDockTabId,
@@ -181,25 +182,20 @@ function button(
   ].join("");
 }
 
-function refusalLegend(view: DesktopVisualView): string {
-  const seen = new Map<string, string>();
-  const add = (ctrl: DesktopControl): void => {
-    if (ctrl.refusal !== null && ctrl.refusalMessage !== null) {
-      seen.set(ctrl.refusal, ctrl.refusalMessage);
-    }
-  };
-  add(view.assistant.toggle);
-  add(view.assistant.send);
-  add(view.sculpt.start);
-  for (const menu of view.menus) add(menu.control);
-  for (const group of view.overlay.paletteGroups) {
-    for (const item of group.items) add(item.control);
-  }
-  seen.set(view.viewport.refusal, view.viewport.inertNote);
-  const rows = [...seen.entries()]
+/**
+ * The whole closed registry, each code printed with the registry's own sentence.
+ *
+ * Every code rather than the ones this state happens to use, because a control
+ * can become inert in the browser — the profile switch does exactly that to the
+ * rail and the assistant — and an `aria-describedby` that resolves to nothing is
+ * worse than no description. One code carries one sentence: a renderer variant
+ * of it would put two wordings for the same refusal in one document.
+ */
+function refusalLegend(): string {
+  const rows = Object.values(DESKTOP_VISUAL_REFUSALS)
     .map(
-      ([code, message]) =>
-        `<p class="refusal-row" id="refusal-${escapeHtml(code)}"><code>${escapeHtml(code)}</code> ${escapeHtml(message)}</p>`,
+      (code) =>
+        `<p class="refusal-row" id="refusal-${escapeHtml(code)}"><code>${escapeHtml(code)}</code> ${escapeHtml(DESKTOP_REFUSAL_MESSAGES[code])}</p>`,
     )
     .join("");
   return `<section class="refusal-legend" aria-labelledby="refusal-legend-title"><h2 id="refusal-legend-title">Refusals on this surface</h2>${rows}</section>`;
@@ -247,7 +243,7 @@ function titleBar(view: DesktopVisualView): string {
       view.assistant.toggle,
       `<span class="dot" data-assistant-dot aria-hidden="true"></span><span>Assistant</span>`,
       "assistant-toggle",
-      `${view.assistant.toggle.kind === "view" ? ` data-action="assistant"` : ""} aria-pressed="${view.assistant.state === "open" ? "true" : "false"}"`,
+      ` data-action="assistant" aria-pressed="${view.assistant.state === "open" ? "true" : "false"}"`,
     )}
   </div>
 </header>`;
@@ -257,14 +253,16 @@ function modeRail(view: DesktopVisualView): string {
   const items = view.modes
     .map((mode) => {
       const def = DESKTOP_MODES.find((candidate) => candidate.id === mode.id);
-      return [
-        `<button type="button" class="rail-mode" data-action="mode" data-value="${escapeHtml(mode.id)}"`,
-        ` aria-pressed="${mode.active ? "true" : "false"}" title="${escapeHtml(mode.title)}">`,
-        `<span class="rail-glyph" aria-hidden="true" style="border-radius:${escapeHtml(def?.glyphRadius ?? "2px")};transform:${escapeHtml(def?.glyphTransform ?? "none")}"></span>`,
-        `<span class="rail-label">${escapeHtml(mode.label)}</span>`,
-        `<span class="sr-only">${escapeHtml(mode.title)} mode</span>`,
-        `</button>`,
-      ].join("");
+      return button(
+        mode.control,
+        [
+          `<span class="rail-glyph" aria-hidden="true" style="border-radius:${escapeHtml(def?.glyphRadius ?? "2px")};transform:${escapeHtml(def?.glyphTransform ?? "none")}"></span>`,
+          `<span class="rail-label">${escapeHtml(mode.label)}</span>`,
+          `<span class="sr-only">${escapeHtml(mode.title)} mode</span>`,
+        ].join(""),
+        "rail-mode",
+        ` data-action="mode" data-value="${escapeHtml(mode.id)}" aria-pressed="${mode.active ? "true" : "false"}" title="${escapeHtml(mode.title)}"`,
+      );
     })
     .join("");
   return `<nav class="mode-rail" aria-label="Editor mode"><span class="brand" aria-hidden="true"></span>${items}</nav>`;
@@ -291,20 +289,25 @@ function viewport(view: DesktopVisualView): string {
   const sculptRunning = view.sculpt.phase === "running";
   return `
 <section class="viewport-region" aria-label="Viewport">
-  <div class="view-tabs" role="tablist" aria-label="Viewport source">
-    ${["Scene", "Game", "Sculpt preview"]
-      .map(
-        (name, index) =>
-          `<button type="button" role="tab" class="view-tab" aria-selected="${index === 0 ? "true" : "false"}" tabindex="${index === 0 ? "0" : "-1"}">${escapeHtml(name)}</button>`,
-      )
-      .join("")}
+  <div class="view-tabs">
+    <div class="view-tablist" role="tablist" aria-label="Viewport source">
+      ${view.viewport.sources
+        .map((source) =>
+          button(
+            source.control,
+            escapeHtml(source.label),
+            "view-tab",
+            ` role="tab" aria-selected="${source.active ? "true" : "false"}" tabindex="${source.active ? "0" : "-1"}"`,
+          ),
+        )
+        .join("")}
+    </div>
     <span class="spacer"></span>
     <span class="view-tools" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
   </div>
   <div class="viewport">
     <div class="viewport-backdrop" role="img" aria-label="${escapeHtml(view.viewport.inertNote)}"></div>
     <p class="viewport-note viewport-note-inert">${escapeHtml(view.viewport.inertNote)}</p>
-    <p class="viewport-note viewport-note-renderer"><span class="dot" style="background:${SIGNAL.info}" aria-hidden="true"></span>${escapeHtml(view.viewport.rendererNote)}</p>
     <div class="axis-widget" aria-hidden="true">
       <i style="background:${AXIS.x}"></i><i style="background:${AXIS.y}"></i><i style="background:${AXIS.z}"></i>
     </div>
@@ -326,9 +329,13 @@ function viewport(view: DesktopVisualView): string {
 
 function dock(view: DesktopVisualView): string {
   const tabs = view.dockTabs
-    .map(
-      (tab) =>
-        `<button type="button" role="tab" class="dock-tab" data-action="dock-tab" data-value="${escapeHtml(tab.id)}" aria-selected="${tab.active ? "true" : "false"}" aria-controls="dock-panel-${escapeHtml(tab.id)}" tabindex="${tab.active ? "0" : "-1"}">${escapeHtml(tab.label)}${tab.id === "changes" ? `<span class="badge" data-change-badge>${tab.badge}</span>` : ""}</button>`,
+    .map((tab) =>
+      button(
+        tab.control,
+        `${escapeHtml(tab.label)}${tab.id === "changes" ? `<span class="badge" data-change-badge>${tab.badge}</span>` : ""}`,
+        "dock-tab",
+        ` role="tab" data-action="dock-tab" data-value="${escapeHtml(tab.id)}" aria-selected="${tab.active ? "true" : "false"}" aria-controls="dock-panel-${escapeHtml(tab.id)}" tabindex="${tab.active ? "0" : "-1"}"`,
+      ),
     )
     .join("");
 
@@ -379,8 +386,10 @@ function dock(view: DesktopVisualView): string {
 
   return `
 <section class="dock" aria-label="Dock" style="--dock-h:${view.dockHeight}px">
-  <div class="dock-tabs" role="tablist" aria-label="Dock panel">
-    ${tabs}
+  <div class="dock-tabs">
+    <div class="dock-tablist" role="tablist" aria-label="Dock panel">
+      ${tabs}
+    </div>
     <span class="spacer"></span>
     <span class="dock-bulk" data-change-bulk${hasChanges && !view.changeReview.empty ? "" : " hidden"}>
       ${button(view.changeReview.rejectAll, "Reject all", "ghost-button", ` data-action="decide-all"`)}
@@ -420,28 +429,32 @@ function inspector(view: DesktopVisualView): string {
 </aside>`;
 }
 
+/**
+ * The assistant column.
+ *
+ * Both bodies are always emitted and one is chosen by a
+ * `[data-assistant="denied"]` rule, for the reason `profileRefusal()` gives: the
+ * refuse-only decision has to be one decision, not a server branch a client
+ * profile toggle could walk around. The lock screen therefore reads the
+ * state-independent denial, so the bytes say the same thing the model does
+ * whichever profile the document was rendered for.
+ */
 function assistant(view: DesktopVisualView): string {
-  const denied = view.assistant.state === "denied";
+  const denial = kidsAssistantDenial();
   return `
 <aside class="assistant" aria-label="Assistant">
   <div class="assistant-head">
     <span class="assistant-mark" aria-hidden="true"></span>
     <h2>Assistant</h2>
-    <span class="assistant-model">${escapeHtml(view.assistant.modelLabel)}</span>
-    ${
-      view.assistant.toggle.kind === "view"
-        ? `<button type="button" class="icon-button" data-action="assistant" aria-label="Close assistant">✕</button>`
-        : ""
-    }
+    <span class="assistant-model" data-assistant-model>${escapeHtml(view.assistant.modelLabel)}</span>
+    ${button(view.assistant.close, "✕", "icon-button", ` data-action="assistant" aria-label="Close assistant"`)}
   </div>
-  ${
-    denied
-      ? `<div class="assistant-denied" role="note">
+  <div class="assistant-denied" role="note">
     <p class="assistant-denied-title">The assistant is off on Kids</p>
-    <p>${escapeHtml(view.assistant.refusalMessage ?? "")}</p>
-    <p><code>${escapeHtml(view.assistant.refusalCode ?? "")}</code></p>
-  </div>`
-      : `<div class="assistant-body">
+    <p>${escapeHtml(denial.message)}</p>
+    <p><code>${escapeHtml(denial.lockCode)}</code></p>
+  </div>
+  <div class="assistant-body">
     <p class="panel-empty">No provider adapter is configured on this surface, so there is no thread and nothing is sent anywhere.</p>
     <p class="assistant-foot">Every edit it makes arrives as a proposal you review. It never writes to the scene directly.</p>
   </div>
@@ -459,8 +472,7 @@ function assistant(view: DesktopVisualView): string {
       <span class="spacer"></span>
       ${button(view.assistant.send, "↑", "primary-button icon-button", ` aria-label="Send"`)}
     </div>
-  </div>`
-  }
+  </div>
 </aside>`;
 }
 
@@ -662,6 +674,9 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .viewport-column{display:flex;flex-direction:column;min-width:0;min-height:0}
 .viewport-region{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0;background:var(--canvas)}
 .view-tabs{height:var(--tabs-h);flex:none;display:flex;align-items:stretch;background:var(--panel);border-bottom:1px solid var(--line)}
+/* The tablist owns only its tabs: ARIA restricts a tablist's children to tabs,
+   so the spacer and the tool glyphs stay siblings in the same flex row. */
+.view-tablist{display:flex;align-items:stretch}
 .view-tab{padding:0 15px;font-size:11px;color:var(--dim);border-right:1px solid var(--line)}
 .view-tab[aria-selected="true"]{color:var(--text);font-weight:600;background:var(--panel);box-shadow:inset 0 2px 0 var(--accent)}
 .spacer{flex:1}
@@ -670,7 +685,6 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .viewport{flex:1;position:relative;min-height:0;overflow:hidden;background:radial-gradient(130% 95% at 50% 0%, ${VIEWPORT_GRADIENT.inner} 0%, ${VIEWPORT_GRADIENT.mid} 48%, ${SURFACE.canvas} 100%);display:grid;place-items:center}
 .viewport-backdrop{position:absolute;inset:0;pointer-events:none}
 .viewport-note{margin:0;font-size:11px;line-height:1.5;color:var(--dim);max-width:44ch;text-align:center}
-.viewport-note-renderer{position:absolute;left:11px;bottom:10px;display:flex;align-items:center;gap:7px;padding:5px 9px;background:${SIGNAL.infoSurface};border:1px solid ${SIGNAL.infoLine};border-radius:4px;color:${SIGNAL.info};font-size:10px;text-align:left;max-width:none}
 .axis-widget{position:absolute;right:12px;top:11px;display:flex;gap:4px}
 .axis-widget i{width:18px;height:2px;border-radius:1px;display:block}
 
@@ -683,6 +697,9 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 
 .dock{height:var(--dock-h);flex:none;background:var(--panel);border-top:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
 .dock-tabs{height:30px;flex:none;display:flex;align-items:stretch;background:var(--header);border-bottom:1px solid var(--line)}
+/* Same rule as the viewport strip: the bulk accept/reject are the highest
+   consequence controls here, so they must not sit inside the tablist. */
+.dock-tablist{display:flex;align-items:stretch}
 .dock-tab{display:flex;align-items:center;gap:7px;padding:0 13px;font-size:11px;color:var(--dim);border-right:1px solid var(--line)}
 .dock-tab[aria-selected="true"]{color:var(--text);font-weight:600;background:var(--panel);box-shadow:inset 0 2px 0 var(--accent)}
 .badge{min-width:15px;height:15px;padding:0 4px;border-radius:8px;background:var(--accent);color:var(--on-accent);font-family:var(--mono);font-size:9px;font-weight:700;display:grid;place-items:center}
@@ -727,7 +744,13 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .assistant-modes{display:flex;background:var(--header);border:1px solid var(--line-control);border-radius:4px;padding:2px}
 .assistant-mode{height:21px;padding:0 9px;font-size:10px;color:var(--dim);border-radius:2px}
 .assistant-mode[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);font-weight:600}
-.assistant-denied{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:34px 26px;text-align:center}
+/* Both assistant bodies ship in every document and the state chooses between
+   them, so a profile switched in the browser reaches the same named denial the
+   model reports — the rule the editor body's refusal region already follows. */
+.assistant-denied{display:none;flex:1;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:34px 26px;text-align:center}
+.shell[data-assistant="denied"] .assistant-denied{display:flex}
+.shell[data-assistant="denied"] .assistant-body,
+.shell[data-assistant="denied"] .assistant-composer{display:none}
 .assistant-denied p{margin:0;font-size:12px;color:var(--dim);line-height:1.6}
 .assistant-denied-title{font-size:14px;font-weight:600;color:var(--text)}
 .assistant-denied code{color:${SIGNAL.sceneText};border:1px solid ${SIGNAL.sceneLine};background:${SIGNAL.sceneSurface};border-radius:3px;padding:4px 8px;display:inline-block}
@@ -847,14 +870,24 @@ function script(view: DesktopVisualView): string {
       ]),
     ),
     changeCount: CHANGE_REVIEW_ROWS.length,
+    dockTabKind: view.dockTabs[0]?.control.kind ?? "view",
+    // Every per-profile answer below is the model's own projection, so a switch
+    // in the browser lands on the same controls a render of that profile would.
     assistantByProfile: Object.fromEntries(
       view.profiles.map((profile) => [
         profile.id,
-        profile.refuseOnly ? "denied" : "open",
+        {
+          state: profile.assistant.state,
+          modelLabel: profile.assistant.modelLabel,
+          toggle: profile.assistant.toggle.refusal,
+          close: profile.assistant.close.refusal,
+          send: profile.assistant.send.refusal,
+        },
       ]),
     ),
-    refuseOnlyProfile: view.profiles.find((profile) => profile.refuseOnly)?.id ?? "kids",
-    refuseOnlyCode: kidsProfileRefusal().code,
+    modeRefusalByProfile: Object.fromEntries(
+      view.profiles.map((profile) => [profile.id, profile.refusal]),
+    ),
   };
 
   return `
@@ -873,16 +906,17 @@ if (shell) {
   };
 
   const buildDockTabs = (mode, active) => {
-    const strip = shell.querySelector('.dock-tabs');
+    const strip = shell.querySelector('.dock-tablist');
     if (!strip) return;
     const ids = T.dockTabsByMode[mode];
     const chosen = ids.indexOf(active) === -1 ? ids[0] : active;
     q('.dock-tab').forEach((el) => el.remove());
-    const anchor = strip.firstChild;
     ids.forEach((id) => {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'dock-tab';
+      b.id = 'dock-' + id;
+      b.dataset.kind = T.dockTabKind;
       b.setAttribute('role', 'tab');
       b.dataset.action = 'dock-tab';
       b.dataset.value = id;
@@ -897,7 +931,7 @@ if (shell) {
         badge.textContent = String(pendingCount());
         b.appendChild(badge);
       }
-      strip.insertBefore(b, anchor);
+      strip.appendChild(b);
     });
     selectDockTab(chosen);
     // The bulk actions belong to the Changes tab, so a mode without one loses
@@ -984,6 +1018,37 @@ if (shell) {
     q('.assistant-toggle').forEach((el) => el.setAttribute('aria-pressed', String(state === 'open')));
   };
 
+  // An inert control keeps its focus stop and names its refusal, so a control
+  // that becomes inert in the browser has to gain all of that, not just dim.
+  const setRefusal = (el, code) => {
+    if (el === null) return;
+    if (code) {
+      el.classList.add('is-inert');
+      el.setAttribute('aria-disabled', 'true');
+      el.setAttribute('aria-describedby', 'refusal-' + code);
+      el.dataset.refusal = code;
+    } else {
+      el.classList.remove('is-inert');
+      el.removeAttribute('aria-disabled');
+      el.removeAttribute('aria-describedby');
+      delete el.dataset.refusal;
+    }
+  };
+
+  const setProfile = (id) => {
+    const seat = T.assistantByProfile[id];
+    if (!seat) return;
+    setAssistant(seat.state);
+    q('[data-assistant-model]').forEach((el) => { el.textContent = seat.modelLabel; });
+    setRefusal(shell.querySelector('#assistant-toggle'), seat.toggle);
+    setRefusal(shell.querySelector('#assistant-close'), seat.close);
+    setRefusal(shell.querySelector('#assistant-send'), seat.send);
+    // The refuse-only profile has no editor, so the rail refuses by name too:
+    // no mode can be entered from behind the refusal region.
+    const mode = T.modeRefusalByProfile[id];
+    q('.rail-mode').forEach((el) => setRefusal(el, mode));
+  };
+
   shell.addEventListener('click', (event) => {
     const el = event.target instanceof Element ? event.target.closest('[data-action]') : null;
     if (!el || el.getAttribute('aria-disabled') === 'true') return;
@@ -1002,14 +1067,7 @@ if (shell) {
     else if (action === 'profile' && value) {
       shell.dataset.profile = value;
       q('.profile-chip').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.value === value)));
-      setAssistant(T.assistantByProfile[value]);
-      // The refuse-only profile has no editor, so the rail refuses by name too:
-      // no mode can be entered from behind the refusal region.
-      const refused = value === T.refuseOnlyProfile;
-      q('.rail-mode').forEach((m) => {
-        if (refused) { m.setAttribute('aria-disabled', 'true'); m.dataset.refusal = T.refuseOnlyCode; }
-        else { m.removeAttribute('aria-disabled'); delete m.dataset.refusal; }
-      });
+      setProfile(value);
     } else if (action === 'assistant') {
       if (shell.dataset.assistant === 'denied') return;
       setAssistant(shell.dataset.assistant === 'open' ? 'closed' : 'open');
@@ -1111,7 +1169,7 @@ ${assistant(view)}
 ${statusBar(view)}
 ${overlays(view)}
 </div>
-${refusalLegend(view)}
+${refusalLegend()}
 <script>${script(view)}</script>
 </body>
 </html>
