@@ -66,6 +66,14 @@ the contract's own key in mono. It offers no re-attempt affordance, because noth
 decides whether a refused operation may be tried again. A panel that is a page's first
 section under its `h1` passes `level={2}` so the document never jumps a heading level.
 
+The header carries three things that all have to stay readable, so it is responsive too:
+one row above `620px` with the key's column bounded, two rows below it with the key at
+full width under the name. Neither shape may shorten the key — the whole point of the
+panel is that the key is the half a reader files an issue with — so the header changes
+shape rather than the key changing length. `tests/sites/umbrella-visual.test.ts` asserts
+that structure, after a track collapse that no overflow sweep or accessibility audit could
+see; `VISUAL-EVIDENCE.md` records the measurement and names that blind spot.
+
 ## The viewports (`/`, `/open`, and `/editor`)
 
 The umbrella owns every viewport ([ADR 0022](../../docs/adr/0022-umbrella-owns-the-public-viewport.md)

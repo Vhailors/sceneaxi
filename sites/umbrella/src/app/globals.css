@@ -1349,10 +1349,18 @@ p {
  * it is the half of the state a reader files an issue with. It has its own track so it
  * cannot be pushed out of the box by a long title, and it wraps rather than truncating:
  * a half-shown refusal key is worse than a wrapped one.
+ *
+ * The key's track is `minmax(0, max-content)` with a bounded contribution (`.reason`
+ * carries the `max-width`), never a bare `auto`. An `auto` track takes free space up to
+ * its max-content size *before* a `1fr` track expands, so a long key ate the whole row
+ * and starved the name's `minmax(0, 1fr)` track to 0px — with `overflow-wrap: anywhere`
+ * on the heading, the name then wrapped one character per line. The bound caps what the
+ * key can take; the explicit `0` minimum and the empty growth limit of an absent key keep
+ * a state with no key from reserving a column it does not use.
  */
 .state-head {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, max-content);
   align-items: center;
   gap: 10px 12px;
   min-width: 0;
@@ -1386,6 +1394,13 @@ p {
   gap: 8px;
   justify-self: end;
   min-width: 0;
+  /*
+   * The bound on the key's track. It is written here rather than in the track list so an
+   * absent key still collapses its column to nothing, and it is what stops the longest
+   * key — a provider's own sentence, not a short registry token — from taking the row.
+   * The key is not truncated by it: it wraps.
+   */
+  max-width: 12rem;
   overflow-wrap: anywhere;
 }
 
@@ -1399,6 +1414,13 @@ p {
   text-transform: uppercase;
   letter-spacing: 0.12em;
   font-size: 9px;
+  /*
+   * The label is one word and never breaks. Without this it is a flex item whose automatic
+   * minimum size is its min-content size, and `overflow-wrap: anywhere` — inherited from
+   * `.reason`, where the *key* needs it — makes that one character wide, so a bounded
+   * `.reason` squeezed the label into a vertical column of letters.
+   */
+  white-space: nowrap;
 }
 
 /* --------------------------------------------------------------------------
@@ -2517,6 +2539,22 @@ footer {
 
   .dl dt:first-child {
     padding-top: 0;
+  }
+
+  /*
+   * The state header stops being one line. There is not room at this width for a chip, a
+   * name, and a machine key side by side, and the key is the one thing here that may not
+   * be shortened, hidden, or put behind a disclosure — so the row splits instead: chip
+   * and name above, the key below at full width.
+   */
+  .state-head {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .state-head .reason {
+    grid-column: 1 / -1;
+    justify-self: start;
+    max-width: none;
   }
 
   .tier-body {

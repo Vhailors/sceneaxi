@@ -675,6 +675,73 @@ describe("account, credits, and refusal surfaces stay truthful", () => {
     expect(CSS).toContain(".state-head {");
     expect(CSS).toContain(".reason-label {");
   });
+
+  /** The `620px` phone block — the last media block in the sheet. */
+  const PHONE = CSS.slice(CSS.indexOf("@media (max-width: 620px)"));
+
+  /**
+   * The declarations of the first `selector { … }` rule in `scope`.
+   *
+   * Enough of a parser for this sheet: every rule here is a flat declaration block with
+   * no nesting, so the first `}` after the selector ends it.
+   */
+  const rule = (scope: string, selector: string): string => {
+    const at = scope.indexOf(`${selector} {`);
+    expect(at, `no \`${selector}\` rule in this scope`).toBeGreaterThan(-1);
+    return scope.slice(at, scope.indexOf("}", at));
+  };
+
+  it("cannot starve the state's own name to a zero-width column", () => {
+    /*
+     * The blind spot this closes. A grid track squeezed to `0px` is *tall*, not wide, so
+     * it escapes nothing: a `scrollWidth === innerWidth` sweep passes it, a walk for an
+     * element crossing its container's right edge passes it, and no accessibility audit
+     * has a rule for a name rendered one character per line. It was a real defect on the
+     * shipped default path — identity plane unwired — at 390px, and every automated check
+     * this site had was structurally incapable of seeing it.
+     *
+     * This assertion is structural, not measured: nothing in `pnpm gate` lays out CSS, and
+     * a check that claims to measure what it cannot is worse than one that says so. It
+     * pins the two properties that made the collapse possible, so the shape cannot return
+     * silently. The measured widths, at 390px on that same unwired path, are recorded in
+     * `sites/umbrella/VISUAL-EVIDENCE.md`.
+     */
+    const head = rule(CSS, ".state-head");
+
+    // Wide: three tracks, and the key's track carries an explicit `0` minimum, so the
+    // key's own content can never be the reason the name has no room left.
+    expect(head).toMatch(
+      /grid-template-columns:\s*auto\s+minmax\(0,\s*1fr\)\s+minmax\(0,\s*[^)]+\);/,
+    );
+    // A bare `auto` track takes free space up to its max-content size *before* a `1fr`
+    // track expands — that is exactly what collapsed the name to `0px`.
+    expect(head).not.toMatch(/grid-template-columns:[^;]*\bauto\s*;/);
+    // …and what the key may contribute is bounded rather than open-ended.
+    expect(rule(CSS, ".reason")).toMatch(/max-width:\s*\d/);
+
+    // Phone: two tracks, and the key moves to its own full-width row under the name
+    // rather than competing with it for one.
+    expect(rule(PHONE, ".state-head")).toMatch(/grid-template-columns:\s*auto\s+minmax\(0,\s*1fr\);/);
+    expect(rule(PHONE, ".state-head .reason")).toContain("grid-column: 1 / -1");
+  });
+
+  it("repairs that collapse by layout, never by letting a name or a key overflow", () => {
+    // Dropping `overflow-wrap: anywhere` from the heading would trade a collapsed column
+    // for a sideways scroll this site does not have at any width. The wrapping stays.
+    expect(CSS).toMatch(
+      /\.state-head h2,\s*\.state-head h3\s*\{[^}]*overflow-wrap:\s*anywhere/,
+    );
+    // And the key is still printed whole — bounded in width, never elided or clipped.
+    const reason = rule(CSS, ".reason");
+    expect(reason).toContain("overflow-wrap: anywhere");
+    for (const eliding of ["text-overflow", "white-space: nowrap", "overflow: hidden"]) {
+      expect(reason).not.toContain(eliding);
+    }
+    // The key's own label is a single word and is held out of the same collapse: it is a
+    // flex item beside the key, and the `anywhere` the key needs would otherwise let the
+    // label break between letters once its container is bounded.
+    expect(rule(CSS, ".reason-label")).toContain("white-space: nowrap");
+  });
 });
 
 describe("the layout is one responsive composition, not a desktop-only one", () => {

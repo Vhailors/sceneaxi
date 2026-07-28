@@ -47,10 +47,18 @@ footer render their configured-catalog state. Identity, credits, and billing wer
 named key, `/pricing` shows the packs with a disabled "Not for sale yet" control and the
 plane's own reason, and that is what was captured.
 
+That unwired path is not a corner case to check after the happy one — it is what a visitor
+to this deployment gets, so it is the path every figure below was measured on. It is also
+where the one defect recorded here was found.
+
 Driven through headless Chrome (`chrome-devtools-axi`) at three viewports. Note for
 anyone repeating this: the harness resets a page's viewport when it opens a new tab, so
 the sweep resizes **once** and then navigates in place via `location.href`; a
 resize-then-open loop silently measures the default 412px width on every route.
+
+The viewport's own refusal state is reached by serving the same build to a second Chrome
+started with `--disable-webgl --disable-webgl2 --disable-3d-apis`, so it is the presentation
+core's real refusal rather than a state the page was asked to render.
 
 | Rendering | Viewport | What it exercises |
 |---|---|---|
@@ -84,6 +92,76 @@ command painted past the viewport instead of scrolling, because a flex item defa
 `min-width: auto` and refuses to shrink below its content — the scroller is now the
 `code` itself.
 
+#### What this sweep does not cover
+
+It measures **overflow**, not legibility, and the two are not the same question. Both
+halves of it — `scrollWidth === innerWidth`, and the walk for an element crossing its
+container's edge — answer only "did anything paint outside its box". A box can be
+unreadable without ever leaving one.
+
+The case in point is a grid track squeezed to `0px`: it is *tall* rather than wide, so it
+escapes nothing, the page does not scroll sideways, and both halves of the sweep pass it.
+No accessibility audit has a rule for it either — Lighthouse scores it 100. Nothing
+recorded here measures line count against text length, type rendering, visual hierarchy,
+or whether a reader can tell two states apart. Those stay human judgements, and the
+section below is what happened when that gap went unnoticed.
+
+#### The named state's header collapsed at phone width, and now cannot
+
+Found by the pipeline's live verification rather than by the original sweep — the same way
+the two accessibility regressions under [Accessibility](#accessibility) were found by the
+audit rather than by eye.
+
+`.state-head` was `grid-template-columns: auto minmax(0, 1fr) auto`. A bare `auto` track
+takes free space up to its max-content size *before* a `1fr` track expands, so on the
+shipped default path the key `reason IDENTITY_PLANE_NOT_WIRED` (184.39px of 11.5px mono)
+plus the 74.61px status chip took the whole 283px panel row and left the name's track at
+**0px**. `overflow-wrap: anywhere` on the heading then wrapped the name one character per
+line: at 390 `/editor` rendered "Not entitled" as a 0 × 133px vertical column and
+`/account` rendered its sentence as 0 × 651px, with tracks measured
+`74.6094px 0px 184.391px`. The same collapse appeared at 1440 in the hero's narrower
+column, where the WebGL refusal's longer reason left the title at 22.33 × 157px.
+
+The repair is layout, not a softened refusal. Below `620px` the header is two rows — chip
+and name above, the key at full width below. Above it the header stays one row and the
+key's track carries an explicit `0` minimum with a bounded contribution
+(`.reason { max-width: 12rem }`), so a long key can no longer take the row. The key is
+still printed whole on every surface: not shortened, elided, truncated, or put behind a
+disclosure, and no re-attempt affordance was added. Bounding the key did squeeze its own
+`REASON` label into a column of letters — a flex item's automatic minimum is its
+min-content size, and the `anywhere` the key needs is inherited — so the label is
+`white-space: nowrap`.
+
+Measured after the fix at 390 × 844, identity plane unwired:
+
+| Route | State | Name, w × h | Lines | Header tracks | Key |
+|---|---|---|---|---|---|
+| `/editor` | Not entitled | 196.39 × 12.09 | 1 | `74.61px 196.39px` | `IDENTITY_PLANE_NOT_WIRED`, 212.5px, own row |
+| `/account` | Sign-in is not available on this deployment | 196.39 × 35.19 | 2 | `74.61px 196.39px` | `IDENTITY_PLANE_NOT_WIRED`, 212.5px, own row |
+| `/profiles` | Kids refuses the open path | 189.59 × 35.19 | 2 | `81.41px 189.59px` | `refuse-only`, 122.8px, own row |
+| `/profiles` | No shipping claim is made here | 162.39 × 35.19 | 2 | `108.61px 162.39px` | none |
+| `/pricing` | Billing mode | 162.39 × 17.59 | 1 | `108.61px 162.39px` | none |
+| `/pricing` | Catalog purchases are not open | 162.39 × 35.19 | 2 | `108.61px 162.39px` | none |
+| `/engine` | Support status | 162.39 × 17.59 | 1 | `108.61px 162.39px` | none |
+| `/open` | Public — no account, no credits | 182.80 × 35.19 | 2 | `88.20px 182.80px` | none |
+| `/` no-WebGL | The viewport could not open | 196.39 × 24.19 | 2 | `74.61px 196.39px` | `THREE.WebGLRenderer: Error creating WebGL context.`, 283px, own row |
+
+and at 1440 × 1000, where the header stays one row and an absent key collapses its own
+column rather than reserving one:
+
+| Route | Header tracks | Key track |
+|---|---|---|
+| `/account`, `/editor` | `74.6094px 882.391px 192px` | 192px — the `12rem` bound |
+| `/profiles`, Kids | `81.4062px 944.797px 122.797px` | sized to a short key |
+| `/pricing`, `/engine`, `/open` | `108.609px 1040.39px 0px` | **0px** — no key, no reserved column |
+| `/` hero, no WebGL | `74.6094px 222.219px 192px` | 192px, the sentence wrapping inside it |
+
+`tests/sites/umbrella-visual.test.ts` now fails on the pre-fix sheet — verified by
+reverting the fix and watching it fail. It pins the track shape at both widths, the key's
+bound, and the label's `nowrap`. That assertion is **structural**: nothing in `pnpm gate`
+lays out CSS, so it guards the shape rather than measuring the result. The widths above
+are the measurement.
+
 Other layout behaviour, unchanged from the carried implementation:
 
 - The masthead collapses at `860px`: catalog store links and the divider are dropped
@@ -114,7 +192,8 @@ Lighthouse (navigation mode, desktop emulation) against the production build:
 | `/editor` | 100 | 0 |
 
 `/`, `/profiles`, `/account`, and `/pricing` were additionally run in **mobile**
-emulation and scored 100 there too.
+emulation and scored 100 with 0 failed audits there too. Every figure in this table was
+re-run against the build at this head, after the state-header repair below.
 
 This extends the carried implementation's five 100s to all eight surfaces. Two real
 regressions were introduced by this revision and found by that audit rather than by eye:
@@ -190,24 +269,34 @@ order are written `html body` rather than `body`, and why `next/font` writes
 
 The home page's hero is no longer a CSS gradient field. It renders the same composed
 `MountableScene` the public open path serves, through the tier's one renderer boundary.
-Observed on `/`, reported by the running core rather than by the page:
+Observed on `/` and `/open`, reported by the running core rather than by the page:
 
-    draw surface   webgl-canvas
-    frame          165
-    draw calls     15
-    instances      3
+    /      hero     webgl-canvas · frame 2 · 15 draw calls · 3 instances    (0 controls in the canvas section)
+    /open  viewer   backend three · webgl-canvas · pixels drawn true · frame 390 · 15 draw calls
+                    mounted  service-crate-left, service-crate-root, service-crate-stacked
 
-`/open` reports the same surface and the same 15 draw calls over the same three
-instances (`service-crate-left`, `service-crate-root`, `service-crate-stacked`), which is
-the point: there is one artifact, one composition, and one renderer behind both.
-`sculpt-viewport.tsx` remains the only module on the tier that constructs a renderer.
+Same surface, same 15 draw calls, same three instances, which is the point: there is one
+artifact, one composition, and one renderer behind both. `sculpt-viewport.tsx` remains the
+only module on the tier that constructs a renderer.
 
-The frame *number* above is from the revision whose hero ran a continuous loop. The hero
-is now a `snapshot` surface: it attaches no camera input, and its loop stops once the
-frame settles instead of redrawing an unchanging image for the rest of the visit, so the
-number it reports is the settled frame's rather than a running count. Every figure in
-this document is re-recorded from a real browser before push; the values here are the
-observation, not a prediction.
+The two frame *numbers* are the difference between the two presentations, not noise. The
+hero is a `snapshot` surface: it attaches no camera input, and its loop stops once the
+frame settles instead of redrawing an unchanging image for the rest of the visit, so `2`
+is the settled frame rather than a running count. `/open` is `interactive` and its loop
+runs for the life of the mount, so its number keeps climbing.
+
+Because a stopped surface has no next frame to recover on, a lost WebGL context is asked
+for a new one by name. Observed on `/` by forcing the loss through
+`WEBGL_lose_context`:
+
+    before             webgl-canvas · frame 2 · 15 draw calls · 3 instances
+    t+250ms  lost      "Opening the scene…" — the frame report is dropped first, so a
+                       provenance line never outlives the pixels it describes
+    t+600ms  restored  webgl-canvas · frame 3 · 15 draw calls · 3 instances
+    t+2600ms           unchanged — it settled again and stopped
+
+Every figure in this document is re-recorded from a real browser at this head; the values
+here are the observation, not a prediction.
 
 ## Where the implementation departs from the mockup
 
