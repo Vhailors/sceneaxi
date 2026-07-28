@@ -634,4 +634,62 @@ describe("the visual layer adds no behaviour the site did not already have", () 
       expect(content).not.toContain(needle);
     }
   });
+
+  it("reaches every workspace package but the Three core type-only from the browser bundle", () => {
+    // A `"use client"` module and everything it imports is compiled for the browser.
+    // `@sceneaxi/site-kit` has one export target — its barrel — which re-exports values
+    // out of `node:fs`/`node:crypto`/`node:os` modules, and `@sceneaxi/schemas`,
+    // `@sceneaxi/authoring-core`, `@sceneaxi/auth`, and `@sceneaxi/billing` are server
+    // planes the site reaches only from `src/lib/`. A value import of any of them from
+    // the client graph would either fail the browser build on an unresolvable `node:`
+    // specifier or ship that whole graph to a visitor. `@sceneaxi/engine-presentation`
+    // is exempt: it is the umbrella's one engine edge (ADR 0022) and is browser-safe by
+    // contract. Type-only imports erase, so they stay allowed everywhere.
+    /** Every module a source imports for its *value*; `import type` is erased and skipped. */
+    const valueImports = (relativePath: string): readonly string[] =>
+      [...read(relativePath).matchAll(/import\s+(type\s+)?[^"';]*?from\s+"([^"]+)"/g)]
+        .filter(([, typeKeyword]) => typeKeyword === undefined)
+        .flatMap(([, , specifier]) => (specifier === undefined ? [] : [specifier]));
+
+    const clientGraph = new Set(
+      UMBRELLA_SOURCES.filter((relativePath) => read(relativePath).startsWith('"use client"')),
+    );
+    // A Set iterated while it grows visits what the walk appends, so this is the whole
+    // transitive closure rather than one hop.
+    for (const relativePath of clientGraph) {
+      const dir = relativePath.split("/").slice(0, -1).join("/");
+      for (const specifier of valueImports(relativePath)) {
+        if (!specifier.startsWith(".")) continue;
+        const resolved = join(dir, specifier).split(sep).join("/").replace(/\.js$/, "");
+        for (const candidate of [`${resolved}.ts`, `${resolved}.tsx`]) {
+          if (UMBRELLA_SOURCES.includes(candidate)) clientGraph.add(candidate);
+        }
+      }
+    }
+
+    const offenders = [...clientGraph].flatMap((relativePath) =>
+      valueImports(relativePath)
+        .filter(
+          (specifier) =>
+            specifier.startsWith("@sceneaxi/") && specifier !== "@sceneaxi/engine-presentation",
+        )
+        .map((specifier) => `${relativePath} -> ${specifier}`),
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  it("names only statuses Foundations publishes, with their published labels", () => {
+    // The state panel is in the browser bundle, so it restates its four labels rather
+    // than reading `FOUNDATION_STATUSES` at runtime. This is the join that keeps the
+    // restatement honest: a status renamed in site-kit fails here.
+    const pinned = [
+      ...read("src/app/_components/state-panel.tsx").matchAll(
+        /\{ id: "([a-z-]+)", label: "([^"]+)" \}/g,
+      ),
+    ];
+    expect(pinned).toHaveLength(4);
+    for (const [, id, label] of pinned) {
+      expect(FOUNDATION_STATUSES.find((status) => status.id === id)?.label).toBe(label);
+    }
+  });
 });

@@ -1,5 +1,6 @@
 import { Fragment } from "react";
 import type { Metadata } from "next";
+import { LIVE_OPEN_PATH } from "../../lib/live-open.js";
 import {
   PROFILE_CAPABILITY_COPY,
   PROFILE_MATRIX_COPY,
@@ -140,7 +141,7 @@ export default function ProfilesPage() {
 
       <h2>Where to go next</h2>
       <div className="actions">
-        <a className="button" href="/open">
+        <a className="button" href={LIVE_OPEN_PATH}>
           Open a real artifact
         </a>
         <a className="button button-quiet" href="/docs">

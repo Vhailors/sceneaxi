@@ -13,7 +13,7 @@
  * would be inventing a contract. Pages link onward to surfaces that exist (account,
  * pricing, the free downloads) — that is a route, not a retry.
  */
-import { FOUNDATION_STATUSES, type FoundationStatusId } from "@sceneaxi/site-kit";
+import type { FoundationStatusId } from "@sceneaxi/site-kit";
 import { Fragment } from "react";
 
 /**
@@ -23,27 +23,21 @@ import { Fragment } from "react";
 export type StateTone = "ok" | "warn" | "deny" | "iso";
 
 /**
- * A tone selects a published status *by id*; the id is the only thing this site decides.
- * The label beside it — like the colours `umbrellaStatusVariablesCss()` projects — is read
- * back out of `FOUNDATION_STATUSES`, so a status renamed in site-kit renames here rather
- * than silently disagreeing with every other chip in the product. An id site-kit does not
- * publish refuses at module load: this surface may not name a status Foundations has not.
+ * A tone selects a published status *by id*, typed as `FoundationStatusId` so an id
+ * Foundations does not publish fails to compile. The label is restated rather than read
+ * out of `FOUNDATION_STATUSES` because this module is in the browser bundle — the
+ * `@sceneaxi/site-kit` barrel re-exports Node-only values, so every reference to it from
+ * the client graph stays type-only and erases. The restatement is not a second source:
+ * `tests/sites/umbrella-visual.test.ts` runs at the repository root, where naming site-kit
+ * is free, and pins these four ids and labels to the published vocabulary.
  */
-function publishedStatus(id: FoundationStatusId) {
-  const status = FOUNDATION_STATUSES.find((candidate) => candidate.id === id);
-  if (status === undefined) {
-    throw new Error(`Foundations publishes no status "${id}".`);
-  }
-  return Object.freeze({ id: status.id, label: status.label });
-}
-
 const TONE_STATUS: Readonly<
   Record<StateTone, { readonly id: FoundationStatusId; readonly label: string }>
 > = Object.freeze({
-  ok: publishedStatus("validated"),
-  warn: publishedStatus("needs-review"),
-  deny: publishedStatus("refused"),
-  iso: publishedStatus("isolated"),
+  ok: Object.freeze({ id: "validated", label: "Validated" }),
+  warn: Object.freeze({ id: "needs-review", label: "Needs review" }),
+  deny: Object.freeze({ id: "refused", label: "Refused" }),
+  iso: Object.freeze({ id: "isolated", label: "Isolated" }),
 });
 
 export function StatePanel({
