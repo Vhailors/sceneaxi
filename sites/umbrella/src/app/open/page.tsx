@@ -33,7 +33,7 @@ export default function OpenPage() {
           <p className="eyebrow">{LIVE_OPEN_COPY.eyebrow}</p>
           <h1>{LIVE_OPEN_COPY.title}</h1>
         </div>
-        <StatePanel tone="deny" title="No scene to open" reason={scene.reason}>
+        <StatePanel tone="deny" level={2} title="No scene to open" reason={scene.reason}>
           <p>{scene.message}</p>
           <p>
             The scene is built by the same composition pipeline the CLI uses, and it

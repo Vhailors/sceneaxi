@@ -17,33 +17,65 @@ pure wiring modules under `src/lib/`.
 
 ## The visual layer
 
-The site implements the captain-accepted `Umbrella Site` design screen (sceneaxi#157).
-Ownership is split so a marketing edit cannot become a product claim:
+The site implements the captain-accepted `Umbrella Site` design screen (sceneaxi#157)
+under **Foundations v2**. Ownership is split so a marketing edit cannot become a product
+claim:
 
-- `src/app/globals.css` is the whole design system — tokens, primitives, and the three
-  breakpoints. Its header states the only three deliberate deviations from the accepted
-  screen (contrast-safe text greys, real links and buttons with a focus ring, and
-  reduced-motion support), and why.
+- **The token layer is not here.** `@sceneaxi/site-kit` owns the palette, the type scale,
+  the surface ladder, and the status vocabulary (`docs/design-foundations.md`), and
+  `src/lib/foundations.ts` emits that package's sheet plus three things derived from it:
+  the surface accent, the status custom properties, and this site's layout metrics. The
+  root layout inlines the result and **throws** if it refuses — a page whose token layer
+  refused is not one this site serves with its palette quietly missing.
+- `src/app/globals.css` is composition only. It declares no colour at all; a hex there
+  would be a second source for a value site-kit already owns, and the gate asserts there
+  is none. The only invented colours on the site are the three entries in
+  `UMBRELLA_RECORDED_GAPS`, which the gate also pins.
 - `src/lib/site-content.ts` is the page **content**, in pure TypeScript so the hermetic
   gate type-checks it. It derives every figure it can from the contract that owns it and
   restates only the sculpt pass order and the CLI exit-code table, both of which
   `tests/sites/umbrella-visual.test.ts` pins to `@sceneaxi/schemas` and `@sceneaxi/cli`.
-- `tests/sites/umbrella-visual.test.ts` also asserts what the surface may **not** claim —
-  no installer, size, or digest this repository does not build; no seat or subscription
-  price; no registry install; no shipping claim; and no Kids link — plus the
-  accessibility and responsive structure below.
-- `VISUAL-EVIDENCE.md` records the browser observations: viewports, Lighthouse
-  accessibility scores, and measured contrast.
+- `src/lib/profile-matrix.ts` backs `/profiles`. It mirrors the profile conformance
+  registry and the open-path demo policy — the sites tier may not import
+  `@sceneaxi/schemas` — and computes every cell rather than storing one, so an unproven
+  capability cannot be presented as claimed.
+  `tests/sites/umbrella-profile-matrix.test.ts` holds the mirror in lockstep with both
+  contracts and drives the derivation with adversarial rows.
+- `tests/sites/umbrella-visual.test.ts` asserts what the surface may **not** claim — no
+  installer, size, or digest this repository does not build; no seat or subscription
+  price; no registry install; no widened shipping claim; no Kids link; no ledger write
+  from the account surface; and no re-attempt affordance on a refusal — plus the token
+  layer, the accessibility structure, and the responsive structure.
+- `VISUAL-EVIDENCE.md` records the browser observations: viewports, measured overflow,
+  Lighthouse accessibility scores, measured contrast, and the live frame report.
 
-Adding a client component is a deliberate act here: `src/app/_components/site-nav.tsx`
-exists only to resolve `aria-current`, and the gate asserts the client-component list.
+Two client components carry the visual layer's behaviour, and both are deliberate:
+`src/app/_components/site-nav.tsx` exists only to resolve `aria-current`, and
+`src/app/_components/hero-viewport.tsx` draws the hero's real artifact through the shared
+renderer boundary. The gate asserts the client-component list.
 
-## The viewports (`/open` and `/editor`)
+### Named states
+
+Every refusal, warning, and confirmation renders through `src/app/_components/state-panel.tsx`:
+a Foundations status chip, the state's name, and — always, never behind a disclosure —
+the contract's own key in mono. It offers no re-attempt affordance, because nothing here
+decides whether a refused operation may be tried again. A panel that is a page's first
+section under its `h1` passes `level={2}` so the document never jumps a heading level.
+
+## The viewports (`/`, `/open`, and `/editor`)
 
 The umbrella owns every viewport ([ADR 0022](../../docs/adr/0022-umbrella-owns-the-public-viewport.md)
 and its 2026-07-26 amendment), so it is the one site allowed to depend on
 `@sceneaxi/engine-presentation`. Nothing else changes about the tier: no other engine
 package is reachable from any site, and the two catalogs keep `site-kit` only.
+
+The marketing hero on `/` is the third caller. It draws a **real Sculpt Artifact** — the
+same composed `MountableScene` the public open path serves — rather than bespoke
+procedural geometry, so the picture behind the headline rests on the same artifact and
+digest chain the gate proves. It mounts a snapshot and nothing more: no kernel session is
+advanced, no control is offered, and the interactive path stays one click away at `/open`.
+What the hero can show is what a real artifact can express, and the composition is
+designed around that rather than around widening the contract.
 
 - `src/app/_components/sculpt-viewport.tsx` is the **only** file on the site that
   constructs a renderer, and it touches it only through the ADR 0002 seam: Sculpt

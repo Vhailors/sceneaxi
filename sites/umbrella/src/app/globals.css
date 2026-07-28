@@ -1,136 +1,49 @@
 /*
- * SceneAxi umbrella — the accepted product visual system (sceneaxi#157).
+ * SceneAxi umbrella — composition over the shared Foundations v2 token layer.
  *
- * The target is the captain-accepted `Umbrella Site.dc.html` screen: a dark
- * instrument-panel surface, one orange signal colour, Archivo for prose and
- * JetBrains Mono for anything the machine produced. It is deliberately not a
- * decorative theme — the same rule the product follows applies here, so a refusal
- * looks like a refusal, evidence looks like evidence, and nothing is styled to imply
- * a claim the contracts do not make.
+ * This file holds **no palette, no type scale, and no surface ladder**. Every token it
+ * references is emitted by `@sceneaxi/site-kit` and served from `src/lib/foundations.ts`
+ * (decision D2: the shared site token and component layer lives in `packages/site-kit`).
+ * That is why nothing below declares a colour: a hex here would be a second source for a
+ * value the design package already owns, and the gate asserts there is none.
  *
- * Three deviations from the accepted screen are deliberate and are the only ones:
+ * What the sheet still owns is this site's *composition* — the shell, the masthead, the
+ * bands, the cards, the named-state panels, the machine surfaces, and the responsive
+ * behaviour. The target is the captain-accepted `Umbrella Site.dc.html` screen under
+ * Foundations v2: a dark instrument-panel surface, one orange signal colour, Archivo for
+ * prose and JetBrains Mono for anything the machine produced. It is deliberately not a
+ * decorative theme — a refusal looks like a refusal, evidence looks like evidence, and
+ * nothing is styled to imply a claim the contracts do not make.
  *
- *   1. `#6E7681`, `#565E68`, and `#3F464F` carry text in the mockup at 4.36:1, 3.05:1,
- *      and 2.10:1 against the page. Text uses `--fg-5` / `--fg-4` instead; those three
- *      values survive only as `--rule-*` and `--deco`, which never carry a word.
- *   2. Every interactive element in the mockup is a `div` with a cursor. Here they are
+ * Two deviations from the accepted screen are deliberate and are the only ones left
+ * (the third, a contrast-safe text ramp, is now settled in site-kit, whose `--fg-2` is
+ * measured rather than asserted):
+ *
+ *   1. Every interactive element in the mockup is a `div` with a cursor. Here they are
  *      real links and buttons with a visible `:focus-visible` ring.
- *   3. Motion respects `prefers-reduced-motion`.
+ *   2. Motion respects `prefers-reduced-motion`.
  *
  * Layout is fluid rather than fixed at the mockup's 1440×1000 preview: the same
  * composition reflows through 1180px, 1024px, 860px, and 620px, so the desktop,
  * tablet, and phone renderings are one implementation rather than three.
+ *
+ * Cascade note: site-kit's sheet is inlined in `<head>` and this file arrives as a
+ * framework-hoisted stylesheet, so the two orders are not ours to fix. The handful of
+ * element rules that must win regardless are written `html body` / `html a` rather than
+ * `body` / `a`, which decides them by specificity instead of by load order.
  */
-
-:root {
-  color-scheme: dark;
-
-  /* --- surfaces, darkest to lightest --- */
-  --bg: #07080a;
-  --bg-deep: #08090b;
-  --bg-band: #090b0e;
-  --card: #0b0d10;
-  --card-raised: #0d0f12;
-  --card-chip: #12151a;
-
-  /* --- hairlines. Never text. --- */
-  --rule: #14181e;
-  --rule-2: #1c2129;
-  --rule-3: #20262e;
-  --rule-4: #262c34;
-  --rule-hover: #333a44;
-  --rule-hover-2: #3d4550;
-  --deco: #3f464f;
-
-  /* --- text. Every value here clears 4.5:1 on every surface above. --- */
-  --fg: #edeff2;
-  --fg-2: #c6ccd4;
-  --fg-3: #a7aeb8;
-  --fg-4: #8a929c;
-  --fg-5: #7c8593;
-
-  /* --- the one signal colour, plus the semantic set --- */
-  --accent: #ff6b2c;
-  --accent-hi: #ff8a54;
-  --accent-ink: #07080a;
-  --accent-line: #4a3820;
-  --accent-bg: #191207;
-  --accent-soft: #e5b98a;
-
-  --ok: #5eead4;
-  --ok-line: #1e4a45;
-  --ok-bg: #0d2422;
-
-  --deny: #ff4d5e;
-  --deny-line: #3a2126;
-  --deny-bg: #1a1113;
-
-  --iso: #a78bfa;
-  --iso-line: #3a2e52;
-  --iso-line-2: #2e2542;
-  --iso-bg: #160f22;
-  --iso-bg-2: #120e1c;
-
-  --web: #3fb8c9;
-  --web-line: #1d4a52;
-  --web-bg: #0c2226;
-  --game: #e8544e;
-  --info: #5b9cff;
-  --info-line: #223040;
-  --info-bg: #0c1620;
-
-  /*
-   * Type. `--font-sans` / `--font-mono` are set by `next/font/google` on the root
-   * element, which self-hosts Archivo and JetBrains Mono from this origin — no runtime
-   * third-party request. The literal family names are the fallback for a build that
-   * has no fetched face, and the generic stacks are the fallback for that.
-   */
-  --sans: var(--font-sans, "Archivo"), ui-sans-serif, system-ui, -apple-system,
-    "Segoe UI", Helvetica, Arial, sans-serif;
-  --mono: var(--font-mono, "JetBrains Mono"), ui-monospace, "SFMono-Regular", Menlo,
-    Consolas, monospace;
-
-  /* --- metrics --- */
-  --shell: 1280px;
-  --gutter: 32px;
-  --band-pad: 104px;
-  --radius: 10px;
-  --radius-sm: 6px;
-  --masthead-h: 60px;
-}
-
-* {
-  box-sizing: border-box;
-}
 
 html {
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
 }
 
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--fg);
+html body {
   font-family: var(--sans);
   font-size: 16px;
   line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
   /* Wide evidence tables scroll inside their own container, never the page. */
   overflow-x: hidden;
-}
-
-::selection {
-  background: rgba(255, 107, 44, 0.3);
-}
-
-a {
-  color: var(--accent);
-  text-decoration: none;
-}
-
-a:hover {
-  color: var(--accent-hi);
 }
 
 /*
@@ -198,15 +111,15 @@ canvas {
   top: 0;
   z-index: 100;
   background: var(--accent);
-  color: var(--accent-ink);
+  color: var(--bg-base);
   font-weight: 600;
   padding: 0.6rem 1rem;
-  border-radius: 0 0 var(--radius-sm) 0;
+  border-radius: 0 0 var(--radius-md) 0;
 }
 
 .skip-link:focus {
   left: 0;
-  color: var(--accent-ink);
+  color: var(--bg-base);
 }
 
 /*
@@ -215,12 +128,12 @@ canvas {
  * separating them.
  */
 .band {
-  border-top: 1px solid var(--rule);
+  border-top: 1px solid var(--line-soft);
 }
 
 .band-sunk {
   background: var(--bg-band);
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 1px solid var(--line-soft);
 }
 
 .band-inner {
@@ -238,7 +151,7 @@ canvas {
 }
 
 .band-gradient {
-  background: linear-gradient(var(--bg-band), var(--bg));
+  background: linear-gradient(var(--bg-band), var(--bg-base));
 }
 
 .band-centered {
@@ -267,9 +180,9 @@ canvas {
   position: sticky;
   top: 0;
   z-index: 40;
-  background: rgba(7, 8, 10, 0.82);
+  background: color-mix(in srgb, var(--bg-base) 82%, transparent);
   backdrop-filter: blur(18px);
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 1px solid var(--line-soft);
 }
 
 .masthead-inner {
@@ -306,8 +219,8 @@ canvas {
   display: grid;
   place-items: center;
   box-shadow:
-    0 0 0 1px rgba(255, 107, 44, 0.3),
-    0 4px 14px -4px rgba(255, 107, 44, 0.6);
+    0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
+    0 4px 14px -4px color-mix(in srgb, var(--accent) 60%, transparent);
   flex: none;
 }
 
@@ -315,7 +228,7 @@ canvas {
   content: "";
   width: 9px;
   height: 9px;
-  border: 2px solid var(--accent-ink);
+  border: 2px solid var(--bg-base);
   border-radius: 1px;
   transform: rotate(45deg);
 }
@@ -348,7 +261,7 @@ canvas {
 .nav a {
   font-size: 13px;
   font-weight: 400;
-  color: var(--fg-4);
+  color: var(--fg-2);
   padding: 0 12px;
   height: 30px;
   display: flex;
@@ -364,7 +277,7 @@ canvas {
 .nav a[aria-current="page"] {
   color: var(--fg);
   font-weight: 600;
-  background: var(--card-chip);
+  background: var(--bg-control);
 }
 
 .masthead-spacer {
@@ -385,21 +298,21 @@ canvas {
   height: 30px;
   padding: 0 11px;
   border-radius: 5px;
-  border: 1px solid var(--rule-2);
-  color: var(--fg-3);
+  border: 1px solid var(--line);
+  color: var(--fg-2);
   font-size: 12px;
   white-space: nowrap;
 }
 
 .store-link:hover {
-  border-color: var(--rule-hover);
+  border-color: var(--line-strong);
   color: var(--fg);
 }
 
 .masthead-divider {
   width: 1px;
   height: 18px;
-  background: var(--rule-2);
+  background: var(--line);
   margin: 0 6px;
 }
 
@@ -415,7 +328,7 @@ canvas {
 .dot-window {
   width: 9px;
   height: 9px;
-  background: var(--rule-4);
+  background: var(--line-strong);
 }
 
 main {
@@ -460,14 +373,14 @@ p {
 .lede {
   font-size: 17px;
   line-height: 1.65;
-  color: var(--fg-3);
+  color: var(--fg-2);
   max-width: 56ch;
 }
 
 .prose {
   font-size: 15px;
   line-height: 1.7;
-  color: var(--fg-4);
+  color: var(--fg-2);
   max-width: 52ch;
 }
 
@@ -478,7 +391,7 @@ p {
 .note {
   font-size: 12.5px;
   line-height: 1.6;
-  color: var(--fg-5);
+  color: var(--fg-2);
 }
 
 /* The mono kicker above a section heading: `01 — SCULPT`. */
@@ -492,7 +405,7 @@ p {
 }
 
 .eyebrow-quiet {
-  color: var(--fg-4);
+  color: var(--fg-2);
   letter-spacing: 0.14em;
 }
 
@@ -514,7 +427,7 @@ p {
 .section-aside {
   font-size: 15px;
   line-height: 1.65;
-  color: var(--fg-4);
+  color: var(--fg-2);
   max-width: 38ch;
   flex: none;
 }
@@ -549,14 +462,14 @@ p {
   align-items: center;
   gap: 9px;
   padding: 5px 11px;
-  border: 1px solid var(--accent-line);
-  background: var(--accent-bg);
+  border: 1px solid var(--status-needs-review-line);
+  background: var(--status-needs-review-bg);
   border-radius: 20px;
   width: fit-content;
   font-family: var(--mono);
   font-size: 10px;
   letter-spacing: 0.08em;
-  color: var(--accent-soft);
+  color: var(--accent-hi);
 }
 
 .badge .dot {
@@ -571,27 +484,27 @@ p {
   text-transform: uppercase;
   border-radius: 3px;
   padding: 3px 7px;
-  border: 1px solid var(--rule-4);
-  color: var(--fg-3);
+  border: 1px solid var(--line-strong);
+  color: var(--fg-2);
   white-space: nowrap;
 }
 
 .tag-accent {
   color: var(--accent);
-  border-color: var(--accent-line);
-  background: var(--accent-bg);
+  border-color: var(--status-needs-review-line);
+  background: var(--status-needs-review-bg);
 }
 
 .tag-web {
-  color: var(--web);
-  border-color: var(--web-line);
-  background: var(--web-bg);
+  color: var(--store-web);
+  border-color: var(--store-web-line);
+  background: var(--store-web-bg);
 }
 
 .tag-iso {
-  color: var(--iso);
-  border-color: var(--iso-line);
-  background: var(--iso-bg);
+  color: var(--kids);
+  border-color: var(--status-isolated-line);
+  background: var(--status-isolated-bg);
 }
 
 /*
@@ -618,6 +531,66 @@ p {
   color: var(--accent);
 }
 
+/*
+ * The published Foundations status vocabulary, as chips.
+ *
+ * These are the same six statuses site-kit emits as `.sx-status-*`, wearing this site's
+ * chip geometry. Which status a surface may show is decided by that surface's contract —
+ * the conformance registry, the open-path policy, a refusal registry — never here.
+ */
+.chip-validated,
+.chip-needs-review,
+.chip-refused,
+.chip-experimental,
+.chip-isolated,
+.chip-dormant {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-width: 1px;
+  border-style: solid;
+}
+
+.chip-validated {
+  color: var(--status-validated-fg);
+  background: var(--status-validated-bg);
+  border-color: var(--status-validated-line);
+}
+
+.chip-needs-review {
+  color: var(--status-needs-review-fg);
+  background: var(--status-needs-review-bg);
+  border-color: var(--status-needs-review-line);
+}
+
+.chip-refused {
+  color: var(--status-refused-fg);
+  background: var(--status-refused-bg);
+  border-color: var(--status-refused-line);
+}
+
+.chip-experimental {
+  color: var(--status-experimental-fg);
+  background: var(--status-experimental-bg);
+  border-color: var(--status-experimental-line);
+}
+
+.chip-isolated {
+  color: var(--status-isolated-fg);
+  background: var(--status-isolated-bg);
+  border-color: var(--status-isolated-line);
+}
+
+.chip-dormant {
+  color: var(--status-dormant-fg);
+  background: var(--status-dormant-bg);
+  border-color: var(--status-dormant-line);
+}
+
+.chip .dot {
+  background: currentColor;
+}
+
 /* A small square mark: ✓ / ✕ / ~ inside a matrix cell or a feature list. */
 .mark-box {
   width: 15px;
@@ -632,20 +605,20 @@ p {
 }
 
 .mark-yes {
-  background: var(--ok-bg);
-  border: 1px solid var(--ok-line);
+  background: var(--status-validated-bg);
+  border: 1px solid var(--status-validated-line);
   color: var(--ok);
 }
 
 .mark-no {
-  background: var(--deny-bg);
-  border: 1px solid var(--deny-line);
-  color: var(--deny);
+  background: var(--status-refused-bg);
+  border: 1px solid var(--status-refused-line);
+  color: var(--danger);
 }
 
 .mark-part {
-  background: var(--accent-bg);
-  border: 1px solid var(--accent-line);
+  background: var(--status-needs-review-bg);
+  border: 1px solid var(--status-needs-review-line);
   color: var(--accent);
 }
 
@@ -689,9 +662,9 @@ p {
 }
 
 .panel {
-  background: var(--card);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius);
+  background: var(--bg-panel);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-lg);
   padding: 22px 20px;
   display: flex;
   flex-direction: column;
@@ -702,13 +675,13 @@ p {
 }
 
 .panel:hover {
-  border-color: var(--rule-4);
+  border-color: var(--line-strong);
 }
 
 .panel p {
   font-size: 12.5px;
   line-height: 1.6;
-  color: var(--fg-5);
+  color: var(--fg-2);
 }
 
 /*
@@ -720,32 +693,32 @@ p {
  */
 .tone-accent {
   --tone: var(--accent);
-  --tone-line: var(--accent-line);
+  --tone-line: var(--status-needs-review-line);
 }
 
 .tone-ok {
   --tone: var(--ok);
-  --tone-line: var(--ok-line);
+  --tone-line: var(--status-validated-line);
 }
 
 .tone-info {
   --tone: var(--info);
-  --tone-line: var(--info-line);
+  --tone-line: var(--status-experimental-line);
 }
 
 .tone-iso {
-  --tone: var(--iso);
-  --tone-line: var(--iso-line);
+  --tone: var(--kids);
+  --tone-line: var(--status-isolated-line);
 }
 
 .tone-web {
-  --tone: var(--web);
-  --tone-line: var(--web-line);
+  --tone: var(--store-web);
+  --tone-line: var(--store-web-line);
 }
 
 .tone-game {
-  --tone: var(--game);
-  --tone-line: var(--rule);
+  --tone: var(--store-game);
+  --tone-line: var(--line-soft);
 }
 
 .panel-bar {
@@ -764,7 +737,7 @@ p {
 .panel .panel-num {
   font-family: var(--mono);
   font-size: 10px;
-  color: var(--fg-5);
+  color: var(--fg-2);
 }
 
 .panel-head {
@@ -783,7 +756,7 @@ p {
   flex-direction: column;
   gap: 8px;
   padding-top: 12px;
-  border-top: 1px solid var(--rule);
+  border-top: 1px solid var(--line-soft);
 }
 
 /* A card whose whole body is a link target (profile cards, family cards). */
@@ -800,18 +773,16 @@ p {
 
 /* The profile card: a tinted rail over a body that grows to a shared baseline. */
 .profile-card {
-  background: var(--card);
-  border: 1px solid var(--tone-line, var(--rule));
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-panel);
+  border: 1px solid var(--tone-line, var(--line-soft));
   border-radius: 11px;
   overflow: hidden;
 }
 
 .profile-card:hover {
-  border-color: var(--rule-hover);
-}
-
-.profile-card > .card-accent-rail {
-  background: var(--tone, var(--accent));
+  border-color: var(--line-strong);
 }
 
 .profile-card-body {
@@ -832,7 +803,7 @@ p {
 .profile-card-body > p {
   font-size: 13.5px;
   line-height: 1.65;
-  color: var(--fg-4);
+  color: var(--fg-2);
 }
 
 /* A roomier panel: the download card and its verify companion. */
@@ -854,13 +825,13 @@ p {
 .panel .meta {
   font-family: var(--mono);
   font-size: 11px;
-  color: var(--fg-5);
+  color: var(--fg-2);
 }
 
 .panel .sha {
   font-family: var(--mono);
   font-size: 10px;
-  color: var(--fg-5);
+  color: var(--fg-2);
   word-break: break-all;
 }
 
@@ -878,7 +849,7 @@ p {
 
 .panel .body-copy {
   font-size: 13px;
-  color: var(--fg-4);
+  color: var(--fg-2);
 }
 
 /* The pipeline strip: six stages that scroll rather than squeeze. */
@@ -902,7 +873,7 @@ p {
   font-family: var(--mono);
   font-size: 9px;
   letter-spacing: 0.1em;
-  color: var(--fg-5);
+  color: var(--fg-2);
 }
 
 /* The family card's tinted square and the surface label beneath its name. */
@@ -920,7 +891,7 @@ p {
   content: "";
   width: 9px;
   height: 9px;
-  border: 2px solid var(--bg);
+  border: 2px solid var(--bg-base);
   border-radius: 1px;
 }
 
@@ -931,7 +902,7 @@ p {
 }
 
 .family-out {
-  color: var(--deco);
+  color: var(--fg-4);
   font-size: 10px;
 }
 
@@ -948,9 +919,9 @@ p {
   align-items: center;
   gap: 11px;
   padding: 11px 13px;
-  background: var(--card);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
   min-width: 0;
 }
 
@@ -978,12 +949,12 @@ p {
 .exit-code-when {
   display: block;
   font-size: 11px;
-  color: var(--fg-5);
+  color: var(--fg-2);
 }
 
 .card-accent-rail {
   height: 3px;
-  background: var(--accent);
+  background: var(--tone, var(--accent));
 }
 
 .bullets {
@@ -1001,7 +972,7 @@ p {
   align-items: baseline;
   font-size: 12.5px;
   line-height: 1.5;
-  color: var(--fg-3);
+  color: var(--fg-2);
 }
 
 .bullets li::before {
@@ -1031,7 +1002,7 @@ p {
   align-items: flex-start;
   font-size: 13.5px;
   line-height: 1.55;
-  color: var(--fg-3);
+  color: var(--fg-2);
 }
 
 .checks li .mark-box {
@@ -1040,9 +1011,9 @@ p {
 
 /* A tinted note card — the engine page's four standing rules. */
 .note-card {
-  background: var(--card);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius);
+  background: var(--bg-panel);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-lg);
   padding: 24px;
   display: flex;
   flex-direction: column;
@@ -1066,12 +1037,12 @@ p {
 .note-card p {
   font-size: 13px;
   line-height: 1.65;
-  color: var(--fg-4);
+  color: var(--fg-2);
 }
 
 .note-card-info {
-  background: var(--info-bg);
-  border-color: var(--info-line);
+  background: var(--status-experimental-bg);
+  border-color: var(--status-experimental-line);
 }
 
 .note-card-info h3 .dot {
@@ -1079,8 +1050,8 @@ p {
 }
 
 .note-card-accent {
-  background: var(--accent-bg);
-  border-color: var(--accent-line);
+  background: var(--status-needs-review-bg);
+  border-color: var(--status-needs-review-line);
 }
 
 .note-card-accent h3 .dot {
@@ -1088,7 +1059,7 @@ p {
 }
 
 .note-card-accent p {
-  color: var(--accent-soft);
+  color: var(--accent-hi);
 }
 
 /* --------------------------------------------------------------------------
@@ -1098,39 +1069,7 @@ p {
 .hero {
   position: relative;
   overflow: hidden;
-  border-bottom: 1px solid var(--rule);
-}
-
-/*
- * The mockup's hero art is a live three.js scene. The umbrella already owns a real
- * one at the live open path, so this surface stays a rendered gradient field rather
- * than a second renderer: only `sculpt-viewport.tsx` may construct a backend.
- */
-.hero-field {
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  left: 34%;
-  background:
-    radial-gradient(78% 62% at 62% 26%, rgba(255, 107, 44, 0.34), transparent 62%),
-    radial-gradient(66% 58% at 84% 78%, rgba(94, 234, 212, 0.16), transparent 66%),
-    repeating-linear-gradient(90deg, rgba(87, 99, 114, 0.3) 0 1px, transparent 1px 56px),
-    repeating-linear-gradient(0deg, rgba(87, 99, 114, 0.22) 0 1px, transparent 1px 56px);
-  pointer-events: none;
-}
-
-.hero-veil {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    100deg,
-    rgba(7, 8, 10, 0.97) 0%,
-    rgba(7, 8, 10, 0.93) 30%,
-    rgba(7, 8, 10, 0.55) 52%,
-    rgba(7, 8, 10, 0.06) 76%
-  );
-  pointer-events: none;
+  border-bottom: 1px solid var(--line-soft);
 }
 
 .hero-inner {
@@ -1140,11 +1079,51 @@ p {
   padding: 104px var(--gutter) 108px;
 }
 
+/*
+ * The hero is two columns: the claim, and the artifact the claim is about.
+ *
+ * The mockup floats its scene behind the headline under a gradient veil. A veil over a
+ * real artifact would be dimming evidence to make type legible, so the two get their own
+ * tracks instead. Both are `minmax(0, …)`, so the canvas cannot push the copy column
+ * past its share of the row at any width.
+ */
+.hero-inner-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.92fr);
+  gap: 56px;
+  align-items: center;
+}
+
 .hero-copy {
   max-width: 640px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 26px;
+}
+
+/* The hero's drawing surface. Sized by aspect ratio so it reflows without a script. */
+.hero-stage {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hero-stage .viewport {
+  aspect-ratio: 4 / 3;
+}
+
+.hero-stage-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--fg-2);
 }
 
 .hero-copy h1 {
@@ -1154,14 +1133,14 @@ p {
 
 .hero-copy .lede {
   font-size: 18px;
-  color: var(--fg-3);
+  color: var(--fg-2);
   max-width: 52ch;
 }
 
 .statbar {
   position: relative;
-  border-top: 1px solid var(--rule);
-  background: rgba(10, 12, 14, 0.7);
+  border-top: 1px solid var(--line-soft);
+  background: color-mix(in srgb, var(--bg-panel) 70%, transparent);
   backdrop-filter: blur(10px);
 }
 
@@ -1175,7 +1154,7 @@ p {
 
 .stat {
   padding: 22px 0;
-  border-right: 1px solid var(--rule);
+  border-right: 1px solid var(--line-soft);
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -1189,7 +1168,7 @@ p {
 .stat dt {
   order: 2;
   font-size: 12px;
-  color: var(--fg-5);
+  color: var(--fg-2);
 }
 
 .stat dd {
@@ -1227,28 +1206,28 @@ p {
   gap: 9px;
   height: 46px;
   padding: 0 24px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   border: 1px solid var(--accent);
   background: var(--accent);
-  color: var(--accent-ink);
+  color: var(--bg-base);
   font: inherit;
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.32),
-    0 12px 32px -12px rgba(255, 107, 44, 0.9);
+    0 12px 32px -12px color-mix(in srgb, var(--accent) 90%, transparent);
 }
 
 .button:hover {
   background: var(--accent-hi);
   border-color: var(--accent-hi);
-  color: var(--accent-ink);
+  color: var(--bg-base);
 }
 
 .button-quiet {
   background: transparent;
-  border-color: var(--rule-4);
+  border-color: var(--line-strong);
   color: var(--fg);
   font-weight: 500;
   box-shadow: none;
@@ -1256,7 +1235,7 @@ p {
 
 .button-quiet:hover {
   background: transparent;
-  border-color: var(--rule-hover-2);
+  border-color: var(--line-strong);
   color: var(--fg);
 }
 
@@ -1275,15 +1254,15 @@ p {
 
 .button[aria-disabled="true"] {
   background: transparent;
-  border-color: var(--rule-4);
-  color: var(--fg-5);
+  border-color: var(--line-strong);
+  color: var(--fg-2);
   cursor: not-allowed;
   box-shadow: none;
 }
 
 .button-arrow::after {
   content: "→";
-  color: var(--fg-5);
+  color: var(--fg-2);
 }
 
 /* --------------------------------------------------------------------------
@@ -1291,16 +1270,17 @@ p {
  * ------------------------------------------------------------------------ */
 
 .state {
-  border: 1px solid var(--rule-2);
-  border-left: 2px solid var(--rule-hover);
-  border-radius: 0 var(--radius) var(--radius) 0;
-  background: var(--card);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--line-strong);
+  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+  background: var(--bg-panel);
   padding: 18px 20px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
+.state h2,
 .state h3 {
   font-family: var(--mono);
   font-size: 11px;
@@ -1311,49 +1291,114 @@ p {
 .state p {
   font-size: 13.5px;
   line-height: 1.65;
-  color: var(--fg-3);
+  color: var(--fg-2);
 }
 
 .state-ok {
-  border-color: var(--ok-line);
+  border-color: var(--status-validated-line);
   border-left-color: var(--ok);
-  background: var(--ok-bg);
+  background: var(--status-validated-bg);
 }
 
+.state-ok h2,
 .state-ok h3 {
   color: var(--ok);
 }
 
 .state-warn {
-  border-color: var(--accent-line);
+  border-color: var(--status-needs-review-line);
   border-left-color: var(--accent);
-  background: var(--accent-bg);
+  background: var(--status-needs-review-bg);
 }
 
+.state-warn h2,
 .state-warn h3 {
   color: var(--accent);
 }
 
 .state-warn p {
-  color: var(--accent-soft);
+  color: var(--accent-hi);
 }
 
 .state-deny {
-  border-color: var(--deny-line);
-  border-left-color: var(--deny);
-  background: var(--deny-bg);
+  border-color: var(--status-refused-line);
+  border-left-color: var(--danger);
+  background: var(--status-refused-bg);
 }
 
+.state-deny h2,
 .state-deny h3 {
-  color: var(--deny);
+  color: var(--danger);
+}
+
+.state-iso {
+  border-color: var(--status-isolated-line);
+  border-left-color: var(--kids);
+  background: var(--status-isolated-bg);
+}
+
+.state-iso h2,
+.state-iso h3 {
+  color: var(--kids);
+}
+
+/*
+ * The state header: status chip, name, and the machine key on one line.
+ *
+ * The key sits in the header rather than at the foot because it is not a footnote —
+ * it is the half of the state a reader files an issue with. It has its own track so it
+ * cannot be pushed out of the box by a long title, and it wraps rather than truncating:
+ * a half-shown refusal key is worse than a wrapped one.
+ */
+.state-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px 12px;
+  min-width: 0;
+}
+
+.state-head h2,
+.state-head h3 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.state-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.state-evidence {
+  margin: 4px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
 }
 
 .reason {
   font-family: var(--mono);
   font-size: 11.5px;
-  color: var(--fg-4);
-  display: block;
-  word-break: break-word;
+  color: var(--fg-2);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  justify-self: end;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * The label is a word, so it takes a body-role token. `--fg-4` is Foundations'
+ * `non-text` step — rules, units, disabled marks — and putting a word on it would fail
+ * the contrast role the design package measured it for.
+ */
+.reason-label {
+  color: var(--fg-2);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 9px;
 }
 
 /* --------------------------------------------------------------------------
@@ -1361,9 +1406,9 @@ p {
  * ------------------------------------------------------------------------ */
 
 .frame {
-  background: var(--bg-deep);
-  border: 1px solid var(--rule-3);
-  border-radius: var(--radius);
+  background: var(--bg-field);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
   overflow: hidden;
   min-width: 0;
 }
@@ -1374,11 +1419,11 @@ p {
   align-items: center;
   gap: 10px;
   padding: 6px 13px;
-  background: var(--card-raised);
-  border-bottom: 1px solid var(--rule-2);
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--line);
   font-family: var(--mono);
   font-size: 10px;
-  color: var(--fg-5);
+  color: var(--fg-2);
 }
 
 .frame-bar-title {
@@ -1415,7 +1460,7 @@ p {
 }
 
 .terminal-out {
-  color: var(--fg-4);
+  color: var(--fg-2);
 }
 
 .terminal-hi {
@@ -1427,7 +1472,7 @@ p {
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 1px solid var(--line-soft);
   font-family: var(--mono);
   font-size: 11px;
 }
@@ -1445,7 +1490,7 @@ p {
 }
 
 .diff-dir {
-  color: var(--fg-5);
+  color: var(--fg-2);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1467,11 +1512,11 @@ p {
   align-items: center;
   gap: 10px;
   padding: 11px 14px;
-  background: var(--bg-deep);
-  border-top: 1px solid var(--rule);
+  background: var(--bg-field);
+  border-top: 1px solid var(--line-soft);
   font-family: var(--mono);
   font-size: 10.5px;
-  color: var(--fg-5);
+  color: var(--fg-2);
 }
 
 .diff-foot-note {
@@ -1481,7 +1526,7 @@ p {
 }
 
 .hash-before {
-  color: var(--fg-4);
+  color: var(--fg-2);
 }
 
 .hash-after {
@@ -1494,8 +1539,8 @@ p {
   align-items: center;
   gap: 11px;
   padding: 8px 13px;
-  background: var(--card-raised);
-  border: 1px solid var(--rule-2);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
   border-radius: 5px;
   font-family: var(--mono);
   font-size: 12px;
@@ -1510,8 +1555,17 @@ p {
   flex: none;
 }
 
+/*
+ * A command is one unbreakable line, so the *code* is the scroller rather than its
+ * frame. A flex item defaults to `min-width: auto`, which refuses to shrink below its
+ * content — without the override the line paints past the container instead of scrolling
+ * inside it, and on a phone the tail of a verify command is silently clipped.
+ */
 .command code {
   white-space: nowrap;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
 }
 
 /* --------------------------------------------------------------------------
@@ -1520,9 +1574,9 @@ p {
 
 .scroll-x {
   overflow-x: auto;
-  border: 1px solid var(--rule);
-  border-radius: var(--radius);
-  background: var(--card);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
 }
 
 table {
@@ -1535,10 +1589,10 @@ th,
 td {
   text-align: left;
   padding: 14px 22px;
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 1px solid var(--line-soft);
   vertical-align: top;
   white-space: nowrap;
-  color: var(--fg-3);
+  color: var(--fg-2);
 }
 
 th {
@@ -1546,9 +1600,9 @@ th {
   font-size: 9.5px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--fg-4);
-  background: var(--card-raised);
-  border-bottom-color: var(--rule-2);
+  color: var(--fg-2);
+  background: var(--bg-raised);
+  border-bottom-color: var(--line);
   font-weight: 400;
 }
 
@@ -1563,7 +1617,7 @@ tbody tr:last-child td {
 }
 
 tbody tr:hover td {
-  background: var(--card-raised);
+  background: var(--bg-raised);
 }
 
 td code,
@@ -1591,7 +1645,7 @@ p code {
   font-size: 10px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--fg-5);
+  color: var(--fg-2);
   padding-top: 0.25rem;
 }
 
@@ -1602,18 +1656,70 @@ p code {
   word-break: break-word;
 }
 
+/*
+ * A keyed wrapper that stays out of the grid.
+ *
+ * A definition list rendered from data needs one element per pair to carry the key, and
+ * `display: contents` lets that element exist in the markup without becoming a grid item
+ * — so a data-driven readout and a hand-written one lay out identically.
+ */
+.dl > .dl-row {
+  display: contents;
+}
+
+/* The one figure on the account surface that is a derived total, not a stored value. */
+.ledger-balance {
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--fg);
+}
+
+/*
+ * The profile matrix: a row header column plus one column per profile.
+ *
+ * The row headers are `th[scope="row"]`, so a screen reader announces which operation a
+ * cell belongs to — with three near-identical status chips per row, an unassociated cell
+ * would be unreadable without the visual grid.
+ */
+.matrix th[scope="row"] {
+  background: var(--bg-panel);
+  text-transform: none;
+  font-family: var(--sans);
+  font-size: 13px;
+  letter-spacing: 0;
+  color: var(--fg);
+  min-width: 22ch;
+}
+
+.matrix th[scope="row"] code {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.matrix td {
+  white-space: normal;
+}
+
+/* Bounded operation names printed inline in a sentence. */
+.op-chip {
+  display: inline-block;
+  margin-right: 0.5rem;
+}
+
 .tree {
   list-style: none;
   padding: 0;
   margin: 0;
   font-family: var(--mono);
   font-size: 12px;
-  color: var(--fg-3);
+  color: var(--fg-2);
 }
 
 .tree li {
   padding: 0.3rem 0;
-  border-bottom: 1px dotted var(--rule-2);
+  border-bottom: 1px dotted var(--line);
 }
 
 .tree li:last-child {
@@ -1621,7 +1727,7 @@ p code {
 }
 
 .tree .depth {
-  color: var(--fg-5);
+  color: var(--fg-2);
 }
 
 /* --------------------------------------------------------------------------
@@ -1639,7 +1745,7 @@ p code {
   font-size: 10px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--fg-5);
+  color: var(--fg-2);
 }
 
 .field input,
@@ -1648,16 +1754,16 @@ p code {
   font-family: var(--mono);
   font-size: 13px;
   padding: 0.5rem 0.6rem;
-  border: 1px solid var(--rule-3);
+  border: 1px solid var(--line-strong);
   border-radius: 5px;
-  background: var(--bg-deep);
+  background: var(--bg-field);
   color: var(--fg);
   min-width: 0;
 }
 
 .field input:hover,
 .field select:hover {
-  border-color: var(--rule-hover);
+  border-color: var(--line-strong);
 }
 
 .row {
@@ -1673,9 +1779,9 @@ p code {
 
 .viewport {
   position: relative;
-  border: 1px solid var(--rule-3);
-  border-radius: var(--radius);
-  background: #050608;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--bg-base);
   aspect-ratio: 16 / 9;
   max-height: 70vh;
   overflow: hidden;
@@ -1705,7 +1811,7 @@ p code {
   font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--fg-4);
+  color: var(--fg-2);
   pointer-events: none;
 }
 
@@ -1768,13 +1874,13 @@ p code {
   font-size: 9px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--fg-5);
+  color: var(--fg-2);
   padding: 0 10px 7px;
 }
 
 .docs-rail a {
   font-size: 13px;
-  color: var(--fg-4);
+  color: var(--fg-2);
   padding: 6px 10px;
   border-radius: 5px;
   border-left: 2px solid transparent;
@@ -1782,7 +1888,7 @@ p code {
 
 .docs-rail a:hover {
   color: var(--fg);
-  background: var(--card-raised);
+  background: var(--bg-raised);
 }
 
 .docs-main {
@@ -1802,7 +1908,7 @@ p code {
 .docs-main .lede {
   font-size: 16px;
   line-height: 1.75;
-  color: var(--fg-3);
+  color: var(--fg-2);
   max-width: none;
 }
 
@@ -1822,25 +1928,25 @@ p code {
   gap: 9px;
   font-family: var(--mono);
   font-size: 11px;
-  color: var(--fg-5);
+  color: var(--fg-2);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .crumbs li:last-child {
-  color: var(--fg-3);
+  color: var(--fg-2);
 }
 
 .crumbs li + li::before {
   content: "/";
-  color: var(--rule-hover);
+  color: var(--line-strong);
   margin-right: 9px;
 }
 
 .rule-card {
-  background: var(--card);
-  border: 1px solid var(--rule);
+  background: var(--bg-panel);
+  border: 1px solid var(--line-soft);
   border-left: 2px solid var(--accent);
   border-radius: 0 8px 8px 0;
   padding: 18px 20px;
@@ -1870,14 +1976,14 @@ p code {
   font-size: 9px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--fg-5);
+  color: var(--fg-2);
 }
 
 .toc a {
   font-size: 12.5px;
-  color: var(--fg-4);
+  color: var(--fg-2);
   padding: 3px 0 3px 11px;
-  border-left: 2px solid var(--rule-2);
+  border-left: 2px solid var(--line);
 }
 
 .toc a:hover {
@@ -1910,9 +2016,9 @@ p code {
 .code-defs dt {
   font-family: var(--mono);
   font-size: 12px;
-  color: var(--deny);
+  color: var(--danger);
   padding: 13px 0;
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 1px solid var(--line-soft);
   word-break: break-word;
 }
 
@@ -1920,9 +2026,9 @@ p code {
   margin: 0;
   font-size: 13.5px;
   line-height: 1.6;
-  color: var(--fg-4);
+  color: var(--fg-2);
   padding: 13px 0;
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 1px solid var(--line-soft);
 }
 
 /* --------------------------------------------------------------------------
@@ -1930,8 +2036,8 @@ p code {
  * ------------------------------------------------------------------------ */
 
 .tier {
-  background: var(--card);
-  border: 1px solid var(--rule);
+  background: var(--bg-panel);
+  border: 1px solid var(--line-soft);
   border-radius: 12px;
   overflow: hidden;
   display: flex;
@@ -1941,7 +2047,7 @@ p code {
 
 .tier-flag {
   background: var(--accent);
-  color: var(--accent-ink);
+  color: var(--bg-base);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -1980,20 +2086,20 @@ p code {
 
 .tier-unit {
   font-size: 13px;
-  color: var(--fg-5);
+  color: var(--fg-2);
 }
 
 .tier-rule {
   height: 1px;
-  background: var(--rule-3);
+  background: var(--line-strong);
   margin: 4px 0;
   border: none;
 }
 
 .tier-featured {
-  background: var(--card-raised);
-  border-color: var(--accent-line);
-  box-shadow: 0 30px 70px -28px rgba(255, 107, 44, 0.35);
+  background: var(--bg-raised);
+  border-color: var(--status-needs-review-line);
+  box-shadow: 0 30px 70px -28px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 /*
@@ -2013,7 +2119,7 @@ p code {
   flex-direction: column;
   gap: 8px;
   padding: 18px 0;
-  border-top: 1px solid var(--rule);
+  border-top: 1px solid var(--line-soft);
   min-width: 0;
 }
 
@@ -2028,7 +2134,7 @@ p code {
   margin: 0;
   font-size: 13px;
   line-height: 1.65;
-  color: var(--fg-4);
+  color: var(--fg-2);
 }
 
 /* --------------------------------------------------------------------------
@@ -2036,8 +2142,8 @@ p code {
  * ------------------------------------------------------------------------ */
 
 footer {
-  border-top: 1px solid var(--rule);
-  background: var(--bg-deep);
+  border-top: 1px solid var(--line-soft);
+  background: var(--bg-field);
 }
 
 .footer-inner {
@@ -2059,14 +2165,14 @@ footer {
 .footer-brand p {
   font-size: 12.5px;
   line-height: 1.65;
-  color: var(--fg-5);
+  color: var(--fg-2);
   max-width: 34ch;
 }
 
 .footer-version {
   font-family: var(--mono);
   font-size: 10px;
-  color: var(--fg-5);
+  color: var(--fg-2);
 }
 
 .footer-col {
@@ -2082,13 +2188,13 @@ footer {
   font-weight: 400;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--fg-5);
+  color: var(--fg-2);
   line-height: 1.6;
 }
 
 .footer-col a {
   font-size: 12.5px;
-  color: var(--fg-4);
+  color: var(--fg-2);
 }
 
 .footer-col a:hover {
@@ -2096,7 +2202,7 @@ footer {
 }
 
 .footer-note {
-  color: var(--fg-5);
+  color: var(--fg-2);
   font-size: 12.5px;
 }
 
@@ -2104,13 +2210,13 @@ footer {
   max-width: var(--shell);
   margin: 0 auto;
   padding: 22px var(--gutter) 40px;
-  border-top: 1px solid var(--rule);
+  border-top: 1px solid var(--line-soft);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 16px;
   font-size: 11.5px;
-  color: var(--fg-5);
+  color: var(--fg-2);
 }
 
 .footer-iso {
@@ -2118,16 +2224,16 @@ footer {
   align-items: center;
   gap: 8px;
   padding: 5px 10px;
-  border: 1px solid var(--iso-line-2);
-  background: var(--iso-bg-2);
+  border: 1px solid var(--status-isolated-line);
+  background: var(--status-isolated-bg);
   border-radius: 4px;
   font-size: 11px;
-  color: var(--iso);
+  color: var(--kids);
   margin-left: auto;
 }
 
 .footer-iso .dot {
-  background: var(--iso);
+  background: var(--kids);
 }
 
 /* --------------------------------------------------------------------------
@@ -2158,6 +2264,19 @@ footer {
 @media (max-width: 1024px) {
   :root {
     --gutter: 24px;
+  }
+
+  /*
+   * The hero stacks claim-first. The artifact keeps a wider aspect once it has the full
+   * measure, so a stacked hero does not push the stat bar an entire screen down.
+   */
+  .hero-inner-split {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
+  }
+
+  .hero-stage .viewport {
+    aspect-ratio: 16 / 9;
   }
 
   .split {
@@ -2205,11 +2324,6 @@ footer {
     --masthead-h: 56px;
   }
 
-  /* Collapsed, the hero art sits behind the copy rather than beside it. */
-  .hero-field {
-    left: 0;
-  }
-
   .masthead-inner {
     flex-wrap: wrap;
     gap: 10px 16px;
@@ -2250,15 +2364,6 @@ footer {
     padding: 72px var(--gutter) 76px;
   }
 
-  .hero-veil {
-    background: linear-gradient(
-      180deg,
-      rgba(7, 8, 10, 0.94) 0%,
-      rgba(7, 8, 10, 0.86) 45%,
-      rgba(7, 8, 10, 0.55) 100%
-    );
-  }
-
   .statbar-inner {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0 24px;
@@ -2269,7 +2374,7 @@ footer {
   }
 
   .stat:nth-child(-n + 2) {
-    border-bottom: 1px solid var(--rule);
+    border-bottom: 1px solid var(--line-soft);
   }
 
   .grid-5,
@@ -2361,7 +2466,7 @@ footer {
   .stat {
     padding: 16px 0;
     border-right: none;
-    border-bottom: 1px solid var(--rule);
+    border-bottom: 1px solid var(--line-soft);
   }
 
   .stat:last-child {

@@ -24,7 +24,7 @@ export default function EnginePage() {
           <p className="eyebrow">Engine SDK</p>
           <h1>The SDK archive is not in this build</h1>
         </div>
-        <StatePanel tone="deny" title="No download to offer" reason={offer.reason}>
+        <StatePanel tone="deny" level={2} title="No download to offer" reason={offer.reason}>
           <p>{offer.message}</p>
           <p>
             The archive is produced by <code>node scripts/build-engine-sdk.mjs</code>{" "}

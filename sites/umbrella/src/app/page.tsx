@@ -5,7 +5,12 @@ import {
   SITE_CAPABILITY_IDS,
   SITE_STARTER_CREDIT_ALLOTMENT,
 } from "@sceneaxi/site-kit";
-import { LIVE_OPEN_COPY, LIVE_OPEN_PATH } from "../lib/live-open.js";
+import {
+  LIVE_OPEN_COPY,
+  LIVE_OPEN_INSTANCE_COUNT,
+  LIVE_OPEN_PATH,
+  resolveLiveOpenScene,
+} from "../lib/live-open.js";
 import {
   DIFF_ROWS,
   EXIT_CODES,
@@ -18,6 +23,8 @@ import {
 } from "../lib/site-content.js";
 import { UMBRELLA_BRAND, resolveFamilyLinks } from "../lib/site-config.js";
 import { CapabilityTable } from "./_components/capability-table.js";
+import { HeroViewport } from "./_components/hero-viewport.js";
+import { StatePanel } from "./_components/state-panel.js";
 
 /**
  * The overview.
@@ -25,12 +32,17 @@ import { CapabilityTable } from "./_components/capability-table.js";
  * Every number on this page is read from the contract that owns it — the starter
  * allotment and the creator share from site-kit, the free-capability count from the
  * published capability matrix — so the marketing surface and the gate cannot disagree
- * about what SceneAxi costs. The hero art is a rendered gradient field rather than a
- * second renderer: `sculpt-viewport.tsx` is the tier's only renderer boundary, and the
- * real one is a click away at the live open path.
+ * about what SceneAxi costs.
+ *
+ * The hero art is a **real Sculpt Artifact** (decision D4): the server composes the same
+ * `MountableScene` the public open path serves and hands it to the tier's one renderer
+ * boundary. There is no procedural marketing geometry on this page, so the picture
+ * behind the headline is bound to the same artifact and digest chain the gate proves. A
+ * scene the pipeline refuses to compose renders the refusal, not a decorative stand-in.
  */
 export default function OverviewPage() {
   const family = resolveFamilyLinks(process.env);
+  const heroScene = resolveLiveOpenScene();
   const freeCapabilityCount = SITE_CAPABILITY_IDS.filter(
     (id) => SITE_CAPABILITIES[id].tier === "free",
   ).length;
@@ -45,10 +57,7 @@ export default function OverviewPage() {
   return (
     <>
       <section className="hero">
-        <div className="hero-field" aria-hidden="true" />
-        <div className="hero-veil" aria-hidden="true" />
-
-        <div className="hero-inner">
+        <div className="hero-inner hero-inner-split">
           <div className="hero-copy">
             <p className="badge">
               <span className="dot" aria-hidden="true" />
@@ -77,6 +86,32 @@ export default function OverviewPage() {
               </p>
             </div>
           </div>
+
+          {/*
+            Not an illustration. This is the committed artifact from the public open
+            path, composed by the same pipeline and drawn by the same renderer boundary,
+            so the headline's claim and the picture beside it rest on one contract.
+          */}
+          {heroScene.ok ? (
+            <HeroViewport
+              scene={heroScene.value}
+              label={`A committed SceneAxi Sculpt Artifact, composed into ${LIVE_OPEN_INSTANCE_COUNT} placed instances and drawn live`}
+            />
+          ) : (
+            <StatePanel
+              tone="deny"
+              title="No artifact to draw"
+              reason={heroScene.reason}
+              evidence={[{ term: "Surface", value: "hero" }]}
+            >
+              <p>{heroScene.message}</p>
+              <p>
+                The hero draws the same composed scene the public open path serves. The
+                pipeline fails closed, so this deploy shows its refusal rather than
+                substituting decorative geometry for the artifact it could not build.
+              </p>
+            </StatePanel>
+          )}
         </div>
 
         <div className="statbar">

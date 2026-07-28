@@ -27,6 +27,7 @@ import {
   type ThreeSculptPresentationBackend,
 } from "@sceneaxi/engine-presentation";
 import type { MountableScene } from "@sceneaxi/site-kit";
+import { StatePanel } from "./state-panel.js";
 
 /** Frames are published to React at this cadence; the loop still draws every frame. */
 const FRAME_REPORT_INTERVAL = 15;
@@ -274,20 +275,33 @@ export function useSculptViewport(input: {
 export function SculptViewportSurface({
   viewport,
   label,
+  refusalLevel,
 }: {
   readonly viewport: SculptViewport;
   readonly label: string;
+  /**
+   * Heading level for the refusal, when one is rendered.
+   *
+   * The two routed viewports sit under a section heading, so their refusal is an `h3`;
+   * the marketing hero sits directly under the page's `h1` and passes `2`. The default
+   * keeps the routed callers unchanged.
+   */
+  readonly refusalLevel?: 2 | 3;
 }) {
   const { canvasRef, status } = viewport;
 
   if (status.kind === "refused") {
     const refusal = REFUSAL_COPY[status.stage];
     return (
-      <section className="state state-deny">
-        <h3>{refusal.heading}</h3>
+      <StatePanel
+        tone="deny"
+        level={refusalLevel ?? 3}
+        title={refusal.heading}
+        reason={status.message}
+        evidence={[{ term: "Stage", value: status.stage }]}
+      >
         <p>{refusal.body}</p>
-        <code className="reason">{status.message}</code>
-      </section>
+      </StatePanel>
     );
   }
 

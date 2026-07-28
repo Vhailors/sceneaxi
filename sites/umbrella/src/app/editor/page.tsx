@@ -43,6 +43,7 @@ export default async function EditorPage({
         </div>
         <StatePanel
           tone="deny"
+          level={2}
           title="Not entitled"
           reason={resolved.decision.reason}
         >
@@ -69,7 +70,7 @@ export default async function EditorPage({
           <p className="eyebrow">Minimum E2 editor</p>
           <h1>That editor link was refused</h1>
         </div>
-        <StatePanel tone="deny" title="Link refused" reason={state.reason}>
+        <StatePanel tone="deny" level={2} title="Link refused" reason={state.reason}>
           <p>{state.message}</p>
           <p>
             Catalog deep links carry a source, an item, and an optional artifact
@@ -92,7 +93,7 @@ export default async function EditorPage({
           <p className="eyebrow">Minimum E2 editor</p>
           <h1>The editor session could not start</h1>
         </div>
-        <StatePanel tone="deny" title="Session refused" reason={render.reason}>
+        <StatePanel tone="deny" level={2} title="Session refused" reason={render.reason}>
           <p>{render.message}</p>
         </StatePanel>
       </div>
@@ -113,7 +114,7 @@ export default async function EditorPage({
       </div>
 
       {resolved.decision.mode === "preview" ? (
-        <StatePanel tone="warn" title="Preview — not an entitled session">
+        <StatePanel tone="warn" level={2} title="Preview — not an entitled session">
           <p>
             This deployment sets the server-side editor preview flag, so the Minimum E2
             surface is demonstrable before the identity plane is wired. Nothing here is
@@ -122,7 +123,7 @@ export default async function EditorPage({
           </p>
         </StatePanel>
       ) : (
-        <StatePanel tone="ok" title={`Entitled — ${resolved.decision.basis}`} />
+        <StatePanel tone="ok" level={2} title={`Entitled — ${resolved.decision.basis}`} />
       )}
 
       {editor.deepLink !== null && (
@@ -151,7 +152,7 @@ export default async function EditorPage({
       ) : (
         <EditorViewport scene={mountable} selectedInstanceId={editor.selectedInstanceId} />
       )}
-      <p style={{ color: "var(--ink-faint)", fontSize: "0.9rem" }}>
+      <p className="note">
         {EDITOR_VIEWPORT_COPY.honesty}
       </p>
 
@@ -379,7 +380,7 @@ export default async function EditorPage({
         </StatePanel>
       )}
       {composition.ok && (
-        <p style={{ color: "var(--ink-faint)", fontSize: "0.9rem" }}>
+        <p className="note">
           Placement is a projection: a child transform reads relative to its parent and
           no artifact is rewritten to place it, because its evidence binds its exact spec
           bytes.
@@ -390,7 +391,7 @@ export default async function EditorPage({
       <p>
         Exactly these operations, and no more:{" "}
         {WEB_EDITOR_SESSION_OPERATIONS.map((operation) => (
-          <code key={operation} style={{ marginRight: "0.5rem" }}>
+          <code key={operation} className="op-chip">
             {operation}
           </code>
         ))}

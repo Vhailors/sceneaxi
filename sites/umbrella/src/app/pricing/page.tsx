@@ -6,7 +6,11 @@ import {
   type SiteCreditPack,
 } from "@sceneaxi/site-kit";
 import { IDENTITY_PLANE_PENDING_NOTE, createUmbrellaIdentityPlane } from "../../lib/identity-plane.js";
-import { PRICING_FAQ } from "../../lib/site-content.js";
+import {
+  CREDIT_LEDGER_COPY,
+  CREDIT_LEDGER_FACTS,
+  PRICING_FAQ,
+} from "../../lib/site-content.js";
 import { CapabilityTable } from "../_components/capability-table.js";
 import { StatePanel } from "../_components/state-panel.js";
 
@@ -84,8 +88,9 @@ export default async function PricingPage() {
                         </span>
                       </p>
                       <p className="body-copy">
-                        {pack.credits} credits, added to your ledger when the checkout
-                        settles. Credits do not expire and are never a subscription.
+                        {pack.credits} credits, appended to your ledger as one entry when
+                        the checkout settles. Credits do not expire and are never a
+                        subscription.
                       </p>
                       <hr className="tier-rule" />
                       <ul className="checks panel-grow">
@@ -136,12 +141,20 @@ export default async function PricingPage() {
               })}
             </div>
 
-            <StatePanel tone="warn" title={`Billing mode: ${plane.billingMode}`}>
+            <StatePanel
+              tone="warn"
+              title="Billing mode"
+              evidence={[
+                { term: "Mode", value: plane.billingMode },
+                { term: "Checkout", value: plane.wired.billing ? "wired" : "not wired" },
+              ]}
+            >
               <p>
                 Checkout runs against Stripe <strong>test</strong> mode on this
                 deployment. Live charges need a separate captain decision, and the
                 billing port refuses live mode without explicit authorization.
               </p>
+              <p>{CREDIT_LEDGER_COPY.retryIsNotASecondCharge}</p>
               {!plane.wired.billing && (
                 <p>
                   Buying is not open on this deployment: the hosted checkout round-trip
@@ -161,6 +174,22 @@ export default async function PricingPage() {
             </p>
           </StatePanel>
         )}
+      </div>
+
+      <div className="stack">
+        <h2>What a credit is</h2>
+        <p className="prose prose-wide">{CREDIT_LEDGER_COPY.model}</p>
+        <div className="grid grid-2">
+          {CREDIT_LEDGER_FACTS.map((fact) => (
+            <article className="note-card" key={fact.title}>
+              <h3>
+                <span className="dot" aria-hidden="true" />
+                {fact.title}
+              </h3>
+              <p>{fact.body}</p>
+            </article>
+          ))}
+        </div>
       </div>
 
       <div className="stack">

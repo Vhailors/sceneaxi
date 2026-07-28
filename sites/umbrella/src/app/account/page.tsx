@@ -5,6 +5,7 @@ import {
   IDENTITY_PLANE_PENDING_NOTE,
   createUmbrellaIdentityPlane,
 } from "../../lib/identity-plane.js";
+import { CREDIT_LEDGER_FACTS, CREDIT_LEDGER_COPY } from "../../lib/site-content.js";
 import { StatePanel } from "../_components/state-panel.js";
 
 /**
@@ -14,6 +15,15 @@ import { StatePanel } from "../_components/state-panel.js";
  * page renders whatever those ports return and nothing else — no fake session, no
  * fake balance, and no client-supplied role. A role claim arriving from a client is
  * refused by the port before any adapter is consulted.
+ *
+ * Under decision D5 this surface wears the archive's technical-document treatment: the
+ * plane readout is an evidence block, each of the three phases is a designed named state
+ * carrying its own key, and credits are explained as what they are. Two things the
+ * archive assumes are deliberately absent, because the product does not have them —
+ * there is **no seat, plan, tier, or subscription** anywhere on this page, and there is
+ * no editable balance: `CreditAccount` carries no balance field because the append-only
+ * ledger is the only source of truth, so this page reads a balance and never offers to
+ * change one.
  */
 export default async function AccountPage() {
   const sessionToken = await readSessionToken();
@@ -31,6 +41,17 @@ export default async function AccountPage() {
   const phase =
     resolved.principal !== null ? "authenticated" : signedOut ? "anonymous" : "refused";
 
+  /** The plane readout, in the same evidence shape every other machine fact uses. */
+  const planeEvidence = [
+    { term: "Phase", value: phase },
+    { term: "Identity plane", value: plane.wired.identity ? "wired" : "not wired" },
+    { term: "Credits plane", value: plane.wired.credits ? "wired" : "not wired" },
+    {
+      term: "Billing plane",
+      value: `${plane.wired.billing ? "wired" : "not wired"} · mode ${plane.billingMode}`,
+    },
+  ];
+
   return (
     <div className="page">
       <div className="page-head">
@@ -44,48 +65,67 @@ export default async function AccountPage() {
         </p>
       </div>
 
+      <h2>This deployment</h2>
       <dl className="dl">
-        <dt>Phase</dt>
-        <dd>
-          <code>{phase}</code>
-        </dd>
-        <dt>Identity plane</dt>
-        <dd>
-          <code>{plane.wired.identity ? "wired" : "not wired"}</code>
-        </dd>
-        <dt>Credits plane</dt>
-        <dd>
-          <code>{plane.wired.credits ? "wired" : "not wired"}</code>
-        </dd>
-        <dt>Billing plane</dt>
-        <dd>
-          <code>
-            {plane.wired.billing ? "wired" : "not wired"} · mode {plane.billingMode}
-          </code>
-        </dd>
+        {planeEvidence.map((entry) => (
+          <div className="dl-row" key={entry.term}>
+            <dt>{entry.term}</dt>
+            <dd>
+              <code>{entry.value}</code>
+            </dd>
+          </div>
+        ))}
       </dl>
 
       {resolved.principal !== null ? (
         <>
-          <StatePanel tone="ok" title="Signed in">
+          <StatePanel
+            tone="ok"
+            title="Signed in"
+            evidence={[
+              { term: "Email", value: resolved.principal.user.email },
+              { term: "Role", value: resolved.principal.role },
+            ]}
+          >
             <p>
-              <code>{resolved.principal.user.email}</code> · role{" "}
-              <code>{resolved.principal.role}</code>
+              The role comes from the server&rsquo;s own configuration. There is no role
+              field on a user record, so <code>admin</code> is unclaimable from a client.
             </p>
           </StatePanel>
+
           <h2>Credits</h2>
           {resolved.credits === null ? (
-            <p>
-              This account is an administrator, so editor access does not depend on a
-              credit balance and none was read.
-            </p>
+            <StatePanel tone="ok" title="Administrator — no balance was read">
+              <p>
+                This account is an administrator, so editor access does not depend on a
+                credit balance and none was read. Nothing was debited to render this page.
+              </p>
+            </StatePanel>
           ) : resolved.credits.ok ? (
-            <dl className="dl">
-              <dt>Balance</dt>
-              <dd>{resolved.credits.value.balance}</dd>
-              <dt>Starter grant</dt>
-              <dd>{resolved.credits.value.starterGrantConsumed ? "used" : "available"}</dd>
-            </dl>
+            <>
+              <dl className="dl">
+                <div className="dl-row">
+                  <dt>Balance</dt>
+                  <dd>
+                    <span className="ledger-balance">{resolved.credits.value.balance}</span>{" "}
+                    credits
+                  </dd>
+                </div>
+                <div className="dl-row">
+                  <dt>Starter grant</dt>
+                  <dd>
+                    <span
+                      className={`chip chip-${
+                        resolved.credits.value.starterGrantConsumed ? "dormant" : "validated"
+                      }`}
+                    >
+                      {resolved.credits.value.starterGrantConsumed ? "used" : "available"}
+                    </span>
+                  </dd>
+                </div>
+              </dl>
+              <p className="note">{CREDIT_LEDGER_COPY.balanceIsDerived}</p>
+            </>
           ) : (
             <StatePanel
               tone="deny"
@@ -93,11 +133,17 @@ export default async function AccountPage() {
               reason={resolved.credits.reason}
             >
               <p>{resolved.credits.message}</p>
+              <p>{CREDIT_LEDGER_COPY.unreadableLedger}</p>
             </StatePanel>
           )}
+
           <h2>Editor access</h2>
           {resolved.entitlement.entitled ? (
-            <StatePanel tone="ok" title={`Entitled — ${resolved.entitlement.basis}`}>
+            <StatePanel
+              tone="ok"
+              title="Entitled"
+              evidence={[{ term: "Basis", value: resolved.entitlement.basis }]}
+            >
               <p>
                 <a href="/editor">Open the Minimum E2 editor</a>
               </p>
@@ -110,7 +156,9 @@ export default async function AccountPage() {
             >
               <p>{resolved.entitlement.message}</p>
               <p>
-                <a href="/pricing">Buy credits</a> to open the editor.
+                Entitlement is decided before a session exists, so a refused request
+                reaches no editor and no canvas. <a href="/pricing">Buy credits</a> to open
+                it.
               </p>
             </StatePanel>
           )}
@@ -142,6 +190,25 @@ export default async function AccountPage() {
           </p>
         </StatePanel>
       )}
+
+      <h2>How credits work here</h2>
+      <p className="prose prose-wide">{CREDIT_LEDGER_COPY.model}</p>
+      <div className="grid grid-2">
+        {CREDIT_LEDGER_FACTS.map((fact) => (
+          <article className="note-card" key={fact.title}>
+            <h3>
+              <span className="dot" aria-hidden="true" />
+              {fact.title}
+            </h3>
+            <p>{fact.body}</p>
+          </article>
+        ))}
+      </div>
+      <div className="actions">
+        <a className="button button-quiet" href="/pricing">
+          Credit packs and pricing
+        </a>
+      </div>
     </div>
   );
 }

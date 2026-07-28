@@ -170,7 +170,7 @@ export const PROFILE_CARDS: readonly ProfileCard[] = Object.freeze([
       "Animation sockets on the sculpt hierarchy",
       "Replay refuses on digest drift",
     ]),
-    href: "/docs",
+    href: "/profiles",
   }),
   Object.freeze({
     name: "Web experience",
@@ -182,7 +182,7 @@ export const PROFILE_CARDS: readonly ProfileCard[] = Object.freeze([
       "Pinned, versioned packages",
       "Refuses out-of-scope SaaS patterns",
     ]),
-    href: "/docs",
+    href: "/profiles",
   }),
   Object.freeze({
     name: "Kids",
@@ -418,6 +418,56 @@ export const REFUSAL_CODES: readonly RefusalCode[] = Object.freeze([
   }),
 ]);
 
+/** One durable fact about how credits behave on the account and checkout surfaces. */
+export interface CreditLedgerFact {
+  readonly title: string;
+  readonly body: string;
+}
+
+/**
+ * The credit model, in the product's own words (decision D5).
+ *
+ * The accepted archive assumes a seat subscription. SceneAxi has an **append-only credit
+ * ledger** instead, and that difference is not cosmetic: it is why a balance is derived
+ * rather than stored, why nothing on an account surface offers to edit one, and why a
+ * retry of a settled purchase adds nothing a second time. These sentences exist so the
+ * account and checkout surfaces describe that model from one place — a page that
+ * paraphrased it would be the place a seat price eventually reappears.
+ *
+ * Nothing here restates a figure. Amounts, packs, and balances come from the billing
+ * plane at render time.
+ */
+export const CREDIT_LEDGER_COPY = Object.freeze({
+  model:
+    "Credits are an append-only ledger, not a subscription and not a stored number you can edit. Every grant, purchase, and debit is one entry, and a balance is what those entries add up to — which is why an account has no balance field for anything to overwrite and why the history behind a figure can always be re-derived. There is no seat, no plan, no tier, and nothing that renews: you buy credits once and they do not expire.",
+  balanceIsDerived:
+    "This figure is the sum of the ledger's entries at the moment the page rendered, not a stored value. Nothing on this page can write to it.",
+  unreadableLedger:
+    "The ledger is the only source of truth for a balance, so a ledger this deployment cannot read refuses here rather than showing a number it could not verify. An unreadable ledger is never treated as a balance of zero.",
+  retryIsNotASecondCharge:
+    "Submitting a settled checkout again adds nothing a second time: the purchase is matched to the ledger entry it already produced, so a refreshed or resubmitted page cannot double-credit an account or double-charge it.",
+});
+
+/** The four properties an account or checkout surface may state about credits. */
+export const CREDIT_LEDGER_FACTS: readonly CreditLedgerFact[] = Object.freeze([
+  Object.freeze({
+    title: "Append-only",
+    body: "Entries are added, never edited or deleted. That is enforced in the billing code and again by a database trigger, so a balance cannot be quietly rewritten from either side.",
+  }),
+  Object.freeze({
+    title: "Bought once, not rented",
+    body: "A credit pack is a one-time purchase. Credits do not expire, nothing renews, and no part of this product is sold by the seat or by the month.",
+  }),
+  Object.freeze({
+    title: "Spent only where it is stated",
+    body: "Hosted AI generation debits credits. The engine SDK download, the CLI, the docs, the public open path, and bringing your own AI provider debit nothing at all.",
+  }),
+  Object.freeze({
+    title: "Provisioned by the deployment",
+    body: "A credit account is created by the deployment's own store. This repository ships no migration that invents one, so an absent account refuses rather than appearing with a balance nobody granted.",
+  }),
+]);
+
 /** A question and its answer on the pricing surface. */
 export interface FaqEntry {
   readonly q: string;
@@ -482,6 +532,7 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = Object.freeze([
     title: "Product",
     items: Object.freeze([
       Object.freeze({ name: "Overview", href: "/" }),
+      Object.freeze({ name: "Profiles", href: "/profiles" }),
       Object.freeze({ name: "Engine SDK", href: "/engine" }),
       Object.freeze({ name: "Pricing", href: "/pricing" }),
       Object.freeze({ name: "Account", href: "/account" }),

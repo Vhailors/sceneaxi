@@ -22,12 +22,19 @@ import { REQUIRED_SCULPT_PASSES } from "@sceneaxi/schemas";
 import { EXIT_CODE_TABLE } from "../../packages/cli/src/exit-codes.ts";
 import {
   CREATOR_SHARE_RULE,
+  FOUNDATION_COLORS,
+  FOUNDATION_CONTRAST_ROLES,
+  FOUNDATION_NEUTRAL_TOKENS,
+  FOUNDATION_STATUSES,
   LIVE_OPEN_PRESENTATION,
   SITE_CAPABILITIES,
   SITE_CAPABILITY_IDS,
   SITE_STARTER_CREDIT_ALLOTMENT,
+  meetsContrast,
 } from "@sceneaxi/site-kit";
 import {
+  CREDIT_LEDGER_COPY,
+  CREDIT_LEDGER_FACTS,
   ENGINE_NOTES,
   EXIT_CODES,
   FAMILY_CARDS,
@@ -42,6 +49,10 @@ import {
   SCULPT_PASSES,
   TERMINAL_LINES,
 } from "../../sites/umbrella/src/lib/site-content.ts";
+import {
+  UMBRELLA_RECORDED_GAPS,
+  umbrellaFoundationsCss,
+} from "../../sites/umbrella/src/lib/foundations.ts";
 
 const UMBRELLA = fileURLToPath(new URL("../../sites/umbrella/", import.meta.url));
 
@@ -149,13 +160,21 @@ describe("the marketing surface makes no claim the repository cannot stand behin
   });
 
   it("makes no shipping or general-availability claim", () => {
-    for (const claim of [
-      "shippingClaim",
-      "generally available",
-      "production ready",
-      "production-ready",
-    ]) {
+    for (const claim of ["generally available", "production ready", "production-ready"]) {
       expect(ALL_SOURCE.toLowerCase()).not.toContain(claim.toLowerCase());
+    }
+    /*
+      `shippingClaim` is a real contract field, and `/profiles` mirrors it — so banning
+      the identifier outright would ban carrying the contract forward. What must never
+      appear is the field holding anything but `false`: the conformance contract and the
+      open-path policy both type it `false`, and a surface that widened it would be
+      claiming shipping in the one vocabulary the repository reserves for refusing to.
+    */
+    const occurrences = [...ALL_SOURCE.matchAll(/shippingClaim([^,;)\n]*)/g)];
+    expect(occurrences.length).toBeGreaterThan(0);
+    for (const occurrence of occurrences) {
+      expect(occurrence[0]).toMatch(/shippingClaim(\?)?(:\s*(false|readonly false)|\b)/);
+      expect(occurrence[0]).not.toMatch(/:\s*true/);
     }
   });
 
@@ -228,7 +247,16 @@ describe("Kids is described and never linked", () => {
 
 describe("family and footer links only ever point at routes this site serves", () => {
   it("routes every footer entry to a real umbrella path", () => {
-    const routes = new Set(["/", "/open", "/engine", "/docs", "/pricing", "/account", "/editor"]);
+    const routes = new Set([
+      "/",
+      "/open",
+      "/profiles",
+      "/engine",
+      "/docs",
+      "/pricing",
+      "/account",
+      "/editor",
+    ]);
     for (const column of FOOTER_COLUMNS) {
       for (const item of column.items) {
         expect(routes.has(item.href)).toBe(true);
@@ -283,8 +311,6 @@ describe("accessibility structure", () => {
   it("hides every decorative mark, rail, and arrow from the accessibility tree", () => {
     // Each of these is a bare span with no text; unlabelled, they would be noise.
     for (const decorative of [
-      'className="hero-field" aria-hidden="true"',
-      'className="hero-veil" aria-hidden="true"',
       'className="panel-bar" aria-hidden="true"',
       'className="card-accent-rail" aria-hidden="true"',
       'className="family-mark" aria-hidden="true"',
@@ -305,47 +331,225 @@ describe("accessibility structure", () => {
     expect(DOCS).toContain('href={`#${section.id}`}');
   });
 
-  it("uses only text colours that clear 4.5:1 on every surface they sit on", () => {
-    // The three mockup greys that carry text below 4.5:1 (#6E7681, #565E68, #3F464F)
-    // survive as `--rule-*` and `--deco` only — never as a text colour. This asserts the
-    // whole declared text ramp instead of those three by name, so a token added later is
-    // checked on the day it lands.
-    const surfaces = ["#07080a", "#08090b", "#090b0e", "#0b0d10", "#0d0f12", "#12151a"];
-    const declared = new Map<string, string>();
-    for (const [, name, value] of CSS.matchAll(/(--fg(?:-\d)?):\s*(#[0-9a-f]{6});/g)) {
-      if (name !== undefined && value !== undefined) declared.set(name, value);
-    }
-    expect([...declared.keys()].sort()).toEqual(["--fg", "--fg-2", "--fg-3", "--fg-4", "--fg-5"]);
+  it("carries every text colour at the contrast role site-kit measured it for", () => {
+    /*
+      The palette is site-kit's now, and so is the measurement: `meetsContrast` is the
+      same function the design package's own gate test uses. What this asserts is the
+      *umbrella's* half — that every surface this site actually paints text on is one of
+      the published neutrals, and that the two foreground tokens it uses for words clear
+      the body floor on all of them. The recorded gap `--bg-band` is included, because it
+      is a fill this site invented and therefore one this site has to prove.
+    */
+    const hexOf = (token: string): string => {
+      const found = FOUNDATION_COLORS.find((color) => color.token === token);
+      if (found === undefined) throw new Error(`no Foundations token ${token}`);
+      return found.hex;
+    };
+    const bandGap = UMBRELLA_RECORDED_GAPS.find((gap) => gap.token === "--bg-band");
+    expect(bandGap, "the marketing band fill must stay a recorded gap").toBeDefined();
+
+    const surfaces = [
+      ...FOUNDATION_NEUTRAL_TOKENS.map(hexOf),
+      bandGap?.value ?? "#090B0E",
+    ];
 
     const failures: string[] = [];
-    for (const [name, value] of declared) {
+    for (const token of ["--fg", "--fg-2"]) {
+      expect(FOUNDATION_CONTRAST_ROLES[token]).toBe("body");
       for (const surface of surfaces) {
-        const ratio = contrast(value, surface);
-        if (ratio < 4.5) failures.push(`${name} (${value}) on ${surface}: ${ratio.toFixed(2)}`);
+        if (!meetsContrast(hexOf(token), surface, "body")) {
+          failures.push(`${token} on ${surface}`);
+        }
       }
     }
     expect(failures).toEqual([]);
+
+    // `--fg-4` is Foundations' non-text token. This site uses it for the reason label and
+    // decorative rules, never for a word that carries meaning alone.
+    expect(FOUNDATION_CONTRAST_ROLES["--fg-4"]).toBe("non-text");
   });
 });
 
-/** WCAG 2.x relative luminance, for the contrast assertion above. */
-function luminance(hex: string): number {
-  const value = Number.parseInt(hex.slice(1), 16);
-  const channel = (raw: number): number => {
-    const c = raw / 255;
-    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-  };
-  return (
-    0.2126 * channel((value >> 16) & 255) +
-    0.7152 * channel((value >> 8) & 255) +
-    0.0722 * channel(value & 255)
-  );
-}
+describe("the token layer comes from site-kit and is not duplicated here", () => {
+  it("declares no colour in the site stylesheet at all", () => {
+    // A hex in `globals.css` would be a second source for a value the design package
+    // already owns. There are none: every colour reaches this sheet as a custom property.
+    expect(CSS).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+  });
 
-function contrast(a: string, b: string): number {
-  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
-  return ((light ?? 0) + 0.05) / ((dark ?? 0) + 0.05);
-}
+  it("declares no Foundations token the shared sheet already emits", () => {
+    const declared = [...CSS.matchAll(/^\s*(--[a-z0-9-]+):/gm)].map((match) => match[1]);
+    const shared = new Set<string>(FOUNDATION_COLORS.map((color) => color.token));
+    expect(declared.filter((token) => token !== undefined && shared.has(token))).toEqual([]);
+  });
+
+  it("serves the shared sheet, and every token the stylesheet reads resolves in it", () => {
+    const sheet = umbrellaFoundationsCss();
+    expect(sheet.ok).toBe(true);
+    if (!sheet.ok) return;
+
+    const emitted = new Set(
+      [...sheet.value.matchAll(/^\s*(--[a-z0-9-]+):/gm)].map((match) => match[1]),
+    );
+    const localMetrics = new Set(["--shell", "--gutter", "--band-pad", "--masthead-h"]);
+    const used = new Set(
+      [...CSS.matchAll(/var\((--[a-z0-9-]+)\)/g)].map((match) => match[1]),
+    );
+    const unresolved = [...used].filter(
+      (token) => token !== undefined && !emitted.has(token) && !localMetrics.has(token),
+    );
+    expect(unresolved).toEqual([]);
+  });
+
+  it("projects the status vocabulary from site-kit rather than restating it", () => {
+    const sheet = umbrellaFoundationsCss();
+    expect(sheet.ok).toBe(true);
+    if (!sheet.ok) return;
+    for (const status of FOUNDATION_STATUSES) {
+      expect(sheet.value).toContain(`--status-${status.id}-fg: ${status.fg};`);
+      expect(sheet.value).toContain(`--status-${status.id}-bg: ${status.bg};`);
+      expect(sheet.value).toContain(`--status-${status.id}-line: ${status.line};`);
+    }
+    // The projection is derived, so the module holds no status hex of its own.
+    const module = read("src/lib/foundations.ts");
+    for (const status of FOUNDATION_STATUSES) {
+      expect(module).not.toContain(status.fg);
+    }
+  });
+
+  it("keeps every invented colour in one recorded-gap list", () => {
+    const module = read("src/lib/foundations.ts");
+    const literals = [...module.matchAll(/#[0-9A-Fa-f]{6}\b/g)].map((match) => match[0]);
+    expect(literals.sort()).toEqual(
+      UMBRELLA_RECORDED_GAPS.map((gap) => gap.value).sort(),
+    );
+    for (const gap of UMBRELLA_RECORDED_GAPS) {
+      expect(gap.gap.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("never redefines the two published font tokens from the framework", () => {
+    // `next/font` writes its variables onto a generated class; naming them `--font-ui` or
+    // `--font-mono` would race the shared sheet for the same token.
+    expect(LAYOUT).toContain('variable: "--font-archivo"');
+    expect(LAYOUT).toContain('variable: "--font-jetbrains"');
+    expect(LAYOUT).not.toContain('variable: "--font-mono"');
+    expect(LAYOUT).not.toContain('variable: "--font-ui"');
+  });
+
+  it("fails closed when the shared sheet refuses rather than serving an unthemed page", () => {
+    expect(LAYOUT).toContain("if (!foundations.ok)");
+    expect(LAYOUT).toContain("throw new Error(");
+  });
+});
+
+describe("the hero draws a real Sculpt Artifact", () => {
+  it("renders the composed scene rather than procedural marketing geometry", () => {
+    expect(HOME).toContain("resolveLiveOpenScene()");
+    expect(HOME).toContain("<HeroViewport");
+    // The retired gradient field and its veil are gone from both the page and the sheet.
+    for (const retired of ["hero-field", "hero-veil"]) {
+      expect(HOME).not.toContain(retired);
+      expect(CSS).not.toContain(retired);
+    }
+  });
+
+  it("goes through the tier's one renderer boundary and no other", () => {
+    const hero = read("src/app/_components/hero-viewport.tsx");
+    expect(hero).toContain("useSculptViewport");
+    expect(hero).not.toContain("createThreeSculptPresentationBackend");
+    // The hero draws; it does not author. No editor operation is reachable from it.
+    expect(hero).not.toContain("WEB_EDITOR_SESSION_OPERATIONS");
+    expect(hero).not.toContain("renderEditorState");
+  });
+
+  it("refuses in the open when the pipeline cannot compose the scene", () => {
+    expect(HOME).toContain("heroScene.ok ? (");
+    expect(HOME).toContain("reason={heroScene.reason}");
+  });
+});
+
+describe("account, credits, and refusal surfaces stay truthful", () => {
+  const ACCOUNT = read("src/app/account/page.tsx");
+  const STATE_PANEL = read("src/app/_components/state-panel.tsx");
+
+  it("describes an append-only ledger and no seat subscription anywhere", () => {
+    expect(CREDIT_LEDGER_COPY.model).toContain("append-only");
+    expect(CREDIT_LEDGER_FACTS.map((fact) => fact.title)).toContain("Append-only");
+    for (const invented of [
+      "per seat",
+      "per-seat",
+      "per month",
+      "/ month",
+      "subscribe",
+      "Subscribe",
+      "renewal date",
+      "Start a trial",
+      "free trial",
+    ]) {
+      expect(ALL_SOURCE).not.toContain(invented);
+    }
+    /*
+      "Subscription" and "tier" may still appear — but only where the text is rejecting
+      the model, never offering it. Each occurrence is checked in its own neighbourhood
+      rather than its sentence, because the rejections that matter most span two clauses
+      ("The accepted screen prices three subscription tiers. SceneAxi does not sell
+      seats"), and a per-sentence rule would fail exactly the passage doing the work.
+    */
+    const denial = /never|not a|does not|no seat|rejected|instead of|rather than/i;
+    for (const match of ALL_SOURCE.matchAll(/subscription/gi)) {
+      const at = match.index ?? 0;
+      const around = ALL_SOURCE.slice(Math.max(0, at - 220), at + 220);
+      expect(around, `"subscription" near offset ${at} does not reject the model`).toMatch(
+        denial,
+      );
+    }
+  });
+
+  it("reads a balance and never offers to write one", () => {
+    expect(ACCOUNT).toContain("resolved.credits.value.balance");
+    expect(ACCOUNT).toContain("CREDIT_LEDGER_COPY.balanceIsDerived");
+    // No form, no input, no mutating method reaches the ledger from the account surface.
+    for (const mutating of ["<form", "<input", "method=\"post\""]) {
+      expect(ACCOUNT).not.toContain(mutating);
+    }
+  });
+
+  it("refuses rather than showing a zero when the ledger cannot be read", () => {
+    expect(CREDIT_LEDGER_COPY.unreadableLedger).toContain("never treated as a balance of zero");
+    expect(ACCOUNT).toContain("CREDIT_LEDGER_COPY.unreadableLedger");
+  });
+
+  it("keeps the named refusal key visible on every refusing surface", () => {
+    // The panel prints the key unconditionally whenever one exists — no disclosure, no
+    // truncation, no "details" affordance standing between a reader and the reason.
+    expect(STATE_PANEL).toContain("reason !== undefined &&");
+    expect(STATE_PANEL).toContain('className="reason"');
+    for (const source of [
+      ACCOUNT,
+      read("src/app/editor/page.tsx"),
+      read("src/app/engine/page.tsx"),
+      read("src/app/open/page.tsx"),
+    ]) {
+      expect(source).toMatch(/reason=\{/);
+    }
+  });
+
+  it("adds no retry affordance the contracts do not define", () => {
+    expect(STATE_PANEL).toContain("no re-attempt affordance");
+    for (const invented of ["Try again", "Retry", "retry now", "Refresh to retry"]) {
+      expect(ALL_SOURCE).not.toContain(invented);
+    }
+  });
+
+  it("keeps refusal styled as a first-class state rather than a fallback", () => {
+    for (const tone of ["ok", "warn", "deny", "iso"]) {
+      expect(CSS).toContain(`.state-${tone} {`);
+    }
+    expect(CSS).toContain(".state-head {");
+    expect(CSS).toContain(".reason-label {");
+  });
+});
 
 describe("the layout is one responsive composition, not a desktop-only one", () => {
   it("declares a viewport-fluid type scale rather than fixed pixel headings", () => {
@@ -398,6 +602,7 @@ describe("the visual layer adds no behaviour the site did not already have", () 
     expect(clients).toEqual([
       "src/app/_components/site-nav.tsx",
       "src/app/_components/sculpt-viewport.tsx",
+      "src/app/_components/hero-viewport.tsx",
       "src/app/editor/_components/editor-viewport.tsx",
       "src/app/open/_components/live-viewport.tsx",
     ].sort());
