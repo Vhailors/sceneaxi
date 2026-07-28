@@ -76,6 +76,37 @@ export const DESKTOP_MODES: ReadonlyArray<
   Object.freeze({ id: "plugins", label: "PLUG", title: "Plugins", glyphRadius: "3px", glyphTransform: "none" }),
 ]);
 
+/**
+ * The archive's application menus.
+ *
+ * Held as ids rather than as labels in the renderer so each menu is a modelled
+ * control that goes through the same closed-registry accounting as every other
+ * one: this shell has no command behind any of them, so all eight are inert and
+ * name the reason a menu is inert, not the viewport's reason.
+ */
+export const DESKTOP_MENU_IDS = Object.freeze([
+  "file",
+  "edit",
+  "scene",
+  "object",
+  "sculpt",
+  "run",
+  "window",
+  "help",
+] as const);
+export type DesktopMenuId = (typeof DESKTOP_MENU_IDS)[number];
+
+const MENU_LABELS: Readonly<Record<DesktopMenuId, string>> = Object.freeze({
+  file: "File",
+  edit: "Edit",
+  scene: "Scene",
+  object: "Object",
+  sculpt: "Sculpt",
+  run: "Run",
+  window: "Window",
+  help: "Help",
+});
+
 export const DESKTOP_PROFILE_IDS = Object.freeze(["game", "web", "kids"] as const);
 export type DesktopProfileId = (typeof DESKTOP_PROFILE_IDS)[number];
 
@@ -546,6 +577,13 @@ export const PALETTE_GROUPS: ReadonlyArray<
     title: string;
     items: ReadonlyArray<
       Readonly<{
+        /**
+         * Stable row identity, and the only thing a rendered element id is
+         * derived from. Display text is not an identity: two rows may name the
+         * same CLI verb in the same mode, and a verb contains spaces, which is
+         * not permitted in an HTML id.
+         */
+        id: string;
         name: string;
         cli: string;
         shortcut: string;
@@ -559,23 +597,23 @@ export const PALETTE_GROUPS: ReadonlyArray<
   Object.freeze({
     title: "SCULPT",
     items: Object.freeze([
-      Object.freeze({ name: "Sculpt an object from a reference", cli: "sceneaxi project propose", shortcut: "⇧S", mode: "sculpt" as const, desktopCommand: "propose" }),
-      Object.freeze({ name: "Re-sculpt selection with changes", cli: "sceneaxi project propose", shortcut: "", mode: "sculpt" as const, desktopCommand: "propose" }),
+      Object.freeze({ id: "sculpt-from-reference", name: "Sculpt an object from a reference", cli: "sceneaxi project propose", shortcut: "⇧S", mode: "sculpt" as const, desktopCommand: "propose" }),
+      Object.freeze({ id: "resculpt-selection", name: "Re-sculpt selection with changes", cli: "sceneaxi project propose", shortcut: "", mode: "sculpt" as const, desktopCommand: "propose" }),
     ]),
   }),
   Object.freeze({
     title: "SCENE",
     items: Object.freeze([
-      Object.freeze({ name: "Compose instances into a scene", cli: "sceneaxi project apply", shortcut: "⇧C", mode: "compose" as const, desktopCommand: "apply" }),
-      Object.freeze({ name: "Import an external document", cli: "sceneaxi asset list", shortcut: "", mode: "build" as const, desktopCommand: null }),
+      Object.freeze({ id: "compose-instances", name: "Compose instances into a scene", cli: "sceneaxi project apply", shortcut: "⇧C", mode: "compose" as const, desktopCommand: "apply" }),
+      Object.freeze({ id: "import-document", name: "Import an external document", cli: "sceneaxi asset list", shortcut: "", mode: "build" as const, desktopCommand: null }),
     ]),
   }),
   Object.freeze({
     title: "RUN & SHIP",
     items: Object.freeze([
-      Object.freeze({ name: "Play the scene", cli: "sceneaxi project dev", shortcut: "⌘P", mode: "run" as const, desktopCommand: null }),
-      Object.freeze({ name: "Replay the last run", cli: "sceneaxi evidence list", shortcut: "", mode: "run" as const, desktopCommand: null }),
-      Object.freeze({ name: "Export a delivery handoff", cli: "sceneaxi project capture", shortcut: "", mode: "ship" as const, desktopCommand: null }),
+      Object.freeze({ id: "play-scene", name: "Play the scene", cli: "sceneaxi project dev", shortcut: "⌘P", mode: "run" as const, desktopCommand: null }),
+      Object.freeze({ id: "replay-last-run", name: "Replay the last run", cli: "sceneaxi evidence list", shortcut: "", mode: "run" as const, desktopCommand: null }),
+      Object.freeze({ id: "export-handoff", name: "Export a delivery handoff", cli: "sceneaxi project capture", shortcut: "", mode: "ship" as const, desktopCommand: null }),
     ]),
   }),
 ]);
@@ -770,6 +808,12 @@ export type DesktopVisualView = Readonly<{
   dockedColumns: ReadonlyArray<string>;
   drawerColumns: ReadonlyArray<string>;
   dockHeight: number;
+  /**
+   * The application menu bar. Every entry is inert: this surface has no command
+   * behind any of the archive's menus, and saying so with the menus' own reason
+   * is what keeps eight controls from borrowing the viewport's.
+   */
+  menus: ReadonlyArray<Readonly<{ id: DesktopMenuId; label: string; control: DesktopControl }>>;
   modes: ReadonlyArray<Readonly<{ id: DesktopModeId; label: string; title: string; active: boolean; control: DesktopControl }>>;
   profiles: ReadonlyArray<DesktopProfileChip>;
   policy: OpenPathPolicyViewModel;
@@ -915,6 +959,21 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
     dockHeight:
       state.mode === "animate" ? METRICS.dockHeightAnimate : METRICS.dockHeight,
 
+    menus: Object.freeze(
+      DESKTOP_MENU_IDS.map((id) =>
+        Object.freeze({
+          id,
+          label: MENU_LABELS[id],
+          control: control(
+            `menu-${id}`,
+            MENU_LABELS[id],
+            "inert",
+            DESKTOP_VISUAL_REFUSALS.verbNotOnDesktop,
+          ),
+        }),
+      ),
+    ),
+
     modes: Object.freeze(
       DESKTOP_MODES.map((mode) =>
         Object.freeze({
@@ -984,9 +1043,9 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
                   control:
                     item.desktopCommand !== null &&
                     Object.hasOwn(DESKTOP_COMMANDS, item.desktopCommand)
-                      ? control(`palette-${item.mode}-${item.cli}`, item.name, "view")
+                      ? control(`palette-${item.id}`, item.name, "view")
                       : control(
-                          `palette-${item.mode}-${item.cli}`,
+                          `palette-${item.id}`,
                           item.name,
                           "inert",
                           DESKTOP_VISUAL_REFUSALS.verbNotOnDesktop,

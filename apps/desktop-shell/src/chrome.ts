@@ -32,8 +32,11 @@
 
 import {
   CHANGE_REVIEW_ROWS,
+  DESKTOP_MINIMUM_WINDOW,
   DESKTOP_MODES,
   DESKTOP_MODE_IDS,
+  DESKTOP_REFUSAL_MESSAGES,
+  DESKTOP_VISUAL_REFUSALS,
   SCULPT_PASSES,
   dockTabsFor,
   kidsProfileRefusal,
@@ -46,10 +49,12 @@ import {
   AXIS,
   LINE,
   METRICS,
+  PROFILE_DOT,
   SIGNAL,
   SURFACE,
   TEXT,
   TYPE,
+  VIEWPORT_GRADIENT,
   VISUAL_SOURCE,
 } from "./visual-tokens.js";
 
@@ -183,6 +188,7 @@ function refusalLegend(view: DesktopVisualView): string {
   add(view.assistant.toggle);
   add(view.assistant.send);
   add(view.sculpt.start);
+  for (const menu of view.menus) add(menu.control);
   for (const group of view.overlay.paletteGroups) {
     for (const item of group.items) add(item.control);
   }
@@ -220,11 +226,8 @@ function titleBar(view: DesktopVisualView): string {
 <header class="title-bar">
   <div class="window-dots" aria-hidden="true"><i></i><i></i><i></i></div>
   <nav class="menu-bar" aria-label="Application menu">
-    ${["File", "Edit", "Scene", "Object", "Sculpt", "Run", "Window", "Help"]
-      .map(
-        (name) =>
-          `<button type="button" class="menu-item is-inert" aria-disabled="true" aria-describedby="refusal-${escapeHtml(view.viewport.refusal)}">${escapeHtml(name)}</button>`,
-      )
+    ${view.menus
+      .map((menu) => button(menu.control, escapeHtml(menu.label), "menu-item"))
       .join("")}
   </nav>
   <div class="profile-switch" role="group" aria-label="Profile">${profiles}</div>
@@ -580,15 +583,15 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 
 .title-bar{display:flex;align-items:center;gap:12px;padding:0 11px;background:var(--panel);border-bottom:1px solid var(--line)}
 .window-dots{display:flex;gap:7px}
-.window-dots i{width:11px;height:11px;border-radius:50%;background:#262C34}
+.window-dots i{width:11px;height:11px;border-radius:50%;background:${LINE.raised}}
 .menu-bar{display:flex;gap:1px}
 .menu-item{font-size:12px;color:var(--text-3);padding:0 8px;height:22px;border-radius:3px}
 .profile-switch{display:flex;gap:2px;padding:2px;background:var(--well);border:1px solid var(--line-control);border-radius:5px}
 .profile-chip{display:flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:3px;font-size:11px;color:var(--dim);white-space:nowrap}
 .profile-chip[aria-pressed="true"]{background:var(--hover);color:var(--text);font-weight:600}
-.profile-chip .dot{background:#2A313A}
+.profile-chip .dot{background:${PROFILE_DOT.idle}}
 .profile-chip[aria-pressed="true"] [data-profile-dot="game"]{background:var(--accent)}
-.profile-chip[aria-pressed="true"] [data-profile-dot="web"]{background:#3FB8C9}
+.profile-chip[aria-pressed="true"] [data-profile-dot="web"]{background:${PROFILE_DOT.web}}
 .profile-chip[aria-pressed="true"] [data-profile-dot="kids"]{background:var(--scene)}
 .chip-tag{font-family:var(--mono);font-size:8.5px;letter-spacing:.06em;color:var(--faint)}
 .dot{width:5px;height:5px;border-radius:50%;flex:none;display:inline-block}
@@ -642,7 +645,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .spacer{flex:1}
 .view-tools{display:flex;align-items:center;gap:3px;padding:0 8px}
 .view-tools i{width:10px;height:10px;border:1.4px solid var(--faint);border-radius:1px}
-.viewport{flex:1;position:relative;min-height:0;overflow:hidden;background:radial-gradient(130% 95% at 50% 0%, #161A20 0%, #0B0D11 48%, ${SURFACE.canvas} 100%);display:grid;place-items:center}
+.viewport{flex:1;position:relative;min-height:0;overflow:hidden;background:radial-gradient(130% 95% at 50% 0%, ${VIEWPORT_GRADIENT.inner} 0%, ${VIEWPORT_GRADIENT.mid} 48%, ${SURFACE.canvas} 100%);display:grid;place-items:center}
 .viewport-note{margin:0;font-size:11px;line-height:1.5;color:var(--dim);max-width:44ch;text-align:center}
 .viewport-note-renderer{position:absolute;left:11px;bottom:10px;display:flex;align-items:center;gap:7px;padding:5px 9px;background:${SIGNAL.infoSurface};border:1px solid ${SIGNAL.infoLine};border-radius:4px;color:${SIGNAL.info};font-size:10px;text-align:left;max-width:none}
 .axis-widget{position:absolute;right:12px;top:11px;display:flex;gap:4px}
@@ -794,9 +797,9 @@ code,kbd{font-family:var(--mono);font-size:.86em}
   .change-before,.change-arrow,.change-after{display:none}
 }
 /* Below the declared minimum the chrome refuses instead of laying out. The
-   breakpoints are DESKTOP_MINIMUM_WINDOW, so the CSS and the model refuse at
-   exactly the same size. */
-@media (max-width:899px),(max-height:599px){
+   breakpoints are interpolated from DESKTOP_MINIMUM_WINDOW, so the CSS and the
+   model refuse at exactly the same size and cannot be raised apart. */
+@media (max-width:${DESKTOP_MINIMUM_WINDOW.width - 1}px),(max-height:${DESKTOP_MINIMUM_WINDOW.height - 1}px){
   .shell{display:none}
   .window-refusal{display:block}
 }
@@ -897,13 +900,32 @@ if (shell) {
     if (bulk) bulk.hidden = n === 0;
   };
 
+  // An overlay declares aria-modal, so the rest of the document must really be
+  // out of reach: focus moves in on open, Tab wraps inside the dialog, and the
+  // control that opened it gets focus back on close.
+  let overlayReturn = null;
+
+  const overlayStops = () => {
+    const open = shell.querySelector('.overlay:not([hidden])');
+    return open === null ? [] : Array.from(open.querySelectorAll('button'));
+  };
+
   const setOverlay = (id) => {
+    const wasOpen = shell.dataset.overlay !== 'none';
+    if (id !== 'none' && !wasOpen) {
+      const active = document.activeElement;
+      overlayReturn = active !== null && typeof active.focus === 'function' ? active : null;
+    }
     shell.dataset.overlay = id;
     q('.overlay').forEach((el) => { el.hidden = el.dataset.overlay !== id; });
-    if (id !== 'none') {
-      const focusable = shell.querySelector('.overlay:not([hidden]) button');
-      if (focusable) focusable.focus();
+    if (id === 'none') {
+      const back = overlayReturn;
+      overlayReturn = null;
+      if (back !== null && shell.contains(back)) back.focus();
+      return;
     }
+    const stops = overlayStops();
+    if (stops.length > 0) stops[0].focus();
   };
 
   const setAssistant = (state) => {
@@ -953,8 +975,23 @@ if (shell) {
     }
   });
 
-  shell.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && shell.dataset.overlay !== 'none') setOverlay('none');
+  // On the document, not the shell: once focus is inside a dialog the shell is
+  // still the ancestor, but a restored or lost focus must not silently drop the
+  // Escape key, and the trap has to see every Tab.
+  document.addEventListener('keydown', (event) => {
+    if (shell.dataset.overlay === 'none') return;
+    if (event.key === 'Escape') { setOverlay('none'); return; }
+    if (event.key !== 'Tab') return;
+    const stops = overlayStops();
+    if (stops.length === 0) return;
+    const first = stops[0];
+    const last = stops[stops.length - 1];
+    const active = document.activeElement;
+    const inside = stops.indexOf(active) !== -1;
+    if (event.shiftKey ? active === first || !inside : active === last || !inside) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+    }
   });
 
   syncChanges();
@@ -980,7 +1017,15 @@ export function renderDesktopChrome(
   options: DesktopChromeOptions = {},
 ): string {
   const title = options.title ?? "SceneAxi — Engine Desktop";
-  const refusal = view.refusal;
+  // The block is emitted in every document but `view.refusal` is non-null only
+  // in the below-minimum render, so the fallback is what a browser actually
+  // shows once the viewport crosses the breakpoint. It reads the same registry
+  // and the same minimum the model refuses with, never a copy of them.
+  const refusal = view.refusal ?? {
+    code: DESKTOP_VISUAL_REFUSALS.windowBelowMinimum,
+    message: DESKTOP_REFUSAL_MESSAGES[DESKTOP_VISUAL_REFUSALS.windowBelowMinimum],
+    minimum: DESKTOP_MINIMUM_WINDOW,
+  };
 
   return `<!doctype html>
 <html lang="en" data-surface="engine-desktop">
@@ -997,8 +1042,8 @@ export function renderDesktopChrome(
 <body>
 <div class="window-refusal" role="alert">
   <h1>Window below the minimum size</h1>
-  <p>${escapeHtml(refusal?.message ?? "The editor chrome refuses below its minimum window size rather than rendering an unusable layout.")}</p>
-  <p>Minimum: <code>${escapeHtml(`${(refusal?.minimum ?? { width: 900 }).width}×${(refusal?.minimum ?? { height: 600 }).height}`)}</code> · refusal <code>${escapeHtml(refusal?.code ?? "DESKTOP_WINDOW_BELOW_MINIMUM")}</code></p>
+  <p>${escapeHtml(refusal.message)}</p>
+  <p>Minimum: <code>${escapeHtml(`${refusal.minimum.width}×${refusal.minimum.height}`)}</code> · refusal <code>${escapeHtml(refusal.code)}</code></p>
 </div>
 <div class="shell" data-mode="${escapeHtml(view.state.mode)}" data-profile="${escapeHtml(view.state.profile)}" data-assistant="${escapeHtml(view.assistant.state)}" data-overlay="${escapeHtml(view.state.overlay ?? "none")}" data-tier="${escapeHtml(view.tier)}" data-drawer-left="closed" data-drawer-inspector="closed" data-drawer-assistant="closed">
 ${titleBar(view)}

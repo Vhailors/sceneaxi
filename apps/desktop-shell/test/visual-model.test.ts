@@ -3,6 +3,7 @@ import {
   CHANGE_REVIEW_ROWS,
   DESKTOP_ASSISTANT_MODE_IDS,
   DESKTOP_COMMANDS,
+  DESKTOP_MENU_IDS,
   DESKTOP_MINIMUM_WINDOW,
   DESKTOP_MODE_IDS,
   DESKTOP_OVERLAY_IDS,
@@ -409,6 +410,7 @@ describe("desktop visual model — refusals and honesty", () => {
         view.assistant.toggle,
         view.assistant.send,
         view.sculpt.start,
+        ...view.menus.map((menu) => menu.control),
         ...view.modes.map((mode) => mode.control),
         ...view.overlay.paletteGroups.flatMap((group) =>
           group.items.map((item) => item.control),
@@ -448,12 +450,54 @@ describe("desktop visual model — refusals and honesty", () => {
       view.sculpt.start,
       view.sculpt.cancel,
       view.overlay.close,
+      ...view.menus.map((menu) => menu.control),
       ...view.modes.map((mode) => mode.control),
       ...view.dockTabs.map((tab) => tab.control),
     ];
     for (const control of controls) {
       expect(control.refusal === null).toBe(control.kind !== "inert");
       expect(control.refusalMessage === null).toBe(control.kind !== "inert");
+    }
+  });
+
+  it("gives every control a unique id that is a legal HTML id", () => {
+    // Ids are derived from declared identities, never from display text: two
+    // palette rows name the same CLI verb in the same mode, and a verb has
+    // spaces in it.
+    for (const state of [
+      createDesktopVisualState(),
+      drive([{ type: "select-profile", profile: "kids" }]),
+      drive([{ type: "select-mode", mode: "animate" }]),
+    ]) {
+      const view = desktopVisualView(state);
+      const ids = [
+        view.assistant.toggle,
+        view.assistant.send,
+        view.sculpt.start,
+        view.sculpt.cancel,
+        view.overlay.close,
+        view.changeReview.acceptAll,
+        view.changeReview.rejectAll,
+        ...view.changeReview.pending.flatMap((row) => [row.accept, row.reject]),
+        ...view.menus.map((menu) => menu.control),
+        ...view.modes.map((mode) => mode.control),
+        ...view.dockTabs.map((tab) => tab.control),
+        ...view.overlay.paletteGroups.flatMap((group) =>
+          group.items.map((item) => item.control),
+        ),
+      ].map((control) => control.id);
+      expect(ids.filter((id) => !/^[A-Za-z][\w-]*$/.test(id))).toEqual([]);
+      expect(new Set(ids).size).toBe(ids.length);
+    }
+  });
+
+  it("marks every application menu inert, with the menus' own reason", () => {
+    const view = desktopVisualView(createDesktopVisualState());
+    expect(view.menus.map((menu) => menu.id)).toEqual([...DESKTOP_MENU_IDS]);
+    for (const menu of view.menus) {
+      expect(menu.control.kind).toBe("inert");
+      // Not the viewport's reason: that one is about pixels, not commands.
+      expect(menu.control.refusal).toBe(DESKTOP_VISUAL_REFUSALS.verbNotOnDesktop);
     }
   });
 

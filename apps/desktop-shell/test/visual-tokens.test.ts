@@ -1,17 +1,20 @@
 import { describe, expect, it } from "vitest";
 import {
   ACCENT,
+  AXIS,
   DEVIATIONS,
   FOUNDATIONS_V2_ALIGNMENT,
   FOUNDATIONS_V2_COLORS,
   FOUNDATIONS_V2_FAMILIES,
   FOUNDATIONS_V2_SOURCE,
   LINE,
+  PROFILE_DOT,
   SIGNAL,
   SUPERSEDED_V1,
   SURFACE,
   TEXT,
   TYPE,
+  VIEWPORT_GRADIENT,
   VISUAL_SOURCE,
   renderDesktopChrome,
   createDesktopVisualState,
@@ -211,6 +214,12 @@ describe("foundations v2 alignment", () => {
   });
 
   it("gives a reason for every sheet token it does not carry", () => {
+    // The claim is about what *ships*, so the emitted document is checked too:
+    // a token declared absent that the stylesheet writes as a literal hex would
+    // otherwise pass the token-object check and still be on the surface.
+    const document = renderDesktopChrome(
+      desktopVisualView(createDesktopVisualState()),
+    );
     for (const row of FOUNDATIONS_V2_ALIGNMENT.filter(
       (entry) => entry.disposition === "absent",
     )) {
@@ -218,9 +227,43 @@ describe("foundations v2 alignment", () => {
       // An absent token must not be smuggled in under a different local name.
       const sheet =
         FOUNDATIONS_V2_COLORS[row.token as keyof typeof FOUNDATIONS_V2_COLORS];
-      const tokens = JSON.stringify({ SURFACE, LINE, ACCENT, SIGNAL, TEXT });
-      expect(tokens).not.toContain(sheet);
+      const tokens = JSON.stringify({
+        SURFACE,
+        LINE,
+        ACCENT,
+        SIGNAL,
+        TEXT,
+        PROFILE_DOT,
+        VIEWPORT_GRADIENT,
+      });
+      expect(tokens, row.token).not.toContain(sheet);
+      expect(document, row.token).not.toContain(sheet);
     }
+  });
+
+  it("draws every colour it ships from a token the alignment accounts for", () => {
+    // Any raw hex left in the stylesheet is a value no disposition covers, which
+    // is how a declared-absent token got shipped once already.
+    const document = renderDesktopChrome(
+      desktopVisualView(createDesktopVisualState()),
+    );
+    const declared = new Set(
+      [
+        ...Object.values(SURFACE),
+        ...Object.values(LINE),
+        ...Object.values(ACCENT),
+        ...Object.values(SIGNAL),
+        ...Object.values(TEXT),
+        ...Object.values(AXIS),
+        ...Object.values(PROFILE_DOT),
+        ...Object.values(VIEWPORT_GRADIENT),
+      ].map((value) => value.toUpperCase()),
+    );
+    const shipped = [...document.matchAll(/#[0-9A-Fa-f]{6}\b/g)].map(([hex]) =>
+      hex.toUpperCase(),
+    );
+    expect(shipped.length).toBeGreaterThan(0);
+    expect([...new Set(shipped)].filter((hex) => !declared.has(hex))).toEqual([]);
   });
 
   it("uses the sheet's two families as the first choice in each stack", () => {

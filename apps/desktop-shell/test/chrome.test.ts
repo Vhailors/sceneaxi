@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  DESKTOP_MENU_IDS,
+  DESKTOP_MINIMUM_WINDOW,
   DESKTOP_MODE_IDS,
+  DESKTOP_REFUSAL_MESSAGES,
   DESKTOP_VISUAL_REFUSALS,
   applyDesktopVisualAction,
   createDesktopVisualState,
@@ -207,6 +210,33 @@ describe("engine desktop chrome — accessibility", () => {
     }
   });
 
+  it("gives every element a unique, well-formed id", () => {
+    // An `aria-describedby` / `getElementById` reference is only meaningful if
+    // the id is unique and contains no whitespace, so the id has to come from a
+    // declared identity rather than from display text.
+    for (const [label, state] of ALL_STATES) {
+      const ids = [...render(state).matchAll(/\sid="([^"]*)"/g)].map(
+        ([, id]) => id ?? "",
+      );
+      expect(ids.length, label).toBeGreaterThan(0);
+      expect(ids.filter((id) => /[\s"']/.test(id) || id.length === 0), label).toEqual([]);
+      expect(new Set(ids).size, label).toBe(ids.length);
+    }
+  });
+
+  it("gives the menu bar its own reason, not the viewport's", () => {
+    const html = render();
+    for (const id of DESKTOP_MENU_IDS) {
+      expect(html).toContain(
+        `id="menu-${id}" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.verbNotOnDesktop}"`,
+      );
+    }
+    // The viewport's reason describes the viewport; a menu must not borrow it.
+    expect(html).not.toContain(
+      `id="menu-file" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.noPresentationRuntime}"`,
+    );
+  });
+
   it("gives every tablist a selected tab and roving tabindex", () => {
     const html = render();
     expect(html).toContain('role="tablist"');
@@ -239,6 +269,21 @@ describe("engine desktop chrome — accessibility", () => {
     );
   });
 
+  it("backs aria-modal with a real focus trap and a focus restore", () => {
+    const html = render(createDesktopVisualState({ overlay: "palette" }));
+    expect(html).toContain('aria-modal="true"');
+    const script = /<script>(.*)<\/script>/s.exec(html)?.[1] ?? "";
+    // aria-modal tells assistive tech the rest of the document is inert, so Tab
+    // must not walk out of the dialog and the opener must get focus back.
+    expect(script).toContain("event.key !== 'Tab'");
+    expect(script).toContain("event.preventDefault()");
+    expect(script).toContain("overlayReturn");
+    // Escape still closes, and the handler is on the document so a lost focus
+    // cannot swallow it.
+    expect(script).toContain("document.addEventListener('keydown'");
+    expect(script).toContain("event.key === 'Escape'");
+  });
+
   it("respects prefers-reduced-motion", () => {
     const html = render();
     expect(html).toContain("@media (prefers-reduced-motion:reduce)");
@@ -264,8 +309,12 @@ describe("engine desktop chrome — responsive strategy", () => {
     const html = render();
     expect(html).toContain("@media (max-width:1439px)");
     expect(html).toContain("@media (max-width:1179px)");
-    // The refusal breakpoint is the model's own minimum, not a round number.
-    expect(html).toContain("@media (max-width:899px),(max-height:599px)");
+    // The refusal breakpoint is derived from the model's own minimum, so raising
+    // DESKTOP_MINIMUM_WINDOW moves the stylesheet with it rather than leaving a
+    // literal behind.
+    expect(html).toContain(
+      `@media (max-width:${DESKTOP_MINIMUM_WINDOW.width - 1}px),(max-height:${DESKTOP_MINIMUM_WINDOW.height - 1}px)`,
+    );
   });
 
   it("gives every undocked column an opener", () => {
@@ -329,9 +378,24 @@ describe("engine desktop chrome — honesty", () => {
   });
 
   it("renders the window refusal in the same document, at the same size", () => {
+    const minimum = `${DESKTOP_MINIMUM_WINDOW.width}×${DESKTOP_MINIMUM_WINDOW.height}`;
     const html = render(createDesktopVisualState({ window: { width: 800, height: 560 } }));
     expect(html).toContain("Window below the minimum size");
-    expect(html).toContain("900×600");
+    expect(html).toContain(minimum);
+    expect(html).toContain(DESKTOP_VISUAL_REFUSALS.windowBelowMinimum);
+  });
+
+  it("prints the model's own minimum and sentence in every render, not a copy", () => {
+    // The block is always emitted but the view's refusal is null above the
+    // breakpoint, so the common case is exactly where a hardcoded fallback
+    // would go stale against DESKTOP_MINIMUM_WINDOW.
+    const html = render();
+    expect(html).toContain(
+      `${DESKTOP_MINIMUM_WINDOW.width}×${DESKTOP_MINIMUM_WINDOW.height}`,
+    );
+    expect(html).toContain(
+      DESKTOP_REFUSAL_MESSAGES[DESKTOP_VISUAL_REFUSALS.windowBelowMinimum],
+    );
     expect(html).toContain(DESKTOP_VISUAL_REFUSALS.windowBelowMinimum);
   });
 

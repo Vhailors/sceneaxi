@@ -465,7 +465,13 @@ describe("desktop shell commands", () => {
 
     it("is a projection, not a session: it never touches a document", () => {
       const before = readFileSync(join(cwd, "scene.json"), "utf8");
-      runDesktopShell(["chrome", "--cwd", cwd]);
+      // `chrome` takes no --cwd, because it resolves nothing from disk. What
+      // proves that is the session factory: reaching it at all is the failure.
+      const r = runDesktopShell(["chrome"], () => {
+        throw new Error("chrome opened a session");
+      });
+      expect(r.exitCode).toBe(DesktopExit.OK);
+      expect(r.stdout.startsWith("<!doctype html>")).toBe(true);
       expect(readFileSync(join(cwd, "scene.json"), "utf8")).toBe(before);
     });
   });

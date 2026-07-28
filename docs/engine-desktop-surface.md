@@ -72,16 +72,19 @@ opinion about them.
 
 | Disposition | Tokens | Meaning |
 |---|---|---|
-| **carried** (20) | `--bg-base`, `--bg-panel`, `--bg-raised`, `--bg-control`, `--bg-field`, `--bg-row`, `--line-soft`, `--line`, `--fg`, `--fg-2`, `--accent`, `--accent-hi`, `--ok`, `--danger`, `--info`, `--axis-x`, `--axis-y`, `--axis-z`, `--kids`, and the `Archivo`/`JetBrains Mono` families | the sheet's hex, verbatim |
+| **carried** (21) | `--bg-base`, `--bg-panel`, `--bg-raised`, `--bg-control`, `--bg-field`, `--bg-row`, `--line-soft`, `--line`, `--fg`, `--fg-2`, `--accent`, `--accent-hi`, `--ok`, `--danger`, `--info`, `--axis-x`, `--axis-y`, `--axis-z`, `--kids`, `--store-web`, and the `Archivo`/`JetBrains Mono` families | the sheet's hex, verbatim |
 | **raised** (2) | `--fg-4` `#3F464F` → `#7D8694`; `--stale` `#7A6448` → `#A08663` | below the 4.5:1 text floor on this surface's near-black chrome; each names its `DEVIATIONS` row |
-| **absent** (3) | `--line-strong`, `--store-game`, `--store-web` | named with a reason, not silently unused (see below) |
+| **absent** (2) | `--line-strong`, `--store-game` | named with a reason, not silently unused (see below) |
 
 `--line-strong` `#2C323B` is the one place the two archive members genuinely
 disagree: the Foundations sheet prints three line weights, but the implemented
 member `Engine Desktop.dc.html` draws its own six-step line scale and does not
 use `#2C323B` anywhere in the file. For a value the accepted surface itself
-specifies, that member wins. `--store-game` / `--store-web` are storefront
-accents; this app draws no storefront and no commerce.
+specifies, that member wins. `--store-game` is a storefront accent this app never
+paints — the Game profile chip is drawn with the accent instead. `--store-web`
+*is* painted here, on the Website profile chip, so it is carried as
+`PROFILE_DOT.web` rather than declared absent: a token this surface ships cannot
+be accounted for as unused.
 
 ### What stops the two copies drifting
 
@@ -92,9 +95,11 @@ transcription in `pnpm gate`. On this side that is
 accounted for **in full** (every token has exactly one disposition, so a token
 added upstream cannot be silently ignored), that every *carried* token equals the
 sheet hex exactly, that a *raised* token is only raised where the sheet value
-measurably fails the floor, that an *absent* token gives a reason and does not
-reappear under a different local name, and that the accent, near-black, and both
-families survive into the actually-emitted document. Editing a hex on either side
+measurably fails the floor, that an *absent* token gives a reason, does not
+reappear under a different local name, **and does not appear in the emitted
+document**, that every hex the document ships comes from a token the table
+accounts for, and that the accent, near-black, and both families survive into the
+actually-emitted document. Editing a hex on either side
 without the other is a failing test.
 
 If the matrix ever permits `@sceneaxi/site-kit` here, the thing to delete is
@@ -165,7 +170,7 @@ so it cannot write a document by accident, and `test/app.test.ts` proves a
 | `DESKTOP_NO_PRESENTATION_RUNTIME` | the viewport: no renderer is mounted, so no pixels |
 | `DESKTOP_NO_KERNEL_SESSION` | `run` mode: no session, so no tick, frame, or body |
 | `DESKTOP_NO_DOCUMENT_BOUND` | any control that would author something |
-| `DESKTOP_VERB_NOT_ON_THIS_SURFACE` | a palette row naming a CLI verb this shell has no command for |
+| `DESKTOP_VERB_NOT_ON_THIS_SURFACE` | a palette row naming a CLI verb this shell has no command for, and every application-menu button — this surface has no command behind any of the archive's menus |
 | `DESKTOP_WINDOW_BELOW_MINIMUM` | the window is smaller than 900×600 |
 
 ### Parity with the CLI
@@ -204,9 +209,13 @@ Two rules keep this honest:
   undocked drawer also starts closed rather than covering the panel it undocked
   from.
 - **The CSS breakpoints are the model's own minimum.** `@media (max-width:899px),
-  (max-height:599px)` is `DESKTOP_MINIMUM_WINDOW`, so the stylesheet and
-  `resolveWindowTier()` refuse at exactly the same size. Below it the editor is
-  replaced by a named refusal, not by an unusable layout.
+  (max-height:599px)` is not a literal in the stylesheet: it is interpolated from
+  `DESKTOP_MINIMUM_WINDOW`, as is the refusal block's printed `900×600` and its
+  sentence, which come from `DESKTOP_MINIMUM_WINDOW` and
+  `DESKTOP_REFUSAL_MESSAGES`. Raising the minimum therefore moves the stylesheet,
+  the printed size, and `resolveWindowTier()` together instead of leaving two of
+  the three stale. Below it the editor is replaced by a named refusal, not by an
+  unusable layout.
 
 ## Accessibility
 
@@ -220,6 +229,18 @@ Two rules keep this honest:
   not just "dimmed". Every referenced reason exists in the same document.
 - **Roving tabindex** on both tablists, with `aria-selected` on the active tab
   and `aria-pressed` on the active mode and profile.
+- **`aria-modal` is backed by a real trap.** An overlay declares
+  `role="dialog" aria-modal="true"`, which tells assistive tech the rest of the
+  document is inert, so keyboard focus must agree: opening one moves focus into
+  the dialog, `Tab` and `Shift+Tab` wrap inside it, and closing it — by button or
+  by `Escape` — returns focus to the control that opened it. The `keydown`
+  handler is on the document rather than the shell so a lost focus cannot swallow
+  `Escape`.
+- **Element ids are unique and well-formed**, because a control id is derived
+  from a declared identity (`PALETTE_GROUPS[].id`, `DESKTOP_MENU_IDS`) and never
+  from display text — two palette rows name the same CLI verb in the same mode,
+  and a verb contains spaces. An `aria-describedby` reference is only meaningful
+  if it resolves to exactly one element.
 - **Reduced motion**: `@media (prefers-reduced-motion:reduce)` collapses every
   animation and removes the sculpt sweep entirely.
 - **Contrast**: every text token clears 4.5:1 against every chrome surface, and
@@ -333,8 +354,12 @@ plainly that the viewport draws no pixels. The document also carries
     style, or image was fetched, so the Foundations families are named and never
     downloaded.
   - `<meta name="sceneaxi-pixels-drawn" content="false">` unchanged, and the
-    inert menu buttons still carry their `DESKTOP_NO_PRESENTATION_RUNTIME`
-    description in the accessibility tree.
+    inert menu buttons still carry an `aria-describedby` refusal description in
+    the accessibility tree. (The code behind that description was
+    `DESKTOP_NO_PRESENTATION_RUNTIME` when this was recorded and is now
+    `DESKTOP_VERB_NOT_ON_THIS_SURFACE`, since the viewport's reason is about
+    pixels and a menu's is about commands; the node gates assert the current
+    code, and the browser observation above is left as what was seen.)
 
 - **Not claimed, and not claimable here**: an installer, a packaged desktop
   application, real renderer finality, live commerce, any file size or hash, and

@@ -209,6 +209,28 @@ export const SIGNAL = Object.freeze({
 export const AXIS = Object.freeze({ x: "#E0564F", y: "#7BC44C", z: "#4C8BE0" });
 
 /**
+ * Profile-switch chip dots.
+ *
+ * Named here rather than written as literals in the stylesheet so every colour
+ * the document ships is accounted for by `FOUNDATIONS_V2_ALIGNMENT`: `web` *is*
+ * the sheet's `--store-web`, and a token this surface actually paints cannot be
+ * declared absent. Game and Kids reuse `ACCENT.base` and `SIGNAL.scene` through
+ * their existing custom properties, so they are not restated.
+ */
+export const PROFILE_DOT = Object.freeze({
+  /** Unselected chip. Archive value. */
+  idle: "#2A313A",
+  /** Website profile — Foundations v2 `--store-web`. */
+  web: "#3FB8C9",
+});
+
+/** The viewport's radial base gradient, from the archive. Non-text. */
+export const VIEWPORT_GRADIENT = Object.freeze({
+  inner: "#161A20",
+  mid: "#0B0D11",
+});
+
+/**
  * Text scale. Every value here clears 4.5:1 against every `SURFACE` value.
  *
  * `dim` and `faint` are where the deviation lives: the archive spends four
@@ -347,13 +369,10 @@ export const FOUNDATIONS_V2_ALIGNMENT = Object.freeze([
   Object.freeze({
     token: "--store-game",
     disposition: "absent",
-    reason: "storefront accent; this app draws no storefront and no commerce",
+    reason:
+      "storefront accent; this app draws no storefront and no commerce, and the Game profile chip is drawn with the accent rather than this value",
   }),
-  Object.freeze({
-    token: "--store-web",
-    disposition: "absent",
-    reason: "storefront / web-editor accent; neither surface is this app",
-  }),
+  Object.freeze({ token: "--store-web", disposition: "carried", local: "PROFILE_DOT.web", value: PROFILE_DOT.web }),
 ]);
 
 /** Typography. Archive families first; no remote font is ever requested. */
