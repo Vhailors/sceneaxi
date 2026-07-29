@@ -825,14 +825,25 @@ describe("the visual layer adds no behaviour the site did not already have", () 
     /**
      * Every module a source pulls in for its *value*; `import type` is erased and skipped.
      *
-     * A re-export (`export … from "…"`) loads the target exactly like an import does, so
-     * both keywords are matched — matching only `import` would let a barrel-style module
-     * carry a whole graph past this walk.
+     * A re-export (`export … from "…"`) and a bare side-effect `import "…"` both load the
+     * target exactly like a plain import does, so all three forms are matched — matching
+     * only `import … from` would let a barrel-style or side-effecting module carry a whole
+     * graph past this walk. One extractor serves both walks below so they cannot disagree
+     * about what reaches a bundle.
      */
+    const valueSpecifiers = (source: string): readonly string[] =>
+      [
+        ...source.matchAll(
+          /\b(?:import|export)\s+(type\s+)?[^"';]*?from\s+"([^"]+)"|\bimport\s+"([^"]+)"/g,
+        ),
+      ].flatMap(([, typeKeyword, fromSpecifier, sideEffectSpecifier]) => {
+        if (typeKeyword !== undefined) return [];
+        const specifier = fromSpecifier ?? sideEffectSpecifier;
+        return specifier === undefined ? [] : [specifier];
+      });
+
     const valueImports = (relativePath: string): readonly string[] =>
-      [...read(relativePath).matchAll(/\b(?:import|export)\s+(type\s+)?[^"';]*?from\s+"([^"]+)"/g)]
-        .filter(([, typeKeyword]) => typeKeyword === undefined)
-        .flatMap(([, , specifier]) => (specifier === undefined ? [] : [specifier]));
+      valueSpecifiers(read(relativePath));
 
     const clientGraph = new Set(
       UMBRELLA_SOURCES.filter((relativePath) => read(relativePath).startsWith('"use client"')),
@@ -878,14 +889,19 @@ describe("the visual layer adds no behaviour the site did not already have", () 
     const unresolved: string[] = [];
     for (const entry of siteKitGraph) {
       const source = readFileSync(join(siteKitSrc, entry), "utf8");
-      if (source.includes('from "node:')) notBrowserSafe.push(`${entry} -> node:`);
-      if (source.includes('from "@sceneaxi/site-kit"')) {
-        notBrowserSafe.push(`${entry} -> @sceneaxi/site-kit`);
-      }
-      for (const [, typeKeyword, specifier] of source.matchAll(
-        /\b(?:import|export)\s+(type\s+)?[^"';]*?from\s+"(\.[^"]+)"/g,
-      )) {
-        if (typeKeyword !== undefined || specifier === undefined) continue;
+      for (const specifier of valueSpecifiers(source)) {
+        if (!specifier.startsWith(".")) {
+          // A bare specifier is compiled into the same bundle as the entry but cannot be
+          // walked from this directory, so it is safe only when it is itself a reviewed
+          // browser-safe entry. That is what catches `node:` and every Node-bearing
+          // workspace package — `@sceneaxi/authoring-core` is a declared site-kit
+          // dependency whose value imports are the live idiom one directory over, and the
+          // barrel re-exports out of `node:fs`/`node:crypto`/`node:os`.
+          if (!browserSafeValueImports.has(specifier)) {
+            notBrowserSafe.push(`${entry} -> ${specifier}`);
+          }
+          continue;
+        }
         const target = `${specifier.replace(/^\.\//, "").replace(/\.js$/, "")}.ts`;
         if (existsSync(join(siteKitSrc, target))) siteKitGraph.add(target);
         else unresolved.push(`${entry} -> ${specifier}`);
