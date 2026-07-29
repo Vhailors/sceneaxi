@@ -371,4 +371,5 @@ refuses if the registry and policy profile sets differ. The projection carries *
 cell**: every cell is computed by `profileCapabilityStatus()`, whose branches
 make `proven` unreachable for a refuse-only profile, for a profile that has not claimed
 conformance, for an operation outside the row's own list, and for a row with no committed
-evidence. Adversarial inputs for all four are in that test.
+evidence. Adversarial inputs for all four are in
+`tests/sites/umbrella-profile-matrix.test.ts`.
