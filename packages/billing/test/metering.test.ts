@@ -352,6 +352,44 @@ describe("meterCredits", () => {
     expect(store.entryCount("acc_mate")).toBe(2);
   });
 
+  it("refuses a commit answer that is not this debit, however well-formed", async () => {
+    // The port is structural, so a store that never went through
+    // `createCreditStore` can answer with a schema-valid row belonging to some
+    // other request. Trusting its shape alone would report a foreign entry as
+    // this debit — and the balance derived beside it — instead of naming a
+    // commit that could not be confirmed.
+    const state = funded();
+    const backing = storeFor(state);
+    const store = Object.freeze({
+      ...backing,
+      appendOrReplayEntry() {
+        return {
+          entry: {
+            ...state.entries[0],
+            entryId: "ent_someone_else",
+            idempotencyKey: "usage:someone-else",
+          },
+          replayed: true,
+        };
+      },
+    });
+
+    const result = await meterCredits({
+      principal: principal(),
+      admin,
+      store,
+      state,
+      amount: 10,
+      reason: "hosted assistant turn",
+      idempotencyKey: "usage:turn_01",
+      now: NOW,
+    } as never);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.storeFailed);
+    expect(backing.entryCount(ACCOUNT.accountId)).toBe(state.entries.length);
+  });
+
   it("refuses an unknown or stale persisted account", async () => {
     const state = funded();
     const missing = await meterCredits({
@@ -383,5 +421,85 @@ describe("meterCredits", () => {
     if (!stale.ok) {
       expect(stale.reason).toBe(BILLING_REFUSE_REASONS.ledgerStateInvalid);
     }
+  });
+
+  /**
+   * A lost response is the operational fault that makes a stale-state refusal
+   * wrong (sceneaxi#128): the debit committed, the answer never arrived, and the
+   * caller can only retry with the state it still holds — the state from *before*
+   * its own entry. Refusing that as stale would strand the caller, since the
+   * money is already gone and no retry it can construct would ever succeed.
+   */
+  describe("a debit whose first response was lost", () => {
+    const lostRequest = (state: LedgerState, store: ReturnType<typeof storeFor>) =>
+      ({
+        principal: principal(),
+        admin,
+        store,
+        state,
+        amount: 10,
+        reason: "hosted assistant turn",
+        idempotencyKey: "usage:turn_01",
+        now: NOW,
+      }) as const;
+
+    it("replays on retry and appends exactly one entry", async () => {
+      const state = funded();
+      const store = storeFor(state);
+
+      const first = await meterCredits(lostRequest(state, store));
+      expect(first.ok).toBe(true);
+      if (!first.ok) return;
+      expect(first.value.replayed).toBe(false);
+
+      // The caller never saw that result, so it retries with the pre-debit state.
+      const retry = await meterCredits(lostRequest(state, store));
+      expect(retry.ok).toBe(true);
+      if (!retry.ok) return;
+      expect(retry.value.metered).toBe(true);
+      expect(retry.value.replayed).toBe(true);
+      expect(retry.value.balance).toBe(90);
+      expect(retry.value.entry).toEqual(first.value.entry);
+      expect(retry.value.state.entries).toEqual(first.value.state.entries);
+      // The funding grant plus one debit. A second debit would be the bug.
+      expect(store.entryCount(ACCOUNT.accountId)).toBe(2);
+    });
+
+    it("does not reconcile a retry that asks for different money", async () => {
+      const state = funded();
+      const store = storeFor(state);
+      const first = await meterCredits(lostRequest(state, store));
+      expect(first.ok).toBe(true);
+
+      // Same key, larger amount. The committed entry is not what this request
+      // describes, so it is a conflict and stays a refusal.
+      const mutated = await meterCredits({
+        ...lostRequest(state, store),
+        amount: 25,
+      });
+      expect(mutated.ok).toBe(false);
+      if (mutated.ok) return;
+      expect(mutated.reason).toBe(BILLING_REFUSE_REASONS.ledgerStateInvalid);
+      expect(store.entryCount(ACCOUNT.accountId)).toBe(2);
+    });
+
+    it("still refuses a state made stale by somebody else's entry", async () => {
+      const state = funded();
+      const store = storeFor(state);
+
+      // A different debit committed against this account, so the caller's state
+      // is stale for a reason that is not its own lost response.
+      const other = await meterCredits({
+        ...lostRequest(state, store),
+        idempotencyKey: "usage:turn_00",
+      });
+      expect(other.ok).toBe(true);
+
+      const retry = await meterCredits(lostRequest(state, store));
+      expect(retry.ok).toBe(false);
+      if (retry.ok) return;
+      expect(retry.reason).toBe(BILLING_REFUSE_REASONS.ledgerStateInvalid);
+      expect(store.entryCount(ACCOUNT.accountId)).toBe(2);
+    });
   });
 });

@@ -340,10 +340,55 @@ is required, the parser reads `data.object.id` from the verified body and compar
 before anything else about the settlement, and carries it onto the completion as
 `checkoutSessionId` — so evidence from another identically-priced paid session refuses
 `STRIPE_SETTLEMENT_SESSION_MISMATCH` and an event that names no session refuses
-`STRIPE_CHECKOUT_SESSION_ID_MISSING`. Persisted, atomic money settlement is #128 and is not
-in this repo yet. Ownership map: `docs/auth-credits.md`; regressions live in
+`STRIPE_CHECKOUT_SESSION_ID_MISSING`. `MoneySplitRecord` stays pure and unpersisted — #128
+delivered the **credits** commit boundary below, and no store operation writes a money
+split, so a deployment that wants those rows durable owns that write. Ownership map:
+`docs/auth-credits.md`; regressions live in
 `packages/billing/test/revenue-share.test.ts`, `packages/billing/test/stripe-checkout.test.ts`,
 and `tests/e2e/auth-credits-refuse-matrix.test.ts`.
+
+The credit **commit** boundary is `createCreditStore()` in
+`packages/billing/src/store.ts` (sceneaxi#128), and every `CreditStore` — the
+in-memory reference one included — is built through it, so build a Neon adapter
+the same way rather than implementing the port directly. It exists because the
+pure layer guarantees the arithmetic and the refusals but owns no commit, and
+because a rule enforced in one adapter is not enforced. Three invariants it holds
+for an adapter that has never heard of them: `sale:`-namespaced keys are refused
+by `appendEntry` and reach persistence only through `settleCreditsSale`, which
+commits both legs and the `CreatorShareRecord` together or not at all;
+`appendOrReplayEntry` must answer for the entry it was asked about (a replay
+matches the requested payload, a fresh append is exactly what was handed over);
+and a settlement's legs must carry that sale's own `saleEntryKeys()`. That
+append-or-replay is what a lost response needs — it appends or hands back the row
+already committed under the key — and `meterCredits` builds on it by reconciling
+a stale supplied state against persistence *before* refusing, so a debit whose
+first answer never arrived replays instead of stranding the caller. The webhook's
+decision is not a commit either: `persistCheckoutCompletedGrant()` is the
+boundary that reports success only after the grant is in the ledger, and it, not
+`applyCheckoutCompletedGrant()`, is where the documented flow ends. Contract and
+refusal ordering: `docs/auth-credits.md`; regressions live in
+`packages/billing/test/store-boundary.test.ts` (written against a hand-rolled
+adapter on purpose), `packages/billing/test/metering.test.ts`, and
+`packages/billing/test/stripe-checkout.test.ts`. That boundary is the **only**
+way a webhook grant commits anywhere (captain decision D4): `sites/umbrella`
+goes through it too, so no second commit path exists for a paid event, and the
+three-way outcome split it sits inside — acknowledged no-op `200`, deployment
+fault `503`, request fault `400`, with `ignored: false` meaning credits are in
+the ledger — is unchanged. A commit the boundary cannot confirm refuses
+`CREDIT_STORE_FAILED` and is retried; it is never acknowledged. Extend
+`tests/sites/identity-plane-wiring.test.ts` when touching that path.
+
+Live-mode authorization has exactly one configuration source (captain decision
+D5): `SCENEAXI_STRIPE_LIVE_AUTHORIZED`, resolved only by
+`resolveLiveModeAuthorization()` in `packages/billing/src/live-mode.ts`, whose
+contract is owned by `docs/auth-credits.md`. Its affirmative names the
+authorizer and the day, an alias name refuses by its presence alone, the
+injected audit sink is a precondition rather than a side effect, and the
+resolved value is runtime-witnessed so no look-alike authorizes anything.
+Nothing else — mode, price, `NODE_ENV`, key prefix — may ever become an input.
+**It enables nothing:** no shipped call site passes its result, so `live` still
+refuses at both ends, and live activation remains the separate ADR 0021 captain
+decision.
 
 First-class plugins follow `docs/plugins.md` and ADR 0005: manifests may claim
 only IDs from the versioned public capability registry; unknown IDs and

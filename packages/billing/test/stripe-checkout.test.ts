@@ -14,14 +14,19 @@ import {
   BILLING_REFUSE_REASONS,
   CHECKOUT_METADATA_KEYS,
   STRIPE_EVENT_IDEMPOTENCY_PREFIX,
+  STRIPE_LIVE_MODE_ENV_VAR,
   STRIPE_SIGNATURE_TOLERANCE_SECONDS,
   applyCheckoutCompletedGrant,
   checkoutPurposeSettlesElsewhere,
   createCheckoutSessionIntent,
+  createInMemoryCreditStore,
   createLedgerState,
+  liveModeAuthorizedFlag,
   loadCreditPackCatalog,
   lookupCreditPack,
   parseCheckoutCompletedEvent,
+  persistCheckoutCompletedGrant,
+  resolveLiveModeAuthorization,
   signStripeWebhookPayload,
   verifyStripeWebhookSignature,
 } from "@sceneaxi/billing";
@@ -886,24 +891,25 @@ describe("parseCheckoutCompletedEvent", () => {
   });
 });
 
-describe("applyCheckoutCompletedGrant", () => {
-  const parsed = (overrides: Record<string, unknown> = {}) => {
-    const intent = checkoutIntent(
-      overrides["livemode"] === true
-        ? { mode: "live", liveModeAuthorized: true }
-        : overrides["packId"] === undefined
-          ? {}
-          : { packId: overrides["packId"] },
-    );
-    const result = parseCheckoutCompletedEvent({
-      verified: verified(eventBody(overrides, intent)),
-      intent,
-      settlement: settlementFor(intent),
-    });
-    if (!result.ok) throw new Error(`fixture parse failed: ${result.message}`);
-    return result.value;
-  };
+/** A completion whose provenance is real: parsed from a signed fixture body. */
+const parsed = (overrides: Record<string, unknown> = {}) => {
+  const intent = checkoutIntent(
+    overrides["livemode"] === true
+      ? { mode: "live", liveModeAuthorized: true }
+      : overrides["packId"] === undefined
+        ? {}
+        : { packId: overrides["packId"] },
+  );
+  const result = parseCheckoutCompletedEvent({
+    verified: verified(eventBody(overrides, intent)),
+    intent,
+    settlement: settlementFor(intent),
+  });
+  if (!result.ok) throw new Error(`fixture parse failed: ${result.message}`);
+  return result.value;
+};
 
+describe("applyCheckoutCompletedGrant", () => {
   it("grants exactly the pack's credits once", () => {
     const completion = parsed();
     const result = applyCheckoutCompletedGrant({
@@ -1100,6 +1106,158 @@ describe("applyCheckoutCompletedGrant", () => {
   });
 });
 
+/**
+ * The persisted grant boundary (sceneaxi#128).
+ *
+ * `applyCheckoutCompletedGrant` decides and cannot commit. An endpoint that
+ * answered Stripe 2xx on its result alone would claim a purchase was honored
+ * against a ledger that never changed, and Stripe would never redeliver it.
+ */
+describe("persistCheckoutCompletedGrant", () => {
+  const storeWithAccount = () =>
+    createInMemoryCreditStore({ accounts: [ACCOUNT] });
+
+  it("reports success only after the grant is in the ledger", async () => {
+    const store = storeWithAccount();
+    const completion = parsed();
+    const result = await persistCheckoutCompletedGrant({
+      store,
+      state: createLedgerState(ACCOUNT),
+      completion,
+      now: NOW,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.replayed).toBe(false);
+    expect(result.value.state.balance).toBe(completion.credits);
+
+    const persisted = await store.listEntries(ACCOUNT.accountId);
+    expect(persisted.length).toBe(1);
+    expect(persisted[0]?.idempotencyKey).toBe(
+      `${STRIPE_EVENT_IDEMPOTENCY_PREFIX}evt_test_01`,
+    );
+    expect(persisted[0]?.delta).toBe(completion.credits);
+  });
+
+  it("names a store failure and grants nothing", async () => {
+    const backing = storeWithAccount();
+    let attempts = 0;
+    const store = Object.freeze({
+      ...backing,
+      appendOrReplayEntry() {
+        attempts += 1;
+        throw new Error("transaction rolled back");
+      },
+    });
+
+    const result = await persistCheckoutCompletedGrant({
+      store,
+      state: createLedgerState(ACCOUNT),
+      completion: parsed(),
+      now: NOW,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.storeFailed);
+    expect(attempts).toBe(1);
+    expect(backing.entryCount(ACCOUNT.accountId)).toBe(0);
+  });
+
+  it("refuses an answer that is not this grant, however well-formed", async () => {
+    // A deployment may implement `CreditStore` directly and never pass through
+    // `createCreditStore`. If a commit trusted the shape of its answer alone, a
+    // store answering `replayed: true` with somebody else's schema-valid row
+    // would have this endpoint tell Stripe `ignored: false` — "the credits are
+    // in the ledger" — for a grant that never committed.
+    const backing = storeWithAccount();
+    const foreign = Object.freeze({
+      schemaVersion: 1 as const,
+      kind: "sceneaxi.credit-ledger-entry" as const,
+      entryId: "ent_someone_else",
+      accountId: "acct_someone_else",
+      sequence: 1,
+      movement: "grant" as const,
+      delta: 5,
+      balanceAfter: 5,
+      reason: "an entry this request never asked for",
+      idempotencyKey: "stripe-event:evt_other",
+      occurredAt: new Date(NOW).toISOString(),
+    });
+    const store = Object.freeze({
+      ...backing,
+      appendOrReplayEntry() {
+        return { entry: foreign, replayed: true };
+      },
+    });
+
+    const result = await persistCheckoutCompletedGrant({
+      store,
+      state: createLedgerState(ACCOUNT),
+      completion: parsed(),
+      now: NOW,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.storeFailed);
+    expect(backing.entryCount(ACCOUNT.accountId)).toBe(0);
+  });
+
+  it("replays a redelivery whose first response was lost, granting once", async () => {
+    const store = storeWithAccount();
+    const completion = parsed();
+    const request = {
+      store,
+      state: createLedgerState(ACCOUNT),
+      completion,
+      now: NOW,
+    };
+
+    const first = await persistCheckoutCompletedGrant(request);
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    expect(first.value.replayed).toBe(false);
+
+    // Stripe redelivers; this caller's ledger read still predates its own commit,
+    // so the pure path would append again and only the store can tell it not to.
+    const redelivery = await persistCheckoutCompletedGrant({
+      ...request,
+      now: NOW + 5_000,
+    });
+    expect(redelivery.ok).toBe(true);
+    if (!redelivery.ok) return;
+    expect(redelivery.value.replayed).toBe(true);
+    expect(redelivery.value.entry).toEqual(first.value.entry);
+    expect(redelivery.value.state.balance).toBe(completion.credits);
+    expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
+  });
+
+  it("commits nothing when the grant itself refuses", async () => {
+    const store = storeWithAccount();
+    const result = await persistCheckoutCompletedGrant({
+      store,
+      state: createLedgerState(ACCOUNT),
+      // A completion that was never parsed from a verified webhook.
+      completion: { ...parsed() } as never,
+      now: NOW,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.completionNotVerified);
+    expect(store.entryCount(ACCOUNT.accountId)).toBe(0);
+  });
+
+  it("requires a credit store", async () => {
+    const result = await persistCheckoutCompletedGrant({
+      state: createLedgerState(ACCOUNT),
+      completion: parsed(),
+      now: NOW,
+    } as never);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.requestInvalid);
+  });
+});
+
 describe("checkoutPurposeSettlesElsewhere", () => {
   it("names only the known purposes the credit ledger does not settle", () => {
     expect(checkoutPurposeSettlesElsewhere("catalog-listing")).toBe(true);
@@ -1116,9 +1274,93 @@ describe("checkoutPurposeSettlesElsewhere", () => {
   });
 });
 
+/**
+ * D5 requirement 2, proven at **both** ends against the real paths.
+ *
+ * The captain allowed live-mode authorization to be sourced from one named
+ * configuration variable. The mitigation is that an absent or malformed variable
+ * changes nothing: `assertModeAuthorized` must still refuse
+ * `STRIPE_LIVE_MODE_NOT_AUTHORIZED` when creating an intent *and* when honoring
+ * an event. `live-mode.test.ts` owns the resolver's own contract; this is the
+ * end-to-end half, because both ends live here.
+ */
+describe("live-mode authorization sourced from configuration (D5)", () => {
+  const flagFor = (env: Readonly<Record<string, string | undefined>>) =>
+    liveModeAuthorizedFlag(
+      (() => {
+        const resolved = resolveLiveModeAuthorization({
+          env,
+          recordAudit: () => undefined,
+        });
+        return resolved.ok ? resolved.value : undefined;
+      })(),
+    );
+
+  const AUTHORIZED = {
+    [STRIPE_LIVE_MODE_ENV_VAR]: "live-mode-authorized:captain@example.com:2026-07-29",
+  };
+
+  /** Environments that authorize nothing: unset, and three plausible mistakes. */
+  const UNAUTHORIZED: ReadonlyArray<Readonly<Record<string, string | undefined>>> = [
+    {},
+    { [STRIPE_LIVE_MODE_ENV_VAR]: "true" },
+    { [STRIPE_LIVE_MODE_ENV_VAR]: "live-mode-authorized" },
+    { [STRIPE_LIVE_MODE_ENV_VAR]: "live-mode-authorized:captain@example.com:soon" },
+  ];
+
+  it("refuses intent creation for every environment that is not the affirmative", () => {
+    for (const env of UNAUTHORIZED) {
+      const result = createCheckoutSessionIntent(
+        intentRequest({ mode: "live", liveModeAuthorized: flagFor(env) }) as never,
+      );
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.reason).toBe(BILLING_REFUSE_REASONS.liveModeNotAuthorized);
+    }
+  });
+
+  it("refuses the grant for every environment that is not the affirmative", () => {
+    const completion = parsed({ livemode: true });
+    for (const env of UNAUTHORIZED) {
+      const result = applyCheckoutCompletedGrant({
+        state: createLedgerState(ACCOUNT),
+        completion,
+        now: NOW,
+        liveModeAuthorized: flagFor(env),
+      });
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.reason).toBe(BILLING_REFUSE_REASONS.liveModeNotAuthorized);
+    }
+  });
+
+  it("is a usable source at both ends when the variable is the exact affirmative", () => {
+    // This is what the captain decided the mechanism may be. It is not live
+    // activation: no shipped call site derives a flag this way (ADR 0021), and this
+    // test builds the environment itself rather than reading one.
+    const intent = createCheckoutSessionIntent(
+      intentRequest({ mode: "live", liveModeAuthorized: flagFor(AUTHORIZED) }) as never,
+    );
+    expect(intent.ok).toBe(true);
+    if (intent.ok) expect(intent.value.mode).toBe("live");
+
+    const granted = applyCheckoutCompletedGrant({
+      state: createLedgerState(ACCOUNT),
+      completion: parsed({ livemode: true }),
+      now: NOW,
+      liveModeAuthorized: flagFor(AUTHORIZED),
+    });
+    expect(granted.ok).toBe(true);
+  });
+});
+
 describe("gate hygiene", () => {
   it("needs no Stripe credentials in the environment", () => {
     expect(process.env["STRIPE_SECRET_KEY"]).toBeUndefined();
     expect(process.env["STRIPE_WEBHOOK_SECRET"]).toBeUndefined();
+  });
+
+  it("carries no live-mode authorization", () => {
+    expect(process.env[STRIPE_LIVE_MODE_ENV_VAR]).toBeUndefined();
   });
 });

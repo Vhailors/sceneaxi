@@ -42,8 +42,14 @@ export {
 } from "./ledger.js";
 
 export {
+  SALE_ENTRY_KEY_PREFIX,
+  createCreditStore,
   createInMemoryCreditStore,
+  isSaleEntryKey,
+  saleEntryKeys,
+  type CommittedEntry,
   type CreditStore,
+  type CreditStoreAdapter,
   type CreditsSaleSettlement,
   type CreditsSaleSettlementOutcome,
   type InMemoryCreditStore,
@@ -94,6 +100,18 @@ export {
 } from "./checkout.js";
 
 export {
+  STRIPE_LIVE_MODE_AFFIRMATIVE,
+  STRIPE_LIVE_MODE_ALIAS_ENV_VARS,
+  STRIPE_LIVE_MODE_ENV_VAR,
+  hasLiveModeAuthorizationProvenance,
+  liveModeAuthorizedFlag,
+  resolveLiveModeAuthorization,
+  type LiveModeAuthorization,
+  type LiveModeAuthorizationAudit,
+  type ResolveLiveModeAuthorizationRequest,
+} from "./live-mode.js";
+
+export {
   LISTING_SALE_IDEMPOTENCY_PREFIX,
   assertCurrencyListed,
   createListingCheckoutIntent,
@@ -116,9 +134,11 @@ export {
   hasVerifiedCompletionProvenance,
   hasVerifiedWebhookProvenance,
   parseCheckoutCompletedEvent,
+  persistCheckoutCompletedGrant,
   signStripeWebhookPayload,
   verifyStripeWebhookSignature,
   type ApplyCheckoutCompletedGrantRequest,
+  type PersistCheckoutCompletedGrantRequest,
   type CheckoutSettlement,
   type CheckoutSettlementPort,
   type VerifiedCheckoutCompletion,

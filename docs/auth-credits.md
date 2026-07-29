@@ -15,6 +15,7 @@ The architecture decision behind the shape of this plane is
 | Contracts (User, Session, RoleAssignment, credits, billing, entitlements, listings, revenue share) | `packages/schemas` |
 | Single-admin resolution, role guards, identity port | `packages/auth` |
 | Credit ledger, metering, entitlements, hosted-AI credit gate, Stripe test checkout, revenue share, fixture commerce | `packages/billing` |
+| Credit persistence boundary (`createCreditStore`) every adapter is built through | `packages/billing/src/store.ts` |
 | Neon schema | `db/migrations` |
 | Login + balance view model | `apps/web-shell` (`createAccountPanel`) |
 | In-app AI assistant view model | `apps/web-shell` (`createAssistantPanel`) |
@@ -39,6 +40,7 @@ Names only; values never appear in the repository.
 | `DATABASE_URL` | Neon Postgres connection string |
 | `STRIPE_SECRET_KEY` | Stripe **test** secret key |
 | `STRIPE_WEBHOOK_SECRET` | Stripe **test** webhook signing secret |
+| `SCENEAXI_STRIPE_LIVE_AUTHORIZED` | The **one** source of live-mode authorization; see *Live-mode authorization* below. Unset — as it is everywhere — means `live` refuses |
 
 `pnpm gate` passes with none of these set. If it ever needs one, that is a defect.
 
@@ -175,10 +177,64 @@ store never authorized.
 `DATABASE_URL` from the environment only. Apply `db/migrations` in numeric order; see
 [`db/README.md`](../db/README.md) for the full invariant table.
 
-Implement `IdentityStore` (`@sceneaxi/auth`) and `CreditStore` (`@sceneaxi/billing`) over
-your Neon client. The in-memory reference implementations mirror the database's constraints
-— unique `(account_id, sequence)`, unique `idempotency_key`, no update or delete — so a bug
-the real trigger would catch cannot pass the test suite.
+Implement `IdentityStore` (`@sceneaxi/auth`) over your Neon client, and a
+`CreditStoreAdapter` (`@sceneaxi/billing`) handed to `createCreditStore` — never a
+`CreditStore` implemented directly, for the reasons in *The credit persistence boundary*
+below. The in-memory reference implementations mirror the database's constraints — unique
+`(account_id, sequence)`, unique `idempotency_key`, no update or delete — so a bug the real
+trigger would catch cannot pass the test suite.
+
+## The credit persistence boundary (sceneaxi#128)
+
+The pure layer guarantees the *arithmetic and the refusals*; it cannot guarantee the
+*commit*, because it owns none. `createCreditStore` is that commit boundary. **Build every
+adapter through it** — `createCreditStore(yourNeonAdapter)` — because it is where the
+invariants that must not be re-implemented per adapter live. The in-memory reference store
+is constructed the same way, so it is held to exactly the rules a Neon adapter will be.
+
+| operation | what the boundary guarantees |
+|---|---|
+| `appendEntry` | refuses a `sale:`-namespaced key before the adapter is reached |
+| `appendOrReplayEntry` | the committed entry answers for the key that was requested, at the ledger position it was requested for |
+| `settleCreditsSale` | each leg carries that sale's own reserved key, no gross or creator share is booked without the entry that moved it, each present leg moves exactly the credits the share record claims, and the adapter's outcome says whether it replayed |
+
+`CreditStore` is a structural type, so a deployment *can* implement the port directly and
+reach a commit path having never been through `createCreditStore`. The two commit call
+sites — `persistCheckoutCompletedGrant` and `meterCredits` — therefore read every
+append-or-replay answer through `readCommittedEntry`, which applies the boundary's own
+comparison to the entry that call requested. An answer that is merely schema-valid, or is a
+row belonging to some other request, is a commit that could not be confirmed:
+`CREDIT_STORE_FAILED`, no entry, retry — never a foreign row reported as this grant or this
+debit, and never an `ignored: false` for credits the ledger does not hold.
+
+**`sale:` keys are reserved to atomic settlement.** A sale has two ledger legs in two
+different accounts. Any path that can append one on its own can leave a buyer charged for a
+creator who was never paid, so `appendEntry` refuses the namespace outright and
+`settleCreditsSale` is the only way in — committing both legs and the `CreatorShareRecord`
+together, or nothing. `saleEntryKeys(saleId)` names the two keys; `isSaleEntryKey` asks the
+question. The reservation lives at the shared boundary rather than in one adapter, so a new
+adapter inherits it by construction.
+
+**`appendOrReplayEntry` is what a lost response needs.** Given an idempotency key and a
+semantic payload it either appends or hands back the entry already committed under that
+key, atomically — one row per key, mirroring the DDL's unique `idempotency_key`. A caller
+whose append committed but whose answer never arrived is told `replayed: true` instead of
+colliding with its own row. A key carrying different money is a conflict, never a second
+append. The boundary then checks the answer: a replay must match the requested payload on
+the fields the ledger's own idempotency rule compares, and a fresh append must be exactly
+the entry handed over — an adapter that renumbered a sequence or balance witness would
+break the next reader's derivation.
+
+`meterCredits` goes further, because a lost response also makes the caller's state look
+stale: before refusing `CREDIT_LEDGER_STATE_INVALID` it asks whether persistence holds
+exactly the caller's own history **plus this very debit**. That shape, and only that shape,
+is a replay. A different account record, a different history, more than one extra entry, or
+an extra entry that is somebody else's movement stays a refusal — as does a retry that asks
+for different money under the same key.
+
+None of this needs a database to prove. The gate builds adapters in-process and asserts the
+contract against them; there is no live-database suite in this repository, and any future
+one must stay opt-in and outside the default run, which is hermetic by rule (ADR 0021).
 
 ## Stripe (test mode)
 
@@ -242,8 +298,9 @@ re-encoding the JSON changes the bytes and verification will (correctly) fail:
 import {
   BILLING_REFUSE_REASONS,
   CHECKOUT_METADATA_KEYS,
-  applyCheckoutCompletedGrant,
+  loadLedgerState,
   parseCheckoutCompletedEvent,
+  persistCheckoutCompletedGrant,
   verifyStripeWebhookSignature,
   type CheckoutSettlementPort,
 } from "@sceneaxi/billing";
@@ -299,18 +356,96 @@ const completed = parseCheckoutCompletedEvent({
 // `retrieveSettlement` can disagree with a session id read from the verified body.
 if (!completed.ok) return respond(statusFor(completed.reason), completed.reason);
 
-const granted = applyCheckoutCompletedGrant({
-  state: await creditStore.loadState(completed.value.userId),
+// The ledger this grant extends. `CreditStore` exposes no state-loading operation of its
+// own: read the account and its entries, then derive the state. An absent account refuses
+// — a credit account is provisioned by the deployment, never created from a payment event.
+const account = await creditStore.findAccountByUserId(completed.value.userId);
+if (!account) return respond(503, "no credit account for the purchasing user");
+const state = loadLedgerState(account, await creditStore.listEntries(account.accountId));
+if (!state.ok) return respond(statusFor(state.reason), state.reason);
+
+// The flow ends at the *persisted* call. `applyCheckoutCompletedGrant` decides and
+// cannot commit — it owns no persistence — so answering 2xx on its result alone would
+// tell Stripe the purchase was honored while the buyer's ledger was unchanged, and
+// Stripe would never redeliver it. `persistCheckoutCompletedGrant` reports success only
+// after the store holds the entry, and refuses `CREDIT_STORE_FAILED` with no grant if it
+// does not (sceneaxi#128).
+const granted = await persistCheckoutCompletedGrant({
+  store: creditStore,
+  state: state.value,
   completion: completed.value,
   now: Date.now(),
 });
+// A commit failure is this deployment's own store, so it answers 503 and Stripe retries.
 if (!granted.ok) return respond(statusFor(granted.reason), granted.reason);
 ```
+
+The commit is `CreditStore.appendOrReplayEntry` on the event's own key
+(`stripe-event:<eventId>`), so at-least-once delivery is safe from both sides: the pure
+path answers a redelivery the ledger already shows, and the store answers one that landed
+after this caller read the ledger. Exactly one grant exists either way.
+
+**A webhook grant commits through exactly one boundary, and every endpoint uses it**
+(captain decision D4). `sites/umbrella/src/lib/credit-webhook.ts` used to hand the decided
+entry to `appendEntry` itself and reconcile a throw by re-reading the ledger; it now calls
+`persistCheckoutCompletedGrant` like the sketch above, so no second commit path exists for
+the same paid event. The re-read is not missing, it is *unnecessary*: it existed because
+`appendEntry` reports an ordinary redelivery race and a genuine store failure identically,
+and only the ledger could tell them apart. `appendOrReplayEntry` answers the race itself —
+handing back the row already committed under that key, checked against the entry that was
+requested and the ledger position it was requested for — so a throw is what it says it is.
+The endpoint's three-way outcome split is unchanged, and so is what its success means:
+
+| Outcome | HTTP | Meaning |
+|---|---|---|
+| `ok: true, ignored: true` | `200` | an event this endpoint owes no work, decided from the verified body alone before any port or store is read; permanent, because Stripe stops redelivering |
+| `ok: true, ignored: false` | `200` | **the credits are in the ledger** — nothing else is reported as success |
+| refusal in `SERVER_SIDE_REASONS` | `503` | this deployment's own fault, retried |
+| every other refusal | `400` | decided against the inbound bytes, retried |
+
+A commit the boundary could not confirm refuses `CREDIT_STORE_FAILED` (`503`) with no
+grant claimed — including when the row did in fact land, since this call cannot prove it —
+and the redelivery reads the ledger and answers the replay. **An issuance-authority
+refusal is never `ignored`**: a fault answered as a permanent acknowledgement is money
+silently lost, so nothing is ever added to the acknowledged set. `CREDIT_REQUEST_INVALID`
+joins the server-side set for the same reason: the boundary refuses it for a request the
+endpoint built, never for anything the inbound bytes decided.
 
 **Live mode is unreachable by default.** `mode: "live"` refuses unless
 `liveModeAuthorized: true` is passed explicitly at the call site, enforced both when
 creating an intent and when honoring an event. **Live activation is not authorized today**
 and remains a captain decision (ADR 0021).
+
+## Live-mode authorization (captain decision D5)
+
+`assertModeAuthorized` takes a bare boolean, and this repository used to say nothing about
+where a deployment could get one — which reads as "any expression you like" to anyone
+wiring an adapter. The captain closed that silence by allowing **one named configuration
+variable**, against the recommendation that it stay a code-only literal, and attached the
+mitigations below as the price. `resolveLiveModeAuthorization` in
+`packages/billing/src/live-mode.ts` is the only implementation of them.
+
+```
+SCENEAXI_STRIPE_LIVE_AUTHORIZED=live-mode-authorized:<email>:<YYYY-MM-DD>
+```
+
+| Requirement | How it holds |
+|---|---|
+| **One name, never a second spelling** | `STRIPE_LIVE_MODE_ENV_VAR` is the only key read. Every alias in `STRIPE_LIVE_MODE_ALIAS_ENV_VARS` refuses **by its presence alone**, even alongside a correct affirmative — the same rule `SCENEAXI_ADMIN_EMAILS` gets, for the same reason |
+| **Absent means refused** | Unset, empty, `true`, `1`, `yes`, a value naming no address, or a date that is not a real `YYYY-MM-DD` all refuse `STRIPE_LIVE_MODE_NOT_AUTHORIZED`, so `assertModeAuthorized` refuses at both ends unchanged |
+| **Audit evidence** | The affirmative *names its author and the day*, so live mode cannot be switched on anonymously; and the caller must inject a `recordAudit` sink, which is handed a `LiveModeAuthorizationAudit` (`authorizedBy`, `authorizedOn`, a `sha256` fingerprint, and one ready-to-log line) **before** the authorization is issued. A missing sink, a non-function, one that throws, and one that answers with a promise all refuse — the resolver is synchronous, so a record it would have to await is a record it cannot witness — and no deployment can hold an authorization it never wrote down |
+| **The gate stays a gate** | Nothing else is an input. `NODE_ENV`, `VERCEL_ENV`, an `sk_live_` key, `SCENEAXI_BILLING_MODE`, the price, and the adapter's identity are not read and must not become inputs. The resolved value is runtime-witnessed (sceneaxi#126), so `liveModeAuthorizedFlag` answers `true` for the exact object the resolver issued and `undefined` for every copy or look-alike |
+| **The hermetic gate is unaffected** | The resolver takes an injected `env`; nothing reads a global. `pnpm gate` runs with the variable absent, and a test asserts that |
+
+**This is a mechanism, not an activation.** No shipped call site passes
+`liveModeAuthorizedFlag`'s result to a checkout or a grant — a gate test asserts that — so
+today `live` refuses everywhere regardless of the variable. Reaching live mode still needs
+the separate captain go-live decision ADR 0021 holds, *and* a deliberate wiring change on
+top of it. `SCENEAXI_BILLING_MODE=live` selects a mode; it authorizes nothing.
+
+Regressions: `packages/billing/test/live-mode.test.ts` (the resolver's contract) and the
+`live-mode authorization sourced from configuration (D5)` block in
+`packages/billing/test/stripe-checkout.test.ts` (both ends, against the real paths).
 
 ## Contracts
 
@@ -382,6 +517,13 @@ Every new user receives exactly **100** credits, once, under idempotency key
 `starter:<userId>`. A second attempt grants nothing. The amount is captain-frozen and the
 contract check refuses a change to it.
 
+The umbrella's own starter grant (`createBillingCreditsAdapter` in
+`sites/umbrella/src/lib/identity-plane.ts`) still commits it with `appendEntry` plus a
+re-read of the ledger, the idiom the webhook path left behind. That is a **recorded gap,
+not a second sanctioned pattern**: captain decision D4 scopes its invariant to webhook
+grants, and this path is not one. Moving it onto `appendOrReplayEntry` needs no new
+authority and would delete the re-read the same way.
+
 ## Metering
 
 `meterCredits` namespaces the caller's idempotency key by account before it reaches the
@@ -392,6 +534,10 @@ committed debit collide with a different account's legitimately distinct usage �
 as a store failure rather than metering it. Every other producer in this plane already
 namespaces by identity (`starter:<userId>`, `sale:<saleId>:buyer`, `stripe-event:<id>`);
 metering is scoped the same way so the pure check and the persisted constraint agree.
+
+The debit itself is committed through `appendOrReplayEntry`, and a stale supplied state is
+reconciled against persistence before it is refused — see *The credit persistence boundary*
+above for what counts as a replay and what stays a refusal.
 
 ## Hosted AI (sceneaxi#139)
 
@@ -445,8 +591,16 @@ state is current, step 5 can return the prior debit without dispatch or another 
 **The balance gate and debit judge the same current ledger.** A stale or fabricated state
 refuses before either is reached, even when persistence still holds enough credits and even
 for the captain's unlimited allowance. `meterCredits` receives the state step 4 already
-matched to persistence. The narrow race left is a debit landing between the two store reads,
-which `meterCredits` still refuses outright rather than half-applying.
+matched to persistence. The race left is this same key committing between step 4's read and
+step 9's append — two concurrent requests sharing one scoped key, each seeing no debit at
+step 5 and each entering the provider. Exactly one debit exists afterwards, because step 9
+commits through `appendOrReplayEntry` and reconciles a state that persistence has already
+moved past; the loser of that race is answered from the committed row rather than refused.
+Its outcome is still a `MeteredModelCallCompleted` — the provider *was* entered, so
+`replayed` stays `false` and the `response` is real — and the debit's own answer is reported
+separately as **`debitReplayed: true`**, so a caller can tell "this call appended the charge"
+from "this call's charge was already in the ledger". Nothing else about that shape changes:
+the `entry`, `state`, and `balance` reported are the ledger's own.
 
 **Identity is settled before persistence is read.** The account id arrives inside a
 caller-supplied state, so step 4 authenticates the principal and checks account ownership
@@ -728,8 +882,10 @@ time rather than the recorder's clock, so re-recording the same completion produ
 identical row.
 
 Both credits paths are idempotent on the sale id (`sale:<saleId>:buyer` / `:creator`), so a
-replay moves nothing. Money bookkeeping is pure and unpersisted in v1 — persisted atomic
-settlement is sceneaxi#128.
+replay moves nothing, and neither key can reach persistence except through
+`settleCreditsSale` — see *The credit persistence boundary* above. **Money** bookkeeping
+remains pure and unpersisted: `recordMoneySale` returns a `MoneySplitRecord` and no store
+operation writes one, so a deployment that wants those rows durable owns that write.
 
 ## Fixture commerce (sceneaxi#138)
 
@@ -835,9 +991,10 @@ Everything below is outside this vertical. The hosted HTTP surface it needed is 
 
 1. Better Auth's own handler, mounted behind that surface to issue the session cookie the
    umbrella already reads.
-2. `IdentityStore` and `CreditStore` implementations over a Neon client, and the migrations
-   applied to a Neon branch (needs credentials — separate authority). The `CreditStore` also
-   owns provisioning a `CreditAccount` per user; nothing in this repository can create one.
+2. An `IdentityStore` and a `CreditStoreAdapter` over a Neon client — the latter handed to
+   `createCreditStore` — and the migrations applied to a Neon branch (needs credentials —
+   separate authority). That adapter also owns provisioning a `CreditAccount` per user;
+   nothing in this repository can create one.
 3. A Stripe adapter that turns a `CheckoutSessionIntent` into a hosted checkout URL. The
    webhook route that passes the **raw** body to `verifyStripeWebhookSignature` has landed
    on the umbrella (`sites/umbrella/src/app/api/stripe/webhook/route.ts`, sceneaxi#131).

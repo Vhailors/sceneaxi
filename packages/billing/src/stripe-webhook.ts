@@ -36,6 +36,7 @@ import {
   type AppendOutcome,
   type LedgerState,
 } from "./ledger.js";
+import { readCommittedEntry, type CreditStore } from "./store.js";
 import {
   BILLING_REFUSE_REASONS,
   billingOk,
@@ -711,6 +712,80 @@ export function applyCheckoutCompletedGrant(
     idempotencyKey,
     now,
   });
+}
+
+export type PersistCheckoutCompletedGrantRequest =
+  ApplyCheckoutCompletedGrantRequest & Readonly<{ store: CreditStore }>;
+
+/**
+ * Grant a completed purchase's credits **and commit them**, or refuse.
+ *
+ * `applyCheckoutCompletedGrant` decides; it cannot commit, because it owns no
+ * persistence. A webhook endpoint that answered 2xx on its result alone would be
+ * telling Stripe the purchase was honored while the buyer's ledger was
+ * unchanged, and Stripe would never redeliver it. This is the boundary that
+ * closes that gap: success is reported only after the store has the entry.
+ *
+ * The commit is `appendOrReplayEntry` on the event's own key
+ * (`stripe-event:<eventId>`), so at-least-once delivery stays safe from both
+ * sides — the pure path answers a redelivery the ledger already shows, and the
+ * store answers one that landed after this caller read the ledger. Exactly one
+ * grant exists either way. A commit that fails refuses `CREDIT_STORE_FAILED`
+ * with no entry, which is the outcome a provider must retry.
+ */
+export async function persistCheckoutCompletedGrant(
+  request: PersistCheckoutCompletedGrantRequest,
+): Promise<BillingOutcome<AppendOutcome>> {
+  const record = snapshotPlainRecord(request);
+  if (record === undefined || record["store"] === undefined) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.requestInvalid,
+      "A persisted checkout grant requires a credit store.",
+    );
+  }
+  const { store, ...grantRequest } =
+    record as unknown as PersistCheckoutCompletedGrantRequest;
+
+  const granted = applyCheckoutCompletedGrant(grantRequest);
+  if (!granted.ok) return granted;
+
+  const entry = granted.value.entry;
+  // The ledger the caller read already holds this event's grant, so there is
+  // nothing to commit and the existing row is the answer.
+  if (granted.value.replayed || entry === undefined) return granted;
+
+  let answer: unknown;
+  try {
+    answer = await store.appendOrReplayEntry(entry);
+  } catch {
+    answer = undefined;
+  }
+  // A store this call cannot prove was built by `createCreditStore` is held to
+  // the same answer-for-what-was-asked rule here, so `ignored: false` never
+  // reports a grant the ledger does not hold under this event's own key.
+  const committed = readCommittedEntry(entry, answer);
+  if (committed === undefined) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.storeFailed,
+      "The credit store failed while committing the checkout grant; no credits are granted.",
+    );
+  }
+  if (!committed.replayed) return granted;
+
+  return billingOk(
+    Object.freeze({
+      state: Object.freeze({
+        account: granted.value.state.account,
+        entries: Object.freeze([
+          ...granted.value.state.entries.slice(0, -1),
+          committed.entry,
+        ]),
+        balance: granted.value.state.balance,
+      }),
+      entry: committed.entry,
+      replayed: true,
+    }),
+  );
 }
 
 /**

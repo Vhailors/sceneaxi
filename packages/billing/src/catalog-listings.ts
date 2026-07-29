@@ -39,6 +39,7 @@ import {
   type BillingOutcome,
 } from "./refusals.js";
 import type { EntitlementPaymentMethod } from "./entitlements.js";
+import { SALE_ENTRY_KEY_PREFIX, saleEntryKeys } from "./store.js";
 
 let cached: CatalogListingSet | undefined;
 
@@ -158,8 +159,15 @@ export type ListingPurchaseOutcome = Readonly<{
   charged: boolean;
 }>;
 
-/** Namespace for listing-sale idempotency keys. */
-export const LISTING_SALE_IDEMPOTENCY_PREFIX = "sale:" as const;
+/**
+ * Namespace for listing-sale idempotency keys.
+ *
+ * Aliased to the store boundary's own reserved prefix rather than spelled again:
+ * the boundary refuses any ledger leg whose key it did not derive, so a second
+ * literal here would put the producer and its checker on opposite sides of a
+ * comparison that must never disagree.
+ */
+export const LISTING_SALE_IDEMPOTENCY_PREFIX = SALE_ENTRY_KEY_PREFIX;
 
 /** Debit a buyer for a credits-priced listing, or refuse without partial effect. */
 export function purchaseListingWithCredits(
@@ -230,7 +238,7 @@ export function purchaseListingWithCredits(
     );
   }
 
-  const idempotencyKey = `${LISTING_SALE_IDEMPOTENCY_PREFIX}${saleId}:buyer`;
+  const idempotencyKey = saleEntryKeys(saleId).buyer;
 
   // The captain's unlimited allowance: no debit is appended and none is faked.
   // Nothing was collected, so `charged: false` is reported explicitly rather

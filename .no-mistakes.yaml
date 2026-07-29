@@ -5,6 +5,13 @@
 # Previously authorized by the sceneaxi-auth-credits-v1,
 # sceneaxi-runnable-surfaces-v1, sceneaxi-sculpt-scene-composition-v1,
 # sceneaxi-sculpt-quality-v1, and sceneaxi-websites-deploy-v1 launch briefs.
+# Reviewer brain cannot be set from here. The project-local `agent` key is not
+# honoured by the running shared daemon - a review pinned here still resolved to
+# Claude. Reviewer brain is currently a global, fleet-shared setting, so do not
+# add an `agent` line to this file expecting it to hold: it would make a pull
+# request assert a cross-brain guarantee the repository does not actually get.
+# The `auto_fix` block below *is* honoured project-locally.
+
 auto_fix:
   rebase: 3
   review: 3

@@ -391,6 +391,60 @@ describe("runMeteredModelCall — hosted route, funded", () => {
     expect(store.entryCount(ACCOUNT.accountId)).toBe(2);
   });
 
+  it("reports a debit a concurrent request committed under the same key", async () => {
+    // Two requests share one scoped key. Both read a ledger with no such debit,
+    // so both enter the provider; the other one commits first. This call's own
+    // append is answered from that committed row, and reporting it as a fresh
+    // charge would claim an append this request never made.
+    const state = funded(100);
+    const store = storeFor(state);
+    const provider = recordingProvider();
+    let raced = false;
+    const racedStore: CreditStore = {
+      findAccountByUserId: (userId) => store.findAccountByUserId(userId),
+      findAccountById: (accountId) => store.findAccountById(accountId),
+      listEntries: (accountId) => store.listEntries(accountId),
+      appendEntry: (entry) => store.appendEntry(entry),
+      async appendOrReplayEntry(entry) {
+        if (!raced) {
+          raced = true;
+          await store.appendEntry({ ...entry, entryId: "ent_race_winner" });
+        }
+        return store.appendOrReplayEntry(entry);
+      },
+      settleCreditsSale: (settlement: CreditsSaleSettlement) =>
+        store.settleCreditsSale(settlement),
+    };
+
+    const result = await hostedCall(state, provider, { store: racedStore });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // The provider was entered, so this is a completed call carrying a real
+    // answer — not the response-less replayed shape.
+    expect(result.value.replayed).toBe(false);
+    if (result.value.replayed) return;
+    expect(result.value.response).toEqual({ text: "fixture answer" });
+    expect(result.value.debitReplayed).toBe(true);
+    expect(result.value.metered).toBe(true);
+    // Exactly one debit exists, and it is the row the ledger actually holds.
+    expect(store.entryCount(ACCOUNT.accountId)).toBe(2);
+    expect(result.value.entry?.entryId).toBe("ent_race_winner");
+    expect(result.value.entry?.idempotencyKey).toBe(
+      meteringIdempotencyKey(ACCOUNT.accountId, "turn_01"),
+    );
+    expect(result.value.balance).toBe(93);
+  });
+
+  it("reports a fresh debit as one this call appended", async () => {
+    const state = funded(100);
+    const store = storeFor(state);
+    const provider = recordingProvider();
+    const result = await hostedCall(state, provider, { store });
+    expect(result.ok).toBe(true);
+    if (!result.ok || result.value.replayed) return;
+    expect(result.value.debitReplayed).toBe(false);
+  });
+
   it("refuses a mutated replay rather than returning the cheaper original", async () => {
     const state = funded(100);
     const store = storeFor(state);
@@ -741,6 +795,9 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
       appendEntry(entry: CreditLedgerEntry) {
         return backing.appendEntry(entry);
       }
+      appendOrReplayEntry(entry: CreditLedgerEntry) {
+        return backing.appendOrReplayEntry(entry);
+      }
       settleCreditsSale(settlement: CreditsSaleSettlement) {
         return backing.settleCreditsSale(settlement);
       }
@@ -859,7 +916,7 @@ describe("runMeteredModelCall — failures do not half-apply", () => {
     const store = storeFor(state);
     const throwingStore = Object.freeze({
       ...store,
-      appendEntry() {
+      appendOrReplayEntry() {
         throw new Error("db down");
       },
     });

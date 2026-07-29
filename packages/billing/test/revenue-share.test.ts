@@ -574,6 +574,52 @@ describe("applyCreditsSale", () => {
     expect(store.entryCount(creatorAccount.accountId)).toBe(0);
   });
 
+  it("leaves no buyer debit behind when the creator leg cannot commit", async () => {
+    const target = listing("lantern-prop");
+    const buyerState = funded(100, BUYER);
+    const creatorAccount = account(target.sellerUserId, "acc_creator");
+    // The creator's ledger already holds a row, so the grant computed against an
+    // empty creator state collides at sequence 1. Everything about the buyer's
+    // side is valid — which is exactly the half-sale shape: the debit would
+    // commit, and the creator would never be paid.
+    const creatorFunding = appendCreditEntry(
+      createLedgerState(creatorAccount),
+      {
+        entryId: "ent_creator_prior",
+        movement: "grant",
+        delta: 5,
+        reason: "earlier earnings",
+        idempotencyKey: "fixture:creator:prior",
+        now: NOW,
+      },
+    );
+    expect(creatorFunding.ok).toBe(true);
+    if (!creatorFunding.ok) return;
+    const store = createInMemoryCreditStore({
+      accounts: [BUYER, creatorAccount],
+      entries: [...buyerState.entries, ...creatorFunding.value.state.entries],
+    });
+
+    const result = await persistCreditsSale({
+      store,
+      principal: principal(),
+      admin,
+      listing: target,
+      buyerState,
+      creatorState: createLedgerState(creatorAccount),
+      now: NOW,
+      saleId: "sale_creator_conflict",
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.storeFailed);
+    // The buyer keeps only their funding grant, the creator only their prior
+    // row, and no share record claims a collection that did not happen.
+    expect(store.entryCount(BUYER.accountId)).toBe(1);
+    expect(store.entryCount(creatorAccount.accountId)).toBe(1);
+    expect(store.shareRecordCount()).toBe(0);
+  });
+
   it("refuses settlement entries that do not extend persisted ledger tails", async () => {
     const target = listing("lantern-prop");
     const persistedBuyerState = funded(10, BUYER);
@@ -697,6 +743,10 @@ describe("applyCreditsSale", () => {
       listEntries: () => [],
       appendEntry() {
         appendCalls += 1;
+      },
+      appendOrReplayEntry(entry) {
+        appendCalls += 1;
+        return { entry, replayed: false };
       },
       settleCreditsSale() {
         settlementCalls += 1;

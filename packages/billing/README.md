@@ -36,6 +36,36 @@ creator grant, and share record without mutation. `persistCreditsSale` hands tha
 settlement to `CreditStore.settleCreditsSale` once, so no supported persistence path can
 commit only one side.
 
+**One boundary, not one rule per adapter.** Every `CreditStore` is built by
+`createCreditStore(adapter)`, including the in-memory reference one, so an adapter is held
+to the invariants whether or not its author knew them: `sale:`-namespaced keys are refused
+by `appendEntry` and reach persistence only through `settleCreditsSale`, and an
+`appendOrReplayEntry` must answer for the entry it was asked about. That last operation is
+what a lost response needs — it appends or hands back the row already committed under the
+key, atomically, so a caller whose answer never arrived replays instead of colliding with
+its own debit. The full contract, and how `meterCredits` reconciles the stale state a lost
+response leaves behind, is owned by
+[`docs/auth-credits.md`](../../docs/auth-credits.md#the-credit-persistence-boundary-sceneaxi128).
+
+**A decision is not a commit.** `applyCheckoutCompletedGrant` is pure and owns no store, so
+a webhook endpoint answering Stripe on its result alone would report a purchase honored
+against an unchanged ledger — and Stripe would never redeliver it.
+`persistCheckoutCompletedGrant` is the boundary that closes that gap: success only after
+the entry is committed, `CREDIT_STORE_FAILED` and no grant otherwise. It is also the
+**only** way a webhook grant commits anywhere — `sites/umbrella` goes through it rather
+than holding a second commit path for the same paid event (captain decision D4).
+
+**Live-mode authorization has exactly one configuration source.**
+`resolveLiveModeAuthorization` reads `SCENEAXI_STRIPE_LIVE_AUTHORIZED` and nothing else —
+not the mode, not the price, not a key prefix, not `NODE_ENV`, because a gate that can
+infer its own authorization is not a gate. Its affirmative names who authorized live mode
+and on what day, the injected audit sink is a precondition rather than a side effect, an
+alias variable refuses by its presence alone, and the resolved value is runtime-witnessed
+so `liveModeAuthorizedFlag` answers `true` for no copy of it. **It enables nothing:** no
+shipped call site passes its result, so `live` still refuses at both ends, and live
+activation remains the separate captain decision ADR 0021 holds. Contract:
+[`docs/auth-credits.md`](../../docs/auth-credits.md#live-mode-authorization-captain-decision-d5).
+
 **Admin is never debited.** The captain's unlimited allowance returns `metered: false` and
 leaves the ledger untouched — reported explicitly rather than faked with a zero-credit
 entry, which would pollute the ledger with meaningless rows.
@@ -46,7 +76,7 @@ nothing. `settleCreditsSale` refuses a settlement whose non-zero gross has no bu
 so the rule holds at the persistence boundary too, not only in the pure path.
 
 **Metering is a persisted effect.** `meterCredits` loads the current account history from
-its injected `CreditStore`, refuses an absent or stale account, and appends the debit
+its injected `CreditStore`, refuses an absent or stale account, and commits the debit
 before it reports success. The caller's idempotency key is scoped to the account
 (`usage:<accountId>:<callerKey>`) so the ledger's per-account replay check and the store's
 global `idempotency_key` uniqueness cannot disagree.

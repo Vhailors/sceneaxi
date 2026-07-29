@@ -359,22 +359,41 @@ describe("auth + credits golden path", () => {
       accounts: [crewLedger.account],
       entries: crewLedger.entries,
     });
-    const metered = await meterCredits({
+    const preDebitLedger = crewLedger;
+    const debitRequest = {
       principal: crew,
       admin: adminIdentity,
       store: crewCreditStore,
-      state: crewLedger,
+      state: preDebitLedger,
       amount: 30,
       reason: "hosted assistant turn",
       idempotencyKey: "usage:turn_golden_01",
       now: NOW,
       surface: "web-shell",
-    });
+    } as const;
+    const metered = await meterCredits(debitRequest);
     expect(metered.ok).toBe(true);
     if (!metered.ok) return;
     expect(metered.value.metered).toBe(true);
     crewLedger = metered.value.state;
     expect(crewLedger.balance).toBe(balanceAfterPurchase - 30);
+    const entriesAfterDebit = crewCreditStore.entryCount(
+      crewLedger.account.accountId,
+    );
+
+    // ---- 10b. a lost response replays instead of double-charging ----------
+    // The debit committed but its answer never reached the caller, which can
+    // only retry with the state it still holds — the state from before its own
+    // entry. That must replay, not refuse as stale and not debit twice.
+    const meteredReplay = await meterCredits(debitRequest);
+    expect(meteredReplay.ok).toBe(true);
+    if (!meteredReplay.ok) return;
+    expect(meteredReplay.value.replayed).toBe(true);
+    expect(meteredReplay.value.balance).toBe(crewLedger.balance);
+    expect(meteredReplay.value.entry).toEqual(metered.value.entry);
+    expect(crewCreditStore.entryCount(crewLedger.account.accountId)).toBe(
+      entriesAfterDebit,
+    );
 
     // ---- 11. an over-balance debit refuses and appends nothing -------------
     const overspend = await meterCredits({
