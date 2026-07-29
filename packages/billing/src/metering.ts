@@ -39,7 +39,11 @@ import {
   validateLedgerState,
   type LedgerState,
 } from "./ledger.js";
-import type { CommittedEntry, CreditStore } from "./store.js";
+import {
+  isCommittedEntry,
+  type CommittedEntry,
+  type CreditStore,
+} from "./store.js";
 import {
   BILLING_REFUSE_REASONS,
   billingOk,
@@ -291,15 +295,19 @@ export async function meterCredits(
   if (!appended.ok) return appended;
 
   if (!appended.value.replayed && appended.value.entry !== undefined) {
-    let committed: CommittedEntry;
+    let answer: unknown;
     try {
-      committed = await store.appendOrReplayEntry(appended.value.entry);
+      answer = await store.appendOrReplayEntry(appended.value.entry);
     } catch {
+      answer = undefined;
+    }
+    if (!isCommittedEntry(answer)) {
       return billingRefuse(
         BILLING_REFUSE_REASONS.storeFailed,
         "The credit store failed while persisting the metered debit.",
       );
     }
+    const committed: CommittedEntry = answer;
     // The ledger read above showed no such key, so a replay here means a
     // concurrent writer committed this same debit between the read and the
     // write. Exactly one row exists; report the one that is in the ledger.

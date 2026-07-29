@@ -49,6 +49,26 @@ export type CommittedEntry = Readonly<{
   replayed: boolean;
 }>;
 
+/**
+ * Whether an append-or-replay answer carries the shape a commit reads.
+ *
+ * `createCreditStore` refuses anything else before a caller sees it, but a caller
+ * holding a `CreditStore` cannot prove the store it was handed was built there.
+ * A commit therefore reads the answer through this guard, inside the block that
+ * names a store failure: an answer that is not a committed entry is a commit the
+ * store could not confirm, never an unnamed error escaping the call.
+ */
+export function isCommittedEntry(
+  candidate: unknown,
+): candidate is CommittedEntry {
+  const record = snapshotPlainRecord(candidate);
+  return (
+    record !== undefined &&
+    typeof record["replayed"] === "boolean" &&
+    validateCreditLedgerEntry(record["entry"]).ok
+  );
+}
+
 export type CreditStore = Readonly<{
   findAccountByUserId(userId: string): Awaitable<CreditAccount | undefined>;
   findAccountById(accountId: string): Awaitable<CreditAccount | undefined>;

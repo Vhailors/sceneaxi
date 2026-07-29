@@ -36,7 +36,7 @@ import {
   type AppendOutcome,
   type LedgerState,
 } from "./ledger.js";
-import type { CreditStore } from "./store.js";
+import { isCommittedEntry, type CreditStore } from "./store.js";
 import {
   BILLING_REFUSE_REASONS,
   billingOk,
@@ -754,15 +754,19 @@ export async function persistCheckoutCompletedGrant(
   // nothing to commit and the existing row is the answer.
   if (granted.value.replayed || entry === undefined) return granted;
 
-  let committed;
+  let answer: unknown;
   try {
-    committed = await store.appendOrReplayEntry(entry);
+    answer = await store.appendOrReplayEntry(entry);
   } catch {
+    answer = undefined;
+  }
+  if (!isCommittedEntry(answer)) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.storeFailed,
       "The credit store failed while committing the checkout grant; no credits are granted.",
     );
   }
+  const committed = answer;
   if (!committed.replayed) return granted;
 
   return billingOk(

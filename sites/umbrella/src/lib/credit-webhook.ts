@@ -461,12 +461,21 @@ export async function applyCreditPackWebhook(input: {
   // the grant and committing it are the same call here, so this module holds no second
   // path to the ledger: `applyCheckoutCompletedGrant` still decides, and success is
   // reported only once the store holds the entry.
-  const granted = await persistCheckoutCompletedGrant({
-    store: input.store,
-    state: state.value,
-    completion: completion.value,
-    now: input.now,
-  });
+  const commit = await attempt(() =>
+    persistCheckoutCompletedGrant({
+      store: input.store,
+      state: state.value,
+      completion: completion.value,
+      now: input.now,
+    }),
+  );
+  if (!commit.ok) {
+    return refused(
+      CREDIT_WEBHOOK_REASONS.storeFailed,
+      "The commit of the checkout grant threw, so whether the credits reached the ledger is unknown; this event is unacknowledged and must be retried.",
+    );
+  }
+  const granted = commit.value;
   if (!granted.ok) return settle(granted.reason, granted.message);
 
   return Object.freeze({
