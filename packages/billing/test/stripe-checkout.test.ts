@@ -1163,6 +1163,45 @@ describe("persistCheckoutCompletedGrant", () => {
     expect(backing.entryCount(ACCOUNT.accountId)).toBe(0);
   });
 
+  it("refuses an answer that is not this grant, however well-formed", async () => {
+    // A deployment may implement `CreditStore` directly and never pass through
+    // `createCreditStore`. If a commit trusted the shape of its answer alone, a
+    // store answering `replayed: true` with somebody else's schema-valid row
+    // would have this endpoint tell Stripe `ignored: false` — "the credits are
+    // in the ledger" — for a grant that never committed.
+    const backing = storeWithAccount();
+    const foreign = Object.freeze({
+      schemaVersion: 1 as const,
+      kind: "sceneaxi.credit-ledger-entry" as const,
+      entryId: "ent_someone_else",
+      accountId: "acct_someone_else",
+      sequence: 1,
+      movement: "grant" as const,
+      delta: 5,
+      balanceAfter: 5,
+      reason: "an entry this request never asked for",
+      idempotencyKey: "stripe-event:evt_other",
+      occurredAt: new Date(NOW).toISOString(),
+    });
+    const store = Object.freeze({
+      ...backing,
+      appendOrReplayEntry() {
+        return { entry: foreign, replayed: true };
+      },
+    });
+
+    const result = await persistCheckoutCompletedGrant({
+      store,
+      state: createLedgerState(ACCOUNT),
+      completion: parsed(),
+      now: NOW,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.storeFailed);
+    expect(backing.entryCount(ACCOUNT.accountId)).toBe(0);
+  });
+
   it("replays a redelivery whose first response was lost, granting once", async () => {
     const store = storeWithAccount();
     const completion = parsed();

@@ -50,23 +50,31 @@ export type CommittedEntry = Readonly<{
 }>;
 
 /**
- * Whether an append-or-replay answer carries the shape a commit reads.
+ * The committed entry an append-or-replay answered *this* request with, or
+ * `undefined` when it answered with anything else.
  *
- * `createCreditStore` refuses anything else before a caller sees it, but a caller
- * holding a `CreditStore` cannot prove the store it was handed was built there.
- * A commit therefore reads the answer through this guard, inside the block that
- * names a store failure: an answer that is not a committed entry is a commit the
- * store could not confirm, never an unnamed error escaping the call.
+ * `createCreditStore` already holds an adapter to this, but a caller holding a
+ * `CreditStore` cannot prove the store it was handed was built there — the port
+ * is a structural type, so a deployment that implements it directly reaches a
+ * commit path unguarded. Shape alone is not enough there: an answer carrying a
+ * schema-valid entry that is not the requested one would be reported as this
+ * request's grant or debit. A commit therefore reads the answer through this,
+ * inside the block that names a store failure, so an answer that does not
+ * belong to the request is a commit the store could not confirm rather than a
+ * foreign row reported as committed.
+ *
+ * It is `assertCommittedEntry`'s own comparison, so the guarded and unguarded
+ * paths cannot drift apart.
  */
-export function isCommittedEntry(
+export function readCommittedEntry(
+  requested: CreditLedgerEntry,
   candidate: unknown,
-): candidate is CommittedEntry {
-  const record = snapshotPlainRecord(candidate);
-  return (
-    record !== undefined &&
-    typeof record["replayed"] === "boolean" &&
-    validateCreditLedgerEntry(record["entry"]).ok
-  );
+): CommittedEntry | undefined {
+  try {
+    return assertCommittedEntry(requested, candidate);
+  } catch {
+    return undefined;
+  }
 }
 
 export type CreditStore = Readonly<{

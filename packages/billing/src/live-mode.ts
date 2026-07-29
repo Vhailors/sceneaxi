@@ -27,8 +27,11 @@
  *
  * **The audit record is a precondition, not a side effect.** The caller injects
  * the sink that records the authorization; an absent sink, a sink that is not a
- * function, or one that throws all refuse. No deployment can hold an
- * authorization it never wrote down.
+ * function, one that throws, and one that answers with a promise all refuse —
+ * this resolver is synchronous, so a record it would have to await is a record
+ * it cannot witness, and a rejection arriving after the fact would leave an
+ * authorization already issued. No deployment can hold an authorization it
+ * never wrote down.
  *
  * **Nothing else is an input.** The mode, the price, the Stripe key's own
  * `sk_live_` prefix, `NODE_ENV`, and every other value that merely correlates
@@ -144,6 +147,26 @@ const notAuthorized = (detail: string): BillingOutcome<never> =>
     `Live-mode billing is not authorized: ${detail}`,
   );
 
+/**
+ * Whether a value is one this resolver would have to await.
+ *
+ * Fail-closed on a `then` accessor that throws: a sink whose answer cannot even
+ * be inspected is not one that proved it recorded anything.
+ */
+function isThenable(value: unknown): boolean {
+  if (
+    value === null ||
+    (typeof value !== "object" && typeof value !== "function")
+  ) {
+    return false;
+  }
+  try {
+    return typeof (value as { then?: unknown }).then === "function";
+  } catch {
+    return true;
+  }
+}
+
 /** Whether `YYYY-MM-DD` names a real calendar day, not merely four-two-two digits. */
 function isCalendarDate(value: string): boolean {
   if (!AUTHORIZED_ON_RE.test(value)) return false;
@@ -238,11 +261,18 @@ export function resolveLiveModeAuthorization(
     record: `${STRIPE_LIVE_MODE_ENV_VAR}: Stripe live mode authorized by ${authorizedBy} on ${authorizedOn} (sha256:${fingerprint})`,
   });
 
+  let recorded: unknown;
   try {
-    recordAudit(audit);
+    recorded = recordAudit(audit);
   } catch {
     return notAuthorized(
       "the audit sink failed, so the authorization was not recorded and is not honored.",
+    );
+  }
+  if (isThenable(recorded)) {
+    void Promise.resolve(recorded).catch(() => undefined);
+    return notAuthorized(
+      "the audit sink answered with a promise, and a synchronous resolver cannot wait for it, so the authorization would be issued before the record it depends on either exists or fails.",
     );
   }
 

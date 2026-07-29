@@ -36,7 +36,7 @@ import {
   type AppendOutcome,
   type LedgerState,
 } from "./ledger.js";
-import { isCommittedEntry, type CreditStore } from "./store.js";
+import { readCommittedEntry, type CreditStore } from "./store.js";
 import {
   BILLING_REFUSE_REASONS,
   billingOk,
@@ -760,13 +760,16 @@ export async function persistCheckoutCompletedGrant(
   } catch {
     answer = undefined;
   }
-  if (!isCommittedEntry(answer)) {
+  // A store this call cannot prove was built by `createCreditStore` is held to
+  // the same answer-for-what-was-asked rule here, so `ignored: false` never
+  // reports a grant the ledger does not hold under this event's own key.
+  const committed = readCommittedEntry(entry, answer);
+  if (committed === undefined) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.storeFailed,
       "The credit store failed while committing the checkout grant; no credits are granted.",
     );
   }
-  const committed = answer;
   if (!committed.replayed) return granted;
 
   return billingOk(

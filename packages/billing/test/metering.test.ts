@@ -352,6 +352,44 @@ describe("meterCredits", () => {
     expect(store.entryCount("acc_mate")).toBe(2);
   });
 
+  it("refuses a commit answer that is not this debit, however well-formed", async () => {
+    // The port is structural, so a store that never went through
+    // `createCreditStore` can answer with a schema-valid row belonging to some
+    // other request. Trusting its shape alone would report a foreign entry as
+    // this debit — and the balance derived beside it — instead of naming a
+    // commit that could not be confirmed.
+    const state = funded();
+    const backing = storeFor(state);
+    const store = Object.freeze({
+      ...backing,
+      appendOrReplayEntry() {
+        return {
+          entry: {
+            ...state.entries[0],
+            entryId: "ent_someone_else",
+            idempotencyKey: "usage:someone-else",
+          },
+          replayed: true,
+        };
+      },
+    });
+
+    const result = await meterCredits({
+      principal: principal(),
+      admin,
+      store,
+      state,
+      amount: 10,
+      reason: "hosted assistant turn",
+      idempotencyKey: "usage:turn_01",
+      now: NOW,
+    } as never);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.storeFailed);
+    expect(backing.entryCount(ACCOUNT.accountId)).toBe(state.entries.length);
+  });
+
   it("refuses an unknown or stale persisted account", async () => {
     const state = funded();
     const missing = await meterCredits({

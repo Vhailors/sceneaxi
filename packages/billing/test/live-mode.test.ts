@@ -205,6 +205,46 @@ describe("D5 requirement 3 — the audit record is a precondition", () => {
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.liveModeNotAuthorized);
   });
 
+  it("refuses an audit sink that answers asynchronously", async () => {
+    // A sink returning a promise cannot be a precondition of a synchronous
+    // resolver: its rejection would arrive after the authorization was already
+    // issued, which is the unobservable authorization requirement 3 forbids.
+    let settled: (() => void) | undefined;
+    const written = new Promise<void>((resolve_) => {
+      settled = resolve_;
+    });
+    const result = resolve(
+      { [STRIPE_LIVE_MODE_ENV_VAR]: AFFIRMATIVE },
+      () =>
+        written.then(() => {
+          throw new Error("the audit log write failed");
+        }),
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.liveModeNotAuthorized);
+    // The rejection this resolver could never have awaited is handled, not left
+    // to surface as an unhandled rejection long after the refusal.
+    settled?.();
+    await written.then(
+      () => undefined,
+      () => undefined,
+    );
+  });
+
+  it("refuses a sink whose answer cannot even be inspected", () => {
+    const result = resolve({ [STRIPE_LIVE_MODE_ENV_VAR]: AFFIRMATIVE }, () =>
+      Object.defineProperty({}, "then", {
+        get() {
+          throw new Error("unreadable");
+        },
+      }),
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(BILLING_REFUSE_REASONS.liveModeNotAuthorized);
+  });
+
   it("fingerprints two different authorizations differently", () => {
     const first = recorder();
     const second = recorder();

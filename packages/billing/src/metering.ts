@@ -39,11 +39,7 @@ import {
   validateLedgerState,
   type LedgerState,
 } from "./ledger.js";
-import {
-  isCommittedEntry,
-  type CommittedEntry,
-  type CreditStore,
-} from "./store.js";
+import { readCommittedEntry, type CreditStore } from "./store.js";
 import {
   BILLING_REFUSE_REASONS,
   billingOk,
@@ -301,13 +297,17 @@ export async function meterCredits(
     } catch {
       answer = undefined;
     }
-    if (!isCommittedEntry(answer)) {
+    // The answer must be for the debit that was requested, not merely a
+    // schema-valid row: a store this call cannot prove was built by
+    // `createCreditStore` would otherwise have a foreign entry reported as this
+    // debit, on the balance this caller goes on to trust.
+    const committed = readCommittedEntry(appended.value.entry, answer);
+    if (committed === undefined) {
       return billingRefuse(
         BILLING_REFUSE_REASONS.storeFailed,
         "The credit store failed while persisting the metered debit.",
       );
     }
-    const committed: CommittedEntry = answer;
     // The ledger read above showed no such key, so a replay here means a
     // concurrent writer committed this same debit between the read and the
     // write. Exactly one row exists; report the one that is in the ledger.
