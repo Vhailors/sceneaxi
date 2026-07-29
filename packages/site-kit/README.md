@@ -22,6 +22,7 @@ opened — and what may be drawn — lives here.
 | `editor-session.ts` | driving that session from URL state, and projecting its composed scene for a browser |
 | `mountable-scene.ts` | the one payload shape a browser mounts, shared by both umbrella viewports |
 | `live-open.ts` | the public live open path: which committed fixture is opened, how it is placed by `composeScene()`, and the honest vocabulary a page may use for the presentation core |
+| `profile-contracts.ts` | the browser-safe re-export of `profileConformanceRegistry` and `OPEN_PATH_POLICY`, so the umbrella `/profiles` page reads the canonical contracts by reference instead of through the Node-bearing root barrel |
 | `design-tokens.ts` | the Foundations v2 visual tokens, the measured contrast contract, and the CSS emitters |
 | `site-element.ts` | a framework-neutral element tree plus an escaping HTML serializer |
 | `change-review.ts` | Change Review — the design system's signature primitive, over a real `Proposal` |
@@ -48,9 +49,10 @@ The state panel and commerce notice follow the same boundary: site-kit exports m
 and `SiteElement` trees, while each separate site install root keeps the few lines that
 map those facts onto React. Browser clients import the narrow
 `@sceneaxi/site-kit/state-panel` entry rather than the root barrel, whose server-side
-catalog and editor exports intentionally reach Node builtins. The catalog identity and
-request-token seams likewise have narrow public entries, so a site does not need a
-duplicated re-export or duplicated credential precedence.
+catalog and editor exports intentionally reach Node builtins. The catalog identity,
+request-token, and profile-contract seams likewise have narrow public entries, so a site
+does not need a duplicated re-export, duplicated credential precedence, or a bundled copy
+of a contract it must not restate.
 
 Ownership, the measured accessibility contract, the recorded archive ↔ contract
 differences, and the browser evidence are in `docs/design-foundations.md`.
