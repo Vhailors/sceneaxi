@@ -163,20 +163,34 @@ presentation core.
 
 ### Captain authority decisions D1–D5
 
-The five choices raised by the FirstMate operational record of **2026-07-28**,
-`data/sceneaxi-issuance-authority-scout/report.md` (an **out-of-tree** record, written
-against `origin/main` at `569a12c`), are decided. This table records their disposition and
-sequencing only; **it is not an implementation authority**. D1–D3 remain unimplemented and
-unauthorized.
+Five authority choices are decided. Each disposition is recorded in its own **out-of-tree**
+FirstMate operational record, all headed *recorded 2026-07-28*:
+
+- `data/sceneaxi-authority-decision-d1-principal-provenance.md`
+- `data/sceneaxi-authority-decision-d2-intent-credit-anchor.md`
+- `data/sceneaxi-authority-decision-d3-intent-ddl-immutability.md`
+- `data/sceneaxi-authority-decision-d4-commit-boundary-sequencing.md`
+- `data/sceneaxi-authority-decision-d5-live-mode-authorization-source.md`
+
+The earlier record `data/sceneaxi-issuance-authority-scout/report.md` of **2026-07-28**
+(written against `origin/main` at `569a12c`) is the **prior investigation** that framed
+these five then-open questions. It decided none of them and says so, so it is not a
+decision source — cite the five decision records for any disposition. The captain also
+departed from it on D5: the scout argued against configuration and recommended a
+code-literal-only rule, while the captain instead chose the named
+`SCENEAXI_STRIPE_LIVE_AUTHORIZED` configuration value with an evidence mitigation.
+
+The table below records disposition and sequencing only; **it is not an implementation
+authority**. D1–D3 remain unimplemented and unauthorized.
 
 Note the difference in where these decisions are *owned*. D4 and D5 landed with their
 implementation, so each is now owned by an in-tree document —
 [`auth-credits.md`](../auth-credits.md) for both, plus
 [`websites-deploy.md`](../websites-deploy.md) for D4's webhook path. D1–D3 are recorded
-**only** in that 2026-07-28 out-of-tree FirstMate record; no in-tree document owns them
-yet, and this brief does not become their owner. Their in-tree owner lands with their
+**only** in their out-of-tree decision records above; no in-tree document owns them yet,
+and this brief does not become their owner. Their in-tree owner lands with their
 implementation. Until then they are decided and unimplemented, and the disposition text
-below is a restatement of that external record rather than a fact this repository holds.
+below is a restatement of those external records rather than a fact this repository holds.
 
 | Decision | Recorded disposition | Status / binding prerequisite |
 |---|---|---|
