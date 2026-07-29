@@ -32,6 +32,7 @@ import {
   PROFILE_MATRIX_SOURCE,
   PROFILE_OPERATIONS,
   profileCapabilityStatus,
+  profileDisplayName,
   profileMatrix,
   type ProfileMatrixSource,
 } from "../../sites/umbrella/src/lib/profile-matrix.ts";
@@ -83,6 +84,44 @@ describe("the shared site-kit path stays identical to the canonical contracts", 
 
   it("names the same refuse-only profile the policy does", () => {
     expect(profileMatrix().refuseOnlyProfile).toBe(OPEN_PATH_REFUSE_ONLY_PROFILE);
+  });
+});
+
+describe("display labels are pinned copy, never invented from a package id", () => {
+  /** The exact strings the accepted screen prints as the matrix column headers. */
+  const PINNED_LABELS: ReadonlyArray<readonly [string, string]> = [
+    ["@sceneaxi/profile-game", "Game"],
+    ["@sceneaxi/profile-web", "Web experience"],
+    ["@sceneaxi/profile-kids", "Kids"],
+  ];
+
+  it("prints the pinned label for every profile the contracts carry", () => {
+    expect(PROFILE_MATRIX_SOURCE.map((row) => [row.profile, row.name])).toEqual(
+      PINNED_LABELS.map(([profile, name]) => [profile, name]),
+    );
+    for (const row of profileMatrix().rows) {
+      const pinned = PINNED_LABELS.find(([profile]) => profile === row.profile);
+      expect(pinned, `no pinned label for ${row.profile}`).toBeDefined();
+      expect(row.name).toBe(pinned?.[1]);
+    }
+  });
+
+  it("covers every policy profile, so no contract row can render an unlabelled header", () => {
+    for (const policy of OPEN_PATH_POLICY) {
+      expect(() => profileDisplayName(policy.profile)).not.toThrow();
+    }
+  });
+
+  it("refuses an unknown profile instead of munging one out of its id", () => {
+    for (const unknown of [
+      "@sceneaxi/profile-web-xr",
+      "@sceneaxi/profile-",
+      "profile-game",
+      "",
+      "toString",
+    ]) {
+      expect(() => profileDisplayName(unknown)).toThrow(/refuses an unknown profile/);
+    }
   });
 });
 

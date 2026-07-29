@@ -70,12 +70,26 @@ export type ProfileMatrixSource = Readonly<
 >;
 
 /**
- * Presentation-only names are derived from the contract package id. They decide no claim.
+ * Presentation-only display labels, pinned one per profile id. They decide no claim, and
+ * they are written down rather than derived from the package id: a label munged from an
+ * id would silently invent copy for a profile nobody has written copy for. A profile the
+ * contracts carry but this map does not refuses at module initialization, so adding a
+ * policy row means deciding its label rather than shipping a guess.
  */
-function profileName(profile: string) {
-  const slug = profile.replace("@sceneaxi/profile-", "");
-  if (slug === "web") return "Web experience";
-  return `${slug.slice(0, 1).toUpperCase()}${slug.slice(1)}`;
+const PROFILE_DISPLAY_NAMES: ReadonlyMap<string, string> = new Map([
+  ["@sceneaxi/profile-game", "Game"],
+  ["@sceneaxi/profile-web", "Web experience"],
+  ["@sceneaxi/profile-kids", "Kids"],
+]);
+
+export function profileDisplayName(profile: string) {
+  const name = PROFILE_DISPLAY_NAMES.get(profile);
+  if (name === undefined) {
+    throw new Error(
+      `The /profiles matrix refuses an unknown profile: ${profile} has no pinned display name.`,
+    );
+  }
+  return name;
 }
 
 const registryByProfile = new Map(
@@ -103,7 +117,7 @@ export const PROFILE_MATRIX_SOURCE: readonly ProfileMatrixSource[] = Object.free
     }
     return Object.freeze({
       ...policy,
-      name: profileName(policy.profile),
+      name: profileDisplayName(policy.profile),
       claimStatus: registryEntry.claimStatus,
     });
   }),
