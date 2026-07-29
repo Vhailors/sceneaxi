@@ -5,6 +5,15 @@
 # Previously authorized by the sceneaxi-auth-credits-v1,
 # sceneaxi-runnable-surfaces-v1, sceneaxi-sculpt-scene-composition-v1,
 # sceneaxi-sculpt-quality-v1, and sceneaxi-websites-deploy-v1 launch briefs.
+# Cross-brain review is a captain binding: the reviewer's brain must differ from
+# the author's, and never claude -> claude. The current work in this repository is
+# Claude/Opus-authored, so Sol (codex) reviews here.
+# Keep this project-local; the global home configuration is deliberately left
+# alone. It is one instance serving every home and is currently pinned
+# claude-first for another home's Sol-authored validation window, so flipping it
+# would hand that home the same-brain review this line exists to prevent.
+agent: [codex, claude]
+
 auto_fix:
   rebase: 3
   review: 3
