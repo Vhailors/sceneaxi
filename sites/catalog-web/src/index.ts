@@ -34,7 +34,7 @@ export {
   resolveCatalogViewer,
   type CatalogIdentityPlane,
   type CatalogIdentityPlaneOptions,
-} from "./lib/identity-plane.js";
+} from "@sceneaxi/site-kit/catalog-identity";
 
 export {
   FAMILY_DOTS,

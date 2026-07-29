@@ -857,9 +857,14 @@ describe("commerce stays inert and the archive's merchandising does not ship", (
       const detail = readSite(site, "src/app/item/[itemId]/page.tsx");
       expect(detail).toContain("<CommerceNotice");
       expect(readSite(site, "src/app/_components/commerce-notice.tsx")).toContain(
-        "attemptCatalogPurchase",
+        "createCommerceNoticeModel",
       );
     }
+    const shared = readFileSync(
+      new URL("../../packages/site-kit/src/commerce-notice.ts", import.meta.url),
+      "utf8",
+    );
+    expect(shared).toContain("attemptCatalogPurchase");
   });
 
   it("keeps the detail page's only working action the editor deep link", () => {

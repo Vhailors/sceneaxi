@@ -149,11 +149,16 @@ invented. The wiring invariants and the six acceptance properties are proven in
 `tests/boundary/injected-site-violations.test.ts`, when touching any of this.
 
 The shared visual layer is `packages/site-kit` (`design-tokens.ts`, `site-element.ts`,
-`change-review.ts`), owned by `docs/design-foundations.md` (sceneaxi#155). It lives there
+`change-review.ts`, `state-panel.ts`, `commerce-notice.ts`), owned by
+`docs/design-foundations.md` (sceneaxi#155/#162). It lives there
 because ADR 0018 makes each site its own install root and site-kit is the only package all
 three already depend on, so the tokens cost no matrix edge; the surface accent stays a
 per-site override. The package stays framework-free — it emits CSS text and a neutral
-`SiteElement` tree, never a component. Two rules that cannot bend: contrast is **measured**
+`SiteElement` tree, never a React component. Site-local `state-panel.tsx` and
+`commerce-notice.tsx` files are thin React adapters; browser graphs consume the narrow
+`@sceneaxi/site-kit/state-panel` entry rather than the Node-bearing root barrel. Shared
+session credential vocabulary/precedence is `site-session.ts`, while Next header/cookie
+access stays in each site's `_session.ts`. Two rules that cannot bend: contrast is **measured**
 in `test/design-tokens.test.ts` against every neutral, so a token cannot be promoted to a
 readable role by editing a table; and a visual fact the design archive does not state is a
 decision recorded in that doc before it ships, never invented in code. Change Review

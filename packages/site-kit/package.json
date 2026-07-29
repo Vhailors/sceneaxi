@@ -5,7 +5,11 @@
   "description": "SceneAxi site-kit — deployment-neutral logic for the first-party sites/ surfaces: fail-closed identity/credits/billing ports, editor entitlement, catalog view models, bounded Minimum E2 web editor session",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./catalog-identity": "./src/catalog-identity.ts",
+    "./commerce-notice": "./src/commerce-notice.ts",
+    "./site-session": "./src/site-session.ts",
+    "./state-panel": "./src/state-panel.ts"
   },
   "files": [
     "src"

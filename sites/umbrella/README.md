@@ -60,9 +60,10 @@ renderer boundary. The gate asserts the client-component list.
 
 ### Named states
 
-Every refusal, warning, and confirmation renders through `src/app/_components/state-panel.tsx`:
-a Foundations status chip, the state's name, and — always, never behind a disclosure —
-the contract's own key in mono. It offers no re-attempt affordance, because nothing here
+Every refusal, warning, and confirmation renders through the thin React adapter
+`src/app/_components/state-panel.tsx`, over the browser-safe shared model exported from
+`@sceneaxi/site-kit/state-panel`: a Foundations status chip, the state's name, and —
+always, never behind a disclosure — the contract's own key in mono. It offers no re-attempt affordance, because nothing here
 decides whether a refused operation may be tried again. A panel that is a page's first
 section under its `h1` passes `level={2}` so the document never jumps a heading level.
 

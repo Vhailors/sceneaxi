@@ -4,6 +4,18 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   resolve: {
     alias: {
+      "@sceneaxi/site-kit/catalog-identity": fileURLToPath(
+        new URL("./packages/site-kit/src/catalog-identity.ts", import.meta.url),
+      ),
+      "@sceneaxi/site-kit/commerce-notice": fileURLToPath(
+        new URL("./packages/site-kit/src/commerce-notice.ts", import.meta.url),
+      ),
+      "@sceneaxi/site-kit/site-session": fileURLToPath(
+        new URL("./packages/site-kit/src/site-session.ts", import.meta.url),
+      ),
+      "@sceneaxi/site-kit/state-panel": fileURLToPath(
+        new URL("./packages/site-kit/src/state-panel.ts", import.meta.url),
+      ),
       // `sites/*` are separate single-package workspaces outside the repository-root
       // workspace, so their `link:` dependency is not resolvable from the hermetic
       // root. Aliasing it here lets the gate test the sites' pure logic without adding

@@ -1,26 +1,34 @@
 /**
- * A named-state panel.
+ * The storefront's thin React adapter over site-kit's shared state-panel model.
  *
- * Every refusal on this storefront renders through here, carrying the
- * machine-readable reason alongside the human sentence — an inert commerce gate should
- * look deliberate, not broken.
+ * React stays in this install root; status/refusal semantics stay in site-kit.
  */
+import { createStatePanelModel } from "@sceneaxi/site-kit/state-panel";
+import type { StatePanelTone } from "@sceneaxi/site-kit/state-panel";
+
 export function StatePanel({
   tone,
   title,
   reason,
   children,
 }: {
-  readonly tone: "ok" | "warn" | "deny";
+  readonly tone: Exclude<StatePanelTone, "iso">;
   readonly title: string;
   readonly reason?: string | undefined;
   readonly children?: React.ReactNode | undefined;
 }) {
+  const model = createStatePanelModel({
+    tone,
+    title,
+    ...(reason === undefined ? {} : { reason }),
+  });
+  const Heading = model.headingTag;
+
   return (
-    <section className={`state state-${tone}`}>
-      <h3>{title}</h3>
+    <section className={model.sectionClassName}>
+      <Heading>{model.title}</Heading>
       {children}
-      {reason !== undefined && <code className="reason">reason: {reason}</code>}
+      {model.reason !== null && <code className="reason">reason: {model.reason}</code>}
     </section>
   );
 }

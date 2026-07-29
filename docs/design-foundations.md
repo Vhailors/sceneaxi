@@ -49,6 +49,15 @@ React, so a shared primitive is a *description* of a component
 | `design-tokens.ts` | the transcribed token tables, the contrast contract, and the CSS emitters |
 | `site-element.ts` | the framework-neutral element tree and its escaping HTML serializer |
 | `change-review.ts` | Change Review: the view model over a real `Proposal`, the decision resolution, the element tree, and the component CSS |
+| `state-panel.ts` | the named-state model, Foundations status mapping, compact/diagnostic neutral trees, and refusal/evidence vocabulary |
+| `commerce-notice.ts` | the storefront commerce-gate model, copy, viewer projection, and neutral tree |
+
+Issue [sceneaxi#162](https://github.com/Vhailors/sceneaxi/issues/162) completed D2's
+component half after the three visual lanes landed. React and Next remain site-local:
+`state-panel.tsx`, `commerce-notice.tsx`, and `_session.ts` are thin framework adapters,
+while their models, copy, refusal facts, element trees, credential names, and precedence
+live here. Client adapters use the browser-safe `@sceneaxi/site-kit/state-panel` subpath;
+they do not value-import the Node-bearing package root.
 
 A site pairs the two stylesheets — `foundationsCss()` for the palette, scale and
 shared parts, `changeReviewCss()` for the primitive — and loads Archivo and

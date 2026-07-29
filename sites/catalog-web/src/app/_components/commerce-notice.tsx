@@ -1,4 +1,4 @@
-import { COMMERCE_ACTIVATION_GATE, attemptCatalogPurchase } from "@sceneaxi/site-kit";
+import { createCommerceNoticeModel } from "@sceneaxi/site-kit/commerce-notice";
 import type { CatalogSurface, SitePrincipal, SiteResult } from "@sceneaxi/site-kit";
 import { StatePanel } from "./state-panel.js";
 
@@ -25,32 +25,31 @@ export function CommerceNotice({
   readonly itemId: string;
   readonly viewer: SiteResult<SitePrincipal>;
 }) {
-  const attempt = attemptCatalogPurchase({ surface, itemId, payWith: "credits" });
-  const reason = attempt.ok ? undefined : attempt.reason;
+  const model = createCommerceNoticeModel({ surface, itemId, viewer });
 
   return (
-    <StatePanel tone="warn" title="Buying is not open yet" reason={reason}>
-      <p>{COMMERCE_ACTIVATION_GATE.policy}</p>
-      <p>
-        Prices and the creator share are shown so listings can be evaluated now. When
-        activation opens, purchases settle in credits through the shared account plane —
-        nothing on this page collects payment details in the meantime.
-      </p>
+    <StatePanel
+      tone={model.tone}
+      title={model.title}
+      reason={model.reason ?? undefined}
+    >
+      <p>{model.policy}</p>
+      <p>{model.explanation}</p>
       <p>
         Account plane:{" "}
-        {viewer.ok ? (
+        {model.viewer.state === "resolved" ? (
           <>
-            signed in as <code>{viewer.value.user.email}</code> · role{" "}
-            <code>{viewer.value.role}</code>
+            signed in as <code>{model.viewer.email}</code> · role{" "}
+            <code>{model.viewer.role}</code>
           </>
         ) : (
           <>
-            no viewer resolved · <code>{viewer.reason}</code>
+            no viewer resolved · <code>{model.viewer.reason}</code>
           </>
         )}
       </p>
       <p>
-        Registry: <code>{COMMERCE_ACTIVATION_GATE.registry}</code>
+        Registry: <code>{model.registry}</code>
       </p>
     </StatePanel>
   );

@@ -1,4 +1,9 @@
 import { cookies, headers } from "next/headers";
+import {
+  SITE_SESSION_COOKIE,
+  SITE_SESSION_HEADER,
+  resolveSiteSessionToken,
+} from "@sceneaxi/site-kit/site-session";
 
 /**
  * Read the opaque session token a signed-in browser carries.
@@ -10,15 +15,11 @@ import { cookies, headers } from "next/headers";
  * single-file identity activation (`src/lib/identity-plane.ts`) actually see a session
  * once an adapter is wired, without any other route change.
  */
-const SESSION_COOKIE = "sceneaxi.session";
-const SESSION_HEADER = "x-sceneaxi-session";
-
 export async function readSessionToken(): Promise<string | null> {
   const headerStore = await headers();
-  const fromHeader = headerStore.get(SESSION_HEADER);
-  if (fromHeader !== null && fromHeader.trim().length > 0) return fromHeader.trim();
   const cookieStore = await cookies();
-  const fromCookie = cookieStore.get(SESSION_COOKIE)?.value;
-  if (fromCookie !== undefined && fromCookie.trim().length > 0) return fromCookie.trim();
-  return null;
+  return resolveSiteSessionToken({
+    header: headerStore.get(SITE_SESSION_HEADER),
+    cookie: cookieStore.get(SITE_SESSION_COOKIE)?.value,
+  });
 }

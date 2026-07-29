@@ -30,6 +30,7 @@ import {
   SITE_CAPABILITIES,
   SITE_CAPABILITY_IDS,
   SITE_STARTER_CREDIT_ALLOTMENT,
+  createStatePanelModel,
   meetsContrast,
 } from "@sceneaxi/site-kit";
 import {
@@ -649,7 +650,7 @@ describe("account, credits, and refusal surfaces stay truthful", () => {
   it("keeps the named refusal key visible on every refusing surface", () => {
     // The panel prints the key unconditionally whenever one exists — no disclosure, no
     // truncation, no "details" affordance standing between a reader and the reason.
-    expect(STATE_PANEL).toContain("reason !== undefined &&");
+    expect(STATE_PANEL).toContain("model.reason !== null &&");
     expect(STATE_PANEL).toContain('className="reason"');
     for (const source of [
       ACCOUNT,
@@ -810,16 +811,17 @@ describe("the visual layer adds no behaviour the site did not already have", () 
     }
   });
 
-  it("reaches every workspace package but the Three core type-only from the browser bundle", () => {
+  it("reaches only reviewed browser-safe package entries from the client graph", () => {
     // A `"use client"` module and everything it imports is compiled for the browser.
-    // `@sceneaxi/site-kit` has one export target — its barrel — which re-exports values
-    // out of `node:fs`/`node:crypto`/`node:os` modules, and `@sceneaxi/schemas`,
+    // The `@sceneaxi/site-kit` barrel re-exports values out of
+    // `node:fs`/`node:crypto`/`node:os` modules, while its state-panel subpath is a
+    // deliberately narrow browser-safe entry. `@sceneaxi/schemas`,
     // `@sceneaxi/authoring-core`, `@sceneaxi/auth`, and `@sceneaxi/billing` are server
     // planes the site reaches only from `src/lib/`. A value import of any of them from
     // the client graph would either fail the browser build on an unresolvable `node:`
     // specifier or ship that whole graph to a visitor. `@sceneaxi/engine-presentation`
-    // is exempt: it is the umbrella's one engine edge (ADR 0022) and is browser-safe by
-    // contract. Type-only imports erase, so they stay allowed everywhere.
+    // and the state-panel entry are exempt: both are browser-safe by contract.
+    // Type-only imports erase, so they stay allowed everywhere.
     /** Every module a source imports for its *value*; `import type` is erased and skipped. */
     const valueImports = (relativePath: string): readonly string[] =>
       [...read(relativePath).matchAll(/import\s+(type\s+)?[^"';]*?from\s+"([^"]+)"/g)]
@@ -842,29 +844,46 @@ describe("the visual layer adds no behaviour the site did not already have", () 
       }
     }
 
+    const browserSafeValueImports = new Set([
+      "@sceneaxi/engine-presentation",
+      "@sceneaxi/site-kit/state-panel",
+    ]);
     const offenders = [...clientGraph].flatMap((relativePath) =>
       valueImports(relativePath)
         .filter(
           (specifier) =>
-            specifier.startsWith("@sceneaxi/") && specifier !== "@sceneaxi/engine-presentation",
+            specifier.startsWith("@sceneaxi/") && !browserSafeValueImports.has(specifier),
         )
         .map((specifier) => `${relativePath} -> ${specifier}`),
     );
     expect(offenders).toEqual([]);
+
+    const statePanelEntry = readFileSync(
+      new URL("../../packages/site-kit/src/state-panel.ts", import.meta.url),
+      "utf8",
+    );
+    expect(statePanelEntry).not.toContain('from "node:');
+    expect(statePanelEntry).not.toContain('from "@sceneaxi/site-kit"');
   });
 
   it("names only statuses Foundations publishes, with their published labels", () => {
-    // The state panel is in the browser bundle, so it restates its four labels rather
-    // than reading `FOUNDATION_STATUSES` at runtime. This is the join that keeps the
-    // restatement honest: a status renamed in site-kit fails here.
-    const pinned = [
-      ...read("src/app/_components/state-panel.tsx").matchAll(
-        /\{ id: "([a-z-]+)", label: "([^"]+)" \}/g,
-      ),
-    ];
-    expect(pinned).toHaveLength(4);
-    for (const [, id, label] of pinned) {
-      expect(FOUNDATION_STATUSES.find((status) => status.id === id)?.label).toBe(label);
+    // The browser-safe shared model now reads the vocabulary directly; the site carries
+    // no restated id or label that could drift.
+    const expected = [
+      ["ok", "validated"],
+      ["warn", "needs-review"],
+      ["deny", "refused"],
+      ["iso", "isolated"],
+    ] as const;
+    for (const [tone, id] of expected) {
+      const model = createStatePanelModel({ tone, title: "State" });
+      expect(model.status.id).toBe(id);
+      expect(model.status.label).toBe(
+        FOUNDATION_STATUSES.find((status) => status.id === id)?.label,
+      );
     }
+    expect(read("src/app/_components/state-panel.tsx")).not.toMatch(
+      /\{ id: "[a-z-]+", label: "[^"]+" \}/,
+    );
   });
 });
