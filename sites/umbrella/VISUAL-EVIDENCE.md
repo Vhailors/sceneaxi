@@ -357,23 +357,19 @@ its canvas to an invented `#0b0e13` while `.viewport` painted `--bg-base` behind
 the old scan read only `src/lib/foundations.ts`, so it never looked. The letterbox is one
 colour now on every surface that mounts the viewport.
 
-## One structural divergence, recorded
+## Shared profile-contract path
 
 `/profiles` needs `profileConformanceRegistry` and `OPEN_PATH_POLICY`, both owned by
 `@sceneaxi/schemas`. `docs/dependency-matrix.json` allows this site four edges —
-`@sceneaxi/site-kit`, `@sceneaxi/engine-presentation`, `@sceneaxi/auth`,
-`@sceneaxi/billing` — and none of them re-exports either table.
+`@sceneaxi/site-kit`, `@sceneaxi/engine-presentation`, `@sceneaxi/auth`, and
+`@sceneaxi/billing`. The narrow browser-safe `@sceneaxi/site-kit/profile-contracts`
+entry now re-exports both canonical frozen objects without exposing site-kit's Node-bearing
+root barrel to the client graph.
 
-The durable home for that projection is a re-export from `@sceneaxi/site-kit`, which is
-how every other contract shape reaches the `sites/` tier. `packages/site-kit` is a shared
-seam this lane may not edit, so the projection ships instead as a **bundled mirror**
-(`src/lib/profile-matrix.ts`) held in lockstep with both contracts by
-`tests/sites/umbrella-profile-matrix.test.ts`, which runs from the repository root where
-naming `@sceneaxi/schemas` is allowed. The mirror carries only what the contracts state
-and **no cell**: every cell is computed by `profileCapabilityStatus()`, whose branches
+`src/lib/profile-matrix.ts` computes its projection directly from that shared data and
+refuses if the registry and policy profile sets differ. The projection carries **no
+cell**: every cell is computed by `profileCapabilityStatus()`, whose branches
 make `proven` unreachable for a refuse-only profile, for a profile that has not claimed
 conformance, for an operation outside the row's own list, and for a row with no committed
-evidence. Adversarial inputs for all four are in that test.
-
-Moving the projection into site-kit later is a small, mechanical change; nothing on the
-page would move.
+evidence. Adversarial inputs for all four are in
+`tests/sites/umbrella-profile-matrix.test.ts`.

@@ -40,12 +40,16 @@ claim:
   gate type-checks it. It derives every figure it can from the contract that owns it and
   restates only the sculpt pass order and the CLI exit-code table, both of which
   `tests/sites/umbrella-visual.test.ts` pins to `@sceneaxi/schemas` and `@sceneaxi/cli`.
-- `src/lib/profile-matrix.ts` backs `/profiles`. It mirrors the profile conformance
-  registry and the open-path demo policy — the sites tier may not import
-  `@sceneaxi/schemas` — and computes every cell rather than storing one, so an unproven
-  capability cannot be presented as claimed.
-  `tests/sites/umbrella-profile-matrix.test.ts` holds the mirror in lockstep with both
-  contracts and drives the derivation with adversarial rows.
+- `src/lib/profile-matrix.ts` backs `/profiles`. It reads the canonical profile
+  conformance registry and open-path demo policy through the narrow browser-safe
+  `@sceneaxi/site-kit/profile-contracts` entry and computes every cell rather than
+  storing one, so an unproven capability cannot be presented as claimed.
+  It keeps only the column headers as page-local copy: `PROFILE_DISPLAY_NAMES` pins one
+  label per profile id and refuses an id it does not carry, so a new policy row must be
+  given a decided label in the same commit rather than one munged from its package name.
+  `tests/sites/umbrella-profile-matrix.test.ts` asserts reference identity with both
+  schema contracts, pins every label, covers the unknown-profile refusal, and drives the
+  derivation with adversarial rows.
 - `tests/sites/umbrella-visual.test.ts` asserts what the surface may **not** claim — no
   installer, size, or digest this repository does not build; no seat or subscription
   price; no registry install; no widened shipping claim; no Kids link; no ledger write
