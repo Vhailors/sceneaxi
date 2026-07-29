@@ -3,13 +3,10 @@
  *
  * Two halves, and both are load-bearing:
  *
- *   1. **Lockstep.** `sites/umbrella/src/lib/profile-matrix.ts` carries a bundled mirror
- *      of `profileConformanceRegistry` and `OPEN_PATH_POLICY`, because
- *      `docs/dependency-matrix.json` gives the umbrella four edges and none of them
- *      reaches `@sceneaxi/schemas`. This file runs from the repository root, where naming
- *      that package *is* allowed, so the mirror is compared against both contracts field
- *      by field. A hand edit that softened a claim status, promoted a demo level, added
- *      an operation, or dropped an evidence path fails here rather than shipping.
+ *   1. **Canonical identity.** The browser-safe `@sceneaxi/site-kit/profile-contracts`
+ *      entry re-exports the canonical `@sceneaxi/schemas` frozen objects. Reference
+ *      identity fails if that shared path becomes a copy, and the page projection is
+ *      still compared field by field so a join that drops or softens data fails here.
  *
  *   2. **Derivation.** The page renders no cell of its own; every cell comes from
  *      `profileCapabilityStatus()`. These tests drive that function with adversarial
@@ -26,6 +23,12 @@ import {
   profileConformanceRegistry,
 } from "@sceneaxi/schemas";
 import {
+  OPEN_PATH_POLICY as SITE_OPEN_PATH_POLICY,
+  OPEN_PATH_DEMO_OPERATIONS as SITE_OPEN_PATH_DEMO_OPERATIONS,
+  OPEN_PATH_REFUSE_ONLY_PROFILE as SITE_OPEN_PATH_REFUSE_ONLY_PROFILE,
+  profileConformanceRegistry as siteProfileConformanceRegistry,
+} from "@sceneaxi/site-kit/profile-contracts";
+import {
   PROFILE_MATRIX_SOURCE,
   PROFILE_OPERATIONS,
   profileCapabilityStatus,
@@ -33,7 +36,14 @@ import {
   type ProfileMatrixSource,
 } from "../../sites/umbrella/src/lib/profile-matrix.ts";
 
-describe("the bundled mirror stays in lockstep with the contracts it mirrors", () => {
+describe("the shared site-kit path stays identical to the canonical contracts", () => {
+  it("re-exports contract objects by reference instead of copying them", () => {
+    expect(SITE_OPEN_PATH_POLICY).toBe(OPEN_PATH_POLICY);
+    expect(SITE_OPEN_PATH_DEMO_OPERATIONS).toBe(OPEN_PATH_DEMO_OPERATIONS);
+    expect(SITE_OPEN_PATH_REFUSE_ONLY_PROFILE).toBe(OPEN_PATH_REFUSE_ONLY_PROFILE);
+    expect(siteProfileConformanceRegistry).toBe(profileConformanceRegistry);
+  });
+
   it("covers exactly the profiles the open-path policy covers, in order", () => {
     expect(PROFILE_MATRIX_SOURCE.map((row) => row.profile)).toEqual(
       OPEN_PATH_POLICY.map((row) => row.profile),
@@ -52,21 +62,21 @@ describe("the bundled mirror stays in lockstep with the contracts it mirrors", (
 
   it("repeats each policy row's level, session, operations, and evidence verbatim", () => {
     for (const policy of OPEN_PATH_POLICY) {
-      const mirrored = PROFILE_MATRIX_SOURCE.find((row) => row.profile === policy.profile);
-      expect(mirrored, `no mirror row for ${policy.profile}`).toBeDefined();
-      expect(mirrored?.demoLevel).toBe(policy.demoLevel);
-      expect(mirrored?.sessionKind).toBe(policy.sessionKind);
-      expect(mirrored?.operations).toEqual([...policy.operations]);
-      expect(mirrored?.evidence).toBe(policy.evidence);
-      expect(mirrored?.summary).toBe(policy.summary);
-      expect(mirrored?.shippingClaim).toBe(false);
+      const projected = PROFILE_MATRIX_SOURCE.find((row) => row.profile === policy.profile);
+      expect(projected, `no projected row for ${policy.profile}`).toBeDefined();
+      expect(projected?.demoLevel).toBe(policy.demoLevel);
+      expect(projected?.sessionKind).toBe(policy.sessionKind);
+      expect(projected?.operations).toBe(policy.operations);
+      expect(projected?.evidence).toBe(policy.evidence);
+      expect(projected?.summary).toBe(policy.summary);
+      expect(projected?.shippingClaim).toBe(false);
     }
   });
 
   it("repeats each registry row's claim status verbatim", () => {
     for (const entry of profileConformanceRegistry) {
-      const mirrored = PROFILE_MATRIX_SOURCE.find((row) => row.profile === entry.profile);
-      expect(mirrored?.claimStatus).toBe(entry.claimStatus);
+      const projected = PROFILE_MATRIX_SOURCE.find((row) => row.profile === entry.profile);
+      expect(projected?.claimStatus).toBe(entry.claimStatus);
       expect(entry.shippingClaim).toBe(false);
     }
   });
@@ -143,5 +153,17 @@ describe("no unproven capability can be presented as claimed", () => {
     const matrix = profileMatrix();
     expect(matrix.shippingClaim).toBe(false);
     for (const row of matrix.rows) expect(row.shippingClaim).toBe(false);
+  });
+
+  it("keeps Web and Kids unclaimed, with Kids refuse-only", () => {
+    const matrix = profileMatrix();
+    const web = matrix.rows.find((row) => row.profile === "@sceneaxi/profile-web");
+    const kids = matrix.rows.find((row) => row.profile === "@sceneaxi/profile-kids");
+
+    expect(web?.claimStatus).toBe("not-yet-claimed");
+    expect(web?.cells.every((cell) => cell.status === "not-yet-claimed")).toBe(true);
+    expect(kids?.claimStatus).toBe("not-yet-claimed");
+    expect(kids?.demoLevel).toBe("refuse-only");
+    expect(kids?.cells.every((cell) => cell.status === "refused")).toBe(true);
   });
 });

@@ -8,6 +8,7 @@
     ".": "./src/index.ts",
     "./catalog-identity": "./src/catalog-identity.ts",
     "./commerce-notice": "./src/commerce-notice.ts",
+    "./profile-contracts": "./src/profile-contracts.ts",
     "./site-session": "./src/site-session.ts",
     "./state-panel": "./src/state-panel.ts"
   },

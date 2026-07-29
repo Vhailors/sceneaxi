@@ -17,6 +17,9 @@
       "@sceneaxi/site-kit/commerce-notice": [
         "./packages/site-kit/src/commerce-notice.ts"
       ],
+      "@sceneaxi/site-kit/profile-contracts": [
+        "./packages/site-kit/src/profile-contracts.ts"
+      ],
       "@sceneaxi/site-kit/site-session": [
         "./packages/site-kit/src/site-session.ts"
       ],

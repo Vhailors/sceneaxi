@@ -51,7 +51,7 @@ when a surface changes level instead of copying its current inventory here.
 How far each profile's open path may be **demonstrated** is a separate, shared
 contract: `docs/open-path-policy.md`, implemented in
 `packages/schemas/src/open-path-policy.ts` (+ `contracts/open-path-policy.*`) and
-read — restated only in the one gate-locked mirror that doc records — by
+read — through the narrow site-kit re-export for the umbrella `/profiles` page — by
 `profile-game`, `profile-web`, `sceneaxi profile
 open-path`, `sceneaxi-desktop open-path`, and web-shell's `createOpenPathView()`.
 It lives in `schemas` because that is the only package all five may name, so

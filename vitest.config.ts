@@ -10,6 +10,9 @@ export default defineConfig({
       "@sceneaxi/site-kit/commerce-notice": fileURLToPath(
         new URL("./packages/site-kit/src/commerce-notice.ts", import.meta.url),
       ),
+      "@sceneaxi/site-kit/profile-contracts": fileURLToPath(
+        new URL("./packages/site-kit/src/profile-contracts.ts", import.meta.url),
+      ),
       "@sceneaxi/site-kit/site-session": fileURLToPath(
         new URL("./packages/site-kit/src/site-session.ts", import.meta.url),
       ),

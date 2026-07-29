@@ -8,62 +8,46 @@
  * ships is the reduced, truthful one (decision D3): the six ADR 0001 Kernel-seam
  * operations, each cell answered by the policy rather than by a page author.
  *
- * ## Why the contract data is mirrored here
+ * ## Why the contract data cannot drift here
  *
- * Both owners live in `@sceneaxi/schemas`
- * (`src/profile-conformance.ts`, `src/open-path-policy.ts`), and
- * `docs/dependency-matrix.json` allows this site four edges — `@sceneaxi/site-kit`,
- * `@sceneaxi/engine-presentation`, `@sceneaxi/auth`, `@sceneaxi/billing` — none of which
- * re-exports either table. So this module carries a **bundled mirror**, the same shape
- * `packages/schemas/src/credit-packs.data.ts` uses for the same reason, and
- * `tests/sites/umbrella-profile-matrix.test.ts` holds it in lockstep with both contracts
- * from the repository root, where naming `@sceneaxi/schemas` is allowed. A drifted
- * mirror fails the gate; it does not reach a page.
- *
- * The durable home for this projection is a re-export from `@sceneaxi/site-kit`, which is
- * how every other contract shape reaches the sites tier. That package is a shared seam
- * this lane may not edit, so the mirror plus its lockstep test is the in-lane form of the
- * same guarantee. `sites/umbrella/VISUAL-EVIDENCE.md` records the divergence.
+ * Both owners live in `@sceneaxi/schemas`, and the umbrella may reach them only through
+ * the narrow, browser-safe `@sceneaxi/site-kit/profile-contracts` entry. That entry
+ * re-exports the canonical frozen objects rather than copying them. This module joins
+ * those objects into the page projection and refuses module initialization if the two
+ * profile sets disagree, so contract drift cannot leave a stale page-local table behind.
  *
  * ## Why a hand edit here cannot overclaim
  *
- * The mirror carries only what the contracts state; it carries **no cell**. Every cell is
- * computed by `profileCapabilityStatus()` below, whose branches make `proven` unreachable
- * for a refuse-only profile and for a profile that is not a development consumer — so
- * granting a tick would take editing the derivation, not the data, and the derivation is
- * what the test exercises.
+ * The projection carries **no cell**. Every cell is computed by
+ * `profileCapabilityStatus()` below, whose branches make `proven` unreachable for a
+ * refuse-only profile and for a profile that is not a development consumer — so granting
+ * a tick would take editing the derivation, not the data, and the derivation is what the
+ * test exercises.
  */
 
-/** Mirrors `ProfileClaimStatus` in `@sceneaxi/schemas`. */
-export type ProfileClaimStatus = "development-consumer" | "not-yet-claimed";
+import {
+  OPEN_PATH_DEMO_OPERATIONS,
+  OPEN_PATH_POLICY,
+  OPEN_PATH_REFUSE_ONLY_PROFILE,
+  profileConformanceRegistry,
+  type OpenPathDemoLevel,
+  type OpenPathDemoOperation,
+  type OpenPathPolicyRow,
+  type OpenPathSessionKind,
+  type ProfileClaimStatus,
+} from "@sceneaxi/site-kit/profile-contracts";
 
-/** Mirrors `OpenPathDemoLevel` in `@sceneaxi/schemas`. */
-export type ProfileDemoLevel = "demo-driveable" | "refuse-only";
-
-/** Mirrors `OpenPathSessionKind` in `@sceneaxi/schemas`. */
-export type ProfileSessionKind = "kernel-session" | "scene-kernel-session" | "none";
-
-/** Mirrors `OpenPathDemoOperation` in `@sceneaxi/schemas` — the ADR 0001 Kernel seam. */
-export type ProfileOperation =
-  | "open"
-  | "dispatch"
-  | "advance"
-  | "observe"
-  | "save"
-  | "replay";
+export type ProfileDemoLevel = OpenPathDemoLevel;
+export type ProfileSessionKind = OpenPathSessionKind;
+export type ProfileOperation = OpenPathDemoOperation;
+export type { ProfileClaimStatus };
 
 /**
  * The six operations, in the contract's canonical order. This is the whole column set:
  * the matrix has no column for a capability no contract grades.
  */
-export const PROFILE_OPERATIONS: readonly ProfileOperation[] = Object.freeze([
-  "open",
-  "dispatch",
-  "advance",
-  "observe",
-  "save",
-  "replay",
-]);
+export const PROFILE_OPERATIONS: readonly ProfileOperation[] =
+  OPEN_PATH_DEMO_OPERATIONS;
 
 /** What each column means, in the vocabulary ADR 0001 already uses. */
 export const PROFILE_OPERATION_COPY: Readonly<Record<ProfileOperation, string>> =
@@ -77,76 +61,53 @@ export const PROFILE_OPERATION_COPY: Readonly<Record<ProfileOperation, string>> 
   });
 
 /** One profile, exactly as the two contracts state it. No cell, no verdict. */
-export type ProfileMatrixSource = {
-  readonly profile: string;
-  /** Display name. Presentation only — it decides nothing. */
-  readonly name: string;
-  readonly claimStatus: ProfileClaimStatus;
-  readonly demoLevel: ProfileDemoLevel;
-  readonly sessionKind: ProfileSessionKind;
-  readonly operations: readonly ProfileOperation[];
-  /** Repo-relative committed test that proves the level. Never empty for a graded row. */
-  readonly evidence: string;
-  readonly shippingClaim: false;
-  readonly summary: string;
-};
+export type ProfileMatrixSource = Readonly<
+  OpenPathPolicyRow & {
+    /** Display name. Presentation only — it decides nothing. */
+    readonly name: string;
+    readonly claimStatus: ProfileClaimStatus;
+  }
+>;
 
 /**
- * The bundled mirror. Held in lockstep with `profileConformanceRegistry` and
- * `OPEN_PATH_POLICY` by `tests/sites/umbrella-profile-matrix.test.ts`.
+ * Presentation-only names are derived from the contract package id. They decide no claim.
  */
-export const PROFILE_MATRIX_SOURCE: readonly ProfileMatrixSource[] = Object.freeze([
-  Object.freeze({
-    profile: "@sceneaxi/profile-game",
-    name: "Game",
-    claimStatus: "development-consumer" as const,
-    demoLevel: "demo-driveable" as const,
-    sessionKind: "scene-kernel-session" as const,
-    operations: Object.freeze([
-      "open",
-      "dispatch",
-      "advance",
-      "observe",
-      "save",
-      "replay",
-    ] as const),
-    evidence: "tests/e2e/profile-game-scene-golden.test.ts",
-    shippingClaim: false as const,
-    summary:
-      "Opens a composed multi-object scene kernel session offline; a development demo, not a shippable game.",
+function profileName(profile: string) {
+  const slug = profile.replace("@sceneaxi/profile-", "");
+  if (slug === "web") return "Web experience";
+  return `${slug.slice(0, 1).toUpperCase()}${slug.slice(1)}`;
+}
+
+const registryByProfile = new Map(
+  profileConformanceRegistry.map((entry) => [entry.profile, entry] as const),
+);
+const policyProfiles = new Set(OPEN_PATH_POLICY.map((row) => row.profile));
+
+if (
+  registryByProfile.size !== OPEN_PATH_POLICY.length ||
+  profileConformanceRegistry.some((entry) => !policyProfiles.has(entry.profile))
+) {
+  throw new Error(
+    "The /profiles matrix refuses contract drift: profile conformance and open-path policy profile sets differ.",
+  );
+}
+
+/** The page source is computed directly from the canonical contracts; no mirror remains. */
+export const PROFILE_MATRIX_SOURCE: readonly ProfileMatrixSource[] = Object.freeze(
+  OPEN_PATH_POLICY.map((policy) => {
+    const registryEntry = registryByProfile.get(policy.profile);
+    if (registryEntry === undefined) {
+      throw new Error(
+        `The /profiles matrix refuses contract drift: ${policy.profile} has policy but no conformance registry row.`,
+      );
+    }
+    return Object.freeze({
+      ...policy,
+      name: profileName(policy.profile),
+      claimStatus: registryEntry.claimStatus,
+    });
   }),
-  Object.freeze({
-    profile: "@sceneaxi/profile-web",
-    name: "Web experience",
-    claimStatus: "not-yet-claimed" as const,
-    demoLevel: "demo-driveable" as const,
-    sessionKind: "kernel-session" as const,
-    operations: Object.freeze([
-      "open",
-      "dispatch",
-      "advance",
-      "observe",
-      "save",
-      "replay",
-    ] as const),
-    evidence: "tests/e2e/profile-web-golden-path.test.ts",
-    shippingClaim: false as const,
-    summary:
-      "Opens a single-object kernel session inside the locked Web Experience scope; a development demo, not a shipped website.",
-  }),
-  Object.freeze({
-    profile: "@sceneaxi/profile-kids",
-    name: "Kids",
-    claimStatus: "not-yet-claimed" as const,
-    demoLevel: "refuse-only" as const,
-    sessionKind: "none" as const,
-    operations: Object.freeze([] as const),
-    evidence: "tests/e2e/profile-kids-refuse-golden.test.ts",
-    shippingClaim: false as const,
-    summary:
-      "Refuses every open-path demo: the Kids product is an isolation boundary with no UI, commerce, identity, or third-party model route.",
-  }),
-]);
+);
 
 /**
  * What one cell may say. There is no fourth value, and in particular no value that means
@@ -222,12 +183,11 @@ export function profileMatrix(): ProfileMatrixView {
       ),
     }),
   );
-  const refuseOnly = rows.find((row) => row.demoLevel === "refuse-only");
   return Object.freeze({
     rows: Object.freeze(rows),
     operations: PROFILE_OPERATIONS,
     shippingClaim: false as const,
-    refuseOnlyProfile: refuseOnly?.profile ?? "@sceneaxi/profile-kids",
+    refuseOnlyProfile: OPEN_PATH_REFUSE_ONLY_PROFILE,
     provenCount: rows.reduce(
       (total, row) => total + row.cells.filter((cell) => cell.status === "proven").length,
       0,
