@@ -25,6 +25,9 @@ opened — and what may be drawn — lives here.
 | `design-tokens.ts` | the Foundations v2 visual tokens, the measured contrast contract, and the CSS emitters |
 | `site-element.ts` | a framework-neutral element tree plus an escaping HTML serializer |
 | `change-review.ts` | Change Review — the design system's signature primitive, over a real `Proposal` |
+| `state-panel.ts` | the shared named-state model, Foundations status mapping, and neutral tree; sites retain only React adapters |
+| `commerce-notice.ts` | the two storefronts' inert-commerce copy, refusal model, and neutral tree |
+| `site-session.ts` | the shared session header/cookie vocabulary and header-first token normalization |
 
 ## The shared visual layer
 
@@ -40,6 +43,14 @@ real propose/apply `Proposal`: one row per `ProposalEdit`, a projected before �
 document digest, and a stale proposal refused rather than merged. Per-row decisions
 function, and a *mixed* decision refuses by name — apply is all-or-nothing, and
 narrowing a proposal is authoring, which belongs to `@sceneaxi/authoring-core`.
+
+The state panel and commerce notice follow the same boundary: site-kit exports models
+and `SiteElement` trees, while each separate site install root keeps the few lines that
+map those facts onto React. Browser clients import the narrow
+`@sceneaxi/site-kit/state-panel` entry rather than the root barrel, whose server-side
+catalog and editor exports intentionally reach Node builtins. The catalog identity and
+request-token seams likewise have narrow public entries, so a site does not need a
+duplicated re-export or duplicated credential precedence.
 
 Ownership, the measured accessibility contract, the recorded archive ↔ contract
 differences, and the browser evidence are in `docs/design-foundations.md`.

@@ -10,6 +10,18 @@
     "paths": {
       "@sceneaxi/site-kit": [
         "./packages/site-kit/src/index.ts"
+      ],
+      "@sceneaxi/site-kit/catalog-identity": [
+        "./packages/site-kit/src/catalog-identity.ts"
+      ],
+      "@sceneaxi/site-kit/commerce-notice": [
+        "./packages/site-kit/src/commerce-notice.ts"
+      ],
+      "@sceneaxi/site-kit/site-session": [
+        "./packages/site-kit/src/site-session.ts"
+      ],
+      "@sceneaxi/site-kit/state-panel": [
+        "./packages/site-kit/src/state-panel.ts"
       ]
     },
     "baseUrl": "."

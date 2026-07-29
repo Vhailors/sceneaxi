@@ -21,9 +21,9 @@ surface does not publish the website catalog's or the umbrella's canonical pages
 
 ## Identity is read, never issued
 
-This storefront takes **no auth stack of its own**: `src/lib/identity-plane.ts` re-exports
-the shared `@sceneaxi/site-kit` storefront plane, and the item page shows what that plane
-says about the request — display only, with a server-derived role or a named refusal. The
+This storefront takes **no auth stack of its own**: its seam and item page consume the
+public `@sceneaxi/site-kit/catalog-identity` entry directly, and the item page shows what
+that plane says about the request — display only, with a server-derived role or a named refusal. The
 matrix denies this site `@sceneaxi/auth` and `@sceneaxi/billing`, and no adapter is
 supplied here, so an unwired deployment refuses rather than inventing a viewer. The plane
 and its activation are owned by [`docs/websites-deploy.md`](../../docs/websites-deploy.md).
@@ -53,7 +53,7 @@ design itself asks for — *"same skeleton, different accent and merchandising"*
   not configured renders as text rather than a broken link; and `FAMILY_KEYS` has no
   Kids entry, so no configuration can produce a link into Kids.
 
-### The token layer comes from `packages/site-kit`
+### The token and component layer comes from `packages/site-kit`
 
 Captain decision **D2** (2026-07-28) gives the shared token and component layer one home,
 and this storefront consumes it rather than carrying a copy:
@@ -73,6 +73,10 @@ and this storefront consumes it rather than carrying a copy:
 - The status vocabulary is re-projected as `--status-<id>-{fg,bg,line}` from
   `FOUNDATION_STATUSES`, so the storefront's notice panels and rails read the same
   triples as site-kit's `.sx-status-*` chips without writing one of their values.
+- `state-panel.tsx` and `commerce-notice.tsx` are React-only adapters over the shared
+  state and commerce models; they own no status mapping, commerce copy, or purchase
+  refusal logic. `_session.ts` similarly owns only Next request access and delegates
+  header/cookie names and precedence to `@sceneaxi/site-kit/site-session`.
 - What stays local is what site-kit does not publish: the archive's per-store washes
   (`--accent-bg`, `--accent-line`, `--hero-wash`, `--media-wash`), the store mark shape,
   and the layout measures its own `:root` block declares.

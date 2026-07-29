@@ -9,7 +9,10 @@ import {
 import { CATALOG_SITE_BRAND, CATALOG_SITE_SURFACE, editorLinkFor } from "../../../lib/site-config.js";
 import { curationTrail, sameCreatorListings } from "../../../lib/catalog-facts.js";
 import { shortenDigest } from "../../../lib/digest-sigil.js";
-import { createCatalogIdentityPlane, resolveCatalogViewer } from "../../../lib/identity-plane.js";
+import {
+  createCatalogIdentityPlane,
+  resolveCatalogViewer,
+} from "@sceneaxi/site-kit/catalog-identity";
 import { readSessionToken } from "../../_session.js";
 import { CommerceNotice } from "../../_components/commerce-notice.js";
 import { DigestFigure } from "../../_components/digest-figure.js";

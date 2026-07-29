@@ -13,32 +13,11 @@
  * would be inventing a contract. Pages link onward to surfaces that exist (account,
  * pricing, the free downloads) — that is a route, not a retry.
  */
-import type { FoundationStatusId } from "@sceneaxi/site-kit";
+import { createStatePanelModel } from "@sceneaxi/site-kit/state-panel";
+import type { StatePanelEvidence, StatePanelTone } from "@sceneaxi/site-kit/state-panel";
 import { Fragment } from "react";
 
-/**
- * The tones, mapped onto Foundations' published status vocabulary so a state on this
- * site and a status chip anywhere else in the product read as the same thing.
- */
-export type StateTone = "ok" | "warn" | "deny" | "iso";
-
-/**
- * A tone selects a published status *by id*, typed as `FoundationStatusId` so an id
- * Foundations does not publish fails to compile. The label is restated rather than read
- * out of `FOUNDATION_STATUSES` because this module is in the browser bundle — the
- * `@sceneaxi/site-kit` barrel re-exports Node-only values, so every reference to it from
- * the client graph stays type-only and erases. The restatement is not a second source:
- * `tests/sites/umbrella-visual.test.ts` runs at the repository root, where naming site-kit
- * is free, and pins these four ids and labels to the published vocabulary.
- */
-const TONE_STATUS: Readonly<
-  Record<StateTone, { readonly id: FoundationStatusId; readonly label: string }>
-> = Object.freeze({
-  ok: Object.freeze({ id: "validated", label: "Validated" }),
-  warn: Object.freeze({ id: "needs-review", label: "Needs review" }),
-  deny: Object.freeze({ id: "refused", label: "Refused" }),
-  iso: Object.freeze({ id: "isolated", label: "Isolated" }),
-});
+export type StateTone = StatePanelTone;
 
 export function StatePanel({
   tone,
@@ -67,31 +46,38 @@ export function StatePanel({
    * ran in. Rendered as a definition list, in the same technical-document treatment the
    * evidence readouts use, so a state and an evidence block are visibly one language.
    */
-  readonly evidence?: readonly { readonly term: string; readonly value: string }[] | undefined;
+  readonly evidence?: readonly StatePanelEvidence[] | undefined;
   readonly children?: React.ReactNode | undefined;
 }) {
-  const status = TONE_STATUS[tone];
-  const Heading = level === 2 ? "h2" : "h3";
+  const model = createStatePanelModel({
+    tone,
+    title,
+    ...(level === undefined ? {} : { level }),
+    ...(reason === undefined ? {} : { reason }),
+    ...(evidence === undefined ? {} : { evidence }),
+    variant: "diagnostic",
+  });
+  const Heading = model.headingTag;
 
   return (
-    <section className={`state state-${tone}`}>
+    <section className={model.sectionClassName}>
       <div className="state-head">
-        <span className={`chip chip-${status.id}`}>
+        <span className={`chip chip-${model.status.id}`}>
           <span className="dot" aria-hidden="true" />
-          {status.label}
+          {model.status.label}
         </span>
-        <Heading>{title}</Heading>
-        {reason !== undefined && (
+        <Heading>{model.title}</Heading>
+        {model.reason !== null && (
           <code className="reason">
             <span className="reason-label">reason</span>
-            {reason}
+            {model.reason}
           </code>
         )}
       </div>
       {children !== undefined && <div className="state-body">{children}</div>}
-      {evidence !== undefined && evidence.length > 0 && (
+      {model.evidence.length > 0 && (
         <dl className="dl state-evidence">
-          {evidence.map((entry) => (
+          {model.evidence.map((entry) => (
             <Fragment key={entry.term}>
               <dt>{entry.term}</dt>
               <dd>
