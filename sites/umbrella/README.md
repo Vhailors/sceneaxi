@@ -44,8 +44,12 @@ claim:
   conformance registry and open-path demo policy through the narrow browser-safe
   `@sceneaxi/site-kit/profile-contracts` entry and computes every cell rather than
   storing one, so an unproven capability cannot be presented as claimed.
+  It keeps only the column headers as page-local copy: `PROFILE_DISPLAY_NAMES` pins one
+  label per profile id and refuses an id it does not carry, so a new policy row must be
+  given a decided label in the same commit rather than one munged from its package name.
   `tests/sites/umbrella-profile-matrix.test.ts` asserts reference identity with both
-  schema contracts and drives the derivation with adversarial rows.
+  schema contracts, pins every label, covers the unknown-profile refusal, and drives the
+  derivation with adversarial rows.
 - `tests/sites/umbrella-visual.test.ts` asserts what the surface may **not** claim — no
   installer, size, or digest this repository does not build; no seat or subscription
   price; no registry install; no widened shipping claim; no Kids link; no ledger write

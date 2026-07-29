@@ -155,7 +155,11 @@ re-exports this table and `profileConformanceRegistry` by reference; the site
 computes its projection from those canonical objects and refuses if their profile
 sets differ. `tests/sites/umbrella-profile-matrix.test.ts` asserts reference
 identity, field-preserving projection, and adversarial derivation, so there is no
-page-local contract table that can drift.
+page-local contract table that can drift. The one datum the page still owns is
+presentation copy: `PROFILE_DISPLAY_NAMES` in
+`sites/umbrella/src/lib/profile-matrix.ts` pins a column header per profile id and
+refuses an id it does not carry, so a new policy row needs a decided label rather
+than one munged out of its package name.
 
 ## Refusal codes
 
@@ -174,9 +178,12 @@ Adding a profile, a level, or an operation is an explicit contract edit that
 moves `packages/schemas/src/open-path-policy.ts`,
 `packages/schemas/contracts/open-path-policy.fixtures.json`,
 `packages/schemas/contracts/open-path-policy.schema.json` (which pins the whole
-`profiles` array as a `const`), and the table above in one commit —
+`profiles` array as a `const`), the table above, and — for a new profile —
+its pinned display label in `PROFILE_DISPLAY_NAMES`
+(`sites/umbrella/src/lib/profile-matrix.ts`, above) in one commit —
 `pnpm check:contracts` fails otherwise,
-`tests/sites/umbrella-profile-matrix.test.ts` fails on a broken shared projection, and
+`tests/sites/umbrella-profile-matrix.test.ts` fails on a broken shared projection
+or an unlabelled profile, and
 `tests/contracts/injected-open-path-drift.test.ts` proves that check itself
 fails on injected drift.
 
