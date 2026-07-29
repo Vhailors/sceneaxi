@@ -18,10 +18,18 @@ import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  COMMERCE_ACTIVATION_GATE,
+  COMMERCE_NOTICE_COPY,
   FOUNDATION_COLORS,
   FOUNDATION_STATUSES,
+  commerceNoticeElement,
   listSiteCatalog,
+  ok,
+  refuse,
+  renderSiteElementHtml,
   resolveSurfaceAccent,
+  type SitePrincipal,
+  type SiteResult,
 } from "@sceneaxi/site-kit";
 import * as game from "../../sites/catalog-game/src/index.ts";
 import * as web from "../../sites/catalog-web/src/index.ts";
@@ -847,10 +855,79 @@ describe("the rail counts real listings instead of the archive's invented facets
   });
 });
 
+/**
+ * The words the shared notice actually puts on both item pages, rendered rather than read.
+ *
+ * A file scan is only ever as deep as the files it lists: `sharedEntrySources` reads the
+ * entry a storefront imports, so copy hoisted into a module one level below that entry
+ * would leave the scanned text and still ship. Reading the closure instead is the wrong
+ * widening — it would drag in shared vocabulary no storefront renders (a typography
+ * specimen's sample digest, a refusal message about *not* inventing a checkout) and score
+ * it as merchandising. What ships is the element tree, so it is rendered here for every
+ * committed listing and both viewer states, and the merchandising cases scan that text at
+ * whatever depth its words were written.
+ */
+const renderedCommerceCopy = (): string => {
+  const user = {
+    userId: "user_storefront_copy_scan",
+    email: "viewer@sceneaxi.test",
+    emailVerified: true,
+    disabled: false,
+  } as const;
+  const principal: SitePrincipal = {
+    user,
+    role: "user",
+    session: {
+      sessionId: "session_storefront_copy_scan",
+      userId: user.userId,
+      surface: "site",
+      issuedAt: "2026-07-29T00:00:00.000Z",
+      expiresAt: "2026-07-30T00:00:00.000Z",
+    },
+  };
+  const viewers: readonly SiteResult<SitePrincipal>[] = [
+    ok(principal),
+    refuse("IDENTITY_SESSION_ABSENT"),
+  ];
+  return STOREFRONTS.flatMap((surface) =>
+    listSiteCatalog(surface).flatMap((listing) =>
+      viewers.map((viewer) =>
+        renderSiteElementHtml(commerceNoticeElement({ surface, itemId: listing.itemId, viewer })),
+      ),
+    ),
+  ).join("\n");
+};
+
 describe("commerce stays inert and the archive's merchandising does not ship", () => {
   const SITE_SOURCES = STOREFRONTS.flatMap((site) => sourcesFor(site));
   const SHARED_SOURCES = sharedEntrySources(SITE_SOURCES);
-  const ALL_SOURCES = [...SITE_SOURCES, ...SHARED_SOURCES];
+  const RENDERED_COPY = {
+    path: "rendered: @sceneaxi/site-kit commerceNoticeElement",
+    text: renderedCommerceCopy(),
+  };
+  const ALL_SOURCES = [...SITE_SOURCES, ...SHARED_SOURCES, RENDERED_COPY];
+
+  it("scans the notice as it renders, so hoisted copy cannot leave the scan", () => {
+    // A vacuous render would pass every case below without reading a shipped word, so
+    // the rendered text is pinned to real listings and to copy the notice must carry.
+    const listings = STOREFRONTS.flatMap((surface) => listSiteCatalog(surface));
+    expect(listings.length).toBeGreaterThan(0);
+    expect(RENDERED_COPY.text).toContain(COMMERCE_NOTICE_COPY.title);
+    expect(RENDERED_COPY.text).toContain(COMMERCE_NOTICE_COPY.explanation);
+    expect(RENDERED_COPY.text).toContain(COMMERCE_NOTICE_COPY.accountLabel);
+    expect(RENDERED_COPY.text).toContain(COMMERCE_ACTIVATION_GATE.policy);
+    for (const listing of listings) {
+      expect(
+        renderSiteElementHtml(
+          commerceNoticeElement({
+            surface: listing.surface,
+            itemId: listing.itemId,
+            viewer: refuse("IDENTITY_SESSION_ABSENT"),
+          }),
+        ),
+      ).toContain("CATALOG_COMMERCE_INERT");
+    }
+  });
 
   it("scans the shared entries the storefronts render, not the site tree alone", () => {
     // The scans below are only as wide as this set: a collapsed component's copy lives

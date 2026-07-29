@@ -822,9 +822,15 @@ describe("the visual layer adds no behaviour the site did not already have", () 
     // specifier or ship that whole graph to a visitor. `@sceneaxi/engine-presentation`
     // and the state-panel entry are exempt: both are browser-safe by contract.
     // Type-only imports erase, so they stay allowed everywhere.
-    /** Every module a source imports for its *value*; `import type` is erased and skipped. */
+    /**
+     * Every module a source pulls in for its *value*; `import type` is erased and skipped.
+     *
+     * A re-export (`export … from "…"`) loads the target exactly like an import does, so
+     * both keywords are matched — matching only `import` would let a barrel-style module
+     * carry a whole graph past this walk.
+     */
     const valueImports = (relativePath: string): readonly string[] =>
-      [...read(relativePath).matchAll(/import\s+(type\s+)?[^"';]*?from\s+"([^"]+)"/g)]
+      [...read(relativePath).matchAll(/\b(?:import|export)\s+(type\s+)?[^"';]*?from\s+"([^"]+)"/g)]
         .filter(([, typeKeyword]) => typeKeyword === undefined)
         .flatMap(([, , specifier]) => (specifier === undefined ? [] : [specifier]));
 
@@ -877,7 +883,7 @@ describe("the visual layer adds no behaviour the site did not already have", () 
         notBrowserSafe.push(`${entry} -> @sceneaxi/site-kit`);
       }
       for (const [, typeKeyword, specifier] of source.matchAll(
-        /import\s+(type\s+)?[^"';]*?from\s+"(\.[^"]+)"/g,
+        /\b(?:import|export)\s+(type\s+)?[^"';]*?from\s+"(\.[^"]+)"/g,
       )) {
         if (typeKeyword !== undefined || specifier === undefined) continue;
         const target = `${specifier.replace(/^\.\//, "").replace(/\.js$/, "")}.ts`;
