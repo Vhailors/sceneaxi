@@ -222,14 +222,20 @@ describe("D5 requirement 3 — the audit record is a precondition", () => {
 describe("D5 requirement 4 — the gate stays a gate", () => {
   it("reads nothing that merely correlates with production", () => {
     // Every value here says "this is production" to a human. None of them is an input:
-    // a gate that can infer its own authorization is not a gate.
+    // a gate that can infer its own authorization is not a gate. `SCENEAXI_BILLING_MODE`
+    // is the sharpest of them — it is the variable most likely to be mistaken for live
+    // authorization, and selecting the live *mode* is exactly what must not authorize it.
+    // The values are deliberately not credential-shaped: what is being asserted is that
+    // the name is never read, and a realistic secret literal would prove nothing extra
+    // while planting a credential-shaped string in the tree.
     const result = resolve({
       NODE_ENV: "production",
       VERCEL_ENV: "production",
-      STRIPE_SECRET_KEY: "sk_live_not_a_real_key",
-      STRIPE_WEBHOOK_SECRET: "whsec_live_not_a_real_secret",
+      SCENEAXI_BILLING_MODE: "live",
+      STRIPE_SECRET_KEY: "set-but-never-read",
+      STRIPE_WEBHOOK_SECRET: "set-but-never-read",
       SCENEAXI_ADMIN_EMAIL: AUTHORIZER,
-      DATABASE_URL: "postgres://neon.example/prod",
+      DATABASE_URL: "set-but-never-read",
     });
     expect(result.ok).toBe(false);
     if (result.ok) return;
