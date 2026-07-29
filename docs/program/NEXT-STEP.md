@@ -168,6 +168,16 @@ The five choices raised by the FirstMate evidence record
 disposition and sequencing only; **it is not an implementation authority**. D1–D3 remain
 unimplemented and unauthorized.
 
+Note the difference in where these decisions are *owned*. D4 and D5 landed with their
+implementation, so each is now owned by an in-tree document —
+[`auth-credits.md`](../auth-credits.md) for both, plus
+[`websites-deploy.md`](../websites-deploy.md) for D4's webhook path. D1–D3 are recorded
+**only** in the dated FirstMate operational record above, which lives outside this
+repository; no in-tree document owns them yet, and this brief does not become their owner.
+Their in-tree owner lands with their implementation. Until then they are decided and
+unimplemented, and the disposition text below is a restatement of that external record
+rather than a fact this repository holds.
+
 | Decision | Recorded disposition | Status / binding prerequisite |
 |---|---|---|
 | **D1 — `principal-provenance`** | Witness every `Principal` the identity port issues; guards accept only values actually issued by `createIdentityPort`, with a test-only issuance seam | **Decided, unimplemented.** First confirm the deployment re-verifies each request instead of rehydrating a cached principal; then ship the test seam before flipping guards |
@@ -179,10 +189,18 @@ unimplemented and unauthorized.
 ### Open trackers
 
 - [#165](https://github.com/Vhailors/sceneaxi/issues/165) — move the `/profiles`
-  contract mirror onto the shared site-kit layer. It is now unblocked because
-  [#162](https://github.com/Vhailors/sceneaxi/issues/162) landed in
-  [PR #169](https://github.com/Vhailors/sceneaxi/pull/169), but it remains
-  **unauthorized**; this brief does not start it.
+  contract mirror onto the shared site-kit layer. It is now unblocked, for two
+  separate reasons. Its own blocker, as [#165](https://github.com/Vhailors/sceneaxi/issues/165)
+  states it, was that `packages/site-kit` was deliberately held read-only while three
+  concurrent visual lanes ran so their PRs stayed independently mergeable; that hold ended
+  when [#163](https://github.com/Vhailors/sceneaxi/pull/163),
+  [#164](https://github.com/Vhailors/sceneaxi/pull/164), and
+  [#166](https://github.com/Vhailors/sceneaxi/pull/166) landed. Separately,
+  [#162](https://github.com/Vhailors/sceneaxi/issues/162) — which #165 records as
+  *distinct* work that merely touches the same package — has since landed in
+  [PR #169](https://github.com/Vhailors/sceneaxi/pull/169), removing the
+  concurrent-mutation conflict as well. Unblocked is not authorized: #165 remains
+  **unauthorized**, and this brief does not start it.
 - [#114](https://github.com/Vhailors/sceneaxi/issues/114) — the runnable-surfaces
   epic; its issue graph owns the remaining closure dependencies. Its former #120 and
   #121 gaps are closed by PRs #154 and #153 respectively; the precise runnable levels
@@ -192,8 +210,15 @@ unimplemented and unauthorized.
 
 ### Production deployment evidence and limits
 
-Two production URLs named by the deployment record were reachable in Chrome on
-2026-07-29:
+[`websites-deploy.md`](../websites-deploy.md) names three planned production sites, but the
+captain-scoped deployment wave covered only two of them — the umbrella and the game-asset
+catalog — deliberately excluding the website-asset catalog (`sceneaxi-catalog-web`) and
+Kids. The website-asset catalog was therefore neither deployed nor checked; its absence
+below is scope, not a failed or skipped check, and Kids is refuse-only by contract.
+
+The reachability statement that follows is a **dated external observation, not an in-tree
+fact**: the two deployed URLs were opened in Chrome on 2026-07-29 and served the surfaces
+described. No in-tree document owns that observation, and no gate produces it.
 
 | Surface | Production URL | Honest limit |
 |---|---|---|
