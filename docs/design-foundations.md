@@ -1,7 +1,8 @@
 # SceneAxi Foundations v2 — shared visual tokens and site-kit primitives
 
 Owner of this document: the shared visual layer in `packages/site-kit`
-(`src/design-tokens.ts`, `src/site-element.ts`, `src/change-review.ts`).
+(`src/design-tokens.ts`, `src/site-element.ts`, `src/change-review.ts`,
+`src/state-panel.ts`, `src/commerce-notice.ts`).
 Behavioural contracts are owned elsewhere and win every disagreement — see
 [Precedence](#precedence).
 

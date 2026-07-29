@@ -345,7 +345,8 @@ Three values remain umbrella-local, listed in `UMBRELLA_RECORDED_GAPS`: `--bg-ba
 
 The gate scans **every** umbrella source for a colour literal, not just the module that
 holds those three, and allows one further list: `src/lib/viewport-letterbox.ts`, which
-*restates* published Foundations values the browser bundle cannot import. It has one
+*restates* published Foundations values the browser bundle cannot value-import from the
+Node-bearing site-kit root barrel. It has one
 entry, `--bg-base #07080A`, and it exists because the WebGL clear colour is a value
 handed to the presentation core rather than a custom property the sheet resolves, and the
 module that hands it over is a `"use client"` module. The gate pins each entry back to
