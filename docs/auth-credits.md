@@ -367,9 +367,9 @@ The commit is `CreditStore.appendOrReplayEntry` on the event's own key
 path answers a redelivery the ledger already shows, and the store answers one that landed
 after this caller read the ledger. Exactly one grant exists either way.
 
-**There is exactly one commit boundary for credits, and every endpoint uses it** (captain
-decision D4). `sites/umbrella/src/lib/credit-webhook.ts` used to hand the decided entry to
-`appendEntry` itself and reconcile a throw by re-reading the ledger; it now calls
+**A webhook grant commits through exactly one boundary, and every endpoint uses it**
+(captain decision D4). `sites/umbrella/src/lib/credit-webhook.ts` used to hand the decided
+entry to `appendEntry` itself and reconcile a throw by re-reading the ledger; it now calls
 `persistCheckoutCompletedGrant` like the sketch above, so no second commit path exists for
 the same paid event. The re-read is not missing, it is *unnecessary*: it existed because
 `appendEntry` reports an ordinary redelivery race and a genuine store failure identically,
@@ -498,6 +498,13 @@ where forgetting makes it silently chargeable.
 Every new user receives exactly **100** credits, once, under idempotency key
 `starter:<userId>`. A second attempt grants nothing. The amount is captain-frozen and the
 contract check refuses a change to it.
+
+The umbrella's own starter grant (`createBillingCreditsAdapter` in
+`sites/umbrella/src/lib/identity-plane.ts`) still commits it with `appendEntry` plus a
+re-read of the ledger, the idiom the webhook path left behind. That is a **recorded gap,
+not a second sanctioned pattern**: captain decision D4 scopes its invariant to webhook
+grants, and this path is not one. Moving it onto `appendOrReplayEntry` needs no new
+authority and would delete the re-read the same way.
 
 ## Metering
 
