@@ -15,9 +15,19 @@
  *   1. secret present        — an unconfigured endpoint refuses, never accepts
  *   2. signature over bytes  — before the body is parsed as anything
  *   3. intent + settlement   — the price snapshot, not the event, names the credits
- *   4. grant, keyed by event — Stripe delivers at least once, so replay is expected
- *   5. persist               — a store conflict re-reads and answers only what the
- *                              ledger proves, so an unapplied event is retried
+ *   4. grant and commit      — one call, `persistCheckoutCompletedGrant`, which is the
+ *                              only commit boundary credits have anywhere (D4)
+ *
+ * Step 4 used to be two steps here — decide, then hand the entry to `appendEntry` and
+ * reconcile a throw by re-reading the ledger. That reconciliation existed because
+ * `appendEntry` reports an ordinary redelivery race and a genuine store failure
+ * identically, so only the ledger could tell them apart. `persistCheckoutCompletedGrant`
+ * commits through `appendOrReplayEntry` instead, which answers the race itself — the row
+ * already committed under this event's key is handed back as `replayed: true`, checked
+ * against the entry that was requested and the ledger position it was requested for. A
+ * throw is therefore what it says it is: a store failure, refused `CREDIT_STORE_FAILED`
+ * with no grant claimed, which Stripe retries and the ledger answers on redelivery. The
+ * guarantee this module used to implement itself is unchanged and now has one owner.
  *
  * One endpoint receives every event Stripe is configured to send, so what is *not* this
  * endpoint's work — another event type, or a completion whose purpose settles on the
@@ -42,11 +52,11 @@
 import {
   BILLING_REFUSE_REASONS,
   CHECKOUT_METADATA_KEYS,
-  applyCheckoutCompletedGrant,
   checkoutPurposeGrantsCredits,
   checkoutPurposeSettlesElsewhere,
   loadLedgerState,
   parseCheckoutCompletedEvent,
+  persistCheckoutCompletedGrant,
   verifyStripeWebhookSignature,
   type CheckoutSettlement,
   type CreditStore,
@@ -148,6 +158,11 @@ const UNHANDLED_EVENT_REASONS: ReadonlySet<string> = Object.freeze(
  * and asks its own `retrieveSettlement` for exactly that id, so only the adapter's answer
  * can disagree. A sender cannot reach it — a forged or replayed body is refused by
  * signature verification first, and that stays a request fault.
+ *
+ * `CREDIT_REQUEST_INVALID` is here for the same reason the store failures are: the commit
+ * boundary refuses it for a request *this module* built, never for anything the inbound
+ * bytes decided, so a sender must not be told they sent a bad request — and money may
+ * already have moved, so it must stay retryable.
  */
 const SERVER_SIDE_REASONS: ReadonlySet<string> = Object.freeze(
   new Set<string>([
@@ -155,6 +170,7 @@ const SERVER_SIDE_REASONS: ReadonlySet<string> = Object.freeze(
     CREDIT_WEBHOOK_REASONS.evidenceUnavailable,
     CREDIT_WEBHOOK_REASONS.ledgerUnavailable,
     CREDIT_WEBHOOK_REASONS.storeFailed,
+    BILLING_REFUSE_REASONS.requestInvalid,
     BILLING_REFUSE_REASONS.webhookSecretMissing,
     BILLING_REFUSE_REASONS.settlementSessionMismatch,
     BILLING_REFUSE_REASONS.clockInvalid,
@@ -441,51 +457,17 @@ export async function applyCreditPackWebhook(input: {
   const state = loadLedgerState(account, entries.value);
   if (!state.ok) return refused(state.reason, state.message);
 
-  const granted = applyCheckoutCompletedGrant({
+  // The one commit boundary for credits (sceneaxi#128, captain decision D4). Deciding
+  // the grant and committing it are the same call here, so this module holds no second
+  // path to the ledger: `applyCheckoutCompletedGrant` still decides, and success is
+  // reported only once the store holds the entry.
+  const granted = await persistCheckoutCompletedGrant({
+    store: input.store,
     state: state.value,
     completion: completion.value,
     now: input.now,
   });
   if (!granted.ok) return settle(granted.reason, granted.message);
-
-  const entry = granted.value.entry;
-  if (!granted.value.replayed && entry !== undefined) {
-    try {
-      await input.store.appendEntry(entry);
-    } catch {
-      // Stripe delivers at least once and retries concurrently, so an append can lose a
-      // race with a redelivery of this same event. It can also fail for reasons that
-      // granted nothing — a sequence another writer took, a transport failure — and the
-      // store throws identically for all of them. The ledger is the only thing that can
-      // tell them apart, so the re-read is checked for *this* event's key: present means
-      // the grant is in the ledger and the replay answer is proven; absent means the
-      // outcome is a failure the provider must retry, never a 2xx for credits nobody has.
-      const rereadEntries = await attempt(() => input.store.listEntries(account.accountId));
-      const reread = rereadEntries.ok ? loadLedgerState(account, rereadEntries.value) : undefined;
-      if (reread === undefined || !reread.ok) {
-        return refused(
-          CREDIT_WEBHOOK_REASONS.storeFailed,
-          "The ledger could not be re-read after an append conflict, so the outcome of this event is unknown.",
-        );
-      }
-      const persisted = reread.value.entries.some(
-        (held) => held.idempotencyKey === entry.idempotencyKey,
-      );
-      if (!persisted) {
-        return refused(
-          CREDIT_WEBHOOK_REASONS.storeFailed,
-          "The credit grant for this event could not be appended and is not in the ledger, so this event is unapplied and must be retried.",
-        );
-      }
-      return Object.freeze({
-        ok: true as const,
-        ignored: false as const,
-        replayed: true,
-        credits: completion.value.credits ?? 0,
-        balance: reread.value.balance,
-      });
-    }
-  }
 
   return Object.freeze({
     ok: true as const,

@@ -75,6 +75,7 @@ set them *before* deploying and redeploy after changing one.
 | `STRIPE_SECRET_KEY` | umbrella | captain | credit-pack checkout | **TEST** key (`sk_test_…`) only in this wave |
 | `STRIPE_WEBHOOK_SECRET` | umbrella | captain | credit grants | signing secret for `POST /api/stripe/webhook`; verification is owned by `@sceneaxi/billing`. Absent means the endpoint refuses `STRIPE_WEBHOOK_SECRET_MISSING` rather than accepting an unsigned event, and answers `503` because the omission is this deployment's, not Stripe's |
 | `SCENEAXI_BILLING_MODE` | umbrella | this ship | optional | `test` when unset; `live` still refuses without explicit live authorization |
+| `SCENEAXI_STRIPE_LIVE_AUTHORIZED` | umbrella | captain | **nothing today** | the single, explicitly named source of live-mode authorization (captain decision D5). Format `live-mode-authorized:<email>:<YYYY-MM-DD>` — it names who authorized live mode and when, so switching to live is an auditable act; anything else, including `true`, authorizes nothing. A second spelling (`STRIPE_LIVE_MODE_AUTHORIZED`, `SCENEAXI_STRIPE_LIVE_AUTHORIZATIONS`, …) refuses **by its presence alone**. **Do not set it:** no shipped call site reads it, live activation is a separate captain decision (ADR 0021), and setting it would grant nothing while suggesting otherwise. Contract: `docs/auth-credits.md` |
 | `NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN` | all three | this ship | editor deep links, checkout redirects | https `*.vercel.app` umbrella origin; a missing or non-https value makes the catalog refuse to render the link. On the umbrella it is also the **only** source of the checkout success/cancel URLs — they are never derived from the request's `Host`, and a checkout POST arriving on any other origin refuses `BILLING_CHECKOUT_ORIGIN_UNTRUSTED`. A missing or non-https value refuses `BILLING_CHECKOUT_ORIGIN_UNCONFIGURED` on that path — the umbrella must name one origin, so an alias domain or a per-build preview URL is not a checkout origin |
 | `NEXT_PUBLIC_SCENEAXI_GAME_CATALOG_ORIGIN` | all three | this ship | optional | family cross-link. On the catalogs it also drives the family bar: whichever origin is set becomes a link, the store's own entry is marked current instead of linked, and an unset sibling renders as plain text. The entry matching a storefront's own surface is the only source of the domain line it prints, so an unset value prints no domain rather than a guessed one |
 | `NEXT_PUBLIC_SCENEAXI_WEB_CATALOG_ORIGIN` | all three | this ship | optional | family cross-link, same rules as the game-catalog origin above |
@@ -100,7 +101,12 @@ injected adapter that lives outside this repository (ADR 0021).
 
 **Test mode only.** Going live is a separate captain decision: the billing port refuses
 `live` unless explicitly authorized, so a stray `SCENEAXI_BILLING_MODE=live` cannot start
-real charges on its own.
+real charges on its own. `SCENEAXI_BILLING_MODE` selects a *mode*; authorization is a
+different variable entirely (`SCENEAXI_STRIPE_LIVE_AUTHORIZED`, above), read only by
+`resolveLiveModeAuthorization` and passed to no shipped call site — so setting either, or
+both, still refuses `STRIPE_LIVE_MODE_NOT_AUTHORIZED` at intent creation and at the grant.
+Nothing infers authorization from the mode, the key prefix, `NODE_ENV`, or anything else
+that merely correlates with production; `docs/auth-credits.md` owns that contract.
 
 ## Deploy checklist
 
@@ -339,6 +345,14 @@ Load-bearing properties, each gate-tested in `tests/sites/identity-plane-wiring.
   `checkout.session.completed` this deployment *did* create is never acknowledged as
   another product's event: if it carries any SceneAxi key but cannot be routed, it is
   refused and retried.
+- **A webhook grant commits through one boundary, everywhere.** The endpoint calls
+  `persistCheckoutCompletedGrant` — the same boundary any other deployment uses — so
+  there is no second commit path for a paid event (captain decision D4), and `200` with
+  `ignored: false` still means the credits are committed. A commit the boundary could not
+  confirm refuses `CREDIT_STORE_FAILED` and answers `503`, even when the row did land,
+  because this call cannot prove it; Stripe redelivers and the ledger answers the replay.
+  A failure is never turned into an acknowledgement, which is what would lose the money
+  permanently.
 - **The buyer is the verified principal**, not the `userId` the checkout form submitted;
   the submitted value is only cross-checked against it.
 - **Unknown is never zero.** A failed ledger read refuses `CREDITS_PLANE_UNAVAILABLE`

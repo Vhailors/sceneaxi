@@ -51,7 +51,20 @@ response leaves behind, is owned by
 a webhook endpoint answering Stripe on its result alone would report a purchase honored
 against an unchanged ledger — and Stripe would never redeliver it.
 `persistCheckoutCompletedGrant` is the boundary that closes that gap: success only after
-the entry is committed, `CREDIT_STORE_FAILED` and no grant otherwise.
+the entry is committed, `CREDIT_STORE_FAILED` and no grant otherwise. It is also the
+**only** way a webhook grant commits anywhere — `sites/umbrella` goes through it rather
+than holding a second commit path for the same paid event (captain decision D4).
+
+**Live-mode authorization has exactly one configuration source.**
+`resolveLiveModeAuthorization` reads `SCENEAXI_STRIPE_LIVE_AUTHORIZED` and nothing else —
+not the mode, not the price, not a key prefix, not `NODE_ENV`, because a gate that can
+infer its own authorization is not a gate. Its affirmative names who authorized live mode
+and on what day, the injected audit sink is a precondition rather than a side effect, an
+alias variable refuses by its presence alone, and the resolved value is runtime-witnessed
+so `liveModeAuthorizedFlag` answers `true` for no copy of it. **It enables nothing:** no
+shipped call site passes its result, so `live` still refuses at both ends, and live
+activation remains the separate captain decision ADR 0021 holds. Contract:
+[`docs/auth-credits.md`](../../docs/auth-credits.md#live-mode-authorization-captain-decision-d5).
 
 **Admin is never debited.** The captain's unlimited allowance returns `metered: false` and
 leaves the ledger untouched — reported explicitly rather than faked with a zero-credit

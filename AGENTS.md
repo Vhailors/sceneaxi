@@ -369,9 +369,26 @@ boundary that reports success only after the grant is in the ledger, and it, not
 refusal ordering: `docs/auth-credits.md`; regressions live in
 `packages/billing/test/store-boundary.test.ts` (written against a hand-rolled
 adapter on purpose), `packages/billing/test/metering.test.ts`, and
-`packages/billing/test/stripe-checkout.test.ts`. `sites/umbrella` still
-hand-rolls its own webhook commit over `appendEntry`; migrating it onto
-`persistCheckoutCompletedGrant()` was out of that lane's scope.
+`packages/billing/test/stripe-checkout.test.ts`. That boundary is the **only**
+way a webhook grant commits anywhere (captain decision D4): `sites/umbrella`
+goes through it too, so no second commit path exists for a paid event, and the
+three-way outcome split it sits inside — acknowledged no-op `200`, deployment
+fault `503`, request fault `400`, with `ignored: false` meaning credits are in
+the ledger — is unchanged. A commit the boundary cannot confirm refuses
+`CREDIT_STORE_FAILED` and is retried; it is never acknowledged. Extend
+`tests/sites/identity-plane-wiring.test.ts` when touching that path.
+
+Live-mode authorization has exactly one configuration source (captain decision
+D5): `SCENEAXI_STRIPE_LIVE_AUTHORIZED`, resolved only by
+`resolveLiveModeAuthorization()` in `packages/billing/src/live-mode.ts`, whose
+contract is owned by `docs/auth-credits.md`. Its affirmative names the
+authorizer and the day, an alias name refuses by its presence alone, the
+injected audit sink is a precondition rather than a side effect, and the
+resolved value is runtime-witnessed so no look-alike authorizes anything.
+Nothing else — mode, price, `NODE_ENV`, key prefix — may ever become an input.
+**It enables nothing:** no shipped call site passes its result, so `live` still
+refuses at both ends, and live activation remains the separate ADR 0021 captain
+decision.
 
 First-class plugins follow `docs/plugins.md` and ADR 0005: manifests may claim
 only IDs from the versioned public capability registry; unknown IDs and

@@ -40,6 +40,7 @@ Names only; values never appear in the repository.
 | `DATABASE_URL` | Neon Postgres connection string |
 | `STRIPE_SECRET_KEY` | Stripe **test** secret key |
 | `STRIPE_WEBHOOK_SECRET` | Stripe **test** webhook signing secret |
+| `SCENEAXI_STRIPE_LIVE_AUTHORIZED` | The **one** source of live-mode authorization; see *Live-mode authorization* below. Unset — as it is everywhere — means `live` refuses |
 
 `pnpm gate` passes with none of these set. If it ever needs one, that is a defect.
 
@@ -366,10 +367,67 @@ The commit is `CreditStore.appendOrReplayEntry` on the event's own key
 path answers a redelivery the ledger already shows, and the store answers one that landed
 after this caller read the ledger. Exactly one grant exists either way.
 
+**There is exactly one commit boundary for credits, and every endpoint uses it** (captain
+decision D4). `sites/umbrella/src/lib/credit-webhook.ts` used to hand the decided entry to
+`appendEntry` itself and reconcile a throw by re-reading the ledger; it now calls
+`persistCheckoutCompletedGrant` like the sketch above, so no second commit path exists for
+the same paid event. The re-read is not missing, it is *unnecessary*: it existed because
+`appendEntry` reports an ordinary redelivery race and a genuine store failure identically,
+and only the ledger could tell them apart. `appendOrReplayEntry` answers the race itself —
+handing back the row already committed under that key, checked against the entry that was
+requested and the ledger position it was requested for — so a throw is what it says it is.
+The endpoint's three-way outcome split is unchanged, and so is what its success means:
+
+| Outcome | HTTP | Meaning |
+|---|---|---|
+| `ok: true, ignored: true` | `200` | an event this endpoint owes no work, decided from the verified body alone before any port or store is read; permanent, because Stripe stops redelivering |
+| `ok: true, ignored: false` | `200` | **the credits are in the ledger** — nothing else is reported as success |
+| refusal in `SERVER_SIDE_REASONS` | `503` | this deployment's own fault, retried |
+| every other refusal | `400` | decided against the inbound bytes, retried |
+
+A commit the boundary could not confirm refuses `CREDIT_STORE_FAILED` (`503`) with no
+grant claimed — including when the row did in fact land, since this call cannot prove it —
+and the redelivery reads the ledger and answers the replay. **An issuance-authority
+refusal is never `ignored`**: a fault answered as a permanent acknowledgement is money
+silently lost, so nothing is ever added to the acknowledged set. `CREDIT_REQUEST_INVALID`
+joins the server-side set for the same reason: the boundary refuses it for a request the
+endpoint built, never for anything the inbound bytes decided.
+
 **Live mode is unreachable by default.** `mode: "live"` refuses unless
 `liveModeAuthorized: true` is passed explicitly at the call site, enforced both when
 creating an intent and when honoring an event. **Live activation is not authorized today**
 and remains a captain decision (ADR 0021).
+
+## Live-mode authorization (captain decision D5)
+
+`assertModeAuthorized` takes a bare boolean, and this repository used to say nothing about
+where a deployment could get one — which reads as "any expression you like" to anyone
+wiring an adapter. The captain closed that silence by allowing **one named configuration
+variable**, against the recommendation that it stay a code-only literal, and attached the
+mitigations below as the price. `resolveLiveModeAuthorization` in
+`packages/billing/src/live-mode.ts` is the only implementation of them.
+
+```
+SCENEAXI_STRIPE_LIVE_AUTHORIZED=live-mode-authorized:<email>:<YYYY-MM-DD>
+```
+
+| Requirement | How it holds |
+|---|---|
+| **One name, never a second spelling** | `STRIPE_LIVE_MODE_ENV_VAR` is the only key read. Every alias in `STRIPE_LIVE_MODE_ALIAS_ENV_VARS` refuses **by its presence alone**, even alongside a correct affirmative — the same rule `SCENEAXI_ADMIN_EMAILS` gets, for the same reason |
+| **Absent means refused** | Unset, empty, `true`, `1`, `yes`, a value naming no address, or a date that is not a real `YYYY-MM-DD` all refuse `STRIPE_LIVE_MODE_NOT_AUTHORIZED`, so `assertModeAuthorized` refuses at both ends unchanged |
+| **Audit evidence** | The affirmative *names its author and the day*, so live mode cannot be switched on anonymously; and the caller must inject a `recordAudit` sink, which is handed a `LiveModeAuthorizationAudit` (`authorizedBy`, `authorizedOn`, a `sha256` fingerprint, and one ready-to-log line) **before** the authorization is issued. A missing sink, a non-function, or one that throws all refuse — no deployment can hold an authorization it never wrote down |
+| **The gate stays a gate** | Nothing else is an input. `NODE_ENV`, `VERCEL_ENV`, an `sk_live_` key, `SCENEAXI_BILLING_MODE`, the price, and the adapter's identity are not read and must not become inputs. The resolved value is runtime-witnessed (sceneaxi#126), so `liveModeAuthorizedFlag` answers `true` for the exact object the resolver issued and `undefined` for every copy or look-alike |
+| **The hermetic gate is unaffected** | The resolver takes an injected `env`; nothing reads a global. `pnpm gate` runs with the variable absent, and a test asserts that |
+
+**This is a mechanism, not an activation.** No shipped call site passes
+`liveModeAuthorizedFlag`'s result to a checkout or a grant — a gate test asserts that — so
+today `live` refuses everywhere regardless of the variable. Reaching live mode still needs
+the separate captain go-live decision ADR 0021 holds, *and* a deliberate wiring change on
+top of it. `SCENEAXI_BILLING_MODE=live` selects a mode; it authorizes nothing.
+
+Regressions: `packages/billing/test/live-mode.test.ts` (the resolver's contract) and the
+`live-mode authorization sourced from configuration (D5)` block in
+`packages/billing/test/stripe-checkout.test.ts` (both ends, against the real paths).
 
 ## Contracts
 

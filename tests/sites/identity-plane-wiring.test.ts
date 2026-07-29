@@ -673,6 +673,9 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       CREDIT_WEBHOOK_REASONS.evidenceUnavailable,
       CREDIT_WEBHOOK_REASONS.ledgerUnavailable,
       CREDIT_WEBHOOK_REASONS.storeFailed,
+      // The commit boundary's own refusals: a failure it names is this deployment's
+      // store or this module's request, never anything the inbound bytes decided.
+      "CREDIT_REQUEST_INVALID",
       "STRIPE_WEBHOOK_SECRET_MISSING",
       "CREDIT_CLOCK_INVALID",
       "CREDIT_LEDGER_STATE_INVALID",
@@ -963,38 +966,116 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
   });
 
   /**
-   * A store whose `appendEntry` throws. `persists` decides whether the row is in the
-   * ledger anyway — the two outcomes the store reports identically: a redelivery of this
-   * same event that another writer already committed, and an append that granted nothing.
+   * The D4 invariant: one commit boundary for credits, everywhere.
+   *
+   * This endpoint used to hand the decided entry to `appendEntry` itself and reconcile a
+   * throw by re-reading the ledger, which is a second commit path for the same paid event
+   * — exactly what captain decision D4 forbids. `persistCheckoutCompletedGrant` is the
+   * only path now, so a store whose `appendEntry` is a trap still grants normally.
    */
-  const throwingAppendStore = (persists: boolean) => {
+  const boundaryOnlyStore = () => {
     const inner = webhookStore();
     return Object.freeze({
       ...inner,
-      appendEntry(entry: Parameters<typeof inner.appendEntry>[0]) {
+      appendEntry(): never {
+        throw new Error(
+          "a webhook grant must commit through persistCheckoutCompletedGrant, never appendEntry",
+        );
+      },
+    }) as ReturnType<typeof webhookStore>;
+  };
+
+  it("commits a webhook grant only through the credit commit boundary", async () => {
+    const store = boundaryOnlyStore();
+    const outcome = await signedCall({
+      payload: eventBody("evt_test_boundary_only"),
+      store,
+    });
+    expect(outcome).toMatchObject({
+      ok: true,
+      ignored: false,
+      replayed: false,
+      credits: PACK.credits,
+      balance: PACK.credits,
+    });
+    expect(store.entryCount("acct-1")).toBe(1);
+  });
+
+  /**
+   * A store whose commit throws. `persists` decides whether the row landed anyway — the
+   * transport failure that loses its answer after the write committed.
+   */
+  const throwingCommitStore = (persists: boolean) => {
+    const inner = webhookStore();
+    return Object.freeze({
+      ...inner,
+      appendOrReplayEntry(entry: Parameters<typeof inner.appendOrReplayEntry>[0]) {
         if (persists) inner.appendEntry(entry);
-        throw new Error("credit store: sequence 1 already exists for acct-1");
+        throw new Error("credit store: the commit could not be confirmed");
       },
     });
   };
 
-  it("refuses rather than reporting a replay when a failed append left nothing in the ledger", async () => {
-    const store = throwingAppendStore(false);
+  it("refuses retryably when the boundary could not commit, granting nothing", async () => {
+    const store = throwingCommitStore(false);
     const outcome = await signedCall({
-      payload: eventBody("evt_test_append_lost"),
+      payload: eventBody("evt_test_commit_lost"),
       store: store as ReturnType<typeof webhookStore>,
     });
     expect(outcome).toMatchObject({ ok: false, reason: "CREDIT_STORE_FAILED" });
+    expect(creditWebhookHttpStatus("CREDIT_STORE_FAILED")).toBe(503);
     expect(store.entryCount("acct-1")).toBe(0);
   });
 
-  it("reports a replay when a failed append raced a redelivery that did persist the grant", async () => {
-    const store = throwingAppendStore(true);
-    const outcome = await signedCall({
-      payload: eventBody("evt_test_append_raced"),
+  it("never acknowledges an unconfirmed commit, and loses nothing when it did land", async () => {
+    // A commit whose answer never arrived is not a 2xx: `ignored: false` means credits
+    // are in the ledger, and this call cannot prove that. Answering 503 keeps the event
+    // retryable, and the redelivery reads the ledger and answers the replay — which is
+    // how the old hand-rolled re-read's guarantee survives with one owner instead of two.
+    const store = throwingCommitStore(true);
+    const payload = eventBody("evt_test_commit_unconfirmed");
+    const unconfirmed = await signedCall({
+      payload,
       store: store as ReturnType<typeof webhookStore>,
     });
-    expect(outcome).toMatchObject({ ok: true, replayed: true, balance: PACK.credits });
+    expect(unconfirmed).toMatchObject({ ok: false, reason: "CREDIT_STORE_FAILED" });
+    expect(store.entryCount("acct-1")).toBe(1);
+
+    const redelivery = await signedCall({
+      payload,
+      store: store as ReturnType<typeof webhookStore>,
+    });
+    expect(redelivery).toMatchObject({
+      ok: true,
+      ignored: false,
+      replayed: true,
+      credits: PACK.credits,
+      balance: PACK.credits,
+    });
+    expect(store.entryCount("acct-1")).toBe(1);
+  });
+
+  it("takes the store's own replay answer when a redelivery committed first", async () => {
+    // The race the re-read used to diagnose: another writer committed this same event
+    // after this caller read the ledger. `appendOrReplayEntry` answers it directly, so
+    // there is nothing left for this module to reconcile.
+    const inner = webhookStore();
+    const store = Object.freeze({
+      ...inner,
+      appendOrReplayEntry(entry: Parameters<typeof inner.appendOrReplayEntry>[0]) {
+        inner.appendEntry(entry);
+        return inner.appendOrReplayEntry(entry);
+      },
+    }) as ReturnType<typeof webhookStore>;
+
+    const outcome = await signedCall({ payload: eventBody("evt_test_raced"), store });
+    expect(outcome).toMatchObject({
+      ok: true,
+      ignored: false,
+      replayed: true,
+      credits: PACK.credits,
+      balance: PACK.credits,
+    });
     expect(store.entryCount("acct-1")).toBe(1);
   });
 

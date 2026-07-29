@@ -100,6 +100,18 @@ export {
 } from "./checkout.js";
 
 export {
+  STRIPE_LIVE_MODE_AFFIRMATIVE,
+  STRIPE_LIVE_MODE_ALIAS_ENV_VARS,
+  STRIPE_LIVE_MODE_ENV_VAR,
+  hasLiveModeAuthorizationProvenance,
+  liveModeAuthorizedFlag,
+  resolveLiveModeAuthorization,
+  type LiveModeAuthorization,
+  type LiveModeAuthorizationAudit,
+  type ResolveLiveModeAuthorizationRequest,
+} from "./live-mode.js";
+
+export {
   LISTING_SALE_IDEMPOTENCY_PREFIX,
   assertCurrencyListed,
   createListingCheckoutIntent,
