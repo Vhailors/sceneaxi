@@ -298,6 +298,7 @@ re-encoding the JSON changes the bytes and verification will (correctly) fail:
 import {
   BILLING_REFUSE_REASONS,
   CHECKOUT_METADATA_KEYS,
+  loadLedgerState,
   parseCheckoutCompletedEvent,
   persistCheckoutCompletedGrant,
   verifyStripeWebhookSignature,
@@ -355,6 +356,14 @@ const completed = parseCheckoutCompletedEvent({
 // `retrieveSettlement` can disagree with a session id read from the verified body.
 if (!completed.ok) return respond(statusFor(completed.reason), completed.reason);
 
+// The ledger this grant extends. `CreditStore` exposes no state-loading operation of its
+// own: read the account and its entries, then derive the state. An absent account refuses
+// — a credit account is provisioned by the deployment, never created from a payment event.
+const account = await creditStore.findAccountByUserId(completed.value.userId);
+if (!account) return respond(503, "no credit account for the purchasing user");
+const state = loadLedgerState(account, await creditStore.listEntries(account.accountId));
+if (!state.ok) return respond(statusFor(state.reason), state.reason);
+
 // The flow ends at the *persisted* call. `applyCheckoutCompletedGrant` decides and
 // cannot commit — it owns no persistence — so answering 2xx on its result alone would
 // tell Stripe the purchase was honored while the buyer's ledger was unchanged, and
@@ -363,7 +372,7 @@ if (!completed.ok) return respond(statusFor(completed.reason), completed.reason)
 // does not (sceneaxi#128).
 const granted = await persistCheckoutCompletedGrant({
   store: creditStore,
-  state: await creditStore.loadState(completed.value.userId),
+  state: state.value,
   completion: completed.value,
   now: Date.now(),
 });
