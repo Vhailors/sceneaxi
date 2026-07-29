@@ -163,20 +163,20 @@ presentation core.
 
 ### Captain authority decisions D1–D5
 
-The five choices raised by the FirstMate evidence record
-`data/sceneaxi-issuance-authority-scout/report.md` are decided. This table records their
-disposition and sequencing only; **it is not an implementation authority**. D1–D3 remain
-unimplemented and unauthorized.
+The five choices raised by the FirstMate operational record of **2026-07-28**,
+`data/sceneaxi-issuance-authority-scout/report.md` (an **out-of-tree** record, written
+against `origin/main` at `569a12c`), are decided. This table records their disposition and
+sequencing only; **it is not an implementation authority**. D1–D3 remain unimplemented and
+unauthorized.
 
 Note the difference in where these decisions are *owned*. D4 and D5 landed with their
 implementation, so each is now owned by an in-tree document —
 [`auth-credits.md`](../auth-credits.md) for both, plus
 [`websites-deploy.md`](../websites-deploy.md) for D4's webhook path. D1–D3 are recorded
-**only** in the dated FirstMate operational record above, which lives outside this
-repository; no in-tree document owns them yet, and this brief does not become their owner.
-Their in-tree owner lands with their implementation. Until then they are decided and
-unimplemented, and the disposition text below is a restatement of that external record
-rather than a fact this repository holds.
+**only** in that 2026-07-28 out-of-tree FirstMate record; no in-tree document owns them
+yet, and this brief does not become their owner. Their in-tree owner lands with their
+implementation. Until then they are decided and unimplemented, and the disposition text
+below is a restatement of that external record rather than a fact this repository holds.
 
 | Decision | Recorded disposition | Status / binding prerequisite |
 |---|---|---|
@@ -210,15 +210,17 @@ rather than a fact this repository holds.
 
 ### Production deployment evidence and limits
 
-[`websites-deploy.md`](../websites-deploy.md) names three planned production sites, but the
-captain-scoped deployment wave covered only two of them — the umbrella and the game-asset
-catalog — deliberately excluding the website-asset catalog (`sceneaxi-catalog-web`) and
-Kids. The website-asset catalog was therefore neither deployed nor checked; its absence
-below is scope, not a failed or skipped check, and Kids is refuse-only by contract.
+[`websites-deploy.md`](../websites-deploy.md) lists three deployed production URLs — the
+umbrella, the game-asset catalog, and the website-asset catalog (`sceneaxi-catalog-web`).
+The deployment wave recorded below covered only the first two, per captain scope; the
+website-asset catalog was outside this wave and so is outside the evidence table, and Kids
+is not deployed at all and is refuse-only by contract. The website-asset catalog was
+nonetheless separately verified reachable on 2026-07-29, returning `200` and serving real
+SceneAxi Vitrine content at <https://sceneaxi-catalog-web.vercel.app>.
 
-The reachability statement that follows is a **dated external observation, not an in-tree
-fact**: the two deployed URLs were opened in Chrome on 2026-07-29 and served the surfaces
-described. No in-tree document owns that observation, and no gate produces it.
+The reachability statements here are **dated external observations, not in-tree facts**:
+the two in-scope URLs were opened in Chrome on 2026-07-29 and served the surfaces
+described. No in-tree document owns those observations, and no gate produces them.
 
 | Surface | Production URL | Honest limit |
 |---|---|---|
