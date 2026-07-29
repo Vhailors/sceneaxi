@@ -11,7 +11,7 @@
  * `site-seams.test.ts` does — the sites are separate install roots outside the
  * repository-root workspace, so their modules are imported by path.
  */
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -858,12 +858,37 @@ describe("the visual layer adds no behaviour the site did not already have", () 
     );
     expect(offenders).toEqual([]);
 
-    const statePanelEntry = readFileSync(
-      new URL("../../packages/site-kit/src/state-panel.ts", import.meta.url),
-      "utf8",
-    );
-    expect(statePanelEntry).not.toContain('from "node:');
-    expect(statePanelEntry).not.toContain('from "@sceneaxi/site-kit"');
+    // An exempt entry is only browser-safe if everything it pulls in is: the modules it
+    // imports are compiled into the same bundle, and they sit in the directory the
+    // Node-bearing barrel re-exports from. So the closure is walked, not just the entry.
+    const siteKitSrc = fileURLToPath(new URL("../../packages/site-kit/src/", import.meta.url));
+    const exemptEntries = [...browserSafeValueImports]
+      .filter((specifier) => specifier.startsWith("@sceneaxi/site-kit/"))
+      .map((specifier) => `${specifier.slice("@sceneaxi/site-kit/".length)}.ts`);
+    expect(exemptEntries.length).toBeGreaterThan(0);
+
+    const siteKitGraph = new Set(exemptEntries);
+    const notBrowserSafe: string[] = [];
+    const unresolved: string[] = [];
+    for (const entry of siteKitGraph) {
+      const source = readFileSync(join(siteKitSrc, entry), "utf8");
+      if (source.includes('from "node:')) notBrowserSafe.push(`${entry} -> node:`);
+      if (source.includes('from "@sceneaxi/site-kit"')) {
+        notBrowserSafe.push(`${entry} -> @sceneaxi/site-kit`);
+      }
+      for (const [, typeKeyword, specifier] of source.matchAll(
+        /import\s+(type\s+)?[^"';]*?from\s+"(\.[^"]+)"/g,
+      )) {
+        if (typeKeyword !== undefined || specifier === undefined) continue;
+        const target = `${specifier.replace(/^\.\//, "").replace(/\.js$/, "")}.ts`;
+        if (existsSync(join(siteKitSrc, target))) siteKitGraph.add(target);
+        else unresolved.push(`${entry} -> ${specifier}`);
+      }
+    }
+    expect(notBrowserSafe).toEqual([]);
+    expect(unresolved).toEqual([]);
+    // The walk reached past the entry itself, so the guard is as deep as the risk.
+    expect(siteKitGraph.size).toBeGreaterThan(exemptEntries.length);
   });
 
   it("names only statuses Foundations publishes, with their published labels", () => {

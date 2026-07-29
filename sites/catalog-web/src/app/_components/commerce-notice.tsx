@@ -1,4 +1,7 @@
-import { createCommerceNoticeModel } from "@sceneaxi/site-kit/commerce-notice";
+import {
+  COMMERCE_NOTICE_COPY,
+  createCommerceNoticeModel,
+} from "@sceneaxi/site-kit/commerce-notice";
 import type { CatalogSurface, SitePrincipal, SiteResult } from "@sceneaxi/site-kit";
 import { StatePanel } from "./state-panel.js";
 
@@ -36,7 +39,7 @@ export function CommerceNotice({
       <p>{model.policy}</p>
       <p>{model.explanation}</p>
       <p>
-        Account plane:{" "}
+        {COMMERCE_NOTICE_COPY.accountLabel}{" "}
         {model.viewer.state === "resolved" ? (
           <>
             signed in as <code>{model.viewer.email}</code> · role{" "}
@@ -49,7 +52,7 @@ export function CommerceNotice({
         )}
       </p>
       <p>
-        Registry: <code>{model.registry}</code>
+        {COMMERCE_NOTICE_COPY.registryLabel} <code>{model.registry}</code>
       </p>
     </StatePanel>
   );

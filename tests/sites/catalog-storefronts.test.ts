@@ -220,6 +220,28 @@ const sourcesFor = (site: string): readonly { path: string; text: string }[] =>
     text: stripComments(readFileSync(path, "utf8")),
   }));
 
+/**
+ * The shared site-kit modules a storefront ships copy out of, discovered from its own
+ * imports rather than listed. Collapsing a component onto `@sceneaxi/site-kit/<entry>`
+ * moves the shipped words out of `sites/*\/src`, so a merchandising scan that walked
+ * only the site tree would stop reading the text that actually renders.
+ */
+const sharedEntrySources = (
+  sources: readonly { path: string; text: string }[],
+): readonly { path: string; text: string }[] => {
+  const entries = new Set(
+    sources.flatMap((source) =>
+      [...source.text.matchAll(/from "@sceneaxi\/site-kit\/([a-z-]+)"/g)].flatMap(
+        ([, entry]) => (entry === undefined ? [] : [entry]),
+      ),
+    ),
+  );
+  return [...entries].sort().map((entry) => {
+    const path = join(REPO_ROOT, "packages/site-kit/src", `${entry}.ts`);
+    return { path, text: stripComments(readFileSync(path, "utf8")) };
+  });
+};
+
 /** The shared component directory AGENTS.md holds identical, read rather than listed. */
 const componentFiles = (site: string): readonly string[] =>
   readdirSync(join(siteDir(site), "src/app/_components")).sort();
@@ -826,7 +848,30 @@ describe("the rail counts real listings instead of the archive's invented facets
 });
 
 describe("commerce stays inert and the archive's merchandising does not ship", () => {
-  const ALL_SOURCES = STOREFRONTS.flatMap((site) => sourcesFor(site));
+  const SITE_SOURCES = STOREFRONTS.flatMap((site) => sourcesFor(site));
+  const SHARED_SOURCES = sharedEntrySources(SITE_SOURCES);
+  const ALL_SOURCES = [...SITE_SOURCES, ...SHARED_SOURCES];
+
+  it("scans the shared entries the storefronts render, not the site tree alone", () => {
+    // The scans below are only as wide as this set: a collapsed component's copy lives
+    // in site-kit, so the set must name every entry the storefronts import by subpath.
+    expect(SHARED_SOURCES.map((source) => relative(REPO_ROOT, source.path))).toContain(
+      join("packages", "site-kit", "src", "commerce-notice.ts"),
+    );
+    for (const site of STOREFRONTS) {
+      const imported = [
+        ...readSite(site, "src/app/_components/commerce-notice.tsx").matchAll(
+          /from "@sceneaxi\/site-kit\/([a-z-]+)"/g,
+        ),
+      ].map(([, entry]) => entry);
+      expect(imported.length).toBeGreaterThan(0);
+      for (const entry of imported) {
+        expect(SHARED_SOURCES.map((source) => source.path)).toContain(
+          join(REPO_ROOT, "packages/site-kit/src", `${entry as string}.ts`),
+        );
+      }
+    }
+  });
 
   it.each([
     ["a cart", /\bcarts?\b/i],
