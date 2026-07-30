@@ -235,10 +235,15 @@ than inventing a session, balance, or checkout.
    an implementation that only creates a session captures money and then refuses every
    grant — retried by Stripe until it gives up:
 
-   - **Persist the intent** under `intent.intentId`, exactly as given, before redirecting.
-     `CheckoutEvidencePort.findIntent(intentId)` must return that same record; it is the
-     immutable price snapshot the credits come from, and an absent one refuses
-     `STRIPE_CHECKOUT_EVIDENCE_MISSING`.
+   - **Persist the intent** under `intent.intentId`, exactly as given, before redirecting,
+     and never update that row afterwards. `CheckoutEvidencePort.findIntent(intentId)`
+     must return that same record; it is the immutable price snapshot and the deployment's
+     issuance authority for the credits granted by a paid checkout, and an absent one
+     refuses `STRIPE_CHECKOUT_EVIDENCE_MISSING`. Stripe settlement anchors the money
+     figure; only this persisted row currently anchors the credit figure. Captain decision
+     D2's grant-time catalog cross-check and D3's price-column immutability trigger are
+     decided but are not implemented by this contract; their dispositions and prerequisites
+     remain recorded in [`docs/program/NEXT-STEP.md`](program/NEXT-STEP.md#captain-authority-decisions-d1d5).
    - **Echo the session id on the settlement.** `CheckoutEvidencePort.retrieveSettlement`
      is called with the Checkout Session id read from the verified body, and the
      `CheckoutSettlement` it returns must carry that same id on `sessionId`.
@@ -344,7 +349,9 @@ Load-bearing properties, each gate-tested in `tests/sites/identity-plane-wiring.
   purpose against the persisted intent for everything that stays on it. A
   `checkout.session.completed` this deployment *did* create is never acknowledged as
   another product's event: if it carries any SceneAxi key but cannot be routed, it is
-  refused and retried.
+  refused and retried. `tests/sites/identity-plane-wiring.test.ts` locks the private
+  `UNHANDLED_EVENT_REASONS` set to the reason symbols representing exactly those three
+  body-only decisions, so adding another acknowledged reason fails the gate.
 - **A webhook grant commits through one boundary, everywhere.** The endpoint calls
   `persistCheckoutCompletedGrant` — the same boundary any other deployment uses — so
   there is no second commit path for a paid event (captain decision D4), and `200` with

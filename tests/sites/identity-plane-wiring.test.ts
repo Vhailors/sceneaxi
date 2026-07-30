@@ -11,6 +11,7 @@
  * produced by `signStripeWebhookPayload` (the same construction the verifier checks), and
  * the billing mode is never `live`.
  */
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   createIdentityPort,
@@ -692,6 +693,28 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     ]) {
       expect(creditWebhookHttpStatus(reason)).toBe(400);
     }
+  });
+
+  it("keeps acknowledgements closed to the three current body-only decisions", () => {
+    const webhookSource = readFileSync(
+      new URL("../../sites/umbrella/src/lib/credit-webhook.ts", import.meta.url),
+      "utf8",
+    );
+
+    // Three decisions are acknowledged: an unhandled type, a purpose that settles on
+    // the revenue-share path, and an event with no SceneAxi metadata. The first two share
+    // the billing package's unsupported-event reason, so the closed set has exactly these
+    // two symbols. Pin the private declaration itself: adding any new member must fail the
+    // gate even when no existing behavior fixture happens to exercise the new reason.
+    const closedSet = `const UNHANDLED_EVENT_REASONS: ReadonlySet<string> = Object.freeze(
+  new Set<string>([
+    BILLING_REFUSE_REASONS.webhookEventTypeUnsupported,
+    CREDIT_WEBHOOK_REASONS.eventUnrelated,
+  ]),
+);`;
+
+    expect(webhookSource).toContain(closedSet);
+    expect(webhookSource.match(/const UNHANDLED_EVENT_REASONS:/g)).toHaveLength(1);
   });
 
   it("owns a settlement bound to the wrong session, and still disowns a bad signature", () => {

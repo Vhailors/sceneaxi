@@ -119,6 +119,24 @@ builds every impostor listed above for each value and asserts the refusal by nam
 asserts a genuine completion still grants exactly once and a redelivery still grants
 nothing.
 
+## Process trust boundary and issuance authority
+
+The trust boundary is **the process**. SceneAxi core issues no authority of its own: it
+derives in-process, non-transferable witnesses from authority supplied by the environment,
+and verifies provider evidence and deployment-persisted state supplied from outside core.
+Issuance authority begins only at the environment and the deployment's own persistence,
+and ends at the process boundary. Evidence that crosses that boundary needs its owning
+external guarantee, such as the Stripe signature or the deployment's persistence rules.
+
+The module-private witnesses above are defence-in-depth **inside** that process boundary,
+not a second trust boundary. Their object-identity guarantee proves that this process ran
+the expected step on this exact object; it does not make the process an independent issuer
+of the environment value, persisted row, or provider fact from which the object was
+derived. [`packages/schemas/src/provenance.ts`](../packages/schemas/src/provenance.ts)
+implements that in-process-only witness, and
+[`tests/e2e/runtime-provenance-refusal.test.ts`](../tests/e2e/runtime-provenance-refusal.test.ts)
+proves that copied or hand-built values refuse while the issued object remains usable.
+
 ## Better Auth
 
 Better Auth is **injected**, not depended on: it needs a running HTTP host and a live
@@ -255,6 +273,23 @@ takes settlement (session id, paid status, amount, currency, quantity, Stripe pr
 your adapter **retrieves separately** for that exact Checkout Session, and refuses unless it
 and the session's mode and metadata all match the persisted intent — the immutable price
 snapshot.
+
+The persisted checkout intent is an **issuance authority for `credits`**. The money figure
+is anchored to Stripe because `parseCheckoutCompletedEvent` compares the retrieved
+settlement amount with the intent's `unitAmount`; the credit figure is anchored only to
+the deployment's persisted intent row, which the grant reads as `intent.credits`. The
+adapter obligation is therefore exact and permanent: write the row exactly as
+`createCheckoutSessionIntent` produced it, and never update that row afterwards.
+[`packages/billing/src/stripe-webhook.ts`](../packages/billing/src/stripe-webhook.ts) and
+[`packages/billing/test/stripe-checkout.test.ts`](../packages/billing/test/stripe-checkout.test.ts)
+prove the current settlement-to-intent comparison and persisted-credit grant behavior.
+
+Captain decisions D2 and D3 are decided but are not implemented here: D2 adds a grant-time
+catalog cross-check, and D3 adds price-column immutability in the database. Their current
+dispositions and prerequisites are recorded in
+[`docs/program/NEXT-STEP.md`](program/NEXT-STEP.md#captain-authority-decisions-d1d5).
+Neither decision changes the issuance authority or adapter obligation stated above, and
+this contract statement authorizes neither implementation.
 
 **Settlement must name the session it settles** (sceneaxi#127). `CheckoutSettlement.sessionId`
 is required and must equal the Checkout Session id in the verified body (`data.object.id`),
@@ -407,9 +442,17 @@ A commit the boundary could not confirm refuses `CREDIT_STORE_FAILED` (`503`) wi
 grant claimed — including when the row did in fact land, since this call cannot prove it —
 and the redelivery reads the ledger and answers the replay. **An issuance-authority
 refusal is never `ignored`**: a fault answered as a permanent acknowledgement is money
-silently lost, so nothing is ever added to the acknowledged set. `CREDIT_REQUEST_INVALID`
-joins the server-side set for the same reason: the boundary refuses it for a request the
-endpoint built, never for anything the inbound bytes decided.
+silently lost. A new issuance-authority refusal belongs in `SERVER_SIDE_REASONS` (`503`)
+unless it is decided purely from the inbound bytes without consulting a port, in which
+case it is a `400`. Nothing new is ever added to `UNHANDLED_EVENT_REASONS`. The three
+current acknowledgements remain only the verified-body cases documented in
+[`docs/websites-deploy.md`](websites-deploy.md#identity--credits-plane): an unhandled event
+type, a completion purpose that settles elsewhere, and an event carrying no SceneAxi
+metadata. The closed-set assertion in
+[`tests/sites/identity-plane-wiring.test.ts`](../tests/sites/identity-plane-wiring.test.ts)
+makes a new member a gate failure. `CREDIT_REQUEST_INVALID` joins the server-side set for
+the same reason: the boundary refuses it for a request the endpoint built, never for
+anything the inbound bytes decided.
 
 **Live mode is unreachable by default.** `mode: "live"` refuses unless
 `liveModeAuthorized: true` is passed explicitly at the call site, enforced both when
@@ -885,7 +928,14 @@ Both credits paths are idempotent on the sale id (`sale:<saleId>:buyer` / `:crea
 replay moves nothing, and neither key can reach persistence except through
 `settleCreditsSale` — see *The credit persistence boundary* above. **Money** bookkeeping
 remains pure and unpersisted: `recordMoneySale` returns a `MoneySplitRecord` and no store
-operation writes one, so a deployment that wants those rows durable owns that write.
+operation writes one, so a deployment that wants those rows durable owns that write with
+no boundary check. [`packages/billing/src/revenue-share.ts`](../packages/billing/src/revenue-share.ts)
+and [`packages/billing/test/revenue-share.test.ts`](../packages/billing/test/revenue-share.test.ts)
+prove only construction and validation of the returned record; the credit-store operation
+table above contains no money-split commit. [sceneaxi#127](https://github.com/Vhailors/sceneaxi/issues/127)
+blocks Stripe Connect payouts on correct money bookkeeping, so an atomic money-settlement
+store operation is a hard precondition on any Connect work. No such operation or Connect
+authority exists in this repository.
 
 ## Fixture commerce (sceneaxi#138)
 
