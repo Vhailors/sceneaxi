@@ -27,6 +27,39 @@ const sql = migrationFiles
   .map((name) => readFileSync(join(migrationsDir, name), "utf8"))
   .join("\n");
 
+const checkoutIntentPriceTriggerColumns = () => {
+  const functionBody =
+    /CREATE OR REPLACE FUNCTION checkout_session_intents_price_immutable\(\)([\s\S]*?)\n\$\$;/.exec(
+      sql,
+    )?.[1];
+  if (functionBody === undefined) {
+    throw new Error("missing checkout intent price immutability function");
+  }
+
+  const condition = /\bIF ([\s\S]*?)\s+THEN\b/.exec(functionBody)?.[1];
+  if (condition === undefined) {
+    throw new Error("missing checkout intent price immutability predicate");
+  }
+
+  const columns = [
+    ...condition.matchAll(
+      /NEW\.([a-z_][a-z0-9_]*)\s+IS DISTINCT FROM\s+OLD\.\1/g,
+    ),
+  ].map((match) => match[1]);
+  const operators = condition
+    .replace(
+      /NEW\.[a-z_][a-z0-9_]*\s+IS DISTINCT FROM\s+OLD\.[a-z_][a-z0-9_]*/g,
+      "",
+    )
+    .replace(/\bOR\b/g, "")
+    .trim();
+  if (operators.length > 0) {
+    throw new Error(`unexpected checkout intent trigger predicate: ${condition}`);
+  }
+
+  return columns.filter((column): column is string => column !== undefined);
+};
+
 /** Column names declared by one CREATE TABLE block. */
 const columnsOf = (table: string): string[] => {
   const match = new RegExp(
@@ -333,6 +366,51 @@ describe("invariants the database enforces itself", () => {
       /CREATE TRIGGER credit_ledger_entries_append_only_trigger\s+BEFORE UPDATE OR DELETE ON credit_ledger_entries/,
     );
     expect(sql).toContain("RAISE EXCEPTION");
+  });
+
+  it("keeps checkout intent prices immutable while operational updates proceed", () => {
+    const priceColumns = checkoutIntentPriceTriggerColumns();
+    expect(priceColumns).toEqual([
+      "credits",
+      "unit_amount",
+      "currency",
+      "stripe_price_id",
+    ]);
+    expect(sql).toMatch(
+      /CREATE TRIGGER checkout_session_intents_price_immutable_trigger\s+BEFORE UPDATE ON checkout_session_intents/,
+    );
+    expect(sql).toMatch(
+      /checkout_session_intents price columns are immutable; UPDATE is refused'[\s\S]*?ERRCODE = 'restrict_violation'/,
+    );
+    expect(sql).toMatch(/END IF;\s+RETURN NEW;/);
+
+    const before: Record<string, bigint | string | null> = {
+      credits: 100n,
+      unit_amount: 1_000n,
+      currency: "USD",
+      stripe_price_id: "price_original",
+      success_url: "https://sceneaxi.example/success",
+    };
+    const triggerRefuses = (after: Record<string, bigint | string | null>) =>
+      priceColumns.some((column) => !Object.is(before[column], after[column]));
+
+    expect(
+      triggerRefuses({
+        ...before,
+        success_url: "https://sceneaxi.example/complete",
+      }),
+    ).toBe(false);
+
+    const changedPriceValues: Record<string, bigint | string> = {
+      credits: 200n,
+      unit_amount: 2_000n,
+      currency: "EUR",
+      stripe_price_id: "price_changed",
+    };
+    for (const column of priceColumns) {
+      expect(triggerRefuses({ ...before, [column]: changedPriceValues[column] }))
+        .toBe(true);
+    }
   });
 
   it("makes a sequence fork and a replayed key impossible", () => {
