@@ -28,6 +28,29 @@ const PACK = {
   stripePriceId: "price_test_starter_100",
 } as const;
 
+const REVISION_V1 = { revisionId: "starter-v1", ...PACK } as const;
+const REVISION_V2 = {
+  revisionId: "starter-v2",
+  ...PACK,
+  credits: 120,
+  unitAmount: 600,
+  stripePriceId: "price_test_starter_120",
+} as const;
+
+/**
+ * A superseded `starter-v1` retained beside the current `starter-v2` — the shape
+ * every archive refusal below patches, so each failure is caused by its patch alone.
+ */
+const archive = (
+  patch: Record<string, unknown> = {},
+): Record<string, unknown> => ({
+  schemaVersion: 1,
+  mode: "test",
+  currentRevisionIds: ["starter-v2"],
+  packRevisions: [REVISION_V1, REVISION_V2],
+  ...patch,
+});
+
 /** A record with one required key removed, for missing-property refusals. */
 const without = (record: object, key: string): Record<string, unknown> =>
   Object.fromEntries(Object.entries(record).filter(([name]) => name !== key));
@@ -200,6 +223,103 @@ describe("credit pack catalog", () => {
     expect(
       schema.properties.packRevisions.items.properties.unitAmount.minimum,
     ).toBe(1);
+  });
+});
+
+describe("validateCreditPackCatalogArchive", () => {
+  it("control: accepts a superseded revision retained beside the current one", () => {
+    const result = validateCreditPackCatalogArchive(archive());
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.currentRevisionIds).toEqual(["starter-v2"]);
+    expect(result.value.packRevisions.map((row) => row.revisionId)).toEqual([
+      "starter-v1",
+      "starter-v2",
+    ]);
+  });
+
+  it("refuses a duplicate revisionId — a revision id must name one row", () => {
+    const result = validateCreditPackCatalogArchive(
+      archive({
+        currentRevisionIds: ["starter-v1"],
+        packRevisions: [REVISION_V1, { ...REVISION_V2, revisionId: "starter-v1" }],
+      }),
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe(BILLING_REFUSE_CODES.invalidProperty);
+    expect(result.message).toContain('duplicate revisionId "starter-v1"');
+  });
+
+  it("refuses two revisions sharing a stripePriceId — historical resolution must be deterministic", () => {
+    const result = validateCreditPackCatalogArchive(
+      archive({
+        packRevisions: [
+          REVISION_V1,
+          { ...REVISION_V2, stripePriceId: PACK.stripePriceId },
+        ],
+      }),
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe(BILLING_REFUSE_CODES.invalidProperty);
+    expect(result.message).toContain(
+      `duplicate stripePriceId "${PACK.stripePriceId}"`,
+    );
+  });
+
+  it("refuses a current revisionId that resolves to no retained row", () => {
+    const result = validateCreditPackCatalogArchive(
+      archive({ currentRevisionIds: ["starter-v3"] }),
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe(BILLING_REFUSE_CODES.invalidProperty);
+    expect(result.message).toContain(
+      'current revisionId "starter-v3" does not resolve',
+    );
+  });
+
+  it("refuses two current revisions for one packId — a pack has one current price", () => {
+    const result = validateCreditPackCatalogArchive(
+      archive({ currentRevisionIds: ["starter-v1", "starter-v2"] }),
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe(BILLING_REFUSE_CODES.invalidProperty);
+    expect(result.message).toContain(
+      'more than one current revision for packId "starter"',
+    );
+  });
+
+  it("refuses a repeated current revisionId", () => {
+    const result = validateCreditPackCatalogArchive(
+      archive({ currentRevisionIds: ["starter-v2", "starter-v2"] }),
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.message).toContain('repeats current revisionId "starter-v2"');
+  });
+
+  it("refuses an archive with no current revision at all — retiring the last pack is not representable", () => {
+    const result = validateCreditPackCatalogArchive(
+      archive({ currentRevisionIds: [] }),
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe(BILLING_REFUSE_CODES.invalidProperty);
+    expect(result.message).toContain(
+      "currentRevisionIds must be a non-empty array",
+    );
+  });
+
+  it("refuses an empty packRevisions archive", () => {
+    const result = validateCreditPackCatalogArchive(
+      archive({ currentRevisionIds: ["starter-v1"], packRevisions: [] }),
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.message).toContain("packRevisions must be a non-empty array");
   });
 });
 

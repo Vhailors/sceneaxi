@@ -41,6 +41,21 @@ const writeCatalog = (root: string, catalog: PackCatalog): void => {
   writeTo(root, FIXTURES_REL, `${JSON.stringify(catalog, null, 2)}\n`);
 };
 
+const MODULE_MARKER =
+  "export const CREDIT_PACK_CATALOG_DATA: unknown = Object.freeze(";
+
+/** Rewrite the bundled twin from the same catalog, so it never drifts by accident. */
+const writeModule = (root: string, catalog: PackCatalog): void => {
+  const module = readFileSync(join(root, MODULE_REL), "utf8");
+  const marker = module.indexOf(MODULE_MARKER);
+  if (marker === -1) throw new Error("bundled module has no catalog export");
+  writeTo(
+    root,
+    MODULE_REL,
+    `${module.slice(0, marker)}${MODULE_MARKER}\n${JSON.stringify(catalog, null, 2)}\n);\n`,
+  );
+};
+
 describe("contract check — injected credit-pack drift", () => {
   let fx: string;
 
@@ -105,6 +120,60 @@ describe("contract check — injected credit-pack drift", () => {
     expect(res.stderr).toContain(
       'immutable revision "starter-v1" does not match its pinned economic row',
     );
+    expect(res.stderr).not.toContain(
+      "bundled credit pack catalog does not exactly match credit-packs.fixtures.json",
+    );
+    expect(res.stderr).not.toContain("credit pack table does not exactly match");
+  });
+
+  it("fails when an appended revision carries no pinned digest", () => {
+    const catalog = readCatalog(fx);
+    catalog.packRevisions.push({
+      revisionId: "starter-v2",
+      packId: "starter",
+      credits: 100,
+      unitAmount: 600,
+      currency: "usd",
+      stripePriceId: "price_test_starter_100_v2",
+    });
+    writeCatalog(fx, catalog);
+    writeModule(fx, catalog);
+
+    const res = runCheck(fx, "check-contracts.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      'revision "starter-v2" is not pinned in CREDIT_PACK_REVISION_DIGESTS',
+    );
+    expect(res.stderr).not.toContain(
+      "bundled credit pack catalog does not exactly match credit-packs.fixtures.json",
+    );
+    expect(res.stderr).not.toContain("credit pack table does not exactly match");
+  });
+
+  it("fails when a pinned archived revision row is deleted", () => {
+    const catalog = readCatalog(fx);
+    catalog.currentRevisionIds = catalog.currentRevisionIds.filter(
+      (revisionId) => revisionId !== "starter-v1",
+    );
+    catalog.packRevisions = catalog.packRevisions.filter(
+      (revision) => revision.revisionId !== "starter-v1",
+    );
+    writeCatalog(fx, catalog);
+    writeModule(fx, catalog);
+
+    const doc = readFileSync(join(fx, DOC_REL), "utf8");
+    writeTo(
+      fx,
+      DOC_REL,
+      doc.replace(
+        "| `starter` | `starter-v1` | 100 | 500 USD minor units | `price_test_starter_100` |\n",
+        "",
+      ),
+    );
+
+    const res = runCheck(fx, "check-contracts.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("pinned revision row(s) were removed: starter-v1");
     expect(res.stderr).not.toContain(
       "bundled credit pack catalog does not exactly match credit-packs.fixtures.json",
     );
