@@ -27,7 +27,15 @@ const sql = migrationFiles
   .map((name) => readFileSync(join(migrationsDir, name), "utf8"))
   .join("\n");
 
-const checkoutIntentPriceTriggerColumns = () => {
+/**
+ * The checkout intent price trigger, parsed into the pieces that decide whether
+ * an UPDATE is refused: the columns the guard compares, the statements it runs
+ * when they changed, and the statements that run regardless. A refusal hoisted
+ * out of the guarded branch refuses every UPDATE, including the operational
+ * ones the migration deliberately permits, so the split is what the assertions
+ * below are actually about.
+ */
+const checkoutIntentPriceTrigger = () => {
   const functionBody =
     /CREATE OR REPLACE FUNCTION checkout_session_intents_price_immutable\(\)([\s\S]*?)\n\$\$;/.exec(
       sql,
@@ -36,8 +44,21 @@ const checkoutIntentPriceTriggerColumns = () => {
     throw new Error("missing checkout intent price immutability function");
   }
 
-  const condition = /\bIF ([\s\S]*?)\s+THEN\b/.exec(functionBody)?.[1];
-  if (condition === undefined) {
+  const statements = /\bBEGIN\b([\s\S]*)\bEND;\s*$/.exec(functionBody)?.[1];
+  if (statements === undefined) {
+    throw new Error("missing checkout intent price immutability body");
+  }
+
+  const guard = /\bIF\s([\s\S]*?)\sTHEN\b([\s\S]*?)\bEND IF;/.exec(statements);
+  const guardText = guard?.[0];
+  const condition = guard?.[1];
+  const guarded = guard?.[2];
+  if (
+    guard === null ||
+    guardText === undefined ||
+    condition === undefined ||
+    guarded === undefined
+  ) {
     throw new Error("missing checkout intent price immutability predicate");
   }
 
@@ -57,7 +78,16 @@ const checkoutIntentPriceTriggerColumns = () => {
     throw new Error(`unexpected checkout intent trigger predicate: ${condition}`);
   }
 
-  return columns.filter((column): column is string => column !== undefined);
+  const unguarded = (
+    statements.slice(0, guard.index) +
+    statements.slice(guard.index + guardText.length)
+  ).trim();
+
+  return {
+    columns: columns.filter((column): column is string => column !== undefined),
+    guarded,
+    unguarded,
+  };
 };
 
 /** Column names declared by one CREATE TABLE block. */
@@ -369,7 +399,11 @@ describe("invariants the database enforces itself", () => {
   });
 
   it("keeps checkout intent prices immutable while operational updates proceed", () => {
-    const priceColumns = checkoutIntentPriceTriggerColumns();
+    const {
+      columns: priceColumns,
+      guarded,
+      unguarded,
+    } = checkoutIntentPriceTrigger();
     expect(priceColumns).toEqual([
       "credits",
       "unit_amount",
@@ -384,10 +418,14 @@ describe("invariants the database enforces itself", () => {
     expect(sql).toMatch(
       /CREATE TRIGGER checkout_session_intents_price_immutable_trigger\s+BEFORE UPDATE ON checkout_session_intents/,
     );
-    expect(sql).toMatch(
-      /checkout_session_intents price columns are immutable; UPDATE is refused'[\s\S]*?ERRCODE = 'restrict_violation'/,
+    // The refusal has to sit inside the guarded branch and nowhere else: an
+    // unconditional RAISE would still name the right columns and the right
+    // errcode while refusing every operational update too.
+    expect(guarded).toMatch(
+      /RAISE EXCEPTION\s+'checkout_session_intents price columns are immutable; UPDATE is refused'\s+USING ERRCODE = 'restrict_violation';/,
     );
-    expect(sql).toMatch(/END IF;\s+RETURN NEW;/);
+    expect(unguarded).not.toMatch(/\bRAISE\b/);
+    expect(unguarded).toBe("RETURN NEW;");
 
     const operationalColumn = "success_url";
     expect(intentColumns).toContain(operationalColumn);
@@ -417,8 +455,11 @@ describe("invariants the database enforces itself", () => {
       stripe_price_id: "price_changed",
     };
     for (const column of priceColumns) {
-      expect(triggerRefuses({ ...before, [column]: changedPriceValues[column] }))
-        .toBe(true);
+      const changed = changedPriceValues[column];
+      if (changed === undefined) {
+        throw new Error(`no changed value for price column ${column}`);
+      }
+      expect(triggerRefuses({ ...before, [column]: changed })).toBe(true);
     }
   });
 
