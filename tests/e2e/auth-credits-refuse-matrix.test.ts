@@ -39,6 +39,7 @@ import {
   persistCreditsSale,
   purchaseListingWithCredits,
   recordMoneySale,
+  resolveCreditPackRevision,
   resolveFixtureCommerceListing,
   runMeteredModelCall,
   signStripeWebhookPayload,
@@ -758,6 +759,7 @@ describe("billing refuse matrix", () => {
   it("reaches every credit-pack and checkout refusal", () => {
     record(lookupCreditPack({ packs: [] }, "starter"));
     record(lookupCreditPack(packCatalog(), "platinum"));
+    record(resolveCreditPackRevision("starter", "price_test_unknown", 500));
     record(assertModeAuthorized("barter" as never, true));
 
     const request = {

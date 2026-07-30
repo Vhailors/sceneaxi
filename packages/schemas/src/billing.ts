@@ -81,6 +81,23 @@ export type CreditPackCatalog = {
   readonly packs: ReadonlyArray<CreditPack>;
 };
 
+/** One immutable economic version of a credit pack. */
+export type CreditPackRevision = CreditPack & {
+  readonly revisionId: string;
+};
+
+/**
+ * The committed archive. `currentRevisionIds` is the mutable current-view
+ * index; rows in `packRevisions` are retained so paid in-flight intents remain
+ * resolvable after a reprice or retirement.
+ */
+export type CreditPackCatalogArchive = {
+  readonly schemaVersion: typeof BILLING_SCHEMA_VERSION;
+  readonly mode: typeof DEFAULT_BILLING_MODE;
+  readonly currentRevisionIds: ReadonlyArray<string>;
+  readonly packRevisions: ReadonlyArray<CreditPackRevision>;
+};
+
 /** Links a SceneAxi user to a provider customer, per mode. */
 export type StripeCustomerLink = {
   readonly schemaVersion: typeof BILLING_SCHEMA_VERSION;
@@ -402,6 +419,167 @@ export function validateCreditPackCatalog(
       schemaVersion: BILLING_SCHEMA_VERSION,
       mode: DEFAULT_BILLING_MODE,
       packs: Object.freeze(validated),
+    }),
+  );
+}
+
+const CREDIT_PACK_REVISION_KEYS = Object.freeze([
+  "revisionId",
+  ...CREDIT_PACK_KEYS,
+]);
+
+/** Validate the committed append-only revision archive and its current index. */
+export function validateCreditPackCatalogArchive(
+  value: unknown,
+): BillingValidationResult<CreditPackCatalogArchive> {
+  const record = snapshotPlainRecord(value);
+  if (record === undefined) {
+    return refuseWith(
+      BILLING_REFUSE_CODES.notObject,
+      "The credit pack catalog archive must be a plain JSON object.",
+    );
+  }
+  const required = [
+    "schemaVersion",
+    "mode",
+    "currentRevisionIds",
+    "packRevisions",
+  ];
+  const missing = firstMissingKey(record, required);
+  if (missing !== undefined) {
+    return refuseWith(
+      BILLING_REFUSE_CODES.missingProperty,
+      `credit pack catalog archive is missing required property "${missing}".`,
+    );
+  }
+  const unexpected = firstUnexpectedKey(record, required);
+  if (unexpected !== undefined) {
+    return refuseWith(
+      BILLING_REFUSE_CODES.unexpectedProperty,
+      `credit pack catalog archive has unexpected property "${unexpected}".`,
+    );
+  }
+  if (record["schemaVersion"] !== BILLING_SCHEMA_VERSION) {
+    return refuseWith(
+      BILLING_REFUSE_CODES.schemaVersionMismatch,
+      `credit pack catalog archive schemaVersion must be ${BILLING_SCHEMA_VERSION}; silent migration is refused.`,
+    );
+  }
+  if (record["mode"] !== DEFAULT_BILLING_MODE) {
+    return invalid(
+      `credit pack catalog archive mode must be "${DEFAULT_BILLING_MODE}"; live price ids are not committed.`,
+    );
+  }
+
+  const candidates = snapshotPlainArray(record["packRevisions"]);
+  if (candidates === undefined || candidates.length === 0) {
+    return invalid(
+      "credit pack catalog archive packRevisions must be a non-empty array.",
+    );
+  }
+
+  const revisions: CreditPackRevision[] = [];
+  const byRevisionId = new Map<string, CreditPackRevision>();
+  const seenPriceIds = new Set<string>();
+  for (const candidate of candidates) {
+    const revision = snapshotPlainRecord(candidate);
+    if (revision === undefined) {
+      return refuseWith(
+        BILLING_REFUSE_CODES.notObject,
+        "A credit pack revision must be a plain JSON object.",
+      );
+    }
+    const revisionMissing = firstMissingKey(revision, CREDIT_PACK_REVISION_KEYS);
+    if (revisionMissing !== undefined) {
+      return refuseWith(
+        BILLING_REFUSE_CODES.missingProperty,
+        `credit pack revision is missing required property "${revisionMissing}".`,
+      );
+    }
+    const revisionUnexpected = firstUnexpectedKey(
+      revision,
+      CREDIT_PACK_REVISION_KEYS,
+    );
+    if (revisionUnexpected !== undefined) {
+      return refuseWith(
+        BILLING_REFUSE_CODES.unexpectedProperty,
+        `credit pack revision has unexpected property "${revisionUnexpected}".`,
+      );
+    }
+    const revisionId = revision["revisionId"];
+    if (typeof revisionId !== "string" || !SLUG_RE.test(revisionId)) {
+      return invalid(
+        "credit pack revisionId must be a lowercase slug of 1-64 chars.",
+      );
+    }
+    if (byRevisionId.has(revisionId)) {
+      return invalid(
+        `credit pack catalog archive has duplicate revisionId "${revisionId}".`,
+      );
+    }
+
+    const pack = validateCreditPack({
+      packId: revision["packId"],
+      credits: revision["credits"],
+      unitAmount: revision["unitAmount"],
+      currency: revision["currency"],
+      stripePriceId: revision["stripePriceId"],
+    });
+    if (!pack.ok) return pack;
+    if (seenPriceIds.has(pack.value.stripePriceId)) {
+      return invalid(
+        `credit pack catalog archive has duplicate stripePriceId "${pack.value.stripePriceId}".`,
+      );
+    }
+
+    const validated = Object.freeze({ revisionId, ...pack.value });
+    byRevisionId.set(revisionId, validated);
+    seenPriceIds.add(pack.value.stripePriceId);
+    revisions.push(validated);
+  }
+
+  const currentCandidates = snapshotPlainArray(record["currentRevisionIds"]);
+  if (currentCandidates === undefined || currentCandidates.length === 0) {
+    return invalid(
+      "credit pack catalog archive currentRevisionIds must be a non-empty array.",
+    );
+  }
+  const currentRevisionIds: string[] = [];
+  const seenCurrentRevisionIds = new Set<string>();
+  const seenCurrentPackIds = new Set<string>();
+  for (const candidate of currentCandidates) {
+    if (typeof candidate !== "string" || !SLUG_RE.test(candidate)) {
+      return invalid(
+        "credit pack current revision ids must be lowercase slugs of 1-64 chars.",
+      );
+    }
+    if (seenCurrentRevisionIds.has(candidate)) {
+      return invalid(
+        `credit pack catalog archive repeats current revisionId "${candidate}".`,
+      );
+    }
+    const revision = byRevisionId.get(candidate);
+    if (revision === undefined) {
+      return invalid(
+        `credit pack catalog archive current revisionId "${candidate}" does not resolve.`,
+      );
+    }
+    if (seenCurrentPackIds.has(revision.packId)) {
+      return invalid(
+        `credit pack catalog archive has more than one current revision for packId "${revision.packId}".`,
+      );
+    }
+    seenCurrentRevisionIds.add(candidate);
+    seenCurrentPackIds.add(revision.packId);
+    currentRevisionIds.push(candidate);
+  }
+
+  return ok(
+    Object.freeze({
+      schemaVersion: BILLING_SCHEMA_VERSION,
+      mode: DEFAULT_BILLING_MODE,
+      currentRevisionIds: Object.freeze(currentRevisionIds),
+      packRevisions: Object.freeze(revisions),
     }),
   );
 }

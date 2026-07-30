@@ -228,7 +228,11 @@ user auth and does **not** replace held-key captain policy; it adds no CLI verb.
 The credit-pack, entitlement-matrix, and catalog-listing fixtures are canonical
 JSON kept in lockstep with `docs/auth-credits.md` by `pnpm check:contracts` —
 extend `tests/contracts/` and `tests/db/schema-lockstep.test.ts` when touching any
-of it.
+of it. The credit-pack fixture is an **append-only archive**: a `packRevisions`
+row is immutable and digest-pinned, repricing or retirement only appends a row
+and moves `currentRevisionIds`, and `resolveCreditPackRevision()` keeps an
+already-paid revision resolvable from the persisted intent's anchor tuple —
+`docs/auth-credits.md` owns those rules.
 
 Runtime-unforgeable provenance for the identity + credits plane is owned by
 `docs/auth-credits.md` (sceneaxi#126). Preserve its object-identity witness: a

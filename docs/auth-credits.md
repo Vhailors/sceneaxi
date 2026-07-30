@@ -454,7 +454,7 @@ Regressions: `packages/billing/test/live-mode.test.ts` (the resolver's contract)
 | `User`, `RoleAssignment`, `Session`, `Principal` | `packages/schemas/src/identity.ts` | `contracts/identity.schema.json` |
 | `CreditAccount`, `CreditLedgerEntry` | `packages/schemas/src/credits.ts` | `contracts/credit-ledger.schema.json` |
 | `StripeCustomerLink`, `CheckoutSessionIntent`, `CheckoutCompletedEvent` | `packages/schemas/src/billing.ts` | `contracts/billing-checkout.schema.json` |
-| `CreditPack` catalog | `packages/schemas/src/billing.ts` | `contracts/credit-packs.schema.json` |
+| `CreditPack`, `CreditPackRevision`, `CreditPackCatalogArchive` | `packages/schemas/src/billing.ts` | `contracts/credit-packs.schema.json` |
 | `EntitlementDecision` | `packages/schemas/src/entitlements.ts` | `contracts/entitlement-decision.schema.json` |
 | `CreatorShareRecord`, `MoneySplitRecord` | `packages/schemas/src/revenue-share.ts` | `contracts/revenue-share.schema.json` |
 
@@ -748,26 +748,56 @@ spend.
 
 ## Credit packs
 
-Canonical list: `packages/schemas/contracts/credit-packs.fixtures.json`. The table below is
-kept in exact lockstep with it by `pnpm check:contracts` — edit the JSON, then the table.
+Canonical archive: `packages/schemas/contracts/credit-packs.fixtures.json`. Each immutable
+row in `packRevisions` has a stable `revisionId`; `currentRevisionIds` is the only current
+catalog index. Repricing appends a row and moves that pack's current pointer. An appended
+row must carry a Stripe price id no revision has ever used — uniqueness is enforced across
+the whole archive, not just the current pointers — so even a credits-only change needs a new
+Stripe price object rather than the already-paid one, which is what keeps the anchor tuple
+resolving to exactly one row. Retirement
+removes the pointer but retains the row. The table below shows only the current pointers
+and is kept in exact lockstep by `pnpm check:contracts` — edit the JSON, then the table.
+
+That immutability is **enforced**, not merely documented: `CREDIT_PACK_REVISION_DIGESTS` in
+`scripts/check-contracts.mjs` pins one SHA-256 per revision over its economic tuple
+(`revisionId`, `packId`, `credits`, `unitAmount`, `currency`, `stripePriceId`), and
+`pnpm check:contracts` fails in three directions — an altered pinned row, a revision that
+carries no pin, and a pinned row that was deleted. The table check alone cannot cover this,
+because it is built from `currentRevisionIds` and a superseded or retired revision has left
+that index; the fixture/module comparison alone cannot either, since it only proves the two
+copies agree. So appending a revision is a deliberate contract change that adds its digest,
+while editing an archived one fails the gate even when fixture and bundled module are
+changed together (`tests/contracts/injected-credit-pack-drift.test.ts`).
+
+`resolveCreditPackRevision(itemId, stripePriceId, unitAmount)` resolves only against that
+bundled committed archive. It accepts lookup keys, never a caller-supplied pack or archive,
+and refuses `BILLING_CATALOG_REVISION_UNRESOLVABLE` when the tuple has no retained row.
+This is the prerequisite for the separately held grant-time intent-credit cross-check; no
+grant path performs that cross-check yet.
+
+The archive shape was chosen over a `createdAt` grace window because persisted intents
+already carry the exact `(itemId, stripePriceId, unitAmount)` anchor. Time alone cannot
+prove which values were current, and a bounded window would make correctness depend on
+webhook and deployment timing instead of retaining the paid revision.
 
 `loadCreditPackCatalog()` reads the fixture's bundled twin,
 `packages/schemas/src/credit-packs.data.ts` (`CREDIT_PACK_CATALOG_DATA`), rather than the
 JSON file: the same catalog is loaded inside a bundled serverless site, where a
 package-relative file read is not guaranteed to be traced into the deployment. That module
 is held byte-for-byte against the fixture by the same `pnpm check:contracts` run, so it is
-a third lockstep artifact, never a second source of truth — edit the JSON, then the table,
-then the module.
+a third lockstep artifact, never a second source of truth. With the digest pin above there
+are four edits for a new revision, in order: the JSON, the table, the module, then the
+revision's digest in `CREDIT_PACK_REVISION_DIGESTS`.
 
 Only **test-mode** price ids are committed. Live price ids belong to a later captain
 go-live decision.
 
 <!-- credit-packs:list -->
-| pack | credits | price | stripe test price id |
-|---|---|---|---|
-| `starter` | 100 | 500 USD minor units | `price_test_starter_100` |
-| `maker` | 500 | 2000 USD minor units | `price_test_maker_500` |
-| `studio` | 2000 | 7000 USD minor units | `price_test_studio_2000` |
+| pack | revision | credits | price | stripe test price id |
+|---|---|---|---|---|
+| `starter` | `starter-v1` | 100 | 500 USD minor units | `price_test_starter_100` |
+| `maker` | `maker-v1` | 500 | 2000 USD minor units | `price_test_maker_500` |
+| `studio` | `studio-v1` | 2000 | 7000 USD minor units | `price_test_studio_2000` |
 <!-- /credit-packs:list -->
 
 Price ids are public identifiers, not secrets. API keys are a different thing entirely and

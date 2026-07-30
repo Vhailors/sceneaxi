@@ -23,7 +23,9 @@ const MODULE_REL = "packages/schemas/src/credit-packs.data.ts";
 interface PackCatalog {
   schemaVersion: number;
   mode: string;
-  packs: {
+  currentRevisionIds: string[];
+  packRevisions: {
+    revisionId: string;
     packId: string;
     credits: number;
     unitAmount: number;
@@ -37,6 +39,21 @@ const readCatalog = (root: string): PackCatalog =>
 
 const writeCatalog = (root: string, catalog: PackCatalog): void => {
   writeTo(root, FIXTURES_REL, `${JSON.stringify(catalog, null, 2)}\n`);
+};
+
+const MODULE_MARKER =
+  "export const CREDIT_PACK_CATALOG_DATA: unknown = Object.freeze(";
+
+/** Rewrite the bundled twin from the same catalog, so it never drifts by accident. */
+const writeModule = (root: string, catalog: PackCatalog): void => {
+  const module = readFileSync(join(root, MODULE_REL), "utf8");
+  const marker = module.indexOf(MODULE_MARKER);
+  if (marker === -1) throw new Error("bundled module has no catalog export");
+  writeTo(
+    root,
+    MODULE_REL,
+    `${module.slice(0, marker)}${MODULE_MARKER}\n${JSON.stringify(catalog, null, 2)}\n);\n`,
+  );
 };
 
 describe("contract check — injected credit-pack drift", () => {
@@ -69,6 +86,98 @@ describe("contract check — injected credit-pack drift", () => {
     expect(res.stderr).toContain(
       "bundled credit pack catalog does not exactly match credit-packs.fixtures.json",
     );
+  });
+
+  it("fails when an archived economic row changes in both committed copies", () => {
+    const catalog = readCatalog(fx);
+    catalog.currentRevisionIds = catalog.currentRevisionIds.filter(
+      (revisionId) => revisionId !== "starter-v1",
+    );
+    const starter = catalog.packRevisions.find(
+      (revision) => revision.revisionId === "starter-v1",
+    );
+    if (starter === undefined) throw new Error("fixture has no starter-v1 revision");
+    starter.credits = 101;
+    writeCatalog(fx, catalog);
+
+    const module = readFileSync(join(fx, MODULE_REL), "utf8")
+      .replace('    "starter-v1",\n    "maker-v1"', '    "maker-v1"')
+      .replace('"credits": 100', '"credits": 101');
+    writeTo(fx, MODULE_REL, module);
+
+    const doc = readFileSync(join(fx, DOC_REL), "utf8");
+    writeTo(
+      fx,
+      DOC_REL,
+      doc.replace(
+        "| `starter` | `starter-v1` | 100 | 500 USD minor units | `price_test_starter_100` |\n",
+        "",
+      ),
+    );
+
+    const res = runCheck(fx, "check-contracts.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      'immutable revision "starter-v1" does not match its pinned economic row',
+    );
+    expect(res.stderr).not.toContain(
+      "bundled credit pack catalog does not exactly match credit-packs.fixtures.json",
+    );
+    expect(res.stderr).not.toContain("credit pack table does not exactly match");
+  });
+
+  it("fails when an appended revision carries no pinned digest", () => {
+    const catalog = readCatalog(fx);
+    catalog.packRevisions.push({
+      revisionId: "starter-v2",
+      packId: "starter",
+      credits: 100,
+      unitAmount: 600,
+      currency: "usd",
+      stripePriceId: "price_test_starter_100_v2",
+    });
+    writeCatalog(fx, catalog);
+    writeModule(fx, catalog);
+
+    const res = runCheck(fx, "check-contracts.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      'revision "starter-v2" is not pinned in CREDIT_PACK_REVISION_DIGESTS',
+    );
+    expect(res.stderr).not.toContain(
+      "bundled credit pack catalog does not exactly match credit-packs.fixtures.json",
+    );
+    expect(res.stderr).not.toContain("credit pack table does not exactly match");
+  });
+
+  it("fails when a pinned archived revision row is deleted", () => {
+    const catalog = readCatalog(fx);
+    catalog.currentRevisionIds = catalog.currentRevisionIds.filter(
+      (revisionId) => revisionId !== "starter-v1",
+    );
+    catalog.packRevisions = catalog.packRevisions.filter(
+      (revision) => revision.revisionId !== "starter-v1",
+    );
+    writeCatalog(fx, catalog);
+    writeModule(fx, catalog);
+
+    const doc = readFileSync(join(fx, DOC_REL), "utf8");
+    writeTo(
+      fx,
+      DOC_REL,
+      doc.replace(
+        "| `starter` | `starter-v1` | 100 | 500 USD minor units | `price_test_starter_100` |\n",
+        "",
+      ),
+    );
+
+    const res = runCheck(fx, "check-contracts.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("pinned revision row(s) were removed: starter-v1");
+    expect(res.stderr).not.toContain(
+      "bundled credit pack catalog does not exactly match credit-packs.fixtures.json",
+    );
+    expect(res.stderr).not.toContain("credit pack table does not exactly match");
   });
 
   it("fails when the bundled module stops being a parseable catalog literal", () => {
@@ -109,7 +218,7 @@ describe("contract check — injected credit-pack drift", () => {
 
   it("fails when a pack changes in the fixture but not in the doc table", () => {
     const catalog = readCatalog(fx);
-    const first = catalog.packs[0];
+    const first = catalog.packRevisions[0];
     if (first === undefined) throw new Error("fixture has no packs");
     first.credits += 1;
     writeCatalog(fx, catalog);
@@ -122,7 +231,9 @@ describe("contract check — injected credit-pack drift", () => {
 
   it("fails when a pack is added to the fixture but not to the doc table", () => {
     const catalog = readCatalog(fx);
-    catalog.packs.push({
+    catalog.currentRevisionIds.push("injected-v1");
+    catalog.packRevisions.push({
+      revisionId: "injected-v1",
       packId: "injected",
       credits: 1,
       unitAmount: 1,
@@ -136,11 +247,16 @@ describe("contract check — injected credit-pack drift", () => {
     expect(res.stderr).toContain("credit pack table does not exactly match");
   });
 
-  it("fails on a duplicate packId", () => {
+  it("fails when two current revisions have the same packId", () => {
     const catalog = readCatalog(fx);
-    const first = catalog.packs[0];
+    const first = catalog.packRevisions[0];
     if (first === undefined) throw new Error("fixture has no packs");
-    catalog.packs.push({ ...first, stripePriceId: "price_test_dupe" });
+    catalog.currentRevisionIds.push("starter-v2");
+    catalog.packRevisions.push({
+      ...first,
+      revisionId: "starter-v2",
+      stripePriceId: "price_test_dupe",
+    });
     writeCatalog(fx, catalog);
 
     const res = runCheck(fx, "check-contracts.mjs");
@@ -150,7 +266,7 @@ describe("contract check — injected credit-pack drift", () => {
 
   it("fails on a duplicate stripePriceId", () => {
     const catalog = readCatalog(fx);
-    const [first, second] = catalog.packs;
+    const [first, second] = catalog.packRevisions;
     if (first === undefined || second === undefined) {
       throw new Error("fixture needs at least two packs");
     }
@@ -162,9 +278,33 @@ describe("contract check — injected credit-pack drift", () => {
     expect(res.stderr).toContain("duplicate stripePriceId(s)");
   });
 
+  it("fails on a duplicate revisionId", () => {
+    const catalog = readCatalog(fx);
+    const [first, second] = catalog.packRevisions;
+    if (first === undefined || second === undefined) {
+      throw new Error("fixture needs at least two pack revisions");
+    }
+    second.revisionId = first.revisionId;
+    writeCatalog(fx, catalog);
+
+    const res = runCheck(fx, "check-contracts.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("duplicate revisionId(s)");
+  });
+
+  it("fails when a current revision id does not resolve", () => {
+    const catalog = readCatalog(fx);
+    catalog.currentRevisionIds[0] = "missing-v1";
+    writeCatalog(fx, catalog);
+
+    const res = runCheck(fx, "check-contracts.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("current revisionId(s) do not resolve");
+  });
+
   it("fails when a live price id is committed", () => {
     const catalog = readCatalog(fx);
-    const first = catalog.packs[0];
+    const first = catalog.packRevisions[0];
     if (first === undefined) throw new Error("fixture has no packs");
     first.stripePriceId = "price_live_starter_100";
     writeCatalog(fx, catalog);

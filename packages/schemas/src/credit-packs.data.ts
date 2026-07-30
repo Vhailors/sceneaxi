@@ -13,17 +13,24 @@
  * A module is always bundled, so `/pricing` lists packs wherever it is deployed
  * rather than refusing on a packaging fault.
  *
- * Typed `unknown` on purpose: it is validated by `validateCreditPackCatalog`
- * like any other inbound contract value, so a hand edit here cannot smuggle an
- * unvalidated catalog into the checkout path.
+ * Typed `unknown` on purpose: it is validated by
+ * `validateCreditPackCatalogArchive` like any other inbound contract value, so
+ * a hand edit here cannot smuggle an unvalidated revision into checkout or
+ * historical resolution.
  */
 
 export const CREDIT_PACK_CATALOG_DATA: unknown = Object.freeze(
 {
   "schemaVersion": 1,
   "mode": "test",
-  "packs": [
+  "currentRevisionIds": [
+    "starter-v1",
+    "maker-v1",
+    "studio-v1"
+  ],
+  "packRevisions": [
     {
+      "revisionId": "starter-v1",
       "packId": "starter",
       "credits": 100,
       "unitAmount": 500,
@@ -31,6 +38,7 @@ export const CREDIT_PACK_CATALOG_DATA: unknown = Object.freeze(
       "stripePriceId": "price_test_starter_100"
     },
     {
+      "revisionId": "maker-v1",
       "packId": "maker",
       "credits": 500,
       "unitAmount": 2000,
@@ -38,6 +46,7 @@ export const CREDIT_PACK_CATALOG_DATA: unknown = Object.freeze(
       "stripePriceId": "price_test_maker_500"
     },
     {
+      "revisionId": "studio-v1",
       "packId": "studio",
       "credits": 2000,
       "unitAmount": 7000,

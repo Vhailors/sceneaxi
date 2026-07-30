@@ -128,6 +128,7 @@ export {
   validateCheckoutSessionIntent,
   validateCreditPack,
   validateCreditPackCatalog,
+  validateCreditPackCatalogArchive,
   validateStripeCustomerLink,
 } from "./billing.js";
 export { CREDIT_PACK_CATALOG_DATA } from "./credit-packs.data.js";
@@ -142,6 +143,8 @@ export type {
   CheckoutSessionIntent,
   CreditPack,
   CreditPackCatalog,
+  CreditPackCatalogArchive,
+  CreditPackRevision,
   StripeCustomerLink,
 } from "./billing.js";
 

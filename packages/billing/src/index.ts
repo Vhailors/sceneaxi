@@ -67,6 +67,7 @@ export {
 export {
   loadCreditPackCatalog,
   lookupCreditPack,
+  resolveCreditPackRevision,
 } from "./credit-packs.js";
 
 export {
