@@ -449,7 +449,8 @@ current acknowledgements remain only the verified-body cases documented in
 type, a completion purpose that settles elsewhere, and an event carrying no SceneAxi
 metadata. The closed-set assertion in
 [`tests/sites/identity-plane-wiring.test.ts`](../tests/sites/identity-plane-wiring.test.ts)
-makes a new member a gate failure. `CREDIT_REQUEST_INVALID` joins the server-side set for
+makes a new member — or a new acknowledgement path added beside the set — a gate failure.
+`CREDIT_REQUEST_INVALID` joins the server-side set for
 the same reason: the boundary refuses it for a request the endpoint built, never for
 anything the inbound bytes decided.
 

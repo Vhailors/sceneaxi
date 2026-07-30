@@ -355,7 +355,10 @@ Load-bearing properties, each gate-tested in `tests/sites/identity-plane-wiring.
   another product's event: if it carries any SceneAxi key but cannot be routed, it is
   refused and retried. `tests/sites/identity-plane-wiring.test.ts` locks the private
   `UNHANDLED_EVENT_REASONS` set to the reason symbols representing exactly those three
-  body-only decisions, so adding another acknowledged reason fails the gate.
+  decisions, and locks every acknowledgement the module can emit to that same set — the one
+  path that downgrades a package refusal by consulting it, plus each direct acknowledgement,
+  the purpose decision being re-asked of the parsed completion included — so adding another
+  acknowledged reason, or another acknowledgement path, fails the gate.
 - **A webhook grant commits through one boundary, everywhere.** The endpoint calls
   `persistCheckoutCompletedGrant` — the same boundary any other deployment uses — so
   there is no second commit path for a paid event (captain decision D4), and `200` with

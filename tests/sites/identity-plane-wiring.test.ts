@@ -695,7 +695,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     }
   });
 
-  it("keeps acknowledgements closed to the three current body-only decisions", () => {
+  it("keeps every acknowledgement closed to the three current decisions", () => {
     const webhookSource = readFileSync(
       new URL("../../sites/umbrella/src/lib/credit-webhook.ts", import.meta.url),
       "utf8",
@@ -727,6 +727,30 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       "BILLING_REFUSE_REASONS.webhookEventTypeUnsupported",
       "CREDIT_WEBHOOK_REASONS.eventUnrelated",
     ]);
+
+    // The closed set governs only the refusals `settle()` downgrades, so pin the direct
+    // acknowledgement call sites too: an `ignored(...)` written beside them would otherwise
+    // acknowledge a fault with `200` and stop Stripe from redelivering it. Every reason
+    // handed to `ignored` must therefore be either the `settle` parameter routed through
+    // the closed set, or a member expression of that set.
+    const acknowledgements = [...webhookSource.matchAll(/(?<![\w$.])ignored\(([^,]*),/g)].map(
+      (match) => (match[1] ?? "").replace(/\s+/g, " ").trim(),
+    );
+    const routedThroughClosedSet = acknowledgements.filter((reason) => reason === "reason");
+    expect(
+      routedThroughClosedSet,
+      "the closed set must be consulted by exactly one acknowledgement path",
+    ).toHaveLength(1);
+
+    const direct = acknowledgements.filter((reason) => reason !== "reason");
+    expect(
+      direct.filter((reason) => !members.includes(reason)),
+      "a direct acknowledgement may name only a reason the closed set holds",
+    ).toEqual([]);
+    expect(
+      direct,
+      "no acknowledgement path may be added beside the four current ones",
+    ).toHaveLength(4);
   });
 
   it("owns a settlement bound to the wrong session, and still disowns a bad signature", () => {
