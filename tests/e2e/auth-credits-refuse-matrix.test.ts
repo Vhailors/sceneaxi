@@ -540,6 +540,9 @@ describe("auth refuse matrix", () => {
 
   it("reaches every guard refusal", () => {
     record(requireRole(undefined, "admin", { now: NOW, admin }));
+    const issued = principal();
+    if (typeof issued !== "object" || issued === null) throw new Error("fixture");
+    record(requireRole({ ...issued }, "user", { now: NOW, admin }));
     record(requireRole(principal(), "superadmin" as never, { now: NOW, admin }));
     record(requireRole(principal(), "admin", { now: NOW, admin }));
     record(requireRole(principal({ disabled: true }), "user", { now: NOW, admin }));

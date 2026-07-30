@@ -25,6 +25,11 @@ Dependencies: `@sceneaxi/schemas` only. No engine package, no profile, no CLI.
 `signOut` accepts only the exact principal capability returned by `signIn` or
 `verifySession` on that port instance. A bare session id is not revocation authority.
 
+Every role guard likewise accepts only the exact `Principal` object issued by an
+identity port. A hand-built value or any copy refuses `AUTH_PRINCIPAL_UNPROVEN`, even
+when its public structure is valid. Package tests obtain genuine negative-state fixtures
+through the unpublished `test/principal-fixture.ts` issuance seam.
+
 ## Why it is shaped this way
 
 **Admin is unclaimable, not merely validated.** The `User` contract has no role field, so
@@ -54,11 +59,13 @@ a byte-wise early return would leak how much of a guessed token was right.
 signed-in principal uses `requireAuthenticated`. That way "admin also counts as a user"
 never has to be inferred from the guard's name.
 
-**The admin identity is unforgeable at runtime, not just typed.** `{ email, source }` is a
+**Identity authority is unforgeable at runtime, not just typed.** `{ email, source }` is a
 public shape, so a caller supplying both the principal *and* the `admin` option would be
 answering the guard's own question. Only the object `resolveAdminIdentity` issued counts —
 checked by object identity, so a spread, `structuredClone`, JSON round-trip, or `Proxy` of
-a real one refuses with `AUTH_ADMIN_IDENTITY_UNPROVEN`. Prefer
+a real one refuses with `AUTH_ADMIN_IDENTITY_UNPROVEN`. The same rule applies to the
+`Principal`: only the exact object `createIdentityPort` returned counts, and a look-alike
+refuses with `AUTH_PRINCIPAL_UNPROVEN`. Prefer
 `createRoleGuards(resolveAdminIdentity(env))`, which removes the argument entirely: the
 answer is fixed where the guards are made, and a refused resolution makes every bound guard
 return that same named refusal. The mechanism is `createProvenanceWitness` in

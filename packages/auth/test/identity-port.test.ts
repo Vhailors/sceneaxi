@@ -6,6 +6,8 @@ import {
   createIdentityPort,
   createInMemoryIdentityStore,
   digestSessionToken,
+  hasPrincipalProvenance,
+  requireAuthenticated,
   resolveAdminIdentity,
   type IdentityAdapter,
   type IdentityStore,
@@ -180,6 +182,8 @@ describe("identity port — sign-in", () => {
     expect(result.value.role.source).toBe("admin-env");
     expect(result.value.session.surface).toBe("web-shell");
     expect(result.value.session.tokenDigest).toBe(digestSessionToken("tok-captain"));
+    expect(hasPrincipalProvenance(result.value)).toBe(true);
+    expect(requireAuthenticated(result.value, { now: NOW, admin }).ok).toBe(true);
   });
 
   it("signs an ordinary user in as user", async () => {
@@ -751,6 +755,8 @@ describe("identity port — session verification", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.value.role.role).toBe("user");
+    expect(hasPrincipalProvenance(result.value)).toBe(true);
+    expect(requireAuthenticated(result.value, { now: NOW, admin }).ok).toBe(true);
   });
 
   it("refuses a wrong token", async () => {

@@ -218,6 +218,21 @@ describe("requireAuthenticated", () => {
       requireAuthenticated(principal({ surface: "kids" }), { now: NOW, admin }).ok,
     ).toBe(false);
   });
+
+  it("refuses a structurally valid principal no identity port issued", () => {
+    const issued = principal({ role: "user", source: "default-user" });
+    if (typeof issued !== "object" || issued === null) throw new Error("fixture");
+    const handBuilt = { ...issued };
+
+    for (const result of [
+      requireAuthenticated(handBuilt, { now: NOW, admin }),
+      requireRole(handBuilt, "user", { now: NOW, admin }),
+    ]) {
+      expect(result.ok).toBe(false);
+      if (result.ok) continue;
+      expect(result.reason).toBe(AUTH_REFUSE_REASONS.principalUnproven);
+    }
+  });
 });
 
 describe("session token digests", () => {

@@ -134,6 +134,31 @@ describe("meterCredits", () => {
     expect(store.entryCount(ACCOUNT.accountId)).toBe(2);
   });
 
+  it("refuses the Appendix B.1 cross-user debit from an unissued principal", async () => {
+    const state = funded();
+    const store = storeFor(state);
+    const forged = structuredClone(principal());
+
+    const result = await meterCredits({
+      principal: forged,
+      admin,
+      store,
+      state,
+      amount: 40,
+      reason: "a turn the victim never asked for",
+      idempotencyKey: "usage:forged_01",
+      now: NOW,
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(AUTH_REFUSE_REASONS.principalUnproven);
+    expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
+    expect((await store.listEntries(ACCOUNT.accountId)).at(-1)?.balanceAfter).toBe(
+      100,
+    );
+  });
+
   it("never debits an admin — the captain has an unlimited allowance", async () => {
     const state = funded();
     const result = await meterCredits({

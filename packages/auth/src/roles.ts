@@ -28,6 +28,7 @@ import {
   normalizeEmail,
   type AdminIdentity,
 } from "./admin.js";
+import { hasPrincipalProvenance } from "./principal-provenance.js";
 import {
   AUTH_REFUSE_REASONS,
   authOk,
@@ -160,6 +161,16 @@ function checkPrincipal(
     );
   }
   const value = validated.value;
+
+  // Shape is not authentication. A principal's public structure can be built
+  // or copied by any in-process caller, so only the exact object recorded by
+  // identity-port issuance may reach an authorization decision.
+  if (!hasPrincipalProvenance(principal)) {
+    return authRefuse(
+      AUTH_REFUSE_REASONS.principalUnproven,
+      "The supplied principal was not issued by createIdentityPort; a hand-built or copied principal cannot authorize an identity.",
+    );
+  }
 
   // The role is *derived* here, never trusted off the inbound principal: a
   // structurally valid principal carrying a fabricated `admin` role and
