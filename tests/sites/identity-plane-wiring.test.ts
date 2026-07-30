@@ -11,6 +11,7 @@
  * produced by `signStripeWebhookPayload` (the same construction the verifier checks), and
  * the billing mode is never `live`.
  */
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   createIdentityPort,
@@ -692,6 +693,76 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     ]) {
       expect(creditWebhookHttpStatus(reason)).toBe(400);
     }
+  });
+
+  it("keeps every acknowledgement closed to the three current decisions", () => {
+    // Scan the module's code, never its prose: a doc comment that mentions `ignored(...)`
+    // or `ignored: true` must not decide whether this gate passes, in either direction.
+    const webhookSource = readFileSync(
+      new URL("../../sites/umbrella/src/lib/credit-webhook.ts", import.meta.url),
+      "utf8",
+    )
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^[^\S\n]*\/\/[^\n]*$/gm, "");
+
+    // Three decisions are acknowledged: an unhandled type, a purpose that settles on
+    // the revenue-share path, and an event with no SceneAxi metadata. The first two share
+    // the billing package's unsupported-event reason, so the closed set has exactly these
+    // two symbols. Pin the private declaration itself: adding any new member must fail the
+    // gate even when no existing behavior fixture happens to exercise the new reason.
+    const declarations = webhookSource.match(/const\s+UNHANDLED_EVENT_REASONS\b/g) ?? [];
+    expect(declarations, "UNHANDLED_EVENT_REASONS must have exactly one declaration").toHaveLength(
+      1,
+    );
+
+    const frozenSet = webhookSource.match(
+      /const\s+UNHANDLED_EVENT_REASONS\b[^=]*=\s*Object\.freeze\(\s*new\s+Set(?:<[^>]*>)?\(\s*\[([\s\S]*?)\]\s*\)/,
+    );
+    expect(frozenSet, "UNHANDLED_EVENT_REASONS must stay one frozen set literal").not.toBeNull();
+
+    const members = (frozenSet?.[1] ?? "")
+      .split(",")
+      .map((member) => member.trim())
+      .filter((member) => member.length > 0)
+      .sort();
+    expect(members, "no acknowledged reason may be added to the closed set").toEqual([
+      "BILLING_REFUSE_REASONS.webhookEventTypeUnsupported",
+      "CREDIT_WEBHOOK_REASONS.eventUnrelated",
+    ]);
+
+    // The closed set governs only the refusals `settle()` downgrades, so pin the direct
+    // acknowledgement call sites too: an `ignored(...)` written beside them would otherwise
+    // acknowledge a fault with `200` and stop Stripe from redelivering it. Every reason
+    // handed to `ignored` must therefore be either the `settle` parameter routed through
+    // the closed set, or a member expression of that set.
+    const acknowledgements = [...webhookSource.matchAll(/(?<![\w$.])ignored\(([^,]*),/g)].map(
+      (match) => (match[1] ?? "").replace(/\s+/g, " ").trim(),
+    );
+    const routedThroughClosedSet = acknowledgements.filter((reason) => reason === "reason");
+    expect(
+      routedThroughClosedSet,
+      "the closed set must be consulted by exactly one acknowledgement path",
+    ).toHaveLength(1);
+
+    const direct = acknowledgements.filter((reason) => reason !== "reason");
+    expect(
+      direct.filter((reason) => !members.includes(reason)),
+      "a direct acknowledgement may name only a reason the closed set holds",
+    ).toEqual([]);
+    expect(
+      direct,
+      "no acknowledgement path may be added beside the four current ones",
+    ).toHaveLength(4);
+
+    // The call sites above are only exhaustive while the helper is the only way to build an
+    // acknowledgement. `CreditWebhookOutcome` is a union, so a plain contextually-typed
+    // literal would need no helper, no `as const`, and no `Object.freeze` — and would answer
+    // Stripe `200` for a fault it never redelivers. `ignored: true` may therefore appear in
+    // exactly two places: the union member that declares the shape, and the helper.
+    expect(
+      webhookSource.match(/ignored:\s*true\b/g) ?? [],
+      "an acknowledged outcome may be built only by the one private helper the call sites above pin",
+    ).toHaveLength(2);
   });
 
   it("owns a settlement bound to the wrong session, and still disowns a bad signature", () => {

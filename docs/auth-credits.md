@@ -141,6 +141,16 @@ builds every impostor listed above for each value and asserts the refusal by nam
 asserts a genuine completion still grants exactly once and a redelivery still grants
 nothing.
 
+### Issuance authority begins outside core
+
+The trust boundary is **the process**, and SceneAxi core issues no authority of its own:
+issuance authority begins at the environment and at the deployment's own persistence, and
+core's work is to derive the witnesses above from it and to verify provider evidence and
+persisted state handed in from outside. Those witnesses are therefore defence-in-depth
+*inside* that boundary rather than a second one — they establish that this process ran the
+expected step on this exact object, and never make the process an independent issuer of the
+environment value, persisted row, or provider fact the object was derived from.
+
 ## Better Auth
 
 Better Auth is **injected**, not depended on: it needs a running HTTP host and a live
@@ -277,6 +287,37 @@ takes settlement (session id, paid status, amount, currency, quantity, Stripe pr
 your adapter **retrieves separately** for that exact Checkout Session, and refuses unless it
 and the session's mode and metadata all match the persisted intent — the immutable price
 snapshot.
+
+The persisted checkout intent is an **issuance authority for `credits`**. Both figures a
+grant depends on arrive through the same deployment-owned `CheckoutEvidencePort`, so what
+separates them is corroboration, not origin: the money figure has to agree across two
+reads, because `parseCheckoutCompletedEvent` compares the retrieved settlement's amount,
+currency, and Stripe price against the persisted intent — and requires its quantity to be
+exactly `1`, which the intent does not carry a field for — while the credit figure is read
+from that row's `intent.credits` alone and has nothing to disagree with. That is
+what makes the adapter obligation exact: write the row exactly as
+`createCheckoutSessionIntent` produced it, and treat its four price-bearing fields —
+`credits`, `unit_amount`, `currency`, `stripe_price_id` — as immutable once written. The
+obligation is field-scoped on purpose, not whole-row: the columns a deployment adds for its
+own operations stay writable, so it may stamp the hosted Stripe session id onto the row
+after creating the session, and this rule must not be re-tightened into whole-row
+immutability later. The `CheckoutEvidencePort` obligations themselves, retrieving the
+settlement separately for that exact Checkout Session included, stay owned by
+[`websites-deploy.md`](websites-deploy.md#remaining-activation).
+[`packages/billing/src/stripe-webhook.ts`](../packages/billing/src/stripe-webhook.ts) and
+[`packages/billing/test/stripe-checkout.test.ts`](../packages/billing/test/stripe-checkout.test.ts)
+prove the current settlement-to-intent comparison and persisted-credit grant behavior.
+
+Captain decisions D2 (`intent-credit-anchor`) and D3 (`intent-ddl-immutability`) bear on
+that asymmetry and are decided but unimplemented, and no in-tree document owns either. Read
+their dispositions and prerequisites in their own out-of-tree records,
+`data/sceneaxi-authority-decision-d2-intent-credit-anchor.md` and
+`data/sceneaxi-authority-decision-d3-intent-ddl-immutability.md`, which
+[`docs/program/NEXT-STEP.md`](program/NEXT-STEP.md#captain-authority-decisions-d1d5) only
+restates. D3 is what would enforce the field scope above in the database; no migration in
+`db/migrations` checks it today, so until D3's own migration lands that immutability rests
+entirely on the adapter. This contract statement authorizes neither implementation, and it
+does not restate either disposition — read the records for that.
 
 **Settlement must name the session it settles** (sceneaxi#127). `CheckoutSettlement.sessionId`
 is required and must equal the Checkout Session id in the verified body (`data.object.id`),
@@ -429,9 +470,18 @@ A commit the boundary could not confirm refuses `CREDIT_STORE_FAILED` (`503`) wi
 grant claimed — including when the row did in fact land, since this call cannot prove it —
 and the redelivery reads the ledger and answers the replay. **An issuance-authority
 refusal is never `ignored`**: a fault answered as a permanent acknowledgement is money
-silently lost, so nothing is ever added to the acknowledged set. `CREDIT_REQUEST_INVALID`
-joins the server-side set for the same reason: the boundary refuses it for a request the
-endpoint built, never for anything the inbound bytes decided.
+silently lost. A new issuance-authority refusal belongs in `SERVER_SIDE_REASONS` (`503`)
+unless it is decided purely from the inbound bytes without consulting a port, in which
+case it is a `400`. Nothing new is ever added to `UNHANDLED_EVENT_REASONS`. The three
+current acknowledgements remain only the verified-body cases documented in
+[`docs/websites-deploy.md`](websites-deploy.md#how-the-seam-holds): an unhandled event
+type, a completion purpose that settles elsewhere, and an event carrying no SceneAxi
+metadata. The closed-set assertion in
+[`tests/sites/identity-plane-wiring.test.ts`](../tests/sites/identity-plane-wiring.test.ts)
+makes a new member — or a new acknowledgement path added beside the set — a gate failure.
+`CREDIT_REQUEST_INVALID` joins the server-side set for
+the same reason: the boundary refuses it for a request the endpoint built, never for
+anything the inbound bytes decided.
 
 **Live mode is unreachable by default.** `mode: "live"` refuses unless
 `liveModeAuthorized: true` is passed explicitly at the call site, enforced both when
@@ -937,7 +987,18 @@ Both credits paths are idempotent on the sale id (`sale:<saleId>:buyer` / `:crea
 replay moves nothing, and neither key can reach persistence except through
 `settleCreditsSale` — see *The credit persistence boundary* above. **Money** bookkeeping
 remains pure and unpersisted: `recordMoneySale` returns a `MoneySplitRecord` and no store
-operation writes one, so a deployment that wants those rows durable owns that write.
+operation writes one, so a deployment that wants those rows durable owns that write with
+no boundary check. [`packages/billing/src/revenue-share.ts`](../packages/billing/src/revenue-share.ts)
+and [`packages/billing/test/revenue-share.test.ts`](../packages/billing/test/revenue-share.test.ts)
+prove only construction and validation of the returned record; the credit-store operation
+table above contains no money-split commit. [sceneaxi#127](https://github.com/Vhailors/sceneaxi/issues/127)
+blocks Stripe Connect payouts on correct money bookkeeping, and captain decision D4 —
+`data/sceneaxi-authority-decision-d4-commit-boundary-sequencing.md`, restated in
+[`docs/program/NEXT-STEP.md`](program/NEXT-STEP.md#captain-authority-decisions-d1d5) — is
+where the persistence half of that is recorded: atomic persistence for `MoneySplitRecord`
+was not selected and remains an unauthorized gap before any Connect work. So an atomic
+money-settlement store operation is a hard precondition on any Connect work. No such
+operation or Connect authority exists in this repository.
 
 ## Fixture commerce (sceneaxi#138)
 

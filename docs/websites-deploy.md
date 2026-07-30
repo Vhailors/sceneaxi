@@ -235,10 +235,25 @@ than inventing a session, balance, or checkout.
    an implementation that only creates a session captures money and then refuses every
    grant — retried by Stripe until it gives up:
 
-   - **Persist the intent** under `intent.intentId`, exactly as given, before redirecting.
-     `CheckoutEvidencePort.findIntent(intentId)` must return that same record; it is the
-     immutable price snapshot the credits come from, and an absent one refuses
-     `STRIPE_CHECKOUT_EVIDENCE_MISSING`.
+   - **Persist the intent** under `intent.intentId`, exactly as given, before redirecting,
+     and keep the four price-bearing fields it was written with — `credits`, `unit_amount`,
+     `currency`, `stripe_price_id` — unchanged for the row's whole life.
+     `CheckoutEvidencePort.findIntent(intentId)` must return that same price snapshot; it is
+     the deployment's issuance authority for the credits granted by a paid checkout, and an
+     absent one refuses `STRIPE_CHECKOUT_EVIDENCE_MISSING`. The money figure is corroborated
+     across two reads, because `parseCheckoutCompletedEvent` compares the retrieved
+     settlement against this row; the credit figure is read from this row alone
+     ([`auth-credits.md`](auth-credits.md#stripe-test-mode)). The obligation is deliberately
+     field-scoped rather than whole-row: the columns a deployment adds for its own
+     operations stay writable, so stamping the hosted Stripe session id onto the row once
+     the session exists is expected, and nobody should later re-tighten this into whole-row
+     immutability. Captain decisions D2 and D3 bear on that asymmetry — D3 on enforcing this
+     same field scope in the database — are decided but unimplemented, and are owned only by
+     their out-of-tree records `data/sceneaxi-authority-decision-d2-intent-credit-anchor.md`
+     and `data/sceneaxi-authority-decision-d3-intent-ddl-immutability.md` — which
+     [`docs/program/NEXT-STEP.md`](program/NEXT-STEP.md#captain-authority-decisions-d1d5)
+     only restates. This contract implements neither, so until D3's own migration lands the
+     obligation above is the adapter's to honour and nothing in `db/migrations` checks it.
    - **Echo the session id on the settlement.** `CheckoutEvidencePort.retrieveSettlement`
      is called with the Checkout Session id read from the verified body, and the
      `CheckoutSettlement` it returns must carry that same id on `sessionId`.
@@ -344,7 +359,12 @@ Load-bearing properties, each gate-tested in `tests/sites/identity-plane-wiring.
   purpose against the persisted intent for everything that stays on it. A
   `checkout.session.completed` this deployment *did* create is never acknowledged as
   another product's event: if it carries any SceneAxi key but cannot be routed, it is
-  refused and retried.
+  refused and retried. `tests/sites/identity-plane-wiring.test.ts` locks the private
+  `UNHANDLED_EVENT_REASONS` set to the reason symbols representing exactly those three
+  decisions, and locks every acknowledgement the module can emit to that same set — the one
+  path that downgrades a package refusal by consulting it, plus each direct acknowledgement,
+  the purpose decision being re-asked of the parsed completion included — so adding another
+  acknowledged reason, or another acknowledgement path, fails the gate.
 - **A webhook grant commits through one boundary, everywhere.** The endpoint calls
   `persistCheckoutCompletedGrant` — the same boundary any other deployment uses — so
   there is no second commit path for a paid event (captain decision D4), and `200` with
