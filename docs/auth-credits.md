@@ -273,10 +273,14 @@ reads, because `parseCheckoutCompletedEvent` compares the retrieved settlement's
 currency, and Stripe price against the persisted intent — and requires its quantity to be
 exactly `1`, which the intent does not carry a field for — while the credit figure is read
 from that row's `intent.credits` alone and has nothing to disagree with. That is
-what makes the adapter obligation exact and permanent: write the row exactly as
-`createCheckoutSessionIntent` produced it, and never update that row afterwards. The
-`CheckoutEvidencePort` obligations themselves, retrieving the settlement separately for
-that exact Checkout Session included, stay owned by
+what makes the adapter obligation exact: write the row exactly as
+`createCheckoutSessionIntent` produced it, and treat its four price-bearing fields —
+`credits`, `unit_amount`, `currency`, `stripe_price_id` — as immutable once written. The
+obligation is field-scoped on purpose, not whole-row: the columns a deployment adds for its
+own operations stay writable, so it may stamp the hosted Stripe session id onto the row
+after creating the session, and this rule must not be re-tightened into whole-row
+immutability later. The `CheckoutEvidencePort` obligations themselves, retrieving the
+settlement separately for that exact Checkout Session included, stay owned by
 [`websites-deploy.md`](websites-deploy.md#remaining-activation).
 [`packages/billing/src/stripe-webhook.ts`](../packages/billing/src/stripe-webhook.ts) and
 [`packages/billing/test/stripe-checkout.test.ts`](../packages/billing/test/stripe-checkout.test.ts)
@@ -288,8 +292,10 @@ their dispositions and prerequisites in their own out-of-tree records,
 `data/sceneaxi-authority-decision-d2-intent-credit-anchor.md` and
 `data/sceneaxi-authority-decision-d3-intent-ddl-immutability.md`, which
 [`docs/program/NEXT-STEP.md`](program/NEXT-STEP.md#captain-authority-decisions-d1d5) only
-restates. Neither decision changes the issuance authority or adapter obligation stated
-above, and this contract statement authorizes neither implementation.
+restates. D3 is what would enforce the field scope above in the database; no migration in
+`db/migrations` checks it today, so until D3's own migration lands that immutability rests
+entirely on the adapter. This contract statement authorizes neither implementation, and it
+does not restate either disposition — read the records for that.
 
 **Settlement must name the session it settles** (sceneaxi#127). `CheckoutSettlement.sessionId`
 is required and must equal the Checkout Session id in the verified body (`data.object.id`),
