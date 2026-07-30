@@ -239,11 +239,15 @@ than inventing a session, balance, or checkout.
      and never update that row afterwards. `CheckoutEvidencePort.findIntent(intentId)`
      must return that same record; it is the immutable price snapshot and the deployment's
      issuance authority for the credits granted by a paid checkout, and an absent one
-     refuses `STRIPE_CHECKOUT_EVIDENCE_MISSING`. Stripe settlement anchors the money
-     figure; only this persisted row currently anchors the credit figure. Captain decision
-     D2's grant-time catalog cross-check and D3's price-column immutability trigger are
-     decided but are not implemented by this contract; their dispositions and prerequisites
-     remain recorded in [`docs/program/NEXT-STEP.md`](program/NEXT-STEP.md#captain-authority-decisions-d1d5).
+     refuses `STRIPE_CHECKOUT_EVIDENCE_MISSING`. The money figure is corroborated across two
+     reads, because `parseCheckoutCompletedEvent` compares the retrieved settlement against
+     this row; the credit figure is read from this row alone
+     ([`auth-credits.md`](auth-credits.md#stripe-test-mode)). Captain decisions D2 and D3
+     bear on that asymmetry, are decided but unimplemented, and are owned only by their
+     out-of-tree records `data/sceneaxi-authority-decision-d2-intent-credit-anchor.md` and
+     `data/sceneaxi-authority-decision-d3-intent-ddl-immutability.md` — which
+     [`docs/program/NEXT-STEP.md`](program/NEXT-STEP.md#captain-authority-decisions-d1d5)
+     only restates. This contract implements neither.
    - **Echo the session id on the settlement.** `CheckoutEvidencePort.retrieveSettlement`
      is called with the Checkout Session id read from the verified body, and the
      `CheckoutSettlement` it returns must carry that same id on `sessionId`.

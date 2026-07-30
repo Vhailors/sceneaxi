@@ -119,23 +119,15 @@ builds every impostor listed above for each value and asserts the refusal by nam
 asserts a genuine completion still grants exactly once and a redelivery still grants
 nothing.
 
-## Process trust boundary and issuance authority
+### Issuance authority begins outside core
 
-The trust boundary is **the process**. SceneAxi core issues no authority of its own: it
-derives in-process, non-transferable witnesses from authority supplied by the environment,
-and verifies provider evidence and deployment-persisted state supplied from outside core.
-Issuance authority begins only at the environment and the deployment's own persistence,
-and ends at the process boundary. Evidence that crosses that boundary needs its owning
-external guarantee, such as the Stripe signature or the deployment's persistence rules.
-
-The module-private witnesses above are defence-in-depth **inside** that process boundary,
-not a second trust boundary. Their object-identity guarantee proves that this process ran
-the expected step on this exact object; it does not make the process an independent issuer
-of the environment value, persisted row, or provider fact from which the object was
-derived. [`packages/schemas/src/provenance.ts`](../packages/schemas/src/provenance.ts)
-implements that in-process-only witness, and
-[`tests/e2e/runtime-provenance-refusal.test.ts`](../tests/e2e/runtime-provenance-refusal.test.ts)
-proves that copied or hand-built values refuse while the issued object remains usable.
+The trust boundary is **the process**, and SceneAxi core issues no authority of its own:
+issuance authority begins at the environment and at the deployment's own persistence, and
+core's work is to derive the witnesses above from it and to verify provider evidence and
+persisted state handed in from outside. Those witnesses are therefore defence-in-depth
+*inside* that boundary rather than a second one — they establish that this process ran the
+expected step on this exact object, and never make the process an independent issuer of the
+environment value, persisted row, or provider fact the object was derived from.
 
 ## Better Auth
 
@@ -274,22 +266,29 @@ your adapter **retrieves separately** for that exact Checkout Session, and refus
 and the session's mode and metadata all match the persisted intent — the immutable price
 snapshot.
 
-The persisted checkout intent is an **issuance authority for `credits`**. The money figure
-is anchored to Stripe because `parseCheckoutCompletedEvent` compares the retrieved
-settlement amount with the intent's `unitAmount`; the credit figure is anchored only to
-the deployment's persisted intent row, which the grant reads as `intent.credits`. The
-adapter obligation is therefore exact and permanent: write the row exactly as
-`createCheckoutSessionIntent` produced it, and never update that row afterwards.
+The persisted checkout intent is an **issuance authority for `credits`**. Both figures a
+grant depends on arrive through the same deployment-owned `CheckoutEvidencePort`, so what
+separates them is corroboration, not origin: the money figure has to agree across two
+reads, because `parseCheckoutCompletedEvent` compares the retrieved settlement's amount,
+currency, quantity, and Stripe price against the persisted intent, while the credit figure
+is read from that row's `intent.credits` alone and has nothing to disagree with. That is
+what makes the adapter obligation exact and permanent: write the row exactly as
+`createCheckoutSessionIntent` produced it, and never update that row afterwards. The
+`CheckoutEvidencePort` obligations themselves, retrieving the settlement separately for
+that exact Checkout Session included, stay owned by
+[`websites-deploy.md`](websites-deploy.md#remaining-activation).
 [`packages/billing/src/stripe-webhook.ts`](../packages/billing/src/stripe-webhook.ts) and
 [`packages/billing/test/stripe-checkout.test.ts`](../packages/billing/test/stripe-checkout.test.ts)
 prove the current settlement-to-intent comparison and persisted-credit grant behavior.
 
-Captain decisions D2 and D3 are decided but are not implemented here: D2 adds a grant-time
-catalog cross-check, and D3 adds price-column immutability in the database. Their current
-dispositions and prerequisites are recorded in
-[`docs/program/NEXT-STEP.md`](program/NEXT-STEP.md#captain-authority-decisions-d1d5).
-Neither decision changes the issuance authority or adapter obligation stated above, and
-this contract statement authorizes neither implementation.
+Captain decisions D2 (`intent-credit-anchor`) and D3 (`intent-ddl-immutability`) bear on
+that asymmetry and are decided but unimplemented, and no in-tree document owns either. Read
+their dispositions and prerequisites in their own out-of-tree records,
+`data/sceneaxi-authority-decision-d2-intent-credit-anchor.md` and
+`data/sceneaxi-authority-decision-d3-intent-ddl-immutability.md`, which
+[`docs/program/NEXT-STEP.md`](program/NEXT-STEP.md#captain-authority-decisions-d1d5) only
+restates. Neither decision changes the issuance authority or adapter obligation stated
+above, and this contract statement authorizes neither implementation.
 
 **Settlement must name the session it settles** (sceneaxi#127). `CheckoutSettlement.sessionId`
 is required and must equal the Checkout Session id in the verified body (`data.object.id`),
@@ -933,9 +932,13 @@ no boundary check. [`packages/billing/src/revenue-share.ts`](../packages/billing
 and [`packages/billing/test/revenue-share.test.ts`](../packages/billing/test/revenue-share.test.ts)
 prove only construction and validation of the returned record; the credit-store operation
 table above contains no money-split commit. [sceneaxi#127](https://github.com/Vhailors/sceneaxi/issues/127)
-blocks Stripe Connect payouts on correct money bookkeeping, so an atomic money-settlement
-store operation is a hard precondition on any Connect work. No such operation or Connect
-authority exists in this repository.
+blocks Stripe Connect payouts on correct money bookkeeping, and captain decision D4 —
+`data/sceneaxi-authority-decision-d4-commit-boundary-sequencing.md`, restated in
+[`docs/program/NEXT-STEP.md`](program/NEXT-STEP.md#captain-authority-decisions-d1d5) — is
+where the persistence half of that is recorded: atomic persistence for `MoneySplitRecord`
+was not selected and remains an unauthorized gap before any Connect work. So an atomic
+money-settlement store operation is a hard precondition on any Connect work. No such
+operation or Connect authority exists in this repository.
 
 ## Fixture commerce (sceneaxi#138)
 
