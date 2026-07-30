@@ -28,6 +28,7 @@ import {
   type Session,
 } from "@sceneaxi/schemas";
 import { hasAdminIdentityProvenance, type AdminIdentity } from "./admin.js";
+import { issuePrincipalProvenance } from "./principal-provenance.js";
 import {
   mapBetterAuthAuthentication,
   type IdentityAdapter,
@@ -236,8 +237,10 @@ export function createIdentityPort(
   options: CreateIdentityPortOptions,
 ): IdentityPort {
   const issuedPrincipals = new WeakSet<object>();
-  const issuePrincipal = (principal: Principal): void => {
-    issuedPrincipals.add(principal);
+  const issuePrincipal = (principal: Principal): Principal => {
+    const issued = issuePrincipalProvenance(principal);
+    issuedPrincipals.add(issued);
+    return issued;
   };
   const requireStore = (): AuthResult<IdentityStore> =>
     options.store === undefined
@@ -403,8 +406,7 @@ export function createIdentityPort(
       );
       if (!stored.ok) return stored;
 
-      issuePrincipal(principal.value);
-      return principal;
+      return authOk(issuePrincipal(principal.value));
     },
 
     async verifySession(request) {
@@ -499,8 +501,9 @@ export function createIdentityPort(
         admin: admin.value,
         now: clock.value,
       });
-      if (principal.ok) issuePrincipal(principal.value);
-      return principal;
+      return principal.ok
+        ? authOk(issuePrincipal(principal.value))
+        : principal;
     },
 
     async signOut(request) {

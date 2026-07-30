@@ -55,6 +55,8 @@ export {
   type RoleGuards,
 } from "./roles.js";
 
+export { hasPrincipalProvenance } from "./principal-provenance.js";
+
 export {
   createInMemoryIdentityStore,
   type Awaitable,

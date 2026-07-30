@@ -17,6 +17,7 @@ recorded in ADR 0021.
 | `store.ts` | the `IdentityStore` port + in-memory reference implementation |
 | `better-auth-adapter.ts` | the injected Better Auth boundary and its mapping |
 | `identity-port.ts` | `createIdentityPort` — `signIn` / `verifySession` / `signOut` |
+| `principal-provenance.ts` | Object-identity witness shared by identity issuance and role guards |
 | `bootstrap.ts` | `planAdminBootstrap` — the one admin assignment to persist |
 
 Dependencies: `@sceneaxi/schemas` only. No engine package, no profile, no CLI.
