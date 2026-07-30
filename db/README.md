@@ -11,6 +11,7 @@ Forward-only, in numeric order:
 2. `migrations/0002_credits_billing.sql` — `credit_accounts`,
    `credit_ledger_entries`, `stripe_customer_links`, `checkout_session_intents`,
    `catalog_listings`, `creator_share_records`, `money_split_records`
+3. `migrations/0003_checkout_session_intent_price_immutability.sql` — checkout intent price immutability trigger
 
 There are no down-migrations. Reverting a financial schema by dropping tables loses the
 ledger, so a correction ships as a new forward migration.

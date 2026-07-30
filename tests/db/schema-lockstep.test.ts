@@ -27,6 +27,69 @@ const sql = migrationFiles
   .map((name) => readFileSync(join(migrationsDir, name), "utf8"))
   .join("\n");
 
+/**
+ * The checkout intent price trigger, parsed into the pieces that decide whether
+ * an UPDATE is refused: the columns the guard compares, the statements it runs
+ * when they changed, and the statements that run regardless. A refusal hoisted
+ * out of the guarded branch refuses every UPDATE, including the operational
+ * ones the migration deliberately permits, so the split is what the assertions
+ * below are actually about.
+ */
+const checkoutIntentPriceTrigger = () => {
+  const functionBody =
+    /CREATE OR REPLACE FUNCTION checkout_session_intents_price_immutable\(\)([\s\S]*?)\n\$\$;/.exec(
+      sql,
+    )?.[1];
+  if (functionBody === undefined) {
+    throw new Error("missing checkout intent price immutability function");
+  }
+
+  const statements = /\bBEGIN\b([\s\S]*)\bEND;\s*$/.exec(functionBody)?.[1];
+  if (statements === undefined) {
+    throw new Error("missing checkout intent price immutability body");
+  }
+
+  const guard = /\bIF\s([\s\S]*?)\sTHEN\b([\s\S]*?)\bEND IF;/.exec(statements);
+  const guardText = guard?.[0];
+  const condition = guard?.[1];
+  const guarded = guard?.[2];
+  if (
+    guard === null ||
+    guardText === undefined ||
+    condition === undefined ||
+    guarded === undefined
+  ) {
+    throw new Error("missing checkout intent price immutability predicate");
+  }
+
+  const columns = [
+    ...condition.matchAll(
+      /NEW\.([a-z_][a-z0-9_]*)\s+IS DISTINCT FROM\s+OLD\.\1/g,
+    ),
+  ].map((match) => match[1]);
+  const operators = condition
+    .replace(
+      /NEW\.[a-z_][a-z0-9_]*\s+IS DISTINCT FROM\s+OLD\.[a-z_][a-z0-9_]*/g,
+      "",
+    )
+    .replace(/\bOR\b/g, "")
+    .trim();
+  if (operators.length > 0) {
+    throw new Error(`unexpected checkout intent trigger predicate: ${condition}`);
+  }
+
+  const unguarded = (
+    statements.slice(0, guard.index) +
+    statements.slice(guard.index + guardText.length)
+  ).trim();
+
+  return {
+    columns: columns.filter((column): column is string => column !== undefined),
+    guarded,
+    unguarded,
+  };
+};
+
 /** Column names declared by one CREATE TABLE block. */
 const columnsOf = (table: string): string[] => {
   const match = new RegExp(
@@ -333,6 +396,71 @@ describe("invariants the database enforces itself", () => {
       /CREATE TRIGGER credit_ledger_entries_append_only_trigger\s+BEFORE UPDATE OR DELETE ON credit_ledger_entries/,
     );
     expect(sql).toContain("RAISE EXCEPTION");
+  });
+
+  it("keeps checkout intent prices immutable while operational updates proceed", () => {
+    const {
+      columns: priceColumns,
+      guarded,
+      unguarded,
+    } = checkoutIntentPriceTrigger();
+    expect(priceColumns).toEqual([
+      "credits",
+      "unit_amount",
+      "currency",
+      "stripe_price_id",
+    ]);
+    // Every NEW/OLD field the trigger names must be a real column, or Postgres
+    // raises 42703 on every UPDATE and the targeted price guard becomes a total
+    // UPDATE block — including the operational updates it deliberately permits.
+    const intentColumns = columnsOf("checkout_session_intents");
+    expect(intentColumns).toEqual(expect.arrayContaining(priceColumns));
+    expect(sql).toMatch(
+      /CREATE TRIGGER checkout_session_intents_price_immutable_trigger\s+BEFORE UPDATE ON checkout_session_intents/,
+    );
+    // The refusal has to sit inside the guarded branch and nowhere else: an
+    // unconditional RAISE would still name the right columns and the right
+    // errcode while refusing every operational update too.
+    expect(guarded).toMatch(
+      /RAISE EXCEPTION\s+'checkout_session_intents price columns are immutable; UPDATE is refused'\s+USING ERRCODE = 'restrict_violation';/,
+    );
+    expect(unguarded).not.toMatch(/\bRAISE\b/);
+    expect(unguarded).toBe("RETURN NEW;");
+
+    const operationalColumn = "success_url";
+    expect(intentColumns).toContain(operationalColumn);
+    expect(priceColumns).not.toContain(operationalColumn);
+
+    const before: Record<string, bigint | string | null> = {
+      credits: 100n,
+      unit_amount: 1_000n,
+      currency: "USD",
+      stripe_price_id: "price_original",
+      [operationalColumn]: "https://sceneaxi.example/success",
+    };
+    const triggerRefuses = (after: Record<string, bigint | string | null>) =>
+      priceColumns.some((column) => !Object.is(before[column], after[column]));
+
+    expect(
+      triggerRefuses({
+        ...before,
+        [operationalColumn]: "https://sceneaxi.example/complete",
+      }),
+    ).toBe(false);
+
+    const changedPriceValues: Record<string, bigint | string> = {
+      credits: 200n,
+      unit_amount: 2_000n,
+      currency: "EUR",
+      stripe_price_id: "price_changed",
+    };
+    for (const column of priceColumns) {
+      const changed = changedPriceValues[column];
+      if (changed === undefined) {
+        throw new Error(`no changed value for price column ${column}`);
+      }
+      expect(triggerRefuses({ ...before, [column]: changed })).toBe(true);
+    }
   });
 
   it("makes a sequence fork and a replayed key impossible", () => {
