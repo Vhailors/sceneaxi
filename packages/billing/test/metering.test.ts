@@ -15,7 +15,7 @@ import {
   meteringIdempotencyKey,
   type LedgerState,
 } from "@sceneaxi/billing";
-import { issuePrincipalForTest } from "../../auth/test/principal-fixture.js";
+import { issuePrincipalForTest } from "@sceneaxi/auth/testing/principal-issuance";
 const NOW = Date.parse("2026-07-25T10:00:00Z");
 const adminResolution = resolveAdminIdentity({
   [ADMIN_EMAIL_ENV_VAR]: "captain@example.com",

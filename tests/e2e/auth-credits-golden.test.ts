@@ -45,7 +45,7 @@ import {
   validatePrincipal,
   type CreditAccount,
 } from "@sceneaxi/schemas";
-import { issuePrincipalForTest } from "../../packages/auth/test/principal-fixture.js";
+import { issuePrincipalForTest } from "@sceneaxi/auth/testing/principal-issuance";
 
 /**
  * One deterministic golden path through the whole identity + credits plane.

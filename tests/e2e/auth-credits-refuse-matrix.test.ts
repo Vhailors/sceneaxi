@@ -53,7 +53,7 @@ import type {
   CheckoutSessionIntent,
   CreditAccount,
 } from "@sceneaxi/schemas";
-import { issuePrincipalForTest } from "../../packages/auth/test/principal-fixture.js";
+import { issuePrincipalForTest } from "@sceneaxi/auth/testing/principal-issuance";
 
 /**
  * The refuse matrix.

@@ -37,7 +37,7 @@ import {
   type LedgerState,
   type CreditStore,
 } from "@sceneaxi/billing";
-import { issuePrincipalForTest } from "../../auth/test/principal-fixture.js";
+import { issuePrincipalForTest } from "@sceneaxi/auth/testing/principal-issuance";
 
 const NOW = Date.parse("2026-07-25T10:00:00Z");
 const adminResolution = resolveAdminIdentity({

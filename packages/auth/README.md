@@ -18,6 +18,7 @@ recorded in ADR 0021.
 | `better-auth-adapter.ts` | the injected Better Auth boundary and its mapping |
 | `identity-port.ts` | `createIdentityPort` — `signIn` / `verifySession` / `signOut` |
 | `principal-provenance.ts` | Object-identity witness shared by identity issuance and role guards |
+| `testing/principal-issuance.ts` | The test-only `./testing/principal-issuance` subpath — genuine `Principal` fixtures, unreachable from production source |
 | `bootstrap.ts` | `planAdminBootstrap` — the one admin assignment to persist |
 
 Dependencies: `@sceneaxi/schemas` only. No engine package, no profile, no CLI.
@@ -27,8 +28,13 @@ Dependencies: `@sceneaxi/schemas` only. No engine package, no profile, no CLI.
 
 Every role guard likewise accepts only the exact `Principal` object issued by an
 identity port. A hand-built value or any copy refuses `AUTH_PRINCIPAL_UNPROVEN`, even
-when its public structure is valid. Package tests obtain genuine negative-state fixtures
-through the unpublished `test/principal-fixture.ts` issuance seam.
+when its public structure is valid. Tests — in this package and in every other one —
+obtain genuine fixtures through the declared, visibly test-only
+`@sceneaxi/auth/testing/principal-issuance` subpath, always by public package name and
+never by a relative path into a foreign directory. That subpath is not re-exported from
+the root barrel, and `pnpm check:boundaries` refuses any package, app, or site `src` file
+that imports it, by package name or by relative path — so an issuance authority cannot
+reach production source, and the rule is enforced rather than conventional.
 
 ## Why it is shaped this way
 

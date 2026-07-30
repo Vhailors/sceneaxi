@@ -54,7 +54,7 @@ import {
   type LedgerState,
 } from "@sceneaxi/billing";
 import type { CreditAccount, ModelDescriptor } from "@sceneaxi/schemas";
-import { issuePrincipalForTest } from "../../../packages/auth/test/principal-fixture.js";
+import { issuePrincipalForTest } from "@sceneaxi/auth/testing/principal-issuance";
 
 const NOW = Date.parse("2026-07-27T10:00:00Z");
 const clock = () => NOW;

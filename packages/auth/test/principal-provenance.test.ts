@@ -3,7 +3,7 @@ import {
   digestSessionToken,
   hasPrincipalProvenance,
 } from "@sceneaxi/auth";
-import { issuePrincipalForTest } from "./principal-fixture.js";
+import { issuePrincipalForTest } from "@sceneaxi/auth/testing/principal-issuance";
 
 const fixture = () => ({
   user: {

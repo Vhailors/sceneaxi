@@ -5,7 +5,8 @@
   "description": "SceneAxi identity plane — single-admin env resolution, fail-closed role guards, and a Kids-isolated identity port over an injected Better Auth adapter",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./testing/principal-issuance": "./src/testing/principal-issuance.ts"
   },
   "files": [
     "src"

@@ -39,7 +39,7 @@ import {
   type LedgerState,
   type VerifiedCheckoutCompletion,
 } from "@sceneaxi/billing";
-import { issuePrincipalForTest } from "../../auth/test/principal-fixture.js";
+import { issuePrincipalForTest } from "@sceneaxi/auth/testing/principal-issuance";
 
 /**
  * The bounded fixture-commerce path.

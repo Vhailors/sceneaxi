@@ -297,6 +297,22 @@ describe("sites tier — injected violations", () => {
     expect(res.status).toBe(0);
   });
 
+  it("boundary check fails when site source imports a test-only testing/ subpath", () => {
+    // The umbrella is the one site the matrix allows to name @sceneaxi/auth, so this
+    // injection isolates the test-only rule rather than the allow list: the declared
+    // `./testing/*` seam is for tests, and no deployable site source may reach it.
+    appendTo(
+      fx,
+      "sites/umbrella/src/lib/identity-plane.ts",
+      '\nimport "@sceneaxi/auth/testing/principal-issuance";\n',
+    );
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "imports test-only subpath @sceneaxi/auth/testing/principal-issuance — production source may not reach a testing/ seam",
+    );
+  });
+
   it("sites check fails on an empty sites tree", () => {
     for (const dir of ["umbrella", "catalog-game", "catalog-web"]) {
       rmSync(join(fx, "sites", dir), { recursive: true, force: true });
