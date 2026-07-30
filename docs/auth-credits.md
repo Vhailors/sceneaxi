@@ -270,8 +270,9 @@ The persisted checkout intent is an **issuance authority for `credits`**. Both f
 grant depends on arrive through the same deployment-owned `CheckoutEvidencePort`, so what
 separates them is corroboration, not origin: the money figure has to agree across two
 reads, because `parseCheckoutCompletedEvent` compares the retrieved settlement's amount,
-currency, quantity, and Stripe price against the persisted intent, while the credit figure
-is read from that row's `intent.credits` alone and has nothing to disagree with. That is
+currency, and Stripe price against the persisted intent — and requires its quantity to be
+exactly `1`, which the intent does not carry a field for — while the credit figure is read
+from that row's `intent.credits` alone and has nothing to disagree with. That is
 what makes the adapter obligation exact and permanent: write the row exactly as
 `createCheckoutSessionIntent` produced it, and never update that row afterwards. The
 `CheckoutEvidencePort` obligations themselves, retrieving the settlement separately for

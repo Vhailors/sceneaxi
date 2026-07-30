@@ -751,6 +751,11 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       direct,
       "no acknowledgement path may be added beside the four current ones",
     ).toHaveLength(4);
+
+    expect(
+      webhookSource.match(/ignored:\s*true as const/g) ?? [],
+      "an acknowledged outcome may be built only by the one private helper the call sites above pin",
+    ).toHaveLength(1);
   });
 
   it("owns a settlement bound to the wrong session, and still disowns a bad signature", () => {
