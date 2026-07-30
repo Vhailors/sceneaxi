@@ -706,15 +706,27 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     // the billing package's unsupported-event reason, so the closed set has exactly these
     // two symbols. Pin the private declaration itself: adding any new member must fail the
     // gate even when no existing behavior fixture happens to exercise the new reason.
-    const closedSet = `const UNHANDLED_EVENT_REASONS: ReadonlySet<string> = Object.freeze(
-  new Set<string>([
-    BILLING_REFUSE_REASONS.webhookEventTypeUnsupported,
-    CREDIT_WEBHOOK_REASONS.eventUnrelated,
-  ]),
-);`;
+    const declarations = webhookSource.match(/const\s+UNHANDLED_EVENT_REASONS\b/g) ?? [];
+    expect(declarations, "UNHANDLED_EVENT_REASONS must have exactly one declaration").toHaveLength(
+      1,
+    );
 
-    expect(webhookSource).toContain(closedSet);
-    expect(webhookSource.match(/const UNHANDLED_EVENT_REASONS:/g)).toHaveLength(1);
+    const frozenSet = webhookSource.match(
+      /const\s+UNHANDLED_EVENT_REASONS\b[^=]*=\s*Object\.freeze\(\s*new\s+Set(?:<[^>]*>)?\(\s*\[([\s\S]*?)\]\s*\)/,
+    );
+    expect(frozenSet, "UNHANDLED_EVENT_REASONS must stay one frozen set literal").not.toBeNull();
+
+    const members = (frozenSet?.[1] ?? "")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/[^\n]*/g, "")
+      .split(",")
+      .map((member) => member.trim())
+      .filter((member) => member.length > 0)
+      .sort();
+    expect(members, "no acknowledged reason may be added to the closed set").toEqual([
+      "BILLING_REFUSE_REASONS.webhookEventTypeUnsupported",
+      "CREDIT_WEBHOOK_REASONS.eventUnrelated",
+    ]);
   });
 
   it("owns a settlement bound to the wrong session, and still disowns a bad signature", () => {

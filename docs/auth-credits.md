@@ -446,7 +446,7 @@ silently lost. A new issuance-authority refusal belongs in `SERVER_SIDE_REASONS`
 unless it is decided purely from the inbound bytes without consulting a port, in which
 case it is a `400`. Nothing new is ever added to `UNHANDLED_EVENT_REASONS`. The three
 current acknowledgements remain only the verified-body cases documented in
-[`docs/websites-deploy.md`](websites-deploy.md#identity--credits-plane): an unhandled event
+[`docs/websites-deploy.md`](websites-deploy.md#how-the-seam-holds): an unhandled event
 type, a completion purpose that settles elsewhere, and an event carrying no SceneAxi
 metadata. The closed-set assertion in
 [`tests/sites/identity-plane-wiring.test.ts`](../tests/sites/identity-plane-wiring.test.ts)
