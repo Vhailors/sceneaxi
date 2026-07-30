@@ -32,9 +32,9 @@ when its public structure is valid. Tests — in this package and in every other
 obtain genuine fixtures through the declared, visibly test-only
 `@sceneaxi/auth/testing/principal-issuance` subpath, always by public package name and
 never by a relative path into a foreign directory. That subpath is not re-exported from
-the root barrel, and `pnpm check:boundaries` refuses any package, app, or site `src` file
-that imports it, by package name or by relative path — so an issuance authority cannot
-reach production source, and the rule is enforced rather than conventional.
+the root barrel, and production source cannot reach it: the rule is enforced rather than
+conventional, by the `testing/` subpath check in
+[`docs/DEPENDENCY-MATRIX.md`](../../docs/DEPENDENCY-MATRIX.md#test-only-testing-subpaths).
 
 ## Why it is shaped this way
 

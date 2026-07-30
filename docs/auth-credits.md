@@ -106,11 +106,8 @@ declares one visibly test-only subpath, `@sceneaxi/auth/testing/principal-issuan
 validates a structural fixture and records it with the same witness the port uses. It is a
 declared package entry point rather than a relative reach into another package's test
 directory, it is never re-exported from the root barrel, and it is unreachable from
-shipped code: `pnpm check:boundaries` refuses any package, app, or site `src` file that
-imports a `testing/` subpath, by package name or by relative path
-(`tests/boundary/injected-violations.test.ts` and
-`tests/boundary/injected-site-violations.test.ts` inject exactly that import and prove the
-real checker fails).
+shipped code — the general `testing/` subpath rule `pnpm check:boundaries` enforces is
+owned by [`DEPENDENCY-MATRIX.md`](DEPENDENCY-MATRIX.md#test-only-testing-subpaths).
 
 A guard is never an issuance authority, so it returns the **exact** witnessed object it was
 handed rather than the validator's copy: `requireAuthenticated`/`requireRole` results still

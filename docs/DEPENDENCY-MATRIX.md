@@ -109,6 +109,22 @@ allow-list drift cannot silently open the Kids boundary. The separate Kids surfa
 origin boundary is owned by
 [`docs/program/site-domain-topology.md`](program/site-domain-topology.md).
 
+## Test-only `testing/` subpaths
+
+A package may declare a visibly test-only `./testing/*` export subpath so that a test in
+another package reaches a real fixture seam by public package name instead of a relative
+path into a foreign directory. That surface exists for tests alone, so the checker refuses
+both ways into it from any package, app, or site `src` file: the public
+`@sceneaxi/<pkg>/testing/...` specifier, and a relative import that lands in the package's
+own `src/testing` tree — only a file already inside `src/testing` may name a sibling
+there. This is enforced independently of the allow lists, so an allowed edge does not
+grant the testing seam behind it.
+`tests/boundary/injected-violations.test.ts` and
+`tests/boundary/injected-site-violations.test.ts` inject exactly those imports and assert
+the real checker fails. The declared seams are listed in
+[`publish-readiness.md`](publish-readiness.md); why the principal-issuance seam exists is
+owned by [`auth-credits.md`](auth-credits.md).
+
 ## Delayed packages (accounted, not seeded)
 
 Spec #41's six deep modules map to six engine packages. Seeded now: **engine-kernel**
