@@ -750,7 +750,11 @@ spend.
 
 Canonical archive: `packages/schemas/contracts/credit-packs.fixtures.json`. Each immutable
 row in `packRevisions` has a stable `revisionId`; `currentRevisionIds` is the only current
-catalog index. Repricing appends a row and moves that pack's current pointer. Retirement
+catalog index. Repricing appends a row and moves that pack's current pointer. An appended
+row must carry a Stripe price id no revision has ever used — uniqueness is enforced across
+the whole archive, not just the current pointers — so even a credits-only change needs a new
+Stripe price object rather than the already-paid one, which is what keeps the anchor tuple
+resolving to exactly one row. Retirement
 removes the pointer but retains the row. The table below shows only the current pointers
 and is kept in exact lockstep by `pnpm check:contracts` — edit the JSON, then the table.
 
