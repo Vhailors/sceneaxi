@@ -1,13 +1,18 @@
 /**
  * The credit pack catalog.
  *
- * The canonical list is a **contract fixture**
- * (`@sceneaxi/schemas/contracts/credit-packs.fixtures.json`), kept in lockstep
- * with `docs/auth-credits.md` and with the bundled module below by
- * `pnpm check:contracts`. Loading it is isolated in `loadCreditPackCatalog` so
- * every other function takes the catalog as an argument: the checkout path stays
- * pure, injectable, and a test can pass a two-pack catalog without touching the
- * repo's.
+ * The canonical artifact is a **versioned contract fixture**
+ * (`@sceneaxi/schemas/contracts/credit-packs.fixtures.json`): immutable
+ * `packRevisions` rows plus the `currentRevisionIds` pointer index, kept in
+ * lockstep with `docs/auth-credits.md`, the bundled module below, and the
+ * per-revision digest pins by `pnpm check:contracts`. Loading it is isolated in
+ * `loadCreditPackCatalog`, which projects only the current pointers, so every
+ * other current-catalog function takes the catalog as an argument: the checkout
+ * path stays pure, injectable, and a test can pass a two-pack catalog without
+ * touching the repo's. Historical resolution is the deliberate exception —
+ * `resolveCreditPackRevision` accepts lookup keys only, never a caller-supplied
+ * archive, because a paid revision must come from the committed record.
+ * Contract owner: `docs/auth-credits.md`.
  */
 
 import {
