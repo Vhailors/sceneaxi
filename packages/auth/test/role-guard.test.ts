@@ -3,6 +3,7 @@ import {
   ADMIN_EMAIL_ENV_VAR,
   AUTH_REFUSE_REASONS,
   digestSessionToken,
+  hasPrincipalProvenance,
   requireAuthenticated,
   requireRole,
   resolveAdminIdentity,
@@ -217,6 +218,28 @@ describe("requireAuthenticated", () => {
     expect(
       requireAuthenticated(principal({ surface: "kids" }), { now: NOW, admin }).ok,
     ).toBe(false);
+  });
+
+  it("hands back the witnessed object, so its own result passes a second guard", () => {
+    const issued = principal({ role: "user", source: "default-user" });
+    const first = requireAuthenticated(issued, { now: NOW, admin });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+
+    // The same object, not a re-validated copy: a guard proves provenance, it
+    // never issues it.
+    expect(first.value).toBe(issued);
+    expect(hasPrincipalProvenance(first.value)).toBe(true);
+
+    // So a caller may sequence guards, and a role guard may follow an
+    // authentication guard, without the second one refusing the first's answer.
+    const second = requireAuthenticated(first.value, { now: NOW, admin });
+    expect(second.ok).toBe(true);
+    const role = requireRole(first.value, "user", { now: NOW, admin });
+    expect(role.ok).toBe(true);
+    if (!role.ok) return;
+    expect(role.value).toBe(issued);
+    expect(hasPrincipalProvenance(role.value)).toBe(true);
   });
 
   it("refuses a structurally valid principal no identity port issued", () => {

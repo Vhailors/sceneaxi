@@ -160,8 +160,6 @@ function checkPrincipal(
       `The principal is not a valid identity principal (${validated.code}): ${validated.message}`,
     );
   }
-  const value = validated.value;
-
   // Shape is not authentication. A principal's public structure can be built
   // or copied by any in-process caller, so only the exact object recorded by
   // identity-port issuance may reach an authorization decision.
@@ -171,6 +169,12 @@ function checkPrincipal(
       "The supplied principal was not issued by createIdentityPort; a hand-built or copied principal cannot authorize an identity.",
     );
   }
+
+  // A guard is not an issuance authority: it hands back the exact witnessed
+  // object it was given, never `validated.value`, which is always a fresh frozen
+  // copy carrying no provenance. So a guard's own result still satisfies
+  // `hasPrincipalProvenance` and passes a subsequent guard.
+  const value: Principal = principal;
 
   // The role is *derived* here, never trusted off the inbound principal: a
   // structurally valid principal carrying a fabricated `admin` role and

@@ -135,9 +135,14 @@ describe("meterCredits", () => {
   });
 
   it("refuses the Appendix B.1 cross-user debit from an unissued principal", async () => {
+    // The attacker is `usr_thief`; the targeted ledger is `acc_crew`, owned by
+    // `usr_crew`. The forged principal names its own user, so it is not a role
+    // claim the ownership comparison would catch — the only thing standing
+    // between it and 40 of somebody else's credits is provenance, and it refuses
+    // before the account is ever compared.
     const state = funded();
     const store = storeFor(state);
-    const forged = structuredClone(principal());
+    const forged = structuredClone(principal({ userId: "usr_thief" }));
 
     const result = await meterCredits({
       principal: forged,
@@ -153,10 +158,14 @@ describe("meterCredits", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.reason).toBe(AUTH_REFUSE_REASONS.principalUnproven);
+    // Not the ownership refusal: an unissued principal never reaches it.
+    expect(result.reason).not.toBe(BILLING_REFUSE_REASONS.accountNotOwned);
     expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
-    expect((await store.listEntries(ACCOUNT.accountId)).at(-1)?.balanceAfter).toBe(
-      100,
-    );
+    const persisted = await store.listEntries(ACCOUNT.accountId);
+    expect(persisted.at(-1)?.balanceAfter).toBe(100);
+    expect(state.entries.length).toBe(1);
+    expect(state.balance).toBe(100);
+    expect(await store.findAccountByUserId("usr_thief")).toBeUndefined();
   });
 
   it("never debits an admin — the captain has an unlimited allowance", async () => {

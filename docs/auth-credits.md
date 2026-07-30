@@ -101,6 +101,12 @@ caller sequencing its own route can
 assert the same thing. Checking provenance grants nothing; each module's issuing witness
 stays private.
 
+A guard is never an issuance authority, so it returns the **exact** witnessed object it was
+handed rather than the validator's copy: `requireAuthenticated`/`requireRole` results still
+satisfy `hasPrincipalProvenance` and still pass a subsequent guard. Structural validation
+runs first and keeps its own named refusal, so a malformed value is still
+`AUTH_PRINCIPAL_INVALID` rather than unproven.
+
 Principal provenance deliberately does not survive serialization. A deployment must
 re-verify its carried session per request instead of caching and rehydrating a principal.
 The umbrella does this in `verifyCarriedSession()`: each checkout calls
