@@ -73,6 +73,44 @@ describe("contract check — injected credit-pack drift", () => {
     );
   });
 
+  it("fails when an archived economic row changes in both committed copies", () => {
+    const catalog = readCatalog(fx);
+    catalog.currentRevisionIds = catalog.currentRevisionIds.filter(
+      (revisionId) => revisionId !== "starter-v1",
+    );
+    const starter = catalog.packRevisions.find(
+      (revision) => revision.revisionId === "starter-v1",
+    );
+    if (starter === undefined) throw new Error("fixture has no starter-v1 revision");
+    starter.credits = 101;
+    writeCatalog(fx, catalog);
+
+    const module = readFileSync(join(fx, MODULE_REL), "utf8")
+      .replace('    "starter-v1",\n    "maker-v1"', '    "maker-v1"')
+      .replace('"credits": 100', '"credits": 101');
+    writeTo(fx, MODULE_REL, module);
+
+    const doc = readFileSync(join(fx, DOC_REL), "utf8");
+    writeTo(
+      fx,
+      DOC_REL,
+      doc.replace(
+        "| `starter` | `starter-v1` | 100 | 500 USD minor units | `price_test_starter_100` |\n",
+        "",
+      ),
+    );
+
+    const res = runCheck(fx, "check-contracts.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      'immutable revision "starter-v1" does not match its pinned economic row',
+    );
+    expect(res.stderr).not.toContain(
+      "bundled credit pack catalog does not exactly match credit-packs.fixtures.json",
+    );
+    expect(res.stderr).not.toContain("credit pack table does not exactly match");
+  });
+
   it("fails when the bundled module stops being a parseable catalog literal", () => {
     writeTo(fx, MODULE_REL, "export const CREDIT_PACK_CATALOG_DATA: unknown = undefined;\n");
 
