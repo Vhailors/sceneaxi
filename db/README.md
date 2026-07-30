@@ -50,7 +50,6 @@ plane and a bad row.
 | Only a 50/50 creator split | `basis_points = 5000` check constraint |
 | No payout can be recorded | `money_split_records` has no payout/transfer/destination column |
 | A checkout redirect is never plaintext | `success_url LIKE 'https://%'` check |
-| A checkout intent's price cannot be rewritten | `BEFORE UPDATE` trigger raises `restrict_violation` when `credits`, `unit_amount`, `currency`, or `stripe_price_id` changes; operational columns stay writable |
 
 ## Connecting
 
