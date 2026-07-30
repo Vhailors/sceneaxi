@@ -376,6 +376,11 @@ describe("invariants the database enforces itself", () => {
       "currency",
       "stripe_price_id",
     ]);
+    // Every NEW/OLD field the trigger names must be a real column, or Postgres
+    // raises 42703 on every UPDATE and the targeted price guard becomes a total
+    // UPDATE block — including the operational updates it deliberately permits.
+    const intentColumns = columnsOf("checkout_session_intents");
+    expect(intentColumns).toEqual(expect.arrayContaining(priceColumns));
     expect(sql).toMatch(
       /CREATE TRIGGER checkout_session_intents_price_immutable_trigger\s+BEFORE UPDATE ON checkout_session_intents/,
     );
@@ -384,12 +389,16 @@ describe("invariants the database enforces itself", () => {
     );
     expect(sql).toMatch(/END IF;\s+RETURN NEW;/);
 
+    const operationalColumn = "success_url";
+    expect(intentColumns).toContain(operationalColumn);
+    expect(priceColumns).not.toContain(operationalColumn);
+
     const before: Record<string, bigint | string | null> = {
       credits: 100n,
       unit_amount: 1_000n,
       currency: "USD",
       stripe_price_id: "price_original",
-      success_url: "https://sceneaxi.example/success",
+      [operationalColumn]: "https://sceneaxi.example/success",
     };
     const triggerRefuses = (after: Record<string, bigint | string | null>) =>
       priceColumns.some((column) => !Object.is(before[column], after[column]));
@@ -397,7 +406,7 @@ describe("invariants the database enforces itself", () => {
     expect(
       triggerRefuses({
         ...before,
-        success_url: "https://sceneaxi.example/complete",
+        [operationalColumn]: "https://sceneaxi.example/complete",
       }),
     ).toBe(false);
 
