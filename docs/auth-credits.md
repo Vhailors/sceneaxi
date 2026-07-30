@@ -754,6 +754,17 @@ catalog index. Repricing appends a row and moves that pack's current pointer. Re
 removes the pointer but retains the row. The table below shows only the current pointers
 and is kept in exact lockstep by `pnpm check:contracts` — edit the JSON, then the table.
 
+That immutability is **enforced**, not merely documented: `CREDIT_PACK_REVISION_DIGESTS` in
+`scripts/check-contracts.mjs` pins one SHA-256 per revision over its economic tuple
+(`revisionId`, `packId`, `credits`, `unitAmount`, `currency`, `stripePriceId`), and
+`pnpm check:contracts` fails in three directions — an altered pinned row, a revision that
+carries no pin, and a pinned row that was deleted. The table check alone cannot cover this,
+because it is built from `currentRevisionIds` and a superseded or retired revision has left
+that index; the fixture/module comparison alone cannot either, since it only proves the two
+copies agree. So appending a revision is a deliberate contract change that adds its digest,
+while editing an archived one fails the gate even when fixture and bundled module are
+changed together (`tests/contracts/injected-credit-pack-drift.test.ts`).
+
 `resolveCreditPackRevision(itemId, stripePriceId, unitAmount)` resolves only against that
 bundled committed archive. It accepts lookup keys, never a caller-supplied pack or archive,
 and refuses `BILLING_CATALOG_REVISION_UNRESOLVABLE` when the tuple has no retained row.
@@ -770,8 +781,9 @@ webhook and deployment timing instead of retaining the paid revision.
 JSON file: the same catalog is loaded inside a bundled serverless site, where a
 package-relative file read is not guaranteed to be traced into the deployment. That module
 is held byte-for-byte against the fixture by the same `pnpm check:contracts` run, so it is
-a third lockstep artifact, never a second source of truth — edit the JSON, then the table,
-then the module.
+a third lockstep artifact, never a second source of truth. With the digest pin above there
+are four edits for a new revision, in order: the JSON, the table, the module, then the
+revision's digest in `CREDIT_PACK_REVISION_DIGESTS`.
 
 Only **test-mode** price ids are committed. Live price ids belong to a later captain
 go-live decision.
