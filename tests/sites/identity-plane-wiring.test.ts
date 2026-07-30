@@ -696,10 +696,14 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
   });
 
   it("keeps every acknowledgement closed to the three current decisions", () => {
+    // Scan the module's code, never its prose: a doc comment that mentions `ignored(...)`
+    // or `ignored: true` must not decide whether this gate passes, in either direction.
     const webhookSource = readFileSync(
       new URL("../../sites/umbrella/src/lib/credit-webhook.ts", import.meta.url),
       "utf8",
-    );
+    )
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^[^\S\n]*\/\/[^\n]*$/gm, "");
 
     // Three decisions are acknowledged: an unhandled type, a purpose that settles on
     // the revenue-share path, and an event with no SceneAxi metadata. The first two share
@@ -717,8 +721,6 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     expect(frozenSet, "UNHANDLED_EVENT_REASONS must stay one frozen set literal").not.toBeNull();
 
     const members = (frozenSet?.[1] ?? "")
-      .replace(/\/\*[\s\S]*?\*\//g, "")
-      .replace(/\/\/[^\n]*/g, "")
       .split(",")
       .map((member) => member.trim())
       .filter((member) => member.length > 0)
@@ -752,10 +754,15 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       "no acknowledgement path may be added beside the four current ones",
     ).toHaveLength(4);
 
+    // The call sites above are only exhaustive while the helper is the only way to build an
+    // acknowledgement. `CreditWebhookOutcome` is a union, so a plain contextually-typed
+    // literal would need no helper, no `as const`, and no `Object.freeze` — and would answer
+    // Stripe `200` for a fault it never redelivers. `ignored: true` may therefore appear in
+    // exactly two places: the union member that declares the shape, and the helper.
     expect(
-      webhookSource.match(/ignored:\s*true as const/g) ?? [],
+      webhookSource.match(/ignored:\s*true\b/g) ?? [],
       "an acknowledged outcome may be built only by the one private helper the call sites above pin",
-    ).toHaveLength(1);
+    ).toHaveLength(2);
   });
 
   it("owns a settlement bound to the wrong session, and still disowns a bad signature", () => {
