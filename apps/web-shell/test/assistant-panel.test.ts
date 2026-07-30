@@ -54,6 +54,7 @@ import {
   type LedgerState,
 } from "@sceneaxi/billing";
 import type { CreditAccount, ModelDescriptor } from "@sceneaxi/schemas";
+import { issuePrincipalForTest } from "@sceneaxi/auth/testing/principal-issuance";
 
 const NOW = Date.parse("2026-07-27T10:00:00Z");
 const clock = () => NOW;
@@ -87,7 +88,7 @@ const OTHER_ACCOUNT = Object.freeze({
   userId: "usr_stranger",
 }) as CreditAccount;
 
-const PRINCIPAL = Object.freeze({
+const PRINCIPAL = issuePrincipalForTest({
   user: {
     schemaVersion: 1,
     kind: "sceneaxi.user",
@@ -115,10 +116,10 @@ const PRINCIPAL = Object.freeze({
     expiresAt: "2026-07-28T10:00:00Z",
     tokenDigest: digestSessionToken("tok"),
   },
-}) as never as CreateAssistantPanelOptions["principal"] & object;
+}) as CreateAssistantPanelOptions["principal"] & object;
 
 /** The captain, whose role the guard re-derives from the admin identity. */
-const ADMIN_PRINCIPAL = Object.freeze({
+const ADMIN_PRINCIPAL = issuePrincipalForTest({
   user: {
     ...PRINCIPAL.user,
     userId: "usr_captain",
@@ -131,7 +132,7 @@ const ADMIN_PRINCIPAL = Object.freeze({
     source: "admin-env",
   },
   session: { ...PRINCIPAL.session, userId: "usr_captain" },
-}) as never as CreateAssistantPanelOptions["principal"] & object;
+}) as CreateAssistantPanelOptions["principal"] & object;
 
 const funded = (credits: number, account: CreditAccount = ACCOUNT) => {
   if (credits === 0) return createLedgerState(account);
@@ -455,10 +456,10 @@ describe("hosted mode debits through the existing ledger", () => {
     ).toBe(BILLING_REFUSE_REASONS.hostedAiNotEnabled);
 
     const kids = hostedPanel(10, {
-      principal: {
+      principal: issuePrincipalForTest({
         ...PRINCIPAL,
         session: { ...PRINCIPAL.session, surface: "kids" },
-      } as never as CreateAssistantPanelOptions["principal"],
+      }) as CreateAssistantPanelOptions["principal"],
       credits: counting(funded(10)),
     });
     expect(
@@ -785,10 +786,10 @@ describe("hosted mode debits through the existing ledger", () => {
   });
 
   it("refuses an expired session in the auth guard's own vocabulary", async () => {
-    const expired = {
+    const expired = issuePrincipalForTest({
       ...PRINCIPAL,
       session: { ...PRINCIPAL.session, expiresAt: "2026-07-27T09:30:00Z" },
-    };
+    });
     const { panel, store, stack } = hostedPanel(10, {
       principal: expired as typeof PRINCIPAL,
     });
@@ -831,10 +832,10 @@ describe("hosted mode debits through the existing ledger", () => {
     // is both expired *and* backed by a credits view that fails, which is exactly
     // the pair that would otherwise answer "the credits view failed".
     const reads: string[] = [];
-    const expired = {
+    const expired = issuePrincipalForTest({
       ...PRINCIPAL,
       session: { ...PRINCIPAL.session, expiresAt: "2026-07-27T09:30:00Z" },
-    };
+    });
     const { panel, store, stack } = hostedPanel(10, {
       principal: expired as typeof PRINCIPAL,
       credits: {

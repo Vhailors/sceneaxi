@@ -39,6 +39,7 @@ import {
   type LedgerState,
   type VerifiedCheckoutCompletion,
 } from "@sceneaxi/billing";
+import { issuePrincipalForTest } from "@sceneaxi/auth/testing/principal-issuance";
 
 /**
  * The bounded fixture-commerce path.
@@ -82,7 +83,7 @@ const principal = (
 ): unknown => {
   const userId = overrides.userId ?? "usr_buyer";
   const role = overrides.role ?? "user";
-  return {
+  return issuePrincipalForTest({
     user: {
       schemaVersion: 1,
       kind: "sceneaxi.user",
@@ -110,7 +111,7 @@ const principal = (
       expiresAt: "2026-07-26T10:00:00Z",
       tokenDigest: digestSessionToken("tok"),
     },
-  };
+  });
 };
 
 const funded = (credits: number, userId = "usr_buyer"): LedgerState => {

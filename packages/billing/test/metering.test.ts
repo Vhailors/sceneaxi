@@ -15,6 +15,7 @@ import {
   meteringIdempotencyKey,
   type LedgerState,
 } from "@sceneaxi/billing";
+import { issuePrincipalForTest } from "@sceneaxi/auth/testing/principal-issuance";
 const NOW = Date.parse("2026-07-25T10:00:00Z");
 const adminResolution = resolveAdminIdentity({
   [ADMIN_EMAIL_ENV_VAR]: "captain@example.com",
@@ -44,7 +45,7 @@ const principal = (
 ): unknown => {
   const userId = overrides.userId ?? "usr_crew";
   const role = overrides.role ?? "user";
-  return {
+  return issuePrincipalForTest({
     user: {
       schemaVersion: 1,
       kind: "sceneaxi.user",
@@ -72,7 +73,7 @@ const principal = (
       expiresAt: overrides.expiresAt ?? "2026-07-26T10:00:00Z",
       tokenDigest: digestSessionToken("tok"),
     },
-  };
+  });
 };
 
 
@@ -131,6 +132,40 @@ describe("meterCredits", () => {
     expect(result.value.entry?.delta).toBe(-10);
     expect(result.value.entry?.movement).toBe("debit");
     expect(store.entryCount(ACCOUNT.accountId)).toBe(2);
+  });
+
+  it("refuses the Appendix B.1 cross-user debit from an unissued principal", async () => {
+    // The attacker is `usr_thief`; the targeted ledger is `acc_crew`, owned by
+    // `usr_crew`. The forged principal names its own user, so it is not a role
+    // claim the ownership comparison would catch — the only thing standing
+    // between it and 40 of somebody else's credits is provenance, and it refuses
+    // before the account is ever compared.
+    const state = funded();
+    const store = storeFor(state);
+    const forged = structuredClone(principal({ userId: "usr_thief" }));
+
+    const result = await meterCredits({
+      principal: forged,
+      admin,
+      store,
+      state,
+      amount: 40,
+      reason: "a turn the victim never asked for",
+      idempotencyKey: "usage:forged_01",
+      now: NOW,
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(AUTH_REFUSE_REASONS.principalUnproven);
+    // Not the ownership refusal: an unissued principal never reaches it.
+    expect(result.reason).not.toBe(BILLING_REFUSE_REASONS.accountNotOwned);
+    expect(store.entryCount(ACCOUNT.accountId)).toBe(1);
+    const persisted = await store.listEntries(ACCOUNT.accountId);
+    expect(persisted.at(-1)?.balanceAfter).toBe(100);
+    expect(state.entries.length).toBe(1);
+    expect(state.balance).toBe(100);
+    expect(await store.findAccountByUserId("usr_thief")).toBeUndefined();
   });
 
   it("never debits an admin — the captain has an unlimited allowance", async () => {

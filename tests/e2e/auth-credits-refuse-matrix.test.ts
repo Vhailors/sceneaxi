@@ -54,6 +54,7 @@ import type {
   CheckoutSessionIntent,
   CreditAccount,
 } from "@sceneaxi/schemas";
+import { issuePrincipalForTest } from "@sceneaxi/auth/testing/principal-issuance";
 
 /**
  * The refuse matrix.
@@ -157,7 +158,7 @@ const principal = (
 ): unknown => {
   const userId = overrides.userId ?? "usr_crew";
   const role = overrides.role ?? "user";
-  return {
+  return issuePrincipalForTest({
     user: {
       schemaVersion: 1,
       kind: "sceneaxi.user",
@@ -186,7 +187,7 @@ const principal = (
       expiresAt: overrides.expiresAt ?? "2026-07-26T10:00:00Z",
       tokenDigest: digestSessionToken("tok"),
     },
-  };
+  });
 };
 
 const funded = (credits: number, forAccount = account("usr_crew")): LedgerState => {
@@ -540,6 +541,9 @@ describe("auth refuse matrix", () => {
 
   it("reaches every guard refusal", () => {
     record(requireRole(undefined, "admin", { now: NOW, admin }));
+    const issued = principal();
+    if (typeof issued !== "object" || issued === null) throw new Error("fixture");
+    record(requireRole({ ...issued }, "user", { now: NOW, admin }));
     record(requireRole(principal(), "superadmin" as never, { now: NOW, admin }));
     record(requireRole(principal(), "admin", { now: NOW, admin }));
     record(requireRole(principal({ disabled: true }), "user", { now: NOW, admin }));

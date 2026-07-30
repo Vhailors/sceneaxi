@@ -47,6 +47,7 @@ export const AUTH_REFUSE_REASONS = Object.freeze({
 
   // --- guards ---
   principalInvalid: "AUTH_PRINCIPAL_INVALID",
+  principalUnproven: "AUTH_PRINCIPAL_UNPROVEN",
   roleUnknown: "AUTH_ROLE_UNKNOWN",
   roleNotPermitted: "AUTH_ROLE_NOT_PERMITTED",
 } as const);

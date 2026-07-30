@@ -17,12 +17,24 @@ recorded in ADR 0021.
 | `store.ts` | the `IdentityStore` port + in-memory reference implementation |
 | `better-auth-adapter.ts` | the injected Better Auth boundary and its mapping |
 | `identity-port.ts` | `createIdentityPort` — `signIn` / `verifySession` / `signOut` |
+| `principal-provenance.ts` | Object-identity witness shared by identity issuance and role guards |
+| `testing/principal-issuance.ts` | The test-only `./testing/principal-issuance` subpath — genuine `Principal` fixtures, unreachable from production source |
 | `bootstrap.ts` | `planAdminBootstrap` — the one admin assignment to persist |
 
 Dependencies: `@sceneaxi/schemas` only. No engine package, no profile, no CLI.
 
 `signOut` accepts only the exact principal capability returned by `signIn` or
 `verifySession` on that port instance. A bare session id is not revocation authority.
+
+Every role guard likewise accepts only the exact `Principal` object issued by an
+identity port. A hand-built value or any copy refuses `AUTH_PRINCIPAL_UNPROVEN`, even
+when its public structure is valid. Tests — in this package and in every other one —
+obtain genuine fixtures through the declared, visibly test-only
+`@sceneaxi/auth/testing/principal-issuance` subpath, always by public package name and
+never by a relative path into a foreign directory. That subpath is not re-exported from
+the root barrel, and production source cannot reach it: the rule is enforced rather than
+conventional, by the `testing/` subpath check in
+[`docs/DEPENDENCY-MATRIX.md`](../../docs/DEPENDENCY-MATRIX.md#test-only-testing-subpaths).
 
 ## Why it is shaped this way
 
@@ -53,11 +65,13 @@ a byte-wise early return would leak how much of a guessed token was right.
 signed-in principal uses `requireAuthenticated`. That way "admin also counts as a user"
 never has to be inferred from the guard's name.
 
-**The admin identity is unforgeable at runtime, not just typed.** `{ email, source }` is a
+**Identity authority is unforgeable at runtime, not just typed.** `{ email, source }` is a
 public shape, so a caller supplying both the principal *and* the `admin` option would be
 answering the guard's own question. Only the object `resolveAdminIdentity` issued counts —
 checked by object identity, so a spread, `structuredClone`, JSON round-trip, or `Proxy` of
-a real one refuses with `AUTH_ADMIN_IDENTITY_UNPROVEN`. Prefer
+a real one refuses with `AUTH_ADMIN_IDENTITY_UNPROVEN`. The same rule applies to the
+`Principal`: only the exact object `createIdentityPort` returned counts, and a look-alike
+refuses with `AUTH_PRINCIPAL_UNPROVEN`. Prefer
 `createRoleGuards(resolveAdminIdentity(env))`, which removes the argument entirely: the
 answer is fixed where the guards are made, and a refused resolution makes every bound guard
 return that same named refusal. The mechanism is `createProvenanceWitness` in

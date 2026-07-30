@@ -3,11 +3,13 @@ import {
   ADMIN_EMAIL_ENV_VAR,
   AUTH_REFUSE_REASONS,
   digestSessionToken,
+  hasPrincipalProvenance,
   requireAuthenticated,
   requireRole,
   resolveAdminIdentity,
   sessionTokenMatches,
 } from "@sceneaxi/auth";
+import { issuePrincipalForTest } from "@sceneaxi/auth/testing/principal-issuance";
 
 const NOW = Date.parse("2026-07-25T10:00:00Z");
 const adminResolution = resolveAdminIdentity({
@@ -25,8 +27,10 @@ const principal = (overrides: {
   disabled?: boolean;
   emailVerified?: boolean;
   expiresAt?: string;
+  witnessed?: boolean;
 } = {}) =>
-  ({
+  {
+    const value = {
     user: {
       schemaVersion: 1,
       kind: "sceneaxi.user",
@@ -57,7 +61,11 @@ const principal = (overrides: {
       expiresAt: overrides.expiresAt ?? "2026-07-26T10:00:00Z",
       tokenDigest: digestSessionToken("token-01"),
     },
-  }) as unknown;
+    };
+    return overrides.witnessed === false
+      ? value
+      : issuePrincipalForTest(value);
+  };
 
 describe("requireRole", () => {
   it("allows an admin principal sourced from the environment", () => {
@@ -78,7 +86,7 @@ describe("requireRole", () => {
 
   it("refuses an admin role whose source is not the environment", () => {
     const result = requireRole(
-      principal({ role: "admin", source: "default-user" }),
+      principal({ role: "admin", source: "default-user", witnessed: false }),
       "admin",
       { now: NOW, admin },
     );
@@ -210,6 +218,43 @@ describe("requireAuthenticated", () => {
     expect(
       requireAuthenticated(principal({ surface: "kids" }), { now: NOW, admin }).ok,
     ).toBe(false);
+  });
+
+  it("hands back the witnessed object, so its own result passes a second guard", () => {
+    const issued = principal({ role: "user", source: "default-user" });
+    const first = requireAuthenticated(issued, { now: NOW, admin });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+
+    // The same object, not a re-validated copy: a guard proves provenance, it
+    // never issues it.
+    expect(first.value).toBe(issued);
+    expect(hasPrincipalProvenance(first.value)).toBe(true);
+
+    // So a caller may sequence guards, and a role guard may follow an
+    // authentication guard, without the second one refusing the first's answer.
+    const second = requireAuthenticated(first.value, { now: NOW, admin });
+    expect(second.ok).toBe(true);
+    const role = requireRole(first.value, "user", { now: NOW, admin });
+    expect(role.ok).toBe(true);
+    if (!role.ok) return;
+    expect(role.value).toBe(issued);
+    expect(hasPrincipalProvenance(role.value)).toBe(true);
+  });
+
+  it("refuses a structurally valid principal no identity port issued", () => {
+    const issued = principal({ role: "user", source: "default-user" });
+    if (typeof issued !== "object" || issued === null) throw new Error("fixture");
+    const handBuilt = { ...issued };
+
+    for (const result of [
+      requireAuthenticated(handBuilt, { now: NOW, admin }),
+      requireRole(handBuilt, "user", { now: NOW, admin }),
+    ]) {
+      expect(result.ok).toBe(false);
+      if (result.ok) continue;
+      expect(result.reason).toBe(AUTH_REFUSE_REASONS.principalUnproven);
+    }
   });
 });
 

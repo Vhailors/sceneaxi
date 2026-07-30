@@ -37,6 +37,7 @@ import {
   type LedgerState,
   type CreditStore,
 } from "@sceneaxi/billing";
+import { issuePrincipalForTest } from "@sceneaxi/auth/testing/principal-issuance";
 
 const NOW = Date.parse("2026-07-25T10:00:00Z");
 const adminResolution = resolveAdminIdentity({
@@ -61,7 +62,7 @@ const principal = (
 ): unknown => {
   const userId = overrides.userId ?? "usr_buyer";
   const role = overrides.role ?? "user";
-  return {
+  return issuePrincipalForTest({
     user: {
       schemaVersion: 1,
       kind: "sceneaxi.user",
@@ -89,7 +90,7 @@ const principal = (
       expiresAt: "2026-07-26T10:00:00Z",
       tokenDigest: digestSessionToken("tok"),
     },
-  };
+  });
 };
 
 const funded = (credits: number, forAccount: CreditAccount): LedgerState => {

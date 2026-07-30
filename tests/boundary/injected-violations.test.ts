@@ -143,6 +143,61 @@ describe("boundary check — injected violations", () => {
     );
   });
 
+  it("fails when production source imports a test-only testing/ subpath (billing src)", () => {
+    // The matrix allows billing -> auth, so this injection isolates the test-only rule:
+    // the declared `@sceneaxi/auth/testing/principal-issuance` seam exists for tests, and
+    // no production source may reach an issuance authority through it.
+    appendTo(
+      fx,
+      "packages/billing/src/index.ts",
+      '\nimport "@sceneaxi/auth/testing/principal-issuance";\n',
+    );
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("boundary check FAILED");
+    expect(res.stderr).toContain(
+      "imports test-only subpath @sceneaxi/auth/testing/principal-issuance — production source may not reach a testing/ seam",
+    );
+  });
+
+  it("fails when an app's production source imports a test-only testing/ subpath", () => {
+    appendTo(
+      fx,
+      "apps/web-shell/src/index.ts",
+      '\nimport "@sceneaxi/auth/testing/principal-issuance";\n',
+    );
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("boundary check FAILED");
+    expect(res.stderr).toContain(
+      "imports test-only subpath @sceneaxi/auth/testing/principal-issuance — production source may not reach a testing/ seam",
+    );
+  });
+
+  it("fails when a package's own production source reaches its src/testing seam relatively", () => {
+    // Renaming the public specifier away is not an escape: the owning package is the one
+    // place a relative path into `src/testing` resolves, so that form is refused too.
+    appendTo(fx, "packages/auth/src/index.ts", '\nimport "./testing/principal-issuance.js";\n');
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("boundary check FAILED");
+    expect(res.stderr).toContain(
+      "imports test-only module './testing/principal-issuance.js' — production source may not reach a testing/ seam",
+    );
+  });
+
+  it("allows a test-only seam to name a sibling inside the same src/testing tree", () => {
+    writeTo(fx, "packages/auth/src/testing/helper.ts", "export const helper = 1;\n");
+    appendTo(
+      fx,
+      "packages/auth/src/testing/principal-issuance.ts",
+      '\nimport "./helper.js";\n',
+    );
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.stderr).toBe("");
+    expect(res.status).toBe(0);
+  });
+
   it("fails on a shared-prefix sibling escape (cli reaching into cli-shadow)", () => {
     // The trap this regression pins: packages/cli-shadow starts with the string
     // packages/cli, so a naive prefix check would treat the sibling as inside

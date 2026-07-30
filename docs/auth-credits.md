@@ -69,12 +69,12 @@ if (!admin.ok) throw new Error(`${admin.reason}: ${admin.message}`);
 
 ## Runtime provenance (sceneaxi#126)
 
-Three values in this plane mean "a trusted step produced me", and their shapes are public:
-the resolved `AdminIdentity`, the `VerifiedWebhook` a signature check produces, and the
-`VerifiedCheckoutCompletion` parsed out of it. Structural validation confirms only the
+Four values in this plane mean "a trusted step produced me", and their shapes are public:
+the resolved `AdminIdentity`, the `Principal` an identity port issues, the `VerifiedWebhook`
+a signature check produces, and the `VerifiedCheckoutCompletion` parsed out of it. Structural validation confirms only the
 public shape, while a TypeScript brand constrains only ordinary typed callers; neither
-proves trusted origin against JavaScript or an `as` cast. Both can reach the same exported
-functions inside the server process. So all three carry **runtime** provenance, built on
+proves trusted origin against JavaScript or an `as` cast. These values can reach exported
+functions inside the server process. So all four carry **runtime** provenance, built on
 the one shared helper `createProvenanceWitness` in `@sceneaxi/schemas`.
 
 A witness remembers the *object identity* of every value its module issued, in a `WeakSet`
@@ -91,13 +91,35 @@ Who issues, who checks, and what refuses:
 | Value | Issued by | Checked at | Refusal |
 | --- | --- | --- | --- |
 | `AdminIdentity` | `resolveAdminIdentity(env)` | `requireRole`, `requireAuthenticated`, identity-port sign-in/session verification | `AUTH_ADMIN_IDENTITY_UNPROVEN` |
+| `Principal` | `createIdentityPort().signIn` / `.verifySession` | `requireRole`, `requireAuthenticated` and every billing path built on them | `AUTH_PRINCIPAL_UNPROVEN` |
 | `VerifiedWebhook` | `verifyStripeWebhookSignature` | `parseCheckoutCompletedEvent` | `STRIPE_WEBHOOK_NOT_VERIFIED` |
 | `VerifiedCheckoutCompletion` | `parseCheckoutCompletedEvent` | `applyCheckoutCompletedGrant`, `recordMoneySale`, `settleFixtureListingMoneySale` | `STRIPE_COMPLETION_NOT_VERIFIED` |
 
-`hasAdminIdentityProvenance`, `hasVerifiedWebhookProvenance`, and
-`hasVerifiedCompletionProvenance` are exported so a caller sequencing its own route can
+`hasAdminIdentityProvenance`, `hasPrincipalProvenance`,
+`hasVerifiedWebhookProvenance`, and `hasVerifiedCompletionProvenance` are exported so a
+caller sequencing its own route can
 assert the same thing. Checking provenance grants nothing; each module's issuing witness
 stays private.
+
+Tests need genuinely issued principals without standing up a port, so `@sceneaxi/auth`
+declares one visibly test-only subpath, `@sceneaxi/auth/testing/principal-issuance`, which
+validates a structural fixture and records it with the same witness the port uses. It is a
+declared package entry point rather than a relative reach into another package's test
+directory, it is never re-exported from the root barrel, and it is unreachable from
+shipped code — the general `testing/` subpath rule `pnpm check:boundaries` enforces is
+owned by [`DEPENDENCY-MATRIX.md`](DEPENDENCY-MATRIX.md#test-only-testing-subpaths).
+
+A guard is never an issuance authority, so it returns the **exact** witnessed object it was
+handed rather than the validator's copy: `requireAuthenticated`/`requireRole` results still
+satisfy `hasPrincipalProvenance` and still pass a subsequent guard. Structural validation
+runs first and keeps its own named refusal, so a malformed value is still
+`AUTH_PRINCIPAL_INVALID` rather than unproven.
+
+Principal provenance deliberately does not survive serialization. A deployment must
+re-verify its carried session per request instead of caching and rehydrating a principal.
+The umbrella does this in `verifyCarriedSession()`: each checkout calls
+`IdentityPort.verifySession()` and threads that exact returned object into the billing
+guard.
 
 **Prefer bound guards.** `createRoleGuards(resolveAdminIdentity(env))` fixes "who is admin"
 at the point the guards are made, so no later call site supplies it as an argument at all:

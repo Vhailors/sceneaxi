@@ -62,6 +62,7 @@ import {
   type CreateAssistantPanelOptions,
 } from "../../apps/web-shell/src/index.ts";
 import type { CreditAccount } from "@sceneaxi/schemas";
+import { issuePrincipalForTest } from "@sceneaxi/auth/testing/principal-issuance";
 
 const NOW = Date.parse("2026-07-27T10:00:00Z");
 const clock = () => NOW;
@@ -107,7 +108,7 @@ const ACCOUNT = Object.freeze({
   createdAt: "2026-07-27T09:00:00Z",
 }) as CreditAccount;
 
-const PRINCIPAL = Object.freeze({
+const PRINCIPAL = issuePrincipalForTest({
   user: {
     schemaVersion: 1,
     kind: "sceneaxi.user",
@@ -135,7 +136,7 @@ const PRINCIPAL = Object.freeze({
     expiresAt: "2026-07-28T10:00:00Z",
     tokenDigest: digestSessionToken("tok"),
   },
-}) as never as NonNullable<CreateAssistantPanelOptions["principal"]>;
+}) as NonNullable<CreateAssistantPanelOptions["principal"]>;
 
 const funded = (credits: number): LedgerState => {
   if (credits === 0) return createLedgerState(ACCOUNT);

@@ -27,6 +27,7 @@ import {
   createRoleGuards,
   digestSessionToken,
   hasAdminIdentityProvenance,
+  hasPrincipalProvenance,
   requireAuthenticated,
   requireRole,
   resolveAdminIdentity,
@@ -48,7 +49,9 @@ import {
 import type {
   CheckoutSessionIntent,
   CreditAccount,
+  Principal,
 } from "@sceneaxi/schemas";
+import { issuePrincipalForTest } from "@sceneaxi/auth/testing/principal-issuance";
 
 const NOW = Date.parse("2026-07-25T10:00:00Z");
 const NOW_SECONDS = Math.floor(NOW / 1000);
@@ -78,7 +81,7 @@ const ACCOUNT = Object.freeze({
  * be what refuses the impostor guards below.
  */
 const captainPrincipal = () =>
-  ({
+  issuePrincipalForTest({
     user: {
       schemaVersion: 1,
       kind: "sceneaxi.user",
@@ -106,14 +109,14 @@ const captainPrincipal = () =>
       expiresAt: "2026-07-26T10:00:00Z",
       tokenDigest: digestSessionToken("tok"),
     },
-  }) as unknown;
+  });
 
 /**
  * The same principal, but named by the attacker's address — the shape a caller
  * who also supplies the `admin` option would build to elevate themselves.
  */
 const attackerPrincipal = () =>
-  ({
+  issuePrincipalForTest({
     user: {
       schemaVersion: 1,
       kind: "sceneaxi.user",
@@ -141,7 +144,7 @@ const attackerPrincipal = () =>
       expiresAt: "2026-07-26T10:00:00Z",
       tokenDigest: digestSessionToken("tok"),
     },
-  }) as unknown;
+  });
 
 /**
  * Every way to end up holding a look-alike of an issued value without having
@@ -342,6 +345,56 @@ describe("admin identity provenance", () => {
     expect(guarded.ok).toBe(false);
     if (guarded.ok) return;
     expect(guarded.reason).toBe(AUTH_REFUSE_REASONS.adminIdentityUnresolved);
+  });
+});
+
+describe("principal provenance", () => {
+  it("refuses a hand-built principal at every role guard", () => {
+    const issued = captainPrincipal();
+    const handBuilt = {
+      user: issued.user,
+      role: issued.role,
+      session: issued.session,
+    } as Principal;
+
+    expect(hasPrincipalProvenance(handBuilt)).toBe(false);
+    for (const guarded of [
+      requireAuthenticated(handBuilt, { now: NOW, admin: resolvedAdmin() }),
+      requireRole(handBuilt, "admin", { now: NOW, admin: resolvedAdmin() }),
+      createRoleGuards(resolveAdminIdentity(ENV)).requireAuthenticated(handBuilt, {
+        now: NOW,
+      }),
+      createRoleGuards(resolveAdminIdentity(ENV)).requireRole(
+        handBuilt,
+        "admin",
+        { now: NOW },
+      ),
+    ]) {
+      expect(guarded.ok).toBe(false);
+      if (guarded.ok) continue;
+      expect(guarded.reason).toBe(AUTH_REFUSE_REASONS.principalUnproven);
+    }
+  });
+
+  it("refuses every copy while accepting the exact issued object", () => {
+    const issued = captainPrincipal();
+    expect(hasPrincipalProvenance(issued)).toBe(true);
+    expect(
+      requireAuthenticated(issued, { now: NOW, admin: resolvedAdmin() }).ok,
+    ).toBe(true);
+
+    for (const [how, impostor] of copiesOf(issued)) {
+      expect(hasPrincipalProvenance(impostor), how).toBe(false);
+      const guarded = requireAuthenticated(impostor, {
+        now: NOW,
+        admin: resolvedAdmin(),
+      });
+      expect(guarded.ok, how).toBe(false);
+      if (guarded.ok) continue;
+      expect(guarded.reason, how).toBe(
+        AUTH_REFUSE_REASONS.principalUnproven,
+      );
+    }
   });
 });
 
