@@ -1,8 +1,14 @@
 {
   "schemaVersion": 1,
   "mode": "test",
-  "packs": [
+  "currentRevisionIds": [
+    "starter-v1",
+    "maker-v1",
+    "studio-v1"
+  ],
+  "packRevisions": [
     {
+      "revisionId": "starter-v1",
       "packId": "starter",
       "credits": 100,
       "unitAmount": 500,
@@ -10,6 +16,7 @@
       "stripePriceId": "price_test_starter_100"
     },
     {
+      "revisionId": "maker-v1",
       "packId": "maker",
       "credits": 500,
       "unitAmount": 2000,
@@ -17,6 +24,7 @@
       "stripePriceId": "price_test_maker_500"
     },
     {
+      "revisionId": "studio-v1",
       "packId": "studio",
       "credits": 2000,
       "unitAmount": 7000,

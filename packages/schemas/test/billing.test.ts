@@ -16,6 +16,7 @@ import {
   validateCheckoutSessionIntent,
   validateCreditPack,
   validateCreditPackCatalog,
+  validateCreditPackCatalogArchive,
   validateStripeCustomerLink,
 } from "@sceneaxi/schemas";
 
@@ -124,10 +125,11 @@ describe("credit pack catalog", () => {
         "utf8",
       ),
     );
-    const result = validateCreditPackCatalog(raw);
+    const result = validateCreditPackCatalogArchive(raw);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.packs.length).toBeGreaterThan(0);
+    expect(result.value.packRevisions.length).toBeGreaterThan(0);
+    expect(result.value.currentRevisionIds.length).toBeGreaterThan(0);
     expect(result.value.mode).toBe("test");
   });
 
@@ -182,7 +184,7 @@ describe("credit pack catalog", () => {
       ),
     ) as {
       properties: {
-        packs: {
+        packRevisions: {
           items: {
             properties: {
               credits: { minimum: number };
@@ -192,8 +194,12 @@ describe("credit pack catalog", () => {
         };
       };
     };
-    expect(schema.properties.packs.items.properties.credits.minimum).toBe(1);
-    expect(schema.properties.packs.items.properties.unitAmount.minimum).toBe(1);
+    expect(
+      schema.properties.packRevisions.items.properties.credits.minimum,
+    ).toBe(1);
+    expect(
+      schema.properties.packRevisions.items.properties.unitAmount.minimum,
+    ).toBe(1);
   });
 });
 

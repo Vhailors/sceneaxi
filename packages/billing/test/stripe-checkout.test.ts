@@ -26,6 +26,7 @@ import {
   lookupCreditPack,
   parseCheckoutCompletedEvent,
   persistCheckoutCompletedGrant,
+  resolveCreditPackRevision,
   resolveLiveModeAuthorization,
   signStripeWebhookPayload,
   verifyStripeWebhookSignature,
@@ -206,6 +207,19 @@ describe("credit pack catalog", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.catalogInvalid);
+  });
+
+  it("fails closed when no committed historical revision matches", () => {
+    const result = resolveCreditPackRevision(
+      "starter",
+      "price_test_unknown_revision",
+      500,
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(
+      BILLING_REFUSE_REASONS.catalogRevisionUnresolvable,
+    );
   });
 });
 

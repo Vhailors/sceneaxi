@@ -880,10 +880,37 @@ if (authCreditsDoc !== loadFailed && !authCreditsDocHasContent) {
 let creditPackCount = 0;
 
 if (creditPacksSurface.ready) {
-  const packs = Array.isArray(creditPacksFixtures.packs)
-    ? creditPacksFixtures.packs
+  const revisions = Array.isArray(creditPacksFixtures.packRevisions)
+    ? creditPacksFixtures.packRevisions
     : [];
+  const currentRevisionIds = Array.isArray(creditPacksFixtures.currentRevisionIds)
+    ? creditPacksFixtures.currentRevisionIds
+    : [];
+  const revisionById = new Map(
+    revisions
+      .filter((revision) => isPlainObject(revision))
+      .map((revision) => [revision.revisionId, revision]),
+  );
+  const packs = currentRevisionIds
+    .map((revisionId) => revisionById.get(revisionId))
+    .filter((revision) => revision !== undefined);
   creditPackCount = packs.length;
+
+  const duplicateRevisionIds = duplicateFieldValues(revisions, "revisionId");
+  if (duplicateRevisionIds.length > 0) {
+    fail(
+      `credit-packs.fixtures: duplicate revisionId(s): ${duplicateRevisionIds.join(", ")}`,
+    );
+  }
+
+  const unresolvedCurrentRevisionIds = currentRevisionIds.filter(
+    (revisionId) => !revisionById.has(revisionId),
+  );
+  if (unresolvedCurrentRevisionIds.length > 0) {
+    fail(
+      `credit-packs.fixtures: current revisionId(s) do not resolve: ${unresolvedCurrentRevisionIds.join(", ")}`,
+    );
+  }
 
   const duplicatePackIds = duplicateFieldValues(packs, "packId");
   if (duplicatePackIds.length > 0) {
@@ -892,7 +919,7 @@ if (creditPacksSurface.ready) {
     );
   }
 
-  const duplicatePriceIds = duplicateFieldValues(packs, "stripePriceId");
+  const duplicatePriceIds = duplicateFieldValues(revisions, "stripePriceId");
   if (duplicatePriceIds.length > 0) {
     fail(
       `credit-packs.fixtures: duplicate stripePriceId(s): ${duplicatePriceIds.join(", ")}`,
@@ -900,7 +927,7 @@ if (creditPacksSurface.ready) {
   }
 
   // Test-mode price ids only: a live price id must never be committed.
-  for (const pack of packs) {
+  for (const pack of revisions) {
     if (!isPlainObject(pack) || typeof pack.stripePriceId !== "string") continue;
     if (!pack.stripePriceId.includes("test")) {
       fail(
@@ -918,16 +945,16 @@ if (creditPacksSurface.ready) {
     });
     if (actual !== undefined) {
       const expected = [
-        "| pack | credits | price | stripe test price id |",
-        "|---|---|---|---|",
+        "| pack | revision | credits | price | stripe test price id |",
+        "|---|---|---|---|---|",
         ...packs.map(
           (pack) =>
-            `| \`${pack.packId}\` | ${pack.credits} | ${pack.unitAmount} ${String(pack.currency).toUpperCase()} minor units | \`${pack.stripePriceId}\` |`,
+            `| \`${pack.packId}\` | \`${pack.revisionId}\` | ${pack.credits} | ${pack.unitAmount} ${String(pack.currency).toUpperCase()} minor units | \`${pack.stripePriceId}\` |`,
         ),
       ].join("\n");
       if (actual !== expected) {
         fail(
-          "docs/auth-credits.md: credit pack table does not exactly match credit-packs.fixtures.json (pack id, credits, price, price id columns in order)",
+          "docs/auth-credits.md: credit pack table does not exactly match the current revisions in credit-packs.fixtures.json (pack id, revision, credits, price, price id columns in order)",
         );
       }
     }

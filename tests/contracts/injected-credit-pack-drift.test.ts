@@ -23,7 +23,9 @@ const MODULE_REL = "packages/schemas/src/credit-packs.data.ts";
 interface PackCatalog {
   schemaVersion: number;
   mode: string;
-  packs: {
+  currentRevisionIds: string[];
+  packRevisions: {
+    revisionId: string;
     packId: string;
     credits: number;
     unitAmount: number;
@@ -109,7 +111,7 @@ describe("contract check — injected credit-pack drift", () => {
 
   it("fails when a pack changes in the fixture but not in the doc table", () => {
     const catalog = readCatalog(fx);
-    const first = catalog.packs[0];
+    const first = catalog.packRevisions[0];
     if (first === undefined) throw new Error("fixture has no packs");
     first.credits += 1;
     writeCatalog(fx, catalog);
@@ -122,7 +124,9 @@ describe("contract check — injected credit-pack drift", () => {
 
   it("fails when a pack is added to the fixture but not to the doc table", () => {
     const catalog = readCatalog(fx);
-    catalog.packs.push({
+    catalog.currentRevisionIds.push("injected-v1");
+    catalog.packRevisions.push({
+      revisionId: "injected-v1",
       packId: "injected",
       credits: 1,
       unitAmount: 1,
@@ -136,11 +140,16 @@ describe("contract check — injected credit-pack drift", () => {
     expect(res.stderr).toContain("credit pack table does not exactly match");
   });
 
-  it("fails on a duplicate packId", () => {
+  it("fails when two current revisions have the same packId", () => {
     const catalog = readCatalog(fx);
-    const first = catalog.packs[0];
+    const first = catalog.packRevisions[0];
     if (first === undefined) throw new Error("fixture has no packs");
-    catalog.packs.push({ ...first, stripePriceId: "price_test_dupe" });
+    catalog.currentRevisionIds.push("starter-v2");
+    catalog.packRevisions.push({
+      ...first,
+      revisionId: "starter-v2",
+      stripePriceId: "price_test_dupe",
+    });
     writeCatalog(fx, catalog);
 
     const res = runCheck(fx, "check-contracts.mjs");
@@ -150,7 +159,7 @@ describe("contract check — injected credit-pack drift", () => {
 
   it("fails on a duplicate stripePriceId", () => {
     const catalog = readCatalog(fx);
-    const [first, second] = catalog.packs;
+    const [first, second] = catalog.packRevisions;
     if (first === undefined || second === undefined) {
       throw new Error("fixture needs at least two packs");
     }
@@ -162,9 +171,33 @@ describe("contract check — injected credit-pack drift", () => {
     expect(res.stderr).toContain("duplicate stripePriceId(s)");
   });
 
+  it("fails on a duplicate revisionId", () => {
+    const catalog = readCatalog(fx);
+    const [first, second] = catalog.packRevisions;
+    if (first === undefined || second === undefined) {
+      throw new Error("fixture needs at least two pack revisions");
+    }
+    second.revisionId = first.revisionId;
+    writeCatalog(fx, catalog);
+
+    const res = runCheck(fx, "check-contracts.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("duplicate revisionId(s)");
+  });
+
+  it("fails when a current revision id does not resolve", () => {
+    const catalog = readCatalog(fx);
+    catalog.currentRevisionIds[0] = "missing-v1";
+    writeCatalog(fx, catalog);
+
+    const res = runCheck(fx, "check-contracts.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("current revisionId(s) do not resolve");
+  });
+
   it("fails when a live price id is committed", () => {
     const catalog = readCatalog(fx);
-    const first = catalog.packs[0];
+    const first = catalog.packRevisions[0];
     if (first === undefined) throw new Error("fixture has no packs");
     first.stripePriceId = "price_live_starter_100";
     writeCatalog(fx, catalog);

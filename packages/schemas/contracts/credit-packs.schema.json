@@ -1,10 +1,15 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://sceneaxi.invalid/contracts/credit-packs/v1",
-  "title": "SceneAxi credit pack catalog (v1)",
-  "description": "The one canonical list of purchasable credit packs. Test mode only: live price ids belong to a later captain go-live decision and are not committed. The canonical artifact is contracts/credit-packs.fixtures.json; pnpm check:contracts keeps the docs/auth-credits.md table in exact lockstep with it. Deliberately expressed in the JSON Schema subset scripts/check-contracts.mjs supports, so the gate validates it directly.",
+  "title": "SceneAxi archived credit pack catalog (v1)",
+  "description": "The one canonical, versioned list of credit pack revisions. currentRevisionIds selects the purchasable revisions while packRevisions retains historical entries. Test mode only: live price ids belong to a later captain go-live decision and are not committed. The canonical artifact is contracts/credit-packs.fixtures.json; pnpm check:contracts keeps the docs/auth-credits.md table in exact lockstep with it. Deliberately expressed in the JSON Schema subset scripts/check-contracts.mjs supports, so the gate validates it directly.",
   "type": "object",
-  "required": ["schemaVersion", "mode", "packs"],
+  "required": [
+    "schemaVersion",
+    "mode",
+    "currentRevisionIds",
+    "packRevisions"
+  ],
   "additionalProperties": false,
   "properties": {
     "schemaVersion": { "const": 1 },
@@ -12,13 +17,24 @@
       "const": "test",
       "description": "Constant: only test-mode packs are committed to the repository."
     },
-    "packs": {
+    "currentRevisionIds": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+      },
+      "description": "Revision ids currently offered for checkout. Repricing replaces a pointer; retirement removes one. Historical revision rows remain."
+    },
+    "packRevisions": {
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,
       "items": {
         "type": "object",
         "required": [
+          "revisionId",
           "packId",
           "credits",
           "unitAmount",
@@ -27,6 +43,11 @@
         ],
         "additionalProperties": false,
         "properties": {
+          "revisionId": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
+            "description": "Stable identity for this immutable economic revision."
+          },
           "packId": {
             "type": "string",
             "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",

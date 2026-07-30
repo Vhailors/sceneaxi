@@ -748,8 +748,22 @@ spend.
 
 ## Credit packs
 
-Canonical list: `packages/schemas/contracts/credit-packs.fixtures.json`. The table below is
-kept in exact lockstep with it by `pnpm check:contracts` — edit the JSON, then the table.
+Canonical archive: `packages/schemas/contracts/credit-packs.fixtures.json`. Each immutable
+row in `packRevisions` has a stable `revisionId`; `currentRevisionIds` is the only current
+catalog index. Repricing appends a row and moves that pack's current pointer. Retirement
+removes the pointer but retains the row. The table below shows only the current pointers
+and is kept in exact lockstep by `pnpm check:contracts` — edit the JSON, then the table.
+
+`resolveCreditPackRevision(itemId, stripePriceId, unitAmount)` resolves only against that
+bundled committed archive. It accepts lookup keys, never a caller-supplied pack or archive,
+and refuses `BILLING_CATALOG_REVISION_UNRESOLVABLE` when the tuple has no retained row.
+This is the prerequisite for the separately held grant-time intent-credit cross-check; no
+grant path performs that cross-check yet.
+
+The archive shape was chosen over a `createdAt` grace window because persisted intents
+already carry the exact `(itemId, stripePriceId, unitAmount)` anchor. Time alone cannot
+prove which values were current, and a bounded window would make correctness depend on
+webhook and deployment timing instead of retaining the paid revision.
 
 `loadCreditPackCatalog()` reads the fixture's bundled twin,
 `packages/schemas/src/credit-packs.data.ts` (`CREDIT_PACK_CATALOG_DATA`), rather than the
@@ -763,11 +777,11 @@ Only **test-mode** price ids are committed. Live price ids belong to a later cap
 go-live decision.
 
 <!-- credit-packs:list -->
-| pack | credits | price | stripe test price id |
-|---|---|---|---|
-| `starter` | 100 | 500 USD minor units | `price_test_starter_100` |
-| `maker` | 500 | 2000 USD minor units | `price_test_maker_500` |
-| `studio` | 2000 | 7000 USD minor units | `price_test_studio_2000` |
+| pack | revision | credits | price | stripe test price id |
+|---|---|---|---|---|
+| `starter` | `starter-v1` | 100 | 500 USD minor units | `price_test_starter_100` |
+| `maker` | `maker-v1` | 500 | 2000 USD minor units | `price_test_maker_500` |
+| `studio` | `studio-v1` | 2000 | 7000 USD minor units | `price_test_studio_2000` |
 <!-- /credit-packs:list -->
 
 Price ids are public identifiers, not secrets. API keys are a different thing entirely and

@@ -30,6 +30,7 @@ export const BILLING_REFUSE_REASONS = Object.freeze({
 
   // --- credit packs and checkout ---
   catalogInvalid: "BILLING_CATALOG_INVALID",
+  catalogRevisionUnresolvable: "BILLING_CATALOG_REVISION_UNRESOLVABLE",
   packUnknown: "STRIPE_CREDIT_PACK_UNKNOWN",
   liveModeNotAuthorized: "STRIPE_LIVE_MODE_NOT_AUTHORIZED",
   checkoutIntentInvalid: "STRIPE_CHECKOUT_INTENT_INVALID",
