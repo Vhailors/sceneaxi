@@ -8,6 +8,7 @@ import {
   resolveAdminIdentity,
   sessionTokenMatches,
 } from "@sceneaxi/auth";
+import { issuePrincipalForTest } from "./principal-fixture.js";
 
 const NOW = Date.parse("2026-07-25T10:00:00Z");
 const adminResolution = resolveAdminIdentity({
@@ -25,8 +26,10 @@ const principal = (overrides: {
   disabled?: boolean;
   emailVerified?: boolean;
   expiresAt?: string;
+  witnessed?: boolean;
 } = {}) =>
-  ({
+  {
+    const value = {
     user: {
       schemaVersion: 1,
       kind: "sceneaxi.user",
@@ -57,7 +60,11 @@ const principal = (overrides: {
       expiresAt: overrides.expiresAt ?? "2026-07-26T10:00:00Z",
       tokenDigest: digestSessionToken("token-01"),
     },
-  }) as unknown;
+    };
+    return overrides.witnessed === false
+      ? value
+      : issuePrincipalForTest(value);
+  };
 
 describe("requireRole", () => {
   it("allows an admin principal sourced from the environment", () => {
@@ -78,7 +85,7 @@ describe("requireRole", () => {
 
   it("refuses an admin role whose source is not the environment", () => {
     const result = requireRole(
-      principal({ role: "admin", source: "default-user" }),
+      principal({ role: "admin", source: "default-user", witnessed: false }),
       "admin",
       { now: NOW, admin },
     );

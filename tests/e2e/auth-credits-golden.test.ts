@@ -45,6 +45,7 @@ import {
   validatePrincipal,
   type CreditAccount,
 } from "@sceneaxi/schemas";
+import { issuePrincipalForTest } from "../../packages/auth/test/principal-fixture.js";
 
 /**
  * One deterministic golden path through the whole identity + credits plane.
@@ -603,7 +604,7 @@ describe("auth + credits golden path", () => {
       });
       if (!first.ok) throw new Error("run failed");
       const second = await meterCredits({
-        principal: {
+        principal: issuePrincipalForTest({
           user: CREW,
           role: {
             schemaVersion: 1,
@@ -623,7 +624,7 @@ describe("auth + credits golden path", () => {
             expiresAt: "2026-07-26T10:00:00Z",
             tokenDigest: "a".repeat(64),
           },
-        },
+        }),
         admin: resolvedAdmin(),
         store: createInMemoryCreditStore({
           accounts: [first.value.state.account],

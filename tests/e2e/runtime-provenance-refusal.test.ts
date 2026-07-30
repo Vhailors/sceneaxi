@@ -49,6 +49,7 @@ import type {
   CheckoutSessionIntent,
   CreditAccount,
 } from "@sceneaxi/schemas";
+import { issuePrincipalForTest } from "../../packages/auth/test/principal-fixture.js";
 
 const NOW = Date.parse("2026-07-25T10:00:00Z");
 const NOW_SECONDS = Math.floor(NOW / 1000);
@@ -78,7 +79,7 @@ const ACCOUNT = Object.freeze({
  * be what refuses the impostor guards below.
  */
 const captainPrincipal = () =>
-  ({
+  issuePrincipalForTest({
     user: {
       schemaVersion: 1,
       kind: "sceneaxi.user",
@@ -106,14 +107,14 @@ const captainPrincipal = () =>
       expiresAt: "2026-07-26T10:00:00Z",
       tokenDigest: digestSessionToken("tok"),
     },
-  }) as unknown;
+  });
 
 /**
  * The same principal, but named by the attacker's address — the shape a caller
  * who also supplies the `admin` option would build to elevate themselves.
  */
 const attackerPrincipal = () =>
-  ({
+  issuePrincipalForTest({
     user: {
       schemaVersion: 1,
       kind: "sceneaxi.user",
@@ -141,7 +142,7 @@ const attackerPrincipal = () =>
       expiresAt: "2026-07-26T10:00:00Z",
       tokenDigest: digestSessionToken("tok"),
     },
-  }) as unknown;
+  });
 
 /**
  * Every way to end up holding a look-alike of an issued value without having

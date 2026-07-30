@@ -46,6 +46,7 @@ import {
   type LedgerState,
 } from "@sceneaxi/billing";
 import type { CreditAccount } from "@sceneaxi/schemas";
+import { issuePrincipalForTest } from "../../packages/auth/test/principal-fixture.js";
 
 const NOW = Date.parse("2026-07-25T10:00:00Z");
 const adminResolution = resolveAdminIdentity({
@@ -89,7 +90,7 @@ const ACCOUNT = Object.freeze({
   createdAt: "2026-07-25T09:00:00Z",
 }) as CreditAccount;
 
-const PRINCIPAL = Object.freeze({
+const PRINCIPAL = issuePrincipalForTest({
   user: {
     schemaVersion: 1,
     kind: "sceneaxi.user",

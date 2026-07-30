@@ -30,6 +30,7 @@ import {
   signStripeWebhookPayload,
   verifyStripeWebhookSignature,
 } from "@sceneaxi/billing";
+import { issuePrincipalForTest } from "../../auth/test/principal-fixture.js";
 
 const NOW = Date.parse("2026-07-25T10:00:00Z");
 const NOW_SECONDS = Math.floor(NOW / 1000);
@@ -59,7 +60,7 @@ const admin = adminResolution.value;
 
 /** A valid usr_crew principal; the guard re-derives its `user` role. */
 const principal = () =>
-  ({
+  issuePrincipalForTest({
     user: {
       schemaVersion: 1,
       kind: "sceneaxi.user",
@@ -87,7 +88,7 @@ const principal = () =>
       expiresAt: "2026-07-26T10:00:00Z",
       tokenDigest: digestSessionToken("tok"),
     },
-  }) as unknown;
+  });
 
 /** Sign and verify a body, returning the runtime-witnessed webhook. */
 const verified = (body: string) => {

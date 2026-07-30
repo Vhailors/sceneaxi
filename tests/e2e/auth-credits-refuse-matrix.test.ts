@@ -53,6 +53,7 @@ import type {
   CheckoutSessionIntent,
   CreditAccount,
 } from "@sceneaxi/schemas";
+import { issuePrincipalForTest } from "../../packages/auth/test/principal-fixture.js";
 
 /**
  * The refuse matrix.
@@ -156,7 +157,7 @@ const principal = (
 ): unknown => {
   const userId = overrides.userId ?? "usr_crew";
   const role = overrides.role ?? "user";
-  return {
+  return issuePrincipalForTest({
     user: {
       schemaVersion: 1,
       kind: "sceneaxi.user",
@@ -185,7 +186,7 @@ const principal = (
       expiresAt: overrides.expiresAt ?? "2026-07-26T10:00:00Z",
       tokenDigest: digestSessionToken("tok"),
     },
-  };
+  });
 };
 
 const funded = (credits: number, forAccount = account("usr_crew")): LedgerState => {

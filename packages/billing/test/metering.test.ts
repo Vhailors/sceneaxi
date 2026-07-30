@@ -15,6 +15,7 @@ import {
   meteringIdempotencyKey,
   type LedgerState,
 } from "@sceneaxi/billing";
+import { issuePrincipalForTest } from "../../auth/test/principal-fixture.js";
 const NOW = Date.parse("2026-07-25T10:00:00Z");
 const adminResolution = resolveAdminIdentity({
   [ADMIN_EMAIL_ENV_VAR]: "captain@example.com",
@@ -44,7 +45,7 @@ const principal = (
 ): unknown => {
   const userId = overrides.userId ?? "usr_crew";
   const role = overrides.role ?? "user";
-  return {
+  return issuePrincipalForTest({
     user: {
       schemaVersion: 1,
       kind: "sceneaxi.user",
@@ -72,7 +73,7 @@ const principal = (
       expiresAt: overrides.expiresAt ?? "2026-07-26T10:00:00Z",
       tokenDigest: digestSessionToken("tok"),
     },
-  };
+  });
 };
 
 
