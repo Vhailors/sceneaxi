@@ -44,6 +44,7 @@ export {
   createAuthIdentityAdapter,
   createBillingCheckoutAdapter,
   createBillingCreditsAdapter,
+  createDeploymentPlaneHandles,
   createUmbrellaIdentityPlane,
   parseSessionToken,
   resolveBillingMode,
@@ -53,9 +54,35 @@ export {
   type BillingReadPlane,
   type CheckoutSessionAdapter,
   type IdentityPlaneAdapters,
+  type DeploymentPlaneOptions,
   type IdentityPlaneWiring,
   type UmbrellaIdentityPlane,
+  type UmbrellaPlaneHandles,
 } from "./lib/identity-plane.js";
+
+export {
+  createBetterAuthHttpClient,
+  createNeonCheckoutIntentStore,
+  createNeonCreditStore,
+  createNeonCreditStoreAdapter,
+  createNeonDatabase,
+  createNeonIdentityStore,
+  createProvisioningIdentityAdapter,
+  createStripeCheckoutEvidenceAdapter,
+  createStripeCheckoutSessionAdapter,
+  createStripeClient,
+  resolveBetterAuthOrigin,
+  resolveNonEmptyEnv,
+  type DeploymentProviderOverrides,
+  type NeonDatabase,
+  type NeonIdentityStore,
+  type ProviderFetch,
+  type SqlRow,
+  type SqlStatement,
+  type StripeClientLike,
+  type StripeSession,
+  type StripeSessionCreateParams,
+} from "./lib/provider-adapters.js";
 
 export {
   CREDIT_WEBHOOK_REASONS,

@@ -464,7 +464,7 @@ export const CREDIT_LEDGER_FACTS: readonly CreditLedgerFact[] = Object.freeze([
   }),
   Object.freeze({
     title: "Provisioned by the deployment",
-    body: "A credit account is created by the deployment's own store. This repository ships no migration that invents one, so an absent account refuses rather than appearing with a balance nobody granted.",
+    body: "A credit account is created once by the deployment's own store when a user authenticates. Payment events never invent an account, so an absent account refuses rather than appearing with a balance nobody granted.",
   }),
 ]);
 
