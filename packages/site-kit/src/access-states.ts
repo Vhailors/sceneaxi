@@ -47,10 +47,44 @@ export type SiteAccessState = {
   readonly action: SiteAccessAction | null;
 };
 
-const SIGN_IN: SiteAccessAction = Object.freeze({
-  label: "Sign in",
-  href: SITE_LOGIN_PATH,
-});
+/**
+ * Confine a destination to this site, or refuse it.
+ *
+ * Only a same-site relative path survives: no scheme, no authority, no
+ * protocol-relative `//`, no backslash trickery, no whitespace. It lives here
+ * rather than in a site because both ends of the round trip need the same
+ * answer — the surface that *emits* a sign-in link carrying a destination and
+ * the login flow that *reads* one back — and two implementations of that rule
+ * would eventually disagree about which paths are safe.
+ */
+export function confineSiteRelativePath(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const path = value.trim();
+  if (!path.startsWith("/")) return null;
+  if (path.startsWith("//") || path.includes("\\") || /\s/.test(path)) return null;
+  return path;
+}
+
+/**
+ * The sign-in link, carrying where the visitor was headed when they were
+ * refused.
+ *
+ * A destination that is not same-site relative is dropped rather than refused,
+ * so a hostile `next` degrades to the plain form. `/login` itself is dropped
+ * too: sending a visitor back to the page they are already on is not a
+ * destination.
+ */
+export function siteLoginHref(next?: unknown): string {
+  const path = confineSiteRelativePath(next);
+  if (path === null) return SITE_LOGIN_PATH;
+  if (path === SITE_LOGIN_PATH || path.startsWith(`${SITE_LOGIN_PATH}?`)) {
+    return SITE_LOGIN_PATH;
+  }
+  return `${SITE_LOGIN_PATH}?next=${encodeURIComponent(path)}`;
+}
+
+const signInAction = (next?: unknown): SiteAccessAction =>
+  Object.freeze({ label: "Sign in", href: siteLoginHref(next) });
 
 const BUY_CREDITS: SiteAccessAction = Object.freeze({
   label: "Buy credits",
@@ -102,6 +136,15 @@ const NOT_WIRED_REASONS: ReadonlyArray<SiteRefusalReason> = Object.freeze([
   "CREDITS_PLANE_NOT_WIRED",
 ]);
 
+export type SiteAccessStateOptions = {
+  /**
+   * Where the visitor was headed when this refusal happened. A confinable
+   * same-site path is carried on the sign-in action so signing in returns them
+   * to the surface that refused instead of the generic default.
+   */
+  readonly next?: unknown;
+};
+
 /**
  * Project one refusal reason onto its named access state.
  *
@@ -110,7 +153,11 @@ const NOT_WIRED_REASONS: ReadonlyArray<SiteRefusalReason> = Object.freeze([
  * specific where the difference changes what the visitor should do, honest
  * everywhere else.
  */
-export function describeSiteAccessState(reason: SiteRefusalReason): SiteAccessState {
+export function describeSiteAccessState(
+  reason: SiteRefusalReason,
+  options: SiteAccessStateOptions = {},
+): SiteAccessState {
+  const SIGN_IN = signInAction(options.next);
   if (SIGNED_OUT_REASONS.includes(reason)) {
     return state(
       "signed-out",

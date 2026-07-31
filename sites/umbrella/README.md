@@ -172,6 +172,13 @@ Real Better Auth login into the entitled editor, over the existing identity plan
   a client role claim refuses before dispatch, and every refusal — wrong password,
   expired or foreign session, disabled user, Kids, unwired or failed provider — comes
   back as its own named access state rather than one undifferentiated wall.
+- A refused surface hands its own path to the sign-in action it renders, so a visitor
+  bounced off `/editor` signs in and lands back on `/editor` instead of the default
+  `/account`. Emitting and reading that destination share one confinement rule —
+  site-kit's `confineSiteRelativePath`, which `siteLoginHref` and
+  `resolveLoginDestination` both go through — so a link this site emits can never carry
+  a `next` the login flow would then discard, and a hostile one degrades to the plain
+  form rather than refusing the sign-in.
 - The temporary `SCENEAXI_SITE_EDITOR_PREVIEW` flag remains a labeled stopgap, not the
   product path; the flow is proven end-to-end against the real identity port in
   `tests/sites/identity-plane-wiring.test.ts` ("hosted login") and

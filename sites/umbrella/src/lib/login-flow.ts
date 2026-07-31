@@ -17,6 +17,7 @@ import {
   SITE_REFUSAL_REASONS,
   buildSiteSessionCookie,
   clearSiteSessionCookie,
+  confineSiteRelativePath,
   resolveSiteSessionCookieSecurity,
   resolveUmbrellaEditorOrigin,
   type SitePrincipal,
@@ -56,18 +57,13 @@ export const LOGIN_DEFAULT_DESTINATION = "/account";
 /**
  * Confine a requested post-login destination to this site.
  *
- * Only a same-site relative path survives: no scheme, no authority, no
- * protocol-relative `//`, no backslash trickery, no whitespace. Anything else
- * falls back to the default rather than refusing the login over its `next`.
+ * The rule itself is site-kit's `confineSiteRelativePath` — the same one the
+ * sign-in links are built from — so a destination a guarded surface emits can
+ * never be one this flow then discards. Anything it refuses falls back to the
+ * default rather than refusing the login over its `next`.
  */
 export function resolveLoginDestination(value: unknown): string {
-  if (typeof value !== "string") return LOGIN_DEFAULT_DESTINATION;
-  const path = value.trim();
-  if (!path.startsWith("/")) return LOGIN_DEFAULT_DESTINATION;
-  if (path.startsWith("//") || path.includes("\\") || /\s/.test(path)) {
-    return LOGIN_DEFAULT_DESTINATION;
-  }
-  return path;
+  return confineSiteRelativePath(value) ?? LOGIN_DEFAULT_DESTINATION;
 }
 
 /** The login form's fields, exactly as the route read them from the body. */

@@ -347,10 +347,13 @@ export {
 
 export {
   SITE_LOGIN_PATH,
+  confineSiteRelativePath,
   describeSiteAccessState,
+  siteLoginHref,
   type SiteAccessAction,
   type SiteAccessState,
   type SiteAccessStateKey,
+  type SiteAccessStateOptions,
 } from "./access-states.js";
 
 export {

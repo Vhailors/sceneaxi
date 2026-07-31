@@ -44,7 +44,11 @@ export default async function EditorPage({
     // The refusal renders as its own named access state — signed out, expired,
     // disabled, Kids, provider unavailable, not wired, out of credits — with the
     // one action that can change it, instead of a single undifferentiated wall.
-    const outcome = describeSiteAccessState(resolved.decision.reason);
+    // Signing in from here returns to the editor rather than the account page,
+    // so the surface that refused is the one the visitor gets back.
+    const outcome = describeSiteAccessState(resolved.decision.reason, {
+      next: EDITOR_DEEP_LINK_PATH,
+    });
     return (
       <div className="page">
         <div className="page-head">
