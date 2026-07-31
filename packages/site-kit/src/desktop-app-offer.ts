@@ -48,14 +48,14 @@ export const DESKTOP_LINUX_APP_OFFER: DesktopAppOffer = Object.freeze({
     Object.freeze({
       kind: "AppImage" as const,
       fileName: "SceneAxi-Engine-Desktop-0.0.0-linux-x86_64.AppImage",
-      sha256: "8c90d8aa375a63b3f7dcb133706984655c3996f9ea49b4632f3f2d38a74a87d9",
-      byteSize: 115161541,
+      sha256: "720ca4cb8145231f4eb3cc537ddcd0c246a55a44c09b4f6edca1690c40f2021a",
+      byteSize: 115161554,
     }),
     Object.freeze({
       kind: "deb" as const,
       fileName: "SceneAxi-Engine-Desktop-0.0.0-linux-amd64.deb",
-      sha256: "82a78341368838ebc8cb35063c09ff26b9aed7b447fde41f5e389752266faaee",
-      byteSize: 90490924,
+      sha256: "a7f7ac9c4cb25db25ae9e8bff7333d60cbab4ac53c035b22e8898e2230fa340f",
+      byteSize: 90491280,
     }),
   ]),
   buildCommand: "pnpm install && cd desktop/linux && pnpm install && pnpm dist",

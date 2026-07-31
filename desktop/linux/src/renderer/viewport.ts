@@ -48,6 +48,7 @@ type MountablePayload = {
 
 const REPORT_ID = "desktop-live-viewport-report";
 const OPEN_PATH_ID = "desktop-live-viewport-open-path";
+const FRAME_REPORT_ID = "desktop-live-viewport-frame-report";
 
 function bridge(): BridgeGlobal | null {
   const candidate = (globalThis as Record<string, unknown>)[DESKTOP_BRIDGE_GLOBAL];
@@ -86,6 +87,14 @@ function reportLine(host: Element, text: string): void {
 // the render loop starts needs its own line or it is erased within ~250ms.
 function openPathLine(host: Element, text: string): void {
   overlayLine(host, OPEN_PATH_ID, "open-path", "52px", text);
+}
+
+function frameReportLine(host: Element, text: string): void {
+  overlayLine(host, FRAME_REPORT_ID, "frame-report", "96px", text);
+}
+
+function refusalText(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function updatePixelsMeta(frame: SculptPresentationFrame): void {
@@ -154,10 +163,7 @@ async function mountLiveViewport(): Promise<void> {
     });
   } catch (error) {
     canvas.remove();
-    reportLine(
-      stage,
-      `Live viewport refused: no WebGL surface — ${error instanceof Error ? error.message : String(error)}`,
-    );
+    reportLine(stage, `Live viewport refused: no WebGL surface — ${refusalText(error)}`);
     return;
   }
 
@@ -180,7 +186,7 @@ async function mountLiveViewport(): Promise<void> {
     canvas.remove();
     reportLine(
       stage,
-      `Live viewport refused: could not mount the composed scene — ${error instanceof Error ? error.message : String(error)}`,
+      `Live viewport refused: could not mount the composed scene — ${refusalText(error)}`,
     );
     return;
   }
@@ -201,17 +207,35 @@ async function mountLiveViewport(): Promise<void> {
   // only now that a real backend owns the canvas. On any refusal above, it stays.
   stage.querySelector(".viewport-note-inert")?.remove();
 
-  let reported = false;
+  let printed = false;
+  let frameReportSettled = false;
+  let frameReportInFlight = false;
   const loop = createThreeRenderLoop({
     onFrame: () => {
       const frame = mounts.render();
       updatePixelsMeta(frame);
-      if (!reported || frame.frame % 15 === 0) {
+      if (!printed || frame.frame % 15 === 0) {
+        printed = true;
         reportLine(stage, `${frameText(frame)} · scene ${scene.sceneId}`);
       }
-      if (!reported) {
-        reported = true;
-        void port.request({ action: "frame-report", payload: frame });
+      if (!frameReportSettled && !frameReportInFlight) {
+        frameReportInFlight = true;
+        port.request({ action: "frame-report", payload: frame }).then(
+          (response) => {
+            frameReportInFlight = false;
+            frameReportSettled = true;
+            if (!response.ok) {
+              frameReportLine(
+                stage,
+                `frame report refused: ${response.reason} — ${response.message}`,
+              );
+            }
+          },
+          (error: unknown) => {
+            frameReportInFlight = false;
+            frameReportLine(stage, `frame report refused: ${refusalText(error)} — retrying`);
+          },
+        );
       }
     },
   });
@@ -231,10 +255,7 @@ async function mountLiveViewport(): Promise<void> {
       openPathLine(stage, `kernel open path refused: ${openPath.reason} — ${openPath.message}`);
     }
   } catch (error) {
-    openPathLine(
-      stage,
-      `kernel open path refused: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    openPathLine(stage, `kernel open path refused: ${refusalText(error)}`);
   }
 }
 
@@ -245,10 +266,7 @@ function startLiveViewport(): void {
   void mountLiveViewport().catch((error: unknown) => {
     const stage = document.querySelector(".viewport");
     if (stage === null) return;
-    reportLine(
-      stage,
-      `Live viewport refused: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    reportLine(stage, `Live viewport refused: ${refusalText(error)}`);
   });
 }
 

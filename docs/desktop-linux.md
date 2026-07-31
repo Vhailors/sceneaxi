@@ -86,8 +86,8 @@ gate until the other moves with it.
 <!-- desktop-linux:artifacts -->
 | Artifact | File | Bytes | SHA-256 |
 |---|---|---|---|
-| AppImage | `SceneAxi-Engine-Desktop-0.0.0-linux-x86_64.AppImage` | 115161541 | `8c90d8aa375a63b3f7dcb133706984655c3996f9ea49b4632f3f2d38a74a87d9` |
-| deb | `SceneAxi-Engine-Desktop-0.0.0-linux-amd64.deb` | 90490924 | `82a78341368838ebc8cb35063c09ff26b9aed7b447fde41f5e389752266faaee` |
+| AppImage | `SceneAxi-Engine-Desktop-0.0.0-linux-x86_64.AppImage` | 115161554 | `720ca4cb8145231f4eb3cc537ddcd0c246a55a44c09b4f6edca1690c40f2021a` |
+| deb | `SceneAxi-Engine-Desktop-0.0.0-linux-amd64.deb` | 90491280 | `a7f7ac9c4cb25db25ae9e8bff7333d60cbab4ac53c035b22e8898e2230fa340f` |
 
 Toolchain of the recorded build: Electron 43.2.0 · electron-builder 26.15.3 ·
 esbuild 0.28.1 · Node 24.14.0 · pnpm 9.15.0 · Ubuntu 24.04 (kernel 6.17,

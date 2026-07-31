@@ -158,18 +158,24 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       return bridgeRefuse(live.reason, live.message, live.detail);
     }
 
-    const initial = live.value.observe();
+    let initialDigest: string;
+    let instanceCount: number;
     const tickDigests: string[] = [];
-    for (let tick = 1; tick <= OPEN_PATH_EXERCISE_TICKS; tick += 1) {
-      live.value.advance({ tick, deltaMs: 100 });
-      tickDigests.push(live.value.observe().digest);
+    try {
+      const initial = live.value.observe();
+      initialDigest = initial.digest;
+      instanceCount = initial.instances.length;
+      for (let tick = 1; tick <= OPEN_PATH_EXERCISE_TICKS; tick += 1) {
+        live.value.advance({ tick, deltaMs: 100 });
+        tickDigests.push(live.value.observe().digest);
+      }
+    } finally {
+      handle.close();
     }
-    const instanceCount = initial.instances.length;
-    handle.close();
 
     const exercise: OpenPathExercise = Object.freeze({
       bootstrap: handle.bootstrap,
-      initialDigest: initial.digest,
+      initialDigest,
       tickDigests: Object.freeze(tickDigests),
       instanceCount,
       closed: true as const,
