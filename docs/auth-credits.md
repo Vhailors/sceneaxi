@@ -39,7 +39,7 @@ Names only; values never appear in the repository.
 | Variable | Purpose |
 |---|---|
 | `SCENEAXI_ADMIN_EMAIL` | The **one** captain email that resolves to the `admin` role |
-| `BETTER_AUTH_ORIGIN` | Better Auth provider origin used by the umbrella sign-in adapter |
+| `BETTER_AUTH_ORIGIN` | Better Auth provider origin used by the umbrella sign-in adapter. The provider must serve `sign-in/email` and `get-session`, and must resolve that lookup from either the issued session cookie or the issued bearer token; `docs/websites-deploy.md` owns that prerequisite |
 | `DATABASE_URL` | Neon Postgres connection string |
 | `STRIPE_SECRET_KEY` | Stripe **test** secret key |
 | `STRIPE_WEBHOOK_SECRET` | Stripe **test** webhook signing secret |

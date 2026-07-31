@@ -70,7 +70,7 @@ set them *before* deploying and redeploy after changing one.
 | Variable | Projects | Owner | Required for | Purpose |
 |---|---|---|---|---|
 | `DATABASE_URL` | all three | captain (Neon) | the identity plane | one shared Neon Postgres database: auth/billing plus catalog read models |
-| `BETTER_AUTH_ORIGIN` | umbrella | deployment owner | identity sign-in | https origin of the Better Auth provider endpoint used by the umbrella; credentials remain with that provider |
+| `BETTER_AUTH_ORIGIN` | umbrella | deployment owner | identity sign-in | https origin of the Better Auth provider endpoint used by the umbrella; credentials remain with that provider. The provider must serve `POST /api/auth/sign-in/email` and `GET /api/auth/get-session` under that origin — see the provider prerequisite below |
 | `SCENEAXI_ADMIN_EMAIL` | umbrella | captain | admin sign-in | sole admin identity (`hajczuk.dominik@gmail.com`), resolved by `@sceneaxi/auth` |
 | `SCENEAXI_ADMIN_BOOTSTRAP_SECRET` | umbrella | captain | first admin sign-in | first-run admin credential material; env-secret bootstrap only |
 | `STRIPE_SECRET_KEY` | umbrella | captain | credit-pack checkout | **TEST** key (`sk_test_…`) only in this wave |
@@ -101,6 +101,20 @@ credentials and account tables remain provider-owned. `resolveBetterAuthOrigin` 
 `127.0.0.1`, `[::1]`) — a look-alike such as `http://localhost.example` resolves to no
 provider at all, because the sign-in client posts a member's email and password there.
 Anything else leaves `identityPort` absent and the surface refuses by name.
+
+#### Better Auth provider prerequisite
+
+The umbrella's client speaks two standard Better Auth endpoints under that origin:
+`POST /api/auth/sign-in/email`, whose answer (`{ redirect, token, user }`) carries no
+session record, and `GET /api/auth/get-session`, which supplies the session id, owner, and
+expiry the `sessions` row is written from. That lookup sends **both** credentials the
+provider may accept — the `Set-Cookie` session cookie the sign-in answer issued, replayed
+as a `Cookie` header, and the issued token as `Authorization: Bearer` — because stock
+Better Auth resolves the session from the cookie while the `bearer()` plugin resolves it
+from the header. Either configuration works; a provider that honours neither is a
+deployment fault, and the client throws a named error rather than reporting the member's
+correct password as a rejected sign-in. A provider that returns a session inline on
+sign-in is used as-is and no lookup is made.
 
 ### Stripe
 

@@ -171,7 +171,11 @@ through `umbrellaPlaneHandles()`; absent configuration still refuses with named 
 rather than showing an invented session, account, balance, or checkout. Account
 provisioning is an idempotent user-plus-credit-account insert at authentication, which
 reconciles the provider-owned address and verification state each time, never a
-payment-event side effect. This site exposes **no sign-in route**, so nothing reaches
+payment-event side effect. The Better Auth client reads the session back from
+`GET /api/auth/get-session`, sending both the issued session cookie and the issued bearer
+token so either provider configuration resolves; a provider that honours neither throws a
+named fault instead of reporting a valid password as refused
+(`docs/websites-deploy.md` owns that prerequisite). This site exposes **no sign-in route**, so nothing reaches
 `identityPort.signIn` and no session can be issued here yet — that HTTP/UI layer is
 [sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185).
 `docs/websites-deploy.md` owns the env names and activation procedure.

@@ -848,6 +848,19 @@ export function createNeonCheckoutIntentStore(
   });
 }
 
+/**
+ * The response headers this client reads.
+ *
+ * `getSetCookie()` is the only faithful reader of a multi-value `Set-Cookie`
+ * answer, so it is preferred; `get()` is the fallback for a transport that does
+ * not implement it. Both are optional, because a caller may inject a transport
+ * that exposes no headers at all — that costs the cookie path, not the client.
+ */
+export type ProviderResponseHeaders = Readonly<{
+  get(name: string): string | null;
+  getSetCookie?(): ReadonlyArray<string>;
+}>;
+
 /** Better Auth's standard sign-in response, reached over an injected HTTP client. */
 export type ProviderFetch = (
   input: string,
@@ -855,6 +868,7 @@ export type ProviderFetch = (
 ) => Promise<Readonly<{
   readonly ok: boolean;
   readonly status: number;
+  readonly headers?: ProviderResponseHeaders | undefined;
   json(): Promise<unknown>;
 }> >;
 
@@ -897,18 +911,53 @@ function stringValue(value: unknown): string {
 }
 
 /**
+ * Split a folded `Set-Cookie` header back into its values.
+ *
+ * A single joined header is ambiguous — an `Expires=Wed, 09 Jun 2027 …`
+ * attribute contains the same separator — so the split only fires before a
+ * `name=` that carries no whitespace, which no date attribute produces.
+ */
+const SET_COOKIE_SEPARATOR = /,\s*(?=[^\s;,=]+=)/;
+
+/**
+ * Rebuild the `Cookie` header a provider issued its session under.
+ *
+ * Stock Better Auth resolves `get-session` from the session cookie it just set;
+ * only the `bearer()` plugin reads the token from an `Authorization` header. The
+ * lookup therefore replays the issued cookie **and** sends the bearer token, so
+ * neither provider configuration is a silent sign-in failure.
+ */
+function issuedCookieHeader(headers: ProviderResponseHeaders | undefined): string | undefined {
+  if (headers === undefined) return undefined;
+  const issued =
+    typeof headers.getSetCookie === "function"
+      ? [...headers.getSetCookie()]
+      : (headers.get("set-cookie") ?? "").split(SET_COOKIE_SEPARATOR);
+  const pairs = issued
+    .map((value) => (value.split(";")[0] ?? "").trim())
+    .filter((pair) => pair.length > 0 && pair.includes("="));
+  return pairs.length === 0 ? undefined : pairs.join("; ");
+}
+
+/**
  * Create the small Better Auth instance shape consumed by @sceneaxi/auth. The
  * provider remains external; this site never stores a password or implements a
  * second credential verifier.
  *
  * Better Auth answers `POST /api/auth/sign-in/email` with `{ redirect, token,
  * user }` and no session record, so the session this boundary needs — its id,
- * owner, and expiry — is read back from `GET /api/auth/get-session` with the
- * issued token. A provider that does return a session inline is used as-is. No
- * field is inferred from the other half of the answer: a provider that does not
- * state the session's id, owner, or expiry produces an envelope
+ * owner, and expiry — is read back from `GET /api/auth/get-session`. That lookup
+ * carries both credentials the provider may accept — the issued session cookie
+ * and the issued token as a bearer header — because stock Better Auth reads the
+ * cookie while the `bearer()` plugin reads the header, and neither choice is
+ * observable from here. A provider that does return a session inline is used
+ * as-is. No field is inferred from the other half of the answer: a provider that
+ * does not state the session's id, owner, or expiry produces an envelope
  * `mapBetterAuthAuthentication` refuses, which is the intended fail-closed
  * outcome rather than a session attributed to a user the provider never named.
+ * A lookup that accepts the request but names no session is a provider
+ * configuration fault, not a rejected password, and is thrown as one so it
+ * cannot be read as "wrong credentials".
  */
 export function createBetterAuthHttpClient(options: {
   readonly origin: string;
@@ -916,16 +965,36 @@ export function createBetterAuthHttpClient(options: {
 }): BetterAuthInstanceLike {
   const origin = new URL(options.origin).origin;
 
-  async function readSessionRecord(token: string): Promise<Record<string, unknown> | undefined> {
+  async function readSessionRecord(
+    token: string,
+    cookie: string | undefined,
+  ): Promise<
+    | Readonly<{
+        readonly session: Record<string, unknown>;
+        readonly user: Record<string, unknown> | undefined;
+      }>
+    | undefined
+  > {
     const response = await options.fetch(`${origin}/api/auth/get-session`, {
       method: "GET",
-      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+        ...(cookie === undefined ? {} : { cookie }),
+      },
     });
     if (response.status === 401 || response.status === 403) return undefined;
     if (!response.ok) {
       throw new Error(`Better Auth session lookup failed (${response.status})`);
     }
-    return recordOf(await response.json());
+    const payload = recordOf(await response.json());
+    const session = recordOf(payload?.["session"]);
+    if (session === undefined) {
+      throw new Error(
+        "Better Auth session lookup named no session for the issued token; the provider must honour the issued session cookie or accept the token as a bearer credential",
+      );
+    }
+    return Object.freeze({ session, user: recordOf(payload?.["user"]) });
   }
 
   return Object.freeze({
@@ -946,10 +1015,10 @@ export function createBetterAuthHttpClient(options: {
 
         if (providerSession === undefined) {
           if (issuedToken.length === 0) return undefined;
-          const resolved = await readSessionRecord(issuedToken);
+          const resolved = await readSessionRecord(issuedToken, issuedCookieHeader(response.headers));
           if (resolved === undefined) return undefined;
-          providerSession = recordOf(resolved["session"]);
-          user = recordOf(resolved["user"]) ?? user;
+          providerSession = resolved.session;
+          user = resolved.user ?? user;
         }
 
         return {

@@ -1105,13 +1105,40 @@ const GET_SESSION_BODY = Object.freeze({
   user: SIGN_IN_BODY.user,
 });
 
-type ProviderResponse = Readonly<{ status: number; body: unknown }>;
+/**
+ * A provider answer. `setCookie` models a transport that implements
+ * `getSetCookie()`; `foldedSetCookie` models one that folds the values into a
+ * single `get("set-cookie")` string, which is the harder shape to read back.
+ */
+type ProviderResponse = Readonly<{
+  status: number;
+  body: unknown;
+  setCookie?: ReadonlyArray<string>;
+  foldedSetCookie?: string;
+}>;
+
+function responseHeaders(response: ProviderResponse) {
+  if (response.setCookie !== undefined) {
+    return {
+      get: (name: string) =>
+        name.toLowerCase() === "set-cookie" ? [...response.setCookie!].join(", ") : null,
+      getSetCookie: () => [...response.setCookie!],
+    };
+  }
+  if (response.foldedSetCookie !== undefined) {
+    return {
+      get: (name: string) =>
+        name.toLowerCase() === "set-cookie" ? response.foldedSetCookie! : null,
+    };
+  }
+  return undefined;
+}
 
 function recordingFetch(responses: ReadonlyArray<ProviderResponse>): {
   readonly fetch: ProviderFetch;
-  readonly calls: Array<{ url: string; method: string; authorization: string }>;
+  readonly calls: Array<{ url: string; method: string; authorization: string; cookie: string }>;
 } {
-  const calls: Array<{ url: string; method: string; authorization: string }> = [];
+  const calls: Array<{ url: string; method: string; authorization: string; cookie: string }> = [];
   const queue = [...responses];
   const fetch: ProviderFetch = async (input, init) => {
     const headers = (init?.headers ?? {}) as Record<string, string>;
@@ -1119,12 +1146,14 @@ function recordingFetch(responses: ReadonlyArray<ProviderResponse>): {
       url: input,
       method: init?.method ?? "GET",
       authorization: headers["authorization"] ?? "",
+      cookie: headers["cookie"] ?? "",
     });
     const next = queue.shift();
     if (next === undefined) throw new Error(`unexpected provider request: ${input}`);
     return {
       ok: next.status >= 200 && next.status < 300,
       status: next.status,
+      ...(responseHeaders(next) === undefined ? {} : { headers: responseHeaders(next) }),
       json: async () => next.body,
     };
   };
@@ -1134,7 +1163,13 @@ function recordingFetch(responses: ReadonlyArray<ProviderResponse>): {
 describe("umbrella Better Auth HTTP client", () => {
   it("resolves the session Better Auth's sign-in answer does not carry", async () => {
     const { fetch, calls } = recordingFetch([
-      { status: 200, body: SIGN_IN_BODY },
+      {
+        status: 200,
+        body: SIGN_IN_BODY,
+        setCookie: [
+          "better-auth.session_token=provider-token-1.signature; Path=/; Expires=Wed, 09 Jun 2027 10:18:14 GMT; HttpOnly; SameSite=Lax",
+        ],
+      },
       { status: 200, body: GET_SESSION_BODY },
     ]);
     const client = createBetterAuthHttpClient({ origin: "https://auth.example.com/", fetch });
@@ -1143,16 +1178,20 @@ describe("umbrella Better Auth HTTP client", () => {
       body: { email: "member@example.com", password: "test-password" },
     });
 
+    // The lookup carries both credentials a Better Auth deployment may accept:
+    // the issued session cookie (stock) and the bearer token (`bearer()` plugin).
     expect(calls).toEqual([
       {
         url: "https://auth.example.com/api/auth/sign-in/email",
         method: "POST",
         authorization: "",
+        cookie: "",
       },
       {
         url: "https://auth.example.com/api/auth/get-session",
         method: "GET",
         authorization: "Bearer provider-token-1",
+        cookie: "better-auth.session_token=provider-token-1.signature",
       },
     ]);
     // The envelope is only useful if @sceneaxi/auth accepts it, so the contract
@@ -1252,6 +1291,47 @@ describe("umbrella Better Auth HTTP client", () => {
         body: { email: "member@example.com", password: "test-password" },
       }),
     ).rejects.toThrow(/Better Auth session lookup failed \(503\)/);
+  });
+
+  it("replays a folded set-cookie answer without splitting a cookie date attribute", async () => {
+    const { fetch, calls } = recordingFetch([
+      {
+        status: 200,
+        body: SIGN_IN_BODY,
+        foldedSetCookie:
+          "better-auth.session_token=provider-token-1.signature; Path=/; Expires=Wed, 09 Jun 2027 10:18:14 GMT; HttpOnly, better-auth.csrf=csrf-1; Path=/",
+      },
+      { status: 200, body: GET_SESSION_BODY },
+    ]);
+    const client = createBetterAuthHttpClient({ origin: "https://auth.example.com", fetch });
+
+    await client.api.signInEmail({
+      body: { email: "member@example.com", password: "test-password" },
+    });
+
+    expect(calls[1]?.cookie).toBe(
+      "better-auth.session_token=provider-token-1.signature; better-auth.csrf=csrf-1",
+    );
+  });
+
+  it("reports a provider that accepts the lookup but names no session as a fault", async () => {
+    // Stock Better Auth answers `get-session` 200 with no session when it honours
+    // neither the replayed cookie nor the bearer token. That is a deployment
+    // configuration fault, and must not read back as a rejected password.
+    for (const body of [null, { session: null, user: null }]) {
+      const client = createBetterAuthHttpClient({
+        origin: "https://auth.example.com",
+        fetch: recordingFetch([
+          { status: 200, body: SIGN_IN_BODY },
+          { status: 200, body },
+        ]).fetch,
+      });
+      await expect(
+        client.api.signInEmail({
+          body: { email: "member@example.com", password: "test-password" },
+        }),
+      ).rejects.toThrow(/named no session for the issued token/);
+    }
   });
 
   it("refuses an answer that names no session and no token", async () => {

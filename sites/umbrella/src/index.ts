@@ -77,6 +77,7 @@ export {
   type NeonDatabase,
   type NeonIdentityStore,
   type ProviderFetch,
+  type ProviderResponseHeaders,
   type SqlRow,
   type SqlStatement,
   type StripeClientLike,
