@@ -48,9 +48,18 @@ function projectDir(): string {
   return dir;
 }
 
-function fail(message: string): never {
+let reportedFailure = false;
+
+/** Print the one `{ok:false}` proof line and exit; later callers stay silent. */
+function reportFailure(message: string): void {
+  if (reportedFailure) return;
+  reportedFailure = true;
   console.error(JSON.stringify({ ok: false, message }));
   app.exit(1);
+}
+
+function fail(message: string): never {
+  reportFailure(message);
   throw new Error(message);
 }
 
@@ -161,7 +170,11 @@ async function start(): Promise<void> {
   app.exit(0);
 }
 
-void start();
+// Every await above can reject; without this the process would keep an open window
+// alive until the launcher's timeout and print no cause at all.
+void start().catch((error: unknown) => {
+  reportFailure(error instanceof Error ? error.message : String(error));
+});
 
 app.on("window-all-closed", () => {
   app.quit();

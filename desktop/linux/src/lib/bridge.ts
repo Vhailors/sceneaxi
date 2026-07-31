@@ -25,6 +25,7 @@
  * desktop shell it wraps. Kids has no path here: the bridge names no profile, and
  * the chrome's refuse-only Kids projection stays owned by `@sceneaxi/desktop-shell`.
  */
+import { isAbsolute, resolve, sep } from "node:path";
 import {
   createDesktopSession,
   type DesktopSession,
@@ -176,6 +177,21 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     return bridgeOk("open-path", exercise);
   };
 
+  /**
+   * A document path arrives from the renderer process across IPC, and the authoring
+   * core resolves it against `cwd` without a containment check of its own. The bridge
+   * owns that constraint: a project-relative path, never an absolute one and never an
+   * escape out of the project directory.
+   */
+  const containedDocumentPath = (value: unknown): string | null => {
+    if (typeof value !== "string" || value.length === 0) return null;
+    if (isAbsolute(value) || /^[a-zA-Z]:[\\/]/.test(value) || value.includes("\0")) return null;
+    const root = resolve(options.cwd);
+    const target = resolve(root, value);
+    if (target !== root && !target.startsWith(`${root}${sep}`)) return null;
+    return value;
+  };
+
   const authoring = (payload: unknown): DesktopBridgeResponse => {
     const op = field(payload, "op");
     if (!isAuthoringOp(op)) {
@@ -186,22 +202,22 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     }
     const live = authoringSession();
     if (op === "status") {
-      const documentPath = field(payload, "documentPath");
-      if (typeof documentPath !== "string" || documentPath.length === 0) {
+      const documentPath = containedDocumentPath(field(payload, "documentPath"));
+      if (documentPath === null) {
         return bridgeRefuse(
           DESKTOP_BRIDGE_REFUSALS.requestMalformed,
-          "authoring status requires a documentPath string.",
+          "authoring status requires a documentPath string inside the project directory.",
         );
       }
       return bridgeOk("authoring", live.status(documentPath));
     }
     if (op === "propose") {
-      const documentPath = field(payload, "documentPath");
+      const documentPath = containedDocumentPath(field(payload, "documentPath"));
       const jsonPointer = field(payload, "jsonPointer");
-      if (typeof documentPath !== "string" || typeof jsonPointer !== "string") {
+      if (documentPath === null || typeof jsonPointer !== "string") {
         return bridgeRefuse(
           DESKTOP_BRIDGE_REFUSALS.requestMalformed,
-          "authoring propose requires documentPath and jsonPointer strings.",
+          "authoring propose requires a jsonPointer string and a documentPath inside the project directory.",
         );
       }
       const snapshot: DesktopSnapshot = live.proposeEdit({

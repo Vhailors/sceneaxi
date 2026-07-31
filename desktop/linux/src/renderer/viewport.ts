@@ -151,18 +151,39 @@ async function mountLiveViewport(): Promise<void> {
   }
 
   const mounts = createSculptMountApi(backend);
-  for (const instance of scene.instances) {
-    const artifact = scene.artifacts[instance.artifactId];
-    // The payload crossed IPC as JSON; the Sculpt Mount API re-validates every
-    // artifact and transform at mount time and refuses invalid ones by name.
-    mounts.mount({
-      instanceId: instance.instanceId,
-      artifact,
-      transform: instance.worldTransform,
-    } as Parameters<typeof mounts.mount>[0]);
+  try {
+    for (const instance of scene.instances) {
+      const artifact = scene.artifacts[instance.artifactId];
+      // The payload crossed IPC as JSON; the Sculpt Mount API re-validates every
+      // artifact and transform at mount time and refuses invalid ones by name.
+      mounts.mount({
+        instanceId: instance.instanceId,
+        artifact,
+        transform: instance.worldTransform,
+      } as Parameters<typeof mounts.mount>[0]);
+    }
+    backend.frameMountedContent();
+    backend.camera.attach(canvas);
+  } catch (error) {
+    mounts.dispose();
+    canvas.remove();
+    reportLine(
+      stage,
+      `Live viewport refused: could not mount the composed scene — ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return;
   }
-  backend.frameMountedContent();
-  backend.camera.attach(canvas);
+
+  // The drawing buffer was sized once from the stage; the window is resizable and
+  // the canvas is CSS-stretched, so without this a resize scales a stale buffer.
+  const applyViewport = (): void => {
+    backend.resize(
+      Math.max(1, stage.clientWidth),
+      Math.max(1, stage.clientHeight),
+      Math.min(globalThis.devicePixelRatio || 1, 2),
+    );
+  };
+  if (typeof ResizeObserver === "function") new ResizeObserver(applyViewport).observe(stage);
 
   // The chrome's inert note says no renderer is mounted on this surface. That
   // was true until this line, so leaving it visible would be the lie — remove it

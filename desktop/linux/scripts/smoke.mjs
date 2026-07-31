@@ -83,7 +83,15 @@ if (proof.openPath?.initialDigest === proof.openPath?.tickDigests?.at(-1)) {
   failures.push("open-path digests never moved — kernel session did not advance");
 }
 if (proof.frameReport?.backend !== "three") failures.push("frame report is not the Three core");
-if (typeof proof.frameReport?.drawCalls !== "number") failures.push("frame report has no drawCalls");
+// The pixel claim the docs and the site-kit offer carry is only ever this
+// observation: a WebGL canvas surface that reported drawing something.
+if (proof.frameReport?.surface !== "webgl-canvas") {
+  failures.push(`frame report surface is '${proof.frameReport?.surface}', not the webgl-canvas surface`);
+}
+if (proof.frameReport?.pixelsDrawn !== true) failures.push("frame report does not claim pixelsDrawn");
+if (typeof proof.frameReport?.drawCalls !== "number" || proof.frameReport.drawCalls <= 0) {
+  failures.push("frame report drew no draw calls");
+}
 if (proof.viewportDom?.canvases !== 1) failures.push("window DOM does not hold exactly one live canvas");
 if (proof.viewportDom?.inertNotePresent !== false) {
   failures.push("inert viewport note still present after a live mount");

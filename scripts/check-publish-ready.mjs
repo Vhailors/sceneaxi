@@ -503,7 +503,7 @@ export { exportEntries };
  * ID covering "every workspace manifest and the repository root manifest", so the two
  * tiers must not be able to enforce different versions of the same documented row.
  */
-function checkPublishRules(label, json, consumable) {
+function checkPublishRules(label, json, consumable, tier) {
   if (json.private !== true) {
     fail(
       "manifest-private",
@@ -527,11 +527,20 @@ function checkPublishRules(label, json, consumable) {
   for (const field of DEPENDENCY_FIELDS) {
     for (const [dep, range] of Object.entries(json[field] ?? {})) {
       if (!dep.startsWith("@sceneaxi/")) continue;
-      const allowed = consumable ? /^workspace:/ : /^link:\.\.\/\.\.\/(?:packages|apps)\//;
+      // The `apps/` half is the desktop tier's alone (ADR 0024): the packaged app
+      // links the Engine Desktop chrome, which lives in `apps/desktop-shell`. A site
+      // keeps the narrower ADR 0018 rule so the widening cannot leak a tier sideways.
+      const allowed = consumable
+        ? /^workspace:/
+        : tier === "desktop"
+          ? /^link:\.\.\/\.\.\/(?:packages|apps)\//
+          : /^link:\.\.\/\.\.\/packages\//;
       if (typeof range !== "string" || !allowed.test(range)) {
         const expected = consumable
           ? "the workspace: protocol"
-          : "a link: path into packages/ or apps/ (a separate install root, ADR 0018/0024)";
+          : tier === "desktop"
+            ? "a link: path into packages/ or apps/ (a separate install root, ADR 0024)"
+            : "a link: path into packages/ (a separate install root, ADR 0018)";
         fail(
           "internal-deps-workspace",
           `${label} declares ${dep}@'${range}' in ${field} — internal dependencies use ${expected} until a real release exists`,
@@ -549,7 +558,7 @@ function checkManifests(manifests) {
     // `workspace:`. Their own structural rules are `pnpm check:sites` and
     // `pnpm check:desktop`; the rules below that still apply, apply unchanged.
     const consumable = tier !== "sites" && tier !== "desktop";
-    checkPublishRules(name, json, consumable);
+    checkPublishRules(name, json, consumable, tier);
     if (json.type !== "module") fail("manifest-hygiene", `${name} must declare "type": "module"`);
     if (typeof json.license !== "string" || json.license.length === 0) {
       fail("manifest-hygiene", `${name} declares no license`);
@@ -642,7 +651,12 @@ function checkManifests(manifests) {
  * `pnpm install` at the repo root looking for an unpublished `0.0.0` package.
  */
 function checkRootManifest(rootManifest) {
-  checkPublishRules(`${rootManifest.name ?? "package.json"} (repository root)`, rootManifest, true);
+  checkPublishRules(
+    `${rootManifest.name ?? "package.json"} (repository root)`,
+    rootManifest,
+    true,
+    null,
+  );
 }
 
 /**

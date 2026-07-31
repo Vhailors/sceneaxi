@@ -28,6 +28,13 @@ jobs:
         working-directory: desktop/linux
         run: pnpm install --frozen-lockfile
 
+      # `pnpm dist` runs esbuild, which strips types without checking them, and the
+      # root build covers only this tier's `src/index.ts` and `src/lib/**`. This is the
+      # only place the main-process and renderer entry points are type-checked.
+      - name: Type-check the desktop tier
+        working-directory: desktop/linux
+        run: pnpm typecheck
+
       - name: Build the runtime and package AppImage + deb
         working-directory: desktop/linux
         run: pnpm dist

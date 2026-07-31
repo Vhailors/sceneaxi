@@ -264,6 +264,20 @@ describe("publish-ready check — injected violations", () => {
     );
   });
 
+  it("fails when a site borrows the desktop tier's link: into apps/", () => {
+    // The `apps/` widening exists for the packaged desktop app alone (ADR 0024): it
+    // links the Engine Desktop chrome. A site keeps the narrower ADR 0018 rule.
+    editManifest(fx, "sites/umbrella/package.json", (m) => {
+      m.dependencies = { ...m.dependencies, "@sceneaxi/desktop-shell": "link:../../apps/desktop-shell" };
+    });
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "[internal-deps-workspace] @sceneaxi/site-umbrella declares @sceneaxi/desktop-shell@'link:../../apps/desktop-shell'",
+    );
+    expect(res.stderr).toContain("a link: path into packages/ (a separate install root, ADR 0018)");
+  });
+
   it("fails when a package grows a publish lifecycle hook", () => {
     editManifest(fx, "packages/schemas/package.json", (m) => {
       m.scripts = { prepublishOnly: "echo build" };

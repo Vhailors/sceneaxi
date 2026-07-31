@@ -203,6 +203,31 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
     expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(before);
   });
 
+  it("refuses an authoring documentPath that leaves the project directory", () => {
+    // The path arrives from the renderer across IPC and the authoring core resolves it
+    // against `cwd` with no containment check of its own, so the bridge owns it.
+    const dir = authoringDir();
+    const bridge = bridgeAt(dir);
+    const escapes = ["/etc/passwd", "../scene.json", "nested/../../scene.json", join(dir, "scene.json")];
+
+    for (const documentPath of escapes) {
+      const proposed = bridge.handle({
+        action: "authoring",
+        payload: { op: "propose", documentPath, jsonPointer: "/data/entities/0/x", newValue: 7 },
+      });
+      expect(proposed.ok, documentPath).toBe(false);
+      if (!proposed.ok) expect(proposed.reason).toBe(DESKTOP_BRIDGE_REFUSALS.requestMalformed);
+
+      const status = bridge.handle({ action: "authoring", payload: { op: "status", documentPath } });
+      expect(status.ok, documentPath).toBe(false);
+      if (!status.ok) expect(status.reason).toBe(DESKTOP_BRIDGE_REFUSALS.requestMalformed);
+    }
+
+    // A contained path still works: the constraint refuses escapes, not authoring.
+    const contained = bridge.handle({ action: "authoring", payload: { op: "status", documentPath: "scene.json" } });
+    expect(contained.ok).toBe(true);
+  });
+
   it("accepts only a real frame-report shape, and hands it to the observer", () => {
     const seen: DesktopFrameReport[] = [];
     const bridge = bridgeAt(authoringDir(), (report) => seen.push(report));
