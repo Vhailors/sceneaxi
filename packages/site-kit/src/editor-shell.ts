@@ -37,6 +37,7 @@
  */
 import {
   EDITOR_SHELL_ASSISTANT_MODE_IDS,
+  EDITOR_SHELL_MINIMUM_WINDOW,
   EDITOR_SHELL_MODES,
   EDITOR_SHELL_SOURCE,
   EDITOR_SHELL_VIEWPORT_SOURCES,
@@ -54,7 +55,12 @@ import {
 } from "@sceneaxi/schemas";
 import type { SceneDocument } from "@sceneaxi/authoring-core";
 import { reviewProposal, type ChangeReview } from "./change-review.js";
-import { editorHref, type EditorState } from "./editor-state.js";
+import {
+  EDITOR_MAX_OBJECTS,
+  EDITOR_MIN_OBJECTS,
+  editorHref,
+  type EditorState,
+} from "./editor-state.js";
 import type { EditorRender } from "./editor-session.js";
 import { WEB_EDITOR_STARTER_SEED } from "./starter-artifact.js";
 import {
@@ -209,6 +215,8 @@ export type EditorShellProfileChip = Readonly<{
   label: string;
   control: EditorShellControl;
   policy: OpenPathPolicyViewRow;
+  /** What the status bar pins while this profile is projected. */
+  statusPin: string;
 }>;
 
 export type EditorShellModeView = Readonly<{
@@ -308,16 +316,26 @@ export type EditorShellView = Readonly<{
     sees: ReadonlyArray<string>;
   }>;
   palette: ReadonlyArray<EditorShellPaletteRow>;
+  /** The control that opens the palette; it lives in the chrome, not in a row. */
+  paletteOpener: EditorShellControl;
   statusBar: Readonly<{
     readiness: string;
     profilePin: string;
     docLabel: string;
   }>;
+  /**
+   * The refusal the chrome prints instead of rendering below the shared minimum
+   * window. It is carried by a block rather than a control, so the view owns its
+   * code and its wording — the numbers come from `EDITOR_SHELL_MINIMUM_WINDOW`.
+   */
+  windowMinimum: Readonly<{ code: EditorShellWebRefusal; message: string }>;
   edit: Readonly<{
     selection: EditorShellControl;
     translation: EditorShellControl;
     objects: EditorShellControl;
     apply: EditorShellControl;
+    /** The same bounds `readEditorState` clamps `objects` to, so the input agrees. */
+    objectBounds: Readonly<{ min: number; max: number }>;
   }>;
   /** Every minted control, in mint order — the control-accounting index. */
   controls: ReadonlyArray<EditorShellControl>;
@@ -406,6 +424,10 @@ export function buildEditorShellView(input: EditorShellInput): EditorShellView {
 
   // --- profiles: the shared policy, projected — never restated ---
   const policy = openPathPolicyView();
+  const statusPinFor = (profile: "game" | "web" | "kids"): string =>
+    profile === "kids"
+      ? `${profile} profile · refuse-only · separate origin`
+      : `${profile} profile · core 0.0.0`;
   const chipFor = (profile: "game" | "web" | "kids", label: string): EditorShellProfileChip => {
     const row = policy.rows.find((candidate) => candidate.profile.includes(profile));
     if (row === undefined) {
@@ -416,6 +438,7 @@ export function buildEditorShellView(input: EditorShellInput): EditorShellView {
       label,
       control: mint({ id: `profile-${profile}`, label, kind: "view" }),
       policy: row,
+      statusPin: statusPinFor(profile),
     });
   };
   const profiles = Object.freeze([
@@ -914,6 +937,7 @@ export function buildEditorShellView(input: EditorShellInput): EditorShellView {
         operations: Object.freeze(["setSelectedTransform", "select"] as const),
       }),
     }),
+    objectBounds: Object.freeze({ min: EDITOR_MIN_OBJECTS, max: EDITOR_MAX_OBJECTS }),
   });
 
   // --- palette: rows bind to this surface's real controls or refuse by name ---
@@ -975,6 +999,11 @@ export function buildEditorShellView(input: EditorShellInput): EditorShellView {
     }),
   ];
 
+  /**
+   * The opener is chrome, not a command: it lives in the title bar and opens the
+   * overlay the rows live in. Minting it outside `paletteRows` is what keeps it
+   * from being drawn inside the surface it opens.
+   */
   const paletteOpener = mint({
     id: "overlay-open-palette",
     label: "Search",
@@ -983,8 +1012,13 @@ export function buildEditorShellView(input: EditorShellInput): EditorShellView {
 
   const statusBar = Object.freeze({
     readiness: state.playing ? "Running — deterministic" : "Ready",
-    profilePin: "game profile · core 0.0.0",
+    profilePin: statusPinFor("game"),
     docLabel: `doc ${sceneDigest === null ? "—" : shortDigestValue(sceneDigest)}`,
+  });
+
+  const windowMinimum = Object.freeze({
+    code: EDITOR_SHELL_WEB_REFUSALS.windowBelowMinimum,
+    message: `The editor chrome refuses below ${EDITOR_SHELL_MINIMUM_WINDOW.width}×${EDITOR_SHELL_MINIMUM_WINDOW.height} rather than rendering an unusable layout. Enlarge the window to continue.`,
   });
 
   const refusalLegend = Object.freeze(
@@ -1028,15 +1062,10 @@ export function buildEditorShellView(input: EditorShellInput): EditorShellView {
     console: Object.freeze(consoleRows),
     evidence: Object.freeze(evidence),
     assistant,
-    palette: Object.freeze([
-      ...paletteRows,
-      Object.freeze({
-        control: paletteOpener,
-        cliVerb: null,
-        group: "OVERLAY",
-      }),
-    ]),
+    palette: Object.freeze([...paletteRows]),
+    paletteOpener,
     statusBar,
+    windowMinimum,
     edit,
     controls: Object.freeze([...controls]),
     refusalLegend,

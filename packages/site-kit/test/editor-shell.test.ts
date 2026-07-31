@@ -9,6 +9,8 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+  EDITOR_MAX_OBJECTS,
+  EDITOR_MIN_OBJECTS,
   EDITOR_SHELL_FABRICATED_FIGURES,
   EDITOR_SHELL_WEB_REFUSALS,
   EDITOR_SHELL_WEB_REFUSAL_MESSAGES,
@@ -118,6 +120,30 @@ describe("control accounting", () => {
     for (const code of reachable) {
       expect(registry).toContain(code);
     }
+  });
+
+  it("the palette opener is chrome, not one of the rows it opens", () => {
+    const shell = view();
+    expect(shell.paletteOpener.kind).toBe("view");
+    expect(shell.palette.map((row) => row.control.id)).not.toContain(
+      shell.paletteOpener.id,
+    );
+    // It is still accounted for, so the renderer has to draw it through the
+    // kind-aware helper like every other control.
+    expect(shell.controls.map((control) => control.id)).toContain(
+      shell.paletteOpener.id,
+    );
+  });
+
+  it("the objects field is bounded by the state parser's own clamp", () => {
+    const shell = view();
+    expect(shell.edit.objectBounds).toEqual({
+      min: EDITOR_MIN_OBJECTS,
+      max: EDITOR_MAX_OBJECTS,
+    });
+    // And the clamp is what a request past either end actually lands on.
+    expect(view({ objects: "9" }).run.objectCount).toBe(EDITOR_MAX_OBJECTS);
+    expect(view({ objects: "0" }).run.objectCount).toBe(EDITOR_MIN_OBJECTS);
   });
 
   it("the Kids code is the shared open-path policy's own", () => {

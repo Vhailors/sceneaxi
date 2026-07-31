@@ -51,7 +51,7 @@ const legendId = (code: string): string => `edshell-refusal-${code}`;
 function ShellButton({
   control,
   className,
-  demoted,
+  demotedRefusal,
   pressed,
   selected,
   onClick,
@@ -59,15 +59,19 @@ function ShellButton({
 }: {
   readonly control: EditorShellControl;
   readonly className?: string | undefined;
-  /** Kids projection: a live/view control rendered behind the refusal. */
-  readonly demoted?: boolean | undefined;
+  /**
+   * Kids projection: a live/view control rendered behind the refusal. The code
+   * is the view's own (`view.kidsLock.code`), never restated here, so the
+   * describedby it produces always resolves against the rendered legend.
+   */
+  readonly demotedRefusal?: string | undefined;
   readonly pressed?: boolean | undefined;
   readonly selected?: boolean | undefined;
-  readonly onClick?: (() => void) | undefined;
+  readonly onClick?: ((event: React.MouseEvent<HTMLElement>) => void) | undefined;
   readonly children?: React.ReactNode;
 }) {
-  const inert = control.kind === "inert" || demoted === true;
-  const refusal = control.kind === "inert" ? control.refusal : "OPEN_PATH_KIDS_REFUSED";
+  const inert = control.kind === "inert" || demotedRefusal !== undefined;
+  const refusal = control.kind === "inert" ? control.refusal : (demotedRefusal ?? null);
   const binding = control.binding;
 
   const shared = {
@@ -124,11 +128,11 @@ export function EditorShell({
   const [mode, setMode] = useState<ModeId>("build");
   const [dockTab, setDockTab] = useState<DockTabId>("changes");
   const [profile, setProfile] = useState<ProfileId>("game");
-  const [assistantOpen, setAssistantOpen] = useState(true);
+  const [assistantOpen, setAssistantOpen] = useState(view.assistant.state === "open");
   const [assistantMode, setAssistantMode] = useState("build");
   const [paletteOpen, setPaletteOpen] = useState(false);
   const paletteRef = useRef<HTMLInputElement | null>(null);
-  const paletteOpener = useRef<HTMLElement | null>(null);
+  const paletteReturnFocus = useRef<HTMLElement | null>(null);
 
   const fallbackMode = view.modes[0];
   if (fallbackMode === undefined) {
@@ -150,11 +154,11 @@ export function EditorShell({
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
-        paletteOpener.current = document.activeElement as HTMLElement;
+        paletteReturnFocus.current = document.activeElement as HTMLElement;
         setPaletteOpen(true);
       } else if (event.key === "Escape" && paletteOpen) {
         setPaletteOpen(false);
-        paletteOpener.current?.focus();
+        paletteReturnFocus.current?.focus();
       }
     };
     document.addEventListener("keydown", onKey);
@@ -165,9 +169,15 @@ export function EditorShell({
     if (paletteOpen) paletteRef.current?.focus();
   }, [paletteOpen]);
 
-  const profilePin = kids
-    ? "kids profile · refuse-only · separate origin"
-    : `${profile} profile · core 0.0.0`;
+  const profilePin =
+    view.profiles.find((chip) => chip.id === profile)?.statusPin ??
+    view.statusBar.profilePin;
+
+  /** Palette groups in the view's own mint order — the view decides the set. */
+  const paletteGroups = view.palette.reduce<readonly string[]>(
+    (groups, row) => (groups.includes(row.group) ? groups : [...groups, row.group]),
+    [],
+  );
 
   const dockTabs = activeMode.dockTabs;
   const shownDockTab: DockTabId = dockTabs.includes(dockTab) ? dockTab : (dockTabs[0] ?? "console");
@@ -181,11 +191,8 @@ export function EditorShell({
         stylesheet decides which side shows, so the refusal needs no script.
       */}
       <div className="ed-minimum" role="note">
-        <p className="reason mono">EDITOR_WINDOW_BELOW_MINIMUM</p>
-        <p>
-          The editor chrome refuses below 900×600 rather than rendering an
-          unusable layout. Enlarge the window to continue.
-        </p>
+        <p className="reason mono">{view.windowMinimum.code}</p>
+        <p>{view.windowMinimum.message}</p>
       </div>
       {/* ------------------------------------------------ title bar ------ */}
       <header className="ed-titlebar" aria-label="Editor title bar">
@@ -224,21 +231,19 @@ export function EditorShell({
           </span>
         </div>
         <div className="ed-title-actions">
-          <button
-            type="button"
+          <ShellButton
+            control={view.paletteOpener}
             className="ed-search"
-            data-kind="view"
             onClick={(event) => {
-              paletteOpener.current = event.currentTarget;
+              paletteReturnFocus.current = event.currentTarget;
               setPaletteOpen(true);
             }}
           >
-            Search <kbd>⌘K</kbd>
-          </button>
+            {view.paletteOpener.label} <kbd>⌘K</kbd>
+          </ShellButton>
           <ShellButton
             control={view.assistant.toggle}
             className="ed-assistant-toggle"
-            demoted={false}
             pressed={assistantOpen}
             onClick={() => setAssistantOpen((open) => !open)}
           >
@@ -257,7 +262,7 @@ export function EditorShell({
               key={entry.control.id}
               control={entry.control}
               className="ed-rail-mode"
-              demoted={kids}
+              demotedRefusal={kids ? view.kidsLock.code : undefined}
               pressed={mode === entry.id}
               onClick={() => enterMode(entry.id)}
             >
@@ -345,7 +350,7 @@ export function EditorShell({
                 <>
                   <div className="ed-panel-head">
                     <span>LOADED</span>
-                    <span className="hint">0</span>
+                    <span className="hint">{view.plugins.loaded.length}</span>
                   </div>
                   <p className="ed-note-block">
                     No plugin is loaded on this surface. The host and its isolation
@@ -409,12 +414,12 @@ export function EditorShell({
             {/* ---------------------------------------- viewport column --- */}
             <section className="ed-viewport-col" aria-label="Viewport">
               <div className="ed-viewtabs" role="tablist" aria-label="Viewport source">
-                {view.viewport.sources.map((source, index) => (
+                {view.viewport.sources.map((source) => (
                   <ShellButton
                     key={source.id}
                     control={source}
                     className="ed-viewtab"
-                    selected={index === 0}
+                    selected={source.kind !== "inert"}
                   />
                 ))}
               </div>
@@ -808,8 +813,8 @@ export function EditorShell({
                           id="ed-objects"
                           name="objects"
                           type="number"
-                          min={2}
-                          max={4}
+                          min={view.edit.objectBounds.min}
+                          max={view.edit.objectBounds.max}
                           defaultValue={view.run.objectCount}
                         />
                       </div>
@@ -902,7 +907,7 @@ export function EditorShell({
               placeholder="Type a command…"
               aria-label="Filter commands"
             />
-            {["SCULPT", "SCENE", "RUN", "RUN & SHIP", "OVERLAY"].map((group) => {
+            {paletteGroups.map((group) => {
               const rows = view.palette.filter((row) => row.group === group);
               if (rows.length === 0) return null;
               return (
@@ -919,9 +924,7 @@ export function EditorShell({
                                 enterMode("compose");
                                 setPaletteOpen(false);
                               }
-                            : row.control.id === "overlay-open-palette"
-                              ? () => setPaletteOpen(false)
-                              : undefined
+                            : undefined
                         }
                       />
                       {row.cliVerb !== null && (
@@ -942,7 +945,7 @@ export function EditorShell({
               data-kind="view"
               onClick={() => {
                 setPaletteOpen(false);
-                paletteOpener.current?.focus();
+                paletteReturnFocus.current?.focus();
               }}
             >
               Close <kbd>ESC</kbd>

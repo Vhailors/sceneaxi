@@ -22,6 +22,7 @@ import { REQUIRED_SCULPT_PASSES } from "@sceneaxi/schemas";
 import { EXIT_CODE_TABLE } from "../../packages/cli/src/exit-codes.ts";
 import {
   CREATOR_SHARE_RULE,
+  EDITOR_SHELL_WEB_REFUSALS,
   FOUNDATION_COLORS,
   FOUNDATION_CONTRAST_ROLES,
   FOUNDATION_NEUTRAL_TOKENS,
@@ -1056,7 +1057,14 @@ describe("the Engine Desktop editor shell stays honest (sceneaxi#184)", () => {
   });
 
   it("refuses below the shared minimum window rather than degrading", () => {
-    expect(SHELL).toContain("EDITOR_WINDOW_BELOW_MINIMUM");
+    // The block prints the view's own code and wording rather than restating
+    // either, so the refusal cannot drift from the closed registry it names.
+    expect(EDITOR_SHELL_WEB_REFUSALS.windowBelowMinimum).toBe(
+      "EDITOR_WINDOW_BELOW_MINIMUM",
+    );
+    expect(SHELL).toContain("{view.windowMinimum.code}");
+    expect(SHELL).toContain("{view.windowMinimum.message}");
+    expect(SHELL).not.toContain("EDITOR_WINDOW_BELOW_MINIMUM");
     expect(CSS).toContain("@media (max-width: 899px), (max-height: 599px)");
   });
 
