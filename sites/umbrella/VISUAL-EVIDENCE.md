@@ -99,8 +99,7 @@ site-chrome page. sceneaxi#184 replaced it with the Engine Desktop shell (owner
 `/editor` render, so its `display: none` on `.masthead`, `body > footer`, and
 `.skip-link` reaches the unentitled, link-refused, and session-refused branches as well
 as the shell. Those branches no longer sit under the site chrome — they carry their own
-"Back to SceneAxi" link instead, and they sit on `.ed-refusal-page` inside a `main` whose
-padding the same layout zeroes.
+"Back to SceneAxi" link instead, on the sheet's ordinary `.page` block.
 
 So the `/editor` rows of the overflow sweep, of both named-state measurement tables, and
 of the Lighthouse table are the observation at that earlier revision of the page, and they

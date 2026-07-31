@@ -306,6 +306,12 @@ export function EditorShell({
     <ActiveModeContext value={mode}>
       <div className="edshell" data-mode={mode} data-profile={profile}>
         {/*
+          The chrome depicts an application, so it draws no page title — but the
+          route is still a document, and its panel heads are its second level.
+          The name is carried for assistive technology only.
+        */}
+        <h1 className="ed-shell-title">SceneAxi Engine Desktop editor</h1>
+        {/*
           Below the shared minimum window the chrome refuses rather than rendering
           an unusable layout — the same tier rule the desktop chrome derives from
           the shared editor-shell model. The block is in every document; the
@@ -408,10 +414,10 @@ export function EditorShell({
               <aside className="ed-left" aria-label="Scene panels">
                 {mode === "sculpt" ? (
                   <>
-                    <div className="ed-panel-head">
+                    <h2 className="ed-panel-head">
                       <span>SCULPT LIBRARY</span>
                       <span className="hint">{view.sculpt.library.length}</span>
-                    </div>
+                    </h2>
                     <ul className="ed-library">
                       {view.sculpt.library.map((item) => (
                         <li key={item.artifactId}>
@@ -421,16 +427,16 @@ export function EditorShell({
                         </li>
                       ))}
                     </ul>
-                    <div className="ed-panel-head">
+                    <h2 className="ed-panel-head">
                       <span>RUN HISTORY</span>
-                    </div>
+                    </h2>
                     <p className="ed-run-history">{view.sculpt.runOutcome}</p>
                   </>
                 ) : mode === "run" ? (
                   <>
-                    <div className="ed-panel-head">
+                    <h2 className="ed-panel-head">
                       <span>RUNTIME</span>
-                    </div>
+                    </h2>
                     {/*
                       The transport for both is a link back to /editor: play and
                       step run on the server, and stopping ends this session
@@ -453,10 +459,10 @@ export function EditorShell({
                       <dt>Frame digest</dt>
                       <dd className="mono">{view.run.frameDigestShort ?? "—"}</dd>
                     </dl>
-                    <div className="ed-panel-head">
+                    <h2 className="ed-panel-head">
                       <span>SIMULATED BODIES</span>
                       <span className="hint">{view.run.bodies.length}</span>
-                    </div>
+                    </h2>
                     <ul className="ed-bodies">
                       {view.run.bodies.map((body) => (
                         <li key={body.instanceId}>
@@ -466,9 +472,9 @@ export function EditorShell({
                         </li>
                       ))}
                     </ul>
-                    <div className="ed-panel-head">
+                    <h2 className="ed-panel-head">
                       <span>REPLAY</span>
-                    </div>
+                    </h2>
                     <p className="ed-note-block">
                       Every session records its advances and ends with a digest. Replay
                       re-runs the exact sequence; a differing digest refuses, never
@@ -477,18 +483,18 @@ export function EditorShell({
                   </>
                 ) : mode === "plugins" ? (
                   <>
-                    <div className="ed-panel-head">
+                    <h2 className="ed-panel-head">
                       <span>LOADED</span>
                       <span className="hint">{view.plugins.loaded.length}</span>
-                    </div>
+                    </h2>
                     <p className="ed-note-block">
                       No plugin is loaded on this surface. The host and its isolation
                       rules live behind the plugin capability registry.
                     </p>
-                    <div className="ed-panel-head">
+                    <h2 className="ed-panel-head">
                       <span>REGISTRY</span>
                       <span className="hint">{view.plugins.registry.length}</span>
-                    </div>
+                    </h2>
                     <ul className="ed-registry">
                       {view.plugins.registry.map((row) => (
                         <li key={row.id}>
@@ -502,10 +508,10 @@ export function EditorShell({
                   </>
                 ) : (
                   <>
-                    <div className="ed-panel-head">
+                    <h2 className="ed-panel-head">
                       <span>{mode === "compose" ? "SCENE INSTANCES" : "SCENE"}</span>
                       <span className="hint">{view.tree.length}</span>
-                    </div>
+                    </h2>
                     <ul className="ed-tree" aria-label="Scene tree">
                       {view.tree.map((row) => (
                         <li
@@ -522,10 +528,10 @@ export function EditorShell({
                         </li>
                       ))}
                     </ul>
-                    <div className="ed-panel-head">
+                    <h2 className="ed-panel-head">
                       <span>LAYERS</span>
                       <span className="hint">{view.layers.length}</span>
-                    </div>
+                    </h2>
                     <ul className="ed-layers">
                       {view.layers.map((layer) => (
                         <li key={layer.id}>
@@ -800,10 +806,10 @@ export function EditorShell({
               <aside className="ed-inspector" aria-label="Inspector">
                 {mode === "sculpt" ? (
                   <>
-                    <div className="ed-panel-head">
+                    <h2 className="ed-panel-head">
                       <span>SCULPT OBJECT</span>
                       <span className="hint">deterministic</span>
-                    </div>
+                    </h2>
                     <div className="ed-insp-section">
                       <h3>BUILD PASSES</h3>
                       <ol className="ed-passes">
@@ -836,10 +842,10 @@ export function EditorShell({
                   </>
                 ) : mode === "ship" ? (
                   <>
-                    <div className="ed-panel-head">
+                    <h2 className="ed-panel-head">
                       <span>DELIVERY HANDOFF</span>
                       <span className="hint">contract</span>
-                    </div>
+                    </h2>
                     <ul className="ed-targets">
                       {view.ship.targets.map((target) => (
                         <li key={target.id}>
@@ -857,10 +863,10 @@ export function EditorShell({
                   </>
                 ) : mode === "plugins" ? (
                   <>
-                    <div className="ed-panel-head">
+                    <h2 className="ed-panel-head">
                       <span>PLUGIN HOST</span>
                       <span className="hint">isolation</span>
-                    </div>
+                    </h2>
                     <p className="ed-note-block">
                       The host exposes a capability table, not a hook bus. A plugin may
                       only claim IDs already in the registry — a new capability needs a
@@ -870,12 +876,12 @@ export function EditorShell({
                   </>
                 ) : (
                   <>
-                    <div className="ed-panel-head">
+                    <h2 className="ed-panel-head">
                       <span>{mode === "run" ? "LIVE VALUES" : "PROPERTIES"}</span>
                       <span className="hint">
                         {mode === "run" ? "read only" : "1 selected"}
                       </span>
-                    </div>
+                    </h2>
                     {view.inspector.map((section) => (
                       <div key={section.id} className="ed-insp-section">
                         <h3>

@@ -41,7 +41,7 @@ export default async function EditorPage({
 
   if (!resolved.decision.granted) {
     return (
-      <div className="page ed-refusal-page">
+      <div className="page">
         <div className="page-head">
           <p className="eyebrow">Engine Desktop editor</p>
           <h1>The editor is not open for this request</h1>
@@ -71,7 +71,7 @@ export default async function EditorPage({
   const state = readEditorState(params);
   if (!state.ok) {
     return (
-      <div className="page ed-refusal-page">
+      <div className="page">
         <div className="page-head">
           <p className="eyebrow">Engine Desktop editor</p>
           <h1>That editor link was refused</h1>
@@ -95,7 +95,7 @@ export default async function EditorPage({
   const render = renderEditorState(state.value);
   if (!render.ok) {
     return (
-      <div className="page ed-refusal-page">
+      <div className="page">
         <div className="page-head">
           <p className="eyebrow">Engine Desktop editor</p>
           <h1>The editor session could not start</h1>
@@ -113,7 +113,7 @@ export default async function EditorPage({
   const starter = webEditorStarterArtifact();
   if (!starter.ok) {
     return (
-      <div className="page ed-refusal-page">
+      <div className="page">
         <div className="page-head">
           <p className="eyebrow">Engine Desktop editor</p>
           <h1>The editor session could not start</h1>

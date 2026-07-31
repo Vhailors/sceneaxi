@@ -2610,6 +2610,22 @@ footer {
   overflow: hidden;
 }
 
+/* The document's name for the route. The chrome depicts an application and the
+   archive draws no page title, so it is carried for assistive technology only —
+   clipped rather than `display: none`, which would take it out of the
+   accessibility tree along with the pixels. */
+.ed-shell-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .edshell .mono {
   font-family: var(--mono);
 }
@@ -3005,6 +3021,8 @@ footer {
   border-top: 1px solid var(--line);
   font-family: var(--mono);
   font-size: 8.5px;
+  font-weight: 400;
+  line-height: 1;
   letter-spacing: 0.15em;
   color: var(--fg-2);
   position: sticky;
@@ -3989,12 +4007,6 @@ a.ed-tree-label:hover {
   color: var(--fg-2);
   font-size: 11px;
   padding: 7px 12px;
-}
-
-/* ------------------------------------------------- refusal pages -------- */
-
-.ed-refusal-page {
-  padding-top: 72px;
 }
 
 /* ------------------------------------------------- shared window tiers -- */

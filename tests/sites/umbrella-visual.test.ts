@@ -1000,6 +1000,25 @@ describe("the Engine Desktop editor shell stays honest (sceneaxi#184)", () => {
     expect(SHELL).toContain("view.profiles.map");
   });
 
+  it("keeps a document outline under the application chrome", () => {
+    // The archive draws a title bar rather than a page heading, but the route is
+    // still a document: without an `h1` its section titles are `h3`s under
+    // nothing, which is the heading-order jump this file already gates for the
+    // hero. The name is clipped rather than `display: none`, so it stays in the
+    // accessibility tree, and the panel heads carry level 2 exactly as the
+    // desktop chrome renders the same heads.
+    expect(SHELL).toContain('<h1 className="ed-shell-title">');
+    expect(SHELL).toContain('<h2 className="ed-panel-head">');
+    expect(SHELL).not.toContain('<div className="ed-panel-head">');
+    expect(CSS).toMatch(/\.ed-shell-title \{[^}]*clip-path: inset\(50%\)/);
+    expect(CSS).not.toMatch(/\.ed-shell-title \{[^}]*display: none/);
+    // Promoting a head to a heading must not repaint it: the `h2` element rule
+    // carries the sheet's display weight and line box, so the panel head pins
+    // its own rather than inheriting them.
+    expect(CSS).toMatch(/\.ed-panel-head \{[^}]*font-weight: 400;/);
+    expect(CSS).toMatch(/\.ed-panel-head \{[^}]*line-height: 1;/);
+  });
+
   it("keeps every editor metric owned by the stylesheet, in archive values", () => {
     // The structural metrics the shared model carries (EDITOR_SHELL_METRICS):
     // title bar 36, rail 56, left dock 274, inspector 326, assistant 344,

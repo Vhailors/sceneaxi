@@ -130,6 +130,16 @@ Control accounting has two halves, and both are load-bearing:
   application it depicts; the title-bar wordmark links home. The footer rule is
   scoped `body > footer` so it reaches the root layout's footer only — the
   shell's own status bar is a `<footer>` as well.
+- **The route keeps a document outline the archive has no picture of.** The
+  archive draws an application chrome, which has a title bar rather than a page
+  heading — but `/editor` is still a document, and the shell's `h3` section
+  titles would otherwise be its first headings, with no `h1` above them. The
+  shell therefore carries one clipped `h1` naming the editor (`.ed-shell-title`
+  — clipped, not `display: none`, so it stays in the accessibility tree), and
+  the panel heads are `h2` exactly as the desktop chrome already renders them
+  (`chrome.ts`, `<h2 class="panel-head">`). Nothing about the drawn surface
+  changes: `.ed-panel-head` pins its own weight and line box, so the promoted
+  heading paints the same pixels the archive's panel head does.
 - **Traffic lights and collaborator avatars are not drawn** — a web page has no
   window controls, and there are no collaborators to show.
 

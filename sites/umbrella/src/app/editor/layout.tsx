@@ -15,7 +15,7 @@ export default function EditorLayout({
 }) {
   return (
     <>
-      <style>{`.masthead, body > footer, .skip-link { display: none; } main#main { padding: 0; }`}</style>
+      <style>{`.masthead, body > footer, .skip-link { display: none; }`}</style>
       {children}
     </>
   );
