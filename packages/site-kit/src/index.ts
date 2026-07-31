@@ -340,6 +340,8 @@ export {
   clearSiteSessionCookie,
   resolveSiteSessionCookieSecurity,
   resolveSiteSessionToken,
+  verifySiteFormOrigin,
+  type SiteFormOriginSignals,
   type SiteSessionCookieInput,
   type SiteSessionCookieSecuritySignals,
   type SiteSessionTokenSources,

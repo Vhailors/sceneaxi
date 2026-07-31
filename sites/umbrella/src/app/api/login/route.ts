@@ -4,13 +4,15 @@ import {
   loginRefusalOutcome,
   performLogin,
   resolveSessionCookieSecurity,
+  verifyLoginRequestOrigin,
 } from "../../../lib/login-flow.js";
 
 /**
  * The hosted sign-in handler (sceneaxi#185).
  *
  * A thin translation over `performLogin`, which owns the whole decision: the
- * identity plane's login port authenticates through the deployment-supplied
+ * submission must prove it came from this deployment's own pages, the identity
+ * plane's login port then authenticates through the deployment-supplied
  * provider, every refusal redirects back to the form carrying the plane's own
  * named reason, and success sets the one HttpOnly session cookie. The redirect
  * `Location` is always a same-site relative path — `performLogin` confines the
@@ -22,6 +24,12 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
+  const requestOrigin = verifyLoginRequestOrigin(process.env, {
+    origin: request.headers.get("origin"),
+    fetchSite: request.headers.get("sec-fetch-site"),
+    requestUrl: request.url,
+  });
+
   let form: FormData;
   try {
     form = await request.formData();
@@ -37,6 +45,7 @@ export async function POST(request: NextRequest) {
   const plane = createUmbrellaIdentityPlane(process.env, {});
   const outcome = await performLogin({
     plane,
+    requestOrigin,
     fields: {
       email: form.get("email"),
       password: form.get("password"),

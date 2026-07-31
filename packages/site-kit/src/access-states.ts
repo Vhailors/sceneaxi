@@ -30,6 +30,7 @@ export type SiteAccessStateKey =
   | "credentials-required"
   | "credentials-rejected"
   | "sign-in-not-issued"
+  | "cross-origin"
   | "refused";
 
 export type SiteAccessAction = {
@@ -261,6 +262,15 @@ export function describeSiteAccessState(
       reason,
       "Sign-in could not be completed on this deployment",
       "Sign-in reached this deployment's identity provider, but what came back is not a session this site can hand a browser, so none was issued and nothing was signed in. This is a deployment fault, not an account problem, and trying again will end the same way until it is fixed.",
+      null,
+    );
+  }
+  if (reason === "SITE_REQUEST_CROSS_ORIGIN") {
+    return state(
+      "cross-origin",
+      reason,
+      "That submission did not come from SceneAxi",
+      "The sign-in or sign-out request arrived from another site, so nothing was signed in, out, or revoked. Use the form on this page; if you got here from a link somewhere else, that link was not one of ours.",
       null,
     );
   }

@@ -73,6 +73,7 @@ export {
   readLoginRefusalReason,
   resolveLoginDestination,
   resolveSessionCookieSecurity,
+  verifyLoginRequestOrigin,
   type LoginAttemptOutcome,
   type LoginFormFields,
   type LogoutOutcome,

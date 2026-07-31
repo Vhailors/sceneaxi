@@ -10,7 +10,9 @@
  * path, and nothing else is read from it. Roles, user identity, and session
  * claims never enter here — the principal comes back out of the identity plane,
  * and the destination is confined to a same-site relative path so the login
- * form can never be used as an open redirect.
+ * form can never be used as an open redirect. Before any of that, the
+ * submission must prove it came from this deployment's own pages: both entry
+ * points take that proof as a required argument, so a route cannot forget it.
  */
 import {
   SITE_LOGIN_PATH,
@@ -20,6 +22,8 @@ import {
   confineSiteRelativePath,
   resolveSiteSessionCookieSecurity,
   resolveUmbrellaEditorOrigin,
+  verifySiteFormOrigin,
+  type SiteFormOriginSignals,
   type SitePrincipal,
   type SiteRefusalReason,
   type SiteResult,
@@ -47,6 +51,29 @@ export function resolveSessionCookieSecurity(
   return resolveSiteSessionCookieSecurity({
     configuredOrigin: configured.ok ? configured.value : null,
     forwardedProto: signals.forwardedProto,
+    requestUrl: signals.requestUrl,
+  });
+}
+
+/**
+ * Whether this submission came from this deployment's own pages.
+ *
+ * The rule is site-kit's `verifySiteFormOrigin`; what this adds is the same
+ * configured-origin precedence the cookie's `Secure` flag already uses, so both
+ * answers are read off one deployment fact rather than off the request. The
+ * result is passed into `performLogin` / `performLogout` as a required argument
+ * rather than checked inside a route handler, because a check a route performs
+ * is a check the next route can forget.
+ */
+export function verifyLoginRequestOrigin(
+  env: Readonly<Record<string, string | undefined>>,
+  signals: Omit<SiteFormOriginSignals, "configuredOrigin"> = {},
+): SiteResult<string> {
+  const configured = resolveUmbrellaEditorOrigin(env);
+  return verifySiteFormOrigin({
+    configuredOrigin: configured.ok ? configured.value : null,
+    origin: signals.origin,
+    fetchSite: signals.fetchSite,
     requestUrl: signals.requestUrl,
   });
 }
@@ -132,17 +159,26 @@ export function loginRefusalOutcome(
 /**
  * Attempt a sign-in and decide the response.
  *
- * Every refusal — empty fields, rejected credentials, an unwired or failed
- * plane, a Kids surface — comes back as a redirect to the form carrying the
- * plane's own named reason. Success carries the one Set-Cookie header and the
- * confined destination; the cookie's lifetime is the session's own.
+ * Every refusal — a submission from another site, empty fields, rejected
+ * credentials, an unwired or failed plane, a Kids surface — comes back as a
+ * redirect to the form carrying the plane's own named reason. Success carries
+ * the one Set-Cookie header and the confined destination; the cookie's lifetime
+ * is the session's own.
+ *
+ * The origin proof is answered first, before a single submitted field is read,
+ * so a cross-site submission influences neither the credentials dispatched nor
+ * the destination the refusal carries back.
  */
 export async function performLogin(input: {
   readonly plane: UmbrellaIdentityPlane;
   readonly fields: LoginFormFields;
+  /** Proof the submission came from this deployment; see `verifyLoginRequestOrigin`. */
+  readonly requestOrigin: SiteResult<string>;
   /** Whether the deployment is reached over https; stamps `Secure` on the cookie. */
   readonly secure: boolean;
 }): Promise<LoginAttemptOutcome> {
+  if (!input.requestOrigin.ok) return loginRefusalOutcome(input.requestOrigin.reason);
+
   const next = resolveLoginDestination(input.fields.next);
   const email = typeof input.fields.email === "string" ? input.fields.email.trim() : "";
   const password = typeof input.fields.password === "string" ? input.fields.password : "";
@@ -167,17 +203,25 @@ export async function performLogin(input: {
   });
 }
 
-export type LogoutOutcome = {
-  /** Logout always lands on the home page. */
-  readonly location: string;
-  /** The Set-Cookie header value that clears the session cookie. */
-  readonly clearCookie: string;
-  /**
-   * The server-side revocation result. A refusal means the stored session may
-   * still be live; the browser is signed out either way.
-   */
-  readonly revocation: SiteResult<null>;
-};
+export type LogoutOutcome =
+  | {
+      readonly kind: "signed-out";
+      /** Logout always lands on the home page. */
+      readonly location: string;
+      /** The Set-Cookie header value that clears the session cookie. */
+      readonly clearCookie: string;
+      /**
+       * The server-side revocation result. A refusal means the stored session may
+       * still be live; the browser is signed out either way.
+       */
+      readonly revocation: SiteResult<null>;
+    }
+  | {
+      readonly kind: "refused";
+      /** Back to the form, with the named reason in the query. */
+      readonly location: string;
+      readonly reason: SiteRefusalReason;
+    };
 
 /**
  * Sign the request's session out.
@@ -185,13 +229,28 @@ export type LogoutOutcome = {
  * The cookie is cleared unconditionally — a browser must always be able to
  * discard its credential — while the stored session is deleted through the
  * identity port when the plane can reach it.
+ *
+ * "Unconditionally" is about *this* browser's own request, though: a submission
+ * from another site is refused before the port is reached, because a cross-site
+ * page forcing a visitor's session out is an attack on them, not a sign-out
+ * they asked for. Nothing is revoked and no clearing cookie is handed back.
  */
 export async function performLogout(input: {
   readonly plane: UmbrellaIdentityPlane;
+  /** Proof the submission came from this deployment; see `verifyLoginRequestOrigin`. */
+  readonly requestOrigin: SiteResult<string>;
   readonly secure: boolean;
 }): Promise<LogoutOutcome> {
+  if (!input.requestOrigin.ok) {
+    return Object.freeze({
+      kind: "refused" as const,
+      location: loginRefusalHref(input.requestOrigin.reason, LOGIN_DEFAULT_DESTINATION),
+      reason: input.requestOrigin.reason,
+    });
+  }
   const revocation = await input.plane.signOut();
   return Object.freeze({
+    kind: "signed-out" as const,
     location: "/",
     clearCookie: clearSiteSessionCookie({ secure: input.secure }),
     revocation,

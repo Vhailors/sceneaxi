@@ -79,6 +79,15 @@ describe("describeSiteAccessState", () => {
     expect(issuance.action).toBeNull();
   });
 
+  it("names a submission from another site as one, with nothing to retry", () => {
+    const state = describeSiteAccessState("SITE_REQUEST_CROSS_ORIGIN");
+    expect(state.key).toBe("cross-origin");
+    // The visitor did not do this, so the copy must not read as their mistake,
+    // and there is no action here that would repeat the attempt.
+    expect(state.key).not.toBe("credentials-rejected");
+    expect(state.action).toBeNull();
+  });
+
   it("offers sign-in exactly where signing in can change the outcome", () => {
     for (const reason of [
       "IDENTITY_SESSION_ABSENT",

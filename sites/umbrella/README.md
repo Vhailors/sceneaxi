@@ -161,6 +161,15 @@ Real Better Auth login into the entitled editor, over the existing identity plan
   with a 303 plus the one HttpOnly `sceneaxi.session` cookie, whose lifetime is the
   session's own. `POST /api/logout` deletes the stored session through the same port
   and clears the cookie unconditionally.
+- Both endpoints refuse a submission that cannot prove it came from these pages
+  (`SITE_REQUEST_CROSS_ORIGIN`, decided by site-kit's `verifySiteFormOrigin` through
+  `verifyLoginRequestOrigin`). `SameSite=Lax` does not cover this: a sign-in POST carries
+  no cookie yet, so nothing is withheld from it and the browser stores the `Set-Cookie`
+  it answers with — a cross-site page could otherwise sign a visitor into an account it
+  chose, or force theirs out. The proof is a **required argument** of `performLogin` /
+  `performLogout` rather than a check inside a route, so a new route cannot forget it;
+  the expected origin is the configured `NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN`, and only
+  an unconfigured deployment falls back to the request's own origin.
 - The cookie's `Secure` attribute is a deployment fact, not a request artifact:
   `resolveSessionCookieSecurity` reads `NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN` — the same
   configured origin checkout redirects come from — so a TLS-terminating proxy, behind

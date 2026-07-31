@@ -35,6 +35,7 @@ import {
   resolveSurfaceAccent,
   reviewProposal,
   showSiteListing,
+  verifySiteFormOrigin,
   webEditorStarterArtifact,
 } from "@sceneaxi/site-kit";
 import type {
@@ -156,6 +157,12 @@ const CASES: Readonly<Record<SiteRefusalReason, () => Promise<unknown> | unknown
     } as unknown as SiteIdentityRequest),
   SITE_REQUEST_MALFORMED: () =>
     createIdentityPlane({ now }).resolvePrincipal(null as unknown as SiteIdentityRequest),
+  SITE_REQUEST_CROSS_ORIGIN: () =>
+    verifySiteFormOrigin({
+      configuredOrigin: "https://umbrella.vercel.app",
+      origin: "https://attacker.example",
+      requestUrl: "https://umbrella.vercel.app/api/login",
+    }),
   IDENTITY_SESSION_ABSENT: () => identityWith(null).resolvePrincipal(umbrella),
   IDENTITY_PLANE_UNAVAILABLE: () =>
     createIdentityPlane({

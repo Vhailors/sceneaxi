@@ -153,7 +153,11 @@ by any migration or code in this repository — an absent account refuses, and i
 invented. Hosted login (sceneaxi#185) rides the same seam: `/login` plus
 `POST /api/login|logout` are thin over `performLogin`/`performLogout` in
 `sites/umbrella/src/lib/login-flow.ts`, which drive the plane's login port
-(`createAuthLoginAdapter` over the deployment's `IdentityPort`); the sign-in grant's raw
+(`createAuthLoginAdapter` over the deployment's `IdentityPort`); both entry points take a
+same-origin proof as a **required argument** (`verifyLoginRequestOrigin` over site-kit's
+`verifySiteFormOrigin`) and refuse `SITE_REQUEST_CROSS_ORIGIN` before a field is read or a
+port is reached, because `SameSite=Lax` withholds nothing from a POST that carries no
+cookie yet; the sign-in grant's raw
 session token exists only in the HttpOnly `sceneaxi.session` cookie, `next` redirects
 stay same-site relative, and guarded surfaces render refusals as named access states via
 site-kit's `describeSiteAccessState` — the account surface itself stays form-free

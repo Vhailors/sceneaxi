@@ -44,6 +44,7 @@ import {
   siteReasonForAuthReason,
   siteReasonForBillingReason,
   siteReasonForLoginAuthReason,
+  verifyLoginRequestOrigin,
 } from "../../sites/umbrella/src/index.ts";
 import {
   CATALOG_IDENTITY_SURFACE,
@@ -1659,6 +1660,29 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
   const LOGIN_SESSION = "sess-fresh";
 
   /**
+   * The origin proof a submission from this deployment's own form carries.
+   *
+   * Every `performLogin` / `performLogout` call takes one, because the argument
+   * is required: a route that never verified where a submission came from
+   * cannot call either entry point at all.
+   */
+  const originProof = (
+    env: Readonly<Record<string, string | undefined>>,
+    origin: string,
+  ) => verifyLoginRequestOrigin(env, { origin, requestUrl: `${origin}/api/login` });
+  const SAME_ORIGIN = originProof(ENV, "http://localhost:3000");
+  const httpsOrigin = originProof(
+    { ...ENV, NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN: "https://sceneaxi.example" },
+    "https://sceneaxi.example",
+  );
+  /** What a cross-site page's auto-submitted form actually arrives as. */
+  const CROSS_ORIGIN = verifyLoginRequestOrigin(ENV, {
+    origin: "https://attacker.example",
+    fetchSite: "cross-site",
+    requestUrl: "http://localhost:3000/api/login",
+  });
+
+  /**
    * A Better Auth-shaped provider over the same fixture users: the documented
    * `{ user, session }` envelope, a fresh session per successful authentication,
    * and `undefined` — not a throw — for a wrong password.
@@ -1711,6 +1735,7 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
 
     // 1. The form submission authenticates through the injected provider.
     const outcome = await performLogin({
+      requestOrigin: SAME_ORIGIN,
       plane,
       fields: { email: MEMBER_EMAIL, password: MEMBER_PASSWORD },
       secure: true,
@@ -1792,6 +1817,7 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
       token: `a1.${FRESH_TOKEN}`,
     });
     const outcome = await performLogin({
+      requestOrigin: SAME_ORIGIN,
       plane,
       fields: { email: MEMBER_EMAIL, password: MEMBER_PASSWORD },
       secure: true,
@@ -1846,6 +1872,7 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
     });
     expect(
       await performLogin({
+        requestOrigin: SAME_ORIGIN,
         plane: skewedPlane,
         fields: { email: MEMBER_EMAIL, password: MEMBER_PASSWORD },
         secure: true,
@@ -1866,6 +1893,7 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
       clock,
     });
     const outcome = await performLogin({
+      requestOrigin: SAME_ORIGIN,
       plane: unprovisioned,
       fields: { email: MEMBER_EMAIL, password: MEMBER_PASSWORD },
       secure: true,
@@ -1902,6 +1930,7 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
     const { port } = loginWorld();
     const plane = createUmbrellaIdentityPlane(ENV, { identityPort: port, clock });
     const outcome = await performLogin({
+      requestOrigin: SAME_ORIGIN,
       plane,
       fields: { email: MEMBER_EMAIL, password: "wrong" },
       secure: true,
@@ -1931,6 +1960,7 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
     });
     const plane = createUmbrellaIdentityPlane(ENV, { identityPort: port, clock });
     const outcome = await performLogin({
+      requestOrigin: SAME_ORIGIN,
       plane,
       fields: { email: "", password: "" },
       secure: true,
@@ -2017,6 +2047,7 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
       "  /spaced path",
     ]) {
       const outcome = await performLogin({
+        requestOrigin: SAME_ORIGIN,
         plane,
         fields: { email: MEMBER_EMAIL, password: MEMBER_PASSWORD, next: hostile },
         secure: true,
@@ -2025,6 +2056,7 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
       if (outcome.kind === "success") expect(outcome.location).toBe("/account");
     }
     const kept = await performLogin({
+      requestOrigin: SAME_ORIGIN,
       plane,
       fields: { email: MEMBER_EMAIL, password: MEMBER_PASSWORD, next: "/editor" },
       secure: true,
@@ -2049,7 +2081,13 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
       sessionToken: login.value.sessionCredential,
       clock,
     });
-    const outcome = await performLogout({ plane: boundPlane, secure: true });
+    const outcome = await performLogout({
+      plane: boundPlane,
+      requestOrigin: SAME_ORIGIN,
+      secure: true,
+    });
+    expect(outcome.kind).toBe("signed-out");
+    if (outcome.kind !== "signed-out") return;
     expect(outcome.revocation).toMatchObject({ ok: true, value: null });
     expect(outcome.clearCookie).toContain("sceneaxi.session=;");
     expect(outcome.clearCookie).toContain("Max-Age=0");
@@ -2071,7 +2109,13 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
       sessionToken: "sess-gone.some-token",
       clock,
     });
-    const outcome = await performLogout({ plane, secure: false });
+    const outcome = await performLogout({
+      plane,
+      requestOrigin: SAME_ORIGIN,
+      secure: false,
+    });
+    expect(outcome.kind).toBe("signed-out");
+    if (outcome.kind !== "signed-out") return;
     expect(outcome.revocation).toMatchObject({ ok: true, value: null });
     expect(outcome.clearCookie).not.toContain("Secure");
   });
@@ -2095,6 +2139,7 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
     const { port } = loginWorld();
     const plane = createUmbrellaIdentityPlane(httpsEnv, { identityPort: port, clock });
     const outcome = await performLogin({
+      requestOrigin: httpsOrigin,
       plane,
       fields: { email: MEMBER_EMAIL, password: MEMBER_PASSWORD },
       secure: resolveSessionCookieSecurity(httpsEnv, proxied),
@@ -2104,9 +2149,70 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
     expect(outcome.setCookie).toContain("Secure");
 
     const signedOut = await performLogout({
+      requestOrigin: httpsOrigin,
       plane,
       secure: resolveSessionCookieSecurity(httpsEnv, proxied),
     });
-    expect(signedOut.clearCookie).toContain("Secure");
+    expect(signedOut.kind === "signed-out" && signedOut.clearCookie).toContain("Secure");
+  });
+
+  it("refuses a submission from another site before either plane is reached", async () => {
+    const { store, port } = loginWorld();
+    const plane = createUmbrellaIdentityPlane(ENV, { identityPort: port, clock });
+
+    // 1. A cross-site page auto-submits its own credentials. Nothing is
+    //    authenticated, so no session exists and no `Set-Cookie` is handed back
+    //    for the browser to store — which is the whole attack: `SameSite=Lax`
+    //    withholds nothing from a POST that carries no cookie yet.
+    const forgedLogin = await performLogin({
+      plane,
+      requestOrigin: CROSS_ORIGIN,
+      fields: { email: MEMBER_EMAIL, password: MEMBER_PASSWORD, next: "/editor" },
+      secure: true,
+    });
+    expect(forgedLogin).toEqual({
+      kind: "refused",
+      reason: "SITE_REQUEST_CROSS_ORIGIN",
+      location: "/login?reason=SITE_REQUEST_CROSS_ORIGIN",
+    });
+    expect(store.sessionCount()).toBe(0);
+
+    // 2. The same refusal is decided before a single submitted field is read,
+    //    so the attacker's `next` cannot even choose where the redirect lands.
+    expect(forgedLogin.kind === "refused" && forgedLogin.location).not.toContain("editor");
+
+    // 3. The visitor's own sign-in still works, and the forced sign-out that
+    //    mirrors the attack revokes nothing and clears nothing.
+    const signedIn = await performLogin({
+      plane,
+      requestOrigin: SAME_ORIGIN,
+      fields: { email: MEMBER_EMAIL, password: MEMBER_PASSWORD },
+      secure: true,
+    });
+    expect(signedIn.kind).toBe("success");
+    expect(store.sessionCount()).toBe(1);
+
+    const boundPlane = createUmbrellaIdentityPlane(ENV, {
+      identityPort: port,
+      sessionToken: `${LOGIN_SESSION}.${FRESH_TOKEN}`,
+      clock,
+    });
+    const forcedLogout = await performLogout({
+      plane: boundPlane,
+      requestOrigin: CROSS_ORIGIN,
+      secure: true,
+    });
+    expect(forcedLogout).toEqual({
+      kind: "refused",
+      reason: "SITE_REQUEST_CROSS_ORIGIN",
+      location: "/login?reason=SITE_REQUEST_CROSS_ORIGIN",
+    });
+    expect(store.sessionCount()).toBe(1);
+
+    // 4. What the visitor is told names the attempt for what it was, and offers
+    //    nothing to retry.
+    const rendered = describeSiteAccessState("SITE_REQUEST_CROSS_ORIGIN");
+    expect(rendered.key).toBe("cross-origin");
+    expect(rendered.action).toBeNull();
   });
 });

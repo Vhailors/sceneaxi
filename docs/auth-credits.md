@@ -206,6 +206,18 @@ drives `signIn` and composes the cookie credential; a consumer that holds the is
 `Principal` object itself, like web-shell's account panel, drops the token on the floor
 deliberately.
 
+Issuance has one precondition ahead of everything above: the submission must prove it
+came from the deployment's own pages. `verifySiteFormOrigin` decides it from the
+browser-set `Origin` (or `Sec-Fetch-Site: same-origin` where a browser omits `Origin`)
+against the configured umbrella origin, and `performLogin` / `performLogout` take that
+proof as a **required argument**, refusing `SITE_REQUEST_CROSS_ORIGIN` before a field is
+read or a port is reached. The cookie's `SameSite=Lax` is not that check and cannot be:
+a sign-in POST carries no cookie yet, so nothing is withheld from it and the browser
+stores the `Set-Cookie` it answers with — a cross-site page would otherwise be able to
+sign a visitor into an account it chose, and the mirror submission to sign-out would
+force a visitor's session away. Sign-out is refused there too, which is the one bound on
+"the cookie is cleared unconditionally": that promise is to this browser's own request.
+
 That credential format carries one obligation back onto the provider's session id: it is
 read back by splitting on the **first** `.`, so a session id that itself contains a dot —
 which the adapter's identifier rules otherwise permit — cannot round-trip. The umbrella

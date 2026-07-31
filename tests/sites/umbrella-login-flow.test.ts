@@ -14,6 +14,7 @@ import {
   loginRefusalOutcome,
   readLoginRefusalReason,
   resolveLoginDestination,
+  verifyLoginRequestOrigin,
 } from "../../sites/umbrella/src/index.ts";
 
 describe("resolveLoginDestination", () => {
@@ -90,5 +91,60 @@ describe("loginRefusalOutcome", () => {
     expect(loginRefusalOutcome("SITE_REQUEST_MALFORMED", "/editor").location).toBe(
       `${LOGIN_PATH}?reason=SITE_REQUEST_MALFORMED&next=%2Feditor`,
     );
+  });
+});
+
+describe("verifyLoginRequestOrigin", () => {
+  const ENV = { NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN: "https://sceneaxi.example" };
+
+  it("accepts the deployment's own pages", () => {
+    expect(
+      verifyLoginRequestOrigin(ENV, {
+        origin: "https://sceneaxi.example",
+        fetchSite: "same-origin",
+        requestUrl: "https://sceneaxi.example/api/login",
+      }),
+    ).toEqual({ ok: true, value: "https://sceneaxi.example" });
+  });
+
+  it("refuses a cross-site submission, including one aimed at an alias host", () => {
+    expect(
+      verifyLoginRequestOrigin(ENV, {
+        origin: "https://attacker.example",
+        fetchSite: "cross-site",
+        requestUrl: "https://sceneaxi.example/api/login",
+      }),
+    ).toMatchObject({ ok: false, reason: "SITE_REQUEST_CROSS_ORIGIN" });
+    expect(
+      verifyLoginRequestOrigin(ENV, {
+        origin: "https://alias.vercel.app",
+        requestUrl: "https://alias.vercel.app/api/login",
+      }),
+    ).toMatchObject({ ok: false, reason: "SITE_REQUEST_CROSS_ORIGIN" });
+  });
+
+  it("refuses a submission that proves nothing about where it came from", () => {
+    expect(
+      verifyLoginRequestOrigin(ENV, { requestUrl: "https://sceneaxi.example/api/logout" }),
+    ).toMatchObject({ ok: false, reason: "SITE_REQUEST_CROSS_ORIGIN" });
+    expect(verifyLoginRequestOrigin(ENV)).toMatchObject({
+      ok: false,
+      reason: "SITE_REQUEST_CROSS_ORIGIN",
+    });
+  });
+
+  it("falls back to the request's own origin only on an unconfigured deployment", () => {
+    expect(
+      verifyLoginRequestOrigin(
+        {},
+        { origin: "http://localhost:3000", requestUrl: "http://localhost:3000/api/login" },
+      ),
+    ).toEqual({ ok: true, value: "http://localhost:3000" });
+    expect(
+      verifyLoginRequestOrigin(
+        {},
+        { origin: "https://attacker.example", requestUrl: "http://localhost:3000/api/login" },
+      ),
+    ).toMatchObject({ ok: false, reason: "SITE_REQUEST_CROSS_ORIGIN" });
   });
 });

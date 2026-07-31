@@ -6,6 +6,7 @@ import {
   clearSiteSessionCookie,
   resolveSiteSessionCookieSecurity,
   resolveSiteSessionToken,
+  verifySiteFormOrigin,
 } from "@sceneaxi/site-kit/site-session";
 
 describe("shared site session token", () => {
@@ -117,5 +118,100 @@ describe("session cookie construction", () => {
     expect(header).toContain("Expires=Thu, 01 Jan 1970 00:00:00 GMT");
     expect(header).toContain("Secure");
     expect(clearSiteSessionCookie({ secure: false })).not.toContain("Secure");
+  });
+});
+
+describe("same-origin proof for state-changing submissions", () => {
+  const CONFIGURED = "https://sceneaxi.example";
+  const REQUEST_URL = "https://sceneaxi.example/api/login";
+
+  it("accepts a submission whose Origin is the configured origin", () => {
+    expect(
+      verifySiteFormOrigin({
+        configuredOrigin: CONFIGURED,
+        origin: CONFIGURED,
+        fetchSite: "same-origin",
+        requestUrl: REQUEST_URL,
+      }),
+    ).toEqual({ ok: true, value: CONFIGURED });
+    // Port and default port are the same origin; a path on the header is not.
+    expect(
+      verifySiteFormOrigin({
+        configuredOrigin: "http://localhost:3000",
+        origin: "http://localhost:3000",
+        requestUrl: "http://localhost:3000/api/logout",
+      }).ok,
+    ).toBe(true);
+  });
+
+  it("refuses every submission a cross-site page could make", () => {
+    for (const origin of [
+      "https://attacker.example",
+      "http://sceneaxi.example",
+      "https://sceneaxi.example.attacker.test",
+      "https://sceneaxi.example:8443",
+      "null",
+      "not a url",
+    ]) {
+      expect(
+        verifySiteFormOrigin({
+          configuredOrigin: CONFIGURED,
+          origin,
+          requestUrl: REQUEST_URL,
+        }),
+      ).toMatchObject({ ok: false, reason: "SITE_REQUEST_CROSS_ORIGIN" });
+    }
+    // A cross-site fetch metadata label cannot stand in for a matching Origin.
+    for (const fetchSite of ["cross-site", "same-site", "none", "", undefined]) {
+      expect(
+        verifySiteFormOrigin({
+          configuredOrigin: CONFIGURED,
+          fetchSite,
+          requestUrl: REQUEST_URL,
+        }),
+      ).toMatchObject({ ok: false, reason: "SITE_REQUEST_CROSS_ORIGIN" });
+    }
+  });
+
+  it("accepts Sec-Fetch-Site: same-origin from a browser that sends no Origin", () => {
+    expect(
+      verifySiteFormOrigin({
+        configuredOrigin: CONFIGURED,
+        fetchSite: "  Same-Origin  ",
+        requestUrl: REQUEST_URL,
+      }),
+    ).toEqual({ ok: true, value: CONFIGURED });
+  });
+
+  it("prefers the configured origin, so an alias host is not an accepted origin", () => {
+    // The request arrived on an alias the deployment answers to; the submission
+    // declares that alias. The configured origin is still what must be proven.
+    expect(
+      verifySiteFormOrigin({
+        configuredOrigin: CONFIGURED,
+        origin: "https://alias.vercel.app",
+        fetchSite: "same-origin",
+        requestUrl: "https://alias.vercel.app/api/login",
+      }),
+    ).toMatchObject({ ok: false, reason: "SITE_REQUEST_CROSS_ORIGIN" });
+    // Only an unconfigured deployment falls back to the request's own origin,
+    // which is what keeps local development working.
+    expect(
+      verifySiteFormOrigin({
+        origin: "http://localhost:3000",
+        requestUrl: "http://localhost:3000/api/login",
+      }),
+    ).toEqual({ ok: true, value: "http://localhost:3000" });
+  });
+
+  it("refuses when no expected origin can be established at all", () => {
+    expect(verifySiteFormOrigin({ origin: "https://sceneaxi.example" })).toMatchObject({
+      ok: false,
+      reason: "SITE_REQUEST_CROSS_ORIGIN",
+    });
+    expect(verifySiteFormOrigin({})).toMatchObject({
+      ok: false,
+      reason: "SITE_REQUEST_CROSS_ORIGIN",
+    });
   });
 });

@@ -95,6 +95,14 @@ into "signed out", and a grant no cookie can faithfully carry refuses
 answer to is
 [`docs/auth-credits.md`](../../docs/auth-credits.md).
 
+`verifySiteFormOrigin` (in `site-session.ts`) is the precondition to all of that: a
+submission that cannot prove it came from the deployment's own pages refuses
+`SITE_REQUEST_CROSS_ORIGIN` before any port is reached. It lives beside the cookie
+because it answers the hazard the cookie's `SameSite=Lax` does **not** cover — a sign-in
+POST carries no cookie yet, so nothing is withheld from it and the browser stores the
+`Set-Cookie` that comes back — and it reads the deployment's configured origin first for
+the same reason `Secure` does.
+
 This package implements **no identity and no ledger**. It does not resolve an
 admin email, does not derive a balance from ledger entries, and does not verify a
 Stripe signature. What it owns is the fail-closed boundary:
