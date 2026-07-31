@@ -28,9 +28,14 @@ provider credentials and the database remain outside the repository.
 
 The TEST deployment path now has the provider-backed handles and idempotent account
 provisioning. Missing provider configuration remains a named refusal, and activation
-still requires the deployment procedure at `docs/websites-deploy.md`. **What v1 still does
-not deliver is a live signed-in browser session:** the sign-in HTTP entry point that would
-reach `identityPort.signIn` is sceneaxi#185. See *Deployment activation* at the end.
+still requires the deployment procedure at `docs/websites-deploy.md`. The sign-in HTTP
+entry point that reaches `identityPort.signIn` **ships** (sceneaxi#185): the umbrella's
+`/login` page and `POST /api/login|logout` routes drive the plane's login port and set the
+HttpOnly `sceneaxi.session` cookie — see *Better Auth* below. **What v1 still does
+not deliver is a running provider:** a live signed-in browser session additionally needs
+the deployment to serve Better Auth's own handler and return the handles from
+`umbrellaPlaneHandles()`, which is operational work outside this repository. See
+*Deployment activation* at the end.
 
 ## Environment
 
@@ -1205,17 +1210,20 @@ is `NOT NULL REFERENCES catalog_listings (listing_id)`, and this repository seed
 `catalog_listings` row — the shipped listing set is the bundled `catalog-listings.data.ts`
 module, not a table. So a Neon settlement additionally requires the deployment to seed that
 table from the committed listing set, or the transaction fails the foreign key. No umbrella
-route reaches that path today (its only routes are `/api/checkout` and
-`/api/stripe/webhook`), so the store method is wired ahead of the catalog-sale surface that
+route reaches that path today — none of `/login`, `/api/login`, `/api/logout`,
+`/api/checkout`, or `/api/stripe/webhook`
+does — so the store method is wired ahead of the catalog-sale surface that
 would call it, and its gate tests run against an in-memory fake that enforces no constraint.
 
-The second is still code, and it is not this vertical's: **no signed-in browser session
-can exist yet.** `putSession` is reached only from `identityPort.signIn`, and the umbrella
-exposes that over no route — `createAuthIdentityAdapter` deliberately offers only
-`verifySession`, and the site's only routes are `/api/checkout` and
-`/api/stripe/webhook`. So a fully configured deployment still provisions no user, runs no
-starter grant, and refuses `IDENTITY_SESSION_ABSENT` on every surface. Mounting Better
-Auth's own handler and a sign-in surface that calls `signIn` — and only then dropping the
-editor preview flag — is [sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185).
+The second is no longer code in this repository: the sign-in surface
+[sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185) called for has landed. The
+umbrella serves `/login` beside `POST /api/login`, `POST /api/logout`, `/api/checkout`, and
+`/api/stripe/webhook`, and `performLogin` reaches `identityPort.signIn` — and therefore
+`putSession` — through `createAuthLoginAdapter`, the login-port counterpart to the
+verify-only `createAuthIdentityAdapter`. What remains is the deployment's own: serve Better
+Auth's own handler and return the handles from `umbrellaPlaneHandles()`. Until it does,
+`signIn` has no adapter to reach, so no user is provisioned, no starter grant runs, and
+every surface refuses by name. Dropping the editor preview flag comes after that provider
+configuration, never before it.
 The deployable-site activation procedure and surface status are owned by
 [`websites-deploy.md`](websites-deploy.md#remaining-activation).

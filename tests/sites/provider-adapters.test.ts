@@ -970,7 +970,7 @@ describe("umbrella deployment provider adapters", () => {
       "utf8",
     );
 
-    expect(source).toContain('process\n  .getBuiltinModule("module")\n  .createRequire(');
+    expect(source).toMatch(/process\s*\.getBuiltinModule\("module"\)\s*\.createRequire\(/);
     expect(source).not.toMatch(/from "node:module"/);
     expect(source).toMatch(/typeof __filename === "string" \? __filename : import\.meta\.url/);
 

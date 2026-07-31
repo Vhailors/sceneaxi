@@ -138,8 +138,8 @@ Neon, Stripe API) stay outside the repo per ADR 0021 and arrive through the one
 by name and `IDENTITY_SESSION_ABSENT` means signed-out, not broken. Those adapters make the
 provider authoritative for a user's address and verification state on every
 authentication, and treat a repeated idempotency key as an intent replay rather than a
-conflict; the sign-in HTTP entry point that would let a browser reach any of it is
-sceneaxi#185, not this tier. Catalogs read identity
+conflict; the sign-in HTTP entry point that lets a browser reach any of it is the hosted
+login path described below, and it too goes through that one plug point. Catalogs read identity
 through the same site-kit port with no second auth stack — the storefront plane is
 `packages/site-kit/src/catalog-identity.ts`, one implementation both catalogs re-export —
 and the matrix denies them both identity packages. Two rules the sites tier cannot bend:
