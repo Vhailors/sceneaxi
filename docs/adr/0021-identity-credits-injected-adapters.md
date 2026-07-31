@@ -1,6 +1,10 @@
 # ADR 0021: The identity/credits plane ships as contracts and ports with injected Better Auth, Neon, and Stripe adapters
 
-- **Status:** Accepted for auth + credits billing v1.
+- **Status:** Accepted for auth + credits billing v1 — **Amended 2026-07-31** by
+  [sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185): the hosted
+  sign-in HTTP surface now ships in `sites/umbrella`, so what a live signed-in
+  browser session still waits on is the deployment's own provider handles, not
+  missing code. See *Amendment* below.
 - **Date recorded:** 2026-07-25
 - **Source:** [sceneaxi#90](https://github.com/Vhailors/sceneaxi/issues/90) (children #91–#101).
 - **Lineage:** Follows the Model Provider Port precedent
@@ -62,7 +66,8 @@ adapters**, in two packages under a new `identity` release group:
   is acceptance-tested in the hermetic gate, with no credentials and no network.
 - v1 does **not** deliver a live signed-in browser session. That needs a hosted
   HTTP surface this repo does not contain, and belongs to the runnable-surfaces /
-  websites lane. `docs/auth-credits.md` names the remaining wiring.
+  websites lane. `docs/auth-credits.md` names the remaining wiring. *(Amended
+  2026-07-31 — the surface has since landed in `sites/umbrella`; see below.)*
 - Swapping the identity provider or payment provider is an adapter change, not a
   core change.
 - Invariants are enforced twice — in the pure code and in the database DDL — so
@@ -112,3 +117,35 @@ bookkeeping.
   [`docs/held-key-enforcement.md`](../held-key-enforcement.md); this vertical adds
   no CLI verb.
 - **A hosted HTTP surface** — owned by the websites / runnable-surfaces lane.
+  *(Amended 2026-07-31 — that lane has since delivered the umbrella sign-in
+  surface; see below. The lane still owns it.)*
+
+## Amendment — the hosted sign-in surface landed (2026-07-31)
+
+[sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185) delivered, in the
+websites lane this ADR deferred to, the HTTP entry point that lets a browser
+reach the plane: `sites/umbrella` serves `/login` beside `POST /api/login` and
+`POST /api/logout`. Nothing in the decision above changes — no package gained a
+`better-auth`, driver, or Stripe dependency, and the routes are thin over
+`performLogin` / `performLogout`, which drive the same injected `IdentityPort`
+through the one `sites/umbrella/src/lib/identity-plane.ts` plug point. What the
+amendment corrects is one factual claim in *Consequences*: the repository does
+now contain that surface.
+
+What stays true:
+
+- **The provider is still injected and still absent.** A live signed-in session
+  additionally requires the deployment to serve Better Auth's own handler and
+  return the handles from `umbrellaPlaneHandles()` — operational work outside
+  this repository. Until it does, `signIn` has no adapter to reach and every
+  dependent surface refuses by name.
+- **The gate stays hermetic.** The whole flow is proven with mocked providers,
+  no network, and no credential; secrets remain env-only.
+- **`IDENTITY_SESSION_ABSENT` still means signed out, not broken**, and the
+  editor preview flag remains a labelled temporary fallback, never the product
+  path.
+
+Ownership is unchanged and this ADR copies none of it: the login contract,
+refusal ordering, and session-credential rules are owned by
+[`docs/auth-credits.md`](../auth-credits.md); the activation procedure and
+surface status by [`docs/websites-deploy.md`](../websites-deploy.md).
