@@ -20,6 +20,7 @@ This monorepo is the packaging home for:
 | Asset catalogs (may split later) | `apps/catalog-game`, `apps/catalog-web` |
 | Deployable web surfaces | `sites/umbrella`, `sites/catalog-game`, `sites/catalog-web` over `packages/site-kit` (ADR 0018; deploy details in [`docs/websites-deploy.md`](docs/websites-deploy.md)) |
 | Public live open path | `sites/umbrella/src/app/open/` — a committed Sculpt Artifact composed and drawn in a real WebGL canvas (ADR 0022) |
+| Packaged Linux desktop app | `desktop/linux` — Electron over the desktop-shell chrome and the real engine stack, AppImage + `.deb` with recorded checksums (ADR 0024; [`docs/desktop-linux.md`](docs/desktop-linux.md)) |
 
 **Not in this monorepo:** individual game products (separate repos).
 
@@ -104,7 +105,8 @@ and it adds no presentation adapter, checklist item, renderer decision, or spend
 
 Install the pinned workspace toolchain with `pnpm install`, then run `pnpm gate`
 for the repository's required syntax, boundary, contract, site-structure,
-publish-readiness, build, test, and lint checks. The root `package.json` owns the exact
+desktop-tier-structure, publish-readiness, build, test, and lint checks. The root
+`package.json` owns the exact
 command sequence; the referenced TypeScript, Vitest, ESLint, boundary, contract, and
 site-checker configuration files own their respective contracts, and
 [`docs/publish-readiness.md`](docs/publish-readiness.md) owns the publish-ready one.

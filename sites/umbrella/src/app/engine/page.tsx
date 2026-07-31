@@ -1,42 +1,32 @@
-import { formatByteSize, readEngineSdkOffer } from "@sceneaxi/site-kit";
+import { desktopLinuxAppOffer, formatByteSize, readEngineSdkOffer } from "@sceneaxi/site-kit";
 import { LIVE_OPEN_PRESENTATION } from "../../lib/live-open.js";
 import { ENGINE_NOTES, PIPELINE, RELEASE_MARKER } from "../../lib/site-content.js";
 import { StatePanel } from "../_components/state-panel.js";
 
 /**
- * The engine surface: what the engine is, and the one artifact this site hands out.
+ * The engine surface: what the engine is, and the artifacts this repository stands
+ * behind.
  *
- * The accepted screen has a separate download page offering platform installers with
- * sizes and digests. This repository builds exactly one downloadable artifact — the
- * deterministic engine SDK archive produced by `scripts/build-engine-sdk.mjs` — so
- * that layout is applied to the artifact that exists. Its size, entry count, and
- * SHA-256 are read off the served file; no installer, size, or digest is written into
- * this page. When the archive is absent the page renders the named reason rather than
- * a button that leads nowhere.
+ * Two of them, with different evidence models. The deterministic engine SDK archive
+ * is built by `scripts/build-engine-sdk.mjs` during the site build, so its size,
+ * entry count, and SHA-256 are read off the served file; when it is absent the page
+ * renders the named reason rather than a button that leads nowhere. The Linux
+ * desktop application (ADR 0024) is packaged by electron-builder, which is not
+ * bit-reproducible, so its facts come from the committed recorded-build offer in
+ * `@sceneaxi/site-kit` — held in lockstep with `docs/desktop-linux.md` by the gate —
+ * and the site serves no binary: readers build from source or fetch the CI artifact.
+ * No installer, size, or digest is typed into this page for either artifact, and
+ * Windows/macOS are stated as not packaged rather than implied.
+ *
+ * The two evidence models fail independently, so they render independently: an absent
+ * archive replaces the SDK cards with the named reason and takes nothing else with it,
+ * because the desktop record is committed data that does not depend on a served file.
  */
 export default function EnginePage() {
   const offer = readEngineSdkOffer(process.cwd());
-
-  if (!offer.ok) {
-    return (
-      <div className="page">
-        <div className="page-head">
-          <p className="eyebrow">Engine SDK</p>
-          <h1>The SDK archive is not in this build</h1>
-        </div>
-        <StatePanel tone="deny" level={2} title="No download to offer" reason={offer.reason}>
-          <p>{offer.message}</p>
-          <p>
-            The archive is produced by <code>node scripts/build-engine-sdk.mjs</code>{" "}
-            during the site build. A deployment without it serves no download rather
-            than an empty file.
-          </p>
-        </StatePanel>
-      </div>
-    );
-  }
-
-  const sdk = offer.value;
+  const desktopApp = desktopLinuxAppOffer();
+  const sdk = offer.ok ? offer.value : null;
+  const sdkRefusal = offer.ok ? null : { reason: offer.reason, message: offer.message };
 
   return (
     <div className="page">
@@ -44,59 +34,128 @@ export default function EnginePage() {
         <p className="eyebrow">Download · {RELEASE_MARKER}</p>
         <h1>Get the engine.</h1>
         <p className="lede">
-          The public package surface as source, with the consumption contract. Everything
-          in the archive runs locally. This is not an npm publish and not a dump of the
-          monorepo.
+          {sdk === null
+            ? "The SDK archive is not in this build, so there is nothing to download here. The packaged Linux desktop application below is a separate artifact and is unaffected."
+            : "The public package surface as source, with the consumption contract. Everything in the archive runs locally. This is not an npm publish and not a dump of the monorepo."}
         </p>
       </div>
 
-      <div className="grid grid-2">
-        <article className="panel panel-roomy tone-accent">
-          <div className="panel-head">
-            <span className="family-mark" aria-hidden="true" />
-            <span className="tag tag-accent">This build</span>
-          </div>
-          <h2 className="card-title">{sdk.fileName}</h2>
-          <p className="meta">
-            {formatByteSize(sdk.byteSize)} · {sdk.entryCount} entries · {sdk.version}
+      {sdkRefusal !== null ? (
+        <StatePanel tone="deny" level={2} title="No download to offer" reason={sdkRefusal.reason}>
+          <p>{sdkRefusal.message}</p>
+          <p>
+            The archive is produced by <code>node scripts/build-engine-sdk.mjs</code>{" "}
+            during the site build. A deployment without it serves no download rather
+            than an empty file.
           </p>
-          <a className="button button-block" href={sdk.href} download>
-            Download the archive
-          </a>
-          <a className="button button-quiet button-block" href={sdk.checksumHref}>
-            Checksum file
-          </a>
-          <p className="sha">sha256 {sdk.sha256}</p>
-        </article>
+        </StatePanel>
+      ) : (
+        <div className="grid grid-2">
+          <article className="panel panel-roomy tone-accent">
+            <div className="panel-head">
+              <span className="family-mark" aria-hidden="true" />
+              <span className="tag tag-accent">This build</span>
+            </div>
+            <h2 className="card-title">{sdk.fileName}</h2>
+            <p className="meta">
+              {formatByteSize(sdk.byteSize)} · {sdk.entryCount} entries · {sdk.version}
+            </p>
+            <a className="button button-block" href={sdk.href} download>
+              Download the archive
+            </a>
+            <a className="button button-quiet button-block" href={sdk.checksumHref}>
+              Checksum file
+            </a>
+            <p className="sha">sha256 {sdk.sha256}</p>
+          </article>
+
+          <article className="panel panel-roomy">
+            <h2 className="card-title">Verify what you downloaded</h2>
+            <p className="body-copy">
+              The build is deterministic, so an independent rebuild from the same sources
+              produces this same digest. Run this next to the archive and the checksum
+              file.
+            </p>
+            <p className="command">
+              <code>{sdk.verifyCommand}</code>
+            </p>
+            <dl className="dl">
+              <dt>Version</dt>
+              <dd>
+                <code>{sdk.version}</code>
+              </dd>
+              <dt>Size</dt>
+              <dd>
+                {formatByteSize(sdk.byteSize)}{" "}
+                <span className="note">({sdk.byteSize} bytes)</span>
+              </dd>
+              <dt>Entries</dt>
+              <dd>{sdk.entryCount}</dd>
+              <dt>SHA-256</dt>
+              <dd>
+                <code>{sdk.sha256}</code>
+              </dd>
+            </dl>
+          </article>
+        </div>
+      )}
+
+      <div className="stack">
+        <div className="section-title">
+          <p className="eyebrow">Desktop application · {desktopApp.platform}</p>
+          <h2>{desktopApp.productName} for Linux.</h2>
+          <p className="prose prose-wide">
+            The Engine Desktop editor as a packaged Linux application: the accepted
+            editor chrome in an Electron window over the real engine stack — kernel
+            open path, the {LIVE_OPEN_PRESENTATION.coreLabel} drawing in the window,
+            and the shared authoring propose/accept session. Built from{" "}
+            <code>{desktopApp.sourceDir}</code> in the repository; the{" "}
+            <code>{desktopApp.ciWorkflow}</code> CI workflow builds, smoke-tests, and
+            uploads the same artifacts as <code>{desktopApp.ciArtifactName}</code>.
+          </p>
+        </div>
+
+        <div className="grid grid-2">
+          {desktopApp.artifacts.map((artifact) => (
+            <article className="panel panel-roomy" key={artifact.kind}>
+              <div className="panel-head">
+                <span className="family-mark" aria-hidden="true" />
+                <span className="tag">{artifact.kind}</span>
+              </div>
+              <h3 className="card-title">{artifact.fileName}</h3>
+              <p className="meta">
+                {formatByteSize(artifact.byteSize)} · {desktopApp.version} · recorded{" "}
+                {desktopApp.recordedOn}
+              </p>
+              <p className="sha">sha256 {artifact.sha256}</p>
+            </article>
+          ))}
+        </div>
 
         <article className="panel panel-roomy">
-          <h2 className="card-title">Verify what you downloaded</h2>
-          <p className="body-copy">
-            The build is deterministic, so an independent rebuild from the same sources
-            produces this same digest. Run this next to the archive and the checksum
-            file.
+          <h3 className="card-title">Build it, verify it, prove it runs</h3>
+          <p className="command">
+            <code>{desktopApp.buildCommand}</code>
           </p>
           <p className="command">
-            <code>{sdk.verifyCommand}</code>
+            <code>{desktopApp.verifyCommand}</code>
           </p>
-          <dl className="dl">
-            <dt>Version</dt>
-            <dd>
-              <code>{sdk.version}</code>
-            </dd>
-            <dt>Size</dt>
-            <dd>
-              {formatByteSize(sdk.byteSize)}{" "}
-              <span className="note">({sdk.byteSize} bytes)</span>
-            </dd>
-            <dt>Entries</dt>
-            <dd>{sdk.entryCount}</dd>
-            <dt>SHA-256</dt>
-            <dd>
-              <code>{sdk.sha256}</code>
-            </dd>
-          </dl>
+          <p className="command">
+            <code>{desktopApp.smokeCommand}</code>
+          </p>
+          <p className="note">{desktopApp.reproducibilityNote}</p>
         </article>
+
+        <StatePanel tone="warn" title="Platform status">
+          <p>
+            Linux is the only packaged platform. {desktopApp.notPackaged.join(" and ")}{" "}
+            are not packaged yet — no installer for them exists, and this page will not
+            pretend otherwise.{" "}
+            {sdk === null
+              ? "The SDK archive is not in this build either, so there is no cross-platform download to fall back on here — build from source."
+              : "The free SDK archive above remains the supported download for every platform."}
+          </p>
+        </StatePanel>
       </div>
 
       <StatePanel tone="warn" title="Support status">
@@ -120,14 +179,18 @@ export default function EnginePage() {
           </p>
         </div>
 
-        <p className="eyebrow eyebrow-quiet">Packages in this archive</p>
-        <div className="grid grid-3">
-          {sdk.packages.map((name) => (
-            <article className="panel panel-line" key={name}>
-              <p className="pkg">{name}</p>
-            </article>
-          ))}
-        </div>
+        {sdk !== null && (
+          <>
+            <p className="eyebrow eyebrow-quiet">Packages in this archive</p>
+            <div className="grid grid-3">
+              {sdk.packages.map((name) => (
+                <article className="panel panel-line" key={name}>
+                  <p className="pkg">{name}</p>
+                </article>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       <div className="stack">
@@ -173,7 +236,7 @@ export default function EnginePage() {
       <div className="stack">
         <h2>Licence</h2>
         <p className="prose prose-wide">
-          This archive is <strong>source-available for evaluation, not open-source</strong>.
+          This source is <strong>source-available for evaluation, not open-source</strong>.
           The packages are <code>UNLICENSED</code>, no licence file ships with the
           download, and <strong>no licence is granted</strong> to use, modify, copy, or
           redistribute the source beyond evaluating it here. It is not redistributable

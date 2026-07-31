@@ -1,0 +1,28 @@
+# Packaging for the Linux desktop application (ADR 0024).
+# Everything the app runs is bundled into dist/ by scripts/build.mjs, so no
+# node_modules ship in the artifact; `electron` itself is the only runtime.
+appId: com.sceneaxi.engine-desktop
+productName: SceneAxi Engine Desktop
+executableName: sceneaxi-engine-desktop
+directories:
+  output: release
+files:
+  - dist/**
+  - package.json
+  - "!node_modules/**"
+npmRebuild: false
+electronLanguages:
+  - en-US
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Development
+  maintainer: SceneAxi <builds@sceneaxi.example>
+  synopsis: SceneAxi Engine Desktop
+  description: >-
+    The SceneAxi Engine Desktop editor packaged for Linux: the Engine Desktop
+    chrome over the real engine stack (kernel open path, Three presentation
+    core, authoring propose/accept). Built from the sceneaxi repository;
+    Windows and macOS are not packaged yet.
+  artifactName: SceneAxi-Engine-Desktop-${version}-linux-${arch}.${ext}

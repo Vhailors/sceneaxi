@@ -1,0 +1,10 @@
+packages:
+  - "."
+# Postinstall approvals, so install stays non-interactive locally and in CI:
+# electron downloads its runtime binary, esbuild links its native binary.
+# electron-winstaller is Windows-only packaging support and stays off — Linux
+# is the only packaged target (ADR 0024).
+allowBuilds:
+  electron: true
+  esbuild: true
+  electron-winstaller: false

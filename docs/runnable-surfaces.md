@@ -19,6 +19,7 @@ a marketing word.
 | `@sceneaxi/cli` | **R2** | `pnpm build && node packages/cli/bin/sceneaxi.mjs --help` | `packages/cli/test/bin-smoke.test.ts` + the rest of `packages/cli/test/` |
 | `@sceneaxi/desktop-shell` | **R2** | `pnpm build && node apps/desktop-shell/bin/sceneaxi-desktop.mjs --help`; for the editor chrome, `… chrome > shell.html` and open that file | `apps/desktop-shell/test/bin-smoke.test.ts` (including a spawned `chrome` render), `tests/parity/shell-cli-parity.test.ts`, `apps/desktop-shell/test/{visual-model,visual-tokens,chrome}.test.ts` + the browser record in [`engine-desktop-surface.md`](engine-desktop-surface.md) |
 | `@sceneaxi/web-shell` (local authoring inspector + assistant transport) | **R2** | `pnpm build && node apps/web-shell/bin/sceneaxi-web-shell.mjs --cwd <project>`, then open the printed loopback URL or `POST /api/assistant` | `apps/web-shell/test/bin-smoke.test.ts` (spawns the binary and drives propose → accept plus a fixture assistant turn over a socket), `apps/web-shell/test/refuse-matrix.test.ts`, `tests/parity/shell-cli-parity.test.ts` |
+| `@sceneaxi/desktop-linux` (packaged Linux desktop app, ADR 0024) | **R2** | `cd desktop/linux && pnpm install && pnpm build && pnpm start`; distributable via `pnpm dist` (AppImage + `.deb` + `SHA256SUMS`), proven by `pnpm smoke --packaged` | `tests/e2e/desktop-linux-bridge-golden.test.ts` (headless surface, no pixel claim), `tests/desktop/desktop-linux-seams.test.ts`, the spawned `--smoke` proof in CI (`.github/workflows/desktop-linux.yml`), and the recorded build/pixel observations in [`desktop-linux.md`](desktop-linux.md) |
 | Game profile (single object) | **R1** | `pnpm test:golden` | `tests/e2e/cli-golden-path.test.ts` |
 | Game profile (multi-object scene) | **R1** | `pnpm test:golden` | `tests/e2e/profile-game-scene-golden.test.ts` |
 | Web Experience profile | **R1** | `pnpm test:golden` | `tests/e2e/profile-web-golden-path.test.ts` |
@@ -112,7 +113,9 @@ still-unimplemented target:
   presentation runtime and opens **no** kernel session, so its viewport draws no
   pixels, its `run` mode reports no tick, and every control that would author
   something is inert with a named refusal. It is a view model with a renderer for
-  it, not a packaged desktop application: there is no installer here.
+  it, not a packaged desktop application: this app ships no installer. The packaged
+  application that wraps this same chrome is the `@sceneaxi/desktop-linux` row above
+  ([`desktop-linux.md`](desktop-linux.md)).
 
 ## Commercial model
 

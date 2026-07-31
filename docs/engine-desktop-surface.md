@@ -708,7 +708,10 @@ sentence can return by review slip.
 
 - **Not claimed, and not claimable here**: an installer, a packaged desktop
   application, real renderer finality, live commerce, any file size or hash, and
-  any pixel drawn by an engine. None of those exist on this surface.
+  any pixel drawn by an engine. None of those exist on this surface. The packaged
+  Linux application consumes this chrome unforked from its own tier, where those
+  claims are made against real artifacts and a real frame report
+  ([`desktop-linux.md`](desktop-linux.md), ADR 0024) — it changes nothing here.
 
 ## Extending it
 

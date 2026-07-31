@@ -25,6 +25,18 @@
       ],
       "@sceneaxi/site-kit/state-panel": [
         "./packages/site-kit/src/state-panel.ts"
+      ],
+      "@sceneaxi/desktop-shell": [
+        "./apps/desktop-shell/src/index.ts"
+      ],
+      "@sceneaxi/engine-orchestrator": [
+        "./packages/engine-orchestrator/src/index.ts"
+      ],
+      "@sceneaxi/engine-presentation": [
+        "./packages/engine-presentation/src/index.ts"
+      ],
+      "@sceneaxi/engine-kernel": [
+        "./packages/engine-kernel/src/index.ts"
       ]
     },
     "baseUrl": "."
@@ -34,6 +46,8 @@
     "packages/*/src/**/*.ts",
     "apps/*/src/**/*.ts",
     "sites/*/src/index.ts",
-    "sites/*/src/lib/**/*.ts"
+    "sites/*/src/lib/**/*.ts",
+    "desktop/*/src/index.ts",
+    "desktop/*/src/lib/**/*.ts"
   ]
 }

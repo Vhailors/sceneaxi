@@ -141,6 +141,20 @@
       "dir": "sites/catalog-web",
       "releaseGroup": "sites",
       "allow": ["@sceneaxi/site-kit"]
+    },
+    "@sceneaxi/desktop-linux": {
+      "dir": "desktop/linux",
+      "releaseGroup": "desktop",
+      "allow": [
+        "@sceneaxi/schemas",
+        "@sceneaxi/desktop-shell",
+        "@sceneaxi/site-kit",
+        "@sceneaxi/authoring-core",
+        "@sceneaxi/engine-kernel",
+        "@sceneaxi/engine-presentation",
+        "@sceneaxi/engine-orchestrator"
+      ],
+      "note": "ADR 0024: the packaged Linux desktop application. It reuses the desktop-shell Engine Desktop visual model and session (never a second editor state machine), draws through the one ADR 0002 presentation seam in its renderer process, opens kernel sessions only through the orchestrator, and consumes the shared MountableScene payload from site-kit so what may be drawn stays decided in the hermetic gate. No profile package, no Kids, no auth/billing — the desktop app has no identity plane."
     }
   },
   "kidsBoundary": {
@@ -185,6 +199,9 @@
     "apps": { "policy": "private, unpublished, unversioned beyond workspace bookkeeping" },
     "sites": {
       "policy": "first-party deployable web surfaces and their shared deployment-neutral logic; consume only public contracts and public authoring-core APIs; never profiles, a service locator, or Kids; the single charted engine edge is ADR 0022 — the umbrella site may consume @sceneaxi/engine-presentation to draw every viewport it owns, both the public /open surface and the entitled /editor surface, and no other engine package is reachable from any site; framework and provider SDKs stay in the sites/ tier and out of the hermetic package tier"
+    },
+    "desktop": {
+      "policy": "packaged desktop applications (ADR 0024); each is its own single-package install root outside the repository-root workspace so Electron never moves the hermetic root lockfile; consumes the desktop-shell visual model and public engine seams, never profiles, Kids, auth/billing, or a service locator; Electron and packaging toolchains stay in desktop/ and out of the hermetic package tier"
     }
   }
 }

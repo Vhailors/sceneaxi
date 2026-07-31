@@ -20,8 +20,10 @@ const walk = (dir) => {
   }
 };
 // `sites` is included with no extra tooling: this program runs with noResolve and
-// noLib, so a site's .tsx parses without React ever being installed.
-for (const parent of ["packages", "apps", "sites"]) {
+// noLib, so a site's .tsx parses without React ever being installed. `desktop` is
+// the packaged desktop-application tier (ADR 0024) — a separate install root like
+// each site, and gated the same way.
+for (const parent of ["packages", "apps", "sites", "desktop"]) {
   const parentDir = join(root, parent);
   if (!existsSync(parentDir)) continue;
   for (const entry of readdirSync(parentDir)) {

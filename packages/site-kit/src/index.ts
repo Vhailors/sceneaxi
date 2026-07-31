@@ -142,6 +142,13 @@ export {
 } from "./mountable-scene.js";
 
 export {
+  DESKTOP_LINUX_APP_OFFER,
+  desktopLinuxAppOffer,
+  type DesktopAppArtifact,
+  type DesktopAppOffer,
+} from "./desktop-app-offer.js";
+
+export {
   LIVE_OPEN_INSTANCE_COUNT,
   LIVE_OPEN_PATH,
   LIVE_OPEN_PRESENTATION,

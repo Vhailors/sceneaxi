@@ -27,6 +27,21 @@ export default defineConfig({
       "@sceneaxi/site-kit": fileURLToPath(
         new URL("./packages/site-kit/src/index.ts", import.meta.url),
       ),
+      // `desktop/*` are separate install roots like the sites (ADR 0024): their
+      // `link:` dependencies are not resolvable from the hermetic root, so the
+      // packages their pure `src/lib/` names are aliased here for the gate.
+      "@sceneaxi/desktop-shell": fileURLToPath(
+        new URL("./apps/desktop-shell/src/index.ts", import.meta.url),
+      ),
+      "@sceneaxi/engine-orchestrator": fileURLToPath(
+        new URL("./packages/engine-orchestrator/src/index.ts", import.meta.url),
+      ),
+      "@sceneaxi/engine-presentation": fileURLToPath(
+        new URL("./packages/engine-presentation/src/index.ts", import.meta.url),
+      ),
+      "@sceneaxi/engine-kernel": fileURLToPath(
+        new URL("./packages/engine-kernel/src/index.ts", import.meta.url),
+      ),
     },
   },
   test: {

@@ -160,7 +160,9 @@ curl -s "$UMB/open" | grep -c 'Experimental Three preview'       # 0
 curl -s "$UMB/editor" | grep -c 'Not entitled'                   # >= 1
 curl -s "$UMB/editor" | grep -c 'viewport-canvas'                # 0
 
-# The served archive must hash to the published checksum
+# The served archive must hash to the published checksum. `/engine` publishes three
+# digests: the SDK archive's first, then the two recorded desktop-build artifacts
+# (docs/desktop-linux.md), which describe binaries this site never serves.
 curl -s "$UMB/engine" | grep -oE '[0-9a-f]{64}' | head -1
 curl -sL -o sdk.zip "$UMB/engine-sdk/sceneaxi-engine-sdk-<version>.zip"
 sha256sum sdk.zip
@@ -181,7 +183,9 @@ webgl-canvas`, `pixelsDrawn true`), and the standing record is in
 [`three-presentation-core.md`](three-presentation-core.md). `/editor` without the
 preview flag serves no canvas at all, which is what the refusal check below asserts.
 
-Expected: pages 200; the served zip's SHA-256 equal to the digest `/engine` publishes;
+Expected: pages 200; the served zip's SHA-256 equal to the first digest `/engine`
+publishes (the desktop-build digests below it are a recorded build, verified by
+rebuilding it, not by a fetch from this site);
 an unknown item id 404; neither storefront resolving the other's ids; `/pricing` listing
 the three credit packs, its Buy control live only once the TEST Stripe handle is
 configured and disabled otherwise; `/account` rendering an honest refusal, since no
