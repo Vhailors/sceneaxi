@@ -19,6 +19,7 @@ import {
   createBillingPlane,
   createCreditsPlane,
   createIdentityPlane,
+  createLoginPlane,
   createPublishIntent,
   createWebEditorSession,
   decideCapability,
@@ -28,6 +29,7 @@ import {
   parseEditorDeepLinkParams,
   readEngineSdkOffer,
   reconstructStarter,
+  refuse,
   resolveChangeReview,
   resolveCheckoutRedirectOrigin,
   resolveSurfaceAccent,
@@ -215,6 +217,19 @@ const CASES: Readonly<Record<SiteRefusalReason, () => Promise<unknown> | unknown
         },
       },
     }).readBalance({ userId: "user-1" }),
+  LOGIN_CREDENTIALS_REQUIRED: () =>
+    createLoginPlane({ now }).signIn({ surface: "site", email: "", password: "" }),
+  // The plane itself never judges a password; the rejection is the wired
+  // adapter's answer, passed through under its canonical registry reason.
+  LOGIN_CREDENTIALS_REJECTED: () =>
+    createLoginPlane({
+      now,
+      adapter: {
+        async signIn() {
+          return refuse("LOGIN_CREDENTIALS_REJECTED");
+        },
+      },
+    }).signIn({ surface: "site", email: "crew@example.com", password: "wrong" }),
   EDITOR_ENTITLEMENT_ANONYMOUS: () => decideEditorEntitlement({ principal: null, credits: null }),
   EDITOR_ENTITLEMENT_NO_CREDITS: () =>
     decideEditorEntitlement({

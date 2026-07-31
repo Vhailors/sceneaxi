@@ -44,6 +44,7 @@ const NAV: readonly NavItem[] = [
   { href: "/engine", label: "Engine SDK" },
   { href: "/docs", label: "Docs" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/account", label: "Account" },
 ];
 
 export default function RootLayout({ children }: { readonly children: React.ReactNode }) {

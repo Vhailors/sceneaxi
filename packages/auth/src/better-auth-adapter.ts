@@ -111,6 +111,12 @@ export type MappedAuthentication = Readonly<{
   email: string;
   emailVerified: boolean;
   session: Session;
+  /**
+   * The provider's raw session token. The `Session` above carries only its
+   * digest; this is the one value a login surface may hand the browser, and it
+   * exists nowhere else — not in the store, not on the principal.
+   */
+  sessionToken: string;
 }>;
 
 /**
@@ -172,6 +178,7 @@ export function mapBetterAuthAuthentication(input: {
     providerUserId,
     email: email.trim().toLowerCase(),
     emailVerified,
+    sessionToken: token,
     session: Object.freeze({
       schemaVersion: 1 as const,
       kind: "sceneaxi.session" as const,

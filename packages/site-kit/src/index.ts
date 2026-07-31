@@ -77,10 +77,16 @@ export {
   createBillingPlane,
   createCreditsPlane,
   createIdentityPlane,
+  createLoginPlane,
   hasClientRoleClaim,
   type BillingPlaneOptions,
   type CreditsPlaneOptions,
   type IdentityPlaneOptions,
+  type LoginPlaneOptions,
+  type SiteLoginAdapter,
+  type SiteLoginGrant,
+  type SiteLoginPort,
+  type SiteLoginRequest,
   type SiteBillingAdapter,
   type SiteBillingMode,
   type SiteBillingPort,
@@ -329,9 +335,20 @@ export {
 export {
   SITE_SESSION_COOKIE,
   SITE_SESSION_HEADER,
+  buildSiteSessionCookie,
+  clearSiteSessionCookie,
   resolveSiteSessionToken,
+  type SiteSessionCookieInput,
   type SiteSessionTokenSources,
 } from "./site-session.js";
+
+export {
+  SITE_LOGIN_PATH,
+  describeSiteAccessState,
+  type SiteAccessAction,
+  type SiteAccessState,
+  type SiteAccessStateKey,
+} from "./access-states.js";
 
 export {
   CHANGE_REVIEW_BADGE_GLYPHS,

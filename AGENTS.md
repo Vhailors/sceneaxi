@@ -150,8 +150,16 @@ trace — or a bundler cannot even resolve; and checkout redirect URLs come only
 `NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN` via `resolveCheckoutRedirectOrigin`, never from a
 request `Host`. Credit accounts are provisioned by the deployment's own `CreditStore`, not
 by any migration or code in this repository — an absent account refuses, and is never
-invented. The wiring invariants and the six acceptance properties are proven in
-`tests/sites/identity-plane-wiring.test.ts` — extend it, and the matrix cases in
+invented. Hosted login (sceneaxi#185) rides the same seam: `/login` plus
+`POST /api/login|logout` are thin over `performLogin`/`performLogout` in
+`sites/umbrella/src/lib/login-flow.ts`, which drive the plane's login port
+(`createAuthLoginAdapter` over the deployment's `IdentityPort`); the sign-in grant's raw
+session token exists only in the HttpOnly `sceneaxi.session` cookie, `next` redirects
+stay same-site relative, and guarded surfaces render refusals as named access states via
+site-kit's `describeSiteAccessState` — the account surface itself stays form-free
+(sign-out lives on `/login`). The wiring invariants and the six acceptance properties
+are proven in `tests/sites/identity-plane-wiring.test.ts` (hosted-login block included)
+— extend it, and the matrix cases in
 `tests/boundary/injected-site-violations.test.ts`, when touching any of this.
 
 The shared visual layer is `packages/site-kit` (`design-tokens.ts`, `site-element.ts`,

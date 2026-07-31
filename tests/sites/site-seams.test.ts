@@ -157,7 +157,12 @@ describe("umbrella family links never reach Kids", () => {
 describe("umbrella identity plane refuses honestly without provider handles", () => {
   it("reports every plane as unwired with no adapters", () => {
     const plane = createUmbrellaIdentityPlane({});
-    expect(plane.wired).toEqual({ identity: false, credits: false, billing: false });
+    expect(plane.wired).toEqual({
+      identity: false,
+      credits: false,
+      billing: false,
+      login: false,
+    });
     expect(plane.billingMode).toBe("test");
     expect(Object.isFrozen(plane)).toBe(true);
   });

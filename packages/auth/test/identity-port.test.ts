@@ -178,12 +178,17 @@ describe("identity port — sign-in", () => {
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.role.role).toBe("admin");
-    expect(result.value.role.source).toBe("admin-env");
-    expect(result.value.session.surface).toBe("web-shell");
-    expect(result.value.session.tokenDigest).toBe(digestSessionToken("tok-captain"));
-    expect(hasPrincipalProvenance(result.value)).toBe(true);
-    expect(requireAuthenticated(result.value, { now: NOW, admin }).ok).toBe(true);
+    expect(result.value.principal.role.role).toBe("admin");
+    expect(result.value.principal.role.source).toBe("admin-env");
+    expect(result.value.principal.session.surface).toBe("web-shell");
+    expect(result.value.principal.session.tokenDigest).toBe(
+      digestSessionToken("tok-captain"),
+    );
+    // The grant hands back the raw token exactly once; the principal's session
+    // carries only the digest, so this is the sole redeemable copy.
+    expect(result.value.sessionToken).toBe("tok-captain");
+    expect(hasPrincipalProvenance(result.value.principal)).toBe(true);
+    expect(requireAuthenticated(result.value.principal, { now: NOW, admin }).ok).toBe(true);
   });
 
   it("signs an ordinary user in as user", async () => {
@@ -194,7 +199,7 @@ describe("identity port — sign-in", () => {
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.role.role).toBe("user");
+    expect(result.value.principal.role.role).toBe("user");
   });
 
   it("requires provider and stored verification only for admin elevation", async () => {
@@ -271,7 +276,7 @@ describe("identity port — sign-in", () => {
     });
     expect(ordinaryResult.ok).toBe(true);
     if (ordinaryResult.ok) {
-      expect(ordinaryResult.value.role.role).toBe("user");
+      expect(ordinaryResult.value.principal.role.role).toBe("user");
     }
   });
 
@@ -621,7 +626,7 @@ describe("identity port — sign-in", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.role.role).toBe("user");
+    expect(result.value.principal.role.role).toBe("user");
     expect(adminReads).toBe(1);
   });
 
@@ -683,14 +688,14 @@ describe("identity port — sign-in", () => {
     expect(signIn.ok).toBe(true);
     if (!signIn.ok) return;
 
-    const malformed = await port.signOut({ principal: signIn.value });
+    const malformed = await port.signOut({ principal: signIn.value.principal });
     expect(malformed.ok).toBe(false);
     if (!malformed.ok) {
       expect(malformed.reason).toBe(AUTH_REFUSE_REASONS.principalInvalid);
     }
 
     deletionResult = true;
-    expect(await port.signOut({ principal: signIn.value })).toEqual({
+    expect(await port.signOut({ principal: signIn.value.principal })).toEqual({
       ok: true,
       value: null,
     });
@@ -742,7 +747,7 @@ describe("identity port — session verification", () => {
       password: "pw",
     });
     if (!result.ok) throw new Error("fixture sign-in failed");
-    return { store, port, principal: result.value };
+    return { store, port, principal: result.value.principal };
   };
 
   it("verifies a live session and re-derives the role", async () => {
@@ -920,7 +925,7 @@ describe("identity port — sign-out", () => {
     expect(store.sessionCount()).toBe(1);
 
     if (!signIn.ok) return;
-    const result = await port.signOut({ principal: signIn.value });
+    const result = await port.signOut({ principal: signIn.value.principal });
     expect(result.ok).toBe(true);
     expect(store.sessionCount()).toBe(0);
   });
@@ -937,12 +942,12 @@ describe("identity port — sign-out", () => {
     if (!signIn.ok) return;
     const verified = await port.verifySession({
       surface: "web-shell",
-      sessionId: signIn.value.session.sessionId,
+      sessionId: signIn.value.principal.session.sessionId,
       token: "tok-crew",
     });
     expect(verified.ok).toBe(true);
 
-    expect(await port.signOut({ principal: signIn.value })).toEqual({
+    expect(await port.signOut({ principal: signIn.value.principal })).toEqual({
       ok: true,
       value: null,
     });
@@ -982,13 +987,13 @@ describe("identity port — sign-out", () => {
     expect(second.ok).toBe(true);
     if (!second.ok) return;
 
-    const stale = await port.signOut({ principal: first.value });
+    const stale = await port.signOut({ principal: first.value.principal });
     expect(stale.ok).toBe(false);
     if (!stale.ok) {
       expect(stale.reason).toBe(AUTH_REFUSE_REASONS.principalInvalid);
     }
     expect(store.sessionCount()).toBe(1);
-    expect((await port.signOut({ principal: second.value })).ok).toBe(true);
+    expect((await port.signOut({ principal: second.value.principal })).ok).toBe(true);
     expect(store.sessionCount()).toBe(0);
   });
 
@@ -1022,7 +1027,7 @@ describe("identity port — sign-out", () => {
     });
     expect(signIn.ok).toBe(true);
     if (!signIn.ok) return;
-    const result = await port.signOut({ principal: signIn.value });
+    const result = await port.signOut({ principal: signIn.value.principal });
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.reason).toBe(AUTH_REFUSE_REASONS.storeFailed);
@@ -1038,7 +1043,7 @@ describe("identity port — sign-out", () => {
     });
     expect(signIn.ok).toBe(true);
     if (!signIn.ok) return;
-    const result = await second.signOut({ principal: signIn.value });
+    const result = await second.signOut({ principal: signIn.value.principal });
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.reason).toBe(AUTH_REFUSE_REASONS.principalInvalid);
@@ -1078,6 +1083,6 @@ describe("createBetterAuthIdentityAdapter", () => {
     ).signIn({ surface: "web-shell", email: "crew@example.com", password: "pw" });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.session.expiresAt).toBe("2026-07-26T10:00:00.000Z");
+    expect(result.value.principal.session.expiresAt).toBe("2026-07-26T10:00:00.000Z");
   });
 });

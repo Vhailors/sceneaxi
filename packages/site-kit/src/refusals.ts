@@ -48,6 +48,12 @@ export const SITE_REFUSALS = Object.freeze({
   CREDIT_ADAPTER_OUTPUT_INVALID:
     "The credits adapter returned a value that is not a valid balance record.",
 
+  // --- hosted login (see the login plane in ports.ts) ---
+  LOGIN_CREDENTIALS_REQUIRED:
+    "Sign-in requires a non-empty email and password. Nothing was dispatched to the identity plane.",
+  LOGIN_CREDENTIALS_REJECTED:
+    "That email and password did not authenticate. No session was created.",
+
   // --- editor entitlement ---
   EDITOR_ENTITLEMENT_ANONYMOUS: "The web editor requires a signed-in principal.",
   EDITOR_ENTITLEMENT_NO_CREDITS:

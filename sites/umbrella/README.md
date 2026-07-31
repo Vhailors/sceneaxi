@@ -129,7 +129,9 @@ designed around that rather than around widening the contract.
 - `/open` is **public**: no sign-in, no credits, no editing operation.
 - `/editor` is **entitled**, and access is decided before a session is constructed —
   a signed-out, unavailable, or unentitled request reaches no session, no composition,
-  and no canvas, only the plane's own named refusal. Its viewport *draws* the composed
+  and no canvas, only the plane's own named refusal, rendered as its named access
+  state (`describeSiteAccessState` in `@sceneaxi/site-kit`) with the one action that
+  can change it. Its viewport *draws* the composed
   scene: selection, transform edits, and play/pause/step stay server-side Minimum E2
   operations, so nothing here widens ADR 0020 entitlement or ADR 0003's general-E2
   bound. The viewport is one region of the **Engine Desktop shell** the whole route
@@ -148,6 +150,26 @@ designed around that rather than around widening the contract.
   (`tests/e2e/umbrella-live-open-golden.test.ts`,
   `tests/e2e/umbrella-editor-viewport-golden.test.ts`); the pixel claims are recorded
   browser observations in `docs/three-presentation-core.md`.
+
+## Hosted sign-in (`/login`, sceneaxi#185)
+
+Real Better Auth login into the entitled editor, over the existing identity plane:
+
+- `/login` renders the form; `POST /api/login` drives `performLogin`
+  (`src/lib/login-flow.ts`), which signs in through the plane's login port —
+  `createAuthLoginAdapter` over the deployment's `IdentityPort` handle — and answers
+  with a 303 plus the one HttpOnly `sceneaxi.session` cookie, whose lifetime is the
+  session's own. `POST /api/logout` deletes the stored session through the same port
+  and clears the cookie unconditionally.
+- Nothing identity-shaped is trusted from the browser: email and password go to the
+  injected provider, the destination `next` is confined to a same-site relative path,
+  a client role claim refuses before dispatch, and every refusal — wrong password,
+  expired or foreign session, disabled user, Kids, unwired or failed provider — comes
+  back as its own named access state rather than one undifferentiated wall.
+- The temporary `SCENEAXI_SITE_EDITOR_PREVIEW` flag remains a labeled stopgap, not the
+  product path; the flow is proven end-to-end against the real identity port in
+  `tests/sites/identity-plane-wiring.test.ts` ("hosted login") and
+  `tests/sites/umbrella-login-flow.test.ts`, with the provider injected and no network.
 
 ## Separate install root
 

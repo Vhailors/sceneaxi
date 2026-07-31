@@ -449,7 +449,7 @@ describe("auth refuse matrix", () => {
     const signedIn = await live.signIn(CREDENTIALS);
     expect(signedIn.ok).toBe(true);
     if (!signedIn.ok) return;
-    const sessionId = signedIn.value.session.sessionId;
+    const sessionId = signedIn.value.principal.session.sessionId;
 
     record(
       await live.verifySession({

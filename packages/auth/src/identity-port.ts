@@ -58,8 +58,25 @@ export type VerifySessionRequest = Readonly<{
 
 export type SignOutRequest = Readonly<{ principal: Principal }>;
 
+/**
+ * What a successful sign-in hands back: the issued principal, plus the one copy
+ * of the raw session token that exists.
+ *
+ * The principal's `Session` carries only the token's digest, so without this
+ * value no browser credential can ever be constructed and the sign-in would be
+ * unredeemable. The caller's obligation is symmetric to the store's: hand the
+ * token to the authenticated client (an HttpOnly cookie, a shell keychain) and
+ * hold it nowhere else — it is never logged, never persisted, and never
+ * re-derivable, because the store keeps only the digest.
+ */
+export type SignInGrant = Readonly<{
+  principal: Principal;
+  /** Raw provider session token; `verifySession` matches it against the stored digest. */
+  sessionToken: string;
+}>;
+
 export type IdentityPort = Readonly<{
-  signIn(request: unknown): Promise<AuthResult<Principal>>;
+  signIn(request: unknown): Promise<AuthResult<SignInGrant>>;
   verifySession(request: unknown): Promise<AuthResult<Principal>>;
   signOut(request: unknown): Promise<AuthResult<null>>;
 }>;
@@ -406,7 +423,12 @@ export function createIdentityPort(
       );
       if (!stored.ok) return stored;
 
-      return authOk(issuePrincipal(principal.value));
+      return authOk(
+        Object.freeze({
+          principal: issuePrincipal(principal.value),
+          sessionToken: mapped.sessionToken,
+        }),
+      );
     },
 
     async verifySession(request) {

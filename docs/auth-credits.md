@@ -192,6 +192,20 @@ throwing mean different things — the port reports `AUTH_CREDENTIALS_REJECTED` 
 and `AUTH_ADAPTER_FAILED` for the second, so a wrong password is never confused with a
 broken provider.
 
+A successful `signIn` returns a `SignInGrant`, not a bare principal:
+`{ principal, sessionToken }`. The store keeps only the token's digest, so the grant's
+raw `sessionToken` is the **one redeemable copy in existence** — without it no browser
+credential could ever be constructed and a sign-in would be unredeemable. The caller's
+obligation is symmetric to the store's: hand the token to the authenticated client (the
+umbrella writes it into the HttpOnly `sceneaxi.session` cookie as
+`<sessionId>.<token>`, the same credential `verifySession` later checks against the
+stored digest) and hold it nowhere else — never logged, never persisted, never
+re-derivable. The first consumer is the umbrella's hosted login route
+(sceneaxi#185): `createAuthLoginAdapter` in `sites/umbrella/src/lib/identity-plane.ts`
+drives `signIn` and composes the cookie credential; a consumer that holds the issued
+`Principal` object itself, like web-shell's account panel, drops the token on the floor
+deliberately.
+
 Admin elevation requires both the provider authentication and the stored SceneAxi user
 record to mark `emailVerified: true`. An unverified address matching
 `SCENEAXI_ADMIN_EMAIL` refuses with `AUTH_ADMIN_EMAIL_UNVERIFIED` before any session is

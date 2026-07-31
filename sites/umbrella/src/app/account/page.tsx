@@ -91,6 +91,10 @@ export default async function AccountPage() {
               The role comes from the server&rsquo;s own configuration. There is no role
               field on a user record, so <code>admin</code> is unclaimable from a client.
             </p>
+            <p>
+              {/* This surface stays read-only; signing out lives on the sign-in surface. */}
+              <a href="/login">Manage this session</a>
+            </p>
           </StatePanel>
 
           <h2>Credits</h2>
@@ -174,6 +178,13 @@ export default async function AccountPage() {
               ? "No session is present."
               : resolved.identity.message}
           </p>
+          {signedOut && (
+            <p>
+              <a className="button" href="/login">
+                Sign in
+              </a>
+            </p>
+          )}
           {!signedOut && (
             <>
               <p>{IDENTITY_PLANE_PENDING_NOTE}</p>

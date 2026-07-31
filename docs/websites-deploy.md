@@ -80,7 +80,7 @@ set them *before* deploying and redeploy after changing one.
 | `NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN` | all three | this ship | editor deep links, checkout redirects | https `*.vercel.app` umbrella origin; a missing or non-https value makes the catalog refuse to render the link. On the umbrella it is also the **only** source of the checkout success/cancel URLs — they are never derived from the request's `Host`, and a checkout POST arriving on any other origin refuses `BILLING_CHECKOUT_ORIGIN_UNTRUSTED`. A missing or non-https value refuses `BILLING_CHECKOUT_ORIGIN_UNCONFIGURED` on that path — the umbrella must name one origin, so an alias domain or a per-build preview URL is not a checkout origin |
 | `NEXT_PUBLIC_SCENEAXI_GAME_CATALOG_ORIGIN` | all three | this ship | optional | family cross-link. On the catalogs it also drives the family bar: whichever origin is set becomes a link, the store's own entry is marked current instead of linked, and an unset sibling renders as plain text. The entry matching a storefront's own surface is the only source of the domain line it prints, so an unset value prints no domain rather than a guessed one |
 | `NEXT_PUBLIC_SCENEAXI_WEB_CATALOG_ORIGIN` | all three | this ship | optional | family cross-link, same rules as the game-catalog origin above |
-| `SCENEAXI_SITE_EDITOR_PREVIEW` | umbrella | captain | optional | `1` grants a banner-marked editor preview while no member can hold a session — the sign-in entry point is [#185](https://github.com/Vhailors/sceneaxi/issues/185) — so no real entitlement can be resolved; absent means the editor refuses. Server-side only; a client value is ignored |
+| `SCENEAXI_SITE_EDITOR_PREVIEW` | umbrella | captain | optional | `1` grants a banner-marked editor preview for a deployment whose identity providers are not configured yet, so no real entitlement can be resolved; absent means the editor refuses. A clearly labeled temporary fallback, never the product path — hosted sign-in at `/login` ([#185](https://github.com/Vhailors/sceneaxi/issues/185)) is. Server-side only; a client value is ignored |
 
 Each site's `.env.example` lists only names assigned to that Vercel project, including
 the identity-plane names consumed by the deployment adapters, and commits no values.
@@ -229,13 +229,14 @@ ADR 0021 keeps the provider clients — Better Auth, the Neon client, the Stripe
 | Capability | State | Why |
 |---|---|---|
 | Credit-pack list on `/pricing` | **live** | read from the committed contract fixture's bundled module (`packages/schemas/src/credit-packs.data.ts`, held in lockstep by `pnpm check:contracts`); needs no provider and no traced file |
-| The **Buy** control on `/pricing` | posts to a real checkout once the TEST Stripe handle is configured, but only for a signed-in buyer | the adapter persists the intent before creating a card-only hosted checkout; with no session the POST refuses `IDENTITY_SESSION_ABSENT`, so until [#185](https://github.com/Vhailors/sceneaxi/issues/185) lands the control is reachable and every click refuses |
+| The **Buy** control on `/pricing` | posts to a real checkout once the TEST Stripe handle is configured, but only for a signed-in buyer | the adapter persists the intent before creating a card-only hosted checkout; with no session the POST refuses `IDENTITY_SESSION_ABSENT`, so a visitor signs in at `/login` first and the control refuses by name until then |
 | Admin identity (`SCENEAXI_ADMIN_EMAIL`) | **live** | resolved by `@sceneaxi/auth` from the environment |
 | Checkout intent, starter grant, webhook verification | **live as behaviour** | implemented in-repo and gate-tested |
-| Session verification on `/account`, `/editor` | adapter live when Better Auth + Neon are configured; **no session can exist yet** | `verifySession` is wired, and authentication provisions the SceneAxi user and credit account idempotently — but nothing calls `identityPort.signIn`, so no `sessions` row is ever written and both surfaces refuse `IDENTITY_SESSION_ABSENT`. The sign-in entry point is [#185](https://github.com/Vhailors/sceneaxi/issues/185) |
-| Credit balance | adapter live; unreachable until a session exists | the balance is derived from the append-only ledger through `createCreditStore`, and the once-per-user 100-credit starter grant runs on the first authenticated read |
+| Hosted sign-in on `/login` (`POST /api/login`, `POST /api/logout`) | **live as behaviour**; signs a member in once Better Auth + Neon are configured, and refuses `IDENTITY_PLANE_NOT_WIRED` until they are | the whole flow — form, named refusal states, HttpOnly `sceneaxi.session` cookie, sign-out — is in-repo and gate-tested ([#185](https://github.com/Vhailors/sceneaxi/issues/185)); it drives the same `IdentityPort` handle, so wiring step 4 activates it with no other change |
+| Session verification on `/account`, `/editor` | adapter live when Better Auth + Neon are configured | `verifySession` is wired, and authentication provisions the SceneAxi user and credit account idempotently; the `sessions` row is written by the sign-in above, and that same `IdentityPort` verifies the credential both surfaces read. Unwired they refuse `IDENTITY_PLANE_NOT_WIRED`, and a visitor with no cookie refuses `IDENTITY_SESSION_ABSENT` |
+| Credit balance | adapter live; reachable for a signed-in member | the balance is derived from the append-only ledger through `createCreditStore`, and the once-per-user 100-credit starter grant runs on the first authenticated read |
 | Hosted checkout redirect | live when the TEST Stripe handle is configured | the adapter uses the committed intent and TEST-only Stripe API call |
-| A signed-out visitor | refuses `IDENTITY_SESSION_ABSENT` | not a failure, and shown as "you are not signed in" — today this is *every* visitor |
+| A signed-out visitor | refuses `IDENTITY_SESSION_ABSENT` | not a failure, and shown as "you are not signed in", with `/login` as the action that changes it |
 
 `umbrellaPlaneHandles()` in `identity-plane.ts` is the **single** place those handles
 arrive. It constructs the site-tier adapters when their provider names and clients are
@@ -243,13 +244,15 @@ available; an absent or malformed provider remains absent, so each plane refuses
 rather than inventing a session, account, balance, or checkout.
 
 Read the table as two separate facts. The provider adapters are wired and gate-tested, so
-configuring Better Auth, Neon, and the Stripe TEST key genuinely activates them. It does
-**not** produce a signed-in browser: the umbrella session credential is
-`<sessionId>.<token>` matched against a `sessions` row that only `putSession` writes, and
-`putSession` is reached only from `identityPort.signIn`, which this site exposes over no
-route. That HTTP/UI layer is [#185](https://github.com/Vhailors/sceneaxi/issues/185), not
-this tier — so an operator who completes every step below has a correctly configured
-deployment with zero provisioned users.
+configuring Better Auth, Neon, and the Stripe TEST key genuinely activates them; the
+HTTP/UI layer that turns that into a signed-in browser is now in-repo too
+([#185](https://github.com/Vhailors/sceneaxi/issues/185)). The umbrella session credential
+is `<sessionId>.<token>` matched against a `sessions` row that only `putSession` writes,
+and `putSession` is reached only from `identityPort.signIn` — which `POST /api/login`
+drives through the plane's login port, over the deployment's own handle. So an operator
+who completes the steps below has a deployment where a member can sign in at `/login` and
+reach the entitled `/editor`; with no handle configured, every one of those surfaces
+refuses by name instead of inventing a session.
 
 ### Remaining activation
 
@@ -347,18 +350,22 @@ deployment with zero provisioned users.
    idempotency semantics this step deliberately does not add, so the boundary is a scope
    decision rather than an omission — enabling such a method in the Stripe dashboard would
    take payments this endpoint cannot settle.
-7. **Not this tier, and the step that actually opens the deployment to a member:** mount
-   Better Auth's own handler and a sign-in surface that calls `identityPort.signIn` and
-   sets the umbrella session cookie. Nothing in this repository does either — the site
-   exposes `/api/checkout` and `/api/stripe/webhook` and no more, and
-   `createAuthIdentityAdapter` deliberately exposes only `verifySession` — so until it
-   lands there is no path that writes a `sessions` row, no provisioned user, no starter
-   grant, and no signed-in `/account` or `/editor`. That HTTP/UI layer is
-   [sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185); the provider wiring it
-   builds on is the work above.
-8. Remove `SCENEAXI_SITE_EDITOR_PREVIEW` from the umbrella project **only after step 7**.
-   Entitlement can be resolved for real once a member can hold a session; dropping the
-   preview flag before that turns `/editor` into a refusal wall for every visitor.
+7. **The step that opens the deployment to a member** is done in-repo
+   ([sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185)): the umbrella exposes
+   `/login`, `POST /api/login`, and `POST /api/logout` beside `/api/checkout` and
+   `/api/stripe/webhook`, and `performLogin` calls `identityPort.signIn` through the
+   plane's login port and sets the HttpOnly `sceneaxi.session` cookie. What remains
+   operational is provider-side: serve Better Auth's own handler at `BETTER_AUTH_ORIGIN`
+   (the `sign-in/email` and `get-session` endpoints named above) and hand the handles back
+   from `umbrellaPlaneHandles()` per step 4. With those configured, sign-in writes a
+   `sessions` row, provisions the user and the starter grant, and `/account` and `/editor`
+   verify that credential through the same `IdentityPort`; without them every one of those
+   surfaces refuses by name.
+8. Remove `SCENEAXI_SITE_EDITOR_PREVIEW` from the umbrella project once step 7's provider
+   configuration is in place. Entitlement is resolved for real as soon as a member can
+   hold a session; the preview flag is a labeled temporary fallback, not the product path,
+   and dropping it before sign-in works turns `/editor` into a refusal wall for every
+   visitor.
 
 ### How the seam holds
 

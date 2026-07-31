@@ -1,5 +1,6 @@
 import {
   buildEditorShellView,
+  describeSiteAccessState,
   readEditorState,
   renderEditorState,
   webEditorStarterArtifact,
@@ -40,6 +41,10 @@ export default async function EditorPage({
   const resolved = await resolveUmbrellaEditorAccess({ plane, env: process.env, sessionToken });
 
   if (!resolved.decision.granted) {
+    // The refusal renders as its own named access state — signed out, expired,
+    // disabled, Kids, provider unavailable, not wired, out of credits — with the
+    // one action that can change it, instead of a single undifferentiated wall.
+    const outcome = describeSiteAccessState(resolved.decision.reason);
     return (
       <div className="page">
         <div className="page-head">
@@ -49,15 +54,23 @@ export default async function EditorPage({
         <StatePanel
           tone="deny"
           level={2}
-          title="Not entitled"
+          title={outcome.title}
           reason={resolved.decision.reason}
         >
+          <p>{outcome.body}</p>
           <p>{resolved.decision.message}</p>
           <p>
-            The editor needs credits above zero or an unused starter allotment;
-            administrators are unrestricted. No editor session was created for this
-            request.
+            The editor needs a signed-in account with credits above zero or an unused
+            starter allotment; administrators are unrestricted. No editor session was
+            created for this request.
           </p>
+          {outcome.action !== null && (
+            <p>
+              <a className="button" href={outcome.action.href}>
+                {outcome.action.label}
+              </a>
+            </p>
+          )}
           <p>
             <a href="/account">Account</a> · <a href="/pricing">Pricing</a> ·{" "}
             <a href="/engine">The engine SDK is free and needs no account</a> ·{" "}

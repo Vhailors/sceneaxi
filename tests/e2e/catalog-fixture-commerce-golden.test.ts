@@ -149,7 +149,7 @@ const signIn = async (email: string) => {
     password: "pw",
   });
   if (!result.ok) throw new Error(`fixture sign-in failed: ${result.reason}`);
-  return result.value;
+  return result.value.principal;
 };
 
 const adminIdentity = () => {

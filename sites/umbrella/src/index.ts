@@ -42,6 +42,7 @@ export {
   IDENTITY_PLANE_DOC,
   IDENTITY_PLANE_PENDING_NOTE,
   createAuthIdentityAdapter,
+  createAuthLoginAdapter,
   createBillingCheckoutAdapter,
   createBillingCreditsAdapter,
   createDeploymentPlaneHandles,
@@ -59,6 +60,19 @@ export {
   type UmbrellaIdentityPlane,
   type UmbrellaPlaneHandles,
 } from "./lib/identity-plane.js";
+
+export {
+  LOGIN_DEFAULT_DESTINATION,
+  LOGIN_PATH,
+  loginRefusalHref,
+  performLogin,
+  performLogout,
+  readLoginRefusalReason,
+  resolveLoginDestination,
+  type LoginAttemptOutcome,
+  type LoginFormFields,
+  type LogoutOutcome,
+} from "./lib/login-flow.js";
 
 export {
   createBetterAuthHttpClient,

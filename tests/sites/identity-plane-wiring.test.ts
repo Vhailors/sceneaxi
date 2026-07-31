@@ -34,6 +34,9 @@ import {
   createUmbrellaIdentityPlane,
   creditWebhookHttpStatus,
   parseSessionToken,
+  performLogin,
+  performLogout,
+  resolveUmbrellaEditorAccess,
   siteReasonForAuthReason,
   siteReasonForBillingReason,
 } from "../../sites/umbrella/src/index.ts";
@@ -90,7 +93,7 @@ const account = (accountId: string, userId: string) =>
     createdAt: iso(-86_400_000),
   });
 
-/** The provider is injected; sign-in is never reachable from a site anyway. */
+/** A provider that authenticates nobody, for the session-only worlds below. */
 const noProvider: IdentityAdapter = Object.freeze({
   authenticate() {
     return undefined;
@@ -1490,7 +1493,12 @@ describe("acceptance 4 — catalogs accept surface: site principals", () => {
 describe("acceptance 5 — an unwired deployment refuses by name", () => {
   it("invents no session, balance, or checkout when nothing is supplied", async () => {
     const plane = createUmbrellaIdentityPlane({});
-    expect(plane.wired).toEqual({ identity: false, credits: false, billing: false });
+    expect(plane.wired).toEqual({
+      identity: false,
+      credits: false,
+      billing: false,
+      login: false,
+    });
     expect(plane.admin).toBeNull();
     expect(await plane.identity.resolvePrincipal({ surface: "site" })).toMatchObject({
       ok: false,
@@ -1637,5 +1645,285 @@ describe("acceptance 6 — no secret, no live mode, no Kids", () => {
         reason: "KIDS_SURFACE_DENIED",
       });
     }
+  });
+});
+
+describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
+  const MEMBER_PASSWORD = "fixture-correct-password";
+  const FRESH_TOKEN = "fresh-login-token";
+  const LOGIN_SESSION = "sess-fresh";
+
+  /**
+   * A Better Auth-shaped provider over the same fixture users: the documented
+   * `{ user, session }` envelope, a fresh session per successful authentication,
+   * and `undefined` — not a throw — for a wrong password.
+   */
+  const provider = (email: string, userId: string): IdentityAdapter =>
+    Object.freeze({
+      authenticate(credentials: { email: string; password: string }) {
+        if (credentials.email !== email || credentials.password !== MEMBER_PASSWORD) {
+          return undefined;
+        }
+        return {
+          user: { id: userId, email, emailVerified: true },
+          session: {
+            id: LOGIN_SESSION,
+            token: FRESH_TOKEN,
+            userId,
+            expiresAt: iso(3_600_000),
+          },
+        };
+      },
+    });
+
+  const loginWorld = (overrides: Record<string, unknown> = {}) => {
+    const admin = resolveAdminIdentity({ SCENEAXI_ADMIN_EMAIL: ADMIN_EMAIL });
+    if (!admin.ok) throw new Error(`admin unresolved: ${admin.message}`);
+    const store = createInMemoryIdentityStore({
+      users: [user("member-1", MEMBER_EMAIL, overrides)] as never,
+      sessions: [] as never,
+    });
+    const port = createIdentityPort({
+      adapter: provider(MEMBER_EMAIL, "member-1"),
+      store,
+      admin: admin.value,
+      clock,
+    });
+    return { store, port };
+  };
+
+  it("signs in through the real port and reaches the entitled editor", async () => {
+    const { store, port } = loginWorld();
+    const creditStore = createInMemoryCreditStore({
+      accounts: [account("acct-1", "member-1")] as never,
+    });
+    const plane = createUmbrellaIdentityPlane(ENV, {
+      identityPort: port,
+      creditStore,
+      clock,
+    });
+    expect(plane.wired.login).toBe(true);
+
+    // 1. The form submission authenticates through the injected provider.
+    const outcome = await performLogin({
+      plane,
+      fields: { email: MEMBER_EMAIL, password: MEMBER_PASSWORD },
+      secure: true,
+    });
+    expect(outcome.kind).toBe("success");
+    if (outcome.kind !== "success") return;
+    expect(outcome.location).toBe("/account");
+    expect(outcome.principal.role).toBe("user");
+    expect(outcome.setCookie).toContain(`sceneaxi.session=${LOGIN_SESSION}.${FRESH_TOKEN}`);
+    expect(outcome.setCookie).toContain("HttpOnly");
+    expect(outcome.setCookie).toContain("SameSite=Lax");
+    expect(outcome.setCookie).toContain("Secure");
+    // The store holds the digest, never the redeemable token.
+    expect(store.sessionCount()).toBe(1);
+    const stored = await store.findSession(LOGIN_SESSION);
+    expect(stored?.tokenDigest).toBe(digestSessionToken(FRESH_TOKEN));
+    expect(JSON.stringify(stored)).not.toContain(FRESH_TOKEN);
+
+    // 2. The cookie's credential is the one the verify path reads back.
+    const credential = `${LOGIN_SESSION}.${FRESH_TOKEN}`;
+    expect(parseSessionToken(credential)).toEqual({
+      sessionId: LOGIN_SESSION,
+      token: FRESH_TOKEN,
+    });
+
+    // 3. A later request carrying that credential reaches the editor
+    //    entitlement guard as a server-verified principal and is entitled by
+    //    the starter allotment — the guard, not the login, decides.
+    const laterPlane = createUmbrellaIdentityPlane(ENV, {
+      identityPort: port,
+      creditStore,
+      sessionToken: credential,
+      clock,
+    });
+    const access = await resolveUmbrellaEditorAccess({
+      plane: laterPlane,
+      env: ENV,
+      sessionToken: credential,
+    });
+    expect(access.decision).toMatchObject({ granted: true, mode: "entitled" });
+    expect(access.access.principal?.user.userId).toBe("member-1");
+  });
+
+  it("refuses wrong credentials as their own named outcome, back at the form", async () => {
+    const { port } = loginWorld();
+    const plane = createUmbrellaIdentityPlane(ENV, { identityPort: port, clock });
+    const outcome = await performLogin({
+      plane,
+      fields: { email: MEMBER_EMAIL, password: "wrong" },
+      secure: true,
+    });
+    expect(outcome).toMatchObject({
+      kind: "refused",
+      reason: "LOGIN_CREDENTIALS_REJECTED",
+      location: "/login?reason=LOGIN_CREDENTIALS_REJECTED",
+    });
+  });
+
+  it("refuses an empty submission before the provider is consulted", async () => {
+    let consulted = false;
+    const spy: IdentityAdapter = Object.freeze({
+      authenticate() {
+        consulted = true;
+        return undefined;
+      },
+    });
+    const admin = resolveAdminIdentity({ SCENEAXI_ADMIN_EMAIL: ADMIN_EMAIL });
+    if (!admin.ok) throw new Error("admin unresolved");
+    const port = createIdentityPort({
+      adapter: spy,
+      store: createInMemoryIdentityStore({ users: [] as never }),
+      admin: admin.value,
+      clock,
+    });
+    const plane = createUmbrellaIdentityPlane(ENV, { identityPort: port, clock });
+    const outcome = await performLogin({
+      plane,
+      fields: { email: "", password: "" },
+      secure: true,
+    });
+    expect(outcome).toMatchObject({
+      kind: "refused",
+      reason: "LOGIN_CREDENTIALS_REQUIRED",
+    });
+    expect(consulted).toBe(false);
+  });
+
+  it("refuses a disabled user with the named outcome even on a correct password", async () => {
+    const { port } = loginWorld({ disabled: true });
+    const plane = createUmbrellaIdentityPlane(ENV, { identityPort: port, clock });
+    const login = await plane.login.signIn({
+      surface: "site",
+      email: MEMBER_EMAIL,
+      password: MEMBER_PASSWORD,
+    });
+    expect(login).toMatchObject({ ok: false, reason: "IDENTITY_USER_DISABLED" });
+  });
+
+  it("refuses the Kids surface and a client role claim before any dispatch", async () => {
+    const { port } = loginWorld();
+    const plane = createUmbrellaIdentityPlane(ENV, { identityPort: port, clock });
+    expect(
+      await plane.login.signIn({
+        surface: "kids",
+        email: MEMBER_EMAIL,
+        password: MEMBER_PASSWORD,
+      }),
+    ).toMatchObject({ ok: false, reason: "KIDS_SURFACE_DENIED" });
+    expect(
+      await plane.login.signIn({
+        surface: "site",
+        email: MEMBER_EMAIL,
+        password: MEMBER_PASSWORD,
+        role: "admin",
+      } as never),
+    ).toMatchObject({ ok: false, reason: "ROLE_CLAIM_FROM_CLIENT_DENIED" });
+  });
+
+  it("names an unwired deployment and a failed provider distinctly", async () => {
+    const unwired = createUmbrellaIdentityPlane(ENV, { clock });
+    expect(unwired.wired.login).toBe(false);
+    expect(
+      await unwired.login.signIn({
+        surface: "site",
+        email: MEMBER_EMAIL,
+        password: MEMBER_PASSWORD,
+      }),
+    ).toMatchObject({ ok: false, reason: "IDENTITY_PLANE_NOT_WIRED" });
+
+    const admin = resolveAdminIdentity({ SCENEAXI_ADMIN_EMAIL: ADMIN_EMAIL });
+    if (!admin.ok) throw new Error("admin unresolved");
+    const broken = createIdentityPort({
+      adapter: Object.freeze({
+        authenticate(): never {
+          throw new Error("provider down");
+        },
+      }),
+      store: createInMemoryIdentityStore({ users: [user("member-1", MEMBER_EMAIL)] as never }),
+      admin: admin.value,
+      clock,
+    });
+    const plane = createUmbrellaIdentityPlane(ENV, { identityPort: broken, clock });
+    expect(
+      await plane.login.signIn({
+        surface: "site",
+        email: MEMBER_EMAIL,
+        password: MEMBER_PASSWORD,
+      }),
+    ).toMatchObject({ ok: false, reason: "IDENTITY_PLANE_UNAVAILABLE" });
+  });
+
+  it("confines the post-login destination to a same-site relative path", async () => {
+    const { port } = loginWorld();
+    const plane = createUmbrellaIdentityPlane(ENV, { identityPort: port, clock });
+    for (const hostile of [
+      "https://evil.example",
+      "//evil.example",
+      "/path\\evil",
+      "javascript:alert(1)",
+      "  /spaced path",
+    ]) {
+      const outcome = await performLogin({
+        plane,
+        fields: { email: MEMBER_EMAIL, password: MEMBER_PASSWORD, next: hostile },
+        secure: true,
+      });
+      expect(outcome.kind).toBe("success");
+      if (outcome.kind === "success") expect(outcome.location).toBe("/account");
+    }
+    const kept = await performLogin({
+      plane,
+      fields: { email: MEMBER_EMAIL, password: MEMBER_PASSWORD, next: "/editor" },
+      secure: true,
+    });
+    expect(kept.kind === "success" && kept.location).toBe("/editor");
+  });
+
+  it("signs out: the stored session is deleted and the cookie cleared", async () => {
+    const { store, port } = loginWorld();
+    const plane = createUmbrellaIdentityPlane(ENV, { identityPort: port, clock });
+    const login = await plane.login.signIn({
+      surface: "site",
+      email: MEMBER_EMAIL,
+      password: MEMBER_PASSWORD,
+    });
+    expect(login.ok).toBe(true);
+    if (!login.ok) return;
+    expect(store.sessionCount()).toBe(1);
+
+    const boundPlane = createUmbrellaIdentityPlane(ENV, {
+      identityPort: port,
+      sessionToken: login.value.sessionCredential,
+      clock,
+    });
+    const outcome = await performLogout({ plane: boundPlane, secure: true });
+    expect(outcome.revocation).toMatchObject({ ok: true, value: null });
+    expect(outcome.clearCookie).toContain("sceneaxi.session=;");
+    expect(outcome.clearCookie).toContain("Max-Age=0");
+    expect(store.sessionCount()).toBe(0);
+
+    // The deleted credential is now simply signed out, not an error.
+    expect(
+      await boundPlane.identity.resolvePrincipal({
+        surface: "site",
+        sessionToken: login.value.sessionCredential,
+      }),
+    ).toMatchObject({ ok: false, reason: "IDENTITY_SESSION_ABSENT" });
+  });
+
+  it("signs out a credential that no longer names a session as already signed out", async () => {
+    const { port } = loginWorld();
+    const plane = createUmbrellaIdentityPlane(ENV, {
+      identityPort: port,
+      sessionToken: "sess-gone.some-token",
+      clock,
+    });
+    const outcome = await performLogout({ plane, secure: false });
+    expect(outcome.revocation).toMatchObject({ ok: true, value: null });
+    expect(outcome.clearCookie).not.toContain("Secure");
   });
 });
