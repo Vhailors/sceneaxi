@@ -82,6 +82,21 @@ if (!Array.isArray(proof.openPath?.tickDigests) || proof.openPath.tickDigests.le
 if (proof.openPath?.initialDigest === proof.openPath?.tickDigests?.at(-1)) {
   failures.push("open-path digests never moved — kernel session did not advance");
 }
+// The authoring round trip is proven by the session's own phases and the document
+// bytes, on a scratch project this run created — not by the bridge envelope, which
+// carries a refused propose or a failed apply inside `{ok: true}` just the same.
+if (proof.authoring?.scratchProject !== true) {
+  failures.push("authoring proof did not run on a scratch project");
+}
+if (proof.authoring?.proposedPhase !== "reviewing") {
+  failures.push(`authoring propose reached phase '${proof.authoring?.proposedPhase}', not 'reviewing'`);
+}
+if (proof.authoring?.acceptedPhase !== "applied") {
+  failures.push(`authoring accept reached phase '${proof.authoring?.acceptedPhase}', not 'applied'`);
+}
+if (proof.authoring?.undone !== true || proof.authoring?.restored !== true) {
+  failures.push("authoring undo did not restore the document it applied to");
+}
 if (proof.frameReport?.backend !== "three") failures.push("frame report is not the Three core");
 // The pixel claim the docs and the site-kit offer carry is only ever this
 // observation: a WebGL canvas surface that reported drawing something.
@@ -118,6 +133,9 @@ console.log("desktop-linux smoke OK —");
 console.log(`  mode: ${packaged ? "packaged (linux-unpacked)" : "built runtime (dist/main.cjs)"}`);
 console.log(
   `  open path: ${proof.openPath.tickDigests.length} ticks, digest ${String(proof.openPath.initialDigest).slice(0, 18)}… → ${String(proof.openPath.tickDigests.at(-1)).slice(0, 18)}…`,
+);
+console.log(
+  `  authoring: scratch project, ${proof.authoring.proposedPhase} → ${proof.authoring.acceptedPhase} → undone, document restored`,
 );
 console.log(
   `  frame: backend ${proof.frameReport.backend} · surface ${proof.frameReport.surface ?? "unreported"} · pixelsDrawn ${proof.frameReport.pixelsDrawn ?? "unreported"} · drawCalls ${proof.frameReport.drawCalls}`,

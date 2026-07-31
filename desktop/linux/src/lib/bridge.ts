@@ -25,7 +25,8 @@
  * desktop shell it wraps. Kids has no path here: the bridge names no profile, and
  * the chrome's refuse-only Kids projection stays owned by `@sceneaxi/desktop-shell`.
  */
-import { isAbsolute, resolve, sep } from "node:path";
+import { realpathSync } from "node:fs";
+import { basename, dirname, isAbsolute, join, resolve, sep } from "node:path";
 import {
   createDesktopSession,
   type DesktopSession,
@@ -71,6 +72,29 @@ export type OpenPathExercise = {
   readonly instanceCount: number;
   readonly closed: true;
 };
+
+/**
+ * The canonical form of `target`: every symlink on the part of the path that exists
+ * is resolved, and a not-yet-created tail is re-appended to that real ancestry. A
+ * lexical comparison alone answers the wrong question — the authoring core follows
+ * links when it reads and writes, so containment has to be judged where the bytes
+ * actually land. Returns null when nothing about the path can be resolved.
+ */
+function canonicalPath(target: string): string | null {
+  const missing: string[] = [];
+  let current = target;
+  for (;;) {
+    try {
+      const real = realpathSync(current);
+      return missing.length === 0 ? real : join(real, ...missing);
+    } catch {
+      const parent = dirname(current);
+      if (parent === current) return null;
+      missing.unshift(basename(current));
+      current = parent;
+    }
+  }
+}
 
 function isAction(value: unknown): value is DesktopBridgeAction {
   return (
@@ -187,7 +211,9 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
    * A document path arrives from the renderer process across IPC, and the authoring
    * core resolves it against `cwd` without a containment check of its own. The bridge
    * owns that constraint: a project-relative path, never an absolute one and never an
-   * escape out of the project directory.
+   * escape out of the project directory — lexically, and again after every symlink on
+   * it has been resolved, since a link inside the project is an escape the text of the
+   * path does not show.
    */
   const containedDocumentPath = (value: unknown): string | null => {
     if (typeof value !== "string" || value.length === 0) return null;
@@ -195,6 +221,10 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     const root = resolve(options.cwd);
     const target = resolve(root, value);
     if (target !== root && !target.startsWith(`${root}${sep}`)) return null;
+    const realRoot = canonicalPath(root);
+    const realTarget = canonicalPath(target);
+    if (realRoot === null || realTarget === null) return null;
+    if (realTarget !== realRoot && !realTarget.startsWith(`${realRoot}${sep}`)) return null;
     return value;
   };
 

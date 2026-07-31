@@ -14,7 +14,7 @@
  * `docs/desktop-linux.md`, never a gate inference — the same split the umbrella
  * live open path uses.
  */
-import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -226,6 +226,38 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
     // A contained path still works: the constraint refuses escapes, not authoring.
     const contained = bridge.handle({ action: "authoring", payload: { op: "status", documentPath: "scene.json" } });
     expect(contained.ok).toBe(true);
+  });
+
+  it("refuses a documentPath that leaves the project through a symlink", () => {
+    // A lexical check passes `link/scene.json` while the authoring core follows the
+    // link and reads and writes outside the project, so containment is judged on the
+    // canonical path — where the bytes actually land.
+    const dir = authoringDir();
+    const outside = authoringDir();
+    symlinkSync(outside, join(dir, "link"), "dir");
+    symlinkSync(join(outside, "scene.json"), join(dir, "elsewhere.json"), "file");
+    const bridge = bridgeAt(dir);
+
+    for (const documentPath of ["link/scene.json", "link", "elsewhere.json"]) {
+      const proposed = bridge.handle({
+        action: "authoring",
+        payload: { op: "propose", documentPath, jsonPointer: "/data/entities/0/x", newValue: 7 },
+      });
+      expect(proposed.ok, documentPath).toBe(false);
+      if (!proposed.ok) expect(proposed.reason).toBe(DESKTOP_BRIDGE_REFUSALS.requestMalformed);
+
+      const status = bridge.handle({ action: "authoring", payload: { op: "status", documentPath } });
+      expect(status.ok, documentPath).toBe(false);
+      if (!status.ok) expect(status.reason).toBe(DESKTOP_BRIDGE_REFUSALS.requestMalformed);
+    }
+
+    // A symlink that stays inside the project is not an escape, and a not-yet-created
+    // document inside it still resolves — containment is not an existence check.
+    symlinkSync(dir, join(dir, "self"), "dir");
+    for (const documentPath of ["self/scene.json", "new/scene.json"]) {
+      const status = bridge.handle({ action: "authoring", payload: { op: "status", documentPath } });
+      expect(status.ok, documentPath).toBe(true);
+    }
   });
 
   it("accepts only a real frame-report shape, and hands it to the observer", () => {

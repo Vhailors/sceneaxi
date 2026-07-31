@@ -11,7 +11,8 @@
  * The window is locked down: context isolation on, sandbox on, no node integration,
  * and navigation away from the packaged document is refused.
  */
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { BrowserWindow, app, ipcMain } from "electron";
 import { createDocument, writeDocumentFile } from "@sceneaxi/authoring-core";
@@ -28,25 +29,51 @@ const SMOKE_TIMEOUT_MS = 45_000;
 /** Sample document the authoring session works on, seeded on first launch. */
 const SAMPLE_DOCUMENT = "scene.json";
 
-function projectDir(): string {
-  const dir = join(app.getPath("userData"), "project");
+function seedProject(dir: string): void {
   mkdirSync(dir, { recursive: true });
   const documentPath = join(dir, SAMPLE_DOCUMENT);
-  if (!existsSync(documentPath)) {
-    const doc = createDocument({
-      id: "scene",
-      data: {
-        entities: [{ id: "hero", x: 1, y: 2, rz: 0 }],
-        material: { roughness: 0.4 },
-      },
-    });
-    const written = writeDocumentFile(documentPath, doc, { cwd: dir });
-    if (!written.ok) {
-      // Fail visible, not silent: the authoring path needs its document.
-      console.error("desktop-linux: could not seed the sample document", written);
-    }
+  if (existsSync(documentPath)) return;
+  const doc = createDocument({
+    id: "scene",
+    data: {
+      entities: [{ id: "hero", x: 1, y: 2, rz: 0 }],
+      material: { roughness: 0.4 },
+    },
+  });
+  const written = writeDocumentFile(documentPath, doc, { cwd: dir });
+  if (!written.ok) {
+    // Fail visible, not silent: the authoring path needs its document.
+    console.error("desktop-linux: could not seed the sample document", written);
   }
+}
+
+/** The launched application's own project: persistent, under the user's data dir. */
+function projectDir(): string {
+  const dir = join(app.getPath("userData"), "project");
+  seedProject(dir);
   return dir;
+}
+
+/**
+ * The smoke's project: a fresh directory per run, never the persistent one.
+ *
+ * The proof asserts what propose/accept/undo did to a document, so it has to own
+ * that document: a persistent project can already hold an edited, invalid, or
+ * mid-transaction file, and `undo()` there can resolve an earlier completed
+ * journal this run never wrote — either of which would let the proof line report
+ * a round trip it did not perform.
+ */
+function smokeProjectDir(): string {
+  const dir = mkdtempSync(join(tmpdir(), "sceneaxi-desktop-smoke-"));
+  seedProject(dir);
+  return dir;
+}
+
+/** Read one own property off an unknown bridge payload, without asserting a shape. */
+function payloadField(value: unknown, name: string): unknown {
+  if (typeof value !== "object" || value === null) return undefined;
+  const descriptor = Object.getOwnPropertyDescriptor(value, name);
+  return descriptor !== undefined && "value" in descriptor ? descriptor.value : undefined;
 }
 
 let reportedFailure = false;
@@ -72,8 +99,9 @@ async function start(): Promise<void> {
     frameReported = resolve;
   });
 
+  const cwd = SMOKE ? smokeProjectDir() : projectDir();
   const bridge = createDesktopBridge({
-    cwd: projectDir(),
+    cwd,
     onFrameReport: (report) => frameReported?.(report),
   });
 
@@ -118,6 +146,12 @@ async function start(): Promise<void> {
   const openPath = bridge.handle({ action: "open-path" });
   if (!openPath.ok) fail(`open-path refused: ${openPath.reason}`);
 
+  // The envelope only says the bridge answered; a refused propose, a failed apply,
+  // and an undo that restored nothing all arrive inside `{ok: true}`. So the proof
+  // reads the session's own phases and the document bytes on disk.
+  const documentFile = join(cwd, SAMPLE_DOCUMENT);
+  const seededBytes = readFileSync(documentFile, "utf8");
+
   const proposed = bridge.handle({
     action: "authoring",
     payload: {
@@ -128,10 +162,29 @@ async function start(): Promise<void> {
     },
   });
   if (!proposed.ok) fail(`authoring propose refused: ${proposed.reason}`);
+  const proposedPhase = payloadField(proposed.data, "phase");
+  if (proposedPhase !== "reviewing") {
+    fail(`authoring propose did not open a review: phase ${JSON.stringify(proposedPhase)}`);
+  }
+  if (readFileSync(documentFile, "utf8") !== seededBytes) {
+    fail("authoring propose wrote to the document before it was accepted");
+  }
+
   const accepted = bridge.handle({ action: "authoring", payload: { op: "accept" } });
   if (!accepted.ok) fail(`authoring accept refused: ${accepted.reason}`);
+  const acceptedPhase = payloadField(accepted.data, "phase");
+  if (acceptedPhase !== "applied") {
+    fail(`authoring accept did not apply: phase ${JSON.stringify(acceptedPhase)}`);
+  }
+  if (readFileSync(documentFile, "utf8") === seededBytes) {
+    fail("authoring accept reported applied but the document is unchanged");
+  }
+
   const undone = bridge.handle({ action: "authoring", payload: { op: "undo" } });
   if (!undone.ok) fail(`authoring undo refused: ${undone.reason}`);
+  if (payloadField(undone.data, "ok") !== true) fail("authoring undo did not succeed");
+  const restored = readFileSync(documentFile, "utf8") === seededBytes;
+  if (!restored) fail("authoring undo did not restore the document it applied to");
 
   const frameReport = await Promise.race([
     firstFrameReport,
@@ -162,12 +215,22 @@ async function start(): Promise<void> {
     writeFileSync(shotPath, png);
   }
 
+  rmSync(cwd, { recursive: true, force: true });
+
   console.log(
     JSON.stringify({
       ok: true,
       handshake: handshake.data,
       openPath: openPath.data,
-      authoring: { proposed: true, accepted: true, undone: true },
+      authoring: {
+        proposed: true,
+        accepted: true,
+        undone: true,
+        proposedPhase,
+        acceptedPhase,
+        restored,
+        scratchProject: true,
+      },
       frameReport,
       viewportDom,
       ...(screenshotBytes > 0 ? { screenshotBytes } : {}),

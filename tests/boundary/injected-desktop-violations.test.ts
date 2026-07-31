@@ -96,17 +96,24 @@ describe("desktop tier — injected violations", () => {
     expect(res.stderr).toContain("desktop/linux/src/lib/broken.ts");
   });
 
-  it("desktop check fails when Electron leaks into the hermetic root manifest", () => {
-    editManifest(fx, "package.json", (manifest) => {
-      (manifest as { devDependencies?: Record<string, string> }).devDependencies = {
-        ...(manifest as { devDependencies?: Record<string, string> }).devDependencies,
-        electron: "^43.0.0",
-      };
-    });
-    const res = runCheck(fx, "check-desktop.mjs");
-    expect(res.status).toBe(1);
-    expect(res.stderr).toContain("Electron and packaging toolchains stay in the desktop/ tier");
-  });
+  // Electron, its bundler, and its packaging toolchain each move the hermetic root
+  // lockfile and the gate runtime, which is exactly what the separate install root
+  // exists to prevent — so each is denied at the root by name.
+  it.each(["electron", "electron-builder", "esbuild"])(
+    "desktop check fails when '%s' leaks into the hermetic root manifest",
+    (dep) => {
+      editManifest(fx, "package.json", (manifest) => {
+        (manifest as { devDependencies?: Record<string, string> }).devDependencies = {
+          ...(manifest as { devDependencies?: Record<string, string> }).devDependencies,
+          [dep]: "^0.0.1",
+        };
+      });
+      const res = runCheck(fx, "check-desktop.mjs");
+      expect(res.status).toBe(1);
+      expect(res.stderr).toContain(`root package.json declares '${dep}' in devDependencies`);
+      expect(res.stderr).toContain("stay in the desktop/ tier");
+    },
+  );
 
   it("desktop check fails when the root workspace globs desktop/", () => {
     appendTo(fx, "pnpm-workspace.yaml", '  - "desktop/*"\n');

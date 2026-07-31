@@ -4,14 +4,14 @@
  *
  * Each desktop application is a separate single-package pnpm workspace and install
  * root with its own lockfile, deliberately outside the repository-root workspace, so
- * Electron and its packaging toolchain never move the hermetic root install, the root
- * lockfile, the `tsc --build` graph, or the gate runtime. That isolation is what this
+ * Electron, its bundler, and its packaging toolchain never move the hermetic root
+ * install, the root lockfile, the `tsc --build` graph, or the gate runtime. That isolation is what this
  * check protects — plus the rule that no secret value is ever committed, and the
  * tier's own split: only `src/electron/**` may import Electron, so everything under
  * `src/lib/**` stays pure TypeScript the hermetic gate can test from `tests/desktop/`.
  *
  * Fail-closed: an empty `desktop/` tree, a missing required file, an app that is not
- * matrix-listed, Electron leaking into the hermetic root, an Electron import outside
+ * matrix-listed, any of that toolchain leaking into the hermetic root, an Electron import outside
  * `src/electron/`, or any committed secret value exits 1.
  */
 import { existsSync, lstatSync, readFileSync, readdirSync, statSync } from "node:fs";
@@ -34,8 +34,12 @@ const REQUIRED_FILES = Object.freeze([
 
 const REQUIRED_SCRIPTS = Object.freeze(["build", "dist", "smoke", "typecheck"]);
 
-/** Electron and packaging toolchains belong in `desktop/`, never in the hermetic root. */
-const DESKTOP_DEPENDENCIES = Object.freeze(["electron", "electron-builder"]);
+/**
+ * Electron, its bundler, and its packaging toolchain belong in `desktop/`, never in
+ * the hermetic root: each of them moves the root lockfile and the gate runtime, which
+ * is the whole reason the tier is a separate install root (ADR 0024).
+ */
+const DESKTOP_DEPENDENCIES = Object.freeze(["electron", "electron-builder", "esbuild"]);
 
 /** Same secret-shaped material the sites check refuses; the desktop tier needs no secret at all. */
 const SECRET_VALUE_PATTERNS = Object.freeze([
@@ -96,7 +100,7 @@ for (const field of ["dependencies", "devDependencies", "optionalDependencies"])
   for (const dep of Object.keys(rootManifest[field] ?? {})) {
     if (DESKTOP_DEPENDENCIES.includes(dep)) {
       fail(
-        `root package.json declares '${dep}' in ${field} — Electron and packaging toolchains stay in the desktop/ tier`,
+        `root package.json declares '${dep}' in ${field} — Electron, its bundler, and packaging toolchains stay in the desktop/ tier`,
       );
     }
   }

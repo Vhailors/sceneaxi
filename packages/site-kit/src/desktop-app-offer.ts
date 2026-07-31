@@ -12,6 +12,13 @@
  * The site serves no binary: the artifacts are built from source with one command,
  * or fetched from the named CI workflow artifact. Windows and macOS are stated as
  * not packaged — a page that offered them would be inventing installers.
+ *
+ * Every `Object.freeze` below is annotated `@__PURE__` so this record can never
+ * reach the packaged application it describes. `desktop/linux` bundles `site-kit`
+ * for the scene payload, and without the annotation esbuild keeps this module in
+ * `dist/main.cjs`: the digest of a build would then be inside that build, and
+ * recording a fresh one would invalidate itself on the next rebuild. Held by
+ * `tests/sites/desktop-offer-lockstep.test.ts`.
  */
 
 export type DesktopAppArtifact = {
@@ -39,23 +46,23 @@ export type DesktopAppOffer = {
   readonly reproducibilityNote: string;
 };
 
-export const DESKTOP_LINUX_APP_OFFER: DesktopAppOffer = Object.freeze({
+export const DESKTOP_LINUX_APP_OFFER: DesktopAppOffer = /* @__PURE__ */ Object.freeze({
   productName: "SceneAxi Engine Desktop",
   version: "0.0.0",
   platform: "Linux x86_64",
   recordedOn: "2026-07-31",
-  artifacts: Object.freeze([
-    Object.freeze({
+  artifacts: /* @__PURE__ */ Object.freeze([
+    /* @__PURE__ */ Object.freeze({
       kind: "AppImage" as const,
       fileName: "SceneAxi-Engine-Desktop-0.0.0-linux-x86_64.AppImage",
-      sha256: "720ca4cb8145231f4eb3cc537ddcd0c246a55a44c09b4f6edca1690c40f2021a",
-      byteSize: 115161554,
+      sha256: "4e1814157e78e6619407c07de4a1f1cdf5bf84880f5f53e917815722f07923db",
+      byteSize: 115161576,
     }),
-    Object.freeze({
+    /* @__PURE__ */ Object.freeze({
       kind: "deb" as const,
       fileName: "SceneAxi-Engine-Desktop-0.0.0-linux-amd64.deb",
-      sha256: "a7f7ac9c4cb25db25ae9e8bff7333d60cbab4ac53c035b22e8898e2230fa340f",
-      byteSize: 90491280,
+      sha256: "d51cfb28f79e7fb8e4009648b6129f239ec8f39823c6fa390e2519754811a0a8",
+      byteSize: 90491852,
     }),
   ]),
   buildCommand: "pnpm install && cd desktop/linux && pnpm install && pnpm dist",
@@ -64,7 +71,7 @@ export const DESKTOP_LINUX_APP_OFFER: DesktopAppOffer = Object.freeze({
   sourceDir: "desktop/linux",
   ciWorkflow: "desktop-linux",
   ciArtifactName: "sceneaxi-desktop-linux",
-  notPackaged: Object.freeze(["Windows", "macOS"]),
+  notPackaged: /* @__PURE__ */ Object.freeze(["Windows", "macOS"]),
   reproducibilityNote:
     "Electron packaging is not bit-reproducible, so these digests identify the recorded build above. A rebuild from source produces its own SHA256SUMS beside its own artifacts — verify the pairing you obtained.",
 });

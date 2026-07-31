@@ -31,7 +31,7 @@ Bridge actions and what each reaches — only through public seams:
 | `handshake` | identity only |
 | `scene` | `composeScene()` via `desktopOpenScene()` → the shared `MountableScene` payload from `@sceneaxi/site-kit` |
 | `open-path` | `bootstrapOpenPath()` from `@sceneaxi/engine-orchestrator`: a real kernel scene session opened, advanced, observed, closed |
-| `authoring` | `createDesktopSession()` from `@sceneaxi/desktop-shell` — the same propose/accept protocol as the CLI and web-shell. A `documentPath` arrives from the renderer over IPC and the authoring core resolves it against `cwd` without a containment check of its own, so the bridge owns that constraint: an absolute path or one escaping the project directory refuses `DESKTOP_BRIDGE_REQUEST_MALFORMED` |
+| `authoring` | `createDesktopSession()` from `@sceneaxi/desktop-shell` — the same propose/accept protocol as the CLI and web-shell. A `documentPath` arrives from the renderer over IPC and the authoring core resolves it against `cwd` without a containment check of its own, so the bridge owns that constraint: an absolute path, one escaping the project directory, or one whose **canonical** path leaves it through a symlink refuses `DESKTOP_BRIDGE_REQUEST_MALFORMED`. Containment is judged after symlink resolution because that is where the bytes land; a missing leaf still resolves, so this is containment and not an existence check |
 | `frame-report` | nothing: it *accepts* the renderer's real presentation frame so main and the smoke can see what was claimed |
 
 The UI is the Engine Desktop chrome from `@sceneaxi/desktop-shell`, **unforked**:
@@ -83,11 +83,18 @@ page advertises exactly this record through `desktopLinuxAppOffer()` in
 offer and the table below in lockstep — a digest edited in one place fails the
 gate until the other moves with it.
 
+The record is deliberately kept **out of the build it describes**: the tier bundles
+site-kit for its scene payload, so `desktop-app-offer.ts` marks every `Object.freeze`
+`@__PURE__` and esbuild drops it from `dist/main.cjs`. Without that, a build's digest
+would ship inside the build, and re-recording one would invalidate it on the next
+rebuild. The same test asserts the annotation, so the record and the artifact stay
+independent.
+
 <!-- desktop-linux:artifacts -->
 | Artifact | File | Bytes | SHA-256 |
 |---|---|---|---|
-| AppImage | `SceneAxi-Engine-Desktop-0.0.0-linux-x86_64.AppImage` | 115161554 | `720ca4cb8145231f4eb3cc537ddcd0c246a55a44c09b4f6edca1690c40f2021a` |
-| deb | `SceneAxi-Engine-Desktop-0.0.0-linux-amd64.deb` | 90491280 | `a7f7ac9c4cb25db25ae9e8bff7333d60cbab4ac53c035b22e8898e2230fa340f` |
+| AppImage | `SceneAxi-Engine-Desktop-0.0.0-linux-x86_64.AppImage` | 115161576 | `4e1814157e78e6619407c07de4a1f1cdf5bf84880f5f53e917815722f07923db` |
+| deb | `SceneAxi-Engine-Desktop-0.0.0-linux-amd64.deb` | 90491852 | `d51cfb28f79e7fb8e4009648b6129f239ec8f39823c6fa390e2519754811a0a8` |
 
 Toolchain of the recorded build: Electron 43.2.0 · electron-builder 26.15.3 ·
 esbuild 0.28.1 · Node 24.14.0 · pnpm 9.15.0 · Ubuntu 24.04 (kernel 6.17,
@@ -101,7 +108,11 @@ proof (`pnpm smoke`, `pnpm smoke --packaged`, and the AppImage itself with
 - kernel open path: bootstrap `kind scene · subjectId desktop-linux-open-scene`,
   4 ticks advanced, digest `sha256:a0cfe040739…` → `sha256:d683df159e8…`,
   3 instances, session closed
-- authoring: propose → accept → undo round trip completed on the scratch document
+- authoring: propose → accept → undo on a **scratch project the run creates and
+  deletes** (never the persistent user project, whose contents no proof controls),
+  asserted on the session's own phases and the bytes on disk rather than on the
+  bridge envelope: `reviewing` with the file untouched → `applied` with the file
+  changed → `undo` reporting success with the seeded bytes restored
 - renderer frame report: `backend three · surface webgl-canvas · pixelsDrawn true
   · drawCalls 15` — real pixels from the packaged window, drawn by SwiftShader
   under Xvfb, matching the draw-call count the headless gate derives from the

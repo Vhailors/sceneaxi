@@ -67,6 +67,21 @@ describe("desktop offer ↔ recorded build lockstep", () => {
     expect(DESKTOP_LINUX_APP_OFFER.notPackaged).toEqual(["Windows", "macOS"]);
   });
 
+  it("keeps the record out of the build it describes", () => {
+    // `desktop/linux` bundles site-kit for its scene payload, so without a pure
+    // annotation esbuild keeps this module in `dist/main.cjs` — and a digest that
+    // ships inside the artifact it identifies can never survive being re-recorded:
+    // the next build differs by exactly the digest just written down.
+    const source = readFileSync(
+      new URL("../../packages/site-kit/src/desktop-app-offer.ts", import.meta.url),
+      "utf8",
+    );
+    const freezes = source.match(/Object\.freeze\(/g) ?? [];
+    const pureFreezes = source.match(/\/\* @__PURE__ \*\/ Object\.freeze\(/g) ?? [];
+    expect(freezes.length).toBeGreaterThan(0);
+    expect(pureFreezes).toHaveLength(freezes.length);
+  });
+
   it("names the same CI workflow and artifact the repository actually declares", () => {
     const workflow = readFileSync(
       new URL("../../.github/workflows/desktop-linux.yml", import.meta.url),
