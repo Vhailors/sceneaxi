@@ -3,8 +3,9 @@
  * the inspector (sceneaxi#120).
  *
  * The only module in this package that owns a socket. Everything it serves is
- * `inspector-app.ts`, which is everything `createInspectorSession` already did,
- * so "startable" adds a transport and no authoring behaviour.
+ * `inspector-app.ts`: authoring routes forward to `createInspectorSession`, and
+ * the assistant route forwards to the existing `createAssistantPanel`, so
+ * "startable" adds transports and no new product policy.
  *
  * Fail-closed at launch, not only per request:
  *
@@ -34,6 +35,7 @@ import {
   type InspectorApp,
   type WebShellRefusal,
 } from "./inspector-app.js";
+import type { AssistantPanel } from "./assistant-panel.js";
 
 /** Exit codes, matching the CLI protocol's map so scripts branch identically. */
 export const WebShellExit = {
@@ -63,6 +65,8 @@ export type DevServerOptions = {
   readonly port: number;
   /** Canonical served project root. */
   readonly projectRoot: string;
+  /** Existing assistant seam to expose; omitted uses the deterministic fixture panel. */
+  readonly assistant?: AssistantPanel;
 };
 
 export type DevServerArgsOk = {
@@ -414,7 +418,10 @@ export function startInspectorDevServer(
     );
   }
 
-  const app = createInspectorApp({ projectRoot: options.projectRoot });
+  const app = createInspectorApp({
+    projectRoot: options.projectRoot,
+    ...(options.assistant === undefined ? {} : { assistant: options.assistant }),
+  });
 
   // Resolved in `onListening`, which is the only place the bound port is known.
   // Null until then, and a request cannot be accepted before the socket listens.
@@ -493,7 +500,7 @@ export function startInspectorDevServer(
         body = read.body;
       }
 
-      const result = app.handle({
+      const result = await app.handleAsync({
         method: headOnly ? "GET" : method,
         url,
         ...(body === undefined ? {} : { body }),

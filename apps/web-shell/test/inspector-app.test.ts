@@ -58,7 +58,11 @@ type Payload = {
   reason?: string;
   message?: string;
   reviewToken?: string | null;
-  snapshot?: InspectorSnapshot;
+  snapshot?: InspectorSnapshot & {
+    mode?: string;
+    metered?: boolean;
+    turns?: ReadonlyArray<Record<string, unknown>>;
+  };
   [key: string]: unknown;
 };
 
@@ -174,6 +178,39 @@ describe("served inspector protocol", () => {
     expect(payload["contentHash"]).toMatch(/^sha256:[0-9a-f]{64}$/);
     expect(payload["dataKeys"]).toEqual(["entities"]);
     expect(payload["projectRoot"]).toBe(dir);
+  });
+
+  it("drives the deterministic fixture assistant through the served app", async () => {
+    const { app } = project();
+    const response = await app.handleAsync({
+      method: "POST",
+      url: "/api/assistant",
+      body: JSON.stringify({ prompt: "fixture prompt" }),
+    });
+
+    expect(response.status).toBe(200);
+    const payload = body(response);
+    expect(payload.action).toBe("assistant");
+    expect(payload.snapshot?.mode).toBe("fixture");
+    expect(payload.snapshot?.metered).toBe(false);
+    expect(payload.snapshot?.turns?.[0]).toMatchObject({
+      prompt: "fixture prompt",
+      text: "fixture completion",
+    });
+  });
+
+  it("keeps hosted mode explicit and default-off on the served route", async () => {
+    const { app } = project();
+    const response = await app.handleAsync({
+      method: "POST",
+      url: "/api/assistant",
+      body: JSON.stringify({ prompt: "hosted prompt", mode: "hosted", turnId: "t1" }),
+    });
+
+    expect(response.status).toBe(409);
+    const payload = body(response);
+    expect(payload.reason).toBe("HOSTED_AI_NOT_ENABLED");
+    expect(payload.snapshot?.turns).toHaveLength(0);
   });
 });
 

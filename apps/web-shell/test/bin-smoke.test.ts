@@ -57,7 +57,17 @@ describe("sceneaxi-web-shell binary", () => {
     const child: DevProcess = spawn(
       process.execPath,
       [BIN, "--port", "0", "--cwd", cwd, ...extra],
-      { cwd, stdio: ["ignore", "pipe", "pipe"] },
+      {
+        cwd,
+        stdio: ["ignore", "pipe", "pipe"],
+        // The built fixture route must not need an admin bootstrap setting.
+        env: {
+          ...process.env,
+          SCENEAXI_ADMIN_EMAIL: undefined,
+          SCENEAXI_ADMIN_EMAILS: undefined,
+          SCENEAXI_ADMINS: undefined,
+        },
+      },
     );
     spawned = child;
 
@@ -118,6 +128,7 @@ describe("sceneaxi-web-shell binary", () => {
     expect(r.status).toBe(0);
     expect(r.stdout).toContain("Usage: sceneaxi-web-shell");
     expect(r.stdout).toContain("POST /api/propose");
+    expect(r.stdout).toContain("POST /api/assistant");
   });
 
   it("refuses a non-loopback bind with a usage exit rather than serving it", () => {
@@ -147,6 +158,56 @@ describe("sceneaxi-web-shell binary", () => {
     expect(((await state.json()) as { snapshot: { phase: string } }).snapshot.phase).toBe(
       "idle",
     );
+  });
+
+  it("drives the default fixture assistant turn against the started process", async () => {
+    const { url } = await start();
+
+    const response = await fetch(new URL("/api/assistant", url), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ prompt: "How do I place a cube?" }),
+    });
+    expect(response.status).toBe(200);
+    const payload = (await response.json()) as {
+      app: string;
+      ok: boolean;
+      action: string;
+      snapshot: {
+        mode: string;
+        metered: boolean;
+        hostedEnabled: boolean;
+        turns: Array<{
+          prompt: string;
+          text: string;
+          metered: boolean;
+          evidence: { kind: string; operation: string };
+        }>;
+        refusal?: unknown;
+      };
+    };
+    expect(payload).toMatchObject({
+      app: "sceneaxi-web-shell",
+      ok: true,
+      action: "assistant",
+      snapshot: {
+        mode: "fixture",
+        metered: false,
+        hostedEnabled: false,
+        turns: [
+          {
+            prompt: "How do I place a cube?",
+            text: "fixture completion",
+            metered: false,
+            evidence: {
+              kind: "sceneaxi.model-provider-call-evidence",
+              operation: "complete",
+            },
+          },
+        ],
+      },
+    });
+    expect(payload.snapshot.refusal).toBeUndefined();
   });
 
   it("drives propose → rendered diff → accept against the started process", async () => {

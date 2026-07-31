@@ -5,7 +5,8 @@
  * Same shape as the CLI and desktop binaries: register the shared workspace
  * resolver (see scripts/workspace-dist-resolver.mjs), then hand argv to the
  * `main()` the tests drive. It starts a loopback HTTP server that serves the
- * inspector; it does not deploy, host, or publish anything.
+ * inspector and deterministic fixture assistant route; it does not deploy,
+ * host, or publish anything.
  */
 
 import { existsSync } from "node:fs";

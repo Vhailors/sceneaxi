@@ -49,6 +49,7 @@ document-status route is explicitly read-only:
 | `POST /api/accept` with the `reviewToken` returned by propose/state | `accept()` |
 | `POST /api/reject` with the `reviewToken` returned by propose/state | `reject()` |
 | `POST /api/recover` | `refreshRecovery()` |
+| `POST /api/assistant` | configured `createAssistantPanel()` (asynchronous turn) |
 
 The server is a transport and nothing else. `createInspectorApp()` maps each
 authoring action onto one session call and keeps document status read-only;
@@ -62,6 +63,17 @@ Each successful proposal returns an opaque `reviewToken`. Accept and reject must
 send that token, so one browser tab cannot act on a proposal that replaced the
 diff it reviewed. One app/server owns one session and therefore one pending
 proposal at a time, matching the session API's review-before-apply contract.
+
+The assistant transport is `POST /api/assistant` with a JSON body containing
+`prompt`, plus optional `mode` (`fixture`, `byo`, or `hosted`) and `turnId`.
+It returns the assistant snapshot and uses the panel's named refusal as the
+response `reason` with status `409`. The built shell wires the recorded fixture
+port for the default `fixture` mode, so a turn is deterministic and needs no
+network, credential, or ledger. A `byo` selection remains explicit and free
+when an injected BYO port is supplied; the built default does not invent one.
+`hosted` remains explicit and default-off. Injected panels use their existing
+identity, provider, clock, and credit-store seams; the transport creates none
+of those policies and accepts no provider credential from HTTP.
 
 ### How it fails closed
 
@@ -155,7 +167,8 @@ Three modes reach the model through the same port and differ only in metering: `
 (SceneAxi-operated, credits, **off** unless explicitly enabled). Hosted requires a current
 persisted ledger for every principal; fixture and BYO never touch it. Kids is refused at
 construction — surface *and* profile — so no turn in any mode can be metered or dispatched.
-Contract and ownership: [`docs/auth-credits.md`](../../docs/auth-credits.md).
+The startable loopback transport is documented above; it forwards these decisions rather
+than making a second one. Contract and ownership: [`docs/auth-credits.md`](../../docs/auth-credits.md).
 
 ## Open-path policy view
 

@@ -32,6 +32,12 @@ import {
   type InspectorSession,
   type InspectorSnapshot,
 } from "./inspector.js";
+import { createDefaultAssistantPanel } from "./assistant-default.js";
+import type {
+  AssistantPanel,
+  AssistantPanelSnapshot,
+  CreateAssistantPanelResult,
+} from "./assistant-panel.js";
 
 /** Stable app identifier echoed on every payload, matching the shell binaries. */
 export const WEB_SHELL_APP = "sceneaxi-web-shell";
@@ -123,6 +129,12 @@ export const INSPECTOR_ACTIONS = Object.freeze({
     session: "refreshRecovery",
     description: "Re-resolve a pending durable apply transaction",
   }),
+  assistant: Object.freeze({
+    method: "POST",
+    path: "/api/assistant",
+    session: null,
+    description: "Complete one assistant turn through the configured panel",
+  }),
 } as const);
 
 export type InspectorAction = keyof typeof INSPECTOR_ACTIONS;
@@ -150,7 +162,10 @@ export type InspectorHttpResponse = {
 export type InspectorApp = {
   /** Canonical served project root; every document path resolves inside it. */
   readonly projectRoot: string;
+  /** Synchronous authoring/document routes. */
   handle(request: InspectorHttpRequest): InspectorHttpResponse;
+  /** The same surface with the asynchronous assistant turn included. */
+  handleAsync(request: InspectorHttpRequest): Promise<InspectorHttpResponse>;
 };
 
 export type CreateInspectorAppOptions = {
@@ -158,6 +173,8 @@ export type CreateInspectorAppOptions = {
   readonly projectRoot?: string;
   /** Inspector session to drive (default: one bound to `projectRoot`). */
   readonly session?: InspectorSession;
+  /** Existing assistant panel to expose (default: the deterministic fixture panel). */
+  readonly assistant?: AssistantPanel;
 };
 
 const JSON_TYPE = "application/json; charset=utf-8";
@@ -181,7 +198,7 @@ function okResponse(
 function refuse(
   status: number,
   action: string,
-  reason: WebShellRefusal,
+  reason: string,
   message: string,
   extra: Readonly<Record<string, unknown>> = {},
 ): InspectorHttpResponse {
@@ -344,6 +361,18 @@ function primaryMessage(diagnostics: readonly ApplyDiagnostic[]): string {
   return diagnostics[0]?.message ?? "The inspector refused with typed diagnostics.";
 }
 
+function assistantSnapshotResponse(
+  action: InspectorAction,
+  snapshot: AssistantPanelSnapshot,
+): InspectorHttpResponse {
+  if (snapshot.refusal === undefined) {
+    return okResponse(action, { snapshot });
+  }
+  return refuse(409, action, snapshot.refusal.reason, snapshot.refusal.message, {
+    snapshot,
+  });
+}
+
 /**
  * Create the served inspector application over one session.
  *
@@ -357,6 +386,11 @@ export function createInspectorApp(
   const projectRoot = canonicalPath(options.projectRoot ?? ".");
   const session =
     options.session ?? createInspectorSession({ cwd: projectRoot });
+  const assistantSetup: CreateAssistantPanelResult =
+    options.assistant === undefined
+      ? createDefaultAssistantPanel()
+      : Object.freeze({ ok: true, panel: options.assistant });
+  const assistant = assistantSetup.ok ? assistantSetup.panel : undefined;
   let reviewGeneration = 0;
   let activeReviewToken: string | null = null;
 
@@ -469,6 +503,46 @@ export function createInspectorApp(
     return snapshotResponse(action, snapshot, projectRoot, activeReviewToken);
   };
 
+  const assistantTurn = async (
+    body: string | undefined,
+  ): Promise<InspectorHttpResponse> => {
+    if (!assistantSetup.ok) {
+      return refuse(
+        503,
+        "assistant",
+        WEB_SHELL_REFUSALS.handlerFailed,
+        `The assistant panel could not be wired: ${assistantSetup.message}`,
+        { assistantReason: assistantSetup.reason },
+      );
+    }
+    if (assistant === undefined) {
+      return refuse(
+        503,
+        "assistant",
+        WEB_SHELL_REFUSALS.handlerFailed,
+        "The assistant panel could not be wired.",
+      );
+    }
+
+    const parsed = parseJsonObject(body);
+    if (!parsed.ok) return refuseRequest("assistant", parsed);
+
+    if (Object.hasOwn(parsed.value, "mode")) {
+      const selected = assistant.setMode(parsed.value["mode"]);
+      if (selected.refusal !== undefined) {
+        return assistantSnapshotResponse("assistant", selected);
+      }
+    }
+
+    const snapshot = await assistant.ask({
+      prompt: typeof parsed.value["prompt"] === "string" ? parsed.value["prompt"] : "",
+      ...(typeof parsed.value["turnId"] === "string"
+        ? { turnId: parsed.value["turnId"] }
+        : {}),
+    });
+    return assistantSnapshotResponse("assistant", snapshot);
+  };
+
   const route = (request: InspectorHttpRequest): InspectorHttpResponse => {
     const target = new URL(request.url, "http://localhost");
     const path = target.pathname;
@@ -541,6 +615,13 @@ export function createInspectorApp(
           projectRoot,
           activeReviewToken,
         );
+      case "assistant":
+        return refuse(
+          500,
+          action,
+          WEB_SHELL_REFUSALS.handlerFailed,
+          "The assistant route requires asynchronous request handling.",
+        );
     }
   };
 
@@ -561,6 +642,36 @@ export function createInspectorApp(
         return refuse(
           500,
           "unknown",
+          WEB_SHELL_REFUSALS.handlerFailed,
+          `The inspector could not serve ${request.url}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    },
+
+    async handleAsync(
+      request: InspectorHttpRequest,
+    ): Promise<InspectorHttpResponse> {
+      try {
+        const target = new URL(request.url, "http://localhost");
+        if (target.pathname !== INSPECTOR_ACTIONS.assistant.path) {
+          return this.handle(request);
+        }
+        const method = request.method.toUpperCase();
+        if (method !== INSPECTOR_ACTIONS.assistant.method) {
+          return refuse(
+            405,
+            "assistant",
+            WEB_SHELL_REFUSALS.methodNotAllowed,
+            `${method} is not allowed on ${target.pathname}; use ${INSPECTOR_ACTIONS.assistant.method}.`,
+          );
+        }
+        return await assistantTurn(request.body);
+      } catch (error) {
+        return refuse(
+          500,
+          "assistant",
           WEB_SHELL_REFUSALS.handlerFailed,
           `The inspector could not serve ${request.url}: ${
             error instanceof Error ? error.message : String(error)
