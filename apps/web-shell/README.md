@@ -75,6 +75,11 @@ when an injected BYO port is supplied; the built default does not invent one.
 identity, provider, clock, and credit-store seams; the transport creates none
 of those policies and accepts no provider credential from HTTP.
 
+Because that turn is asynchronous, an embedder driving `createInspectorApp()`
+itself must route through `handleAsync()`, which serves the whole vocabulary;
+the synchronous `handle()` still serves every authoring route and refuses the
+assistant path with `500 handler-failed` rather than answering it half-way.
+
 ### How it fails closed
 
 This is a **local development** surface: it authenticates nobody, and it writes
@@ -110,8 +115,8 @@ rather than renaming a decision it does not own, so `HOSTED_AI_NOT_ENABLED` and
 `ASSISTANT_PROMPT_INVALID` reach the client unchanged. `ServedRefusalReason` is
 that union, and those reasons stay covered by the panel's and the billing
 plane's own refuse matrices. The binary itself is proven to start by
-`test/bin-smoke.test.ts`, which spawns it and drives propose → accept over a
-real socket.
+`test/bin-smoke.test.ts`, which spawns it and drives propose → accept and one
+default fixture assistant turn over a real socket.
 
 It still does no remote hosting, deployment, TLS, process management, or domain
 work — that tier is `sites/`

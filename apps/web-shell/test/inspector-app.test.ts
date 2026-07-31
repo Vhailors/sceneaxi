@@ -68,7 +68,7 @@ const ADMIN_ENV_VARS = [
 /** Build an app with the ambient identity environment removed, then restore it. */
 function assistantProject(): { dir: string; app: InspectorApp } {
   const saved = ADMIN_ENV_VARS.map((name) => [name, process.env[name]] as const);
-  for (const [name] of saved) delete process.env[name];
+  for (const [name] of saved) Reflect.deleteProperty(process.env, name);
   try {
     return project();
   } finally {

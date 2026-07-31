@@ -136,8 +136,8 @@ and the built default panel has no ledger or hosted opt-in, so it cannot spend.
 `sceneaxi-web-shell` is a **local authoring** surface, not a deployment. Its run
 instructions, security rationale, and authoritative refusal table live in
 [`../apps/web-shell/README.md`](../apps/web-shell/README.md); the shell adds only
-a transport over the inspector phases it already had. The deployable web tier
-remains the separate `sites/` tier (ADR 0018).
+transports over the inspector phases and the assistant panel it already had. The
+deployable web tier remains the separate `sites/` tier (ADR 0018).
 
 ## Not runnable yet
 

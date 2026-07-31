@@ -109,7 +109,7 @@ function withEnv<T>(
   );
   const restore = (entries: ReadonlyArray<readonly [string, string | undefined]>) => {
     for (const [name, value] of entries) {
-      if (value === undefined) delete process.env[name];
+      if (value === undefined) Reflect.deleteProperty(process.env, name);
       else process.env[name] = value;
     }
   };
