@@ -65,6 +65,7 @@ export {
   LOGIN_DEFAULT_DESTINATION,
   LOGIN_PATH,
   loginRefusalHref,
+  loginRefusalOutcome,
   performLogin,
   performLogout,
   readLoginRefusalReason,

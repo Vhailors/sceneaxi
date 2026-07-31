@@ -206,6 +206,14 @@ drives `signIn` and composes the cookie credential; a consumer that holds the is
 `Principal` object itself, like web-shell's account panel, drops the token on the floor
 deliberately.
 
+That credential format carries one obligation back onto the provider's session id: it is
+read back by splitting on the **first** `.`, so a session id that itself contains a dot —
+which the adapter's identifier rules otherwise permit — cannot round-trip. The umbrella
+adapter re-reads the credential it just composed and refuses
+`IDENTITY_ADAPTER_OUTPUT_INVALID` when the halves do not come back unchanged, so an
+unrepresentable session id is a named refusal at issuance rather than a cookie the next
+request silently reads as "signed out".
+
 Admin elevation requires both the provider authentication and the stored SceneAxi user
 record to mark `emailVerified: true`. An unverified address matching
 `SCENEAXI_ADMIN_EMAIL` refuses with `AUTH_ADMIN_EMAIL_UNVERIFIED` before any session is

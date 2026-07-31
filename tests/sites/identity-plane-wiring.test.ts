@@ -1750,6 +1750,54 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
     expect(access.access.principal?.user.userId).toBe("member-1");
   });
 
+  it("refuses a session id the cookie credential cannot carry back, rather than minting a dead cookie", async () => {
+    // The provider's identifier rules allow a dot inside a session id, and the
+    // cookie credential is read back by splitting on its first dot — so this
+    // session id is unrepresentable and must fail closed by name at issuance.
+    const admin = resolveAdminIdentity({ SCENEAXI_ADMIN_EMAIL: ADMIN_EMAIL });
+    if (!admin.ok) throw new Error(`admin unresolved: ${admin.message}`);
+    const dotted: IdentityAdapter = Object.freeze({
+      authenticate(credentials: { email: string; password: string }) {
+        if (credentials.email !== MEMBER_EMAIL || credentials.password !== MEMBER_PASSWORD) {
+          return undefined;
+        }
+        return {
+          user: { id: "member-1", email: MEMBER_EMAIL, emailVerified: true },
+          session: {
+            id: "sess.a1",
+            token: FRESH_TOKEN,
+            userId: "member-1",
+            expiresAt: iso(3_600_000),
+          },
+        };
+      },
+    });
+    const port = createIdentityPort({
+      adapter: dotted,
+      store: createInMemoryIdentityStore({
+        users: [user("member-1", MEMBER_EMAIL)] as never,
+        sessions: [] as never,
+      }),
+      admin: admin.value,
+      clock,
+    });
+    const plane = createUmbrellaIdentityPlane(ENV, { identityPort: port, clock });
+
+    expect(parseSessionToken(`sess.a1.${FRESH_TOKEN}`)).toEqual({
+      sessionId: "sess",
+      token: `a1.${FRESH_TOKEN}`,
+    });
+    const outcome = await performLogin({
+      plane,
+      fields: { email: MEMBER_EMAIL, password: MEMBER_PASSWORD },
+      secure: true,
+    });
+    expect(outcome).toMatchObject({
+      kind: "refused",
+      reason: "IDENTITY_ADAPTER_OUTPUT_INVALID",
+    });
+  });
+
   it("refuses wrong credentials as their own named outcome, back at the form", async () => {
     const { port } = loginWorld();
     const plane = createUmbrellaIdentityPlane(ENV, { identityPort: port, clock });

@@ -607,10 +607,19 @@ export function createAuthLoginAdapter(options: {
         return refuse(siteReasonForAuthReason(granted.reason));
       }
       const principal = granted.value.principal;
+      const sessionCredential = `${principal.session.sessionId}.${granted.value.sessionToken}`;
+      const readBack = parseSessionToken(sessionCredential);
+      if (
+        readBack === null ||
+        readBack.sessionId !== principal.session.sessionId ||
+        readBack.token !== granted.value.sessionToken
+      ) {
+        return refuse("IDENTITY_ADAPTER_OUTPUT_INVALID");
+      }
       return ok(
         Object.freeze({
           principal: toSitePrincipal(principal),
-          sessionCredential: `${principal.session.sessionId}.${granted.value.sessionToken}`,
+          sessionCredential,
         }),
       );
     },

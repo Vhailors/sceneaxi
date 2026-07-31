@@ -115,6 +115,25 @@ export type LoginAttemptOutcome =
     };
 
 /**
+ * A refused attempt, as the redirect the route hands back.
+ *
+ * Every outcome of the endpoint is a 303 carrying a registry reason, including
+ * the ones decided before the plane is reached — a body the framework could not
+ * parse into form fields is refused `SITE_REQUEST_MALFORMED` here rather than
+ * escaping as an unnamed framework fault.
+ */
+export function loginRefusalOutcome(
+  reason: SiteRefusalReason,
+  next: string = LOGIN_DEFAULT_DESTINATION,
+): LoginAttemptOutcome {
+  return Object.freeze({
+    kind: "refused" as const,
+    location: loginRefusalHref(reason, resolveLoginDestination(next)),
+    reason,
+  });
+}
+
+/**
  * Attempt a sign-in and decide the response.
  *
  * Every refusal — empty fields, rejected credentials, an unwired or failed
@@ -133,13 +152,7 @@ export async function performLogin(input: {
   const password = typeof input.fields.password === "string" ? input.fields.password : "";
 
   const granted = await input.plane.login.signIn({ surface: "site", email, password });
-  if (!granted.ok) {
-    return Object.freeze({
-      kind: "refused" as const,
-      location: loginRefusalHref(granted.reason, next),
-      reason: granted.reason,
-    });
-  }
+  if (!granted.ok) return loginRefusalOutcome(granted.reason, next);
 
   const setCookie = buildSiteSessionCookie({
     credential: granted.value.sessionCredential,
@@ -148,13 +161,7 @@ export async function performLogin(input: {
   });
   // The login plane has already vetted the credential and expiry, so this is a
   // belt-and-suspenders refusal, not a reachable product state.
-  if (setCookie === null) {
-    return Object.freeze({
-      kind: "refused" as const,
-      location: loginRefusalHref("IDENTITY_ADAPTER_OUTPUT_INVALID", next),
-      reason: "IDENTITY_ADAPTER_OUTPUT_INVALID" as const,
-    });
-  }
+  if (setCookie === null) return loginRefusalOutcome("IDENTITY_ADAPTER_OUTPUT_INVALID", next);
 
   return Object.freeze({
     kind: "success" as const,

@@ -11,6 +11,7 @@ import {
   LOGIN_DEFAULT_DESTINATION,
   LOGIN_PATH,
   loginRefusalHref,
+  loginRefusalOutcome,
   readLoginRefusalReason,
   resolveLoginDestination,
 } from "../../sites/umbrella/src/index.ts";
@@ -70,5 +71,24 @@ describe("loginRefusalHref", () => {
   it("carries a non-default destination through the retry", () => {
     const href = loginRefusalHref("LOGIN_CREDENTIALS_REJECTED", "/editor");
     expect(href).toBe(`${LOGIN_PATH}?reason=LOGIN_CREDENTIALS_REJECTED&next=%2Feditor`);
+  });
+});
+
+describe("loginRefusalOutcome", () => {
+  it("shapes a refusal decided before the plane is reached, like a body that would not parse", () => {
+    expect(loginRefusalOutcome("SITE_REQUEST_MALFORMED")).toEqual({
+      kind: "refused",
+      reason: "SITE_REQUEST_MALFORMED",
+      location: `${LOGIN_PATH}?reason=SITE_REQUEST_MALFORMED`,
+    });
+  });
+
+  it("confines the carried destination like every other refusal does", () => {
+    expect(loginRefusalOutcome("SITE_REQUEST_MALFORMED", "https://evil.example").location).toBe(
+      `${LOGIN_PATH}?reason=SITE_REQUEST_MALFORMED`,
+    );
+    expect(loginRefusalOutcome("SITE_REQUEST_MALFORMED", "/editor").location).toBe(
+      `${LOGIN_PATH}?reason=SITE_REQUEST_MALFORMED&next=%2Feditor`,
+    );
   });
 });

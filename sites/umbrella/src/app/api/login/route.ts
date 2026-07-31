@@ -1,6 +1,10 @@
 import type { NextRequest } from "next/server";
 import { createUmbrellaIdentityPlane } from "../../../lib/identity-plane.js";
-import { performLogin, resolveSessionCookieSecurity } from "../../../lib/login-flow.js";
+import {
+  loginRefusalOutcome,
+  performLogin,
+  resolveSessionCookieSecurity,
+} from "../../../lib/login-flow.js";
 
 /**
  * The hosted sign-in handler (sceneaxi#185).
@@ -18,7 +22,18 @@ import { performLogin, resolveSessionCookieSecurity } from "../../../lib/login-f
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
-  const form = await request.formData();
+  let form: FormData;
+  try {
+    form = await request.formData();
+  } catch {
+    return new Response(null, {
+      status: 303,
+      headers: new Headers({
+        Location: loginRefusalOutcome("SITE_REQUEST_MALFORMED").location,
+      }),
+    });
+  }
+
   const plane = createUmbrellaIdentityPlane(process.env, {});
   const outcome = await performLogin({
     plane,
