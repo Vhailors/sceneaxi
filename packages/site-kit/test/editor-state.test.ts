@@ -81,6 +81,37 @@ describe("readEditorState — refusals", () => {
   });
 });
 
+describe("readEditorState — the shell's active mode", () => {
+  it("reads the mode the link names", () => {
+    expect(readEditorState({ mode: "run" })).toMatchObject({ ok: true, value: { modeId: "run" } });
+  });
+
+  it("opens the default mode when none is named, or one the shared table does not know", () => {
+    // A mode names no engine behaviour, so an unknown one is a chrome
+    // preference to fall back on — never a refused link.
+    expect(readEditorState({})).toMatchObject({ ok: true, value: { modeId: "build" } });
+    expect(readEditorState({ mode: "sculptx" })).toMatchObject({
+      ok: true,
+      value: { modeId: "build" },
+    });
+  });
+
+  it("carries the active mode through every live control's href", () => {
+    // Every live control is a full-page navigation, so the mode has to ride in
+    // the URL or the reader is dropped back into Build by their own click.
+    const state = readEditorState({ mode: "run", play: "1" });
+    expect(state.ok).toBe(true);
+    if (!state.ok) return;
+    const carried = new URL(editorHref(state.value, {}), "https://x").searchParams;
+    expect(carried.get("mode")).toBe("run");
+    const switched = new URL(editorHref(state.value, { mode: "ship" }), "https://x").searchParams;
+    expect(switched.get("mode")).toBe("ship");
+    // And it changes nothing else the state carries.
+    expect(switched.get("play")).toBe("1");
+    expect(switched.get("sel")).toBe("object-1");
+  });
+});
+
 describe("readEditorState — catalog deep link", () => {
   it("parses a catalog deep link alongside editor state", () => {
     const state = readEditorState({

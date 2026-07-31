@@ -20,6 +20,7 @@ opened — and what may be drawn — lives here.
 | `deep-link.ts` | catalog → umbrella editor deep-link contract, and the one definition of the configured umbrella origin — including the checkout redirect origin, which is never taken from a request `Host` |
 | `web-editor.ts` | bounded Minimum E2 web editor session over `@sceneaxi/authoring-core` |
 | `editor-session.ts` | driving that session from URL state, and projecting its composed scene for a browser |
+| `editor-shell.ts` | `buildEditorShellView()` — the umbrella `/editor` Engine Desktop shell projected from the shared vocabulary in `@sceneaxi/schemas` over one real session render, plus the closed `EDITOR_SHELL_WEB_REFUSALS` registry; owner doc `docs/web-editor-shell.md` |
 | `mountable-scene.ts` | the one payload shape a browser mounts, shared by both umbrella viewports |
 | `live-open.ts` | the public live open path: which committed fixture is opened, how it is placed by `composeScene()`, and the honest vocabulary a page may use for the presentation core |
 | `profile-contracts.ts` | the browser-safe re-export of `profileConformanceRegistry` and `OPEN_PATH_POLICY`, so the umbrella `/profiles` page reads the canonical contracts by reference instead of through the Node-bearing root barrel |

@@ -15,13 +15,15 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { REQUIRED_SCULPT_PASSES } from "@sceneaxi/schemas";
+import { EDITOR_SHELL_RETIRED_COPY, REQUIRED_SCULPT_PASSES } from "@sceneaxi/schemas";
 // `@sceneaxi/cli` is not a hermetic-root dependency, and the sites tier may not import
 // it either. It is read by path here for the same reason the site seams are: the point
 // is to compare against the shipped source, not to acquire an edge to it.
 import { EXIT_CODE_TABLE } from "../../packages/cli/src/exit-codes.ts";
 import {
   CREATOR_SHARE_RULE,
+  EDITOR_SHELL_FABRICATED_FIGURES,
+  EDITOR_SHELL_WEB_REFUSALS,
   FOUNDATION_COLORS,
   FOUNDATION_CONTRAST_ROLES,
   FOUNDATION_NEUTRAL_TOKENS,
@@ -434,7 +436,19 @@ describe("the token layer comes from site-kit and is not duplicated here", () =>
     const emitted = new Set(
       [...sheet.value.matchAll(/^\s*(--[a-z0-9-]+):/gm)].map((match) => match[1]),
     );
-    const localMetrics = new Set(["--shell", "--gutter", "--band-pad", "--masthead-h"]);
+    // Site-local layout metrics, declared and read in this sheet only. The
+    // `--ed-narrow-*` three are the reflowed editor row's budget: the row floor
+    // is their sum, so the canvas cannot be squeezed to nothing by a dock or a
+    // copy band whose height the floor did not count.
+    const localMetrics = new Set([
+      "--shell",
+      "--gutter",
+      "--band-pad",
+      "--masthead-h",
+      "--ed-narrow-dock",
+      "--ed-narrow-note",
+      "--ed-narrow-canvas",
+    ]);
     const used = new Set(
       [...CSS.matchAll(/var\((--[a-z0-9-]+)\)/g)].map((match) => match[1]),
     );
@@ -821,6 +835,7 @@ describe("the visual layer adds no behaviour the site did not already have", () 
       "src/app/_components/site-nav.tsx",
       "src/app/_components/sculpt-viewport.tsx",
       "src/app/_components/hero-viewport.tsx",
+      "src/app/editor/_components/editor-shell.tsx",
       "src/app/editor/_components/editor-viewport.tsx",
       "src/app/open/_components/live-viewport.tsx",
     ].sort());
@@ -956,5 +971,324 @@ describe("the visual layer adds no behaviour the site did not already have", () 
     expect(read("src/app/_components/state-panel.tsx")).not.toMatch(
       /\{ id: "[a-z-]+", label: "[^"]+" \}/,
     );
+  });
+});
+
+describe("the Engine Desktop editor shell stays honest (sceneaxi#184)", () => {
+  const SHELL = read("src/app/editor/_components/editor-shell.tsx");
+  const PAGE = read("src/app/editor/page.tsx");
+
+  it("draws the shared editor-shell structure, not an invented dashboard", () => {
+    // Title bar, mode rail, dock strip, inspector, assistant, status bar, and
+    // the command palette — the archive's regions, each present as a landmark
+    // or labelled region in the one shell component.
+    for (const region of [
+      'className="ed-titlebar"',
+      'className="ed-rail"',
+      'className="ed-dock"',
+      'className="ed-inspector"',
+      'className="ed-assistant"',
+      'className="ed-status"',
+      'aria-label="Command palette"',
+    ]) {
+      expect(SHELL).toContain(region);
+    }
+    // The chrome is data-driven: modes, menus, and dock tabs come from the
+    // view the server built, never from a literal list in JSX.
+    expect(SHELL).toContain("view.modes.map");
+    expect(SHELL).toContain("view.menus.map");
+    expect(SHELL).toContain("view.profiles.map");
+  });
+
+  it("keeps a document outline under the application chrome", () => {
+    // The archive draws a title bar rather than a page heading, but the route is
+    // still a document: without an `h1` its section titles are `h3`s under
+    // nothing, which is the heading-order jump this file already gates for the
+    // hero. The name is clipped rather than `display: none`, so it stays in the
+    // accessibility tree, and the panel heads carry level 2 exactly as the
+    // desktop chrome renders the same heads.
+    expect(SHELL).toContain('<h1 className="ed-shell-title">');
+    expect(SHELL).toContain('<h2 className="ed-panel-head">');
+    expect(SHELL).not.toContain('<div className="ed-panel-head">');
+    expect(CSS).toMatch(/\.ed-shell-title \{[^}]*clip-path: inset\(50%\)/);
+    expect(CSS).not.toMatch(/\.ed-shell-title \{[^}]*display: none/);
+    // Promoting a head to a heading must not repaint it: the `h2` element rule
+    // carries the sheet's display weight and line box, so the panel head pins
+    // its own rather than inheriting them.
+    expect(CSS).toMatch(/\.ed-panel-head \{[^}]*font-weight: 400;/);
+    expect(CSS).toMatch(/\.ed-panel-head \{[^}]*line-height: 1;/);
+  });
+
+  it("keeps every editor metric owned by the stylesheet, in archive values", () => {
+    // The structural metrics the shared model carries (EDITOR_SHELL_METRICS):
+    // title bar 36, rail 56, left dock 274, inspector 326, assistant 344,
+    // view tabs 32, dock 228 (252 for animate), status bar 27.
+    for (const rule of [
+      ".ed-titlebar {\n  height: 36px;",
+      ".ed-rail {\n  width: 56px;",
+      ".ed-left {\n  width: 274px;",
+      ".ed-inspector {\n  width: 326px;",
+      ".ed-assistant {\n  width: 344px;",
+      ".ed-viewtabs {\n  height: 32px;",
+      ".ed-dock {\n  height: 228px;",
+      ".ed-status {\n  height: 27px;",
+    ]) {
+      expect(CSS).toContain(rule);
+    }
+    expect(CSS).toContain('.edshell[data-mode="animate"] .ed-dock {\n  height: 252px;');
+  });
+
+  it("ships no archive fixture figure and no retired renderer copy", () => {
+    // The pinned lists are read from their owners, not restated here: adding a
+    // figure or a retired sentence has to extend this shipped-source check too,
+    // which is what `EDITOR_SHELL_FABRICATED_FIGURES` claims about this file.
+    expect(EDITOR_SHELL_FABRICATED_FIGURES.length).toBeGreaterThan(0);
+    expect(EDITOR_SHELL_RETIRED_COPY.length).toBeGreaterThan(0);
+    for (const source of [SHELL, PAGE, CSS]) {
+      for (const pinned of [
+        ...EDITOR_SHELL_FABRICATED_FIGURES,
+        ...EDITOR_SHELL_RETIRED_COPY,
+      ]) {
+        expect(source).not.toContain(pinned);
+      }
+    }
+  });
+
+  it("keeps engine state server-owned: no client mutation of the session", () => {
+    // Client state is view state only; every live control is a link or a GET
+    // form back to /editor, so the browser can never show a scene the server
+    // session did not produce.
+    expect(SHELL).toContain('method="get" action="/editor"');
+    expect(SHELL).not.toContain("fetch(");
+    expect(SHELL).not.toContain('method="post"');
+    // The one state hook family is React's, applied to chrome only.
+    expect(SHELL).toContain("useState<ModeId>");
+  });
+
+  it("renders every control through the one kind-aware helper", () => {
+    // A control cannot reach the document without its kind: the helper stamps
+    // data-kind, and inert controls keep a focus stop with a resolving
+    // describedby — the desktop chrome's accounting rule, kept here.
+    expect(SHELL).toContain("function ShellButton");
+    expect(SHELL).toContain('"aria-disabled": true');
+    expect(SHELL).toContain("aria-describedby");
+    expect(SHELL).toContain("legendId");
+    // The legend prints the whole closed registry once.
+    expect(SHELL).toContain("view.refusalLegend.map");
+  });
+
+  it("projects the Kids refusal as the whole editor body, exits stay live", () => {
+    expect(SHELL).toContain("view.kidsLock.code");
+    expect(SHELL).toContain("ed-kids-lock");
+    // The profile chips are not demoted — a refuse-only state must be exitable.
+    expect(SHELL).toContain("a refuse-only state is a state you can");
+    // The assistant seat becomes the deny, and it is not reopenable copy. The
+    // renderer prints the view's own code — the Model Provider Port's reason,
+    // never respelled on the surface.
+    expect(SHELL).toContain("{view.assistant.kidsDenyCode}");
+    expect(SHELL).not.toContain("THIRD_PARTY_LLM_DENIED_BY_DEFAULT");
+  });
+
+  it("seats the Kids assistant deny the same way it seats an open one", () => {
+    // The compact tier lifts the assistant out of flow; below it the narrow
+    // tier makes `.ed-body` a grid whose placements name every other panel, so
+    // a seat that stayed docked would auto-place into an implicit row inside
+    // `.edshell { overflow: hidden }`.
+    expect(CSS).toContain('.ed-assistant:not([data-assistant="closed"]) {');
+    expect(CSS).not.toContain('.ed-assistant[data-assistant="open"] {');
+  });
+
+  it("keeps a drawing surface in the reflowed tier it declares supported", () => {
+    // The tier above the shared minimum is supported, so the canvas has to keep
+    // pixels there. A bare `1.6fr` row does not: its share at 900×600 is 330px
+    // and the view tabs, copy band, and dock consume it whole. The row's floor
+    // is therefore the sum of those three plus the canvas minimum, and the
+    // canvas carries that minimum itself.
+    const narrow = CSS.slice(CSS.indexOf("@media (max-width: 1179px), (max-height: 659px)"));
+    const block = narrow.slice(0, narrow.indexOf("\n}\n") + 3);
+    for (const declaration of [
+      "--ed-narrow-dock:",
+      "--ed-narrow-note:",
+      "--ed-narrow-canvas:",
+      "min-height: var(--ed-narrow-canvas);",
+      "max-height: var(--ed-narrow-note);",
+      "height: var(--ed-narrow-dock);",
+    ]) {
+      expect(block).toContain(declaration);
+    }
+    expect(block).toContain("var(--ed-narrow-note) + var(--ed-narrow-dock)");
+    // The timeline dock is the specific rule, so shrinking `.ed-dock` alone
+    // would leave `animate` at 252px and take the canvas back.
+    expect(block).toContain('.edshell[data-mode="animate"] .ed-dock');
+  });
+
+  it("carries the active mode across a live control's own navigation", () => {
+    // Every live control is a full-page navigation and its href was built in
+    // the mode the URL named, so the shell rebuilds each one in the mode the
+    // reader switched to — otherwise Run's own Play control returns to Build,
+    // away from the panel that shows its result. Mode stays view state: the
+    // parameter names no engine operation.
+    expect(SHELL).toContain("const [mode, setMode] = useState<ModeId>(view.activeModeId);");
+    expect(SHELL).toContain("href={hrefInMode(binding.href, activeMode)}");
+    expect(SHELL).toContain("<ActiveModeContext value={mode}>");
+    // A submit is a navigation too.
+    expect(SHELL).toContain('<input type="hidden" name="mode" value={mode} />');
+  });
+
+  it("refuses below the shared minimum window rather than degrading", () => {
+    // The block prints the view's own code and wording rather than restating
+    // either, so the refusal cannot drift from the closed registry it names.
+    expect(EDITOR_SHELL_WEB_REFUSALS.windowBelowMinimum).toBe(
+      "EDITOR_WINDOW_BELOW_MINIMUM",
+    );
+    expect(SHELL).toContain("{view.windowMinimum.code}");
+    expect(SHELL).toContain("{view.windowMinimum.message}");
+    expect(SHELL).not.toContain("EDITOR_WINDOW_BELOW_MINIMUM");
+    expect(CSS).toContain("@media (max-width: 899px), (max-height: 599px)");
+  });
+
+  it("withdraws the command palette entirely under the Kids lock", () => {
+    // The palette is part of the editor body the refuse-only profile replaces,
+    // so neither the opener nor ⌘K may reach it — otherwise the overlay's live
+    // play row stays reachable behind a refusal that claims the body is gone.
+    expect(SHELL).toContain("const paletteOpen = paletteRequested && !kids;");
+    expect(SHELL).toContain("if (kids) return;");
+    // And the opener itself is demoted with the policy's own code, like the rail.
+    const opener = SHELL.slice(SHELL.indexOf("control={view.paletteOpener}"));
+    expect(opener.slice(0, 400)).toContain(
+      "demotedRefusal={kids ? view.kidsLock.code : undefined}",
+    );
+  });
+
+  it("contains focus in the palette it declares modal", () => {
+    // `aria-modal` promises the rest of the shell is out of reach, so every
+    // sibling region the overlay covers is inert while it is open. The refusal
+    // legend is deliberately not: `aria-describedby` has to keep resolving into
+    // it from the palette's own inert rows.
+    expect(SHELL).toContain('role="dialog" aria-modal="true"');
+    for (const region of [
+      '<header className="ed-titlebar" aria-label="Editor title bar" inert={paletteOpen}>',
+      '<div className="ed-body" inert={paletteOpen}>',
+      '<footer className="ed-status" aria-label="Editor status" inert={paletteOpen}>',
+    ]) {
+      expect(SHELL).toContain(region);
+    }
+    expect(SHELL).toContain('<div className="ed-legend" hidden>');
+    // The below-minimum note is deliberately never inert: it is the only thing
+    // that surface renders, and the tier hides the overlay in CSS instead.
+    expect(SHELL).toContain('<div className="ed-minimum" role="note">');
+  });
+
+  it("returns palette focus after the inert regions are released", () => {
+    // Restoring focus inside a close handler cannot work: the regions the return
+    // target lives in still carry `inert` at that point, so `focus()` is a no-op.
+    // The restore therefore lives in the effect that runs after the commit.
+    expect(SHELL).toContain("onClick={() => setPaletteRequested(false)}");
+    const effect = SHELL.slice(SHELL.indexOf("if (paletteOpen) {"));
+    expect(effect.slice(0, 220)).toContain("paletteReturnFocus.current?.focus();");
+    // Exactly one restore, and it is that one — no close handler may reintroduce
+    // a synchronous one alongside it.
+    expect(SHELL.split("paletteReturnFocus.current?.focus();")).toHaveLength(2);
+  });
+
+  it("withdraws the palette below the shared minimum window", () => {
+    // The tier refusal claims the whole surface, and the palette is script-owned
+    // with no knowledge of the tier — so the stylesheet withdraws its scrim too,
+    // or one keystroke paints a live play link over a refusal.
+    const tier = CSS.slice(CSS.indexOf("@media (max-width: 899px), (max-height: 599px)"));
+    const block = tier.slice(0, tier.indexOf("\n}\n") + 3);
+    for (const region of [
+      ".ed-titlebar",
+      ".ed-body",
+      ".ed-status",
+      ".ed-palette-scrim",
+    ]) {
+      expect(block).toContain(region);
+    }
+    expect(block).toContain("display: none !important;");
+  });
+
+  it("points every dock tab at a panel that exists", () => {
+    // Only the shown tab's content renders, so a per-tab `aria-controls` would
+    // name three IDREFs that resolve to nothing. One panel owns them all.
+    expect(SHELL).toContain("aria-controls={DOCK_PANEL_ID}");
+    expect(SHELL).toContain("id={DOCK_PANEL_ID}");
+    expect(SHELL).toContain('aria-labelledby={`dock-${shownDockTab}`}');
+    expect(SHELL).not.toContain("dock-panel-");
+  });
+
+  it("filters the palette it offers to filter", () => {
+    // An input that advertises "Filter commands" has to filter, so the rows the
+    // groups draw are the filtered ones, not the whole set.
+    expect(SHELL).toContain("onChange={(event) => setPaletteQuery(event.target.value)}");
+    expect(SHELL).toContain("const rows = paletteRows.filter");
+  });
+
+  it("renders the run controls the view mints, in Run mode", () => {
+    // Both are `live` links back to /editor; a minted control that reaches no
+    // element is a control nothing can use.
+    expect(SHELL).toContain("control={view.run.playPause}");
+    expect(SHELL).toContain("control={view.run.reset}");
+  });
+
+  it("keeps the viewport's own copy beside the viewport, in every mode", () => {
+    // Neither line belongs to one mode's inspector: what the canvas draws and
+    // what it deliberately never does is true of all seven.
+    expect(SHELL).toContain("{viewportCopy.lede}");
+    expect(SHELL).toContain("{viewportCopy.honesty}");
+    const viewportColumn = SHELL.slice(
+      SHELL.indexOf('className="ed-viewport-col"'),
+      SHELL.indexOf('className="ed-dock"'),
+    );
+    expect(viewportColumn).toContain("{viewportCopy.lede}");
+    expect(viewportColumn).toContain("{viewportCopy.honesty}");
+  });
+
+  it("states that the applied save does not survive the request", () => {
+    expect(SHELL).toContain("{view.changes.savedLabel}");
+    expect(SHELL).toContain("{view.changes.persistenceNote}");
+    expect(SHELL).toContain("{view.changes.persistencePin}");
+  });
+
+  it("draws the archive's per-row change decisions inert, through the helper", () => {
+    // Apply is E1 all-or-nothing and already happened, so the ✕/✓ the archive
+    // draws per row ship refusing rather than missing.
+    expect(SHELL).toContain("view.changes.rowDecisions");
+    expect(SHELL).toMatch(/<ShellButton\s+control=\{decision\.reject\}/);
+    expect(SHELL).toMatch(/<ShellButton\s+control=\{decision\.accept\}/);
+  });
+
+  it("gives every form control the id and kind its minted control declares", () => {
+    // `view.edit.*` are minted `live`, so the elements that carry them have to
+    // say so — otherwise the accounting index names four live edit controls the
+    // document does not expose.
+    for (const wiring of [
+      "id={view.edit.selection.id}",
+      'data-kind={view.edit.selection.kind}',
+      "id={view.edit.translation.id}",
+      'data-kind={view.edit.translation.kind}',
+      "id={view.edit.objects.id}",
+      'data-kind={view.edit.objects.kind}',
+      "id={view.edit.apply.id}",
+      'data-kind={view.edit.apply.kind}',
+    ]) {
+      expect(SHELL).toContain(wiring);
+    }
+    // The scene tree's selection links are minted controls too, drawn through
+    // the same helper rather than as bare anchors.
+    expect(SHELL).toContain("<ShellButton control={row.select}");
+    // And every remaining interactive element on the route declares a kind.
+    const viewport = read("src/app/editor/_components/editor-viewport.tsx");
+    expect(viewport.match(/<button/g)?.length).toBe(
+      viewport.match(/data-kind="view"/g)?.length,
+    );
+  });
+
+  it("collapses the site chrome for the editor route only, by removal", () => {
+    const layout = read("src/app/editor/layout.tsx");
+    expect(layout).toContain(".masthead, body > footer, .skip-link { display: none; }");
+    // Scoped to the root layout's own footer: the shell's status bar is a
+    // <footer> too, and a type selector would reach it.
+    expect(layout).not.toContain(", footer,");
   });
 });

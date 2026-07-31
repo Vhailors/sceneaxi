@@ -18,7 +18,11 @@
  *
  * Pure TypeScript: no React, no Next, gate-typechecked and gate-tested.
  */
-import type { SculptTransform } from "@sceneaxi/schemas";
+import {
+  EDITOR_SHELL_MODE_IDS,
+  type EditorShellModeId,
+  type SculptTransform,
+} from "@sceneaxi/schemas";
 import {
   EDITOR_DEEP_LINK_PARAMS,
   parseEditorDeepLinkParams,
@@ -26,8 +30,20 @@ import {
 } from "./deep-link.js";
 import { type SiteResult, ok, refuse } from "./refusals.js";
 
-/** Non-transform parameters the editor owns, on top of the deep-link contract. */
-export const EDITOR_STATE_PARAMS = Object.freeze(["sel", "objects", "play"] as const);
+/**
+ * Non-transform parameters the editor owns, on top of the deep-link contract.
+ *
+ * `mode` is the shell's active mode. It is **view** state, not engine state: no
+ * render reads it, no session operation depends on it, and every mode shows the
+ * same session. It rides in the URL because every live control is a full-page
+ * navigation, so a mode kept only in the browser would be lost on the very click
+ * it was meant to answer — Run's own Play control would eject the reader back to
+ * Build.
+ */
+export const EDITOR_STATE_PARAMS = Object.freeze(["sel", "objects", "play", "mode"] as const);
+
+/** The mode a request that names none — or names one the shared table does not — opens in. */
+const DEFAULT_MODE_ID = EDITOR_SHELL_MODE_IDS[0];
 
 /**
  * Per-instance transforms ride under `tx-<instanceId>` parameters. The instance id is the
@@ -50,6 +66,8 @@ export type EditorState = {
   readonly instances: readonly EditorInstanceState[];
   readonly selectedInstanceId: string;
   readonly playing: boolean;
+  /** The shell's active mode — chrome only, and the same session in all seven. */
+  readonly modeId: EditorShellModeId;
   /** The deep link that opened the editor, when the request carried one. */
   readonly deepLink: EditorDeepLink | null;
 };
@@ -145,25 +163,34 @@ export function readEditorState(params: SearchParams): SiteResult<EditorState> {
       ? selectedRaw
       : (instances[0]?.instanceId ?? instanceIdAt(0));
 
+  /**
+   * An unnamed or unknown mode opens the default one, the same fallback the
+   * selection takes. A mode names no engine behaviour, so refusing here would
+   * turn a chrome preference into a broken link.
+   */
+  const modeRaw = single(params["mode"]);
+  const modeId = EDITOR_SHELL_MODE_IDS.find((candidate) => candidate === modeRaw) ?? DEFAULT_MODE_ID;
+
   return ok(
     Object.freeze({
       instances: Object.freeze(instances),
       selectedInstanceId,
       playing: single(params["play"]) === "1",
+      modeId,
       deepLink,
     }),
   );
 }
 
 /**
- * Rebuild the query string for a state change, preserving the deep link and every
- * instance's own translation. Only the play state is varied here; selection and
- * transforms are carried verbatim from the authoritative state, so this link never
- * mutates an object's transform.
+ * Rebuild the query string for a state change, preserving the deep link, every
+ * instance's own translation, and the active mode. Only the play state and the mode
+ * are varied here; selection and transforms are carried verbatim from the
+ * authoritative state, so this link never mutates an object's transform.
  */
 export function editorHref(
   state: EditorState,
-  change: { readonly play?: boolean },
+  change: { readonly play?: boolean; readonly mode?: EditorShellModeId },
 ): string {
   const query = new URLSearchParams();
   if (state.deepLink !== null) {
@@ -173,6 +200,7 @@ export function editorHref(
   }
   query.set("objects", String(state.instances.length));
   query.set("sel", state.selectedInstanceId);
+  query.set("mode", change.mode ?? state.modeId);
   for (const instance of state.instances) {
     query.set(`tx-${instance.instanceId}`, instance.transform.translation.join(","));
   }

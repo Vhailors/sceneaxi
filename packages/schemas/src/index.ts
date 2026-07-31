@@ -306,6 +306,34 @@ export type {
 } from "./delivery-handoff.js";
 
 export {
+  EDITOR_SHELL_ASSISTANT_MODE_IDS,
+  EDITOR_SHELL_ASSISTANT_STATES,
+  EDITOR_SHELL_CONTROL_KINDS,
+  EDITOR_SHELL_DOCK_TAB_IDS,
+  EDITOR_SHELL_METRICS,
+  EDITOR_SHELL_MINIMUM_WINDOW,
+  EDITOR_SHELL_MODE_IDS,
+  EDITOR_SHELL_MODES,
+  EDITOR_SHELL_RETIRED_COPY,
+  EDITOR_SHELL_SCHEMA_VERSION,
+  EDITOR_SHELL_SOURCE,
+  EDITOR_SHELL_VIEWPORT_SOURCES,
+  EDITOR_SHELL_WINDOW_TIERS,
+  editorShellDockTabsFor,
+  editorShellModeRow,
+} from "./editor-shell.js";
+export type {
+  EditorShellAssistantModeId,
+  EditorShellAssistantState,
+  EditorShellControlKind,
+  EditorShellDockTabId,
+  EditorShellModeId,
+  EditorShellModeRow,
+  EditorShellViewportSourceId,
+  EditorShellWindowTierId,
+} from "./editor-shell.js";
+
+export {
   PLUGIN_MANIFEST_HOST_API_DIALECT,
   PLUGIN_MANIFEST_PATH,
   PLUGIN_MANIFEST_SCHEMA_URI,

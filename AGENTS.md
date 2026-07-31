@@ -324,6 +324,27 @@ and `tests/sites/desktop-offer-lockstep.test.ts` keeps the two in lockstep.
 Windows/macOS stay unpackaged and say so. No profile, Kids, auth/billing, or CLI
 verb reaches this tier.
 
+The Engine Desktop chrome's **shared product model** is
+`packages/schemas/src/editor-shell.ts` (sceneaxi#184): the seven modes, rail
+labels, dock-tab derivation, viewport sources, assistant modes/states, control
+kinds (`view`/`review`/`live`/`inert`), window-tier thresholds, structural
+metrics, and the retired-copy list — vocabulary only, no state machine and no
+colour. `apps/desktop-shell` derives its tables from it; the umbrella's entitled
+`/editor` projects it through `buildEditorShellView()` in
+`packages/site-kit/src/editor-shell.ts` over one real Minimum E2 render (real
+tree, transforms, kernel digests, the actual propose/apply proposal reviewed by
+`reviewProposal`, composition projection, seeded plugin registry), rendered by
+the one client component `sites/umbrella/src/app/editor/_components/editor-shell.tsx`.
+Parity across schemas/desktop/web/stylesheet-breakpoints is a data identity in
+`tests/parity/editor-shell-parity.test.ts`; the web shell's honesty contract
+(closed `EDITOR_SHELL_WEB_REFUSALS`, live controls ⊆
+`WEB_EDITOR_SESSION_OPERATIONS`, `EDITOR_SHELL_FABRICATED_FIGURES` asserted
+absent) is `packages/site-kit/test/editor-shell.test.ts`, and the surface's
+owner doc — deviations and the recorded browser evidence — is
+`docs/web-editor-shell.md`. Engine state never changes client-side: every live
+control is a link or GET form re-rendering `/editor` URL state, so ADR 0020's
+entitlement-before-session and ADR 0003's bounds are untouched.
+
 The Engine Desktop **visual** surface is `apps/desktop-shell` alone
 (sceneaxi#158): `src/visual-model.ts` decides (seven modes, mode-dependent dock
 tabs, profile switch, assistant states, Change Review, command palette,

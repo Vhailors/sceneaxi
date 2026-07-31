@@ -135,9 +135,13 @@ only, and presentation invents no state the kernel does not own.
     renderer
 
 - **The entitled Minimum E2 editor** (`/editor`, ADR 0022), the umbrella's second
-  pixel-drawing surface. Verified 2026-07-26 in Chrome against the production
-  build (`next build && next start`), SwiftShader ANGLE, with the server-side
-  editor preview flag set:
+  pixel-drawing surface. Since sceneaxi#184 that canvas is one region of the
+  Engine Desktop shell the route draws, through the same viewport boundary and
+  the same session composition; the shell's own regions, refusals, and browser
+  record are owned by [`web-editor-shell.md`](web-editor-shell.md), which is also
+  where its later pixel observation is recorded. Verified 2026-07-26 in Chrome
+  against the production build (`next build && next start`), SwiftShader ANGLE,
+  with the server-side editor preview flag set:
   - the canvas holds a real `webgl2` context (`WebGL 2.0 (OpenGL ES 3.0
     Chromium)`); `toDataURL` returned 63 162 bytes, 2 234 distinct colours,
     102 911 of 763 730 pixels non-background — lit crates, not a cleared buffer

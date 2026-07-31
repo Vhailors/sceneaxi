@@ -31,9 +31,19 @@
  */
 
 import {
+  EDITOR_SHELL_ASSISTANT_MODE_IDS,
+  EDITOR_SHELL_DOCK_TAB_IDS,
+  EDITOR_SHELL_MINIMUM_WINDOW,
+  EDITOR_SHELL_MODE_IDS,
+  EDITOR_SHELL_VIEWPORT_SOURCES,
+  EDITOR_SHELL_WINDOW_TIERS,
+  editorShellDockTabsFor,
+  editorShellModeRow,
   OPEN_PATH_REFUSE_CODES,
   OPEN_PATH_REFUSE_ONLY_PROFILE,
   openPathPolicyView,
+  type EditorShellAssistantState,
+  type EditorShellViewportSourceId,
   type OpenPathPolicyViewModel,
   type OpenPathPolicyViewRow,
 } from "@sceneaxi/schemas";
@@ -44,15 +54,14 @@ import { METRICS } from "./visual-tokens.js";
 /* Vocabulary                                                                  */
 /* -------------------------------------------------------------------------- */
 
-export const DESKTOP_MODE_IDS = Object.freeze([
-  "build",
-  "sculpt",
-  "compose",
-  "animate",
-  "run",
-  "ship",
-  "plugins",
-] as const);
+/**
+ * The mode vocabulary is the shared editor-shell model's (sceneaxi#184): one
+ * table in `@sceneaxi/schemas` that this chrome and the umbrella's entitled web
+ * editor both project, so the two surfaces cannot disagree about what the
+ * editor's modes are. Only the glyph geometry below stays local — it is this
+ * renderer's drawing detail, not product structure.
+ */
+export const DESKTOP_MODE_IDS = EDITOR_SHELL_MODE_IDS;
 
 export type DesktopModeId = (typeof DESKTOP_MODE_IDS)[number];
 
@@ -66,15 +75,28 @@ export const DESKTOP_MODES: ReadonlyArray<
     glyphRadius: string;
     glyphTransform: string;
   }>
-> = Object.freeze([
-  Object.freeze({ id: "build", label: "BUILD", title: "Build", glyphRadius: "2px", glyphTransform: "none" }),
-  Object.freeze({ id: "sculpt", label: "SCULPT", title: "Sculpt", glyphRadius: "50%", glyphTransform: "none" }),
-  Object.freeze({ id: "compose", label: "SCENE", title: "Scene composition", glyphRadius: "2px", glyphTransform: "rotate(45deg)" }),
-  Object.freeze({ id: "animate", label: "ANIM", title: "Animate", glyphRadius: "2px 9px 2px 9px", glyphTransform: "none" }),
-  Object.freeze({ id: "run", label: "RUN", title: "Run", glyphRadius: "50% 2px 50% 2px", glyphTransform: "none" }),
-  Object.freeze({ id: "ship", label: "SHIP", title: "Ship", glyphRadius: "2px", glyphTransform: "rotate(20deg)" }),
-  Object.freeze({ id: "plugins", label: "PLUG", title: "Plugins", glyphRadius: "3px", glyphTransform: "none" }),
-]);
+> = Object.freeze(
+  (
+    [
+      { id: "build", glyphRadius: "2px", glyphTransform: "none" },
+      { id: "sculpt", glyphRadius: "50%", glyphTransform: "none" },
+      { id: "compose", glyphRadius: "2px", glyphTransform: "rotate(45deg)" },
+      { id: "animate", glyphRadius: "2px 9px 2px 9px", glyphTransform: "none" },
+      { id: "run", glyphRadius: "50% 2px 50% 2px", glyphTransform: "none" },
+      { id: "ship", glyphRadius: "2px", glyphTransform: "rotate(20deg)" },
+      { id: "plugins", glyphRadius: "3px", glyphTransform: "none" },
+    ] as const
+  ).map((glyph) => {
+    const shared = editorShellModeRow(glyph.id);
+    return Object.freeze({
+      id: glyph.id,
+      label: shared.railLabel,
+      title: shared.title,
+      glyphRadius: glyph.glyphRadius,
+      glyphTransform: glyph.glyphTransform,
+    });
+  }),
+);
 
 /**
  * The archive's application menus.
@@ -119,13 +141,7 @@ export const DESKTOP_PROFILE_PACKAGES: Readonly<
   kids: "@sceneaxi/profile-kids",
 });
 
-export const DESKTOP_DOCK_TAB_IDS = Object.freeze([
-  "changes",
-  "assets",
-  "console",
-  "evidence",
-  "timeline",
-] as const);
+export const DESKTOP_DOCK_TAB_IDS = EDITOR_SHELL_DOCK_TAB_IDS;
 export type DesktopDockTabId = (typeof DESKTOP_DOCK_TAB_IDS)[number];
 
 export const DESKTOP_OVERLAY_IDS = Object.freeze([
@@ -186,11 +202,7 @@ const DRAWER_TARGETS: Readonly<Record<DesktopDrawerId, string>> = Object.freeze(
   inspector: "inspector",
 });
 
-export const DESKTOP_ASSISTANT_MODE_IDS = Object.freeze([
-  "ask",
-  "build",
-  "agent",
-] as const);
+export const DESKTOP_ASSISTANT_MODE_IDS = EDITOR_SHELL_ASSISTANT_MODE_IDS;
 export type DesktopAssistantModeId = (typeof DESKTOP_ASSISTANT_MODE_IDS)[number];
 
 export type DesktopSculptPhase = "idle" | "running";
@@ -198,9 +210,10 @@ export type DesktopSculptPhase = "idle" | "running";
 /**
  * Assistant states, as one closed enumeration rather than a pair of booleans —
  * `denied` is not "closed", and a renderer must not be able to reach the
- * composer by flipping `open`.
+ * composer by flipping `open`. The enumeration is the shared editor-shell
+ * model's, so the two chrome surfaces cannot disagree about what states exist.
  */
-export type DesktopAssistantState = "open" | "closed" | "denied";
+export type DesktopAssistantState = EditorShellAssistantState;
 
 /* -------------------------------------------------------------------------- */
 /* Refusals                                                                    */
@@ -265,8 +278,20 @@ export type DesktopWindowSize = Readonly<{ width: number; height: number }>;
  *
  * Widths are the sum of the archive's own column metrics plus a workable centre,
  * so a tier boundary is derived from the layout rather than a round number
- * somebody liked.
+ * somebody liked. The thresholds themselves come from the shared editor-shell
+ * model, so this chrome and the web editor undock at the same sizes; the tier
+ * shape — docked columns, drawers, summaries — stays this chrome's own.
  */
+const sharedTier = (
+  id: "regular" | "compact" | "narrow",
+): Readonly<{ minWidth: number; minHeight: number }> => {
+  const tier = EDITOR_SHELL_WINDOW_TIERS.find((row) => row.id === id);
+  if (tier === undefined) {
+    throw new Error(`editor-shell model names no ${id} window tier`);
+  }
+  return tier;
+};
+
 export const WINDOW_TIERS: ReadonlyArray<
   Readonly<{
     id: DesktopWindowTierId;
@@ -283,8 +308,8 @@ export const WINDOW_TIERS: ReadonlyArray<
 > = Object.freeze([
   Object.freeze({
     id: "regular",
-    minWidth: 1440,
-    minHeight: 720,
+    minWidth: sharedTier("regular").minWidth,
+    minHeight: sharedTier("regular").minHeight,
     dockedColumns: Object.freeze([
       "rail",
       "leftDock",
@@ -298,8 +323,8 @@ export const WINDOW_TIERS: ReadonlyArray<
   }),
   Object.freeze({
     id: "compact",
-    minWidth: 1180,
-    minHeight: 660,
+    minWidth: sharedTier("compact").minWidth,
+    minHeight: sharedTier("compact").minHeight,
     dockedColumns: Object.freeze([
       "rail",
       "leftDock",
@@ -312,8 +337,8 @@ export const WINDOW_TIERS: ReadonlyArray<
   }),
   Object.freeze({
     id: "narrow",
-    minWidth: 900,
-    minHeight: 600,
+    minWidth: sharedTier("narrow").minWidth,
+    minHeight: sharedTier("narrow").minHeight,
     dockedColumns: Object.freeze(["rail", "viewport"] as const),
     drawerColumns: Object.freeze([
       "leftDock",
@@ -336,9 +361,10 @@ export const WINDOW_TIERS: ReadonlyArray<
 
 /** The smallest window the editor chrome will render. */
 export const DESKTOP_MINIMUM_WINDOW: DesktopWindowSize = Object.freeze({
-  width: 900,
-  height: 600,
+  width: EDITOR_SHELL_MINIMUM_WINDOW.width,
+  height: EDITOR_SHELL_MINIMUM_WINDOW.height,
 });
+
 
 /** The window size the archive was drawn at, used as the evidence reference. */
 export const DESKTOP_REFERENCE_WINDOW: DesktopWindowSize = Object.freeze({
@@ -387,10 +413,7 @@ export type DesktopVisualState = Readonly<{
 export function dockTabsFor(
   mode: DesktopModeId,
 ): ReadonlyArray<DesktopDockTabId> {
-  if (mode === "animate") return Object.freeze(["timeline", "changes", "console"] as const);
-  if (mode === "run") return Object.freeze(["console", "evidence"] as const);
-  if (mode === "ship") return Object.freeze(["evidence", "console"] as const);
-  return Object.freeze(["changes", "assets", "console", "evidence"] as const);
+  return editorShellDockTabsFor(mode);
 }
 
 /** The tab a mode opens on when it is entered. */
@@ -690,21 +713,19 @@ export const VIEWPORT_INERT_NOTE =
  * none. They are modelled as controls so all three declare a kind and name that
  * reason, rather than being three tab-shaped elements nothing accounts for.
  */
-export const DESKTOP_VIEWPORT_SOURCE_IDS = Object.freeze([
-  "scene",
-  "game",
-  "sculpt-preview",
-] as const);
-export type DesktopViewportSourceId =
-  (typeof DESKTOP_VIEWPORT_SOURCE_IDS)[number];
+export const DESKTOP_VIEWPORT_SOURCE_IDS = Object.freeze(
+  EDITOR_SHELL_VIEWPORT_SOURCES.map((source) => source.id),
+);
+export type DesktopViewportSourceId = EditorShellViewportSourceId;
 
-const VIEWPORT_SOURCE_LABELS: Readonly<
-  Record<DesktopViewportSourceId, string>
-> = Object.freeze({
-  scene: "Scene",
-  game: "Game",
-  "sculpt-preview": "Sculpt preview",
-});
+/** The shared row's own label — total, so a projection cannot miss a source. */
+function viewportSourceLabel(id: DesktopViewportSourceId): string {
+  const row = EDITOR_SHELL_VIEWPORT_SOURCES.find((source) => source.id === id);
+  if (row === undefined) {
+    throw new Error(`editor-shell names no viewport source ${JSON.stringify(id)}`);
+  }
+  return row.label;
+}
 
 /** The source the viewport shows; the other two cannot be entered. */
 const VIEWPORT_SHOWN_SOURCE: DesktopViewportSourceId = "scene";
@@ -1408,11 +1429,11 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
         DESKTOP_VIEWPORT_SOURCE_IDS.map((id) =>
           Object.freeze({
             id,
-            label: VIEWPORT_SOURCE_LABELS[id],
+            label: viewportSourceLabel(id),
             active: id === VIEWPORT_SHOWN_SOURCE,
             control: control(
               `viewport-source-${id}`,
-              VIEWPORT_SOURCE_LABELS[id],
+              viewportSourceLabel(id),
               "inert",
               DESKTOP_VISUAL_REFUSALS.noPresentationRuntime,
             ),

@@ -152,6 +152,26 @@ Registry seed state: `registryVersion` is `1.0.0`; `entries` holds exactly 1 rev
 - `shippingClaim` is `false` structurally, and `@sceneaxi/profile-kids` is
   refuse-only: neither is a convention this package can be talked out of
 
+## Editor-shell vocabulary (sceneaxi#184)
+
+- `src/editor-shell.ts` — the shared answer to what the Engine Desktop editor's
+  chrome *is*: the seven modes and rail labels, dock-tab derivation
+  (`editorShellDockTabsFor`), viewport sources, assistant modes/states, control
+  kinds, window tiers and the minimum window, the archive-fixed structural
+  metrics, and the retired-copy list
+- Vocabulary only: no state machine (that stays `createMinimumE2Editor` in
+  `@sceneaxi/authoring-core`), no colour (Foundations v2 owns those), and no
+  authority for what a control *does* — each surface still declares kinds against
+  its own operation set
+- Lives here for the same reason the open-path policy does: `schemas` is the only
+  package the dependency matrix lets both consumers name, so sharing cost no edge
+- Consumers: `apps/desktop-shell/src/visual-model.ts` derives its tables from it,
+  and `@sceneaxi/site-kit`'s `buildEditorShellView()` projects it for the
+  umbrella's entitled `/editor`; parity is a data identity in
+  `tests/parity/editor-shell-parity.test.ts`
+- Surface owners: [`docs/engine-desktop-surface.md`](../../docs/engine-desktop-surface.md)
+  and [`docs/web-editor-shell.md`](../../docs/web-editor-shell.md)
+
 ## Model Provider Port (sceneaxi#45)
 
 - `contracts/model-provider-port.schema.json` — v1 model/capability descriptors,

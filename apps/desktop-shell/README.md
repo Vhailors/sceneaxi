@@ -69,7 +69,16 @@ pnpm sceneaxi-desktop chrome --width 1024 --height 700
 The decision layer is `src/visual-model.ts` (modes, mode-dependent dock tabs,
 profile switch, assistant states, Change Review, command palette, overlays,
 sculpt progress, window tiers, refusals); `src/chrome.ts` renders it and decides
-nothing. Every control declares its kind — `view` changes visual state and works,
+nothing. The chrome's product **vocabulary** is not this app's: the mode ids and
+rail labels, the dock-tab ids and their per-mode derivation, the assistant modes
+and states, the viewport sources, and the window-tier thresholds are derived from
+`packages/schemas/src/editor-shell.ts` (sceneaxi#184), which the umbrella's
+entitled web editor projects too — so the two surfaces cannot disagree about what
+the editor is, and `tests/parity/editor-shell-parity.test.ts` asserts that as a
+data identity. What stays local is this renderer's own detail (glyph geometry,
+tier shape) and everything below.
+
+Every control declares its kind — `view` changes visual state and works,
 `review` edits the fixture Change Review queue and writes no document, and
 `inert` keeps its focus stop and refuses by a name from
 `DESKTOP_VISUAL_REFUSALS`. Nothing on this path reaches `authoring-core`.

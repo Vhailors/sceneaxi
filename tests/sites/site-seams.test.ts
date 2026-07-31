@@ -218,34 +218,45 @@ const readSite = (relativePath: string): string =>
   readFileSync(new URL(`../../sites/${relativePath}`, import.meta.url), "utf8");
 
 const EDITOR_PAGE = "umbrella/src/app/editor/page.tsx";
+const EDITOR_SHELL = "umbrella/src/app/editor/_components/editor-shell.tsx";
 const EDITOR_VIEWPORT = "umbrella/src/app/editor/_components/editor-viewport.tsx";
 const LIVE_VIEWPORT = "umbrella/src/app/open/_components/live-viewport.tsx";
 const SCULPT_VIEWPORT = "umbrella/src/app/_components/sculpt-viewport.tsx";
 
 describe("the entitled editor draws through the same viewport boundary", () => {
   it("mounts the editor viewport on the entitled route", () => {
+    // The page hands the shell the session's own composed scene, and the shell is the
+    // only module that mounts the viewport from it — so the canvas can never draw
+    // something the editor did not compose.
     const page = readSite(EDITOR_PAGE);
-    expect(page).toContain("<EditorViewport");
-    // The viewport is rendered from the session's own composed scene, so the canvas can
-    // never draw something the editor did not compose.
-    expect(page).toContain("scene={mountable}");
+    expect(page).toContain("scene={render.value.mountable}");
+    const shell = readSite(EDITOR_SHELL);
+    expect(shell).toContain("<EditorViewport");
+    expect(shell).toContain("scene={scene}");
   });
 
   it("decides access before it decides anything about a viewport", () => {
     const page = readSite(EDITOR_PAGE);
     const accessAt = page.indexOf("resolveUmbrellaEditorAccess");
     const refusalAt = page.indexOf("resolved.decision.granted");
-    const viewportAt = page.indexOf("<EditorViewport");
+    const shellAt = page.indexOf("<EditorShell");
     expect(accessAt).toBeGreaterThan(-1);
     expect(refusalAt).toBeGreaterThan(accessAt);
-    // An unentitled request returns at the refusal above, so it never reaches a canvas.
-    expect(viewportAt).toBeGreaterThan(refusalAt);
+    // An unentitled request returns at the refusal above, so it never reaches the
+    // shell, and therefore never reaches a canvas.
+    expect(shellAt).toBeGreaterThan(refusalAt);
   });
 
   it("keeps a refused composition from opening a canvas at all", () => {
-    const page = readSite(EDITOR_PAGE);
-    expect(page).toContain("mountable === null");
-    expect(page).toContain("EDITOR_VIEWPORT_COPY.notComposable");
+    const shell = readSite(EDITOR_SHELL);
+    expect(shell).toContain("scene === null");
+    expect(shell).toContain("viewportCopy.notComposable");
+    // The refusal branch renders the pipeline's own code, never a canvas.
+    const refusalBranch = shell.slice(
+      shell.indexOf("scene === null"),
+      shell.indexOf("<EditorViewport"),
+    );
+    expect(refusalBranch).toContain("compose.refusalCode");
   });
 
   it("routes both surfaces through one renderer boundary and no other", () => {
@@ -285,7 +296,7 @@ describe("the entitled editor draws through the same viewport boundary", () => {
     // reader attaches it to the browser report directly above it, which does draw.
     const noPixelPanel = "Server session frame";
     expect(EDITOR_VIEWPORT_COPY.honesty).toContain(noPixelPanel);
-    expect(readSite(EDITOR_PAGE)).toContain(`<h3>${noPixelPanel}</h3>`);
+    expect(readSite(EDITOR_SHELL)).toContain(`<h3>${noPixelPanel}</h3>`);
     // The report the browser surface publishes must not answer to that same name.
     expect(readSite(EDITOR_VIEWPORT)).toContain('heading="Browser session frame"');
   });
