@@ -429,6 +429,53 @@ describe("umbrella deployment provider adapters", () => {
     });
   });
 
+  it("round-trips a session row through the Neon store's write, read, and delete", async () => {
+    const fixture = createDatabase();
+    const store = createNeonIdentityStore(fixture.database);
+    const session = {
+      schemaVersion: 1 as const,
+      kind: "sceneaxi.session" as const,
+      sessionId: "session-round-trip",
+      userId: "member-1",
+      surface: "site" as const,
+      issuedAt: iso(-1_000),
+      expiresAt: iso(3_600_000),
+      tokenDigest: digestSessionToken("token-round-trip"),
+    };
+
+    await store.putSession(session);
+    expect(fixture.sessions).toHaveLength(1);
+    expect(fixture.sessions[0]).toEqual({
+      session_id: session.sessionId,
+      user_id: session.userId,
+      surface: session.surface,
+      issued_at: session.issuedAt,
+      expires_at: session.expiresAt,
+      token_digest: session.tokenDigest,
+    });
+    expect(await store.findSession(session.sessionId)).toEqual(session);
+
+    const rotated = {
+      ...session,
+      expiresAt: iso(7_200_000),
+      tokenDigest: digestSessionToken("token-round-trip-2"),
+    };
+    await store.putSession(rotated);
+    expect(fixture.sessions).toHaveLength(1);
+    expect(await store.findSession(session.sessionId)).toEqual(rotated);
+
+    expect(await store.deleteSession({ ...rotated, tokenDigest: session.tokenDigest })).toBe(
+      false,
+    );
+    expect(await store.deleteSession({ ...rotated, issuedAt: iso(-2_000) })).toBe(false);
+    expect(fixture.sessions).toHaveLength(1);
+
+    expect(await store.deleteSession(rotated)).toBe(true);
+    expect(fixture.sessions).toHaveLength(0);
+    expect(await store.findSession(session.sessionId)).toBeUndefined();
+    expect(await store.deleteSession(rotated)).toBe(false);
+  });
+
   it("grants the starter and spends through the Neon store's append-or-replay boundary", async () => {
     const fixture = createDatabase();
     const handles = createDeploymentPlaneHandles({
