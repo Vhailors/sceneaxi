@@ -80,7 +80,7 @@ set them *before* deploying and redeploy after changing one.
 | `NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN` | all three | this ship | editor deep links, checkout redirects | https `*.vercel.app` umbrella origin; a missing or non-https value makes the catalog refuse to render the link. On the umbrella it is also the **only** source of the checkout success/cancel URLs — they are never derived from the request's `Host`, and a checkout POST arriving on any other origin refuses `BILLING_CHECKOUT_ORIGIN_UNTRUSTED`. A missing or non-https value refuses `BILLING_CHECKOUT_ORIGIN_UNCONFIGURED` on that path — the umbrella must name one origin, so an alias domain or a per-build preview URL is not a checkout origin. It is also what decides the `Secure` attribute on the `sceneaxi.session` cookie (`resolveSessionCookieSecurity`), for the same reason: behind a TLS-terminating proxy the request the app sees is plain http, so an https origin here keeps the session credential off plaintext even when the incoming request does not look secure. Unconfigured, the flag falls back to `x-forwarded-proto` and then to the request itself, which is what lets `http://localhost` development work unchanged |
 | `NEXT_PUBLIC_SCENEAXI_GAME_CATALOG_ORIGIN` | all three | this ship | optional | family cross-link. On the catalogs it also drives the family bar: whichever origin is set becomes a link, the store's own entry is marked current instead of linked, and an unset sibling renders as plain text. The entry matching a storefront's own surface is the only source of the domain line it prints, so an unset value prints no domain rather than a guessed one |
 | `NEXT_PUBLIC_SCENEAXI_WEB_CATALOG_ORIGIN` | all three | this ship | optional | family cross-link, same rules as the game-catalog origin above |
-| `SCENEAXI_SITE_EDITOR_PREVIEW` | umbrella | captain | optional | `1` grants a banner-marked editor preview for a deployment whose identity providers are not configured yet, so no real entitlement can be resolved; absent means the editor refuses. A clearly labeled temporary fallback, never the product path — hosted sign-in at `/login` ([#185](https://github.com/Vhailors/sceneaxi/issues/185)) is. Server-side only; a client value is ignored |
+| `SCENEAXI_SITE_EDITOR_PREVIEW` | umbrella | captain | optional | `1` grants a banner-marked editor preview for a deployment whose identity providers are not configured yet, so no real entitlement can be resolved; absent means the editor refuses. A **temporary fallback**, never the product path — once wiring step 4 activates `/login`, hosted sign-in ([#185](https://github.com/Vhailors/sceneaxi/issues/185)) is, and the flag is removed. Server-side only; a client value is ignored |
 
 Each site's `.env.example` lists only names assigned to that Vercel project, including
 the identity-plane names consumed by the deployment adapters, and commits no values.
@@ -147,7 +147,7 @@ GAME=https://<game-catalog>.vercel.app
 WEB=https://<web-catalog>.vercel.app
 
 # Umbrella pages
-for p in / /open /docs /engine /pricing /profiles /account /editor; do
+for p in / /open /docs /engine /pricing /profiles /account /login /editor; do
   printf '%s %s\n' "$p" "$(curl -s -o /dev/null -w '%{http_code}' "$UMB$p")"
 done
 
@@ -156,9 +156,15 @@ curl -s "$UMB/open" | grep -c 'Three presentation core'          # >= 1
 curl -s "$UMB/open" | grep -oE 'sha256:[0-9a-f]{64}' | head -1   # the scene digest
 curl -s "$UMB/open" | grep -c 'Experimental Three preview'       # 0
 
-# Without the preview flag the editor refuses and opens no canvas
-curl -s "$UMB/editor" | grep -c 'Not entitled'                   # >= 1
+# Without the preview flag the editor refuses and opens no canvas. The panel's title is
+# now the named access state's, so match the page heading and the key rather than it
+curl -s "$UMB/editor" | grep -c 'The editor is not open for this request'   # >= 1
+curl -s "$UMB/editor" | grep -c 'IDENTITY_PLANE_NOT_WIRED'       # >= 1, before wiring
 curl -s "$UMB/editor" | grep -c 'viewport-canvas'                # 0
+
+# Before the identity plane is wired, sign-in says so and offers no form
+curl -s "$UMB/login" | grep -c 'Sign-in is not activated on this deployment'  # >= 1
+curl -s "$UMB/login" | grep -c '<form'                           # 0, until wiring step 4
 
 # The served archive must hash to the published checksum. `/engine` publishes three
 # digests: the SDK archive's first, then the two recorded desktop-build artifacts
@@ -188,9 +194,10 @@ publishes (the desktop-build digests below it are a recorded build, verified by
 rebuilding it, not by a fetch from this site);
 an unknown item id 404; neither storefront resolving the other's ids; `/pricing` listing
 the three credit packs, its Buy control live only once the TEST Stripe handle is
-configured and disabled otherwise; `/account` rendering an honest refusal, since no
-member can hold a session yet; and `/editor` refusing without the preview flag. The
-per-surface states are owned by [What works now, and what still
+configured and disabled otherwise; `/account` rendering an honest refusal until the
+deployment's provider handles are configured; `/login` naming that same unwired plane
+instead of serving a form it cannot honour; and `/editor` refusing without the preview
+flag. The per-surface states are owned by [What works now, and what still
 refuses](#what-works-now-and-what-still-refuses).
 
 ## Building the SDK archive

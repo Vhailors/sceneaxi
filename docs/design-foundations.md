@@ -193,6 +193,9 @@ comparison. `pnpm gate` needs no browser; these are observations, not gate infer
   `FOUNDATION_CONTRAST_ROLES` entry, which the gate then measures.
 - A new refusal means a `SITE_REFUSALS` key plus a covering case in
   `packages/site-kit/test/refuse-matrix.test.ts`, which asserts every reason is
-  reachable.
+  reachable. `describeSiteAccessState` (`access-states.ts`) then renders it on a guarded
+  surface — its projection is total, so a reason with no mapping still gets a named state
+  carrying the registry's own message; decide whether it deserves its own state and
+  action rather than leaving that to the default.
 - A visual fact the archive does not state is a **decision**, not a transcription.
   Record it here before shipping it.

@@ -16,15 +16,23 @@ recorded in ADR 0021.
 | `session-token.ts` | SHA-256 digests and constant-time comparison |
 | `store.ts` | the `IdentityStore` port + in-memory reference implementation |
 | `better-auth-adapter.ts` | the injected Better Auth boundary and its mapping |
-| `identity-port.ts` | `createIdentityPort` — `signIn` / `verifySession` / `signOut` |
+| `identity-port.ts` | `createIdentityPort` — `signIn` / `verifySession` / `signOut`, and the `SignInGrant` a sign-in returns |
 | `principal-provenance.ts` | Object-identity witness shared by identity issuance and role guards |
 | `testing/principal-issuance.ts` | The test-only `./testing/principal-issuance` subpath — genuine `Principal` fixtures, unreachable from production source |
 | `bootstrap.ts` | `planAdminBootstrap` — the one admin assignment to persist |
 
 Dependencies: `@sceneaxi/schemas` only. No engine package, no profile, no CLI.
 
-`signOut` accepts only the exact principal capability returned by `signIn` or
-`verifySession` on that port instance. A bare session id is not revocation authority.
+`signOut` accepts only the exact principal capability the port issued — `signIn`'s grant
+carries it as `grant.principal`, and `verifySession` returns it directly. A bare session
+id is not revocation authority.
+
+A successful `signIn` resolves a `SignInGrant` (`{ principal, sessionToken }`), not a bare
+principal, because the store keeps only the token's digest: that raw token is the one
+redeemable copy in existence, so a caller that needs a browser credential must take it
+here or never. The caller's obligation — hand it to the authenticated client and hold it
+nowhere else — is owned by
+[`docs/auth-credits.md`](../../docs/auth-credits.md).
 
 Every role guard likewise accepts only the exact `Principal` object issued by an
 identity port. A hand-built value or any copy refuses `AUTH_PRINCIPAL_UNPROVEN`, even

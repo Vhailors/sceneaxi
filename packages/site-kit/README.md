@@ -13,7 +13,8 @@ opened — and what may be drawn — lives here.
 | Module | Owns |
 |---|---|
 | `refusals.ts` | the named refusal registry; every fail-closed path refuses with a key from it |
-| `ports.ts` | fail-closed identity / credits / billing ports — the single seam with the identity plane |
+| `ports.ts` | fail-closed identity / credits / billing / login ports — the single seam with the identity plane |
+| `access-states.ts` | the total projection from a refusal reason to a **named access state** — what a guarded surface tells a visitor and the one action that can change it — plus the same-site confinement rule both ends of a sign-in round trip use |
 | `catalog-identity.ts` | the storefront identity plane both catalogs read through, pinned to the `site` surface; a reader of identity, never an issuer |
 | `entitlement.ts` | free-vs-paid capability matrix, Minimum E2 editor entitlement |
 | `catalog.ts` | catalog view models, dual price, creator share, fail-closed purchase intent |
@@ -29,7 +30,7 @@ opened — and what may be drawn — lives here.
 | `change-review.ts` | Change Review — the design system's signature primitive, over a real `Proposal` |
 | `state-panel.ts` | the shared named-state model, Foundations status mapping, and neutral tree; sites retain only React adapters |
 | `commerce-notice.ts` | the two storefronts' inert-commerce copy, refusal model, and neutral tree |
-| `site-session.ts` | the shared session header/cookie vocabulary and header-first token normalization |
+| `site-session.ts` | the shared session header/cookie vocabulary, header-first token normalization, and the session cookie a login grant is handed to a browser in — built, cleared, and its `Secure` attribute decided from the deployment's configured origin rather than the request |
 | `desktop-app-offer.ts` | the recorded Linux desktop build the umbrella `/engine` page advertises — committed facts, held in lockstep with [`docs/desktop-linux.md`](../../docs/desktop-linux.md), never a rebuilt file's digest |
 
 ## The shared visual layer
@@ -79,10 +80,20 @@ because its evidence binds its exact spec bytes.
 
 ## The identity-plane seam
 
-`SiteIdentityPort`, `SiteCreditsPort`, and `SiteBillingPort` are deliberate
-structural projections of the identity/credits/billing contracts owned by
+`SiteIdentityPort`, `SiteCreditsPort`, `SiteBillingPort`, and `SiteLoginPort` are
+deliberate structural projections of the identity/credits/billing contracts owned by
 `@sceneaxi/auth` and `@sceneaxi/billing`, so those packages satisfy these ports
 as **injected adapters**.
+
+`SiteLoginPort` is the one that *issues* rather than reads: its adapter returns a
+principal plus the opaque credential a browser may carry, and this package decides only
+whether that grant is well-formed enough to become a cookie — empty credentials refuse
+before dispatch (`LOGIN_CREDENTIALS_REQUIRED`), an adapter's rejected password comes back
+as the visitor's own named outcome (`LOGIN_CREDENTIALS_REJECTED`) instead of collapsing
+into "signed out", and a grant no cookie can faithfully carry refuses
+`LOGIN_SESSION_NOT_ISSUED` instead of being sent anyway. The contract those refusals
+answer to is
+[`docs/auth-credits.md`](../../docs/auth-credits.md).
 
 This package implements **no identity and no ledger**. It does not resolve an
 admin email, does not derive a balance from ledger entries, and does not verify a
