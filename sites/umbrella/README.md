@@ -219,10 +219,12 @@ payment-event side effect. The Better Auth client reads the session back from
 `GET /api/auth/get-session`, sending both the issued session cookie and the issued bearer
 token so either provider configuration resolves; a provider that honours neither throws a
 named fault instead of reporting a valid password as refused
-(`docs/websites-deploy.md` owns that prerequisite). This site exposes **no sign-in route**, so nothing reaches
-`identityPort.signIn` and no session can be issued here yet — that HTTP/UI layer is
-[sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185).
-`docs/websites-deploy.md` owns the env names and activation procedure.
+(`docs/websites-deploy.md` owns that prerequisite). Hosted sign-in reaches
+`identityPort.signIn` through this same plug point
+([sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185), see **Hosted sign-in**
+above); a deployment whose provider handles are absent issues no session and refuses by
+name instead. `docs/websites-deploy.md` owns the env names and activation procedure.
 
 `SCENEAXI_SITE_EDITOR_PREVIEW=1` grants a banner-marked editor preview so the
-Minimum E2 surface is demonstrable before then. Absent by default; server-side only.
+Minimum E2 surface is demonstrable until those handles are configured. Absent by
+default; server-side only.

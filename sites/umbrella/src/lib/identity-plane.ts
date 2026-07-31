@@ -953,4 +953,4 @@ export function createUmbrellaIdentityPlane(
 export const IDENTITY_PLANE_DOC = "docs/websites-deploy.md";
 
 export const IDENTITY_PLANE_PENDING_NOTE =
-  "Signing in is not open here yet. This site verifies a session and reads a balance from the deployment's own Neon and Stripe test handles, but it exposes no route that issues a session, so no signed-in browser exists until that entry point ships (sceneaxi#185). Until then these surfaces refuse with a named reason rather than showing an invented session, balance, or checkout.";
+  "Signing in is not open on this deployment yet. The sign-in route ships here (sceneaxi#185), but this deployment has not configured the provider handles it runs on, so no session can be issued or verified and no balance can be read from its own Neon and Stripe test handles. Until those handles are configured these surfaces refuse with a named reason rather than showing an invented session, balance, or checkout.";
