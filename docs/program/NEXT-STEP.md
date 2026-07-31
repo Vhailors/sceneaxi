@@ -181,22 +181,24 @@ code-literal-only rule, while the captain instead chose the named
 `SCENEAXI_STRIPE_LIVE_AUTHORIZED` configuration value with an evidence mitigation.
 
 The table below records disposition and sequencing only; **it is not an implementation
-authority**. D1 and D3 remain unimplemented and unauthorized; D2 is implemented here.
+authority**. All five now have landed implementation work: D1 in PR #174, D2 here, D3's
+migration in PR #172, and D4/D5 in PR #168. D3 is the one still carrying an unfinished
+prerequisite, and it is out-of-tree — see its row.
 
-Note the difference in where these decisions are *owned*. D2's implementation is now
-owned by [`auth-credits.md`](../auth-credits.md), while D4 and D5 landed with their
-implementation and are owned by that document too, plus
-[`websites-deploy.md`](../websites-deploy.md) for D4's webhook path. D1 and D3 remain
-recorded **only** in their out-of-tree decision records above; no in-tree document owns
-them yet, and this brief does not become their owner. Their in-tree owner lands with their
-implementation. Until then they are decided and unimplemented, and the disposition text
-below is a restatement of those external records rather than a fact this repository holds.
+Note the difference in where these decisions are *owned*. Each landed implementation
+brought its in-tree owner with it: [`auth-credits.md`](../auth-credits.md) owns D1's
+principal provenance, D2's grant-time anchor, and D4 and D5, with
+[`packages/auth/README.md`](../../packages/auth/README.md) beside it for D1 and
+[`websites-deploy.md`](../websites-deploy.md) for D4's webhook path; D3's migration is
+owned by `db/migrations` and asserted by `tests/db/schema-lockstep.test.ts`. This brief
+owns none of them, and the disposition column below remains a restatement of the external
+records rather than a fact this repository holds.
 
 | Decision | Recorded disposition | Status / binding prerequisite |
 |---|---|---|
-| **D1 — `principal-provenance`** | Witness every `Principal` the identity port issues; guards accept only values actually issued by `createIdentityPort`, with a test-only issuance seam | **Decided, unimplemented.** First confirm the deployment re-verifies each request instead of rehydrating a cached principal; then ship the test seam before flipping guards |
+| **D1 — `principal-provenance`** | Witness every `Principal` the identity port issues; guards accept only values actually issued by `createIdentityPort`, with a test-only issuance seam | **Landed in [PR #174](https://github.com/Vhailors/sceneaxi/pull/174).** `packages/auth/src/principal-provenance.ts` witnesses every issued `Principal`, the guards in `roles.ts` refuse an unwitnessed one and return the exact witnessed object, and the test-only seam is `@sceneaxi/auth/testing/principal-issuance`. Provenance deliberately does not survive serialization, so the umbrella re-verifies its carried session per request |
 | **D2 — `intent-credit-anchor`** | At grant time, cross-check persisted intent credits against the committed pack catalog by `(itemId, stripePriceId, unitAmount)` | **Implemented in #177.** `applyCheckoutCompletedGrant` resolves the archived tuple before append/commit, refuses unknown or mismatched credit amounts, and grants retained revision credits; D3 remains separate |
-| **D3 — `intent-ddl-immutability`** | Add a forward-only trigger protecting only `credits`, `unit_amount`, `currency`, and `stripe_price_id`; operational columns stay writable | **Decided, unimplemented.** Audit the deployment's own writes first; the repository cannot see them. Migration execution also needs its separate deploy authority |
+| **D3 — `intent-ddl-immutability`** | Add a forward-only trigger protecting only `credits`, `unit_amount`, `currency`, and `stripe_price_id`; operational columns stay writable | **Migration landed in [PR #172](https://github.com/Vhailors/sceneaxi/pull/172).** `db/migrations/0003_checkout_session_intent_price_immutability.sql` refuses an `UPDATE` to exactly those four columns; `tests/db/schema-lockstep.test.ts` asserts the field scope. Not discharged: the deployment's own writes are still unaudited — the repository cannot see them — and executing the migration needs its separate deploy authority |
 | **D4 — `commit-boundary-sequencing`** | Move the umbrella webhook onto `persistCheckoutCompletedGrant()` in the same ship as #128, preserving one credit-grant commit boundary | **Landed in [PR #168](https://github.com/Vhailors/sceneaxi/pull/168).** Atomic persistence for `MoneySplitRecord` was not selected and remains an unauthorized gap before any Connect work |
 | **D5 — `live-mode-authorization-source`** | Permit one named configuration value, `SCENEAXI_STRIPE_LIVE_AUTHORIZED`, with an auditable affirmative; no alias, mode, price, adapter, or production-correlated value may imply authorization | **Landed in [PR #168](https://github.com/Vhailors/sceneaxi/pull/168).** Absent or malformed still refuses `STRIPE_LIVE_MODE_NOT_AUTHORIZED` at intent creation and grant. No shipped call site activates live mode; ADR 0021's separate go-live hold remains |
 

@@ -317,10 +317,19 @@ and the credit-pack grant-anchor tests prove the settlement comparison, grant-ti
 and persisted-credit commit behavior.
 
 Captain decision D2 (`intent-credit-anchor`) is implemented here over the archived/versioned
-catalog landed in #173 / PR #173. D3 (`intent-ddl-immutability`) remains separate and
-unimplemented: it would enforce the field scope above in the database, and no migration in
-`db/migrations` checks it today, so that immutability remains the adapter's obligation until
-D3's own migration lands. Stripe LIVE is still unactivated under ADR 0021.
+catalog landed in #173 / PR #173. D3 (`intent-ddl-immutability`) stays a separate decision
+and this change implements no part of it, but its migration already landed in
+[PR #172](https://github.com/Vhailors/sceneaxi/pull/172):
+`db/migrations/0003_checkout_session_intent_price_immutability.sql` is a forward-only
+`BEFORE UPDATE` trigger that refuses a change to exactly those four price-bearing columns
+while operational columns stay writable, and
+[`tests/db/schema-lockstep.test.ts`](../tests/db/schema-lockstep.test.ts) asserts that
+field scope. What D3 still owes is outside this repository: the deployment's own writes
+have not been audited — this repository cannot see them — and applying the migration needs
+the separate deploy authority that [`websites-deploy.md`](websites-deploy.md#remaining-activation)
+owns. So the obligation above is enforced in the database of any deployment that has run
+`db/migrations` in order, and rests on the adapter alone until it has. Stripe LIVE is still
+unactivated under ADR 0021.
 
 **Settlement must name the session it settles** (sceneaxi#127). `CheckoutSettlement.sessionId`
 is required and must equal the Checkout Session id in the verified body (`data.object.id`),

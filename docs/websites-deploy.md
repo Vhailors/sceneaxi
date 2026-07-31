@@ -250,9 +250,14 @@ than inventing a session, balance, or checkout.
      deliberately field-scoped rather than whole-row: the columns a deployment adds for its
      own operations stay writable, so stamping the hosted Stripe session id onto the row once
      the session exists is expected, and nobody should later re-tighten this into whole-row
-     immutability. D2 is implemented over the archived/versioned catalog from #173 / PR #173;
-     D3 remains separate and unimplemented, with its field scope still an adapter obligation
-     until D3's migration lands. Nothing in `db/migrations` implements D2 or D3 here.
+     immutability. D2 is implemented over the archived/versioned catalog from #173 / PR #173
+     and adds no migration. D3 remains a separate decision this change implements no part of,
+     but its migration landed in [PR #172](https://github.com/Vhailors/sceneaxi/pull/172):
+     once you have run step 5 below, `0003_checkout_session_intent_price_immutability.sql`
+     refuses an `UPDATE` to those same four columns in the database, leaving the operational
+     ones writable. Do not read that as D3 discharged — auditing this deployment's own writes
+     is still outstanding, and this repository cannot see them — and until the migration is
+     applied here the field scope rests on the adapter alone.
    - **Echo the session id on the settlement.** `CheckoutEvidencePort.retrieveSettlement`
      is called with the Checkout Session id read from the verified body, and the
      `CheckoutSettlement` it returns must carry that same id on `sessionId`.
