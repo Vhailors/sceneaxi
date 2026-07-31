@@ -261,13 +261,13 @@ described. No in-tree document owns those observations, and no gate produces the
 
 | Surface | Production URL | Honest limit |
 |---|---|---|
-| Umbrella | <https://sceneaxi-umbrella.vercel.app> | Public/product routes and the live hero are served. Admin sign-in is deferred because `SCENEAXI_ADMIN_BOOTSTRAP_SECRET` is not provisioned. The provider handles for Better Auth, Neon credits, and the Stripe API are still absent, so account, balance, checkout, and credit-grant paths refuse by name rather than inventing state or granting credits |
+| Umbrella | <https://sceneaxi-umbrella.vercel.app> | Public/product routes and the live hero are served. The Wave 4 site-tier adapters now construct the Better Auth/Neon/Stripe TEST handles when configured, provision one credit account per authenticated user, and keep account/balance/checkout/grant paths fail-closed when deployment providers or captain-held secrets are absent. No browser can sign in yet: the site exposes no route reaching `identityPort.signIn`, so every visitor is signed out and that HTTP/UI layer is [sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185) |
 | Game-asset catalog | <https://sceneaxi-catalog-game.vercel.app> | Browse/detail is served as an evaluation-only catalog. Buying remains inactive; the storefront collects no payment details |
 
 [`websites-deploy.md`](../websites-deploy.md) owns the topology, environment names,
 activation sequence, and exact refusal table. In particular, the umbrella Stripe endpoint
-exists but the credits provider plane is unwired: without the provider-backed store and
-evidence handles it refuses rather than claiming a grant.
+and provider-backed store/evidence handles now share the deployment adapter path; missing
+configuration still refuses rather than claiming a grant.
 
 ### Known automated-coverage gap
 
@@ -291,9 +291,8 @@ brief neither changes the gate nor authorizes work to close it.
   imports; being listed is not being for sale.
 - **Three absent captain-held secrets** — `STRIPE_SECRET_KEY` (test),
   `STRIPE_WEBHOOK_SECRET`, `SCENEAXI_ADMIN_BOOTSTRAP_SECRET`. None blocks
-  anything shipped: the dependent surfaces refuse by name today and would refuse
-  identically with the keys present while `umbrellaPlaneHandles()` returns no
-  provider handles.
+  anything shipped: the dependent surfaces refuse by name today, while the Wave 4
+  handles activate only when their deployment-owned provider configuration is present.
 - **Stage 1 renderer adjudication** — held. [ADR
   0017](../adr/0017-three-product-presentation-core.md) is a captain *product*
   decision and is explicitly not a Stage 1 result or a renderer winner.

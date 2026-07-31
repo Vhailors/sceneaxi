@@ -19,16 +19,18 @@ The architecture decision behind the shape of this plane is
 | Neon schema | `db/migrations` |
 | Login + balance view model | `apps/web-shell` (`createAccountPanel`) |
 | In-app AI assistant view model | `apps/web-shell` (`createAssistantPanel`) |
-| Deployable-site wiring | `sites/umbrella/src/lib/identity-plane.ts` (`docs/websites-deploy.md`) |
+| Deployable-site wiring | `sites/umbrella/src/lib/identity-plane.ts` + `provider-adapters.ts` (`docs/websites-deploy.md`) |
 
 Release group `identity`; both packages consume only public contracts. **Outside core:** a
 running Better Auth instance, a Neon connection, the Stripe API client, any HTTP surface,
-and any UI. Those are injected adapters or other lanes' work — UI surfaces are coordinated
-with `sceneaxi-websites-deploy-v1`, which this vertical does not block.
+and any UI. The umbrella owns only the deployment adapters that connect those providers;
+provider credentials and the database remain outside the repository.
 
-**What v1 does not deliver:** a live signed-in browser session. The deployable HTTP surface
-has since landed on `sites/umbrella` and is wired to this plane, so what remains are the
-provider handles ADR 0021 keeps outside this repository. See *Remaining wiring* at the end.
+The TEST deployment path now has the provider-backed handles and idempotent account
+provisioning. Missing provider configuration remains a named refusal, and activation
+still requires the deployment procedure at `docs/websites-deploy.md`. **What v1 still does
+not deliver is a live signed-in browser session:** the sign-in HTTP entry point that would
+reach `identityPort.signIn` is sceneaxi#185. See *Deployment activation* at the end.
 
 ## Environment
 
@@ -37,6 +39,7 @@ Names only; values never appear in the repository.
 | Variable | Purpose |
 |---|---|
 | `SCENEAXI_ADMIN_EMAIL` | The **one** captain email that resolves to the `admin` role |
+| `BETTER_AUTH_ORIGIN` | Better Auth provider origin used by the umbrella sign-in adapter. The provider must serve `sign-in/email` and `get-session`, and must resolve that lookup from either the issued session cookie or the issued bearer token; `docs/websites-deploy.md` owns that prerequisite |
 | `DATABASE_URL` | Neon Postgres connection string |
 | `STRIPE_SECRET_KEY` | Stripe **test** secret key |
 | `STRIPE_WEBHOOK_SECRET` | Stripe **test** webhook signing secret |
@@ -209,10 +212,18 @@ store never authorized.
 `DATABASE_URL` from the environment only. Apply `db/migrations` in numeric order; see
 [`db/README.md`](../db/README.md) for the full invariant table.
 
-Implement `IdentityStore` (`@sceneaxi/auth`) over your Neon client, and a
-`CreditStoreAdapter` (`@sceneaxi/billing`) handed to `createCreditStore` — never a
-`CreditStore` implemented directly, for the reasons in *The credit persistence boundary*
-below. The in-memory reference implementations mirror the database's constraints — unique
+The umbrella deployment implements `IdentityStore` (`@sceneaxi/auth`) over its Neon
+client, and a `CreditStoreAdapter` (`@sceneaxi/billing`) handed to `createCreditStore` —
+never a `CreditStore` implemented directly, for the reasons in *The credit persistence
+boundary* below. Its authentication adapter provisions the SceneAxi user and exactly one
+credit account with an idempotent insert; payment webhooks never create accounts. That
+insert reconciles `email` and `email_verified` from the provider on every authentication,
+because the provider — not this deployment — owns both: freezing them at the first sign-in
+would leave an admin who verified afterwards permanently refused `adminEmailUnverified`
+against a stale row, and a member who changed their address permanently `userNotFound`.
+`disabled` and `created_at` stay deployment-owned and are never overwritten, and the
+credit account is still created at most once. The
+in-memory reference implementations mirror the database's constraints — unique
 `(account_id, sequence)`, unique `idempotency_key`, no update or delete — so a bug the real
 trigger would catch cannot pass the test suite.
 
@@ -1105,6 +1116,9 @@ The structural points that hold whatever else is added:
   no assistant turn — in any mode, metered or not — can be attempted there at all.
 - The `sessions` table's surface check constraint omits `'kids'` entirely, so the row
   cannot exist.
+- The umbrella's Neon session mapping (`provider-adapters.ts`) carries that constraint's
+  deny in code, on both halves: it refuses to write a `kids` session and refuses to build
+  one out of a row, rather than handing a Kids surface up to `@sceneaxi/auth` to reject.
 
 Additionally, nothing depends on or imports `@sceneaxi/profile-kids`, enforced independently
 of allow lists by `pnpm check:boundaries`.
@@ -1115,22 +1129,35 @@ This plane is **product** user authentication. It does not replace, weaken, or i
 with held-key captain policy ([`held-key-enforcement.md`](held-key-enforcement.md)), and
 this vertical adds no CLI verb. Machine/agent CLI behavior is untouched.
 
-## Remaining wiring for a live signed-in session
+## Deployment activation
 
-Everything below is outside this vertical. The hosted HTTP surface it needed is now
-`sites/umbrella`, wired to this plane through one plug point:
+The deployable HTTP surface is `sites/umbrella`, wired to this plane through one plug
+point. Its `provider-adapters.ts` provides the Neon `IdentityStore` and
+`CreditStoreAdapter` (wrapped by `createCreditStore`), provisions one credit account per
+user at authentication, and provides the TEST Stripe checkout/evidence adapters. The
+existing webhook route passes the **raw** body to `verifyStripeWebhookSignature` and
+commits through `persistCheckoutCompletedGrant`.
 
-1. Better Auth's own handler, mounted behind that surface to issue the session cookie the
-   umbrella already reads.
-2. An `IdentityStore` and a `CreditStoreAdapter` over a Neon client — the latter handed to
-   `createCreditStore` — and the migrations applied to a Neon branch (needs credentials —
-   separate authority). That adapter also owns provisioning a `CreditAccount` per user;
-   nothing in this repository can create one.
-3. A Stripe adapter that turns a `CheckoutSessionIntent` into a hosted checkout URL. The
-   webhook route that passes the **raw** body to `verifyStripeWebhookSignature` has landed
-   on the umbrella (`sites/umbrella/src/app/api/stripe/webhook/route.ts`, sceneaxi#131).
-4. A renderer over `createAccountPanel`'s snapshots.
+Two distinct things remain, and only the first is deployment authority: apply the forward
+migrations, set the named Better Auth/Neon/Stripe TEST variables, and register the
+card-only webhook. Missing providers continue to refuse by name.
 
-None of it changes a contract or a policy in this plane; all of it is adapters and glue.
-The deployable-site half of that glue — and which surfaces are already live versus still
-refusing — is owned by [`websites-deploy.md`](websites-deploy.md).
+One further deployment obligation is specific to `settleCreditsSale`: `creator_share_records.listing_id`
+is `NOT NULL REFERENCES catalog_listings (listing_id)`, and this repository seeds no
+`catalog_listings` row — the shipped listing set is the bundled `catalog-listings.data.ts`
+module, not a table. So a Neon settlement additionally requires the deployment to seed that
+table from the committed listing set, or the transaction fails the foreign key. No umbrella
+route reaches that path today (its only routes are `/api/checkout` and
+`/api/stripe/webhook`), so the store method is wired ahead of the catalog-sale surface that
+would call it, and its gate tests run against an in-memory fake that enforces no constraint.
+
+The second is still code, and it is not this vertical's: **no signed-in browser session
+can exist yet.** `putSession` is reached only from `identityPort.signIn`, and the umbrella
+exposes that over no route — `createAuthIdentityAdapter` deliberately offers only
+`verifySession`, and the site's only routes are `/api/checkout` and
+`/api/stripe/webhook`. So a fully configured deployment still provisions no user, runs no
+starter grant, and refuses `IDENTITY_SESSION_ABSENT` on every surface. Mounting Better
+Auth's own handler and a sign-in surface that calls `signIn` — and only then dropping the
+editor preview flag — is [sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185).
+The deployable-site activation procedure and surface status are owned by
+[`websites-deploy.md`](websites-deploy.md#remaining-activation).

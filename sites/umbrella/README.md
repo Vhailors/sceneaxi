@@ -147,9 +147,10 @@ repository-root workspace. It keeps its own lockfile so the hermetic root instal
 root lockfile, `tsc --build` graph, and gate runtime stay untouched by site framework
 dependencies. `@sceneaxi/site-kit`, `@sceneaxi/engine-presentation`, `@sceneaxi/auth`,
 and `@sceneaxi/billing` are consumed with `link:` specifiers and transpiled by Next,
-because SceneAxi package exports are source-backed. None of them ships a provider SDK.
-Their own dependencies — including `three` — resolve from the repository-root install, so
-a clean builder must provision both roots (`docs/websites-deploy.md`).
+because SceneAxi package exports are source-backed. The deployment-only Neon and Stripe
+clients live in this site's install root, never in the hermetic package graph. Their
+other dependencies — including `three` — resolve from the repository-root install, so a
+clean builder must provision both roots (`docs/websites-deploy.md`).
 
     pnpm install      # from this directory
     pnpm dev
@@ -164,13 +165,20 @@ implements no identity, no ledger, and no signature check of its own.
 
 The credit-pack list and admin resolution are live on any deployment — the pack catalog
 is read from a bundled module rather than a file, so it survives serverless output
-tracing. Session verification, balances, and the hosted checkout redirect still need
-provider handles — Better Auth, Neon, and the Stripe API, which ADR 0021 keeps outside
-this repository — and arrive through `umbrellaPlaneHandles()` in that same file. Until
-they do, those surfaces refuse with named reasons rather than showing an invented
-session, balance, or checkout, and `/pricing` lists the packs with the Buy control
-replaced by a disabled "Not for sale yet" marker.
-`docs/websites-deploy.md` has the remaining activation steps and the env var list.
+tracing. `provider-adapters.ts` maps deployment-owned Better Auth, Neon, and Stripe TEST
+clients onto the existing `@sceneaxi/auth` and `@sceneaxi/billing` seams. Handles arrive
+through `umbrellaPlaneHandles()`; absent configuration still refuses with named reasons
+rather than showing an invented session, account, balance, or checkout. Account
+provisioning is an idempotent user-plus-credit-account insert at authentication, which
+reconciles the provider-owned address and verification state each time, never a
+payment-event side effect. The Better Auth client reads the session back from
+`GET /api/auth/get-session`, sending both the issued session cookie and the issued bearer
+token so either provider configuration resolves; a provider that honours neither throws a
+named fault instead of reporting a valid password as refused
+(`docs/websites-deploy.md` owns that prerequisite). This site exposes **no sign-in route**, so nothing reaches
+`identityPort.signIn` and no session can be issued here yet — that HTTP/UI layer is
+[sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185).
+`docs/websites-deploy.md` owns the env names and activation procedure.
 
 `SCENEAXI_SITE_EDITOR_PREVIEW=1` grants a banner-marked editor preview so the
 Minimum E2 surface is demonstrable before then. Absent by default; server-side only.

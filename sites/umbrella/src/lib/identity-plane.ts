@@ -12,19 +12,17 @@
  * named refusals onto the site refusal registry. No identity is derived here, no
  * balance is computed here, and no signature is checked here.
  *
- * ## What is wired, and what still needs a provider handle
+ * ## Provider-backed deployment wiring
  *
- * Per ADR 0021 the provider clients — Better Auth, the Neon client, the Stripe API —
- * are **injected adapters that live outside this repository**. So the parts of the
- * plane whose implementation is entirely in-repo are live on any deployment: the
- * credit-pack list read from the committed contract fixture, single-admin resolution
- * from `SCENEAXI_ADMIN_EMAIL`, and the checkout intent, starter grant, and webhook
- * verification as behaviour.
+ * Per ADR 0021 the provider clients — Better Auth, the Neon client, and the Stripe API —
+ * remain deployment-owned. `provider-adapters.ts` maps those clients onto the existing
+ * `IdentityStore`, `CreditStoreAdapter`, and checkout evidence seams; it adds no auth,
+ * ledger, issuance, or live-mode policy. The pure site plane below only projects their
+ * results and maps named refusals.
  *
- * The parts that need a running provider stay adapter-injected and refuse by name
- * until a deployment supplies one: session verification needs an `IdentityPort` over a
- * real store, balances need a `CreditStore`, and turning an intent into a hosted
- * checkout URL needs the Stripe API. `docs/websites-deploy.md` is the procedure.
+ * Missing configuration still refuses by name: session verification needs Better Auth
+ * and Neon, balances need a provisioned Neon account, and checkout/grants need Stripe
+ * TEST mode plus persisted evidence. `docs/websites-deploy.md` owns activation.
  *
  * The rule the whole module is built around: an absent dependency produces a *named*
  * refusal, never an invented session, balance, or checkout.
@@ -53,6 +51,8 @@ import {
 } from "@sceneaxi/site-kit";
 import {
   AUTH_REFUSE_REASONS,
+  createBetterAuthIdentityAdapter,
+  createIdentityPort,
   resolveAdminIdentity,
   type AdminIdentity,
   type AuthRefuseReason,
@@ -71,6 +71,22 @@ import {
   type LedgerState,
 } from "@sceneaxi/billing";
 import type { CheckoutEvidencePort } from "./credit-webhook.js";
+import {
+  createBetterAuthHttpClient,
+  createNeonCheckoutIntentStore,
+  createNeonCreditStore,
+  createNeonDatabase,
+  createNeonIdentityStore,
+  createProvisioningIdentityAdapter,
+  createStripeCheckoutEvidenceAdapter,
+  createStripeCheckoutSessionAdapter,
+  createStripeClient,
+  providerFetch,
+  resolveBetterAuthOrigin,
+  resolveNonEmptyEnv,
+  type DeploymentProviderOverrides,
+  type NeonDatabase,
+} from "./provider-adapters.js";
 
 /**
  * Contract shapes reached through the two plane packages rather than imported from
@@ -337,14 +353,15 @@ export type IdentityPlaneAdapters = {
 /**
  * The provider handles a deployment supplies, and the one function that supplies them.
  *
- * ADR 0021 keeps the Neon client, Better Auth, and the Stripe API **outside** this
- * repository, so there is nothing here to construct and every handle is absent. That
- * absence is not an oversight — it is what makes each plane refuse with its own named
- * reason instead of inventing a session, a balance, or a checkout.
+ * ADR 0021 keeps provider ownership in the deployment tier. This site constructs only
+ * the narrow provider adapters in `provider-adapters.ts`; the contracts and policy stay
+ * in `@sceneaxi/auth` and `@sceneaxi/billing`. A deployment with missing env or provider
+ * clients returns absent handles, so each plane refuses by name instead of inventing a
+ * session, account, balance, grant, or checkout.
  *
- * A deployment that carries those clients returns them from here, and no other file
- * changes: `createUmbrellaIdentityPlane` folds them under any explicitly injected
- * adapter, and the webhook endpoint reads the store and evidence from the same place.
+ * `createUmbrellaIdentityPlane` folds these handles under any explicitly injected adapter,
+ * and the webhook endpoint reads the credit store and checkout evidence from this same
+ * registry.
  */
 export type UmbrellaPlaneHandles = {
   readonly identityPort?: IdentityPort | undefined;
@@ -355,8 +372,96 @@ export type UmbrellaPlaneHandles = {
 
 const NO_PLANE_HANDLES: UmbrellaPlaneHandles = Object.freeze({});
 
-export function umbrellaPlaneHandles(): UmbrellaPlaneHandles {
-  return NO_PLANE_HANDLES;
+export type DeploymentPlaneOptions = Readonly<{
+  readonly env?: Readonly<Record<string, string | undefined>>;
+  readonly providers?: DeploymentProviderOverrides;
+  readonly clock?: (() => number) | undefined;
+}>;
+
+/**
+ * Build the deployment-owned handles from the injected provider clients.
+ *
+ * A missing env value is a missing provider, not an invitation to construct an
+ * in-memory account or ledger. The optional provider bundle exists for the
+ * hermetic adapter tests; production uses the Neon and Stripe constructors below.
+ */
+export function createDeploymentPlaneHandles(
+  options: DeploymentPlaneOptions = {},
+): UmbrellaPlaneHandles {
+  const env = options.env ?? process.env;
+  const providers = options.providers ?? {};
+  const clock = options.clock ?? (() => Date.now());
+  const databaseUrl = resolveNonEmptyEnv(env, "DATABASE_URL");
+  let database: NeonDatabase | undefined = providers.database;
+  if (database === undefined && databaseUrl !== undefined) {
+    try {
+      database = createNeonDatabase(databaseUrl);
+    } catch {
+      return NO_PLANE_HANDLES;
+    }
+  }
+  if (database === undefined) return NO_PLANE_HANDLES;
+
+  const identityStore = createNeonIdentityStore(database);
+  const creditStore = createNeonCreditStore(database);
+  const intentStore = createNeonCheckoutIntentStore(database);
+
+  const authOrigin = resolveBetterAuthOrigin(
+    resolveNonEmptyEnv(env, "BETTER_AUTH_ORIGIN"),
+  );
+  const fetcher = providers.fetch ?? providerFetch();
+  const betterAuth =
+    providers.betterAuth ??
+    (authOrigin === undefined || fetcher === undefined
+      ? undefined
+      : createBetterAuthHttpClient({ origin: authOrigin, fetch: fetcher }));
+  const resolvedAdmin = resolveAdminIdentity(env);
+  const stripeKey = resolveNonEmptyEnv(env, "STRIPE_SECRET_KEY");
+  let stripe = providers.stripe;
+  if (stripe === undefined && stripeKey !== undefined) {
+    try {
+      stripe = createStripeClient(stripeKey);
+    } catch {
+      stripe = undefined;
+    }
+  }
+
+  const identityPort =
+    betterAuth === undefined
+      ? undefined
+      : createIdentityPort({
+          adapter: createProvisioningIdentityAdapter({
+            adapter: createBetterAuthIdentityAdapter(betterAuth),
+            clock,
+            provision: (authentication) =>
+              identityStore.ensureUserAndCreditAccount(authentication, clock()),
+          }),
+          store: identityStore,
+          ...(resolvedAdmin.ok ? { admin: resolvedAdmin.value } : {}),
+          clock,
+        });
+  const checkoutSessions =
+    stripe === undefined
+      ? undefined
+      : createStripeCheckoutSessionAdapter({ stripe, intents: intentStore });
+  const checkoutEvidence =
+    stripe === undefined
+      ? undefined
+      : createStripeCheckoutEvidenceAdapter({ stripe, intents: intentStore });
+
+  return Object.freeze({
+    identityPort,
+    creditStore,
+    checkoutSessions,
+    checkoutEvidence,
+  });
+}
+
+/** The production entry point. It reads names only; absent providers stay absent. */
+export function umbrellaPlaneHandles(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): UmbrellaPlaneHandles {
+  return createDeploymentPlaneHandles({ env });
 }
 
 export type IdentityPlaneWiring = IdentityPlaneAdapters & {
@@ -657,7 +762,7 @@ export function createUmbrellaIdentityPlane(
   const deploymentHandle = <Key extends keyof UmbrellaPlaneHandles>(
     key: Key,
   ): UmbrellaPlaneHandles[Key] => {
-    deployment ??= umbrellaPlaneHandles();
+    deployment ??= umbrellaPlaneHandles(env);
     return deployment[key];
   };
   const identityPort = (): IdentityPort | undefined =>
@@ -730,4 +835,4 @@ export function createUmbrellaIdentityPlane(
 export const IDENTITY_PLANE_DOC = "docs/websites-deploy.md";
 
 export const IDENTITY_PLANE_PENDING_NOTE =
-  "Sign-in and credit balances activate when this deployment supplies the identity plane's provider handles — the session store and the Stripe checkout round-trip, which ADR 0021 keeps outside this repository. Until then these surfaces refuse with a named reason rather than showing an invented session, balance, or checkout.";
+  "Signing in is not open here yet. This site verifies a session and reads a balance from the deployment's own Neon and Stripe test handles, but it exposes no route that issues a session, so no signed-in browser exists until that entry point ships (sceneaxi#185). Until then these surfaces refuse with a named reason rather than showing an invented session, balance, or checkout.";

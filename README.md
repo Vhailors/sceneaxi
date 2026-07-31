@@ -34,7 +34,8 @@ umbrella → `@sceneaxi/engine-presentation` for every viewport the umbrella own
 [`docs/three-presentation-core.md`](docs/three-presentation-core.md)); every
 other engine package stays denied to every site. The umbrella is also the one site wired
 to the identity plane (`@sceneaxi/auth` + `@sceneaxi/billing`, ADR 0021) and only through
-`sites/umbrella/src/lib/identity-plane.ts`; the catalogs read identity through the same
+`sites/umbrella/src/lib/identity-plane.ts` plus the deployment adapters it assembles in
+`src/lib/provider-adapters.ts` — two files and no more; the catalogs read identity through the same
 `site-kit` ports and take no second auth stack. The visual layer those sites share —
 the Foundations v2 tokens, their measured contrast contract, the Change Review
 primitive over a real propose/apply `Proposal`, and the named-state and commerce-notice
