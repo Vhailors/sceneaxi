@@ -900,12 +900,34 @@ function stringValue(value: unknown): string {
  * Create the small Better Auth instance shape consumed by @sceneaxi/auth. The
  * provider remains external; this site never stores a password or implements a
  * second credential verifier.
+ *
+ * Better Auth answers `POST /api/auth/sign-in/email` with `{ redirect, token,
+ * user }` and no session record, so the session this boundary needs — its id,
+ * owner, and expiry — is read back from `GET /api/auth/get-session` with the
+ * issued token. A provider that does return a session inline is used as-is. No
+ * field is inferred from the other half of the answer: a provider that does not
+ * state the session's id, owner, or expiry produces an envelope
+ * `mapBetterAuthAuthentication` refuses, which is the intended fail-closed
+ * outcome rather than a session attributed to a user the provider never named.
  */
 export function createBetterAuthHttpClient(options: {
   readonly origin: string;
   readonly fetch: ProviderFetch;
 }): BetterAuthInstanceLike {
   const origin = new URL(options.origin).origin;
+
+  async function readSessionRecord(token: string): Promise<Record<string, unknown> | undefined> {
+    const response = await options.fetch(`${origin}/api/auth/get-session`, {
+      method: "GET",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    });
+    if (response.status === 401 || response.status === 403) return undefined;
+    if (!response.ok) {
+      throw new Error(`Better Auth session lookup failed (${response.status})`);
+    }
+    return recordOf(await response.json());
+  }
+
   return Object.freeze({
     api: Object.freeze({
       async signInEmail(input: { body: { email: string; password: string } }) {
@@ -918,9 +940,18 @@ export function createBetterAuthHttpClient(options: {
         if (response.status === 401 || response.status === 403) return undefined;
         if (!response.ok) throw new Error(`Better Auth sign-in failed (${response.status})`);
         const payload = recordOf(await response.json());
-        const user = recordOf(payload?.["user"]);
-        const providerSession = recordOf(payload?.["session"]);
-        const token = stringValue(payload?.["token"]) || stringValue(providerSession?.["token"]);
+        let user = recordOf(payload?.["user"]);
+        let providerSession = recordOf(payload?.["session"]);
+        const issuedToken = stringValue(payload?.["token"]);
+
+        if (providerSession === undefined) {
+          if (issuedToken.length === 0) return undefined;
+          const resolved = await readSessionRecord(issuedToken);
+          if (resolved === undefined) return undefined;
+          providerSession = recordOf(resolved["session"]);
+          user = recordOf(resolved["user"]) ?? user;
+        }
+
         return {
           user: {
             id: stringValue(user?.["id"]),
@@ -929,8 +960,8 @@ export function createBetterAuthHttpClient(options: {
           },
           session: {
             id: stringValue(providerSession?.["id"]),
-            token,
-            userId: stringValue(providerSession?.["userId"]) || stringValue(user?.["id"]),
+            token: issuedToken || stringValue(providerSession?.["token"]),
+            userId: stringValue(providerSession?.["userId"]),
             expiresAt: stringValue(providerSession?.["expiresAt"]),
           },
         };

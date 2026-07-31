@@ -1142,6 +1142,15 @@ Two distinct things remain, and only the first is deployment authority: apply th
 migrations, set the named Better Auth/Neon/Stripe TEST variables, and register the
 card-only webhook. Missing providers continue to refuse by name.
 
+One further deployment obligation is specific to `settleCreditsSale`: `creator_share_records.listing_id`
+is `NOT NULL REFERENCES catalog_listings (listing_id)`, and this repository seeds no
+`catalog_listings` row — the shipped listing set is the bundled `catalog-listings.data.ts`
+module, not a table. So a Neon settlement additionally requires the deployment to seed that
+table from the committed listing set, or the transaction fails the foreign key. No umbrella
+route reaches that path today (its only routes are `/api/checkout` and
+`/api/stripe/webhook`), so the store method is wired ahead of the catalog-sale surface that
+would call it, and its gate tests run against an in-memory fake that enforces no constraint.
+
 The second is still code, and it is not this vertical's: **no signed-in browser session
 can exist yet.** `putSession` is reached only from `identityPort.signIn`, and the umbrella
 exposes that over no route — `createAuthIdentityAdapter` deliberately offers only

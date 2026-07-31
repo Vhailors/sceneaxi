@@ -4,6 +4,7 @@ import {
   createIdentityPort,
   createInMemoryIdentityStore,
   digestSessionToken,
+  mapBetterAuthAuthentication,
   resolveAdminIdentity,
   type BetterAuthInstanceLike,
 } from "@sceneaxi/auth";
@@ -16,6 +17,7 @@ import {
 } from "@sceneaxi/billing";
 import {
   applyCreditPackWebhook,
+  createBetterAuthHttpClient,
   createDeploymentPlaneHandles,
   createNeonCheckoutIntentStore,
   createNeonCreditStore,
@@ -27,6 +29,7 @@ import {
   createStripeClient,
   resolveBetterAuthOrigin,
   type NeonDatabase,
+  type ProviderFetch,
   type SqlRow,
   type StripeClientLike,
 } from "../../sites/umbrella/src/index.ts";
@@ -1067,5 +1070,222 @@ describe("umbrella Neon credit settlement", () => {
     // before the write, so this is a throw and never a rejected promise.
     expect(() => store.appendEntry(buyerEntry)).toThrow(/requires atomic settlement/);
     expect(fixture.entries).toHaveLength(0);
+  });
+});
+
+/**
+ * The Better Auth response bodies this client is written against.
+ *
+ * `POST /api/auth/sign-in/email` answers `{ redirect, token, user }` and sets the
+ * session cookie — it carries no session record — so the session id, owner, and
+ * expiry the boundary needs come from `GET /api/auth/get-session`, which answers
+ * `{ session, user }`.
+ */
+const SIGN_IN_BODY = Object.freeze({
+  redirect: false,
+  token: "provider-token-1",
+  user: {
+    id: "member-1",
+    email: "member@example.com",
+    emailVerified: true,
+    name: "Member",
+    createdAt: iso(-86_400_000),
+    updatedAt: iso(-86_400_000),
+  },
+});
+
+const GET_SESSION_BODY = Object.freeze({
+  session: {
+    id: "provider-session-1",
+    token: "provider-token-1",
+    userId: "member-1",
+    expiresAt: iso(3_600_000),
+    createdAt: iso(0),
+  },
+  user: SIGN_IN_BODY.user,
+});
+
+type ProviderResponse = Readonly<{ status: number; body: unknown }>;
+
+function recordingFetch(responses: ReadonlyArray<ProviderResponse>): {
+  readonly fetch: ProviderFetch;
+  readonly calls: Array<{ url: string; method: string; authorization: string }>;
+} {
+  const calls: Array<{ url: string; method: string; authorization: string }> = [];
+  const queue = [...responses];
+  const fetch: ProviderFetch = async (input, init) => {
+    const headers = (init?.headers ?? {}) as Record<string, string>;
+    calls.push({
+      url: input,
+      method: init?.method ?? "GET",
+      authorization: headers["authorization"] ?? "",
+    });
+    const next = queue.shift();
+    if (next === undefined) throw new Error(`unexpected provider request: ${input}`);
+    return {
+      ok: next.status >= 200 && next.status < 300,
+      status: next.status,
+      json: async () => next.body,
+    };
+  };
+  return { fetch, calls };
+}
+
+describe("umbrella Better Auth HTTP client", () => {
+  it("resolves the session Better Auth's sign-in answer does not carry", async () => {
+    const { fetch, calls } = recordingFetch([
+      { status: 200, body: SIGN_IN_BODY },
+      { status: 200, body: GET_SESSION_BODY },
+    ]);
+    const client = createBetterAuthHttpClient({ origin: "https://auth.example.com/", fetch });
+
+    const authentication = await client.api.signInEmail({
+      body: { email: "member@example.com", password: "test-password" },
+    });
+
+    expect(calls).toEqual([
+      {
+        url: "https://auth.example.com/api/auth/sign-in/email",
+        method: "POST",
+        authorization: "",
+      },
+      {
+        url: "https://auth.example.com/api/auth/get-session",
+        method: "GET",
+        authorization: "Bearer provider-token-1",
+      },
+    ]);
+    // The envelope is only useful if @sceneaxi/auth accepts it, so the contract
+    // is asserted through the mapper rather than against a hand-copied shape.
+    expect(
+      mapBetterAuthAuthentication({ authentication, surface: "site", issuedAt: NOW }),
+    ).toMatchObject({
+      providerUserId: "member-1",
+      email: "member@example.com",
+      emailVerified: true,
+      session: {
+        sessionId: "provider-session-1",
+        userId: "member-1",
+        surface: "site",
+        expiresAt: iso(3_600_000),
+        tokenDigest: digestSessionToken("provider-token-1"),
+      },
+    });
+  });
+
+  it("uses an inline session when the provider states one, without a second request", async () => {
+    const { fetch, calls } = recordingFetch([
+      {
+        status: 200,
+        body: {
+          ...SIGN_IN_BODY,
+          session: {
+            id: "provider-session-2",
+            token: "provider-token-2",
+            userId: "member-1",
+            expiresAt: iso(7_200_000),
+          },
+        },
+      },
+    ]);
+    const client = createBetterAuthHttpClient({ origin: "https://auth.example.com", fetch });
+
+    const authentication = await client.api.signInEmail({
+      body: { email: "member@example.com", password: "test-password" },
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(
+      mapBetterAuthAuthentication({ authentication, surface: "site", issuedAt: NOW }),
+    ).toMatchObject({
+      session: { sessionId: "provider-session-2", expiresAt: iso(7_200_000) },
+    });
+  });
+
+  it("refuses rejected credentials on either request without inventing an envelope", async () => {
+    for (const status of [401, 403]) {
+      const signInRefused = createBetterAuthHttpClient({
+        origin: "https://auth.example.com",
+        fetch: recordingFetch([{ status, body: { message: "denied" } }]).fetch,
+      });
+      await expect(
+        signInRefused.api.signInEmail({
+          body: { email: "member@example.com", password: "wrong" },
+        }),
+      ).resolves.toBeUndefined();
+
+      const sessionRefused = createBetterAuthHttpClient({
+        origin: "https://auth.example.com",
+        fetch: recordingFetch([
+          { status: 200, body: SIGN_IN_BODY },
+          { status, body: { message: "denied" } },
+        ]).fetch,
+      });
+      await expect(
+        sessionRefused.api.signInEmail({
+          body: { email: "member@example.com", password: "test-password" },
+        }),
+      ).resolves.toBeUndefined();
+    }
+  });
+
+  it("throws on a provider fault rather than reporting a failed sign-in", async () => {
+    const signInFaulted = createBetterAuthHttpClient({
+      origin: "https://auth.example.com",
+      fetch: recordingFetch([{ status: 500, body: {} }]).fetch,
+    });
+    await expect(
+      signInFaulted.api.signInEmail({
+        body: { email: "member@example.com", password: "test-password" },
+      }),
+    ).rejects.toThrow(/Better Auth sign-in failed \(500\)/);
+
+    const lookupFaulted = createBetterAuthHttpClient({
+      origin: "https://auth.example.com",
+      fetch: recordingFetch([
+        { status: 200, body: SIGN_IN_BODY },
+        { status: 503, body: {} },
+      ]).fetch,
+    });
+    await expect(
+      lookupFaulted.api.signInEmail({
+        body: { email: "member@example.com", password: "test-password" },
+      }),
+    ).rejects.toThrow(/Better Auth session lookup failed \(503\)/);
+  });
+
+  it("refuses an answer that names no session and no token", async () => {
+    const { fetch, calls } = recordingFetch([
+      { status: 200, body: { redirect: false, user: SIGN_IN_BODY.user } },
+    ]);
+    const client = createBetterAuthHttpClient({ origin: "https://auth.example.com", fetch });
+
+    await expect(
+      client.api.signInEmail({ body: { email: "member@example.com", password: "test-password" } }),
+    ).resolves.toBeUndefined();
+    expect(calls).toHaveLength(1);
+  });
+
+  it("never attributes a session to a user the provider did not name as its owner", async () => {
+    const { fetch } = recordingFetch([
+      { status: 200, body: SIGN_IN_BODY },
+      {
+        status: 200,
+        body: {
+          session: { id: "provider-session-1", expiresAt: iso(3_600_000) },
+          user: SIGN_IN_BODY.user,
+        },
+      },
+    ]);
+    const client = createBetterAuthHttpClient({ origin: "https://auth.example.com", fetch });
+
+    const authentication = await client.api.signInEmail({
+      body: { email: "member@example.com", password: "test-password" },
+    });
+
+    expect(authentication).toMatchObject({ session: { userId: "" } });
+    expect(
+      mapBetterAuthAuthentication({ authentication, surface: "site", issuedAt: NOW }),
+    ).toBeUndefined();
   });
 });
