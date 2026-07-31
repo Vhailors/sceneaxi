@@ -43,6 +43,9 @@ const DOCK_TAB_LABELS: Record<DockTabId, string> = {
 /** The refusal-legend anchor id for a code, shared by every describedby. */
 const legendId = (code: string): string => `edshell-refusal-${code}`;
 
+/** The one panel every viewport-source tab controls. */
+const VIEWPORT_PANEL_ID = "ed-viewport-panel";
+
 /**
  * Every interactive element goes through this one helper, so a control cannot
  * reach the document without its kind and its refusal wiring — the invariant
@@ -54,6 +57,8 @@ function ShellButton({
   demotedRefusal,
   pressed,
   selected,
+  role,
+  controls,
   onClick,
   children,
 }: {
@@ -66,7 +71,13 @@ function ShellButton({
    */
   readonly demotedRefusal?: string | undefined;
   readonly pressed?: boolean | undefined;
+  /**
+   * `aria-selected` is only legal on a role that supports it, so a caller that
+   * passes it must also pass the role (`tab`) and the panel it controls.
+   */
   readonly selected?: boolean | undefined;
+  readonly role?: "tab" | undefined;
+  readonly controls?: string | undefined;
   readonly onClick?: ((event: React.MouseEvent<HTMLElement>) => void) | undefined;
   readonly children?: React.ReactNode;
 }) {
@@ -85,7 +96,11 @@ function ShellButton({
         }
       : {}),
     ...(pressed === undefined ? {} : { "aria-pressed": pressed }),
-    ...(selected === undefined ? {} : { "aria-selected": selected }),
+    ...(role === undefined ? {} : { role }),
+    ...(selected === undefined || role === undefined
+      ? {}
+      : { "aria-selected": selected }),
+    ...(controls === undefined ? {} : { "aria-controls": controls }),
   } as const;
 
   if (!inert && binding !== null && binding.kind === "href") {
@@ -129,7 +144,7 @@ export function EditorShell({
   const [dockTab, setDockTab] = useState<DockTabId>("changes");
   const [profile, setProfile] = useState<ProfileId>("game");
   const [assistantOpen, setAssistantOpen] = useState(view.assistant.state === "open");
-  const [assistantMode, setAssistantMode] = useState("build");
+  const [assistantMode, setAssistantMode] = useState(view.assistant.defaultModeId);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const paletteRef = useRef<HTMLInputElement | null>(null);
   const paletteReturnFocus = useRef<HTMLElement | null>(null);
@@ -141,6 +156,10 @@ export function EditorShell({
   const activeMode =
     view.modes.find((candidate) => candidate.id === mode) ?? fallbackMode;
   const kids = profile === "kids";
+  // The view decides which source has a session here; the other tabs refuse.
+  const selectedViewportSource = view.viewport.sources.find(
+    (source) => source.kind !== "inert",
+  );
 
   const enterMode = (next: ModeId) => {
     const nextMode = view.modes.find((candidate) => candidate.id === next);
@@ -419,11 +438,20 @@ export function EditorShell({
                     key={source.id}
                     control={source}
                     className="ed-viewtab"
-                    selected={source.kind !== "inert"}
+                    role="tab"
+                    selected={source.id === selectedViewportSource?.id}
+                    controls={VIEWPORT_PANEL_ID}
                   />
                 ))}
               </div>
-              <div className="ed-canvas">
+              <div
+                className="ed-canvas"
+                id={VIEWPORT_PANEL_ID}
+                role="tabpanel"
+                {...(selectedViewportSource === undefined
+                  ? {}
+                  : { "aria-labelledby": selectedViewportSource.id })}
+              >
                 <div className="ed-canvas-chips">
                   <span className="ed-chip">
                     <span className="dot" aria-hidden="true" />
@@ -871,8 +899,8 @@ export function EditorShell({
                       key={control.id}
                       control={control}
                       className="ed-assistant-mode"
-                      pressed={assistantMode === control.label.toLowerCase()}
-                      onClick={() => setAssistantMode(control.label.toLowerCase())}
+                      pressed={assistantMode === control.id}
+                      onClick={() => setAssistantMode(control.id)}
                     />
                   ))}
                   <ShellButton control={view.assistant.send} className="ed-primary" />

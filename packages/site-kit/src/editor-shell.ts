@@ -47,6 +47,7 @@ import {
   digestSceneArtifact,
   openPathPolicyView,
   pluginCapabilityRegistrySeed,
+  type EditorShellAssistantModeId,
   type EditorShellControlKind,
   type EditorShellDockTabId,
   type EditorShellModeId,
@@ -111,6 +112,16 @@ export const EDITOR_SHELL_WEB_REFUSAL_MESSAGES: Readonly<
   [EDITOR_SHELL_WEB_REFUSALS.windowBelowMinimum]:
     "The editor chrome refuses below its minimum window size rather than rendering an unusable layout.",
 });
+
+/**
+ * The one place an assistant mode's control id is spelled, so the composer's
+ * default and the minted controls cannot drift apart.
+ */
+const assistantModeControlId = (mode: EditorShellAssistantModeId): string =>
+  `assistant-mode-${mode}`;
+
+/** The mode the composer starts on, named from the shared vocabulary. */
+const EDITOR_SHELL_ASSISTANT_DEFAULT_MODE: EditorShellAssistantModeId = "build";
 
 /**
  * Archive fixture figures that must never ship from this model. The design
@@ -312,6 +323,11 @@ export type EditorShellView = Readonly<{
     modelLabel: string;
     toggle: EditorShellControl;
     modes: ReadonlyArray<EditorShellControl>;
+    /**
+     * The mode control the composer starts on, as a control id rather than a
+     * label, so a renderer keys its pressed state on identity the view owns.
+     */
+    defaultModeId: string;
     send: EditorShellControl;
     sees: ReadonlyArray<string>;
   }>;
@@ -874,12 +890,13 @@ export function buildEditorShellView(input: EditorShellInput): EditorShellView {
     modes: Object.freeze(
       EDITOR_SHELL_ASSISTANT_MODE_IDS.map((mode) =>
         mint({
-          id: `assistant-mode-${mode}`,
+          id: assistantModeControlId(mode),
           label: mode.charAt(0).toUpperCase() + mode.slice(1),
           kind: "view",
         }),
       ),
     ),
+    defaultModeId: assistantModeControlId(EDITOR_SHELL_ASSISTANT_DEFAULT_MODE),
     send: mint({
       id: "assistant-send",
       label: "Send",

@@ -122,6 +122,13 @@ describe("control accounting", () => {
     }
   });
 
+  it("the assistant's default mode names one of its own mode controls", () => {
+    const shell = view();
+    expect(shell.assistant.modes.map((control) => control.id)).toContain(
+      shell.assistant.defaultModeId,
+    );
+  });
+
   it("the palette opener is chrome, not one of the rows it opens", () => {
     const shell = view();
     expect(shell.paletteOpener.kind).toBe("view");
