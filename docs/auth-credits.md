@@ -317,7 +317,8 @@ and the credit-pack grant-anchor tests prove the settlement comparison, grant-ti
 and persisted-credit commit behavior.
 
 Captain decision D2 (`intent-credit-anchor`) is implemented here over the archived/versioned
-catalog landed in #173 / PR #173. D3 (`intent-ddl-immutability`) stays a separate decision
+catalog landed in [PR #173](https://github.com/Vhailors/sceneaxi/pull/173). D3
+(`intent-ddl-immutability`) stays a separate decision
 and this change implements no part of it, but its migration already landed in
 [PR #172](https://github.com/Vhailors/sceneaxi/pull/172):
 `db/migrations/0003_checkout_session_intent_price_immutability.sql` is a forward-only
@@ -859,9 +860,8 @@ and refuses `BILLING_CATALOG_REVISION_UNRESOLVABLE` when the tuple has no retain
 `applyCheckoutCompletedGrant` performs the D2 grant-time check before it calls the ledger:
 a resolved revision priced in a currency the completion does not settle refuses that same
 `BILLING_CATALOG_REVISION_UNRESOLVABLE`, a known revision whose credits differ from the
-completion refuses
-`BILLING_CATALOG_REVISION_CREDITS_MISMATCH`, while a valid current or retained revision
-uses the archive row's credits for the grant. `persistCheckoutCompletedGrant` inherits the
+completion refuses `BILLING_CATALOG_REVISION_CREDITS_MISMATCH`, while a valid current or
+retained revision uses the archive row's credits for the grant. `persistCheckoutCompletedGrant` inherits the
 same refusal before its commit boundary, so unknown or inflated intent values cannot mutate
 the ledger.
 

@@ -231,8 +231,12 @@ extend `tests/contracts/` and `tests/db/schema-lockstep.test.ts` when touching a
 of it. The credit-pack fixture is an **append-only archive**: a `packRevisions`
 row is immutable and digest-pinned, repricing or retirement only appends a row
 and moves `currentRevisionIds`, and `resolveCreditPackRevision()` keeps an
-already-paid revision resolvable from the persisted intent's anchor tuple —
-`docs/auth-credits.md` owns those rules.
+already-paid revision resolvable from the persisted intent's anchor tuple. That
+archive is the grant's issuance authority (captain decision D2): before any
+append or commit, `applyCheckoutCompletedGrant()` resolves the persisted
+intent's `(itemId, stripePriceId, unitAmount)` through it and grants the
+retained revision's credits, so the persisted intent is evidence to cross-check
+and never an amount to honour. `docs/auth-credits.md` owns those rules.
 
 Runtime-unforgeable provenance for the identity + credits plane is owned by
 `docs/auth-credits.md` (sceneaxi#126). Preserve its object-identity witness: a

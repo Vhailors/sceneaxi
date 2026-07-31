@@ -58,8 +58,9 @@ than holding a second commit path for the same paid event (captain decision D4).
 **Credit-pack grants are anchored to the committed archive.** Before the pure grant can
 append, `applyCheckoutCompletedGrant` resolves the persisted intent tuple through
 `resolveCreditPackRevision`, refuses unknown tuples, a settlement currency the retained
-revision is not priced in, or mismatched credits, and uses the retained revision's credits. The persisted intent is evidence to cross-check, not an
-issuance authority; D3's database immutability decision remains separate.
+revision is not priced in, or mismatched credits, and uses the retained revision's credits
+(captain decision D2). The persisted intent is evidence to cross-check, not an issuance
+authority; D3's database immutability decision remains separate.
 
 **Live-mode authorization has exactly one configuration source.**
 `resolveLiveModeAuthorization` reads `SCENEAXI_STRIPE_LIVE_AUTHORIZED` and nothing else —

@@ -150,8 +150,8 @@ const UNHANDLED_EVENT_REASONS: ReadonlySet<string> = Object.freeze(
  * id at all, its own ledger rows do not load, its own bundled credit-pack archive does not
  * validate, the intent it persisted names a pack tuple or currency no retained revision of
  * that archive resolves or credits that revision does not carry, or the purchasing user has
- * no provisioned credit account. They are separated from the request-fault refusals so the transport can
- * answer a status that names the failing side — an operator who forgot
+ * no provisioned credit account. They are separated from the request-fault refusals so
+ * the transport can answer a status that names the failing side — an operator who forgot
  * `STRIPE_WEBHOOK_SECRET`, or whose adapter forgot to persist intents, must not see their
  * own omission reported as a bad request from Stripe.
  *
@@ -295,8 +295,8 @@ const claimsSceneAxiCheckout = (metadata: Record<string, unknown> | undefined): 
  * and settlement comparison, while the committed archive supplies the credits that may
  * be granted; an attacker able to influence event metadata still cannot name their own
  * credit amount. These two are only *lookup keys*, and a key that names the wrong intent
- * fails the parser's own
- * metadata/mode cross-check immediately after. The event type and the purpose are read at
+ * fails the parser's own metadata/mode cross-check immediately after. The event type and
+ * the purpose are read at
  * that same trust level and for the same reason — to route, never to admit: each can only
  * send a body away from the grant path, an unknown or absent purpose keeps its existing
  * path, and `parseCheckoutCompletedEvent` still owns the authoritative check — including

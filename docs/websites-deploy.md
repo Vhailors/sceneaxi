@@ -250,8 +250,9 @@ than inventing a session, balance, or checkout.
      deliberately field-scoped rather than whole-row: the columns a deployment adds for its
      own operations stay writable, so stamping the hosted Stripe session id onto the row once
      the session exists is expected, and nobody should later re-tighten this into whole-row
-     immutability. D2 is implemented over the archived/versioned catalog from #173 / PR #173
-     and adds no migration. D3 remains a separate decision this change implements no part of,
+     immutability. D2 is implemented over the archived/versioned catalog from
+     [PR #173](https://github.com/Vhailors/sceneaxi/pull/173) and adds no migration. D3
+     remains a separate decision this change implements no part of,
      but its migration landed in [PR #172](https://github.com/Vhailors/sceneaxi/pull/172):
      once you have run step 5 below, `0003_checkout_session_intent_price_immutability.sql`
      refuses an `UPDATE` to those same four columns in the database, leaving the operational
