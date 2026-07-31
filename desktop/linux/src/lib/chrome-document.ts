@@ -12,8 +12,9 @@
  * because at build time no pixels exist. The renderer viewport updates it at
  * runtime from the real presentation frame report — evidence, never assertion.
  *
- * Fail-closed: if the chrome loses either injection anchor, this throws rather
- * than emitting a window that silently lost its live viewport.
+ * Fail-closed: if the chrome loses an injection anchor, or one of the markup
+ * anchors the renderer viewport and the packaged smoke depend on, this throws
+ * rather than emitting a window that silently lost its live viewport.
  */
 import {
   createDesktopVisualState,
@@ -32,6 +33,23 @@ export const RENDERER_SCRIPT_TAG = '<script defer src="./renderer.js"></script>'
 
 const PIXELS_META_ANCHOR = `<meta name="${PIXELS_META_NAME}" content="false">`;
 const BODY_CLOSE_ANCHOR = "</body>";
+
+/**
+ * Markup this tier reads but does not own: `@sceneaxi/desktop-shell` renders both
+ * and knows nothing about this consumer, so a rename there would otherwise land as
+ * a silent runtime hole — no canvas at all, or the "no renderer is mounted" note
+ * left painted over a live one while the smoke's honesty check reads clean.
+ */
+const RUNTIME_ANCHORS: readonly { readonly markup: string; readonly used: string }[] = [
+  {
+    markup: '<div class="viewport">',
+    used: "the renderer viewport mounts the Three core on the .viewport stage",
+  },
+  {
+    markup: "viewport-note-inert",
+    used: "the renderer removes the inert note only after a real mount, and the smoke asserts its absence",
+  },
+];
 
 export type DesktopIndexHtmlOptions = {
   readonly title?: string;
@@ -58,6 +76,13 @@ export function desktopLinuxIndexHtml(options: DesktopIndexHtmlOptions = {}): st
     throw new Error(
       "desktop chrome document lost its </body> anchor — refusing to emit a window without the live viewport script",
     );
+  }
+  for (const anchor of RUNTIME_ANCHORS) {
+    if (!chrome.includes(anchor.markup)) {
+      throw new Error(
+        `desktop chrome document lost its '${anchor.markup}' anchor — ${anchor.used}; refusing to emit a window whose live viewport cannot be mounted honestly`,
+      );
+    }
   }
 
   return chrome

@@ -279,6 +279,9 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     // The chrome's own interactive controls are intact — not a re-implementation.
     expect(html).toContain('data-action="mode"');
     expect(html).toContain('data-action="profile"');
+    // The markup the renderer viewport and the packaged smoke read but do not own.
+    expect(html).toContain('<div class="viewport">');
+    expect(html).toContain("viewport-note-inert");
     expect(html).toContain("<title>SceneAxi Engine Desktop</title>");
   });
 });

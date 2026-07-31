@@ -96,6 +96,17 @@ if (proof.viewportDom?.canvases !== 1) failures.push("window DOM does not hold e
 if (proof.viewportDom?.inertNotePresent !== false) {
   failures.push("inert viewport note still present after a live mount");
 }
+// The on-surface report line must print the same frame the bridge received —
+// otherwise the window could show nothing, or a refusal, while the proof reads clean.
+const reportText = proof.viewportDom?.reportText;
+if (typeof reportText !== "string" || reportText.length === 0) {
+  failures.push("window DOM printed no live viewport report line");
+} else if (
+  !reportText.includes(`backend ${proof.frameReport?.backend}`) ||
+  !reportText.includes(`surface ${proof.frameReport?.surface}`)
+) {
+  failures.push(`report line does not print the reported frame: '${reportText}'`);
+}
 
 if (failures.length > 0) {
   console.error(`smoke FAILED — ${failures.join("; ")}`);

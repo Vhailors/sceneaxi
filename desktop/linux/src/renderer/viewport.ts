@@ -225,8 +225,22 @@ async function mountLiveViewport(): Promise<void> {
   }
 }
 
+// A bridge call rejects whenever the main-process handler throws rather than
+// refusing by name; without this the canvas would already be in the DOM and the
+// only trace would be an unhandled rejection, so the surface names it instead.
+function startLiveViewport(): void {
+  void mountLiveViewport().catch((error: unknown) => {
+    const stage = document.querySelector(".viewport");
+    if (stage === null) return;
+    reportLine(
+      stage,
+      `Live viewport refused: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  });
+}
+
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", () => void mountLiveViewport());
+  document.addEventListener("DOMContentLoaded", startLiveViewport);
 } else {
-  void mountLiveViewport();
+  startLiveViewport();
 }
