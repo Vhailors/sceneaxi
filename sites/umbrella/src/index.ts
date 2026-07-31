@@ -39,6 +39,7 @@ export {
 } from "./lib/live-open.js";
 
 export {
+  BILLING_PLANE_PENDING_NOTE,
   IDENTITY_PLANE_DOC,
   IDENTITY_PLANE_PENDING_NOTE,
   createAuthIdentityAdapter,
@@ -51,6 +52,7 @@ export {
   resolveBillingMode,
   siteReasonForAuthReason,
   siteReasonForBillingReason,
+  siteReasonForLoginAuthReason,
   toSitePrincipal,
   type BillingReadPlane,
   type CheckoutSessionAdapter,

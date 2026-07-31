@@ -1,4 +1,8 @@
-import { SITE_STARTER_CREDIT_ALLOTMENT, resolveEditorAccess } from "@sceneaxi/site-kit";
+import {
+  SITE_STARTER_CREDIT_ALLOTMENT,
+  describeSiteAccessState,
+  resolveEditorAccess,
+} from "@sceneaxi/site-kit";
 import { readSessionToken } from "../_session.js";
 import {
   IDENTITY_PLANE_DOC,
@@ -34,10 +38,17 @@ export default async function AccountPage() {
     request: { surface: "site", sessionToken },
   });
 
-  // A signed-out visitor is its own phase. `IDENTITY_SESSION_ABSENT` is the plane
-  // saying "nobody is signed in here", which must not read like a broken deployment.
-  const signedOut =
-    !resolved.identity.ok && resolved.identity.reason === "IDENTITY_SESSION_ABSENT";
+  // A refusal here is projected onto its own named access state — signed out,
+  // expired, disabled, Kids, provider unavailable, not wired — with the one action
+  // that can change it, the same projection `/editor` renders. Without it every
+  // outcome but "signed out" claimed this deployment had no identity plane, which
+  // is false for an expired or disabled session on a fully wired one.
+  const identityRefusal = resolved.identity.ok ? null : resolved.identity;
+  const outcome =
+    identityRefusal === null ? null : describeSiteAccessState(identityRefusal.reason);
+  // A signed-out visitor is its own phase: the plane saying "nobody is signed in
+  // here", which must not read like a broken deployment.
+  const signedOut = outcome?.key === "signed-out";
   const phase =
     resolved.principal !== null ? "authenticated" : signedOut ? "anonymous" : "refused";
 
@@ -170,22 +181,23 @@ export default async function AccountPage() {
       ) : (
         <StatePanel
           tone="deny"
-          title={signedOut ? "You are not signed in" : "Sign-in is not available on this deployment"}
-          reason={resolved.identity.ok ? undefined : resolved.identity.reason}
+          title={outcome === null ? "No session is present" : outcome.title}
+          reason={identityRefusal?.reason}
         >
           <p>
-            {resolved.identity.ok
-              ? "No session is present."
-              : resolved.identity.message}
+            {outcome === null
+              ? "The identity plane returned no principal for this request."
+              : outcome.body}
           </p>
-          {signedOut && (
+          {identityRefusal !== null && <p>{identityRefusal.message}</p>}
+          {outcome?.action != null && (
             <p>
-              <a className="button" href="/login">
-                Sign in
+              <a className="button" href={outcome.action.href}>
+                {outcome.action.label}
               </a>
             </p>
           )}
-          {!signedOut && (
+          {outcome?.key === "identity-not-wired" && (
             <>
               <p>{IDENTITY_PLANE_PENDING_NOTE}</p>
               <p>

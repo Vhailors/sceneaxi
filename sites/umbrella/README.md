@@ -171,7 +171,10 @@ Real Better Auth login into the entitled editor, over the existing identity plan
   injected provider, the destination `next` is confined to a same-site relative path,
   a client role claim refuses before dispatch, and every refusal — wrong password,
   expired or foreign session, disabled user, Kids, unwired or failed provider — comes
-  back as its own named access state rather than one undifferentiated wall.
+  back as its own named access state rather than one undifferentiated wall. Those
+  refusals are read through `siteReasonForLoginAuthReason`, the issuance mapping, so a
+  provider fault at sign-in is named as one instead of accusing a credential no browser
+  presented; `docs/auth-credits.md` owns which reasons are renamed and which are not.
 - A refused surface hands its own path to the sign-in action it renders, so a visitor
   bounced off `/editor` signs in and lands back on `/editor` instead of the default
   `/account`. Emitting and reading that destination share one confinement rule —

@@ -185,6 +185,42 @@ export function siteReasonForAuthReason(reason: AuthRefuseReason): SiteRefusalRe
 }
 
 /**
+ * Site reasons whose named access state describes a credential this browser
+ * *presented* — a session that was carried, read back, and then not trusted.
+ *
+ * On the verify path each of them is exactly true. On the issuance path none of
+ * them can be: no session was carried, nothing was discarded, and signing in
+ * again reaches the same fault. They are therefore renamed at the one boundary
+ * that knows which path it is on, rather than being softened downstream where a
+ * page can no longer tell an issued session from a presented one.
+ */
+const LOGIN_ISSUANCE_FAULT_REASONS: ReadonlyArray<SiteRefusalReason> = Object.freeze([
+  "IDENTITY_SESSION_ABSENT",
+  "IDENTITY_ADAPTER_OUTPUT_INVALID",
+  "IDENTITY_ROLE_UNKNOWN",
+  "IDENTITY_SESSION_EXPIRED",
+  "IDENTITY_SESSION_NOT_YET_VALID",
+  "IDENTITY_SESSION_SURFACE_MISMATCH",
+]);
+
+/**
+ * Map one `@sceneaxi/auth` reason raised while *issuing* a session.
+ *
+ * It is the verify mapping with one substitution, so a reason added there is
+ * carried here by construction: rejected credentials are the visitor's own named
+ * outcome, every reason that would have described a presented credential becomes
+ * `LOGIN_SESSION_NOT_ISSUED`, and everything that is equally true at issuance —
+ * Kids, a disabled account, an unwired or unavailable plane — keeps its own name.
+ */
+export function siteReasonForLoginAuthReason(reason: AuthRefuseReason): SiteRefusalReason {
+  if (reason === AUTH_REFUSE_REASONS.credentialsRejected) return "LOGIN_CREDENTIALS_REJECTED";
+  const verified = siteReasonForAuthReason(reason);
+  return LOGIN_ISSUANCE_FAULT_REASONS.includes(verified)
+    ? "LOGIN_SESSION_NOT_ISSUED"
+    : verified;
+}
+
+/**
  * Which plane a `@sceneaxi/billing` refusal was read through.
  *
  * One package owns both the ledger and the checkout builder, and several of its
@@ -585,10 +621,12 @@ export function createAuthIdentityAdapter(options: {
  * `<sessionId>.<token>` credential `parseSessionToken` reads back on every later
  * request, because this module owns that format in both directions.
  *
- * Two refusals are deliberately re-read for a login form: rejected credentials are
- * the visitor's own named outcome rather than the generic "signed out" the verify
- * path folds them into, and an empty submission is refused by the site login plane
- * before this adapter is reached at all.
+ * Refusals are read through `siteReasonForLoginAuthReason` rather than the verify
+ * mapping, because this is the only place that knows the refusal happened while a
+ * session was being *issued*: rejected credentials are the visitor's own named
+ * outcome rather than the generic "signed out", and a provider fault is named as
+ * one instead of blaming a credential no browser presented. An empty submission is
+ * refused by the site login plane before this adapter is reached at all.
  */
 export function createAuthLoginAdapter(options: {
   readonly port: IdentityPort;
@@ -601,10 +639,7 @@ export function createAuthLoginAdapter(options: {
         password: request.password,
       });
       if (!granted.ok) {
-        if (granted.reason === AUTH_REFUSE_REASONS.credentialsRejected) {
-          return refuse("LOGIN_CREDENTIALS_REJECTED");
-        }
-        return refuse(siteReasonForAuthReason(granted.reason));
+        return refuse(siteReasonForLoginAuthReason(granted.reason));
       }
       const principal = granted.value.principal;
       const sessionCredential = `${principal.session.sessionId}.${granted.value.sessionToken}`;
@@ -954,3 +989,15 @@ export const IDENTITY_PLANE_DOC = "docs/websites-deploy.md";
 
 export const IDENTITY_PLANE_PENDING_NOTE =
   "Signing in is not open on this deployment yet. The sign-in route ships here (sceneaxi#185), but this deployment has not configured the provider handles it runs on, so no session can be issued or verified and no balance can be read from its own Neon and Stripe test handles. Until those handles are configured these surfaces refuse with a named reason rather than showing an invented session, balance, or checkout.";
+
+/**
+ * The billing half of the same fact, for surfaces that only found the checkout
+ * plane missing.
+ *
+ * It says nothing about identity, because the two planes are configured
+ * independently: a deployment can carry Better Auth and Neon without a Stripe
+ * test key, and telling a signed-in visitor that sign-in is closed would be
+ * false on exactly that deployment.
+ */
+export const BILLING_PLANE_PENDING_NOTE =
+  "Buying is not open on this deployment yet. It has not configured the Stripe test handle the hosted checkout round-trip runs on, so no checkout session can be created. Prices shown here are the committed catalog's own; nothing is invented to fill the gap, and signing in is unaffected — it is configured separately.";

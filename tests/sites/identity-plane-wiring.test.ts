@@ -43,6 +43,7 @@ import {
   resolveUmbrellaEditorAccess,
   siteReasonForAuthReason,
   siteReasonForBillingReason,
+  siteReasonForLoginAuthReason,
 } from "../../sites/umbrella/src/index.ts";
 import {
   CATALOG_IDENTITY_SURFACE,
@@ -1804,6 +1805,97 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
     const rendered = describeSiteAccessState("LOGIN_SESSION_NOT_ISSUED");
     expect(rendered.key).toBe("sign-in-not-issued");
     expect(rendered.action).toBeNull();
+  });
+
+  it("names a provider fault at issuance as one, never as a credential this browser presented", async () => {
+    const admin = resolveAdminIdentity({ SCENEAXI_ADMIN_EMAIL: ADMIN_EMAIL });
+    if (!admin.ok) throw new Error(`admin unresolved: ${admin.message}`);
+
+    // 1. Clock skew: the provider authenticates and hands back a session that has
+    //    already run out, so the port refuses the envelope. Read through the verify
+    //    mapping this was `IDENTITY_ADAPTER_OUTPUT_INVALID`, whose state tells the
+    //    visitor the credential their browser presented was discarded — but no
+    //    browser presented one, and signing in again reaches the same fault.
+    const skewed: IdentityAdapter = Object.freeze({
+      authenticate(credentials: { email: string; password: string }) {
+        if (credentials.email !== MEMBER_EMAIL || credentials.password !== MEMBER_PASSWORD) {
+          return undefined;
+        }
+        return {
+          user: { id: "member-1", email: MEMBER_EMAIL, emailVerified: true },
+          session: {
+            id: LOGIN_SESSION,
+            token: FRESH_TOKEN,
+            userId: "member-1",
+            expiresAt: iso(-1_000),
+          },
+        };
+      },
+    });
+    const skewedPlane = createUmbrellaIdentityPlane(ENV, {
+      identityPort: createIdentityPort({
+        adapter: skewed,
+        store: createInMemoryIdentityStore({
+          users: [user("member-1", MEMBER_EMAIL)] as never,
+          sessions: [] as never,
+        }),
+        admin: admin.value,
+        clock,
+      }),
+      clock,
+    });
+    expect(
+      await performLogin({
+        plane: skewedPlane,
+        fields: { email: MEMBER_EMAIL, password: MEMBER_PASSWORD },
+        secure: true,
+      }),
+    ).toMatchObject({ kind: "refused", reason: "LOGIN_SESSION_NOT_ISSUED" });
+
+    // 2. The provider authenticates an address this deployment's store has no user
+    //    record for. Read through the verify mapping this was
+    //    `IDENTITY_SESSION_ABSENT`, so a failed sign-in rendered "you are signed
+    //    out → Sign in" and looped the visitor back onto the form they just used.
+    const unprovisioned = createUmbrellaIdentityPlane(ENV, {
+      identityPort: createIdentityPort({
+        adapter: provider(MEMBER_EMAIL, "member-1"),
+        store: createInMemoryIdentityStore({ users: [] as never, sessions: [] as never }),
+        admin: admin.value,
+        clock,
+      }),
+      clock,
+    });
+    const outcome = await performLogin({
+      plane: unprovisioned,
+      fields: { email: MEMBER_EMAIL, password: MEMBER_PASSWORD },
+      secure: true,
+    });
+    expect(outcome).toMatchObject({ kind: "refused", reason: "LOGIN_SESSION_NOT_ISSUED" });
+    expect(describeSiteAccessState("LOGIN_SESSION_NOT_ISSUED").action).toBeNull();
+
+    // The mapping renames only what cannot be true at issuance. Everything equally
+    // true on both paths keeps its own name, so the issuance path gains no second
+    // vocabulary to drift from the registry.
+    expect(siteReasonForLoginAuthReason("AUTH_CREDENTIALS_REJECTED")).toBe(
+      "LOGIN_CREDENTIALS_REJECTED",
+    );
+    for (const reason of [
+      "AUTH_USER_NOT_FOUND",
+      "AUTH_SESSION_NOT_FOUND",
+      "AUTH_ADAPTER_ENVELOPE_INVALID",
+      "AUTH_SESSION_EXPIRED",
+    ] as const) {
+      expect(siteReasonForLoginAuthReason(reason)).toBe("LOGIN_SESSION_NOT_ISSUED");
+    }
+    for (const reason of [
+      "KIDS_IDENTITY_SURFACE_DENIED",
+      "ROLE_CLAIM_FROM_CLIENT_DENIED",
+      "AUTH_USER_DISABLED",
+      "AUTH_ADAPTER_MISSING",
+      "AUTH_STORE_FAILED",
+    ] as const) {
+      expect(siteReasonForLoginAuthReason(reason)).toBe(siteReasonForAuthReason(reason));
+    }
   });
 
   it("refuses wrong credentials as their own named outcome, back at the form", async () => {

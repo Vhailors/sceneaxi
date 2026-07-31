@@ -5,7 +5,10 @@ import {
   SITE_STARTER_CREDIT_ALLOTMENT,
   type SiteCreditPack,
 } from "@sceneaxi/site-kit";
-import { IDENTITY_PLANE_PENDING_NOTE, createUmbrellaIdentityPlane } from "../../lib/identity-plane.js";
+import {
+  BILLING_PLANE_PENDING_NOTE,
+  createUmbrellaIdentityPlane,
+} from "../../lib/identity-plane.js";
 import {
   CREDIT_LEDGER_COPY,
   CREDIT_LEDGER_FACTS,
@@ -157,9 +160,8 @@ export default async function PricingPage() {
               <p>{CREDIT_LEDGER_COPY.retryIsNotASecondCharge}</p>
               {!plane.wired.billing && (
                 <p>
-                  Buying is not open on this deployment: the hosted checkout round-trip
-                  is not wired, so these prices are shown for information and no purchase
-                  is offered. {IDENTITY_PLANE_PENDING_NOTE}
+                  These prices are shown for information and no purchase is offered.{" "}
+                  {BILLING_PLANE_PENDING_NOTE}
                 </p>
               )}
             </StatePanel>
@@ -167,7 +169,7 @@ export default async function PricingPage() {
         ) : (
           <StatePanel tone="deny" title="No credit packs to offer yet" reason={packs.reason}>
             <p>{packs.message}</p>
-            <p>{IDENTITY_PLANE_PENDING_NOTE}</p>
+            <p>{BILLING_PLANE_PENDING_NOTE}</p>
             <p>
               Pack contents and prices are a product decision owned by the billing
               vertical, so this page shows nothing rather than inventing a price.

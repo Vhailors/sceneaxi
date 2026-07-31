@@ -4,6 +4,10 @@ Evidence for sceneaxi#157: the captain-accepted `Umbrella Site` design screen un
 **Foundations v2**, implemented responsively over the existing live viewport, the shared
 `@sceneaxi/site-kit` token layer, and the identity/credits seams.
 
+It also carries the re-run for sceneaxi#185, which adds `/login` and moves `/editor` and
+`/account` onto site-kit's named access states —
+[The hosted-login access states, re-measured](#the-hosted-login-access-states-re-measured).
+
 This file records **browser observations**, the way `docs/three-presentation-core.md`
 records the pixel claim. It is not a gate result and it authorizes nothing. The gate's
 own half of this work is `tests/sites/umbrella-visual.test.ts` and
@@ -112,9 +116,9 @@ evidence lives in its owner doc.
 
 ### Layout
 
-**No horizontal page scroll on any of the eight routes at any of the three viewports.**
+**No horizontal page scroll on any of the nine routes at any of the three viewports.**
 Measured rather than judged by eye — `document.documentElement.scrollWidth` against
-`window.innerWidth`, 24 combinations, all equal:
+`window.innerWidth`, 27 combinations, all equal:
 
 | Route | 1440 | 834 | 390 |
 |---|---|---|---|
@@ -126,6 +130,7 @@ Measured rather than judged by eye — `document.documentElement.scrollWidth` ag
 | `/open` | 1440/1440 | 834/834 | 390/390 |
 | `/account` | 1440/1440 | 834/834 | 390/390 |
 | `/editor` | 1440/1440 | 834/834 | 390/390 |
+| `/login` | 1440/1440 | 834/834 | 390/390 |
 
 The `/engine` row here, and in both measurement tables below, is
 [pending re-record](#the-engine-figures-predate-the-desktop-download-section); the
@@ -180,14 +185,17 @@ disclosure, and no re-attempt affordance was added. Bounding the key did squeeze
 min-content size, and the `anywhere` the key needs is inherited — so the label is
 `white-space: nowrap`.
 
-Measured after the layout fix at 390 × 844, before the hosted-login named access
-states replaced the editor's then-current copy. The current editor title is deliberately
-not inferred from these historical dimensions; `packages/site-kit/src/access-states.ts`
-owns it.
+Measured after the layout fix at 390 × 844. The `/account`, `/editor`, and `/login` rows
+were **re-measured at this head**, after the hosted-login named access states replaced the
+editor's and account page's then-current copy — see
+[The hosted-login access states, re-measured](#the-hosted-login-access-states-re-measured)
+for the sweep those three rows come from and for what it could not reach.
 
 | Route | State | Name, w × h | Lines | Header tracks | Key |
 |---|---|---|---|---|---|
-| `/account` | Sign-in is not available on this deployment | 196.39 × 35.19 | 2 | `74.61px 196.39px` | `IDENTITY_PLANE_NOT_WIRED`, 212.5px, own row |
+| `/login` | Identity plane not wired | 196.39 × 12.09 | 1 | `74.61px 196.39px` | `IDENTITY_PLANE_NOT_WIRED`, 212.5px, own row |
+| `/account` | Sign-in is not activated on this deployment | 196.39 × 35.19 | 2 | `74.61px 196.39px` | `IDENTITY_PLANE_NOT_WIRED`, 212.5px, own row |
+| `/editor` | Sign-in is not activated on this deployment | 196.39 × 24.19 | 2 | `74.61px 196.39px` | `IDENTITY_PLANE_NOT_WIRED`, 212.5px, own row |
 | `/profiles` | Kids refuses the open path | 189.59 × 35.19 | 2 | `81.41px 189.59px` | `refuse-only`, 122.8px, own row |
 | `/profiles` | No shipping claim is made here | 162.39 × 35.19 | 2 | `108.61px 162.39px` | none |
 | `/pricing` | Billing mode | 162.39 × 17.59 | 1 | `108.61px 162.39px` | none |
@@ -201,7 +209,7 @@ column rather than reserving one:
 
 | Route | Header tracks | Key track |
 |---|---|---|
-| `/account`, `/editor` | `74.6094px 882.391px 192px` | 192px — the `12rem` bound |
+| `/login`, `/account`, `/editor` | `74.6094px 882.391px 192px` | 192px — the `12rem` bound |
 | `/profiles`, Kids | `81.4062px 944.797px 122.797px` | sized to a short key |
 | `/pricing`, `/engine` | `108.609px 1040.39px 0px` | **0px** — no key, no reserved column |
 | `/open` | `88.2031px 1060.8px 0px` | **0px** — the same, behind its own narrower chip |
@@ -212,6 +220,60 @@ The `/editor` rows in both tables are
 refusal panel is now laid out inside the shell route's collapsed chrome, so the width the
 header divides is not the one measured here. What the repair fixes is unaffected — the
 rule belongs to the shared sheet, and every other route above still exercises it.
+
+#### The hosted-login access states, re-measured
+
+sceneaxi#185 adds `/login` and replaces the `/editor` and `/account` refusal copy with
+site-kit's named access states, whose titles are longer than the copy the sweep above was
+first run against. Because the header-collapse class of regression is driven by exactly
+that — title length against a bounded key column — the sweep was re-run at this head
+against a fresh production build, on the same unwired deployment and through the same
+resize-once-then-navigate protocol.
+
+The three `/login`, `/account`, and `/editor` rows in the 390 table and the `/login` entry
+in the 1440 table are that re-run. No track collapsed and no route gained horizontal
+scroll: `document.documentElement.scrollWidth === window.innerWidth` on `/login`,
+`/account`, and `/editor` at all three viewports, nine combinations, and the only element
+crossing the viewport edge on any of them is the off-screen skip link. `/pricing`'s
+capability table also reports past the edge and is inside its deliberate `.scroll-x`
+scroller, as before.
+
+The name's track never falls below the `minmax(0, 1fr)` share the chip leaves it —
+196.39px at 390, 436.39px at 834, 882.39px at 1440 — so a longer title buys more lines,
+never a zero-width column. The `h2` a level-2 panel renders sets a 12.1px line box against
+the `h3`'s 17.6px, which is the whole difference between `/editor`'s 24.19px two-line name
+and `/account`'s 35.19px one.
+
+Lighthouse (navigation mode, desktop emulation) against the same build: `/login` scores
+**100** accessibility with 0 failed audits across all categories, and the re-measured
+`/account`, `/editor`, and `/pricing` still do. That extends the table under
+[Accessibility](#accessibility) to a ninth route.
+
+**What this deployment could not reach.** The sweep runs unwired, which is what a visitor
+to *this* deployment gets, but it means `/login` renders its `IDENTITY_PLANE_NOT_WIRED`
+state rather than the form — the route short-circuits before the form and before any
+`?reason=` panel, so the credential-rejected, expired, disabled, and
+`LOGIN_SESSION_NOT_ISSUED` panels have no route observation here. Wiring them needs a real
+Neon database and Better Auth origin, which this repository holds no authority to create.
+
+So the longest shipped title was measured as a **probe** instead of claimed: with the
+served sheet and the served panel in the browser, the rendered heading's text was replaced
+with `"Sign-in could not be completed on this deployment"` — the longest string in
+`packages/site-kit/src/access-states.ts` — and re-measured. It is a measurement of the
+stylesheet this site serves, not an observation of a route, and it is recorded as such:
+
+| Viewport | Probed on | Name, w × h | Lines | Header tracks |
+|---|---|---|---|---|
+| 390 × 844 | `/login` (`h2`) | 196.39 × 36.28 | 3 | `74.61px 196.39px` |
+| 390 × 844 | `/editor` (`h2`) | 196.39 × 36.28 | 3 | `74.61px 196.39px` |
+| 390 × 844 | `/account` (`h3`) | 196.39 × 52.78 | 3 | `74.61px 196.39px` |
+| 834 × 1112 | all three | 436.39 × 12.09–17.59 | 1 | `74.61px 436.39px 192px` |
+| 1440 × 1000 | all three | 882.39 × 12.09–17.59 | 1 | `74.61px 882.39px 192px` |
+
+The longest state the login surface can ship therefore wraps to three lines at phone width
+and stays on one above it, with the same tracks as the shipped copy — the key's `12rem`
+bound is what holds that, and it is the property `tests/sites/umbrella-visual.test.ts`
+pins structurally.
 
 `tests/sites/umbrella-visual.test.ts` now fails on the pre-fix sheet — verified by
 reverting the fix and watching it fail. It pins the track shape at both widths, the key's
@@ -247,6 +309,7 @@ Lighthouse (navigation mode, desktop emulation) against the production build:
 | `/open` | 100 | 0 |
 | `/account` | 100 | 0 |
 | `/editor` | 100 | 0 |
+| `/login` | 100 | 0 |
 
 `/`, `/profiles`, `/account`, and `/pricing` were additionally run in **mobile**
 emulation and scored 100 with 0 failed audits there too. Every figure in this table except
@@ -254,9 +317,10 @@ the `/engine` and `/editor` rows was re-run against the build at this head, afte
 state-header repair below; the `/engine` row is
 [pending re-record](#the-engine-figures-predate-the-desktop-download-section) and the
 `/editor` row is
-[pending re-record](#the-editor-figures-predate-the-engine-desktop-shell).
-
-This extends the carried implementation's five 100s to all eight surfaces. Two real
+[pending re-record](#the-editor-figures-predate-the-engine-desktop-shell). The `/login`,
+`/account`, and `/pricing` rows were re-run again after the hosted-login access states
+landed; the editor's shell measurement remains pending its dedicated re-record.
+This extends the carried implementation's five 100s to all nine surfaces. Two real
 regressions were introduced by this revision and found by that audit rather than by eye:
 
 1. **`--fg-4` carrying a word.** The new refusal-state header labelled its key with a

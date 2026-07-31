@@ -221,10 +221,22 @@ cosmetic: at issuance the browser presented nothing, so nothing was discarded an
 signing in again cannot change the outcome. `describeSiteAccessState` therefore projects
 it onto its own `sign-in-not-issued` state — a deployment fault with **no** action —
 instead of the "sign in again to get a fresh session" copy that belongs to a credential
-the plane refused to trust. Refusals about the *account* or the returned session's
-own validity (`IDENTITY_USER_DISABLED`, `IDENTITY_SESSION_EXPIRED`,
-`IDENTITY_SESSION_SURFACE_MISMATCH`, `IDENTITY_ROLE_UNKNOWN`) keep their own names on
-both paths.
+the plane refused to trust.
+
+That distinction is held at the boundary rather than at each page, because a page can no
+longer tell an issued session from a presented one. `siteReasonForLoginAuthReason` is
+the issuance mapping: it is `siteReasonForAuthReason` with one substitution, so a reason
+added to the verify mapping is carried onto the login path by construction. Rejected
+credentials become `LOGIN_CREDENTIALS_REJECTED` rather than the "signed out" the verify
+path folds them into; every reason whose named state would describe a credential *this
+browser presented* — `IDENTITY_SESSION_ABSENT`, `IDENTITY_ADAPTER_OUTPUT_INVALID`,
+`IDENTITY_ROLE_UNKNOWN`, `IDENTITY_SESSION_EXPIRED`,
+`IDENTITY_SESSION_NOT_YET_VALID`, `IDENTITY_SESSION_SURFACE_MISMATCH` — becomes
+`LOGIN_SESSION_NOT_ISSUED`, since at issuance nothing was carried, nothing was
+discarded, and retrying reaches the same fault. Everything equally true on both paths —
+`KIDS_SURFACE_DENIED`, `ROLE_CLAIM_FROM_CLIENT_DENIED`, `IDENTITY_USER_DISABLED`,
+`IDENTITY_PLANE_NOT_WIRED`, `IDENTITY_PLANE_UNAVAILABLE` — keeps its own name, so the
+issuance path gains no second vocabulary to drift from the registry.
 
 Admin elevation requires both the provider authentication and the stored SceneAxi user
 record to mark `emailVerified: true`. An unverified address matching

@@ -295,8 +295,17 @@ describe("umbrella deployment provider adapters", () => {
       password: "test-password",
     });
 
-    expect(first).toMatchObject({ ok: true, value: { user: { userId: "member-1" }, role: { role: "user" } } });
-    expect(second).toMatchObject({ ok: true, value: { user: { userId: "member-1" }, role: { role: "user" } } });
+    // `signIn` answers with a `SignInGrant` — the server-derived principal plus the
+    // one redeemable copy of the raw session token — never a bare principal.
+    const grant = {
+      ok: true,
+      value: {
+        principal: { user: { userId: "member-1" }, role: { role: "user" } },
+        sessionToken: "provider-token-1",
+      },
+    };
+    expect(first).toMatchObject(grant);
+    expect(second).toMatchObject(grant);
     // Provisioning happened before the identity port read the SceneAxi user.
     expect(fixture.users).toHaveLength(1);
     expect(fixture.accounts).toHaveLength(1);
@@ -357,7 +366,7 @@ describe("umbrella deployment provider adapters", () => {
     });
     expect(verified).toMatchObject({
       ok: true,
-      value: { user: { userId: "member-1" }, role: { role: "admin" } },
+      value: { principal: { user: { userId: "member-1" }, role: { role: "admin" } } },
     });
 
     // A provider-side address change is followed too, so the by-email lookup keeps
@@ -368,7 +377,10 @@ describe("umbrella deployment provider adapters", () => {
       email: "captain.new@example.com",
       password: "test-password",
     });
-    expect(renamed).toMatchObject({ ok: true, value: { user: { userId: "member-1" } } });
+    expect(renamed).toMatchObject({
+      ok: true,
+      value: { principal: { user: { userId: "member-1" } } },
+    });
     expect(fixture.users).toHaveLength(1);
     expect(fixture.users[0]).toMatchObject({
       user_id: "member-1",
