@@ -333,12 +333,15 @@ export {
 } from "./commerce-notice.js";
 
 export {
+  SITE_COOKIE_OCTET_RE,
   SITE_SESSION_COOKIE,
   SITE_SESSION_HEADER,
   buildSiteSessionCookie,
   clearSiteSessionCookie,
+  resolveSiteSessionCookieSecurity,
   resolveSiteSessionToken,
   type SiteSessionCookieInput,
+  type SiteSessionCookieSecuritySignals,
   type SiteSessionTokenSources,
 } from "./site-session.js";
 

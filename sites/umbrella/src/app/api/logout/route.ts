@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { createUmbrellaIdentityPlane } from "../../../lib/identity-plane.js";
-import { performLogout } from "../../../lib/login-flow.js";
+import { performLogout, resolveSessionCookieSecurity } from "../../../lib/login-flow.js";
 import { readSessionToken } from "../../_session.js";
 
 /**
@@ -18,7 +18,10 @@ export async function POST(request: NextRequest) {
   const plane = createUmbrellaIdentityPlane(process.env, { sessionToken });
   const outcome = await performLogout({
     plane,
-    secure: new URL(request.url).protocol === "https:",
+    secure: resolveSessionCookieSecurity(process.env, {
+      forwardedProto: request.headers.get("x-forwarded-proto"),
+      requestUrl: request.url,
+    }),
   });
 
   return new Response(null, {

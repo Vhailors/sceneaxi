@@ -36,6 +36,7 @@ import {
   parseSessionToken,
   performLogin,
   performLogout,
+  resolveSessionCookieSecurity,
   resolveUmbrellaEditorAccess,
   siteReasonForAuthReason,
   siteReasonForBillingReason,
@@ -1925,5 +1926,39 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
     const outcome = await performLogout({ plane, secure: false });
     expect(outcome.revocation).toMatchObject({ ok: true, value: null });
     expect(outcome.clearCookie).not.toContain("Secure");
+  });
+
+  it("stamps Secure from the configured origin, so a TLS-terminating proxy cannot strip it", async () => {
+    const httpsEnv = {
+      ...ENV,
+      NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN: "https://sceneaxi.example",
+    };
+    // What the app itself sees behind the proxy: plain http, private address.
+    const proxied = {
+      forwardedProto: "http",
+      requestUrl: "http://10.0.0.4:3000/api/login",
+    };
+    expect(resolveSessionCookieSecurity(httpsEnv, proxied)).toBe(true);
+    // An unconfigured local deployment is still allowed to run over http.
+    expect(
+      resolveSessionCookieSecurity(ENV, { requestUrl: "http://localhost:3000/api/login" }),
+    ).toBe(false);
+
+    const { port } = loginWorld();
+    const plane = createUmbrellaIdentityPlane(httpsEnv, { identityPort: port, clock });
+    const outcome = await performLogin({
+      plane,
+      fields: { email: MEMBER_EMAIL, password: MEMBER_PASSWORD },
+      secure: resolveSessionCookieSecurity(httpsEnv, proxied),
+    });
+    expect(outcome.kind).toBe("success");
+    if (outcome.kind !== "success") return;
+    expect(outcome.setCookie).toContain("Secure");
+
+    const signedOut = await performLogout({
+      plane,
+      secure: resolveSessionCookieSecurity(httpsEnv, proxied),
+    });
+    expect(signedOut.clearCookie).toContain("Secure");
   });
 });

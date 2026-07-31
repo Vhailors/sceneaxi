@@ -4,6 +4,7 @@ import {
   SITE_SESSION_HEADER,
   buildSiteSessionCookie,
   clearSiteSessionCookie,
+  resolveSiteSessionCookieSecurity,
   resolveSiteSessionToken,
 } from "@sceneaxi/site-kit/site-session";
 
@@ -70,6 +71,43 @@ describe("session cookie construction", () => {
         secure: true,
       }),
     ).toBeNull();
+  });
+
+  it("reads Secure from the configured origin, not from the request the app sees", () => {
+    // The proxy terminated TLS, so the app's own request is plain http.
+    expect(
+      resolveSiteSessionCookieSecurity({
+        configuredOrigin: "https://sceneaxi.example",
+        forwardedProto: "http",
+        requestUrl: "http://10.0.0.4:3000/api/login",
+      }),
+    ).toBe(true);
+    expect(
+      resolveSiteSessionCookieSecurity({
+        configuredOrigin: "http://localhost:3000",
+        requestUrl: "https://sceneaxi.example/api/login",
+      }),
+    ).toBe(false);
+  });
+
+  it("falls back to the forwarded protocol, then to the request, when no origin is configured", () => {
+    expect(
+      resolveSiteSessionCookieSecurity({
+        forwardedProto: "https,http",
+        requestUrl: "http://10.0.0.4:3000/api/login",
+      }),
+    ).toBe(true);
+    expect(
+      resolveSiteSessionCookieSecurity({
+        configuredOrigin: "not a url",
+        forwardedProto: "  ",
+        requestUrl: "https://sceneaxi.example/api/login",
+      }),
+    ).toBe(true);
+    expect(
+      resolveSiteSessionCookieSecurity({ requestUrl: "http://localhost:3000/api/login" }),
+    ).toBe(false);
+    expect(resolveSiteSessionCookieSecurity({})).toBe(false);
   });
 
   it("clears with an expired empty value on the same name and path", () => {

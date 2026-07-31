@@ -161,6 +161,12 @@ Real Better Auth login into the entitled editor, over the existing identity plan
   with a 303 plus the one HttpOnly `sceneaxi.session` cookie, whose lifetime is the
   session's own. `POST /api/logout` deletes the stored session through the same port
   and clears the cookie unconditionally.
+- The cookie's `Secure` attribute is a deployment fact, not a request artifact:
+  `resolveSessionCookieSecurity` reads `NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN` — the same
+  configured origin checkout redirects come from — so a TLS-terminating proxy, behind
+  which the app's own request is plain http, cannot cause the credential to be issued
+  without it. Only an unconfigured deployment falls back to `x-forwarded-proto` and then
+  to the request, which is what keeps `http://localhost` development working.
 - Nothing identity-shaped is trusted from the browser: email and password go to the
   injected provider, the destination `next` is confined to a same-site relative path,
   a client role claim refuses before dispatch, and every refusal — wrong password,

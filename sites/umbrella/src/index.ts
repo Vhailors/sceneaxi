@@ -69,6 +69,7 @@ export {
   performLogout,
   readLoginRefusalReason,
   resolveLoginDestination,
+  resolveSessionCookieSecurity,
   type LoginAttemptOutcome,
   type LoginFormFields,
   type LogoutOutcome,

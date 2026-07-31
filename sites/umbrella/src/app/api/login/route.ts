@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { createUmbrellaIdentityPlane } from "../../../lib/identity-plane.js";
-import { performLogin } from "../../../lib/login-flow.js";
+import { performLogin, resolveSessionCookieSecurity } from "../../../lib/login-flow.js";
 
 /**
  * The hosted sign-in handler (sceneaxi#185).
@@ -27,7 +27,10 @@ export async function POST(request: NextRequest) {
       password: form.get("password"),
       next: form.get("next"),
     },
-    secure: new URL(request.url).protocol === "https:",
+    secure: resolveSessionCookieSecurity(process.env, {
+      forwardedProto: request.headers.get("x-forwarded-proto"),
+      requestUrl: request.url,
+    }),
   });
 
   const headers = new Headers({ Location: outcome.location });

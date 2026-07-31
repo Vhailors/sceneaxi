@@ -17,6 +17,8 @@ import {
   SITE_REFUSAL_REASONS,
   buildSiteSessionCookie,
   clearSiteSessionCookie,
+  resolveSiteSessionCookieSecurity,
+  resolveUmbrellaEditorOrigin,
   type SitePrincipal,
   type SiteRefusalReason,
   type SiteResult,
@@ -24,6 +26,29 @@ import {
 import type { UmbrellaIdentityPlane } from "./identity-plane.js";
 
 export const LOGIN_PATH = SITE_LOGIN_PATH;
+
+/**
+ * Whether the session cookie is stamped `Secure`, as a deployment fact.
+ *
+ * The umbrella's own configured origin decides it — the same server-configured
+ * value checkout redirects are built from — so a TLS-terminating proxy in front
+ * of the app cannot cause the credential to be issued without `Secure`. Only an
+ * unconfigured deployment falls back to what the request itself claims.
+ */
+export function resolveSessionCookieSecurity(
+  env: Readonly<Record<string, string | undefined>>,
+  signals: {
+    readonly forwardedProto?: string | null | undefined;
+    readonly requestUrl?: string | null | undefined;
+  } = {},
+): boolean {
+  const configured = resolveUmbrellaEditorOrigin(env);
+  return resolveSiteSessionCookieSecurity({
+    configuredOrigin: configured.ok ? configured.value : null,
+    forwardedProto: signals.forwardedProto,
+    requestUrl: signals.requestUrl,
+  });
+}
 
 /** Where a successful sign-in lands when the form named no destination. */
 export const LOGIN_DEFAULT_DESTINATION = "/account";
@@ -100,7 +125,7 @@ export type LoginAttemptOutcome =
 export async function performLogin(input: {
   readonly plane: UmbrellaIdentityPlane;
   readonly fields: LoginFormFields;
-  /** Whether the response travels over https; stamps `Secure` on the cookie. */
+  /** Whether the deployment is reached over https; stamps `Secure` on the cookie. */
   readonly secure: boolean;
 }): Promise<LoginAttemptOutcome> {
   const next = resolveLoginDestination(input.fields.next);

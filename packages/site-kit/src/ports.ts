@@ -23,6 +23,7 @@ import {
   ok,
   refuse,
 } from "./refusals.js";
+import { SITE_COOKIE_OCTET_RE } from "./site-session.js";
 
 /**
  * Identity surfaces, in the vocabulary `sceneaxi-auth-credits-v1` (#91) defines
@@ -458,13 +459,6 @@ export type LoginPlaneOptions = {
   readonly now?: (() => string) | undefined;
 };
 
-/**
- * RFC 6265 cookie-octets. A credential outside this set could not survive the
- * Set-Cookie header unescaped, so it is refused as adapter output rather than
- * silently corrupted into a session that can never verify.
- */
-const COOKIE_SAFE_CREDENTIAL_RE = /^[\x21\x23-\x2B\x2D-\x3A\x3C-\x5B\x5D-\x7E]+$/;
-
 const LOGIN_KEYS = Object.freeze(["surface", "email", "password"] as const);
 
 function validateLoginRequest(request: unknown): SiteRefusal | null {
@@ -533,10 +527,7 @@ export function createLoginPlane(options: LoginPlaneOptions = {}): SiteLoginPort
       );
       if (!principal.ok) return principal;
       const credential = grant["sessionCredential"];
-      if (
-        typeof credential !== "string" ||
-        !COOKIE_SAFE_CREDENTIAL_RE.test(credential)
-      ) {
+      if (typeof credential !== "string" || !SITE_COOKIE_OCTET_RE.test(credential)) {
         return refuse("IDENTITY_ADAPTER_OUTPUT_INVALID");
       }
       return ok(
