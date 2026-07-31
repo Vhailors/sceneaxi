@@ -42,6 +42,18 @@ show a scene the server session did not produce, and the frozen
 `WEB_EDITOR_SESSION_OPERATIONS` set is not widened (ADR 0003, ADR 0020 — the
 entitlement decision still happens before any session exists).
 
+Because of that, the **active mode rides in the URL too** (`mode`, read by
+`readEditorState` and written by `editorHref`). It is view state and nothing
+else: it names no session operation, no render reads it, and all seven modes
+show the same session — an unknown value opens the default mode rather than
+refusing, while a parameter outside the editor and deep-link contracts still
+refuses `DEEP_LINK_UNKNOWN_PARAMETER`. It has to be carried because a mode kept
+only in the browser is lost on the very click it was meant to answer: Run's own
+Play control is a navigation, and without the parameter it returns in Build,
+away from the tick it just produced. Switching mode stays client-side; the shell
+opens in `view.activeModeId` and rebuilds each href — and the edit form's hidden
+field — in the mode the reader is in.
+
 | Surface | Backing |
 |---|---|
 | Scene tree, layers, inspector transform/kernel facts | the session's own `snapshot()` — real instance ids, transforms, kernel tick/collisions/digest; indentation walks the snapshot's own parent chain, so an artifact's nested runtime hierarchy draws at its real depth, and each selectable row is a minted `live` control on `select` rather than a bare link |
@@ -102,7 +114,13 @@ Control accounting has two halves, and both are load-bearing:
   1440×720 the assistant undocks to an overlay; below 1180×660 the side panels
   reflow under the viewport (a web-native adaptation of the desktop's drawers)
   and the menu row is dropped; below the shared 900×600 minimum the chrome
-  refuses by name (`EDITOR_WINDOW_BELOW_MINIMUM`) with no script involved. The
+  refuses by name (`EDITOR_WINDOW_BELOW_MINIMUM`) with no script involved. A
+  supported tier has to keep drawing, so the reflowed viewport row carries a
+  **floor** rather than only a `1.6fr` share: the floor is the view tabs, the
+  capped copy band, and the shrunk dock plus the canvas minimum
+  (`--ed-narrow-*`), and the dock gives ground in `animate` too — the timeline
+  rule is the more specific one, so shrinking `.ed-dock` alone would leave it at
+  252px and take the canvas back. The
   refusal is the whole surface at that tier: the stylesheet withdraws the
   palette scrim with the other regions, because the palette is script-owned and
   cannot see the tier, and the refusal note itself is never made `inert`.
@@ -156,6 +174,21 @@ Chrome via `chrome-devtools-axi`, `sites/umbrella` dev server with
   an overlay; at 1024×700 the side panels reflowed under the viewport with the
   menus dropped; at 800×560 the chrome was replaced by the
   `EDITOR_WINDOW_BELOW_MINIMUM` refusal naming 900×600.
+- **The reflowed tier still draws** (measured 2026-07-31, after the row floor
+  landed; the earlier session recorded the reflow without measuring the canvas,
+  which had collapsed to a 9px sliver at 1024×700 and to nothing at 900×600):
+  canvas element `842×105` at the 900×600 minimum, `966×123` at 1024×660 and
+  1024×700, `942×153` at 1000×780, `1042×226` at 1100×900, `1121×288` at
+  1179×1000 — and `968×123` in `animate` at 1024×700, whose dock shrinks with
+  the rest. Nothing is clipped at the minimum: the dock ends at 448, the
+  reflowed panels run 448→573 scrolled, the status bar 573→600, and the canvas
+  chips sit clear of the viewport actions strip.
+- **A live control returns in its own mode**: from Run, `#run-play-pause`
+  navigated to `…&mode=run&play=1` and the shell came back with `RUN` pressed,
+  `Play state playing`, the `Stop` control, and `Running — deterministic` —
+  where before the click landed back in Build. From Scene, the inspector's edit
+  form submitted `mode=compose` alongside the transform and returned in Scene.
+  `?mode=bogus` opened Build; `?nope=1` still refused the link.
 - **The palette opens on ⌘K and the Search control**, groups its rows, prints
   CLI verbs beside CLI-only rows, closes on Escape with focus returned. It
   declares `aria-modal`, so while it is open every sibling region — title bar,

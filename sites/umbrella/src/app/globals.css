@@ -4021,10 +4021,39 @@ a.ed-tree-label:hover {
     display: none;
   }
 
+  /*
+   * The reflowed viewport row keeps a floor rather than only a share. A bare
+   * `1.6fr` is 330px at the shared 900×600 minimum, which the view tabs, the
+   * copy band, and the dock consume whole — the canvas then draws nothing while
+   * the tier still claims to be supported. The floor is those three plus a real
+   * drawing surface, so the canvas keeps pixels everywhere above the minimum,
+   * and the panels below it take what is left (125px at the minimum, scrolled).
+   */
   .ed-body {
+    /* The dock and the copy band both give ground here; the canvas does not. */
+    --ed-narrow-dock: 124px;
+    --ed-narrow-note: 44px;
+    /* 89px of this is the canvas column's actions strip and frame report. */
+    --ed-narrow-canvas: 212px;
     display: grid;
     grid-template-columns: 56px minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1.6fr) minmax(0, 1fr);
+    grid-template-rows:
+      minmax(
+        calc(
+          32px + var(--ed-narrow-note) + var(--ed-narrow-dock) +
+            var(--ed-narrow-canvas)
+        ),
+        1.6fr
+      )
+      minmax(0, 1fr);
+  }
+
+  .ed-canvas {
+    min-height: var(--ed-narrow-canvas);
+  }
+
+  .ed-viewport-note {
+    max-height: var(--ed-narrow-note);
   }
 
   .ed-rail {
@@ -4057,8 +4086,14 @@ a.ed-tree-label:hover {
     grid-row: 1 / 3;
   }
 
-  .ed-dock {
-    height: 180px;
+  /*
+   * Both dock heights shrink here. The wide `animate` rule outranks a bare
+   * `.ed-dock` on specificity — a media query adds none — so the timeline dock
+   * has to be named or it keeps 252px and takes the canvas back.
+   */
+  .ed-dock,
+  .edshell[data-mode="animate"] .ed-dock {
+    height: var(--ed-narrow-dock);
   }
 }
 

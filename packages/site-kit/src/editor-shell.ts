@@ -257,6 +257,13 @@ export type EditorShellView = Readonly<{
   entitlement: Readonly<{ mode: "entitled" | "preview"; basis: string }>;
   menus: ReadonlyArray<EditorShellControl>;
   modes: ReadonlyArray<EditorShellModeView>;
+  /**
+   * The mode this request's URL state names, which the shell opens in. Modes stay
+   * client-side view switches once it is open; carrying the active one in the URL
+   * is what keeps a live control's own navigation from dropping the reader back
+   * into Build, and it names no engine behaviour.
+   */
+  activeModeId: EditorShellModeId;
   profiles: ReadonlyArray<EditorShellProfileChip>;
   /** The shared policy payload, verbatim, for the Kids lock and the legend. */
   policyNote: string;
@@ -1181,6 +1188,7 @@ export function buildEditorShellView(input: EditorShellInput): EditorShellView {
     entitlement,
     menus,
     modes: Object.freeze(modes),
+    activeModeId: state.modeId,
     profiles,
     policyNote: policy.notes.join(" "),
     kidsLock: Object.freeze({

@@ -436,7 +436,19 @@ describe("the token layer comes from site-kit and is not duplicated here", () =>
     const emitted = new Set(
       [...sheet.value.matchAll(/^\s*(--[a-z0-9-]+):/gm)].map((match) => match[1]),
     );
-    const localMetrics = new Set(["--shell", "--gutter", "--band-pad", "--masthead-h"]);
+    // Site-local layout metrics, declared and read in this sheet only. The
+    // `--ed-narrow-*` three are the reflowed editor row's budget: the row floor
+    // is their sum, so the canvas cannot be squeezed to nothing by a dock or a
+    // copy band whose height the floor did not count.
+    const localMetrics = new Set([
+      "--shell",
+      "--gutter",
+      "--band-pad",
+      "--masthead-h",
+      "--ed-narrow-dock",
+      "--ed-narrow-note",
+      "--ed-narrow-canvas",
+    ]);
     const used = new Set(
       [...CSS.matchAll(/var\((--[a-z0-9-]+)\)/g)].map((match) => match[1]),
     );
@@ -1065,6 +1077,43 @@ describe("the Engine Desktop editor shell stays honest (sceneaxi#184)", () => {
     // `.edshell { overflow: hidden }`.
     expect(CSS).toContain('.ed-assistant:not([data-assistant="closed"]) {');
     expect(CSS).not.toContain('.ed-assistant[data-assistant="open"] {');
+  });
+
+  it("keeps a drawing surface in the reflowed tier it declares supported", () => {
+    // The tier above the shared minimum is supported, so the canvas has to keep
+    // pixels there. A bare `1.6fr` row does not: its share at 900×600 is 330px
+    // and the view tabs, copy band, and dock consume it whole. The row's floor
+    // is therefore the sum of those three plus the canvas minimum, and the
+    // canvas carries that minimum itself.
+    const narrow = CSS.slice(CSS.indexOf("@media (max-width: 1179px), (max-height: 659px)"));
+    const block = narrow.slice(0, narrow.indexOf("\n}\n") + 3);
+    for (const declaration of [
+      "--ed-narrow-dock:",
+      "--ed-narrow-note:",
+      "--ed-narrow-canvas:",
+      "min-height: var(--ed-narrow-canvas);",
+      "max-height: var(--ed-narrow-note);",
+      "height: var(--ed-narrow-dock);",
+    ]) {
+      expect(block).toContain(declaration);
+    }
+    expect(block).toContain("var(--ed-narrow-note) + var(--ed-narrow-dock)");
+    // The timeline dock is the specific rule, so shrinking `.ed-dock` alone
+    // would leave `animate` at 252px and take the canvas back.
+    expect(block).toContain('.edshell[data-mode="animate"] .ed-dock');
+  });
+
+  it("carries the active mode across a live control's own navigation", () => {
+    // Every live control is a full-page navigation and its href was built in
+    // the mode the URL named, so the shell rebuilds each one in the mode the
+    // reader switched to — otherwise Run's own Play control returns to Build,
+    // away from the panel that shows its result. Mode stays view state: the
+    // parameter names no engine operation.
+    expect(SHELL).toContain("const [mode, setMode] = useState<ModeId>(view.activeModeId);");
+    expect(SHELL).toContain("href={hrefInMode(binding.href, activeMode)}");
+    expect(SHELL).toContain("<ActiveModeContext value={mode}>");
+    // A submit is a navigation too.
+    expect(SHELL).toContain('<input type="hidden" name="mode" value={mode} />');
   });
 
   it("refuses below the shared minimum window rather than degrading", () => {
