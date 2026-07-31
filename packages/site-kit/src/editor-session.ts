@@ -17,15 +17,19 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type {
-  MinimumE2SaveResult,
-  MinimumE2Snapshot,
-  SceneCompositionResult,
+import {
+  parseDocumentText,
+  readTextFile,
+  type MinimumE2SaveResult,
+  type MinimumE2Snapshot,
+  type SceneCompositionResult,
+  type SceneDocument,
 } from "@sceneaxi/authoring-core";
 import { mountableScene, type MountableScene } from "./mountable-scene.js";
 import { type SiteResult, ok } from "./refusals.js";
 import { webEditorStarterArtifact } from "./starter-artifact.js";
 import {
+  WEB_EDITOR_DOCUMENT_PATH,
   type WebEditorViewportFrame,
   createWebEditorSession,
 } from "./web-editor.js";
@@ -50,6 +54,13 @@ export type EditorRender = {
    */
   readonly mountable: MountableScene | null;
   readonly artifactId: string;
+  /**
+   * The text-canonical document as it stood *before* this render's save, or
+   * `null` when it could not be read back. The Changes panel reviews the real
+   * save proposal against exactly this baseline, so what the review shows is
+   * the diff propose/apply actually judged.
+   */
+  readonly baseDocument: SceneDocument | null;
 };
 
 /**
@@ -85,6 +96,20 @@ export function renderEditorState(state: EditorState): SiteResult<EditorRender> 
         session.step(16);
       }
       const composition = session.composeSceneProjection({ sceneId: EDITOR_SCENE_ID });
+
+      // Captured before save so the Changes review judges the same baseline
+      // the proposal was made against. An unreadable baseline is `null`, never
+      // an invented document.
+      let baseDocument: SceneDocument | null = null;
+      try {
+        const parsed = parseDocumentText(
+          readTextFile(join(workspaceRoot, WEB_EDITOR_DOCUMENT_PATH)),
+        );
+        baseDocument = parsed.ok ? parsed.document : null;
+      } catch {
+        baseDocument = null;
+      }
+
       return ok(
         Object.freeze({
           snapshot: session.snapshot(),
@@ -93,6 +118,7 @@ export function renderEditorState(state: EditorState): SiteResult<EditorRender> 
           composition,
           mountable: composition.ok ? mountableScene(composition) : null,
           artifactId: artifact.value.artifactId,
+          baseDocument,
         }),
       );
     } finally {

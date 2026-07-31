@@ -236,6 +236,29 @@ export {
 } from "./editor-session.js";
 
 export {
+  EDITOR_SHELL_FABRICATED_FIGURES,
+  EDITOR_SHELL_WEB_REFUSALS,
+  EDITOR_SHELL_WEB_REFUSAL_MESSAGES,
+  buildEditorShellView,
+  type EditorShellConsoleRow,
+  type EditorShellControl,
+  type EditorShellControlBinding,
+  type EditorShellEvidenceRow,
+  type EditorShellInput,
+  type EditorShellInspectorField,
+  type EditorShellInspectorSection,
+  type EditorShellModeView,
+  type EditorShellPaletteRow,
+  type EditorShellProfileChip,
+  type EditorShellRegistryRow,
+  type EditorShellSocketRow,
+  type EditorShellTreeRow,
+  type EditorShellView,
+  type EditorShellWebRefusal,
+  type WebEditorOperation,
+} from "./editor-shell.js";
+
+export {
   FOUNDATIONS_SOURCE,
   FOUNDATIONS_VERSION,
   FOUNDATION_ACCENT_RULE,

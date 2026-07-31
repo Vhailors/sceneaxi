@@ -1,10 +1,8 @@
 import {
-  WEB_EDITOR_SESSION_OPERATIONS,
-  EDITOR_MAX_OBJECTS,
-  EDITOR_MIN_OBJECTS,
-  editorHref,
-  renderEditorState,
+  buildEditorShellView,
   readEditorState,
+  renderEditorState,
+  webEditorStarterArtifact,
   type SearchParams,
 } from "@sceneaxi/site-kit";
 import { createUmbrellaIdentityPlane } from "../../lib/identity-plane.js";
@@ -12,17 +10,24 @@ import { EDITOR_VIEWPORT_COPY } from "../../lib/editor-viewport.js";
 import { resolveUmbrellaEditorAccess } from "../../lib/site-config.js";
 import { readSessionToken } from "../_session.js";
 import { StatePanel } from "../_components/state-panel.js";
-import { EditorViewport } from "./_components/editor-viewport.js";
+import { EditorShell } from "./_components/editor-shell.js";
 
 /**
- * The Minimum E2 sculpt/scene web editor.
+ * The Minimum E2 sculpt/scene web editor, drawn as the Engine Desktop shell.
  *
  * Bounded to exactly the Minimum E2 checklist plus the multi-object composition
  * projection (ADRs 0014-0015). ADR 0003 keeps general E2 specified-not-built and
- * nothing here widens that.
+ * nothing here widens that: the shell's `live` controls map onto the same frozen
+ * operation set the previous page used, and a control the design draws for
+ * behaviour this surface has no contract for renders inert with a named refusal.
  *
  * Access is decided before a session is constructed: an unentitled request never
- * reaches the engine. The preview flag is read from the server environment only.
+ * reaches the engine, and a refused request reaches no canvas. The preview flag
+ * is read from the server environment only.
+ *
+ * Everything the shell shows is computed here, server-side, from one real
+ * session render — `buildEditorShellView` in `@sceneaxi/site-kit` decides, the
+ * client component draws.
  */
 export default async function EditorPage({
   searchParams,
@@ -36,9 +41,9 @@ export default async function EditorPage({
 
   if (!resolved.decision.granted) {
     return (
-      <div className="page">
+      <div className="page ed-refusal-page">
         <div className="page-head">
-          <p className="eyebrow">Minimum E2 editor</p>
+          <p className="eyebrow">Engine Desktop editor</p>
           <h1>The editor is not open for this request</h1>
         </div>
         <StatePanel
@@ -55,7 +60,8 @@ export default async function EditorPage({
           </p>
           <p>
             <a href="/account">Account</a> · <a href="/pricing">Pricing</a> ·{" "}
-            <a href="/engine">The engine SDK is free and needs no account</a>
+            <a href="/engine">The engine SDK is free and needs no account</a> ·{" "}
+            <a href="/">Back to SceneAxi</a>
           </p>
         </StatePanel>
       </div>
@@ -65,9 +71,9 @@ export default async function EditorPage({
   const state = readEditorState(params);
   if (!state.ok) {
     return (
-      <div className="page">
+      <div className="page ed-refusal-page">
         <div className="page-head">
-          <p className="eyebrow">Minimum E2 editor</p>
+          <p className="eyebrow">Engine Desktop editor</p>
           <h1>That editor link was refused</h1>
         </div>
         <StatePanel tone="deny" level={2} title="Link refused" reason={state.reason}>
@@ -78,7 +84,8 @@ export default async function EditorPage({
             telemetry across a surface boundary.
           </p>
           <p>
-            <a href="/editor">Open the editor without a link</a>
+            <a href="/editor">Open the editor without a link</a> ·{" "}
+            <a href="/">Back to SceneAxi</a>
           </p>
         </StatePanel>
       </div>
@@ -88,323 +95,81 @@ export default async function EditorPage({
   const render = renderEditorState(state.value);
   if (!render.ok) {
     return (
-      <div className="page">
+      <div className="page ed-refusal-page">
         <div className="page-head">
-          <p className="eyebrow">Minimum E2 editor</p>
+          <p className="eyebrow">Engine Desktop editor</p>
           <h1>The editor session could not start</h1>
         </div>
         <StatePanel tone="deny" level={2} title="Session refused" reason={render.reason}>
           <p>{render.message}</p>
+          <p>
+            <a href="/">Back to SceneAxi</a>
+          </p>
         </StatePanel>
       </div>
     );
   }
 
-  const { snapshot, viewport, save, composition, mountable, artifactId } = render.value;
+  const starter = webEditorStarterArtifact();
+  if (!starter.ok) {
+    return (
+      <div className="page ed-refusal-page">
+        <div className="page-head">
+          <p className="eyebrow">Engine Desktop editor</p>
+          <h1>The editor session could not start</h1>
+        </div>
+        <StatePanel tone="deny" level={2} title="Session refused" reason={starter.reason}>
+          <p>{starter.message}</p>
+        </StatePanel>
+      </div>
+    );
+  }
+
   const editor = state.value;
-  const selected = editor.instances.find(
-    (instance) => instance.instanceId === editor.selectedInstanceId,
-  );
+  const view = buildEditorShellView({
+    state: editor,
+    render: render.value,
+    baseDocument: render.value.baseDocument,
+    entitlement: {
+      mode: resolved.decision.mode === "preview" ? "preview" : "entitled",
+      basis: resolved.decision.mode === "preview" ? "preview flag" : resolved.decision.basis,
+    },
+    starterArtifact: starter.value,
+  });
+
+  const deepLinkFields =
+    editor.deepLink === null
+      ? []
+      : [
+          { name: "source", value: editor.deepLink.source },
+          { name: "item", value: editor.deepLink.itemId },
+          ...(editor.deepLink.artifactRef === null
+            ? []
+            : [{ name: "artifact", value: editor.deepLink.artifactRef }]),
+        ];
+  const carriedTransforms = editor.instances
+    .filter((instance) => instance.instanceId !== editor.selectedInstanceId)
+    .map((instance) => ({
+      name: `tx-${instance.instanceId}`,
+      value: instance.transform.translation.join(","),
+    }));
 
   return (
-    <div className="page">
-      <div className="page-head">
-        <p className="eyebrow">Minimum E2 editor · sculpt and scene</p>
-        <h1>Editor</h1>
-      </div>
-
-      {resolved.decision.mode === "preview" ? (
-        <StatePanel tone="warn" level={2} title="Preview — not an entitled session">
-          <p>
-            This deployment sets the server-side editor preview flag, so the Minimum E2
-            surface is demonstrable before the identity plane is wired. Nothing here is
-            attributed to an account, and no credits are consumed. The flag is removed
-            once entitlement can be resolved.
-          </p>
-        </StatePanel>
-      ) : (
-        <StatePanel tone="ok" level={2} title={`Entitled — ${resolved.decision.basis}`} />
-      )}
-
-      {editor.deepLink !== null && (
-        <StatePanel tone="ok" title="Opened from a catalog">
-          <p>
-            The catalog item is shown here as context only — every editor session opens
-            the shared starter scene, not that listing&rsquo;s own scene. Source{" "}
-            <code>{editor.deepLink.source}</code> · item{" "}
-            <code>{editor.deepLink.itemId}</code>
-            {editor.deepLink.artifactRef !== null && (
-              <>
-                {" "}
-                · artifact <code>{editor.deepLink.artifactRef}</code>
-              </>
-            )}
-          </p>
-        </StatePanel>
-      )}
-
-      <h2>Viewport</h2>
-      <p className="lede">{EDITOR_VIEWPORT_COPY.lede}</p>
-      {mountable === null ? (
-        <StatePanel tone="warn" title="No scene to draw">
-          <p>{EDITOR_VIEWPORT_COPY.notComposable}</p>
-        </StatePanel>
-      ) : (
-        <EditorViewport scene={mountable} selectedInstanceId={editor.selectedInstanceId} />
-      )}
-      <p className="note">
-        {EDITOR_VIEWPORT_COPY.honesty}
-      </p>
-
-      <h2>Scene</h2>
-      <div className="grid">
-        <section className="panel">
-          <h3>Tree</h3>
-          <ul className="tree">
-            {snapshot.sceneTree.map((node) => (
-              <li key={node.id}>
-                <span className="depth">{node.kind === "sculpt-instance" ? "▸ " : "  · "}</span>
-                {node.label}
-                {node.instanceId === snapshot.selectedInstanceId && node.kind === "sculpt-instance" && (
-                  <strong> ←</strong>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="panel">
-          <h3>Inspector</h3>
-          {snapshot.inspector === null ? (
-            <p>Nothing selected.</p>
-          ) : (
-            <dl className="dl">
-              <dt>Instance</dt>
-              <dd>
-                <code>{snapshot.inspector.instanceId}</code>
-              </dd>
-              <dt>Artifact</dt>
-              <dd>
-                <code>{snapshot.inspector.artifactId}</code>
-              </dd>
-              <dt>Components</dt>
-              <dd>{snapshot.inspector.componentCount}</dd>
-              <dt>Sockets</dt>
-              <dd>{snapshot.inspector.socketCount}</dd>
-              <dt>Translation</dt>
-              <dd>
-                <code>[{snapshot.inspector.transform.translation.join(", ")}]</code>
-              </dd>
-              <dt>Kernel tick</dt>
-              <dd>{snapshot.inspector.kernel.tick}</dd>
-            </dl>
-          )}
-        </section>
-
-        <section className="panel">
-          <h3>Server session frame</h3>
-          <dl className="dl">
-            <dt>Backend</dt>
-            <dd>
-              <code>{viewport.backend}</code>
-            </dd>
-            <dt>Label</dt>
-            <dd>{viewport.label}</dd>
-            <dt>Draw surface</dt>
-            <dd>
-              <code>{viewport.surface ?? "—"}</code>
-            </dd>
-            <dt>Pixels drawn</dt>
-            <dd>
-              <code>{String(viewport.pixelsDrawn ?? false)}</code>
-            </dd>
-            <dt>Frame</dt>
-            <dd>{viewport.frame}</dd>
-            <dt>Draw calls</dt>
-            <dd>{viewport.drawCalls}</dd>
-            <dt>Instances</dt>
-            <dd>{viewport.instanceIds.length}</dd>
-          </dl>
-        </section>
-
-        <section className="panel">
-          <h3>Session</h3>
-          <dl className="dl">
-            <dt>Play state</dt>
-            <dd>
-              <code>{snapshot.playState}</code>
-            </dd>
-            <dt>Tick</dt>
-            <dd>{snapshot.tick}</dd>
-            <dt>Objects</dt>
-            <dd>{editor.instances.length}</dd>
-            <dt>Seed artifact</dt>
-            <dd>
-              <code>{artifactId}</code>
-            </dd>
-          </dl>
-        </section>
-      </div>
-
-      <h2>Edit</h2>
-      <form method="get" action="/editor">
-        {editor.deepLink !== null && (
-          <>
-            <input type="hidden" name="source" value={editor.deepLink.source} />
-            <input type="hidden" name="item" value={editor.deepLink.itemId} />
-            {editor.deepLink.artifactRef !== null && (
-              <input type="hidden" name="artifact" value={editor.deepLink.artifactRef} />
-            )}
-          </>
-        )}
-        {editor.instances
-          .filter((instance) => instance.instanceId !== editor.selectedInstanceId)
-          .map((instance) => (
-            <input
-              key={`tx-${instance.instanceId}`}
-              type="hidden"
-              name={`tx-${instance.instanceId}`}
-              value={instance.transform.translation.join(",")}
-            />
-          ))}
-        <div className="row">
-          <div className="field">
-            <label htmlFor="sel">Selection</label>
-            <select id="sel" name="sel" defaultValue={editor.selectedInstanceId}>
-              {editor.instances.map((instance) => (
-                <option key={instance.instanceId} value={instance.instanceId}>
-                  {instance.instanceId}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="tx">Translation (x,y,z)</label>
-            <input
-              id="tx"
-              name={`tx-${editor.selectedInstanceId}`}
-              defaultValue={selected?.transform.translation.join(",") ?? "0,0,0"}
-              size={14}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="objects">Objects</label>
-            <input
-              id="objects"
-              name="objects"
-              type="number"
-              min={EDITOR_MIN_OBJECTS}
-              max={EDITOR_MAX_OBJECTS}
-              defaultValue={editor.instances.length}
-            />
-          </div>
-          <button className="button" type="submit">
-            Apply
-          </button>
-        </div>
-      </form>
-
-      <div className="actions">
-        <a className="button button-quiet" href={editorHref(editor, { play: !editor.playing })}>
-          {editor.playing ? "Pause" : "Play one step"}
-        </a>
-        <a className="button button-quiet" href="/editor">
-          Reset
-        </a>
-      </div>
-
-      <h2>Save — through propose/apply</h2>
-      {save.ok ? (
-        <>
-          <p>
-            The editor saves by proposing an edit to a text-canonical document and
-            applying it, the same path the CLI uses. There is no second writer.
-          </p>
-          <dl className="dl">
-            <dt>Applied paths</dt>
-            <dd>
-              <code>{save.appliedPaths.join(", ")}</code>
-            </dd>
-          </dl>
-          <pre>
-            <code>{save.unifiedDiff.split("\n").slice(0, 24).join("\n")}</code>
-          </pre>
-        </>
-      ) : (
-        <StatePanel tone="deny" title="Save refused">
-          <p>
-            {save.diagnostics
-              .map((diagnostic) => `${diagnostic.code}: ${diagnostic.message}`)
-              .join(" · ")}
-          </p>
-        </StatePanel>
-      )}
-
-      <h2>Composition projection</h2>
-      {composition.ok ? (
-        <div className="scroll-x">
-          <table>
-            <thead>
-              <tr>
-                <th>Instance</th>
-                <th>Parent</th>
-                <th>Depth</th>
-                <th>World translation</th>
-              </tr>
-            </thead>
-            <tbody>
-              {composition.scene.instances.map((instance) => (
-                <tr key={instance.instanceId}>
-                  <td>
-                    <code>{instance.instanceId}</code>
-                  </td>
-                  <td>
-                    <code>{instance.parentInstanceId ?? "—"}</code>
-                  </td>
-                  <td>{instance.depth}</td>
-                  <td>
-                    <code>[{instance.worldTransform.translation.join(", ")}]</code>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <StatePanel tone="warn" title="Not composable" reason={composition.code}>
-          <p>{composition.message}</p>
-          <p>
-            A composed scene needs at least two placements and exactly one root. This is
-            the pipeline&rsquo;s own refusal, not a message invented by this page.
-          </p>
-        </StatePanel>
-      )}
-      {composition.ok && (
-        <p className="note">
-          Placement is a projection: a child transform reads relative to its parent and
-          no artifact is rewritten to place it, because its evidence binds its exact spec
-          bytes.
+    <>
+      {resolved.decision.mode === "preview" && (
+        <p className="ed-preview-note" role="note">
+          Preview — the server-side editor preview flag is set, nothing is
+          attributed to an account, and no credits are consumed. Real entitlement
+          replaces this flag.
         </p>
       )}
-
-      <h2>What this surface is bounded to</h2>
-      <p>
-        Exactly these operations, and no more:{" "}
-        {WEB_EDITOR_SESSION_OPERATIONS.map((operation) => (
-          <code key={operation} className="op-chip">
-            {operation}
-          </code>
-        ))}
-      </p>
-      <StatePanel tone="warn" title="Edits are not persisted">
-        <p>
-          The session is rebuilt per request in an ephemeral workspace and its state
-          lives in this URL, so the same link always renders the same scene. Each object
-          keeps its own translation, so switching selection never moves another object.
-          Persisting a project needs a storage decision that has not been made, so
-          nothing here pretends to save your work.
-        </p>
-      </StatePanel>
-    </div>
+      <EditorShell
+        view={view}
+        scene={render.value.mountable}
+        selectedInstanceId={editor.selectedInstanceId}
+        deepLinkFields={[...deepLinkFields, ...carriedTransforms]}
+        viewportCopy={EDITOR_VIEWPORT_COPY}
+      />
+    </>
   );
 }

@@ -821,6 +821,7 @@ describe("the visual layer adds no behaviour the site did not already have", () 
       "src/app/_components/site-nav.tsx",
       "src/app/_components/sculpt-viewport.tsx",
       "src/app/_components/hero-viewport.tsx",
+      "src/app/editor/_components/editor-shell.tsx",
       "src/app/editor/_components/editor-viewport.tsx",
       "src/app/open/_components/live-viewport.tsx",
     ].sort());
@@ -956,5 +957,111 @@ describe("the visual layer adds no behaviour the site did not already have", () 
     expect(read("src/app/_components/state-panel.tsx")).not.toMatch(
       /\{ id: "[a-z-]+", label: "[^"]+" \}/,
     );
+  });
+});
+
+describe("the Engine Desktop editor shell stays honest (sceneaxi#184)", () => {
+  const SHELL = read("src/app/editor/_components/editor-shell.tsx");
+  const PAGE = read("src/app/editor/page.tsx");
+
+  it("draws the shared editor-shell structure, not an invented dashboard", () => {
+    // Title bar, mode rail, dock strip, inspector, assistant, status bar, and
+    // the command palette — the archive's regions, each present as a landmark
+    // or labelled region in the one shell component.
+    for (const region of [
+      'className="ed-titlebar"',
+      'className="ed-rail"',
+      'className="ed-dock"',
+      'className="ed-inspector"',
+      'className="ed-assistant"',
+      'className="ed-status"',
+      'aria-label="Command palette"',
+    ]) {
+      expect(SHELL).toContain(region);
+    }
+    // The chrome is data-driven: modes, menus, and dock tabs come from the
+    // view the server built, never from a literal list in JSX.
+    expect(SHELL).toContain("view.modes.map");
+    expect(SHELL).toContain("view.menus.map");
+    expect(SHELL).toContain("view.profiles.map");
+  });
+
+  it("keeps every editor metric owned by the stylesheet, in archive values", () => {
+    // The structural metrics the shared model carries (EDITOR_SHELL_METRICS):
+    // title bar 36, rail 56, left dock 274, inspector 326, assistant 344,
+    // view tabs 32, dock 228 (252 for animate), status bar 27.
+    for (const rule of [
+      ".ed-titlebar {\n  height: 36px;",
+      ".ed-rail {\n  width: 56px;",
+      ".ed-left {\n  width: 274px;",
+      ".ed-inspector {\n  width: 326px;",
+      ".ed-assistant {\n  width: 344px;",
+      ".ed-viewtabs {\n  height: 32px;",
+      ".ed-dock {\n  height: 228px;",
+      ".ed-status {\n  height: 27px;",
+    ]) {
+      expect(CSS).toContain(rule);
+    }
+    expect(CSS).toContain('.edshell[data-mode="animate"] .ed-dock {\n  height: 252px;');
+  });
+
+  it("ships no archive fixture figure and no retired renderer copy", () => {
+    for (const source of [SHELL, PAGE, CSS]) {
+      for (const fabricated of [
+        "18 412",
+        "412 MB",
+        "20 fps",
+        "saved 10:26",
+        "qwen3-30b",
+        "Harbour Depot",
+        "depot_scene",
+        "Preview renderer is experimental",
+        "Experimental Three preview",
+      ]) {
+        expect(source).not.toContain(fabricated);
+      }
+    }
+  });
+
+  it("keeps engine state server-owned: no client mutation of the session", () => {
+    // Client state is view state only; every live control is a link or a GET
+    // form back to /editor, so the browser can never show a scene the server
+    // session did not produce.
+    expect(SHELL).toContain('method="get" action="/editor"');
+    expect(SHELL).not.toContain("fetch(");
+    expect(SHELL).not.toContain('method="post"');
+    // The one state hook family is React's, applied to chrome only.
+    expect(SHELL).toContain("useState<ModeId>");
+  });
+
+  it("renders every control through the one kind-aware helper", () => {
+    // A control cannot reach the document without its kind: the helper stamps
+    // data-kind, and inert controls keep a focus stop with a resolving
+    // describedby — the desktop chrome's accounting rule, kept here.
+    expect(SHELL).toContain("function ShellButton");
+    expect(SHELL).toContain('"aria-disabled": true');
+    expect(SHELL).toContain("aria-describedby");
+    expect(SHELL).toContain("legendId");
+    // The legend prints the whole closed registry once.
+    expect(SHELL).toContain("view.refusalLegend.map");
+  });
+
+  it("projects the Kids refusal as the whole editor body, exits stay live", () => {
+    expect(SHELL).toContain("view.kidsLock.code");
+    expect(SHELL).toContain("ed-kids-lock");
+    // The profile chips are not demoted — a refuse-only state must be exitable.
+    expect(SHELL).toContain("a refuse-only state is a state you can");
+    // The assistant seat becomes the deny, and it is not reopenable copy.
+    expect(SHELL).toContain("THIRD_PARTY_LLM_DENIED_BY_DEFAULT");
+  });
+
+  it("refuses below the shared minimum window rather than degrading", () => {
+    expect(SHELL).toContain("EDITOR_WINDOW_BELOW_MINIMUM");
+    expect(CSS).toContain("@media (max-width: 899px), (max-height: 599px)");
+  });
+
+  it("collapses the site chrome for the editor route only, by removal", () => {
+    const layout = read("src/app/editor/layout.tsx");
+    expect(layout).toContain(".masthead, footer, .skip-link { display: none; }");
   });
 });
