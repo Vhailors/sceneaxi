@@ -57,6 +57,12 @@ const fieldName = (control: EditorShellControl): string =>
 
 /** The one panel every viewport-source tab controls. */
 const VIEWPORT_PANEL_ID = "ed-viewport-panel";
+/**
+ * One dock panel exists at a time, so every dock tab controls the one panel
+ * element the body always renders — an `aria-controls` per tab would name four
+ * IDREFs of which three resolve to nothing.
+ */
+const DOCK_PANEL_ID = "ed-dock-panel";
 
 /**
  * Every interactive element goes through this one helper, so a control cannot
@@ -199,16 +205,27 @@ export function EditorShell({
         setPaletteRequested(true);
       } else if (event.key === "Escape" && paletteOpen) {
         setPaletteRequested(false);
-        paletteReturnFocus.current?.focus();
       }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [paletteOpen, kids]);
 
+  /**
+   * Focus moves in this effect rather than in the close handlers, because the
+   * regions the return target lives in carry `inert` while the palette is open:
+   * a synchronous `focus()` from a handler runs before React has committed that
+   * attribute away, and focusing into an inert subtree is a no-op. Here the
+   * commit has already happened, so the opener really takes focus back.
+   */
   useEffect(() => {
-    if (paletteOpen) paletteRef.current?.focus();
-    else setPaletteQuery("");
+    if (paletteOpen) {
+      paletteRef.current?.focus();
+      return;
+    }
+    setPaletteQuery("");
+    paletteReturnFocus.current?.focus();
+    paletteReturnFocus.current = null;
   }, [paletteOpen]);
 
   // Entering the refuse-only profile withdraws the request too, so leaving it
@@ -252,7 +269,7 @@ export function EditorShell({
         the shared editor-shell model. The block is in every document; the
         stylesheet decides which side shows, so the refusal needs no script.
       */}
-      <div className="ed-minimum" role="note" inert={paletteOpen}>
+      <div className="ed-minimum" role="note">
         <p className="reason mono">{view.windowMinimum.code}</p>
         <p>{view.windowMinimum.message}</p>
       </div>
@@ -555,7 +572,7 @@ export function EditorShell({
                         role="tab"
                         id={`dock-${tab}`}
                         aria-selected={shownDockTab === tab}
-                        aria-controls={`dock-panel-${tab}`}
+                        aria-controls={DOCK_PANEL_ID}
                         className="ed-dock-tab"
                         data-kind="view"
                         onClick={() => setDockTab(tab)}
@@ -575,9 +592,14 @@ export function EditorShell({
                   )}
                 </div>
 
-                <div className="ed-dock-body">
+                <div
+                  className="ed-dock-body"
+                  id={DOCK_PANEL_ID}
+                  role="tabpanel"
+                  aria-labelledby={`dock-${shownDockTab}`}
+                >
                   {shownDockTab === "changes" && (
-                    <div role="tabpanel" id="dock-panel-changes" aria-labelledby="dock-changes">
+                    <div>
                       {view.changes.review === null ? (
                         <p className="ed-note-block">
                           No reviewable proposal: {view.changes.reviewRefusal ?? "nothing to review"}.
@@ -624,7 +646,7 @@ export function EditorShell({
                     </div>
                   )}
                   {shownDockTab === "assets" && (
-                    <div role="tabpanel" id="dock-panel-assets" aria-labelledby="dock-assets">
+                    <div>
                       <ul className="ed-assets">
                         {view.sculpt.library.map((item) => (
                           <li key={item.artifactId}>
@@ -641,7 +663,7 @@ export function EditorShell({
                     </div>
                   )}
                   {shownDockTab === "console" && (
-                    <div role="tabpanel" id="dock-panel-console" aria-labelledby="dock-console">
+                    <div>
                       <ol className="ed-console">
                         {view.console.map((row, index) => (
                           <li key={index} className={`ed-console-${row.level}`}>
@@ -653,7 +675,7 @@ export function EditorShell({
                     </div>
                   )}
                   {shownDockTab === "evidence" && (
-                    <div role="tabpanel" id="dock-panel-evidence" aria-labelledby="dock-evidence">
+                    <div>
                       <table className="ed-evidence">
                         <thead>
                           <tr>
@@ -675,7 +697,7 @@ export function EditorShell({
                     </div>
                   )}
                   {shownDockTab === "timeline" && (
-                    <div role="tabpanel" id="dock-panel-timeline" aria-labelledby="dock-timeline">
+                    <div>
                       <p className="ed-dock-lede">
                         Socket values are advanced by the kernel and read back as
                         frozen observations — this surface authors no timeline.
@@ -1067,10 +1089,7 @@ export function EditorShell({
               type="button"
               className="ed-ghost ed-palette-close"
               data-kind="view"
-              onClick={() => {
-                setPaletteRequested(false);
-                paletteReturnFocus.current?.focus();
-              }}
+              onClick={() => setPaletteRequested(false)}
             >
               Close <kbd>ESC</kbd>
             </button>

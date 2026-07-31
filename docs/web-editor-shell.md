@@ -102,7 +102,10 @@ Control accounting has two halves, and both are load-bearing:
   1440×720 the assistant undocks to an overlay; below 1180×660 the side panels
   reflow under the viewport (a web-native adaptation of the desktop's drawers)
   and the menu row is dropped; below the shared 900×600 minimum the chrome
-  refuses by name (`EDITOR_WINDOW_BELOW_MINIMUM`) with no script involved.
+  refuses by name (`EDITOR_WINDOW_BELOW_MINIMUM`) with no script involved. The
+  refusal is the whole surface at that tier: the stylesheet withdraws the
+  palette scrim with the other regions, because the palette is script-owned and
+  cannot see the tier, and the refusal note itself is never made `inert`.
 - **The site masthead and footer are collapsed on this route**
   (`editor/layout.tsx`, `display: none` — removed from the accessibility tree,
   not painted over), because the shell owns the whole viewport like the
@@ -156,11 +159,13 @@ Chrome via `chrome-devtools-axi`, `sites/umbrella` dev server with
 - **The palette opens on ⌘K and the Search control**, groups its rows, prints
   CLI verbs beside CLI-only rows, closes on Escape with focus returned. It
   declares `aria-modal`, so while it is open every sibling region — title bar,
-  body, status bar, minimum-window note — is `inert` and focus stays inside it;
-  the hidden refusal legend stays reachable so the palette's own inert rows keep
-  resolving their `aria-describedby`. Its filter input, its withdrawal under the
-  Kids lock, and that containment landed in later review rounds and are
-  gate-covered, not part of this session.
+  body, status bar — is `inert` and focus stays inside it; the hidden refusal
+  legend stays reachable so the palette's own inert rows keep resolving their
+  `aria-describedby`. The focus return runs in the effect that follows the
+  close, not in the close handler, since a handler fires while those regions are
+  still `inert` and focusing into an inert subtree does nothing. Its filter
+  input, its withdrawal under the Kids lock, and that containment landed in
+  later review rounds and are gate-covered, not part of this session.
 
 ## How to run it
 

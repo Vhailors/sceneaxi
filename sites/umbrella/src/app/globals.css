@@ -2663,9 +2663,15 @@ footer {
     display: block;
   }
 
+  /*
+    The palette is script-owned and cannot see this tier, so the tier withdraws
+    it the same way it withdraws every other region: below the shared minimum
+    the refusal is the whole surface, and nothing paints over it.
+  */
   .ed-titlebar,
   .ed-body,
-  .ed-status {
+  .ed-status,
+  .ed-palette-scrim {
     display: none !important;
   }
 }
@@ -3125,6 +3131,9 @@ a.ed-tree-label:hover {
   margin: 0;
   padding: 6px 10px;
   font-size: 11.5px;
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 6px 10px;
 }
 
 .ed-facts dt {
@@ -3137,12 +3146,6 @@ a.ed-tree-label:hover {
 
 .ed-facts .ok {
   color: var(--ok);
-}
-
-.ed-facts {
-  display: grid;
-  grid-template-columns: 92px minmax(0, 1fr);
-  gap: 6px 10px;
 }
 
 .ed-fact-row {

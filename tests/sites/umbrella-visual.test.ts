@@ -1099,7 +1099,6 @@ describe("the Engine Desktop editor shell stays honest (sceneaxi#184)", () => {
     // it from the palette's own inert rows.
     expect(SHELL).toContain('role="dialog" aria-modal="true"');
     for (const region of [
-      '<div className="ed-minimum" role="note" inert={paletteOpen}>',
       '<header className="ed-titlebar" aria-label="Editor title bar" inert={paletteOpen}>',
       '<div className="ed-body" inert={paletteOpen}>',
       '<footer className="ed-status" aria-label="Editor status" inert={paletteOpen}>',
@@ -1107,6 +1106,47 @@ describe("the Engine Desktop editor shell stays honest (sceneaxi#184)", () => {
       expect(SHELL).toContain(region);
     }
     expect(SHELL).toContain('<div className="ed-legend" hidden>');
+    // The below-minimum note is deliberately never inert: it is the only thing
+    // that surface renders, and the tier hides the overlay in CSS instead.
+    expect(SHELL).toContain('<div className="ed-minimum" role="note">');
+  });
+
+  it("returns palette focus after the inert regions are released", () => {
+    // Restoring focus inside a close handler cannot work: the regions the return
+    // target lives in still carry `inert` at that point, so `focus()` is a no-op.
+    // The restore therefore lives in the effect that runs after the commit.
+    expect(SHELL).toContain("onClick={() => setPaletteRequested(false)}");
+    const effect = SHELL.slice(SHELL.indexOf("if (paletteOpen) {"));
+    expect(effect.slice(0, 220)).toContain("paletteReturnFocus.current?.focus();");
+    // Exactly one restore, and it is that one — no close handler may reintroduce
+    // a synchronous one alongside it.
+    expect(SHELL.split("paletteReturnFocus.current?.focus();")).toHaveLength(2);
+  });
+
+  it("withdraws the palette below the shared minimum window", () => {
+    // The tier refusal claims the whole surface, and the palette is script-owned
+    // with no knowledge of the tier — so the stylesheet withdraws its scrim too,
+    // or one keystroke paints a live play link over a refusal.
+    const tier = CSS.slice(CSS.indexOf("@media (max-width: 899px), (max-height: 599px)"));
+    const block = tier.slice(0, tier.indexOf("\n}\n") + 3);
+    for (const region of [
+      ".ed-titlebar",
+      ".ed-body",
+      ".ed-status",
+      ".ed-palette-scrim",
+    ]) {
+      expect(block).toContain(region);
+    }
+    expect(block).toContain("display: none !important;");
+  });
+
+  it("points every dock tab at a panel that exists", () => {
+    // Only the shown tab's content renders, so a per-tab `aria-controls` would
+    // name three IDREFs that resolve to nothing. One panel owns them all.
+    expect(SHELL).toContain("aria-controls={DOCK_PANEL_ID}");
+    expect(SHELL).toContain("id={DOCK_PANEL_ID}");
+    expect(SHELL).toContain('aria-labelledby={`dock-${shownDockTab}`}');
+    expect(SHELL).not.toContain("dock-panel-");
   });
 
   it("filters the palette it offers to filter", () => {
