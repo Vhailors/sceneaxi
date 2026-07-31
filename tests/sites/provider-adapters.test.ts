@@ -368,7 +368,10 @@ describe("umbrella deployment provider adapters", () => {
     });
     expect(verified).toMatchObject({
       ok: true,
-      value: { principal: { user: { userId: "member-1" }, role: { role: "admin" } } },
+      value: {
+        principal: { user: { userId: "member-1" }, role: { role: "admin" } },
+        sessionToken: "provider-token-1",
+      },
     });
 
     // A provider-side address change is followed too, so the by-email lookup keeps
@@ -381,7 +384,10 @@ describe("umbrella deployment provider adapters", () => {
     });
     expect(renamed).toMatchObject({
       ok: true,
-      value: { principal: { user: { userId: "member-1" } } },
+      value: {
+        principal: { user: { userId: "member-1" } },
+        sessionToken: "provider-token-1",
+      },
     });
     expect(fixture.users).toHaveLength(1);
     expect(fixture.users[0]).toMatchObject({
