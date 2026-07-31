@@ -107,6 +107,18 @@ describe("control accounting", () => {
         expect(shell.refusalLegend.map((row) => row.code)).toContain(code);
         continue;
       }
+      if (code === EDITOR_SHELL_WEB_REFUSALS.changesBaselineUnreadable) {
+        // Carried by the Changes dock when the applied proposal has no
+        // readable baseline to diff against, not by a control.
+        const unreadable = buildEditorShellView({
+          ...shellInput(),
+          baseDocument: null,
+        });
+        expect(unreadable.changes.review).toBeNull();
+        expect(unreadable.changes.reviewRefusal).toBe(code);
+        expect(shell.refusalLegend.map((row) => row.code)).toContain(code);
+        continue;
+      }
       if (code === EDITOR_SHELL_WEB_REFUSALS.kidsRefuseOnly) {
         // Carried by the Kids lock projection the profile switch applies —
         // the whole editor body refuses, not one control at build time.

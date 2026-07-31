@@ -72,6 +72,7 @@ import {
 import type { EditorRender } from "./editor-session.js";
 import { WEB_EDITOR_STARTER_SEED } from "./starter-artifact.js";
 import {
+  WEB_EDITOR_DOCUMENT_PATH,
   WEB_EDITOR_SESSION_OPERATIONS,
   type WebEditorViewportFrame,
 } from "./web-editor.js";
@@ -95,6 +96,8 @@ export const EDITOR_SHELL_WEB_REFUSALS = Object.freeze({
   verbCliOnly: "EDITOR_VERB_CLI_ONLY",
   /** The viewport draws the session's own composed scene; no other source exists here. */
   viewportSourceFixed: "EDITOR_VIEWPORT_SOURCE_FIXED",
+  /** The pre-save document could not be read or parsed, so there is no baseline to diff against. */
+  changesBaselineUnreadable: "EDITOR_CHANGES_BASELINE_UNREADABLE",
   /** The window is smaller than the shared editor-shell minimum (900×600). */
   windowBelowMinimum: "EDITOR_WINDOW_BELOW_MINIMUM",
 } as const);
@@ -116,6 +119,8 @@ export const EDITOR_SHELL_WEB_REFUSAL_MESSAGES: Readonly<
     "That verb exists on the CLI and has no operation on this web surface; run it with `sceneaxi`.",
   [EDITOR_SHELL_WEB_REFUSALS.viewportSourceFixed]:
     "This viewport draws the editor session's own composed scene; the other sources have no session on this surface.",
+  [EDITOR_SHELL_WEB_REFUSALS.changesBaselineUnreadable]:
+    "The proposal applied, but the pre-save document could not be read back, so this render has no baseline to review it against.",
   [EDITOR_SHELL_WEB_REFUSALS.windowBelowMinimum]:
     "The editor chrome refuses below its minimum window size rather than rendering an unusable layout.",
 });
@@ -887,7 +892,7 @@ export function buildEditorShellView(input: EditorShellInput): EditorShellView {
   if (render.save.ok && input.baseDocument !== null) {
     const built = reviewProposal({
       proposal: render.save.proposal,
-      documents: new Map([["scene.sceneaxi.json", input.baseDocument]]),
+      documents: new Map([[WEB_EDITOR_DOCUMENT_PATH, input.baseDocument]]),
       origin: "Minimum E2 session · propose/apply",
     });
     if (built.ok) review = built.value;
@@ -896,6 +901,8 @@ export function buildEditorShellView(input: EditorShellInput): EditorShellView {
     reviewRefusal = render.save.diagnostics
       .map((diagnostic) => diagnostic.code)
       .join(" · ");
+  } else {
+    reviewRefusal = EDITOR_SHELL_WEB_REFUSALS.changesBaselineUnreadable;
   }
   const appliedPaths = render.save.ok ? render.save.appliedPaths : Object.freeze([]);
   const changes = Object.freeze({
@@ -1199,7 +1206,7 @@ export function buildEditorShellView(input: EditorShellInput): EditorShellView {
     }),
     project: Object.freeze({
       name: "umbrella-web-editor",
-      documentPath: "scene.sceneaxi.json",
+      documentPath: WEB_EDITOR_DOCUMENT_PATH,
       sceneDigestShort: sceneDigest === null ? null : shortDigestValue(sceneDigest),
     }),
     deepLink:
