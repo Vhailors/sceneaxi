@@ -95,10 +95,7 @@ const loadBillingWithArchive = async () => {
     );
     return { ...actual, CREDIT_PACK_CATALOG_DATA: ARCHIVE };
   });
-  return {
-    ledger: await import("../src/ledger.js"),
-    webhook: await import("../src/stripe-webhook.js"),
-  };
+  return await import("@sceneaxi/billing");
 };
 
 afterEach(() => {
@@ -108,7 +105,7 @@ afterEach(() => {
 
 describe("credit-pack grant archive anchor", () => {
   it("grants both current and retained revisions from archived credits", async () => {
-    const { ledger, webhook } = await loadBillingWithArchive();
+    const billing = await loadBillingWithArchive();
     const cases = [
       {
         intent: intentFor(
@@ -134,9 +131,9 @@ describe("credit-pack grant archive anchor", () => {
 
     for (const [index, testCase] of cases.entries()) {
       const body = eventBody(testCase.intent, `evt_archive_${index}`);
-      const verified = webhook.verifyStripeWebhookSignature({
+      const verified = billing.verifyStripeWebhookSignature({
         payload: body,
-        header: webhook.signStripeWebhookPayload({
+        header: billing.signStripeWebhookPayload({
           payload: body,
           secret: SECRET,
           timestamp: NOW_SECONDS,
@@ -147,7 +144,7 @@ describe("credit-pack grant archive anchor", () => {
       expect(verified.ok).toBe(true);
       if (!verified.ok) return;
 
-      const completion = webhook.parseCheckoutCompletedEvent({
+      const completion = billing.parseCheckoutCompletedEvent({
         verified: verified.value,
         intent: testCase.intent,
         settlement: {
@@ -162,8 +159,8 @@ describe("credit-pack grant archive anchor", () => {
       expect(completion.ok).toBe(true);
       if (!completion.ok) return;
 
-      const granted = webhook.applyCheckoutCompletedGrant({
-        state: ledger.createLedgerState(ACCOUNT),
+      const granted = billing.applyCheckoutCompletedGrant({
+        state: billing.createLedgerState(ACCOUNT),
         completion: completion.value,
         now: NOW,
       });

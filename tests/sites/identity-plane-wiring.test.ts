@@ -708,6 +708,9 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       "CREDIT_LEDGER_STATE_INVALID",
       "CREDIT_LEDGER_ORDER_INVALID",
       "CREDIT_ENTRY_INVALID",
+      // The bundled credit-pack archive is this deployment's own artifact, and the
+      // grant path loads it, so an invalid one is never a bad request from Stripe.
+      BILLING_REFUSE_REASONS.catalogInvalid,
       BILLING_REFUSE_REASONS.catalogRevisionUnresolvable,
       BILLING_REFUSE_REASONS.catalogRevisionCreditsMismatch,
     ]) {

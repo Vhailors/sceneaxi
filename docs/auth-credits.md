@@ -296,8 +296,10 @@ Stripe price against the persisted intent — and requires its quantity to be ex
 which the intent does not carry a field for. At grant time,
 `applyCheckoutCompletedGrant` resolves the persisted intent's exact
 `(itemId, stripePriceId, unitAmount)` tuple through the committed historical archive and
-requires the completion's `credits` to equal that retained revision. The ledger entry uses
-the revision's credits, never a caller- or intent-controlled amount. Unknown tuples refuse
+requires the completion's `currency` and `credits` to equal that retained revision. The
+ledger entry uses the revision's credits, never a caller- or intent-controlled amount.
+Unknown tuples — and a resolved revision the completion does not settle the currency of,
+since a matching amount in another currency is another price — refuse
 `BILLING_CATALOG_REVISION_UNRESOLVABLE`; a known tuple with a different credit amount
 refuses `BILLING_CATALOG_REVISION_CREDITS_MISMATCH`, both before any append or commit.
 That is what makes a deployment's adapter obligation exact: write the row exactly as
@@ -846,7 +848,9 @@ changed together (`tests/contracts/injected-credit-pack-drift.test.ts`).
 bundled committed archive. It accepts lookup keys, never a caller-supplied pack or archive,
 and refuses `BILLING_CATALOG_REVISION_UNRESOLVABLE` when the tuple has no retained row.
 `applyCheckoutCompletedGrant` performs the D2 grant-time check before it calls the ledger:
-a known revision whose credits differ from the completion refuses
+a resolved revision priced in a currency the completion does not settle refuses that same
+`BILLING_CATALOG_REVISION_UNRESOLVABLE`, a known revision whose credits differ from the
+completion refuses
 `BILLING_CATALOG_REVISION_CREDITS_MISMATCH`, while a valid current or retained revision
 uses the archive row's credits for the grant. `persistCheckoutCompletedGrant` inherits the
 same refusal before its commit boundary, so unknown or inflated intent values cannot mutate

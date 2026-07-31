@@ -715,6 +715,12 @@ export function applyCheckoutCompletedGrant(
     validated.value.unitAmount,
   );
   if (!revision.ok) return revision;
+  if (validated.value.currency !== revision.value.currency) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.catalogRevisionUnresolvable,
+      `The checkout completion settles in "${validated.value.currency}", but committed credit pack revision "${revision.value.revisionId}" is priced in "${revision.value.currency}"; no revision resolves that tuple.`,
+    );
+  }
   if (credits !== revision.value.credits) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.catalogRevisionCreditsMismatch,

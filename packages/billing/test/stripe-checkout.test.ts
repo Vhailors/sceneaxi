@@ -1015,6 +1015,21 @@ describe("applyCheckoutCompletedGrant", () => {
     expect(state).toEqual(createLedgerState(ACCOUNT));
   });
 
+  it("refuses a settled currency the committed revision is not priced in", () => {
+    const state = createLedgerState(ACCOUNT);
+    const result = applyCheckoutCompletedGrant({
+      state,
+      completion: reparsed({ currency: "jpy" }),
+      now: NOW,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(
+      BILLING_REFUSE_REASONS.catalogRevisionUnresolvable,
+    );
+    expect(state).toEqual(createLedgerState(ACCOUNT));
+  });
+
   it("refuses a mutated replay of the same event id", () => {
     const first = applyCheckoutCompletedGrant({
       state: createLedgerState(ACCOUNT),
@@ -1076,7 +1091,6 @@ describe("applyCheckoutCompletedGrant", () => {
 
     const idempotentVariants = [
       reparsed({ intentId: "intent_other" }),
-      reparsed({ currency: "eur" }),
       reparsed({}, { created: NOW_SECONDS + 1 }),
       reparsed({}, {}, "cs_test_second"),
       reparsed({}, {}, `cs_live_${"a".repeat(240)}/b+c=d%e`),
@@ -1096,6 +1110,7 @@ describe("applyCheckoutCompletedGrant", () => {
     const unresolvedVariants = [
       reparsed({ unitAmount: completion.unitAmount + 1 }),
       reparsed({ stripePriceId: "price_test_other" }),
+      reparsed({ currency: "eur" }),
     ];
     for (const variant of unresolvedVariants) {
       const refused = applyCheckoutCompletedGrant({
