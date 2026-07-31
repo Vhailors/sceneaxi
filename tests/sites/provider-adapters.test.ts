@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  AUTH_REFUSE_REASONS,
   createIdentityPort,
   createInMemoryIdentityStore,
   digestSessionToken,
@@ -16,6 +17,7 @@ import {
 import {
   applyCreditPackWebhook,
   createDeploymentPlaneHandles,
+  createNeonCheckoutIntentStore,
   createNeonCreditStore,
   createNeonDatabase,
   createNeonIdentityStore,
@@ -97,7 +99,8 @@ function createDatabase(withAccount = true) {
       calls.push(query);
       if (query.includes("WITH ensured_user")) {
         const userId = text(values[0]);
-        if (!users.some((row) => row.user_id === userId)) {
+        const heldIndex = users.findIndex((row) => row.user_id === userId);
+        if (heldIndex === -1) {
           users.push({
             user_id: userId,
             email: text(values[1]),
@@ -105,6 +108,14 @@ function createDatabase(withAccount = true) {
             disabled: false,
             created_at: values[3] ?? "",
           });
+        } else {
+          // `ON CONFLICT (user_id) DO UPDATE` reconciles exactly the two
+          // provider-owned columns and leaves the deployment-owned ones alone.
+          users[heldIndex] = {
+            ...users[heldIndex],
+            email: text(values[1]),
+            email_verified: values[2] === true,
+          };
         }
         if (!accounts.some((row) => row.user_id === userId)) {
           accounts.push({
@@ -288,6 +299,82 @@ describe("umbrella deployment provider adapters", () => {
     expect(fixture.accounts).toHaveLength(1);
     expect(fixture.accounts.filter((row) => row.user_id === "member-1")).toHaveLength(1);
     expect(fixture.calls.filter((query) => query.includes("WITH ensured_user"))).toHaveLength(2);
+  });
+
+  it("reconciles the provider's address and verification state on every authentication", async () => {
+    const fixture = createDatabase(false);
+    let providerUser = {
+      id: "member-1",
+      email: "captain@example.com",
+      emailVerified: false,
+    };
+    const mutableProvider: BetterAuthInstanceLike = {
+      api: {
+        async signInEmail() {
+          return {
+            user: providerUser,
+            session: {
+              id: "provider-session-1",
+              token: "provider-token-1",
+              userId: "member-1",
+              expiresAt: iso(3_600_000),
+            },
+          };
+        },
+      },
+    };
+    const handles = createDeploymentPlaneHandles({
+      env: { SCENEAXI_ADMIN_EMAIL: "captain@example.com" },
+      providers: { database: fixture.database, betterAuth: mutableProvider },
+      clock: () => NOW,
+    });
+    expect(handles.identityPort).toBeDefined();
+    const port = handles.identityPort;
+    if (port === undefined) return;
+
+    // Signing in before verifying the address writes an unverified row, and admin
+    // elevation refuses by name against that stored record.
+    const unverified = await port.signIn({
+      surface: "site",
+      email: "captain@example.com",
+      password: "test-password",
+    });
+    expect(unverified).toMatchObject({
+      ok: false,
+      reason: AUTH_REFUSE_REASONS.adminEmailUnverified,
+    });
+
+    // Verifying at the provider must repair the row: the provider owns the column,
+    // so the next authentication reconciles it rather than freezing the refusal.
+    providerUser = { ...providerUser, emailVerified: true };
+    const verified = await port.signIn({
+      surface: "site",
+      email: "captain@example.com",
+      password: "test-password",
+    });
+    expect(verified).toMatchObject({
+      ok: true,
+      value: { user: { userId: "member-1" }, role: { role: "admin" } },
+    });
+
+    // A provider-side address change is followed too, so the by-email lookup keeps
+    // resolving the same SceneAxi user instead of refusing `userNotFound`.
+    providerUser = { ...providerUser, email: "captain.new@example.com" };
+    const renamed = await port.signIn({
+      surface: "site",
+      email: "captain.new@example.com",
+      password: "test-password",
+    });
+    expect(renamed).toMatchObject({ ok: true, value: { user: { userId: "member-1" } } });
+    expect(fixture.users).toHaveLength(1);
+    expect(fixture.users[0]).toMatchObject({
+      user_id: "member-1",
+      email: "captain.new@example.com",
+      email_verified: true,
+      disabled: false,
+    });
+    // Reconciling the user never provisions a second credit account.
+    expect(fixture.accounts).toHaveLength(1);
   });
 
   it("maps provider rows to identity sessions and preserves the token digest boundary", async () => {
@@ -491,6 +578,42 @@ describe("umbrella deployment provider adapters", () => {
     expect(calls[0]).toContain("sceneaxiUserId");
     expect(calls[0]).toContain("sceneaxiPurpose");
     expect(calls[0]).toContain("sceneaxiIntentId");
+  });
+
+  it("replays a persisted intent when the same idempotency key is submitted again", async () => {
+    const fixture = createDatabase();
+    const intents = createNeonCheckoutIntentStore(fixture.database);
+    const first = {
+      schemaVersion: 1 as const,
+      kind: "sceneaxi.checkout-session-intent" as const,
+      intentId: "int_test_replay",
+      userId: "member-1",
+      purpose: "credit-pack" as const,
+      itemId: "starter",
+      credits: 100,
+      unitAmount: 500,
+      currency: "usd",
+      stripePriceId: "price_test_starter_100",
+      mode: "test" as const,
+      successUrl: "https://sceneaxi.test/account",
+      cancelUrl: "https://sceneaxi.test/pricing",
+      idempotencyKey: "pack:starter:user:member-1:attempt:a",
+      createdAt: iso(0),
+    };
+    await expect(intents.persistIntent(first)).resolves.toEqual(first);
+
+    // The same rendered form submitted twice reuses its attempt token, so the
+    // derived intent id and every price column match while the clock has moved.
+    // That is the retry the idempotency key exists to absorb, not a conflict.
+    const retried = { ...first, createdAt: iso(4_000) };
+    await expect(intents.persistIntent(retried)).resolves.toEqual(first);
+    expect(fixture.intents).toHaveLength(1);
+    expect(fixture.intents[0]).toMatchObject({ created_at: first.createdAt });
+
+    // A price-bearing difference under the same id is still a hard conflict.
+    await expect(
+      intents.persistIntent({ ...first, unitAmount: 900 }),
+    ).rejects.toThrow(/checkout intent conflict/);
   });
 
   it("runs a persisted TEST intent through webhook grant and replay on the Neon store", async () => {

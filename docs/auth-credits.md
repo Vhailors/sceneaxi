@@ -28,7 +28,9 @@ provider credentials and the database remain outside the repository.
 
 The TEST deployment path now has the provider-backed handles and idempotent account
 provisioning. Missing provider configuration remains a named refusal, and activation
-still requires the deployment procedure at `docs/websites-deploy.md`.
+still requires the deployment procedure at `docs/websites-deploy.md`. **What v1 still does
+not deliver is a live signed-in browser session:** the sign-in HTTP entry point that would
+reach `identityPort.signIn` is sceneaxi#185. See *Deployment activation* at the end.
 
 ## Environment
 
@@ -214,7 +216,13 @@ The umbrella deployment implements `IdentityStore` (`@sceneaxi/auth`) over its N
 client, and a `CreditStoreAdapter` (`@sceneaxi/billing`) handed to `createCreditStore` —
 never a `CreditStore` implemented directly, for the reasons in *The credit persistence
 boundary* below. Its authentication adapter provisions the SceneAxi user and exactly one
-credit account with an idempotent insert; payment webhooks never create accounts. The
+credit account with an idempotent insert; payment webhooks never create accounts. That
+insert reconciles `email` and `email_verified` from the provider on every authentication,
+because the provider — not this deployment — owns both: freezing them at the first sign-in
+would leave an admin who verified afterwards permanently refused `adminEmailUnverified`
+against a stale row, and a member who changed their address permanently `userNotFound`.
+`disabled` and `created_at` stay deployment-owned and are never overwritten, and the
+credit account is still created at most once. The
 in-memory reference implementations mirror the database's constraints — unique
 `(account_id, sequence)`, unique `idempotency_key`, no update or delete — so a bug the real
 trigger would catch cannot pass the test suite.
@@ -1130,8 +1138,17 @@ user at authentication, and provides the TEST Stripe checkout/evidence adapters.
 existing webhook route passes the **raw** body to `verifyStripeWebhookSignature` and
 commits through `persistCheckoutCompletedGrant`.
 
-What remains is deployment authority rather than a second implementation: apply the
-forward migrations, set the named Better Auth/Neon/Stripe TEST variables, register the
-card-only webhook, and remove the preview flag. Missing providers continue to refuse by
-name. The deployable-site activation procedure and surface status are owned by
+Two distinct things remain, and only the first is deployment authority: apply the forward
+migrations, set the named Better Auth/Neon/Stripe TEST variables, and register the
+card-only webhook. Missing providers continue to refuse by name.
+
+The second is still code, and it is not this vertical's: **no signed-in browser session
+can exist yet.** `putSession` is reached only from `identityPort.signIn`, and the umbrella
+exposes that over no route — `createAuthIdentityAdapter` deliberately offers only
+`verifySession`, and the site's only routes are `/api/checkout` and
+`/api/stripe/webhook`. So a fully configured deployment still provisions no user, runs no
+starter grant, and refuses `IDENTITY_SESSION_ABSENT` on every surface. Mounting Better
+Auth's own handler and a sign-in surface that calls `signIn` — and only then dropping the
+editor preview flag — is [sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185).
+The deployable-site activation procedure and surface status are owned by
 [`websites-deploy.md`](websites-deploy.md#remaining-activation).

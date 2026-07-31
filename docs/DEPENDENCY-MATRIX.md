@@ -81,7 +81,10 @@ Deliberate denials that carry design intent:
   in [`three-presentation-core.md`](three-presentation-core.md) — so it alone consumes
   the ADR 0002 presentation seam to draw a real artifact into a browser canvas; and **umbrella → `auth` + `billing`** (ADR 0021,
   sceneaxi#131): it is the one site wired to the identity plane, and only through the
-  single plug point `sites/umbrella/src/lib/identity-plane.ts`. Nothing widens past that
+  plug point `sites/umbrella/src/lib/identity-plane.ts` together with the deployment
+  adapters it assembles in `sites/umbrella/src/lib/provider-adapters.ts` (sceneaxi#180) —
+  two files and no more, and no route, page, or component may name either package.
+  Nothing widens past that
   — kernel, orchestrator, authoring-core, profiles, and Kids stay denied to every site,
   and the two catalogs keep `site-kit` only, reading identity through the same site-kit
   ports rather than a second auth stack. `tests/boundary/injected-site-violations.test.ts`

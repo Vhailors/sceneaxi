@@ -209,18 +209,27 @@ ADR 0021 keeps the provider clients — Better Auth, the Neon client, the Stripe
 | Capability | State | Why |
 |---|---|---|
 | Credit-pack list on `/pricing` | **live** | read from the committed contract fixture's bundled module (`packages/schemas/src/credit-packs.data.ts`, held in lockstep by `pnpm check:contracts`); needs no provider and no traced file |
-| The **Buy** control on `/pricing` | live when the TEST Stripe handle is configured | the adapter persists the intent before creating a card-only hosted checkout |
+| The **Buy** control on `/pricing` | posts to a real checkout once the TEST Stripe handle is configured, but only for a signed-in buyer | the adapter persists the intent before creating a card-only hosted checkout; with no session the POST refuses `IDENTITY_SESSION_ABSENT`, so until [#185](https://github.com/Vhailors/sceneaxi/issues/185) lands the control is reachable and every click refuses |
 | Admin identity (`SCENEAXI_ADMIN_EMAIL`) | **live** | resolved by `@sceneaxi/auth` from the environment |
 | Checkout intent, starter grant, webhook verification | **live as behaviour** | implemented in-repo and gate-tested |
-| Session verification on `/account`, `/editor` | live when Better Auth + Neon are configured | the provider adapter provisions the SceneAxi user and credit account idempotently at authentication |
-| Credit balance | live when Neon has a provisioned account | the balance is derived from the append-only ledger through `createCreditStore` |
+| Session verification on `/account`, `/editor` | adapter live when Better Auth + Neon are configured; **no session can exist yet** | `verifySession` is wired, and authentication provisions the SceneAxi user and credit account idempotently — but nothing calls `identityPort.signIn`, so no `sessions` row is ever written and both surfaces refuse `IDENTITY_SESSION_ABSENT`. The sign-in entry point is [#185](https://github.com/Vhailors/sceneaxi/issues/185) |
+| Credit balance | adapter live; unreachable until a session exists | the balance is derived from the append-only ledger through `createCreditStore`, and the once-per-user 100-credit starter grant runs on the first authenticated read |
 | Hosted checkout redirect | live when the TEST Stripe handle is configured | the adapter uses the committed intent and TEST-only Stripe API call |
-| A signed-out visitor | refuses `IDENTITY_SESSION_ABSENT` | not a failure, and shown as "you are not signed in" |
+| A signed-out visitor | refuses `IDENTITY_SESSION_ABSENT` | not a failure, and shown as "you are not signed in" — today this is *every* visitor |
 
 `umbrellaPlaneHandles()` in `identity-plane.ts` is the **single** place those handles
 arrive. It constructs the site-tier adapters when their provider names and clients are
 available; an absent or malformed provider remains absent, so each plane refuses by name
 rather than inventing a session, account, balance, or checkout.
+
+Read the table as two separate facts. The provider adapters are wired and gate-tested, so
+configuring Better Auth, Neon, and the Stripe TEST key genuinely activates them. It does
+**not** produce a signed-in browser: the umbrella session credential is
+`<sessionId>.<token>` matched against a `sessions` row that only `putSession` writes, and
+`putSession` is reached only from `identityPort.signIn`, which this site exposes over no
+route. That HTTP/UI layer is [#185](https://github.com/Vhailors/sceneaxi/issues/185), not
+this tier — so an operator who completes every step below has a correctly configured
+deployment with zero provisioned users.
 
 ### Remaining activation
 
@@ -318,8 +327,18 @@ rather than inventing a session, account, balance, or checkout.
    idempotency semantics this step deliberately does not add, so the boundary is a scope
    decision rather than an omission — enabling such a method in the Stripe dashboard would
    take payments this endpoint cannot settle.
-7. Remove `SCENEAXI_SITE_EDITOR_PREVIEW` from the umbrella project, since entitlement can
-   now be resolved for real.
+7. **Not this tier, and the step that actually opens the deployment to a member:** mount
+   Better Auth's own handler and a sign-in surface that calls `identityPort.signIn` and
+   sets the umbrella session cookie. Nothing in this repository does either — the site
+   exposes `/api/checkout` and `/api/stripe/webhook` and no more, and
+   `createAuthIdentityAdapter` deliberately exposes only `verifySession` — so until it
+   lands there is no path that writes a `sessions` row, no provisioned user, no starter
+   grant, and no signed-in `/account` or `/editor`. That HTTP/UI layer is
+   [sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185); the provider wiring it
+   builds on is the work above.
+8. Remove `SCENEAXI_SITE_EDITOR_PREVIEW` from the umbrella project **only after step 7**.
+   Entitlement can be resolved for real once a member can hold a session; dropping the
+   preview flag before that turns `/editor` into a refusal wall for every visitor.
 
 ### How the seam holds
 

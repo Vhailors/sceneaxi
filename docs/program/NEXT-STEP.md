@@ -261,7 +261,7 @@ described. No in-tree document owns those observations, and no gate produces the
 
 | Surface | Production URL | Honest limit |
 |---|---|---|
-| Umbrella | <https://sceneaxi-umbrella.vercel.app> | Public/product routes and the live hero are served. The Wave 4 site-tier adapters now construct the Better Auth/Neon/Stripe TEST handles when configured, provision one credit account per authenticated user, and keep account/balance/checkout/grant paths fail-closed when deployment providers or captain-held secrets are absent |
+| Umbrella | <https://sceneaxi-umbrella.vercel.app> | Public/product routes and the live hero are served. The Wave 4 site-tier adapters now construct the Better Auth/Neon/Stripe TEST handles when configured, provision one credit account per authenticated user, and keep account/balance/checkout/grant paths fail-closed when deployment providers or captain-held secrets are absent. No browser can sign in yet: the site exposes no route reaching `identityPort.signIn`, so every visitor is signed out and that HTTP/UI layer is [sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185) |
 | Game-asset catalog | <https://sceneaxi-catalog-game.vercel.app> | Browse/detail is served as an evaluation-only catalog. Buying remains inactive; the storefront collects no payment details |
 
 [`websites-deploy.md`](../websites-deploy.md) owns the topology, environment names,

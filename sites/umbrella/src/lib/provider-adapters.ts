@@ -402,19 +402,23 @@ export function createNeonIdentityStore(database: NeonDatabase): NeonIdentitySto
         throw new Error("identity provider returned an empty user identity");
       }
       const accountId = accountIdFor(userId);
+      // The identity provider owns the address and its verification state, so both
+      // columns are reconciled on every authentication rather than frozen at the
+      // first one. `disabled` and `created_at` are deployment-owned and stay
+      // untouched, and the credit account is still created at most once — its own
+      // conflict target is `user_id`, and `DO UPDATE` makes `ensured_user` return
+      // exactly one row on both the insert and the conflict path.
       await database.query(
         `WITH ensured_user AS (
            INSERT INTO users (${USER_COLUMNS})
            VALUES ($1, $2, $3, false, $4)
-           ON CONFLICT (user_id) DO NOTHING
+           ON CONFLICT (user_id) DO UPDATE
+             SET email = EXCLUDED.email,
+                 email_verified = EXCLUDED.email_verified
            RETURNING user_id
-         ), available_user AS (
-           SELECT user_id FROM ensured_user
-           UNION ALL
-           SELECT user_id FROM users WHERE user_id = $1
          )
          INSERT INTO credit_accounts (account_id, user_id, created_at)
-         SELECT $5, user_id, $4 FROM available_user
+         SELECT $5, user_id, $4 FROM ensured_user
          ON CONFLICT (user_id) DO NOTHING`,
         [userId, email, authentication.user.emailVerified, new Date(now).toISOString(), accountId],
       );
@@ -507,6 +511,19 @@ export function createStripeClient(
   return new (constructor as new (key: string) => StripeClientLike)(secretKey);
 }
 
+/**
+ * Identity- and price-equality between a persisted intent and the one a caller
+ * just built for the same idempotency key.
+ *
+ * `createdAt` is excluded deliberately. `intentId` is derived from the
+ * idempotency key alone, while `createdAt` is stamped from the clock at build
+ * time, so a legitimate replay of one rendered checkout — a double-submitted
+ * form, a resubmit after a failed provider call — carries the same identity and
+ * the same price with a later timestamp. Comparing it would turn exactly the
+ * retry the stable key exists to absorb into a hard persistence failure. The
+ * database agrees: migration 0003 makes `credits`, `unit_amount`, `currency`,
+ * and `stripe_price_id` immutable and leaves `created_at` operational.
+ */
 function sameIntent(left: CheckoutIntent, right: CheckoutIntent): boolean {
   return (
     left.schemaVersion === right.schemaVersion &&
@@ -522,8 +539,7 @@ function sameIntent(left: CheckoutIntent, right: CheckoutIntent): boolean {
     left.mode === right.mode &&
     left.successUrl === right.successUrl &&
     left.cancelUrl === right.cancelUrl &&
-    left.idempotencyKey === right.idempotencyKey &&
-    left.createdAt === right.createdAt
+    left.idempotencyKey === right.idempotencyKey
   );
 }
 

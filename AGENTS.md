@@ -128,12 +128,18 @@ unrestricted) is ADR 0020 and does not widen ADR 0003's general-E2 bound. Identi
 credits, and billing stay owned by `sceneaxi-auth-credits-v1`; `site-kit` only declares
 fail-closed ports and `sites/umbrella/src/lib/identity-plane.ts` is the single plug point.
 That plug point is now **wired** (sceneaxi#131): the umbrella alone may depend on
-`@sceneaxi/auth` + `@sceneaxi/billing`, and only from that file, which builds the site-kit
-adapters over them and maps their named refusals onto the site refusal registry — it
-implements no identity, no ledger, and no signature check. Provider clients (Better Auth,
+`@sceneaxi/auth` + `@sceneaxi/billing`, and only from that file plus the deployment
+adapters it assembles in `src/lib/provider-adapters.ts` (sceneaxi#180) — two files and no
+more, never a route, page, or component. Between them they build the site-kit
+adapters over those packages and map their named refusals onto the site refusal registry —
+they implement no identity, no ledger, and no signature check. Provider clients (Better Auth,
 Neon, Stripe API) stay outside the repo per ADR 0021 and arrive through the one
 `umbrellaPlaneHandles()` function; while they are absent every dependent surface refuses
-by name and `IDENTITY_SESSION_ABSENT` means signed-out, not broken. Catalogs read identity
+by name and `IDENTITY_SESSION_ABSENT` means signed-out, not broken. Those adapters make the
+provider authoritative for a user's address and verification state on every
+authentication, and treat a repeated idempotency key as an intent replay rather than a
+conflict; the sign-in HTTP entry point that would let a browser reach any of it is
+sceneaxi#185, not this tier. Catalogs read identity
 through the same site-kit port with no second auth stack — the storefront plane is
 `packages/site-kit/src/catalog-identity.ts`, one implementation both catalogs re-export —
 and the matrix denies them both identity packages. Two rules the sites tier cannot bend:

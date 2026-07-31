@@ -169,9 +169,12 @@ tracing. `provider-adapters.ts` maps deployment-owned Better Auth, Neon, and Str
 clients onto the existing `@sceneaxi/auth` and `@sceneaxi/billing` seams. Handles arrive
 through `umbrellaPlaneHandles()`; absent configuration still refuses with named reasons
 rather than showing an invented session, account, balance, or checkout. Account
-provisioning is an idempotent user-plus-credit-account insert at authentication, never a
-payment-event side effect. `docs/websites-deploy.md` owns the env names and activation
-procedure.
+provisioning is an idempotent user-plus-credit-account insert at authentication, which
+reconciles the provider-owned address and verification state each time, never a
+payment-event side effect. This site exposes **no sign-in route**, so nothing reaches
+`identityPort.signIn` and no session can be issued here yet — that HTTP/UI layer is
+[sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185).
+`docs/websites-deploy.md` owns the env names and activation procedure.
 
 `SCENEAXI_SITE_EDITOR_PREVIEW=1` grants a banner-marked editor preview so the
 Minimum E2 surface is demonstrable before then. Absent by default; server-side only.
