@@ -149,7 +149,10 @@ describe("desktop tier — injected violations", () => {
   });
 
   it("desktop check fails on committed secret-shaped material", () => {
-    writeTo(fx, "desktop/linux/notes.txt", "sk_live_abcdefghijklmnop\n");
+    // The planted value must trip the desktop checker's 8+ webhook-secret pattern
+    // while staying invisible to the repo-wide scan, whose whsec rule starts at 16
+    // characters — a longer body would fail tests/contracts/no-committed-secrets.
+    writeTo(fx, "desktop/linux/notes.txt", "whsec_abcdefgh\n");
     const res = runCheck(fx, "check-desktop.mjs");
     expect(res.status).toBe(1);
     expect(res.stderr).toContain("contains secret-shaped material");
