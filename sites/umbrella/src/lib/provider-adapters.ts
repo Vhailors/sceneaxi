@@ -157,13 +157,21 @@ function requiredDateTime(row: SqlRow, key: string): string {
   return date.toISOString();
 }
 
+/**
+ * Kids is refused on this path independently of `@sceneaxi/auth`.
+ *
+ * The `sessions` table's own CHECK constraint excludes `'kids'` for the same
+ * reason, so a Kids surface can neither be written by this store nor mapped out
+ * of a row it should never have held.
+ */
 function identitySurface(value: unknown): StoredSession["surface"] {
   switch (value) {
     case "web-shell":
     case "desktop-shell":
     case "site":
-    case "kids":
       return value;
+    case "kids":
+      throw new Error("umbrella identity provider denies the Kids surface");
     default:
       throw new Error("provider row contains an unknown identity surface");
   }
@@ -350,7 +358,7 @@ export function createNeonIdentityStore(database: NeonDatabase): NeonIdentitySto
         [
           session.sessionId,
           session.userId,
-          session.surface,
+          identitySurface(session.surface),
           session.issuedAt,
           session.expiresAt,
           session.tokenDigest,
@@ -374,7 +382,7 @@ export function createNeonIdentityStore(database: NeonDatabase): NeonIdentitySto
         [
           session.sessionId,
           session.userId,
-          session.surface,
+          identitySurface(session.surface),
           session.issuedAt,
           session.expiresAt,
           session.tokenDigest,
@@ -534,11 +542,36 @@ function intentFromRow(row: SqlRow): CheckoutIntent {
 }
 
 function sameEntry(left: StoredEntry | undefined, right: StoredEntry | undefined): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
+  if (left === undefined || right === undefined) return left === right;
+  return (
+    left.schemaVersion === right.schemaVersion &&
+    left.kind === right.kind &&
+    left.entryId === right.entryId &&
+    left.accountId === right.accountId &&
+    left.sequence === right.sequence &&
+    left.movement === right.movement &&
+    left.delta === right.delta &&
+    left.balanceAfter === right.balanceAfter &&
+    left.reason === right.reason &&
+    left.idempotencyKey === right.idempotencyKey &&
+    left.occurredAt === right.occurredAt
+  );
 }
 
 function sameShare(left: StoredShare, right: StoredShare): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
+  return (
+    left.schemaVersion === right.schemaVersion &&
+    left.kind === right.kind &&
+    left.saleId === right.saleId &&
+    left.listingId === right.listingId &&
+    left.buyerUserId === right.buyerUserId &&
+    left.creatorUserId === right.creatorUserId &&
+    left.grossCredits === right.grossCredits &&
+    left.creatorCredits === right.creatorCredits &&
+    left.platformCredits === right.platformCredits &&
+    left.basisPoints === right.basisPoints &&
+    left.occurredAt === right.occurredAt
+  );
 }
 
 function statementForEntry(entry: StoredEntry): SqlStatement {
@@ -942,14 +975,32 @@ export type DeploymentProviderOverrides = Readonly<{
   readonly fetch?: ProviderFetch | undefined;
 }>;
 
-/** Resolve a remote auth origin without turning malformed config into a provider. */
+/**
+ * Loopback hosts, matched as whole hostnames.
+ *
+ * `URL.hostname` renders an IPv6 literal with its brackets, so both spellings
+ * are listed rather than stripped.
+ */
+const LOOPBACK_AUTH_HOSTS: ReadonlySet<string> = new Set([
+  "localhost",
+  "127.0.0.1",
+  "[::1]",
+]);
+
+/**
+ * Resolve a remote auth origin without turning malformed config into a provider.
+ *
+ * Plaintext HTTP is accepted only for an exact loopback host: this client POSTs a
+ * member's email and password to whatever origin resolves here, so a prefix match
+ * would let `http://localhost.example` — a real remote host — collect them.
+ */
 export function resolveBetterAuthOrigin(value: string | undefined): string | undefined {
   if (value === undefined || value.trim().length === 0) return undefined;
   try {
-    const origin = new URL(value).origin;
-    return origin.startsWith("https://") || origin.startsWith("http://localhost")
-      ? origin
-      : undefined;
+    const url = new URL(value);
+    if (url.protocol === "https:") return url.origin;
+    if (url.protocol !== "http:") return undefined;
+    return LOOPBACK_AUTH_HOSTS.has(url.hostname) ? url.origin : undefined;
   } catch {
     return undefined;
   }

@@ -96,7 +96,11 @@ database `neondb`). `DATABASE_URL` is set as an **encrypted** environment variab
 three Vercel projects and appears in no committed file. The umbrella deployment tier
 reads it only to construct the `NeonDatabase` adapter; the root gate never reads it.
 `BETTER_AUTH_ORIGIN` names the provider endpoint for sign-in, while Better Auth's own
-credentials and account tables remain provider-owned.
+credentials and account tables remain provider-owned. `resolveBetterAuthOrigin` accepts an
+`https` origin, or plaintext `http` only for an exact loopback host (`localhost`,
+`127.0.0.1`, `[::1]`) — a look-alike such as `http://localhost.example` resolves to no
+provider at all, because the sign-in client posts a member's email and password there.
+Anything else leaves `identityPort` absent and the surface refuses by name.
 
 ### Stripe
 

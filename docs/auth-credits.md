@@ -1108,6 +1108,9 @@ The structural points that hold whatever else is added:
   no assistant turn — in any mode, metered or not — can be attempted there at all.
 - The `sessions` table's surface check constraint omits `'kids'` entirely, so the row
   cannot exist.
+- The umbrella's Neon session mapping (`provider-adapters.ts`) carries that constraint's
+  deny in code, on both halves: it refuses to write a `kids` session and refuses to build
+  one out of a row, rather than handing a Kids surface up to `@sceneaxi/auth` to reject.
 
 Additionally, nothing depends on or imports `@sceneaxi/profile-kids`, enforced independently
 of allow lists by `pnpm check:boundaries`.

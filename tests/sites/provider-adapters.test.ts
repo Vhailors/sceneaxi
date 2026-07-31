@@ -9,13 +9,18 @@ import {
 import {
   loadLedgerState,
   meterCredits,
+  saleEntryKeys,
   signStripeWebhookPayload,
+  type CreditsSaleSettlement,
 } from "@sceneaxi/billing";
 import {
   applyCreditPackWebhook,
   createDeploymentPlaneHandles,
+  createNeonCreditStore,
+  createNeonIdentityStore,
   createStripeCheckoutEvidenceAdapter,
   createStripeCheckoutSessionAdapter,
+  resolveBetterAuthOrigin,
   type NeonDatabase,
   type SqlRow,
   type StripeClientLike,
@@ -48,6 +53,20 @@ function rowForEntry(values: ReadonlyArray<unknown>): SqlRow {
   };
 }
 
+function rowForShare(values: ReadonlyArray<unknown>): SqlRow {
+  return {
+    sale_id: text(values[0]),
+    listing_id: text(values[1]),
+    buyer_user_id: text(values[2]),
+    creator_user_id: text(values[3]),
+    gross_credits: values[4] ?? 0,
+    creator_credits: values[5] ?? 0,
+    platform_credits: values[6] ?? 0,
+    basis_points: values[7] ?? 0,
+    occurred_at: values[8] ?? "",
+  };
+}
+
 function createDatabase(withAccount = true) {
   const calls: string[] = [];
   const users: SqlRow[] = [];
@@ -55,6 +74,7 @@ function createDatabase(withAccount = true) {
   const sessions: SqlRow[] = [];
   const entries: SqlRow[] = [];
   const intents: SqlRow[] = [];
+  const shares: SqlRow[] = [];
 
   const database: NeonDatabase = {
     async query(query, values = []) {
@@ -138,6 +158,10 @@ function createDatabase(withAccount = true) {
         entries.push(row);
         return query.includes("RETURNING") ? [row] : [];
       }
+      if (query.includes("FROM creator_share_records WHERE sale_id")) {
+        const found = shares.find((row) => row.sale_id === values[0]);
+        return found === undefined ? [] : [found];
+      }
       if (query.startsWith("SELECT intent_id")) {
         const found = intents.find((row) => row.intent_id === values[0]);
         return found === undefined ? [] : [found];
@@ -164,19 +188,38 @@ function createDatabase(withAccount = true) {
       }
       throw new Error(`unhandled fake SQL: ${query}`);
     },
+    // Staged then committed together, so a statement rejected part-way through
+    // leaves the fake ledger exactly as Postgres would leave the real one.
     async transaction(statements) {
+      const stagedEntries: SqlRow[] = [];
+      const stagedShares: SqlRow[] = [];
       for (const statement of statements) {
-        if (!statement.text.includes("credit_ledger_entries")) continue;
-        const existing = entries.find(
-          (row) => row.idempotency_key === text(statement.values[7]),
-        );
-        if (existing === undefined) entries.push(rowForEntry(statement.values));
+        calls.push(statement.text);
+        if (statement.text.includes("credit_ledger_entries")) {
+          const key = text(statement.values[7]);
+          if (entries.some((row) => row.idempotency_key === key)) {
+            throw new Error(`duplicate ledger idempotency key ${key}`);
+          }
+          stagedEntries.push(rowForEntry(statement.values));
+          continue;
+        }
+        if (statement.text.includes("creator_share_records")) {
+          const saleId = text(statement.values[0]);
+          if (shares.some((row) => row.sale_id === saleId)) {
+            throw new Error(`duplicate sale ${saleId}`);
+          }
+          stagedShares.push(rowForShare(statement.values));
+          continue;
+        }
+        throw new Error(`unhandled fake transaction statement: ${statement.text}`);
       }
-      return [];
+      entries.push(...stagedEntries);
+      shares.push(...stagedShares);
+      return statements.map(() => []);
     },
   };
 
-  return { database, calls, users, accounts, entries, intents };
+  return { database, calls, users, accounts, sessions, entries, intents, shares };
 }
 
 const authProvider: BetterAuthInstanceLike = {
@@ -253,6 +296,7 @@ describe("umbrella deployment provider adapters", () => {
       ],
     });
     const admin = resolveAdminIdentity({ SCENEAXI_ADMIN_EMAIL: "member@example.com" });
+    expect(admin.ok).toBe(true);
     if (!admin.ok || store === undefined) return;
     const port = createIdentityPort({
       store: identityStore,
@@ -290,9 +334,11 @@ describe("umbrella deployment provider adapters", () => {
       clock: () => NOW,
     });
     const store = handles.creditStore;
+    expect(store).toBeDefined();
     if (store === undefined) return;
 
     const account = await store.findAccountByUserId("member-1");
+    expect(account).toBeDefined();
     if (account === undefined) return;
     const initial = loadLedgerState(account, await store.listEntries(account.accountId));
     expect(initial.ok).toBe(true);
@@ -343,6 +389,7 @@ describe("umbrella deployment provider adapters", () => {
       clock: () => NOW,
     });
     const credits = plane.creditStore;
+    expect(credits).toBeDefined();
     if (credits === undefined) return;
     const withStarter = await credits.appendOrReplayEntry({
       schemaVersion: 1,
@@ -459,6 +506,9 @@ describe("umbrella deployment provider adapters", () => {
     const checkout = handles.checkoutSessions;
     const store = handles.creditStore;
     const evidence = handles.checkoutEvidence;
+    expect(checkout).toBeDefined();
+    expect(store).toBeDefined();
+    expect(evidence).toBeDefined();
     if (checkout === undefined || store === undefined || evidence === undefined) return;
     const intent = {
       schemaVersion: 1 as const,
@@ -562,5 +612,199 @@ describe("umbrella deployment provider adapters", () => {
       sessionId: "cs_other",
       amountTotal: 500,
     });
+  });
+
+  it("refuses a Kids surface on both halves of the session row path", async () => {
+    const fixture = createDatabase();
+    const store = createNeonIdentityStore(fixture.database);
+    fixture.sessions.push({
+      session_id: "session-kids",
+      user_id: "member-1",
+      surface: "kids",
+      issued_at: iso(-1_000),
+      expires_at: iso(3_600_000),
+      token_digest: digestSessionToken("token-kids"),
+    });
+
+    await expect(store.findSession("session-kids")).rejects.toThrow(/Kids surface/);
+    await expect(
+      store.putSession({
+        schemaVersion: 1,
+        kind: "sceneaxi.session",
+        sessionId: "session-kids-2",
+        userId: "member-1",
+        surface: "kids",
+        issuedAt: iso(-1_000),
+        expiresAt: iso(3_600_000),
+        tokenDigest: digestSessionToken("token-kids-2"),
+      }),
+    ).rejects.toThrow(/Kids surface/);
+    expect(fixture.sessions).toHaveLength(1);
+  });
+
+  it("accepts a remote auth origin only over https or an exact loopback host", () => {
+    expect(resolveBetterAuthOrigin("https://auth.sceneaxi.test")).toBe(
+      "https://auth.sceneaxi.test",
+    );
+    expect(resolveBetterAuthOrigin("http://localhost:3000/api")).toBe(
+      "http://localhost:3000",
+    );
+    expect(resolveBetterAuthOrigin("http://127.0.0.1:3000")).toBe("http://127.0.0.1:3000");
+    expect(resolveBetterAuthOrigin("http://[::1]:3000")).toBe("http://[::1]:3000");
+    // A prefix match would have handed a member's password to these hosts.
+    expect(resolveBetterAuthOrigin("http://localhost.attacker.example")).toBeUndefined();
+    expect(resolveBetterAuthOrigin("http://localhostfoo:3000")).toBeUndefined();
+    expect(resolveBetterAuthOrigin("http://auth.sceneaxi.test")).toBeUndefined();
+    expect(resolveBetterAuthOrigin("ftp://localhost")).toBeUndefined();
+    expect(resolveBetterAuthOrigin("not-a-url")).toBeUndefined();
+    expect(resolveBetterAuthOrigin("   ")).toBeUndefined();
+    expect(resolveBetterAuthOrigin(undefined)).toBeUndefined();
+  });
+});
+
+const SALE_ID = "sale-fixture-1";
+const CREATOR_ACCOUNT = "acct_creator_1";
+
+function saleSettlement(
+  overrides: {
+    readonly creatorAccountId?: string;
+    readonly shareOccurredAt?: string;
+  } = {},
+): CreditsSaleSettlement {
+  const keys = saleEntryKeys(SALE_ID);
+  return {
+    buyerEntry: {
+      schemaVersion: 1,
+      kind: "sceneaxi.credit-ledger-entry",
+      entryId: "entry-sale-buyer",
+      accountId: "acct_member_1",
+      sequence: 1,
+      movement: "debit",
+      delta: -100,
+      balanceAfter: 0,
+      reason: "catalog listing purchase",
+      idempotencyKey: keys.buyer,
+      occurredAt: iso(0),
+    },
+    creatorEntry: {
+      schemaVersion: 1,
+      kind: "sceneaxi.credit-ledger-entry",
+      entryId: "entry-sale-creator",
+      accountId: overrides.creatorAccountId ?? CREATOR_ACCOUNT,
+      sequence: 1,
+      movement: "grant",
+      delta: 50,
+      balanceAfter: 50,
+      reason: "creator revenue share",
+      idempotencyKey: keys.creator,
+      occurredAt: iso(0),
+    },
+    share: {
+      schemaVersion: 1,
+      kind: "sceneaxi.creator-share-record",
+      saleId: SALE_ID,
+      listingId: "fixture-listing",
+      buyerUserId: "member-1",
+      creatorUserId: "creator-1",
+      grossCredits: 100,
+      creatorCredits: 50,
+      platformCredits: 50,
+      basisPoints: 5000,
+      occurredAt: overrides.shareOccurredAt ?? iso(0),
+    },
+  };
+}
+
+function creditsFixture() {
+  const fixture = createDatabase();
+  fixture.accounts.push({
+    account_id: CREATOR_ACCOUNT,
+    user_id: "creator-1",
+    created_at: iso(-86_400_000),
+  });
+  return fixture;
+}
+
+describe("umbrella Neon credit settlement", () => {
+  it("commits both sale legs and the share record through one transaction", async () => {
+    const fixture = creditsFixture();
+    const store = createNeonCreditStore(fixture.database);
+
+    await expect(store.settleCreditsSale(saleSettlement())).resolves.toEqual({
+      replayed: false,
+    });
+    expect(fixture.entries).toHaveLength(2);
+    expect(fixture.shares).toHaveLength(1);
+    expect(fixture.shares[0]).toMatchObject({
+      sale_id: SALE_ID,
+      buyer_user_id: "member-1",
+      creator_user_id: "creator-1",
+      gross_credits: 100,
+      creator_credits: 50,
+      platform_credits: 50,
+      basis_points: 5000,
+    });
+  });
+
+  it("replays an identical settlement from the committed rows without appending", async () => {
+    const fixture = creditsFixture();
+    const store = createNeonCreditStore(fixture.database);
+
+    await store.settleCreditsSale(saleSettlement());
+    await expect(store.settleCreditsSale(saleSettlement())).resolves.toEqual({
+      replayed: true,
+    });
+    expect(fixture.entries).toHaveLength(2);
+    expect(fixture.shares).toHaveLength(1);
+  });
+
+  it("refuses a second settlement of the same sale carrying different evidence", async () => {
+    const fixture = creditsFixture();
+    const store = createNeonCreditStore(fixture.database);
+
+    await store.settleCreditsSale(saleSettlement());
+    await expect(
+      store.settleCreditsSale(saleSettlement({ shareOccurredAt: iso(1_000) })),
+    ).rejects.toThrow(/different settlement evidence/);
+    expect(fixture.entries).toHaveLength(2);
+    expect(fixture.shares).toHaveLength(1);
+  });
+
+  it("refuses a leg whose account belongs to the other settlement party", async () => {
+    const fixture = creditsFixture();
+    const store = createNeonCreditStore(fixture.database);
+
+    await expect(
+      store.settleCreditsSale(saleSettlement({ creatorAccountId: "acct_member_1" })),
+    ).rejects.toThrow(/does not belong to its settlement party/);
+    expect(fixture.entries).toHaveLength(0);
+    expect(fixture.shares).toHaveLength(0);
+  });
+
+  it("refuses to settle a sale when the provider offers no transaction", async () => {
+    const fixture = creditsFixture();
+    const withoutTransaction: NeonDatabase = {
+      query: (text, values) => fixture.database.query(text, values),
+    };
+    const store = createNeonCreditStore(withoutTransaction);
+
+    await expect(store.settleCreditsSale(saleSettlement())).rejects.toThrow(
+      /requires a Neon transaction/,
+    );
+    expect(fixture.entries).toHaveLength(0);
+    expect(fixture.shares).toHaveLength(0);
+  });
+
+  it("keeps a sale leg out of the plain append path", () => {
+    const fixture = creditsFixture();
+    const store = createNeonCreditStore(fixture.database);
+    const { buyerEntry } = saleSettlement();
+
+    expect(buyerEntry).toBeDefined();
+    if (buyerEntry === undefined) return;
+    // The boundary guard runs synchronously, exactly as a constraint rejects
+    // before the write, so this is a throw and never a rejected promise.
+    expect(() => store.appendEntry(buyerEntry)).toThrow(/requires atomic settlement/);
+    expect(fixture.entries).toHaveLength(0);
   });
 });
