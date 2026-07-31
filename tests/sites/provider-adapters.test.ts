@@ -32,6 +32,19 @@ import {
 const NOW = Date.parse("2026-07-26T12:00:00.000Z");
 const iso = (offset: number) => new Date(NOW + offset).toISOString();
 
+/**
+ * Placeholders for the two provider constructors, deliberately shaped so they can
+ * never read as a credential: the repo-wide scan in
+ * `tests/contracts/no-committed-secrets.test.ts` matches a Stripe key body of eight
+ * or more alphanumerics and any Postgres connection URL, and this file earns no
+ * exemption from it. The adapters only inspect the `sk_test_` prefix and hand the
+ * connection string straight to an injected fake factory, so the non-alphanumeric
+ * suffix and the non-URL string exercise exactly the same paths.
+ */
+const TEST_MODE_KEY = "sk_test_fixture-key";
+const LIVE_MODE_KEY = "sk_live_fixture-key";
+const FIXTURE_CONNECTION = "neon-fixture-connection";
+
 const accountRow = {
   account_id: "acct_member_1",
   user_id: "member-1",
@@ -692,15 +705,15 @@ describe("umbrella deployment provider adapters", () => {
       { Stripe: FakeStripe },
       { default: { default: FakeStripe } },
     ]) {
-      const client = createStripeClient("sk_test_umbrella", () => loaded);
+      const client = createStripeClient(TEST_MODE_KEY, () => loaded);
       expect(client).toBeInstanceOf(FakeStripe);
-      expect((client as unknown as FakeStripe).key).toBe("sk_test_umbrella");
+      expect((client as unknown as FakeStripe).key).toBe(TEST_MODE_KEY);
     }
 
-    expect(() => createStripeClient("sk_test_umbrella", () => ({}))).toThrow(
+    expect(() => createStripeClient(TEST_MODE_KEY, () => ({}))).toThrow(
       /Stripe provider is unavailable/,
     );
-    expect(() => createStripeClient("sk_live_umbrella", () => FakeStripe)).toThrow(
+    expect(() => createStripeClient(LIVE_MODE_KEY, () => FakeStripe)).toThrow(
       /TEST keys only/,
     );
   });
@@ -713,9 +726,9 @@ describe("umbrella deployment provider adapters", () => {
     const neon = () => sql;
 
     for (const loaded of [{ neon }, { default: { neon } }]) {
-      expect(createNeonDatabase("postgres://umbrella", () => loaded)).toBeDefined();
+      expect(createNeonDatabase(FIXTURE_CONNECTION, () => loaded)).toBeDefined();
     }
-    expect(() => createNeonDatabase("postgres://umbrella", () => ({}))).toThrow(
+    expect(() => createNeonDatabase(FIXTURE_CONNECTION, () => ({}))).toThrow(
       /Neon provider is unavailable/,
     );
   });
