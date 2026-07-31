@@ -11,10 +11,13 @@ own half of this work is `tests/sites/umbrella-visual.test.ts` and
 structure and the claims; nothing here is asserted twice.
 
 `/editor` appears below only as the **site-chrome** route it was for sceneaxi#157 —
-the unentitled refusal under the masthead and footer. sceneaxi#184 rebuilt the
-entitled route as the Engine Desktop shell, which owns the whole viewport and
-collapses the masthead, footer, and skip link for that route alone; its own
-regions, tiers, and browser evidence are recorded in
+a named refusal between the masthead and the footer. sceneaxi#184 rebuilt it as the
+Engine Desktop shell and gave the **whole route** its own window: `editor/layout.tsx`
+is a route layout, so the masthead, footer, and skip link are collapsed on every
+`/editor` render, the three refusal branches included. Every `/editor` figure below is
+therefore the observation at that earlier revision and is
+[pending re-record](#the-editor-figures-predate-the-engine-desktop-shell); the shell's
+own regions, tiers, and browser evidence are recorded in
 [`../../docs/web-editor-shell.md`](../../docs/web-editor-shell.md), not here.
 
 ## Source authority
@@ -87,6 +90,25 @@ been re-typed to guess at the new layout — a predicted figure would be exactly
 invented visual fact this file exists to avoid. Every other route is unaffected: that lane
 changed no other umbrella source file.
 
+### The `/editor` figures predate the Engine Desktop shell
+
+Every `/editor` figure in this document was recorded while that route was an ordinary
+site-chrome page. sceneaxi#184 replaced it with the Engine Desktop shell (owner
+[`../../docs/web-editor-shell.md`](../../docs/web-editor-shell.md)) and added
+`src/app/editor/layout.tsx`, which is a **route** layout: Next renders it for every
+`/editor` render, so its `display: none` on `.masthead`, `body > footer`, and
+`.skip-link` reaches the unentitled, link-refused, and session-refused branches as well
+as the shell. Those branches no longer sit under the site chrome — they carry their own
+"Back to SceneAxi" link instead, and they sit on `.ed-refusal-page` inside a `main` whose
+padding the same layout zeroes.
+
+So the `/editor` rows of the overflow sweep, of both named-state measurement tables, and
+of the Lighthouse table are the observation at that earlier revision of the page, and they
+are **pending re-record**, for the same reason and on the same terms as the `/engine` rows
+above: they were really measured, and predicting what the shell renders instead would be
+inventing the visual facts this file exists to avoid. The shell's own recorded browser
+evidence lives in its owner doc.
+
 ## Observations
 
 ### Layout
@@ -107,7 +129,10 @@ Measured rather than judged by eye — `document.documentElement.scrollWidth` ag
 | `/editor` | 1440/1440 | 834/834 | 390/390 |
 
 The `/engine` row here, and in both measurement tables below, is
-[pending re-record](#the-engine-figures-predate-the-desktop-download-section).
+[pending re-record](#the-engine-figures-predate-the-desktop-download-section); the
+`/editor` row is
+[pending re-record](#the-editor-figures-predate-the-engine-desktop-shell) for its own
+reason.
 
 The same sweep also walked every element in the body and found **none** escaping its
 container except inside a deliberate scroller (`.scroll-x`, `.command`, `.nav`) or the
@@ -181,6 +206,12 @@ column rather than reserving one:
 | `/open` | `88.2031px 1060.8px 0px` | **0px** — the same, behind its own narrower chip |
 | `/` hero, no WebGL | `74.6094px 222.219px 192px` | 192px, the sentence wrapping inside it |
 
+The `/editor` rows in both tables are
+[pending re-record](#the-editor-figures-predate-the-engine-desktop-shell): that route's
+refusal panel is now laid out inside the shell route's collapsed chrome, so the width the
+header divides is not the one measured here. What the repair fixes is unaffected — the
+rule belongs to the shared sheet, and every other route above still exercises it.
+
 `tests/sites/umbrella-visual.test.ts` now fails on the pre-fix sheet — verified by
 reverting the fix and watching it fail. It pins the track shape at both widths, the key's
 bound, and the label's `nowrap`. That assertion is **structural**: nothing in `pnpm gate`
@@ -218,9 +249,11 @@ Lighthouse (navigation mode, desktop emulation) against the production build:
 
 `/`, `/profiles`, `/account`, and `/pricing` were additionally run in **mobile**
 emulation and scored 100 with 0 failed audits there too. Every figure in this table except
-the `/engine` row was re-run against the build at this head, after the state-header repair
-below; the `/engine` row is
-[pending re-record](#the-engine-figures-predate-the-desktop-download-section).
+the `/engine` and `/editor` rows was re-run against the build at this head, after the
+state-header repair below; the `/engine` row is
+[pending re-record](#the-engine-figures-predate-the-desktop-download-section) and the
+`/editor` row is
+[pending re-record](#the-editor-figures-predate-the-engine-desktop-shell).
 
 This extends the carried implementation's five 100s to all eight surfaces. Two real
 regressions were introduced by this revision and found by that audit rather than by eye:
@@ -237,7 +270,10 @@ regressions were introduced by this revision and found by that audit rather than
 
 Beyond the audit, and asserted in the test files so they cannot regress silently:
 
-- A skip link to the `#main` landmark, visible on focus.
+- A skip link to the `#main` landmark, visible on focus — on every route the site chrome
+  serves. `/editor` is the exception: its route layout removes the link with the masthead
+  and footer, because the shell owns the whole window and there are no site landmarks
+  above `main` to skip past.
 - `aria-current="page"` on the active nav item — the same state the visual marker uses.
 - Every nav landmark is labelled (`Primary`, `Documents`, `On this page`).
 - A visible `:focus-visible` ring; no rule anywhere removes an outline.
