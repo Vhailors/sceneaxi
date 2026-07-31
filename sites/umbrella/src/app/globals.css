@@ -3035,10 +3035,6 @@ footer {
   font-size: 12px;
 }
 
-.ed-tree li.is-selected {
-  background: var(--bg-control);
-}
-
 .ed-tree li.is-selected::before {
   content: "";
   position: absolute;
@@ -3922,9 +3918,11 @@ a.ed-tree-label:hover {
 
 /* ------------------------------------------------- shared window tiers -- */
 
-/* compact (below 1440×720): the assistant undocks to an overlay drawer. */
+/* compact (below 1440×720): every seated assistant state — `open` and the Kids
+   `denied` lock alike — undocks to an overlay drawer, so the seat never
+   auto-places itself into the narrow tier's grid. */
 @media (max-width: 1439px), (max-height: 719px) {
-  .ed-assistant[data-assistant="open"] {
+  .ed-assistant:not([data-assistant="closed"]) {
     position: absolute;
     top: 0;
     right: 0;

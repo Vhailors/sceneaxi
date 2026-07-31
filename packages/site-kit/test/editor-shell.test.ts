@@ -30,6 +30,7 @@ import {
   digestSceneArtifact,
   editorShellDockTabsFor,
 } from "@sceneaxi/schemas";
+import { MODEL_PROVIDER_REFUSE_REASONS } from "@sceneaxi/authoring-core";
 
 function shellInput(params: SearchParams = {}): EditorShellInput {
   const state = readEditorState(params);
@@ -126,6 +127,12 @@ describe("control accounting", () => {
     const shell = view();
     expect(shell.assistant.modes.map((control) => control.id)).toContain(
       shell.assistant.defaultModeId,
+    );
+  });
+
+  it("the Kids assistant deny is the port's own reason, not a restatement", () => {
+    expect(view().assistant.kidsDenyCode).toBe(
+      MODEL_PROVIDER_REFUSE_REASONS.kidsThirdPartyDenied,
     );
   });
 

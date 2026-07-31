@@ -1052,8 +1052,20 @@ describe("the Engine Desktop editor shell stays honest (sceneaxi#184)", () => {
     expect(SHELL).toContain("ed-kids-lock");
     // The profile chips are not demoted — a refuse-only state must be exitable.
     expect(SHELL).toContain("a refuse-only state is a state you can");
-    // The assistant seat becomes the deny, and it is not reopenable copy.
-    expect(SHELL).toContain("THIRD_PARTY_LLM_DENIED_BY_DEFAULT");
+    // The assistant seat becomes the deny, and it is not reopenable copy. The
+    // renderer prints the view's own code — the Model Provider Port's reason,
+    // never respelled on the surface.
+    expect(SHELL).toContain("{view.assistant.kidsDenyCode}");
+    expect(SHELL).not.toContain("THIRD_PARTY_LLM_DENIED_BY_DEFAULT");
+  });
+
+  it("seats the Kids assistant deny the same way it seats an open one", () => {
+    // The compact tier lifts the assistant out of flow; below it the narrow
+    // tier makes `.ed-body` a grid whose placements name every other panel, so
+    // a seat that stayed docked would auto-place into an implicit row inside
+    // `.edshell { overflow: hidden }`.
+    expect(CSS).toContain('.ed-assistant:not([data-assistant="closed"]) {');
+    expect(CSS).not.toContain('.ed-assistant[data-assistant="open"] {');
   });
 
   it("refuses below the shared minimum window rather than degrading", () => {

@@ -872,7 +872,7 @@ export function EditorShell({
           </div>
           {kids ? (
             <div className="ed-assistant-lock">
-              <p className="reason mono">THIRD_PARTY_LLM_DENIED_BY_DEFAULT</p>
+              <p className="reason mono">{view.assistant.kidsDenyCode}</p>
               <p>
                 Kids denies third-party model routes by default. Nothing crosses over
                 from Game or Website.

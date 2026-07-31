@@ -54,7 +54,10 @@ import {
   type OpenPathPolicyViewRow,
   type SculptArtifact,
 } from "@sceneaxi/schemas";
-import type { SceneDocument } from "@sceneaxi/authoring-core";
+import {
+  MODEL_PROVIDER_REFUSE_REASONS,
+  type SceneDocument,
+} from "@sceneaxi/authoring-core";
 import { reviewProposal, type ChangeReview } from "./change-review.js";
 import {
   EDITOR_MAX_OBJECTS,
@@ -321,6 +324,11 @@ export type EditorShellView = Readonly<{
   assistant: Readonly<{
     state: "open" | "closed" | "denied";
     modelLabel: string;
+    /**
+     * The refuse-only profile's assistant denial, taken from the Model Provider
+     * Port's own reason table rather than spelled again here or in a renderer.
+     */
+    kidsDenyCode: string;
     toggle: EditorShellControl;
     modes: ReadonlyArray<EditorShellControl>;
     /**
@@ -886,6 +894,7 @@ export function buildEditorShellView(input: EditorShellInput): EditorShellView {
   const assistant = Object.freeze({
     state: "open" as const,
     modelLabel: "no provider configured",
+    kidsDenyCode: MODEL_PROVIDER_REFUSE_REASONS.kidsThirdPartyDenied,
     toggle: mint({ id: "assistant-toggle", label: "Assistant", kind: "view" }),
     modes: Object.freeze(
       EDITOR_SHELL_ASSISTANT_MODE_IDS.map((mode) =>
