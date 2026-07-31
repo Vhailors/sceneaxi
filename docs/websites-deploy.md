@@ -390,8 +390,10 @@ Load-bearing properties, each gate-tested in `tests/sites/identity-plane-wiring.
   inbound payload refuses at any depth, before any adapter or store is touched. `admin`
   comes only from `SCENEAXI_ADMIN_EMAIL`, re-derived by the identity port on every call.
 - **Session provenance stays in `@sceneaxi/auth`.** The sites never mint or validate a
-  session; the umbrella only splits the opaque cookie into the `sessionId` and token the
-  port expects, and the catalogs forward it untouched.
+  session; the umbrella only formats the opaque cookie in both directions — composing
+  `<sessionId>.<token>` from the grant the port issues at sign-in, and splitting it back
+  into the `sessionId` and token the port expects on every later request — and the
+  catalogs forward it untouched.
 - **The starter 100 credits are granted exactly once**, keyed `starter:<userId>` by the
   ledger, so the grant is safe to attempt on every balance read and a concurrent second
   reader cannot double it.
