@@ -936,10 +936,31 @@ describe("applyCheckoutCompletedGrant", () => {
     if (!result.ok) return;
     expect(completion.credits).toBeDefined();
     expect(result.value.state.balance).toBe(completion.credits);
+    expect(result.value.entry?.delta).toBe(completion.credits);
     expect(result.value.replayed).toBe(false);
     expect(result.value.entry?.idempotencyKey).toBe(
       `${STRIPE_EVENT_IDEMPOTENCY_PREFIX}evt_test_01`,
     );
+  });
+
+  it("anchors a signed, session-bound grant to the committed revision", () => {
+    const completion = parsed();
+    const revision = resolveCreditPackRevision(
+      completion.itemId,
+      completion.stripePriceId,
+      completion.unitAmount,
+    );
+    expect(revision.ok).toBe(true);
+    if (!revision.ok) return;
+
+    const result = applyCheckoutCompletedGrant({
+      state: createLedgerState(ACCOUNT),
+      completion,
+      now: NOW,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.entry?.delta).toBe(revision.value.credits);
   });
 
   it("grants nothing on an identical redelivery", () => {
@@ -964,6 +985,34 @@ describe("applyCheckoutCompletedGrant", () => {
     expect(replay.value.state.entries.length).toBe(
       first.value.state.entries.length,
     );
+  });
+
+  it("refuses an unknown archived revision before touching the ledger", () => {
+    const result = applyCheckoutCompletedGrant({
+      state: createLedgerState(ACCOUNT),
+      completion: reparsed({ stripePriceId: "price_test_unknown_revision" }),
+      now: NOW,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(
+      BILLING_REFUSE_REASONS.catalogRevisionUnresolvable,
+    );
+  });
+
+  it("refuses a signed, session-bound inflated intent credit amount", () => {
+    const state = createLedgerState(ACCOUNT);
+    const result = applyCheckoutCompletedGrant({
+      state,
+      completion: reparsed({ credits: 1_000_000 }),
+      now: NOW,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(
+      BILLING_REFUSE_REASONS.catalogRevisionCreditsMismatch,
+    );
+    expect(state).toEqual(createLedgerState(ACCOUNT));
   });
 
   it("refuses a mutated replay of the same event id", () => {
@@ -1025,16 +1074,14 @@ describe("applyCheckoutCompletedGrant", () => {
     expect(first.ok).toBe(true);
     if (!first.ok) return;
 
-    const variants = [
+    const idempotentVariants = [
       reparsed({ intentId: "intent_other" }),
-      reparsed({ unitAmount: completion.unitAmount + 1 }),
       reparsed({ currency: "eur" }),
-      reparsed({ stripePriceId: "price_test_other" }),
       reparsed({}, { created: NOW_SECONDS + 1 }),
       reparsed({}, {}, "cs_test_second"),
       reparsed({}, {}, `cs_live_${"a".repeat(240)}/b+c=d%e`),
     ];
-    for (const variant of variants) {
+    for (const variant of idempotentVariants) {
       expect(variant.eventId).toBe(completion.eventId);
       const replay = applyCheckoutCompletedGrant({
         state: first.value.state,
@@ -1044,6 +1091,23 @@ describe("applyCheckoutCompletedGrant", () => {
       expect(replay.ok).toBe(false);
       if (replay.ok) return;
       expect(replay.reason).toBe(BILLING_REFUSE_REASONS.idempotencyConflict);
+    }
+
+    const unresolvedVariants = [
+      reparsed({ unitAmount: completion.unitAmount + 1 }),
+      reparsed({ stripePriceId: "price_test_other" }),
+    ];
+    for (const variant of unresolvedVariants) {
+      const refused = applyCheckoutCompletedGrant({
+        state: first.value.state,
+        completion: variant,
+        now: NOW,
+      });
+      expect(refused.ok).toBe(false);
+      if (refused.ok) return;
+      expect(refused.reason).toBe(
+        BILLING_REFUSE_REASONS.catalogRevisionUnresolvable,
+      );
     }
   });
 
@@ -1152,6 +1216,33 @@ describe("persistCheckoutCompletedGrant", () => {
       `${STRIPE_EVENT_IDEMPOTENCY_PREFIX}evt_test_01`,
     );
     expect(persisted[0]?.delta).toBe(completion.credits);
+  });
+
+  it("refuses an inflated intent before committing anything", async () => {
+    const store = storeWithAccount();
+    const inflatedIntent: CheckoutSessionIntent = {
+      ...checkoutIntent(),
+      credits: 1_000_000,
+    };
+    const parsedInflated = parseCheckoutCompletedEvent({
+      verified: verified(eventBody({}, inflatedIntent)),
+      intent: inflatedIntent,
+      settlement: settlementFor(inflatedIntent),
+    });
+    expect(parsedInflated.ok).toBe(true);
+    if (!parsedInflated.ok) return;
+    const result = await persistCheckoutCompletedGrant({
+      store,
+      state: createLedgerState(ACCOUNT),
+      completion: parsedInflated.value,
+      now: NOW,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe(
+      BILLING_REFUSE_REASONS.catalogRevisionCreditsMismatch,
+    );
+    expect(store.entryCount(ACCOUNT.accountId)).toBe(0);
   });
 
   it("names a store failure and grants nothing", async () => {

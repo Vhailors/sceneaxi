@@ -288,14 +288,19 @@ your adapter **retrieves separately** for that exact Checkout Session, and refus
 and the session's mode and metadata all match the persisted intent — the immutable price
 snapshot.
 
-The persisted checkout intent is an **issuance authority for `credits`**. Both figures a
-grant depends on arrive through the same deployment-owned `CheckoutEvidencePort`, so what
-separates them is corroboration, not origin: the money figure has to agree across two
-reads, because `parseCheckoutCompletedEvent` compares the retrieved settlement's amount,
-currency, and Stripe price against the persisted intent — and requires its quantity to be
-exactly `1`, which the intent does not carry a field for — while the credit figure is read
-from that row's `intent.credits` alone and has nothing to disagree with. That is
-what makes the adapter obligation exact: write the row exactly as
+The persisted checkout intent is an **input to issuance**, not its authority for
+`credits`. Both figures a grant depends on arrive through the same deployment-owned
+`CheckoutEvidencePort`, so the money figure is corroborated across two reads:
+`parseCheckoutCompletedEvent` compares the retrieved settlement's amount, currency, and
+Stripe price against the persisted intent — and requires its quantity to be exactly `1`,
+which the intent does not carry a field for. At grant time,
+`applyCheckoutCompletedGrant` resolves the persisted intent's exact
+`(itemId, stripePriceId, unitAmount)` tuple through the committed historical archive and
+requires the completion's `credits` to equal that retained revision. The ledger entry uses
+the revision's credits, never a caller- or intent-controlled amount. Unknown tuples refuse
+`BILLING_CATALOG_REVISION_UNRESOLVABLE`; a known tuple with a different credit amount
+refuses `BILLING_CATALOG_REVISION_CREDITS_MISMATCH`, both before any append or commit.
+That is what makes a deployment's adapter obligation exact: write the row exactly as
 `createCheckoutSessionIntent` produced it, and treat its four price-bearing fields —
 `credits`, `unit_amount`, `currency`, `stripe_price_id` — as immutable once written. The
 obligation is field-scoped on purpose, not whole-row: the columns a deployment adds for its
@@ -304,20 +309,16 @@ after creating the session, and this rule must not be re-tightened into whole-ro
 immutability later. The `CheckoutEvidencePort` obligations themselves, retrieving the
 settlement separately for that exact Checkout Session included, stay owned by
 [`websites-deploy.md`](websites-deploy.md#remaining-activation).
-[`packages/billing/src/stripe-webhook.ts`](../packages/billing/src/stripe-webhook.ts) and
-[`packages/billing/test/stripe-checkout.test.ts`](../packages/billing/test/stripe-checkout.test.ts)
-prove the current settlement-to-intent comparison and persisted-credit grant behavior.
+[`packages/billing/src/stripe-webhook.ts`](../packages/billing/src/stripe-webhook.ts),
+[`packages/billing/test/stripe-checkout.test.ts`](../packages/billing/test/stripe-checkout.test.ts),
+and the credit-pack grant-anchor tests prove the settlement comparison, grant-time anchor,
+and persisted-credit commit behavior.
 
-Captain decisions D2 (`intent-credit-anchor`) and D3 (`intent-ddl-immutability`) bear on
-that asymmetry and are decided but unimplemented, and no in-tree document owns either. Read
-their dispositions and prerequisites in their own out-of-tree records,
-`data/sceneaxi-authority-decision-d2-intent-credit-anchor.md` and
-`data/sceneaxi-authority-decision-d3-intent-ddl-immutability.md`, which
-[`docs/program/NEXT-STEP.md`](program/NEXT-STEP.md#captain-authority-decisions-d1d5) only
-restates. D3 is what would enforce the field scope above in the database; no migration in
-`db/migrations` checks it today, so until D3's own migration lands that immutability rests
-entirely on the adapter. This contract statement authorizes neither implementation, and it
-does not restate either disposition — read the records for that.
+Captain decision D2 (`intent-credit-anchor`) is implemented here over the archived/versioned
+catalog landed in #173 / PR #173. D3 (`intent-ddl-immutability`) remains separate and
+unimplemented: it would enforce the field scope above in the database, and no migration in
+`db/migrations` checks it today, so that immutability remains the adapter's obligation until
+D3's own migration lands. Stripe LIVE is still unactivated under ADR 0021.
 
 **Settlement must name the session it settles** (sceneaxi#127). `CheckoutSettlement.sessionId`
 is required and must equal the Checkout Session id in the verified body (`data.object.id`),
@@ -844,8 +845,12 @@ changed together (`tests/contracts/injected-credit-pack-drift.test.ts`).
 `resolveCreditPackRevision(itemId, stripePriceId, unitAmount)` resolves only against that
 bundled committed archive. It accepts lookup keys, never a caller-supplied pack or archive,
 and refuses `BILLING_CATALOG_REVISION_UNRESOLVABLE` when the tuple has no retained row.
-This is the prerequisite for the separately held grant-time intent-credit cross-check; no
-grant path performs that cross-check yet.
+`applyCheckoutCompletedGrant` performs the D2 grant-time check before it calls the ledger:
+a known revision whose credits differ from the completion refuses
+`BILLING_CATALOG_REVISION_CREDITS_MISMATCH`, while a valid current or retained revision
+uses the archive row's credits for the grant. `persistCheckoutCompletedGrant` inherits the
+same refusal before its commit boundary, so unknown or inflated intent values cannot mutate
+the ledger.
 
 The archive shape was chosen over a `createdAt` grace window because persisted intents
 already carry the exact `(itemId, stripePriceId, unitAmount)` anchor. Time alone cannot

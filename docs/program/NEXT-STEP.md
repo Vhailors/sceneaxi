@@ -181,21 +181,21 @@ code-literal-only rule, while the captain instead chose the named
 `SCENEAXI_STRIPE_LIVE_AUTHORIZED` configuration value with an evidence mitigation.
 
 The table below records disposition and sequencing only; **it is not an implementation
-authority**. D1–D3 remain unimplemented and unauthorized.
+authority**. D1 and D3 remain unimplemented and unauthorized; D2 is implemented here.
 
-Note the difference in where these decisions are *owned*. D4 and D5 landed with their
-implementation, so each is now owned by an in-tree document —
-[`auth-credits.md`](../auth-credits.md) for both, plus
-[`websites-deploy.md`](../websites-deploy.md) for D4's webhook path. D1–D3 are recorded
-**only** in their out-of-tree decision records above; no in-tree document owns them yet,
-and this brief does not become their owner. Their in-tree owner lands with their
+Note the difference in where these decisions are *owned*. D2's implementation is now
+owned by [`auth-credits.md`](../auth-credits.md), while D4 and D5 landed with their
+implementation and are owned by that document too, plus
+[`websites-deploy.md`](../websites-deploy.md) for D4's webhook path. D1 and D3 remain
+recorded **only** in their out-of-tree decision records above; no in-tree document owns
+them yet, and this brief does not become their owner. Their in-tree owner lands with their
 implementation. Until then they are decided and unimplemented, and the disposition text
 below is a restatement of those external records rather than a fact this repository holds.
 
 | Decision | Recorded disposition | Status / binding prerequisite |
 |---|---|---|
 | **D1 — `principal-provenance`** | Witness every `Principal` the identity port issues; guards accept only values actually issued by `createIdentityPort`, with a test-only issuance seam | **Decided, unimplemented.** First confirm the deployment re-verifies each request instead of rehydrating a cached principal; then ship the test seam before flipping guards |
-| **D2 — `intent-credit-anchor`** | At grant time, cross-check persisted intent credits against the committed pack catalog by `(itemId, stripePriceId, unitAmount)` | **Decided, unimplemented.** An archived/versioned pack catalog (or the recorded `intent.createdAt` grace window) is a binding prerequisite, or a reprice can leave a paid in-flight checkout permanently ungranted |
+| **D2 — `intent-credit-anchor`** | At grant time, cross-check persisted intent credits against the committed pack catalog by `(itemId, stripePriceId, unitAmount)` | **Implemented in #177.** `applyCheckoutCompletedGrant` resolves the archived tuple before append/commit, refuses unknown or mismatched credit amounts, and grants retained revision credits; D3 remains separate |
 | **D3 — `intent-ddl-immutability`** | Add a forward-only trigger protecting only `credits`, `unit_amount`, `currency`, and `stripe_price_id`; operational columns stay writable | **Decided, unimplemented.** Audit the deployment's own writes first; the repository cannot see them. Migration execution also needs its separate deploy authority |
 | **D4 — `commit-boundary-sequencing`** | Move the umbrella webhook onto `persistCheckoutCompletedGrant()` in the same ship as #128, preserving one credit-grant commit boundary | **Landed in [PR #168](https://github.com/Vhailors/sceneaxi/pull/168).** Atomic persistence for `MoneySplitRecord` was not selected and remains an unauthorized gap before any Connect work |
 | **D5 — `live-mode-authorization-source`** | Permit one named configuration value, `SCENEAXI_STRIPE_LIVE_AUTHORIZED`, with an auditable affirmative; no alias, mode, price, adapter, or production-correlated value may imply authorization | **Landed in [PR #168](https://github.com/Vhailors/sceneaxi/pull/168).** Absent or malformed still refuses `STRIPE_LIVE_MODE_NOT_AUTHORIZED` at intent creation and grant. No shipped call site activates live mode; ADR 0021's separate go-live hold remains |

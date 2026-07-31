@@ -55,6 +55,12 @@ the entry is committed, `CREDIT_STORE_FAILED` and no grant otherwise. It is also
 **only** way a webhook grant commits anywhere — `sites/umbrella` goes through it rather
 than holding a second commit path for the same paid event (captain decision D4).
 
+**Credit-pack grants are anchored to the committed archive.** Before the pure grant can
+append, `applyCheckoutCompletedGrant` resolves the persisted intent tuple through
+`resolveCreditPackRevision`, refuses unknown tuples or mismatched credits, and uses the
+retained revision's credits. The persisted intent is evidence to cross-check, not an
+issuance authority; D3's database immutability decision remains separate.
+
 **Live-mode authorization has exactly one configuration source.**
 `resolveLiveModeAuthorization` reads `SCENEAXI_STRIPE_LIVE_AUTHORIZED` and nothing else —
 not the mode, not the price, not a key prefix, not `NODE_ENV`, because a gate that can

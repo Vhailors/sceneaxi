@@ -178,6 +178,8 @@ const SERVER_SIDE_REASONS: ReadonlySet<string> = Object.freeze(
     BILLING_REFUSE_REASONS.ledgerStateInvalid,
     BILLING_REFUSE_REASONS.ledgerOrderInvalid,
     BILLING_REFUSE_REASONS.entryInvalid,
+    BILLING_REFUSE_REASONS.catalogRevisionUnresolvable,
+    BILLING_REFUSE_REASONS.catalogRevisionCreditsMismatch,
   ]),
 );
 
@@ -286,10 +288,11 @@ const claimsSceneAxiCheckout = (metadata: Record<string, unknown> | undefined): 
  * The two lookup keys a verified checkout body carries: which session to retrieve
  * settlement for, and which persisted intent to bind it to.
  *
- * Nothing else is read from the event. Everything the grant depends on — credits,
- * amount, currency, price — comes from the persisted intent, so an attacker able to
- * influence event metadata still cannot name their own credit amount. These two are
- * only *lookup keys*, and a key that names the wrong intent fails the parser's own
+ * Nothing else is read from the event. The persisted intent supplies the lookup tuple
+ * and settlement comparison, while the committed archive supplies the credits that may
+ * be granted; an attacker able to influence event metadata still cannot name their own
+ * credit amount. These two are only *lookup keys*, and a key that names the wrong intent
+ * fails the parser's own
  * metadata/mode cross-check immediately after. The event type and the purpose are read at
  * that same trust level and for the same reason — to route, never to admit: each can only
  * send a body away from the grant path, an unknown or absent purpose keeps its existing

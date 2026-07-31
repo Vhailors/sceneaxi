@@ -238,22 +238,21 @@ than inventing a session, balance, or checkout.
    - **Persist the intent** under `intent.intentId`, exactly as given, before redirecting,
      and keep the four price-bearing fields it was written with — `credits`, `unit_amount`,
      `currency`, `stripe_price_id` — unchanged for the row's whole life.
-     `CheckoutEvidencePort.findIntent(intentId)` must return that same price snapshot; it is
-     the deployment's issuance authority for the credits granted by a paid checkout, and an
+     `CheckoutEvidencePort.findIntent(intentId)` must return that same price snapshot; an
      absent one refuses `STRIPE_CHECKOUT_EVIDENCE_MISSING`. The money figure is corroborated
      across two reads, because `parseCheckoutCompletedEvent` compares the retrieved
-     settlement against this row; the credit figure is read from this row alone
-     ([`auth-credits.md`](auth-credits.md#stripe-test-mode)). The obligation is deliberately
-     field-scoped rather than whole-row: the columns a deployment adds for its own
-     operations stay writable, so stamping the hosted Stripe session id onto the row once
+     settlement against this row. At grant time, `applyCheckoutCompletedGrant` resolves the
+     row's `(itemId, stripePriceId, unitAmount)` through the committed archive and requires
+     its credits to match the retained revision; the ledger uses that revision's credits,
+     not the row or event as an issuance authority ([`auth-credits.md`](auth-credits.md#stripe-test-mode)).
+     Unknown tuples refuse `BILLING_CATALOG_REVISION_UNRESOLVABLE` and mismatches refuse
+     `BILLING_CATALOG_REVISION_CREDITS_MISMATCH` before the commit boundary. The obligation is
+     deliberately field-scoped rather than whole-row: the columns a deployment adds for its
+     own operations stay writable, so stamping the hosted Stripe session id onto the row once
      the session exists is expected, and nobody should later re-tighten this into whole-row
-     immutability. Captain decisions D2 and D3 bear on that asymmetry — D3 on enforcing this
-     same field scope in the database — are decided but unimplemented, and are owned only by
-     their out-of-tree records `data/sceneaxi-authority-decision-d2-intent-credit-anchor.md`
-     and `data/sceneaxi-authority-decision-d3-intent-ddl-immutability.md` — which
-     [`docs/program/NEXT-STEP.md`](program/NEXT-STEP.md#captain-authority-decisions-d1d5)
-     only restates. This contract implements neither, so until D3's own migration lands the
-     obligation above is the adapter's to honour and nothing in `db/migrations` checks it.
+     immutability. D2 is implemented over the archived/versioned catalog from #173 / PR #173;
+     D3 remains separate and unimplemented, with its field scope still an adapter obligation
+     until D3's migration lands. Nothing in `db/migrations` implements D2 or D3 here.
    - **Echo the session id on the settlement.** `CheckoutEvidencePort.retrieveSettlement`
      is called with the Checkout Session id read from the verified body, and the
      `CheckoutSettlement` it returns must carry that same id on `sessionId`.
@@ -336,7 +335,8 @@ Load-bearing properties, each gate-tested in `tests/sites/identity-plane-wiring.
   of `verifyStripeWebhookSignature` — checked at **runtime** by object identity, not only
   by type (sceneaxi#126), so an unsigned or forged body has no path to a grant even from
   JavaScript or through an `as` cast, and a copy of a genuine completion refuses too. The
-  credit amount comes from the persisted intent, never from the event.
+  grant-time archive anchor also refuses a signed/session-bound intent whose credits do not
+  match its retained revision, before `persistCheckoutCompletedGrant` can commit.
 - **The webhook's answer names the failing side.** A refusal this deployment owns — no
   signing secret, an unusable clock, an adapter that threw, a persisted intent its own
   checkout adapter never wrote, a settlement its own adapter returned for a different

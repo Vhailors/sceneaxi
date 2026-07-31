@@ -484,11 +484,13 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
   // --- the webhook grant --------------------------------------------------
 
   const PACK = Object.freeze({
-    packId: "pack-webhook-test",
-    credits: 500,
-    unitAmount: 1500,
+    // The grant path is anchored to the committed archive, so the wiring fixture
+    // uses its current starter revision rather than inventing a deployment-local SKU.
+    packId: "starter",
+    credits: 100,
+    unitAmount: 500,
     currency: "usd",
-    stripePriceId: "price_test_webhook",
+    stripePriceId: "price_test_starter_100",
   });
 
   const INTENT = Object.freeze({
@@ -651,6 +653,30 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     expect(store.entryCount("acct-1")).toBe(1);
   });
 
+  it("refuses an inflated persisted intent before the webhook commit boundary", async () => {
+    const store = webhookStore();
+    const inflatedIntent = Object.freeze({ ...INTENT, credits: 1_000_000 });
+    const inflatedEvidence: WebhookEvidence = Object.freeze({
+      findIntent(intentId: string) {
+        return intentId === inflatedIntent.intentId ? inflatedIntent : undefined;
+      },
+      retrieveSettlement(sessionId: string) {
+        return sessionId === SESSION_ID ? SETTLEMENT : undefined;
+      },
+    });
+    const outcome = await signedCall({
+      payload: eventBody("evt_test_inflated_credits"),
+      store,
+      evidence: inflatedEvidence,
+    });
+    expect(outcome).toMatchObject({
+      ok: false,
+      reason: BILLING_REFUSE_REASONS.catalogRevisionCreditsMismatch,
+    });
+    if (!outcome.ok) expect(creditWebhookHttpStatus(outcome.reason)).toBe(503);
+    expect(store.entryCount("acct-1")).toBe(0);
+  });
+
   it("binds the fixture wire keys to the metadata contract the grant path reads", () => {
     // The bodies above spell the wire keys out, and the plane reads them through
     // `CHECKOUT_METADATA_KEYS`. Pinning the two together here makes a rename of the
@@ -682,6 +708,8 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       "CREDIT_LEDGER_STATE_INVALID",
       "CREDIT_LEDGER_ORDER_INVALID",
       "CREDIT_ENTRY_INVALID",
+      BILLING_REFUSE_REASONS.catalogRevisionUnresolvable,
+      BILLING_REFUSE_REASONS.catalogRevisionCreditsMismatch,
     ]) {
       expect(creditWebhookHttpStatus(reason)).toBe(503);
     }

@@ -294,13 +294,13 @@ export function parseSessionToken(
  *
  *   1. **Persist the intent** under `intent.intentId`, exactly as given, before the
  *      buyer is redirected. `CheckoutEvidencePort.findIntent(intentId)` must return
- *      that same price snapshot: it is the deployment's issuance authority for the
- *      credits a paid checkout grants, so `credits`, `unit_amount`, `currency`, and
- *      `stripe_price_id` are immutable once written, while columns the deployment
- *      adds for its own operations — the hosted session id it stamps on after
- *      creating the session — stay writable. Not finding the row refuses
- *      `STRIPE_CHECKOUT_EVIDENCE_MISSING`. `docs/websites-deploy.md` owns the full
- *      adapter obligation.
+ *      that same price snapshot, with `credits`, `unit_amount`, `currency`, and
+ *      `stripe_price_id` immutable once written, while columns the deployment adds for
+ *      its own operations — the hosted session id it stamps on after creating the
+ *      session — stay writable. Not finding the row refuses
+ *      `STRIPE_CHECKOUT_EVIDENCE_MISSING`; at grant time the billing package anchors the
+ *      tuple to the committed archive before it can issue credits. `docs/websites-deploy.md`
+ *      owns the full adapter obligation.
  *   2. **Carry the identity on the session** as Stripe metadata under
  *      `CHECKOUT_METADATA_KEYS` from `@sceneaxi/billing` — `sceneaxiUserId`,
  *      `sceneaxiPurpose`, `sceneaxiItemId`, `sceneaxiIntentId`, taken from
