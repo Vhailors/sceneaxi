@@ -29,6 +29,7 @@ opened — and what may be drawn — lives here.
 | `state-panel.ts` | the shared named-state model, Foundations status mapping, and neutral tree; sites retain only React adapters |
 | `commerce-notice.ts` | the two storefronts' inert-commerce copy, refusal model, and neutral tree |
 | `site-session.ts` | the shared session header/cookie vocabulary and header-first token normalization |
+| `desktop-app-offer.ts` | the recorded Linux desktop build the umbrella `/engine` page advertises — committed facts, held in lockstep with [`docs/desktop-linux.md`](../../docs/desktop-linux.md), never a rebuilt file's digest |
 
 ## The shared visual layer
 

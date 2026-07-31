@@ -27,6 +27,10 @@ L4  sites              site-kit ← the three deployable sites (leaves; ADR 0018
                        for every viewport it owns (ADR 0022; surfaces inventoried in
                        docs/three-presentation-core.md), and auth + billing for the
                        identity plane (ADR 0021)
+L4  desktop            the packaged desktop applications (leaf; ADR 0024). desktop/linux
+                       consumes schemas, desktop-shell, site-kit, authoring-core and the
+                       three engine packages it draws and opens through; no profile, no
+                       Kids, no auth/billing, no plugin host
 ```
 
 ## Allow matrix (✓ = allowed; blank = denied)
@@ -50,6 +54,7 @@ L4  sites              site-kit ← the three deployable sites (leaves; ADR 0018
 | site-kit | ✓ | | | | ✓ | | | | | |
 | site-umbrella (→ site-kit ✓, auth ✓, billing ✓) | | | ✓ | | | | | | | |
 | site-catalog-game / site-catalog-web (→ site-kit ✓) | | | | | | | | | | |
+| desktop-linux (→ site-kit ✓) | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | ✓ (desktop-shell alone) |
 
 Deliberate denials that carry design intent:
 
@@ -67,7 +72,10 @@ Deliberate denials that carry design intent:
   through the catalog pipeline contracts in `schemas`.
 - **profile → profile: denied.** Profiles never import each other.
 - **anything → profile-kids: denied** (Kids boundary below).
-- **anything → apps, anything → cli: denied.** Apps and the CLI are leaves.
+- **anything → apps, anything → cli: denied**, with one charted exception: the
+  packaged desktop tier holds `desktop-linux → desktop-shell` (ADR 0024), because the
+  window renders that app's Engine Desktop chrome unforked rather than a second copy
+  of it. Nothing else names an app, and the CLI stays a leaf outright.
 - **plugin-host → engine packages / authoring-core / profiles: denied.** The Plugin
   Host (ADR 0005) consumes only public contracts from `schemas`; it must not grow
   an engine service locator or absorb engine internals.
@@ -86,11 +94,17 @@ Deliberate denials that carry design intent:
   and the two catalogs keep `site-kit` only, reading identity through the same site-kit
   ports rather than a second auth stack. `tests/boundary/injected-site-violations.test.ts`
   asserts both allowed edges and each denial.
-- **framework and provider SDKs → the hermetic tier: denied.** `next`, `react`,
-  and provider clients live in `sites/` only. `pnpm check:sites` fails if one appears
-  in the root manifest, and if `pnpm-workspace.yaml` starts globbing `sites/` — the
-  sites are separate install roots so the hermetic root lockfile never moves for a
-  site dependency.
+- **desktop → profiles / Kids / auth / billing / plugin-host: denied.** The packaged
+  application (ADR 0024) draws and opens through the same public seams a site does; it
+  has no account surface, no profile package, and no CLI verb.
+  `tests/boundary/injected-desktop-violations.test.ts` injects a profile import, a Kids
+  import, and an identity-plane dependency and asserts the real checker fails on each.
+- **framework, provider, and packaging toolchains → the hermetic tier: denied.**
+  `next`, `react`, and provider clients live in `sites/` only; Electron, esbuild, and
+  electron-builder in `desktop/` only. `pnpm check:sites` and `pnpm check:desktop` each
+  fail if one appears in the root manifest, and if `pnpm-workspace.yaml` starts globbing
+  its tier — both tiers are separate install roots so the hermetic root lockfile never
+  moves for a site or desktop dependency.
 - **auth → anything but schemas: denied.** The identity plane (ADR 0021) is
   contracts and policy only. Better Auth and Neon are injected adapters, so there
   is nothing for it to depend on.
@@ -164,6 +178,12 @@ Recorded in `dependency-matrix.json → releaseGroups` and stamped on every mani
   additionally consumes the `identity` group (`auth`, `billing`) from its one plug point; the catalogs
   do not. Framework and provider SDKs stay in the `sites/` tier. Deploy and env details:
   [`websites-deploy.md`](websites-deploy.md).
+- **desktop** (`desktop-linux`): packaged desktop applications (ADR 0024), each its own
+  install root outside the repository-root workspace so Electron never moves the
+  hermetic lockfile. Deployable, not consumable — like a site it declares no root
+  export and uses `link:` dependencies (into `packages/` **or** `apps/`, the one
+  widening the desktop tier holds). Build, distribution, and the recorded checksums:
+  [`desktop-linux.md`](desktop-linux.md).
 - **identity** (`auth`, `billing`): independently versioned; consumes only public
   contracts from `schemas` (and, for `billing`, the `auth` seam); never engine
   packages, profiles, the CLI, or a service locator. Better Auth, Neon, and the

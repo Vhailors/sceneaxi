@@ -16,7 +16,7 @@ SceneAxi = interactive engine/library + versioned profiles (Game, Web Experience
 ## Toolchain
 
 - `pnpm gate` is the required repository check; root `package.json` owns its exact
-  sequence (syntax, boundaries, contracts, **sites**, **publish-ready**, build, test, lint). Syntax and test explicitly refuse empty surfaces, and every stage exits
+  sequence (syntax, boundaries, contracts, **sites**, **desktop**, **publish-ready**, build, test, lint). Syntax and test explicitly refuse empty surfaces, and every stage exits
   non-zero on its configured failures. Never weaken the gate: no skips, no `|| true`,
   no lint disables, no matrix allow-list widening.
 - Build uses strict tsc project references; package exports remain source-backed and
@@ -203,9 +203,11 @@ real file — and it shares one walker (`scripts/lib/package-exports.mjs`) with 
 engine-SDK archive test, so the gate and the archive cannot disagree about what an
 export target is or about the archive shipping it. Adding a check means
 adding its ID to `CHECK_IDS`, a row to the doc, and an injected-violation case to
-`tests/publish/injected-publish-violations.test.ts`. Sites are exempt from the
-consumable rules by tier (no root export, `link:` deps) because they are separate
-install roots (ADR 0018); `pnpm check:sites` owns them instead.
+`tests/publish/injected-publish-violations.test.ts`. The two deployable tiers are
+exempt from the consumable rules by tier (no root export, `link:` deps) because they
+are separate install roots — `sites/` (ADR 0018) and `desktop/` (ADR 0024, whose
+`link:` may also reach `apps/`); `pnpm check:sites` and `pnpm check:desktop` own them
+instead.
 
 The identity + credits plane is `packages/auth` (single-admin resolution, role
 guards, identity port) and `packages/billing` (append-only ledger, metering,
@@ -247,10 +249,12 @@ When adding a provenance-bearing value or consumer, extend
 The umbrella owns **every viewport** and is the only site that may depend on
 `@sceneaxi/engine-presentation` (ADR 0022 + its 2026-07-26 amendment) — every other
 engine package stays denied to every site, and both catalogs keep `site-kit` only. Every
-surface that draws pixels — inventoried in `docs/three-presentation-core.md` — goes
+**site** surface that draws pixels — all of them inventoried, with the desktop tier's,
+in `docs/three-presentation-core.md` — goes
 through exactly one module that constructs a renderer:
 `sites/umbrella/src/app/_components/sculpt-viewport.tsx`, through the ADR 0002 seam,
-naming no Three type. A gate test asserts that owner list has exactly one entry. They all
+naming no Three type. A gate test asserts that owner list has exactly one entry, and the
+desktop tier's own single owner is asserted separately, never added to it. They all
 receive the same browser payload, `MountableScene`
 (`packages/site-kit/src/mountable-scene.ts`) — validated artifacts plus `composeScene()`
 world transforms — so what may be drawn is decided in `site-kit` and gate-tested without

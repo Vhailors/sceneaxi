@@ -113,7 +113,9 @@ still-unimplemented target:
   presentation runtime and opens **no** kernel session, so its viewport draws no
   pixels, its `run` mode reports no tick, and every control that would author
   something is inert with a named refusal. It is a view model with a renderer for
-  it, not a packaged desktop application: there is no installer here.
+  it, not a packaged desktop application: this app ships no installer. The packaged
+  application that wraps this same chrome is the `@sceneaxi/desktop-linux` row above
+  ([`desktop-linux.md`](desktop-linux.md)).
 
 ## Commercial model
 

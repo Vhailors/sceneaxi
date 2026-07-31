@@ -273,8 +273,9 @@ evidence handles it refuses rather than claiming a grant.
 
 No automated repository step runs `next build` for `sites/umbrella`,
 `sites/catalog-game`, or `sites/catalog-web`. Root `pnpm build` is the TypeScript project
-build, `check:sites` validates site structure and manifests, and the two GitHub workflows
-run `pnpm gate` and the engine-SDK builder. Consequently the gate can be green while a
+build, `check:sites` validates site structure and manifests, and the three GitHub
+workflows run `pnpm gate`, the engine-SDK builder, and the Linux desktop packaging +
+packaged smoke (`desktop-linux`, ADR 0024) — none of which is a site's Next build. Consequently the gate can be green while a
 site's production Next build is broken. This is a recorded verification gap only: this
 brief neither changes the gate nor authorizes work to close it.
 
