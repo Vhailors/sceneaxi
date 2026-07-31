@@ -3457,6 +3457,40 @@ a.ed-tree-label:hover {
   color: var(--fg);
 }
 
+.ed-cr-state {
+  color: var(--fg-2);
+  margin-right: 10px;
+}
+
+.ed-cr-decisions {
+  display: inline-flex;
+  gap: 4px;
+  vertical-align: middle;
+}
+
+.ed-cr-decide {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--bg-control);
+  color: var(--fg-2);
+  font-size: 10px;
+  line-height: 1;
+}
+
+.ed-cr-decide-name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .ed-cr-current {
   color: var(--stale);
   text-decoration: line-through;

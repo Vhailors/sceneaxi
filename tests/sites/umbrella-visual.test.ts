@@ -1182,6 +1182,14 @@ describe("the Engine Desktop editor shell stays honest (sceneaxi#184)", () => {
     expect(SHELL).toContain("{view.changes.persistencePin}");
   });
 
+  it("draws the archive's per-row change decisions inert, through the helper", () => {
+    // Apply is E1 all-or-nothing and already happened, so the ✕/✓ the archive
+    // draws per row ship refusing rather than missing.
+    expect(SHELL).toContain("view.changes.rowDecisions");
+    expect(SHELL).toMatch(/<ShellButton\s+control=\{decision\.reject\}/);
+    expect(SHELL).toMatch(/<ShellButton\s+control=\{decision\.accept\}/);
+  });
+
   it("gives every form control the id and kind its minted control declares", () => {
     // `view.edit.*` are minted `live`, so the elements that carry them have to
     // say so — otherwise the accounting index names four live edit controls the

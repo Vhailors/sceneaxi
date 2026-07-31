@@ -201,7 +201,13 @@ export function EditorShell({
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         if (kids) return;
         event.preventDefault();
-        paletteReturnFocus.current = document.activeElement as HTMLElement;
+        // Only the keystroke that opens the palette records where focus came
+        // from. While it is open the rest of the chrome is `inert`, so
+        // `activeElement` is the palette's own input — capturing that would
+        // hand the close effect an element React is about to unmount.
+        if (!paletteOpen) {
+          paletteReturnFocus.current = document.activeElement as HTMLElement;
+        }
         setPaletteRequested(true);
       } else if (event.key === "Escape" && paletteOpen) {
         setPaletteRequested(false);
@@ -596,6 +602,7 @@ export function EditorShell({
                   className="ed-dock-body"
                   id={DOCK_PANEL_ID}
                   role="tabpanel"
+                  tabIndex={0}
                   aria-labelledby={`dock-${shownDockTab}`}
                 >
                   {shownDockTab === "changes" && (
@@ -622,20 +629,49 @@ export function EditorShell({
                               </tr>
                             </thead>
                             <tbody>
-                              {view.changes.review.rows.map((row) => (
-                                <tr key={row.index}>
-                                  <td className="mono">
-                                    <span className={`ed-cr-badge ed-cr-${row.badge}`}>
-                                      {row.badgeGlyph}
-                                    </span>
-                                    <span className="ed-cr-path">{row.path}</span>
-                                    <span className="ed-cr-leaf">{row.leaf}</span>
-                                  </td>
-                                  <td className="mono ed-cr-current">{row.before}</td>
-                                  <td className="mono ed-cr-proposed">{row.after}</td>
-                                  <td className="mono">applied</td>
-                                </tr>
-                              ))}
+                              {view.changes.review.rows.map((row) => {
+                                const decision = view.changes.rowDecisions.find(
+                                  (candidate) => candidate.index === row.index,
+                                );
+                                return (
+                                  <tr key={row.index}>
+                                    <td className="mono">
+                                      <span className={`ed-cr-badge ed-cr-${row.badge}`}>
+                                        {row.badgeGlyph}
+                                      </span>
+                                      <span className="ed-cr-path">{row.path}</span>
+                                      <span className="ed-cr-leaf">{row.leaf}</span>
+                                    </td>
+                                    <td className="mono ed-cr-current">{row.before}</td>
+                                    <td className="mono ed-cr-proposed">{row.after}</td>
+                                    <td className="mono">
+                                      <span className="ed-cr-state">applied</span>
+                                      {decision !== undefined && (
+                                        <span className="ed-cr-decisions">
+                                          <ShellButton
+                                            control={decision.reject}
+                                            className="ed-cr-decide"
+                                          >
+                                            <span aria-hidden="true">✕</span>
+                                            <span className="ed-cr-decide-name">
+                                              {decision.reject.label}
+                                            </span>
+                                          </ShellButton>
+                                          <ShellButton
+                                            control={decision.accept}
+                                            className="ed-cr-decide"
+                                          >
+                                            <span aria-hidden="true">✓</span>
+                                            <span className="ed-cr-decide-name">
+                                              {decision.accept.label}
+                                            </span>
+                                          </ShellButton>
+                                        </span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
                             </tbody>
                           </table>
                           <p className="ed-dock-foot mono">

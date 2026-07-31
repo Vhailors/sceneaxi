@@ -320,6 +320,25 @@ describe("real engine state, not fixtures", () => {
     expect(shell.changes.rejectAll.kind).toBe("inert");
   });
 
+  it("draws a per-row decision pair, inert and accounted for, on every row", () => {
+    const shell = view();
+    const review = shell.changes.review;
+    if (review === null) throw new Error("expected a reviewable proposal");
+    expect(shell.changes.rowDecisions.map((decision) => decision.index)).toEqual(
+      review.rows.map((row) => row.index),
+    );
+    const accounted = shell.controls.map((control) => control.id);
+    for (const decision of shell.changes.rowDecisions) {
+      for (const control of [decision.reject, decision.accept]) {
+        expect(control.kind, control.id).toBe("inert");
+        expect(control.refusal, control.id).toBe(
+          EDITOR_SHELL_WEB_REFUSALS.operationNotOnSurface,
+        );
+        expect(accounted).toContain(control.id);
+      }
+    }
+  });
+
   it("logs what the render actually did, in order, with real ids", () => {
     const rows = view().console.map((row) => row.text);
     expect(rows[0]).toContain("addSculpt object-1");

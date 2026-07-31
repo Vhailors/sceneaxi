@@ -354,6 +354,19 @@ export type EditorShellView = Readonly<{
     persistencePin: string;
     acceptAll: EditorShellControl;
     rejectAll: EditorShellControl;
+    /**
+     * The archive's per-row ✕/✓ decisions, one pair per reviewed row. Apply on
+     * this surface is E1 all-or-nothing and already happened, so both are inert
+     * and carry the same named refusal the bulk pair does — they are minted here
+     * so a per-row decision is accounted for exactly like every other control.
+     */
+    rowDecisions: ReadonlyArray<
+      Readonly<{
+        index: number;
+        reject: EditorShellControl;
+        accept: EditorShellControl;
+      }>
+    >;
   }>;
   console: ReadonlyArray<EditorShellConsoleRow>;
   evidence: ReadonlyArray<EditorShellEvidenceRow>;
@@ -901,6 +914,25 @@ export function buildEditorShellView(input: EditorShellInput): EditorShellView {
       kind: "inert",
       refusal: EDITOR_SHELL_WEB_REFUSALS.operationNotOnSurface,
     }),
+    rowDecisions: Object.freeze(
+      (review?.rows ?? []).map((row) =>
+        Object.freeze({
+          index: row.index,
+          reject: mint({
+            id: `changes-row-reject-${row.index}`,
+            label: `Reject ${row.leaf}`,
+            kind: "inert",
+            refusal: EDITOR_SHELL_WEB_REFUSALS.operationNotOnSurface,
+          }),
+          accept: mint({
+            id: `changes-row-accept-${row.index}`,
+            label: `Accept ${row.leaf}`,
+            kind: "inert",
+            refusal: EDITOR_SHELL_WEB_REFUSALS.operationNotOnSurface,
+          }),
+        }),
+      ),
+    ),
   });
 
   // --- console: what this render actually did, in order ---
