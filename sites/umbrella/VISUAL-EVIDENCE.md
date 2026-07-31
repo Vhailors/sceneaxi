@@ -162,11 +162,11 @@ audit rather than by eye.
 
 `.state-head` was `grid-template-columns: auto minmax(0, 1fr) auto`. A bare `auto` track
 takes free space up to its max-content size *before* a `1fr` track expands, so on the
-shipped default path the key `reason IDENTITY_PLANE_NOT_WIRED` (184.39px of 11.5px mono)
+then-shipped default path the key `reason IDENTITY_PLANE_NOT_WIRED` (184.39px of 11.5px mono)
 plus the 74.61px status chip took the whole 283px panel row and left the name's track at
 **0px**. `overflow-wrap: anywhere` on the heading then wrapped the name one character per
-line: at 390 `/editor` rendered "Not entitled" as a 0 × 133px vertical column and
-`/account` rendered its sentence as 0 × 651px, with tracks measured
+line: at 390 the then-current `/editor` name rendered as a 0 × 133px vertical column
+and `/account` rendered its sentence as 0 × 651px, with tracks measured
 `74.6094px 0px 184.391px`. The same collapse appeared at 1440 in the hero's narrower
 column, where the WebGL refusal's longer reason left the title at 22.33 × 157px.
 
@@ -180,11 +180,13 @@ disclosure, and no re-attempt affordance was added. Bounding the key did squeeze
 min-content size, and the `anywhere` the key needs is inherited — so the label is
 `white-space: nowrap`.
 
-Measured after the fix at 390 × 844, identity plane unwired:
+Measured after the layout fix at 390 × 844, before the hosted-login named access
+states replaced the editor's then-current copy. The current editor title is deliberately
+not inferred from these historical dimensions; `packages/site-kit/src/access-states.ts`
+owns it.
 
 | Route | State | Name, w × h | Lines | Header tracks | Key |
 |---|---|---|---|---|---|
-| `/editor` | Not entitled | 196.39 × 12.09 | 1 | `74.61px 196.39px` | `IDENTITY_PLANE_NOT_WIRED`, 212.5px, own row |
 | `/account` | Sign-in is not available on this deployment | 196.39 × 35.19 | 2 | `74.61px 196.39px` | `IDENTITY_PLANE_NOT_WIRED`, 212.5px, own row |
 | `/profiles` | Kids refuses the open path | 189.59 × 35.19 | 2 | `81.41px 189.59px` | `refuse-only`, 122.8px, own row |
 | `/profiles` | No shipping claim is made here | 162.39 × 35.19 | 2 | `108.61px 162.39px` | none |

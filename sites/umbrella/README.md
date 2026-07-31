@@ -155,7 +155,7 @@ designed around that rather than around widening the contract.
 
 Real Better Auth login into the entitled editor, over the existing identity plane:
 
-- `/login` renders the form; `POST /api/login` drives `performLogin`
+- On a wired deployment, `/login` renders the form; `POST /api/login` drives `performLogin`
   (`src/lib/login-flow.ts`), which signs in through the plane's login port —
   `createAuthLoginAdapter` over the deployment's `IdentityPort` handle — and answers
   with a 303 plus the one HttpOnly `sceneaxi.session` cookie, whose lifetime is the
