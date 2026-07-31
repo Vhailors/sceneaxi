@@ -29,6 +29,7 @@ export type SiteAccessStateKey =
   | "no-credits"
   | "credentials-required"
   | "credentials-rejected"
+  | "sign-in-not-issued"
   | "refused";
 
 export type SiteAccessAction = {
@@ -197,6 +198,15 @@ export function describeSiteAccessState(reason: SiteRefusalReason): SiteAccessSt
       reason,
       "That email and password did not match",
       "The identity provider did not authenticate those credentials. Which of the two was wrong is deliberately not disclosed.",
+      null,
+    );
+  }
+  if (reason === "LOGIN_SESSION_NOT_ISSUED") {
+    return state(
+      "sign-in-not-issued",
+      reason,
+      "Sign-in could not be completed on this deployment",
+      "Sign-in reached this deployment's identity provider, but what came back is not a session this site can hand a browser, so none was issued and nothing was signed in. This is a deployment fault, not an account problem, and trying again will end the same way until it is fixed.",
       null,
     );
   }

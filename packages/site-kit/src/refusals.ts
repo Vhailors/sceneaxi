@@ -53,6 +53,8 @@ export const SITE_REFUSALS = Object.freeze({
     "Sign-in requires a non-empty email and password. Nothing was dispatched to the identity plane.",
   LOGIN_CREDENTIALS_REJECTED:
     "That email and password did not authenticate. No session was created.",
+  LOGIN_SESSION_NOT_ISSUED:
+    "Sign-in reached the identity plane, but the session it returned cannot be issued as a browser credential, so none was set.",
 
   // --- editor entitlement ---
   EDITOR_ENTITLEMENT_ANONYMOUS: "The web editor requires a signed-in principal.",

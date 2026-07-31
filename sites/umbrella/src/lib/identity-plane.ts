@@ -614,7 +614,7 @@ export function createAuthLoginAdapter(options: {
         readBack.sessionId !== principal.session.sessionId ||
         readBack.token !== granted.value.sessionToken
       ) {
-        return refuse("IDENTITY_ADAPTER_OUTPUT_INVALID");
+        return refuse("LOGIN_SESSION_NOT_ISSUED");
       }
       return ok(
         Object.freeze({

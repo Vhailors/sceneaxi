@@ -44,6 +44,18 @@ describe("describeSiteAccessState", () => {
     );
   });
 
+  it("separates an issuance fault from an untrusted browser credential", () => {
+    const issuance = describeSiteAccessState("LOGIN_SESSION_NOT_ISSUED");
+    const presented = describeSiteAccessState("IDENTITY_ADAPTER_OUTPUT_INVALID");
+    expect(issuance.key).toBe("sign-in-not-issued");
+    expect(presented.key).toBe("session-invalid");
+    expect(issuance.title).not.toBe(presented.title);
+    expect(issuance.body).not.toBe(presented.body);
+    // Nothing the visitor can do resolves a provider that returns an unusable
+    // session, so the issuance state must not dangle a sign-in action.
+    expect(issuance.action).toBeNull();
+  });
+
   it("offers sign-in exactly where signing in can change the outcome", () => {
     for (const reason of [
       "IDENTITY_SESSION_ABSENT",

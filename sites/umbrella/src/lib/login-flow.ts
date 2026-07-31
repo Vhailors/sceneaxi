@@ -161,7 +161,7 @@ export async function performLogin(input: {
   });
   // The login plane has already vetted the credential and expiry, so this is a
   // belt-and-suspenders refusal, not a reachable product state.
-  if (setCookie === null) return loginRefusalOutcome("IDENTITY_ADAPTER_OUTPUT_INVALID", next);
+  if (setCookie === null) return loginRefusalOutcome("LOGIN_SESSION_NOT_ISSUED", next);
 
   return Object.freeze({
     kind: "success" as const,

@@ -27,7 +27,10 @@ import {
   signStripeWebhookPayload,
   type CheckoutSettlement,
 } from "@sceneaxi/billing";
-import { SITE_STARTER_CREDIT_ALLOTMENT } from "@sceneaxi/site-kit";
+import {
+  SITE_STARTER_CREDIT_ALLOTMENT,
+  describeSiteAccessState,
+} from "@sceneaxi/site-kit";
 import {
   CREDIT_WEBHOOK_REASONS,
   applyCreditPackWebhook,
@@ -1794,8 +1797,13 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
     });
     expect(outcome).toMatchObject({
       kind: "refused",
-      reason: "IDENTITY_ADAPTER_OUTPUT_INVALID",
+      reason: "LOGIN_SESSION_NOT_ISSUED",
     });
+    // The visitor presented no credential here, so the state the form renders
+    // must be the deployment's own fault, with no sign-in action to loop on.
+    const rendered = describeSiteAccessState("LOGIN_SESSION_NOT_ISSUED");
+    expect(rendered.key).toBe("sign-in-not-issued");
+    expect(rendered.action).toBeNull();
   });
 
   it("refuses wrong credentials as their own named outcome, back at the form", async () => {

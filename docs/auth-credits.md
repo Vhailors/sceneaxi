@@ -209,10 +209,22 @@ deliberately.
 That credential format carries one obligation back onto the provider's session id: it is
 read back by splitting on the **first** `.`, so a session id that itself contains a dot —
 which the adapter's identifier rules otherwise permit — cannot round-trip. The umbrella
-adapter re-reads the credential it just composed and refuses
-`IDENTITY_ADAPTER_OUTPUT_INVALID` when the halves do not come back unchanged, so an
-unrepresentable session id is a named refusal at issuance rather than a cookie the next
-request silently reads as "signed out".
+adapter re-reads the credential it just composed and refuses `LOGIN_SESSION_NOT_ISSUED`
+when the halves do not come back unchanged, so an unrepresentable session id is a named
+refusal at issuance rather than a cookie the next request silently reads as "signed out".
+
+`LOGIN_SESSION_NOT_ISSUED` is the issuance counterpart of the verify path's
+`IDENTITY_ADAPTER_OUTPUT_INVALID`, and site-kit's login plane uses it for every
+malformed grant it refuses — a non-record answer, an off-registry refusal, a principal
+that does not validate, or a credential no cookie can carry. The distinction is not
+cosmetic: at issuance the browser presented nothing, so nothing was discarded and
+signing in again cannot change the outcome. `describeSiteAccessState` therefore projects
+it onto its own `sign-in-not-issued` state — a deployment fault with **no** action —
+instead of the "sign in again to get a fresh session" copy that belongs to a credential
+the plane refused to trust. Refusals about the *account* or the returned session's
+own validity (`IDENTITY_USER_DISABLED`, `IDENTITY_SESSION_EXPIRED`,
+`IDENTITY_SESSION_SURFACE_MISMATCH`, `IDENTITY_ROLE_UNKNOWN`) keep their own names on
+both paths.
 
 Admin elevation requires both the provider authentication and the stored SceneAxi user
 record to mark `emailVerified: true`. An unverified address matching

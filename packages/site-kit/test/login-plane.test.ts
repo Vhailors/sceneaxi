@@ -169,7 +169,7 @@ describe("createLoginPlane", () => {
     };
     expect(
       await createLoginPlane({ now, adapter: offRegistry }).signIn(REQUEST),
-    ).toMatchObject({ ok: false, reason: "IDENTITY_ADAPTER_OUTPUT_INVALID" });
+    ).toMatchObject({ ok: false, reason: "LOGIN_SESSION_NOT_ISSUED" });
   });
 
   it("re-validates the granted principal like the identity plane would", async () => {
@@ -177,7 +177,9 @@ describe("createLoginPlane", () => {
       [{ user: { disabled: true } }, "IDENTITY_USER_DISABLED"],
       [{ session: { expiresAt: "2026-07-25T11:30:00.000Z" } }, "IDENTITY_SESSION_EXPIRED"],
       [{ session: { surface: "web-shell" } }, "IDENTITY_SESSION_SURFACE_MISMATCH"],
-      [{ grant: { principal: null } }, "IDENTITY_ADAPTER_OUTPUT_INVALID"],
+      // A malformed grant is a fault of the deployment's provider, not of a
+      // credential the browser presented, so issuance names itself.
+      [{ grant: { principal: null } }, "LOGIN_SESSION_NOT_ISSUED"],
     ];
     for (const [overrides, reason] of cases) {
       const result = await createLoginPlane({
@@ -194,7 +196,7 @@ describe("createLoginPlane", () => {
         now,
         adapter: adapterReturning(grant({ grant: { sessionCredential } })),
       }).signIn(REQUEST);
-      expect(result).toMatchObject({ ok: false, reason: "IDENTITY_ADAPTER_OUTPUT_INVALID" });
+      expect(result).toMatchObject({ ok: false, reason: "LOGIN_SESSION_NOT_ISSUED" });
     }
   });
 });

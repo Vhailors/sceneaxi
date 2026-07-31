@@ -230,6 +230,17 @@ const CASES: Readonly<Record<SiteRefusalReason, () => Promise<unknown> | unknown
         },
       },
     }).signIn({ surface: "site", email: "crew@example.com", password: "wrong" }),
+  // Issuance names itself: the adapter answered, but with a grant no cookie can
+  // carry, which is a provider fault rather than an untrusted browser credential.
+  LOGIN_SESSION_NOT_ISSUED: () =>
+    createLoginPlane({
+      now,
+      adapter: {
+        async signIn() {
+          return ok({ principal: principal("user"), sessionCredential: "has space" } as never);
+        },
+      },
+    }).signIn({ surface: "site", email: "crew@example.com", password: "pw" }),
   EDITOR_ENTITLEMENT_ANONYMOUS: () => decideEditorEntitlement({ principal: null, credits: null }),
   EDITOR_ENTITLEMENT_NO_CREDITS: () =>
     decideEditorEntitlement({

@@ -288,6 +288,7 @@ function canonicalAdapterRefusal(
   result: Record<string, unknown>,
   invalidReason:
     | "IDENTITY_ADAPTER_OUTPUT_INVALID"
+    | "LOGIN_SESSION_NOT_ISSUED"
     | "CREDIT_ADAPTER_OUTPUT_INVALID"
     | "BILLING_ADAPTER_OUTPUT_INVALID",
 ): SiteRefusal {
@@ -501,6 +502,12 @@ function validateLoginRequest(request: unknown): SiteRefusal | null {
  * a disabled user, an expired or surface-mismatched session, or an unknown role
  * refuses with its own named reason — so an adapter cannot hand a site a
  * principal the identity plane would not have accepted.
+ *
+ * A grant that is malformed rather than untrusted refuses `LOGIN_SESSION_NOT_ISSUED`
+ * instead of the verify path's `IDENTITY_ADAPTER_OUTPUT_INVALID`: at issuance the
+ * browser presented no credential and nothing was discarded, so the deployment's
+ * provider — not the visitor's session — is what failed, and signing in again
+ * cannot change it.
  */
 export function createLoginPlane(options: LoginPlaneOptions = {}): SiteLoginPort {
   const nowIso = options.now ?? (() => new Date().toISOString());
@@ -514,21 +521,25 @@ export function createLoginPlane(options: LoginPlaneOptions = {}): SiteLoginPort
         () => adapter.signIn(request),
         "IDENTITY_PLANE_UNAVAILABLE",
       );
-      if (!isRecord(result)) return refuse("IDENTITY_ADAPTER_OUTPUT_INVALID");
+      if (!isRecord(result)) return refuse("LOGIN_SESSION_NOT_ISSUED");
       if (result["ok"] !== true) {
-        return canonicalAdapterRefusal(result, "IDENTITY_ADAPTER_OUTPUT_INVALID");
+        return canonicalAdapterRefusal(result, "LOGIN_SESSION_NOT_ISSUED");
       }
       const grant = result["value"];
-      if (!isRecord(grant)) return refuse("IDENTITY_ADAPTER_OUTPUT_INVALID");
+      if (!isRecord(grant)) return refuse("LOGIN_SESSION_NOT_ISSUED");
       const principal = validatePrincipal(
         grant["principal"],
         { surface: request.surface },
         nowIso(),
       );
-      if (!principal.ok) return principal;
+      if (!principal.ok) {
+        return principal.reason === "IDENTITY_ADAPTER_OUTPUT_INVALID"
+          ? refuse("LOGIN_SESSION_NOT_ISSUED")
+          : principal;
+      }
       const credential = grant["sessionCredential"];
       if (typeof credential !== "string" || !SITE_COOKIE_OCTET_RE.test(credential)) {
-        return refuse("IDENTITY_ADAPTER_OUTPUT_INVALID");
+        return refuse("LOGIN_SESSION_NOT_ISSUED");
       }
       return ok(
         Object.freeze({ principal: principal.value, sessionCredential: credential }),
