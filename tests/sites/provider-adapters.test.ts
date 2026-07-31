@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   AUTH_REFUSE_REASONS,
@@ -935,6 +937,46 @@ describe("umbrella deployment provider adapters", () => {
     expect(resolveBetterAuthOrigin("not-a-url")).toBeUndefined();
     expect(resolveBetterAuthOrigin("   ")).toBeUndefined();
     expect(resolveBetterAuthOrigin(undefined)).toBeUndefined();
+  });
+
+  /**
+   * The default loader must survive a production `next build`, which the gate
+   * cannot run: the sites are separate install roots and CI installs only the
+   * hermetic root, so this is asserted on the source that the bundler reads.
+   *
+   * Both provider specifiers arrive through the injected `load` parameter, so an
+   * imported `createRequire(import.meta.url)` gives webpack no dependency to
+   * extract and it substitutes an empty context module that throws
+   * `MODULE_NOT_FOUND` for every specifier — observed as
+   * `1704:a=>{function b(a){var b=Error("Cannot find module '"+a+"'");...}`
+   * in `.next/server/chunks`. Both constructors then throw on every deployment,
+   * `createDeploymentPlaneHandles` catches that into ordinary provider absence,
+   * and a fully configured deployment reports `IDENTITY_PLANE_NOT_WIRED` exactly
+   * as an unconfigured one does. The two properties that keep it loadable are
+   * that the require is reached through a builtin accessor the bundler does not
+   * recognise, and that it is anchored to the emitted chunk's runtime path —
+   * `import.meta.url` alone is inlined as this file's build-time source path,
+   * which the deployed function does not have.
+   */
+  it("builds its provider loader in a form a production bundler cannot replace", () => {
+    const source = readFileSync(
+      fileURLToPath(new URL("../../sites/umbrella/src/lib/provider-adapters.ts", import.meta.url)),
+      "utf8",
+    );
+
+    expect(source).toContain('process\n  .getBuiltinModule("module")\n  .createRequire(');
+    expect(source).not.toMatch(/from "node:module"/);
+    expect(source).toMatch(/typeof __filename === "string" \? __filename : import\.meta\.url/);
+
+    // Tracing cannot see the specifiers either, so the deployed function only
+    // holds the packages because the config pins them.
+    const config = readFileSync(
+      fileURLToPath(new URL("../../sites/umbrella/next.config.ts", import.meta.url)),
+      "utf8",
+    );
+    for (const provider of ["@neondatabase/serverless", "stripe"]) {
+      expect(config).toContain(`"./node_modules/${provider}/**"`);
+    }
   });
 });
 

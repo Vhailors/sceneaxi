@@ -7,7 +7,6 @@
  * so the default gate can mock every provider call without a database or network.
  */
 import { createHash } from "node:crypto";
-import { createRequire } from "node:module";
 import {
   mapBetterAuthAuthentication,
   type Awaitable,
@@ -497,7 +496,38 @@ export type StripeClientLike = Readonly<{
   }>;
 }>;
 
-const requireSiteModule: SiteModuleLoader = createRequire(import.meta.url);
+/**
+ * Node's own `require`, reached through `process.getBuiltinModule` rather than an
+ * imported `createRequire`.
+ *
+ * The import form is one webpack recognises and rewrites. Both provider
+ * specifiers arrive through the injected `load` parameter below, so the bundler
+ * can extract no dependency from `createRequire(import.meta.url)` and replaces it
+ * with an empty context module that throws `MODULE_NOT_FOUND` for every
+ * specifier. Both constructors would then fail on any production `next build`,
+ * and `createDeploymentPlaneHandles` catches those failures into ordinary
+ * provider absence — so a fully configured deployment would report exactly the
+ * state an unconfigured one does. `process.getBuiltinModule` is opaque to the
+ * bundler, which leaves the loader as Node's real `require` resolving the two
+ * packages `next.config.ts` keeps external and traces into the deployed function.
+ */
+const requireSiteModule: SiteModuleLoader = process
+  .getBuiltinModule("module")
+  .createRequire(siteModuleAnchor());
+
+/**
+ * The file Node resolves the two provider specifiers relative to.
+ *
+ * The bundler inlines `import.meta.url` as this source file's build-time path,
+ * which the deployed function does not have, so resolution would walk up a
+ * directory tree that is not there. `__filename` is the emitted chunk's own
+ * runtime path inside the deployed function, whose root is where the traced
+ * `node_modules` lives; it is absent when this module runs unbundled as ESM
+ * (the gate, `next dev`), where `import.meta.url` is the real path.
+ */
+function siteModuleAnchor(): string {
+  return typeof __filename === "string" ? __filename : import.meta.url;
+}
 
 export function createStripeClient(
   secretKey: string,
