@@ -29,6 +29,7 @@ import {
 } from "@sceneaxi/schemas";
 import type { Awaitable } from "@sceneaxi/auth";
 import { assertModeAuthorized } from "./checkout.js";
+import { resolveCreditPackRevision } from "./credit-packs.js";
 import {
   appendCreditEntry,
   deriveEntryId,
@@ -381,8 +382,10 @@ export const CHECKOUT_METADATA_KEYS = Object.freeze({
  * amount, currency, quantity, Stripe price) comes from the injected adapter
  * boundary — Stripe webhook objects are minimal and do not carry `line_items` —
  * and is bound to the persisted intent, which is the immutable price snapshot.
- * `credits` comes from that intent, never from the event: an attacker who could
- * influence event metadata must not be able to name their own credit amount.
+ * The normalized `credits` starts from that intent, never from the event, but the
+ * grant path cross-checks it against the committed archive before any ledger entry:
+ * an attacker who could influence event metadata or the persisted amount must not
+ * be able to name their own credit amount.
  *
  * The event's Checkout Session id (`data.object.id`) is read here and compared
  * against the settlement's own `sessionId` **inside this boundary**, so the
@@ -702,12 +705,35 @@ export function applyCheckoutCompletedGrant(
     );
   }
 
+  // The persisted intent is not itself an issuance authority. Resolve its exact
+  // price tuple against the committed archive before constructing the ledger
+  // entry, so a signed/session-bound intent cannot inflate a paid grant and a
+  // repriced or retired pack remains grantable from its retained revision.
+  const revision = resolveCreditPackRevision(
+    validated.value.itemId,
+    validated.value.stripePriceId,
+    validated.value.unitAmount,
+  );
+  if (!revision.ok) return revision;
+  if (validated.value.currency !== revision.value.currency) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.catalogRevisionUnresolvable,
+      `The checkout completion settles in "${validated.value.currency}", but committed credit pack revision "${revision.value.revisionId}" is priced in "${revision.value.currency}"; no revision resolves that tuple.`,
+    );
+  }
+  if (credits !== revision.value.credits) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.catalogRevisionCreditsMismatch,
+      `The checkout completion claims ${credits} credits, but committed credit pack revision "${revision.value.revisionId}" grants ${revision.value.credits}.`,
+    );
+  }
+
   const idempotencyKey = `${STRIPE_EVENT_IDEMPOTENCY_PREFIX}${validated.value.eventId}`;
   const completionFingerprint = fingerprintCheckoutCompletion(validated.value);
   return appendCreditEntry(state, {
     entryId: deriveEntryId(idempotencyKey),
     movement: "grant",
-    delta: credits,
+    delta: revision.value.credits,
     reason: `credit pack ${validated.value.itemId} purchased (${validated.value.mode}); completion-sha256:${completionFingerprint}`,
     idempotencyKey,
     now,

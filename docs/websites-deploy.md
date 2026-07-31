@@ -238,22 +238,27 @@ than inventing a session, balance, or checkout.
    - **Persist the intent** under `intent.intentId`, exactly as given, before redirecting,
      and keep the four price-bearing fields it was written with — `credits`, `unit_amount`,
      `currency`, `stripe_price_id` — unchanged for the row's whole life.
-     `CheckoutEvidencePort.findIntent(intentId)` must return that same price snapshot; it is
-     the deployment's issuance authority for the credits granted by a paid checkout, and an
+     `CheckoutEvidencePort.findIntent(intentId)` must return that same price snapshot; an
      absent one refuses `STRIPE_CHECKOUT_EVIDENCE_MISSING`. The money figure is corroborated
      across two reads, because `parseCheckoutCompletedEvent` compares the retrieved
-     settlement against this row; the credit figure is read from this row alone
-     ([`auth-credits.md`](auth-credits.md#stripe-test-mode)). The obligation is deliberately
-     field-scoped rather than whole-row: the columns a deployment adds for its own
-     operations stay writable, so stamping the hosted Stripe session id onto the row once
+     settlement against this row. At grant time, `applyCheckoutCompletedGrant` resolves the
+     row's `(itemId, stripePriceId, unitAmount)` through the committed archive and requires
+     its credits to match the retained revision; the ledger uses that revision's credits,
+     not the row or event as an issuance authority ([`auth-credits.md`](auth-credits.md#stripe-test-mode)).
+     Unknown tuples refuse `BILLING_CATALOG_REVISION_UNRESOLVABLE` and mismatches refuse
+     `BILLING_CATALOG_REVISION_CREDITS_MISMATCH` before the commit boundary. The obligation is
+     deliberately field-scoped rather than whole-row: the columns a deployment adds for its
+     own operations stay writable, so stamping the hosted Stripe session id onto the row once
      the session exists is expected, and nobody should later re-tighten this into whole-row
-     immutability. Captain decisions D2 and D3 bear on that asymmetry — D3 on enforcing this
-     same field scope in the database — are decided but unimplemented, and are owned only by
-     their out-of-tree records `data/sceneaxi-authority-decision-d2-intent-credit-anchor.md`
-     and `data/sceneaxi-authority-decision-d3-intent-ddl-immutability.md` — which
-     [`docs/program/NEXT-STEP.md`](program/NEXT-STEP.md#captain-authority-decisions-d1d5)
-     only restates. This contract implements neither, so until D3's own migration lands the
-     obligation above is the adapter's to honour and nothing in `db/migrations` checks it.
+     immutability. D2 is implemented over the archived/versioned catalog from
+     [PR #173](https://github.com/Vhailors/sceneaxi/pull/173) and adds no migration. D3
+     remains a separate decision this change implements no part of,
+     but its migration landed in [PR #172](https://github.com/Vhailors/sceneaxi/pull/172):
+     once you have run step 5 below, `0003_checkout_session_intent_price_immutability.sql`
+     refuses an `UPDATE` to those same four columns in the database, leaving the operational
+     ones writable. Do not read that as D3 discharged — auditing this deployment's own writes
+     is still outstanding, and this repository cannot see them — and until the migration is
+     applied here the field scope rests on the adapter alone.
    - **Echo the session id on the settlement.** `CheckoutEvidencePort.retrieveSettlement`
      is called with the Checkout Session id read from the verified body, and the
      `CheckoutSettlement` it returns must carry that same id on `sessionId`.
@@ -336,18 +341,24 @@ Load-bearing properties, each gate-tested in `tests/sites/identity-plane-wiring.
   of `verifyStripeWebhookSignature` — checked at **runtime** by object identity, not only
   by type (sceneaxi#126), so an unsigned or forged body has no path to a grant even from
   JavaScript or through an `as` cast, and a copy of a genuine completion refuses too. The
-  credit amount comes from the persisted intent, never from the event.
+  grant-time archive anchor also refuses a signed/session-bound intent whose credits do not
+  match its retained revision, before `persistCheckoutCompletedGrant` can commit.
 - **The webhook's answer names the failing side.** A refusal this deployment owns — no
   signing secret, an unusable clock, an adapter that threw, a persisted intent its own
   checkout adapter never wrote, a settlement its own adapter returned for a different
   Checkout Session or without the required `sessionId`, its own ledger rows that do not
-  load — answers `503`; a refusal the request owns — signature, payload, a session id the
-  verified body itself omits, an intent that does not match — answers `400`. The
-  settlement-session refusal sits on the deployment's side because both sides of that
-  comparison come from one signature-verified body: the endpoint reads the session id out
-  of the verified payload and asks its own `retrieveSettlement` for exactly that id, so
-  only the adapter's answer can disagree, and a forged body is refused by signature
-  verification long before it. An event the endpoint is not built to act on is neither: it
+  load, its own bundled credit-pack archive that does not validate, a persisted intent
+  whose pack tuple or currency no retained revision of that archive resolves, or one whose
+  credits do not equal the resolved revision's — answers `503`; a refusal the request owns
+  — signature, payload, a session id the verified body itself omits, an intent that does
+  not match — answers `400`. The settlement-session refusal sits on the deployment's side
+  because both sides of that comparison come from one signature-verified body: the endpoint
+  reads the session id out of the verified payload and asks its own `retrieveSettlement`
+  for exactly that id, so only the adapter's answer can disagree, and a forged body is
+  refused by signature verification long before it. The archive and revision refusals sit
+  there for the same shape of reason: both sides are the deployment's own — the intent its
+  checkout adapter persisted, and the pack revision this repository commits — so a sender
+  decides neither. An event the endpoint is not built to act on is neither: it
   answers `200` with `ignored: true`, so Stripe stops redelivering a condition redelivery
   cannot change. Only `ignored: false` means credits are in the ledger. Exactly three
   things are acknowledged, and all three are decided from the verified body before any

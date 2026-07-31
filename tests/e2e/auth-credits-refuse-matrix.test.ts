@@ -1049,6 +1049,29 @@ describe("billing refuse matrix", () => {
       );
     }
 
+    // The body is genuinely signed and its settlement is bound to the exact
+    // session, but the persisted intent claims an amount the committed archive
+    // never issued. D2 must refuse before the ledger sees an append.
+    const inflatedIntent: CheckoutSessionIntent = {
+      ...packIntent.value,
+      credits: 1_000_000,
+    };
+    const inflatedEvent = parseCheckoutCompletedEvent({
+      verified: verifyBody(body),
+      intent: inflatedIntent,
+      settlement: settlementFor(inflatedIntent),
+    });
+    expect(inflatedEvent.ok).toBe(true);
+    if (inflatedEvent.ok) {
+      record(
+        applyCheckoutCompletedGrant({
+          state: funded(0),
+          completion: inflatedEvent.value,
+          now: NOW,
+        }),
+      );
+    }
+
     const liveIntent: CheckoutSessionIntent = {
       ...packIntent.value,
       intentId: "int_live",

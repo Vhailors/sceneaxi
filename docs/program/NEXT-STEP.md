@@ -85,6 +85,24 @@ account of landed work cannot disagree:
 | B3 credit commit boundary plus captain decisions D4/D5 | [#128](https://github.com/Vhailors/sceneaxi/issues/128) | [#168](https://github.com/Vhailors/sceneaxi/pull/168) | 2026-07-29 |
 | Shared site-kit component collapse | [#162](https://github.com/Vhailors/sceneaxi/issues/162) | [#169](https://github.com/Vhailors/sceneaxi/pull/169) | 2026-07-29 |
 
+### Merged after the pinned SHA
+
+The Position block above pins the snapshot this brief was last re-pinned to, and re-pinning
+is its own change ([PR #170](https://github.com/Vhailors/sceneaxi/pull/170) was the last
+one). Six further first-parent merges landed after `203eb53` and **are not reachable from
+it**, so the "all reachable from `203eb53`" statement above covers the ladder table only.
+Sections below cite these merges by PR; read that as landed on `main` after the pin, not as
+work contained in the pinned snapshot:
+
+| Work | Issue | PR | Merged |
+|---|---|---|---|
+| Re-pin of this brief to `203eb53` | [#141](https://github.com/Vhailors/sceneaxi/issues/141) | [#170](https://github.com/Vhailors/sceneaxi/pull/170) | 2026-07-29 |
+| `/profiles` routed through shared site-kit profile contracts | [#165](https://github.com/Vhailors/sceneaxi/issues/165) | [#171](https://github.com/Vhailors/sceneaxi/pull/171) | 2026-07-29 |
+| D3 checkout-intent price-immutability migration | — | [#172](https://github.com/Vhailors/sceneaxi/pull/172) | 2026-07-30 |
+| Archived and versioned credit-pack catalog, D2's binding prerequisite | — | [#173](https://github.com/Vhailors/sceneaxi/pull/173) | 2026-07-30 |
+| D1 identity-port-witnessed principals | — | [#174](https://github.com/Vhailors/sceneaxi/pull/174) | 2026-07-30 |
+| Deployment-owned issuance authority contract | — | [#175](https://github.com/Vhailors/sceneaxi/pull/175) | 2026-07-30 |
+
 Surface-by-surface runnable levels and their proofs are owned by
 [`runnable-surfaces.md`](../runnable-surfaces.md); how far each profile's open
 path may be *demonstrated* is owned by
@@ -181,46 +199,51 @@ code-literal-only rule, while the captain instead chose the named
 `SCENEAXI_STRIPE_LIVE_AUTHORIZED` configuration value with an evidence mitigation.
 
 The table below records disposition and sequencing only; **it is not an implementation
-authority**. D1–D3 remain unimplemented and unauthorized.
+authority**. All five now have landed implementation work: D1 in PR #174, D2 here, D3's
+migration in PR #172, and D4/D5 in PR #168. Only #168 is reachable from the SHA pinned in
+Position; #172 and #174 merged after it, as recorded in [Merged after the pinned
+SHA](#merged-after-the-pinned-sha). D3 is the one still carrying an unfinished
+prerequisite, and it is out-of-tree — see its row.
 
-Note the difference in where these decisions are *owned*. D4 and D5 landed with their
-implementation, so each is now owned by an in-tree document —
-[`auth-credits.md`](../auth-credits.md) for both, plus
-[`websites-deploy.md`](../websites-deploy.md) for D4's webhook path. D1–D3 are recorded
-**only** in their out-of-tree decision records above; no in-tree document owns them yet,
-and this brief does not become their owner. Their in-tree owner lands with their
-implementation. Until then they are decided and unimplemented, and the disposition text
-below is a restatement of those external records rather than a fact this repository holds.
+Note the difference in where these decisions are *owned*. Each landed implementation
+brought its in-tree owner with it: [`auth-credits.md`](../auth-credits.md) owns D1's
+principal provenance, D2's grant-time anchor, and D4 and D5, with
+[`packages/auth/README.md`](../../packages/auth/README.md) beside it for D1 and
+[`websites-deploy.md`](../websites-deploy.md) for D4's webhook path; D3's migration is
+owned by `db/migrations` and asserted by `tests/db/schema-lockstep.test.ts`. This brief
+owns none of them, and the disposition column below remains a restatement of the external
+records rather than a fact this repository holds.
 
 | Decision | Recorded disposition | Status / binding prerequisite |
 |---|---|---|
-| **D1 — `principal-provenance`** | Witness every `Principal` the identity port issues; guards accept only values actually issued by `createIdentityPort`, with a test-only issuance seam | **Decided, unimplemented.** First confirm the deployment re-verifies each request instead of rehydrating a cached principal; then ship the test seam before flipping guards |
-| **D2 — `intent-credit-anchor`** | At grant time, cross-check persisted intent credits against the committed pack catalog by `(itemId, stripePriceId, unitAmount)` | **Decided, unimplemented.** An archived/versioned pack catalog (or the recorded `intent.createdAt` grace window) is a binding prerequisite, or a reprice can leave a paid in-flight checkout permanently ungranted |
-| **D3 — `intent-ddl-immutability`** | Add a forward-only trigger protecting only `credits`, `unit_amount`, `currency`, and `stripe_price_id`; operational columns stay writable | **Decided, unimplemented.** Audit the deployment's own writes first; the repository cannot see them. Migration execution also needs its separate deploy authority |
+| **D1 — `principal-provenance`** | Witness every `Principal` the identity port issues; guards accept only values actually issued by `createIdentityPort`, with a test-only issuance seam | **Landed in [PR #174](https://github.com/Vhailors/sceneaxi/pull/174).** `packages/auth/src/principal-provenance.ts` witnesses every issued `Principal`, the guards in `roles.ts` refuse an unwitnessed one and return the exact witnessed object, and the test-only seam is `@sceneaxi/auth/testing/principal-issuance`. Provenance deliberately does not survive serialization, so the umbrella re-verifies its carried session per request |
+| **D2 — `intent-credit-anchor`** | At grant time, cross-check persisted intent credits against the committed pack catalog by `(itemId, stripePriceId, unitAmount)` | **Implemented in #177.** `applyCheckoutCompletedGrant` resolves the archived tuple before append/commit, refuses unknown or mismatched credit amounts, and grants retained revision credits; D3 remains separate |
+| **D3 — `intent-ddl-immutability`** | Add a forward-only trigger protecting only `credits`, `unit_amount`, `currency`, and `stripe_price_id`; operational columns stay writable | **Migration landed in [PR #172](https://github.com/Vhailors/sceneaxi/pull/172).** `db/migrations/0003_checkout_session_intent_price_immutability.sql` refuses an `UPDATE` to exactly those four columns; `tests/db/schema-lockstep.test.ts` asserts the field scope. Not discharged: the deployment's own writes are still unaudited — the repository cannot see them — and executing the migration needs its separate deploy authority |
 | **D4 — `commit-boundary-sequencing`** | Move the umbrella webhook onto `persistCheckoutCompletedGrant()` in the same ship as #128, preserving one credit-grant commit boundary | **Landed in [PR #168](https://github.com/Vhailors/sceneaxi/pull/168).** Atomic persistence for `MoneySplitRecord` was not selected and remains an unauthorized gap before any Connect work |
 | **D5 — `live-mode-authorization-source`** | Permit one named configuration value, `SCENEAXI_STRIPE_LIVE_AUTHORIZED`, with an auditable affirmative; no alias, mode, price, adapter, or production-correlated value may imply authorization | **Landed in [PR #168](https://github.com/Vhailors/sceneaxi/pull/168).** Absent or malformed still refuses `STRIPE_LIVE_MODE_NOT_AUTHORIZED` at intent creation and grant. No shipped call site activates live mode; ADR 0021's separate go-live hold remains |
 
 ### Open trackers
 
-- [#165](https://github.com/Vhailors/sceneaxi/issues/165) — move the `/profiles`
-  contract mirror onto the shared site-kit layer. It is now unblocked, for two
-  separate reasons. Its own blocker, as [#165](https://github.com/Vhailors/sceneaxi/issues/165)
-  states it, was that `packages/site-kit` was deliberately held read-only while three
-  concurrent visual lanes ran so their PRs stayed independently mergeable; that hold ended
-  when [#163](https://github.com/Vhailors/sceneaxi/pull/163),
-  [#164](https://github.com/Vhailors/sceneaxi/pull/164), and
-  [#166](https://github.com/Vhailors/sceneaxi/pull/166) landed. Separately,
-  [#162](https://github.com/Vhailors/sceneaxi/issues/162) — which #165 records as
-  *distinct* work that merely touches the same package — has since landed in
-  [PR #169](https://github.com/Vhailors/sceneaxi/pull/169), removing the
-  concurrent-mutation conflict as well. Unblocked is not authorized: #165 remains
-  **unauthorized**, and this brief does not start it.
 - [#114](https://github.com/Vhailors/sceneaxi/issues/114) — the runnable-surfaces
   epic; its issue graph owns the remaining closure dependencies. Its former #120 and
   #121 gaps are closed by PRs #154 and #153 respectively; the precise runnable levels
   remain owned by [`runnable-surfaces.md`](../runnable-surfaces.md).
 - [#1](https://github.com/Vhailors/sceneaxi/issues/1) — the canonical product
   spec, a standing issue rather than a work item.
+
+One tracker this brief previously listed as open has since closed:
+[#165](https://github.com/Vhailors/sceneaxi/issues/165) — move the `/profiles` contract
+mirror onto the shared site-kit layer — landed in
+[PR #171](https://github.com/Vhailors/sceneaxi/pull/171) on 2026-07-29, after the SHA
+pinned in Position. Its recorded blocker had been `packages/site-kit` being deliberately
+held read-only while three concurrent visual lanes ran so their PRs stayed independently
+mergeable; that hold ended when [#163](https://github.com/Vhailors/sceneaxi/pull/163),
+[#164](https://github.com/Vhailors/sceneaxi/pull/164), and
+[#166](https://github.com/Vhailors/sceneaxi/pull/166) landed, and
+[#162](https://github.com/Vhailors/sceneaxi/issues/162) — which #165 records as *distinct*
+work that merely touches the same package — landed in
+[PR #169](https://github.com/Vhailors/sceneaxi/pull/169), removing the concurrent-mutation
+conflict as well.
 
 ### Production deployment evidence and limits
 
