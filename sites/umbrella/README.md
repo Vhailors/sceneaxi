@@ -132,7 +132,14 @@ designed around that rather than around widening the contract.
   and no canvas, only the plane's own named refusal. Its viewport *draws* the composed
   scene: selection, transform edits, and play/pause/step stay server-side Minimum E2
   operations, so nothing here widens ADR 0020 entitlement or ADR 0003's general-E2
-  bound.
+  bound. The viewport is one region of the **Engine Desktop shell** the whole route
+  now draws (sceneaxi#184) — server-built by `buildEditorShellView()` in
+  `@sceneaxi/site-kit`, drawn by the one client component
+  `src/app/editor/_components/editor-shell.tsx`, and given the whole window by
+  `src/app/editor/layout.tsx`, which collapses the site masthead, footer, and skip
+  link for this route alone. What that shell decides, what refuses, where it departs
+  from the design archive, and its recorded browser evidence are owned by
+  [`docs/web-editor-shell.md`](../../docs/web-editor-shell.md).
 - Each page reports the running core's own frame record (`backend`, `label`, draw
   surface, `pixelsDrawn`, draw calls, mounted instances), so a frame counter can never
   imply pixels that were never drawn. The editor additionally shows its *server*

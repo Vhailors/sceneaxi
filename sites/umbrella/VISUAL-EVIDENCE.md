@@ -10,6 +10,13 @@ own half of this work is `tests/sites/umbrella-visual.test.ts` and
 `tests/sites/umbrella-profile-matrix.test.ts`, which run in `pnpm gate` and assert the
 structure and the claims; nothing here is asserted twice.
 
+`/editor` appears below only as the **site-chrome** route it was for sceneaxi#157 —
+the unentitled refusal under the masthead and footer. sceneaxi#184 rebuilt the
+entitled route as the Engine Desktop shell, which owns the whole viewport and
+collapses the masthead, footer, and skip link for that route alone; its own
+regions, tiers, and browser evidence are recorded in
+[`../../docs/web-editor-shell.md`](../../docs/web-editor-shell.md), not here.
+
 ## Source authority
 
 - Accepted screen: `Umbrella Site.dc.html`, from the captain-supplied
