@@ -211,9 +211,89 @@ describe("real engine state, not fixtures", () => {
     expect(playing.run.tick).toBeGreaterThan(0);
     expect(playing.run.playState).toBe("playing");
     expect(playing.statusBar.readiness).toBe("Running — deterministic");
-    // The play control flips to pause, still inside the frozen operation set.
-    const binding = playing.run.playPause.binding;
-    expect(binding?.kind === "href" && binding.operations.includes("pause")).toBe(true);
+  });
+
+  it("declares the run link as what it does, never a pause it does not perform", () => {
+    // The session is rebuilt per request, so turning `play` off opens the next
+    // one at tick 0 rather than pausing the advanced one. The control says
+    // "Stop" and declares `dispose`; claiming `pause` would name an operation no
+    // render on this surface calls.
+    const playing = view({ play: "1" });
+    const stop = playing.run.playPause;
+    expect(stop.label).toBe("Stop");
+    if (stop.binding === null || stop.binding.kind !== "href") {
+      throw new Error("the run control must be an href binding");
+    }
+    expect(stop.binding.operations).not.toContain("pause");
+    expect(stop.binding.operations).toContain("dispose");
+    // Following it lands on a session that never advanced.
+    expect(view().run.tick).toBe(0);
+    expect(view().run.playState).toBe("paused");
+
+    const paused = view();
+    const play = paused.run.playPause;
+    expect(play.label).toBe("Play one step");
+    if (play.binding === null || play.binding.kind !== "href") {
+      throw new Error("the run control must be an href binding");
+    }
+    expect([...play.binding.operations]).toEqual(["play", "step"]);
+    // The palette row is the same binding, so the two cannot disagree.
+    const paletteRow = paused.palette.find((row) => row.control.id === "palette-play-scene");
+    expect(paletteRow?.control.binding).toBe(play.binding);
+  });
+
+  it("indents the scene tree by the snapshot's own parent chain", () => {
+    const shell = view();
+    const depthById = new Map(shell.tree.map((row) => [row.id, row.depth]));
+    // The starter artifact nests its runtime hierarchy, so the tree is deeper
+    // than "instance or not": a grandchild node must not draw level with its
+    // own parent.
+    expect(Math.max(...depthById.values())).toBeGreaterThan(1);
+    // Instance rows are roots, and every other row is exactly one deeper than
+    // whatever row precedes it as its parent.
+    for (const row of shell.tree) {
+      if (row.kindLabel === "sculpt") expect(row.depth).toBe(0);
+      else expect(row.depth).toBeGreaterThan(0);
+    }
+  });
+
+  it("mints the scene tree's selection links, so accounting can see them", () => {
+    const shell = view();
+    const selectable = shell.tree.filter((row) => row.select !== null);
+    expect(selectable.length).toBeGreaterThan(0);
+    for (const row of selectable) {
+      const control = row.select;
+      if (control === null) throw new Error("filtered rows carry a control");
+      expect(control.kind).toBe("live");
+      expect(shell.controls.map((entry) => entry.id)).toContain(control.id);
+      if (control.binding === null || control.binding.kind !== "href") {
+        throw new Error(`${control.id} must select through an href`);
+      }
+      expect([...control.binding.operations]).toEqual(["select"]);
+    }
+    // The selected instance offers no link to select itself again.
+    expect(shell.tree.filter((row) => row.selected && row.select !== null)).toEqual([]);
+  });
+
+  it("says the applied save is ephemeral rather than claiming durability", () => {
+    const shell = view();
+    expect(shell.changes.appliedPaths).toContain("scene.sceneaxi.json");
+    // The label may not read as a durable save, and the disclosure has to exist.
+    expect(shell.changes.savedLabel).toContain("in session");
+    expect(shell.changes.persistenceNote).toContain("nothing is stored between requests");
+    expect(shell.changes.persistencePin).toContain("ephemeral");
+  });
+
+  it("carries the deep link and what it does not do, only when one was given", () => {
+    expect(view().deepLink).toBeNull();
+    const linked = view({ source: "catalog-game", item: "listing-1" });
+    expect(linked.deepLink?.source).toBe("catalog-game");
+    expect(linked.deepLink?.itemId).toBe("listing-1");
+    expect(linked.deepLink?.note).toContain("shared starter scene");
+  });
+
+  it("decides the refuse-only assistant state here, not in a renderer", () => {
+    expect(view().assistant.kidsState).toBe("denied");
   });
 
   it("moves exactly the edited instance through its own transform parameter", () => {

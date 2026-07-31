@@ -1080,6 +1080,78 @@ describe("the Engine Desktop editor shell stays honest (sceneaxi#184)", () => {
     expect(CSS).toContain("@media (max-width: 899px), (max-height: 599px)");
   });
 
+  it("withdraws the command palette entirely under the Kids lock", () => {
+    // The palette is part of the editor body the refuse-only profile replaces,
+    // so neither the opener nor ⌘K may reach it — otherwise the overlay's live
+    // play row stays reachable behind a refusal that claims the body is gone.
+    expect(SHELL).toContain("const paletteOpen = paletteRequested && !kids;");
+    expect(SHELL).toContain("if (kids) return;");
+    // And the opener itself is demoted with the policy's own code, like the rail.
+    const opener = SHELL.slice(SHELL.indexOf("control={view.paletteOpener}"));
+    expect(opener.slice(0, 400)).toContain(
+      "demotedRefusal={kids ? view.kidsLock.code : undefined}",
+    );
+  });
+
+  it("filters the palette it offers to filter", () => {
+    // An input that advertises "Filter commands" has to filter, so the rows the
+    // groups draw are the filtered ones, not the whole set.
+    expect(SHELL).toContain("onChange={(event) => setPaletteQuery(event.target.value)}");
+    expect(SHELL).toContain("const rows = paletteRows.filter");
+  });
+
+  it("renders the run controls the view mints, in Run mode", () => {
+    // Both are `live` links back to /editor; a minted control that reaches no
+    // element is a control nothing can use.
+    expect(SHELL).toContain("control={view.run.playPause}");
+    expect(SHELL).toContain("control={view.run.reset}");
+  });
+
+  it("keeps the viewport's own copy beside the viewport, in every mode", () => {
+    // Neither line belongs to one mode's inspector: what the canvas draws and
+    // what it deliberately never does is true of all seven.
+    expect(SHELL).toContain("{viewportCopy.lede}");
+    expect(SHELL).toContain("{viewportCopy.honesty}");
+    const viewportColumn = SHELL.slice(
+      SHELL.indexOf('className="ed-viewport-col"'),
+      SHELL.indexOf('className="ed-dock"'),
+    );
+    expect(viewportColumn).toContain("{viewportCopy.lede}");
+    expect(viewportColumn).toContain("{viewportCopy.honesty}");
+  });
+
+  it("states that the applied save does not survive the request", () => {
+    expect(SHELL).toContain("{view.changes.savedLabel}");
+    expect(SHELL).toContain("{view.changes.persistenceNote}");
+    expect(SHELL).toContain("{view.changes.persistencePin}");
+  });
+
+  it("gives every form control the id and kind its minted control declares", () => {
+    // `view.edit.*` are minted `live`, so the elements that carry them have to
+    // say so — otherwise the accounting index names four live edit controls the
+    // document does not expose.
+    for (const wiring of [
+      "id={view.edit.selection.id}",
+      'data-kind={view.edit.selection.kind}',
+      "id={view.edit.translation.id}",
+      'data-kind={view.edit.translation.kind}',
+      "id={view.edit.objects.id}",
+      'data-kind={view.edit.objects.kind}',
+      "id={view.edit.apply.id}",
+      'data-kind={view.edit.apply.kind}',
+    ]) {
+      expect(SHELL).toContain(wiring);
+    }
+    // The scene tree's selection links are minted controls too, drawn through
+    // the same helper rather than as bare anchors.
+    expect(SHELL).toContain("<ShellButton control={row.select}");
+    // And every remaining interactive element on the route declares a kind.
+    const viewport = read("src/app/editor/_components/editor-viewport.tsx");
+    expect(viewport.match(/<button/g)?.length).toBe(
+      viewport.match(/data-kind="view"/g)?.length,
+    );
+  });
+
   it("collapses the site chrome for the editor route only, by removal", () => {
     const layout = read("src/app/editor/layout.tsx");
     expect(layout).toContain(".masthead, footer, .skip-link { display: none; }");

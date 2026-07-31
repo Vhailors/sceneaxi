@@ -65,13 +65,22 @@ export function EditorViewport({
         label="Minimum E2 editor viewport — drag to orbit, scroll to zoom"
       />
 
+      {/* Both change what this canvas shows and nothing else, which is the view
+          kind each declares — the editor shell's accounting rule reaches every
+          interactive element on the route, these two included. */}
       <div className="actions">
-        <button className="button button-quiet" type="button" onClick={viewport.resetView}>
+        <button
+          className="button button-quiet"
+          type="button"
+          data-kind="view"
+          onClick={viewport.resetView}
+        >
           Reset view
         </button>
         <button
           className="button button-quiet"
           type="button"
+          data-kind="view"
           disabled={!isolatable}
           aria-pressed={isolateSelection && isolatable}
           onClick={() => {

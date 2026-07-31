@@ -17,7 +17,7 @@ file covers the web surface only.
 | Layer | Owner | Decides |
 |---|---|---|
 | Shared vocabulary | `packages/schemas/src/editor-shell.ts` (`EDITOR_SHELL_MODES`, dock tabs, viewport sources, assistant modes/states, control kinds, window tiers, structural metrics, retired copy) | what the editor's chrome *is* — for every surface |
-| Desktop projection | `apps/desktop-shell/src/visual-model.ts` | derives its mode table, dock-tab derivation, assistant modes, and tier thresholds from the shared vocabulary; everything else unchanged |
+| Desktop projection | `apps/desktop-shell/src/visual-model.ts` | derives its mode table, dock-tab derivation, assistant modes and states, viewport sources (ids **and** labels), and tier thresholds from the shared vocabulary; everything else unchanged |
 | Web projection | `packages/site-kit/src/editor-shell.ts` (`buildEditorShellView`) | binds the vocabulary to one real session render: every panel value, every control's kind, every refusal |
 | Web renderer | `sites/umbrella/src/app/editor/_components/editor-shell.tsx` + the `.edshell` section of `globals.css` | draws the view and decides nothing; client state is chrome navigation only |
 
@@ -25,9 +25,10 @@ The vocabulary lives in `@sceneaxi/schemas` because the dependency matrix lets
 both consumers name exactly `schemas` + `authoring-core` — the same reasoning
 that placed the open-path policy there. Parity is a data identity in
 `tests/parity/editor-shell-parity.test.ts`: modes, rail labels, dock tabs,
-assistant modes, tier thresholds, archive anchor, and structural metrics are
-asserted equal across schemas, the desktop model, the web view, and the web
-stylesheet's derived breakpoints. There is **no second state machine**: the one
+assistant modes, assistant states, viewport source ids and labels, tier
+thresholds, archive anchor, and structural metrics are asserted equal across
+schemas, the desktop model, the web view, and the web stylesheet's derived
+breakpoints. There is **no second state machine**: the one
 live editor state machine remains `createMinimumE2Editor` in
 `@sceneaxi/authoring-core`, reached through `createWebEditorSession`, and the
 chrome's client state (active mode, dock tab, overlay, assistant visibility,
@@ -43,26 +44,38 @@ entitlement decision still happens before any session exists).
 
 | Surface | Backing |
 |---|---|
-| Scene tree, layers, inspector transform/kernel facts | the session's own `snapshot()` — real instance ids, transforms, kernel tick/collisions/digest |
+| Scene tree, layers, inspector transform/kernel facts | the session's own `snapshot()` — real instance ids, transforms, kernel tick/collisions/digest; indentation walks the snapshot's own parent chain, so an artifact's nested runtime hierarchy draws at its real depth, and each selectable row is a minted `live` control on `select` rather than a bare link |
 | Viewport | the existing ADR 0022 boundary: `EditorViewport` over `useSculptViewport`, drawing the session's composed `MountableScene` on a real `WebGLRenderer`; the compact strip below it is the browser frame's own report |
-| Changes dock | the **real** proposal this render saved through propose/apply, reviewed by `reviewProposal` against the captured pre-save document (`EditorRender.baseDocument`); rows read `applied` because apply is E1 all-or-nothing — accept/reject per row renders inert and says so |
+| Changes dock | the **real** proposal this render saved through propose/apply, reviewed by `reviewProposal` against the captured pre-save document (`EditorRender.baseDocument`); rows read `applied` because apply is E1 all-or-nothing — accept/reject per row renders inert and says so. The apply is real and the workspace is not: `renderEditorState` creates it with `mkdtemp` and removes it in its `finally`, so the title bar reads `applied in session`, the dock prints `changes.persistenceNote`, and the status bar pins `changes.persistencePin` — the URL is the only thing that carries an edit |
 | Console dock | the operations this render actually performed, in order, with real ids and digests |
 | Evidence dock | the starter artifact digest, sculpt spec digest, composed scene digest, kernel session digest — all recomputed, none typed in |
 | Sculpt mode | the starter reconstruction's real facts: `REQUIRED_SCULPT_PASSES`, seed 8001, method/intake/spec digests; "Sculpt object" is inert (`EDITOR_OPERATION_NOT_ON_THIS_SURFACE`) |
 | Scene mode | the real `composeSceneProjection()` — world transforms, parent/depth, scene digest; placement copy restates ADR 0014's rule |
-| Run mode | real play/pause through the session (`play`/`step` server-side), real tick, the honest server-frame panel (`headless`, `pixelsDrawn: false`) beside the browser report that does draw |
+| Run mode | Play and Stop are rendered controls in the Run dock, not palette-only rows. Play is a real server-side `play` + `step` and a real tick. **Stop is a stop, not a pause**: the session is rebuilt per request, so dropping `play` from the URL ends this session and opens the next at tick 0, which is why the control says `Stop` and declares `dispose` instead of borrowing the `pause` operation no render here calls. Reset drops the URL state entirely. Beside them, the honest server-frame panel (`headless`, `pixelsDrawn: false`) and the browser report that does draw |
 | Ship mode | contract-only targets and an inert export — a handoff is data, not authority, and building one is not a Minimum E2 operation |
 | Plugins mode | the real seeded capability registry rows; nothing is loaded on this surface and the panel says so |
 | Assistant | honest seat: `no provider configured` (no live adapter in core); Send is inert (`EDITOR_ASSISTANT_NO_PROVIDER`); on Kids the seat is the deny (`THIRD_PARTY_LLM_DENIED_BY_DEFAULT`) |
-| Profile chips | `openPathPolicyView()` projected, never restated; the Kids chip swaps the editor body for the policy's own refusal (`OPEN_PATH_KIDS_REFUSED`), demotes the rail, and keeps the chips live — a refuse-only state is a state you can leave |
-| Command palette | rows bind to this surface's real controls or refuse by name; CLI-only verbs render inert with `EDITOR_VERB_CLI_ONLY` and print their verb |
+| Profile chips | `openPathPolicyView()` projected, never restated; the Kids chip swaps the editor body for the policy's own refusal (`OPEN_PATH_KIDS_REFUSED`), demotes the rail, the Search opener and the assistant toggle with that same code, withdraws the palette (⌘K opens nothing, any open overlay closes), and keeps the chips live — a refuse-only state is a state you can leave, and nothing else |
+| Command palette | rows bind to this surface's real controls or refuse by name; CLI-only verbs render inert with `EDITOR_VERB_CLI_ONLY` and print their verb. The filter input filters, over row labels and CLI verbs |
+| Viewport copy | `EDITOR_VIEWPORT_COPY.lede` and `.honesty` ride with the canvas in **every** mode, not inside the Run branch: the ADR 0017 core it names and the "draws only, never advances" statement are true of all seven |
+| Catalog deep link | when the request carried one, the source, item, and artifact reference are shown with the one thing the link does not do — every editor session opens the shared starter scene, not that listing's own scene |
 
 The closed refusal registry is `EDITOR_SHELL_WEB_REFUSALS` in
 `packages/site-kit/src/editor-shell.ts`; every code is reachable and every
 control's kind is asserted in `packages/site-kit/test/editor-shell.test.ts`.
-Every interactive element renders through one kind-aware helper
-(`ShellButton`), inert controls keep their focus stop with `aria-disabled` and
-an `aria-describedby` resolving into the printed legend.
+
+Control accounting has two halves, and both are load-bearing:
+
+- **Every minted control renders through the one kind-aware helper**
+  (`ShellButton`) — buttons and links alike, the scene tree's selection links
+  included. Inert controls keep their focus stop with `aria-disabled` and an
+  `aria-describedby` resolving into the printed legend.
+- **Every remaining interactive element declares a `data-kind` of its own.**
+  Form controls cannot go through the helper (they are a `<select>` and two
+  `<input>`s), so each wears the id and the kind of the `view.edit.*` control it
+  submits for; the dock tabs, the palette filter and close, the wordmark, and
+  `EditorViewport`'s two canvas buttons are `view`. A live control that appears
+  in neither half is the bug this rule exists to catch.
 
 ## Deviations from the archive, and why
 
@@ -119,22 +132,29 @@ Chrome via `chrome-devtools-axi`, `sites/umbrella` dev server with
 - **Play advances a real kernel**: `/editor?play=1` rendered
   `Play state playing · Tick 1`, frame digest `dcf1…0e5a` in both the runtime
   panel and the live-values inspector, console row `play · step 16ms · tick 1`,
-  status bar `Running — deterministic`.
+  status bar `Running — deterministic`. That session drove the run state by URL
+  (`?play=1`); the Run dock's own Play and Stop controls carry exactly that
+  href, and are covered by the gate rather than by this recorded session.
 - **The Kids chip is the policy's own lock**: clicking Kids replaced the editor
   body with `OPEN_PATH_KIDS_REFUSED` and the policy summary, set the assistant
   seat to `denied` with `THIRD_PARTY_LLM_DENIED_BY_DEFAULT`, demoted the rail
   to inert, kept all three chips live, and pinned the status bar to
   `kids profile · refuse-only · separate origin`; clicking Game restored the
   editor.
-- **Control accounting held in the live page**: every interactive element
-  carried `data-kind`; 36 buttons with 13 inert on the measured build state,
-  and **0** dangling `aria-describedby` references.
+- **Control accounting held in the live page**: 36 buttons with 13 inert on the
+  measured build state, and **0** dangling `aria-describedby` references. That
+  count predates the review round that put the run controls, the scene tree's
+  selection links, and the form controls into the accounting index, so treat the
+  number as stale and the property — every interactive element declares a kind,
+  no describedby dangles — as the thing to re-measure.
 - **Tiers behave as the shared table says**: at 1280×800 the assistant became
   an overlay; at 1024×700 the side panels reflowed under the viewport with the
   menus dropped; at 800×560 the chrome was replaced by the
   `EDITOR_WINDOW_BELOW_MINIMUM` refusal naming 900×600.
 - **The palette opens on ⌘K and the Search control**, groups its rows, prints
-  CLI verbs beside CLI-only rows, closes on Escape with focus returned.
+  CLI verbs beside CLI-only rows, closes on Escape with focus returned. Its
+  filter input and its withdrawal under the Kids lock landed in the same review
+  round as the run controls and are gate-covered, not part of this session.
 
 ## How to run it
 
@@ -157,6 +177,8 @@ and reaches no session and no canvas.
   kind; an inert one needs a registry code, and
   `packages/site-kit/test/editor-shell.test.ts` fails on an unreachable or
   unlisted refusal. Render it through `ShellButton` — a raw `<button>` has no
-  kind and no legend wiring.
+  kind and no legend wiring. A form control that cannot go through the helper
+  carries its control's own `id` and `kind` instead; nothing interactive ships
+  without one of the two.
 - A new live control must name operations from `WEB_EDITOR_SESSION_OPERATIONS`;
   widening that set is an ADR 0003 event, not an editor change.

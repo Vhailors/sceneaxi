@@ -28,9 +28,12 @@
  *   widened here: a control whose behaviour would need general E2 renders inert
  *   and says so (ADR 0003, ADR 0020).
  * - **Kids refuses in the model.** The profile chips project the shared
- *   open-path policy; on the refuse-only profile every control not in the
- *   exempt set is demoted to inert with the policy's own code, decided in the
- *   one mint function rather than per call site.
+ *   open-path policy, and the refuse-only projection is data on this view —
+ *   `kidsLock.code`, `assistant.kidsDenyCode`, `assistant.kidsState`. The
+ *   profile is chosen in the browser, so the renderer applies that projection;
+ *   what it may never do is spell a code or a state of its own, and everything
+ *   outside the exempt chips is either withdrawn or demoted with the code this
+ *   view carries.
  *
  * Pure TypeScript: no React, no Next, no DOM. The umbrella's client component
  * renders this data and decides nothing.
@@ -48,6 +51,7 @@ import {
   openPathPolicyView,
   pluginCapabilityRegistrySeed,
   type EditorShellAssistantModeId,
+  type EditorShellAssistantState,
   type EditorShellControlKind,
   type EditorShellDockTabId,
   type EditorShellModeId,
@@ -170,13 +174,19 @@ export type EditorShellControl = Readonly<{
 
 export type EditorShellTreeRow = Readonly<{
   id: string;
+  /** Indentation depth, walked from the snapshot's own parent chain. */
   depth: number;
   label: string;
   kindLabel: string;
   instanceId: string | null;
   selected: boolean;
-  /** Href that selects this instance, for rows that are instances. */
-  selectHref: string | null;
+  /**
+   * The control that selects this instance, for rows that are selectable
+   * instances. It is a real `live` control on a real session operation, so it is
+   * minted like every other one and lands in the accounting index rather than
+   * reaching the document as an unaccounted link.
+   */
+  select: EditorShellControl | null;
 }>;
 
 export type EditorShellInspectorField = Readonly<{
@@ -258,6 +268,18 @@ export type EditorShellView = Readonly<{
     /** Short form of the composed scene digest, or null when not composable. */
     sceneDigestShort: string | null;
   }>;
+  /**
+   * The catalog deep link this request carried, `null` when it carried none.
+   * It is on the view because a reader who arrived from a listing has to be
+   * told the one thing the link does not do: every editor session opens the
+   * shared starter scene, not that listing's own scene.
+   */
+  deepLink: Readonly<{
+    source: string;
+    itemId: string;
+    artifactRef: string | null;
+    note: string;
+  }> | null;
   tree: ReadonlyArray<EditorShellTreeRow>;
   layers: ReadonlyArray<Readonly<{ id: string; label: string; detail: string }>>;
   inspector: ReadonlyArray<EditorShellInspectorSection>;
@@ -316,13 +338,34 @@ export type EditorShellView = Readonly<{
     reviewRefusal: string | null;
     /** Apply on this surface is E1 all-or-nothing and already happened. */
     appliedPaths: ReadonlyArray<string>;
+    /**
+     * What the title bar says about the save. The apply was real, but the
+     * workspace it wrote into is created and removed inside the render, so this
+     * never claims a durable save — see `persistenceNote`.
+     */
+    savedLabel: string;
+    /**
+     * The ephemerality disclosure, printed verbatim. `renderEditorState`
+     * `mkdtemp`s a workspace and removes it in its `finally`, so nothing here
+     * survives the request and the surface has to say so.
+     */
+    persistenceNote: string;
+    /** The status bar's compact form of the same disclosure. */
+    persistencePin: string;
     acceptAll: EditorShellControl;
     rejectAll: EditorShellControl;
   }>;
   console: ReadonlyArray<EditorShellConsoleRow>;
   evidence: ReadonlyArray<EditorShellEvidenceRow>;
   assistant: Readonly<{
-    state: "open" | "closed" | "denied";
+    /** The seat's state on an allowed profile, before the reader closes it. */
+    state: EditorShellAssistantState;
+    /**
+     * The seat's state on the refuse-only profile. It is a member of the shared
+     * closed enumeration decided here, so a renderer cannot invent a fourth
+     * state or reach the composer by flipping `open`.
+     */
+    kidsState: EditorShellAssistantState;
     modelLabel: string;
     /**
      * The refuse-only profile's assistant denial, taken from the Model Provider
@@ -388,9 +431,12 @@ const vec = (translation: readonly number[]): string =>
  * Build the shell view for one rendered editor state.
  *
  * Deterministic: same state and render, same view. The mint function records
- * every control into the accounting index, and the Kids demotion — applied by
- * the client-side profile switch — is projected per profile here rather than
- * decided in the browser.
+ * every control into the accounting index, including the scene tree's own
+ * selection links, so nothing that drives a session operation can reach the
+ * document unaccounted. The refuse-only projection the client-side profile
+ * switch applies is data on this view — `kidsLock`, `assistant.kidsDenyCode`,
+ * `assistant.kidsState` — so the browser chooses the profile and never the
+ * wording, the code, or the state.
  */
 export function buildEditorShellView(input: EditorShellInput): EditorShellView {
   const { state, render, entitlement } = input;
@@ -474,20 +520,47 @@ export function buildEditorShellView(input: EditorShellInput): EditorShellView {
   // --- project pill: real document identity, no invented save time ---
   const sceneDigest = render.composition.ok ? render.composition.sceneDigest : null;
 
-  // --- scene tree: the session's own snapshot rows ---
+  // --- scene tree: the session's own snapshot rows, at their own depth ---
+  const parentByNodeId = new Map(
+    render.snapshot.sceneTree.map((node) => [node.id, node.parentId] as const),
+  );
+  /**
+   * Depth is the snapshot's parent chain walked to the root, not "has a parent":
+   * an artifact's runtime hierarchy nests, so a lid under a body under an
+   * instance is depth 2 and must not draw level with its own parent. The bound
+   * is the node count, so a malformed cycle stops rather than hangs the render.
+   */
+  const depthOfNode = (parentId: string | null): number => {
+    let depth = 0;
+    let current = parentId;
+    while (current !== null && depth <= parentByNodeId.size) {
+      depth += 1;
+      current = parentByNodeId.get(current) ?? null;
+    }
+    return depth;
+  };
   const tree = render.snapshot.sceneTree.map((node, index) => {
     const isInstance = node.kind === "sculpt-instance";
     const selected = isInstance && node.instanceId === render.snapshot.selectedInstanceId;
     const selectable = isInstance && !selected;
     return Object.freeze({
       id: `tree-${index}-${node.id}`,
-      depth: node.parentId === null ? 0 : 1,
+      depth: depthOfNode(node.parentId),
       label: node.label,
       kindLabel: isInstance ? "sculpt" : "node",
       instanceId: isInstance ? node.instanceId : null,
       selected,
-      selectHref: selectable
-        ? editorHref({ ...state, selectedInstanceId: node.instanceId }, {})
+      select: selectable
+        ? mint({
+            id: `tree-select-${node.instanceId}`,
+            label: node.label,
+            kind: "live",
+            binding: Object.freeze({
+              kind: "href" as const,
+              href: editorHref({ ...state, selectedInstanceId: node.instanceId }, {}),
+              operations: Object.freeze(["select"] as const),
+            }),
+          })
         : null,
     });
   });
@@ -679,18 +752,33 @@ export function buildEditorShellView(input: EditorShellInput): EditorShellView {
     }),
   });
 
-  // --- run: the session's own play state and kernel facts ---
-  const playPause = mint({
-    id: "run-play-pause",
-    label: state.playing ? "Pause" : "Play one step",
-    kind: "live",
+  /**
+   * What the run link honestly does, in both directions.
+   *
+   * The session is rebuilt per request from URL state, so turning `play` off
+   * does not pause an advanced session — it ends this one and opens the next at
+   * tick 0. That is a **stop**, and it declares `dispose` rather than borrowing
+   * the `pause` operation no render on this surface calls. Turning `play` on
+   * genuinely plays and steps the kernel once, server-side.
+   */
+  const runLink = Object.freeze({
+    label: state.playing ? "Stop" : "Play one step",
+    paletteLabel: state.playing ? "Stop the scene" : "Play the scene",
     binding: Object.freeze({
       kind: "href" as const,
       href: editorHref(state, { play: !state.playing }),
       operations: Object.freeze(
-        state.playing ? (["pause"] as const) : (["play", "step"] as const),
+        state.playing ? (["dispose"] as const) : (["play", "step"] as const),
       ),
     }),
+  });
+
+  // --- run: the session's own play state and kernel facts ---
+  const playPause = mint({
+    id: "run-play-pause",
+    label: runLink.label,
+    kind: "live",
+    binding: runLink.binding,
   });
   const reset = mint({
     id: "run-reset",
@@ -789,10 +877,18 @@ export function buildEditorShellView(input: EditorShellInput): EditorShellView {
       .map((diagnostic) => diagnostic.code)
       .join(" · ");
   }
+  const appliedPaths = render.save.ok ? render.save.appliedPaths : Object.freeze([]);
   const changes = Object.freeze({
     review,
     reviewRefusal,
-    appliedPaths: render.save.ok ? render.save.appliedPaths : Object.freeze([]),
+    appliedPaths,
+    savedLabel:
+      appliedPaths.length > 0
+        ? `applied in session · ${appliedPaths.join(", ")}`
+        : "not saved",
+    persistenceNote:
+      "This render applied the proposal to a workspace it created and removed inside the request: nothing is stored between requests, and the whole scene is rebuilt from the URL each time. Nothing here pretends to save your work — the URL is the only thing that carries it.",
+    persistencePin: "ephemeral workspace · nothing stored between requests",
     acceptAll: mint({
       id: "changes-accept-all",
       label: "Accept all",
@@ -893,6 +989,7 @@ export function buildEditorShellView(input: EditorShellInput): EditorShellView {
   // --- assistant: honest seat — no provider is wired on this surface ---
   const assistant = Object.freeze({
     state: "open" as const,
+    kidsState: "denied" as const,
     modelLabel: "no provider configured",
     kidsDenyCode: MODEL_PROVIDER_REFUSE_REASONS.kidsThirdPartyDenied,
     toggle: mint({ id: "assistant-toggle", label: "Assistant", kind: "view" }),
@@ -971,15 +1068,9 @@ export function buildEditorShellView(input: EditorShellInput): EditorShellView {
     Object.freeze({
       control: mint({
         id: "palette-play-scene",
-        label: state.playing ? "Pause the scene" : "Play the scene",
+        label: runLink.paletteLabel,
         kind: "live",
-        binding: Object.freeze({
-          kind: "href" as const,
-          href: editorHref(state, { play: !state.playing }),
-          operations: Object.freeze(
-            state.playing ? (["pause"] as const) : (["play", "step"] as const),
-          ),
-        }),
+        binding: runLink.binding,
       }),
       cliVerb: null,
       group: "RUN",
@@ -1071,6 +1162,15 @@ export function buildEditorShellView(input: EditorShellInput): EditorShellView {
       documentPath: "scene.sceneaxi.json",
       sceneDigestShort: sceneDigest === null ? null : shortDigestValue(sceneDigest),
     }),
+    deepLink:
+      state.deepLink === null
+        ? null
+        : Object.freeze({
+            source: state.deepLink.source,
+            itemId: state.deepLink.itemId,
+            artifactRef: state.deepLink.artifactRef,
+            note: "Opened from a catalog. The link carries a source, an item, and an optional artifact reference and nothing else — every editor session opens the shared starter scene, not that listing's own scene.",
+          }),
     tree: Object.freeze(tree),
     layers,
     inspector: Object.freeze(inspector),

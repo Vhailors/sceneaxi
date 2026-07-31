@@ -16,12 +16,14 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   EDITOR_SHELL_ASSISTANT_MODE_IDS,
+  EDITOR_SHELL_ASSISTANT_STATES,
   EDITOR_SHELL_METRICS,
   EDITOR_SHELL_MINIMUM_WINDOW,
   EDITOR_SHELL_MODE_IDS,
   EDITOR_SHELL_MODES,
   EDITOR_SHELL_RETIRED_COPY,
   EDITOR_SHELL_SOURCE,
+  EDITOR_SHELL_VIEWPORT_SOURCES,
   EDITOR_SHELL_WINDOW_TIERS,
   editorShellDockTabsFor,
 } from "../../packages/schemas/src/index.ts";
@@ -30,7 +32,10 @@ import {
   DESKTOP_MINIMUM_WINDOW,
   DESKTOP_MODES,
   DESKTOP_MODE_IDS,
+  DESKTOP_VIEWPORT_SOURCE_IDS,
   WINDOW_TIERS,
+  createDesktopVisualState,
+  desktopVisualView,
   dockTabsFor,
 } from "../../apps/desktop-shell/src/visual-model.ts";
 import { METRICS, VISUAL_SOURCE } from "../../apps/desktop-shell/src/visual-tokens.ts";
@@ -91,6 +96,49 @@ describe("editor-shell vocabulary parity", () => {
     expect(view.assistant.modes.map((control) => control.id)).toEqual(
       EDITOR_SHELL_ASSISTANT_MODE_IDS.map((mode) => `assistant-mode-${mode}`),
     );
+  });
+
+  it("viewport sources are one table on both surfaces, ids and labels", () => {
+    expect(DESKTOP_VIEWPORT_SOURCE_IDS).toEqual(
+      EDITOR_SHELL_VIEWPORT_SOURCES.map((source) => source.id),
+    );
+    const desktop = desktopVisualView(createDesktopVisualState());
+    expect(desktop.viewport.sources.map((source) => ({ id: source.id, label: source.label }))).toEqual(
+      EDITOR_SHELL_VIEWPORT_SOURCES.map((source) => ({ id: source.id, label: source.label })),
+    );
+    const view = webShellView();
+    expect(
+      view.viewport.sources.map((control) => ({ id: control.id, label: control.label })),
+    ).toEqual(
+      EDITOR_SHELL_VIEWPORT_SOURCES.map((source) => ({
+        id: `viewport-source-${source.id}`,
+        label: source.label,
+      })),
+    );
+  });
+
+  it("assistant states are the shared enumeration, and every member is reachable", () => {
+    // The desktop holds the state; the web shell projects one per profile. Both
+    // may only report a member of the shared closed enumeration, so `denied`
+    // cannot become "closed with a message" on one surface.
+    const desktopStates = (["open", "closed", "denied"] as const).map(
+      (assistant) =>
+        desktopVisualView(
+          createDesktopVisualState(
+            assistant === "denied"
+              ? { profile: "kids" }
+              : { profile: "game", assistant },
+          ),
+        ).assistant.state,
+    );
+    expect(new Set(desktopStates)).toEqual(new Set(EDITOR_SHELL_ASSISTANT_STATES));
+    for (const state of desktopStates) {
+      expect(EDITOR_SHELL_ASSISTANT_STATES).toContain(state);
+    }
+    const view = webShellView();
+    expect(EDITOR_SHELL_ASSISTANT_STATES).toContain(view.assistant.state);
+    expect(EDITOR_SHELL_ASSISTANT_STATES).toContain(view.assistant.kidsState);
+    expect(view.assistant.kidsState).toBe("denied");
   });
 
   it("window tiers and the refuse-below minimum are the shared numbers", () => {

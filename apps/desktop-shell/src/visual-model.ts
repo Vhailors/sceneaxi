@@ -35,12 +35,15 @@ import {
   EDITOR_SHELL_DOCK_TAB_IDS,
   EDITOR_SHELL_MINIMUM_WINDOW,
   EDITOR_SHELL_MODE_IDS,
+  EDITOR_SHELL_VIEWPORT_SOURCES,
   EDITOR_SHELL_WINDOW_TIERS,
   editorShellDockTabsFor,
   editorShellModeRow,
   OPEN_PATH_REFUSE_CODES,
   OPEN_PATH_REFUSE_ONLY_PROFILE,
   openPathPolicyView,
+  type EditorShellAssistantState,
+  type EditorShellViewportSourceId,
   type OpenPathPolicyViewModel,
   type OpenPathPolicyViewRow,
 } from "@sceneaxi/schemas";
@@ -207,9 +210,10 @@ export type DesktopSculptPhase = "idle" | "running";
 /**
  * Assistant states, as one closed enumeration rather than a pair of booleans —
  * `denied` is not "closed", and a renderer must not be able to reach the
- * composer by flipping `open`.
+ * composer by flipping `open`. The enumeration is the shared editor-shell
+ * model's, so the two chrome surfaces cannot disagree about what states exist.
  */
-export type DesktopAssistantState = "open" | "closed" | "denied";
+export type DesktopAssistantState = EditorShellAssistantState;
 
 /* -------------------------------------------------------------------------- */
 /* Refusals                                                                    */
@@ -709,21 +713,19 @@ export const VIEWPORT_INERT_NOTE =
  * none. They are modelled as controls so all three declare a kind and name that
  * reason, rather than being three tab-shaped elements nothing accounts for.
  */
-export const DESKTOP_VIEWPORT_SOURCE_IDS = Object.freeze([
-  "scene",
-  "game",
-  "sculpt-preview",
-] as const);
-export type DesktopViewportSourceId =
-  (typeof DESKTOP_VIEWPORT_SOURCE_IDS)[number];
+export const DESKTOP_VIEWPORT_SOURCE_IDS = Object.freeze(
+  EDITOR_SHELL_VIEWPORT_SOURCES.map((source) => source.id),
+);
+export type DesktopViewportSourceId = EditorShellViewportSourceId;
 
-const VIEWPORT_SOURCE_LABELS: Readonly<
-  Record<DesktopViewportSourceId, string>
-> = Object.freeze({
-  scene: "Scene",
-  game: "Game",
-  "sculpt-preview": "Sculpt preview",
-});
+/** The shared row's own label — total, so a projection cannot miss a source. */
+function viewportSourceLabel(id: DesktopViewportSourceId): string {
+  const row = EDITOR_SHELL_VIEWPORT_SOURCES.find((source) => source.id === id);
+  if (row === undefined) {
+    throw new Error(`editor-shell names no viewport source ${JSON.stringify(id)}`);
+  }
+  return row.label;
+}
 
 /** The source the viewport shows; the other two cannot be entered. */
 const VIEWPORT_SHOWN_SOURCE: DesktopViewportSourceId = "scene";
@@ -1427,11 +1429,11 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
         DESKTOP_VIEWPORT_SOURCE_IDS.map((id) =>
           Object.freeze({
             id,
-            label: VIEWPORT_SOURCE_LABELS[id],
+            label: viewportSourceLabel(id),
             active: id === VIEWPORT_SHOWN_SOURCE,
             control: control(
               `viewport-source-${id}`,
-              VIEWPORT_SOURCE_LABELS[id],
+              viewportSourceLabel(id),
               "inert",
               DESKTOP_VISUAL_REFUSALS.noPresentationRuntime,
             ),

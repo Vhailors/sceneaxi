@@ -17,8 +17,11 @@
  *
  * The Kids chip projects the shared open-path policy: selecting it replaces the
  * editor body with the policy's own refusal, demotes the rail and the composer
- * to inert, and keeps exactly the controls that leave the state live — the same
- * refuse-only behaviour the desktop chrome records.
+ * to inert, withdraws the command palette and its rows — the opener demoted with
+ * the policy's own code, ⌘K opening nothing, any open overlay closed — and keeps exactly
+ * the controls that leave the state live: a refuse-only state is a state you can
+ * leave and nothing else. That is the same refuse-only behaviour the desktop
+ * chrome records, and every code and state it prints comes off the view.
  */
 import { useEffect, useRef, useState } from "react";
 import type {
@@ -42,6 +45,15 @@ const DOCK_TAB_LABELS: Record<DockTabId, string> = {
 
 /** The refusal-legend anchor id for a code, shared by every describedby. */
 const legendId = (code: string): string => `edshell-refusal-${code}`;
+
+/**
+ * The query-parameter name a live form control submits under, taken from the
+ * control's own binding so the transport is never respelled in JSX.
+ */
+const fieldName = (control: EditorShellControl): string =>
+  control.binding !== null && control.binding.kind === "form-field"
+    ? control.binding.field
+    : "";
 
 /** The one panel every viewport-source tab controls. */
 const VIEWPORT_PANEL_ID = "ed-viewport-panel";
@@ -145,7 +157,8 @@ export function EditorShell({
   const [profile, setProfile] = useState<ProfileId>("game");
   const [assistantOpen, setAssistantOpen] = useState(view.assistant.state === "open");
   const [assistantMode, setAssistantMode] = useState(view.assistant.defaultModeId);
-  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [paletteRequested, setPaletteRequested] = useState(false);
+  const [paletteQuery, setPaletteQuery] = useState("");
   const paletteRef = useRef<HTMLInputElement | null>(null);
   const paletteReturnFocus = useRef<HTMLElement | null>(null);
 
@@ -156,6 +169,13 @@ export function EditorShell({
   const activeMode =
     view.modes.find((candidate) => candidate.id === mode) ?? fallbackMode;
   const kids = profile === "kids";
+  /**
+   * The palette is part of the editor body the refuse-only profile withdraws, so
+   * Kids is what decides whether it is open at all — not a second piece of state
+   * a keystroke could set behind the lock. Everything the overlay offers, the
+   * live play row included, is therefore unreachable while Kids is selected.
+   */
+  const paletteOpen = paletteRequested && !kids;
   // The view decides which source has a session here; the other tabs refuse.
   const selectedViewportSource = view.viewport.sources.find(
     (source) => source.kind !== "inert",
@@ -168,32 +188,55 @@ export function EditorShell({
     setDockTab(nextMode.dockTabs[0] ?? "console");
   };
 
-  // ⌘K / Ctrl+K opens the palette; Escape closes it and returns focus.
+  // ⌘K / Ctrl+K opens the palette; Escape closes it and returns focus. Under the
+  // Kids lock the shortcut opens nothing, the same as the demoted opener.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
+        if (kids) return;
         paletteReturnFocus.current = document.activeElement as HTMLElement;
-        setPaletteOpen(true);
+        setPaletteRequested(true);
       } else if (event.key === "Escape" && paletteOpen) {
-        setPaletteOpen(false);
+        setPaletteRequested(false);
         paletteReturnFocus.current?.focus();
       }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [paletteOpen]);
+  }, [paletteOpen, kids]);
 
   useEffect(() => {
     if (paletteOpen) paletteRef.current?.focus();
+    else setPaletteQuery("");
   }, [paletteOpen]);
+
+  // Entering the refuse-only profile withdraws the request too, so leaving it
+  // again returns to the editor rather than to a palette held open behind it.
+  useEffect(() => {
+    if (kids) setPaletteRequested(false);
+  }, [kids]);
 
   const profilePin =
     view.profiles.find((chip) => chip.id === profile)?.statusPin ??
     view.statusBar.profilePin;
 
+  /**
+   * The rows the typed filter leaves, matched on what the row shows: its label
+   * and the CLI verb printed beside it. An input that advertises filtering has
+   * to filter, so this is real client work over view data — it decides nothing
+   * about what a row is, only whether this reader asked to see it.
+   */
+  const paletteNeedle = paletteQuery.trim().toLowerCase();
+  const paletteRows =
+    paletteNeedle === ""
+      ? view.palette
+      : view.palette.filter((row) =>
+          `${row.control.label} ${row.cliVerb ?? ""}`.toLowerCase().includes(paletteNeedle),
+        );
+
   /** Palette groups in the view's own mint order — the view decides the set. */
-  const paletteGroups = view.palette.reduce<readonly string[]>(
+  const paletteGroups = paletteRows.reduce<readonly string[]>(
     (groups, row) => (groups.includes(row.group) ? groups : [...groups, row.group]),
     [],
   );
@@ -215,7 +258,7 @@ export function EditorShell({
       </div>
       {/* ------------------------------------------------ title bar ------ */}
       <header className="ed-titlebar" aria-label="Editor title bar">
-        <a className="ed-wordmark" href="/" aria-label="SceneAxi home">
+        <a className="ed-wordmark" href="/" aria-label="SceneAxi home" data-kind="view">
           <span className="mark" aria-hidden="true" />
         </a>
         <nav className="ed-menus" aria-label="Application menus">
@@ -243,19 +286,16 @@ export function EditorShell({
             {view.project.name}
             <span className="ed-project-doc">{view.project.documentPath}</span>
           </span>
-          <span className="ed-project-save">
-            {view.changes.appliedPaths.length > 0
-              ? `saved · ${view.changes.appliedPaths.join(", ")}`
-              : "not saved"}
-          </span>
+          <span className="ed-project-save">{view.changes.savedLabel}</span>
         </div>
         <div className="ed-title-actions">
           <ShellButton
             control={view.paletteOpener}
             className="ed-search"
+            demotedRefusal={kids ? view.kidsLock.code : undefined}
             onClick={(event) => {
               paletteReturnFocus.current = event.currentTarget;
-              setPaletteOpen(true);
+              setPaletteRequested(true);
             }}
           >
             {view.paletteOpener.label} <kbd>⌘K</kbd>
@@ -263,6 +303,7 @@ export function EditorShell({
           <ShellButton
             control={view.assistant.toggle}
             className="ed-assistant-toggle"
+            demotedRefusal={kids ? view.kidsLock.code : undefined}
             pressed={assistantOpen}
             onClick={() => setAssistantOpen((open) => !open)}
           >
@@ -330,6 +371,16 @@ export function EditorShell({
                 <>
                   <div className="ed-panel-head">
                     <span>RUNTIME</span>
+                  </div>
+                  {/*
+                    The transport for both is a link back to /editor: play and
+                    step run on the server, and stopping ends this session
+                    rather than pausing an advanced one, which is what each
+                    control's binding declares.
+                  */}
+                  <div className="ed-run-controls">
+                    <ShellButton control={view.run.playPause} className="ed-primary" />
+                    <ShellButton control={view.run.reset} className="ed-ghost" />
                   </div>
                   <dl className="ed-facts">
                     <dt>Session</dt>
@@ -403,12 +454,10 @@ export function EditorShell({
                         className={row.selected ? "is-selected" : undefined}
                         style={{ paddingLeft: `${10 + row.depth * 14}px` }}
                       >
-                        {row.selectHref === null ? (
+                        {row.select === null ? (
                           <span className="ed-tree-label">{row.label}</span>
                         ) : (
-                          <a className="ed-tree-label" href={row.selectHref}>
-                            {row.label}
-                          </a>
+                          <ShellButton control={row.select} className="ed-tree-label" />
                         )}
                         <span className="ed-tree-kind">{row.kindLabel}</span>
                       </li>
@@ -473,6 +522,28 @@ export function EditorShell({
                 )}
               </div>
 
+              {/*
+                The viewport's own copy rides with the viewport in every mode,
+                not only in Run: what the canvas draws and what it deliberately
+                does not do is true of every mode, and the ADR 0017 core it names
+                is the same core throughout.
+              */}
+              <div className="ed-viewport-note">
+                <p className="ed-viewport-lede">{viewportCopy.lede}</p>
+                <p>{viewportCopy.honesty}</p>
+                {view.deepLink !== null && (
+                  <p className="ed-viewport-deeplink">
+                    <span className="mono">
+                      {view.deepLink.source} · {view.deepLink.itemId}
+                      {view.deepLink.artifactRef === null
+                        ? ""
+                        : ` · ${view.deepLink.artifactRef}`}
+                    </span>{" "}
+                    {view.deepLink.note}
+                  </p>
+                )}
+              </div>
+
               {/* ------------------------------------------- dock -------- */}
               <div className="ed-dock">
                 <div className="ed-dock-strip">
@@ -518,6 +589,7 @@ export function EditorShell({
                             all-or-nothing: the whole proposal below was applied as
                             one edit, which is why single-row decisions refuse.
                           </p>
+                          <p className="ed-dock-lede">{view.changes.persistenceNote}</p>
                           <table className="ed-changes">
                             <thead>
                               <tr>
@@ -799,7 +871,6 @@ export function EditorShell({
                           </div>
                         </dl>
                       </div>
-                      <p className="ed-note-block">{viewportCopy.honesty}</p>
                       <p className="ed-note-block">
                         Frozen snapshots: the session steps only through the Play
                         control, and each step is a real kernel advance.
@@ -810,9 +881,22 @@ export function EditorShell({
                       {deepLinkFields.map((field) => (
                         <input key={field.name} type="hidden" name={field.name} value={field.value} />
                       ))}
+                      {/*
+                        A form control is an interactive element too, so each one
+                        wears the id and the kind its minted control declares —
+                        the accounting index and the DOM then name the same four
+                        live edit controls instead of one.
+                      */}
                       <div className="ed-field">
-                        <label htmlFor="ed-sel">{view.edit.selection.label}</label>
-                        <select id="ed-sel" name="sel" defaultValue={selectedInstanceId}>
+                        <label htmlFor={view.edit.selection.id}>
+                          {view.edit.selection.label}
+                        </label>
+                        <select
+                          id={view.edit.selection.id}
+                          data-kind={view.edit.selection.kind}
+                          name={fieldName(view.edit.selection)}
+                          defaultValue={selectedInstanceId}
+                        >
                           {view.run.bodies.map((body) => (
                             <option key={body.instanceId} value={body.instanceId}>
                               {body.instanceId}
@@ -821,14 +905,11 @@ export function EditorShell({
                         </select>
                       </div>
                       <div className="ed-field">
-                        <label htmlFor="ed-tx">Translation (x,y,z)</label>
+                        <label htmlFor={view.edit.translation.id}>Translation (x,y,z)</label>
                         <input
-                          id="ed-tx"
-                          name={
-                            view.edit.translation.binding?.kind === "form-field"
-                              ? view.edit.translation.binding.field
-                              : ""
-                          }
+                          id={view.edit.translation.id}
+                          data-kind={view.edit.translation.kind}
+                          name={fieldName(view.edit.translation)}
                           defaultValue={
                             view.run.bodies.find((body) => body.instanceId === selectedInstanceId)
                               ?.translation.replaceAll(" ", "") ?? "0,0,0"
@@ -836,17 +917,23 @@ export function EditorShell({
                         />
                       </div>
                       <div className="ed-field">
-                        <label htmlFor="ed-objects">{view.edit.objects.label}</label>
+                        <label htmlFor={view.edit.objects.id}>{view.edit.objects.label}</label>
                         <input
-                          id="ed-objects"
-                          name="objects"
+                          id={view.edit.objects.id}
+                          data-kind={view.edit.objects.kind}
+                          name={fieldName(view.edit.objects)}
                           type="number"
                           min={view.edit.objectBounds.min}
                           max={view.edit.objectBounds.max}
                           defaultValue={view.run.objectCount}
                         />
                       </div>
-                      <button id={view.edit.apply.id} className="ed-primary" type="submit" data-kind="live">
+                      <button
+                        id={view.edit.apply.id}
+                        className="ed-primary"
+                        type="submit"
+                        data-kind={view.edit.apply.kind}
+                      >
                         {view.edit.apply.label}
                       </button>
                     </form>
@@ -861,7 +948,9 @@ export function EditorShell({
         <aside
           className="ed-assistant"
           aria-label="Assistant"
-          data-assistant={kids ? "denied" : assistantOpen ? "open" : "closed"}
+          data-assistant={
+            kids ? view.assistant.kidsState : assistantOpen ? view.assistant.state : "closed"
+          }
         >
           <div className="ed-assistant-head">
             <span className="dot" aria-hidden="true" />
@@ -918,6 +1007,7 @@ export function EditorShell({
           {view.statusBar.readiness}
         </span>
         <span className="mono">{profilePin}</span>
+        <span className="mono">{view.changes.persistencePin}</span>
         <span className="ed-status-spacer" />
         <span className="mono">{view.statusBar.docLabel}</span>
         <span className="mono ed-status-entitle">
@@ -934,9 +1024,15 @@ export function EditorShell({
               className="ed-palette-input"
               placeholder="Type a command…"
               aria-label="Filter commands"
+              data-kind="view"
+              value={paletteQuery}
+              onChange={(event) => setPaletteQuery(event.target.value)}
             />
+            {paletteRows.length === 0 && (
+              <p className="ed-palette-empty">No command matches “{paletteQuery.trim()}”.</p>
+            )}
             {paletteGroups.map((group) => {
-              const rows = view.palette.filter((row) => row.group === group);
+              const rows = paletteRows.filter((row) => row.group === group);
               if (rows.length === 0) return null;
               return (
                 <div key={group} className="ed-palette-group">
@@ -950,7 +1046,7 @@ export function EditorShell({
                           row.control.id === "palette-open-compose"
                             ? () => {
                                 enterMode("compose");
-                                setPaletteOpen(false);
+                                setPaletteRequested(false);
                               }
                             : undefined
                         }
@@ -972,7 +1068,7 @@ export function EditorShell({
               className="ed-ghost ed-palette-close"
               data-kind="view"
               onClick={() => {
-                setPaletteOpen(false);
+                setPaletteRequested(false);
                 paletteReturnFocus.current?.focus();
               }}
             >
