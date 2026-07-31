@@ -72,6 +72,11 @@ describe("desktop offer ↔ recorded build lockstep", () => {
     // annotation esbuild keeps this module in `dist/main.cjs` — and a digest that
     // ships inside the artifact it identifies can never survive being re-recorded:
     // the next build differs by exactly the digest just written down.
+    //
+    // The outcome is asserted where the bundle exists: `desktop/linux/scripts/build.mjs`
+    // fails the build if an emitted bundle carries a recorded digest or file name.
+    // This is the secondary guard — the annotation that makes the drop possible — and
+    // it lives here because the hermetic root cannot run the tier's esbuild.
     const source = readFileSync(
       new URL("../../packages/site-kit/src/desktop-app-offer.ts", import.meta.url),
       "utf8",

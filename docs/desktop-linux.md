@@ -87,14 +87,17 @@ The record is deliberately kept **out of the build it describes**: the tier bund
 site-kit for its scene payload, so `desktop-app-offer.ts` marks every `Object.freeze`
 `@__PURE__` and esbuild drops it from `dist/main.cjs`. Without that, a build's digest
 would ship inside the build, and re-recording one would invalidate it on the next
-rebuild. The same test asserts the annotation, so the record and the artifact stay
+rebuild. The outcome is asserted where the bundle exists: `scripts/build.mjs` reads
+the bytes esbuild emitted and fails the build if any of them carries a recorded
+digest or file name. `tests/sites/desktop-offer-lockstep.test.ts` guards the
+annotation that makes the drop possible, so the record and the artifact stay
 independent.
 
 <!-- desktop-linux:artifacts -->
 | Artifact | File | Bytes | SHA-256 |
 |---|---|---|---|
-| AppImage | `SceneAxi-Engine-Desktop-0.0.0-linux-x86_64.AppImage` | 115161576 | `4e1814157e78e6619407c07de4a1f1cdf5bf84880f5f53e917815722f07923db` |
-| deb | `SceneAxi-Engine-Desktop-0.0.0-linux-amd64.deb` | 90491852 | `d51cfb28f79e7fb8e4009648b6129f239ec8f39823c6fa390e2519754811a0a8` |
+| AppImage | `SceneAxi-Engine-Desktop-0.0.0-linux-x86_64.AppImage` | 115161530 | `b175f99fc51953ee4631a2fd5aac17d86447c581df97aeb14c6f61e517fb6367` |
+| deb | `SceneAxi-Engine-Desktop-0.0.0-linux-amd64.deb` | 90492464 | `d471353c00e32335fc269b93982cb1d6f04d9974ee169bd4a14a1e72e188bb68` |
 
 Toolchain of the recorded build: Electron 43.2.0 · electron-builder 26.15.3 ·
 esbuild 0.28.1 · Node 24.14.0 · pnpm 9.15.0 · Ubuntu 24.04 (kernel 6.17,
@@ -112,7 +115,10 @@ proof (`pnpm smoke`, `pnpm smoke --packaged`, and the AppImage itself with
   deletes** (never the persistent user project, whose contents no proof controls),
   asserted on the session's own phases and the bytes on disk rather than on the
   bridge envelope: `reviewing` with the file untouched → `applied` with the file
-  changed → `undo` reporting success with the seeded bytes restored
+  changed → `undo` reporting success with the seeded bytes restored. The isolation
+  is observed too, not declared: the app compares the directory it bound against
+  its own persistent project path and refuses the round trip there, and the
+  launcher separately checks the directory the proof reports is a temporary one
 - renderer frame report: `backend three · surface webgl-canvas · pixelsDrawn true
   · drawCalls 15` — real pixels from the packaged window, drawn by SwiftShader
   under Xvfb, matching the draw-call count the headless gate derives from the

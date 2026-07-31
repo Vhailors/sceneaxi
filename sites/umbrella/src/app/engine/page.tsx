@@ -150,8 +150,10 @@ export default function EnginePage() {
           <p>
             Linux is the only packaged platform. {desktopApp.notPackaged.join(" and ")}{" "}
             are not packaged yet — no installer for them exists, and this page will not
-            pretend otherwise. The free SDK archive above remains the supported
-            download for every platform.
+            pretend otherwise.{" "}
+            {sdk === null
+              ? "The SDK archive is not in this build either, so there is no cross-platform download to fall back on here — build from source."
+              : "The free SDK archive above remains the supported download for every platform."}
           </p>
         </StatePanel>
       </div>

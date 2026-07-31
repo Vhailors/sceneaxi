@@ -15,7 +15,8 @@
  */
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -85,8 +86,14 @@ if (proof.openPath?.initialDigest === proof.openPath?.tickDigests?.at(-1)) {
 // The authoring round trip is proven by the session's own phases and the document
 // bytes, on a scratch project this run created — not by the bridge envelope, which
 // carries a refused propose or a failed apply inside `{ok: true}` just the same.
+// The app compares the project it bound against its own persistent one (the only
+// process that knows that path); the launcher independently checks the directory
+// it reports is a temporary one, so neither side can assert isolation alone.
+const project = proof.authoring?.project;
 if (proof.authoring?.scratchProject !== true) {
   failures.push("authoring proof did not run on a scratch project");
+} else if (typeof project !== "string" || !project.startsWith(`${tmpdir()}${sep}`)) {
+  failures.push(`authoring proof ran outside the temporary directory: '${project}'`);
 }
 if (proof.authoring?.proposedPhase !== "reviewing") {
   failures.push(`authoring propose reached phase '${proof.authoring?.proposedPhase}', not 'reviewing'`);

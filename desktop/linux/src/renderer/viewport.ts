@@ -46,6 +46,12 @@ type MountablePayload = {
   instances: MountableInstance[];
 };
 
+// A rejected bridge call is worth retrying — the next frame is milliseconds away —
+// but a structural rejection (no handler on the channel, a payload that cannot be
+// cloned) never recovers, and retrying it per frame would burn IPC for the life of
+// the session. A few attempts, then the refusal stands on its own line.
+const FRAME_REPORT_MAX_ATTEMPTS = 3;
+
 const REPORT_ID = "desktop-live-viewport-report";
 const OPEN_PATH_ID = "desktop-live-viewport-open-path";
 const FRAME_REPORT_ID = "desktop-live-viewport-frame-report";
@@ -210,6 +216,7 @@ async function mountLiveViewport(): Promise<void> {
   let printed = false;
   let frameReportSettled = false;
   let frameReportInFlight = false;
+  let frameReportAttempts = 0;
   const loop = createThreeRenderLoop({
     onFrame: () => {
       const frame = mounts.render();
@@ -220,6 +227,7 @@ async function mountLiveViewport(): Promise<void> {
       }
       if (!frameReportSettled && !frameReportInFlight) {
         frameReportInFlight = true;
+        frameReportAttempts += 1;
         port.request({ action: "frame-report", payload: frame }).then(
           (response) => {
             frameReportInFlight = false;
@@ -233,7 +241,16 @@ async function mountLiveViewport(): Promise<void> {
           },
           (error: unknown) => {
             frameReportInFlight = false;
-            frameReportLine(stage, `frame report refused: ${refusalText(error)} — retrying`);
+            const exhausted = frameReportAttempts >= FRAME_REPORT_MAX_ATTEMPTS;
+            frameReportSettled = exhausted;
+            frameReportLine(
+              stage,
+              `frame report refused: ${refusalText(error)} — ${
+                exhausted
+                  ? `giving up after ${frameReportAttempts} attempts`
+                  : `retrying (attempt ${frameReportAttempts} of ${FRAME_REPORT_MAX_ATTEMPTS})`
+              }`,
+            );
           },
         );
       }

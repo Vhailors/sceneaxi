@@ -13,7 +13,7 @@
  */
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import { BrowserWindow, app, ipcMain } from "electron";
 import { createDocument, writeDocumentFile } from "@sceneaxi/authoring-core";
 import { DESKTOP_MINIMUM_WINDOW } from "@sceneaxi/desktop-shell";
@@ -47,9 +47,14 @@ function seedProject(dir: string): void {
   }
 }
 
+/** Where the launched application's own project lives: persistent, under userData. */
+function persistentProjectDir(): string {
+  return join(app.getPath("userData"), "project");
+}
+
 /** The launched application's own project: persistent, under the user's data dir. */
 function projectDir(): string {
-  const dir = join(app.getPath("userData"), "project");
+  const dir = persistentProjectDir();
   seedProject(dir);
   return dir;
 }
@@ -146,6 +151,14 @@ async function start(): Promise<void> {
   const openPath = bridge.handle({ action: "open-path" });
   if (!openPath.ok) fail(`open-path refused: ${openPath.reason}`);
 
+  // Isolation is observed, not declared: the proof owns the document it reports on
+  // only if the round trip is running somewhere the persistent project is not, and
+  // the directory is deleted below, so a wrong `cwd` here would take a real project
+  // with it. Compared against the same path `projectDir()` resolves.
+  const persistent = persistentProjectDir();
+  const scratchProject = cwd !== persistent && !cwd.startsWith(`${persistent}${sep}`);
+  if (!scratchProject) fail(`authoring proof would run on the persistent project ${cwd}`);
+
   // The envelope only says the bridge answered; a refused propose, a failed apply,
   // and an undo that restored nothing all arrive inside `{ok: true}`. So the proof
   // reads the session's own phases and the document bytes on disk.
@@ -229,7 +242,8 @@ async function start(): Promise<void> {
         proposedPhase,
         acceptedPhase,
         restored,
-        scratchProject: true,
+        scratchProject,
+        project: cwd,
       },
       frameReport,
       viewportDom,

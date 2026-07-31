@@ -13,7 +13,7 @@
  * `link:` dependencies straight to their TypeScript sources — the same resolution
  * strategy the sites tier uses through Next `transpilePackages` (ADR 0018/0024).
  */
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { build } from "esbuild";
@@ -77,6 +77,43 @@ const { desktopLinuxIndexHtml } = await import(
   pathToFileURL(join(distBuild, "chrome-document.mjs")).href
 );
 writeFileSync(join(dist, "index.html"), desktopLinuxIndexHtml());
+
+// The recorded-build offer must stay out of the build it describes. This tier bundles
+// site-kit for its scene payload, so that record is reachable from `main.ts`, and a
+// digest shipped inside the artifact it identifies invalidates itself the moment a
+// fresh one is recorded. `desktop-app-offer.ts` is annotated `@__PURE__` so esbuild
+// drops it; the annotation is checked in the repository gate, but the property is
+// only true of emitted bytes, so it is checked here on the bundles esbuild wrote.
+const offerEntry = join(distBuild, "recorded-offer.mjs");
+await build({
+  ...common,
+  stdin: {
+    contents: 'export { DESKTOP_LINUX_APP_OFFER } from "@sceneaxi/site-kit";\n',
+    resolveDir: appRoot,
+    loader: "js",
+  },
+  outfile: offerEntry,
+  platform: "node",
+  format: "esm",
+  target: "node22",
+});
+const { DESKTOP_LINUX_APP_OFFER } = await import(pathToFileURL(offerEntry).href);
+const leaked = [];
+for (const file of ["main.cjs", "preload.cjs", "renderer.js"]) {
+  const bytes = readFileSync(join(dist, file), "utf8");
+  for (const artifact of DESKTOP_LINUX_APP_OFFER.artifacts) {
+    if (bytes.includes(artifact.sha256)) leaked.push(`${file} carries the recorded ${artifact.kind} digest`);
+    if (bytes.includes(artifact.fileName)) leaked.push(`${file} carries the recorded ${artifact.kind} file name`);
+  }
+}
+
 rmSync(distBuild, { recursive: true, force: true });
+
+if (leaked.length > 0) {
+  console.error(
+    `desktop-linux build FAILED — the recorded build record reached the build it describes: ${leaked.join("; ")}`,
+  );
+  process.exit(1);
+}
 
 console.log("desktop-linux build OK — dist/main.cjs, dist/preload.cjs, dist/renderer.js, dist/index.html");
