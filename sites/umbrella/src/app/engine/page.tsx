@@ -1,21 +1,26 @@
-import { formatByteSize, readEngineSdkOffer } from "@sceneaxi/site-kit";
+import { desktopLinuxAppOffer, formatByteSize, readEngineSdkOffer } from "@sceneaxi/site-kit";
 import { LIVE_OPEN_PRESENTATION } from "../../lib/live-open.js";
 import { ENGINE_NOTES, PIPELINE, RELEASE_MARKER } from "../../lib/site-content.js";
 import { StatePanel } from "../_components/state-panel.js";
 
 /**
- * The engine surface: what the engine is, and the one artifact this site hands out.
+ * The engine surface: what the engine is, and the artifacts this repository stands
+ * behind.
  *
- * The accepted screen has a separate download page offering platform installers with
- * sizes and digests. This repository builds exactly one downloadable artifact — the
- * deterministic engine SDK archive produced by `scripts/build-engine-sdk.mjs` — so
- * that layout is applied to the artifact that exists. Its size, entry count, and
- * SHA-256 are read off the served file; no installer, size, or digest is written into
- * this page. When the archive is absent the page renders the named reason rather than
- * a button that leads nowhere.
+ * Two of them, with different evidence models. The deterministic engine SDK archive
+ * is built by `scripts/build-engine-sdk.mjs` during the site build, so its size,
+ * entry count, and SHA-256 are read off the served file; when it is absent the page
+ * renders the named reason rather than a button that leads nowhere. The Linux
+ * desktop application (ADR 0024) is packaged by electron-builder, which is not
+ * bit-reproducible, so its facts come from the committed recorded-build offer in
+ * `@sceneaxi/site-kit` — held in lockstep with `docs/desktop-linux.md` by the gate —
+ * and the site serves no binary: readers build from source or fetch the CI artifact.
+ * No installer, size, or digest is typed into this page for either artifact, and
+ * Windows/macOS are stated as not packaged rather than implied.
  */
 export default function EnginePage() {
   const offer = readEngineSdkOffer(process.cwd());
+  const desktopApp = desktopLinuxAppOffer();
 
   if (!offer.ok) {
     return (
@@ -97,6 +102,62 @@ export default function EnginePage() {
             </dd>
           </dl>
         </article>
+      </div>
+
+      <div className="stack">
+        <div className="section-title">
+          <p className="eyebrow">Desktop application · {desktopApp.platform}</p>
+          <h2>{desktopApp.productName} for Linux.</h2>
+          <p className="prose prose-wide">
+            The Engine Desktop editor as a packaged Linux application: the accepted
+            editor chrome in an Electron window over the real engine stack — kernel
+            open path, the {LIVE_OPEN_PRESENTATION.coreLabel} drawing in the window,
+            and the shared authoring propose/accept session. Built from{" "}
+            <code>{desktopApp.sourceDir}</code> in the repository; the{" "}
+            <code>{desktopApp.ciWorkflow}</code> CI workflow builds, smoke-tests, and
+            uploads the same artifacts as <code>{desktopApp.ciArtifactName}</code>.
+          </p>
+        </div>
+
+        <div className="grid grid-2">
+          {desktopApp.artifacts.map((artifact) => (
+            <article className="panel panel-roomy" key={artifact.kind}>
+              <div className="panel-head">
+                <span className="family-mark" aria-hidden="true" />
+                <span className="tag">{artifact.kind}</span>
+              </div>
+              <h3 className="card-title">{artifact.fileName}</h3>
+              <p className="meta">
+                {formatByteSize(artifact.byteSize)} · {desktopApp.version} · recorded{" "}
+                {desktopApp.recordedOn}
+              </p>
+              <p className="sha">sha256 {artifact.sha256}</p>
+            </article>
+          ))}
+        </div>
+
+        <article className="panel panel-roomy">
+          <h3 className="card-title">Build it, verify it, prove it runs</h3>
+          <p className="command">
+            <code>{desktopApp.buildCommand}</code>
+          </p>
+          <p className="command">
+            <code>{desktopApp.verifyCommand}</code>
+          </p>
+          <p className="command">
+            <code>{desktopApp.smokeCommand}</code>
+          </p>
+          <p className="note">{desktopApp.reproducibilityNote}</p>
+        </article>
+
+        <StatePanel tone="warn" title="Platform status">
+          <p>
+            Linux is the only packaged platform. {desktopApp.notPackaged.join(" and ")}{" "}
+            are not packaged yet — no installer for them exists, and this page will not
+            pretend otherwise. The free SDK archive above remains the supported
+            download for every platform.
+          </p>
+        </StatePanel>
       </div>
 
       <StatePanel tone="warn" title="Support status">

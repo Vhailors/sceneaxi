@@ -148,6 +148,12 @@ installer, an offline store, hosting, and authentication. The shell stays
 protocol-thin — `docs/dependency-matrix.json` allows it only
 `@sceneaxi/schemas` and `@sceneaxi/authoring-core`.
 
+Packaging exists, but as its own tier rather than here: `desktop/linux`
+(`@sceneaxi/desktop-linux`, ADR 0024) wraps this shell's chrome and session in an
+Electron window over the real engine stack, consuming this package unchanged
+through its public exports. Nothing in this package knows that consumer exists,
+which is exactly the point — see [`docs/desktop-linux.md`](../../docs/desktop-linux.md).
+
 `chrome` does not change that. It renders a **view model**, not an application:
 it opens no session, binds no document, mounts no renderer, and has no dev
 server. There is no installer and no packaged desktop app here, and the chrome

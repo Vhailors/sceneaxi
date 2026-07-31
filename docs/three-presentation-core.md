@@ -164,11 +164,25 @@ only, and presentation invents no state the kernel does not own.
   [`../sites/umbrella/VISUAL-EVIDENCE.md`](../sites/umbrella/VISUAL-EVIDENCE.md),
   which owns that surface's observations.
 
+- **The packaged Linux desktop application** (`desktop/linux`, ADR 0024), the
+  fourth pixel-drawing surface and the first outside a browser page: the Electron
+  renderer process mounts the shared `MountableScene` payload over its window
+  canvas through the same seam calls the umbrella makes. Verified 2026-07-31 from
+  the packaged binary's `--smoke` proof (SwiftShader under Xvfb):
+  `backend three · surface webgl-canvas · pixelsDrawn true · drawCalls 15`,
+  matching the draw-call count the headless gate derives from the same
+  composition. The recorded build and its observations are owned by
+  [`desktop-linux.md`](desktop-linux.md).
+
 Reproduce the standalone snippets by serving a page that runs the consumer
 snippets above against a validated Sculpt Artifact;
 `sites/umbrella/src/app/page.tsx`, `sites/umbrella/src/app/open/` and
 `sites/umbrella/src/app/editor/` are the shipped versions, all three built on the
 site's one renderer-owning module, `src/app/_components/sculpt-viewport.tsx`.
+Each tier that draws owns exactly one such module: the sites-tier owner list is
+asserted in `tests/sites/site-seams.test.ts`, and the desktop tier's single owner
+(`desktop/linux/src/renderer/viewport.ts`, ADR 0024) is asserted the same way in
+`tests/e2e/desktop-linux-bridge-golden.test.ts`.
 
 ## Not claimed
 

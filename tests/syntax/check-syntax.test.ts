@@ -45,8 +45,9 @@ describe("syntax check", () => {
 
   it("refuses to pass on an empty source surface", () => {
     // Every walked tier must be gone for the surface to be empty — `sites` joined
-    // `packages` and `apps` when the deployable sites tier landed.
-    for (const tier of ["packages", "apps", "sites"]) {
+    // `packages` and `apps` when the deployable sites tier landed, and `desktop`
+    // joined with the packaged Linux application (ADR 0024).
+    for (const tier of ["packages", "apps", "sites", "desktop"]) {
       rmSync(join(fx, tier), { recursive: true, force: true });
     }
     const res = runCheck(fx, "check-syntax.mjs");

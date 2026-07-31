@@ -53,7 +53,7 @@ const WORKSPACE_FILE = "pnpm-workspace.yaml";
  * its own install root (ADR 0018) and `pnpm check:sites` owns its structure — but its
  * manifests still answer to every publish rule below.
  */
-const UNGLOBBED_MANIFEST_TIERS = Object.freeze(["sites"]);
+const UNGLOBBED_MANIFEST_TIERS = Object.freeze(["sites", "desktop"]);
 
 /**
  * Lifecycle script names that can reach a registry, directly or by hook. `prepare` is
@@ -527,11 +527,11 @@ function checkPublishRules(label, json, consumable) {
   for (const field of DEPENDENCY_FIELDS) {
     for (const [dep, range] of Object.entries(json[field] ?? {})) {
       if (!dep.startsWith("@sceneaxi/")) continue;
-      const allowed = consumable ? /^workspace:/ : /^link:\.\.\/\.\.\/packages\//;
+      const allowed = consumable ? /^workspace:/ : /^link:\.\.\/\.\.\/(?:packages|apps)\//;
       if (typeof range !== "string" || !allowed.test(range)) {
         const expected = consumable
           ? "the workspace: protocol"
-          : "a link: path into packages/ (a site is its own install root, ADR 0018)";
+          : "a link: path into packages/ or apps/ (a separate install root, ADR 0018/0024)";
         fail(
           "internal-deps-workspace",
           `${label} declares ${dep}@'${range}' in ${field} — internal dependencies use ${expected} until a real release exists`,
@@ -543,12 +543,12 @@ function checkPublishRules(label, json, consumable) {
 
 function checkManifests(manifests) {
   for (const { name, json, dir, rel, tier } of manifests.values()) {
-    // The `sites/` tier is deployable, not consumable: each site is its own install
-    // root outside the repository workspace (ADR 0018), so it has no library entry
-    // point and reaches internal packages by `link:` rather than `workspace:`. Its own
-    // structural rules are `pnpm check:sites`; the rules below that still apply to a
-    // site apply unchanged.
-    const consumable = tier !== "sites";
+    // The `sites/` and `desktop/` tiers are deployable, not consumable: each is its
+    // own install root outside the repository workspace (ADR 0018/0024), so it has no
+    // library entry point and reaches internal packages by `link:` rather than
+    // `workspace:`. Their own structural rules are `pnpm check:sites` and
+    // `pnpm check:desktop`; the rules below that still apply, apply unchanged.
+    const consumable = tier !== "sites" && tier !== "desktop";
     checkPublishRules(name, json, consumable);
     if (json.type !== "module") fail("manifest-hygiene", `${name} must declare "type": "module"`);
     if (typeof json.license !== "string" || json.license.length === 0) {

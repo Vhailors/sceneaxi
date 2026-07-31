@@ -1,0 +1,57 @@
+name: desktop-linux
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  desktop-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # No explicit pnpm version: the root `packageManager` field pins it, exactly
+      # as the gate workflow resolves it.
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      # The tier links workspace packages by path, so the hermetic root install
+      # must exist first; both installs are frozen-lockfile.
+      - name: Install the hermetic root
+        run: pnpm install --frozen-lockfile
+
+      - name: Install the desktop tier
+        working-directory: desktop/linux
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the runtime and package AppImage + deb
+        working-directory: desktop/linux
+        run: pnpm dist
+
+      # The checksums travel with the artifacts; verify them before uploading the
+      # same bytes, exactly as a downloader will.
+      - name: Verify checksums
+        working-directory: desktop/linux/release
+        run: sha256sum -c SHA256SUMS
+
+      # The packaged binary must prove the engine paths are real: kernel digests
+      # that move, the shared authoring round trip, and a real presentation frame.
+      # SwiftShader under Xvfb keeps WebGL a real rasterizer on a GPU-less runner.
+      - name: Smoke the packaged app
+        working-directory: desktop/linux
+        run: xvfb-run -a pnpm smoke --packaged
+
+      # A workflow artifact, not a GitHub Release: no release authority is claimed
+      # (the same posture as the engine SDK, ADR 0019).
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sceneaxi-desktop-linux
+          path: |
+            desktop/linux/release/*.AppImage
+            desktop/linux/release/*.deb
+            desktop/linux/release/SHA256SUMS
+          if-no-files-found: error

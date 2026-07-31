@@ -31,11 +31,12 @@ const allowOf = matrix.packages ?? {};
 const kids = matrix.kidsBoundary ?? { kidsPackages: [], allowedDependents: [] };
 const releaseGroups = matrix.releaseGroups ?? {};
 
-// --- discover packages (packages/*, apps/*) plus the deployable sites/ tier ---
-// `sites/*` are separate single-package workspaces outside the repository-root
-// workspace, but their @sceneaxi/* edges use the same exhaustive allow lists.
+// --- discover packages (packages/*, apps/*) plus the deployable sites/ and desktop/ tiers ---
+// `sites/*` and `desktop/*` are separate single-package workspaces outside the
+// repository-root workspace, but their @sceneaxi/* edges use the same exhaustive
+// allow lists.
 const pkgDirs = [];
-for (const parent of ["packages", "apps", "sites"]) {
+for (const parent of ["packages", "apps", "sites", "desktop"]) {
   const parentDir = join(root, parent);
   if (!existsSync(parentDir)) continue;
   for (const entry of readdirSync(parentDir)) {

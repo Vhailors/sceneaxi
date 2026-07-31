@@ -535,6 +535,7 @@ describe("the sites tier keeps the hermetic root hermetic", () => {
       "check:boundaries",
       "check:contracts",
       "check:sites",
+      "check:desktop",
       "build",
       "test",
       "lint",

@@ -23,6 +23,12 @@ sites/*/public/engine-sdk/
 sites/*/node_modules/
 sites/*/next-env.d.ts
 
+# desktop/ apps are separate install roots too (ADR 0024); `release/` holds the
+# packaged AppImage/deb artifacts and their SHA256SUMS, `dist-build/` is a
+# transient bundle step. `dist/` and `node_modules/` are already ignored above.
+desktop/*/release/
+desktop/*/dist-build/
+
 # Vercel CLI link state, at any depth (covers sites/*/.vercel/).
 .vercel/
 

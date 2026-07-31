@@ -293,6 +293,27 @@ network, no credential). Adding a `BILLING_REFUSE_REASONS` entry requires a
 covering case in `tests/e2e/auth-credits-refuse-matrix.test.ts`, which asserts
 every reason is reachable.
 
+The packaged **Linux desktop application** is its own `desktop/` tier (ADR 0024):
+`desktop/linux` (`@sceneaxi/desktop-linux`), an Electron install root outside the
+root workspace exactly like each site, so Electron/esbuild/electron-builder never
+touch the hermetic lockfile — `pnpm check:desktop` (in the gate) enforces that,
+plus the tier split where only `src/electron/**` may import Electron. The window
+document is the desktop-shell chrome **unforked** plus exactly two injections;
+the one bridge seam is `createDesktopBridge()` in `desktop/linux/src/lib/bridge.ts`
+(synchronous `handle()`, mirrored on web-shell's inspector app), reaching
+`composeScene()`, `bootstrapOpenPath()`, and `createDesktopSession()` only. The
+renderer process holds the tier's one renderer-owning module
+(`src/renderer/viewport.ts`) drawing the shared `MountableScene` through the
+ADR 0002 seam; gate proof is `tests/e2e/desktop-linux-bridge-golden.test.ts` (in
+`test:golden`, headless surface, no pixel claim) plus
+`tests/boundary/injected-desktop-violations.test.ts`, and the packaged binary
+re-proves the paths via `pnpm smoke --packaged`. Distribution is a recorded,
+non-bit-reproducible build: `docs/desktop-linux.md` owns the checksum record, the
+umbrella `/engine` advertises it through `desktopLinuxAppOffer()` in `site-kit`,
+and `tests/sites/desktop-offer-lockstep.test.ts` keeps the two in lockstep.
+Windows/macOS stay unpackaged and say so. No profile, Kids, auth/billing, or CLI
+verb reaches this tier.
+
 The Engine Desktop **visual** surface is `apps/desktop-shell` alone
 (sceneaxi#158): `src/visual-model.ts` decides (seven modes, mode-dependent dock
 tabs, profile switch, assistant states, Change Review, command palette,

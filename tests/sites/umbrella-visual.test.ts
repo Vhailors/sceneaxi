@@ -136,12 +136,14 @@ describe("restated content stays pinned to the contract that owns it", () => {
 
 describe("the marketing surface makes no claim the repository cannot stand behind", () => {
   it("invents no installer, platform build, size, or digest", () => {
-    // The one downloadable artifact is the SDK archive, whose facts are read off the
-    // served file. A page that spelled out a size or a digest would be inventing one.
+    // Two downloadable artifacts exist: the SDK archive, whose facts are read off the
+    // served file, and the recorded Linux desktop build, whose facts come from the
+    // committed site-kit offer (lockstep with docs/desktop-linux.md). A page that
+    // spelled out a size or a digest would be inventing one, and Windows/macOS
+    // installers do not exist, so naming one anywhere is refused.
     for (const invented of [
       ".dmg",
       ".exe",
-      "AppImage",
       "Apple silicon",
       "Download for macOS",
       "Download for Windows",
@@ -149,9 +151,16 @@ describe("the marketing surface makes no claim the repository cannot stand behin
       expect(ALL_SOURCE).not.toContain(invented);
     }
     expect(ALL_SOURCE).not.toMatch(/\b\d+\s*MB\b/);
-    // Digest and byte size are read from the offer, never typed into the page.
+    // Digest and byte size are read from the offers, never typed into the page.
     expect(ENGINE).toContain("sdk.sha256");
     expect(ENGINE).toContain("formatByteSize(sdk.byteSize)");
+    expect(ENGINE).toContain("artifact.sha256");
+    expect(ENGINE).toContain("formatByteSize(artifact.byteSize)");
+    expect(ENGINE).not.toMatch(/\b[0-9a-f]{64}\b/);
+    // The desktop offer is rendered whole: the honest platform line and the
+    // reproducibility note are not optional decorations.
+    expect(ENGINE).toContain("desktopApp.notPackaged.join");
+    expect(ENGINE).toContain("desktopApp.reproducibilityNote");
   });
 
   it("prices in credits and sells no seat, plan, or subscription", () => {

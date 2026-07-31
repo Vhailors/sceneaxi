@@ -70,6 +70,7 @@ naming its source.
 | [0021](0021-identity-credits-injected-adapters.md) | The identity/credits plane ships as contracts and ports with injected Better Auth, Neon, and Stripe adapters; webhook verification stays in core; plain SQL over Drizzle |
 | [0022](0022-umbrella-owns-the-public-viewport.md) | The umbrella site owns every viewport — public `/open` and entitled `/editor` (2026-07-26 amendment) — and is the only site allowed to consume `@sceneaxi/engine-presentation` |
 | [0023](0023-open-path-bootstrap-and-session-lifecycle.md) | `engine-orchestrator` owns open-path bootstrap and per-handle session lifecycle above the kernel — and no job system; supersedes the sceneaxi#60 stub disposition |
+| [0024](0024-linux-desktop-electron-tier.md) | A `desktop/` tier: the Linux desktop application is Electron over the shell's unforked chrome, a narrow bridge seam, and the real engine stack; recorded-build distribution, no Windows/macOS claim |
 
 ## Number allocation
 

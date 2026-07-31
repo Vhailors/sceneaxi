@@ -395,7 +395,8 @@ export type ReleaseGroup =
   | "plugin-host"
   | "identity"
   | "apps"
-  | "sites";
+  | "sites"
+  | "desktop";
 
 /** The self-description every SceneAxi package exposes at its public seam. */
 export interface PackageSeam {

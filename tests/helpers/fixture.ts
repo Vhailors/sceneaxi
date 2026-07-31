@@ -15,13 +15,15 @@ import { fileURLToPath } from "node:url";
 
 export const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 
-const COPY_TOPS = ["docs", "packages", "apps", "sites", "scripts", "tests", ".github"];
+const COPY_TOPS = ["docs", "packages", "apps", "sites", "desktop", "scripts", "tests", ".github"];
 /**
  * Root files the gate scripts read: `check-sites` reads the manifest and workspace,
  * and `check-publish-ready` reads the manifest scripts and the SDK-output ignores.
  */
 const COPY_FILES = ["package.json", "pnpm-workspace.yaml", ".gitignore"];
-const SKIP_DIRS = new Set(["node_modules", "dist", "coverage", "test"]);
+// `release` and `dist-build` are desktop-tier packaging output (ADR 0024): heavy
+// binaries the checkers never read, so copying them would only slow every fixture.
+const SKIP_DIRS = new Set(["node_modules", "dist", "coverage", "test", "release", "dist-build"]);
 
 /**
  * Copy the parts of the repo the gate scripts read (manifests, sources, matrix,
@@ -82,6 +84,7 @@ export function runCheck(
     | "check-boundaries.mjs"
     | "check-syntax.mjs"
     | "check-sites.mjs"
+    | "check-desktop.mjs"
     | "check-contracts.mjs"
     | "check-publish-ready.mjs",
 ): { status: number | null; stdout: string; stderr: string } {
