@@ -99,12 +99,19 @@ rather than degrading.
 | `authoring-core` refuses (bad pointer, hash conflict, recovery pending) | `409 inspector-refused`, carrying the typed diagnostics and the unchanged snapshot — never a `200` beside a refusal. |
 | An unknown route or the wrong method | `404 route-unknown` / `405 method-not-allowed`. |
 | A route handler throws unexpectedly | `500 handler-failed`; the server returns a named refusal instead of terminating. |
+| The assistant panel could not be wired (for example a plural admin environment) | `503 assistant-unavailable`, carrying the panel's construction reason as `assistantReason`. No turn is attempted; the authoring routes keep serving. |
 | The client abandons a request mid-body, or the listening socket errors | Neither ends the command. An unfinished body runs no inspector action and is not reported as a size refusal — there is no client left to read one, so the connection is simply dropped; a socket error is logged to stderr and the inspector keeps serving. |
 
 Every `WEB_SHELL_REFUSALS` reason appears above, and
-`test/refuse-matrix.test.ts` asserts each one is actually reachable. The binary
-itself is proven to start by `test/bin-smoke.test.ts`, which spawns it and drives
-propose → accept over a real socket.
+`test/refuse-matrix.test.ts` asserts each one is actually reachable. The one
+reason a served response may carry that is *not* in that registry is the
+assistant panel's own: `POST /api/assistant` forwards it verbatim with `409`
+rather than renaming a decision it does not own, so `HOSTED_AI_NOT_ENABLED` and
+`ASSISTANT_PROMPT_INVALID` reach the client unchanged. `ServedRefusalReason` is
+that union, and those reasons stay covered by the panel's and the billing
+plane's own refuse matrices. The binary itself is proven to start by
+`test/bin-smoke.test.ts`, which spawns it and drives propose → accept over a
+real socket.
 
 It still does no remote hosting, deployment, TLS, process management, or domain
 work — that tier is `sites/`

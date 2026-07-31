@@ -51,6 +51,33 @@ function project(): { dir: string; app: InspectorApp } {
   return { dir, app: createInspectorApp({ projectRoot: dir }) };
 }
 
+/**
+ * The identity environment the default panel is built from.
+ *
+ * The built fixture route must not need an admin bootstrap setting, and a host
+ * that happens to export one — or a plural spelling the identity package
+ * refuses outright — would otherwise decide these assertions. `bin-smoke`
+ * scrubs the same three for the spawned binary.
+ */
+const ADMIN_ENV_VARS = [
+  "SCENEAXI_ADMIN_EMAIL",
+  "SCENEAXI_ADMIN_EMAILS",
+  "SCENEAXI_ADMINS",
+] as const;
+
+/** Build an app with the ambient identity environment removed, then restore it. */
+function assistantProject(): { dir: string; app: InspectorApp } {
+  const saved = ADMIN_ENV_VARS.map((name) => [name, process.env[name]] as const);
+  for (const [name] of saved) delete process.env[name];
+  try {
+    return project();
+  } finally {
+    for (const [name, value] of saved) {
+      if (value !== undefined) process.env[name] = value;
+    }
+  }
+}
+
 type Payload = {
   app: string;
   ok: boolean;
@@ -181,7 +208,7 @@ describe("served inspector protocol", () => {
   });
 
   it("drives the deterministic fixture assistant through the served app", async () => {
-    const { app } = project();
+    const { app } = assistantProject();
     const response = await app.handleAsync({
       method: "POST",
       url: "/api/assistant",
@@ -200,7 +227,7 @@ describe("served inspector protocol", () => {
   });
 
   it("keeps hosted mode explicit and default-off on the served route", async () => {
-    const { app } = project();
+    const { app } = assistantProject();
     const response = await app.handleAsync({
       method: "POST",
       url: "/api/assistant",
