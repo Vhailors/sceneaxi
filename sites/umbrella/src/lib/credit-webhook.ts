@@ -148,7 +148,9 @@ const UNHANDLED_EVENT_REASONS: ReadonlySet<string> = Object.freeze(
  * persisted the intent the grant must be bound to, its own settlement adapter answered
  * for a different Checkout Session than the one asked about or did not echo the session
  * id at all, its own ledger rows do not load, its own bundled credit-pack archive does not
- * validate, or the purchasing user has no provisioned credit account. They are separated from the request-fault refusals so the transport can
+ * validate, the intent it persisted names a pack tuple or currency no retained revision of
+ * that archive resolves or credits that revision does not carry, or the purchasing user has
+ * no provisioned credit account. They are separated from the request-fault refusals so the transport can
  * answer a status that names the failing side — an operator who forgot
  * `STRIPE_WEBHOOK_SECRET`, or whose adapter forgot to persist intents, must not see their
  * own omission reported as a bad request from Stripe.

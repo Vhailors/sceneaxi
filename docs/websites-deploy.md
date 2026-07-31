@@ -341,13 +341,18 @@ Load-bearing properties, each gate-tested in `tests/sites/identity-plane-wiring.
   signing secret, an unusable clock, an adapter that threw, a persisted intent its own
   checkout adapter never wrote, a settlement its own adapter returned for a different
   Checkout Session or without the required `sessionId`, its own ledger rows that do not
-  load — answers `503`; a refusal the request owns — signature, payload, a session id the
-  verified body itself omits, an intent that does not match — answers `400`. The
-  settlement-session refusal sits on the deployment's side because both sides of that
-  comparison come from one signature-verified body: the endpoint reads the session id out
-  of the verified payload and asks its own `retrieveSettlement` for exactly that id, so
-  only the adapter's answer can disagree, and a forged body is refused by signature
-  verification long before it. An event the endpoint is not built to act on is neither: it
+  load, its own bundled credit-pack archive that does not validate, a persisted intent
+  whose pack tuple or currency no retained revision of that archive resolves, or one whose
+  credits do not equal the resolved revision's — answers `503`; a refusal the request owns
+  — signature, payload, a session id the verified body itself omits, an intent that does
+  not match — answers `400`. The settlement-session refusal sits on the deployment's side
+  because both sides of that comparison come from one signature-verified body: the endpoint
+  reads the session id out of the verified payload and asks its own `retrieveSettlement`
+  for exactly that id, so only the adapter's answer can disagree, and a forged body is
+  refused by signature verification long before it. The archive and revision refusals sit
+  there for the same shape of reason: both sides are the deployment's own — the intent its
+  checkout adapter persisted, and the pack revision this repository commits — so a sender
+  decides neither. An event the endpoint is not built to act on is neither: it
   answers `200` with `ignored: true`, so Stripe stops redelivering a condition redelivery
   cannot change. Only `ignored: false` means credits are in the ledger. Exactly three
   things are acknowledged, and all three are decided from the verified body before any
