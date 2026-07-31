@@ -32,16 +32,29 @@ import {
   type InspectorSession,
   type InspectorSnapshot,
 } from "./inspector.js";
+import { createDefaultAssistantPanel } from "./assistant-default.js";
+import type {
+  AssistantPanel,
+  AssistantPanelSnapshot,
+  AssistantRefusal,
+  CreateAssistantPanelResult,
+} from "./assistant-panel.js";
 
 /** Stable app identifier echoed on every payload, matching the shell binaries. */
 export const WEB_SHELL_APP = "sceneaxi-web-shell";
 
 /**
- * Every named refusal the startable web shell can produce, launch included.
+ * Every named refusal the startable web shell **owns**, launch included.
  *
  * One registry rather than one per module: a refusal is only fail-closed if it
  * is reachable, and `test/refuse-matrix.test.ts` asserts exactly that of every
  * entry here.
+ *
+ * The assistant route additionally forwards the panel's own refusal reason
+ * verbatim — `ASSISTANT_PANEL_REASONS`, plus billing's and auth's vocabularies
+ * through it — because a transport that renamed a panel refusal would be making
+ * a second decision. Those reasons stay owned and matrix-covered where they are
+ * produced; `ServedRefusalReason` is the union this surface can answer with.
  */
 export const WEB_SHELL_REFUSALS = Object.freeze({
   /** No route serves this path. */
@@ -76,10 +89,18 @@ export const WEB_SHELL_REFUSALS = Object.freeze({
   listenFailed: "listen-failed",
   /** An unexpected throw while routing; the surface answers, never dies. */
   handlerFailed: "handler-failed",
+  /** The assistant panel could not be wired, so no turn can be served. */
+  assistantUnavailable: "assistant-unavailable",
 } as const);
 
 export type WebShellRefusal =
   (typeof WEB_SHELL_REFUSALS)[keyof typeof WEB_SHELL_REFUSALS];
+
+/**
+ * What a served response's `reason` may be: this surface's own registry, or the
+ * assistant panel's reason forwarded unchanged.
+ */
+export type ServedRefusalReason = WebShellRefusal | AssistantRefusal["reason"];
 
 /**
  * The served vocabulary. `session` names the `InspectorSession` method the
@@ -123,6 +144,12 @@ export const INSPECTOR_ACTIONS = Object.freeze({
     session: "refreshRecovery",
     description: "Re-resolve a pending durable apply transaction",
   }),
+  assistant: Object.freeze({
+    method: "POST",
+    path: "/api/assistant",
+    session: null,
+    description: "Complete one assistant turn through the configured panel",
+  }),
 } as const);
 
 export type InspectorAction = keyof typeof INSPECTOR_ACTIONS;
@@ -150,7 +177,10 @@ export type InspectorHttpResponse = {
 export type InspectorApp = {
   /** Canonical served project root; every document path resolves inside it. */
   readonly projectRoot: string;
+  /** Synchronous authoring/document routes. */
   handle(request: InspectorHttpRequest): InspectorHttpResponse;
+  /** The same surface with the asynchronous assistant turn included. */
+  handleAsync(request: InspectorHttpRequest): Promise<InspectorHttpResponse>;
 };
 
 export type CreateInspectorAppOptions = {
@@ -158,6 +188,8 @@ export type CreateInspectorAppOptions = {
   readonly projectRoot?: string;
   /** Inspector session to drive (default: one bound to `projectRoot`). */
   readonly session?: InspectorSession;
+  /** Existing assistant panel to expose (default: the deterministic fixture panel). */
+  readonly assistant?: AssistantPanel;
 };
 
 const JSON_TYPE = "application/json; charset=utf-8";
@@ -181,7 +213,7 @@ function okResponse(
 function refuse(
   status: number,
   action: string,
-  reason: WebShellRefusal,
+  reason: ServedRefusalReason,
   message: string,
   extra: Readonly<Record<string, unknown>> = {},
 ): InspectorHttpResponse {
@@ -344,6 +376,18 @@ function primaryMessage(diagnostics: readonly ApplyDiagnostic[]): string {
   return diagnostics[0]?.message ?? "The inspector refused with typed diagnostics.";
 }
 
+function assistantSnapshotResponse(
+  action: InspectorAction,
+  snapshot: AssistantPanelSnapshot,
+): InspectorHttpResponse {
+  if (snapshot.refusal === undefined) {
+    return okResponse(action, { snapshot });
+  }
+  return refuse(409, action, snapshot.refusal.reason, snapshot.refusal.message, {
+    snapshot,
+  });
+}
+
 /**
  * Create the served inspector application over one session.
  *
@@ -357,6 +401,10 @@ export function createInspectorApp(
   const projectRoot = canonicalPath(options.projectRoot ?? ".");
   const session =
     options.session ?? createInspectorSession({ cwd: projectRoot });
+  const assistantSetup: CreateAssistantPanelResult =
+    options.assistant === undefined
+      ? createDefaultAssistantPanel()
+      : Object.freeze({ ok: true, panel: options.assistant });
   let reviewGeneration = 0;
   let activeReviewToken: string | null = null;
 
@@ -469,6 +517,39 @@ export function createInspectorApp(
     return snapshotResponse(action, snapshot, projectRoot, activeReviewToken);
   };
 
+  const assistantTurn = async (
+    body: string | undefined,
+  ): Promise<InspectorHttpResponse> => {
+    if (!assistantSetup.ok) {
+      return refuse(
+        503,
+        "assistant",
+        WEB_SHELL_REFUSALS.assistantUnavailable,
+        `The assistant panel could not be wired: ${assistantSetup.message}`,
+        { assistantReason: assistantSetup.reason },
+      );
+    }
+    const panel = assistantSetup.panel;
+
+    const parsed = parseJsonObject(body);
+    if (!parsed.ok) return refuseRequest("assistant", parsed);
+
+    if (Object.hasOwn(parsed.value, "mode")) {
+      const selected = panel.setMode(parsed.value["mode"]);
+      if (selected.refusal !== undefined) {
+        return assistantSnapshotResponse("assistant", selected);
+      }
+    }
+
+    const snapshot = await panel.ask({
+      prompt: typeof parsed.value["prompt"] === "string" ? parsed.value["prompt"] : "",
+      ...(typeof parsed.value["turnId"] === "string"
+        ? { turnId: parsed.value["turnId"] }
+        : {}),
+    });
+    return assistantSnapshotResponse("assistant", snapshot);
+  };
+
   const route = (request: InspectorHttpRequest): InspectorHttpResponse => {
     const target = new URL(request.url, "http://localhost");
     const path = target.pathname;
@@ -541,34 +622,74 @@ export function createInspectorApp(
           projectRoot,
           activeReviewToken,
         );
+      case "assistant":
+        return refuse(
+          500,
+          action,
+          WEB_SHELL_REFUSALS.handlerFailed,
+          "The assistant route requires asynchronous request handling.",
+        );
     }
   };
 
-  return {
-    projectRoot,
-
-    /**
-     * Route one request.
-     *
-     * The catch-all is the last fail-closed rule: a served surface answers
-     * every request, so an unexpected throw becomes a named refusal instead of
-     * an unhandled rejection that would take the dev server down with it.
-     */
-    handle(request: InspectorHttpRequest): InspectorHttpResponse {
-      try {
-        return route(request);
-      } catch (error) {
-        return refuse(
-          500,
-          "unknown",
-          WEB_SHELL_REFUSALS.handlerFailed,
-          `The inspector could not serve ${request.url}: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-        );
-      }
-    },
+  /**
+   * Route one request.
+   *
+   * The catch-all is the last fail-closed rule: a served surface answers every
+   * request, so an unexpected throw becomes a named refusal instead of an
+   * unhandled rejection that would take the dev server down with it.
+   *
+   * A closure, not a method: both members below call it, so routing cannot
+   * depend on how a caller obtained the function it invoked.
+   */
+  const handleSync = (request: InspectorHttpRequest): InspectorHttpResponse => {
+    try {
+      return route(request);
+    } catch (error) {
+      return refuse(
+        500,
+        "unknown",
+        WEB_SHELL_REFUSALS.handlerFailed,
+        `The inspector could not serve ${request.url}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
   };
+
+  /**
+   * The same surface, with the one asynchronous route intercepted.
+   *
+   * Only an exact path *and* method match is intercepted; everything else —
+   * unknown routes and a wrong method on the assistant path included — falls
+   * through to the one router above rather than re-deriving its refusals.
+   */
+  const handleAsync = async (
+    request: InspectorHttpRequest,
+  ): Promise<InspectorHttpResponse> => {
+    try {
+      const target = new URL(request.url, "http://localhost");
+      const method = request.method.toUpperCase();
+      if (
+        target.pathname !== INSPECTOR_ACTIONS.assistant.path ||
+        method !== INSPECTOR_ACTIONS.assistant.method
+      ) {
+        return handleSync(request);
+      }
+      return await assistantTurn(request.body);
+    } catch (error) {
+      return refuse(
+        500,
+        "assistant",
+        WEB_SHELL_REFUSALS.handlerFailed,
+        `The inspector could not serve ${request.url}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+  };
+
+  return { projectRoot, handle: handleSync, handleAsync };
 }
 
 function escapeHtml(value: string): string {

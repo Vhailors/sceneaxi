@@ -18,7 +18,7 @@ a marketing word.
 |---|---|---|---|
 | `@sceneaxi/cli` | **R2** | `pnpm build && node packages/cli/bin/sceneaxi.mjs --help` | `packages/cli/test/bin-smoke.test.ts` + the rest of `packages/cli/test/` |
 | `@sceneaxi/desktop-shell` | **R2** | `pnpm build && node apps/desktop-shell/bin/sceneaxi-desktop.mjs --help`; for the editor chrome, `… chrome > shell.html` and open that file | `apps/desktop-shell/test/bin-smoke.test.ts` (including a spawned `chrome` render), `tests/parity/shell-cli-parity.test.ts`, `apps/desktop-shell/test/{visual-model,visual-tokens,chrome}.test.ts` + the browser record in [`engine-desktop-surface.md`](engine-desktop-surface.md) |
-| `@sceneaxi/web-shell` (local authoring inspector) | **R2** | `pnpm build && node apps/web-shell/bin/sceneaxi-web-shell.mjs --cwd <project>`, then open the printed loopback URL | `apps/web-shell/test/bin-smoke.test.ts` (spawns the binary and drives propose → accept over a socket), `apps/web-shell/test/refuse-matrix.test.ts`, `tests/parity/shell-cli-parity.test.ts` |
+| `@sceneaxi/web-shell` (local authoring inspector + assistant transport) | **R2** | `pnpm build && node apps/web-shell/bin/sceneaxi-web-shell.mjs --cwd <project>`, then open the printed loopback URL or `POST /api/assistant` | `apps/web-shell/test/bin-smoke.test.ts` (spawns the binary and drives propose → accept plus a fixture assistant turn over a socket), `apps/web-shell/test/refuse-matrix.test.ts`, `tests/parity/shell-cli-parity.test.ts` |
 | Game profile (single object) | **R1** | `pnpm test:golden` | `tests/e2e/cli-golden-path.test.ts` |
 | Game profile (multi-object scene) | **R1** | `pnpm test:golden` | `tests/e2e/profile-game-scene-golden.test.ts` |
 | Web Experience profile | **R1** | `pnpm test:golden` | `tests/e2e/profile-web-golden-path.test.ts` |
@@ -119,33 +119,27 @@ still-unimplemented target:
 The CLI is **free and BYO-AI**: no verb reads a credential, opens a socket, or
 spends anything, and no shipped verb is held-key gated (`SHIPPED_COMMAND_MAP`).
 
-Hosted AI is metered but is **not a runnable surface here**. The free-vs-paid
-matrix it must obey — including BYO-key never touching the ledger and the
+Hosted AI is metered but remains **explicit and default-off**. The free-vs-paid
+matrix it obeys — including BYO-key never touching the ledger and the
 non-overridable Kids deny — is owned by
 [`docs/auth-credits.md`](auth-credits.md). The credit ledger, metering, and the one
 default-off gate a hosted call must pass to reach a debit (`runMeteredModelCall`)
-exist in `packages/billing`, and the assistant that composes that gate with the
-Model Provider Port has landed as `createAssistantPanel()` in `apps/web-shell`
-(sceneaxi#121). It is a view model, not a startable surface: its host's inspector
-server exposes it no route (below), its default mode is the recorded fixture
-transport, and its hosted mode
-is off unless a caller explicitly enables it — so nothing runnable spends
-anything.
+exist in `packages/billing`, and `createAssistantPanel()` composes that gate with
+the Model Provider Port in `apps/web-shell` (sceneaxi#121). The startable
+loopback shell exposes that existing panel at `POST /api/assistant`: fixture is
+the deterministic default, while an injected panel supplies any explicit BYO or
+hosted wiring. The transport creates no provider, identity, or credits policy,
+and the built default panel has no ledger or hosted opt-in, so it cannot spend.
 
 ## Why the web shell serves loopback only
 
 `sceneaxi-web-shell` is a **local authoring** surface, not a deployment. Its run
 instructions, security rationale, and authoritative refusal table live in
 [`../apps/web-shell/README.md`](../apps/web-shell/README.md); the shell adds only
-a transport over the inspector phases it already had. The deployable web tier
-remains the separate `sites/` tier (ADR 0018).
+transports over the inspector phases and the assistant panel it already had. The
+deployable web tier remains the separate `sites/` tier (ADR 0018).
 
 ## Not runnable yet
 
-- **In-app AI assistant** (sceneaxi#121) — built, as `createAssistantPanel()` in
-  `apps/web-shell`, and still not runnable: it ships a view model and no
-  renderer, and the startable shell above serves it no route
-  (`INSPECTOR_ACTIONS` is the whole served vocabulary). Every transport is
-  injected, so nothing here can start one.
 - **`apps/catalog-game`, `apps/catalog-web`** — dormant, owned by the
   websites/deploy track.

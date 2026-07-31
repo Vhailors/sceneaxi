@@ -51,6 +51,33 @@ function project(): { dir: string; app: InspectorApp } {
   return { dir, app: createInspectorApp({ projectRoot: dir }) };
 }
 
+/**
+ * The identity environment the default panel is built from.
+ *
+ * The built fixture route must not need an admin bootstrap setting, and a host
+ * that happens to export one — or a plural spelling the identity package
+ * refuses outright — would otherwise decide these assertions. `bin-smoke`
+ * scrubs the same three for the spawned binary.
+ */
+const ADMIN_ENV_VARS = [
+  "SCENEAXI_ADMIN_EMAIL",
+  "SCENEAXI_ADMIN_EMAILS",
+  "SCENEAXI_ADMINS",
+] as const;
+
+/** Build an app with the ambient identity environment removed, then restore it. */
+function assistantProject(): { dir: string; app: InspectorApp } {
+  const saved = ADMIN_ENV_VARS.map((name) => [name, process.env[name]] as const);
+  for (const [name] of saved) Reflect.deleteProperty(process.env, name);
+  try {
+    return project();
+  } finally {
+    for (const [name, value] of saved) {
+      if (value !== undefined) process.env[name] = value;
+    }
+  }
+}
+
 type Payload = {
   app: string;
   ok: boolean;
@@ -58,7 +85,11 @@ type Payload = {
   reason?: string;
   message?: string;
   reviewToken?: string | null;
-  snapshot?: InspectorSnapshot;
+  snapshot?: InspectorSnapshot & {
+    mode?: string;
+    metered?: boolean;
+    turns?: ReadonlyArray<Record<string, unknown>>;
+  };
   [key: string]: unknown;
 };
 
@@ -174,6 +205,39 @@ describe("served inspector protocol", () => {
     expect(payload["contentHash"]).toMatch(/^sha256:[0-9a-f]{64}$/);
     expect(payload["dataKeys"]).toEqual(["entities"]);
     expect(payload["projectRoot"]).toBe(dir);
+  });
+
+  it("drives the deterministic fixture assistant through the served app", async () => {
+    const { app } = assistantProject();
+    const response = await app.handleAsync({
+      method: "POST",
+      url: "/api/assistant",
+      body: JSON.stringify({ prompt: "fixture prompt" }),
+    });
+
+    expect(response.status).toBe(200);
+    const payload = body(response);
+    expect(payload.action).toBe("assistant");
+    expect(payload.snapshot?.mode).toBe("fixture");
+    expect(payload.snapshot?.metered).toBe(false);
+    expect(payload.snapshot?.turns?.[0]).toMatchObject({
+      prompt: "fixture prompt",
+      text: "fixture completion",
+    });
+  });
+
+  it("keeps hosted mode explicit and default-off on the served route", async () => {
+    const { app } = assistantProject();
+    const response = await app.handleAsync({
+      method: "POST",
+      url: "/api/assistant",
+      body: JSON.stringify({ prompt: "hosted prompt", mode: "hosted", turnId: "t1" }),
+    });
+
+    expect(response.status).toBe(409);
+    const payload = body(response);
+    expect(payload.reason).toBe("HOSTED_AI_NOT_ENABLED");
+    expect(payload.snapshot?.turns).toHaveLength(0);
   });
 });
 

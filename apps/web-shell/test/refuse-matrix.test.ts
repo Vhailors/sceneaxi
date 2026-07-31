@@ -99,6 +99,28 @@ function rawRequestReason(
   });
 }
 
+/** Run `build` with the identity environment replaced, then restore it exactly. */
+function withEnv<T>(
+  overrides: Readonly<Record<string, string | undefined>>,
+  build: () => T,
+): T {
+  const saved = Object.keys(overrides).map(
+    (name) => [name, process.env[name]] as const,
+  );
+  const restore = (entries: ReadonlyArray<readonly [string, string | undefined]>) => {
+    for (const [name, value] of entries) {
+      if (value === undefined) Reflect.deleteProperty(process.env, name);
+      else process.env[name] = value;
+    }
+  };
+  restore(Object.entries(overrides));
+  try {
+    return build();
+  } finally {
+    restore(saved);
+  }
+}
+
 /**
  * One producer per reason. Async because the two launch-side reasons that need a
  * real bind cannot be produced any other way.
@@ -224,6 +246,24 @@ const PRODUCERS: Readonly<Record<WebShellRefusal, () => Promise<string>>> = {
     });
     const response = app.handle({ method: "GET", url: "/api/state" });
     expect(response.status).toBe(500);
+    return reasonOf(response);
+  },
+
+  [WEB_SHELL_REFUSALS.assistantUnavailable]: async () => {
+    // A plural admin spelling is refused by the identity package itself, which
+    // is the reachable instance of "the panel could not be wired". The route
+    // must say so rather than report it as an unexpected throw.
+    const dir = fixtureDir();
+    writeScene(dir, "scene.json", { entities: [] });
+    const app = withEnv({ SCENEAXI_ADMIN_EMAILS: "one@example.test" }, () =>
+      createInspectorApp({ projectRoot: dir }),
+    );
+    const response = await app.handleAsync({
+      method: "POST",
+      url: "/api/assistant",
+      body: JSON.stringify({ prompt: "hello" }),
+    });
+    expect(response.status).toBe(503);
     return reasonOf(response);
   },
 

@@ -49,6 +49,7 @@ document-status route is explicitly read-only:
 | `POST /api/accept` with the `reviewToken` returned by propose/state | `accept()` |
 | `POST /api/reject` with the `reviewToken` returned by propose/state | `reject()` |
 | `POST /api/recover` | `refreshRecovery()` |
+| `POST /api/assistant` | configured `createAssistantPanel()` (asynchronous turn) |
 
 The server is a transport and nothing else. `createInspectorApp()` maps each
 authoring action onto one session call and keeps document status read-only;
@@ -62,6 +63,22 @@ Each successful proposal returns an opaque `reviewToken`. Accept and reject must
 send that token, so one browser tab cannot act on a proposal that replaced the
 diff it reviewed. One app/server owns one session and therefore one pending
 proposal at a time, matching the session API's review-before-apply contract.
+
+The assistant transport is `POST /api/assistant` with a JSON body containing
+`prompt`, plus optional `mode` (`fixture`, `byo`, or `hosted`) and `turnId`.
+It returns the assistant snapshot and uses the panel's named refusal as the
+response `reason` with status `409`. The built shell wires the recorded fixture
+port for the default `fixture` mode, so a turn is deterministic and needs no
+network, credential, or ledger. A `byo` selection remains explicit and free
+when an injected BYO port is supplied; the built default does not invent one.
+`hosted` remains explicit and default-off. Injected panels use their existing
+identity, provider, clock, and credit-store seams; the transport creates none
+of those policies and accepts no provider credential from HTTP.
+
+Because that turn is asynchronous, an embedder driving `createInspectorApp()`
+itself must route through `handleAsync()`, which serves the whole vocabulary;
+the synchronous `handle()` still serves every authoring route and refuses the
+assistant path with `500 handler-failed` rather than answering it half-way.
 
 ### How it fails closed
 
@@ -87,12 +104,19 @@ rather than degrading.
 | `authoring-core` refuses (bad pointer, hash conflict, recovery pending) | `409 inspector-refused`, carrying the typed diagnostics and the unchanged snapshot — never a `200` beside a refusal. |
 | An unknown route or the wrong method | `404 route-unknown` / `405 method-not-allowed`. |
 | A route handler throws unexpectedly | `500 handler-failed`; the server returns a named refusal instead of terminating. |
+| The assistant panel could not be wired (for example a plural admin environment) | `503 assistant-unavailable`, carrying the panel's construction reason as `assistantReason`. No turn is attempted; the authoring routes keep serving. |
 | The client abandons a request mid-body, or the listening socket errors | Neither ends the command. An unfinished body runs no inspector action and is not reported as a size refusal — there is no client left to read one, so the connection is simply dropped; a socket error is logged to stderr and the inspector keeps serving. |
 
 Every `WEB_SHELL_REFUSALS` reason appears above, and
-`test/refuse-matrix.test.ts` asserts each one is actually reachable. The binary
-itself is proven to start by `test/bin-smoke.test.ts`, which spawns it and drives
-propose → accept over a real socket.
+`test/refuse-matrix.test.ts` asserts each one is actually reachable. The one
+reason a served response may carry that is *not* in that registry is the
+assistant panel's own: `POST /api/assistant` forwards it verbatim with `409`
+rather than renaming a decision it does not own, so `HOSTED_AI_NOT_ENABLED` and
+`ASSISTANT_PROMPT_INVALID` reach the client unchanged. `ServedRefusalReason` is
+that union, and those reasons stay covered by the panel's and the billing
+plane's own refuse matrices. The binary itself is proven to start by
+`test/bin-smoke.test.ts`, which spawns it and drives propose → accept and one
+default fixture assistant turn over a real socket.
 
 It still does no remote hosting, deployment, TLS, process management, or domain
 work — that tier is `sites/`
@@ -155,7 +179,8 @@ Three modes reach the model through the same port and differ only in metering: `
 (SceneAxi-operated, credits, **off** unless explicitly enabled). Hosted requires a current
 persisted ledger for every principal; fixture and BYO never touch it. Kids is refused at
 construction — surface *and* profile — so no turn in any mode can be metered or dispatched.
-Contract and ownership: [`docs/auth-credits.md`](../../docs/auth-credits.md).
+The startable loopback transport is documented above; it forwards these decisions rather
+than making a second one. Contract and ownership: [`docs/auth-credits.md`](../../docs/auth-credits.md).
 
 ## Open-path policy view
 
