@@ -51,9 +51,12 @@ export type SiteAccessState = {
  * Confine a destination to this site, or refuse it.
  *
  * Only a same-site relative path survives: no scheme, no authority, no
- * protocol-relative `//`, no backslash trickery, no whitespace. It lives here
- * rather than in a site because both ends of the round trip need the same
- * answer — the surface that *emits* a sign-in link carrying a destination and
+ * protocol-relative `//`, no backslash trickery, no whitespace, and no control
+ * character — a byte no `Location` header may carry is not a destination, so it
+ * degrades to the fallback here instead of throwing at the response.
+ *
+ * It lives here rather than in a site because both ends of the round trip need
+ * the same answer — the surface that *emits* a sign-in link carrying a destination and
  * the login flow that *reads* one back — and two implementations of that rule
  * would eventually disagree about which paths are safe.
  */
@@ -62,6 +65,10 @@ export function confineSiteRelativePath(value: unknown): string | null {
   const path = value.trim();
   if (!path.startsWith("/")) return null;
   if (path.startsWith("//") || path.includes("\\") || /\s/.test(path)) return null;
+  for (const char of path) {
+    const code = char.codePointAt(0) ?? 0;
+    if (code < 0x20 || code === 0x7f) return null;
+  }
   return path;
 }
 

@@ -31,6 +31,11 @@ const HOSTILE_DESTINATIONS = [
   "javascript:alert(1)",
   "/has space",
   "/line\nbreak",
+  "/nul\u0000byte",
+  "/bell\u0007ring",
+  "/shift\u000eout",
+  "/unit\u001fseparator",
+  "/delete\u007fchar",
 ];
 
 describe("describeSiteAccessState", () => {
