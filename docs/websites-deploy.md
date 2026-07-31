@@ -80,7 +80,7 @@ set them *before* deploying and redeploy after changing one.
 | `NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN` | all three | this ship | editor deep links, checkout redirects | https `*.vercel.app` umbrella origin; a missing or non-https value makes the catalog refuse to render the link. On the umbrella it is also the **only** source of the checkout success/cancel URLs — they are never derived from the request's `Host`, and a checkout POST arriving on any other origin refuses `BILLING_CHECKOUT_ORIGIN_UNTRUSTED`. A missing or non-https value refuses `BILLING_CHECKOUT_ORIGIN_UNCONFIGURED` on that path — the umbrella must name one origin, so an alias domain or a per-build preview URL is not a checkout origin |
 | `NEXT_PUBLIC_SCENEAXI_GAME_CATALOG_ORIGIN` | all three | this ship | optional | family cross-link. On the catalogs it also drives the family bar: whichever origin is set becomes a link, the store's own entry is marked current instead of linked, and an unset sibling renders as plain text. The entry matching a storefront's own surface is the only source of the domain line it prints, so an unset value prints no domain rather than a guessed one |
 | `NEXT_PUBLIC_SCENEAXI_WEB_CATALOG_ORIGIN` | all three | this ship | optional | family cross-link, same rules as the game-catalog origin above |
-| `SCENEAXI_SITE_EDITOR_PREVIEW` | umbrella | captain | optional | `1` grants a banner-marked editor preview while the identity plane has no provider handles, so no real entitlement can be resolved; absent means the editor refuses. Server-side only; a client value is ignored |
+| `SCENEAXI_SITE_EDITOR_PREVIEW` | umbrella | captain | optional | `1` grants a banner-marked editor preview while no member can hold a session — the sign-in entry point is [#185](https://github.com/Vhailors/sceneaxi/issues/185) — so no real entitlement can be resolved; absent means the editor refuses. Server-side only; a client value is ignored |
 
 Each site's `.env.example` lists only names assigned to that Vercel project, including
 the identity-plane names consumed by the deployment adapters, and commits no values.
@@ -183,9 +183,11 @@ preview flag serves no canvas at all, which is what the refusal check below asse
 
 Expected: pages 200; the served zip's SHA-256 equal to the digest `/engine` publishes;
 an unknown item id 404; neither storefront resolving the other's ids; `/pricing` listing
-the three credit packs with no live Buy control; `/account` rendering an honest refusal
-while the identity plane has no provider handles; and `/editor` refusing without the
-preview flag.
+the three credit packs, its Buy control live only once the TEST Stripe handle is
+configured and disabled otherwise; `/account` rendering an honest refusal, since no
+member can hold a session yet; and `/editor` refusing without the preview flag. The
+per-surface states are owned by [What works now, and what still
+refuses](#what-works-now-and-what-still-refuses).
 
 ## Building the SDK archive
 

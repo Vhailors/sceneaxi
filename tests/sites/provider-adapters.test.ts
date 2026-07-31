@@ -1118,17 +1118,19 @@ type ProviderResponse = Readonly<{
 }>;
 
 function responseHeaders(response: ProviderResponse) {
-  if (response.setCookie !== undefined) {
+  const setCookie = response.setCookie;
+  if (setCookie !== undefined) {
     return {
       get: (name: string) =>
-        name.toLowerCase() === "set-cookie" ? [...response.setCookie!].join(", ") : null,
-      getSetCookie: () => [...response.setCookie!],
+        name.toLowerCase() === "set-cookie" ? [...setCookie].join(", ") : null,
+      getSetCookie: () => [...setCookie],
     };
   }
-  if (response.foldedSetCookie !== undefined) {
+  const foldedSetCookie = response.foldedSetCookie;
+  if (foldedSetCookie !== undefined) {
     return {
       get: (name: string) =>
-        name.toLowerCase() === "set-cookie" ? response.foldedSetCookie! : null,
+        name.toLowerCase() === "set-cookie" ? foldedSetCookie : null,
     };
   }
   return undefined;

@@ -236,9 +236,10 @@ export function decideCapability(input: {
 /**
  * The editor preview flag.
  *
- * Server environment only, absent by default. It exists because the identity plane
- * (`sceneaxi-auth-credits-v1`) has not landed, so without it the Minimum E2 surface
- * would be undemonstrable on a production deploy. A client cannot set it — a site
+ * Server environment only, absent by default. It exists because no member can hold a
+ * session yet — the deployment exposes no sign-in entry point (sceneaxi#185) — so
+ * without it the Minimum E2 surface would be undemonstrable on a production deploy.
+ * A client cannot set it — a site
  * reads it from `process.env` and never from a request — and it is removed once
  * entitlement can actually be resolved.
  */
