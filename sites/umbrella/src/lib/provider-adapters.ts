@@ -290,9 +290,14 @@ function accountIdFor(userId: string): string {
 }
 
 /** Build a Neon HTTP client without making Neon a dependency of SceneAxi core. */
-export function createNeonDatabase(connectionString: string): NeonDatabase {
-  const loaded = recordOf(requireSiteModule("@neondatabase/serverless"));
-  const neonFactory = loaded?.["neon"];
+export function createNeonDatabase(
+  connectionString: string,
+  load: SiteModuleLoader = requireSiteModule,
+): NeonDatabase {
+  const neonFactory = moduleFunctionExport(load("@neondatabase/serverless"), [
+    "neon",
+    "default",
+  ]);
   if (typeof neonFactory !== "function") throw new Error("Neon provider is unavailable");
   const sql = (neonFactory as (url: string) => NeonRuntimeQuery)(connectionString);
   const query = async (
@@ -425,6 +430,12 @@ export function createProvisioningIdentityAdapter(options: {
 }): IdentityAdapter {
   return Object.freeze({
     async authenticate(credentials) {
+      // Kids is denied by name here, not upstream: this adapter owns a
+      // deployment write, so it refuses before the provider is even asked and
+      // before any SceneAxi row can exist for a Kids surface.
+      if (credentials.surface === "kids") {
+        throw new Error("umbrella identity provider denies the Kids surface");
+      }
       const authentication = await options.adapter.authenticate(credentials);
       if (authentication === undefined) return undefined;
       // Validate the provider envelope before it can create a SceneAxi row. The
@@ -482,14 +493,16 @@ export type StripeClientLike = Readonly<{
   }>;
 }>;
 
-const requireSiteModule = createRequire(import.meta.url);
+const requireSiteModule: SiteModuleLoader = createRequire(import.meta.url);
 
-export function createStripeClient(secretKey: string): StripeClientLike {
+export function createStripeClient(
+  secretKey: string,
+  load: SiteModuleLoader = requireSiteModule,
+): StripeClientLike {
   if (!secretKey.startsWith("sk_test_")) {
     throw new Error("umbrella Stripe adapter accepts TEST keys only");
   }
-  const loaded = recordOf(requireSiteModule("stripe"));
-  const constructor = loaded?.["default"];
+  const constructor = moduleFunctionExport(load("stripe"), ["default", "Stripe"]);
   if (typeof constructor !== "function") throw new Error("Stripe provider is unavailable");
   return new (constructor as new (key: string) => StripeClientLike)(secretKey);
 }
@@ -831,6 +844,36 @@ export type ProviderFetch = (
 
 function recordOf(value: unknown): Record<string, unknown> | undefined {
   return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : undefined;
+}
+
+/** Loader shape shared by the provider constructors, injectable for tests. */
+export type SiteModuleLoader = (specifier: string) => unknown;
+
+function moduleNamespaceOf(value: unknown): Record<string, unknown> | undefined {
+  if (typeof value === "function") return value as unknown as Record<string, unknown>;
+  return recordOf(value);
+}
+
+/**
+ * Resolve a callable provider export across the shapes `require()` can return:
+ * the callable itself (CommonJS `module.exports = fn`), an ES namespace holding
+ * it, or a namespace nesting one inside the other. Resolving only `["default"]`
+ * of an object namespace misses the CommonJS shape stripe-node actually ships,
+ * and the miss is indistinguishable from an unconfigured deployment.
+ */
+function moduleFunctionExport(loaded: unknown, names: ReadonlyArray<string>): unknown {
+  const seen = new Set<unknown>();
+  let candidate = loaded;
+  while (candidate !== undefined && candidate !== null && !seen.has(candidate)) {
+    if (typeof candidate === "function") return candidate;
+    seen.add(candidate);
+    const namespace = moduleNamespaceOf(candidate);
+    if (namespace === undefined) return undefined;
+    candidate = names
+      .map((name) => namespace[name])
+      .find((value) => value !== undefined && value !== null);
+  }
+  return undefined;
 }
 
 function stringValue(value: unknown): string {

@@ -17,9 +17,12 @@ import {
   applyCreditPackWebhook,
   createDeploymentPlaneHandles,
   createNeonCreditStore,
+  createNeonDatabase,
   createNeonIdentityStore,
+  createProvisioningIdentityAdapter,
   createStripeCheckoutEvidenceAdapter,
   createStripeCheckoutSessionAdapter,
+  createStripeClient,
   resolveBetterAuthOrigin,
   type NeonDatabase,
   type SqlRow,
@@ -640,6 +643,81 @@ describe("umbrella deployment provider adapters", () => {
       }),
     ).rejects.toThrow(/Kids surface/);
     expect(fixture.sessions).toHaveLength(1);
+  });
+
+  it("refuses a Kids surface before the provider or the provisioning write", async () => {
+    const seen: string[] = [];
+    const adapter = createProvisioningIdentityAdapter({
+      adapter: {
+        authenticate(credentials) {
+          seen.push(`authenticate:${credentials.surface}`);
+          return undefined;
+        },
+      },
+      provision() {
+        seen.push("provision");
+      },
+      clock: () => NOW,
+    });
+
+    await expect(
+      adapter.authenticate({
+        surface: "kids",
+        email: "member@example.com",
+        password: "test-password",
+      }),
+    ).rejects.toThrow(/Kids surface/);
+    expect(seen).toEqual([]);
+    await adapter.authenticate({
+      surface: "site",
+      email: "member@example.com",
+      password: "test-password",
+    });
+    expect(seen).toEqual(["authenticate:site"]);
+  });
+
+  it("constructs Stripe from both the CommonJS and the ES module export shape", () => {
+    class FakeStripe {
+      readonly key: string;
+      readonly checkout = { sessions: { create: async () => ({}), retrieve: async () => ({}) } };
+      constructor(key: string) {
+        this.key = key;
+      }
+    }
+
+    for (const loaded of [
+      FakeStripe,
+      Object.assign(FakeStripe, { default: FakeStripe }),
+      { default: FakeStripe },
+      { Stripe: FakeStripe },
+      { default: { default: FakeStripe } },
+    ]) {
+      const client = createStripeClient("sk_test_umbrella", () => loaded);
+      expect(client).toBeInstanceOf(FakeStripe);
+      expect((client as unknown as FakeStripe).key).toBe("sk_test_umbrella");
+    }
+
+    expect(() => createStripeClient("sk_test_umbrella", () => ({}))).toThrow(
+      /Stripe provider is unavailable/,
+    );
+    expect(() => createStripeClient("sk_live_umbrella", () => FakeStripe)).toThrow(
+      /TEST keys only/,
+    );
+  });
+
+  it("reads the Neon factory from a CommonJS or an ES module namespace", () => {
+    const sql = Object.assign(() => undefined, {
+      query: async () => [],
+      transaction: async () => [],
+    });
+    const neon = () => sql;
+
+    for (const loaded of [{ neon }, { default: { neon } }]) {
+      expect(createNeonDatabase("postgres://umbrella", () => loaded)).toBeDefined();
+    }
+    expect(() => createNeonDatabase("postgres://umbrella", () => ({}))).toThrow(
+      /Neon provider is unavailable/,
+    );
   });
 
   it("accepts a remote auth origin only over https or an exact loopback host", () => {
