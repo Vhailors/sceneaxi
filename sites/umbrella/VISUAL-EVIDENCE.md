@@ -66,6 +66,20 @@ core's real refusal rather than a state the page was asked to render.
 | Tablet | 834 × 1112 | `1024px` and `860px` rules: the hero stacks claim-first, splits collapse copy-first, paired grids halve, docs rail becomes a strip, stat bar goes 2 × 2 |
 | Phone | 390 × 844 | `620px` rules: single column throughout, full-width actions, stacked definition lists, wrapped nav |
 
+### The `/engine` figures predate the desktop download section
+
+Every `/engine` figure in this document was recorded before sceneaxi#183 rewrote that
+page, which gained the recorded Linux desktop build section, its artifact cards, and the
+platform-status panel (ADR 0024, owner
+[`docs/desktop-linux.md`](../../docs/desktop-linux.md)). So the `/engine` rows of the
+overflow sweep, of both named-state measurement tables, and of the Lighthouse table are
+the observation at that earlier revision of the page, and they are **pending re-record**.
+
+They are kept rather than deleted because they were really measured, and nothing here has
+been re-typed to guess at the new layout — a predicted figure would be exactly the kind of
+invented visual fact this file exists to avoid. Every other route is unaffected: that lane
+changed no other umbrella source file.
+
 ## Observations
 
 ### Layout
@@ -84,6 +98,9 @@ Measured rather than judged by eye — `document.documentElement.scrollWidth` ag
 | `/open` | 1440/1440 | 834/834 | 390/390 |
 | `/account` | 1440/1440 | 834/834 | 390/390 |
 | `/editor` | 1440/1440 | 834/834 | 390/390 |
+
+The `/engine` row here, and in both measurement tables below, is
+[pending re-record](#the-engine-figures-predate-the-desktop-download-section).
 
 The same sweep also walked every element in the body and found **none** escaping its
 container except inside a deliberate scroller (`.scroll-x`, `.command`, `.nav`) or the
@@ -193,8 +210,10 @@ Lighthouse (navigation mode, desktop emulation) against the production build:
 | `/editor` | 100 | 0 |
 
 `/`, `/profiles`, `/account`, and `/pricing` were additionally run in **mobile**
-emulation and scored 100 with 0 failed audits there too. Every figure in this table was
-re-run against the build at this head, after the state-header repair below.
+emulation and scored 100 with 0 failed audits there too. Every figure in this table except
+the `/engine` row was re-run against the build at this head, after the state-header repair
+below; the `/engine` row is
+[pending re-record](#the-engine-figures-predate-the-desktop-download-section).
 
 This extends the carried implementation's five 100s to all eight surfaces. Two real
 regressions were introduced by this revision and found by that audit rather than by eye:
@@ -296,7 +315,9 @@ for a new one by name. Observed on `/` by forcing the loss through
     t+600ms  restored  webgl-canvas · frame 3 · 15 draw calls · 3 instances
     t+2600ms           unchanged — it settled again and stopped
 
-Every figure in this document is re-recorded from a real browser at this head; the values
+Every figure in this document is re-recorded from a real browser, and at this head except
+for the `/engine` rows noted as
+[pending re-record](#the-engine-figures-predate-the-desktop-download-section); the values
 here are the observation, not a prediction.
 
 ## Where the implementation departs from the mockup
