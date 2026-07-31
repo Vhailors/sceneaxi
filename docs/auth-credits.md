@@ -231,10 +231,14 @@ when the halves do not come back unchanged, so an unrepresentable session id is 
 refusal at issuance rather than a cookie the next request silently reads as "signed out".
 
 `LOGIN_SESSION_NOT_ISSUED` is the issuance counterpart of the verify path's
-`IDENTITY_ADAPTER_OUTPUT_INVALID`, and site-kit's login plane uses it for every
-malformed grant it refuses — a non-record answer, an off-registry refusal, a principal
-that does not validate, or a credential no cookie can carry. The distinction is not
-cosmetic: at issuance the browser presented nothing, so nothing was discarded and
+`IDENTITY_ADAPTER_OUTPUT_INVALID`, and site-kit's login plane uses it for a grant it
+cannot read — a non-record answer, an off-registry refusal, a principal whose shape the
+verify path would have called `IDENTITY_ADAPTER_OUTPUT_INVALID`, or a credential no
+cookie can carry. A grant it reads but will not trust is a different answer: the plane
+re-validates the principal exactly as it does a resolved one, so an expired,
+not-yet-valid, or surface-mismatched session, an unknown role, and a disabled user each
+keep their own named reason rather than being folded into the issuance one. The
+distinction is not cosmetic: at issuance the browser presented nothing, so nothing was discarded and
 signing in again cannot change the outcome. `describeSiteAccessState` therefore projects
 it onto its own `sign-in-not-issued` state — a deployment fault with **no** action —
 instead of the "sign in again to get a fresh session" copy that belongs to a credential
@@ -242,7 +246,9 @@ the plane refused to trust.
 
 That distinction is held at the boundary rather than at each page, because a page can no
 longer tell an issued session from a presented one. `siteReasonForLoginAuthReason` is
-the issuance mapping: it is `siteReasonForAuthReason` with one substitution, so a reason
+the issuance mapping the umbrella's login adapter applies to the reasons the **auth
+port** raises, upstream of the plane's own re-validation above: it is
+`siteReasonForAuthReason` with one substitution, so a reason
 added to the verify mapping is carried onto the login path by construction. Rejected
 credentials become `LOGIN_CREDENTIALS_REJECTED` rather than the "signed out" the verify
 path folds them into; every reason whose named state would describe a credential *this
