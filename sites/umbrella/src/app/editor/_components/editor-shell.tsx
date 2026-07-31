@@ -193,8 +193,8 @@ export function EditorShell({
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
         if (kids) return;
+        event.preventDefault();
         paletteReturnFocus.current = document.activeElement as HTMLElement;
         setPaletteRequested(true);
       } else if (event.key === "Escape" && paletteOpen) {
@@ -252,12 +252,12 @@ export function EditorShell({
         the shared editor-shell model. The block is in every document; the
         stylesheet decides which side shows, so the refusal needs no script.
       */}
-      <div className="ed-minimum" role="note">
+      <div className="ed-minimum" role="note" inert={paletteOpen}>
         <p className="reason mono">{view.windowMinimum.code}</p>
         <p>{view.windowMinimum.message}</p>
       </div>
       {/* ------------------------------------------------ title bar ------ */}
-      <header className="ed-titlebar" aria-label="Editor title bar">
+      <header className="ed-titlebar" aria-label="Editor title bar" inert={paletteOpen}>
         <a className="ed-wordmark" href="/" aria-label="SceneAxi home" data-kind="view">
           <span className="mark" aria-hidden="true" />
         </a>
@@ -313,7 +313,7 @@ export function EditorShell({
         </div>
       </header>
 
-      <div className="ed-body">
+      <div className="ed-body" inert={paletteOpen}>
         {/* ---------------------------------------------- mode rail ------ */}
         <nav className="ed-rail" aria-label="Editor modes">
           <span className="ed-rail-mark" aria-hidden="true" />
@@ -1001,7 +1001,7 @@ export function EditorShell({
       </div>
 
       {/* -------------------------------------------------- status bar --- */}
-      <footer className="ed-status" aria-label="Editor status">
+      <footer className="ed-status" aria-label="Editor status" inert={paletteOpen}>
         <span className="ed-status-ready">
           <span className="dot" aria-hidden="true" />
           {view.statusBar.readiness}

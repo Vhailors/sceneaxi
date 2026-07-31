@@ -120,6 +120,9 @@ export default async function EditorPage({
         </div>
         <StatePanel tone="deny" level={2} title="Session refused" reason={starter.reason}>
           <p>{starter.message}</p>
+          <p>
+            <a href="/">Back to SceneAxi</a>
+          </p>
         </StatePanel>
       </div>
     );

@@ -106,7 +106,9 @@ Control accounting has two halves, and both are load-bearing:
 - **The site masthead and footer are collapsed on this route**
   (`editor/layout.tsx`, `display: none` — removed from the accessibility tree,
   not painted over), because the shell owns the whole viewport like the
-  application it depicts; the title-bar wordmark links home.
+  application it depicts; the title-bar wordmark links home. The footer rule is
+  scoped `body > footer` so it reaches the root layout's footer only — the
+  shell's own status bar is a `<footer>` as well.
 - **Traffic lights and collaborator avatars are not drawn** — a web page has no
   window controls, and there are no collaborators to show.
 
@@ -152,9 +154,13 @@ Chrome via `chrome-devtools-axi`, `sites/umbrella` dev server with
   menus dropped; at 800×560 the chrome was replaced by the
   `EDITOR_WINDOW_BELOW_MINIMUM` refusal naming 900×600.
 - **The palette opens on ⌘K and the Search control**, groups its rows, prints
-  CLI verbs beside CLI-only rows, closes on Escape with focus returned. Its
-  filter input and its withdrawal under the Kids lock landed in the same review
-  round as the run controls and are gate-covered, not part of this session.
+  CLI verbs beside CLI-only rows, closes on Escape with focus returned. It
+  declares `aria-modal`, so while it is open every sibling region — title bar,
+  body, status bar, minimum-window note — is `inert` and focus stays inside it;
+  the hidden refusal legend stays reachable so the palette's own inert rows keep
+  resolving their `aria-describedby`. Its filter input, its withdrawal under the
+  Kids lock, and that containment landed in later review rounds and are
+  gate-covered, not part of this session.
 
 ## How to run it
 

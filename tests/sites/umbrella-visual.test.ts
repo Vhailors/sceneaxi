@@ -15,13 +15,14 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { REQUIRED_SCULPT_PASSES } from "@sceneaxi/schemas";
+import { EDITOR_SHELL_RETIRED_COPY, REQUIRED_SCULPT_PASSES } from "@sceneaxi/schemas";
 // `@sceneaxi/cli` is not a hermetic-root dependency, and the sites tier may not import
 // it either. It is read by path here for the same reason the site seams are: the point
 // is to compare against the shipped source, not to acquire an edge to it.
 import { EXIT_CODE_TABLE } from "../../packages/cli/src/exit-codes.ts";
 import {
   CREATOR_SHARE_RULE,
+  EDITOR_SHELL_FABRICATED_FIGURES,
   EDITOR_SHELL_WEB_REFUSALS,
   FOUNDATION_COLORS,
   FOUNDATION_CONTRAST_ROLES,
@@ -1007,19 +1008,17 @@ describe("the Engine Desktop editor shell stays honest (sceneaxi#184)", () => {
   });
 
   it("ships no archive fixture figure and no retired renderer copy", () => {
+    // The pinned lists are read from their owners, not restated here: adding a
+    // figure or a retired sentence has to extend this shipped-source check too,
+    // which is what `EDITOR_SHELL_FABRICATED_FIGURES` claims about this file.
+    expect(EDITOR_SHELL_FABRICATED_FIGURES.length).toBeGreaterThan(0);
+    expect(EDITOR_SHELL_RETIRED_COPY.length).toBeGreaterThan(0);
     for (const source of [SHELL, PAGE, CSS]) {
-      for (const fabricated of [
-        "18 412",
-        "412 MB",
-        "20 fps",
-        "saved 10:26",
-        "qwen3-30b",
-        "Harbour Depot",
-        "depot_scene",
-        "Preview renderer is experimental",
-        "Experimental Three preview",
+      for (const pinned of [
+        ...EDITOR_SHELL_FABRICATED_FIGURES,
+        ...EDITOR_SHELL_RETIRED_COPY,
       ]) {
-        expect(source).not.toContain(fabricated);
+        expect(source).not.toContain(pinned);
       }
     }
   });
@@ -1093,6 +1092,23 @@ describe("the Engine Desktop editor shell stays honest (sceneaxi#184)", () => {
     );
   });
 
+  it("contains focus in the palette it declares modal", () => {
+    // `aria-modal` promises the rest of the shell is out of reach, so every
+    // sibling region the overlay covers is inert while it is open. The refusal
+    // legend is deliberately not: `aria-describedby` has to keep resolving into
+    // it from the palette's own inert rows.
+    expect(SHELL).toContain('role="dialog" aria-modal="true"');
+    for (const region of [
+      '<div className="ed-minimum" role="note" inert={paletteOpen}>',
+      '<header className="ed-titlebar" aria-label="Editor title bar" inert={paletteOpen}>',
+      '<div className="ed-body" inert={paletteOpen}>',
+      '<footer className="ed-status" aria-label="Editor status" inert={paletteOpen}>',
+    ]) {
+      expect(SHELL).toContain(region);
+    }
+    expect(SHELL).toContain('<div className="ed-legend" hidden>');
+  });
+
   it("filters the palette it offers to filter", () => {
     // An input that advertises "Filter commands" has to filter, so the rows the
     // groups draw are the filtered ones, not the whole set.
@@ -1154,6 +1170,9 @@ describe("the Engine Desktop editor shell stays honest (sceneaxi#184)", () => {
 
   it("collapses the site chrome for the editor route only, by removal", () => {
     const layout = read("src/app/editor/layout.tsx");
-    expect(layout).toContain(".masthead, footer, .skip-link { display: none; }");
+    expect(layout).toContain(".masthead, body > footer, .skip-link { display: none; }");
+    // Scoped to the root layout's own footer: the shell's status bar is a
+    // <footer> too, and a type selector would reach it.
+    expect(layout).not.toContain(", footer,");
   });
 });

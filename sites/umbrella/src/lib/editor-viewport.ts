@@ -15,5 +15,5 @@ export const EDITOR_VIEWPORT_COPY = Object.freeze({
   honesty:
     "The canvas draws the session's composition projection and nothing else: the same instances, the same world transforms, and the same artifact the session composed on the server. Selection, transform edits, and play and step are Minimum E2 session operations that run on the server; the viewport never advances a kernel session and invents no state of its own. The “Server session frame” panel in Run mode is the same core on its no-pixel surface, which is why it draws no pixels.",
   notComposable:
-    "The composition pipeline refused these placements, so there is no composed scene to draw and no canvas is opened. The pipeline's own refusal is shown with the projection below.",
+    "The composition pipeline refused these placements, so there is no composed scene to draw and no canvas is opened. The pipeline's own refusal code and message are printed above; nothing is drawn in their place.",
 });
