@@ -15,6 +15,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { BrowserWindow, app, ipcMain } from "electron";
 import { createDocument, writeDocumentFile } from "@sceneaxi/authoring-core";
+import { DESKTOP_MINIMUM_WINDOW } from "@sceneaxi/desktop-shell";
 import { DESKTOP_BRIDGE_CHANNEL } from "../lib/bridge-contract.js";
 import { createDesktopBridge } from "../lib/bridge.js";
 
@@ -81,10 +82,15 @@ async function start(): Promise<void> {
   );
 
   const window = new BrowserWindow({
+    // Content-box sizing, and the floor taken from the chrome's own published
+    // minimum: any smaller and the document this window renders hides its shell
+    // behind the "window below the minimum size" refusal, so the window must not
+    // be able to reach a size its own chrome refuses to lay out.
+    useContentSize: true,
     width: 1440,
     height: 900,
-    minWidth: 960,
-    minHeight: 560,
+    minWidth: DESKTOP_MINIMUM_WINDOW.width,
+    minHeight: DESKTOP_MINIMUM_WINDOW.height,
     // Shown in smoke mode too: a hidden window throttles painting, and the smoke
     // exists to observe the real one (under xvfb on headless hosts).
     show: true,

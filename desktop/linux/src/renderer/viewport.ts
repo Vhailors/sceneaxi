@@ -47,6 +47,7 @@ type MountablePayload = {
 };
 
 const REPORT_ID = "desktop-live-viewport-report";
+const OPEN_PATH_ID = "desktop-live-viewport-open-path";
 
 function bridge(): BridgeGlobal | null {
   const candidate = (globalThis as Record<string, unknown>)[DESKTOP_BRIDGE_GLOBAL];
@@ -55,19 +56,19 @@ function bridge(): BridgeGlobal | null {
   return typeof request === "function" ? (candidate as BridgeGlobal) : null;
 }
 
-function reportLine(host: Element, text: string): void {
-  let line = document.getElementById(REPORT_ID);
+function overlayLine(host: Element, id: string, kind: string, bottom: string, text: string): void {
+  let line = document.getElementById(id);
   if (line === null) {
     line = document.createElement("p");
-    line.id = REPORT_ID;
+    line.id = id;
     line.className = "viewport-note";
-    line.setAttribute("data-live-viewport", "report");
+    line.setAttribute("data-live-viewport", kind);
     // An overlay above the canvas: absolute siblings paint in DOM order, and the
-    // report must stay readable over whatever the frame drew.
+    // note must stay readable over whatever the frame drew.
     line.style.position = "absolute";
     line.style.left = "12px";
     line.style.right = "12px";
-    line.style.bottom = "8px";
+    line.style.bottom = bottom;
     line.style.margin = "0";
     line.style.textAlign = "left";
     line.style.maxWidth = "none";
@@ -75,6 +76,16 @@ function reportLine(host: Element, text: string): void {
     host.append(line);
   }
   line.textContent = text;
+}
+
+function reportLine(host: Element, text: string): void {
+  overlayLine(host, REPORT_ID, "report", "8px", text);
+}
+
+// The frame report rewrites itself every 15 frames, so anything that happens after
+// the render loop starts needs its own line or it is erased within ~250ms.
+function openPathLine(host: Element, text: string): void {
+  overlayLine(host, OPEN_PATH_ID, "open-path", "52px", text);
 }
 
 function updatePixelsMeta(frame: SculptPresentationFrame): void {
@@ -206,22 +217,24 @@ async function mountLiveViewport(): Promise<void> {
   });
   loop.start();
 
-  const openPath = await port.request({ action: "open-path" });
-  if (openPath.ok) {
-    const exercise = openPath.data as { initialDigest: string; tickDigests: string[] };
-    const status = document.createElement("p");
-    status.className = "viewport-note";
-    status.setAttribute("data-live-viewport", "open-path");
-    status.style.position = "absolute";
-    status.style.left = "12px";
-    status.style.right = "12px";
-    status.style.bottom = "52px";
-    status.style.margin = "0";
-    status.style.textAlign = "left";
-    status.style.maxWidth = "none";
-    status.style.pointerEvents = "none";
-    status.textContent = `kernel open path: ${exercise.tickDigests.length} ticks advanced · digest ${exercise.initialDigest.slice(0, 18)}… → ${exercise.tickDigests[exercise.tickDigests.length - 1]?.slice(0, 18)}… · session closed`;
-    stage.append(status);
+  // Everything below runs after `loop.start()`, so it names itself on its own line
+  // — a refusal written to the frame report would be overwritten by the next frame.
+  try {
+    const openPath = await port.request({ action: "open-path" });
+    if (openPath.ok) {
+      const exercise = openPath.data as { initialDigest: string; tickDigests: string[] };
+      openPathLine(
+        stage,
+        `kernel open path: ${exercise.tickDigests.length} ticks advanced · digest ${exercise.initialDigest.slice(0, 18)}… → ${exercise.tickDigests[exercise.tickDigests.length - 1]?.slice(0, 18)}… · session closed`,
+      );
+    } else {
+      openPathLine(stage, `kernel open path refused: ${openPath.reason} — ${openPath.message}`);
+    }
+  } catch (error) {
+    openPathLine(
+      stage,
+      `kernel open path refused: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 
