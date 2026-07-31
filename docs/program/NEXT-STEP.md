@@ -85,6 +85,24 @@ account of landed work cannot disagree:
 | B3 credit commit boundary plus captain decisions D4/D5 | [#128](https://github.com/Vhailors/sceneaxi/issues/128) | [#168](https://github.com/Vhailors/sceneaxi/pull/168) | 2026-07-29 |
 | Shared site-kit component collapse | [#162](https://github.com/Vhailors/sceneaxi/issues/162) | [#169](https://github.com/Vhailors/sceneaxi/pull/169) | 2026-07-29 |
 
+### Merged after the pinned SHA
+
+The Position block above pins the snapshot this brief was last re-pinned to, and re-pinning
+is its own change ([PR #170](https://github.com/Vhailors/sceneaxi/pull/170) was the last
+one). Six further first-parent merges landed after `203eb53` and **are not reachable from
+it**, so the "all reachable from `203eb53`" statement above covers the ladder table only.
+Sections below cite these merges by PR; read that as landed on `main` after the pin, not as
+work contained in the pinned snapshot:
+
+| Work | Issue | PR | Merged |
+|---|---|---|---|
+| Re-pin of this brief to `203eb53` | [#141](https://github.com/Vhailors/sceneaxi/issues/141) | [#170](https://github.com/Vhailors/sceneaxi/pull/170) | 2026-07-29 |
+| `/profiles` routed through shared site-kit profile contracts | [#165](https://github.com/Vhailors/sceneaxi/issues/165) | [#171](https://github.com/Vhailors/sceneaxi/pull/171) | 2026-07-29 |
+| D3 checkout-intent price-immutability migration | — | [#172](https://github.com/Vhailors/sceneaxi/pull/172) | 2026-07-30 |
+| Archived and versioned credit-pack catalog, D2's binding prerequisite | — | [#173](https://github.com/Vhailors/sceneaxi/pull/173) | 2026-07-30 |
+| D1 identity-port-witnessed principals | — | [#174](https://github.com/Vhailors/sceneaxi/pull/174) | 2026-07-30 |
+| Deployment-owned issuance authority contract | — | [#175](https://github.com/Vhailors/sceneaxi/pull/175) | 2026-07-30 |
+
 Surface-by-surface runnable levels and their proofs are owned by
 [`runnable-surfaces.md`](../runnable-surfaces.md); how far each profile's open
 path may be *demonstrated* is owned by
@@ -182,7 +200,9 @@ code-literal-only rule, while the captain instead chose the named
 
 The table below records disposition and sequencing only; **it is not an implementation
 authority**. All five now have landed implementation work: D1 in PR #174, D2 here, D3's
-migration in PR #172, and D4/D5 in PR #168. D3 is the one still carrying an unfinished
+migration in PR #172, and D4/D5 in PR #168. Only #168 is reachable from the SHA pinned in
+Position; #172 and #174 merged after it, as recorded in [Merged after the pinned
+SHA](#merged-after-the-pinned-sha). D3 is the one still carrying an unfinished
 prerequisite, and it is out-of-tree — see its row.
 
 Note the difference in where these decisions are *owned*. Each landed implementation
@@ -204,25 +224,26 @@ records rather than a fact this repository holds.
 
 ### Open trackers
 
-- [#165](https://github.com/Vhailors/sceneaxi/issues/165) — move the `/profiles`
-  contract mirror onto the shared site-kit layer. It is now unblocked, for two
-  separate reasons. Its own blocker, as [#165](https://github.com/Vhailors/sceneaxi/issues/165)
-  states it, was that `packages/site-kit` was deliberately held read-only while three
-  concurrent visual lanes ran so their PRs stayed independently mergeable; that hold ended
-  when [#163](https://github.com/Vhailors/sceneaxi/pull/163),
-  [#164](https://github.com/Vhailors/sceneaxi/pull/164), and
-  [#166](https://github.com/Vhailors/sceneaxi/pull/166) landed. Separately,
-  [#162](https://github.com/Vhailors/sceneaxi/issues/162) — which #165 records as
-  *distinct* work that merely touches the same package — has since landed in
-  [PR #169](https://github.com/Vhailors/sceneaxi/pull/169), removing the
-  concurrent-mutation conflict as well. Unblocked is not authorized: #165 remains
-  **unauthorized**, and this brief does not start it.
 - [#114](https://github.com/Vhailors/sceneaxi/issues/114) — the runnable-surfaces
   epic; its issue graph owns the remaining closure dependencies. Its former #120 and
   #121 gaps are closed by PRs #154 and #153 respectively; the precise runnable levels
   remain owned by [`runnable-surfaces.md`](../runnable-surfaces.md).
 - [#1](https://github.com/Vhailors/sceneaxi/issues/1) — the canonical product
   spec, a standing issue rather than a work item.
+
+One tracker this brief previously listed as open has since closed:
+[#165](https://github.com/Vhailors/sceneaxi/issues/165) — move the `/profiles` contract
+mirror onto the shared site-kit layer — landed in
+[PR #171](https://github.com/Vhailors/sceneaxi/pull/171) on 2026-07-29, after the SHA
+pinned in Position. Its recorded blocker had been `packages/site-kit` being deliberately
+held read-only while three concurrent visual lanes ran so their PRs stayed independently
+mergeable; that hold ended when [#163](https://github.com/Vhailors/sceneaxi/pull/163),
+[#164](https://github.com/Vhailors/sceneaxi/pull/164), and
+[#166](https://github.com/Vhailors/sceneaxi/pull/166) landed, and
+[#162](https://github.com/Vhailors/sceneaxi/issues/162) — which #165 records as *distinct*
+work that merely touches the same package — landed in
+[PR #169](https://github.com/Vhailors/sceneaxi/pull/169), removing the concurrent-mutation
+conflict as well.
 
 ### Production deployment evidence and limits
 
