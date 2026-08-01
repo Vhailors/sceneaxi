@@ -191,6 +191,28 @@ describe("sites tier — injected violations", () => {
     );
   });
 
+  it.each([
+    [
+      "same-file const binding",
+      'const authorityPath = "../../../lib/identity-plane.js";\nawait import(authorityPath);',
+    ],
+    [
+      "constant conditional binding",
+      'const authorityPath = true ? "../../../lib/identity-plane.js" : "../../../lib/request-authority.js";\nawait import(authorityPath);',
+    ],
+    [
+      "constant logical binding",
+      'const authorityPath = false || "../../../lib/identity-plane.js";\nawait import(authorityPath);',
+    ],
+  ])("boundary check denies deployment authority through a %s", (_label, source) => {
+    appendTo(fx, "sites/umbrella/src/app/api/login/route.ts", `\n${source}\n`);
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "sites/umbrella/src/app/api/login/route.ts imports deployment authority module sites/umbrella/src/lib/identity-plane outside the request-authority facade",
+    );
+  });
+
   it("boundary check scans a JSX intermediary that re-exports deployment authority", () => {
     writeTo(
       fx,
