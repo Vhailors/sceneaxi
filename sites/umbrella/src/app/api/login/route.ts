@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { createUmbrellaIdentityPlane } from "../../../lib/identity-plane.js";
+import { createUmbrellaDeploymentPlane } from "../../../lib/identity-plane.js";
 import {
   loginRefusalOutcome,
   performLogin,
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const plane = createUmbrellaIdentityPlane(process.env, {});
+  const plane = createUmbrellaDeploymentPlane();
   const outcome = await performLogin({
     plane,
     requestOrigin,

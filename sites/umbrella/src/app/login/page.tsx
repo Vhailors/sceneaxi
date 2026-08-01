@@ -6,7 +6,7 @@ import {
 import {
   IDENTITY_PLANE_DOC,
   IDENTITY_PLANE_PENDING_NOTE,
-  createUmbrellaIdentityPlane,
+  createUmbrellaDeploymentPlane,
 } from "../../lib/identity-plane.js";
 import {
   LOGIN_DEFAULT_DESTINATION,
@@ -39,7 +39,7 @@ export default async function LoginPage({
 }) {
   const params = await searchParams;
   const sessionToken = await readSessionToken();
-  const plane = createUmbrellaIdentityPlane(process.env, { sessionToken });
+  const plane = createUmbrellaDeploymentPlane({ sessionToken });
   const current = await plane.identity.resolvePrincipal({ surface: "site", sessionToken });
 
   const refusalReason = readLoginRefusalReason(params["reason"]);

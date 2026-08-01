@@ -9,8 +9,8 @@
  * checkout intent, and Stripe webhook verification. This module **forks none of it**.
  * It translates in one direction only: it turns `@sceneaxi/auth` and `@sceneaxi/billing`
  * results into the structural shapes `@sceneaxi/site-kit` ports accept, and maps their
- * named refusals onto the site refusal registry. No identity is derived here, no
- * balance is computed here, and no signature is checked here.
+ * named refusals onto the site refusal registry. No identity policy is reimplemented
+ * here, no balance is computed here, and no signature is checked here.
  *
  * ## Provider-backed deployment wiring
  *
@@ -75,7 +75,12 @@ import {
   type CreditStore,
   type LedgerState,
 } from "@sceneaxi/billing";
-import type { CheckoutEvidencePort } from "./credit-webhook.js";
+import {
+  STRIPE_WEBHOOK_SECRET_ENV,
+  applyCreditPackWebhook,
+  type CheckoutEvidencePort,
+  type CreditWebhookOutcome,
+} from "./credit-webhook.js";
 import {
   createBetterAuthHttpClient,
   createNeonCheckoutIntentStore,
@@ -406,70 +411,64 @@ export type IdentityPlaneAdapters = {
  * registry.
  */
 export type UmbrellaPlaneHandles = {
+  /** The deployment-issued single-admin evidence. Never resolved from a route argument. */
+  readonly admin: AdminIdentity | null;
+  /** Billing mode is deployment configuration; `live` still refuses in core. */
+  readonly billingMode: SiteBillingMode;
+  /** One deployment-owned clock shared by every issued port and capability. */
+  readonly clock: () => number;
   readonly identityPort?: IdentityPort | undefined;
   readonly creditStore?: CreditStore | undefined;
   readonly checkoutSessions?: CheckoutSessionAdapter | undefined;
   readonly checkoutEvidence?: CheckoutEvidencePort | undefined;
+  /** Secret-holding webhook effect. The route can supply only request evidence. */
+  readonly creditWebhook?: CreditWebhookCapability | undefined;
 };
 
-const NO_PLANE_HANDLES: UmbrellaPlaneHandles = Object.freeze({});
+export type CreditWebhookCapability = Readonly<{
+  apply(input: {
+    readonly payload: string;
+    readonly signatureHeader: string | null;
+  }): Promise<CreditWebhookOutcome>;
+}>;
 
 export type DeploymentPlaneOptions = Readonly<{
-  readonly env?: Readonly<Record<string, string | undefined>>;
+  /** Already-issued evidence; this builder never reads an environment. */
+  readonly admin?: AdminIdentity | null | undefined;
+  readonly billingMode?: SiteBillingMode | undefined;
   readonly providers?: DeploymentProviderOverrides;
   readonly clock?: (() => number) | undefined;
 }>;
 
 /**
- * Build the deployment-owned handles from the injected provider clients.
+ * Build provider handles from typed deployment evidence and injected clients.
  *
- * A missing env value is a missing provider, not an invitation to construct an
- * in-memory account or ledger. The optional provider bundle exists for the
- * hermetic adapter tests; production uses the Neon and Stripe constructors below.
+ * This is the hermetic half of the boundary: it receives no environment object,
+ * connection string, Stripe key, webhook secret, or network default. Tests inject
+ * synthetic providers here; production resolves configuration only in the private
+ * builder behind `umbrellaPlaneHandles()`.
  */
 export function createDeploymentPlaneHandles(
   options: DeploymentPlaneOptions = {},
 ): UmbrellaPlaneHandles {
-  const env = options.env ?? process.env;
   const providers = options.providers ?? {};
   const clock = options.clock ?? (() => Date.now());
-  const databaseUrl = resolveNonEmptyEnv(env, "DATABASE_URL");
-  let database: NeonDatabase | undefined = providers.database;
-  if (database === undefined && databaseUrl !== undefined) {
-    try {
-      database = createNeonDatabase(databaseUrl);
-    } catch {
-      return NO_PLANE_HANDLES;
-    }
+  const admin = options.admin ?? null;
+  const billingMode = options.billingMode ?? "test";
+  const database = providers.database;
+  if (database === undefined) {
+    return Object.freeze({ admin, billingMode, clock });
   }
-  if (database === undefined) return NO_PLANE_HANDLES;
 
   const identityStore = createNeonIdentityStore(database);
   const creditStore = createNeonCreditStore(database);
   const intentStore = createNeonCheckoutIntentStore(database);
 
-  const authOrigin = resolveBetterAuthOrigin(
-    resolveNonEmptyEnv(env, "BETTER_AUTH_ORIGIN"),
-  );
-  const fetcher = providers.fetch ?? providerFetch();
-  const betterAuth =
-    providers.betterAuth ??
-    (authOrigin === undefined || fetcher === undefined
-      ? undefined
-      : createBetterAuthHttpClient({ origin: authOrigin, fetch: fetcher }));
-  const resolvedAdmin = resolveAdminIdentity(env);
-  const stripeKey = resolveNonEmptyEnv(env, "STRIPE_SECRET_KEY");
-  let stripe = providers.stripe;
-  if (stripe === undefined && stripeKey !== undefined) {
-    try {
-      stripe = createStripeClient(stripeKey);
-    } catch {
-      stripe = undefined;
-    }
-  }
+  const betterAuth = providers.betterAuth;
+  const stripe = providers.stripe;
 
   const identityPort =
-    betterAuth === undefined
+    betterAuth === undefined || admin === null
       ? undefined
       : createIdentityPort({
           adapter: createProvisioningIdentityAdapter({
@@ -479,7 +478,7 @@ export function createDeploymentPlaneHandles(
               identityStore.ensureUserAndCreditAccount(authentication, clock()),
           }),
           store: identityStore,
-          ...(resolvedAdmin.ok ? { admin: resolvedAdmin.value } : {}),
+          admin,
           clock,
         });
   const checkoutSessions =
@@ -492,6 +491,9 @@ export function createDeploymentPlaneHandles(
       : createStripeCheckoutEvidenceAdapter({ stripe, intents: intentStore });
 
   return Object.freeze({
+    admin,
+    billingMode,
+    clock,
     identityPort,
     creditStore,
     checkoutSessions,
@@ -499,14 +501,96 @@ export function createDeploymentPlaneHandles(
   });
 }
 
-/** The production entry point. It reads names only; absent providers stay absent. */
-export function umbrellaPlaneHandles(
-  env: Readonly<Record<string, string | undefined>> = process.env,
+function providerClientsFromEnvironment(
+  env: Readonly<Record<string, string | undefined>>,
+): DeploymentProviderOverrides {
+  const databaseUrl = resolveNonEmptyEnv(env, "DATABASE_URL");
+  let database: NeonDatabase | undefined;
+  if (databaseUrl !== undefined) {
+    try {
+      database = createNeonDatabase(databaseUrl);
+    } catch {
+      database = undefined;
+    }
+  }
+
+  const authOrigin = resolveBetterAuthOrigin(resolveNonEmptyEnv(env, "BETTER_AUTH_ORIGIN"));
+  const fetcher = providerFetch();
+  const betterAuth =
+    authOrigin === undefined || fetcher === undefined
+      ? undefined
+      : createBetterAuthHttpClient({ origin: authOrigin, fetch: fetcher });
+
+  const stripeKey = resolveNonEmptyEnv(env, "STRIPE_SECRET_KEY");
+  let stripe: DeploymentProviderOverrides["stripe"];
+  if (stripeKey !== undefined) {
+    try {
+      stripe = createStripeClient(stripeKey);
+    } catch {
+      stripe = undefined;
+    }
+  }
+
+  return Object.freeze({ database, betterAuth, stripe });
+}
+
+function createCreditWebhookCapability(options: {
+  readonly secret: string | undefined;
+  readonly store: CreditStore;
+  readonly evidence: CheckoutEvidencePort;
+  readonly clock: () => number;
+}): CreditWebhookCapability {
+  return Object.freeze({
+    apply(input) {
+      return applyCreditPackWebhook({
+        payload: input.payload,
+        signatureHeader: input.signatureHeader,
+        secret: options.secret,
+        store: options.store,
+        evidence: options.evidence,
+        now: options.clock(),
+      });
+    },
+  });
+}
+
+function buildUmbrellaPlaneHandles(
+  env: Readonly<Record<string, string | undefined>>,
 ): UmbrellaPlaneHandles {
-  return createDeploymentPlaneHandles({ env });
+  const resolvedAdmin = resolveAdminIdentity(env);
+  const base = createDeploymentPlaneHandles({
+    admin: resolvedAdmin.ok ? resolvedAdmin.value : null,
+    billingMode: resolveBillingMode(env),
+    providers: providerClientsFromEnvironment(env),
+  });
+  const creditWebhook =
+    base.creditStore === undefined || base.checkoutEvidence === undefined
+      ? undefined
+      : createCreditWebhookCapability({
+          secret: resolveNonEmptyEnv(env, STRIPE_WEBHOOK_SECRET_ENV),
+          store: base.creditStore,
+          evidence: base.checkoutEvidence,
+          clock: base.clock,
+        });
+  return Object.freeze({ ...base, creditWebhook });
+}
+
+let deploymentHandles: UmbrellaPlaneHandles | undefined;
+
+/**
+ * The production plug point. It accepts no environment, issuer, provider, clock, or
+ * secret from its caller: the server resolves and holds those exactly once here.
+ */
+export function umbrellaPlaneHandles(): UmbrellaPlaneHandles {
+  deploymentHandles ??= buildUmbrellaPlaneHandles(process.env);
+  return deploymentHandles;
 }
 
 export type IdentityPlaneWiring = IdentityPlaneAdapters & {
+  /** Typed test/deployment evidence; production routes obtain it from the plug point. */
+  readonly admin?: AdminIdentity | null | undefined;
+  /** A complete capability registry. Explicit only for deterministic tests. */
+  readonly deployment?: UmbrellaPlaneHandles | undefined;
   /** The identity port from `@sceneaxi/auth`, built over a real store and provider. */
   readonly identityPort?: IdentityPort | undefined;
   /** The credit store from `@sceneaxi/billing`; the ledger is the only balance source. */
@@ -548,8 +632,6 @@ export type UmbrellaIdentityPlane = {
     readonly login: boolean;
   };
   readonly billingMode: SiteBillingMode;
-  /** The resolved admin identity, or `null` when the environment names none. */
-  readonly admin: AdminIdentity | null;
 };
 
 /**
@@ -853,20 +935,16 @@ export function createUmbrellaIdentityPlane(
   env: Readonly<Record<string, string | undefined>> = {},
   wiring: IdentityPlaneWiring = {},
 ): UmbrellaIdentityPlane {
-  const billingMode = resolveBillingMode(env);
-  const clock = wiring.clock ?? (() => Date.now());
-  const resolvedAdmin = resolveAdminIdentity(env);
-  const admin = resolvedAdmin.ok ? resolvedAdmin.value : null;
-  // Explicit wiring wins over the deployment's handles, and a slot reaches for them only
-  // when nothing was injected for it, so a fully wired test drives the plane without the
-  // ambient registry — and whatever provider clients a deployment builds there — ever
-  // being reached.
-  let deployment: UmbrellaPlaneHandles | undefined;
+  const deployment = wiring.deployment;
+  const billingMode = deployment?.billingMode ?? resolveBillingMode(env);
+  const clock = wiring.clock ?? deployment?.clock ?? (() => Date.now());
+  const admin = wiring.admin ?? deployment?.admin ?? null;
+  // Explicit wiring wins over the supplied capability registry. This pure builder never
+  // reaches for ambient deployment state; production uses createUmbrellaDeploymentPlane.
   const deploymentHandle = <Key extends keyof UmbrellaPlaneHandles>(
     key: Key,
-  ): UmbrellaPlaneHandles[Key] => {
-    deployment ??= umbrellaPlaneHandles(env);
-    return deployment[key];
+  ): UmbrellaPlaneHandles[Key] | undefined => {
+    return deployment?.[key];
   };
   const identityPort = (): IdentityPort | undefined =>
     wiring.identityPort ?? deploymentHandle("identityPort");
@@ -980,8 +1058,29 @@ export function createUmbrellaIdentityPlane(
       login: loginAdapter !== undefined,
     }),
     billingMode,
-    admin,
   });
+}
+
+export type UmbrellaDeploymentRequest = Readonly<{
+  readonly sessionToken?: string | null | undefined;
+}>;
+
+/**
+ * Build one request plane from the deployment-owned capability registry.
+ *
+ * The request may supply only its carried session credential. It cannot replace the
+ * admin evidence, provider clients, stores, clock, billing mode, or webhook authority.
+ */
+export function createUmbrellaDeploymentPlane(
+  request: UmbrellaDeploymentRequest = {},
+): UmbrellaIdentityPlane {
+  return createUmbrellaIdentityPlane(
+    {},
+    {
+      deployment: umbrellaPlaneHandles(),
+      ...(request.sessionToken === undefined ? {} : { sessionToken: request.sessionToken }),
+    },
+  );
 }
 
 /** Where a reader is sent when a plane is unwired. */
