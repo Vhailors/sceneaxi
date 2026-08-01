@@ -34,6 +34,7 @@ import {
   type AuthRefuseReason,
   type AuthResult,
   type IdentityPort,
+  type SignInGrant,
 } from "@sceneaxi/auth";
 import {
   BILLING_REFUSE_REASONS,
@@ -448,7 +449,7 @@ export function createAccountPanel(
   };
 
   const submitCredentials = async (request: unknown) => {
-    let result: AuthResult<Principal>;
+    let result: AuthResult<SignInGrant>;
     try {
       result = await identityPort.signIn(request);
     } catch {
@@ -461,10 +462,14 @@ export function createAccountPanel(
       return held;
     }
     if (result.ok) {
-      trackPrincipal(result.value);
-      const next = await authenticated(result.value);
-      const failure = await revokeAllExcept(result.value);
-      heldPrincipal = result.value;
+      // The grant's raw session token is deliberately dropped: this panel holds
+      // the issued principal itself, so it never needs a re-presentable
+      // credential and must not keep one.
+      const principal = result.value.principal;
+      trackPrincipal(principal);
+      const next = await authenticated(principal);
+      const failure = await revokeAllExcept(principal);
+      heldPrincipal = principal;
       held = failure === undefined ? next : refused(failure);
     } else {
       held = refused(refusal(result.reason, result.message));

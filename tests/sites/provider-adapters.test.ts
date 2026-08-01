@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   AUTH_REFUSE_REASONS,
@@ -295,8 +297,17 @@ describe("umbrella deployment provider adapters", () => {
       password: "test-password",
     });
 
-    expect(first).toMatchObject({ ok: true, value: { user: { userId: "member-1" }, role: { role: "user" } } });
-    expect(second).toMatchObject({ ok: true, value: { user: { userId: "member-1" }, role: { role: "user" } } });
+    // `signIn` answers with a `SignInGrant` — the server-derived principal plus the
+    // one redeemable copy of the raw session token — never a bare principal.
+    const grant = {
+      ok: true,
+      value: {
+        principal: { user: { userId: "member-1" }, role: { role: "user" } },
+        sessionToken: "provider-token-1",
+      },
+    };
+    expect(first).toMatchObject(grant);
+    expect(second).toMatchObject(grant);
     // Provisioning happened before the identity port read the SceneAxi user.
     expect(fixture.users).toHaveLength(1);
     expect(fixture.accounts).toHaveLength(1);
@@ -357,7 +368,10 @@ describe("umbrella deployment provider adapters", () => {
     });
     expect(verified).toMatchObject({
       ok: true,
-      value: { user: { userId: "member-1" }, role: { role: "admin" } },
+      value: {
+        principal: { user: { userId: "member-1" }, role: { role: "admin" } },
+        sessionToken: "provider-token-1",
+      },
     });
 
     // A provider-side address change is followed too, so the by-email lookup keeps
@@ -368,7 +382,13 @@ describe("umbrella deployment provider adapters", () => {
       email: "captain.new@example.com",
       password: "test-password",
     });
-    expect(renamed).toMatchObject({ ok: true, value: { user: { userId: "member-1" } } });
+    expect(renamed).toMatchObject({
+      ok: true,
+      value: {
+        principal: { user: { userId: "member-1" } },
+        sessionToken: "provider-token-1",
+      },
+    });
     expect(fixture.users).toHaveLength(1);
     expect(fixture.users[0]).toMatchObject({
       user_id: "member-1",
@@ -924,6 +944,79 @@ describe("umbrella deployment provider adapters", () => {
     expect(resolveBetterAuthOrigin("   ")).toBeUndefined();
     expect(resolveBetterAuthOrigin(undefined)).toBeUndefined();
   });
+
+  /**
+   * The default loader must survive a production `next build`, which the gate
+   * cannot run: the sites are separate install roots and CI installs only the
+   * hermetic root, so this is asserted on the source that the bundler reads.
+   *
+   * Both provider specifiers arrive through the injected `load` parameter, so an
+   * imported `createRequire(import.meta.url)` gives webpack no dependency to
+   * extract and it substitutes an empty context module that throws
+   * `MODULE_NOT_FOUND` for every specifier — observed as
+   * `1704:a=>{function b(a){var b=Error("Cannot find module '"+a+"'");...}`
+   * in `.next/server/chunks`. Both constructors then throw on every deployment,
+   * `createDeploymentPlaneHandles` catches that into ordinary provider absence,
+   * and a fully configured deployment reports `IDENTITY_PLANE_NOT_WIRED` exactly
+   * as an unconfigured one does. The two properties that keep it loadable are
+   * that the require is reached through a builtin accessor the bundler does not
+   * recognise, and that it is anchored to the emitted chunk's runtime path —
+   * `import.meta.url` alone is inlined as this file's build-time source path,
+   * which the deployed function does not have.
+   */
+  it("builds its provider loader in a form a production bundler cannot replace", () => {
+    const source = readFileSync(
+      fileURLToPath(new URL("../../sites/umbrella/src/lib/provider-adapters.ts", import.meta.url)),
+      "utf8",
+    );
+
+    expect(source).toMatch(/process\s*\.getBuiltinModule\("module"\)\s*\.createRequire\(/);
+    expect(source).not.toMatch(/from "node:module"/);
+    expect(source).toMatch(/typeof __filename === "string" \? __filename : import\.meta\.url/);
+
+    // Tracing cannot see the specifiers either, so the deployed function only
+    // holds the packages because the config pins them.
+    const config = readFileSync(
+      fileURLToPath(new URL("../../sites/umbrella/next.config.ts", import.meta.url)),
+      "utf8",
+    );
+    for (const provider of ["@neondatabase/serverless", "stripe"]) {
+      expect(config).toContain(`"./node_modules/${provider}/**"`);
+    }
+  });
+
+  /**
+   * That loader's accessor is itself a runtime assumption: `process.getBuiltinModule`
+   * landed in Node 20.16.0 / 22.3.0, and below it the module throws a `TypeError`
+   * while evaluating rather than degrading — `identity-plane.ts` imports it, so every
+   * umbrella server route would answer 500 instead of refusing by name, which is the
+   * opposite of what the loader exists to protect. The site is its own install root
+   * (ADR 0018), so the hermetic root's `engines` governs nothing here; the site
+   * manifest is what a deployment reads to pick its Node runtime, and it must pin the
+   * same floor rather than inherit one it is not part of.
+   */
+  it("pins a Node floor that has the builtin-module accessor its loader needs", () => {
+    const readManifest = (path: string) =>
+      JSON.parse(readFileSync(fileURLToPath(new URL(path, import.meta.url)), "utf8")) as {
+        readonly engines?: { readonly node?: string };
+      };
+    const declared = readManifest("../../sites/umbrella/package.json").engines?.node;
+
+    expect(declared).toBe(readManifest("../../package.json").engines?.node);
+
+    const branches = (declared ?? "").split("||").map((branch) => branch.trim());
+    expect(branches.length).toBeGreaterThan(0);
+    for (const branch of branches) {
+      const parsed = /^(?:\^|>=)(\d+)(?:\.(\d+))?/.exec(branch);
+      expect(parsed, `unparseable engines branch '${branch}'`).not.toBeNull();
+      const major = Number(parsed?.[1]);
+      const minor = Number(parsed?.[2] ?? "0");
+      const hasAccessor =
+        major > 22 || (major === 22 && minor >= 3) || (major === 20 && minor >= 16);
+      expect(hasAccessor, `engines branch '${branch}' admits a Node without getBuiltinModule`)
+        .toBe(true);
+    }
+  });
 });
 
 const SALE_ID = "sale-fixture-1";
@@ -1243,7 +1336,7 @@ describe("umbrella Better Auth HTTP client", () => {
     });
   });
 
-  it("refuses rejected credentials on either request without inventing an envelope", async () => {
+  it("refuses credentials only when the sign-in request rejects them", async () => {
     for (const status of [401, 403]) {
       const signInRefused = createBetterAuthHttpClient({
         origin: "https://auth.example.com",
@@ -1252,19 +1345,6 @@ describe("umbrella Better Auth HTTP client", () => {
       await expect(
         signInRefused.api.signInEmail({
           body: { email: "member@example.com", password: "wrong" },
-        }),
-      ).resolves.toBeUndefined();
-
-      const sessionRefused = createBetterAuthHttpClient({
-        origin: "https://auth.example.com",
-        fetch: recordingFetch([
-          { status: 200, body: SIGN_IN_BODY },
-          { status, body: { message: "denied" } },
-        ]).fetch,
-      });
-      await expect(
-        sessionRefused.api.signInEmail({
-          body: { email: "member@example.com", password: "test-password" },
         }),
       ).resolves.toBeUndefined();
     }
@@ -1293,6 +1373,21 @@ describe("umbrella Better Auth HTTP client", () => {
         body: { email: "member@example.com", password: "test-password" },
       }),
     ).rejects.toThrow(/Better Auth session lookup failed \(503\)/);
+
+    for (const status of [401, 403]) {
+      const lookupDenied = createBetterAuthHttpClient({
+        origin: "https://auth.example.com",
+        fetch: recordingFetch([
+          { status: 200, body: SIGN_IN_BODY },
+          { status, body: { message: "denied" } },
+        ]).fetch,
+      });
+      await expect(
+        lookupDenied.api.signInEmail({
+          body: { email: "member@example.com", password: "test-password" },
+        }),
+      ).rejects.toThrow(new RegExp(`session lookup denied after sign-in \\(${status}\\)`));
+    }
   });
 
   it("replays a folded set-cookie answer without splitting a cookie date attribute", async () => {
@@ -1336,7 +1431,7 @@ describe("umbrella Better Auth HTTP client", () => {
     }
   });
 
-  it("refuses an answer that names no session and no token", async () => {
+  it("reports a successful answer that names no session and no token as a fault", async () => {
     const { fetch, calls } = recordingFetch([
       { status: 200, body: { redirect: false, user: SIGN_IN_BODY.user } },
     ]);
@@ -1344,7 +1439,7 @@ describe("umbrella Better Auth HTTP client", () => {
 
     await expect(
       client.api.signInEmail({ body: { email: "member@example.com", password: "test-password" } }),
-    ).resolves.toBeUndefined();
+    ).rejects.toThrow(/returned neither a session nor a token/);
     expect(calls).toHaveLength(1);
   });
 

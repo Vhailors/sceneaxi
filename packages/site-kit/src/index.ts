@@ -77,10 +77,16 @@ export {
   createBillingPlane,
   createCreditsPlane,
   createIdentityPlane,
+  createLoginPlane,
   hasClientRoleClaim,
   type BillingPlaneOptions,
   type CreditsPlaneOptions,
   type IdentityPlaneOptions,
+  type LoginPlaneOptions,
+  type SiteLoginAdapter,
+  type SiteLoginGrant,
+  type SiteLoginPort,
+  type SiteLoginRequest,
   type SiteBillingAdapter,
   type SiteBillingMode,
   type SiteBillingPort,
@@ -192,8 +198,10 @@ export {
   resolveEditorLinkFromEnv,
   resolveFamilyLinks,
   resolveUmbrellaEditorOrigin,
+  resolveUmbrellaOriginConfiguration,
   type EditorDeepLink,
   type FamilyLinks,
+  type UmbrellaOriginConfiguration,
 } from "./deep-link.js";
 
 export {
@@ -327,11 +335,30 @@ export {
 } from "./commerce-notice.js";
 
 export {
+  SITE_COOKIE_OCTET_RE,
   SITE_SESSION_COOKIE,
   SITE_SESSION_HEADER,
+  buildSiteSessionCookie,
+  clearSiteSessionCookie,
+  resolveSiteSessionCookieSecurity,
   resolveSiteSessionToken,
+  verifySiteFormOrigin,
+  type SiteFormOriginSignals,
+  type SiteSessionCookieInput,
+  type SiteSessionCookieSecuritySignals,
   type SiteSessionTokenSources,
 } from "./site-session.js";
+
+export {
+  SITE_LOGIN_PATH,
+  confineSiteRelativePath,
+  describeSiteAccessState,
+  siteLoginHref,
+  type SiteAccessAction,
+  type SiteAccessState,
+  type SiteAccessStateKey,
+  type SiteAccessStateOptions,
+} from "./access-states.js";
 
 export {
   CHANGE_REVIEW_BADGE_GLYPHS,

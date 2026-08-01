@@ -3,7 +3,35 @@ import {
   SITE_SESSION_COOKIE,
   SITE_SESSION_HEADER,
   resolveSiteSessionToken,
+  type SiteFormOriginSignals,
+  type SiteSessionCookieSecuritySignals,
 } from "@sceneaxi/site-kit/site-session";
+
+type RequestSignalSource = Readonly<{
+  headers: Readonly<{ get(name: string): string | null }>;
+  url: string;
+}>;
+
+export type SiteMutationRequestSignals = Readonly<{
+  formOrigin: Omit<SiteFormOriginSignals, "configuredOrigin">;
+  cookieSecurity: Omit<SiteSessionCookieSecuritySignals, "configuredOrigin">;
+}>;
+
+export function readSiteMutationRequestSignals(
+  request: RequestSignalSource,
+): SiteMutationRequestSignals {
+  return Object.freeze({
+    formOrigin: Object.freeze({
+      origin: request.headers.get("origin"),
+      fetchSite: request.headers.get("sec-fetch-site"),
+      requestUrl: request.url,
+    }),
+    cookieSecurity: Object.freeze({
+      forwardedProto: request.headers.get("x-forwarded-proto"),
+      requestUrl: request.url,
+    }),
+  });
+}
 
 /**
  * Read the opaque session token a signed-in browser carries.

@@ -1,10 +1,10 @@
 # @sceneaxi/site-umbrella
 
 The deployable SceneAxi umbrella site: product and docs, the **public live open
-path**, the profile capability matrix, the public engine SDK download, the recorded
-Linux desktop build `/engine` advertises (built from `desktop/linux`, never served
-here — [`docs/desktop-linux.md`](../../docs/desktop-linux.md)), the account
-surface, credit packs, and the entitled Minimum E2 sculpt/scene web editor.
+path**, the profile capability matrix, the public engine SDK download, hosted
+sign-in, the recorded Linux desktop build `/engine` advertises (built from
+`desktop/linux`, never served here — [`docs/desktop-linux.md`](../../docs/desktop-linux.md)),
+the account surface, credit packs, and the entitled Minimum E2 sculpt/scene web editor.
 
 ## Shape
 
@@ -129,7 +129,9 @@ designed around that rather than around widening the contract.
 - `/open` is **public**: no sign-in, no credits, no editing operation.
 - `/editor` is **entitled**, and access is decided before a session is constructed —
   a signed-out, unavailable, or unentitled request reaches no session, no composition,
-  and no canvas, only the plane's own named refusal. Its viewport *draws* the composed
+  and no canvas, only the plane's own named refusal, rendered as its named access
+  state (`describeSiteAccessState` in `@sceneaxi/site-kit`) with the one action that
+  can change it. Its viewport *draws* the composed
   scene: selection, transform edits, and play/pause/step stay server-side Minimum E2
   operations, so nothing here widens ADR 0020 entitlement or ADR 0003's general-E2
   bound. The viewport is one region of the **Engine Desktop shell** the whole route
@@ -148,6 +150,53 @@ designed around that rather than around widening the contract.
   (`tests/e2e/umbrella-live-open-golden.test.ts`,
   `tests/e2e/umbrella-editor-viewport-golden.test.ts`); the pixel claims are recorded
   browser observations in `docs/three-presentation-core.md`.
+
+## Hosted sign-in (`/login`, sceneaxi#185)
+
+Real Better Auth login into the entitled editor, over the existing identity plane:
+
+- On a wired deployment, `/login` renders the form; `POST /api/login` drives `performLogin`
+  (`src/lib/login-flow.ts`), which signs in through the plane's login port —
+  `createAuthLoginAdapter` over the deployment's `IdentityPort` handle — and answers
+  with a 303 plus the one HttpOnly `sceneaxi.session` cookie, whose lifetime is the
+  session's own. `POST /api/logout` deletes the stored session through the same port
+  and clears the cookie unconditionally — unconditionally about *this* browser's own
+  request, since a submission that fails the origin proof below is refused before the
+  port is reached and nothing is revoked or cleared from it.
+- Both endpoints refuse a submission that cannot prove it came from these pages
+  (`SITE_REQUEST_CROSS_ORIGIN`, decided by site-kit's `verifySiteFormOrigin` through
+  `verifyLoginRequestOrigin`). `SameSite=Lax` does not cover this: a sign-in POST carries
+  no cookie yet, so nothing is withheld from it and the browser stores the `Set-Cookie`
+  it answers with — a cross-site page could otherwise sign a visitor into an account it
+  chose, or force theirs out. The proof is a **required argument** of `performLogin` /
+  `performLogout` rather than a check inside a route, so a new route cannot forget it;
+  the expected origin is the configured `NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN`, and only
+  an unconfigured deployment falls back to the request's own origin.
+- The cookie's `Secure` attribute is a deployment fact, not a request artifact:
+  `resolveSessionCookieSecurity` reads `NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN` — the same
+  configured origin checkout redirects come from — so a TLS-terminating proxy, behind
+  which the app's own request is plain http, cannot cause the credential to be issued
+  without it. Only an unconfigured deployment falls back to `x-forwarded-proto` and then
+  to the request, which is what keeps `http://localhost` development working.
+- Nothing identity-shaped is trusted from the browser: email and password go to the
+  injected provider, the destination `next` is confined to a same-site relative path,
+  a client role claim refuses before dispatch, and every refusal — wrong password,
+  expired or foreign session, disabled user, Kids, unwired or failed provider — comes
+  back as its own named access state rather than one undifferentiated wall. Those
+  refusals are read through `siteReasonForLoginAuthReason`, the issuance mapping, so a
+  provider fault at sign-in is named as one instead of accusing a credential no browser
+  presented; `docs/auth-credits.md` owns which reasons are renamed and which are not.
+- A refused surface hands its own path to the sign-in action it renders, so a visitor
+  bounced off `/editor` signs in and lands back on `/editor` instead of the default
+  `/account`. Emitting and reading that destination share one confinement rule —
+  site-kit's `confineSiteRelativePath`, which `siteLoginHref` and
+  `resolveLoginDestination` both go through — so a link this site emits can never carry
+  a `next` the login flow would then discard, and a hostile one degrades to the plain
+  form rather than refusing the sign-in.
+- The temporary `SCENEAXI_SITE_EDITOR_PREVIEW` flag remains a labeled stopgap, not the
+  product path; the flow is proven end-to-end against the real identity port in
+  `tests/sites/identity-plane-wiring.test.ts` ("hosted login") and
+  `tests/sites/umbrella-login-flow.test.ts`, with the provider injected and no network.
 
 ## Separate install root
 
@@ -184,10 +233,12 @@ payment-event side effect. The Better Auth client reads the session back from
 `GET /api/auth/get-session`, sending both the issued session cookie and the issued bearer
 token so either provider configuration resolves; a provider that honours neither throws a
 named fault instead of reporting a valid password as refused
-(`docs/websites-deploy.md` owns that prerequisite). This site exposes **no sign-in route**, so nothing reaches
-`identityPort.signIn` and no session can be issued here yet — that HTTP/UI layer is
-[sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185).
-`docs/websites-deploy.md` owns the env names and activation procedure.
+(`docs/websites-deploy.md` owns that prerequisite). Hosted sign-in reaches
+`identityPort.signIn` through this same plug point
+([sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185), see **Hosted sign-in**
+above); a deployment whose provider handles are absent issues no session and refuses by
+name instead. `docs/websites-deploy.md` owns the env names and activation procedure.
 
 `SCENEAXI_SITE_EDITOR_PREVIEW=1` grants a banner-marked editor preview so the
-Minimum E2 surface is demonstrable before then. Absent by default; server-side only.
+Minimum E2 surface is demonstrable until those handles are configured. Absent by
+default; server-side only.

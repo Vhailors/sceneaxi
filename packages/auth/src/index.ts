@@ -81,6 +81,7 @@ export {
   createIdentityPort,
   type CreateIdentityPortOptions,
   type IdentityPort,
+  type SignInGrant,
   type SignInRequest,
   type SignOutRequest,
   type VerifySessionRequest,

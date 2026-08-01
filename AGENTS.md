@@ -138,8 +138,8 @@ Neon, Stripe API) stay outside the repo per ADR 0021 and arrive through the one
 by name and `IDENTITY_SESSION_ABSENT` means signed-out, not broken. Those adapters make the
 provider authoritative for a user's address and verification state on every
 authentication, and treat a repeated idempotency key as an intent replay rather than a
-conflict; the sign-in HTTP entry point that would let a browser reach any of it is
-sceneaxi#185, not this tier. Catalogs read identity
+conflict; the sign-in HTTP entry point that lets a browser reach any of it is the hosted
+login path described below, and it too goes through that one plug point. Catalogs read identity
 through the same site-kit port with no second auth stack — the storefront plane is
 `packages/site-kit/src/catalog-identity.ts`, one implementation both catalogs re-export —
 and the matrix denies them both identity packages. Two rules the sites tier cannot bend:
@@ -150,8 +150,20 @@ trace — or a bundler cannot even resolve; and checkout redirect URLs come only
 `NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN` via `resolveCheckoutRedirectOrigin`, never from a
 request `Host`. Credit accounts are provisioned by the deployment's own `CreditStore`, not
 by any migration or code in this repository — an absent account refuses, and is never
-invented. The wiring invariants and the six acceptance properties are proven in
-`tests/sites/identity-plane-wiring.test.ts` — extend it, and the matrix cases in
+invented. Hosted login (sceneaxi#185) rides the same seam: `/login` plus
+`POST /api/login|logout` are thin over `performLogin`/`performLogout` in
+`sites/umbrella/src/lib/login-flow.ts`, which drive the plane's login port
+(`createAuthLoginAdapter` over the deployment's `IdentityPort`); both entry points take a
+same-origin proof as a **required argument** (`verifyLoginRequestOrigin` over site-kit's
+`verifySiteFormOrigin`) and refuse `SITE_REQUEST_CROSS_ORIGIN` before a field is read or a
+port is reached, because `SameSite=Lax` withholds nothing from a POST that carries no
+cookie yet; the sign-in grant's raw
+session token exists only in the HttpOnly `sceneaxi.session` cookie, `next` redirects
+stay same-site relative, and guarded surfaces render refusals as named access states via
+site-kit's `describeSiteAccessState` — the account surface itself stays form-free
+(sign-out lives on `/login`). The wiring invariants and the six acceptance properties
+are proven in `tests/sites/identity-plane-wiring.test.ts` (hosted-login block included)
+— extend it, and the matrix cases in
 `tests/boundary/injected-site-violations.test.ts`, when touching any of this.
 
 The shared visual layer is `packages/site-kit` (`design-tokens.ts`, `site-element.ts`,

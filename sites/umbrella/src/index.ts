@@ -39,9 +39,11 @@ export {
 } from "./lib/live-open.js";
 
 export {
+  BILLING_PLANE_PENDING_NOTE,
   IDENTITY_PLANE_DOC,
   IDENTITY_PLANE_PENDING_NOTE,
   createAuthIdentityAdapter,
+  createAuthLoginAdapter,
   createBillingCheckoutAdapter,
   createBillingCreditsAdapter,
   createDeploymentPlaneHandles,
@@ -50,6 +52,7 @@ export {
   resolveBillingMode,
   siteReasonForAuthReason,
   siteReasonForBillingReason,
+  siteReasonForLoginAuthReason,
   toSitePrincipal,
   type BillingReadPlane,
   type CheckoutSessionAdapter,
@@ -59,6 +62,22 @@ export {
   type UmbrellaIdentityPlane,
   type UmbrellaPlaneHandles,
 } from "./lib/identity-plane.js";
+
+export {
+  LOGIN_DEFAULT_DESTINATION,
+  LOGIN_PATH,
+  loginRefusalHref,
+  loginRefusalOutcome,
+  performLogin,
+  performLogout,
+  readLoginRefusalReason,
+  resolveLoginDestination,
+  resolveSessionCookieSecurity,
+  verifyLoginRequestOrigin,
+  type LoginAttemptOutcome,
+  type LoginFormFields,
+  type LogoutOutcome,
+} from "./lib/login-flow.js";
 
 export {
   createBetterAuthHttpClient,

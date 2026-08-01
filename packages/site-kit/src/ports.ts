@@ -23,6 +23,7 @@ import {
   ok,
   refuse,
 } from "./refusals.js";
+import { SITE_COOKIE_OCTET_RE } from "./site-session.js";
 
 /**
  * Identity surfaces, in the vocabulary `sceneaxi-auth-credits-v1` (#91) defines
@@ -287,6 +288,7 @@ function canonicalAdapterRefusal(
   result: Record<string, unknown>,
   invalidReason:
     | "IDENTITY_ADAPTER_OUTPUT_INVALID"
+    | "LOGIN_SESSION_NOT_ISSUED"
     | "CREDIT_ADAPTER_OUTPUT_INVALID"
     | "BILLING_ADAPTER_OUTPUT_INVALID",
 ): SiteRefusal {
@@ -414,6 +416,134 @@ export function createIdentityPlane(options: IdentityPlaneOptions = {}): SiteIde
       // A signed-out visitor is reported as such, never as a broken plane.
       if (result["value"] === null) return refuse("IDENTITY_SESSION_ABSENT");
       return validatePrincipal(result["value"], request, nowIso());
+    },
+  });
+}
+
+// --- hosted login ------------------------------------------------------------
+
+/**
+ * A sign-in submission. `email` and `password` are the only credential a
+ * browser may supply — they prove who the visitor is to the injected provider,
+ * while roles, sessions, and user identity stay server-derived. The password is
+ * treated as opaque: it is never parsed, logged, or echoed back.
+ */
+export type SiteLoginRequest = {
+  readonly surface: SiteSurface;
+  readonly email: string;
+  readonly password: string;
+};
+
+/**
+ * What a successful sign-in hands the site: the server-derived principal, plus
+ * the opaque browser credential the session cookie will carry. The credential's
+ * format is owned by the site's identity wiring (it is what
+ * `SiteIdentityRequest.sessionToken` later presents); this package only checks
+ * that it is a value a cookie can actually hold.
+ */
+export type SiteLoginGrant = {
+  readonly principal: SitePrincipal;
+  readonly sessionCredential: string;
+};
+
+export interface SiteLoginAdapter {
+  signIn(request: SiteLoginRequest): Promise<SiteResult<SiteLoginGrant>>;
+}
+
+export interface SiteLoginPort {
+  signIn(request: SiteLoginRequest): Promise<SiteResult<SiteLoginGrant>>;
+}
+
+export type LoginPlaneOptions = {
+  readonly adapter?: SiteLoginAdapter | undefined;
+  /** Injected clock so session expiry is deterministic under test. */
+  readonly now?: (() => string) | undefined;
+};
+
+const LOGIN_KEYS = Object.freeze(["surface", "email", "password"] as const);
+
+function validateLoginRequest(request: unknown): SiteRefusal | null {
+  if (!isRecord(request)) return refuse("SITE_REQUEST_MALFORMED");
+  // A role claim beside the credentials is an escalation attempt and refuses
+  // before anything else — never silently stripped, and never dispatched.
+  for (const key of Object.keys(request)) {
+    if ((CLIENT_ROLE_CLAIM_KEYS as readonly string[]).includes(key)) {
+      return refuse("ROLE_CLAIM_FROM_CLIENT_DENIED");
+    }
+    if (!(LOGIN_KEYS as readonly string[]).includes(key)) {
+      return refuse("SITE_REQUEST_MALFORMED");
+    }
+  }
+  const surface = request["surface"];
+  if (!(IDENTITY_SURFACES as readonly unknown[]).includes(surface)) {
+    return refuse("SITE_SURFACE_UNKNOWN");
+  }
+  // Kids refuses before the adapter is reached, non-overridably: no Kids
+  // sign-in exists, so no adapter can be consulted about one.
+  if (surface === "kids") return refuse("KIDS_SURFACE_DENIED");
+  const email = request["email"];
+  const password = request["password"];
+  if (
+    !isNonEmptyString(email) ||
+    typeof password !== "string" ||
+    password.length === 0
+  ) {
+    return refuse("LOGIN_CREDENTIALS_REQUIRED");
+  }
+  return null;
+}
+
+/**
+ * Create the login port. With no adapter every call refuses
+ * `IDENTITY_PLANE_NOT_WIRED`, the same reading the identity port gives an
+ * unwired deployment: sign-in that cannot reach a provider is not sign-in.
+ *
+ * The adapter's grant is re-validated here exactly like a resolved principal —
+ * a disabled user, an expired or surface-mismatched session, or an unknown role
+ * refuses with its own named reason — so an adapter cannot hand a site a
+ * principal the identity plane would not have accepted.
+ *
+ * A grant that is malformed rather than untrusted refuses `LOGIN_SESSION_NOT_ISSUED`
+ * instead of the verify path's `IDENTITY_ADAPTER_OUTPUT_INVALID`: at issuance the
+ * browser presented no credential and nothing was discarded, so the deployment's
+ * provider — not the visitor's session — is what failed, and signing in again
+ * cannot change it.
+ */
+export function createLoginPlane(options: LoginPlaneOptions = {}): SiteLoginPort {
+  const nowIso = options.now ?? (() => new Date().toISOString());
+  return Object.freeze({
+    async signIn(request: SiteLoginRequest): Promise<SiteResult<SiteLoginGrant>> {
+      const invalid = validateLoginRequest(request);
+      if (invalid !== null) return invalid;
+      if (options.adapter === undefined) return refuse("IDENTITY_PLANE_NOT_WIRED");
+      const adapter = options.adapter;
+      const result = await callAdapter(
+        () => adapter.signIn(request),
+        "IDENTITY_PLANE_UNAVAILABLE",
+      );
+      if (!isRecord(result)) return refuse("LOGIN_SESSION_NOT_ISSUED");
+      if (result["ok"] !== true) {
+        return canonicalAdapterRefusal(result, "LOGIN_SESSION_NOT_ISSUED");
+      }
+      const grant = result["value"];
+      if (!isRecord(grant)) return refuse("LOGIN_SESSION_NOT_ISSUED");
+      const principal = validatePrincipal(
+        grant["principal"],
+        { surface: request.surface },
+        nowIso(),
+      );
+      if (!principal.ok) {
+        return principal.reason === "IDENTITY_ADAPTER_OUTPUT_INVALID"
+          ? refuse("LOGIN_SESSION_NOT_ISSUED")
+          : principal;
+      }
+      const credential = grant["sessionCredential"];
+      if (typeof credential !== "string" || !SITE_COOKIE_OCTET_RE.test(credential)) {
+        return refuse("LOGIN_SESSION_NOT_ISSUED");
+      }
+      return ok(
+        Object.freeze({ principal: principal.value, sessionCredential: credential }),
+      );
     },
   });
 }

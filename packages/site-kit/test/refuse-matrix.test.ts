@@ -19,6 +19,7 @@ import {
   createBillingPlane,
   createCreditsPlane,
   createIdentityPlane,
+  createLoginPlane,
   createPublishIntent,
   createWebEditorSession,
   decideCapability,
@@ -28,11 +29,13 @@ import {
   parseEditorDeepLinkParams,
   readEngineSdkOffer,
   reconstructStarter,
+  refuse,
   resolveChangeReview,
   resolveCheckoutRedirectOrigin,
   resolveSurfaceAccent,
   reviewProposal,
   showSiteListing,
+  verifySiteFormOrigin,
   webEditorStarterArtifact,
 } from "@sceneaxi/site-kit";
 import type {
@@ -154,6 +157,12 @@ const CASES: Readonly<Record<SiteRefusalReason, () => Promise<unknown> | unknown
     } as unknown as SiteIdentityRequest),
   SITE_REQUEST_MALFORMED: () =>
     createIdentityPlane({ now }).resolvePrincipal(null as unknown as SiteIdentityRequest),
+  SITE_REQUEST_CROSS_ORIGIN: () =>
+    verifySiteFormOrigin({
+      configuredOrigin: "https://umbrella.vercel.app",
+      origin: "https://attacker.example",
+      requestUrl: "https://umbrella.vercel.app/api/login",
+    }),
   IDENTITY_SESSION_ABSENT: () => identityWith(null).resolvePrincipal(umbrella),
   IDENTITY_PLANE_UNAVAILABLE: () =>
     createIdentityPlane({
@@ -215,6 +224,30 @@ const CASES: Readonly<Record<SiteRefusalReason, () => Promise<unknown> | unknown
         },
       },
     }).readBalance({ userId: "user-1" }),
+  LOGIN_CREDENTIALS_REQUIRED: () =>
+    createLoginPlane({ now }).signIn({ surface: "site", email: "", password: "" }),
+  // The plane itself never judges a password; the rejection is the wired
+  // adapter's answer, passed through under its canonical registry reason.
+  LOGIN_CREDENTIALS_REJECTED: () =>
+    createLoginPlane({
+      now,
+      adapter: {
+        async signIn() {
+          return refuse("LOGIN_CREDENTIALS_REJECTED");
+        },
+      },
+    }).signIn({ surface: "site", email: "crew@example.com", password: "wrong" }),
+  // Issuance names itself: the adapter answered, but with a grant no cookie can
+  // carry, which is a provider fault rather than an untrusted browser credential.
+  LOGIN_SESSION_NOT_ISSUED: () =>
+    createLoginPlane({
+      now,
+      adapter: {
+        async signIn() {
+          return ok({ principal: principal("user"), sessionCredential: "has space" } as never);
+        },
+      },
+    }).signIn({ surface: "site", email: "crew@example.com", password: "pw" }),
   EDITOR_ENTITLEMENT_ANONYMOUS: () => decideEditorEntitlement({ principal: null, credits: null }),
   EDITOR_ENTITLEMENT_NO_CREDITS: () =>
     decideEditorEntitlement({

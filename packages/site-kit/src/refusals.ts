@@ -22,6 +22,8 @@ export const SITE_REFUSALS = Object.freeze({
     "A role claim arrived from the client. Roles are server-derived only and never client-claimable.",
   SITE_SURFACE_UNKNOWN: "The requested identity surface is not a known SceneAxi surface.",
   SITE_REQUEST_MALFORMED: "The identity request is malformed.",
+  SITE_REQUEST_CROSS_ORIGIN:
+    "The submission did not come from this deployment's own pages, so no session was created, revoked, or cleared from it.",
 
   // --- plane availability, distinct from "not wired" and from "no session" ---
   IDENTITY_SESSION_ABSENT:
@@ -47,6 +49,14 @@ export const SITE_REFUSALS = Object.freeze({
     "The credits adapter returned a balance that is not a non-negative integer.",
   CREDIT_ADAPTER_OUTPUT_INVALID:
     "The credits adapter returned a value that is not a valid balance record.",
+
+  // --- hosted login (see the login plane in ports.ts) ---
+  LOGIN_CREDENTIALS_REQUIRED:
+    "Sign-in requires a non-empty email and password. Nothing was dispatched to the identity plane.",
+  LOGIN_CREDENTIALS_REJECTED:
+    "That email and password did not authenticate. No session was created.",
+  LOGIN_SESSION_NOT_ISSUED:
+    "Sign-in reached the identity plane, but the session it returned cannot be issued as a browser credential, so none was set.",
 
   // --- editor entitlement ---
   EDITOR_ENTITLEMENT_ANONYMOUS: "The web editor requires a signed-in principal.",

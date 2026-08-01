@@ -31,6 +31,7 @@ import {
   createBillingPlane,
   createCreditsPlane,
   createIdentityPlane,
+  createLoginPlane,
   ok,
   refuse,
   type SiteBillingAdapter,
@@ -45,6 +46,10 @@ import {
   type SiteIdentityAdapter,
   type SiteIdentityPort,
   type SiteIdentityRequest,
+  type SiteLoginAdapter,
+  type SiteLoginGrant,
+  type SiteLoginPort,
+  type SiteLoginRequest,
   type SitePrincipal,
   type SiteRefusalReason,
   type SiteResult,
@@ -177,6 +182,42 @@ export function siteReasonForAuthReason(reason: AuthRefuseReason): SiteRefusalRe
       // at this boundary: what came back is not a principal a site may trust.
       return "IDENTITY_ADAPTER_OUTPUT_INVALID";
   }
+}
+
+/**
+ * Site reasons whose named access state describes a credential this browser
+ * *presented* — a session that was carried, read back, and then not trusted.
+ *
+ * On the verify path each of them is exactly true. On the issuance path none of
+ * them can be: no session was carried, nothing was discarded, and signing in
+ * again reaches the same fault. They are therefore renamed at the one boundary
+ * that knows which path it is on, rather than being softened downstream where a
+ * page can no longer tell an issued session from a presented one.
+ */
+const LOGIN_ISSUANCE_FAULT_REASONS: ReadonlyArray<SiteRefusalReason> = Object.freeze([
+  "IDENTITY_SESSION_ABSENT",
+  "IDENTITY_ADAPTER_OUTPUT_INVALID",
+  "IDENTITY_ROLE_UNKNOWN",
+  "IDENTITY_SESSION_EXPIRED",
+  "IDENTITY_SESSION_NOT_YET_VALID",
+  "IDENTITY_SESSION_SURFACE_MISMATCH",
+]);
+
+/**
+ * Map one `@sceneaxi/auth` reason raised while *issuing* a session.
+ *
+ * It is the verify mapping with one substitution, so a reason added there is
+ * carried here by construction: rejected credentials are the visitor's own named
+ * outcome, every reason that would have described a presented credential becomes
+ * `LOGIN_SESSION_NOT_ISSUED`, and everything that is equally true at issuance —
+ * Kids, a disabled account, an unwired or unavailable plane — keeps its own name.
+ */
+export function siteReasonForLoginAuthReason(reason: AuthRefuseReason): SiteRefusalReason {
+  if (reason === AUTH_REFUSE_REASONS.credentialsRejected) return "LOGIN_CREDENTIALS_REJECTED";
+  const verified = siteReasonForAuthReason(reason);
+  return LOGIN_ISSUANCE_FAULT_REASONS.includes(verified)
+    ? "LOGIN_SESSION_NOT_ISSUED"
+    : verified;
 }
 
 /**
@@ -348,6 +389,7 @@ export type IdentityPlaneAdapters = {
   readonly identity?: SiteIdentityAdapter | undefined;
   readonly credits?: SiteCreditsAdapter | undefined;
   readonly billing?: SiteBillingAdapter | undefined;
+  readonly login?: SiteLoginAdapter | undefined;
 };
 
 /**
@@ -487,11 +529,23 @@ export type UmbrellaIdentityPlane = {
   readonly identity: SiteIdentityPort;
   readonly credits: SiteCreditsPort;
   readonly billing: SiteBillingPort;
+  readonly login: SiteLoginPort;
+  /**
+   * Delete the stored session this request's credential names, if any.
+   *
+   * `ok(null)` means "no live session remains for that credential" — including the
+   * case where it was already gone — so the caller's next move is always the same:
+   * clear the browser cookie. A named refusal means the store could not answer and
+   * the session may still be live server-side.
+   */
+  readonly signOut: () => Promise<SiteResult<null>>;
   /** Whether an adapter is present for each plane, for honest UI copy. */
   readonly wired: {
     readonly identity: boolean;
     readonly credits: boolean;
     readonly billing: boolean;
+    /** Sign-in needs the identity port itself, not just a resolve adapter. */
+    readonly login: boolean;
   };
   readonly billingMode: SiteBillingMode;
   /** The resolved admin identity, or `null` when the environment names none. */
@@ -514,11 +568,10 @@ export function resolveBillingMode(
 /**
  * Verify the carried session through `@sceneaxi/auth`, or report a signed-out visitor.
  *
- * Only `verifySession` is reachable from a site. Sign-in — which takes a password — is
- * deliberately not exposed here: the site never handles a credential, it only presents
- * a session the provider already issued. Admin comes out of this path exactly when
- * `SCENEAXI_ADMIN_EMAIL` names the verified user, because the identity port re-derives
- * the role on every call.
+ * Admin comes out of this path exactly when `SCENEAXI_ADMIN_EMAIL` names the verified
+ * user, because the identity port re-derives the role on every call. Sign-in lives on
+ * its own port (`createAuthLoginAdapter` below): this path only presents a session the
+ * provider already issued, and never sees a password.
  */
 async function verifyCarriedSession(options: {
   readonly port: IdentityPort;
@@ -554,6 +607,56 @@ export function createAuthIdentityAdapter(options: {
       });
       if (!verified.ok) return verified;
       return ok(verified.value === null ? null : toSitePrincipal(verified.value));
+    },
+  });
+}
+
+/**
+ * Sign in through `@sceneaxi/auth`, handing back the browser credential.
+ *
+ * This is the umbrella end of the hosted login route (sceneaxi#185). The password
+ * transits this call and is gone: the identity port hands it to the injected Better
+ * Auth adapter, the store keeps only the session token's digest, and what comes back
+ * out is the one redeemable copy of the raw token — composed here into the same
+ * `<sessionId>.<token>` credential `parseSessionToken` reads back on every later
+ * request, because this module owns that format in both directions.
+ *
+ * Refusals are read through `siteReasonForLoginAuthReason` rather than the verify
+ * mapping, because this is the only place that knows the refusal happened while a
+ * session was being *issued*: rejected credentials are the visitor's own named
+ * outcome rather than the generic "signed out", and a provider fault is named as
+ * one instead of blaming a credential no browser presented. An empty submission is
+ * refused by the site login plane before this adapter is reached at all.
+ */
+export function createAuthLoginAdapter(options: {
+  readonly port: IdentityPort;
+}): SiteLoginAdapter {
+  return Object.freeze({
+    async signIn(request: SiteLoginRequest): Promise<SiteResult<SiteLoginGrant>> {
+      const granted = await options.port.signIn({
+        surface: request.surface,
+        email: request.email,
+        password: request.password,
+      });
+      if (!granted.ok) {
+        return refuse(siteReasonForLoginAuthReason(granted.reason));
+      }
+      const principal = granted.value.principal;
+      const sessionCredential = `${principal.session.sessionId}.${granted.value.sessionToken}`;
+      const readBack = parseSessionToken(sessionCredential);
+      if (
+        readBack === null ||
+        readBack.sessionId !== principal.session.sessionId ||
+        readBack.token !== granted.value.sessionToken
+      ) {
+        return refuse("LOGIN_SESSION_NOT_ISSUED");
+      }
+      return ok(
+        Object.freeze({
+          principal: toSitePrincipal(principal),
+          sessionCredential,
+        }),
+      );
     },
   });
 }
@@ -805,9 +908,53 @@ export function createUmbrellaIdentityPlane(
     });
   };
 
+  const buildLoginAdapter = (): SiteLoginAdapter | undefined => {
+    const port = identityPort();
+    if (port === undefined) return undefined;
+    return createAuthLoginAdapter({ port });
+  };
+
+  /**
+   * Sign out the session this plane's bound credential names.
+   *
+   * The principal handed to `port.signOut` must be the identity-port-issued object
+   * itself — the runtime-provenance witness refuses a rebuilt lookalike — which is
+   * why this lives here, where `verifyCarriedSession` still holds it, rather than
+   * downstream of the structural site projection.
+   */
+  const signOutBoundSession = async (): Promise<SiteResult<null>> => {
+    const port = identityPort();
+    if (port === undefined) return refuse("IDENTITY_PLANE_NOT_WIRED");
+    const verified = await verifyCarriedSession({
+      port,
+      surface: "site",
+      sessionToken: wiring.sessionToken,
+    });
+    // A credential that names no live session — absent, expired, or already
+    // deleted — has nothing left to revoke: the signed-out end state holds.
+    if (!verified.ok) {
+      return verified.reason === "IDENTITY_SESSION_ABSENT" ||
+        verified.reason === "IDENTITY_SESSION_EXPIRED"
+        ? ok(null)
+        : verified;
+    }
+    if (verified.value === null) return ok(null);
+    const removed = await port.signOut({ principal: verified.value });
+    if (!removed.ok) {
+      // `principalInvalid` here means the stored session rotated or vanished
+      // between the verify and the delete; either way it is provably not the
+      // session this credential names any more.
+      return removed.reason === AUTH_REFUSE_REASONS.principalInvalid
+        ? ok(null)
+        : refuse(siteReasonForAuthReason(removed.reason));
+    }
+    return ok(null);
+  };
+
   const identityAdapter = wiring.identity ?? buildIdentityAdapter();
   const creditsAdapter = wiring.credits ?? buildCreditsAdapter();
   const billingAdapter = wiring.billing ?? buildBillingAdapter();
+  const loginAdapter = wiring.login ?? buildLoginAdapter();
 
   return Object.freeze({
     // The port re-checks session validity against its own clock, so it is given the
@@ -819,12 +966,18 @@ export function createUmbrellaIdentityPlane(
     }),
     credits: createCreditsPlane({ adapter: creditsAdapter }),
     billing: createBillingPlane({ adapter: billingAdapter, mode: billingMode }),
+    login: createLoginPlane({
+      adapter: loginAdapter,
+      now: () => new Date(clock()).toISOString(),
+    }),
+    signOut: signOutBoundSession,
     wired: Object.freeze({
       identity: identityAdapter !== undefined,
       credits: creditsAdapter !== undefined,
       // Billing counts as wired only when a checkout can actually be created.
       // Listing packs works regardless, because the catalog is committed.
       billing: wiring.billing !== undefined || checkoutSessions() !== undefined,
+      login: loginAdapter !== undefined,
     }),
     billingMode,
     admin,
@@ -835,4 +988,16 @@ export function createUmbrellaIdentityPlane(
 export const IDENTITY_PLANE_DOC = "docs/websites-deploy.md";
 
 export const IDENTITY_PLANE_PENDING_NOTE =
-  "Signing in is not open here yet. This site verifies a session and reads a balance from the deployment's own Neon and Stripe test handles, but it exposes no route that issues a session, so no signed-in browser exists until that entry point ships (sceneaxi#185). Until then these surfaces refuse with a named reason rather than showing an invented session, balance, or checkout.";
+  "Signing in is not open on this deployment yet. The sign-in route ships here (sceneaxi#185), but this deployment has not configured the provider handles it runs on, so no session can be issued or verified and no balance can be read from its own Neon and Stripe test handles. Until those handles are configured these surfaces refuse with a named reason rather than showing an invented session, balance, or checkout.";
+
+/**
+ * The billing half of the same fact, for surfaces that only found the checkout
+ * plane missing.
+ *
+ * It says nothing about identity, because the two planes are configured
+ * independently: a deployment can carry Better Auth and Neon without a Stripe
+ * test key, and telling a signed-in visitor that sign-in is closed would be
+ * false on exactly that deployment.
+ */
+export const BILLING_PLANE_PENDING_NOTE =
+  "Buying is not open on this deployment yet. It has not configured the Stripe test handle the hosted checkout round-trip runs on, so no checkout session can be created. Prices shown here are the committed catalog's own; nothing is invented to fill the gap, and signing in is unaffected — it is configured separately.";

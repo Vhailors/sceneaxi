@@ -28,11 +28,12 @@ const nextConfig: NextConfig = {
     "@sceneaxi/auth",
     "@sceneaxi/billing",
   ],
-  // The two provider SDKs are loaded through `createRequire` in
-  // `src/lib/provider-adapters.ts`, so neither the bundler nor output-file tracing
-  // can see the specifiers statically. Listing them keeps them external (required
-  // from `node_modules` at runtime rather than bundled), and the trace include
-  // pins the packages into the deployed function — without it a traced serverless
+  // The two provider SDKs are loaded through Node's own `require` in
+  // `src/lib/provider-adapters.ts`, deliberately reached in a form the bundler
+  // does not rewrite, so neither the bundler nor output-file tracing sees the
+  // specifiers statically. Listing them keeps them external (required from
+  // `node_modules` at runtime rather than bundled), and the trace include pins
+  // the packages into the deployed function — without it a traced serverless
   // build ships a lambda missing them, and both construction failures are caught
   // into ordinary provider absence, so a fully configured deployment would report
   // the same state as an unconfigured one.

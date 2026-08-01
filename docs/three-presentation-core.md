@@ -153,8 +153,8 @@ only, and presentation invents no state the kernel does not own.
   - pointer drag changed the drawn pixels; **Reset view** returned a byte-identical
     PNG to the opening framing
   - with the preview flag unset the same build served **no canvas at all**: zero
-    `<canvas>` elements, no viewport section, and the named refusal
-    `Not entitled · reason: IDENTITY_PLANE_NOT_WIRED`
+    `<canvas>` elements, no viewport section, and the named
+    `IDENTITY_PLANE_NOT_WIRED` refusal state
   - the same session re-verified `/open` unchanged after both surfaces moved onto
     the shared viewport boundary: `drawCalls 15`, 1 717 distinct colours, 101 278
     non-background pixels — the figures recorded above, unmoved

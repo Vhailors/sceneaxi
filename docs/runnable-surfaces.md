@@ -26,8 +26,14 @@ a marketing word.
 | Kids profile | **R0** | `pnpm test:golden` | `tests/e2e/profile-kids-refuse-golden.test.ts` |
 | Importers + plugin host | **R1** | `pnpm test:golden` | `tests/e2e/importers-plugin-golden.test.ts`, `tests/e2e/plugin-capability-golden.test.ts` (the one registered capability, `sceneaxi.sculpt.intake-source.v1`, from the shipped seed through load to an addressed call) |
 | Umbrella live open path (`/open`) | **R1** | `pnpm test:golden`; in a browser, `cd sites/umbrella && pnpm build && pnpm start` | `tests/e2e/umbrella-live-open-golden.test.ts` (headless surface, no pixel claim) + the browser record in `docs/three-presentation-core.md` |
-| Umbrella entitled Minimum E2 editor (`/editor`, Engine Desktop shell) | **R1** | `pnpm test:golden`; in a browser, `cd sites/umbrella && pnpm build && SCENEAXI_SITE_EDITOR_PREVIEW=1 pnpm start` | `tests/e2e/umbrella-editor-viewport-golden.test.ts` (headless surface, no pixel claim), `packages/site-kit/test/editor-shell.test.ts`, `tests/parity/editor-shell-parity.test.ts`, + the browser records in `docs/three-presentation-core.md` and [`web-editor-shell.md`](web-editor-shell.md). Without the preview flag, and until a member can hold a session ([sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185)), the route is a named refusal and draws nothing |
+| Umbrella entitled Minimum E2 editor (`/editor`, Engine Desktop shell) | **R1** | `pnpm test:golden`; in a browser, `cd sites/umbrella && pnpm build && SCENEAXI_SITE_EDITOR_PREVIEW=1 pnpm start` | `tests/e2e/umbrella-editor-viewport-golden.test.ts` (headless surface, no pixel claim), `packages/site-kit/test/editor-shell.test.ts`, `tests/parity/editor-shell-parity.test.ts`, + the browser records in `docs/three-presentation-core.md` and [`web-editor-shell.md`](web-editor-shell.md). Without the preview flag, and until a member can hold a session ([sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185)), the route is a named refusal and draws nothing. The flag is a temporary fallback: the product path is signing in at `/login` (`sites/umbrella/README.md`), which needs the deployment's own provider handles |
 
+Hosted sign-in is the editor row's access path, not a second runnable-level claim:
+`/login` and `POST /api/login|logout` exist to establish or clear the session that
+unlocks `/editor`. Their deterministic site-level proof is
+`tests/sites/identity-plane-wiring.test.ts` plus
+`tests/sites/umbrella-login-flow.test.ts`; the editor's R1 claim remains owned by
+the golden e2e named in the table.
 How far each profile's open path may be *demonstrated*, and by what evidence, is
 owned by [`open-path-policy.md`](open-path-policy.md) — one shared contract the
 profiles, the CLI, and both shells all read. The levels there use this table's

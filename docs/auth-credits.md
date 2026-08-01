@@ -28,9 +28,14 @@ provider credentials and the database remain outside the repository.
 
 The TEST deployment path now has the provider-backed handles and idempotent account
 provisioning. Missing provider configuration remains a named refusal, and activation
-still requires the deployment procedure at `docs/websites-deploy.md`. **What v1 still does
-not deliver is a live signed-in browser session:** the sign-in HTTP entry point that would
-reach `identityPort.signIn` is sceneaxi#185. See *Deployment activation* at the end.
+still requires the deployment procedure at `docs/websites-deploy.md`. The sign-in HTTP
+entry point that reaches `identityPort.signIn` **ships** (sceneaxi#185): the umbrella's
+`/login` page and `POST /api/login|logout` routes drive the plane's login port and set the
+HttpOnly `sceneaxi.session` cookie — see *Better Auth* below. **What v1 still does
+not deliver is a running provider:** a live signed-in browser session additionally needs
+the deployment to serve Better Auth's own handler and return the handles from
+`umbrellaPlaneHandles()`, which is operational work outside this repository. See
+*Deployment activation* at the end.
 
 ## Environment
 
@@ -191,6 +196,70 @@ or `undefined` when the credentials simply do not authenticate. Resolving `undef
 throwing mean different things — the port reports `AUTH_CREDENTIALS_REJECTED` for the first
 and `AUTH_ADAPTER_FAILED` for the second, so a wrong password is never confused with a
 broken provider.
+
+A successful `signIn` returns a `SignInGrant`, not a bare principal:
+`{ principal, sessionToken }`. The store keeps only the token's digest, so the grant's
+raw `sessionToken` is the **one redeemable copy in existence** — without it no browser
+credential could ever be constructed and a sign-in would be unredeemable. The caller's
+obligation is symmetric to the store's: hand the token to the authenticated client (the
+umbrella writes it into the HttpOnly `sceneaxi.session` cookie as
+`<sessionId>.<token>`, the same credential `verifySession` later checks against the
+stored digest) and hold it nowhere else — never logged, never persisted, never
+re-derivable. The first consumer is the umbrella's hosted login route
+(sceneaxi#185): `createAuthLoginAdapter` in `sites/umbrella/src/lib/identity-plane.ts`
+drives `signIn` and composes the cookie credential; a consumer that holds the issued
+`Principal` object itself, like web-shell's account panel, drops the token on the floor
+deliberately.
+
+Issuance has one precondition ahead of everything above: the submission must prove it
+came from the deployment's own pages. `verifySiteFormOrigin` decides it from the
+browser-set `Origin` (or `Sec-Fetch-Site: same-origin` where a browser omits `Origin`)
+against the configured umbrella origin, and `performLogin` / `performLogout` take that
+proof as a **required argument**, refusing `SITE_REQUEST_CROSS_ORIGIN` before a field is
+read or a port is reached. The cookie's `SameSite=Lax` is not that check and cannot be:
+a sign-in POST carries no cookie yet, so nothing is withheld from it and the browser
+stores the `Set-Cookie` it answers with — a cross-site page would otherwise be able to
+sign a visitor into an account it chose, and the mirror submission to sign-out would
+force a visitor's session away. Sign-out is refused there too, which is the one bound on
+"the cookie is cleared unconditionally": that promise is to this browser's own request.
+
+That credential format carries one obligation back onto the provider's session id: it is
+read back by splitting on the **first** `.`, so a session id that itself contains a dot —
+which the adapter's identifier rules otherwise permit — cannot round-trip. The umbrella
+adapter re-reads the credential it just composed and refuses `LOGIN_SESSION_NOT_ISSUED`
+when the halves do not come back unchanged, so an unrepresentable session id is a named
+refusal at issuance rather than a cookie the next request silently reads as "signed out".
+
+`LOGIN_SESSION_NOT_ISSUED` is the issuance counterpart of the verify path's
+`IDENTITY_ADAPTER_OUTPUT_INVALID`, and site-kit's login plane uses it for a grant it
+cannot read — a non-record answer, an off-registry refusal, a principal whose shape the
+verify path would have called `IDENTITY_ADAPTER_OUTPUT_INVALID`, or a credential no
+cookie can carry. A grant it reads but will not trust is a different answer: the plane
+re-validates the principal exactly as it does a resolved one, so an expired,
+not-yet-valid, or surface-mismatched session, an unknown role, and a disabled user each
+keep their own named reason rather than being folded into the issuance one. The
+distinction is not cosmetic: at issuance the browser presented nothing, so nothing was discarded and
+signing in again cannot change the outcome. `describeSiteAccessState` therefore projects
+it onto its own `sign-in-not-issued` state — a deployment fault with **no** action —
+instead of the "sign in again to get a fresh session" copy that belongs to a credential
+the plane refused to trust.
+
+That distinction is held at the boundary rather than at each page, because a page can no
+longer tell an issued session from a presented one. `siteReasonForLoginAuthReason` is
+the issuance mapping the umbrella's login adapter applies to the reasons the **auth
+port** raises, upstream of the plane's own re-validation above: it is
+`siteReasonForAuthReason` with one substitution, so a reason
+added to the verify mapping is carried onto the login path by construction. Rejected
+credentials become `LOGIN_CREDENTIALS_REJECTED` rather than the "signed out" the verify
+path folds them into; every reason whose named state would describe a credential *this
+browser presented* — `IDENTITY_SESSION_ABSENT`, `IDENTITY_ADAPTER_OUTPUT_INVALID`,
+`IDENTITY_ROLE_UNKNOWN`, `IDENTITY_SESSION_EXPIRED`,
+`IDENTITY_SESSION_NOT_YET_VALID`, `IDENTITY_SESSION_SURFACE_MISMATCH` — becomes
+`LOGIN_SESSION_NOT_ISSUED`, since at issuance nothing was carried, nothing was
+discarded, and retrying reaches the same fault. Everything equally true on both paths —
+`KIDS_SURFACE_DENIED`, `ROLE_CLAIM_FROM_CLIENT_DENIED`, `IDENTITY_USER_DISABLED`,
+`IDENTITY_PLANE_NOT_WIRED`, `IDENTITY_PLANE_UNAVAILABLE` — keeps its own name, so the
+issuance path gains no second vocabulary to drift from the registry.
 
 Admin elevation requires both the provider authentication and the stored SceneAxi user
 record to mark `emailVerified: true`. An unverified address matching
@@ -1147,17 +1216,20 @@ is `NOT NULL REFERENCES catalog_listings (listing_id)`, and this repository seed
 `catalog_listings` row — the shipped listing set is the bundled `catalog-listings.data.ts`
 module, not a table. So a Neon settlement additionally requires the deployment to seed that
 table from the committed listing set, or the transaction fails the foreign key. No umbrella
-route reaches that path today (its only routes are `/api/checkout` and
-`/api/stripe/webhook`), so the store method is wired ahead of the catalog-sale surface that
+route reaches that path today — none of `/login`, `/api/login`, `/api/logout`,
+`/api/checkout`, or `/api/stripe/webhook`
+does — so the store method is wired ahead of the catalog-sale surface that
 would call it, and its gate tests run against an in-memory fake that enforces no constraint.
 
-The second is still code, and it is not this vertical's: **no signed-in browser session
-can exist yet.** `putSession` is reached only from `identityPort.signIn`, and the umbrella
-exposes that over no route — `createAuthIdentityAdapter` deliberately offers only
-`verifySession`, and the site's only routes are `/api/checkout` and
-`/api/stripe/webhook`. So a fully configured deployment still provisions no user, runs no
-starter grant, and refuses `IDENTITY_SESSION_ABSENT` on every surface. Mounting Better
-Auth's own handler and a sign-in surface that calls `signIn` — and only then dropping the
-editor preview flag — is [sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185).
+The second is no longer code in this repository: the sign-in surface
+[sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185) called for has landed. The
+umbrella serves `/login` beside `POST /api/login`, `POST /api/logout`, `/api/checkout`, and
+`/api/stripe/webhook`, and `performLogin` reaches `identityPort.signIn` — and therefore
+`putSession` — through `createAuthLoginAdapter`, the login-port counterpart to the
+verify-only `createAuthIdentityAdapter`. What remains is the deployment's own: serve Better
+Auth's own handler and return the handles from `umbrellaPlaneHandles()`. Until it does,
+`signIn` has no adapter to reach, so no user is provisioned, no starter grant runs, and
+every surface refuses by name. Dropping the editor preview flag comes after that provider
+configuration, never before it.
 The deployable-site activation procedure and surface status are owned by
 [`websites-deploy.md`](websites-deploy.md#remaining-activation).
