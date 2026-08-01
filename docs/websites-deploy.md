@@ -454,25 +454,35 @@ Load-bearing properties, each gate-tested in `tests/sites/identity-plane-wiring.
   `@sceneaxi/site-kit` port and the matrix denies them `@sceneaxi/auth` and
   `@sceneaxi/billing` outright.
 
-## Outstanding captain secrets
+## Verified TEST readiness
 
-Everything free is live now. Three captain-held secrets are still absent, and were not
-invented or faked:
+The issue [#181](https://github.com/Vhailors/sceneaxi/issues/181) readiness check was
+repeated on 2026-08-01 without reading a secret value, creating a credential, sending a
+webhook event, or performing a charge:
 
-| Variable | Blocks | Why it is not set |
-|---|---|---|
-| `STRIPE_SECRET_KEY` (test) | credit-pack checkout | captain-held; no Stripe test key is available to this worker |
-| `STRIPE_WEBHOOK_SECRET` | credit grants from checkout | captain-held; created with the webhook endpoint |
-| `SCENEAXI_ADMIN_BOOTSTRAP_SECRET` | first admin sign-in | captain-held credential material |
+- Vercel lists `DATABASE_URL`, `SCENEAXI_BILLING_MODE`, `STRIPE_SECRET_KEY`,
+  `STRIPE_WEBHOOK_SECRET`, and `SCENEAXI_ADMIN_BOOTSTRAP_SECRET` as encrypted Production
+  variable **names** on `sceneaxi-umbrella`. Presence proves only deployment ownership;
+  it does not expose or attest a secret value.
+- Neon lists the existing shared `sceneaxi-prod` project (`misty-king-68383952`) in
+  `aws-us-east-2`, matching the project recorded above. No database connection or
+  migration was attempted during this check.
+- Stripe lists an enabled, test-mode (`livemode: false`) endpoint at
+  `https://sceneaxi-umbrella.vercel.app/api/stripe/webhook` subscribed only to
+  `checkout.session.completed`. The available CLI profile has TEST access and no LIVE
+  access; SceneAxi's separate live-authorization refusal remains unchanged.
+- The umbrella `/` and `/pricing` pages and both catalog roots are reachable. The current
+  production umbrella deployment predates the merged hosted-login route and still serves
+  `404` at `/login`; `BETTER_AUTH_ORIGIN` is also absent from the umbrella Production
+  variable-name listing. Activating member sign-in therefore still requires step 7 and a
+  fresh deployment of current `main`. Do not remove `SCENEAXI_SITE_EDITOR_PREVIEW` before
+  that sign-in path is proven.
 
-`SCENEAXI_ADMIN_EMAIL` is known (`hajczuk.dominik@gmail.com`) and is now resolved by
-`@sceneaxi/auth` on this site, so setting it is meaningful: it is the only source of the
-`admin` role. It still grants nothing on its own — a session must be verified against a
-real store before any role is derived — so it is safe to set before step 4 above.
-
-None of the three secrets block anything shipped: the surfaces that need them refuse with
-named reasons today, and would refuse identically with the keys present while the provider
-handles in `umbrellaPlaneHandles()` are still absent.
+`SCENEAXI_ADMIN_EMAIL` remains the only source of the `admin` role. Neither its presence
+nor the bootstrap-secret name grants anything on its own: a session must be authenticated
+by the provider and verified against the real store before any role is derived. Missing or
+unusable provider configuration continues to leave handles absent and surfaces refusing by
+their existing named reasons.
 
 ## What is not deployed or activated
 
