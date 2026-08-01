@@ -148,7 +148,10 @@ function createUmbrellaIdentityPlane(
   wiring: Parameters<typeof createIdentityPlaneForTest>[1] = {},
 ) {
   const admin = env["SCENEAXI_ADMIN_EMAIL"] === ADMIN_EMAIL ? TEST_ADMIN : null;
-  return createIdentityPlaneForTest(env, { ...wiring, admin: wiring.admin ?? admin });
+  return createIdentityPlaneForTest(env, {
+    ...wiring,
+    admin: wiring.admin === undefined ? admin : wiring.admin,
+  });
 }
 
 describe("acceptance 1 — admin env login on the umbrella", () => {
@@ -1649,6 +1652,40 @@ describe("acceptance 6 — no secret, no live mode, no Kids", () => {
     expect(plane.wired.identity).toBe(false);
     expect(plane.wired.billing).toBe(false);
     expect("admin" in plane).toBe(false);
+  });
+
+  it("lets an explicit null admin override deployment-issued evidence", async () => {
+    let providerCalls = 0;
+    const plane = createUmbrellaIdentityPlane(
+      {},
+      {
+        admin: null,
+        deployment: Object.freeze({
+          admin: TEST_ADMIN,
+          billingMode: "test" as const,
+          clock,
+          identityPort: adminWorld(),
+          checkoutSessions: {
+            createCheckoutSession() {
+              providerCalls += 1;
+              return { redirectUrl: "https://checkout.stripe.test/unreachable" };
+            },
+          },
+        }),
+        sessionToken: `sess-admin.${ADMIN_TOKEN}`,
+      },
+    );
+
+    expect(
+      await plane.billing.createCheckout({
+        userId: "captain",
+        packId: "starter",
+        successUrl: "https://sceneaxi-umbrella.vercel.app/account",
+        cancelUrl: "https://sceneaxi-umbrella.vercel.app/pricing",
+        idempotencyKey: "pack:explicit-null-admin:1",
+      }),
+    ).toMatchObject({ ok: false, reason: "IDENTITY_PLANE_NOT_WIRED" });
+    expect(providerCalls).toBe(0);
   });
 
   it("keeps production routes on the no-argument deployment capability boundary", () => {
