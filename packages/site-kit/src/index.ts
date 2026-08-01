@@ -198,8 +198,10 @@ export {
   resolveEditorLinkFromEnv,
   resolveFamilyLinks,
   resolveUmbrellaEditorOrigin,
+  resolveUmbrellaOriginConfiguration,
   type EditorDeepLink,
   type FamilyLinks,
+  type UmbrellaOriginConfiguration,
 } from "./deep-link.js";
 
 export {

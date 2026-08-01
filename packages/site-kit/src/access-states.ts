@@ -60,10 +60,27 @@ export type SiteAccessState = {
  * the same answer — the surface that *emits* a sign-in link carrying a destination and
  * the login flow that *reads* one back — and two implementations of that rule
  * would eventually disagree about which paths are safe.
+ *
+ * Because both ends confine, the answer must also be **idempotent**: the value a
+ * sign-in form carries is confined again when it comes back, and a second pass
+ * that re-escaped the first pass's `%` would redirect a signed-in visitor to a
+ * path that does not exist. So percent-escapes are decoded before anything is
+ * judged and the ASCII form is produced from that — a lone `%` first standing in
+ * for itself, since it is a literal the previous pass would have escaped. An
+ * escape therefore cannot smuggle a byte past the rules above, because they all
+ * read the decoded path, and it cannot manufacture an authority either, because
+ * the value must already be relative before a single escape is decoded.
  */
 export function confineSiteRelativePath(value: unknown): string | null {
   if (typeof value !== "string") return null;
-  const path = value.trim();
+  const raw = value.trim();
+  if (!raw.startsWith("/") || raw.startsWith("//")) return null;
+  let path: string;
+  try {
+    path = decodeURIComponent(raw.replace(/%(?![0-9A-Fa-f]{2})/g, "%25"));
+  } catch {
+    return null;
+  }
   if (!path.startsWith("/")) return null;
   if (path.startsWith("//") || path.includes("\\") || /\s/.test(path)) return null;
   for (const char of path) {

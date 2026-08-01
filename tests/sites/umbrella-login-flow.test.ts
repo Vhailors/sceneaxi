@@ -25,6 +25,13 @@ describe("resolveLoginDestination", () => {
     expect(resolveLoginDestination("/café/💥")).toBe("/caf%C3%A9/%F0%9F%92%A5");
   });
 
+  it("survives the form round trip, which confines the same value twice", () => {
+    for (const requested of ["/editor", "/editor?objects=3", "/café/💥"]) {
+      const carried = resolveLoginDestination(requested);
+      expect(resolveLoginDestination(carried)).toBe(carried);
+    }
+  });
+
   it("falls back to the default for anything that could leave this site", () => {
     for (const hostile of [
       undefined,

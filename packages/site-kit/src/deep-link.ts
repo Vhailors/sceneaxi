@@ -149,6 +149,44 @@ export function resolveFamilyLinks(
   });
 }
 
+export type UmbrellaOriginConfiguration = {
+  /**
+   * Whether the deployment supplied the variable at all, independent of whether
+   * what it supplied is usable.
+   */
+  readonly supplied: boolean;
+  /** The resolved origin, or the refusal naming why it cannot be used. */
+  readonly origin: SiteResult<string>;
+};
+
+/**
+ * Read the umbrella's configured origin, keeping "not supplied" and "supplied but
+ * unusable" apart.
+ *
+ * Most callers only need the resolved origin and use `resolveUmbrellaEditorOrigin`
+ * below. The distinction exists for the surfaces that must treat a *misconfigured*
+ * deployment differently from an unconfigured one — a state-changing form may fall
+ * back to the request's own origin only when nothing was configured, since falling
+ * back on a malformed value would accept submissions aimed at an alias host. That
+ * rule needs the env name to have exactly one reader, which is this function: a
+ * second reader elsewhere would silently stop matching if the name or precedence
+ * here ever changed.
+ */
+export function resolveUmbrellaOriginConfiguration(
+  env: Readonly<Record<string, string | undefined>>,
+): UmbrellaOriginConfiguration {
+  const configured = env["NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN"] ?? "";
+  const probe = buildEditorDeepLink({
+    umbrellaOrigin: configured,
+    source: "catalog-game",
+    itemId: "origin-probe",
+  });
+  return Object.freeze({
+    supplied: isNonEmptyString(configured),
+    origin: probe.ok ? ok(new URL(configured).origin) : probe,
+  });
+}
+
 /**
  * Resolve the umbrella origin the editor deep links point at, from the server environment.
  *
@@ -159,13 +197,7 @@ export function resolveFamilyLinks(
 export function resolveUmbrellaEditorOrigin(
   env: Readonly<Record<string, string | undefined>>,
 ): SiteResult<string> {
-  const origin = env["NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN"] ?? "";
-  const probe = buildEditorDeepLink({
-    umbrellaOrigin: origin,
-    source: "catalog-game",
-    itemId: "origin-probe",
-  });
-  return probe.ok ? ok(new URL(origin).origin) : probe;
+  return resolveUmbrellaOriginConfiguration(env).origin;
 }
 
 /**

@@ -151,6 +151,27 @@ describe("describeSiteAccessState", () => {
     }
   });
 
+  it("confines an already-confined destination to itself", () => {
+    for (const destination of [
+      "/editor",
+      "/editor?objects=3",
+      "/café/💥",
+      "/percent%sign",
+      "/a%2Fb",
+    ]) {
+      const once = confineSiteRelativePath(destination);
+      expect(once).not.toBeNull();
+      expect(confineSiteRelativePath(once)).toBe(once);
+    }
+  });
+
+  it("judges an escaped destination by what it decodes to", () => {
+    expect(confineSiteRelativePath("/%2F%2Fevil.example")).toBeNull();
+    expect(confineSiteRelativePath("/line%0Abreak")).toBeNull();
+    expect(confineSiteRelativePath("/path%5Csegment")).toBeNull();
+    expect(confineSiteRelativePath("%2Fevil.example")).toBeNull();
+  });
+
   it("falls back to a named state carrying the registry's own message", () => {
     const state = describeSiteAccessState("CATALOG_ITEM_NOT_FOUND");
     expect(state.key).toBe("refused");

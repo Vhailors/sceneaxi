@@ -21,7 +21,7 @@ import {
   clearSiteSessionCookie,
   confineSiteRelativePath,
   resolveSiteSessionCookieSecurity,
-  resolveUmbrellaEditorOrigin,
+  resolveUmbrellaOriginConfiguration,
   refuse,
   verifySiteFormOrigin,
   type SiteFormOriginSignals,
@@ -48,7 +48,7 @@ export function resolveSessionCookieSecurity(
     readonly requestUrl?: string | null | undefined;
   } = {},
 ): boolean {
-  const configured = resolveUmbrellaEditorOrigin(env);
+  const configured = resolveUmbrellaOriginConfiguration(env).origin;
   return resolveSiteSessionCookieSecurity({
     configuredOrigin: configured.ok ? configured.value : null,
     forwardedProto: signals.forwardedProto,
@@ -65,20 +65,21 @@ export function resolveSessionCookieSecurity(
  * result is passed into `performLogin` / `performLogout` as a required argument
  * rather than checked inside a route handler, because a check a route performs
  * is a check the next route can forget.
+ *
+ * A deployment that configured an origin gets no fallback: `verifySiteFormOrigin`
+ * falls back to the request's own origin when none is configured, which is what
+ * keeps localhost development working, but doing that for a *malformed* configured
+ * value would quietly accept sign-ins aimed at an alias host on exactly the
+ * deployment whose configuration is broken. So a supplied-but-unusable origin
+ * refuses here, using site-kit's own supplied-versus-usable answer rather than a
+ * second reading of the environment.
  */
 export function verifyLoginRequestOrigin(
   env: Readonly<Record<string, string | undefined>>,
   signals: Omit<SiteFormOriginSignals, "configuredOrigin"> = {},
 ): SiteResult<string> {
-  const configured = resolveUmbrellaEditorOrigin(env);
-  const configuredValue = env["NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN"];
-  if (
-    typeof configuredValue === "string" &&
-    configuredValue.trim().length > 0 &&
-    !configured.ok
-  ) {
-    return refuse("SITE_REQUEST_CROSS_ORIGIN");
-  }
+  const { supplied, origin: configured } = resolveUmbrellaOriginConfiguration(env);
+  if (supplied && !configured.ok) return refuse("SITE_REQUEST_CROSS_ORIGIN");
   return verifySiteFormOrigin({
     configuredOrigin: configured.ok ? configured.value : null,
     origin: signals.origin,
