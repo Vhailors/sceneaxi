@@ -160,7 +160,9 @@ Real Better Auth login into the entitled editor, over the existing identity plan
   `createAuthLoginAdapter` over the deployment's `IdentityPort` handle — and answers
   with a 303 plus the one HttpOnly `sceneaxi.session` cookie, whose lifetime is the
   session's own. `POST /api/logout` deletes the stored session through the same port
-  and clears the cookie unconditionally.
+  and clears the cookie unconditionally — unconditionally about *this* browser's own
+  request, since a submission that fails the origin proof below is refused before the
+  port is reached and nothing is revoked or cleared from it.
 - Both endpoints refuse a submission that cannot prove it came from these pages
   (`SITE_REQUEST_CROSS_ORIGIN`, decided by site-kit's `verifySiteFormOrigin` through
   `verifyLoginRequestOrigin`). `SameSite=Lax` does not cover this: a sign-in POST carries
