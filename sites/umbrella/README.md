@@ -221,13 +221,17 @@ clean builder must provision both roots (`docs/websites-deploy.md`).
 `@sceneaxi/billing`, and maps their named refusals onto the site refusal registry. It
 implements no identity, no ledger, and no signature check of its own.
 
-The credit-pack list and admin resolution are live on any deployment — the pack catalog
-is read from a bundled module rather than a file, so it survives serverless output
-tracing. `provider-adapters.ts` maps deployment-owned Better Auth, Neon, and Stripe TEST
-clients onto the existing `@sceneaxi/auth` and `@sceneaxi/billing` seams. Handles arrive
-through `umbrellaPlaneHandles()`; absent configuration still refuses with named reasons
-rather than showing an invented session, account, balance, or checkout. Account
-provisioning is an idempotent user-plus-credit-account insert at authentication, which
+The credit-pack list is live on any deployment — the pack catalog is read from a bundled
+module rather than a file, so it survives serverless output tracing.
+`provider-adapters.ts` maps deployment-owned Better Auth, Neon, and Stripe TEST clients
+onto the existing `@sceneaxi/auth` and `@sceneaxi/billing` seams. The no-argument
+`umbrellaPlaneHandles()` resolves and holds the deployment's one admin witness, provider
+handles, and secret-backed webhook capability. Request planes accept only a carried
+session credential, and the webhook route accepts only raw bytes plus the signature
+header; neither can replace the deployment authority. Absent configuration still refuses
+with named reasons rather than showing an invented session, account, balance, or
+checkout. Account provisioning is an idempotent user-plus-credit-account insert at
+authentication, which
 reconciles the provider-owned address and verification state each time, never a
 payment-event side effect. The Better Auth client reads the session back from
 `GET /api/auth/get-session`, sending both the issued session cookie and the issued bearer

@@ -20,7 +20,6 @@ import {
 import {
   applyCreditPackWebhook,
   createBetterAuthHttpClient,
-  createDeploymentPlaneHandles,
   createNeonCheckoutIntentStore,
   createNeonCreditStore,
   createNeonDatabase,
@@ -35,6 +34,7 @@ import {
   type SqlRow,
   type StripeClientLike,
 } from "../../sites/umbrella/src/index.ts";
+import { createDeploymentPlaneHandles } from "../../sites/umbrella/src/lib/identity-plane.ts";
 
 const NOW = Date.parse("2026-07-26T12:00:00.000Z");
 const iso = (offset: number) => new Date(NOW + offset).toISOString();
@@ -274,11 +274,52 @@ const authProvider: BetterAuthInstanceLike = {
   },
 };
 
+function issuedAdmin(email: string) {
+  const result = resolveAdminIdentity({ SCENEAXI_ADMIN_EMAIL: email });
+  if (!result.ok) throw new Error(`fixture admin unresolved: ${result.reason}`);
+  return result.value;
+}
+
 describe("umbrella deployment provider adapters", () => {
+  it("builds hermetically from typed evidence without reading env or a network default", () => {
+    const options = {
+      admin: issuedAdmin("captain@example.com"),
+      providers: { database: createDatabase(false).database, betterAuth: authProvider },
+      clock: () => NOW,
+    };
+    Object.defineProperty(options, "env", {
+      get() {
+        throw new Error("the hermetic builder read a caller environment");
+      },
+    });
+
+    const fetchDescriptor = Object.getOwnPropertyDescriptor(globalThis, "fetch");
+    Object.defineProperty(globalThis, "fetch", {
+      configurable: true,
+      get() {
+        throw new Error("the hermetic builder read the ambient network transport");
+      },
+    });
+    try {
+      const handles = createDeploymentPlaneHandles(options);
+      expect(handles.identityPort).toBeDefined();
+      expect(handles.admin).toBe(options.admin);
+      expect(String(createDeploymentPlaneHandles)).not.toMatch(
+        /process\.env|providerFetch|createNeonDatabase|createStripeClient/,
+      );
+    } finally {
+      if (fetchDescriptor === undefined) {
+        Reflect.deleteProperty(globalThis, "fetch");
+      } else {
+        Object.defineProperty(globalThis, "fetch", fetchDescriptor);
+      }
+    }
+  });
+
   it("provisions one account with the SceneAxi user exactly once at authentication", async () => {
     const fixture = createDatabase(false);
     const handles = createDeploymentPlaneHandles({
-      env: { SCENEAXI_ADMIN_EMAIL: "captain@example.com" },
+      admin: issuedAdmin("captain@example.com"),
       providers: { database: fixture.database, betterAuth: authProvider },
       clock: () => NOW,
     });
@@ -338,7 +379,7 @@ describe("umbrella deployment provider adapters", () => {
       },
     };
     const handles = createDeploymentPlaneHandles({
-      env: { SCENEAXI_ADMIN_EMAIL: "captain@example.com" },
+      admin: issuedAdmin("captain@example.com"),
       providers: { database: fixture.database, betterAuth: mutableProvider },
       clock: () => NOW,
     });
@@ -403,7 +444,6 @@ describe("umbrella deployment provider adapters", () => {
   it("maps provider rows to identity sessions and preserves the token digest boundary", async () => {
     const fixture = createDatabase();
     const store = createDeploymentPlaneHandles({
-      env: {},
       providers: { database: fixture.database },
     }).creditStore;
     expect(store).toBeDefined();
@@ -502,7 +542,6 @@ describe("umbrella deployment provider adapters", () => {
   it("grants the starter and spends through the Neon store's append-or-replay boundary", async () => {
     const fixture = createDatabase();
     const handles = createDeploymentPlaneHandles({
-      env: {},
       providers: { database: fixture.database },
       clock: () => NOW,
     });
@@ -557,7 +596,6 @@ describe("umbrella deployment provider adapters", () => {
     if (!principal.ok) return;
 
     const plane = createDeploymentPlaneHandles({
-      env: {},
       providers: { database: fixture.database },
       clock: () => NOW,
     });
@@ -709,7 +747,6 @@ describe("umbrella deployment provider adapters", () => {
       },
     } satisfies StripeClientLike;
     const handles = createDeploymentPlaneHandles({
-      env: {},
       providers: { database: fixture.database, stripe },
     });
     const checkout = handles.checkoutSessions;
@@ -781,8 +818,14 @@ describe("umbrella deployment provider adapters", () => {
   });
 
   it("fails closed when the deployment has no Neon provider", () => {
-    const handles = createDeploymentPlaneHandles({ env: {} });
-    expect(handles).toEqual({});
+    const admin = issuedAdmin("captain@example.com");
+    const handles = createDeploymentPlaneHandles({ admin });
+    expect(handles.admin).toBe(admin);
+    expect(handles.billingMode).toBe("test");
+    expect(handles.identityPort).toBeUndefined();
+    expect(handles.creditStore).toBeUndefined();
+    expect(handles.checkoutSessions).toBeUndefined();
+    expect(handles.checkoutEvidence).toBeUndefined();
   });
 
   it("echoes Stripe's retrieved session id so the core parser owns mismatch refusal", async () => {

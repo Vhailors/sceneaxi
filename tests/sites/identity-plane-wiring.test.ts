@@ -11,7 +11,7 @@
  * produced by `signStripeWebhookPayload` (the same construction the verifier checks), and
  * the billing mode is never `live`.
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   createIdentityPort,
@@ -34,7 +34,7 @@ import {
 import {
   CREDIT_WEBHOOK_REASONS,
   applyCreditPackWebhook,
-  createUmbrellaIdentityPlane,
+  createUmbrellaIdentityPlane as createIdentityPlaneForTest,
   creditWebhookHttpStatus,
   parseSessionToken,
   performLogin,
@@ -133,6 +133,23 @@ const adminWorld = () =>
   );
 
 const ENV = Object.freeze({ SCENEAXI_ADMIN_EMAIL: ADMIN_EMAIL });
+const TEST_ADMIN = (() => {
+  const result = resolveAdminIdentity(ENV);
+  if (!result.ok) throw new Error(`fixture admin unresolved: ${result.reason}`);
+  return result.value;
+})();
+
+/**
+ * Tests supply already-issued evidence to the hermetic plane builder. The production
+ * routes do not have this seam: they use the no-argument deployment capability registry.
+ */
+function createUmbrellaIdentityPlane(
+  env: Readonly<Record<string, string | undefined>> = {},
+  wiring: Parameters<typeof createIdentityPlaneForTest>[1] = {},
+) {
+  const admin = env["SCENEAXI_ADMIN_EMAIL"] === ADMIN_EMAIL ? TEST_ADMIN : null;
+  return createIdentityPlaneForTest(env, { ...wiring, admin: wiring.admin ?? admin });
+}
 
 describe("acceptance 1 — admin env login on the umbrella", () => {
   it("resolves the admin role for the session whose user the env names", async () => {
@@ -142,7 +159,6 @@ describe("acceptance 1 — admin env login on the umbrella", () => {
       clock,
     });
     expect(plane.wired.identity).toBe(true);
-    expect(plane.admin?.email).toBe(ADMIN_EMAIL);
 
     const resolved = await plane.identity.resolvePrincipal({ surface: "site" });
     expect(resolved.ok).toBe(true);
@@ -177,7 +193,6 @@ describe("acceptance 1 — admin env login on the umbrella", () => {
         clock,
       },
     );
-    expect(plane.admin).toBeNull();
     expect(await plane.identity.resolvePrincipal({ surface: "site" })).toMatchObject({
       ok: false,
       reason: "IDENTITY_PLANE_NOT_WIRED",
@@ -1505,7 +1520,6 @@ describe("acceptance 5 — an unwired deployment refuses by name", () => {
       billing: false,
       login: false,
     });
-    expect(plane.admin).toBeNull();
     expect(await plane.identity.resolvePrincipal({ surface: "site" })).toMatchObject({
       ok: false,
       reason: "IDENTITY_PLANE_NOT_WIRED",
@@ -1628,14 +1642,62 @@ describe("acceptance 5 — an unwired deployment refuses by name", () => {
 });
 
 describe("acceptance 6 — no secret, no live mode, no Kids", () => {
-  it("keeps the deployment handle registry empty in-repo, per ADR 0021", async () => {
-    // Nothing in this repository constructs a Neon, Better Auth, or Stripe client, so
-    // a plane built with no explicit wiring is unwired for identity and checkout.
-    const plane = createUmbrellaIdentityPlane({ SCENEAXI_ADMIN_EMAIL: ADMIN_EMAIL });
+  it("does not turn a caller-supplied environment into deployment authority", async () => {
+    // The pure builder may still receive non-authority configuration such as billing
+    // mode, but a caller-shaped admin env no longer mints or exposes admin evidence.
+    const plane = createIdentityPlaneForTest({ SCENEAXI_ADMIN_EMAIL: ADMIN_EMAIL });
     expect(plane.wired.identity).toBe(false);
     expect(plane.wired.billing).toBe(false);
-    // The admin *name* is env-derived and needs no provider, so it does resolve.
-    expect(plane.admin?.email).toBe(ADMIN_EMAIL);
+    expect("admin" in plane).toBe(false);
+  });
+
+  it("keeps production routes on the no-argument deployment capability boundary", () => {
+    const identitySource = readFileSync(
+      new URL("../../sites/umbrella/src/lib/identity-plane.ts", import.meta.url),
+      "utf8",
+    );
+    expect(identitySource).toMatch(/export function umbrellaPlaneHandles\(\)/);
+    expect(identitySource).toMatch(
+      /export function createUmbrellaDeploymentPlane\([\s\S]*umbrellaPlaneHandles\(\)/,
+    );
+
+    for (const path of [
+      "../../sites/umbrella/src/app/api/login/route.ts",
+      "../../sites/umbrella/src/app/api/logout/route.ts",
+      "../../sites/umbrella/src/app/api/checkout/route.ts",
+      "../../sites/umbrella/src/app/account/page.tsx",
+      "../../sites/umbrella/src/app/editor/page.tsx",
+      "../../sites/umbrella/src/app/login/page.tsx",
+      "../../sites/umbrella/src/app/pricing/page.tsx",
+    ]) {
+      const source = readFileSync(new URL(path, import.meta.url), "utf8");
+      expect(source).toContain("createUmbrellaDeploymentPlane");
+      expect(source).not.toContain("createUmbrellaIdentityPlane");
+      expect(source).not.toContain("resolveAdminIdentity");
+    }
+
+    const webhookRoute = readFileSync(
+      new URL("../../sites/umbrella/src/app/api/stripe/webhook/route.ts", import.meta.url),
+      "utf8",
+    );
+    expect(webhookRoute).toContain("umbrellaPlaneHandles()");
+    expect(webhookRoute).toContain("creditWebhook.apply(");
+    expect(webhookRoute).not.toMatch(
+      /process\.env|STRIPE_WEBHOOK_SECRET_ENV|applyCreditPackWebhook|\bsecret\s*:|\bstore\s*:|\bevidence\s*:/,
+    );
+  });
+
+  it("keeps environment and provider I/O out of the hermetic auth and billing roots", () => {
+    const sources = ["auth", "billing"].flatMap((name) => {
+      const directory = new URL(`../../packages/${name}/src/`, import.meta.url);
+      return readdirSync(directory)
+        .filter((entry) => entry.endsWith(".ts"))
+        .map((entry) => readFileSync(new URL(entry, directory), "utf8"));
+    });
+    const source = sources.join("\n");
+    expect(source).not.toMatch(/\bprocess\.env(?:\.|\[)/);
+    expect(source).not.toMatch(/from\s+["'](?:stripe|@neondatabase\/serverless)["']/);
+    expect(source).not.toMatch(/\bfetch\s*\(/);
   });
 
   it("never mints or accepts a Kids session on any site plane", async () => {

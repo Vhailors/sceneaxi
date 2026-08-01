@@ -82,14 +82,27 @@ describe("sites tier — injected violations", () => {
   );
 
   it.each(["@sceneaxi/auth", "@sceneaxi/billing"])(
-    "boundary check allows the umbrella's charted identity edge — %s",
+    "boundary check allows the umbrella's charted identity edge through its plug point — %s",
     (allowed) => {
-      // sceneaxi#131: the umbrella is the one site wired to the identity plane, so
-      // these two edges must pass. Asserted beside the catalog denials below so the
-      // widening and its bound are proven together rather than separately.
-      appendTo(fx, "sites/umbrella/src/index.ts", `\nimport "${allowed}";\n`);
+      // sceneaxi#131: the umbrella is the one site wired to the identity plane, but
+      // the edge terminates in the deployment-owned lib boundary. Asserted beside
+      // the request-surface denials below so the widening and its bound are proven
+      // together rather than separately.
+      appendTo(fx, "sites/umbrella/src/lib/identity-plane.ts", `\nimport "${allowed}";\n`);
       const res = runCheck(fx, "check-boundaries.mjs");
       expect(res.status, `stderr: ${res.stderr}`).toBe(0);
+    },
+  );
+
+  it.each(["@sceneaxi/auth", "@sceneaxi/billing"])(
+    "boundary check denies a request route taking caller-facing authority through %s",
+    (denied) => {
+      appendTo(fx, "sites/umbrella/src/app/api/login/route.ts", `\nimport "${denied}";\n`);
+      const res = runCheck(fx, "check-boundaries.mjs");
+      expect(res.status).toBe(1);
+      expect(res.stderr).toContain(
+        `imports ${denied} outside the deployment-owned lib boundary`,
+      );
     },
   );
 

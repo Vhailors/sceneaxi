@@ -108,6 +108,11 @@ const walk = (dir, out = []) => {
 const TESTING_SUBPATH_SEGMENT = "testing";
 const isTestingSubpath = (spec) =>
   spec.startsWith("@sceneaxi/") && spec.split("/")[2] === TESTING_SUBPATH_SEGMENT;
+const UMBRELLA_IDENTITY_PACKAGES = new Set(["@sceneaxi/auth", "@sceneaxi/billing"]);
+const isUmbrellaRequestSurface = (file) => {
+  const path = relative(root, file).split(sep).join("/");
+  return path === "sites/umbrella/src/index.ts" || path.startsWith("sites/umbrella/src/app/");
+};
 // Path-segment containment via relative(), never raw startsWith, so a sibling directory
 // whose name merely begins with "testing" is not treated as inside it.
 const contains = (parent, candidate) => {
@@ -128,6 +133,15 @@ for (const [name, { dir }] of manifests) {
         const target = spec.split("/").slice(0, 2).join("/");
         if (!allow.has(target)) {
           fail(`${name}: ${relative(root, file)} imports ${target}, DENIED by the matrix`);
+        }
+        if (
+          name === "@sceneaxi/site-umbrella" &&
+          UMBRELLA_IDENTITY_PACKAGES.has(target) &&
+          isUmbrellaRequestSurface(file)
+        ) {
+          fail(
+            `${name}: ${relative(root, file)} imports ${target} outside the deployment-owned lib boundary — routes, pages, components, and the root barrel may not name the identity plane directly`,
+          );
         }
         if (isTestingSubpath(spec)) {
           fail(`${name}: ${relative(root, file)} imports test-only subpath ${spec} — production source may not reach a testing/ seam`);

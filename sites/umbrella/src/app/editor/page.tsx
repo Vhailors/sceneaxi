@@ -7,7 +7,7 @@ import {
   webEditorStarterArtifact,
   type SearchParams,
 } from "@sceneaxi/site-kit";
-import { createUmbrellaIdentityPlane } from "../../lib/identity-plane.js";
+import { createUmbrellaDeploymentPlane } from "../../lib/identity-plane.js";
 import { EDITOR_VIEWPORT_COPY } from "../../lib/editor-viewport.js";
 import { resolveUmbrellaEditorAccess } from "../../lib/site-config.js";
 import { readSessionToken } from "../_session.js";
@@ -38,7 +38,7 @@ export default async function EditorPage({
 }) {
   const params = await searchParams;
   const sessionToken = await readSessionToken();
-  const plane = createUmbrellaIdentityPlane(process.env, { sessionToken });
+  const plane = createUmbrellaDeploymentPlane({ sessionToken });
   const resolved = await resolveUmbrellaEditorAccess({ plane, env: process.env, sessionToken });
 
   if (!resolved.decision.granted) {
