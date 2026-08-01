@@ -60,7 +60,7 @@ import {
   verifyStripeWebhookSignature,
   type CheckoutSettlement,
   type CreditStore,
-} from "@sceneaxi/billing";
+} from "./provider-adapters.js";
 
 /** The header Stripe signs every webhook body with. */
 export const STRIPE_SIGNATURE_HEADER = "stripe-signature" as const;

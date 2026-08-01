@@ -154,13 +154,14 @@ surface status by [`docs/websites-deploy.md`](../websites-deploy.md).
 
 The sceneaxi#126 runtime witnesses remain unchanged, including their low-level public
 constructors for hermetic hosts. The umbrella does not treat caller-configured use of
-those constructors as deployment authority. Its no-argument `umbrellaPlaneHandles()`
-plug point alone reads the server environment, resolves and holds the single admin
-identity, and closes the Stripe webhook secret, store, evidence adapter, and clock into a
-`CreditWebhookCapability`. Identity, checkout, login, and page routes consume the
-resulting request plane; the webhook route supplies only raw bytes and the signature
-header. No route accepts an admin issuer, environment object, webhook secret, provider
-client, or clock.
+those constructors as deployment authority. Its no-argument
+`umbrellaRequestAuthority()` facade alone exposes the deployment-owned capability to
+request code. Behind it, `identity-plane.ts` reads the server environment once, resolves
+and holds the single admin identity, and closes the Stripe webhook secret, store,
+evidence adapter, and clock into a `CreditWebhookCapability`. Identity, checkout, login,
+and page routes may supply only a carried session credential; the webhook route may
+supply only raw bytes and the signature header. The boundary checker denies routes, the
+root barrel, and arbitrary library modules from importing the owner modules directly.
 
 This narrows the hosted boundary without changing the decision above: core still owns
 single-admin derivation and webhook signature verification, provider clients and secrets

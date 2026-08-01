@@ -1693,9 +1693,19 @@ describe("acceptance 6 — no secret, no live mode, no Kids", () => {
       new URL("../../sites/umbrella/src/lib/identity-plane.ts", import.meta.url),
       "utf8",
     );
+    const requestAuthoritySource = readFileSync(
+      new URL("../../sites/umbrella/src/lib/request-authority.ts", import.meta.url),
+      "utf8",
+    );
     expect(identitySource).toMatch(/export function umbrellaPlaneHandles\(\)/);
-    expect(identitySource).toMatch(
-      /export function createUmbrellaDeploymentPlane\([\s\S]*umbrellaPlaneHandles\(\)/,
+    expect(requestAuthoritySource).toMatch(
+      /export function umbrellaRequestAuthority\(\)[\s\S]*const deployment = umbrellaPlaneHandles\(\)/,
+    );
+    expect(
+      [...requestAuthoritySource.matchAll(/^export function (\w+)/gm)].map((match) => match[1]),
+    ).toEqual(["umbrellaRequestAuthority"]);
+    expect(requestAuthoritySource).not.toMatch(
+      /process\.env|resolveAdminIdentity|STRIPE_WEBHOOK_SECRET_ENV|\bsecret\s*:|\bstore\s*:|\bevidence\s*:/,
     );
 
     for (const path of [
@@ -1708,7 +1718,8 @@ describe("acceptance 6 — no secret, no live mode, no Kids", () => {
       "../../sites/umbrella/src/app/pricing/page.tsx",
     ]) {
       const source = readFileSync(new URL(path, import.meta.url), "utf8");
-      expect(source).toContain("createUmbrellaDeploymentPlane");
+      expect(source).toContain("umbrellaRequestAuthority");
+      expect(source).not.toContain("/identity-plane.js");
       expect(source).not.toContain("createUmbrellaIdentityPlane");
       expect(source).not.toContain("resolveAdminIdentity");
     }
@@ -1717,8 +1728,9 @@ describe("acceptance 6 — no secret, no live mode, no Kids", () => {
       new URL("../../sites/umbrella/src/app/api/stripe/webhook/route.ts", import.meta.url),
       "utf8",
     );
-    expect(webhookRoute).toContain("umbrellaPlaneHandles()");
-    expect(webhookRoute).toContain("creditWebhook.apply(");
+    expect(webhookRoute).toContain("umbrellaRequestAuthority().applyCreditWebhook(");
+    expect(webhookRoute).not.toContain("/identity-plane.js");
+    expect(webhookRoute).not.toContain("/credit-webhook.js");
     expect(webhookRoute).not.toMatch(
       /process\.env|STRIPE_WEBHOOK_SECRET_ENV|applyCreditPackWebhook|\bsecret\s*:|\bstore\s*:|\bevidence\s*:/,
     );

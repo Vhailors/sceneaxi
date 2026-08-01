@@ -2,8 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import {
   STRIPE_SIGNATURE_HEADER,
   creditWebhookHttpStatus,
-} from "../../../../lib/credit-webhook.js";
-import { umbrellaPlaneHandles } from "../../../../lib/identity-plane.js";
+  umbrellaRequestAuthority,
+} from "../../../../lib/request-authority.js";
 
 /**
  * The Stripe credit-pack webhook endpoint.
@@ -28,20 +28,7 @@ import { umbrellaPlaneHandles } from "../../../../lib/identity-plane.js";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
-  const { creditWebhook } = umbrellaPlaneHandles();
-  if (creditWebhook === undefined) {
-    return NextResponse.json(
-      {
-        ok: false,
-        reason: "CREDITS_PLANE_NOT_WIRED",
-        message:
-          "No deployment-owned webhook capability is wired, so a paid event cannot be verified or settled. Nothing was granted.",
-      },
-      { status: 503 },
-    );
-  }
-
-  const outcome = await creditWebhook.apply({
+  const outcome = await umbrellaRequestAuthority().applyCreditWebhook({
     payload: await request.text(),
     signatureHeader: request.headers.get(STRIPE_SIGNATURE_HEADER),
   });
@@ -49,7 +36,12 @@ export async function POST(request: NextRequest) {
   if (!outcome.ok) {
     return NextResponse.json(
       { ok: false, reason: outcome.reason, message: outcome.message },
-      { status: creditWebhookHttpStatus(outcome.reason) },
+      {
+        status:
+          outcome.reason === "CREDITS_PLANE_NOT_WIRED"
+            ? 503
+            : creditWebhookHttpStatus(outcome.reason),
+      },
     );
   }
   if (outcome.ignored) {

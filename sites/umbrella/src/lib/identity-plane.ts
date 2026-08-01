@@ -940,7 +940,7 @@ export function createUmbrellaIdentityPlane(
   const clock = wiring.clock ?? deployment?.clock ?? (() => Date.now());
   const admin = wiring.admin === undefined ? (deployment?.admin ?? null) : wiring.admin;
   // Explicit wiring wins over the supplied capability registry. This pure builder never
-  // reaches for ambient deployment state; production uses createUmbrellaDeploymentPlane.
+  // reaches for ambient deployment state; production uses umbrellaRequestAuthority.
   const deploymentHandle = <Key extends keyof UmbrellaPlaneHandles>(
     key: Key,
   ): UmbrellaPlaneHandles[Key] | undefined => {
@@ -1059,28 +1059,6 @@ export function createUmbrellaIdentityPlane(
     }),
     billingMode,
   });
-}
-
-export type UmbrellaDeploymentRequest = Readonly<{
-  readonly sessionToken?: string | null | undefined;
-}>;
-
-/**
- * Build one request plane from the deployment-owned capability registry.
- *
- * The request may supply only its carried session credential. It cannot replace the
- * admin evidence, provider clients, stores, clock, billing mode, or webhook authority.
- */
-export function createUmbrellaDeploymentPlane(
-  request: UmbrellaDeploymentRequest = {},
-): UmbrellaIdentityPlane {
-  return createUmbrellaIdentityPlane(
-    {},
-    {
-      deployment: umbrellaPlaneHandles(),
-      ...(request.sessionToken === undefined ? {} : { sessionToken: request.sessionToken }),
-    },
-  );
 }
 
 /** Where a reader is sent when a plane is unwired. */

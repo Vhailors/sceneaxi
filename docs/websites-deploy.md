@@ -74,7 +74,7 @@ set them *before* deploying and redeploy after changing one.
 | `SCENEAXI_ADMIN_EMAIL` | umbrella | captain | admin sign-in | sole admin identity, resolved by `@sceneaxi/auth` only inside the deployment plug point; no route accepts an override |
 | `SCENEAXI_ADMIN_BOOTSTRAP_SECRET` | umbrella | captain | first admin sign-in | provider-owned first-run credential material; env-secret bootstrap only, never a role source or core input |
 | `STRIPE_SECRET_KEY` | umbrella | captain | credit-pack checkout | **TEST** key (`sk_test_…`) only in this wave |
-| `STRIPE_WEBHOOK_SECRET` | umbrella | captain | credit grants | signing secret held by the deployment-owned `CreditWebhookCapability` behind `umbrellaPlaneHandles()`; the route never reads or accepts it. Verification remains owned by `@sceneaxi/billing`. Absent means `STRIPE_WEBHOOK_SECRET_MISSING` and `503`, never acceptance |
+| `STRIPE_WEBHOOK_SECRET` | umbrella | captain | credit grants | signing secret held by the deployment-owned `CreditWebhookCapability` behind `umbrellaRequestAuthority()`; the route never reads or accepts it. Verification remains owned by `@sceneaxi/billing`. Absent means `STRIPE_WEBHOOK_SECRET_MISSING` and `503`, never acceptance |
 | `SCENEAXI_BILLING_MODE` | umbrella | this ship | optional | `test` when unset; `live` still refuses without explicit live authorization |
 | `SCENEAXI_STRIPE_LIVE_AUTHORIZED` | umbrella | captain | **nothing today** | the single, explicitly named source of live-mode authorization (captain decision D5). Format `live-mode-authorized:<email>:<YYYY-MM-DD>` — it names who authorized live mode and when, so switching to live is an auditable act; anything else, including `true`, authorizes nothing. A second spelling (`STRIPE_LIVE_MODE_AUTHORIZED`, `SCENEAXI_STRIPE_LIVE_AUTHORIZATIONS`, …) refuses **by its presence alone**. **Do not set it:** no shipped call site reads it, live activation is a separate captain decision (ADR 0021), and setting it would grant nothing while suggesting otherwise. Contract: `docs/auth-credits.md` |
 | `NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN` | all three | this ship | editor deep links, checkout redirects, hosted sign-in | https `*.vercel.app` umbrella origin; a missing or non-https value makes the catalog refuse to render the link. On the umbrella it is also the **only** source of the checkout success/cancel URLs — they are never derived from the request's `Host`, and a checkout POST arriving on any other origin refuses `BILLING_CHECKOUT_ORIGIN_UNTRUSTED`. A missing or non-https value refuses `BILLING_CHECKOUT_ORIGIN_UNCONFIGURED` on that path — the umbrella must name one origin, so an alias domain or a per-build preview URL is not a checkout origin. It is also what decides the `Secure` attribute on the `sceneaxi.session` cookie (`resolveSessionCookieSecurity`), for the same reason: behind a TLS-terminating proxy the request the app sees is plain http, so an https origin here keeps the session credential off plaintext even when the incoming request does not look secure. Unconfigured, the flag falls back to `x-forwarded-proto` and then to the request itself, which is what lets `http://localhost` development work unchanged. Finally, it is the origin a sign-in or sign-out submission must come from (`verifyLoginRequestOrigin`): a value that is **supplied but unusable** — non-https, malformed, or whitespace-only — refuses every `POST /api/login` and `POST /api/logout` with `SITE_REQUEST_CROSS_ORIGIN` instead of falling back, because falling back on a broken configuration would accept submissions aimed at an alias host. Only an unconfigured deployment falls back to the request's own origin there, so a typo in this value reads as a deployment nobody can sign in to, never as a looser check |
@@ -237,7 +237,7 @@ ADR 0021 keeps the provider clients — Better Auth, the Neon client, the Stripe
 |---|---|---|
 | Credit-pack list on `/pricing` | **live** | read from the committed contract fixture's bundled module (`packages/schemas/src/credit-packs.data.ts`, held in lockstep by `pnpm check:contracts`); needs no provider and no traced file |
 | The **Buy** control on `/pricing` | posts to a real checkout once the TEST Stripe handle is configured, but only for a signed-in buyer | the adapter persists the intent before creating a card-only hosted checkout; with no session the POST refuses `IDENTITY_SESSION_ABSENT`, so a visitor signs in at `/login` first and the control refuses by name until then |
-| Admin identity (`SCENEAXI_ADMIN_EMAIL`) | **live as deployment evidence** | resolved by `@sceneaxi/auth` only inside `umbrellaPlaneHandles()` and held there; request routes cannot supply another environment or issuer |
+| Admin identity (`SCENEAXI_ADMIN_EMAIL`) | **live as deployment evidence** | resolved by `@sceneaxi/auth` only inside the deployment owner and held behind `umbrellaRequestAuthority()`; request routes cannot supply another environment or issuer |
 | Checkout intent, starter grant, webhook verification | **live as behaviour** | implemented in-repo and gate-tested |
 | Hosted sign-in on `/login` (`POST /api/login`, `POST /api/logout`) | **live as behaviour**; signs a member in once Better Auth + Neon are configured, and refuses `IDENTITY_PLANE_NOT_WIRED` until they are | the whole flow — form, named refusal states, HttpOnly `sceneaxi.session` cookie, sign-out — is in-repo and gate-tested ([#185](https://github.com/Vhailors/sceneaxi/issues/185)); it drives the same `IdentityPort` handle, so wiring step 4 activates it with no other change |
 | Session verification on `/account`, `/editor` | adapter live when Better Auth + Neon are configured | `verifySession` is wired, and authentication provisions the SceneAxi user and credit account idempotently; the `sessions` row is written by the sign-in above, and that same `IdentityPort` verifies the credential both surfaces read. Unwired they refuse `IDENTITY_PLANE_NOT_WIRED`, and a visitor with no cookie refuses `IDENTITY_SESSION_ABSENT` |
@@ -245,13 +245,15 @@ ADR 0021 keeps the provider clients — Better Auth, the Neon client, the Stripe
 | Hosted checkout redirect | live when the TEST Stripe handle is configured | the adapter uses the committed intent and TEST-only Stripe API call |
 | A signed-out visitor | refuses `IDENTITY_SESSION_ABSENT` | not a failure, and shown as "you are not signed in", with `/login` as the action that changes it |
 
-`umbrellaPlaneHandles()` in `identity-plane.ts` is the **single** place those handles
-arrive. It accepts no arguments, resolves deployment configuration once, and holds the
-admin witness plus the secret-backed webhook capability beside the provider handles.
-Every identity/billing route uses `createUmbrellaDeploymentPlane()`, whose only request
-input is the carried session credential; the webhook route can supply only raw bytes and
-the signature header. An absent or malformed provider remains absent, so each plane
-refuses by name rather than inventing a session, account, balance, or checkout.
+`identity-plane.ts` is the **single** place those handles arrive. It resolves deployment
+configuration once and holds the admin witness plus the secret-backed webhook capability
+beside the provider handles. Request code reaches it only through the no-argument
+`umbrellaRequestAuthority()` facade: identity and billing routes can supply only the
+carried session credential, and the webhook route can supply only raw bytes and the
+signature header. The boundary checker denies direct owner-module, provider-adapter, and
+root-barrel imports from routes or arbitrary library modules. An absent or malformed
+provider remains absent, so each plane refuses by name rather than inventing a session,
+account, balance, or checkout.
 
 Read the table as two separate facts. The provider adapters are wired and gate-tested, so
 configuring Better Auth, Neon, and the Stripe TEST key genuinely activates them; the
@@ -269,7 +271,7 @@ refuses by name instead of inventing a session.
 1. ~~Widen the `@sceneaxi/site-umbrella` allow list in `docs/dependency-matrix.json`.~~ Done.
 2. ~~Add both packages as `link:` dependencies and to `transpilePackages`.~~ Done.
 3. ~~Build the site-kit adapters over them in `identity-plane.ts`.~~ Done.
-4. `umbrellaPlaneHandles()` now returns the deployment capabilities and provider handles:
+4. The deployment owner now returns the capabilities and provider handles held behind `umbrellaRequestAuthority()`:
    the exact `AdminIdentity` issued from the one `SCENEAXI_ADMIN_EMAIL`, a secret-holding
    `CreditWebhookCapability`, an `IdentityPort`
    (`createIdentityPort` over the Neon-backed `IdentityStore` and Better Auth adapter), a
@@ -404,8 +406,8 @@ Load-bearing properties, each gate-tested in `tests/sites/identity-plane-wiring.
 - **The starter 100 credits are granted exactly once**, keyed `starter:<userId>` by the
   ledger, so the grant is safe to attempt on every balance read and a concurrent second
   reader cannot double it.
-- **Credits are granted only behind a deployment-owned verified webhook.** The route gets
-  a `CreditWebhookCapability` from `umbrellaPlaneHandles()` and supplies only raw bytes and
+- **Credits are granted only behind a deployment-owned verified webhook.** The route calls
+  `umbrellaRequestAuthority().applyCreditWebhook()` and supplies only raw bytes and
   the signature header; it never accepts a signing secret, evidence port, store, or clock.
   The capability drives `applyCreditPackWebhook`, and `applyCheckoutCompletedGrant`
   accepts only the output of `parseCheckoutCompletedEvent`, which accepts only the output
