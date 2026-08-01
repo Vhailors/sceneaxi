@@ -9,6 +9,7 @@
 import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import { join, dirname, resolve, relative, isAbsolute, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import ts from "typescript";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const errors = [];
@@ -90,7 +91,30 @@ for (const [name, { json }] of manifests) {
 }
 
 // --- source imports (import/export-from/require specifiers) ---
-const SPEC_RE = /(?:from\s+|require\s*\(\s*|import\s*\(\s*|^\s*import\s+)["']([^"']+)["']/gm;
+const staticImportSpecifiers = (file, text) => {
+  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
+  const specifiers = [];
+  const addStaticSpecifier = (node) => {
+    if (node !== undefined && ts.isStringLiteralLike(node)) specifiers.push(node.text);
+  };
+  const visit = (node) => {
+    if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
+      addStaticSpecifier(node.moduleSpecifier);
+    } else if (
+      ts.isImportEqualsDeclaration(node) &&
+      ts.isExternalModuleReference(node.moduleReference)
+    ) {
+      addStaticSpecifier(node.moduleReference.expression);
+    } else if (ts.isCallExpression(node)) {
+      const isDynamicImport = node.expression.kind === ts.SyntaxKind.ImportKeyword;
+      const isRequire = ts.isIdentifier(node.expression) && node.expression.text === "require";
+      if (isDynamicImport || isRequire) addStaticSpecifier(node.arguments[0]);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return specifiers;
+};
 const walk = (dir, out = []) => {
   for (const entry of readdirSync(dir)) {
     const p = join(dir, entry);
@@ -177,8 +201,7 @@ for (const [name, { dir }] of manifests) {
     const fromTesting = contains(testingDir, file);
     const fromModule = sourceModuleId(file);
     const text = readFileSync(file, "utf8");
-    for (const m of text.matchAll(SPEC_RE)) {
-      const spec = m[1];
+    for (const spec of staticImportSpecifiers(file, text)) {
       if (spec.startsWith("@sceneaxi/")) {
         const target = spec.split("/").slice(0, 2).join("/");
         if (!allow.has(target)) {
@@ -232,8 +255,8 @@ for (const [name, { json, dir }] of manifests) {
   const srcDir = join(dir, "src");
   if (existsSync(srcDir)) {
     for (const file of walk(srcDir)) {
-      for (const m of readFileSync(file, "utf8").matchAll(SPEC_RE)) {
-        const target = m[1].startsWith("@sceneaxi/") ? m[1].split("/").slice(0, 2).join("/") : null;
+      for (const spec of staticImportSpecifiers(file, readFileSync(file, "utf8"))) {
+        const target = spec.startsWith("@sceneaxi/") ? spec.split("/").slice(0, 2).join("/") : null;
         if (target && kidsSet.has(target)) {
           fail(`${name}: ${relative(root, file)} imports Kids package ${target} — Kids boundary violation`);
         }
