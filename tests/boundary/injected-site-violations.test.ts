@@ -178,6 +178,50 @@ describe("sites tier — injected violations", () => {
     );
   });
 
+  it("boundary check denies a constant-concatenated dynamic import of deployment authority", () => {
+    appendTo(
+      fx,
+      "sites/umbrella/src/app/api/login/route.ts",
+      '\nawait import("../../../lib/" + "identity-plane.js");\n',
+    );
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "sites/umbrella/src/app/api/login/route.ts imports deployment authority module sites/umbrella/src/lib/identity-plane outside the request-authority facade",
+    );
+  });
+
+  it("boundary check scans a JSX intermediary that re-exports deployment authority", () => {
+    writeTo(
+      fx,
+      "sites/umbrella/src/lib/authority-leak.jsx",
+      'export { createUmbrellaIdentityPlane } from "./identity-plane.js";\n',
+    );
+    appendTo(
+      fx,
+      "sites/umbrella/src/app/api/login/route.ts",
+      '\nimport { createUmbrellaIdentityPlane } from "../../../lib/authority-leak.jsx";\n',
+    );
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "sites/umbrella/src/lib/authority-leak.jsx imports deployment authority module sites/umbrella/src/lib/identity-plane outside the request-authority facade",
+    );
+  });
+
+  it("boundary check resolves a directory barrel that re-exports deployment authority", () => {
+    appendTo(
+      fx,
+      "sites/umbrella/src/app/api/login/route.ts",
+      '\nimport { createUmbrellaIdentityPlane } from "../../../";\n',
+    );
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "sites/umbrella/src/app/api/login/route.ts imports deployment authority module sites/umbrella/src/index outside the request-authority facade",
+    );
+  });
+
   it.each([
     ["catalog-game", "@sceneaxi/auth"],
     ["catalog-game", "@sceneaxi/billing"],

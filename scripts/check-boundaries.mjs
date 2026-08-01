@@ -94,8 +94,37 @@ for (const [name, { json }] of manifests) {
 const staticImportSpecifiers = (file, text) => {
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
   const specifiers = [];
+  const staticStringValue = (node) => {
+    if (node === undefined) return null;
+    if (ts.isStringLiteralLike(node)) return node.text;
+    if (
+      ts.isParenthesizedExpression(node) ||
+      ts.isAsExpression(node) ||
+      ts.isTypeAssertionExpression(node) ||
+      ts.isSatisfiesExpression(node) ||
+      ts.isNonNullExpression(node)
+    ) {
+      return staticStringValue(node.expression);
+    }
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.PlusToken) {
+      const left = staticStringValue(node.left);
+      const right = staticStringValue(node.right);
+      return left === null || right === null ? null : left + right;
+    }
+    if (ts.isTemplateExpression(node)) {
+      let value = node.head.text;
+      for (const span of node.templateSpans) {
+        const expression = staticStringValue(span.expression);
+        if (expression === null) return null;
+        value += expression + span.literal.text;
+      }
+      return value;
+    }
+    return null;
+  };
   const addStaticSpecifier = (node) => {
-    if (node !== undefined && ts.isStringLiteralLike(node)) specifiers.push(node.text);
+    const value = staticStringValue(node);
+    if (value !== null) specifiers.push(value);
   };
   const visit = (node) => {
     if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
@@ -115,11 +144,12 @@ const staticImportSpecifiers = (file, text) => {
   visit(source);
   return specifiers;
 };
+const SOURCE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"];
 const walk = (dir, out = []) => {
   for (const entry of readdirSync(dir)) {
     const p = join(dir, entry);
     if (statSync(p).isDirectory()) walk(p, out);
-    else if (/\.(ts|tsx|js|mjs|cjs)$/.test(entry)) out.push(p);
+    else if (SOURCE_EXTENSIONS.some((extension) => entry.endsWith(extension))) out.push(p);
   }
   return out;
 };
@@ -136,11 +166,32 @@ const sourceModuleId = (path) =>
   relative(root, path)
     .split(sep)
     .join("/")
-    .replace(/\.(?:tsx?|mjs|cjs|js)$/, "");
+    .replace(/\.(?:[cm]?[jt]s|[jt]sx)$/, "");
+const resolveSourceModule = (candidate) => {
+  if (existsSync(candidate)) {
+    const status = statSync(candidate);
+    if (status.isFile()) return candidate;
+    if (status.isDirectory()) {
+      for (const extension of SOURCE_EXTENSIONS) {
+        const indexPath = join(candidate, `index${extension}`);
+        if (existsSync(indexPath) && statSync(indexPath).isFile()) return indexPath;
+      }
+    }
+  }
+  const importedExtension = SOURCE_EXTENSIONS.find((extension) => candidate.endsWith(extension));
+  const base = importedExtension === undefined
+    ? candidate
+    : candidate.slice(0, -importedExtension.length);
+  for (const extension of SOURCE_EXTENSIONS) {
+    const sourcePath = `${base}${extension}`;
+    if (existsSync(sourcePath) && statSync(sourcePath).isFile()) return sourcePath;
+  }
+  return candidate;
+};
 const resolvePackageLocalSpecifier = ({ name, srcDir, file, spec }) => {
-  if (spec.startsWith(".")) return resolve(dirname(file), spec);
+  if (spec.startsWith(".")) return resolveSourceModule(resolve(dirname(file), spec));
   if (name === "@sceneaxi/site-umbrella" && spec.startsWith("@/")) {
-    return resolve(srcDir, spec.slice(2));
+    return resolveSourceModule(resolve(srcDir, spec.slice(2)));
   }
   return null;
 };
