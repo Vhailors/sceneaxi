@@ -290,10 +290,12 @@ brief neither changes the gate nor authorizes work to close it.
   ([`websites-deploy.md`](../websites-deploy.md)). Step 10 opened exactly one
   fixture SKU by closed enumeration in `packages/billing`, which no storefront
   imports; being listed is not being for sale.
-- **Three absent captain-held secrets** — `STRIPE_SECRET_KEY` (test),
-  `STRIPE_WEBHOOK_SECRET`, `SCENEAXI_ADMIN_BOOTSTRAP_SECRET`. None blocks
-  anything shipped: the dependent surfaces refuse by name today, while the Wave 4
-  handles activate only when their deployment-owned provider configuration is present.
+- **Three captain-held secret variables** — as of the 2026-08-01 name-only check,
+  Vercel lists encrypted Production variable names for `STRIPE_SECRET_KEY` (test),
+  `STRIPE_WEBHOOK_SECRET`, and `SCENEAXI_ADMIN_BOOTSTRAP_SECRET`. No value was read or
+  attested, so their usability remains unverified; [`websites-deploy.md`](../websites-deploy.md)
+  owns the exact readiness result and activation blocker. Missing or unusable provider
+  configuration keeps the Wave 4 handles absent and dependent surfaces refusing by name.
 - **Stage 1 renderer adjudication** — held. [ADR
   0017](../adr/0017-three-product-presentation-core.md) is a captain *product*
   decision and is explicitly not a Stage 1 result or a renderer winner.
