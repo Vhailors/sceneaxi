@@ -4,6 +4,9 @@
   "private": true,
   "description": "SceneAxi umbrella site \u2014 product/docs, the public live open path, engine SDK download, account surface, credit packs, entitled Minimum E2 web editor",
   "type": "module",
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

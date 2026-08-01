@@ -984,6 +984,39 @@ describe("umbrella deployment provider adapters", () => {
       expect(config).toContain(`"./node_modules/${provider}/**"`);
     }
   });
+
+  /**
+   * That loader's accessor is itself a runtime assumption: `process.getBuiltinModule`
+   * landed in Node 20.16.0 / 22.3.0, and below it the module throws a `TypeError`
+   * while evaluating rather than degrading — `identity-plane.ts` imports it, so every
+   * umbrella server route would answer 500 instead of refusing by name, which is the
+   * opposite of what the loader exists to protect. The site is its own install root
+   * (ADR 0018), so the hermetic root's `engines` governs nothing here; the site
+   * manifest is what a deployment reads to pick its Node runtime, and it must pin the
+   * same floor rather than inherit one it is not part of.
+   */
+  it("pins a Node floor that has the builtin-module accessor its loader needs", () => {
+    const readManifest = (path: string) =>
+      JSON.parse(readFileSync(fileURLToPath(new URL(path, import.meta.url)), "utf8")) as {
+        readonly engines?: { readonly node?: string };
+      };
+    const declared = readManifest("../../sites/umbrella/package.json").engines?.node;
+
+    expect(declared).toBe(readManifest("../../package.json").engines?.node);
+
+    const branches = (declared ?? "").split("||").map((branch) => branch.trim());
+    expect(branches.length).toBeGreaterThan(0);
+    for (const branch of branches) {
+      const parsed = /^(?:\^|>=)(\d+)(?:\.(\d+))?/.exec(branch);
+      expect(parsed, `unparseable engines branch '${branch}'`).not.toBeNull();
+      const major = Number(parsed?.[1]);
+      const minor = Number(parsed?.[2] ?? "0");
+      const hasAccessor =
+        major > 22 || (major === 22 && minor >= 3) || (major === 20 && minor >= 16);
+      expect(hasAccessor, `engines branch '${branch}' admits a Node without getBuiltinModule`)
+        .toBe(true);
+    }
+  });
 });
 
 const SALE_ID = "sale-fixture-1";
