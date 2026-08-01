@@ -152,7 +152,9 @@ export function resolveFamilyLinks(
 export type UmbrellaOriginConfiguration = {
   /**
    * Whether the deployment supplied the variable at all, independent of whether
-   * what it supplied is usable.
+   * what it supplied is usable. Any non-empty value counts, whitespace included:
+   * a value that is only whitespace is a misconfigured deployment, not an
+   * unconfigured one, and the two must not collapse.
    */
   readonly supplied: boolean;
   /** The resolved origin, or the refusal naming why it cannot be used. */
@@ -182,7 +184,7 @@ export function resolveUmbrellaOriginConfiguration(
     itemId: "origin-probe",
   });
   return Object.freeze({
-    supplied: isNonEmptyString(configured),
+    supplied: configured !== "",
     origin: probe.ok ? ok(new URL(configured).origin) : probe,
   });
 }

@@ -142,12 +142,14 @@ describe("verifyLoginRequestOrigin", () => {
   });
 
   it("falls back to the request's own origin only on an unconfigured deployment", () => {
-    expect(
-      verifyLoginRequestOrigin(
-        {},
-        { origin: "http://localhost:3000", requestUrl: "http://localhost:3000/api/login" },
-      ),
-    ).toEqual({ ok: true, value: "http://localhost:3000" });
+    for (const env of [{}, { NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN: "" }]) {
+      expect(
+        verifyLoginRequestOrigin(env, {
+          origin: "http://localhost:3000",
+          requestUrl: "http://localhost:3000/api/login",
+        }),
+      ).toEqual({ ok: true, value: "http://localhost:3000" });
+    }
     expect(
       verifyLoginRequestOrigin(
         {},
@@ -157,7 +159,7 @@ describe("verifyLoginRequestOrigin", () => {
   });
 
   it("refuses instead of falling back when a configured origin is invalid", () => {
-    for (const configured of ["not-a-url", "http://sceneaxi.example"]) {
+    for (const configured of ["not-a-url", "http://sceneaxi.example", " ", "\t\n"]) {
       expect(
         verifyLoginRequestOrigin(
           { NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN: configured },
