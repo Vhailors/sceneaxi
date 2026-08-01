@@ -938,7 +938,7 @@ export function createUmbrellaIdentityPlane(
   const deployment = wiring.deployment;
   const billingMode = deployment?.billingMode ?? resolveBillingMode(env);
   const clock = wiring.clock ?? deployment?.clock ?? (() => Date.now());
-  const admin = wiring.admin ?? deployment?.admin ?? null;
+  const admin = wiring.admin === undefined ? (deployment?.admin ?? null) : wiring.admin;
   // Explicit wiring wins over the supplied capability registry. This pure builder never
   // reaches for ambient deployment state; production uses createUmbrellaDeploymentPlane.
   const deploymentHandle = <Key extends keyof UmbrellaPlaneHandles>(
