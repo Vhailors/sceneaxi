@@ -6,6 +6,7 @@ import {
   resolveSessionCookieSecurity,
   verifyLoginRequestOrigin,
 } from "../../../lib/login-flow.js";
+import { readSiteMutationRequestSignals } from "../../_session.js";
 
 /**
  * The hosted sign-in handler (sceneaxi#185).
@@ -24,11 +25,16 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
-  const requestOrigin = verifyLoginRequestOrigin(process.env, {
-    origin: request.headers.get("origin"),
-    fetchSite: request.headers.get("sec-fetch-site"),
-    requestUrl: request.url,
-  });
+  const signals = readSiteMutationRequestSignals(request);
+  const requestOrigin = verifyLoginRequestOrigin(process.env, signals.formOrigin);
+  if (!requestOrigin.ok) {
+    return new Response(null, {
+      status: 303,
+      headers: new Headers({
+        Location: loginRefusalOutcome(requestOrigin.reason).location,
+      }),
+    });
+  }
 
   let form: FormData;
   try {
@@ -51,10 +57,7 @@ export async function POST(request: NextRequest) {
       password: form.get("password"),
       next: form.get("next"),
     },
-    secure: resolveSessionCookieSecurity(process.env, {
-      forwardedProto: request.headers.get("x-forwarded-proto"),
-      requestUrl: request.url,
-    }),
+    secure: resolveSessionCookieSecurity(process.env, signals.cookieSecurity),
   });
 
   const headers = new Headers({ Location: outcome.location });

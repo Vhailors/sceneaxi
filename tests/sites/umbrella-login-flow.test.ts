@@ -22,6 +22,7 @@ describe("resolveLoginDestination", () => {
     expect(resolveLoginDestination("/editor")).toBe("/editor");
     expect(resolveLoginDestination("  /pricing  ")).toBe("/pricing");
     expect(resolveLoginDestination("/editor?objects=3")).toBe("/editor?objects=3");
+    expect(resolveLoginDestination("/café/💥")).toBe("/caf%C3%A9/%F0%9F%92%A5");
   });
 
   it("falls back to the default for anything that could leave this site", () => {
@@ -146,5 +147,19 @@ describe("verifyLoginRequestOrigin", () => {
         { origin: "https://attacker.example", requestUrl: "http://localhost:3000/api/login" },
       ),
     ).toMatchObject({ ok: false, reason: "SITE_REQUEST_CROSS_ORIGIN" });
+  });
+
+  it("refuses instead of falling back when a configured origin is invalid", () => {
+    for (const configured of ["not-a-url", "http://sceneaxi.example"]) {
+      expect(
+        verifyLoginRequestOrigin(
+          { NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN: configured },
+          {
+            origin: "https://alias.vercel.app",
+            requestUrl: "https://alias.vercel.app/api/login",
+          },
+        ),
+      ).toMatchObject({ ok: false, reason: "SITE_REQUEST_CROSS_ORIGIN" });
+    }
   });
 });

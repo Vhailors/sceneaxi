@@ -999,11 +999,10 @@ export function createBetterAuthHttpClient(options: {
     token: string,
     cookie: string | undefined,
   ): Promise<
-    | Readonly<{
-        readonly session: Record<string, unknown>;
-        readonly user: Record<string, unknown> | undefined;
-      }>
-    | undefined
+    Readonly<{
+      readonly session: Record<string, unknown>;
+      readonly user: Record<string, unknown> | undefined;
+    }>
   > {
     const response = await options.fetch(`${origin}/api/auth/get-session`, {
       method: "GET",
@@ -1013,7 +1012,9 @@ export function createBetterAuthHttpClient(options: {
         ...(cookie === undefined ? {} : { cookie }),
       },
     });
-    if (response.status === 401 || response.status === 403) return undefined;
+    if (response.status === 401 || response.status === 403) {
+      throw new Error(`Better Auth session lookup denied after sign-in (${response.status})`);
+    }
     if (!response.ok) {
       throw new Error(`Better Auth session lookup failed (${response.status})`);
     }
@@ -1044,9 +1045,10 @@ export function createBetterAuthHttpClient(options: {
         const issuedToken = stringValue(payload?.["token"]);
 
         if (providerSession === undefined) {
-          if (issuedToken.length === 0) return undefined;
+          if (issuedToken.length === 0) {
+            throw new Error("Better Auth sign-in returned neither a session nor a token");
+          }
           const resolved = await readSessionRecord(issuedToken, issuedCookieHeader(response.headers));
-          if (resolved === undefined) return undefined;
           providerSession = resolved.session;
           user = resolved.user ?? user;
         }

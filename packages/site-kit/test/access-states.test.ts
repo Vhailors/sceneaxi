@@ -144,6 +144,8 @@ describe("describeSiteAccessState", () => {
     expect(confineSiteRelativePath("/editor")).toBe("/editor");
     expect(confineSiteRelativePath("  /pricing  ")).toBe("/pricing");
     expect(confineSiteRelativePath("/editor?objects=3")).toBe("/editor?objects=3");
+    expect(confineSiteRelativePath("/café/💥")).toBe("/caf%C3%A9/%F0%9F%92%A5");
+    expect(confineSiteRelativePath("/broken\ud800")).toBeNull();
     for (const hostile of HOSTILE_DESTINATIONS) {
       expect(confineSiteRelativePath(hostile)).toBeNull();
     }

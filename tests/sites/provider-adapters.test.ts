@@ -1303,7 +1303,7 @@ describe("umbrella Better Auth HTTP client", () => {
     });
   });
 
-  it("refuses rejected credentials on either request without inventing an envelope", async () => {
+  it("refuses credentials only when the sign-in request rejects them", async () => {
     for (const status of [401, 403]) {
       const signInRefused = createBetterAuthHttpClient({
         origin: "https://auth.example.com",
@@ -1312,19 +1312,6 @@ describe("umbrella Better Auth HTTP client", () => {
       await expect(
         signInRefused.api.signInEmail({
           body: { email: "member@example.com", password: "wrong" },
-        }),
-      ).resolves.toBeUndefined();
-
-      const sessionRefused = createBetterAuthHttpClient({
-        origin: "https://auth.example.com",
-        fetch: recordingFetch([
-          { status: 200, body: SIGN_IN_BODY },
-          { status, body: { message: "denied" } },
-        ]).fetch,
-      });
-      await expect(
-        sessionRefused.api.signInEmail({
-          body: { email: "member@example.com", password: "test-password" },
         }),
       ).resolves.toBeUndefined();
     }
@@ -1353,6 +1340,21 @@ describe("umbrella Better Auth HTTP client", () => {
         body: { email: "member@example.com", password: "test-password" },
       }),
     ).rejects.toThrow(/Better Auth session lookup failed \(503\)/);
+
+    for (const status of [401, 403]) {
+      const lookupDenied = createBetterAuthHttpClient({
+        origin: "https://auth.example.com",
+        fetch: recordingFetch([
+          { status: 200, body: SIGN_IN_BODY },
+          { status, body: { message: "denied" } },
+        ]).fetch,
+      });
+      await expect(
+        lookupDenied.api.signInEmail({
+          body: { email: "member@example.com", password: "test-password" },
+        }),
+      ).rejects.toThrow(new RegExp(`session lookup denied after sign-in \\(${status}\\)`));
+    }
   });
 
   it("replays a folded set-cookie answer without splitting a cookie date attribute", async () => {
@@ -1396,7 +1398,7 @@ describe("umbrella Better Auth HTTP client", () => {
     }
   });
 
-  it("refuses an answer that names no session and no token", async () => {
+  it("reports a successful answer that names no session and no token as a fault", async () => {
     const { fetch, calls } = recordingFetch([
       { status: 200, body: { redirect: false, user: SIGN_IN_BODY.user } },
     ]);
@@ -1404,7 +1406,7 @@ describe("umbrella Better Auth HTTP client", () => {
 
     await expect(
       client.api.signInEmail({ body: { email: "member@example.com", password: "test-password" } }),
-    ).resolves.toBeUndefined();
+    ).rejects.toThrow(/returned neither a session nor a token/);
     expect(calls).toHaveLength(1);
   });
 

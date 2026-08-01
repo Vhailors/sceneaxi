@@ -1,11 +1,15 @@
 import type { NextRequest } from "next/server";
 import { createUmbrellaIdentityPlane } from "../../../lib/identity-plane.js";
 import {
+  loginRefusalOutcome,
   performLogout,
   resolveSessionCookieSecurity,
   verifyLoginRequestOrigin,
 } from "../../../lib/login-flow.js";
-import { readSessionToken } from "../../_session.js";
+import {
+  readSessionToken,
+  readSiteMutationRequestSignals,
+} from "../../_session.js";
 
 /**
  * Sign the carried session out.
@@ -22,19 +26,23 @@ import { readSessionToken } from "../../_session.js";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
+  const signals = readSiteMutationRequestSignals(request);
+  const requestOrigin = verifyLoginRequestOrigin(process.env, signals.formOrigin);
+  if (!requestOrigin.ok) {
+    return new Response(null, {
+      status: 303,
+      headers: new Headers({
+        Location: loginRefusalOutcome(requestOrigin.reason).location,
+      }),
+    });
+  }
+
   const sessionToken = await readSessionToken();
   const plane = createUmbrellaIdentityPlane(process.env, { sessionToken });
   const outcome = await performLogout({
     plane,
-    requestOrigin: verifyLoginRequestOrigin(process.env, {
-      origin: request.headers.get("origin"),
-      fetchSite: request.headers.get("sec-fetch-site"),
-      requestUrl: request.url,
-    }),
-    secure: resolveSessionCookieSecurity(process.env, {
-      forwardedProto: request.headers.get("x-forwarded-proto"),
-      requestUrl: request.url,
-    }),
+    requestOrigin,
+    secure: resolveSessionCookieSecurity(process.env, signals.cookieSecurity),
   });
 
   const headers = new Headers({ Location: outcome.location });

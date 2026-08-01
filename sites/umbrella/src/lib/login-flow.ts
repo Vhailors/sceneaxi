@@ -22,6 +22,7 @@ import {
   confineSiteRelativePath,
   resolveSiteSessionCookieSecurity,
   resolveUmbrellaEditorOrigin,
+  refuse,
   verifySiteFormOrigin,
   type SiteFormOriginSignals,
   type SitePrincipal,
@@ -70,6 +71,14 @@ export function verifyLoginRequestOrigin(
   signals: Omit<SiteFormOriginSignals, "configuredOrigin"> = {},
 ): SiteResult<string> {
   const configured = resolveUmbrellaEditorOrigin(env);
+  const configuredValue = env["NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN"];
+  if (
+    typeof configuredValue === "string" &&
+    configuredValue.trim().length > 0 &&
+    !configured.ok
+  ) {
+    return refuse("SITE_REQUEST_CROSS_ORIGIN");
+  }
   return verifySiteFormOrigin({
     configuredOrigin: configured.ok ? configured.value : null,
     origin: signals.origin,

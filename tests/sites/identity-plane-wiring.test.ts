@@ -1682,6 +1682,35 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
     requestUrl: "http://localhost:3000/api/login",
   });
 
+  it("keeps request signals in the framework adapter and rejects before request data", () => {
+    const sessionSource = readFileSync(
+      new URL("../../sites/umbrella/src/app/_session.ts", import.meta.url),
+      "utf8",
+    );
+    const loginSource = readFileSync(
+      new URL("../../sites/umbrella/src/app/api/login/route.ts", import.meta.url),
+      "utf8",
+    );
+    const logoutSource = readFileSync(
+      new URL("../../sites/umbrella/src/app/api/logout/route.ts", import.meta.url),
+      "utf8",
+    );
+
+    expect(sessionSource).toContain("readSiteMutationRequestSignals");
+    expect(sessionSource).toContain('request.headers.get("origin")');
+    expect(sessionSource).toContain('request.headers.get("x-forwarded-proto")');
+    for (const routeSource of [loginSource, logoutSource]) {
+      expect(routeSource).not.toContain("request.headers.get(");
+      expect(routeSource.indexOf("if (!requestOrigin.ok)")).toBeGreaterThan(-1);
+    }
+    expect(loginSource.indexOf("if (!requestOrigin.ok)")).toBeLessThan(
+      loginSource.indexOf("request.formData()"),
+    );
+    expect(logoutSource.indexOf("if (!requestOrigin.ok)")).toBeLessThan(
+      logoutSource.indexOf("readSessionToken()"),
+    );
+  });
+
   /**
    * A Better Auth-shaped provider over the same fixture users: the documented
    * `{ user, session }` envelope, a fresh session per successful authentication,

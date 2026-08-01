@@ -70,7 +70,11 @@ export function confineSiteRelativePath(value: unknown): string | null {
     const code = char.codePointAt(0) ?? 0;
     if (code < 0x20 || code === 0x7f) return null;
   }
-  return path;
+  try {
+    return encodeURI(path);
+  } catch {
+    return null;
+  }
 }
 
 /**
