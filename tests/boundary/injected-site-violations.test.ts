@@ -135,6 +135,23 @@ describe("sites tier — injected violations", () => {
     },
   );
 
+  it.each([
+    ["@/lib/identity-plane", "sites/umbrella/src/lib/identity-plane"],
+    ["@/lib/provider-adapters", "sites/umbrella/src/lib/provider-adapters"],
+    ["@/lib/credit-webhook", "sites/umbrella/src/lib/credit-webhook"],
+    ["@/index", "sites/umbrella/src/index"],
+  ])(
+    "boundary check denies a route bypassing the request facade through alias %s",
+    (specifier, target) => {
+      appendTo(fx, "sites/umbrella/src/app/api/login/route.ts", `\nimport "${specifier}";\n`);
+      const res = runCheck(fx, "check-boundaries.mjs");
+      expect(res.status).toBe(1);
+      expect(res.stderr).toContain(
+        `imports deployment authority module ${target} outside the request-authority facade`,
+      );
+    },
+  );
+
   it("boundary check denies an unauthorized lib re-exporting deployment authority", () => {
     writeTo(
       fx,

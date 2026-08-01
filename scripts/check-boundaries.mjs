@@ -113,6 +113,13 @@ const sourceModuleId = (path) =>
     .split(sep)
     .join("/")
     .replace(/\.(?:tsx?|mjs|cjs|js)$/, "");
+const resolvePackageLocalSpecifier = ({ name, srcDir, file, spec }) => {
+  if (spec.startsWith(".")) return resolve(dirname(file), spec);
+  if (name === "@sceneaxi/site-umbrella" && spec.startsWith("@/")) {
+    return resolve(srcDir, spec.slice(2));
+  }
+  return null;
+};
 const UMBRELLA_IDENTITY_IMPORT_OWNERS = new Map([
   [
     "@sceneaxi/auth",
@@ -186,8 +193,9 @@ for (const [name, { dir }] of manifests) {
         if (isTestingSubpath(spec)) {
           fail(`${name}: ${relative(root, file)} imports test-only subpath ${spec} — production source may not reach a testing/ seam`);
         }
-      } else if (spec.startsWith(".")) {
-        const resolved = resolve(dirname(file), spec);
+      } else {
+        const resolved = resolvePackageLocalSpecifier({ name, srcDir, file, spec });
+        if (resolved === null) continue;
         const targetModule = sourceModuleId(resolved);
         // Path-segment containment (not raw startsWith): "packages/cli-shadow" must not match "packages/cli"
         const rel = relative(dir, resolved);
