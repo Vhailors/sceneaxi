@@ -29,7 +29,7 @@ import {
   type SiteRefusalReason,
   type SiteResult,
 } from "@sceneaxi/site-kit";
-import type { UmbrellaIdentityPlane } from "./identity-plane.js";
+import type { UmbrellaIdentityPlane } from "./request-authority.js";
 
 export const LOGIN_PATH = SITE_LOGIN_PATH;
 

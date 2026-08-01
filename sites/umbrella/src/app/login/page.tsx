@@ -6,8 +6,8 @@ import {
 import {
   IDENTITY_PLANE_DOC,
   IDENTITY_PLANE_PENDING_NOTE,
-  createUmbrellaDeploymentPlane,
-} from "../../lib/identity-plane.js";
+  umbrellaRequestAuthority,
+} from "../../lib/request-authority.js";
 import {
   LOGIN_DEFAULT_DESTINATION,
   readLoginRefusalReason,
@@ -21,7 +21,7 @@ import { StatePanel } from "../_components/state-panel.js";
  *
  * The form posts email and password to `/api/login`, which drives the identity
  * plane's login port — the same `@sceneaxi/auth` identity port a deployment
- * supplies through `umbrellaPlaneHandles()`. Nothing about who the visitor is
+ * supplies through `umbrellaRequestAuthority()`. Nothing about who the visitor is
  * comes from this page: the browser proves credentials to the injected
  * provider, and role, identity, and session all come back server-derived.
  *
@@ -39,7 +39,7 @@ export default async function LoginPage({
 }) {
   const params = await searchParams;
   const sessionToken = await readSessionToken();
-  const plane = createUmbrellaDeploymentPlane({ sessionToken });
+  const plane = umbrellaRequestAuthority().plane({ sessionToken });
   const current = await plane.identity.resolvePrincipal({ surface: "site", sessionToken });
 
   const refusalReason = readLoginRefusalReason(params["reason"]);

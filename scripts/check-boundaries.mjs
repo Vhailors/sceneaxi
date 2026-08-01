@@ -108,11 +108,53 @@ const walk = (dir, out = []) => {
 const TESTING_SUBPATH_SEGMENT = "testing";
 const isTestingSubpath = (spec) =>
   spec.startsWith("@sceneaxi/") && spec.split("/")[2] === TESTING_SUBPATH_SEGMENT;
-const UMBRELLA_IDENTITY_PACKAGES = new Set(["@sceneaxi/auth", "@sceneaxi/billing"]);
-const isUmbrellaRequestSurface = (file) => {
-  const path = relative(root, file).split(sep).join("/");
-  return path === "sites/umbrella/src/index.ts" || path.startsWith("sites/umbrella/src/app/");
-};
+const sourceModuleId = (path) =>
+  relative(root, path)
+    .split(sep)
+    .join("/")
+    .replace(/\.(?:tsx?|mjs|cjs|js)$/, "");
+const UMBRELLA_IDENTITY_IMPORT_OWNERS = new Map([
+  [
+    "@sceneaxi/auth",
+    new Set([
+      "sites/umbrella/src/lib/identity-plane",
+      "sites/umbrella/src/lib/provider-adapters",
+    ]),
+  ],
+  [
+    "@sceneaxi/billing",
+    new Set([
+      "sites/umbrella/src/lib/identity-plane",
+      "sites/umbrella/src/lib/provider-adapters",
+    ]),
+  ],
+]);
+const UMBRELLA_AUTHORITY_IMPORTERS = new Map([
+  [
+    "sites/umbrella/src/lib/identity-plane",
+    new Set([
+      "sites/umbrella/src/index",
+      "sites/umbrella/src/lib/request-authority",
+    ]),
+  ],
+  [
+    "sites/umbrella/src/lib/provider-adapters",
+    new Set([
+      "sites/umbrella/src/lib/credit-webhook",
+      "sites/umbrella/src/index",
+      "sites/umbrella/src/lib/identity-plane",
+    ]),
+  ],
+  [
+    "sites/umbrella/src/lib/credit-webhook",
+    new Set([
+      "sites/umbrella/src/index",
+      "sites/umbrella/src/lib/identity-plane",
+      "sites/umbrella/src/lib/request-authority",
+    ]),
+  ],
+  ["sites/umbrella/src/index", new Set()],
+]);
 // Path-segment containment via relative(), never raw startsWith, so a sibling directory
 // whose name merely begins with "testing" is not treated as inside it.
 const contains = (parent, candidate) => {
@@ -126,6 +168,7 @@ for (const [name, { dir }] of manifests) {
   const testingDir = join(srcDir, TESTING_SUBPATH_SEGMENT);
   for (const file of walk(srcDir)) {
     const fromTesting = contains(testingDir, file);
+    const fromModule = sourceModuleId(file);
     const text = readFileSync(file, "utf8");
     for (const m of text.matchAll(SPEC_RE)) {
       const spec = m[1];
@@ -134,13 +177,10 @@ for (const [name, { dir }] of manifests) {
         if (!allow.has(target)) {
           fail(`${name}: ${relative(root, file)} imports ${target}, DENIED by the matrix`);
         }
-        if (
-          name === "@sceneaxi/site-umbrella" &&
-          UMBRELLA_IDENTITY_PACKAGES.has(target) &&
-          isUmbrellaRequestSurface(file)
-        ) {
+        const owners = UMBRELLA_IDENTITY_IMPORT_OWNERS.get(target);
+        if (name === "@sceneaxi/site-umbrella" && owners !== undefined && !owners.has(fromModule)) {
           fail(
-            `${name}: ${relative(root, file)} imports ${target} outside the deployment-owned lib boundary — routes, pages, components, and the root barrel may not name the identity plane directly`,
+            `${name}: ${relative(root, file)} imports ${target} outside its exact deployment owner files`,
           );
         }
         if (isTestingSubpath(spec)) {
@@ -148,12 +188,23 @@ for (const [name, { dir }] of manifests) {
         }
       } else if (spec.startsWith(".")) {
         const resolved = resolve(dirname(file), spec);
+        const targetModule = sourceModuleId(resolved);
         // Path-segment containment (not raw startsWith): "packages/cli-shadow" must not match "packages/cli"
         const rel = relative(dir, resolved);
         if (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {
           fail(`${name}: ${relative(root, file)} escapes its package via relative import '${spec}'`);
         } else if (!fromTesting && contains(testingDir, resolved)) {
           fail(`${name}: ${relative(root, file)} imports test-only module '${spec}' — production source may not reach a testing/ seam`);
+        }
+        const authorityImporters = UMBRELLA_AUTHORITY_IMPORTERS.get(targetModule);
+        if (
+          name === "@sceneaxi/site-umbrella" &&
+          authorityImporters !== undefined &&
+          !authorityImporters.has(fromModule)
+        ) {
+          fail(
+            `${name}: ${relative(root, file)} imports deployment authority module ${targetModule} outside the request-authority facade`,
+          );
         }
       }
     }

@@ -101,10 +101,52 @@ describe("sites tier — injected violations", () => {
       const res = runCheck(fx, "check-boundaries.mjs");
       expect(res.status).toBe(1);
       expect(res.stderr).toContain(
-        `imports ${denied} outside the deployment-owned lib boundary`,
+        `imports ${denied} outside its exact deployment owner files`,
       );
     },
   );
+
+  it.each(["@sceneaxi/auth", "@sceneaxi/billing"])(
+    "boundary check denies an unauthorized umbrella lib importing %s",
+    (denied) => {
+      writeTo(fx, "sites/umbrella/src/lib/authority-leak.ts", `import "${denied}";\n`);
+      const res = runCheck(fx, "check-boundaries.mjs");
+      expect(res.status).toBe(1);
+      expect(res.stderr).toContain(
+        `sites/umbrella/src/lib/authority-leak.ts imports ${denied} outside its exact deployment owner files`,
+      );
+    },
+  );
+
+  it.each([
+    ["../../../lib/identity-plane.js", "sites/umbrella/src/lib/identity-plane"],
+    ["../../../lib/provider-adapters.js", "sites/umbrella/src/lib/provider-adapters"],
+    ["../../../lib/credit-webhook.js", "sites/umbrella/src/lib/credit-webhook"],
+    ["../../../index.js", "sites/umbrella/src/index"],
+  ])(
+    "boundary check denies a route bypassing the request facade through %s",
+    (specifier, target) => {
+      appendTo(fx, "sites/umbrella/src/app/api/login/route.ts", `\nimport "${specifier}";\n`);
+      const res = runCheck(fx, "check-boundaries.mjs");
+      expect(res.status).toBe(1);
+      expect(res.stderr).toContain(
+        `imports deployment authority module ${target} outside the request-authority facade`,
+      );
+    },
+  );
+
+  it("boundary check denies an unauthorized lib re-exporting deployment authority", () => {
+    writeTo(
+      fx,
+      "sites/umbrella/src/lib/authority-leak.ts",
+      'export { createUmbrellaIdentityPlane } from "./identity-plane.js";\n',
+    );
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "sites/umbrella/src/lib/authority-leak.ts imports deployment authority module sites/umbrella/src/lib/identity-plane outside the request-authority facade",
+    );
+  });
 
   it.each([
     ["catalog-game", "@sceneaxi/auth"],

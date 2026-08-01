@@ -225,12 +225,14 @@ The credit-pack list is live on any deployment — the pack catalog is read from
 module rather than a file, so it survives serverless output tracing.
 `provider-adapters.ts` maps deployment-owned Better Auth, Neon, and Stripe TEST clients
 onto the existing `@sceneaxi/auth` and `@sceneaxi/billing` seams. The no-argument
-`umbrellaPlaneHandles()` resolves and holds the deployment's one admin witness, provider
-handles, and secret-backed webhook capability. Request planes accept only a carried
-session credential, and the webhook route accepts only raw bytes plus the signature
-header; neither can replace the deployment authority. Absent configuration still refuses
-with named reasons rather than showing an invented session, account, balance, or
-checkout. Account provisioning is an idempotent user-plus-credit-account insert at
+`umbrellaRequestAuthority()` facade holds the deployment's one resolved registry and
+exposes only request evidence methods. Request planes accept only a carried session
+credential, and the webhook route accepts only raw bytes plus the signature header;
+neither can replace the deployment authority. The boundary checker denies direct access
+to the owner modules, provider adapters, and root barrel from request code and arbitrary
+library modules. Absent configuration still refuses with named reasons rather than
+showing an invented session, account, balance, or checkout. Account provisioning is an
+idempotent user-plus-credit-account insert at
 authentication, which
 reconciles the provider-owned address and verification state each time, never a
 payment-event side effect. The Better Auth client reads the session back from

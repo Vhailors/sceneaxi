@@ -33,8 +33,8 @@ entry point that reaches `identityPort.signIn` **ships** (sceneaxi#185): the umb
 `/login` page and `POST /api/login|logout` routes drive the plane's login port and set the
 HttpOnly `sceneaxi.session` cookie — see *Better Auth* below. **What v1 still does
 not deliver is a running provider:** a live signed-in browser session additionally needs
-the deployment to serve Better Auth's own handler and return the handles from
-`umbrellaPlaneHandles()`, which is operational work outside this repository. See
+the deployment to serve Better Auth's own handler and configure the handles held behind
+`umbrellaRequestAuthority()`, which is operational work outside this repository. See
 *Deployment activation* at the end.
 
 ## Environment
@@ -70,12 +70,14 @@ that can mint a second one. `planAdminBootstrap` produces the single `RoleAssign
 deployment persists; the database allows at most one admin row regardless.
 
 On the umbrella, a route does not call this resolver and cannot supply its own `env`.
-The no-argument `umbrellaPlaneHandles()` plug point resolves the deployment environment
-once, holds the exact issued `AdminIdentity` with the provider handles, and
-`createUmbrellaDeploymentPlane()` accepts only the request's carried session credential.
-The pure `createUmbrellaIdentityPlane()` builder receives already-issued evidence for
-deterministic tests; it no longer turns a caller-shaped environment into admin authority,
-and the returned site plane does not expose the admin witness.
+The no-argument `umbrellaRequestAuthority()` facade obtains the deployment registry once
+and exposes only a request-plane method accepting the carried session credential and a
+webhook method accepting raw request evidence. The registry holds the exact issued
+`AdminIdentity` with the provider handles. The pure `createUmbrellaIdentityPlane()`
+builder receives already-issued evidence for deterministic tests; it no longer turns a
+caller-shaped environment into admin authority, and the returned site plane does not
+expose the admin witness. `pnpm check:boundaries` denies production code from reaching
+that builder, the provider adapters, or the root barrel around the facade.
 
 ```ts
 import { planAdminBootstrap, resolveAdminIdentity } from "@sceneaxi/auth";
@@ -172,13 +174,13 @@ The public low-level functions landed for sceneaxi#126 remain compatible buildin
 but they are not the umbrella's deployment authority. `resolveAdminIdentity(env)` and
 `verifyStripeWebhookSignature({ secret, ... })` necessarily accept caller-supplied inputs
 for hermetic core tests and other hosts. The umbrella narrows those inputs at its server
-boundary instead: only `umbrellaPlaneHandles()` reads deployment configuration; it holds
-the admin evidence and a `CreditWebhookCapability` that closes over the webhook signing
-secret, store, evidence adapter, and clock. Routes receive neither issuer input nor
-secret. The webhook route can supply only raw request bytes and the Stripe signature
-header to that capability. Core still owns the same signature verification, completion
-provenance, grant decision, and commit boundary; the deployment adds no second verifier or
-issuer.
+boundary instead: the owner module alone reads deployment configuration and holds the
+admin evidence plus a `CreditWebhookCapability` that closes over the webhook signing
+secret, store, evidence adapter, and clock. Routes reach that registry only through
+`umbrellaRequestAuthority()`, receiving neither issuer input nor secret. The webhook
+route can supply only raw request bytes and the Stripe signature header to that
+capability. Core still owns the same signature verification, completion provenance,
+grant decision, and commit boundary; the deployment adds no second verifier or issuer.
 
 ## Better Auth
 
@@ -474,10 +476,7 @@ umbrella, the route receives the deployment-owned capability from the one plug p
 never accepts or reads a webhook secret itself:
 
 ```ts
-const { creditWebhook } = umbrellaPlaneHandles();
-if (creditWebhook === undefined) return respond(503, "CREDITS_PLANE_NOT_WIRED");
-
-const outcome = await creditWebhook.apply({
+const outcome = await umbrellaRequestAuthority().applyCreditWebhook({
   payload: await request.text(),
   signatureHeader: request.headers.get("stripe-signature"),
 });
@@ -1178,9 +1177,9 @@ umbrella serves `/login` beside `POST /api/login`, `POST /api/logout`, `/api/che
 `/api/stripe/webhook`, and `performLogin` reaches `identityPort.signIn` — and therefore
 `putSession` — through `createAuthLoginAdapter`, the login-port counterpart to the
 verify-only `createAuthIdentityAdapter`. What remains is the deployment's own: serve Better
-Auth's own handler and return the handles from `umbrellaPlaneHandles()`. Until it does,
-`signIn` has no adapter to reach, so no user is provisioned, no starter grant runs, and
-every surface refuses by name. Dropping the editor preview flag comes after that provider
-configuration, never before it.
+Auth's own handler and configure the handles behind `umbrellaRequestAuthority()`. Until
+it does, `signIn` has no adapter to reach, so no user is provisioned, no starter grant
+runs, and every surface refuses by name. Dropping the editor preview flag comes after
+that provider configuration, never before it.
 The deployable-site activation procedure and surface status are owned by
 [`websites-deploy.md`](websites-deploy.md#remaining-activation).
