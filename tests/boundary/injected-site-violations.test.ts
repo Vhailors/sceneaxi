@@ -165,6 +165,19 @@ describe("sites tier — injected violations", () => {
     );
   });
 
+  it("boundary check denies a static template dynamic import of deployment authority", () => {
+    appendTo(
+      fx,
+      "sites/umbrella/src/app/api/login/route.ts",
+      '\nawait import(`../../../lib/identity-plane.js`);\n',
+    );
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "sites/umbrella/src/app/api/login/route.ts imports deployment authority module sites/umbrella/src/lib/identity-plane outside the request-authority facade",
+    );
+  });
+
   it.each([
     ["catalog-game", "@sceneaxi/auth"],
     ["catalog-game", "@sceneaxi/billing"],
