@@ -255,13 +255,14 @@ is not deployed at all and is refuse-only by contract. The website-asset catalog
 nonetheless separately verified reachable on 2026-07-29, returning `200` and serving real
 SceneAxi Vitrine content at <https://sceneaxi-catalog-web.vercel.app>.
 
-The reachability statements here are **dated external observations, not in-tree facts**:
-the two in-scope URLs were opened in Chrome on 2026-07-29 and served the surfaces
-described. No in-tree document owns those observations, and no gate produces them.
+The reachability statements here are **dated external observations, not gate-produced
+facts**: the two in-scope URLs were opened in Chrome on 2026-07-29 and served the
+surfaces described. [`websites-deploy.md`](../websites-deploy.md#verified-test-readiness)
+owns the newer 2026-08-01 readiness result and its exact external activation blocker.
 
 | Surface | Production URL | Honest limit |
 |---|---|---|
-| Umbrella | <https://sceneaxi-umbrella.vercel.app> | Public/product routes and the live hero are served. The Wave 4 site-tier adapters now construct the Better Auth/Neon/Stripe TEST handles when configured, provision one credit account per authenticated user, and keep account/balance/checkout/grant paths fail-closed when deployment providers or captain-held secrets are absent. The [sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185) HTTP/UI layer is now in tree: `/login` and `POST /api/login|logout` reach `identityPort.signIn` through the plane's login port. Whether a browser can actually sign in is a deployment question this repository cannot answer — it needs Better Auth's own handler served and the handles returned from `umbrellaPlaneHandles()`, and until then every surface refuses by name. The 2026-07-29 observation predates that layer and recorded a signed-out visitor |
+| Umbrella | <https://sceneaxi-umbrella.vercel.app> | Public/product routes and the live hero were served in the dated observation above. The Wave 4 site-tier adapters construct the Better Auth/Neon/Stripe TEST handles when configured, provision one credit account per authenticated user, and keep account/balance/checkout/grant paths fail-closed when provider configuration is missing or unusable. The [sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185) HTTP/UI layer is in tree: `/login` and `POST /api/login|logout` reach `identityPort.signIn` through the plane's login port. Current deployment readiness and its blocker are owned by [`websites-deploy.md`](../websites-deploy.md#verified-test-readiness) |
 | Game-asset catalog | <https://sceneaxi-catalog-game.vercel.app> | Browse/detail is served as an evaluation-only catalog. Buying remains inactive; the storefront collects no payment details |
 
 [`websites-deploy.md`](../websites-deploy.md) owns the topology, environment names,
@@ -290,12 +291,6 @@ brief neither changes the gate nor authorizes work to close it.
   ([`websites-deploy.md`](../websites-deploy.md)). Step 10 opened exactly one
   fixture SKU by closed enumeration in `packages/billing`, which no storefront
   imports; being listed is not being for sale.
-- **Three captain-held secret variables** — as of the 2026-08-01 name-only check,
-  Vercel lists encrypted Production variable names for `STRIPE_SECRET_KEY` (test),
-  `STRIPE_WEBHOOK_SECRET`, and `SCENEAXI_ADMIN_BOOTSTRAP_SECRET`. No value was read or
-  attested, so their usability remains unverified; [`websites-deploy.md`](../websites-deploy.md)
-  owns the exact readiness result and activation blocker. Missing or unusable provider
-  configuration keeps the Wave 4 handles absent and dependent surfaces refusing by name.
 - **Stage 1 renderer adjudication** — held. [ADR
   0017](../adr/0017-three-product-presentation-core.md) is a captain *product*
   decision and is explicitly not a Stage 1 result or a renderer winner.
