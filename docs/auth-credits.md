@@ -506,7 +506,7 @@ The endpoint's three-way outcome split is unchanged, and so is what its success 
 |---|---|---|
 | `ok: true, ignored: true` | `200` | an event this endpoint owes no work, decided from the verified body alone before any port or store is read; permanent, because Stripe stops redelivering |
 | `ok: true, ignored: false` | `200` | **the credits are in the ledger** — nothing else is reported as success |
-| `CREDITS_PLANE_NOT_WIRED` from the request facade | `503` | no deployment webhook capability is wired, so nothing was verified and nothing was granted; it is answered ahead of `creditWebhookHttpStatus` because it names a deployment that never reached the endpoint's own reason set |
+| `CREDITS_PLANE_NOT_WIRED` from the request facade | `503` | no deployment webhook capability is wired, so nothing was verified and nothing was granted; it is `CREDIT_WEBHOOK_REASONS.planeNotWired` and sits in `SERVER_SIDE_REASONS` like every other deployment fault, so `creditWebhookHttpStatus` — never the route — answers it |
 | refusal in `SERVER_SIDE_REASONS` | `503` | this deployment's own fault, retried |
 | every other refusal | `400` | decided against the inbound bytes, retried |
 

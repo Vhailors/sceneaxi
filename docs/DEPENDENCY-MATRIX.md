@@ -91,8 +91,15 @@ Deliberate denials that carry design intent:
   sceneaxi#131): it is the one site wired to the identity plane, and only through the
   plug point `sites/umbrella/src/lib/identity-plane.ts` together with the deployment
   adapters it assembles in `sites/umbrella/src/lib/provider-adapters.ts` (sceneaxi#180) —
-  two files and no more, and no route, page, or component may name either package.
-  Nothing widens past that
+  two files and no more, so no route, page, component, **or any other `src/lib/` module**
+  may name either package. A second rule bounds the reverse direction: the deployment
+  owners (`identity-plane`, `provider-adapters`, `credit-webhook`) and the site's root
+  barrel may be imported only by each other and by the request-authority facade
+  `sites/umbrella/src/lib/request-authority.ts`, so request code reaches deployment
+  authority through that one no-argument entry point and never around it. Both rules are
+  resolved through the specifier a bundler would resolve — relative, `tsconfig` `paths`
+  alias, resource query or fragment suffix, directory barrel, and statically constant
+  dynamic `import()` alike. Nothing widens past that
   — kernel, orchestrator, authoring-core, profiles, and Kids stay denied to every site,
   and the two catalogs keep `site-kit` only, reading identity through the same site-kit
   ports rather than a second auth stack. `tests/boundary/injected-site-violations.test.ts`
@@ -181,7 +188,9 @@ Recorded in `dependency-matrix.json → releaseGroups` and stamped on every mani
   additionally consumes the `identity` group (`auth`, `billing`) from the plug point
   `src/lib/identity-plane.ts` together with the deployment adapters it assembles in
   `src/lib/provider-adapters.ts` — two files and no more; the catalogs
-  do not. Framework and provider SDKs stay in the `sites/` tier. Deploy and env details:
+  do not. Request code reaches none of it directly: `src/lib/request-authority.ts` is the
+  only importer of those owners outside themselves, and the checker refuses any other.
+  Framework and provider SDKs stay in the `sites/` tier. Deploy and env details:
   [`websites-deploy.md`](websites-deploy.md).
 - **desktop** (`desktop-linux`): packaged desktop applications (ADR 0024), each its own
   install root outside the repository-root workspace so Electron never moves the

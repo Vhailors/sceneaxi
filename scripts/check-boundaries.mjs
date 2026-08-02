@@ -98,6 +98,11 @@ const staticImportSpecifiers = (file, text) => {
   const staticObjectValue = Symbol("static-object-value");
   const staticArrayValue = Symbol("static-array-value");
   const constBindings = new Map();
+  // Every binding form that is *not* an immutable const, recorded by name and scope so a
+  // parameter, `let`/`var`, import, catch variable, or declaration name that shadows an
+  // unrelated outer const is never mistaken for it. Without this the checker could report
+  // a module the code never imports, or resolve a genuinely dynamic specifier.
+  const shadowBindings = new Map();
   const lexicalScope = (node) => {
     for (let current = node.parent; current !== undefined; current = current.parent) {
       if (
@@ -108,6 +113,26 @@ const staticImportSpecifiers = (file, text) => {
         ts.isForStatement(current) ||
         ts.isForInStatement(current) ||
         ts.isForOfStatement(current) ||
+        ts.isClassStaticBlockDeclaration(current)
+      ) {
+        return current;
+      }
+    }
+    return source;
+  };
+  const isFunctionLikeNode = (node) =>
+    ts.isFunctionDeclaration(node) ||
+    ts.isFunctionExpression(node) ||
+    ts.isArrowFunction(node) ||
+    ts.isMethodDeclaration(node) ||
+    ts.isConstructorDeclaration(node) ||
+    ts.isGetAccessorDeclaration(node) ||
+    ts.isSetAccessorDeclaration(node);
+  const functionScope = (node) => {
+    for (let current = node.parent; current !== undefined; current = current.parent) {
+      if (
+        ts.isSourceFile(current) ||
+        isFunctionLikeNode(current) ||
         ts.isClassStaticBlockDeclaration(current)
       ) {
         return current;
@@ -154,29 +179,79 @@ const staticImportSpecifiers = (file, text) => {
       });
     }
   };
-  const collectConstBindings = (node) => {
-    if (
-      ts.isVariableDeclaration(node) &&
-      ts.isVariableDeclarationList(node.parent) &&
-      (node.parent.flags & ts.NodeFlags.Const) !== 0
-    ) {
-      recordConstBindings({
-        name: node.name,
-        declaration: node,
-        selectors: [],
-        scope: lexicalScope(node),
-      });
+  const recordShadowBinding = (name, scope) => {
+    if (name === undefined || name === null) return;
+    if (ts.isIdentifier(name)) {
+      const scopes = shadowBindings.get(name.text) ?? [];
+      scopes.push(scope);
+      shadowBindings.set(name.text, scopes);
+      return;
     }
-    ts.forEachChild(node, collectConstBindings);
+    if (ts.isObjectBindingPattern(name) || ts.isArrayBindingPattern(name)) {
+      for (const element of name.elements) {
+        if (ts.isBindingElement(element)) recordShadowBinding(element.name, scope);
+      }
+    }
   };
-  collectConstBindings(source);
+  const collectBindings = (node) => {
+    if (ts.isVariableDeclaration(node) && ts.isVariableDeclarationList(node.parent)) {
+      if ((node.parent.flags & ts.NodeFlags.Const) !== 0) {
+        recordConstBindings({
+          name: node.name,
+          declaration: node,
+          selectors: [],
+          scope: lexicalScope(node),
+        });
+      } else {
+        recordShadowBinding(
+          node.name,
+          (node.parent.flags & ts.NodeFlags.Let) !== 0 ? lexicalScope(node) : functionScope(node),
+        );
+      }
+    } else if (ts.isParameter(node)) {
+      recordShadowBinding(node.name, node.parent);
+    } else if (ts.isCatchClause(node)) {
+      recordShadowBinding(node.variableDeclaration?.name, node);
+    } else if (ts.isFunctionExpression(node) || ts.isClassExpression(node)) {
+      recordShadowBinding(node.name, node);
+    } else if (
+      ts.isFunctionDeclaration(node) ||
+      ts.isClassDeclaration(node) ||
+      ts.isEnumDeclaration(node) ||
+      ts.isModuleDeclaration(node)
+    ) {
+      if (node.name !== undefined && ts.isIdentifier(node.name)) {
+        recordShadowBinding(node.name, lexicalScope(node));
+      }
+    } else if (
+      ts.isImportClause(node) ||
+      ts.isImportSpecifier(node) ||
+      ts.isNamespaceImport(node) ||
+      ts.isImportEqualsDeclaration(node)
+    ) {
+      recordShadowBinding(node.name, source);
+    }
+    ts.forEachChild(node, collectBindings);
+  };
+  collectBindings(source);
+  // The tightest enclosing binding wins, exactly as scope resolution does. A shadowing
+  // binding winning means the identifier is not the const's value at all, so the
+  // specifier stays unknown rather than being read off a same-named outer const.
   const constBindingFor = (identifier) => {
-    const bindings = (constBindings.get(identifier.text) ?? [])
-      .filter(({ scope }) => scope.pos <= identifier.pos && scope.end >= identifier.end)
-      .sort((left, right) =>
-        (left.scope.end - left.scope.pos) - (right.scope.end - right.scope.pos));
-    if (bindings.length === 0 || bindings[0].scope === bindings[1]?.scope) return null;
-    return bindings[0];
+    const encloses = (scope) => scope.pos <= identifier.pos && scope.end >= identifier.end;
+    const candidates = [
+      ...(constBindings.get(identifier.text) ?? [])
+        .filter((binding) => encloses(binding.scope))
+        .map((binding) => ({ binding, scope: binding.scope })),
+      ...(shadowBindings.get(identifier.text) ?? [])
+        .filter(encloses)
+        .map((scope) => ({ binding: null, scope })),
+    ].sort((left, right) =>
+      (left.scope.end - left.scope.pos) - (right.scope.end - right.scope.pos));
+    const [winner, runnerUp] = candidates;
+    if (winner === undefined || winner.binding === null) return null;
+    if (runnerUp !== undefined && runnerUp.scope === winner.scope) return null;
+    return winner.binding;
   };
   const projectBindingValues = (values, selectors) => {
     let projected = values;
@@ -189,8 +264,15 @@ const staticImportSpecifiers = (file, text) => {
           const propertyValues = value.properties.get(selector);
           if (propertyValues === undefined) next.add(unknownStaticValue);
           else for (const propertyValue of propertyValues) next.add(propertyValue);
-        } else if (typeof selector === "number" && value?.kind === staticArrayValue) {
-          const elementValues = value.elements[selector];
+        } else if (value?.kind === staticArrayValue) {
+          // `A[0]` and `A["0"]` name the same element, so a digit-string index resolves
+          // like a numeric one rather than falling through to unknown.
+          const index = typeof selector === "number"
+            ? selector
+            : typeof selector === "string" && /^\d+$/.test(selector)
+              ? Number(selector)
+              : null;
+          const elementValues = index === null ? undefined : value.elements[index];
           if (elementValues === undefined) next.add(unknownStaticValue);
           else for (const elementValue of elementValues) next.add(elementValue);
         } else {
@@ -242,6 +324,25 @@ const staticImportSpecifiers = (file, text) => {
           ? new Set([unknownStaticValue])
           : staticValues(element, seenBindings));
       return new Set([{ kind: staticArrayValue, elements }]);
+    }
+    // Member access on an immutable const object or array is the same lookup destructuring
+    // performs, so `const M = { p: "..." }; import(M.p)` must resolve exactly like
+    // `const { p } = { p: "..." }; import(p)`, and `A[0]` like `const [p] = [...]`.
+    if (ts.isPropertyAccessExpression(node)) {
+      if (!ts.isIdentifier(node.name)) return new Set([unknownStaticValue]);
+      return projectBindingValues(staticValues(node.expression, seenBindings), [node.name.text]);
+    }
+    if (ts.isElementAccessExpression(node)) {
+      const target = staticValues(node.expression, seenBindings);
+      const values = new Set();
+      for (const selector of staticValues(node.argumentExpression, seenBindings)) {
+        if (typeof selector === "string" || typeof selector === "number") {
+          for (const value of projectBindingValues(target, [selector])) values.add(value);
+        } else {
+          values.add(unknownStaticValue);
+        }
+      }
+      return values;
     }
     if (
       ts.isParenthesizedExpression(node) ||
@@ -367,6 +468,16 @@ const staticImportSpecifiers = (file, text) => {
   visit(source);
   return specifiers;
 };
+// The import loop and the Kids loop below walk overlapping file sets, and a full
+// TypeScript parse per file is no longer near-free, so each file is read and parsed once.
+const specifierCache = new Map();
+const importSpecifiersOf = (file) => {
+  const cached = specifierCache.get(file);
+  if (cached !== undefined) return cached;
+  const specifiers = staticImportSpecifiers(file, readFileSync(file, "utf8"));
+  specifierCache.set(file, specifiers);
+  return specifiers;
+};
 const SOURCE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"];
 const walk = (dir, out = []) => {
   for (const entry of readdirSync(dir)) {
@@ -412,10 +523,89 @@ const resolveSourceModule = (candidate) => {
   }
   return candidate;
 };
-const resolvePackageLocalSpecifier = ({ name, srcDir, file, spec }) => {
+// A bundler-resolved bare specifier is a package-local import too, so the alias table is
+// read from the package's own tsconfig rather than hardcoded: an alias added there must
+// not silently become an unmodelled path around the authority rules below.
+const readTsconfigOptions = (configPath, seen = new Set()) => {
+  const key = resolve(configPath);
+  if (seen.has(key) || !existsSync(key) || !statSync(key).isFile()) return null;
+  seen.add(key);
+  const parsed = ts.parseConfigFileTextToJson(key, readFileSync(key, "utf8"));
+  if (parsed.error !== undefined || typeof parsed.config !== "object" || parsed.config === null) {
+    fail(`${relative(root, key)} is not readable, so its path aliases cannot be modelled`);
+    return null;
+  }
+  const dir = dirname(key);
+  const compilerOptions = parsed.config.compilerOptions ?? {};
+  const own = {
+    paths: compilerOptions.paths,
+    pathsDir: dir,
+    baseUrl: compilerOptions.baseUrl,
+    baseUrlDir: dir,
+  };
+  if (own.paths !== undefined && own.baseUrl !== undefined) return own;
+  // `extends` merges compilerOptions per key, so an inherited `paths` or `baseUrl` still
+  // maps specifiers, and each resolves relative to the config that declares it.
+  const extendsList = Array.isArray(parsed.config.extends)
+    ? parsed.config.extends
+    : typeof parsed.config.extends === "string"
+      ? [parsed.config.extends]
+      : [];
+  for (const extended of [...extendsList].reverse()) {
+    if (typeof extended !== "string" || !extended.startsWith(".")) continue;
+    const inherited = readTsconfigOptions(resolve(dir, extended), seen);
+    if (inherited === null) continue;
+    if (own.paths === undefined && inherited.paths !== undefined) {
+      own.paths = inherited.paths;
+      own.pathsDir = inherited.pathsDir;
+    }
+    if (own.baseUrl === undefined && inherited.baseUrl !== undefined) {
+      own.baseUrl = inherited.baseUrl;
+      own.baseUrlDir = inherited.baseUrlDir;
+    }
+  }
+  return own;
+};
+const packageAliasCache = new Map();
+const packageAliases = (dir) => {
+  const cached = packageAliasCache.get(dir);
+  if (cached !== undefined) return cached;
+  const aliases = [];
+  const options = readTsconfigOptions(join(dir, "tsconfig.json"));
+  if (options !== null && typeof options.paths === "object" && options.paths !== null) {
+    const base = typeof options.baseUrl === "string"
+      ? resolve(options.baseUrlDir, options.baseUrl)
+      : options.pathsDir;
+    for (const [pattern, targets] of Object.entries(options.paths)) {
+      if (!Array.isArray(targets)) continue;
+      for (const target of targets) {
+        if (typeof target === "string") aliases.push({ pattern, target, base });
+      }
+    }
+  }
+  packageAliasCache.set(dir, aliases);
+  return aliases;
+};
+const matchAlias = ({ pattern, target, base }, spec) => {
+  const star = pattern.indexOf("*");
+  if (star === -1) return spec === pattern ? resolve(base, target) : null;
+  const prefix = pattern.slice(0, star);
+  const suffix = pattern.slice(star + 1);
+  if (
+    spec.length < prefix.length + suffix.length ||
+    !spec.startsWith(prefix) ||
+    !spec.endsWith(suffix)
+  ) {
+    return null;
+  }
+  const captured = spec.slice(prefix.length, spec.length - suffix.length);
+  return resolve(base, target.replace("*", captured));
+};
+const resolvePackageLocalSpecifier = ({ dir, file, spec }) => {
   if (spec.startsWith(".")) return resolveSourceModule(resolve(dirname(file), spec));
-  if (name === "@sceneaxi/site-umbrella" && spec.startsWith("@/")) {
-    return resolveSourceModule(resolve(srcDir, spec.slice(2)));
+  for (const alias of packageAliases(dir)) {
+    const resolved = matchAlias(alias, spec);
+    if (resolved !== null) return resolveSourceModule(resolved);
   }
   return null;
 };
@@ -475,8 +665,7 @@ for (const [name, { dir }] of manifests) {
   for (const file of walk(srcDir)) {
     const fromTesting = contains(testingDir, file);
     const fromModule = sourceModuleId(file);
-    const text = readFileSync(file, "utf8");
-    for (const spec of staticImportSpecifiers(file, text)) {
+    for (const spec of importSpecifiersOf(file)) {
       const resourcePath = resourceSpecifierPath(spec);
       if (resourcePath.startsWith("@sceneaxi/")) {
         const target = resourcePath.split("/").slice(0, 2).join("/");
@@ -493,7 +682,7 @@ for (const [name, { dir }] of manifests) {
           fail(`${name}: ${relative(root, file)} imports test-only subpath ${spec} — production source may not reach a testing/ seam`);
         }
       } else {
-        const resolved = resolvePackageLocalSpecifier({ name, srcDir, file, spec: resourcePath });
+        const resolved = resolvePackageLocalSpecifier({ dir, file, spec: resourcePath });
         if (resolved === null) continue;
         const targetModule = sourceModuleId(resolved);
         // Path-segment containment (not raw startsWith): "packages/cli-shadow" must not match "packages/cli"
@@ -531,7 +720,7 @@ for (const [name, { json, dir }] of manifests) {
   const srcDir = join(dir, "src");
   if (existsSync(srcDir)) {
     for (const file of walk(srcDir)) {
-      for (const spec of staticImportSpecifiers(file, readFileSync(file, "utf8"))) {
+      for (const spec of importSpecifiersOf(file)) {
         const resourcePath = resourceSpecifierPath(spec);
         const target = resourcePath.startsWith("@sceneaxi/")
           ? resourcePath.split("/").slice(0, 2).join("/")

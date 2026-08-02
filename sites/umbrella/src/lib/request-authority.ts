@@ -25,6 +25,7 @@ import {
   type UmbrellaIdentityPlane,
 } from "./identity-plane.js";
 import {
+  CREDIT_WEBHOOK_REASONS,
   STRIPE_SIGNATURE_HEADER,
   creditWebhookHttpStatus,
   type CreditWebhookOutcome,
@@ -73,7 +74,7 @@ export function umbrellaRequestAuthority(): UmbrellaRequestAuthority {
       if (deployment.creditWebhook === undefined) {
         return Object.freeze({
           ok: false as const,
-          reason: "CREDITS_PLANE_NOT_WIRED",
+          reason: CREDIT_WEBHOOK_REASONS.planeNotWired,
           message:
             "No deployment-owned webhook capability is wired, so a paid event cannot be verified or settled. Nothing was granted.",
         });

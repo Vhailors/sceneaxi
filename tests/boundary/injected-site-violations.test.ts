@@ -152,6 +152,43 @@ describe("sites tier — injected violations", () => {
     },
   );
 
+  it("boundary check models every alias the umbrella's tsconfig declares, not one hardcoded pair", () => {
+    // The `@/*` mapping is not special: any alias a bundler would resolve is a path to
+    // the deployment owners, so adding one to the site's tsconfig must not open a route
+    // around the facade with no checker change and no failing test.
+    editManifest(fx, "sites/umbrella/tsconfig.json", (config) => {
+      const options = config["compilerOptions"] as Record<string, unknown>;
+      options["paths"] = { ...(options["paths"] as object), "~deploy/*": ["./src/lib/*"] };
+    });
+    appendTo(fx, "sites/umbrella/src/app/api/login/route.ts", '\nimport "~deploy/identity-plane";\n');
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "imports deployment authority module sites/umbrella/src/lib/identity-plane outside the request-authority facade",
+    );
+  });
+
+  it("boundary check does not read a dynamic specifier off a same-named outer const", () => {
+    // Static resolution is evidence, not a name match: a parameter shadowing an unrelated
+    // module-scope const means the import is genuinely dynamic, and reporting the const's
+    // value would name a module this file never imports.
+    appendTo(
+      fx,
+      "sites/umbrella/src/app/api/login/route.ts",
+      [
+        "",
+        'const authorityPath = "../../../lib/identity-plane.js";',
+        "export const declaredAuthorityPath = authorityPath;",
+        "export async function loadModule(authorityPath: string) {",
+        "  return import(authorityPath);",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status, `stderr: ${res.stderr}`).toBe(0);
+  });
+
   it("boundary check denies an unauthorized lib re-exporting deployment authority", () => {
     writeTo(
       fx,
@@ -211,6 +248,24 @@ describe("sites tier — injected violations", () => {
     [
       "destructured array const binding",
       'const [authorityPath] = ["../../../lib/identity-plane.js"];\nawait import(authorityPath);',
+    ],
+    // Member access is the same lookup destructuring performs, so it must refuse the
+    // same way rather than falling through to an unknown specifier.
+    [
+      "const object property access",
+      'const authority = { path: "../../../lib/identity-plane.js" };\nawait import(authority.path);',
+    ],
+    [
+      "const object element access",
+      'const authority = { path: "../../../lib/identity-plane.js" };\nawait import(authority["path"]);',
+    ],
+    [
+      "const array element access",
+      'const authority = ["../../../lib/identity-plane.js"];\nawait import(authority[0]);',
+    ],
+    [
+      "nested const member access",
+      'const authority = { lib: { path: "../../../lib/identity-plane.js" } };\nawait import(authority.lib.path);',
     ],
   ])("boundary check denies deployment authority through a %s", (_label, source) => {
     appendTo(fx, "sites/umbrella/src/app/api/login/route.ts", `\n${source}\n`);

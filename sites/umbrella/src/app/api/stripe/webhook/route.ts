@@ -21,9 +21,10 @@ import {
  * grant is owed, and retrying it forever would only wear down the endpoint's health.
  *
  * Which non-2xx is a diagnostic, not a retry decision: `creditWebhookHttpStatus` answers
- * 503 for the refusals this deployment owns and 400 for the ones the request owns, so a
- * forged signature and an unreachable database are distinguishable in the provider
- * dashboard and in status-code alerting.
+ * 503 for the refusals this deployment owns — an unwired webhook capability included —
+ * and 400 for the ones the request owns, so a forged signature and an unreachable
+ * database are distinguishable in the provider dashboard and in status-code alerting.
+ * That decision has exactly one owner; this route classifies no reason itself.
  */
 export const dynamic = "force-dynamic";
 
@@ -36,12 +37,7 @@ export async function POST(request: NextRequest) {
   if (!outcome.ok) {
     return NextResponse.json(
       { ok: false, reason: outcome.reason, message: outcome.message },
-      {
-        status:
-          outcome.reason === "CREDITS_PLANE_NOT_WIRED"
-            ? 503
-            : creditWebhookHttpStatus(outcome.reason),
-      },
+      { status: creditWebhookHttpStatus(outcome.reason) },
     );
   }
   if (outcome.ignored) {
