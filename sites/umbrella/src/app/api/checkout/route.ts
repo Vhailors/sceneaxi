@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SITE_REFUSALS, resolveCheckoutRedirectOrigin } from "@sceneaxi/site-kit";
-import { createUmbrellaIdentityPlane } from "../../../lib/identity-plane.js";
+import { umbrellaRequestAuthority } from "../../../lib/request-authority.js";
 import { readSessionToken } from "../../_session.js";
 
 /**
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
   // authorizes the purchase against the session the server verified rather than
   // against the user id this form submitted.
   const sessionToken = await readSessionToken();
-  const plane = createUmbrellaIdentityPlane(process.env, { sessionToken });
+  const plane = umbrellaRequestAuthority().plane({ sessionToken });
 
   if (!plane.wired.billing) {
     return refusalResponse("BILLING_PLANE_NOT_WIRED", SITE_REFUSALS.BILLING_PLANE_NOT_WIRED);

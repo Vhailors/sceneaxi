@@ -46,7 +46,6 @@ export {
   createAuthLoginAdapter,
   createBillingCheckoutAdapter,
   createBillingCreditsAdapter,
-  createDeploymentPlaneHandles,
   createUmbrellaIdentityPlane,
   parseSessionToken,
   resolveBillingMode,
@@ -56,12 +55,19 @@ export {
   toSitePrincipal,
   type BillingReadPlane,
   type CheckoutSessionAdapter,
+  type CreditWebhookCapability,
   type IdentityPlaneAdapters,
-  type DeploymentPlaneOptions,
   type IdentityPlaneWiring,
   type UmbrellaIdentityPlane,
   type UmbrellaPlaneHandles,
 } from "./lib/identity-plane.js";
+
+export {
+  umbrellaRequestAuthority,
+  type UmbrellaRequestAuthority,
+  type UmbrellaRequestEvidence,
+  type UmbrellaWebhookRequestEvidence,
+} from "./lib/request-authority.js";
 
 export {
   LOGIN_DEFAULT_DESTINATION,

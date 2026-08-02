@@ -26,6 +26,18 @@ import {
   type CreditsSaleSettlement,
 } from "@sceneaxi/billing";
 
+export { CHECKOUT_METADATA_KEYS };
+export type { CheckoutSettlement, CreditStore };
+export {
+  BILLING_REFUSE_REASONS,
+  checkoutPurposeGrantsCredits,
+  checkoutPurposeSettlesElsewhere,
+  loadLedgerState,
+  parseCheckoutCompletedEvent,
+  persistCheckoutCompletedGrant,
+  verifyStripeWebhookSignature,
+} from "@sceneaxi/billing";
+
 export type SqlRow = Readonly<Record<string, unknown>>;
 
 type NeonRuntimeQuery = Readonly<{

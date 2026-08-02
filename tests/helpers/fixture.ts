@@ -18,9 +18,18 @@ export const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 const COPY_TOPS = ["docs", "packages", "apps", "sites", "desktop", "scripts", "tests", ".github"];
 /**
  * Root files the gate scripts read: `check-sites` reads the manifest and workspace,
- * and `check-publish-ready` reads the manifest scripts and the SDK-output ignores.
+ * `check-publish-ready` reads the manifest scripts and the SDK-output ignores, and
+ * `check-boundaries` reads each package's tsconfig alias table — which every package
+ * config inherits from the root ones, so a fixture without them models a different
+ * config chain than the tree it copies.
  */
-const COPY_FILES = ["package.json", "pnpm-workspace.yaml", ".gitignore"];
+const COPY_FILES = [
+  "package.json",
+  "pnpm-workspace.yaml",
+  ".gitignore",
+  "tsconfig.json",
+  "tsconfig.base.json",
+];
 // `release` and `dist-build` are desktop-tier packaging output (ADR 0024): heavy
 // binaries the checkers never read, so copying them would only slow every fixture.
 const SKIP_DIRS = new Set(["node_modules", "dist", "coverage", "test", "release", "dist-build"]);

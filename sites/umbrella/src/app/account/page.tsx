@@ -7,8 +7,8 @@ import { readSessionToken } from "../_session.js";
 import {
   IDENTITY_PLANE_DOC,
   IDENTITY_PLANE_PENDING_NOTE,
-  createUmbrellaIdentityPlane,
-} from "../../lib/identity-plane.js";
+  umbrellaRequestAuthority,
+} from "../../lib/request-authority.js";
 import { CREDIT_LEDGER_FACTS, CREDIT_LEDGER_COPY } from "../../lib/site-content.js";
 import { StatePanel } from "../_components/state-panel.js";
 
@@ -31,7 +31,7 @@ import { StatePanel } from "../_components/state-panel.js";
  */
 export default async function AccountPage() {
   const sessionToken = await readSessionToken();
-  const plane = createUmbrellaIdentityPlane(process.env, { sessionToken });
+  const plane = umbrellaRequestAuthority().plane({ sessionToken });
   const resolved = await resolveEditorAccess({
     identity: plane.identity,
     credits: plane.credits,

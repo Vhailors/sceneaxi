@@ -12,7 +12,7 @@ import {
   type EditorSessionAccess,
   type FamilyLinks,
 } from "@sceneaxi/site-kit";
-import type { UmbrellaIdentityPlane } from "./identity-plane.js";
+import type { UmbrellaIdentityPlane } from "./request-authority.js";
 
 export const UMBRELLA_BRAND = Object.freeze({
   name: "SceneAxi",

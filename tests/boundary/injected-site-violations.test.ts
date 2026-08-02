@@ -82,16 +82,345 @@ describe("sites tier — injected violations", () => {
   );
 
   it.each(["@sceneaxi/auth", "@sceneaxi/billing"])(
-    "boundary check allows the umbrella's charted identity edge — %s",
+    "boundary check allows the umbrella's charted identity edge through its plug point — %s",
     (allowed) => {
-      // sceneaxi#131: the umbrella is the one site wired to the identity plane, so
-      // these two edges must pass. Asserted beside the catalog denials below so the
-      // widening and its bound are proven together rather than separately.
-      appendTo(fx, "sites/umbrella/src/index.ts", `\nimport "${allowed}";\n`);
+      // sceneaxi#131: the umbrella is the one site wired to the identity plane, but
+      // the edge terminates in the deployment-owned lib boundary. Asserted beside
+      // the request-surface denials below so the widening and its bound are proven
+      // together rather than separately.
+      appendTo(fx, "sites/umbrella/src/lib/identity-plane.ts", `\nimport "${allowed}";\n`);
       const res = runCheck(fx, "check-boundaries.mjs");
       expect(res.status, `stderr: ${res.stderr}`).toBe(0);
     },
   );
+
+  it.each(["@sceneaxi/auth", "@sceneaxi/billing"])(
+    "boundary check denies a request route taking caller-facing authority through %s",
+    (denied) => {
+      appendTo(fx, "sites/umbrella/src/app/api/login/route.ts", `\nimport "${denied}";\n`);
+      const res = runCheck(fx, "check-boundaries.mjs");
+      expect(res.status).toBe(1);
+      expect(res.stderr).toContain(
+        `imports ${denied} outside its exact deployment owner files`,
+      );
+    },
+  );
+
+  it.each(["@sceneaxi/auth", "@sceneaxi/billing"])(
+    "boundary check denies an unauthorized umbrella lib importing %s",
+    (denied) => {
+      writeTo(fx, "sites/umbrella/src/lib/authority-leak.ts", `import "${denied}";\n`);
+      const res = runCheck(fx, "check-boundaries.mjs");
+      expect(res.status).toBe(1);
+      expect(res.stderr).toContain(
+        `sites/umbrella/src/lib/authority-leak.ts imports ${denied} outside its exact deployment owner files`,
+      );
+    },
+  );
+
+  it.each([
+    ["../../../lib/identity-plane.js", "sites/umbrella/src/lib/identity-plane"],
+    ["../../../lib/provider-adapters.js", "sites/umbrella/src/lib/provider-adapters"],
+    ["../../../lib/credit-webhook.js", "sites/umbrella/src/lib/credit-webhook"],
+    ["../../../index.js", "sites/umbrella/src/index"],
+  ])(
+    "boundary check denies a route bypassing the request facade through %s",
+    (specifier, target) => {
+      appendTo(fx, "sites/umbrella/src/app/api/login/route.ts", `\nimport "${specifier}";\n`);
+      const res = runCheck(fx, "check-boundaries.mjs");
+      expect(res.status).toBe(1);
+      expect(res.stderr).toContain(
+        `imports deployment authority module ${target} outside the request-authority facade`,
+      );
+    },
+  );
+
+  it.each([
+    ["@/lib/identity-plane", "sites/umbrella/src/lib/identity-plane"],
+    ["@/lib/provider-adapters", "sites/umbrella/src/lib/provider-adapters"],
+    ["@/lib/credit-webhook", "sites/umbrella/src/lib/credit-webhook"],
+    ["@/index", "sites/umbrella/src/index"],
+  ])(
+    "boundary check denies a route bypassing the request facade through alias %s",
+    (specifier, target) => {
+      appendTo(fx, "sites/umbrella/src/app/api/login/route.ts", `\nimport "${specifier}";\n`);
+      const res = runCheck(fx, "check-boundaries.mjs");
+      expect(res.status).toBe(1);
+      expect(res.stderr).toContain(
+        `imports deployment authority module ${target} outside the request-authority facade`,
+      );
+    },
+  );
+
+  it("boundary check models every alias the umbrella's tsconfig declares, not one hardcoded pair", () => {
+    // The `@/*` mapping is not special: any alias a bundler would resolve is a path to
+    // the deployment owners, so adding one to the site's tsconfig must not open a route
+    // around the facade with no checker change and no failing test.
+    editManifest(fx, "sites/umbrella/tsconfig.json", (config) => {
+      const options = config["compilerOptions"] as Record<string, unknown>;
+      options["paths"] = { ...(options["paths"] as object), "~deploy/*": ["./src/lib/*"] };
+    });
+    appendTo(fx, "sites/umbrella/src/app/api/login/route.ts", '\nimport "~deploy/identity-plane";\n');
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "imports deployment authority module sites/umbrella/src/lib/identity-plane outside the request-authority facade",
+    );
+  });
+
+  it("boundary check follows a longer alias prefix that shadows an earlier one", () => {
+    // TypeScript and webpack resolve the longest matching prefix, not the first declared
+    // one, so checking only the first match would hand `@/deploy/*` a path around the
+    // facade while the bundler loaded the deployment owner.
+    editManifest(fx, "sites/umbrella/tsconfig.json", (config) => {
+      const options = config["compilerOptions"] as Record<string, unknown>;
+      options["paths"] = { ...(options["paths"] as object), "@/deploy/*": ["./src/lib/*"] };
+    });
+    appendTo(fx, "sites/umbrella/src/app/api/login/route.ts", '\nimport "@/deploy/identity-plane";\n');
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "imports deployment authority module sites/umbrella/src/lib/identity-plane outside the request-authority facade",
+    );
+  });
+
+  it("boundary check checks every target of a multi-target alias, not just the first", () => {
+    // A resolver takes the first target that resolves, so a leading target that resolves
+    // to nothing must not hide the one that lands on the deployment owner.
+    editManifest(fx, "sites/umbrella/tsconfig.json", (config) => {
+      const options = config["compilerOptions"] as Record<string, unknown>;
+      options["paths"] = { "@/*": ["./generated/*", "./src/*"] };
+    });
+    appendTo(fx, "sites/umbrella/src/app/api/login/route.ts", '\nimport "@/lib/identity-plane";\n');
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "imports deployment authority module sites/umbrella/src/lib/identity-plane outside the request-authority facade",
+    );
+  });
+
+  it("boundary check resolves a bare specifier through a baseUrl that declares no alias", () => {
+    // Next.js absolute imports need no `paths` entry: `"baseUrl": "."` alone makes
+    // `src/lib/identity-plane` load the deployment owner, so a checker that models only
+    // the alias table would pass a route that reaches it.
+    editManifest(fx, "sites/umbrella/tsconfig.json", (config) => {
+      const options = config["compilerOptions"] as Record<string, unknown>;
+      options["baseUrl"] = ".";
+      delete options["paths"];
+    });
+    appendTo(fx, "sites/umbrella/src/app/api/login/route.ts", '\nimport "src/lib/identity-plane";\n');
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "imports deployment authority module sites/umbrella/src/lib/identity-plane outside the request-authority facade",
+    );
+  });
+
+  it("boundary check leaves a real dependency a package import under a declared baseUrl", () => {
+    // The baseUrl root only claims specifiers that land on a file that exists, so adding
+    // one must not turn `react` or `next` into a phantom package-local module and fail
+    // the clean tree.
+    editManifest(fx, "sites/umbrella/tsconfig.json", (config) => {
+      const options = config["compilerOptions"] as Record<string, unknown>;
+      options["baseUrl"] = ".";
+    });
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status, `stderr: ${res.stderr}`).toBe(0);
+  });
+
+  it("boundary check models an alias table inherited through tsconfig extends", () => {
+    // `paths` declared in an extended base still maps specifiers, so inheriting the
+    // alias must not be a way to declare one the checker never sees.
+    writeTo(
+      fx,
+      "sites/umbrella/tsconfig.aliases.json",
+      `${JSON.stringify(
+        { compilerOptions: { paths: { "@/*": ["./src/*"], "~deploy/*": ["./src/lib/*"] } } },
+        null,
+        2,
+      )}\n`,
+    );
+    editManifest(fx, "sites/umbrella/tsconfig.json", (config) => {
+      config["extends"] = "./tsconfig.aliases.json";
+      delete (config["compilerOptions"] as Record<string, unknown>)["paths"];
+    });
+    appendTo(fx, "sites/umbrella/src/app/api/login/route.ts", '\nimport "~deploy/identity-plane";\n');
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "imports deployment authority module sites/umbrella/src/lib/identity-plane outside the request-authority facade",
+    );
+  });
+
+  it("boundary check refuses a tsconfig base it cannot resolve instead of ignoring its aliases", () => {
+    // An unresolvable base may declare any `paths` at all, so passing over it would be
+    // passing on an unknown alias table.
+    editManifest(fx, "sites/umbrella/tsconfig.json", (config) => {
+      config["extends"] = "@tsconfig/absent/tsconfig.json";
+    });
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "sites/umbrella/tsconfig.json extends '@tsconfig/absent/tsconfig.json', which does not resolve, so its path aliases cannot be modelled",
+    );
+  });
+
+  it("boundary check does not read a dynamic specifier off a same-named outer const", () => {
+    // Static resolution is evidence, not a name match: a parameter shadowing an unrelated
+    // module-scope const means the import is genuinely dynamic, and reporting the const's
+    // value would name a module this file never imports.
+    appendTo(
+      fx,
+      "sites/umbrella/src/app/api/login/route.ts",
+      [
+        "",
+        'const authorityPath = "../../../lib/identity-plane.js";',
+        "export const declaredAuthorityPath = authorityPath;",
+        "export async function loadModule(authorityPath: string) {",
+        "  return import(authorityPath);",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status, `stderr: ${res.stderr}`).toBe(0);
+  });
+
+  it("boundary check denies an unauthorized lib re-exporting deployment authority", () => {
+    writeTo(
+      fx,
+      "sites/umbrella/src/lib/authority-leak.ts",
+      'export { createUmbrellaIdentityPlane } from "./identity-plane.js";\n',
+    );
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "sites/umbrella/src/lib/authority-leak.ts imports deployment authority module sites/umbrella/src/lib/identity-plane outside the request-authority facade",
+    );
+  });
+
+  it("boundary check denies a static template dynamic import of deployment authority", () => {
+    appendTo(
+      fx,
+      "sites/umbrella/src/app/api/login/route.ts",
+      '\nawait import(`../../../lib/identity-plane.js`);\n',
+    );
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "sites/umbrella/src/app/api/login/route.ts imports deployment authority module sites/umbrella/src/lib/identity-plane outside the request-authority facade",
+    );
+  });
+
+  it("boundary check denies a constant-concatenated dynamic import of deployment authority", () => {
+    appendTo(
+      fx,
+      "sites/umbrella/src/app/api/login/route.ts",
+      '\nawait import("../../../lib/" + "identity-plane.js");\n',
+    );
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "sites/umbrella/src/app/api/login/route.ts imports deployment authority module sites/umbrella/src/lib/identity-plane outside the request-authority facade",
+    );
+  });
+
+  it.each([
+    [
+      "same-file const binding",
+      'const authorityPath = "../../../lib/identity-plane.js";\nawait import(authorityPath);',
+    ],
+    [
+      "constant conditional binding",
+      'const authorityPath = true ? "../../../lib/identity-plane.js" : "../../../lib/request-authority.js";\nawait import(authorityPath);',
+    ],
+    [
+      "constant logical binding",
+      'const authorityPath = false || "../../../lib/identity-plane.js";\nawait import(authorityPath);',
+    ],
+    [
+      "destructured object const binding",
+      'const { path: authorityPath } = { path: "../../../lib/identity-plane.js" };\nawait import(authorityPath);',
+    ],
+    [
+      "destructured array const binding",
+      'const [authorityPath] = ["../../../lib/identity-plane.js"];\nawait import(authorityPath);',
+    ],
+    // Member access is the same lookup destructuring performs, so it must refuse the
+    // same way rather than falling through to an unknown specifier.
+    [
+      "const object property access",
+      'const authority = { path: "../../../lib/identity-plane.js" };\nawait import(authority.path);',
+    ],
+    [
+      "const object element access",
+      'const authority = { path: "../../../lib/identity-plane.js" };\nawait import(authority["path"]);',
+    ],
+    [
+      "const array element access",
+      'const authority = ["../../../lib/identity-plane.js"];\nawait import(authority[0]);',
+    ],
+    [
+      "nested const member access",
+      'const authority = { lib: { path: "../../../lib/identity-plane.js" } };\nawait import(authority.lib.path);',
+    ],
+  ])("boundary check denies deployment authority through a %s", (_label, source) => {
+    appendTo(fx, "sites/umbrella/src/app/api/login/route.ts", `\n${source}\n`);
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "sites/umbrella/src/app/api/login/route.ts imports deployment authority module sites/umbrella/src/lib/identity-plane outside the request-authority facade",
+    );
+  });
+
+  it.each([
+    ["a relative resource query", "./identity-plane.js?authority"],
+    ["a relative resource fragment", "./identity-plane.js#authority"],
+    ["an aliased resource query", "@/lib/identity-plane?authority"],
+    ["an aliased resource fragment", "@/lib/identity-plane#authority"],
+  ])("boundary check denies deployment authority through %s", (_label, specifier) => {
+    writeTo(
+      fx,
+      "sites/umbrella/src/lib/authority-leak.jsx",
+      `await import("${specifier}");\n`,
+    );
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "sites/umbrella/src/lib/authority-leak.jsx imports deployment authority module sites/umbrella/src/lib/identity-plane outside the request-authority facade",
+    );
+  });
+
+  it("boundary check scans a JSX intermediary that re-exports deployment authority", () => {
+    writeTo(
+      fx,
+      "sites/umbrella/src/lib/authority-leak.jsx",
+      'export { createUmbrellaIdentityPlane } from "./identity-plane.js";\n',
+    );
+    appendTo(
+      fx,
+      "sites/umbrella/src/app/api/login/route.ts",
+      '\nimport { createUmbrellaIdentityPlane } from "../../../lib/authority-leak.jsx";\n',
+    );
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "sites/umbrella/src/lib/authority-leak.jsx imports deployment authority module sites/umbrella/src/lib/identity-plane outside the request-authority facade",
+    );
+  });
+
+  it("boundary check resolves a directory barrel that re-exports deployment authority", () => {
+    appendTo(
+      fx,
+      "sites/umbrella/src/app/api/login/route.ts",
+      '\nimport { createUmbrellaIdentityPlane } from "../../../";\n',
+    );
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "sites/umbrella/src/app/api/login/route.ts imports deployment authority module sites/umbrella/src/index outside the request-authority facade",
+    );
+  });
 
   it.each([
     ["catalog-game", "@sceneaxi/auth"],

@@ -7,8 +7,8 @@ import {
 } from "@sceneaxi/site-kit";
 import {
   BILLING_PLANE_PENDING_NOTE,
-  createUmbrellaIdentityPlane,
-} from "../../lib/identity-plane.js";
+  umbrellaRequestAuthority,
+} from "../../lib/request-authority.js";
 import {
   CREDIT_LEDGER_COPY,
   CREDIT_LEDGER_FACTS,
@@ -40,7 +40,7 @@ const rate = (pack: SiteCreditPack): number =>
   pack.unitAmount === 0 ? Number.POSITIVE_INFINITY : pack.credits / pack.unitAmount;
 
 export default async function PricingPage() {
-  const plane = createUmbrellaIdentityPlane(process.env);
+  const plane = umbrellaRequestAuthority().plane();
   const packs = await plane.billing.listCreditPacks();
 
   // The one flag on this page is arithmetic, not a recommendation: it appears only when

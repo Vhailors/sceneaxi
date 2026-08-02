@@ -60,7 +60,7 @@ import {
   verifyStripeWebhookSignature,
   type CheckoutSettlement,
   type CreditStore,
-} from "@sceneaxi/billing";
+} from "./provider-adapters.js";
 
 /** The header Stripe signs every webhook body with. */
 export const STRIPE_SIGNATURE_HEADER = "stripe-signature" as const;
@@ -123,6 +123,14 @@ export const CREDIT_WEBHOOK_REASONS = Object.freeze({
   eventUnrelated: "STRIPE_WEBHOOK_EVENT_UNRELATED",
   ledgerUnavailable: "CREDIT_LEDGER_UNAVAILABLE",
   storeFailed: "CREDIT_STORE_FAILED",
+  /**
+   * No deployment-owned webhook capability is wired at all, so this path was never
+   * entered. The request facade raises it *before* `applyCreditPackWebhook`, but the
+   * status it deserves is this module's to answer like every other reason — a second
+   * owner at the transport would answer for callers of `creditWebhookHttpStatus`
+   * this module cannot see.
+   */
+  planeNotWired: "CREDITS_PLANE_NOT_WIRED",
 } as const);
 
 /**
@@ -165,6 +173,10 @@ const UNHANDLED_EVENT_REASONS: ReadonlySet<string> = Object.freeze(
  * boundary refuses it for a request *this module* built, never for anything the inbound
  * bytes decided, so a sender must not be told they sent a bad request — and money may
  * already have moved, so it must stay retryable.
+ *
+ * `CREDITS_PLANE_NOT_WIRED` is the extreme case of the same thing — an endpoint with no
+ * webhook capability wired at all — so it is answered here rather than special-cased at
+ * the transport, which would leave two owners disagreeing about one reason.
  */
 const SERVER_SIDE_REASONS: ReadonlySet<string> = Object.freeze(
   new Set<string>([
@@ -172,6 +184,7 @@ const SERVER_SIDE_REASONS: ReadonlySet<string> = Object.freeze(
     CREDIT_WEBHOOK_REASONS.evidenceUnavailable,
     CREDIT_WEBHOOK_REASONS.ledgerUnavailable,
     CREDIT_WEBHOOK_REASONS.storeFailed,
+    CREDIT_WEBHOOK_REASONS.planeNotWired,
     BILLING_REFUSE_REASONS.requestInvalid,
     BILLING_REFUSE_REASONS.webhookSecretMissing,
     BILLING_REFUSE_REASONS.settlementSessionMismatch,

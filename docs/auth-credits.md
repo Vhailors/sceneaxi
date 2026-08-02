@@ -19,7 +19,7 @@ The architecture decision behind the shape of this plane is
 | Neon schema | `db/migrations` |
 | Login + balance view model | `apps/web-shell` (`createAccountPanel`) |
 | In-app AI assistant view model | `apps/web-shell` (`createAssistantPanel`) |
-| Deployable-site wiring | `sites/umbrella/src/lib/identity-plane.ts` + `provider-adapters.ts` (`docs/websites-deploy.md`) |
+| Deployable-site wiring | `sites/umbrella/src/lib/identity-plane.ts` + `provider-adapters.ts`, reached by request code only through the `request-authority.ts` facade (`docs/websites-deploy.md`) |
 
 Release group `identity`; both packages consume only public contracts. **Outside core:** a
 running Better Auth instance, a Neon connection, the Stripe API client, any HTTP surface,
@@ -33,8 +33,8 @@ entry point that reaches `identityPort.signIn` **ships** (sceneaxi#185): the umb
 `/login` page and `POST /api/login|logout` routes drive the plane's login port and set the
 HttpOnly `sceneaxi.session` cookie — see *Better Auth* below. **What v1 still does
 not deliver is a running provider:** a live signed-in browser session additionally needs
-the deployment to serve Better Auth's own handler and return the handles from
-`umbrellaPlaneHandles()`, which is operational work outside this repository. See
+the deployment to serve Better Auth's own handler and configure the handles held behind
+`umbrellaRequestAuthority()`, which is operational work outside this repository. See
 *Deployment activation* at the end.
 
 ## Environment
@@ -44,6 +44,7 @@ Names only; values never appear in the repository.
 | Variable | Purpose |
 |---|---|
 | `SCENEAXI_ADMIN_EMAIL` | The **one** captain email that resolves to the `admin` role |
+| `SCENEAXI_ADMIN_BOOTSTRAP_SECRET` | Provider-owned first-admin credential material. It is not a role source and never enters core |
 | `BETTER_AUTH_ORIGIN` | Better Auth provider origin used by the umbrella sign-in adapter. The provider must serve `sign-in/email` and `get-session`, and must resolve that lookup from either the issued session cookie or the issued bearer token; `docs/websites-deploy.md` owns that prerequisite |
 | `DATABASE_URL` | Neon Postgres connection string |
 | `STRIPE_SECRET_KEY` | Stripe **test** secret key |
@@ -67,6 +68,16 @@ into the codebase, and multi-admin needs a captain decision.
 Admin comes from an environment variable, so there is no API, migration, or admin panel
 that can mint a second one. `planAdminBootstrap` produces the single `RoleAssignment` a
 deployment persists; the database allows at most one admin row regardless.
+
+On the umbrella, a route does not call this resolver and cannot supply its own `env`.
+The no-argument `umbrellaRequestAuthority()` facade obtains the deployment registry once
+and exposes only a request-plane method accepting the carried session credential and a
+webhook method accepting raw request evidence. The registry holds the exact issued
+`AdminIdentity` with the provider handles. The pure `createUmbrellaIdentityPlane()`
+builder receives already-issued evidence for deterministic tests; it no longer turns a
+caller-shaped environment into admin authority, and the returned site plane does not
+expose the admin witness. `pnpm check:boundaries` denies production code from reaching
+that builder, the provider adapters, or the root barrel around the facade.
 
 ```ts
 import { planAdminBootstrap, resolveAdminIdentity } from "@sceneaxi/auth";
@@ -158,6 +169,18 @@ persisted state handed in from outside. Those witnesses are therefore defence-in
 *inside* that boundary rather than a second one — they establish that this process ran the
 expected step on this exact object, and never make the process an independent issuer of the
 environment value, persisted row, or provider fact the object was derived from.
+
+The public low-level functions landed for sceneaxi#126 remain compatible building blocks,
+but they are not the umbrella's deployment authority. `resolveAdminIdentity(env)` and
+`verifyStripeWebhookSignature({ secret, ... })` necessarily accept caller-supplied inputs
+for hermetic core tests and other hosts. The umbrella narrows those inputs at its server
+boundary instead: the owner module alone reads deployment configuration and holds the
+admin evidence plus a `CreditWebhookCapability` that closes over the webhook signing
+secret, store, evidence adapter, and clock. Routes reach that registry only through
+`umbrellaRequestAuthority()`, receiving neither issuer input nor secret. The webhook
+route can supply only raw request bytes and the Stripe signature header to that
+capability. Core still owns the same signature verification, completion provenance,
+grant decision, and commit boundary; the deployment adds no second verifier or issuer.
 
 ## Better Auth
 
@@ -448,93 +471,20 @@ reads the id out of the verified body itself, so an absent id means the inbound 
 lacked one.
 
 Your webhook endpoint must pass the **raw request body**, not a re-serialised object —
-re-encoding the JSON changes the bytes and verification will (correctly) fail:
+re-encoding the JSON changes the bytes and verification will (correctly) fail. On the
+umbrella, the route receives the deployment-owned capability from the one plug point; it
+never accepts or reads a webhook secret itself:
 
 ```ts
-import {
-  BILLING_REFUSE_REASONS,
-  CHECKOUT_METADATA_KEYS,
-  loadLedgerState,
-  parseCheckoutCompletedEvent,
-  persistCheckoutCompletedGrant,
-  verifyStripeWebhookSignature,
-  type CheckoutSettlementPort,
-} from "@sceneaxi/billing";
-
-// A refusal this deployment owns must not be reported as a bad request from Stripe.
-// Sketch only — `SERVER_SIDE_REASONS` / `creditWebhookHttpStatus` in
-// `sites/umbrella/src/lib/credit-webhook.ts` is the authoritative set, and
-// `docs/websites-deploy.md` owns the full status table.
-const serverSide = new Set<string>([
-  BILLING_REFUSE_REASONS.settlementSessionMismatch,
-  BILLING_REFUSE_REASONS.webhookSecretMissing,
-  BILLING_REFUSE_REASONS.clockInvalid,
-  // ...plus your own adapter failures; see the umbrella set for the rest.
-]);
-const statusFor = (reason: string) => (serverSide.has(reason) ? 503 : 400);
-
-const verified = verifyStripeWebhookSignature({
-  payload: rawBodyBuffer,                                  // raw bytes
-  header: request.headers["stripe-signature"],
-  secret: process.env.STRIPE_WEBHOOK_SECRET,
-  now: Date.now(),
+const outcome = await umbrellaRequestAuthority().applyCreditWebhook({
+  payload: await request.text(),
+  signatureHeader: request.headers.get("stripe-signature"),
 });
-// A forged or replayed body is a genuine request fault, so it stays 400.
-if (!verified.ok) return respond(statusFor(verified.reason), verified.reason);
-
-const event = JSON.parse(verified.value.payload) as {
-  data: { object: { id: string; metadata: Record<string, string> } };
-};
-const sessionId = event.data.object.id;
-const intentId = event.data.object.metadata[CHECKOUT_METADATA_KEYS.intentId];
-
-// The persisted intent is the immutable price snapshot; look it up by the id carried
-// in the session metadata. Your store owns this lookup.
-const intent = await checkoutIntentStore.findByIntentId(intentId);
-if (!intent) return respond(400, "unknown checkout intent");
-
-// Stripe webhook objects do not carry line items — retrieve settlement for this exact
-// Checkout Session through the injected adapter boundary. The retrieved evidence must
-// carry `sessionId`; the parser re-reads the id from the verified body and refuses
-// anything that does not match, so retrieving for the wrong session cannot settle.
-const settlement = await (settlementPort as CheckoutSettlementPort).retrieveSettlement(
-  sessionId,
-);
-// Your own adapter answered nothing, so this is server-side too.
-if (!settlement) return respond(503, "settlement evidence unavailable");
-
-const completed = parseCheckoutCompletedEvent({
-  verified: verified.value,                                // the issued webhook itself
-  intent,
-  settlement,
-});
-// `STRIPE_SETTLEMENT_SESSION_MISMATCH` lands here and answers 503: only your own
-// `retrieveSettlement` can disagree with a session id read from the verified body.
-if (!completed.ok) return respond(statusFor(completed.reason), completed.reason);
-
-// The ledger this grant extends. `CreditStore` exposes no state-loading operation of its
-// own: read the account and its entries, then derive the state. An absent account refuses
-// — a credit account is provisioned by the deployment, never created from a payment event.
-const account = await creditStore.findAccountByUserId(completed.value.userId);
-if (!account) return respond(503, "no credit account for the purchasing user");
-const state = loadLedgerState(account, await creditStore.listEntries(account.accountId));
-if (!state.ok) return respond(statusFor(state.reason), state.reason);
-
-// The flow ends at the *persisted* call. `applyCheckoutCompletedGrant` decides and
-// cannot commit — it owns no persistence — so answering 2xx on its result alone would
-// tell Stripe the purchase was honored while the buyer's ledger was unchanged, and
-// Stripe would never redeliver it. `persistCheckoutCompletedGrant` reports success only
-// after the store holds the entry, and refuses `CREDIT_STORE_FAILED` with no grant if it
-// does not (sceneaxi#128).
-const granted = await persistCheckoutCompletedGrant({
-  store: creditStore,
-  state: state.value,
-  completion: completed.value,
-  now: Date.now(),
-});
-// A commit failure is this deployment's own store, so it answers 503 and Stripe retries.
-if (!granted.ok) return respond(statusFor(granted.reason), granted.reason);
 ```
+
+`CreditWebhookCapability` closes over the environment secret and the deployment's typed
+`CreditStore` / `CheckoutEvidencePort`; `applyCreditPackWebhook` still performs the
+signature check, parsing, archive anchor, and persisted grant exactly as documented below.
 
 The commit is `CreditStore.appendOrReplayEntry` on the event's own key
 (`stripe-event:<eventId>`), so at-least-once delivery is safe from both sides: the pure
@@ -556,6 +506,7 @@ The endpoint's three-way outcome split is unchanged, and so is what its success 
 |---|---|---|
 | `ok: true, ignored: true` | `200` | an event this endpoint owes no work, decided from the verified body alone before any port or store is read; permanent, because Stripe stops redelivering |
 | `ok: true, ignored: false` | `200` | **the credits are in the ledger** — nothing else is reported as success |
+| `CREDITS_PLANE_NOT_WIRED` from the request facade | `503` | no deployment webhook capability is wired, so nothing was verified and nothing was granted; it is `CREDIT_WEBHOOK_REASONS.planeNotWired` and sits in `SERVER_SIDE_REASONS` like every other deployment fault, so `creditWebhookHttpStatus` — never the route — answers it |
 | refusal in `SERVER_SIDE_REASONS` | `503` | this deployment's own fault, retried |
 | every other refusal | `400` | decided against the inbound bytes, retried |
 
@@ -1227,9 +1178,9 @@ umbrella serves `/login` beside `POST /api/login`, `POST /api/logout`, `/api/che
 `/api/stripe/webhook`, and `performLogin` reaches `identityPort.signIn` — and therefore
 `putSession` — through `createAuthLoginAdapter`, the login-port counterpart to the
 verify-only `createAuthIdentityAdapter`. What remains is the deployment's own: serve Better
-Auth's own handler and return the handles from `umbrellaPlaneHandles()`. Until it does,
-`signIn` has no adapter to reach, so no user is provisioned, no starter grant runs, and
-every surface refuses by name. Dropping the editor preview flag comes after that provider
-configuration, never before it.
+Auth's own handler and configure the handles behind `umbrellaRequestAuthority()`. Until
+it does, `signIn` has no adapter to reach, so no user is provisioned, no starter grant
+runs, and every surface refuses by name. Dropping the editor preview flag comes after
+that provider configuration, never before it.
 The deployable-site activation procedure and surface status are owned by
 [`websites-deploy.md`](websites-deploy.md#remaining-activation).
