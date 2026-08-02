@@ -19,7 +19,7 @@ The architecture decision behind the shape of this plane is
 | Neon schema | `db/migrations` |
 | Login + balance view model | `apps/web-shell` (`createAccountPanel`) |
 | In-app AI assistant view model | `apps/web-shell` (`createAssistantPanel`) |
-| Deployable-site wiring | `sites/umbrella/src/lib/identity-plane.ts` + `provider-adapters.ts` (`docs/websites-deploy.md`) |
+| Deployable-site wiring | `sites/umbrella/src/lib/identity-plane.ts` + `provider-adapters.ts`, reached by request code only through the `request-authority.ts` facade (`docs/websites-deploy.md`) |
 
 Release group `identity`; both packages consume only public contracts. **Outside core:** a
 running Better Auth instance, a Neon connection, the Stripe API client, any HTTP surface,
@@ -506,6 +506,7 @@ The endpoint's three-way outcome split is unchanged, and so is what its success 
 |---|---|---|
 | `ok: true, ignored: true` | `200` | an event this endpoint owes no work, decided from the verified body alone before any port or store is read; permanent, because Stripe stops redelivering |
 | `ok: true, ignored: false` | `200` | **the credits are in the ledger** — nothing else is reported as success |
+| `CREDITS_PLANE_NOT_WIRED` from the request facade | `503` | no deployment webhook capability is wired, so nothing was verified and nothing was granted; it is answered ahead of `creditWebhookHttpStatus` because it names a deployment that never reached the endpoint's own reason set |
 | refusal in `SERVER_SIDE_REASONS` | `503` | this deployment's own fault, retried |
 | every other refusal | `400` | decided against the inbound bytes, retried |
 

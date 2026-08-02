@@ -370,8 +370,9 @@ refuses by name instead of inventing a session.
    `/api/stripe/webhook`, and `performLogin` calls `identityPort.signIn` through the
    plane's login port and sets the HttpOnly `sceneaxi.session` cookie. What remains
    operational is provider-side: serve Better Auth's own handler at `BETTER_AUTH_ORIGIN`
-   (the `sign-in/email` and `get-session` endpoints named above) and hand the handles back
-   from `umbrellaPlaneHandles()` per step 4. With those configured, sign-in writes a
+   (the `sign-in/email` and `get-session` endpoints named above) and configure the handles
+   the deployment owner holds behind `umbrellaRequestAuthority()` per step 4. With those
+   configured, sign-in writes a
    `sessions` row, provisions the user and the starter grant, and `/account` and `/editor`
    verify that credential through the same `IdentityPort`; without them every one of those
    surfaces refuses by name.
