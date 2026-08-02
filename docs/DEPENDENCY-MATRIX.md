@@ -98,8 +98,9 @@ Deliberate denials that carry design intent:
   `sites/umbrella/src/lib/request-authority.ts`, so request code reaches deployment
   authority through that one no-argument entry point and never around it. Both rules are
   resolved through the specifier a bundler would resolve — relative, `tsconfig` `paths`
-  alias, resource query or fragment suffix, directory barrel, and statically constant
-  dynamic `import()` alike. Nothing widens past that
+  alias (every declared pattern and target, inherited bases included) or `baseUrl`-rooted
+  absolute import, resource query or fragment suffix, directory barrel, and statically
+  constant dynamic `import()` alike. Nothing widens past that
   — kernel, orchestrator, authoring-core, profiles, and Kids stay denied to every site,
   and the two catalogs keep `site-kit` only, reading identity through the same site-kit
   ports rather than a second auth stack. `tests/boundary/injected-site-violations.test.ts`

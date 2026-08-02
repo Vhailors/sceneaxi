@@ -595,25 +595,30 @@ const readTsconfigOptions = (configPath, seen = new Set()) => {
   }
   return own;
 };
-const packageAliasCache = new Map();
-const packageAliases = (dir) => {
-  const cached = packageAliasCache.get(dir);
+const packageResolutionCache = new Map();
+const packageResolution = (dir) => {
+  const cached = packageResolutionCache.get(dir);
   if (cached !== undefined) return cached;
   const aliases = [];
+  let baseUrl = null;
   const options = readTsconfigOptions(join(dir, "tsconfig.json"));
-  if (options !== null && typeof options.paths === "object" && options.paths !== null) {
-    const base = typeof options.baseUrl === "string"
-      ? resolve(options.baseUrlDir, options.baseUrl)
-      : options.pathsDir;
-    for (const [pattern, targets] of Object.entries(options.paths)) {
-      if (!Array.isArray(targets)) continue;
-      for (const target of targets) {
-        if (typeof target === "string") aliases.push({ pattern, target, base });
+  if (options !== null) {
+    if (typeof options.baseUrl === "string") {
+      baseUrl = resolve(options.baseUrlDir, options.baseUrl);
+    }
+    if (typeof options.paths === "object" && options.paths !== null) {
+      const base = baseUrl ?? options.pathsDir;
+      for (const [pattern, targets] of Object.entries(options.paths)) {
+        if (!Array.isArray(targets)) continue;
+        for (const target of targets) {
+          if (typeof target === "string") aliases.push({ pattern, target, base });
+        }
       }
     }
   }
-  packageAliasCache.set(dir, aliases);
-  return aliases;
+  const resolution = { aliases, baseUrl };
+  packageResolutionCache.set(dir, resolution);
+  return resolution;
 };
 const matchAlias = ({ pattern, target, base }, spec) => {
   const star = pattern.indexOf("*");
@@ -635,14 +640,28 @@ const matchAlias = ({ pattern, target, base }, spec) => {
 // first target that resolves, so the first declared match is not the module a bundler
 // loads. Every candidate any of them could land on is returned, and each is checked, so
 // a later, more specific alias cannot reach a denied module unseen.
+//
+// `baseUrl` is a resolution root of its own, not merely the base `paths` targets resolve
+// against: a Next.js site with `"baseUrl": "."` and no `paths` entry at all still loads
+// `src/lib/identity-plane` from the bare specifier `src/lib/identity-plane`. Only a
+// candidate that lands on a file that exists is kept, so a real dependency (`react`,
+// `next`) stays a package import rather than becoming a phantom package-local module.
+const BARE_MODULE_SPECIFIER = /^[^./\\]/;
 const resolvePackageLocalSpecifiers = ({ dir, file, spec }) => {
   if (spec.startsWith(".")) return [resolveSourceModule(resolve(dirname(file), spec))];
+  const { aliases, baseUrl } = packageResolution(dir);
   const resolved = [];
-  for (const alias of packageAliases(dir)) {
+  for (const alias of aliases) {
     const candidate = matchAlias(alias, spec);
     if (candidate === null) continue;
     const module = resolveSourceModule(candidate);
     if (!resolved.includes(module)) resolved.push(module);
+  }
+  if (baseUrl !== null && BARE_MODULE_SPECIFIER.test(spec) && !spec.includes(":")) {
+    const module = resolveSourceModule(resolve(baseUrl, spec));
+    if (existsSync(module) && statSync(module).isFile() && !resolved.includes(module)) {
+      resolved.push(module);
+    }
   }
   return resolved;
 };

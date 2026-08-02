@@ -199,6 +199,35 @@ describe("sites tier — injected violations", () => {
     );
   });
 
+  it("boundary check resolves a bare specifier through a baseUrl that declares no alias", () => {
+    // Next.js absolute imports need no `paths` entry: `"baseUrl": "."` alone makes
+    // `src/lib/identity-plane` load the deployment owner, so a checker that models only
+    // the alias table would pass a route that reaches it.
+    editManifest(fx, "sites/umbrella/tsconfig.json", (config) => {
+      const options = config["compilerOptions"] as Record<string, unknown>;
+      options["baseUrl"] = ".";
+      delete options["paths"];
+    });
+    appendTo(fx, "sites/umbrella/src/app/api/login/route.ts", '\nimport "src/lib/identity-plane";\n');
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "imports deployment authority module sites/umbrella/src/lib/identity-plane outside the request-authority facade",
+    );
+  });
+
+  it("boundary check leaves a real dependency a package import under a declared baseUrl", () => {
+    // The baseUrl root only claims specifiers that land on a file that exists, so adding
+    // one must not turn `react` or `next` into a phantom package-local module and fail
+    // the clean tree.
+    editManifest(fx, "sites/umbrella/tsconfig.json", (config) => {
+      const options = config["compilerOptions"] as Record<string, unknown>;
+      options["baseUrl"] = ".";
+    });
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status, `stderr: ${res.stderr}`).toBe(0);
+  });
+
   it("boundary check models an alias table inherited through tsconfig extends", () => {
     // `paths` declared in an extended base still maps specifiers, so inheriting the
     // alias must not be a way to declare one the checker never sees.

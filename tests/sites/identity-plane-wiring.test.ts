@@ -44,6 +44,7 @@ import {
   siteReasonForAuthReason,
   siteReasonForBillingReason,
   siteReasonForLoginAuthReason,
+  umbrellaRequestAuthority,
   verifyLoginRequestOrigin,
 } from "../../sites/umbrella/src/index.ts";
 import {
@@ -727,6 +728,9 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       CREDIT_WEBHOOK_REASONS.evidenceUnavailable,
       CREDIT_WEBHOOK_REASONS.ledgerUnavailable,
       CREDIT_WEBHOOK_REASONS.storeFailed,
+      // An endpoint with no webhook capability wired at all is the extreme case of the
+      // same omission, so it is answered here rather than special-cased at the transport.
+      CREDIT_WEBHOOK_REASONS.planeNotWired,
       // The commit boundary's own refusals: a failure it names is this deployment's
       // store or this module's request, never anything the inbound bytes decided.
       "CREDIT_REQUEST_INVALID",
@@ -1734,6 +1738,33 @@ describe("acceptance 6 — no secret, no live mode, no Kids", () => {
     expect(webhookRoute).not.toMatch(
       /process\.env|STRIPE_WEBHOOK_SECRET_ENV|applyCreditPackWebhook|\bsecret\s*:|\bstore\s*:|\bevidence\s*:/,
     );
+  });
+
+  it("refuses a webhook on an unwired deployment as that deployment's own omission", async () => {
+    // The facade is the only thing between the transport and a capability a deployment
+    // may never have provisioned, and it is now the only owner of that answer: the route
+    // no longer special-cases the status. An operator who wired no provider must be told
+    // the endpoint could not act, never that Stripe sent a bad request.
+    const providerEnv = ["DATABASE_URL", "STRIPE_SECRET_KEY"];
+    const saved = providerEnv.map((name) => [name, process.env[name]] as const);
+    for (const name of providerEnv) delete process.env[name];
+    try {
+      const outcome = await umbrellaRequestAuthority().applyCreditWebhook({
+        payload: '{"type":"checkout.session.completed"}',
+        signatureHeader: null,
+      });
+      expect(outcome).toMatchObject({
+        ok: false,
+        reason: CREDIT_WEBHOOK_REASONS.planeNotWired,
+      });
+      expect(outcome).not.toHaveProperty("response");
+      if (!outcome.ok) expect(creditWebhookHttpStatus(outcome.reason)).toBe(503);
+    } finally {
+      for (const [name, value] of saved) {
+        if (value === undefined) delete process.env[name];
+        else process.env[name] = value;
+      }
+    }
   });
 
   it("keeps environment and provider I/O out of the hermetic auth and billing roots", () => {
