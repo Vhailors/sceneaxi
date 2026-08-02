@@ -92,11 +92,13 @@ Deliberate denials that carry design intent:
   plug point `sites/umbrella/src/lib/identity-plane.ts` together with the deployment
   adapters it assembles in `sites/umbrella/src/lib/provider-adapters.ts` (sceneaxi#180) —
   two files and no more, so no route, page, component, **or any other `src/lib/` module**
-  may name either package. A second rule bounds the reverse direction: the deployment
-  owners (`identity-plane`, `provider-adapters`, `credit-webhook`) and the site's root
-  barrel may be imported only by each other and by the request-authority facade
-  `sites/umbrella/src/lib/request-authority.ts`, so request code reaches deployment
-  authority through that one no-argument entry point and never around it. Both rules are
+  may name either package. A second rule bounds the reverse direction: each deployment
+  owner (`identity-plane`, `provider-adapters`, `credit-webhook`) is importable only by
+  the sibling owners the checker pins for it — the request-authority facade
+  `sites/umbrella/src/lib/request-authority.ts` among them for the two it drives — and
+  the site's own root barrel, which re-exports all three, is importable by **nothing**,
+  so request code reaches deployment authority through that one no-argument entry point
+  and never around it. Both rules are
   resolved through the specifier a bundler would resolve — relative, `tsconfig` `paths`
   alias (every declared pattern and target, inherited bases included) or `baseUrl`-rooted
   absolute import, resource query or fragment suffix, directory barrel, and statically

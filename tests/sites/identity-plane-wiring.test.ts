@@ -1747,7 +1747,7 @@ describe("acceptance 6 — no secret, no live mode, no Kids", () => {
     // the endpoint could not act, never that Stripe sent a bad request.
     const providerEnv = ["DATABASE_URL", "STRIPE_SECRET_KEY"];
     const saved = providerEnv.map((name) => [name, process.env[name]] as const);
-    for (const name of providerEnv) delete process.env[name];
+    for (const name of providerEnv) Reflect.deleteProperty(process.env, name);
     try {
       const outcome = await umbrellaRequestAuthority().applyCreditWebhook({
         payload: '{"type":"checkout.session.completed"}',
@@ -1761,7 +1761,7 @@ describe("acceptance 6 — no secret, no live mode, no Kids", () => {
       if (!outcome.ok) expect(creditWebhookHttpStatus(outcome.reason)).toBe(503);
     } finally {
       for (const [name, value] of saved) {
-        if (value === undefined) delete process.env[name];
+        if (value === undefined) Reflect.deleteProperty(process.env, name);
         else process.env[name] = value;
       }
     }
