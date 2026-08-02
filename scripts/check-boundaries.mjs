@@ -94,8 +94,168 @@ for (const [name, { json }] of manifests) {
 const staticImportSpecifiers = (file, text) => {
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
   const specifiers = [];
+  const unknownStaticValue = Symbol("unknown-static-value");
+  const constBindings = new Map();
+  const lexicalScope = (node) => {
+    for (let current = node.parent; current !== undefined; current = current.parent) {
+      if (
+        ts.isSourceFile(current) ||
+        ts.isBlock(current) ||
+        ts.isModuleBlock(current) ||
+        ts.isCaseBlock(current) ||
+        ts.isForStatement(current) ||
+        ts.isForInStatement(current) ||
+        ts.isForOfStatement(current) ||
+        ts.isClassStaticBlockDeclaration(current)
+      ) {
+        return current;
+      }
+    }
+    return source;
+  };
+  const collectConstBindings = (node) => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      ts.isVariableDeclarationList(node.parent) &&
+      (node.parent.flags & ts.NodeFlags.Const) !== 0
+    ) {
+      const bindings = constBindings.get(node.name.text) ?? [];
+      bindings.push({ declaration: node, scope: lexicalScope(node) });
+      constBindings.set(node.name.text, bindings);
+    }
+    ts.forEachChild(node, collectConstBindings);
+  };
+  collectConstBindings(source);
+  const constBindingFor = (identifier) => {
+    const bindings = (constBindings.get(identifier.text) ?? [])
+      .filter(({ scope }) => scope.pos <= identifier.pos && scope.end >= identifier.end)
+      .sort((left, right) =>
+        (left.scope.end - left.scope.pos) - (right.scope.end - right.scope.pos));
+    if (bindings.length === 0 || bindings[0].scope === bindings[1]?.scope) return null;
+    return bindings[0].declaration;
+  };
+  const staticValues = (node, seenBindings = new Set()) => {
+    if (node === undefined) return new Set([unknownStaticValue]);
+    if (ts.isStringLiteralLike(node)) return new Set([node.text]);
+    if (ts.isNumericLiteral(node)) return new Set([Number(node.text)]);
+    if (node.kind === ts.SyntaxKind.TrueKeyword) return new Set([true]);
+    if (node.kind === ts.SyntaxKind.FalseKeyword) return new Set([false]);
+    if (node.kind === ts.SyntaxKind.NullKeyword) return new Set([null]);
+    if (ts.isIdentifier(node)) {
+      const binding = constBindingFor(node);
+      if (binding === null || binding.initializer === undefined || seenBindings.has(binding)) {
+        return new Set([unknownStaticValue]);
+      }
+      const nextSeenBindings = new Set(seenBindings);
+      nextSeenBindings.add(binding);
+      return staticValues(binding.initializer, nextSeenBindings);
+    }
+    if (
+      ts.isParenthesizedExpression(node) ||
+      ts.isAsExpression(node) ||
+      ts.isTypeAssertionExpression(node) ||
+      ts.isSatisfiesExpression(node) ||
+      ts.isNonNullExpression(node)
+    ) {
+      return staticValues(node.expression, seenBindings);
+    }
+    if (ts.isPrefixUnaryExpression(node)) {
+      const values = new Set();
+      for (const value of staticValues(node.operand, seenBindings)) {
+        if (value === unknownStaticValue) {
+          values.add(value);
+        } else if (node.operator === ts.SyntaxKind.ExclamationToken) {
+          values.add(!value);
+        } else if (node.operator === ts.SyntaxKind.PlusToken) {
+          values.add(+value);
+        } else if (node.operator === ts.SyntaxKind.MinusToken) {
+          values.add(-value);
+        } else {
+          values.add(unknownStaticValue);
+        }
+      }
+      return values;
+    }
+    if (ts.isConditionalExpression(node)) {
+      const values = new Set();
+      for (const condition of staticValues(node.condition, seenBindings)) {
+        if (condition === unknownStaticValue) {
+          for (const value of staticValues(node.whenTrue, seenBindings)) values.add(value);
+          for (const value of staticValues(node.whenFalse, seenBindings)) values.add(value);
+        } else {
+          const branch = condition ? node.whenTrue : node.whenFalse;
+          for (const value of staticValues(branch, seenBindings)) values.add(value);
+        }
+      }
+      return values;
+    }
+    if (ts.isBinaryExpression(node)) {
+      const leftValues = staticValues(node.left, seenBindings);
+      const rightValues = staticValues(node.right, seenBindings);
+      const values = new Set();
+      for (const left of leftValues) {
+        if (
+          node.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken ||
+          node.operatorToken.kind === ts.SyntaxKind.BarBarToken ||
+          node.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken
+        ) {
+          if (left === unknownStaticValue) {
+            values.add(unknownStaticValue);
+            for (const right of rightValues) values.add(right);
+          } else {
+            const useRight = node.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken
+              ? Boolean(left)
+              : node.operatorToken.kind === ts.SyntaxKind.BarBarToken
+                ? !left
+                : left === null || left === undefined;
+            if (useRight) {
+              for (const right of rightValues) values.add(right);
+            } else {
+              values.add(left);
+            }
+          }
+          continue;
+        }
+        for (const right of rightValues) {
+          if (left === unknownStaticValue || right === unknownStaticValue) {
+            values.add(unknownStaticValue);
+          } else if (node.operatorToken.kind === ts.SyntaxKind.PlusToken) {
+            values.add(left + right);
+          } else if (node.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken) {
+            values.add(left === right);
+          } else if (node.operatorToken.kind === ts.SyntaxKind.ExclamationEqualsEqualsToken) {
+            values.add(left !== right);
+          } else {
+            values.add(unknownStaticValue);
+          }
+        }
+      }
+      return values;
+    }
+    if (ts.isTemplateExpression(node)) {
+      let values = new Set([node.head.text]);
+      for (const span of node.templateSpans) {
+        const nextValues = new Set();
+        for (const prefix of values) {
+          for (const expression of staticValues(span.expression, seenBindings)) {
+            if (prefix === unknownStaticValue || expression === unknownStaticValue) {
+              nextValues.add(unknownStaticValue);
+            } else {
+              nextValues.add(prefix + expression + span.literal.text);
+            }
+          }
+        }
+        values = nextValues;
+      }
+      return values;
+    }
+    return new Set([unknownStaticValue]);
+  };
   const addStaticSpecifier = (node) => {
-    if (node !== undefined && ts.isStringLiteralLike(node)) specifiers.push(node.text);
+    for (const value of staticValues(node)) {
+      if (typeof value === "string") specifiers.push(value);
+    }
   };
   const visit = (node) => {
     if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
@@ -115,11 +275,12 @@ const staticImportSpecifiers = (file, text) => {
   visit(source);
   return specifiers;
 };
+const SOURCE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"];
 const walk = (dir, out = []) => {
   for (const entry of readdirSync(dir)) {
     const p = join(dir, entry);
     if (statSync(p).isDirectory()) walk(p, out);
-    else if (/\.(ts|tsx|js|mjs|cjs)$/.test(entry)) out.push(p);
+    else if (SOURCE_EXTENSIONS.some((extension) => entry.endsWith(extension))) out.push(p);
   }
   return out;
 };
@@ -136,11 +297,32 @@ const sourceModuleId = (path) =>
   relative(root, path)
     .split(sep)
     .join("/")
-    .replace(/\.(?:tsx?|mjs|cjs|js)$/, "");
+    .replace(/\.(?:[cm]?[jt]s|[jt]sx)$/, "");
+const resolveSourceModule = (candidate) => {
+  if (existsSync(candidate)) {
+    const status = statSync(candidate);
+    if (status.isFile()) return candidate;
+    if (status.isDirectory()) {
+      for (const extension of SOURCE_EXTENSIONS) {
+        const indexPath = join(candidate, `index${extension}`);
+        if (existsSync(indexPath) && statSync(indexPath).isFile()) return indexPath;
+      }
+    }
+  }
+  const importedExtension = SOURCE_EXTENSIONS.find((extension) => candidate.endsWith(extension));
+  const base = importedExtension === undefined
+    ? candidate
+    : candidate.slice(0, -importedExtension.length);
+  for (const extension of SOURCE_EXTENSIONS) {
+    const sourcePath = `${base}${extension}`;
+    if (existsSync(sourcePath) && statSync(sourcePath).isFile()) return sourcePath;
+  }
+  return candidate;
+};
 const resolvePackageLocalSpecifier = ({ name, srcDir, file, spec }) => {
-  if (spec.startsWith(".")) return resolve(dirname(file), spec);
+  if (spec.startsWith(".")) return resolveSourceModule(resolve(dirname(file), spec));
   if (name === "@sceneaxi/site-umbrella" && spec.startsWith("@/")) {
-    return resolve(srcDir, spec.slice(2));
+    return resolveSourceModule(resolve(srcDir, spec.slice(2)));
   }
   return null;
 };

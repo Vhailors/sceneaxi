@@ -49,7 +49,7 @@ export default function EnginePage() {
             than an empty file.
           </p>
         </StatePanel>
-      ) : (
+      ) : sdk !== null ? (
         <div className="grid grid-2">
           <article className="panel panel-roomy tone-accent">
             <div className="panel-head">
@@ -98,7 +98,7 @@ export default function EnginePage() {
             </dl>
           </article>
         </div>
-      )}
+      ) : null}
 
       <div className="stack">
         <div className="section-title">

@@ -134,7 +134,13 @@ more, never a route, page, or component. Between them they build the site-kit
 adapters over those packages and map their named refusals onto the site refusal registry —
 they implement no identity, no ledger, and no signature check. Provider clients (Better Auth,
 Neon, Stripe API) stay outside the repo per ADR 0021 and arrive through the one
-`umbrellaPlaneHandles()` function; while they are absent every dependent surface refuses
+`umbrellaPlaneHandles()` function, which reads the server environment once and holds the
+issued admin identity and the secret-closing webhook capability beside the provider
+handles; request code never reaches it directly but only through the no-argument
+`umbrellaRequestAuthority()` facade in `src/lib/request-authority.ts`, supplying a carried
+session credential — or, for the webhook route, raw bytes plus the signature header — and
+never an environment, issuer, store, clock, or secret, which `pnpm check:boundaries`
+enforces. While the provider clients are absent every dependent surface refuses
 by name and `IDENTITY_SESSION_ABSENT` means signed-out, not broken. Those adapters make the
 provider authoritative for a user's address and verification state on every
 authentication, and treat a repeated idempotency key as an intent replay rather than a

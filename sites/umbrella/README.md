@@ -232,8 +232,7 @@ neither can replace the deployment authority. The boundary checker denies direct
 to the owner modules, provider adapters, and root barrel from request code and arbitrary
 library modules. Absent configuration still refuses with named reasons rather than
 showing an invented session, account, balance, or checkout. Account provisioning is an
-idempotent user-plus-credit-account insert at
-authentication, which
+idempotent user-plus-credit-account insert at authentication, which
 reconciles the provider-owned address and verification state each time, never a
 payment-event side effect. The Better Auth client reads the session back from
 `GET /api/auth/get-session`, sending both the issued session cookie and the issued bearer
