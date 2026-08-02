@@ -2,7 +2,9 @@
  * The single wiring point for the identity plane.
  *
  * This is the **only** module that constructs the identity, credits, and billing
- * ports. Everything else on the umbrella consumes what it returns.
+ * ports, and the only one that reads deployment configuration. Request code never
+ * reaches it directly: routes and pages consume what it returns through the
+ * no-argument `request-authority.ts` facade, which `pnpm check:boundaries` enforces.
  *
  * `sceneaxi-auth-credits-v1` owns identity and billing: single-admin resolution from
  * `SCENEAXI_ADMIN_EMAIL`, fail-closed role guards, the append-only credit ledger, the
