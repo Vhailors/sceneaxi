@@ -8,6 +8,7 @@
  */
 import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import { join, dirname, resolve, relative, isAbsolute, sep } from "node:path";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 
@@ -526,6 +527,27 @@ const resolveSourceModule = (candidate) => {
 // A bundler-resolved bare specifier is a package-local import too, so the alias table is
 // read from the package's own tsconfig rather than hardcoded: an alias added there must
 // not silently become an unmodelled path around the authority rules below.
+// `extends` may name a relative file (with or without the .json suffix, or a directory
+// holding tsconfig.json) or an installed package. A base that cannot be resolved would
+// hide whatever `paths` it declares, so it is refused rather than skipped.
+const resolveExtendedConfig = (dir, extended) => {
+  if (extended.startsWith(".") || isAbsolute(extended)) {
+    const base = resolve(dir, extended);
+    for (const candidate of [base, `${base}.json`, join(base, "tsconfig.json")]) {
+      if (existsSync(candidate) && statSync(candidate).isFile()) return candidate;
+    }
+    return null;
+  }
+  const requireFrom = createRequire(join(dir, "tsconfig.json"));
+  for (const candidate of [extended, `${extended}/tsconfig.json`, `${extended}.json`]) {
+    try {
+      return requireFrom.resolve(candidate);
+    } catch {
+      // try the next documented spelling before refusing
+    }
+  }
+  return null;
+};
 const readTsconfigOptions = (configPath, seen = new Set()) => {
   const key = resolve(configPath);
   if (seen.has(key) || !existsSync(key) || !statSync(key).isFile()) return null;
@@ -552,8 +574,15 @@ const readTsconfigOptions = (configPath, seen = new Set()) => {
       ? [parsed.config.extends]
       : [];
   for (const extended of [...extendsList].reverse()) {
-    if (typeof extended !== "string" || !extended.startsWith(".")) continue;
-    const inherited = readTsconfigOptions(resolve(dir, extended), seen);
+    if (typeof extended !== "string") continue;
+    const extendedPath = resolveExtendedConfig(dir, extended);
+    if (extendedPath === null) {
+      fail(
+        `${relative(root, key)} extends '${extended}', which does not resolve, so its path aliases cannot be modelled`,
+      );
+      continue;
+    }
+    const inherited = readTsconfigOptions(extendedPath, seen);
     if (inherited === null) continue;
     if (own.paths === undefined && inherited.paths !== undefined) {
       own.paths = inherited.paths;
@@ -601,13 +630,21 @@ const matchAlias = ({ pattern, target, base }, spec) => {
   const captured = spec.slice(prefix.length, spec.length - suffix.length);
   return resolve(base, target.replace("*", captured));
 };
-const resolvePackageLocalSpecifier = ({ dir, file, spec }) => {
-  if (spec.startsWith(".")) return resolveSourceModule(resolve(dirname(file), spec));
+// One bare specifier can match several alias patterns, and one pattern can declare
+// several targets: TypeScript and webpack take the longest matching prefix and then the
+// first target that resolves, so the first declared match is not the module a bundler
+// loads. Every candidate any of them could land on is returned, and each is checked, so
+// a later, more specific alias cannot reach a denied module unseen.
+const resolvePackageLocalSpecifiers = ({ dir, file, spec }) => {
+  if (spec.startsWith(".")) return [resolveSourceModule(resolve(dirname(file), spec))];
+  const resolved = [];
   for (const alias of packageAliases(dir)) {
-    const resolved = matchAlias(alias, spec);
-    if (resolved !== null) return resolveSourceModule(resolved);
+    const candidate = matchAlias(alias, spec);
+    if (candidate === null) continue;
+    const module = resolveSourceModule(candidate);
+    if (!resolved.includes(module)) resolved.push(module);
   }
-  return null;
+  return resolved;
 };
 const UMBRELLA_IDENTITY_IMPORT_OWNERS = new Map([
   [
@@ -682,25 +719,25 @@ for (const [name, { dir }] of manifests) {
           fail(`${name}: ${relative(root, file)} imports test-only subpath ${spec} — production source may not reach a testing/ seam`);
         }
       } else {
-        const resolved = resolvePackageLocalSpecifier({ dir, file, spec: resourcePath });
-        if (resolved === null) continue;
-        const targetModule = sourceModuleId(resolved);
-        // Path-segment containment (not raw startsWith): "packages/cli-shadow" must not match "packages/cli"
-        const rel = relative(dir, resolved);
-        if (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {
-          fail(`${name}: ${relative(root, file)} escapes its package via relative import '${spec}'`);
-        } else if (!fromTesting && contains(testingDir, resolved)) {
-          fail(`${name}: ${relative(root, file)} imports test-only module '${spec}' — production source may not reach a testing/ seam`);
-        }
-        const authorityImporters = UMBRELLA_AUTHORITY_IMPORTERS.get(targetModule);
-        if (
-          name === "@sceneaxi/site-umbrella" &&
-          authorityImporters !== undefined &&
-          !authorityImporters.has(fromModule)
-        ) {
-          fail(
-            `${name}: ${relative(root, file)} imports deployment authority module ${targetModule} outside the request-authority facade`,
-          );
+        for (const resolved of resolvePackageLocalSpecifiers({ dir, file, spec: resourcePath })) {
+          const targetModule = sourceModuleId(resolved);
+          // Path-segment containment (not raw startsWith): "packages/cli-shadow" must not match "packages/cli"
+          const rel = relative(dir, resolved);
+          if (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {
+            fail(`${name}: ${relative(root, file)} escapes its package via relative import '${spec}'`);
+          } else if (!fromTesting && contains(testingDir, resolved)) {
+            fail(`${name}: ${relative(root, file)} imports test-only module '${spec}' — production source may not reach a testing/ seam`);
+          }
+          const authorityImporters = UMBRELLA_AUTHORITY_IMPORTERS.get(targetModule);
+          if (
+            name === "@sceneaxi/site-umbrella" &&
+            authorityImporters !== undefined &&
+            !authorityImporters.has(fromModule)
+          ) {
+            fail(
+              `${name}: ${relative(root, file)} imports deployment authority module ${targetModule} outside the request-authority facade`,
+            );
+          }
         }
       }
     }

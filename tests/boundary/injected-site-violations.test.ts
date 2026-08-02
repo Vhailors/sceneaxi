@@ -168,6 +168,74 @@ describe("sites tier — injected violations", () => {
     );
   });
 
+  it("boundary check follows a longer alias prefix that shadows an earlier one", () => {
+    // TypeScript and webpack resolve the longest matching prefix, not the first declared
+    // one, so checking only the first match would hand `@/deploy/*` a path around the
+    // facade while the bundler loaded the deployment owner.
+    editManifest(fx, "sites/umbrella/tsconfig.json", (config) => {
+      const options = config["compilerOptions"] as Record<string, unknown>;
+      options["paths"] = { ...(options["paths"] as object), "@/deploy/*": ["./src/lib/*"] };
+    });
+    appendTo(fx, "sites/umbrella/src/app/api/login/route.ts", '\nimport "@/deploy/identity-plane";\n');
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "imports deployment authority module sites/umbrella/src/lib/identity-plane outside the request-authority facade",
+    );
+  });
+
+  it("boundary check checks every target of a multi-target alias, not just the first", () => {
+    // A resolver takes the first target that resolves, so a leading target that resolves
+    // to nothing must not hide the one that lands on the deployment owner.
+    editManifest(fx, "sites/umbrella/tsconfig.json", (config) => {
+      const options = config["compilerOptions"] as Record<string, unknown>;
+      options["paths"] = { "@/*": ["./generated/*", "./src/*"] };
+    });
+    appendTo(fx, "sites/umbrella/src/app/api/login/route.ts", '\nimport "@/lib/identity-plane";\n');
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "imports deployment authority module sites/umbrella/src/lib/identity-plane outside the request-authority facade",
+    );
+  });
+
+  it("boundary check models an alias table inherited through tsconfig extends", () => {
+    // `paths` declared in an extended base still maps specifiers, so inheriting the
+    // alias must not be a way to declare one the checker never sees.
+    writeTo(
+      fx,
+      "sites/umbrella/tsconfig.aliases.json",
+      `${JSON.stringify(
+        { compilerOptions: { paths: { "@/*": ["./src/*"], "~deploy/*": ["./src/lib/*"] } } },
+        null,
+        2,
+      )}\n`,
+    );
+    editManifest(fx, "sites/umbrella/tsconfig.json", (config) => {
+      config["extends"] = "./tsconfig.aliases.json";
+      delete (config["compilerOptions"] as Record<string, unknown>)["paths"];
+    });
+    appendTo(fx, "sites/umbrella/src/app/api/login/route.ts", '\nimport "~deploy/identity-plane";\n');
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "imports deployment authority module sites/umbrella/src/lib/identity-plane outside the request-authority facade",
+    );
+  });
+
+  it("boundary check refuses a tsconfig base it cannot resolve instead of ignoring its aliases", () => {
+    // An unresolvable base may declare any `paths` at all, so passing over it would be
+    // passing on an unknown alias table.
+    editManifest(fx, "sites/umbrella/tsconfig.json", (config) => {
+      config["extends"] = "@tsconfig/absent/tsconfig.json";
+    });
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "sites/umbrella/tsconfig.json extends '@tsconfig/absent/tsconfig.json', which does not resolve, so its path aliases cannot be modelled",
+    );
+  });
+
   it("boundary check does not read a dynamic specifier off a same-named outer const", () => {
     // Static resolution is evidence, not a name match: a parameter shadowing an unrelated
     // module-scope const means the import is genuinely dynamic, and reporting the const's
