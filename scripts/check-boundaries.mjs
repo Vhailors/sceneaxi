@@ -95,6 +95,8 @@ const staticImportSpecifiers = (file, text) => {
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
   const specifiers = [];
   const unknownStaticValue = Symbol("unknown-static-value");
+  const staticObjectValue = Symbol("static-object-value");
+  const staticArrayValue = Symbol("static-array-value");
   const constBindings = new Map();
   const lexicalScope = (node) => {
     for (let current = node.parent; current !== undefined; current = current.parent) {
@@ -113,16 +115,57 @@ const staticImportSpecifiers = (file, text) => {
     }
     return source;
   };
+  const propertyNameText = (name) => {
+    if (name === undefined) return null;
+    if (ts.isIdentifier(name) || ts.isStringLiteralLike(name) || ts.isNumericLiteral(name)) {
+      return name.text;
+    }
+    return null;
+  };
+  const recordConstBindings = ({ name, declaration, selectors, scope }) => {
+    if (ts.isIdentifier(name)) {
+      const bindings = constBindings.get(name.text) ?? [];
+      bindings.push({ declaration, scope, selectors });
+      constBindings.set(name.text, bindings);
+      return;
+    }
+    if (ts.isObjectBindingPattern(name)) {
+      for (const element of name.elements) {
+        if (element.dotDotDotToken !== undefined) continue;
+        const selector = propertyNameText(element.propertyName) ??
+          (ts.isIdentifier(element.name) ? element.name.text : null);
+        if (selector === null) continue;
+        recordConstBindings({
+          name: element.name,
+          declaration,
+          selectors: [...selectors, selector],
+          scope,
+        });
+      }
+      return;
+    }
+    for (const [index, element] of name.elements.entries()) {
+      if (!ts.isBindingElement(element) || element.dotDotDotToken !== undefined) continue;
+      recordConstBindings({
+        name: element.name,
+        declaration,
+        selectors: [...selectors, index],
+        scope,
+      });
+    }
+  };
   const collectConstBindings = (node) => {
     if (
       ts.isVariableDeclaration(node) &&
-      ts.isIdentifier(node.name) &&
       ts.isVariableDeclarationList(node.parent) &&
       (node.parent.flags & ts.NodeFlags.Const) !== 0
     ) {
-      const bindings = constBindings.get(node.name.text) ?? [];
-      bindings.push({ declaration: node, scope: lexicalScope(node) });
-      constBindings.set(node.name.text, bindings);
+      recordConstBindings({
+        name: node.name,
+        declaration: node,
+        selectors: [],
+        scope: lexicalScope(node),
+      });
     }
     ts.forEachChild(node, collectConstBindings);
   };
@@ -133,7 +176,30 @@ const staticImportSpecifiers = (file, text) => {
       .sort((left, right) =>
         (left.scope.end - left.scope.pos) - (right.scope.end - right.scope.pos));
     if (bindings.length === 0 || bindings[0].scope === bindings[1]?.scope) return null;
-    return bindings[0].declaration;
+    return bindings[0];
+  };
+  const projectBindingValues = (values, selectors) => {
+    let projected = values;
+    for (const selector of selectors) {
+      const next = new Set();
+      for (const value of projected) {
+        if (value === unknownStaticValue) {
+          next.add(unknownStaticValue);
+        } else if (typeof selector === "string" && value?.kind === staticObjectValue) {
+          const propertyValues = value.properties.get(selector);
+          if (propertyValues === undefined) next.add(unknownStaticValue);
+          else for (const propertyValue of propertyValues) next.add(propertyValue);
+        } else if (typeof selector === "number" && value?.kind === staticArrayValue) {
+          const elementValues = value.elements[selector];
+          if (elementValues === undefined) next.add(unknownStaticValue);
+          else for (const elementValue of elementValues) next.add(elementValue);
+        } else {
+          next.add(unknownStaticValue);
+        }
+      }
+      projected = next;
+    }
+    return projected;
   };
   const staticValues = (node, seenBindings = new Set()) => {
     if (node === undefined) return new Set([unknownStaticValue]);
@@ -144,12 +210,38 @@ const staticImportSpecifiers = (file, text) => {
     if (node.kind === ts.SyntaxKind.NullKeyword) return new Set([null]);
     if (ts.isIdentifier(node)) {
       const binding = constBindingFor(node);
-      if (binding === null || binding.initializer === undefined || seenBindings.has(binding)) {
+      if (
+        binding === null ||
+        binding.declaration.initializer === undefined ||
+        seenBindings.has(binding)
+      ) {
         return new Set([unknownStaticValue]);
       }
       const nextSeenBindings = new Set(seenBindings);
       nextSeenBindings.add(binding);
-      return staticValues(binding.initializer, nextSeenBindings);
+      return projectBindingValues(
+        staticValues(binding.declaration.initializer, nextSeenBindings),
+        binding.selectors,
+      );
+    }
+    if (ts.isObjectLiteralExpression(node)) {
+      const properties = new Map();
+      for (const property of node.properties) {
+        if (ts.isPropertyAssignment(property)) {
+          const name = propertyNameText(property.name);
+          if (name !== null) properties.set(name, staticValues(property.initializer, seenBindings));
+        } else if (ts.isShorthandPropertyAssignment(property)) {
+          properties.set(property.name.text, staticValues(property.name, seenBindings));
+        }
+      }
+      return new Set([{ kind: staticObjectValue, properties }]);
+    }
+    if (ts.isArrayLiteralExpression(node)) {
+      const elements = node.elements.map((element) =>
+        ts.isSpreadElement(element)
+          ? new Set([unknownStaticValue])
+          : staticValues(element, seenBindings));
+      return new Set([{ kind: staticArrayValue, elements }]);
     }
     if (
       ts.isParenthesizedExpression(node) ||
@@ -293,6 +385,7 @@ const walk = (dir, out = []) => {
 const TESTING_SUBPATH_SEGMENT = "testing";
 const isTestingSubpath = (spec) =>
   spec.startsWith("@sceneaxi/") && spec.split("/")[2] === TESTING_SUBPATH_SEGMENT;
+const resourceSpecifierPath = (spec) => spec.replace(/[?#].*$/, "");
 const sourceModuleId = (path) =>
   relative(root, path)
     .split(sep)
@@ -384,8 +477,9 @@ for (const [name, { dir }] of manifests) {
     const fromModule = sourceModuleId(file);
     const text = readFileSync(file, "utf8");
     for (const spec of staticImportSpecifiers(file, text)) {
-      if (spec.startsWith("@sceneaxi/")) {
-        const target = spec.split("/").slice(0, 2).join("/");
+      const resourcePath = resourceSpecifierPath(spec);
+      if (resourcePath.startsWith("@sceneaxi/")) {
+        const target = resourcePath.split("/").slice(0, 2).join("/");
         if (!allow.has(target)) {
           fail(`${name}: ${relative(root, file)} imports ${target}, DENIED by the matrix`);
         }
@@ -395,11 +489,11 @@ for (const [name, { dir }] of manifests) {
             `${name}: ${relative(root, file)} imports ${target} outside its exact deployment owner files`,
           );
         }
-        if (isTestingSubpath(spec)) {
+        if (isTestingSubpath(resourcePath)) {
           fail(`${name}: ${relative(root, file)} imports test-only subpath ${spec} — production source may not reach a testing/ seam`);
         }
       } else {
-        const resolved = resolvePackageLocalSpecifier({ name, srcDir, file, spec });
+        const resolved = resolvePackageLocalSpecifier({ name, srcDir, file, spec: resourcePath });
         if (resolved === null) continue;
         const targetModule = sourceModuleId(resolved);
         // Path-segment containment (not raw startsWith): "packages/cli-shadow" must not match "packages/cli"
@@ -438,7 +532,10 @@ for (const [name, { json, dir }] of manifests) {
   if (existsSync(srcDir)) {
     for (const file of walk(srcDir)) {
       for (const spec of staticImportSpecifiers(file, readFileSync(file, "utf8"))) {
-        const target = spec.startsWith("@sceneaxi/") ? spec.split("/").slice(0, 2).join("/") : null;
+        const resourcePath = resourceSpecifierPath(spec);
+        const target = resourcePath.startsWith("@sceneaxi/")
+          ? resourcePath.split("/").slice(0, 2).join("/")
+          : null;
         if (target && kidsSet.has(target)) {
           fail(`${name}: ${relative(root, file)} imports Kids package ${target} — Kids boundary violation`);
         }

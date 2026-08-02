@@ -204,12 +204,38 @@ describe("sites tier — injected violations", () => {
       "constant logical binding",
       'const authorityPath = false || "../../../lib/identity-plane.js";\nawait import(authorityPath);',
     ],
+    [
+      "destructured object const binding",
+      'const { path: authorityPath } = { path: "../../../lib/identity-plane.js" };\nawait import(authorityPath);',
+    ],
+    [
+      "destructured array const binding",
+      'const [authorityPath] = ["../../../lib/identity-plane.js"];\nawait import(authorityPath);',
+    ],
   ])("boundary check denies deployment authority through a %s", (_label, source) => {
     appendTo(fx, "sites/umbrella/src/app/api/login/route.ts", `\n${source}\n`);
     const res = runCheck(fx, "check-boundaries.mjs");
     expect(res.status).toBe(1);
     expect(res.stderr).toContain(
       "sites/umbrella/src/app/api/login/route.ts imports deployment authority module sites/umbrella/src/lib/identity-plane outside the request-authority facade",
+    );
+  });
+
+  it.each([
+    ["a relative resource query", "./identity-plane.js?authority"],
+    ["a relative resource fragment", "./identity-plane.js#authority"],
+    ["an aliased resource query", "@/lib/identity-plane?authority"],
+    ["an aliased resource fragment", "@/lib/identity-plane#authority"],
+  ])("boundary check denies deployment authority through %s", (_label, specifier) => {
+    writeTo(
+      fx,
+      "sites/umbrella/src/lib/authority-leak.jsx",
+      `await import("${specifier}");\n`,
+    );
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "sites/umbrella/src/lib/authority-leak.jsx imports deployment authority module sites/umbrella/src/lib/identity-plane outside the request-authority facade",
     );
   });
 
