@@ -175,7 +175,9 @@ only, and presentation invents no state the kernel does not own.
   the packaged binary's `--smoke` proof (SwiftShader under Xvfb):
   `backend three · surface webgl-canvas · pixelsDrawn true · drawCalls 15`,
   matching the draw-call count the headless gate derives from the same
-  composition. The recorded build and its observations are owned by
+  composition. That build is the local source build recorded there, not the
+  workflow artifact `/engine` offers — packaging is not bit-reproducible, so the
+  two are never the same bytes. Both records and these observations are owned by
   [`desktop-linux.md`](desktop-linux.md).
 
 Reproduce the standalone snippets by serving a page that runs the consumer

@@ -53,10 +53,47 @@ describe("desktop offer ↔ recorded build lockstep", () => {
     ).toEqual(documented);
   });
 
-  it("records the same date and version the doc stands behind", () => {
-    expect(doc).toContain(`Recorded ${DESKTOP_LINUX_APP_OFFER.recordedOn}`);
+  it("records the same release identity the doc stands behind", () => {
+    expect(doc).toContain(`Verified ${DESKTOP_LINUX_APP_OFFER.verifiedOn}`);
+    expect(doc).toContain(DESKTOP_LINUX_APP_OFFER.downloadHref);
+    expect(doc).toContain(String(DESKTOP_LINUX_APP_OFFER.workflowRunId));
+    expect(doc).toContain(DESKTOP_LINUX_APP_OFFER.sourceCommit);
+    expect(doc).toContain(DESKTOP_LINUX_APP_OFFER.ciArtifactName);
+    expect(doc).toContain(DESKTOP_LINUX_APP_OFFER.checksumFileName);
     for (const artifact of DESKTOP_LINUX_APP_OFFER.artifacts) {
       expect(artifact.fileName).toContain(DESKTOP_LINUX_APP_OFFER.version);
+    }
+  });
+
+  it("records the same retention window and expiry date the doc states", () => {
+    expect(doc).toContain(
+      `| Artifact retention | ${String(DESKTOP_LINUX_APP_OFFER.artifactRetentionDays)} days |`,
+    );
+    expect(doc).toContain(
+      `| Download expires by | ${DESKTOP_LINUX_APP_OFFER.artifactExpiresBy} |`,
+    );
+    expect(doc).toContain("This download expires");
+    // The recorded run predates the declaration, so the doc and the note must bound
+    // its retention rather than attribute it to a setting that governs later runs.
+    expect(doc).toContain("governs every later run");
+    expect(DESKTOP_LINUX_APP_OFFER.retentionNote).toContain("upper bound");
+    expect(DESKTOP_LINUX_APP_OFFER.retentionNote).toContain("repository default");
+  });
+
+  it("attributes every proof to the build it came from", () => {
+    expect(doc).not.toContain("Smoke observations of the downloaded workflow build");
+    const start = doc.indexOf("## Where each proof came from");
+    expect(start, "docs/desktop-linux.md lost its proof-attribution section").toBeGreaterThan(-1);
+    const evidence = doc.slice(start);
+    expect(evidence).toContain("A local source build");
+    expect(evidence).toContain("verified, not separately launched here");
+    // Every source-built launch mode must sit below the source-build attribution,
+    // never under the downloaded artifact, whose only proof is its checksum.
+    for (const sourceBuiltMode of ["--appimage-extract-and-run", "SCENEAXI_SMOKE_SHOT"]) {
+      expect(evidence).toContain(sourceBuiltMode);
+      expect(evidence.indexOf("A local source build")).toBeLessThan(
+        evidence.indexOf(sourceBuiltMode),
+      );
     }
   });
 
@@ -64,7 +101,22 @@ describe("desktop offer ↔ recorded build lockstep", () => {
     expect(doc).toContain("not bit-reproducible");
     expect(DESKTOP_LINUX_APP_OFFER.reproducibilityNote).toContain("not bit-reproducible");
     expect(doc).toContain("Windows and macOS packaging");
-    expect(DESKTOP_LINUX_APP_OFFER.notPackaged).toEqual(["Windows", "macOS"]);
+    expect(DESKTOP_LINUX_APP_OFFER.unavailablePlatforms.map((row) => row.platform)).toEqual([
+      "macOS",
+      "Windows",
+    ]);
+    expect(DESKTOP_LINUX_APP_OFFER.unavailablePlatforms.every((row) => row.status === "coming-soon"))
+      .toBe(true);
+    expect(doc).toContain("no code-signing claim");
+    expect(doc).toContain("no auto-update support");
+  });
+
+  it("documents first-run project creation and all three honest product tabs", () => {
+    expect(doc).toContain("seeds `scene.json` only when that file is absent");
+    expect(doc).toContain("**Game**");
+    expect(doc).toContain("**Website (Web)**");
+    expect(doc).toContain("**Kids**");
+    expect(doc).toContain("**refuse-only**");
   });
 
   it("keeps the record out of the build it describes", () => {
@@ -94,5 +146,8 @@ describe("desktop offer ↔ recorded build lockstep", () => {
     );
     expect(workflow).toContain(`name: ${DESKTOP_LINUX_APP_OFFER.ciWorkflow}`);
     expect(workflow).toContain(`name: ${DESKTOP_LINUX_APP_OFFER.ciArtifactName}`);
+    expect(workflow).toContain(
+      `retention-days: ${String(DESKTOP_LINUX_APP_OFFER.artifactRetentionDays)}`,
+    );
   });
 });

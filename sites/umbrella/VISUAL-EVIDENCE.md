@@ -83,9 +83,11 @@ core's real refusal rather than a state the page was asked to render.
 ### The `/engine` figures predate the desktop download section
 
 Every `/engine` figure in this document was recorded before sceneaxi#183 rewrote that
-page, which gained the recorded Linux desktop build section, its artifact cards, and the
+page, which gained the Linux desktop section, its artifact cards, and the
 platform-status panel (ADR 0024, owner
-[`docs/desktop-linux.md`](../../docs/desktop-linux.md)). So the `/engine` rows of the
+[`docs/desktop-linux.md`](../../docs/desktop-linux.md)). sceneaxi#193 then rewrote that
+section again into the download CTA, the per-file metadata and checksum-command cards,
+the install/first-launch pair, and the coming-soon panel. So the `/engine` rows of the
 overflow sweep, of both named-state measurement tables, and of the Lighthouse table are
 the observation at that earlier revision of the page, and they are **pending re-record**.
 
@@ -437,7 +439,7 @@ contract wins.
 |---|---|---|
 | A full 3 × 10 Game/Web/Kids capability grid, mostly ticked | six ADR 0001 Kernel-seam rows, each cell computed from the conformance registry and the open-path policy: Game "Proven in a demo", Web "Not yet claimed", Kids "Refused" | `profileConformanceRegistry` marks Web and Kids not-yet-claimed and `shippingClaim` is structurally false. The mockup's grid would claim what no test proves. |
 | A live scene floated behind the headline under a gradient veil | the real artifact in its own hero column, unveiled | Dimming evidence to make type legible is not a trade this surface makes. The composition changed instead. |
-| "Download for macOS", `.dmg` / `.exe` cards with sizes and elided digests | two sections, each with the evidence it actually has: the engine SDK archive, whose size, entry count, and SHA-256 are read off the served file, and the recorded Linux desktop build (AppImage + `.deb`, ADR 0024) read from `desktopLinuxAppOffer()` in site-kit, under a platform-status panel naming Windows and macOS as not packaged | These are the only artifacts this repository builds; a macOS or Windows installer would be invented, and no digest is typed into the page. The desktop record is owned by [`docs/desktop-linux.md`](../../docs/desktop-linux.md). |
+| "Download for macOS", `.dmg` / `.exe` cards with sizes and elided digests | two sections, each with the evidence it actually has: the engine SDK archive, whose size, entry count, and SHA-256 are read off the served file, and one verified Linux workflow artifact (AppImage + `.deb`, ADR 0024) read through the fail-closed `desktopLinuxAppOffer()` in site-kit. The CTA names the exact repository run, each file prints complete metadata and a copyable checksum command, and macOS/Windows are explicit coming-soon rows with no link. | These are the only artifacts this repository builds. A macOS or Windows installer would be invented, and a malformed Linux record now refuses instead of rendering a fallback URL. The desktop record is owned by [`docs/desktop-linux.md`](../../docs/desktop-linux.md). |
 | `$ npm i -g @sceneaxi/cli` in the hero | `sceneaxi project propose …`, with a note that the CLI ships inside the archive | Private `0.0.0` bootstrap packages; no registry publish authority. |
 | Free / Studio $24 per seat / Enterprise tiers, and a seat-subscription account surface | credit packs from the billing plane, and an account surface that explains an **append-only ledger** | SceneAxi sells credits, not seats. A balance is the sum of the ledger's entries, so nothing on `/account` offers to write one — it has no form, no input, and no mutating method. |
 | "MOST TEAMS" flag on the middle tier | a "best rate per credit" flag, and only when one pack is strictly better than every other | A recommendation is a product decision. Arithmetic over the returned packs is not. |

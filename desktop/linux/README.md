@@ -7,7 +7,8 @@ Three presentation core drawing real pixels in the renderer process, and the
 shared authoring propose/accept session. Not a static HTML export: every claim
 below is exercised by a spawned binary or a gate test.
 
-Ownership map, recorded build results, and what stays deliberately absent:
+Ownership map, the first-download record (the offered workflow artifact, its
+checksums, and the date it expires), and what stays deliberately absent:
 [`docs/desktop-linux.md`](../../docs/desktop-linux.md). Tier decision: ADR 0024.
 
 ## Build and run

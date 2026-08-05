@@ -3,7 +3,7 @@
 The packaged **SceneAxi Engine Desktop** for Linux: `desktop/linux`
 (`@sceneaxi/desktop-linux`), decided by [ADR 0024](adr/0024-linux-desktop-electron-tier.md)
 and dispatched by [sceneaxi#183](https://github.com/Vhailors/sceneaxi/issues/183).
-This document owns the runtime choice, the bridge map, the recorded build results,
+This document owns the runtime choice, the bridge map, the first-download record,
 and what stays deliberately absent. The tier's structural rules are enforced by
 `pnpm check:desktop`; the engine paths are proven in
 `tests/e2e/desktop-linux-bridge-golden.test.ts` (in `pnpm test:golden`).
@@ -70,18 +70,54 @@ Headless hosts wrap the smoke in `xvfb-run -a`; the launcher forces SwiftShader 
 WebGL stays a real software rasterizer. CI (`.github/workflows/desktop-linux.yml`)
 builds both artifacts on `ubuntu-latest`, runs the packaged smoke under xvfb, and
 uploads them with `SHA256SUMS` as the workflow artifact `sceneaxi-desktop-linux`.
-No GitHub Release is created; no release authority is claimed (the same posture as
-the engine SDK, ADR 0019).
+The first download points to the concrete successful main-branch run recorded below.
+No GitHub Release is created and no release URL is invented; the repository artifact
+is the distribution path for this first ship.
 
-## Recorded build results
+## First download record
 
-Recorded 2026-07-31, from `pnpm dist` at the tier root. Electron packaging is
-**not bit-reproducible**, so these digests identify this recorded build; a rebuild
-produces its own `SHA256SUMS` beside its own artifacts. The umbrella `/engine`
-page advertises exactly this record through `desktopLinuxAppOffer()` in
+Verified 2026-08-05 by downloading `sceneaxi-desktop-linux` from the successful
+main-branch workflow run below and running its own `sha256sum -c SHA256SUMS`.
+Electron packaging is **not bit-reproducible**, so these digests identify that
+workflow artifact only; a source rebuild produces its own `SHA256SUMS` beside its
+own artifacts. The umbrella `/engine` page advertises exactly this record through
+`desktopLinuxAppOffer()` in
 `@sceneaxi/site-kit`, and `tests/sites/desktop-offer-lockstep.test.ts` holds the
 offer and the table below in lockstep — a digest edited in one place fails the
-gate until the other moves with it.
+gate until the other moves with it. Nothing on that page is rendered around the
+record: `resolveDesktopAppOffer()` validates every field first, and an
+incomplete, malformed, or wrongly-linked record refuses by name instead of
+offering a download — the page's metadata, checksum, coming-soon, and refusal
+behaviour is held by `tests/sites/desktop-download.test.ts`.
+
+<!-- desktop-linux:release -->
+| Field | Value |
+|---|---|
+| Version | `0.0.0` |
+| Platform | Linux x86_64 |
+| Repository artifact | [workflow run 30739014112](https://github.com/Vhailors/sceneaxi/actions/runs/30739014112) |
+| Source commit | `b338a911b1e2646d815538c75daf82db5d8d6cd9` |
+| Actions artifact | `sceneaxi-desktop-linux` |
+| Checksum file | `SHA256SUMS` |
+| Verified | 2026-08-05 |
+| Artifact retention | 90 days |
+| Download expires by | 2026-11-03 |
+
+**This download expires.** A workflow artifact is not a release. Run 30739014112
+predates this branch — its source commit is the branch base — so GitHub fixed that
+artifact's retention at upload time from the repository default, at most the 90 days
+GitHub's own default gives. The upload step now declares `retention-days: 90`
+explicitly, which governs every later run rather than this one. Either way these files
+are gone on or before **2026-11-03**, 90 days after the verification date above. That
+date is an upper bound twice over: a shorter inherited default expires sooner, and
+retention runs from the run itself, which is on or before the verification date.
+Nothing in this
+repository can observe that deletion: the run page keeps resolving afterwards, and
+`resolveDesktopAppOffer()` reads no clock, because a page that renders a different
+record per visitor would be worse than one that states its own expiry. `/engine`
+therefore prints the date beside the CTA, and the record above must be re-recorded
+from a fresh successful main-branch run before it, or the offer stops being true.
+Until then the honest fallback is the source build in this document.
 
 The record is deliberately kept **out of the build it describes**: the tier bundles
 site-kit for its scene payload, so `desktop-app-offer.ts` marks every `Object.freeze`
@@ -96,15 +132,78 @@ independent.
 <!-- desktop-linux:artifacts -->
 | Artifact | File | Bytes | SHA-256 |
 |---|---|---|---|
-| AppImage | `SceneAxi-Engine-Desktop-0.0.0-linux-x86_64.AppImage` | 115161530 | `b175f99fc51953ee4631a2fd5aac17d86447c581df97aeb14c6f61e517fb6367` |
-| deb | `SceneAxi-Engine-Desktop-0.0.0-linux-amd64.deb` | 90492464 | `d471353c00e32335fc269b93982cb1d6f04d9974ee169bd4a14a1e72e188bb68` |
+| AppImage | `SceneAxi-Engine-Desktop-0.0.0-linux-x86_64.AppImage` | 115165695 | `ea962d2a44a5d141bfca8aee5d650575b3e4d1123f01c68d3bd0c3791e194527` |
+| deb | `SceneAxi-Engine-Desktop-0.0.0-linux-amd64.deb` | 89870252 | `0b5b4ba2f2df41200087300f60543675d26357bbd22fd8cf19a5473ee17b99ac` |
 
-Toolchain of the recorded build: Electron 43.2.0 · electron-builder 26.15.3 ·
-esbuild 0.28.1 · Node 24.14.0 · pnpm 9.15.0 · Ubuntu 24.04 (kernel 6.17,
-Mesa 25.2.8) under Xvfb with SwiftShader.
+The workflow pins Node 24 and pnpm 9.15.0; the tier lockfile supplies Electron
+43.2.0, electron-builder 26.15.3, and esbuild 0.28.1 on `ubuntu-latest`. Its
+packaged smoke runs under Xvfb with SwiftShader before upload.
 
-Smoke observations of the recorded build — all three launch modes printed the same
-proof (`pnpm smoke`, `pnpm smoke --packaged`, and the AppImage itself with
+## Download, verify, and install
+
+Open [workflow run 30739014112](https://github.com/Vhailors/sceneaxi/actions/runs/30739014112)
+and select `sceneaxi-desktop-linux` under **Artifacts**. GitHub may require sign-in
+with repository access. Extract the downloaded bundle, then verify both packaged
+files before running either one:
+
+```bash
+unzip sceneaxi-desktop-linux.zip -d sceneaxi-desktop-linux
+cd sceneaxi-desktop-linux
+sha256sum -c SHA256SUMS
+```
+
+Use either the portable AppImage or the Debian package:
+
+```bash
+chmod +x SceneAxi-Engine-Desktop-0.0.0-linux-x86_64.AppImage
+./SceneAxi-Engine-Desktop-0.0.0-linux-x86_64.AppImage
+
+# Or install the Debian package:
+sudo apt install ./SceneAxi-Engine-Desktop-0.0.0-linux-amd64.deb
+```
+
+This `0.0.0` artifact makes no code-signing claim and has no auto-update support.
+Future builds must be downloaded and checksum-verified manually.
+
+## First launch and product tabs
+
+On first launch, the application creates its persistent project directory under
+Electron's user-data directory and seeds `scene.json` only when that file is absent.
+Later launches reuse the project and do not replace existing project bytes.
+
+The profile switch presents **Game**, **Website (Web)**, and **Kids**:
+
+- Game is the initial profile and exposes the current authoring projection.
+- Website selects the Web Experience projection.
+- Kids is present so its product boundary is visible, but it is **refuse-only** in
+  this release. The application shows the named safety refusal and keeps the profile
+  switch available so the operator can return to Game or Website; it does not claim
+  a Kids authoring path that is not shipped.
+
+## Where each proof came from
+
+Three sources, and they are not interchangeable. Electron packaging is not
+bit-reproducible, so a proof of *this source* is not a proof of *those bytes*, and
+mixing them would let the record claim more than it verified.
+
+**Workflow run 30739014112 — the bytes offered above.** The run succeeded, and
+`.github/workflows/desktop-linux.yml` puts every check before the upload: the tier is
+type-checked, `pnpm dist` packages both files, `sha256sum -c SHA256SUMS` runs in
+`desktop/linux/release`, and `xvfb-run -a pnpm smoke --packaged` launches the packaged
+app under Xvfb with SwiftShader. Only then does `actions/upload-artifact` publish those
+same files, with `if-no-files-found: error`. The run log is that evidence; no transcript
+of it is copied here.
+
+**The download — 2026-08-05.** `sceneaxi-desktop-linux` was downloaded from that run
+and its own `sha256sum -c SHA256SUMS` checked locally; both files matched, which is
+where the byte sizes and digests in the table above come from. That is the whole claim
+made about the downloaded files: they were verified, not separately launched here.
+
+**A local source build — recorded 2026-07-31, `pnpm dist` at the tier root.** A
+different build with its own digests, kept because it is where the behaviour below was
+observed in detail. These lines describe the same source as the offered artifact, never
+the same bytes. All three launch modes printed the same proof (`pnpm smoke`,
+`pnpm smoke --packaged`, and the AppImage itself with
 `--appimage-extract-and-run --smoke`):
 
 - bridge handshake: `@sceneaxi/desktop-linux` on runtime `electron`, bridge v1
@@ -135,9 +234,9 @@ proof (`pnpm smoke`, `pnpm smoke --packaged`, and the AppImage itself with
 
 ## Deliberately absent
 
-Windows and macOS packaging (stated on `/engine`, never implied), code signing,
-auto-update, an app store listing, a GitHub Release, identity/billing (the desktop
-app has no account surface; the matrix denies it `auth`/`billing`), any Kids path
+Windows and macOS packaging (shown as coming soon on `/engine`, never implied), code
+signing, auto-update, an app store listing, a GitHub Release, identity/billing (the desktop
+app has no account surface; the matrix denies it `auth`/`billing`), any Kids authoring path
 (the chrome's refuse-only Kids projection stays owned by `@sceneaxi/desktop-shell`,
 and the matrix denies every profile package), and any new CLI verb — held-key
 policy is untouched.

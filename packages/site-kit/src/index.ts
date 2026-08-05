@@ -150,8 +150,10 @@ export {
 export {
   DESKTOP_LINUX_APP_OFFER,
   desktopLinuxAppOffer,
+  resolveDesktopAppOffer,
   type DesktopAppArtifact,
   type DesktopAppOffer,
+  type DesktopUnavailablePlatform,
 } from "./desktop-app-offer.js";
 
 export {

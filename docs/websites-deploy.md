@@ -167,7 +167,7 @@ curl -s "$UMB/login" | grep -c 'Sign-in is not activated on this deployment'  # 
 curl -s "$UMB/login" | grep -c '<form'                           # 0, until wiring step 4
 
 # The served archive must hash to the published checksum. `/engine` publishes three
-# digests: the SDK archive's first, then the two recorded desktop-build artifacts
+# digests: the SDK archive's first, then the two Linux desktop artifacts
 # (docs/desktop-linux.md), which describe binaries this site never serves.
 curl -s "$UMB/engine" | grep -oE '[0-9a-f]{64}' | head -1
 curl -sL -o sdk.zip "$UMB/engine-sdk/sceneaxi-engine-sdk-<version>.zip"
@@ -190,8 +190,9 @@ webgl-canvas`, `pixelsDrawn true`), and the standing record is in
 preview flag serves no canvas at all, which is what the refusal check below asserts.
 
 Expected: pages 200; the served zip's SHA-256 equal to the first digest `/engine`
-publishes (the desktop-build digests below it are a recorded build, verified by
-rebuilding it, not by a fetch from this site);
+publishes (the desktop digests below it identify one recorded workflow artifact that
+expires, never a file this site serves — [`desktop-linux.md`](desktop-linux.md) owns
+that record and its expiry);
 an unknown item id 404; neither storefront resolving the other's ids; `/pricing` listing
 the three credit packs, its Buy control live only once the TEST Stripe handle is
 configured and disabled otherwise; `/account` rendering an honest refusal until the

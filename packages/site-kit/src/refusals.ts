@@ -110,6 +110,10 @@ export const SITE_REFUSALS = Object.freeze({
     "The engine SDK archive or its manifest is not present in this build.",
   ENGINE_SDK_MANIFEST_INVALID:
     "The engine SDK manifest is malformed, so no download or checksum can be offered.",
+  DESKTOP_APP_ARTIFACT_UNAVAILABLE:
+    "No complete Linux desktop artifact record is available, so no desktop download can be offered.",
+  DESKTOP_APP_ARTIFACT_LINK_INVALID:
+    "The Linux desktop artifact link does not name its recorded repository workflow run, so no download can be offered.",
 
   // --- Foundations v2 tokens (see design-tokens.ts) ---
   FOUNDATION_SURFACE_UNKNOWN:

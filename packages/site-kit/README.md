@@ -31,7 +31,7 @@ opened — and what may be drawn — lives here.
 | `state-panel.ts` | the shared named-state model, Foundations status mapping, and neutral tree; sites retain only React adapters |
 | `commerce-notice.ts` | the two storefronts' inert-commerce copy, refusal model, and neutral tree |
 | `site-session.ts` | the shared session header/cookie vocabulary, header-first token normalization, and the session cookie a login grant is handed to a browser in — built, cleared, and its `Secure` attribute decided from the deployment's configured origin rather than the request |
-| `desktop-app-offer.ts` | the recorded Linux desktop build the umbrella `/engine` page advertises — committed facts, held in lockstep with [`docs/desktop-linux.md`](../../docs/desktop-linux.md), never a rebuilt file's digest |
+| `desktop-app-offer.ts` | the validated Linux workflow-artifact offer for umbrella `/engine` — exact run, source commit, files, sizes, checksums, and the retention window after which the artifact is gone, held in lockstep with [`docs/desktop-linux.md`](../../docs/desktop-linux.md), with named refusals for missing or broken metadata |
 
 ## The shared visual layer
 
