@@ -535,6 +535,7 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = Object.freeze([
       Object.freeze({ name: "Profiles", href: "/profiles" }),
       Object.freeze({ name: "Engine SDK", href: "/engine" }),
       Object.freeze({ name: "Pricing", href: "/pricing" }),
+      Object.freeze({ name: "Login", href: "/login" }),
       Object.freeze({ name: "Account", href: "/account" }),
     ]),
   }),

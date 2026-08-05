@@ -61,10 +61,34 @@ claim:
 - `VISUAL-EVIDENCE.md` records the browser observations: viewports, measured overflow,
   Lighthouse accessibility scores, measured contrast, and the live frame report.
 
-Two client components carry the visual layer's behaviour, and both are deliberate:
+### First-release overview
+
+The default route is the first-release information architecture from sceneaxi#203:
+
+- `src/lib/download-platform.ts` resolves desktop user-agent copy without ever creating
+  an artifact URL. Linux reaches the existing `/engine` evidence route; macOS and
+  Windows remain `coming-soon` rows with no href.
+- `src/lib/launch-marketing.ts` owns the frozen trust, comparison, and profile-launch
+  projections. The Unity, Godot, and Three.js rows link to each project's own product
+  description, carry no score, and state where SceneAxi is narrower.
+- `src/app/page.tsx` renders those projections around the existing real-artifact hero.
+  It does not import or duplicate `/engine` artifact, checksum, billing, identity, or
+  desktop implementation logic.
+- `tests/sites/umbrella-launch-marketing.test.ts` tests the pure content and detection
+  seams. `test/first-release.visual.spec.ts` drives the rendered route at default,
+  short-height, and both sides of its breakpoints; it also tests real Tab focus and
+  contrast after browser compositing rather than comparing declared token strings.
+
+Run the browser checks from this install root:
+
+    pnpm test:visual
+
+Three overview client components carry the visual layer's behaviour, and all are deliberate:
 `src/app/_components/site-nav.tsx` exists only to resolve `aria-current`, and
 `src/app/_components/hero-viewport.tsx` draws the hero's real artifact through the shared
-renderer boundary. The gate asserts the client-component list.
+renderer boundary. `src/app/_components/download-cta.tsx` changes detected-platform copy
+only; it cannot change the stable `/engine` destination or an availability state. The gate
+asserts the complete client-component list.
 
 ### Named states
 

@@ -28,6 +28,26 @@ export {
 export { EDITOR_VIEWPORT_COPY } from "./lib/editor-viewport.js";
 
 export {
+  DOWNLOAD_PLATFORMS,
+  downloadCallToAction,
+  resolveDownloadPlatform,
+  type DetectedDownloadPlatform,
+  type DownloadPlatformId,
+  type DownloadPlatformOffer,
+} from "./lib/download-platform.js";
+
+export {
+  ENGINE_COMPARISONS,
+  LAUNCH_PROOFS,
+  PROFILE_RELEASE_MATRIX,
+  type EngineComparison,
+  type LaunchProof,
+  type ReleaseCapability,
+  type ReleaseProfile,
+  type ReleaseProfileId,
+} from "./lib/launch-marketing.js";
+
+export {
   LIVE_OPEN_COPY,
   LIVE_OPEN_INSTANCE_COUNT,
   LIVE_OPEN_PATH,

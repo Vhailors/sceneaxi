@@ -1,97 +1,51 @@
+import { LIVE_OPEN_INSTANCE_COUNT, LIVE_OPEN_PATH, resolveLiveOpenScene } from "../lib/live-open.js";
 import {
-  CREATOR_SHARE_ROUNDING_NOTE,
-  CREATOR_SHARE_RULE,
-  SITE_CAPABILITIES,
-  SITE_CAPABILITY_IDS,
-  SITE_STARTER_CREDIT_ALLOTMENT,
-} from "@sceneaxi/site-kit";
-import {
-  LIVE_OPEN_COPY,
-  LIVE_OPEN_INSTANCE_COUNT,
-  LIVE_OPEN_PATH,
-  resolveLiveOpenScene,
-} from "../lib/live-open.js";
-import {
-  DIFF_ROWS,
-  EXIT_CODES,
-  FAMILY_CARDS,
-  PROFILE_CARDS,
-  RELEASE_MARKER,
-  REVIEW_POINTS,
-  SCULPT_PASSES,
-  TERMINAL_LINES,
-} from "../lib/site-content.js";
-import { UMBRELLA_BRAND, resolveFamilyLinks } from "../lib/site-config.js";
-import { CapabilityTable } from "./_components/capability-table.js";
+  ENGINE_COMPARISONS,
+  LAUNCH_PROOFS,
+  PROFILE_RELEASE_MATRIX,
+} from "../lib/launch-marketing.js";
+import { RELEASE_MARKER } from "../lib/site-content.js";
+import { DownloadCta } from "./_components/download-cta.js";
 import { HeroViewport } from "./_components/hero-viewport.js";
 import { StatePanel } from "./_components/state-panel.js";
 
+const PROFILE_STATE_COPY = Object.freeze({
+  "development-consumer": Object.freeze({ label: "Development proof", tone: "validated" }),
+  "not-yet-claimed": Object.freeze({ label: "Not yet claimed", tone: "dormant" }),
+  "refuse-only": Object.freeze({ label: "Refuse-only", tone: "isolated" }),
+});
+
 /**
- * The overview.
+ * The first public engine release overview (sceneaxi#203).
  *
- * Every number on this page is read from the contract that owns it — the starter
- * allotment and the creator share from site-kit, the free-capability count from the
- * published capability matrix — so the marketing surface and the gate cannot disagree
- * about what SceneAxi costs.
- *
- * The hero art is a **real Sculpt Artifact** (decision D4): the server composes the same
- * `MountableScene` the public open path serves and hands it to the tier's one renderer
- * boundary. There is no procedural marketing geometry on this page, so the picture
- * behind the headline is bound to the same artifact and digest chain the gate proves. A
- * scene the pipeline refuses to compose renders the refusal, not a decorative stand-in.
+ * The route sells one bounded proposition: local, reviewable scene authoring over a
+ * shared engine core. Its hero visual is the committed public artifact, its comparison
+ * claims link to each product's own description, and its profile matrix carries a
+ * structurally false shipping claim.
  */
 export default function OverviewPage() {
-  const family = resolveFamilyLinks(process.env);
   const heroScene = resolveLiveOpenScene();
-  const freeCapabilityCount = SITE_CAPABILITY_IDS.filter(
-    (id) => SITE_CAPABILITIES[id].tier === "free",
-  ).length;
-
-  // Family cards name a surface, never a hostname; a card is a link only when this
-  // deployment actually resolved that surface's origin.
-  const catalogHref: Readonly<Record<string, string | null>> = {
-    "Game assets": family.gameCatalog,
-    "Web assets": family.webCatalog,
-  };
 
   return (
     <>
-      <section className="hero">
+      <section className="hero release-hero" aria-labelledby="release-title">
         <div className="hero-inner hero-inner-split">
           <div className="hero-copy">
-            <p className="badge">
-              <span className="dot" aria-hidden="true" />
-              {RELEASE_MARKER}
+            <p className="badge">{RELEASE_MARKER}</p>
+            <h1 id="release-title">Build scenes. Keep the source.</h1>
+            <p className="lede">
+              Build interactive scenes as local, reviewable files, then open them through
+              a versioned product profile.
             </p>
-            <h1>Describe the object. Get a real one.</h1>
-            <p className="lede">{UMBRELLA_BRAND.summary}</p>
 
-            <div className="actions">
-              <a className="button" href="/engine">
-                Download the engine SDK
-              </a>
+            <div className="release-actions">
+              <DownloadCta />
               <a className="button button-quiet button-arrow" href={LIVE_OPEN_PATH}>
-                Open a real artifact
+                Open the proof
               </a>
-            </div>
-
-            <div className="stack stack-tight">
-              <p className="command">
-                <code>sceneaxi project propose --document scene.json</code>
-              </p>
-              <p className="note">
-                The CLI ships inside the SDK archive. These are private <code>0.0.0</code>{" "}
-                bootstrap packages, so there is no registry install yet —{" "}
-                <a href="/engine">the download page</a> states exactly what is served.
-              </p>
             </div>
           </div>
 
-          {/*
-            Not an illustration. This is the committed artifact from the public open
-            path, composed by the same pipeline and drawn by the same renderer boundary,
-            so the headline's claim and the picture beside it rest on one contract.
-          */}
           {heroScene.ok ? (
             <HeroViewport
               scene={heroScene.value}
@@ -101,307 +55,143 @@ export default function OverviewPage() {
             <StatePanel
               tone="deny"
               level={2}
-              title="No artifact to draw"
+              title="The release artifact refused to open"
               reason={heroScene.reason}
-              evidence={[{ term: "Surface", value: "hero" }]}
+              evidence={[{ term: "Surface", value: "release overview" }]}
             >
               <p>{heroScene.message}</p>
               <p>
-                The hero draws the same composed scene the public open path serves. The
-                pipeline fails closed, so this deploy shows its refusal rather than
-                substituting decorative geometry for the artifact it could not build.
+                This slot shows the same composed artifact as the public open path. A
+                refusal stays visible instead of being replaced by invented marketing art.
               </p>
             </StatePanel>
           )}
         </div>
 
-        <div className="statbar">
-          <dl className="statbar-inner">
-            <div className="stat">
-              <dt>starter credits, granted once</dt>
-              <dd>{SITE_STARTER_CREDIT_ALLOTMENT}</dd>
-            </div>
-            <div className="stat">
-              <dt>of a sale&rsquo;s credits to the creator</dt>
-              <dd>{CREATOR_SHARE_RULE.creatorPercent}%</dd>
-            </div>
-            <div className="stat stat-accent">
-              <dt>silent writes — every change is a proposal</dt>
-              <dd>0</dd>
-            </div>
-            <div className="stat stat-ok">
-              <dt>published capabilities that cost nothing</dt>
-              <dd>{freeCapabilityCount}</dd>
-            </div>
+        <div className="launch-proof-rail">
+          <dl className="launch-proof-grid">
+            {LAUNCH_PROOFS.map((proof) => (
+              <div className={`launch-proof proof-${proof.id}`} key={proof.id}>
+                <dt>
+                  {proof.href === null ? proof.title : <a href={proof.href}>{proof.title}</a>}
+                </dt>
+                <dd>{proof.body}</dd>
+              </div>
+            ))}
           </dl>
         </div>
       </section>
 
-      {/* 01 — SCULPT */}
-      <section className="band-inner">
-        <div className="section-head">
-          <div className="section-title">
-            <p className="eyebrow">01 — Sculpt</p>
-            <h2>A reference, a brief, and a list of what must be there.</h2>
-          </div>
-          <p className="section-aside">
-            An object is reconstructed in visible passes. You name the details that
-            matter; if they are not in the result, the sculpt is refused rather than
-            quietly shipped.
+      <section className="band-inner release-section" id="compare" aria-labelledby="compare-title">
+        <div className="release-heading">
+          <h2 id="compare-title">Choose the right layer.</h2>
+          <p className="prose prose-wide">
+            Unity and Godot are broad game engines. Three.js is a web rendering library.
+            SceneAxi is a smaller engine and library centered on reviewable source,
+            deterministic evidence, and versioned profiles.
           </p>
         </div>
 
-        <div className="grid grid-5">
-          {SCULPT_PASSES.map((pass) => (
-            <article className={`panel tone-${pass.bar}`} key={pass.id}>
-              <span className="panel-bar" aria-hidden="true" />
-              <p className="panel-num">{pass.required ? pass.n : `${pass.n} · optional`}</p>
-              <h3>{pass.name}</h3>
-              <p>{pass.desc}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {/* 02 — REVIEW */}
-      <section className="band band-sunk">
-        <div className="band-inner band-inner-tight">
-          <div className="split split-copy-first">
-            <div className="stack split-copy">
-              <p className="eyebrow">02 — Review</p>
-              <h2>Nothing writes to your scene without you.</h2>
-              <p className="prose">
-                Every generated edit — from the assistant, a plugin, or an agent on your
-                CI — arrives as a proposal with a readable diff and the document hash
-                before and after. You accept or reject it. There is no second, quieter
-                path that skips this.
-              </p>
-              <ul className="checks">
-                {REVIEW_POINTS.map((point) => (
-                  <li key={point}>
-                    <span className="mark-box mark-yes" aria-hidden="true">
-                      ✓
-                    </span>
-                    {point}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="frame">
-              <div className="frame-bar">
-                <span className="dot tone-accent" aria-hidden="true" />
-                <span className="frame-bar-title">{DIFF_ROWS.length} proposed changes</span>
-                <span className="frame-bar-spacer" />
-                <span>illustration, not a recorded run</span>
-              </div>
-              {DIFF_ROWS.map((row) => (
-                <div className="diff-row" key={`${row.dir}${row.leaf}`}>
-                  <span
-                    className={`mark-box ${row.badge === "+" ? "mark-yes" : "mark-part"}`}
-                    aria-hidden="true"
-                  >
-                    {row.badge}
-                  </span>
-                  <span className="diff-path">
-                    <span className="diff-dir">{row.dir}</span>
-                    <span className="diff-leaf">{row.leaf}</span>
-                  </span>
-                  <span className="diff-after">{row.after}</span>
-                </div>
+        <div className="scroll-x comparison-scroll" tabIndex={0} aria-label="Engine comparison">
+          <table className="comparison-table" aria-label="Engine comparison">
+            <thead>
+              <tr>
+                <th scope="col">Product</th>
+                <th className="wrap" scope="col">What it is</th>
+                <th className="wrap" scope="col">Choose it when</th>
+                <th className="wrap" scope="col">Honest tradeoff</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ENGINE_COMPARISONS.map((entry) => (
+                <tr className={entry.name === "SceneAxi" ? "comparison-sceneaxi" : undefined} key={entry.name}>
+                  <th scope="row">
+                    <span>{entry.name}</span>
+                    <a
+                      href={entry.source.href}
+                      {...(entry.source.href.startsWith("https://")
+                        ? { rel: "noreferrer", target: "_blank" }
+                        : {})}
+                    >
+                      {entry.source.label}
+                    </a>
+                  </th>
+                  <td className="wrap">{entry.category}</td>
+                  <td className="wrap">{entry.bestWhen}</td>
+                  <td className="wrap">{entry.tradeoff}</td>
+                </tr>
               ))}
-              <div className="diff-foot">
-                <span className="hash-before">a4f2…9c1e</span>
-                <span aria-hidden="true">→</span>
-                <span className="hash-after">b7d0…41aa</span>
-                <span className="diff-foot-note">
-                  the same proposal in the editor, the CLI, and CI
-                </span>
-              </div>
-            </div>
-          </div>
+            </tbody>
+          </table>
         </div>
       </section>
 
-      {/* 03 — PROFILES */}
-      <section className="band-inner">
-        <div className="section-title">
-          <p className="eyebrow">03 — Profiles</p>
-          <h2>One runtime. Three products that share nothing they shouldn&rsquo;t.</h2>
-        </div>
-
-        <div className="grid grid-3">
-          {PROFILE_CARDS.map((profile) => {
-            const body = (
-              <>
-                <span className="card-accent-rail" aria-hidden="true" />
-                <div className="profile-card-body">
-                  <div className="panel-head">
-                    <h3>{profile.name}</h3>
-                    <span className={`tag tag-${profile.accent}`}>{profile.tag}</span>
-                  </div>
-                  <p>{profile.desc}</p>
-                  <span className="panel-grow" />
-                  <ul className="bullets panel-foot">
-                    {profile.points.map((point) => (
-                      <li key={point}>{point}</li>
-                    ))}
-                  </ul>
-                </div>
-              </>
-            );
-            const className = `card-link profile-card tone-${profile.accent}`;
-
-            // The Kids card carries no href: this site links to no Kids surface, and a
-            // card styled as a link that leads nowhere would imply one exists here.
-            return profile.href === null ? (
-              <article className={className} key={profile.name}>
-                {body}
-              </article>
-            ) : (
-              <a className={className} key={profile.name} href={profile.href}>
-                {body}
-              </a>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Free and paid */}
-      <section className="band band-sunk">
-        <div className="band-inner band-inner-tight">
-          <div className="section-title">
-            <p className="eyebrow">Free and paid</p>
-            <h2>What costs nothing, and what costs credits.</h2>
+      <section className="band band-sunk" id="profiles" aria-labelledby="profiles-title">
+        <div className="band-inner release-section">
+          <div className="release-heading">
+            <h2 id="profiles-title">One core, three explicit scopes.</h2>
             <p className="prose prose-wide">
-              The engine SDK download, the CLI, and bringing your own AI provider are
-              free. Hosted AI and catalog assets are paid. New accounts receive{" "}
-              <strong>{SITE_STARTER_CREDIT_ALLOTMENT} credits once</strong>. The table
-              below renders from the same capability matrix the gate asserts.
+              Profiles define product scope around the engine. This first-release matrix
+              distinguishes development evidence from product intent and keeps Kids
+              refusal visible.
             </p>
           </div>
-          <CapabilityTable />
-          <div className="actions">
-            <a className="button button-quiet" href="/pricing">
-              Credit packs and pricing
-            </a>
-          </div>
-        </div>
-      </section>
 
-      {/* 04 — AGENT-NATIVE */}
-      <section className="band-inner">
-        <div className="split split-copy-first">
-          <div className="frame">
-            <div className="frame-bar">
-              <span className="dot dot-window" aria-hidden="true" />
-              <span className="dot dot-window" aria-hidden="true" />
-              <span className="dot dot-window" aria-hidden="true" />
-              <span>zsh — sceneaxi</span>
-            </div>
-            <div className="frame-body">
-              <pre className="terminal">
-                {TERMINAL_LINES.map((line) => (
-                  <span className="terminal-line" key={line.text}>
-                    <span className="terminal-prompt">{line.prompt || " "}</span>{" "}
-                    <span className={line.tone === "in" ? "" : `terminal-${line.tone}`}>
-                      {line.text}
-                    </span>
-                  </span>
+          <div className="scroll-x profile-release-scroll" tabIndex={0} aria-label="Profile capability matrix">
+            <table className="profile-release-matrix" aria-label="Profile capability matrix">
+              <thead>
+                <tr>
+                  <th scope="col">Capability</th>
+                  {PROFILE_RELEASE_MATRIX.profiles.map((profile) => {
+                    const state = PROFILE_STATE_COPY[profile.state];
+                    return (
+                      <th className="wrap" scope="col" key={profile.id}>
+                        <span className="profile-column-name">{profile.name}</span>
+                        <span className={`chip chip-${state.tone}`}>{state.label}</span>
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {PROFILE_RELEASE_MATRIX.capabilities.map((capability) => (
+                  <tr key={capability.capability}>
+                    <th className="wrap" scope="row">{capability.capability}</th>
+                    {PROFILE_RELEASE_MATRIX.profiles.map((profile) => (
+                      <td className="wrap" key={profile.id}>
+                        {capability.values[profile.id]}
+                      </td>
+                    ))}
+                  </tr>
                 ))}
-              </pre>
-            </div>
+              </tbody>
+            </table>
           </div>
 
-          <div className="stack split-copy">
-            <p className="eyebrow">04 — Agent-native</p>
-            <h2>Every button is also a command.</h2>
-            <p className="prose">
-              The editor is a client of the same protocol your scripts use. Files and
-              flags in, stable paths and typed exit codes out — no prompt, no TTY guess,
-              no best-effort mutation. An agent can drive the CLI without a screen and
-              produce byte-identical documents.
+          <div className="matrix-note">
+            <p>
+              This matrix makes no shipping or availability claim. The detailed open-path
+              table is generated directly from the conformance registry and policy.
             </p>
-            <dl className="exit-codes">
-              {EXIT_CODES.map((row) => (
-                <div className="exit-code" key={row.code}>
-                  <dt>{row.code}</dt>
-                  <dd>
-                    <span className="exit-code-name">{row.name}</span>
-                    <span className="exit-code-when">{row.when}</span>
-                  </dd>
-                </div>
-              ))}
-            </dl>
+            <a className="button button-quiet" href="/profiles">Inspect profile evidence</a>
           </div>
         </div>
       </section>
 
-      {/* 05 — THE FAMILY */}
-      <section className="band band-sunk">
-        <div className="band-inner band-inner-tight">
-          <div className="section-head">
-            <div className="section-title">
-              <p className="eyebrow">05 — The family</p>
-              <h2>Where everything lives.</h2>
-            </div>
-            <p className="section-aside">
-              Each surface owns its pages outright — the storefronts never duplicate the
-              docs, and Kids is a separate origin rather than a route. Creators receive{" "}
-              {CREATOR_SHARE_RULE.creatorPercent}% of the credits on a sale.
-            </p>
-          </div>
-
-          <div className="grid grid-4">
-            {FAMILY_CARDS.map((entry) => {
-              const href = entry.linkable ? (catalogHref[entry.name] ?? null) : null;
-              const inner = (
-                <>
-                  <div className="panel-head">
-                    <span className="family-mark" aria-hidden="true" />
-                    {href !== null && (
-                      <span className="family-out" aria-hidden="true">
-                        ↗
-                      </span>
-                    )}
-                  </div>
-                  <h3>{entry.name}</h3>
-                  <p className="family-what">{entry.what}</p>
-                  <p>{entry.desc}</p>
-                </>
-              );
-              const className = `panel tone-${entry.accent}`;
-
-              return href === null ? (
-                <article className={className} key={entry.name}>
-                  {inner}
-                </article>
-              ) : (
-                <a className={`${className} card-link`} key={entry.name} href={href}>
-                  {inner}
-                </a>
-              );
-            })}
-          </div>
-
-          <p className="note">{CREATOR_SHARE_ROUNDING_NOTE}</p>
+      <section className="band-inner release-section release-paths" aria-labelledby="paths-title">
+        <div className="release-heading">
+          <h2 id="paths-title">Start without an account.</h2>
+          <p className="prose prose-wide">
+            Download the engine, read the contracts, or open the browser proof. Sign in
+            only when you choose account-backed editor or hosted-AI features.
+          </p>
         </div>
-      </section>
-
-      {/* Closing */}
-      <section className="band band-gradient">
-        <div className="band-inner band-centered">
-          <h2>Open a real artifact in the browser.</h2>
-          <p className="lede">{LIVE_OPEN_COPY.teaser}</p>
-          <div className="actions">
-            <a className="button" href={LIVE_OPEN_PATH}>
-              Open a scene
-            </a>
-            <a className="button button-quiet" href="/docs">
-              Read the contracts
-            </a>
-          </div>
-        </div>
+        <nav className="path-links" aria-label="First-release paths">
+          <a href="/docs">Read the docs</a>
+          <a href={LIVE_OPEN_PATH}>Open the proof</a>
+          <a href="/login">Sign in</a>
+          <a href="/pricing">View credit pricing</a>
+        </nav>
       </section>
     </>
   );

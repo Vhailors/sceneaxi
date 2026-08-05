@@ -14,6 +14,33 @@ own half of this work is `tests/sites/umbrella-visual.test.ts` and
 `tests/sites/umbrella-profile-matrix.test.ts`, which run in `pnpm gate` and assert the
 structure and the claims; nothing here is asserted twice.
 
+## First-release overview re-record, 2026-08-05
+
+Sceneaxi#203 replaces the default route's long feature tour with a release-led path:
+Download and the real artifact first, four trust statements, a source-linked engine
+comparison, the explicit three-profile capability matrix, then routes into docs, the
+public proof, login, and credit pricing. `/engine`, billing, and desktop implementation
+were not changed.
+
+The executable browser suite is `test/first-release.visual.spec.ts`, run with
+`pnpm test:visual` from this install root. It covers:
+
+| Check | Browser observation |
+|---|---|
+| Default | 1440 × 1000, Download and both tables visible, no page-level overflow |
+| Short desktop | 1280 × 640, heading y=131-290.09, Download y=406.77-452.77, live artifact height=268.80 |
+| Split boundary | 1025px remains side-by-side; 1024px stacks claim before artifact |
+| Masthead boundary | 861px remains one row; 860px moves primary navigation to its own visible row |
+| Phone boundary | 621px keeps trust proof pairs; 620px stacks all four rows |
+| Keyboard | first Tab exposes Skip to content at x=0 with a composited 2px solid focus outline |
+| Readability | CTA, trust copy, highlighted comparison, profile cells, and path links all clear the 4.5:1 body floor after the browser composites ancestor backgrounds |
+
+The same route was inspected through `chrome-devtools-axi`. At 1280 × 640 the document
+reported `clientWidth=1269` and `scrollWidth=1269`; the first Tab focused the skip link
+at `(0, 0)` with its full 141.89 × 44.78 box visible. The live hero reported the real
+`webgl-canvas` surface, 15 draw calls, and three instances. These are browser
+observations, not claims inferred from a frame counter or declared palette values.
+
 `/editor` appears below only as the **site-chrome** route it was for sceneaxi#157 —
 a named refusal between the masthead and the footer. sceneaxi#184 rebuilt it as the
 Engine Desktop shell and gave the **whole route** its own window: `editor/layout.tsx`

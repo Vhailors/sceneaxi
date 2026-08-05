@@ -52,6 +52,7 @@ import {
   SCULPT_PASSES,
   TERMINAL_LINES,
 } from "../../sites/umbrella/src/lib/site-content.ts";
+import { LAUNCH_PROOFS } from "../../sites/umbrella/src/lib/launch-marketing.ts";
 import {
   UMBRELLA_RECORDED_GAPS,
   umbrellaFoundationsCss,
@@ -194,7 +195,9 @@ describe("the marketing surface makes no claim the repository cannot stand behin
   it("claims no registry install for private bootstrap packages", () => {
     expect(ALL_SOURCE).not.toContain("npm i -g");
     expect(ALL_SOURCE).not.toContain("npm install -g");
-    expect(HOME).toContain("no registry install yet");
+    expect(
+      LAUNCH_PROOFS.find((proof) => proof.id === "engine-access")?.body,
+    ).toContain("not registry-published");
   });
 
   it("makes no shipping or general-availability claim", () => {
@@ -236,12 +239,11 @@ describe("the marketing surface makes no claim the repository cannot stand behin
     expect(LIVE_OPEN_PRESENTATION.coreLabel).toBe("Three presentation core");
   });
 
-  it("keeps every credit and share figure derived from site-kit", () => {
-    for (const source of [HOME, PRICING]) {
-      expect(source).toContain("SITE_STARTER_CREDIT_ALLOTMENT");
-    }
-    expect(HOME).toContain("CREATOR_SHARE_RULE.creatorPercent");
-    // …and never spelled out beside them.
+  it("keeps every rendered credit and share figure derived from site-kit", () => {
+    expect(PRICING).toContain("SITE_STARTER_CREDIT_ALLOTMENT");
+    // The launch overview states the model but prints no page-authored credit or share
+    // figure. Pricing remains the route that renders those contract-owned numbers.
+    expect(HOME).toContain("LAUNCH_PROOFS.map");
     expect(ALL_SOURCE).not.toMatch(
       new RegExp(`\\b${SITE_STARTER_CREDIT_ALLOTMENT}\\s+credits\\b`),
     );
@@ -250,11 +252,13 @@ describe("the marketing surface makes no claim the repository cannot stand behin
     );
   });
 
-  it("counts free capabilities from the published matrix", () => {
-    expect(HOME).toContain("SITE_CAPABILITIES[id].tier === \"free\"");
+  it("keeps the free capability classification in the published matrix", () => {
     const free = SITE_CAPABILITY_IDS.filter((id) => SITE_CAPABILITIES[id].tier === "free");
     expect(free.length).toBeGreaterThan(0);
     expect(free.length).toBeLessThan(SITE_CAPABILITY_IDS.length);
+    expect(LAUNCH_PROOFS.find((proof) => proof.id === "engine-access")?.body).toContain(
+      "cost zero credits",
+    );
   });
 
   it("states the release marker once, from one constant", () => {
@@ -285,12 +289,9 @@ describe("Kids is described and never linked", () => {
     expect(ALL_SOURCE).not.toMatch(/KIDS_ORIGIN/);
   });
 
-  it("renders an unlinkable card as an article, never as an anchor", () => {
-    // The branch that decides this is the load-bearing line: a null href must pick the
-    // non-anchor element on both card grids — the profile row and the family row.
-    expect(HOME).toContain("profile.href === null ? (");
-    expect(HOME).toContain("href === null ? (");
-    expect(HOME.split("<article className={className}").length - 1).toBe(2);
+  it("renders the Kids proof as text, never as an anchor", () => {
+    expect(LAUNCH_PROOFS.find((proof) => proof.id === "kids-isolation")?.href).toBeNull();
+    expect(HOME).toContain("proof.href === null ? proof.title");
   });
 });
 
@@ -303,6 +304,7 @@ describe("family and footer links only ever point at routes this site serves", (
       "/engine",
       "/docs",
       "/pricing",
+      "/login",
       "/account",
       "/editor",
     ]);
@@ -314,10 +316,9 @@ describe("family and footer links only ever point at routes this site serves", (
   });
 
   it("links a catalog card only when this deployment resolved that origin", () => {
-    // `catalogHref` is `resolveFamilyLinks`' output, which is null for an unset or
-    // insecure origin — so an unconfigured deploy renders no link rather than a broken one.
-    expect(HOME).toContain("resolveFamilyLinks(process.env)");
-    expect(HOME).toContain("entry.linkable ? (catalogHref[entry.name] ?? null) : null");
+    // The root layout resolves catalog origins and filters null before rendering. The
+    // launch overview no longer repeats a second catalog navigation surface.
+    expect(LAYOUT).toContain("resolveFamilyLinks(process.env)");
     expect(LAYOUT).toContain("entry.href !== null");
   });
 
@@ -357,15 +358,7 @@ describe("accessibility structure", () => {
     expect(CSS).toContain("@media (prefers-reduced-motion: reduce)");
   });
 
-  it("hides every decorative mark, rail, and arrow from the accessibility tree", () => {
-    // Each of these is a bare span with no text; unlabelled, they would be noise.
-    for (const decorative of [
-      'className="panel-bar" aria-hidden="true"',
-      'className="card-accent-rail" aria-hidden="true"',
-      'className="family-mark" aria-hidden="true"',
-    ]) {
-      expect(HOME + ENGINE).toContain(decorative);
-    }
+  it("hides the decorative product mark from the accessibility tree", () => {
     expect(LAYOUT).toContain('className="mark" aria-hidden="true"');
   });
 
@@ -835,6 +828,7 @@ describe("the visual layer adds no behaviour the site did not already have", () 
       "src/app/_components/site-nav.tsx",
       "src/app/_components/sculpt-viewport.tsx",
       "src/app/_components/hero-viewport.tsx",
+      "src/app/_components/download-cta.tsx",
       "src/app/editor/_components/editor-shell.tsx",
       "src/app/editor/_components/editor-viewport.tsx",
       "src/app/open/_components/live-viewport.tsx",
