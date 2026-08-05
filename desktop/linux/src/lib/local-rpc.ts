@@ -408,6 +408,24 @@ export async function startDesktopLocalBridgeServer(
   await listen(server, socketPath);
   chmodSync(socketPath, 0o600);
 
+  let closed = false;
+  const removeOwnedEndpoint = (): void => {
+    if (existsSync(discoveryPath)) {
+      const current = readDiscoveryDescriptor(discoveryPath);
+      if (current?.instanceId === instanceId) rmSync(discoveryPath);
+    }
+    if (existsSync(socketPath) && lstatSync(socketPath).isSocket()) rmSync(socketPath);
+  };
+  server.on("error", () => {
+    if (closed || server.listening) return;
+    closed = true;
+    try {
+      removeOwnedEndpoint();
+    } catch {
+      return;
+    }
+  });
+
   const temporaryDiscovery = `${discoveryPath}.${instanceId}.tmp`;
   try {
     writeFileSync(temporaryDiscovery, `${JSON.stringify(discovery)}\n`, {
@@ -424,18 +442,13 @@ export async function startDesktopLocalBridgeServer(
     throw error;
   }
 
-  let closed = false;
   return Object.freeze({
     discovery,
     close: async (): Promise<void> => {
       if (closed) return;
       closed = true;
       await closeServer(server);
-      if (existsSync(discoveryPath)) {
-        const current = readDiscoveryDescriptor(discoveryPath);
-        if (current?.instanceId === instanceId) rmSync(discoveryPath);
-      }
-      if (existsSync(socketPath) && lstatSync(socketPath).isSocket()) rmSync(socketPath);
+      removeOwnedEndpoint();
     },
   });
 }
