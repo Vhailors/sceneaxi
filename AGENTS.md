@@ -345,8 +345,14 @@ offering a fallback URL, and reads no clock so every visitor sees the same
 record. `tests/sites/desktop-offer-lockstep.test.ts` keeps offer and doc in
 lockstep; `tests/sites/desktop-download.test.ts` holds the page's metadata,
 checksum, coming-soon, and refusal contract. Windows/macOS stay without recorded
-public downloads and render as the record's own coming-soon rows. No profile, Kids,
-auth/billing, or CLI
+public downloads and render as the record's own coming-soon rows. The separate macOS
+packaging root is `desktop/macos` (`@sceneaxi/desktop-macos`, sceneaxi#194): it stages
+the exact `desktop/linux` build rather than forking product behavior, keeps updates
+disabled unless the release preflight has real Apple signing/notarization inputs, and
+emits stable universal artifact names plus checksummed release/update metadata. It owns
+no second renderer. No signed/public macOS artifact is recorded yet, so `/engine` must
+continue to show macOS unavailable; `docs/desktop-macos.md` owns the exact operator
+prerequisites and release handoff. No profile, Kids, auth/billing, or CLI
 verb reaches this tier.
 
 Windows packaging (sceneaxi#204) is the separate `desktop/windows` install root and

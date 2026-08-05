@@ -51,6 +51,32 @@ describe("desktop tier — injected violations", () => {
     );
   });
 
+  it("boundary check covers the macOS packaging root", () => {
+    editManifest(fx, "docs/dependency-matrix.json", (matrix) => {
+      const packages = matrix["packages"] as Record<string, unknown>;
+      delete packages["@sceneaxi/desktop-macos"];
+    });
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "@sceneaxi/desktop-macos exists on disk but is not listed in the dependency matrix",
+    );
+  });
+
+  it("boundary check denies the macOS packaging root the identity plane", () => {
+    editManifest(fx, "desktop/macos/package.json", (manifest) => {
+      manifest.dependencies = {
+        ...manifest.dependencies,
+        "@sceneaxi/auth": "link:../../packages/auth",
+      };
+    });
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "@sceneaxi/desktop-macos: dependency @sceneaxi/auth is DENIED by the matrix",
+    );
+  });
+
   it("boundary check allows the desktop app's charted engine edges", () => {
     // ADR 0024: the packaged desktop app draws through the presentation seam and
     // opens kernel sessions through the orchestrator. These edges must pass.

@@ -1,0 +1,36 @@
+{
+  "name": "@sceneaxi/desktop-macos",
+  "version": "0.0.0",
+  "private": true,
+  "description": "macOS packaging for the existing SceneAxi Engine Desktop application",
+  "homepage": "https://github.com/Vhailors/sceneaxi",
+  "author": "SceneAxi",
+  "type": "module",
+  "main": "dist/main.cjs",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dist": "node scripts/dist.mjs",
+    "smoke": "node scripts/smoke.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@sceneaxi/schemas": "link:../../packages/schemas",
+    "electron-updater": "^6.8.9"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "electron": "^43.2.0",
+    "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.1",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.10"
+  },
+  "sceneaxi": {
+    "releaseGroup": "desktop"
+  },
+  "license": "UNLICENSED"
+}

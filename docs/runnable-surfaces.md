@@ -34,6 +34,12 @@ unlocks `/editor`. Their deterministic site-level proof is
 `tests/sites/identity-plane-wiring.test.ts` plus
 `tests/sites/umbrella-login-flow.test.ts`; the editor's R1 claim remains owned by
 the golden e2e named in the table.
+
+`@sceneaxi/desktop-macos` is deliberately absent from the table. Its packaging,
+signing/notarization preflight, disabled-without-release update policy, and missing-input
+smoke are implemented and gate-tested, but no signed artifact or packaged launch proof
+exists yet. [`desktop-macos.md`](desktop-macos.md) owns the operator path; the surface
+earns R2 only after `pnpm smoke --packaged` succeeds for recorded release bytes.
 How far each profile's open path may be *demonstrated*, and by what evidence, is
 owned by [`open-path-policy.md`](open-path-policy.md) — one shared contract the
 profiles, the CLI, and both shells all read. The levels there use this table's

@@ -1,0 +1,79 @@
+name: desktop-macos
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  desktop-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            desktop/linux/pnpm-lock.yaml
+            desktop/macos/pnpm-lock.yaml
+
+      - name: Install the hermetic root
+        run: pnpm install --frozen-lockfile
+
+      - name: Install the existing desktop application
+        working-directory: desktop/linux
+        run: pnpm install --frozen-lockfile
+
+      - name: Install the macOS packaging root
+        working-directory: desktop/macos
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check the macOS bootstrap and packaging scripts
+        working-directory: desktop/macos
+        run: pnpm typecheck
+
+      - name: Stage the existing desktop runtime with updates disabled
+        working-directory: desktop/macos
+        run: pnpm build
+
+      - name: Smoke configuration and missing release inputs
+        working-directory: desktop/macos
+        run: pnpm smoke
+
+      # Only an operator-dispatched run reaches release packaging. Empty secrets or
+      # a missing URL are passed as empty strings and `pnpm dist` refuses by name.
+      - name: Build, sign, notarize, and verify the release candidate
+        if: github.event_name == 'workflow_dispatch'
+        working-directory: desktop/macos
+        run: pnpm dist
+        env:
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          SCENEAXI_MACOS_RELEASE_BASE_URL: ${{ vars.SCENEAXI_MACOS_RELEASE_BASE_URL }}
+
+      - name: Smoke the signed packaged application
+        if: github.event_name == 'workflow_dispatch'
+        working-directory: desktop/macos
+        run: pnpm smoke --packaged
+
+      # This is a verified workflow artifact, not a public release or an update
+      # upload. Download IA remains unchanged until a durable release is recorded.
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          name: sceneaxi-desktop-macos
+          path: |
+            desktop/macos/release/*.dmg
+            desktop/macos/release/*.zip
+            desktop/macos/release/SHA256SUMS
+            desktop/macos/release/latest-mac.yml
+            desktop/macos/release/desktop-macos-release.json
+          if-no-files-found: error
+          retention-days: 90

@@ -22,6 +22,7 @@ This monorepo is the packaging home for:
 | Public live open path | `sites/umbrella/src/app/open/` — a committed Sculpt Artifact composed and drawn in a real WebGL canvas (ADR 0022) |
 | Packaged Linux desktop app | `desktop/linux` — Electron over the desktop-shell chrome and the real engine stack, AppImage + `.deb` with recorded checksums (ADR 0024; [`docs/desktop-linux.md`](docs/desktop-linux.md)) |
 | Windows packaging of that app | `desktop/windows` — a signing/update wrapper that stages the built `desktop/linux` runtime; fails closed without operator-supplied signing inputs and has no public artifact yet ([`docs/desktop-windows.md`](docs/desktop-windows.md)) |
+| macOS desktop packaging | `desktop/macos` — separate signing/notarization/update install root that stages the existing desktop runtime; no public artifact exists yet ([`docs/desktop-macos.md`](docs/desktop-macos.md)) |
 
 **Not in this monorepo:** individual game products (separate repos).
 
