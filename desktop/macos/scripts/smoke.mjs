@@ -4,7 +4,13 @@
  *
  * The default mode deliberately removes all operator inputs and proves the release
  * command refuses them by name before electron-builder can run. `--packaged`
- * verifies the already signed/stapled bundle, its checksums, and its real runtime.
+ * verifies the already signed/stapled bundle, its checksums, its release-record
+ * provenance, and its real runtime.
+ *
+ * The packaged launch passes SwiftShader, exactly as the Linux smoke does: an Apple
+ * Silicon or Intel CI runner is a GPU-less VM, and a software rasterizer keeps WebGL
+ * real rather than stubbed, so the pixel proof fails only for the package. An
+ * operator running this on a real Mac still exercises the same code path.
  */
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -22,6 +28,7 @@ const releaseInputs = [
   "APPLE_TEAM_ID",
   "SCENEAXI_MACOS_RELEASE_BASE_URL",
 ];
+const provenanceInputs = ["GITHUB_REPOSITORY", "GITHUB_SHA", "GITHUB_RUN_ID"];
 
 const fail = (message) => {
   console.error(`desktop-macos smoke FAILED — ${message}`);
@@ -44,8 +51,11 @@ if (!packaged) {
     fail("packaging config references no tracked entitlements file");
   }
 
+  // Provenance is stripped too, so this proves the same refusals on an operator's
+  // machine and inside Actions, where GitHub would otherwise supply all three.
+  const removed = [...releaseInputs, ...provenanceInputs];
   const env = Object.fromEntries(
-    Object.entries(process.env).filter(([name]) => !releaseInputs.includes(name)),
+    Object.entries(process.env).filter(([name]) => !removed.includes(name)),
   );
   const result = spawnSync(process.execPath, [join(appRoot, "scripts/dist.mjs"), "--preflight-only"], {
     cwd: appRoot,
@@ -58,8 +68,15 @@ if (!packaged) {
       fail(`missing-input preflight did not refuse ${name}`);
     }
   }
+  for (const name of provenanceInputs) {
+    if (!result.stderr.includes(`MACOS_PROVENANCE_REQUIRED:${name}`)) {
+      fail(`missing-input preflight did not refuse absent provenance ${name}`);
+    }
+  }
 
-  console.log("desktop-macos smoke OK — packaging config valid; missing signing/notarization/update inputs refused");
+  console.log(
+    "desktop-macos smoke OK — packaging config valid; missing signing/notarization/update inputs refused; incomplete release provenance refused",
+  );
   process.exit(0);
 }
 
@@ -71,6 +88,22 @@ const updatePath = join(release, "latest-mac.yml");
 for (const path of [checksumsPath, manifestPath, updatePath]) {
   if (!existsSync(path)) fail(`release proof file is absent: ${path}`);
 }
+const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+const { repository, sourceCommit, workflowRunId, verifiedOn } = manifest;
+if (
+  typeof repository !== "string" ||
+  !/^[A-Za-z0-9][A-Za-z0-9._-]*\/[A-Za-z0-9][A-Za-z0-9._-]*$/.test(repository) ||
+  typeof sourceCommit !== "string" ||
+  !/^[0-9a-f]{40}$/.test(sourceCommit) ||
+  !Number.isSafeInteger(workflowRunId) ||
+  workflowRunId <= 0 ||
+  manifest.downloadHref !== `https://github.com/${repository}/actions/runs/${workflowRunId}` ||
+  typeof verifiedOn !== "string" ||
+  !/^\d{4}-\d{2}-\d{2}$/.test(verifiedOn)
+) {
+  fail("release record carries no complete provenance the download IA can consume");
+}
+
 for (const line of readFileSync(checksumsPath, "utf8").trim().split("\n")) {
   const match = /^([a-f0-9]{64}) {2}(.+)$/.exec(line);
   if (match === null) fail(`invalid SHA256SUMS line: ${line}`);
@@ -89,7 +122,7 @@ for (const [command, args] of [
 }
 
 const executable = join(appBundle, "Contents/MacOS/sceneaxi-engine-desktop");
-const result = spawnSync(executable, ["--smoke"], {
+const result = spawnSync(executable, ["--smoke", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"], {
   cwd: appRoot,
   encoding: "utf8",
   timeout: 120_000,

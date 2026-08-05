@@ -15,6 +15,6 @@
     "exactOptionalPropertyTypes": true,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts", "scripts/**/*.mjs", "test/**/*.ts"],
+  "include": ["src/**/*.ts", "scripts/**/*.mjs"],
   "exclude": ["node_modules", "dist", "release"]
 }

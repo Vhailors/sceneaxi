@@ -34,6 +34,18 @@ const requiredEnvironment = Object.freeze([
 const requiredTools = Object.freeze(["codesign", "hdiutil", "security", "spctl", "xcrun"]);
 const { version } = JSON.parse(readFileSync(join(appRoot, "package.json"), "utf8"));
 
+/**
+ * The release record identifies one build, so it must name the run that produced it.
+ * These are the CI-supplied provenance the download IA needs to link the artifact
+ * (`packages/site-kit/src/desktop-app-offer.ts`); a record that omits or malforms any
+ * of them cannot be consumed, so the release refuses rather than writing a partial one.
+ */
+const requiredProvenance = Object.freeze({
+  GITHUB_REPOSITORY: (value) => /^[A-Za-z0-9][A-Za-z0-9._-]*\/[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value),
+  GITHUB_SHA: (value) => /^[0-9a-f]{40}$/.test(value),
+  GITHUB_RUN_ID: (value) => /^[1-9][0-9]*$/.test(value) && Number.isSafeInteger(Number(value)),
+});
+
 const executableExists = (name) => {
   for (const entry of (process.env.PATH ?? "").split(delimiter)) {
     if (entry.length === 0) continue;
@@ -55,6 +67,14 @@ if (typeof version !== "string" || !/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)*$/.tes
 for (const name of requiredEnvironment) {
   if (process.env[name] === undefined || process.env[name]?.trim() === "") {
     refusals.push(`MACOS_ENV_REQUIRED:${name}`);
+  }
+}
+for (const [name, isValid] of Object.entries(requiredProvenance)) {
+  const value = process.env[name]?.trim();
+  if (value === undefined || value === "") {
+    refusals.push(`MACOS_PROVENANCE_REQUIRED:${name}`);
+  } else if (!isValid(value)) {
+    refusals.push(`MACOS_PROVENANCE_INVALID:${name}`);
   }
 }
 const baseUrl = process.env.SCENEAXI_MACOS_RELEASE_BASE_URL;
@@ -123,6 +143,10 @@ run("spctl", ["--assess", "--type", "execute", "--verbose=2", appBundle]);
 run("xcrun", ["stapler", "validate", appBundle]);
 
 const releaseBase = `${baseUrl.trim().replace(/\/$/, "")}/`;
+const repository = process.env.GITHUB_REPOSITORY.trim();
+const sourceCommit = process.env.GITHUB_SHA.trim();
+const workflowRunId = Number(process.env.GITHUB_RUN_ID.trim());
+const verifiedOn = new Date().toISOString().slice(0, 10);
 const hash = (algorithm, name, encoding) =>
   createHash(algorithm).update(readFileSync(join(release, name))).digest(encoding);
 const artifactRecords = artifacts.map((name) => ({
@@ -164,6 +188,11 @@ writeFileSync(
       platform: "macOS universal",
       version,
       sourceApplication: "desktop/linux",
+      repository,
+      sourceCommit,
+      workflowRunId,
+      downloadHref: `https://github.com/${repository}/actions/runs/${workflowRunId}`,
+      verifiedOn,
       signed: true,
       notarized: true,
       updateMetadataUrl: new URL("latest-mac.yml", releaseBase).href,

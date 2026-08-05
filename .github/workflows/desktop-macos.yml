@@ -8,7 +8,11 @@ on:
 
 jobs:
   desktop-macos:
-    runs-on: macos-latest
+    # Only the release-candidate steps below need a macOS host, and macOS minutes bill
+    # at 10x. Type-check, staging build, and the configuration smoke are all
+    # platform-independent — the missing-input refusals are proven on Linux by the
+    # repository gate — so an ordinary push or pull request runs on ubuntu.
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && 'macos-latest' || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

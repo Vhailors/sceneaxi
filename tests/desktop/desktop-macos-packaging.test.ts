@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { seam } from "../../desktop/macos/src/index.ts";
 
@@ -32,6 +32,17 @@ describe("desktop-macos packaging seam", () => {
     for (const script of ["build", "dist", "smoke", "typecheck"]) {
       expect(manifest.scripts[script]).toBeDefined();
     }
+
+    // This suite is the tier's coverage, exactly as it is for `desktop/linux`: a
+    // packaging install root that declares its own runner would ship a test surface
+    // no pipeline runs, and drag that runner's tree into an Electron install root.
+    expect(manifest.scripts["test"]).toBeUndefined();
+    expect(manifest.devDependencies["vitest"]).toBeUndefined();
+    expect(read("desktop/macos/pnpm-lock.yaml")).not.toContain("vitest");
+    expect(existsSync(new URL("../../desktop/macos/test", import.meta.url))).toBe(false);
+    expect(existsSync(new URL("../../desktop/macos/vitest.config.ts", import.meta.url))).toBe(
+      false,
+    );
 
     const build = read("desktop/macos/scripts/build.mjs");
     expect(build).toContain("desktop/linux");
@@ -73,6 +84,55 @@ describe("desktop-macos packaging seam", () => {
     expect(dist).not.toContain(version);
   });
 
+  it("refuses a release record the download IA could not consume", () => {
+    const dist = read("desktop/macos/scripts/dist.mjs");
+    for (const name of ["GITHUB_REPOSITORY", "GITHUB_SHA", "GITHUB_RUN_ID"]) {
+      expect(dist).toContain(name);
+    }
+    expect(dist).toContain("MACOS_PROVENANCE_REQUIRED");
+    expect(dist).toContain("MACOS_PROVENANCE_INVALID");
+    for (const field of [
+      "repository",
+      "sourceCommit",
+      "workflowRunId",
+      "downloadHref",
+      "verifiedOn",
+    ]) {
+      expect(dist).toContain(field);
+    }
+    expect(dist).toContain("https://github.com/${repository}/actions/runs/${workflowRunId}");
+
+    // The packaged smoke is the second reader of that record, so an incomplete one
+    // fails the release verification rather than reaching the download IA.
+    const smoke = read("desktop/macos/scripts/smoke.mjs");
+    expect(smoke).toContain("release record carries no complete provenance");
+    expect(smoke).toContain("downloadHref");
+  });
+
+  it("proves pixels on a GPU-less host with a real software rasterizer", () => {
+    const smoke = read("desktop/macos/scripts/smoke.mjs");
+    const linux = read("desktop/linux/scripts/smoke.mjs");
+    for (const flag of ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"]) {
+      expect(linux).toContain(flag);
+      expect(smoke).toContain(flag);
+    }
+    expect(smoke).toContain("pixelsDrawn !== true");
+    expect(read("docs/desktop-macos.md")).toContain("--use-angle=swiftshader");
+  });
+
+  it("spends macOS runner minutes only on the operator-dispatched release", () => {
+    const workflow = read(".github/workflows/desktop-macos.yml");
+    expect(workflow).toContain(
+      "runs-on: ${{ github.event_name == 'workflow_dispatch' && 'macos-latest' || 'ubuntu-latest' }}",
+    );
+    expect(workflow).not.toMatch(/^\s*runs-on:\s*macos-latest\s*$/m);
+    for (const step of ["pnpm dist", "pnpm smoke --packaged", "actions/upload-artifact@v4"]) {
+      expect(workflow).toContain(step);
+    }
+    const dispatchOnly = workflow.match(/if: github\.event_name == 'workflow_dispatch'/g) ?? [];
+    expect(dispatchOnly).toHaveLength(3);
+  });
+
   it("smokes the packaging contract and refuses every absent release input", () => {
     const result = spawnSync(process.execPath, ["scripts/smoke.mjs"], {
       cwd: new URL("../../desktop/macos", import.meta.url),
@@ -81,6 +141,7 @@ describe("desktop-macos packaging seam", () => {
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain("desktop-macos smoke OK");
     expect(result.stdout).toContain("missing signing/notarization/update inputs refused");
+    expect(result.stdout).toContain("incomplete release provenance refused");
   });
 
   it("keeps runtime updates disabled until a signed release configures an HTTPS feed", () => {
@@ -105,6 +166,9 @@ describe("desktop-macos packaging seam", () => {
       "APPLE_APP_SPECIFIC_PASSWORD",
       "APPLE_TEAM_ID",
       "SCENEAXI_MACOS_RELEASE_BASE_URL",
+      "GITHUB_REPOSITORY",
+      "GITHUB_SHA",
+      "GITHUB_RUN_ID",
     ]) {
       expect(doc).toContain(`\`${name}\``);
     }

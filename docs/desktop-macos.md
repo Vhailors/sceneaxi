@@ -61,6 +61,19 @@ not provide values, examples, fallbacks, or secret files:
 | `APPLE_TEAM_ID` | Apple Developer team identifier that owns the certificate |
 | `SCENEAXI_MACOS_RELEASE_BASE_URL` | Final HTTPS directory that will serve the `.dmg`, `.zip`, and `latest-mac.yml` together |
 
+The release also refuses without complete build provenance, because the record it
+writes identifies one build and must name the run that produced it. GitHub Actions
+supplies all three automatically, which is why the dispatched workflow is the release
+path; a local release run must export the same three itself and refuses by name
+(`MACOS_PROVENANCE_REQUIRED:<name>`, or `MACOS_PROVENANCE_INVALID:<name>` for a value
+of the wrong shape) rather than writing a record the download IA cannot consume:
+
+| Name | Meaning |
+|---|---|
+| `GITHUB_REPOSITORY` | `owner/name` of the repository the release was built from |
+| `GITHUB_SHA` | Full 40-character commit the release was built from |
+| `GITHUB_RUN_ID` | Workflow run whose artifact holds the verified files |
+
 The required certificate is a **Developer ID Application** certificate for direct
 distribution, backed by an active Apple Developer Program membership. These inputs
 belong in the operator's secret store or CI secrets; never commit them. The release
@@ -84,11 +97,19 @@ and verifies the app with `codesign`, `spctl`, and `stapler`. It then writes:
 - `SHA256SUMS`, sorted by artifact file name;
 - `latest-mac.yml`, bound to that exact zip by SHA-512 and byte count; and
 - `desktop-macos-release.json`, containing the exact download URLs, sizes, SHA-256
-  values, source application path, and signed/notarized claims.
+  values, source application path, signed/notarized claims, and the build provenance
+  the download IA needs — `repository`, `sourceCommit`, `workflowRunId`, the run's
+  `downloadHref`, and the `verifiedOn` day the signature checks passed.
 
-`smoke --packaged` rechecks checksums, signing, Gatekeeper assessment, and stapling,
-then launches the packaged executable with `--smoke`. It requires the existing
-desktop runtime to prove its kernel, authoring, and real-pixel viewport path.
+`smoke --packaged` rechecks checksums, signing, Gatekeeper assessment, stapling, and
+that the release record's provenance is complete, then launches the packaged
+executable with `--smoke`. It requires the existing desktop runtime to prove its
+kernel, authoring, and real-pixel viewport path. The launch passes
+`--use-angle=swiftshader --enable-unsafe-swiftshader`, exactly as the Linux smoke
+does, so the pixel proof holds on a GPU-less CI runner: SwiftShader is a real
+software rasterizer, not a stub, and it is the only reason a hosted macOS VM can
+satisfy that assertion. Nothing else about the packaged application changes, and
+`open`-ing the installed app still uses the real GPU.
 
 The manually dispatched `.github/workflows/desktop-macos.yml` release path uploads
 those verified files only as the Actions artifact `sceneaxi-desktop-macos`. It does
