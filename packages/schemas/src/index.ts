@@ -285,6 +285,30 @@ export {
   MODEL_PROVIDER_PORT_SCHEMA_VERSION,
   MODEL_PROVIDER_ROUTE_KINDS,
 } from "./model-provider.js";
+
+export {
+  DESKTOP_LOCAL_BRIDGE_DISCOVERY_KIND,
+  DESKTOP_LOCAL_BRIDGE_ERROR_CODES,
+  DESKTOP_LOCAL_BRIDGE_PERMISSIONS,
+  DESKTOP_LOCAL_BRIDGE_PROTOCOL_VERSION,
+  DESKTOP_LOCAL_BRIDGE_TOOLS,
+  DESKTOP_LOCAL_BRIDGE_TRANSPORT,
+  desktopLocalBridgeTool,
+  isDesktopLocalBridgePermission,
+  parseDesktopLocalBridgeDiscovery,
+  validateDesktopLocalBridgeToolInput,
+} from "./desktop-local-bridge.js";
+export type {
+  DesktopLocalBridgeDiscovery,
+  DesktopLocalBridgeErrorCode,
+  DesktopLocalBridgeFailure,
+  DesktopLocalBridgePermission,
+  DesktopLocalBridgeRequest,
+  DesktopLocalBridgeResponse,
+  DesktopLocalBridgeSuccess,
+  DesktopLocalBridgeTool,
+  DesktopLocalBridgeToolName,
+} from "./desktop-local-bridge.js";
 export type {
   ModelCapabilityDescriptor,
   ModelCompleteRequest,
@@ -465,6 +489,7 @@ export const contracts = Object.freeze({
   proposal: "contracts/proposal.schema.json",
   deliveryHandoff: "contracts/delivery-handoff.schema.json",
   modelProviderPort: "contracts/model-provider-port.schema.json",
+  desktopLocalBridge: "contracts/desktop-local-bridge.schema.json",
   sculptIntake: "contracts/sculpt-intake.schema.json",
   objectSculptSpec: "contracts/object-sculpt-spec.schema.json",
   sculptArtifact: "contracts/sculpt-artifact.schema.json",

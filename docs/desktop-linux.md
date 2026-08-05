@@ -15,12 +15,15 @@ blocked by no ADR: it reuses the repository's own TypeScript surfaces in both
 processes and needs no second UI implementation. The window is locked down —
 context isolation on, sandbox on, no node integration, navigation refused.
 
-One bridge, one channel, mirrored on web-shell's transport-free inspector app:
+One bridge, mirrored on web-shell's transport-free inspector app; the renderer's
+IPC channel and the local socket adapter are two transports over that one
+`handle()`, never a second authoring implementation:
 
 | Piece | Where it runs | What it is |
 |---|---|---|
 | `src/lib/bridge-contract.ts` | everywhere | channel name, request/response envelope, named refusals |
 | `src/lib/bridge.ts` — `createDesktopBridge()` | main process | synchronous `handle()` over the real engine; `ipcMain.handle` adapts it in one line |
+| `src/lib/local-rpc.ts` | main process | protocol-v1 same-user Unix-socket adapter over the closed project/assistant agent-tool registry; private discovery and explicit permissions |
 | `src/electron/preload.ts` | preload | exposes exactly one frozen global with one `request()` method |
 | `src/renderer/viewport.ts` | the window | the desktop tier's **one renderer-owning module** (see below) |
 
@@ -43,6 +46,12 @@ editor state machine stays owned by the shell ([sceneaxi#184](https://github.com
 deepens that surface, not this tier). The chrome's `sceneaxi-pixels-drawn` meta
 stays `false` at build time; the renderer updates it only from a real frame's
 `pixelsDrawn` — evidence, never assertion.
+
+The local CLI/BYOK agent attachment is separately owned by
+[`desktop-local-bridge.md`](desktop-local-bridge.md). It exposes no renderer-only
+action, no TCP listener, no provider credential field, and no hosted route; the
+real CLI-to-socket-to-authoring round trip is in
+`tests/e2e/desktop-cli-local-bridge-golden.test.ts`.
 
 ### Assistant-to-viewport product loop
 
@@ -336,7 +345,9 @@ Also absent: Linux code signing, Linux auto-update, an app store listing, a GitH
 identity/billing (the desktop app has no account surface; the matrix denies it
 `auth`/`billing`), any Kids authoring path (the chrome's refuse-only Kids projection
 stays owned by `@sceneaxi/desktop-shell`, and the matrix denies every profile
-package), and any new CLI verb — held-key policy is untouched.
+package). The `desktop bridge` CLI group is now present and explicitly ungated
+because it is local/free; held-key policy is untouched and every verb remains in
+the shipped command map.
 
 Windows packaging now lives in the separate `desktop/windows` path, which stages this
 existing application for a mandatory-signed NSIS build and fail-closed updates, and the

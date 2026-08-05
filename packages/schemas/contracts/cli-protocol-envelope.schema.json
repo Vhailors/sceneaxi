@@ -46,7 +46,10 @@
             "HELD_KEY",
             "CONFLICT",
             "VALIDATION",
-            "NOT_FOUND"
+            "NOT_FOUND",
+            "BRIDGE_UNAVAILABLE",
+            "BRIDGE_PROTOCOL",
+            "BRIDGE_REFUSED"
           ]
         },
         "message": { "type": "string" },

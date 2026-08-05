@@ -1,9 +1,12 @@
 # ADR 0024: A `desktop/` tier — the Linux desktop application is Electron over the shell's chrome and the real engine
 
 - **Status:** Accepted — **Amended 2026-08-05** by
-  [sceneaxi#204](https://github.com/Vhailors/sceneaxi/issues/204): the tier gained the
-  `desktop/windows` packaging root around this same application, with no public
-  artifact. See *Amendment* below.
+  [sceneaxi#204](https://github.com/Vhailors/sceneaxi/issues/204) and
+  [sceneaxi#194](https://github.com/Vhailors/sceneaxi/issues/194) (the tier gained the
+  `desktop/windows` and `desktop/macos` packaging roots around this same application,
+  with no public artifact) and by
+  [sceneaxi#202](https://github.com/Vhailors/sceneaxi/issues/202) (the running app
+  attaches the external CLI over a local socket). See the *Amendment* sections below.
 - **Date recorded:** 2026-07-31
 - **Source:** captain hard mandate (2026-07-31), [sceneaxi#183](https://github.com/Vhailors/sceneaxi/issues/183) — ship a real downloadable Linux desktop application over the real engine stack, superseding the HTML-chrome-only story for packaging (the chrome itself, sceneaxi#158, is unchanged).
 - **Lineage:** Extends the separate-install-root pattern of [ADR 0018](0018-sites-tier-three-vercel-one-neon.md) to a new tier; consumes [ADR 0002](0002-presentation-runtime-deep-seam.md)/[0017](0017-three-product-presentation-core.md) presentation unchanged; opens sessions only through [ADR 0023](0023-open-path-bootstrap-and-session-lifecycle.md); widens neither [ADR 0003](0003-editor-sequencing-e1-first-e2-specified.md) nor [ADR 0020](0020-minimum-e2-web-editor-entitlement.md); claims no distribution authority beyond what [ADR 0019](0019-public-engine-sdk-zip-not-npm.md) already models.
@@ -72,7 +75,9 @@ properties:
   (`link:` into `packages/` **or `apps/`** — the one widening this ADR makes to that
   checker, since the chrome lives in `apps/desktop-shell`).
 - Kids isolation, held-key policy, general-E2 bounds, and Stripe live-mode posture
-  are untouched; the app adds no CLI verb and no identity surface.
+  are untouched; the app adds no CLI verb and no identity surface. *(Amended
+  2026-08-05 — the CLI verb half of that claim no longer holds; see the
+  sceneaxi#202 amendment below.)*
 
 ## Rejected alternatives
 
@@ -122,3 +127,19 @@ configuration landed as another install root in this tier, `desktop/macos`
 build rather than forking it, and records no released artifact — so `/engine`
 advertising, store listings, and release/tagging authority are all unchanged by it,
 and macOS *packaging* alone moves out of "held elsewhere".
+
+## Amendment — the CLI attaches to the running app (2026-08-05)
+
+[sceneaxi#202](https://github.com/Vhailors/sceneaxi/issues/202) corrects one factual
+claim in *Consequences*: the tier no longer "adds no CLI verb". The running
+application publishes a versioned same-user Unix socket over the **same**
+`createDesktopBridge().handle()` this ADR already decided, and `@sceneaxi/cli` gains
+the `desktop bridge status|tools|call` group that discovers and calls it. Nothing else
+above moves: the socket adds no second authoring implementation, no renderer, no
+matrix edge (the CLI keeps `schemas` + `authoring-core`, and the desktop tier depends
+on no CLI package), no identity surface, and no held-key gate — the new verbs ship
+ungated because local authoring is free. Kids isolation, general-E2 bounds, and
+Stripe live-mode posture stay untouched, and hosted assistant work still refuses here
+for want of a credit plane. That contract's owner — protocol, discovery,
+permissions, BYOK secure storage, and proof map — is
+[`../desktop-local-bridge.md`](../desktop-local-bridge.md).

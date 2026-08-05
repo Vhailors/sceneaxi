@@ -13,8 +13,10 @@ Direct engine imports are denied by `docs/dependency-matrix.json`. That is why
 there are no kernel-session, presentation, or plugin verbs here — those paths
 are proven end to end in `tests/e2e/`, which may import any package.
 
-**Cost:** free and BYO-AI. No verb reads a credential, opens a socket, or spends
-anything. Hosted AI (which does cost credits) is a shell concern, not a CLI one.
+**Cost:** free and BYO-AI. No verb reads a provider credential or spends
+anything. The `desktop bridge` verbs may open the documented same-user Unix
+socket; local and BYOK tool rows carry `creditRoute: none`. Hosted AI (which
+does cost credits) remains behind the existing web-shell billing seam.
 
 ## How to run
 
@@ -41,6 +43,9 @@ missing, the binary says so and exits `1` rather than failing obscurely.
 # Programmatic (tests and embedders) — same dispatcher, no subprocess
 import { runCli, main } from "@sceneaxi/cli";
 const { exitCode, envelope, stdout } = runCli(["protocol", "inspect", "--json"]);
+
+# The one exception: `desktop bridge status|call` spawn the local socket worker.
+# Pass `runCli(argv, { desktopBridge })` to inject that transport instead.
 ```
 
 ## Commands
@@ -55,6 +60,7 @@ Command-first shape: `pnpm sceneaxi <group> <verb> [flags]`.
 | `profile` | `list`, `open-path` |
 | `catalog` | `list` |
 | `evidence` | `list` |
+| `desktop bridge` | `status`, `tools`, `call` |
 | `demo` | `gated` (held-key protocol demo; gated by synthetic keys, fails closed) |
 | `protocol` | `version`, `inspect` |
 
@@ -84,6 +90,23 @@ pnpm sceneaxi scene compose \
 Composition is offline and fixed — no provider, no network, no seed — so
 identical inputs always yield identical bytes and the same `sceneDigest`.
 Placement is a projection: a source Sculpt Artifact is never rewritten.
+
+Calling the running Engine Desktop through the versioned local bridge:
+
+```bash
+pnpm sceneaxi desktop bridge status --json
+pnpm sceneaxi desktop bridge tools --json
+pnpm sceneaxi desktop bridge call \
+  --tool sceneaxi.project.status \
+  --allow project:read \
+  --input-json '{"documentPath":"scene.json"}' \
+  --json
+```
+
+`--allow` must exactly match the permission printed beside the tool; the CLI
+refuses before connecting otherwise. Protocol, secure discovery, BYOK storage,
+examples, and the free-vs-hosted boundary are owned by
+[`docs/desktop-local-bridge.md`](../../docs/desktop-local-bridge.md).
 
 Reporting the shared open-path demo policy, and evaluating one demo against it:
 
@@ -130,7 +153,7 @@ no best-effort mutation path.
 | Code | Name | When |
 |---:|---|---|
 | 0 | `OK` | Command completed successfully |
-| 1 | `ERROR` | Operational / internal failure (`NOT_IMPLEMENTED`, `INTERNAL`, `CONFLICT`, `NOT_FOUND`) |
+| 1 | `ERROR` | Operational / internal failure (`NOT_IMPLEMENTED`, `INTERNAL`, `CONFLICT`, `NOT_FOUND`, `BRIDGE_UNAVAILABLE`, `BRIDGE_PROTOCOL`, `BRIDGE_REFUSED`) |
 | 2 | `USAGE` | Unknown command path at **any** depth, unknown flag, ambiguous/incomplete input, `VALIDATION` |
 | 3 | `HELD_KEY` | Held-key refusal: open captain hold or any failed currency/snapshot check (sceneaxi#7) |
 
@@ -187,6 +210,7 @@ CLI protocol tests live under `packages/cli/test/`:
 - `registry-verbs.test.ts` — profile/catalog/asset/evidence listings, commerce inert
 - `profile-open-path.test.ts` — `profile open-path` reporting, projection, and refusals
 - `bin-smoke.test.ts` — the `sceneaxi` binary actually starts (spawned, not in-process)
+- `desktop-bridge.test.ts` — local tool schemas, permission preflight, deterministic bridge errors
 - `held-keys.generator.test.ts` — snapshot generator + digest verification
 - `held-keys.command-map.test.ts` — shipped-map coverage + map validation
 - `held-keys.refusal-table.test.ts` — every refusal-table row, fixture-driven

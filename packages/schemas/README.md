@@ -2,6 +2,16 @@
 
 Shared contracts home for SceneAxi. Zero internal dependencies by rule.
 
+## Desktop local bridge (sceneaxi#202)
+
+`contracts/desktop-local-bridge.schema.json` and
+`src/desktop-local-bridge.ts` own protocol v1, the closed agent-tool registry,
+exact permissions, runtime input validation, and discovery/RPC envelope types.
+Provider credentials are structurally absent from every tool input; the CLI
+prints these definitions through `sceneaxi desktop bridge tools --json`. The
+transport, secure discovery descriptor, and BYOK storage contract are documented
+in [`docs/desktop-local-bridge.md`](../../docs/desktop-local-bridge.md).
+
 ## Hybrid sculpt contracts
 
 The authoritative v1 shapes are the package-exported

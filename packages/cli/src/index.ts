@@ -44,6 +44,14 @@ export { dispatch, parseArgv, type DispatchOptions } from "./dispatcher.js";
 export { runCli, main, type RunCliResult } from "./run.js";
 
 export {
+  callDesktopLocalBridge,
+  type DesktopLocalBridgeClient,
+  type DesktopLocalBridgeClientCall,
+  type DesktopLocalBridgeClientFailure,
+  type DesktopLocalBridgeClientResult,
+} from "./desktop-client.js";
+
+export {
   ROOT_COMMANDS,
   ROOT_GROUP_NAMES,
   topLevelHelpPayload,

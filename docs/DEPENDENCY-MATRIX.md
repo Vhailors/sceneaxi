@@ -115,7 +115,11 @@ Deliberate denials that carry design intent:
   asserts both allowed edges and each denial.
 - **desktop → profiles / Kids / auth / billing / plugin-host: denied.** The packaged
   application (ADR 0024) draws and opens through the same public seams a site does; it
-  has no account surface, no profile package, and no CLI verb.
+  has no account surface and no profile package, and it depends on no CLI package —
+  the `desktop bridge` verbs live in `@sceneaxi/cli` and reach the running app only
+  over the local socket documented in
+  [`desktop-local-bridge.md`](desktop-local-bridge.md), sharing the
+  `@sceneaxi/schemas` tool registry both already name.
   `tests/boundary/injected-desktop-violations.test.ts` injects a profile import, a Kids
   import, and an identity-plane dependency and asserts the real checker fails on each.
 - **framework, provider, and packaging toolchains → the hermetic tier: denied.**

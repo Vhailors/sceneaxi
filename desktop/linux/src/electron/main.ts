@@ -21,6 +21,11 @@ import {
   DESKTOP_BRIDGE_CHANNEL,
 } from "../lib/bridge-contract.js";
 import { createDesktopBridge } from "../lib/bridge.js";
+import {
+  resolveDesktopLocalBridgePaths,
+  startDesktopLocalBridgeServer,
+  type DesktopLocalBridgeServer,
+} from "../lib/local-rpc.js";
 import { seedDesktopProject } from "../lib/project-seed.js";
 
 // The bundle is CJS (Electron's main entry), so the native `__dirname` is real.
@@ -72,6 +77,7 @@ function payloadField(value: unknown, name: string): unknown {
 }
 
 let reportedFailure = false;
+let localBridgeServer: DesktopLocalBridgeServer | null = null;
 
 /** Print the one `{ok:false}` proof line and exit; later callers stay silent. */
 function reportFailure(message: string): void {
@@ -99,6 +105,38 @@ async function start(): Promise<void> {
     cwd,
     onFrameReport: (report) => frameReported?.(report),
   });
+
+  const localPaths = SMOKE
+    ? {
+        socketPath: join(cwd, ".sceneaxi-runtime", "desktop-v1.sock"),
+        discoveryPath: join(cwd, ".sceneaxi-config", "desktop-bridge-v1.json"),
+      }
+    : resolveDesktopLocalBridgePaths({
+        ...(process.env["XDG_RUNTIME_DIR"] === undefined
+          ? {}
+          : { runtimeDir: process.env["XDG_RUNTIME_DIR"] }),
+        ...(process.env["XDG_CONFIG_HOME"] === undefined
+          ? {}
+          : { configDir: process.env["XDG_CONFIG_HOME"] }),
+      });
+  // The local agent bridge is an attachment point, not the application: a second
+  // live host, an unusable runtime directory, or a refused socket must cost the
+  // operator the CLI attachment, never the window and the authoring session in it.
+  // The smoke proof asserts that attachment, so there it stays fatal.
+  try {
+    localBridgeServer = await startDesktopLocalBridgeServer({
+      bridge,
+      projectRoot: cwd,
+      ...localPaths,
+    });
+  } catch (error) {
+    if (SMOKE) throw error;
+    localBridgeServer = null;
+    console.error(
+      "desktop-linux: the local agent bridge did not start; Engine Desktop continues without CLI attachment:",
+      error instanceof Error ? error.message : String(error),
+    );
+  }
 
   ipcMain.handle(DESKTOP_BRIDGE_CHANNEL, (_event, request: unknown) =>
     bridge.handle(request),
@@ -221,6 +259,8 @@ async function start(): Promise<void> {
     writeFileSync(shotPath, png);
   }
 
+  await localBridgeServer?.close();
+  localBridgeServer = null;
   rmSync(cwd, { recursive: true, force: true });
 
   console.log(
@@ -253,5 +293,7 @@ void start().catch((error: unknown) => {
 });
 
 app.on("window-all-closed", () => {
-  app.quit();
+  const closing = localBridgeServer?.close() ?? Promise.resolve();
+  localBridgeServer = null;
+  void closing.finally(() => app.quit());
 });

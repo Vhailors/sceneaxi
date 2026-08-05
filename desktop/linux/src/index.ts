@@ -74,6 +74,15 @@ export {
 } from "./lib/project-seed.js";
 
 export {
+  resolveDesktopLocalBridgePaths,
+  startDesktopLocalBridgeServer,
+  type DesktopLocalBridgePathOptions,
+  type DesktopLocalBridgePaths,
+  type DesktopLocalBridgeServer,
+  type StartDesktopLocalBridgeServerOptions,
+} from "./lib/local-rpc.js";
+
+export {
   DESKTOP_RUNTIME_META,
   PIXELS_META_NAME,
   RENDERER_SCRIPT_TAG,

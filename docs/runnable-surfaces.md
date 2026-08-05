@@ -19,7 +19,7 @@ a marketing word.
 | `@sceneaxi/cli` | **R2** | `pnpm build && node packages/cli/bin/sceneaxi.mjs --help` | `packages/cli/test/bin-smoke.test.ts` + the rest of `packages/cli/test/` |
 | `@sceneaxi/desktop-shell` | **R2** | `pnpm build && node apps/desktop-shell/bin/sceneaxi-desktop.mjs --help`; for standalone chrome, `… chrome > shell.html`; the packaged host activates Open/Save/Play | `apps/desktop-shell/test/bin-smoke.test.ts`, `apps/desktop-shell/test/{product-loop,visual-model,visual-tokens,chrome}.test.ts`, `tests/e2e/desktop-product-loop-golden.test.ts`, `tests/parity/shell-cli-parity.test.ts` + the browser record in [`engine-desktop-surface.md`](engine-desktop-surface.md) |
 | `@sceneaxi/web-shell` (local authoring inspector + assistant transport) | **R2** | `pnpm build && node apps/web-shell/bin/sceneaxi-web-shell.mjs --cwd <project>`, then open the printed loopback URL or `POST /api/assistant` | `apps/web-shell/test/bin-smoke.test.ts` (spawns the binary and drives propose → accept plus a fixture assistant turn over a socket), `apps/web-shell/test/refuse-matrix.test.ts`, `tests/parity/shell-cli-parity.test.ts` |
-| `@sceneaxi/desktop-linux` (packaged Linux desktop app, ADR 0024) | **R2** | `cd desktop/linux && pnpm install && pnpm build && pnpm start`; Assistant Build's Local route compiles and mounts a typed sculpt without a provider; distributable via `pnpm dist` (AppImage + `.deb` + `SHA256SUMS`), proven by `pnpm smoke --packaged` | `tests/e2e/desktop-linux-bridge-golden.test.ts` (assistant → typed artifact → headless mount/manipulator contract, no pixel claim), `tests/desktop/desktop-linux-seams.test.ts`, the spawned `--smoke` proof in CI (`.github/workflows/desktop-linux.yml`), and the recorded builds/pixel observations plus the offered workflow artifact in [`desktop-linux.md`](desktop-linux.md) |
+| `@sceneaxi/desktop-linux` (packaged Linux desktop app, ADR 0024) | **R2** | `cd desktop/linux && pnpm install && pnpm build && pnpm start`; Assistant Build's Local route compiles and mounts a typed sculpt without a provider; the running host also publishes the permission-bound protocol-v1 local CLI bridge; distributable via `pnpm dist` (AppImage + `.deb` + `SHA256SUMS`), proven by `pnpm smoke --packaged` | `tests/e2e/desktop-linux-bridge-golden.test.ts` (assistant → typed artifact → headless mount/manipulator contract, no pixel claim), `tests/e2e/desktop-cli-local-bridge-golden.test.ts` (spawned CLI → Unix socket → shared authoring session), `tests/desktop/desktop-linux-seams.test.ts`, the spawned `--smoke` proof in CI (`.github/workflows/desktop-linux.yml`), and the recorded builds/pixel observations plus the offered workflow artifact in [`desktop-linux.md`](desktop-linux.md) |
 | Game profile (single object) | **R1** | `pnpm test:golden` | `tests/e2e/cli-golden-path.test.ts` |
 | Game profile (multi-object scene) | **R1** | `pnpm test:golden` | `tests/e2e/profile-game-scene-golden.test.ts` |
 | Web Experience profile | **R1** | `pnpm test:golden` | `tests/e2e/profile-web-golden-path.test.ts` |
@@ -138,8 +138,11 @@ still-unimplemented target:
 
 ## Commercial model
 
-The CLI is **free and BYO-AI**: no verb reads a credential, opens a socket, or
-spends anything, and no shipped verb is held-key gated (`SHIPPED_COMMAND_MAP`).
+The CLI is **free and BYO-AI**: no verb reads a provider credential or spends
+anything, and no shipped verb is held-key gated (`SHIPPED_COMMAND_MAP`). The
+`desktop bridge` group opens only the same-user Unix socket documented in
+[`desktop-local-bridge.md`](desktop-local-bridge.md); every tool has
+`creditRoute: none`, and the CLI never receives the launch capability in output.
 
 Hosted AI is metered but remains **explicit and default-off**. The free-vs-paid
 matrix it obeys — including BYO-key never touching the ledger and the

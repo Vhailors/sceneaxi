@@ -22,6 +22,7 @@ import {
   type VerbNode,
 } from "./commands.js";
 import { failure, success, type CliOutcome } from "./envelope.js";
+import type { DesktopLocalBridgeClient } from "./desktop-client.js";
 import type { OutputFormat } from "./format.js";
 import {
   defaultHeldKeyRuntime,
@@ -98,6 +99,8 @@ export interface DispatchOptions {
    * every gated verb refuses. Injectable so tests are fixture-driven.
    */
   readonly heldKeys?: HeldKeyRuntime;
+  /** Injectable synchronous adapter for the desktop Unix-socket transport. */
+  readonly desktopBridge?: DesktopLocalBridgeClient;
 }
 
 /**
@@ -197,7 +200,10 @@ export function dispatch(
     };
   }
 
-  return { outcome: walk(tokens, wantsHelp, heldKeys), format };
+  return {
+    outcome: walk(tokens, wantsHelp, heldKeys, options.desktopBridge),
+    format,
+  };
 }
 
 /** Count leading non-flag tokens (the command path prefix). */
@@ -223,6 +229,7 @@ function walk(
   tokens: readonly string[],
   wantsHelp: boolean,
   heldKeys: HeldKeyRuntime,
+  desktopBridge?: DesktopLocalBridgeClient,
 ): CliOutcome {
   let node: CommandNode | undefined;
   let children: Readonly<Record<string, CommandNode>> = ROOT_COMMANDS;
@@ -296,7 +303,7 @@ function walk(
           "Run `sceneaxi protocol inspect` for protocol details",
         ]);
       }
-      return invokeVerb(walked, next, rest, heldKeys);
+      return invokeVerb(walked, next, rest, heldKeys, desktopBridge);
     }
 
     // group
@@ -324,7 +331,7 @@ function walk(
   }
 
   // Leaf reached exactly (shouldn't hit — loop returns on verb).
-  return invokeVerb(walked, node, [], heldKeys);
+  return invokeVerb(walked, node, [], heldKeys, desktopBridge);
 }
 
 /**
@@ -337,12 +344,13 @@ function invokeVerb(
   node: VerbNode,
   tokens: readonly string[],
   heldKeys: HeldKeyRuntime,
+  desktopBridge?: DesktopLocalBridgeClient,
 ): CliOutcome {
   const decision = evaluateHeldKeyGate(path.join(" "), heldKeys);
   if (!decision.allow) {
     return heldKeyRefusal(path, decision);
   }
-  return runVerb(path, node, tokens);
+  return runVerb(path, node, tokens, desktopBridge);
 }
 
 function heldKeyRefusal(
@@ -364,6 +372,7 @@ function runVerb(
   path: readonly string[],
   node: VerbNode,
   tokens: readonly string[],
+  desktopBridge?: DesktopLocalBridgeClient,
 ): CliOutcome {
   try {
     // Argument-less verbs refuse any leftover token (flag or positional);
@@ -393,7 +402,11 @@ function runVerb(
       );
     }
 
-    const result = node.run({ path, tokens });
+    const result = node.run({
+      path,
+      tokens,
+      ...(desktopBridge === undefined ? {} : { desktopBridge }),
+    });
     if (isOutcome(result)) {
       return result;
     }
