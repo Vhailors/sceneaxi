@@ -335,11 +335,17 @@ renderer process holds the tier's one renderer-owning module
 ADR 0002 seam; gate proof is `tests/e2e/desktop-linux-bridge-golden.test.ts` (in
 `test:golden`, headless surface, no pixel claim) plus
 `tests/boundary/injected-desktop-violations.test.ts`, and the packaged binary
-re-proves the paths via `pnpm smoke --packaged`. Distribution is a recorded,
-non-bit-reproducible build: `docs/desktop-linux.md` owns the checksum record, the
-umbrella `/engine` advertises it through `desktopLinuxAppOffer()` in `site-kit`,
-and `tests/sites/desktop-offer-lockstep.test.ts` keeps the two in lockstep.
-Windows/macOS stay unpackaged and say so. No profile, Kids, auth/billing, or CLI
+re-proves the paths via `pnpm smoke --packaged`. Distribution is one recorded,
+non-bit-reproducible CI workflow artifact that **expires**:
+`docs/desktop-linux.md` owns that record — run, source commit, checksums, and the
+day the download is gone — and the umbrella `/engine` may print no field of it
+except through the fail-closed `resolveDesktopAppOffer()` behind
+`desktopLinuxAppOffer()` in `site-kit`, which refuses by name rather than
+offering a fallback URL, and reads no clock so every visitor sees the same
+record. `tests/sites/desktop-offer-lockstep.test.ts` keeps offer and doc in
+lockstep; `tests/sites/desktop-download.test.ts` holds the page's metadata,
+checksum, coming-soon, and refusal contract. Windows/macOS stay unpackaged and
+render as the record's own coming-soon rows. No profile, Kids, auth/billing, or CLI
 verb reaches this tier.
 
 The Engine Desktop chrome's **shared product model** is

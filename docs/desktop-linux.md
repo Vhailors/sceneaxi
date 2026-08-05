@@ -84,7 +84,11 @@ own artifacts. The umbrella `/engine` page advertises exactly this record throug
 `desktopLinuxAppOffer()` in
 `@sceneaxi/site-kit`, and `tests/sites/desktop-offer-lockstep.test.ts` holds the
 offer and the table below in lockstep — a digest edited in one place fails the
-gate until the other moves with it.
+gate until the other moves with it. Nothing on that page is rendered around the
+record: `resolveDesktopAppOffer()` validates every field first, and an
+incomplete, malformed, or wrongly-linked record refuses by name instead of
+offering a download — the page's metadata, checksum, coming-soon, and refusal
+behaviour is held by `tests/sites/desktop-download.test.ts`.
 
 <!-- desktop-linux:release -->
 | Field | Value |

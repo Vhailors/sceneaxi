@@ -83,9 +83,11 @@ core's real refusal rather than a state the page was asked to render.
 ### The `/engine` figures predate the desktop download section
 
 Every `/engine` figure in this document was recorded before sceneaxi#183 rewrote that
-page, which gained the recorded Linux desktop build section, its artifact cards, and the
+page, which gained the Linux desktop section, its artifact cards, and the
 platform-status panel (ADR 0024, owner
-[`docs/desktop-linux.md`](../../docs/desktop-linux.md)). So the `/engine` rows of the
+[`docs/desktop-linux.md`](../../docs/desktop-linux.md)). sceneaxi#193 then rewrote that
+section again into the download CTA, the per-file metadata and checksum-command cards,
+the install/first-launch pair, and the coming-soon panel. So the `/engine` rows of the
 overflow sweep, of both named-state measurement tables, and of the Lighthouse table are
 the observation at that earlier revision of the page, and they are **pending re-record**.
 
