@@ -332,9 +332,11 @@ the one bridge seam is `createDesktopBridge()` in `desktop/linux/src/lib/bridge.
 `composeScene()`, `bootstrapOpenPath()`, `createDesktopSession()`, and the
 deterministic local or explicitly injected BYOK assistant runner in
 `authoring-core`; hosted assistant work refuses because this tier owns no identity
-or credit plane. Every successful assistant artifact is projected through a
-single-instance `composeScene()` result and the shared `MountableScene` boundary
-before the renderer may mount it. The
+or credit plane. Every successful assistant artifact is projected through the shared
+`MountableScene` boundary before the renderer may mount it — directly, not through
+`composeScene()`, because composition's own contract calls a one-instance scene a
+sculpt and refuses it, and because placement there belongs to the viewport's
+manipulators. The
 renderer process holds the tier's one renderer-owning module
 (`src/renderer/viewport.ts`) drawing the shared `MountableScene` through the
 ADR 0002 seam; gate proof is `tests/e2e/desktop-linux-bridge-golden.test.ts` (in

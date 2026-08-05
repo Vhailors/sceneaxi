@@ -50,8 +50,9 @@ The packaged chrome also binds its Assistant **Build** mode to the bridge. Local
 is a deterministic, free compiler; BYOK is free of SceneAxi credits but runs
 only when the embedding deployment injects its provider runner; Hosted is
 metered and refuses here because this desktop tier has no identity/credit plane.
-A successful action projects the validated Sculpt Artifact through a
-single-instance composition and the shared `MountableScene` payload before the
+A successful action projects the validated Sculpt Artifact through the shared
+`MountableScene` payload — directly, since composition refuses a one-instance
+scene as a sculpt — before the
 live center viewport mounts it, adds translate/rotate/scale manipulators, and shows the artifact's
 read-only materials, supported collider physics, and procedural settings.
 Progress, provider/refusal details, and Retry remain on the surface. A timed-out

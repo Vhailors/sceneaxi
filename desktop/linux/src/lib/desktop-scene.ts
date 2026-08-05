@@ -15,6 +15,7 @@ import { composeScene } from "@sceneaxi/authoring-core";
 import {
   SCENE_COMPOSITION_INTAKE_KIND,
   SCENE_COMPOSITION_SCHEMA_VERSION,
+  digestSceneArtifact,
   identitySculptTransform,
   type SceneCompositionIntake,
   type SculptArtifact,
@@ -130,35 +131,35 @@ export function desktopOpenScene(): DesktopSceneResult {
   });
 }
 
-export function desktopAssistantScene(artifact: SculptArtifact): DesktopSceneResult {
-  const intake: SceneCompositionIntake = {
-    schemaVersion: SCENE_COMPOSITION_SCHEMA_VERSION,
-    kind: SCENE_COMPOSITION_INTAKE_KIND,
+/**
+ * Project one assistant artifact into the shared `MountableScene` browser payload.
+ *
+ * Deliberately *not* through `composeScene()`: the composition contract calls a
+ * one-instance scene a sculpt rather than a scene (`SCENE_MINIMUM_INSTANCES`), so
+ * that pipeline refuses a single artifact by design. The artifact still crosses
+ * exactly the boundary the renderer may mount from — the same payload shape the
+ * composed open scene produces — carrying an identity world transform, because
+ * placement here belongs to the viewport's manipulators and not to the pipeline.
+ * The artifact is never rewritten, so its evidence still binds its own bytes, and
+ * `sceneDigest` is that artifact's digest since it is the whole of what mounts.
+ *
+ * Total for a validated artifact: there is no composition left to refuse.
+ */
+export function desktopAssistantScene(artifact: SculptArtifact): MountableScene {
+  return Object.freeze({
     sceneId: DESKTOP_ASSISTANT_SCENE_ID,
     rootInstanceId: DESKTOP_ASSISTANT_INSTANCE_ID,
-    placements: [
-      {
+    sceneDigest: digestSceneArtifact(artifact),
+    artifacts: Object.freeze({ [artifact.artifactId]: artifact }),
+    instances: Object.freeze([
+      Object.freeze({
         instanceId: DESKTOP_ASSISTANT_INSTANCE_ID,
         artifactId: artifact.artifactId,
         parentInstanceId: null,
-        transform: identitySculptTransform(),
-      },
-    ],
-  };
-  const composed = composeScene(intake, [artifact]);
-  if (!composed.ok) {
-    return Object.freeze({
-      ok: false as const,
-      reason: DESKTOP_SCENE_NOT_COMPOSABLE,
-      message: "The scene composition pipeline rejected the assistant output.",
-    });
-  }
-  return Object.freeze({
-    ok: true as const,
-    composed,
-    mountable: mountableScene(
-      composed,
-      new Map([[DESKTOP_ASSISTANT_INSTANCE_ID, "Assistant output"]]),
-    ),
+        depth: 0,
+        label: "Assistant output",
+        worldTransform: identitySculptTransform(),
+      }),
+    ]),
   });
 }

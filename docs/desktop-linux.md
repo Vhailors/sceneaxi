@@ -57,9 +57,12 @@ The desktop golden test injects a real fixture-backed Model Provider Port throug
 that BYOK runner and proves the typed result crosses the job seam; the packaged
 default deliberately injects no provider, credential, or fallback behaviour.
 
-On success the existing validated `SculptArtifact` becomes a single-instance
-`composeScene()` result and shared `MountableScene` payload before it is mounted
-through `createSculptMountApi()` into the one live center viewport. The renderer exposes
+On success the existing validated `SculptArtifact` becomes the shared
+`MountableScene` payload before it is mounted through `createSculptMountApi()` into
+the one live center viewport. That projection is direct rather than a
+`composeScene()` call: the composition contract's `SCENE_MINIMUM_INSTANCES` calls a
+one-instance scene a sculpt and refuses it, and the mount carries an identity world
+transform because placement here is the manipulators' job. The renderer exposes
 real translate/rotate/scale controls using the Mount API and prints read-only
 materials, collider physics where the quality artifact supports it, and
 procedural settings. Unsupported edits and legacy physics inspection refuse by

@@ -463,29 +463,18 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       (result) => {
         if (assistantJob !== activeJob || activeJob.status !== "running") return;
         if (result.ok) {
-          const scene = desktopAssistantScene(result.artifact);
-          if (scene.ok) {
-            activeJob.status = "ready";
-            activeJob.result = Object.freeze({
-              ok: true as const,
-              route: result.route,
-              artifactBytes: result.artifactBytes,
-              artifactDigest: result.artifactDigest,
-              inspection: result.inspection,
-              mountable: scene.mountable,
-              ...(result.providerEvidence === undefined
-                ? {}
-                : { providerEvidence: result.providerEvidence }),
-            });
-          } else {
-            activeJob.status = "refused";
-            activeJob.refusal = Object.freeze({
-              ok: false as const,
-              reason: scene.reason,
-              message: scene.message,
-              recoverable: true,
-            });
-          }
+          activeJob.status = "ready";
+          activeJob.result = Object.freeze({
+            ok: true as const,
+            route: result.route,
+            artifactBytes: result.artifactBytes,
+            artifactDigest: result.artifactDigest,
+            inspection: result.inspection,
+            mountable: desktopAssistantScene(result.artifact),
+            ...(result.providerEvidence === undefined
+              ? {}
+              : { providerEvidence: result.providerEvidence }),
+          });
         } else {
           activeJob.status = "refused";
           activeJob.refusal = result;
