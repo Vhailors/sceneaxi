@@ -23,17 +23,25 @@ public proof, login, and credit pricing. `/engine`, billing, and desktop impleme
 were not changed.
 
 The executable browser suite is `test/first-release.visual.spec.ts`, run with
-`pnpm test:visual` from this install root. It covers:
+`pnpm test:visual` from this install root. Every navigation pins the user agent whose
+platform it expects to be resolved, so the detected-platform states below are properties
+of that agent rather than of the machine the suite ran on. It covers:
 
 | Check | Browser observation |
 |---|---|
 | Default | 1440 × 1000, Download and both tables visible, no page-level overflow |
+| Detected platform | pinned Linux agent resolves `linux` on every navigation; a pinned macOS agent resolves `macos`, keeps Linux the single Available row, leaves both coming-soon rows anchor-free, and leaves the primary action on `/engine` — asserted only |
 | Short desktop | 1280 × 640, heading y=131-290.09, Download y=406.77-452.77, live artifact height=268.80 |
 | Split boundary | 1025px remains side-by-side; 1024px stacks claim before artifact |
 | Masthead boundary | 861px remains one row; 860px moves primary navigation to its own visible row |
 | Phone boundary | 621px keeps trust proof pairs; 620px stacks all four rows |
+| Sideways scroll | checked at 1440 × 1000 and again at each boundary width the suite visits — 1025, 1024, 861, 860, 621, 620 — where the availability legend deliberately stays 3-up; the measured pair below is the 1280 × 640 one, so the boundary widths are asserted only |
 | Keyboard | first Tab exposes Skip to content at x=0 with a composited 2px solid focus outline |
-| Readability | CTA, trust copy, highlighted comparison, profile cells, and path links all clear the 4.5:1 body floor after the browser composites ancestor backgrounds |
+| Readability | CTA, trust copy, highlighted comparison, profile cells, and path links all clear the 4.5:1 body floor after the browser composites ancestor backgrounds; the download context line and all three availability legend states were added to the same sweep and floor — asserted only |
+
+"Asserted only" marks a check the suite performs whose figure has not been recorded
+here. Those rows deliberately carry no measurement: this column is a record of what a
+browser reported, and a number no run produced would be an invention.
 
 The same route was inspected through `chrome-devtools-axi`. At 1280 × 640 the document
 reported `clientWidth=1269` and `scrollWidth=1269`; the first Tab focused the skip link
