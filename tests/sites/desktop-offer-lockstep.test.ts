@@ -111,10 +111,12 @@ describe("desktop offer ↔ recorded build lockstep", () => {
     }
   });
 
-  it("keeps the honesty claims aligned: not bit-reproducible, Windows/macOS absent", () => {
+  it("keeps the honesty claims aligned across released and unreleased platforms", () => {
     expect(doc).toContain("not bit-reproducible");
     expect(DESKTOP_LINUX_APP_OFFER.reproducibilityNote).toContain("not bit-reproducible");
-    expect(doc).toContain("Windows and macOS packaging");
+    expect(doc).toContain("Windows packaging");
+    expect(doc).toContain("No public macOS artifact is recorded");
+    expect(doc).toContain("separate `desktop/macos` root now owns macOS packaging");
     expect(DESKTOP_LINUX_APP_OFFER.unavailablePlatforms.map((row) => row.platform)).toEqual([
       "macOS",
       "Windows",

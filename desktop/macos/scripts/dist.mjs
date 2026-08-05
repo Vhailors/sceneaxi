@@ -20,6 +20,11 @@ import {
 } from "node:fs";
 import { delimiter, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  CANONICAL_REPOSITORY,
+  isPositiveGitHubRunId,
+  resolveReleaseProvenance,
+} from "./release-provenance.mjs";
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const release = join(appRoot, "release");
@@ -42,9 +47,10 @@ const buildVersion = buildVersionMatches.length === 1 ? buildVersionMatches[0][1
 const provenanceValidators = Object.freeze({
   GITHUB_REPOSITORY: (value) => /^[A-Za-z0-9][A-Za-z0-9._-]*\/[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value),
   GITHUB_SHA: (value) => /^[0-9a-f]{40}$/.test(value),
-  GITHUB_RUN_ID: (value) => /^[1-9][0-9]*$/.test(value) && Number.isSafeInteger(Number(value)),
+  GITHUB_RUN_ID: isPositiveGitHubRunId,
 });
-const actionsRelease = process.env.GITHUB_ACTIONS === "true";
+const releaseProvenance = resolveReleaseProvenance(process.env);
+const actionsRelease = releaseProvenance.iaLinkable;
 const repositoryRoot = resolve(appRoot, "../..");
 const git = (args) =>
   spawnSync("git", args, {
@@ -93,7 +99,7 @@ for (const name of requiredEnvironment) {
     refusals.push(`MACOS_ENV_REQUIRED:${name}`);
   }
 }
-const requiredProvenance = actionsRelease
+const requiredProvenance = releaseProvenance.canonicalReleaseContext
   ? Object.entries(provenanceValidators)
   : [["GITHUB_SHA", provenanceValidators.GITHUB_SHA]];
 for (const [name, isValid] of requiredProvenance) {
@@ -121,16 +127,11 @@ if (declaredCommit !== undefined && provenanceValidators.GITHUB_SHA(declaredComm
     }
   }
 }
-if (actionsRelease) {
-  if (process.env.GITHUB_EVENT_NAME !== "workflow_dispatch") {
-    refusals.push("MACOS_ACTIONS_DISPATCH_REQUIRED");
-  }
-  if (process.env.GITHUB_SERVER_URL !== "https://github.com") {
+if (releaseProvenance.canonicalReleaseContext) {
+  if (!releaseProvenance.serverValid) {
     refusals.push("MACOS_ACTIONS_SERVER_REQUIRED");
   }
-  const repository = process.env.GITHUB_REPOSITORY?.trim() ?? "";
-  const expectedWorkflow = `${repository}/.github/workflows/desktop-macos.yml@`;
-  if (!process.env.GITHUB_WORKFLOW_REF?.startsWith(expectedWorkflow)) {
+  if (!releaseProvenance.workflowValid) {
     refusals.push("MACOS_ACTIONS_WORKFLOW_REQUIRED");
   }
 }
@@ -201,7 +202,7 @@ run("xcrun", ["stapler", "validate", appBundle]);
 
 const releaseBase = `${baseUrl.trim().replace(/\/$/, "")}/`;
 const sourceCommit = process.env.GITHUB_SHA.trim();
-const repository = actionsRelease ? process.env.GITHUB_REPOSITORY.trim() : undefined;
+const repository = actionsRelease ? CANONICAL_REPOSITORY : undefined;
 const workflowRunId = actionsRelease ? Number(process.env.GITHUB_RUN_ID.trim()) : undefined;
 const verifiedOn = new Date().toISOString().slice(0, 10);
 const hash = (algorithm, name, encoding) =>

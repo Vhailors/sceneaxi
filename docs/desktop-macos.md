@@ -71,18 +71,28 @@ only `GITHUB_SHA`; the value must equal the clean checkout's `git rev-parse HEAD
 It writes `desktop-macos-local-build.json` with `iaLinkable: false` and no repository,
 workflow-run, download, update-metadata, or artifact URL claim.
 
-Only the repository's actual GitHub Actions `workflow_dispatch` release path may write
-the IA-linkable `desktop-macos-release.json`. Actions supplies the three values below;
-the script additionally requires `GITHUB_ACTIONS=true`, the dispatch event,
-`https://github.com`, and this repository's `desktop-macos.yml` workflow reference.
-An absent value refuses `MACOS_PROVENANCE_REQUIRED:<name>`, and a value of the wrong
-shape refuses `MACOS_PROVENANCE_INVALID:<name>`:
+Only the canonical `Vhailors/sceneaxi` GitHub Actions `workflow_dispatch` release path
+may write the IA-linkable `desktop-macos-release.json`. The script requires
+`GITHUB_ACTIONS=true`, the exact canonical repository, a positive safe-integer run ID,
+the explicitly allowed dispatch event, `https://github.com`, and the canonical
+`desktop-macos.yml` workflow reference. Local runs, forks, and every other event write
+the non-linkable local record. An absent required value refuses
+`MACOS_PROVENANCE_REQUIRED:<name>`, and a value of the wrong shape refuses
+`MACOS_PROVENANCE_INVALID:<name>`:
 
 | Name | Meaning |
 |---|---|
 | `GITHUB_REPOSITORY` | `owner/name` of the repository the release was built from |
 | `GITHUB_SHA` | Full 40-character commit the release was built from |
 | `GITHUB_RUN_ID` | Workflow run whose artifact holds the verified files |
+
+These context checks are not cryptographic attestation. A caller controlling the
+process environment can spoof `GITHUB_*` values outside GitHub Actions; adding OIDC or
+an authenticated GitHub API handoff is outside #194. Before changing download IA, the
+operator must corroborate the record against the actual canonical Actions run, commit,
+workflow, and uploaded artifact. The script prevents ordinary local and fork contexts
+from becoming linkable, but does not claim to defeat a caller fabricating the complete
+canonical environment.
 
 `GITHUB_SHA` is **verified, not trusted**, on both paths: `git` must be on `PATH`
 (`MACOS_PROVENANCE_UNVERIFIABLE:git`), the release must run inside a readable checkout

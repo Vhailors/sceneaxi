@@ -94,6 +94,7 @@ if (!packaged) {
         ...env,
         GITHUB_ACTIONS: "true",
         GITHUB_EVENT_NAME: "workflow_dispatch",
+        GITHUB_REPOSITORY: "Vhailors/sceneaxi",
         GITHUB_SERVER_URL: "https://github.com",
         GITHUB_WORKFLOW_REF:
           "Vhailors/sceneaxi/.github/workflows/desktop-macos.yml@refs/heads/main",
@@ -103,7 +104,7 @@ if (!packaged) {
   if (actionsResult.status !== 1) {
     fail(`missing Actions provenance preflight exited ${actionsResult.status}, not 1`);
   }
-  for (const name of ["GITHUB_REPOSITORY", "GITHUB_SHA", "GITHUB_RUN_ID"]) {
+  for (const name of ["GITHUB_SHA", "GITHUB_RUN_ID"]) {
     if (!actionsResult.stderr.includes(`MACOS_PROVENANCE_REQUIRED:${name}`)) {
       fail(`Actions preflight did not refuse absent provenance ${name}`);
     }
@@ -144,8 +145,7 @@ if (manifestPath === actionsManifestPath) {
   if (
     manifest.recordKind !== "github-actions-release" ||
     manifest.iaLinkable !== true ||
-    typeof repository !== "string" ||
-    !/^[A-Za-z0-9][A-Za-z0-9._-]*\/[A-Za-z0-9][A-Za-z0-9._-]*$/.test(repository) ||
+    repository !== "Vhailors/sceneaxi" ||
     !Number.isSafeInteger(workflowRunId) ||
     workflowRunId <= 0 ||
     manifest.downloadHref !== `https://github.com/${repository}/actions/runs/${workflowRunId}`

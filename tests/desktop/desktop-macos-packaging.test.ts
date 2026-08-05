@@ -92,11 +92,13 @@ describe("desktop-macos packaging", () => {
 
   it("refuses a release record the download IA could not consume", () => {
     const dist = read("desktop/macos/scripts/dist.mjs");
+    const provenance = read("desktop/macos/scripts/release-provenance.mjs");
     for (const name of ["GITHUB_REPOSITORY", "GITHUB_SHA", "GITHUB_RUN_ID"]) {
       expect(dist).toContain(name);
     }
-    expect(dist).toContain('process.env.GITHUB_ACTIONS === "true"');
-    expect(dist).toContain('process.env.GITHUB_EVENT_NAME !== "workflow_dispatch"');
+    expect(provenance).toContain('CANONICAL_REPOSITORY = "Vhailors/sceneaxi"');
+    expect(provenance).toContain('ALLOWED_RELEASE_EVENTS = Object.freeze(["workflow_dispatch"])');
+    expect(dist).toContain("resolveReleaseProvenance(process.env)");
     expect(dist).toContain("desktop-macos-local-build.json");
     expect(dist).toContain('iaLinkable: false');
     expect(dist).toContain('recordKind: "github-actions-release"');
@@ -120,6 +122,54 @@ describe("desktop-macos packaging", () => {
     expect(smoke).toContain("release record carries no complete provenance");
     expect(smoke).toContain("local build record is not explicitly non-linkable");
     expect(smoke).toContain("downloadHref");
+  });
+
+  it("keeps every noncanonical release context non-linkable", () => {
+    const moduleUrl = new URL(
+      "../../desktop/macos/scripts/release-provenance.mjs",
+      import.meta.url,
+    ).href;
+    const resolve = (environment: Record<string, string>) => {
+      const result = spawnSync(
+        process.execPath,
+        [
+          "--input-type=module",
+          "--eval",
+          `import { resolveReleaseProvenance } from ${JSON.stringify(moduleUrl)}; process.stdout.write(JSON.stringify(resolveReleaseProvenance(JSON.parse(process.argv[1]))));`,
+          JSON.stringify(environment),
+        ],
+        { encoding: "utf8" },
+      );
+      expect(result.status, result.stderr).toBe(0);
+      return JSON.parse(result.stdout) as { iaLinkable: boolean };
+    };
+    const canonical = {
+      GITHUB_ACTIONS: "true",
+      GITHUB_EVENT_NAME: "workflow_dispatch",
+      GITHUB_REPOSITORY: "Vhailors/sceneaxi",
+      GITHUB_RUN_ID: "123",
+      GITHUB_SERVER_URL: "https://github.com",
+      GITHUB_WORKFLOW_REF:
+        "Vhailors/sceneaxi/.github/workflows/desktop-macos.yml@refs/heads/main",
+    };
+
+    expect(resolve(canonical).iaLinkable).toBe(true);
+    for (const environment of [
+      {},
+      { ...canonical, GITHUB_REPOSITORY: "fork/sceneaxi" },
+      { ...canonical, GITHUB_EVENT_NAME: "push" },
+      { ...canonical, GITHUB_EVENT_NAME: "pull_request" },
+      { ...canonical, GITHUB_RUN_ID: "0" },
+      { ...canonical, GITHUB_RUN_ID: "-1" },
+      { ...canonical, GITHUB_RUN_ID: "not-a-run" },
+      { ...canonical, GITHUB_RUN_ID: "9007199254740992" },
+      { ...canonical, GITHUB_SERVER_URL: "https://example.com" },
+      { ...canonical, GITHUB_WORKFLOW_REF: "Vhailors/sceneaxi/.github/workflows/other.yml@main" },
+    ]) {
+      expect(resolve(environment).iaLinkable).toBe(false);
+    }
+    expect(read("docs/desktop-macos.md")).toContain("not cryptographic attestation");
+    expect(read("docs/desktop-macos.md")).toContain("outside #194");
   });
 
   it("verifies the recorded commit against the checkout instead of trusting its shape", () => {
