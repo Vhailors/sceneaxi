@@ -82,6 +82,12 @@ describe("desktop-macos packaging seam", () => {
     expect(dist).toContain("SceneAxi-Engine-Desktop-${version}-macos-universal");
     expect(dist).toContain("version: ${version}");
     expect(dist).not.toContain(version);
+    const cleanOutputGuard = dist.indexOf("MACOS_RELEASE_OUTPUT_NOT_EMPTY");
+    expect(cleanOutputGuard).toBeGreaterThan(-1);
+    expect(cleanOutputGuard).toBeLessThan(
+      dist.indexOf('run(process.execPath, [join(appRoot, "scripts/build.mjs")])'),
+    );
+    expect(read("docs/desktop-macos.md")).toContain("MACOS_RELEASE_OUTPUT_NOT_EMPTY");
   });
 
   it("refuses a release record the download IA could not consume", () => {

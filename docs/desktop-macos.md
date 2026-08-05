@@ -102,9 +102,13 @@ pnpm --dir desktop/macos smoke --packaged
 ```
 
 `dist` refuses before packaging if the host, a tool, a secret name, or the HTTPS
-release location is absent. It runs electron-builder with `--publish never`, signs
-the universal application, submits it for notarization, requires stapled tickets,
-and verifies the app with `codesign`, `spctl`, and `stapler`. It then writes:
+release location is absent. The `release/` output must be absent or empty; a path that
+is invalid, unreadable, or contains any prior output refuses as
+`MACOS_RELEASE_OUTPUT_INVALID`, `MACOS_RELEASE_OUTPUT_UNREADABLE`, or
+`MACOS_RELEASE_OUTPUT_NOT_EMPTY` before building or signing. It runs electron-builder
+with `--publish never`, signs the universal application, submits it for notarization,
+requires stapled tickets, and verifies the app with `codesign`, `spctl`, and `stapler`.
+It then writes:
 
 - the universal `.dmg` installer and `.zip` updater payload;
 - `SHA256SUMS`, sorted by artifact file name;

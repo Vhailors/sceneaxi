@@ -71,6 +71,17 @@ const executableExists = (name) => {
 };
 
 const refusals = [];
+if (existsSync(release)) {
+  try {
+    if (!statSync(release).isDirectory()) {
+      refusals.push("MACOS_RELEASE_OUTPUT_INVALID");
+    } else if (readdirSync(release).length > 0) {
+      refusals.push("MACOS_RELEASE_OUTPUT_NOT_EMPTY");
+    }
+  } catch {
+    refusals.push("MACOS_RELEASE_OUTPUT_UNREADABLE");
+  }
+}
 if (process.platform !== "darwin") refusals.push("MACOS_HOST_REQUIRED");
 if (typeof version !== "string" || !/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)*$/.test(version)) {
   refusals.push("MACOS_RELEASE_VERSION_INVALID");
