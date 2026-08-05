@@ -139,7 +139,12 @@ only, and presentation invents no state the kernel does not own.
   Engine Desktop shell the route draws, through the same viewport boundary and
   the same session composition; the shell's own regions, refusals, and browser
   record are owned by [`web-editor-shell.md`](web-editor-shell.md), which is also
-  where its later pixel observation is recorded. Verified 2026-07-26 in Chrome
+  where its later pixel observation is recorded. Since sceneaxi#197 the route's
+  `?profile=web` request draws the smaller Web Experience projection around that
+  same canvas instead — same viewport boundary, same composed scene, draw-only —
+  and that projection's own record is owned by
+  [`web-experience-editor.md`](web-experience-editor.md). This list is unchanged
+  by it: it is one surface reached two ways, not a fifth. Verified 2026-07-26 in Chrome
   against the production build (`next build && next start`), SwiftShader ANGLE,
   with the server-side editor preview flag set:
   - the canvas holds a real `webgl2` context (`WebGL 2.0 (OpenGL ES 3.0

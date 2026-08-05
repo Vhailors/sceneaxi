@@ -28,6 +28,7 @@ import {
   parseEditorDeepLink,
   parseEditorDeepLinkParams,
   readEngineSdkOffer,
+  readWebExperienceEditorState,
   reconstructStarter,
   refuse,
   resolveDesktopAppOffer,
@@ -158,6 +159,10 @@ const CASES: Readonly<Record<SiteRefusalReason, () => Promise<unknown> | unknown
     } as unknown as SiteIdentityRequest),
   SITE_REQUEST_MALFORMED: () =>
     createIdentityPlane({ now }).resolvePrincipal(null as unknown as SiteIdentityRequest),
+  SITE_REQUEST_TARGET_TOO_LONG: () =>
+    readWebExperienceEditorState({
+      "web-html": "<>\"'".repeat(400),
+    }),
   SITE_REQUEST_CROSS_ORIGIN: () =>
     verifySiteFormOrigin({
       configuredOrigin: "https://umbrella.vercel.app",

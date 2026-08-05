@@ -28,8 +28,10 @@ import type {
   EditorShellControl,
   EditorShellView,
   MountableScene,
+  WebExperienceEditorView,
 } from "@sceneaxi/site-kit";
 import { EditorViewport } from "./editor-viewport.js";
+import { WebExperienceEditor } from "./web-experience-editor.js";
 
 type ModeId = EditorShellView["modes"][number]["id"];
 type DockTabId = EditorShellView["modes"][number]["dockTabs"][number];
@@ -69,18 +71,63 @@ const fieldName = (control: EditorShellControl): string =>
 const ActiveModeContext = createContext<ModeId | null>(null);
 
 /**
- * The same href in the mode the reader is in. Only a link that already carries
- * the parameter is rewritten, so the wordmark's `/` and any other off-editor
- * destination is handed back untouched.
+ * The profile the reader switched to, for exactly the same reason mode is
+ * carried: the chip is client state, but every live control is a full-page
+ * navigation built server-side from the *request's* profile. Without this, a
+ * reader who leaves the Web profile is returned to it by the first link they
+ * click, and one who stays in it falls out of it on the first form submit.
  */
-function hrefInMode(href: string, mode: ModeId | null): string {
-  if (mode === null) return href;
+const ActiveProfileContext = createContext<ProfileId | null>(null);
+
+/**
+ * The same href in the view state the reader is in. Only an editor destination
+ * is rewritten, so the wordmark's `/` and any other off-editor link is handed
+ * back untouched.
+ *
+ * Kids is deliberately not written into a URL: it is a refuse-only client
+ * projection with no request state, and `profile=kids` is not a value the server
+ * contract accepts. Under Kids the parameter is therefore left exactly as the
+ * request carried it.
+ */
+function hrefInViewState(
+  href: string,
+  mode: ModeId | null,
+  profile: ProfileId | null,
+): string {
   const [path, query] = href.split("?");
   if (path === undefined || query === undefined) return href;
   const params = new URLSearchParams(query);
-  if (!params.has("mode")) return href;
-  params.set("mode", mode);
-  return `${path}?${params.toString()}`;
+  let rewritten = false;
+  if (mode !== null && params.has("mode")) {
+    params.set("mode", mode);
+    rewritten = true;
+  }
+  if (path === "/editor" && (profile === "game" || profile === "web")) {
+    if (profile === "web") params.set("profile", "web");
+    else params.delete("profile");
+    rewritten = true;
+  }
+  return rewritten ? `${path}?${params.toString()}` : href;
+}
+
+/**
+ * Both pieces of chrome view state, published together, so a control reads the
+ * mode and the profile the reader is actually in from one place.
+ */
+function ShellViewState({
+  mode,
+  profile,
+  children,
+}: {
+  readonly mode: ModeId;
+  readonly profile: ProfileId;
+  readonly children: React.ReactNode;
+}) {
+  return (
+    <ActiveModeContext value={mode}>
+      <ActiveProfileContext value={profile}>{children}</ActiveProfileContext>
+    </ActiveModeContext>
+  );
 }
 
 /** The one panel every viewport-source tab controls. */
@@ -101,6 +148,7 @@ function ShellButton({
   control,
   className,
   demotedRefusal,
+  profileRefusal,
   pressed,
   selected,
   role,
@@ -116,6 +164,8 @@ function ShellButton({
    * describedby it produces always resolves against the rendered legend.
    */
   readonly demotedRefusal?: string | undefined;
+  /** A non-Kids profile may also narrow desktop chrome without changing its policy code. */
+  readonly profileRefusal?: string | undefined;
   readonly pressed?: boolean | undefined;
   /**
    * `aria-selected` is only legal on a role that supports it, so a caller that
@@ -127,10 +177,17 @@ function ShellButton({
   readonly onClick?: ((event: React.MouseEvent<HTMLElement>) => void) | undefined;
   readonly children?: React.ReactNode;
 }) {
-  const inert = control.kind === "inert" || demotedRefusal !== undefined;
-  const refusal = control.kind === "inert" ? control.refusal : (demotedRefusal ?? null);
+  const inert =
+    control.kind === "inert" ||
+    demotedRefusal !== undefined ||
+    profileRefusal !== undefined;
+  const refusal =
+    control.kind === "inert"
+      ? control.refusal
+      : (demotedRefusal ?? profileRefusal ?? null);
   const binding = control.binding;
   const activeMode = useContext(ActiveModeContext);
+  const activeProfile = useContext(ActiveProfileContext);
 
   const shared = {
     className: `${className ?? ""}${inert ? " is-inert" : ""}`,
@@ -152,7 +209,11 @@ function ShellButton({
 
   if (!inert && binding !== null && binding.kind === "href") {
     return (
-      <a id={control.id} href={hrefInMode(binding.href, activeMode)} {...shared}>
+      <a
+        id={control.id}
+        href={hrefInViewState(binding.href, activeMode, activeProfile)}
+        {...shared}
+      >
         {children ?? control.label}
       </a>
     );
@@ -174,12 +235,16 @@ export function EditorShell({
   scene,
   selectedInstanceId,
   deepLinkFields,
+  initialProfile,
   viewportCopy,
+  webView,
 }: {
   readonly view: EditorShellView;
   readonly scene: MountableScene | null;
   readonly selectedInstanceId: string;
   readonly deepLinkFields: ReadonlyArray<{ readonly name: string; readonly value: string }>;
+  readonly initialProfile: "game" | "web";
+  readonly webView: WebExperienceEditorView;
   /**
    * The viewport copy is owned by `src/lib/editor-viewport.ts` and arrives as a
    * prop because a client component must not import the Node-bearing site-kit
@@ -191,7 +256,7 @@ export function EditorShell({
   // comes back in the mode the reader was working in.
   const [mode, setMode] = useState<ModeId>(view.activeModeId);
   const [dockTab, setDockTab] = useState<DockTabId>("changes");
-  const [profile, setProfile] = useState<ProfileId>("game");
+  const [profile, setProfile] = useState<ProfileId>(initialProfile);
   const [assistantOpen, setAssistantOpen] = useState(view.assistant.state === "open");
   const [assistantMode, setAssistantMode] = useState(view.assistant.defaultModeId);
   const [paletteRequested, setPaletteRequested] = useState(false);
@@ -206,6 +271,7 @@ export function EditorShell({
   const activeMode =
     view.modes.find((candidate) => candidate.id === mode) ?? fallbackMode;
   const kids = profile === "kids";
+  const web = profile === "web";
   /**
    * The palette is part of the editor body the refuse-only profile withdraws, so
    * Kids is what decides whether it is open at all — not a second piece of state
@@ -231,6 +297,7 @@ export function EditorShell({
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         if (kids) return;
+        if (web) return;
         event.preventDefault();
         // Only the keystroke that opens the palette records where focus came
         // from. While it is open the rest of the chrome is `inert`, so
@@ -246,7 +313,7 @@ export function EditorShell({
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [paletteOpen, kids]);
+  }, [paletteOpen, kids, web]);
 
   /**
    * Focus moves in this effect rather than in the close handlers, because the
@@ -268,8 +335,8 @@ export function EditorShell({
   // Entering the refuse-only profile withdraws the request too, so leaving it
   // again returns to the editor rather than to a palette held open behind it.
   useEffect(() => {
-    if (kids) setPaletteRequested(false);
-  }, [kids]);
+    if (kids || web) setPaletteRequested(false);
+  }, [kids, web]);
 
   const profilePin =
     view.profiles.find((chip) => chip.id === profile)?.statusPin ??
@@ -300,10 +367,11 @@ export function EditorShell({
 
   return (
     /*
-      Every href the shell renders is rebuilt in the mode the reader is in, so a
-      live control's own navigation returns to the mode it was clicked from.
+      Every href the shell renders is rebuilt in the mode and the profile the
+      reader is in, so a live control's own navigation returns to the chrome it
+      was clicked from instead of to the one the request happened to name.
     */
-    <ActiveModeContext value={mode}>
+    <ShellViewState mode={mode} profile={profile}>
       <div className="edshell" data-mode={mode} data-profile={profile}>
         {/*
           The chrome depicts an application, so it draws no page title — but the
@@ -358,6 +426,7 @@ export function EditorShell({
               control={view.paletteOpener}
               className="ed-search"
               demotedRefusal={kids ? view.kidsLock.code : undefined}
+              profileRefusal={web ? webView.desktopOnlyRefusal.code : undefined}
               onClick={(event) => {
                 paletteReturnFocus.current = event.currentTarget;
                 setPaletteRequested(true);
@@ -369,6 +438,7 @@ export function EditorShell({
               control={view.assistant.toggle}
               className="ed-assistant-toggle"
               demotedRefusal={kids ? view.kidsLock.code : undefined}
+              profileRefusal={web ? webView.desktopOnlyRefusal.code : undefined}
               pressed={assistantOpen}
               onClick={() => setAssistantOpen((open) => !open)}
             >
@@ -388,6 +458,7 @@ export function EditorShell({
                 control={entry.control}
                 className="ed-rail-mode"
                 demotedRefusal={kids ? view.kidsLock.code : undefined}
+                profileRefusal={web ? webView.desktopOnlyRefusal.code : undefined}
                 pressed={mode === entry.id}
                 onClick={() => enterMode(entry.id)}
               >
@@ -408,6 +479,8 @@ export function EditorShell({
                 leave.
               </p>
             </section>
+          ) : web ? (
+            <WebExperienceEditor view={webView} scene={scene} />
           ) : (
             <>
               {/* -------------------------------------------- left dock ---- */}
@@ -982,7 +1055,12 @@ export function EditorShell({
                           <input key={field.name} type="hidden" name={field.name} value={field.value} />
                         ))}
                         {/* A submit is a navigation too, so it carries the mode
-                            the reader is in, exactly like every link above. */}
+                            the reader is in, exactly like every link above. It
+                            names no profile because it is the Game body's own
+                            form — the Web projection replaces this body and
+                            submits through its own contract-owned field — and an
+                            omitted parameter is what `hrefInViewState` writes
+                            for Game as well. */}
                         <input type="hidden" name="mode" value={mode} />
                         {/*
                           A form control is an interactive element too, so each one
@@ -1048,7 +1126,7 @@ export function EditorShell({
           )}
 
           {/* ------------------------------------------------ assistant ---- */}
-          <aside
+          {!web && <aside
             className="ed-assistant"
             aria-label="Assistant"
             data-assistant={
@@ -1100,7 +1178,7 @@ export function EditorShell({
                 </div>
               </>
             )}
-          </aside>
+          </aside>}
         </div>
 
         {/* -------------------------------------------------- status bar --- */}
@@ -1119,7 +1197,7 @@ export function EditorShell({
         </footer>
 
         {/* ---------------------------------------------------- palette ---- */}
-        {paletteOpen && (
+        {paletteOpen && !web && (
           <div className="ed-palette-scrim">
             <div className="ed-palette" role="dialog" aria-modal="true" aria-label="Command palette">
               <input
@@ -1185,8 +1263,11 @@ export function EditorShell({
               {entry.code}: {entry.message}
             </p>
           ))}
+          <p id={legendId(webView.desktopOnlyRefusal.code)}>
+            {webView.desktopOnlyRefusal.code}: {webView.desktopOnlyRefusal.message}
+          </p>
         </div>
       </div>
-    </ActiveModeContext>
+    </ShellViewState>
   );
 }

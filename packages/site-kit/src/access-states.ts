@@ -49,6 +49,19 @@ export type SiteAccessState = {
 };
 
 /**
+ * True when a string carries only bytes a `Location` header may carry: no
+ * whitespace and no C0 or DEL control character, anywhere in it.
+ */
+const headerSafe = (candidate: string): boolean => {
+  if (/\s/.test(candidate)) return false;
+  for (const char of candidate) {
+    const code = char.codePointAt(0) ?? 0;
+    if (code < 0x20 || code === 0x7f) return false;
+  }
+  return true;
+};
+
+/**
  * Confine a destination to this site, or refuse it.
  *
  * Only a same-site relative path survives: no scheme, no authority, no
@@ -64,20 +77,33 @@ export type SiteAccessState = {
  * Because both ends confine, the answer must also be **idempotent**: the value a
  * sign-in form carries is confined again when it comes back, and a second pass
  * that re-escaped the first pass's `%` would redirect a signed-in visitor to a
- * path that does not exist. So percent-escapes are decoded before anything is
- * judged and the ASCII form is produced from that — a lone `%` first standing in
- * for itself, since it is a literal the previous pass would have escaped. An
- * escape therefore cannot smuggle a byte past the rules above, because they all
- * read the decoded path, and it cannot manufacture an authority either, because
- * the value must already be relative before a single escape is decoded.
+ * path that does not exist. Percent escapes are decoded for the safety checks,
+ * but the URL parser canonicalizes the original structure. That distinction is
+ * load-bearing for query values: an encoded `&` must remain data rather than
+ * becoming a second parameter. An escape therefore cannot smuggle a byte past
+ * the rules below, and confinement cannot corrupt a URL-carried editor document
+ * on the login round trip.
+ *
+ * The two rules are read at the two different levels that make each one true.
+ * *Structure* — which route this is — is decided on the **decoded path**, so an
+ * escaped `//`, `\`, or space cannot smuggle a second authority or segment past
+ * the check. *Header safety* is decided on the encoded value that is actually
+ * emitted, because that is the string a `Location` header carries: a
+ * percent-encoded byte stays three printable characters there and is data, not a
+ * header break. Applying the control-character rule to the decoded **query**
+ * would reject a destination no header ever sees — which is precisely the
+ * multi-line document a URL-carried Web Experience editor session hands to the
+ * login round trip.
  */
 export function confineSiteRelativePath(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const raw = value.trim();
   if (!raw.startsWith("/") || raw.startsWith("//")) return null;
+  if (!headerSafe(raw)) return null;
+  const rawPath = raw.split(/[?#]/, 1)[0] ?? "";
   let path: string;
   try {
-    path = decodeURIComponent(raw.replace(/%(?![0-9A-Fa-f]{2})/g, "%25"));
+    path = decodeURIComponent(rawPath.replace(/%(?![0-9A-Fa-f]{2})/g, "%25"));
   } catch {
     return null;
   }
@@ -88,11 +114,51 @@ export function confineSiteRelativePath(value: unknown): string | null {
     if (code < 0x20 || code === 0x7f) return null;
   }
   try {
-    return encodeURI(path);
+    decodeURIComponent(raw.replace(/%(?![0-9A-Fa-f]{2})/g, "%25"));
+  } catch {
+    return null;
+  }
+  for (let index = 0; index < raw.length; index += 1) {
+    const code = raw.charCodeAt(index);
+    if (code >= 0xd800 && code <= 0xdbff) {
+      const next = raw.charCodeAt(index + 1);
+      if (!(next >= 0xdc00 && next <= 0xdfff)) return null;
+      index += 1;
+    } else if (code >= 0xdc00 && code <= 0xdfff) {
+      return null;
+    }
+  }
+  try {
+    const confined = new URL(raw, "https://sceneaxi.invalid");
+    if (confined.origin !== "https://sceneaxi.invalid") return null;
+    const result = `${confined.pathname}${confined.search}${confined.hash}`;
+    if (result.startsWith("//")) return null;
+    if (!headerSafe(result)) return null;
+    return result;
   } catch {
     return null;
   }
 }
+
+/**
+ * The bound on the sign-in link this package emits.
+ *
+ * `/login?next=…` is the *longest* URL any guarded surface produces: the
+ * destination is escaped a second time to ride as query data, so every `%XX`
+ * triplet already in it becomes `%25XX` and a destination near its own budget
+ * lands roughly 1.6× larger here. This is therefore the boundary the ceiling
+ * belongs on, and it is the earliest one: it applies to a destination built
+ * straight from an unparsed request — the anonymous and unentitled paths refuse
+ * before any surface-specific state is read — so no surface has to remember to
+ * bound its own `next`.
+ *
+ * The value is the same self-imposed budget the Web Experience request target
+ * uses, kept far below the ceilings both must sit under (an 8 KiB request line
+ * at the narrowest edge, a 16 KiB header block in Node). Duplicating the number
+ * rather than importing it keeps this module free of a surface-specific
+ * dependency; `test/access-states.test.ts` asserts the two agree.
+ */
+export const SITE_LOGIN_HREF_MAX_LENGTH = 4_000;
 
 /**
  * The sign-in link, carrying where the visitor was headed when they were
@@ -101,7 +167,10 @@ export function confineSiteRelativePath(value: unknown): string | null {
  * A destination that is not same-site relative is dropped rather than refused,
  * so a hostile `next` degrades to the plain form. `/login` itself is dropped
  * too: sending a visitor back to the page they are already on is not a
- * destination.
+ * destination. A destination that would push the link past
+ * `SITE_LOGIN_HREF_MAX_LENGTH` degrades the same way — losing the continuation
+ * is a worse sign-in, but emitting a link an edge answers with an unnamed 414 or
+ * 431 is no sign-in at all.
  */
 export function siteLoginHref(next?: unknown): string {
   const path = confineSiteRelativePath(next);
@@ -109,7 +178,8 @@ export function siteLoginHref(next?: unknown): string {
   if (path === SITE_LOGIN_PATH || path.startsWith(`${SITE_LOGIN_PATH}?`)) {
     return SITE_LOGIN_PATH;
   }
-  return `${SITE_LOGIN_PATH}?next=${encodeURIComponent(path)}`;
+  const href = `${SITE_LOGIN_PATH}?next=${encodeURIComponent(path)}`;
+  return href.length > SITE_LOGIN_HREF_MAX_LENGTH ? SITE_LOGIN_PATH : href;
 }
 
 const signInAction = (next?: unknown): SiteAccessAction =>

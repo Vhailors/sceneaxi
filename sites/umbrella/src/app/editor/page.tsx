@@ -1,9 +1,12 @@
 import {
   EDITOR_DEEP_LINK_PATH,
+  buildWebExperienceEditorView,
   buildEditorShellView,
   describeSiteAccessState,
   readEditorState,
+  readWebExperienceEditorState,
   renderEditorState,
+  sitePathWithSearchParams,
   webEditorStarterArtifact,
   type SearchParams,
 } from "@sceneaxi/site-kit";
@@ -15,7 +18,8 @@ import { StatePanel } from "../_components/state-panel.js";
 import { EditorShell } from "./_components/editor-shell.js";
 
 /**
- * The Minimum E2 sculpt/scene web editor, drawn as the Engine Desktop shell.
+ * The entitled editor route: Minimum E2 for Game and the smaller document-only
+ * Web Experience authoring profile, drawn inside the shared product shell.
  *
  * Bounded to exactly the Minimum E2 checklist plus the multi-object composition
  * projection (ADRs 0014-0015). ADR 0003 keeps general E2 specified-not-built and
@@ -48,7 +52,7 @@ export default async function EditorPage({
     // Signing in from here returns to the editor rather than the account page,
     // so the surface that refused is the one the visitor gets back.
     const outcome = describeSiteAccessState(resolved.decision.reason, {
-      next: EDITOR_DEEP_LINK_PATH,
+      next: sitePathWithSearchParams(EDITOR_DEEP_LINK_PATH, params),
     });
     return (
       <div className="page">
@@ -110,6 +114,23 @@ export default async function EditorPage({
     );
   }
 
+  const webState = readWebExperienceEditorState(params);
+  if (!webState.ok) {
+    return (
+      <div className="page">
+        <div className="page-head">
+          <p className="eyebrow">Web Experience editor</p>
+          <h1>That web editor state was refused</h1>
+        </div>
+        <StatePanel tone="deny" level={2} title="Web state refused" reason={webState.reason}>
+          <p>{webState.message}</p>
+          <p>Only the bounded page, canvas, known-asset, and safe Three fields are accepted.</p>
+          <p><a href="/editor?profile=web">Open a clean Web Experience session</a></p>
+        </StatePanel>
+      </div>
+    );
+  }
+
   const render = renderEditorState(state.value);
   if (!render.ok) {
     return (
@@ -147,6 +168,10 @@ export default async function EditorPage({
   }
 
   const editor = state.value;
+  const webView = buildWebExperienceEditorView({
+    state: webState.value,
+    starterArtifactId: starter.value.artifactId,
+  });
   const view = buildEditorShellView({
     state: editor,
     render: render.value,
@@ -190,6 +215,8 @@ export default async function EditorPage({
         selectedInstanceId={editor.selectedInstanceId}
         deepLinkFields={[...deepLinkFields, ...carriedTransforms]}
         viewportCopy={EDITOR_VIEWPORT_COPY}
+        initialProfile={editor.profileId}
+        webView={webView}
       />
     </>
   );

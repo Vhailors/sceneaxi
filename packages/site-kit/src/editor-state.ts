@@ -29,6 +29,10 @@ import {
   type EditorDeepLink,
 } from "./deep-link.js";
 import { type SiteResult, ok, refuse } from "./refusals.js";
+import { WEB_EXPERIENCE_EDITOR_PARAMS } from "./web-experience-editor.js";
+import type { SearchParams } from "./site-search-params.js";
+
+export type { SearchParams } from "./site-search-params.js";
 
 /**
  * Non-transform parameters the editor owns, on top of the deep-link contract.
@@ -68,11 +72,11 @@ export type EditorState = {
   readonly playing: boolean;
   /** The shell's active mode — chrome only, and the same session in all seven. */
   readonly modeId: EditorShellModeId;
+  /** Initial product projection for the client shell. Kids remains refuse-only client state. */
+  readonly profileId: "game" | "web";
   /** The deep link that opened the editor, when the request carried one. */
   readonly deepLink: EditorDeepLink | null;
 };
-
-export type SearchParams = Readonly<Record<string, string | readonly string[] | undefined>>;
 
 const single = (value: string | readonly string[] | undefined): string | null =>
   typeof value === "string" ? value : Array.isArray(value) ? (value[0] ?? null) : null;
@@ -123,6 +127,7 @@ export function readEditorState(params: SearchParams): SiteResult<EditorState> {
   const transformsByInstance: Record<string, readonly [number, number, number]> = {};
   for (const [key, value] of Object.entries(params)) {
     if ((EDITOR_STATE_PARAMS as readonly string[]).includes(key)) continue;
+    if ((WEB_EXPERIENCE_EDITOR_PARAMS as readonly string[]).includes(key)) continue;
     if (isTransformParam(key)) {
       const raw = single(value);
       const vec = raw === null ? null : parseVector(raw);
@@ -170,6 +175,10 @@ export function readEditorState(params: SearchParams): SiteResult<EditorState> {
    */
   const modeRaw = single(params["mode"]);
   const modeId = EDITOR_SHELL_MODE_IDS.find((candidate) => candidate === modeRaw) ?? DEFAULT_MODE_ID;
+  const profileRaw = single(params["profile"]);
+  if (profileRaw !== null && profileRaw !== "game" && profileRaw !== "web") {
+    return refuse("SITE_REQUEST_MALFORMED");
+  }
 
   return ok(
     Object.freeze({
@@ -177,6 +186,7 @@ export function readEditorState(params: SearchParams): SiteResult<EditorState> {
       selectedInstanceId,
       playing: single(params["play"]) === "1",
       modeId,
+      profileId: profileRaw === "web" ? "web" : "game",
       deepLink,
     }),
   );
@@ -201,6 +211,7 @@ export function editorHref(
   query.set("objects", String(state.instances.length));
   query.set("sel", state.selectedInstanceId);
   query.set("mode", change.mode ?? state.modeId);
+  if (state.profileId === "web") query.set("profile", "web");
   for (const instance of state.instances) {
     query.set(`tx-${instance.instanceId}`, instance.transform.translation.join(","));
   }

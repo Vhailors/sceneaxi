@@ -246,6 +246,20 @@ export type {
 } from "./document.js";
 
 export {
+  WEB_EXPERIENCE_AUTHORING_OPERATIONS,
+  WEB_EXPERIENCE_AUTHORING_REFUSALS,
+  WEB_EXPERIENCE_DESKTOP_ONLY_OPERATIONS,
+  WEB_EXPERIENCE_SANDBOX_POLICY,
+  evaluateWebExperienceAuthoringOperation,
+} from "./web-experience-authoring.js";
+export type {
+  WebExperienceAuthoringDecision,
+  WebExperienceAuthoringOperation,
+  WebExperienceAuthoringRefusal,
+  WebExperienceDesktopOnlyOperation,
+} from "./web-experience-authoring.js";
+
+export {
   CONTENT_HASH_PREFIX,
   PROPOSAL_KIND,
   PROPOSAL_SCHEMA_VERSION,

@@ -9,9 +9,11 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+  SITE_LOGIN_HREF_MAX_LENGTH,
   SITE_LOGIN_PATH,
   SITE_REFUSALS,
   SITE_REFUSAL_REASONS,
+  WEB_EXPERIENCE_REQUEST_TARGET_MAX_LENGTH,
   confineSiteRelativePath,
   describeSiteAccessState,
   siteLoginHref,
@@ -28,6 +30,8 @@ const HOSTILE_DESTINATIONS = [
   "//evil.example",
   "/\\evil.example",
   "/path\\segment",
+  "/a/..//evil.example",
+  "/%2e%2e//evil.example",
   "javascript:alert(1)",
   "/has space",
   "/line\nbreak",
@@ -144,6 +148,9 @@ describe("describeSiteAccessState", () => {
     expect(confineSiteRelativePath("/editor")).toBe("/editor");
     expect(confineSiteRelativePath("  /pricing  ")).toBe("/pricing");
     expect(confineSiteRelativePath("/editor?objects=3")).toBe("/editor?objects=3");
+    expect(confineSiteRelativePath("/editor?html=%3Ch1%3EA+%26+B%3C%2Fh1%3E")).toBe(
+      "/editor?html=%3Ch1%3EA+%26+B%3C%2Fh1%3E",
+    );
     expect(confineSiteRelativePath("/café/💥")).toBe("/caf%C3%A9/%F0%9F%92%A5");
     expect(confineSiteRelativePath("/broken\ud800")).toBeNull();
     for (const hostile of HOSTILE_DESTINATIONS) {
@@ -158,6 +165,7 @@ describe("describeSiteAccessState", () => {
       "/café/💥",
       "/percent%sign",
       "/a%2Fb",
+      "/editor?html=%3Ch1%3EA+%26+B%3C%2Fh1%3E",
     ]) {
       const once = confineSiteRelativePath(destination);
       expect(once).not.toBeNull();
@@ -165,11 +173,50 @@ describe("describeSiteAccessState", () => {
     }
   });
 
-  it("judges an escaped destination by what it decodes to", () => {
+  it("judges an escaped destination by what its path decodes to", () => {
     expect(confineSiteRelativePath("/%2F%2Fevil.example")).toBeNull();
     expect(confineSiteRelativePath("/line%0Abreak")).toBeNull();
     expect(confineSiteRelativePath("/path%5Csegment")).toBeNull();
     expect(confineSiteRelativePath("%2Fevil.example")).toBeNull();
+  });
+
+  it("drops a continuation that would emit a link an edge answers instead of us", () => {
+    // The sign-in link is the longest URL any guarded surface emits: the
+    // destination is escaped a second time to ride as query data, so a target
+    // near its own budget lands far larger here.
+    expect(SITE_LOGIN_HREF_MAX_LENGTH).toBe(WEB_EXPERIENCE_REQUEST_TARGET_MAX_LENGTH);
+
+    const target = `/editor?profile=web&web-html=${"%3Cp%3E".repeat(400)}`;
+    expect(target.length).toBeLessThanOrEqual(SITE_LOGIN_HREF_MAX_LENGTH);
+    expect(confineSiteRelativePath(target)).toBe(target);
+    expect(
+      `${SITE_LOGIN_PATH}?next=${encodeURIComponent(target)}`.length,
+    ).toBeGreaterThan(SITE_LOGIN_HREF_MAX_LENGTH);
+    expect(siteLoginHref(target)).toBe(SITE_LOGIN_PATH);
+
+    // A destination that fits still carries, and every link this emits is bounded.
+    const modest = "/editor?profile=web&web-html=%3Ch1%3EHello%3C%2Fh1%3E";
+    expect(siteLoginHref(modest)).toBe(
+      `${SITE_LOGIN_PATH}?next=${encodeURIComponent(modest)}`,
+    );
+    for (const candidate of [target, modest, `/editor?objects=${"9".repeat(9_000)}`]) {
+      expect(siteLoginHref(candidate).length).toBeLessThanOrEqual(
+        SITE_LOGIN_HREF_MAX_LENGTH,
+      );
+    }
+  });
+
+  it("carries an encoded multi-line document without ever emitting a raw break", () => {
+    const destination = "/editor?profile=web&web-html=%3Ch1%3EA%3C%2Fh1%3E%0D%0A%3Cp%3EB%3C%2Fp%3E";
+    expect(confineSiteRelativePath(destination)).toBe(destination);
+    expect(siteLoginHref(destination)).toBe(
+      `${SITE_LOGIN_PATH}?next=${encodeURIComponent(destination)}`,
+    );
+    // The emitted value keeps every break percent-encoded, so no header sees one.
+    expect(confineSiteRelativePath(destination)).not.toMatch(/[\r\n\t\s]/);
+    // A literal break is still not a destination, wherever it appears.
+    expect(confineSiteRelativePath("/editor?web-html=a\r\nb")).toBeNull();
+    expect(confineSiteRelativePath("/editor\r\nSet-Cookie: x=1")).toBeNull();
   });
 
   it("falls back to a named state carrying the registry's own message", () => {

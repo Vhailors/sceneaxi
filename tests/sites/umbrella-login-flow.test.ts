@@ -22,11 +22,19 @@ describe("resolveLoginDestination", () => {
     expect(resolveLoginDestination("/editor")).toBe("/editor");
     expect(resolveLoginDestination("  /pricing  ")).toBe("/pricing");
     expect(resolveLoginDestination("/editor?objects=3")).toBe("/editor?objects=3");
+    expect(
+      resolveLoginDestination("/editor?html=%3Ch1%3EA+%26+B%3C%2Fh1%3E"),
+    ).toBe("/editor?html=%3Ch1%3EA+%26+B%3C%2Fh1%3E");
     expect(resolveLoginDestination("/café/💥")).toBe("/caf%C3%A9/%F0%9F%92%A5");
   });
 
   it("survives the form round trip, which confines the same value twice", () => {
-    for (const requested of ["/editor", "/editor?objects=3", "/café/💥"]) {
+    for (const requested of [
+      "/editor",
+      "/editor?objects=3",
+      "/editor?html=%3Ch1%3EA+%26+B%3C%2Fh1%3E",
+      "/café/💥",
+    ]) {
       const carried = resolveLoginDestination(requested);
       expect(resolveLoginDestination(carried)).toBe(carried);
     }
@@ -44,6 +52,8 @@ describe("resolveLoginDestination", () => {
       "//evil.example",
       "/\\evil.example",
       "/path\\segment",
+      "/a/..//evil.example",
+      "/%2e%2e//evil.example",
       "javascript:alert(1)",
       "/has space",
       "/line\nbreak",

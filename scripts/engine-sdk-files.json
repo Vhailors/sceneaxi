@@ -114,5 +114,6 @@
   "packages/schemas/src/sculpt-procedural.ts",
   "packages/schemas/src/sculpt.ts",
   "packages/schemas/src/testing/scene-composition.ts",
-  "packages/schemas/src/unambiguous-json.ts"
+  "packages/schemas/src/unambiguous-json.ts",
+  "packages/schemas/src/web-experience-authoring.ts"
 ]

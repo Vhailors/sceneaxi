@@ -1118,7 +1118,7 @@ describe("the Engine Desktop editor shell stays honest (sceneaxi#184)", () => {
     // away from the panel that shows its result. Mode stays view state: the
     // parameter names no engine operation.
     expect(SHELL).toContain("const [mode, setMode] = useState<ModeId>(view.activeModeId);");
-    expect(SHELL).toContain("href={hrefInMode(binding.href, activeMode)}");
+    expect(SHELL).toContain("hrefInViewState(binding.href, activeMode, activeProfile)");
     expect(SHELL).toContain("<ActiveModeContext value={mode}>");
     // A submit is a navigation too.
     expect(SHELL).toContain('<input type="hidden" name="mode" value={mode} />');

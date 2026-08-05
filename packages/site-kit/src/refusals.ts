@@ -22,6 +22,8 @@ export const SITE_REFUSALS = Object.freeze({
     "A role claim arrived from the client. Roles are server-derived only and never client-claimable.",
   SITE_SURFACE_UNKNOWN: "The requested identity surface is not a known SceneAxi surface.",
   SITE_REQUEST_MALFORMED: "The identity request is malformed.",
+  SITE_REQUEST_TARGET_TOO_LONG:
+    "The state this request reconstructs would submit a URL beyond the bounded editor request-target budget, so it is refused by name here rather than left to a platform URL or header limit.",
   SITE_REQUEST_CROSS_ORIGIN:
     "The submission did not come from this deployment's own pages, so no session was created, revoked, or cleared from it.",
 

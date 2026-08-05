@@ -12,12 +12,23 @@ import {
 import { open, replay } from "@sceneaxi/engine-kernel";
 import { createNullPresentationRuntime } from "@sceneaxi/engine-presentation";
 import {
+  WEB_EXPERIENCE_AUTHORING_OPERATIONS,
+  WEB_EXPERIENCE_DESKTOP_ONLY_OPERATIONS,
+  WEB_EXPERIENCE_SANDBOX_POLICY,
   evaluateOpenPathDemo,
+  evaluateWebExperienceAuthoringOperation,
   openPathPolicyRowFor,
   type OpenPathDemoDecision,
   type OpenPathPolicyRow,
   type ProfileSeam,
 } from "@sceneaxi/schemas";
+
+export {
+  WEB_EXPERIENCE_AUTHORING_OPERATIONS,
+  WEB_EXPERIENCE_DESKTOP_ONLY_OPERATIONS,
+  WEB_EXPERIENCE_SANDBOX_POLICY,
+  evaluateWebExperienceAuthoringOperation,
+};
 
 export const WEB_EXPERIENCE_POLICY_VERSION = 1 as const;
 
@@ -96,6 +107,18 @@ export const policy = Object.freeze({
   defaultDecision: "refuse" as const,
   scopes: WEB_EXPERIENCE_SCOPES,
   refusedScopes: WEB_EXPERIENCE_REFUSED_SCOPES,
+});
+
+/**
+ * The deliberately smaller first-release authoring interface for Web Experience.
+ * Sites consume the same schema-owned vocabulary through site-kit; they never add
+ * a profile dependency or a second identity seam.
+ */
+export const webExperienceAuthoring = Object.freeze({
+  operations: WEB_EXPERIENCE_AUTHORING_OPERATIONS,
+  desktopOnlyOperations: WEB_EXPERIENCE_DESKTOP_ONLY_OPERATIONS,
+  sandbox: WEB_EXPERIENCE_SANDBOX_POLICY,
+  evaluateOperation: evaluateWebExperienceAuthoringOperation,
 });
 
 export const seam: ProfileSeam = Object.freeze({
