@@ -20,12 +20,14 @@ export const seam: PackageSeam = Object.freeze({
 });
 
 export {
+  DESKTOP_ACTIVE_DOCUMENT_PATH,
   DESKTOP_BRIDGE_ACTIONS,
   DESKTOP_BRIDGE_ASSISTANT_OPS,
   DESKTOP_BRIDGE_AUTHORING_OPS,
   DESKTOP_BRIDGE_CHANNEL,
   DESKTOP_BRIDGE_GLOBAL,
   DESKTOP_BRIDGE_REFUSALS,
+  DESKTOP_VIEWPORT_PLAY_EVENT,
   bridgeOk,
   bridgeRefuse,
   type DesktopBridgeAction,
@@ -62,8 +64,14 @@ export {
   DESKTOP_SCENE_NOT_COMPOSABLE,
   desktopAssistantScene,
   desktopOpenScene,
+  desktopSceneFromDocumentData,
   type DesktopSceneResult,
 } from "./lib/desktop-scene.js";
+
+export {
+  seedDesktopProject,
+  type DesktopProjectSeedResult,
+} from "./lib/project-seed.js";
 
 export {
   DESKTOP_RUNTIME_META,

@@ -50,6 +50,8 @@ export type DesktopDocumentStatus =
       readonly documentId: string;
       readonly contentHash: string;
       readonly dataKeys: readonly string[];
+      /** Validated document data for project-loop proposals; never executable. */
+      readonly data: Readonly<Record<string, unknown>>;
     }
   | {
       readonly ok: false;
@@ -88,6 +90,19 @@ export type DesktopSessionOptions = {
   readonly cwd?: string;
   readonly operations?: Partial<DesktopSessionOperations>;
 };
+
+/**
+ * Freeze a validated JSON value all the way down.
+ *
+ * `Object.freeze` alone leaves nested objects writable, so a `Readonly<...>`
+ * return would over-promise to an in-process caller — the Electron IPC boundary
+ * structured-clones, but the CLI and the goldens hold the very same object.
+ */
+function deepFreeze<T>(value: T): T {
+  if (typeof value !== "object" || value === null) return value;
+  for (const nested of Object.values(value)) deepFreeze(nested);
+  return Object.freeze(value);
+}
 
 const PENDING_DIAGNOSTICS: readonly ApplyDiagnostic[] = Object.freeze([
   Object.freeze({
@@ -315,6 +330,7 @@ export function createDesktopSession(
         documentId: validation.document.id,
         contentHash: contentHash(text),
         dataKeys: Object.freeze(Object.keys(validation.document.data).sort()),
+        data: deepFreeze(structuredClone(validation.document.data)),
       };
     },
 

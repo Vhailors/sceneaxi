@@ -137,6 +137,17 @@ describe("desktop visual model — profile switch", () => {
     );
     // Every mode is inert: no mode may be entered from behind the refusal.
     expect(view.modes.every((mode) => mode.control.kind === "inert")).toBe(true);
+    expect(
+      [view.product.open, view.product.save, view.product.play].map(
+        (control) => control.refusal,
+      ),
+    ).toEqual(Array(3).fill(DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly));
+    expect(view.product.stageHtml.refusal).toBe(
+      DESKTOP_VISUAL_REFUSALS.webCapabilityRequired,
+    );
+    expect(view.product.injectAsset.refusal).toBe(
+      DESKTOP_VISUAL_REFUSALS.webCapabilityRequired,
+    );
   });
 
   it("keeps Game and Website driveable", () => {
@@ -427,6 +438,11 @@ describe("desktop visual model — refusals and honesty", () => {
         view.assistant.toggle,
         view.assistant.send,
         view.sculpt.start,
+        view.product.open,
+        view.product.save,
+        view.product.play,
+        view.product.stageHtml,
+        view.product.injectAsset,
         ...view.menus.map((menu) => menu.control),
         ...view.modes.map((mode) => mode.control),
         ...view.overlay.paletteGroups.flatMap((group) =>
@@ -467,6 +483,11 @@ describe("desktop visual model — refusals and honesty", () => {
       view.assistant.send,
       view.sculpt.start,
       view.sculpt.cancel,
+      view.product.open,
+      view.product.save,
+      view.product.play,
+      view.product.stageHtml,
+      view.product.injectAsset,
       view.overlay.search,
       ...view.overlay.shortcuts.map((shortcut) => shortcut.control),
       ...view.overlay.dismissals.map((dismissal) => dismissal.control),
@@ -500,6 +521,11 @@ describe("desktop visual model — refusals and honesty", () => {
         view.assistant.send,
         view.sculpt.start,
         view.sculpt.cancel,
+        view.product.open,
+        view.product.save,
+        view.product.play,
+        view.product.stageHtml,
+        view.product.injectAsset,
         view.overlay.search,
         ...view.overlay.shortcuts.map((shortcut) => shortcut.control),
         ...view.overlay.dismissals.map((dismissal) => dismissal.control),

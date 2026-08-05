@@ -29,12 +29,12 @@ failing obscurely.
 
 | Command | Effect |
 |---|---|
-| `status --document <path>` | Report the document's id, content hash, and top-level `data` keys |
+| `status --document <path>` | Report the document's id, content hash, top-level `data` keys, and validated inert document data |
 | `propose --document <path> --pointer <ptr> --value <json>` | Render the diff for review — **writes nothing** |
 | `apply --document <path> --pointer <ptr> --value <json>` | Propose and accept in one non-interactive step |
 | `undo` | Revert the last completed apply |
 | `open-path [--profile <p>] [--operation <op>]` | Report the shared open-path demo policy, or evaluate one demo operation against it — opens **no** session |
-| `chrome [--mode …] [--profile …] [--overlay …] [--assistant-mode …] [--sculpt …] [--width/--height …]` | Render the Engine Desktop editor chrome for one visual state as a self-contained HTML document — mounts **no** renderer and draws **no** pixels |
+| `chrome [--mode …] [--profile …] [--overlay …] [--assistant-mode …] [--sculpt …] [--width/--height …]` | Render the Engine Desktop product chrome; standalone it refuses live actions, while a packaged host can inject the existing authoring/open-path bridge and viewport |
 
 `--cwd <dir>` sets the working directory for the session commands above;
 `open-path` opens no session and takes only its own two flags, so `--cwd` refuses
@@ -66,7 +66,9 @@ pnpm sceneaxi-desktop chrome --overlay palette
 pnpm sceneaxi-desktop chrome --width 1024 --height 700
 ```
 
-The decision layer is `src/visual-model.ts` (modes, mode-dependent dock tabs,
+The product-loop model is `src/product-loop.ts` (active project file, profile
+capabilities, Web HTML and project-relative asset staging). The broader decision
+layer is `src/visual-model.ts` (modes, mode-dependent dock tabs,
 profile switch, assistant states, Change Review, command palette, overlays,
 sculpt progress, window tiers, refusals); `src/chrome.ts` renders it and decides
 nothing. The chrome's product **vocabulary** is not this app's: the mode ids and
@@ -80,19 +82,41 @@ tier shape) and everything below.
 
 Every control declares its kind — `view` changes visual state and works,
 `review` edits the fixture Change Review queue and writes no document, `live`
-declares a product action an enclosing consumer runtime must bind (the assistant
-prompt, Send, Retry, and the artifact manipulators, which the packaged Linux tier
+declares a product action the injected desktop host — an enclosing consumer
+runtime — must bind (the assistant prompt, Send, Retry, and the artifact
+manipulators, plus Open/Save/Play and Web staging, which the packaged Linux tier
 binds through its bridge), and `inert` keeps its focus stop and refuses by a name
-from `DESKTOP_VISUAL_REFUSALS`. This app invokes no authoring operation itself,
-so a `live` control rendered by the standalone `chrome` command is inert and says
-why.
+from `DESKTOP_VISUAL_REFUSALS`. This app invokes no authoring operation itself
+and adds no engine/profile/site/billing dependency: the host remains the adapter
+that reaches shared authoring, orchestration, and presentation seams, so a `live`
+control rendered by the standalone `chrome` command is inert and says why.
+
+The first-release loop has one honest active file, `scene.json`. Open validates
+and reads it through the long-lived authoring session. Web Experience can stage
+stored HTML or the normalized `assets/hero.glb` reference as one `/data`
+proposal; Save accepts that proposal atomically. The chrome never executes the
+stored HTML. Stored markup is capped at 100,000 characters; asset paths are
+capped at 512 characters and each document carries at most 256 of them. A
+pending durable apply leaves Save in a visible recovery state; Save calls the
+host recovery operation, while Open can start a fresh session and re-read the
+document if recovery remains non-terminal. Profile switching stays blocked
+until either path resolves the session. A staged proposal also blocks profile
+switching until Save applies it or Open explicitly discards it through the same
+authoring session. Play passes that active document path to the existing host
+`open-path` action, which re-reads and validates its stored composition before it
+opens, advances, observes, and closes the scene session. The mounted viewport
+receives that same composition and must acknowledge the returned post-play frame
+before the Run panel reports its ticks, frame, and closed state. Game exposes scene/runtime + FreeJS vocabulary, Web exposes
+HTML/site-canvas/asset-injection, and Kids remains the shared refuse-only policy
+surface with every new live control demoted in the same central mint.
 
 The refuse-only profile demotes in **one** place: every control is minted through
 one function inside `desktopVisualView()`, and on Kids that function makes each
 one inert unless it is already inert for a more specific reason. A control added
 anywhere is behind the refusal by default, so forgetting fails closed; the
-eleven that are deliberately *not* behind it — the profile switch and the overlay
-open/close — say so by naming `outsideRefusal()`. The browser-side switch applies
+twelve that are deliberately *not* behind it — the profile switch, refusal
+help, and the overlay open/close controls — say so by naming
+`outsideRefusal()`. The browser-side switch applies
 the same answer by sweeping every `[data-kind]` element against
 `view.controls`, never a selector list. Everything else the switch changes comes
 from the same kind of serialized projection — the assistant seat, its model
@@ -109,8 +133,10 @@ control's kind at render time — is owned by
 [`docs/engine-desktop-surface.md`](../../docs/engine-desktop-surface.md); read it
 there before widening any statement about what the guard covers.
 
-The document is self-contained: no remote font, script, style, or image. It
-mounts no presentation runtime, so it draws no pixels and says so on the surface.
+The document is self-contained: no remote font, script, style, or image. On its
+own it mounts no presentation runtime, draws no pixels, and names
+`DESKTOP_RUNTIME_UNAVAILABLE` when a live control is used. The packaged desktop
+injects the bridge and the one presentation owner without forking these bytes.
 
 It draws **Foundations v2**, the product visual language for every surface. The
 shared token layer lives in `packages/site-kit`, but the dependency matrix allows
@@ -151,7 +177,10 @@ one protocol rather than two editors.
 A round-trip can report pending or indeterminate journal recovery with a
 `transactionId`. While recovery is pending the session refuses new propose,
 accept, and reject actions; call `refreshRecovery()` until the transaction
-reaches a terminal state. The non-interactive one-shot helper
+reaches a terminal state. A `journal-not-found` result requires the host to
+create a fresh session and re-read the active document before continuing. The
+packaged bridge exposes that lifecycle step as `authoring.restart`. The
+non-interactive one-shot helper
 `shellProposeAndApply()` remains available for agent parity.
 
 ## What this is not
@@ -164,14 +193,18 @@ protocol-thin — `docs/dependency-matrix.json` allows it only
 Packaging exists, but as its own tier rather than here: `desktop/linux`
 (`@sceneaxi/desktop-linux`, ADR 0024) wraps this shell's chrome and session in an
 Electron window over the real engine stack, consuming this package unchanged
-through its public exports. Nothing in this package knows that consumer exists,
-which is exactly the point — see [`docs/desktop-linux.md`](../../docs/desktop-linux.md).
+through its public exports. The emitted script accepts the portable
+`sceneaxiDesktop` host port and the existing `sceneaxiDesktopLinux`
+compatibility name; it imports no host contract and cannot bypass the host's
+path containment or refusal envelope — see
+[`docs/desktop-linux.md`](../../docs/desktop-linux.md).
 
-`chrome` does not change that. It renders a **view model**, not an application:
-it opens no session, binds no document, mounts no renderer, and has no dev
-server. There is no installer and no packaged desktop app here, and the chrome
-draws no pixels — a claim the emitted document carries as
-`<meta name="sceneaxi-pixels-drawn" content="false">`.
+`chrome` does not own native lifecycle, a dev server, a renderer, or a kernel.
+It renders the product UI plus a small adapter onto an optional injected host;
+without that host all live actions refuse. The generated bytes still draw no
+pixels themselves — the document begins with
+`<meta name="sceneaxi-pixels-drawn" content="false">`, and only the packaged
+presentation owner may update it from a real frame.
 
 ## Parity
 
@@ -196,3 +229,8 @@ projects the same `openPathPolicyView()` payload rather than describing a profil
 itself, so Kids refuses there with the shared code. `test/app.test.ts`
 ("chrome / open-path parity") asserts the identity, and also that a palette row
 may claim to be driveable only when it names a real desktop command.
+
+`tests/e2e/desktop-product-loop-golden.test.ts` is the vertical acceptance path:
+it executes the emitted browser script at the narrow window tier, clicks all
+three profile surfaces plus Open, Web asset staging, Save recovery, and Play
+against the real host bridge, and observes the viewport playback acknowledgement.

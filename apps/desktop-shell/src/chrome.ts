@@ -21,11 +21,9 @@
  *   still be findable and still say why.
  * - **No fabricated inventory.** The archive's panels are full of fixture
  *   objects, digests, file sizes, frame counters, and timings. Those are not
- *   reproduced: a shell that mounts no renderer and opens no kernel session has
- *   no fps, no triangle count, and no 14.2 MB artifact. Each panel renders its
- *   real structure and an honest empty or inert state instead. Change Review is
- *   the one fixture queue kept, because its interactions are the point, and it
- *   says on the surface that deciding there writes no document.
+ *   reproduced: the chrome reports only values returned by its injected desktop
+ *   host, never invented fps, triangle counts, or 14.2 MB artifacts. Each panel
+ *   renders its real structure and an honest empty or inert state instead.
  * - **No network.** No remote font, script, style, or image; the archive's font
  *   families are named in a stack that falls back to the system UI face.
  */
@@ -51,6 +49,14 @@ import {
   type DesktopVisualView,
   type DesktopWindowTierId,
 } from "./visual-model.js";
+import {
+  DESKTOP_PRODUCT_REFUSAL_MESSAGES,
+  DESKTOP_PRODUCT_REFUSALS,
+  DESKTOP_VIEWPORT_PLAY_EVENT,
+  DESKTOP_WEB_STAGE_CONFIG,
+  DESKTOP_WEB_STARTER,
+  desktopWebStageDecision,
+} from "./product-loop.js";
 import {
   ACCENT,
   AXIS,
@@ -120,7 +126,7 @@ const MODE_PANELS: Readonly<
 > = Object.freeze({
   build: Object.freeze({
     leftTitle: "SCENE",
-    leftEmpty: "No document is open, so the scene tree is empty.",
+    leftEmpty: "The active Scene Document is listed above; Play sends its composed scene to the live viewport.",
     inspectorTitle: "PROPERTIES",
     inspectorEmpty: "Nothing is selected. Properties appear when a document is bound.",
     note: "Generated edits arrive as proposals and land in Change Review before they touch a document.",
@@ -235,14 +241,36 @@ function promptInput(ctrl: DesktopControl): string {
  * worse than no description. One code carries one sentence: a renderer variant
  * of it would put two wordings for the same refusal in one document.
  */
-function refusalLegend(): string {
-  const rows = Object.values(DESKTOP_VISUAL_REFUSALS)
+/**
+ * A sentence for every refusal either registry can put on this surface.
+ *
+ * The product-loop names are here because the emitted script can print them:
+ * a refusal a visitor can read with no explanation is the same gap an unnamed
+ * one is. `webCapabilityRequired` is one code in two registries by re-export,
+ * so the rows are de-duplicated by code rather than by registry.
+ */
+function refusalLegend(view: DesktopVisualView): string {
+  const messages = new Map<string, string>();
+  for (const code of Object.values(DESKTOP_VISUAL_REFUSALS)) {
+    messages.set(code, DESKTOP_REFUSAL_MESSAGES[code]);
+  }
+  for (const code of Object.values(DESKTOP_PRODUCT_REFUSALS)) {
+    if (!messages.has(code)) {
+      messages.set(code, DESKTOP_PRODUCT_REFUSAL_MESSAGES[code]);
+    }
+  }
+  const rows = [...messages]
     .map(
-      (code) =>
-        `<p class="refusal-row" id="refusal-${escapeHtml(code)}"><code>${escapeHtml(code)}</code> ${escapeHtml(DESKTOP_REFUSAL_MESSAGES[code])}</p>`,
+      ([code, message]) =>
+        `<p class="refusal-row" id="refusal-${escapeHtml(code)}"><code>${escapeHtml(code)}</code> ${escapeHtml(message)}</p>`,
     )
     .join("");
-  return `<section class="refusal-legend" aria-labelledby="refusal-legend-title"><h2 id="refusal-legend-title">Refusals on this surface</h2>${rows}</section>`;
+  return `${button(
+    view.overlay.refusalHelp,
+    "Refusal help",
+    "state-shortcut refusal-help-toggle",
+    ' data-action="refusal-help" aria-expanded="false" aria-controls="refusal-legend"',
+  )}<section class="refusal-legend-panel" id="refusal-legend" aria-labelledby="refusal-legend-title" hidden><h2 id="refusal-legend-title">Refusals on this surface</h2>${rows}</section>`;
 }
 
 function titleBar(view: DesktopVisualView): string {
@@ -262,7 +290,7 @@ function titleBar(view: DesktopVisualView): string {
         ].join(""),
         "profile-chip",
         [
-          ` data-action="profile" data-value="${escapeHtml(profile.id)}"`,
+          ` data-product-action data-action="profile" data-value="${escapeHtml(profile.id)}"`,
           ` aria-pressed="${profile.active ? "true" : "false"}"`,
           ` title="${escapeHtml(`${profile.packageName} — ${detail}`)}"`,
         ].join(""),
@@ -291,9 +319,11 @@ function titleBar(view: DesktopVisualView): string {
   </nav>
   <div class="profile-switch" role="group" aria-label="Profile">${profiles}</div>
   <div class="title-centre">
-    <span class="project-pill"><span class="dot dot-ok" aria-hidden="true"></span><span>No document open</span></span>
+    <span class="project-pill" data-project-state="closed"><span class="dot dot-ok" aria-hidden="true"></span><span data-project-status>${escapeHtml(view.product.surface.project.activeFile)} · ready to open</span></span>
   </div>
   <div class="title-actions">
+    ${button(view.product.open, "Open", "ghost-button", ` data-product-action data-action="project-open"`)}
+    ${button(view.product.save, "Save", "primary-button", ` data-product-action data-action="project-save"`)}
     ${drawers}
     ${button(
       view.overlay.search,
@@ -335,16 +365,65 @@ function note(text: string, tone: "info" | "scene" | "accent"): string {
   return `<p class="panel-note" style="background:${colors.bg};border-color:${colors.line};color:${colors.fg}"><span class="dot" style="background:${colors.dot}" aria-hidden="true"></span>${escapeHtml(text)}</p>`;
 }
 
-function leftDock(active: DesktopModeId): string {
+function leftDock(view: DesktopVisualView): string {
+  const active = view.state.mode;
+  const project = view.product.surface.project;
   const panels = DESKTOP_MODE_IDS.map((mode) => {
     const panel = MODE_PANELS[mode];
     return `<section class="dock-panel" data-mode-panel="${escapeHtml(mode)}" aria-label="${escapeHtml(panel.leftTitle)}"${mode === active ? "" : " hidden"}>
   <h2 class="panel-head"><span>${escapeHtml(panel.leftTitle)}</span></h2>
-  <p class="panel-empty">${escapeHtml(panel.leftEmpty)}</p>
+  <p class="panel-empty"${mode === "run" ? " data-run-session-report" : ""}>${escapeHtml(panel.leftEmpty)}</p>
   ${note(panel.note, panel.noteTone)}
 </section>`;
   }).join("");
-  return `<aside class="left-dock" id="left-dock" aria-label="Scene and library">${panels}</aside>`;
+  const files = project.files
+    .map(
+      (file) => `<div class="project-file${file.active ? " is-active" : ""}"${file.active ? ' aria-current="page"' : ""} data-project-file="${escapeHtml(file.path)}">
+  <span class="project-file-mark" aria-hidden="true">◇</span>
+  <span><b>${escapeHtml(file.path)}</b><em>${escapeHtml(file.label)}</em></span>
+</div>`,
+    )
+    .join("");
+  return `<aside class="left-dock" id="left-dock" aria-label="Project files and editor panels">
+<section class="project-panel" aria-labelledby="project-files-title">
+  <h2 class="panel-head" id="project-files-title"><span>PROJECT / FILES</span><span class="project-name">${escapeHtml(project.name)}</span></h2>
+  <div class="project-files">${files}</div>
+  <p class="project-file-state" data-project-file-state>Active · not opened</p>
+</section>
+${panels}</aside>`;
+}
+
+function profileSurfaces(view: DesktopVisualView): string {
+  const surfaces = view.product.surfaces
+    .filter((surface) => surface.profile !== "kids")
+    .map((surface) => {
+      const capabilities = surface.capabilities
+        .map(
+          (capability) => `<li><b>${escapeHtml(capability.label)}</b><span>${escapeHtml(capability.detail)}</span></li>`,
+        )
+        .join("");
+      const webTools =
+        surface.profile === "web"
+          ? `<div class="web-authoring-tools">
+  <p>Stored HTML is data, never executed by this chrome.</p>
+  <code>&lt;main id=&quot;sceneaxi-mount&quot;&gt;&lt;/main&gt;</code>
+  <div class="profile-actions">
+    ${button(view.product.stageHtml, "Stage HTML", "ghost-button", ` data-product-action data-action="web-stage-html"`)}
+    ${button(view.product.injectAsset, "Inject assets/hero.glb", "ghost-button", ` data-product-action data-action="web-inject-asset"`)}
+  </div>
+</div>`
+          : `<p class="game-runtime-note">FreeJS behavior stays project-local; play reaches the composed scene without a site or billing package.</p>`;
+      return `<section class="profile-surface" data-profile-surface="${escapeHtml(surface.profile)}" aria-label="${escapeHtml(surface.profile === "game" ? "Game product surface" : "Web Experience product surface")}">
+  <div><span class="profile-kicker">${surface.profile === "game" ? "GAME" : "WEB EXPERIENCE"}</span><strong>${surface.profile === "game" ? "Scene + runtime" : "HTML + site canvas"}</strong></div>
+  <ul class="capability-list">${capabilities}</ul>
+  ${webTools}
+</section>`;
+    })
+    .join("");
+  return `<div class="profile-surfaces">${surfaces}<div class="profile-runtime-actions">
+  ${button(view.product.play, "▶ Play composed scene", "primary-button", ` data-product-action data-action="scene-play"`)}
+  <p class="runtime-report" data-product-run-report aria-live="polite">Ready to run through the desktop host.</p>
+</div></div>`;
 }
 
 /**
@@ -360,6 +439,7 @@ function viewport(view: DesktopVisualView): string {
   const sculptRunning = view.sculpt.phase === "running";
   return `
 <section class="viewport-region" aria-label="Viewport">
+  ${profileSurfaces(view)}
   <div class="view-tabs">
     <div class="view-tablist" role="tablist" aria-label="Viewport source">
       ${view.viewport.sources
@@ -489,7 +569,7 @@ function inspector(view: DesktopVisualView): string {
     const panel = MODE_PANELS[mode];
     return `<section class="inspector-panel" data-mode-panel="${escapeHtml(mode)}" aria-label="${escapeHtml(panel.inspectorTitle)}"${mode === active ? "" : " hidden"}>
   <h2 class="panel-head"><span>${escapeHtml(panel.inspectorTitle)}</span></h2>
-  <p class="panel-empty">${escapeHtml(panel.inspectorEmpty)}</p>
+  <p class="panel-empty"${mode === "run" ? " data-run-live-report" : ""}>${escapeHtml(panel.inspectorEmpty)}</p>
 </section>`;
   }).join("");
 
@@ -603,12 +683,24 @@ function profileRefusal(view: DesktopVisualView): string {
 </section>`;
 }
 
+/**
+ * The status bar is the one region no tier hides, which is why the product
+ * loop reports here as well as in the title pill.
+ *
+ * Below the compact tier the title centre is display:none and the left dock is
+ * a closed drawer, so a refusal written only to those two would leave Open,
+ * Save, Stage, and Play refusing invisibly at the sizes the recorded browser
+ * evidence covers. This mirror carries the live region for the same reason:
+ * a hidden `aria-live` announces nothing.
+ */
 function statusBar(view: DesktopVisualView): string {
   return `
 <footer class="status-bar">
   <span class="status-text"><span class="dot dot-ok" aria-hidden="true"></span>${escapeHtml(view.statusText)}</span>
   <span class="divider" aria-hidden="true"></span>
   <span class="status-pin" data-profile-pin>${escapeHtml(view.profilePin)}</span>
+  <span class="divider" aria-hidden="true"></span>
+  <span class="status-project" data-project-status aria-live="polite">${escapeHtml(view.product.surface.project.activeFile)} · ready to open</span>
   <span class="spacer"></span>
   ${view.overlay.shortcuts
     .map((shortcut) =>
@@ -620,6 +712,7 @@ function statusBar(view: DesktopVisualView): string {
       ),
     )
     .join("")}
+  ${refusalLegend(view)}
 </footer>`;
 }
 
@@ -717,7 +810,7 @@ function styles(): string {
    does not show), so the attribute has to win over the class that lays it out —
    a display rule on .change-row or .dock-bulk otherwise outranks the UA sheet. */
 [hidden]{display:none !important}
-html,body{margin:0;padding:0;height:100%}
+html,body{margin:0;padding:0;height:100%;overflow:hidden}
 body{background:var(--backdrop);color:var(--text);font-family:var(--sans);font-size:13px;-webkit-font-smoothing:antialiased}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
@@ -758,6 +851,8 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .dot-ok{background:var(--ok)}
 .title-centre{flex:1;display:flex;justify-content:center;min-width:0}
 .project-pill{display:flex;align-items:center;gap:8px;height:22px;padding:0 11px;border-radius:11px;background:var(--header);border:1px solid var(--line-control);font-size:11px;white-space:nowrap}
+.project-pill[data-project-state="dirty"],.project-pill[data-project-state="recovering"]{border-color:var(--accent);color:var(--accent)}
+.project-pill[data-project-state="refused"]{border-color:${SIGNAL.refuseLine};color:var(--refuse)}
 .title-actions{display:flex;align-items:center;gap:9px;flex:none}
 /* Drawer toggles exist at every size but only matter once a column undocks.
    Scoped so the later .ghost-button rule cannot win on equal specificity. */
@@ -808,6 +903,17 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .panel-empty{margin:0;padding:12px 11px;font-size:11px;line-height:1.55;color:var(--dim)}
 .panel-note{display:flex;gap:9px;align-items:flex-start;margin:0 10px 11px;padding:10px 11px;border:1px solid;border-radius:4px;font-size:11px;line-height:1.55}
 .panel-note .dot{margin-top:5px}
+.project-panel{flex:none;border-bottom:1px solid var(--line)}
+.project-panel .panel-head{justify-content:space-between}
+.project-name{max-width:126px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dim);font-size:8px;letter-spacing:.04em}
+.project-files{padding:7px}
+.project-file{display:flex;align-items:center;gap:9px;padding:8px 9px;border:1px solid transparent;border-radius:4px;color:var(--dim)}
+.project-file.is-active{background:${ACCENT.surface};border-color:${ACCENT.line};color:var(--text)}
+.project-file-mark{color:var(--accent);font-size:14px}
+.project-file b,.project-file em{display:block}
+.project-file b{font-family:var(--mono);font-size:10px;font-weight:500}
+.project-file em{font-size:9px;font-style:normal;color:var(--dim);margin-top:2px}
+.project-file-state{margin:0;padding:0 10px 9px;font-family:var(--mono);font-size:9px;color:var(--faint)}
 .pass-list{list-style:none;margin:0;padding:10px 11px;display:flex;flex-direction:column;gap:6px}
 .pass-row{display:flex;align-items:center;gap:10px;padding:6px 9px;background:var(--raised);border:1px solid var(--line);border-radius:4px}
 .pass-order{width:14px;height:14px;border-radius:3px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-size:9px;font-weight:700;flex:none}
@@ -816,6 +922,23 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 
 .viewport-column{display:flex;flex-direction:column;min-width:0;min-height:0}
 .viewport-region{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0;background:var(--canvas)}
+.profile-surfaces{flex:none;background:var(--panel);border-bottom:1px solid var(--line);position:relative}
+.profile-surface{min-height:92px;padding:9px 12px;display:grid;grid-template-columns:146px minmax(0,1fr) minmax(220px,.8fr);gap:12px;align-items:center}
+.profile-surface[data-profile-surface="web"]{display:none}
+.shell[data-profile="web"] .profile-surface[data-profile-surface="game"]{display:none}
+.shell[data-profile="web"] .profile-surface[data-profile-surface="web"]{display:grid}
+.profile-kicker{display:block;font-family:var(--mono);font-size:8px;letter-spacing:.14em;color:var(--accent);margin-bottom:4px}
+.profile-surface strong{font-size:13px}
+.capability-list{list-style:none;margin:0;padding:0;display:flex;gap:6px;min-width:0;overflow:hidden}
+.capability-list li{min-width:0;flex:1;padding:6px 8px;background:var(--raised);border:1px solid var(--line-card);border-radius:4px}
+.capability-list b,.capability-list span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.capability-list b{font-size:10px}.capability-list span{font-size:8.5px;color:var(--dim);margin-top:2px}
+.game-runtime-note,.web-authoring-tools p{margin:0;font-size:10px;line-height:1.45;color:var(--dim)}
+.web-authoring-tools{display:flex;flex-direction:column;gap:5px;min-width:0}
+.web-authoring-tools code{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${PROFILE_DOT.web}}
+.profile-actions{display:flex;gap:6px;align-items:center}
+.profile-runtime-actions{min-height:30px;padding:0 12px 7px;display:flex;align-items:center;justify-content:flex-end;gap:9px}
+.runtime-report{margin:0;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono);font-size:8.5px;color:var(--dim)}
 .view-tabs{height:var(--tabs-h);flex:none;display:flex;align-items:stretch;background:var(--panel);border-bottom:1px solid var(--line)}
 /* The tablist owns only its tabs: ARIA restricts a tablist's children to tabs,
    so the spacer and the tool glyphs stay siblings in the same flex row. */
@@ -931,9 +1054,10 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .profile-refusal-foot{color:var(--dim) !important}
 .mark-scene{background:${SIGNAL.sceneSurface};border:1px solid ${SIGNAL.sceneLine};color:${SIGNAL.scene};margin:0 auto}
 
-.status-bar{background:var(--well);border-top:1px solid var(--line);display:flex;align-items:center;padding:0 12px;gap:13px}
+.status-bar{position:relative;background:var(--well);border-top:1px solid var(--line);display:flex;align-items:center;padding:0 12px;gap:13px}
 .status-text{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text-3)}
 .status-pin{font-family:var(--mono);font-size:10px;color:var(--faint)}
+.status-project{min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono);font-size:10px;color:var(--dim)}
 .divider{width:1px;height:12px;background:var(--line-card)}
 .state-shortcut{font-family:var(--mono);font-size:9px;letter-spacing:.07em;color:var(--faint);border:1px solid var(--line-control);border-radius:3px;padding:2px 7px}
 .state-shortcut:hover{border-color:var(--line-hover);color:var(--text)}
@@ -963,8 +1087,9 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .palette-item kbd{font-size:9px;color:var(--dim);border:1px solid var(--line-control);border-radius:3px;padding:2px 5px}
 .overlay-foot{margin:0;padding:10px 16px;background:var(--well);border-top:1px solid var(--line);font-size:10.5px;color:var(--dim)}
 
-.refusal-legend{padding:14px 16px;background:var(--well);border-top:1px solid var(--line)}
-.refusal-legend h2{margin:0 0 8px;font-family:var(--mono);font-size:9px;font-weight:400;letter-spacing:.15em;color:var(--text-3)}
+.refusal-help-toggle[aria-expanded="true"]{border-color:var(--line-hover);color:var(--text)}
+.refusal-legend-panel{position:absolute;right:8px;bottom:calc(100% + 8px);z-index:45;width:min(520px,calc(100vw - 16px));max-height:min(360px,calc(100dvh - var(--title-h) - var(--status-h) - 24px));overflow:auto;padding:10px 12px;background:var(--well);border:1px solid var(--line-raised);border-radius:6px;box-shadow:0 18px 48px -18px ${SCRIM.shadow}}
+.refusal-legend-panel h2{margin:0 0 8px;font-family:var(--mono);font-size:9px;font-weight:400;letter-spacing:.15em;color:var(--text-3)}
 .refusal-row{margin:0 0 6px;font-size:11px;line-height:1.5;color:var(--dim)}
 .refusal-row code{color:var(--accent);margin-right:8px}
 
@@ -1014,6 +1139,9 @@ code,kbd{font-family:var(--mono);font-size:.86em}
   .shell:not([data-drawer-inspector="open"]) .inspector{display:none}
   .change-row{grid-template-columns:22px minmax(0,1fr) 84px}
   .change-before,.change-arrow,.change-after{display:none}
+  .profile-surface{grid-template-columns:120px minmax(0,1fr);min-height:76px}
+  .profile-surface .capability-list,.game-runtime-note{display:none}
+  .runtime-report{display:none}
   .shell[data-assistant="denied"] .shell-body,.shell[data-profile="kids"][data-assistant="denied"] .shell-body{grid-template-columns:var(--rail) minmax(0,1fr) var(--assistant-w)}
 }
 /* Below the declared minimum the chrome refuses instead of laying out. The
@@ -1114,6 +1242,18 @@ function script(view: DesktopVisualView): string {
     ),
     /** The tier boundary the stylesheet undocks the assistant at. */
     assistantDrawerQuery: belowTier("regular"),
+    product: {
+      documentPath: view.product.surface.project.activeFile,
+      viewportPlayEvent: DESKTOP_VIEWPORT_PLAY_EVENT,
+      webStarter: DESKTOP_WEB_STARTER,
+      // Every name the script can print, serialized rather than typed out as a
+      // literal in the browser body: a refusal the visitor reads is one the
+      // registry owns and `refusalLegend()` explains.
+      refusals: DESKTOP_PRODUCT_REFUSALS,
+      /** The one staging decision's own configuration, not a browser copy. */
+      stageConfig: DESKTOP_WEB_STAGE_CONFIG,
+    },
+    controlsByProfile: controlsByProfile(view),
   };
 
   return `
@@ -1121,6 +1261,313 @@ const T = ${inlineJson(tables)};
 const shell = document.querySelector('.shell');
 if (shell) {
   const q = (sel) => Array.from(shell.querySelectorAll(sel));
+
+  // The model's own staging decision, not a paraphrase of it: this is the exact
+  // function \`stageWebHtml()\` and \`stageWebAssetInjection()\` call, so the shipped
+  // browser path and the tested exports cannot answer differently.
+  const webStageDecision = ${String(desktopWebStageDecision)};
+
+  let projectData = null;
+  let projectContentHash = null;
+  let projectDirty = false;
+  let projectRecovering = false;
+  // One product request at a time. Every live control reads \`projectData\` before
+  // its first await, so two overlapping clicks would each build a proposal from
+  // the same pre-edit document and the second would replace the first in the
+  // host's single-proposal session — both reporting success, one edit gone.
+  let inFlight = false;
+
+  const productStatus = (state, text) => {
+    const pill = shell.querySelector('[data-project-state]');
+    if (pill) pill.dataset.projectState = state;
+    q('[data-project-status]').forEach((el) => { el.textContent = text; });
+    q('[data-project-file-state]').forEach((el) => { el.textContent = text; });
+  };
+
+  // The run report is hidden below the compact tier, so a refusal that lives
+  // only there is a refusal nobody at 1000x700 can read. Refusals also go to the
+  // product status, which the status bar mirrors at every tier.
+  const runStatus = (text) => {
+    q('[data-product-run-report]').forEach((el) => { el.textContent = text; });
+  };
+
+  const runRefusal = (code, detail) => {
+    const text = 'Play refused · ' + code + (detail ? ' · ' + detail : '');
+    runStatus(text);
+    q('[data-run-session-report]').forEach((el) => {
+      el.textContent = 'No completed session for the latest Play request · ' + code;
+    });
+    q('[data-run-live-report]').forEach((el) => {
+      el.textContent = 'No viewport frame was acknowledged for the latest Play request.';
+    });
+    productStatus('refused', text);
+  };
+
+  const desktopPort = () => {
+    const portable = globalThis.sceneaxiDesktop;
+    const linux = globalThis.sceneaxiDesktopLinux;
+    const candidate = portable || linux;
+    return candidate && typeof candidate.request === 'function' ? candidate : null;
+  };
+
+  const runtimeRequest = async (request) => {
+    const port = desktopPort();
+    if (port === null) return null;
+    try {
+      return await port.request(request);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return {
+        ok: false,
+        reason: T.product.refusals.runtimeRequestFailed,
+        message,
+        detail: message,
+      };
+    }
+  };
+
+  // A refused authoring response carries its own named reason: the document
+  // status shape reports \`ok: false\`, a session snapshot reports diagnostics.
+  // Both are read here so the host's reason reaches the surface instead of the
+  // generic one — \`apply-in-progress\` in particular is the operator's cue that
+  // journal recovery, not another click, is what moves this forward.
+  const responseReason = (response) => {
+    if (response === null) return T.product.refusals.runtimeUnavailable;
+    if (!response.ok) return response.reason || T.product.refusals.runtimeRequestRefused;
+    const data = response.data;
+    const diagnostics = data && Array.isArray(data.diagnostics) ? data.diagnostics : [];
+    if (diagnostics.length > 0) {
+      return diagnostics[0]?.code || T.product.refusals.authoringRefused;
+    }
+    if (data && data.ok === false) {
+      return data.reason || T.product.refusals.authoringRefused;
+    }
+    return null;
+  };
+
+  const restartProject = async (diagnostic) => {
+    productStatus('recovering', T.product.documentPath + ' · ' + diagnostic + ' · re-opening fresh session…');
+    const response = await runtimeRequest({
+      action: 'authoring',
+      payload: { op: 'restart', documentPath: T.product.documentPath },
+    });
+    if (response === null || !response.ok) {
+      productStatus('recovering', 'Open refused · ' + diagnostic + ' · ' + responseReason(response));
+      return false;
+    }
+    const status = response.data;
+    const reason = responseReason(response);
+    projectData = null;
+    projectContentHash = null;
+    projectDirty = false;
+    projectRecovering = false;
+    if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' || status.data === null || typeof status.contentHash !== 'string') {
+      productStatus('refused', 'Recovery reset · ' + diagnostic + ' · ' + (reason || T.product.refusals.documentDataInvalid));
+      return false;
+    }
+    projectData = status.data;
+    projectContentHash = status.contentHash;
+    productStatus('open', T.product.documentPath + ' · re-opened after ' + diagnostic + ' · ' + status.documentId);
+    return true;
+  };
+
+  // Re-opening re-reads the document from the host, so a proposal the host is
+  // still holding has to be discarded there rather than only forgotten here:
+  // otherwise the shell reports a clean project while the session stays in
+  // \`reviewing\`, and the next Save reports "no staged changes" over an edit the
+  // host would still have applied.
+  const discardStagedProposal = async () => {
+    if (!projectDirty) return true;
+    const response = await runtimeRequest({ action: 'authoring', payload: { op: 'reject' } });
+    const reason = responseReason(response);
+    const snapshot = response?.ok ? response.data : null;
+    if (reason !== null || !snapshot || snapshot.phase !== 'rejected') {
+      productStatus('refused', 'Open refused · ' + (reason || T.product.refusals.proposalNotDiscarded));
+      return false;
+    }
+    projectData = null;
+    projectContentHash = null;
+    projectDirty = false;
+    return true;
+  };
+
+  const openProject = async () => {
+    if (projectRecovering) return restartProject('recovery-pending');
+    if (!(await discardStagedProposal())) return false;
+    productStatus('opening', T.product.documentPath + ' · opening…');
+    const response = await runtimeRequest({
+      action: 'authoring',
+      payload: { op: 'status', documentPath: T.product.documentPath },
+    });
+    const reason = responseReason(response);
+    const status = response?.ok ? response.data : null;
+    if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' || status.data === null || typeof status.contentHash !== 'string') {
+      productStatus('refused', 'Open refused · ' + (reason || T.product.refusals.documentDataInvalid));
+      return false;
+    }
+    projectData = status.data;
+    projectContentHash = status.contentHash;
+    projectDirty = false;
+    projectRecovering = false;
+    productStatus('open', T.product.documentPath + ' · open · ' + status.documentId);
+    return true;
+  };
+
+  const stageWebEdit = async (kind) => {
+    // The decision refuses this too; answering before the round trip only keeps
+    // a profile that cannot stage from opening a document to be told so.
+    if (shell.dataset.profile !== 'web') {
+      productStatus('refused', 'Stage refused · ' + T.product.refusals.webCapabilityRequired);
+      return;
+    }
+    if ((projectData === null || projectContentHash === null) && !(await openProject())) return;
+    const decision = webStageDecision(
+      {
+        profile: shell.dataset.profile,
+        documentData: projectData,
+        contentHash: projectContentHash,
+        kind,
+        html: T.product.webStarter.html,
+        assetPath: T.product.webStarter.assetPath,
+      },
+      T.product.stageConfig,
+    );
+    if (!decision.ok) {
+      productStatus('refused', 'Stage refused · ' + decision.reason);
+      return;
+    }
+    const response = await runtimeRequest(decision.request);
+    const reason = responseReason(response);
+    const snapshot = response?.ok ? response.data : null;
+    if (reason !== null || !snapshot || snapshot.phase !== 'reviewing') {
+      productStatus('refused', 'Stage refused · ' + (reason || T.product.refusals.proposalNotReviewing));
+      return;
+    }
+    projectData = decision.request.payload.newValue;
+    projectDirty = true;
+    projectRecovering = false;
+    productStatus('dirty', T.product.documentPath + ' · staged · Save to apply');
+  };
+
+  const applySaveSnapshot = (snapshot) => {
+    if (!snapshot) return false;
+    const diagnostics = Array.isArray(snapshot.diagnostics) ? snapshot.diagnostics : [];
+    if (diagnostics[0]?.code === 'journal-not-found') return false;
+    if (snapshot.phase === 'pending' || snapshot.journalRecoveryPending === true) {
+      projectRecovering = true;
+      productStatus('recovering', T.product.documentPath + ' · recovery pending · Save to refresh or Open to re-read');
+      return true;
+    }
+    if (snapshot.phase === 'applied' && diagnostics.length === 0) {
+      projectData = null;
+      projectContentHash = null;
+      projectDirty = false;
+      projectRecovering = false;
+      productStatus('saved', T.product.documentPath + ' · saved');
+      return true;
+    }
+    return false;
+  };
+
+  const saveProject = async () => {
+    if (!projectDirty && !projectRecovering) {
+      productStatus(projectData === null ? 'closed' : 'open', T.product.documentPath + ' · no staged changes');
+      return;
+    }
+    const recovering = projectRecovering;
+    productStatus(recovering ? 'recovering' : 'saving', T.product.documentPath + (recovering ? ' · refreshing recovery…' : ' · saving…'));
+    const response = await runtimeRequest({ action: 'authoring', payload: { op: recovering ? 'recover' : 'accept' } });
+    const snapshot = response?.ok ? response.data : null;
+    const reason = responseReason(response);
+    if (recovering && reason === 'journal-not-found') {
+      await restartProject('journal-not-found');
+      return;
+    }
+    if (applySaveSnapshot(snapshot)) return;
+    if (recovering && snapshot && snapshot.journalRecoveryPending !== true) projectRecovering = false;
+    productStatus(projectRecovering ? 'recovering' : 'refused', 'Save refused · ' + (reason || T.product.refusals.applyNotCompleted));
+  };
+
+  // Serialize the product loop: the host holds one session and one proposal, so
+  // a second action started before the first answers is not concurrency, it is a
+  // lost edit. The controls are inert for the duration, which is the surface's
+  // own vocabulary for "this cannot act right now".
+  const productAction = async (run) => {
+    if (inFlight) return;
+    inFlight = true;
+    q('[data-product-action]').forEach((el) => {
+      el.dataset.busy = 'true';
+      setRefusal(el, T.product.refusals.requestInFlight);
+    });
+    try {
+      await run();
+    } finally {
+      inFlight = false;
+      // Cleared unconditionally, then re-decided: a control whose id the profile
+      // table does not carry must not stay disabled because a request finished.
+      q('[data-product-action]').forEach((el) => {
+        delete el.dataset.busy;
+        setRefusal(el, null);
+        applyControl(el);
+      });
+    }
+  };
+
+  const playScene = async () => {
+    if (projectData === null && !(await openProject())) return;
+    runStatus('Opening composed scene…');
+    const response = await runtimeRequest({
+      action: 'open-path',
+      payload: { documentPath: T.product.documentPath },
+    });
+    if (response === null || !response.ok) {
+      runRefusal(
+        response === null
+          ? T.product.refusals.runtimeUnavailable
+          : (response.reason || T.product.refusals.runtimeRequestRefused),
+        response === null ? null : response.detail,
+      );
+      return;
+    }
+    const exercise = response.data;
+    const ticks = Array.isArray(exercise?.tickDigests) ? exercise.tickDigests.length : 0;
+    if (exercise?.closed !== true || ticks === 0) {
+      runRefusal(T.product.refusals.openPathEvidenceInvalid);
+      return;
+    }
+    const playback = { exercise, accepted: false, frame: null };
+    document.dispatchEvent(new CustomEvent(T.product.viewportPlayEvent, { detail: playback }));
+    if (!playback.accepted || !Number.isSafeInteger(playback.frame) || playback.frame < 1) {
+      runRefusal(T.product.refusals.viewportUnavailable);
+      return;
+    }
+    showModePanels('run');
+    const lastDigest = exercise.tickDigests[ticks - 1];
+    const played = 'Played composed scene · ' + ticks + ' ticks · viewport frame ' + playback.frame + ' · session closed';
+    q('[data-run-session-report]').forEach((el) => {
+      el.textContent = 'Completed closed session · ' + ticks + ' ticks · terminal digest ' + String(lastDigest);
+    });
+    q('[data-run-live-report]').forEach((el) => {
+      el.textContent = 'Viewport frame ' + playback.frame + ' acknowledged for ' + exercise.mountable.sceneId + '.';
+    });
+    runStatus(played);
+    productStatus(projectRecovering ? 'recovering' : (projectDirty ? 'dirty' : (projectData === null ? 'closed' : 'open')), played);
+  };
+
+  const switchProfile = async (value) => {
+    if (shell.dataset.profile === value) return;
+    if (projectRecovering) {
+      productStatus('refused', 'Profile switch refused · ' + T.product.refusals.recoveryPending);
+      return;
+    }
+    if (projectDirty) {
+      productStatus('refused', 'Profile switch refused · ' + T.product.refusals.profileSwitchDirty);
+      return;
+    }
+    shell.dataset.profile = value;
+    q('.profile-chip').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.value === value)));
+    setProfile(value);
+  };
 
   const showModePanels = (mode) => {
     shell.dataset.mode = mode;
@@ -1348,14 +1795,24 @@ if (shell) {
       el.setAttribute('aria-expanded', String(open));
       return;
     }
-    if (action === 'mode' && value) showModePanels(value);
+    if (action === 'project-open') void productAction(openProject);
+    else if (action === 'project-save') void productAction(saveProject);
+    else if (action === 'scene-play') void productAction(playScene);
+    else if (action === 'web-stage-html') void productAction(() => stageWebEdit('html'));
+    else if (action === 'web-inject-asset') void productAction(() => stageWebEdit('asset'));
+    else if (action === 'mode' && value) showModePanels(value);
     else if (action === 'dock-tab' && value) selectDockTab(value);
     else if (action === 'overlay') setOverlay(value || 'none');
-    else if (action === 'profile' && value) {
-      shell.dataset.profile = value;
-      q('.profile-chip').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.value === value)));
-      setProfile(value);
-    } else if (action === 'assistant') {
+    else if (action === 'refusal-help') {
+      const panel = shell.querySelector('#refusal-legend');
+      if (panel) {
+        const open = panel.hidden;
+        panel.hidden = !open;
+        el.setAttribute('aria-expanded', String(open));
+      }
+    }
+    else if (action === 'profile' && value) void productAction(() => switchProfile(value));
+    else if (action === 'assistant') {
       if (shell.dataset.assistant === 'denied') return;
       setAssistant(assistantOpen() ? 'closed' : 'open');
     } else if (action === 'assistant-mode' && value) {
@@ -1454,7 +1911,7 @@ export function renderDesktopChrome(
 ${titleBar(view)}
 <div class="shell-body">
 ${modeRail(view)}
-${leftDock(view.state.mode)}
+${leftDock(view)}
 <div class="viewport-column">
 ${viewport(view)}
 ${dock(view)}
@@ -1466,7 +1923,6 @@ ${assistant(view)}
 ${statusBar(view)}
 ${overlays(view)}
 </div>
-${refusalLegend()}
 <script>${script(view)}</script>
 </body>
 </html>

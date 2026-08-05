@@ -11,12 +11,14 @@
  *
  * 1. **Every control declares its kind.** `view` controls change visual state
  *    and genuinely work. `review` controls edit the fixture Change Review queue
- *    and write no document. `live` controls declare a capability that a consumer
- *    runtime must bind. `inert` controls render, take focus, and refuse by a name
- *    from `DESKTOP_VISUAL_REFUSALS` — because the archive draws controls for
- *    behaviour this shell has no contract for, and drawing them as if they worked
- *    would be the lie. Nothing here invokes `authoring-core`, so the chrome cannot
- *    write a document by accident.
+ *    and write no document. `live` controls declare a capability the injected
+ *    desktop host — a consumer runtime — must bind. `inert` controls render,
+ *    take focus, and refuse by a name from `DESKTOP_VISUAL_REFUSALS` — because
+ *    the archive draws controls for behaviour this shell has no contract for,
+ *    and drawing them as if they worked would be the lie. Nothing here invokes
+ *    `authoring-core`, and the browser document imports no implementation
+ *    package, so the packaged host remains the only authority that may open,
+ *    save, or play a project.
  *
  * 2. **Profiles are not restated, they are read.** The profile switch projects
  *    `openPathPolicyView()` from `@sceneaxi/schemas` — the same value
@@ -44,11 +46,17 @@ import {
   OPEN_PATH_REFUSE_ONLY_PROFILE,
   openPathPolicyView,
   type EditorShellAssistantState,
+  type EditorShellControlKind,
   type EditorShellViewportSourceId,
   type OpenPathPolicyViewModel,
   type OpenPathPolicyViewRow,
 } from "@sceneaxi/schemas";
 import { DESKTOP_COMMANDS } from "./commands.js";
+import {
+  DESKTOP_PRODUCT_REFUSALS,
+  desktopProductSurface,
+  type DesktopProductSurface,
+} from "./product-loop.js";
 import { METRICS } from "./visual-tokens.js";
 
 /* -------------------------------------------------------------------------- */
@@ -254,6 +262,12 @@ export const DESKTOP_VISUAL_REFUSALS = Object.freeze({
   verbNotOnDesktop: "DESKTOP_VERB_NOT_ON_THIS_SURFACE",
   /** The window is smaller than the editor chrome's declared minimum. */
   windowBelowMinimum: "DESKTOP_WINDOW_BELOW_MINIMUM",
+  /**
+   * HTML and asset injection belong only to Web Experience. Read from the
+   * product-loop registry rather than restated, so the code the chrome renders
+   * inert with is the same one the staging decision refuses with.
+   */
+  webCapabilityRequired: DESKTOP_PRODUCT_REFUSALS.webCapabilityRequired,
 } as const);
 
 export type DesktopVisualRefusal =
@@ -270,13 +284,15 @@ export const DESKTOP_REFUSAL_MESSAGES: Readonly<
   [DESKTOP_VISUAL_REFUSALS.noPresentationRuntime]:
     "No presentation runtime is mounted on this surface, so the viewport draws no pixels.",
   [DESKTOP_VISUAL_REFUSALS.noKernelSession]:
-    "This shell opens no kernel session, so nothing simulates, advances, or replays here.",
+    "Without a packaged-host Play response, this shell has no kernel session to report.",
   [DESKTOP_VISUAL_REFUSALS.noDocumentBound]:
-    "The chrome is not bound to a document, so this control writes nothing.",
+    "This control has no bound authoring operation, so it writes nothing.",
   [DESKTOP_VISUAL_REFUSALS.verbNotOnDesktop]:
     "That verb exists on the CLI and has no desktop command; run it with `sceneaxi`.",
   [DESKTOP_VISUAL_REFUSALS.windowBelowMinimum]:
     "The editor chrome refuses below its minimum window size rather than rendering an unusable layout.",
+  [DESKTOP_VISUAL_REFUSALS.webCapabilityRequired]:
+    "HTML, site-canvas, and asset-injection authoring are available only on the Web Experience profile.",
 });
 
 /* -------------------------------------------------------------------------- */
@@ -798,18 +814,16 @@ export function kidsProfileRefusal(): Readonly<{
   summary: string;
   profile: typeof OPEN_PATH_REFUSE_ONLY_PROFILE;
 }> {
-  const row = openPathPolicyView().rows.find(
-    (candidate) => candidate.profile === OPEN_PATH_REFUSE_ONLY_PROFILE,
-  );
+  const refusal = desktopProductSurface("kids").refusal;
   return Object.freeze({
-    code: DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly,
+    code: refusal?.code ?? DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly,
     message: DESKTOP_REFUSAL_MESSAGES[DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly],
-    summary: row?.summary ?? "",
+    summary: refusal?.message ?? "",
     profile: OPEN_PATH_REFUSE_ONLY_PROFILE,
   });
 }
 
-export type DesktopControlKind = "view" | "review" | "live" | "inert";
+export type DesktopControlKind = EditorShellControlKind;
 
 export type DesktopControl = Readonly<{
   id: string;
@@ -1072,6 +1086,7 @@ export type DesktopOverlayView = Readonly<{
   id: DesktopOverlayId | null;
   /** The title bar's palette opener. */
   search: DesktopControl;
+  refusalHelp: DesktopControl;
   /** The status bar's three overlay shortcuts. */
   shortcuts: ReadonlyArray<
     Readonly<{ overlay: DesktopOverlayId; label: string; control: DesktopControl }>
@@ -1161,6 +1176,15 @@ export type DesktopVisualView = Readonly<{
   changeReview: DesktopChangeReviewView;
   sculpt: DesktopSculptView;
   overlay: DesktopOverlayView;
+  product: Readonly<{
+    surface: DesktopProductSurface;
+    surfaces: readonly DesktopProductSurface[];
+    open: DesktopControl;
+    save: DesktopControl;
+    play: DesktopControl;
+    stageHtml: DesktopControl;
+    injectAsset: DesktopControl;
+  }>;
   viewport: Readonly<{
     inertNote: typeof VIEWPORT_INERT_NOTE;
     refusal: DesktopVisualRefusal;
@@ -1339,6 +1363,33 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
     ),
   });
 
+  const productSurface = desktopProductSurface(state.profile);
+  const product = Object.freeze({
+    surface: productSurface,
+    surfaces: Object.freeze(DESKTOP_PROFILE_IDS.map(desktopProductSurface)),
+    open: control("project-open", "Open scene.json", "live"),
+    save: control("project-save", "Save scene.json", "live"),
+    play: control("scene-play", "Play composed scene", "live"),
+    stageHtml:
+      state.profile === "web"
+        ? control("web-stage-html", "Stage starter HTML", "live")
+        : control(
+            "web-stage-html",
+            "Stage starter HTML",
+            "inert",
+            DESKTOP_VISUAL_REFUSALS.webCapabilityRequired,
+          ),
+    injectAsset:
+      state.profile === "web"
+        ? control("web-inject-asset", "Inject assets/hero.glb", "live")
+        : control(
+            "web-inject-asset",
+            "Inject assets/hero.glb",
+            "inert",
+            DESKTOP_VISUAL_REFUSALS.webCapabilityRequired,
+          ),
+  });
+
   return Object.freeze({
     state,
     source: VISUAL_SOURCE_REF,
@@ -1426,10 +1477,12 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
     assistant,
     changeReview,
     sculpt,
+    product,
 
     overlay: Object.freeze({
       id: state.overlay,
       search: outsideRefusal("overlay-open-palette", "Search"),
+      refusalHelp: outsideRefusal("status-refusal-help", "Refusal help"),
       shortcuts: Object.freeze(
         DESKTOP_OVERLAY_SHORTCUTS.map((shortcut) =>
           Object.freeze({

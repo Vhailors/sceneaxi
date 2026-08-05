@@ -8,9 +8,14 @@
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { DESKTOP_VISUAL_REFUSALS } from "@sceneaxi/desktop-shell";
 import {
+  DESKTOP_VISUAL_REFUSALS,
+  desktopProductSurface,
+} from "@sceneaxi/desktop-shell";
+import {
+  DESKTOP_ACTIVE_DOCUMENT_PATH,
   DESKTOP_BRIDGE_ACTIONS,
+  DESKTOP_BRIDGE_AUTHORING_OPS,
   DESKTOP_BRIDGE_CHANNEL,
   DESKTOP_BRIDGE_GLOBAL,
   DESKTOP_BRIDGE_REFUSALS,
@@ -38,7 +43,11 @@ describe("desktop-linux seam", () => {
       "frame-report",
     ]);
     expect(DESKTOP_BRIDGE_CHANNEL).toBe("sceneaxi:desktop-bridge");
+    expect(DESKTOP_ACTIVE_DOCUMENT_PATH).toBe("scene.json");
+    expect(DESKTOP_ACTIVE_DOCUMENT_PATH).toBe(desktopProductSurface("game").project.activeFile);
     expect(DESKTOP_BRIDGE_GLOBAL).toBe("sceneaxiDesktopLinux");
+    expect(DESKTOP_BRIDGE_AUTHORING_OPS).toContain("recover");
+    expect(DESKTOP_BRIDGE_AUTHORING_OPS).toContain("restart");
     expect(Object.isFrozen(DESKTOP_OPEN_PLACEMENTS)).toBe(true);
     expect(DESKTOP_OPEN_PLACEMENTS).toHaveLength(3);
   });

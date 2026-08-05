@@ -176,7 +176,7 @@ only, and presentation invents no state the kernel does not own.
 - **The packaged Linux desktop application** (`desktop/linux`, ADR 0024), the
   fourth pixel-drawing surface and the first outside a browser page: the Electron
   renderer process mounts the shared `MountableScene` payload over its window
-  canvas through the same seam calls the umbrella makes. Verified 2026-07-31 from
+  canvas through the same seam calls the umbrella makes. Verified 2026-08-05 from
   the packaged binary's `--smoke` proof (SwiftShader under Xvfb):
   `backend three · surface webgl-canvas · pixelsDrawn true · drawCalls 15`,
   matching the draw-call count the headless gate derives from the same

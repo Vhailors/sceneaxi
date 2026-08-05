@@ -29,10 +29,10 @@ Bridge actions and what each reaches — only through public seams:
 | Action | Reaches |
 |---|---|
 | `handshake` | identity only |
-| `scene` | `composeScene()` via `desktopOpenScene()` → the shared `MountableScene` payload from `@sceneaxi/site-kit` |
-| `open-path` | `bootstrapOpenPath()` from `@sceneaxi/engine-orchestrator`: a real kernel scene session opened, advanced, observed, closed |
+| `scene` | re-read the requested project-contained Scene Document, validate and reproduce its stored composition through `composeScene()`, then return the shared `MountableScene` payload from `@sceneaxi/site-kit` |
+| `open-path` | the same requested document's composition — `documentPath` required exactly as for `scene` — through `bootstrapOpenPath()` from `@sceneaxi/engine-orchestrator`: a real kernel scene session opened, advanced, observed, closed, with its mountable payload returned for viewport synchronization |
 | `assistant` | `runAssistantSculptAction()` in `@sceneaxi/authoring-core`: deterministic local compilation by default, or an explicitly injected BYOK runner; job status carries real progress and a typed artifact or recoverable named refusal. Hosted refuses here because this tier has no identity/credit authority |
-| `authoring` | `createDesktopSession()` from `@sceneaxi/desktop-shell` — the same propose/accept protocol as the CLI and web-shell. A `documentPath` arrives from the renderer over IPC and the authoring core resolves it against `cwd` without a containment check of its own, so the bridge owns that constraint: an absolute path, one escaping the project directory, or one whose **canonical** path leaves it through a symlink refuses `DESKTOP_BRIDGE_REQUEST_MALFORMED`. Containment is judged after symlink resolution because that is where the bytes land; a missing leaf still resolves, so this is containment and not an existence check |
+| `authoring` | `createDesktopSession()` from `@sceneaxi/desktop-shell` — the same propose/accept protocol as the CLI and web-shell. A `documentPath` arrives from the renderer over IPC — here, and on `scene` and `open-path` alike — and the authoring core resolves it against `cwd` without a containment check of its own, so the bridge owns that constraint for every action that takes one: an absolute path, one escaping the project directory, or one whose **canonical** path leaves it through a symlink refuses `DESKTOP_BRIDGE_REQUEST_MALFORMED`. Containment is judged after symlink resolution because that is where the bytes land; a missing leaf still resolves, so this is containment and not an existence check |
 | `frame-report` | nothing: it *accepts* the renderer's real presentation frame so main and the smoke can see what was claimed |
 
 The UI is the Engine Desktop chrome from `@sceneaxi/desktop-shell`, **unforked**:
@@ -97,7 +97,10 @@ desktop tier adds one: `desktop/linux/src/renderer/viewport.ts`, which construct
 the ADR 0002 presentation backend over its own window canvas — exactly the calls
 the umbrella's `sculpt-viewport.tsx` makes, naming no Three type. The golden test
 asserts the tier has exactly one module constructing a backend, mirroring the
-sites-tier owner-list assertion; the umbrella's own list is unchanged.
+sites-tier owner-list assertion; the umbrella's own list is unchanged. Its
+playback synchronizer is separately executable on the headless surface: the
+golden replaces the mounted composition and proves a refused replacement rolls
+back to the prior mount set.
 
 ## Build, verify, run
 
@@ -220,8 +223,11 @@ Future builds must be downloaded and checksum-verified manually.
 ## First launch and product tabs
 
 On first launch, the application creates its persistent project directory under
-Electron's user-data directory and seeds `scene.json` only when that file is absent.
-Later launches reuse the project and do not replace existing project bytes.
+Electron's user-data directory and seeds `scene.json`. A valid document from an
+older desktop build that lacks the composed-scene field is migrated once by
+adding the starter composition while retaining its id, title, entities, material,
+and other data. Documents that already carry that field are never rewritten;
+invalid existing bytes refuse rather than being replaced.
 
 The profile switch presents **Game**, **Website (Web)**, and **Kids**:
 
@@ -231,6 +237,17 @@ The profile switch presents **Game**, **Website (Web)**, and **Kids**:
   this release. The application shows the named safety refusal and keeps the profile
   switch available so the operator can return to Game or Website; it does not claim
   a Kids authoring path that is not shipped.
+
+A profile change is serialized with project actions. A staged proposal blocks
+the tab change until Save applies it or Open explicitly discards it, and an
+in-progress durable save blocks switching until Save refreshes recovery to a
+terminal state. Open remains an explicit fresh-session re-read escape for any
+non-terminal recovery; a missing journal takes that path automatically with
+`journal-not-found` retained in the visible result, so the prior indeterminate
+session cannot permanently block Open or switching.
+Play advances the composed
+scene through the orchestrator and succeeds only when the mounted renderer
+redraws the same composed scene and acknowledges the post-play viewport frame.
 
 The Assistant column distinguishes `Local · free`, `BYOK · free`, and
 `Hosted · metered`. Build is the first-release artifact-producing mode; Ask and
@@ -257,17 +274,24 @@ and its own `sha256sum -c SHA256SUMS` checked locally; both files matched, which
 where the byte sizes and digests in the table above come from. That is the whole claim
 made about the downloaded files: they were verified, not separately launched here.
 
-**A local source build — recorded 2026-07-31, `pnpm dist` at the tier root.** A
-different build with its own digests, kept because it is where the behaviour below was
-observed in detail. These lines describe the same source as the offered artifact, never
-the same bytes. All three launch modes printed the same proof (`pnpm smoke`,
-`pnpm smoke --packaged`, and the AppImage itself with
-`--appimage-extract-and-run --smoke`):
+**A local source build — recorded 2026-08-05, `pnpm dist` at the tier root on source
+commit `342e5ff11676b7de38d22d94814fae75c7929868`.** A different build with its own
+digests, kept because it is where the behaviour below was observed in detail. It is
+also a *later source* than the offered artifact, which was packaged from this branch's
+base `b338a911` and therefore predates the unified product loop
+([sceneaxi#196](https://github.com/Vhailors/sceneaxi/issues/196)) these observations
+describe — one more reason the record above must be re-taken from a fresh successful
+main-branch run. These lines never describe the offered bytes. All three launch modes
+printed the same proof (`pnpm smoke`, `pnpm smoke --packaged`, and the AppImage itself
+with `--appimage-extract-and-run --smoke`):
 
 - bridge handshake: `@sceneaxi/desktop-linux` on runtime `electron`, bridge v1
-- kernel open path: bootstrap `kind scene · subjectId desktop-linux-open-scene`,
+- kernel open path, requested for the seeded project-contained `scene.json`:
+  bootstrap `kind scene · subjectId desktop-linux-open-scene`,
   4 ticks advanced, digest `sha256:a0cfe040739…` → `sha256:d683df159e8…`,
-  3 instances, session closed
+  3 instances, session closed — the same digests the 2026-07-31 record carried, so
+  routing the open path through a named document moved nothing about what the kernel
+  observed
 - authoring: propose → accept → undo on a **scratch project the run creates and
   deletes** (never the persistent user project, whose contents no proof controls),
   asserted on the session's own phases and the bytes on disk rather than on the
@@ -284,11 +308,24 @@ the same bytes. All three launch modes printed the same proof (`pnpm smoke`,
   chrome's "no renderer is mounted" note removed only after the real mount, and
   the on-surface report line printing the same frame the bridge received
 - captured window (`SCENEAXI_SMOKE_SHOT=<path> pnpm smoke`): the Engine Desktop
-  chrome — mode rail, dock with the Change Review queue, profile switch with
-  `Kids refuse-only`, status bar `game profile · core 0.0.0` — with the three
-  composed crates lit in the viewport above the kernel open-path line and the
-  frame report line. Binary evidence stays out of the repository; the capture is
-  reproducible with that one environment variable on any Linux host
+  chrome — mode rail, the unified **Project / Files** panel listing `scene.json`
+  as `Active · not opened`, title-bar **Open**/**Save** beside the project pill
+  `scene.json · ready to open`, the **Play composed scene** control, dock with the
+  Change Review queue, profile switch with `Kids refuse-only`, status bar
+  `game profile · core 0.0.0` — with the three composed crates lit in the viewport
+  above the kernel open-path line and the frame report line. Binary evidence stays
+  out of the repository; the capture is reproducible with that one environment
+  variable on any Linux host
+
+The smoke owns a scratch project, so it proves nothing about the seed the *launched*
+application starts from. That was observed separately on 2026-08-05, from the same
+build, by launching the packaged binary against a throwaway `--user-data-dir` instead
+of the host's own user data: an empty directory came back seeded with `scene.json`; a
+valid document lacking the composed-scene field gained it while keeping its id, title,
+entities, and material; relaunching over the resulting document left it byte-identical,
+down to its mtime; and unparseable bytes were left exactly as found, with the seed
+reporting its refusal rather than replacing them. Those are the behaviours the section
+above describes.
 
 ## Deliberately absent
 

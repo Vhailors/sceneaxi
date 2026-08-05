@@ -493,6 +493,30 @@ describe("engine desktop chrome — refusal reachability at every tier", () => {
     }
   });
 
+  it("keeps the product loop's own status on screen at every tier", () => {
+    // Open, Save, Stage, and Play all refuse by writing the product status. The
+    // title centre is display:none below the compact tier and the left dock is a
+    // closed drawer there, so those two alone would leave a refusal unreadable at
+    // 1000x700 and at the 900x600 minimum — both in the recorded browser
+    // evidence. The status bar is the region no tier removes.
+    for (const [label, size] of TIER_SIZES) {
+      for (const profile of ["game", "web", "kids"] as const) {
+        const state = createDesktopVisualState({ profile, window: size });
+        const html = render(state);
+        const rules = stylesheet(html);
+        const shell = shellElement(html);
+        const chain = [body, shell, element("status-bar"), element("status-project")];
+        expect(
+          computedDisplay(rules, chain, size),
+          `${label} ${profile} status-project`,
+        ).not.toBe("none");
+        expect(html, `${label} ${profile}`).toContain(
+          'class="status-project" data-project-status aria-live="polite"',
+        );
+      }
+    }
+  });
+
   it("refuses the whole chrome below the minimum, and shows that refusal", () => {
     const size = { width: 800, height: 560 };
     const html = render(createDesktopVisualState({ window: size }));
@@ -517,6 +541,7 @@ describe("engine desktop chrome — refusal reachability at every tier", () => {
 const REGION_CHAINS: Readonly<Record<string, ReadonlyArray<string>>> = Object.freeze({
   "left-dock": ["left-dock"],
   inspector: ["inspector"],
+  "refusal-legend": ["status-bar", "refusal-legend-panel"],
   ...Object.fromEntries(
     DESKTOP_DOCK_TAB_IDS.map((id) => [
       `dock-panel-${id}`,

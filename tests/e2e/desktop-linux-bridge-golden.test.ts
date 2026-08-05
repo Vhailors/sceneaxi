@@ -22,6 +22,7 @@ import { runInNewContext } from "node:vm";
 import { afterAll, describe, expect, it } from "vitest";
 import {
   MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+  composeScene,
   createDocument,
   createModelProviderPort,
   runAssistantSculptAction,
@@ -31,7 +32,13 @@ import {
   type ModelDescriptor,
 } from "@sceneaxi/authoring-core";
 import {
+  SCENE_COMPOSITION_INTAKE_KIND,
+  SCENE_COMPOSITION_SCHEMA_VERSION,
+  type SceneCompositionIntake,
+} from "@sceneaxi/schemas";
+import {
   DESKTOP_ASSISTANT_RUNTIME_EVENT,
+  DESKTOP_VIEWPORT_PLAY_EVENT as SHELL_VIEWPORT_PLAY_EVENT,
   DESKTOP_VISUAL_REFUSALS,
 } from "@sceneaxi/desktop-shell";
 import {
@@ -41,10 +48,14 @@ import {
 } from "../../packages/engine-presentation/src/index.ts";
 import {
   DESKTOP_BRIDGE_ACTIONS,
+  DESKTOP_ACTIVE_DOCUMENT_PATH,
   DESKTOP_BRIDGE_REFUSALS,
+  DESKTOP_VIEWPORT_PLAY_EVENT,
   createDesktopAssistantViewportController,
   createDesktopBridge,
   desktopOpenScene,
+  desktopSceneFromDocumentData,
+  seedDesktopProject,
   type DesktopAssistantJobSnapshot,
   type DesktopFrameReport,
 } from "../../desktop/linux/src/index.ts";
@@ -53,6 +64,10 @@ import {
   RENDERER_SCRIPT_TAG,
   desktopLinuxIndexHtml,
 } from "../../desktop/linux/src/lib/chrome-document.ts";
+import {
+  mountDesktopScene,
+  synchronizeViewportScene,
+} from "../../desktop/linux/src/renderer/viewport-playback.ts";
 
 const FIXED_NOW_MS = 1_753_920_000_000;
 const fixedNow = (): number => FIXED_NOW_MS;
@@ -205,12 +220,41 @@ afterAll(() => {
   for (const dir of tmpDirs) rmSync(dir, { recursive: true, force: true });
 });
 
-function authoringDir(): string {
+function activeDocumentData(sceneId = "desktop-linux-open-scene") {
+  const starter = desktopOpenScene();
+  if (!starter.ok) throw new Error(`desktop scene refused: ${starter.reason}`);
+  const intake: SceneCompositionIntake = {
+    schemaVersion: SCENE_COMPOSITION_SCHEMA_VERSION,
+    kind: SCENE_COMPOSITION_INTAKE_KIND,
+    sceneId,
+    rootInstanceId: starter.composed.scene.rootInstanceId,
+    placements: starter.composed.scene.instances.map((instance) => ({
+      instanceId: instance.instanceId,
+      artifactId: instance.artifactId,
+      parentInstanceId: instance.parentInstanceId,
+      transform: instance.localTransform,
+    })),
+  };
+  const artifacts = [
+    ...new Map(
+      starter.composed.scene.instances.map((instance) => [instance.artifactId, instance.artifact]),
+    ).values(),
+  ];
+  const composed = composeScene(intake, artifacts);
+  if (!composed.ok) throw new Error(`active document composition refused: ${composed.code}`);
+  return composed.document.data;
+}
+
+function authoringDir(sceneId = "desktop-linux-open-scene"): string {
   const dir = mkdtempSync(join(tmpdir(), "sceneaxi-desktop-golden-"));
   tmpDirs.push(dir);
   const doc = createDocument({
     id: "scene",
-    data: { entities: [{ id: "hero", x: 1, y: 2, rz: 0 }], material: { roughness: 0.4 } },
+    data: {
+      ...activeDocumentData(sceneId),
+      entities: [{ id: "hero", x: 1, y: 2, rz: 0 }],
+      material: { roughness: 0.4 },
+    },
   });
   const written = writeDocumentFile(join(dir, "scene.json"), doc, { cwd: dir });
   if (!written.ok) throw new Error("golden fixture document refused");
@@ -222,6 +266,46 @@ function bridgeAt(dir: string, onFrameReport?: (report: DesktopFrameReport) => v
 }
 
 describe("desktop bridge — the packaged app's engine paths are real", () => {
+  it("migrates a legacy seeded project without replacing its existing data", () => {
+    const dir = mkdtempSync(join(tmpdir(), "sceneaxi-desktop-legacy-"));
+    tmpDirs.push(dir);
+    const legacy = createDocument({
+      id: "legacy-scene",
+      title: "Existing project",
+      data: { entities: [{ id: "legacy-hero", x: 9 }], material: { roughness: 0.8 } },
+    });
+    const written = writeDocumentFile(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), legacy, {
+      cwd: dir,
+    });
+    if (!written.ok) {
+      throw new Error(written.diagnostics.map((entry) => entry.message).join("; "));
+    }
+
+    expect(seedDesktopProject(dir)).toEqual({ ok: true, migrated: true });
+    const bridge = bridgeAt(dir);
+    const status = bridge.handle({
+      action: "authoring",
+      payload: { op: "status", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+    });
+    if (!status.ok) throw new Error(status.reason);
+    expect(status.data).toMatchObject({
+      ok: true,
+      documentId: "legacy-scene",
+      data: {
+        entities: [{ id: "legacy-hero", x: 9 }],
+        material: { roughness: 0.8 },
+      },
+    });
+    const scene = bridge.handle({
+      action: "scene",
+      payload: { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+    });
+    expect(scene.ok).toBe(true);
+    const migratedBytes = readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8");
+    expect(seedDesktopProject(dir)).toEqual({ ok: true, migrated: false });
+    expect(readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toBe(migratedBytes);
+  });
+
   it("handshakes with its identity and the closed action set", () => {
     const bridge = bridgeAt(authoringDir());
     const res = bridge.handle({ action: "handshake" });
@@ -236,18 +320,29 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
   });
 
   it("serves the composed MountableScene the renderer mounts", () => {
-    const bridge = bridgeAt(authoringDir());
-    const res = bridge.handle({ action: "scene" });
+    const data = activeDocumentData("opened-project-scene");
+    const expected = desktopSceneFromDocumentData(data);
+    if (!expected.ok) throw new Error(expected.reason);
+    const dir = authoringDir("opened-project-scene");
+    const bridge = bridgeAt(dir);
+    const res = bridge.handle({
+      action: "scene",
+      payload: { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+    });
     expect(res.ok).toBe(true);
     if (!res.ok) return;
-    const scene = res.data as ReturnType<typeof composedScene>;
-    const direct = composedScene();
-    expect(scene.sceneId).toBe("desktop-linux-open-scene");
+    const scene = res.data as ComposedScene;
+    expect(scene.sceneId).toBe("opened-project-scene");
     expect(scene.instances).toHaveLength(3);
-    expect(scene.sceneDigest).toBe(direct.sceneDigest);
+    expect(scene.sceneDigest).toBe(expected.mountable.sceneDigest);
     expect(scene.instances.map((i) => i.instanceId)).toEqual(
-      direct.instances.map((i) => i.instanceId),
+      expected.mountable.instances.map((i) => i.instanceId),
     );
+    expect(scene.instances.map((instance) => instance.label)).toEqual([
+      "Root instance",
+      "Placed beside the root",
+      "Stacked on the root",
+    ]);
   });
 
   it("mounts, transforms, and resets a replacement local assistant artifact", async () => {
@@ -627,9 +722,12 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
 
   it("mounts the served scene on the one Three core without claiming pixels", () => {
     const bridge = bridgeAt(authoringDir());
-    const res = bridge.handle({ action: "scene" });
+    const res = bridge.handle({
+      action: "scene",
+      payload: { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+    });
     if (!res.ok) throw new Error(res.reason);
-    const scene = res.data as ReturnType<typeof composedScene>;
+    const scene = res.data as ComposedScene;
 
     const backend = createThreeSculptPresentationBackend();
     const mounts = createSculptMountApi(backend);
@@ -671,8 +769,11 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
   });
 
   it("opens a real kernel scene session through the orchestrator, deterministically", () => {
-    const bridge = bridgeAt(authoringDir());
-    const res = bridge.handle({ action: "open-path" });
+    const bridge = bridgeAt(authoringDir("active-kernel-scene"));
+    const res = bridge.handle({
+      action: "open-path",
+      payload: { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+    });
     expect(res.ok).toBe(true);
     if (!res.ok) return;
     const exercise = res.data as {
@@ -681,14 +782,16 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
       tickDigests: string[];
       instanceCount: number;
       closed: boolean;
+      mountable: { sceneId: string };
     };
 
     expect(exercise.bootstrap["kind"]).toBe("scene");
-    expect(exercise.bootstrap["subjectId"]).toBe("desktop-linux-open-scene");
+    expect(exercise.bootstrap["subjectId"]).toBe("active-kernel-scene");
     expect(exercise.bootstrap["openedAtMs"]).toBe(FIXED_NOW_MS);
     expect(exercise.bootstrap["resumed"]).toBe(false);
     expect(exercise.bootstrap["sessionId"]).toMatch(/^sha256:[0-9a-f]{64}$/);
     expect(exercise.instanceCount).toBe(3);
+    expect(exercise.mountable.sceneId).toBe("active-kernel-scene");
     expect(exercise.closed).toBe(true);
 
     // Only `advance` moves state, and it really does: digests move tick over tick.
@@ -696,7 +799,10 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
     expect(new Set([exercise.initialDigest, ...exercise.tickDigests]).size).toBe(5);
 
     // Deterministic under a fixed clock: the same request opens the same session.
-    const again = bridge.handle({ action: "open-path" });
+    const again = bridge.handle({
+      action: "open-path",
+      payload: { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+    });
     if (!again.ok) throw new Error(again.reason);
     expect((again.data as typeof exercise).bootstrap["sessionId"]).toBe(
       exercise.bootstrap["sessionId"],
@@ -727,6 +833,13 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
     const accepted = bridge.handle({ action: "authoring", payload: { op: "accept" } });
     if (!accepted.ok) throw new Error(accepted.reason);
     expect((accepted.data as { phase: string }).phase).toBe("applied");
+    const recovered = bridge.handle({
+      action: "authoring",
+      payload: { op: "recover" },
+    });
+    expect(recovered.ok).toBe(true);
+    if (!recovered.ok) return;
+    expect((recovered.data as { phase: string }).phase).toBe("applied");
     const after = readFileSync(join(dir, "scene.json"), "utf8");
     expect(after).not.toBe(before);
     expect(after).toContain('"x": 7');
@@ -735,6 +848,37 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
     if (!undone.ok) throw new Error(undone.reason);
     expect((undone.data as { ok: boolean }).ok).toBe(true);
     expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(before);
+  });
+
+  it("restarts the authoring session and re-reads the active document", () => {
+    const dir = authoringDir();
+    const bridge = bridgeAt(dir);
+    const proposed = bridge.handle({
+      action: "authoring",
+      payload: {
+        op: "propose",
+        documentPath: "scene.json",
+        jsonPointer: "/data/entities/0/x",
+        newValue: 7,
+      },
+    });
+    expect(proposed.ok).toBe(true);
+
+    const restarted = bridge.handle({
+      action: "authoring",
+      payload: { op: "restart", documentPath: "scene.json" },
+    });
+    expect(restarted.ok).toBe(true);
+    if (!restarted.ok) return;
+    expect(restarted.data).toMatchObject({ ok: true, documentId: "scene" });
+
+    const accepted = bridge.handle({ action: "authoring", payload: { op: "accept" } });
+    expect(accepted.ok).toBe(true);
+    if (!accepted.ok) return;
+    expect(accepted.data).toMatchObject({
+      phase: "idle",
+      diagnostics: [{ code: "invalid-proposal" }],
+    });
   });
 
   it("refuses an authoring documentPath that leaves the project directory", () => {
@@ -859,7 +1003,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     expect(html).toContain("Hosted · metered");
   });
 
-  it("activates only after runtime binding and preserves refusal across profiles", () => {
+  it("activates only after runtime binding and preserves refusal across profiles", async () => {
     const runtimeRefusal = DESKTOP_BRIDGE_REFUSALS.presentationRuntimeUnavailable;
     const prompt = new FakeTextAreaElement("assistant-prompt", { kind: "inert" });
     const send = new FakeElement("assistant-send", { kind: "inert" });
@@ -895,12 +1039,18 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       },
     });
 
-    const switchTo = (profile: string): void => {
+    // The chrome serializes a profile switch with the project actions, so the
+    // click resolves through the document's in-flight guard rather than in the
+    // click handler itself: a real operator's next click is a later event-loop
+    // turn, and asserting inside this one would read the pre-switch document.
+    const switchTo = async (profile: string): Promise<void> => {
       const chip = profileChips.find((candidate) => candidate.dataset.value === profile);
       if (chip === undefined || shell.clickListener === undefined) {
         throw new Error(`profile switch harness missing ${profile}`);
       }
       shell.clickListener({ target: chip });
+      await Promise.resolve();
+      await Promise.resolve();
     };
     const expectRefusal = (reason: string): void => {
       for (const control of controls) {
@@ -928,11 +1078,11 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       detail: { runtime: "local" },
     });
     expectLive();
-    switchTo("web");
+    await switchTo("web");
     expectLive();
-    switchTo("kids");
+    await switchTo("kids");
     expectRefusal(DESKTOP_VISUAL_REFUSALS.kidsAssistantDenied);
-    switchTo("game");
+    await switchTo("game");
     expectLive();
 
     documentListeners.get(DESKTOP_ASSISTANT_RUNTIME_EVENT)?.({
@@ -940,11 +1090,11 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     });
     expectRefusal(runtimeRefusal);
 
-    switchTo("web");
+    await switchTo("web");
     expectRefusal(runtimeRefusal);
-    switchTo("kids");
+    await switchTo("kids");
     expectRefusal(DESKTOP_VISUAL_REFUSALS.kidsAssistantDenied);
-    switchTo("game");
+    await switchTo("game");
     expectRefusal(runtimeRefusal);
   });
 });
@@ -1011,6 +1161,54 @@ describe("desktop renderer module accounting", () => {
     expect(source.match(/Live viewport refused/g)).toHaveLength(1);
   });
 
+  it("synchronizes the mounted viewport scene and restores it after a refused replacement", () => {
+    const initial = desktopOpenScene();
+    const replacement = desktopSceneFromDocumentData(activeDocumentData("viewport-replacement"));
+    if (!initial.ok || !replacement.ok) throw new Error("viewport scene fixture refused");
+    const backend = createThreeSculptPresentationBackend();
+    const mounts = createSculptMountApi(backend);
+    mountDesktopScene(mounts, initial.mountable);
+    let reframes = 0;
+    const synchronized = synchronizeViewportScene({
+      mounts,
+      frameMountedContent: () => {
+        reframes += 1;
+      },
+      current: initial.mountable,
+      next: replacement.mountable,
+    });
+    expect(synchronized).toMatchObject({
+      ok: true,
+      scene: { sceneId: "viewport-replacement" },
+    });
+    if (!synchronized.ok) return;
+    expect(mounts.list().map((instance) => instance.instanceId)).toEqual(
+      replacement.mountable.instances.map((instance) => instance.instanceId),
+    );
+
+    const invalid = {
+      ...replacement.mountable,
+      sceneDigest: "sha256:invalid-replacement",
+      instances: replacement.mountable.instances.map((instance, index) =>
+        index === 0 ? { ...instance, worldTransform: {} } : instance,
+      ),
+    };
+    const refused = synchronizeViewportScene({
+      mounts,
+      frameMountedContent: () => {
+        reframes += 1;
+      },
+      current: synchronized.scene,
+      next: invalid,
+    });
+    expect(refused.ok).toBe(false);
+    expect(mounts.list().map((instance) => instance.instanceId)).toEqual(
+      replacement.mountable.instances.map((instance) => instance.instanceId),
+    );
+    expect(reframes).toBe(2);
+    mounts.dispose();
+  });
+
   it("updates the pixels meta only from the real frame, and never imports Electron", () => {
     const viewport = readFileSync(
       join(desktopRoot, "linux/src/renderer/viewport.ts"),
@@ -1018,6 +1216,11 @@ describe("desktop renderer module accounting", () => {
     );
     expect(viewport).toContain("frame.pixelsDrawn");
     expect(viewport).toContain("PIXELS_META_NAME");
+    expect(viewport).toContain("document.addEventListener(DESKTOP_VIEWPORT_PLAY_EVENT");
+    expect(viewport).toContain('stage.dataset.playback = "acknowledged"');
+    expect(DESKTOP_VIEWPORT_PLAY_EVENT).toBe("sceneaxi:desktop-viewport-play");
+    expect(DESKTOP_VIEWPORT_PLAY_EVENT).toBe(SHELL_VIEWPORT_PLAY_EVENT);
+    expect(viewport).not.toContain('from "@sceneaxi/desktop-shell"');
     expect(viewport).not.toMatch(/from\s+"electron"/);
     // No Three type crosses the seam into this consumer either.
     expect(viewport).not.toMatch(/from\s+"three"/);
@@ -1025,8 +1228,8 @@ describe("desktop renderer module accounting", () => {
   });
 });
 
-function composedScene() {
-  const result = desktopOpenScene();
-  if (!result.ok) throw new Error(`desktop scene refused: ${result.reason}`);
-  return result.mountable;
-}
+/** The browser payload a successful scene composition serves. */
+type ComposedScene = Extract<
+  ReturnType<typeof desktopOpenScene>,
+  { ok: true }
+>["mountable"];

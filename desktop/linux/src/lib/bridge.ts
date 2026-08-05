@@ -7,8 +7,8 @@
  *
  * What each action reaches, and reaches only through the public seams:
  *
- * - `scene`        → `composeScene()` via `desktopOpenScene()` — the shared
- *                    `MountableScene` browser payload the renderer viewport mounts.
+ * - `scene`        → the active Scene Document composition reproduced through
+ *                    `composeScene()` and projected to the renderer payload.
  * - `open-path`    → `bootstrapOpenPath()` from `@sceneaxi/engine-orchestrator`
  *                    over the same composition: a real kernel scene session is
  *                    opened, advanced, observed, and closed, and the deterministic
@@ -57,7 +57,12 @@ import {
   type DesktopBridgeResponse,
   type DesktopFrameReport,
 } from "./bridge-contract.js";
-import { desktopAssistantScene, desktopOpenScene } from "./desktop-scene.js";
+import {
+  DESKTOP_SCENE_NOT_COMPOSABLE,
+  desktopAssistantScene,
+  desktopSceneFromDocumentData,
+  type DesktopSceneResult,
+} from "./desktop-scene.js";
 
 export type DesktopBridgeOptions = {
   /** Working directory the authoring session binds to. */
@@ -95,6 +100,7 @@ export type OpenPathExercise = {
   readonly initialDigest: string;
   readonly tickDigests: readonly string[];
   readonly instanceCount: number;
+  readonly mountable: Extract<DesktopSceneResult, { readonly ok: true }>["mountable"];
   readonly closed: true;
 };
 
@@ -213,8 +219,8 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       actions: DESKTOP_BRIDGE_ACTIONS,
     });
 
-  const openPathExercise = (): DesktopBridgeResponse => {
-    const scene = desktopOpenScene();
+  const openPathExercise = (payload: unknown): DesktopBridgeResponse => {
+    const scene = activeScene(payload);
     if (!scene.ok) return bridgeRefuse(scene.reason, scene.message);
 
     const bootstrapped = bootstrapOpenPath(
@@ -252,6 +258,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       initialDigest,
       tickDigests: Object.freeze(tickDigests),
       instanceCount,
+      mountable: scene.mountable,
       closed: true as const,
     });
     return bridgeOk("open-path", exercise);
@@ -278,6 +285,27 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     return value;
   };
 
+  const activeScene = (payload: unknown): DesktopSceneResult => {
+    const documentPath = containedDocumentPath(field(payload, "documentPath"));
+    if (documentPath === null) {
+      return {
+        ok: false,
+        reason: DESKTOP_BRIDGE_REFUSALS.requestMalformed,
+        message: "scene playback requires a documentPath string inside the project directory.",
+      };
+    }
+    const status = authoringSession().status(documentPath);
+    if (!status.ok) {
+      const diagnostic = status.diagnostics[0];
+      return {
+        ok: false,
+        reason: diagnostic?.code ?? DESKTOP_SCENE_NOT_COMPOSABLE,
+        message: diagnostic?.message ?? "The active Scene Document could not be read.",
+      };
+    }
+    return desktopSceneFromDocumentData(status.data);
+  };
+
   const authoring = (payload: unknown): DesktopBridgeResponse => {
     const op = field(payload, "op");
     if (!isAuthoringOp(op)) {
@@ -285,6 +313,17 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         DESKTOP_BRIDGE_REFUSALS.authoringOpUnknown,
         `Unknown authoring operation ${JSON.stringify(op)}. Known: ${DESKTOP_BRIDGE_AUTHORING_OPS.join(", ")}.`,
       );
+    }
+    if (op === "restart") {
+      const documentPath = containedDocumentPath(field(payload, "documentPath"));
+      if (documentPath === null) {
+        return bridgeRefuse(
+          DESKTOP_BRIDGE_REFUSALS.requestMalformed,
+          "authoring restart requires a documentPath string inside the project directory.",
+        );
+      }
+      session = createDesktopSession({ cwd: options.cwd });
+      return bridgeOk("authoring", session.status(documentPath));
     }
     const live = authoringSession();
     if (op === "status") {
@@ -300,21 +339,30 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     if (op === "propose") {
       const documentPath = containedDocumentPath(field(payload, "documentPath"));
       const jsonPointer = field(payload, "jsonPointer");
-      if (documentPath === null || typeof jsonPointer !== "string") {
+      const expectedContentHash = field(payload, "expectedContentHash");
+      if (
+        documentPath === null ||
+        typeof jsonPointer !== "string" ||
+        (expectedContentHash !== undefined &&
+          (typeof expectedContentHash !== "string" ||
+            !/^sha256:[0-9a-f]{64}$/.test(expectedContentHash)))
+      ) {
         return bridgeRefuse(
           DESKTOP_BRIDGE_REFUSALS.requestMalformed,
-          "authoring propose requires a jsonPointer string and a documentPath inside the project directory.",
+          "authoring propose requires a jsonPointer string, an optional SHA-256 expectedContentHash, and a documentPath inside the project directory.",
         );
       }
       const snapshot: DesktopSnapshot = live.proposeEdit({
         documentPath,
         jsonPointer,
         newValue: field(payload, "newValue"),
+        ...(expectedContentHash !== undefined ? { expectedContentHash } : {}),
       });
       return bridgeOk("authoring", snapshot);
     }
     if (op === "accept") return bridgeOk("authoring", live.accept());
     if (op === "reject") return bridgeOk("authoring", live.reject());
+    if (op === "recover") return bridgeOk("authoring", live.refreshRecovery());
     return bridgeOk("authoring", live.undo());
   };
 
@@ -505,12 +553,12 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       case "handshake":
         return bridgeOk("handshake", handshake());
       case "scene": {
-        const scene = desktopOpenScene();
+        const scene = activeScene(payload);
         if (!scene.ok) return bridgeRefuse(scene.reason, scene.message);
         return bridgeOk("scene", scene.mountable);
       }
       case "open-path":
-        return openPathExercise();
+        return openPathExercise(payload);
       case "assistant":
         return assistant(payload);
       case "authoring":

@@ -251,7 +251,7 @@ describe("engine desktop chrome — accessibility", () => {
       'aria-label="Application menu"',
       'aria-label="Profile"',
       'aria-label="Editor mode"',
-      'aria-label="Scene and library"',
+      'aria-label="Project files and editor panels"',
       'aria-label="Inspector"',
       'aria-label="Assistant"',
       'aria-label="Dock"',
@@ -288,6 +288,26 @@ describe("engine desktop chrome — accessibility", () => {
     for (const [, code] of html.matchAll(/aria-describedby="refusal-([A-Z_]+)"/g)) {
       expect(html).toContain(`id="refusal-${code}"`);
     }
+  });
+
+  it("keeps modelled refusal help collapsed with a bounded scroll panel", () => {
+    const html = render();
+    const footer = html.indexOf('<footer class="status-bar">');
+    const help = html.indexOf('id="status-refusal-help" data-kind="view"');
+    const legend = html.indexOf('<section class="refusal-legend-panel" id="refusal-legend"');
+    const footerEnd = html.indexOf("</footer>", footer);
+    expect(footer).toBeGreaterThan(-1);
+    expect(help).toBeGreaterThan(footer);
+    expect(legend).toBeGreaterThan(footer);
+    expect(legend).toBeLessThan(footerEnd);
+    expect(html).toContain('data-action="refusal-help" aria-expanded="false"');
+    expect(html).toContain('aria-controls="refusal-legend"');
+    expect(html).toContain('aria-labelledby="refusal-legend-title" hidden>');
+    expect(html).not.toContain("<details");
+    expect(html).not.toMatch(/refusal-legend[^>]*tabindex/);
+    expect(html).toContain(".refusal-legend-panel{position:absolute");
+    expect(html).toContain("overflow:auto;padding:10px 12px");
+    expect(html).toContain("else if (action === 'refusal-help')");
   });
 
   it("gives every element a unique, well-formed id", () => {
@@ -357,7 +377,7 @@ describe("engine desktop chrome — accessibility", () => {
       'id="mode-compose" data-kind="view" data-action="mode" data-value="compose" aria-pressed="true"',
     );
     expect(html).toContain(
-      'id="profile-web" data-kind="view" data-action="profile" data-value="web" aria-pressed="true"',
+      'id="profile-web" data-kind="view" data-product-action data-action="profile" data-value="web" aria-pressed="true"',
     );
   });
 

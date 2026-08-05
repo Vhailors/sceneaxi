@@ -11,6 +11,7 @@ import {
   writeDocumentFile,
 } from "@sceneaxi/authoring-core";
 import {
+  createDesktopSession,
   shellPropose,
   shellProposeAndApply,
 } from "@sceneaxi/desktop-shell";
@@ -70,5 +71,33 @@ describe("desktop-shell protocol client", () => {
 
     const text = readFileSync(join(dir, "scene.json"), "utf8");
     expect(JSON.parse(text).data.n).toBe(5);
+  });
+
+  it("refuses staging against a document changed after open", () => {
+    const dir = fixtureDir();
+    writeScene(dir, "scene.json", { n: 5 });
+    const opened = createDesktopSession({ cwd: dir }).status("scene.json");
+    if (!opened.ok) throw new Error("fixture document did not open");
+    writeScene(dir, "scene.json", { n: 7 });
+
+    const proposed = shellPropose({
+      documentPath: "scene.json",
+      jsonPointer: "/data/n",
+      newValue: 9,
+      expectedContentHash: opened.contentHash,
+      cwd: dir,
+    });
+
+    expect(proposed).toMatchObject({
+      ok: false,
+      diagnostics: [
+        {
+          code: "content-hash-conflict",
+          documentPath: "scene.json",
+          reReadHint: "Re-open the document before staging this edit again.",
+        },
+      ],
+    });
+    expect(JSON.parse(readFileSync(join(dir, "scene.json"), "utf8")).data.n).toBe(7);
   });
 });

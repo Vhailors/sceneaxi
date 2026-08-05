@@ -117,6 +117,7 @@ asserted rather than remembered.
 |---|---|
 | Colours, typography, metrics, contrast deviations, archive provenance | `apps/desktop-shell/src/visual-tokens.ts` |
 | Shared chrome vocabulary — the seven modes, rail labels, dock-tab derivation, assistant modes, window-tier thresholds, structural metrics | `packages/schemas/src/editor-shell.ts` (sceneaxi#184); this model **derives** its tables from it, and the umbrella web editor projects the same rows — parity is a data identity in `tests/parity/editor-shell-parity.test.ts`, and the web surface's own record is [`web-editor-shell.md`](web-editor-shell.md) |
+| First-release project/file and per-profile product loop, including Web stored-HTML and project-relative asset staging | `apps/desktop-shell/src/product-loop.ts` (sceneaxi#196) |
 | Mode/profile/dock/assistant/overlay/sculpt state, refusals, window tiers, control kinds | `apps/desktop-shell/src/visual-model.ts` |
 | The emitted document (markup, stylesheet, behaviour script) | `apps/desktop-shell/src/chrome.ts` |
 | The `chrome` command and its flags | `apps/desktop-shell/src/app.ts` |
@@ -164,6 +165,8 @@ renders nothing, rather than silently falling back to a state nobody asked for.
 
 The document is **self-contained**: no remote font, script, style, or image, and
 no `fetch`. One request loads it and nothing else is fetched (measured below).
+Live controls use only an optional host port exposed in the packaged window; in
+the standalone file they refuse `DESKTOP_RUNTIME_UNAVAILABLE` and stay honest.
 
 ## What actually works, and what refuses
 
@@ -176,18 +179,95 @@ always has a refusal and a non-inert one never does.
 |---|---|---|
 | `view` | changes visual state; genuinely works | mode rail, dock tabs, profile switch, assistant open/close, its Ask/Build/Agent modes and its three route chips, the overlay openers and each of the four overlay dismiss buttons, the sculpt cancel, drawer toggles |
 | `review` | edits the fixture Change Review queue; **writes no document** | accept/reject a row, accept all, reject all |
-| `live` | delegates a product action to an enclosing runtime seam | assistant prompt, Send, Retry, and artifact manipulators only when the packaged Linux runtime binds them |
-| `inert` | renders, keeps its focus stop, refuses by name | Sculpt object, standalone-shell assistant prompt/Send/Retry and the four artifact manipulators, menu bar, the three viewport-source tabs, the palette rows naming CLI-only verbs, and — on the refuse-only profile — every control except the eleven named below |
+| `live` | delegates a product action to an injected desktop-host seam; refuses visibly when that host is absent | Open and Save `scene.json`, play the composed scene, stage Web HTML, inject a project-relative Web asset; and — only once the packaged Linux runtime binds them — the assistant prompt, Send, Retry, and the artifact manipulators |
+| `inert` | renders, keeps its focus stop, refuses by name | Sculpt object, standalone-shell assistant prompt/Send/Retry and the four artifact manipulators, menu bar, the three viewport-source tabs, the palette rows naming CLI-only verbs, and — on the refuse-only profile — every control except the twelve named below |
 
-The chrome still reaches no authoring package itself. Its standalone CLI render
-therefore keeps every product action inert and `test/app.test.ts` proves a
-`chrome` invocation leaves a document byte-identical. The packaged Linux tier
-also renders `assistantRuntime: "none"`; after its bridge, initial Mount API scene,
-and every assistant handler bind, the renderer emits the model-owned runtime event
-that promotes the controls to `local`. If that runtime cannot mount or bind, the
+The chrome imports no engine, profile, site, billing, or host package, and
+reaches no authoring package itself. Its live adapter calls the host's existing
+refusal envelope; that host remains solely responsible for project containment,
+the shared authoring session, the orchestrated kernel path, and the presentation
+runtime. No host is present in the standalone CLI render, so the assistant
+product actions stay inert there and the project-loop `live` controls refuse
+`DESKTOP_RUNTIME_UNAVAILABLE` when clicked; `test/app.test.ts` proves a `chrome`
+invocation leaves a document byte-identical. The packaged Linux tier also renders
+`assistantRuntime: "none"`; after its bridge, initial Mount API scene, and every
+assistant handler bind, the renderer emits the model-owned runtime event that
+promotes the controls to `local`. If that runtime cannot mount or bind, the
 chrome retains the precomputed `none` projection for every control rather than
 maintaining a renderer-owned control list. The runtime contract is owned in
 `docs/desktop-linux.md`.
+
+### First-release product loop
+
+The left dock owns one project/file answer rather than parallel mock panels:
+`SceneAxi Project` has one active validated document, `scene.json`. Open calls
+the host's authoring `status` operation and retains its validated inert `data`.
+Web Experience stages either starter HTML or `assets/hero.glb` by proposing one
+replacement of `/data`. The proposal carries the content hash returned by Open;
+the shared shell protocol compares it with the hash read while constructing the
+proposal, so an external edit made after Open refuses with
+`content-hash-conflict` before stale data can enter review. Save accepts that
+exact pending proposal through the
+long-lived shared session. Pending or journal-recovery results keep the surface
+in `recovering`; Save calls the bridge's `recover` operation until the session
+reaches a terminal state, while Open is the explicit escape that starts a fresh
+session and re-reads the active document if recovery remains non-terminal. If
+the journal is missing, the diagnostic remains visible through that same
+fresh-session re-read. Either path releases Open and profile switching from the
+indeterminate session. A
+staged proposal also blocks profile switching until Save applies it or Open
+rejects it and clears its browser copy, so Web work cannot later be accepted
+under Game or Kids. The HTML is stored and displayed only as escaped text—never inserted into
+the chrome DOM. Invalid existing Web data and asset paths outside normalized
+`assets/` refuse before a proposal is made. The shared staging decision caps
+stored markup at 100,000 characters, asset paths at 512 characters, and each
+document's asset list at 256 entries.
+
+Play calls the host's existing `open-path` action with the active document path.
+In the packaged desktop the bridge re-reads that document, validates and
+reproduces its stored composition through `composeScene()`, and passes that
+scene through `bootstrapOpenPath()`: the response must contain tick digests, the
+matching mountable payload, and a closed session before the chrome reports play.
+The chrome then emits the shared viewport-play event carrying that evidence;
+the separate renderer owner validates it, redraws the same `MountableScene`
+after playback, and acknowledges that frame. It does not claim the closed
+kernel session's tick state was projected into the presentation. Without that acknowledgement
+Play refuses. On success the Run panels replace their pre-play empty state with
+the returned tick, terminal digest, viewport frame, and closed-session evidence.
+The shell neither constructs a renderer nor invents a pixel claim.
+
+The staging decision itself lives in exactly one place. `desktopWebStageDecision()`
+closes over no module binding, so `chrome.ts` embeds `String(desktopWebStageDecision)`
+into the emitted script and passes it the serialized `DESKTOP_WEB_STAGE_CONFIG`:
+the browser runs the same function `stageWebHtml()` and `stageWebAssetInjection()`
+call, rather than a hand-copied paraphrase that can — and previously did — lose a
+guard. The exported wrappers add only the deeper finite-JSON check an in-process
+caller needs, after the shared decision has answered, so the refusal order is
+identical on both sides. `test/product-loop.test.ts` asserts the emitted document
+contains that exact function and still parses as JavaScript.
+
+Two loop properties the surface depends on. **One request at a time:** every live
+control reads the retained document before its first `await`, and the host holds a
+single proposal, so overlapping clicks are serialized and the controls report
+themselves unavailable for the duration — otherwise the second action would build
+its proposal from the pre-edit document and silently replace the first. **Re-opening
+discards on the host, not just locally:** Open rejects a proposal the session is
+still holding before it re-reads, so the surface never reports a clean project over
+an edit the host would still apply.
+
+The product status is written to the title pill, the left-dock file line, **and** an
+always-visible status-bar mirror, which is also where the `aria-live` region lives.
+Below the compact tier the title centre is `display:none` and the left dock is a
+closed drawer, so a refusal written only to those two would be unreadable at exactly
+the sizes in the recorded browser evidence; Play refusals go to the product status
+for the same reason, since the run report is hidden there too.
+
+The Game surface names scene authoring, composed-scene play, and project-local
+FreeJS behavior. Web Experience names stored HTML, site canvas, asset injection,
+and the same composed-scene play path without importing any site or billing
+package. Kids remains `OPEN_PATH_KIDS_REFUSED`: the central control mint demotes
+every new live control alongside the existing modes and panels, while the three
+profile chips still let the operator leave the refusal.
 
 ### The refuse-only profile demotes in one place
 
@@ -206,11 +286,12 @@ same tier on height alone — "Panels" and "Inspector" rendered as live `view`
 buttons that set `aria-expanded="true"` on regions
 `.shell[data-profile="kids"]` keeps shut at every size.
 
-Exactly eleven controls are exempt, and they are the ones **not behind** the
+Exactly twelve controls are exempt, and they are the ones **not behind** the
 refusal: the three profile chips (the switch is how an operator leaves the Kids
 state, so making it inert would turn a state you can exit into a dead end), the
-palette opener, the three status-bar overlay shortcuts, and the four overlay
-dismiss buttons. Those genuinely work on every profile, and marking a control
+palette opener, the three status-bar overlay shortcuts, the refusal-help
+disclosure, and the four overlay dismiss buttons. Those genuinely work on every
+profile, and marking a control
 that works as refusing is the same dishonesty pointing the other way.
 
 The browser-side switch applies the same decision the same way: it sweeps
@@ -241,18 +322,56 @@ correctly and then never updated, so clicking the Kids chip left a footer readin
 
 ### Refusal registry
 
-`DESKTOP_VISUAL_REFUSALS` is closed, and every entry is reachable from some state
-— asserted in both directions.
+Two closed registries, never a string literal in a call site.
+`DESKTOP_VISUAL_REFUSALS` (`visual-model.ts`) names why a *control* renders inert,
+and every entry is reachable from some state — asserted in both directions.
+`DESKTOP_PRODUCT_REFUSALS` (`product-loop.ts`) names why a *product-loop action*
+declines, on either side of the host port. `DESKTOP_WEB_CAPABILITY_REQUIRED` is
+one code with one owner: the visual registry re-exports the product-loop entry
+rather than restating the string, because the same refusal both greys the control
+out and refuses the staging decision behind it.
+
+`refusalLegend()` prints a sentence for every code in both registries, de-duplicated
+by code, and the emitted script reads its names out of the serialized
+`T.product.refusals` table — so a refusal a visitor can read is a refusal the
+document also explains. `test/product-loop.test.ts` asserts that in both directions.
 
 | Code | When |
 |---|---|
-| `OPEN_PATH_KIDS_REFUSED` | the refuse-only profile, and every control behind it that is not already refusing for a more specific reason — the mode rail, the dock tabs, the two drawer toggles, the Change Review decisions, the sculpt cancel, the driveable palette rows; the code comes from the shared open-path policy, not from here |
+| `OPEN_PATH_KIDS_REFUSED` | the refuse-only profile, and every control behind it that is not already refusing for a more specific reason — Open, Save, Play, the mode rail, the dock tabs, the two drawer toggles, the Change Review decisions, the sculpt cancel, and the driveable palette rows; the code comes from the shared open-path policy, not from here |
 | `DESKTOP_KIDS_ASSISTANT_DENIED` | assistant on Kids — its toggle, its close, its prompt, its Send, its Retry, its three route chips, and its three composer modes |
 | `DESKTOP_NO_PRESENTATION_RUNTIME` | the viewport: no renderer is mounted, so no pixels — the three viewport-source tabs, because switching what a viewport shows needs the runtime that is missing, and every `live` assistant control (prompt, Send, Retry, the four artifact manipulators) while `assistantRuntime` is `none` |
-| `DESKTOP_NO_KERNEL_SESSION` | `run` mode: no session, so no tick, frame, or body |
-| `DESKTOP_NO_DOCUMENT_BOUND` | any control that would author something |
+| `DESKTOP_NO_KERNEL_SESSION` | the static `run` mode before a host-backed Play response; the chrome never invents a tick, frame, or body |
+| `DESKTOP_NO_DOCUMENT_BOUND` | authoring controls not covered by the first-release project loop (for example Sculpt) |
+| `DESKTOP_WEB_CAPABILITY_REQUIRED` | the Web stored-HTML and asset-injection controls on Game and Kids; these controls are already inert with the more specific capability refusal, so the Kids demotion preserves it |
 | `DESKTOP_VERB_NOT_ON_THIS_SURFACE` | a palette row naming a CLI verb this shell has no command for, and every application-menu button — this surface has no command behind any of the archive's menus |
 | `DESKTOP_WINDOW_BELOW_MINIMUM` | the window is smaller than 900×600 |
+
+| Product-loop code | When |
+|---|---|
+| `DESKTOP_WEB_CAPABILITY_REQUIRED` | staging asked for outside Web Experience (the same code the control carries) |
+| `DESKTOP_WEB_ASSET_PATH_INVALID` | an injected asset is outside the normalized `assets/` subset, exceeds 512 characters, or would exceed 256 stored assets |
+| `DESKTOP_WEB_HTML_INVALID` | stored markup exceeds 100,000 characters or carries a null byte |
+| `DESKTOP_DOCUMENT_DATA_INVALID` | the open document's data, or its existing `webExperience` value, is not data this loop may replace |
+| `DESKTOP_RUNTIME_UNAVAILABLE` | no packaged host port is attached |
+| `DESKTOP_RUNTIME_REQUEST_FAILED` | the host threw instead of answering |
+| `DESKTOP_RUNTIME_REQUEST_REFUSED` | the host refused and named no reason of its own |
+| `DESKTOP_VIEWPORT_UNAVAILABLE` | orchestrated playback completed but the live viewport did not acknowledge a post-play frame |
+| `DESKTOP_AUTHORING_REFUSED` | the shared authoring session refused and carried no diagnostic code |
+| `DESKTOP_PROPOSAL_NOT_REVIEWING` | propose returned without parking the edit for review |
+| `DESKTOP_PROPOSAL_NOT_DISCARDED` | re-opening could not discard the proposal the host still holds |
+| `DESKTOP_PROFILE_SWITCH_DIRTY` | a staged proposal must be saved or discarded before the profile changes |
+| `DESKTOP_APPLY_NOT_COMPLETED` | accept returned without reporting the apply completed |
+| `DESKTOP_RECOVERY_PENDING` | profile switching is blocked until Save resolves recovery or Open starts a fresh re-read session |
+| `DESKTOP_OPEN_PATH_EVIDENCE_INVALID` | the play response carried no closed session with observed tick digests |
+| `DESKTOP_PRODUCT_REQUEST_IN_FLIGHT` | another serialized product-loop request currently owns the shared session |
+
+A named diagnostic from the host wins over the generic code above it: the surface
+prints `snapshot.diagnostics[0].code` when there is one, which is how
+`apply-in-progress` — the session's cue that journal recovery, not another click,
+is what moves this forward — reaches the operator. `journal-not-found` remains
+visible through the fresh-session re-read that prevents recovery from becoming
+a permanent UI lock.
 
 ### Parity with the CLI
 
@@ -344,8 +463,9 @@ Two rules keep this honest:
   reach the document without its
   kind, and a control the model builds cannot fail to reach the document. That is
   not a convention here: `test/control-accounting.test.ts` enumerates the
-  controls by walking the view and fails in both directions. The refusal legend prints the **whole closed
-  registry**, one sentence per code taken from `DESKTOP_REFUSAL_MESSAGES`, for
+  controls by walking the view and fails in both directions. The status bar's
+  collapsed Refusal help panel prints the **whole closed registry**, one sentence
+  per code taken from `DESKTOP_REFUSAL_MESSAGES`, for
   two reasons: a code must not have two wordings in one document, and a control
   that becomes inert *in the browser* — the profile switch does that to the rail
   and to the assistant — needs its reason to already be there to point at.
@@ -423,8 +543,8 @@ against.
 | Web fonts | `fonts.googleapis.com` link for Archivo + JetBrains Mono | font-family stack, no remote request | the emitted document is self-contained and offline. The archive families are named first and render when installed; otherwise the system UI face does. |
 | Fixed stage | 1680×1000 scaled with a transform | fluid layout, four window tiers | see above |
 | Informational blue | the member carries both `#5B9CFF` and a lighter `#8FB7F5` for the same informational role | `#5B9CFF` | the two archive members disagree, so the shared sheet settles it: Foundations v2 canonicalises `--info` to `#5B9CFF`, D1 makes the sheet binding, and the value clears the text floor here anyway (6.16:1 at worst on `SURFACE`, 6.48:1 on the note's own fill) — so there is no accessibility reason to keep the member's lighter variant, and keeping it would be drift from the shared layer. |
-| Kids profile | a working editor with only the assistant locked | the **whole editor body** refuses | **contract conflict, resolved for the repository.** The Kids product is an isolation boundary with no UI (`open-path-policy.md`, `OPEN_PATH_KIDS_REFUSED`). An editor that merely looked disabled under a Kids badge would still be a Kids authoring UI. Every control behind the refusal goes inert — in the emitted bytes, not only after a click, and decided in one place rather than remembered per call site — so no mode can be entered and no removed panel can be opened from behind it; eleven chrome controls stay live so the refusal is a state you can leave. |
-| Panel inventory | fixture object trees, digests, byte sizes, fps, triangle counts, run timings, evidence rows | real structure with honest empty and inert states | a shell that mounts no renderer and opens no kernel session has no fps, no triangle count, and no `14.2 MB` artifact. Rendering the archive's fixtures would be inventing file sizes and hashes. Change Review is the one fixture queue kept — its interactions are in scope — and it says on the surface that deciding there writes no document. |
+| Kids profile | a working editor with only the assistant locked | the **whole editor body** refuses | **contract conflict, resolved for the repository.** The Kids product is an isolation boundary with no UI (`open-path-policy.md`, `OPEN_PATH_KIDS_REFUSED`). An editor that merely looked disabled under a Kids badge would still be a Kids authoring UI. Every control behind the refusal goes inert — in the emitted bytes, not only after a click, and decided in one place rather than remembered per call site — so no mode can be entered and no removed panel can be opened from behind it; twelve chrome controls stay live so the refusal is a state you can leave and its named reasons remain reachable. |
+| Panel inventory | fixture object trees, digests, byte sizes, fps, triangle counts, run timings, evidence rows | real structure with honest empty and inert states | the chrome mounts no renderer itself and reports only results returned by the packaged host, so it has no authority to invent fps, a triangle count, or a `14.2 MB` artifact. Rendering the archive's fixtures would be inventing file sizes and hashes. Change Review is the one fixture queue kept — its interactions are in scope — and it says on the surface that deciding there writes no document. |
 | Assistant product flow (sceneaxi#192) | nothing recorded: this document has never carried an assistant composer inventory from the archive, and the archive is a design input for visual values, not for product flow | a real prompt `<textarea>`, three provider-route chips (`local`, `byo`, `hosted`), progress and result regions that report actual work, a `Retry` action, and a viewport manipulator bar (`Move +X`, `Move +Y`, `Rotate Y`, `Scale +`) | **product decision, not a visual one.** sceneaxi#192 turns the assistant from a drawn panel into a flow that a runtime performs, so the surface needs controls for the states that flow really has. They ship as modelled controls under the rules already on this page: each declares its kind, all of them are `inert` with a named refusal in the standalone CLI render and become `live` only when the packaged Linux runtime binds them, and all of them are denied on Kids. No colour, size, or geometry is claimed for them from the archive, which is why there is no `DEVIATIONS` row: there is no archive value to compare against. Their rendered contrast has not been swept in a browser — see the caveat on the recorded sweep below. |
 
 ### The renderer note is deliberately dropped
@@ -448,7 +568,8 @@ sentence can return by review slip.
 ## What is verified where
 
 - **Node gates** (`pnpm gate`) cover the whole model — mode/dock-tab derivation,
-  profile projection and the Kids refusal, assistant states including the
+  the active project file, profile capability projection and the Kids refusal,
+  Web stored-HTML/project-asset staging, assistant states including the
   non-reopenable deny, Change Review arithmetic, sculpt pass advance and
   clamping, overlays, window tiers, control kinds, refusal reachability, view
   freezing, and determinism — plus the emitted document: escaping (including a
@@ -461,6 +582,9 @@ sentence can return by review slip.
   which is asserted to be genuinely per profile so a table frozen on one value
   fails rather than passing an identity vacuously. `apps/desktop-shell/test/bin-smoke.test.ts`
   spawns the real binary and renders a document from it.
+  `tests/e2e/desktop-product-loop-golden.test.ts` crosses the rendered profiles,
+  existing desktop bridge, shared authoring session, durable accept, and
+  orchestrated composed-scene play path in one test.
 
 - **The model/renderer split is enforced, not conventional** —
   `apps/desktop-shell/test/control-accounting.test.ts`. Review round after review
@@ -489,8 +613,8 @@ sentence can return by review slip.
      companion case asserts the same helper reports `display: none` for the
      docked assistant below the regular tier, so the check cannot pass vacuously.
      This is the property the Kids lock screen failed at 1280×800.
-  4. **A declared kind tells the truth.** No control declares itself `view` or
-     `review` while the region it names through `aria-controls` resolves to
+  4. **A declared kind tells the truth.** No control declares itself `view`,
+     `review`, or `live` while the region it names through `aria-controls` resolves to
      `display: none` — judged with the control's *own* effect applied, since a
      drawer opener naming a region the sheet keeps shut until it opens it is the
      control working, not a region the profile removed. An `aria-controls` target
@@ -509,6 +633,26 @@ sentence can return by review slip.
   every probe in the file. That is how the palette's dismiss action was gated on
   `kind === "view"` and still passed; it is now emitted unconditionally, and the
   click handler's `aria-disabled` check is what keeps an inert row from acting.
+
+- **First-release product loop, recorded 2026-08-05.** Chromium 148 controlled
+  through `chrome-devtools-axi` against the actual generated `file://` document. At
+  1680×1000 the accessibility tree exposed the active `scene.json`, Open/Save,
+  the Game capability surface, and Play. Switching to Website replaced that
+  region with HTML, site canvas, and asset injection controls and updated the
+  profile pin; switching to Kids displayed the full `OPEN_PATH_KIDS_REFUSED`
+  alert and demoted Open, Save, and Play to inert controls carrying that reason.
+  Standalone Open visibly refused `DESKTOP_RUNTIME_UNAVAILABLE`. With an
+  injected fixture host port, the browser drove exactly
+  `status → propose → accept → open-path`, reported `open → staged → saved`,
+  stored `assets/hero.glb`, entered Run, and printed `4 ticks · session closed`.
+  At 1000×700 and the exact 900×600 minimum the Web tools and Play remained
+  displayed, the left/inspector columns became closed drawers, and both page and
+  shell measured 0 horizontal/vertical overflow. The model-owned Refusal help
+  button opened its in-viewport scrollable explanation panel at both sizes,
+  changed `aria-expanded` to `true`, and closed it without changing either
+  overflow measurement; at 899×599 the shell resolved
+  to `display:none` and the named minimum-window refusal to `display:block`,
+  also with 0 overflow.
 
 - **Real browser, re-recorded 2026-07-28 against this branch's final HEAD.**
   Not inherited: the previous record was taken before the inert state stopped
@@ -543,7 +687,7 @@ sentence can return by review slip.
     `kids`'s "the same 58 with 47 inert" were taken before those eight buttons
     existed, so each figure is low, and "buttons" is no longer even a count of
     the document's interactive elements, because the prompt is a `<textarea>`
-    rather than a button. The **eleven live controls on `kids`** enumerated
+    rather than a button. The **live controls on `kids`** enumerated
     beside those counts are unaffected: that list is the model's own
     outside-the-refusal set (`outsideRefusal` in `visual-model.ts`), not a
     browser observation, and #192 added no control to it. The inert count
@@ -569,6 +713,19 @@ sentence can return by review slip.
   emitted bytes is not a browser observation, and a ratio computed from the token
   table is not a composited one. Re-record this whole sweep in a real browser
   before citing any figure in it for the current chrome.
+
+  **Current-control addendum, recorded 2026-08-05.** Chromium 148 through
+  `chrome-devtools-axi` re-measured the current generated `build` and `kids`
+  documents at 1680×1000, then the refusal-help interaction at 1000×700,
+  900×600, and 899×599. This addendum owns the button, focus-stop, inert,
+  Kids-live-control, disclosure, and short-window figures below; the geometry,
+  contrast, and hover sweep remains the 2026-07-28 full run.
+
+  That addendum was recorded against documents built before the assistant
+  product controls of sceneaxi#192 landed beside this work, so it predates them
+  exactly as the full run does: it re-derives no figure for the prompt
+  `<textarea>`, `Retry`, the three provider-route chips, or the four artifact
+  manipulators, and the caveat above stands for all of them.
 
   **A second correction, on the same axis.** The earlier record read every
   control **at rest**, and a resting read cannot see a `:hover` rule. A
@@ -612,11 +769,15 @@ sentence can return by review slip.
   - **Every button came from the helper.** Across the thirteen document/size
     combinations audited, **0** buttons lacked the `id` + `data-kind` pair and
     **0** `aria-describedby` references dangled, in every state and after every
-    interaction below. `build` renders 58 buttons, 53 focus stops, **0
-    unlabelled**, 17 inert. `kids` renders the same 58 with **47** inert: the
-    live eleven are exactly the controls not behind the refusal —
-    `profile-game`, `profile-web`, `profile-kids`, `overlay-open-palette`, the
-    three `status-overlay-*`, and the four `overlay-close-*`. The only inert
+    interaction below. `build` renders 64 buttons, 59 focus stops, **0
+    unlabelled**, 19 inert. `kids` renders the same 64 with **52** inert: the
+    live twelve are exactly the controls not behind the refusal —
+    `profile-game`, `profile-web`, `profile-kids`, `overlay-open-palette`,
+    `status-overlay-conflict`, `status-overlay-palette`,
+    `status-overlay-refused`, `status-refusal-help`,
+    `overlay-close-conflict-discard`, `overlay-close-conflict-review`,
+    `overlay-close-refused-edit-brief`, and
+    `overlay-close-refused-keep-draft`. The only inert
     controls outside the plain Tab order are `viewport-source-game` and
     `viewport-source-sculpt-preview` on `build` (roving tabindex, and the arrow
     keys reach them), joined on `kids` by the non-active dock tabs.

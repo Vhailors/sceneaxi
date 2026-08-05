@@ -1,11 +1,9 @@
 /**
- * The scene the packaged desktop app opens: one composition, two consumers.
+ * The scene composition boundary for the packaged desktop app.
  *
- * The same `composeScene()` result feeds both the renderer-process viewport (as the
- * shared `MountableScene` browser payload from `@sceneaxi/site-kit`) and the
- * main-process kernel open path (through `@sceneaxi/engine-orchestrator`). One
- * pipeline decides what may be drawn and what may be opened, so the two can never
- * disagree, and `pnpm gate` proves all of it without Electron or a browser.
+ * One `composeScene()` result feeds both the renderer-process viewport and the
+ * main-process kernel open path, whether it is the initial starter composition or
+ * one re-read from the active Scene Document.
  *
  * Placement stays a projection (ADR 0014): the committed starter artifact is
  * reconstructed through `@sceneaxi/authoring-core` and never rewritten to place it,
@@ -15,8 +13,10 @@ import { composeScene } from "@sceneaxi/authoring-core";
 import {
   SCENE_COMPOSITION_INTAKE_KIND,
   SCENE_COMPOSITION_SCHEMA_VERSION,
+  composedSceneFromDocumentData,
   digestSceneArtifact,
   identitySculptTransform,
+  isJsonObject,
   type SceneCompositionIntake,
   type SculptArtifact,
   type SculptTransform,
@@ -82,6 +82,12 @@ function artifactIdOf(value: unknown): string {
     : "";
 }
 
+function desktopPlacementLabels(): ReadonlyMap<string, string> {
+  return new Map(
+    DESKTOP_OPEN_PLACEMENTS.map((placement) => [placement.instanceId, placement.label]),
+  );
+}
+
 /**
  * Compose the desktop open scene from the committed starter artifact.
  *
@@ -121,13 +127,59 @@ export function desktopOpenScene(): DesktopSceneResult {
     });
   }
 
-  const labels = new Map(
-    DESKTOP_OPEN_PLACEMENTS.map((placement) => [placement.instanceId, placement.label]),
-  );
   return Object.freeze({
     ok: true as const,
     composed,
-    mountable: mountableScene(composed, labels),
+    mountable: mountableScene(composed, desktopPlacementLabels()),
+  });
+}
+
+export function desktopSceneFromDocumentData(data: unknown): DesktopSceneResult {
+  if (!isJsonObject(data)) {
+    return Object.freeze({
+      ok: false as const,
+      reason: DESKTOP_SCENE_NOT_COMPOSABLE,
+      message: "The active Scene Document data is not a JSON object.",
+    });
+  }
+  const stored = composedSceneFromDocumentData(data);
+  if (!stored.ok) {
+    const diagnostic = stored.diagnostics[0];
+    return Object.freeze({
+      ok: false as const,
+      reason: DESKTOP_SCENE_NOT_COMPOSABLE,
+      message: diagnostic?.message ?? "The active Scene Document has no valid composition.",
+    });
+  }
+
+  const intake: SceneCompositionIntake = {
+    schemaVersion: SCENE_COMPOSITION_SCHEMA_VERSION,
+    kind: SCENE_COMPOSITION_INTAKE_KIND,
+    sceneId: stored.value.sceneId,
+    rootInstanceId: stored.value.rootInstanceId,
+    placements: stored.value.instances.map((instance) => ({
+      instanceId: instance.instanceId,
+      artifactId: instance.artifactId,
+      parentInstanceId: instance.parentInstanceId,
+      transform: instance.localTransform,
+    })),
+  };
+  const artifacts = new Map<string, SculptArtifact>();
+  for (const instance of stored.value.instances) {
+    artifacts.set(instance.artifactId, instance.artifact);
+  }
+  const composed = composeScene(intake, [...artifacts.values()]);
+  if (!composed.ok || composed.sceneDigest !== stored.value.evidence.sceneDigest) {
+    return Object.freeze({
+      ok: false as const,
+      reason: DESKTOP_SCENE_NOT_COMPOSABLE,
+      message: "The active Scene Document composition could not be reproduced.",
+    });
+  }
+  return Object.freeze({
+    ok: true as const,
+    composed,
+    mountable: mountableScene(composed, desktopPlacementLabels()),
   });
 }
 

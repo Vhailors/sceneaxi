@@ -407,17 +407,27 @@ tabs, profile switch, assistant states, Change Review, command palette,
 overlays, sculpt progress, window tiers, the closed `DESKTOP_VISUAL_REFUSALS`
 registry) and `src/chrome.ts` renders it as one self-contained HTML document via
 the `sceneaxi-desktop chrome` command — no remote asset, no framework, no DOM
-types. Three invariants: every control declares `view` | `review` | `live` | `inert`,
+types. The first-release product loop is `src/product-loop.ts`, which owns the
+second closed registry, `DESKTOP_PRODUCT_REFUSALS` (the visual one re-exports
+`webCapabilityRequired` rather than restating it), and the one Web staging
+decision `desktopWebStageDecision()` — free of module bindings so the emitted
+script embeds that exact function instead of a hand-copied paraphrase of it.
+The chrome writes no refusal name as a literal: both registries are serialized
+into the script, and `refusalLegend()` prints a sentence for every code in
+either. Three invariants: every control declares `view` | `review` | `live` | `inert`,
 a `live` control is bound only by an explicit consumer runtime transition, and an
 inert one keeps its focus stop and names a refusal; the profile switch
 **projects** `openPathPolicyView()` rather than describing a profile, so parity
 with the CLI is a data identity; and the chrome mounts no presentation runtime
-and opens no kernel session, so it draws no pixels, invents no digest, byte
-size, frame rate, or timing. Its visual model invokes no authoring operation; the
-packaged Linux consumer binds its live assistant controls through the bridge above.
-Its document starts with the assistant runtime unavailable and the renderer promotes
-it to local only after the bridge, presentation mount, and control handlers are bound.
-The
+and opens no kernel session, reaching project state and composed-scene playback
+only through its optional packaged-host port — refusing standalone calls by name
+and never importing presentation, profile, site, or billing implementations. It
+reports only host-returned play evidence and invents no digest, byte size, frame
+rate, or timing. Its visual model invokes no authoring operation; the packaged
+Linux consumer binds its live assistant controls through the bridge above. Its
+document starts with the assistant runtime unavailable and the renderer promotes
+it to local only after the bridge, presentation mount, and control handlers are
+bound. The
 canonical archive digest, the `Engine Desktop v1.dc.html` supersession (amber
 accent, Space Grotesk/IBM Plex, fixed 2064×1400 launcher storyboard — none of it
 may return), every deviation from that archive, and the recorded browser

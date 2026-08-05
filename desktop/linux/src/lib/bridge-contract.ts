@@ -21,6 +21,10 @@ import type { MountableScene } from "@sceneaxi/site-kit";
 /** The one IPC channel the preload exposes and the main process serves. */
 export const DESKTOP_BRIDGE_CHANNEL = "sceneaxi:desktop-bridge";
 
+export const DESKTOP_VIEWPORT_PLAY_EVENT = "sceneaxi:desktop-viewport-play";
+
+export const DESKTOP_ACTIVE_DOCUMENT_PATH = "scene.json";
+
 /**
  * The chrome meta the renderer updates from the real frame report. Lives here —
  * not in `chrome-document.ts` — because this module is the browser-safe half of
@@ -105,6 +109,8 @@ export const DESKTOP_BRIDGE_AUTHORING_OPS = Object.freeze([
   "propose",
   "accept",
   "reject",
+  "recover",
+  "restart",
   "undo",
 ] as const);
 

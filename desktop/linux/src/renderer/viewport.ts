@@ -24,29 +24,22 @@ import {
 } from "@sceneaxi/engine-presentation";
 import { createDesktopAssistantViewportController } from "../lib/assistant-viewport.js";
 import {
+  DESKTOP_ACTIVE_DOCUMENT_PATH,
   DESKTOP_BRIDGE_GLOBAL,
   DESKTOP_BRIDGE_REFUSALS,
+  DESKTOP_VIEWPORT_PLAY_EVENT,
   PIXELS_META_NAME,
   type DesktopAssistantJobSnapshot,
   type DesktopBridgeResponse,
 } from "../lib/bridge-contract.js";
+import {
+  desktopMountablePayload,
+  mountDesktopScene,
+  synchronizeViewportScene,
+} from "./viewport-playback.js";
 
 type BridgeGlobal = {
   request(request: unknown): Promise<DesktopBridgeResponse>;
-};
-
-type MountableInstance = {
-  instanceId: string;
-  artifactId: string;
-  label: string;
-  worldTransform: unknown;
-};
-
-type MountablePayload = {
-  sceneId: string;
-  sceneDigest: string;
-  artifacts: Record<string, unknown>;
-  instances: MountableInstance[];
 };
 
 // A rejected bridge call is worth retrying — the next frame is milliseconds away —
@@ -335,7 +328,7 @@ function installAssistantProductFlow(
 }
 
 async function mountLiveViewport(): Promise<void> {
-  const stage = document.querySelector(".viewport");
+  const stage = document.querySelector<HTMLElement>(".viewport");
   if (stage === null) {
     refuseLiveViewport(null, "the chrome document has no viewport stage.");
     return;
@@ -347,12 +340,19 @@ async function mountLiveViewport(): Promise<void> {
     return;
   }
 
-  const sceneResponse = await port.request({ action: "scene" });
+  const sceneResponse = await port.request({
+    action: "scene",
+    payload: { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+  });
   if (!sceneResponse.ok) {
     refuseLiveViewport(stage, `${sceneResponse.reason} — ${sceneResponse.message}`);
     return;
   }
-  const scene = sceneResponse.data as MountablePayload;
+  if (!desktopMountablePayload(sceneResponse.data)) {
+    refuseLiveViewport(stage, "the active Scene Document payload is invalid.");
+    return;
+  }
+  let scene = sceneResponse.data;
 
   const canvas = document.createElement("canvas");
   canvas.setAttribute("data-live-viewport", "canvas");
@@ -391,16 +391,7 @@ async function mountLiveViewport(): Promise<void> {
 
   const mounts = createSculptMountApi(backend);
   try {
-    for (const instance of scene.instances) {
-      const artifact = scene.artifacts[instance.artifactId];
-      // The payload crossed IPC as JSON; the Sculpt Mount API re-validates every
-      // artifact and transform at mount time and refuses invalid ones by name.
-      mounts.mount({
-        instanceId: instance.instanceId,
-        artifact,
-        transform: instance.worldTransform,
-      } as Parameters<typeof mounts.mount>[0]);
-    }
+    mountDesktopScene(mounts, scene);
     backend.frameMountedContent();
     backend.camera.attach(canvas);
   } catch (error) {
@@ -479,10 +470,56 @@ async function mountLiveViewport(): Promise<void> {
     );
   }
 
+  document.addEventListener(DESKTOP_VIEWPORT_PLAY_EVENT, (event: Event) => {
+    if (!(event instanceof CustomEvent)) return;
+    const detail = event.detail as {
+      accepted?: unknown;
+      exercise?: {
+        closed?: unknown;
+        initialDigest?: unknown;
+        tickDigests?: unknown;
+        mountable?: unknown;
+      };
+      frame?: unknown;
+    } | null;
+    const exercise = detail?.exercise;
+    if (
+      detail === null ||
+      exercise?.closed !== true ||
+      typeof exercise.initialDigest !== "string" ||
+      !Array.isArray(exercise.tickDigests) ||
+      exercise.tickDigests.length === 0 ||
+      !exercise.tickDigests.every((digest) => typeof digest === "string") ||
+      !desktopMountablePayload(exercise.mountable)
+    ) {
+      return;
+    }
+    const synchronized = synchronizeViewportScene({
+      mounts,
+      frameMountedContent: () => backend.frameMountedContent(),
+      current: scene,
+      next: exercise.mountable,
+    });
+    if (!synchronized.ok) return;
+    scene = synchronized.scene;
+    const frame = mounts.render();
+    updatePixelsMeta(frame);
+    detail.accepted = true;
+    detail.frame = frame.frame;
+    stage.dataset.playback = "acknowledged";
+    openPathLine(
+      stage,
+      `kernel playback acknowledged: ${exercise.tickDigests.length} ticks advanced · digest ${exercise.initialDigest.slice(0, 18)}… → ${exercise.tickDigests.at(-1)?.slice(0, 18)}… · composed scene redrawn at viewport frame ${frame.frame}`,
+    );
+  });
+
   // Everything below runs after `loop.start()`, so it names itself on its own line
   // — a refusal written to the frame report would be overwritten by the next frame.
   try {
-    const openPath = await port.request({ action: "open-path" });
+    const openPath = await port.request({
+      action: "open-path",
+      payload: { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+    });
     if (openPath.ok) {
       const exercise = openPath.data as { initialDigest: string; tickDigests: string[] };
       openPathLine(

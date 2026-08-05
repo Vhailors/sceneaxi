@@ -204,17 +204,18 @@ export type EditorShellAssistantState =
 
 /**
  * What an editor-shell control declares itself to be. This is the product
- * model's honesty contract, shared with the desktop chrome's own kinds
- * (`docs/engine-desktop-surface.md`):
+ * model's honesty contract, shared by both surfaces
+ * (`docs/engine-desktop-surface.md`, `docs/web-editor-shell.md`):
  *
  * - `view` — changes visual state only, and genuinely works.
  * - `review` — edits a Change Review queue; writes no document.
  * - `live` — operates a real engine seam (a Minimum E2 session operation, a
- *   real save through propose/apply). Only a surface with a real session may
- *   mint one, and each maps to a named operation of that surface's own frozen
- *   operation set. The desktop chrome mints its own `live` controls only for
- *   the assistant product actions a consumer runtime binds, which is why the
- *   standalone `chrome` render keeps them inert (`docs/desktop-linux.md`).
+ *   real save through propose/apply, or the desktop chrome's injected
+ *   packaged host). Only a surface that can reach a real session may mint one,
+ *   and each maps to a named operation of that surface's own frozen operation
+ *   set. The desktop chrome also mints `live` controls for the assistant
+ *   product actions a consumer runtime binds, which is why the standalone
+ *   `chrome` render keeps those inert (`docs/desktop-linux.md`).
  * - `inert` — renders, keeps its focus stop, and refuses by name.
  *
  * There is no fifth kind, and a control with no kind cannot exist: both

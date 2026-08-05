@@ -128,7 +128,13 @@ describe("desktop offer ↔ recorded build lockstep", () => {
   });
 
   it("documents first-run project creation and all three honest product tabs", () => {
-    expect(doc).toContain("seeds `scene.json` only when that file is absent");
+    // The seed writes a project only where one is missing something: it creates
+    // `scene.json`, migrates a document that predates the composed-scene field,
+    // and leaves anything else alone. The doc has to say all three, because
+    // "seeds on first launch" alone would read as "may rewrite what is there".
+    expect(doc).toContain("seeds `scene.json`");
+    expect(doc).toContain("Documents that already carry that field are never rewritten");
+    expect(doc).toContain("invalid existing bytes refuse rather than being replaced");
     expect(doc).toContain("**Game**");
     expect(doc).toContain("**Website (Web)**");
     expect(doc).toContain("**Kids**");
