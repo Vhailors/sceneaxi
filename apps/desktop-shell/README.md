@@ -79,9 +79,13 @@ data identity. What stays local is this renderer's own detail (glyph geometry,
 tier shape) and everything below.
 
 Every control declares its kind — `view` changes visual state and works,
-`review` edits the fixture Change Review queue and writes no document, and
-`inert` keeps its focus stop and refuses by a name from
-`DESKTOP_VISUAL_REFUSALS`. Nothing on this path reaches `authoring-core`.
+`review` edits the fixture Change Review queue and writes no document, `live`
+declares a product action an enclosing consumer runtime must bind (the assistant
+prompt, Send, Retry, and the artifact manipulators, which the packaged Linux tier
+binds through its bridge), and `inert` keeps its focus stop and refuses by a name
+from `DESKTOP_VISUAL_REFUSALS`. This app invokes no authoring operation itself,
+so a `live` control rendered by the standalone `chrome` command is inert and says
+why.
 
 The refuse-only profile demotes in **one** place: every control is minted through
 one function inside `desktopVisualView()`, and on Kids that function makes each

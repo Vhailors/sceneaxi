@@ -46,12 +46,27 @@ authoring propose → accept → undo round trip, and the renderer's real
 presentation frame report (`backend three`, `surface webgl-canvas` where a
 drawing buffer exists).
 
+The packaged chrome also binds its Assistant **Build** mode to the bridge. Local
+is a deterministic, free compiler; BYOK is free of SceneAxi credits but runs
+only when the embedding deployment injects its provider runner; Hosted is
+metered and refuses here because this desktop tier has no identity/credit plane.
+A successful action projects the validated Sculpt Artifact through the shared
+`MountableScene` payload — directly, since composition refuses a one-instance
+scene as a sculpt — before the
+live center viewport mounts it, adds translate/rotate/scale manipulators, and shows the artifact's
+read-only materials, supported collider physics, and procedural settings.
+Progress, provider/refusal details, and Retry remain on the surface. A timed-out
+job is abandoned before Retry is offered, so a late provider result cannot
+replace the newer job. Ask and Agent modes refuse clearly rather than pretending
+they produce build output. The shell visual model owns the manipulator controls
+and tokens; the renderer only binds their Mount API effects.
+
 ## Shape
 
 | Piece | Path | Runs in |
 |---|---|---|
 | Bridge contract (channel, envelope, refusals) | `src/lib/bridge-contract.ts` | everywhere (pure) |
-| Bridge (`handle()` over the real engine) | `src/lib/bridge.ts` | main process; gate-tested from `tests/e2e/` |
+| Bridge (`handle()` over the real engine and assistant job) | `src/lib/bridge.ts` | main process; gate-tested from `tests/e2e/` |
 | Scene composition (one pipeline, two consumers) | `src/lib/desktop-scene.ts` | main process; gate-tested |
 | Chrome document emitter (desktop-shell, unforked) | `src/lib/chrome-document.ts` | build time |
 | Electron entries (window, IPC adapter, smoke) | `src/electron/{main,preload}.ts` | Electron only |
@@ -65,12 +80,18 @@ Rules the gate enforces (`pnpm check:desktop`, `pnpm check:boundaries`,
 - The visual model is consumed, never duplicated: no control, mode, refusal, or
   token is re-declared here, and the emitted document is byte-derived from
   `renderDesktopChrome()` plus exactly two injections (a runtime marker meta and
-  the renderer script tag).
+  the renderer script tag). The document starts with the assistant runtime
+  unavailable; only complete viewport and handler binding promotes it to local.
+  Runtime loss is signalled back to the chrome, which applies the visual model's
+  precomputed unavailable transition to every control.
 - The chrome's `sceneaxi-pixels-drawn` meta stays `false` at build time; the
   renderer updates it only from a real presentation frame's `pixelsDrawn`.
-- Kids has no path here: the bridge names no profile, the chrome's refuse-only
-  Kids projection stays owned by `@sceneaxi/desktop-shell`, and the dependency
-  matrix denies this package every profile and identity package.
+- Kids has no assistant path here: the chrome's refuse-only projection stays
+  owned by `@sceneaxi/desktop-shell`, the bridge refuses
+  `ASSISTANT_SCULPT_KIDS_DENIED` before it routes local, BYOK, or hosted, and
+  the profile it carries makes authoring-core deny again — independently — before
+  generation or provider dispatch. No Kids or identity package is imported; the
+  dependency matrix keeps both denied.
 - No secret exists in this tier; the window runs with context isolation and the
   sandbox on, and navigation away from the packaged document is refused.
 

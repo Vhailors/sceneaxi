@@ -31,6 +31,7 @@ Bridge actions and what each reaches — only through public seams:
 | `handshake` | identity only |
 | `scene` | `composeScene()` via `desktopOpenScene()` → the shared `MountableScene` payload from `@sceneaxi/site-kit` |
 | `open-path` | `bootstrapOpenPath()` from `@sceneaxi/engine-orchestrator`: a real kernel scene session opened, advanced, observed, closed |
+| `assistant` | `runAssistantSculptAction()` in `@sceneaxi/authoring-core`: deterministic local compilation by default, or an explicitly injected BYOK runner; job status carries real progress and a typed artifact or recoverable named refusal. Hosted refuses here because this tier has no identity/credit authority |
 | `authoring` | `createDesktopSession()` from `@sceneaxi/desktop-shell` — the same propose/accept protocol as the CLI and web-shell. A `documentPath` arrives from the renderer over IPC and the authoring core resolves it against `cwd` without a containment check of its own, so the bridge owns that constraint: an absolute path, one escaping the project directory, or one whose **canonical** path leaves it through a symlink refuses `DESKTOP_BRIDGE_REQUEST_MALFORMED`. Containment is judged after symlink resolution because that is where the bytes land; a missing leaf still resolves, so this is containment and not an existence check |
 | `frame-report` | nothing: it *accepts* the renderer's real presentation frame so main and the smoke can see what was claimed |
 
@@ -42,6 +43,52 @@ editor state machine stays owned by the shell ([sceneaxi#184](https://github.com
 deepens that surface, not this tier). The chrome's `sceneaxi-pixels-drawn` meta
 stays `false` at build time; the renderer updates it only from a real frame's
 `pixelsDrawn` — evidence, never assertion.
+
+### Assistant-to-viewport product loop
+
+The packaged document requests a build only from Assistant **Build** mode. The
+free Local route uses the deterministic compiler and no provider or credit; BYOK
+uses only an injected runner and otherwise refuses
+`DESKTOP_ASSISTANT_BYO_UNAVAILABLE`; Hosted names itself metered and refuses
+`DESKTOP_ASSISTANT_HOSTED_METERING_UNAVAILABLE` because the dependency matrix
+correctly keeps auth/billing out of this tier. Hosted completion and debiting are
+proved separately through web-shell's existing `createAssistantPanel()` seam.
+The desktop golden test injects a real fixture-backed Model Provider Port through
+that BYOK runner and proves the typed result crosses the job seam; the packaged
+default deliberately injects no provider, credential, or fallback behaviour.
+
+On success the existing validated `SculptArtifact` becomes the shared
+`MountableScene` payload before it is mounted through `createSculptMountApi()` into
+the one live center viewport. That projection is direct rather than a
+`composeScene()` call: the composition contract's `SCENE_MINIMUM_INSTANCES` calls a
+one-instance scene a sculpt and refuses it, and the mount carries an identity world
+transform because placement here is the manipulators' job. The renderer exposes
+real translate/rotate/scale controls using the Mount API and prints read-only
+materials, collider physics where the quality artifact supports it, and
+procedural settings. Unsupported edits and legacy physics inspection refuse by
+name. Provider failures, malformed output, timeouts, and other refusals remain
+visible with Retry; a timeout first abandons the old job so its late result
+cannot overwrite the retry, and a runner that dispatches nothing takes its
+`running` claim back rather than leaving the seam permanently
+`DESKTOP_ASSISTANT_BUSY`. Streaming progress contains only deltas actually
+observed from a BYOK stream; the bridge retains the **newest** entry plus a count,
+never the accumulated log, and stops accepting progress after abandonment. If the live viewport itself refuses — no bridge, no
+composable scene, no WebGL surface, or a mount that fails — the composer is
+transitioned by the visual model to `DESKTOP_NO_PRESENTATION_RUNTIME` instead of
+staying live and unbound, because a control here is either live and acts or inert
+and names a refusal. Selecting Kids removes the composer, the bridge refuses
+`ASSISTANT_SCULPT_KIDS_DENIED` before it routes local, BYOK, or hosted, and
+authoring-core denies the carried Kids profile again — independently — before
+local compilation or provider dispatch.
+The packaged document starts in that unavailable state and transitions to local
+only after the bridge, initial Mount API scene, and every assistant handler bind.
+
+The first-release manipulator is deliberately bounded: `Move +X` and `Move +Y`
+advance by 0.25 world units, `Rotate Y` advances by 15 degrees, and `Scale +`
+adds 0.1 uniformly. A replacement artifact resets that state to identity before
+the controls act again. These controls are modelled by `desktop-shell` and use
+its existing control tokens; the renderer declares only the Mount API effects,
+not a parallel control or palette.
 
 ## The renderer-owning module
 
@@ -184,6 +231,12 @@ The profile switch presents **Game**, **Website (Web)**, and **Kids**:
   this release. The application shows the named safety refusal and keeps the profile
   switch available so the operator can return to Game or Website; it does not claim
   a Kids authoring path that is not shipped.
+
+The Assistant column distinguishes `Local · free`, `BYOK · free`, and
+`Hosted · metered`. Build is the first-release artifact-producing mode; Ask and
+Agent refuse instead of borrowing Build semantics. A mounted assistant result
+keeps orbit/zoom plus explicit translation, rotation, and scale manipulators in
+the center viewport.
 
 ## Where each proof came from
 

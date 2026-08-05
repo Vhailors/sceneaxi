@@ -15,8 +15,10 @@ import { composeScene } from "@sceneaxi/authoring-core";
 import {
   SCENE_COMPOSITION_INTAKE_KIND,
   SCENE_COMPOSITION_SCHEMA_VERSION,
+  digestSceneArtifact,
   identitySculptTransform,
   type SceneCompositionIntake,
+  type SculptArtifact,
   type SculptTransform,
   type Vector3,
 } from "@sceneaxi/schemas";
@@ -29,6 +31,10 @@ import {
 
 /** Document id of the composed scene the desktop app opens. */
 export const DESKTOP_OPEN_SCENE_ID = "desktop-linux-open-scene";
+
+export const DESKTOP_ASSISTANT_SCENE_ID = "desktop-assistant-output-scene";
+
+export const DESKTOP_ASSISTANT_INSTANCE_ID = "assistant-live-output";
 
 /** Refusal minted when the pipeline rejects the desktop composition. */
 export const DESKTOP_SCENE_NOT_COMPOSABLE = "DESKTOP_SCENE_NOT_COMPOSABLE";
@@ -122,5 +128,38 @@ export function desktopOpenScene(): DesktopSceneResult {
     ok: true as const,
     composed,
     mountable: mountableScene(composed, labels),
+  });
+}
+
+/**
+ * Project one assistant artifact into the shared `MountableScene` browser payload.
+ *
+ * Deliberately *not* through `composeScene()`: the composition contract calls a
+ * one-instance scene a sculpt rather than a scene (`SCENE_MINIMUM_INSTANCES`), so
+ * that pipeline refuses a single artifact by design. The artifact still crosses
+ * exactly the boundary the renderer may mount from — the same payload shape the
+ * composed open scene produces — carrying an identity world transform, because
+ * placement here belongs to the viewport's manipulators and not to the pipeline.
+ * The artifact is never rewritten, so its evidence still binds its own bytes, and
+ * `sceneDigest` is that artifact's digest since it is the whole of what mounts.
+ *
+ * Total for a validated artifact: there is no composition left to refuse.
+ */
+export function desktopAssistantScene(artifact: SculptArtifact): MountableScene {
+  return Object.freeze({
+    sceneId: DESKTOP_ASSISTANT_SCENE_ID,
+    rootInstanceId: DESKTOP_ASSISTANT_INSTANCE_ID,
+    sceneDigest: digestSceneArtifact(artifact),
+    artifacts: Object.freeze({ [artifact.artifactId]: artifact }),
+    instances: Object.freeze([
+      Object.freeze({
+        instanceId: DESKTOP_ASSISTANT_INSTANCE_ID,
+        artifactId: artifact.artifactId,
+        parentInstanceId: null,
+        depth: 0,
+        label: "Assistant output",
+        worldTransform: identitySculptTransform(),
+      }),
+    ]),
   });
 }

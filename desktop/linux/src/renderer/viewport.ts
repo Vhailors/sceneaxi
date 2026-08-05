@@ -22,9 +22,12 @@ import {
   createThreeSculptPresentationBackend,
   type SculptPresentationFrame,
 } from "@sceneaxi/engine-presentation";
+import { createDesktopAssistantViewportController } from "../lib/assistant-viewport.js";
 import {
   DESKTOP_BRIDGE_GLOBAL,
+  DESKTOP_BRIDGE_REFUSALS,
   PIXELS_META_NAME,
+  type DesktopAssistantJobSnapshot,
   type DesktopBridgeResponse,
 } from "../lib/bridge-contract.js";
 
@@ -121,19 +124,232 @@ function frameText(frame: SculptPresentationFrame): string {
   ].join(" · ");
 }
 
+function signalAssistantRuntime(
+  runtime: "none" | "local",
+  message?: string,
+): void {
+  const shell = document.querySelector<HTMLElement>(".shell");
+  const eventName = shell?.dataset.assistantRuntimeEvent;
+  if (eventName === undefined) return;
+  document.dispatchEvent(
+    new CustomEvent(eventName, {
+      detail: Object.freeze({
+        runtime,
+        ...(message === undefined ? {} : { message }),
+      }),
+    }),
+  );
+}
+
+function signalAssistantRuntimeUnavailable(message: string): void {
+  signalAssistantRuntime("none", message);
+}
+
+/**
+ * One refusal, said in both places it has to be said: the viewport's own report
+ * line, and the assistant composer that would otherwise still invite a prompt it
+ * has no runtime to answer.
+ */
+function refuseLiveViewport(stage: Element | null, message: string): void {
+  if (stage !== null) reportLine(stage, `Live viewport refused: ${message}`);
+  signalAssistantRuntimeUnavailable(
+    `${message} Assistant Build has no live viewport to mount a typed artifact into.`,
+  );
+}
+
+function assistantProfile(shell: HTMLElement): `@sceneaxi/profile-${string}` {
+  const id = shell.dataset.profile;
+  return `@sceneaxi/profile-${id === "web" ? "web" : id === "kids" ? "kids" : "game"}`;
+}
+
+function inspectionText(job: DesktopAssistantJobSnapshot): string {
+  const inspection = job.result?.inspection;
+  if (inspection === undefined) return "";
+  const materials = inspection.materials.values
+    .map(
+      (material) =>
+        `${material.id}: ${material.baseColor}, metal ${material.metallic}, rough ${material.roughness}`,
+    )
+    .join("\n");
+  const physics = inspection.physics.supported
+    ? inspection.physics.colliders
+        .map((collider) => `${collider.id}: ${collider.shape} collider`)
+        .join("\n")
+    : `${inspection.physics.reason}: ${inspection.physics.message}`;
+  const settings = inspection.settings.proceduralModule;
+  return [
+    "MATERIALS (read-only)",
+    materials || "none",
+    "",
+    "PHYSICS (read-only)",
+    physics || "none",
+    "",
+    "SETTINGS (read-only)",
+    `${settings.moduleId} · ${settings.exportName}`,
+    inspection.settings.edit.refusal,
+  ].join("\n");
+}
+
+function installAssistantProductFlow(
+  stage: Element,
+  port: BridgeGlobal,
+  mounts: ReturnType<typeof createSculptMountApi>,
+  backend: ReturnType<typeof createThreeSculptPresentationBackend>,
+): boolean {
+  const shell = document.querySelector<HTMLElement>(".shell");
+  const prompt = document.querySelector<HTMLTextAreaElement>("#assistant-prompt");
+  const send = document.querySelector<HTMLElement>("#assistant-send");
+  const status = document.querySelector<HTMLElement>("[data-assistant-status]");
+  const resultView = document.querySelector<HTMLElement>("[data-assistant-result]");
+  const retry = document.querySelector<HTMLButtonElement>("#assistant-retry");
+  const manipulatorBar = stage.querySelector<HTMLElement>("[data-assistant-manipulators]");
+  const sendControls = Array.from(
+    document.querySelectorAll<HTMLElement>("[data-action='assistant-send']"),
+  );
+  const manipulatorControls = Array.from(
+    manipulatorBar?.querySelectorAll<HTMLButtonElement>(
+      "[data-action='assistant-manipulator']",
+    ) ?? [],
+  );
+  if (
+    shell === null ||
+    prompt === null ||
+    send === null ||
+    status === null ||
+    resultView === null ||
+    retry === null ||
+    manipulatorBar === null ||
+    sendControls.length === 0 ||
+    !sendControls.includes(send) ||
+    !sendControls.includes(retry) ||
+    manipulatorControls.length === 0
+  ) {
+    return false;
+  }
+  let running = false;
+  const assistantViewport = createDesktopAssistantViewportController(mounts);
+
+  manipulatorControls.forEach((control) => {
+    control.addEventListener("click", () => {
+      if (control.getAttribute("aria-disabled") === "true") return;
+      assistantViewport.manipulate(control.dataset.value);
+    });
+  });
+
+  const refused = (reason: string, message: string): void => {
+    running = false;
+    status.textContent = `${reason} — ${message}`;
+    retry?.removeAttribute("hidden");
+  };
+
+  const poll = async (): Promise<void> => {
+    for (let attempt = 0; attempt < 200; attempt += 1) {
+      const response = await port.request({ action: "assistant", payload: { op: "status" } });
+      if (!response.ok) {
+        refused(response.reason, response.message);
+        return;
+      }
+      const job = response.data as DesktopAssistantJobSnapshot | null;
+      if (job === null) {
+        refused(
+          DESKTOP_BRIDGE_REFUSALS.assistantJobMissing,
+          "The assistant job disappeared; retry the prompt.",
+        );
+        return;
+      }
+      const latest = job.latestProgress;
+      if (latest !== null) status.textContent = `${latest.percent}% · ${latest.message}`;
+      if (job.status === "refused") {
+        refused(
+          job.refusal?.reason ?? DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
+          job.refusal === undefined
+            ? "The assistant action refused."
+            : `${job.refusal.message}${job.refusal.detail === undefined ? "" : ` — ${job.refusal.detail}`}`,
+        );
+        return;
+      }
+      if (job.status === "ready" && job.result !== undefined) {
+        assistantViewport.replace(job.result.mountable);
+        backend.frameMountedContent();
+        manipulatorBar?.removeAttribute("hidden");
+        resultView.textContent = inspectionText(job);
+        resultView.removeAttribute("hidden");
+        retry?.setAttribute("hidden", "");
+        status.textContent =
+          "Mounted in the live center viewport · translate/rotate/scale manipulators active · drag to orbit, wheel to zoom.";
+        running = false;
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    await port.request({ action: "assistant", payload: { op: "abandon" } });
+    refused(
+      DESKTOP_BRIDGE_REFUSALS.assistantStatusTimeout,
+      "The assistant job did not finish in time; it was abandoned and Retry may start a fresh job.",
+    );
+  };
+
+  const start = async (): Promise<void> => {
+    if (running) return;
+    if (shell.dataset.assistantMode !== "build") {
+      refused(
+        DESKTOP_BRIDGE_REFUSALS.assistantBuildModeRequired,
+        "Choose Build mode to produce and mount a typed Sculpt Artifact; Ask and Agent are not implemented by this first-release flow.",
+      );
+      return;
+    }
+    const value = prompt.value.trim();
+    if (value.length === 0) {
+      refused("ASSISTANT_SCULPT_PROMPT_INVALID", "Enter a prompt before sending.");
+      return;
+    }
+    running = true;
+    retry?.setAttribute("hidden", "");
+    resultView.setAttribute("hidden", "");
+    status.textContent = "Starting assistant action…";
+    const response = await port.request({
+      action: "assistant",
+      payload: {
+        op: "start",
+        route: shell.dataset.assistantRoute ?? "local",
+        profile: assistantProfile(shell),
+        prompt: value,
+      },
+    });
+    if (!response.ok) {
+      refused(response.reason, response.message);
+      return;
+    }
+    await poll();
+  };
+
+  sendControls.forEach((control) => {
+    control.addEventListener("click", () => {
+      if (control.getAttribute("aria-disabled") === "true") return;
+      void start().catch((error: unknown) =>
+        refused(DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed, refusalText(error)),
+      );
+    });
+  });
+  return true;
+}
+
 async function mountLiveViewport(): Promise<void> {
   const stage = document.querySelector(".viewport");
-  if (stage === null) return;
+  if (stage === null) {
+    refuseLiveViewport(null, "the chrome document has no viewport stage.");
+    return;
+  }
 
   const port = bridge();
   if (port === null) {
-    reportLine(stage, "Live viewport refused: the desktop bridge is not exposed.");
+    refuseLiveViewport(stage, "the desktop bridge is not exposed.");
     return;
   }
 
   const sceneResponse = await port.request({ action: "scene" });
   if (!sceneResponse.ok) {
-    reportLine(stage, `Live viewport refused: ${sceneResponse.reason} — ${sceneResponse.message}`);
+    refuseLiveViewport(stage, `${sceneResponse.reason} — ${sceneResponse.message}`);
     return;
   }
   const scene = sceneResponse.data as MountablePayload;
@@ -169,7 +385,7 @@ async function mountLiveViewport(): Promise<void> {
     });
   } catch (error) {
     canvas.remove();
-    reportLine(stage, `Live viewport refused: no WebGL surface — ${refusalText(error)}`);
+    refuseLiveViewport(stage, `no WebGL surface — ${refusalText(error)}`);
     return;
   }
 
@@ -190,10 +406,7 @@ async function mountLiveViewport(): Promise<void> {
   } catch (error) {
     mounts.dispose();
     canvas.remove();
-    reportLine(
-      stage,
-      `Live viewport refused: could not mount the composed scene — ${refusalText(error)}`,
-    );
+    refuseLiveViewport(stage, `could not mount the composed scene — ${refusalText(error)}`);
     return;
   }
 
@@ -257,6 +470,14 @@ async function mountLiveViewport(): Promise<void> {
     },
   });
   loop.start();
+  const assistantBound = installAssistantProductFlow(stage, port, mounts, backend);
+  if (assistantBound) {
+    signalAssistantRuntime("local");
+  } else {
+    signalAssistantRuntimeUnavailable(
+      "the assistant controls could not be bound to the mounted presentation runtime.",
+    );
+  }
 
   // Everything below runs after `loop.start()`, so it names itself on its own line
   // — a refusal written to the frame report would be overwritten by the next frame.
@@ -281,9 +502,7 @@ async function mountLiveViewport(): Promise<void> {
 // only trace would be an unhandled rejection, so the surface names it instead.
 function startLiveViewport(): void {
   void mountLiveViewport().catch((error: unknown) => {
-    const stage = document.querySelector(".viewport");
-    if (stage === null) return;
-    reportLine(stage, `Live viewport refused: ${refusalText(error)}`);
+    refuseLiveViewport(document.querySelector(".viewport"), refusalText(error));
   });
 }
 

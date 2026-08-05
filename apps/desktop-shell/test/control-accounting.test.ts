@@ -53,7 +53,12 @@ const render = (state: DesktopVisualState): string =>
 /* Modelled controls                                                           */
 /* -------------------------------------------------------------------------- */
 
-const CONTROL_KINDS: ReadonlySet<string> = new Set(["view", "review", "inert"]);
+const CONTROL_KINDS: ReadonlySet<string> = new Set([
+  "view",
+  "review",
+  "live",
+  "inert",
+]);
 
 /**
  * The two subtrees the walk deliberately skips.
@@ -107,6 +112,11 @@ function collectControls(
 
 const STATES: ReadonlyArray<readonly [string, DesktopVisualState]> = [
   ["default", createDesktopVisualState()],
+  ["assistant:runtime", createDesktopVisualState({ assistantRuntime: "local" })],
+  [
+    "assistant:runtime-kids",
+    createDesktopVisualState({ assistantRuntime: "local", profile: "kids" }),
+  ],
   ["profile:kids", createDesktopVisualState({ profile: "kids" })],
   ["profile:web", createDesktopVisualState({ profile: "web" })],
   ["mode:run", createDesktopVisualState({ mode: "run" })],
@@ -181,7 +191,7 @@ describe("engine desktop chrome — control accounting (model → document)", ()
 });
 
 describe("engine desktop chrome — control accounting (document → model)", () => {
-  it("routes every interactive element through the one button helper", () => {
+  it("routes every action button through the one button helper", () => {
     for (const [label, state] of STATES) {
       const html = render(state);
       const buttons = [...html.matchAll(/<button\b[^>]*>/g)].map(([tag]) => tag);
@@ -189,7 +199,7 @@ describe("engine desktop chrome — control accounting (document → model)", ()
       for (const tag of buttons) {
         // `button(control, …)` is the only thing that emits this pair, so a raw
         // `<button>` written into the markup fails here rather than at review.
-        expect(tag, `${label} ${tag}`).toMatch(/\sid="[^"]+"\sdata-kind="(view|review|inert)"/);
+        expect(tag, `${label} ${tag}`).toMatch(/\sid="[^"]+"\sdata-kind="(view|review|live|inert)"/);
       }
     }
   });
@@ -211,12 +221,17 @@ describe("engine desktop chrome — control accounting (document → model)", ()
   it("adds no interactive element the button helper cannot own", () => {
     for (const [label, state] of STATES) {
       const html = render(state);
-      expect(html, label).not.toMatch(/<(a|input|select|textarea|details|summary)\b/i);
+      expect(html, label).not.toMatch(/<(a|input|select|details|summary)\b/i);
+      const textareas = html.match(/<textarea\b[^>]*>/g) ?? [];
+      expect(textareas, label).toHaveLength(1);
+      expect(textareas[0], label).toMatch(
+        /id="assistant-prompt" data-kind="(live|inert)"/,
+      );
       expect(html, label).not.toMatch(/\son[a-z]+=/i);
       // A focus stop outside a <button> would be an interactive element with no
       // control behind it; the tabs' roving `tabindex` sits on buttons.
       for (const [tag] of html.matchAll(/<[a-z][^>]*\stabindex="[^"]*"[^>]*>/gi)) {
-        expect(tag, `${label} ${tag}`).toMatch(/^<button\b/);
+        expect(tag, `${label} ${tag}`).toMatch(/^<(button|textarea)\b/);
       }
     }
   });

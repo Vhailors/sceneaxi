@@ -21,6 +21,7 @@ export const seam: PackageSeam = Object.freeze({
 
 export {
   DESKTOP_BRIDGE_ACTIONS,
+  DESKTOP_BRIDGE_ASSISTANT_OPS,
   DESKTOP_BRIDGE_AUTHORING_OPS,
   DESKTOP_BRIDGE_CHANNEL,
   DESKTOP_BRIDGE_GLOBAL,
@@ -28,6 +29,9 @@ export {
   bridgeOk,
   bridgeRefuse,
   type DesktopBridgeAction,
+  type DesktopBridgeAssistantOp,
+  type DesktopAssistantMountedResult,
+  type DesktopAssistantJobSnapshot,
   type DesktopBridgeAuthoringOp,
   type DesktopBridgeHandshake,
   type DesktopBridgeOk,
@@ -43,13 +47,20 @@ export {
   createDesktopBridge,
   type DesktopBridge,
   type DesktopBridgeOptions,
+  type DesktopAssistantRunRequest,
+  type DesktopAssistantProfile,
   type OpenPathExercise,
 } from "./lib/bridge.js";
 
+export { createDesktopAssistantViewportController } from "./lib/assistant-viewport.js";
+
 export {
+  DESKTOP_ASSISTANT_INSTANCE_ID,
+  DESKTOP_ASSISTANT_SCENE_ID,
   DESKTOP_OPEN_PLACEMENTS,
   DESKTOP_OPEN_SCENE_ID,
   DESKTOP_SCENE_NOT_COMPOSABLE,
+  desktopAssistantScene,
   desktopOpenScene,
   type DesktopSceneResult,
 } from "./lib/desktop-scene.js";

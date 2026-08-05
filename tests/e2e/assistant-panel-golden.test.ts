@@ -28,6 +28,7 @@ import { readFileSync } from "node:fs";
 import {
   MODEL_PROVIDER_PORT_SCHEMA_VERSION,
   createModelProviderPort,
+  sculptArtifactFromAssistantCompletion,
   type ModelDescriptor,
 } from "@sceneaxi/authoring-core";
 import {
@@ -156,11 +157,11 @@ const funded = (credits: number): LedgerState => {
  * The whole provider stack, assembled the way a product surface would.
  * `transportRequests` is the ground truth for whether the provider was reached.
  */
-const providerStack = () => {
+const providerStack = (completionFixture: unknown = COMPLETE_FIXTURE) => {
   const transportRequests: OpenRouterTransportRequest[] = [];
   const fixtureTransport = createFixtureTransport({
     model: MODEL,
-    responses: { complete: COMPLETE_FIXTURE },
+    responses: { complete: completionFixture },
   });
   const port = createModelProviderPort({
     adapter: createOpenRouterAdapter({
@@ -183,13 +184,14 @@ const providerStack = () => {
 const assistant = (
   overrides: Partial<CreateAssistantPanelOptions> = {},
   credits = 10,
+  completionFixture: unknown = COMPLETE_FIXTURE,
 ) => {
   const state = funded(credits);
   const store = createInMemoryCreditStore({
     accounts: [state.account],
     entries: state.entries,
   });
-  const stack = providerStack();
+  const stack = providerStack(completionFixture);
   const created = createAssistantPanel({
     surface: "web-shell",
     profile: "@sceneaxi/profile-web",
@@ -301,6 +303,84 @@ describe("in-app AI assistant golden path", () => {
         `${ASSISTANT_TURN_KEY_PREFIX}:t1`,
       ),
     });
+  });
+
+  it("turns a metered hosted completion into the existing typed sculpt artifact", async () => {
+    const intake = {
+      schemaVersion: 1,
+      kind: "sceneaxi.sculpt-intake",
+      intakeId: "hosted-crate",
+      mode: "structured-spec",
+      structuredSpec: {
+        schemaVersion: 1,
+        kind: "sceneaxi.object-sculpt-spec",
+        id: "hosted-crate-spec",
+        rootNodeId: "crate-root",
+        components: [
+          {
+            id: "crate-body",
+            primitive: "box",
+            dimensions: [2, 2, 2],
+            materialId: "shell",
+          },
+        ],
+        materials: [
+          {
+            id: "shell",
+            baseColor: "#39434f",
+            metallic: 0.2,
+            roughness: 0.7,
+          },
+        ],
+        sockets: [],
+        hierarchy: [
+          {
+            id: "crate-root",
+            parentId: null,
+            componentId: "crate-body",
+            transform: {
+              translation: [0, 0, 0],
+              rotationEulerDegrees: [0, 0, 0],
+              scale: [1, 1, 1],
+            },
+          },
+        ],
+      },
+    };
+    const completionFixture = {
+      id: "fixture-hosted-sculpt",
+      model: MODEL.model,
+      choices: [
+        {
+          finish_reason: "stop",
+          message: { content: JSON.stringify(intake) },
+        },
+      ],
+    };
+    const wired = assistant(
+      { mode: "hosted", hostedAi: { enabled: true } },
+      10,
+      completionFixture,
+    );
+    const panel = panelOf(wired);
+
+    const snapshot = await panel.ask({ prompt: "Build a crate", turnId: "sculpt-1" });
+    expect(snapshot.refusal).toBeUndefined();
+    const turn = snapshot.turns[0];
+    expect(turn?.metered).toBe(true);
+    expect(turn?.credits).toBe(4);
+    if (turn === undefined) return;
+
+    const sculpt = sculptArtifactFromAssistantCompletion(turn.text, {
+      profile: snapshot.profile,
+      providerEvidence: turn.evidence,
+    });
+    expect(sculpt.ok).toBe(true);
+    if (!sculpt.ok) return;
+    expect(sculpt.route).toBe("validated-completion");
+    expect(sculpt.artifact.kind).toBe("sceneaxi.sculpt-artifact");
+    expect(sculpt.artifact.spec.id).toBe("hosted-crate-spec");
+    expect(wired.store.entryCount(ACCOUNT.accountId)).toBe(2);
   });
 
   it("answers a retried hosted turn without re-entering the transport", async () => {

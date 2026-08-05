@@ -12,6 +12,11 @@
  * refusals (composition, orchestrator, authoring) pass through carrying their own
  * reason rather than being rewrapped into a second vocabulary.
  */
+import type {
+  AssistantSculptProgress,
+  AssistantSculptSuccess,
+} from "@sceneaxi/authoring-core";
+import type { MountableScene } from "@sceneaxi/site-kit";
 
 /** The one IPC channel the preload exposes and the main process serves. */
 export const DESKTOP_BRIDGE_CHANNEL = "sceneaxi:desktop-bridge";
@@ -30,6 +35,7 @@ export const DESKTOP_BRIDGE_ACTIONS = Object.freeze([
   "handshake",
   "scene",
   "open-path",
+  "assistant",
   "authoring",
   "frame-report",
 ] as const);
@@ -37,7 +43,7 @@ export const DESKTOP_BRIDGE_ACTIONS = Object.freeze([
 export type DesktopBridgeAction = (typeof DESKTOP_BRIDGE_ACTIONS)[number];
 
 /**
- * Refusals the bridge itself can mint. Upstream reasons (for example
+ * Refusals the desktop runtime seam can mint. Upstream reasons (for example
  * `DESKTOP_SCENE_NOT_COMPOSABLE` or an orchestrator `OPEN_PATH_*` reason) travel
  * through the same envelope under their own names.
  */
@@ -45,6 +51,27 @@ export const DESKTOP_BRIDGE_REFUSALS = Object.freeze({
   actionUnknown: "DESKTOP_BRIDGE_ACTION_UNKNOWN",
   requestMalformed: "DESKTOP_BRIDGE_REQUEST_MALFORMED",
   authoringOpUnknown: "DESKTOP_BRIDGE_AUTHORING_OP_UNKNOWN",
+  assistantOpUnknown: "DESKTOP_BRIDGE_ASSISTANT_OP_UNKNOWN",
+  assistantBusy: "DESKTOP_ASSISTANT_BUSY",
+  assistantAbandoned: "DESKTOP_ASSISTANT_ABANDONED",
+  assistantBuildModeRequired: "DESKTOP_ASSISTANT_BUILD_MODE_REQUIRED",
+  assistantJobMissing: "DESKTOP_ASSISTANT_JOB_MISSING",
+  assistantStatusTimeout: "DESKTOP_ASSISTANT_STATUS_TIMEOUT",
+  assistantRuntimeFailed: "DESKTOP_ASSISTANT_RUNTIME_FAILED",
+  assistantByoUnavailable: "DESKTOP_ASSISTANT_BYO_UNAVAILABLE",
+  assistantHostedMeteringUnavailable:
+    "DESKTOP_ASSISTANT_HOSTED_METERING_UNAVAILABLE",
+  /**
+   * No presentation runtime owns the window canvas, so nothing can be mounted.
+   *
+   * Mirrors `DESKTOP_VISUAL_REFUSALS.noPresentationRuntime` from the shell's
+   * visual model on purpose: the renderer bundle is browser-only and may not
+   * pull the Node-bearing shell barrel, but the chrome emits one refusal
+   * paragraph per registry code, so a control the renderer turns inert has to
+   * name a code whose `aria-describedby` still resolves in that document. The
+   * two are kept in lockstep by `tests/desktop/desktop-linux-seams.test.ts`.
+   */
+  presentationRuntimeUnavailable: "DESKTOP_NO_PRESENTATION_RUNTIME",
 } as const);
 
 export type DesktopBridgeRefusalReason =
@@ -82,6 +109,42 @@ export const DESKTOP_BRIDGE_AUTHORING_OPS = Object.freeze([
 ] as const);
 
 export type DesktopBridgeAuthoringOp = (typeof DESKTOP_BRIDGE_AUTHORING_OPS)[number];
+
+export const DESKTOP_BRIDGE_ASSISTANT_OPS = Object.freeze([
+  "start",
+  "status",
+  "abandon",
+] as const);
+
+export type DesktopBridgeAssistantOp =
+  (typeof DESKTOP_BRIDGE_ASSISTANT_OPS)[number];
+
+export type DesktopAssistantMountedResult = Omit<AssistantSculptSuccess, "artifact"> &
+  Readonly<{ mountable: MountableScene }>;
+
+export type DesktopAssistantJobSnapshot = Readonly<{
+  jobId: string;
+  route: "local" | "byo";
+  status: "running" | "ready" | "refused";
+  /**
+   * The newest progress entry only, never the accumulated log.
+   *
+   * A status poll runs every 50ms while a streaming BYOK route can report one
+   * entry per provider chunk, each carrying its raw delta. `progressCount` is
+   * what a caller needs to see that work is still moving.
+   */
+  latestProgress: AssistantSculptProgress | null;
+  /** How many progress entries the job has observed so far. */
+  progressCount: number;
+  result?: DesktopAssistantMountedResult;
+  refusal?: Readonly<{
+    ok: false;
+    reason: string;
+    message: string;
+    recoverable: boolean;
+    detail?: string;
+  }>;
+}>;
 
 /** What `handshake` reports: identity, never capability it cannot prove. */
 export type DesktopBridgeHandshake = {

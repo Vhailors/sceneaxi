@@ -199,6 +199,37 @@ describe("engine desktop chrome — regions and modes", () => {
 });
 
 describe("engine desktop chrome — accessibility", () => {
+  it("renders an honest prompt flow when an assistant runtime is bound", () => {
+    const html = render(
+      createDesktopVisualState({ assistantRuntime: "local" }),
+    );
+    expect(html).toContain(
+      '<textarea id="assistant-prompt" data-kind="live"',
+    );
+    expect(html).toContain("Local · free");
+    expect(html).toContain("BYOK · free");
+    expect(html).toContain("Hosted · metered");
+    expect(html).toContain(
+      'id="assistant-send" data-kind="live" data-action="assistant-send"',
+    );
+    expect(html).toContain('data-assistant-mode="build"');
+    expect(html).toContain("shell.dataset.assistantMode = value");
+    expect(html).toContain('data-assistant-status role="status"');
+    expect(html).toContain("Retry");
+    expect(html).toContain(
+      'data-assistant-manipulators="translation rotation scale"',
+    );
+    for (const id of ["move-x", "move-y", "rotate-y", "scale-up"]) {
+      expect(html).toContain(
+        `id="assistant-manipulator-${id}" data-kind="live"`,
+      );
+    }
+
+    const unavailable = render();
+    expect(unavailable).toContain(
+      `id="assistant-send" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.noPresentationRuntime}"`,
+    );
+  });
   it("uses landmarks rather than anonymous divs for every region", () => {
     const html = render();
     for (const landmark of [
@@ -229,7 +260,7 @@ describe("engine desktop chrome — accessibility", () => {
     }
   });
 
-  it("makes every control a real button, so keyboard order is the DOM order", () => {
+  it("makes every action a real button and keeps prompt order in the DOM", () => {
     for (const [label, state] of ALL_STATES) {
       const html = render(state);
       // Nothing is a clickable div: no interactive element outside <button>.
@@ -694,7 +725,7 @@ describe("engine desktop chrome — honesty", () => {
       const html = render(state);
       expect(html, label).toContain("THIRD_PARTY_LLM_DENIED_BY_DEFAULT");
       expect(html, label).toContain('class="assistant-denied"');
-      expect(html, label).toContain('class="composer-placeholder"');
+      expect(html, label).toContain('class="assistant-prompt');
       expect(html, label).toContain('id="assistant-close"');
       expect(html, label).toContain(
         '.shell[data-assistant="denied"] .assistant-denied{display:flex}',
@@ -704,28 +735,39 @@ describe("engine desktop chrome — honesty", () => {
       );
     }
     // The switch applies the model's own projection for the profile it lands on.
-    const view = desktopVisualView(createDesktopVisualState());
     const script = /<script>(.*)<\/script>/s.exec(render())?.[1] ?? "";
     const tables = JSON.parse(/const T = (\{.*?\});\n/s.exec(render())?.[1] ?? "{}") as {
-      assistantByProfile: Record<string, Record<string, string>>;
-      controlsByProfile: Record<string, Record<string, [string, string | null]>>;
+      assistantRuntimeRows: Record<
+        string,
+        {
+          assistantByProfile: Record<string, Record<string, string>>;
+          controlsByProfile: Record<string, Record<string, [string, string | null]>>;
+        }
+      >;
     };
-    for (const chip of view.profiles) {
-      expect(tables.assistantByProfile[chip.id]).toEqual({
-        state: chip.assistant.state,
-        modelLabel: chip.assistant.modelLabel,
-      });
-      // Every control that profile would render, not the handful a selector
-      // list remembered: the list is what left the drawer toggles behind.
-      const seat = tables.controlsByProfile[chip.id] ?? {};
-      const projected = desktopVisualView(
-        createDesktopVisualState({ profile: chip.id }),
-      );
-      for (const control of projected.controls) {
-        expect(seat[control.id], `${chip.id} ${control.id}`).toEqual([
-          control.kind,
-          control.refusal,
-        ]);
+    for (const runtime of ["none", "local"] as const) {
+      const view = desktopVisualView(createDesktopVisualState({ assistantRuntime: runtime }));
+      const runtimeRows = tables.assistantRuntimeRows[runtime];
+      expect(runtimeRows).toBeDefined();
+      if (runtimeRows === undefined) continue;
+      for (const chip of view.profiles) {
+        expect(runtimeRows.assistantByProfile[chip.id]).toEqual({
+          state: chip.assistant.state,
+          modelLabel: chip.assistant.modelLabel,
+        });
+        const seat = runtimeRows.controlsByProfile[chip.id] ?? {};
+        const projected = desktopVisualView(
+          createDesktopVisualState({
+            profile: chip.id,
+            assistantRuntime: runtime,
+          }),
+        );
+        for (const control of projected.controls) {
+          expect(seat[control.id], `${runtime} ${chip.id} ${control.id}`).toEqual([
+            control.kind,
+            control.refusal,
+          ]);
+        }
       }
     }
     expect(script).toContain("setProfile(value)");
@@ -813,7 +855,7 @@ describe("engine desktop chrome — honesty", () => {
   it("never renders a control kind the model did not assign", () => {
     for (const [label, state] of ALL_STATES) {
       for (const [, kind] of render(state).matchAll(/data-kind="(\w+)"/g)) {
-        expect(["view", "review", "inert"], label).toContain(kind);
+        expect(["view", "review", "live", "inert"], label).toContain(kind);
       }
     }
   });

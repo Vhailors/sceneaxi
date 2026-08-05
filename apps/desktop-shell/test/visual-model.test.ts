@@ -199,10 +199,10 @@ describe("desktop visual model — assistant", () => {
     );
   });
 
-  it("never claims a provider: send is inert with no document bound", () => {
+  it("never claims a provider: send is inert with no presentation runtime", () => {
     const view = desktopVisualView(createDesktopVisualState());
     expect(view.assistant.send.kind).toBe("inert");
-    expect(view.assistant.send.refusal).toBe(DESKTOP_VISUAL_REFUSALS.noDocumentBound);
+    expect(view.assistant.send.refusal).toBe(DESKTOP_VISUAL_REFUSALS.noPresentationRuntime);
     expect(view.assistant.modelLabel).toBe("no provider configured");
     expect([...DESKTOP_ASSISTANT_MODE_IDS]).toEqual(["ask", "build", "agent"]);
   });
@@ -579,7 +579,7 @@ describe("desktop visual model — refusals and honesty", () => {
       expect(chip.assistant.send.refusal).toBe(
         chip.refuseOnly
           ? DESKTOP_VISUAL_REFUSALS.kidsAssistantDenied
-          : DESKTOP_VISUAL_REFUSALS.noDocumentBound,
+          : DESKTOP_VISUAL_REFUSALS.noPresentationRuntime,
       );
     }
     // The active profile's column is that same projection, not a second one.
