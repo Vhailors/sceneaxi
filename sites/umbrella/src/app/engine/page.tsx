@@ -14,7 +14,8 @@ import { StatePanel } from "../_components/state-panel.js";
  * desktop application (ADR 0024) is packaged by electron-builder, which is not
  * bit-reproducible, so its facts come from one committed, verified workflow-artifact
  * offer in `@sceneaxi/site-kit` — held in lockstep with `docs/desktop-linux.md` by the
- * gate. The CTA names that exact repository run, or refuses if its record is invalid.
+ * gate. The CTA names that exact repository run, or refuses if its record is invalid,
+ * and states the date that artifact expires rather than implying the link is permanent.
  * No installer name, size, or digest is typed into this page for either artifact — the
  * install commands are built from the same validated record as the metadata cards — and
  * macOS/Windows render as the record's own explicit coming-soon rows rather than being
@@ -154,7 +155,13 @@ export default function EnginePage() {
             </a>
             <p className="meta">
               Version {desktopApp.version} · workflow run {desktopApp.workflowRunId} ·
-              verified {desktopApp.verifiedOn}
+              verified {desktopApp.verifiedOn} · retained{" "}
+              {desktopApp.artifactRetentionDays} days
+            </p>
+            <p className="note">
+              Workflow artifacts expire, so this download is gone on or before{" "}
+              <strong>{desktopApp.artifactExpiresBy}</strong>.{" "}
+              {desktopApp.retentionNote}
             </p>
           </article>
 

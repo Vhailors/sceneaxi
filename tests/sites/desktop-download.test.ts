@@ -55,6 +55,19 @@ describe("umbrella desktop download", () => {
     }
   });
 
+  it("states when the offered workflow artifact expires, from the record", () => {
+    for (const field of [
+      "desktopApp.artifactRetentionDays",
+      "desktopApp.artifactExpiresBy",
+      "desktopApp.retentionNote",
+    ]) {
+      expect(ENGINE_PAGE).toContain(field);
+    }
+    expect(ENGINE_PAGE).toContain("Workflow artifacts expire");
+    expect(ENGINE_PAGE).not.toContain(offer.artifactExpiresBy);
+    expect(ENGINE_PAGE).not.toContain(String(offer.artifactRetentionDays));
+  });
+
   it("shows macOS and Windows as coming soon with no invented download", () => {
     expect(offer.unavailablePlatforms.map((row) => row.platform)).toEqual([
       "macOS",

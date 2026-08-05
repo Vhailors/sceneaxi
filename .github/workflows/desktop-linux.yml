@@ -53,7 +53,10 @@ jobs:
         run: xvfb-run -a pnpm smoke --packaged
 
       # A workflow artifact, not a GitHub Release: no release authority is claimed
-      # (the same posture as the engine SDK, ADR 0019).
+      # (the same posture as the engine SDK, ADR 0019). The retention window is
+      # declared here rather than inherited from a settings page, because
+      # `docs/desktop-linux.md` and the umbrella `/engine` record state the date the
+      # download expires and nothing at runtime can observe that expiry.
       - uses: actions/upload-artifact@v4
         with:
           name: sceneaxi-desktop-linux
@@ -62,3 +65,4 @@ jobs:
             desktop/linux/release/*.deb
             desktop/linux/release/SHA256SUMS
           if-no-files-found: error
+          retention-days: 90

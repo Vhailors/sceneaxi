@@ -7,6 +7,13 @@
  * `sceneaxi-desktop-linux` artifact. `docs/desktop-linux.md` records the same run,
  * source commit, byte sizes, and checksums; `tests/sites/` keeps both in lockstep.
  *
+ * A workflow artifact is not permanent, so the record states its own expiry:
+ * `artifactRetentionDays` mirrors the retention the upload step declares, and
+ * `artifactExpiresBy` is the last day the download can still exist. Nothing here reads
+ * a clock — a page must render the same record for every visitor, and no code in this
+ * repository can observe GitHub deleting the artifact — so the honest move is to print
+ * the date and keep the record re-recordable, which `retentionNote` says out loud.
+ *
  * `resolveDesktopAppOffer()` is the fail-closed edge, and it validates every field a
  * page may print — not only the link. A missing record, a link that does not name the
  * recorded repository/run, or any incomplete honesty field yields a named refusal, so
@@ -58,11 +65,19 @@ export type DesktopAppOffer = {
   readonly unavailablePlatforms: readonly DesktopUnavailablePlatform[];
   /** Why the digests identify this workflow artifact instead of every rebuild. */
   readonly reproducibilityNote: string;
+  /** The retention window `.github/workflows/desktop-linux.yml` declares on the upload. */
+  readonly artifactRetentionDays: number;
+  /** `verifiedOn` plus the retention window: the last day the download can still exist. */
+  readonly artifactExpiresBy: string;
+  /** What the run page still shows after that date, and what to do instead. */
+  readonly retentionNote: string;
 };
 
 const REPOSITORY = "Vhailors/sceneaxi" as const;
 const WORKFLOW_RUN_ID = 30739014112;
 const DOWNLOAD_HREF = `https://github.com/${REPOSITORY}/actions/runs/${WORKFLOW_RUN_ID}`;
+/** Declared on the upload step in `.github/workflows/desktop-linux.yml`. */
+const ARTIFACT_RETENTION_DAYS = 90;
 
 export const DESKTOP_LINUX_APP_OFFER: DesktopAppOffer = /* @__PURE__ */ Object.freeze({
   productName: "SceneAxi Engine Desktop",
@@ -112,6 +127,10 @@ export const DESKTOP_LINUX_APP_OFFER: DesktopAppOffer = /* @__PURE__ */ Object.f
   ]),
   reproducibilityNote:
     "Electron packaging is not bit-reproducible. These checksums identify workflow run 30739014112 only; a source rebuild produces its own SHA256SUMS beside its own files.",
+  artifactRetentionDays: ARTIFACT_RETENTION_DAYS,
+  artifactExpiresBy: "2026-11-03",
+  retentionNote:
+    "That date is an upper bound: retention runs from the workflow run, which is on or before the verification date. After it the run page still opens but holds no artifact, and no code here can observe that, so build from the repository or wait for a re-recorded run rather than trusting this page's checksums forever.",
 });
 
 const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
@@ -169,6 +188,24 @@ const isValidUnavailablePlatform = (value: unknown): boolean => {
   );
 };
 
+const CALENDAR_DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/**
+ * A calendar day this many days after `isoDay`, or `null` when `isoDay` is not a real
+ * day. Pure arithmetic on committed strings — the offer states an expiry rather than
+ * reading a clock, because a page must render the same record for every visitor.
+ */
+const dayAfter = (isoDay: string, days: number): string | null => {
+  const parts = CALENDAR_DAY.exec(isoDay);
+  if (parts === null) return null;
+  const shifted = new Date(
+    Date.UTC(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3])) + days * 86_400_000,
+  );
+  if (Number.isNaN(shifted.getTime())) return null;
+  const day = shifted.toISOString().slice(0, 10);
+  return days === 0 && day !== isoDay ? null : day;
+};
+
 const namesEveryUnavailablePlatform = (value: unknown): boolean =>
   Array.isArray(value) &&
   value.length === UNAVAILABLE_PLATFORMS.length &&
@@ -194,6 +231,8 @@ export function resolveDesktopAppOffer(candidate: unknown): SiteResult<DesktopAp
   }
 
   const sourceCommit = candidate["sourceCommit"];
+  const verifiedOn = candidate["verifiedOn"];
+  const retentionDays = candidate["artifactRetentionDays"];
   const verifyCommand = candidate["verifyCommand"];
   const artifacts = candidate["artifacts"];
   const unavailablePlatforms = candidate["unavailablePlatforms"];
@@ -202,8 +241,12 @@ export function resolveDesktopAppOffer(candidate: unknown): SiteResult<DesktopAp
     candidate["platform"] !== "Linux x86_64" ||
     !isFilledString(candidate["productName"]) ||
     !isFilledString(candidate["reproducibilityNote"]) ||
-    typeof candidate["verifiedOn"] !== "string" ||
-    !/^\d{4}-\d{2}-\d{2}$/.test(candidate["verifiedOn"]) ||
+    !isFilledString(candidate["retentionNote"]) ||
+    typeof verifiedOn !== "string" ||
+    dayAfter(verifiedOn, 0) === null ||
+    !isPositiveSafeInteger(retentionDays) ||
+    retentionDays > ARTIFACT_RETENTION_DAYS ||
+    candidate["artifactExpiresBy"] !== dayAfter(verifiedOn, retentionDays) ||
     typeof sourceCommit !== "string" ||
     !/^[0-9a-f]{40}$/.test(sourceCommit) ||
     candidate["ciWorkflow"] !== "desktop-linux" ||

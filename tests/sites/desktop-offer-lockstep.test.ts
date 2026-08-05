@@ -65,6 +65,33 @@ describe("desktop offer ↔ recorded build lockstep", () => {
     }
   });
 
+  it("records the same retention window and expiry date the doc states", () => {
+    expect(doc).toContain(
+      `| Artifact retention | ${String(DESKTOP_LINUX_APP_OFFER.artifactRetentionDays)} days |`,
+    );
+    expect(doc).toContain(
+      `| Download expires by | ${DESKTOP_LINUX_APP_OFFER.artifactExpiresBy} |`,
+    );
+    expect(doc).toContain("This download expires");
+  });
+
+  it("attributes every proof to the build it came from", () => {
+    expect(doc).not.toContain("Smoke observations of the downloaded workflow build");
+    const start = doc.indexOf("## Where each proof came from");
+    expect(start, "docs/desktop-linux.md lost its proof-attribution section").toBeGreaterThan(-1);
+    const evidence = doc.slice(start);
+    expect(evidence).toContain("A local source build");
+    expect(evidence).toContain("verified, not separately launched here");
+    // Every source-built launch mode must sit below the source-build attribution,
+    // never under the downloaded artifact, whose only proof is its checksum.
+    for (const sourceBuiltMode of ["--appimage-extract-and-run", "SCENEAXI_SMOKE_SHOT"]) {
+      expect(evidence).toContain(sourceBuiltMode);
+      expect(evidence.indexOf("A local source build")).toBeLessThan(
+        evidence.indexOf(sourceBuiltMode),
+      );
+    }
+  });
+
   it("keeps the honesty claims aligned: not bit-reproducible, Windows/macOS absent", () => {
     expect(doc).toContain("not bit-reproducible");
     expect(DESKTOP_LINUX_APP_OFFER.reproducibilityNote).toContain("not bit-reproducible");
@@ -114,5 +141,8 @@ describe("desktop offer ↔ recorded build lockstep", () => {
     );
     expect(workflow).toContain(`name: ${DESKTOP_LINUX_APP_OFFER.ciWorkflow}`);
     expect(workflow).toContain(`name: ${DESKTOP_LINUX_APP_OFFER.ciArtifactName}`);
+    expect(workflow).toContain(
+      `retention-days: ${String(DESKTOP_LINUX_APP_OFFER.artifactRetentionDays)}`,
+    );
   });
 });

@@ -96,6 +96,19 @@ gate until the other moves with it.
 | Actions artifact | `sceneaxi-desktop-linux` |
 | Checksum file | `SHA256SUMS` |
 | Verified | 2026-08-05 |
+| Artifact retention | 90 days |
+| Download expires by | 2026-11-03 |
+
+**This download expires.** A workflow artifact is not a release: the upload step
+declares `retention-days: 90`, so GitHub deletes these files on or before
+**2026-11-03** — 90 days after the verification date above, and earlier if the run
+itself predates it, which is why the date is an upper bound. Nothing in this
+repository can observe that deletion: the run page keeps resolving afterwards, and
+`resolveDesktopAppOffer()` reads no clock, because a page that renders a different
+record per visitor would be worse than one that states its own expiry. `/engine`
+therefore prints the date beside the CTA, and the record above must be re-recorded
+from a fresh successful main-branch run before it, or the offer stops being true.
+Until then the honest fallback is the source build in this document.
 
 The record is deliberately kept **out of the build it describes**: the tier bundles
 site-kit for its scene payload, so `desktop-app-offer.ts` marks every `Object.freeze`
@@ -158,8 +171,30 @@ The profile switch presents **Game**, **Website (Web)**, and **Kids**:
   switch available so the operator can return to Game or Website; it does not claim
   a Kids authoring path that is not shipped.
 
-Smoke observations of the downloaded workflow build — all three launch modes printed the same
-proof (`pnpm smoke`, `pnpm smoke --packaged`, and the AppImage itself with
+## Where each proof came from
+
+Three sources, and they are not interchangeable. Electron packaging is not
+bit-reproducible, so a proof of *this source* is not a proof of *those bytes*, and
+mixing them would let the record claim more than it verified.
+
+**Workflow run 30739014112 — the bytes offered above.** The run succeeded, and
+`.github/workflows/desktop-linux.yml` puts every check before the upload: the tier is
+type-checked, `pnpm dist` packages both files, `sha256sum -c SHA256SUMS` runs in
+`desktop/linux/release`, and `xvfb-run -a pnpm smoke --packaged` launches the packaged
+app under Xvfb with SwiftShader. Only then does `actions/upload-artifact` publish those
+same files, with `if-no-files-found: error`. The run log is that evidence; no transcript
+of it is copied here.
+
+**The download — 2026-08-05.** `sceneaxi-desktop-linux` was downloaded from that run
+and its own `sha256sum -c SHA256SUMS` checked locally; both files matched, which is
+where the byte sizes and digests in the table above come from. That is the whole claim
+made about the downloaded files: they were verified, not separately launched here.
+
+**A local source build — recorded 2026-07-31, `pnpm dist` at the tier root.** A
+different build with its own digests, kept because it is where the behaviour below was
+observed in detail. These lines describe the same source as the offered artifact, never
+the same bytes. All three launch modes printed the same proof (`pnpm smoke`,
+`pnpm smoke --packaged`, and the AppImage itself with
 `--appimage-extract-and-run --smoke`):
 
 - bridge handshake: `@sceneaxi/desktop-linux` on runtime `electron`, bridge v1

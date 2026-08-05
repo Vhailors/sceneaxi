@@ -57,6 +57,54 @@ describe("desktop app offer", () => {
     expect(offer.reproducibilityNote).toContain("not bit-reproducible");
   });
 
+  it("states an expiry the declared retention window actually implies", () => {
+    expect(offer.artifactRetentionDays).toBe(90);
+    expect(offer.artifactExpiresBy).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(offer.artifactExpiresBy > offer.verifiedOn).toBe(true);
+    expect(offer.retentionNote).toContain("upper bound");
+    expect(offer.retentionNote).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+  });
+
+  it("refuses a retention window the stated expiry does not follow from", () => {
+    for (const drift of [
+      { artifactExpiresBy: "2026-11-04" },
+      { artifactExpiresBy: "2026-11-02" },
+      { artifactExpiresBy: "not-a-day" },
+      { artifactRetentionDays: 91 },
+      { artifactRetentionDays: 0 },
+      { artifactRetentionDays: -90 },
+      { artifactRetentionDays: 90.5 },
+      { artifactRetentionDays: "90" },
+      { verifiedOn: "2026-08-06" },
+      { verifiedOn: "2026-13-05" },
+      { verifiedOn: "2026-02-30" },
+      { retentionNote: "   " },
+    ]) {
+      expect(resolveDesktopAppOffer({ ...offer, ...drift })).toMatchObject({
+        ok: false,
+        reason: "DESKTOP_APP_ARTIFACT_UNAVAILABLE",
+      });
+    }
+  });
+
+  it("resolves a re-recorded window whose expiry moves with its verification day", () => {
+    expect(
+      resolveDesktopAppOffer({
+        ...offer,
+        verifiedOn: "2026-01-31",
+        artifactExpiresBy: "2026-05-01",
+      }),
+    ).toMatchObject({ ok: true });
+    expect(
+      resolveDesktopAppOffer({
+        ...offer,
+        verifiedOn: "2026-01-31",
+        artifactRetentionDays: 1,
+        artifactExpiresBy: "2026-02-01",
+      }),
+    ).toMatchObject({ ok: true });
+  });
+
   it("carries the version and checksum command the docs promise", () => {
     expect(offer.version).toBe("0.0.0");
     expect(offer.verifyCommand).toContain("sha256sum -c SHA256SUMS");
@@ -101,6 +149,9 @@ describe("desktop app offer", () => {
       "reproducibilityNote",
       "unavailablePlatforms",
       "ciWorkflow",
+      "retentionNote",
+      "artifactRetentionDays",
+      "artifactExpiresBy",
     ] as const;
     for (const field of dropped) {
       const rest = Object.fromEntries(
