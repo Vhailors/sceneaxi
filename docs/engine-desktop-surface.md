@@ -206,19 +206,26 @@ Web Experience stages either starter HTML or `assets/hero.glb` by proposing one
 replacement of `/data`; Save accepts that exact pending proposal through the
 long-lived shared session. Pending or journal-recovery results keep the surface
 in `recovering`; Save calls the bridge's `recover` operation until the session
-reaches a terminal state, and profile switching refuses during recovery. A
+reaches a terminal state, while Open is the explicit escape that starts a fresh
+session and re-reads the active document if recovery remains non-terminal. If
+the journal is missing, the diagnostic remains visible through that same
+fresh-session re-read. Either path releases Open and profile switching from the
+indeterminate session. A
 staged proposal also blocks profile switching until Save applies it or Open
 rejects it and clears its browser copy, so Web work cannot later be accepted
 under Game or Kids. The HTML is stored and displayed only as escaped text—never inserted into
 the chrome DOM. Invalid existing Web data and asset paths outside normalized
-`assets/` refuse before a proposal is made.
+`assets/` refuse before a proposal is made. The shared staging decision caps
+stored markup at 100,000 characters, asset paths at 512 characters, and each
+document's asset list at 256 entries.
 
 Play calls the host's existing `open-path` action. In the packaged desktop that
 is the already-composed scene path through `bootstrapOpenPath()`: the response
 must contain tick digests and a closed session before the chrome reports play.
 The chrome then emits the shared viewport-play event carrying that evidence;
-the separate renderer owner validates it, draws a synchronized frame of the
-same `MountableScene`, and acknowledges the event. Without that acknowledgement
+the separate renderer owner validates it, redraws the same `MountableScene`
+after playback, and acknowledges that frame. It does not claim the closed
+kernel session's tick state was projected into the presentation. Without that acknowledgement
 Play refuses. The shell neither constructs a renderer nor invents a pixel claim.
 
 The staging decision itself lives in exactly one place. `desktopWebStageDecision()`
@@ -334,22 +341,28 @@ document also explains. `test/product-loop.test.ts` asserts that in both directi
 | Product-loop code | When |
 |---|---|
 | `DESKTOP_WEB_CAPABILITY_REQUIRED` | staging asked for outside Web Experience (the same code the control carries) |
-| `DESKTOP_WEB_ASSET_PATH_INVALID` | an injected asset is not a normalized project-relative path under `assets/` |
+| `DESKTOP_WEB_ASSET_PATH_INVALID` | an injected asset is outside the normalized `assets/` subset, exceeds 512 characters, or would exceed 256 stored assets |
 | `DESKTOP_WEB_HTML_INVALID` | stored markup exceeds 100,000 characters or carries a null byte |
 | `DESKTOP_DOCUMENT_DATA_INVALID` | the open document's data, or its existing `webExperience` value, is not data this loop may replace |
 | `DESKTOP_RUNTIME_UNAVAILABLE` | no packaged host port is attached |
 | `DESKTOP_RUNTIME_REQUEST_FAILED` | the host threw instead of answering |
 | `DESKTOP_RUNTIME_REQUEST_REFUSED` | the host refused and named no reason of its own |
+| `DESKTOP_VIEWPORT_UNAVAILABLE` | orchestrated playback completed but the live viewport did not acknowledge a post-play frame |
 | `DESKTOP_AUTHORING_REFUSED` | the shared authoring session refused and carried no diagnostic code |
 | `DESKTOP_PROPOSAL_NOT_REVIEWING` | propose returned without parking the edit for review |
 | `DESKTOP_PROPOSAL_NOT_DISCARDED` | re-opening could not discard the proposal the host still holds |
+| `DESKTOP_PROFILE_SWITCH_DIRTY` | a staged proposal must be saved or discarded before the profile changes |
 | `DESKTOP_APPLY_NOT_COMPLETED` | accept returned without reporting the apply completed |
+| `DESKTOP_RECOVERY_PENDING` | profile switching is blocked until Save resolves recovery or Open starts a fresh re-read session |
 | `DESKTOP_OPEN_PATH_EVIDENCE_INVALID` | the play response carried no closed session with observed tick digests |
+| `DESKTOP_PRODUCT_REQUEST_IN_FLIGHT` | another serialized product-loop request currently owns the shared session |
 
 A named diagnostic from the host wins over the generic code above it: the surface
 prints `snapshot.diagnostics[0].code` when there is one, which is how
 `apply-in-progress` — the session's cue that journal recovery, not another click,
-is what moves this forward — reaches the operator.
+is what moves this forward — reaches the operator. `journal-not-found` remains
+visible through the fresh-session re-read that prevents recovery from becoming
+a permanent UI lock.
 
 ### Parity with the CLI
 

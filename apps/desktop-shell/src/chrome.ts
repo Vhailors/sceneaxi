@@ -1331,16 +1331,36 @@ if (shell) {
     return null;
   };
 
+  const restartProject = async (diagnostic) => {
+    productStatus('recovering', T.product.documentPath + ' · ' + diagnostic + ' · re-opening fresh session…');
+    const response = await runtimeRequest({
+      action: 'authoring',
+      payload: { op: 'restart', documentPath: T.product.documentPath },
+    });
+    if (response === null || !response.ok) {
+      productStatus('recovering', 'Open refused · ' + diagnostic + ' · ' + responseReason(response));
+      return false;
+    }
+    const status = response.data;
+    const reason = responseReason(response);
+    projectData = null;
+    projectDirty = false;
+    projectRecovering = false;
+    if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' || status.data === null) {
+      productStatus('refused', 'Recovery reset · ' + diagnostic + ' · ' + (reason || T.product.refusals.documentDataInvalid));
+      return true;
+    }
+    projectData = status.data;
+    productStatus('open', T.product.documentPath + ' · re-opened after ' + diagnostic + ' · ' + status.documentId);
+    return true;
+  };
+
   // Re-opening re-reads the document from the host, so a proposal the host is
   // still holding has to be discarded there rather than only forgotten here:
   // otherwise the shell reports a clean project while the session stays in
   // \`reviewing\`, and the next Save reports "no staged changes" over an edit the
   // host would still have applied.
   const discardStagedProposal = async () => {
-    if (projectRecovering) {
-      productStatus('refused', 'Open refused · ' + T.product.refusals.recoveryPending);
-      return false;
-    }
     if (!projectDirty) return true;
     const response = await runtimeRequest({ action: 'authoring', payload: { op: 'reject' } });
     const reason = responseReason(response);
@@ -1355,6 +1375,7 @@ if (shell) {
   };
 
   const openProject = async () => {
+    if (projectRecovering) return restartProject('recovery-pending');
     if (!(await discardStagedProposal())) return false;
     productStatus('opening', T.product.documentPath + ' · opening…');
     const response = await runtimeRequest({
@@ -1412,9 +1433,10 @@ if (shell) {
   const applySaveSnapshot = (snapshot) => {
     if (!snapshot) return false;
     const diagnostics = Array.isArray(snapshot.diagnostics) ? snapshot.diagnostics : [];
+    if (diagnostics[0]?.code === 'journal-not-found') return false;
     if (snapshot.phase === 'pending' || snapshot.journalRecoveryPending === true) {
       projectRecovering = true;
-      productStatus('recovering', T.product.documentPath + ' · recovery pending · Save to refresh');
+      productStatus('recovering', T.product.documentPath + ' · recovery pending · Save to refresh or Open to re-read');
       return true;
     }
     if (snapshot.phase === 'applied' && diagnostics.length === 0) {
@@ -1435,8 +1457,12 @@ if (shell) {
     productStatus(recovering ? 'recovering' : 'saving', T.product.documentPath + (recovering ? ' · refreshing recovery…' : ' · saving…'));
     const response = await runtimeRequest({ action: 'authoring', payload: { op: recovering ? 'recover' : 'accept' } });
     const snapshot = response?.ok ? response.data : null;
-    if (applySaveSnapshot(snapshot)) return;
     const reason = responseReason(response);
+    if (recovering && reason === 'journal-not-found') {
+      await restartProject('journal-not-found');
+      return;
+    }
+    if (applySaveSnapshot(snapshot)) return;
     if (recovering && snapshot && snapshot.journalRecoveryPending !== true) projectRecovering = false;
     productStatus(projectRecovering ? 'recovering' : 'refused', 'Save refused · ' + (reason || T.product.refusals.applyNotCompleted));
   };

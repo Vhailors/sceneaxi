@@ -144,7 +144,7 @@ export const DESKTOP_PRODUCT_REFUSAL_MESSAGES: Readonly<
   [DESKTOP_PRODUCT_REFUSALS.webCapabilityRequired]:
     "HTML, site-canvas, and asset-injection authoring are available only on the Web Experience profile.",
   [DESKTOP_PRODUCT_REFUSALS.webAssetPathInvalid]:
-    "An injected asset must be a normalized project-relative path under assets/.",
+    "Injected assets must stay within the bounded normalized project-relative assets/ subset.",
   [DESKTOP_PRODUCT_REFUSALS.webHtmlInvalid]:
     "Stored HTML must be at most 100,000 characters and contain no null byte.",
   [DESKTOP_PRODUCT_REFUSALS.documentDataInvalid]:
@@ -168,7 +168,7 @@ export const DESKTOP_PRODUCT_REFUSAL_MESSAGES: Readonly<
   [DESKTOP_PRODUCT_REFUSALS.applyNotCompleted]:
     "The host did not report the apply as completed, so the staged edit is still pending.",
   [DESKTOP_PRODUCT_REFUSALS.recoveryPending]:
-    "Durable apply recovery is still pending; save again to refresh it before switching profiles.",
+    "Durable apply recovery is still pending; save to refresh it or open to re-read in a fresh session before switching profiles.",
   [DESKTOP_PRODUCT_REFUSALS.openPathEvidenceInvalid]:
     "The play response carried no closed session with observed tick digests, so nothing is reported as played.",
   [DESKTOP_PRODUCT_REFUSALS.requestInFlight]:
@@ -196,6 +196,8 @@ export const DESKTOP_WEB_STARTER = Object.freeze({
 
 /** Stored markup is data, so its size and byte content are bounded. */
 export const DESKTOP_WEB_HTML_MAX_LENGTH = 100_000;
+export const DESKTOP_WEB_ASSET_PATH_MAX_LENGTH = 512;
+export const DESKTOP_WEB_ASSET_MAX_COUNT = 256;
 
 export type DesktopWebStageOperation = Readonly<{
   profile: string;
@@ -209,6 +211,8 @@ export type DesktopWebStageConfig = Readonly<{
   documentPath: typeof DESKTOP_PROJECT.activeFile;
   starterHtml: string;
   htmlMaxLength: number;
+  assetPathMaxLength: number;
+  assetMaxCount: number;
   refusals: Readonly<
     Pick<
       typeof DESKTOP_PRODUCT_REFUSALS,
@@ -224,6 +228,8 @@ export const DESKTOP_WEB_STAGE_CONFIG: DesktopWebStageConfig = Object.freeze({
   documentPath: DESKTOP_PROJECT.activeFile,
   starterHtml: DESKTOP_WEB_STARTER.html,
   htmlMaxLength: DESKTOP_WEB_HTML_MAX_LENGTH,
+  assetPathMaxLength: DESKTOP_WEB_ASSET_PATH_MAX_LENGTH,
+  assetMaxCount: DESKTOP_WEB_ASSET_MAX_COUNT,
   refusals: DESKTOP_PRODUCT_REFUSALS,
 });
 
@@ -247,6 +253,14 @@ export function desktopWebStageDecision(
     message: string,
   ): DesktopStageDecision =>
     Object.freeze({ ok: false as const, reason, message });
+  const htmlIsValid = (value: unknown): value is string =>
+    typeof value === "string" &&
+    value.length <= config.htmlMaxLength &&
+    !value.includes("\u0000");
+  const assetPathIsValid = (value: unknown): value is string =>
+    typeof value === "string" &&
+    value.length <= config.assetPathMaxLength &&
+    assetPattern.test(value);
 
   if (operation.profile !== "web") {
     return refuse(
@@ -277,13 +291,18 @@ export function desktopWebStageDecision(
     if (
       typeof storedHtml !== "string" ||
       !Array.isArray(storedAssets) ||
-      !storedAssets.every(
-        (asset) => typeof asset === "string" && assetPattern.test(asset),
-      )
+      storedAssets.length > config.assetMaxCount ||
+      !storedAssets.every(assetPathIsValid)
     ) {
       return refuse(
         config.refusals.documentDataInvalid,
         "The existing webExperience data is malformed and cannot be replaced implicitly.",
+      );
+    }
+    if (!htmlIsValid(storedHtml)) {
+      return refuse(
+        config.refusals.webHtmlInvalid,
+        "Stored HTML must be at most 100,000 characters and contain no null byte.",
       );
     }
     html = storedHtml;
@@ -291,11 +310,7 @@ export function desktopWebStageDecision(
   }
 
   if (operation.kind === "html") {
-    if (
-      typeof operation.html !== "string" ||
-      operation.html.length > config.htmlMaxLength ||
-      operation.html.includes("\u0000")
-    ) {
+    if (!htmlIsValid(operation.html)) {
       return refuse(
         config.refusals.webHtmlInvalid,
         "Stored HTML must be at most 100,000 characters and contain no null byte.",
@@ -303,16 +318,21 @@ export function desktopWebStageDecision(
     }
     html = operation.html;
   } else {
-    if (
-      typeof operation.assetPath !== "string" ||
-      !assetPattern.test(operation.assetPath)
-    ) {
+    if (!assetPathIsValid(operation.assetPath)) {
       return refuse(
         config.refusals.webAssetPathInvalid,
-        "An injected asset must be a normalized project-relative path under assets/.",
+        "An injected asset must be a bounded normalized project-relative path under assets/.",
       );
     }
-    if (!assets.includes(operation.assetPath)) assets.push(operation.assetPath);
+    if (!assets.includes(operation.assetPath)) {
+      if (assets.length >= config.assetMaxCount) {
+        return refuse(
+          config.refusals.webAssetPathInvalid,
+          "The Web Experience asset set is full and cannot accept another path.",
+        );
+      }
+      assets.push(operation.assetPath);
+    }
   }
 
   let carried: Record<string, unknown>;

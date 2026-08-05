@@ -26,6 +26,7 @@ export {
   DESKTOP_BRIDGE_CHANNEL,
   DESKTOP_BRIDGE_GLOBAL,
   DESKTOP_BRIDGE_REFUSALS,
+  DESKTOP_VIEWPORT_PLAY_EVENT,
   bridgeOk,
   bridgeRefuse,
   type DesktopBridgeAction,

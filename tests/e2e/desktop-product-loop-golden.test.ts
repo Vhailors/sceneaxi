@@ -57,7 +57,8 @@ describe("desktop first-release product loop", () => {
     const dir = projectDir();
     const bridge = createDesktopBridge({ cwd: dir, nowMs: () => 1_753_920_000_000 });
     const requests: Array<{ action?: unknown; payload?: { op?: unknown } }> = [];
-    let deferAcceptedSave = true;
+    let deferredAcceptedSaves = 2;
+    let reportMissingRecovery = true;
     const window = new HappyWindow({ width: 1000, height: 700 });
     const ipcClone = <T>(value: T): T =>
       window.eval(`(${JSON.stringify(value)})`) as T;
@@ -73,12 +74,12 @@ describe("desktop first-release product loop", () => {
           requests.push(typed);
           const response = bridge.handle(typed);
           if (
-            deferAcceptedSave &&
+            deferredAcceptedSaves > 0 &&
             typed.action === "authoring" &&
             typed.payload?.op === "accept" &&
             response.ok
           ) {
-            deferAcceptedSave = false;
+            deferredAcceptedSaves -= 1;
             return ipcClone({
               ...response,
               data: {
@@ -86,6 +87,30 @@ describe("desktop first-release product loop", () => {
                 phase: "pending",
                 journalRecoveryPending: true,
                 transactionId: "fixture-pending-apply",
+              },
+            });
+          }
+          if (
+            reportMissingRecovery &&
+            typed.action === "authoring" &&
+            typed.payload?.op === "recover" &&
+            response.ok
+          ) {
+            reportMissingRecovery = false;
+            return ipcClone({
+              ...response,
+              data: {
+                ...(response.data as Record<string, unknown>),
+                phase: "pending",
+                journalRecoveryPending: true,
+                transactionId: "fixture-pending-apply",
+                diagnostics: [
+                  {
+                    code: "journal-not-found",
+                    message: "The pending apply journal is missing.",
+                    reReadHint: "Re-read the document in a fresh session.",
+                  },
+                ],
               },
             });
           }
@@ -148,8 +173,29 @@ describe("desktop first-release product loop", () => {
     expect(shell?.dataset.profile).toBe("web");
     expect(status()).toContain("DESKTOP_RECOVERY_PENDING");
 
+    await click(window, "#project-open");
+    expect(status()).toContain("re-opened after recovery-pending");
+
+    const reset = writeDocumentFile(
+      join(dir, "scene.json"),
+      createDocument({
+        id: "desktop-first-release",
+        data: { title: "First release", entities: [{ id: "hero" }] },
+      }),
+      { cwd: dir },
+    );
+    if (!reset.ok) throw new Error("desktop product-loop reset refused");
+    await click(window, "#project-open");
+    await click(window, "#web-inject-asset");
     await click(window, "#project-save");
-    expect(status()).toContain("scene.json · saved");
+    expect(status()).toContain("recovery pending · Save to refresh");
+
+    await click(window, "#profile-kids");
+    expect(shell?.dataset.profile).toBe("web");
+    expect(status()).toContain("DESKTOP_RECOVERY_PENDING");
+
+    await click(window, "#project-save");
+    expect(status()).toContain("re-opened after journal-not-found");
     expect(readFileSync(join(dir, "scene.json"), "utf8")).toContain(
       '"assets/hero.glb"',
     );
@@ -174,7 +220,12 @@ describe("desktop first-release product loop", () => {
       "status",
       "propose",
       "accept",
+      "restart",
+      "status",
+      "propose",
+      "accept",
       "recover",
+      "restart",
       "open-path",
     ]);
   });

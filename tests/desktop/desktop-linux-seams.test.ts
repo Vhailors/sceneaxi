@@ -41,6 +41,7 @@ describe("desktop-linux seam", () => {
     expect(DESKTOP_BRIDGE_CHANNEL).toBe("sceneaxi:desktop-bridge");
     expect(DESKTOP_BRIDGE_GLOBAL).toBe("sceneaxiDesktopLinux");
     expect(DESKTOP_BRIDGE_AUTHORING_OPS).toContain("recover");
+    expect(DESKTOP_BRIDGE_AUTHORING_OPS).toContain("restart");
     expect(Object.isFrozen(DESKTOP_OPEN_PLACEMENTS)).toBe(true);
     expect(DESKTOP_OPEN_PLACEMENTS).toHaveLength(3);
   });

@@ -4,6 +4,8 @@ import {
   DESKTOP_PRODUCT_REFUSAL_MESSAGES,
   DESKTOP_PRODUCT_REFUSALS,
   DESKTOP_VIEWPORT_PLAY_EVENT,
+  DESKTOP_WEB_ASSET_MAX_COUNT,
+  DESKTOP_WEB_ASSET_PATH_MAX_LENGTH,
   DESKTOP_WEB_HTML_MAX_LENGTH,
   DESKTOP_WEB_STAGE_CONFIG,
   desktopProductSurface,
@@ -168,6 +170,7 @@ describe("desktop product loop", () => {
     expect(game).toContain("op: 'status'");
     expect(game).toContain("op: 'reject'");
     expect(game).toContain("op: recovering ? 'recover' : 'accept'");
+    expect(game).toContain("op: 'restart'");
     expect(game).toContain(DESKTOP_VIEWPORT_PLAY_EVENT);
   });
 
@@ -195,6 +198,8 @@ describe("desktop product loop", () => {
       documentPath: "scene.json",
       starterHtml: '<main id="sceneaxi-mount"></main>',
       htmlMaxLength: DESKTOP_WEB_HTML_MAX_LENGTH,
+      assetPathMaxLength: DESKTOP_WEB_ASSET_PATH_MAX_LENGTH,
+      assetMaxCount: DESKTOP_WEB_ASSET_MAX_COUNT,
       refusals: { ...DESKTOP_PRODUCT_REFUSALS },
     });
   });
@@ -244,6 +249,68 @@ describe("desktop product loop", () => {
     ).toMatchObject({
       ok: false,
       reason: DESKTOP_PRODUCT_REFUSALS.documentDataInvalid,
+    });
+
+    expect(
+      stageWebAssetInjection({
+        profile: "web",
+        documentData: {
+          webExperience: {
+            html: "x".repeat(DESKTOP_WEB_HTML_MAX_LENGTH + 1),
+            assets: [],
+          },
+        },
+        assetPath: "assets/hero.glb",
+      }),
+    ).toMatchObject({
+      ok: false,
+      reason: DESKTOP_PRODUCT_REFUSALS.webHtmlInvalid,
+    });
+
+    expect(
+      stageWebAssetInjection({
+        profile: "web",
+        documentData,
+        assetPath: `assets/${"x".repeat(DESKTOP_WEB_ASSET_PATH_MAX_LENGTH)}.glb`,
+      }),
+    ).toMatchObject({
+      ok: false,
+      reason: DESKTOP_PRODUCT_REFUSALS.webAssetPathInvalid,
+    });
+
+    expect(
+      stageWebAssetInjection({
+        profile: "web",
+        documentData: {
+          webExperience: {
+            html: "<main></main>",
+            assets: Array.from(
+              { length: DESKTOP_WEB_ASSET_MAX_COUNT + 1 },
+              (_, index) => `assets/item-${index}.glb`,
+            ),
+          },
+        },
+        assetPath: "assets/hero.glb",
+      }),
+    ).toMatchObject({
+      ok: false,
+      reason: DESKTOP_PRODUCT_REFUSALS.documentDataInvalid,
+    });
+
+    expect(
+      stageWebHtml({
+        profile: "web",
+        documentData: {
+          webExperience: {
+            html: `<main>${String.fromCharCode(0)}</main>`,
+            assets: [],
+          },
+        },
+        html: "<main>replacement</main>",
+      }),
+    ).toMatchObject({
+      ok: false,
+      reason: DESKTOP_PRODUCT_REFUSALS.webHtmlInvalid,
     });
 
     // Non-finite numbers are not JSON, and the in-process form still says so.

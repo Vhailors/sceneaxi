@@ -32,7 +32,7 @@ import {
 } from "@sceneaxi/authoring-core";
 import {
   DESKTOP_ASSISTANT_RUNTIME_EVENT,
-  DESKTOP_VIEWPORT_PLAY_EVENT,
+  DESKTOP_VIEWPORT_PLAY_EVENT as SHELL_VIEWPORT_PLAY_EVENT,
   DESKTOP_VISUAL_REFUSALS,
 } from "@sceneaxi/desktop-shell";
 import {
@@ -43,6 +43,7 @@ import {
 import {
   DESKTOP_BRIDGE_ACTIONS,
   DESKTOP_BRIDGE_REFUSALS,
+  DESKTOP_VIEWPORT_PLAY_EVENT,
   createDesktopAssistantViewportController,
   createDesktopBridge,
   desktopOpenScene,
@@ -745,6 +746,37 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
     expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(before);
   });
 
+  it("restarts the authoring session and re-reads the active document", () => {
+    const dir = authoringDir();
+    const bridge = bridgeAt(dir);
+    const proposed = bridge.handle({
+      action: "authoring",
+      payload: {
+        op: "propose",
+        documentPath: "scene.json",
+        jsonPointer: "/data/entities/0/x",
+        newValue: 7,
+      },
+    });
+    expect(proposed.ok).toBe(true);
+
+    const restarted = bridge.handle({
+      action: "authoring",
+      payload: { op: "restart", documentPath: "scene.json" },
+    });
+    expect(restarted.ok).toBe(true);
+    if (!restarted.ok) return;
+    expect(restarted.data).toMatchObject({ ok: true, documentId: "scene" });
+
+    const accepted = bridge.handle({ action: "authoring", payload: { op: "accept" } });
+    expect(accepted.ok).toBe(true);
+    if (!accepted.ok) return;
+    expect(accepted.data).toMatchObject({
+      phase: "idle",
+      diagnostics: [{ code: "invalid-proposal" }],
+    });
+  });
+
   it("refuses an authoring documentPath that leaves the project directory", () => {
     // The path arrives from the renderer across IPC and the authoring core resolves it
     // against `cwd` with no containment check of its own, so the bridge owns it.
@@ -1027,8 +1059,10 @@ describe("desktop renderer module accounting", () => {
     expect(viewport).toContain("frame.pixelsDrawn");
     expect(viewport).toContain("PIXELS_META_NAME");
     expect(viewport).toContain("document.addEventListener(DESKTOP_VIEWPORT_PLAY_EVENT");
-    expect(viewport).toContain('stage.dataset.playback = "synchronized"');
+    expect(viewport).toContain('stage.dataset.playback = "acknowledged"');
     expect(DESKTOP_VIEWPORT_PLAY_EVENT).toBe("sceneaxi:desktop-viewport-play");
+    expect(DESKTOP_VIEWPORT_PLAY_EVENT).toBe(SHELL_VIEWPORT_PLAY_EVENT);
+    expect(viewport).not.toContain('from "@sceneaxi/desktop-shell"');
     expect(viewport).not.toMatch(/from\s+"electron"/);
     // No Three type crosses the seam into this consumer either.
     expect(viewport).not.toMatch(/from\s+"three"/);

@@ -17,9 +17,6 @@
  * the main process only through the preload-exposed bridge global.
  */
 import {
-  DESKTOP_VIEWPORT_PLAY_EVENT,
-} from "@sceneaxi/desktop-shell";
-import {
   createSculptMountApi,
   createThreeRenderLoop,
   createThreeSculptPresentationBackend,
@@ -29,6 +26,7 @@ import { createDesktopAssistantViewportController } from "../lib/assistant-viewp
 import {
   DESKTOP_BRIDGE_GLOBAL,
   DESKTOP_BRIDGE_REFUSALS,
+  DESKTOP_VIEWPORT_PLAY_EVENT,
   PIXELS_META_NAME,
   type DesktopAssistantJobSnapshot,
   type DesktopBridgeResponse,
@@ -506,10 +504,10 @@ async function mountLiveViewport(): Promise<void> {
     const frame = mounts.render();
     updatePixelsMeta(frame);
     detail.accepted = true;
-    stage.dataset.playback = "synchronized";
+    stage.dataset.playback = "acknowledged";
     openPathLine(
       stage,
-      `kernel playback synchronized: ${exercise.tickDigests.length} ticks advanced · digest ${exercise.initialDigest.slice(0, 18)}… → ${exercise.tickDigests.at(-1)?.slice(0, 18)}… · viewport frame ${frame.frame}`,
+      `kernel playback acknowledged: ${exercise.tickDigests.length} ticks advanced · digest ${exercise.initialDigest.slice(0, 18)}… → ${exercise.tickDigests.at(-1)?.slice(0, 18)}… · composed scene redrawn at viewport frame ${frame.frame}`,
     );
   });
 

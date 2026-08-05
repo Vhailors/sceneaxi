@@ -235,9 +235,13 @@ The profile switch presents **Game**, **Website (Web)**, and **Kids**:
 A profile change is serialized with project actions. A staged proposal blocks
 the tab change until Save applies it or Open explicitly discards it, and an
 in-progress durable save blocks switching until Save refreshes recovery to a
-terminal state. Play advances the composed scene through the orchestrator and
-succeeds only when the mounted renderer acknowledges the synchronized viewport
-frame.
+terminal state. Open remains an explicit fresh-session re-read escape for any
+non-terminal recovery; a missing journal takes that path automatically with
+`journal-not-found` retained in the visible result, so the prior indeterminate
+session cannot permanently block Open or switching.
+Play advances the composed
+scene through the orchestrator and succeeds only when the mounted renderer
+redraws the same composed scene and acknowledges the post-play viewport frame.
 
 The Assistant column distinguishes `Local · free`, `BYOK · free`, and
 `Hosted · metered`. Build is the first-release artifact-producing mode; Ask and

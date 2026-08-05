@@ -95,13 +95,16 @@ The first-release loop has one honest active file, `scene.json`. Open validates
 and reads it through the long-lived authoring session. Web Experience can stage
 stored HTML or the normalized `assets/hero.glb` reference as one `/data`
 proposal; Save accepts that proposal atomically. The chrome never executes the
-stored HTML. A pending durable apply leaves Save in a visible recovery state;
-the next Save calls the host recovery operation and profile switching stays
-blocked until recovery is terminal. A staged proposal also blocks profile
+stored HTML. Stored markup is capped at 100,000 characters; asset paths are
+capped at 512 characters and each document carries at most 256 of them. A
+pending durable apply leaves Save in a visible recovery state; Save calls the
+host recovery operation, while Open can start a fresh session and re-read the
+document if recovery remains non-terminal. Profile switching stays blocked
+until either path resolves the session. A staged proposal also blocks profile
 switching until Save applies it or Open explicitly discards it through the same
 authoring session. Play asks the existing host `open-path` action to open, advance,
 observe, and close the composed scene session, then requires the mounted
-viewport to acknowledge a synchronized presentation frame before reporting
+viewport to redraw the same composed scene and acknowledge that post-play frame before reporting
 success. Game exposes scene/runtime + FreeJS vocabulary, Web exposes
 HTML/site-canvas/asset-injection, and Kids remains the shared refuse-only policy
 surface with every new live control demoted in the same central mint.
@@ -172,7 +175,10 @@ one protocol rather than two editors.
 A round-trip can report pending or indeterminate journal recovery with a
 `transactionId`. While recovery is pending the session refuses new propose,
 accept, and reject actions; call `refreshRecovery()` until the transaction
-reaches a terminal state. The non-interactive one-shot helper
+reaches a terminal state. A `journal-not-found` result requires the host to
+create a fresh session and re-read the active document before continuing. The
+packaged bridge exposes that lifecycle step as `authoring.restart`. The
+non-interactive one-shot helper
 `shellProposeAndApply()` remains available for agent parity.
 
 ## What this is not

@@ -286,6 +286,17 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         `Unknown authoring operation ${JSON.stringify(op)}. Known: ${DESKTOP_BRIDGE_AUTHORING_OPS.join(", ")}.`,
       );
     }
+    if (op === "restart") {
+      const documentPath = containedDocumentPath(field(payload, "documentPath"));
+      if (documentPath === null) {
+        return bridgeRefuse(
+          DESKTOP_BRIDGE_REFUSALS.requestMalformed,
+          "authoring restart requires a documentPath string inside the project directory.",
+        );
+      }
+      session = createDesktopSession({ cwd: options.cwd });
+      return bridgeOk("authoring", session.status(documentPath));
+    }
     const live = authoringSession();
     if (op === "status") {
       const documentPath = containedDocumentPath(field(payload, "documentPath"));
