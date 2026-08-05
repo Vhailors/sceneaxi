@@ -24,5 +24,6 @@ linux:
     The SceneAxi Engine Desktop editor packaged for Linux: the Engine Desktop
     chrome over the real engine stack (kernel open path, Three presentation
     core, authoring propose/accept). Built from the sceneaxi repository;
-    Windows and macOS are not packaged yet.
+    Windows and macOS packaging each live in their own separate root; no public
+    Windows artifact and no public macOS artifact are recorded.
   artifactName: SceneAxi-Engine-Desktop-${version}-linux-${arch}.${ext}

@@ -19,10 +19,14 @@ The packaging contract uses the stable names
 `version` field of `desktop/macos/package.json` — currently `0.0.0`. That manifest is
 the only place the release version is stated: `electron-builder.yml` templates the
 artifact names from it and `scripts/dist.mjs` reads it for the expected names,
-`latest-mac.yml`, and `desktop-macos-release.json`. The same input runtime is staged
-byte-for-byte and release metadata is written in stable sorted order, but Electron
-packaging, Apple signing, and notarization are **not bit-reproducible**. A checksum
-identifies one completed release build, never all builds of the same source.
+`latest-mac.yml`, and the build record. Apple bundle metadata uses the independent
+`buildVersion` in `electron-builder.yml` — currently `1` — because the shared package
+version remains `0.0.0`; increment that positive Apple build number for every signed
+candidate. Preflight refuses a missing or nonconforming value as
+`MACOS_BUILD_VERSION_INVALID`. The same input runtime is staged byte-for-byte and
+release metadata is written in stable sorted order, but Electron packaging, Apple
+signing, and notarization are **not bit-reproducible**. A checksum identifies one
+completed release build, never all builds of the same source.
 
 ## Local configuration smoke
 
@@ -62,13 +66,17 @@ not provide values, examples, fallbacks, or secret files:
 | `APPLE_TEAM_ID` | Apple Developer team identifier that owns the certificate |
 | `SCENEAXI_MACOS_RELEASE_BASE_URL` | Final HTTPS directory that will serve the `.dmg`, `.zip`, and `latest-mac.yml` together |
 
-The release also refuses without complete build provenance, because the record it
-writes identifies one build and must name the run that produced it. GitHub Actions
-supplies all three automatically, which is why the dispatched workflow is the release
-path; a local release run must export the same three itself. Any of them absent refuses
-`MACOS_PROVENANCE_REQUIRED:<name>`, and a value of the wrong shape refuses
-`MACOS_PROVENANCE_INVALID:<name>`, rather than writing a record the download IA cannot
-consume:
+Every build record carries a verified source commit. A local signed build must export
+only `GITHUB_SHA`; the value must equal the clean checkout's `git rev-parse HEAD`.
+It writes `desktop-macos-local-build.json` with `iaLinkable: false` and no repository,
+workflow-run, download, update-metadata, or artifact URL claim.
+
+Only the repository's actual GitHub Actions `workflow_dispatch` release path may write
+the IA-linkable `desktop-macos-release.json`. Actions supplies the three values below;
+the script additionally requires `GITHUB_ACTIONS=true`, the dispatch event,
+`https://github.com`, and this repository's `desktop-macos.yml` workflow reference.
+An absent value refuses `MACOS_PROVENANCE_REQUIRED:<name>`, and a value of the wrong
+shape refuses `MACOS_PROVENANCE_INVALID:<name>`:
 
 | Name | Meaning |
 |---|---|
@@ -76,16 +84,14 @@ consume:
 | `GITHUB_SHA` | Full 40-character commit the release was built from |
 | `GITHUB_RUN_ID` | Workflow run whose artifact holds the verified files |
 
-`GITHUB_SHA` is **verified, not trusted**, on every path: `git` must be on `PATH`
+`GITHUB_SHA` is **verified, not trusted**, on both paths: `git` must be on `PATH`
 (`MACOS_PROVENANCE_UNVERIFIABLE:git`), the release must run inside a readable checkout
 (`MACOS_PROVENANCE_UNVERIFIABLE:checkout`), the supplied commit must equal
 `git rev-parse HEAD` (`MACOS_PROVENANCE_COMMIT_MISMATCH`), and `git status --porcelain`
 must be empty (`MACOS_PROVENANCE_WORKTREE_DIRTY`) — build output is git-ignored, so a
 completed packaging run does not dirty the tree, but an uncommitted or untracked source
-change does. A local release therefore carries the same commit evidence a hosted run
-does: export `GITHUB_SHA="$(git rev-parse HEAD)"` from the clean checkout being
-packaged. Nothing here invents a run id; `GITHUB_RUN_ID` remains operator- or
-Actions-supplied, which is the reason the dispatched workflow is the release path.
+change does. A local build carries commit evidence but never claims an Actions run;
+export `GITHUB_SHA="$(git rev-parse HEAD)"` from the clean checkout being packaged.
 
 The required certificate is a **Developer ID Application** certificate for direct
 distribution, backed by an active Apple Developer Program membership. These inputs
@@ -113,14 +119,17 @@ It then writes:
 - the universal `.dmg` installer and `.zip` updater payload;
 - `SHA256SUMS`, sorted by artifact file name;
 - `latest-mac.yml`, bound to that exact zip by SHA-512 and byte count; and
-- `desktop-macos-release.json`, containing the exact download URLs, sizes, SHA-256
-  values, source application path, signed/notarized claims, and the build provenance
-  the download IA needs — `repository`, `sourceCommit`, `workflowRunId`, the run's
-  `downloadHref`, and the `verifiedOn` day the signature checks passed.
+- on the dispatched Actions path, `desktop-macos-release.json`, with
+  `iaLinkable: true`, exact download URLs, sizes, SHA-256 values, source application
+  path, signed/notarized claims, and the verified Actions provenance the download IA
+  needs; or
+- on a local path, `desktop-macos-local-build.json`, with `iaLinkable: false`, the
+  verified source commit and artifact evidence, and none of the IA link fields.
 
 `smoke --packaged` rechecks checksums, signing, Gatekeeper assessment, stapling, and
-that the release record's provenance is complete, then launches the packaged
-executable with `--smoke`. It requires the existing desktop runtime to prove its
+exactly one valid provenance shape. An Actions record must be fully IA-linkable; a
+local record must explicitly exclude every link field. It then launches the packaged
+executable with `--smoke` and requires the existing desktop runtime to prove its
 kernel, authoring, and real-pixel viewport path. The launch passes
 `--use-angle=swiftshader --enable-unsafe-swiftshader`, exactly as the Linux smoke
 does, so the pixel proof holds on a GPU-less CI runner: SwiftShader is a real
@@ -169,5 +178,5 @@ checks the directory that must serve `latest-mac.yml` and its exact signed zip. 
 missing, malformed, unreachable, checksum-mismatched, or improperly signed update is
 ignored without replacing the installed app. The repository performs no upload and
 has no fallback channel. Publishing a future update therefore remains an operator
-action: build and verify one higher version, then upload its `.dmg`, `.zip`, and
-metadata atomically to the configured HTTPS location.
+action: build and verify one higher package version and build number, then upload its
+`.dmg`, `.zip`, and metadata atomically to the configured HTTPS location.

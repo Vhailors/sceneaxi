@@ -1,16 +1,12 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { seam } from "../../desktop/macos/src/index.ts";
 
 const read = (rel: string): string =>
   readFileSync(new URL(`../../${rel}`, import.meta.url), "utf8");
 
-describe("desktop-macos packaging seam", () => {
+describe("desktop-macos packaging", () => {
   it("is a standalone desktop install root around the existing application", () => {
-    expect(seam).toEqual({ name: "@sceneaxi/desktop-macos", releaseGroup: "desktop" });
-    expect(Object.isFrozen(seam)).toBe(true);
-
     expect(read("desktop/macos/pnpm-workspace.yaml")).toMatch(
       /^packages:\s*\n\s*-\s*["']?\.["']?\s*$/m,
     );
@@ -33,16 +29,15 @@ describe("desktop-macos packaging seam", () => {
       expect(manifest.scripts[script]).toBeDefined();
     }
 
-    // This suite is the tier's coverage, exactly as it is for `desktop/linux`: a
-    // packaging install root that declares its own runner would ship a test surface
-    // no pipeline runs, and drag that runner's tree into an Electron install root.
     expect(manifest.scripts["test"]).toBeUndefined();
     expect(manifest.devDependencies["vitest"]).toBeUndefined();
     expect(read("desktop/macos/pnpm-lock.yaml")).not.toContain("vitest");
-    expect(existsSync(new URL("../../desktop/macos/test", import.meta.url))).toBe(false);
-    expect(existsSync(new URL("../../desktop/macos/vitest.config.ts", import.meta.url))).toBe(
-      false,
+    expect(existsSync(new URL("../../desktop/macos/test/seam.test.ts", import.meta.url))).toBe(true);
+    expect(read("desktop/macos/test/seam.test.ts")).toContain(
+      'from "@sceneaxi/desktop-macos"',
     );
+    expect(read("vitest.config.ts")).toContain('"desktop/*/test/**/*.test.ts"');
+    expect(read("tsconfig.tests.json")).toContain('"desktop/*/test/**/*.ts"');
 
     const build = read("desktop/macos/scripts/build.mjs");
     expect(build).toContain("desktop/linux");
@@ -53,6 +48,9 @@ describe("desktop-macos packaging seam", () => {
     const builder = read("desktop/macos/electron-builder.yml");
     expect(builder).toMatch(/^mac:/m);
     expect(builder).toContain("hardenedRuntime: true");
+    const buildVersion = /^buildVersion:\s*["']([^"']+)["']\s*$/m.exec(builder)?.[1];
+    expect(buildVersion).toMatch(/^[1-9]\d{0,3}(?:\.(?:0|[1-9]\d?)){0,2}$/);
+    expect(read("docs/desktop-macos.md")).toContain(`currently \`${buildVersion}\``);
     expect(builder).toContain("notarize: true");
     expect(builder).toContain("target: dmg");
     expect(builder).toContain("target: zip");
@@ -82,6 +80,8 @@ describe("desktop-macos packaging seam", () => {
     expect(dist).toContain("SceneAxi-Engine-Desktop-${version}-macos-universal");
     expect(dist).toContain("version: ${version}");
     expect(dist).not.toContain(version);
+    expect(dist).toContain("MACOS_BUILD_VERSION_INVALID");
+    expect(dist).toContain("buildVersion");
     const cleanOutputGuard = dist.indexOf("MACOS_RELEASE_OUTPUT_NOT_EMPTY");
     expect(cleanOutputGuard).toBeGreaterThan(-1);
     expect(cleanOutputGuard).toBeLessThan(
@@ -95,6 +95,12 @@ describe("desktop-macos packaging seam", () => {
     for (const name of ["GITHUB_REPOSITORY", "GITHUB_SHA", "GITHUB_RUN_ID"]) {
       expect(dist).toContain(name);
     }
+    expect(dist).toContain('process.env.GITHUB_ACTIONS === "true"');
+    expect(dist).toContain('process.env.GITHUB_EVENT_NAME !== "workflow_dispatch"');
+    expect(dist).toContain("desktop-macos-local-build.json");
+    expect(dist).toContain('iaLinkable: false');
+    expect(dist).toContain('recordKind: "github-actions-release"');
+    expect(dist).toContain('recordKind: "local-build"');
     expect(dist).toContain("MACOS_PROVENANCE_REQUIRED");
     expect(dist).toContain("MACOS_PROVENANCE_INVALID");
     for (const field of [
@@ -112,6 +118,7 @@ describe("desktop-macos packaging seam", () => {
     // fails the release verification rather than reaching the download IA.
     const smoke = read("desktop/macos/scripts/smoke.mjs");
     expect(smoke).toContain("release record carries no complete provenance");
+    expect(smoke).toContain("local build record is not explicitly non-linkable");
     expect(smoke).toContain("downloadHref");
   });
 
@@ -131,11 +138,20 @@ describe("desktop-macos packaging seam", () => {
         encoding: "utf8",
         env: {
           ...Object.fromEntries(
-            Object.entries(process.env).filter(([name]) => !releaseInputs.includes(name)),
+            Object.entries(process.env).filter(
+              ([name]) =>
+                ![
+                  ...releaseInputs,
+                  "GITHUB_ACTIONS",
+                  "GITHUB_EVENT_NAME",
+                  "GITHUB_REPOSITORY",
+                  "GITHUB_RUN_ID",
+                  "GITHUB_SERVER_URL",
+                  "GITHUB_WORKFLOW_REF",
+                ].includes(name),
+            ),
           ),
-          GITHUB_REPOSITORY: "Vhailors/sceneaxi",
           GITHUB_SHA: sha,
-          GITHUB_RUN_ID: "1",
         },
       });
       expect(result.status, result.stdout).toBe(1);
@@ -197,7 +213,7 @@ describe("desktop-macos packaging seam", () => {
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain("desktop-macos smoke OK");
     expect(result.stdout).toContain("missing signing/notarization/update inputs refused");
-    expect(result.stdout).toContain("incomplete release provenance refused");
+    expect(result.stdout).toContain("local and Actions provenance refusals proven");
   });
 
   it("keeps runtime updates disabled until a signed release configures an HTTPS feed", () => {
@@ -236,6 +252,17 @@ describe("desktop-macos packaging seam", () => {
     expect(doc).toContain("latest-mac.yml");
     expect(doc).toContain("Applications");
     expect(doc).toContain("first launch");
+
+    const linuxOwner = read("docs/desktop-linux.md");
+    const linuxReadme = read("desktop/linux/README.md");
+    const linuxBuilder = read("desktop/linux/electron-builder.yml");
+    for (const sibling of [linuxOwner, linuxReadme, linuxBuilder]) {
+      expect(sibling).toContain("macOS");
+      expect(sibling).toMatch(/no public macOS artifact/i);
+    }
+    expect(linuxOwner).not.toContain("Windows and macOS packaging");
+    expect(linuxReadme).not.toContain("Windows and macOS packaging");
+    expect(linuxBuilder).not.toContain("Windows and macOS are not packaged yet");
 
     const workflow = read(".github/workflows/desktop-macos.yml");
     expect(workflow).toContain("workflow_dispatch:");

@@ -1,4 +1,5 @@
 appId: com.sceneaxi.engine-desktop
+buildVersion: "1"
 productName: SceneAxi Engine Desktop
 executableName: sceneaxi-engine-desktop
 directories:

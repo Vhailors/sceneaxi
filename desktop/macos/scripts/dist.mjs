@@ -33,22 +33,18 @@ const requiredEnvironment = Object.freeze([
 ]);
 const requiredTools = Object.freeze(["codesign", "hdiutil", "security", "spctl", "xcrun"]);
 const { version } = JSON.parse(readFileSync(join(appRoot, "package.json"), "utf8"));
+const builderConfig = readFileSync(join(appRoot, "electron-builder.yml"), "utf8");
+const buildVersionMatches = [
+  ...builderConfig.matchAll(/^buildVersion:\s*["']([^"']+)["']\s*$/gm),
+];
+const buildVersion = buildVersionMatches.length === 1 ? buildVersionMatches[0][1] : undefined;
 
-/**
- * The release record identifies one build, so it must name the run that produced it.
- * These are the CI-supplied provenance the download IA needs to link the artifact
- * (`packages/site-kit/src/desktop-app-offer.ts`); a record that omits or malforms any
- * of them cannot be consumed, so the release refuses rather than writing a partial one.
- *
- * Shape is not evidence. `GITHUB_SHA` is checked against the checkout that is actually
- * being packaged, so the commit the record claims is the commit the artifact was built
- * from on every path — a hosted runner and an operator's Mac alike.
- */
-const requiredProvenance = Object.freeze({
+const provenanceValidators = Object.freeze({
   GITHUB_REPOSITORY: (value) => /^[A-Za-z0-9][A-Za-z0-9._-]*\/[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value),
   GITHUB_SHA: (value) => /^[0-9a-f]{40}$/.test(value),
   GITHUB_RUN_ID: (value) => /^[1-9][0-9]*$/.test(value) && Number.isSafeInteger(Number(value)),
 });
+const actionsRelease = process.env.GITHUB_ACTIONS === "true";
 const repositoryRoot = resolve(appRoot, "../..");
 const git = (args) =>
   spawnSync("git", args, {
@@ -86,12 +82,21 @@ if (process.platform !== "darwin") refusals.push("MACOS_HOST_REQUIRED");
 if (typeof version !== "string" || !/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)*$/.test(version)) {
   refusals.push("MACOS_RELEASE_VERSION_INVALID");
 }
+if (
+  typeof buildVersion !== "string" ||
+  !/^[1-9]\d{0,3}(?:\.(?:0|[1-9]\d?)){0,2}$/.test(buildVersion)
+) {
+  refusals.push("MACOS_BUILD_VERSION_INVALID");
+}
 for (const name of requiredEnvironment) {
   if (process.env[name] === undefined || process.env[name]?.trim() === "") {
     refusals.push(`MACOS_ENV_REQUIRED:${name}`);
   }
 }
-for (const [name, isValid] of Object.entries(requiredProvenance)) {
+const requiredProvenance = actionsRelease
+  ? Object.entries(provenanceValidators)
+  : [["GITHUB_SHA", provenanceValidators.GITHUB_SHA]];
+for (const [name, isValid] of requiredProvenance) {
   const value = process.env[name]?.trim();
   if (value === undefined || value === "") {
     refusals.push(`MACOS_PROVENANCE_REQUIRED:${name}`);
@@ -100,7 +105,7 @@ for (const [name, isValid] of Object.entries(requiredProvenance)) {
   }
 }
 const declaredCommit = process.env.GITHUB_SHA?.trim();
-if (declaredCommit !== undefined && requiredProvenance.GITHUB_SHA(declaredCommit)) {
+if (declaredCommit !== undefined && provenanceValidators.GITHUB_SHA(declaredCommit)) {
   if (!executableExists("git")) {
     refusals.push("MACOS_PROVENANCE_UNVERIFIABLE:git");
   } else {
@@ -114,6 +119,19 @@ if (declaredCommit !== undefined && requiredProvenance.GITHUB_SHA(declaredCommit
       }
       if (worktree.stdout.trim() !== "") refusals.push("MACOS_PROVENANCE_WORKTREE_DIRTY");
     }
+  }
+}
+if (actionsRelease) {
+  if (process.env.GITHUB_EVENT_NAME !== "workflow_dispatch") {
+    refusals.push("MACOS_ACTIONS_DISPATCH_REQUIRED");
+  }
+  if (process.env.GITHUB_SERVER_URL !== "https://github.com") {
+    refusals.push("MACOS_ACTIONS_SERVER_REQUIRED");
+  }
+  const repository = process.env.GITHUB_REPOSITORY?.trim() ?? "";
+  const expectedWorkflow = `${repository}/.github/workflows/desktop-macos.yml@`;
+  if (!process.env.GITHUB_WORKFLOW_REF?.startsWith(expectedWorkflow)) {
+    refusals.push("MACOS_ACTIONS_WORKFLOW_REQUIRED");
   }
 }
 const baseUrl = process.env.SCENEAXI_MACOS_RELEASE_BASE_URL;
@@ -182,9 +200,9 @@ run("spctl", ["--assess", "--type", "execute", "--verbose=2", appBundle]);
 run("xcrun", ["stapler", "validate", appBundle]);
 
 const releaseBase = `${baseUrl.trim().replace(/\/$/, "")}/`;
-const repository = process.env.GITHUB_REPOSITORY.trim();
 const sourceCommit = process.env.GITHUB_SHA.trim();
-const workflowRunId = Number(process.env.GITHUB_RUN_ID.trim());
+const repository = actionsRelease ? process.env.GITHUB_REPOSITORY.trim() : undefined;
+const workflowRunId = actionsRelease ? Number(process.env.GITHUB_RUN_ID.trim()) : undefined;
 const verifiedOn = new Date().toISOString().slice(0, 10);
 const hash = (algorithm, name, encoding) =>
   createHash(algorithm).update(readFileSync(join(release, name))).digest(encoding);
@@ -192,7 +210,6 @@ const artifactRecords = artifacts.map((name) => ({
   fileName: name,
   bytes: statSync(join(release, name)).size,
   sha256: hash("sha256", name, "hex"),
-  url: new URL(encodeURIComponent(name), releaseBase).href,
 }));
 writeFileSync(
   join(release, "SHA256SUMS"),
@@ -220,23 +237,47 @@ writeFileSync(
 );
 
 writeFileSync(
-  join(release, "desktop-macos-release.json"),
+  join(
+    release,
+    actionsRelease ? "desktop-macos-release.json" : "desktop-macos-local-build.json",
+  ),
   `${JSON.stringify(
-    {
-      schemaVersion: 1,
-      platform: "macOS universal",
-      version,
-      sourceApplication: "desktop/linux",
-      repository,
-      sourceCommit,
-      workflowRunId,
-      downloadHref: `https://github.com/${repository}/actions/runs/${workflowRunId}`,
-      verifiedOn,
-      signed: true,
-      notarized: true,
-      updateMetadataUrl: new URL("latest-mac.yml", releaseBase).href,
-      artifacts: artifactRecords,
-    },
+    actionsRelease
+      ? {
+          schemaVersion: 1,
+          recordKind: "github-actions-release",
+          iaLinkable: true,
+          platform: "macOS universal",
+          version,
+          buildVersion,
+          sourceApplication: "desktop/linux",
+          repository,
+          sourceCommit,
+          workflowRunId,
+          downloadHref: `https://github.com/${repository}/actions/runs/${workflowRunId}`,
+          verifiedOn,
+          signed: true,
+          notarized: true,
+          updateMetadataUrl: new URL("latest-mac.yml", releaseBase).href,
+          artifacts: artifactRecords.map((artifact) => ({
+            ...artifact,
+            url: new URL(encodeURIComponent(artifact.fileName), releaseBase).href,
+          })),
+        }
+      : {
+          schemaVersion: 1,
+          recordKind: "local-build",
+          iaLinkable: false,
+          platform: "macOS universal",
+          version,
+          buildVersion,
+          sourceApplication: "desktop/linux",
+          sourceCommit,
+          verifiedOn,
+          signed: true,
+          notarized: true,
+          artifacts: artifactRecords,
+        },
     null,
     2,
   )}\n`,

@@ -4,7 +4,7 @@
  *
  * The default mode deliberately removes all operator inputs and proves the release
  * command refuses them by name before electron-builder can run. `--packaged`
- * verifies the already signed/stapled bundle, its checksums, its release-record
+ * verifies the already signed/stapled bundle, its checksums, its build-record
  * provenance, and its real runtime.
  *
  * The packaged launch passes SwiftShader, exactly as the Linux smoke does: an Apple
@@ -28,7 +28,15 @@ const releaseInputs = [
   "APPLE_TEAM_ID",
   "SCENEAXI_MACOS_RELEASE_BASE_URL",
 ];
-const provenanceInputs = ["GITHUB_REPOSITORY", "GITHUB_SHA", "GITHUB_RUN_ID"];
+const provenanceInputs = [
+  "GITHUB_ACTIONS",
+  "GITHUB_EVENT_NAME",
+  "GITHUB_REPOSITORY",
+  "GITHUB_RUN_ID",
+  "GITHUB_SERVER_URL",
+  "GITHUB_SHA",
+  "GITHUB_WORKFLOW_REF",
+];
 
 const fail = (message) => {
   console.error(`desktop-macos smoke FAILED — ${message}`);
@@ -46,13 +54,18 @@ if (!packaged) {
   ]) {
     if (!config.includes(required)) fail(`packaging config lacks '${required}'`);
   }
+  const buildVersionMatches = [
+    ...config.matchAll(/^buildVersion:\s*["']([^"']+)["']\s*$/gm),
+  ];
+  const buildVersion = buildVersionMatches.length === 1 ? buildVersionMatches[0][1] : undefined;
+  if (!/^[1-9]\d{0,3}(?:\.(?:0|[1-9]\d?)){0,2}$/.test(buildVersion ?? "")) {
+    fail("packaging config carries no valid Apple build version");
+  }
   if (/^publish:/m.test(config)) fail("packaging config can publish implicitly");
   if (!existsSync(join(appRoot, "entitlements.mac.plist"))) {
     fail("packaging config references no tracked entitlements file");
   }
 
-  // Provenance is stripped too, so this proves the same refusals on an operator's
-  // machine and inside Actions, where GitHub would otherwise supply all three.
   const removed = [...releaseInputs, ...provenanceInputs];
   const env = Object.fromEntries(
     Object.entries(process.env).filter(([name]) => !removed.includes(name)),
@@ -68,14 +81,36 @@ if (!packaged) {
       fail(`missing-input preflight did not refuse ${name}`);
     }
   }
-  for (const name of provenanceInputs) {
-    if (!result.stderr.includes(`MACOS_PROVENANCE_REQUIRED:${name}`)) {
-      fail(`missing-input preflight did not refuse absent provenance ${name}`);
+  if (!result.stderr.includes("MACOS_PROVENANCE_REQUIRED:GITHUB_SHA")) {
+    fail("missing-input preflight did not refuse absent source provenance");
+  }
+  const actionsResult = spawnSync(
+    process.execPath,
+    [join(appRoot, "scripts/dist.mjs"), "--preflight-only"],
+    {
+      cwd: appRoot,
+      encoding: "utf8",
+      env: {
+        ...env,
+        GITHUB_ACTIONS: "true",
+        GITHUB_EVENT_NAME: "workflow_dispatch",
+        GITHUB_SERVER_URL: "https://github.com",
+        GITHUB_WORKFLOW_REF:
+          "Vhailors/sceneaxi/.github/workflows/desktop-macos.yml@refs/heads/main",
+      },
+    },
+  );
+  if (actionsResult.status !== 1) {
+    fail(`missing Actions provenance preflight exited ${actionsResult.status}, not 1`);
+  }
+  for (const name of ["GITHUB_REPOSITORY", "GITHUB_SHA", "GITHUB_RUN_ID"]) {
+    if (!actionsResult.stderr.includes(`MACOS_PROVENANCE_REQUIRED:${name}`)) {
+      fail(`Actions preflight did not refuse absent provenance ${name}`);
     }
   }
 
   console.log(
-    "desktop-macos smoke OK — packaging config valid; missing signing/notarization/update inputs refused; incomplete release provenance refused",
+    "desktop-macos smoke OK — packaging config valid; missing signing/notarization/update inputs refused; local and Actions provenance refusals proven",
   );
   process.exit(0);
 }
@@ -83,7 +118,11 @@ if (!packaged) {
 if (process.platform !== "darwin") fail("--packaged requires macOS");
 const release = join(appRoot, "release");
 const checksumsPath = join(release, "SHA256SUMS");
-const manifestPath = join(release, "desktop-macos-release.json");
+const actionsManifestPath = join(release, "desktop-macos-release.json");
+const localManifestPath = join(release, "desktop-macos-local-build.json");
+const manifestPaths = [actionsManifestPath, localManifestPath].filter((path) => existsSync(path));
+if (manifestPaths.length !== 1) fail("release must carry exactly one provenance record");
+const manifestPath = manifestPaths[0];
 const updatePath = join(release, "latest-mac.yml");
 for (const path of [checksumsPath, manifestPath, updatePath]) {
   if (!existsSync(path)) fail(`release proof file is absent: ${path}`);
@@ -91,17 +130,38 @@ for (const path of [checksumsPath, manifestPath, updatePath]) {
 const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
 const { repository, sourceCommit, workflowRunId, verifiedOn } = manifest;
 if (
-  typeof repository !== "string" ||
-  !/^[A-Za-z0-9][A-Za-z0-9._-]*\/[A-Za-z0-9][A-Za-z0-9._-]*$/.test(repository) ||
   typeof sourceCommit !== "string" ||
   !/^[0-9a-f]{40}$/.test(sourceCommit) ||
-  !Number.isSafeInteger(workflowRunId) ||
-  workflowRunId <= 0 ||
-  manifest.downloadHref !== `https://github.com/${repository}/actions/runs/${workflowRunId}` ||
+  typeof manifest.buildVersion !== "string" ||
+  !/^[1-9]\d{0,3}(?:\.(?:0|[1-9]\d?)){0,2}$/.test(manifest.buildVersion) ||
   typeof verifiedOn !== "string" ||
-  !/^\d{4}-\d{2}-\d{2}$/.test(verifiedOn)
+  !/^\d{4}-\d{2}-\d{2}$/.test(verifiedOn) ||
+  !Array.isArray(manifest.artifacts)
 ) {
-  fail("release record carries no complete provenance the download IA can consume");
+  fail("build record carries no complete source provenance");
+}
+if (manifestPath === actionsManifestPath) {
+  if (
+    manifest.recordKind !== "github-actions-release" ||
+    manifest.iaLinkable !== true ||
+    typeof repository !== "string" ||
+    !/^[A-Za-z0-9][A-Za-z0-9._-]*\/[A-Za-z0-9][A-Za-z0-9._-]*$/.test(repository) ||
+    !Number.isSafeInteger(workflowRunId) ||
+    workflowRunId <= 0 ||
+    manifest.downloadHref !== `https://github.com/${repository}/actions/runs/${workflowRunId}`
+  ) {
+    fail("release record carries no complete provenance the download IA can consume");
+  }
+} else {
+  const forbidden = ["repository", "workflowRunId", "downloadHref", "updateMetadataUrl"];
+  if (
+    manifest.recordKind !== "local-build" ||
+    manifest.iaLinkable !== false ||
+    forbidden.some((field) => Object.hasOwn(manifest, field)) ||
+    manifest.artifacts?.some((artifact) => Object.hasOwn(artifact, "url"))
+  ) {
+    fail("local build record is not explicitly non-linkable");
+  }
 }
 
 for (const line of readFileSync(checksumsPath, "utf8").trim().split("\n")) {
