@@ -1055,14 +1055,13 @@ export function EditorShell({
                           <input key={field.name} type="hidden" name={field.name} value={field.value} />
                         ))}
                         {/* A submit is a navigation too, so it carries the mode
-                            and the profile the reader is in, exactly like every
-                            link above — a form that dropped the profile would
-                            eject the reader from the projection they applied
-                            their edit in. */}
+                            the reader is in, exactly like every link above. It
+                            names no profile because it is the Game body's own
+                            form — the Web projection replaces this body and
+                            submits through its own contract-owned field — and an
+                            omitted parameter is what `hrefInViewState` writes
+                            for Game as well. */}
                         <input type="hidden" name="mode" value={mode} />
-                        {profile === "web" && (
-                          <input type="hidden" name="profile" value="web" />
-                        )}
                         {/*
                           A form control is an interactive element too, so each one
                           wears the id and the kind its minted control declares —

@@ -199,9 +199,25 @@ describe("SA-WEB-1 browser confinement", () => {
     expect(shell).toContain('params.set("profile", "web")');
     expect(shell).toContain('params.delete("profile")');
     expect(shell).not.toContain("hrefInMode(");
-    // Forms: the same value, spelled as a hidden field beside the mode.
-    expect(shell).toContain('<input type="hidden" name="profile" value="web" />');
     expect(shell).toContain("<ActiveProfileContext value={profile}>");
+    // Forms: each body submits the profile its own projection is, so the Web
+    // form carries the contract's field and the Game body's form — the only
+    // other form here — names no profile at all, exactly as `params.delete`
+    // does for a Game link.
+    const component = read(WEB_EDITOR);
+    expect(component).toContain("name={view.form.profile.name}");
+    expect(component).toContain("value={view.form.profile.value}");
+    const web = readWebExperienceEditorState({ profile: "web" });
+    expect(web.ok).toBe(true);
+    if (!web.ok) return;
+    expect(
+      buildWebExperienceEditorView({
+        state: web.value,
+        starterArtifactId: "sculpt:starter-crate",
+      }).form.profile,
+    ).toEqual({ name: "profile", value: "web" });
+    expect(shell).not.toContain('name="profile"');
+    expect(shell.match(/<form\b/g)).toHaveLength(1);
   });
 
   it("names the demoted-chrome refusal off the view instead of restating it", () => {
