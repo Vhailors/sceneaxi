@@ -132,6 +132,7 @@ class FakeElement {
   constructor(
     readonly id = "",
     dataset: Record<string, string> = {},
+    private readonly selectorMatches: ReadonlyMap<string, readonly FakeElement[]> = new Map(),
   ) {
     this.dataset = { ...dataset };
   }
@@ -156,8 +157,8 @@ class FakeElement {
     return null;
   }
 
-  querySelectorAll(): FakeElement[] {
-    return [];
+  querySelectorAll(selector: string): FakeElement[] {
+    return [...(this.selectorMatches.get(selector) ?? [])];
   }
 
   focus(): void {}
@@ -174,23 +175,21 @@ class FakeTextAreaElement extends FakeElement {
 class FakeShell extends FakeElement {
   clickListener?: (event: { readonly target: FakeElement }) => void;
 
-  constructor(
-    private readonly controls: readonly FakeElement[],
-    private readonly profileChips: readonly FakeElement[],
-  ) {
-    super("shell", {
-      assistant: "open",
-      assistantRuntime: "none",
-      drawerAssistant: "open",
-      overlay: "none",
-      profile: "game",
-    });
-  }
-
-  override querySelectorAll(selector: string): FakeElement[] {
-    if (selector === "[data-kind]") return [...this.controls];
-    if (selector === ".profile-chip") return [...this.profileChips];
-    return [];
+  constructor(controls: readonly FakeElement[], profileChips: readonly FakeElement[]) {
+    super(
+      "shell",
+      {
+        assistant: "open",
+        assistantRuntime: "none",
+        drawerAssistant: "open",
+        overlay: "none",
+        profile: "game",
+      },
+      new Map([
+        ["[data-kind]", controls],
+        [".profile-chip", profileChips],
+      ]),
+    );
   }
 
   addEventListener(
