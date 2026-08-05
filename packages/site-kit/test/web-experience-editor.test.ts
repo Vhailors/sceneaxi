@@ -2,12 +2,16 @@ import { describe, expect, it } from "vitest";
 import {
   WEB_EXPERIENCE_AUTHORING_OPERATIONS,
   WEB_EXPERIENCE_AUTHORING_REFUSALS,
+  WEB_EXPERIENCE_DEFAULT_TITLE,
   WEB_EXPERIENCE_DESKTOP_ONLY_OPERATIONS,
+  WEB_EXPERIENCE_HTML_MAX_LENGTH,
+  WEB_EXPERIENCE_REQUEST_TARGET_MAX_LENGTH,
   WEB_EDITOR_SESSION_OPERATIONS,
   buildWebExperienceEditorView,
   editorHref,
   readEditorState,
   readWebExperienceEditorState,
+  webExperienceRequestTarget,
 } from "@sceneaxi/site-kit";
 
 describe("the simplified Web Experience editor", () => {
@@ -72,7 +76,11 @@ describe("the simplified Web Experience editor", () => {
       method: "get",
       profile: { name: "profile", value: "web" },
       title: { name: "web-title", maxLength: 80, operation: "page.set-html" },
-      html: { name: "web-html", maxLength: 5_000, operation: "page.set-html" },
+      html: {
+        name: "web-html",
+        maxLength: WEB_EXPERIENCE_HTML_MAX_LENGTH,
+        operation: "page.set-html",
+      },
       asset: { name: "web-asset", value: "1", operation: "asset.inject" },
       three: { name: "web-three", value: "1", operation: "three.embed" },
     });
@@ -140,11 +148,63 @@ describe("the simplified Web Experience editor", () => {
 
   it.each([
     [{ "web-layout": "desktop" }, "SITE_REQUEST_MALFORMED"],
-    [{ "web-title": "" }, "SITE_REQUEST_MALFORMED"],
     [{ "web-asset": "https://evil.test/a.js" }, "SITE_REQUEST_MALFORMED"],
     [{ "web-three": ["1", "0"] }, "SITE_REQUEST_MALFORMED"],
+    [{ "web-title": "t".repeat(81) }, "SITE_REQUEST_MALFORMED"],
+    [
+      { "web-html": "x".repeat(WEB_EXPERIENCE_HTML_MAX_LENGTH + 1) },
+      "SITE_REQUEST_MALFORMED",
+    ],
   ] as const)("refuses malformed web authoring state %#", (params, reason) => {
     expect(readWebExperienceEditorState(params)).toMatchObject({ ok: false, reason });
+  });
+
+  it("clears one field instead of refusing the whole document", () => {
+    const cleared = readWebExperienceEditorState({
+      profile: "web",
+      "web-title": "   ",
+      "web-layout": "hero",
+      "web-html": "<h1>Still here</h1>",
+      "web-three": "1",
+    });
+    expect(cleared.ok).toBe(true);
+    if (!cleared.ok) return;
+    expect(cleared.value).toMatchObject({
+      title: WEB_EXPERIENCE_DEFAULT_TITLE,
+      html: "<h1>Still here</h1>",
+      layout: "hero",
+      embedThree: true,
+    });
+    expect(readWebExperienceEditorState({ "web-title": "" })).toEqual(
+      readWebExperienceEditorState({}),
+    );
+  });
+
+  it("refuses an over-budget request target by name rather than by platform limit", () => {
+    const ok = readWebExperienceEditorState({
+      "web-html": "<p>a</p>".repeat(100),
+    });
+    expect(ok.ok).toBe(true);
+    if (!ok.ok) return;
+    expect(webExperienceRequestTarget(ok.value).length).toBeLessThanOrEqual(
+      WEB_EXPERIENCE_REQUEST_TARGET_MAX_LENGTH,
+    );
+    const view = buildWebExperienceEditorView({
+      state: ok.value,
+      starterArtifactId: "sculpt:starter-crate",
+    });
+    expect(view.submission).toEqual({
+      target: webExperienceRequestTarget(ok.value),
+      maxLength: WEB_EXPERIENCE_REQUEST_TARGET_MAX_LENGTH,
+    });
+
+    // Inside the field bound, past the target budget once percent-encoded.
+    const dense = "<>\"'".repeat(Math.floor(WEB_EXPERIENCE_HTML_MAX_LENGTH / 4));
+    expect(dense.length).toBeLessThanOrEqual(WEB_EXPERIENCE_HTML_MAX_LENGTH);
+    expect(readWebExperienceEditorState({ "web-html": dense })).toMatchObject({
+      ok: false,
+      reason: "SITE_REQUEST_TARGET_TOO_LONG",
+    });
   });
 
   it("publishes every desktop-only refusal in the view", () => {

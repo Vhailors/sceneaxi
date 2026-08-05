@@ -171,11 +171,24 @@ describe("describeSiteAccessState", () => {
     }
   });
 
-  it("judges an escaped destination by what it decodes to", () => {
+  it("judges an escaped destination by what its path decodes to", () => {
     expect(confineSiteRelativePath("/%2F%2Fevil.example")).toBeNull();
     expect(confineSiteRelativePath("/line%0Abreak")).toBeNull();
     expect(confineSiteRelativePath("/path%5Csegment")).toBeNull();
     expect(confineSiteRelativePath("%2Fevil.example")).toBeNull();
+  });
+
+  it("carries an encoded multi-line document without ever emitting a raw break", () => {
+    const destination = "/editor?profile=web&web-html=%3Ch1%3EA%3C%2Fh1%3E%0D%0A%3Cp%3EB%3C%2Fp%3E";
+    expect(confineSiteRelativePath(destination)).toBe(destination);
+    expect(siteLoginHref(destination)).toBe(
+      `${SITE_LOGIN_PATH}?next=${encodeURIComponent(destination)}`,
+    );
+    // The emitted value keeps every break percent-encoded, so no header sees one.
+    expect(confineSiteRelativePath(destination)).not.toMatch(/[\r\n\t\s]/);
+    // A literal break is still not a destination, wherever it appears.
+    expect(confineSiteRelativePath("/editor?web-html=a\r\nb")).toBeNull();
+    expect(confineSiteRelativePath("/editor\r\nSet-Cookie: x=1")).toBeNull();
   });
 
   it("falls back to a named state carrying the registry's own message", () => {

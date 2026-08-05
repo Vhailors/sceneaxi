@@ -19,7 +19,19 @@ no editor model and no canvas. The Web projection adds no identity dependency,
 provider adapter, cookie, role, credit rule, or billing call. The guarded route
 carries its encoded query string through the existing hosted-login `next`
 contract, so sign-in returns to the same Web profile and reconstructs the same
-document instead of opening the Game default.
+document instead of opening the Game default — multi-line documents included.
+`confineSiteRelativePath` reads its two rules at the two levels that make each
+true: route *structure* on the decoded path, so no escape smuggles an authority
+or a second segment past it, and header safety on the encoded value actually
+emitted, where a newline inside a query stays three printable characters. A
+literal control character is still not a destination, wherever it appears.
+
+The active profile is chrome state, and — like the active mode — it is carried on
+every navigation the shell renders: `hrefInViewState` writes it onto editor
+hrefs and the apply form carries it as a hidden field, so leaving the Web profile
+is not undone by the next link and staying in it is not undone by the next
+submit. Kids is never written to a URL; it stays the refuse-only client
+projection with no request state.
 
 The dependency matrix continues to deny profile packages to sites. The shared
 vocabulary lives in
@@ -45,6 +57,34 @@ URL carries the bounded inputs needed to reconstruct those bytes. It is not
 durable account storage: the same URL rebuilds the same document, and changing
 the form creates the next document. No provider or persistence behavior is
 implied.
+
+## The submission bound
+
+The session lives in the URL, so the submission path has a size a platform can
+answer before any SceneAxi code runs. `WEB_EXPERIENCE_REQUEST_TARGET_MAX_LENGTH`
+(4,000 characters of `/editor?…`) is therefore the bound that matters, and
+`readWebExperienceEditorState` enforces it on the **reconstructed target** built
+by `webExperienceRequestTarget()` rather than on any single field — a field only
+contributes to the quantity a platform measures. Over-budget state refuses
+`SITE_REQUEST_TARGET_TOO_LONG` by name; the view publishes the target and the
+budget it fits as `submission`.
+
+The budget is self-imposed and deliberately well under the ceilings it sits
+below — an 8 KiB request line at the narrowest edge, a 16 KiB header block in
+Node — so the session cookie, the method, and the version all fit beside it, and
+so state between our bound and any platform's is answered here rather than as an
+unnamed 414 or 431. The field bounds (80-character title, 2,000-character HTML)
+are what keep ordinary authored markup inside it: a 2,000-character document of
+dense markup encodes to roughly 3–6 KB, which is why the HTML bound is not the
+5,000 the first draft carried. A document that is *both* at the field bound and
+almost entirely multi-byte still encodes past every ceiling; that residual case
+is the one the platform answers first, and it is recorded here rather than
+claimed away.
+
+POST was considered and rejected: the state is the URL by design (deep links,
+deterministic reconstruction, and the login continuation below all read it), and
+a POST would still have to redirect to the same target, so it moves the bound
+rather than removing it.
 
 These four operations are a closed **Web profile document projection**, not
 members of `WEB_EDITOR_SESSION_OPERATIONS` and not new Minimum E2 runtime
@@ -81,10 +121,14 @@ no engine implementation crosses into the Web Experience contract.
   unknown refusals, immutable sandbox policy.
 - `packages/site-kit/test/web-experience-editor.test.ts` — deterministic state,
   canonical document/digest, form contract, operation separation,
-  HTML/canvas/asset/Three paths, malformed input, and refusal projection.
+  HTML/canvas/asset/Three paths, malformed input, cleared-field fallback, the
+  request-target budget, and refusal projection.
+- `packages/site-kit/test/access-states.test.ts` — same-site confinement, and the
+  encoded multi-line destination that survives it with nothing raw emitted.
 - `tests/sites/web-experience-editor.test.ts` — no-session,
-  login continuation, denied-entitlement, entitled-member, route-order,
-  thin-renderer, sandbox, single viewport, and no-second-auth assertions.
+  login continuation (single- and multi-line), denied-entitlement,
+  entitled-member, route-order, profile carry, thin-renderer, sandbox, single
+  viewport, and no-second-auth assertions.
 - Existing identity wiring, editor viewport golden, site boundary, visual, and
   full gate suites remain mandatory.
 

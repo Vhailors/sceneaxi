@@ -71,18 +71,63 @@ const fieldName = (control: EditorShellControl): string =>
 const ActiveModeContext = createContext<ModeId | null>(null);
 
 /**
- * The same href in the mode the reader is in. Only a link that already carries
- * the parameter is rewritten, so the wordmark's `/` and any other off-editor
- * destination is handed back untouched.
+ * The profile the reader switched to, for exactly the same reason mode is
+ * carried: the chip is client state, but every live control is a full-page
+ * navigation built server-side from the *request's* profile. Without this, a
+ * reader who leaves the Web profile is returned to it by the first link they
+ * click, and one who stays in it falls out of it on the first form submit.
  */
-function hrefInMode(href: string, mode: ModeId | null): string {
-  if (mode === null) return href;
+const ActiveProfileContext = createContext<ProfileId | null>(null);
+
+/**
+ * The same href in the view state the reader is in. Only an editor destination
+ * is rewritten, so the wordmark's `/` and any other off-editor link is handed
+ * back untouched.
+ *
+ * Kids is deliberately not written into a URL: it is a refuse-only client
+ * projection with no request state, and `profile=kids` is not a value the server
+ * contract accepts. Under Kids the parameter is therefore left exactly as the
+ * request carried it.
+ */
+function hrefInViewState(
+  href: string,
+  mode: ModeId | null,
+  profile: ProfileId | null,
+): string {
   const [path, query] = href.split("?");
   if (path === undefined || query === undefined) return href;
   const params = new URLSearchParams(query);
-  if (!params.has("mode")) return href;
-  params.set("mode", mode);
-  return `${path}?${params.toString()}`;
+  let rewritten = false;
+  if (mode !== null && params.has("mode")) {
+    params.set("mode", mode);
+    rewritten = true;
+  }
+  if (path === "/editor" && (profile === "game" || profile === "web")) {
+    if (profile === "web") params.set("profile", "web");
+    else params.delete("profile");
+    rewritten = true;
+  }
+  return rewritten ? `${path}?${params.toString()}` : href;
+}
+
+/**
+ * Both pieces of chrome view state, published together, so a control reads the
+ * mode and the profile the reader is actually in from one place.
+ */
+function ShellViewState({
+  mode,
+  profile,
+  children,
+}: {
+  readonly mode: ModeId;
+  readonly profile: ProfileId;
+  readonly children: React.ReactNode;
+}) {
+  return (
+    <ActiveModeContext value={mode}>
+      <ActiveProfileContext value={profile}>{children}</ActiveProfileContext>
+    </ActiveModeContext>
+  );
 }
 
 /** The one panel every viewport-source tab controls. */
@@ -142,6 +187,7 @@ function ShellButton({
       : (demotedRefusal ?? profileRefusal ?? null);
   const binding = control.binding;
   const activeMode = useContext(ActiveModeContext);
+  const activeProfile = useContext(ActiveProfileContext);
 
   const shared = {
     className: `${className ?? ""}${inert ? " is-inert" : ""}`,
@@ -163,7 +209,11 @@ function ShellButton({
 
   if (!inert && binding !== null && binding.kind === "href") {
     return (
-      <a id={control.id} href={hrefInMode(binding.href, activeMode)} {...shared}>
+      <a
+        id={control.id}
+        href={hrefInViewState(binding.href, activeMode, activeProfile)}
+        {...shared}
+      >
         {children ?? control.label}
       </a>
     );
@@ -317,10 +367,11 @@ export function EditorShell({
 
   return (
     /*
-      Every href the shell renders is rebuilt in the mode the reader is in, so a
-      live control's own navigation returns to the mode it was clicked from.
+      Every href the shell renders is rebuilt in the mode and the profile the
+      reader is in, so a live control's own navigation returns to the chrome it
+      was clicked from instead of to the one the request happened to name.
     */
-    <ActiveModeContext value={mode}>
+    <ShellViewState mode={mode} profile={profile}>
       <div className="edshell" data-mode={mode} data-profile={profile}>
         {/*
           The chrome depicts an application, so it draws no page title — but the
@@ -1004,8 +1055,14 @@ export function EditorShell({
                           <input key={field.name} type="hidden" name={field.name} value={field.value} />
                         ))}
                         {/* A submit is a navigation too, so it carries the mode
-                            the reader is in, exactly like every link above. */}
+                            and the profile the reader is in, exactly like every
+                            link above — a form that dropped the profile would
+                            eject the reader from the projection they applied
+                            their edit in. */}
                         <input type="hidden" name="mode" value={mode} />
+                        {profile === "web" && (
+                          <input type="hidden" name="profile" value="web" />
+                        )}
                         {/*
                           A form control is an interactive element too, so each one
                           wears the id and the kind its minted control declares —
@@ -1212,6 +1269,6 @@ export function EditorShell({
           </p>
         </div>
       </div>
-    </ActiveModeContext>
+    </ShellViewState>
   );
 }

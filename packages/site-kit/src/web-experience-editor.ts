@@ -46,7 +46,28 @@ export const WEB_EXPERIENCE_DEFAULT_HTML =
   "<main><p>Shape one focused interactive page, then add a safe scene or asset.</p></main>";
 
 export const WEB_EXPERIENCE_TITLE_MAX_LENGTH = 80;
-export const WEB_EXPERIENCE_HTML_MAX_LENGTH = 5_000;
+export const WEB_EXPERIENCE_HTML_MAX_LENGTH = 2_000;
+
+/** The title a request that names none — or names a blank one — authors under. */
+export const WEB_EXPERIENCE_DEFAULT_TITLE = "Untitled Web Experience";
+
+/**
+ * The bound on the whole `/editor?…` request target this surface submits.
+ *
+ * The session lives in the URL, so the submission path has a size a platform can
+ * answer before this code ever runs — a 414 or 431 from an edge is the one
+ * failure on this surface that would not explain itself. The budget is therefore
+ * self-imposed and deliberately far below the ceilings it must sit under (an
+ * 8 KiB request line at the narrowest edge, a 16 KiB header block in Node), so
+ * an oversized state refuses **by name** here, with room left over for the
+ * method, the version, and the session cookie beside it.
+ *
+ * `readWebExperienceEditorState` enforces it on the reconstructed target rather
+ * than on any one field, because it is the target — not the HTML — that a
+ * platform measures. The field bounds above are what keep a browser submission
+ * of this form inside it for ordinary authored markup.
+ */
+export const WEB_EXPERIENCE_REQUEST_TARGET_MAX_LENGTH = 4_000;
 
 export type WebExperienceEditorState = Readonly<{
   title: string;
@@ -79,6 +100,8 @@ export type WebExperienceEditorView = Readonly<{
     }>;
   }>;
   page: Readonly<{ title: string; html: string }>;
+  /** The bounded request target this state submits to, and the budget it fits. */
+  submission: Readonly<{ target: string; maxLength: number }>;
   canvas: Readonly<{
     layout: WebExperienceCanvasLayout;
     iframeSandbox: "";
@@ -193,8 +216,7 @@ export function readWebExperienceEditorState(
   if (
     title === null ||
     (title !== undefined &&
-      (title.trim().length === 0 ||
-        title.length > WEB_EXPERIENCE_TITLE_MAX_LENGTH ||
+      (title.length > WEB_EXPERIENCE_TITLE_MAX_LENGTH ||
         title.includes("\u0000")))
   ) {
     return refuse("SITE_REQUEST_MALFORMED");
@@ -224,15 +246,49 @@ export function readWebExperienceEditorState(
     return refuse("SITE_REQUEST_MALFORMED");
   }
 
-  return ok(
-    Object.freeze({
-      title: title ?? "Untitled Web Experience",
-      html: html ?? WEB_EXPERIENCE_DEFAULT_HTML,
-      layout: (layout ?? "split") as WebExperienceCanvasLayout,
-      injectStarterAsset,
-      embedThree,
-    }),
-  );
+  /**
+   * A text input always submits, so an emptied title arrives as `web-title=`.
+   * That is the author clearing one field, not a malformed request — refusing it
+   * would discard the HTML, layout, asset, and Three selections the very same
+   * request carries. A blank title takes the fallback an absent one takes.
+   */
+  const named = title === undefined || title.trim().length === 0 ? undefined : title;
+
+  const state = Object.freeze({
+    title: named ?? WEB_EXPERIENCE_DEFAULT_TITLE,
+    html: html ?? WEB_EXPERIENCE_DEFAULT_HTML,
+    layout: (layout ?? "split") as WebExperienceCanvasLayout,
+    injectStarterAsset,
+    embedThree,
+  });
+
+  if (
+    webExperienceRequestTarget(state).length > WEB_EXPERIENCE_REQUEST_TARGET_MAX_LENGTH
+  ) {
+    return refuse("SITE_REQUEST_TARGET_TOO_LONG");
+  }
+
+  return ok(state);
+}
+
+/**
+ * The canonical `/editor?…` target one Web Experience state submits to.
+ *
+ * It is the bounded quantity: every live control on this surface is a GET that
+ * rebuilds this string, the login round trip carries it, and a platform measures
+ * it long before this package sees the request. Building it in one place is what
+ * lets the bound be checked against the thing that is actually transmitted
+ * instead of against a field that only contributes to it.
+ */
+export function webExperienceRequestTarget(state: WebExperienceEditorState): string {
+  const query = new URLSearchParams();
+  query.set("profile", "web");
+  if (state.title !== WEB_EXPERIENCE_DEFAULT_TITLE) query.set("web-title", state.title);
+  query.set("web-layout", state.layout);
+  query.set("web-html", state.html);
+  if (state.injectStarterAsset) query.set("web-asset", "1");
+  if (state.embedThree) query.set("web-three", "1");
+  return `/editor?${query.toString()}`;
 }
 
 const escapeHtml = (value: string): string =>
@@ -320,6 +376,10 @@ export function buildWebExperienceEditorView(input: {
     operations: WEB_EXPERIENCE_AUTHORING_OPERATIONS,
     form: WEB_EXPERIENCE_FORM,
     page: Object.freeze({ title: input.state.title, html: input.state.html }),
+    submission: Object.freeze({
+      target: webExperienceRequestTarget(input.state),
+      maxLength: WEB_EXPERIENCE_REQUEST_TARGET_MAX_LENGTH,
+    }),
     canvas: Object.freeze({
       layout: input.state.layout,
       iframeSandbox: WEB_EXPERIENCE_SANDBOX_POLICY.iframeSandbox,

@@ -49,6 +49,19 @@ export type SiteAccessState = {
 };
 
 /**
+ * True when a string carries only bytes a `Location` header may carry: no
+ * whitespace and no C0 or DEL control character, anywhere in it.
+ */
+const headerSafe = (candidate: string): boolean => {
+  if (/\s/.test(candidate)) return false;
+  for (const char of candidate) {
+    const code = char.codePointAt(0) ?? 0;
+    if (code < 0x20 || code === 0x7f) return false;
+  }
+  return true;
+};
+
+/**
  * Confine a destination to this site, or refuse it.
  *
  * Only a same-site relative path survives: no scheme, no authority, no
@@ -70,14 +83,27 @@ export type SiteAccessState = {
  * becoming a second parameter. An escape therefore cannot smuggle a byte past
  * the rules below, and confinement cannot corrupt a URL-carried editor document
  * on the login round trip.
+ *
+ * The two rules are read at the two different levels that make each one true.
+ * *Structure* — which route this is — is decided on the **decoded path**, so an
+ * escaped `//`, `\`, or space cannot smuggle a second authority or segment past
+ * the check. *Header safety* is decided on the encoded value that is actually
+ * emitted, because that is the string a `Location` header carries: a
+ * percent-encoded byte stays three printable characters there and is data, not a
+ * header break. Applying the control-character rule to the decoded **query**
+ * would reject a destination no header ever sees — which is precisely the
+ * multi-line document a URL-carried Web Experience editor session hands to the
+ * login round trip.
  */
 export function confineSiteRelativePath(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const raw = value.trim();
   if (!raw.startsWith("/") || raw.startsWith("//")) return null;
+  if (!headerSafe(raw)) return null;
+  const rawPath = raw.split(/[?#]/, 1)[0] ?? "";
   let path: string;
   try {
-    path = decodeURIComponent(raw.replace(/%(?![0-9A-Fa-f]{2})/g, "%25"));
+    path = decodeURIComponent(rawPath.replace(/%(?![0-9A-Fa-f]{2})/g, "%25"));
   } catch {
     return null;
   }
@@ -86,6 +112,11 @@ export function confineSiteRelativePath(value: unknown): string | null {
   for (const char of path) {
     const code = char.codePointAt(0) ?? 0;
     if (code < 0x20 || code === 0x7f) return null;
+  }
+  try {
+    decodeURIComponent(raw.replace(/%(?![0-9A-Fa-f]{2})/g, "%25"));
+  } catch {
+    return null;
   }
   for (let index = 0; index < raw.length; index += 1) {
     const code = raw.charCodeAt(index);
@@ -102,6 +133,7 @@ export function confineSiteRelativePath(value: unknown): string | null {
     if (confined.origin !== "https://sceneaxi.invalid") return null;
     const result = `${confined.pathname}${confined.search}${confined.hash}`;
     if (result.startsWith("//")) return null;
+    if (!headerSafe(result)) return null;
     return result;
   } catch {
     return null;

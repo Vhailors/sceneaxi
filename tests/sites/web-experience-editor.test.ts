@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   WEB_EXPERIENCE_AUTHORING_REFUSALS,
   buildWebExperienceEditorView,
+  confineSiteRelativePath,
   decideEditorAccess,
   decideEditorEntitlement,
   describeSiteAccessState,
@@ -110,6 +111,30 @@ describe("SA-WEB-1 access", () => {
     });
   });
 
+  it("returns a signed-out visitor to a multi-line authored document too", () => {
+    const html = "<h1>Launch</h1>\r\n<p>Line two.</p>";
+    const destination = sitePathWithSearchParams("/editor", {
+      profile: "web",
+      "web-html": html,
+    });
+    expect(destination).toContain("%0D%0A");
+    const action = describeSiteAccessState("EDITOR_ENTITLEMENT_ANONYMOUS", {
+      next: destination,
+    }).action;
+    expect(action).toEqual({
+      label: "Sign in",
+      href: `/login?next=${encodeURIComponent(destination)}`,
+    });
+    // And what comes back off that link reconstructs the same document.
+    const returned = confineSiteRelativePath(destination);
+    expect(returned).toBe(destination);
+    const carried = new URL(returned ?? "", "https://sceneaxi.invalid").searchParams;
+    expect(readWebExperienceEditorState({
+      profile: carried.get("profile") ?? undefined,
+      "web-html": carried.get("web-html") ?? undefined,
+    })).toMatchObject({ ok: true, value: { html } });
+  });
+
   it("keeps the existing umbrella identity and entitlement seam ahead of all editor work", () => {
     const page = read(PAGE);
     const route = page.slice(page.indexOf("export default"));
@@ -163,6 +188,20 @@ describe("SA-WEB-1 browser confinement", () => {
     expect(component).toContain("view.desktopRefusals.map");
     expect(component).toContain('data-kind="inert"');
     expect(component).toContain("data-refusal={refusal.reason}");
+  });
+
+  it("carries the selected profile through every editor navigation it renders", () => {
+    const shell = read(SHELL);
+    // Links: one rewrite for both pieces of chrome view state, applied to the
+    // editor route only.
+    expect(shell).toContain("hrefInViewState(binding.href, activeMode, activeProfile)");
+    expect(shell).toContain('path === "/editor"');
+    expect(shell).toContain('params.set("profile", "web")');
+    expect(shell).toContain('params.delete("profile")');
+    expect(shell).not.toContain("hrefInMode(");
+    // Forms: the same value, spelled as a hidden field beside the mode.
+    expect(shell).toContain('<input type="hidden" name="profile" value="web" />');
+    expect(shell).toContain("<ActiveProfileContext value={profile}>");
   });
 
   it("names the demoted-chrome refusal off the view instead of restating it", () => {
