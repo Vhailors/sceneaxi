@@ -30,6 +30,7 @@ import {
   readEngineSdkOffer,
   reconstructStarter,
   refuse,
+  resolveDesktopAppOffer,
   resolveChangeReview,
   resolveCheckoutRedirectOrigin,
   resolveSurfaceAccent,
@@ -363,6 +364,13 @@ const CASES: Readonly<Record<SiteRefusalReason, () => Promise<unknown> | unknown
     writeFileSync(join(siteRoot, "public", "engine-sdk", "sdk-manifest.json"), "{ not json");
     return readEngineSdkOffer(siteRoot);
   },
+  DESKTOP_APP_ARTIFACT_UNAVAILABLE: () => resolveDesktopAppOffer(null),
+  DESKTOP_APP_ARTIFACT_LINK_INVALID: () =>
+    resolveDesktopAppOffer({
+      repository: "Vhailors/sceneaxi",
+      workflowRunId: 12,
+      downloadHref: "https://example.invalid/artifact",
+    }),
   EDITOR_SESSION_DISPOSED: () => {
     const created = createWebEditorSession({ workspaceRoot: workspace(), backend: "null" });
     if (!created.ok) return created;

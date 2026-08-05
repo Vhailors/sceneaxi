@@ -161,7 +161,7 @@ describe("the marketing surface makes no claim the repository cannot stand behin
     expect(ENGINE).not.toMatch(/\b[0-9a-f]{64}\b/);
     // The desktop offer is rendered whole: the honest platform line and the
     // reproducibility note are not optional decorations.
-    expect(ENGINE).toContain("desktopApp.notPackaged.join");
+    expect(ENGINE).toContain("desktopApp.unavailablePlatforms.map");
     expect(ENGINE).toContain("desktopApp.reproducibilityNote");
   });
 

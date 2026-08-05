@@ -5,19 +5,25 @@
  * build it must match — is asserted from `tests/sites/`, which may read the docs.
  */
 import { describe, expect, it } from "vitest";
-import { DESKTOP_LINUX_APP_OFFER, desktopLinuxAppOffer } from "@sceneaxi/site-kit";
+import {
+  DESKTOP_LINUX_APP_OFFER,
+  desktopLinuxAppOffer,
+  resolveDesktopAppOffer,
+} from "@sceneaxi/site-kit";
 
 describe("desktop app offer", () => {
-  const offer = desktopLinuxAppOffer();
+  const resolved = desktopLinuxAppOffer();
+  if (!resolved.ok) throw new Error(`desktop offer refused: ${resolved.reason}`);
+  const offer = resolved.value;
 
   it("returns the one frozen committed record", () => {
     expect(offer).toBe(DESKTOP_LINUX_APP_OFFER);
     expect(Object.isFrozen(offer)).toBe(true);
     expect(Object.isFrozen(offer.artifacts)).toBe(true);
-    expect(Object.isFrozen(offer.notPackaged)).toBe(true);
+    expect(Object.isFrozen(offer.unavailablePlatforms)).toBe(true);
   });
 
-  it("offers exactly the two Linux artifact kinds with real digest shapes", () => {
+  it("publishes complete metadata for both verified Linux files", () => {
     expect(offer.artifacts.map((artifact) => artifact.kind)).toEqual(["AppImage", "deb"]);
     for (const artifact of offer.artifacts) {
       expect(artifact.sha256).toMatch(/^[0-9a-f]{64}$/);
@@ -25,20 +31,55 @@ describe("desktop app offer", () => {
       expect(artifact.byteSize).toBeGreaterThan(0);
       expect(artifact.fileName).toContain(offer.version);
       expect(artifact.fileName).toContain("linux");
+      expect(artifact.platform).toBe(offer.platform);
+      expect(artifact.verifyCommand).toContain(artifact.sha256);
+      expect(artifact.verifyCommand).toContain(artifact.fileName);
     }
     expect(offer.platform).toContain("Linux");
   });
 
-  it("states what is not packaged instead of leaving it to implication", () => {
-    expect(offer.notPackaged).toEqual(["Windows", "macOS"]);
+  it("points to the exact repository workflow artifact instead of a placeholder", () => {
+    expect(offer.downloadHref).toBe(
+      `https://github.com/${offer.repository}/actions/runs/${offer.workflowRunId}`,
+    );
+    expect(offer.downloadHref).not.toContain("example");
+    expect(offer.sourceCommit).toMatch(/^[0-9a-f]{40}$/);
+    expect(offer.ciArtifactName).toBe("sceneaxi-desktop-linux");
+    expect(offer.checksumFileName).toBe("SHA256SUMS");
+  });
+
+  it("states unavailable platforms as coming soon instead of inventing installers", () => {
+    expect(offer.unavailablePlatforms.map(({ platform, status }) => ({ platform, status }))).toEqual([
+      { platform: "macOS", status: "coming-soon" },
+      { platform: "Windows", status: "coming-soon" },
+    ]);
+    for (const platform of offer.unavailablePlatforms) expect(platform.reason).toContain("No ");
     expect(offer.reproducibilityNote).toContain("not bit-reproducible");
   });
 
-  it("carries the version plan and the commands the docs promise", () => {
+  it("carries the version and checksum command the docs promise", () => {
     expect(offer.version).toBe("0.0.0");
-    expect(offer.buildCommand).toContain("pnpm dist");
     expect(offer.verifyCommand).toContain("sha256sum -c SHA256SUMS");
-    expect(offer.smokeCommand).toContain("pnpm smoke --packaged");
     expect(offer.sourceDir).toBe("desktop/linux");
+  });
+
+  it("refuses an absent record and a broken repository artifact link", () => {
+    expect(resolveDesktopAppOffer(null)).toMatchObject({
+      ok: false,
+      reason: "DESKTOP_APP_ARTIFACT_UNAVAILABLE",
+    });
+    expect(
+      resolveDesktopAppOffer({
+        ...offer,
+        downloadHref: "https://downloads.example/sceneaxi.AppImage",
+      }),
+    ).toMatchObject({ ok: false, reason: "DESKTOP_APP_ARTIFACT_LINK_INVALID" });
+  });
+
+  it("refuses incomplete metadata even when the repository link is well formed", () => {
+    expect(resolveDesktopAppOffer({ ...offer, artifacts: [] })).toMatchObject({
+      ok: false,
+      reason: "DESKTOP_APP_ARTIFACT_UNAVAILABLE",
+    });
   });
 });

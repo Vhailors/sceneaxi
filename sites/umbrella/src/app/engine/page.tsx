@@ -12,9 +12,9 @@ import { StatePanel } from "../_components/state-panel.js";
  * entry count, and SHA-256 are read off the served file; when it is absent the page
  * renders the named reason rather than a button that leads nowhere. The Linux
  * desktop application (ADR 0024) is packaged by electron-builder, which is not
- * bit-reproducible, so its facts come from the committed recorded-build offer in
- * `@sceneaxi/site-kit` — held in lockstep with `docs/desktop-linux.md` by the gate —
- * and the site serves no binary: readers build from source or fetch the CI artifact.
+ * bit-reproducible, so its facts come from one committed, verified workflow-artifact
+ * offer in `@sceneaxi/site-kit` — held in lockstep with `docs/desktop-linux.md` by the
+ * gate. The CTA names that exact repository run, or refuses if its record is invalid.
  * No installer, size, or digest is typed into this page for either artifact, and
  * Windows/macOS are stated as not packaged rather than implied.
  *
@@ -24,9 +24,13 @@ import { StatePanel } from "../_components/state-panel.js";
  */
 export default function EnginePage() {
   const offer = readEngineSdkOffer(process.cwd());
-  const desktopApp = desktopLinuxAppOffer();
+  const desktopOffer = desktopLinuxAppOffer();
   const sdk = offer.ok ? offer.value : null;
   const sdkRefusal = offer.ok ? null : { reason: offer.reason, message: offer.message };
+  const desktopApp = desktopOffer.ok ? desktopOffer.value : null;
+  const desktopRefusal = desktopOffer.ok
+    ? null
+    : { reason: desktopOffer.reason, message: desktopOffer.message };
 
   return (
     <div className="page">
@@ -100,68 +104,166 @@ export default function EnginePage() {
         </div>
       ) : null}
 
-      <div className="stack">
-        <div className="section-title">
-          <p className="eyebrow">Desktop application · {desktopApp.platform}</p>
-          <h2>{desktopApp.productName} for Linux.</h2>
-          <p className="prose prose-wide">
-            The Engine Desktop editor as a packaged Linux application: the accepted
-            editor chrome in an Electron window over the real engine stack — kernel
-            open path, the {LIVE_OPEN_PRESENTATION.coreLabel} drawing in the window,
-            and the shared authoring propose/accept session. Built from{" "}
-            <code>{desktopApp.sourceDir}</code> in the repository; the{" "}
-            <code>{desktopApp.ciWorkflow}</code> CI workflow builds, smoke-tests, and
-            uploads the same artifacts as <code>{desktopApp.ciArtifactName}</code>.
-          </p>
-        </div>
-
-        <div className="grid grid-2">
-          {desktopApp.artifacts.map((artifact) => (
-            <article className="panel panel-roomy" key={artifact.kind}>
-              <div className="panel-head">
-                <span className="family-mark" aria-hidden="true" />
-                <span className="tag">{artifact.kind}</span>
-              </div>
-              <h3 className="card-title">{artifact.fileName}</h3>
-              <p className="meta">
-                {formatByteSize(artifact.byteSize)} · {desktopApp.version} · recorded{" "}
-                {desktopApp.recordedOn}
-              </p>
-              <p className="sha">sha256 {artifact.sha256}</p>
-            </article>
-          ))}
-        </div>
-
-        <article className="panel panel-roomy">
-          <h3 className="card-title">Build it, verify it, prove it runs</h3>
-          <p className="command">
-            <code>{desktopApp.buildCommand}</code>
-          </p>
-          <p className="command">
-            <code>{desktopApp.verifyCommand}</code>
-          </p>
-          <p className="command">
-            <code>{desktopApp.smokeCommand}</code>
-          </p>
-          <p className="note">{desktopApp.reproducibilityNote}</p>
-        </article>
-
-        <StatePanel tone="warn" title="Platform status">
+      {desktopRefusal !== null ? (
+        <StatePanel
+          tone="deny"
+          title="Desktop artifact unavailable"
+          reason={desktopRefusal.reason}
+        >
+          <p>{desktopRefusal.message}</p>
           <p>
-            Linux is the only packaged platform. {desktopApp.notPackaged.join(" and ")}{" "}
-            are not packaged yet — no installer for them exists, and this page will not
-            pretend otherwise.{" "}
-            {sdk === null
-              ? "The SDK archive is not in this build either, so there is no cross-platform download to fall back on here — build from source."
-              : "The free SDK archive above remains the supported download for every platform."}
+            No fallback URL is offered. Build from the repository until a verified
+            record lands.
           </p>
         </StatePanel>
-      </div>
+      ) : desktopApp !== null ? (
+        <div className="stack">
+          <div className="section-title">
+            <p className="eyebrow">Desktop application · {desktopApp.platform}</p>
+            <h2>{desktopApp.productName} for Linux.</h2>
+            <p className="prose prose-wide">
+              The Engine Desktop editor as a packaged Linux application: the accepted
+              editor chrome in an Electron window over the real engine stack — kernel
+              open path, the {LIVE_OPEN_PRESENTATION.coreLabel} drawing in the window,
+              and the shared authoring propose/accept session. Built from{" "}
+              <code>{desktopApp.sourceDir}</code> in the repository and verified from
+              source commit <code>{desktopApp.sourceCommit.slice(0, 12)}</code>.
+            </p>
+          </div>
+
+          <article className="panel panel-roomy tone-accent">
+            <div className="panel-head">
+              <span className="family-mark" aria-hidden="true" />
+              <span className="tag tag-accent">Linux available</span>
+            </div>
+            <h3 className="card-title">Download the verified Linux bundle</h3>
+            <p className="body-copy">
+              The repository workflow run contains{" "}
+              <code>{desktopApp.ciArtifactName}</code>: both installers plus{" "}
+              <code>{desktopApp.checksumFileName}</code>. GitHub may ask you to sign in
+              with repository access; on the run page, choose that artifact under{" "}
+              <strong>Artifacts</strong>.
+            </p>
+            <a className="button button-block" href={desktopApp.downloadHref}>
+              Open Linux download
+            </a>
+            <p className="meta">
+              Version {desktopApp.version} · workflow run {desktopApp.workflowRunId} ·
+              verified {desktopApp.verifiedOn}
+            </p>
+          </article>
+
+          <div className="grid grid-2">
+            {desktopApp.artifacts.map((artifact) => (
+              <article className="panel panel-roomy" key={artifact.kind}>
+                <div className="panel-head">
+                  <span className="family-mark" aria-hidden="true" />
+                  <span className="tag">{artifact.kind}</span>
+                </div>
+                <h3 className="card-title">{artifact.kind}</h3>
+                <dl className="dl">
+                  <dt>Version</dt>
+                  <dd>
+                    <code>{desktopApp.version}</code>
+                  </dd>
+                  <dt>Platform</dt>
+                  <dd>{artifact.platform}</dd>
+                  <dt>Filename</dt>
+                  <dd>
+                    <code>{artifact.fileName}</code>
+                  </dd>
+                  <dt>Size</dt>
+                  <dd>
+                    {formatByteSize(artifact.byteSize)}{" "}
+                    <span className="note">({artifact.byteSize} bytes)</span>
+                  </dd>
+                  <dt>SHA-256</dt>
+                  <dd>
+                    <code>{artifact.sha256}</code>
+                  </dd>
+                </dl>
+                <p className="eyebrow eyebrow-quiet">Copy and verify this file</p>
+                <p className="command">
+                  <code>{artifact.verifyCommand}</code>
+                </p>
+              </article>
+            ))}
+          </div>
+
+          <article className="panel panel-roomy">
+            <h3 className="card-title">Verify the whole download</h3>
+            <p className="body-copy">
+              Extract <code>{desktopApp.ciArtifactName}.zip</code>, enter that directory,
+              then check both files against the checksum list shipped beside them.
+            </p>
+            <p className="command">
+              <code>{desktopApp.verifyCommand}</code>
+            </p>
+            <p className="note">{desktopApp.reproducibilityNote}</p>
+          </article>
+
+          <div className="grid grid-2">
+            <article className="panel panel-roomy">
+              <h3 className="card-title">Install and open</h3>
+              <p className="body-copy">Choose one package after checksum verification.</p>
+              <p className="command">
+                <code>{"chmod +x SceneAxi-Engine-Desktop-0.0.0-linux-x86_64.AppImage && ./SceneAxi-Engine-Desktop-0.0.0-linux-x86_64.AppImage"}</code>
+              </p>
+              <p className="command">
+                <code>{"sudo apt install ./SceneAxi-Engine-Desktop-0.0.0-linux-amd64.deb"}</code>
+              </p>
+              <p className="note">
+                This first artifact has no code-signing claim and no auto-update
+                support. Install future builds manually after verifying their own
+                checksums.
+              </p>
+            </article>
+
+            <article className="panel panel-roomy">
+              <h3 className="card-title">First launch</h3>
+              <p className="body-copy">
+                SceneAxi creates a persistent project directory in the application's
+                user data and seeds <code>scene.json</code> only when it is absent.
+                Existing project bytes are not replaced on later launches.
+              </p>
+              <p className="body-copy">
+                The top profile tabs are <strong>Game</strong>,{" "}
+                <strong>Website (Web)</strong>, and <strong>Kids</strong>. Game is the
+                initial profile; Website selects the web-experience projection. Kids is
+                visible but refuse-only in this release: it names the safety refusal and
+                asks you to switch back to Game or Website, rather than presenting an
+                authoring surface that is not shipped.
+              </p>
+            </article>
+          </div>
+
+          <StatePanel tone="warn" title="Other platforms are coming soon">
+            <p>
+              Linux is the only available first-party desktop artifact. macOS and
+              Windows remain unavailable until their packaging and signing work lands.{" "}
+              {sdk === null
+                ? "The SDK archive is not in this build either, so there is no cross-platform download to fall back on here — build from source."
+                : "The free SDK archive above remains the supported download for every platform."}
+            </p>
+            <dl className="dl">
+              {desktopApp.unavailablePlatforms.map((platform) => (
+                <div key={platform.platform}>
+                  <dt>
+                    {platform.platform} · {platform.status}
+                  </dt>
+                  <dd>{platform.reason}</dd>
+                </div>
+              ))}
+            </dl>
+          </StatePanel>
+        </div>
+      ) : null}
 
       <StatePanel tone="warn" title="Support status">
         <p>
-          These are private <code>0.0.0</code> bootstrap packages. There is no supported
-          external install until matching versions are published to a registry — read{" "}
+          The SDK archive contains private <code>0.0.0</code> bootstrap packages. There
+          is no supported external install until matching versions are published to a
+          registry — read{" "}
           <code>docs/web-consumer.md</code> inside the archive before pinning anything.
           Reading and building against this source is free, as is CLI use and bringing
           your own AI provider.
