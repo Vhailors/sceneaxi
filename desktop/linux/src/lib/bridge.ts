@@ -317,13 +317,22 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     return bridgeOk("authoring", live.undo());
   };
 
+  /**
+   * What crosses the seam is bounded: the newest progress entry and how many
+   * have accrued, never the accumulated log. The renderer polls this every 50ms
+   * and renders only the latest entry, while a streaming BYOK route appends one
+   * entry per provider chunk — copying the whole log per poll would clone the
+   * completion so far across IPC again and again for data nothing reads.
+   */
   const assistantSnapshot = (): DesktopAssistantJobSnapshot | null => {
     if (assistantJob === null) return null;
+    const { progress } = assistantJob;
     return Object.freeze({
       jobId: assistantJob.jobId,
       route: assistantJob.route,
       status: assistantJob.status,
-      progress: Object.freeze([...assistantJob.progress]),
+      latestProgress: progress[progress.length - 1] ?? null,
+      progressCount: progress.length,
       ...(assistantJob.result === undefined ? {} : { result: assistantJob.result }),
       ...(assistantJob.refusal === undefined ? {} : { refusal: assistantJob.refusal }),
     });
@@ -392,6 +401,14 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       );
     }
 
+    // Kept so a runner that never dispatches can be rolled back to it. The job
+    // has to be installed before the runner is called — a local or streaming
+    // runner may report progress synchronously, and `onProgress` only accepts
+    // entries for the installed job — so "running" is claimed one call before
+    // dispatch is known. Without the rollback that claim is permanent: every
+    // later `start` would refuse DESKTOP_ASSISTANT_BUSY for a job that never
+    // ran, and the renderer only abandons from its own poll timeout.
+    const previousJob = assistantJob;
     assistantSequence += 1;
     assistantJob = {
       jobId: `desktop-assistant-${String(assistantSequence)}`,
@@ -418,9 +435,10 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         })
       : options.runByoAssistant?.(request);
     if (running === undefined) {
+      assistantJob = previousJob;
       return bridgeRefuse(
         DESKTOP_BRIDGE_REFUSALS.assistantByoUnavailable,
-        "No BYOK Model Provider Port is configured for this desktop session.",
+        "No BYOK Model Provider Port dispatched this desktop assistant job, so no work started. Local remains free and available.",
       );
     }
     void running.then(

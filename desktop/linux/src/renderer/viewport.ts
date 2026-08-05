@@ -125,6 +125,48 @@ function frameText(frame: SculptPresentationFrame): string {
 
 const ASSISTANT_INSTANCE_ID = "assistant-live-output";
 
+/**
+ * The composer controls the chrome renders live whenever the desktop runtime is
+ * declared. They only *are* live once `installAssistantProductFlow()` has bound
+ * them to a mount API, and that happens at the end of a path with several
+ * refusals in front of it. A control that is neither bound nor inert is the one
+ * thing this surface does not allow, so every path that returns before the
+ * binding turns them inert here, naming the refusal the chrome already prints a
+ * paragraph for.
+ */
+const ASSISTANT_CONTROL_IDS = ["assistant-prompt", "assistant-send", "assistant-retry"] as const;
+
+function refuseAssistantControls(reason: string, message: string): void {
+  const status = document.querySelector<HTMLElement>("[data-assistant-status]");
+  if (status !== null) status.textContent = `${reason} — ${message}`;
+  for (const id of ASSISTANT_CONTROL_IDS) {
+    const control = document.getElementById(id);
+    if (control === null) continue;
+    control.setAttribute("data-kind", "inert");
+    control.setAttribute("aria-disabled", "true");
+    control.setAttribute("data-refusal", reason);
+    control.setAttribute("aria-describedby", `refusal-${reason}`);
+    control.classList.add("is-inert");
+    if (control instanceof HTMLTextAreaElement) control.readOnly = true;
+  }
+  document
+    .querySelector<HTMLElement>("[data-assistant-manipulators]")
+    ?.setAttribute("hidden", "");
+}
+
+/**
+ * One refusal, said in both places it has to be said: the viewport's own report
+ * line, and the assistant composer that would otherwise still invite a prompt it
+ * has no runtime to answer.
+ */
+function refuseLiveViewport(stage: Element | null, message: string): void {
+  if (stage !== null) reportLine(stage, `Live viewport refused: ${message}`);
+  refuseAssistantControls(
+    DESKTOP_BRIDGE_REFUSALS.presentationRuntimeUnavailable,
+    `${message} Assistant Build has no live viewport to mount a typed artifact into.`,
+  );
+}
+
 function assistantProfile(shell: HTMLElement): `@sceneaxi/profile-${string}` {
   const id = shell.dataset.profile;
   return `@sceneaxi/profile-${id === "web" ? "web" : id === "kids" ? "kids" : "game"}`;
@@ -233,8 +275,8 @@ function installAssistantProductFlow(
         );
         return;
       }
-      const latest = job.progress[job.progress.length - 1];
-      if (latest !== undefined) status.textContent = `${latest.percent}% · ${latest.message}`;
+      const latest = job.latestProgress;
+      if (latest !== null) status.textContent = `${latest.percent}% · ${latest.message}`;
       if (job.status === "refused") {
         refused(
           job.refusal?.reason ?? DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
@@ -317,17 +359,20 @@ function installAssistantProductFlow(
 
 async function mountLiveViewport(): Promise<void> {
   const stage = document.querySelector(".viewport");
-  if (stage === null) return;
+  if (stage === null) {
+    refuseLiveViewport(null, "the chrome document has no viewport stage.");
+    return;
+  }
 
   const port = bridge();
   if (port === null) {
-    reportLine(stage, "Live viewport refused: the desktop bridge is not exposed.");
+    refuseLiveViewport(stage, "the desktop bridge is not exposed.");
     return;
   }
 
   const sceneResponse = await port.request({ action: "scene" });
   if (!sceneResponse.ok) {
-    reportLine(stage, `Live viewport refused: ${sceneResponse.reason} — ${sceneResponse.message}`);
+    refuseLiveViewport(stage, `${sceneResponse.reason} — ${sceneResponse.message}`);
     return;
   }
   const scene = sceneResponse.data as MountablePayload;
@@ -363,7 +408,7 @@ async function mountLiveViewport(): Promise<void> {
     });
   } catch (error) {
     canvas.remove();
-    reportLine(stage, `Live viewport refused: no WebGL surface — ${refusalText(error)}`);
+    refuseLiveViewport(stage, `no WebGL surface — ${refusalText(error)}`);
     return;
   }
 
@@ -384,10 +429,7 @@ async function mountLiveViewport(): Promise<void> {
   } catch (error) {
     mounts.dispose();
     canvas.remove();
-    reportLine(
-      stage,
-      `Live viewport refused: could not mount the composed scene — ${refusalText(error)}`,
-    );
+    refuseLiveViewport(stage, `could not mount the composed scene — ${refusalText(error)}`);
     return;
   }
 
@@ -476,9 +518,7 @@ async function mountLiveViewport(): Promise<void> {
 // only trace would be an unhandled rejection, so the surface names it instead.
 function startLiveViewport(): void {
   void mountLiveViewport().catch((error: unknown) => {
-    const stage = document.querySelector(".viewport");
-    if (stage === null) return;
-    reportLine(stage, `Live viewport refused: ${refusalText(error)}`);
+    refuseLiveViewport(document.querySelector(".viewport"), refusalText(error));
   });
 }
 

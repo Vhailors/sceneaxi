@@ -360,6 +360,87 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
     expect(dispatches).toBe(0);
   });
 
+  it("bounds a status poll to the newest progress entry, never the accumulated log", async () => {
+    const bridge = createDesktopBridge({
+      cwd: authoringDir(),
+      nowMs: fixedNow,
+      runByoAssistant: async (request) => {
+        for (let chunk = 1; chunk <= 40; chunk += 1) {
+          request.onProgress({
+            phase: "streaming-provider",
+            percent: chunk,
+            message: `chunk ${String(chunk)}`,
+            delta: "x".repeat(512),
+          });
+        }
+        throw new Error("progress only");
+      },
+    });
+    expect(
+      bridge.handle({
+        action: "assistant",
+        payload: {
+          op: "start",
+          route: "byo",
+          profile: "@sceneaxi/profile-game",
+          prompt: "Stream a lot",
+        },
+      }).ok,
+    ).toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const status = bridge.handle({ action: "assistant", payload: { op: "status" } });
+    expect(status.ok).toBe(true);
+    if (!status.ok) return;
+    const job = status.data as {
+      latestProgress: { percent: number; message: string } | null;
+      progressCount: number;
+    };
+    expect(job.progressCount).toBe(40);
+    expect(job.latestProgress).toMatchObject({ percent: 40, message: "chunk 40" });
+    // The whole log never crosses the seam, so a poll cannot clone the stream so far.
+    expect(Object.keys(job)).not.toContain("progress");
+  });
+
+  it("does not strand the seam when an injected runner dispatches nothing", () => {
+    const bridge = createDesktopBridge({
+      cwd: authoringDir(),
+      nowMs: fixedNow,
+      // A runner that answers with nothing rather than a job: the bridge claimed
+      // "running" one call before dispatch was known, and must take it back.
+      runByoAssistant: (() => undefined) as unknown as NonNullable<
+        Parameters<typeof createDesktopBridge>[0]["runByoAssistant"]
+      >,
+    });
+    const started = bridge.handle({
+      action: "assistant",
+      payload: {
+        op: "start",
+        route: "byo",
+        profile: "@sceneaxi/profile-game",
+        prompt: "Never dispatched",
+      },
+    });
+    expect(started.ok).toBe(false);
+    if (!started.ok) expect(started.reason).toBe(DESKTOP_BRIDGE_REFUSALS.assistantByoUnavailable);
+    // No phantom job is left behind, so the next start is not refused BUSY.
+    const idle = bridge.handle({ action: "assistant", payload: { op: "status" } });
+    expect(idle.ok).toBe(true);
+    if (idle.ok) expect(idle.data).toBeNull();
+
+    const retried = bridge.handle({
+      action: "assistant",
+      payload: {
+        op: "start",
+        route: "local",
+        profile: "@sceneaxi/profile-game",
+        prompt: "A green sphere",
+      },
+    });
+    expect(retried.ok).toBe(true);
+    if (retried.ok) expect(retried.data).toMatchObject({ status: "running", route: "local" });
+  });
+
   it("mounts the served scene on the one Three core without claiming pixels", () => {
     const bridge = bridgeAt(authoringDir());
     const res = bridge.handle({ action: "scene" });
@@ -626,6 +707,24 @@ describe("desktop renderer module accounting", () => {
     expect(source).toContain("MATERIALS (read-only)");
     expect(source).toContain("PHYSICS (read-only)");
     expect(source).toContain("SETTINGS (read-only)");
+  });
+
+  it("leaves no composer control live-but-unbound when the viewport refuses", () => {
+    const source = readFileSync(
+      join(desktopRoot, "linux/src/renderer/viewport.ts"),
+      "utf8",
+    );
+    // The chrome renders the composer live for the declared desktop runtime, and
+    // the flow is bound only after the scene request, backend construction, and
+    // first mount succeed. Every path that returns before that has to name a
+    // refusal on those controls rather than leaving Send inert-looking-live.
+    expect(source).toContain("refuseAssistantControls");
+    expect(source).toContain("DESKTOP_BRIDGE_REFUSALS.presentationRuntimeUnavailable");
+    expect(source).toContain('control.setAttribute("data-kind", "inert")');
+    expect(source).toContain('control.setAttribute("aria-disabled", "true")');
+    // One place says it, and that place settles the composer too — a second
+    // refusal sentence would be a path that reports without disarming Send.
+    expect(source.match(/Live viewport refused/g)).toHaveLength(1);
   });
 
   it("updates the pixels meta only from the real frame, and never imports Electron", () => {

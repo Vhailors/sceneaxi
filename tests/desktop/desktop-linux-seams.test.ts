@@ -8,10 +8,12 @@
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { DESKTOP_VISUAL_REFUSALS } from "@sceneaxi/desktop-shell";
 import {
   DESKTOP_BRIDGE_ACTIONS,
   DESKTOP_BRIDGE_CHANNEL,
   DESKTOP_BRIDGE_GLOBAL,
+  DESKTOP_BRIDGE_REFUSALS,
   DESKTOP_OPEN_PLACEMENTS,
   seam,
 } from "../../desktop/linux/src/index.ts";
@@ -39,6 +41,16 @@ describe("desktop-linux seam", () => {
     expect(DESKTOP_BRIDGE_GLOBAL).toBe("sceneaxiDesktopLinux");
     expect(Object.isFrozen(DESKTOP_OPEN_PLACEMENTS)).toBe(true);
     expect(DESKTOP_OPEN_PLACEMENTS).toHaveLength(3);
+  });
+
+  it("names the shell's own presentation refusal, so the renderer's inert controls stay described", () => {
+    // The renderer bundle is browser-only and cannot pull the Node-bearing shell
+    // barrel, so it carries this name on the browser-safe half of the seam. The
+    // chrome emits one refusal paragraph per visual-model code, and the renderer
+    // points `aria-describedby` at it — a drifted copy would dangle.
+    expect(DESKTOP_BRIDGE_REFUSALS.presentationRuntimeUnavailable).toBe(
+      DESKTOP_VISUAL_REFUSALS.noPresentationRuntime,
+    );
   });
 });
 

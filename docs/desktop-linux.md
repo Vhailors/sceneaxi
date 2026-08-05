@@ -64,8 +64,17 @@ materials, collider physics where the quality artifact supports it, and
 procedural settings. Unsupported edits and legacy physics inspection refuse by
 name. Provider failures, malformed output, timeouts, and other refusals remain
 visible with Retry; a timeout first abandons the old job so its late result
-cannot overwrite the retry. Streaming progress contains only deltas actually
-observed from a BYOK stream. Selecting Kids removes the composer, and authoring-core also
+cannot overwrite the retry, and a runner that dispatches nothing takes its
+`running` claim back rather than leaving the seam permanently
+`DESKTOP_ASSISTANT_BUSY`. Streaming progress contains only deltas actually
+observed from a BYOK stream, and a `status` poll carries the **newest** entry
+plus a count, never the accumulated log — the renderer polls every 50ms and
+renders one entry, so handing back the log would clone the completion so far
+across IPC on each poll. If the live viewport itself refuses — no bridge, no
+composable scene, no WebGL surface, or a mount that fails — the composer is
+turned inert under `DESKTOP_NO_PRESENTATION_RUNTIME` instead of staying live and
+unbound, because a control here is either live and acts or inert and names a
+refusal. Selecting Kids removes the composer, and authoring-core also
 denies the carried Kids profile before local compilation or provider dispatch.
 
 The first-release manipulator is deliberately bounded: `Move +X` and `Move +Y`

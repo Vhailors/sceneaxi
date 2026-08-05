@@ -60,6 +60,17 @@ export const DESKTOP_BRIDGE_REFUSALS = Object.freeze({
   assistantByoUnavailable: "DESKTOP_ASSISTANT_BYO_UNAVAILABLE",
   assistantHostedMeteringUnavailable:
     "DESKTOP_ASSISTANT_HOSTED_METERING_UNAVAILABLE",
+  /**
+   * No presentation runtime owns the window canvas, so nothing can be mounted.
+   *
+   * Mirrors `DESKTOP_VISUAL_REFUSALS.noPresentationRuntime` from the shell's
+   * visual model on purpose: the renderer bundle is browser-only and may not
+   * pull the Node-bearing shell barrel, but the chrome emits one refusal
+   * paragraph per registry code, so a control the renderer turns inert has to
+   * name a code whose `aria-describedby` still resolves in that document. The
+   * two are kept in lockstep by `tests/desktop/desktop-linux-seams.test.ts`.
+   */
+  presentationRuntimeUnavailable: "DESKTOP_NO_PRESENTATION_RUNTIME",
 } as const);
 
 export type DesktopBridgeRefusalReason =
@@ -111,7 +122,19 @@ export type DesktopAssistantJobSnapshot = Readonly<{
   jobId: string;
   route: "local" | "byo";
   status: "running" | "ready" | "refused";
-  progress: ReadonlyArray<AssistantSculptProgress>;
+  /**
+   * The newest progress entry only, never the accumulated log.
+   *
+   * A status poll runs every 50ms while a streaming BYOK route appends one
+   * entry per provider chunk, each carrying its raw delta. Handing back the
+   * whole log would structured-clone the completion so far across IPC on every
+   * poll — cost quadratic in stream length for entries the consumer discards,
+   * since it renders the latest one. `progressCount` is what a caller needs to
+   * see that work is still moving.
+   */
+  latestProgress: AssistantSculptProgress | null;
+  /** How many progress entries the job has observed so far. */
+  progressCount: number;
   result?: AssistantSculptSuccess;
   refusal?: Readonly<{
     ok: false;
