@@ -68,9 +68,11 @@ and tokens; the renderer only binds their Mount API effects.
 | Bridge contract (channel, envelope, refusals) | `src/lib/bridge-contract.ts` | everywhere (pure) |
 | Bridge (`handle()` over the real engine and assistant job) | `src/lib/bridge.ts` | main process; gate-tested from `tests/e2e/` |
 | Scene composition (one pipeline, two consumers) | `src/lib/desktop-scene.ts` | main process; gate-tested |
+| First-launch project seed and one-time migration | `src/lib/project-seed.ts` | main process; gate-tested |
 | Chrome document emitter (desktop-shell, unforked) | `src/lib/chrome-document.ts` | build time |
 | Electron entries (window, IPC adapter, smoke) | `src/electron/{main,preload}.ts` | Electron only |
 | Live viewport (the desktop tier's one renderer-owning module) | `src/renderer/viewport.ts` | the window |
+| Playback mount synchronizer (constructs no backend) | `src/renderer/viewport-playback.ts` | the window; gate-tested |
 
 Rules the gate enforces (`pnpm check:desktop`, `pnpm check:boundaries`,
 `tests/desktop/`, `tests/e2e/desktop-linux-bridge-golden.test.ts`):

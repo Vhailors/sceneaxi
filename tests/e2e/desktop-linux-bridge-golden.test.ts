@@ -331,7 +331,7 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
     });
     expect(res.ok).toBe(true);
     if (!res.ok) return;
-    const scene = res.data as ReturnType<typeof composedScene>;
+    const scene = res.data as ComposedScene;
     expect(scene.sceneId).toBe("opened-project-scene");
     expect(scene.instances).toHaveLength(3);
     expect(scene.sceneDigest).toBe(expected.mountable.sceneDigest);
@@ -727,7 +727,7 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
       payload: { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
     });
     if (!res.ok) throw new Error(res.reason);
-    const scene = res.data as ReturnType<typeof composedScene>;
+    const scene = res.data as ComposedScene;
 
     const backend = createThreeSculptPresentationBackend();
     const mounts = createSculptMountApi(backend);
@@ -1222,8 +1222,8 @@ describe("desktop renderer module accounting", () => {
   });
 });
 
-function composedScene() {
-  const result = desktopOpenScene();
-  if (!result.ok) throw new Error(`desktop scene refused: ${result.reason}`);
-  return result.mountable;
-}
+/** The browser payload a successful scene composition serves. */
+type ComposedScene = Extract<
+  ReturnType<typeof desktopOpenScene>,
+  { ok: true }
+>["mountable"];

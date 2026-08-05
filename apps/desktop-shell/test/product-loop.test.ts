@@ -380,7 +380,7 @@ describe("desktop product loop", () => {
     );
     const script = /<script>([\s\S]*?)<\/script>/.exec(html)?.[1] ?? "";
     const source =
-      /const runtimeRequest = (async \(request\) => \{[\s\S]*?\n  \});/.exec(
+      /const runtimeRequest = (async \(request\) => \{[\s\S]*?\n {2}\});/.exec(
         script,
       )?.[1];
     expect(source).toBeTruthy();
@@ -423,7 +423,7 @@ describe("desktop product loop", () => {
     );
     const script = /<script>([\s\S]*?)<\/script>/.exec(html)?.[1] ?? "";
     const source =
-      /const restartProject = (async \(diagnostic\) => \{[\s\S]*?\n  \});/.exec(
+      /const restartProject = (async \(diagnostic\) => \{[\s\S]*?\n {2}\});/.exec(
         script,
       )?.[1];
     expect(source).toBeTruthy();
