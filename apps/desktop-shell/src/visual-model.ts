@@ -11,11 +11,12 @@
  *
  * 1. **Every control declares its kind.** `view` controls change visual state
  *    and genuinely work. `review` controls edit the fixture Change Review queue
- *    and write no document. `inert` controls render, take focus, and refuse by
- *    a name from `DESKTOP_VISUAL_REFUSALS` — because the archive draws controls
- *    for behaviour this shell has no contract for, and drawing them as if they
- *    worked would be the lie. There is no fourth kind: nothing here reaches
- *    `authoring-core`, so the chrome cannot write a document by accident.
+ *    and write no document. `live` controls declare a capability that a consumer
+ *    runtime must bind. `inert` controls render, take focus, and refuse by a name
+ *    from `DESKTOP_VISUAL_REFUSALS` — because the archive draws controls for
+ *    behaviour this shell has no contract for, and drawing them as if they worked
+ *    would be the lie. Nothing here invokes `authoring-core`, so the chrome cannot
+ *    write a document by accident.
  *
  * 2. **Profiles are not restated, they are read.** The profile switch projects
  *    `openPathPolicyView()` from `@sceneaxi/schemas` — the same value
@@ -216,6 +217,9 @@ export type DesktopSculptPhase = "idle" | "running";
 export type DesktopAssistantState = EditorShellAssistantState;
 export type DesktopAssistantRuntime = "none" | "local";
 export type DesktopAssistantRoute = "local" | "byo" | "hosted";
+
+export const DESKTOP_ASSISTANT_RUNTIME_EVENT =
+  "sceneaxi:desktop-assistant-runtime";
 
 export const DESKTOP_ASSISTANT_MANIPULATORS = Object.freeze([
   Object.freeze({ id: "move-x", label: "Move +X" }),
@@ -969,7 +973,7 @@ function assistantProjection(
       ? mint(id, label, "inert", denial.code)
       : runtimeAvailable
         ? mint(id, label, "live")
-        : mint(id, label, "inert", DESKTOP_VISUAL_REFUSALS.noDocumentBound);
+        : mint(id, label, "inert", DESKTOP_VISUAL_REFUSALS.noPresentationRuntime);
   return Object.freeze({
     state: refuseOnly ? "denied" : "open",
     modelLabel: refuseOnly

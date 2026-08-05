@@ -17,6 +17,7 @@
  * rather than emitting a window that silently lost its live viewport.
  */
 import {
+  DESKTOP_ASSISTANT_RUNTIME_EVENT,
   createDesktopVisualState,
   desktopVisualView,
   renderDesktopChrome,
@@ -48,6 +49,10 @@ const RUNTIME_ANCHORS: readonly { readonly markup: string; readonly used: string
   {
     markup: "viewport-note-inert",
     used: "the renderer removes the inert note only after a real mount, and the smoke asserts its absence",
+  },
+  {
+    markup: `data-assistant-runtime-event="${DESKTOP_ASSISTANT_RUNTIME_EVENT}"`,
+    used: "the renderer signals runtime loss to the visual model's control transition",
   },
 ];
 

@@ -227,7 +227,7 @@ describe("engine desktop chrome — accessibility", () => {
 
     const unavailable = render();
     expect(unavailable).toContain(
-      `id="assistant-send" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.noDocumentBound}"`,
+      `id="assistant-send" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.noPresentationRuntime}"`,
     );
   });
   it("uses landmarks rather than anonymous divs for every region", () => {
@@ -735,28 +735,39 @@ describe("engine desktop chrome — honesty", () => {
       );
     }
     // The switch applies the model's own projection for the profile it lands on.
-    const view = desktopVisualView(createDesktopVisualState());
     const script = /<script>(.*)<\/script>/s.exec(render())?.[1] ?? "";
     const tables = JSON.parse(/const T = (\{.*?\});\n/s.exec(render())?.[1] ?? "{}") as {
-      assistantByProfile: Record<string, Record<string, string>>;
-      controlsByProfile: Record<string, Record<string, [string, string | null]>>;
+      assistantRuntimeRows: Record<
+        string,
+        {
+          assistantByProfile: Record<string, Record<string, string>>;
+          controlsByProfile: Record<string, Record<string, [string, string | null]>>;
+        }
+      >;
     };
-    for (const chip of view.profiles) {
-      expect(tables.assistantByProfile[chip.id]).toEqual({
-        state: chip.assistant.state,
-        modelLabel: chip.assistant.modelLabel,
-      });
-      // Every control that profile would render, not the handful a selector
-      // list remembered: the list is what left the drawer toggles behind.
-      const seat = tables.controlsByProfile[chip.id] ?? {};
-      const projected = desktopVisualView(
-        createDesktopVisualState({ profile: chip.id }),
-      );
-      for (const control of projected.controls) {
-        expect(seat[control.id], `${chip.id} ${control.id}`).toEqual([
-          control.kind,
-          control.refusal,
-        ]);
+    for (const runtime of ["none", "local"] as const) {
+      const view = desktopVisualView(createDesktopVisualState({ assistantRuntime: runtime }));
+      const runtimeRows = tables.assistantRuntimeRows[runtime];
+      expect(runtimeRows).toBeDefined();
+      if (runtimeRows === undefined) continue;
+      for (const chip of view.profiles) {
+        expect(runtimeRows.assistantByProfile[chip.id]).toEqual({
+          state: chip.assistant.state,
+          modelLabel: chip.assistant.modelLabel,
+        });
+        const seat = runtimeRows.controlsByProfile[chip.id] ?? {};
+        const projected = desktopVisualView(
+          createDesktopVisualState({
+            profile: chip.id,
+            assistantRuntime: runtime,
+          }),
+        );
+        for (const control of projected.controls) {
+          expect(seat[control.id], `${runtime} ${chip.id} ${control.id}`).toEqual([
+            control.kind,
+            control.refusal,
+          ]);
+        }
       }
     }
     expect(script).toContain("setProfile(value)");

@@ -50,8 +50,9 @@ The packaged chrome also binds its Assistant **Build** mode to the bridge. Local
 is a deterministic, free compiler; BYOK is free of SceneAxi credits but runs
 only when the embedding deployment injects its provider runner; Hosted is
 metered and refuses here because this desktop tier has no identity/credit plane.
-A successful action mounts the validated Sculpt Artifact into the live center
-viewport, adds translate/rotate/scale manipulators, and shows the artifact's
+A successful action projects the validated Sculpt Artifact through a
+single-instance composition and the shared `MountableScene` payload before the
+live center viewport mounts it, adds translate/rotate/scale manipulators, and shows the artifact's
 read-only materials, supported collider physics, and procedural settings.
 Progress, provider/refusal details, and Retry remain on the surface. A timed-out
 job is abandoned before Retry is offered, so a late provider result cannot
@@ -78,7 +79,8 @@ Rules the gate enforces (`pnpm check:desktop`, `pnpm check:boundaries`,
 - The visual model is consumed, never duplicated: no control, mode, refusal, or
   token is re-declared here, and the emitted document is byte-derived from
   `renderDesktopChrome()` plus exactly two injections (a runtime marker meta and
-  the renderer script tag).
+  the renderer script tag). Runtime loss is signalled back to the chrome, which
+  applies the visual model's precomputed unavailable transition to every control.
 - The chrome's `sceneaxi-pixels-drawn` meta stays `false` at build time; the
   renderer updates it only from a real presentation frame's `pixelsDrawn`.
 - Kids has no assistant path here: the chrome's refuse-only projection stays

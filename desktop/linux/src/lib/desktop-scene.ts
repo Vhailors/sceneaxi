@@ -17,6 +17,7 @@ import {
   SCENE_COMPOSITION_SCHEMA_VERSION,
   identitySculptTransform,
   type SceneCompositionIntake,
+  type SculptArtifact,
   type SculptTransform,
   type Vector3,
 } from "@sceneaxi/schemas";
@@ -29,6 +30,10 @@ import {
 
 /** Document id of the composed scene the desktop app opens. */
 export const DESKTOP_OPEN_SCENE_ID = "desktop-linux-open-scene";
+
+export const DESKTOP_ASSISTANT_SCENE_ID = "desktop-assistant-output-scene";
+
+export const DESKTOP_ASSISTANT_INSTANCE_ID = "assistant-live-output";
 
 /** Refusal minted when the pipeline rejects the desktop composition. */
 export const DESKTOP_SCENE_NOT_COMPOSABLE = "DESKTOP_SCENE_NOT_COMPOSABLE";
@@ -122,5 +127,38 @@ export function desktopOpenScene(): DesktopSceneResult {
     ok: true as const,
     composed,
     mountable: mountableScene(composed, labels),
+  });
+}
+
+export function desktopAssistantScene(artifact: SculptArtifact): DesktopSceneResult {
+  const intake: SceneCompositionIntake = {
+    schemaVersion: SCENE_COMPOSITION_SCHEMA_VERSION,
+    kind: SCENE_COMPOSITION_INTAKE_KIND,
+    sceneId: DESKTOP_ASSISTANT_SCENE_ID,
+    rootInstanceId: DESKTOP_ASSISTANT_INSTANCE_ID,
+    placements: [
+      {
+        instanceId: DESKTOP_ASSISTANT_INSTANCE_ID,
+        artifactId: artifact.artifactId,
+        parentInstanceId: null,
+        transform: identitySculptTransform(),
+      },
+    ],
+  };
+  const composed = composeScene(intake, [artifact]);
+  if (!composed.ok) {
+    return Object.freeze({
+      ok: false as const,
+      reason: DESKTOP_SCENE_NOT_COMPOSABLE,
+      message: "The scene composition pipeline rejected the assistant output.",
+    });
+  }
+  return Object.freeze({
+    ok: true as const,
+    composed,
+    mountable: mountableScene(
+      composed,
+      new Map([[DESKTOP_ASSISTANT_INSTANCE_ID, "Assistant output"]]),
+    ),
   });
 }

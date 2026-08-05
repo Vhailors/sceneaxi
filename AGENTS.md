@@ -329,7 +329,12 @@ plus the tier split where only `src/electron/**` may import Electron. The window
 document is the desktop-shell chrome **unforked** plus exactly two injections;
 the one bridge seam is `createDesktopBridge()` in `desktop/linux/src/lib/bridge.ts`
 (synchronous `handle()`, mirrored on web-shell's inspector app), reaching
-`composeScene()`, `bootstrapOpenPath()`, and `createDesktopSession()` only. The
+`composeScene()`, `bootstrapOpenPath()`, `createDesktopSession()`, and the
+deterministic local or explicitly injected BYOK assistant runner in
+`authoring-core`; hosted assistant work refuses because this tier owns no identity
+or credit plane. Every successful assistant artifact is projected through a
+single-instance `composeScene()` result and the shared `MountableScene` boundary
+before the renderer may mount it. The
 renderer process holds the tier's one renderer-owning module
 (`src/renderer/viewport.ts`) drawing the shared `MountableScene` through the
 ADR 0002 seam; gate proof is `tests/e2e/desktop-linux-bridge-golden.test.ts` (in
@@ -352,8 +357,10 @@ disabled unless the release preflight has real Apple signing/notarization inputs
 emits stable universal artifact names plus checksummed release/update metadata. It owns
 no second renderer. No signed/public macOS artifact is recorded yet, so `/engine` must
 continue to show macOS unavailable; `docs/desktop-macos.md` owns the exact operator
-prerequisites and release handoff. No profile, Kids, auth/billing, or CLI
-verb reaches this tier.
+prerequisites and release handoff. No profile package, Kids dependency, auth/billing
+implementation, or CLI verb reaches this tier; the assistant request carries only profile
+vocabulary so the bridge and authoring core can deny Kids independently before local work
+or provider dispatch.
 
 Windows packaging (sceneaxi#204) is the separate `desktop/windows` install root and
 stages the already-built `desktop/linux` runtime rather than forking the editor,
@@ -398,12 +405,15 @@ tabs, profile switch, assistant states, Change Review, command palette,
 overlays, sculpt progress, window tiers, the closed `DESKTOP_VISUAL_REFUSALS`
 registry) and `src/chrome.ts` renders it as one self-contained HTML document via
 the `sceneaxi-desktop chrome` command — no remote asset, no framework, no DOM
-types. Three invariants: every control declares `view` | `review` | `inert`, and
-an inert one keeps its focus stop and names a refusal; the profile switch
+types. Three invariants: every control declares `view` | `review` | `live` | `inert`,
+a `live` control is bound only by an explicit consumer runtime transition, and an
+inert one keeps its focus stop and names a refusal; the profile switch
 **projects** `openPathPolicyView()` rather than describing a profile, so parity
 with the CLI is a data identity; and the chrome mounts no presentation runtime
 and opens no kernel session, so it draws no pixels, invents no digest, byte
-size, frame rate, or timing, and reaches `authoring-core` on no path. The
+size, frame rate, or timing. Its visual model invokes no authoring operation; the
+packaged Linux consumer binds its live assistant controls through the bridge above.
+The
 canonical archive digest, the `Engine Desktop v1.dc.html` supersession (amber
 accent, Space Grotesk/IBM Plex, fixed 2064×1400 launcher storyboard — none of it
 may return), every deviation from that archive, and the recorded browser

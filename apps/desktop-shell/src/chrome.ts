@@ -32,6 +32,7 @@
 
 import {
   CHANGE_REVIEW_ROWS,
+  DESKTOP_ASSISTANT_RUNTIME_EVENT,
   DESKTOP_DOCK_TAB_IDS,
   DESKTOP_MINIMUM_WINDOW,
   DESKTOP_MODES,
@@ -1041,6 +1042,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
  */
 function controlsByProfile(
   view: DesktopVisualView,
+  runtime = view.state.assistantRuntime,
 ): Record<string, Record<string, readonly [string, string | null]>> {
   const table: Record<string, Record<string, readonly [string, string | null]>> = {};
   for (const profile of view.profiles) {
@@ -1050,6 +1052,7 @@ function controlsByProfile(
         ...view.state,
         profile: profile.id,
         mode,
+        assistantRuntime: runtime,
       });
       for (const control of projected.controls) {
         merged[control.id] = [control.kind, control.refusal] as const;
@@ -1062,6 +1065,29 @@ function controlsByProfile(
 
 /** The emitted behaviour script. Reads only tables serialized from the model. */
 function script(view: DesktopVisualView): string {
+  const assistantRuntimeRows = Object.fromEntries(
+    (["none", "local"] as const).map((runtime) => {
+      const projected = desktopVisualView({
+        ...view.state,
+        assistantRuntime: runtime,
+      });
+      return [
+        runtime,
+        {
+          controlsByProfile: controlsByProfile(projected, runtime),
+          assistantByProfile: Object.fromEntries(
+            projected.profiles.map((profile) => [
+              profile.id,
+              {
+                state: profile.assistant.state,
+                modelLabel: profile.assistant.modelLabel,
+              },
+            ]),
+          ),
+        },
+      ];
+    }),
+  );
   const tables = {
     dockTabsByMode: Object.fromEntries(
       DESKTOP_MODE_IDS.map((mode) => [mode, [...dockTabsFor(mode)]]),
@@ -1074,17 +1100,9 @@ function script(view: DesktopVisualView): string {
       ]),
     ),
     changeCount: CHANGE_REVIEW_ROWS.length,
-    // Every per-profile answer below is the model's own projection, so a switch
-    // in the browser lands on the same controls a render of that profile would.
-    assistantByProfile: Object.fromEntries(
-      view.profiles.map((profile) => [
-        profile.id,
-        {
-          state: profile.assistant.state,
-          modelLabel: profile.assistant.modelLabel,
-        },
-      ]),
-    ),
+    assistantRuntimeEvent: DESKTOP_ASSISTANT_RUNTIME_EVENT,
+    assistantRuntimeRows,
+    assistantRuntimeRefusal: DESKTOP_VISUAL_REFUSALS.noPresentationRuntime,
     // The status bar names the profile the document is on, so a switch that
     // leaves it behind has the surface asserting a profile it is not on — next
     // to a refusal that says otherwise. The model's own pin, never a local copy.
@@ -1096,7 +1114,6 @@ function script(view: DesktopVisualView): string {
     ),
     /** The tier boundary the stylesheet undocks the assistant at. */
     assistantDrawerQuery: belowTier("regular"),
-    controlsByProfile: controlsByProfile(view),
   };
 
   return `
@@ -1271,9 +1288,10 @@ if (shell) {
   // what each control is on each profile, and a list of the ones to update is a
   // list that has to be edited whenever a control is added.
   const applyControl = (el) => {
-    const row = (T.controlsByProfile[shell.dataset.profile] || {})[el.id];
+    const runtime = T.assistantRuntimeRows[shell.dataset.assistantRuntime];
+    const row = ((runtime && runtime.controlsByProfile[shell.dataset.profile]) || {})[el.id];
     if (!row) return;
-    const refusal = row[1] || el.dataset.runtimeRefusal;
+    const refusal = row[1];
     el.dataset.kind = refusal ? 'inert' : row[0];
     setRefusal(el, refusal);
   };
@@ -1293,7 +1311,8 @@ if (shell) {
   };
 
   const setProfile = (id) => {
-    const seat = T.assistantByProfile[id];
+    const runtime = T.assistantRuntimeRows[shell.dataset.assistantRuntime];
+    const seat = runtime && runtime.assistantByProfile[id];
     if (!seat) return;
     setAssistant(seat.state);
     q('[data-assistant-model]').forEach((el) => { el.textContent = seat.modelLabel; });
@@ -1305,6 +1324,17 @@ if (shell) {
     // it, and leaving a refusal is not opening a drawer.
     syncAssistantTier();
   };
+
+  document.addEventListener(T.assistantRuntimeEvent, (event) => {
+    const detail = event && event.detail;
+    if (!detail || !T.assistantRuntimeRows[detail.runtime]) return;
+    shell.dataset.assistantRuntime = detail.runtime;
+    setProfile(shell.dataset.profile);
+    const status = shell.querySelector('[data-assistant-status]');
+    if (status && typeof detail.message === 'string') {
+      status.textContent = T.assistantRuntimeRefusal + ' — ' + detail.message;
+    }
+  });
 
   shell.addEventListener('click', (event) => {
     const el = event.target instanceof Element ? event.target.closest('[data-action]') : null;
@@ -1420,7 +1450,7 @@ export function renderDesktopChrome(
   <p>${escapeHtml(refusal.message)}</p>
   <p>Minimum: <code>${escapeHtml(`${refusal.minimum.width}×${refusal.minimum.height}`)}</code> · refusal <code>${escapeHtml(refusal.code)}</code></p>
 </div>
-<div class="shell" data-mode="${escapeHtml(view.state.mode)}" data-profile="${escapeHtml(view.state.profile)}" data-assistant="${escapeHtml(view.assistant.state)}" data-assistant-mode="${escapeHtml(view.state.assistantMode)}" data-assistant-route="${escapeHtml(view.state.assistantRoute)}" data-overlay="${escapeHtml(view.state.overlay ?? "none")}" data-tier="${escapeHtml(view.tier)}" data-drawer-left="closed" data-drawer-inspector="closed" data-drawer-assistant="closed">
+<div class="shell" data-mode="${escapeHtml(view.state.mode)}" data-profile="${escapeHtml(view.state.profile)}" data-assistant="${escapeHtml(view.assistant.state)}" data-assistant-mode="${escapeHtml(view.state.assistantMode)}" data-assistant-route="${escapeHtml(view.state.assistantRoute)}" data-assistant-runtime="${escapeHtml(view.state.assistantRuntime)}" data-assistant-runtime-event="${escapeHtml(DESKTOP_ASSISTANT_RUNTIME_EVENT)}" data-overlay="${escapeHtml(view.state.overlay ?? "none")}" data-tier="${escapeHtml(view.tier)}" data-drawer-left="closed" data-drawer-inspector="closed" data-drawer-assistant="closed">
 ${titleBar(view)}
 <div class="shell-body">
 ${modeRail(view)}

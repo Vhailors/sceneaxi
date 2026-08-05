@@ -176,14 +176,17 @@ always has a refusal and a non-inert one never does.
 |---|---|---|
 | `view` | changes visual state; genuinely works | mode rail, dock tabs, profile switch, assistant open/close and its Ask/Build/Agent modes, the overlay openers and each of the four overlay dismiss buttons, the sculpt cancel, drawer toggles |
 | `review` | edits the fixture Change Review queue; **writes no document** | accept/reject a row, accept all, reject all |
-| `live` | delegates a product action to an enclosing runtime seam | assistant prompt, Send, and Retry only when the packaged Linux runtime binds them |
+| `live` | delegates a product action to an enclosing runtime seam | assistant prompt, Send, Retry, and artifact manipulators only when the packaged Linux runtime binds them |
 | `inert` | renders, keeps its focus stop, refuses by name | Sculpt object, standalone-shell assistant prompt/Send/Retry, menu bar, the three viewport-source tabs, the palette rows naming CLI-only verbs, and — on the refuse-only profile — every control except the eleven named below |
 
 The chrome still reaches no authoring package itself. Its standalone CLI render
 therefore keeps every product action inert and `test/app.test.ts` proves a
 `chrome` invocation leaves a document byte-identical. The packaged Linux tier
-requests `assistantRuntime: "local"`, binds only those three `live` controls to
-its existing bridge, and owns that runtime contract in `docs/desktop-linux.md`.
+requests `assistantRuntime: "local"`, binds the assistant's `live` controls to
+its existing bridge and Mount API, and owns that runtime contract in
+`docs/desktop-linux.md`. If that runtime cannot mount, the renderer emits the
+model-owned runtime event; the chrome applies the precomputed `none` projection
+to every control rather than maintaining a renderer-owned control list.
 
 ### The refuse-only profile demotes in one place
 
@@ -211,10 +214,10 @@ that works as refusing is the same dishonesty pointing the other way.
 
 The browser-side switch applies the same decision the same way: it sweeps
 **every** `[data-kind]` element and applies the model's own `[kind, refusal]` for
-that control id, serialized per profile from `view.controls`. There is no
-selector list — a list of the controls to update is a list that has to be edited
-whenever a control is added, and the one that existed had never gained
-`.drawer-toggle`.
+that control id, serialized per profile and assistant-runtime state from
+`view.controls`. The same table owns runtime loss. There is no selector list — a
+list of the controls to update is a list that has to be edited whenever a control
+is added, and the one that existed had never gained `.drawer-toggle`.
 
 Demoting a control is not the whole of the switch, though: a drawer **already
 open** when the profile changes has state of its own. Closing the toggle is not

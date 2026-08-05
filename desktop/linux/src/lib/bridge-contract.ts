@@ -16,6 +16,7 @@ import type {
   AssistantSculptProgress,
   AssistantSculptSuccess,
 } from "@sceneaxi/authoring-core";
+import type { MountableScene } from "@sceneaxi/site-kit";
 
 /** The one IPC channel the preload exposes and the main process serves. */
 export const DESKTOP_BRIDGE_CHANNEL = "sceneaxi:desktop-bridge";
@@ -118,6 +119,9 @@ export const DESKTOP_BRIDGE_ASSISTANT_OPS = Object.freeze([
 export type DesktopBridgeAssistantOp =
   (typeof DESKTOP_BRIDGE_ASSISTANT_OPS)[number];
 
+export type DesktopAssistantMountedResult = Omit<AssistantSculptSuccess, "artifact"> &
+  Readonly<{ mountable: MountableScene }>;
+
 export type DesktopAssistantJobSnapshot = Readonly<{
   jobId: string;
   route: "local" | "byo";
@@ -125,17 +129,14 @@ export type DesktopAssistantJobSnapshot = Readonly<{
   /**
    * The newest progress entry only, never the accumulated log.
    *
-   * A status poll runs every 50ms while a streaming BYOK route appends one
-   * entry per provider chunk, each carrying its raw delta. Handing back the
-   * whole log would structured-clone the completion so far across IPC on every
-   * poll — cost quadratic in stream length for entries the consumer discards,
-   * since it renders the latest one. `progressCount` is what a caller needs to
-   * see that work is still moving.
+   * A status poll runs every 50ms while a streaming BYOK route can report one
+   * entry per provider chunk, each carrying its raw delta. `progressCount` is
+   * what a caller needs to see that work is still moving.
    */
   latestProgress: AssistantSculptProgress | null;
   /** How many progress entries the job has observed so far. */
   progressCount: number;
-  result?: AssistantSculptSuccess;
+  result?: DesktopAssistantMountedResult;
   refusal?: Readonly<{
     ok: false;
     reason: string;

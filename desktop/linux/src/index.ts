@@ -30,6 +30,7 @@ export {
   bridgeRefuse,
   type DesktopBridgeAction,
   type DesktopBridgeAssistantOp,
+  type DesktopAssistantMountedResult,
   type DesktopAssistantJobSnapshot,
   type DesktopBridgeAuthoringOp,
   type DesktopBridgeHandshake,
@@ -52,9 +53,12 @@ export {
 } from "./lib/bridge.js";
 
 export {
+  DESKTOP_ASSISTANT_INSTANCE_ID,
+  DESKTOP_ASSISTANT_SCENE_ID,
   DESKTOP_OPEN_PLACEMENTS,
   DESKTOP_OPEN_SCENE_ID,
   DESKTOP_SCENE_NOT_COMPOSABLE,
+  desktopAssistantScene,
   desktopOpenScene,
   type DesktopSceneResult,
 } from "./lib/desktop-scene.js";

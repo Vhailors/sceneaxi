@@ -26,10 +26,14 @@ import {
   createModelProviderPort,
   runAssistantSculptAction,
   writeDocumentFile,
+  type AssistantSculptProgress,
   type AssistantSculptResult,
   type ModelDescriptor,
 } from "@sceneaxi/authoring-core";
-import { DESKTOP_VISUAL_REFUSALS } from "@sceneaxi/desktop-shell";
+import {
+  DESKTOP_ASSISTANT_RUNTIME_EVENT,
+  DESKTOP_VISUAL_REFUSALS,
+} from "@sceneaxi/desktop-shell";
 import {
   THREE_HEADLESS_SURFACE_LABEL,
   createSculptMountApi,
@@ -174,6 +178,7 @@ class FakeShell extends FakeElement {
   ) {
     super("shell", {
       assistant: "open",
+      assistantRuntime: "local",
       drawerAssistant: "open",
       overlay: "none",
       profile: "game",
@@ -268,7 +273,7 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
     const job = status.data as {
       status: string;
       result: {
-        artifact: Parameters<ReturnType<typeof createSculptMountApi>["mount"]>[0]["artifact"];
+        mountable: ReturnType<typeof composedScene>;
         inspection: {
           physics: { supported: boolean };
           materials: { supported: boolean };
@@ -285,11 +290,15 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
 
     const backend = createThreeSculptPresentationBackend();
     const mounts = createSculptMountApi(backend);
+    expect(job.result.mountable.instances).toHaveLength(1);
+    const instance = job.result.mountable.instances[0];
+    if (instance === undefined) throw new Error("assistant composition has no root instance");
     mounts.mount({
-      instanceId: "assistant-live-output",
-      artifact: job.result.artifact,
+      instanceId: instance.instanceId,
+      artifact: job.result.mountable.artifacts[instance.artifactId],
+      transform: instance.worldTransform,
     });
-    const moved = mounts.updateTransform("assistant-live-output", {
+    const moved = mounts.updateTransform(instance.instanceId, {
       translation: [1, 0, 0],
       rotationEulerDegrees: [0, 15, 0],
       scale: [1, 1, 1],
@@ -297,7 +306,7 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
     expect(moved.transform.translation).toEqual([1, 0, 0]);
     expect(mounts.render()).toMatchObject({
       backend: "three",
-      instanceIds: ["assistant-live-output"],
+      instanceIds: [instance.instanceId],
       surface: "headless",
       pixelsDrawn: false,
     });
@@ -377,7 +386,12 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
       status: "ready",
       result: {
         route: "byo",
-        artifact: { kind: "sceneaxi.sculpt-artifact" },
+        mountable: {
+          artifacts: {
+            "desktop-byo-crate-artifact": { kind: "sceneaxi.sculpt-artifact" },
+          },
+          instances: [{ artifactId: "desktop-byo-crate-artifact" }],
+        },
         providerEvidence: { operation: "complete" },
       },
     });
@@ -385,12 +399,14 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
 
   it("abandons a hung BYOK job so Retry can start fresh work", async () => {
     let rejectHung: ((reason: Error) => void) | undefined;
+    let reportProgress: ((snapshot: AssistantSculptProgress) => void) | undefined;
     const bridge = createDesktopBridge({
       cwd: authoringDir(),
       nowMs: fixedNow,
-      runByoAssistant: () =>
+      runByoAssistant: (request) =>
         new Promise<AssistantSculptResult>((_resolve, reject) => {
           rejectHung = reject;
+          reportProgress = request.onProgress;
         }),
     });
     expect(
@@ -404,6 +420,7 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
         },
       }).ok,
     ).toBe(true);
+    reportProgress?.({ phase: "waiting-provider", percent: 20, message: "Waiting" });
     const abandoned = bridge.handle({
       action: "assistant",
       payload: { op: "abandon" },
@@ -413,6 +430,23 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
       expect(abandoned.data).toMatchObject({
         status: "refused",
         refusal: { reason: DESKTOP_BRIDGE_REFUSALS.assistantAbandoned },
+      });
+    }
+    reportProgress?.({
+      phase: "streaming-provider",
+      percent: 45,
+      message: "Late chunk",
+      delta: "ignored",
+    });
+    const abandonedStatus = bridge.handle({
+      action: "assistant",
+      payload: { op: "status" },
+    });
+    expect(abandonedStatus.ok).toBe(true);
+    if (abandonedStatus.ok) {
+      expect(abandonedStatus.data).toMatchObject({
+        progressCount: 1,
+        latestProgress: { message: "Waiting" },
       });
     }
 
@@ -763,6 +797,9 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     expect(html).toContain("viewport-note-inert");
     expect(html).toContain("<title>SceneAxi Engine Desktop</title>");
     expect(html).toContain('<textarea id="assistant-prompt" data-kind="live"');
+    expect(html).toContain(
+      `data-assistant-runtime-event="${DESKTOP_ASSISTANT_RUNTIME_EVENT}"`,
+    );
     expect(html).toContain("Hosted · metered");
   });
 
@@ -780,12 +817,16 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
         }),
     );
     const shell = new FakeShell(controls, profileChips);
+    const documentListeners = new Map<string, (event: { readonly detail?: unknown }) => void>();
     const script = /<script>([\s\S]*?)<\/script>/.exec(desktopLinuxIndexHtml())?.[1];
     expect(script).toBeDefined();
     runInNewContext(script ?? "", {
       document: {
         activeElement: null,
-        addEventListener: () => undefined,
+        addEventListener: (
+          name: string,
+          listener: (event: { readonly detail?: unknown }) => void,
+        ) => documentListeners.set(name, listener),
         querySelector: (selector: string) => (selector === ".shell" ? shell : null),
       },
       Element: FakeElement,
@@ -798,15 +839,9 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       },
     });
 
-    for (const control of controls) {
-      control.dataset.runtimeRefusal = runtimeRefusal;
-      control.dataset.kind = "inert";
-      control.dataset.refusal = runtimeRefusal;
-      control.setAttribute("aria-disabled", "true");
-      control.setAttribute("aria-describedby", `refusal-${runtimeRefusal}`);
-      control.classList.add("is-inert");
-    }
-    prompt.readOnly = true;
+    documentListeners.get(DESKTOP_ASSISTANT_RUNTIME_EVENT)?.({
+      detail: { runtime: "none", message: "Viewport unavailable" },
+    });
 
     const switchTo = (profile: string): void => {
       const chip = profileChips.find((candidate) => candidate.dataset.value === profile);
@@ -864,7 +899,9 @@ describe("desktop renderer module accounting", () => {
     );
     expect(source).toContain('action: "assistant"');
     expect(source).toContain("mounts.mount({");
-    expect(source).toContain("mounts.updateTransform(ASSISTANT_INSTANCE_ID");
+    expect(source).toContain("mounts.updateTransform(assistantInstanceId");
+    expect(source).toContain("job.result.mountable.instances");
+    expect(source).toContain("instance.worldTransform");
     expect(source).toContain('data-assistant-manipulators');
     expect(source).toContain('shell.dataset.assistantMode !== "build"');
     expect(source).toContain("DESKTOP_BRIDGE_REFUSALS.assistantBuildModeRequired");
@@ -883,12 +920,10 @@ describe("desktop renderer module accounting", () => {
     // the flow is bound only after the scene request, backend construction, and
     // first mount succeed. Every path that returns before that has to name a
     // refusal on those controls rather than leaving Send inert-looking-live.
-    expect(source).toContain("refuseAssistantControls");
-    expect(source).toContain("DESKTOP_BRIDGE_REFUSALS.presentationRuntimeUnavailable");
-    expect(source).toContain("control.dataset.runtimeRefusal = reason");
-    expect(source).toContain('if (control.dataset.kind === "inert") continue');
-    expect(source).toContain('control.setAttribute("data-kind", "inert")');
-    expect(source).toContain('control.setAttribute("aria-disabled", "true")');
+    expect(source).toContain("signalAssistantRuntimeUnavailable");
+    expect(source).toContain("shell?.dataset.assistantRuntimeEvent");
+    expect(source).toContain('runtime: "none"');
+    expect(source).not.toContain("ASSISTANT_CONTROL_IDS");
     // One place says it, and that place settles the composer too — a second
     // refusal sentence would be a path that reports without disarming Send.
     expect(source.match(/Live viewport refused/g)).toHaveLength(1);

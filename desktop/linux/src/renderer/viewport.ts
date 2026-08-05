@@ -123,37 +123,15 @@ function frameText(frame: SculptPresentationFrame): string {
   ].join(" · ");
 }
 
-const ASSISTANT_INSTANCE_ID = "assistant-live-output";
-
-/**
- * The composer controls the chrome renders live whenever the desktop runtime is
- * declared. They only *are* live once `installAssistantProductFlow()` has bound
- * them to a mount API, and that happens at the end of a path with several
- * refusals in front of it. A control that is neither bound nor inert is the one
- * thing this surface does not allow, so every path that returns before the
- * binding turns them inert here, naming the refusal the chrome already prints a
- * paragraph for.
- */
-const ASSISTANT_CONTROL_IDS = ["assistant-prompt", "assistant-send", "assistant-retry"] as const;
-
-function refuseAssistantControls(reason: string, message: string): void {
-  const status = document.querySelector<HTMLElement>("[data-assistant-status]");
-  if (status !== null) status.textContent = `${reason} — ${message}`;
-  for (const id of ASSISTANT_CONTROL_IDS) {
-    const control = document.getElementById(id);
-    if (control === null) continue;
-    control.dataset.runtimeRefusal = reason;
-    if (control.dataset.kind === "inert") continue;
-    control.setAttribute("data-kind", "inert");
-    control.setAttribute("aria-disabled", "true");
-    control.setAttribute("data-refusal", reason);
-    control.setAttribute("aria-describedby", `refusal-${reason}`);
-    control.classList.add("is-inert");
-    if (control instanceof HTMLTextAreaElement) control.readOnly = true;
-  }
-  document
-    .querySelector<HTMLElement>("[data-assistant-manipulators]")
-    ?.setAttribute("hidden", "");
+function signalAssistantRuntimeUnavailable(message: string): void {
+  const shell = document.querySelector<HTMLElement>(".shell");
+  const eventName = shell?.dataset.assistantRuntimeEvent;
+  if (eventName === undefined) return;
+  document.dispatchEvent(
+    new CustomEvent(eventName, {
+      detail: Object.freeze({ runtime: "none", message }),
+    }),
+  );
 }
 
 /**
@@ -163,8 +141,7 @@ function refuseAssistantControls(reason: string, message: string): void {
  */
 function refuseLiveViewport(stage: Element | null, message: string): void {
   if (stage !== null) reportLine(stage, `Live viewport refused: ${message}`);
-  refuseAssistantControls(
-    DESKTOP_BRIDGE_REFUSALS.presentationRuntimeUnavailable,
+  signalAssistantRuntimeUnavailable(
     `${message} Assistant Build has no live viewport to mount a typed artifact into.`,
   );
 }
@@ -216,6 +193,7 @@ function installAssistantProductFlow(
   const manipulatorBar = stage.querySelector<HTMLElement>("[data-assistant-manipulators]");
   if (shell === null || prompt === null || status === null || resultView === null) return;
   let running = false;
+  let assistantInstanceId: string | null = null;
   const identityTransform = () => ({
     translation: [0, 0, 0] as [number, number, number],
     rotationEulerDegrees: [0, 0, 0] as [number, number, number],
@@ -248,7 +226,8 @@ function installAssistantProductFlow(
           default:
             return;
         }
-        mounts.updateTransform(ASSISTANT_INSTANCE_ID, {
+        if (assistantInstanceId === null) return;
+        mounts.updateTransform(assistantInstanceId, {
           translation: [...manipulatorTransform.translation],
           rotationEulerDegrees: [...manipulatorTransform.rotationEulerDegrees],
           scale: [...manipulatorTransform.scale],
@@ -289,12 +268,16 @@ function installAssistantProductFlow(
         return;
       }
       if (job.status === "ready" && job.result !== undefined) {
-        const already = mounts.list().find((instance) => instance.instanceId === ASSISTANT_INSTANCE_ID);
-        if (already !== undefined) mounts.unmount(ASSISTANT_INSTANCE_ID);
-        mounts.mount({
-          instanceId: ASSISTANT_INSTANCE_ID,
-          artifact: job.result.artifact,
-        });
+        if (assistantInstanceId !== null) mounts.unmount(assistantInstanceId);
+        for (const instance of job.result.mountable.instances) {
+          const artifact = job.result.mountable.artifacts[instance.artifactId];
+          mounts.mount({
+            instanceId: instance.instanceId,
+            artifact,
+            transform: instance.worldTransform,
+          } as Parameters<typeof mounts.mount>[0]);
+          assistantInstanceId = instance.instanceId;
+        }
         backend.frameMountedContent();
         manipulatorTransform = identityTransform();
         manipulatorBar?.removeAttribute("hidden");

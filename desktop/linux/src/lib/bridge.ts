@@ -57,7 +57,7 @@ import {
   type DesktopBridgeResponse,
   type DesktopFrameReport,
 } from "./bridge-contract.js";
-import { desktopOpenScene } from "./desktop-scene.js";
+import { desktopAssistantScene, desktopOpenScene } from "./desktop-scene.js";
 
 export type DesktopBridgeOptions = {
   /** Working directory the authoring session binds to. */
@@ -194,7 +194,8 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     jobId: string;
     route: "local" | "byo";
     status: "running" | "ready" | "refused";
-    progress: AssistantSculptProgress[];
+    latestProgress: AssistantSculptProgress | null;
+    progressCount: number;
     result?: NonNullable<DesktopAssistantJobSnapshot["result"]>;
     refusal?: NonNullable<DesktopAssistantJobSnapshot["refusal"]>;
   } | null = null;
@@ -320,19 +321,17 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
   /**
    * What crosses the seam is bounded: the newest progress entry and how many
    * have accrued, never the accumulated log. The renderer polls this every 50ms
-   * and renders only the latest entry, while a streaming BYOK route appends one
-   * entry per provider chunk — copying the whole log per poll would clone the
-   * completion so far across IPC again and again for data nothing reads.
+   * and renders only the latest entry, while a streaming BYOK route can report one
+   * entry per provider chunk.
    */
   const assistantSnapshot = (): DesktopAssistantJobSnapshot | null => {
     if (assistantJob === null) return null;
-    const { progress } = assistantJob;
     return Object.freeze({
       jobId: assistantJob.jobId,
       route: assistantJob.route,
       status: assistantJob.status,
-      latestProgress: progress[progress.length - 1] ?? null,
-      progressCount: progress.length,
+      latestProgress: assistantJob.latestProgress,
+      progressCount: assistantJob.progressCount,
       ...(assistantJob.result === undefined ? {} : { result: assistantJob.result }),
       ...(assistantJob.refusal === undefined ? {} : { refusal: assistantJob.refusal }),
     });
@@ -414,12 +413,14 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       jobId: `desktop-assistant-${String(assistantSequence)}`,
       route,
       status: "running",
-      progress: [],
+      latestProgress: null,
+      progressCount: 0,
     };
     const activeJob = assistantJob;
     const onProgress = (snapshot: AssistantSculptProgress): void => {
-      if (assistantJob !== activeJob) return;
-      activeJob.progress.push(snapshot);
+      if (assistantJob !== activeJob || activeJob.status !== "running") return;
+      activeJob.latestProgress = snapshot;
+      activeJob.progressCount += 1;
     };
     const request: DesktopAssistantRunRequest = {
       prompt: prompt.trim(),
@@ -445,8 +446,29 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       (result) => {
         if (assistantJob !== activeJob || activeJob.status !== "running") return;
         if (result.ok) {
-          activeJob.status = "ready";
-          activeJob.result = result;
+          const scene = desktopAssistantScene(result.artifact);
+          if (scene.ok) {
+            activeJob.status = "ready";
+            activeJob.result = Object.freeze({
+              ok: true as const,
+              route: result.route,
+              artifactBytes: result.artifactBytes,
+              artifactDigest: result.artifactDigest,
+              inspection: result.inspection,
+              mountable: scene.mountable,
+              ...(result.providerEvidence === undefined
+                ? {}
+                : { providerEvidence: result.providerEvidence }),
+            });
+          } else {
+            activeJob.status = "refused";
+            activeJob.refusal = Object.freeze({
+              ok: false as const,
+              reason: scene.reason,
+              message: scene.message,
+              recoverable: true,
+            });
+          }
         } else {
           activeJob.status = "refused";
           activeJob.refusal = result;
