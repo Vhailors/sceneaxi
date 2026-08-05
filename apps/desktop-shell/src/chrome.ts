@@ -1425,8 +1425,7 @@ if (shell) {
     inFlight = true;
     q('[data-product-action]').forEach((el) => {
       el.dataset.busy = 'true';
-      el.classList.add('is-inert');
-      el.setAttribute('aria-disabled', 'true');
+      setRefusal(el, T.product.refusals.requestInFlight);
     });
     try {
       await run();

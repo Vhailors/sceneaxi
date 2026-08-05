@@ -814,13 +814,11 @@ export function kidsProfileRefusal(): Readonly<{
   summary: string;
   profile: typeof OPEN_PATH_REFUSE_ONLY_PROFILE;
 }> {
-  const row = openPathPolicyView().rows.find(
-    (candidate) => candidate.profile === OPEN_PATH_REFUSE_ONLY_PROFILE,
-  );
+  const refusal = desktopProductSurface("kids").refusal;
   return Object.freeze({
-    code: DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly,
+    code: refusal?.code ?? DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly,
     message: DESKTOP_REFUSAL_MESSAGES[DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly],
-    summary: row?.summary ?? "",
+    summary: refusal?.message ?? "",
     profile: OPEN_PATH_REFUSE_ONLY_PROFILE,
   });
 }

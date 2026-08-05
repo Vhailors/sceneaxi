@@ -9,6 +9,7 @@ import {
   desktopWebStageDecision,
   createDesktopVisualState,
   desktopVisualView,
+  kidsProfileRefusal,
   renderDesktopChrome,
   stageWebAssetInjection,
   stageWebHtml,
@@ -38,6 +39,10 @@ describe("desktop product loop", () => {
     ]);
     expect(kids.capabilities).toEqual([]);
     expect(kids.refusal?.code).toBe(OPEN_PATH_REFUSE_CODES.kidsRefused);
+    expect(kidsProfileRefusal()).toMatchObject({
+      code: kids.refusal?.code,
+      summary: kids.refusal?.message,
+    });
   });
 
   it("stages a project-relative Web asset as one reviewable document proposal", () => {
@@ -250,6 +255,28 @@ describe("desktop product loop", () => {
       ok: false,
       reason: DESKTOP_PRODUCT_REFUSALS.documentDataInvalid,
     });
+
+    expect(
+      stageWebHtml({
+        profile: "web",
+        documentData: { onLoad: () => undefined },
+        html: "<main></main>",
+      }),
+    ).toMatchObject({
+      ok: false,
+      reason: DESKTOP_PRODUCT_REFUSALS.documentDataInvalid,
+    });
+  });
+
+  it("names the transient refusal while a project request is in flight", () => {
+    const html = renderDesktopChrome(
+      desktopVisualView(createDesktopVisualState({ profile: "web" })),
+    );
+    const script = /<script>([\s\S]*?)<\/script>/.exec(html)?.[1] ?? "";
+
+    expect(script).toContain(
+      "el.dataset.busy = 'true';\n      setRefusal(el, T.product.refusals.requestInFlight);",
+    );
   });
 
   it("explains every refusal name the surface can print", () => {

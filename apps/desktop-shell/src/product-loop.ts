@@ -99,7 +99,10 @@ export type DesktopProductSurface = Readonly<{
   profile: DesktopProfileId;
   project: typeof DESKTOP_PROJECT;
   capabilities: readonly DesktopProductCapability[];
-  refusal: Readonly<{ code: string; message: string }> | null;
+  refusal: Readonly<{
+    code: typeof OPEN_PATH_REFUSE_CODES.kidsRefused;
+    message: string;
+  }> | null;
 }>;
 
 /**
@@ -124,6 +127,7 @@ export const DESKTOP_PRODUCT_REFUSALS = Object.freeze({
   proposalNotDiscarded: "DESKTOP_PROPOSAL_NOT_DISCARDED",
   applyNotCompleted: "DESKTOP_APPLY_NOT_COMPLETED",
   openPathEvidenceInvalid: "DESKTOP_OPEN_PATH_EVIDENCE_INVALID",
+  requestInFlight: "DESKTOP_PRODUCT_REQUEST_IN_FLIGHT",
 } as const);
 
 export type DesktopProductRefusal =
@@ -156,6 +160,8 @@ export const DESKTOP_PRODUCT_REFUSAL_MESSAGES: Readonly<
     "The host did not report the apply as completed, so the staged edit is still pending.",
   [DESKTOP_PRODUCT_REFUSALS.openPathEvidenceInvalid]:
     "The play response carried no closed session with observed tick digests, so nothing is reported as played.",
+  [DESKTOP_PRODUCT_REFUSALS.requestInFlight]:
+    "Another project request is still open; the host holds one session and one proposal, so this control waits rather than racing it.",
 });
 
 export type DesktopAuthoringRequest = Readonly<{
@@ -298,8 +304,17 @@ export function desktopWebStageDecision(
     if (!assets.includes(operation.assetPath)) assets.push(operation.assetPath);
   }
 
+  let carried: Record<string, unknown>;
+  try {
+    carried = structuredClone(record);
+  } catch {
+    return refuse(
+      config.refusals.documentDataInvalid,
+      "The open Scene Document data holds a value that cannot be carried into a proposal.",
+    );
+  }
   const newValue = {
-    ...structuredClone(record),
+    ...carried,
     webExperience: { html, assets },
   } as JsonObject;
 
