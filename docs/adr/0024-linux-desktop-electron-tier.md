@@ -1,6 +1,9 @@
 # ADR 0024: A `desktop/` tier — the Linux desktop application is Electron over the shell's chrome and the real engine
 
-- **Status:** Accepted.
+- **Status:** Accepted — **Amended 2026-08-05** by
+  [sceneaxi#204](https://github.com/Vhailors/sceneaxi/issues/204): the tier gained the
+  `desktop/windows` packaging root around this same application, with no public
+  artifact. See *Amendment* below.
 - **Date recorded:** 2026-07-31
 - **Source:** captain hard mandate (2026-07-31), [sceneaxi#183](https://github.com/Vhailors/sceneaxi/issues/183) — ship a real downloadable Linux desktop application over the real engine stack, superseding the HTML-chrome-only story for packaging (the chrome itself, sceneaxi#158, is unchanged).
 - **Lineage:** Extends the separate-install-root pattern of [ADR 0018](0018-sites-tier-three-vercel-one-neon.md) to a new tier; consumes [ADR 0002](0002-presentation-runtime-deep-seam.md)/[0017](0017-three-product-presentation-core.md) presentation unchanged; opens sessions only through [ADR 0023](0023-open-path-bootstrap-and-session-lifecycle.md); widens neither [ADR 0003](0003-editor-sequencing-e1-first-e2-specified.md) nor [ADR 0020](0020-minimum-e2-web-editor-entitlement.md); claims no distribution authority beyond what [ADR 0019](0019-public-engine-sdk-zip-not-npm.md) already models.
@@ -94,3 +97,18 @@ CI artifact + lockstep checksums; `/engine` advertising.
 **Held elsewhere:** Windows/macOS packaging, signing, auto-update, store listings,
 and release/tagging authority; the live editor deepening (sceneaxi#184); identity
 in the desktop app; Kids anything; Stage 1 and every captain hold.
+
+## Amendment — Windows packaging landed as a second install root (2026-08-05)
+
+[sceneaxi#204](https://github.com/Vhailors/sceneaxi/issues/204) adds `desktop/windows`,
+which extends this tier's separate-install-root pattern rather than changing any
+decision above. It stages the already-built `desktop/linux` runtime for a signed NSIS
+build and adds only a Windows updater bootstrap — no second chrome, bridge, renderer,
+or matrix edge (its allow list is empty). The one factual claim this amendment
+corrects is scope: Windows *packaging* is no longer held elsewhere, while Windows
+signing credentials, release/tagging authority, and any public artifact still are.
+macOS is unchanged and remains unpackaged. Nothing here becomes a claim: `dist`
+refuses without operator-supplied signing inputs and never publishes, `/engine` keeps
+Windows as a coming-soon row, and the download IA may only change after a real
+release is verified and recorded. That contract's owner is
+[`docs/desktop-windows.md`](../desktop-windows.md).

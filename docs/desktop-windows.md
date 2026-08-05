@@ -40,8 +40,8 @@ Inject these values at runtime:
 
 | Name | Required for | Supplied by |
 |---|---|---|
-| `WIN_CSC_LINK` | `dist`, `release` | operator-controlled Windows code-signing `.pfx` path, URL, or base64 value |
-| `WIN_CSC_KEY_PASSWORD` | `dist`, `release` | operator-controlled certificate password |
+| `WIN_CSC_LINK` | `dist`, `draft:upload` | operator-controlled Windows code-signing `.pfx` path, URL, or base64 value |
+| `WIN_CSC_KEY_PASSWORD` | `dist`, `draft:upload` | operator-controlled certificate password |
 | `GITHUB_RELEASE_TOKEN` | `draft:upload` only | operator-controlled GitHub token with contents-write permission |
 | `SCENEAXI_WINDOWS_RELEASE_TAG` | `draft:upload` only | exact existing draft tag, equal to `v<package.json version>` |
 
@@ -110,3 +110,12 @@ metadata is created/uploaded only through the existing-draft release command, wh
 refuses without its token, tag, GitHub CLI, signing identity, and SignTool. A draft is
 not visible to normal update clients, so publication remains the final explicit
 operator action.
+
+## Gate coverage
+
+Every rule above is held on any host, with no Windows machine and no credential:
+`pnpm check:desktop` covers this install root exactly like `desktop/linux`,
+`pnpm --dir desktop/windows smoke` re-checks the packaging configuration and the
+download IA's coming-soon state, and `tests/desktop/desktop-windows-packaging.test.ts`
+owns the artifact shape, the missing-authority refusal set, the non-publishing `dist`
+path, and the update refusals — extend it when touching any of them.
