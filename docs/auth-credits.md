@@ -559,6 +559,10 @@ today `live` refuses everywhere regardless of the variable. Reaching live mode s
 the separate captain go-live decision ADR 0021 holds, *and* a deliberate wiring change on
 top of it. `SCENEAXI_BILLING_MODE=live` selects a mode; it authorizes nothing.
 
+The complete non-executable Stripe account, webhook, tax/legal, refund, deployment,
+preflight, and rollback gate is [`docs/stripe-live-activation.md`](stripe-live-activation.md).
+Every item remains unchecked; the checklist neither supplies secrets nor authorizes LIVE.
+
 Regressions: `packages/billing/test/live-mode.test.ts` (the resolver's contract) and the
 `live-mode authorization sourced from configuration (D5)` block in
 `packages/billing/test/stripe-checkout.test.ts` (both ends, against the real paths).

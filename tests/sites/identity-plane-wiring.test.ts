@@ -921,6 +921,36 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     expect(store.entryCount("acct-1")).toBe(0);
   });
 
+  it("acknowledges a TEST refund event without rewriting or deleting ledger history", async () => {
+    // SA-PAY-1 does not invent refund issuance authority. Returning money and
+    // reconciling credits are separate operations: the latter needs provider evidence,
+    // the original paid intent, and a new append-only adjustment. Until that workflow is
+    // approved, a refund event is an explicitly unsupported event type and cannot touch
+    // the original grant or append a guessed debit.
+    const store = webhookStore();
+    const outcome = await signedCall({
+      payload: eventBody("evt_test_refund", {
+        type: "charge.refunded",
+        sessionId: "ch_test_refunded_charge",
+        metadata: {
+          sceneaxiUserId: "member-1",
+          sceneaxiPurpose: "credit-pack",
+          sceneaxiItemId: PACK.packId,
+          sceneaxiIntentId: INTENT.intentId,
+        },
+      }),
+      store,
+      evidence: unreachableEvidence,
+    });
+
+    expect(outcome).toMatchObject({
+      ok: true,
+      ignored: true,
+      reason: BILLING_REFUSE_REASONS.webhookEventTypeUnsupported,
+    });
+    expect(store.entryCount("acct-1")).toBe(0);
+  });
+
   it("still refuses a signed body that carries no event type", async () => {
     // Acknowledging unhandled types must not become a blanket 2xx for anything unlabelled:
     // Stripe always states the type, so a body without one is a fault, not a no-op.

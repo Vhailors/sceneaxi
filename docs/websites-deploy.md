@@ -504,3 +504,8 @@ their existing named reasons.
 Kids · custom domains · Stripe live mode · catalog asset checkout (tier-6b marketplace
 activation stays an open captain decision, so purchase and publish refuse
 `CATALOG_COMMERCE_INERT`) · npm publication of any package · editor project persistence.
+
+Stripe LIVE readiness has a complete, deliberately non-executable checklist in
+[`docs/stripe-live-activation.md`](stripe-live-activation.md). It does not change this
+deployment state: the adapter remains TEST-key-only and the shipped checkout and grant
+paths still receive no live-mode authorization.
