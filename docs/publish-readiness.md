@@ -72,6 +72,7 @@ honest statement that nothing is released.
 | `@sceneaxi/site-umbrella` | `0.0.0` | `sites` | — |
 | `@sceneaxi/desktop-linux` | `0.0.0` | `desktop` | — |
 | `@sceneaxi/desktop-windows` | `0.0.0` | `desktop` | — |
+| `@sceneaxi/desktop-macos` | `0.0.0` | `desktop` | — |
 
 ## Export surface of the consumer packages
 

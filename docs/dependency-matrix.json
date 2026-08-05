@@ -161,6 +161,12 @@
       "releaseGroup": "desktop",
       "allow": [],
       "note": "sceneaxi#204: isolated Windows signing/update packaging around the already-built desktop/linux application. Its source imports no SceneAxi package and adds only a Windows updater bootstrap; the staged runtime remains owned by desktop/linux, so there is no second editor, bridge, renderer, profile, Kids, or identity implementation."
+    },
+    "@sceneaxi/desktop-macos": {
+      "dir": "desktop/macos",
+      "releaseGroup": "desktop",
+      "allow": ["@sceneaxi/schemas"],
+      "note": "sceneaxi#194: the separate macOS packaging install root. Its only source-level workspace edge is schemas for the frozen seam; packaging stages the exact already-bundled desktop/linux runtime instead of importing or forking the desktop-shell, bridge, renderer, or engine implementation. The macOS-only bootstrap adds a fail-closed update check. No profile, Kids, auth/billing, plugin host, or second renderer owner."
     }
   },
   "kidsBoundary": {

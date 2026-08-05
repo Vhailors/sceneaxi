@@ -1,0 +1,31 @@
+appId: com.sceneaxi.engine-desktop
+buildVersion: "1"
+productName: SceneAxi Engine Desktop
+executableName: sceneaxi-engine-desktop
+directories:
+  output: release
+files:
+  - dist/**
+  - package.json
+  - "!node_modules/**"
+extraResources:
+  - from: dist/app-update.yml
+    to: app-update.yml
+npmRebuild: false
+electronLanguages:
+  - en-US
+mac:
+  category: public.app-category.developer-tools
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  notarize: true
+  entitlements: entitlements.mac.plist
+  entitlementsInherit: entitlements.mac.plist
+  target:
+    - target: dmg
+      arch:
+        - universal
+    - target: zip
+      arch:
+        - universal
+  artifactName: SceneAxi-Engine-Desktop-${version}-macos-${arch}.${ext}

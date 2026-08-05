@@ -29,6 +29,9 @@
       "@sceneaxi/desktop-shell": [
         "./apps/desktop-shell/src/index.ts"
       ],
+      "@sceneaxi/desktop-macos": [
+        "./desktop/macos/src/index.ts"
+      ],
       "@sceneaxi/engine-orchestrator": [
         "./packages/engine-orchestrator/src/index.ts"
       ],
@@ -47,6 +50,7 @@
     "apps/*/src/**/*.ts",
     "sites/*/src/index.ts",
     "sites/*/src/lib/**/*.ts",
+    "desktop/*/test/**/*.ts",
     "desktop/*/src/index.ts",
     "desktop/*/src/lib/**/*.ts"
   ]

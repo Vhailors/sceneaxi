@@ -33,6 +33,9 @@ export default defineConfig({
       "@sceneaxi/desktop-shell": fileURLToPath(
         new URL("./apps/desktop-shell/src/index.ts", import.meta.url),
       ),
+      "@sceneaxi/desktop-macos": fileURLToPath(
+        new URL("./desktop/macos/src/index.ts", import.meta.url),
+      ),
       "@sceneaxi/engine-orchestrator": fileURLToPath(
         new URL("./packages/engine-orchestrator/src/index.ts", import.meta.url),
       ),
@@ -65,6 +68,7 @@ export default defineConfig({
     include: [
       "packages/*/test/**/*.test.ts",
       "apps/*/test/**/*.test.ts",
+      "desktop/*/test/**/*.test.ts",
       "tests/**/*.test.ts",
     ],
     // Fail-closed: an empty test surface is a gate failure, never a pass.

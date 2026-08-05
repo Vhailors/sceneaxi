@@ -32,7 +32,9 @@ L4  desktop            the packaged desktop applications (leaf; ADR 0024). deskt
                        three engine packages it draws and opens through; no profile, no
                        Kids, no auth/billing, no plugin host. desktop/windows packages
                        that same built application for Windows and names no SceneAxi
-                       package at all (sceneaxi#204)
+                       package at all (sceneaxi#204); desktop/macos stages that same
+                       bundled runtime for signing/notarization and consumes schemas
+                       only (sceneaxi#194)
 ```
 
 ## Allow matrix (✓ = allowed; blank = denied)
@@ -58,6 +60,7 @@ L4  desktop            the packaged desktop applications (leaf; ADR 0024). deskt
 | site-catalog-game / site-catalog-web (→ site-kit ✓) | | | | | | | | | | |
 | desktop-linux (→ site-kit ✓) | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | ✓ (desktop-shell alone) |
 | desktop-windows | | | | | | | | | | |
+| desktop-macos (stages desktop-linux dist) | ✓ | | | | | | | | | |
 
 Deliberate denials that carry design intent:
 
@@ -198,17 +201,22 @@ Recorded in `dependency-matrix.json → releaseGroups` and stamped on every mani
   only importer of those owners outside themselves, and the checker refuses any other.
   Framework and provider SDKs stay in the `sites/` tier. Deploy and env details:
   [`websites-deploy.md`](websites-deploy.md).
-- **desktop** (`desktop-linux`, `desktop-windows`): packaged desktop applications
-  (ADR 0024), each its own
+- **desktop** (`desktop-linux`, `desktop-windows`, `desktop-macos`): packaged desktop
+  applications (ADR 0024), each its own
   install root outside the repository-root workspace so Electron never moves the
-  hermetic lockfile. Deployable, not consumable — like a site it declares no root
-  export and uses `link:` dependencies (into `packages/` **or** `apps/`, the one
+  hermetic lockfile. Deployable, not consumable — its root export is a gate-tested
+  package seam rather than a registry consumer surface, and it uses `link:` dependencies
+  (into `packages/` **or** `apps/`, the one
   widening the desktop tier holds). Build, distribution, and the recorded checksums:
   [`desktop-linux.md`](desktop-linux.md). `desktop-windows` holds an empty allow list:
   it packages the already-built `desktop/linux` runtime and imports no SceneAxi
   package, so it is a second install root rather than a second application —
   signing, update, and release contract in
-  [`desktop-windows.md`](desktop-windows.md).
+  [`desktop-windows.md`](desktop-windows.md). The macOS packager names only `schemas`
+  in source and stages that same already-bundled Linux install-root runtime
+  byte-for-byte, so it adds no second product implementation or renderer owner —
+  signing, notarization, and release contract in
+  [`desktop-macos.md`](desktop-macos.md).
 - **identity** (`auth`, `billing`): independently versioned; consumes only public
   contracts from `schemas` (and, for `billing`, the `auth` seam); never engine
   packages, profiles, the CLI, or a service locator. Better Auth, Neon, and the
