@@ -409,7 +409,11 @@ Two rules keep this honest:
 
 ## Deviations from the archive, and why
 
-Each row is also carried as data in `DEVIATIONS`.
+Every row that is an archive-versus-shipped *value* — a colour, a font source, a
+stage geometry — is also carried as data in `DEVIATIONS`, so the test suite can
+re-measure it. The rows below that settle a product or contract question instead
+carry no data row, because there is no archive value for the suite to compare
+against.
 
 | Deviation | Archive | Shipped | Why |
 |---|---|---|---|
@@ -421,6 +425,7 @@ Each row is also carried as data in `DEVIATIONS`.
 | Informational blue | the member carries both `#5B9CFF` and a lighter `#8FB7F5` for the same informational role | `#5B9CFF` | the two archive members disagree, so the shared sheet settles it: Foundations v2 canonicalises `--info` to `#5B9CFF`, D1 makes the sheet binding, and the value clears the text floor here anyway (6.16:1 at worst on `SURFACE`, 6.48:1 on the note's own fill) — so there is no accessibility reason to keep the member's lighter variant, and keeping it would be drift from the shared layer. |
 | Kids profile | a working editor with only the assistant locked | the **whole editor body** refuses | **contract conflict, resolved for the repository.** The Kids product is an isolation boundary with no UI (`open-path-policy.md`, `OPEN_PATH_KIDS_REFUSED`). An editor that merely looked disabled under a Kids badge would still be a Kids authoring UI. Every control behind the refusal goes inert — in the emitted bytes, not only after a click, and decided in one place rather than remembered per call site — so no mode can be entered and no removed panel can be opened from behind it; eleven chrome controls stay live so the refusal is a state you can leave. |
 | Panel inventory | fixture object trees, digests, byte sizes, fps, triangle counts, run timings, evidence rows | real structure with honest empty and inert states | a shell that mounts no renderer and opens no kernel session has no fps, no triangle count, and no `14.2 MB` artifact. Rendering the archive's fixtures would be inventing file sizes and hashes. Change Review is the one fixture queue kept — its interactions are in scope — and it says on the surface that deciding there writes no document. |
+| Assistant product flow (sceneaxi#192) | nothing recorded: this document has never carried an assistant composer inventory from the archive, and the archive is a design input for visual values, not for product flow | a real prompt `<textarea>`, three provider-route chips (`local`, `byo`, `hosted`), progress and result regions that report actual work, a `Retry` action, and a viewport manipulator bar (`Move +X`, `Move +Y`, `Rotate Y`, `Scale +`) | **product decision, not a visual one.** sceneaxi#192 turns the assistant from a drawn panel into a flow that a runtime performs, so the surface needs controls for the states that flow really has. They ship as modelled controls under the rules already on this page: each declares its kind, all of them are `inert` with a named refusal in the standalone CLI render and become `live` only when the packaged Linux runtime binds them, and all of them are denied on Kids. No colour, size, or geometry is claimed for them from the archive, which is why there is no `DEVIATIONS` row: there is no archive value to compare against. Their rendered contrast has not been swept in a browser — see the caveat on the recorded sweep below. |
 
 ### The renderer note is deliberately dropped
 
@@ -528,14 +533,42 @@ sentence can return by review slip.
   at the drawer tiers, not only at 1680×1000.
 
   **This sweep predates the assistant product controls, and has not been
-  re-run for them.** sceneaxi#192 later added the modelled prompt field, Retry,
-  the three route chips, and the four artifact manipulators to this document, so
-  every count below — buttons, focus stops, inert controls, and the elements each
-  contrast measurement swept — describes the document as it stood on 2026-07-28,
-  and the contrast sweep never looked at the controls added after it. Nothing
-  here was re-derived from the model instead, because a count computed from the
-  emitted bytes is not a browser observation. Re-record this whole sweep before
-  citing it for the current chrome.
+  re-run for them.** sceneaxi#192 later added, to the documents that render the
+  assistant panel and the viewport, eight further buttons — `Retry`, the three
+  provider-route chips, and the four artifact manipulators — plus the modelled
+  prompt `<textarea>`. Everything below therefore describes the document as it
+  stood on 2026-07-28, and three claims in it are stale by name:
+
+  - **The control counts.** `build`'s "58 buttons, 53 focus stops, 17 inert" and
+    `kids`'s "the same 58 with 47 inert" were taken before those eight buttons
+    existed, so each figure is low, and "buttons" is no longer even a count of
+    the document's interactive elements, because the prompt is a `<textarea>`
+    rather than a button. The **eleven live controls on `kids`** enumerated
+    beside those counts are unaffected: that list is the model's own
+    outside-the-refusal set (`outsideRefusal` in `visual-model.ts`), not a
+    browser observation, and #192 added no control to it. The inert count
+    sitting next to it is a count of this document, and it is stale.
+  - **The composited contrast sweep.** Its per-document element totals (99 on
+    `build`, 63 on `kids`, and every other figure in that list) are counts of a
+    smaller document than the chrome emits today, so its "0 failures below 4.5:1"
+    is a result about that smaller document. The added controls' own text
+    pairings were never measured: the route chips at `font-size:9px`, in both
+    their `--dim` rest state and their pressed `--accent` state on the accent
+    surface fill; the prompt's placeholder and its `--inert` label in the
+    read-only state; the manipulator labels over the viewport; and the progress
+    line and the result region it reveals — none of them at rest, and none under
+    the pointer.
+  - **The inert-under-the-pointer reading.** Its enumeration of the visible
+    inert controls, and its count of stylesheet `:hover` rules that repaint a
+    label, both predate `.assistant-manipulator:hover` and the `.is-inert`
+    answer shipped beside it, so the rule count is low and the manipulators
+    were never the control under the pointer.
+
+  No figure here was re-derived from the model instead, and no measurement was
+  extrapolated onto a control the browser never saw: a count computed from the
+  emitted bytes is not a browser observation, and a ratio computed from the token
+  table is not a composited one. Re-record this whole sweep in a real browser
+  before citing any figure in it for the current chrome.
 
   **A second correction, on the same axis.** The earlier record read every
   control **at rest**, and a resting read cannot see a `:hover` rule. A
