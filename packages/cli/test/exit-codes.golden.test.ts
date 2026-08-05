@@ -22,6 +22,9 @@ const GOLDEN_FAILURE_EXIT: Record<FailureClass, number> = {
   CONFLICT: 1,
   VALIDATION: 2,
   NOT_FOUND: 1,
+  BRIDGE_UNAVAILABLE: 1,
+  BRIDGE_PROTOCOL: 1,
+  BRIDGE_REFUSED: 1,
 };
 
 describe("deterministic exit-code map", () => {
@@ -100,6 +103,7 @@ describe("exit codes at every nesting level (anti gh-axi wart)", () => {
       "profile",
       "catalog",
       "evidence",
+      "desktop",
       "demo",
       "protocol",
     ]) {
@@ -140,6 +144,7 @@ describe("exit codes at every nesting level (anti gh-axi wart)", () => {
       ["asset", "list"],
       ["catalog", "list"],
       ["evidence", "list"],
+      ["desktop", "bridge", "call"],
     ]) {
       const r = runCli(path);
       expect(r.exitCode, path.join(" ")).toBe(ExitCode.USAGE);

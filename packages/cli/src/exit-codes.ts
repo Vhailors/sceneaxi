@@ -45,7 +45,10 @@ export type FailureClass =
   /** Schema / pointer / proposal / document validation refusal. */
   | "VALIDATION"
   /** Document or proposal path not found. */
-  | "NOT_FOUND";
+  | "NOT_FOUND"
+  | "BRIDGE_UNAVAILABLE"
+  | "BRIDGE_PROTOCOL"
+  | "BRIDGE_REFUSED";
 
 /** Documented failure-class → exit-code map (golden-tested). */
 export const FAILURE_EXIT_CODE: Readonly<Record<FailureClass, ExitCodeValue>> =
@@ -59,6 +62,9 @@ export const FAILURE_EXIT_CODE: Readonly<Record<FailureClass, ExitCodeValue>> =
     CONFLICT: ExitCode.ERROR,
     VALIDATION: ExitCode.USAGE,
     NOT_FOUND: ExitCode.ERROR,
+    BRIDGE_UNAVAILABLE: ExitCode.ERROR,
+    BRIDGE_PROTOCOL: ExitCode.ERROR,
+    BRIDGE_REFUSED: ExitCode.ERROR,
   });
 
 export function exitCodeForFailure(code: FailureClass): ExitCodeValue {

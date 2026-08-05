@@ -7,6 +7,14 @@
  */
 
 import { EXIT_CODE_TABLE } from "./exit-codes.js";
+import {
+  desktopBridgeCallHelp,
+  desktopBridgeStatusHelp,
+  runDesktopBridgeCall,
+  runDesktopBridgeStatus,
+  runDesktopBridgeTools,
+} from "./desktop-verbs.js";
+import type { DesktopLocalBridgeClient } from "./desktop-client.js";
 import type { CliOutcome, ResultPayload } from "./envelope.js";
 import {
   projectCaptureHelp,
@@ -44,6 +52,7 @@ import { CLI_VERSION, PROTOCOL_SCHEMA_VERSION } from "./version.js";
 export interface VerbContext {
   readonly path: readonly string[];
   readonly tokens: readonly string[];
+  readonly desktopBridge?: DesktopLocalBridgeClient;
 }
 
 export interface VerbNode {
@@ -206,6 +215,28 @@ const evidenceGroup = group("evidence", "Evidence packet operations (read-only)"
   ),
 });
 
+const desktopGroup = group("desktop", "Local Engine Desktop bridge", {
+  bridge: group("bridge", "Versioned same-user Unix-socket agent bridge", {
+    call: argVerb(
+      "call",
+      "Invoke one permission-bound checked-in agent tool",
+      (ctx) => runDesktopBridgeCall(ctx.path, ctx.tokens, ctx.desktopBridge),
+      desktopBridgeCallHelp,
+    ),
+    status: argVerb(
+      "status",
+      "Discover, authenticate, and handshake with the running local desktop",
+      (ctx) => runDesktopBridgeStatus(ctx.path, ctx.tokens, ctx.desktopBridge),
+      desktopBridgeStatusHelp,
+    ),
+    tools: verb(
+      "tools",
+      "Print the versioned local agent tool schemas (no connection required)",
+      runDesktopBridgeTools,
+    ),
+  }),
+});
+
 /**
  * Held-key protocol demo (sceneaxi#7): gated by SYNTHETIC fixture keys only.
  * With the shipped fail-closed runtime (no snapshot, no sentinel) this verb
@@ -266,6 +297,7 @@ export const ROOT_COMMANDS: Readonly<Record<string, CommandNode>> =
     profile: profileGroup,
     catalog: catalogGroup,
     evidence: evidenceGroup,
+    desktop: desktopGroup,
     demo: demoGroup,
     protocol: protocolGroup,
   });

@@ -67,6 +67,7 @@ and tokens; the renderer only binds their Mount API effects.
 |---|---|---|
 | Bridge contract (channel, envelope, refusals) | `src/lib/bridge-contract.ts` | everywhere (pure) |
 | Bridge (`handle()` over the real engine and assistant job) | `src/lib/bridge.ts` | main process; gate-tested from `tests/e2e/` |
+| Local RPC adapter | `src/lib/local-rpc.ts` | main process; private same-user Unix socket for the CLI's closed agent tools |
 | Scene composition (one pipeline, two consumers) | `src/lib/desktop-scene.ts` | main process; gate-tested |
 | First-launch project seed and one-time migration | `src/lib/project-seed.ts` | main process; gate-tested |
 | Chrome document emitter (desktop-shell, unforked) | `src/lib/chrome-document.ts` | build time |
@@ -94,8 +95,14 @@ Rules the gate enforces (`pnpm check:desktop`, `pnpm check:boundaries`,
   the profile it carries makes authoring-core deny again — independently — before
   generation or provider dispatch. No Kids or identity package is imported; the
   dependency matrix keeps both denied.
-- No secret exists in this tier; the window runs with context isolation and the
-  sandbox on, and navigation away from the packaged document is refused.
+- No provider secret exists in this tier. The local RPC adapter does generate a
+  launch-scoped 256-bit capability in a mode-`0600` discovery descriptor; it is
+  local bridge authentication, never BYOK configuration, and is neither logged
+  nor returned by the CLI. Provider credentials may arrive only inside an
+  injected runner backed by the OS credential store, as specified in
+  [`docs/desktop-local-bridge.md`](../../docs/desktop-local-bridge.md). The window
+  still runs with context isolation and the sandbox on, and navigation away from
+  the packaged document is refused.
 
 ## What this is not
 

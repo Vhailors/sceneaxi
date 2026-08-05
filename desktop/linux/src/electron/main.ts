@@ -21,6 +21,11 @@ import {
   DESKTOP_BRIDGE_CHANNEL,
 } from "../lib/bridge-contract.js";
 import { createDesktopBridge } from "../lib/bridge.js";
+import {
+  resolveDesktopLocalBridgePaths,
+  startDesktopLocalBridgeServer,
+  type DesktopLocalBridgeServer,
+} from "../lib/local-rpc.js";
 import { seedDesktopProject } from "../lib/project-seed.js";
 
 // The bundle is CJS (Electron's main entry), so the native `__dirname` is real.
@@ -72,6 +77,7 @@ function payloadField(value: unknown, name: string): unknown {
 }
 
 let reportedFailure = false;
+let localBridgeServer: DesktopLocalBridgeServer | null = null;
 
 /** Print the one `{ok:false}` proof line and exit; later callers stay silent. */
 function reportFailure(message: string): void {
@@ -98,6 +104,25 @@ async function start(): Promise<void> {
   const bridge = createDesktopBridge({
     cwd,
     onFrameReport: (report) => frameReported?.(report),
+  });
+
+  const localPaths = SMOKE
+    ? {
+        socketPath: join(cwd, ".sceneaxi-runtime", "desktop-v1.sock"),
+        discoveryPath: join(cwd, ".sceneaxi-config", "desktop-bridge-v1.json"),
+      }
+    : resolveDesktopLocalBridgePaths({
+        ...(process.env["XDG_RUNTIME_DIR"] === undefined
+          ? {}
+          : { runtimeDir: process.env["XDG_RUNTIME_DIR"] }),
+        ...(process.env["XDG_CONFIG_HOME"] === undefined
+          ? {}
+          : { configDir: process.env["XDG_CONFIG_HOME"] }),
+      });
+  localBridgeServer = await startDesktopLocalBridgeServer({
+    bridge,
+    projectRoot: cwd,
+    ...localPaths,
   });
 
   ipcMain.handle(DESKTOP_BRIDGE_CHANNEL, (_event, request: unknown) =>
@@ -221,6 +246,8 @@ async function start(): Promise<void> {
     writeFileSync(shotPath, png);
   }
 
+  await localBridgeServer.close();
+  localBridgeServer = null;
   rmSync(cwd, { recursive: true, force: true });
 
   console.log(
@@ -253,5 +280,7 @@ void start().catch((error: unknown) => {
 });
 
 app.on("window-all-closed", () => {
-  app.quit();
+  const closing = localBridgeServer?.close() ?? Promise.resolve();
+  localBridgeServer = null;
+  void closing.finally(() => app.quit());
 });

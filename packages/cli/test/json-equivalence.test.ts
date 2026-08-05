@@ -22,6 +22,8 @@ describe("strict --json equivalence", () => {
     ["asset", "list"],
     ["catalog", "list"],
     ["evidence", "list"],
+    ["desktop", "bridge", "tools"],
+    ["desktop", "bridge", "call"],
     ["project"],
     ["scene"],
     ["project", "bogus-verb"],
@@ -31,6 +33,7 @@ describe("strict --json equivalence", () => {
     ["project", "new", "--help"],
     ["scene", "compose", "--help"],
     ["catalog", "list", "--help"],
+    ["desktop", "bridge", "call", "--help"],
   ];
 
   for (const path of paths) {

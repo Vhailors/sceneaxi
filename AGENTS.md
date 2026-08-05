@@ -359,10 +359,21 @@ disabled unless the release preflight has real Apple signing/notarization inputs
 emits stable universal artifact names plus checksummed release/update metadata. It owns
 no second renderer. No signed/public macOS artifact is recorded yet, so `/engine` must
 continue to show macOS unavailable; `docs/desktop-macos.md` owns the exact operator
-prerequisites and release handoff. No profile package, Kids dependency, auth/billing
-implementation, or CLI verb reaches this tier; the assistant request carries only profile
-vocabulary so the bridge and authoring core can deny Kids independently before local work
-or provider dispatch.
+prerequisites and release handoff. No profile package, Kids dependency, or auth/billing
+implementation reaches this tier; the assistant request carries only profile vocabulary
+so the bridge and authoring core can deny Kids independently before local work or provider
+dispatch.
+
+External CLI/agent attachment (sceneaxi#202) is the protocol-v1 same-user Unix
+socket in `desktop/linux/src/lib/local-rpc.ts`, over the same
+`createDesktopBridge()` session; the CLI surface is `desktop bridge
+status|tools|call`, and the shared closed tool/permission registry is
+`packages/schemas/src/desktop-local-bridge.ts`. Discovery, launch-capability
+permissions, BYOK OS-secret-store contract, deterministic refusals, and proof
+map are authoritative in `docs/desktop-local-bridge.md`. No provider credential
+crosses the descriptor, CLI, RPC, tool input, logs, evidence, or project files;
+local and BYOK carry `creditRoute: none`, while hosted has no local tool and
+stays behind the billing seam.
 
 Windows packaging (sceneaxi#204) is the separate `desktop/windows` install root and
 stages the already-built `desktop/linux` runtime rather than forking the editor,

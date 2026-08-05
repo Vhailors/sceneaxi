@@ -167,6 +167,12 @@ function defaultHelpForFailure(
       return [
         "Check document/proposal paths relative to --cwd (default: process cwd)",
       ];
+    case "BRIDGE_UNAVAILABLE":
+      return ["Start SceneAxi Engine Desktop, then retry the local bridge command"];
+    case "BRIDGE_PROTOCOL":
+      return ["Update the CLI and desktop app to compatible local bridge versions"];
+    case "BRIDGE_REFUSED":
+      return ["Inspect error.details.bridgeCode for the named desktop refusal"];
     case "INTERNAL":
     default:
       return ["Run `sceneaxi protocol inspect` for protocol diagnostics"];
