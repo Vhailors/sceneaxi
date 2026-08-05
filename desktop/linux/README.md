@@ -46,12 +46,22 @@ authoring propose → accept → undo round trip, and the renderer's real
 presentation frame report (`backend three`, `surface webgl-canvas` where a
 drawing buffer exists).
 
+The packaged chrome also binds its Assistant **Build** mode to the bridge. Local
+is a deterministic, free compiler; BYOK is free of SceneAxi credits but runs
+only when the embedding deployment injects its provider runner; Hosted is
+metered and refuses here because this desktop tier has no identity/credit plane.
+A successful action mounts the validated Sculpt Artifact into the live center
+viewport, adds translate/rotate/scale manipulators, and shows the artifact's
+read-only materials, supported collider physics, and procedural settings.
+Progress, provider/refusal details, and Retry remain on the surface. Ask and
+Agent modes refuse clearly rather than pretending they produce build output.
+
 ## Shape
 
 | Piece | Path | Runs in |
 |---|---|---|
 | Bridge contract (channel, envelope, refusals) | `src/lib/bridge-contract.ts` | everywhere (pure) |
-| Bridge (`handle()` over the real engine) | `src/lib/bridge.ts` | main process; gate-tested from `tests/e2e/` |
+| Bridge (`handle()` over the real engine and assistant job) | `src/lib/bridge.ts` | main process; gate-tested from `tests/e2e/` |
 | Scene composition (one pipeline, two consumers) | `src/lib/desktop-scene.ts` | main process; gate-tested |
 | Chrome document emitter (desktop-shell, unforked) | `src/lib/chrome-document.ts` | build time |
 | Electron entries (window, IPC adapter, smoke) | `src/electron/{main,preload}.ts` | Electron only |
@@ -68,9 +78,10 @@ Rules the gate enforces (`pnpm check:desktop`, `pnpm check:boundaries`,
   the renderer script tag).
 - The chrome's `sceneaxi-pixels-drawn` meta stays `false` at build time; the
   renderer updates it only from a real presentation frame's `pixelsDrawn`.
-- Kids has no path here: the bridge names no profile, the chrome's refuse-only
-  Kids projection stays owned by `@sceneaxi/desktop-shell`, and the dependency
-  matrix denies this package every profile and identity package.
+- Kids has no assistant path here: the chrome's refuse-only projection stays
+  owned by `@sceneaxi/desktop-shell`, and the bridge carries the selected profile
+  only to trigger authoring-core's deny before generation/provider dispatch. No
+  Kids or identity package is imported; the dependency matrix keeps both denied.
 - No secret exists in this tier; the window runs with context isolation and the
   sandbox on, and navigation away from the packaged document is refused.
 

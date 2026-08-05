@@ -132,6 +132,22 @@ export {
 } from "./scene-composition.js";
 
 export {
+  ASSISTANT_SCULPT_PROGRESS_PHASES,
+  ASSISTANT_SCULPT_REFUSALS,
+  runAssistantSculptAction,
+  sculptArtifactFromAssistantCompletion,
+  type AssistantSculptFailure,
+  type AssistantSculptInspection,
+  type AssistantSculptInspectionEdit,
+  type AssistantSculptProgress,
+  type AssistantSculptProgressPhase,
+  type AssistantSculptRefusal,
+  type AssistantSculptResult,
+  type AssistantSculptSuccess,
+  type RunAssistantSculptOptions,
+} from "./assistant-sculpt.js";
+
+export {
   MINIMUM_E2_STATE_VERSION,
   MinimumE2Error,
   createMinimumE2Editor,

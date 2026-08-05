@@ -91,6 +91,107 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
     );
   });
 
+  it("runs a free local assistant job and returns the typed artifact the viewport mounts", async () => {
+    const bridge = bridgeAt(authoringDir());
+    const started = bridge.handle({
+      action: "assistant",
+      payload: {
+        op: "start",
+        route: "local",
+        profile: "@sceneaxi/profile-game",
+        prompt: "A tall blue service cylinder",
+      },
+    });
+    expect(started.ok).toBe(true);
+    if (!started.ok) return;
+    expect(started.data).toMatchObject({ status: "running", route: "local" });
+
+    // The bridge remains synchronous: provider/local work settles behind the
+    // job, and the renderer polls the same status operation.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const status = bridge.handle({ action: "assistant", payload: { op: "status" } });
+    expect(status.ok).toBe(true);
+    if (!status.ok) return;
+    const job = status.data as {
+      status: string;
+      result: {
+        artifact: Parameters<ReturnType<typeof createSculptMountApi>["mount"]>[0]["artifact"];
+        inspection: {
+          physics: { supported: boolean };
+          materials: { supported: boolean };
+          settings: { supported: boolean };
+        };
+      };
+    };
+    expect(job.status).toBe("ready");
+    expect(job.result.inspection).toMatchObject({
+      physics: { supported: true },
+      materials: { supported: true },
+      settings: { supported: true },
+    });
+
+    const backend = createThreeSculptPresentationBackend();
+    const mounts = createSculptMountApi(backend);
+    mounts.mount({
+      instanceId: "assistant-live-output",
+      artifact: job.result.artifact,
+    });
+    const moved = mounts.updateTransform("assistant-live-output", {
+      translation: [1, 0, 0],
+      rotationEulerDegrees: [0, 15, 0],
+      scale: [1, 1, 1],
+    });
+    expect(moved.transform.translation).toEqual([1, 0, 0]);
+    expect(mounts.render()).toMatchObject({
+      backend: "three",
+      instanceIds: ["assistant-live-output"],
+      surface: "headless",
+      pixelsDrawn: false,
+    });
+    mounts.dispose();
+  });
+
+  it("refuses hosted desktop assistant work at the missing metering seam", () => {
+    const bridge = bridgeAt(authoringDir());
+    const hosted = bridge.handle({
+      action: "assistant",
+      payload: {
+        op: "start",
+        route: "hosted",
+        profile: "@sceneaxi/profile-game",
+        prompt: "Build a crate",
+      },
+    });
+    expect(hosted.ok).toBe(false);
+    if (!hosted.ok) {
+      expect(hosted.reason).toBe("DESKTOP_ASSISTANT_HOSTED_METERING_UNAVAILABLE");
+    }
+  });
+
+  it("denies Kids before an injected BYOK runner can be reached", () => {
+    let dispatches = 0;
+    const bridge = createDesktopBridge({
+      cwd: authoringDir(),
+      nowMs: fixedNow,
+      runByoAssistant: async () => {
+        dispatches += 1;
+        throw new Error("Kids reached the provider runner");
+      },
+    });
+    const denied = bridge.handle({
+      action: "assistant",
+      payload: {
+        op: "start",
+        route: "byo",
+        profile: "@sceneaxi/profile-kids",
+        prompt: "Build a toy",
+      },
+    });
+    expect(denied.ok).toBe(false);
+    if (!denied.ok) expect(denied.reason).toBe("ASSISTANT_SCULPT_KIDS_DENIED");
+    expect(dispatches).toBe(0);
+  });
+
   it("mounts the served scene on the one Three core without claiming pixels", () => {
     const bridge = bridgeAt(authoringDir());
     const res = bridge.handle({ action: "scene" });
@@ -315,6 +416,8 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     expect(html).toContain('<div class="viewport">');
     expect(html).toContain("viewport-note-inert");
     expect(html).toContain("<title>SceneAxi Engine Desktop</title>");
+    expect(html).toContain('<textarea id="assistant-prompt" data-kind="live"');
+    expect(html).toContain("Hosted · metered");
   });
 });
 
@@ -338,6 +441,22 @@ describe("desktop renderer module accounting", () => {
     expect(owners.map((file) => file.slice(desktopRoot.length + 1))).toEqual([
       "linux/src/renderer/viewport.ts",
     ]);
+  });
+
+  it("wires the assistant job into the existing mount and manipulator seams", () => {
+    const source = readFileSync(
+      join(desktopRoot, "linux/src/renderer/viewport.ts"),
+      "utf8",
+    );
+    expect(source).toContain('action: "assistant"');
+    expect(source).toContain("mounts.mount({");
+    expect(source).toContain("mounts.updateTransform(ASSISTANT_INSTANCE_ID");
+    expect(source).toContain('data-assistant-manipulators');
+    expect(source).toContain('shell.dataset.assistantMode !== "build"');
+    expect(source).toContain("DESKTOP_ASSISTANT_BUILD_MODE_REQUIRED");
+    expect(source).toContain("MATERIALS (read-only)");
+    expect(source).toContain("PHYSICS (read-only)");
+    expect(source).toContain("SETTINGS (read-only)");
   });
 
   it("updates the pixels meta only from the real frame, and never imports Electron", () => {

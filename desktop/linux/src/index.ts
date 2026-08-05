@@ -21,6 +21,7 @@ export const seam: PackageSeam = Object.freeze({
 
 export {
   DESKTOP_BRIDGE_ACTIONS,
+  DESKTOP_BRIDGE_ASSISTANT_OPS,
   DESKTOP_BRIDGE_AUTHORING_OPS,
   DESKTOP_BRIDGE_CHANNEL,
   DESKTOP_BRIDGE_GLOBAL,
@@ -28,6 +29,8 @@ export {
   bridgeOk,
   bridgeRefuse,
   type DesktopBridgeAction,
+  type DesktopBridgeAssistantOp,
+  type DesktopAssistantJobSnapshot,
   type DesktopBridgeAuthoringOp,
   type DesktopBridgeHandshake,
   type DesktopBridgeOk,
@@ -43,6 +46,7 @@ export {
   createDesktopBridge,
   type DesktopBridge,
   type DesktopBridgeOptions,
+  type DesktopAssistantRunRequest,
   type OpenPathExercise,
 } from "./lib/bridge.js";
 

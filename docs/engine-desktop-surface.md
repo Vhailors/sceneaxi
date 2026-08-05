@@ -169,18 +169,21 @@ no `fetch`. One request loads it and nothing else is fetched (measured below).
 
 The archive is a mockup: it draws controls for behaviour this shell has no
 contract for. Rather than dim them and hope, every control in the model declares
-one of three kinds, and `test/visual-model.test.ts` asserts that an inert control
-always has a refusal and a live one never does.
+one of four kinds, and `test/visual-model.test.ts` asserts that an inert control
+always has a refusal and a non-inert one never does.
 
 | Kind | Meaning | Examples |
 |---|---|---|
 | `view` | changes visual state; genuinely works | mode rail, dock tabs, profile switch, assistant open/close and its Ask/Build/Agent modes, the overlay openers and each of the four overlay dismiss buttons, the sculpt cancel, drawer toggles |
 | `review` | edits the fixture Change Review queue; **writes no document** | accept/reject a row, accept all, reject all |
-| `inert` | renders, keeps its focus stop, refuses by name | Sculpt object, assistant Send, menu bar, the three viewport-source tabs, the palette rows naming CLI-only verbs, and — on the refuse-only profile — every control except the eleven named below |
+| `live` | delegates a product action to an enclosing runtime seam | assistant prompt, Send, and Retry only when the packaged Linux runtime binds them |
+| `inert` | renders, keeps its focus stop, refuses by name | Sculpt object, standalone-shell assistant prompt/Send/Retry, menu bar, the three viewport-source tabs, the palette rows naming CLI-only verbs, and — on the refuse-only profile — every control except the eleven named below |
 
-There is no fourth kind. Nothing in the chrome reaches `@sceneaxi/authoring-core`,
-so it cannot write a document by accident, and `test/app.test.ts` proves a
-`chrome` invocation leaves a document byte-identical.
+The chrome still reaches no authoring package itself. Its standalone CLI render
+therefore keeps every product action inert and `test/app.test.ts` proves a
+`chrome` invocation leaves a document byte-identical. The packaged Linux tier
+requests `assistantRuntime: "local"`, binds only those three `live` controls to
+its existing bridge, and owns that runtime contract in `docs/desktop-linux.md`.
 
 ### The refuse-only profile demotes in one place
 

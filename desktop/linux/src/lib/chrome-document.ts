@@ -62,7 +62,9 @@ export type DesktopIndexHtmlOptions = {
  * shell's reference window, exactly what `sceneaxi-desktop chrome` emits.
  */
 export function desktopLinuxIndexHtml(options: DesktopIndexHtmlOptions = {}): string {
-  const view = desktopVisualView(createDesktopVisualState());
+  const view = desktopVisualView(
+    createDesktopVisualState({ assistantRuntime: "local" }),
+  );
   const chrome = renderDesktopChrome(view, {
     title: options.title ?? "SceneAxi Engine Desktop",
   });

@@ -184,7 +184,7 @@ const TONE_COLORS: Readonly<
 });
 
 /**
- * Render one control. `view` and `review` controls are live buttons; an inert
+ * Render one control. `view`, `review`, and `live` controls are buttons; an inert
  * one keeps its focus stop, is marked `aria-disabled`, and points at the
  * paragraph carrying its refusal so a screen reader gets the reason, not just
  * "dimmed".
@@ -204,6 +204,24 @@ function button(
     described,
     extra,
     `>${content}</button>`,
+  ].join("");
+}
+
+/** Render the one modelled prompt field through the same refusal contract. */
+function promptInput(ctrl: DesktopControl): string {
+  const inert = ctrl.kind === "inert";
+  const described = inert
+    ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
+    : "";
+  return [
+    `<textarea id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
+    inert
+      ? ` aria-disabled="true" data-refusal="${escapeHtml(ctrl.refusal ?? "")}" readonly`
+      : "",
+    described,
+    ` class="assistant-prompt${inert ? " is-inert" : ""}"`,
+    ` aria-label="${escapeHtml(ctrl.label)}" rows="3"`,
+    ` placeholder="Describe the object to build"></textarea>`,
   ].join("");
 }
 
@@ -504,12 +522,27 @@ function assistant(view: DesktopVisualView): string {
     <p><code>${escapeHtml(denial.lockCode)}</code></p>
   </div>
   <div class="assistant-body">
-    <p class="panel-empty">No provider adapter is configured on this surface, so there is no thread and nothing is sent anywhere.</p>
+    <p class="assistant-empty">Local runs on-device and is free. BYOK calls only a provider you configure and never touches credits. Hosted AI is metered and refuses here until its identity and credit seam is available.</p>
     <p class="assistant-thinking" role="status" data-assistant-thinking${view.assistant.thinking ? "" : " hidden"}><span class="dot" aria-hidden="true"></span>Thinking…</p>
-    <p class="assistant-foot">Every edit it makes arrives as a proposal you review. It never writes to the scene directly.</p>
+    <p class="assistant-progress" data-assistant-status role="status">Ready for a local prompt.</p>
+    <div class="assistant-result" data-assistant-result hidden></div>
+    ${button(view.assistant.retry, "Retry", "ghost-button assistant-retry", ` data-action="assistant-send" hidden`)}
+    <p class="assistant-foot">Successful Build output is validated as a Sculpt Artifact, mounted in the center viewport, and remains transformable through the Mount API.</p>
   </div>
   <div class="assistant-composer">
-    <p class="composer-placeholder">Ask, or describe what to build…</p>
+    ${promptInput(view.assistant.prompt)}
+    <div class="assistant-routes" role="group" aria-label="Assistant provider route">
+      ${view.assistant.routes
+        .map((route) =>
+          button(
+            route.control,
+            escapeHtml(route.label),
+            "assistant-route",
+            ` data-action="assistant-route" data-value="${escapeHtml(route.id)}" aria-pressed="${route.id === view.state.assistantRoute ? "true" : "false"}"`,
+          ),
+        )
+        .join("")}
+    </div>
     <div class="composer-actions">
       <div class="assistant-modes" role="group" aria-label="Assistant mode">
         ${view.assistant.modes
@@ -524,7 +557,7 @@ function assistant(view: DesktopVisualView): string {
           .join("")}
       </div>
       <span class="spacer"></span>
-      ${button(view.assistant.send, "↑", "primary-button icon-button", ` aria-label="Send"`)}
+      ${button(view.assistant.send, "↑", "primary-button icon-button", ` data-action="assistant-send" aria-label="Send"`)}
     </div>
   </div>
 </aside>`;
@@ -838,11 +871,18 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .primary-button.icon-button{color:var(--on-accent)}
 .primary-button.icon-button.is-inert{color:var(--inert-on-accent)}
 .assistant-body{flex:1;min-height:0;overflow-y:auto;padding:13px 12px}
+.assistant-empty{margin:0;font-size:11px;line-height:1.55;color:var(--dim)}
 .assistant-thinking{display:flex;align-items:center;gap:8px;margin:12px 0 0;font-size:11px;color:var(--dim)}
 .assistant-thinking .dot{background:var(--accent)}
+.assistant-progress{font-size:11px;line-height:1.5;color:var(--text-2);padding:9px;border:1px solid var(--line-control);border-radius:4px;background:var(--header)}
+.assistant-result{font-size:10px;line-height:1.55;color:var(--text-3);white-space:pre-wrap}
 .assistant-foot{font-size:10px;color:var(--dim);line-height:1.5;margin:12px 0 0}
 .assistant-composer{flex:none;border-top:1px solid var(--line);background:var(--panel);padding:9px 11px 11px;display:flex;flex-direction:column;gap:8px}
-.composer-placeholder{margin:0;background:var(--well);border:1px solid var(--line-raised);border-radius:6px;padding:9px 10px;min-height:56px;font-size:12px;color:var(--dim)}
+.assistant-prompt{width:100%;min-height:58px;resize:vertical;border:1px solid var(--line-control);border-radius:4px;background:var(--well);color:var(--text);font:11px/1.5 var(--sans);padding:8px}
+.assistant-prompt.is-inert{color:var(--inert);cursor:not-allowed}
+.assistant-routes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px}
+.assistant-route{min-width:0;padding:5px 3px;border:1px solid var(--line-control);border-radius:3px;color:var(--dim);font-size:9px;line-height:1.2}
+.assistant-route[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);background:${ACCENT.surface}}
 .composer-actions{display:flex;align-items:center;gap:7px}
 .assistant-modes{display:flex;background:var(--header);border:1px solid var(--line-control);border-radius:4px;padding:2px}
 .assistant-mode{height:21px;padding:0 9px;font-size:10px;color:var(--dim);border-radius:2px}
@@ -1201,11 +1241,13 @@ if (shell) {
       el.setAttribute('aria-disabled', 'true');
       el.setAttribute('aria-describedby', 'refusal-' + code);
       el.dataset.refusal = code;
+      if (el instanceof HTMLTextAreaElement) el.readOnly = true;
     } else {
       el.classList.remove('is-inert');
       el.removeAttribute('aria-disabled');
       el.removeAttribute('aria-describedby');
       delete el.dataset.refusal;
+      if (el instanceof HTMLTextAreaElement) el.readOnly = false;
     }
   };
 
@@ -1270,7 +1312,11 @@ if (shell) {
       if (shell.dataset.assistant === 'denied') return;
       setAssistant(assistantOpen() ? 'closed' : 'open');
     } else if (action === 'assistant-mode' && value) {
+      shell.dataset.assistantMode = value;
       q('.assistant-mode').forEach((m) => m.setAttribute('aria-pressed', String(m.dataset.value === value)));
+    } else if (action === 'assistant-route' && value) {
+      shell.dataset.assistantRoute = value;
+      q('.assistant-route').forEach((m) => m.setAttribute('aria-pressed', String(m.dataset.value === value)));
     } else if (action === 'sculpt-cancel') {
       // The model's cancel-sculpt takes the phase back to idle, which is the
       // state this document renders with the progress region hidden.
@@ -1357,7 +1403,7 @@ export function renderDesktopChrome(
   <p>${escapeHtml(refusal.message)}</p>
   <p>Minimum: <code>${escapeHtml(`${refusal.minimum.width}×${refusal.minimum.height}`)}</code> · refusal <code>${escapeHtml(refusal.code)}</code></p>
 </div>
-<div class="shell" data-mode="${escapeHtml(view.state.mode)}" data-profile="${escapeHtml(view.state.profile)}" data-assistant="${escapeHtml(view.assistant.state)}" data-overlay="${escapeHtml(view.state.overlay ?? "none")}" data-tier="${escapeHtml(view.tier)}" data-drawer-left="closed" data-drawer-inspector="closed" data-drawer-assistant="closed">
+<div class="shell" data-mode="${escapeHtml(view.state.mode)}" data-profile="${escapeHtml(view.state.profile)}" data-assistant="${escapeHtml(view.assistant.state)}" data-assistant-mode="${escapeHtml(view.state.assistantMode)}" data-assistant-route="${escapeHtml(view.state.assistantRoute)}" data-overlay="${escapeHtml(view.state.overlay ?? "none")}" data-tier="${escapeHtml(view.tier)}" data-drawer-left="closed" data-drawer-inspector="closed" data-drawer-assistant="closed">
 ${titleBar(view)}
 <div class="shell-body">
 ${modeRail(view)}

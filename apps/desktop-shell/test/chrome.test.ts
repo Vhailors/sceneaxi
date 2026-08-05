@@ -199,6 +199,29 @@ describe("engine desktop chrome — regions and modes", () => {
 });
 
 describe("engine desktop chrome — accessibility", () => {
+  it("renders an honest prompt flow when an assistant runtime is bound", () => {
+    const html = render(
+      createDesktopVisualState({ assistantRuntime: "local" }),
+    );
+    expect(html).toContain(
+      '<textarea id="assistant-prompt" data-kind="live"',
+    );
+    expect(html).toContain("Local · free");
+    expect(html).toContain("BYOK · free");
+    expect(html).toContain("Hosted · metered");
+    expect(html).toContain(
+      'id="assistant-send" data-kind="live" data-action="assistant-send"',
+    );
+    expect(html).toContain('data-assistant-mode="build"');
+    expect(html).toContain("shell.dataset.assistantMode = value");
+    expect(html).toContain('data-assistant-status role="status"');
+    expect(html).toContain("Retry");
+
+    const unavailable = render();
+    expect(unavailable).toContain(
+      `id="assistant-send" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.noDocumentBound}"`,
+    );
+  });
   it("uses landmarks rather than anonymous divs for every region", () => {
     const html = render();
     for (const landmark of [
@@ -694,7 +717,7 @@ describe("engine desktop chrome — honesty", () => {
       const html = render(state);
       expect(html, label).toContain("THIRD_PARTY_LLM_DENIED_BY_DEFAULT");
       expect(html, label).toContain('class="assistant-denied"');
-      expect(html, label).toContain('class="composer-placeholder"');
+      expect(html, label).toContain('class="assistant-prompt');
       expect(html, label).toContain('id="assistant-close"');
       expect(html, label).toContain(
         '.shell[data-assistant="denied"] .assistant-denied{display:flex}',
@@ -813,7 +836,7 @@ describe("engine desktop chrome — honesty", () => {
   it("never renders a control kind the model did not assign", () => {
     for (const [label, state] of ALL_STATES) {
       for (const [, kind] of render(state).matchAll(/data-kind="(\w+)"/g)) {
-        expect(["view", "review", "inert"], label).toContain(kind);
+        expect(["view", "review", "live", "inert"], label).toContain(kind);
       }
     }
   });

@@ -109,6 +109,8 @@ export {
   resolveWindowTier,
   type DesktopAssistantModeId,
   type DesktopAssistantProjection,
+  type DesktopAssistantRoute,
+  type DesktopAssistantRuntime,
   type DesktopAssistantState,
   type DesktopAssistantView,
   type DesktopChangeReviewRow,

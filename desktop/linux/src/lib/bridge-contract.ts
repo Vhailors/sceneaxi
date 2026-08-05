@@ -12,6 +12,11 @@
  * refusals (composition, orchestrator, authoring) pass through carrying their own
  * reason rather than being rewrapped into a second vocabulary.
  */
+import type {
+  AssistantSculptProgress,
+  AssistantSculptResult,
+  AssistantSculptSuccess,
+} from "@sceneaxi/authoring-core";
 
 /** The one IPC channel the preload exposes and the main process serves. */
 export const DESKTOP_BRIDGE_CHANNEL = "sceneaxi:desktop-bridge";
@@ -30,6 +35,7 @@ export const DESKTOP_BRIDGE_ACTIONS = Object.freeze([
   "handshake",
   "scene",
   "open-path",
+  "assistant",
   "authoring",
   "frame-report",
 ] as const);
@@ -45,6 +51,11 @@ export const DESKTOP_BRIDGE_REFUSALS = Object.freeze({
   actionUnknown: "DESKTOP_BRIDGE_ACTION_UNKNOWN",
   requestMalformed: "DESKTOP_BRIDGE_REQUEST_MALFORMED",
   authoringOpUnknown: "DESKTOP_BRIDGE_AUTHORING_OP_UNKNOWN",
+  assistantOpUnknown: "DESKTOP_BRIDGE_ASSISTANT_OP_UNKNOWN",
+  assistantBusy: "DESKTOP_ASSISTANT_BUSY",
+  assistantByoUnavailable: "DESKTOP_ASSISTANT_BYO_UNAVAILABLE",
+  assistantHostedMeteringUnavailable:
+    "DESKTOP_ASSISTANT_HOSTED_METERING_UNAVAILABLE",
 } as const);
 
 export type DesktopBridgeRefusalReason =
@@ -82,6 +93,23 @@ export const DESKTOP_BRIDGE_AUTHORING_OPS = Object.freeze([
 ] as const);
 
 export type DesktopBridgeAuthoringOp = (typeof DESKTOP_BRIDGE_AUTHORING_OPS)[number];
+
+export const DESKTOP_BRIDGE_ASSISTANT_OPS = Object.freeze([
+  "start",
+  "status",
+] as const);
+
+export type DesktopBridgeAssistantOp =
+  (typeof DESKTOP_BRIDGE_ASSISTANT_OPS)[number];
+
+export type DesktopAssistantJobSnapshot = Readonly<{
+  jobId: string;
+  route: "local" | "byo";
+  status: "running" | "ready" | "refused";
+  progress: ReadonlyArray<AssistantSculptProgress>;
+  result?: AssistantSculptSuccess;
+  refusal?: Extract<AssistantSculptResult, { readonly ok: false }>;
+}>;
 
 /** What `handshake` reports: identity, never capability it cannot prove. */
 export type DesktopBridgeHandshake = {

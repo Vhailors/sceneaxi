@@ -31,6 +31,7 @@ describe("desktop-linux seam", () => {
       "handshake",
       "scene",
       "open-path",
+      "assistant",
       "authoring",
       "frame-report",
     ]);

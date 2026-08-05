@@ -214,6 +214,8 @@ export type DesktopSculptPhase = "idle" | "running";
  * model's, so the two chrome surfaces cannot disagree about what states exist.
  */
 export type DesktopAssistantState = EditorShellAssistantState;
+export type DesktopAssistantRuntime = "none" | "local";
+export type DesktopAssistantRoute = "local" | "byo" | "hosted";
 
 /* -------------------------------------------------------------------------- */
 /* Refusals                                                                    */
@@ -393,6 +395,9 @@ export type DesktopVisualState = Readonly<{
   assistant: DesktopAssistantState;
   assistantMode: DesktopAssistantModeId;
   assistantThinking: boolean;
+  /** Runtime capability bound by the consumer; the standalone chrome has none. */
+  assistantRuntime: DesktopAssistantRuntime;
+  assistantRoute: DesktopAssistantRoute;
   sculpt: DesktopSculptPhase;
   /** 0-based pass index, clamped to the five-pass plan. */
   sculptPass: number;
@@ -430,6 +435,8 @@ const INITIAL_STATE: DesktopVisualState = Object.freeze({
   assistant: "open",
   assistantMode: "build",
   assistantThinking: false,
+  assistantRuntime: "none",
+  assistantRoute: "local",
   sculpt: "idle",
   sculptPass: 2,
   sculptPassFraction: 0.64,
@@ -788,7 +795,7 @@ export function kidsProfileRefusal(): Readonly<{
   });
 }
 
-export type DesktopControlKind = "view" | "review" | "inert";
+export type DesktopControlKind = "view" | "review" | "live" | "inert";
 
 export type DesktopControl = Readonly<{
   id: string;
@@ -888,7 +895,16 @@ export type DesktopAssistantProjection = Readonly<{
   toggle: DesktopControl;
   /** Closes the column from inside it; inert wherever the toggle is. */
   close: DesktopControl;
+  prompt: DesktopControl;
   send: DesktopControl;
+  retry: DesktopControl;
+  routes: ReadonlyArray<
+    Readonly<{
+      id: DesktopAssistantRoute;
+      label: string;
+      control: DesktopControl;
+    }>
+  >;
   /** Ask / Build / Agent. Inert wherever the composer is denied. */
   modes: ReadonlyArray<
     Readonly<{ id: DesktopAssistantModeId; label: string; control: DesktopControl }>
@@ -934,27 +950,47 @@ export type DesktopAssistantView = Omit<DesktopAssistantProjection, "modes"> &
 function assistantProjection(
   refuseOnly: boolean,
   mint: DesktopControlMint = liveControl,
+  runtime: DesktopAssistantRuntime = "none",
 ): DesktopAssistantProjection {
   const denial = kidsAssistantDenial();
+  const runtimeAvailable = runtime === "local";
+  const runtimeControl = (id: string, label: string): DesktopControl =>
+    refuseOnly
+      ? mint(id, label, "inert", denial.code)
+      : runtimeAvailable
+        ? mint(id, label, "live")
+        : mint(id, label, "inert", DESKTOP_VISUAL_REFUSALS.noDocumentBound);
   return Object.freeze({
     state: refuseOnly ? "denied" : "open",
     modelLabel: refuseOnly
       ? ASSISTANT_MODEL_LABELS.denied
-      : ASSISTANT_MODEL_LABELS.noProvider,
+      : runtimeAvailable
+        ? "local · free / BYOK"
+        : ASSISTANT_MODEL_LABELS.noProvider,
     toggle: refuseOnly
       ? mint("assistant-toggle", "Assistant", "inert", denial.code)
       : mint("assistant-toggle", "Assistant", "view"),
     close: refuseOnly
       ? mint("assistant-close", "Close assistant", "inert", denial.code)
       : mint("assistant-close", "Close assistant", "view"),
-    send: refuseOnly
-      ? mint("assistant-send", "Send", "inert", denial.code)
-      : mint(
-          "assistant-send",
-          "Send",
-          "inert",
-          DESKTOP_VISUAL_REFUSALS.noDocumentBound,
-        ),
+    prompt: runtimeControl("assistant-prompt", "Assistant prompt"),
+    send: runtimeControl("assistant-send", "Send"),
+    retry: runtimeControl("assistant-retry", "Retry"),
+    routes: Object.freeze(
+      ([
+        ["local", "Local · free"],
+        ["byo", "BYOK · free"],
+        ["hosted", "Hosted · metered"],
+      ] as const).map(([id, label]) =>
+        Object.freeze({
+          id,
+          label,
+          control: refuseOnly
+            ? mint(`assistant-route-${id}`, label, "inert", denial.code)
+            : mint(`assistant-route-${id}`, label, "view"),
+        }),
+      ),
+    ),
     modes: Object.freeze(
       DESKTOP_ASSISTANT_MODE_IDS.map((id) => {
         const label = id.charAt(0).toUpperCase() + id.slice(1);
@@ -1266,7 +1302,7 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
     cancel: control("sculpt-cancel", "Cancel after this pass", "view"),
   });
 
-  const projection = assistantProjection(kids, control);
+  const projection = assistantProjection(kids, control, state.assistantRuntime);
   const assistantIsDrawer = (tierRow?.drawerColumns ?? []).includes("assistant");
 
   const assistant: DesktopAssistantView = Object.freeze({
@@ -1344,7 +1380,11 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
           policy: row,
           refuseOnly,
           refusal: refuseOnly ? DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly : null,
-          assistant: assistantProjection(refuseOnly),
+          assistant: assistantProjection(
+            refuseOnly,
+            liveControl,
+            state.assistantRuntime,
+          ),
         });
       }),
     ),

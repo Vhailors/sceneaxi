@@ -16,17 +16,26 @@
  * - `authoring`    → `createDesktopSession()` from `@sceneaxi/desktop-shell` — the
  *                    same propose/accept protocol layer as the CLI and web-shell,
  *                    never a second editor state machine.
+ * - `assistant`    → the deterministic local compiler by default, or one
+ *                    explicitly injected BYOK runner. Hosted refuses here
+ *                    because this tier has no identity or credit authority.
  * - `frame-report` → accepts the renderer's real presentation frame report so the
  *                    main process (and the packaged-app smoke test) can see what the
  *                    viewport actually claimed. The bridge never invents one.
  *
- * The bridge holds no session across calls: `open-path` closes what it opens, and
- * the authoring session is the one long-lived piece of state, exactly as in the
- * desktop shell it wraps. Kids has no path here: the bridge names no profile, and
- * the chrome's refuse-only Kids projection stays owned by `@sceneaxi/desktop-shell`.
+ * The bridge holds no kernel session across calls: `open-path` closes what it
+ * opens. The authoring session and most recent assistant job are the only
+ * long-lived state. Assistant profile is carried across the seam solely so the
+ * authoring core can enforce its own compiled Kids denial before work starts.
  */
 import { realpathSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, resolve, sep } from "node:path";
+import {
+  ASSISTANT_SCULPT_REFUSALS,
+  runAssistantSculptAction,
+  type AssistantSculptProgress,
+  type AssistantSculptResult,
+} from "@sceneaxi/authoring-core";
 import {
   createDesktopSession,
   type DesktopSession,
@@ -35,11 +44,14 @@ import {
 import { bootstrapOpenPath } from "@sceneaxi/engine-orchestrator";
 import {
   DESKTOP_BRIDGE_ACTIONS,
+  DESKTOP_BRIDGE_ASSISTANT_OPS,
   DESKTOP_BRIDGE_AUTHORING_OPS,
   DESKTOP_BRIDGE_REFUSALS,
   bridgeOk,
   bridgeRefuse,
   type DesktopBridgeAction,
+  type DesktopBridgeAssistantOp,
+  type DesktopAssistantJobSnapshot,
   type DesktopBridgeAuthoringOp,
   type DesktopBridgeHandshake,
   type DesktopBridgeResponse,
@@ -54,7 +66,15 @@ export type DesktopBridgeOptions = {
   readonly nowMs?: () => number;
   /** Observer for renderer frame reports (the smoke path listens here). */
   readonly onFrameReport?: (report: DesktopFrameReport) => void;
+  /** Optional BYOK runner. The default desktop owns only the free local path. */
+  readonly runByoAssistant?: (request: DesktopAssistantRunRequest) => Promise<AssistantSculptResult>;
 };
+
+export type DesktopAssistantRunRequest = Readonly<{
+  prompt: string;
+  profile: `@sceneaxi/profile-${string}`;
+  onProgress: (snapshot: AssistantSculptProgress) => void;
+}>;
 
 export type DesktopBridge = {
   handle(request: unknown): DesktopBridgeResponse;
@@ -110,6 +130,13 @@ function isAuthoringOp(value: unknown): value is DesktopBridgeAuthoringOp {
   );
 }
 
+function isAssistantOp(value: unknown): value is DesktopBridgeAssistantOp {
+  return (
+    typeof value === "string" &&
+    (DESKTOP_BRIDGE_ASSISTANT_OPS as readonly string[]).includes(value)
+  );
+}
+
 function field(value: unknown, name: string): unknown {
   if (typeof value !== "object" || value === null) return undefined;
   const descriptor = Object.getOwnPropertyDescriptor(value, name);
@@ -149,6 +176,15 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
   const nowMs = options.nowMs ?? ((): number => Date.now());
   let session: DesktopSession | null = null;
   let lastReport: DesktopFrameReport | null = null;
+  let assistantSequence = 0;
+  let assistantJob: {
+    jobId: string;
+    route: "local" | "byo";
+    status: "running" | "ready" | "refused";
+    progress: AssistantSculptProgress[];
+    result?: NonNullable<DesktopAssistantJobSnapshot["result"]>;
+    refusal?: Extract<AssistantSculptResult, { readonly ok: false }>;
+  } | null = null;
 
   const authoringSession = (): DesktopSession => {
     session ??= createDesktopSession({ cwd: options.cwd });
@@ -268,6 +304,127 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     return bridgeOk("authoring", live.undo());
   };
 
+  const assistantSnapshot = (): DesktopAssistantJobSnapshot | null => {
+    if (assistantJob === null) return null;
+    return Object.freeze({
+      jobId: assistantJob.jobId,
+      route: assistantJob.route,
+      status: assistantJob.status,
+      progress: Object.freeze([...assistantJob.progress]),
+      ...(assistantJob.result === undefined ? {} : { result: assistantJob.result }),
+      ...(assistantJob.refusal === undefined ? {} : { refusal: assistantJob.refusal }),
+    });
+  };
+
+  const assistant = (payload: unknown): DesktopBridgeResponse => {
+    const op = field(payload, "op");
+    if (!isAssistantOp(op)) {
+      return bridgeRefuse(
+        DESKTOP_BRIDGE_REFUSALS.assistantOpUnknown,
+        `Unknown assistant operation ${JSON.stringify(op)}. Known: ${DESKTOP_BRIDGE_ASSISTANT_OPS.join(", ")}.`,
+      );
+    }
+    if (op === "status") {
+      return bridgeOk("assistant", assistantSnapshot());
+    }
+
+    const prompt = field(payload, "prompt");
+    const profile = field(payload, "profile");
+    const route = field(payload, "route");
+    if (
+      typeof prompt !== "string" ||
+      prompt.trim().length === 0 ||
+      typeof profile !== "string" ||
+      !/^@sceneaxi\/profile-[a-z][a-z0-9-]*$/.test(profile) ||
+      (route !== "local" && route !== "byo" && route !== "hosted")
+    ) {
+      return bridgeRefuse(
+        DESKTOP_BRIDGE_REFUSALS.requestMalformed,
+        "assistant start requires a non-empty prompt, a SceneAxi profile, and route local, byo, or hosted.",
+      );
+    }
+    if (profile === "@sceneaxi/profile-kids") {
+      return bridgeRefuse(
+        ASSISTANT_SCULPT_REFUSALS.kidsDenied,
+        "The desktop assistant is denied for Kids before local generation, BYOK dispatch, or hosted routing.",
+      );
+    }
+    if (route === "hosted") {
+      return bridgeRefuse(
+        DESKTOP_BRIDGE_REFUSALS.assistantHostedMeteringUnavailable,
+        "Hosted AI is metered through the web-shell assistant panel; the desktop has no identity or credit plane and cannot bypass that gate.",
+      );
+    }
+    if (route === "byo" && options.runByoAssistant === undefined) {
+      return bridgeRefuse(
+        DESKTOP_BRIDGE_REFUSALS.assistantByoUnavailable,
+        "No BYOK Model Provider Port is configured for this desktop session. Local remains free and available.",
+      );
+    }
+    if (assistantJob?.status === "running") {
+      return bridgeRefuse(
+        DESKTOP_BRIDGE_REFUSALS.assistantBusy,
+        "An assistant job is already running; poll its status before retrying.",
+      );
+    }
+
+    assistantSequence += 1;
+    assistantJob = {
+      jobId: `desktop-assistant-${String(assistantSequence)}`,
+      route,
+      status: "running",
+      progress: [],
+    };
+    const activeJob = assistantJob;
+    const onProgress = (snapshot: AssistantSculptProgress): void => {
+      if (assistantJob !== activeJob) return;
+      activeJob.progress.push(snapshot);
+    };
+    const request: DesktopAssistantRunRequest = {
+      prompt: prompt.trim(),
+      profile: profile as DesktopAssistantRunRequest["profile"],
+      onProgress,
+    };
+    const running = route === "local"
+      ? runAssistantSculptAction({
+          route: "local",
+          prompt: request.prompt,
+          profile: request.profile,
+          onProgress,
+        })
+      : options.runByoAssistant?.(request);
+    if (running === undefined) {
+      return bridgeRefuse(
+        DESKTOP_BRIDGE_REFUSALS.assistantByoUnavailable,
+        "No BYOK Model Provider Port is configured for this desktop session.",
+      );
+    }
+    void running.then(
+      (result) => {
+        if (assistantJob !== activeJob) return;
+        if (result.ok) {
+          activeJob.status = "ready";
+          activeJob.result = result;
+        } else {
+          activeJob.status = "refused";
+          activeJob.refusal = result;
+        }
+      },
+      (error: unknown) => {
+        if (assistantJob !== activeJob) return;
+        activeJob.status = "refused";
+        activeJob.refusal = Object.freeze({
+          ok: false as const,
+          reason: "ASSISTANT_SCULPT_PROVIDER_FAILED",
+          message: "The configured BYOK assistant runner failed.",
+          recoverable: true,
+          detail: error instanceof Error ? error.message : String(error),
+        });
+      },
+    );
+    return bridgeOk("assistant", assistantSnapshot());
+  };
+
   const handle = (request: unknown): DesktopBridgeResponse => {
     const action = field(request, "action");
     if (action === undefined) {
@@ -294,6 +451,8 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       }
       case "open-path":
         return openPathExercise();
+      case "assistant":
+        return assistant(payload);
       case "authoring":
         return authoring(payload);
       case "frame-report": {
