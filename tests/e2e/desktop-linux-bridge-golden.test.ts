@@ -42,8 +42,10 @@ import {
 import {
   DESKTOP_BRIDGE_ACTIONS,
   DESKTOP_BRIDGE_REFUSALS,
+  createDesktopAssistantViewportController,
   createDesktopBridge,
   desktopOpenScene,
+  type DesktopAssistantJobSnapshot,
   type DesktopFrameReport,
 } from "../../desktop/linux/src/index.ts";
 import {
@@ -249,40 +251,34 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
     );
   });
 
-  it("runs a free local assistant job and returns the typed artifact the viewport mounts", async () => {
+  it("mounts, transforms, and resets a replacement local assistant artifact", async () => {
     const bridge = bridgeAt(authoringDir());
-    const started = bridge.handle({
-      action: "assistant",
-      payload: {
-        op: "start",
-        route: "local",
-        profile: "@sceneaxi/profile-game",
-        prompt: "A tall blue service cylinder",
-      },
-    });
-    expect(started.ok).toBe(true);
-    if (!started.ok) return;
-    expect(started.data).toMatchObject({ status: "running", route: "local" });
-
-    // The bridge remains synchronous: provider/local work settles behind the
-    // job, and the renderer polls the same status operation.
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    const status = bridge.handle({ action: "assistant", payload: { op: "status" } });
-    expect(status.ok).toBe(true);
-    if (!status.ok) return;
-    const job = status.data as {
-      status: string;
-      result: {
-        mountable: ReturnType<typeof composedScene>;
-        inspection: {
-          physics: { supported: boolean };
-          materials: { supported: boolean };
-          settings: { supported: boolean };
-        };
-      };
+    const readyResult = async (prompt: string) => {
+      const started = bridge.handle({
+        action: "assistant",
+        payload: {
+          op: "start",
+          route: "local",
+          profile: "@sceneaxi/profile-game",
+          prompt,
+        },
+      });
+      expect(started.ok).toBe(true);
+      if (!started.ok) throw new Error(started.message);
+      expect(started.data).toMatchObject({ status: "running", route: "local" });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      const status = bridge.handle({ action: "assistant", payload: { op: "status" } });
+      expect(status.ok).toBe(true);
+      if (!status.ok) throw new Error(status.message);
+      const job = status.data as DesktopAssistantJobSnapshot | null;
+      if (job?.status !== "ready" || job.result === undefined) {
+        throw new Error("local assistant job did not produce a mountable result");
+      }
+      return job.result;
     };
-    expect(job.status).toBe("ready");
-    expect(job.result.inspection).toMatchObject({
+
+    const first = await readyResult("A tall blue service cylinder");
+    expect(first.inspection).toMatchObject({
       physics: { supported: true },
       materials: { supported: true },
       settings: { supported: true },
@@ -290,23 +286,34 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
 
     const backend = createThreeSculptPresentationBackend();
     const mounts = createSculptMountApi(backend);
-    expect(job.result.mountable.instances).toHaveLength(1);
-    const instance = job.result.mountable.instances[0];
-    if (instance === undefined) throw new Error("assistant composition has no root instance");
-    mounts.mount({
-      instanceId: instance.instanceId,
-      artifact: job.result.mountable.artifacts[instance.artifactId],
-      transform: instance.worldTransform,
-    });
-    const moved = mounts.updateTransform(instance.instanceId, {
-      translation: [1, 0, 0],
-      rotationEulerDegrees: [0, 15, 0],
+    const viewport = createDesktopAssistantViewportController(mounts);
+    expect(first.mountable.instances).toHaveLength(1);
+    viewport.replace(first.mountable);
+    viewport.manipulate("move-x");
+    const firstMovedAgain = viewport.manipulate("move-x");
+    expect(firstMovedAgain?.transform).toMatchObject({
+      translation: [0.5, 0, 0],
+      rotationEulerDegrees: [0, 0, 0],
       scale: [1, 1, 1],
     });
-    expect(moved.transform.translation).toEqual([1, 0, 0]);
+
+    const second = await readyResult("A green sphere");
+    expect(second.artifactDigest).not.toBe(first.artifactDigest);
+    const replacement = viewport.replace(second.mountable);
+    expect(replacement.transform).toMatchObject({
+      translation: [0, 0, 0],
+      rotationEulerDegrees: [0, 0, 0],
+      scale: [1, 1, 1],
+    });
+    const replacementMoved = viewport.manipulate("move-x");
+    expect(replacementMoved?.transform).toMatchObject({
+      translation: [0.25, 0, 0],
+      rotationEulerDegrees: [0, 0, 0],
+      scale: [1, 1, 1],
+    });
     expect(mounts.render()).toMatchObject({
       backend: "three",
-      instanceIds: [instance.instanceId],
+      instanceIds: [second.mountable.instances[0]?.instanceId],
       surface: "headless",
       pixelsDrawn: false,
     });
@@ -395,6 +402,53 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
         providerEvidence: { operation: "complete" },
       },
     });
+  });
+
+  it("settles a synchronous BYOK runner throw so Retry can start fresh work", async () => {
+    const bridge = createDesktopBridge({
+      cwd: authoringDir(),
+      nowMs: fixedNow,
+      runByoAssistant: () => {
+        throw new Error("synchronous provider failure");
+      },
+    });
+    const failed = bridge.handle({
+      action: "assistant",
+      payload: {
+        op: "start",
+        route: "byo",
+        profile: "@sceneaxi/profile-game",
+        prompt: "Provider throws before returning a promise",
+      },
+    });
+    expect(failed.ok).toBe(true);
+    if (!failed.ok) return;
+    expect(failed.data).toMatchObject({
+      route: "byo",
+      status: "refused",
+      refusal: {
+        reason: DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
+        message: "The configured assistant runner failed.",
+        recoverable: true,
+        detail: "synchronous provider failure",
+      },
+    });
+
+    const retried = bridge.handle({
+      action: "assistant",
+      payload: {
+        op: "start",
+        route: "local",
+        profile: "@sceneaxi/profile-game",
+        prompt: "A green sphere",
+      },
+    });
+    expect(retried.ok).toBe(true);
+    if (retried.ok) expect(retried.data).toMatchObject({ status: "running" });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const status = bridge.handle({ action: "assistant", payload: { op: "status" } });
+    expect(status.ok).toBe(true);
+    if (status.ok) expect(status.data).toMatchObject({ status: "ready" });
   });
 
   it("abandons a hung BYOK job so Retry can start fresh work", async () => {
@@ -924,10 +978,9 @@ describe("desktop renderer module accounting", () => {
       "utf8",
     );
     expect(source).toContain('action: "assistant"');
-    expect(source).toContain("mounts.mount({");
-    expect(source).toContain("mounts.updateTransform(assistantInstanceId");
-    expect(source).toContain("job.result.mountable.instances");
-    expect(source).toContain("instance.worldTransform");
+    expect(source).toContain("createDesktopAssistantViewportController(mounts)");
+    expect(source).toContain("assistantViewport.replace(job.result.mountable)");
+    expect(source).toContain("assistantViewport.manipulate(control.dataset.value)");
     expect(source).toContain('data-assistant-manipulators');
     expect(source).toContain('shell.dataset.assistantMode !== "build"');
     expect(source).toContain("DESKTOP_BRIDGE_REFUSALS.assistantBuildModeRequired");

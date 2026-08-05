@@ -427,14 +427,31 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       profile,
       onProgress,
     };
-    const running = route === "local"
-      ? runAssistantSculptAction({
-          route: "local",
-          prompt: request.prompt,
-          profile: request.profile,
-          onProgress,
-        })
-      : options.runByoAssistant?.(request);
+    const settleRuntimeFailure = (error: unknown): void => {
+      if (assistantJob !== activeJob || activeJob.status !== "running") return;
+      activeJob.status = "refused";
+      activeJob.refusal = Object.freeze({
+        ok: false as const,
+        reason: DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
+        message: "The configured assistant runner failed.",
+        recoverable: true,
+        detail: error instanceof Error ? error.message : String(error),
+      });
+    };
+    let running: Promise<AssistantSculptResult> | undefined;
+    try {
+      running = route === "local"
+        ? runAssistantSculptAction({
+            route: "local",
+            prompt: request.prompt,
+            profile: request.profile,
+            onProgress,
+          })
+        : options.runByoAssistant?.(request);
+    } catch (error) {
+      settleRuntimeFailure(error);
+      return bridgeOk("assistant", assistantSnapshot());
+    }
     if (running === undefined) {
       assistantJob = previousJob;
       return bridgeRefuse(
@@ -474,17 +491,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           activeJob.refusal = result;
         }
       },
-      (error: unknown) => {
-        if (assistantJob !== activeJob || activeJob.status !== "running") return;
-        activeJob.status = "refused";
-        activeJob.refusal = Object.freeze({
-          ok: false as const,
-          reason: DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
-          message: "The configured assistant runner failed.",
-          recoverable: true,
-          detail: error instanceof Error ? error.message : String(error),
-        });
-      },
+      settleRuntimeFailure,
     );
     return bridgeOk("assistant", assistantSnapshot());
   };

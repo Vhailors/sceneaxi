@@ -52,6 +52,8 @@ export {
   type OpenPathExercise,
 } from "./lib/bridge.js";
 
+export { createDesktopAssistantViewportController } from "./lib/assistant-viewport.js";
+
 export {
   DESKTOP_ASSISTANT_INSTANCE_ID,
   DESKTOP_ASSISTANT_SCENE_ID,

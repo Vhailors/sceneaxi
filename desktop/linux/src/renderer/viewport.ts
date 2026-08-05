@@ -22,6 +22,7 @@ import {
   createThreeSculptPresentationBackend,
   type SculptPresentationFrame,
 } from "@sceneaxi/engine-presentation";
+import { createDesktopAssistantViewportController } from "../lib/assistant-viewport.js";
 import {
   DESKTOP_BRIDGE_GLOBAL,
   DESKTOP_BRIDGE_REFUSALS,
@@ -226,43 +227,12 @@ function installAssistantProductFlow(
     return false;
   }
   let running = false;
-  let assistantInstanceId: string | null = null;
-  const identityTransform = () => ({
-    translation: [0, 0, 0] as [number, number, number],
-    rotationEulerDegrees: [0, 0, 0] as [number, number, number],
-    scale: [1, 1, 1] as [number, number, number],
-  });
-  let manipulatorTransform = identityTransform();
+  const assistantViewport = createDesktopAssistantViewportController(mounts);
 
   manipulatorControls.forEach((control) => {
     control.addEventListener("click", () => {
       if (control.getAttribute("aria-disabled") === "true") return;
-      switch (control.dataset.value) {
-        case "move-x":
-          manipulatorTransform.translation[0] += 0.25;
-          break;
-        case "move-y":
-          manipulatorTransform.translation[1] += 0.25;
-          break;
-        case "rotate-y":
-          manipulatorTransform.rotationEulerDegrees[1] += 15;
-          break;
-        case "scale-up":
-          manipulatorTransform.scale = [
-            manipulatorTransform.scale[0] + 0.1,
-            manipulatorTransform.scale[1] + 0.1,
-            manipulatorTransform.scale[2] + 0.1,
-          ];
-          break;
-        default:
-          return;
-      }
-      if (assistantInstanceId === null) return;
-      mounts.updateTransform(assistantInstanceId, {
-        translation: [...manipulatorTransform.translation],
-        rotationEulerDegrees: [...manipulatorTransform.rotationEulerDegrees],
-        scale: [...manipulatorTransform.scale],
-      });
+      assistantViewport.manipulate(control.dataset.value);
     });
   });
 
@@ -299,18 +269,8 @@ function installAssistantProductFlow(
         return;
       }
       if (job.status === "ready" && job.result !== undefined) {
-        if (assistantInstanceId !== null) mounts.unmount(assistantInstanceId);
-        for (const instance of job.result.mountable.instances) {
-          const artifact = job.result.mountable.artifacts[instance.artifactId];
-          mounts.mount({
-            instanceId: instance.instanceId,
-            artifact,
-            transform: instance.worldTransform,
-          } as Parameters<typeof mounts.mount>[0]);
-          assistantInstanceId = instance.instanceId;
-        }
+        assistantViewport.replace(job.result.mountable);
         backend.frameMountedContent();
-        manipulatorTransform = identityTransform();
         manipulatorBar?.removeAttribute("hidden");
         resultView.textContent = inspectionText(job);
         resultView.removeAttribute("hidden");
