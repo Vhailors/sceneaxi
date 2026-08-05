@@ -349,7 +349,7 @@ async function mountLiveViewport(): Promise<void> {
     return;
   }
   if (!desktopMountablePayload(sceneResponse.data)) {
-    reportLine(stage, "Live viewport refused: the active Scene Document payload is invalid.");
+    refuseLiveViewport(stage, "the active Scene Document payload is invalid.");
     return;
   }
   let scene = sceneResponse.data;

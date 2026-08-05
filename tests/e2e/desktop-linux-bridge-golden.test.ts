@@ -1003,7 +1003,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     expect(html).toContain("Hosted · metered");
   });
 
-  it("activates only after runtime binding and preserves refusal across profiles", () => {
+  it("activates only after runtime binding and preserves refusal across profiles", async () => {
     const runtimeRefusal = DESKTOP_BRIDGE_REFUSALS.presentationRuntimeUnavailable;
     const prompt = new FakeTextAreaElement("assistant-prompt", { kind: "inert" });
     const send = new FakeElement("assistant-send", { kind: "inert" });
@@ -1039,12 +1039,18 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       },
     });
 
-    const switchTo = (profile: string): void => {
+    // The chrome serializes a profile switch with the project actions, so the
+    // click resolves through the document's in-flight guard rather than in the
+    // click handler itself: a real operator's next click is a later event-loop
+    // turn, and asserting inside this one would read the pre-switch document.
+    const switchTo = async (profile: string): Promise<void> => {
       const chip = profileChips.find((candidate) => candidate.dataset.value === profile);
       if (chip === undefined || shell.clickListener === undefined) {
         throw new Error(`profile switch harness missing ${profile}`);
       }
       shell.clickListener({ target: chip });
+      await Promise.resolve();
+      await Promise.resolve();
     };
     const expectRefusal = (reason: string): void => {
       for (const control of controls) {
@@ -1072,11 +1078,11 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       detail: { runtime: "local" },
     });
     expectLive();
-    switchTo("web");
+    await switchTo("web");
     expectLive();
-    switchTo("kids");
+    await switchTo("kids");
     expectRefusal(DESKTOP_VISUAL_REFUSALS.kidsAssistantDenied);
-    switchTo("game");
+    await switchTo("game");
     expectLive();
 
     documentListeners.get(DESKTOP_ASSISTANT_RUNTIME_EVENT)?.({
@@ -1084,11 +1090,11 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     });
     expectRefusal(runtimeRefusal);
 
-    switchTo("web");
+    await switchTo("web");
     expectRefusal(runtimeRefusal);
-    switchTo("kids");
+    await switchTo("kids");
     expectRefusal(DESKTOP_VISUAL_REFUSALS.kidsAssistantDenied);
-    switchTo("game");
+    await switchTo("game");
     expectRefusal(runtimeRefusal);
   });
 });
