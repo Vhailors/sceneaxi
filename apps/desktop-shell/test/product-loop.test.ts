@@ -391,6 +391,54 @@ describe("desktop product loop", () => {
     });
   });
 
+  it("stops the active action when a fresh-session re-read refuses", async () => {
+    const html = renderDesktopChrome(
+      desktopVisualView(createDesktopVisualState({ profile: "web" })),
+    );
+    const script = /<script>([\s\S]*?)<\/script>/.exec(html)?.[1] ?? "";
+    const source =
+      /const restartProject = (async \(diagnostic\) => \{[\s\S]*?\n  \});/.exec(
+        script,
+      )?.[1];
+    expect(source).toBeTruthy();
+
+    const statuses: string[] = [];
+    const createRestart = new Function(
+      "productStatus",
+      "T",
+      "runtimeRequest",
+      "responseReason",
+      `let projectData = {}; let projectDirty = true; let projectRecovering = true; return ${source ?? "null"};`,
+    ) as (
+      productStatus: (state: string, text: string) => void,
+      tables: unknown,
+      runtimeRequest: (request: unknown) => Promise<unknown>,
+      responseReason: (response: unknown) => string | null,
+    ) => (diagnostic: string) => Promise<boolean>;
+    const restart = createRestart(
+      (_state, text) => statuses.push(text),
+      {
+        product: {
+          documentPath: "scene.json",
+          refusals: DESKTOP_PRODUCT_REFUSALS,
+        },
+      },
+      async () => ({
+        ok: true,
+        data: {
+          ok: false,
+          diagnostics: [{ code: "document-not-found" }],
+        },
+      }),
+      () => "document-not-found",
+    );
+
+    await expect(restart("recovery-pending")).resolves.toBe(false);
+    expect(statuses.at(-1)).toContain(
+      "Recovery reset · recovery-pending · document-not-found",
+    );
+  });
+
   it("explains every refusal name the surface can print", () => {
     const html = renderDesktopChrome(
       desktopVisualView(createDesktopVisualState({ profile: "web" })),

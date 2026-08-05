@@ -1348,7 +1348,7 @@ if (shell) {
     projectRecovering = false;
     if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' || status.data === null) {
       productStatus('refused', 'Recovery reset · ' + diagnostic + ' · ' + (reason || T.product.refusals.documentDataInvalid));
-      return true;
+      return false;
     }
     projectData = status.data;
     productStatus('open', T.product.documentPath + ' · re-opened after ' + diagnostic + ' · ' + status.documentId);
