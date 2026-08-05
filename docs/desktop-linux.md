@@ -88,7 +88,12 @@ gate until the other moves with it. Nothing on that page is rendered around the
 record: `resolveDesktopAppOffer()` validates every field first, and an
 incomplete, malformed, or wrongly-linked record refuses by name instead of
 offering a download — the page's metadata, checksum, coming-soon, and refusal
-behaviour is held by `tests/sites/desktop-download.test.ts`.
+behaviour is held by `tests/sites/desktop-download.test.ts`. The lockstep suite
+also owns the offer's other restatement: the umbrella's marketing download table
+(`sites/umbrella/src/lib/download-platform.ts`) reaches a `"use client"`
+component and so cannot import the offer, and is instead bound to
+`unavailablePlatforms` there — packaging Windows or macOS fails the gate until the
+landing page's "Coming soon" rows move with it.
 
 <!-- desktop-linux:release -->
 | Field | Value |

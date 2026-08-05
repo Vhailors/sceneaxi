@@ -73,7 +73,10 @@ The default route is the first-release information architecture from sceneaxi#20
   labelled "Recorded build", because that is what `desktopLinuxAppOffer()` serves: a
   build from source or the named CI workflow artifact, against recorded checksums. No
   row may say "Available" of a desktop binary this site does not serve, and each state
-  carries its own rendered words so no component can shorten one.
+  carries its own rendered words so no component can shorten one. Which platforms are
+  packaged stays that offer's fact: `tests/sites/desktop-offer-lockstep.test.ts` binds
+  the table to its `unavailablePlatforms` list, so packaging shipping fails the gate
+  instead of leaving a stale "Coming soon" row here.
 - `src/lib/launch-marketing.ts` owns the frozen trust, comparison, and profile-launch
   projections. The Unity, Godot, and Three.js rows link to each project's own product
   description, carry no score, and state where SceneAxi is narrower.

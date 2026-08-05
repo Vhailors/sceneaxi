@@ -11,6 +11,16 @@
  * checksums. A row labelled "Available" beside a build recipe would be exactly the
  * claim this vocabulary exists to prevent, so each state carries its own rendered
  * words here instead of a component deriving them from the state name.
+ *
+ * Which platforms are packaged is that offer's fact, not this table's. This module is
+ * reached from a `"use client"` component, so it may not value-import the Node-bearing
+ * site-kit barrel and restates the split instead, in the same shape
+ * `viewport-letterbox.ts` uses for a Foundations colour and for the same reason.
+ * The offer's `unavailablePlatforms` is what decides:
+ * `tests/sites/desktop-offer-lockstep.test.ts` binds every row's availability, href, and
+ * detected copy to it, so packaging shipping for Windows or macOS fails the gate rather
+ * than leaving a stale "Coming soon" here. The rows are authored rather than derived
+ * because a derived row would silently keep this copy beside the new state.
  */
 
 export type DownloadPlatformId = "linux" | "macos" | "windows";
