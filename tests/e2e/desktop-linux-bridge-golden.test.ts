@@ -18,6 +18,7 @@ import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync }
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { runInNewContext } from "node:vm";
 import { afterAll, describe, expect, it } from "vitest";
 import {
   MODEL_PROVIDER_PORT_SCHEMA_VERSION,
@@ -28,6 +29,7 @@ import {
   type AssistantSculptResult,
   type ModelDescriptor,
 } from "@sceneaxi/authoring-core";
+import { DESKTOP_VISUAL_REFUSALS } from "@sceneaxi/desktop-shell";
 import {
   THREE_HEADLESS_SURFACE_LABEL,
   createSculptMountApi,
@@ -96,6 +98,101 @@ const BYO_INTAKE = JSON.stringify({
     ],
   },
 });
+
+class FakeClassList {
+  readonly values = new Set<string>();
+
+  add(value: string): void {
+    this.values.add(value);
+  }
+
+  remove(value: string): void {
+    this.values.delete(value);
+  }
+
+  contains(value: string): boolean {
+    return this.values.has(value);
+  }
+}
+
+class FakeElement {
+  readonly classList = new FakeClassList();
+  readonly dataset: Record<string, string>;
+  readonly attributes = new Map<string, string>();
+  hidden = false;
+  tabIndex = 0;
+  textContent: string | null = "";
+
+  constructor(
+    readonly id = "",
+    dataset: Record<string, string> = {},
+  ) {
+    this.dataset = { ...dataset };
+  }
+
+  setAttribute(name: string, value: string): void {
+    this.attributes.set(name, value);
+  }
+
+  removeAttribute(name: string): void {
+    this.attributes.delete(name);
+  }
+
+  getAttribute(name: string): string | null {
+    return this.attributes.get(name) ?? null;
+  }
+
+  closest(selector: string): FakeElement | null {
+    return selector === "[data-action]" ? this : null;
+  }
+
+  querySelector(): FakeElement | null {
+    return null;
+  }
+
+  querySelectorAll(): FakeElement[] {
+    return [];
+  }
+
+  focus(): void {}
+
+  contains(element: FakeElement | null): boolean {
+    return element !== null;
+  }
+}
+
+class FakeTextAreaElement extends FakeElement {
+  readOnly = false;
+}
+
+class FakeShell extends FakeElement {
+  clickListener?: (event: { readonly target: FakeElement }) => void;
+
+  constructor(
+    private readonly controls: readonly FakeElement[],
+    private readonly profileChips: readonly FakeElement[],
+  ) {
+    super("shell", {
+      assistant: "open",
+      drawerAssistant: "open",
+      overlay: "none",
+      profile: "game",
+    });
+  }
+
+  override querySelectorAll(selector: string): FakeElement[] {
+    if (selector === "[data-kind]") return [...this.controls];
+    if (selector === ".profile-chip") return [...this.profileChips];
+    return [];
+  }
+
+  addEventListener(
+    name: string,
+    listener: (event: { readonly target: FakeElement }) => void,
+  ): void {
+    if (name === "click") this.clickListener = listener;
+  }
+}
 
 const tmpDirs: string[] = [];
 afterAll(() => {
@@ -668,6 +765,74 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     expect(html).toContain('<textarea id="assistant-prompt" data-kind="live"');
     expect(html).toContain("Hosted · metered");
   });
+
+  it("preserves runtime composer refusal across profile switches", () => {
+    const runtimeRefusal = DESKTOP_BRIDGE_REFUSALS.presentationRuntimeUnavailable;
+    const prompt = new FakeTextAreaElement("assistant-prompt", { kind: "live" });
+    const send = new FakeElement("assistant-send", { kind: "live" });
+    const retry = new FakeElement("assistant-retry", { kind: "live" });
+    const controls = [prompt, send, retry];
+    const profileChips = ["game", "web", "kids"].map(
+      (profile) =>
+        new FakeElement(`profile-${profile}`, {
+          action: "profile",
+          value: profile,
+        }),
+    );
+    const shell = new FakeShell(controls, profileChips);
+    const script = /<script>([\s\S]*?)<\/script>/.exec(desktopLinuxIndexHtml())?.[1];
+    expect(script).toBeDefined();
+    runInNewContext(script ?? "", {
+      document: {
+        activeElement: null,
+        addEventListener: () => undefined,
+        querySelector: (selector: string) => (selector === ".shell" ? shell : null),
+      },
+      Element: FakeElement,
+      HTMLTextAreaElement: FakeTextAreaElement,
+      window: {
+        matchMedia: () => ({
+          addEventListener: () => undefined,
+          matches: false,
+        }),
+      },
+    });
+
+    for (const control of controls) {
+      control.dataset.runtimeRefusal = runtimeRefusal;
+      control.dataset.kind = "inert";
+      control.dataset.refusal = runtimeRefusal;
+      control.setAttribute("aria-disabled", "true");
+      control.setAttribute("aria-describedby", `refusal-${runtimeRefusal}`);
+      control.classList.add("is-inert");
+    }
+    prompt.readOnly = true;
+
+    const switchTo = (profile: string): void => {
+      const chip = profileChips.find((candidate) => candidate.dataset.value === profile);
+      if (chip === undefined || shell.clickListener === undefined) {
+        throw new Error(`profile switch harness missing ${profile}`);
+      }
+      shell.clickListener({ target: chip });
+    };
+    const expectRefusal = (reason: string): void => {
+      for (const control of controls) {
+        expect(control.dataset.kind).toBe("inert");
+        expect(control.dataset.refusal).toBe(reason);
+        expect(control.getAttribute("aria-disabled")).toBe("true");
+        expect(control.getAttribute("aria-describedby")).toBe(`refusal-${reason}`);
+        expect(control.classList.contains("is-inert")).toBe(true);
+      }
+      expect(prompt.readOnly).toBe(true);
+    };
+
+    switchTo("web");
+    expectRefusal(runtimeRefusal);
+    switchTo("kids");
+    expectRefusal(DESKTOP_VISUAL_REFUSALS.kidsAssistantDenied);
+    switchTo("game");
+    expectRefusal(runtimeRefusal);
+  });
 });
 
 describe("desktop renderer module accounting", () => {
@@ -720,6 +885,8 @@ describe("desktop renderer module accounting", () => {
     // refusal on those controls rather than leaving Send inert-looking-live.
     expect(source).toContain("refuseAssistantControls");
     expect(source).toContain("DESKTOP_BRIDGE_REFUSALS.presentationRuntimeUnavailable");
+    expect(source).toContain("control.dataset.runtimeRefusal = reason");
+    expect(source).toContain('if (control.dataset.kind === "inert") continue');
     expect(source).toContain('control.setAttribute("data-kind", "inert")');
     expect(source).toContain('control.setAttribute("aria-disabled", "true")');
     // One place says it, and that place settles the composer too — a second

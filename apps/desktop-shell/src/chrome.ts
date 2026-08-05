@@ -1273,8 +1273,9 @@ if (shell) {
   const applyControl = (el) => {
     const row = (T.controlsByProfile[shell.dataset.profile] || {})[el.id];
     if (!row) return;
-    el.dataset.kind = row[0];
-    setRefusal(el, row[1]);
+    const refusal = row[1] || el.dataset.runtimeRefusal;
+    el.dataset.kind = refusal ? 'inert' : row[0];
+    setRefusal(el, refusal);
   };
 
   const applyProfileControls = () => q('[data-kind]').forEach(applyControl);

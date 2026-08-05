@@ -142,6 +142,8 @@ function refuseAssistantControls(reason: string, message: string): void {
   for (const id of ASSISTANT_CONTROL_IDS) {
     const control = document.getElementById(id);
     if (control === null) continue;
+    control.dataset.runtimeRefusal = reason;
+    if (control.dataset.kind === "inert") continue;
     control.setAttribute("data-kind", "inert");
     control.setAttribute("aria-disabled", "true");
     control.setAttribute("data-refusal", reason);
