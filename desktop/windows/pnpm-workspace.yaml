@@ -1,0 +1,9 @@
+packages:
+  - "."
+# Postinstall approvals, so install stays non-interactive locally and in CI:
+# electron downloads its runtime binary, esbuild links its native binary,
+# electron-winstaller is Windows packaging support pulled in by electron-builder.
+allowBuilds:
+  electron: true
+  electron-winstaller: true
+  esbuild: true

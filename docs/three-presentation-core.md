@@ -188,7 +188,10 @@ site's one renderer-owning module, `src/app/_components/sculpt-viewport.tsx`.
 Each tier that draws owns exactly one such module: the sites-tier owner list is
 asserted in `tests/sites/site-seams.test.ts`, and the desktop tier's single owner
 (`desktop/linux/src/renderer/viewport.ts`, ADR 0024) is asserted the same way in
-`tests/e2e/desktop-linux-bridge-golden.test.ts`.
+`tests/e2e/desktop-linux-bridge-golden.test.ts`. The tier's second install root,
+`desktop/windows`, adds no renderer: it stages that same built module and owns only a
+Windows updater bootstrap, so this list is unchanged by it
+([`desktop-windows.md`](desktop-windows.md)).
 
 ## Not claimed
 

@@ -30,7 +30,9 @@ L4  sites              site-kit ← the three deployable sites (leaves; ADR 0018
 L4  desktop            the packaged desktop applications (leaf; ADR 0024). desktop/linux
                        consumes schemas, desktop-shell, site-kit, authoring-core and the
                        three engine packages it draws and opens through; no profile, no
-                       Kids, no auth/billing, no plugin host
+                       Kids, no auth/billing, no plugin host. desktop/windows packages
+                       that same built application for Windows and names no SceneAxi
+                       package at all (sceneaxi#204)
 ```
 
 ## Allow matrix (✓ = allowed; blank = denied)
@@ -55,6 +57,7 @@ L4  desktop            the packaged desktop applications (leaf; ADR 0024). deskt
 | site-umbrella (→ site-kit ✓, auth ✓, billing ✓) | | | ✓ | | | | | | | |
 | site-catalog-game / site-catalog-web (→ site-kit ✓) | | | | | | | | | | |
 | desktop-linux (→ site-kit ✓) | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | ✓ (desktop-shell alone) |
+| desktop-windows | | | | | | | | | | |
 
 Deliberate denials that carry design intent:
 
@@ -195,12 +198,17 @@ Recorded in `dependency-matrix.json → releaseGroups` and stamped on every mani
   only importer of those owners outside themselves, and the checker refuses any other.
   Framework and provider SDKs stay in the `sites/` tier. Deploy and env details:
   [`websites-deploy.md`](websites-deploy.md).
-- **desktop** (`desktop-linux`): packaged desktop applications (ADR 0024), each its own
+- **desktop** (`desktop-linux`, `desktop-windows`): packaged desktop applications
+  (ADR 0024), each its own
   install root outside the repository-root workspace so Electron never moves the
   hermetic lockfile. Deployable, not consumable — like a site it declares no root
   export and uses `link:` dependencies (into `packages/` **or** `apps/`, the one
   widening the desktop tier holds). Build, distribution, and the recorded checksums:
-  [`desktop-linux.md`](desktop-linux.md).
+  [`desktop-linux.md`](desktop-linux.md). `desktop-windows` holds an empty allow list:
+  it packages the already-built `desktop/linux` runtime and imports no SceneAxi
+  package, so it is a second install root rather than a second application —
+  signing, update, and release contract in
+  [`desktop-windows.md`](desktop-windows.md).
 - **identity** (`auth`, `billing`): independently versioned; consumes only public
   contracts from `schemas` (and, for `billing`, the `auth` seam); never engine
   packages, profiles, the CLI, or a service locator. Better Auth, Neon, and the

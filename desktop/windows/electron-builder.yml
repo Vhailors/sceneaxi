@@ -1,0 +1,38 @@
+# Windows packaging wrapper for the existing Engine Desktop runtime.
+# Release packaging is always signed (`forceCodeSigning`) and update installers
+# retain electron-updater's publisher-name signature verification. Scripts own
+# the explicit no-publish vs existing-draft-release split.
+appId: com.sceneaxi.engine-desktop
+productName: SceneAxi Engine Desktop
+executableName: sceneaxi-engine-desktop
+directories:
+  output: release
+files:
+  - dist/**
+  - package.json
+npmRebuild: false
+electronLanguages:
+  - en-US
+electronUpdaterCompatibility: ">= 2.16"
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  forceCodeSigning: true
+  verifyUpdateCodeSignature: true
+  artifactName: SceneAxi-Engine-Desktop-${version}-windows-${arch}.${ext}
+  publish:
+    - provider: github
+      owner: Vhailors
+      repo: sceneaxi
+      releaseType: draft
+      publishAutoUpdate: true
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: SceneAxi Engine Desktop
+  deleteAppDataOnUninstall: false

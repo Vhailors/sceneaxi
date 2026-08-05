@@ -344,9 +344,18 @@ except through the fail-closed `resolveDesktopAppOffer()` behind
 offering a fallback URL, and reads no clock so every visitor sees the same
 record. `tests/sites/desktop-offer-lockstep.test.ts` keeps offer and doc in
 lockstep; `tests/sites/desktop-download.test.ts` holds the page's metadata,
-checksum, coming-soon, and refusal contract. Windows/macOS stay unpackaged and
-render as the record's own coming-soon rows. No profile, Kids, auth/billing, or CLI
+checksum, coming-soon, and refusal contract. Windows/macOS stay without recorded
+public downloads and render as the record's own coming-soon rows. No profile, Kids,
+auth/billing, or CLI
 verb reaches this tier.
+
+Windows packaging (sceneaxi#204) is the separate `desktop/windows` install root and
+stages the already-built `desktop/linux` runtime rather than forking the editor,
+bridge, or renderer. Its signed NSIS/update/release contract is owned by
+`docs/desktop-windows.md`: `dist` refuses without Windows signing inputs and never
+publishes; `draft:upload` additionally requires an operator-created draft and explicit
+GitHub authority. Until a real release is verified and recorded, the download IA
+must keep Windows coming soon and no Windows R2 claim exists.
 
 The Engine Desktop chrome's **shared product model** is
 `packages/schemas/src/editor-shell.ts` (sceneaxi#184): the seven modes, rail
