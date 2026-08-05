@@ -279,6 +279,49 @@ describe("desktop product loop", () => {
     );
   });
 
+  it("distinguishes an absent runtime from a failed runtime request", async () => {
+    const html = renderDesktopChrome(
+      desktopVisualView(createDesktopVisualState({ profile: "game" })),
+    );
+    const script = /<script>([\s\S]*?)<\/script>/.exec(html)?.[1] ?? "";
+    const source =
+      /const runtimeRequest = (async \(request\) => \{[\s\S]*?\n  \});/.exec(
+        script,
+      )?.[1];
+    expect(source).toBeTruthy();
+
+    const createRequest = new Function(
+      "desktopPort",
+      "T",
+      `return ${source ?? "null"};`,
+    ) as (
+      desktopPort: () => unknown,
+      tables: unknown,
+    ) => (request: unknown) => Promise<unknown>;
+    const tables = {
+      product: { refusals: DESKTOP_PRODUCT_REFUSALS },
+    };
+
+    await expect(
+      createRequest(() => null, tables)({ action: "open-path" }),
+    ).resolves.toBeNull();
+    await expect(
+      createRequest(
+        () => ({
+          request: async () => {
+            throw new Error("ipc channel closed");
+          },
+        }),
+        tables,
+      )({ action: "open-path" }),
+    ).resolves.toEqual({
+      ok: false,
+      reason: DESKTOP_PRODUCT_REFUSALS.runtimeRequestFailed,
+      message: "ipc channel closed",
+      detail: "ipc channel closed",
+    });
+  });
+
   it("explains every refusal name the surface can print", () => {
     const html = renderDesktopChrome(
       desktopVisualView(createDesktopVisualState({ profile: "web" })),

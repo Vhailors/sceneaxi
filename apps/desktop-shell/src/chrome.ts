@@ -1295,17 +1295,17 @@ if (shell) {
 
   const runtimeRequest = async (request) => {
     const port = desktopPort();
-    if (port === null) {
-      productStatus('refused', T.product.refusals.runtimeUnavailable);
-      runStatus('Refused · ' + T.product.refusals.runtimeUnavailable);
-      return null;
-    }
+    if (port === null) return null;
     try {
       return await port.request(request);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      productStatus('refused', T.product.refusals.runtimeRequestFailed + ' · ' + message);
-      return null;
+      return {
+        ok: false,
+        reason: T.product.refusals.runtimeRequestFailed,
+        message,
+        detail: message,
+      };
     }
   };
 
@@ -1449,6 +1449,7 @@ if (shell) {
         response === null
           ? T.product.refusals.runtimeUnavailable
           : (response.reason || T.product.refusals.runtimeRequestRefused),
+        response === null ? null : response.detail,
       );
       return;
     }
