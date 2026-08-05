@@ -111,18 +111,29 @@ describe("desktop-macos packaging seam", () => {
 
   it("verifies the recorded commit against the checkout instead of trusting its shape", () => {
     const macosRoot = new URL("../../desktop/macos", import.meta.url);
+    const releaseInputs = [
+      "CSC_LINK",
+      "CSC_KEY_PASSWORD",
+      "APPLE_ID",
+      "APPLE_APP_SPECIFIC_PASSWORD",
+      "APPLE_TEAM_ID",
+      "SCENEAXI_MACOS_RELEASE_BASE_URL",
+    ];
     const preflight = (sha: string): string => {
       const result = spawnSync(process.execPath, ["scripts/dist.mjs", "--preflight-only"], {
         cwd: macosRoot,
         encoding: "utf8",
         env: {
-          ...process.env,
+          ...Object.fromEntries(
+            Object.entries(process.env).filter(([name]) => !releaseInputs.includes(name)),
+          ),
           GITHUB_REPOSITORY: "Vhailors/sceneaxi",
           GITHUB_SHA: sha,
           GITHUB_RUN_ID: "1",
         },
       });
-      expect(result.status).toBe(1);
+      expect(result.status, result.stdout).toBe(1);
+      expect(result.stderr).toContain("MACOS_ENV_REQUIRED:CSC_LINK");
       return result.stderr;
     };
 
