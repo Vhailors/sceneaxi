@@ -3,6 +3,13 @@
  *
  * Stdout is exactly one client-result JSON object. It never writes discovery
  * contents, capabilities, request inputs, provider output, or raw errors.
+ *
+ * It is spawned as a bare `node <file>` child, without the workspace resolver
+ * the `sceneaxi` binary registers, so it may import node builtins only: the
+ * protocol constants, permission set, and descriptor shape below are therefore
+ * inlined copies of `@sceneaxi/schemas`. `test/desktop-socket-worker-lockstep.test.ts`
+ * reads this source and fails if a copy drifts from that registry — keep them
+ * single-line literals it can parse.
  */
 import { readFileSync, lstatSync } from "node:fs";
 import { connect } from "node:net";

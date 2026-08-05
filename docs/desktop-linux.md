@@ -15,7 +15,9 @@ blocked by no ADR: it reuses the repository's own TypeScript surfaces in both
 processes and needs no second UI implementation. The window is locked down —
 context isolation on, sandbox on, no node integration, navigation refused.
 
-One bridge, one channel, mirrored on web-shell's transport-free inspector app:
+One bridge, mirrored on web-shell's transport-free inspector app; the renderer's
+IPC channel and the local socket adapter are two transports over that one
+`handle()`, never a second authoring implementation:
 
 | Piece | Where it runs | What it is |
 |---|---|---|

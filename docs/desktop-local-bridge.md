@@ -166,6 +166,12 @@ cannot opt into hosted routing or bypass metering.
   refuses a second host.
 - `packages/cli/test/desktop-bridge.test.ts` proves CLI validation and
   deterministic envelope mapping through the injected transport seam.
+- `packages/cli/test/desktop-socket-worker-lockstep.test.ts` keeps the socket
+  worker's inlined constants honest. That worker is spawned as a bare `node`
+  child without the workspace resolver, so it may import node builtins only and
+  copies the protocol version, discovery kind, transport, permission set, and
+  descriptor shape from the registry; the test reads its source and fails on
+  drift.
 - `tests/e2e/desktop-cli-local-bridge-golden.test.ts` spawns the real CLI binary
   against the real desktop server, performs propose/apply, runs the free local
   assistant, and proves absent BYOK plus hosted stay fail-closed.

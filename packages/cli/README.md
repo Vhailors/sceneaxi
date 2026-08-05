@@ -43,6 +43,9 @@ missing, the binary says so and exits `1` rather than failing obscurely.
 # Programmatic (tests and embedders) — same dispatcher, no subprocess
 import { runCli, main } from "@sceneaxi/cli";
 const { exitCode, envelope, stdout } = runCli(["protocol", "inspect", "--json"]);
+
+# The one exception: `desktop bridge status|call` spawn the local socket worker.
+# Pass `runCli(argv, { desktopBridge })` to inject that transport instead.
 ```
 
 ## Commands
