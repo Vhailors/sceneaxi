@@ -9,9 +9,11 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+  SITE_LOGIN_HREF_MAX_LENGTH,
   SITE_LOGIN_PATH,
   SITE_REFUSALS,
   SITE_REFUSAL_REASONS,
+  WEB_EXPERIENCE_REQUEST_TARGET_MAX_LENGTH,
   confineSiteRelativePath,
   describeSiteAccessState,
   siteLoginHref,
@@ -176,6 +178,32 @@ describe("describeSiteAccessState", () => {
     expect(confineSiteRelativePath("/line%0Abreak")).toBeNull();
     expect(confineSiteRelativePath("/path%5Csegment")).toBeNull();
     expect(confineSiteRelativePath("%2Fevil.example")).toBeNull();
+  });
+
+  it("drops a continuation that would emit a link an edge answers instead of us", () => {
+    // The sign-in link is the longest URL any guarded surface emits: the
+    // destination is escaped a second time to ride as query data, so a target
+    // near its own budget lands far larger here.
+    expect(SITE_LOGIN_HREF_MAX_LENGTH).toBe(WEB_EXPERIENCE_REQUEST_TARGET_MAX_LENGTH);
+
+    const target = `/editor?profile=web&web-html=${"%3Cp%3E".repeat(400)}`;
+    expect(target.length).toBeLessThanOrEqual(SITE_LOGIN_HREF_MAX_LENGTH);
+    expect(confineSiteRelativePath(target)).toBe(target);
+    expect(
+      `${SITE_LOGIN_PATH}?next=${encodeURIComponent(target)}`.length,
+    ).toBeGreaterThan(SITE_LOGIN_HREF_MAX_LENGTH);
+    expect(siteLoginHref(target)).toBe(SITE_LOGIN_PATH);
+
+    // A destination that fits still carries, and every link this emits is bounded.
+    const modest = "/editor?profile=web&web-html=%3Ch1%3EHello%3C%2Fh1%3E";
+    expect(siteLoginHref(modest)).toBe(
+      `${SITE_LOGIN_PATH}?next=${encodeURIComponent(modest)}`,
+    );
+    for (const candidate of [target, modest, `/editor?objects=${"9".repeat(9_000)}`]) {
+      expect(siteLoginHref(candidate).length).toBeLessThanOrEqual(
+        SITE_LOGIN_HREF_MAX_LENGTH,
+      );
+    }
   });
 
   it("carries an encoded multi-line document without ever emitting a raw break", () => {

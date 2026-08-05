@@ -141,13 +141,36 @@ export function confineSiteRelativePath(value: unknown): string | null {
 }
 
 /**
+ * The bound on the sign-in link this package emits.
+ *
+ * `/login?next=…` is the *longest* URL any guarded surface produces: the
+ * destination is escaped a second time to ride as query data, so every `%XX`
+ * triplet already in it becomes `%25XX` and a destination near its own budget
+ * lands roughly 1.6× larger here. This is therefore the boundary the ceiling
+ * belongs on, and it is the earliest one: it applies to a destination built
+ * straight from an unparsed request — the anonymous and unentitled paths refuse
+ * before any surface-specific state is read — so no surface has to remember to
+ * bound its own `next`.
+ *
+ * The value is the same self-imposed budget the Web Experience request target
+ * uses, kept far below the ceilings both must sit under (an 8 KiB request line
+ * at the narrowest edge, a 16 KiB header block in Node). Duplicating the number
+ * rather than importing it keeps this module free of a surface-specific
+ * dependency; `test/access-states.test.ts` asserts the two agree.
+ */
+export const SITE_LOGIN_HREF_MAX_LENGTH = 4_000;
+
+/**
  * The sign-in link, carrying where the visitor was headed when they were
  * refused.
  *
  * A destination that is not same-site relative is dropped rather than refused,
  * so a hostile `next` degrades to the plain form. `/login` itself is dropped
  * too: sending a visitor back to the page they are already on is not a
- * destination.
+ * destination. A destination that would push the link past
+ * `SITE_LOGIN_HREF_MAX_LENGTH` degrades the same way — losing the continuation
+ * is a worse sign-in, but emitting a link an edge answers with an unnamed 414 or
+ * 431 is no sign-in at all.
  */
 export function siteLoginHref(next?: unknown): string {
   const path = confineSiteRelativePath(next);
@@ -155,7 +178,8 @@ export function siteLoginHref(next?: unknown): string {
   if (path === SITE_LOGIN_PATH || path.startsWith(`${SITE_LOGIN_PATH}?`)) {
     return SITE_LOGIN_PATH;
   }
-  return `${SITE_LOGIN_PATH}?next=${encodeURIComponent(path)}`;
+  const href = `${SITE_LOGIN_PATH}?next=${encodeURIComponent(path)}`;
+  return href.length > SITE_LOGIN_HREF_MAX_LENGTH ? SITE_LOGIN_PATH : href;
 }
 
 const signInAction = (next?: unknown): SiteAccessAction =>

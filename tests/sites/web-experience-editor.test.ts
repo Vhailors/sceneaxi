@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  SITE_LOGIN_HREF_MAX_LENGTH,
   WEB_EXPERIENCE_AUTHORING_REFUSALS,
   buildWebExperienceEditorView,
   confineSiteRelativePath,
@@ -109,6 +110,34 @@ describe("SA-WEB-1 access", () => {
       label: "Sign in",
       href: `/login?next=${encodeURIComponent(destination)}`,
     });
+  });
+
+  it("bounds the sign-in link on the path that refuses before editor state is read", () => {
+    // The anonymous and unentitled refusals build `next` from the raw request
+    // and return before `readWebExperienceEditorState` runs, so the editor's own
+    // request-target budget never sees them. A hand-crafted near-limit URL —
+    // `tx-object-N` is accepted for any N — must therefore still not produce a
+    // sign-in link an edge answers with an unnamed 414 or 431.
+    const params: Record<string, string> = { profile: "web" };
+    for (let index = 1; index <= 120; index += 1) {
+      params[`tx-object-${index}`] = "111.111,222.222,333.333";
+    }
+    const destination = sitePathWithSearchParams("/editor", params);
+    expect(destination.length).toBeGreaterThan(SITE_LOGIN_HREF_MAX_LENGTH / 2);
+
+    for (const reason of [
+      "EDITOR_ENTITLEMENT_ANONYMOUS",
+      "EDITOR_ENTITLEMENT_NO_CREDITS",
+      "IDENTITY_SESSION_EXPIRED",
+    ] as const) {
+      const action = describeSiteAccessState(reason, { next: destination }).action;
+      expect(action).not.toBeNull();
+      expect(action?.href.length).toBeLessThanOrEqual(SITE_LOGIN_HREF_MAX_LENGTH);
+    }
+    expect(
+      describeSiteAccessState("EDITOR_ENTITLEMENT_ANONYMOUS", { next: destination })
+        .action,
+    ).toEqual({ label: "Sign in", href: "/login" });
   });
 
   it("returns a signed-out visitor to a multi-line authored document too", () => {

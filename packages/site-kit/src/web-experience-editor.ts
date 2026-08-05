@@ -100,8 +100,6 @@ export type WebExperienceEditorView = Readonly<{
     }>;
   }>;
   page: Readonly<{ title: string; html: string }>;
-  /** The bounded request target this state submits to, and the budget it fits. */
-  submission: Readonly<{ target: string; maxLength: number }>;
   canvas: Readonly<{
     layout: WebExperienceCanvasLayout;
     iframeSandbox: "";
@@ -376,10 +374,6 @@ export function buildWebExperienceEditorView(input: {
     operations: WEB_EXPERIENCE_AUTHORING_OPERATIONS,
     form: WEB_EXPERIENCE_FORM,
     page: Object.freeze({ title: input.state.title, html: input.state.html }),
-    submission: Object.freeze({
-      target: webExperienceRequestTarget(input.state),
-      maxLength: WEB_EXPERIENCE_REQUEST_TARGET_MAX_LENGTH,
-    }),
     canvas: Object.freeze({
       layout: input.state.layout,
       iframeSandbox: WEB_EXPERIENCE_SANDBOX_POLICY.iframeSandbox,

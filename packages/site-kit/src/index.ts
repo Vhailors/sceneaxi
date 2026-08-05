@@ -382,6 +382,7 @@ export {
 } from "./site-session.js";
 
 export {
+  SITE_LOGIN_HREF_MAX_LENGTH,
   SITE_LOGIN_PATH,
   confineSiteRelativePath,
   describeSiteAccessState,

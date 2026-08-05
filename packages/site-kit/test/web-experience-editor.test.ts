@@ -189,15 +189,6 @@ describe("the simplified Web Experience editor", () => {
     expect(webExperienceRequestTarget(ok.value).length).toBeLessThanOrEqual(
       WEB_EXPERIENCE_REQUEST_TARGET_MAX_LENGTH,
     );
-    const view = buildWebExperienceEditorView({
-      state: ok.value,
-      starterArtifactId: "sculpt:starter-crate",
-    });
-    expect(view.submission).toEqual({
-      target: webExperienceRequestTarget(ok.value),
-      maxLength: WEB_EXPERIENCE_REQUEST_TARGET_MAX_LENGTH,
-    });
-
     // Inside the field bound, past the target budget once percent-encoded.
     const dense = "<>\"'".repeat(Math.floor(WEB_EXPERIENCE_HTML_MAX_LENGTH / 4));
     expect(dense.length).toBeLessThanOrEqual(WEB_EXPERIENCE_HTML_MAX_LENGTH);

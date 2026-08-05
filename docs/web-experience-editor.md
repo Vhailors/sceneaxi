@@ -66,8 +66,18 @@ answer before any SceneAxi code runs. `WEB_EXPERIENCE_REQUEST_TARGET_MAX_LENGTH`
 `readWebExperienceEditorState` enforces it on the **reconstructed target** built
 by `webExperienceRequestTarget()` rather than on any single field — a field only
 contributes to the quantity a platform measures. Over-budget state refuses
-`SITE_REQUEST_TARGET_TOO_LONG` by name; the view publishes the target and the
-budget it fits as `submission`.
+`SITE_REQUEST_TARGET_TOO_LONG` by name.
+
+The sign-in link derived from that state is bounded separately and at the same
+number, by `SITE_LOGIN_HREF_MAX_LENGTH` in `access-states.ts`. It needs its own
+ceiling for two reasons: `/login?next=…` escapes the destination a second time,
+so every `%XX` triplet becomes `%25XX` and a target at its own budget lands
+roughly 1.6× larger; and the anonymous and unentitled paths build `next` from the
+raw request and refuse **before** editor state is parsed, so the budget above
+never sees them. Over the ceiling the continuation is dropped and the plain
+`/login` is emitted — a worse sign-in, but not a link an edge answers with an
+unnamed 414 or 431. Both bounds together are what make the claim below true of
+every URL this surface emits, not just of the editor target.
 
 The budget is self-imposed and deliberately well under the ceilings it sits
 below — an 8 KiB request line at the narrowest edge, a 16 KiB header block in
@@ -123,8 +133,9 @@ no engine implementation crosses into the Web Experience contract.
   canonical document/digest, form contract, operation separation,
   HTML/canvas/asset/Three paths, malformed input, cleared-field fallback, the
   request-target budget, and refusal projection.
-- `packages/site-kit/test/access-states.test.ts` — same-site confinement, and the
-  encoded multi-line destination that survives it with nothing raw emitted.
+- `packages/site-kit/test/access-states.test.ts` — same-site confinement, the
+  encoded multi-line destination that survives it with nothing raw emitted, and
+  the sign-in link's own ceiling.
 - `tests/sites/web-experience-editor.test.ts` — no-session,
   login continuation (single- and multi-line), denied-entitlement,
   entitled-member, route-order, profile carry, thin-renderer, sandbox, single
