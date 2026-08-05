@@ -19,19 +19,33 @@ no editor model and no canvas. The Web projection adds no identity dependency,
 provider adapter, cookie, role, credit rule, or billing call. The guarded route
 carries its encoded query string through the existing hosted-login `next`
 contract, so sign-in returns to the same Web profile and reconstructs the same
-document instead of opening the Game default — multi-line documents included.
+document — multi-line documents included — rather than opening the Game default.
 `confineSiteRelativePath` reads its two rules at the two levels that make each
 true: route *structure* on the decoded path, so no escape smuggles an authority
 or a second segment past it, and header safety on the encoded value actually
 emitted, where a newline inside a query stays three printable characters. A
 literal control character is still not a destination, wherever it appears.
 
+That round trip holds up to the sign-in link's own ceiling, not unconditionally:
+past `SITE_LOGIN_HREF_MAX_LENGTH` the destination is dropped and the visitor
+signs in to a fresh Web session instead. Measured against that 4,000-character
+bound, ordinary prose markup carries the whole 2,000-character HTML field bound
+(a ~3,300-character link), attribute-dense markup carries to roughly 1,500
+source characters, and multi-byte text to a few hundred. See **The submission
+bound** below for why the link amplifies and why losing the destination is the
+chosen degradation.
+
 The active profile is chrome state, and — like the active mode — it is carried on
-every navigation the shell renders: `hrefInViewState` writes it onto editor
-hrefs and the apply form carries it as a hidden field, so leaving the Web profile
-is not undone by the next link and staying in it is not undone by the next
-submit. Kids is never written to a URL; it stays the refuse-only client
-projection with no request state.
+every navigation the shell renders. `hrefInViewState` writes it onto editor
+hrefs, and each body submits the profile it *is*: the Web projection's form
+carries the contract's own `view.form.profile` field, while the Game body's form
+names no profile at all — exactly what `hrefInViewState` writes for Game via
+`params.delete("profile")`. So leaving the Web profile is not undone by the next
+link, and staying in it is not undone by the next submit. The shell holds no
+`name="profile"` of its own, and `tests/sites/web-experience-editor.test.ts`
+asserts that: a hidden field there would be a second spelling of a contract
+site-kit already owns. Kids is never written to a URL; it stays the refuse-only
+client projection with no request state.
 
 The dependency matrix continues to deny profile packages to sites. The shared
 vocabulary lives in
@@ -71,13 +85,22 @@ contributes to the quantity a platform measures. Over-budget state refuses
 The sign-in link derived from that state is bounded separately and at the same
 number, by `SITE_LOGIN_HREF_MAX_LENGTH` in `access-states.ts`. It needs its own
 ceiling for two reasons: `/login?next=…` escapes the destination a second time,
-so every `%XX` triplet becomes `%25XX` and a target at its own budget lands
-roughly 1.6× larger; and the anonymous and unentitled paths build `next` from the
-raw request and refuse **before** editor state is parsed, so the budget above
+so every `%XX` triplet becomes `%25XX` and the link runs larger than the target
+it carries — measured at ~1.4× for ASCII markup and ~1.65× when the target is
+mostly percent-escapes; and the anonymous and unentitled paths build `next` from
+the raw request and refuse **before** editor state is parsed, so the budget above
 never sees them. Over the ceiling the continuation is dropped and the plain
 `/login` is emitted — a worse sign-in, but not a link an edge answers with an
 unnamed 414 or 431. Both bounds together are what make the claim below true of
 every URL this surface emits, not just of the editor target.
+
+Because the link amplifies and both ceilings are the same number, a document can
+sit inside the request-target budget and still lose its continuation. That is the
+band quoted under **Ownership and access** above: prose markup carries the full
+field bound, attribute-dense markup roughly 1,500 source characters, multi-byte
+text a few hundred. Raising the sign-in ceiling alone would only move the
+unnamed platform answer back onto the link, so the degradation is the trade
+rather than a gap.
 
 The budget is self-imposed and deliberately well under the ceilings it sits
 below — an 8 KiB request line at the narrowest edge, a 16 KiB header block in
