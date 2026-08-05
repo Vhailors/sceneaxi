@@ -16,7 +16,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { createServer, type Server, type Socket } from "node:net";
+import { connect, createServer, type Server, type Socket } from "node:net";
 import { homedir, tmpdir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import {
@@ -43,6 +43,7 @@ import type { DesktopBridge } from "./bridge.js";
 
 const MAX_REQUEST_BYTES = 1024 * 1024;
 const SOCKET_IDLE_TIMEOUT_MS = 5_000;
+const ENDPOINT_PROBE_TIMEOUT_MS = 1_000;
 
 export type DesktopLocalBridgePaths = Readonly<{
   socketPath: string;
@@ -222,6 +223,40 @@ function isProcessAlive(pid: number): boolean {
   }
 }
 
+function isPrivateSameUserSocket(path: string): boolean {
+  try {
+    const stat = lstatSync(path);
+    return stat.isSocket() &&
+      !stat.isSymbolicLink() &&
+      (typeof process.getuid !== "function" || stat.uid === process.getuid()) &&
+      (stat.mode & 0o077) === 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Liveness of the recorded endpoint, not of a number: a PID may be recycled by
+ * any other process of this user, but only a live host still answers on its own
+ * socket. A dead host leaves no listener, so its descriptor is stale.
+ */
+function endpointAccepting(socketPath: string): Promise<boolean> {
+  if (!isPrivateSameUserSocket(socketPath)) return Promise.resolve(false);
+  return new Promise((resolveProbe) => {
+    let settled = false;
+    const probe = connect(socketPath);
+    const finish = (accepting: boolean): void => {
+      if (settled) return;
+      settled = true;
+      probe.destroy();
+      resolveProbe(accepting);
+    };
+    probe.setTimeout(ENDPOINT_PROBE_TIMEOUT_MS, () => finish(false));
+    probe.on("connect", () => finish(true));
+    probe.on("error", () => finish(false));
+  });
+}
+
 function preparePrivateDirectory(path: string): void {
   mkdirSync(path, { recursive: true, mode: 0o700 });
   const stat = lstatSync(path);
@@ -244,14 +279,18 @@ function readDiscoveryDescriptor(path: string): DesktopLocalBridgeDiscovery | nu
   return parseDesktopLocalBridgeDiscovery(decoded);
 }
 
-function removeStaleDiscovery(path: string): void {
+async function removeStaleDiscovery(path: string): Promise<void> {
   if (!existsSync(path)) return;
   const stat = lstatSync(path);
   if (!stat.isFile() || stat.isSymbolicLink()) {
     throw new Error(`Desktop local bridge discovery path is not a regular file: ${path}`);
   }
   const parsed = readDiscoveryDescriptor(path);
-  if (parsed !== null && isProcessAlive(parsed.pid)) {
+  if (
+    parsed !== null &&
+    isProcessAlive(parsed.pid) &&
+    await endpointAccepting(parsed.socketPath)
+  ) {
     throw new Error(`Another SceneAxi desktop local bridge is active (pid ${String(parsed.pid)}).`);
   }
   rmSync(path);
@@ -304,7 +343,7 @@ export async function startDesktopLocalBridgeServer(
 
   preparePrivateDirectory(dirname(socketPath));
   preparePrivateDirectory(dirname(discoveryPath));
-  removeStaleDiscovery(discoveryPath);
+  await removeStaleDiscovery(discoveryPath);
   removeStaleSocket(socketPath);
 
   const instanceId = randomBytes(16).toString("hex");

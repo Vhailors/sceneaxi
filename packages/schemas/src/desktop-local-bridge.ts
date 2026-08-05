@@ -131,9 +131,9 @@ export const DESKTOP_LOCAL_BRIDGE_TOOLS = Object.freeze([
   }),
   tool({
     name: "sceneaxi.project.recover",
-    description: "Read the shared authoring session's recovery state.",
-    permission: "project:read",
-    mutatesProject: false,
+    description: "Resolve the shared authoring session's pending apply, rolling the prepared transaction forward or back on disk.",
+    permission: "project:write",
+    mutatesProject: true,
     providerRoute: "none",
     creditRoute: "none",
     inputSchema: noInput,

@@ -200,6 +200,77 @@ describe("desktop same-user local RPC bridge", () => {
     expect(existsSync(socketPath)).toBe(false);
   });
 
+  it("reclaims a descriptor whose recorded endpoint no longer accepts, even when its pid is alive", async () => {
+    const root = mkdtempSync(join(tmpdir(), "sceneaxi-local-rpc-"));
+    roots.push(root);
+    const projectRoot = join(root, "project");
+    expect(seedDesktopProject(projectRoot).ok).toBe(true);
+    const socketPath = join(root, "runtime", "desktop-v1.sock");
+    const discoveryPath = join(root, "config", "desktop-bridge-v1.json");
+    mkdirSync(dirname(discoveryPath), { recursive: true, mode: 0o700 });
+    writeFileSync(
+      discoveryPath,
+      `${JSON.stringify({
+        protocolVersion: 1,
+        kind: "sceneaxi.desktop-local-bridge-discovery",
+        transport: "unix-ndjson",
+        instanceId: "recycled-pid-owner",
+        socketPath: join(root, "runtime", "never-bound.sock"),
+        capability: "b".repeat(43),
+        pid: process.pid,
+        projectRoot,
+        permissions: ["bridge:connect", "project:read"],
+      })}\n`,
+      { encoding: "utf8", mode: 0o600 },
+    );
+
+    const server = await startDesktopLocalBridgeServer({
+      bridge: createDesktopBridge({ cwd: projectRoot }),
+      projectRoot,
+      socketPath,
+      discoveryPath,
+      capability: CAPABILITY,
+    });
+    servers.push(server);
+
+    const discovery = parseDesktopLocalBridgeDiscovery(
+      JSON.parse(readFileSync(discoveryPath, "utf8")),
+    );
+    expect(discovery?.instanceId).toBe(server.discovery.instanceId);
+    expect(discovery?.capability).toBe(CAPABILITY);
+  });
+
+  it("still refuses a second host while the recorded endpoint is accepting", async () => {
+    const root = mkdtempSync(join(tmpdir(), "sceneaxi-local-rpc-"));
+    roots.push(root);
+    const projectRoot = join(root, "project");
+    expect(seedDesktopProject(projectRoot).ok).toBe(true);
+    const discoveryPath = join(root, "config", "desktop-bridge-v1.json");
+    const first = await startDesktopLocalBridgeServer({
+      bridge: createDesktopBridge({ cwd: projectRoot }),
+      projectRoot,
+      socketPath: join(root, "runtime", "desktop-v1.sock"),
+      discoveryPath,
+      capability: CAPABILITY,
+    });
+    servers.push(first);
+
+    await expect(
+      startDesktopLocalBridgeServer({
+        bridge: createDesktopBridge({ cwd: projectRoot }),
+        projectRoot,
+        socketPath: join(root, "runtime", "desktop-v1-second.sock"),
+        discoveryPath,
+        capability: CAPABILITY,
+      }),
+    ).rejects.toThrow(/Another SceneAxi desktop local bridge is active/);
+
+    expect(
+      parseDesktopLocalBridgeDiscovery(JSON.parse(readFileSync(discoveryPath, "utf8")))
+        ?.instanceId,
+    ).toBe(first.discovery.instanceId);
+  });
+
   it("survives a client that disconnects before the response is written", async () => {
     const root = mkdtempSync(join(tmpdir(), "sceneaxi-local-rpc-"));
     roots.push(root);

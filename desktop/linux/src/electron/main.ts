@@ -119,11 +119,24 @@ async function start(): Promise<void> {
           ? {}
           : { configDir: process.env["XDG_CONFIG_HOME"] }),
       });
-  localBridgeServer = await startDesktopLocalBridgeServer({
-    bridge,
-    projectRoot: cwd,
-    ...localPaths,
-  });
+  // The local agent bridge is an attachment point, not the application: a second
+  // live host, an unusable runtime directory, or a refused socket must cost the
+  // operator the CLI attachment, never the window and the authoring session in it.
+  // The smoke proof asserts that attachment, so there it stays fatal.
+  try {
+    localBridgeServer = await startDesktopLocalBridgeServer({
+      bridge,
+      projectRoot: cwd,
+      ...localPaths,
+    });
+  } catch (error) {
+    if (SMOKE) throw error;
+    localBridgeServer = null;
+    console.error(
+      "desktop-linux: the local agent bridge did not start; Engine Desktop continues without CLI attachment:",
+      error instanceof Error ? error.message : String(error),
+    );
+  }
 
   ipcMain.handle(DESKTOP_BRIDGE_CHANNEL, (_event, request: unknown) =>
     bridge.handle(request),
@@ -246,7 +259,7 @@ async function start(): Promise<void> {
     writeFileSync(shotPath, png);
   }
 
-  await localBridgeServer.close();
+  await localBridgeServer?.close();
   localBridgeServer = null;
   rmSync(cwd, { recursive: true, force: true });
 

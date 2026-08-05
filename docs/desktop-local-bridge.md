@@ -34,9 +34,16 @@ a BYOK credential. The containing directories are mode `0700`; descriptor and
 socket are mode `0600`; the CLI refuses symlinks, non-owner endpoints, and any
 group/world permission bit. A capability is generated on every launch, compared
 in constant time, never emitted by a CLI envelope, and removed with the
-descriptor on graceful shutdown. A dead process's exact regular-file/socket
-pair may be recovered on the next launch; an active descriptor refuses a second
-host.
+descriptor on graceful shutdown.
+
+A descriptor that outlived its host — after a crash or `SIGKILL`, where no
+`close()` ran — is reclaimed on the next launch. Liveness is proven against the
+**endpoint**, never against the recorded PID alone: the host connects to the
+descriptor's own `socketPath`, and only a private same-user socket that still
+accepts proves another host. A recycled PID leaves no listener, so its
+descriptor is stale and is removed. Only a genuinely live host refuses a second
+one, and that refusal costs the CLI attachment alone: Engine Desktop logs the
+reason and opens its window with the local bridge absent, rather than exiting.
 
 The socket is Unix-only: no TCP listener, HTTP port, remote bind, CORS surface,
 or renderer-only action exists. Request and response bodies are bounded to 1
@@ -52,10 +59,18 @@ declared by the checked-in tool definition.
 | Permission | Tools |
 |---|---|
 | `bridge:connect` | `sceneaxi.bridge.handshake` |
-| `project:read` | `sceneaxi.project.status`, `sceneaxi.project.recover` |
-| `project:write` | `sceneaxi.project.propose`, `accept`, `reject`, `restart`, `undo` |
+| `project:read` | `sceneaxi.project.status` |
+| `project:write` | `sceneaxi.project.propose`, `accept`, `reject`, `recover`, `restart`, `undo` |
 | `assistant:read` | `sceneaxi.assistant.status` |
 | `assistant:run` | `sceneaxi.assistant.local.start`, `sceneaxi.assistant.byo.start`, `sceneaxi.assistant.abandon` |
+
+`sceneaxi.project.recover` is a **write**, not a read. It resolves the shared
+session's pending apply through `resolveApplyTransaction()`, which rolls a
+prepared transaction forward or back on disk, so it carries `project:write` and
+`mutatesProject: true`. The marker an agent reads describes what a tool can
+durably do, not what it usually returns; the invariant that no
+`mutatesProject` tool may sit behind a read permission is asserted in
+`packages/schemas/test/desktop-local-bridge.test.ts`.
 
 The CLI requires the operator/agent to repeat the exact permission with
 `--allow`; a missing, wider, narrower, or misspelled value refuses before the
@@ -141,9 +156,14 @@ cannot opt into hosted routing or bypass metering.
 ## Executable proof
 
 - `packages/schemas/test/desktop-local-bridge.test.ts` locks protocol/tool
-  schema identity and proves credential fields cannot enter BYOK inputs.
+  schema identity, pins every tool's permission and mutation marker, proves no
+  `mutatesProject` tool sits behind a read permission, and proves credential
+  fields cannot enter BYOK inputs.
 - `desktop/linux/test/local-rpc.test.ts` proves private modes, capability
-  authentication, and exact permission checks over a real Unix socket.
+  authentication, and exact permission checks over a real Unix socket, plus
+  endpoint-liveness reclamation: an unparsable or no-longer-accepting descriptor
+  is stale even when its recorded pid is alive, while a live endpoint still
+  refuses a second host.
 - `packages/cli/test/desktop-bridge.test.ts` proves CLI validation and
   deterministic envelope mapping through the injected transport seam.
 - `tests/e2e/desktop-cli-local-bridge-golden.test.ts` spawns the real CLI binary

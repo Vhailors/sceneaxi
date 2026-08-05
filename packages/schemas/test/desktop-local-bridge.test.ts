@@ -47,6 +47,34 @@ describe("desktop local bridge contract", () => {
     );
   });
 
+  it("never declares a project-mutating tool behind a read permission", () => {
+    expect(
+      DESKTOP_LOCAL_BRIDGE_TOOLS.map((tool) => ({
+        name: tool.name,
+        permission: tool.permission,
+        mutatesProject: tool.mutatesProject,
+      })),
+    ).toEqual([
+      { name: "sceneaxi.bridge.handshake", permission: "bridge:connect", mutatesProject: false },
+      { name: "sceneaxi.project.status", permission: "project:read", mutatesProject: false },
+      { name: "sceneaxi.project.propose", permission: "project:write", mutatesProject: false },
+      { name: "sceneaxi.project.accept", permission: "project:write", mutatesProject: true },
+      { name: "sceneaxi.project.reject", permission: "project:write", mutatesProject: false },
+      { name: "sceneaxi.project.recover", permission: "project:write", mutatesProject: true },
+      { name: "sceneaxi.project.restart", permission: "project:write", mutatesProject: false },
+      { name: "sceneaxi.project.undo", permission: "project:write", mutatesProject: true },
+      { name: "sceneaxi.assistant.local.start", permission: "assistant:run", mutatesProject: false },
+      { name: "sceneaxi.assistant.byo.start", permission: "assistant:run", mutatesProject: false },
+      { name: "sceneaxi.assistant.status", permission: "assistant:read", mutatesProject: false },
+      { name: "sceneaxi.assistant.abandon", permission: "assistant:run", mutatesProject: false },
+    ]);
+
+    for (const tool of DESKTOP_LOCAL_BRIDGE_TOOLS) {
+      if (tool.mutatesProject) expect(tool.permission).toBe("project:write");
+      if (tool.permission === "project:read") expect(tool.mutatesProject).toBe(false);
+    }
+  });
+
   it("keeps credentials and hosted credits outside every agent tool input", () => {
     for (const tool of DESKTOP_LOCAL_BRIDGE_TOOLS) {
       const encoded = JSON.stringify(tool.inputSchema).toLowerCase();
