@@ -5,7 +5,7 @@
  * the chrome, bridge, renderer, authoring session, and smoke path.
  */
 import { spawnSync } from "node:child_process";
-import { copyFileSync, mkdirSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, renameSync, rmSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
@@ -14,25 +14,34 @@ const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const existingRoot = resolve(appRoot, "../linux");
 const existingDist = join(existingRoot, "dist");
 const dist = join(appRoot, "dist");
-const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+const stagedEntry = "desktop-main.cjs";
 
-const built = spawnSync(pnpm, ["--dir", existingRoot, "build"], {
-  cwd: appRoot,
+// Run the existing build through this same node binary rather than a pnpm shim:
+// on Windows `spawnSync` refuses a `.cmd` target without a shell, so the only
+// supported packaging host would fail before esbuild ran.
+const built = spawnSync(process.execPath, [join(existingRoot, "scripts/build.mjs")], {
+  cwd: existingRoot,
   stdio: "inherit",
 });
-if (built.status !== 0) {
-  console.error("desktop-windows build FAILED — existing desktop application build failed");
+if (built.error || built.status !== 0) {
+  console.error(
+    `desktop-windows build FAILED — existing desktop application build failed${
+      built.error ? `: ${built.error.message}` : ""
+    }`,
+  );
   process.exit(built.status ?? 1);
 }
 
 rmSync(dist, { recursive: true, force: true });
 mkdirSync(dist, { recursive: true });
-for (const file of ["main.cjs", "preload.cjs", "renderer.js", "index.html"]) {
-  copyFileSync(
-    join(existingDist, file),
-    join(dist, file === "main.cjs" ? "desktop-main.cjs" : file),
+cpSync(existingDist, dist, { recursive: true });
+if (!existsSync(join(dist, "main.cjs"))) {
+  console.error(
+    "desktop-windows build FAILED — the existing desktop application produced no dist/main.cjs to stage",
   );
+  process.exit(1);
 }
+renameSync(join(dist, "main.cjs"), join(dist, stagedEntry));
 
 await build({
   absWorkingDir: appRoot,

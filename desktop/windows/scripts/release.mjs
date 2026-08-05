@@ -11,11 +11,19 @@ import { packageWindowsRelease } from "./package-release.mjs";
 import { requireWindowsReleaseEnvironment } from "./release-preflight.mjs";
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+// electron-builder's GitHub publisher reads the token from the environment, so the
+// operator-supplied release token has to reach it exactly like it reaches `gh.exe`.
+const githubEnv = () => ({ ...process.env, GH_TOKEN: process.env.GITHUB_RELEASE_TOKEN });
 
 const run = (command, args, options = {}) => {
   const result = spawnSync(command, args, { cwd: appRoot, encoding: "utf8", ...options });
-  if (result.status !== 0) {
-    throw new Error(result.stderr.trim() || `command failed: ${command} ${args.join(" ")}`);
+  if (result.error || result.status !== 0) {
+    const detail = result.error?.message ?? result.stderr?.trim();
+    throw new Error(
+      detail
+        ? `command failed: ${command} ${args.join(" ")}\n${detail}`
+        : `command failed: ${command} ${args.join(" ")}`,
+    );
   }
   return result.stdout;
 };
@@ -41,7 +49,7 @@ try {
         "--json",
         "isDraft,tagName",
       ],
-      { env: { ...process.env, GH_TOKEN: process.env.GITHUB_RELEASE_TOKEN } },
+      { env: githubEnv() },
     ),
   );
   if (release.tagName !== tag || release.isDraft !== true) {
@@ -51,7 +59,11 @@ try {
   }
 
   rmSync(join(appRoot, "release"), { recursive: true, force: true });
-  const artifact = packageWindowsRelease({ appRoot, publish: "onTagOrDraft" });
+  const artifact = packageWindowsRelease({
+    appRoot,
+    publish: "onTagOrDraft",
+    env: githubEnv(),
+  });
   run(
     "gh.exe",
     [
@@ -62,7 +74,7 @@ try {
       "--repo",
       "Vhailors/sceneaxi",
     ],
-    { env: { ...process.env, GH_TOKEN: process.env.GITHUB_RELEASE_TOKEN }, stdio: "inherit" },
+    { env: githubEnv(), stdio: "inherit" },
   );
   console.log(
     `desktop-windows release upload OK — draft ${tag}; operator must publish it explicitly`,

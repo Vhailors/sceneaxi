@@ -10,9 +10,9 @@ const run = (command, args, options = {}) => {
   }
 };
 
-export function packageWindowsRelease({ appRoot, publish }) {
+export function packageWindowsRelease({ appRoot, publish, env = process.env }) {
   const release = join(appRoot, "release");
-  run(process.execPath, [join(appRoot, "scripts/build.mjs")], { cwd: appRoot });
+  run(process.execPath, [join(appRoot, "scripts/build.mjs")], { cwd: appRoot, env });
   run(
     process.execPath,
     [
@@ -23,7 +23,7 @@ export function packageWindowsRelease({ appRoot, publish }) {
       "--publish",
       publish,
     ],
-    { cwd: appRoot },
+    { cwd: appRoot, env },
   );
 
   const manifest = JSON.parse(readFileSync(join(appRoot, "package.json"), "utf8"));
@@ -35,8 +35,21 @@ export function packageWindowsRelease({ appRoot, publish }) {
     );
   }
 
+  if (publish !== "never") {
+    const produced = readdirSync(release);
+    const metadata = ["latest.yml", `${expected}.blockmap`].filter(
+      (name) => !produced.includes(name),
+    );
+    if (metadata.length > 0) {
+      throw new Error(
+        `desktop-windows packaging refused — update metadata is absent: ${metadata.join(", ")}`,
+      );
+    }
+  }
+
   run("signtool.exe", ["verify", "/pa", "/all", "/v", join(release, expected)], {
     cwd: appRoot,
+    env,
   });
   const digest = createHash("sha256")
     .update(readFileSync(join(release, expected)))

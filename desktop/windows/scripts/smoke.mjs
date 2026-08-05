@@ -58,6 +58,14 @@ assert(
   "release is not pinned to an existing draft path",
 );
 assert(packageScript.includes('"signtool.exe"'), "packaging does not verify Authenticode");
+assert(
+  /packageWindowsRelease\(\{[\s\S]*?env:/.test(releaseScript),
+  "publishing does not hand the release token to electron-builder",
+);
+assert(
+  packageScript.includes('"latest.yml"'),
+  "packaging does not require published update metadata",
+);
 
 const downloadTable = read(join(repositoryRoot, "sites/umbrella/src/lib/download-platform.ts"));
 assert(
