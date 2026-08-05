@@ -5,8 +5,11 @@ import { join } from "node:path";
 
 const run = (command, args, options = {}) => {
   const result = spawnSync(command, args, { stdio: "inherit", ...options });
-  if (result.status !== 0) {
-    throw new Error(`desktop-windows command failed: ${command} ${args.join(" ")}`);
+  if (result.error || result.status !== 0) {
+    const detail = result.error?.message;
+    throw new Error(
+      `desktop-windows command failed: ${command} ${args.join(" ")}${detail ? `\n${detail}` : ""}`,
+    );
   }
 };
 
