@@ -111,11 +111,20 @@ describe("desktop app offer", () => {
         reason: "DESKTOP_APP_ARTIFACT_UNAVAILABLE",
       });
     }
+    const [macOS, windows] = offer.unavailablePlatforms;
+    if (macOS === undefined || windows === undefined) {
+      throw new Error("the offer names fewer than two unavailable platforms");
+    }
     for (const unavailablePlatforms of [
-      [{ platform: "macOS", status: "shipping", reason: "x" }],
-      [{ platform: "Linux", status: "coming-soon", reason: "x" }],
-      [{ platform: "Windows", status: "coming-soon", reason: "  " }],
-      ["macOS"],
+      [],
+      [macOS],
+      [windows],
+      [macOS, macOS],
+      [...offer.unavailablePlatforms, { ...macOS, platform: "Linux" }],
+      [{ ...macOS, status: "shipping" }, windows],
+      [{ ...macOS, platform: "Linux" }, windows],
+      [macOS, { ...windows, reason: "  " }],
+      ["macOS", "Windows"],
     ]) {
       expect(resolveDesktopAppOffer({ ...offer, unavailablePlatforms })).toMatchObject({
         ok: false,

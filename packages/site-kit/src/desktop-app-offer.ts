@@ -149,11 +149,33 @@ const isValidArtifact = (value: unknown): boolean => {
   );
 };
 
-const isValidUnavailablePlatform = (value: unknown): boolean =>
-  isRecord(value) &&
-  (value["platform"] === "macOS" || value["platform"] === "Windows") &&
-  value["status"] === "coming-soon" &&
-  isFilledString(value["reason"]);
+/**
+ * The platforms `/engine` names in prose as coming soon, so a record that omits one
+ * would print that sentence over a shorter list than it promises.
+ */
+const UNAVAILABLE_PLATFORMS: readonly string[] = /* @__PURE__ */ Object.freeze([
+  "macOS",
+  "Windows",
+]);
+
+const isValidUnavailablePlatform = (value: unknown): boolean => {
+  if (!isRecord(value)) return false;
+  const platform = value["platform"];
+  return (
+    typeof platform === "string" &&
+    UNAVAILABLE_PLATFORMS.includes(platform) &&
+    value["status"] === "coming-soon" &&
+    isFilledString(value["reason"])
+  );
+};
+
+const namesEveryUnavailablePlatform = (value: unknown): boolean =>
+  Array.isArray(value) &&
+  value.length === UNAVAILABLE_PLATFORMS.length &&
+  value.every(isValidUnavailablePlatform) &&
+  UNAVAILABLE_PLATFORMS.every((platform) =>
+    value.some((row) => isRecord(row) && row["platform"] === platform),
+  );
 
 /** Validate an artifact record before a page is allowed to render its CTA. */
 export function resolveDesktopAppOffer(candidate: unknown): SiteResult<DesktopAppOffer> {
@@ -193,8 +215,7 @@ export function resolveDesktopAppOffer(candidate: unknown): SiteResult<DesktopAp
     !Array.isArray(artifacts) ||
     artifacts.length === 0 ||
     !artifacts.every(isValidArtifact) ||
-    !Array.isArray(unavailablePlatforms) ||
-    !unavailablePlatforms.every(isValidUnavailablePlatform)
+    !namesEveryUnavailablePlatform(unavailablePlatforms)
   ) {
     return refuse("DESKTOP_APP_ARTIFACT_UNAVAILABLE");
   }
