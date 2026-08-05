@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   WEB_EXPERIENCE_AUTHORING_OPERATIONS,
   WEB_EXPERIENCE_DESKTOP_ONLY_OPERATIONS,
+  WEB_EDITOR_SESSION_OPERATIONS,
   buildWebExperienceEditorView,
   editorHref,
   readEditorState,
@@ -46,7 +47,47 @@ describe("the simplified Web Experience editor", () => {
     });
     expect(firstView).toEqual(secondView);
     expect(firstView.sessionId).toMatch(/^web-experience:sha256:[0-9a-f]{64}$/);
+    expect(firstView.document).toMatchObject({
+      schemaVersion: 1,
+      kind: "sceneaxi.document",
+      id: "umbrella-web-experience",
+      title: "Launch story",
+    });
+    expect(firstView.documentDigest).toMatch(/^sha256:[0-9a-f]{64}$/);
+    expect(firstView.sessionId).toBe(`web-experience:${firstView.documentDigest}`);
     expect(firstView.operations).toBe(WEB_EXPERIENCE_AUTHORING_OPERATIONS);
+  });
+
+  it("owns its complete form contract outside the React renderer", () => {
+    const state = readWebExperienceEditorState({});
+    expect(state.ok).toBe(true);
+    if (!state.ok) return;
+    const view = buildWebExperienceEditorView({
+      state: state.value,
+      starterArtifactId: "sculpt:starter-crate",
+    });
+    expect(view.form).toMatchObject({
+      action: "/editor",
+      method: "get",
+      profile: { name: "profile", value: "web" },
+      title: { name: "web-title", maxLength: 80, operation: "page.set-html" },
+      html: { name: "web-html", maxLength: 5_000, operation: "page.set-html" },
+      asset: { name: "web-asset", value: "1", operation: "asset.inject" },
+      three: { name: "web-three", value: "1", operation: "three.embed" },
+    });
+    expect(view.form.layout.options.map((option) => option.value)).toEqual([
+      "hero",
+      "split",
+      "stack",
+    ]);
+  });
+
+  it("keeps document projection operations separate from the Minimum E2 session", () => {
+    expect(
+      WEB_EXPERIENCE_AUTHORING_OPERATIONS.filter((operation) =>
+        (WEB_EDITOR_SESSION_OPERATIONS as readonly string[]).includes(operation),
+      ),
+    ).toEqual([]);
   });
 
   it("projects page HTML, site canvas, known asset injection, and a safe Three embed", () => {

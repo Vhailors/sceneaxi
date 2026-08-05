@@ -4,8 +4,10 @@ import {
   buildWebExperienceEditorView,
   decideEditorAccess,
   decideEditorEntitlement,
+  describeSiteAccessState,
   ok,
   readWebExperienceEditorState,
+  sitePathWithSearchParams,
 } from "@sceneaxi/site-kit";
 
 const read = (relativePath: string) =>
@@ -88,6 +90,25 @@ describe("SA-WEB-1 access", () => {
     ).toMatch(/^web-experience:sha256:/);
   });
 
+  it("returns a signed-out visitor to the exact URL-carried Web session", () => {
+    const destination = sitePathWithSearchParams("/editor", {
+      profile: "web",
+      "web-title": "Launch story",
+      "web-layout": "hero",
+      "web-html": "<h1>Launch & learn</h1>",
+      "web-three": "1",
+    });
+    expect(destination).toBe(
+      "/editor?profile=web&web-title=Launch+story&web-layout=hero&web-html=%3Ch1%3ELaunch+%26+learn%3C%2Fh1%3E&web-three=1",
+    );
+    expect(
+      describeSiteAccessState("EDITOR_ENTITLEMENT_ANONYMOUS", { next: destination }).action,
+    ).toEqual({
+      label: "Sign in",
+      href: `/login?next=${encodeURIComponent(destination)}`,
+    });
+  });
+
   it("keeps the existing umbrella identity and entitlement seam ahead of all editor work", () => {
     const page = read(PAGE);
     const route = page.slice(page.indexOf("export default"));
@@ -101,6 +122,7 @@ describe("SA-WEB-1 access", () => {
     expect(refusedAt).toBeGreaterThan(accessAt);
     expect(webStateAt).toBeGreaterThan(refusedAt);
     expect(webViewAt).toBeGreaterThan(webStateAt);
+    expect(route).toContain("sitePathWithSearchParams(EDITOR_DEEP_LINK_PATH, params)");
     expect(page).not.toContain("@sceneaxi/profile-web");
     expect(page).not.toContain("@sceneaxi/auth");
     expect(page).not.toContain("@sceneaxi/billing");
@@ -113,6 +135,16 @@ describe("SA-WEB-1 browser confinement", () => {
     expect(component).toContain("sandbox={view.canvas.iframeSandbox}");
     expect(component).toContain("srcDoc={view.canvas.srcDoc}");
     expect(component).not.toContain("dangerouslySetInnerHTML");
+  });
+
+  it("renders the site-kit form contract without restating authoring parameters", () => {
+    const component = read(WEB_EDITOR);
+    expect(component).toContain("view.form.layout.options.map");
+    expect(component).toContain("name={view.form.html.name}");
+    expect(component).toContain("maxLength={view.form.html.maxLength}");
+    expect(component).not.toContain('name="web-html"');
+    expect(component).not.toContain('data-operation="page.set-html"');
+    expect(component).not.toContain('value="hero"');
   });
 
   it("mounts a safe Three scene outside authored HTML through the existing viewport", () => {

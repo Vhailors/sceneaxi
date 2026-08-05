@@ -16,7 +16,10 @@ The entitlement decision returns before either the game session or the Web
 Experience view is constructed. An anonymous request, an unavailable identity
 or credit plane, and a signed-in member without an entitlement therefore reach
 no editor model and no canvas. The Web projection adds no identity dependency,
-provider adapter, cookie, role, credit rule, or billing call.
+provider adapter, cookie, role, credit rule, or billing call. The guarded route
+carries its encoded query string through the existing hosted-login `next`
+contract, so sign-in returns to the same Web profile and reconstructs the same
+document instead of opening the Game default.
 
 The dependency matrix continues to deny profile packages to sites. The shared
 vocabulary lives in
@@ -36,10 +39,21 @@ The closed operation list is:
 | `asset.inject` | inject the session's already-validated starter Sculpt Artifact by id; arbitrary URLs are not accepted |
 | `three.embed` | mount the session's existing `MountableScene` through the umbrella's one presentation seam; draw-only, never a kernel advance |
 
-Request state is URL-reconstructable and hashed into a deterministic session
-id. It is not durable account storage: the same URL rebuilds the same state,
-and changing the form creates the next state. No provider or persistence
-behavior is implied.
+Each accepted request projects a v1 text-canonical `SceneDocument`. Its canonical
+serialized bytes produce the document digest and deterministic session id; the
+URL carries the bounded inputs needed to reconstruct those bytes. It is not
+durable account storage: the same URL rebuilds the same document, and changing
+the form creates the next document. No provider or persistence behavior is
+implied.
+
+These four operations are a closed **Web profile document projection**, not
+members of `WEB_EDITOR_SESSION_OPERATIONS` and not new Minimum E2 runtime
+operations. They never call `createWebEditorSession`, advance a kernel, or widen
+ADR 0003. The shared product shell may display the existing composed scene for
+the optional draw-only Three viewport, but Web controls change only the canonical
+Web document. `packages/site-kit/src/web-experience-editor.ts` owns the complete
+form contract (names, bounds, options, and operation bindings); the React module
+only renders it.
 
 The desktop-only list (`sculpt.edit`, `scene.compose`, `runtime.advance`,
 `animation.timeline`, `plugin.load`, `native.export`) is also closed. Each one
@@ -66,10 +80,11 @@ no engine implementation crosses into the Web Experience contract.
 - `packages/profile-web/test/authoring.test.ts` — closed subset, desktop and
   unknown refusals, immutable sandbox policy.
 - `packages/site-kit/test/web-experience-editor.test.ts` — deterministic state,
+  canonical document/digest, form contract, operation separation,
   HTML/canvas/asset/Three paths, malformed input, and refusal projection.
 - `tests/sites/web-experience-editor.test.ts` — no-session,
-  denied-entitlement, entitled-member, route-order, sandbox, single viewport,
-  and no-second-auth assertions.
+  login continuation, denied-entitlement, entitled-member, route-order,
+  thin-renderer, sandbox, single viewport, and no-second-auth assertions.
 - Existing identity wiring, editor viewport golden, site boundary, visual, and
   full gate suites remain mandatory.
 

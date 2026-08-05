@@ -1,20 +1,24 @@
 /**
  * Deployment-neutral Web Experience editor model (sceneaxi#197).
  *
- * The URL is the durable request state for the serverless umbrella surface. A
- * fixed input therefore reconstructs one deterministic view/session id. Raw HTML
- * is never interpreted in the parent document: callers render `srcDoc` only in an
- * iframe carrying the schema-owned empty sandbox token set. The optional Three
- * scene stays outside that iframe and reaches the existing umbrella presentation
- * seam as an opaque MountableScene.
+ * The URL carries bounded request inputs for the serverless umbrella surface.
+ * Those inputs project one text-canonical SceneDocument whose digest identifies
+ * the stable session. Raw HTML is never interpreted in the parent document:
+ * callers render `srcDoc` only in an iframe carrying the schema-owned empty
+ * sandbox token set. The optional Three scene stays outside that iframe and
+ * reaches the existing umbrella presentation seam as an opaque MountableScene.
  */
 import { createHash } from "node:crypto";
 import {
   WEB_EXPERIENCE_AUTHORING_OPERATIONS,
   WEB_EXPERIENCE_DESKTOP_ONLY_OPERATIONS,
   WEB_EXPERIENCE_SANDBOX_POLICY,
+  createDocument,
   evaluateWebExperienceAuthoringOperation,
+  serializeDocument,
+  type SceneDocument,
   type WebExperienceAuthoringDecision,
+  type WebExperienceAuthoringOperation,
 } from "@sceneaxi/schemas";
 import { type SiteResult, ok, refuse } from "./refusals.js";
 import type { SearchParams } from "./site-search-params.js";
@@ -40,6 +44,9 @@ export type WebExperienceCanvasLayout =
 export const WEB_EXPERIENCE_DEFAULT_HTML =
   "<main><p>Shape one focused interactive page, then add a safe scene or asset.</p></main>";
 
+export const WEB_EXPERIENCE_TITLE_MAX_LENGTH = 80;
+export const WEB_EXPERIENCE_HTML_MAX_LENGTH = 5_000;
+
 export type WebExperienceEditorState = Readonly<{
   title: string;
   html: string;
@@ -50,7 +57,26 @@ export type WebExperienceEditorState = Readonly<{
 
 export type WebExperienceEditorView = Readonly<{
   sessionId: string;
+  document: SceneDocument;
+  documentDigest: `sha256:${string}`;
   operations: typeof WEB_EXPERIENCE_AUTHORING_OPERATIONS;
+  form: Readonly<{
+    action: "/editor";
+    method: "get";
+    profile: Readonly<{ name: "profile"; value: "web" }>;
+    title: WebExperienceFormControl & Readonly<{ maxLength: number }>;
+    layout: WebExperienceFormControl &
+      Readonly<{
+        options: ReadonlyArray<Readonly<{ value: WebExperienceCanvasLayout; label: string }>>;
+      }>;
+    html: WebExperienceFormControl & Readonly<{ maxLength: number }>;
+    asset: WebExperienceFormControl & Readonly<{ value: "1" }>;
+    three: WebExperienceFormControl & Readonly<{ value: "1" }>;
+    submit: Readonly<{
+      kind: "web-authoring";
+      operations: typeof WEB_EXPERIENCE_AUTHORING_OPERATIONS;
+    }>;
+  }>;
   page: Readonly<{ title: string; html: string }>;
   canvas: Readonly<{
     layout: WebExperienceCanvasLayout;
@@ -70,6 +96,55 @@ export type WebExperienceEditorView = Readonly<{
     Extract<WebExperienceAuthoringDecision, { readonly ok: false }>
   >;
 }>;
+
+type WebExperienceFormControl = Readonly<{
+  id: string;
+  name: string;
+  kind: "web-authoring";
+  operation: WebExperienceAuthoringOperation;
+}>;
+
+const webControl = (
+  id: string,
+  name: string,
+  operation: WebExperienceAuthoringOperation,
+): WebExperienceFormControl => Object.freeze({ id, name, kind: "web-authoring", operation });
+
+const WEB_EXPERIENCE_LAYOUT_OPTIONS = Object.freeze([
+  Object.freeze({ value: "hero" as const, label: "Hero" }),
+  Object.freeze({ value: "split" as const, label: "Split" }),
+  Object.freeze({ value: "stack" as const, label: "Stack" }),
+]);
+
+const WEB_EXPERIENCE_FORM = Object.freeze({
+  action: "/editor" as const,
+  method: "get" as const,
+  profile: Object.freeze({ name: "profile" as const, value: "web" as const }),
+  title: Object.freeze({
+    ...webControl("webxp-title", "web-title", "page.set-html"),
+    maxLength: WEB_EXPERIENCE_TITLE_MAX_LENGTH,
+  }),
+  layout: Object.freeze({
+    ...webControl("webxp-layout", "web-layout", "site-canvas.configure"),
+    options: WEB_EXPERIENCE_LAYOUT_OPTIONS,
+  }),
+  html: Object.freeze({
+    ...webControl("webxp-html", "web-html", "page.set-html"),
+    maxLength: WEB_EXPERIENCE_HTML_MAX_LENGTH,
+  }),
+  asset: Object.freeze({
+    ...webControl("webxp-asset", "web-asset", "asset.inject"),
+    value: "1" as const,
+  }),
+  three: Object.freeze({
+    ...webControl("webxp-three", "web-three", "three.embed"),
+    value: "1" as const,
+  }),
+  submit: Object.freeze({
+    kind: "web-authoring" as const,
+    operations: WEB_EXPERIENCE_AUTHORING_OPERATIONS,
+  }),
+});
 
 const one = (
   value: string | readonly string[] | undefined,
@@ -102,13 +177,19 @@ export function readWebExperienceEditorState(
   if (
     title === null ||
     (title !== undefined &&
-      (title.trim().length === 0 || title.length > 80 || title.includes("\u0000")))
+      (title.trim().length === 0 ||
+        title.length > WEB_EXPERIENCE_TITLE_MAX_LENGTH ||
+        title.includes("\u0000")))
   ) {
     return refuse("SITE_REQUEST_MALFORMED");
   }
 
   const html = one(params["web-html"]);
-  if (html === null || (html !== undefined && (html.length > 5_000 || html.includes("\u0000")))) {
+  if (
+    html === null ||
+    (html !== undefined &&
+      (html.length > WEB_EXPERIENCE_HTML_MAX_LENGTH || html.includes("\u0000")))
+  ) {
     return refuse("SITE_REQUEST_MALFORMED");
   }
 
@@ -173,14 +254,6 @@ export function buildWebExperienceEditorView(input: {
   readonly state: WebExperienceEditorState;
   readonly starterArtifactId: string;
 }): WebExperienceEditorView {
-  const source = JSON.stringify({
-    schemaVersion: 1,
-    state: input.state,
-    starterArtifactId: input.state.injectStarterAsset
-      ? input.starterArtifactId
-      : null,
-  });
-  const sessionId = `web-experience:sha256:${createHash("sha256").update(source, "utf8").digest("hex")}`;
   const assets = input.state.injectStarterAsset
     ? Object.freeze([
         Object.freeze({
@@ -189,6 +262,31 @@ export function buildWebExperienceEditorView(input: {
         }),
       ])
     : Object.freeze([]);
+  const documentData = Object.freeze({
+    webExperience: Object.freeze({
+      authoringContract: "sceneaxi.web-experience-authoring.v1",
+      page: Object.freeze({ html: input.state.html }),
+      canvas: Object.freeze({ layout: input.state.layout }),
+      assets,
+      threeEmbed: Object.freeze({
+        enabled: input.state.embedThree,
+        host: "umbrella-presentation-seam" as const,
+        advancesSession: false as const,
+      }),
+    }),
+  });
+  const document = Object.freeze(
+    createDocument({
+      id: "umbrella-web-experience",
+      title: input.state.title,
+      data: documentData,
+    }),
+  );
+  const digest = createHash("sha256")
+    .update(serializeDocument(document), "utf8")
+    .digest("hex");
+  const documentDigest = `sha256:${digest}` as const;
+  const sessionId = `web-experience:${documentDigest}`;
   const desktopRefusals = Object.freeze(
     WEB_EXPERIENCE_DESKTOP_ONLY_OPERATIONS.map((operation) => {
       const decision = evaluateWebExperienceAuthoringOperation(operation);
@@ -201,7 +299,10 @@ export function buildWebExperienceEditorView(input: {
 
   return Object.freeze({
     sessionId,
+    document,
+    documentDigest,
     operations: WEB_EXPERIENCE_AUTHORING_OPERATIONS,
+    form: WEB_EXPERIENCE_FORM,
     page: Object.freeze({ title: input.state.title, html: input.state.html }),
     canvas: Object.freeze({
       layout: input.state.layout,

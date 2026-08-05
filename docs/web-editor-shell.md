@@ -43,6 +43,14 @@ show a scene the server session did not produce, and the frozen
 `WEB_EDITOR_SESSION_OPERATIONS` set is not widened (ADR 0003, ADR 0020 — the
 entitlement decision still happens before any session exists).
 
+The Web Experience projection introduced by #197 has a separate, closed set of
+document-projection operations. They are marked `web-authoring`, not `live`, are
+asserted disjoint from `WEB_EDITOR_SESSION_OPERATIONS`, and rebuild a
+text-canonical Web document without calling the Minimum E2 session. Its optional
+Three surface is draw-only. This distinction keeps the Engine Desktop rule above
+intact while giving the smaller Web profile its explicitly bounded authoring
+surface; [`web-experience-editor.md`](web-experience-editor.md) owns that contract.
+
 Because of that, the **active mode rides in the URL too** (`mode`, read by
 `readEditorState` and written by `editorHref`). It is view state and nothing
 else: it names no session operation, no render reads it, and all seven modes

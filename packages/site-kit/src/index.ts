@@ -138,12 +138,16 @@ export {
   WEB_EXPERIENCE_CANVAS_LAYOUTS,
   WEB_EXPERIENCE_DEFAULT_HTML,
   WEB_EXPERIENCE_EDITOR_PARAMS,
+  WEB_EXPERIENCE_HTML_MAX_LENGTH,
+  WEB_EXPERIENCE_TITLE_MAX_LENGTH,
   buildWebExperienceEditorView,
   readWebExperienceEditorState,
   type WebExperienceCanvasLayout,
   type WebExperienceEditorState,
   type WebExperienceEditorView,
 } from "./web-experience-editor.js";
+
+export { sitePathWithSearchParams } from "./site-search-params.js";
 
 export {
   WEB_EXPERIENCE_AUTHORING_OPERATIONS,

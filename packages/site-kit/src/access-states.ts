@@ -64,12 +64,12 @@ export type SiteAccessState = {
  * Because both ends confine, the answer must also be **idempotent**: the value a
  * sign-in form carries is confined again when it comes back, and a second pass
  * that re-escaped the first pass's `%` would redirect a signed-in visitor to a
- * path that does not exist. So percent-escapes are decoded before anything is
- * judged and the ASCII form is produced from that — a lone `%` first standing in
- * for itself, since it is a literal the previous pass would have escaped. An
- * escape therefore cannot smuggle a byte past the rules above, because they all
- * read the decoded path, and it cannot manufacture an authority either, because
- * the value must already be relative before a single escape is decoded.
+ * path that does not exist. Percent escapes are decoded for the safety checks,
+ * but the URL parser canonicalizes the original structure. That distinction is
+ * load-bearing for query values: an encoded `&` must remain data rather than
+ * becoming a second parameter. An escape therefore cannot smuggle a byte past
+ * the rules below, and confinement cannot corrupt a URL-carried editor document
+ * on the login round trip.
  */
 export function confineSiteRelativePath(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -87,8 +87,22 @@ export function confineSiteRelativePath(value: unknown): string | null {
     const code = char.codePointAt(0) ?? 0;
     if (code < 0x20 || code === 0x7f) return null;
   }
+  for (let index = 0; index < raw.length; index += 1) {
+    const code = raw.charCodeAt(index);
+    if (code >= 0xd800 && code <= 0xdbff) {
+      const next = raw.charCodeAt(index + 1);
+      if (!(next >= 0xdc00 && next <= 0xdfff)) return null;
+      index += 1;
+    } else if (code >= 0xdc00 && code <= 0xdfff) {
+      return null;
+    }
+  }
   try {
-    return encodeURI(path);
+    const confined = new URL(raw, "https://sceneaxi.invalid");
+    if (confined.origin !== "https://sceneaxi.invalid") return null;
+    const result = `${confined.pathname}${confined.search}${confined.hash}`;
+    if (result.startsWith("//")) return null;
+    return result;
   } catch {
     return null;
   }

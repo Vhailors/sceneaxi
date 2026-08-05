@@ -35,7 +35,9 @@ export function WebExperienceEditor({
           <dt>Session</dt>
           <dd className="mono">{view.sessionId}</dd>
           <dt>Persistence</dt>
-          <dd>URL-reconstructable</dd>
+          <dd>v{view.document.schemaVersion} text-canonical / URL-carried</dd>
+          <dt>Document</dt>
+          <dd className="mono">{view.documentDigest}</dd>
         </dl>
       </header>
 
@@ -48,63 +50,69 @@ export function WebExperienceEditor({
       </div>
 
       <div className="webxp-grid">
-        <form method="get" action="/editor" className="webxp-form">
-          <input type="hidden" name="profile" value="web" />
-          <label htmlFor="webxp-title">Page title</label>
+        <form method={view.form.method} action={view.form.action} className="webxp-form">
           <input
-            id="webxp-title"
-            name="web-title"
-            maxLength={80}
+            type="hidden"
+            name={view.form.profile.name}
+            value={view.form.profile.value}
+          />
+          <label htmlFor={view.form.title.id}>Page title</label>
+          <input
+            id={view.form.title.id}
+            name={view.form.title.name}
+            maxLength={view.form.title.maxLength}
             defaultValue={view.page.title}
-            data-kind="live"
-            data-operation="page.set-html"
+            data-kind={view.form.title.kind}
+            data-operation={view.form.title.operation}
           />
 
-          <label htmlFor="webxp-layout">Site canvas</label>
+          <label htmlFor={view.form.layout.id}>Site canvas</label>
           <select
-            id="webxp-layout"
-            name="web-layout"
+            id={view.form.layout.id}
+            name={view.form.layout.name}
             defaultValue={view.canvas.layout}
-            data-kind="live"
-            data-operation="site-canvas.configure"
+            data-kind={view.form.layout.kind}
+            data-operation={view.form.layout.operation}
           >
-            <option value="hero">Hero</option>
-            <option value="split">Split</option>
-            <option value="stack">Stack</option>
+            {view.form.layout.options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
 
-          <label htmlFor="webxp-html">Page HTML</label>
+          <label htmlFor={view.form.html.id}>Page HTML</label>
           <textarea
-            id="webxp-html"
-            name="web-html"
-            maxLength={5000}
+            id={view.form.html.id}
+            name={view.form.html.name}
+            maxLength={view.form.html.maxLength}
             rows={12}
             defaultValue={view.page.html}
-            data-kind="live"
-            data-operation="page.set-html"
+            data-kind={view.form.html.kind}
+            data-operation={view.form.html.operation}
           />
 
-          <label className="webxp-check" htmlFor="webxp-asset">
+          <label className="webxp-check" htmlFor={view.form.asset.id}>
             <input
-              id="webxp-asset"
+              id={view.form.asset.id}
               type="checkbox"
-              name="web-asset"
-              value="1"
+              name={view.form.asset.name}
+              value={view.form.asset.value}
               defaultChecked={view.assets.length > 0}
-              data-kind="live"
-              data-operation="asset.inject"
+              data-kind={view.form.asset.kind}
+              data-operation={view.form.asset.operation}
             />
             Inject the known starter asset
           </label>
-          <label className="webxp-check" htmlFor="webxp-three">
+          <label className="webxp-check" htmlFor={view.form.three.id}>
             <input
-              id="webxp-three"
+              id={view.form.three.id}
               type="checkbox"
-              name="web-three"
-              value="1"
+              name={view.form.three.name}
+              value={view.form.three.value}
               defaultChecked={view.threeEmbed.enabled}
-              data-kind="live"
-              data-operation="three.embed"
+              data-kind={view.form.three.kind}
+              data-operation={view.form.three.operation}
             />
             Embed the safe Three scene
           </label>
@@ -112,8 +120,8 @@ export function WebExperienceEditor({
           <button
             type="submit"
             className="ed-primary"
-            data-kind="live"
-            data-operation="page.set-html"
+            data-kind={view.form.submit.kind}
+            data-operation={view.form.submit.operations.join(" ")}
           >
             Apply web page state
           </button>

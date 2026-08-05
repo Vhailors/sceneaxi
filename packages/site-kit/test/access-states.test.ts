@@ -28,6 +28,8 @@ const HOSTILE_DESTINATIONS = [
   "//evil.example",
   "/\\evil.example",
   "/path\\segment",
+  "/a/..//evil.example",
+  "/%2e%2e//evil.example",
   "javascript:alert(1)",
   "/has space",
   "/line\nbreak",
@@ -144,6 +146,9 @@ describe("describeSiteAccessState", () => {
     expect(confineSiteRelativePath("/editor")).toBe("/editor");
     expect(confineSiteRelativePath("  /pricing  ")).toBe("/pricing");
     expect(confineSiteRelativePath("/editor?objects=3")).toBe("/editor?objects=3");
+    expect(confineSiteRelativePath("/editor?html=%3Ch1%3EA+%26+B%3C%2Fh1%3E")).toBe(
+      "/editor?html=%3Ch1%3EA+%26+B%3C%2Fh1%3E",
+    );
     expect(confineSiteRelativePath("/café/💥")).toBe("/caf%C3%A9/%F0%9F%92%A5");
     expect(confineSiteRelativePath("/broken\ud800")).toBeNull();
     for (const hostile of HOSTILE_DESTINATIONS) {
@@ -158,6 +163,7 @@ describe("describeSiteAccessState", () => {
       "/café/💥",
       "/percent%sign",
       "/a%2Fb",
+      "/editor?html=%3Ch1%3EA+%26+B%3C%2Fh1%3E",
     ]) {
       const once = confineSiteRelativePath(destination);
       expect(once).not.toBeNull();

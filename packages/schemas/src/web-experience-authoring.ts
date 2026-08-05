@@ -1,9 +1,11 @@
 /**
  * First-release Web Experience authoring contract (sceneaxi#197).
  *
- * This is vocabulary and policy, not an editor state machine. The Web profile
- * exposes it directly, while the deployable umbrella editor consumes it through
- * site-kit because ADR 0018 deliberately denies sites a profile-package edge.
+ * This is vocabulary and policy for a Web document projection, not an editor
+ * state machine and not an extension of the Minimum E2 session operations. The
+ * Web profile exposes it directly, while the deployable umbrella editor consumes
+ * it through site-kit because ADR 0018 deliberately denies sites a
+ * profile-package edge.
  */
 
 export const WEB_EXPERIENCE_AUTHORING_OPERATIONS = Object.freeze([
