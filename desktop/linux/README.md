@@ -76,6 +76,8 @@ Rules the gate enforces (`pnpm check:desktop`, `pnpm check:boundaries`,
 
 ## What this is not
 
-Windows and macOS packaging, code signing, auto-update, an app store listing,
+macOS packaging, Linux code signing/auto-update, an app store listing,
 identity/billing, and any publication or release authority — all deliberately
-absent, recorded in `docs/desktop-linux.md`.
+absent, recorded in `docs/desktop-linux.md`. Windows now has a separate ops-gated
+wrapper in `desktop/windows`; it changes no Linux source or claim and has no public
+artifact yet (`docs/desktop-windows.md`).

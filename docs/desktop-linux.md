@@ -239,10 +239,16 @@ the same bytes. All three launch modes printed the same proof (`pnpm smoke`,
 
 ## Deliberately absent
 
-Windows and macOS packaging (shown as coming soon on `/engine` and in the umbrella's
-default-route download legend, never implied), code signing, auto-update, an app store
-listing, a GitHub Release, identity/billing (the desktop app has no account surface; the
-matrix denies it `auth`/`billing`), any Kids authoring path
-(the chrome's refuse-only Kids projection stays owned by `@sceneaxi/desktop-shell`,
-and the matrix denies every profile package), and any new CLI verb — held-key
-policy is untouched.
+Windows and macOS packaging no longer share one state. macOS packaging and any
+public Windows artifact are both deliberately absent from this Linux record;
+`/engine` and the umbrella's default-route download legend show both as coming soon.
+Also absent: Linux code signing, Linux auto-update, an app store listing, a GitHub Release,
+identity/billing (the desktop app has no account surface; the matrix denies it
+`auth`/`billing`), any Kids authoring path (the chrome's refuse-only Kids projection
+stays owned by `@sceneaxi/desktop-shell`, and the matrix denies every profile
+package), and any new CLI verb — held-key policy is untouched.
+
+The separate `desktop/windows` path now stages this existing application for a
+mandatory-signed NSIS build and fail-closed updates. It changes none of this Linux
+record and advertises nothing until `docs/desktop-windows.md` contains a verified
+public release.

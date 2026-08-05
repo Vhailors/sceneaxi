@@ -150,5 +150,12 @@ deployable web tier remains the separate `sites/` tier (ADR 0018).
 
 ## Not runnable yet
 
+- **`@sceneaxi/desktop-windows` public installer** — the packaging, mandatory
+  Authenticode signing, NSIS update, and existing-draft release path are implemented
+  and smoke-tested, but no signing credential or public artifact is present. It gains
+  an R2 claim only after an operator produces, verifies, and records a real release as
+  specified in [`desktop-windows.md`](desktop-windows.md); Windows remains coming soon
+  in the download IA until then.
+
 - **`apps/catalog-game`, `apps/catalog-web`** — dormant, owned by the
   websites/deploy track.
