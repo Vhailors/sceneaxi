@@ -1,24 +1,23 @@
 /**
  * Product copy for the umbrella's marketing surfaces (sceneaxi#157).
  *
- * The accepted visual target is a content-dense screen: numbered sections, card rows,
- * a capability matrix, a terminal, a diff. That content is data, so it lives here in
- * pure TypeScript — the hermetic gate type-checks this module and `tests/sites/` asserts
- * it, which is what keeps a marketing sentence from quietly making a claim the
- * contracts do not.
+ * The surfaces this still serves are `/profiles`, `/engine`, `/docs`, `/pricing`,
+ * `/account`, and the shared shell. That content is data, so it lives here in pure
+ * TypeScript — the hermetic gate type-checks this module and `tests/sites/` asserts it,
+ * which is what keeps a marketing sentence from quietly making a claim the contracts do
+ * not.
  *
- * Two rules govern everything below.
+ * One rule governs everything below: **derive, do not restate.** Anything site-kit or
+ * the identity plane already publishes is read at render time (starter allotment,
+ * creator share, capability tiers, the live open path and its presentation vocabulary,
+ * credit packs, the SDK archive's own facts). Nothing here re-types those numbers.
  *
- *   1. **Derive, do not restate.** Anything site-kit or the identity plane already
- *      publishes is read at render time (starter allotment, creator share, capability
- *      tiers, the live open path and its presentation vocabulary, credit packs, the
- *      SDK archive's own facts). Nothing here re-types those numbers.
- *   2. **Restate only what is owned elsewhere and pinned by a test.** The sculpt pass
- *      order and the CLI exit-code table belong to `@sceneaxi/schemas` and
- *      `@sceneaxi/cli`, which the sites tier may not import (ADR 0018 + the dependency
- *      matrix). They are restated here and pinned to their owners by
- *      `tests/sites/umbrella-visual.test.ts`, so drift fails the gate rather than
- *      shipping.
+ * sceneaxi#203 replaced the default route's feature tour, and the copy that only that
+ * tour rendered — the sculpt-pass cards, the propose/apply diff illustration, the
+ * terminal transcript, the CLI exit-code cards, and the family map — was removed with
+ * it rather than left here reading as shipped product copy. Restating a contract this
+ * tier may not import is only honest while a test pins the restatement to its owner and
+ * a route renders it; an unrendered copy is neither.
  *
  * What is deliberately *not* here: installer names, download sizes, or digests for any
  * artifact this repository does not build; subscription tiers or seat prices; any
@@ -30,116 +29,6 @@ export interface SectionMark {
   readonly n: string;
   readonly label: string;
 }
-
-/** One of the visible sculpt passes, as a card. */
-export interface SculptPassCard {
-  readonly n: string;
-  readonly id: string;
-  readonly name: string;
-  readonly desc: string;
-  readonly required: boolean;
-  readonly bar: "ok" | "accent" | "info" | "iso";
-}
-
-/**
- * The reconstruction passes, in order.
- *
- * `@sceneaxi/schemas` owns `REQUIRED_SCULPT_PASSES` — blockout, structure, materials,
- * sockets — with one optional surface-detail pass permitted before sockets. The
- * optional pass is marked as optional here rather than counted as required, because a
- * card row that showed five equal passes would claim a required pass that is not one.
- */
-export const SCULPT_PASSES: readonly SculptPassCard[] = Object.freeze([
-  Object.freeze({
-    n: "01",
-    id: "blockout",
-    name: "Blockout",
-    desc: "Silhouette and proportion, read from the references in the intake.",
-    required: true,
-    bar: "ok" as const,
-  }),
-  Object.freeze({
-    n: "02",
-    id: "structure",
-    name: "Structure",
-    desc: "Parts, seams, and how the object comes apart.",
-    required: true,
-    bar: "ok" as const,
-  }),
-  Object.freeze({
-    n: "03",
-    id: "surface-detail",
-    name: "Surface detail",
-    desc: "Wear, stencils, and small raised geometry. The one optional pass.",
-    required: false,
-    bar: "accent" as const,
-  }),
-  Object.freeze({
-    n: "04",
-    id: "materials",
-    name: "Materials",
-    desc: "Paint, metal, and rubber with a declared finish.",
-    required: true,
-    bar: "info" as const,
-  }),
-  Object.freeze({
-    n: "05",
-    id: "sockets",
-    name: "Sockets",
-    desc: "Where the object hinges, mounts, and animates from.",
-    required: true,
-    bar: "iso" as const,
-  }),
-]);
-
-/** The required pass ids in order, for the test that pins this list to schemas. */
-export const REQUIRED_PASS_IDS: readonly string[] = Object.freeze(
-  SCULPT_PASSES.filter((pass) => pass.required).map((pass) => pass.id),
-);
-
-/** What the propose/apply contract guarantees, as a check list. */
-export const REVIEW_POINTS: readonly string[] = Object.freeze([
-  "The same proposal object in the editor, the CLI, and your CI.",
-  "Content-hash conflict rejection — a stale proposal is refused, never merged.",
-  "Applies are journaled before commit, so a crash rolls back cleanly.",
-  "Undo restores the exact prior bytes, not an approximation.",
-]);
-
-/** One row of the illustrative proposal panel. */
-export interface DiffRow {
-  readonly badge: "M" | "+";
-  readonly dir: string;
-  readonly leaf: string;
-  readonly after: string;
-}
-
-/**
- * The proposal panel's rows.
- *
- * This is an illustration of the propose/apply shape, not a recording of a run: the
- * page says so beside it, and the two hashes below are visibly elided rather than
- * presented as a digest anyone could check.
- */
-export const DIFF_ROWS: readonly DiffRow[] = Object.freeze([
-  Object.freeze({
-    badge: "M" as const,
-    dir: "objects/field_drone",
-    leaf: "/position",
-    after: "0, 1.85, -2.30",
-  }),
-  Object.freeze({
-    badge: "+" as const,
-    dir: "objects/field_drone/sockets",
-    leaf: "/rotor_fl",
-    after: "spin 0 → 360°",
-  }),
-  Object.freeze({
-    badge: "+" as const,
-    dir: "materials",
-    leaf: "/matte_polymer",
-    after: "rough 0.74",
-  }),
-]);
 
 /** One profile card on the overview. */
 export interface ProfileCard {
@@ -195,111 +84,6 @@ export const PROFILE_CARDS: readonly ProfileCard[] = Object.freeze([
       "Nothing in the tree may depend on it",
     ]),
     href: null,
-  }),
-]);
-
-/** A line in the illustrative terminal block. */
-export interface TerminalLine {
-  readonly prompt: "$" | "→" | "";
-  readonly text: string;
-  readonly tone: "in" | "out" | "hi";
-}
-
-/** The CLI protocol, shown the way an agent sees it. */
-export const TERMINAL_LINES: readonly TerminalLine[] = Object.freeze([
-  Object.freeze({ prompt: "$" as const, text: "sceneaxi project propose \\", tone: "in" as const }),
-  Object.freeze({ prompt: "" as const, text: "  --document scene.json \\", tone: "in" as const }),
-  Object.freeze({
-    prompt: "" as const,
-    text: "  --pointer /data/entities/0/x --value 42",
-    tone: "in" as const,
-  }),
-  Object.freeze({ prompt: "→" as const, text: "ok        true", tone: "out" as const }),
-  Object.freeze({
-    prompt: "→" as const,
-    text: "diff      1 file changed, 1 insertion(+)",
-    tone: "out" as const,
-  }),
-  Object.freeze({ prompt: "→" as const, text: "baseHash  a4f2…9c1e", tone: "out" as const }),
-  Object.freeze({
-    prompt: "→" as const,
-    text: "help[0]   review, then: project apply",
-    tone: "hi" as const,
-  }),
-  Object.freeze({
-    prompt: "$" as const,
-    text: "sceneaxi project apply --proposal edit.json",
-    tone: "in" as const,
-  }),
-  Object.freeze({ prompt: "→" as const, text: "applied   b7d0…41aa", tone: "hi" as const }),
-]);
-
-/** One row of the CLI exit-code table. */
-export interface ExitCodeRow {
-  readonly code: number;
-  readonly name: string;
-  readonly when: string;
-}
-
-/**
- * The CLI's agent-facing exit codes.
- *
- * Owned by `@sceneaxi/cli` (`EXIT_CODE_TABLE`, documented in `packages/cli/README.md`),
- * which the sites tier may not import. `tests/sites/umbrella-visual.test.ts` asserts
- * this list against that table, so a renumbering there fails the gate here.
- */
-export const EXIT_CODES: readonly ExitCodeRow[] = Object.freeze([
-  Object.freeze({ code: 0, name: "OK", when: "completed" }),
-  Object.freeze({ code: 1, name: "ERROR", when: "internal, conflict, or missing path" }),
-  Object.freeze({ code: 2, name: "USAGE", when: "unknown path, unknown flag, or validation" }),
-  Object.freeze({ code: 3, name: "HELD_KEY", when: "refused by an open captain hold" }),
-]);
-
-/** One surface in the family map. */
-export interface FamilyCard {
-  readonly name: string;
-  readonly accent: "accent" | "game" | "web" | "iso";
-  readonly what: string;
-  readonly desc: string;
-  /** `true` when this deployment may hold a resolved origin for the surface. */
-  readonly linkable: boolean;
-}
-
-/**
- * Where each surface lives.
- *
- * `what` describes the surface rather than naming a domain: the origins are per-deploy
- * environment values, and a hard-coded hostname on this page would be a claim about a
- * deployment this repository does not own. The Kids row is never linkable.
- */
-export const FAMILY_CARDS: readonly FamilyCard[] = Object.freeze([
-  Object.freeze({
-    name: "SceneAxi",
-    accent: "accent" as const,
-    what: "this site",
-    desc: "The engine, the profiles, the public open path, the SDK download, and every documentation page.",
-    linkable: false,
-  }),
-  Object.freeze({
-    name: "Game assets",
-    accent: "game" as const,
-    what: "game catalog origin",
-    desc: "Props, kits, and characters curated for playable scenes. Its own origin and its own deployment.",
-    linkable: true,
-  }),
-  Object.freeze({
-    name: "Web assets",
-    accent: "web" as const,
-    what: "web catalog origin",
-    desc: "Embeddable scenes and site chrome, merchandised for the Web Experience profile.",
-    linkable: true,
-  }),
-  Object.freeze({
-    name: "SceneAxi Kids",
-    accent: "iso" as const,
-    what: "separate origin",
-    desc: "Its own identity, storage, and safety rules. Not a route here, and not linked from here.",
-    linkable: false,
   }),
 ]);
 

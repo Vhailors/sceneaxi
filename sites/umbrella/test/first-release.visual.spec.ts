@@ -63,9 +63,10 @@ test.describe("a detected macOS visitor", () => {
     await gotoOverview(page, "macos");
 
     await expect(page.locator(".download-context")).toContainText("macOS detected");
-    await expect(page.locator('.platform-availability li[data-availability="available"]')).toHaveText(
-      /Linux/,
-    );
+    await expect(
+      page.locator('.platform-availability li[data-availability="recorded-build"]'),
+    ).toHaveText(/Linux/);
+    await expect(page.locator(".platform-availability")).not.toContainText("Available");
     await expect(
       page.locator('.platform-availability li[data-availability="coming-soon"]'),
     ).toHaveCount(2);
@@ -164,7 +165,7 @@ test("composited readability clears WCAG body contrast after the browser cascade
     ".download-primary",
     ".download-context",
     ".platform-availability li",
-    '.platform-availability li[data-availability="available"] > span:last-child',
+    '.platform-availability li[data-availability="recorded-build"] > span:last-child',
     '.platform-availability li[data-availability="coming-soon"] > span:last-child',
     ".launch-proof dd",
     ".comparison-sceneaxi td:nth-child(2)",

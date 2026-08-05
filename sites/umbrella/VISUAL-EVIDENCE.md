@@ -30,7 +30,7 @@ of that agent rather than of the machine the suite ran on. It covers:
 | Check | Browser observation |
 |---|---|
 | Default | 1440 × 1000, Download and both tables visible, no page-level overflow |
-| Detected platform | pinned Linux agent resolves `linux` on every navigation; a pinned macOS agent resolves `macos`, keeps Linux the single Available row, leaves both coming-soon rows anchor-free, and leaves the primary action on `/engine` — asserted only |
+| Detected platform | pinned Linux agent resolves `linux` on every navigation; a pinned macOS agent resolves `macos`, keeps Linux the single `recorded-build` row, prints the word "Available" nowhere in the legend, leaves both coming-soon rows anchor-free, and leaves the primary action on `/engine` — asserted only |
 | Short desktop | 1280 × 640, heading y=131-290.09, Download y=406.77-452.77, live artifact height=268.80 |
 | Split boundary | 1025px remains side-by-side; 1024px stacks claim before artifact |
 | Masthead boundary | 861px remains one row; 860px moves primary navigation to its own visible row |
@@ -469,6 +469,13 @@ here are the observation, not a prediction.
 
 Each row is a place the accepted screen and a repository contract disagree, and the
 contract wins.
+
+sceneaxi#203 replaced the default route, so the rows below that describe sections of the
+previous overview — the sculpt-pass cards, the propose/apply diff illustration, the
+terminal transcript, the CLI exit-code cards, the family map, and the hero stat bar — are
+the record of a surface this site no longer serves. Their copy, stylesheet rules, and
+tests were removed with the route rather than left behind, so those rows are history and
+not a description of what ships today.
 
 | Accepted screen | What ships | Why |
 |---|---|---|

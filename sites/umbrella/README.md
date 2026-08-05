@@ -40,9 +40,11 @@ claim:
   browser-safe entry the way `@sceneaxi/site-kit/state-panel` does — those are pinned back
   to `FOUNDATION_COLORS`, so a repalletted token fails rather than drifting.
 - `src/lib/site-content.ts` is the page **content**, in pure TypeScript so the hermetic
-  gate type-checks it. It derives every figure it can from the contract that owns it and
-  restates only the sculpt pass order and the CLI exit-code table, both of which
-  `tests/sites/umbrella-visual.test.ts` pins to `@sceneaxi/schemas` and `@sceneaxi/cli`.
+  gate type-checks it. It derives every figure it can from the contract that owns it, and
+  every collection it still exports is read by a route: `tests/sites/umbrella-visual.test.ts`
+  asserts that join, so copy whose surface is retired is removed rather than left here
+  reading as shipped product text. The sculpt-pass, propose/apply diff, terminal, CLI
+  exit-code, and family-map content went that way with sceneaxi#203's overview rewrite.
 - `src/lib/profile-matrix.ts` backs `/profiles`. It reads the canonical profile
   conformance registry and open-path demo policy through the narrow browser-safe
   `@sceneaxi/site-kit/profile-contracts` entry and computes every cell rather than
@@ -67,7 +69,11 @@ The default route is the first-release information architecture from sceneaxi#20
 
 - `src/lib/download-platform.ts` resolves desktop user-agent copy without ever creating
   an artifact URL. Linux reaches the existing `/engine` evidence route; macOS and
-  Windows remain `coming-soon` rows with no href.
+  Windows remain `coming-soon` rows with no href. Linux's state is `recorded-build`,
+  labelled "Recorded build", because that is what `desktopLinuxAppOffer()` serves: a
+  build from source or the named CI workflow artifact, against recorded checksums. No
+  row may say "Available" of a desktop binary this site does not serve, and each state
+  carries its own rendered words so no component can shorten one.
 - `src/lib/launch-marketing.ts` owns the frozen trust, comparison, and profile-launch
   projections. The Unity, Godot, and Three.js rows link to each project's own product
   description, carry no score, and state where SceneAxi is narrower.

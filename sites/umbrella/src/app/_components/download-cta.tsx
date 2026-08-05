@@ -35,7 +35,7 @@ export function DownloadCta() {
         {action.platforms.map((offer) => (
           <li data-availability={offer.availability} key={offer.id}>
             <span>{offer.name}</span>
-            <span>{offer.availability === "available" ? "Available" : "Coming soon"}</span>
+            <span>{offer.label}</span>
           </li>
         ))}
       </ul>

@@ -145,33 +145,6 @@ canvas {
   gap: 44px;
 }
 
-.band-inner-tight {
-  padding-top: 96px;
-  padding-bottom: 96px;
-}
-
-.band-gradient {
-  background: linear-gradient(var(--bg-band), var(--bg-base));
-}
-
-.band-centered {
-  align-items: center;
-  text-align: center;
-  gap: 26px;
-}
-
-.band-centered h2 {
-  max-width: 18ch;
-}
-
-.band-centered .lede {
-  max-width: 52ch;
-}
-
-.band-centered .actions {
-  justify-content: center;
-}
-
 /* --------------------------------------------------------------------------
  * Masthead
  * ------------------------------------------------------------------------ */
@@ -324,13 +297,6 @@ canvas {
   flex: none;
 }
 
-/* The three inert window dots on a terminal frame's title bar. */
-.dot-window {
-  width: 9px;
-  height: 9px;
-  background: var(--line-strong);
-}
-
 main {
   display: block;
 }
@@ -407,29 +373,6 @@ p {
 .eyebrow-quiet {
   color: var(--fg-2);
   letter-spacing: 0.14em;
-}
-
-.section-head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 40px;
-}
-
-.section-head > .section-title {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  max-width: 620px;
-  min-width: 0;
-}
-
-.section-aside {
-  font-size: 15px;
-  line-height: 1.65;
-  color: var(--fg-2);
-  max-width: 38ch;
-  flex: none;
 }
 
 .page-head {
@@ -616,12 +559,6 @@ p {
   color: var(--danger);
 }
 
-.mark-part {
-  background: var(--status-needs-review-bg);
-  border: 1px solid var(--status-needs-review-line);
-  color: var(--accent);
-}
-
 /* --------------------------------------------------------------------------
  * Cards
  * ------------------------------------------------------------------------ */
@@ -636,14 +573,6 @@ p {
   min-width: 0;
 }
 
-.grid-5 {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-}
-
-.grid-4 {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
 .grid-3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
@@ -652,13 +581,6 @@ p {
 .grid-2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
-}
-
-.split {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 64px;
-  align-items: center;
 }
 
 .panel {
@@ -719,25 +641,6 @@ p {
 .tone-game {
   --tone: var(--store-game);
   --tone-line: var(--line-soft);
-}
-
-.panel-bar {
-  position: absolute;
-  left: 0;
-  top: 0;
-  right: 0;
-  height: 2px;
-  background: var(--tone, var(--accent));
-}
-
-/*
- * Scoped one level deeper than `.panel p` on purpose: the generic panel paragraph rule
- * would otherwise win on specificity and reset these back to body copy.
- */
-.panel .panel-num {
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--fg-2);
 }
 
 .panel-head {
@@ -893,63 +796,6 @@ p {
   height: 9px;
   border: 2px solid var(--bg-base);
   border-radius: 1px;
-}
-
-.panel .family-what {
-  font-family: var(--mono);
-  font-size: 10.5px;
-  color: var(--tone, var(--accent));
-}
-
-.family-out {
-  color: var(--fg-4);
-  font-size: 10px;
-}
-
-/* The exit-code table, as a two-up card row rather than a table. */
-.exit-codes {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin: 0;
-}
-
-.exit-code {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  padding: 11px 13px;
-  background: var(--bg-panel);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius-md);
-  min-width: 0;
-}
-
-.exit-code dt {
-  font-family: var(--mono);
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--fg);
-  width: 14px;
-  flex: none;
-}
-
-.exit-code dd {
-  margin: 0;
-  min-width: 0;
-}
-
-.exit-code-name {
-  display: block;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--fg-2);
-}
-
-.exit-code-when {
-  display: block;
-  font-size: 11px;
-  color: var(--fg-2);
 }
 
 .card-accent-rail {
@@ -1137,57 +983,6 @@ p {
   max-width: 52ch;
 }
 
-.statbar {
-  position: relative;
-  border-top: 1px solid var(--line-soft);
-  background: color-mix(in srgb, var(--bg-panel) 70%, transparent);
-  backdrop-filter: blur(10px);
-}
-
-.statbar-inner {
-  max-width: var(--shell);
-  margin: 0 auto;
-  padding: 0 var(--gutter);
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.stat {
-  padding: 22px 0;
-  border-right: 1px solid var(--line-soft);
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  min-width: 0;
-}
-
-.stat:last-child {
-  border-right: none;
-}
-
-.stat dt {
-  order: 2;
-  font-size: 12px;
-  color: var(--fg-2);
-}
-
-.stat dd {
-  order: 1;
-  margin: 0;
-  font-family: var(--mono);
-  font-size: 22px;
-  font-weight: 500;
-  color: var(--fg);
-}
-
-.stat-accent dd {
-  color: var(--accent);
-}
-
-.stat-ok dd {
-  color: var(--ok);
-}
-
 /* --------------------------------------------------------------------------
  * First public release overview (sceneaxi issue 203)
  * ------------------------------------------------------------------------ */
@@ -1270,7 +1065,7 @@ p {
   color: var(--fg);
 }
 
-.platform-availability li[data-availability="available"] > span:last-child {
+.platform-availability li[data-availability="recorded-build"] > span:last-child {
   color: var(--ok);
 }
 
@@ -1707,136 +1502,8 @@ p {
 }
 
 /* --------------------------------------------------------------------------
- * Machine surfaces: terminal, code frame, diff
+ * Command strip
  * ------------------------------------------------------------------------ */
-
-.frame {
-  background: var(--bg-field);
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  min-width: 0;
-}
-
-.frame-bar {
-  min-height: 34px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 13px;
-  background: var(--bg-raised);
-  border-bottom: 1px solid var(--line);
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--fg-2);
-}
-
-.frame-bar-title {
-  font-family: var(--sans);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--fg);
-}
-
-.frame-bar-spacer {
-  flex: 1;
-}
-
-.frame-body {
-  padding: 18px 16px;
-  overflow-x: auto;
-}
-
-.terminal {
-  margin: 0;
-  font-family: var(--mono);
-  font-size: 12px;
-  line-height: 1.7;
-  color: var(--fg-2);
-  white-space: pre;
-}
-
-.terminal-line {
-  display: block;
-}
-
-.terminal-prompt {
-  color: var(--ok);
-}
-
-.terminal-out {
-  color: var(--fg-2);
-}
-
-.terminal-hi {
-  color: var(--ok);
-}
-
-.diff-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--line-soft);
-  font-family: var(--mono);
-  font-size: 11px;
-}
-
-.diff-row:last-of-type {
-  border-bottom: none;
-}
-
-.diff-path {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: baseline;
-  overflow: hidden;
-}
-
-.diff-dir {
-  color: var(--fg-2);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.diff-leaf {
-  color: var(--fg);
-  flex: none;
-}
-
-.diff-after {
-  color: var(--ok);
-  flex: none;
-}
-
-.diff-foot {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 14px;
-  background: var(--bg-field);
-  border-top: 1px solid var(--line-soft);
-  font-family: var(--mono);
-  font-size: 10.5px;
-  color: var(--fg-2);
-}
-
-.diff-foot-note {
-  font-family: var(--sans);
-  font-size: 11px;
-  margin-left: auto;
-}
-
-.hash-before {
-  color: var(--fg-2);
-}
-
-.hash-after {
-  color: var(--ok);
-}
 
 /* A quiet inline command strip: `$ …` with a copy affordance. */
 .command {
@@ -2563,10 +2230,6 @@ footer {
     --band-pad: 84px;
   }
 
-  .grid-5 {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
   .docs-shell {
     grid-template-columns: 210px minmax(0, 1fr);
     gap: 32px;
@@ -2625,36 +2288,8 @@ footer {
     gap: 32px;
   }
 
-  .split {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 36px;
-  }
-
-  /*
-   * The mockup alternates which half of a split leads. Collapsed, reading order is
-   * source order, so a section that leads with its evidence panel re-orders to put
-   * its prose first.
-   */
-  .split-copy-first > .split-copy {
-    order: -1;
-  }
-
-  .grid-4 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .grid-3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .section-head {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 20px;
-  }
-
-  .section-aside {
-    max-width: 60ch;
   }
 
   .footer-inner {
@@ -2710,21 +2345,6 @@ footer {
     padding: 72px var(--gutter) 76px;
   }
 
-  .statbar-inner {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0 24px;
-  }
-
-  .stat:nth-child(2n) {
-    border-right: none;
-  }
-
-  .stat:nth-child(-n + 2) {
-    border-bottom: 1px solid var(--line-soft);
-  }
-
-  .grid-5,
-  .grid-4,
   .grid-3,
   .grid-2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2786,8 +2406,7 @@ footer {
     font-size: 15px;
   }
 
-  .band-inner,
-  .band-inner-tight {
+  .band-inner {
     padding-top: var(--band-pad);
     padding-bottom: var(--band-pad);
     gap: 32px;
@@ -2857,26 +2476,9 @@ footer {
     border-right: 0;
   }
 
-  .statbar-inner {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .stat {
-    padding: 16px 0;
-    border-right: none;
-    border-bottom: 1px solid var(--line-soft);
-  }
-
-  .stat:last-child {
-    border-bottom: none;
-  }
-
   .grid,
-  .grid-5,
-  .grid-4,
   .grid-3,
-  .grid-2,
-  .exit-codes {
+  .grid-2 {
     grid-template-columns: minmax(0, 1fr);
   }
 

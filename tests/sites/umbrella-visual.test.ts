@@ -15,11 +15,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { EDITOR_SHELL_RETIRED_COPY, REQUIRED_SCULPT_PASSES } from "@sceneaxi/schemas";
-// `@sceneaxi/cli` is not a hermetic-root dependency, and the sites tier may not import
-// it either. It is read by path here for the same reason the site seams are: the point
-// is to compare against the shipped source, not to acquire an edge to it.
-import { EXIT_CODE_TABLE } from "../../packages/cli/src/exit-codes.ts";
+import { EDITOR_SHELL_RETIRED_COPY } from "@sceneaxi/schemas";
 import {
   CREATOR_SHARE_RULE,
   EDITOR_SHELL_FABRICATED_FIGURES,
@@ -39,18 +35,12 @@ import {
   CREDIT_LEDGER_COPY,
   CREDIT_LEDGER_FACTS,
   ENGINE_NOTES,
-  EXIT_CODES,
-  FAMILY_CARDS,
   FOOTER_COLUMNS,
   PIPELINE,
   PRICING_FAQ,
   PROFILE_CARDS,
   REFUSAL_CODES,
   RELEASE_MARKER,
-  REQUIRED_PASS_IDS,
-  REVIEW_POINTS,
-  SCULPT_PASSES,
-  TERMINAL_LINES,
 } from "../../sites/umbrella/src/lib/site-content.ts";
 import { LAUNCH_PROOFS } from "../../sites/umbrella/src/lib/launch-marketing.ts";
 import {
@@ -98,34 +88,10 @@ const UMBRELLA_SOURCES: readonly string[] = collect(join(UMBRELLA, "src")).map((
 
 const ALL_SOURCE = UMBRELLA_SOURCES.map((path) => read(path)).join("\n");
 
-describe("restated content stays pinned to the contract that owns it", () => {
-  it("lists the required sculpt passes schemas declares, in order", () => {
-    // The sites tier may not import `@sceneaxi/schemas`, so the pass order is restated
-    // in site content. This is the join that keeps the restatement honest.
-    expect(REQUIRED_PASS_IDS).toEqual([...REQUIRED_SCULPT_PASSES]);
-  });
-
-  it("marks exactly one pass optional rather than claiming five required ones", () => {
-    const optional = SCULPT_PASSES.filter((pass) => !pass.required);
-    expect(optional).toHaveLength(1);
-    expect(optional[0]?.id).toBe("surface-detail");
-    expect(REQUIRED_SCULPT_PASSES).not.toContain("surface-detail");
-  });
-
-  it("reproduces the CLI's own exit-code table", () => {
-    expect(EXIT_CODES.map((row) => [row.code, row.name])).toEqual(
-      EXIT_CODE_TABLE.map((row) => [row.code, row.name]),
-    );
-  });
-
+describe("shipped content stays frozen and rendered", () => {
   it("freezes every content collection so a render cannot mutate it", () => {
     for (const collection of [
-      SCULPT_PASSES,
-      REVIEW_POINTS,
       PROFILE_CARDS,
-      TERMINAL_LINES,
-      EXIT_CODES,
-      FAMILY_CARDS,
       ENGINE_NOTES,
       PIPELINE,
       REFUSAL_CODES,
@@ -133,6 +99,27 @@ describe("restated content stays pinned to the contract that owns it", () => {
       FOOTER_COLUMNS,
     ]) {
       expect(Object.isFrozen(collection)).toBe(true);
+    }
+  });
+
+  it("keeps every exported content collection on a route that renders it", () => {
+    // sceneaxi#203 replaced the overview's feature tour. Copy no route renders is not
+    // content the gate can hold to anything, and an assertion about it reads as a
+    // guarantee about the shipped page while guarding nothing — so an export that
+    // loses its render site is removed with it rather than left here.
+    const content = read("src/lib/site-content.ts");
+    const exported = [...content.matchAll(/^export const ([A-Z][A-Z0-9_]*)/gm)].map(
+      (match) => match[1] ?? "",
+    );
+    expect(exported.length).toBeGreaterThan(0);
+    const rendered = UMBRELLA_SOURCES.filter(
+      (path) => path !== "src/lib/site-content.ts",
+    ).map((path) => read(path));
+    for (const name of exported) {
+      expect(
+        rendered.some((source) => new RegExp(`\\b${name}\\b`).test(source)),
+        `${name} is exported from site-content.ts but no route reads it`,
+      ).toBe(true);
     }
   });
 });
@@ -276,12 +263,6 @@ describe("Kids is described and never linked", () => {
     expect(kids?.href).toBeNull();
   });
 
-  it("marks the Kids family entry unlinkable", () => {
-    const kids = FAMILY_CARDS.find((card) => card.name.includes("Kids"));
-    expect(kids).toBeDefined();
-    expect(kids?.linkable).toBe(false);
-  });
-
   it("names no Kids host anywhere in the umbrella's sources", () => {
     expect(ALL_SOURCE).not.toMatch(/sceneaxikids/i);
     expect(ALL_SOURCE).not.toMatch(/kids\.[a-z]+\.(dev|com|app)/i);
@@ -320,12 +301,6 @@ describe("family and footer links only ever point at routes this site serves", (
     // launch overview no longer repeats a second catalog navigation surface.
     expect(LAYOUT).toContain("resolveFamilyLinks(process.env)");
     expect(LAYOUT).toContain("entry.href !== null");
-  });
-
-  it("names a surface rather than a hostname on every family card", () => {
-    for (const card of FAMILY_CARDS) {
-      expect(card.what).not.toMatch(/\.(dev|com|app|io)\b/);
-    }
   });
 });
 
@@ -805,9 +780,13 @@ describe("the layout is one responsive composition, not a desktop-only one", () 
   });
 
   it("gives every multi-column grid a single-column phone rule", () => {
+    // Read from the sheet rather than a list here, so a grid utility that is added or
+    // retired cannot leave this assertion covering a class the stylesheet dropped.
+    const declared = [...CSS.matchAll(/^\.grid-(\d+) \{/gm)].map((match) => `.grid-${match[1]}`);
+    expect(declared.length).toBeGreaterThan(0);
     const phone = CSS.slice(CSS.indexOf("@media (max-width: 620px)"));
-    for (const selector of [".grid-5", ".grid-4", ".grid-3", ".grid-2"]) {
-      expect(phone).toContain(selector);
+    for (const selector of declared) {
+      expect(phone, `${selector} has no phone rule`).toContain(selector);
     }
     expect(phone).toContain("grid-template-columns: minmax(0, 1fr)");
   });

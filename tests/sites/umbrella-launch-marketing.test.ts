@@ -29,10 +29,25 @@ describe("the first-release download call to action", () => {
 
   it("offers Linux and keeps macOS and Windows in coming-soon states", () => {
     expect(DOWNLOAD_PLATFORMS).toEqual([
-      expect.objectContaining({ id: "linux", availability: "available", href: "/engine" }),
+      expect.objectContaining({ id: "linux", availability: "recorded-build", href: "/engine" }),
       expect.objectContaining({ id: "macos", availability: "coming-soon", href: null }),
       expect.objectContaining({ id: "windows", availability: "coming-soon", href: null }),
     ]);
+  });
+
+  it("states the Linux offer as the recorded build it is, never as an available binary", () => {
+    // `desktopLinuxAppOffer()` serves no binary: the artifacts are built from source or
+    // taken from the named CI workflow artifact. No row may read as more than that.
+    const linux = DOWNLOAD_PLATFORMS.find((entry) => entry.id === "linux");
+    expect(linux?.label).toBe("Recorded build");
+    expect(linux?.note).toMatch(/build it from source/i);
+    for (const entry of DOWNLOAD_PLATFORMS) {
+      expect(entry.label).not.toMatch(/\bavailable\b/i);
+      expect(entry.note).not.toMatch(/\bavailable\b/i);
+    }
+    for (const platform of ["linux", "macos", "windows", "unknown"] as const) {
+      expect(downloadCallToAction(platform).context).not.toMatch(/\bavailable\b/i);
+    }
   });
 
   it("keeps Download as the primary action for every detected desktop", () => {
@@ -41,7 +56,7 @@ describe("the first-release download call to action", () => {
       expect(action.href).toBe("/engine");
       expect(action.label).toBe("Download");
       expect(action.platforms.find((entry) => entry.id === "linux")?.availability).toBe(
-        "available",
+        "recorded-build",
       );
     }
   });
