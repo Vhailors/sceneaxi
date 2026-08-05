@@ -62,7 +62,14 @@ const SECRET_VALUE_PATTERNS = Object.freeze([
   /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
 ]);
 
-const SKIP_DIRECTORIES = Object.freeze(["node_modules", ".next", "dist", "coverage"]);
+const SKIP_DIRECTORIES = Object.freeze([
+  "node_modules",
+  ".next",
+  "dist",
+  "coverage",
+  "test-results",
+  "playwright-report",
+]);
 
 const walk = (dir, out = []) => {
   for (const entry of readdirSync(dir).sort()) {

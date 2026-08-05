@@ -40,9 +40,11 @@ claim:
   browser-safe entry the way `@sceneaxi/site-kit/state-panel` does — those are pinned back
   to `FOUNDATION_COLORS`, so a repalletted token fails rather than drifting.
 - `src/lib/site-content.ts` is the page **content**, in pure TypeScript so the hermetic
-  gate type-checks it. It derives every figure it can from the contract that owns it and
-  restates only the sculpt pass order and the CLI exit-code table, both of which
-  `tests/sites/umbrella-visual.test.ts` pins to `@sceneaxi/schemas` and `@sceneaxi/cli`.
+  gate type-checks it. It derives every figure it can from the contract that owns it, and
+  every collection it still exports is read by a route: `tests/sites/umbrella-visual.test.ts`
+  asserts that join, so copy whose surface is retired is removed rather than left here
+  reading as shipped product text. The sculpt-pass, propose/apply diff, terminal, CLI
+  exit-code, and family-map content went that way with sceneaxi#203's overview rewrite.
 - `src/lib/profile-matrix.ts` backs `/profiles`. It reads the canonical profile
   conformance registry and open-path demo policy through the narrow browser-safe
   `@sceneaxi/site-kit/profile-contracts` entry and computes every cell rather than
@@ -61,10 +63,53 @@ claim:
 - `VISUAL-EVIDENCE.md` records the browser observations: viewports, measured overflow,
   Lighthouse accessibility scores, measured contrast, and the live frame report.
 
-Two client components carry the visual layer's behaviour, and both are deliberate:
+### First-release overview
+
+The default route is the first-release information architecture from sceneaxi#203:
+
+- `src/lib/download-platform.ts` resolves desktop user-agent copy without ever creating
+  an artifact URL. Linux reaches the existing `/engine` evidence route; macOS and
+  Windows remain `coming-soon` rows with no href. Linux's state is `recorded-build`,
+  labelled "Recorded build", because that is what `desktopLinuxAppOffer()` serves: a
+  build from source or the named CI workflow artifact, against recorded checksums. No
+  row may say "Available" of a desktop binary this site does not serve, and each state
+  carries its own rendered words so no component can shorten one. Which platforms are
+  packaged stays that offer's fact: `tests/sites/desktop-offer-lockstep.test.ts` binds
+  the table to its `unavailablePlatforms` list, so packaging shipping fails the gate
+  instead of leaving a stale "Coming soon" row here.
+- `src/lib/launch-marketing.ts` owns the frozen trust, comparison, and profile-launch
+  projections. The Unity, Godot, and Three.js rows link to each project's own product
+  description, carry no score, and state where SceneAxi is narrower.
+- `src/app/page.tsx` renders those projections around the existing real-artifact hero.
+  It does not import or duplicate `/engine` artifact, checksum, billing, identity, or
+  desktop implementation logic.
+- `tests/sites/umbrella-launch-marketing.test.ts` tests the pure content and detection
+  seams. `test/first-release.visual.spec.ts` drives the rendered route at default,
+  short-height, and both sides of its breakpoints; it also tests real Tab focus and
+  contrast after browser compositing rather than comparing declared token strings. It
+  pins the user agent it navigates with, so platform detection is measured against that
+  agent rather than against the workstation running the suite.
+
+Run the browser checks from this install root:
+
+    pnpm exec playwright install chromium   # once, unless a system browser is used
+    pnpm test:visual
+
+The suite needs a Chromium binary. `SCENEAXI_CHROME_PATH` names one explicitly;
+otherwise `/usr/bin/chromium` is used when present, and Playwright's own download
+otherwise. The browser sandbox stays on unless `CI` or `SCENEAXI_CHROME_NO_SANDBOX=1`
+says the environment cannot provide it.
+
+`pnpm typecheck` covers this suite: `tsconfig.json` is the shipped app and
+`tsconfig.test.json` is `playwright.config.ts` plus `test/**`, so a spec that stops
+compiling fails the same command rather than only failing when a browser is available.
+
+Three overview client components carry the visual layer's behaviour, and all are deliberate:
 `src/app/_components/site-nav.tsx` exists only to resolve `aria-current`, and
 `src/app/_components/hero-viewport.tsx` draws the hero's real artifact through the shared
-renderer boundary. The gate asserts the client-component list.
+renderer boundary. `src/app/_components/download-cta.tsx` changes detected-platform copy
+only; it cannot change the stable `/engine` destination or an availability state. The gate
+asserts the complete client-component list.
 
 ### Named states
 

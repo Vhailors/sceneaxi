@@ -11,7 +11,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit",
+    "test:visual": "playwright test",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "build:sdk": "node ../../scripts/build-engine-sdk.mjs --out public/engine-sdk",
     "prebuild": "pnpm run build:sdk",
     "predev": "pnpm run build:sdk"
@@ -28,6 +29,7 @@
     "stripe": "^22.4.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/node": "26.1.1",
     "@types/react": "19.1.9",
     "@types/react-dom": "19.1.7",

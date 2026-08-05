@@ -22,6 +22,8 @@ sites/*/.next/
 sites/*/public/engine-sdk/
 sites/*/node_modules/
 sites/*/next-env.d.ts
+sites/*/test-results/
+sites/*/playwright-report/
 
 # desktop/ apps are separate install roots too (ADR 0024); `release/` holds the
 # packaged AppImage/deb artifacts and their SHA256SUMS, `dist-build/` is a

@@ -6,13 +6,51 @@ Evidence for sceneaxi#157: the captain-accepted `Umbrella Site` design screen un
 
 It also carries the re-run for sceneaxi#185, which adds `/login` and moves `/editor` and
 `/account` onto site-kit's named access states —
-[The hosted-login access states, re-measured](#the-hosted-login-access-states-re-measured).
+[The hosted-login access states, re-measured](#the-hosted-login-access-states-re-measured)
+— and the re-record for sceneaxi#203, which replaces the default route with the
+first-release overview:
+[First-release overview re-record](#first-release-overview-re-record-2026-08-05).
 
 This file records **browser observations**, the way `docs/three-presentation-core.md`
 records the pixel claim. It is not a gate result and it authorizes nothing. The gate's
 own half of this work is `tests/sites/umbrella-visual.test.ts` and
 `tests/sites/umbrella-profile-matrix.test.ts`, which run in `pnpm gate` and assert the
 structure and the claims; nothing here is asserted twice.
+
+## First-release overview re-record, 2026-08-05
+
+Sceneaxi#203 replaces the default route's long feature tour with a release-led path:
+Download and the real artifact first, four trust statements, a source-linked engine
+comparison, the explicit three-profile capability matrix, then routes into docs, the
+public proof, login, and credit pricing. `/engine`, billing, and desktop implementation
+were not changed.
+
+The executable browser suite is `test/first-release.visual.spec.ts`, run with
+`pnpm test:visual` from this install root. Every navigation pins the user agent whose
+platform it expects to be resolved, so the detected-platform states below are properties
+of that agent rather than of the machine the suite ran on. It covers:
+
+| Check | Browser observation |
+|---|---|
+| Default | 1440 × 1000, Download and both tables visible, no page-level overflow |
+| Detected platform | pinned Linux agent resolves `linux` on every navigation; a pinned macOS agent resolves `macos`, keeps Linux the single `recorded-build` row, prints the word "Available" nowhere in the legend, leaves both coming-soon rows anchor-free, and leaves the primary action on `/engine` — asserted only |
+| Short desktop | 1280 × 640, heading y=131-290.09, Download y=406.77-452.77, live artifact height=268.80 |
+| Split boundary | 1025px remains side-by-side; 1024px stacks claim before artifact |
+| Masthead boundary | 861px remains one row; 860px moves primary navigation to its own visible row |
+| Phone boundary | 621px keeps trust proof pairs; 620px stacks all four rows |
+| Sideways scroll | checked at 1440 × 1000 and again at each boundary width the suite visits — 1025, 1024, 861, 860, 621, 620 — where the availability legend deliberately stays 3-up; the measured pair below is the 1280 × 640 one, so the boundary widths are asserted only |
+| Keyboard | first Tab exposes Skip to content at x=0 with a composited 2px solid focus outline |
+| Readability | CTA, trust copy, highlighted comparison, profile cells, and path links all clear the 4.5:1 body floor after the browser composites ancestor backgrounds; the download context line and all three availability legend states were added to the same sweep and floor — asserted only |
+
+"Asserted only" marks a check the suite performs whose figure has not been recorded
+here. Those rows deliberately carry no measurement: this column is a record of what a
+browser reported, and a number no run produced would be an invention.
+
+The same route was inspected through `chrome-devtools-axi`. At 1280 × 640 the document
+reported `clientWidth=1269` and `scrollWidth=1269`; the first Tab focused the skip link
+at `(0, 0)` with its full 141.89 × 44.78 box visible. The live hero reported the real
+`webgl-canvas` surface, 15 draw calls, and three instances. These are browser
+observations, not claims inferred from a frame counter or declared palette values.
 
 `/editor` appears below only as the **site-chrome** route it was for sceneaxi#157 —
 a named refusal between the masthead and the footer. sceneaxi#184 rebuilt it as the
@@ -80,6 +118,11 @@ core's real refusal rather than a state the page was asked to render.
 | Tablet | 834 × 1112 | `1024px` and `860px` rules: the hero stacks claim-first, splits collapse copy-first, paired grids halve, docs rail becomes a strip, stat bar goes 2 × 2 |
 | Phone | 390 × 844 | `620px` rules: single column throughout, full-width actions, stacked definition lists, wrapped nav |
 
+The 5-up and 4-up card rows, the split sections, and the stat bar named above were the
+previous default route's, and sceneaxi#203 removed them along with their stylesheet
+rules — so those three entries describe what this sweep exercised, not what `/` serves
+now. Everything else in the table is unchanged.
+
 ### The `/engine` figures predate the desktop download section
 
 Every `/engine` figure in this document was recorded before sceneaxi#183 rewrote that
@@ -114,6 +157,23 @@ above: they were really measured, and predicting what the shell renders instead 
 inventing the visual facts this file exists to avoid. The shell's own recorded browser
 evidence lives in its owner doc.
 
+### The `/` figures predate the first-release overview
+
+Every `/` figure below the
+[first-release re-record](#first-release-overview-re-record-2026-08-05) was measured on
+the previous default route, whose hero stat bar, 5-up and 4-up card rows, split sections,
+sculpt-pass cards, propose/apply diff, terminal transcript, CLI exit-code cards, and
+family map sceneaxi#203 removed. What that section records at 1440 × 1000 and 1280 × 640
+is the re-record; the `/` rows below it that it does not cover — the 834 and 390 columns
+of the overflow sweep, the no-WebGL hero rows of both named-state tables, and the
+Lighthouse row — are the observation at that earlier revision and are **pending
+re-record**, on the same terms as the two sections above.
+
+The hero itself is not among them: `hero-viewport.tsx` and the artifact it draws are
+unchanged, and the re-record reports the same `webgl-canvas` surface, 15 draw calls, and
+three instances as
+[The hero draws a real Sculpt Artifact](#the-hero-draws-a-real-sculpt-artifact) below.
+
 ## Observations
 
 ### Layout
@@ -138,7 +198,10 @@ The `/engine` row here, and in both measurement tables below, is
 [pending re-record](#the-engine-figures-predate-the-desktop-download-section); the
 `/editor` row is
 [pending re-record](#the-editor-figures-predate-the-engine-desktop-shell) for its own
-reason.
+reason. The `/` row's 834 and 390 columns are
+[pending re-record](#the--figures-predate-the-first-release-overview) for a third; its
+1440 column is superseded by the first-release suite, which measures the same equality at
+1440 × 1000, at 1280 × 640, and at every breakpoint boundary it visits.
 
 The same sweep also walked every element in the body and found **none** escaping its
 container except inside a deliberate scroller (`.scroll-x`, `.command`, `.nav`) or the
@@ -289,13 +352,17 @@ Other layout behaviour, unchanged from the carried implementation:
   (they are duplicated in the footer, which is not), and the primary nav moves to its own
   full-width row. It **wraps** rather than scrolling, so at 390 the last item stays
   visible; a scroll strip would have hidden it behind an edge with nothing to say so.
-- Both split sections lead with their prose when collapsed (`.split-copy-first`).
 - The docs shell degrades in two steps: the on-this-page column is dropped at `1180px`,
   and at `860px` the left rail becomes a horizontal group strip above the article.
 
-New at this revision: the hero is a two-column grid (claim, artifact) that collapses
-claim-first at `1024px`, where the canvas widens from 4:3 to 16:9 so a stacked hero does
-not push the stat bar an entire screen down.
+The split sections that used to lead with their prose when collapsed (`.split-copy-first`)
+were the previous default route's only ones; sceneaxi#203 removed them and their rules,
+so the sheet declares no split behaviour to record here any more.
+
+The hero is a two-column grid (claim, artifact) that collapses claim-first at `1024px`,
+where the canvas widens from 4:3 to 16:9 so a stacked hero does not push the section below
+it an entire screen down. That behaviour survives the overview rewrite, and the
+first-release suite asserts both sides of the boundary.
 
 ### Accessibility
 
@@ -321,7 +388,12 @@ state-header repair below; the `/engine` row is
 `/editor` row is
 [pending re-record](#the-editor-figures-predate-the-engine-desktop-shell). The `/login`,
 `/account`, and `/pricing` rows were re-run again after the hosted-login access states
-landed; the editor's shell measurement remains pending its dedicated re-record.
+landed; the editor's shell measurement remains pending its dedicated re-record. The `/`
+row became a third
+[pending re-record](#the--figures-predate-the-first-release-overview) when sceneaxi#203
+rewrote that route: the first-release suite measures its keyboard, focus, and composited
+contrast behaviour in a browser, but no Lighthouse run against the new overview is
+recorded here.
 This extends the carried implementation's five 100s to all nine surfaces. Two real
 regressions were introduced by this revision and found by that audit rather than by eye:
 
@@ -426,14 +498,23 @@ for a new one by name. Observed on `/` by forcing the loss through
     t+2600ms           unchanged — it settled again and stopped
 
 Every figure in this document is re-recorded from a real browser, and at this head except
-for the `/engine` rows noted as
-[pending re-record](#the-engine-figures-predate-the-desktop-download-section); the values
-here are the observation, not a prediction.
+for the rows noted as pending re-record —
+[`/engine`](#the-engine-figures-predate-the-desktop-download-section),
+[`/editor`](#the-editor-figures-predate-the-engine-desktop-shell), and the
+[`/` rows the first-release suite does not cover](#the--figures-predate-the-first-release-overview);
+the values here are the observation, not a prediction.
 
 ## Where the implementation departs from the mockup
 
 Each row is a place the accepted screen and a repository contract disagree, and the
 contract wins.
+
+sceneaxi#203 replaced the default route, so the rows below that describe sections of the
+previous overview — the sculpt-pass cards, the propose/apply diff illustration, the
+terminal transcript, the CLI exit-code cards, the family map, and the hero stat bar — are
+the record of a surface this site no longer serves. Their copy, stylesheet rules, and
+tests were removed with the route rather than left behind, so those rows are history and
+not a description of what ships today.
 
 | Accepted screen | What ships | Why |
 |---|---|---|

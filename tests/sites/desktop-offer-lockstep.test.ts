@@ -8,10 +8,24 @@
  * from the documented build. The doc's `<!-- desktop-linux:artifacts -->` table is
  * machine-read here and compared field by field: a digest, file name, or byte size
  * edited in one place fails until the other moves with it.
+ *
+ * `/engine` is not the only surface that restates the offer: the umbrella's marketing
+ * download table (`sites/umbrella/src/lib/download-platform.ts`, sceneaxi#203) also
+ * states which desktop platforms are packaged. That module is reached from a
+ * `"use client"` component, so it may not value-import the Node-bearing site-kit
+ * barrel and has to restate the fact — the same shape `viewport-letterbox.ts` uses for
+ * a Foundations colour. This file is therefore the single owner of desktop-offer
+ * drift, and the block below binds the marketing table to `unavailablePlatforms` so
+ * packaging shipping for Windows or macOS fails the gate here instead of quietly leaving
+ * a "Coming soon" row on the landing page.
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { DESKTOP_LINUX_APP_OFFER } from "@sceneaxi/site-kit";
+import {
+  DOWNLOAD_PLATFORMS,
+  downloadCallToAction,
+} from "../../sites/umbrella/src/lib/download-platform.ts";
 
 const doc = readFileSync(new URL("../../docs/desktop-linux.md", import.meta.url), "utf8");
 
@@ -149,5 +163,62 @@ describe("desktop offer ↔ recorded build lockstep", () => {
     expect(workflow).toContain(
       `retention-days: ${String(DESKTOP_LINUX_APP_OFFER.artifactRetentionDays)}`,
     );
+  });
+});
+
+describe("desktop offer ↔ umbrella download table lockstep", () => {
+  const unpackagedPlatforms = DESKTOP_LINUX_APP_OFFER.unavailablePlatforms.map(
+    (row) => row.platform as string,
+  );
+  const notPackaged = (name: string) => unpackagedPlatforms.includes(name);
+
+  it("holds a coming-soon row for exactly the platforms the offer does not package", () => {
+    const comingSoon = DOWNLOAD_PLATFORMS.filter(
+      (offer) => offer.availability === "coming-soon",
+    ).map((offer) => offer.name);
+    expect([...comingSoon].sort()).toEqual([...unpackagedPlatforms].sort());
+  });
+
+  it("records a build for exactly the one platform the offer actually built", () => {
+    const recorded = DOWNLOAD_PLATFORMS.filter(
+      (offer) => offer.availability === "recorded-build",
+    );
+    expect(recorded).toHaveLength(1);
+    // "Linux" against the offer's "Linux x86_64": the table names the platform, the
+    // offer names the exact build target, and the marketing row may not out-claim it.
+    expect(DESKTOP_LINUX_APP_OFFER.platform.startsWith(recorded[0]?.name ?? "")).toBe(true);
+  });
+
+  it("sends only a packaged platform to the evidence route", () => {
+    for (const offer of DOWNLOAD_PLATFORMS) {
+      expect(offer.href).toBe(notPackaged(offer.name) ? null : "/engine");
+    }
+  });
+
+  it("keeps the detected copy of each platform on the same side of the offer", () => {
+    for (const offer of DOWNLOAD_PLATFORMS) {
+      const { context } = downloadCallToAction(offer.id);
+      if (notPackaged(offer.name)) {
+        expect(offer.label).toMatch(/coming soon/i);
+        expect(context).toMatch(/coming soon/i);
+      } else {
+        // The packaged platform gets the offer's own two routes and its checksums,
+        // never a served binary — the reason its label is "Recorded build".
+        expect(offer.label).not.toMatch(/coming soon/i);
+        expect(context).not.toMatch(/coming soon/i);
+        expect(offer.note).toMatch(/from source/i);
+        expect(offer.note).toMatch(/CI workflow artifact/i);
+        expect(offer.note).toMatch(/checksums/i);
+        // Each of those three words is a field of the offer, not a marketing flourish:
+        // the source tree the build command in `docs/desktop-linux.md` runs in, the CI
+        // artifact the same files can be taken from, and the digests they check against.
+        expect(DESKTOP_LINUX_APP_OFFER.sourceDir.length).toBeGreaterThan(0);
+        expect(DESKTOP_LINUX_APP_OFFER.ciArtifactName.length).toBeGreaterThan(0);
+        expect(DESKTOP_LINUX_APP_OFFER.artifacts.length).toBeGreaterThan(0);
+        for (const artifact of DESKTOP_LINUX_APP_OFFER.artifacts) {
+          expect(artifact.sha256).toMatch(/^[0-9a-f]{64}$/);
+        }
+      }
+    }
   });
 });

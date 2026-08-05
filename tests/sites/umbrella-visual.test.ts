@@ -15,11 +15,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { EDITOR_SHELL_RETIRED_COPY, REQUIRED_SCULPT_PASSES } from "@sceneaxi/schemas";
-// `@sceneaxi/cli` is not a hermetic-root dependency, and the sites tier may not import
-// it either. It is read by path here for the same reason the site seams are: the point
-// is to compare against the shipped source, not to acquire an edge to it.
-import { EXIT_CODE_TABLE } from "../../packages/cli/src/exit-codes.ts";
+import { EDITOR_SHELL_RETIRED_COPY } from "@sceneaxi/schemas";
 import {
   CREATOR_SHARE_RULE,
   EDITOR_SHELL_FABRICATED_FIGURES,
@@ -39,19 +35,14 @@ import {
   CREDIT_LEDGER_COPY,
   CREDIT_LEDGER_FACTS,
   ENGINE_NOTES,
-  EXIT_CODES,
-  FAMILY_CARDS,
   FOOTER_COLUMNS,
   PIPELINE,
   PRICING_FAQ,
   PROFILE_CARDS,
   REFUSAL_CODES,
   RELEASE_MARKER,
-  REQUIRED_PASS_IDS,
-  REVIEW_POINTS,
-  SCULPT_PASSES,
-  TERMINAL_LINES,
 } from "../../sites/umbrella/src/lib/site-content.ts";
+import { LAUNCH_PROOFS } from "../../sites/umbrella/src/lib/launch-marketing.ts";
 import {
   UMBRELLA_RECORDED_GAPS,
   umbrellaFoundationsCss,
@@ -97,34 +88,10 @@ const UMBRELLA_SOURCES: readonly string[] = collect(join(UMBRELLA, "src")).map((
 
 const ALL_SOURCE = UMBRELLA_SOURCES.map((path) => read(path)).join("\n");
 
-describe("restated content stays pinned to the contract that owns it", () => {
-  it("lists the required sculpt passes schemas declares, in order", () => {
-    // The sites tier may not import `@sceneaxi/schemas`, so the pass order is restated
-    // in site content. This is the join that keeps the restatement honest.
-    expect(REQUIRED_PASS_IDS).toEqual([...REQUIRED_SCULPT_PASSES]);
-  });
-
-  it("marks exactly one pass optional rather than claiming five required ones", () => {
-    const optional = SCULPT_PASSES.filter((pass) => !pass.required);
-    expect(optional).toHaveLength(1);
-    expect(optional[0]?.id).toBe("surface-detail");
-    expect(REQUIRED_SCULPT_PASSES).not.toContain("surface-detail");
-  });
-
-  it("reproduces the CLI's own exit-code table", () => {
-    expect(EXIT_CODES.map((row) => [row.code, row.name])).toEqual(
-      EXIT_CODE_TABLE.map((row) => [row.code, row.name]),
-    );
-  });
-
+describe("shipped content stays frozen and rendered", () => {
   it("freezes every content collection so a render cannot mutate it", () => {
     for (const collection of [
-      SCULPT_PASSES,
-      REVIEW_POINTS,
       PROFILE_CARDS,
-      TERMINAL_LINES,
-      EXIT_CODES,
-      FAMILY_CARDS,
       ENGINE_NOTES,
       PIPELINE,
       REFUSAL_CODES,
@@ -132,6 +99,27 @@ describe("restated content stays pinned to the contract that owns it", () => {
       FOOTER_COLUMNS,
     ]) {
       expect(Object.isFrozen(collection)).toBe(true);
+    }
+  });
+
+  it("keeps every exported content collection on a route that renders it", () => {
+    // sceneaxi#203 replaced the overview's feature tour. Copy no route renders is not
+    // content the gate can hold to anything, and an assertion about it reads as a
+    // guarantee about the shipped page while guarding nothing — so an export that
+    // loses its render site is removed with it rather than left here.
+    const content = read("src/lib/site-content.ts");
+    const exported = [...content.matchAll(/^export const ([A-Z][A-Z0-9_]*)/gm)].map(
+      (match) => match[1] ?? "",
+    );
+    expect(exported.length).toBeGreaterThan(0);
+    const rendered = UMBRELLA_SOURCES.filter(
+      (path) => path !== "src/lib/site-content.ts",
+    ).map((path) => read(path));
+    for (const name of exported) {
+      expect(
+        rendered.some((source) => new RegExp(`\\b${name}\\b`).test(source)),
+        `${name} is exported from site-content.ts but no route reads it`,
+      ).toBe(true);
     }
   });
 });
@@ -194,7 +182,9 @@ describe("the marketing surface makes no claim the repository cannot stand behin
   it("claims no registry install for private bootstrap packages", () => {
     expect(ALL_SOURCE).not.toContain("npm i -g");
     expect(ALL_SOURCE).not.toContain("npm install -g");
-    expect(HOME).toContain("no registry install yet");
+    expect(
+      LAUNCH_PROOFS.find((proof) => proof.id === "engine-access")?.body,
+    ).toContain("not registry-published");
   });
 
   it("makes no shipping or general-availability claim", () => {
@@ -236,12 +226,11 @@ describe("the marketing surface makes no claim the repository cannot stand behin
     expect(LIVE_OPEN_PRESENTATION.coreLabel).toBe("Three presentation core");
   });
 
-  it("keeps every credit and share figure derived from site-kit", () => {
-    for (const source of [HOME, PRICING]) {
-      expect(source).toContain("SITE_STARTER_CREDIT_ALLOTMENT");
-    }
-    expect(HOME).toContain("CREATOR_SHARE_RULE.creatorPercent");
-    // …and never spelled out beside them.
+  it("keeps every rendered credit and share figure derived from site-kit", () => {
+    expect(PRICING).toContain("SITE_STARTER_CREDIT_ALLOTMENT");
+    // The launch overview states the model but prints no page-authored credit or share
+    // figure. Pricing remains the route that renders those contract-owned numbers.
+    expect(HOME).toContain("LAUNCH_PROOFS.map");
     expect(ALL_SOURCE).not.toMatch(
       new RegExp(`\\b${SITE_STARTER_CREDIT_ALLOTMENT}\\s+credits\\b`),
     );
@@ -250,11 +239,13 @@ describe("the marketing surface makes no claim the repository cannot stand behin
     );
   });
 
-  it("counts free capabilities from the published matrix", () => {
-    expect(HOME).toContain("SITE_CAPABILITIES[id].tier === \"free\"");
+  it("keeps the free capability classification in the published matrix", () => {
     const free = SITE_CAPABILITY_IDS.filter((id) => SITE_CAPABILITIES[id].tier === "free");
     expect(free.length).toBeGreaterThan(0);
     expect(free.length).toBeLessThan(SITE_CAPABILITY_IDS.length);
+    expect(LAUNCH_PROOFS.find((proof) => proof.id === "engine-access")?.body).toContain(
+      "cost zero credits",
+    );
   });
 
   it("states the release marker once, from one constant", () => {
@@ -272,12 +263,6 @@ describe("Kids is described and never linked", () => {
     expect(kids?.href).toBeNull();
   });
 
-  it("marks the Kids family entry unlinkable", () => {
-    const kids = FAMILY_CARDS.find((card) => card.name.includes("Kids"));
-    expect(kids).toBeDefined();
-    expect(kids?.linkable).toBe(false);
-  });
-
   it("names no Kids host anywhere in the umbrella's sources", () => {
     expect(ALL_SOURCE).not.toMatch(/sceneaxikids/i);
     expect(ALL_SOURCE).not.toMatch(/kids\.[a-z]+\.(dev|com|app)/i);
@@ -285,12 +270,9 @@ describe("Kids is described and never linked", () => {
     expect(ALL_SOURCE).not.toMatch(/KIDS_ORIGIN/);
   });
 
-  it("renders an unlinkable card as an article, never as an anchor", () => {
-    // The branch that decides this is the load-bearing line: a null href must pick the
-    // non-anchor element on both card grids — the profile row and the family row.
-    expect(HOME).toContain("profile.href === null ? (");
-    expect(HOME).toContain("href === null ? (");
-    expect(HOME.split("<article className={className}").length - 1).toBe(2);
+  it("renders the Kids proof as text, never as an anchor", () => {
+    expect(LAUNCH_PROOFS.find((proof) => proof.id === "kids-isolation")?.href).toBeNull();
+    expect(HOME).toContain("proof.href === null ? proof.title");
   });
 });
 
@@ -303,6 +285,7 @@ describe("family and footer links only ever point at routes this site serves", (
       "/engine",
       "/docs",
       "/pricing",
+      "/login",
       "/account",
       "/editor",
     ]);
@@ -314,17 +297,10 @@ describe("family and footer links only ever point at routes this site serves", (
   });
 
   it("links a catalog card only when this deployment resolved that origin", () => {
-    // `catalogHref` is `resolveFamilyLinks`' output, which is null for an unset or
-    // insecure origin — so an unconfigured deploy renders no link rather than a broken one.
-    expect(HOME).toContain("resolveFamilyLinks(process.env)");
-    expect(HOME).toContain("entry.linkable ? (catalogHref[entry.name] ?? null) : null");
+    // The root layout resolves catalog origins and filters null before rendering. The
+    // launch overview no longer repeats a second catalog navigation surface.
+    expect(LAYOUT).toContain("resolveFamilyLinks(process.env)");
     expect(LAYOUT).toContain("entry.href !== null");
-  });
-
-  it("names a surface rather than a hostname on every family card", () => {
-    for (const card of FAMILY_CARDS) {
-      expect(card.what).not.toMatch(/\.(dev|com|app|io)\b/);
-    }
   });
 });
 
@@ -357,15 +333,23 @@ describe("accessibility structure", () => {
     expect(CSS).toContain("@media (prefers-reduced-motion: reduce)");
   });
 
-  it("hides every decorative mark, rail, and arrow from the accessibility tree", () => {
-    // Each of these is a bare span with no text; unlabelled, they would be noise.
-    for (const decorative of [
-      'className="panel-bar" aria-hidden="true"',
-      'className="card-accent-rail" aria-hidden="true"',
-      'className="family-mark" aria-hidden="true"',
-    ]) {
-      expect(HOME + ENGINE).toContain(decorative);
+  it("exposes a role on every focusable scroll region, so its label is announced", () => {
+    // A labelled `div` is `role=generic`, whose accessible name assistive technology
+    // does not expose — a keyboard user who tabs into the scroller would hear nothing.
+    let focusable = 0;
+    for (const relativePath of UMBRELLA_SOURCES) {
+      for (const opening of read(relativePath).matchAll(/<div\b[^>]*\bscroll-x\b[^>]*>/gs)) {
+        if (!opening[0].includes("tabIndex")) continue;
+        focusable += 1;
+        expect(opening[0], `${relativePath} focusable scroller`).toMatch(
+          /role="(region|group)"/,
+        );
+      }
     }
+    expect(focusable).toBeGreaterThan(0);
+  });
+
+  it("hides the decorative product mark from the accessibility tree", () => {
     expect(LAYOUT).toContain('className="mark" aria-hidden="true"');
   });
 
@@ -796,9 +780,13 @@ describe("the layout is one responsive composition, not a desktop-only one", () 
   });
 
   it("gives every multi-column grid a single-column phone rule", () => {
+    // Read from the sheet rather than a list here, so a grid utility that is added or
+    // retired cannot leave this assertion covering a class the stylesheet dropped.
+    const declared = [...CSS.matchAll(/^\.grid-(\d+) \{/gm)].map((match) => `.grid-${match[1]}`);
+    expect(declared.length).toBeGreaterThan(0);
     const phone = CSS.slice(CSS.indexOf("@media (max-width: 620px)"));
-    for (const selector of [".grid-5", ".grid-4", ".grid-3", ".grid-2"]) {
-      expect(phone).toContain(selector);
+    for (const selector of declared) {
+      expect(phone, `${selector} has no phone rule`).toContain(selector);
     }
     expect(phone).toContain("grid-template-columns: minmax(0, 1fr)");
   });
@@ -835,6 +823,7 @@ describe("the visual layer adds no behaviour the site did not already have", () 
       "src/app/_components/site-nav.tsx",
       "src/app/_components/sculpt-viewport.tsx",
       "src/app/_components/hero-viewport.tsx",
+      "src/app/_components/download-cta.tsx",
       "src/app/editor/_components/editor-shell.tsx",
       "src/app/editor/_components/editor-viewport.tsx",
       "src/app/open/_components/live-viewport.tsx",

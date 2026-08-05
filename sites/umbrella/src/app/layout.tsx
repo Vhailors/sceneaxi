@@ -44,6 +44,7 @@ const NAV: readonly NavItem[] = [
   { href: "/engine", label: "Engine SDK" },
   { href: "/docs", label: "Docs" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/login", label: "Login" },
   { href: "/account", label: "Account" },
 ];
 
@@ -113,11 +114,8 @@ export default function RootLayout({ children }: { readonly children: React.Reac
                 </a>
               ))}
               {catalogs.length > 0 && <span className="masthead-divider" aria-hidden="true" />}
-              <a className="button button-quiet button-sm" href="/account">
-                Account
-              </a>
               <a className="button button-sm" href="/engine">
-                Get the engine
+                Download
               </a>
             </div>
           </div>
