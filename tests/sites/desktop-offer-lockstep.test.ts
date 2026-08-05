@@ -73,6 +73,11 @@ describe("desktop offer ↔ recorded build lockstep", () => {
       `| Download expires by | ${DESKTOP_LINUX_APP_OFFER.artifactExpiresBy} |`,
     );
     expect(doc).toContain("This download expires");
+    // The recorded run predates the declaration, so the doc and the note must bound
+    // its retention rather than attribute it to a setting that governs later runs.
+    expect(doc).toContain("governs every later run");
+    expect(DESKTOP_LINUX_APP_OFFER.retentionNote).toContain("upper bound");
+    expect(DESKTOP_LINUX_APP_OFFER.retentionNote).toContain("repository default");
   });
 
   it("attributes every proof to the build it came from", () => {

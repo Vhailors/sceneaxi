@@ -99,10 +99,15 @@ gate until the other moves with it.
 | Artifact retention | 90 days |
 | Download expires by | 2026-11-03 |
 
-**This download expires.** A workflow artifact is not a release: the upload step
-declares `retention-days: 90`, so GitHub deletes these files on or before
-**2026-11-03** — 90 days after the verification date above, and earlier if the run
-itself predates it, which is why the date is an upper bound. Nothing in this
+**This download expires.** A workflow artifact is not a release. Run 30739014112
+predates this branch — its source commit is the branch base — so GitHub fixed that
+artifact's retention at upload time from the repository default, at most the 90 days
+GitHub's own default gives. The upload step now declares `retention-days: 90`
+explicitly, which governs every later run rather than this one. Either way these files
+are gone on or before **2026-11-03**, 90 days after the verification date above. That
+date is an upper bound twice over: a shorter inherited default expires sooner, and
+retention runs from the run itself, which is on or before the verification date.
+Nothing in this
 repository can observe that deletion: the run page keeps resolving afterwards, and
 `resolveDesktopAppOffer()` reads no clock, because a page that renders a different
 record per visitor would be worse than one that states its own expiry. `/engine`

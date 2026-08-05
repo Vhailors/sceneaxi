@@ -9,7 +9,8 @@
  *
  * A workflow artifact is not permanent, so the record states its own expiry:
  * `artifactRetentionDays` mirrors the retention the upload step declares, and
- * `artifactExpiresBy` is the last day the download can still exist. Nothing here reads
+ * `artifactExpiresBy` is the last day the download can still exist — an upper bound,
+ * since a run predating that declaration inherited the repository default instead. Nothing here reads
  * a clock — a page must render the same record for every visitor, and no code in this
  * repository can observe GitHub deleting the artifact — so the honest move is to print
  * the date and keep the record re-recordable, which `retentionNote` says out loud.
@@ -65,7 +66,11 @@ export type DesktopAppOffer = {
   readonly unavailablePlatforms: readonly DesktopUnavailablePlatform[];
   /** Why the digests identify this workflow artifact instead of every rebuild. */
   readonly reproducibilityNote: string;
-  /** The retention window `.github/workflows/desktop-linux.yml` declares on the upload. */
+  /**
+   * The retention window `.github/workflows/desktop-linux.yml` declares on the upload.
+   * A run that predates that declaration inherited the repository default instead, which
+   * this bounds rather than states — see `retentionNote`.
+   */
   readonly artifactRetentionDays: number;
   /** `verifiedOn` plus the retention window: the last day the download can still exist. */
   readonly artifactExpiresBy: string;
@@ -130,7 +135,7 @@ export const DESKTOP_LINUX_APP_OFFER: DesktopAppOffer = /* @__PURE__ */ Object.f
   artifactRetentionDays: ARTIFACT_RETENTION_DAYS,
   artifactExpiresBy: "2026-11-03",
   retentionNote:
-    "That date is an upper bound: retention runs from the workflow run, which is on or before the verification date. After it the run page still opens but holds no artifact, and no code here can observe that, so build from the repository or wait for a re-recorded run rather than trusting this page's checksums forever.",
+    "That date is an upper bound: retention runs from the workflow run rather than from the verification date, and this run predates the workflow declaring its window, so it inherited whatever the repository default was. After that date the run page still opens but holds no artifact, and no code here can observe that, so build from the repository or wait for a re-recorded run rather than trusting this page's checksums forever.",
 });
 
 const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
