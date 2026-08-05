@@ -17,7 +17,7 @@ import {
   desktopVisualView,
   renderDesktopChrome,
 } from "@sceneaxi/desktop-shell";
-import { createDesktopBridge } from "../../desktop/linux/src/index.ts";
+import { createDesktopBridge, desktopOpenScene } from "../../desktop/linux/src/index.ts";
 
 const dirs: string[] = [];
 const windows: HappyWindow[] = [];
@@ -29,11 +29,17 @@ afterEach(() => {
 function projectDir() {
   const dir = mkdtempSync(join(tmpdir(), "sceneaxi-product-loop-"));
   dirs.push(dir);
+  const starter = desktopOpenScene();
+  if (!starter.ok) throw new Error(`desktop scene refused: ${starter.reason}`);
   const result = writeDocumentFile(
     join(dir, "scene.json"),
     createDocument({
       id: "desktop-first-release",
-      data: { title: "First release", entities: [{ id: "hero" }] },
+      data: {
+        ...starter.composed.document.data,
+        title: "First release",
+        entities: [{ id: "hero" }],
+      },
     }),
     { cwd: dir },
   );
@@ -59,6 +65,7 @@ describe("desktop first-release product loop", () => {
     const requests: Array<{ action?: unknown; payload?: { op?: unknown } }> = [];
     let deferredAcceptedSaves = 2;
     let reportMissingRecovery = true;
+    let refuseNextPlay = false;
     const window = new HappyWindow({ width: 1000, height: 700 });
     const ipcClone = <T>(value: T): T =>
       window.eval(`(${JSON.stringify(value)})`) as T;
@@ -72,6 +79,15 @@ describe("desktop first-release product loop", () => {
             payload?: { op?: unknown };
           };
           requests.push(typed);
+          if (refuseNextPlay && typed.action === "open-path") {
+            refuseNextPlay = false;
+            return ipcClone({
+              ok: false,
+              reason: "DESKTOP_SCENE_NOT_COMPOSABLE",
+              message: "The active composition is invalid.",
+              detail: null,
+            });
+          }
           const response = bridge.handle(typed);
           if (
             deferredAcceptedSaves > 0 &&
@@ -137,6 +153,7 @@ describe("desktop first-release product loop", () => {
       }>).detail;
       playback = detail.exercise;
       detail.accepted = true;
+      (detail as { frame?: number }).frame = 27;
     });
     window.eval(match[1]);
 
@@ -176,11 +193,17 @@ describe("desktop first-release product loop", () => {
     await click(window, "#project-open");
     expect(status()).toContain("re-opened after recovery-pending");
 
+    const resetScene = desktopOpenScene();
+    if (!resetScene.ok) throw new Error(`desktop scene refused: ${resetScene.reason}`);
     const reset = writeDocumentFile(
       join(dir, "scene.json"),
       createDocument({
         id: "desktop-first-release",
-        data: { title: "First release", entities: [{ id: "hero" }] },
+        data: {
+          ...resetScene.composed.document.data,
+          title: "First release",
+          entities: [{ id: "hero" }],
+        },
       }),
       { cwd: dir },
     );
@@ -202,9 +225,25 @@ describe("desktop first-release product loop", () => {
 
     await click(window, "#scene-play");
     expect(shell?.dataset.mode).toBe("run");
-    expect(status()).toContain("Played composed scene · 4 ticks");
+    expect(status()).toContain("Played composed scene · 4 ticks · viewport frame 27");
+    expect(
+      window.document.querySelector<HTMLElement>("[data-run-session-report]")?.textContent,
+    ).toContain("Completed closed session · 4 ticks · terminal digest");
+    expect(
+      window.document.querySelector<HTMLElement>("[data-run-live-report]")?.textContent,
+    ).toContain("Viewport frame 27 acknowledged for desktop-linux-open-scene");
     expect(playback).toMatchObject({ closed: true });
     expect((playback as { tickDigests: string[] } | null)?.tickDigests).toHaveLength(4);
+
+    refuseNextPlay = true;
+    await click(window, "#scene-play");
+    expect(status()).toContain("Play refused · DESKTOP_SCENE_NOT_COMPOSABLE");
+    expect(
+      window.document.querySelector<HTMLElement>("[data-run-session-report]")?.textContent,
+    ).toContain("No completed session for the latest Play request");
+    expect(
+      window.document.querySelector<HTMLElement>("[data-run-live-report]")?.textContent,
+    ).toBe("No viewport frame was acknowledged for the latest Play request.");
 
     await click(window, "#profile-kids");
     expect(shell?.dataset.profile).toBe("kids");
@@ -226,6 +265,7 @@ describe("desktop first-release product loop", () => {
       "accept",
       "recover",
       "restart",
+      "open-path",
       "open-path",
     ]);
   });

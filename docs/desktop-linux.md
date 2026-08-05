@@ -29,8 +29,8 @@ Bridge actions and what each reaches — only through public seams:
 | Action | Reaches |
 |---|---|
 | `handshake` | identity only |
-| `scene` | `composeScene()` via `desktopOpenScene()` → the shared `MountableScene` payload from `@sceneaxi/site-kit` |
-| `open-path` | `bootstrapOpenPath()` from `@sceneaxi/engine-orchestrator`: a real kernel scene session opened, advanced, observed, closed |
+| `scene` | re-read the requested project-contained Scene Document, validate and reproduce its stored composition through `composeScene()`, then return the shared `MountableScene` payload from `@sceneaxi/site-kit` |
+| `open-path` | the same active document composition through `bootstrapOpenPath()` from `@sceneaxi/engine-orchestrator`: a real kernel scene session opened, advanced, observed, closed, with its mountable payload returned for viewport synchronization |
 | `assistant` | `runAssistantSculptAction()` in `@sceneaxi/authoring-core`: deterministic local compilation by default, or an explicitly injected BYOK runner; job status carries real progress and a typed artifact or recoverable named refusal. Hosted refuses here because this tier has no identity/credit authority |
 | `authoring` | `createDesktopSession()` from `@sceneaxi/desktop-shell` — the same propose/accept protocol as the CLI and web-shell. A `documentPath` arrives from the renderer over IPC and the authoring core resolves it against `cwd` without a containment check of its own, so the bridge owns that constraint: an absolute path, one escaping the project directory, or one whose **canonical** path leaves it through a symlink refuses `DESKTOP_BRIDGE_REQUEST_MALFORMED`. Containment is judged after symlink resolution because that is where the bytes land; a missing leaf still resolves, so this is containment and not an existence check |
 | `frame-report` | nothing: it *accepts* the renderer's real presentation frame so main and the smoke can see what was claimed |
@@ -97,7 +97,10 @@ desktop tier adds one: `desktop/linux/src/renderer/viewport.ts`, which construct
 the ADR 0002 presentation backend over its own window canvas — exactly the calls
 the umbrella's `sculpt-viewport.tsx` makes, naming no Three type. The golden test
 asserts the tier has exactly one module constructing a backend, mirroring the
-sites-tier owner-list assertion; the umbrella's own list is unchanged.
+sites-tier owner-list assertion; the umbrella's own list is unchanged. Its
+playback synchronizer is separately executable on the headless surface: the
+golden replaces the mounted composition and proves a refused replacement rolls
+back to the prior mount set.
 
 ## Build, verify, run
 
@@ -220,8 +223,11 @@ Future builds must be downloaded and checksum-verified manually.
 ## First launch and product tabs
 
 On first launch, the application creates its persistent project directory under
-Electron's user-data directory and seeds `scene.json` only when that file is absent.
-Later launches reuse the project and do not replace existing project bytes.
+Electron's user-data directory and seeds `scene.json`. A valid document from an
+older desktop build that lacks the composed-scene field is migrated once by
+adding the starter composition while retaining its id, title, entities, material,
+and other data. Documents that already carry that field are never rewritten;
+invalid existing bytes refuse rather than being replaced.
 
 The profile switch presents **Game**, **Website (Web)**, and **Kids**:
 

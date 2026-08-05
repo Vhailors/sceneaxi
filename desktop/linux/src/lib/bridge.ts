@@ -7,8 +7,8 @@
  *
  * What each action reaches, and reaches only through the public seams:
  *
- * - `scene`        → `composeScene()` via `desktopOpenScene()` — the shared
- *                    `MountableScene` browser payload the renderer viewport mounts.
+ * - `scene`        → the active Scene Document composition reproduced through
+ *                    `composeScene()` and projected to the renderer payload.
  * - `open-path`    → `bootstrapOpenPath()` from `@sceneaxi/engine-orchestrator`
  *                    over the same composition: a real kernel scene session is
  *                    opened, advanced, observed, and closed, and the deterministic
@@ -57,7 +57,12 @@ import {
   type DesktopBridgeResponse,
   type DesktopFrameReport,
 } from "./bridge-contract.js";
-import { desktopAssistantScene, desktopOpenScene } from "./desktop-scene.js";
+import {
+  DESKTOP_SCENE_NOT_COMPOSABLE,
+  desktopAssistantScene,
+  desktopSceneFromDocumentData,
+  type DesktopSceneResult,
+} from "./desktop-scene.js";
 
 export type DesktopBridgeOptions = {
   /** Working directory the authoring session binds to. */
@@ -95,6 +100,7 @@ export type OpenPathExercise = {
   readonly initialDigest: string;
   readonly tickDigests: readonly string[];
   readonly instanceCount: number;
+  readonly mountable: Extract<DesktopSceneResult, { readonly ok: true }>["mountable"];
   readonly closed: true;
 };
 
@@ -213,8 +219,8 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       actions: DESKTOP_BRIDGE_ACTIONS,
     });
 
-  const openPathExercise = (): DesktopBridgeResponse => {
-    const scene = desktopOpenScene();
+  const openPathExercise = (payload: unknown): DesktopBridgeResponse => {
+    const scene = activeScene(payload);
     if (!scene.ok) return bridgeRefuse(scene.reason, scene.message);
 
     const bootstrapped = bootstrapOpenPath(
@@ -252,6 +258,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       initialDigest,
       tickDigests: Object.freeze(tickDigests),
       instanceCount,
+      mountable: scene.mountable,
       closed: true as const,
     });
     return bridgeOk("open-path", exercise);
@@ -276,6 +283,27 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     if (realRoot === null || realTarget === null) return null;
     if (realTarget !== realRoot && !realTarget.startsWith(`${realRoot}${sep}`)) return null;
     return value;
+  };
+
+  const activeScene = (payload: unknown): DesktopSceneResult => {
+    const documentPath = containedDocumentPath(field(payload, "documentPath"));
+    if (documentPath === null) {
+      return {
+        ok: false,
+        reason: DESKTOP_BRIDGE_REFUSALS.requestMalformed,
+        message: "scene playback requires a documentPath string inside the project directory.",
+      };
+    }
+    const status = authoringSession().status(documentPath);
+    if (!status.ok) {
+      const diagnostic = status.diagnostics[0];
+      return {
+        ok: false,
+        reason: diagnostic?.code ?? DESKTOP_SCENE_NOT_COMPOSABLE,
+        message: diagnostic?.message ?? "The active Scene Document could not be read.",
+      };
+    }
+    return desktopSceneFromDocumentData(status.data);
   };
 
   const authoring = (payload: unknown): DesktopBridgeResponse => {
@@ -517,12 +545,12 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       case "handshake":
         return bridgeOk("handshake", handshake());
       case "scene": {
-        const scene = desktopOpenScene();
+        const scene = activeScene(payload);
         if (!scene.ok) return bridgeRefuse(scene.reason, scene.message);
         return bridgeOk("scene", scene.mountable);
       }
       case "open-path":
-        return openPathExercise();
+        return openPathExercise(payload);
       case "assistant":
         return assistant(payload);
       case "authoring":

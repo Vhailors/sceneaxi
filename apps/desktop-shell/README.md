@@ -102,10 +102,11 @@ host recovery operation, while Open can start a fresh session and re-read the
 document if recovery remains non-terminal. Profile switching stays blocked
 until either path resolves the session. A staged proposal also blocks profile
 switching until Save applies it or Open explicitly discards it through the same
-authoring session. Play asks the existing host `open-path` action to open, advance,
-observe, and close the composed scene session, then requires the mounted
-viewport to redraw the same composed scene and acknowledge that post-play frame before reporting
-success. Game exposes scene/runtime + FreeJS vocabulary, Web exposes
+authoring session. Play passes that active document path to the existing host
+`open-path` action, which re-reads and validates its stored composition before it
+opens, advances, observes, and closes the scene session. The mounted viewport
+receives that same composition and must acknowledge the returned post-play frame
+before the Run panel reports its ticks, frame, and closed state. Game exposes scene/runtime + FreeJS vocabulary, Web exposes
 HTML/site-canvas/asset-injection, and Kids remains the shared refuse-only policy
 surface with every new live control demoted in the same central mint.
 

@@ -167,6 +167,9 @@ describe("desktop product loop", () => {
 
     expect(game).toContain("sceneaxiDesktopLinux");
     expect(game).toContain("action: 'open-path'");
+    expect(game).toContain("payload: { documentPath: T.product.documentPath }");
+    expect(game).toContain("data-run-session-report");
+    expect(game).toContain("data-run-live-report");
     expect(game).toContain("op: 'status'");
     expect(game).toContain("op: 'reject'");
     expect(game).toContain("op: recovering ? 'recover' : 'accept'");

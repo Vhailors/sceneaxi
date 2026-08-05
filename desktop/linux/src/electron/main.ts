@@ -11,14 +11,17 @@
  * The window is locked down: context isolation on, sandbox on, no node integration,
  * and navigation away from the packaged document is refused.
  */
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, sep } from "node:path";
 import { BrowserWindow, app, ipcMain } from "electron";
-import { createDocument, writeDocumentFile } from "@sceneaxi/authoring-core";
 import { DESKTOP_MINIMUM_WINDOW } from "@sceneaxi/desktop-shell";
-import { DESKTOP_BRIDGE_CHANNEL } from "../lib/bridge-contract.js";
+import {
+  DESKTOP_ACTIVE_DOCUMENT_PATH,
+  DESKTOP_BRIDGE_CHANNEL,
+} from "../lib/bridge-contract.js";
 import { createDesktopBridge } from "../lib/bridge.js";
+import { seedDesktopProject } from "../lib/project-seed.js";
 
 // The bundle is CJS (Electron's main entry), so the native `__dirname` is real.
 declare const __dirname: string;
@@ -27,24 +30,11 @@ const SMOKE = process.argv.includes("--smoke");
 const SMOKE_TIMEOUT_MS = 45_000;
 
 /** Sample document the authoring session works on, seeded on first launch. */
-const SAMPLE_DOCUMENT = "scene.json";
+const SAMPLE_DOCUMENT = DESKTOP_ACTIVE_DOCUMENT_PATH;
 
 function seedProject(dir: string): void {
-  mkdirSync(dir, { recursive: true });
-  const documentPath = join(dir, SAMPLE_DOCUMENT);
-  if (existsSync(documentPath)) return;
-  const doc = createDocument({
-    id: "scene",
-    data: {
-      entities: [{ id: "hero", x: 1, y: 2, rz: 0 }],
-      material: { roughness: 0.4 },
-    },
-  });
-  const written = writeDocumentFile(documentPath, doc, { cwd: dir });
-  if (!written.ok) {
-    // Fail visible, not silent: the authoring path needs its document.
-    console.error("desktop-linux: could not seed the sample document", written);
-  }
+  const seeded = seedDesktopProject(dir);
+  if (!seeded.ok) console.error("desktop-linux: could not seed the sample document", seeded);
 }
 
 /** Where the launched application's own project lives: persistent, under userData. */
@@ -148,7 +138,10 @@ async function start(): Promise<void> {
   const handshake = bridge.handle({ action: "handshake" });
   if (!handshake.ok) fail(`handshake refused: ${handshake.reason}`);
 
-  const openPath = bridge.handle({ action: "open-path" });
+  const openPath = bridge.handle({
+    action: "open-path",
+    payload: { documentPath: SAMPLE_DOCUMENT },
+  });
   if (!openPath.ok) fail(`open-path refused: ${openPath.reason}`);
 
   // Isolation is observed, not declared: the proof owns the document it reports on

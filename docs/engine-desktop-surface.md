@@ -219,14 +219,18 @@ the chrome DOM. Invalid existing Web data and asset paths outside normalized
 stored markup at 100,000 characters, asset paths at 512 characters, and each
 document's asset list at 256 entries.
 
-Play calls the host's existing `open-path` action. In the packaged desktop that
-is the already-composed scene path through `bootstrapOpenPath()`: the response
-must contain tick digests and a closed session before the chrome reports play.
+Play calls the host's existing `open-path` action with the active document path.
+In the packaged desktop the bridge re-reads that document, validates and
+reproduces its stored composition through `composeScene()`, and passes that
+scene through `bootstrapOpenPath()`: the response must contain tick digests, the
+matching mountable payload, and a closed session before the chrome reports play.
 The chrome then emits the shared viewport-play event carrying that evidence;
 the separate renderer owner validates it, redraws the same `MountableScene`
 after playback, and acknowledges that frame. It does not claim the closed
 kernel session's tick state was projected into the presentation. Without that acknowledgement
-Play refuses. The shell neither constructs a renderer nor invents a pixel claim.
+Play refuses. On success the Run panels replace their pre-play empty state with
+the returned tick, terminal digest, viewport frame, and closed-session evidence.
+The shell neither constructs a renderer nor invents a pixel claim.
 
 The staging decision itself lives in exactly one place. `desktopWebStageDecision()`
 closes over no module binding, so `chrome.ts` embeds `String(desktopWebStageDecision)`
@@ -454,8 +458,9 @@ Two rules keep this honest:
   reach the document without its
   kind, and a control the model builds cannot fail to reach the document. That is
   not a convention here: `test/control-accounting.test.ts` enumerates the
-  controls by walking the view and fails in both directions. The refusal legend prints the **whole closed
-  registry**, one sentence per code taken from `DESKTOP_REFUSAL_MESSAGES`, for
+  controls by walking the view and fails in both directions. The status bar's
+  collapsed Refusal help panel prints the **whole closed registry**, one sentence
+  per code taken from `DESKTOP_REFUSAL_MESSAGES`, for
   two reasons: a code must not have two wordings in one document, and a control
   that becomes inert *in the browser* — the profile switch does that to the rail
   and to the assistant — needs its reason to already be there to point at.

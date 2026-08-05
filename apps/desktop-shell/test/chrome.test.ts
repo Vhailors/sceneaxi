@@ -290,6 +290,19 @@ describe("engine desktop chrome — accessibility", () => {
     }
   });
 
+  it("keeps refusal help collapsed in the status bar with a bounded scroll panel", () => {
+    const html = render();
+    const footer = html.indexOf('<footer class="status-bar">');
+    const legend = html.indexOf('<details class="refusal-legend">');
+    const footerEnd = html.indexOf("</footer>", footer);
+    expect(footer).toBeGreaterThan(-1);
+    expect(legend).toBeGreaterThan(footer);
+    expect(legend).toBeLessThan(footerEnd);
+    expect(html).toContain("<summary>Refusal help</summary>");
+    expect(html).toContain(".refusal-legend-panel{position:absolute");
+    expect(html).toContain("overflow:auto;padding:10px 12px");
+  });
+
   it("gives every element a unique, well-formed id", () => {
     // An `aria-describedby` / `getElementById` reference is only meaningful if
     // the id is unique and contains no whitespace, so the id has to come from a

@@ -265,7 +265,7 @@ function refusalLegend(): string {
         `<p class="refusal-row" id="refusal-${escapeHtml(code)}"><code>${escapeHtml(code)}</code> ${escapeHtml(message)}</p>`,
     )
     .join("");
-  return `<section class="refusal-legend" aria-labelledby="refusal-legend-title"><h2 id="refusal-legend-title">Refusals on this surface</h2>${rows}</section>`;
+  return `<details class="refusal-legend"><summary>Refusal help</summary><div class="refusal-legend-panel" tabindex="0" aria-labelledby="refusal-legend-title"><h2 id="refusal-legend-title">Refusals on this surface</h2>${rows}</div></details>`;
 }
 
 function titleBar(view: DesktopVisualView): string {
@@ -367,7 +367,7 @@ function leftDock(view: DesktopVisualView): string {
     const panel = MODE_PANELS[mode];
     return `<section class="dock-panel" data-mode-panel="${escapeHtml(mode)}" aria-label="${escapeHtml(panel.leftTitle)}"${mode === active ? "" : " hidden"}>
   <h2 class="panel-head"><span>${escapeHtml(panel.leftTitle)}</span></h2>
-  <p class="panel-empty">${escapeHtml(panel.leftEmpty)}</p>
+  <p class="panel-empty"${mode === "run" ? " data-run-session-report" : ""}>${escapeHtml(panel.leftEmpty)}</p>
   ${note(panel.note, panel.noteTone)}
 </section>`;
   }).join("");
@@ -564,7 +564,7 @@ function inspector(view: DesktopVisualView): string {
     const panel = MODE_PANELS[mode];
     return `<section class="inspector-panel" data-mode-panel="${escapeHtml(mode)}" aria-label="${escapeHtml(panel.inspectorTitle)}"${mode === active ? "" : " hidden"}>
   <h2 class="panel-head"><span>${escapeHtml(panel.inspectorTitle)}</span></h2>
-  <p class="panel-empty">${escapeHtml(panel.inspectorEmpty)}</p>
+  <p class="panel-empty"${mode === "run" ? " data-run-live-report" : ""}>${escapeHtml(panel.inspectorEmpty)}</p>
 </section>`;
   }).join("");
 
@@ -707,6 +707,7 @@ function statusBar(view: DesktopVisualView): string {
       ),
     )
     .join("")}
+  ${refusalLegend()}
 </footer>`;
 }
 
@@ -1081,7 +1082,11 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .palette-item kbd{font-size:9px;color:var(--dim);border:1px solid var(--line-control);border-radius:3px;padding:2px 5px}
 .overlay-foot{margin:0;padding:10px 16px;background:var(--well);border-top:1px solid var(--line);font-size:10.5px;color:var(--dim)}
 
-.refusal-legend{padding:14px 16px;background:var(--well);border-top:1px solid var(--line)}
+.refusal-legend{position:relative;z-index:45;flex:none}
+.refusal-legend summary{list-style:none;cursor:pointer;font-family:var(--mono);font-size:9px;letter-spacing:.07em;color:var(--faint);border:1px solid var(--line-control);border-radius:3px;padding:2px 7px;white-space:nowrap}
+.refusal-legend summary::-webkit-details-marker{display:none}
+.refusal-legend[open] summary{border-color:var(--line-hover);color:var(--text)}
+.refusal-legend-panel{position:absolute;right:0;bottom:calc(100% + 8px);width:min(520px,calc(100vw - 16px));max-height:min(360px,calc(100dvh - var(--title-h) - var(--status-h) - 24px));overflow:auto;padding:10px 12px;background:var(--well);border:1px solid var(--line-raised);border-radius:6px;box-shadow:0 18px 48px -18px ${SCRIM.shadow}}
 .refusal-legend h2{margin:0 0 8px;font-family:var(--mono);font-size:9px;font-weight:400;letter-spacing:.15em;color:var(--text-3)}
 .refusal-row{margin:0 0 6px;font-size:11px;line-height:1.5;color:var(--dim)}
 .refusal-row code{color:var(--accent);margin-right:8px}
@@ -1286,6 +1291,12 @@ if (shell) {
   const runRefusal = (code, detail) => {
     const text = 'Play refused · ' + code + (detail ? ' · ' + detail : '');
     runStatus(text);
+    q('[data-run-session-report]').forEach((el) => {
+      el.textContent = 'No completed session for the latest Play request · ' + code;
+    });
+    q('[data-run-live-report]').forEach((el) => {
+      el.textContent = 'No viewport frame was acknowledged for the latest Play request.';
+    });
     productStatus('refused', text);
   };
 
@@ -1493,8 +1504,12 @@ if (shell) {
   };
 
   const playScene = async () => {
+    if (projectData === null && !(await openProject())) return;
     runStatus('Opening composed scene…');
-    const response = await runtimeRequest({ action: 'open-path' });
+    const response = await runtimeRequest({
+      action: 'open-path',
+      payload: { documentPath: T.product.documentPath },
+    });
     if (response === null || !response.ok) {
       runRefusal(
         response === null
@@ -1510,14 +1525,21 @@ if (shell) {
       runRefusal(T.product.refusals.openPathEvidenceInvalid);
       return;
     }
-    const playback = { exercise, accepted: false };
+    const playback = { exercise, accepted: false, frame: null };
     document.dispatchEvent(new CustomEvent(T.product.viewportPlayEvent, { detail: playback }));
-    if (!playback.accepted) {
+    if (!playback.accepted || !Number.isSafeInteger(playback.frame) || playback.frame < 1) {
       runRefusal(T.product.refusals.viewportUnavailable);
       return;
     }
     showModePanels('run');
-    const played = 'Played composed scene · ' + ticks + ' ticks · session closed';
+    const lastDigest = exercise.tickDigests[ticks - 1];
+    const played = 'Played composed scene · ' + ticks + ' ticks · viewport frame ' + playback.frame + ' · session closed';
+    q('[data-run-session-report]').forEach((el) => {
+      el.textContent = 'Completed closed session · ' + ticks + ' ticks · terminal digest ' + String(lastDigest);
+    });
+    q('[data-run-live-report]').forEach((el) => {
+      el.textContent = 'Viewport frame ' + playback.frame + ' acknowledged for ' + exercise.mountable.sceneId + '.';
+    });
     runStatus(played);
     productStatus(projectRecovering ? 'recovering' : (projectDirty ? 'dirty' : (projectData === null ? 'closed' : 'open')), played);
   };
@@ -1883,7 +1905,6 @@ ${assistant(view)}
 ${statusBar(view)}
 ${overlays(view)}
 </div>
-${refusalLegend()}
 <script>${script(view)}</script>
 </body>
 </html>
