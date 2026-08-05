@@ -234,9 +234,10 @@ the same bytes. All three launch modes printed the same proof (`pnpm smoke`,
 
 ## Deliberately absent
 
-Windows and macOS packaging (shown as coming soon on `/engine`, never implied), code
-signing, auto-update, an app store listing, a GitHub Release, identity/billing (the desktop
-app has no account surface; the matrix denies it `auth`/`billing`), any Kids authoring path
+Windows and macOS packaging (shown as coming soon on `/engine` and in the umbrella's
+default-route download legend, never implied), code signing, auto-update, an app store
+listing, a GitHub Release, identity/billing (the desktop app has no account surface; the
+matrix denies it `auth`/`billing`), any Kids authoring path
 (the chrome's refuse-only Kids projection stays owned by `@sceneaxi/desktop-shell`,
 and the matrix denies every profile package), and any new CLI verb — held-key
 policy is untouched.

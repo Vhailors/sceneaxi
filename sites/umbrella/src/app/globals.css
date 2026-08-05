@@ -662,7 +662,7 @@ p {
   border-top: 1px solid var(--line-soft);
 }
 
-/* A card whose whole body is a link target (profile cards, family cards). */
+/* A card whose whole body is a link target (the docs page's next-step cards). */
 .card-link {
   color: inherit;
   display: flex;
@@ -779,7 +779,7 @@ p {
   color: var(--fg-2);
 }
 
-/* The family card's tinted square and the surface label beneath its name. */
+/* The tinted product square an artifact card heads itself with, on `/engine`. */
 .family-mark {
   width: 26px;
   height: 26px;
@@ -2248,7 +2248,8 @@ footer {
 
   /*
    * The hero stacks claim-first. The artifact keeps a wider aspect once it has the full
-   * measure, so a stacked hero does not push the stat bar an entire screen down.
+   * measure, so a stacked hero does not push the trust proof rail below it an entire
+   * screen down.
    */
   .hero-inner-split {
     grid-template-columns: minmax(0, 1fr);
@@ -2298,7 +2299,7 @@ footer {
   }
 }
 
-/* Tablet portrait: single-column cards, the stat strip becomes a 2×2 block. */
+/* Tablet portrait: paired grids halve, the nav takes its own row, the docs rail strips. */
 @media (max-width: 860px) {
   :root {
     --band-pad: 64px;
