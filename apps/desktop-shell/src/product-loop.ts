@@ -181,6 +181,7 @@ export type DesktopAuthoringRequest = Readonly<{
     op: "propose";
     documentPath: typeof DESKTOP_PROJECT.activeFile;
     jsonPointer: "/data";
+    expectedContentHash: string;
     newValue: JsonObject;
   }>;
 }>;
@@ -202,6 +203,7 @@ export const DESKTOP_WEB_ASSET_MAX_COUNT = 256;
 export type DesktopWebStageOperation = Readonly<{
   profile: string;
   documentData: unknown;
+  contentHash: string;
   kind: "html" | "asset";
   html: string;
   assetPath: string;
@@ -261,11 +263,19 @@ export function desktopWebStageDecision(
     typeof value === "string" &&
     value.length <= config.assetPathMaxLength &&
     assetPattern.test(value);
+  const contentHashIsValid = (value: unknown): value is string =>
+    typeof value === "string" && /^sha256:[0-9a-f]{64}$/.test(value);
 
   if (operation.profile !== "web") {
     return refuse(
       config.refusals.webCapabilityRequired,
       "HTML and asset injection are available only on the Web Experience profile.",
+    );
+  }
+  if (!contentHashIsValid(operation.contentHash)) {
+    return refuse(
+      config.refusals.documentDataInvalid,
+      "The open Scene Document is missing its validated content hash.",
     );
   }
 
@@ -357,6 +367,7 @@ export function desktopWebStageDecision(
         op: "propose" as const,
         documentPath: config.documentPath,
         jsonPointer: "/data" as const,
+        expectedContentHash: operation.contentHash,
         newValue,
       }),
     }),
@@ -391,11 +402,13 @@ function stageWebEdit(operation: DesktopWebStageOperation): DesktopStageDecision
 export function stageWebAssetInjection(input: Readonly<{
   profile: DesktopProfileId;
   documentData: unknown;
+  contentHash: string;
   assetPath: string;
 }>): DesktopStageDecision {
   return stageWebEdit({
     profile: input.profile,
     documentData: input.documentData,
+    contentHash: input.contentHash,
     kind: "asset",
     html: DESKTOP_WEB_STARTER.html,
     assetPath: input.assetPath,
@@ -406,11 +419,13 @@ export function stageWebAssetInjection(input: Readonly<{
 export function stageWebHtml(input: Readonly<{
   profile: DesktopProfileId;
   documentData: unknown;
+  contentHash: string;
   html: string;
 }>): DesktopStageDecision {
   return stageWebEdit({
     profile: input.profile,
     documentData: input.documentData,
+    contentHash: input.contentHash,
     kind: "html",
     html: input.html,
     assetPath: DESKTOP_WEB_STARTER.assetPath,

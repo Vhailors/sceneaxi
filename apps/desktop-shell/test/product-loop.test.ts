@@ -18,6 +18,8 @@ import {
   stageWebHtml,
 } from "@sceneaxi/desktop-shell";
 
+const CONTENT_HASH = `sha256:${"a".repeat(64)}`;
+
 describe("desktop product loop", () => {
   it("projects one active project file through policy-correct profile surfaces", () => {
     const game = desktopProductSurface("game");
@@ -53,6 +55,7 @@ describe("desktop product loop", () => {
     const staged = stageWebAssetInjection({
       profile: "web",
       documentData: current,
+      contentHash: CONTENT_HASH,
       assetPath: "assets/hero.glb",
     });
 
@@ -64,6 +67,7 @@ describe("desktop product loop", () => {
           op: "propose",
           documentPath: "scene.json",
           jsonPointer: "/data",
+          expectedContentHash: CONTENT_HASH,
           newValue: {
             title: "Landing",
             entities: [{ id: "hero" }],
@@ -81,6 +85,7 @@ describe("desktop product loop", () => {
       stageWebAssetInjection({
         profile: "game",
         documentData: current,
+        contentHash: CONTENT_HASH,
         assetPath: "assets/hero.glb",
       }),
     ).toMatchObject({ ok: false, reason: "DESKTOP_WEB_CAPABILITY_REQUIRED" });
@@ -88,6 +93,7 @@ describe("desktop product loop", () => {
       stageWebAssetInjection({
         profile: "web",
         documentData: current,
+        contentHash: CONTENT_HASH,
         assetPath: "../outside.glb",
       }),
     ).toMatchObject({ ok: false, reason: "DESKTOP_WEB_ASSET_PATH_INVALID" });
@@ -103,6 +109,7 @@ describe("desktop product loop", () => {
           assets: ["assets/hero.glb"],
         },
       },
+      contentHash: CONTENT_HASH,
       html: '<main id="sceneaxi-mount"><h1>Launch</h1></main>',
     });
 
@@ -114,6 +121,7 @@ describe("desktop product loop", () => {
           op: "propose",
           documentPath: "scene.json",
           jsonPointer: "/data",
+          expectedContentHash: CONTENT_HASH,
           newValue: {
             title: "Landing",
             webExperience: {
@@ -125,7 +133,12 @@ describe("desktop product loop", () => {
       },
     });
     expect(
-      stageWebHtml({ profile: "game", documentData: {}, html: "<main></main>" }),
+      stageWebHtml({
+        profile: "game",
+        documentData: {},
+        contentHash: CONTENT_HASH,
+        html: "<main></main>",
+      }),
     ).toMatchObject({ ok: false, reason: "DESKTOP_WEB_CAPABILITY_REQUIRED" });
   });
 
@@ -214,6 +227,7 @@ describe("desktop product loop", () => {
         {
           profile: "web",
           documentData,
+          contentHash: CONTENT_HASH,
           kind: "html",
           html: "x".repeat(DESKTOP_WEB_HTML_MAX_LENGTH + 1),
           assetPath: "assets/hero.glb",
@@ -226,6 +240,7 @@ describe("desktop product loop", () => {
       stageWebHtml({
         profile: "web",
         documentData,
+        contentHash: CONTENT_HASH,
         html: `<main>${String.fromCharCode(0)}</main>`,
       }),
     ).toMatchObject({ ok: false, reason: DESKTOP_PRODUCT_REFUSALS.webHtmlInvalid });
@@ -235,6 +250,7 @@ describe("desktop product loop", () => {
       stageWebAssetInjection({
         profile: "web",
         documentData,
+        contentHash: CONTENT_HASH,
         assetPath: "assets/../../etc/passwd",
       }),
     ).toMatchObject({
@@ -247,6 +263,7 @@ describe("desktop product loop", () => {
       stageWebAssetInjection({
         profile: "web",
         documentData: { webExperience: { html: 4, assets: [] } },
+        contentHash: CONTENT_HASH,
         assetPath: "assets/hero.glb",
       }),
     ).toMatchObject({
@@ -263,6 +280,7 @@ describe("desktop product loop", () => {
             assets: [],
           },
         },
+        contentHash: CONTENT_HASH,
         assetPath: "assets/hero.glb",
       }),
     ).toMatchObject({
@@ -274,6 +292,7 @@ describe("desktop product loop", () => {
       stageWebAssetInjection({
         profile: "web",
         documentData,
+        contentHash: CONTENT_HASH,
         assetPath: `assets/${"x".repeat(DESKTOP_WEB_ASSET_PATH_MAX_LENGTH)}.glb`,
       }),
     ).toMatchObject({
@@ -293,6 +312,7 @@ describe("desktop product loop", () => {
             ),
           },
         },
+        contentHash: CONTENT_HASH,
         assetPath: "assets/hero.glb",
       }),
     ).toMatchObject({
@@ -309,6 +329,7 @@ describe("desktop product loop", () => {
             assets: [],
           },
         },
+        contentHash: CONTENT_HASH,
         html: "<main>replacement</main>",
       }),
     ).toMatchObject({
@@ -321,6 +342,7 @@ describe("desktop product loop", () => {
       stageWebHtml({
         profile: "web",
         documentData: { ratio: Number.POSITIVE_INFINITY },
+        contentHash: CONTENT_HASH,
         html: "<main></main>",
       }),
     ).toMatchObject({
@@ -332,6 +354,7 @@ describe("desktop product loop", () => {
       stageWebHtml({
         profile: "web",
         documentData: { onLoad: () => undefined },
+        contentHash: CONTENT_HASH,
         html: "<main></main>",
       }),
     ).toMatchObject({

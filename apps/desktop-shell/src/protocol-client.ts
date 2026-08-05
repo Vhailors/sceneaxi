@@ -21,6 +21,7 @@ export type ShellEditInput = {
   readonly documentPath: string;
   readonly jsonPointer: string;
   readonly newValue: unknown;
+  readonly expectedContentHash?: string;
   readonly cwd?: string;
 };
 
@@ -100,6 +101,24 @@ export function shellPropose(input: ShellEditInput): ShellProposeResult {
   const result = propose(toProposeInput(input));
   if (!result.ok) {
     return { ok: false, diagnostics: result.diagnostics, renderedDiff: null };
+  }
+  const actualContentHash = result.proposal.edits[0]?.baseContentHash;
+  if (
+    input.expectedContentHash !== undefined &&
+    actualContentHash !== input.expectedContentHash
+  ) {
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          code: "content-hash-conflict",
+          message: `Document changed after it was opened: ${input.documentPath}`,
+          documentPath: input.documentPath,
+          reReadHint: "Re-open the document before staging this edit again.",
+        },
+      ],
+      renderedDiff: null,
+    };
   }
   return {
     ok: true,

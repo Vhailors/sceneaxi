@@ -1268,6 +1268,7 @@ if (shell) {
   const webStageDecision = ${String(desktopWebStageDecision)};
 
   let projectData = null;
+  let projectContentHash = null;
   let projectDirty = false;
   let projectRecovering = false;
   // One product request at a time. Every live control reads \`projectData\` before
@@ -1357,13 +1358,15 @@ if (shell) {
     const status = response.data;
     const reason = responseReason(response);
     projectData = null;
+    projectContentHash = null;
     projectDirty = false;
     projectRecovering = false;
-    if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' || status.data === null) {
+    if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' || status.data === null || typeof status.contentHash !== 'string') {
       productStatus('refused', 'Recovery reset · ' + diagnostic + ' · ' + (reason || T.product.refusals.documentDataInvalid));
       return false;
     }
     projectData = status.data;
+    projectContentHash = status.contentHash;
     productStatus('open', T.product.documentPath + ' · re-opened after ' + diagnostic + ' · ' + status.documentId);
     return true;
   };
@@ -1383,6 +1386,7 @@ if (shell) {
       return false;
     }
     projectData = null;
+    projectContentHash = null;
     projectDirty = false;
     return true;
   };
@@ -1397,11 +1401,12 @@ if (shell) {
     });
     const reason = responseReason(response);
     const status = response?.ok ? response.data : null;
-    if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' || status.data === null) {
+    if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' || status.data === null || typeof status.contentHash !== 'string') {
       productStatus('refused', 'Open refused · ' + (reason || T.product.refusals.documentDataInvalid));
       return false;
     }
     projectData = status.data;
+    projectContentHash = status.contentHash;
     projectDirty = false;
     projectRecovering = false;
     productStatus('open', T.product.documentPath + ' · open · ' + status.documentId);
@@ -1415,11 +1420,12 @@ if (shell) {
       productStatus('refused', 'Stage refused · ' + T.product.refusals.webCapabilityRequired);
       return;
     }
-    if (projectData === null && !(await openProject())) return;
+    if ((projectData === null || projectContentHash === null) && !(await openProject())) return;
     const decision = webStageDecision(
       {
         profile: shell.dataset.profile,
         documentData: projectData,
+        contentHash: projectContentHash,
         kind,
         html: T.product.webStarter.html,
         assetPath: T.product.webStarter.assetPath,
@@ -1453,6 +1459,8 @@ if (shell) {
       return true;
     }
     if (snapshot.phase === 'applied' && diagnostics.length === 0) {
+      projectData = null;
+      projectContentHash = null;
       projectDirty = false;
       projectRecovering = false;
       productStatus('saved', T.product.documentPath + ' · saved');

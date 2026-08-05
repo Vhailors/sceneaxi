@@ -339,16 +339,24 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     if (op === "propose") {
       const documentPath = containedDocumentPath(field(payload, "documentPath"));
       const jsonPointer = field(payload, "jsonPointer");
-      if (documentPath === null || typeof jsonPointer !== "string") {
+      const expectedContentHash = field(payload, "expectedContentHash");
+      if (
+        documentPath === null ||
+        typeof jsonPointer !== "string" ||
+        (expectedContentHash !== undefined &&
+          (typeof expectedContentHash !== "string" ||
+            !/^sha256:[0-9a-f]{64}$/.test(expectedContentHash)))
+      ) {
         return bridgeRefuse(
           DESKTOP_BRIDGE_REFUSALS.requestMalformed,
-          "authoring propose requires a jsonPointer string and a documentPath inside the project directory.",
+          "authoring propose requires a jsonPointer string, an optional SHA-256 expectedContentHash, and a documentPath inside the project directory.",
         );
       }
       const snapshot: DesktopSnapshot = live.proposeEdit({
         documentPath,
         jsonPointer,
         newValue: field(payload, "newValue"),
+        ...(expectedContentHash !== undefined ? { expectedContentHash } : {}),
       });
       return bridgeOk("authoring", snapshot);
     }

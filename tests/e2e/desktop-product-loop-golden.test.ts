@@ -162,6 +162,10 @@ describe("desktop first-release product loop", () => {
       window.document.querySelector<HTMLElement>("[data-project-status]")?.textContent ?? "";
     expect(shell?.dataset.tier).toBe("narrow");
     expect(shell?.dataset.profile).toBe("game");
+    expect(window.document.querySelectorAll("button")).toHaveLength(64);
+    expect(window.document.querySelectorAll('button:not([tabindex="-1"])')).toHaveLength(
+      59,
+    );
 
     const refusalHelp = window.document.querySelector<HTMLElement>("#status-refusal-help");
     const refusalLegend = window.document.querySelector<HTMLElement>("#refusal-legend");
@@ -176,6 +180,34 @@ describe("desktop first-release product loop", () => {
     await click(window, "#profile-web");
     await click(window, "#project-open");
     expect(status()).toContain("open · desktop-first-release");
+
+    const externalScene = desktopOpenScene();
+    if (!externalScene.ok) {
+      throw new Error(`desktop scene refused: ${externalScene.reason}`);
+    }
+    const changed = writeDocumentFile(
+      join(dir, "scene.json"),
+      createDocument({
+        id: "desktop-first-release",
+        data: {
+          ...externalScene.composed.document.data,
+          title: "External edit",
+          entities: [{ id: "hero" }],
+        },
+      }),
+      { cwd: dir },
+    );
+    if (!changed.ok) throw new Error("external edit fixture refused");
+    await click(window, "#web-inject-asset");
+    expect(status()).toContain("Stage refused · content-hash-conflict");
+    expect(readFileSync(join(dir, "scene.json"), "utf8")).toContain(
+      '"title": "External edit"',
+    );
+    expect(readFileSync(join(dir, "scene.json"), "utf8")).not.toContain(
+      '"assets/hero.glb"',
+    );
+
+    await click(window, "#project-open");
     await click(window, "#web-inject-asset");
     expect(status()).toContain("staged · Save to apply");
 
@@ -260,8 +292,30 @@ describe("desktop first-release product loop", () => {
     expect(window.document.querySelector("#scene-play")?.getAttribute("aria-disabled")).toBe(
       "true",
     );
+    expect(
+      [...window.document.querySelectorAll<HTMLElement>('button:not([data-kind="inert"])')]
+        .map((button) => button.id)
+        .sort(),
+    ).toEqual(
+      [
+        "overlay-close-conflict-discard",
+        "overlay-close-conflict-review",
+        "overlay-close-refused-edit-brief",
+        "overlay-close-refused-keep-draft",
+        "overlay-open-palette",
+        "profile-game",
+        "profile-kids",
+        "profile-web",
+        "status-overlay-conflict",
+        "status-overlay-palette",
+        "status-overlay-refused",
+        "status-refusal-help",
+      ].sort(),
+    );
 
     expect(requests.map((request) => request.payload?.op ?? request.action)).toEqual([
+      "status",
+      "propose",
       "status",
       "propose",
       "reject",

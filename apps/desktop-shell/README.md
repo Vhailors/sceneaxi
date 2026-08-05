@@ -114,8 +114,9 @@ The refuse-only profile demotes in **one** place: every control is minted throug
 one function inside `desktopVisualView()`, and on Kids that function makes each
 one inert unless it is already inert for a more specific reason. A control added
 anywhere is behind the refusal by default, so forgetting fails closed; the
-eleven that are deliberately *not* behind it — the profile switch and the overlay
-open/close — say so by naming `outsideRefusal()`. The browser-side switch applies
+twelve that are deliberately *not* behind it — the profile switch, refusal
+help, and the overlay open/close controls — say so by naming
+`outsideRefusal()`. The browser-side switch applies
 the same answer by sweeping every `[data-kind]` element against
 `view.controls`, never a selector list. Everything else the switch changes comes
 from the same kind of serialized projection — the assistant seat, its model
