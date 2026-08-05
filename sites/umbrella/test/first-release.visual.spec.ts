@@ -1,13 +1,25 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
-const gotoOverview = async (page: Page) => {
+/**
+ * Platform detection is a property of the user agent, never of the machine running
+ * the suite. Every navigation pins the agent it expects to be resolved from, so this
+ * file measures the site on a macOS or Windows workstation exactly as it does in CI.
+ */
+const LINUX_USER_AGENT =
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+const MACOS_USER_AGENT =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+
+test.use({ userAgent: LINUX_USER_AGENT });
+
+const gotoOverview = async (page: Page, expectedPlatform = "linux") => {
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     "Build scenes. Keep the source.",
   );
   await expect(page.locator(".download-cta")).toHaveAttribute(
     "data-detected-platform",
-    "linux",
+    expectedPlatform,
   );
 };
 
@@ -16,6 +28,17 @@ const box = async (locator: Locator) => {
   expect(value).not.toBeNull();
   if (value === null) throw new Error("expected a rendered box");
   return value;
+};
+
+const expectNoSidewaysScroll = async (page: Page) => {
+  const overflow = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(
+    overflow.scrollWidth,
+    `page scrolls sideways at ${JSON.stringify(page.viewportSize())}`,
+  ).toBeLessThanOrEqual(overflow.clientWidth + 1);
 };
 
 test("default route keeps Download, proof, comparisons, and profiles readable", async ({
@@ -29,11 +52,26 @@ test("default route keeps Download, proof, comparisons, and profiles readable", 
   await expect(page.getByRole("table", { name: "Profile capability matrix" })).toBeVisible();
   await expect(page.getByText("Kids is structurally separate")).toBeVisible();
 
-  const overflow = await page.evaluate(() => ({
-    clientWidth: document.documentElement.clientWidth,
-    scrollWidth: document.documentElement.scrollWidth,
-  }));
-  expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth + 1);
+  await expectNoSidewaysScroll(page);
+});
+
+test.describe("a detected macOS visitor", () => {
+  test.use({ userAgent: MACOS_USER_AGENT });
+
+  test("reads the coming-soon state without acquiring a macOS download", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await gotoOverview(page, "macos");
+
+    await expect(page.locator(".download-context")).toContainText("macOS detected");
+    await expect(page.locator('.platform-availability li[data-availability="available"]')).toHaveText(
+      /Linux/,
+    );
+    await expect(
+      page.locator('.platform-availability li[data-availability="coming-soon"]'),
+    ).toHaveCount(2);
+    await expect(page.locator(".platform-availability a")).toHaveCount(0);
+    await expect(page.locator(".download-primary")).toHaveAttribute("href", "/engine");
+  });
 });
 
 test("short desktop height keeps the release proposition and primary action above the fold", async ({
@@ -47,6 +85,7 @@ test("short desktop height keeps the release proposition and primary action abov
   const viewport = await box(page.locator(".release-hero .viewport"));
 
   expect(heading.y).toBeGreaterThanOrEqual(0);
+  expect(heading.y + heading.height).toBeLessThanOrEqual(640);
   expect(download.y + download.height).toBeLessThanOrEqual(640);
   expect(viewport.height).toBeLessThanOrEqual(301);
 });
@@ -57,26 +96,31 @@ test("breakpoint boundaries change composition on the declared side", async ({ p
   const copyWide = await box(page.locator(".hero-copy"));
   const stageWide = await box(page.locator(".hero-stage"));
   expect(stageWide.x).toBeGreaterThan(copyWide.x + copyWide.width * 0.8);
+  await expectNoSidewaysScroll(page);
 
   await page.setViewportSize({ width: 1024, height: 800 });
   const copyStacked = await box(page.locator(".hero-copy"));
   const stageStacked = await box(page.locator(".hero-stage"));
   expect(stageStacked.y).toBeGreaterThan(copyStacked.y + copyStacked.height);
+  await expectNoSidewaysScroll(page);
 
   await page.setViewportSize({ width: 861, height: 900 });
   const wordmarkWide = await box(page.locator(".masthead .wordmark"));
   const navWide = await box(page.locator(".masthead .nav"));
   expect(Math.abs(wordmarkWide.y - navWide.y)).toBeLessThan(8);
+  await expectNoSidewaysScroll(page);
 
   await page.setViewportSize({ width: 860, height: 900 });
   const wordmarkWrapped = await box(page.locator(".masthead .wordmark"));
   const navWrapped = await box(page.locator(".masthead .nav"));
   expect(navWrapped.y).toBeGreaterThan(wordmarkWrapped.y + wordmarkWrapped.height);
+  await expectNoSidewaysScroll(page);
 
   await page.setViewportSize({ width: 621, height: 900 });
   const firstProofPaired = await box(page.locator(".launch-proof").nth(0));
   const secondProofPaired = await box(page.locator(".launch-proof").nth(1));
   expect(Math.abs(firstProofPaired.y - secondProofPaired.y)).toBeLessThan(2);
+  await expectNoSidewaysScroll(page);
 
   await page.setViewportSize({ width: 620, height: 900 });
   const firstProofStacked = await box(page.locator(".launch-proof").nth(0));
@@ -84,6 +128,7 @@ test("breakpoint boundaries change composition on the declared side", async ({ p
   expect(secondProofStacked.y).toBeGreaterThanOrEqual(
     firstProofStacked.y + firstProofStacked.height,
   );
+  await expectNoSidewaysScroll(page);
 });
 
 test("keyboard order exposes the skip link and visible focus treatment", async ({ page }) => {
@@ -117,6 +162,10 @@ test("composited readability clears WCAG body contrast after the browser cascade
 
   const selectors = [
     ".download-primary",
+    ".download-context",
+    ".platform-availability li",
+    '.platform-availability li[data-availability="available"] > span:last-child',
+    '.platform-availability li[data-availability="coming-soon"] > span:last-child',
     ".launch-proof dd",
     ".comparison-sceneaxi td:nth-child(2)",
     ".profile-release-matrix tbody td",

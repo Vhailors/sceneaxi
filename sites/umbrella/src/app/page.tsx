@@ -92,7 +92,12 @@ export default function OverviewPage() {
           </p>
         </div>
 
-        <div className="scroll-x comparison-scroll" tabIndex={0} aria-label="Engine comparison">
+        <div
+          className="scroll-x comparison-scroll"
+          role="region"
+          tabIndex={0}
+          aria-label="Engine comparison, scrollable"
+        >
           <table className="comparison-table" aria-label="Engine comparison">
             <thead>
               <tr>
@@ -137,7 +142,12 @@ export default function OverviewPage() {
             </p>
           </div>
 
-          <div className="scroll-x profile-release-scroll" tabIndex={0} aria-label="Profile capability matrix">
+          <div
+            className="scroll-x profile-release-scroll"
+            role="region"
+            tabIndex={0}
+            aria-label="Profile capability matrix, scrollable"
+          >
             <table className="profile-release-matrix" aria-label="Profile capability matrix">
               <thead>
                 <tr>

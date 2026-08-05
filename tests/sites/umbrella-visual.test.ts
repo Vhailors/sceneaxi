@@ -358,6 +358,22 @@ describe("accessibility structure", () => {
     expect(CSS).toContain("@media (prefers-reduced-motion: reduce)");
   });
 
+  it("exposes a role on every focusable scroll region, so its label is announced", () => {
+    // A labelled `div` is `role=generic`, whose accessible name assistive technology
+    // does not expose — a keyboard user who tabs into the scroller would hear nothing.
+    let focusable = 0;
+    for (const relativePath of UMBRELLA_SOURCES) {
+      for (const opening of read(relativePath).matchAll(/<div\b[^>]*\bscroll-x\b[^>]*>/gs)) {
+        if (!opening[0].includes("tabIndex")) continue;
+        focusable += 1;
+        expect(opening[0], `${relativePath} focusable scroller`).toMatch(
+          /role="(region|group)"/,
+        );
+      }
+    }
+    expect(focusable).toBeGreaterThan(0);
+  });
+
   it("hides the decorative product mark from the accessibility tree", () => {
     expect(LAYOUT).toContain('className="mark" aria-hidden="true"');
   });

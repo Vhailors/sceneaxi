@@ -5,6 +5,13 @@ const configuredChrome = process.env.SCENEAXI_CHROME_PATH;
 const executablePath =
   configuredChrome ?? (existsSync("/usr/bin/chromium") ? "/usr/bin/chromium" : undefined);
 
+/**
+ * The Chromium sandbox stays on unless the environment cannot provide it — a CI
+ * container, or a developer who says so by name. A local run never silently drops it.
+ */
+const sandboxUnavailable =
+  process.env.CI !== undefined || process.env.SCENEAXI_CHROME_NO_SANDBOX === "1";
+
 export default defineConfig({
   testDir: "./test",
   testMatch: "**/*.visual.spec.ts",
@@ -21,7 +28,7 @@ export default defineConfig({
     screenshot: "only-on-failure",
     launchOptions: {
       ...(executablePath === undefined ? {} : { executablePath }),
-      args: ["--no-sandbox"],
+      args: sandboxUnavailable ? ["--no-sandbox"] : [],
     },
   },
   webServer: {

@@ -12,7 +12,7 @@
     "build": "next build",
     "start": "next start",
     "test:visual": "playwright test",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "build:sdk": "node ../../scripts/build-engine-sdk.mjs --out public/engine-sdk",
     "prebuild": "pnpm run build:sdk",
     "predev": "pnpm run build:sdk"

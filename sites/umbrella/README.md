@@ -77,11 +77,23 @@ The default route is the first-release information architecture from sceneaxi#20
 - `tests/sites/umbrella-launch-marketing.test.ts` tests the pure content and detection
   seams. `test/first-release.visual.spec.ts` drives the rendered route at default,
   short-height, and both sides of its breakpoints; it also tests real Tab focus and
-  contrast after browser compositing rather than comparing declared token strings.
+  contrast after browser compositing rather than comparing declared token strings. It
+  pins the user agent it navigates with, so platform detection is measured against that
+  agent rather than against the workstation running the suite.
 
 Run the browser checks from this install root:
 
+    pnpm exec playwright install chromium   # once, unless a system browser is used
     pnpm test:visual
+
+The suite needs a Chromium binary. `SCENEAXI_CHROME_PATH` names one explicitly;
+otherwise `/usr/bin/chromium` is used when present, and Playwright's own download
+otherwise. The browser sandbox stays on unless `CI` or `SCENEAXI_CHROME_NO_SANDBOX=1`
+says the environment cannot provide it.
+
+`pnpm typecheck` covers this suite: `tsconfig.json` is the shipped app and
+`tsconfig.test.json` is `playwright.config.ts` plus `test/**`, so a spec that stops
+compiling fails the same command rather than only failing when a browser is available.
 
 Three overview client components carry the visual layer's behaviour, and all are deliberate:
 `src/app/_components/site-nav.tsx` exists only to resolve `aria-current`, and
