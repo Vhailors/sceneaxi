@@ -6,8 +6,9 @@
  * startable (`bin/sceneaxi-desktop.mjs`) with a real session and command layer;
  * sceneaxi#158 adds the accepted Engine Desktop visual surface as a view model
  * (`visual-model.ts`) plus a document renderer (`chrome.ts`).
- * Still protocol-thin: no native packaging, no installer, no offline store, no
- * presentation runtime — the chrome draws no pixels.
+ * Still protocol-thin: no native packaging, no installer, no offline store, and
+ * no direct presentation dependency. The chrome's optional host port receives
+ * project and composed-scene play results from the packaged application.
  */
 import type { PackageSeam } from "@sceneaxi/schemas";
 
@@ -144,3 +145,19 @@ export {
   renderDesktopChrome,
   type DesktopChromeOptions,
 } from "./chrome.js";
+
+export {
+  DESKTOP_PRODUCT_CAPABILITY_IDS,
+  DESKTOP_PRODUCT_REFUSALS,
+  DESKTOP_PROJECT,
+  DESKTOP_WEB_STARTER,
+  desktopProductSurface,
+  stageWebAssetInjection,
+  stageWebHtml,
+  type DesktopAuthoringRequest,
+  type DesktopProductCapability,
+  type DesktopProductCapabilityId,
+  type DesktopProductRefusal,
+  type DesktopProductSurface,
+  type DesktopStageDecision,
+} from "./product-loop.js";

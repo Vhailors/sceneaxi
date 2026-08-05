@@ -50,6 +50,8 @@ export type DesktopDocumentStatus =
       readonly documentId: string;
       readonly contentHash: string;
       readonly dataKeys: readonly string[];
+      /** Validated document data for project-loop proposals; never executable. */
+      readonly data: Readonly<Record<string, unknown>>;
     }
   | {
       readonly ok: false;
@@ -315,6 +317,7 @@ export function createDesktopSession(
         documentId: validation.document.id,
         contentHash: contentHash(text),
         dataKeys: Object.freeze(Object.keys(validation.document.data).sort()),
+        data: Object.freeze(structuredClone(validation.document.data)),
       };
     },
 

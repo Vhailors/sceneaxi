@@ -17,7 +17,7 @@ a marketing word.
 | Surface | Level | How to run | Proof |
 |---|---|---|---|
 | `@sceneaxi/cli` | **R2** | `pnpm build && node packages/cli/bin/sceneaxi.mjs --help` | `packages/cli/test/bin-smoke.test.ts` + the rest of `packages/cli/test/` |
-| `@sceneaxi/desktop-shell` | **R2** | `pnpm build && node apps/desktop-shell/bin/sceneaxi-desktop.mjs --help`; for the editor chrome, `… chrome > shell.html` and open that file | `apps/desktop-shell/test/bin-smoke.test.ts` (including a spawned `chrome` render), `tests/parity/shell-cli-parity.test.ts`, `apps/desktop-shell/test/{visual-model,visual-tokens,chrome}.test.ts` + the browser record in [`engine-desktop-surface.md`](engine-desktop-surface.md) |
+| `@sceneaxi/desktop-shell` | **R2** | `pnpm build && node apps/desktop-shell/bin/sceneaxi-desktop.mjs --help`; for standalone chrome, `… chrome > shell.html`; the packaged host activates Open/Save/Play | `apps/desktop-shell/test/bin-smoke.test.ts`, `apps/desktop-shell/test/{product-loop,visual-model,visual-tokens,chrome}.test.ts`, `tests/e2e/desktop-product-loop-golden.test.ts`, `tests/parity/shell-cli-parity.test.ts` + the browser record in [`engine-desktop-surface.md`](engine-desktop-surface.md) |
 | `@sceneaxi/web-shell` (local authoring inspector + assistant transport) | **R2** | `pnpm build && node apps/web-shell/bin/sceneaxi-web-shell.mjs --cwd <project>`, then open the printed loopback URL or `POST /api/assistant` | `apps/web-shell/test/bin-smoke.test.ts` (spawns the binary and drives propose → accept plus a fixture assistant turn over a socket), `apps/web-shell/test/refuse-matrix.test.ts`, `tests/parity/shell-cli-parity.test.ts` |
 | `@sceneaxi/desktop-linux` (packaged Linux desktop app, ADR 0024) | **R2** | `cd desktop/linux && pnpm install && pnpm build && pnpm start`; Assistant Build's Local route compiles and mounts a typed sculpt without a provider; distributable via `pnpm dist` (AppImage + `.deb` + `SHA256SUMS`), proven by `pnpm smoke --packaged` | `tests/e2e/desktop-linux-bridge-golden.test.ts` (assistant → typed artifact → headless mount/manipulator contract, no pixel claim), `tests/desktop/desktop-linux-seams.test.ts`, the spawned `--smoke` proof in CI (`.github/workflows/desktop-linux.yml`), and the recorded builds/pixel observations plus the offered workflow artifact in [`desktop-linux.md`](desktop-linux.md) |
 | Game profile (single object) | **R1** | `pnpm test:golden` | `tests/e2e/cli-golden-path.test.ts` |
@@ -97,6 +97,11 @@ open-path demo contract, which is `schemas`, and neither opens a kernel session,
 which would not be. See [`open-path-policy.md`](open-path-policy.md), *"Where
 parity stops, and why"*.
 
+The first-release chrome's Play button does not widen that package graph or add
+a shell command: it adapts onto the optional packaged-host port. The Linux host
+already owns `bootstrapOpenPath()` and the presentation runtime under ADR 0024;
+standalone chrome has no port and refuses by name.
+
 ## Deliberate refusals
 
 These are intentional fail-closed behaviors in runnable-surfaces v1. Their
@@ -121,13 +126,13 @@ still-unimplemented target:
   the emitted bytes and selected by state, so a browser-side profile switch
   reaches the same refusals
   ([`engine-desktop-surface.md`](engine-desktop-surface.md)).
-- `sceneaxi-desktop chrome` renders the editor chrome but mounts **no**
-  presentation runtime and opens **no** kernel session, so its viewport draws no
-  pixels, its `run` mode reports no tick, and every control that would author
-  something is inert with a named refusal. It is a view model with a renderer for
-  it, not a packaged desktop application: this app ships no installer. The packaged
-  application that wraps this same chrome is the `@sceneaxi/desktop-linux` row above
-  ([`desktop-linux.md`](desktop-linux.md)).
+- Standalone `sceneaxi-desktop chrome` mounts **no** presentation runtime and
+  opens **no** kernel session, so its viewport draws no pixels and its live
+  Open/Save/Play controls refuse `DESKTOP_RUNTIME_UNAVAILABLE`. The exact same
+  bytes become the product loop when a packaged host injects the existing
+  authoring/open-path port; renderer and kernel authority stay in that host.
+  This package still ships no installer. The packaged application is the
+  `@sceneaxi/desktop-linux` row above ([`desktop-linux.md`](desktop-linux.md)).
 
 ## Commercial model
 

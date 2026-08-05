@@ -336,10 +336,9 @@ function pickSize(
  * `chrome` — render the Engine Desktop editor chrome for one visual state.
  *
  * The document is the evidence artifact: a browser opens exactly the bytes the
- * gate asserts. It renders one state because this package ships a view model
- * and no application runtime — the emitted script only switches between states
- * the model already decided, and mounts no renderer, so nothing here draws a
- * pixel or reaches `authoring-core`.
+ * gate asserts. Its optional host port is the only route to project state and
+ * composed-scene playback; without that injected authority, every product-loop
+ * action refuses by name. Emitting the document itself draws no pixel.
  */
 function chromeResult(args: ParsedArgs): DesktopResult {
   const command = "chrome";
@@ -395,7 +394,7 @@ function chromeResult(args: ParsedArgs): DesktopResult {
     },
     [
       "Text output is the HTML document itself — redirect it to a file and open that file",
-      "This surface mounts no renderer and opens no kernel session: it draws no pixels",
+      "The standalone document draws no pixels; a packaged host may supply project and play results",
     ],
   );
 }
@@ -490,6 +489,7 @@ export function runDesktopCommand(
         documentId: status.documentId,
         contentHash: status.contentHash,
         dataKeys: status.dataKeys,
+        data: status.data,
       },
       ["Run `sceneaxi-desktop propose --document ... --pointer ... --value ...` to edit"],
     );
