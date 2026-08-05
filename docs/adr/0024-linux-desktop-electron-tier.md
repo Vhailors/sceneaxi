@@ -107,8 +107,18 @@ build and adds only a Windows updater bootstrap — no second chrome, bridge, re
 or matrix edge (its allow list is empty). The one factual claim this amendment
 corrects is scope: Windows *packaging* is no longer held elsewhere, while Windows
 signing credentials, release/tagging authority, and any public artifact still are.
-macOS is unchanged and remains unpackaged. Nothing here becomes a claim: `dist`
+Nothing here becomes a claim: `dist`
 refuses without operator-supplied signing inputs and never publishes, `/engine` keeps
 Windows as a coming-soon row, and the download IA may only change after a real
 release is verified and recorded. That contract's owner is
 [`docs/desktop-windows.md`](../desktop-windows.md).
+
+## Amendment — macOS packaging landed as a second install root (2026-08-05)
+
+macOS packaging, its signing/notarization preflight, and its fail-closed update
+configuration landed as another install root in this tier, `desktop/macos`
+([sceneaxi#194](https://github.com/Vhailors/sceneaxi/issues/194)), owned by
+[`../desktop-macos.md`](../desktop-macos.md). It stages this Linux application's own
+build rather than forking it, and records no released artifact — so `/engine`
+advertising, store listings, and release/tagging authority are all unchanged by it,
+and macOS *packaging* alone moves out of "held elsewhere".

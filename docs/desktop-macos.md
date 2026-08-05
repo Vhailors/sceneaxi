@@ -46,6 +46,13 @@ disabled update policy when no release location is supplied. It produces no `.dm
 or `.zip` and makes no signing claim. `smoke` deliberately removes all release inputs
 and succeeds only when `dist` refuses each one by name.
 
+None of that needs a macOS host to be gate-covered: `pnpm check:desktop` holds this
+install root to the same tier rules as `desktop/linux`, and the hermetic suites
+`tests/desktop/desktop-macos-packaging.test.ts` (packaging contract, provenance
+shapes, missing-input refusals, and this document's own prerequisite claims) and
+`tests/boundary/injected-desktop-violations.test.ts` (matrix listing and denied
+edges) are what to extend when any of it changes.
+
 ## Operator-supplied release prerequisites
 
 Run the release only on macOS with Xcode Command Line Tools providing these
@@ -147,9 +154,12 @@ software rasterizer, not a stub, and it is the only reason a hosted macOS VM can
 satisfy that assertion. Nothing else about the packaged application changes, and
 `open`-ing the installed app still uses the real GPU.
 
-The manually dispatched `.github/workflows/desktop-macos.yml` release path uploads
-those verified files only as the Actions artifact `sceneaxi-desktop-macos`. It does
-not create a GitHub Release, publish to an update server, or change the umbrella.
+In `.github/workflows/desktop-macos.yml`, an ordinary push or pull request runs only
+the platform-independent type-check, staging build, and configuration smoke on Linux;
+a macOS runner is spent solely on the operator-dispatched release. That manually
+dispatched release path uploads those verified files only as the Actions artifact
+`sceneaxi-desktop-macos`. It does not create a GitHub Release, publish to an update
+server, or change the umbrella.
 After an operator separately creates a durable release and uploads the files
 together, download IA work can consume `desktop-macos-release.json` as its exact
 record. Until that release exists, there is nothing honest to link.
