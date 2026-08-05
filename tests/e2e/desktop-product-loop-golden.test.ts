@@ -9,7 +9,11 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { Window as HappyWindow } from "happy-dom";
+import {
+  Window as HappyWindow,
+  type CustomEvent as HappyCustomEvent,
+  type HTMLElement as HappyHTMLElement,
+} from "happy-dom";
 import { createDocument, writeDocumentFile } from "@sceneaxi/authoring-core";
 import {
   DESKTOP_VIEWPORT_PLAY_EVENT,
@@ -47,8 +51,20 @@ function projectDir() {
   return dir;
 }
 
+/**
+ * The tests project compiles without the DOM lib, so element types come from
+ * happy-dom itself rather than from a global `HTMLElement`.
+ */
+function query(window: HappyWindow, selector: string) {
+  return window.document.querySelector(selector) as HappyHTMLElement | null;
+}
+
+function queryAll(window: HappyWindow, selector: string) {
+  return [...window.document.querySelectorAll(selector)] as HappyHTMLElement[];
+}
+
 async function click(window: HappyWindow, selector: string) {
-  const element = window.document.querySelector<HTMLElement>(selector);
+  const element = query(window, selector);
   if (element === null) throw new Error(`missing product-loop control ${selector}`);
   element.click();
   for (let turn = 0; turn < 20; turn += 1) {
@@ -144,22 +160,24 @@ describe("desktop first-release product loop", () => {
     );
     const match = /<script>([\s\S]*?)<\/script>/.exec(html);
     if (match === null) throw new Error("desktop chrome lost its emitted script");
+    const script = match[1];
+    if (script === undefined) throw new Error("desktop chrome emitted an empty script");
     window.document.write(html.replace(match[0], ""));
     let playback: { closed?: unknown; tickDigests?: unknown } | null = null;
     window.document.addEventListener(DESKTOP_VIEWPORT_PLAY_EVENT, (event) => {
-      const detail = (event as CustomEvent<{
+      const detail = (event as HappyCustomEvent).detail as {
         accepted: boolean;
         exercise: { closed?: unknown; tickDigests?: unknown };
-      }>).detail;
+      };
       playback = detail.exercise;
       detail.accepted = true;
       (detail as { frame?: number }).frame = 27;
     });
-    window.eval(match[1]);
+    window.eval(script);
 
-    const shell = window.document.querySelector<HTMLElement>(".shell");
+    const shell = query(window, ".shell");
     const status = () =>
-      window.document.querySelector<HTMLElement>("[data-project-status]")?.textContent ?? "";
+      query(window, "[data-project-status]")?.textContent ?? "";
     expect(shell?.dataset.tier).toBe("narrow");
     expect(shell?.dataset.profile).toBe("game");
     expect(window.document.querySelectorAll("button")).toHaveLength(64);
@@ -167,8 +185,8 @@ describe("desktop first-release product loop", () => {
       59,
     );
 
-    const refusalHelp = window.document.querySelector<HTMLElement>("#status-refusal-help");
-    const refusalLegend = window.document.querySelector<HTMLElement>("#refusal-legend");
+    const refusalHelp = query(window, "#status-refusal-help");
+    const refusalLegend = query(window, "#refusal-legend");
     expect(refusalLegend?.hidden).toBe(true);
     await click(window, "#status-refusal-help");
     expect(refusalHelp?.getAttribute("aria-expanded")).toBe("true");
@@ -269,10 +287,10 @@ describe("desktop first-release product loop", () => {
     expect(shell?.dataset.mode).toBe("run");
     expect(status()).toContain("Played composed scene · 4 ticks · viewport frame 27");
     expect(
-      window.document.querySelector<HTMLElement>("[data-run-session-report]")?.textContent,
+      query(window, "[data-run-session-report]")?.textContent,
     ).toContain("Completed closed session · 4 ticks · terminal digest");
     expect(
-      window.document.querySelector<HTMLElement>("[data-run-live-report]")?.textContent,
+      query(window, "[data-run-live-report]")?.textContent,
     ).toContain("Viewport frame 27 acknowledged for desktop-linux-open-scene");
     expect(playback).toMatchObject({ closed: true });
     expect((playback as { tickDigests: string[] } | null)?.tickDigests).toHaveLength(4);
@@ -281,10 +299,10 @@ describe("desktop first-release product loop", () => {
     await click(window, "#scene-play");
     expect(status()).toContain("Play refused · DESKTOP_SCENE_NOT_COMPOSABLE");
     expect(
-      window.document.querySelector<HTMLElement>("[data-run-session-report]")?.textContent,
+      query(window, "[data-run-session-report]")?.textContent,
     ).toContain("No completed session for the latest Play request");
     expect(
-      window.document.querySelector<HTMLElement>("[data-run-live-report]")?.textContent,
+      query(window, "[data-run-live-report]")?.textContent,
     ).toBe("No viewport frame was acknowledged for the latest Play request.");
 
     await click(window, "#profile-kids");
@@ -293,7 +311,7 @@ describe("desktop first-release product loop", () => {
       "true",
     );
     expect(
-      [...window.document.querySelectorAll<HTMLElement>('button:not([data-kind="inert"])')]
+      queryAll(window, 'button:not([data-kind="inert"])')
         .map((button) => button.id)
         .sort(),
     ).toEqual(

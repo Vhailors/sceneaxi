@@ -277,7 +277,9 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
     const written = writeDocumentFile(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), legacy, {
       cwd: dir,
     });
-    if (!written.ok) throw new Error(written.message);
+    if (!written.ok) {
+      throw new Error(written.diagnostics.map((entry) => entry.message).join("; "));
+    }
 
     expect(seedDesktopProject(dir)).toEqual({ ok: true, migrated: true });
     const bridge = bridgeAt(dir);
@@ -780,6 +782,7 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
       tickDigests: string[];
       instanceCount: number;
       closed: boolean;
+      mountable: { sceneId: string };
     };
 
     expect(exercise.bootstrap["kind"]).toBe("scene");
@@ -788,9 +791,7 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
     expect(exercise.bootstrap["resumed"]).toBe(false);
     expect(exercise.bootstrap["sessionId"]).toMatch(/^sha256:[0-9a-f]{64}$/);
     expect(exercise.instanceCount).toBe(3);
-    expect((exercise as { mountable: { sceneId: string } }).mountable.sceneId).toBe(
-      "active-kernel-scene",
-    );
+    expect(exercise.mountable.sceneId).toBe("active-kernel-scene");
     expect(exercise.closed).toBe(true);
 
     // Only `advance` moves state, and it really does: digests move tick over tick.
