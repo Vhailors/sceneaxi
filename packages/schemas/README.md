@@ -172,6 +172,22 @@ Registry seed state: `registryVersion` is `1.0.0`; `entries` holds exactly 1 rev
 - Surface owners: [`docs/engine-desktop-surface.md`](../../docs/engine-desktop-surface.md)
   and [`docs/web-editor-shell.md`](../../docs/web-editor-shell.md)
 
+## Web Experience authoring contract (sceneaxi#197)
+
+- `src/web-experience-authoring.ts` — the closed first-release Web authoring
+  subset (`page.set-html`, `site-canvas.configure`, `asset.inject`,
+  `three.embed`), the closed desktop-only set, the fail-closed
+  `evaluateWebExperienceAuthoringOperation()` lookup behind both named refusals,
+  and the sandbox authority authored HTML is granted (an empty iframe `sandbox`,
+  plus a CSP as defense in depth)
+- Vocabulary and policy only: no editor state machine, and none of these
+  operations joins the Minimum E2 `WEB_EDITOR_SESSION_OPERATIONS` set
+- Lives here for the same reason the editor-shell vocabulary does:
+  `@sceneaxi/profile-web` exposes it as `webExperienceAuthoring` while
+  `@sceneaxi/site-kit` consumes the same contract for the deployable umbrella
+  editor, which ADR 0018 denies a profile-package edge
+- Surface owner: [`docs/web-experience-editor.md`](../../docs/web-experience-editor.md)
+
 ## Model Provider Port (sceneaxi#45)
 
 - `contracts/model-provider-port.schema.json` — v1 model/capability descriptors,

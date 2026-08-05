@@ -181,14 +181,19 @@ designed around that rather than around widening the contract.
   can change it. Its viewport *draws* the composed
   scene: selection, transform edits, and play/pause/step stay server-side Minimum E2
   operations, so nothing here widens ADR 0020 entitlement or ADR 0003's general-E2
-  bound. The viewport is one region of the **Engine Desktop shell** the whole route
-  now draws (sceneaxi#184) — server-built by `buildEditorShellView()` in
+  bound. The viewport is one region of the **Engine Desktop shell** the route draws
+  for the Game profile (sceneaxi#184) — server-built by `buildEditorShellView()` in
   `@sceneaxi/site-kit`, drawn by the one client component
   `src/app/editor/_components/editor-shell.tsx`, and given the whole window by
   `src/app/editor/layout.tsx`, which collapses the site masthead, footer, and skip
   link for this route alone. What that shell decides, what refuses, where it departs
   from the design archive, and its recorded browser evidence are owned by
-  [`docs/web-editor-shell.md`](../../docs/web-editor-shell.md).
+  [`docs/web-editor-shell.md`](../../docs/web-editor-shell.md). A `?profile=web`
+  request draws the deliberately smaller Web Experience projection around that same
+  viewport instead (sceneaxi#197) — authored page/HTML in a sandboxed frame, one site
+  canvas, known-asset injection, and the draw-only Three embed, with desktop-only
+  actions inert and named — owned by
+  [`docs/web-experience-editor.md`](../../docs/web-experience-editor.md).
 - Each page reports the running core's own frame record (`backend`, `label`, draw
   surface, `pixelsDrawn`, draw calls, mounted instances), so a frame counter can never
   imply pixels that were never drawn. The editor additionally shows its *server*
@@ -235,11 +240,16 @@ Real Better Auth login into the entitled editor, over the existing identity plan
   presented; `docs/auth-credits.md` owns which reasons are renamed and which are not.
 - A refused surface hands its own path to the sign-in action it renders, so a visitor
   bounced off `/editor` signs in and lands back on `/editor` instead of the default
-  `/account`. Emitting and reading that destination share one confinement rule —
+  `/account`. The editor hands its whole request target, query included, so the
+  state a visitor was refused on — profile and all — is the state they come back to.
+  Emitting and reading that destination share one confinement rule —
   site-kit's `confineSiteRelativePath`, which `siteLoginHref` and
   `resolveLoginDestination` both go through — so a link this site emits can never carry
   a `next` the login flow would then discard, and a hostile one degrades to the plain
-  form rather than refusing the sign-in.
+  form rather than refusing the sign-in. A destination long enough to push the link
+  past `SITE_LOGIN_HREF_MAX_LENGTH` degrades the same way, since `next` escapes it a
+  second time; [`docs/web-experience-editor.md`](../../docs/web-experience-editor.md)
+  owns why that ceiling sits on the link rather than on each surface.
 - The temporary `SCENEAXI_SITE_EDITOR_PREVIEW` flag remains a labeled stopgap, not the
   product path; the flow is proven end-to-end against the real identity port in
   `tests/sites/identity-plane-wiring.test.ts` ("hosted login") and
