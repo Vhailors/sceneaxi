@@ -47,7 +47,8 @@ and succeeds only when `dist` refuses each one by name.
 Run the release only on macOS with Xcode Command Line Tools providing these
 executables on `PATH`: `codesign`, `hdiutil`, `security`, `spctl`, and `xcrun`.
 The `notarytool` and `stapler` subtools must also be installed:
-`xcrun --find notarytool` and `xcrun --find stapler` must both succeed.
+`xcrun --find notarytool` and `xcrun --find stapler` must both succeed. `git` must also
+be on `PATH`, because the release verifies the commit it records rather than trusting it.
 
 The operator must supply all six environment variables below. The repository does
 not provide values, examples, fallbacks, or secret files:
@@ -64,15 +65,27 @@ not provide values, examples, fallbacks, or secret files:
 The release also refuses without complete build provenance, because the record it
 writes identifies one build and must name the run that produced it. GitHub Actions
 supplies all three automatically, which is why the dispatched workflow is the release
-path; a local release run must export the same three itself and refuses by name
-(`MACOS_PROVENANCE_REQUIRED:<name>`, or `MACOS_PROVENANCE_INVALID:<name>` for a value
-of the wrong shape) rather than writing a record the download IA cannot consume:
+path; a local release run must export the same three itself. Any of them absent refuses
+`MACOS_PROVENANCE_REQUIRED:<name>`, and a value of the wrong shape refuses
+`MACOS_PROVENANCE_INVALID:<name>`, rather than writing a record the download IA cannot
+consume:
 
 | Name | Meaning |
 |---|---|
 | `GITHUB_REPOSITORY` | `owner/name` of the repository the release was built from |
 | `GITHUB_SHA` | Full 40-character commit the release was built from |
 | `GITHUB_RUN_ID` | Workflow run whose artifact holds the verified files |
+
+`GITHUB_SHA` is **verified, not trusted**, on every path: `git` must be on `PATH`
+(`MACOS_PROVENANCE_UNVERIFIABLE:git`), the release must run inside a readable checkout
+(`MACOS_PROVENANCE_UNVERIFIABLE:checkout`), the supplied commit must equal
+`git rev-parse HEAD` (`MACOS_PROVENANCE_COMMIT_MISMATCH`), and `git status --porcelain`
+must be empty (`MACOS_PROVENANCE_WORKTREE_DIRTY`) — build output is git-ignored, so a
+completed packaging run does not dirty the tree, but an uncommitted or untracked source
+change does. A local release therefore carries the same commit evidence a hosted run
+does: export `GITHUB_SHA="$(git rev-parse HEAD)"` from the clean checkout being
+packaged. Nothing here invents a run id; `GITHUB_RUN_ID` remains operator- or
+Actions-supplied, which is the reason the dispatched workflow is the release path.
 
 The required certificate is a **Developer ID Application** certificate for direct
 distribution, backed by an active Apple Developer Program membership. These inputs

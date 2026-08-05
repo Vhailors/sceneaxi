@@ -39,12 +39,23 @@ const { version } = JSON.parse(readFileSync(join(appRoot, "package.json"), "utf8
  * These are the CI-supplied provenance the download IA needs to link the artifact
  * (`packages/site-kit/src/desktop-app-offer.ts`); a record that omits or malforms any
  * of them cannot be consumed, so the release refuses rather than writing a partial one.
+ *
+ * Shape is not evidence. `GITHUB_SHA` is checked against the checkout that is actually
+ * being packaged, so the commit the record claims is the commit the artifact was built
+ * from on every path — a hosted runner and an operator's Mac alike.
  */
 const requiredProvenance = Object.freeze({
   GITHUB_REPOSITORY: (value) => /^[A-Za-z0-9][A-Za-z0-9._-]*\/[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value),
   GITHUB_SHA: (value) => /^[0-9a-f]{40}$/.test(value),
   GITHUB_RUN_ID: (value) => /^[1-9][0-9]*$/.test(value) && Number.isSafeInteger(Number(value)),
 });
+const repositoryRoot = resolve(appRoot, "../..");
+const git = (args) =>
+  spawnSync("git", args, {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
+  });
 
 const executableExists = (name) => {
   for (const entry of (process.env.PATH ?? "").split(delimiter)) {
@@ -75,6 +86,23 @@ for (const [name, isValid] of Object.entries(requiredProvenance)) {
     refusals.push(`MACOS_PROVENANCE_REQUIRED:${name}`);
   } else if (!isValid(value)) {
     refusals.push(`MACOS_PROVENANCE_INVALID:${name}`);
+  }
+}
+const declaredCommit = process.env.GITHUB_SHA?.trim();
+if (declaredCommit !== undefined && requiredProvenance.GITHUB_SHA(declaredCommit)) {
+  if (!executableExists("git")) {
+    refusals.push("MACOS_PROVENANCE_UNVERIFIABLE:git");
+  } else {
+    const head = git(["rev-parse", "--verify", "HEAD"]);
+    const worktree = git(["status", "--porcelain"]);
+    if (head.status !== 0 || worktree.status !== 0) {
+      refusals.push("MACOS_PROVENANCE_UNVERIFIABLE:checkout");
+    } else {
+      if (head.stdout.trim() !== declaredCommit) {
+        refusals.push("MACOS_PROVENANCE_COMMIT_MISMATCH");
+      }
+      if (worktree.stdout.trim() !== "") refusals.push("MACOS_PROVENANCE_WORKTREE_DIRTY");
+    }
   }
 }
 const baseUrl = process.env.SCENEAXI_MACOS_RELEASE_BASE_URL;

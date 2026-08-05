@@ -109,6 +109,45 @@ describe("desktop-macos packaging seam", () => {
     expect(smoke).toContain("downloadHref");
   });
 
+  it("verifies the recorded commit against the checkout instead of trusting its shape", () => {
+    const macosRoot = new URL("../../desktop/macos", import.meta.url);
+    const preflight = (sha: string): string => {
+      const result = spawnSync(process.execPath, ["scripts/dist.mjs", "--preflight-only"], {
+        cwd: macosRoot,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          GITHUB_REPOSITORY: "Vhailors/sceneaxi",
+          GITHUB_SHA: sha,
+          GITHUB_RUN_ID: "1",
+        },
+      });
+      expect(result.status).toBe(1);
+      return result.stderr;
+    };
+
+    const head = spawnSync("git", ["rev-parse", "--verify", "HEAD"], {
+      cwd: new URL("../..", import.meta.url),
+      encoding: "utf8",
+    });
+    if (head.status !== 0) {
+      // No readable checkout: the release must refuse rather than record an unverifiable claim.
+      expect(preflight("a".repeat(40))).toContain("MACOS_PROVENANCE_UNVERIFIABLE");
+      return;
+    }
+
+    // A well-shaped commit that is not the one being packaged is refused by name, and
+    // the real HEAD clears that gate — a dirty tree is refused separately, so this
+    // holds whether or not the checkout running the gate has uncommitted changes.
+    expect(preflight("a".repeat(40))).toContain("MACOS_PROVENANCE_COMMIT_MISMATCH");
+    expect(preflight(head.stdout.trim())).not.toContain("MACOS_PROVENANCE_COMMIT_MISMATCH");
+
+    const dist = read("desktop/macos/scripts/dist.mjs");
+    expect(dist).toContain("MACOS_PROVENANCE_WORKTREE_DIRTY");
+    expect(dist).toContain('git(["status", "--porcelain"])');
+    expect(read("docs/desktop-macos.md")).toContain("MACOS_PROVENANCE_COMMIT_MISMATCH");
+  });
+
   it("proves pixels on a GPU-less host with a real software rasterizer", () => {
     const smoke = read("desktop/macos/scripts/smoke.mjs");
     const linux = read("desktop/linux/scripts/smoke.mjs");
