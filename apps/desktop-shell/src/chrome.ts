@@ -249,7 +249,7 @@ function promptInput(ctrl: DesktopControl): string {
  * one is. `webCapabilityRequired` is one code in two registries by re-export,
  * so the rows are de-duplicated by code rather than by registry.
  */
-function refusalLegend(): string {
+function refusalLegend(view: DesktopVisualView): string {
   const messages = new Map<string, string>();
   for (const code of Object.values(DESKTOP_VISUAL_REFUSALS)) {
     messages.set(code, DESKTOP_REFUSAL_MESSAGES[code]);
@@ -265,7 +265,12 @@ function refusalLegend(): string {
         `<p class="refusal-row" id="refusal-${escapeHtml(code)}"><code>${escapeHtml(code)}</code> ${escapeHtml(message)}</p>`,
     )
     .join("");
-  return `<details class="refusal-legend"><summary>Refusal help</summary><div class="refusal-legend-panel" tabindex="0" aria-labelledby="refusal-legend-title"><h2 id="refusal-legend-title">Refusals on this surface</h2>${rows}</div></details>`;
+  return `${button(
+    view.overlay.refusalHelp,
+    "Refusal help",
+    "state-shortcut refusal-help-toggle",
+    ' data-action="refusal-help" aria-expanded="false" aria-controls="refusal-legend"',
+  )}<section class="refusal-legend-panel" id="refusal-legend" aria-labelledby="refusal-legend-title" hidden><h2 id="refusal-legend-title">Refusals on this surface</h2>${rows}</section>`;
 }
 
 function titleBar(view: DesktopVisualView): string {
@@ -707,7 +712,7 @@ function statusBar(view: DesktopVisualView): string {
       ),
     )
     .join("")}
-  ${refusalLegend()}
+  ${refusalLegend(view)}
 </footer>`;
 }
 
@@ -1049,7 +1054,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .profile-refusal-foot{color:var(--dim) !important}
 .mark-scene{background:${SIGNAL.sceneSurface};border:1px solid ${SIGNAL.sceneLine};color:${SIGNAL.scene};margin:0 auto}
 
-.status-bar{background:var(--well);border-top:1px solid var(--line);display:flex;align-items:center;padding:0 12px;gap:13px}
+.status-bar{position:relative;background:var(--well);border-top:1px solid var(--line);display:flex;align-items:center;padding:0 12px;gap:13px}
 .status-text{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text-3)}
 .status-pin{font-family:var(--mono);font-size:10px;color:var(--faint)}
 .status-project{min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono);font-size:10px;color:var(--dim)}
@@ -1082,12 +1087,9 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .palette-item kbd{font-size:9px;color:var(--dim);border:1px solid var(--line-control);border-radius:3px;padding:2px 5px}
 .overlay-foot{margin:0;padding:10px 16px;background:var(--well);border-top:1px solid var(--line);font-size:10.5px;color:var(--dim)}
 
-.refusal-legend{position:relative;z-index:45;flex:none}
-.refusal-legend summary{list-style:none;cursor:pointer;font-family:var(--mono);font-size:9px;letter-spacing:.07em;color:var(--faint);border:1px solid var(--line-control);border-radius:3px;padding:2px 7px;white-space:nowrap}
-.refusal-legend summary::-webkit-details-marker{display:none}
-.refusal-legend[open] summary{border-color:var(--line-hover);color:var(--text)}
-.refusal-legend-panel{position:absolute;right:0;bottom:calc(100% + 8px);width:min(520px,calc(100vw - 16px));max-height:min(360px,calc(100dvh - var(--title-h) - var(--status-h) - 24px));overflow:auto;padding:10px 12px;background:var(--well);border:1px solid var(--line-raised);border-radius:6px;box-shadow:0 18px 48px -18px ${SCRIM.shadow}}
-.refusal-legend h2{margin:0 0 8px;font-family:var(--mono);font-size:9px;font-weight:400;letter-spacing:.15em;color:var(--text-3)}
+.refusal-help-toggle[aria-expanded="true"]{border-color:var(--line-hover);color:var(--text)}
+.refusal-legend-panel{position:absolute;right:8px;bottom:calc(100% + 8px);z-index:45;width:min(520px,calc(100vw - 16px));max-height:min(360px,calc(100dvh - var(--title-h) - var(--status-h) - 24px));overflow:auto;padding:10px 12px;background:var(--well);border:1px solid var(--line-raised);border-radius:6px;box-shadow:0 18px 48px -18px ${SCRIM.shadow}}
+.refusal-legend-panel h2{margin:0 0 8px;font-family:var(--mono);font-size:9px;font-weight:400;letter-spacing:.15em;color:var(--text-3)}
 .refusal-row{margin:0 0 6px;font-size:11px;line-height:1.5;color:var(--dim)}
 .refusal-row code{color:var(--accent);margin-right:8px}
 
@@ -1793,6 +1795,14 @@ if (shell) {
     else if (action === 'mode' && value) showModePanels(value);
     else if (action === 'dock-tab' && value) selectDockTab(value);
     else if (action === 'overlay') setOverlay(value || 'none');
+    else if (action === 'refusal-help') {
+      const panel = shell.querySelector('#refusal-legend');
+      if (panel) {
+        const open = panel.hidden;
+        panel.hidden = !open;
+        el.setAttribute('aria-expanded', String(open));
+      }
+    }
     else if (action === 'profile' && value) void productAction(() => switchProfile(value));
     else if (action === 'assistant') {
       if (shell.dataset.assistant === 'denied') return;

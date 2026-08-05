@@ -333,12 +333,12 @@ document also explains. `test/product-loop.test.ts` asserts that in both directi
 
 | Code | When |
 |---|---|
-| `OPEN_PATH_KIDS_REFUSED` | the refuse-only profile, and every control behind it that is not already refusing for a more specific reason — the mode rail, the dock tabs, the two drawer toggles, the Change Review decisions, the sculpt cancel, the driveable palette rows; the code comes from the shared open-path policy, not from here |
+| `OPEN_PATH_KIDS_REFUSED` | the refuse-only profile, and every control behind it that is not already refusing for a more specific reason — Open, Save, Play, the mode rail, the dock tabs, the two drawer toggles, the Change Review decisions, the sculpt cancel, and the driveable palette rows; the code comes from the shared open-path policy, not from here |
 | `DESKTOP_KIDS_ASSISTANT_DENIED` | assistant on Kids — its toggle, its close, its prompt, its Send, its Retry, its three route chips, and its three composer modes |
 | `DESKTOP_NO_PRESENTATION_RUNTIME` | the viewport: no renderer is mounted, so no pixels — the three viewport-source tabs, because switching what a viewport shows needs the runtime that is missing, and every `live` assistant control (prompt, Send, Retry, the four artifact manipulators) while `assistantRuntime` is `none` |
 | `DESKTOP_NO_KERNEL_SESSION` | the static `run` mode before a host-backed Play response; the chrome never invents a tick, frame, or body |
 | `DESKTOP_NO_DOCUMENT_BOUND` | authoring controls not covered by the first-release project loop (for example Sculpt) |
-| `DESKTOP_WEB_CAPABILITY_REQUIRED` | the Web stored-HTML and asset-injection controls on Game; Kids takes the stronger profile refusal first |
+| `DESKTOP_WEB_CAPABILITY_REQUIRED` | the Web stored-HTML and asset-injection controls on Game and Kids; these controls are already inert with the more specific capability refusal, so the Kids demotion preserves it |
 | `DESKTOP_VERB_NOT_ON_THIS_SURFACE` | a palette row naming a CLI verb this shell has no command for, and every application-menu button — this surface has no command behind any of the archive's menus |
 | `DESKTOP_WINDOW_BELOW_MINIMUM` | the window is smaller than 900×600 |
 

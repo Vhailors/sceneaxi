@@ -290,17 +290,24 @@ describe("engine desktop chrome — accessibility", () => {
     }
   });
 
-  it("keeps refusal help collapsed in the status bar with a bounded scroll panel", () => {
+  it("keeps modelled refusal help collapsed with a bounded scroll panel", () => {
     const html = render();
     const footer = html.indexOf('<footer class="status-bar">');
-    const legend = html.indexOf('<details class="refusal-legend">');
+    const help = html.indexOf('id="status-refusal-help" data-kind="view"');
+    const legend = html.indexOf('<section class="refusal-legend-panel" id="refusal-legend"');
     const footerEnd = html.indexOf("</footer>", footer);
     expect(footer).toBeGreaterThan(-1);
+    expect(help).toBeGreaterThan(footer);
     expect(legend).toBeGreaterThan(footer);
     expect(legend).toBeLessThan(footerEnd);
-    expect(html).toContain("<summary>Refusal help</summary>");
+    expect(html).toContain('data-action="refusal-help" aria-expanded="false"');
+    expect(html).toContain('aria-controls="refusal-legend"');
+    expect(html).toContain('aria-labelledby="refusal-legend-title" hidden>');
+    expect(html).not.toContain("<details");
+    expect(html).not.toMatch(/refusal-legend[^>]*tabindex/);
     expect(html).toContain(".refusal-legend-panel{position:absolute");
     expect(html).toContain("overflow:auto;padding:10px 12px");
+    expect(html).toContain("else if (action === 'refusal-help')");
   });
 
   it("gives every element a unique, well-formed id", () => {

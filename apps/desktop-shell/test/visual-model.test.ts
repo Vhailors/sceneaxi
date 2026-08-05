@@ -137,6 +137,17 @@ describe("desktop visual model — profile switch", () => {
     );
     // Every mode is inert: no mode may be entered from behind the refusal.
     expect(view.modes.every((mode) => mode.control.kind === "inert")).toBe(true);
+    expect(
+      [view.product.open, view.product.save, view.product.play].map(
+        (control) => control.refusal,
+      ),
+    ).toEqual(Array(3).fill(DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly));
+    expect(view.product.stageHtml.refusal).toBe(
+      DESKTOP_VISUAL_REFUSALS.webCapabilityRequired,
+    );
+    expect(view.product.injectAsset.refusal).toBe(
+      DESKTOP_VISUAL_REFUSALS.webCapabilityRequired,
+    );
   });
 
   it("keeps Game and Website driveable", () => {

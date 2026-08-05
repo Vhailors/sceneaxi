@@ -541,6 +541,7 @@ describe("engine desktop chrome — refusal reachability at every tier", () => {
 const REGION_CHAINS: Readonly<Record<string, ReadonlyArray<string>>> = Object.freeze({
   "left-dock": ["left-dock"],
   inspector: ["inspector"],
+  "refusal-legend": ["status-bar", "refusal-legend-panel"],
   ...Object.fromEntries(
     DESKTOP_DOCK_TAB_IDS.map((id) => [
       `dock-panel-${id}`,

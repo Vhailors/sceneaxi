@@ -163,6 +163,16 @@ describe("desktop first-release product loop", () => {
     expect(shell?.dataset.tier).toBe("narrow");
     expect(shell?.dataset.profile).toBe("game");
 
+    const refusalHelp = window.document.querySelector<HTMLElement>("#status-refusal-help");
+    const refusalLegend = window.document.querySelector<HTMLElement>("#refusal-legend");
+    expect(refusalLegend?.hidden).toBe(true);
+    await click(window, "#status-refusal-help");
+    expect(refusalHelp?.getAttribute("aria-expanded")).toBe("true");
+    expect(refusalLegend?.hidden).toBe(false);
+    await click(window, "#status-refusal-help");
+    expect(refusalHelp?.getAttribute("aria-expanded")).toBe("false");
+    expect(refusalLegend?.hidden).toBe(true);
+
     await click(window, "#profile-web");
     await click(window, "#project-open");
     expect(status()).toContain("open · desktop-first-release");

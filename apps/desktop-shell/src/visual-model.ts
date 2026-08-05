@@ -1086,6 +1086,7 @@ export type DesktopOverlayView = Readonly<{
   id: DesktopOverlayId | null;
   /** The title bar's palette opener. */
   search: DesktopControl;
+  refusalHelp: DesktopControl;
   /** The status bar's three overlay shortcuts. */
   shortcuts: ReadonlyArray<
     Readonly<{ overlay: DesktopOverlayId; label: string; control: DesktopControl }>
@@ -1481,6 +1482,7 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
     overlay: Object.freeze({
       id: state.overlay,
       search: outsideRefusal("overlay-open-palette", "Search"),
+      refusalHelp: outsideRefusal("status-refusal-help", "Refusal help"),
       shortcuts: Object.freeze(
         DESKTOP_OVERLAY_SHORTCUTS.map((shortcut) =>
           Object.freeze({
