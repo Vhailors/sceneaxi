@@ -32,6 +32,7 @@ const requiredEnvironment = Object.freeze([
   "SCENEAXI_MACOS_RELEASE_BASE_URL",
 ]);
 const requiredTools = Object.freeze(["codesign", "hdiutil", "security", "spctl", "xcrun"]);
+const { version } = JSON.parse(readFileSync(join(appRoot, "package.json"), "utf8"));
 
 const executableExists = (name) => {
   for (const entry of (process.env.PATH ?? "").split(delimiter)) {
@@ -48,6 +49,9 @@ const executableExists = (name) => {
 
 const refusals = [];
 if (process.platform !== "darwin") refusals.push("MACOS_HOST_REQUIRED");
+if (typeof version !== "string" || !/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)*$/.test(version)) {
+  refusals.push("MACOS_RELEASE_VERSION_INVALID");
+}
 for (const name of requiredEnvironment) {
   if (process.env[name] === undefined || process.env[name]?.trim() === "") {
     refusals.push(`MACOS_ENV_REQUIRED:${name}`);
@@ -100,12 +104,12 @@ run(join(appRoot, "node_modules/.bin/electron-builder"), ["--mac", "--publish", 
 const artifacts = readdirSync(release)
   .filter((name) => name.endsWith(".dmg") || name.endsWith(".zip"))
   .sort();
-const expected = [
-  "SceneAxi-Engine-Desktop-0.0.0-macos-universal.dmg",
-  "SceneAxi-Engine-Desktop-0.0.0-macos-universal.zip",
-];
+const artifactStem = `SceneAxi-Engine-Desktop-${version}-macos-universal`;
+const expected = [`${artifactStem}.dmg`, `${artifactStem}.zip`];
 if (JSON.stringify(artifacts) !== JSON.stringify(expected)) {
-  console.error(`desktop-macos dist FAILED — artifacts are ${artifacts.join(", ")}`);
+  console.error(
+    `desktop-macos dist FAILED — expected ${expected.join(", ")} but artifacts are ${artifacts.join(", ")}`,
+  );
   process.exit(1);
 }
 
@@ -118,13 +122,14 @@ run("codesign", ["--verify", "--deep", "--strict", "--verbose=2", appBundle]);
 run("spctl", ["--assess", "--type", "execute", "--verbose=2", appBundle]);
 run("xcrun", ["stapler", "validate", appBundle]);
 
+const releaseBase = `${baseUrl.trim().replace(/\/$/, "")}/`;
 const hash = (algorithm, name, encoding) =>
   createHash(algorithm).update(readFileSync(join(release, name))).digest(encoding);
 const artifactRecords = artifacts.map((name) => ({
   fileName: name,
   bytes: statSync(join(release, name)).size,
   sha256: hash("sha256", name, "hex"),
-  url: new URL(encodeURIComponent(name), `${baseUrl.replace(/\/$/, "")}/`).href,
+  url: new URL(encodeURIComponent(name), releaseBase).href,
 }));
 writeFileSync(
   join(release, "SHA256SUMS"),
@@ -140,7 +145,7 @@ const updateSha512 = hash("sha512", updateZip.fileName, "base64");
 writeFileSync(
   join(release, "latest-mac.yml"),
   [
-    "version: 0.0.0",
+    `version: ${version}`,
     "files:",
     `  - url: ${encodeURIComponent(updateZip.fileName)}`,
     `    sha512: ${updateSha512}`,
@@ -157,11 +162,11 @@ writeFileSync(
     {
       schemaVersion: 1,
       platform: "macOS universal",
-      version: "0.0.0",
+      version,
       sourceApplication: "desktop/linux",
       signed: true,
       notarized: true,
-      updateMetadataUrl: new URL("latest-mac.yml", `${baseUrl.replace(/\/$/, "")}/`).href,
+      updateMetadataUrl: new URL("latest-mac.yml", releaseBase).href,
       artifacts: artifactRecords,
     },
     null,

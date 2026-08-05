@@ -14,8 +14,12 @@ The umbrella download IA must continue to show macOS as unavailable until an
 operator completes the release procedure below and deliberately records the output.
 
 The packaging contract uses the stable names
-`SceneAxi-Engine-Desktop-0.0.0-macos-universal.dmg` and
-`SceneAxi-Engine-Desktop-0.0.0-macos-universal.zip`. The same input runtime is staged
+`SceneAxi-Engine-Desktop-<version>-macos-universal.dmg` and
+`SceneAxi-Engine-Desktop-<version>-macos-universal.zip`, where `<version>` is the
+`version` field of `desktop/macos/package.json` — currently `0.0.0`. That manifest is
+the only place the release version is stated: `electron-builder.yml` templates the
+artifact names from it and `scripts/dist.mjs` reads it for the expected names,
+`latest-mac.yml`, and `desktop-macos-release.json`. The same input runtime is staged
 byte-for-byte and release metadata is written in stable sorted order, but Electron
 packaging, Apple signing, and notarization are **not bit-reproducible**. A checksum
 identifies one completed release build, never all builds of the same source.

@@ -37,7 +37,20 @@ for (const file of runtimeFiles) {
 
 const releaseBaseUrl = process.env.SCENEAXI_MACOS_RELEASE_BASE_URL?.trim();
 const updateEnabled = releaseBaseUrl !== undefined && releaseBaseUrl.length > 0;
+let updateOrigin;
 if (updateEnabled) {
+  let parsed;
+  try {
+    parsed = new URL(releaseBaseUrl);
+  } catch {
+    console.error("desktop-macos build FAILED — MACOS_UPDATE_URL_INVALID");
+    process.exit(1);
+  }
+  if (parsed.protocol !== "https:") {
+    console.error("desktop-macos build FAILED — MACOS_UPDATE_HTTPS_REQUIRED");
+    process.exit(1);
+  }
+  updateOrigin = releaseBaseUrl.replace(/\/$/, "");
   const preflight = spawnSync(
     process.execPath,
     [join(appRoot, "scripts/dist.mjs"), "--preflight-only"],
@@ -46,11 +59,6 @@ if (updateEnabled) {
   if (preflight.status !== 0) {
     console.error("desktop-macos build FAILED — update enablement requires the release preflight");
     process.exit(preflight.status ?? 1);
-  }
-  const parsed = new URL(releaseBaseUrl);
-  if (parsed.protocol !== "https:") {
-    console.error("desktop-macos build FAILED — update base URL must use HTTPS");
-    process.exit(1);
   }
 }
 writeFileSync(
@@ -66,7 +74,7 @@ writeFileSync(
 if (updateEnabled) {
   writeFileSync(
     join(dist, "app-update.yml"),
-    `provider: generic\nurl: ${releaseBaseUrl.replace(/\/$/, "")}\nupdaterCacheDirName: sceneaxi-engine-desktop-updater\n`,
+    `provider: generic\nurl: ${updateOrigin}\nupdaterCacheDirName: sceneaxi-engine-desktop-updater\n`,
   );
 }
 

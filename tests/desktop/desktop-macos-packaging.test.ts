@@ -61,6 +61,16 @@ describe("desktop-macos packaging seam", () => {
     expect(dist).toContain("SHA256SUMS");
     expect(dist).toContain("desktop-macos-release.json");
     expect(dist).toContain("latest-mac.yml");
+
+    // electron-builder templates every artifact name from the manifest version, so
+    // the manifest is the only place the release identity may be stated: a version
+    // restated in the release command aborts the release after sign + notarize.
+    const { version } = JSON.parse(read("desktop/macos/package.json")) as { version: string };
+    expect(version).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(dist).toContain('readFileSync(join(appRoot, "package.json")');
+    expect(dist).toContain("SceneAxi-Engine-Desktop-${version}-macos-universal");
+    expect(dist).toContain("version: ${version}");
+    expect(dist).not.toContain(version);
   });
 
   it("smokes the packaging contract and refuses every absent release input", () => {
