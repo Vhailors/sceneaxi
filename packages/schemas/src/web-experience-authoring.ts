@@ -93,15 +93,16 @@ export function evaluateWebExperienceAuthoringOperation(
 /**
  * Browser authority granted to user-authored HTML.
  *
- * An empty iframe `sandbox` grants no tokens. The CSP is defense in depth and
- * intentionally permits no script, network, navigation, form, frame, object, or
- * base authority. The safe Three embed is rendered outside this document through
- * the existing presentation seam.
+ * An empty iframe `sandbox` grants no tokens, and it alone is what withholds
+ * navigation authority — no shipping CSP directive expresses that, so the policy
+ * string carries none. The CSP is defense in depth and intentionally permits no
+ * script, network, form, frame, object, or base authority. The safe Three embed
+ * is rendered outside this document through the existing presentation seam.
  */
 export const WEB_EXPERIENCE_SANDBOX_POLICY = Object.freeze({
   iframeSandbox: "" as const,
   contentSecurityPolicy:
-    "default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; navigate-to 'none'",
+    "default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'",
   allowsParentDom: false as const,
   allowsNetwork: false as const,
   allowsNavigation: false as const,

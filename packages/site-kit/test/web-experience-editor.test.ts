@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   WEB_EXPERIENCE_AUTHORING_OPERATIONS,
+  WEB_EXPERIENCE_AUTHORING_REFUSALS,
   WEB_EXPERIENCE_DESKTOP_ONLY_OPERATIONS,
   WEB_EDITOR_SESSION_OPERATIONS,
   buildWebExperienceEditorView,
@@ -158,5 +159,21 @@ describe("the simplified Web Experience editor", () => {
       WEB_EXPERIENCE_DESKTOP_ONLY_OPERATIONS,
     );
     expect(view.desktopRefusals.every((entry) => entry.reason === "WEB_EXPERIENCE_DESKTOP_ONLY_OPERATION")).toBe(true);
+  });
+
+  it("projects the demoted-chrome refusal with the schema's own sentence", () => {
+    const state = readWebExperienceEditorState({});
+    expect(state.ok).toBe(true);
+    if (!state.ok) return;
+    const view = buildWebExperienceEditorView({
+      state: state.value,
+      starterArtifactId: "sculpt:starter-crate",
+    });
+    expect(view.desktopOnlyRefusal).toEqual({
+      code: "WEB_EXPERIENCE_DESKTOP_ONLY_OPERATION",
+      message:
+        WEB_EXPERIENCE_AUTHORING_REFUSALS.WEB_EXPERIENCE_DESKTOP_ONLY_OPERATION,
+    });
+    expect(Object.isFrozen(view.desktopOnlyRefusal)).toBe(true);
   });
 });

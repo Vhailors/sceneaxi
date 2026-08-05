@@ -375,9 +375,7 @@ export function EditorShell({
               control={view.paletteOpener}
               className="ed-search"
               demotedRefusal={kids ? view.kidsLock.code : undefined}
-              profileRefusal={
-                web ? "WEB_EXPERIENCE_DESKTOP_ONLY_OPERATION" : undefined
-              }
+              profileRefusal={web ? webView.desktopOnlyRefusal.code : undefined}
               onClick={(event) => {
                 paletteReturnFocus.current = event.currentTarget;
                 setPaletteRequested(true);
@@ -389,9 +387,7 @@ export function EditorShell({
               control={view.assistant.toggle}
               className="ed-assistant-toggle"
               demotedRefusal={kids ? view.kidsLock.code : undefined}
-              profileRefusal={
-                web ? "WEB_EXPERIENCE_DESKTOP_ONLY_OPERATION" : undefined
-              }
+              profileRefusal={web ? webView.desktopOnlyRefusal.code : undefined}
               pressed={assistantOpen}
               onClick={() => setAssistantOpen((open) => !open)}
             >
@@ -411,9 +407,7 @@ export function EditorShell({
                 control={entry.control}
                 className="ed-rail-mode"
                 demotedRefusal={kids ? view.kidsLock.code : undefined}
-                profileRefusal={
-                  web ? "WEB_EXPERIENCE_DESKTOP_ONLY_OPERATION" : undefined
-                }
+                profileRefusal={web ? webView.desktopOnlyRefusal.code : undefined}
                 pressed={mode === entry.id}
                 onClick={() => enterMode(entry.id)}
               >
@@ -1213,9 +1207,8 @@ export function EditorShell({
               {entry.code}: {entry.message}
             </p>
           ))}
-          <p id={legendId("WEB_EXPERIENCE_DESKTOP_ONLY_OPERATION")}>
-            WEB_EXPERIENCE_DESKTOP_ONLY_OPERATION: The requested operation belongs to the
-            desktop authoring surface.
+          <p id={legendId(webView.desktopOnlyRefusal.code)}>
+            {webView.desktopOnlyRefusal.code}: {webView.desktopOnlyRefusal.message}
           </p>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  WEB_EXPERIENCE_AUTHORING_REFUSALS,
   buildWebExperienceEditorView,
   decideEditorAccess,
   decideEditorEntitlement,
@@ -162,5 +163,15 @@ describe("SA-WEB-1 browser confinement", () => {
     expect(component).toContain("view.desktopRefusals.map");
     expect(component).toContain('data-kind="inert"');
     expect(component).toContain("data-refusal={refusal.reason}");
+  });
+
+  it("names the demoted-chrome refusal off the view instead of restating it", () => {
+    const shell = read(SHELL);
+    expect(shell).toContain("webView.desktopOnlyRefusal.code");
+    expect(shell).toContain("webView.desktopOnlyRefusal.message");
+    expect(shell).not.toContain('"WEB_EXPERIENCE_DESKTOP_ONLY_OPERATION"');
+    expect(shell).not.toContain(
+      WEB_EXPERIENCE_AUTHORING_REFUSALS.WEB_EXPERIENCE_DESKTOP_ONLY_OPERATION,
+    );
   });
 });

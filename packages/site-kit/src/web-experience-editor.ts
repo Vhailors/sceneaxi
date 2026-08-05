@@ -11,6 +11,7 @@
 import { createHash } from "node:crypto";
 import {
   WEB_EXPERIENCE_AUTHORING_OPERATIONS,
+  WEB_EXPERIENCE_AUTHORING_REFUSALS,
   WEB_EXPERIENCE_DESKTOP_ONLY_OPERATIONS,
   WEB_EXPERIENCE_SANDBOX_POLICY,
   createDocument,
@@ -95,7 +96,22 @@ export type WebExperienceEditorView = Readonly<{
   desktopRefusals: ReadonlyArray<
     Extract<WebExperienceAuthoringDecision, { readonly ok: false }>
   >;
+  /**
+   * The one refusal a Web-profile projection applies to desktop chrome it
+   * demotes rather than to an operation it was asked for. It is projected here,
+   * with the schema's own sentence, so a renderer states neither the code nor
+   * the message itself and the legend it anchors cannot drift from the contract.
+   */
+  desktopOnlyRefusal: Readonly<{
+    code: "WEB_EXPERIENCE_DESKTOP_ONLY_OPERATION";
+    message: string;
+  }>;
 }>;
+
+const WEB_EXPERIENCE_DESKTOP_ONLY_REFUSAL = Object.freeze({
+  code: "WEB_EXPERIENCE_DESKTOP_ONLY_OPERATION" as const,
+  message: WEB_EXPERIENCE_AUTHORING_REFUSALS.WEB_EXPERIENCE_DESKTOP_ONLY_OPERATION,
+});
 
 type WebExperienceFormControl = Readonly<{
   id: string;
@@ -317,5 +333,6 @@ export function buildWebExperienceEditorView(input: {
       advancesSession: false as const,
     }),
     desktopRefusals,
+    desktopOnlyRefusal: WEB_EXPERIENCE_DESKTOP_ONLY_REFUSAL,
   });
 }
