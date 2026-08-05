@@ -15,8 +15,10 @@ import { StatePanel } from "../_components/state-panel.js";
  * bit-reproducible, so its facts come from one committed, verified workflow-artifact
  * offer in `@sceneaxi/site-kit` — held in lockstep with `docs/desktop-linux.md` by the
  * gate. The CTA names that exact repository run, or refuses if its record is invalid.
- * No installer, size, or digest is typed into this page for either artifact, and
- * Windows/macOS are stated as not packaged rather than implied.
+ * No installer name, size, or digest is typed into this page for either artifact — the
+ * install commands are built from the same validated record as the metadata cards — and
+ * macOS/Windows render as the record's own explicit coming-soon rows rather than being
+ * implied.
  *
  * The two evidence models fail independently, so they render independently: an absent
  * archive replaces the SDK cards with the named reason and takes nothing else with it,
@@ -31,6 +33,8 @@ export default function EnginePage() {
   const desktopRefusal = desktopOffer.ok
     ? null
     : { reason: desktopOffer.reason, message: desktopOffer.message };
+  const appImage = desktopApp?.artifacts.find((artifact) => artifact.kind === "AppImage") ?? null;
+  const debPackage = desktopApp?.artifacts.find((artifact) => artifact.kind === "deb") ?? null;
 
   return (
     <div className="page">
@@ -107,6 +111,7 @@ export default function EnginePage() {
       {desktopRefusal !== null ? (
         <StatePanel
           tone="deny"
+          level={2}
           title="Desktop artifact unavailable"
           reason={desktopRefusal.reason}
         >
@@ -206,12 +211,16 @@ export default function EnginePage() {
             <article className="panel panel-roomy">
               <h3 className="card-title">Install and open</h3>
               <p className="body-copy">Choose one package after checksum verification.</p>
-              <p className="command">
-                <code>{"chmod +x SceneAxi-Engine-Desktop-0.0.0-linux-x86_64.AppImage && ./SceneAxi-Engine-Desktop-0.0.0-linux-x86_64.AppImage"}</code>
-              </p>
-              <p className="command">
-                <code>{"sudo apt install ./SceneAxi-Engine-Desktop-0.0.0-linux-amd64.deb"}</code>
-              </p>
+              {appImage !== null && (
+                <p className="command">
+                  <code>{`chmod +x ${appImage.fileName} && ./${appImage.fileName}`}</code>
+                </p>
+              )}
+              {debPackage !== null && (
+                <p className="command">
+                  <code>{`sudo apt install ./${debPackage.fileName}`}</code>
+                </p>
+              )}
               <p className="note">
                 This first artifact has no code-signing claim and no auto-update
                 support. Install future builds manually after verifying their own

@@ -7,9 +7,11 @@
  * `sceneaxi-desktop-linux` artifact. `docs/desktop-linux.md` records the same run,
  * source commit, byte sizes, and checksums; `tests/sites/` keeps both in lockstep.
  *
- * `resolveDesktopAppOffer()` is the fail-closed edge. A missing record or a link that
- * does not name the recorded repository/run yields a named refusal, so `/engine`
- * cannot turn malformed release metadata into a download button.
+ * `resolveDesktopAppOffer()` is the fail-closed edge, and it validates every field a
+ * page may print — not only the link. A missing record, a link that does not name the
+ * recorded repository/run, or any incomplete honesty field yields a named refusal, so
+ * `/engine` cannot turn malformed release metadata into a download button, and can
+ * never reach a rendered field the resolver let through unchecked.
  *
  * Every `Object.freeze` below is annotated `@__PURE__` so this record can never
  * reach the packaged application it describes. `desktop/linux` bundles `site-kit`
@@ -115,53 +117,84 @@ export const DESKTOP_LINUX_APP_OFFER: DesktopAppOffer = /* @__PURE__ */ Object.f
 const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
   typeof value === "object" && value !== null;
 
+const isFilledString = (value: unknown): value is string =>
+  typeof value === "string" && value.trim().length > 0;
+
+const isPositiveSafeInteger = (value: unknown): value is number =>
+  typeof value === "number" && Number.isSafeInteger(value) && value > 0;
+
+/**
+ * A file name a page may print inside a copy-pasteable shell command, so it carries
+ * no shell metacharacter, quote, or space that would make an unquoted command lie.
+ */
+const SAFE_FILE_NAME = /^[A-Za-z0-9][A-Za-z0-9._+-]*$/;
+
+const isValidArtifact = (value: unknown): boolean => {
+  if (!isRecord(value)) return false;
+  const fileName = value["fileName"];
+  const sha256 = value["sha256"];
+  const verifyCommand = value["verifyCommand"];
+  return (
+    (value["kind"] === "AppImage" || value["kind"] === "deb") &&
+    value["platform"] === "Linux x86_64" &&
+    typeof fileName === "string" &&
+    SAFE_FILE_NAME.test(fileName) &&
+    fileName.includes("linux") &&
+    typeof sha256 === "string" &&
+    /^[0-9a-f]{64}$/.test(sha256) &&
+    isPositiveSafeInteger(value["byteSize"]) &&
+    typeof verifyCommand === "string" &&
+    verifyCommand.includes(sha256) &&
+    verifyCommand.includes(fileName)
+  );
+};
+
+const isValidUnavailablePlatform = (value: unknown): boolean =>
+  isRecord(value) &&
+  (value["platform"] === "macOS" || value["platform"] === "Windows") &&
+  value["status"] === "coming-soon" &&
+  isFilledString(value["reason"]);
+
 /** Validate an artifact record before a page is allowed to render its CTA. */
 export function resolveDesktopAppOffer(candidate: unknown): SiteResult<DesktopAppOffer> {
-  if (candidate === undefined || candidate === null) {
+  if (!isRecord(candidate) || Array.isArray(candidate)) {
     return refuse("DESKTOP_APP_ARTIFACT_UNAVAILABLE");
   }
-  if (!isRecord(candidate)) return refuse("DESKTOP_APP_ARTIFACT_LINK_INVALID");
 
-  const repository = candidate["repository"];
   const workflowRunId = candidate["workflowRunId"];
-  const downloadHref = candidate["downloadHref"];
-  const expectedHref =
-    typeof repository === "string" && Number.isSafeInteger(workflowRunId)
-      ? `https://github.com/${repository}/actions/runs/${String(workflowRunId)}`
-      : null;
-
   if (
-    repository !== REPOSITORY ||
-    !Number.isSafeInteger(workflowRunId) ||
-    (workflowRunId as number) <= 0 ||
-    downloadHref !== expectedHref
+    candidate["repository"] !== REPOSITORY ||
+    !isPositiveSafeInteger(workflowRunId) ||
+    candidate["downloadHref"] !==
+      `https://github.com/${REPOSITORY}/actions/runs/${String(workflowRunId)}`
   ) {
     return refuse("DESKTOP_APP_ARTIFACT_LINK_INVALID");
   }
 
+  const sourceCommit = candidate["sourceCommit"];
+  const verifyCommand = candidate["verifyCommand"];
   const artifacts = candidate["artifacts"];
+  const unavailablePlatforms = candidate["unavailablePlatforms"];
   if (
     candidate["version"] !== "0.0.0" ||
     candidate["platform"] !== "Linux x86_64" ||
-    typeof candidate["sourceCommit"] !== "string" ||
-    !/^[0-9a-f]{40}$/.test(candidate["sourceCommit"]) ||
+    !isFilledString(candidate["productName"]) ||
+    !isFilledString(candidate["reproducibilityNote"]) ||
+    typeof candidate["verifiedOn"] !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(candidate["verifiedOn"]) ||
+    typeof sourceCommit !== "string" ||
+    !/^[0-9a-f]{40}$/.test(sourceCommit) ||
+    candidate["ciWorkflow"] !== "desktop-linux" ||
     candidate["ciArtifactName"] !== "sceneaxi-desktop-linux" ||
     candidate["checksumFileName"] !== "SHA256SUMS" ||
+    candidate["sourceDir"] !== "desktop/linux" ||
+    typeof verifyCommand !== "string" ||
+    !verifyCommand.includes("SHA256SUMS") ||
     !Array.isArray(artifacts) ||
     artifacts.length === 0 ||
-    !artifacts.every(
-      (artifact) =>
-        isRecord(artifact) &&
-        artifact["platform"] === "Linux x86_64" &&
-        typeof artifact["fileName"] === "string" &&
-        artifact["fileName"].includes("linux") &&
-        typeof artifact["sha256"] === "string" &&
-        /^[0-9a-f]{64}$/.test(artifact["sha256"]) &&
-        Number.isSafeInteger(artifact["byteSize"]) &&
-        (artifact["byteSize"] as number) > 0 &&
-        typeof artifact["verifyCommand"] === "string" &&
-        artifact["verifyCommand"].includes(artifact["sha256"]),
-    )
+    !artifacts.every(isValidArtifact) ||
+    !Array.isArray(unavailablePlatforms) ||
+    !unavailablePlatforms.every(isValidUnavailablePlatform)
   ) {
     return refuse("DESKTOP_APP_ARTIFACT_UNAVAILABLE");
   }

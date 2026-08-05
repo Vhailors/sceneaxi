@@ -82,4 +82,62 @@ describe("desktop app offer", () => {
       reason: "DESKTOP_APP_ARTIFACT_UNAVAILABLE",
     });
   });
+
+  it("refuses a non-record candidate as unavailable rather than as a broken link", () => {
+    for (const candidate of ["", "an offer", 7, true, [], [offer]]) {
+      expect(resolveDesktopAppOffer(candidate)).toMatchObject({
+        ok: false,
+        reason: "DESKTOP_APP_ARTIFACT_UNAVAILABLE",
+      });
+    }
+  });
+
+  it("refuses every honesty field the page renders unguarded", () => {
+    const dropped = [
+      "productName",
+      "verifiedOn",
+      "sourceDir",
+      "verifyCommand",
+      "reproducibilityNote",
+      "unavailablePlatforms",
+      "ciWorkflow",
+    ] as const;
+    for (const field of dropped) {
+      const rest = Object.fromEntries(
+        Object.entries(offer).filter(([key]) => key !== field),
+      );
+      expect(resolveDesktopAppOffer(rest)).toMatchObject({
+        ok: false,
+        reason: "DESKTOP_APP_ARTIFACT_UNAVAILABLE",
+      });
+    }
+    for (const unavailablePlatforms of [
+      [{ platform: "macOS", status: "shipping", reason: "x" }],
+      [{ platform: "Linux", status: "coming-soon", reason: "x" }],
+      [{ platform: "Windows", status: "coming-soon", reason: "  " }],
+      ["macOS"],
+    ]) {
+      expect(resolveDesktopAppOffer({ ...offer, unavailablePlatforms })).toMatchObject({
+        ok: false,
+        reason: "DESKTOP_APP_ARTIFACT_UNAVAILABLE",
+      });
+    }
+  });
+
+  it("refuses a file name that would print an unsafe or mismatched install command", () => {
+    const [appImage] = offer.artifacts;
+    if (appImage === undefined) throw new Error("the offer publishes no artifact");
+    for (const fileName of [
+      "linux app; rm -rf /.AppImage",
+      "linux app.AppImage",
+      "SceneAxi-Engine-Desktop-0.0.0-x86_64.AppImage",
+    ]) {
+      expect(
+        resolveDesktopAppOffer({
+          ...offer,
+          artifacts: [{ ...appImage, fileName }],
+        }),
+      ).toMatchObject({ ok: false, reason: "DESKTOP_APP_ARTIFACT_UNAVAILABLE" });
+    }
+  });
 });

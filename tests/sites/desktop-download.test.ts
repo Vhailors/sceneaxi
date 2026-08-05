@@ -46,6 +46,15 @@ describe("umbrella desktop download", () => {
     expect(ENGINE_PAGE).toContain("Verify the whole download");
   });
 
+  it("builds the install commands from the record instead of typing a file name", () => {
+    expect(ENGINE_PAGE).not.toContain("SceneAxi-Engine-Desktop-");
+    expect(ENGINE_PAGE).toContain("appImage.fileName");
+    expect(ENGINE_PAGE).toContain("debPackage.fileName");
+    for (const artifact of offer.artifacts) {
+      expect(artifact.verifyCommand).toContain(artifact.fileName);
+    }
+  });
+
   it("shows macOS and Windows as coming soon with no invented download", () => {
     expect(offer.unavailablePlatforms.map((row) => row.platform)).toEqual([
       "macOS",
