@@ -234,13 +234,23 @@ function preparePrivateDirectory(path: string): void {
   chmodSync(path, 0o700);
 }
 
+function readDiscoveryDescriptor(path: string): DesktopLocalBridgeDiscovery | null {
+  let decoded: unknown;
+  try {
+    decoded = JSON.parse(readFileSync(path, "utf8"));
+  } catch {
+    return null;
+  }
+  return parseDesktopLocalBridgeDiscovery(decoded);
+}
+
 function removeStaleDiscovery(path: string): void {
   if (!existsSync(path)) return;
   const stat = lstatSync(path);
   if (!stat.isFile() || stat.isSymbolicLink()) {
     throw new Error(`Desktop local bridge discovery path is not a regular file: ${path}`);
   }
-  const parsed = parseDesktopLocalBridgeDiscovery(JSON.parse(readFileSync(path, "utf8")));
+  const parsed = readDiscoveryDescriptor(path);
   if (parsed !== null && isProcessAlive(parsed.pid)) {
     throw new Error(`Another SceneAxi desktop local bridge is active (pid ${String(parsed.pid)}).`);
   }
@@ -342,6 +352,10 @@ export async function startDesktopLocalBridgeServer(
       answered = true;
       socket.end(`${encoded}\n`);
     };
+    socket.on("error", () => {
+      answered = true;
+      socket.destroy();
+    });
     socket.on("data", (chunk: string) => {
       if (answered) return;
       bytes += Buffer.byteLength(chunk);
@@ -418,7 +432,7 @@ export async function startDesktopLocalBridgeServer(
       closed = true;
       await closeServer(server);
       if (existsSync(discoveryPath)) {
-        const current = parseDesktopLocalBridgeDiscovery(JSON.parse(readFileSync(discoveryPath, "utf8")));
+        const current = readDiscoveryDescriptor(discoveryPath);
         if (current?.instanceId === instanceId) rmSync(discoveryPath);
       }
       if (existsSync(socketPath) && lstatSync(socketPath).isSocket()) rmSync(socketPath);

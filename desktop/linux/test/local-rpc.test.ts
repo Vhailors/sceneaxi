@@ -1,7 +1,15 @@
 import { connect } from "node:net";
-import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   DESKTOP_LOCAL_BRIDGE_PROTOCOL_VERSION,
@@ -161,6 +169,81 @@ describe("desktop same-user local RPC bridge", () => {
     });
     expect(status).toMatchObject({
       ok: true,
+      result: { documentPath: "scene.json" },
+    });
+  });
+
+  it("treats unparsable descriptor bytes as stale on both start and close", async () => {
+    const root = mkdtempSync(join(tmpdir(), "sceneaxi-local-rpc-"));
+    roots.push(root);
+    const projectRoot = join(root, "project");
+    expect(seedDesktopProject(projectRoot).ok).toBe(true);
+    const socketPath = join(root, "runtime", "desktop-v1.sock");
+    const discoveryPath = join(root, "config", "desktop-bridge-v1.json");
+    mkdirSync(dirname(discoveryPath), { recursive: true, mode: 0o700 });
+    writeFileSync(discoveryPath, "{ not json", { encoding: "utf8", mode: 0o600 });
+
+    const server = await startDesktopLocalBridgeServer({
+      bridge: createDesktopBridge({ cwd: projectRoot }),
+      projectRoot,
+      socketPath,
+      discoveryPath,
+      capability: CAPABILITY,
+    });
+    expect(
+      parseDesktopLocalBridgeDiscovery(JSON.parse(readFileSync(discoveryPath, "utf8"))),
+    ).not.toBeNull();
+
+    writeFileSync(discoveryPath, "still not json", { encoding: "utf8", mode: 0o600 });
+    await expect(server.close()).resolves.toBeUndefined();
+    expect(existsSync(discoveryPath)).toBe(true);
+    expect(existsSync(socketPath)).toBe(false);
+  });
+
+  it("survives a client that disconnects before the response is written", async () => {
+    const root = mkdtempSync(join(tmpdir(), "sceneaxi-local-rpc-"));
+    roots.push(root);
+    const projectRoot = join(root, "project");
+    expect(seedDesktopProject(projectRoot).ok).toBe(true);
+    const socketPath = join(root, "runtime", "desktop-v1.sock");
+    const server = await startDesktopLocalBridgeServer({
+      bridge: createDesktopBridge({ cwd: projectRoot }),
+      projectRoot,
+      socketPath,
+      discoveryPath: join(root, "config", "desktop-bridge-v1.json"),
+      capability: CAPABILITY,
+    });
+    servers.push(server);
+
+    await new Promise<void>((resolveAbandon) => {
+      const socket = connect(socketPath);
+      socket.on("error", () => resolveAbandon());
+      socket.on("connect", () => {
+        socket.write(`${JSON.stringify({
+          protocolVersion: 1,
+          id: "abandoned",
+          capability: CAPABILITY,
+          permission: "project:read",
+          tool: "sceneaxi.project.status",
+          input: { documentPath: "scene.json" },
+        })}\n`);
+        socket.destroy();
+        resolveAbandon();
+      });
+    });
+    await new Promise((tick) => setTimeout(tick, 100));
+
+    const survived = await request(socketPath, {
+      protocolVersion: 1,
+      id: "after-abandon",
+      capability: CAPABILITY,
+      permission: "project:read",
+      tool: "sceneaxi.project.status",
+      input: { documentPath: "scene.json" },
+    });
+    expect(survived).toMatchObject({
+      ok: true,
+      id: "after-abandon",
       result: { documentPath: "scene.json" },
     });
   });
