@@ -2,7 +2,7 @@
   "name": "@sceneaxi/profile-web",
   "version": "0.0.0",
   "private": true,
-  "description": "SceneAxi profile-web package (bootstrap stub) — Web Experience profile; pins a core range, compiles its policy in",
+  "description": "SceneAxi Web Experience profile — pinned core policy plus the first-release page/HTML/site-canvas authoring contract",
   "type": "module",
   "exports": { ".": "./src/index.ts" },
   "files": ["src"],

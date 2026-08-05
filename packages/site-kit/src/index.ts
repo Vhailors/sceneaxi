@@ -135,6 +135,29 @@ export {
 } from "./web-editor.js";
 
 export {
+  WEB_EXPERIENCE_CANVAS_LAYOUTS,
+  WEB_EXPERIENCE_DEFAULT_HTML,
+  WEB_EXPERIENCE_EDITOR_PARAMS,
+  buildWebExperienceEditorView,
+  readWebExperienceEditorState,
+  type WebExperienceCanvasLayout,
+  type WebExperienceEditorState,
+  type WebExperienceEditorView,
+} from "./web-experience-editor.js";
+
+export {
+  WEB_EXPERIENCE_AUTHORING_OPERATIONS,
+  WEB_EXPERIENCE_AUTHORING_REFUSALS,
+  WEB_EXPERIENCE_DESKTOP_ONLY_OPERATIONS,
+  WEB_EXPERIENCE_SANDBOX_POLICY,
+  evaluateWebExperienceAuthoringOperation,
+  type WebExperienceAuthoringDecision,
+  type WebExperienceAuthoringOperation,
+  type WebExperienceAuthoringRefusal,
+  type WebExperienceDesktopOnlyOperation,
+} from "@sceneaxi/schemas";
+
+export {
   WEB_EDITOR_STARTER_SEED,
   reconstructStarter,
   webEditorStarterArtifact,

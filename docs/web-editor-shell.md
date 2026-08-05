@@ -20,6 +20,7 @@ file covers the web surface only.
 | Desktop projection | `apps/desktop-shell/src/visual-model.ts` | derives its mode table, dock-tab derivation, assistant modes and states, viewport sources (ids **and** labels), and tier thresholds from the shared vocabulary; everything else unchanged |
 | Web projection | `packages/site-kit/src/editor-shell.ts` (`buildEditorShellView`) | binds the vocabulary to one real session render: every panel value, every control's kind, every refusal |
 | Web renderer | `sites/umbrella/src/app/editor/_components/editor-shell.tsx` + the `.edshell` section of `globals.css` | draws the view and decides nothing; client state is chrome navigation only |
+| Web Experience projection | `packages/schemas/src/web-experience-authoring.ts` + `packages/site-kit/src/web-experience-editor.ts` + `sites/umbrella/src/app/editor/_components/web-experience-editor.tsx` | the deliberately smaller page/HTML/site-canvas interface, sandbox policy, known asset injection, safe draw-only Three embed, and named desktop-only refusals; owner doc [`web-experience-editor.md`](web-experience-editor.md) |
 
 The vocabulary lives in `@sceneaxi/schemas` because the dependency matrix lets
 both consumers name exactly `schemas` + `authoring-core` — the same reasoning
@@ -67,7 +68,7 @@ field — in the mode the reader is in.
 | Ship mode | contract-only targets and an inert export — a handoff is data, not authority, and building one is not a Minimum E2 operation |
 | Plugins mode | the real seeded capability registry rows; nothing is loaded on this surface and the panel says so |
 | Assistant | honest seat: `no provider configured` (no live adapter in core); Send is inert (`EDITOR_ASSISTANT_NO_PROVIDER`); on Kids the seat is the deny (`THIRD_PARTY_LLM_DENIED_BY_DEFAULT`) |
-| Profile chips | `openPathPolicyView()` projected, never restated; the Kids chip swaps the editor body for the policy's own refusal (`OPEN_PATH_KIDS_REFUSED`), demotes the rail, the Search opener and the assistant toggle with that same code, withdraws the palette (⌘K opens nothing, any open overlay closes), and keeps the chips live — a refuse-only state is a state you can leave, and nothing else |
+| Profile chips | `openPathPolicyView()` projected, never restated. Website swaps the desktop body for #197's smaller editor, demotes desktop chrome with `WEB_EXPERIENCE_DESKTOP_ONLY_OPERATION`, and withdraws the desktop palette/assistant. Kids swaps the body for the policy's own refusal (`OPEN_PATH_KIDS_REFUSED`), demotes the rail, Search, and assistant with that same code, withdraws the palette, and keeps the chips live — a refuse-only state is a state you can leave, and nothing else |
 | Command palette | rows bind to this surface's real controls or refuse by name; CLI-only verbs render inert with `EDITOR_VERB_CLI_ONLY` and print their verb. The filter input filters, over row labels and CLI verbs |
 | Viewport copy | `EDITOR_VIEWPORT_COPY.lede` and `.honesty` ride with the canvas in **every** mode, not inside the Run branch: the ADR 0017 core it names and the "draws only, never advances" statement are true of all seven |
 | Catalog deep link | when the request carried one, the source, item, and artifact reference are shown with the one thing the link does not do — every editor session opens the shared starter scene, not that listing's own scene |

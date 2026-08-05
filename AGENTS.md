@@ -378,6 +378,14 @@ owner doc — deviations and the recorded browser evidence — is
 control is a link or GET form re-rendering `/editor` URL state, so ADR 0020's
 entitlement-before-session and ADR 0003's bounds are untouched.
 
+The simplified Web Experience projection (sceneaxi#197) shares that `/editor`
+access decision but replaces the desktop body with the smaller contract in
+`packages/schemas/src/web-experience-authoring.ts`: page/HTML, site canvas,
+known asset injection, and a draw-only Three embed. Site-kit owns deterministic
+URL-state reconstruction and sandbox `srcDoc`; the umbrella remains a thin
+renderer and still cannot import a profile package. Desktop-only operations
+refuse by the shared contract. Owner and proof map: `docs/web-experience-editor.md`.
+
 The Engine Desktop **visual** surface is `apps/desktop-shell` alone
 (sceneaxi#158): `src/visual-model.ts` decides (seven modes, mode-dependent dock
 tabs, profile switch, assistant states, Change Review, command palette,

@@ -1,8 +1,10 @@
 import {
   EDITOR_DEEP_LINK_PATH,
+  buildWebExperienceEditorView,
   buildEditorShellView,
   describeSiteAccessState,
   readEditorState,
+  readWebExperienceEditorState,
   renderEditorState,
   webEditorStarterArtifact,
   type SearchParams,
@@ -110,6 +112,23 @@ export default async function EditorPage({
     );
   }
 
+  const webState = readWebExperienceEditorState(params);
+  if (!webState.ok) {
+    return (
+      <div className="page">
+        <div className="page-head">
+          <p className="eyebrow">Web Experience editor</p>
+          <h1>That web editor state was refused</h1>
+        </div>
+        <StatePanel tone="deny" level={2} title="Web state refused" reason={webState.reason}>
+          <p>{webState.message}</p>
+          <p>Only the bounded page, canvas, known-asset, and safe Three fields are accepted.</p>
+          <p><a href="/editor?profile=web">Open a clean Web Experience session</a></p>
+        </StatePanel>
+      </div>
+    );
+  }
+
   const render = renderEditorState(state.value);
   if (!render.ok) {
     return (
@@ -147,6 +166,10 @@ export default async function EditorPage({
   }
 
   const editor = state.value;
+  const webView = buildWebExperienceEditorView({
+    state: webState.value,
+    starterArtifactId: starter.value.artifactId,
+  });
   const view = buildEditorShellView({
     state: editor,
     render: render.value,
@@ -190,6 +213,8 @@ export default async function EditorPage({
         selectedInstanceId={editor.selectedInstanceId}
         deepLinkFields={[...deepLinkFields, ...carriedTransforms]}
         viewportCopy={EDITOR_VIEWPORT_COPY}
+        initialProfile={editor.profileId}
+        webView={webView}
       />
     </>
   );

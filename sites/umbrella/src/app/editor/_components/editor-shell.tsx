@@ -28,8 +28,10 @@ import type {
   EditorShellControl,
   EditorShellView,
   MountableScene,
+  WebExperienceEditorView,
 } from "@sceneaxi/site-kit";
 import { EditorViewport } from "./editor-viewport.js";
+import { WebExperienceEditor } from "./web-experience-editor.js";
 
 type ModeId = EditorShellView["modes"][number]["id"];
 type DockTabId = EditorShellView["modes"][number]["dockTabs"][number];
@@ -101,6 +103,7 @@ function ShellButton({
   control,
   className,
   demotedRefusal,
+  profileRefusal,
   pressed,
   selected,
   role,
@@ -116,6 +119,8 @@ function ShellButton({
    * describedby it produces always resolves against the rendered legend.
    */
   readonly demotedRefusal?: string | undefined;
+  /** A non-Kids profile may also narrow desktop chrome without changing its policy code. */
+  readonly profileRefusal?: string | undefined;
   readonly pressed?: boolean | undefined;
   /**
    * `aria-selected` is only legal on a role that supports it, so a caller that
@@ -127,8 +132,14 @@ function ShellButton({
   readonly onClick?: ((event: React.MouseEvent<HTMLElement>) => void) | undefined;
   readonly children?: React.ReactNode;
 }) {
-  const inert = control.kind === "inert" || demotedRefusal !== undefined;
-  const refusal = control.kind === "inert" ? control.refusal : (demotedRefusal ?? null);
+  const inert =
+    control.kind === "inert" ||
+    demotedRefusal !== undefined ||
+    profileRefusal !== undefined;
+  const refusal =
+    control.kind === "inert"
+      ? control.refusal
+      : (demotedRefusal ?? profileRefusal ?? null);
   const binding = control.binding;
   const activeMode = useContext(ActiveModeContext);
 
@@ -174,12 +185,16 @@ export function EditorShell({
   scene,
   selectedInstanceId,
   deepLinkFields,
+  initialProfile,
   viewportCopy,
+  webView,
 }: {
   readonly view: EditorShellView;
   readonly scene: MountableScene | null;
   readonly selectedInstanceId: string;
   readonly deepLinkFields: ReadonlyArray<{ readonly name: string; readonly value: string }>;
+  readonly initialProfile: "game" | "web";
+  readonly webView: WebExperienceEditorView;
   /**
    * The viewport copy is owned by `src/lib/editor-viewport.ts` and arrives as a
    * prop because a client component must not import the Node-bearing site-kit
@@ -191,7 +206,7 @@ export function EditorShell({
   // comes back in the mode the reader was working in.
   const [mode, setMode] = useState<ModeId>(view.activeModeId);
   const [dockTab, setDockTab] = useState<DockTabId>("changes");
-  const [profile, setProfile] = useState<ProfileId>("game");
+  const [profile, setProfile] = useState<ProfileId>(initialProfile);
   const [assistantOpen, setAssistantOpen] = useState(view.assistant.state === "open");
   const [assistantMode, setAssistantMode] = useState(view.assistant.defaultModeId);
   const [paletteRequested, setPaletteRequested] = useState(false);
@@ -206,6 +221,7 @@ export function EditorShell({
   const activeMode =
     view.modes.find((candidate) => candidate.id === mode) ?? fallbackMode;
   const kids = profile === "kids";
+  const web = profile === "web";
   /**
    * The palette is part of the editor body the refuse-only profile withdraws, so
    * Kids is what decides whether it is open at all — not a second piece of state
@@ -231,6 +247,7 @@ export function EditorShell({
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         if (kids) return;
+        if (web) return;
         event.preventDefault();
         // Only the keystroke that opens the palette records where focus came
         // from. While it is open the rest of the chrome is `inert`, so
@@ -246,7 +263,7 @@ export function EditorShell({
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [paletteOpen, kids]);
+  }, [paletteOpen, kids, web]);
 
   /**
    * Focus moves in this effect rather than in the close handlers, because the
@@ -268,8 +285,8 @@ export function EditorShell({
   // Entering the refuse-only profile withdraws the request too, so leaving it
   // again returns to the editor rather than to a palette held open behind it.
   useEffect(() => {
-    if (kids) setPaletteRequested(false);
-  }, [kids]);
+    if (kids || web) setPaletteRequested(false);
+  }, [kids, web]);
 
   const profilePin =
     view.profiles.find((chip) => chip.id === profile)?.statusPin ??
@@ -358,6 +375,9 @@ export function EditorShell({
               control={view.paletteOpener}
               className="ed-search"
               demotedRefusal={kids ? view.kidsLock.code : undefined}
+              profileRefusal={
+                web ? "WEB_EXPERIENCE_DESKTOP_ONLY_OPERATION" : undefined
+              }
               onClick={(event) => {
                 paletteReturnFocus.current = event.currentTarget;
                 setPaletteRequested(true);
@@ -369,6 +389,9 @@ export function EditorShell({
               control={view.assistant.toggle}
               className="ed-assistant-toggle"
               demotedRefusal={kids ? view.kidsLock.code : undefined}
+              profileRefusal={
+                web ? "WEB_EXPERIENCE_DESKTOP_ONLY_OPERATION" : undefined
+              }
               pressed={assistantOpen}
               onClick={() => setAssistantOpen((open) => !open)}
             >
@@ -388,6 +411,9 @@ export function EditorShell({
                 control={entry.control}
                 className="ed-rail-mode"
                 demotedRefusal={kids ? view.kidsLock.code : undefined}
+                profileRefusal={
+                  web ? "WEB_EXPERIENCE_DESKTOP_ONLY_OPERATION" : undefined
+                }
                 pressed={mode === entry.id}
                 onClick={() => enterMode(entry.id)}
               >
@@ -408,6 +434,8 @@ export function EditorShell({
                 leave.
               </p>
             </section>
+          ) : web ? (
+            <WebExperienceEditor view={webView} scene={scene} />
           ) : (
             <>
               {/* -------------------------------------------- left dock ---- */}
@@ -1048,7 +1076,7 @@ export function EditorShell({
           )}
 
           {/* ------------------------------------------------ assistant ---- */}
-          <aside
+          {!web && <aside
             className="ed-assistant"
             aria-label="Assistant"
             data-assistant={
@@ -1100,7 +1128,7 @@ export function EditorShell({
                 </div>
               </>
             )}
-          </aside>
+          </aside>}
         </div>
 
         {/* -------------------------------------------------- status bar --- */}
@@ -1119,7 +1147,7 @@ export function EditorShell({
         </footer>
 
         {/* ---------------------------------------------------- palette ---- */}
-        {paletteOpen && (
+        {paletteOpen && !web && (
           <div className="ed-palette-scrim">
             <div className="ed-palette" role="dialog" aria-modal="true" aria-label="Command palette">
               <input
@@ -1185,6 +1213,10 @@ export function EditorShell({
               {entry.code}: {entry.message}
             </p>
           ))}
+          <p id={legendId("WEB_EXPERIENCE_DESKTOP_ONLY_OPERATION")}>
+            WEB_EXPERIENCE_DESKTOP_ONLY_OPERATION: The requested operation belongs to the
+            desktop authoring surface.
+          </p>
         </div>
       </div>
     </ActiveModeContext>

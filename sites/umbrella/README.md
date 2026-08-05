@@ -5,7 +5,8 @@ path**, the profile capability matrix, the public engine SDK download, hosted
 sign-in, the verified Linux workflow artifact `/engine` links from its exact repository
 run (built from `desktop/linux`, never served here —
 [`docs/desktop-linux.md`](../../docs/desktop-linux.md)),
-the account surface, credit packs, and the entitled Minimum E2 sculpt/scene web editor.
+the account surface, credit packs, and the entitled editor with Engine Desktop and
+simplified Web Experience projections.
 
 ## Shape
 

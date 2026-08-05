@@ -20,6 +20,7 @@ opened — and what may be drawn — lives here.
 | `catalog.ts` | catalog view models, dual price, creator share, fail-closed purchase intent |
 | `deep-link.ts` | catalog → umbrella editor deep-link contract, and the one definition of the configured umbrella origin — including the checkout redirect origin, which is never taken from a request `Host` |
 | `web-editor.ts` | bounded Minimum E2 web editor session over `@sceneaxi/authoring-core` |
+| `web-experience-editor.ts` | deterministic #197 page/HTML/site-canvas model over the shared Web Experience operation and sandbox contract; arbitrary assets and desktop-only actions refuse |
 | `editor-session.ts` | driving that session from URL state, and projecting its composed scene for a browser |
 | `editor-shell.ts` | `buildEditorShellView()` — the umbrella `/editor` Engine Desktop shell projected from the shared vocabulary in `@sceneaxi/schemas` over one real session render, plus the closed `EDITOR_SHELL_WEB_REFUSALS` registry; owner doc `docs/web-editor-shell.md` |
 | `mountable-scene.ts` | the one payload shape a browser mounts, shared by both umbrella viewports |

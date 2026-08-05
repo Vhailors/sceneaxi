@@ -1,6 +1,6 @@
 # @sceneaxi/profile-web
 
-Web Experience policy stub. It compiles the locked
+Web Experience profile. It compiles the locked
 `web-experience-profile-scope` decision into a small public allow/refuse seam:
 
 - allowed: interactive experiences and general interactive site shells/chrome;
@@ -9,6 +9,18 @@ Web Experience policy stub. It compiles the locked
 
 `evaluateWebExperienceScope` returns a frozen structured decision. This package
 does not implement a CMS, application builder, or Webapp Factory pipeline.
+
+## First-release authoring subset
+
+`webExperienceAuthoring` exposes the schema-owned #197 contract: page/HTML,
+site-canvas configuration, known asset injection, and a safe Three embed. The
+closed desktop-only set refuses by name, unknown operations fail closed, and the
+sandbox policy grants authored HTML no script, network, navigation, or parent-DOM
+authority. The deployable umbrella consumes the same contract through site-kit
+rather than importing this profile, preserving ADR 0018's site dependency edge.
+
+The full access, sandbox, and proof map is
+[`docs/web-experience-editor.md`](../../docs/web-experience-editor.md).
 
 The MVP conformance case runs the same deterministic project fixture used by
 the Game/CLI golden path through Web policy. `mvpGoldenPath` exposes only the
