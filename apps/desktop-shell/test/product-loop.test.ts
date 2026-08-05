@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { OPEN_PATH_REFUSE_CODES } from "@sceneaxi/schemas";
 import {
+  DESKTOP_PRODUCT_REFUSAL_MESSAGES,
+  DESKTOP_PRODUCT_REFUSALS,
+  DESKTOP_WEB_HTML_MAX_LENGTH,
+  DESKTOP_WEB_STAGE_CONFIG,
   desktopProductSurface,
+  desktopWebStageDecision,
   createDesktopVisualState,
   desktopVisualView,
   renderDesktopChrome,
@@ -129,9 +134,15 @@ describe("desktop product loop", () => {
 
     expect(game).toContain('class="project-file is-active" aria-current="page"');
     expect(game).toContain('data-project-file="scene.json"');
-    expect(game).toContain('id="project-open" data-kind="live" data-action="project-open"');
-    expect(game).toContain('id="project-save" data-kind="live" data-action="project-save"');
-    expect(game).toContain('id="scene-play" data-kind="live" data-action="scene-play"');
+    expect(game).toContain(
+      'id="project-open" data-kind="live" data-product-action data-action="project-open"',
+    );
+    expect(game).toContain(
+      'id="project-save" data-kind="live" data-product-action data-action="project-save"',
+    );
+    expect(game).toContain(
+      'id="scene-play" data-kind="live" data-product-action data-action="scene-play"',
+    );
     expect(game).toContain('data-profile-surface="game"');
     expect(game).toContain("FreeJS behavior");
 
@@ -150,6 +161,112 @@ describe("desktop product loop", () => {
     expect(game).toContain("action: 'open-path'");
     expect(game).toContain("op: 'status'");
     expect(game).toContain("op: 'accept'");
-    expect(game).toContain("op: 'propose'");
+    expect(game).toContain("op: 'reject'");
+  });
+
+  it("ships the model's own staging decision instead of a browser paraphrase of it", () => {
+    // The shipped browser path used to hand-copy the asset-path guard and the
+    // proposal build. That copy is what drifts — it had already lost the markup
+    // bounds. The emitted script now carries this exact function, so the tests
+    // above and the document a visitor loads cannot answer differently.
+    const web = renderDesktopChrome(
+      desktopVisualView(createDesktopVisualState({ profile: "web" })),
+    );
+    expect(web).toContain(String(desktopWebStageDecision));
+    expect(web).not.toContain("validAssetPath");
+
+    // Embedding a compiled function is only safe if the document it lands in is
+    // still parseable JavaScript, so the emitted script is compiled here rather
+    // than trusted to be well-formed.
+    const script = /<script>([\s\S]*?)<\/script>/.exec(web)?.[1] ?? "";
+    expect(script.length).toBeGreaterThan(0);
+    expect(() => new Function(script)).not.toThrow();
+
+    // And its configuration travels as data, so the browser reads the same
+    // document path, starter markup, bounds, and refusal names the model uses.
+    expect(JSON.parse(JSON.stringify(DESKTOP_WEB_STAGE_CONFIG))).toEqual({
+      documentPath: "scene.json",
+      starterHtml: '<main id="sceneaxi-mount"></main>',
+      htmlMaxLength: DESKTOP_WEB_HTML_MAX_LENGTH,
+      refusals: { ...DESKTOP_PRODUCT_REFUSALS },
+    });
+  });
+
+  it("refuses oversized and null-bearing markup through the one decision", () => {
+    const documentData = { title: "Landing" };
+    expect(
+      desktopWebStageDecision(
+        {
+          profile: "web",
+          documentData,
+          kind: "html",
+          html: "x".repeat(DESKTOP_WEB_HTML_MAX_LENGTH + 1),
+          assetPath: "assets/hero.glb",
+        },
+        DESKTOP_WEB_STAGE_CONFIG,
+      ),
+    ).toMatchObject({ ok: false, reason: DESKTOP_PRODUCT_REFUSALS.webHtmlInvalid });
+
+    expect(
+      stageWebHtml({
+        profile: "web",
+        documentData,
+        html: `<main>${String.fromCharCode(0)}</main>`,
+      }),
+    ).toMatchObject({ ok: false, reason: DESKTOP_PRODUCT_REFUSALS.webHtmlInvalid });
+
+    // A traversal that a prefix check alone would let through.
+    expect(
+      stageWebAssetInjection({
+        profile: "web",
+        documentData,
+        assetPath: "assets/../../etc/passwd",
+      }),
+    ).toMatchObject({
+      ok: false,
+      reason: DESKTOP_PRODUCT_REFUSALS.webAssetPathInvalid,
+    });
+
+    // Stored data the model cannot read is never replaced implicitly.
+    expect(
+      stageWebAssetInjection({
+        profile: "web",
+        documentData: { webExperience: { html: 4, assets: [] } },
+        assetPath: "assets/hero.glb",
+      }),
+    ).toMatchObject({
+      ok: false,
+      reason: DESKTOP_PRODUCT_REFUSALS.documentDataInvalid,
+    });
+
+    // Non-finite numbers are not JSON, and the in-process form still says so.
+    expect(
+      stageWebHtml({
+        profile: "web",
+        documentData: { ratio: Number.POSITIVE_INFINITY },
+        html: "<main></main>",
+      }),
+    ).toMatchObject({
+      ok: false,
+      reason: DESKTOP_PRODUCT_REFUSALS.documentDataInvalid,
+    });
+  });
+
+  it("explains every refusal name the surface can print", () => {
+    const html = renderDesktopChrome(
+      desktopVisualView(createDesktopVisualState({ profile: "web" })),
+    );
+    for (const code of Object.values(DESKTOP_PRODUCT_REFUSALS)) {
+      expect(DESKTOP_PRODUCT_REFUSAL_MESSAGES[code], code).toBeTruthy();
+      expect(html, code).toContain(`id="refusal-${code}"`);
+    }
+    // One code, one row: the visual registry re-exports the Web capability
+    // refusal rather than declaring a second owner for it.
+    const rows = [
+      ...html.matchAll(
+        new RegExp(`id="refusal-${DESKTOP_PRODUCT_REFUSALS.webCapabilityRequired}"`, "g"),
+      ),
+    ];
+    expect(rows).toHaveLength(1);
   });
 });

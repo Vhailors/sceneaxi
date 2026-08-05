@@ -53,6 +53,7 @@ import {
 } from "@sceneaxi/schemas";
 import { DESKTOP_COMMANDS } from "./commands.js";
 import {
+  DESKTOP_PRODUCT_REFUSALS,
   desktopProductSurface,
   type DesktopProductSurface,
 } from "./product-loop.js";
@@ -261,8 +262,12 @@ export const DESKTOP_VISUAL_REFUSALS = Object.freeze({
   verbNotOnDesktop: "DESKTOP_VERB_NOT_ON_THIS_SURFACE",
   /** The window is smaller than the editor chrome's declared minimum. */
   windowBelowMinimum: "DESKTOP_WINDOW_BELOW_MINIMUM",
-  /** HTML and asset injection belong only to Web Experience. */
-  webCapabilityRequired: "DESKTOP_WEB_CAPABILITY_REQUIRED",
+  /**
+   * HTML and asset injection belong only to Web Experience. Read from the
+   * product-loop registry rather than restated, so the code the chrome renders
+   * inert with is the same one the staging decision refuses with.
+   */
+  webCapabilityRequired: DESKTOP_PRODUCT_REFUSALS.webCapabilityRequired,
 } as const);
 
 export type DesktopVisualRefusal =

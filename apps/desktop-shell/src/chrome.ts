@@ -50,8 +50,11 @@ import {
   type DesktopWindowTierId,
 } from "./visual-model.js";
 import {
+  DESKTOP_PRODUCT_REFUSAL_MESSAGES,
   DESKTOP_PRODUCT_REFUSALS,
+  DESKTOP_WEB_STAGE_CONFIG,
   DESKTOP_WEB_STARTER,
+  desktopWebStageDecision,
 } from "./product-loop.js";
 import {
   ACCENT,
@@ -237,11 +240,28 @@ function promptInput(ctrl: DesktopControl): string {
  * worse than no description. One code carries one sentence: a renderer variant
  * of it would put two wordings for the same refusal in one document.
  */
+/**
+ * A sentence for every refusal either registry can put on this surface.
+ *
+ * The product-loop names are here because the emitted script can print them:
+ * a refusal a visitor can read with no explanation is the same gap an unnamed
+ * one is. `webCapabilityRequired` is one code in two registries by re-export,
+ * so the rows are de-duplicated by code rather than by registry.
+ */
 function refusalLegend(): string {
-  const rows = Object.values(DESKTOP_VISUAL_REFUSALS)
+  const messages = new Map<string, string>();
+  for (const code of Object.values(DESKTOP_VISUAL_REFUSALS)) {
+    messages.set(code, DESKTOP_REFUSAL_MESSAGES[code]);
+  }
+  for (const code of Object.values(DESKTOP_PRODUCT_REFUSALS)) {
+    if (!messages.has(code)) {
+      messages.set(code, DESKTOP_PRODUCT_REFUSAL_MESSAGES[code]);
+    }
+  }
+  const rows = [...messages]
     .map(
-      (code) =>
-        `<p class="refusal-row" id="refusal-${escapeHtml(code)}"><code>${escapeHtml(code)}</code> ${escapeHtml(DESKTOP_REFUSAL_MESSAGES[code])}</p>`,
+      ([code, message]) =>
+        `<p class="refusal-row" id="refusal-${escapeHtml(code)}"><code>${escapeHtml(code)}</code> ${escapeHtml(message)}</p>`,
     )
     .join("");
   return `<section class="refusal-legend" aria-labelledby="refusal-legend-title"><h2 id="refusal-legend-title">Refusals on this surface</h2>${rows}</section>`;
@@ -293,11 +313,11 @@ function titleBar(view: DesktopVisualView): string {
   </nav>
   <div class="profile-switch" role="group" aria-label="Profile">${profiles}</div>
   <div class="title-centre">
-    <span class="project-pill" data-project-state="closed"><span class="dot dot-ok" aria-hidden="true"></span><span data-project-status aria-live="polite">scene.json · ready to open</span></span>
+    <span class="project-pill" data-project-state="closed"><span class="dot dot-ok" aria-hidden="true"></span><span data-project-status>${escapeHtml(view.product.surface.project.activeFile)} · ready to open</span></span>
   </div>
   <div class="title-actions">
-    ${button(view.product.open, "Open", "ghost-button", ` data-action="project-open"`)}
-    ${button(view.product.save, "Save", "primary-button", ` data-action="project-save"`)}
+    ${button(view.product.open, "Open", "ghost-button", ` data-product-action data-action="project-open"`)}
+    ${button(view.product.save, "Save", "primary-button", ` data-product-action data-action="project-save"`)}
     ${drawers}
     ${button(
       view.overlay.search,
@@ -382,8 +402,8 @@ function profileSurfaces(view: DesktopVisualView): string {
   <p>Stored HTML is data, never executed by this chrome.</p>
   <code>&lt;main id=&quot;sceneaxi-mount&quot;&gt;&lt;/main&gt;</code>
   <div class="profile-actions">
-    ${button(view.product.stageHtml, "Stage HTML", "ghost-button", ` data-action="web-stage-html"`)}
-    ${button(view.product.injectAsset, "Inject assets/hero.glb", "ghost-button", ` data-action="web-inject-asset"`)}
+    ${button(view.product.stageHtml, "Stage HTML", "ghost-button", ` data-product-action data-action="web-stage-html"`)}
+    ${button(view.product.injectAsset, "Inject assets/hero.glb", "ghost-button", ` data-product-action data-action="web-inject-asset"`)}
   </div>
 </div>`
           : `<p class="game-runtime-note">FreeJS behavior stays project-local; play reaches the composed scene without a site or billing package.</p>`;
@@ -395,7 +415,7 @@ function profileSurfaces(view: DesktopVisualView): string {
     })
     .join("");
   return `<div class="profile-surfaces">${surfaces}<div class="profile-runtime-actions">
-  ${button(view.product.play, "▶ Play composed scene", "primary-button", ` data-action="scene-play"`)}
+  ${button(view.product.play, "▶ Play composed scene", "primary-button", ` data-product-action data-action="scene-play"`)}
   <p class="runtime-report" data-product-run-report aria-live="polite">Ready to run through the desktop host.</p>
 </div></div>`;
 }
@@ -657,12 +677,24 @@ function profileRefusal(view: DesktopVisualView): string {
 </section>`;
 }
 
+/**
+ * The status bar is the one region no tier hides, which is why the product
+ * loop reports here as well as in the title pill.
+ *
+ * Below the compact tier the title centre is display:none and the left dock is
+ * a closed drawer, so a refusal written only to those two would leave Open,
+ * Save, Stage, and Play refusing invisibly at the sizes the recorded browser
+ * evidence covers. This mirror carries the live region for the same reason:
+ * a hidden `aria-live` announces nothing.
+ */
 function statusBar(view: DesktopVisualView): string {
   return `
 <footer class="status-bar">
   <span class="status-text"><span class="dot dot-ok" aria-hidden="true"></span>${escapeHtml(view.statusText)}</span>
   <span class="divider" aria-hidden="true"></span>
   <span class="status-pin" data-profile-pin>${escapeHtml(view.profilePin)}</span>
+  <span class="divider" aria-hidden="true"></span>
+  <span class="status-project" data-project-status aria-live="polite">${escapeHtml(view.product.surface.project.activeFile)} · ready to open</span>
   <span class="spacer"></span>
   ${view.overlay.shortcuts
     .map((shortcut) =>
@@ -1018,6 +1050,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .status-bar{background:var(--well);border-top:1px solid var(--line);display:flex;align-items:center;padding:0 12px;gap:13px}
 .status-text{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text-3)}
 .status-pin{font-family:var(--mono);font-size:10px;color:var(--faint)}
+.status-project{min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono);font-size:10px;color:var(--dim)}
 .divider{width:1px;height:12px;background:var(--line-card)}
 .state-shortcut{font-family:var(--mono);font-size:9px;letter-spacing:.07em;color:var(--faint);border:1px solid var(--line-control);border-radius:3px;padding:2px 7px}
 .state-shortcut:hover{border-color:var(--line-hover);color:var(--text)}
@@ -1204,7 +1237,12 @@ function script(view: DesktopVisualView): string {
     product: {
       documentPath: view.product.surface.project.activeFile,
       webStarter: DESKTOP_WEB_STARTER,
-      runtimeUnavailable: DESKTOP_PRODUCT_REFUSALS.runtimeUnavailable,
+      // Every name the script can print, serialized rather than typed out as a
+      // literal in the browser body: a refusal the visitor reads is one the
+      // registry owns and `refusalLegend()` explains.
+      refusals: DESKTOP_PRODUCT_REFUSALS,
+      /** The one staging decision's own configuration, not a browser copy. */
+      stageConfig: DESKTOP_WEB_STAGE_CONFIG,
     },
     controlsByProfile: controlsByProfile(view),
   };
@@ -1215,8 +1253,18 @@ const shell = document.querySelector('.shell');
 if (shell) {
   const q = (sel) => Array.from(shell.querySelectorAll(sel));
 
+  // The model's own staging decision, not a paraphrase of it: this is the exact
+  // function \`stageWebHtml()\` and \`stageWebAssetInjection()\` call, so the shipped
+  // browser path and the tested exports cannot answer differently.
+  const webStageDecision = ${String(desktopWebStageDecision)};
+
   let projectData = null;
   let projectDirty = false;
+  // One product request at a time. Every live control reads \`projectData\` before
+  // its first await, so two overlapping clicks would each build a proposal from
+  // the same pre-edit document and the second would replace the first in the
+  // host's single-proposal session — both reporting success, one edit gone.
+  let inFlight = false;
 
   const productStatus = (state, text) => {
     const pill = shell.querySelector('[data-project-state]');
@@ -1225,8 +1273,17 @@ if (shell) {
     q('[data-project-file-state]').forEach((el) => { el.textContent = text; });
   };
 
+  // The run report is hidden below the compact tier, so a refusal that lives
+  // only there is a refusal nobody at 1000x700 can read. Refusals also go to the
+  // product status, which the status bar mirrors at every tier.
   const runStatus = (text) => {
     q('[data-product-run-report]').forEach((el) => { el.textContent = text; });
+  };
+
+  const runRefusal = (code, detail) => {
+    const text = 'Play refused · ' + code + (detail ? ' · ' + detail : '');
+    runStatus(text);
+    productStatus('refused', text);
   };
 
   const desktopPort = () => {
@@ -1239,30 +1296,58 @@ if (shell) {
   const runtimeRequest = async (request) => {
     const port = desktopPort();
     if (port === null) {
-      productStatus('refused', T.product.runtimeUnavailable);
-      runStatus('Refused · ' + T.product.runtimeUnavailable);
+      productStatus('refused', T.product.refusals.runtimeUnavailable);
+      runStatus('Refused · ' + T.product.refusals.runtimeUnavailable);
       return null;
     }
     try {
       return await port.request(request);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      productStatus('refused', 'DESKTOP_RUNTIME_REQUEST_FAILED · ' + message);
+      productStatus('refused', T.product.refusals.runtimeRequestFailed + ' · ' + message);
       return null;
     }
   };
 
+  // A refused authoring response carries its own named reason: the document
+  // status shape reports \`ok: false\`, a session snapshot reports diagnostics.
+  // Both are read here so the host's reason reaches the surface instead of the
+  // generic one — \`apply-in-progress\` in particular is the operator's cue that
+  // journal recovery, not another click, is what moves this forward.
   const responseReason = (response) => {
-    if (response === null) return T.product.runtimeUnavailable;
-    if (!response.ok) return response.reason || 'DESKTOP_RUNTIME_REQUEST_REFUSED';
+    if (response === null) return T.product.refusals.runtimeUnavailable;
+    if (!response.ok) return response.reason || T.product.refusals.runtimeRequestRefused;
     const data = response.data;
+    const diagnostics = data && Array.isArray(data.diagnostics) ? data.diagnostics : [];
+    if (diagnostics.length > 0) {
+      return diagnostics[0]?.code || T.product.refusals.authoringRefused;
+    }
     if (data && data.ok === false) {
-      return data.diagnostics?.[0]?.code || data.reason || 'DESKTOP_AUTHORING_REFUSED';
+      return data.reason || T.product.refusals.authoringRefused;
     }
     return null;
   };
 
+  // Re-opening re-reads the document from the host, so a proposal the host is
+  // still holding has to be discarded there rather than only forgotten here:
+  // otherwise the shell reports a clean project while the session stays in
+  // \`reviewing\`, and the next Save reports "no staged changes" over an edit the
+  // host would still have applied.
+  const discardStagedProposal = async () => {
+    if (!projectDirty) return true;
+    const response = await runtimeRequest({ action: 'authoring', payload: { op: 'reject' } });
+    const reason = responseReason(response);
+    const snapshot = response?.ok ? response.data : null;
+    if (reason !== null || !snapshot || snapshot.phase !== 'rejected') {
+      productStatus('refused', 'Open refused · ' + (reason || T.product.refusals.proposalNotDiscarded));
+      return false;
+    }
+    projectDirty = false;
+    return true;
+  };
+
   const openProject = async () => {
+    if (!(await discardStagedProposal())) return false;
     productStatus('opening', T.product.documentPath + ' · opening…');
     const response = await runtimeRequest({
       action: 'authoring',
@@ -1271,7 +1356,7 @@ if (shell) {
     const reason = responseReason(response);
     const status = response?.ok ? response.data : null;
     if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' || status.data === null) {
-      productStatus('refused', 'Open refused · ' + (reason || 'DESKTOP_DOCUMENT_DATA_INVALID'));
+      productStatus('refused', 'Open refused · ' + (reason || T.product.refusals.documentDataInvalid));
       return false;
     }
     projectData = status.data;
@@ -1281,54 +1366,35 @@ if (shell) {
   };
 
   const stageWebEdit = async (kind) => {
+    // The decision refuses this too; answering before the round trip only keeps
+    // a profile that cannot stage from opening a document to be told so.
     if (shell.dataset.profile !== 'web') {
-      productStatus('refused', 'DESKTOP_WEB_CAPABILITY_REQUIRED');
+      productStatus('refused', 'Stage refused · ' + T.product.refusals.webCapabilityRequired);
       return;
     }
     if (projectData === null && !(await openProject())) return;
-    const current = projectData.webExperience;
-    let html = T.product.webStarter.html;
-    let assets = [];
-    const validAssetPath = (value) => {
-      if (value.trim() !== value || !value.startsWith('assets/')) return false;
-      if (value.includes('\\\\') || value.includes(':')) return false;
-      const segments = value.split('/');
-      return segments.length > 1 && segments.every((segment) =>
-        segment.length > 0 && segment !== '.' && segment !== '..' &&
-        /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(segment));
-    };
-    if (current !== undefined) {
-      const valid = current && typeof current === 'object' && typeof current.html === 'string' &&
-        Array.isArray(current.assets) && current.assets.every((asset) =>
-          typeof asset === 'string' && validAssetPath(asset));
-      if (!valid) {
-        productStatus('refused', 'DESKTOP_DOCUMENT_DATA_INVALID');
-        return;
-      }
-      html = current.html;
-      assets = [...current.assets];
-    }
-    if (kind === 'html') html = T.product.webStarter.html;
-    if (kind === 'asset' && !assets.includes(T.product.webStarter.assetPath)) {
-      assets.push(T.product.webStarter.assetPath);
-    }
-    const newValue = { ...projectData, webExperience: { html, assets } };
-    const response = await runtimeRequest({
-      action: 'authoring',
-      payload: {
-        op: 'propose',
-        documentPath: T.product.documentPath,
-        jsonPointer: '/data',
-        newValue,
+    const decision = webStageDecision(
+      {
+        profile: shell.dataset.profile,
+        documentData: projectData,
+        kind,
+        html: T.product.webStarter.html,
+        assetPath: T.product.webStarter.assetPath,
       },
-    });
+      T.product.stageConfig,
+    );
+    if (!decision.ok) {
+      productStatus('refused', 'Stage refused · ' + decision.reason);
+      return;
+    }
+    const response = await runtimeRequest(decision.request);
     const reason = responseReason(response);
     const snapshot = response?.ok ? response.data : null;
     if (reason !== null || !snapshot || snapshot.phase !== 'reviewing') {
-      productStatus('refused', 'Stage refused · ' + (reason || 'DESKTOP_PROPOSAL_NOT_REVIEWING'));
+      productStatus('refused', 'Stage refused · ' + (reason || T.product.refusals.proposalNotReviewing));
       return;
     }
-    projectData = newValue;
+    projectData = decision.request.payload.newValue;
     projectDirty = true;
     productStatus('dirty', T.product.documentPath + ' · staged · Save to apply');
   };
@@ -1343,28 +1409,60 @@ if (shell) {
     const reason = responseReason(response);
     const snapshot = response?.ok ? response.data : null;
     if (reason !== null || !snapshot || snapshot.phase !== 'applied') {
-      productStatus('refused', 'Save refused · ' + (reason || 'DESKTOP_APPLY_NOT_COMPLETED'));
+      productStatus('refused', 'Save refused · ' + (reason || T.product.refusals.applyNotCompleted));
       return;
     }
     projectDirty = false;
     productStatus('saved', T.product.documentPath + ' · saved');
   };
 
+  // Serialize the product loop: the host holds one session and one proposal, so
+  // a second action started before the first answers is not concurrency, it is a
+  // lost edit. The controls are inert for the duration, which is the surface's
+  // own vocabulary for "this cannot act right now".
+  const productAction = async (run) => {
+    if (inFlight) return;
+    inFlight = true;
+    q('[data-product-action]').forEach((el) => {
+      el.dataset.busy = 'true';
+      el.classList.add('is-inert');
+      el.setAttribute('aria-disabled', 'true');
+    });
+    try {
+      await run();
+    } finally {
+      inFlight = false;
+      // Cleared unconditionally, then re-decided: a control whose id the profile
+      // table does not carry must not stay disabled because a request finished.
+      q('[data-product-action]').forEach((el) => {
+        delete el.dataset.busy;
+        setRefusal(el, null);
+        applyControl(el);
+      });
+    }
+  };
+
   const playScene = async () => {
     runStatus('Opening composed scene…');
     const response = await runtimeRequest({ action: 'open-path' });
     if (response === null || !response.ok) {
-      runStatus('Play refused · ' + (response?.reason || T.product.runtimeUnavailable));
+      runRefusal(
+        response === null
+          ? T.product.refusals.runtimeUnavailable
+          : (response.reason || T.product.refusals.runtimeRequestRefused),
+      );
       return;
     }
     const exercise = response.data;
     const ticks = Array.isArray(exercise?.tickDigests) ? exercise.tickDigests.length : 0;
     if (exercise?.closed !== true || ticks === 0) {
-      runStatus('Play refused · DESKTOP_OPEN_PATH_EVIDENCE_INVALID');
+      runRefusal(T.product.refusals.openPathEvidenceInvalid);
       return;
     }
     showModePanels('run');
-    runStatus('Played composed scene · ' + ticks + ' ticks · session closed');
+    const played = 'Played composed scene · ' + ticks + ' ticks · session closed';
+    runStatus(played);
+    productStatus(projectDirty ? 'dirty' : (projectData === null ? 'closed' : 'open'), played);
   };
 
   const showModePanels = (mode) => {
@@ -1593,11 +1691,11 @@ if (shell) {
       el.setAttribute('aria-expanded', String(open));
       return;
     }
-    if (action === 'project-open') void openProject();
-    else if (action === 'project-save') void saveProject();
-    else if (action === 'scene-play') void playScene();
-    else if (action === 'web-stage-html') void stageWebEdit('html');
-    else if (action === 'web-inject-asset') void stageWebEdit('asset');
+    if (action === 'project-open') void productAction(openProject);
+    else if (action === 'project-save') void productAction(saveProject);
+    else if (action === 'scene-play') void productAction(playScene);
+    else if (action === 'web-stage-html') void productAction(() => stageWebEdit('html'));
+    else if (action === 'web-inject-asset') void productAction(() => stageWebEdit('asset'));
     else if (action === 'mode' && value) showModePanels(value);
     else if (action === 'dock-tab' && value) selectDockTab(value);
     else if (action === 'overlay') setOverlay(value || 'none');

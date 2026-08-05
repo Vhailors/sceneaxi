@@ -407,7 +407,14 @@ tabs, profile switch, assistant states, Change Review, command palette,
 overlays, sculpt progress, window tiers, the closed `DESKTOP_VISUAL_REFUSALS`
 registry) and `src/chrome.ts` renders it as one self-contained HTML document via
 the `sceneaxi-desktop chrome` command — no remote asset, no framework, no DOM
-types. Three invariants: every control declares `view` | `review` | `live` | `inert`,
+types. The first-release product loop is `src/product-loop.ts`, which owns the
+second closed registry, `DESKTOP_PRODUCT_REFUSALS` (the visual one re-exports
+`webCapabilityRequired` rather than restating it), and the one Web staging
+decision `desktopWebStageDecision()` — free of module bindings so the emitted
+script embeds that exact function instead of a hand-copied paraphrase of it.
+The chrome writes no refusal name as a literal: both registries are serialized
+into the script, and `refusalLegend()` prints a sentence for every code in
+either. Three invariants: every control declares `view` | `review` | `live` | `inert`,
 a `live` control is bound only by an explicit consumer runtime transition, and an
 inert one keeps its focus stop and names a refusal; the profile switch
 **projects** `openPathPolicyView()` rather than describing a profile, so parity

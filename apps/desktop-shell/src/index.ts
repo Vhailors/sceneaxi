@@ -148,10 +148,14 @@ export {
 
 export {
   DESKTOP_PRODUCT_CAPABILITY_IDS,
+  DESKTOP_PRODUCT_REFUSAL_MESSAGES,
   DESKTOP_PRODUCT_REFUSALS,
   DESKTOP_PROJECT,
+  DESKTOP_WEB_HTML_MAX_LENGTH,
+  DESKTOP_WEB_STAGE_CONFIG,
   DESKTOP_WEB_STARTER,
   desktopProductSurface,
+  desktopWebStageDecision,
   stageWebAssetInjection,
   stageWebHtml,
   type DesktopAuthoringRequest,
@@ -160,4 +164,6 @@ export {
   type DesktopProductRefusal,
   type DesktopProductSurface,
   type DesktopStageDecision,
+  type DesktopWebStageConfig,
+  type DesktopWebStageOperation,
 } from "./product-loop.js";

@@ -214,6 +214,32 @@ must contain tick digests and a closed session before the chrome reports play.
 The separate renderer owner continues drawing the same `MountableScene`; the
 shell neither constructs a renderer nor invents a pixel claim.
 
+The staging decision itself lives in exactly one place. `desktopWebStageDecision()`
+closes over no module binding, so `chrome.ts` embeds `String(desktopWebStageDecision)`
+into the emitted script and passes it the serialized `DESKTOP_WEB_STAGE_CONFIG`:
+the browser runs the same function `stageWebHtml()` and `stageWebAssetInjection()`
+call, rather than a hand-copied paraphrase that can — and previously did — lose a
+guard. The exported wrappers add only the deeper finite-JSON check an in-process
+caller needs, after the shared decision has answered, so the refusal order is
+identical on both sides. `test/product-loop.test.ts` asserts the emitted document
+contains that exact function and still parses as JavaScript.
+
+Two loop properties the surface depends on. **One request at a time:** every live
+control reads the retained document before its first `await`, and the host holds a
+single proposal, so overlapping clicks are serialized and the controls report
+themselves unavailable for the duration — otherwise the second action would build
+its proposal from the pre-edit document and silently replace the first. **Re-opening
+discards on the host, not just locally:** Open rejects a proposal the session is
+still holding before it re-reads, so the surface never reports a clean project over
+an edit the host would still apply.
+
+The product status is written to the title pill, the left-dock file line, **and** an
+always-visible status-bar mirror, which is also where the `aria-live` region lives.
+Below the compact tier the title centre is `display:none` and the left dock is a
+closed drawer, so a refusal written only to those two would be unreadable at exactly
+the sizes in the recorded browser evidence; Play refusals go to the product status
+for the same reason, since the run report is hidden there too.
+
 The Game surface names scene authoring, composed-scene play, and project-local
 FreeJS behavior. Web Experience names stored HTML, site canvas, asset injection,
 and the same composed-scene play path without importing any site or billing
@@ -273,8 +299,19 @@ correctly and then never updated, so clicking the Kids chip left a footer readin
 
 ### Refusal registry
 
-`DESKTOP_VISUAL_REFUSALS` is closed, and every entry is reachable from some state
-— asserted in both directions.
+Two closed registries, never a string literal in a call site.
+`DESKTOP_VISUAL_REFUSALS` (`visual-model.ts`) names why a *control* renders inert,
+and every entry is reachable from some state — asserted in both directions.
+`DESKTOP_PRODUCT_REFUSALS` (`product-loop.ts`) names why a *product-loop action*
+declines, on either side of the host port. `DESKTOP_WEB_CAPABILITY_REQUIRED` is
+one code with one owner: the visual registry re-exports the product-loop entry
+rather than restating the string, because the same refusal both greys the control
+out and refuses the staging decision behind it.
+
+`refusalLegend()` prints a sentence for every code in both registries, de-duplicated
+by code, and the emitted script reads its names out of the serialized
+`T.product.refusals` table — so a refusal a visitor can read is a refusal the
+document also explains. `test/product-loop.test.ts` asserts that in both directions.
 
 | Code | When |
 |---|---|
@@ -286,6 +323,26 @@ correctly and then never updated, so clicking the Kids chip left a footer readin
 | `DESKTOP_WEB_CAPABILITY_REQUIRED` | the Web stored-HTML and asset-injection controls on Game; Kids takes the stronger profile refusal first |
 | `DESKTOP_VERB_NOT_ON_THIS_SURFACE` | a palette row naming a CLI verb this shell has no command for, and every application-menu button — this surface has no command behind any of the archive's menus |
 | `DESKTOP_WINDOW_BELOW_MINIMUM` | the window is smaller than 900×600 |
+
+| Product-loop code | When |
+|---|---|
+| `DESKTOP_WEB_CAPABILITY_REQUIRED` | staging asked for outside Web Experience (the same code the control carries) |
+| `DESKTOP_WEB_ASSET_PATH_INVALID` | an injected asset is not a normalized project-relative path under `assets/` |
+| `DESKTOP_WEB_HTML_INVALID` | stored markup exceeds 100,000 characters or carries a null byte |
+| `DESKTOP_DOCUMENT_DATA_INVALID` | the open document's data, or its existing `webExperience` value, is not data this loop may replace |
+| `DESKTOP_RUNTIME_UNAVAILABLE` | no packaged host port is attached |
+| `DESKTOP_RUNTIME_REQUEST_FAILED` | the host threw instead of answering |
+| `DESKTOP_RUNTIME_REQUEST_REFUSED` | the host refused and named no reason of its own |
+| `DESKTOP_AUTHORING_REFUSED` | the shared authoring session refused and carried no diagnostic code |
+| `DESKTOP_PROPOSAL_NOT_REVIEWING` | propose returned without parking the edit for review |
+| `DESKTOP_PROPOSAL_NOT_DISCARDED` | re-opening could not discard the proposal the host still holds |
+| `DESKTOP_APPLY_NOT_COMPLETED` | accept returned without reporting the apply completed |
+| `DESKTOP_OPEN_PATH_EVIDENCE_INVALID` | the play response carried no closed session with observed tick digests |
+
+A named diagnostic from the host wins over the generic code above it: the surface
+prints `snapshot.diagnostics[0].code` when there is one, which is how
+`apply-in-progress` — the session's cue that journal recovery, not another click,
+is what moves this forward — reaches the operator.
 
 ### Parity with the CLI
 

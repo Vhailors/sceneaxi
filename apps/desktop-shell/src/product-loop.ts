@@ -9,7 +9,6 @@
 import {
   OPEN_PATH_REFUSE_CODES,
   isJsonObject,
-  isJsonValue,
   openPathPolicyRowFor,
   type JsonObject,
 } from "@sceneaxi/schemas";
@@ -103,16 +102,61 @@ export type DesktopProductSurface = Readonly<{
   refusal: Readonly<{ code: string; message: string }> | null;
 }>;
 
+/**
+ * Every name the product loop can refuse with, on either side of the bridge.
+ *
+ * The emitted chrome script reads these out of its serialized table rather than
+ * writing string literals of its own, so a refusal the browser can print is a
+ * refusal `refusalLegend()` explains and `DESKTOP_PRODUCT_REFUSAL_MESSAGES`
+ * owns. `webCapabilityRequired` is re-exported by `DESKTOP_VISUAL_REFUSALS`
+ * rather than restated there — one code, one owner.
+ */
 export const DESKTOP_PRODUCT_REFUSALS = Object.freeze({
   webCapabilityRequired: "DESKTOP_WEB_CAPABILITY_REQUIRED",
   webAssetPathInvalid: "DESKTOP_WEB_ASSET_PATH_INVALID",
   webHtmlInvalid: "DESKTOP_WEB_HTML_INVALID",
   documentDataInvalid: "DESKTOP_DOCUMENT_DATA_INVALID",
   runtimeUnavailable: "DESKTOP_RUNTIME_UNAVAILABLE",
+  runtimeRequestFailed: "DESKTOP_RUNTIME_REQUEST_FAILED",
+  runtimeRequestRefused: "DESKTOP_RUNTIME_REQUEST_REFUSED",
+  authoringRefused: "DESKTOP_AUTHORING_REFUSED",
+  proposalNotReviewing: "DESKTOP_PROPOSAL_NOT_REVIEWING",
+  proposalNotDiscarded: "DESKTOP_PROPOSAL_NOT_DISCARDED",
+  applyNotCompleted: "DESKTOP_APPLY_NOT_COMPLETED",
+  openPathEvidenceInvalid: "DESKTOP_OPEN_PATH_EVIDENCE_INVALID",
 } as const);
 
 export type DesktopProductRefusal =
   (typeof DESKTOP_PRODUCT_REFUSALS)[keyof typeof DESKTOP_PRODUCT_REFUSALS];
+
+export const DESKTOP_PRODUCT_REFUSAL_MESSAGES: Readonly<
+  Record<DesktopProductRefusal, string>
+> = Object.freeze({
+  [DESKTOP_PRODUCT_REFUSALS.webCapabilityRequired]:
+    "HTML, site-canvas, and asset-injection authoring are available only on the Web Experience profile.",
+  [DESKTOP_PRODUCT_REFUSALS.webAssetPathInvalid]:
+    "An injected asset must be a normalized project-relative path under assets/.",
+  [DESKTOP_PRODUCT_REFUSALS.webHtmlInvalid]:
+    "Stored HTML must be at most 100,000 characters and contain no null byte.",
+  [DESKTOP_PRODUCT_REFUSALS.documentDataInvalid]:
+    "The open Scene Document data is not the JSON object data this loop can edit.",
+  [DESKTOP_PRODUCT_REFUSALS.runtimeUnavailable]:
+    "No packaged desktop host is attached, so this surface opens, saves, and plays nothing.",
+  [DESKTOP_PRODUCT_REFUSALS.runtimeRequestFailed]:
+    "The packaged host threw instead of answering, so no project state changed here.",
+  [DESKTOP_PRODUCT_REFUSALS.runtimeRequestRefused]:
+    "The packaged host refused the request by name; its own reason is shown beside this one.",
+  [DESKTOP_PRODUCT_REFUSALS.authoringRefused]:
+    "The shared authoring session refused the edit; its first diagnostic is shown beside this one.",
+  [DESKTOP_PRODUCT_REFUSALS.proposalNotReviewing]:
+    "The host did not park the edit for review, so nothing is staged to save.",
+  [DESKTOP_PRODUCT_REFUSALS.proposalNotDiscarded]:
+    "A staged proposal is still held by the host, so re-opening would abandon an edit the host still has.",
+  [DESKTOP_PRODUCT_REFUSALS.applyNotCompleted]:
+    "The host did not report the apply as completed, so the staged edit is still pending.",
+  [DESKTOP_PRODUCT_REFUSALS.openPathEvidenceInvalid]:
+    "The play response carried no closed session with observed tick digests, so nothing is reported as played.",
+});
 
 export type DesktopAuthoringRequest = Readonly<{
   action: "authoring";
@@ -133,94 +177,165 @@ export const DESKTOP_WEB_STARTER = Object.freeze({
   assetPath: "assets/hero.glb",
 });
 
-function projectAssetPath(value: string): boolean {
-  if (value.trim() !== value || !value.startsWith("assets/")) return false;
-  if (value.includes("\\") || value.includes(":")) return false;
-  const segments = value.split("/");
-  return (
-    segments.length > 1 &&
-    segments.every(
-      (segment) =>
-        segment.length > 0 &&
-        segment !== "." &&
-        segment !== ".." &&
-        /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(segment),
-    )
-  );
-}
+/** Stored markup is data, so its size and byte content are bounded. */
+export const DESKTOP_WEB_HTML_MAX_LENGTH = 100_000;
 
-function webExperienceData(value: unknown): Readonly<{
-  html: string;
-  assets: readonly string[];
-}> | null {
-  if (value === undefined) {
-    return Object.freeze({
-      html: DESKTOP_WEB_STARTER.html,
-      assets: Object.freeze([]),
-    });
-  }
-  if (!isJsonObject(value)) return null;
-  const html = value["html"];
-  const assets = value["assets"];
-  if (
-    typeof html !== "string" ||
-    !Array.isArray(assets) ||
-    !assets.every((asset) => typeof asset === "string" && projectAssetPath(asset))
-  ) {
-    return null;
-  }
-  return Object.freeze({ html, assets: Object.freeze([...assets]) });
-}
-
-function stageWebData(input: Readonly<{
-  profile: DesktopProfileId;
+export type DesktopWebStageOperation = Readonly<{
+  profile: string;
   documentData: unknown;
-  update: (
-    current: Readonly<{ html: string; assets: readonly string[] }>,
-  ) => Readonly<{ html: string; assets: readonly string[] }>;
-}>): DesktopStageDecision {
-  if (input.profile !== "web") {
-    return Object.freeze({
-      ok: false as const,
-      reason: DESKTOP_PRODUCT_REFUSALS.webCapabilityRequired,
-      message: "This authoring operation is available only on the Web Experience profile.",
-    });
+  kind: "html" | "asset";
+  html: string;
+  assetPath: string;
+}>;
+
+export type DesktopWebStageConfig = Readonly<{
+  documentPath: typeof DESKTOP_PROJECT.activeFile;
+  starterHtml: string;
+  htmlMaxLength: number;
+  refusals: Readonly<
+    Pick<
+      typeof DESKTOP_PRODUCT_REFUSALS,
+      | "webCapabilityRequired"
+      | "webAssetPathInvalid"
+      | "webHtmlInvalid"
+      | "documentDataInvalid"
+    >
+  >;
+}>;
+
+export const DESKTOP_WEB_STAGE_CONFIG: DesktopWebStageConfig = Object.freeze({
+  documentPath: DESKTOP_PROJECT.activeFile,
+  starterHtml: DESKTOP_WEB_STARTER.html,
+  htmlMaxLength: DESKTOP_WEB_HTML_MAX_LENGTH,
+  refusals: DESKTOP_PRODUCT_REFUSALS,
+});
+
+/**
+ * The one Web Experience staging decision — profile gate, stored-data shape,
+ * project-relative asset path, markup bounds, and the proposal it builds.
+ *
+ * It closes over no module binding on purpose: `String(desktopWebStageDecision)`
+ * is what the emitted chrome script runs, so the shipped browser path and the
+ * exported functions below are the same function rather than two copies of it.
+ * Everything it needs beyond its arguments is a language global.
+ */
+export function desktopWebStageDecision(
+  operation: DesktopWebStageOperation,
+  config: DesktopWebStageConfig,
+): DesktopStageDecision {
+  const assetPattern =
+    /^assets\/(?:[A-Za-z0-9][A-Za-z0-9._-]*\/)*[A-Za-z0-9][A-Za-z0-9._-]*$/;
+  const refuse = (
+    reason: DesktopProductRefusal,
+    message: string,
+  ): DesktopStageDecision =>
+    Object.freeze({ ok: false as const, reason, message });
+
+  if (operation.profile !== "web") {
+    return refuse(
+      config.refusals.webCapabilityRequired,
+      "HTML and asset injection are available only on the Web Experience profile.",
+    );
   }
-  if (!isJsonObject(input.documentData) || !isJsonValue(input.documentData)) {
-    return Object.freeze({
-      ok: false as const,
-      reason: DESKTOP_PRODUCT_REFUSALS.documentDataInvalid,
-      message: "The open Scene Document data is not finite JSON object data.",
-    });
+
+  const data = operation.documentData;
+  if (typeof data !== "object" || data === null || Array.isArray(data)) {
+    return refuse(
+      config.refusals.documentDataInvalid,
+      "The open Scene Document data is not JSON object data.",
+    );
   }
-  const currentWeb = webExperienceData(input.documentData["webExperience"]);
-  if (currentWeb === null) {
-    return Object.freeze({
-      ok: false as const,
-      reason: DESKTOP_PRODUCT_REFUSALS.documentDataInvalid,
-      message: "The existing webExperience data is malformed and cannot be replaced implicitly.",
-    });
+  const record = data as Record<string, unknown>;
+
+  let html = config.starterHtml;
+  let assets: string[] = [];
+  const existing = record["webExperience"];
+  if (existing !== undefined) {
+    const web =
+      typeof existing === "object" && existing !== null && !Array.isArray(existing)
+        ? (existing as Record<string, unknown>)
+        : null;
+    const storedHtml = web === null ? undefined : web["html"];
+    const storedAssets = web === null ? undefined : web["assets"];
+    if (
+      typeof storedHtml !== "string" ||
+      !Array.isArray(storedAssets) ||
+      !storedAssets.every(
+        (asset) => typeof asset === "string" && assetPattern.test(asset),
+      )
+    ) {
+      return refuse(
+        config.refusals.documentDataInvalid,
+        "The existing webExperience data is malformed and cannot be replaced implicitly.",
+      );
+    }
+    html = storedHtml;
+    assets = storedAssets.map((asset) => String(asset));
   }
-  const updated = input.update(currentWeb);
-  const newValue: JsonObject = {
-    ...structuredClone(input.documentData),
-    webExperience: {
-      html: updated.html,
-      assets: [...updated.assets],
-    },
-  };
+
+  if (operation.kind === "html") {
+    if (
+      typeof operation.html !== "string" ||
+      operation.html.length > config.htmlMaxLength ||
+      operation.html.includes("\u0000")
+    ) {
+      return refuse(
+        config.refusals.webHtmlInvalid,
+        "Stored HTML must be at most 100,000 characters and contain no null byte.",
+      );
+    }
+    html = operation.html;
+  } else {
+    if (
+      typeof operation.assetPath !== "string" ||
+      !assetPattern.test(operation.assetPath)
+    ) {
+      return refuse(
+        config.refusals.webAssetPathInvalid,
+        "An injected asset must be a normalized project-relative path under assets/.",
+      );
+    }
+    if (!assets.includes(operation.assetPath)) assets.push(operation.assetPath);
+  }
+
+  const newValue = {
+    ...structuredClone(record),
+    webExperience: { html, assets },
+  } as JsonObject;
+
   return Object.freeze({
     ok: true as const,
     request: Object.freeze({
       action: "authoring" as const,
       payload: Object.freeze({
         op: "propose" as const,
-        documentPath: DESKTOP_PROJECT.activeFile,
+        documentPath: config.documentPath,
         jsonPointer: "/data" as const,
         newValue,
       }),
     }),
   });
+}
+
+/**
+ * The in-process form of the shared decision.
+ *
+ * The browser's document data comes from the host, which already parsed it as a
+ * document; an in-process caller may hand over anything, so the deeper
+ * finite-JSON check belongs here — and runs after the shared decision has
+ * answered, so a refusal ordering is the same on both sides of the bridge.
+ */
+function stageWebEdit(operation: DesktopWebStageOperation): DesktopStageDecision {
+  const decision = desktopWebStageDecision(operation, DESKTOP_WEB_STAGE_CONFIG);
+  if (!decision.ok) return decision;
+  if (!isJsonObject(operation.documentData)) {
+    return Object.freeze({
+      ok: false as const,
+      reason: DESKTOP_PRODUCT_REFUSALS.documentDataInvalid,
+      message: "The open Scene Document data is not finite JSON object data.",
+    });
+  }
+  return decision;
 }
 
 /**
@@ -232,29 +347,12 @@ export function stageWebAssetInjection(input: Readonly<{
   documentData: unknown;
   assetPath: string;
 }>): DesktopStageDecision {
-  if (input.profile !== "web") {
-    return Object.freeze({
-      ok: false as const,
-      reason: DESKTOP_PRODUCT_REFUSALS.webCapabilityRequired,
-      message: "Asset injection is available only on the Web Experience profile.",
-    });
-  }
-  if (!projectAssetPath(input.assetPath)) {
-    return Object.freeze({
-      ok: false as const,
-      reason: DESKTOP_PRODUCT_REFUSALS.webAssetPathInvalid,
-      message: "An injected asset must be a normalized project-relative path under assets/.",
-    });
-  }
-  return stageWebData({
+  return stageWebEdit({
     profile: input.profile,
     documentData: input.documentData,
-    update: (current) => ({
-      html: current.html,
-      assets: current.assets.includes(input.assetPath)
-        ? current.assets
-        : [...current.assets, input.assetPath],
-    }),
+    kind: "asset",
+    html: DESKTOP_WEB_STARTER.html,
+    assetPath: input.assetPath,
   });
 }
 
@@ -264,24 +362,12 @@ export function stageWebHtml(input: Readonly<{
   documentData: unknown;
   html: string;
 }>): DesktopStageDecision {
-  if (input.profile !== "web") {
-    return Object.freeze({
-      ok: false as const,
-      reason: DESKTOP_PRODUCT_REFUSALS.webCapabilityRequired,
-      message: "HTML authoring is available only on the Web Experience profile.",
-    });
-  }
-  if (input.html.length > 100_000 || input.html.includes("\u0000")) {
-    return Object.freeze({
-      ok: false as const,
-      reason: DESKTOP_PRODUCT_REFUSALS.webHtmlInvalid,
-      message: "Stored HTML must be at most 100,000 characters and contain no null byte.",
-    });
-  }
-  return stageWebData({
+  return stageWebEdit({
     profile: input.profile,
     documentData: input.documentData,
-    update: (current) => ({ html: input.html, assets: current.assets }),
+    kind: "html",
+    html: input.html,
+    assetPath: DESKTOP_WEB_STARTER.assetPath,
   });
 }
 
