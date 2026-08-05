@@ -79,8 +79,10 @@ Rules the gate enforces (`pnpm check:desktop`, `pnpm check:boundaries`,
 - The visual model is consumed, never duplicated: no control, mode, refusal, or
   token is re-declared here, and the emitted document is byte-derived from
   `renderDesktopChrome()` plus exactly two injections (a runtime marker meta and
-  the renderer script tag). Runtime loss is signalled back to the chrome, which
-  applies the visual model's precomputed unavailable transition to every control.
+  the renderer script tag). The document starts with the assistant runtime
+  unavailable; only complete viewport and handler binding promotes it to local.
+  Runtime loss is signalled back to the chrome, which applies the visual model's
+  precomputed unavailable transition to every control.
 - The chrome's `sceneaxi-pixels-drawn` meta stays `false` at build time; the
   renderer updates it only from a real presentation frame's `pixelsDrawn`.
 - Kids has no assistant path here: the chrome's refuse-only projection stays

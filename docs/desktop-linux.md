@@ -75,6 +75,8 @@ transitioned by the visual model to `DESKTOP_NO_PRESENTATION_RUNTIME` instead of
 staying live and unbound, because a control here is either live and acts or inert
 and names a refusal. Selecting Kids removes the composer, and authoring-core also
 denies the carried Kids profile before local compilation or provider dispatch.
+The packaged document starts in that unavailable state and transitions to local
+only after the bridge, initial Mount API scene, and every assistant handler bind.
 
 The first-release manipulator is deliberately bounded: `Move +X` and `Move +Y`
 advance by 0.25 world units, `Rotate Y` advances by 15 degrees, and `Scale +`

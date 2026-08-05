@@ -123,15 +123,25 @@ function frameText(frame: SculptPresentationFrame): string {
   ].join(" · ");
 }
 
-function signalAssistantRuntimeUnavailable(message: string): void {
+function signalAssistantRuntime(
+  runtime: "none" | "local",
+  message?: string,
+): void {
   const shell = document.querySelector<HTMLElement>(".shell");
   const eventName = shell?.dataset.assistantRuntimeEvent;
   if (eventName === undefined) return;
   document.dispatchEvent(
     new CustomEvent(eventName, {
-      detail: Object.freeze({ runtime: "none", message }),
+      detail: Object.freeze({
+        runtime,
+        ...(message === undefined ? {} : { message }),
+      }),
     }),
   );
+}
+
+function signalAssistantRuntimeUnavailable(message: string): void {
+  signalAssistantRuntime("none", message);
 }
 
 /**
@@ -184,14 +194,37 @@ function installAssistantProductFlow(
   port: BridgeGlobal,
   mounts: ReturnType<typeof createSculptMountApi>,
   backend: ReturnType<typeof createThreeSculptPresentationBackend>,
-): void {
+): boolean {
   const shell = document.querySelector<HTMLElement>(".shell");
   const prompt = document.querySelector<HTMLTextAreaElement>("#assistant-prompt");
+  const send = document.querySelector<HTMLElement>("#assistant-send");
   const status = document.querySelector<HTMLElement>("[data-assistant-status]");
   const resultView = document.querySelector<HTMLElement>("[data-assistant-result]");
   const retry = document.querySelector<HTMLButtonElement>("#assistant-retry");
   const manipulatorBar = stage.querySelector<HTMLElement>("[data-assistant-manipulators]");
-  if (shell === null || prompt === null || status === null || resultView === null) return;
+  const sendControls = Array.from(
+    document.querySelectorAll<HTMLElement>("[data-action='assistant-send']"),
+  );
+  const manipulatorControls = Array.from(
+    manipulatorBar?.querySelectorAll<HTMLButtonElement>(
+      "[data-action='assistant-manipulator']",
+    ) ?? [],
+  );
+  if (
+    shell === null ||
+    prompt === null ||
+    send === null ||
+    status === null ||
+    resultView === null ||
+    retry === null ||
+    manipulatorBar === null ||
+    sendControls.length === 0 ||
+    !sendControls.includes(send) ||
+    !sendControls.includes(retry) ||
+    manipulatorControls.length === 0
+  ) {
+    return false;
+  }
   let running = false;
   let assistantInstanceId: string | null = null;
   const identityTransform = () => ({
@@ -201,39 +234,37 @@ function installAssistantProductFlow(
   });
   let manipulatorTransform = identityTransform();
 
-  manipulatorBar
-    ?.querySelectorAll<HTMLButtonElement>("[data-action='assistant-manipulator']")
-    .forEach((control) => {
-      control.addEventListener("click", () => {
-        if (control.getAttribute("aria-disabled") === "true") return;
-        switch (control.dataset.value) {
-          case "move-x":
-            manipulatorTransform.translation[0] += 0.25;
-            break;
-          case "move-y":
-            manipulatorTransform.translation[1] += 0.25;
-            break;
-          case "rotate-y":
-            manipulatorTransform.rotationEulerDegrees[1] += 15;
-            break;
-          case "scale-up":
-            manipulatorTransform.scale = [
-              manipulatorTransform.scale[0] + 0.1,
-              manipulatorTransform.scale[1] + 0.1,
-              manipulatorTransform.scale[2] + 0.1,
-            ];
-            break;
-          default:
-            return;
-        }
-        if (assistantInstanceId === null) return;
-        mounts.updateTransform(assistantInstanceId, {
-          translation: [...manipulatorTransform.translation],
-          rotationEulerDegrees: [...manipulatorTransform.rotationEulerDegrees],
-          scale: [...manipulatorTransform.scale],
-        });
+  manipulatorControls.forEach((control) => {
+    control.addEventListener("click", () => {
+      if (control.getAttribute("aria-disabled") === "true") return;
+      switch (control.dataset.value) {
+        case "move-x":
+          manipulatorTransform.translation[0] += 0.25;
+          break;
+        case "move-y":
+          manipulatorTransform.translation[1] += 0.25;
+          break;
+        case "rotate-y":
+          manipulatorTransform.rotationEulerDegrees[1] += 15;
+          break;
+        case "scale-up":
+          manipulatorTransform.scale = [
+            manipulatorTransform.scale[0] + 0.1,
+            manipulatorTransform.scale[1] + 0.1,
+            manipulatorTransform.scale[2] + 0.1,
+          ];
+          break;
+        default:
+          return;
+      }
+      if (assistantInstanceId === null) return;
+      mounts.updateTransform(assistantInstanceId, {
+        translation: [...manipulatorTransform.translation],
+        rotationEulerDegrees: [...manipulatorTransform.rotationEulerDegrees],
+        scale: [...manipulatorTransform.scale],
       });
     });
+  });
 
   const refused = (reason: string, message: string): void => {
     running = false;
@@ -332,7 +363,7 @@ function installAssistantProductFlow(
     await poll();
   };
 
-  document.querySelectorAll<HTMLElement>("[data-action='assistant-send']").forEach((control) => {
+  sendControls.forEach((control) => {
     control.addEventListener("click", () => {
       if (control.getAttribute("aria-disabled") === "true") return;
       void start().catch((error: unknown) =>
@@ -340,6 +371,7 @@ function installAssistantProductFlow(
       );
     });
   });
+  return true;
 }
 
 async function mountLiveViewport(): Promise<void> {
@@ -478,7 +510,14 @@ async function mountLiveViewport(): Promise<void> {
     },
   });
   loop.start();
-  installAssistantProductFlow(stage, port, mounts, backend);
+  const assistantBound = installAssistantProductFlow(stage, port, mounts, backend);
+  if (assistantBound) {
+    signalAssistantRuntime("local");
+  } else {
+    signalAssistantRuntimeUnavailable(
+      "the assistant controls could not be bound to the mounted presentation runtime.",
+    );
+  }
 
   // Everything below runs after `loop.start()`, so it names itself on its own line
   // — a refusal written to the frame report would be overwritten by the next frame.

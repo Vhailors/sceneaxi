@@ -178,7 +178,7 @@ class FakeShell extends FakeElement {
   ) {
     super("shell", {
       assistant: "open",
-      assistantRuntime: "local",
+      assistantRuntime: "none",
       drawerAssistant: "open",
       overlay: "none",
       profile: "game",
@@ -796,18 +796,21 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     expect(html).toContain('<div class="viewport">');
     expect(html).toContain("viewport-note-inert");
     expect(html).toContain("<title>SceneAxi Engine Desktop</title>");
-    expect(html).toContain('<textarea id="assistant-prompt" data-kind="live"');
+    expect(html).toContain('data-assistant-runtime="none"');
+    expect(html).toContain(
+      `<textarea id="assistant-prompt" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.noPresentationRuntime}"`,
+    );
     expect(html).toContain(
       `data-assistant-runtime-event="${DESKTOP_ASSISTANT_RUNTIME_EVENT}"`,
     );
     expect(html).toContain("Hosted · metered");
   });
 
-  it("preserves runtime composer refusal across profile switches", () => {
+  it("activates only after runtime binding and preserves refusal across profiles", () => {
     const runtimeRefusal = DESKTOP_BRIDGE_REFUSALS.presentationRuntimeUnavailable;
-    const prompt = new FakeTextAreaElement("assistant-prompt", { kind: "live" });
-    const send = new FakeElement("assistant-send", { kind: "live" });
-    const retry = new FakeElement("assistant-retry", { kind: "live" });
+    const prompt = new FakeTextAreaElement("assistant-prompt", { kind: "inert" });
+    const send = new FakeElement("assistant-send", { kind: "inert" });
+    const retry = new FakeElement("assistant-retry", { kind: "inert" });
     const controls = [prompt, send, retry];
     const profileChips = ["game", "web", "kids"].map(
       (profile) =>
@@ -839,10 +842,6 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       },
     });
 
-    documentListeners.get(DESKTOP_ASSISTANT_RUNTIME_EVENT)?.({
-      detail: { runtime: "none", message: "Viewport unavailable" },
-    });
-
     const switchTo = (profile: string): void => {
       const chip = profileChips.find((candidate) => candidate.dataset.value === profile);
       if (chip === undefined || shell.clickListener === undefined) {
@@ -860,6 +859,33 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       }
       expect(prompt.readOnly).toBe(true);
     };
+
+    const expectLive = (): void => {
+      for (const control of controls) {
+        expect(control.dataset.kind).toBe("live");
+        expect(control.dataset.refusal).toBeUndefined();
+        expect(control.getAttribute("aria-disabled")).toBeNull();
+        expect(control.getAttribute("aria-describedby")).toBeNull();
+        expect(control.classList.contains("is-inert")).toBe(false);
+      }
+      expect(prompt.readOnly).toBe(false);
+    };
+
+    documentListeners.get(DESKTOP_ASSISTANT_RUNTIME_EVENT)?.({
+      detail: { runtime: "local" },
+    });
+    expectLive();
+    switchTo("web");
+    expectLive();
+    switchTo("kids");
+    expectRefusal(DESKTOP_VISUAL_REFUSALS.kidsAssistantDenied);
+    switchTo("game");
+    expectLive();
+
+    documentListeners.get(DESKTOP_ASSISTANT_RUNTIME_EVENT)?.({
+      detail: { runtime: "none", message: "Viewport unavailable" },
+    });
+    expectRefusal(runtimeRefusal);
 
     switchTo("web");
     expectRefusal(runtimeRefusal);
@@ -916,13 +942,17 @@ describe("desktop renderer module accounting", () => {
       join(desktopRoot, "linux/src/renderer/viewport.ts"),
       "utf8",
     );
-    // The chrome renders the composer live for the declared desktop runtime, and
-    // the flow is bound only after the scene request, backend construction, and
-    // first mount succeed. Every path that returns before that has to name a
-    // refusal on those controls rather than leaving Send inert-looking-live.
+    // The chrome starts the composer inert. The runtime promotes it only after
+    // the scene request, backend construction, first mount, and handler binding.
+    // Every earlier return keeps the model-owned unavailable transition.
     expect(source).toContain("signalAssistantRuntimeUnavailable");
+    expect(source).toContain('signalAssistantRuntime("local")');
+    expect(source).toContain("const assistantBound = installAssistantProductFlow");
+    expect(source.indexOf("const assistantBound = installAssistantProductFlow")).toBeLessThan(
+      source.indexOf('signalAssistantRuntime("local")'),
+    );
     expect(source).toContain("shell?.dataset.assistantRuntimeEvent");
-    expect(source).toContain('runtime: "none"');
+    expect(source).toContain('signalAssistantRuntime("none", message)');
     expect(source).not.toContain("ASSISTANT_CONTROL_IDS");
     // One place says it, and that place settles the composer too — a second
     // refusal sentence would be a path that reports without disarming Send.

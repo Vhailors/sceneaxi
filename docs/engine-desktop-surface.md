@@ -182,11 +182,12 @@ always has a refusal and a non-inert one never does.
 The chrome still reaches no authoring package itself. Its standalone CLI render
 therefore keeps every product action inert and `test/app.test.ts` proves a
 `chrome` invocation leaves a document byte-identical. The packaged Linux tier
-requests `assistantRuntime: "local"`, binds the assistant's `live` controls to
-its existing bridge and Mount API, and owns that runtime contract in
-`docs/desktop-linux.md`. If that runtime cannot mount, the renderer emits the
-model-owned runtime event; the chrome applies the precomputed `none` projection
-to every control rather than maintaining a renderer-owned control list.
+also renders `assistantRuntime: "none"`; after its bridge, initial Mount API scene,
+and every assistant handler bind, the renderer emits the model-owned runtime event
+that promotes the controls to `local`. If that runtime cannot mount or bind, the
+chrome retains the precomputed `none` projection for every control rather than
+maintaining a renderer-owned control list. The runtime contract is owned in
+`docs/desktop-linux.md`.
 
 ### The refuse-only profile demotes in one place
 

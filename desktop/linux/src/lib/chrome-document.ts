@@ -52,7 +52,7 @@ const RUNTIME_ANCHORS: readonly { readonly markup: string; readonly used: string
   },
   {
     markup: `data-assistant-runtime-event="${DESKTOP_ASSISTANT_RUNTIME_EVENT}"`,
-    used: "the renderer signals runtime loss to the visual model's control transition",
+    used: "the renderer signals runtime availability to the visual model's control transition",
   },
 ];
 
@@ -68,7 +68,7 @@ export type DesktopIndexHtmlOptions = {
  */
 export function desktopLinuxIndexHtml(options: DesktopIndexHtmlOptions = {}): string {
   const view = desktopVisualView(
-    createDesktopVisualState({ assistantRuntime: "local" }),
+    createDesktopVisualState({ assistantRuntime: "none" }),
   );
   const chrome = renderDesktopChrome(view, {
     title: options.title ?? "SceneAxi Engine Desktop",

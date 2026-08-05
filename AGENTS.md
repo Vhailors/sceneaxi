@@ -413,6 +413,8 @@ with the CLI is a data identity; and the chrome mounts no presentation runtime
 and opens no kernel session, so it draws no pixels, invents no digest, byte
 size, frame rate, or timing. Its visual model invokes no authoring operation; the
 packaged Linux consumer binds its live assistant controls through the bridge above.
+Its document starts with the assistant runtime unavailable and the renderer promotes
+it to local only after the bridge, presentation mount, and control handlers are bound.
 The
 canonical archive digest, the `Engine Desktop v1.dc.html` supersession (amber
 accent, Space Grotesk/IBM Plex, fixed 2064×1400 launcher storyboard — none of it
