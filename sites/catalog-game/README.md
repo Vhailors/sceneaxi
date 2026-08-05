@@ -4,6 +4,10 @@ The deployable game-asset catalog site: browse and detail over listed catalog
 fixtures, dual pricing (credits and/or money), the creator 50% share note, and deep
 links into the umbrella's Minimum E2 editor.
 
+The inventory is exactly the validated bundled twin of
+`packages/schemas/contracts/catalog-listings.fixtures.json`. The fixture is TEST-only
+and carries listing metadata, not an asset payload or a payment completion.
+
 ## Shape
 
 A thin view + wiring layer over `@sceneaxi/site-kit`, which owns the catalog view
@@ -28,11 +32,13 @@ matrix denies this site `@sceneaxi/auth` and `@sceneaxi/billing`, and no adapter
 supplied here, so an unwired deployment refuses rather than inventing a viewer. The plane
 and its activation are owned by [`docs/websites-deploy.md`](../../docs/websites-deploy.md).
 
-## Commerce is inert
+## TEST purchase is explicit and fail-closed
 
 `COMMERCE_ACTIVATION_GATE` always refuses while tier-6b marketplace activation keys
 remain open. Prices and the creator share are displayed; purchase and publish refuse
-`CATALOG_COMMERCE_INERT`. There is no checkout, cart, or payment field.
+`CATALOG_COMMERCE_INERT`. A selected currency the seller did not offer refuses
+`CATALOG_PURCHASE_METHOD_UNAVAILABLE` first. The refusal is stamped `mode: test` and
+`completion: none`; there is no live checkout, cart, payment field, or fake success.
 
 ## Visual target
 
@@ -104,9 +110,9 @@ gone, and all three were things the design archive does not state:
 | "Apply as a seller", a payouts column | `/publish`, display-only, refusing with the pipeline's own reason |
 | Five filter groups of hand-written counts wired to checkboxes that filter nothing | counts of the listings actually on the page, and no control whose behaviour no contract defines |
 | Sort control, nine-page pager, search field | omitted for the same reason |
-| Rendered-looking asset thumbnails | a figure derived from each listing's real `sha256:` content hash (`src/lib/digest-sigil.ts`), stated on the page to be a mark of the digest rather than a render |
-| Five invented "build passes" | the item's recorded curation transitions, with their real reasons and timestamps |
-| Invented digests, download counts, triangle counts, a refund window | nothing: every value on the page comes from the Catalog Item contract |
+| Rendered-looking asset thumbnails | a figure derived from each validated listing record's `sha256:` digest (`src/lib/digest-sigil.ts`), stated as a record mark rather than an asset render |
+| Five invented "build passes" | the exact non-price fields present in the committed Catalog Listing contract |
+| Invented digests, download counts, triangle counts, a refund window | nothing: every value on the page comes from the Catalog Listing fixture or an explicitly unavailable state |
 | Kids in the family bar | no Kids key exists to configure |
 
 ### Deliberate departures from the archive
@@ -130,7 +136,11 @@ Each is a defect recorded against the design, not against the code:
   colliders") that no listing record backs. The reviewed brand tagline and audience line
   are set in the archive's hero typography instead.
 
-### Recorded browser observation
+### Historical browser observation of the shared visual shell
+
+The measurements below were recorded for the #156 visual shell. They remain useful
+layout history, but #195's fixture-contract content projection is proven by the gate and
+is not represented as re-measured browser evidence here.
 
 `pnpm build && pnpm start`, Chrome through `chrome-devtools-axi`, measuring
 `document.documentElement.scrollWidth` against `window.innerWidth`:
@@ -138,14 +148,14 @@ Each is a defect recorded against the design, not against the code:
 | Route | 1440x1000 | 1366x768 | 1366x600 | 834x1112 | 390x844 |
 |---|---|---|---|---|---|
 | `/` | 1440 = 1440 | 1366 = 1366 | 1366 = 1366 | 834 = 834 | 390 = 390 |
-| `/item/game-lantern-prop` | 1440 = 1440 | 1366 = 1366 | 1366 = 1366 | 834 = 834 | 390 = 390 |
+| `/item/lantern-prop` | 1440 = 1440 | 1366 = 1366 | 1366 = 1366 | 834 = 834 | 390 = 390 |
 | `/publish` | 1440 = 1440 | 1366 = 1366 | 1366 = 1366 | 834 = 834 | 390 = 390 |
 | 404 | 1440 = 1440 | 1366 = 1366 | 1366 = 1366 | 834 = 834 | 390 = 390 |
 
 No route overflows at any of the five viewports, against the archive's 984-against-390. The
 same probe found no element whose right edge exceeded the document width on any of the
 twenty renders. In the same session the detail page's editor deep link resolved to
-`…/editor?source=catalog-game&item=game-lantern-prop`.
+`…/editor?source=catalog-game&item=lantern-prop`.
 
 #### The anchor offset against a masthead that wraps
 
@@ -183,7 +193,7 @@ probe reads `390 = 390` while the text renders as a column of two- and three-cha
 lines. The curation record was exactly that — four children auto-placed into the two-track
 `.record-row`, which put the reason in the 2rem ordinal track — and every viewport in the
 table above passed while that section was unreadable. So it is read directly, as the
-rendered width and line count of `.record-detail` on `/item/game-lantern-prop`:
+rendered width and line count of `.record-detail` on the former #156 detail projection:
 
 | Viewport width | `.record-detail` width | Lines |
 |---|---|---|
@@ -246,7 +256,7 @@ site-kit rather than from this stylesheet — the storefront declares none of th
 | computed `body` font-family | `Archivo, "Archivo Fallback", Archivo, system-ui, sans-serif` |
 
 Lighthouse (navigation, desktop) scored **accessibility 100 with 0 failed audits** on `/`,
-`/item/game-lantern-prop` and `/publish`, and the same on all three of the web
+`/item/lantern-prop` and `/publish`, and the same on all three of the web
 storefront's equivalents — six routes in all.
 
 What a browser has to prove is recorded here. What the gate can prove — shared skeleton,

@@ -1,13 +1,22 @@
 import { notFound } from "next/navigation";
 import {
   CREATOR_SHARE_ROUNDING_NOTE,
-  creatorShare,
+  SITE_CATALOG_FIXTURE_PATH,
+  describeCreatorShare,
   describeListingPrice,
+  formatMoneyPrice,
   listSiteCatalog,
   showSiteListing,
 } from "@sceneaxi/site-kit";
-import { CATALOG_SITE_BRAND, CATALOG_SITE_SURFACE, editorLinkFor } from "../../../lib/site-config.js";
-import { curationTrail, sameCreatorListings } from "../../../lib/catalog-facts.js";
+import {
+  CATALOG_SITE_BRAND,
+  CATALOG_SITE_SURFACE,
+  editorLinkFor,
+} from "../../../lib/site-config.js";
+import {
+  listingRecord,
+  sameCreatorListings,
+} from "../../../lib/catalog-facts.js";
 import { shortenDigest } from "../../../lib/digest-sigil.js";
 import {
   createCatalogIdentityPlane,
@@ -20,19 +29,11 @@ import { ListingCard } from "../../_components/listing-card.js";
 import { StatePanel } from "../../_components/state-panel.js";
 
 /**
- * Scene detail, on the design's split: figure and record on the left, the panel that
- * would carry a purchase on the right.
+ * Listing detail over the committed TEST fixture contract.
  *
- * The archive's right panel is a `$28` headline, two invented licence tiers, an "Add to
- * cart" button and a spec block of placeholder digests, download counts and a refund
- * window. Commerce here is structurally inert — `attemptCatalogPurchase` refuses on every
- * path while tier-6b activation holds open — so the panel's primary action is the one
- * action that does work, the editor deep link, and the slot the cart button occupies is
- * filled by the refusal itself, with its registry citation.
- *
- * Its "Build passes" table becomes the curation record the contract actually holds:
- * the same numbered provenance rows, ending in a verified state, with real reasons and
- * real timestamps.
+ * The record contains seller, title, price mode, prices, and publication time. It
+ * contains no asset payload or payment evidence, so the page names those absences
+ * and never fills the design with invented package, licence, preview, or delivery data.
  */
 export default async function ItemPage({
   params,
@@ -44,18 +45,17 @@ export default async function ItemPage({
   if (!found.ok) notFound();
 
   const listing = found.value;
-  const { item } = listing;
   const price = describeListingPrice(listing.price);
-  const share = listing.price.credits === null ? null : creatorShare(listing.price.credits);
+  const share = describeCreatorShare(listing.price);
   const link = editorLinkFor(process.env, listing.itemId);
-  const trail = curationTrail(item);
-  const related = sameCreatorListings(listSiteCatalog(CATALOG_SITE_SURFACE), listing);
+  const record = listingRecord(listing);
+  const related = sameCreatorListings(
+    listSiteCatalog(CATALOG_SITE_SURFACE),
+    listing,
+  );
 
   // The storefront reads identity through the shared site-kit port and holds no auth
   // stack of its own; unwired, this is a named refusal rather than an invented viewer.
-  // The cookie is read only when an adapter could act on it: `readSessionToken()` is a
-  // request API, so reading it unconditionally would opt every listing page out of the
-  // route cache to produce output that cannot vary.
   const plane = createCatalogIdentityPlane();
   const viewer = await resolveCatalogViewer(
     plane,
@@ -65,7 +65,9 @@ export default async function ItemPage({
   const headlineValue =
     listing.price.credits !== null
       ? String(listing.price.credits)
-      : (listing.price.money?.amount ?? "—");
+      : listing.price.money === null
+        ? "—"
+        : formatMoneyPrice(listing.price.money).split(" ")[0];
   const headlineUnit =
     listing.price.credits !== null
       ? `credit${listing.price.credits === 1 ? "" : "s"}`
@@ -80,11 +82,6 @@ export default async function ItemPage({
       </nav>
 
       <div className="detail-grid">
-        {/*
-          Source order is title, price, then the record — the order a phone shows and the
-          order a screen reader reads. The stylesheet moves this column to the right at
-          the tablet breakpoint and makes it sticky at desktop.
-        */}
         <div
           className="detail-side"
           role="region"
@@ -104,30 +101,32 @@ export default async function ItemPage({
               </p>
 
               <div className="section">
-                <h2 className="micro">Priced in</h2>
+                <h2 className="micro">Committed TEST price</h2>
                 <ul className="buy-options">
                   <li className="buy-option">
                     <span className="buy-option-name">Credits</span>
                     <span className="buy-option-value">
-                      {listing.price.credits ?? "not offered"}
+                      {price.ok ? (price.value.credits ?? "not offered") : "unavailable"}
                     </span>
                   </li>
                   <li className="buy-option">
                     <span className="buy-option-name">Money</span>
                     <span className="buy-option-value">
-                      {listing.price.money === null
-                        ? "not offered"
-                        : `${listing.price.money.amount} ${listing.price.money.currency.toUpperCase()}`}
+                      {price.ok ? (price.value.money ?? "not offered") : "unavailable"}
                     </span>
                   </li>
-                  {share !== null && share.ok && (
-                    <li className="buy-option">
-                      <span className="buy-option-name">Creator receives</span>
-                      <span className="buy-option-value">
-                        {share.value.creator} of {share.value.total}
-                      </span>
-                    </li>
-                  )}
+                  <li className="buy-option">
+                    <span className="buy-option-name">Creator share · credits</span>
+                    <span className="buy-option-value">
+                      {share.ok ? (share.value.credits ?? "not applicable") : "unavailable"}
+                    </span>
+                  </li>
+                  <li className="buy-option">
+                    <span className="buy-option-name">Creator share · money</span>
+                    <span className="buy-option-value">
+                      {share.ok ? (share.value.money ?? "not applicable") : "unavailable"}
+                    </span>
+                  </li>
                 </ul>
                 <p className="reason">{CREATOR_SHARE_ROUNDING_NOTE}</p>
               </div>
@@ -143,34 +142,35 @@ export default async function ItemPage({
                   </span>
                 )}
                 <p className="reason">
-                  The link carries the source surface and this item id and nothing else —
-                  no identity, session, or tracking crosses the surface boundary.
+                  The link carries this listing id and source catalog only. It is a
+                  reference for the umbrella editor, not a claim that this fixture
+                  includes an asset payload.
                 </p>
               </div>
             </div>
 
             <dl className="buy-spec">
               <div className="spec-row">
-                <dt>Item id</dt>
+                <dt>Listing id</dt>
                 <dd>{listing.itemId}</dd>
               </div>
               <div className="spec-row">
-                <dt>Package</dt>
-                <dd>{item.assetPackage.packageId}</dd>
+                <dt>Contract</dt>
+                <dd>{listing.listing.kind}</dd>
               </div>
               <div className="spec-row">
-                <dt>Content hash</dt>
-                <dd title={item.assetPackage.contentHash}>
-                  {shortenDigest(item.assetPackage.contentHash)}
+                <dt>Record digest</dt>
+                <dd title={listing.recordDigest}>
+                  {shortenDigest(listing.recordDigest)}
                 </dd>
               </div>
               <div className="spec-row">
-                <dt>Engine</dt>
-                <dd>core {item.compatibility.coreRange}</dd>
+                <dt>Published</dt>
+                <dd>{listing.publishedAt}</dd>
               </div>
               <div className="spec-row">
-                <dt>Pipeline state</dt>
-                <dd>{item.moderation.pipelineState}</dd>
+                <dt>Mode</dt>
+                <dd>{listing.availability.mode.toUpperCase()}</dd>
               </div>
             </dl>
           </div>
@@ -192,23 +192,24 @@ export default async function ItemPage({
           />
 
           <div className="side-panel">
-            <h2 className="micro">Works with</h2>
+            <h2 className="micro">Availability</h2>
             <ul className="side-list">
-              {item.compatibility.profiles.map((profile) => (
-                <li className="side-row" key={profile}>
-                  <span className="included-check" aria-hidden="true">
-                    ✓
-                  </span>
-                  <span>{profile} profile</span>
-                  <span className="side-row-note">declared</span>
-                </li>
-              ))}
               <li className="side-row">
                 <span className="included-check" aria-hidden="true">
                   ✓
                 </span>
-                <span>Engine core</span>
-                <span className="side-row-note">{item.compatibility.coreRange}</span>
+                <span>Browse and detail</span>
+                <span className="side-row-note">{listing.availability.browse}</span>
+              </li>
+              <li className="side-row">
+                <span aria-hidden="true">—</span>
+                <span>Asset payload</span>
+                <span className="side-row-note">{listing.availability.asset}</span>
+              </li>
+              <li className="side-row">
+                <span aria-hidden="true">—</span>
+                <span>Purchase</span>
+                <span className="side-row-note">{listing.availability.purchase}</span>
               </li>
             </ul>
           </div>
@@ -216,123 +217,57 @@ export default async function ItemPage({
 
         <div className="detail-main">
           <DigestFigure
-            digest={item.assetPackage.contentHash}
+            digest={listing.recordDigest}
             large
             chips={[
               {
-                key: "state",
-                label: item.moderation.pipelineState,
-                tone: "ok" as const,
+                key: "mode",
+                label: listing.availability.mode.toUpperCase(),
+                tone: "accent" as const,
               },
-              { key: "licence", label: item.rights.license },
+              { key: "availability", label: listing.availability.asset },
             ]}
             stats={[
-              { key: "digest", value: shortenDigest(item.assetPackage.contentHash) },
-              { key: "profiles", value: item.compatibility.profiles.join(", ") },
-              { key: "transitions", value: String(trail.length) },
+              { key: "record", value: shortenDigest(listing.recordDigest) },
+              { key: "catalog", value: listing.listing.catalog },
+              { key: "price mode", value: listing.priceMode },
             ]}
           />
           <p className="reason">
-            A mark derived from this listing&apos;s content hash. It is not a render of
-            the asset.
+            A mark derived from the validated listing record. It is not a render of
+            an asset, and the digest is not presented as an asset content hash.
           </p>
 
           <section className="section">
-            <h2>What you get</h2>
-            <p className="prose">{listing.summary}</p>
-            <ul className="included">
-              <li className="included-row">
-                <span className="included-check" aria-hidden="true">
-                  ✓
-                </span>
-                <span className="included-key">Asset package</span>
-                <span className="included-value">{item.assetPackage.packageId}</span>
-              </li>
-              <li className="included-row">
-                <span className="included-check" aria-hidden="true">
-                  ✓
-                </span>
-                <span className="included-key">Content hash</span>
-                <span className="included-value" title={item.assetPackage.contentHash}>
-                  {shortenDigest(item.assetPackage.contentHash)}
-                </span>
-              </li>
-              <li className="included-row">
-                <span className="included-check" aria-hidden="true">
-                  ✓
-                </span>
-                <span className="included-key">Licence</span>
-                <span className="included-value">{item.rights.license}</span>
-              </li>
-              <li className="included-row">
-                <span className="included-check" aria-hidden="true">
-                  ✓
-                </span>
-                <span className="included-key">Rights holder</span>
-                <span className="included-value">{item.rights.rightsHolder}</span>
-              </li>
-              <li className="included-row">
-                <span className="included-check" aria-hidden="true">
-                  ✓
-                </span>
-                <span className="included-key">Commercial use</span>
-                <span className="included-value">
-                  {item.rights.commercialUseAllowed ? "allowed" : "not allowed"}
-                </span>
-              </li>
-              <li className="included-row">
-                <span className="included-check" aria-hidden="true">
-                  ✓
-                </span>
-                <span className="included-key">AI-generation disclosure</span>
-                <span className="included-value">
-                  {item.aiGenerationDisclosure.aiGenerated ? "AI-generated" : "not AI-generated"}
-                </span>
-              </li>
-            </ul>
-            <p className="prose">{item.aiGenerationDisclosure.disclosureText}</p>
-          </section>
-
-          <section className="section">
-            <h2>Curation record</h2>
+            <h2>Fixture listing record</h2>
             <p className="prose">
-              Every transition this item made, with the reason recorded at the time. It
-              reached <code>{item.moderation.pipelineState}</code> through these steps and
-              no others.
+              This page presents every non-price field the committed listing contract
+              carries. The canonical source is <code>{SITE_CATALOG_FIXTURE_PATH}</code>.
             </p>
-            <ol className="record">
-              {trail.map((step) => (
-                <li className="record-row" key={`${step.ordinal}-${step.state}`}>
-                  <span className="record-n">{step.ordinal}</span>
-                  <span className="record-name">{step.state}</span>
-                  <span className="record-detail">{step.reason}</span>
-                  <span className="record-at">{step.at}</span>
+            <ul className="included">
+              {record.map((row) => (
+                <li className="included-row" key={row.label}>
+                  <span className="included-check" aria-hidden="true">
+                    ✓
+                  </span>
+                  <span className="included-key">{row.label}</span>
+                  <span className="included-value">{row.value}</span>
                 </li>
               ))}
-            </ol>
+            </ul>
           </section>
 
-          <section className="section">
-            <h2>Provenance</h2>
-            <dl className="dl">
-              <dt>Origin</dt>
-              <dd>
-                <code>{item.provenance.origin}</code>
-              </dd>
-              <dt>Ingested</dt>
-              <dd>
-                <code>{item.provenance.ingestedAt}</code>
-              </dd>
-              <dt>Source digest</dt>
-              <dd>
-                <code>{item.provenance.sourceDigest}</code>
-              </dd>
-              <dt>Content hash</dt>
-              <dd>
-                <code>{item.assetPackage.contentHash}</code>
-              </dd>
-            </dl>
-          </section>
+          <StatePanel
+            tone="warn"
+            title="Metadata-only fixture"
+            reason={listing.availability.reason}
+          >
+            <p>
+              No asset package, licence, preview, compatibility declaration, delivery
+              artifact, payment form, or completion is part of this listing record.
+              The storefront leaves those states unavailable instead of inventing them.
+            </p>
+          </StatePanel>
 
           {related.length > 0 && (
             <section className="section">
@@ -346,7 +281,11 @@ export default async function ItemPage({
           )}
 
           {!price.ok && (
-            <StatePanel tone="deny" title="This listing has no price to show" reason={price.reason}>
+            <StatePanel
+              tone="deny"
+              title="This listing has no price to show"
+              reason={price.reason}
+            >
               <p>{price.message}</p>
             </StatePanel>
           )}

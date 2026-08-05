@@ -39,6 +39,10 @@ export function CommerceNotice({
       <p>{model.policy}</p>
       <p>{model.explanation}</p>
       <p>
+        {COMMERCE_NOTICE_COPY.modeLabel} <code>{model.mode}</code> ·{" "}
+        {COMMERCE_NOTICE_COPY.completionLabel} <code>{model.completion}</code>
+      </p>
+      <p>
         {COMMERCE_NOTICE_COPY.accountLabel}{" "}
         {model.viewer.state === "resolved" ? (
           <>

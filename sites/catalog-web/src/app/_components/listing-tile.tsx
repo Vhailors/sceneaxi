@@ -1,4 +1,8 @@
-import { describeListingPrice, type SiteListing } from "@sceneaxi/site-kit";
+import {
+  CREATOR_SHARE_RULE,
+  describeListingPrice,
+  type SiteListing,
+} from "@sceneaxi/site-kit";
 import { DigestFigure } from "./digest-figure.js";
 
 /**
@@ -16,19 +20,19 @@ export function ListingTile({ listing }: { readonly listing: SiteListing }) {
     <li>
       <a className="tile" href={`/item/${listing.itemId}`}>
         <DigestFigure
-          digest={listing.item.assetPackage.contentHash}
+          digest={listing.recordDigest}
           chips={[
             {
               key: "state",
-              label: listing.item.moderation.pipelineState,
-              tone: "ok" as const,
+              label: listing.availability.mode.toUpperCase(),
+              tone: "accent" as const,
             },
           ]}
         />
         <span className="tile-name">{listing.title}</span>
         <span className="tile-meta">
           {price.ok ? price.value.label : `unpriced (${price.reason})`} ·{" "}
-          {listing.item.rights.license}
+          creator {CREATOR_SHARE_RULE.creatorPercent}% · {listing.availability.purchase}
         </span>
       </a>
     </li>

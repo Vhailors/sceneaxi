@@ -53,9 +53,9 @@ export {
 
 export {
   catalogFacets,
-  curationTrail,
+  listingRecord,
   sameCreatorListings,
   type CatalogFacet,
   type CatalogFacetRow,
-  type CurationStep,
+  type ListingRecordRow,
 } from "./lib/catalog-facts.js";

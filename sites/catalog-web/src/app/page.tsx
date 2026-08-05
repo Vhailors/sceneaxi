@@ -80,13 +80,12 @@ export default function ShowroomPage() {
 
           <div className="rail-note">
             <p>
-              <strong>Every scene carries its record</strong>
+              <strong>Every scene is a committed fixture record</strong>
             </p>
             <p>
-              Rights, provenance, an AI-generation disclosure, compatibility, and the
-              curation history that put it here — published on the detail page rather than
-              summarised into a badge. These counts describe the scenes on this page and
-              nothing beyond them.
+              Price mode, seller, publication time, TEST mode, and availability come from
+              the validated catalog-listing contract. Asset payload, licence, preview,
+              compatibility, and delivery are not in that fixture and are not implied here.
             </p>
           </div>
         </aside>
@@ -106,28 +105,27 @@ export default function ShowroomPage() {
           </ul>
 
           <p className="prose">
-            Each card is marked with a figure derived from that scene&apos;s own content
-            hash. It is a mark of the digest, not a render of the scene — this showroom
-            has never rendered these scenes and does not draw a picture that would imply
-            otherwise.
+            Each card is marked with a figure derived from the validated listing record.
+            It is a mark of the record digest, not a render of the scene — the fixture
+            carries no asset payload or preview.
           </p>
 
           <section className="section" id="pricing">
             <h2>How pricing reads</h2>
             <p className="prose">
-              A scene may be priced in credits, in money, or both — you pick at purchase.
-              Creators receive {CREATOR_SHARE_RULE.creatorPercent}% of the credits on a
-              sale.
+              A scene may be priced in credits, money, or both. The display keeps the
+              seller&apos;s choice exactly; it does not convert currencies. Creators receive
+              {" "}{CREATOR_SHARE_RULE.creatorPercent}% in the established share model.
             </p>
             <p className="reason">{CREATOR_SHARE_ROUNDING_NOTE}</p>
           </section>
 
-          <StatePanel tone="warn" title="This showroom is evaluation-only for now">
+          <StatePanel tone="warn" title="TEST catalog · purchases refuse here">
             <p>
-              Every scene here is a curated fixture carrying real rights, provenance, and
-              AI-disclosure metadata, so legal and brand review can happen before
-              purchasing opens. Buying is not activated, and nothing on this site collects
-              payment details.
+              These are committed TEST fixture listings. Browse and detail are available;
+              asset delivery and payment completion are not. The catalog sites own no
+              billing stack, collect no payment details, and cannot report a purchase as
+              complete.
             </p>
           </StatePanel>
         </div>

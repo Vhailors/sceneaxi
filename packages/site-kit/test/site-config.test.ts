@@ -96,15 +96,15 @@ describe("catalog umbrella origin resolution", () => {
 
   it("builds a deep link that names its own source surface", () => {
     const env = { NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN: "https://umbrella.vercel.app" };
-    const game = resolveEditorLinkFromEnv(env, "catalog-game", "game-lantern-prop");
-    const web = resolveEditorLinkFromEnv(env, "catalog-web", "web-hero-diorama");
+    const game = resolveEditorLinkFromEnv(env, "catalog-game", "market-stall-kit");
+    const web = resolveEditorLinkFromEnv(env, "catalog-web", "harbour-diorama");
     expect(game.ok && game.value).toContain("source=catalog-game");
     expect(web.ok && web.value).toContain("source=catalog-web");
     expect(game.ok && game.value.startsWith("https://umbrella.vercel.app/editor?")).toBe(true);
   });
 
   it("refuses to build a link when the origin refuses", () => {
-    const link = resolveEditorLinkFromEnv({}, "catalog-game", "game-lantern-prop");
+    const link = resolveEditorLinkFromEnv({}, "catalog-game", "market-stall-kit");
     expect(link.ok).toBe(false);
   });
 });

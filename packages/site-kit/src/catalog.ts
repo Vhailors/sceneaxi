@@ -1,24 +1,25 @@
 /**
- * Catalog view models for the two storefront sites.
+ * Catalog view models for the two deployable storefronts.
  *
- * Built over the `@sceneaxi/schemas` Catalog Item contract only. The dormant
- * `apps/catalog-game` / `apps/catalog-web` stubs are deliberately untouched — this
- * ship does not thrash the catalogs lane.
+ * The committed `CatalogListingSet` is the only listing inventory. This module
+ * validates its bundled twin, projects it for the two sites, and deliberately
+ * adds no asset payload, licence, preview, compatibility, checkout, or payment
+ * completion that the listing contract does not contain.
  *
- * Commerce is **inert**. `COMMERCE_ACTIVATION_GATE` always refuses because tier-6b
- * marketplace activation keys remain open in the factories-helpers#42 registry, and
- * fail-closed held-key behaviour is a hard repo rule. So price display, creator
- * share display, and publish intent are live, while every purchase and publish
- * *submission* refuses `CATALOG_COMMERCE_INERT` and appends nothing anywhere.
+ * Commerce remains fail-closed on the catalog origins. The fixture set is
+ * structurally TEST-only, and these sites have no billing implementation or
+ * checkout adapter. Prices and the established creator-share rule are useful
+ * evaluation metadata; they are not evidence that payment happened.
  */
 import { createHash } from "node:crypto";
 import {
+  CATALOG_LISTINGS_DATA,
+  CATALOG_LISTINGS_FIXTURES_PATH,
   CATALOG_POLICY_CITES,
   COMMERCE_ACTIVATION_GATE,
-  type CatalogItem,
-  type HumanCurationVerdict,
-  createCatalogItemAtIntake,
-  transitionCatalogItem,
+  type CatalogListing,
+  type ListingPriceMode,
+  validateCatalogListingSet,
 } from "@sceneaxi/schemas";
 import { type SiteRefusal, type SiteResult, ok, refuse } from "./refusals.js";
 
@@ -27,25 +28,52 @@ export const CATALOG_SURFACES = Object.freeze(["catalog-game", "catalog-web"] as
 
 export type CatalogSurface = (typeof CATALOG_SURFACES)[number];
 
-export type SiteMoneyPrice = { readonly amount: string; readonly currency: string };
+export type SiteMoneyPrice = {
+  /** Minor units, exactly as committed in the listing contract. */
+  readonly unitAmount: number;
+  readonly currency: string;
+};
 
 /**
- * Dual price. Either side may be absent; a listing with neither refuses, because a
- * listing whose price cannot be shown is a broken listing, not a free one.
+ * Dual price. Either side may be absent according to the seller's price mode;
+ * the contract validator guarantees that at least one is present.
  */
 export type SiteListingPrice = {
   readonly credits: number | null;
   readonly money: SiteMoneyPrice | null;
 };
 
+export type CatalogListingAvailability = {
+  readonly browse: "listed-fixture";
+  readonly asset: "metadata-only";
+  readonly purchase: "refused";
+  readonly mode: "test";
+  readonly reason: "CATALOG_COMMERCE_INERT";
+};
+
+/** The honest shared state of every record in the committed TEST fixture set. */
+export const CATALOG_LISTING_AVAILABILITY: CatalogListingAvailability = Object.freeze({
+  browse: "listed-fixture",
+  asset: "metadata-only",
+  purchase: "refused",
+  mode: "test",
+  reason: "CATALOG_COMMERCE_INERT",
+});
+
 export type SiteListing = {
   readonly surface: CatalogSurface;
+  /** Route-compatible alias of the canonical `listingId`. */
   readonly itemId: string;
   readonly title: string;
-  readonly summary: string;
   readonly creatorId: string;
+  readonly publishedAt: string;
+  readonly priceMode: ListingPriceMode;
   readonly price: SiteListingPrice;
-  readonly item: CatalogItem;
+  /** Digest of the validated listing record, never represented as an asset digest. */
+  readonly recordDigest: string;
+  readonly availability: CatalogListingAvailability;
+  /** The exact validated record from the committed fixture set. */
+  readonly listing: CatalogListing;
 };
 
 export type PriceDisplay = {
@@ -55,10 +83,6 @@ export type PriceDisplay = {
   readonly label: string;
 };
 
-/** Deterministic fixture digest: a fixture that hashes its own descriptor. */
-const fixtureDigest = (descriptor: string): string =>
-  `sha256:${createHash("sha256").update(descriptor, "utf8").digest("hex")}`;
-
 function deepFreeze<T extends object>(value: T): T {
   for (const nested of Object.values(value) as unknown[]) {
     if (nested !== null && typeof nested === "object") deepFreeze(nested as object);
@@ -66,145 +90,47 @@ function deepFreeze<T extends object>(value: T): T {
   return Object.freeze(value);
 }
 
-type FixtureSeed = {
-  readonly surface: CatalogSurface;
-  readonly itemId: string;
-  readonly title: string;
-  readonly summary: string;
-  readonly creatorId: string;
-  readonly profile: string;
-  readonly credits: number | null;
-  readonly money: SiteMoneyPrice | null;
-  readonly aiGenerated: boolean;
-  readonly disclosureText: string;
-  readonly license: string;
-};
-
-const FIXTURE_SEEDS: readonly FixtureSeed[] = Object.freeze([
-  {
-    surface: "catalog-game",
-    itemId: "game-lantern-prop",
-    title: "Hand-lantern prop",
-    summary:
-      "A single sculpt-artifact prop with a socketed handle, authored for the Game profile and ready to mount in the Minimum E2 editor.",
-    creatorId: "Vhailors",
-    profile: "game",
-    credits: 40,
-    money: { amount: "4.00", currency: "usd" },
-    aiGenerated: false,
-    disclosureText: "Deterministic hand-authored catalog fixture.",
-    license: "CC-BY-4.0",
-  },
-  {
-    surface: "catalog-game",
-    itemId: "game-crate-set",
-    title: "Stackable crate set",
-    summary:
-      "Three crate variants sharing one placement grid, sized for axis-aligned scene composition.",
-    creatorId: "Vhailors",
-    profile: "game",
-    credits: 60,
-    money: null,
-    aiGenerated: false,
-    disclosureText: "Deterministic hand-authored catalog fixture.",
-    license: "CC-BY-4.0",
-  },
-  {
-    surface: "catalog-web",
-    itemId: "web-hero-diorama",
-    title: "Hero diorama",
-    summary:
-      "A shallow-depth diorama scene for a Web Experience hero band, authored against the Web profile.",
-    creatorId: "Vhailors",
-    profile: "web",
-    credits: 35,
-    money: { amount: "3.50", currency: "usd" },
-    aiGenerated: false,
-    disclosureText: "Deterministic hand-authored catalog fixture.",
-    license: "CC-BY-4.0",
-  },
-  {
-    surface: "catalog-web",
-    itemId: "web-ui-panel-kit",
-    title: "UI panel kit",
-    summary:
-      "Panel and badge sculpts for embedding an interactive product surface in a marketing page.",
-    creatorId: "Vhailors",
-    profile: "web",
-    credits: null,
-    money: { amount: "6.00", currency: "usd" },
-    aiGenerated: false,
-    disclosureText: "Deterministic hand-authored catalog fixture.",
-    license: "CC-BY-4.0",
-  },
-]);
-
-function buildListedItem(seed: FixtureSeed): CatalogItem {
-  const digest = fixtureDigest(`${seed.surface}/${seed.itemId}`);
-  const intake = createCatalogItemAtIntake({
-    itemId: seed.itemId,
-    assetPackage: { packageId: `${seed.itemId}-package`, contentHash: digest },
-    rights: {
-      license: seed.license,
-      rightsHolder: "SceneAxi fixture",
-      commercialUseAllowed: true,
-    },
-    provenance: {
-      origin: "packages/site-kit/src/catalog.ts",
-      ingestedAt: "2026-07-25T09:00:00.000Z",
-      sourceDigest: digest,
-    },
-    aiGenerationDisclosure: {
-      aiGenerated: seed.aiGenerated,
-      disclosureText: seed.disclosureText,
-    },
-    compatibility: { coreRange: "^0.0.0", profiles: [seed.profile] },
-    // Structurally inert commerce fields, populated for display only. The
-    // activation gate still refuses every purchase.
-    ...(seed.money === null ? {} : { commerce: { price: seed.money, sku: seed.itemId } }),
-  });
-  const screened = transitionCatalogItem(intake, {
-    to: "screening",
-    reason: "Fixture quarantine checks passed.",
-    at: "2026-07-25T09:01:00.000Z",
-  });
-  if (!screened.ok) throw new Error(screened.message);
-  const curated = transitionCatalogItem(screened.item, {
-    to: "curation",
-    reason: "Fixture metadata checks passed.",
-    at: "2026-07-25T09:02:00.000Z",
-  });
-  if (!curated.ok) throw new Error(curated.message);
-  const verdict: HumanCurationVerdict = {
-    kind: "human",
-    decision: "approve",
-    curatorId: "Vhailors",
-    rationale: `Approved as storefront fixture evidence for ${seed.surface}; display only while tier-6b commerce stays inert.`,
-    recordedAt: "2026-07-25T09:03:00.000Z",
-  };
-  const listed = transitionCatalogItem(curated.item, {
-    to: "listed",
-    reason: "Fixture human approval recorded.",
-    at: "2026-07-25T09:03:00.000Z",
-    humanVerdict: verdict,
-  });
-  if (!listed.ok) throw new Error(listed.message);
-  return listed.item;
+const validatedListingSet = validateCatalogListingSet(CATALOG_LISTINGS_DATA);
+if (!validatedListingSet.ok) {
+  throw new Error(
+    `Committed catalog listing data refused ${validatedListingSet.code}: ${validatedListingSet.message}`,
+  );
 }
 
+/** The mode is contract-validated as TEST before any listing reaches a site. */
+export const SITE_CATALOG_MODE = validatedListingSet.value.mode;
+
+const surfaceFor = (listing: CatalogListing): CatalogSurface =>
+  listing.catalog === "game" ? "catalog-game" : "catalog-web";
+
+const recordDigest = (listing: CatalogListing) =>
+  `sha256:${createHash("sha256").update(JSON.stringify(listing), "utf8").digest("hex")}`;
+
 const LISTINGS: readonly SiteListing[] = deepFreeze(
-  FIXTURE_SEEDS.map((seed) => ({
-    surface: seed.surface,
-    itemId: seed.itemId,
-    title: seed.title,
-    summary: seed.summary,
-    creatorId: seed.creatorId,
-    price: { credits: seed.credits, money: seed.money },
-    item: buildListedItem(seed),
+  validatedListingSet.value.listings.map((listing) => ({
+    surface: surfaceFor(listing),
+    itemId: listing.listingId,
+    title: listing.title,
+    creatorId: listing.sellerUserId,
+    publishedAt: listing.publishedAt,
+    priceMode: listing.priceMode,
+    price: {
+      credits: listing.creditPrice ?? null,
+      money:
+        listing.moneyPrice === undefined
+          ? null
+          : {
+              unitAmount: listing.moneyPrice.unitAmount,
+              currency: listing.moneyPrice.currency,
+            },
+    },
+    recordDigest: recordDigest(listing),
+    availability: CATALOG_LISTING_AVAILABILITY,
+    listing,
   })),
 ) as readonly SiteListing[];
 
-/** Listed fixtures for one storefront surface. */
+/** Listed fixture records for one storefront surface. */
 export function listSiteCatalog(surface: CatalogSurface): readonly SiteListing[] {
   return Object.freeze(LISTINGS.filter((listing) => listing.surface === surface));
 }
@@ -220,16 +146,34 @@ export function showSiteListing(
   return listing === undefined ? refuse("CATALOG_ITEM_NOT_FOUND") : ok(listing);
 }
 
+function currencyFractionDigits(currency: string): number | null {
+  try {
+    return new Intl.NumberFormat("en", {
+      style: "currency",
+      currency,
+    }).resolvedOptions().maximumFractionDigits ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Format committed minor units without introducing a locale-dependent symbol. */
+export function formatMoneyPrice(price: SiteMoneyPrice): string {
+  const digits = currencyFractionDigits(price.currency);
+  if (digits === null) {
+    return `${price.unitAmount} ${price.currency.toUpperCase()} minor units`;
+  }
+  const scale = 10 ** digits;
+  return `${(price.unitAmount / scale).toFixed(digits)} ${price.currency.toUpperCase()}`;
+}
+
 /** Render a dual price. Refuses when the listing offers neither side. */
 export function describeListingPrice(price: SiteListingPrice): SiteResult<PriceDisplay> {
   const credits =
     price.credits === null
       ? null
       : `${price.credits} credit${price.credits === 1 ? "" : "s"}`;
-  const money =
-    price.money === null
-      ? null
-      : `${price.money.amount} ${price.money.currency.toUpperCase()}`;
+  const money = price.money === null ? null : formatMoneyPrice(price.money);
   if (credits === null && money === null) return refuse("CATALOG_PRICE_UNAVAILABLE");
   const label =
     credits !== null && money !== null
@@ -256,6 +200,47 @@ export function creatorShare(total: number): SiteResult<CreatorShare> {
   return ok(Object.freeze({ total, creator, platform: total - creator }));
 }
 
+export type CreatorShareDisplay = {
+  readonly credits: string | null;
+  readonly money: string | null;
+  readonly label: string;
+  readonly settlement: "credits-ledger-or-money-bookkeeping-only";
+};
+
+/** Project the existing 50/50 rule for every currency a listing actually offers. */
+export function describeCreatorShare(
+  price: SiteListingPrice,
+): SiteResult<CreatorShareDisplay> {
+  const creditsSplit = price.credits === null ? null : creatorShare(price.credits);
+  if (creditsSplit !== null && !creditsSplit.ok) return creditsSplit;
+  const moneySplit = price.money === null ? null : creatorShare(price.money.unitAmount);
+  if (moneySplit !== null && !moneySplit.ok) return moneySplit;
+
+  const credits =
+    creditsSplit === null
+      ? null
+      : `${creditsSplit.value.creator} creator / ${creditsSplit.value.platform} platform credits`;
+  const money =
+    moneySplit === null || price.money === null
+      ? null
+      : `${formatMoneyPrice({
+          unitAmount: moneySplit.value.creator,
+          currency: price.money.currency,
+        })} creator / ${formatMoneyPrice({
+          unitAmount: moneySplit.value.platform,
+          currency: price.money.currency,
+        })} platform (bookkeeping only)`;
+  if (credits === null && money === null) return refuse("CATALOG_PRICE_UNAVAILABLE");
+  return ok(
+    Object.freeze({
+      credits,
+      money,
+      label: [credits, money].filter((value): value is string => value !== null).join("; "),
+      settlement: "credits-ledger-or-money-bookkeeping-only" as const,
+    }),
+  );
+}
+
 /** The share rule as displayed to a creator. Display only — no ledger authority. */
 export const CREATOR_SHARE_RULE = Object.freeze({
   creatorPercent: 50,
@@ -265,11 +250,14 @@ export const CREATOR_SHARE_RULE = Object.freeze({
 });
 
 export const CREATOR_SHARE_ROUNDING_NOTE =
-  "Credit shares are whole units: on an odd total the creator takes the floor and the platform absorbs the remainder, so the displayed creator share can read just below an exact 50%.";
+  "Shares use whole minor units: on an odd total the creator takes the floor and the platform absorbs the remainder. Money shares are bookkeeping only; no payout is claimed.";
 
 export type CatalogCommerceRefusal = SiteRefusal & {
   readonly gate: typeof COMMERCE_ACTIVATION_GATE;
   readonly registryCite: string;
+  readonly mode: "test";
+  /** A refusal can never be presented as payment evidence. */
+  readonly completion: "none";
 };
 
 const commerceInert = (): CatalogCommerceRefusal =>
@@ -277,6 +265,8 @@ const commerceInert = (): CatalogCommerceRefusal =>
     ...refuse("CATALOG_COMMERCE_INERT"),
     gate: COMMERCE_ACTIVATION_GATE,
     registryCite: COMMERCE_ACTIVATION_GATE.registry,
+    mode: SITE_CATALOG_MODE,
+    completion: "none" as const,
   });
 
 export type CatalogPurchaseRequest = {
@@ -286,8 +276,9 @@ export type CatalogPurchaseRequest = {
 };
 
 /**
- * Attempt a catalog purchase. Always refuses while tier-6b keys are open, and
- * appends nothing — no ledger entry, no order, no reservation.
+ * Attempt a storefront purchase. It validates the listing and selected currency,
+ * then refuses the TEST-only flow before checkout, ledger mutation, or payment
+ * completion. The sites own no billing implementation and cannot widen this path.
  */
 export function attemptCatalogPurchase(
   request: CatalogPurchaseRequest,
@@ -296,6 +287,12 @@ export function attemptCatalogPurchase(
   if (!listing.ok) return listing;
   const price = describeListingPrice(listing.value.price);
   if (!price.ok) return price;
+  if (
+    (request.payWith === "credits" && listing.value.price.credits === null) ||
+    (request.payWith === "money" && listing.value.price.money === null)
+  ) {
+    return refuse("CATALOG_PURCHASE_METHOD_UNAVAILABLE");
+  }
   return commerceInert();
 }
 
@@ -334,7 +331,7 @@ export function createPublishIntent(input: {
   );
 }
 
-/** Submitting a publish intent refuses while tier-6b marketplace keys are open. */
+/** Submitting a publish intent refuses while marketplace activation stays closed. */
 export function submitPublishIntent(intent: PublishIntent): CatalogCommerceRefusal {
   void intent;
   return commerceInert();
@@ -342,3 +339,6 @@ export function submitPublishIntent(intent: PublishIntent): CatalogCommerceRefus
 
 /** Policy cites carried by both storefronts; cite, never rewrite. */
 export const SITE_CATALOG_POLICY_CITES = CATALOG_POLICY_CITES;
+
+/** Canonical source named by the storefront without copying its contents. */
+export const SITE_CATALOG_FIXTURE_PATH = CATALOG_LISTINGS_FIXTURES_PATH;

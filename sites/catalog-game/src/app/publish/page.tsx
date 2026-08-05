@@ -20,7 +20,7 @@ export default function PublishPage() {
     creatorId: "your-account",
     surface: CATALOG_SITE_SURFACE,
     title: "Your asset",
-    price: { credits: 100, money: { amount: "10.00", currency: "usd" } },
+    price: { credits: 100, money: { unitAmount: 1000, currency: "usd" } },
   });
   const refusal = example.ok ? submitPublishIntent(example.value) : null;
 

@@ -89,6 +89,8 @@ export const SITE_REFUSALS = Object.freeze({
   // --- catalog (see catalog.ts) ---
   CATALOG_COMMERCE_INERT:
     "Catalog commerce is structurally inert until tier-6b marketplace activation holds open.",
+  CATALOG_PURCHASE_METHOD_UNAVAILABLE:
+    "The selected payment method is not offered by this committed catalog listing.",
   CATALOG_PRICE_UNAVAILABLE: "The listing carries neither a credit price nor a money price.",
   CATALOG_ITEM_NOT_FOUND: "No listed catalog item matches the requested id.",
 
