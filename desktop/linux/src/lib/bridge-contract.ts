@@ -105,6 +105,7 @@ export const DESKTOP_BRIDGE_AUTHORING_OPS = Object.freeze([
   "propose",
   "accept",
   "reject",
+  "recover",
   "undo",
 ] as const);
 

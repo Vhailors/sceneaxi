@@ -100,7 +100,9 @@ parity stops, and why"*.
 The first-release chrome's Play button does not widen that package graph or add
 a shell command: it adapts onto the optional packaged-host port. The Linux host
 already owns `bootstrapOpenPath()` and the presentation runtime under ADR 0024;
-standalone chrome has no port and refuses by name.
+its renderer acknowledges the shared playback event only after drawing the
+orchestrated result into the mounted viewport. Standalone chrome has no port or
+viewport acknowledgement and refuses by name.
 
 ## Deliberate refusals
 

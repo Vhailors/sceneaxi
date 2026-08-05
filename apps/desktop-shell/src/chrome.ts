@@ -52,6 +52,7 @@ import {
 import {
   DESKTOP_PRODUCT_REFUSAL_MESSAGES,
   DESKTOP_PRODUCT_REFUSALS,
+  DESKTOP_VIEWPORT_PLAY_EVENT,
   DESKTOP_WEB_STAGE_CONFIG,
   DESKTOP_WEB_STARTER,
   desktopWebStageDecision,
@@ -284,7 +285,7 @@ function titleBar(view: DesktopVisualView): string {
         ].join(""),
         "profile-chip",
         [
-          ` data-action="profile" data-value="${escapeHtml(profile.id)}"`,
+          ` data-product-action data-action="profile" data-value="${escapeHtml(profile.id)}"`,
           ` aria-pressed="${profile.active ? "true" : "false"}"`,
           ` title="${escapeHtml(`${profile.packageName} — ${detail}`)}"`,
         ].join(""),
@@ -844,7 +845,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .dot-ok{background:var(--ok)}
 .title-centre{flex:1;display:flex;justify-content:center;min-width:0}
 .project-pill{display:flex;align-items:center;gap:8px;height:22px;padding:0 11px;border-radius:11px;background:var(--header);border:1px solid var(--line-control);font-size:11px;white-space:nowrap}
-.project-pill[data-project-state="dirty"]{border-color:var(--accent);color:var(--accent)}
+.project-pill[data-project-state="dirty"],.project-pill[data-project-state="recovering"]{border-color:var(--accent);color:var(--accent)}
 .project-pill[data-project-state="refused"]{border-color:${SIGNAL.refuseLine};color:var(--refuse)}
 .title-actions{display:flex;align-items:center;gap:9px;flex:none}
 /* Drawer toggles exist at every size but only matter once a column undocks.
@@ -1236,6 +1237,7 @@ function script(view: DesktopVisualView): string {
     assistantDrawerQuery: belowTier("regular"),
     product: {
       documentPath: view.product.surface.project.activeFile,
+      viewportPlayEvent: DESKTOP_VIEWPORT_PLAY_EVENT,
       webStarter: DESKTOP_WEB_STARTER,
       // Every name the script can print, serialized rather than typed out as a
       // literal in the browser body: a refusal the visitor reads is one the
@@ -1260,6 +1262,7 @@ if (shell) {
 
   let projectData = null;
   let projectDirty = false;
+  let projectRecovering = false;
   // One product request at a time. Every live control reads \`projectData\` before
   // its first await, so two overlapping clicks would each build a proposal from
   // the same pre-edit document and the second would replace the first in the
@@ -1334,6 +1337,10 @@ if (shell) {
   // \`reviewing\`, and the next Save reports "no staged changes" over an edit the
   // host would still have applied.
   const discardStagedProposal = async () => {
+    if (projectRecovering) {
+      productStatus('refused', 'Open refused · ' + T.product.refusals.recoveryPending);
+      return false;
+    }
     if (!projectDirty) return true;
     const response = await runtimeRequest({ action: 'authoring', payload: { op: 'reject' } });
     const reason = responseReason(response);
@@ -1342,6 +1349,7 @@ if (shell) {
       productStatus('refused', 'Open refused · ' + (reason || T.product.refusals.proposalNotDiscarded));
       return false;
     }
+    projectData = null;
     projectDirty = false;
     return true;
   };
@@ -1361,6 +1369,7 @@ if (shell) {
     }
     projectData = status.data;
     projectDirty = false;
+    projectRecovering = false;
     productStatus('open', T.product.documentPath + ' · open · ' + status.documentId);
     return true;
   };
@@ -1396,24 +1405,40 @@ if (shell) {
     }
     projectData = decision.request.payload.newValue;
     projectDirty = true;
+    projectRecovering = false;
     productStatus('dirty', T.product.documentPath + ' · staged · Save to apply');
   };
 
+  const applySaveSnapshot = (snapshot) => {
+    if (!snapshot) return false;
+    const diagnostics = Array.isArray(snapshot.diagnostics) ? snapshot.diagnostics : [];
+    if (snapshot.phase === 'pending' || snapshot.journalRecoveryPending === true) {
+      projectRecovering = true;
+      productStatus('recovering', T.product.documentPath + ' · recovery pending · Save to refresh');
+      return true;
+    }
+    if (snapshot.phase === 'applied' && diagnostics.length === 0) {
+      projectDirty = false;
+      projectRecovering = false;
+      productStatus('saved', T.product.documentPath + ' · saved');
+      return true;
+    }
+    return false;
+  };
+
   const saveProject = async () => {
-    if (!projectDirty) {
+    if (!projectDirty && !projectRecovering) {
       productStatus(projectData === null ? 'closed' : 'open', T.product.documentPath + ' · no staged changes');
       return;
     }
-    productStatus('saving', T.product.documentPath + ' · saving…');
-    const response = await runtimeRequest({ action: 'authoring', payload: { op: 'accept' } });
-    const reason = responseReason(response);
+    const recovering = projectRecovering;
+    productStatus(recovering ? 'recovering' : 'saving', T.product.documentPath + (recovering ? ' · refreshing recovery…' : ' · saving…'));
+    const response = await runtimeRequest({ action: 'authoring', payload: { op: recovering ? 'recover' : 'accept' } });
     const snapshot = response?.ok ? response.data : null;
-    if (reason !== null || !snapshot || snapshot.phase !== 'applied') {
-      productStatus('refused', 'Save refused · ' + (reason || T.product.refusals.applyNotCompleted));
-      return;
-    }
-    projectDirty = false;
-    productStatus('saved', T.product.documentPath + ' · saved');
+    if (applySaveSnapshot(snapshot)) return;
+    const reason = responseReason(response);
+    if (recovering && snapshot && snapshot.journalRecoveryPending !== true) projectRecovering = false;
+    productStatus(projectRecovering ? 'recovering' : 'refused', 'Save refused · ' + (reason || T.product.refusals.applyNotCompleted));
   };
 
   // Serialize the product loop: the host holds one session and one proposal, so
@@ -1459,10 +1484,31 @@ if (shell) {
       runRefusal(T.product.refusals.openPathEvidenceInvalid);
       return;
     }
+    const playback = { exercise, accepted: false };
+    document.dispatchEvent(new CustomEvent(T.product.viewportPlayEvent, { detail: playback }));
+    if (!playback.accepted) {
+      runRefusal(T.product.refusals.viewportUnavailable);
+      return;
+    }
     showModePanels('run');
     const played = 'Played composed scene · ' + ticks + ' ticks · session closed';
     runStatus(played);
-    productStatus(projectDirty ? 'dirty' : (projectData === null ? 'closed' : 'open'), played);
+    productStatus(projectRecovering ? 'recovering' : (projectDirty ? 'dirty' : (projectData === null ? 'closed' : 'open')), played);
+  };
+
+  const switchProfile = async (value) => {
+    if (shell.dataset.profile === value) return;
+    if (projectRecovering) {
+      productStatus('refused', 'Profile switch refused · ' + T.product.refusals.recoveryPending);
+      return;
+    }
+    if (projectDirty) {
+      productStatus('refused', 'Profile switch refused · ' + T.product.refusals.profileSwitchDirty);
+      return;
+    }
+    shell.dataset.profile = value;
+    q('.profile-chip').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.value === value)));
+    setProfile(value);
   };
 
   const showModePanels = (mode) => {
@@ -1699,11 +1745,8 @@ if (shell) {
     else if (action === 'mode' && value) showModePanels(value);
     else if (action === 'dock-tab' && value) selectDockTab(value);
     else if (action === 'overlay') setOverlay(value || 'none');
-    else if (action === 'profile' && value) {
-      shell.dataset.profile = value;
-      q('.profile-chip').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.value === value)));
-      setProfile(value);
-    } else if (action === 'assistant') {
+    else if (action === 'profile' && value) void productAction(() => switchProfile(value));
+    else if (action === 'assistant') {
       if (shell.dataset.assistant === 'denied') return;
       setAssistant(assistantOpen() ? 'closed' : 'open');
     } else if (action === 'assistant-mode' && value) {

@@ -154,6 +154,7 @@ export {
   DESKTOP_WEB_HTML_MAX_LENGTH,
   DESKTOP_WEB_STAGE_CONFIG,
   DESKTOP_WEB_STARTER,
+  DESKTOP_VIEWPORT_PLAY_EVENT,
   desktopProductSurface,
   desktopWebStageDecision,
   stageWebAssetInjection,

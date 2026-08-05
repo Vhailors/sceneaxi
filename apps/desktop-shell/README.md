@@ -95,9 +95,14 @@ The first-release loop has one honest active file, `scene.json`. Open validates
 and reads it through the long-lived authoring session. Web Experience can stage
 stored HTML or the normalized `assets/hero.glb` reference as one `/data`
 proposal; Save accepts that proposal atomically. The chrome never executes the
-stored HTML. Play asks the existing host `open-path` action to open, advance,
-observe, and close the composed scene session, and reports only returned tick
-evidence. Game exposes scene/runtime + FreeJS vocabulary, Web exposes
+stored HTML. A pending durable apply leaves Save in a visible recovery state;
+the next Save calls the host recovery operation and profile switching stays
+blocked until recovery is terminal. A staged proposal also blocks profile
+switching until Save applies it or Open explicitly discards it through the same
+authoring session. Play asks the existing host `open-path` action to open, advance,
+observe, and close the composed scene session, then requires the mounted
+viewport to acknowledge a synchronized presentation frame before reporting
+success. Game exposes scene/runtime + FreeJS vocabulary, Web exposes
 HTML/site-canvas/asset-injection, and Kids remains the shared refuse-only policy
 surface with every new live control demoted in the same central mint.
 
@@ -218,6 +223,6 @@ itself, so Kids refuses there with the shared code. `test/app.test.ts`
 may claim to be driveable only when it names a real desktop command.
 
 `tests/e2e/desktop-product-loop-golden.test.ts` is the vertical acceptance path:
-it renders all three profiles, opens the actual `scene.json` through the existing
-host bridge, stages the Web asset proposal from validated data, saves it through
-the shared session, and plays the already-composed scene through the orchestrator.
+it executes the emitted browser script at the narrow window tier, clicks all
+three profile surfaces plus Open, Web asset staging, Save recovery, and Play
+against the real host bridge, and observes the viewport playback acknowledgement.

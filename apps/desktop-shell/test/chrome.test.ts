@@ -357,7 +357,7 @@ describe("engine desktop chrome — accessibility", () => {
       'id="mode-compose" data-kind="view" data-action="mode" data-value="compose" aria-pressed="true"',
     );
     expect(html).toContain(
-      'id="profile-web" data-kind="view" data-action="profile" data-value="web" aria-pressed="true"',
+      'id="profile-web" data-kind="view" data-product-action data-action="profile" data-value="web" aria-pressed="true"',
     );
   });
 

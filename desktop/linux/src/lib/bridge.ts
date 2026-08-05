@@ -315,6 +315,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     }
     if (op === "accept") return bridgeOk("authoring", live.accept());
     if (op === "reject") return bridgeOk("authoring", live.reject());
+    if (op === "recover") return bridgeOk("authoring", live.refreshRecovery());
     return bridgeOk("authoring", live.undo());
   };
 

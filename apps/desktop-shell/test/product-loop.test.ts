@@ -3,6 +3,7 @@ import { OPEN_PATH_REFUSE_CODES } from "@sceneaxi/schemas";
 import {
   DESKTOP_PRODUCT_REFUSAL_MESSAGES,
   DESKTOP_PRODUCT_REFUSALS,
+  DESKTOP_VIEWPORT_PLAY_EVENT,
   DESKTOP_WEB_HTML_MAX_LENGTH,
   DESKTOP_WEB_STAGE_CONFIG,
   desktopProductSurface,
@@ -165,8 +166,9 @@ describe("desktop product loop", () => {
     expect(game).toContain("sceneaxiDesktopLinux");
     expect(game).toContain("action: 'open-path'");
     expect(game).toContain("op: 'status'");
-    expect(game).toContain("op: 'accept'");
     expect(game).toContain("op: 'reject'");
+    expect(game).toContain("op: recovering ? 'recover' : 'accept'");
+    expect(game).toContain(DESKTOP_VIEWPORT_PLAY_EVENT);
   });
 
   it("ships the model's own staging decision instead of a browser paraphrase of it", () => {

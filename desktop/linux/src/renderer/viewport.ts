@@ -17,6 +17,9 @@
  * the main process only through the preload-exposed bridge global.
  */
 import {
+  DESKTOP_VIEWPORT_PLAY_EVENT,
+} from "@sceneaxi/desktop-shell";
+import {
   createSculptMountApi,
   createThreeRenderLoop,
   createThreeSculptPresentationBackend,
@@ -478,6 +481,37 @@ async function mountLiveViewport(): Promise<void> {
       "the assistant controls could not be bound to the mounted presentation runtime.",
     );
   }
+
+  document.addEventListener(DESKTOP_VIEWPORT_PLAY_EVENT, (event: Event) => {
+    if (!(event instanceof CustomEvent)) return;
+    const detail = event.detail as {
+      accepted?: unknown;
+      exercise?: {
+        closed?: unknown;
+        initialDigest?: unknown;
+        tickDigests?: unknown;
+      };
+    } | null;
+    const exercise = detail?.exercise;
+    if (
+      detail === null ||
+      exercise?.closed !== true ||
+      typeof exercise.initialDigest !== "string" ||
+      !Array.isArray(exercise.tickDigests) ||
+      exercise.tickDigests.length === 0 ||
+      !exercise.tickDigests.every((digest) => typeof digest === "string")
+    ) {
+      return;
+    }
+    const frame = mounts.render();
+    updatePixelsMeta(frame);
+    detail.accepted = true;
+    stage.dataset.playback = "synchronized";
+    openPathLine(
+      stage,
+      `kernel playback synchronized: ${exercise.tickDigests.length} ticks advanced · digest ${exercise.initialDigest.slice(0, 18)}… → ${exercise.tickDigests.at(-1)?.slice(0, 18)}… · viewport frame ${frame.frame}`,
+    );
+  });
 
   // Everything below runs after `loop.start()`, so it names itself on its own line
   // — a refusal written to the frame report would be overwritten by the next frame.

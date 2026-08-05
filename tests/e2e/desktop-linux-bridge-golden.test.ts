@@ -32,6 +32,7 @@ import {
 } from "@sceneaxi/authoring-core";
 import {
   DESKTOP_ASSISTANT_RUNTIME_EVENT,
+  DESKTOP_VIEWPORT_PLAY_EVENT,
   DESKTOP_VISUAL_REFUSALS,
 } from "@sceneaxi/desktop-shell";
 import {
@@ -727,6 +728,13 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
     const accepted = bridge.handle({ action: "authoring", payload: { op: "accept" } });
     if (!accepted.ok) throw new Error(accepted.reason);
     expect((accepted.data as { phase: string }).phase).toBe("applied");
+    const recovered = bridge.handle({
+      action: "authoring",
+      payload: { op: "recover" },
+    });
+    expect(recovered.ok).toBe(true);
+    if (!recovered.ok) return;
+    expect((recovered.data as { phase: string }).phase).toBe("applied");
     const after = readFileSync(join(dir, "scene.json"), "utf8");
     expect(after).not.toBe(before);
     expect(after).toContain('"x": 7');
@@ -1018,6 +1026,9 @@ describe("desktop renderer module accounting", () => {
     );
     expect(viewport).toContain("frame.pixelsDrawn");
     expect(viewport).toContain("PIXELS_META_NAME");
+    expect(viewport).toContain("document.addEventListener(DESKTOP_VIEWPORT_PLAY_EVENT");
+    expect(viewport).toContain('stage.dataset.playback = "synchronized"');
+    expect(DESKTOP_VIEWPORT_PLAY_EVENT).toBe("sceneaxi:desktop-viewport-play");
     expect(viewport).not.toMatch(/from\s+"electron"/);
     // No Three type crosses the seam into this consumer either.
     expect(viewport).not.toMatch(/from\s+"three"/);

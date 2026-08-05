@@ -204,15 +204,22 @@ The left dock owns one project/file answer rather than parallel mock panels:
 the host's authoring `status` operation and retains its validated inert `data`.
 Web Experience stages either starter HTML or `assets/hero.glb` by proposing one
 replacement of `/data`; Save accepts that exact pending proposal through the
-long-lived shared session. The HTML is stored and displayed only as escaped
-text—never inserted into the chrome DOM. Invalid existing Web data and asset
-paths outside normalized `assets/` refuse before a proposal is made.
+long-lived shared session. Pending or journal-recovery results keep the surface
+in `recovering`; Save calls the bridge's `recover` operation until the session
+reaches a terminal state, and profile switching refuses during recovery. A
+staged proposal also blocks profile switching until Save applies it or Open
+rejects it and clears its browser copy, so Web work cannot later be accepted
+under Game or Kids. The HTML is stored and displayed only as escaped text—never inserted into
+the chrome DOM. Invalid existing Web data and asset paths outside normalized
+`assets/` refuse before a proposal is made.
 
 Play calls the host's existing `open-path` action. In the packaged desktop that
 is the already-composed scene path through `bootstrapOpenPath()`: the response
 must contain tick digests and a closed session before the chrome reports play.
-The separate renderer owner continues drawing the same `MountableScene`; the
-shell neither constructs a renderer nor invents a pixel claim.
+The chrome then emits the shared viewport-play event carrying that evidence;
+the separate renderer owner validates it, draws a synchronized frame of the
+same `MountableScene`, and acknowledges the event. Without that acknowledgement
+Play refuses. The shell neither constructs a renderer nor invents a pixel claim.
 
 The staging decision itself lives in exactly one place. `desktopWebStageDecision()`
 closes over no module binding, so `chrome.ts` embeds `String(desktopWebStageDecision)`

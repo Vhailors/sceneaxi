@@ -26,6 +26,8 @@ export const DESKTOP_PROJECT = Object.freeze({
   ]),
 });
 
+export const DESKTOP_VIEWPORT_PLAY_EVENT = "sceneaxi:desktop-viewport-play";
+
 export const DESKTOP_PRODUCT_CAPABILITY_IDS = Object.freeze([
   "scene-authoring",
   "composed-scene-play",
@@ -122,10 +124,13 @@ export const DESKTOP_PRODUCT_REFUSALS = Object.freeze({
   runtimeUnavailable: "DESKTOP_RUNTIME_UNAVAILABLE",
   runtimeRequestFailed: "DESKTOP_RUNTIME_REQUEST_FAILED",
   runtimeRequestRefused: "DESKTOP_RUNTIME_REQUEST_REFUSED",
+  viewportUnavailable: "DESKTOP_VIEWPORT_UNAVAILABLE",
   authoringRefused: "DESKTOP_AUTHORING_REFUSED",
   proposalNotReviewing: "DESKTOP_PROPOSAL_NOT_REVIEWING",
   proposalNotDiscarded: "DESKTOP_PROPOSAL_NOT_DISCARDED",
+  profileSwitchDirty: "DESKTOP_PROFILE_SWITCH_DIRTY",
   applyNotCompleted: "DESKTOP_APPLY_NOT_COMPLETED",
+  recoveryPending: "DESKTOP_RECOVERY_PENDING",
   openPathEvidenceInvalid: "DESKTOP_OPEN_PATH_EVIDENCE_INVALID",
   requestInFlight: "DESKTOP_PRODUCT_REQUEST_IN_FLIGHT",
 } as const);
@@ -150,14 +155,20 @@ export const DESKTOP_PRODUCT_REFUSAL_MESSAGES: Readonly<
     "The packaged host threw instead of answering, so no project state changed here.",
   [DESKTOP_PRODUCT_REFUSALS.runtimeRequestRefused]:
     "The packaged host refused the request by name; its own reason is shown beside this one.",
+  [DESKTOP_PRODUCT_REFUSALS.viewportUnavailable]:
+    "The orchestrated playback completed, but no live viewport acknowledged the synchronized frame.",
   [DESKTOP_PRODUCT_REFUSALS.authoringRefused]:
     "The shared authoring session refused the edit; its first diagnostic is shown beside this one.",
   [DESKTOP_PRODUCT_REFUSALS.proposalNotReviewing]:
     "The host did not park the edit for review, so nothing is staged to save.",
   [DESKTOP_PRODUCT_REFUSALS.proposalNotDiscarded]:
     "A staged proposal is still held by the host, so re-opening would abandon an edit the host still has.",
+  [DESKTOP_PRODUCT_REFUSALS.profileSwitchDirty]:
+    "Save the staged proposal or re-open the project to discard it before switching profiles.",
   [DESKTOP_PRODUCT_REFUSALS.applyNotCompleted]:
     "The host did not report the apply as completed, so the staged edit is still pending.",
+  [DESKTOP_PRODUCT_REFUSALS.recoveryPending]:
+    "Durable apply recovery is still pending; save again to refresh it before switching profiles.",
   [DESKTOP_PRODUCT_REFUSALS.openPathEvidenceInvalid]:
     "The play response carried no closed session with observed tick digests, so nothing is reported as played.",
   [DESKTOP_PRODUCT_REFUSALS.requestInFlight]:

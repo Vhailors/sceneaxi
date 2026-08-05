@@ -232,6 +232,13 @@ The profile switch presents **Game**, **Website (Web)**, and **Kids**:
   switch available so the operator can return to Game or Website; it does not claim
   a Kids authoring path that is not shipped.
 
+A profile change is serialized with project actions. A staged proposal blocks
+the tab change until Save applies it or Open explicitly discards it, and an
+in-progress durable save blocks switching until Save refreshes recovery to a
+terminal state. Play advances the composed scene through the orchestrator and
+succeeds only when the mounted renderer acknowledges the synchronized viewport
+frame.
+
 The Assistant column distinguishes `Local · free`, `BYOK · free`, and
 `Hosted · metered`. Build is the first-release artifact-producing mode; Ask and
 Agent refuse instead of borrowing Build semantics. A mounted assistant result
