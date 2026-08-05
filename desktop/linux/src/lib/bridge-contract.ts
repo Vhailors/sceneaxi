@@ -14,7 +14,6 @@
  */
 import type {
   AssistantSculptProgress,
-  AssistantSculptResult,
   AssistantSculptSuccess,
 } from "@sceneaxi/authoring-core";
 
@@ -43,7 +42,7 @@ export const DESKTOP_BRIDGE_ACTIONS = Object.freeze([
 export type DesktopBridgeAction = (typeof DESKTOP_BRIDGE_ACTIONS)[number];
 
 /**
- * Refusals the bridge itself can mint. Upstream reasons (for example
+ * Refusals the desktop runtime seam can mint. Upstream reasons (for example
  * `DESKTOP_SCENE_NOT_COMPOSABLE` or an orchestrator `OPEN_PATH_*` reason) travel
  * through the same envelope under their own names.
  */
@@ -53,6 +52,11 @@ export const DESKTOP_BRIDGE_REFUSALS = Object.freeze({
   authoringOpUnknown: "DESKTOP_BRIDGE_AUTHORING_OP_UNKNOWN",
   assistantOpUnknown: "DESKTOP_BRIDGE_ASSISTANT_OP_UNKNOWN",
   assistantBusy: "DESKTOP_ASSISTANT_BUSY",
+  assistantAbandoned: "DESKTOP_ASSISTANT_ABANDONED",
+  assistantBuildModeRequired: "DESKTOP_ASSISTANT_BUILD_MODE_REQUIRED",
+  assistantJobMissing: "DESKTOP_ASSISTANT_JOB_MISSING",
+  assistantStatusTimeout: "DESKTOP_ASSISTANT_STATUS_TIMEOUT",
+  assistantRuntimeFailed: "DESKTOP_ASSISTANT_RUNTIME_FAILED",
   assistantByoUnavailable: "DESKTOP_ASSISTANT_BYO_UNAVAILABLE",
   assistantHostedMeteringUnavailable:
     "DESKTOP_ASSISTANT_HOSTED_METERING_UNAVAILABLE",
@@ -97,6 +101,7 @@ export type DesktopBridgeAuthoringOp = (typeof DESKTOP_BRIDGE_AUTHORING_OPS)[num
 export const DESKTOP_BRIDGE_ASSISTANT_OPS = Object.freeze([
   "start",
   "status",
+  "abandon",
 ] as const);
 
 export type DesktopBridgeAssistantOp =
@@ -108,7 +113,13 @@ export type DesktopAssistantJobSnapshot = Readonly<{
   status: "running" | "ready" | "refused";
   progress: ReadonlyArray<AssistantSculptProgress>;
   result?: AssistantSculptSuccess;
-  refusal?: Extract<AssistantSculptResult, { readonly ok: false }>;
+  refusal?: Readonly<{
+    ok: false;
+    reason: string;
+    message: string;
+    recoverable: boolean;
+    detail?: string;
+  }>;
 }>;
 
 /** What `handshake` reports: identity, never capability it cannot prove. */

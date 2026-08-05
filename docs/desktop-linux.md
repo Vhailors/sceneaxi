@@ -53,6 +53,9 @@ uses only an injected runner and otherwise refuses
 `DESKTOP_ASSISTANT_HOSTED_METERING_UNAVAILABLE` because the dependency matrix
 correctly keeps auth/billing out of this tier. Hosted completion and debiting are
 proved separately through web-shell's existing `createAssistantPanel()` seam.
+The desktop golden test injects a real fixture-backed Model Provider Port through
+that BYOK runner and proves the typed result crosses the job seam; the packaged
+default deliberately injects no provider, credential, or fallback behaviour.
 
 On success the existing validated `SculptArtifact` is mounted through
 `createSculptMountApi()` into the one live center viewport. The renderer exposes
@@ -60,9 +63,17 @@ real translate/rotate/scale controls using the Mount API and prints read-only
 materials, collider physics where the quality artifact supports it, and
 procedural settings. Unsupported edits and legacy physics inspection refuse by
 name. Provider failures, malformed output, timeouts, and other refusals remain
-visible with Retry; streaming progress contains only deltas actually observed
-from a BYOK stream. Selecting Kids removes the composer, and authoring-core also
+visible with Retry; a timeout first abandons the old job so its late result
+cannot overwrite the retry. Streaming progress contains only deltas actually
+observed from a BYOK stream. Selecting Kids removes the composer, and authoring-core also
 denies the carried Kids profile before local compilation or provider dispatch.
+
+The first-release manipulator is deliberately bounded: `Move +X` and `Move +Y`
+advance by 0.25 world units, `Rotate Y` advances by 15 degrees, and `Scale +`
+adds 0.1 uniformly. A replacement artifact resets that state to identity before
+the controls act again. These controls are modelled by `desktop-shell` and use
+its existing control tokens; the renderer declares only the Mount API effects,
+not a parallel control or palette.
 
 ## The renderer-owning module
 

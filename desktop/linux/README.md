@@ -53,8 +53,11 @@ metered and refuses here because this desktop tier has no identity/credit plane.
 A successful action mounts the validated Sculpt Artifact into the live center
 viewport, adds translate/rotate/scale manipulators, and shows the artifact's
 read-only materials, supported collider physics, and procedural settings.
-Progress, provider/refusal details, and Retry remain on the surface. Ask and
-Agent modes refuse clearly rather than pretending they produce build output.
+Progress, provider/refusal details, and Retry remain on the surface. A timed-out
+job is abandoned before Retry is offered, so a late provider result cannot
+replace the newer job. Ask and Agent modes refuse clearly rather than pretending
+they produce build output. The shell visual model owns the manipulator controls
+and tokens; the renderer only binds their Mount API effects.
 
 ## Shape
 

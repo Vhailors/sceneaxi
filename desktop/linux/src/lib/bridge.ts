@@ -70,9 +70,14 @@ export type DesktopBridgeOptions = {
   readonly runByoAssistant?: (request: DesktopAssistantRunRequest) => Promise<AssistantSculptResult>;
 };
 
+export type DesktopAssistantProfile =
+  | "@sceneaxi/profile-game"
+  | "@sceneaxi/profile-web"
+  | "@sceneaxi/profile-kids";
+
 export type DesktopAssistantRunRequest = Readonly<{
   prompt: string;
-  profile: `@sceneaxi/profile-${string}`;
+  profile: DesktopAssistantProfile;
   onProgress: (snapshot: AssistantSculptProgress) => void;
 }>;
 
@@ -137,6 +142,14 @@ function isAssistantOp(value: unknown): value is DesktopBridgeAssistantOp {
   );
 }
 
+function isAssistantProfile(value: unknown): value is DesktopAssistantProfile {
+  return (
+    value === "@sceneaxi/profile-game" ||
+    value === "@sceneaxi/profile-web" ||
+    value === "@sceneaxi/profile-kids"
+  );
+}
+
 function field(value: unknown, name: string): unknown {
   if (typeof value !== "object" || value === null) return undefined;
   const descriptor = Object.getOwnPropertyDescriptor(value, name);
@@ -183,7 +196,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     status: "running" | "ready" | "refused";
     progress: AssistantSculptProgress[];
     result?: NonNullable<DesktopAssistantJobSnapshot["result"]>;
-    refusal?: Extract<AssistantSculptResult, { readonly ok: false }>;
+    refusal?: NonNullable<DesktopAssistantJobSnapshot["refusal"]>;
   } | null = null;
 
   const authoringSession = (): DesktopSession => {
@@ -327,6 +340,18 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     if (op === "status") {
       return bridgeOk("assistant", assistantSnapshot());
     }
+    if (op === "abandon") {
+      if (assistantJob?.status === "running") {
+        assistantJob.status = "refused";
+        assistantJob.refusal = Object.freeze({
+          ok: false as const,
+          reason: DESKTOP_BRIDGE_REFUSALS.assistantAbandoned,
+          message: "The unresolved assistant job was abandoned; Retry may start a fresh job.",
+          recoverable: true,
+        });
+      }
+      return bridgeOk("assistant", assistantSnapshot());
+    }
 
     const prompt = field(payload, "prompt");
     const profile = field(payload, "profile");
@@ -334,8 +359,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     if (
       typeof prompt !== "string" ||
       prompt.trim().length === 0 ||
-      typeof profile !== "string" ||
-      !/^@sceneaxi\/profile-[a-z][a-z0-9-]*$/.test(profile) ||
+      !isAssistantProfile(profile) ||
       (route !== "local" && route !== "byo" && route !== "hosted")
     ) {
       return bridgeRefuse(
@@ -382,7 +406,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     };
     const request: DesktopAssistantRunRequest = {
       prompt: prompt.trim(),
-      profile: profile as DesktopAssistantRunRequest["profile"],
+      profile,
       onProgress,
     };
     const running = route === "local"
@@ -401,7 +425,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     }
     void running.then(
       (result) => {
-        if (assistantJob !== activeJob) return;
+        if (assistantJob !== activeJob || activeJob.status !== "running") return;
         if (result.ok) {
           activeJob.status = "ready";
           activeJob.result = result;
@@ -411,12 +435,12 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         }
       },
       (error: unknown) => {
-        if (assistantJob !== activeJob) return;
+        if (assistantJob !== activeJob || activeJob.status !== "running") return;
         activeJob.status = "refused";
         activeJob.refusal = Object.freeze({
           ok: false as const,
-          reason: "ASSISTANT_SCULPT_PROVIDER_FAILED",
-          message: "The configured BYOK assistant runner failed.",
+          reason: DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
+          message: "The configured assistant runner failed.",
           recoverable: true,
           detail: error instanceof Error ? error.message : String(error),
         });

@@ -47,6 +47,7 @@ export {
   type DesktopBridge,
   type DesktopBridgeOptions,
   type DesktopAssistantRunRequest,
+  type DesktopAssistantProfile,
   type OpenPathExercise,
 } from "./lib/bridge.js";
 

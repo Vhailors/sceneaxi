@@ -22,9 +22,11 @@ failure. The Kids profile is denied before local work or provider dispatch.
 
 Hosted AI deliberately has no direct authoring-core dispatch. A hosted caller
 must first obtain completion text through billing's metered assistant seam, then
-pass it to `sculptArtifactFromAssistantCompletion({ route: "hosted-metered" })`.
-That function only validates and reconstructs existing text, so it cannot bypass
-the credit gate. Successful results expose the artifact plus read-only material,
+pass it to `sculptArtifactFromAssistantCompletion()` with the already-checked
+profile. That function only validates and reconstructs existing text and labels
+the result `validated-completion`; the billing snapshot remains the only evidence
+that hosted work was metered. It independently denies Kids before parsing.
+Successful results expose the artifact plus read-only material,
 physics (where the quality runtime has colliders), and procedural-settings
 inspection. Editing those values refuses because the current contracts expose
 no such edit operation.

@@ -381,6 +381,18 @@ function viewport(view: DesktopVisualView): string {
     <div class="axis-widget" aria-hidden="true">
       <i style="background:${AXIS.x}"></i><i style="background:${AXIS.y}"></i><i style="background:${AXIS.z}"></i>
     </div>
+    <div class="assistant-manipulators" data-assistant-manipulators="translation rotation scale" aria-label="Assistant artifact manipulators" hidden>
+      ${view.viewport.manipulators
+        .map((row) =>
+          button(
+            row.control,
+            escapeHtml(row.label),
+            "assistant-manipulator",
+            ` data-action="assistant-manipulator" data-value="${escapeHtml(row.id)}"`,
+          ),
+        )
+        .join("")}
+    </div>
     <div class="sculpt-progress" role="status" data-sculpt-progress${sculptRunning ? "" : " hidden"}>
       <p class="sculpt-label">${escapeHtml(view.sculpt.label)}</p>
       <div class="sculpt-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${view.sculpt.percent}" aria-label="${escapeHtml(`Pass ${view.sculpt.passIndex + 1} of ${view.sculpt.passCount}`)}">
@@ -817,6 +829,10 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .viewport-note{margin:0;font-size:11px;line-height:1.5;color:var(--dim);max-width:44ch;text-align:center}
 .axis-widget{position:absolute;right:12px;top:11px;display:flex;gap:4px}
 .axis-widget i{width:18px;height:2px;border-radius:1px;display:block}
+.assistant-manipulators{position:absolute;left:12px;top:12px;z-index:8;display:flex;gap:4px}
+.assistant-manipulator{border:1px solid var(--line-hover);border-radius:3px;background:var(--header);color:var(--text);padding:5px 7px;font-size:10px}
+.assistant-manipulator:hover{border-color:var(--accent);color:var(--accent)}
+.assistant-manipulator.is-inert:hover{border-color:var(--line-hover);color:var(--inert)}
 
 .sculpt-progress{position:absolute;left:50%;bottom:64px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:9px;animation:rise .3s ease-out}
 .sculpt-label{margin:0;font-size:14px;font-weight:600}

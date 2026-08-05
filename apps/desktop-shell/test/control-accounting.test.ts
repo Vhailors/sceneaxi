@@ -191,7 +191,7 @@ describe("engine desktop chrome — control accounting (model → document)", ()
 });
 
 describe("engine desktop chrome — control accounting (document → model)", () => {
-  it("routes every interactive element through the one button helper", () => {
+  it("routes every action button through the one button helper", () => {
     for (const [label, state] of STATES) {
       const html = render(state);
       const buttons = [...html.matchAll(/<button\b[^>]*>/g)].map(([tag]) => tag);

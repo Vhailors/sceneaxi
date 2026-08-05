@@ -4,6 +4,7 @@ import {
   MODEL_PROVIDER_PORT_SCHEMA_VERSION,
   createModelProviderPort,
   runAssistantSculptAction,
+  sculptArtifactFromAssistantCompletion,
   type ModelDescriptor,
 } from "@sceneaxi/authoring-core";
 
@@ -173,6 +174,17 @@ describe("assistant sculpt action", () => {
       recoverable: false,
     });
     expect(entered).toBe(false);
+  });
+
+  it("denies Kids on the public completion converter before parsing", () => {
+    const result = sculptArtifactFromAssistantCompletion("not-json", {
+      profile: "@sceneaxi/profile-kids",
+    });
+    expect(result).toMatchObject({
+      ok: false,
+      reason: ASSISTANT_SCULPT_REFUSALS.kidsDenied,
+      recoverable: false,
+    });
   });
 
   it("turns provider failures into a recoverable named refusal", async () => {

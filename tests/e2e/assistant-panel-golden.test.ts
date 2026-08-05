@@ -372,12 +372,12 @@ describe("in-app AI assistant golden path", () => {
     if (turn === undefined) return;
 
     const sculpt = sculptArtifactFromAssistantCompletion(turn.text, {
-      route: "hosted-metered",
+      profile: snapshot.profile,
       providerEvidence: turn.evidence,
     });
     expect(sculpt.ok).toBe(true);
     if (!sculpt.ok) return;
-    expect(sculpt.route).toBe("hosted-metered");
+    expect(sculpt.route).toBe("validated-completion");
     expect(sculpt.artifact.kind).toBe("sceneaxi.sculpt-artifact");
     expect(sculpt.artifact.spec.id).toBe("hosted-crate-spec");
     expect(wired.store.entryCount(ACCOUNT.accountId)).toBe(2);

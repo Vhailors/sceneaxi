@@ -102,7 +102,7 @@ export type AssistantSculptInspection = Readonly<{
 
 export type AssistantSculptSuccess = Readonly<{
   ok: true;
-  route: "local" | "byo" | "hosted-metered";
+  route: "local" | "byo" | "validated-completion";
   artifact: SculptArtifact;
   artifactBytes: string;
   artifactDigest: string;
@@ -329,12 +329,10 @@ function artifactFromIntake(
  * panel. This function performs no provider call and no metering; callers cannot
  * use it to reach hosted AI without first obtaining completion text elsewhere.
  */
-export function sculptArtifactFromAssistantCompletion(
+function artifactFromCompletion(
   text: string,
-  options: Readonly<{
-    route: "byo" | "hosted-metered";
-    providerEvidence?: ModelProviderCallEvidence;
-  }>,
+  route: AssistantSculptSuccess["route"],
+  providerEvidence?: ModelProviderCallEvidence,
 ): AssistantSculptResult {
   const parsed = parseUnambiguousJson(text);
   if (!parsed.ok) {
@@ -354,7 +352,34 @@ export function sculptArtifactFromAssistantCompletion(
       validated.diagnostics[0]?.message,
     );
   }
-  return artifactFromIntake(validated.value, options.route, options.providerEvidence);
+  return artifactFromIntake(validated.value, route, providerEvidence);
+}
+
+/**
+ * Validate and reconstruct completion text whose dispatch policy was decided by
+ * the caller. `validated-completion` deliberately makes no metering claim: the
+ * billing-owned assistant snapshot remains the only evidence that hosted work
+ * was charged. Kids is denied here independently before any bytes are parsed.
+ */
+export function sculptArtifactFromAssistantCompletion(
+  text: string,
+  options: Readonly<{
+    profile: ModelProviderProfile;
+    providerEvidence?: ModelProviderCallEvidence;
+  }>,
+): AssistantSculptResult {
+  if (options.profile === KIDS_PROFILE) {
+    return failure(
+      ASSISTANT_SCULPT_REFUSALS.kidsDenied,
+      "Assistant completion reconstruction is denied for Kids before parsing or reconstruction.",
+      false,
+    );
+  }
+  return artifactFromCompletion(
+    text,
+    "validated-completion",
+    options.providerEvidence,
+  );
 }
 
 /** Run one deterministic local or explicitly injected BYOK assistant action. */
@@ -471,10 +496,7 @@ export async function runAssistantSculptAction(
       percent: 75,
       message: "Validating provider output against the typed Sculpt Intake contract.",
     });
-    const result = sculptArtifactFromAssistantCompletion(text, {
-      route: "byo",
-      providerEvidence: evidence,
-    });
+    const result = artifactFromCompletion(text, "byo", evidence);
     if (result.ok) {
       progress(options.onProgress, {
         phase: "ready",

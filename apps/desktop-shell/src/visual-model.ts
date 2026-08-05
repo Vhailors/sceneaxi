@@ -217,6 +217,16 @@ export type DesktopAssistantState = EditorShellAssistantState;
 export type DesktopAssistantRuntime = "none" | "local";
 export type DesktopAssistantRoute = "local" | "byo" | "hosted";
 
+export const DESKTOP_ASSISTANT_MANIPULATORS = Object.freeze([
+  Object.freeze({ id: "move-x", label: "Move +X" }),
+  Object.freeze({ id: "move-y", label: "Move +Y" }),
+  Object.freeze({ id: "rotate-y", label: "Rotate Y" }),
+  Object.freeze({ id: "scale-up", label: "Scale +" }),
+] as const);
+
+export type DesktopAssistantManipulatorId =
+  (typeof DESKTOP_ASSISTANT_MANIPULATORS)[number]["id"];
+
 /* -------------------------------------------------------------------------- */
 /* Refusals                                                                    */
 /* -------------------------------------------------------------------------- */
@@ -1159,6 +1169,13 @@ export type DesktopVisualView = Readonly<{
         control: DesktopControl;
       }>
     >;
+    manipulators: ReadonlyArray<
+      Readonly<{
+        id: DesktopAssistantManipulatorId;
+        label: string;
+        control: DesktopControl;
+      }>
+    >;
   }>;
   statusText: string;
   profilePin: string;
@@ -1477,6 +1494,22 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
               "inert",
               DESKTOP_VISUAL_REFUSALS.noPresentationRuntime,
             ),
+          }),
+        ),
+      ),
+      manipulators: Object.freeze(
+        DESKTOP_ASSISTANT_MANIPULATORS.map((row) =>
+          Object.freeze({
+            ...row,
+            control:
+              state.assistantRuntime === "local"
+                ? control(`assistant-manipulator-${row.id}`, row.label, "live")
+                : control(
+                    `assistant-manipulator-${row.id}`,
+                    row.label,
+                    "inert",
+                    DESKTOP_VISUAL_REFUSALS.noPresentationRuntime,
+                  ),
           }),
         ),
       ),

@@ -19,7 +19,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
-import { createDocument, writeDocumentFile } from "@sceneaxi/authoring-core";
+import {
+  MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+  createDocument,
+  createModelProviderPort,
+  runAssistantSculptAction,
+  writeDocumentFile,
+  type AssistantSculptResult,
+  type ModelDescriptor,
+} from "@sceneaxi/authoring-core";
 import {
   THREE_HEADLESS_SURFACE_LABEL,
   createSculptMountApi,
@@ -40,6 +48,54 @@ import {
 
 const FIXED_NOW_MS = 1_753_920_000_000;
 const fixedNow = (): number => FIXED_NOW_MS;
+const BYO_MODEL: ModelDescriptor = Object.freeze({
+  model: "fixture/desktop-byo",
+  provider: "operator-byo",
+  quantization: "pinned",
+  version: "1",
+});
+
+const BYO_INTAKE = JSON.stringify({
+  schemaVersion: 1,
+  kind: "sceneaxi.sculpt-intake",
+  intakeId: "desktop-byo-crate",
+  mode: "structured-spec",
+  structuredSpec: {
+    schemaVersion: 1,
+    kind: "sceneaxi.object-sculpt-spec",
+    id: "desktop-byo-crate-spec",
+    rootNodeId: "crate-root",
+    components: [
+      {
+        id: "crate-body",
+        primitive: "box",
+        dimensions: [2, 2, 2],
+        materialId: "crate-shell",
+      },
+    ],
+    materials: [
+      {
+        id: "crate-shell",
+        baseColor: "#3366cc",
+        metallic: 0.1,
+        roughness: 0.7,
+      },
+    ],
+    sockets: [],
+    hierarchy: [
+      {
+        id: "crate-root",
+        parentId: null,
+        componentId: "crate-body",
+        transform: {
+          translation: [0, 0, 0],
+          rotationEulerDegrees: [0, 0, 0],
+          scale: [1, 1, 1],
+        },
+      },
+    ],
+  },
+});
 
 const tmpDirs: string[] = [];
 afterAll(() => {
@@ -166,6 +222,118 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
     if (!hosted.ok) {
       expect(hosted.reason).toBe("DESKTOP_ASSISTANT_HOSTED_METERING_UNAVAILABLE");
     }
+  });
+
+  it("runs an injected BYOK Model Provider Port through the desktop job seam", async () => {
+    const port = createModelProviderPort({
+      adapter: {
+        routeKind: "third-party",
+        capabilities: {
+          schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+          operations: ["complete"],
+        },
+        async complete() {
+          return {
+            response: {
+              schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+              operation: "complete" as const,
+              text: BYO_INTAKE,
+              finishReason: "stop" as const,
+            },
+            executedModel: BYO_MODEL,
+          };
+        },
+      },
+      profilePolicies: {
+        "@sceneaxi/profile-game": () => ({ ok: true }),
+      },
+    });
+    const bridge = createDesktopBridge({
+      cwd: authoringDir(),
+      nowMs: fixedNow,
+      runByoAssistant: (request) =>
+        runAssistantSculptAction({
+          route: "byo",
+          operation: "complete",
+          model: BYO_MODEL,
+          port,
+          ...request,
+        }),
+    });
+
+    const started = bridge.handle({
+      action: "assistant",
+      payload: {
+        op: "start",
+        route: "byo",
+        profile: "@sceneaxi/profile-game",
+        prompt: "Build a blue crate",
+      },
+    });
+    expect(started.ok).toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const status = bridge.handle({ action: "assistant", payload: { op: "status" } });
+    expect(status.ok).toBe(true);
+    if (!status.ok) return;
+    expect(status.data).toMatchObject({
+      route: "byo",
+      status: "ready",
+      result: {
+        route: "byo",
+        artifact: { kind: "sceneaxi.sculpt-artifact" },
+        providerEvidence: { operation: "complete" },
+      },
+    });
+  });
+
+  it("abandons a hung BYOK job so Retry can start fresh work", async () => {
+    let rejectHung: ((reason: Error) => void) | undefined;
+    const bridge = createDesktopBridge({
+      cwd: authoringDir(),
+      nowMs: fixedNow,
+      runByoAssistant: () =>
+        new Promise<AssistantSculptResult>((_resolve, reject) => {
+          rejectHung = reject;
+        }),
+    });
+    expect(
+      bridge.handle({
+        action: "assistant",
+        payload: {
+          op: "start",
+          route: "byo",
+          profile: "@sceneaxi/profile-game",
+          prompt: "Never finishes",
+        },
+      }).ok,
+    ).toBe(true);
+    const abandoned = bridge.handle({
+      action: "assistant",
+      payload: { op: "abandon" },
+    });
+    expect(abandoned.ok).toBe(true);
+    if (abandoned.ok) {
+      expect(abandoned.data).toMatchObject({
+        status: "refused",
+        refusal: { reason: DESKTOP_BRIDGE_REFUSALS.assistantAbandoned },
+      });
+    }
+
+    const retried = bridge.handle({
+      action: "assistant",
+      payload: {
+        op: "start",
+        route: "local",
+        profile: "@sceneaxi/profile-game",
+        prompt: "A green sphere",
+      },
+    });
+    expect(retried.ok).toBe(true);
+    rejectHung?.(new Error("late provider failure"));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const status = bridge.handle({ action: "assistant", payload: { op: "status" } });
+    expect(status.ok).toBe(true);
+    if (status.ok) expect(status.data).toMatchObject({ status: "ready" });
   });
 
   it("denies Kids before an injected BYOK runner can be reached", () => {
@@ -453,7 +621,8 @@ describe("desktop renderer module accounting", () => {
     expect(source).toContain("mounts.updateTransform(ASSISTANT_INSTANCE_ID");
     expect(source).toContain('data-assistant-manipulators');
     expect(source).toContain('shell.dataset.assistantMode !== "build"');
-    expect(source).toContain("DESKTOP_ASSISTANT_BUILD_MODE_REQUIRED");
+    expect(source).toContain("DESKTOP_BRIDGE_REFUSALS.assistantBuildModeRequired");
+    expect(source).toContain('payload: { op: "abandon" }');
     expect(source).toContain("MATERIALS (read-only)");
     expect(source).toContain("PHYSICS (read-only)");
     expect(source).toContain("SETTINGS (read-only)");

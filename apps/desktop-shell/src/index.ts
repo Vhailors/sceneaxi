@@ -78,6 +78,7 @@ export {
 
 export {
   CHANGE_REVIEW_ROWS,
+  DESKTOP_ASSISTANT_MANIPULATORS,
   DESKTOP_ASSISTANT_MODE_IDS,
   DESKTOP_DOCK_TAB_IDS,
   DESKTOP_DRAWER_IDS,
@@ -108,6 +109,7 @@ export {
   kidsProfileRefusal,
   resolveWindowTier,
   type DesktopAssistantModeId,
+  type DesktopAssistantManipulatorId,
   type DesktopAssistantProjection,
   type DesktopAssistantRoute,
   type DesktopAssistantRuntime,

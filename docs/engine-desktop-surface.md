@@ -323,16 +323,21 @@ Two rules keep this honest:
 
 - **Landmarks, not anonymous divs**: `header` / `nav` / `aside` / `footer` /
   `section`, every one labelled.
-- **Real controls**: every interactive element is a `<button type="button">`, so
-  keyboard order is DOM order. There are no click handlers on `div` or `span`.
+- **Real controls**: every action is a `<button type="button">`; the one
+  non-button control is the modelled assistant `<textarea>`. Keyboard order is
+  DOM order, and there are no click handlers on `div` or `span`.
 - **Inert controls stay reachable.** An inert control is marked `aria-disabled`
   rather than `disabled`, so it keeps its focus stop, and `aria-describedby`
   points at the paragraph carrying its refusal — a screen reader gets the reason,
-  not just "dimmed". **Every** interactive element in the document is rendered
-  through the one `button(control, …)` helper — the mode rail, the dock tabs, the
+  not just "dimmed". Every button is rendered through the one
+  `button(control, …)` helper — the mode rail, the dock tabs, the
   viewport-source tabs, the profile chips, the drawer openers, the status-bar
   overlay shortcuts, the assistant modes, the sculpt cancel, and each of the four
-  overlay dismiss buttons — so a control cannot reach the document without its
+  overlay dismiss buttons, and the assistant artifact manipulators. The prompt
+  uses the parallel `promptInput(control)` helper so it carries the same
+  `data-kind`, refusal reference, and profile-switch demotion; when inert it is
+  `readonly` rather than removed from the focus order. Thus a control cannot
+  reach the document without its
   kind, and a control the model builds cannot fail to reach the document. That is
   not a convention here: `test/control-accounting.test.ts` enumerates the
   controls by walking the view and fails in both directions. The refusal legend prints the **whole closed

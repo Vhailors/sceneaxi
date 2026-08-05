@@ -24,6 +24,7 @@ import {
 } from "@sceneaxi/engine-presentation";
 import {
   DESKTOP_BRIDGE_GLOBAL,
+  DESKTOP_BRIDGE_REFUSALS,
   PIXELS_META_NAME,
   type DesktopAssistantJobSnapshot,
   type DesktopBridgeResponse,
@@ -123,7 +124,6 @@ function frameText(frame: SculptPresentationFrame): string {
 }
 
 const ASSISTANT_INSTANCE_ID = "assistant-live-output";
-const ASSISTANT_BUILD_MODE_REQUIRED = "DESKTOP_ASSISTANT_BUILD_MODE_REQUIRED";
 
 function assistantProfile(shell: HTMLElement): `@sceneaxi/profile-${string}` {
   const id = shell.dataset.profile;
@@ -158,55 +158,6 @@ function inspectionText(job: DesktopAssistantJobSnapshot): string {
   ].join("\n");
 }
 
-function installManipulators(
-  stage: Element,
-  mounts: ReturnType<typeof createSculptMountApi>,
-): void {
-  if (stage.querySelector("[data-assistant-manipulators]") !== null) return;
-  const toolbar = document.createElement("div");
-  toolbar.setAttribute("data-assistant-manipulators", "translation rotation scale");
-  toolbar.setAttribute("aria-label", "Assistant artifact manipulators");
-  toolbar.style.position = "absolute";
-  toolbar.style.left = "12px";
-  toolbar.style.top = "12px";
-  toolbar.style.zIndex = "8";
-  toolbar.style.display = "flex";
-  toolbar.style.gap = "4px";
-  let transform = {
-    translation: [0, 0, 0] as [number, number, number],
-    rotationEulerDegrees: [0, 0, 0] as [number, number, number],
-    scale: [1, 1, 1] as [number, number, number],
-  };
-  const controls = [
-    ["Move +X", (): void => { transform.translation[0] += 0.25; }],
-    ["Move +Y", (): void => { transform.translation[1] += 0.25; }],
-    ["Rotate Y", (): void => { transform.rotationEulerDegrees[1] += 15; }],
-    ["Scale +", (): void => { transform.scale = transform.scale.map((value) => value + 0.1) as [number, number, number]; }],
-  ] as const;
-  for (const [label, mutate] of controls) {
-    const control = document.createElement("button");
-    control.type = "button";
-    control.textContent = label;
-    control.setAttribute("data-assistant-manipulator", label.toLocaleLowerCase().replaceAll(" ", "-"));
-    control.style.border = "1px solid #333a44";
-    control.style.borderRadius = "3px";
-    control.style.background = "#12151a";
-    control.style.color = "#edeff2";
-    control.style.padding = "5px 7px";
-    control.addEventListener("click", () => {
-      mutate();
-      transform = {
-        translation: [...transform.translation],
-        rotationEulerDegrees: [...transform.rotationEulerDegrees],
-        scale: [...transform.scale],
-      };
-      mounts.updateTransform(ASSISTANT_INSTANCE_ID, transform);
-    });
-    toolbar.append(control);
-  }
-  stage.append(toolbar);
-}
-
 function installAssistantProductFlow(
   stage: Element,
   port: BridgeGlobal,
@@ -218,8 +169,48 @@ function installAssistantProductFlow(
   const status = document.querySelector<HTMLElement>("[data-assistant-status]");
   const resultView = document.querySelector<HTMLElement>("[data-assistant-result]");
   const retry = document.querySelector<HTMLButtonElement>("#assistant-retry");
+  const manipulatorBar = stage.querySelector<HTMLElement>("[data-assistant-manipulators]");
   if (shell === null || prompt === null || status === null || resultView === null) return;
   let running = false;
+  const identityTransform = () => ({
+    translation: [0, 0, 0] as [number, number, number],
+    rotationEulerDegrees: [0, 0, 0] as [number, number, number],
+    scale: [1, 1, 1] as [number, number, number],
+  });
+  let manipulatorTransform = identityTransform();
+
+  manipulatorBar
+    ?.querySelectorAll<HTMLButtonElement>("[data-action='assistant-manipulator']")
+    .forEach((control) => {
+      control.addEventListener("click", () => {
+        if (control.getAttribute("aria-disabled") === "true") return;
+        switch (control.dataset.value) {
+          case "move-x":
+            manipulatorTransform.translation[0] += 0.25;
+            break;
+          case "move-y":
+            manipulatorTransform.translation[1] += 0.25;
+            break;
+          case "rotate-y":
+            manipulatorTransform.rotationEulerDegrees[1] += 15;
+            break;
+          case "scale-up":
+            manipulatorTransform.scale = [
+              manipulatorTransform.scale[0] + 0.1,
+              manipulatorTransform.scale[1] + 0.1,
+              manipulatorTransform.scale[2] + 0.1,
+            ];
+            break;
+          default:
+            return;
+        }
+        mounts.updateTransform(ASSISTANT_INSTANCE_ID, {
+          translation: [...manipulatorTransform.translation],
+          rotationEulerDegrees: [...manipulatorTransform.rotationEulerDegrees],
+          scale: [...manipulatorTransform.scale],
+        });
+      });
+    });
 
   const refused = (reason: string, message: string): void => {
     running = false;
@@ -236,15 +227,20 @@ function installAssistantProductFlow(
       }
       const job = response.data as DesktopAssistantJobSnapshot | null;
       if (job === null) {
-        refused("DESKTOP_ASSISTANT_JOB_MISSING", "The assistant job disappeared; retry the prompt.");
+        refused(
+          DESKTOP_BRIDGE_REFUSALS.assistantJobMissing,
+          "The assistant job disappeared; retry the prompt.",
+        );
         return;
       }
       const latest = job.progress[job.progress.length - 1];
       if (latest !== undefined) status.textContent = `${latest.percent}% · ${latest.message}`;
       if (job.status === "refused") {
         refused(
-          job.refusal?.reason ?? "ASSISTANT_SCULPT_PROVIDER_FAILED",
-          job.refusal?.message ?? "The assistant action refused.",
+          job.refusal?.reason ?? DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
+          job.refusal === undefined
+            ? "The assistant action refused."
+            : `${job.refusal.message}${job.refusal.detail === undefined ? "" : ` — ${job.refusal.detail}`}`,
         );
         return;
       }
@@ -256,7 +252,8 @@ function installAssistantProductFlow(
           artifact: job.result.artifact,
         });
         backend.frameMountedContent();
-        installManipulators(stage, mounts);
+        manipulatorTransform = identityTransform();
+        manipulatorBar?.removeAttribute("hidden");
         resultView.textContent = inspectionText(job);
         resultView.removeAttribute("hidden");
         retry?.setAttribute("hidden", "");
@@ -267,14 +264,18 @@ function installAssistantProductFlow(
       }
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
-    refused("DESKTOP_ASSISTANT_STATUS_TIMEOUT", "The assistant job is still unresolved; retry remains available.");
+    await port.request({ action: "assistant", payload: { op: "abandon" } });
+    refused(
+      DESKTOP_BRIDGE_REFUSALS.assistantStatusTimeout,
+      "The assistant job did not finish in time; it was abandoned and Retry may start a fresh job.",
+    );
   };
 
   const start = async (): Promise<void> => {
     if (running) return;
     if (shell.dataset.assistantMode !== "build") {
       refused(
-        ASSISTANT_BUILD_MODE_REQUIRED,
+        DESKTOP_BRIDGE_REFUSALS.assistantBuildModeRequired,
         "Choose Build mode to produce and mount a typed Sculpt Artifact; Ask and Agent are not implemented by this first-release flow.",
       );
       return;
@@ -308,7 +309,7 @@ function installAssistantProductFlow(
     control.addEventListener("click", () => {
       if (control.getAttribute("aria-disabled") === "true") return;
       void start().catch((error: unknown) =>
-        refused("DESKTOP_ASSISTANT_BRIDGE_FAILED", refusalText(error)),
+        refused(DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed, refusalText(error)),
       );
     });
   });

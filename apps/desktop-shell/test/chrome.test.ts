@@ -216,6 +216,14 @@ describe("engine desktop chrome — accessibility", () => {
     expect(html).toContain("shell.dataset.assistantMode = value");
     expect(html).toContain('data-assistant-status role="status"');
     expect(html).toContain("Retry");
+    expect(html).toContain(
+      'data-assistant-manipulators="translation rotation scale"',
+    );
+    for (const id of ["move-x", "move-y", "rotate-y", "scale-up"]) {
+      expect(html).toContain(
+        `id="assistant-manipulator-${id}" data-kind="live"`,
+      );
+    }
 
     const unavailable = render();
     expect(unavailable).toContain(
@@ -252,7 +260,7 @@ describe("engine desktop chrome — accessibility", () => {
     }
   });
 
-  it("makes every control a real button, so keyboard order is the DOM order", () => {
+  it("makes every action a real button and keeps prompt order in the DOM", () => {
     for (const [label, state] of ALL_STATES) {
       const html = render(state);
       // Nothing is a clickable div: no interactive element outside <button>.
