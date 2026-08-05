@@ -87,9 +87,11 @@ Rules the gate enforces (`pnpm check:desktop`, `pnpm check:boundaries`,
 - The chrome's `sceneaxi-pixels-drawn` meta stays `false` at build time; the
   renderer updates it only from a real presentation frame's `pixelsDrawn`.
 - Kids has no assistant path here: the chrome's refuse-only projection stays
-  owned by `@sceneaxi/desktop-shell`, and the bridge carries the selected profile
-  only to trigger authoring-core's deny before generation/provider dispatch. No
-  Kids or identity package is imported; the dependency matrix keeps both denied.
+  owned by `@sceneaxi/desktop-shell`, the bridge refuses
+  `ASSISTANT_SCULPT_KIDS_DENIED` before it routes local, BYOK, or hosted, and
+  the profile it carries makes authoring-core deny again — independently — before
+  generation or provider dispatch. No Kids or identity package is imported; the
+  dependency matrix keeps both denied.
 - No secret exists in this tier; the window runs with context isolation and the
   sandbox on, and navigation away from the packaged document is refused.
 

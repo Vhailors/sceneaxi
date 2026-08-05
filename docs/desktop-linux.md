@@ -76,8 +76,10 @@ never the accumulated log, and stops accepting progress after abandonment. If th
 composable scene, no WebGL surface, or a mount that fails — the composer is
 transitioned by the visual model to `DESKTOP_NO_PRESENTATION_RUNTIME` instead of
 staying live and unbound, because a control here is either live and acts or inert
-and names a refusal. Selecting Kids removes the composer, and authoring-core also
-denies the carried Kids profile before local compilation or provider dispatch.
+and names a refusal. Selecting Kids removes the composer, the bridge refuses
+`ASSISTANT_SCULPT_KIDS_DENIED` before it routes local, BYOK, or hosted, and
+authoring-core denies the carried Kids profile again — independently — before
+local compilation or provider dispatch.
 The packaged document starts in that unavailable state and transitions to local
 only after the bridge, initial Mount API scene, and every assistant handler bind.
 

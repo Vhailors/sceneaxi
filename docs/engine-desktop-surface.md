@@ -174,10 +174,10 @@ always has a refusal and a non-inert one never does.
 
 | Kind | Meaning | Examples |
 |---|---|---|
-| `view` | changes visual state; genuinely works | mode rail, dock tabs, profile switch, assistant open/close and its Ask/Build/Agent modes, the overlay openers and each of the four overlay dismiss buttons, the sculpt cancel, drawer toggles |
+| `view` | changes visual state; genuinely works | mode rail, dock tabs, profile switch, assistant open/close, its Ask/Build/Agent modes and its three route chips, the overlay openers and each of the four overlay dismiss buttons, the sculpt cancel, drawer toggles |
 | `review` | edits the fixture Change Review queue; **writes no document** | accept/reject a row, accept all, reject all |
 | `live` | delegates a product action to an enclosing runtime seam | assistant prompt, Send, Retry, and artifact manipulators only when the packaged Linux runtime binds them |
-| `inert` | renders, keeps its focus stop, refuses by name | Sculpt object, standalone-shell assistant prompt/Send/Retry, menu bar, the three viewport-source tabs, the palette rows naming CLI-only verbs, and — on the refuse-only profile — every control except the eleven named below |
+| `inert` | renders, keeps its focus stop, refuses by name | Sculpt object, standalone-shell assistant prompt/Send/Retry and the four artifact manipulators, menu bar, the three viewport-source tabs, the palette rows naming CLI-only verbs, and — on the refuse-only profile — every control except the eleven named below |
 
 The chrome still reaches no authoring package itself. Its standalone CLI render
 therefore keeps every product action inert and `test/app.test.ts` proves a
@@ -247,8 +247,8 @@ correctly and then never updated, so clicking the Kids chip left a footer readin
 | Code | When |
 |---|---|
 | `OPEN_PATH_KIDS_REFUSED` | the refuse-only profile, and every control behind it that is not already refusing for a more specific reason — the mode rail, the dock tabs, the two drawer toggles, the Change Review decisions, the sculpt cancel, the driveable palette rows; the code comes from the shared open-path policy, not from here |
-| `DESKTOP_KIDS_ASSISTANT_DENIED` | assistant on Kids — its toggle, its close, its Send, and its three composer modes |
-| `DESKTOP_NO_PRESENTATION_RUNTIME` | the viewport: no renderer is mounted, so no pixels — and the three viewport-source tabs, because switching what a viewport shows needs the runtime that is missing |
+| `DESKTOP_KIDS_ASSISTANT_DENIED` | assistant on Kids — its toggle, its close, its prompt, its Send, its Retry, its three route chips, and its three composer modes |
+| `DESKTOP_NO_PRESENTATION_RUNTIME` | the viewport: no renderer is mounted, so no pixels — the three viewport-source tabs, because switching what a viewport shows needs the runtime that is missing, and every `live` assistant control (prompt, Send, Retry, the four artifact manipulators) while `assistantRuntime` is `none` |
 | `DESKTOP_NO_KERNEL_SESSION` | `run` mode: no session, so no tick, frame, or body |
 | `DESKTOP_NO_DOCUMENT_BOUND` | any control that would author something |
 | `DESKTOP_VERB_NOT_ON_THIS_SURFACE` | a palette row naming a CLI verb this shell has no command for, and every application-menu button — this surface has no command behind any of the archive's menus |
@@ -526,6 +526,16 @@ sentence can return by review slip.
   1920×620 (**wide but short** — tiers the model reaches on height alone),
   1024×700 (the Kids drawer tier), and 800×560, and it exercises the Kids switch
   at the drawer tiers, not only at 1680×1000.
+
+  **This sweep predates the assistant product controls, and has not been
+  re-run for them.** sceneaxi#192 later added the modelled prompt field, Retry,
+  the three route chips, and the four artifact manipulators to this document, so
+  every count below — buttons, focus stops, inert controls, and the elements each
+  contrast measurement swept — describes the document as it stood on 2026-07-28,
+  and the contrast sweep never looked at the controls added after it. Nothing
+  here was re-derived from the model instead, because a count computed from the
+  emitted bytes is not a browser observation. Re-record this whole sweep before
+  citing it for the current chrome.
 
   **A second correction, on the same axis.** The earlier record read every
   control **at rest**, and a resting read cannot see a `:hover` rule. A
