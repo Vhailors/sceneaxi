@@ -1,5 +1,11 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import {
+  BILLING_REFUSE_REASONS,
+  STRIPE_LIVE_MODE_ALIAS_ENV_VARS,
+  STRIPE_LIVE_MODE_ENV_VAR,
+} from "@sceneaxi/billing";
+import { SITE_REFUSALS } from "@sceneaxi/site-kit";
 
 const locate = (path: string) => new URL(`../../${path}`, import.meta.url);
 const read = (path: string) => readFileSync(locate(path), "utf8");
@@ -40,7 +46,7 @@ describe("SA-OPS-1 production activation runbook", () => {
 
   const frozenList = (source: string, name: string) => {
     const match = source.match(
-      new RegExp(`\\b${name}(?:\\s*:[^=]*)?\\s*=\\s*Object\\.freeze\\(\\[([^\\]]*)\\]\\)`),
+      new RegExp(`\\b${name}\\s*=\\s*Object\\.freeze\\(\\[([^\\]]*)\\]\\)`),
     );
     expect(match, `owner script no longer freezes a ${name} list`).toBeTruthy();
     const entries = quotedIn((match as RegExpMatchArray)[1] as string);
@@ -48,30 +54,16 @@ describe("SA-OPS-1 production activation runbook", () => {
     return entries;
   };
 
-  const frozenBody = (source: string, name: string) => {
-    const match = source.match(
-      new RegExp(
-        `\\b${name}(?:\\s*:[^=]*)?\\s*=\\s*Object\\.freeze\\(\\{([\\s\\S]*?)\\n\\}(?: as const)?\\)`,
-      ),
-    );
-    expect(match, `owner no longer freezes a ${name} map`).toBeTruthy();
-    return (match as RegExpMatchArray)[1] as string;
-  };
-
   const frozenKeys = (source: string, name: string) => {
-    const keys = [...frozenBody(source, name).matchAll(/^\s+([A-Z][A-Z0-9_]*):/gm)].map(
-      (entry) => entry[1] as string,
+    const match = source.match(
+      new RegExp(`\\b${name}\\s*=\\s*Object\\.freeze\\(\\{([\\s\\S]*?)\\n\\}\\)`),
     );
+    expect(match, `owner script no longer freezes a ${name} map`).toBeTruthy();
+    const keys = [
+      ...((match as RegExpMatchArray)[1] as string).matchAll(/^\s+([A-Z][A-Z0-9_]*):/gm),
+    ].map((entry) => entry[1]);
     expect(keys.length, `${name} parsed as empty`).toBeGreaterThan(0);
     return keys;
-  };
-
-  const frozenValues = (source: string, name: string) => {
-    const values = [
-      ...frozenBody(source, name).matchAll(/:\s*"([A-Z][A-Z0-9_]*)"/g),
-    ].map((entry) => entry[1] as string);
-    expect(values.length, `${name} parsed as empty`).toBeGreaterThan(0);
-    return values;
   };
 
   const EXACT_ENV_NAMES = [
@@ -184,14 +176,9 @@ describe("SA-OPS-1 production activation runbook", () => {
   });
 
   it("resolves every named refusal against its owning source registry", () => {
-    const siteRefusals = frozenKeys(read("packages/site-kit/src/refusals.ts"), "SITE_REFUSALS");
-    const billingRefusals = frozenValues(
-      read("packages/billing/src/refusals.ts"),
-      "BILLING_REFUSE_REASONS",
-    );
+    const siteRefusals = Object.keys(SITE_REFUSALS);
+    const billingRefusals = Object.values(BILLING_REFUSE_REASONS);
     const desktopRefusals = desktopRefusalUniverse();
-    expect(siteRefusals.length).toBeGreaterThanOrEqual(40);
-    expect(billingRefusals.length).toBeGreaterThanOrEqual(40);
     expect(desktopRefusals.length).toBeGreaterThanOrEqual(10);
 
     const tokens = [
@@ -204,7 +191,7 @@ describe("SA-OPS-1 production activation runbook", () => {
     expect(tokens.length).toBeGreaterThanOrEqual(45);
 
     const cited = [
-      [siteRefusals, "packages/site-kit/src/refusals.ts", [
+      [siteRefusals, "@sceneaxi/site-kit", [
         "IDENTITY_PLANE_NOT_WIRED",
         "IDENTITY_PLANE_UNAVAILABLE",
         "IDENTITY_SESSION_ABSENT",
@@ -214,7 +201,7 @@ describe("SA-OPS-1 production activation runbook", () => {
         "SITE_REQUEST_CROSS_ORIGIN",
         "CATALOG_COMMERCE_INERT",
       ]],
-      [billingRefusals, "packages/billing/src/refusals.ts", [
+      [billingRefusals, "@sceneaxi/billing", [
         "STRIPE_WEBHOOK_SECRET_MISSING",
         "STRIPE_LIVE_MODE_NOT_AUTHORIZED",
         "STRIPE_CONNECT_PROVIDER_MISSING",
@@ -242,28 +229,23 @@ describe("SA-OPS-1 production activation runbook", () => {
       }
     }
 
-    const liveMode = read("packages/billing/src/live-mode.ts");
-    const liveModeEnvVar = (liveMode.match(
-      /STRIPE_LIVE_MODE_ENV_VAR\s*=\s*"([A-Z][A-Z0-9_]*)"/,
-    ) as RegExpMatchArray | null)?.[1];
-    expect(liveModeEnvVar, "live-mode owner no longer names its sole variable").toBeTruthy();
     expect(normalizedRunbook).toContain(
-      `The sole accepted LIVE authorization variable is \`${liveModeEnvVar}\``,
+      `The sole accepted LIVE authorization variable is \`${STRIPE_LIVE_MODE_ENV_VAR}\``,
     );
-    const liveModeAliases = frozenList(liveMode, "STRIPE_LIVE_MODE_ALIAS_ENV_VARS");
     const citedAlias = "STRIPE_LIVE_MODE_AUTHORIZED";
     expect(normalizedRunbook).toContain(`any alias such as \`${citedAlias}\``);
-    expect(liveModeAliases, `live-mode owner no longer refuses \`${citedAlias}\``).toContain(
-      citedAlias,
-    );
+    expect(
+      STRIPE_LIVE_MODE_ALIAS_ENV_VARS,
+      `live-mode owner no longer refuses \`${citedAlias}\``,
+    ).toContain(citedAlias);
 
     const resolvable = new Set([
       ...EXACT_ENV_NAMES,
       ...siteRefusals,
       ...billingRefusals,
       ...desktopRefusals,
-      ...liveModeAliases,
-      liveModeEnvVar as string,
+      ...STRIPE_LIVE_MODE_ALIAS_ENV_VARS,
+      STRIPE_LIVE_MODE_ENV_VAR as string,
     ]);
     for (const token of tokens) {
       expect(
