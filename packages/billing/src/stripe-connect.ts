@@ -257,7 +257,6 @@ export function createInMemoryConnectStore(): InMemoryConnectStore {
   const statusOrder: ConnectStatusRecord[] = [];
   const splits = new Map<string, MoneySplitRecord>();
   const payoutIntents = new Map<string, ConnectPayoutIntent>();
-  const payoutIntentsBySale = new Map<string, ConnectPayoutIntent>();
   const payoutOutcomes = new Map<string, ConnectPayoutOutcome>();
 
   const conflict = (label: string): never => {
@@ -339,15 +338,11 @@ export function createInMemoryConnectStore(): InMemoryConnectStore {
           replayed: true,
         }) as ConnectPayoutIntentCommit;
       }
-      if (priorSplit !== undefined && !same(priorSplit, split.value)) {
-        return conflict("money split");
-      }
-      if (payoutIntentsBySale.has(split.value.saleId)) {
+      if (priorSplit !== undefined) {
         return conflict("payout sale");
       }
       splits.set(split.value.saleId, split.value);
       payoutIntents.set(intent.value.idempotencyKey, intent.value);
-      payoutIntentsBySale.set(split.value.saleId, intent.value);
       return Object.freeze({
         split: split.value,
         intent: intent.value,
