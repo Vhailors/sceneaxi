@@ -6,6 +6,10 @@ adapter accepts a LIVE key, and no shipped call site supplies the separate live-
 authorization witness. Completing this list records readiness; it does not authorize a
 charge, a deployment, or a configuration change.
 
+The cross-surface production authorization, TEST activation, rollback/refusal, and
+evidence sequence is [`production-activation.md`](production-activation.md). It keeps
+this LIVE checklist separate and uncompleted.
+
 No secret value belongs in this file, an issue, a pull request, a test fixture, a log, or
 an evidence bundle. Record only provider object ids and secret *names*, redacting values.
 

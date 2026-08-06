@@ -4,6 +4,10 @@ Scope: SA-CON-1 provides the typed creator onboarding, account-status, and payou
 bookkeeping mechanism. It does not configure Stripe, deploy an adapter, create an
 account, or authorize LIVE activity.
 
+The cross-surface production authorization and evidence gate is
+[`production-activation.md`](production-activation.md). It treats this seam as
+TEST-only and does not reopen the uncompleted LIVE checklist below.
+
 ## Shipped boundary
 
 `packages/billing/src/stripe-connect.ts` is the application seam. Every operation:

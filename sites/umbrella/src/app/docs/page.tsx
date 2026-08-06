@@ -78,7 +78,7 @@ const CONTRACTS: readonly Contract[] = [
     group: "Automation",
     path: "docs/websites-deploy.md",
     title: "Websites deploy",
-    note: "This site and the two catalogs: Vercel project map, the env var list, and the identity-plane activation steps.",
+    note: "This site and the two catalogs: Vercel project map, the env var list, and the deployment mechanics the identity plane requires before it is wired.",
   },
 ] as const;
 

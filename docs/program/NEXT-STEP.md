@@ -259,6 +259,8 @@ The reachability statements here are **dated external observations, not gate-pro
 facts**: the two in-scope URLs were opened in Chrome on 2026-07-29 and served the
 surfaces described. [`websites-deploy.md`](../websites-deploy.md#verified-test-readiness)
 owns the newer 2026-08-01 readiness result and its exact external activation blocker.
+[`production-activation.md`](../production-activation.md) owns the operator authorization,
+ordered execution/rollback, refusal, and evidence checklist; it authorizes no action.
 
 | Surface | Production URL | Honest limit |
 |---|---|---|
@@ -266,7 +268,7 @@ owns the newer 2026-08-01 readiness result and its exact external activation blo
 | Game-asset catalog | <https://sceneaxi-catalog-game.vercel.app> | Browse/detail is served as an evaluation-only catalog. Buying remains inactive; the storefront collects no payment details |
 
 [`websites-deploy.md`](../websites-deploy.md) owns the topology, environment names,
-activation sequence, and exact refusal table. In particular, the umbrella Stripe endpoint
+web wiring mechanics, and exact refusal table. In particular, the umbrella Stripe endpoint
 and provider-backed store/evidence handles now share the deployment adapter path; missing
 configuration still refuses rather than claiming a grant.
 

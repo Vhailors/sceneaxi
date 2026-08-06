@@ -5,14 +5,23 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      release_candidate:
+        description: >-
+          Build, sign, and notarize a release candidate on a macOS runner. Leave false
+          to reproduce the pull-request verification job, which is what recovers a
+          missing or cancelled required check.
+        type: boolean
+        default: false
+        required: false
 
 jobs:
   desktop-macos:
     # Only the release-candidate steps below need a macOS host, and macOS minutes bill
     # at 10x. Type-check, staging build, and the configuration smoke are all
     # platform-independent — the missing-input refusals are proven on Linux by the
-    # repository gate — so an ordinary push or pull request runs on ubuntu.
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && 'macos-latest' || 'ubuntu-latest' }}
+    # repository gate — so every run except an explicit release candidate uses ubuntu.
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.release_candidate == true && 'macos-latest' || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -48,10 +57,12 @@ jobs:
         working-directory: desktop/macos
         run: pnpm smoke
 
-      # Only an operator-dispatched run reaches release packaging. Empty secrets or
-      # a missing URL are passed as empty strings and `pnpm dist` refuses by name.
+      # Only an operator-dispatched run that explicitly asks for a release candidate
+      # reaches release packaging; a default dispatch stops above, exactly like a pull
+      # request. Empty secrets or a missing URL are passed as empty strings and
+      # `pnpm dist` refuses by name, so absent credentials still fail closed here.
       - name: Build, sign, notarize, and verify the release candidate
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' && inputs.release_candidate == true
         working-directory: desktop/macos
         run: pnpm dist
         env:
@@ -63,14 +74,14 @@ jobs:
           SCENEAXI_MACOS_RELEASE_BASE_URL: ${{ vars.SCENEAXI_MACOS_RELEASE_BASE_URL }}
 
       - name: Smoke the signed packaged application
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' && inputs.release_candidate == true
         working-directory: desktop/macos
         run: pnpm smoke --packaged
 
       # This is a verified workflow artifact, not a public release or an update
       # upload. Download IA remains unchanged until a durable release is recorded.
       - uses: actions/upload-artifact@v4
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' && inputs.release_candidate == true
         with:
           name: sceneaxi-desktop-macos
           path: |

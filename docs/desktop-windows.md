@@ -1,5 +1,10 @@
 # Windows desktop packaging and release record
 
+Cross-surface release authorization, refusal, rollback, and evidence capture are owned
+by [`production-activation.md`](production-activation.md). This document remains the
+authoritative Windows signing/release procedure; the runbook supplies no credential and
+authorizes no build or publication.
+
 Status: **packaging path implemented; no public Windows artifact exists.**
 
 `desktop/windows` wraps the existing Electron desktop application built from
