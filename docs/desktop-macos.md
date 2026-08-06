@@ -161,8 +161,15 @@ satisfy that assertion. Nothing else about the packaged application changes, and
 
 In `.github/workflows/desktop-macos.yml`, an ordinary push or pull request runs only
 the platform-independent type-check, staging build, and configuration smoke on Linux;
-a macOS runner is spent solely on the operator-dispatched release. That manually
-dispatched release path uploads those verified files only as the Actions artifact
+a macOS runner is spent solely on a release candidate an operator explicitly asked
+for. That request is the `release_candidate` dispatch input, which defaults to `false`
+— a manual run left at the default reproduces the pull-request verification job on
+Linux, needs no Apple credential, and produces no artifact, which is what makes
+dispatch usable for required-check recovery
+([`production-activation.md`](production-activation.md#github-required-check-registration-recovery)).
+Only `release_candidate=true` reaches signing, notarization, the packaged smoke, and
+upload, and it still refuses by name when a required input is absent or empty. That
+release path uploads those verified files only as the Actions artifact
 `sceneaxi-desktop-macos`. It does not create a GitHub Release, publish to an update
 server, or change the umbrella.
 After an operator separately creates a durable release and uploads the files

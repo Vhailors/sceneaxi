@@ -242,17 +242,22 @@ describe("desktop-macos packaging", () => {
     expect(read("docs/desktop-macos.md")).toContain("--use-angle=swiftshader");
   });
 
-  it("spends macOS runner minutes only on the operator-dispatched release", () => {
+  it("spends macOS runner minutes only on an explicitly requested release candidate", () => {
     const workflow = read(".github/workflows/desktop-macos.yml");
     expect(workflow).toContain(
-      "runs-on: ${{ github.event_name == 'workflow_dispatch' && 'macos-latest' || 'ubuntu-latest' }}",
+      "runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.release_candidate == true && 'macos-latest' || 'ubuntu-latest' }}",
     );
     expect(workflow).not.toMatch(/^\s*runs-on:\s*macos-latest\s*$/m);
+    expect(workflow).toMatch(/^ {8}default: false$/m);
     for (const step of ["pnpm dist", "pnpm smoke --packaged", "actions/upload-artifact@v4"]) {
       expect(workflow).toContain(step);
     }
-    const dispatchOnly = workflow.match(/if: github\.event_name == 'workflow_dispatch'/g) ?? [];
-    expect(dispatchOnly).toHaveLength(3);
+    const releaseOnly =
+      workflow.match(
+        /if: github\.event_name == 'workflow_dispatch' && inputs\.release_candidate == true/g,
+      ) ?? [];
+    expect(releaseOnly).toHaveLength(3);
+    expect(workflow).not.toMatch(/if: github\.event_name == 'workflow_dispatch'\s*$/m);
   });
 
   it("smokes the packaging contract and refuses every absent release input", () => {

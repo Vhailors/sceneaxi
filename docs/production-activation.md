@@ -192,10 +192,19 @@ branch and head commit for each required workflow:
 Record each dispatched run URL and verify that all four runs name the intended full head
 commit before treating the required-check set as recovered. A dispatch does not deploy a
 site, publish an artifact, prove a provider credential, enable Stripe LIVE, or supply
-captain authorization. The macOS dispatch retains its existing signing and notarization
-candidate path and fails closed when its real Apple inputs are absent; never substitute,
-copy, print, or invent credentials merely to obtain a green check. Only authoritative
-GitHub results for the intended head count as CI evidence.
+captain authorization.
+
+Recovery never produces a release. `desktop-macos.yml` takes a `release_candidate`
+input that defaults to `false`, and every recovery dispatch leaves it at that default:
+the run then executes exactly the pull-request verification job — the same Linux
+type-check, staging build, and configuration smoke — so it needs no Apple credential and
+no macOS runner to report the same required check. Dispatching `release_candidate=true`
+is a separate credentialed release operation outside this recovery: only that explicit
+input selects a macOS runner and reaches signing, notarization, packaged smoke, and
+artifact upload, and it still fails closed by name when its real Apple inputs are absent
+or empty. Never substitute, copy, print, or invent credentials merely to obtain a green
+check, and never request a release candidate to recover one. Only authoritative GitHub
+results for the intended head count as CI evidence.
 
 ## Preflight checklist
 

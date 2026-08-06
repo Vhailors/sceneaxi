@@ -448,12 +448,54 @@ describe("SA-OPS-1 production activation runbook", () => {
     );
     expect(normalizedRecovery).toContain("does not deploy a site");
     expect(normalizedRecovery).toContain("enable Stripe LIVE");
+    expect(normalizedRecovery).toContain("Recovery never produces a release");
     expect(normalizedRecovery).toContain(
-      "fails closed when its real Apple inputs are absent",
+      "`release_candidate` input that defaults to `false`",
+    );
+    expect(normalizedRecovery).toContain(
+      "separate credentialed release operation outside this recovery",
+    );
+    expect(normalizedRecovery).toContain(
+      "fails closed by name when its real Apple inputs are absent or empty",
     );
     expect(normalizedRecovery).toContain(
       "authoritative GitHub results for the intended head",
     );
+  });
+
+  it("keeps default macOS recovery on the credential-free verification path", () => {
+    const workflow = read(".github/workflows/desktop-macos.yml");
+    const releaseOnly =
+      "github.event_name == 'workflow_dispatch' && inputs.release_candidate == true";
+
+    expect(
+      workflow,
+      "macOS recovery dispatch cannot opt out of the release-candidate path",
+    ).toMatch(/^ {6}release_candidate:$/m);
+    expect(workflow).toMatch(/^ {8}type: boolean$/m);
+    expect(
+      workflow,
+      "a default macOS dispatch would attempt a release instead of recovering the check",
+    ).toMatch(/^ {8}default: false$/m);
+
+    expect(
+      workflow,
+      "a default macOS recovery dispatch would spend a 10x-billed macOS runner",
+    ).toContain(`runs-on: \${{ ${releaseOnly} && 'macos-latest' || 'ubuntu-latest' }}`);
+    expect(workflow).not.toMatch(/^\s*runs-on:\s*macos-latest\s*$/m);
+
+    expect(
+      workflow.split(`if: ${releaseOnly}`).slice(1),
+      "signing, packaged smoke, and artifact upload must each be gated on the explicit release input",
+    ).toHaveLength(3);
+    expect(
+      workflow,
+      "a step still keys off the dispatch event alone, so ordinary recovery would run it",
+    ).not.toMatch(/if: github\.event_name == 'workflow_dispatch'\s*$/m);
+
+    for (const step of ["pnpm dist", "pnpm smoke --packaged", "actions/upload-artifact@v4"]) {
+      expect(workflow).toContain(step);
+    }
   });
 
   it("keeps the dated readiness observations in lockstep with the deployment owner", () => {
