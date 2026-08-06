@@ -327,7 +327,13 @@ refuses by name instead of inventing a session.
      `sceneaxiIntentId` — copied from the intent's own `userId` / `purpose` / `itemId` /
      `intentId`. `parseCheckoutCompletedEvent` cross-checks all four plus the mode against
      the persisted intent, so a missing or mismatched key refuses the grant as an invalid
-     webhook payload.
+     webhook payload. Set the **same** four keys on `payment_intent_data.metadata` as well:
+     Stripe copies those onto the PaymentIntent and its Charge, and a `charge.refunded`
+     event carries only the Charge's own metadata. This is the only thing binding a refund
+     to the purchase it reverses, and an adapter that stamps the session alone loses it
+     quietly rather than loudly — the Charge then carries no SceneAxi key, so the refund is
+     read as another product's event and acknowledged `200` with `ignored: true`. Nothing
+     refuses, and the reconciliation simply never runs on that deployment.
 
      Two of the four are *also* routing keys, read from the verified body before the
      intent and the settlement are, because that decision must not depend on a read that
@@ -347,9 +353,14 @@ refuses by name instead of inventing a session.
    The 100-credit starter grant therefore runs only after a real account exists, and a paid
    webhook still refuses `CREDIT_LEDGER_UNAVAILABLE` rather than creating one from payment.
 6. Register the webhook endpoint `POST /api/stripe/webhook` in the Stripe **test**
-   dashboard for `checkout.session.completed`, and set `STRIPE_WEBHOOK_SECRET` to the
-   signing secret it issues. Subscribing the endpoint to more than that one event type is
-   harmless: anything it is not built to act on — another event type, or a
+   dashboard for **both** event types this endpoint acts on — `checkout.session.completed`
+   for credit grants and `charge.refunded` for full-refund reconciliation — and set
+   `STRIPE_WEBHOOK_SECRET` to the signing secret it issues. An endpoint subscribed to only
+   the completion never receives a refund event, so the refund adjustment silently never
+   runs: the ledger keeps credits the buyer was paid back for, and nothing refuses, because
+   an event that was never delivered cannot be refused. Subscribing the endpoint to more
+   than those two event types is harmless: anything it is not built to act on — another
+   event type, or a
    catalog-listing completion that settles on the revenue-share path — is acknowledged
    `200` with `ignored: true` and its named reason, because no grant is owed and no
    redelivery could change that. Both acknowledgements are decided from the verified event
@@ -435,21 +446,37 @@ Load-bearing properties, each gate-tested in `tests/sites/identity-plane-wiring.
   checkout adapter persisted, and the pack revision this repository commits — so a sender
   decides neither. An event the endpoint is not built to act on is neither: it
   answers `200` with `ignored: true`, so Stripe stops redelivering a condition redelivery
-  cannot change. Only `ignored: false` means credits are in the ledger. Exactly three
-  things are acknowledged, and all three are decided from the verified body before any
+  cannot change. Only `ignored: false` means this event's movement is in the ledger, and
+  that outcome states which movement it was: `movement: "grant"` with a positive `credits`
+  delta for a purchase, `movement: "refund"` with a negative one for a reconciled full
+  refund, so a reversal is never read as a second purchase. Three
+  things are acknowledged for any event, and all three are decided from the verified body
+  before any
   adapter or store is consulted: an event type this path does not handle, a completion
   whose purpose settles on the revenue-share path, and a checkout session carrying no
-  SceneAxi metadata key at all — another product's event. The purpose is read from the session
+  SceneAxi metadata key at all — another product's event. Two more are acknowledged on the
+  **refund** path alone, and only because the money is already settled: a partial refund
+  (`STRIPE_REFUND_NOT_FULL`) and a balance the buyer has already spent
+  (`CREDIT_BALANCE_INSUFFICIENT`). Both keep every fail-closed property — nothing is
+  appended, the buyer's credits are untouched, and the response carries the refusal's own
+  name — but the retry stops, because neither can change on redelivery and a permanently
+  retried non-2xx wears down the endpoint every real grant depends on. A refund that finds
+  no committed grant is deliberately not one of them: the grant's own event may still be in
+  Stripe's retry sequence, so it refuses `CREDIT_LEDGER_STATE_INVALID` and is retried. The
+  purpose is read from the session
   metadata only to route *away* from the grant path — an absent, malformed, or unknown
   one keeps its normal path, and `parseCheckoutCompletedEvent` still cross-checks the
   purpose against the persisted intent for everything that stays on it. A
   `checkout.session.completed` this deployment *did* create is never acknowledged as
   another product's event: if it carries any SceneAxi key but cannot be routed, it is
-  refused and retried. `tests/sites/identity-plane-wiring.test.ts` locks the private
-  `UNHANDLED_EVENT_REASONS` set to the reason symbols representing exactly those three
-  decisions, and locks every acknowledgement the module can emit to that same set — the one
-  path that downgrades a package refusal by consulting it, plus each direct acknowledgement,
-  the purpose decision being re-asked of the parsed completion included — so adding another
+  refused and retried. `tests/sites/identity-plane-wiring.test.ts` locks both private sets —
+  `UNHANDLED_EVENT_REASONS` to the reason symbols representing exactly those three
+  decisions and `TERMINAL_REFUND_REASONS` to the two refund ones — and locks every
+  acknowledgement the module can emit to them: the one
+  path that downgrades a package refusal by consulting them, plus each direct acknowledgement,
+  the purpose decision being re-asked of the parsed completion included. It also pins the
+  scoping, so the refund-only set can never be consulted for a grant, and a spent balance
+  cannot become an acknowledgement for an event that involved no refund. Adding another
   acknowledged reason, or another acknowledgement path, fails the gate.
 - **A webhook grant commits through one boundary, everywhere.** The endpoint calls
   `persistCheckoutCompletedGrant` — the same boundary any other deployment uses — so
@@ -484,7 +511,10 @@ webhook event, or performing a charge:
 - Stripe lists an enabled, test-mode (`livemode: false`) endpoint at
   `https://sceneaxi-umbrella.vercel.app/api/stripe/webhook` subscribed only to
   `checkout.session.completed`. The available CLI profile has TEST access and no LIVE
-  access; SceneAxi's separate live-authorization refusal remains unchanged.
+  access; SceneAxi's separate live-authorization refusal remains unchanged. That
+  observation predates refund reconciliation: until the recorded endpoint is also
+  subscribed to `charge.refunded` per step 6, no refund event reaches this deployment and
+  the TEST refund proof cannot be run there.
 - The umbrella `/` and `/pricing` pages and both catalog roots are reachable. The current
   production umbrella deployment predates the merged hosted-login route and still serves
   `404` at `/login`; `BETTER_AUTH_ORIGIN` is also absent from the umbrella Production
@@ -504,3 +534,8 @@ their existing named reasons.
 Kids · custom domains · Stripe live mode · catalog asset checkout (tier-6b marketplace
 activation stays an open captain decision, so purchase and publish refuse
 `CATALOG_COMMERCE_INERT`) · npm publication of any package · editor project persistence.
+
+Stripe LIVE readiness has a complete, deliberately non-executable checklist in
+[`docs/stripe-live-activation.md`](stripe-live-activation.md). It does not change this
+deployment state: the adapter remains TEST-key-only and the shipped checkout and grant
+paths still receive no live-mode authorization.

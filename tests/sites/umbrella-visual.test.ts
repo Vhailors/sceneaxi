@@ -70,6 +70,7 @@ const HOME = read("src/app/page.tsx");
 const ENGINE = read("src/app/engine/page.tsx");
 const DOCS = read("src/app/docs/page.tsx");
 const PRICING = read("src/app/pricing/page.tsx");
+const CREDIT_PACK_OFFERS = read("src/lib/credit-pack-offers.ts");
 
 /** Every committed source under the umbrella's `src`, discovered rather than listed. */
 function collect(dir: string, out: string[] = []): string[] {
@@ -174,9 +175,12 @@ describe("the marketing surface makes no claim the repository cannot stand behin
     for (const invented of ["per seat", "/ month", "per month", "Start a trial"]) {
       expect(PRICING).not.toContain(invented);
     }
-    // Pack money amounts come from the billing plane's own pack records.
-    expect(PRICING).toContain("pack.unitAmount");
-    expect(PRICING).toContain("pack.credits");
+    // Pack money amounts come from the billing plane's own pack records. The pure
+    // presentation module owns the formatting so the page and its behavior tests use
+    // the same values rather than restating a price.
+    expect(PRICING).toContain("buildCreditPackOffers(packs.value");
+    expect(CREDIT_PACK_OFFERS).toContain("pack.unitAmount");
+    expect(CREDIT_PACK_OFFERS).toContain("pack.credits");
   });
 
   it("claims no registry install for private bootstrap packages", () => {

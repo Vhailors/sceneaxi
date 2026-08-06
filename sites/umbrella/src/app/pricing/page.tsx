@@ -3,7 +3,6 @@ import {
   CREATOR_SHARE_RULE,
   SITE_REFUSALS,
   SITE_STARTER_CREDIT_ALLOTMENT,
-  type SiteCreditPack,
 } from "@sceneaxi/site-kit";
 import {
   BILLING_PLANE_PENDING_NOTE,
@@ -14,6 +13,10 @@ import {
   CREDIT_LEDGER_FACTS,
   PRICING_FAQ,
 } from "../../lib/site-content.js";
+import {
+  buildCreditPackOffers,
+  creditPackBillingModeNotice,
+} from "../../lib/credit-pack-offers.js";
 import { CapabilityTable } from "../_components/capability-table.js";
 import { StatePanel } from "../_components/state-panel.js";
 
@@ -35,23 +38,17 @@ import { StatePanel } from "../_components/state-panel.js";
  */
 export const dynamic = "force-dynamic";
 
-/** Credits per unit of currency, used only to mark a strictly-best pack. */
-const rate = (pack: SiteCreditPack): number =>
-  pack.unitAmount === 0 ? Number.POSITIVE_INFINITY : pack.credits / pack.unitAmount;
-
 export default async function PricingPage() {
   const plane = umbrellaRequestAuthority().plane();
   const packs = await plane.billing.listCreditPacks();
-
-  // The one flag on this page is arithmetic, not a recommendation: it appears only when
-  // a single pack gives strictly more credits per unit than every other pack offered.
-  const bestRatePackId = (() => {
-    if (!packs.ok || packs.value.length < 2) return null;
-    const sorted = [...packs.value].sort((a, b) => rate(b) - rate(a));
-    const [best, runnerUp] = sorted;
-    if (best === undefined || runnerUp === undefined) return null;
-    return rate(best) > rate(runnerUp) ? best.packId : null;
-  })();
+  const offers = packs.ok
+    ? buildCreditPackOffers(packs.value, {
+        billingMode: plane.billingMode,
+        checkoutConfigured: plane.wired.billing,
+        identityConfigured: plane.wired.identity,
+      })
+    : [];
+  const modeNotice = creditPackBillingModeNotice(plane.billingMode);
 
   return (
     <div className="page">
@@ -60,7 +57,8 @@ export default async function PricingPage() {
         <h1>The engine is free. You pay for hosted work.</h1>
         <p className="lede">
           The engine SDK, the CLI, and bringing your own AI provider cost nothing. Hosted
-          AI and catalog assets are paid in credits. New accounts receive{" "}
+          AI uses credits. Catalog listings may be priced in credits, money, or both;
+          catalog purchases are not open. New accounts receive{" "}
           {SITE_STARTER_CREDIT_ALLOTMENT} credits once.
         </p>
       </div>
@@ -70,28 +68,24 @@ export default async function PricingPage() {
         {packs.ok ? (
           <>
             <div className="grid grid-3">
-              {packs.value.map((pack) => {
-                const featured = pack.packId === bestRatePackId;
+              {offers.map((offer) => {
+                const featured = offer.bestRate;
                 return (
                   <article
                     className={featured ? "tier tier-featured" : "tier"}
-                    key={pack.packId}
+                    key={offer.packId}
                   >
                     {featured && <p className="tier-flag">BEST RATE PER CREDIT</p>}
                     <div className="tier-body">
                       <h3>
-                        <code>{pack.packId}</code>
+                        <code>{offer.packId}</code>
                       </h3>
                       <p className="tier-price">
-                        <span className="tier-amount">
-                          {(pack.unitAmount / 100).toFixed(2)}
-                        </span>
-                        <span className="tier-unit">
-                          {pack.currency.toUpperCase()} once
-                        </span>
+                        <span className="tier-amount">{offer.price}</span>
+                        <span className="tier-unit">once</span>
                       </p>
                       <p className="body-copy">
-                        {pack.credits} credits, appended to your ledger as one entry when
+                        {offer.credits} credits, appended to your ledger as one entry when
                         the checkout settles. Credits do not expire and are never a
                         subscription.
                       </p>
@@ -116,9 +110,16 @@ export default async function PricingPage() {
                           Catalog asset purchase — not open
                         </li>
                       </ul>
-                      {plane.wired.billing ? (
+                      <p className="note">
+                        <span
+                          className={`chip chip-${offer.purchase.enabled ? "validated" : "dormant"}`}
+                        >
+                          {offer.purchase.status}
+                        </span>
+                      </p>
+                      {offer.purchase.enabled ? (
                         <form method="post" action="/api/checkout">
-                          <input type="hidden" name="packId" value={pack.packId} />
+                          <input type="hidden" name="packId" value={offer.packId} />
                           <input
                             type="hidden"
                             name="attempt"
@@ -126,16 +127,20 @@ export default async function PricingPage() {
                             autoComplete="off"
                           />
                           <button className="button button-block" type="submit">
-                            Buy {pack.credits} credits
+                            {offer.purchase.label}
                           </button>
                         </form>
                       ) : (
                         <span
                           className="button button-block"
                           aria-disabled="true"
-                          title={SITE_REFUSALS.BILLING_PLANE_NOT_WIRED}
+                          title={
+                            offer.purchase.refusalReason === null
+                              ? undefined
+                              : SITE_REFUSALS[offer.purchase.refusalReason]
+                          }
                         >
-                          Not for sale yet
+                          {offer.purchase.label}
                         </span>
                       )}
                     </div>
@@ -153,9 +158,8 @@ export default async function PricingPage() {
               ]}
             >
               <p>
-                Checkout runs against Stripe <strong>test</strong> mode on this
-                deployment. Live charges need a separate captain decision, and the
-                billing port refuses live mode without explicit authorization.
+                <strong>{modeNotice.mode}</strong> — {modeNotice.charge}{" "}
+                {modeNotice.activation}
               </p>
               <p>{CREDIT_LEDGER_COPY.retryIsNotASecondCharge}</p>
               {!plane.wired.billing && (

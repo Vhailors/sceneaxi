@@ -7,9 +7,11 @@ Evidence for sceneaxi#157: the captain-accepted `Umbrella Site` design screen un
 It also carries the re-run for sceneaxi#185, which adds `/login` and moves `/editor` and
 `/account` onto site-kit's named access states —
 [The hosted-login access states, re-measured](#the-hosted-login-access-states-re-measured)
-— and the re-record for sceneaxi#203, which replaces the default route with the
+— the re-record for sceneaxi#203, which replaces the default route with the
 first-release overview:
-[First-release overview re-record](#first-release-overview-re-record-2026-08-05).
+[First-release overview re-record](#first-release-overview-re-record-2026-08-05) — and the
+re-record for sceneaxi#198, which rebuilds the `/pricing` pack card's purchase block:
+[Credit-pack card re-record](#credit-pack-card-re-record-2026-08-06).
 
 This file records **browser observations**, the way `docs/three-presentation-core.md`
 records the pixel claim. It is not a gate result and it authorizes nothing. The gate's
@@ -96,8 +98,14 @@ with `NEXT_PUBLIC_SCENEAXI_GAME_CATALOG_ORIGIN` and
 `NEXT_PUBLIC_SCENEAXI_WEB_CATALOG_ORIGIN` set to https origins, so the masthead and
 footer render their configured-catalog state. Identity, credits, and billing were left
 **unwired**, which is the honest default: `/account` shows the signed-out state with its
-named key, `/pricing` shows the packs with a disabled "Not for sale yet" control and the
-plane's own reason, and that is what was captured.
+named key, `/pricing` shows the packs with a disabled control and the plane's own reason,
+and that is what was captured. That control read "Not for sale yet" at the time of these
+observations; sceneaxi#198 replaced it with a per-pack status chip above a control naming
+the mode it refuses in, so the pack card was re-measured against a build at this head —
+[Credit-pack card re-record](#credit-pack-card-re-record-2026-08-06). The `/pricing`
+state-header and header-track rows measure the `Billing mode` and `Catalog purchases are
+not open` panels, which that change did not touch, and the re-record confirms both still
+report the figures recorded below.
 
 That unwired path is not a corner case to check after the happy one — it is what a visitor
 to this deployment gets, so it is the path every figure below was measured on. It is also
@@ -364,6 +372,41 @@ where the canvas widens from 4:3 to 16:9 so a stacked hero does not push the sec
 it an entire screen down. That behaviour survives the overview rewrite, and the
 first-release suite asserts both sides of the boundary.
 
+#### Credit-pack card re-record, 2026-08-06
+
+Sceneaxi#198 rebuilt the pack card's purchase block: a per-pack status chip now sits above
+the control, and the control names the mode it refuses in instead of saying "Not for sale
+yet". The card was re-measured against a fresh production build at this head, on the same
+unwired deployment and the same recipe as the sweep above, driven through headless
+Chromium at 1440 × 1000 and 390 × 844. Identity, credits, and billing were left unwired,
+so this is still what a visitor to this deployment gets — and it is why the chip reads
+`provider not configured` rather than an offered checkout.
+
+| What | Browser observation |
+|---|---|
+| Packs rendered | `starter` $5.00 USD, `maker` $20.00 USD, `studio` $70.00 USD; `studio` carries the `BEST RATE PER CREDIT` flag |
+| Status chip | "TEST MODE · provider not configured", `chip chip-dormant`, 254 × 24 at both viewports, identical on all three cards |
+| Control | a `span.button.button-block` with `aria-disabled="true"`, reading "Stripe TEST checkout unavailable" — not a `button`, and no form is rendered while the plane is unwired |
+| Control title | "No billing adapter is wired. The site refuses rather than inventing a checkout." — the site refusal's own sentence, not copy written on the page |
+| Control box | 340.66px wide at 1440 (340.67 on `maker`, a sub-pixel grid remainder), 284px at 390; 40px tall on both |
+| Card height | 487.34 at 1440 on all three; 467.73 at 390, and 493.73 on the flagged `studio` card |
+| Sideways scroll | `document.documentElement.scrollWidth === clientWidth` at 1440 and 390 — the chip and the longer control label add no page-level overflow |
+
+The two `/pricing` state panels were re-measured in the same run and are **unchanged**:
+`Billing mode` 162.39 × 17.59 on one line and `Catalog purchases are not open`
+162.39 × 35.19 on two, both on `108.609px 162.391px` tracks at 390, and both on
+`108.609px 1040.39px 0px` at 1440. So the rows carrying those figures above are this
+head's, not only the earlier sweep's.
+
+Lighthouse (12.8.2) was re-run against this build in both desktop and mobile emulation:
+`/pricing` scores **100** accessibility with **0** failed accessibility audits in both,
+the new chip's contrast and the `aria-disabled` control included. That re-run does not
+restate the "audits failed (all categories)" figure in the table below, because it cannot
+be compared to it: the same command against `/profiles` — a route sceneaxi#198 did not
+touch, recorded there as 0 — reports six failures under this Lighthouse version, all of
+them performance, best-practice, and bf-cache audits, plus a `favicon.ico` 404 that is a
+property of this local server. The divergence is the tool and the host, not the surface.
+
 ### Accessibility
 
 Lighthouse (navigation mode, desktop emulation) against the production build:
@@ -388,7 +431,11 @@ state-header repair below; the `/engine` row is
 `/editor` row is
 [pending re-record](#the-editor-figures-predate-the-engine-desktop-shell). The `/login`,
 `/account`, and `/pricing` rows were re-run again after the hosted-login access states
-landed; the editor's shell measurement remains pending its dedicated re-record. The `/`
+landed; the editor's shell measurement remains pending its dedicated re-record. The
+`/pricing` row's accessibility score was re-run a third time, desktop and mobile, after
+sceneaxi#198 rebuilt the pack card — see
+[Credit-pack card re-record](#credit-pack-card-re-record-2026-08-06), which also records
+why that run cannot restate this table's all-categories column. The `/`
 row became a third
 [pending re-record](#the--figures-predate-the-first-release-overview) when sceneaxi#203
 rewrote that route: the first-release suite measures its keyboard, focus, and composited

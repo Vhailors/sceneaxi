@@ -88,12 +88,13 @@ if (!admin.ok) throw new Error(`${admin.reason}: ${admin.message}`);
 
 ## Runtime provenance (sceneaxi#126)
 
-Four values in this plane mean "a trusted step produced me", and their shapes are public:
+Five values in this plane mean "a trusted step produced me", and their shapes are public:
 the resolved `AdminIdentity`, the `Principal` an identity port issues, the `VerifiedWebhook`
-a signature check produces, and the `VerifiedCheckoutCompletion` parsed out of it. Structural validation confirms only the
+a signature check produces, and the `VerifiedCheckoutCompletion` and
+`VerifiedCreditPackRefund` parsed out of it. Structural validation confirms only the
 public shape, while a TypeScript brand constrains only ordinary typed callers; neither
 proves trusted origin against JavaScript or an `as` cast. These values can reach exported
-functions inside the server process. So all four carry **runtime** provenance, built on
+functions inside the server process. So all five carry **runtime** provenance, built on
 the one shared helper `createProvenanceWitness` in `@sceneaxi/schemas`.
 
 A witness remembers the *object identity* of every value its module issued, in a `WeakSet`
@@ -113,10 +114,11 @@ Who issues, who checks, and what refuses:
 | `Principal` | `createIdentityPort().signIn` / `.verifySession` | `requireRole`, `requireAuthenticated` and every billing path built on them | `AUTH_PRINCIPAL_UNPROVEN` |
 | `VerifiedWebhook` | `verifyStripeWebhookSignature` | `parseCheckoutCompletedEvent` | `STRIPE_WEBHOOK_NOT_VERIFIED` |
 | `VerifiedCheckoutCompletion` | `parseCheckoutCompletedEvent` | `applyCheckoutCompletedGrant`, `recordMoneySale`, `settleFixtureListingMoneySale` | `STRIPE_COMPLETION_NOT_VERIFIED` |
+| `VerifiedCreditPackRefund` | `parseCreditPackRefundEvent` | `applyCreditPackRefund`, and `persistCreditPackRefund` through it | `STRIPE_WEBHOOK_NOT_VERIFIED` |
 
 `hasAdminIdentityProvenance`, `hasPrincipalProvenance`,
-`hasVerifiedWebhookProvenance`, and `hasVerifiedCompletionProvenance` are exported so a
-caller sequencing its own route can
+`hasVerifiedWebhookProvenance`, `hasVerifiedCompletionProvenance`, and
+`hasVerifiedRefundProvenance` are exported so a caller sequencing its own route can
 assert the same thing. Checking provenance grants nothing; each module's issuing witness
 stays private.
 
@@ -157,8 +159,11 @@ them costs nothing at the boundary.
 
 The whole boundary is proven in `tests/e2e/runtime-provenance-refusal.test.ts`, which
 builds every impostor listed above for each value and asserts the refusal by name, then
-asserts a genuine completion still grants exactly once and a redelivery still grants
-nothing.
+asserts a genuine completion still grants exactly once and a genuine refund still reverses
+exactly once, while a redelivery of either settles to the entry already committed. The
+refund impostors are pushed at both `applyCreditPackRefund` and the
+`persistCreditPackRefund` commit boundary, against a ledger holding the real anchored
+grant, so provenance is the only thing that can be refusing them.
 
 ### Issuance authority begins outside core
 
@@ -505,7 +510,7 @@ The endpoint's three-way outcome split is unchanged, and so is what its success 
 | Outcome | HTTP | Meaning |
 |---|---|---|
 | `ok: true, ignored: true` | `200` | an event this endpoint owes no work, decided from the verified body alone before any port or store is read; permanent, because Stripe stops redelivering |
-| `ok: true, ignored: false` | `200` | **the credits are in the ledger** — nothing else is reported as success |
+| `ok: true, ignored: false` | `200` | **this event's movement is in the ledger** — nothing else is reported as success. `movement` names which one it was and `credits` carries the committed entry's signed delta, so a reconciled full refund reports `"refund"` and a negative delta rather than reading as a second purchase |
 | `CREDITS_PLANE_NOT_WIRED` from the request facade | `503` | no deployment webhook capability is wired, so nothing was verified and nothing was granted; it is `CREDIT_WEBHOOK_REASONS.planeNotWired` and sits in `SERVER_SIDE_REASONS` like every other deployment fault, so `creditWebhookHttpStatus` — never the route — answers it |
 | refusal in `SERVER_SIDE_REASONS` | `503` | this deployment's own fault, retried |
 | every other refusal | `400` | decided against the inbound bytes, retried |
@@ -516,16 +521,66 @@ and the redelivery reads the ledger and answers the replay. **An issuance-author
 refusal is never `ignored`**: a fault answered as a permanent acknowledgement is money
 silently lost. A new issuance-authority refusal belongs in `SERVER_SIDE_REASONS` (`503`)
 unless it is decided purely from the inbound bytes without consulting a port, in which
-case it is a `400`. Nothing new is ever added to `UNHANDLED_EVENT_REASONS`. The three
-current acknowledgements remain only the verified-body cases documented in
+case it is a `400`. Nothing new is ever added to `UNHANDLED_EVENT_REASONS`, whose three
+members remain only the verified-body cases documented in
 [`docs/websites-deploy.md`](websites-deploy.md#how-the-seam-holds): an unhandled event
 type, a completion purpose that settles elsewhere, and an event carrying no SceneAxi
-metadata. The closed-set assertion in
+metadata. The refund path adds the endpoint's only other acknowledgements, from its own
+second closed set and scoped to that path alone — a partial refund and a balance the buyer
+already spent, both settled facts about money no redelivery changes, and neither one moves
+the ledger. That doc owns the transport rule for all of them. The closed-set assertions in
 [`tests/sites/identity-plane-wiring.test.ts`](../tests/sites/identity-plane-wiring.test.ts)
-makes a new member — or a new acknowledgement path added beside the set — a gate failure.
+make a new member of either set — or a new acknowledgement path added beside them — a gate
+failure.
 `CREDIT_REQUEST_INVALID` joins the server-side set for
 the same reason: the boundary refuses it for a request the endpoint built, never for
 anything the inbound bytes decided.
+
+**Full TEST refunds reconcile by append, never rewrite.** Checkout creation copies the
+four SceneAxi metadata keys onto both the Checkout Session and its PaymentIntent, so a
+signature-verified `charge.refunded` event carries the immutable intent id on the Charge.
+`parseCreditPackRefundEvent` requires a full refund, exact TEST mode, currency, amount,
+user, purpose, item, and intent match, then resolves the same committed pack revision the
+grant used. `applyCreditPackRefund` requires the ledger's original intent-anchored grant
+and appends one negative `adjustment` under `stripe-refund:<intentId>`; it never edits or
+deletes the grant. The anchor is written as its own `;`-delimited segment of the grant's
+reason and read back as a whole segment, never as a substring: a buyer influences the
+idempotency key an intent id is derived from, so one id can literally begin with another,
+and a substring match would let an ungranted intent reverse a different intent's credits.
+The decision is not the commit here either: `persistCreditPackRefund` is the refund's
+counterpart to `persistCheckoutCompletedGrant`, reporting success only after the
+adjustment is in the ledger and going through the same `appendOrReplayEntry` seam and the
+same answer-for-what-was-asked check, so the reversal has no second commit path any more
+than the grant does. The intent-scoped key makes duplicate and replacement refund events a
+replay rather than a second reversal. A partial refund, a missing original grant, an
+already-spent balance that cannot absorb the adjustment, missing evidence, or an
+unavailable store refuses by name and never reports a reconciled refund. LIVE remains
+unreachable exactly as it is for grants.
+
+A partial refund carries its own reason, `STRIPE_REFUND_NOT_FULL`, rather than the
+payload refusal: it is bound to the intent and well-formed, and only the money is
+partial. That distinction is what lets a transport tell the two conditions apart — a
+payload it could not read may be worth retrying, while a partial refund and a spent
+balance are settled facts no redelivery changes. The umbrella endpoint therefore
+acknowledges exactly those two on the refund path with their own names and no ledger
+movement (`docs/websites-deploy.md` owns that transport rule); the refusal itself is
+unchanged here, and neither one ever appends, rewrites, or partially reverses anything.
+Reconciling the money side of either is an operator decision taken outside this
+repository — never a hand-edited ledger row, which the append-only trigger refuses
+anyway.
+
+**Grants committed before the intent anchor shipped cannot be reconciled.** The anchor is
+part of a grant's `reason`, the ledger is append-only, and a committed row is immutable,
+so no grant written before this contract landed carries one. A refund naming such a
+purchase finds no anchored grant and refuses `CREDIT_LEDGER_STATE_INVALID`, which the
+umbrella endpoint answers `503` and Stripe retries until it stops on its own. That is
+fail-closed and deliberate: the alternative — matching a grant some other way — is
+exactly the ambiguity the anchor exists to remove. There is no migration, and inventing
+one would mean rewriting immutable rows. An operator meeting this case reconciles the
+money in Stripe and records the credit decision out of band; the ledger keeps the
+original grant, and the refund is visible in the endpoint's refusals rather than silently
+absorbed. Deployments whose ledgers hold only grants written on or after this contract
+are unaffected.
 
 **Live mode is unreachable by default.** `mode: "live"` refuses unless
 `liveModeAuthorized: true` is passed explicitly at the call site, enforced both when
@@ -558,6 +613,10 @@ SCENEAXI_STRIPE_LIVE_AUTHORIZED=live-mode-authorized:<email>:<YYYY-MM-DD>
 today `live` refuses everywhere regardless of the variable. Reaching live mode still needs
 the separate captain go-live decision ADR 0021 holds, *and* a deliberate wiring change on
 top of it. `SCENEAXI_BILLING_MODE=live` selects a mode; it authorizes nothing.
+
+The complete non-executable Stripe account, webhook, tax/legal, refund, deployment,
+preflight, and rollback gate is [`docs/stripe-live-activation.md`](stripe-live-activation.md).
+Every item remains unchecked; the checklist neither supplies secrets nor authorizes LIVE.
 
 Regressions: `packages/billing/test/live-mode.test.ts` (the resolver's contract) and the
 `live-mode authorization sourced from configuration (D5)` block in

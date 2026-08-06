@@ -686,6 +686,10 @@ describe("umbrella deployment provider adapters", () => {
     expect(calls[0]).toContain("sceneaxiUserId");
     expect(calls[0]).toContain("sceneaxiPurpose");
     expect(calls[0]).toContain("sceneaxiIntentId");
+    expect(calls[0]).toContain("payment_intent_data");
+    // Session metadata binds completion; PaymentIntent metadata is copied to the
+    // Charge and binds a later `charge.refunded` event to the same immutable intent.
+    expect(calls[0]?.match(/sceneaxiIntentId/g)).toHaveLength(2);
   });
 
   it("replays a persisted intent when the same idempotency key is submitted again", async () => {
