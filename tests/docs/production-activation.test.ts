@@ -392,7 +392,9 @@ describe("SA-OPS-1 production activation runbook", () => {
       "deployment owner no longer groups activation as unnumbered mechanics",
     ).toBeGreaterThan(-1);
 
-    const stepCitations = [...deploy.matchAll(/.*\bsteps? \d+.*/gi)].map(
+    const prose = deploy.replace(/^```[\s\S]*?^```/gm, "");
+
+    const stepCitations = [...prose.matchAll(/.*\bsteps? \d+.*/gi)].map(
       (match) => match[0].trim(),
     );
     expect(
@@ -400,7 +402,6 @@ describe("SA-OPS-1 production activation runbook", () => {
       "the deployment owner cites an activation step number; the runbook owns the ordering, so link the mechanics anchor instead",
     ).toEqual([]);
 
-    const prose = deploy.replace(/^```[\s\S]*?^```/gm, "");
     const orderedListItems = [...prose.matchAll(/^ *\d+\. .*/gm)].map((match) =>
       (match[0] as string).trim(),
     );

@@ -189,7 +189,7 @@ Do not start activation until every applicable item is checked with real evidenc
 - [ ] Confirm all three `DATABASE_URL` entries target Neon project `sceneaxi-prod`
   (`misty-king-68383952`), `aws-us-east-2`, database `neondb`, without recording the
   connection string.
-- [ ] Apply and verify migrations `0001`–`0004` in order under a separately authorized
+- [ ] Apply and verify every migration in `db/migrations`, in order, under a separately authorized
   database action. Prove append-only ledger and Connect triggers, uniqueness, and the
   checkout-intent price immutability rule. Do not create a credit account by hand.
 - [ ] In Stripe TEST, prove the endpoint is `livemode: false` and subscribed to both
