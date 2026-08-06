@@ -534,7 +534,11 @@ signature-verified `charge.refunded` event carries the immutable intent id on th
 user, purpose, item, and intent match, then resolves the same committed pack revision the
 grant used. `applyCreditPackRefund` requires the ledger's original intent-anchored grant
 and appends one negative `adjustment` under `stripe-refund:<intentId>`; it never edits or
-deletes the grant. The intent-scoped key makes duplicate and replacement refund events a
+deletes the grant. The anchor is written as its own `;`-delimited segment of the grant's
+reason and read back as a whole segment, never as a substring: a buyer influences the
+idempotency key an intent id is derived from, so one id can literally begin with another,
+and a substring match would let an ungranted intent reverse a different intent's credits.
+The intent-scoped key makes duplicate and replacement refund events a
 replay rather than a second reversal. A partial refund, a missing original grant, an
 already-spent balance that cannot absorb the adjustment, missing evidence, or an
 unavailable store refuses by name and receives no success acknowledgement. LIVE remains

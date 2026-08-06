@@ -93,7 +93,14 @@ export type CheckoutEvidencePort = {
  * Answering it non-2xx would make Stripe redeliver a condition no redelivery can change,
  * and those permanent failures count against the health of the same endpoint every real
  * grant depends on. `ignored` states that outcome rather than overloading `replayed`, so
- * the honesty invariant still holds: `ignored: false` means credits are in the ledger.
+ * the honesty invariant still holds: `ignored: false` means this event's movement is in
+ * the ledger.
+ *
+ * Which movement is stated, never inferred. A purchase and a full refund both reach the
+ * acted-on state, and they move the balance in opposite directions, so `movement` names
+ * the direction and `credits` carries the ledger's own signed delta — a reversal reports
+ * a negative one. A reader that assumed every acted-on outcome added credits would report
+ * a refund as a purchase.
  */
 export type CreditWebhookOutcome =
   | {
@@ -101,6 +108,9 @@ export type CreditWebhookOutcome =
       readonly ignored: false;
       /** True when this event had already been applied and nothing was appended. */
       readonly replayed: boolean;
+      /** Whether the committed entry granted purchased credits or reversed them. */
+      readonly movement: "grant" | "refund";
+      /** The committed entry's signed delta: positive for a grant, negative for a refund. */
       readonly credits: number;
       readonly balance: number;
     }
@@ -485,7 +495,8 @@ export async function applyCreditPackWebhook(input: {
       ok: true as const,
       ignored: false as const,
       replayed: committed.value.value.replayed,
-      credits: refund.value.credits,
+      movement: "refund" as const,
+      credits: committed.value.value.entry?.delta ?? -refund.value.credits,
       balance: committed.value.value.state.balance,
     });
   }
@@ -581,7 +592,8 @@ export async function applyCreditPackWebhook(input: {
     ok: true as const,
     ignored: false as const,
     replayed: granted.value.replayed,
-    credits: completion.value.credits ?? 0,
+    movement: "grant" as const,
+    credits: granted.value.entry?.delta ?? completion.value.credits ?? 0,
     balance: granted.value.state.balance,
   });
 }

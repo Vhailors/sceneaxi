@@ -43,8 +43,11 @@ POST-AUTH box stays unchecked indefinitely.
 ## Webhook and settlement safety
 
 - [ ] **POST-AUTH** — Create a distinct LIVE endpoint at the canonical umbrella origin:
-  `POST /api/stripe/webhook`. Subscribe only to event types the code handles; today that
-  is `checkout.session.completed` for credit grants.
+  `POST /api/stripe/webhook`. Subscribe only to event types the code handles, and to **all**
+  of them; today that is `checkout.session.completed` for credit grants and
+  `charge.refunded` for full-refund reconciliation. An unsubscribed handled type is not a
+  fail-closed state: the event is never delivered, so nothing refuses and the reconciliation
+  it owns silently never runs.
 - [ ] **POST-AUTH** — Store the LIVE endpoint signing secret under `STRIPE_WEBHOOK_SECRET` in the deployment
   secret store. Do not reuse the TEST endpoint secret and do not reveal either value.
 - [ ] **PRE-AUTH** — Prove raw-body signature verification, timestamp tolerance, persisted-intent lookup,

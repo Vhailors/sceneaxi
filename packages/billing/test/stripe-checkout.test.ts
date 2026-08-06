@@ -1306,6 +1306,51 @@ describe("credit-pack refund reconciliation", () => {
       expect(missingGrant.reason).toBe(BILLING_REFUSE_REASONS.ledgerStateInvalid);
     }
   });
+
+  it("refuses a refund whose intent id is only a prefix of the granted intent's id", () => {
+    // The readable half of an intent id is derived from the idempotency key, and a buyer
+    // influences that key, so a longer id can be minted that literally begins with a
+    // shorter one. The grant anchor must be read back as a whole reason segment: an
+    // ungranted intent must never reverse the credits a different intent bought.
+    const refunded = checkoutIntent();
+    const granted = checkoutIntent({
+      idempotencyKey: `${refunded.intentId.slice("int_".length)}:x`,
+    });
+    expect(granted.intentId.startsWith(refunded.intentId)).toBe(true);
+    expect(granted.intentId).not.toBe(refunded.intentId);
+
+    const completion = parseCheckoutCompletedEvent({
+      verified: verified(eventBody({}, granted)),
+      intent: granted,
+      settlement: settlementFor(granted),
+    });
+    expect(completion.ok).toBe(true);
+    if (!completion.ok) return;
+    const ledger = applyCheckoutCompletedGrant({
+      state: createLedgerState(ACCOUNT),
+      completion: completion.value,
+      now: NOW,
+    });
+    expect(ledger.ok).toBe(true);
+    if (!ledger.ok) return;
+
+    const refund = parseCreditPackRefundEvent({
+      verified: verified(refundBody(refunded)),
+      intent: refunded,
+    });
+    expect(refund.ok).toBe(true);
+    if (!refund.ok) return;
+    const adjusted = applyCreditPackRefund({
+      state: ledger.value.state,
+      refund: refund.value,
+      now: NOW + 1_000,
+    });
+    expect(adjusted.ok).toBe(false);
+    if (!adjusted.ok) {
+      expect(adjusted.reason).toBe(BILLING_REFUSE_REASONS.ledgerStateInvalid);
+    }
+    expect(ledger.value.state.balance).toBe(ledger.value.entry?.delta);
+  });
 });
 
 describe("persistCheckoutCompletedGrant", () => {

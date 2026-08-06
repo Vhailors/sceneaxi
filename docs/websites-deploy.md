@@ -347,9 +347,14 @@ refuses by name instead of inventing a session.
    The 100-credit starter grant therefore runs only after a real account exists, and a paid
    webhook still refuses `CREDIT_LEDGER_UNAVAILABLE` rather than creating one from payment.
 6. Register the webhook endpoint `POST /api/stripe/webhook` in the Stripe **test**
-   dashboard for `checkout.session.completed`, and set `STRIPE_WEBHOOK_SECRET` to the
-   signing secret it issues. Subscribing the endpoint to more than that one event type is
-   harmless: anything it is not built to act on — another event type, or a
+   dashboard for **both** event types this endpoint acts on — `checkout.session.completed`
+   for credit grants and `charge.refunded` for full-refund reconciliation — and set
+   `STRIPE_WEBHOOK_SECRET` to the signing secret it issues. An endpoint subscribed to only
+   the completion never receives a refund event, so the refund adjustment silently never
+   runs: the ledger keeps credits the buyer was paid back for, and nothing refuses, because
+   an event that was never delivered cannot be refused. Subscribing the endpoint to more
+   than those two event types is harmless: anything it is not built to act on — another
+   event type, or a
    catalog-listing completion that settles on the revenue-share path — is acknowledged
    `200` with `ignored: true` and its named reason, because no grant is owed and no
    redelivery could change that. Both acknowledgements are decided from the verified event
@@ -435,7 +440,10 @@ Load-bearing properties, each gate-tested in `tests/sites/identity-plane-wiring.
   checkout adapter persisted, and the pack revision this repository commits — so a sender
   decides neither. An event the endpoint is not built to act on is neither: it
   answers `200` with `ignored: true`, so Stripe stops redelivering a condition redelivery
-  cannot change. Only `ignored: false` means credits are in the ledger. Exactly three
+  cannot change. Only `ignored: false` means this event's movement is in the ledger, and
+  that outcome states which movement it was: `movement: "grant"` with a positive `credits`
+  delta for a purchase, `movement: "refund"` with a negative one for a reconciled full
+  refund, so a reversal is never read as a second purchase. Exactly three
   things are acknowledged, and all three are decided from the verified body before any
   adapter or store is consulted: an event type this path does not handle, a completion
   whose purpose settles on the revenue-share path, and a checkout session carrying no
@@ -484,7 +492,10 @@ webhook event, or performing a charge:
 - Stripe lists an enabled, test-mode (`livemode: false`) endpoint at
   `https://sceneaxi-umbrella.vercel.app/api/stripe/webhook` subscribed only to
   `checkout.session.completed`. The available CLI profile has TEST access and no LIVE
-  access; SceneAxi's separate live-authorization refusal remains unchanged.
+  access; SceneAxi's separate live-authorization refusal remains unchanged. That
+  observation predates refund reconciliation: until the recorded endpoint is also
+  subscribed to `charge.refunded` per step 6, no refund event reaches this deployment and
+  the TEST refund proof cannot be run there.
 - The umbrella `/` and `/pricing` pages and both catalog roots are reachable. The current
   production umbrella deployment predates the merged hosted-login route and still serves
   `404` at `/login`; `BETTER_AUTH_ORIGIN` is also absent from the umbrella Production

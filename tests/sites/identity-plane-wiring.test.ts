@@ -965,14 +965,69 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       ok: true,
       ignored: false,
       replayed: false,
-      credits: PACK.credits,
+      // A reversal states its direction and reports the ledger's own signed delta, so no
+      // reader can mistake a refund for a second purchase.
+      movement: "refund",
+      credits: -PACK.credits,
       balance: 0,
     });
     expect(store.entryCount("acct-1")).toBe(2);
 
     const replay = await signedCall({ payload, store, evidence: refundEvidence });
-    expect(replay).toMatchObject({ ok: true, ignored: false, replayed: true, balance: 0 });
+    expect(replay).toMatchObject({
+      ok: true,
+      ignored: false,
+      replayed: true,
+      movement: "refund",
+      credits: -PACK.credits,
+      balance: 0,
+    });
     expect(store.entryCount("acct-1")).toBe(2);
+  });
+
+  it("refuses a refund whose intent id is only a prefix of another grant's intent", async () => {
+    const store = webhookStore();
+    const granted = await signedCall({ payload: eventBody("evt_test_prefix_grant"), store });
+    expect(granted).toMatchObject({ ok: true, ignored: false, movement: "grant" });
+
+    // The readable half of an intent id is derived from a caller-influenced idempotency
+    // key, so one id can be a strict prefix of another. A refund for the shorter intent
+    // must not claim the longer intent's grant: the ledger holds no grant of its own.
+    const prefixIntentId = INTENT.intentId.slice(0, INTENT.intentId.length - 6);
+    const prefixIntent = Object.freeze({ ...INTENT, intentId: prefixIntentId });
+    expect(INTENT.intentId.startsWith(prefixIntentId)).toBe(true);
+
+    const payload = JSON.stringify({
+      id: "evt_test_prefix_refund",
+      type: "charge.refunded",
+      created: Math.floor(NOW / 1000),
+      livemode: false,
+      data: {
+        object: {
+          id: "ch_test_prefix_charge",
+          refunded: true,
+          amount_refunded: PACK.unitAmount,
+          currency: PACK.currency,
+          metadata: {
+            sceneaxiUserId: "member-1",
+            sceneaxiPurpose: "credit-pack",
+            sceneaxiItemId: PACK.packId,
+            sceneaxiIntentId: prefixIntentId,
+          },
+        },
+      },
+    });
+    const prefixEvidence: WebhookEvidence = Object.freeze({
+      findIntent(intentId: string) {
+        return intentId === prefixIntentId ? prefixIntent : undefined;
+      },
+      retrieveSettlement(): never {
+        throw new Error("a refund must not invent or re-read checkout settlement");
+      },
+    });
+    const outcome = await signedCall({ payload, store, evidence: prefixEvidence });
+    expect(outcome).toMatchObject({ ok: false, reason: "CREDIT_LEDGER_STATE_INVALID" });
+    expect(store.entryCount("acct-1")).toBe(1);
   });
 
   it("still refuses a signed body that carries no event type", async () => {

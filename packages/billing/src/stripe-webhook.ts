@@ -210,8 +210,27 @@ function fingerprintCheckoutCompletion(
   return createHash("sha256").update(canonical, "utf8").digest("hex");
 }
 
-/** Stable ledger evidence that binds a grant to the intent later refund evidence names. */
+/**
+ * Stable ledger evidence that binds a grant to the intent later refund evidence names.
+ *
+ * Written as its own `; `-delimited segment of the entry reason, because that is what
+ * makes reading it back an exact match rather than a substring search.
+ */
 const creditPackIntentAnchor = (intentId: string): string => `intent:${intentId}`;
+
+/**
+ * Whether a ledger reason carries **this** intent's anchor.
+ *
+ * The reason is free text, and one intent id can be a strict prefix of another: the
+ * readable half of `deriveIntentId` comes from the caller-influenced idempotency key.
+ * A substring test would therefore let a refund for one intent claim a different
+ * intent's grant, so the anchor is matched as a whole reason segment. An intent id is
+ * a url-safe identifier and can carry no `;`, which is what makes the split exact.
+ */
+function reasonBindsCreditPackIntent(reason: string, intentId: string): boolean {
+  const anchor = creditPackIntentAnchor(intentId);
+  return reason.split(";").some((segment) => segment.trim() === anchor);
+}
 
 function toBuffer(payload: string | Uint8Array): Buffer {
   return typeof payload === "string"
@@ -913,7 +932,7 @@ export function applyCreditPackRefund(
     (entry) =>
       entry.movement === "grant" &&
       entry.delta === refund.credits &&
-      entry.reason.includes(anchor),
+      reasonBindsCreditPackIntent(entry.reason, refund.intentId),
   );
   if (originalGrant === undefined) {
     return billingRefuse(
