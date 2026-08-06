@@ -1029,7 +1029,10 @@ p {
 .buy-option-name {
   font-size: 0.8125rem;
   font-weight: 600;
-  flex: 1;
+  /* Grows to push the value to the right edge, but never shrinks: the base reset above
+   * drops the `min-width: auto` floor, so a `flex: 1` basis of 0 collapses this label
+   * under a long value and its text overlaps. `auto` basis makes the row wrap instead. */
+  flex: 1 0 auto;
 }
 
 .buy-option-value {
