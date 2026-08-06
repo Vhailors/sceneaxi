@@ -2,7 +2,7 @@
 /**
  * Sites check — structural gate for the `sites/` tier.
  *
- * The three deployable sites are separate single-package pnpm workspaces and install
+ * The deployable sites are separate single-package pnpm workspaces and install
  * roots with their own lockfiles, deliberately outside the repository-root workspace,
  * so the hermetic root install, root lockfile, `tsc --build` graph, and gate runtime
  * stay untouched and no other lane's `pnpm install --frozen-lockfile` moves. That
@@ -31,6 +31,25 @@ const REQUIRED_FILES = Object.freeze([
 ]);
 
 const REQUIRED_SCRIPTS = Object.freeze(["dev", "build", "typecheck"]);
+const KIDS_SITE_PACKAGE = "@sceneaxi/site-kids";
+const KIDS_SITE_RUNTIME_DEPENDENCIES = Object.freeze(["next", "react", "react-dom"]);
+const KIDS_SITE_DEVELOPMENT_DEPENDENCIES = Object.freeze([
+  "@types/node",
+  "@types/react",
+  "@types/react-dom",
+  "typescript",
+]);
+const KIDS_SITE_FORBIDDEN_SOURCE_APIS = Object.freeze([
+  { label: "fetch", pattern: /\bfetch\s*\(/ },
+  { label: "XMLHttpRequest", pattern: /\bXMLHttpRequest\b/ },
+  { label: "WebSocket", pattern: /\bWebSocket\b/ },
+  { label: "EventSource", pattern: /\bEventSource\b/ },
+  { label: "sendBeacon", pattern: /\bsendBeacon\b/ },
+  { label: "environment access", pattern: /\bprocess\.env\b/ },
+  { label: "form", pattern: /<form\b/i },
+  { label: "link", pattern: /<a\b/i },
+  { label: "external URL", pattern: /https?:\/\//i },
+]);
 
 /** Framework and provider SDKs belong in `sites/`, never in the hermetic root. */
 const FRAMEWORK_DEPENDENCIES = Object.freeze([
@@ -264,16 +283,53 @@ for (const dir of siteDirs) {
     }
   }
 
-  const siteKit = manifest.dependencies?.["@sceneaxi/site-kit"];
-  if (typeof siteKit !== "string") {
-    fail(`${manifest.name} must depend on @sceneaxi/site-kit`);
-  } else if (!siteKit.startsWith("link:")) {
-    fail(
-      `${manifest.name}: @sceneaxi/site-kit must use a 'link:' specifier (found '${siteKit}') because sites are not workspace members`,
-    );
+  const dependencies = manifest.dependencies ?? {};
+  if (manifest.name === KIDS_SITE_PACKAGE) {
+    const runtimeNames = Object.keys(dependencies).sort();
+    if (JSON.stringify(runtimeNames) !== JSON.stringify(KIDS_SITE_RUNTIME_DEPENDENCIES)) {
+      fail(
+        `${manifest.name}: the isolated Kids runtime may declare only next, react, and react-dom (found ${runtimeNames.join(", ") || "none"})`,
+      );
+    }
+    const developmentNames = Object.keys(manifest.devDependencies ?? {}).sort();
+    if (
+      developmentNames.some(
+        (dependency) => !KIDS_SITE_DEVELOPMENT_DEPENDENCIES.includes(dependency),
+      )
+    ) {
+      fail(
+        `${manifest.name}: the isolated Kids development toolchain contains an undeclared dependency`,
+      );
+    }
+    for (const field of ["optionalDependencies", "peerDependencies"]) {
+      if (Object.keys(manifest[field] ?? {}).length > 0) {
+        fail(`${manifest.name}: ${field} must stay empty under the isolated Kids build`);
+      }
+    }
+    const kidsWorkspacePolicy = readFileSync(join(dir, "pnpm-workspace.yaml"), "utf8").trim();
+    const expectedKidsWorkspacePolicy = [
+      "packages:",
+      '  - "."',
+      "allowBuilds:",
+      "  sharp: true",
+    ].join("\n");
+    if (kidsWorkspacePolicy !== expectedKidsWorkspacePolicy) {
+      fail(
+        `${manifest.name}: pnpm build approval must allow only sharp in the isolated site workspace`,
+      );
+    }
+  } else {
+    const siteKit = dependencies["@sceneaxi/site-kit"];
+    if (typeof siteKit !== "string") {
+      fail(`${manifest.name} must depend on @sceneaxi/site-kit`);
+    } else if (!siteKit.startsWith("link:")) {
+      fail(
+        `${manifest.name}: @sceneaxi/site-kit must use a 'link:' specifier (found '${siteKit}') because sites are not workspace members`,
+      );
+    }
   }
   for (const framework of ["next", "react", "react-dom"]) {
-    if (manifest.dependencies?.[framework] === undefined) {
+    if (dependencies[framework] === undefined) {
       fail(`${manifest.name} must declare '${framework}' — a site is a deployable Next app`);
     }
   }
@@ -289,6 +345,10 @@ for (const dir of siteDirs) {
         fail(`${rel}/.env.example:${index + 1} is neither a comment nor a NAME= line`);
       } else if (match[2].trim().length > 0) {
         fail(`${rel}/.env.example:${index + 1} assigns a value to '${match[1]}' — names only`);
+      } else if (manifest.name === KIDS_SITE_PACKAGE) {
+        fail(
+          `${rel}/.env.example:${index + 1} declares '${match[1]}' — the first-release Kids site accepts no environment inputs`,
+        );
       }
     }
   }
@@ -298,6 +358,15 @@ for (const dir of siteDirs) {
 for (const file of walk(sitesDir)) {
   const rel = relative(root, file);
   const text = readFileSync(file, "utf8");
+  if (rel.startsWith("sites/kids/src/")) {
+    for (const forbidden of KIDS_SITE_FORBIDDEN_SOURCE_APIS) {
+      if (forbidden.pattern.test(text)) {
+        fail(
+          `${rel} names ${forbidden.label} — the first-release Kids source has no external data path`,
+        );
+      }
+    }
+  }
   for (const pattern of SECRET_VALUE_PATTERNS) {
     if (pattern.test(text)) fail(`${rel} contains secret-shaped material (${pattern})`);
   }

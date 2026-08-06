@@ -46,7 +46,7 @@ uses, so a level here means the same thing it means there:
 | Level | Meaning |
 |---|---|
 | `demo-driveable` | R1 — reachable through a public seam and golden-tested end to end |
-| `refuse-only` | R0 — the product *is* a refusal boundary; there is no open path to drive |
+| `refuse-only` | R0 — the shared engine open path is a refusal boundary; no kernel path is available to drive |
 
 There is no `shipping` level and there will not be one. This contract grades
 demonstrations; readiness is a captain decision made elsewhere.
@@ -86,8 +86,9 @@ Three properties are structural rather than documented:
    operation is considered, so no operation added later can be one Kids happens
    to allow. The refusal reaches every surface as a non-zero exit or a named
    refusal — never an empty row a renderer could read as "nothing to show". This
-   policy adds no Kids UI, no Kids commerce, and no Kids dependency;
-   `kidsBoundary.allowedDependents` stays empty.
+   The separate first-release Kids activity is an in-memory site/profile surface,
+   not an engine open path; it adds no Kids commerce, external plane, or dependent,
+   and `kidsBoundary.allowedDependents` stays empty.
 
 ## Surface parity
 

@@ -4,6 +4,24 @@
  * on it.
  */
 import type { ProfileSeam } from "@sceneaxi/schemas";
+import { KIDS_ACTIVITY_ACTIONS } from "./kids-activity.js";
+
+export {
+  KIDS_ACTIVITY_ACTIONS,
+  KIDS_ACTIVITY_PIECES,
+  KIDS_ACTIVITY_PIECE_LIMIT,
+  KIDS_ACTIVITY_REFUSE_REASONS,
+  KIDS_ACTIVITY_VERSION,
+  KIDS_ACTIVITY_WORLDS,
+  applyKidsActivityAction,
+  createKidsActivityState,
+  type KidsActivityAction,
+  type KidsActivityDecision,
+  type KidsActivityPieceId,
+  type KidsActivityRequest,
+  type KidsActivityState,
+  type KidsActivityWorldId,
+} from "./kids-activity.js";
 
 export const KIDS_POLICY_VERSION = 1 as const;
 
@@ -256,6 +274,8 @@ export const policy = Object.freeze({
   allowedLlmRouteKinds: Object.freeze([]),
   allowedNetworkDestinations: KIDS_NETWORK_DESTINATION_ALLOWLIST,
   thirdPartyLlmDefault: "deny" as const,
+  activityMode: "curated-in-memory" as const,
+  allowedActivityActions: KIDS_ACTIVITY_ACTIONS,
 });
 
 export const seam: ProfileSeam = Object.freeze({
