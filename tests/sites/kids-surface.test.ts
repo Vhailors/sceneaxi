@@ -41,7 +41,7 @@ function kidsColorTokens(): Readonly<Record<string, string>> {
     const token = match[1] as string;
     const value = (match[2] as string).trim();
     if (/^#[0-9a-fA-F]{6}$/.test(value)) tokens[token] = value.toUpperCase();
-    else delete tokens[token];
+    else Reflect.deleteProperty(tokens, token);
   }
   return tokens;
 }

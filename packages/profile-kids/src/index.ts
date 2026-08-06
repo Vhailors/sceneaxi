@@ -121,7 +121,7 @@ export function evaluateKidsIsolation(
 }
 
 /**
- * Current Kids LLM route gate. The stub has no allowed route kinds, so every
+ * Current Kids LLM route gate. The compiled policy allows no route kind, so every
  * route refuses; third-party routes receive the stable default-denial reason.
  */
 export function evaluateKidsLlmRoute(
