@@ -178,6 +178,15 @@ neutrals; plus the three world background pairs implemented in
 not a new shared token. They stay site-local and claim no palette authority outside
 the isolated Kids origin.
 
+Because that origin may not import this package, its stylesheet holds a **copy** of
+the neutrals — the same situation as `apps/desktop-shell/src/visual-tokens.ts`, and
+handled the same way: `tests/sites/kids-surface.test.ts` compares every copied token
+against `FOUNDATION_COLORS` and measures a 4.5:1 floor on each shipped text pairing,
+the empty-stage hint's 78% alpha over all six world gradient stops included. One
+divergence is recorded rather than corrected: the Kids surface ships a single border
+weight and spends it on the strong one, so its `--line` carries this sheet's
+`--line-strong` hex.
+
 ## Browser evidence
 
 Recorded from a real Chrome render of the package's own emitters — `foundationsCss()`,

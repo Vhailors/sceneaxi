@@ -88,7 +88,37 @@ describe("sites tier — injected violations", () => {
     const res = runCheck(fx, "check-sites.mjs");
     expect(res.status).toBe(1);
     expect(res.stderr).toContain(
-      `sites/kids/src/lib/authority-leak.ts names ${label} — the first-release Kids source has no external data path`,
+      `sites/kids/src/lib/authority-leak.ts names ${label} — the first-release Kids site has no external data path`,
+    );
+  });
+
+  it("sites check rejects an external URL added outside the Kids src tree", () => {
+    appendTo(
+      fx,
+      "sites/kids/next.config.ts",
+      '\nexport const outside = "https://third-party.example";\n',
+    );
+    const res = runCheck(fx, "check-sites.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "sites/kids/next.config.ts names external URL — the first-release Kids site has no external data path",
+    );
+  });
+
+  it.each([
+    ["a request rewrite", "async rewrites() { return []; }"],
+    ["a redirect", "async redirects() { return []; }"],
+    ["a remote image pattern", "export const images = { remotePatterns: [] };"],
+    ["an image host allow list", "export const images = { domains: [] };"],
+    ["an asset prefix", 'export const assetPrefix = "/cdn";'],
+    ["a proxy destination", 'export const route = { destination: "/elsewhere" };'],
+    ["build-time environment injection", "export const config = { env: {} };"],
+  ])("sites check rejects a Kids config granting %s", (label, source) => {
+    appendTo(fx, "sites/kids/next.config.ts", `\n${source}\n`);
+    const res = runCheck(fx, "check-sites.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      `sites/kids/next.config.ts configures ${label} — the first-release Kids site serves only its own bundled activity`,
     );
   });
 

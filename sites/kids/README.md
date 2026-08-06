@@ -12,8 +12,10 @@ pnpm dev
 There are no environment variables. The site imports no SceneAxi package—not even
 `@sceneaxi/profile-kids` or `@sceneaxi/site-kit`—so the dependency matrix keeps an
 empty allow list and `kidsBoundary.allowedDependents` stays empty. The activity is
-held in memory for the current tab only. Source gates refuse fetch/socket APIs,
-forms, links, environment access, and external URLs; response headers add
+held in memory for the current tab only. The install-root gate refuses network APIs,
+forms, links, environment access, and external URLs anywhere under this directory —
+configuration as well as source — and refuses Next configuration keys that could
+proxy, redirect, or inject build-time values; response headers add
 `connect-src 'none'`, `form-action 'none'`, and same-origin isolation.
 The standalone pnpm workspace approves one dependency build only: Next's `sharp`;
 `pnpm check:sites` refuses any second approval.

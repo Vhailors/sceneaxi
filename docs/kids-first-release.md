@@ -40,7 +40,8 @@ empty `kidsBoundary.allowedDependents` boundary.
 | Editing during play | `KIDS_ACTIVITY_BUILD_PAUSED_WHILE_PLAYING` |
 | Non-Kids catalog | `NON_KIDS_CATALOG_DENIED` at the profile policy; no catalog code or link exists in the site |
 | Model route | third party refuses `THIRD_PARTY_LLM_DENIED_BY_DEFAULT`; every other route refuses `KIDS_LLM_ROUTE_NOT_ALLOWED`; no provider dependency exists |
-| External data | policy refuses; the site gate rejects fetch/socket/environment APIs and CSP enforces `connect-src 'none'` |
+| External data | policy refuses; the site gate rejects network/environment APIs across the whole install root and CSP enforces `connect-src 'none'` |
+| Outbound site configuration | the site gate refuses a Next rewrite, redirect, remote image pattern, asset prefix, or build-time `env` block — a same-origin proxy CSP could never see |
 | Identity or commerce | no dependency, form, route, environment input, or state vocabulary exists; unsupported activity requests return the generic refusal |
 
 The generic activity refusal deliberately does not echo the attempted action and
@@ -58,6 +59,7 @@ the child surface.
 | Site has no outbound API or configuration | `scripts/check-sites.mjs`, `tests/boundary/injected-site-violations.test.ts` |
 | Browser-enforced outbound denial | `sites/kids/src/lib/security-policy.ts`, `tests/sites/kids-surface.test.ts` |
 | Profile/site parity without runtime coupling | `tests/sites/kids-surface.test.ts` |
+| Duplicated Foundations neutrals and measured 4.5:1 text contrast | `tests/sites/kids-surface.test.ts` |
 
 ## Extending safely
 

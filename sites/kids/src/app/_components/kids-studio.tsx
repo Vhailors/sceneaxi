@@ -37,6 +37,7 @@ export function KidsStudio() {
       <div className="stage-wrap">
         <div
           className={`stage world-${activity.worldId} ${activity.mode === "play" ? "is-playing" : ""}`}
+          role="group"
           aria-label={`${world.label}. ${activity.pieceIds.length} of ${KIDS_ACTIVITY_PIECE_LIMIT} pieces added.`}
         >
           <div className="sky-symbol" aria-hidden="true">

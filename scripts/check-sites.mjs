@@ -39,7 +39,8 @@ const KIDS_SITE_DEVELOPMENT_DEPENDENCIES = Object.freeze([
   "@types/react-dom",
   "typescript",
 ]);
-const KIDS_SITE_FORBIDDEN_SOURCE_APIS = Object.freeze([
+const KIDS_SITE_DIR = "sites/kids";
+const KIDS_SITE_FORBIDDEN_APIS = Object.freeze([
   { label: "fetch", pattern: /\bfetch\s*\(/ },
   { label: "XMLHttpRequest", pattern: /\bXMLHttpRequest\b/ },
   { label: "WebSocket", pattern: /\bWebSocket\b/ },
@@ -50,6 +51,26 @@ const KIDS_SITE_FORBIDDEN_SOURCE_APIS = Object.freeze([
   { label: "link", pattern: /<a\b/i },
   { label: "external URL", pattern: /https?:\/\//i },
 ]);
+
+/**
+ * Outbound configuration a Next config may grant without ever naming a runtime API.
+ *
+ * A rewrite or redirect turns the isolated Kids origin into a server-side proxy that
+ * the browser reads as same-origin, so CSP cannot see it; a build-time `env` block
+ * injects configuration the site's `.env.example` gate never sees. These are refused
+ * by key, because the value that would make them dangerous need not be a literal.
+ */
+const KIDS_SITE_FORBIDDEN_CONFIG_KEYS = Object.freeze([
+  { label: "a request rewrite", pattern: /\brewrites\b/ },
+  { label: "a redirect", pattern: /\bredirects\b/ },
+  { label: "a remote image pattern", pattern: /\bremotePatterns\b/ },
+  { label: "an image host allow list", pattern: /\bdomains\b/ },
+  { label: "an asset prefix", pattern: /\bassetPrefix\b/ },
+  { label: "a proxy destination", pattern: /\bdestination\b/ },
+  { label: "build-time environment injection", pattern: /\benv\s*:/ },
+]);
+
+const isKidsConfigFile = (rel) => /(^|\/)[^/]*\.config\.[cm]?[jt]sx?$/.test(rel);
 
 /** Framework and provider SDKs belong in `sites/`, never in the hermetic root. */
 const FRAMEWORK_DEPENDENCIES = Object.freeze([
@@ -358,12 +379,23 @@ for (const dir of siteDirs) {
 for (const file of walk(sitesDir)) {
   const rel = relative(root, file);
   const text = readFileSync(file, "utf8");
-  if (rel.startsWith("sites/kids/src/")) {
-    for (const forbidden of KIDS_SITE_FORBIDDEN_SOURCE_APIS) {
+  if (rel.startsWith(`${KIDS_SITE_DIR}/`)) {
+    // The whole install root, not just `src/`: an outbound path is added in the site's
+    // own configuration at least as easily as in a component.
+    for (const forbidden of KIDS_SITE_FORBIDDEN_APIS) {
       if (forbidden.pattern.test(text)) {
         fail(
-          `${rel} names ${forbidden.label} — the first-release Kids source has no external data path`,
+          `${rel} names ${forbidden.label} — the first-release Kids site has no external data path`,
         );
+      }
+    }
+    if (isKidsConfigFile(rel)) {
+      for (const forbidden of KIDS_SITE_FORBIDDEN_CONFIG_KEYS) {
+        if (forbidden.pattern.test(text)) {
+          fail(
+            `${rel} configures ${forbidden.label} — the first-release Kids site serves only its own bundled activity`,
+          );
+        }
       }
     }
   }
