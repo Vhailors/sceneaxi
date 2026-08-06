@@ -9,9 +9,9 @@
  * created or destroyed value cannot be persisted at all.
  *
  * `MoneySplitRecord` is **bookkeeping only**. It deliberately has no payout,
- * transfer, destination, or Connect-account field: real cash payouts to creators
- * are a later captain gate, and a record shaped like a payout instruction would
- * invite one to be attempted.
+ * transfer, destination, or Connect-account field: the separate Connect audit
+ * seam references this record, and a split shaped like a payout instruction
+ * would invite one to be attempted.
  *
  * Split behavior and the sale paths live in @sceneaxi/billing; this module is
  * contracts only.
@@ -162,7 +162,7 @@ function screen(
   if (payout !== undefined) {
     return refuseWith(
       REVENUE_SHARE_REFUSE_CODES.payoutFieldForbidden,
-      `A ${label} must not carry a payout field ("${payout}"); v1 records balances and performs no cash payout. Real payouts are a later captain gate.`,
+      `A ${label} must not carry a payout field ("${payout}"); v1 records balances and performs no cash payout. Connect audit records are separate.`,
     );
   }
   if (record["schemaVersion"] !== REVENUE_SHARE_SCHEMA_VERSION) {

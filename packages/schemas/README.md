@@ -254,9 +254,11 @@ not implemented here.
   `contracts/billing-checkout.schema.json`, `contracts/credit-packs.schema.json`,
   `contracts/entitlement-decision.schema.json`,
   `contracts/entitlement-matrix.schema.json`,
-  `contracts/catalog-listings.schema.json`, `contracts/revenue-share.schema.json`
+  `contracts/catalog-listings.schema.json`, `contracts/revenue-share.schema.json`,
+  `contracts/stripe-connect.schema.json`
 - TypeScript contracts: `src/identity.ts`, `src/credits.ts`, `src/billing.ts`,
-  `src/entitlements.ts`, `src/catalog-listing.ts`, `src/revenue-share.ts`
+  `src/entitlements.ts`, `src/catalog-listing.ts`, `src/revenue-share.ts`,
+  `src/stripe-connect.ts`
 - Package-root runtime provenance helper: `createProvenanceWitness` and
   `ProvenanceWitness`; the identity/credits usage and trust-boundary rationale
   are owned by [`docs/auth-credits.md`](../../docs/auth-credits.md)

@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/stripe-connect/v1",
+  "title": "SceneAxi Stripe Connect audit records (v1)",
+  "description": "Append-only TEST-mode-ready records for creator onboarding, observed account capability, and provider-evidenced payout outcomes.",
+  "oneOf": [
+    { "$ref": "#/$defs/connectAccountRecord" },
+    { "$ref": "#/$defs/connectOnboardingIntent" },
+    { "$ref": "#/$defs/connectStatusRecord" },
+    { "$ref": "#/$defs/connectPayoutIntent" },
+    { "$ref": "#/$defs/connectPayoutOutcome" }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$"
+    },
+    "dateTime": { "type": "string", "format": "date-time" },
+    "mode": { "type": "string", "enum": ["test", "live"] },
+    "connectAccountRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "kind", "creatorUserId", "stripeAccountId", "mode", "providerRequestId", "createdAt"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "kind": { "const": "sceneaxi.connect-account-record" },
+        "creatorUserId": { "$ref": "#/$defs/identifier" },
+        "stripeAccountId": { "$ref": "#/$defs/identifier" },
+        "mode": { "$ref": "#/$defs/mode" },
+        "providerRequestId": { "$ref": "#/$defs/identifier" },
+        "createdAt": { "$ref": "#/$defs/dateTime" }
+      }
+    },
+    "connectOnboardingIntent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "kind", "onboardingIntentId", "creatorUserId", "stripeAccountId", "expiresAt", "mode", "idempotencyKey", "providerRequestId", "createdAt"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "kind": { "const": "sceneaxi.connect-onboarding-intent" },
+        "onboardingIntentId": { "$ref": "#/$defs/identifier" },
+        "creatorUserId": { "$ref": "#/$defs/identifier" },
+        "stripeAccountId": { "$ref": "#/$defs/identifier" },
+        "expiresAt": { "$ref": "#/$defs/dateTime" },
+        "mode": { "$ref": "#/$defs/mode" },
+        "idempotencyKey": { "$ref": "#/$defs/identifier" },
+        "providerRequestId": { "$ref": "#/$defs/identifier" },
+        "createdAt": { "$ref": "#/$defs/dateTime" }
+      }
+    },
+    "connectStatusRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "kind", "statusId", "creatorUserId", "stripeAccountId", "onboardingComplete", "payoutsEnabled", "requirementsDue", "providerRequestId", "observedAt"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "kind": { "const": "sceneaxi.connect-status-record" },
+        "statusId": { "$ref": "#/$defs/identifier" },
+        "creatorUserId": { "$ref": "#/$defs/identifier" },
+        "stripeAccountId": { "$ref": "#/$defs/identifier" },
+        "onboardingComplete": { "type": "boolean" },
+        "payoutsEnabled": { "type": "boolean" },
+        "requirementsDue": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/identifier" },
+          "uniqueItems": true
+        },
+        "providerRequestId": { "$ref": "#/$defs/identifier" },
+        "observedAt": { "$ref": "#/$defs/dateTime" }
+      }
+    },
+    "connectPayoutIntent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "kind", "payoutIntentId", "saleId", "creatorUserId", "stripeAccountId", "grossMinor", "creatorMinor", "platformMinor", "currency", "basisPoints", "mode", "idempotencyKey", "requestedAt"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "kind": { "const": "sceneaxi.connect-payout-intent" },
+        "payoutIntentId": { "$ref": "#/$defs/identifier" },
+        "saleId": { "$ref": "#/$defs/identifier" },
+        "creatorUserId": { "$ref": "#/$defs/identifier" },
+        "stripeAccountId": { "$ref": "#/$defs/identifier" },
+        "grossMinor": { "type": "integer", "minimum": 1 },
+        "creatorMinor": { "type": "integer", "minimum": 0 },
+        "platformMinor": { "type": "integer", "minimum": 0 },
+        "currency": { "type": "string", "pattern": "^[a-z]{3}$" },
+        "basisPoints": { "const": 5000 },
+        "mode": { "$ref": "#/$defs/mode" },
+        "idempotencyKey": { "$ref": "#/$defs/identifier" },
+        "requestedAt": { "$ref": "#/$defs/dateTime" }
+      }
+    },
+    "connectPayoutOutcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "kind", "payoutOutcomeId", "payoutIntentId", "status", "providerPayoutId", "providerEvidenceId", "providerMessage", "observedAt"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "kind": { "const": "sceneaxi.connect-payout-outcome" },
+        "payoutOutcomeId": { "$ref": "#/$defs/identifier" },
+        "payoutIntentId": { "$ref": "#/$defs/identifier" },
+        "status": { "enum": ["succeeded", "failed"] },
+        "providerPayoutId": { "type": ["string", "null"] },
+        "providerEvidenceId": { "$ref": "#/$defs/identifier" },
+        "providerMessage": { "type": "string", "maxLength": 1000 },
+        "observedAt": { "$ref": "#/$defs/dateTime" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "succeeded" } } },
+          "then": { "properties": { "providerPayoutId": { "$ref": "#/$defs/identifier" } } },
+          "else": { "properties": { "providerPayoutId": { "type": "null" } } }
+        }
+      ]
+    }
+  }
+}

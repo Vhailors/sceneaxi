@@ -244,8 +244,9 @@ deterministic and fixture-testable. Load-bearing invariants: `User` has no role
 field so `admin` is unclaimable and comes only from `SCENEAXI_ADMIN_EMAIL`;
 `CreditAccount` has no balance because the ledger is the only source of truth; the
 ledger is append-only in both the pure code and a DB trigger; Stripe `live` refuses
-without an explicit `liveModeAuthorized` captain gate; money splits are
-bookkeeping-only (no Connect payouts); Kids commerce and Kids identity are refused
+without an explicit `liveModeAuthorized` captain gate; money splits remain
+bookkeeping-only while the separate Connect audit path is TEST-only and requires
+provider evidence for success (`docs/stripe-connect-operations.md`); Kids commerce and Kids identity are refused
 by name — `AUTH_REFUSE_REASONS.kidsSurfaceDenied` and
 `BILLING_REFUSE_REASONS.kidsCommerceDenied` — independently on every path that can
 reach identity or a charge, so adding a path means adding its deny, not relying on
@@ -487,9 +488,12 @@ is required, the parser reads `data.object.id` from the verified body and compar
 before anything else about the settlement, and carries it onto the completion as
 `checkoutSessionId` — so evidence from another identically-priced paid session refuses
 `STRIPE_SETTLEMENT_SESSION_MISMATCH` and an event that names no session refuses
-`STRIPE_CHECKOUT_SESSION_ID_MISSING`. `MoneySplitRecord` stays pure and unpersisted — #128
-delivered the **credits** commit boundary below, and no store operation writes a money
-split, so a deployment that wants those rows durable owns that write. Ownership map:
+`STRIPE_CHECKOUT_SESSION_ID_MISSING`. `recordMoneySale` itself still returns a pure record
+and no credits or checkout path persists one; the single durable exception is captain
+decision D4's narrow supersession for sceneaxi#199 — `ConnectStore.commitPayoutIntent`
+appends one validated split atomically with the creator-leg payout intent bound to it, from
+the TEST-only Connect seam and nowhere else — so a deployment that wants money splits
+durable outside that path still owns that write. Ownership map:
 `docs/auth-credits.md`; regressions live in
 `packages/billing/test/revenue-share.test.ts`, `packages/billing/test/stripe-checkout.test.ts`,
 and `tests/e2e/auth-credits-refuse-matrix.test.ts`.

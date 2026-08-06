@@ -223,6 +223,33 @@ export type {
 } from "./revenue-share.js";
 
 export {
+  CONNECT_ACCOUNT_RECORD_KIND,
+  CONNECT_ONBOARDING_INTENT_KIND,
+  CONNECT_PAYOUT_INTENT_KIND,
+  CONNECT_PAYOUT_OUTCOME_KIND,
+  CONNECT_PAYOUT_STATUSES,
+  CONNECT_STATUS_RECORD_KIND,
+  STRIPE_CONNECT_REFUSE_CODES,
+  STRIPE_CONNECT_SCHEMA_VERSION,
+  connectPayoutMatchesMoneySplit,
+  validateConnectAccountRecord,
+  validateConnectOnboardingIntent,
+  validateConnectPayoutIntent,
+  validateConnectPayoutOutcome,
+  validateConnectStatusRecord,
+} from "./stripe-connect.js";
+export type {
+  ConnectAccountRecord,
+  ConnectOnboardingIntent,
+  ConnectPayoutIntent,
+  ConnectPayoutOutcome,
+  ConnectPayoutStatus,
+  ConnectStatusRecord,
+  StripeConnectRefuseCode,
+  StripeConnectValidationResult,
+} from "./stripe-connect.js";
+
+export {
   isEpochMilliseconds,
   isNonEmptyString,
   isPlainRecord,
@@ -513,6 +540,7 @@ export const contracts = Object.freeze({
   /** Catalog dual-price listings (sceneaxi#100); data is CATALOG_LISTINGS_FIXTURES_PATH. */
   catalogListings: "contracts/catalog-listings.schema.json",
   revenueShare: "contracts/revenue-share.schema.json",
+  stripeConnect: "contracts/stripe-connect.schema.json",
   /** Plugin Manifest descriptor (sceneaxi#20 / ADR 0005); host runtime is @sceneaxi/plugin-host. */
   pluginManifest: "contracts/plugin-manifest.schema.json",
   /** Plugin Capability ID registry schema (sceneaxi#21 / ADR 0005); seed path is PLUGIN_CAPABILITY_REGISTRY_SEED_PATH. */

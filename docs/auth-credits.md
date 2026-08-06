@@ -12,9 +12,9 @@ The architecture decision behind the shape of this plane is
 
 | Layer | Lives in |
 |---|---|
-| Contracts (User, Session, RoleAssignment, credits, billing, entitlements, listings, revenue share) | `packages/schemas` |
+| Contracts (User, Session, RoleAssignment, credits, billing, entitlements, listings, revenue share, Connect audit) | `packages/schemas` |
 | Single-admin resolution, role guards, identity port | `packages/auth` |
-| Credit ledger, metering, entitlements, hosted-AI credit gate, Stripe test checkout, revenue share, fixture commerce | `packages/billing` |
+| Credit ledger, metering, entitlements, hosted-AI credit gate, Stripe test checkout, revenue share, TEST-only Connect seam, fixture commerce | `packages/billing` |
 | Credit persistence boundary (`createCreditStore`) every adapter is built through | `packages/billing/src/store.ts` |
 | Neon schema | `db/migrations` |
 | Login + balance view model | `apps/web-shell` (`createAccountPanel`) |
@@ -632,6 +632,7 @@ Regressions: `packages/billing/test/live-mode.test.ts` (the resolver's contract)
 | `CreditPack`, `CreditPackRevision`, `CreditPackCatalogArchive` | `packages/schemas/src/billing.ts` | `contracts/credit-packs.schema.json` |
 | `EntitlementDecision` | `packages/schemas/src/entitlements.ts` | `contracts/entitlement-decision.schema.json` |
 | `CreatorShareRecord`, `MoneySplitRecord` | `packages/schemas/src/revenue-share.ts` | `contracts/revenue-share.schema.json` |
+| `ConnectAccountRecord`, `ConnectOnboardingIntent`, `ConnectStatusRecord`, `ConnectPayoutIntent`, `ConnectPayoutOutcome` | `packages/schemas/src/stripe-connect.ts` | `contracts/stripe-connect.schema.json` |
 
 Three shapes are load-bearing and should not be "fixed" later without reading why:
 
@@ -1056,11 +1057,11 @@ book a collection that never happened. `CreditStore.settleCreditsSale` enforces 
 rule independently: a settlement whose non-zero `grossCredits` carries no buyer debit is
 refused, exactly as a non-zero `creatorCredits` with no creator grant already was.
 
-**Money sales are bookkeeping only.** No payout, no Stripe Connect, no transfer. The
+**Money splits are bookkeeping only.** The
 `MoneySplitRecord` contract *refuses* any field that could describe a payout
 (`payout`, `transfer`, `destination`, `connectAccountId`, …) — a record shaped like a
-payout instruction would invite one to be attempted. **Real cash payouts to creators are a
-later captain gate.**
+payout instruction would invite one to be attempted. Stripe Connect is a separate,
+append-only audit path over a validated split; it never widens this record.
 
 **A money split is built from verified evidence, never from arguments** (sceneaxi#127).
 `recordMoneySale` takes exactly two pieces of evidence — a runtime-witnessed
@@ -1093,20 +1094,24 @@ identical row.
 
 Both credits paths are idempotent on the sale id (`sale:<saleId>:buyer` / `:creator`), so a
 replay moves nothing, and neither key can reach persistence except through
-`settleCreditsSale` — see *The credit persistence boundary* above. **Money** bookkeeping
-remains pure and unpersisted: `recordMoneySale` returns a `MoneySplitRecord` and no store
-operation writes one, so a deployment that wants those rows durable owns that write with
-no boundary check. [`packages/billing/src/revenue-share.ts`](../packages/billing/src/revenue-share.ts)
-and [`packages/billing/test/revenue-share.test.ts`](../packages/billing/test/revenue-share.test.ts)
-prove only construction and validation of the returned record; the credit-store operation
-table above contains no money-split commit. [sceneaxi#127](https://github.com/Vhailors/sceneaxi/issues/127)
-blocks Stripe Connect payouts on correct money bookkeeping, and captain decision D4 —
-`data/sceneaxi-authority-decision-d4-commit-boundary-sequencing.md`, restated in
-[`docs/program/NEXT-STEP.md`](program/NEXT-STEP.md#captain-authority-decisions-d1d5) — is
-where the persistence half of that is recorded: atomic persistence for `MoneySplitRecord`
-was not selected and remains an unauthorized gap before any Connect work. So an atomic
-money-settlement store operation is a hard precondition on any Connect work. No such
-operation or Connect authority exists in this repository.
+`settleCreditsSale` — see *The credit persistence boundary* above. `recordMoneySale`
+still constructs a pure `MoneySplitRecord`, and no credits or checkout path persists one.
+
+Captain decision D4 recorded that atomic persistence for `MoneySplitRecord` was not
+selected and remained an unauthorized gap before any Connect work. For the accepted
+SA-CON-1 creator-payout package (sceneaxi#199) the captain **superseded** that
+prohibition, and only to the width described here; the disposition row in
+[`NEXT-STEP.md`](program/NEXT-STEP.md) restates the same supersession. What is
+authorized is the narrower durable boundary `commitPayoutIntent`: it atomically appends
+one validated split together with its exact creator-leg payout intent before a provider
+call, and nothing else. It is not a general money-settlement store — it commits only a
+split a `ConnectPayoutIntent` is bound to field by field, it is reachable only from the
+authenticated TEST-only Connect seam, and D4's general statement stands everywhere else:
+a deployment that wants money splits durable outside this path still owns that write. A success can be appended only
+from strict provider evidence, and retry reads the existing outcome before dispatch.
+All Connect operations are TEST-only and require explicit provider, dashboard, secret,
+and operations readiness. LIVE remains refused and is only the uncompleted checklist in
+[`docs/stripe-connect-operations.md`](stripe-connect-operations.md).
 
 ## Fixture commerce (sceneaxi#138)
 

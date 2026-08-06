@@ -22,6 +22,7 @@ import {
   assertCurrencyListed,
   assertModeAuthorized,
   createCheckoutSessionIntent,
+  createInMemoryConnectStore,
   createInMemoryCreditStore,
   createLedgerState,
   createListingCheckoutIntent,
@@ -39,15 +40,20 @@ import {
   parseCreditPackRefundEvent,
   persistCreditsSale,
   purchaseListingWithCredits,
+  refreshConnectStatus,
   recordMoneySale,
   resolveCreditPackRevision,
   resolveFixtureCommerceListing,
   runMeteredModelCall,
+  requestCreatorPayout,
   signStripeWebhookPayload,
   splitCredits,
+  startConnectOnboarding,
   verifyStripeWebhookSignature,
   type BillingRefuseReason,
   type CreditStore,
+  type ConnectProviderReadiness,
+  type StripeConnectProvider,
   type LedgerState,
 } from "@sceneaxi/billing";
 import type {
@@ -1315,6 +1321,212 @@ describe("billing refuse matrix", () => {
         admin,
         state: funded(100),
         creditAmount: Number.MAX_SAFE_INTEGER,
+      }),
+    );
+  });
+
+  it("reaches every Stripe Connect refusal", async () => {
+    const readiness: ConnectProviderReadiness = Object.freeze({
+      mode: "test" as const,
+      testOperationsEnabled: true,
+      dashboardConfigured: true,
+      secretConfigured: true,
+    });
+    const provider = (
+      readinessOverride: Partial<typeof readiness> = {},
+      methods: Partial<StripeConnectProvider> = {},
+    ): StripeConnectProvider => {
+      const base: StripeConnectProvider = {
+        readiness: Object.freeze({ ...readiness, ...readinessOverride }),
+        createOnboarding: ({ creatorUserId }: { creatorUserId: string }) => ({
+          ok: true,
+          value: {
+            stripeAccountId: `acct_${creatorUserId}`,
+            onboardingUrl: "https://connect.stripe.example/test/onboard",
+            expiresAt: "2026-07-25T11:00:00Z",
+            accountRequestId: `req_account_${creatorUserId}`,
+            accountCreatedAt: "2026-07-25T09:59:00Z",
+            onboardingRequestId: `req_onboard_${creatorUserId}`,
+            onboardingCreatedAt: "2026-07-25T10:00:00Z",
+          },
+        }),
+        retrieveStatus: ({ stripeAccountId }: { stripeAccountId: string }) => ({
+          ok: true,
+          value: {
+            stripeAccountId,
+            onboardingComplete: true,
+            payoutsEnabled: true,
+            requirementsDue: [],
+            requestId: `req_status_${stripeAccountId}`,
+            observedAt: "2026-07-25T10:01:00Z",
+          },
+        }),
+        createPayout: () => ({
+          ok: true,
+          value: {
+            payoutId: "po_matrix",
+            evidenceId: "evt_matrix_payout",
+            message: "test payout",
+            paidAt: "2026-07-25T10:02:00Z",
+          },
+        }),
+      };
+      return Object.freeze({ ...base, ...methods });
+    };
+    const onboard = (
+      store: ReturnType<typeof createInMemoryConnectStore>,
+      connectProvider: StripeConnectProvider | undefined,
+      overrides: Record<string, unknown> = {},
+    ) =>
+      startConnectOnboarding({
+        principal: principal(),
+        admin,
+        creatorUserId: "usr_crew",
+        idempotencyKey: "connect-onboarding:usr_crew",
+        now: NOW,
+        store,
+        provider: connectProvider,
+        ...overrides,
+      });
+    const moneySplit = Object.freeze({
+      schemaVersion: 1 as const,
+      kind: "sceneaxi.money-split-record" as const,
+      saleId: "sale_matrix_connect",
+      listingId: "harbour-diorama",
+      buyerUserId: "usr_buyer",
+      creatorUserId: "usr_crew",
+      grossMinor: 2500,
+      creatorMinor: 1250,
+      platformMinor: 1250,
+      currency: "usd",
+      basisPoints: 5000,
+      mode: "test" as const,
+      occurredAt: "2026-07-25T10:00:00Z",
+    });
+
+    record(await onboard(createInMemoryConnectStore(), undefined));
+    record(await onboard(createInMemoryConnectStore(), provider({ mode: "live" as never })));
+    record(
+      await onboard(
+        createInMemoryConnectStore(),
+        provider({ testOperationsEnabled: false }),
+      ),
+    );
+    record(
+      await onboard(
+        createInMemoryConnectStore(),
+        provider({ dashboardConfigured: false }),
+      ),
+    );
+    record(
+      await onboard(
+        createInMemoryConnectStore(),
+        provider({ secretConfigured: false }),
+      ),
+    );
+    record(
+      await onboard(
+        createInMemoryConnectStore(),
+        provider({}, {
+          createOnboarding: () => ({
+            ok: false,
+            code: "refused",
+            message: "provider refused",
+          }),
+        }),
+      ),
+    );
+    record(
+      await onboard(
+        createInMemoryConnectStore(),
+        provider({}, { createOnboarding: () => ({ ok: true, value: {} as never }) }),
+      ),
+    );
+    const failedBase = createInMemoryConnectStore();
+    const failedStore = Object.freeze({
+      ...failedBase,
+      findOnboardingIntent() {
+        throw new Error("store unavailable");
+      },
+    });
+    record(await onboard(failedStore, provider()));
+
+    const conflictStore = createInMemoryConnectStore();
+    await onboard(conflictStore, provider());
+    record(
+      await onboard(conflictStore, provider(), {
+        principal: principal({ userId: "usr_other" }),
+        creatorUserId: "usr_other",
+      }),
+    );
+
+    const expiredStore = createInMemoryConnectStore();
+    await onboard(expiredStore, provider());
+    record(
+      await onboard(expiredStore, provider(), {
+        now: Date.parse("2026-07-25T12:00:00Z"),
+      }),
+    );
+
+    record(
+      await refreshConnectStatus({
+        principal: principal(),
+        admin,
+        creatorUserId: "usr_crew",
+        now: NOW,
+        store: createInMemoryConnectStore(),
+        provider: provider(),
+      }),
+    );
+
+    const missingStatusStore = createInMemoryConnectStore();
+    await onboard(missingStatusStore, provider());
+    record(
+      await requestCreatorPayout({
+        principal: principal(),
+        admin,
+        creatorUserId: "usr_crew",
+        moneySplit,
+        idempotencyKey: "connect-payout:sale_matrix_connect",
+        now: NOW,
+        store: missingStatusStore,
+        provider: provider(),
+      }),
+    );
+
+    const disabledProvider = provider({}, {
+      retrieveStatus: ({ stripeAccountId }) => ({
+        ok: true,
+        value: {
+          stripeAccountId,
+          onboardingComplete: true,
+          payoutsEnabled: false,
+          requirementsDue: ["external_account"],
+          requestId: "req_status_disabled",
+          observedAt: "2026-07-25T10:01:00Z",
+        },
+      }),
+    });
+    const disabledStore = createInMemoryConnectStore();
+    await onboard(disabledStore, disabledProvider);
+    await refreshConnectStatus({
+      principal: principal(),
+      admin,
+      creatorUserId: "usr_crew",
+      now: NOW,
+      store: disabledStore,
+      provider: disabledProvider,
+    });
+    record(
+      await requestCreatorPayout({
+        principal: principal(),
+        admin,
+        creatorUserId: "usr_crew",
+        moneySplit,
+        idempotencyKey: "connect-payout:sale_matrix_connect",
+        now: NOW,
+        store: disabledStore,
+        provider: disabledProvider,
       }),
     );
   });

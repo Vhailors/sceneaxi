@@ -112,6 +112,13 @@ retry ordering it shares with the hosted-AI replay step are documented in
 [`docs/auth-credits.md`](../../docs/auth-credits.md) under *Fixture commerce (sceneaxi#138)*,
 and the evidence rules under *Creator publish and revenue share*.
 
+Stripe Connect creator onboarding and payout bookkeeping live in
+`src/stripe-connect.ts`. The seam is authenticated, injected-provider-only, append-only,
+and TEST-only: missing provider/dashboard/secret/operations readiness refuses by name,
+and a successful payout record requires provider evidence. The operational boundary and
+the deliberately incomplete LIVE checklist are in
+[`docs/stripe-connect-operations.md`](../../docs/stripe-connect-operations.md).
+
 **Verified means verified at runtime, not in the type.** A `VerifiedWebhook` and a
 `VerifiedCheckoutCompletion` both mean "a signature check produced me", and both have a
 public shape — so a type brand stops only a TypeScript caller, while JavaScript and `as`

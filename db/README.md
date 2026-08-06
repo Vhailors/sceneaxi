@@ -12,6 +12,10 @@ Forward-only, in numeric order:
    `credit_ledger_entries`, `stripe_customer_links`, `checkout_session_intents`,
    `catalog_listings`, `creator_share_records`, `money_split_records`
 3. `migrations/0003_checkout_session_intent_price_immutability.sql` — checkout intent price immutability trigger
+4. `migrations/0004_stripe_connect_audit.sql` — `stripe_connect_accounts`,
+   `stripe_connect_onboarding_intents`, `stripe_connect_status_records`,
+   `stripe_connect_payout_intents`, `stripe_connect_payout_outcomes`, and the
+   append-only triggers those tables share with `money_split_records`
 
 There are no down-migrations. Reverting a financial schema by dropping tables loses the
 ledger, so a correction ships as a new forward migration.
@@ -48,7 +52,10 @@ plane and a bad row.
 | A listing price matches its mode | cross-field check constraints per price mode |
 | A split cannot create or destroy value | `creator + platform = gross` check constraints |
 | Only a 50/50 creator split | `basis_points = 5000` check constraint |
-| No payout can be recorded | `money_split_records` has no payout/transfer/destination column |
+| Money bookkeeping cannot masquerade as payout | `money_split_records` has no payout/transfer/destination column |
+| Connect audit history is immutable | all five Connect tables and `money_split_records` have append-only triggers |
+| No payout success without provider evidence | outcome constraint requires both provider evidence and a provider payout id |
+| At most one payout per sale | `stripe_connect_payout_intents.sale_id` is `UNIQUE`, so a fresh idempotency key cannot buy a second payout |
 | A checkout redirect is never plaintext | `success_url LIKE 'https://%'` check |
 
 ## Connecting

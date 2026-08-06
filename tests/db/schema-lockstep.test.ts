@@ -198,6 +198,26 @@ const CONTRACT_FIELDS: Record<string, readonly string[]> = {
     "revenue-share.schema.json",
     "moneySplitRecord",
   ),
+  stripe_connect_accounts: persistedDefinitionFields(
+    "stripe-connect.schema.json",
+    "connectAccountRecord",
+  ),
+  stripe_connect_onboarding_intents: persistedDefinitionFields(
+    "stripe-connect.schema.json",
+    "connectOnboardingIntent",
+  ),
+  stripe_connect_status_records: persistedDefinitionFields(
+    "stripe-connect.schema.json",
+    "connectStatusRecord",
+  ),
+  stripe_connect_payout_intents: persistedDefinitionFields(
+    "stripe-connect.schema.json",
+    "connectPayoutIntent",
+  ),
+  stripe_connect_payout_outcomes: persistedDefinitionFields(
+    "stripe-connect.schema.json",
+    "connectPayoutOutcome",
+  ),
 };
 
 const FROZEN_V1_FIELDS: Record<string, readonly string[]> = {
@@ -274,6 +294,56 @@ const FROZEN_V1_FIELDS: Record<string, readonly string[]> = {
     "basisPoints",
     "mode",
     "occurredAt",
+  ],
+  stripe_connect_accounts: [
+    "creatorUserId",
+    "stripeAccountId",
+    "mode",
+    "providerRequestId",
+    "createdAt",
+  ],
+  stripe_connect_onboarding_intents: [
+    "onboardingIntentId",
+    "creatorUserId",
+    "stripeAccountId",
+    "expiresAt",
+    "mode",
+    "idempotencyKey",
+    "providerRequestId",
+    "createdAt",
+  ],
+  stripe_connect_status_records: [
+    "statusId",
+    "creatorUserId",
+    "stripeAccountId",
+    "onboardingComplete",
+    "payoutsEnabled",
+    "requirementsDue",
+    "providerRequestId",
+    "observedAt",
+  ],
+  stripe_connect_payout_intents: [
+    "payoutIntentId",
+    "saleId",
+    "creatorUserId",
+    "stripeAccountId",
+    "grossMinor",
+    "creatorMinor",
+    "platformMinor",
+    "currency",
+    "basisPoints",
+    "mode",
+    "idempotencyKey",
+    "requestedAt",
+  ],
+  stripe_connect_payout_outcomes: [
+    "payoutOutcomeId",
+    "payoutIntentId",
+    "status",
+    "providerPayoutId",
+    "providerEvidenceId",
+    "providerMessage",
+    "observedAt",
   ],
 };
 
@@ -513,7 +583,7 @@ describe("invariants the database enforces itself", () => {
     );
     expect(sql).toContain("platform_minor = gross_minor - creator_minor");
     const basisChecks = sql.match(/basis_points = 5000/g) ?? [];
-    expect(basisChecks.length).toBe(2);
+    expect(basisChecks.length).toBe(3);
   });
 
   it("records no payout — money splits are bookkeeping only", () => {
@@ -528,5 +598,31 @@ describe("invariants the database enforces itself", () => {
         expect(column).not.toContain(forbidden);
       }
     }
+  });
+
+  it("keeps every Connect audit table and its money split append-only", () => {
+    for (const table of [
+      "money_split_records",
+      "stripe_connect_accounts",
+      "stripe_connect_onboarding_intents",
+      "stripe_connect_status_records",
+      "stripe_connect_payout_intents",
+      "stripe_connect_payout_outcomes",
+    ]) {
+      expect(sql).toContain(
+        `BEFORE UPDATE OR DELETE ON ${table}`,
+      );
+    }
+    expect(sql).toContain("RAISE EXCEPTION '% is append-only', TG_TABLE_NAME");
+  });
+
+  it("cannot record Connect payout success without provider evidence", () => {
+    expect(sql).toContain("provider_evidence_id text        NOT NULL UNIQUE");
+    expect(sql).toContain(
+      "status = 'succeeded' AND provider_payout_id IS NOT NULL",
+    );
+    expect(sql).toContain(
+      "status = 'failed' AND provider_payout_id IS NULL",
+    );
   });
 });
