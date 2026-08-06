@@ -19,9 +19,10 @@
  * no `CreatorShareRecord` is written, because a record asserting a gross nobody
  * paid would describe credits that never moved.
  *
- * Money sales record a `MoneySplitRecord` and nothing else. No payout, no Stripe
- * Connect: real cash payouts to creators are a later captain gate. They are also
- * the one path here that books money nobody in this process debited, so
+ * Money sales record a `MoneySplitRecord` and nothing else. This module performs
+ * no payout and knows no Stripe Connect account; the separate TEST-only Connect
+ * seam consumes the validated split. Money sales are also the one path here that
+ * books money nobody in this process debited, so
  * `recordMoneySale` accepts no gross, currency, buyer, mode, or sale id at all:
  * it is built from a runtime-witnessed settlement plus the persisted intent that
  * settlement was bound to, and refuses everything else by name (sceneaxi#127).
@@ -396,8 +397,8 @@ export type RecordMoneySaleRequest = Readonly<{
  * creator half, and to refuse a listing the seller never priced in money.
  *
  * Bookkeeping only. This function performs no payout and the record it produces
- * has no field that could describe one — real cash payouts to creators are a
- * later captain gate.
+ * has no field that could describe one; the separate Connect seam references the
+ * validated record instead of widening it.
  */
 export function recordMoneySale(
   request: RecordMoneySaleRequest,

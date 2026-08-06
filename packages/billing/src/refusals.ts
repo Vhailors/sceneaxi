@@ -82,6 +82,20 @@ export const BILLING_REFUSE_REASONS = Object.freeze({
 
   // --- creator revenue share ---
   revenueShareInvalid: "REVENUE_SHARE_INVALID",
+
+  // --- Stripe Connect TEST operations ---
+  connectProviderMissing: "STRIPE_CONNECT_PROVIDER_MISSING",
+  connectLiveUnavailable: "STRIPE_CONNECT_LIVE_UNAVAILABLE",
+  connectTestOperationsDisabled: "STRIPE_CONNECT_TEST_OPERATIONS_DISABLED",
+  connectDashboardMissing: "STRIPE_CONNECT_DASHBOARD_MISSING",
+  connectSecretMissing: "STRIPE_CONNECT_SECRET_MISSING",
+  connectProviderRefused: "STRIPE_CONNECT_PROVIDER_REFUSED",
+  connectProviderResponseInvalid: "STRIPE_CONNECT_PROVIDER_RESPONSE_INVALID",
+  connectStoreFailed: "STRIPE_CONNECT_STORE_FAILED",
+  connectIdempotencyConflict: "STRIPE_CONNECT_IDEMPOTENCY_CONFLICT",
+  connectAccountMissing: "STRIPE_CONNECT_ACCOUNT_MISSING",
+  connectStatusMissing: "STRIPE_CONNECT_STATUS_MISSING",
+  connectPayoutsDisabled: "STRIPE_CONNECT_PAYOUTS_DISABLED",
 } as const);
 
 export type BillingRefuseReason =

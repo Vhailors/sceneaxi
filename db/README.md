@@ -48,7 +48,9 @@ plane and a bad row.
 | A listing price matches its mode | cross-field check constraints per price mode |
 | A split cannot create or destroy value | `creator + platform = gross` check constraints |
 | Only a 50/50 creator split | `basis_points = 5000` check constraint |
-| No payout can be recorded | `money_split_records` has no payout/transfer/destination column |
+| Money bookkeeping cannot masquerade as payout | `money_split_records` has no payout/transfer/destination column |
+| Connect audit history is immutable | all five Connect tables and `money_split_records` have append-only triggers |
+| No payout success without provider evidence | outcome constraint requires both provider evidence and a provider payout id |
 | A checkout redirect is never plaintext | `success_url LIKE 'https://%'` check |
 
 ## Connecting

@@ -85,6 +85,7 @@
   "packages/schemas/contracts/scene-composition.schema.json",
   "packages/schemas/contracts/sculpt-artifact.schema.json",
   "packages/schemas/contracts/sculpt-intake.schema.json",
+  "packages/schemas/contracts/stripe-connect.schema.json",
   "packages/schemas/package.json",
   "packages/schemas/src/billing.ts",
   "packages/schemas/src/catalog-listing.ts",
@@ -116,6 +117,7 @@
   "packages/schemas/src/sculpt-json.ts",
   "packages/schemas/src/sculpt-procedural.ts",
   "packages/schemas/src/sculpt.ts",
+  "packages/schemas/src/stripe-connect.ts",
   "packages/schemas/src/testing/scene-composition.ts",
   "packages/schemas/src/unambiguous-json.ts",
   "packages/schemas/src/web-experience-authoring.ts"

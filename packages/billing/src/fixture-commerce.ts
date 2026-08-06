@@ -435,8 +435,9 @@ export type SettleFixtureListingMoneySaleRequest = Readonly<{
 /**
  * Record the 50/50 money split for a settled fixture listing purchase.
  *
- * Bookkeeping only, exactly like `recordMoneySale` beneath it: no payout, no
- * transfer, no Stripe Connect. Every check that makes the record evidence-bound —
+ * Bookkeeping only, exactly like `recordMoneySale` beneath it: no payout or
+ * transfer is performed here. The separate Connect seam consumes the validated
+ * record. Every check that makes the record evidence-bound —
  * provenance, the intent binding, the sale id read out of the intent's own
  * idempotency key — belongs to `recordMoneySale` and is not restated here. What
  * this adds is the two rules that are this path's own: the SKU must be one of the

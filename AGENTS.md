@@ -244,8 +244,9 @@ deterministic and fixture-testable. Load-bearing invariants: `User` has no role
 field so `admin` is unclaimable and comes only from `SCENEAXI_ADMIN_EMAIL`;
 `CreditAccount` has no balance because the ledger is the only source of truth; the
 ledger is append-only in both the pure code and a DB trigger; Stripe `live` refuses
-without an explicit `liveModeAuthorized` captain gate; money splits are
-bookkeeping-only (no Connect payouts); Kids commerce and Kids identity are refused
+without an explicit `liveModeAuthorized` captain gate; money splits remain
+bookkeeping-only while the separate Connect audit path is TEST-only and requires
+provider evidence for success (`docs/stripe-connect-operations.md`); Kids commerce and Kids identity are refused
 by name — `AUTH_REFUSE_REASONS.kidsSurfaceDenied` and
 `BILLING_REFUSE_REASONS.kidsCommerceDenied` — independently on every path that can
 reach identity or a charge, so adding a path means adding its deny, not relying on
