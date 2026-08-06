@@ -19,6 +19,8 @@ import {
   type TransitionRefuse,
 } from "@sceneaxi/schemas";
 import type { CatalogSurface } from "./catalog.js";
+import { renderEditorState } from "./editor-session.js";
+import { readEditorState } from "./editor-state.js";
 import type { EditorSessionAccess } from "./entitlement.js";
 import { type SiteRefusal, type SiteResult, ok, refuse } from "./refusals.js";
 
@@ -73,13 +75,33 @@ export type CatalogPipelineCommitInput = {
 };
 
 /**
+ * The scope a retry is judged in.
+ *
+ * The authenticated submitter is part of the scope rather than part of the key,
+ * so a provider written against this contract cannot key a global map on a
+ * client-chosen string: two principals reusing one key are two unrelated
+ * submissions, and only the same principal's identical resubmission replays.
+ * `submittedBy` is resolved from the request's own principal, never supplied by
+ * the caller, and always equals the record's `submittedBy`.
+ */
+export type CatalogSubmissionIdempotency = {
+  readonly submittedBy: string;
+  readonly key: string;
+};
+
+/** The single composite key a provider stores a submission retry under. */
+export function catalogSubmissionScopeKey(idempotency: CatalogSubmissionIdempotency): string {
+  return JSON.stringify(["catalog-intake", idempotency.submittedBy, idempotency.key]);
+}
+
+/**
  * Explicit injected persistence/read-model boundary. A production implementation
  * is intentionally absent; implementations must remain atomic at each method.
  */
 export interface CatalogTestPipelineProvider {
   readonly mode: typeof CATALOG_PIPELINE_MODE;
   submit(input: {
-    readonly idempotencyKey: string;
+    readonly idempotency: CatalogSubmissionIdempotency;
     readonly record: CatalogIntakeRecord;
   }): Promise<SiteResult<CatalogSubmissionReceipt>>;
   read(itemId: string): Promise<SiteResult<CatalogIntakeRecord | null>>;
@@ -196,6 +218,14 @@ export async function submitEditorCatalogItem(
 
   const principal = input.access.access.principal;
   if (principal === null) return refuse("EDITOR_ENTITLEMENT_ANONYMOUS");
+  const identity = input.access.access.identity;
+  if (!identity.ok) return identity;
+  if (
+    !nonEmpty(principal.user.userId) ||
+    identity.value.user.userId !== principal.user.userId
+  ) {
+    return refuse("CATALOG_SUBMISSION_PRINCIPAL_INVALID");
+  }
   if (!input.access.decision.granted) return refuse(input.access.decision.reason);
   if (input.access.decision.mode !== "entitled") {
     return refuse("CATALOG_SUBMISSION_ENTITLEMENT_REQUIRED");
@@ -243,7 +273,10 @@ export async function submitEditorCatalogItem(
 
   try {
     const submitted = await input.provider.submit({
-      idempotencyKey: input.idempotencyKey,
+      idempotency: Object.freeze({
+        submittedBy: principal.user.userId,
+        key: input.idempotencyKey,
+      }),
       record,
     });
     if (!submitted.ok) return submitted;
@@ -387,11 +420,21 @@ export function createInMemoryCatalogTestPipelineProvider(): CatalogTestPipeline
   const provider: CatalogTestPipelineProvider = {
     mode: CATALOG_PIPELINE_MODE,
     async submit(input: {
-      readonly idempotencyKey: string;
+      readonly idempotency: CatalogSubmissionIdempotency;
       readonly record: CatalogIntakeRecord;
     }) {
+      if (!nonEmpty(input.idempotency.key)) {
+        return refuse("CATALOG_SUBMISSION_REQUEST_INVALID");
+      }
+      if (
+        !nonEmpty(input.idempotency.submittedBy) ||
+        input.idempotency.submittedBy !== input.record.submittedBy
+      ) {
+        return refuse("CATALOG_SUBMISSION_PRINCIPAL_INVALID");
+      }
+      const scope = catalogSubmissionScopeKey(input.idempotency);
       const fingerprint = recordFingerprint(input.record);
-      const retry = retries.get(input.idempotencyKey);
+      const retry = retries.get(scope);
       if (retry !== undefined) {
         return retry.fingerprint === fingerprint
           ? ok(Object.freeze({ ...retry.receipt, replayed: true as const }))
@@ -402,7 +445,7 @@ export function createInMemoryCatalogTestPipelineProvider(): CatalogTestPipeline
       }
       const receipt = Object.freeze({ record: input.record, replayed: false as const });
       records.set(input.record.item.itemId, input.record);
-      retries.set(input.idempotencyKey, { fingerprint, receipt });
+      retries.set(scope, { fingerprint, receipt });
       return ok(receipt);
     },
     async read(itemId: string) {
@@ -426,13 +469,23 @@ export function createInMemoryCatalogTestPipelineProvider(): CatalogTestPipeline
   return Object.freeze(provider);
 }
 
-const demoDigest = (digit: string): string => `sha256:${digit.repeat(64)}`;
-
-/** A deterministic, labeled TEST demonstration consumed by both honest `/publish` pages. */
+/**
+ * A deterministic, labeled TEST demonstration consumed by both honest `/publish` pages.
+ *
+ * The digests it shows are produced here, by rendering the fixed editor state through
+ * the same `renderEditorState()` the entitled `/editor` route uses and taking that
+ * render's own saved-document and composed-artifact hashes. Nothing on this path is a
+ * written-in constant, so a digest the storefront prints is a digest of real editor
+ * output or the page renders the seam's refusal instead.
+ */
 export async function catalogTestPipelineDemo(
   surface: CatalogSurface,
 ): Promise<SiteResult<{ readonly intake: CatalogPipelineReadModel; readonly listed: CatalogPipelineReadModel }>> {
   const profile = SUPPORTED_PROFILE_BY_SURFACE[surface];
+  const state = readEditorState({});
+  if (!state.ok) return state;
+  const render = renderEditorState(state.value);
+  if (!render.ok) return render;
   const provider = createInMemoryCatalogTestPipelineProvider();
   const submitted = await submitEditorCatalogItem({
     access: {
@@ -486,8 +539,8 @@ export async function catalogTestPipelineDemo(
     profile,
     surface,
     evidence: {
-      documentDigest: demoDigest(surface === "catalog-game" ? "a" : "b"),
-      artifactDigest: demoDigest(surface === "catalog-game" ? "c" : "d"),
+      documentDigest: render.value.documentDigest,
+      artifactDigest: render.value.artifactDigest,
     },
     metadata: {
       itemId: `${profile}-editor-test-item`,
@@ -498,7 +551,7 @@ export async function catalogTestPipelineDemo(
         commercialUseAllowed: false,
       },
       provenance: {
-        origin: "umbrella Web editor TEST fixture",
+        origin: "umbrella Web editor render (fixed TEST state)",
         ingestedAt: "2026-08-06T10:00:00.000Z",
       },
       aiGenerationDisclosure: {

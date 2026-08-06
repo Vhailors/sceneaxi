@@ -1,7 +1,9 @@
 /** Editor -> TEST catalog intake -> explicit curation -> listed read-model proof. */
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   attemptCatalogPurchase,
+  catalogSubmissionScopeKey,
   catalogTestPipelineDemo,
   createInMemoryCatalogTestPipelineProvider,
   ok,
@@ -16,14 +18,18 @@ import {
   type EditorRender,
   type EditorSessionAccess,
 } from "@sceneaxi/site-kit";
-import { submitUmbrellaEditorToCatalog } from "../../sites/umbrella/src/lib/catalog-submission.ts";
+import {
+  buildUmbrellaCatalogIntakeView,
+  submitUmbrellaEditorToCatalog,
+  umbrellaCatalogIntake,
+} from "../../sites/umbrella/src/lib/catalog-submission.ts";
 
 const NOW = "2026-08-06T10:00:00.000Z";
 
-function entitledAccess(): EditorSessionAccess {
+function entitledAccess(userId = "user-editor-218"): EditorSessionAccess {
   const principal = {
     user: {
-      userId: "user-editor-218",
+      userId,
       email: "editor-218@sceneaxi.test",
       emailVerified: true,
       disabled: false,
@@ -31,7 +37,7 @@ function entitledAccess(): EditorSessionAccess {
     role: "user" as const,
     session: {
       sessionId: "session-editor-218",
-      userId: "user-editor-218",
+      userId,
       surface: "site" as const,
       issuedAt: "2026-08-06T09:00:00.000Z",
       expiresAt: "2026-08-06T11:00:00.000Z",
@@ -494,6 +500,103 @@ describe("editor catalog intake", () => {
     ).toMatchObject({ ok: true, value: { item: { moderation: { pipelineState: "screening" } } } });
   });
 
+  it("scopes one idempotency key to the authenticated submitter", async () => {
+    const provider = createInMemoryCatalogTestPipelineProvider();
+    const mine = { access: entitledAccess("user-editor-218") };
+    const theirs = {
+      access: entitledAccess("user-editor-999"),
+      metadata: metadata({ itemId: "web-editor-submission-999" }),
+    };
+
+    // Both principals use the same client-chosen key. Neither may be told the other's
+    // unrelated submission was a conflicting retry of theirs.
+    expect(await submit(provider, mine)).toMatchObject({
+      ok: true,
+      value: { replayed: false, record: { submittedBy: "user-editor-218" } },
+    });
+    expect(await submit(provider, theirs)).toMatchObject({
+      ok: true,
+      value: { replayed: false, record: { submittedBy: "user-editor-999" } },
+    });
+    // Same principal, same key, same evidence still replays...
+    expect(await submit(provider, theirs)).toMatchObject({ ok: true, value: { replayed: true } });
+    // ...and same principal, same key, different evidence still conflicts.
+    expect(
+      await submit(provider, {
+        access: entitledAccess("user-editor-999"),
+        metadata: metadata({ itemId: "web-editor-other-999" }),
+      }),
+    ).toMatchObject({ ok: false, reason: "CATALOG_SUBMISSION_RETRY_CONFLICT" });
+
+    expect(catalogSubmissionScopeKey({ submittedBy: "a", key: "k" })).not.toBe(
+      catalogSubmissionScopeKey({ submittedBy: "b", key: "k" }),
+    );
+  });
+
+  it("refuses unusable or inconsistent principal evidence before any write", async () => {
+    let writes = 0;
+    const backing = createInMemoryCatalogTestPipelineProvider();
+    const counting: CatalogTestPipelineProvider = {
+      mode: "test",
+      async submit(input) {
+        writes += 1;
+        return backing.submit(input);
+      },
+      read: (itemId) => backing.read(itemId),
+      commitTransition: (input) => backing.commitTransition(input),
+    };
+    const base = entitledAccess();
+
+    const mismatched: EditorSessionAccess = {
+      ...base,
+      access: { ...base.access, identity: entitledAccess("user-editor-other").access.identity },
+    };
+    expect(await submit(counting, { access: mismatched })).toMatchObject({
+      ok: false,
+      reason: "CATALOG_SUBMISSION_PRINCIPAL_INVALID",
+    });
+
+    expect(await submit(counting, { access: entitledAccess("   ") })).toMatchObject({
+      ok: false,
+      reason: "CATALOG_SUBMISSION_PRINCIPAL_INVALID",
+    });
+
+    const unavailableIdentity: EditorSessionAccess = {
+      ...base,
+      access: {
+        ...base.access,
+        identity: {
+          ok: false,
+          reason: "IDENTITY_PLANE_UNAVAILABLE",
+          message: "the identity store is unreachable",
+        },
+      },
+    };
+    expect(await submit(counting, { access: unavailableIdentity })).toMatchObject({
+      ok: false,
+      reason: "IDENTITY_PLANE_UNAVAILABLE",
+    });
+    expect(writes).toBe(0);
+
+    // The reference provider holds the same rule on its own, so a caller that reaches
+    // it directly cannot store a record under another principal's scope.
+    const submitted = await submit(backing);
+    expect(submitted.ok).toBe(true);
+    if (!submitted.ok) return;
+    expect(
+      await backing.submit({
+        idempotency: { submittedBy: "someone-else", key: "editor-submit-218" },
+        record: submitted.value.record,
+      }),
+    ).toMatchObject({ ok: false, reason: "CATALOG_SUBMISSION_PRINCIPAL_INVALID" });
+    expect(
+      await backing.submit({
+        idempotency: { submittedBy: submitted.value.record.submittedBy, key: "  " },
+        record: submitted.value.record,
+      }),
+    ).toMatchObject({ ok: false, reason: "CATALOG_SUBMISSION_REQUEST_INVALID" });
+  });
+
   it("keeps the lower-level seam typed and provider-injected", async () => {
     const provider = createInMemoryCatalogTestPipelineProvider();
     const render = editorRender();
@@ -554,5 +657,125 @@ describe("editor catalog intake", () => {
         },
       });
     }
+  });
+
+  it("shows digests the demo computed from a real editor render, not constants", async () => {
+    const state = readEditorState({});
+    if (!state.ok) throw new Error(state.message);
+    const rendered = renderEditorState(state.value);
+    if (!rendered.ok) throw new Error(rendered.message);
+
+    for (const surface of ["catalog-game", "catalog-web"] as const) {
+      const demo = await catalogTestPipelineDemo(surface);
+      expect(demo.ok).toBe(true);
+      if (!demo.ok) return;
+      const listing = demo.value.listed.listing;
+      expect(listing).not.toBeNull();
+      expect(listing?.documentDigest).toBe(rendered.value.documentDigest);
+      expect(listing?.assetPackage.contentHash).toBe(rendered.value.artifactDigest);
+      // A placeholder of one repeated character is exactly what this path may not print.
+      expect(listing?.documentDigest).not.toMatch(/^sha256:(.)\1{63}$/);
+      expect(listing?.assetPackage.contentHash).not.toMatch(/^sha256:(.)\1{63}$/);
+    }
+  });
+});
+
+describe("the shipped umbrella editor route reaches catalog intake", () => {
+  const ROUTE = readFileSync(
+    new URL("../../sites/umbrella/src/app/editor/page.tsx", import.meta.url),
+    "utf8",
+  );
+
+  it("submits through the seam from the route and injects nothing by default", () => {
+    expect(ROUTE).toContain("buildUmbrellaCatalogIntakeView");
+    expect(ROUTE).toContain("injection: umbrellaCatalogIntake()");
+    // The deployment holds no store and no declaration form, so the plug point is empty.
+    expect(umbrellaCatalogIntake()).toBeNull();
+  });
+
+  it("refuses by name on the default deployment without building a record", async () => {
+    expect(
+      await buildUmbrellaCatalogIntakeView({
+        access: entitledAccess(),
+        render: editorRender(),
+        profile: "web",
+        surface: "catalog-web",
+        injection: umbrellaCatalogIntake(),
+      }),
+    ).toMatchObject({ ok: false, reason: "CATALOG_INTAKE_STORAGE_UNAVAILABLE" });
+  });
+
+  it("renders honest intake state when a TEST provider and declaration are injected", async () => {
+    const provider = createInMemoryCatalogTestPipelineProvider();
+    const injection = { provider, declaration: metadata() };
+    const render = editorRender();
+    const request = {
+      access: entitledAccess(),
+      render,
+      profile: "web" as const,
+      surface: "catalog-web",
+      injection,
+    };
+
+    const first = await buildUmbrellaCatalogIntakeView(request);
+    expect(first).toMatchObject({
+      ok: true,
+      value: {
+        itemId: "web-editor-submission-218",
+        pipelineState: "intake",
+        recordedTransitions: 0,
+        replayed: false,
+        listing: null,
+      },
+    });
+    if (!first.ok) return;
+    expect(first.value.documentDigest).toBe(render.documentDigest);
+    expect(first.value.artifactDigest).toBe(render.artifactDigest);
+
+    // Re-opening the same editor URL replays rather than conflicting, and still lists
+    // nothing: the route records no transition and no curation verdict.
+    expect(await buildUmbrellaCatalogIntakeView(request)).toMatchObject({
+      ok: true,
+      value: { replayed: true, pipelineState: "intake", recordedTransitions: 0, listing: null },
+    });
+  });
+
+  it("keeps Kids and unentitled requests off the route seam", async () => {
+    const provider = createInMemoryCatalogTestPipelineProvider();
+    const injection = { provider, declaration: metadata() };
+    const render = editorRender();
+
+    expect(
+      await buildUmbrellaCatalogIntakeView({
+        access: entitledAccess(),
+        render,
+        profile: "kids",
+        surface: "catalog-web",
+        injection,
+      }),
+    ).toMatchObject({ ok: false, reason: "KIDS_SURFACE_DENIED" });
+
+    const anonymous = entitledAccess();
+    expect(
+      await buildUmbrellaCatalogIntakeView({
+        access: {
+          ...anonymous,
+          access: { ...anonymous.access, principal: null },
+          decision: {
+            granted: false,
+            reason: "EDITOR_ENTITLEMENT_ANONYMOUS",
+            message: "anonymous",
+          },
+        },
+        render,
+        profile: "web",
+        surface: "catalog-web",
+        injection,
+      }),
+    ).toMatchObject({ ok: false, reason: "EDITOR_ENTITLEMENT_ANONYMOUS" });
+
+    expect(
+      await readCatalogPipelineItem({ provider, itemId: "web-editor-submission-218" }),
+    ).toMatchObject({ ok: false, reason: "CATALOG_ITEM_NOT_FOUND" });
   });
 });

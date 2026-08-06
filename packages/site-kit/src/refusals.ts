@@ -104,7 +104,9 @@ export const SITE_REFUSALS = Object.freeze({
   CATALOG_SUBMISSION_METADATA_INVALID:
     "Required rights, provenance, AI-disclosure, or compatibility metadata is incomplete or malformed.",
   CATALOG_SUBMISSION_RETRY_CONFLICT:
-    "The idempotency key or item id was already used for different catalog intake evidence.",
+    "This submitter's idempotency key, or the item id, was already used for different catalog intake evidence.",
+  CATALOG_SUBMISSION_PRINCIPAL_INVALID:
+    "The submitting principal is inconsistent or unusable as an idempotency scope, so nothing was written.",
   CATALOG_INTAKE_STORAGE_UNAVAILABLE:
     "The injected TEST catalog intake storage is unavailable, so nothing was written.",
   CATALOG_PIPELINE_PROVIDER_FAILED:

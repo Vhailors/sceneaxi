@@ -11,6 +11,10 @@ import {
   type SearchParams,
 } from "@sceneaxi/site-kit";
 import { umbrellaRequestAuthority } from "../../lib/request-authority.js";
+import {
+  buildUmbrellaCatalogIntakeView,
+  umbrellaCatalogIntake,
+} from "../../lib/catalog-submission.js";
 import { EDITOR_VIEWPORT_COPY } from "../../lib/editor-viewport.js";
 import { resolveUmbrellaEditorAccess } from "../../lib/site-config.js";
 import { readSessionToken } from "../_session.js";
@@ -183,6 +187,17 @@ export default async function EditorPage({
     starterArtifact: starter.value,
   });
 
+  // Intake runs on the same already-decided access as the render above it. The
+  // deployment injects nothing, so this refuses by name without building a record;
+  // an injected TEST provider submits and the panel reports what was stored.
+  const intake = await buildUmbrellaCatalogIntakeView({
+    access: resolved,
+    render: render.value,
+    profile: editor.profileId,
+    surface: editor.profileId === "web" ? "catalog-web" : "catalog-game",
+    injection: umbrellaCatalogIntake(),
+  });
+
   const deepLinkFields =
     editor.deepLink === null
       ? []
@@ -210,10 +225,44 @@ export default async function EditorPage({
         </p>
       )}
       <p className="ed-preview-note" role="note">
-        Catalog intake is a TEST-only injected seam for entitled non-Kids requests. This
-        page does not submit automatically: production storage and moderation are absent,
-        and listing still requires screening, curation, and an explicit human approval.
+        Catalog intake is a TEST-only injected seam for entitled non-Kids requests.
+        Production storage and moderation are absent, and listing still requires
+        screening, curation, and an explicit human approval.
       </p>
+      {intake.ok ? (
+        <StatePanel
+          tone="warn"
+          title="This render was submitted to the injected TEST intake"
+          evidence={[
+            { term: "Item", value: intake.value.itemId },
+            { term: "Pipeline", value: `${intake.value.pipelineState} · TEST only` },
+            { term: "Recorded transitions", value: String(intake.value.recordedTransitions) },
+            { term: "Document digest", value: intake.value.documentDigest },
+            { term: "Asset-package digest", value: intake.value.artifactDigest },
+            { term: "Submission", value: intake.value.replayed ? "replayed" : "first" },
+          ]}
+        >
+          <p>
+            The record holds this render&rsquo;s own document and artifact digests. It is
+            not listed and carries no listing projection: screening, curation, and an
+            explicit human approval are separate recorded steps that nothing on this route
+            performs.
+          </p>
+        </StatePanel>
+      ) : (
+        <StatePanel
+          tone="deny"
+          title="Catalog intake is not open on this deployment"
+          reason={intake.reason}
+        >
+          <p>{intake.message}</p>
+          <p>
+            No intake record was built for this render. This deployment injects no catalog
+            store and collects no rights, provenance, or AI-disclosure declaration, so the
+            seam refuses rather than inventing either.
+          </p>
+        </StatePanel>
+      )}
       <EditorShell
         view={view}
         scene={render.value.mountable}

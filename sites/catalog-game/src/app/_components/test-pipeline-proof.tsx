@@ -22,9 +22,11 @@ export function TestPipelineProof({
       {pipeline.ok && pipeline.value.listed.listing !== null ? (
         <>
           <p className="prose">
-            A fixed editor fixture enters <strong>{pipeline.value.intake.pipelineState}</strong>{" "}
-            with no history. Separate TEST transitions record screening, curation, and
-            one explicit human approval before this read model may say <strong>listed</strong>.
+            A real render of the fixed editor state enters{" "}
+            <strong>{pipeline.value.intake.pipelineState}</strong> with no history, carrying
+            that render&rsquo;s own saved-document and composed-artifact digests. Separate
+            TEST transitions record screening, curation, and one explicit human approval
+            before this read model may say <strong>listed</strong>.
           </p>
           <dl className="dl">
             <dt>Item</dt>
