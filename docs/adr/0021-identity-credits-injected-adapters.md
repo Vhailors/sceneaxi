@@ -153,8 +153,10 @@ What stays true:
 
 Ownership is unchanged and this ADR copies none of it: the login contract,
 refusal ordering, and session-credential rules are owned by
-[`docs/auth-credits.md`](../auth-credits.md); the activation procedure and
-surface status by [`docs/websites-deploy.md`](../websites-deploy.md).
+[`docs/auth-credits.md`](../auth-credits.md); the deployable-site mechanics and
+surface status by [`docs/websites-deploy.md`](../websites-deploy.md); and the
+operator authorization gate, ordered activation/rollback procedure, and evidence
+checklist by [`docs/production-activation.md`](../production-activation.md).
 
 ## Clarification — deployment owns provenance issuance capabilities (2026-08-01)
 

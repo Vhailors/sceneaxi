@@ -293,8 +293,11 @@ describe("SA-OPS-1 production activation runbook", () => {
       "docs/desktop-macos.md",
       "docs/desktop-windows.md",
       "docs/program/NEXT-STEP.md",
+      "docs/adr/0021-identity-credits-injected-adapters.md",
     ]) {
-      expect(read(path)).toContain("production-activation.md");
+      expect(read(path), `${path} no longer points at the activation owner`).toContain(
+        "production-activation.md",
+      );
     }
   });
 });
