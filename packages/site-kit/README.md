@@ -18,6 +18,7 @@ opened — and what may be drawn — lives here.
 | `catalog-identity.ts` | the storefront identity plane both catalogs read through, pinned to the `site` surface; a reader of identity, never an issuer |
 | `entitlement.ts` | free-vs-paid capability matrix, Minimum E2 editor entitlement |
 | `catalog.ts` | validated projection of the committed TEST catalog-listing fixtures, dual-price and creator-share display, honest availability, fail-closed purchase intent |
+| `catalog-pipeline.ts` | injected TEST-only editor intake, idempotent process-local reference provider, one-step curation commits, and a listed-only read model over the existing Catalog Item state machine; owner doc `docs/catalog-intake.md` |
 | `deep-link.ts` | catalog → umbrella editor deep-link contract, and the one definition of the configured umbrella origin — including the checkout redirect origin, which is never taken from a request `Host` |
 | `web-editor.ts` | bounded Minimum E2 web editor session over `@sceneaxi/authoring-core` |
 | `web-experience-editor.ts` | deterministic #197 page/HTML/site-canvas model over the shared Web Experience operation and sandbox contract; arbitrary assets and desktop-only actions refuse |

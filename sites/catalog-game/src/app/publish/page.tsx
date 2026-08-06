@@ -1,6 +1,7 @@
 import {
   CREATOR_SHARE_ROUNDING_NOTE,
   CREATOR_SHARE_RULE,
+  catalogTestPipelineDemo,
   createPublishIntent,
   submitPublishIntent,
 } from "@sceneaxi/site-kit";
@@ -10,15 +11,10 @@ import { StatePanel } from "../_components/state-panel.js";
 /**
  * The creator publish surface.
  *
- * Display-only: it shows the share rule and a worked example of what a listing would
- * pay, then refuses submission with the pipeline's own reason. The requirements it lists
- * are that unopened pipeline's, not fields this storefront collects or displays — the
- * committed fixture record a detail page renders carries none of them. Publishing to a
- * live marketplace is an open captain decision, and this page does not pre-empt it —
- * which is also why the design's "Apply as a seller" button and its payouts column are
- * not here.
+ * Display-only: it shows the share rule plus a deterministic TEST intake/read-model
+ * demonstration. The page collects nothing and owns no store or moderation operator.
  */
-export default function PublishPage() {
+export default async function PublishPage() {
   const example = createPublishIntent({
     creatorId: "your-account",
     surface: CATALOG_SITE_SURFACE,
@@ -26,6 +22,7 @@ export default function PublishPage() {
     price: { credits: 100, money: { unitAmount: 1000, currency: "usd" } },
   });
   const refusal = example.ok ? submitPublishIntent(example.value) : null;
+  const pipeline = await catalogTestPipelineDemo(CATALOG_SITE_SURFACE);
 
   return (
     <div className="shell page">
@@ -59,8 +56,8 @@ export default function PublishPage() {
       <section className="section" id="requirements">
         <h2>What listing will require</h2>
         <p className="prose">
-          These are the requirements of the publishing pipeline, which is not open. None
-          of them is collected, screened, or displayed by this storefront today.
+          These declarations are accepted only by the injected TEST editor-intake seam.
+          This storefront collects none of them and has no production submission form.
         </p>
         <ul className="bullets">
           <li>A sculpt artifact whose evidence matches its spec bytes.</li>
@@ -70,20 +67,49 @@ export default function PublishPage() {
           <li>Compatibility: the core range and the profiles it targets.</li>
         </ul>
         <p className="prose">
-          When publishing opens, intake, screening, and curation each record their own
-          verdict before a listing appears. Until then the catalogue serves committed TEST
-          fixture records, which carry a seller, a title, prices, and a publication time
-          and nothing else — so every detail page states that no licence, preview, or
-          compatibility declaration is part of the record rather than showing one.
+          Intake, screening, and curation each record their own transition before a listing
+          projection appears. The browse and detail routes still serve only the separate
+          committed TEST fixture listing set.
         </p>
       </section>
 
-      <StatePanel tone="warn" title="Publishing is not open yet" reason={refusal?.reason}>
+      <section className="section" id="test-pipeline">
+        <h2>TEST editor-to-listing proof</h2>
+        {pipeline.ok && pipeline.value.listed.listing !== null ? (
+          <>
+            <p className="prose">
+              A fixed editor fixture enters <strong>{pipeline.value.intake.pipelineState}</strong>{" "}
+              with no history. Separate TEST transitions record screening, curation, and
+              one explicit human approval before this read model may say <strong>listed</strong>.
+            </p>
+            <dl className="dl">
+              <dt>Item</dt>
+              <dd>{pipeline.value.listed.itemId}</dd>
+              <dt>Pipeline</dt>
+              <dd>{pipeline.value.listed.pipelineState} · TEST only</dd>
+              <dt>Recorded transitions</dt>
+              <dd>{pipeline.value.listed.history.length}</dd>
+              <dt>Document digest</dt>
+              <dd>{pipeline.value.listed.listing.documentDigest}</dd>
+              <dt>Asset-package digest</dt>
+              <dd>{pipeline.value.listed.listing.assetPackage.contentHash}</dd>
+            </dl>
+            <p className="prose">
+              This process-local proof record is not a public release. It represents no
+              asset delivery, purchase, payout, legal or tax approval, deployment, Stripe
+              LIVE, or Connect LIVE operation.
+            </p>
+          </>
+        ) : (
+          <p className="prose">The injected TEST pipeline refused, so no listing projection is shown.</p>
+        )}
+      </section>
+
+      <StatePanel tone="warn" title="Production publishing is not open" reason={refusal?.reason}>
         <p>{refusal?.message ?? "Marketplace publishing is not activated."}</p>
         <p>
-          Nothing here accepts an upload or a payout detail. When activation opens,
-          publishing and payouts run through the shared account plane rather than a
-          storefront-local form.
+          Nothing here accepts an upload or payout detail. The TEST proof above has no
+          persistent storage or production moderation operator; commerce remains inert.
         </p>
       </StatePanel>
     </div>

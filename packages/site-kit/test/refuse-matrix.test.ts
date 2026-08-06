@@ -346,6 +346,21 @@ const CASES: Readonly<Record<SiteRefusalReason, () => Promise<unknown> | unknown
       price: { credits: null, money: null },
     }),
   CATALOG_ITEM_NOT_FOUND: () => showSiteListing("catalog-game", "no-such-item"),
+  // Full path coverage for these catalog-intake reasons is the vertical golden
+  // `tests/e2e/editor-catalog-intake-golden.test.ts`; this registry suite pins
+  // their shared site refusal projection.
+  CATALOG_SUBMISSION_ENTITLEMENT_REQUIRED: () =>
+    refuse("CATALOG_SUBMISSION_ENTITLEMENT_REQUIRED"),
+  CATALOG_SUBMISSION_SURFACE_UNSUPPORTED: () =>
+    refuse("CATALOG_SUBMISSION_SURFACE_UNSUPPORTED"),
+  CATALOG_SUBMISSION_REQUEST_INVALID: () => refuse("CATALOG_SUBMISSION_REQUEST_INVALID"),
+  CATALOG_SUBMISSION_DIGEST_INVALID: () => refuse("CATALOG_SUBMISSION_DIGEST_INVALID"),
+  CATALOG_SUBMISSION_METADATA_INVALID: () => refuse("CATALOG_SUBMISSION_METADATA_INVALID"),
+  CATALOG_SUBMISSION_RETRY_CONFLICT: () => refuse("CATALOG_SUBMISSION_RETRY_CONFLICT"),
+  CATALOG_INTAKE_STORAGE_UNAVAILABLE: () => refuse("CATALOG_INTAKE_STORAGE_UNAVAILABLE"),
+  CATALOG_PIPELINE_PROVIDER_FAILED: () => refuse("CATALOG_PIPELINE_PROVIDER_FAILED"),
+  CATALOG_PIPELINE_TRANSITION_INVALID: () => refuse("CATALOG_PIPELINE_TRANSITION_INVALID"),
+  CATALOG_PIPELINE_READ_MODEL_INVALID: () => refuse("CATALOG_PIPELINE_READ_MODEL_INVALID"),
   DEEP_LINK_SOURCE_UNKNOWN: () =>
     buildEditorDeepLink({
       umbrellaOrigin: "https://umbrella.vercel.app",

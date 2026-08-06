@@ -24,6 +24,7 @@ export {
   type FamilyLinks,
   type UmbrellaEditorAccess,
 } from "./lib/site-config.js";
+export { submitUmbrellaEditorToCatalog } from "./lib/catalog-submission.js";
 
 export { EDITOR_VIEWPORT_COPY } from "./lib/editor-viewport.js";
 

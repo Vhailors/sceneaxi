@@ -18,6 +18,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  contentHash,
   parseDocumentText,
   readTextFile,
   type MinimumE2SaveResult,
@@ -54,6 +55,10 @@ export type EditorRender = {
    */
   readonly mountable: MountableScene | null;
   readonly artifactId: string;
+  /** SHA-256 of the text-canonical document after this render's real save. */
+  readonly documentDigest: string;
+  /** Digest of the composed editor artifact; identical to the composition evidence. */
+  readonly artifactDigest: string;
   /**
    * The text-canonical document as it stood *before* this render's save, or
    * `null` when it could not be read back. The Changes panel reviews the real
@@ -110,14 +115,35 @@ export function renderEditorState(state: EditorState): SiteResult<EditorRender> 
         baseDocument = null;
       }
 
+      const save = session.save();
+      if (!save.ok) {
+        return ok(
+          Object.freeze({
+            snapshot: session.snapshot(),
+            viewport: session.viewport(),
+            save,
+            composition,
+            mountable: composition.ok ? mountableScene(composition) : null,
+            artifactId: artifact.value.artifactId,
+            documentDigest: "",
+            artifactDigest: composition.ok ? composition.sceneDigest : "",
+            baseDocument,
+          }),
+        );
+      }
+      const documentDigest = contentHash(
+        readTextFile(join(workspaceRoot, WEB_EDITOR_DOCUMENT_PATH)),
+      );
       return ok(
         Object.freeze({
           snapshot: session.snapshot(),
           viewport: session.viewport(),
-          save: session.save(),
+          save,
           composition,
           mountable: composition.ok ? mountableScene(composition) : null,
           artifactId: artifact.value.artifactId,
+          documentDigest,
+          artifactDigest: composition.ok ? composition.sceneDigest : "",
           baseDocument,
         }),
       );

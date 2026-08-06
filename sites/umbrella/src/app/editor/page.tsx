@@ -209,6 +209,11 @@ export default async function EditorPage({
           replaces this flag.
         </p>
       )}
+      <p className="ed-preview-note" role="note">
+        Catalog intake is a TEST-only injected seam for entitled non-Kids requests. This
+        page does not submit automatically: production storage and moderation are absent,
+        and listing still requires screening, curation, and an explicit human approval.
+      </p>
       <EditorShell
         view={view}
         scene={render.value.mountable}

@@ -479,6 +479,13 @@ is what makes test mode structural rather than defaulted; this widens no marketp
 publishing, or catalog-app surface. The whole path is `tests/e2e/catalog-fixture-commerce-golden.test.ts`
 in `test:golden`.
 
+The TEST-only Web editor → catalog intake connection (sceneaxi#218) is owned by
+`docs/catalog-intake.md`: the umbrella adapter carries the real editor document/artifact
+digests and resolved entitlement into `packages/site-kit/src/catalog-pipeline.ts`, while
+the catalog sites consume only its injected read model. The repository ships no production
+store or moderation operator; listing still requires the existing recorded
+`intake → screening → curation → listed` path and an explicit human approval.
+
 Money bookkeeping is built from verified evidence, never from arguments (sceneaxi#127):
 `recordMoneySale()` in `packages/billing/src/revenue-share.ts` takes exactly a
 runtime-witnessed `parseCheckoutCompletedEvent` completion plus the persisted intent it was

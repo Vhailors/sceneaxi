@@ -38,8 +38,11 @@ rollback procedure is owned by
 ## TEST purchase is explicit and fail-closed
 
 `COMMERCE_ACTIVATION_GATE` always refuses while tier-6b marketplace activation keys
-remain open. Prices and the creator share are displayed; purchase and publish refuse
-`CATALOG_COMMERCE_INERT`. A selected currency the seller did not offer refuses
+remain open. Prices and the creator share are displayed; purchase and priced publishing
+intent refuse `CATALOG_COMMERCE_INERT`. The separate `/publish` proof reads an injected,
+process-local TEST intake/curation projection documented in
+[`docs/catalog-intake.md`](../../docs/catalog-intake.md); it is not commerce or production
+publication. A selected currency the seller did not offer refuses
 `CATALOG_PURCHASE_METHOD_UNAVAILABLE` first. The refusal is stamped `mode: test` and
 `completion: none`; there is no live checkout, cart, payment field, or fake success.
 
@@ -110,7 +113,7 @@ gone, and all three were things the design archive does not state:
 | In the archive | Shipped here |
 |---|---|
 | Cart badge, "Add to cart", two invented licence tiers | `attemptCatalogPurchase` refuses `CATALOG_COMMERCE_INERT`; that refusal, its policy text and its registry cite occupy the slot the cart button had |
-| "Apply as a seller", a payouts column | `/publish`, display-only, refusing with the pipeline's own reason |
+| "Apply as a seller", a payouts column | `/publish`, display-only TEST intake/listed read-model proof; no form, persistent store, production operator, commerce, or payout |
 | Five filter groups of hand-written counts wired to checkboxes that filter nothing | counts of the scenes actually on the page, and no control whose behaviour no contract defines |
 | Sort control, nine-page pager, search field | omitted for the same reason |
 | Rendered-looking asset thumbnails | a figure derived from each validated listing record's `sha256:` digest (`src/lib/digest-sigil.ts`), stated as a record mark rather than an asset render |

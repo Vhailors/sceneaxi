@@ -85,6 +85,21 @@ The closed refusal registry is `EDITOR_SHELL_WEB_REFUSALS` in
 `packages/site-kit/src/editor-shell.ts`; every code is reachable and every
 control's kind is asserted in `packages/site-kit/test/editor-shell.test.ts`.
 
+## Catalog intake connection
+
+The editor now has one TEST-only submission adapter at
+`sites/umbrella/src/lib/catalog-submission.ts`. It accepts only an already
+entitled non-Kids request and carries the current render's saved document digest
+and composed artifact digest into the existing Catalog Item intake contract. It
+is not a new authoring operation, is not in `WEB_EDITOR_SESSION_OPERATIONS`, and
+does not run automatically from the page. Preview access cannot submit.
+
+Storage, curation, and the storefront read model are injected through the TEST
+seam documented in [`catalog-intake.md`](catalog-intake.md). The repository has
+no production provider or moderation operator, and the only route to a listing
+remains the recorded `intake → screening → curation → listed` path with explicit
+human approval.
+
 Control accounting has two halves, and both are load-bearing:
 
 - **Every minted control renders through the one kind-aware helper**
