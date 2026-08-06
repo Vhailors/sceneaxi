@@ -282,6 +282,65 @@ describe("SA-OPS-1 production activation runbook", () => {
     expect(runbook).toContain(migrations[migrations.length - 1]);
   });
 
+  it("keeps the dated readiness observations in lockstep with the deployment owner", () => {
+    const deploy = read("docs/websites-deploy.md");
+    const readinessMarker = "## Verified TEST readiness";
+    const readinessStart = deploy.indexOf(readinessMarker);
+    expect(readinessStart, "deployment owner no longer records TEST readiness").toBeGreaterThan(
+      -1,
+    );
+    const readinessBody = deploy.slice(readinessStart + readinessMarker.length);
+    const readinessEnd = readinessBody.search(/\n## /);
+    const readiness = (
+      readinessEnd === -1 ? readinessBody : readinessBody.slice(0, readinessEnd)
+    ).replace(/\s+/g, " ");
+
+    const inventory = sectionOf("Web identity, Neon, and Stripe TEST");
+    const normalizedInventory = inventory.replace(/\s+/g, " ");
+    expect(inventory).toContain("websites-deploy.md#verified-test-readiness");
+
+    const observedOn = readiness.match(/repeated on (\d{4}-\d{2}-\d{2})/);
+    expect(observedOn, "readiness record no longer dates its observation").toBeTruthy();
+    expect(
+      normalizedInventory,
+      "runbook inventory no longer names the owner's observation date",
+    ).toContain((observedOn as RegExpMatchArray)[1]);
+
+    const listed = readiness.match(/Vercel lists ([^*]*?) as encrypted Production variable/);
+    expect(listed, "readiness record no longer lists observed variable names").toBeTruthy();
+    const observedNames = identifiersIn((listed as RegExpMatchArray)[1]);
+    expect(observedNames.length).toBeGreaterThanOrEqual(5);
+    for (const name of observedNames) {
+      const row = rowOf(inventory, `\`${name}\``);
+      expect(row, `runbook does not record \`${name}\` as an observed name`).toMatch(
+        /name (?:was |only )/,
+      );
+    }
+
+    const betterAuthRow = rowOf(inventory, "`BETTER_AUTH_ORIGIN`");
+    expect(
+      observedNames,
+      "readiness now observes BETTER_AUTH_ORIGIN; the runbook still calls it missing",
+    ).not.toContain("BETTER_AUTH_ORIGIN");
+    expect(readiness).toContain("`BETTER_AUTH_ORIGIN` is also absent");
+    expect(betterAuthRow).toContain("**Missing**");
+    expect(readiness).toContain("predates the merged hosted-login route");
+    expect(betterAuthRow).toContain("predates `/login`");
+
+    const neonRow = rowOf(inventory, "Neon project identifiers");
+    expect(readiness).toContain("No database connection or migration was attempted");
+    expect(neonRow).toContain("no connection or migration proof was performed");
+
+    const endpointRow = rowOf(inventory, "Stripe TEST endpoint");
+    expect(readiness).toContain("`livemode: false`");
+    expect(endpointRow).toContain("`livemode: false`");
+    const subscribed = readiness.match(/subscribed only to `([^`]+)`/);
+    expect(subscribed, "readiness record no longer states the subscribed events").toBeTruthy();
+    expect(endpointRow).toContain(
+      `subscribed only to \`${(subscribed as RegExpMatchArray)[1]}\``,
+    );
+  });
+
   it("is linked from every narrower operations owner", () => {
     for (const path of [
       "README.md",

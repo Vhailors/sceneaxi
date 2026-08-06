@@ -63,6 +63,12 @@ and hashes may be recorded; credentials may not.
 
 ### Web identity, Neon, and Stripe TEST
 
+Every **Current recorded state** cell below restates the dated external observation owned by
+[`websites-deploy.md#verified-test-readiness`](websites-deploy.md#verified-test-readiness),
+last re-observed 2026-08-01. Re-observe there first: that record is the owner, this column is
+the operator's at-a-glance copy of it, and the two must move in the same change.
+`tests/docs/production-activation.test.ts` fails if they drift.
+
 | Input or evidence | Exact target | Current recorded state | Owner and required close-out |
 |---|---|---|---|
 | `BETTER_AUTH_ORIGIN` | Vercel Production scope, `sceneaxi-umbrella` | **Missing** from the latest name-only Vercel observation. The deployed umbrella also predates `/login`. | Better Auth/deployment owner supplies a real HTTPS provider origin and proves `POST /api/auth/sign-in/email` plus `GET /api/auth/get-session`. Credentials and provider tables remain provider-owned. A malformed or absent origin leaves the identity handle absent. |
