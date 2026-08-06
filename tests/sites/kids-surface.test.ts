@@ -30,20 +30,45 @@ const KIDS_FOUNDATION_ALIGNMENT: readonly (readonly [string, string])[] = Object
   ["--danger", "--danger"],
 ]);
 
-/** The three world gradients, whose stops are a #200 product decision, not a token. */
-const KIDS_WORLD_FILLS = Object.freeze([
-  "#315869",
-  "#274635",
-  "#22234c",
-  "#202b3c",
-  "#1c5b76",
-  "#123b55",
-]);
+/**
+ * Every colour custom property the sheet ends up declaring, last one wins, the way the
+ * cascade reads them. Derived rather than listed so an eleventh token cannot be added
+ * without the alignment assertion below noticing it.
+ */
+function kidsColorTokens(): Readonly<Record<string, string>> {
+  const tokens: Record<string, string> = {};
+  for (const match of KIDS_STYLESHEET.matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/g)) {
+    const token = match[1] as string;
+    const value = (match[2] as string).trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(value)) tokens[token] = value.toUpperCase();
+    else delete tokens[token];
+  }
+  return tokens;
+}
 
 function kidsToken(token: string): string {
-  const match = new RegExp(`${token}:\\s*(#[0-9a-fA-F]{6})\\s*;`).exec(KIDS_STYLESHEET);
-  if (match?.[1] === undefined) throw new Error(`The Kids stylesheet declares no ${token}.`);
-  return match[1].toUpperCase();
+  const value = kidsColorTokens()[token];
+  if (value === undefined) throw new Error(`The Kids stylesheet declares no colour ${token}.`);
+  return value;
+}
+
+/**
+ * The gradient stops a curated world actually paints, read out of its own rule.
+ *
+ * These are a #200 product decision rather than a token, so the sheet is their only
+ * source — copying them into this file would let a repainted world drift past the
+ * contrast floor while the suite kept measuring the old sky.
+ */
+function kidsWorldFills(worldId: string): readonly string[] {
+  const rule = new RegExp(`\\.world-${worldId}\\s*\\{([^}]*)\\}`).exec(KIDS_STYLESHEET);
+  if (rule?.[1] === undefined) {
+    throw new Error(`The Kids stylesheet has no .world-${worldId} rule.`);
+  }
+  const fills = [...rule[1].matchAll(/#[0-9a-fA-F]{6}\b/g)].map((match) =>
+    match[0].toUpperCase(),
+  );
+  if (fills.length === 0) throw new Error(`.world-${worldId} paints no opaque fill.`);
+  return fills;
 }
 
 function foundationHex(token: string): string {
@@ -169,6 +194,10 @@ describe("the isolated Kids site", () => {
   });
 
   it("keeps its duplicated Foundations neutrals identical to the shared token layer", () => {
+    expect(Object.keys(kidsColorTokens()).sort()).toEqual(
+      KIDS_FOUNDATION_ALIGNMENT.map(([kids]) => kids).sort(),
+    );
+
     for (const [kids, foundation] of KIDS_FOUNDATION_ALIGNMENT) {
       expect(`${kids}=${kidsToken(kids)}`).toBe(`${kids}=${foundationHex(foundation)}`);
     }
@@ -186,8 +215,10 @@ describe("the isolated Kids site", () => {
       // Badge, play button, and selected choice print the base neutral on the accent.
       [kidsToken("--bg-base"), kidsToken("--kids")],
       // The empty-stage hint is the one alpha text in the sheet: 78% of `--fg`.
-      ...KIDS_WORLD_FILLS.map(
-        (fill) => [composite(fg, 0.78, fill.toUpperCase()), fill.toUpperCase()] as const,
+      ...site.KIDS_ACTIVITY_WORLDS.flatMap((world) =>
+        kidsWorldFills(world.id).map(
+          (fill) => [composite(fg, 0.78, fill), fill] as const,
+        ),
       ),
     ];
 

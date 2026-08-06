@@ -182,7 +182,10 @@ Because that origin may not import this package, its stylesheet holds a **copy**
 the neutrals — the same situation as `apps/desktop-shell/src/visual-tokens.ts`, and
 handled the same way: `tests/sites/kids-surface.test.ts` compares every copied token
 against `FOUNDATION_COLORS` and measures a 4.5:1 floor on each shipped text pairing,
-the empty-stage hint's 78% alpha over all six world gradient stops included. One
+the empty-stage hint's 78% alpha over every stop of every curated world gradient
+included. Both inputs are read out of the shipped stylesheet rather than listed in
+the test — the colour-token set is asserted to be exactly the pinned one, so an
+unpinned eleventh token fails, and a repainted world is measured as painted. One
 divergence is recorded rather than corrected: the Kids surface ships a single border
 weight and spends it on the strong one, so its `--line` carries this sheet's
 `--line-strong` hex.
