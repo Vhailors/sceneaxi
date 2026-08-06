@@ -443,21 +443,34 @@ Load-bearing properties, each gate-tested in `tests/sites/identity-plane-wiring.
   cannot change. Only `ignored: false` means this event's movement is in the ledger, and
   that outcome states which movement it was: `movement: "grant"` with a positive `credits`
   delta for a purchase, `movement: "refund"` with a negative one for a reconciled full
-  refund, so a reversal is never read as a second purchase. Exactly three
-  things are acknowledged, and all three are decided from the verified body before any
+  refund, so a reversal is never read as a second purchase. Three
+  things are acknowledged for any event, and all three are decided from the verified body
+  before any
   adapter or store is consulted: an event type this path does not handle, a completion
   whose purpose settles on the revenue-share path, and a checkout session carrying no
-  SceneAxi metadata key at all — another product's event. The purpose is read from the session
+  SceneAxi metadata key at all — another product's event. Two more are acknowledged on the
+  **refund** path alone, and only because the money is already settled: a partial refund
+  (`STRIPE_REFUND_NOT_FULL`) and a balance the buyer has already spent
+  (`CREDIT_BALANCE_INSUFFICIENT`). Both keep every fail-closed property — nothing is
+  appended, the buyer's credits are untouched, and the response carries the refusal's own
+  name — but the retry stops, because neither can change on redelivery and a permanently
+  retried non-2xx wears down the endpoint every real grant depends on. A refund that finds
+  no committed grant is deliberately not one of them: the grant's own event may still be in
+  Stripe's retry sequence, so it refuses `CREDIT_LEDGER_STATE_INVALID` and is retried. The
+  purpose is read from the session
   metadata only to route *away* from the grant path — an absent, malformed, or unknown
   one keeps its normal path, and `parseCheckoutCompletedEvent` still cross-checks the
   purpose against the persisted intent for everything that stays on it. A
   `checkout.session.completed` this deployment *did* create is never acknowledged as
   another product's event: if it carries any SceneAxi key but cannot be routed, it is
-  refused and retried. `tests/sites/identity-plane-wiring.test.ts` locks the private
-  `UNHANDLED_EVENT_REASONS` set to the reason symbols representing exactly those three
-  decisions, and locks every acknowledgement the module can emit to that same set — the one
-  path that downgrades a package refusal by consulting it, plus each direct acknowledgement,
-  the purpose decision being re-asked of the parsed completion included — so adding another
+  refused and retried. `tests/sites/identity-plane-wiring.test.ts` locks both private sets —
+  `UNHANDLED_EVENT_REASONS` to the reason symbols representing exactly those three
+  decisions and `TERMINAL_REFUND_REASONS` to the two refund ones — and locks every
+  acknowledgement the module can emit to them: the one
+  path that downgrades a package refusal by consulting them, plus each direct acknowledgement,
+  the purpose decision being re-asked of the parsed completion included. It also pins the
+  scoping, so the refund-only set can never be consulted for a grant, and a spent balance
+  cannot become an acknowledgement for an event that involved no refund. Adding another
   acknowledged reason, or another acknowledgement path, fails the gate.
 - **A webhook grant commits through one boundary, everywhere.** The endpoint calls
   `persistCheckoutCompletedGrant` — the same boundary any other deployment uses — so

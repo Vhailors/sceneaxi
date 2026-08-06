@@ -1,7 +1,10 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { SiteCreditPack } from "@sceneaxi/site-kit";
-import { buildCreditPackOffers } from "../../sites/umbrella/src/lib/credit-pack-offers.js";
+import {
+  buildCreditPackOffers,
+  creditPackBillingModeNotice,
+} from "../../sites/umbrella/src/lib/credit-pack-offers.js";
 
 const PACKS: readonly SiteCreditPack[] = Object.freeze([
   Object.freeze({
@@ -105,6 +108,32 @@ describe("SA-PAY-1 credit-pack purchase presentation", () => {
         refusalReason: "BILLING_LIVE_MODE_NOT_AUTHORIZED",
       });
     }
+  });
+
+  it("states the deployment's own billing mode rather than a fixed TEST claim", () => {
+    const test = creditPackBillingModeNotice("test");
+    expect(test.mode).toBe("TEST");
+    expect(test.charge).toContain("TEST mode does not make a real charge");
+
+    // The panel prints `plane.billingMode` as evidence beside this copy, so a LIVE
+    // deployment must not read "runs against TEST" next to a `Mode: live` row — and the
+    // packs beside it already refuse by name.
+    const live = creditPackBillingModeNotice("live");
+    expect(live.mode).toBe("LIVE");
+    expect(live.charge).not.toContain("TEST");
+    expect(live.charge).toContain("no checkout is offered");
+    for (const notice of [test, live]) {
+      expect(notice.activation).toContain("refuses live mode without explicit authorization");
+    }
+
+    // The page may state the mode only through this function.
+    const pricing = readFileSync(
+      new URL("../../sites/umbrella/src/app/pricing/page.tsx", import.meta.url),
+      "utf8",
+    );
+    expect(pricing).toContain("creditPackBillingModeNotice(plane.billingMode)");
+    expect(pricing).not.toContain("TEST</strong>");
+    expect(pricing).not.toContain("does not make a real charge");
   });
 
   it("does not assume every currency has two decimal minor units", () => {

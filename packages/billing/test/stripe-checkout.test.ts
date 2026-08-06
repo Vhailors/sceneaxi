@@ -1281,13 +1281,37 @@ describe("credit-pack refund reconciliation", () => {
 
   it("refuses a partial refund and a refund with no original grant", () => {
     const intent = checkoutIntent();
+    // A partial refund is bound to this intent and well-formed; it simply does not
+    // return the whole price. It carries its own name so a caller can tell a settled
+    // fact about the money from a payload it could not read.
     const partial = parseCreditPackRefundEvent({
       verified: verified(refundBody(intent, { amount_refunded: 100 })),
       intent,
     });
     expect(partial.ok).toBe(false);
     if (!partial.ok) {
-      expect(partial.reason).toBe(BILLING_REFUSE_REASONS.webhookPayloadInvalid);
+      expect(partial.reason).toBe(BILLING_REFUSE_REASONS.refundNotFull);
+    }
+
+    // Stripe marks a charge `refunded` only once the whole amount is returned, so a
+    // full amount on an unrefunded charge is the same unreconcilable condition.
+    const unsettled = parseCreditPackRefundEvent({
+      verified: verified(refundBody(intent, { refunded: false })),
+      intent,
+    });
+    expect(unsettled.ok).toBe(false);
+    if (!unsettled.ok) {
+      expect(unsettled.reason).toBe(BILLING_REFUSE_REASONS.refundNotFull);
+    }
+
+    // A body that is not about this intent at all stays a payload refusal.
+    const foreign = parseCreditPackRefundEvent({
+      verified: verified(refundBody(intent, { currency: "eur" })),
+      intent,
+    });
+    expect(foreign.ok).toBe(false);
+    if (!foreign.ok) {
+      expect(foreign.reason).toBe(BILLING_REFUSE_REASONS.webhookPayloadInvalid);
     }
 
     const full = parseCreditPackRefundEvent({

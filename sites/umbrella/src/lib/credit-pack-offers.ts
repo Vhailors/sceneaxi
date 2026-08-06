@@ -89,6 +89,44 @@ const purchasePresentation = (
   });
 };
 
+export type CreditPackBillingModeNotice = Readonly<{
+  /** The mode word the panel emphasises, matching the plane's own evidence row. */
+  mode: string;
+  /** What that mode means for a visitor about to press a checkout button. */
+  charge: string;
+  /** Why a live charge is still not available whichever mode is configured. */
+  activation: string;
+}>;
+
+/**
+ * State the deployment's billing mode, never a mode it is not in.
+ *
+ * The panel sits beside an evidence row printing `plane.billingMode`, so a fixed
+ * "runs against TEST" sentence becomes a contradiction the moment a deployment sets
+ * `SCENEAXI_BILLING_MODE=live` — and it contradicts the packs beside it, which already
+ * refuse live checkout by name. The mode is a plane-owned fact, so the copy is derived
+ * from it here rather than asserted in the page.
+ */
+export function creditPackBillingModeNotice(
+  billingMode: SiteBillingMode,
+): CreditPackBillingModeNotice {
+  return billingMode === "live"
+    ? Object.freeze({
+        mode: "LIVE",
+        charge:
+          "This deployment names Stripe LIVE mode, and no checkout is offered here: every pack above refuses, so no charge can be made from this page.",
+        activation:
+          "Live charges need a separate captain decision, and the billing port refuses live mode without explicit authorization — naming the mode is not that authorization.",
+      })
+    : Object.freeze({
+        mode: "TEST",
+        charge:
+          "Checkout runs against Stripe TEST mode on this deployment. TEST mode does not make a real charge.",
+        activation:
+          "Live charges need a separate captain decision, and the billing port refuses live mode without explicit authorization.",
+      });
+}
+
 /** Build the complete, truthful purchase presentation from plane-owned facts. */
 export function buildCreditPackOffers(
   packs: readonly SiteCreditPack[],

@@ -831,6 +831,8 @@ export function parseCreditPackRefundEvent(input: {
   const occurredAtEpoch =
     typeof event?.["created"] === "number" ? event["created"] * 1_000 : Number.NaN;
   const livemode = event?.["livemode"];
+  const refunded = charge?.["refunded"];
+  const amountRefunded = charge?.["amount_refunded"];
   if (
     event?.["type"] !== "charge.refunded" ||
     typeof eventId !== "string" ||
@@ -839,9 +841,11 @@ export function parseCreditPackRefundEvent(input: {
     chargeId.length === 0 ||
     !isEpochMilliseconds(occurredAtEpoch) ||
     typeof livemode !== "boolean" ||
-    charge?.["refunded"] !== true ||
-    charge["amount_refunded"] !== intent.value.unitAmount ||
-    charge["currency"] !== intent.value.currency ||
+    typeof refunded !== "boolean" ||
+    typeof amountRefunded !== "number" ||
+    !Number.isSafeInteger(amountRefunded) ||
+    amountRefunded <= 0 ||
+    charge?.["currency"] !== intent.value.currency ||
     metadata?.[CHECKOUT_METADATA_KEYS.userId] !== intent.value.userId ||
     metadata?.[CHECKOUT_METADATA_KEYS.purpose] !== intent.value.purpose ||
     metadata?.[CHECKOUT_METADATA_KEYS.itemId] !== intent.value.itemId ||
@@ -849,7 +853,18 @@ export function parseCreditPackRefundEvent(input: {
   ) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.webhookPayloadInvalid,
-      "The refund must be full, settled in the intent currency, and carry the exact persisted credit-pack metadata.",
+      "The refund must be a charge.refunded event settled in the intent currency and carrying the exact persisted credit-pack metadata.",
+    );
+  }
+  // A refund that is bound to this intent but does not return the whole amount is its own
+  // named condition, not a malformed payload: the buyer keeps part of the purchase, and a
+  // grant is never partially reversed. It is separated from the payload refusal because it
+  // is the one refund condition an endpoint should expect, and no redelivery of this body
+  // can turn it into a full refund.
+  if (refunded !== true || amountRefunded !== intent.value.unitAmount) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.refundNotFull,
+      `Only a full refund reconciles against the credit ledger; ${amountRefunded} of ${intent.value.unitAmount} was refunded, so no credit adjustment is made.`,
     );
   }
   const mode: BillingMode = livemode ? "live" : "test";

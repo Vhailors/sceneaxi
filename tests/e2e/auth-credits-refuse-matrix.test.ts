@@ -36,6 +36,7 @@ import {
   lookupCreditPack,
   meterCredits,
   parseCheckoutCompletedEvent,
+  parseCreditPackRefundEvent,
   persistCreditsSale,
   purchaseListingWithCredits,
   recordMoneySale,
@@ -959,6 +960,37 @@ describe("billing refuse matrix", () => {
           ...settlementFor(packIntent.value),
           sessionId: "cs_some_other_paid_session",
         },
+      }),
+    );
+
+    // A refund bound to this exact intent that returns only part of the price. It is
+    // well-formed, so it is not a payload refusal; the ledger simply never partially
+    // reverses a grant.
+    record(
+      parseCreditPackRefundEvent({
+        verified: verifyBody(
+          JSON.stringify({
+            id: "evt_partial_refund",
+            type: "charge.refunded",
+            created: NOW_SECONDS,
+            livemode: false,
+            data: {
+              object: {
+                id: "ch_case",
+                refunded: false,
+                amount_refunded: packIntent.value.unitAmount - 1,
+                currency: packIntent.value.currency,
+                metadata: {
+                  [CHECKOUT_METADATA_KEYS.userId]: packIntent.value.userId,
+                  [CHECKOUT_METADATA_KEYS.purpose]: packIntent.value.purpose,
+                  [CHECKOUT_METADATA_KEYS.itemId]: packIntent.value.itemId,
+                  [CHECKOUT_METADATA_KEYS.intentId]: packIntent.value.intentId,
+                },
+              },
+            },
+          }),
+        ),
+        intent: packIntent.value,
       }),
     );
 

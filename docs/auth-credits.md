@@ -541,8 +541,33 @@ and a substring match would let an ungranted intent reverse a different intent's
 The intent-scoped key makes duplicate and replacement refund events a
 replay rather than a second reversal. A partial refund, a missing original grant, an
 already-spent balance that cannot absorb the adjustment, missing evidence, or an
-unavailable store refuses by name and receives no success acknowledgement. LIVE remains
+unavailable store refuses by name and never reports a reconciled refund. LIVE remains
 unreachable exactly as it is for grants.
+
+A partial refund carries its own reason, `STRIPE_REFUND_NOT_FULL`, rather than the
+payload refusal: it is bound to the intent and well-formed, and only the money is
+partial. That distinction is what lets a transport tell the two conditions apart — a
+payload it could not read may be worth retrying, while a partial refund and a spent
+balance are settled facts no redelivery changes. The umbrella endpoint therefore
+acknowledges exactly those two on the refund path with their own names and no ledger
+movement (`docs/websites-deploy.md` owns that transport rule); the refusal itself is
+unchanged here, and neither one ever appends, rewrites, or partially reverses anything.
+Reconciling the money side of either is an operator decision taken outside this
+repository — never a hand-edited ledger row, which the append-only trigger refuses
+anyway.
+
+**Grants committed before the intent anchor shipped cannot be reconciled.** The anchor is
+part of a grant's `reason`, the ledger is append-only, and a committed row is immutable,
+so no grant written before this contract landed carries one. A refund naming such a
+purchase finds no anchored grant and refuses `CREDIT_LEDGER_STATE_INVALID`, which the
+umbrella endpoint answers `503` and Stripe retries until it stops on its own. That is
+fail-closed and deliberate: the alternative — matching a grant some other way — is
+exactly the ambiguity the anchor exists to remove. There is no migration, and inventing
+one would mean rewriting immutable rows. An operator meeting this case reconciles the
+money in Stripe and records the credit decision out of band; the ledger keeps the
+original grant, and the refund is visible in the endpoint's refusals rather than silently
+absorbed. Deployments whose ledgers hold only grants written on or after this contract
+are unaffected.
 
 **Live mode is unreachable by default.** `mode: "live"` refuses unless
 `liveModeAuthorized: true` is passed explicitly at the call site, enforced both when

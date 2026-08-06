@@ -13,7 +13,10 @@ import {
   CREDIT_LEDGER_FACTS,
   PRICING_FAQ,
 } from "../../lib/site-content.js";
-import { buildCreditPackOffers } from "../../lib/credit-pack-offers.js";
+import {
+  buildCreditPackOffers,
+  creditPackBillingModeNotice,
+} from "../../lib/credit-pack-offers.js";
 import { CapabilityTable } from "../_components/capability-table.js";
 import { StatePanel } from "../_components/state-panel.js";
 
@@ -45,6 +48,7 @@ export default async function PricingPage() {
         identityConfigured: plane.wired.identity,
       })
     : [];
+  const modeNotice = creditPackBillingModeNotice(plane.billingMode);
 
   return (
     <div className="page">
@@ -154,10 +158,8 @@ export default async function PricingPage() {
               ]}
             >
               <p>
-                Checkout runs against Stripe <strong>TEST</strong> mode on this
-                deployment. TEST mode does not make a real charge. Live charges need a
-                separate captain decision, and the billing port refuses live mode without
-                explicit authorization.
+                <strong>{modeNotice.mode}</strong> — {modeNotice.charge}{" "}
+                {modeNotice.activation}
               </p>
               <p>{CREDIT_LEDGER_COPY.retryIsNotASecondCharge}</p>
               {!plane.wired.billing && (

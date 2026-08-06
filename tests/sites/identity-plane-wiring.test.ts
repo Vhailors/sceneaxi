@@ -576,6 +576,36 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       },
     });
 
+  /** A `charge.refunded` body carrying the PaymentIntent metadata Stripe copies onto it. */
+  const refundBody = (
+    eventId: string,
+    overrides: Readonly<{
+      refunded?: boolean;
+      amountRefunded?: number;
+      intentId?: string;
+    }> = {},
+  ): string =>
+    JSON.stringify({
+      id: eventId,
+      type: "charge.refunded",
+      created: Math.floor(NOW / 1000),
+      livemode: false,
+      data: {
+        object: {
+          id: "ch_test_refunded_charge",
+          refunded: overrides.refunded ?? true,
+          amount_refunded: overrides.amountRefunded ?? PACK.unitAmount,
+          currency: PACK.currency,
+          metadata: {
+            sceneaxiUserId: "member-1",
+            sceneaxiPurpose: "credit-pack",
+            sceneaxiItemId: PACK.packId,
+            sceneaxiIntentId: overrides.intentId ?? INTENT.intentId,
+          },
+        },
+      },
+    });
+
   const evidence = Object.freeze({
     findIntent(intentId: string) {
       return intentId === INTENT.intentId ? INTENT : undefined;
@@ -599,6 +629,16 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     },
     retrieveSettlement(): never {
       throw new Error("the evidence port must not be consulted for an event owed no work");
+    },
+  });
+
+  /** The persisted intent a refund is bound to; a refund never reads a settlement. */
+  const refundEvidence: WebhookEvidence = Object.freeze({
+    findIntent(intentId: string) {
+      return intentId === INTENT.intentId ? INTENT : undefined;
+    },
+    retrieveSettlement(): never {
+      throw new Error("a refund must not invent or re-read checkout settlement");
     },
   });
 
@@ -759,7 +799,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     }
   });
 
-  it("keeps every acknowledgement closed to the three current decisions", () => {
+  it("keeps every acknowledgement closed to the five current decisions", () => {
     // Scan the module's code, never its prose: a doc comment that mentions `ignored(...)`
     // or `ignored: true` must not decide whether this gate passes, in either direction.
     const webhookSource = readFileSync(
@@ -769,49 +809,79 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       .replace(/\/\*[\s\S]*?\*\//g, "")
       .replace(/^[^\S\n]*\/\/[^\n]*$/gm, "");
 
-    // Three decisions are acknowledged: an unhandled type, a purpose that settles on
-    // the revenue-share path, and an event with no SceneAxi metadata. The first two share
-    // the billing package's unsupported-event reason, so the closed set has exactly these
-    // two symbols. Pin the private declaration itself: adding any new member must fail the
-    // gate even when no existing behavior fixture happens to exercise the new reason.
-    const declarations = webhookSource.match(/const\s+UNHANDLED_EVENT_REASONS\b/g) ?? [];
-    expect(declarations, "UNHANDLED_EVENT_REASONS must have exactly one declaration").toHaveLength(
-      1,
-    );
+    /** Read one private frozen set literal's member expressions, in source order. */
+    const closedSet = (name: string): readonly string[] => {
+      const declarations = webhookSource.match(new RegExp(`const\\s+${name}\\b`, "g")) ?? [];
+      expect(declarations, `${name} must have exactly one declaration`).toHaveLength(1);
+      const frozenSet = webhookSource.match(
+        new RegExp(
+          `const\\s+${name}\\b[^=]*=\\s*Object\\.freeze\\(\\s*new\\s+Set(?:<[^>]*>)?\\(\\s*\\[([\\s\\S]*?)\\]\\s*\\)`,
+        ),
+      );
+      expect(frozenSet, `${name} must stay one frozen set literal`).not.toBeNull();
+      return (frozenSet?.[1] ?? "")
+        .split(",")
+        .map((member) => member.trim())
+        .filter((member) => member.length > 0)
+        .sort();
+    };
 
-    const frozenSet = webhookSource.match(
-      /const\s+UNHANDLED_EVENT_REASONS\b[^=]*=\s*Object\.freeze\(\s*new\s+Set(?:<[^>]*>)?\(\s*\[([\s\S]*?)\]\s*\)/,
-    );
-    expect(frozenSet, "UNHANDLED_EVENT_REASONS must stay one frozen set literal").not.toBeNull();
-
-    const members = (frozenSet?.[1] ?? "")
-      .split(",")
-      .map((member) => member.trim())
-      .filter((member) => member.length > 0)
-      .sort();
+    // Three decisions are acknowledged for any event: an unhandled type, a purpose that
+    // settles on the revenue-share path, and an event with no SceneAxi metadata. The first
+    // two share the billing package's unsupported-event reason, so the closed set has
+    // exactly these two symbols. Pin the private declaration itself: adding any new member
+    // must fail the gate even when no existing behavior fixture happens to exercise it.
+    const members = closedSet("UNHANDLED_EVENT_REASONS");
     expect(members, "no acknowledged reason may be added to the closed set").toEqual([
       "BILLING_REFUSE_REASONS.webhookEventTypeUnsupported",
       "CREDIT_WEBHOOK_REASONS.eventUnrelated",
     ]);
 
-    // The closed set governs only the refusals `settle()` downgrades, so pin the direct
+    // Two more are acknowledged on the refund path alone, and only because the money is
+    // settled: a refund that returns part of the price, and a balance already spent. Both
+    // are pinned the same way, and neither may migrate into the set above — that would
+    // acknowledge a spent balance for an event that never involved a refund.
+    const terminalRefund = closedSet("TERMINAL_REFUND_REASONS");
+    expect(
+      terminalRefund,
+      "no acknowledged refund reason may be added to the closed set",
+    ).toEqual([
+      "BILLING_REFUSE_REASONS.balanceInsufficient",
+      "BILLING_REFUSE_REASONS.refundNotFull",
+    ]);
+    expect(
+      terminalRefund.filter((member) => members.includes(member)),
+      "a refund-only acknowledgement must never widen to every event",
+    ).toEqual([]);
+    // The scoping is what keeps it refund-only, so pin the guard rather than trusting the
+    // set's name: the second closed set may be consulted only behind the path check.
+    expect(
+      webhookSource,
+      "TERMINAL_REFUND_REASONS may be consulted only on the refund path",
+    ).toContain('path === "refund" && TERMINAL_REFUND_REASONS.has(reason)');
+    expect(
+      webhookSource.match(/TERMINAL_REFUND_REASONS\.has\b/g) ?? [],
+      "the refund-only set must have exactly one consultation",
+    ).toHaveLength(1);
+
+    // The closed sets govern only the refusals `settle()` downgrades, so pin the direct
     // acknowledgement call sites too: an `ignored(...)` written beside them would otherwise
     // acknowledge a fault with `200` and stop Stripe from redelivering it. Every reason
     // handed to `ignored` must therefore be either the `settle` parameter routed through
-    // the closed set, or a member expression of that set.
+    // the closed sets, or a member expression of the unconditional one.
     const acknowledgements = [...webhookSource.matchAll(/(?<![\w$.])ignored\(([^,]*),/g)].map(
       (match) => (match[1] ?? "").replace(/\s+/g, " ").trim(),
     );
     const routedThroughClosedSet = acknowledgements.filter((reason) => reason === "reason");
     expect(
       routedThroughClosedSet,
-      "the closed set must be consulted by exactly one acknowledgement path",
+      "the closed sets must be consulted by exactly one acknowledgement path",
     ).toHaveLength(1);
 
     const direct = acknowledgements.filter((reason) => reason !== "reason");
     expect(
       direct.filter((reason) => !members.includes(reason)),
-      "a direct acknowledgement may name only a reason the closed set holds",
+      "a direct acknowledgement may name only a reason the unconditional closed set holds",
     ).toEqual([]);
     expect(
       direct,
@@ -928,34 +998,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     const granted = await signedCall({ payload: eventBody("evt_test_refund_grant"), store });
     expect(granted).toMatchObject({ ok: true, ignored: false, balance: PACK.credits });
 
-    const payload = JSON.stringify({
-      id: "evt_test_refund",
-      type: "charge.refunded",
-      created: Math.floor(NOW / 1000),
-      livemode: false,
-      data: {
-        object: {
-          id: "ch_test_refunded_charge",
-          refunded: true,
-          amount_refunded: PACK.unitAmount,
-          currency: PACK.currency,
-          metadata: {
-            sceneaxiUserId: "member-1",
-            sceneaxiPurpose: "credit-pack",
-            sceneaxiItemId: PACK.packId,
-            sceneaxiIntentId: INTENT.intentId,
-          },
-        },
-      },
-    });
-    const refundEvidence: WebhookEvidence = Object.freeze({
-      findIntent(intentId: string) {
-        return intentId === INTENT.intentId ? INTENT : undefined;
-      },
-      retrieveSettlement(): never {
-        throw new Error("a refund must not invent or re-read checkout settlement");
-      },
-    });
+    const payload = refundBody("evt_test_refund");
     const outcome = await signedCall({
       payload,
       store,
@@ -997,26 +1040,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     const prefixIntent = Object.freeze({ ...INTENT, intentId: prefixIntentId });
     expect(INTENT.intentId.startsWith(prefixIntentId)).toBe(true);
 
-    const payload = JSON.stringify({
-      id: "evt_test_prefix_refund",
-      type: "charge.refunded",
-      created: Math.floor(NOW / 1000),
-      livemode: false,
-      data: {
-        object: {
-          id: "ch_test_prefix_charge",
-          refunded: true,
-          amount_refunded: PACK.unitAmount,
-          currency: PACK.currency,
-          metadata: {
-            sceneaxiUserId: "member-1",
-            sceneaxiPurpose: "credit-pack",
-            sceneaxiItemId: PACK.packId,
-            sceneaxiIntentId: prefixIntentId,
-          },
-        },
-      },
-    });
+    const payload = refundBody("evt_test_prefix_refund", { intentId: prefixIntentId });
     const prefixEvidence: WebhookEvidence = Object.freeze({
       findIntent(intentId: string) {
         return intentId === prefixIntentId ? prefixIntent : undefined;
@@ -1028,6 +1052,89 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     const outcome = await signedCall({ payload, store, evidence: prefixEvidence });
     expect(outcome).toMatchObject({ ok: false, reason: "CREDIT_LEDGER_STATE_INVALID" });
     expect(store.entryCount("acct-1")).toBe(1);
+    // A grant that is simply not committed *yet* is the same shape, and its own event may
+    // still be in Stripe's retry sequence, so this one stays retryable rather than being
+    // acknowledged as settled.
+    if (!outcome.ok) expect(creditWebhookHttpStatus(outcome.reason)).toBe(503);
+  });
+
+  it("acknowledges a partial refund by name instead of retrying it forever", async () => {
+    // A partial refund can never become full on redelivery: the completing refund arrives
+    // as its own event with its own body. Refusing it would ask Stripe to redeliver a
+    // settled fact until it disabled the endpoint every real grant depends on.
+    const store = webhookStore();
+    const granted = await signedCall({ payload: eventBody("evt_test_partial_grant"), store });
+    expect(granted).toMatchObject({ ok: true, ignored: false, movement: "grant" });
+
+    const outcome = await signedCall({
+      payload: refundBody("evt_test_partial_refund", {
+        refunded: false,
+        amountRefunded: PACK.unitAmount - 1,
+      }),
+      store,
+      evidence: refundEvidence,
+    });
+    expect(outcome).toMatchObject({
+      ok: true,
+      ignored: true,
+      reason: "STRIPE_REFUND_NOT_FULL",
+    });
+    // Fail-closed is the point of the acknowledgement, not a casualty of it: the buyer's
+    // credits are untouched and no adjustment was appended.
+    expect(store.entryCount("acct-1")).toBe(1);
+
+    // The completing full refund is a different event, and it still reconciles.
+    const completed = await signedCall({
+      payload: refundBody("evt_test_partial_then_full"),
+      store,
+      evidence: refundEvidence,
+    });
+    expect(completed).toMatchObject({
+      ok: true,
+      ignored: false,
+      movement: "refund",
+      balance: 0,
+    });
+    expect(store.entryCount("acct-1")).toBe(2);
+  });
+
+  it("acknowledges a refund the spent balance cannot absorb, without inventing a negative", async () => {
+    const store = webhookStore();
+    const granted = await signedCall({ payload: eventBody("evt_test_spent_grant"), store });
+    expect(granted).toMatchObject({ ok: true, ignored: false, balance: PACK.credits });
+
+    // The buyer spends what they bought. The ledger is append-only, so no redelivery can
+    // make the reversal absorbable — the refund is a money decision the credits cannot
+    // follow, and an operator settles it out of band.
+    const account = await store.findAccountByUserId("member-1");
+    expect(account).toBeDefined();
+    if (account === undefined) return;
+    const held = await store.listEntries(account.accountId);
+    const grant = held.at(-1);
+    expect(grant).toBeDefined();
+    if (grant === undefined) return;
+    await store.appendEntry({
+      ...grant,
+      entryId: "entry_spent_all",
+      sequence: grant.sequence + 1,
+      movement: "debit",
+      delta: -PACK.credits,
+      balanceAfter: 0,
+      reason: "hosted ai run",
+      idempotencyKey: "hosted-ai:spent-all",
+    });
+
+    const outcome = await signedCall({
+      payload: refundBody("evt_test_spent_refund"),
+      store,
+      evidence: refundEvidence,
+    });
+    expect(outcome).toMatchObject({
+      ok: true,
+      ignored: true,
+      reason: "CREDIT_BALANCE_INSUFFICIENT",
+    });
+    expect(store.entryCount("acct-1")).toBe(2);
   });
 
   it("still refuses a signed body that carries no event type", async () => {

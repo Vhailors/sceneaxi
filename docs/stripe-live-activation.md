@@ -80,7 +80,15 @@ POST-AUTH box stays unchecked indefinitely.
   evidence to the original paid intent and appends a new idempotent append-only adjustment.
   It must never edit/delete the grant, invent a balance, permit a negative ledger, or treat
   a money refund as a hosted-AI credit debit. Partial refunds and already-spent credits need
-  explicit product/legal decisions and named refusals.
+  explicit product/legal decisions and named refusals; today both refuse by name
+  (`STRIPE_REFUND_NOT_FULL`, `CREDIT_BALANCE_INSUFFICIENT`) and the endpoint acknowledges
+  them without retrying, so confirm the operator process that settles the money side of
+  each — the ledger never moves for either.
+- [ ] **PRE-AUTH** — Confirm the operator handling for a refund of a purchase whose grant
+  predates the ledger's intent anchor. It cannot be reconciled automatically, refuses
+  `CREDIT_LEDGER_STATE_INVALID`, and has no migration by design (`docs/auth-credits.md`).
+  Establish whether the target ledger holds any such grant before LIVE, and name who
+  settles one if it does.
 - [ ] **PRE-AUTH** — Document chargeback/dispute handling separately from voluntary refunds, including
   evidence retention, account access policy, ledger reconciliation, and support escalation.
 
