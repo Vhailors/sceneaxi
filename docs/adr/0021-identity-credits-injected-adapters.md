@@ -4,7 +4,11 @@
   [sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185): the hosted
   sign-in HTTP surface now ships in `sites/umbrella`, so what a live signed-in
   browser session still waits on is the deployment's own provider handles, not
-  missing code. See *Amendment* below.
+  missing code. See *Amendment* below. **Amended 2026-08-06** by
+  [sceneaxi#199](https://github.com/Vhailors/sceneaxi/issues/199): a TEST-only
+  Connect creator-payout seam ships, with one narrow durable exception to
+  ledger-only money bookkeeping. LIVE Connect onboarding and payout activation
+  stay held. See the second *Amendment* below.
 - **Date recorded:** 2026-07-25
 - **Source:** [sceneaxi#90](https://github.com/Vhailors/sceneaxi/issues/90) (children #91–#101).
 - **Lineage:** Follows the Model Provider Port precedent
@@ -104,8 +108,10 @@ bookkeeping.
 - **Live Stripe activation** — test mode is the default and `live` refuses without
   an explicit `liveModeAuthorized`. Going live is a captain decision this ADR does
   not make or narrow.
-- **Real Stripe Connect payouts to creators** — a later captain gate; v1 records
-  balances only.
+- **Real Stripe Connect payouts to creators** — LIVE onboarding and payout
+  activation remain a later captain gate. *(Amended 2026-08-06 — a TEST-only
+  Connect onboarding and payout-bookkeeping seam has since landed; see below.
+  LIVE stays held.)*
 - **Multi-admin** — exactly one admin, from `SCENEAXI_ADMIN_EMAIL`. Any second
   admin needs a captain decision.
 - **Any revenue split other than 50/50** — the captain sets it; the contract
@@ -167,3 +173,48 @@ This narrows the hosted boundary without changing the decision above: core still
 single-admin derivation and webhook signature verification, provider clients and secrets
 stay in the umbrella deployment tier, the hermetic builder receives only typed evidence
 and injected clients, and TEST-only / LIVE-refuse behaviour is unchanged.
+
+## Amendment — a TEST-only Connect seam, and one durable money-split exception (2026-08-06)
+
+[sceneaxi#199](https://github.com/Vhailors/sceneaxi/issues/199) delivered the typed
+creator onboarding, account-status, and payout **bookkeeping** seam in
+`packages/billing/src/stripe-connect.ts`. It is authenticated, Kids-refusing, and
+accepts only an injected provider whose readiness is `mode: "test"` with TEST
+operations, dashboard, and secret all explicitly configured. It corrects one claim
+above: "v1 records balances only" is no longer the whole picture, and the
+*Settled* line's "ledger-only money bookkeeping" now carries the single exception
+below.
+
+What the captain authorized, and nothing wider: `ConnectStore.commitPayoutIntent`
+may atomically append one validated `MoneySplitRecord` together with the exact
+creator-leg `ConnectPayoutIntent` bound to it, before a provider call. That
+supersedes captain decision D4's prohibition on persisting a money split **only**
+at that width. It is not a money-settlement store: it commits only a split a
+payout intent is bound to field by field, it is reachable only from the
+authenticated TEST-only seam, and D4 stands everywhere else — a deployment that
+wants money splits durable outside this path still owns that write.
+
+What stays true:
+
+- **LIVE Connect is held.** A LIVE provider or a LIVE money split refuses
+  `STRIPE_CONNECT_LIVE_UNAVAILABLE`. LIVE onboarding and payout activation remain
+  the separate captain gate this ADR does not make or narrow, and the
+  Held-elsewhere item above stands; the uncompleted checklist is owned by
+  [`docs/stripe-connect-operations.md`](../stripe-connect-operations.md).
+- **No provider is vendored and no secret enters the repository.** The Connect
+  provider is another injected adapter; no credential crosses the seam, the gate
+  stays hermetic, and nothing here deploys, configures Stripe, or creates an
+  account.
+- **The record contract is unchanged.** `MoneySplitRecord` still refuses every
+  payout-shaped field, the split is still `floor(gross × 5000 / 10000)` to the
+  creator with the remainder to the platform, and Connect records reference the
+  split rather than widening it.
+- **No payout is successful without provider evidence.** A success requires both
+  `providerEvidenceId` and `providerPayoutId`; a thrown call leaves a pending
+  intent, and a retry reads the existing outcome before dispatching again.
+
+Ownership is unchanged and this ADR copies none of it: the supersession's exact
+width, refusal ordering, and idempotency rules are owned by
+[`docs/auth-credits.md`](../auth-credits.md); the operations boundary, audit
+records, and LIVE checklist by
+[`docs/stripe-connect-operations.md`](../stripe-connect-operations.md).

@@ -304,7 +304,7 @@ own separate authority before any action; reading this section grants none.
 |---|---|---|
 | **Live npm publication** | A captain publish decision plus authority 11 in [`bootstrap.md`](../bootstrap.md), then the coordinated version change described in [`publish-readiness.md`](../publish-readiness.md): the plan value in `scripts/check-publish-ready.mjs`, every manifest version, and each profile's `sceneaxi.corePin` together | Publish *readiness* is already proven structurally on disk and is not a publish authorization. `0.0.0` everywhere is the honest statement that nothing is released |
 | **Stage 6 — editor-need proof on E1/E2** | The double gate: recorded tier-3 captain decisions **and** a separate explicit run authorization ([`spec-41.md`](spec-41.md), authority 9). Stages are separately authorized with budget caps and kill criteria; the default cash budget is $0 | The shipped Minimum E2 editor is the bounded [ADR 0003](../adr/0003-editor-sequencing-e1-first-e2-specified.md) vertical exception, not general E2 and not Stage 6 evidence. General E2 remains specified-not-built |
-| **Stripe LIVE mode** | D5's one permitted source is `SCENEAXI_STRIPE_LIVE_AUTHORIZED`, resolved to runtime-witnessed audit evidence. Unset, malformed, aliased, or merely correlated configuration still refuses `STRIPE_LIVE_MODE_NOT_AUTHORIZED` at both intent creation and grant. Activation additionally needs ADR 0021's separate captain go-live decision and authority 10 (spend/accounts) | Landing the mechanism in PR #168 did **not** activate it: no shipped call site passes the result. Test mode is structural on fixture commerce; money splits stay bookkeeping-only and there are no Connect payouts |
+| **Stripe LIVE mode** | D5's one permitted source is `SCENEAXI_STRIPE_LIVE_AUTHORIZED`, resolved to runtime-witnessed audit evidence. Unset, malformed, aliased, or merely correlated configuration still refuses `STRIPE_LIVE_MODE_NOT_AUTHORIZED` at both intent creation and grant. Activation additionally needs ADR 0021's separate captain go-live decision and authority 10 (spend/accounts) | Landing the mechanism in PR #168 did **not** activate it: no shipped call site passes the result. Test mode is structural on fixture commerce, and the SA-CON-1 Connect seam is TEST-only: a LIVE provider or LIVE money split refuses `STRIPE_CONNECT_LIVE_UNAVAILABLE`, so no real payout exists. Money splits stay bookkeeping-only except at D4's one superseded width above |
 | **Kids work, later** | An explicit Kids safety decision. Kids is refuse-only (R0) by contract: nothing may depend on `@sceneaxi/profile-kids`, Kids identity and Kids commerce are refused by name on every path that can reach them, and Kids is not deployed | A passing gate is not Kids safety. This brief proposes no Kids surface and no timing |
 
 ## Explicit OUTs
@@ -313,8 +313,9 @@ Out of scope for this document, and not changed by it:
 
 - Implementation changes of any kind; this documentation refresh closes no issue.
 - Any captain decision — settled ones stand, open ones stay open.
-- Live npm publication; Stage 1 or Stage 6 proof execution; Stripe LIVE; Connect
-  payouts; Kids launch; deployment changes; account creation; spend.
+- Live npm publication; Stage 1 or Stage 6 proof execution; Stripe LIVE; LIVE
+  Connect onboarding and payout activation; Kids launch; deployment changes;
+  account creation; spend.
 - Aspirational framing. No engine readiness, production game-shipping readiness,
   commercial validation, Kids safety, marketplace readiness, renderer winner, or
   Stage 1 adjudication is claimed anywhere above. Evidence never rounds up.
