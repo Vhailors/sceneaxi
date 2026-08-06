@@ -11,7 +11,9 @@ an evidence bundle. Record only provider object ids and secret *names*, redactin
 
 Scope: direct SceneAxi credit-pack sales only. Creator onboarding, Stripe Connect accounts,
 transfers, and payouts remain SA-CON-1 and are not prerequisites that this checklist may
-silently implement.
+silently implement; their own TEST-only boundary and separate, deliberately uncompleted LIVE
+checklist are owned by
+[`stripe-connect-operations.md`](stripe-connect-operations.md).
 
 ## Authorization phase boundary
 

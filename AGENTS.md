@@ -488,9 +488,12 @@ is required, the parser reads `data.object.id` from the verified body and compar
 before anything else about the settlement, and carries it onto the completion as
 `checkoutSessionId` — so evidence from another identically-priced paid session refuses
 `STRIPE_SETTLEMENT_SESSION_MISMATCH` and an event that names no session refuses
-`STRIPE_CHECKOUT_SESSION_ID_MISSING`. `MoneySplitRecord` stays pure and unpersisted — #128
-delivered the **credits** commit boundary below, and no store operation writes a money
-split, so a deployment that wants those rows durable owns that write. Ownership map:
+`STRIPE_CHECKOUT_SESSION_ID_MISSING`. `recordMoneySale` itself still returns a pure record
+and no credits or checkout path persists one; the single durable exception is captain
+decision D4's narrow supersession for sceneaxi#199 — `ConnectStore.commitPayoutIntent`
+appends one validated split atomically with the creator-leg payout intent bound to it, from
+the TEST-only Connect seam and nowhere else — so a deployment that wants money splits
+durable outside that path still owns that write. Ownership map:
 `docs/auth-credits.md`; regressions live in
 `packages/billing/test/revenue-share.test.ts`, `packages/billing/test/stripe-checkout.test.ts`,
 and `tests/e2e/auth-credits-refuse-matrix.test.ts`.

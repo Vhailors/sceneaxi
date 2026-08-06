@@ -632,6 +632,7 @@ Regressions: `packages/billing/test/live-mode.test.ts` (the resolver's contract)
 | `CreditPack`, `CreditPackRevision`, `CreditPackCatalogArchive` | `packages/schemas/src/billing.ts` | `contracts/credit-packs.schema.json` |
 | `EntitlementDecision` | `packages/schemas/src/entitlements.ts` | `contracts/entitlement-decision.schema.json` |
 | `CreatorShareRecord`, `MoneySplitRecord` | `packages/schemas/src/revenue-share.ts` | `contracts/revenue-share.schema.json` |
+| `ConnectAccountRecord`, `ConnectOnboardingIntent`, `ConnectStatusRecord`, `ConnectPayoutIntent`, `ConnectPayoutOutcome` | `packages/schemas/src/stripe-connect.ts` | `contracts/stripe-connect.schema.json` |
 
 Three shapes are load-bearing and should not be "fixed" later without reading why:
 
