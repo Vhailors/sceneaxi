@@ -1,5 +1,10 @@
 # Linux desktop application
 
+Cross-surface release authorization, refusal, rollback, and evidence capture are owned
+by [`production-activation.md`](production-activation.md). This document remains the
+authoritative Linux artifact record and does not gain a signing or publication claim
+from that runbook.
+
 The packaged **SceneAxi Engine Desktop** for Linux: `desktop/linux`
 (`@sceneaxi/desktop-linux`), decided by [ADR 0024](adr/0024-linux-desktop-electron-tier.md)
 and dispatched by [sceneaxi#183](https://github.com/Vhailors/sceneaxi/issues/183).

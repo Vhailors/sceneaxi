@@ -1246,5 +1246,7 @@ Auth's own handler and configure the handles behind `umbrellaRequestAuthority()`
 it does, `signIn` has no adapter to reach, so no user is provisioned, no starter grant
 runs, and every surface refuses by name. Dropping the editor preview flag comes after
 that provider configuration, never before it.
-The deployable-site activation procedure and surface status are owned by
-[`websites-deploy.md`](websites-deploy.md#remaining-activation).
+The deployable-site mechanics and surface status are owned by
+[`websites-deploy.md`](websites-deploy.md#remaining-activation). The operator
+authorization gate, ordered activation/rollback procedure, and evidence checklist are
+owned by [`production-activation.md`](production-activation.md).

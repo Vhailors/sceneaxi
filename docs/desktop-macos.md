@@ -1,5 +1,10 @@
 # macOS desktop packaging
 
+Cross-surface release authorization, refusal, rollback, and evidence capture are owned
+by [`production-activation.md`](production-activation.md). This document remains the
+authoritative macOS signing/notarization procedure; the runbook supplies no credential
+and authorizes no build or publication.
+
 `desktop/macos` is the first-release macOS packaging path for the existing SceneAxi
 Engine Desktop application. It stages the exact runtime built by `desktop/linux`
 under a macOS-only bootstrap; it does not copy or replace the desktop-shell chrome,

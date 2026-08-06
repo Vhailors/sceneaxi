@@ -19,6 +19,7 @@ This monorepo is the packaging home for:
 | Web / desktop shells | `apps/web-shell`, `apps/desktop-shell` |
 | Asset catalogs (may split later) | `apps/catalog-game`, `apps/catalog-web` |
 | Deployable web surfaces | `sites/umbrella`, `sites/catalog-game`, `sites/catalog-web` over `packages/site-kit` (ADR 0018; deploy details in [`docs/websites-deploy.md`](docs/websites-deploy.md)) |
+| Production activation control | [`docs/production-activation.md`](docs/production-activation.md) — exact input/owner inventory and preflight, activation, verification, rollback/refusal, and evidence checklist; it authorizes no deployment |
 | Isolated Kids origin | `sites/kids` — a self-contained install root with an empty SceneAxi allow list and a curated in-memory build-and-play activity, not deployed ([`docs/kids-first-release.md`](docs/kids-first-release.md)) |
 | Public live open path | `sites/umbrella/src/app/open/` — a committed Sculpt Artifact composed and drawn in a real WebGL canvas (ADR 0022) |
 | Packaged Linux desktop app | `desktop/linux` — Electron over the desktop-shell chrome and the real engine stack, AppImage + `.deb` with recorded checksums (ADR 0024; [`docs/desktop-linux.md`](docs/desktop-linux.md)) |

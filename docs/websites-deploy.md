@@ -2,6 +2,11 @@
 
 How the three first-party SceneAxi sites are built, configured, and deployed.
 
+The cross-surface execution gate and evidence checklist are owned by
+[`production-activation.md`](production-activation.md). This document remains the
+authoritative web topology, configuration, provider-wiring, and verification owner; it
+does not itself authorize a new deployment or alias move.
+
 **No secret value appears in this document or anywhere in the repository.** Names only;
 values are set in the Vercel project by whoever holds them. `pnpm check:sites` fails the
 gate if a secret-shaped value or an assigned secret name is ever committed under
