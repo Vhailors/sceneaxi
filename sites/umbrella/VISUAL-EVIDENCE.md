@@ -96,8 +96,14 @@ with `NEXT_PUBLIC_SCENEAXI_GAME_CATALOG_ORIGIN` and
 `NEXT_PUBLIC_SCENEAXI_WEB_CATALOG_ORIGIN` set to https origins, so the masthead and
 footer render their configured-catalog state. Identity, credits, and billing were left
 **unwired**, which is the honest default: `/account` shows the signed-out state with its
-named key, `/pricing` shows the packs with a disabled "Not for sale yet" control and the
-plane's own reason, and that is what was captured.
+named key, `/pricing` shows the packs with a disabled control and the plane's own reason,
+and that is what was captured. That control read "Not for sale yet" at the time of these
+observations; the credit-pack purchase surface has since replaced it with a per-pack status
+chip above a control naming the mode it refuses in ("Stripe TEST checkout unavailable"),
+so every `/pricing` figure that reaches inside a pack card — the card copy itself and the
+route's Lighthouse row — is **pending re-record**. The `/pricing` state-header and
+header-track rows measure the `Billing mode` and `Catalog purchases are not open` panels,
+which that change did not touch.
 
 That unwired path is not a corner case to check after the happy one — it is what a visitor
 to this deployment gets, so it is the path every figure below was measured on. It is also

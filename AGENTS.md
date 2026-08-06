@@ -520,8 +520,9 @@ adapter on purpose), `packages/billing/test/metering.test.ts`, and
 way a webhook grant commits anywhere (captain decision D4): `sites/umbrella`
 goes through it too, so no second commit path exists for a paid event, and the
 three-way outcome split it sits inside — acknowledged no-op `200`, deployment
-fault `503`, request fault `400`, with `ignored: false` meaning credits are in
-the ledger — is unchanged. A commit the boundary cannot confirm refuses
+fault `503`, request fault `400`, with `ignored: false` meaning this event's
+movement is in the ledger and `movement` naming which one — is unchanged. A
+commit the boundary cannot confirm refuses
 `CREDIT_STORE_FAILED` and is retried; it is never acknowledged. Extend
 `tests/sites/identity-plane-wiring.test.ts` when touching that path.
 

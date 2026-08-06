@@ -327,7 +327,13 @@ refuses by name instead of inventing a session.
      `sceneaxiIntentId` — copied from the intent's own `userId` / `purpose` / `itemId` /
      `intentId`. `parseCheckoutCompletedEvent` cross-checks all four plus the mode against
      the persisted intent, so a missing or mismatched key refuses the grant as an invalid
-     webhook payload.
+     webhook payload. Set the **same** four keys on `payment_intent_data.metadata` as well:
+     Stripe copies those onto the PaymentIntent and its Charge, and a `charge.refunded`
+     event carries only the Charge's own metadata. This is the only thing binding a refund
+     to the purchase it reverses, and an adapter that stamps the session alone loses it
+     quietly rather than loudly — the Charge then carries no SceneAxi key, so the refund is
+     read as another product's event and acknowledged `200` with `ignored: true`. Nothing
+     refuses, and the reconciliation simply never runs on that deployment.
 
      Two of the four are *also* routing keys, read from the verified body before the
      intent and the settlement are, because that decision must not depend on a read that
