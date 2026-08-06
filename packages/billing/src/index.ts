@@ -192,7 +192,10 @@ export {
 export {
   CONNECT_ONBOARDING_IDEMPOTENCY_PREFIX,
   CONNECT_PAYOUT_IDEMPOTENCY_PREFIX,
+  CONNECT_STORE_CONFLICT_CODE,
+  ConnectStoreConflictError,
   createInMemoryConnectStore,
+  isConnectStoreConflict,
   refreshConnectStatus,
   requestCreatorPayout,
   startConnectOnboarding,

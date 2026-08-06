@@ -44,7 +44,14 @@ The versioned record contract is
   same stored intent. Status observations key on provider request evidence.
 - `commitPayoutIntent` atomically stores the validated `MoneySplitRecord` and the
   exact creator-leg payout intent. A different split under the sale or idempotency
-  key conflicts.
+  key conflicts, and so does a second payout intent for a sale that already has one
+  — the store holds one intent per `saleId`, mirroring `sale_id ... UNIQUE`, so a
+  fresh idempotency key cannot buy a second provider payout for the same sale.
+- A conflicting write is a typed signal, never message text: an adapter throws
+  `ConnectStoreConflictError` (or any error carrying
+  `code: CONNECT_STORE_CONFLICT_CODE`), which the seam refuses as
+  `STRIPE_CONNECT_IDEMPOTENCY_CONFLICT`. Every other throw is a store failure. A
+  durable adapter maps its unique-constraint violations onto that signal.
 - A payout retry first reads the outcome for its committed intent. Once an outcome
   exists, the provider is not called again.
 - A successful outcome requires both `providerEvidenceId` and `providerPayoutId` in

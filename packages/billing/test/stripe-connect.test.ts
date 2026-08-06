@@ -8,11 +8,14 @@ import { issuePrincipalForTest } from "@sceneaxi/auth/testing/principal-issuance
 import type { MoneySplitRecord } from "@sceneaxi/schemas";
 import {
   BILLING_REFUSE_REASONS,
+  CONNECT_STORE_CONFLICT_CODE,
   createInMemoryConnectStore,
   refreshConnectStatus,
   requestCreatorPayout,
   startConnectOnboarding,
   type ConnectProviderReadiness,
+  type ConnectStore,
+  type InMemoryConnectStore,
   type StripeConnectProvider,
 } from "@sceneaxi/billing";
 
@@ -131,6 +134,37 @@ const providerFixture = (
   });
   return { calls, provider };
 };
+
+const reorder = <Value>(value: Value): Value =>
+  Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).reverse(),
+  ) as Value;
+
+/** A durable adapter rebuilds records from columns; its key order is its own. */
+const reorderingStore = (inner: InMemoryConnectStore): ConnectStore =>
+  Object.freeze({
+    ...inner,
+    async commitPayoutIntent(input: {
+      split: Parameters<ConnectStore["commitPayoutIntent"]>[0]["split"];
+      intent: Parameters<ConnectStore["commitPayoutIntent"]>[0]["intent"];
+    }) {
+      const committed = await inner.commitPayoutIntent(input);
+      return Object.freeze({
+        split: reorder(committed.split),
+        intent: reorder(committed.intent),
+        replayed: committed.replayed,
+      });
+    },
+    async appendPayoutOutcome(
+      outcome: Parameters<ConnectStore["appendPayoutOutcome"]>[0],
+    ) {
+      const committed = await inner.appendPayoutOutcome(outcome);
+      return Object.freeze({
+        record: reorder(committed.record),
+        replayed: committed.replayed,
+      });
+    },
+  });
 
 const onboardingRequest = (
   store: ReturnType<typeof createInMemoryConnectStore>,
@@ -352,6 +386,99 @@ describe("Stripe Connect status and payout evidence", () => {
     const outcome = await store.findPayoutOutcome(intent?.payoutIntentId ?? "");
     expect(outcome?.status).toBe("failed");
     expect(outcome?.providerPayoutId).toBeNull();
+  });
+
+  it("refuses a second payout intent for a sale that already has one", async () => {
+    const fixture = providerFixture();
+    const store = await readyStore(fixture.provider);
+    const request = {
+      principal: principal(),
+      admin,
+      creatorUserId: CREATOR_ID,
+      moneySplit: split(),
+      now: NOW,
+      store,
+      provider: fixture.provider,
+      surface: "site" as const,
+    };
+    const first = await requestCreatorPayout({
+      ...request,
+      idempotencyKey: "connect-payout:sale_connect_01",
+    });
+    const second = await requestCreatorPayout({
+      ...request,
+      idempotencyKey: "connect-payout:sale_connect_01-retry",
+    });
+    expect(first.ok).toBe(true);
+    expect(second).toMatchObject({
+      ok: false,
+      reason: BILLING_REFUSE_REASONS.connectIdempotencyConflict,
+    });
+    expect(fixture.calls.payout).toBe(1);
+    expect(store.payoutIntentCount()).toBe(1);
+    expect(store.payoutOutcomeCount()).toBe(1);
+  });
+
+  it("accepts a store that answers with its own property order", async () => {
+    const fixture = providerFixture();
+    const inner = await readyStore(fixture.provider);
+    const reordered = reorderingStore(inner);
+    const result = await requestCreatorPayout({
+      principal: principal(),
+      admin,
+      creatorUserId: CREATOR_ID,
+      moneySplit: split(),
+      idempotencyKey: "connect-payout:sale_connect_01",
+      now: NOW,
+      store: reordered,
+      provider: fixture.provider,
+      surface: "site",
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      value: { outcome: { status: "succeeded" } },
+    });
+    expect(inner.payoutOutcomeCount()).toBe(1);
+  });
+
+  it.each([
+    [
+      "unique-constraint violation carrying the conflict code",
+      Object.assign(
+        new Error(
+          'duplicate key value violates unique constraint "stripe_connect_payout_intents_sale_id_key"',
+        ),
+        { code: CONNECT_STORE_CONFLICT_CODE },
+      ),
+      BILLING_REFUSE_REASONS.connectIdempotencyConflict,
+    ],
+    [
+      "untyped persistence failure",
+      new Error("connection terminated unexpectedly"),
+      BILLING_REFUSE_REASONS.connectStoreFailed,
+    ],
+  ])("classifies a %s by its typed signal", async (_label, thrown, reason) => {
+    const fixture = providerFixture();
+    const inner = await readyStore(fixture.provider);
+    const store: ConnectStore = Object.freeze({
+      ...inner,
+      commitPayoutIntent: (): never => {
+        throw thrown;
+      },
+    });
+    const result = await requestCreatorPayout({
+      principal: principal(),
+      admin,
+      creatorUserId: CREATOR_ID,
+      moneySplit: split(),
+      idempotencyKey: "connect-payout:sale_connect_01",
+      now: NOW,
+      store,
+      provider: fixture.provider,
+      surface: "site",
+    });
+    expect(result).toMatchObject({ ok: false, reason });
+    expect(fixture.calls.payout).toBe(0);
   });
 
   it("refuses payouts until an observed provider status enables them", async () => {

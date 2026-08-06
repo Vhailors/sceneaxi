@@ -17,6 +17,7 @@ import {
   CONNECT_STATUS_RECORD_KIND,
   CREATOR_SHARE_BASIS_POINTS,
   STRIPE_CONNECT_SCHEMA_VERSION,
+  connectPayoutMatchesMoneySplit,
   isEpochMilliseconds,
   isHttpsUrl,
   snapshotPlainArray,
@@ -133,9 +134,48 @@ export type ConnectPayoutIntentCommit = Readonly<{
   replayed: boolean;
 }>;
 
+export const CONNECT_STORE_CONFLICT_CODE =
+  BILLING_REFUSE_REASONS.connectIdempotencyConflict;
+
+/**
+ * The typed signal every `ConnectStore` adapter must throw for an idempotency
+ * conflict. The seam classifies persistence failures by this signal, never by
+ * message text, so an adapter that maps a unique-constraint violation onto it
+ * refuses `STRIPE_CONNECT_IDEMPOTENCY_CONFLICT` instead of the retryable
+ * `STRIPE_CONNECT_STORE_FAILED`.
+ */
+export class ConnectStoreConflictError extends Error {
+  readonly code = CONNECT_STORE_CONFLICT_CODE;
+
+  constructor(label: string) {
+    super(`connect store: ${label} idempotency conflict`);
+    this.name = "ConnectStoreConflictError";
+  }
+}
+
+/** Recognise an adapter's conflict signal without depending on module identity. */
+export function isConnectStoreConflict(error: unknown): boolean {
+  if (error instanceof ConnectStoreConflictError) return true;
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { code?: unknown }).code === CONNECT_STORE_CONFLICT_CODE
+  );
+}
+
 /**
  * Append-only persistence port. `commitPayoutIntent` is the atomic precondition:
  * the exact MoneySplitRecord and its creator-leg payout intent commit together.
+ *
+ * Adapter obligations, held by every implementation and not by the seam:
+ *
+ * - a conflicting idempotent write throws `ConnectStoreConflictError` (or any
+ *   error carrying `code: CONNECT_STORE_CONFLICT_CODE`); every other failure is
+ *   an ordinary throw and refuses as a store failure;
+ * - `commitPayoutIntent` holds one payout intent per `saleId`, mirroring the
+ *   migration's `sale_id ... UNIQUE`, so a second intent for a sale that already
+ *   has one under a different idempotency key conflicts rather than authorizing
+ *   a second provider payout.
  */
 export type ConnectStore = Readonly<{
   findAccountByCreatorUserId(
@@ -179,8 +219,35 @@ export type InMemoryConnectStore = ConnectStore &
     payoutOutcomeCount(): number;
   }>;
 
-const same = (left: unknown, right: unknown) =>
-  JSON.stringify(left) === JSON.stringify(right);
+/**
+ * Structural equality that does not depend on property order: a durable adapter
+ * rebuilding a record from columns returns the same fields in its own order, and
+ * that is the same record, not a conflict.
+ */
+const same = (left: unknown, right: unknown): boolean => {
+  if (Object.is(left, right)) return true;
+  if (Array.isArray(left) || Array.isArray(right)) {
+    const leftItems = snapshotPlainArray(left);
+    const rightItems = snapshotPlainArray(right);
+    return (
+      leftItems !== undefined &&
+      rightItems !== undefined &&
+      leftItems.length === rightItems.length &&
+      leftItems.every((item, index) => same(item, rightItems[index]))
+    );
+  }
+  const leftRecord = snapshotPlainRecord(left);
+  const rightRecord = snapshotPlainRecord(right);
+  if (leftRecord === undefined || rightRecord === undefined) return false;
+  const keys = Object.keys(leftRecord);
+  return (
+    keys.length === Object.keys(rightRecord).length &&
+    keys.every(
+      (key) =>
+        Object.hasOwn(rightRecord, key) && same(leftRecord[key], rightRecord[key]),
+    )
+  );
+};
 
 /** In-memory reference adapter with the same idempotency conflicts as durable storage. */
 export function createInMemoryConnectStore(): InMemoryConnectStore {
@@ -190,10 +257,11 @@ export function createInMemoryConnectStore(): InMemoryConnectStore {
   const statusOrder: ConnectStatusRecord[] = [];
   const splits = new Map<string, MoneySplitRecord>();
   const payoutIntents = new Map<string, ConnectPayoutIntent>();
+  const payoutIntentsBySale = new Map<string, ConnectPayoutIntent>();
   const payoutOutcomes = new Map<string, ConnectPayoutOutcome>();
 
   const conflict = (label: string): never => {
-    throw new Error(`connect store: ${label} idempotency conflict`);
+    throw new ConnectStoreConflictError(label);
   };
 
   return Object.freeze({
@@ -256,16 +324,7 @@ export function createInMemoryConnectStore(): InMemoryConnectStore {
       const split = validateMoneySplitRecord(input.split);
       const intent = validateConnectPayoutIntent(input.intent);
       if (!split.ok || !intent.ok) throw new Error("connect store: invalid payout intent");
-      if (
-        split.value.saleId !== intent.value.saleId ||
-        split.value.creatorUserId !== intent.value.creatorUserId ||
-        split.value.grossMinor !== intent.value.grossMinor ||
-        split.value.creatorMinor !== intent.value.creatorMinor ||
-        split.value.platformMinor !== intent.value.platformMinor ||
-        split.value.currency !== intent.value.currency ||
-        split.value.basisPoints !== intent.value.basisPoints ||
-        split.value.mode !== intent.value.mode
-      ) {
+      if (!connectPayoutMatchesMoneySplit(intent.value, split.value)) {
         throw new Error("connect store: payout intent does not match money split");
       }
       const priorIntent = payoutIntents.get(intent.value.idempotencyKey);
@@ -283,8 +342,12 @@ export function createInMemoryConnectStore(): InMemoryConnectStore {
       if (priorSplit !== undefined && !same(priorSplit, split.value)) {
         return conflict("money split");
       }
+      if (payoutIntentsBySale.has(split.value.saleId)) {
+        return conflict("payout sale");
+      }
       splits.set(split.value.saleId, split.value);
       payoutIntents.set(intent.value.idempotencyKey, intent.value);
+      payoutIntentsBySale.set(split.value.saleId, intent.value);
       return Object.freeze({
         split: split.value,
         intent: intent.value,
@@ -502,7 +565,7 @@ async function storeCall<Value>(operation: () => Awaitable<Value>) {
   try {
     return billingOk(await operation());
   } catch (error) {
-    if (error instanceof Error && error.message.includes("idempotency conflict")) {
+    if (isConnectStoreConflict(error)) {
       return billingRefuse(
         BILLING_REFUSE_REASONS.connectIdempotencyConflict,
         "The Connect audit store found a conflicting idempotent operation.",
