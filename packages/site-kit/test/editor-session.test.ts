@@ -1,5 +1,19 @@
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { EDITOR_SCENE_ID, renderEditorState, readEditorState } from "@sceneaxi/site-kit";
+
+/** Run `body` with the process temporary root pointed at a directory that is not there. */
+function withUnusableTemporaryRoot<T>(body: () => T): T {
+  const previous = process.env["TMPDIR"];
+  process.env["TMPDIR"] = join(previous ?? tmpdir(), "sceneaxi-absent-temporary-root");
+  try {
+    return body();
+  } finally {
+    if (previous === undefined) delete process.env["TMPDIR"];
+    else process.env["TMPDIR"] = previous;
+  }
+}
 
 describe("renderEditorState — real Minimum E2 session from URL state", () => {
   it("renders a snapshot, a viewport frame, a save, and a composition", () => {
@@ -60,6 +74,18 @@ describe("renderEditorState — real Minimum E2 session from URL state", () => {
     }
     // One artifact on the wire, however many instances reference it.
     expect(Object.keys(mountable.artifacts)).toEqual([render.value.artifactId]);
+  });
+
+  it("refuses by name rather than throwing when the workspace cannot be created", () => {
+    // The render reaches the filesystem, and every caller draws a SiteResult. A route
+    // that asked for a session must get a reason it can render, not an exception.
+    const state = readEditorState({});
+    expect(state.ok).toBe(true);
+    if (!state.ok) return;
+    const refused = withUnusableTemporaryRoot(() => renderEditorState(state.value));
+    expect(refused).toMatchObject({ ok: false, reason: "EDITOR_WORKSPACE_UNAVAILABLE" });
+    // The contract is restored as soon as a usable root is: no latched failure.
+    expect(renderEditorState(state.value).ok).toBe(true);
   });
 
   it("reconstructs deterministically for the same state", () => {

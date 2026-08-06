@@ -577,7 +577,10 @@ their existing named reasons.
 
 Kids · custom domains · Stripe live mode · catalog asset checkout (tier-6b marketplace
 activation stays an open captain decision, so purchase and publish refuse
-`CATALOG_COMMERCE_INERT`) · npm publication of any package · editor project persistence.
+`CATALOG_COMMERCE_INERT`) · npm publication of any package · editor project persistence ·
+catalog intake, whose TEST-only `POST /api/editor/catalog-intake` refuses
+`CATALOG_INTAKE_STORAGE_UNAVAILABLE` because no deployment injects a provider
+([`catalog-intake.md`](catalog-intake.md) owns that seam).
 
 Stripe LIVE readiness has a complete, deliberately non-executable checklist in
 [`docs/stripe-live-activation.md`](stripe-live-activation.md). It does not change this

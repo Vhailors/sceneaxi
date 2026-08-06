@@ -11,6 +11,12 @@ import {
   type SearchParams,
 } from "@sceneaxi/site-kit";
 import { umbrellaRequestAuthority } from "../../lib/request-authority.js";
+import {
+  UMBRELLA_CATALOG_INTAKE_ACTION,
+  readUmbrellaCatalogIntakePanel,
+  umbrellaCatalogIntake,
+  umbrellaEditorStateFields,
+} from "../../lib/catalog-submission.js";
 import { EDITOR_VIEWPORT_COPY } from "../../lib/editor-viewport.js";
 import { resolveUmbrellaEditorAccess } from "../../lib/site-config.js";
 import { readSessionToken } from "../_session.js";
@@ -183,6 +189,11 @@ export default async function EditorPage({
     starterArtifact: starter.value,
   });
 
+  // A render never submits. This reads the panel's state — the shipped deployment
+  // injects nothing, so it refuses by name without reaching a provider at all — and the
+  // one control that writes posts to `UMBRELLA_CATALOG_INTAKE_ACTION`.
+  const intake = await readUmbrellaCatalogIntakePanel({ injection: umbrellaCatalogIntake() });
+
   const deepLinkFields =
     editor.deepLink === null
       ? []
@@ -202,13 +213,79 @@ export default async function EditorPage({
 
   return (
     <>
-      {resolved.decision.mode === "preview" && (
-        <p className="ed-preview-note" role="note">
-          Preview — the server-side editor preview flag is set, nothing is
-          attributed to an account, and no credits are consumed. Real entitlement
-          replaces this flag.
-        </p>
-      )}
+      {/*
+        The shell is a fixed, opaque application surface, so anything rendered beside it
+        in normal flow is painted underneath it on a page that does not scroll. These
+        notices therefore ride in one fixed rail above the shell, stacked in a column so
+        a second notice can never land on top of the first, and scrolled internally so
+        the whole rail stays reachable at the smallest supported window.
+      */}
+      <div className="ed-overlay-notes">
+        {resolved.decision.mode === "preview" && (
+          <p className="ed-preview-note" role="note">
+            Preview — the server-side editor preview flag is set, nothing is
+            attributed to an account, and no credits are consumed. Real entitlement
+            replaces this flag.
+          </p>
+        )}
+        {intake.kind === "recorded" ? (
+          <StatePanel
+            tone="warn"
+            title="The injected TEST intake holds this submission"
+            evidence={[
+              { term: "Item", value: intake.record.itemId },
+              { term: "Pipeline", value: `${intake.record.pipelineState} · TEST only` },
+              { term: "Recorded transitions", value: String(intake.record.recordedTransitions) },
+              { term: "Document digest", value: intake.record.documentDigest },
+              { term: "Asset-package digest", value: intake.record.artifactDigest },
+            ]}
+          >
+            <p>
+              Read back from the injected provider, never claimed by this link. The record
+              holds the submitted render&rsquo;s own document and artifact digests, is not
+              listed, and carries no listing projection: screening, curation, and an
+              explicit human approval are separate recorded steps that nothing on this
+              route performs.
+            </p>
+          </StatePanel>
+        ) : intake.kind === "offered" ? (
+          <StatePanel tone="warn" title="Submit this render to the injected TEST intake">
+            <p>
+              Catalog intake is a TEST-only injected seam for entitled non-Kids requests.
+              Nothing is submitted by opening this page — pressing the control below is
+              the only thing that writes a record.
+            </p>
+            <form method="post" action={UMBRELLA_CATALOG_INTAKE_ACTION} className="ed-intake-form">
+              {umbrellaEditorStateFields(params).map((field, index) => (
+                <input
+                  key={`${field.name}-${String(index)}`}
+                  type="hidden"
+                  name={field.name}
+                  value={field.value}
+                />
+              ))}
+              <button className="button" type="submit">
+                Submit this render to TEST intake
+              </button>
+            </form>
+          </StatePanel>
+        ) : (
+          <StatePanel
+            tone="deny"
+            title="Catalog intake is not open on this deployment"
+            reason={intake.reason}
+          >
+            <p>{intake.message}</p>
+            <p>
+              No intake record was built or read for this render, and this page submits
+              nothing. This deployment injects no catalog store and collects no rights,
+              provenance, or AI-disclosure declaration, so the seam refuses rather than
+              inventing either. Listing would still require screening, curation, and an
+              explicit human approval.
+            </p>
+          </StatePanel>
+        )}
+      </div>
       <EditorShell
         view={view}
         scene={render.value.mountable}

@@ -24,6 +24,20 @@ export {
   type FamilyLinks,
   type UmbrellaEditorAccess,
 } from "./lib/site-config.js";
+export {
+  UMBRELLA_CATALOG_INTAKE_ACTION,
+  buildUmbrellaCatalogIntakeView,
+  readUmbrellaCatalogIntakePanel,
+  submitUmbrellaEditorToCatalog,
+  umbrellaCatalogIntake,
+  umbrellaCatalogIntakeKey,
+  umbrellaEditorStateFields,
+  umbrellaEditorStateFromFields,
+  type UmbrellaCatalogIntakeInjection,
+  type UmbrellaCatalogIntakePanel,
+  type UmbrellaCatalogIntakeRecordView,
+  type UmbrellaCatalogIntakeView,
+} from "./lib/catalog-submission.js";
 
 export { EDITOR_VIEWPORT_COPY } from "./lib/editor-viewport.js";
 

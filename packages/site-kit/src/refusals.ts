@@ -93,6 +93,28 @@ export const SITE_REFUSALS = Object.freeze({
     "The selected payment method is not offered by this committed catalog listing.",
   CATALOG_PRICE_UNAVAILABLE: "The listing carries neither a credit price nor a money price.",
   CATALOG_ITEM_NOT_FOUND: "No listed catalog item matches the requested id.",
+  CATALOG_SUBMISSION_ENTITLEMENT_REQUIRED:
+    "Catalog intake requires a real entitled editor request; preview access cannot submit.",
+  CATALOG_SUBMISSION_SURFACE_UNSUPPORTED:
+    "The editor profile does not map to a supported non-Kids catalog surface.",
+  CATALOG_SUBMISSION_REQUEST_INVALID:
+    "The catalog intake request is missing its bounded idempotency evidence.",
+  CATALOG_SUBMISSION_DIGEST_INVALID:
+    "The editor document or artifact digest is malformed, so no intake record was written.",
+  CATALOG_SUBMISSION_METADATA_INVALID:
+    "Required rights, provenance, AI-disclosure, or compatibility metadata is incomplete or malformed.",
+  CATALOG_SUBMISSION_RETRY_CONFLICT:
+    "This submitter's idempotency key, or the item id, was already used for different catalog intake evidence.",
+  CATALOG_SUBMISSION_PRINCIPAL_INVALID:
+    "The submitting principal is inconsistent or unusable as an idempotency scope, so nothing was written.",
+  CATALOG_INTAKE_STORAGE_UNAVAILABLE:
+    "The injected TEST catalog intake storage is unavailable, so nothing was written.",
+  CATALOG_PIPELINE_PROVIDER_FAILED:
+    "The injected TEST catalog pipeline provider failed or returned invalid evidence.",
+  CATALOG_PIPELINE_TRANSITION_INVALID:
+    "The requested catalog transition is not a valid next step with its required evidence.",
+  CATALOG_PIPELINE_READ_MODEL_INVALID:
+    "The injected catalog read model returned an invalid or digest-unbound record.",
 
   // --- editor deep link (see deep-link.ts) ---
   DEEP_LINK_SOURCE_UNKNOWN: "The deep-link source is not a known catalog surface.",
@@ -141,6 +163,8 @@ export const SITE_REFUSALS = Object.freeze({
   EDITOR_SESSION_DISPOSED: "The editor session has been disposed.",
   EDITOR_WORKSPACE_ESCAPE: "The document path escapes the session workspace root.",
   EDITOR_WORKSPACE_INVALID: "The session workspace root is not an absolute path.",
+  EDITOR_WORKSPACE_UNAVAILABLE:
+    "The ephemeral editor workspace could not be created or removed, so no session was rendered.",
 } as const);
 
 export type SiteRefusalReason = keyof typeof SITE_REFUSALS;

@@ -18,6 +18,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  contentHash,
   parseDocumentText,
   readTextFile,
   type MinimumE2SaveResult,
@@ -26,10 +27,11 @@ import {
   type SceneDocument,
 } from "@sceneaxi/authoring-core";
 import { mountableScene, type MountableScene } from "./mountable-scene.js";
-import { type SiteResult, ok } from "./refusals.js";
+import { type SiteResult, ok, refuse } from "./refusals.js";
 import { webEditorStarterArtifact } from "./starter-artifact.js";
 import {
   WEB_EDITOR_DOCUMENT_PATH,
+  WebEditorError,
   type WebEditorViewportFrame,
   createWebEditorSession,
 } from "./web-editor.js";
@@ -54,6 +56,10 @@ export type EditorRender = {
    */
   readonly mountable: MountableScene | null;
   readonly artifactId: string;
+  /** SHA-256 of the text-canonical document after this render's real save. */
+  readonly documentDigest: string;
+  /** Digest of the composed editor artifact; identical to the composition evidence. */
+  readonly artifactDigest: string;
   /**
    * The text-canonical document as it stood *before* this render's save, or
    * `null` when it could not be read back. The Changes panel reviews the real
@@ -68,8 +74,24 @@ export type EditorRender = {
  *
  * The workspace is created and removed inside this call: nothing persists between
  * requests, which is the honest shape until a storage decision exists.
+ *
+ * Total by contract: this reaches the filesystem and a live session, so a failed
+ * temporary-workspace creation or cleanup, or a session operation that throws,
+ * becomes that operation's own named refusal. Every caller renders a `SiteResult`
+ * — the entitled route, the storefront intake demonstration — and none of them may
+ * be handed an exception in place of a reason.
  */
 export function renderEditorState(state: EditorState): SiteResult<EditorRender> {
+  try {
+    return renderEditorSession(state);
+  } catch (error) {
+    return error instanceof WebEditorError
+      ? refuse(error.reason)
+      : refuse("EDITOR_WORKSPACE_UNAVAILABLE");
+  }
+}
+
+function renderEditorSession(state: EditorState): SiteResult<EditorRender> {
   const artifact = webEditorStarterArtifact();
   if (!artifact.ok) return artifact;
 
@@ -110,14 +132,42 @@ export function renderEditorState(state: EditorState): SiteResult<EditorRender> 
         baseDocument = null;
       }
 
+      const save = session.save();
+      if (!save.ok) {
+        return ok(
+          Object.freeze({
+            snapshot: session.snapshot(),
+            viewport: session.viewport(),
+            save,
+            composition,
+            mountable: composition.ok ? mountableScene(composition) : null,
+            artifactId: artifact.value.artifactId,
+            documentDigest: "",
+            artifactDigest: composition.ok ? composition.sceneDigest : "",
+            baseDocument,
+          }),
+        );
+      }
+      // An unreadable saved document yields no digest rather than an invented one,
+      // exactly like the `!save.ok` branch above; submission refuses on an empty digest.
+      let documentDigest = "";
+      try {
+        documentDigest = contentHash(
+          readTextFile(join(workspaceRoot, WEB_EDITOR_DOCUMENT_PATH)),
+        );
+      } catch {
+        documentDigest = "";
+      }
       return ok(
         Object.freeze({
           snapshot: session.snapshot(),
           viewport: session.viewport(),
-          save: session.save(),
+          save,
           composition,
           mountable: composition.ok ? mountableScene(composition) : null,
           artifactId: artifact.value.artifactId,
+          documentDigest,
+          artifactDigest: composition.ok ? composition.sceneDigest : "",
           baseDocument,
         }),
       );

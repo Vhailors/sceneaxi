@@ -228,6 +228,29 @@ export {
 } from "./catalog.js";
 
 export {
+  CATALOG_PIPELINE_MODE,
+  catalogSubmissionScopeKey,
+  catalogTestPipelineDemo,
+  createInMemoryCatalogTestPipelineProvider,
+  readCatalogPipelineItem,
+  submitEditorCatalogItem,
+  transitionTestCatalogItem,
+  type CatalogIntakeRecord,
+  type CatalogListedProjection,
+  type CatalogPipelineCommitInput,
+  type CatalogPipelineReadModel,
+  type CatalogPipelineTransitionResult,
+  type CatalogSubmissionIdempotency,
+  type CatalogSubmissionMetadata,
+  type CatalogSubmissionProfile,
+  type CatalogSubmissionReceipt,
+  type CatalogTestPipelineProvider,
+  type CatalogTransitionRefusal,
+  type EditorCatalogEvidence,
+  type SubmitEditorCatalogItemInput,
+} from "./catalog-pipeline.js";
+
+export {
   EDITOR_DEEP_LINK_PARAMS,
   EDITOR_DEEP_LINK_PATH,
   buildEditorDeepLink,
