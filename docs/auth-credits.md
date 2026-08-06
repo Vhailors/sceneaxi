@@ -157,13 +157,13 @@ has no admin, so nothing is admin. `requireRole`/`requireAuthenticated` stay exp
 callers that already hold the resolved identity; they check its provenance, so keeping
 them costs nothing at the boundary.
 
-The boundary is proven in `tests/e2e/runtime-provenance-refusal.test.ts`, which
-builds every impostor listed above for the admin identity, the principal, the verified
-webhook, and the verified completion, asserts the refusal by name, then asserts a genuine
-completion still grants exactly once and a redelivery still grants nothing.
-`VerifiedCreditPackRefund` is issued and checked through the same witness helper but is
-not yet in that impostor sweep; extend it with the refund value when next touching this
-boundary.
+The whole boundary is proven in `tests/e2e/runtime-provenance-refusal.test.ts`, which
+builds every impostor listed above for each value and asserts the refusal by name, then
+asserts a genuine completion still grants exactly once and a genuine refund still reverses
+exactly once, while a redelivery of either settles to the entry already committed. The
+refund impostors are pushed at both `applyCreditPackRefund` and the
+`persistCreditPackRefund` commit boundary, against a ledger holding the real anchored
+grant, so provenance is the only thing that can be refusing them.
 
 ### Issuance authority begins outside core
 

@@ -1,13 +1,15 @@
 /**
- * Runtime provenance for admin principals and verified checkout completions
+ * Runtime provenance for admin principals and verified Stripe evidence
  * (sceneaxi#126).
  *
- * Two values in the identity/credits plane mean "a trusted step produced me":
- * the `AdminIdentity` a deployment resolves from `SCENEAXI_ADMIN_EMAIL`, and the
- * `VerifiedCheckoutCompletion` parsed out of a signature-checked Stripe webhook.
- * Both had *structural* enforcement — right shape, right contents — plus a
- * type-level brand. Neither stops a JavaScript caller or an `as` cast, and both
- * of those reach the same exported functions inside the server process.
+ * Five values in the identity/credits plane mean "a trusted step produced me":
+ * the `AdminIdentity` a deployment resolves from `SCENEAXI_ADMIN_EMAIL`, the
+ * `Principal` an identity port issues, the `VerifiedWebhook` a signature check
+ * produces, and the `VerifiedCheckoutCompletion` and `VerifiedCreditPackRefund`
+ * parsed out of it. Each had *structural* enforcement — right shape, right
+ * contents — plus a type-level brand. Neither stops a JavaScript caller or an
+ * `as` cast, and both of those reach the same exported functions inside the
+ * server process.
  *
  * This suite is the executable statement of the closed boundary. It builds every
  * plausible impostor of each value — a hand-written literal, a spread, an
@@ -37,14 +39,20 @@ import {
   BILLING_REFUSE_REASONS,
   CHECKOUT_METADATA_KEYS,
   applyCheckoutCompletedGrant,
+  applyCreditPackRefund,
+  createInMemoryCreditStore,
   createLedgerState,
   hasVerifiedCompletionProvenance,
+  hasVerifiedRefundProvenance,
   hasVerifiedWebhookProvenance,
   parseCheckoutCompletedEvent,
+  parseCreditPackRefundEvent,
+  persistCreditPackRefund,
   settleFixtureListingMoneySale,
   signStripeWebhookPayload,
   verifyStripeWebhookSignature,
   type VerifiedCheckoutCompletion,
+  type VerifiedCreditPackRefund,
 } from "@sceneaxi/billing";
 import type {
   CheckoutSessionIntent,
@@ -208,11 +216,33 @@ const EVENT_BODY = JSON.stringify({
   },
 });
 
-const verifiedWebhook = () => {
+/** A charge fully refunding the purchase above, carrying the same intent metadata. */
+const REFUND_BODY = JSON.stringify({
+  id: "evt_provenance_refund",
+  type: "charge.refunded",
+  created: NOW_SECONDS,
+  livemode: false,
+  data: {
+    object: {
+      id: "ch_provenance",
+      refunded: true,
+      amount_refunded: INTENT.unitAmount,
+      currency: INTENT.currency,
+      metadata: {
+        [CHECKOUT_METADATA_KEYS.userId]: INTENT.userId,
+        [CHECKOUT_METADATA_KEYS.purpose]: INTENT.purpose,
+        [CHECKOUT_METADATA_KEYS.itemId]: INTENT.itemId,
+        [CHECKOUT_METADATA_KEYS.intentId]: INTENT.intentId,
+      },
+    },
+  },
+});
+
+const verifyBody = (payload: string) => {
   const result = verifyStripeWebhookSignature({
-    payload: EVENT_BODY,
+    payload,
     header: signStripeWebhookPayload({
-      payload: EVENT_BODY,
+      payload,
       secret: SECRET,
       timestamp: NOW_SECONDS,
     }),
@@ -222,6 +252,8 @@ const verifiedWebhook = () => {
   if (!result.ok) throw new Error(`verify fixture failed: ${result.message}`);
   return result.value;
 };
+
+const verifiedWebhook = () => verifyBody(EVENT_BODY);
 
 const verifiedCompletion = (): VerifiedCheckoutCompletion => {
   const parsed = parseCheckoutCompletedEvent({
@@ -233,7 +265,32 @@ const verifiedCompletion = (): VerifiedCheckoutCompletion => {
   return parsed.value;
 };
 
+const verifiedRefund = (): VerifiedCreditPackRefund => {
+  const parsed = parseCreditPackRefundEvent({
+    verified: verifyBody(REFUND_BODY),
+    intent: INTENT,
+  });
+  if (!parsed.ok) throw new Error(`refund fixture failed: ${parsed.message}`);
+  return parsed.value;
+};
+
 const emptyLedger = () => createLedgerState(ACCOUNT);
+
+/**
+ * The ledger as it stands after the genuine purchase settled, which is the only
+ * state a refund can be reconciled against. Building it from the real grant path
+ * keeps the intent anchor `applyCreditPackRefund` reads back genuine, so nothing
+ * but provenance can be what refuses the impostors below.
+ */
+const grantedLedger = () => {
+  const granted = applyCheckoutCompletedGrant({
+    state: emptyLedger(),
+    completion: verifiedCompletion(),
+    now: NOW,
+  });
+  if (!granted.ok) throw new Error(`grant fixture failed: ${granted.message}`);
+  return granted.value.state;
+};
 
 describe("admin identity provenance", () => {
   it("refuses a hand-built identity naming the attacker's own address", () => {
@@ -517,5 +574,111 @@ describe("verified checkout completion provenance", () => {
     expect(replay.value.replayed).toBe(true);
     expect(replay.value.state.entries).toHaveLength(1);
     expect(replay.value.state.balance).toBe(INTENT.credits);
+  });
+});
+
+describe("verified credit-pack refund provenance", () => {
+  it("refuses an `as`-cast refund at the adjustment path", () => {
+    // Structurally perfect, and it names a grant that really is in the ledger:
+    // only provenance stands between this object and a reversal nobody refunded.
+    const forged = {
+      schemaVersion: 1,
+      kind: "sceneaxi.credit-pack-refund",
+      eventId: "evt_forged_refund",
+      chargeId: "ch_forged",
+      intentId: INTENT.intentId,
+      userId: INTENT.userId,
+      itemId: INTENT.itemId,
+      mode: "test",
+      unitAmount: INTENT.unitAmount,
+      currency: INTENT.currency,
+      credits: INTENT.credits,
+      occurredAt: "2026-07-25T10:00:00Z",
+    } as unknown as VerifiedCreditPackRefund;
+
+    const adjusted = applyCreditPackRefund({
+      state: grantedLedger(),
+      refund: forged,
+      now: NOW + 1_000,
+    });
+    expect(adjusted.ok).toBe(false);
+    if (adjusted.ok) return;
+    expect(adjusted.reason).toBe(BILLING_REFUSE_REASONS.webhookNotVerified);
+  });
+
+  it("refuses every copy of a genuine refund", async () => {
+    const refund = verifiedRefund();
+    for (const [how, impostor] of copiesOf(refund)) {
+      expect(hasVerifiedRefundProvenance(impostor), how).toBe(false);
+
+      const adjusted = applyCreditPackRefund({
+        state: grantedLedger(),
+        refund: impostor,
+        now: NOW + 1_000,
+      });
+      expect(adjusted.ok, how).toBe(false);
+      if (adjusted.ok) continue;
+      expect(adjusted.reason, how).toBe(
+        BILLING_REFUSE_REASONS.webhookNotVerified,
+      );
+
+      // The commit boundary is the second consumer of the same evidence, and it
+      // is the one a webhook endpoint actually calls, so it has to refuse the
+      // same impostors before it can reach the store.
+      const persisted = await persistCreditPackRefund({
+        state: grantedLedger(),
+        refund: impostor,
+        now: NOW + 1_000,
+        store: createInMemoryCreditStore({ accounts: [ACCOUNT] }),
+      });
+      expect(persisted.ok, how).toBe(false);
+      if (persisted.ok) continue;
+      expect(persisted.reason, how).toBe(
+        BILLING_REFUSE_REASONS.webhookNotVerified,
+      );
+    }
+  });
+
+  it("refuses every copy of a genuine verified webhook at the refund parse step", () => {
+    for (const [how, impostor] of copiesOf(verifyBody(REFUND_BODY))) {
+      expect(hasVerifiedWebhookProvenance(impostor), how).toBe(false);
+      const parsed = parseCreditPackRefundEvent({
+        verified: impostor,
+        intent: INTENT,
+      });
+      expect(parsed.ok, how).toBe(false);
+      if (parsed.ok) continue;
+      expect(parsed.reason, how).toBe(
+        BILLING_REFUSE_REASONS.webhookNotVerified,
+      );
+    }
+  });
+
+  it("still reverses a genuine refund exactly once, and nothing on replay", () => {
+    const refund = verifiedRefund();
+    expect(hasVerifiedRefundProvenance(refund)).toBe(true);
+
+    const first = applyCreditPackRefund({
+      state: grantedLedger(),
+      refund,
+      now: NOW + 1_000,
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    expect(first.value.replayed).toBe(false);
+    expect(first.value.state.balance).toBe(0);
+
+    // A redelivered refund parses into a second genuine object, and must still
+    // settle to the one intent-scoped adjustment rather than reversing twice.
+    const replay = applyCreditPackRefund({
+      state: first.value.state,
+      refund: verifiedRefund(),
+      now: NOW + 2_000,
+    });
+    expect(replay.ok).toBe(true);
+    if (!replay.ok) return;
+    expect(replay.value.replayed).toBe(true);
+    expect(replay.value.state.entries).toHaveLength(2);
+    expect(replay.value.state.balance).toBe(0);
   });
 });
