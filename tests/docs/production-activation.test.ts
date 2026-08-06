@@ -43,7 +43,7 @@ describe("SA-OPS-1 production activation runbook", () => {
       new RegExp(`\\b${name}\\s*=\\s*Object\\.freeze\\(\\[([^\\]]*)\\]\\)`),
     );
     expect(match, `owner script no longer freezes a ${name} list`).toBeTruthy();
-    const entries = quotedIn((match as RegExpMatchArray)[1]);
+    const entries = quotedIn((match as RegExpMatchArray)[1] as string);
     expect(entries.length, `${name} parsed as empty`).toBeGreaterThan(0);
     return entries;
   };
@@ -54,7 +54,7 @@ describe("SA-OPS-1 production activation runbook", () => {
     );
     expect(match, `owner script no longer freezes a ${name} map`).toBeTruthy();
     const keys = [
-      ...(match as RegExpMatchArray)[1].matchAll(/^\s+([A-Z][A-Z0-9_]*):/gm),
+      ...((match as RegExpMatchArray)[1] as string).matchAll(/^\s+([A-Z][A-Z0-9_]*):/gm),
     ].map((entry) => entry[1]);
     expect(keys.length, `${name} parsed as empty`).toBeGreaterThan(0);
     return keys;
@@ -202,7 +202,7 @@ describe("SA-OPS-1 production activation runbook", () => {
       ...new Set([
         ...frozenList(macosDist, "requiredTools"),
         ...[...macosDist.matchAll(/for \(const tool of \[([^\]]*)\]\)/g)].flatMap((match) =>
-          quotedIn(match[1]),
+          quotedIn(match[1] as string),
         ),
       ]),
     ];
@@ -308,7 +308,7 @@ describe("SA-OPS-1 production activation runbook", () => {
 
     const listed = readiness.match(/Vercel lists ([^*]*?) as encrypted Production variable/);
     expect(listed, "readiness record no longer lists observed variable names").toBeTruthy();
-    const observedNames = identifiersIn((listed as RegExpMatchArray)[1]);
+    const observedNames = identifiersIn((listed as RegExpMatchArray)[1] as string);
     expect(observedNames.length).toBeGreaterThanOrEqual(5);
     for (const name of observedNames) {
       const row = rowOf(inventory, `\`${name}\``);
