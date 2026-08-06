@@ -184,9 +184,22 @@ describe("the isolated Kids site", () => {
     // `next.config.ts` cannot import this module — Next's config transpiler does not
     // resolve a relative `.ts` — so it selects the same two lists by name instead.
     const config = readFileSync(new URL("sites/kids/next.config.ts", ROOT), "utf8");
-    expect(config).toContain(`phase === "${site.KIDS_DEVELOPMENT_SERVER_PHASE}"`);
-    expect(config).toContain("securityPolicy.developmentServerHeaders");
-    expect(config).toContain("securityPolicy.headers");
+    const selection =
+      /phase === "([a-z-]+)"\s*\?\s*securityPolicy\.(\w+)\s*:\s*securityPolicy\.(\w+)/.exec(config);
+
+    // Which list each branch holds, not merely that both are named: swapping them
+    // would bake the development policy into the deployed origin. A restructured
+    // selection fails here too, because the direction must be re-pinned deliberately.
+    expect(selection, "next.config.ts must select headers by phase in one ternary").not.toBeNull();
+    expect([selection?.[1], selection?.[2], selection?.[3]]).toEqual([
+      site.KIDS_DEVELOPMENT_SERVER_PHASE,
+      "developmentServerHeaders",
+      "headers",
+    ]);
+    expect(config.match(/securityPolicy\.\w+/g)).toEqual([
+      "securityPolicy.developmentServerHeaders",
+      "securityPolicy.headers",
+    ]);
     expect(config).not.toMatch(/connect-src|unsafe-eval/);
   });
 
