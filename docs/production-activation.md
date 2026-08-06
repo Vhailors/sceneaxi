@@ -68,11 +68,20 @@ and hashes may be recorded; credentials may not.
 
 ### Web identity, Neon, and Stripe TEST
 
-Every **Current recorded state** cell below restates the dated external observation owned by
+Two kinds of fact share the **Current recorded state** column below, and they are not
+interchangeable. The `BETTER_AUTH_ORIGIN`, Neon project identity, Stripe TEST endpoint, and
+encrypted Vercel variable-name cells restate the dated external observation owned by
 [`websites-deploy.md#verified-test-readiness`](websites-deploy.md#verified-test-readiness),
-last re-observed 2026-08-01. Re-observe there first: that record is the owner, this column is
-the operator's at-a-glance copy of it, and the two must move in the same change.
+last re-observed 2026-08-01. Re-observe there first: that record is the owner, those cells are
+the operator's at-a-glance copy of it, the two must move in the same change, and
 `tests/docs/production-activation.test.ts` fails if they drift.
+
+The remaining cells are not part of that dated observation. `SCENEAXI_ADMIN_EMAIL` records
+captain-held configuration policy, while the cells for Neon-backed provider handles and TEST
+checkout/evidence adapters state what this repository's own source and tests establish
+together with what production has not evidenced. None of the three is an external
+observation, none is held in lockstep by that test, and none may be read as a deployment
+claim; the deployment owner still proves each of them through the close-out column.
 
 | Input or evidence | Exact target | Current recorded state | Owner and required close-out |
 |---|---|---|---|
@@ -209,7 +218,7 @@ Do not start activation until every applicable item is checked with real evidenc
 - [ ] Confirm all three `DATABASE_URL` entries target Neon project `sceneaxi-prod`
   (`misty-king-68383952`), `aws-us-east-2`, database `neondb`, without recording the
   connection string.
-- [ ] Apply and verify migrations `0001`–`0004` in order under a separately authorized
+- [ ] Apply and verify every migration in `db/migrations`, in order, under a separately authorized
   database action. Prove append-only ledger and Connect triggers, uniqueness, and the
   checkout-intent price immutability rule. Do not create a credit account by hand.
 - [ ] In Stripe TEST, prove the endpoint is `livemode: false` and subscribed to both

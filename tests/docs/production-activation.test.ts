@@ -392,7 +392,9 @@ describe("SA-OPS-1 production activation runbook", () => {
       "deployment owner no longer groups activation as unnumbered mechanics",
     ).toBeGreaterThan(-1);
 
-    const stepCitations = [...deploy.matchAll(/.*\bsteps? \d+.*/gi)].map(
+    const prose = deploy.replace(/^```[\s\S]*?^```/gm, "");
+
+    const stepCitations = [...prose.matchAll(/.*\bsteps? \d+.*/gi)].map(
       (match) => match[0].trim(),
     );
     expect(
@@ -400,7 +402,6 @@ describe("SA-OPS-1 production activation runbook", () => {
       "the deployment owner cites an activation step number; the runbook owns the ordering, so link the mechanics anchor instead",
     ).toEqual([]);
 
-    const prose = deploy.replace(/^```[\s\S]*?^```/gm, "");
     const orderedListItems = [...prose.matchAll(/^ *\d+\. .*/gm)].map((match) =>
       (match[0] as string).trim(),
     );
@@ -471,6 +472,36 @@ describe("SA-OPS-1 production activation runbook", () => {
     const inventory = sectionOf("Web identity, Neon, and Stripe TEST");
     const normalizedInventory = inventory.replace(/\s+/g, " ");
     expect(inventory).toContain("websites-deploy.md#verified-test-readiness");
+
+    const tableStart = inventory.indexOf("\n| Input or evidence");
+    expect(tableStart, "runbook inventory no longer leads with its table").toBeGreaterThan(-1);
+    const preambleParagraphs = inventory
+      .slice(0, tableStart)
+      .split(/\n\s*\n/)
+      .map((paragraph) => paragraph.replace(/\s+/g, " ").trim())
+      .filter((paragraph) => paragraph.length > 0);
+    expect(
+      preambleParagraphs,
+      "runbook inventory no longer separates externally observed cells from locally asserted ones",
+    ).toHaveLength(2);
+    const [observedPreamble, localPreamble] = preambleParagraphs as [string, string];
+    expect(observedPreamble).toContain("websites-deploy.md#verified-test-readiness");
+    expect(localPreamble).not.toContain("websites-deploy.md#verified-test-readiness");
+    for (const label of [
+      "`SCENEAXI_ADMIN_EMAIL`",
+      "Neon-backed provider handles",
+      "TEST checkout/evidence adapters",
+    ]) {
+      rowOf(inventory, label);
+      expect(
+        observedPreamble,
+        `the readiness record does not observe ${label}; the runbook claims the owner's observation covers it`,
+      ).not.toContain(label);
+      expect(
+        localPreamble,
+        `runbook no longer states that ${label} is asserted locally rather than externally observed`,
+      ).toContain(label);
+    }
 
     const observedOn = readiness.match(/repeated on (\d{4}-\d{2}-\d{2})/);
     expect(observedOn, "readiness record no longer dates its observation").toBeTruthy();
