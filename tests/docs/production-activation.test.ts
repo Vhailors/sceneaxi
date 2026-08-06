@@ -1,12 +1,39 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const read = (path: string) =>
-  readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
+const locate = (path: string) => new URL(`../../${path}`, import.meta.url);
+const read = (path: string) => readFileSync(locate(path), "utf8");
+const list = (dir: string) => readdirSync(locate(dir)).sort();
+const readAll = (dir: string, extensions: readonly string[]) =>
+  list(dir)
+    .filter((entry) => extensions.some((extension) => entry.endsWith(extension)))
+    .map((entry) => read(`${dir}/${entry}`))
+    .join("\n");
 
 describe("SA-OPS-1 production activation runbook", () => {
   const runbook = read("docs/production-activation.md");
   const normalizedRunbook = runbook.replace(/\s+/g, " ");
+
+  const sectionOf = (heading: string) => {
+    const marker = `### ${heading}`;
+    const start = runbook.indexOf(marker);
+    expect(start, `runbook is missing section "${heading}"`).toBeGreaterThan(-1);
+    const body = runbook.slice(start + marker.length);
+    const next = body.search(/\n#{2,3} /);
+    return next === -1 ? body : body.slice(0, next);
+  };
+
+  const rowOf = (section: string, label: string) => {
+    const row = section.split("\n").find((line) => line.startsWith(`| ${label} |`));
+    expect(row, `section is missing the "${label}" row`).toBeTruthy();
+    return row as string;
+  };
+
+  const identifiersIn = (source: string) => [
+    ...new Set(
+      [...source.matchAll(/`([A-Z][A-Z0-9_]*)(?::<[a-z]+>)?`/g)].map((match) => match[1]),
+    ),
+  ];
 
   it("holds the explicit authorization boundary and complete operator phases", () => {
     expect(runbook).toContain("RUNBOOK ONLY — NO PRODUCTION ACTION IS AUTHORIZED");
@@ -99,6 +126,100 @@ describe("SA-OPS-1 production activation runbook", () => {
     ]) {
       expect(normalizedRunbook).toContain(held);
     }
+  });
+
+  it("keeps the desktop signing inputs in lockstep with their platform owners", () => {
+    const desktop = sectionOf("Desktop signing and notarization inputs");
+    const macosOwner = `${read("docs/desktop-macos.md")}\n${readAll("desktop/macos/scripts", [".mjs", ".mts"])}`;
+    const windowsOwner = `${read("docs/desktop-windows.md")}\n${readAll("desktop/windows/scripts", [".mjs", ".mts"])}`;
+
+    const macosIdentifiers = identifiersIn(rowOf(desktop, "macOS"));
+    const windowsIdentifiers = identifiersIn(rowOf(desktop, "Windows"));
+    expect(macosIdentifiers.length).toBeGreaterThanOrEqual(14);
+    expect(windowsIdentifiers.length).toBeGreaterThanOrEqual(7);
+
+    for (const identifier of macosIdentifiers) {
+      expect(macosOwner, `macOS owner no longer defines \`${identifier}\``).toContain(
+        identifier,
+      );
+    }
+    for (const identifier of windowsIdentifiers) {
+      expect(windowsOwner, `Windows owner no longer defines \`${identifier}\``).toContain(
+        identifier,
+      );
+    }
+
+    for (const tool of [
+      "codesign",
+      "hdiutil",
+      "security",
+      "spctl",
+      "xcrun",
+      "notarytool",
+      "stapler",
+    ]) {
+      expect(desktop).toContain(`\`${tool}\``);
+      expect(macosOwner, `macOS owner no longer requires ${tool}`).toContain(tool);
+    }
+    for (const tool of ["signtool.exe", "gh.exe"]) {
+      expect(desktop).toContain(`\`${tool}\``);
+      expect(windowsOwner, `Windows owner no longer requires ${tool}`).toContain(tool);
+    }
+  });
+
+  it("keeps the web activation facts in lockstep with the deployment owner", () => {
+    const deploy = read("docs/websites-deploy.md");
+
+    const neonRow = rowOf(sectionOf("Web identity, Neon, and Stripe TEST"), "Neon project identifiers");
+    const neonIdentifiers = [
+      ...new Set([...neonRow.matchAll(/`([a-z0-9][a-z0-9-]*)`/g)].map((match) => match[1])),
+    ];
+    expect(neonIdentifiers).toEqual(
+      expect.arrayContaining([
+        "sceneaxi-prod",
+        "misty-king-68383952",
+        "aws-us-east-2",
+        "neondb",
+      ]),
+    );
+    for (const identifier of neonIdentifiers) {
+      expect(deploy, `deployment owner no longer records \`${identifier}\``).toContain(
+        identifier,
+      );
+    }
+
+    const projectRows = sectionOf("Vercel projects, aliases, and build-time origins")
+      .split("\n")
+      .filter((line) => line.startsWith("| `sceneaxi-"));
+    expect(projectRows).toHaveLength(3);
+    for (const row of projectRows) {
+      const cells = [...row.matchAll(/`([^`]+)`/g)].map((match) => match[1]);
+      expect(cells).toHaveLength(3);
+      for (const cell of cells) {
+        expect(deploy, `deployment owner no longer records \`${cell}\``).toContain(cell);
+      }
+    }
+
+    const aliases = [
+      ...new Set(
+        [...runbook.matchAll(/https:\/\/sceneaxi-[a-z-]+\.vercel\.app/g)].map(
+          (match) => match[0],
+        ),
+      ),
+    ];
+    expect(aliases).toHaveLength(3);
+    for (const alias of aliases) {
+      expect(deploy, `deployment owner no longer records ${alias}`).toContain(alias);
+    }
+
+    const webhookEndpoint = "https://sceneaxi-umbrella.vercel.app/api/stripe/webhook";
+    expect(runbook).toContain(webhookEndpoint);
+    expect(deploy).toContain(webhookEndpoint);
+
+    const migrations = list("db/migrations").filter((entry) => entry.endsWith(".sql"));
+    expect(migrations.length).toBeGreaterThan(1);
+    expect(runbook).toContain(`db/migrations/${migrations[0]}`);
+    expect(runbook).toContain(migrations[migrations.length - 1]);
   });
 
   it("is linked from every narrower operations owner", () => {

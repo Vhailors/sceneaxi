@@ -121,7 +121,10 @@ extend `tests/boundary/injected-site-violations.test.ts` when you extend any of 
 `sites/*/src/app/**` may import React or Next; `src/index.ts` and `src/lib/**` stay pure
 TypeScript so the hermetic build type-checks them, and site seam tests live in
 `tests/sites/`. Deploy, the exact env var list, and the identity-plane activation steps are
-in `docs/websites-deploy.md`. The public engine SDK download is a deterministic zip plus
+in `docs/websites-deploy.md`, while the cross-surface operator control plane — the
+authorization gate, ordered preflight/activation/verification/rollback procedure, and
+evidence checklist that never authorizes an action by itself — is
+`docs/production-activation.md`. The public engine SDK download is a deterministic zip plus
 SHA-256 (`pnpm build:sdk`, ADR 0019), never an npm publish, and it must never contain
 Kids. Web editor entitlement (credits, or the unused 100-credit starter allotment; admin
 unrestricted) is ADR 0020 and does not widen ADR 0003's general-E2 bound. Identity,
