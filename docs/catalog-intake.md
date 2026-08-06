@@ -35,6 +35,14 @@ requires a structurally valid `HumanCurationVerdict` whose decision is
 The in-memory provider uses expected state plus expected history length as its
 atomic compare point, so concurrent or conflicting retries refuse.
 
+Every provider answer is re-validated before it becomes an authoritative result:
+the submit echo, the read record, and the committed record all pass
+`validateCatalogItem()` and both digest bindings again, and the commit must hand
+back exactly the transition that was staged. Record identity is structural
+rather than textual, so a provider that rebuilds the same record with a
+different property order is the same record and neither refuses nor turns an
+identical retry into a conflict.
+
 `readCatalogPipelineItem()` validates the stored Catalog Item and rechecks both
 digest bindings before projecting anything. It reports the honest pipeline state
 at every stage, but its `listing` field is `null` until the validated state is

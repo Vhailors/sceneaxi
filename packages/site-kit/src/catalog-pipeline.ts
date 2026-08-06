@@ -139,8 +139,28 @@ const isSupportedSurface = (surface: string): surface is CatalogSurface =>
 
 const nonEmpty = (value: string): boolean => value.trim().length > 0;
 
+/**
+ * Structural, property-order-insensitive identity for one intake record.
+ *
+ * A provider that round-trips a record through persistence may rebuild it with a
+ * different key order; that is the same record, so the echo check and the retry
+ * discriminator both compare canonical bytes rather than raw `JSON.stringify`.
+ */
+function canonicalValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalValue);
+  if (value === null || typeof value !== "object") return value;
+  const record = value as Record<string, unknown>;
+  return Object.fromEntries(
+    Object.keys(record)
+      .sort()
+      .flatMap((key) =>
+        record[key] === undefined ? [] : [[key, canonicalValue(record[key])] as const],
+      ),
+  );
+}
+
 function recordFingerprint(record: CatalogIntakeRecord): string {
-  return JSON.stringify(record);
+  return JSON.stringify(canonicalValue(record));
 }
 
 function validRecord(record: CatalogIntakeRecord): boolean {
@@ -285,12 +305,20 @@ export async function transitionTestCatalogItem(input: {
       ...current,
       item: transitioned.item,
     });
-    return input.provider.commitTransition({
+    const committed = await input.provider.commitTransition({
       itemId: current.item.itemId,
       expectedState: current.item.moderation.pipelineState,
       expectedHistoryLength: current.item.moderation.history.length,
       next,
     });
+    if (!committed.ok) return committed;
+    if (
+      !validRecord(committed.value) ||
+      recordFingerprint(committed.value) !== recordFingerprint(next)
+    ) {
+      return refuse("CATALOG_PIPELINE_PROVIDER_FAILED");
+    }
+    return committed;
   } catch {
     return refuse("CATALOG_PIPELINE_PROVIDER_FAILED");
   }

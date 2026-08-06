@@ -10,6 +10,7 @@ import {
   renderEditorState,
   submitEditorCatalogItem,
   transitionTestCatalogItem,
+  type CatalogIntakeRecord,
   type CatalogSubmissionMetadata,
   type CatalogTestPipelineProvider,
   type EditorRender,
@@ -394,6 +395,103 @@ describe("editor catalog intake", () => {
       ok: true,
       value: { pipelineState: "intake", history: [] },
     });
+  });
+
+  it("refuses by name when the commit boundary throws instead of refusing", async () => {
+    const backing = createInMemoryCatalogTestPipelineProvider();
+    expect((await submit(backing)).ok).toBe(true);
+    const throwingCommit: CatalogTestPipelineProvider = {
+      mode: "test",
+      submit: (input) => backing.submit(input),
+      read: (itemId) => backing.read(itemId),
+      async commitTransition() {
+        throw new Error("commit boundary unavailable");
+      },
+    };
+    expect(
+      await transitionTestCatalogItem({
+        provider: throwingCommit,
+        itemId: "web-editor-submission-218",
+        to: "screening",
+        reason: "TEST screening complete.",
+        at: NOW,
+      }),
+    ).toMatchObject({ ok: false, reason: "CATALOG_PIPELINE_PROVIDER_FAILED" });
+    expect(
+      await readCatalogPipelineItem({ provider: backing, itemId: "web-editor-submission-218" }),
+    ).toMatchObject({ ok: true, value: { pipelineState: "intake", history: [] } });
+  });
+
+  it("refuses a commit that returns anything but the transition it was asked to commit", async () => {
+    const backing = createInMemoryCatalogTestPipelineProvider();
+    expect((await submit(backing)).ok).toBe(true);
+    const driftingCommit: CatalogTestPipelineProvider = {
+      mode: "test",
+      submit: (input) => backing.submit(input),
+      read: (itemId) => backing.read(itemId),
+      async commitTransition(input) {
+        const committed = await backing.commitTransition(input);
+        return committed.ok
+          ? ok({ ...committed.value, documentDigest: `sha256:${"f".repeat(64)}` })
+          : committed;
+      },
+    };
+    expect(
+      await transitionTestCatalogItem({
+        provider: driftingCommit,
+        itemId: "web-editor-submission-218",
+        to: "screening",
+        reason: "TEST screening complete.",
+        at: NOW,
+      }),
+    ).toMatchObject({ ok: false, reason: "CATALOG_PIPELINE_PROVIDER_FAILED" });
+  });
+
+  it("accepts a provider that rebuilds the same record with a different key order", async () => {
+    const reorder = (value: unknown): unknown => {
+      if (Array.isArray(value)) return value.map(reorder);
+      if (value === null || typeof value !== "object") return value;
+      return Object.fromEntries(
+        Object.entries(value as Record<string, unknown>)
+          .reverse()
+          .map(([key, inner]) => [key, reorder(inner)]),
+      );
+    };
+    const backing = createInMemoryCatalogTestPipelineProvider();
+    const roundTripping: CatalogTestPipelineProvider = {
+      mode: "test",
+      async submit(input) {
+        const result = await backing.submit(input);
+        return result.ok
+          ? ok({
+              ...result.value,
+              record: reorder(result.value.record) as CatalogIntakeRecord,
+            })
+          : result;
+      },
+      async read(itemId) {
+        const found = await backing.read(itemId);
+        return found.ok && found.value !== null
+          ? ok(reorder(found.value) as CatalogIntakeRecord)
+          : found;
+      },
+      async commitTransition(input) {
+        const committed = await backing.commitTransition(input);
+        return committed.ok ? ok(reorder(committed.value) as CatalogIntakeRecord) : committed;
+      },
+    };
+
+    expect(await submit(roundTripping)).toMatchObject({ ok: true, value: { replayed: false } });
+    expect(await submit(roundTripping)).toMatchObject({ ok: true, value: { replayed: true } });
+    expect(
+      await transitionTestCatalogItem({
+        provider: roundTripping,
+        itemId: "web-editor-submission-218",
+        to: "screening",
+        reason: "TEST screening complete.",
+        at: NOW,
+      }),
+    ).toMatchObject({ ok: true, value: { item: { moderation: { pipelineState: "screening" } } } });
   });
 
   it("keeps the lower-level seam typed and provider-injected", async () => {

@@ -131,9 +131,16 @@ export function renderEditorState(state: EditorState): SiteResult<EditorRender> 
           }),
         );
       }
-      const documentDigest = contentHash(
-        readTextFile(join(workspaceRoot, WEB_EDITOR_DOCUMENT_PATH)),
-      );
+      // An unreadable saved document yields no digest rather than an invented one,
+      // exactly like the `!save.ok` branch above; submission refuses on an empty digest.
+      let documentDigest = "";
+      try {
+        documentDigest = contentHash(
+          readTextFile(join(workspaceRoot, WEB_EDITOR_DOCUMENT_PATH)),
+        );
+      } catch {
+        documentDigest = "";
+      }
       return ok(
         Object.freeze({
           snapshot: session.snapshot(),
