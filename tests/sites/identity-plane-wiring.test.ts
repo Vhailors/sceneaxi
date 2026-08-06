@@ -734,11 +734,13 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       // The commit boundary's own refusals: a failure it names is this deployment's
       // store or this module's request, never anything the inbound bytes decided.
       "CREDIT_REQUEST_INVALID",
+      "STRIPE_CHECKOUT_INTENT_INVALID",
       "STRIPE_WEBHOOK_SECRET_MISSING",
       "CREDIT_CLOCK_INVALID",
       "CREDIT_LEDGER_STATE_INVALID",
       "CREDIT_LEDGER_ORDER_INVALID",
       "CREDIT_ENTRY_INVALID",
+      "CREDIT_BALANCE_INSUFFICIENT",
       // The bundled credit-pack archive is this deployment's own artifact, and the
       // grant path loads it, so an invalid one is never a bad request from Stripe.
       BILLING_REFUSE_REASONS.catalogInvalid,
@@ -921,34 +923,56 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     expect(store.entryCount("acct-1")).toBe(0);
   });
 
-  it("acknowledges a TEST refund event without rewriting or deleting ledger history", async () => {
-    // SA-PAY-1 does not invent refund issuance authority. Returning money and
-    // reconciling credits are separate operations: the latter needs provider evidence,
-    // the original paid intent, and a new append-only adjustment. Until that workflow is
-    // approved, a refund event is an explicitly unsupported event type and cannot touch
-    // the original grant or append a guessed debit.
+  it("reconciles a verified full TEST refund as one idempotent append-only adjustment", async () => {
     const store = webhookStore();
-    const outcome = await signedCall({
-      payload: eventBody("evt_test_refund", {
-        type: "charge.refunded",
-        sessionId: "ch_test_refunded_charge",
-        metadata: {
-          sceneaxiUserId: "member-1",
-          sceneaxiPurpose: "credit-pack",
-          sceneaxiItemId: PACK.packId,
-          sceneaxiIntentId: INTENT.intentId,
-        },
-      }),
-      store,
-      evidence: unreachableEvidence,
-    });
+    const granted = await signedCall({ payload: eventBody("evt_test_refund_grant"), store });
+    expect(granted).toMatchObject({ ok: true, ignored: false, balance: PACK.credits });
 
+    const payload = JSON.stringify({
+      id: "evt_test_refund",
+      type: "charge.refunded",
+      created: Math.floor(NOW / 1000),
+      livemode: false,
+      data: {
+        object: {
+          id: "ch_test_refunded_charge",
+          refunded: true,
+          amount_refunded: PACK.unitAmount,
+          currency: PACK.currency,
+          metadata: {
+            sceneaxiUserId: "member-1",
+            sceneaxiPurpose: "credit-pack",
+            sceneaxiItemId: PACK.packId,
+            sceneaxiIntentId: INTENT.intentId,
+          },
+        },
+      },
+    });
+    const refundEvidence: WebhookEvidence = Object.freeze({
+      findIntent(intentId: string) {
+        return intentId === INTENT.intentId ? INTENT : undefined;
+      },
+      retrieveSettlement(): never {
+        throw new Error("a refund must not invent or re-read checkout settlement");
+      },
+    });
+    const outcome = await signedCall({
+      payload,
+      store,
+      evidence: refundEvidence,
+    });
     expect(outcome).toMatchObject({
       ok: true,
-      ignored: true,
-      reason: BILLING_REFUSE_REASONS.webhookEventTypeUnsupported,
+      ignored: false,
+      replayed: false,
+      credits: PACK.credits,
+      balance: 0,
     });
-    expect(store.entryCount("acct-1")).toBe(0);
+    expect(store.entryCount("acct-1")).toBe(2);
+
+    const replay = await signedCall({ payload, store, evidence: refundEvidence });
+    expect(replay).toMatchObject({ ok: true, ignored: false, replayed: true, balance: 0 });
+    expect(store.entryCount("acct-1")).toBe(2);
   });
 
   it("still refuses a signed body that carries no event type", async () => {

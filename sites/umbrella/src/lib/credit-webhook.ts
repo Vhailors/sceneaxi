@@ -55,7 +55,9 @@ import {
   checkoutPurposeGrantsCredits,
   checkoutPurposeSettlesElsewhere,
   loadLedgerState,
+  parseCreditPackRefundEvent,
   parseCheckoutCompletedEvent,
+  persistCreditPackRefund,
   persistCheckoutCompletedGrant,
   verifyStripeWebhookSignature,
   type CheckoutSettlement,
@@ -186,6 +188,7 @@ const SERVER_SIDE_REASONS: ReadonlySet<string> = Object.freeze(
     CREDIT_WEBHOOK_REASONS.storeFailed,
     CREDIT_WEBHOOK_REASONS.planeNotWired,
     BILLING_REFUSE_REASONS.requestInvalid,
+    BILLING_REFUSE_REASONS.checkoutIntentInvalid,
     BILLING_REFUSE_REASONS.webhookSecretMissing,
     BILLING_REFUSE_REASONS.settlementSessionMismatch,
     BILLING_REFUSE_REASONS.clockInvalid,
@@ -193,6 +196,7 @@ const SERVER_SIDE_REASONS: ReadonlySet<string> = Object.freeze(
     BILLING_REFUSE_REASONS.ledgerStateInvalid,
     BILLING_REFUSE_REASONS.ledgerOrderInvalid,
     BILLING_REFUSE_REASONS.entryInvalid,
+    BILLING_REFUSE_REASONS.balanceInsufficient,
     BILLING_REFUSE_REASONS.catalogInvalid,
     BILLING_REFUSE_REASONS.catalogRevisionUnresolvable,
     BILLING_REFUSE_REASONS.catalogRevisionCreditsMismatch,
@@ -273,6 +277,7 @@ const asId = (value: unknown): string | undefined =>
  */
 type CheckoutLookup =
   | { readonly kind: "keys"; readonly intentId: string; readonly sessionId: string }
+  | { readonly kind: "refund"; readonly intentId: string }
   | { readonly kind: "unhandledType"; readonly eventType: string }
   | { readonly kind: "unhandledPurpose"; readonly purpose: string }
   | { readonly kind: "incomplete" }
@@ -281,6 +286,7 @@ type CheckoutLookup =
 
 /** The one event type that can carry a completed checkout this path grants credits for. */
 const HANDLED_EVENT_TYPE = "checkout.session.completed" as const;
+const HANDLED_REFUND_EVENT_TYPE = "charge.refunded" as const;
 
 const unreadable = (detail: string): CheckoutLookup =>
   Object.freeze({ kind: "unreadable" as const, detail });
@@ -334,14 +340,14 @@ function lookupKeysOf(payload: string): CheckoutLookup {
       "The verified event carries no type, so which path owes it work cannot be decided; Stripe does not send such a body.",
     );
   }
-  if (eventType !== HANDLED_EVENT_TYPE) {
+  if (eventType !== HANDLED_EVENT_TYPE && eventType !== HANDLED_REFUND_EVENT_TYPE) {
     return Object.freeze({ kind: "unhandledType" as const, eventType });
   }
   const object = asRecord(asRecord(event["data"])?.["object"]);
   const metadata = asRecord(object?.["metadata"]);
   const sessionId = asId(object?.["id"]);
   const intentId = asId(metadata?.[CHECKOUT_METADATA_KEYS.intentId]);
-  if (sessionId === undefined || intentId === undefined) {
+  if (intentId === undefined || (eventType === HANDLED_EVENT_TYPE && sessionId === undefined)) {
     return Object.freeze({
       kind: claimsSceneAxiCheckout(metadata) ? ("incomplete" as const) : ("unrelated" as const),
     });
@@ -349,6 +355,12 @@ function lookupKeysOf(payload: string): CheckoutLookup {
   const purpose = metadata?.[CHECKOUT_METADATA_KEYS.purpose];
   if (typeof purpose === "string" && checkoutPurposeSettlesElsewhere(purpose)) {
     return Object.freeze({ kind: "unhandledPurpose" as const, purpose });
+  }
+  if (eventType === HANDLED_REFUND_EVENT_TYPE) {
+    return Object.freeze({ kind: "refund" as const, intentId });
+  }
+  if (sessionId === undefined) {
+    return Object.freeze({ kind: "incomplete" as const });
   }
   return Object.freeze({ kind: "keys" as const, intentId, sessionId });
 }
@@ -408,6 +420,74 @@ export async function applyCreditPackWebhook(input: {
       CREDIT_WEBHOOK_REASONS.eventUnrelated,
       "The verified event carries no SceneAxi checkout metadata, so it is not a checkout this deployment created. Nothing was granted, and redelivery would not change that.",
     );
+  }
+  if (lookup.kind === "refund") {
+    const readIntent = await attempt(() => input.evidence.findIntent(lookup.intentId));
+    if (!readIntent.ok) {
+      return refused(
+        CREDIT_WEBHOOK_REASONS.evidenceUnavailable,
+        "The persisted intent for this refund could not be read, so no credit adjustment is attempted.",
+      );
+    }
+    if (readIntent.value === undefined) {
+      return refused(
+        CREDIT_WEBHOOK_REASONS.evidenceMissing,
+        "The persisted intent for this refund is missing, so no credit adjustment is attempted.",
+      );
+    }
+    const refund = parseCreditPackRefundEvent({
+      verified: verified.value,
+      intent: readIntent.value,
+    });
+    if (!refund.ok) return settle(refund.reason, refund.message);
+
+    const found = await attempt(() => input.store.findAccountByUserId(refund.value.userId));
+    if (!found.ok) {
+      return refused(
+        CREDIT_WEBHOOK_REASONS.storeFailed,
+        "The refunded user's credit account could not be read, so the adjustment must be retried.",
+      );
+    }
+    if (found.value === undefined) {
+      return refused(
+        CREDIT_WEBHOOK_REASONS.ledgerUnavailable,
+        "The refunded user has no credit account; a refund never creates one.",
+      );
+    }
+    const account = found.value;
+    const entries = await attempt(() => input.store.listEntries(account.accountId));
+    if (!entries.ok) {
+      return refused(
+        CREDIT_WEBHOOK_REASONS.storeFailed,
+        "The refunded user's ledger could not be read, so no adjustment is attempted.",
+      );
+    }
+    const state = loadLedgerState(account, entries.value);
+    if (!state.ok) return refused(state.reason, state.message);
+    const committed = await attempt(() =>
+      persistCreditPackRefund({
+        store: input.store,
+        state: state.value,
+        refund: refund.value,
+        now: input.now,
+      }),
+    );
+    if (!committed.ok) {
+      return refused(
+        CREDIT_WEBHOOK_REASONS.storeFailed,
+        "The refund adjustment commit threw, so the event remains unacknowledged for retry.",
+      );
+    }
+    if (!committed.value.ok) {
+      return settle(committed.value.reason, committed.value.message);
+    }
+    return Object.freeze({
+      ok: true as const,
+      ignored: false as const,
+      replayed: committed.value.value.replayed,
+      credits: refund.value.credits,
+      balance: committed.value.value.state.balance,
+    });
   }
   const keys = lookup;
 

@@ -51,6 +51,9 @@ export const STRIPE_SIGNATURE_TOLERANCE_SECONDS = 300 as const;
 /** Namespace for grant idempotency keys, so a replayed event cannot re-grant. */
 export const STRIPE_EVENT_IDEMPOTENCY_PREFIX = "stripe-event:" as const;
 
+/** Namespace for full-refund adjustments, keyed by the immutable checkout intent. */
+export const STRIPE_REFUND_IDEMPOTENCY_PREFIX = "stripe-refund:" as const;
+
 export type VerifyStripeWebhookSignatureRequest = Readonly<{
   /** The **raw** request body. Never a re-serialised object. */
   payload: string | Uint8Array;
@@ -71,6 +74,7 @@ export type VerifyStripeWebhookSignatureRequest = Readonly<{
  */
 declare const verifiedWebhookBrand: unique symbol;
 declare const verifiedCompletionBrand: unique symbol;
+declare const verifiedRefundBrand: unique symbol;
 
 /**
  * The runtime half of those brands, and the load-bearing half.
@@ -88,6 +92,7 @@ declare const verifiedCompletionBrand: unique symbol;
 const verifiedWebhookProvenance = createProvenanceWitness<VerifiedWebhook>();
 const verifiedCompletionProvenance =
   createProvenanceWitness<VerifiedCheckoutCompletion>();
+const verifiedRefundProvenance = createProvenanceWitness<VerifiedCreditPackRefund>();
 
 /**
  * Whether a value is a webhook this module verified. Exported because a caller
@@ -105,6 +110,13 @@ export function hasVerifiedCompletionProvenance(
   value: unknown,
 ): value is VerifiedCheckoutCompletion {
   return verifiedCompletionProvenance.holds(value);
+}
+
+/** Whether a value is a full refund parsed from a verified Stripe webhook. */
+export function hasVerifiedRefundProvenance(
+  value: unknown,
+): value is VerifiedCreditPackRefund {
+  return verifiedRefundProvenance.holds(value);
 }
 
 export type VerifiedWebhook = Readonly<{
@@ -158,6 +170,23 @@ export type CheckoutSettlementPort = Readonly<{
 export type VerifiedCheckoutCompletion = CheckoutCompletedEvent &
   Readonly<{ readonly [verifiedCompletionBrand]: true }>;
 
+/** A full credit-pack refund bound to its persisted checkout intent. */
+export type VerifiedCreditPackRefund = Readonly<{
+  schemaVersion: 1;
+  kind: "sceneaxi.credit-pack-refund";
+  eventId: string;
+  chargeId: string;
+  intentId: string;
+  userId: string;
+  itemId: string;
+  mode: BillingMode;
+  unitAmount: number;
+  currency: string;
+  credits: number;
+  occurredAt: string;
+  readonly [verifiedRefundBrand]: true;
+}>;
+
 function fingerprintCheckoutCompletion(
   completion: CheckoutCompletedEvent,
 ): string {
@@ -180,6 +209,9 @@ function fingerprintCheckoutCompletion(
   ]);
   return createHash("sha256").update(canonical, "utf8").digest("hex");
 }
+
+/** Stable ledger evidence that binds a grant to the intent later refund evidence names. */
+const creditPackIntentAnchor = (intentId: string): string => `intent:${intentId}`;
 
 function toBuffer(payload: string | Uint8Array): Buffer {
   return typeof payload === "string"
@@ -734,10 +766,220 @@ export function applyCheckoutCompletedGrant(
     entryId: deriveEntryId(idempotencyKey),
     movement: "grant",
     delta: revision.value.credits,
-    reason: `credit pack ${validated.value.itemId} purchased (${validated.value.mode}); completion-sha256:${completionFingerprint}`,
+    reason: `credit pack ${validated.value.itemId} purchased (${validated.value.mode}); ${creditPackIntentAnchor(validated.value.intentId)}; completion-sha256:${completionFingerprint}`,
     idempotencyKey,
     now,
   });
+}
+
+/** Parse a signature-verified, full Stripe refund and bind it to a persisted intent. */
+export function parseCreditPackRefundEvent(input: {
+  readonly verified: VerifiedWebhook;
+  readonly intent: CheckoutSessionIntent | unknown;
+}): BillingOutcome<VerifiedCreditPackRefund> {
+  const record = snapshotPlainRecord(input);
+  if (record === undefined || !hasVerifiedWebhookProvenance(record["verified"])) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.webhookNotVerified,
+      "A credit-pack refund must come from a signature-verified Stripe webhook.",
+    );
+  }
+  const intent = validateCheckoutSessionIntent(record["intent"]);
+  if (!intent.ok) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.checkoutIntentInvalid,
+      `A refund requires its persisted checkout intent (${intent.code}): ${intent.message}`,
+    );
+  }
+  if (!checkoutPurposeGrantsCredits(intent.value.purpose) || intent.value.credits === undefined) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.webhookEventTypeUnsupported,
+      "Only a credit-pack checkout can be reconciled against the credit ledger.",
+    );
+  }
+
+  let raw: unknown;
+  try {
+    raw = JSON.parse(record["verified"].payload) as unknown;
+  } catch {
+    raw = undefined;
+  }
+  const event = snapshotPlainRecord(raw);
+  const charge = snapshotPlainRecord(snapshotPlainRecord(event?.["data"])?.["object"]);
+  const metadata = snapshotPlainRecord(charge?.["metadata"]);
+  const eventId = event?.["id"];
+  const chargeId = charge?.["id"];
+  const occurredAtEpoch =
+    typeof event?.["created"] === "number" ? event["created"] * 1_000 : Number.NaN;
+  const livemode = event?.["livemode"];
+  if (
+    event?.["type"] !== "charge.refunded" ||
+    typeof eventId !== "string" ||
+    eventId.length === 0 ||
+    typeof chargeId !== "string" ||
+    chargeId.length === 0 ||
+    !isEpochMilliseconds(occurredAtEpoch) ||
+    typeof livemode !== "boolean" ||
+    charge?.["refunded"] !== true ||
+    charge["amount_refunded"] !== intent.value.unitAmount ||
+    charge["currency"] !== intent.value.currency ||
+    metadata?.[CHECKOUT_METADATA_KEYS.userId] !== intent.value.userId ||
+    metadata?.[CHECKOUT_METADATA_KEYS.purpose] !== intent.value.purpose ||
+    metadata?.[CHECKOUT_METADATA_KEYS.itemId] !== intent.value.itemId ||
+    metadata?.[CHECKOUT_METADATA_KEYS.intentId] !== intent.value.intentId
+  ) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.webhookPayloadInvalid,
+      "The refund must be full, settled in the intent currency, and carry the exact persisted credit-pack metadata.",
+    );
+  }
+  const mode: BillingMode = livemode ? "live" : "test";
+  if (mode !== intent.value.mode) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.webhookPayloadInvalid,
+      "The refund mode does not match the persisted checkout intent.",
+    );
+  }
+  const revision = resolveCreditPackRevision(
+    intent.value.itemId,
+    intent.value.stripePriceId,
+    intent.value.unitAmount,
+  );
+  if (!revision.ok) return revision;
+  if (
+    revision.value.currency !== intent.value.currency ||
+    revision.value.credits !== intent.value.credits
+  ) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.catalogRevisionCreditsMismatch,
+      "The refunded intent no longer matches its committed credit-pack revision.",
+    );
+  }
+
+  return billingOk(
+    verifiedRefundProvenance.issue(
+      Object.freeze({
+        schemaVersion: 1 as const,
+        kind: "sceneaxi.credit-pack-refund" as const,
+        eventId,
+        chargeId,
+        intentId: intent.value.intentId,
+        userId: intent.value.userId,
+        itemId: intent.value.itemId,
+        mode,
+        unitAmount: intent.value.unitAmount,
+        currency: intent.value.currency,
+        credits: revision.value.credits,
+        occurredAt: new Date(occurredAtEpoch).toISOString(),
+      }) as VerifiedCreditPackRefund,
+    ),
+  );
+}
+
+export type ApplyCreditPackRefundRequest = Readonly<{
+  state: LedgerState;
+  refund: VerifiedCreditPackRefund;
+  now: number;
+  liveModeAuthorized?: boolean | undefined;
+}>;
+
+/** Append one full-refund adjustment, or replay the intent-scoped adjustment. */
+export function applyCreditPackRefund(
+  request: ApplyCreditPackRefundRequest,
+): BillingOutcome<AppendOutcome> {
+  const record = snapshotPlainRecord(request);
+  if (record === undefined || !hasVerifiedRefundProvenance(record["refund"])) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.webhookNotVerified,
+      "The refund was not parsed from a signature-verified Stripe webhook.",
+    );
+  }
+  const refund = record["refund"];
+  const mode = assertModeAuthorized(
+    refund.mode,
+    record["liveModeAuthorized"] === true ? true : undefined,
+  );
+  if (!mode.ok) return mode;
+  const state = validateLedgerState(record["state"]);
+  if (!state.ok) return state;
+  if (state.value.account.userId !== refund.userId) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.accountNotOwned,
+      "The refund belongs to a different user's credit account.",
+    );
+  }
+  const anchor = creditPackIntentAnchor(refund.intentId);
+  const originalGrant = state.value.entries.find(
+    (entry) =>
+      entry.movement === "grant" &&
+      entry.delta === refund.credits &&
+      entry.reason.includes(anchor),
+  );
+  if (originalGrant === undefined) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.ledgerStateInvalid,
+      "The ledger contains no committed grant bound to the refunded checkout intent.",
+    );
+  }
+  const idempotencyKey = `${STRIPE_REFUND_IDEMPOTENCY_PREFIX}${refund.intentId}`;
+  return appendCreditEntry(state.value, {
+    entryId: deriveEntryId(idempotencyKey),
+    movement: "adjustment",
+    delta: -refund.credits,
+    reason: `credit pack ${refund.itemId} refunded (${refund.mode}); ${anchor}`,
+    idempotencyKey,
+    now: record["now"] as number,
+  });
+}
+
+export type PersistCreditPackRefundRequest = ApplyCreditPackRefundRequest &
+  Readonly<{ store: CreditStore }>;
+
+/** Decide and commit a refund adjustment through the existing append-or-replay seam. */
+export async function persistCreditPackRefund(
+  request: PersistCreditPackRefundRequest,
+): Promise<BillingOutcome<AppendOutcome>> {
+  const record = snapshotPlainRecord(request);
+  if (record === undefined || record["store"] === undefined) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.requestInvalid,
+      "A persisted credit-pack refund requires a credit store.",
+    );
+  }
+  const { store, ...refundRequest } =
+    record as unknown as PersistCreditPackRefundRequest;
+  const adjusted = applyCreditPackRefund(refundRequest);
+  if (!adjusted.ok) return adjusted;
+  const entry = adjusted.value.entry;
+  if (adjusted.value.replayed || entry === undefined) return adjusted;
+  let answer: unknown;
+  try {
+    answer = await store.appendOrReplayEntry(entry);
+  } catch {
+    answer = undefined;
+  }
+  const committed = readCommittedEntry(entry, answer);
+  if (committed === undefined) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.storeFailed,
+      "The credit store failed while committing the refund adjustment.",
+    );
+  }
+  if (!committed.replayed) return adjusted;
+  return billingOk(
+    Object.freeze({
+      state: Object.freeze({
+        account: adjusted.value.state.account,
+        entries: Object.freeze([
+          ...adjusted.value.state.entries.slice(0, -1),
+          committed.entry,
+        ]),
+        balance: adjusted.value.state.balance,
+      }),
+      entry: committed.entry,
+      replayed: true,
+    }),
+  );
 }
 
 export type PersistCheckoutCompletedGrantRequest =

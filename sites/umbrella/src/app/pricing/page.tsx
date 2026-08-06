@@ -42,6 +42,7 @@ export default async function PricingPage() {
     ? buildCreditPackOffers(packs.value, {
         billingMode: plane.billingMode,
         checkoutConfigured: plane.wired.billing,
+        identityConfigured: plane.wired.identity,
       })
     : [];
 
@@ -52,7 +53,8 @@ export default async function PricingPage() {
         <h1>The engine is free. You pay for hosted work.</h1>
         <p className="lede">
           The engine SDK, the CLI, and bringing your own AI provider cost nothing. Hosted
-          AI and catalog assets are paid in credits. New accounts receive{" "}
+          AI uses credits. Catalog listings may be priced in credits, money, or both;
+          catalog purchases are not open. New accounts receive{" "}
           {SITE_STARTER_CREDIT_ALLOTMENT} credits once.
         </p>
       </div>
@@ -128,7 +130,11 @@ export default async function PricingPage() {
                         <span
                           className="button button-block"
                           aria-disabled="true"
-                          title={SITE_REFUSALS.BILLING_PLANE_NOT_WIRED}
+                          title={
+                            offer.purchase.refusalReason === null
+                              ? undefined
+                              : SITE_REFUSALS[offer.purchase.refusalReason]
+                          }
                         >
                           {offer.purchase.label}
                         </span>
@@ -148,9 +154,10 @@ export default async function PricingPage() {
               ]}
             >
               <p>
-                Checkout runs against Stripe <strong>test</strong> mode on this
-                deployment. Live charges need a separate captain decision, and the
-                billing port refuses live mode without explicit authorization.
+                Checkout runs against Stripe <strong>TEST</strong> mode on this
+                deployment. TEST mode does not make a real charge. Live charges need a
+                separate captain decision, and the billing port refuses live mode without
+                explicit authorization.
               </p>
               <p>{CREDIT_LEDGER_COPY.retryIsNotASecondCharge}</p>
               {!plane.wired.billing && (

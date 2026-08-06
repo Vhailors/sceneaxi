@@ -14,9 +14,11 @@ import {
   BILLING_REFUSE_REASONS,
   CHECKOUT_METADATA_KEYS,
   STRIPE_EVENT_IDEMPOTENCY_PREFIX,
+  STRIPE_REFUND_IDEMPOTENCY_PREFIX,
   STRIPE_LIVE_MODE_ENV_VAR,
   STRIPE_SIGNATURE_TOLERANCE_SECONDS,
   applyCheckoutCompletedGrant,
+  applyCreditPackRefund,
   checkoutPurposeSettlesElsewhere,
   createCheckoutSessionIntent,
   createInMemoryCreditStore,
@@ -25,6 +27,7 @@ import {
   loadCreditPackCatalog,
   lookupCreditPack,
   parseCheckoutCompletedEvent,
+  parseCreditPackRefundEvent,
   persistCheckoutCompletedGrant,
   resolveCreditPackRevision,
   resolveLiveModeAuthorization,
@@ -178,6 +181,32 @@ const eventBody = (
       },
     },
     ...overrides,
+  });
+
+const refundBody = (
+  intent: CheckoutSessionIntent,
+  overrides: Record<string, unknown> = {},
+) =>
+  JSON.stringify({
+    id: "evt_refund_01",
+    type: "charge.refunded",
+    created: NOW_SECONDS,
+    livemode: false,
+    data: {
+      object: {
+        id: "ch_test_01",
+        refunded: true,
+        amount_refunded: intent.unitAmount,
+        currency: intent.currency,
+        metadata: {
+          [CHECKOUT_METADATA_KEYS.userId]: intent.userId,
+          [CHECKOUT_METADATA_KEYS.purpose]: intent.purpose,
+          [CHECKOUT_METADATA_KEYS.itemId]: intent.itemId,
+          [CHECKOUT_METADATA_KEYS.intentId]: intent.intentId,
+        },
+        ...overrides,
+      },
+    },
   });
 
 describe("credit pack catalog", () => {
@@ -1207,6 +1236,78 @@ describe("applyCheckoutCompletedGrant", () => {
  * answered Stripe 2xx on its result alone would claim a purchase was honored
  * against a ledger that never changed, and Stripe would never redeliver it.
  */
+describe("credit-pack refund reconciliation", () => {
+  it("appends one intent-scoped adjustment for a signature-verified full refund", () => {
+    const intent = checkoutIntent();
+    const completion = parsed();
+    const granted = applyCheckoutCompletedGrant({
+      state: createLedgerState(ACCOUNT),
+      completion,
+      now: NOW,
+    });
+    expect(granted.ok).toBe(true);
+    if (!granted.ok) return;
+
+    const refund = parseCreditPackRefundEvent({
+      verified: verified(refundBody(intent)),
+      intent,
+    });
+    expect(refund.ok).toBe(true);
+    if (!refund.ok) return;
+    const adjusted = applyCreditPackRefund({
+      state: granted.value.state,
+      refund: refund.value,
+      now: NOW + 1_000,
+    });
+    expect(adjusted.ok).toBe(true);
+    if (!adjusted.ok) return;
+    expect(adjusted.value.state.balance).toBe(0);
+    expect(adjusted.value.entry).toMatchObject({
+      movement: "adjustment",
+      delta: -100,
+      idempotencyKey: `${STRIPE_REFUND_IDEMPOTENCY_PREFIX}${intent.intentId}`,
+    });
+
+    const replay = applyCreditPackRefund({
+      state: adjusted.value.state,
+      refund: refund.value,
+      now: NOW + 2_000,
+    });
+    expect(replay.ok).toBe(true);
+    if (!replay.ok) return;
+    expect(replay.value.replayed).toBe(true);
+    expect(replay.value.state.entries).toHaveLength(2);
+  });
+
+  it("refuses a partial refund and a refund with no original grant", () => {
+    const intent = checkoutIntent();
+    const partial = parseCreditPackRefundEvent({
+      verified: verified(refundBody(intent, { amount_refunded: 100 })),
+      intent,
+    });
+    expect(partial.ok).toBe(false);
+    if (!partial.ok) {
+      expect(partial.reason).toBe(BILLING_REFUSE_REASONS.webhookPayloadInvalid);
+    }
+
+    const full = parseCreditPackRefundEvent({
+      verified: verified(refundBody(intent)),
+      intent,
+    });
+    expect(full.ok).toBe(true);
+    if (!full.ok) return;
+    const missingGrant = applyCreditPackRefund({
+      state: createLedgerState(ACCOUNT),
+      refund: full.value,
+      now: NOW + 1_000,
+    });
+    expect(missingGrant.ok).toBe(false);
+    if (!missingGrant.ok) {
+      expect(missingGrant.reason).toBe(BILLING_REFUSE_REASONS.ledgerStateInvalid);
+    }
+  });
+});
+
 describe("persistCheckoutCompletedGrant", () => {
   const storeWithAccount = () =>
     createInMemoryCreditStore({ accounts: [ACCOUNT] });

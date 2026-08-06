@@ -33,7 +33,9 @@ export {
   checkoutPurposeGrantsCredits,
   checkoutPurposeSettlesElsewhere,
   loadLedgerState,
+  parseCreditPackRefundEvent,
   parseCheckoutCompletedEvent,
+  persistCreditPackRefund,
   persistCheckoutCompletedGrant,
   verifyStripeWebhookSignature,
 } from "@sceneaxi/billing";
@@ -491,6 +493,9 @@ export type StripeSessionCreateParams = Readonly<{
   readonly cancel_url: string;
   readonly client_reference_id: string;
   readonly metadata: Readonly<Record<string, string>>;
+  readonly payment_intent_data: Readonly<{
+    readonly metadata: Readonly<Record<string, string>>;
+  }>;
 }>;
 
 export type StripeClientLike = Readonly<{
@@ -1098,6 +1103,12 @@ export function createStripeCheckoutSessionAdapter(options: {
       // call too, so no deployment wiring can turn a key into a live charge.
       if (intent.mode !== "test") throw new Error("umbrella checkout adapter is test-only");
       const persisted = await options.intents.persistIntent(intent);
+      const metadata = Object.freeze({
+        [CHECKOUT_METADATA_KEYS.userId]: persisted.userId,
+        [CHECKOUT_METADATA_KEYS.purpose]: persisted.purpose,
+        [CHECKOUT_METADATA_KEYS.itemId]: persisted.itemId,
+        [CHECKOUT_METADATA_KEYS.intentId]: persisted.intentId,
+      });
       const session = await options.stripe.checkout.sessions.create(
         {
           mode: "payment",
@@ -1106,12 +1117,11 @@ export function createStripeCheckoutSessionAdapter(options: {
           success_url: persisted.successUrl,
           cancel_url: persisted.cancelUrl,
           client_reference_id: persisted.intentId,
-          metadata: {
-            [CHECKOUT_METADATA_KEYS.userId]: persisted.userId,
-            [CHECKOUT_METADATA_KEYS.purpose]: persisted.purpose,
-            [CHECKOUT_METADATA_KEYS.itemId]: persisted.itemId,
-            [CHECKOUT_METADATA_KEYS.intentId]: persisted.intentId,
-          },
+          metadata,
+          // Stripe copies this metadata onto the PaymentIntent and its Charge. A signed
+          // `charge.refunded` event can therefore be rebound to this immutable intent
+          // without trusting caller input or guessing which purchase was refunded.
+          payment_intent_data: { metadata },
         },
         { idempotencyKey: persisted.idempotencyKey },
       );

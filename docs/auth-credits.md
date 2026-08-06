@@ -527,6 +527,19 @@ makes a new member — or a new acknowledgement path added beside the set — a 
 the same reason: the boundary refuses it for a request the endpoint built, never for
 anything the inbound bytes decided.
 
+**Full TEST refunds reconcile by append, never rewrite.** Checkout creation copies the
+four SceneAxi metadata keys onto both the Checkout Session and its PaymentIntent, so a
+signature-verified `charge.refunded` event carries the immutable intent id on the Charge.
+`parseCreditPackRefundEvent` requires a full refund, exact TEST mode, currency, amount,
+user, purpose, item, and intent match, then resolves the same committed pack revision the
+grant used. `applyCreditPackRefund` requires the ledger's original intent-anchored grant
+and appends one negative `adjustment` under `stripe-refund:<intentId>`; it never edits or
+deletes the grant. The intent-scoped key makes duplicate and replacement refund events a
+replay rather than a second reversal. A partial refund, a missing original grant, an
+already-spent balance that cannot absorb the adjustment, missing evidence, or an
+unavailable store refuses by name and receives no success acknowledgement. LIVE remains
+unreachable exactly as it is for grants.
+
 **Live mode is unreachable by default.** `mode: "live"` refuses unless
 `liveModeAuthorized: true` is passed explicitly at the call site, enforced both when
 creating an intent and when honoring an event. **Live activation is not authorized today**

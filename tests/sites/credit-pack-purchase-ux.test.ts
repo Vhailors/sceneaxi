@@ -29,6 +29,7 @@ describe("SA-PAY-1 credit-pack purchase presentation", () => {
     const offers = buildCreditPackOffers(PACKS, {
       billingMode: "test",
       checkoutConfigured: true,
+      identityConfigured: true,
     });
 
     expect(offers.map((offer) => offer.packId)).toEqual([
@@ -50,6 +51,7 @@ describe("SA-PAY-1 credit-pack purchase presentation", () => {
         enabled: true,
         label: `Open Stripe TEST checkout for ${offer.credits} credits`,
         status: "TEST MODE · no real charge",
+        refusalReason: null,
       });
     }
   });
@@ -58,6 +60,7 @@ describe("SA-PAY-1 credit-pack purchase presentation", () => {
     const offers = buildCreditPackOffers(PACKS, {
       billingMode: "test",
       checkoutConfigured: false,
+      identityConfigured: true,
     });
 
     for (const offer of offers) {
@@ -65,6 +68,24 @@ describe("SA-PAY-1 credit-pack purchase presentation", () => {
         enabled: false,
         label: "Stripe TEST checkout unavailable",
         status: "TEST MODE · provider not configured",
+        refusalReason: "BILLING_PLANE_NOT_WIRED",
+      });
+    }
+  });
+
+  it("does not offer a checkout when Stripe exists without the identity provider", () => {
+    const offers = buildCreditPackOffers(PACKS, {
+      billingMode: "test",
+      checkoutConfigured: true,
+      identityConfigured: false,
+    });
+
+    for (const offer of offers) {
+      expect(offer.purchase).toEqual({
+        enabled: false,
+        label: "Sign-in unavailable",
+        status: "TEST MODE · identity provider not configured",
+        refusalReason: "IDENTITY_PLANE_NOT_WIRED",
       });
     }
   });
@@ -73,6 +94,7 @@ describe("SA-PAY-1 credit-pack purchase presentation", () => {
     const offers = buildCreditPackOffers(PACKS, {
       billingMode: "live",
       checkoutConfigured: true,
+      identityConfigured: true,
     });
 
     for (const offer of offers) {
@@ -80,8 +102,28 @@ describe("SA-PAY-1 credit-pack purchase presentation", () => {
         enabled: false,
         label: "Stripe LIVE checkout unavailable",
         status: "LIVE MODE REFUSED · activation not authorized",
+        refusalReason: "BILLING_LIVE_MODE_NOT_AUTHORIZED",
       });
     }
+  });
+
+  it("does not assume every currency has two decimal minor units", () => {
+    const [offer] = buildCreditPackOffers(
+      [
+        {
+          packId: "future-yen",
+          credits: 100,
+          unitAmount: 500,
+          currency: "jpy",
+        },
+      ],
+      {
+        billingMode: "test",
+        checkoutConfigured: true,
+        identityConfigured: true,
+      },
+    );
+    expect(offer?.price).toBe("500 JPY minor units");
   });
 
   it("keeps the account surface explicit about balance, starter grant, and admin allowance", () => {
