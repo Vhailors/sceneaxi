@@ -27,10 +27,12 @@ import {
   ok,
   parseEditorDeepLink,
   parseEditorDeepLinkParams,
+  readEditorState,
   readEngineSdkOffer,
   readWebExperienceEditorState,
   reconstructStarter,
   refuse,
+  renderEditorState,
   resolveDesktopAppOffer,
   resolveChangeReview,
   resolveCheckoutRedirectOrigin,
@@ -417,6 +419,20 @@ const CASES: Readonly<Record<SiteRefusalReason, () => Promise<unknown> | unknown
     }),
   EDITOR_WORKSPACE_INVALID: () =>
     createWebEditorSession({ workspaceRoot: "not/absolute", backend: "null" }),
+  // A render reaches the filesystem, so an unusable temporary root is a named
+  // refusal rather than an exception the calling route cannot draw.
+  EDITOR_WORKSPACE_UNAVAILABLE: () => {
+    const state = readEditorState({});
+    if (!state.ok) return state;
+    const previous = process.env["TMPDIR"];
+    process.env["TMPDIR"] = join(workspace(), "absent-temporary-root");
+    try {
+      return renderEditorState(state.value);
+    } finally {
+      if (previous === undefined) delete process.env["TMPDIR"];
+      else process.env["TMPDIR"] = previous;
+    }
+  },
   FOUNDATION_SURFACE_UNKNOWN: () => resolveSurfaceAccent("marketplace"),
   CHANGE_REVIEW_PROPOSAL_INVALID: () =>
     reviewProposal({ proposal: { kind: "not-a-proposal" }, documents: new Map() }),

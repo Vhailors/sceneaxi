@@ -73,6 +73,13 @@ composed-artifact hashes, so a digest a storefront prints is a digest of real
 editor output. A render that could not save produces no digest, and the seam
 refuses `CATALOG_SUBMISSION_DIGEST_INVALID` rather than showing a placeholder.
 
+That path reaches the filesystem, so `renderEditorState()` is **total**: an
+ephemeral workspace it cannot create or remove refuses
+`EDITOR_WORKSPACE_UNAVAILABLE`, and a session operation that throws refuses under
+its own `WebEditorError` reason. Both callers draw a `SiteResult` — the entitled
+route's session panel and the storefronts' proof section — so neither is ever
+handed an exception in place of a reason.
+
 ## Refusal and authority boundary
 
 Before provider dispatch, submission refuses anonymous or preview-only access,

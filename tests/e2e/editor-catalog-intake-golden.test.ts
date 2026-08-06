@@ -1,5 +1,7 @@
 /** Editor -> TEST catalog intake -> explicit curation -> listed read-model proof. */
 import { readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   attemptCatalogPurchase,
@@ -676,6 +678,24 @@ describe("editor catalog intake", () => {
       // A placeholder of one repeated character is exactly what this path may not print.
       expect(listing?.documentDigest).not.toMatch(/^sha256:(.)\1{63}$/);
       expect(listing?.assetPackage.contentHash).not.toMatch(/^sha256:(.)\1{63}$/);
+    }
+  });
+
+  it("hands the storefront a refusal, not an exception, when the render cannot run", async () => {
+    // The demo reaches the filesystem now, so the `/publish` proof must still be able to
+    // render its refusal branch rather than failing the whole page.
+    const previous = process.env["TMPDIR"];
+    process.env["TMPDIR"] = join(previous ?? tmpdir(), "sceneaxi-absent-temporary-root");
+    try {
+      for (const surface of ["catalog-game", "catalog-web"] as const) {
+        await expect(catalogTestPipelineDemo(surface)).resolves.toMatchObject({
+          ok: false,
+          reason: "EDITOR_WORKSPACE_UNAVAILABLE",
+        });
+      }
+    } finally {
+      if (previous === undefined) delete process.env["TMPDIR"];
+      else process.env["TMPDIR"] = previous;
     }
   });
 });

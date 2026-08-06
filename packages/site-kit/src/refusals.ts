@@ -163,6 +163,8 @@ export const SITE_REFUSALS = Object.freeze({
   EDITOR_SESSION_DISPOSED: "The editor session has been disposed.",
   EDITOR_WORKSPACE_ESCAPE: "The document path escapes the session workspace root.",
   EDITOR_WORKSPACE_INVALID: "The session workspace root is not an absolute path.",
+  EDITOR_WORKSPACE_UNAVAILABLE:
+    "The ephemeral editor workspace could not be created or removed, so no session was rendered.",
 } as const);
 
 export type SiteRefusalReason = keyof typeof SITE_REFUSALS;

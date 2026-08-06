@@ -27,10 +27,11 @@ import {
   type SceneDocument,
 } from "@sceneaxi/authoring-core";
 import { mountableScene, type MountableScene } from "./mountable-scene.js";
-import { type SiteResult, ok } from "./refusals.js";
+import { type SiteResult, ok, refuse } from "./refusals.js";
 import { webEditorStarterArtifact } from "./starter-artifact.js";
 import {
   WEB_EDITOR_DOCUMENT_PATH,
+  WebEditorError,
   type WebEditorViewportFrame,
   createWebEditorSession,
 } from "./web-editor.js";
@@ -73,8 +74,24 @@ export type EditorRender = {
  *
  * The workspace is created and removed inside this call: nothing persists between
  * requests, which is the honest shape until a storage decision exists.
+ *
+ * Total by contract: this reaches the filesystem and a live session, so a failed
+ * temporary-workspace creation or cleanup, or a session operation that throws,
+ * becomes that operation's own named refusal. Every caller renders a `SiteResult`
+ * — the entitled route, the storefront intake demonstration — and none of them may
+ * be handed an exception in place of a reason.
  */
 export function renderEditorState(state: EditorState): SiteResult<EditorRender> {
+  try {
+    return renderEditorSession(state);
+  } catch (error) {
+    return error instanceof WebEditorError
+      ? refuse(error.reason)
+      : refuse("EDITOR_WORKSPACE_UNAVAILABLE");
+  }
+}
+
+function renderEditorSession(state: EditorState): SiteResult<EditorRender> {
   const artifact = webEditorStarterArtifact();
   if (!artifact.ok) return artifact;
 
