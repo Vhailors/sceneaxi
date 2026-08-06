@@ -311,7 +311,7 @@ export function evaluateOpenPathDemo(
   if (profile === OPEN_PATH_REFUSE_ONLY_PROFILE) {
     return refuseDemo(
       OPEN_PATH_REFUSE_CODES.kidsRefused,
-      "The Kids profile has no open-path demo: it is an isolation boundary, not a product surface.",
+      "The Kids profile has no open-path demo: the shared engine open path refuses Kids, whose product surface is the separate simplified Kids origin.",
       profile,
     );
   }
