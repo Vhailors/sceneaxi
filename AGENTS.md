@@ -9,7 +9,7 @@ SceneAxi = interactive engine/library + versioned profiles (Game, Web Experience
 - Do not invent captain decisions; the runtime source of truth is the held-key registry snapshot protocol (`docs/held-key-enforcement.md`), generated from FirstMate structured backlog state — the #42 Markdown registry documents keys for humans only.
 - Fail closed on held keys in the CLI: missing, stale, invalid, epoch-mismatched, or unknown registry data refuses, exactly like an open key. The runtime implementation (snapshot generator, currency gate, shipped command map) lives in `packages/cli/src/held-keys/` and is wired into the dispatcher for every verb; the refusal table and both mandatory regressions are fixture-tested in `packages/cli/test/held-keys.*.test.ts` — extend those when touching the protocol.
 - Package boundaries are enforced, not aspirational: `pnpm check:boundaries` against `docs/dependency-matrix.json`; run it after any manifest or import change.
-- Kids traffic never uses third-party LLM defaults without an explicit Kids safety decision; nothing may depend on `@sceneaxi/profile-kids` (enforced).
+- Kids traffic never uses third-party LLM defaults without an explicit Kids safety decision; nothing may depend on `@sceneaxi/profile-kids` (enforced). The dedicated `sites/kids` origin has an empty SceneAxi allow list and no environment/external-data path; its activity reducer is byte-identical to the profile copy by root parity test, never by an import edge (`docs/kids-first-release.md`).
 - Do not push, spend, create accounts, create issues, or run the Stage 1 proof without the matching separated authority (`docs/bootstrap.md`).
 - Individual games stay out of this monorepo.
 

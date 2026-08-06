@@ -27,7 +27,7 @@ import { SITE_COOKIE_OCTET_RE } from "./site-session.js";
 
 /**
  * Identity surfaces, in the vocabulary `sceneaxi-auth-credits-v1` (#91) defines
- * (`IDENTITY_SURFACES`). All three deployable sites map onto the `"site"` identity
+ * (`IDENTITY_SURFACES`). All three non-Kids deployable sites map onto the `"site"` identity
  * surface; `"web-shell"` and `"desktop-shell"` are the other shells that vertical knows,
  * and `"kids"` is listed only so it can be refused before any adapter dispatch. The
  * umbrella / catalog-game / catalog-web identifiers stay for routing, branding, catalog

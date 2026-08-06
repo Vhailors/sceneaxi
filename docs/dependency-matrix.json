@@ -142,6 +142,12 @@
       "releaseGroup": "sites",
       "allow": ["@sceneaxi/site-kit"]
     },
+    "@sceneaxi/site-kids": {
+      "dir": "sites/kids",
+      "releaseGroup": "sites",
+      "allow": [],
+      "note": "sceneaxi#200: the fully separate Kids origin is a self-contained Next install root with a closed in-memory activity table. It imports no SceneAxi package — including profile-kids and site-kit — and declares no provider, identity, billing, catalog, persistence, telemetry, or external-data dependency. Profile/site parity is gate-tested without creating a runtime edge, so kidsBoundary.allowedDependents remains empty."
+    },
     "@sceneaxi/desktop-linux": {
       "dir": "desktop/linux",
       "releaseGroup": "desktop",
@@ -210,7 +216,7 @@
     },
     "apps": { "policy": "private, unpublished, unversioned beyond workspace bookkeeping" },
     "sites": {
-      "policy": "first-party deployable web surfaces and their shared deployment-neutral logic; consume only public contracts and public authoring-core APIs; never profiles, a service locator, or Kids; the single charted engine edge is ADR 0022 — the umbrella site may consume @sceneaxi/engine-presentation to draw every viewport it owns, both the public /open surface and the entitled /editor surface, and no other engine package is reachable from any site; framework and provider SDKs stay in the sites/ tier and out of the hermetic package tier"
+      "policy": "first-party deployable web surfaces. The umbrella and catalog sites consume only their charted public seams; never profiles, a service locator, or a Kids package. The single charted engine edge is ADR 0022 — the umbrella site may consume @sceneaxi/engine-presentation to draw every viewport it owns, both the public /open surface and the entitled /editor surface, and no other engine package is reachable from those sites. The dedicated Kids origin is the stricter exception: a self-contained Next install root with an empty SceneAxi allow list and no external data path. Framework dependencies stay in sites/ and out of the hermetic package tier."
     },
     "desktop": {
       "policy": "packaged desktop applications (ADR 0024); each is its own single-package install root outside the repository-root workspace so Electron never moves the hermetic root lockfile; consumes the desktop-shell visual model and public engine seams, never profiles, Kids, auth/billing, or a service locator; Electron and packaging toolchains stay in desktop/ and out of the hermetic package tier"

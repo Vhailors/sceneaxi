@@ -156,7 +156,7 @@ export const OPEN_PATH_POLICY: ReadonlyArray<OpenPathPolicyRow> = Object.freeze(
     evidence: "tests/e2e/profile-kids-refuse-golden.test.ts",
     shippingClaim: false as const,
     summary:
-      "Refuses every open-path demo: the Kids product is an isolation boundary with no UI, commerce, identity, or third-party model route.",
+      "Refuses every shared engine open-path demo; the separate Kids origin allows only its curated in-memory activity, with no commerce, identity, external data, or model route.",
   }),
 ]);
 
@@ -311,7 +311,7 @@ export function evaluateOpenPathDemo(
   if (profile === OPEN_PATH_REFUSE_ONLY_PROFILE) {
     return refuseDemo(
       OPEN_PATH_REFUSE_CODES.kidsRefused,
-      "The Kids profile has no open-path demo: it is an isolation boundary, not a product surface.",
+      "The Kids profile has no open-path demo: the shared engine open path refuses Kids, whose product surface is the separate simplified Kids origin.",
       profile,
     );
   }

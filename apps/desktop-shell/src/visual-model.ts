@@ -1133,10 +1133,11 @@ export type DesktopVisualView = Readonly<{
    * Non-null exactly on the refuse-only profile.
    *
    * The archive draws the Kids profile as a working editor with only the
-   * assistant locked. The repository contract is stronger and wins: the Kids
-   * product is an isolation boundary with **no** UI, so the editor body refuses
-   * as a whole rather than authoring under a Kids badge. The profile switch
-   * stays live so the refusal is a state you can leave, not a dead end.
+   * assistant locked. The repository contract is stronger and wins: Kids
+   * authoring exists only on its dedicated simplified origin, so this shared
+   * surface refuses the editor body as a whole rather than authoring under a
+   * Kids badge. The profile switch stays live so the refusal is a state you can
+   * leave, not a dead end. See `docs/engine-desktop-surface.md`.
    */
   profileRefusal: Readonly<{
     code: DesktopVisualRefusal;

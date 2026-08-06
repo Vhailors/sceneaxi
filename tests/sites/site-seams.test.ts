@@ -1,5 +1,5 @@
 /**
- * Seam and configuration tests for the three deployable sites.
+ * Seam and configuration tests for the deployable sites.
  *
  * These live under `tests/` rather than each site's own `test/` because the sites are
  * separate single-package workspaces outside the repository-root workspace, so
@@ -39,6 +39,7 @@ import {
   editorLinkFor as webEditorLink,
   seam as webSeam,
 } from "../../sites/catalog-web/src/index.ts";
+import { seam as kidsSeam } from "../../sites/kids/src/index.ts";
 
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const SITES_DIR = join(REPO_ROOT, "sites");
@@ -77,6 +78,7 @@ describe("site seams", () => {
     ["@sceneaxi/site-umbrella", umbrellaSeam],
     ["@sceneaxi/site-catalog-game", gameSeam],
     ["@sceneaxi/site-catalog-web", webSeam],
+    ["@sceneaxi/site-kids", kidsSeam],
   ])("%s exports a frozen seam in the sites release group", (name, seam) => {
     expect(seam.name).toBe(name);
     expect(seam.releaseGroup).toBe("sites");
@@ -88,6 +90,7 @@ describe("site seams", () => {
       ["umbrella", umbrellaSeam],
       ["catalog-game", gameSeam],
       ["catalog-web", webSeam],
+      ["kids", kidsSeam],
     ] as const) {
       const manifest = JSON.parse(
         readFileSync(new URL(`../../sites/${dir}/package.json`, import.meta.url), "utf8"),
@@ -532,7 +535,7 @@ describe("the sites tier keeps the hermetic root hermetic", () => {
     }
   });
 
-  it("gives every site a link: dependency on site-kit rather than a workspace: one", () => {
+  it("gives every non-Kids site a link: dependency on site-kit rather than a workspace: one", () => {
     for (const dir of ["umbrella", "catalog-game", "catalog-web"]) {
       const manifest = JSON.parse(
         readFileSync(new URL(`../../sites/${dir}/package.json`, import.meta.url), "utf8"),

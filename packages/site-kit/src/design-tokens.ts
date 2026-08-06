@@ -336,8 +336,8 @@ export type FoundationSurfaceAccent = {
  * The archive's surface → accent map, recorded whole so no visual fact is lost.
  *
  * This is descriptive data. `resolveSurfaceAccent()` is the functional path, and it
- * refuses Kids by name — this repository themes no Kids surface (Kids lives on its
- * own origin and nothing here may depend on `@sceneaxi/profile-kids`).
+ * refuses Kids by name — the shared emitter themes no Kids surface. The dedicated
+ * origin owns its stylesheet without importing this package or `profile-kids`.
  */
 export const FOUNDATION_SURFACE_ACCENTS: readonly FoundationSurfaceAccent[] = freezeAll([
   { id: "umbrella", name: "Umbrella site", accent: "#FF6B2C", accentHi: "#FF8A54", note: "Product, engine, profiles, docs, pricing, download." },
@@ -355,8 +355,8 @@ export const FOUNDATION_ACCENT_RULE =
  * Resolve the accent pair a surface may theme with.
  *
  * Kids refuses by name on this path as it does on every other path in this
- * package: there is no Kids surface here to accent, and minting one would invent a
- * product contract the canonical spec holds closed.
+ * package: there is no Kids surface in site-kit to accent. The dedicated origin's
+ * isolated stylesheet is owned by `docs/kids-first-release.md`.
  */
 export function resolveSurfaceAccent(
   surface: string,

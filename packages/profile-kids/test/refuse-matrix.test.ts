@@ -90,8 +90,11 @@ describe("Kids MVP dedicated refusal gate", () => {
     }
   });
 
-  it("documents refusal-only MVP scope with no product surface", () => {
+  it("documents the isolated local activity without weakening external refusals", () => {
     const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
-    expect(readme).toContain("MVP = refuse/isolation only; no Kids UI/product");
+    expect(readme).toContain("First release = curated local activity + locked isolation");
+    expect(readme).toMatch(
+      /no network, account,\s+commerce, catalog, upload, or model route/,
+    );
   });
 });

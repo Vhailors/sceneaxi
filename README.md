@@ -19,6 +19,7 @@ This monorepo is the packaging home for:
 | Web / desktop shells | `apps/web-shell`, `apps/desktop-shell` |
 | Asset catalogs (may split later) | `apps/catalog-game`, `apps/catalog-web` |
 | Deployable web surfaces | `sites/umbrella`, `sites/catalog-game`, `sites/catalog-web` over `packages/site-kit` (ADR 0018; deploy details in [`docs/websites-deploy.md`](docs/websites-deploy.md)) |
+| Isolated Kids origin | `sites/kids` — a self-contained install root with an empty SceneAxi allow list and a curated in-memory build-and-play activity, not deployed ([`docs/kids-first-release.md`](docs/kids-first-release.md)) |
 | Public live open path | `sites/umbrella/src/app/open/` — a committed Sculpt Artifact composed and drawn in a real WebGL canvas (ADR 0022) |
 | Packaged Linux desktop app | `desktop/linux` — Electron over the desktop-shell chrome and the real engine stack, AppImage + `.deb` with recorded checksums (ADR 0024; [`docs/desktop-linux.md`](docs/desktop-linux.md)) |
 | Windows packaging of that app | `desktop/windows` — a signing/update wrapper that stages the built `desktop/linux` runtime; fails closed without operator-supplied signing inputs and has no public artifact yet ([`docs/desktop-windows.md`](docs/desktop-windows.md)) |
@@ -30,8 +31,12 @@ The `sites/` tier is deliberately outside the hermetic root workspace: each site
 own single-package pnpm workspace and install root with its own lockfile, so a
 web-framework dependency never moves the root lockfile or the gate runtime. The tier is
 still gated — `pnpm check:syntax`,
-`pnpm check:boundaries`, and `pnpm check:sites` all cover it, and all site logic lives in
-`packages/site-kit` where `pnpm gate` tests it. The tier's one engine edge is
+`pnpm check:boundaries`, and `pnpm check:sites` all cover it, and all logic of the three
+deployable sites lives in `packages/site-kit` where `pnpm gate` tests it. The isolated
+`sites/kids` origin is the one exception: it may depend on no SceneAxi package at all, so
+it carries its own copy of the curated activity reducer and the root gate tests that copy
+for parity against the profile's instead
+([`docs/kids-first-release.md`](docs/kids-first-release.md)). The tier's one engine edge is
 umbrella → `@sceneaxi/engine-presentation` for every viewport the umbrella owns
 (ADR 0022; the surfaces are inventoried in
 [`docs/three-presentation-core.md`](docs/three-presentation-core.md)); every
@@ -136,12 +141,15 @@ surface inventory, levels, invocation requirements, and proof locations.
 **Early implementation aggregate.** The monorepo has a real fail-closed toolchain,
 typed public seams for every package and app, and initial contract/tracer
 implementations for authoring, the CLI, the Game Kernel, Game profile conformance,
-the Web Experience and Kids policy stubs, the public Delivery Handoff, the
+the Web Experience policy stub, the Kids profile's curated local activity behind its
+locked isolation boundary, the public Delivery Handoff, the
 startable desktop and web protocol shells, the Plugin Host,
 dormant app-tier catalogs, and the gate-tested `site-kit` logic behind the three
 deployable sites. The engine, profiles, and dormant apps remain proof-oriented; the
 three first-party sites have the bounded, fail-closed deployment status recorded in
-[`docs/websites-deploy.md`](docs/websites-deploy.md). This is not a claim that the
+[`docs/websites-deploy.md`](docs/websites-deploy.md), and the isolated `sites/kids`
+origin is implemented but not deployed
+([`docs/kids-first-release.md`](docs/kids-first-release.md)). This is not a claim that the
 engine, profiles, or applications are production-ready. Proof execution, spend,
 account creation, publication, and other external actions remain subject to the
 separated authorities in `docs/bootstrap.md`.

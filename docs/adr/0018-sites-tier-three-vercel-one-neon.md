@@ -1,6 +1,8 @@
 # ADR 0018: A `sites/` tier — three Vercel projects, one Neon database
 
-- **Status:** Accepted for websites-deploy v1.
+- **Status:** Accepted for websites-deploy v1 — **Amended 2026-08-06** by
+  [sceneaxi#200](https://github.com/Vhailors/sceneaxi/issues/200): the tier gained a
+  fourth, deliberately dependency-empty member, `sites/kids`. See *Amendment* below.
 - **Date recorded:** 2026-07-25
 - **Source:** captain freeze and dispatch, `sceneaxi-websites-deploy-v1`; [sceneaxi#102](https://github.com/Vhailors/sceneaxi/issues/102), [#107](https://github.com/Vhailors/sceneaxi/issues/107).
 - **Lineage:** Implements the locked topology in [`docs/program/site-domain-topology.md`](../program/site-domain-topology.md) as deployable surfaces. Bounded by the Kids isolation boundary and by [`docs/web-consumer.md`](../web-consumer.md).
@@ -80,6 +82,29 @@ site behaviour is testable in `pnpm gate` with no browser and no network.
   since the sites are outside the hermetic build.
 - **Leaving `sites/` outside `check:syntax` / `check:boundaries`** — silently narrows
   gate coverage while appearing to keep it.
+
+## Amendment — a fourth, dependency-empty member (2026-08-06)
+
+sceneaxi#200 landed `sites/kids` in this tier. Nothing about the three deployable
+projects changes: still three Vercel projects on one team, one Neon database,
+`*.vercel.app` only, and **Kids deploy stays held** — the origin exists in the
+repository and is not deployed. What the amendment records is where the Kids origin
+deliberately reads *differently* from the decision above, because the Kids isolation
+boundary is stricter than the tier rule it lives under:
+
+- **Its matrix allow list is empty, not `@sceneaxi/site-kit`.** It takes no `link:`
+  specifier and no `transpilePackages` entry, because `kidsBoundary.allowedDependents`
+  is locked empty and `@sceneaxi/profile-kids` may have no dependent.
+- **Its non-presentational logic therefore cannot live in `packages/site-kit`.** It
+  holds an independent byte-identical copy of the closed activity reducer, and the root
+  gate proves source and behaviour parity against the profile copy instead of an import
+  edge.
+- **`check:sites` is correspondingly stricter for it**, restricting its runtime
+  dependencies, permitting no environment input, and refusing outbound browser APIs and
+  proxying Next configuration keys anywhere under its directory.
+
+The full boundary, refusal matrix, and the separately authorized procedure for
+extending it are owned by [`docs/kids-first-release.md`](../kids-first-release.md).
 
 ## Settled here vs held elsewhere
 

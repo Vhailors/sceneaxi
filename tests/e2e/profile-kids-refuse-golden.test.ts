@@ -1,13 +1,14 @@
 /**
- * Kids refuse-only golden path (sceneaxi#118).
+ * Kids isolated first-release golden path (sceneaxi#118, sceneaxi#200).
  *
- * The Kids *product* is a refusal and isolation boundary, not a UI. "Runnable"
- * for Kids therefore means the whole refuse matrix executes end to end and no
- * product surface exists — not that a Kids app starts.
+ * The shared engine open path remains refuse-only, but the dedicated Kids
+ * origin now owns one closed, local build-and-play activity. "Runnable" means
+ * that curated flow and the whole refusal/isolation matrix execute together.
  *
  * This file deliberately asserts absence as well as behaviour: a future change
- * that adds a Kids UI, catalog, commerce, or identity export, opens the network
- * allowlist, or lets any package depend on Kids must fail here.
+ * Any change that adds a catalog, commerce, identity, provider, or external data
+ * export, opens the network allowlist, or lets any package depend on Kids must
+ * fail here.
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -208,11 +209,72 @@ describe("Kids boundary claims (no external route is enabled)", () => {
   });
 });
 
-describe("Kids has no product surface", () => {
-  it("exports only policy and refusal helpers — no UI, commerce, or identity", () => {
+describe("Kids dedicated local activity", () => {
+  it("builds and plays one curated world without leaving the isolated seam", () => {
+    let state = kids.createKidsActivityState();
+    for (const request of [
+      { action: "world.choose", worldId: "moon" },
+      { action: "piece.add", pieceId: "rocket" },
+      { action: "piece.add", pieceId: "friend" },
+      { action: "play.start" },
+    ] as const) {
+      const decision = kids.applyKidsActivityAction(state, request);
+      expect(decision.ok, JSON.stringify(request)).toBe(true);
+      if (decision.ok) state = decision.state;
+    }
+    expect(state).toMatchObject({
+      worldId: "moon",
+      pieceIds: ["rocket", "friend"],
+      mode: "play",
+    });
+    expect(kids.policy.activityMode).toBe("curated-in-memory");
+    expect(kids.policy.allowedActivityActions).toBe(kids.KIDS_ACTIVITY_ACTIONS);
+  });
+
+  it("refuses every editing action while a world is playing, leaving the scene untouched", () => {
+    let state = kids.createKidsActivityState();
+    for (const request of [
+      { action: "piece.add", pieceId: "star" },
+      { action: "play.start" },
+    ] as const) {
+      const decision = kids.applyKidsActivityAction(state, request);
+      if (decision.ok) state = decision.state;
+    }
+    const playing = JSON.stringify(state);
+
+    for (const request of [
+      { action: "world.choose", worldId: "ocean" },
+      { action: "piece.add", pieceId: "tree" },
+      { action: "piece.undo" },
+      { action: "scene.reset" },
+    ] as const) {
+      const decision = kids.applyKidsActivityAction(state, request);
+      expect(decision, JSON.stringify(request)).toMatchObject({
+        ok: false,
+        reason: kids.KIDS_ACTIVITY_REFUSE_REASONS.buildPaused,
+      });
+      expect(decision).not.toHaveProperty("state");
+    }
+    expect(JSON.stringify(state)).toBe(playing);
+
+    // The mode toggles themselves refuse the transition they are already in.
+    expect(kids.applyKidsActivityAction(state, { action: "play.start" })).toMatchObject({
+      ok: false,
+      reason: kids.KIDS_ACTIVITY_REFUSE_REASONS.alreadyPlaying,
+    });
+    expect(
+      kids.applyKidsActivityAction(kids.createKidsActivityState(), { action: "play.stop" }),
+    ).toMatchObject({ ok: false, reason: kids.KIDS_ACTIVITY_REFUSE_REASONS.alreadyStopped });
+    expect(
+      kids.applyKidsActivityAction(kids.createKidsActivityState(), { action: "piece.undo" }),
+    ).toMatchObject({ ok: false, reason: kids.KIDS_ACTIVITY_REFUSE_REASONS.sceneEmpty });
+  });
+
+  it("exports only policy, refusal helpers, and the local activity — no external plane", () => {
     const exported = Object.keys(kids).sort();
 
-    // Nothing that could act as a product surface may appear on the seam.
+    // Nothing that could bridge the dedicated activity to an external product
+    // plane may appear on the seam.
     const forbidden = /render|mount|component|view|screen|ui|checkout|purchase|cart|price|account|signin|signup|login|session|identity|store|fetch|client/i;
     const offenders = exported.filter(
       (name) =>
@@ -223,12 +285,20 @@ describe("Kids has no product surface", () => {
     );
     expect(offenders).toEqual([]);
 
-    // And the surface is exactly what the refuse-only product is allowed to be.
+    // And the surface is exactly the closed local activity plus the isolation gate.
     expect(exported).toEqual([
+      "KIDS_ACTIVITY_ACTIONS",
+      "KIDS_ACTIVITY_PIECES",
+      "KIDS_ACTIVITY_PIECE_LIMIT",
+      "KIDS_ACTIVITY_REFUSE_REASONS",
+      "KIDS_ACTIVITY_VERSION",
+      "KIDS_ACTIVITY_WORLDS",
       "KIDS_ISOLATION_PLANES",
       "KIDS_NETWORK_DESTINATION_ALLOWLIST",
       "KIDS_POLICY_VERSION",
       "KIDS_REFUSE_REASONS",
+      "applyKidsActivityAction",
+      "createKidsActivityState",
       "evaluateKidsBoundaryClaim",
       "evaluateKidsIsolation",
       "evaluateKidsLlmRoute",

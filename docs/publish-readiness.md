@@ -69,6 +69,7 @@ honest statement that nothing is released.
 | `@sceneaxi/web-shell` | `0.0.0` | `apps` | — |
 | `@sceneaxi/site-catalog-game` | `0.0.0` | `sites` | — |
 | `@sceneaxi/site-catalog-web` | `0.0.0` | `sites` | — |
+| `@sceneaxi/site-kids` | `0.0.0` | `sites` | — |
 | `@sceneaxi/site-umbrella` | `0.0.0` | `sites` | — |
 | `@sceneaxi/desktop-linux` | `0.0.0` | `desktop` | — |
 | `@sceneaxi/desktop-windows` | `0.0.0` | `desktop` | — |
@@ -128,5 +129,7 @@ claim a guarantee the gate does not enforce.
   source-backed.
 - **Kids.** `@sceneaxi/profile-kids` is never a consumer package and never reaches a
   shared artifact; the archive builder and this checklist both refuse it by name.
+  The private `@sceneaxi/site-kids` install root is likewise not an SDK consumer and
+  imports no SceneAxi package, so it creates no route into the archive.
 - **Licence grant.** `UNLICENSED` is the current state, and changing it is a separate
   captain decision.

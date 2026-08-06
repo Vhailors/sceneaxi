@@ -63,6 +63,83 @@ describe("sites tier — injected violations", () => {
     expect(res.stderr).toContain("imports @sceneaxi/engine-kernel, DENIED by the matrix");
   });
 
+  it("the Kids site passes only with an empty SceneAxi edge", () => {
+    editManifest(fx, "sites/kids/package.json", (manifest) => {
+      manifest.dependencies = {
+        ...manifest.dependencies,
+        "@sceneaxi/site-kit": "link:../../packages/site-kit",
+      };
+    });
+    const res = runCheck(fx, "check-sites.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "@sceneaxi/site-kids: the isolated Kids runtime may declare only next, react, and react-dom",
+    );
+  });
+
+  it.each([
+    ["fetch", "fetch('/outside')"],
+    ["WebSocket", "new WebSocket('wss' + '://outside')"],
+    ["environment access", "process.env.OUTSIDE"],
+    ["form", "const markup = '<form action=/outside>'"],
+    ["link", "const markup = '<a href=/outside>'"],
+  ])("sites check rejects Kids source with %s authority", (label, source) => {
+    writeTo(fx, "sites/kids/src/lib/authority-leak.ts", `${source};\n`);
+    const res = runCheck(fx, "check-sites.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      `sites/kids/src/lib/authority-leak.ts names ${label} — the first-release Kids site has no external data path`,
+    );
+  });
+
+  it("sites check rejects an external URL added outside the Kids src tree", () => {
+    appendTo(
+      fx,
+      "sites/kids/next.config.ts",
+      '\nexport const outside = "https://third-party.example";\n',
+    );
+    const res = runCheck(fx, "check-sites.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "sites/kids/next.config.ts names external URL — the first-release Kids site has no external data path",
+    );
+  });
+
+  it.each([
+    ["a request rewrite", "async rewrites() { return []; }"],
+    ["a redirect", "async redirects() { return []; }"],
+    ["a remote image pattern", "export const images = { remotePatterns: [] };"],
+    ["an image host allow list", "export const images = { domains: [] };"],
+    ["an asset prefix", 'export const assetPrefix = "/cdn";'],
+    ["a proxy destination", 'export const route = { destination: "/elsewhere" };'],
+    ["build-time environment injection", "export const config = { env: {} };"],
+  ])("sites check rejects a Kids config granting %s", (label, source) => {
+    appendTo(fx, "sites/kids/next.config.ts", `\n${source}\n`);
+    const res = runCheck(fx, "check-sites.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      `sites/kids/next.config.ts configures ${label} — the first-release Kids site serves only its own bundled activity`,
+    );
+  });
+
+  it("sites check rejects any Kids environment input, even without a value", () => {
+    writeTo(fx, "sites/kids/.env.example", "KIDS_DATA_ORIGIN=\n");
+    const res = runCheck(fx, "check-sites.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "sites/kids/.env.example:1 declares 'KIDS_DATA_ORIGIN' — the first-release Kids site accepts no environment inputs",
+    );
+  });
+
+  it("sites check rejects a second Kids dependency build approval", () => {
+    appendTo(fx, "sites/kids/pnpm-workspace.yaml", "  another-package: true\n");
+    const res = runCheck(fx, "check-sites.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "@sceneaxi/site-kids: pnpm build approval must allow only sharp in the isolated site workspace",
+    );
+  });
+
   it("boundary check allows the umbrella's one charted engine edge — the presentation seam", () => {
     // ADR 0022: the umbrella owns the public viewport, so this edge must pass. It is
     // asserted here beside the denials so widening and its bound are proven together.
@@ -643,7 +720,7 @@ describe("sites tier — injected violations", () => {
   });
 
   it("sites check fails on an empty sites tree", () => {
-    for (const dir of ["umbrella", "catalog-game", "catalog-web"]) {
+    for (const dir of ["umbrella", "catalog-game", "catalog-web", "kids"]) {
       rmSync(join(fx, "sites", dir), { recursive: true, force: true });
     }
     const res = runCheck(fx, "check-sites.mjs");

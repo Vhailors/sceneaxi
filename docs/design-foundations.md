@@ -165,11 +165,30 @@ at the 390px reference width the umbrella mockup does honour.
 
 `--kids` (`#A78BFA`) is transcribed, because the sheet also assigns it to scene
 composition, and the Kids row stays in the descriptive `FOUNDATION_SURFACE_ACCENTS`
-map so no visual fact is lost. But `resolveSurfaceAccent("kids")` and
-`foundationsCss({ surface: "kids" })` **refuse** `KIDS_SURFACE_DENIED`: this
-repository hosts no Kids surface, Kids lives on its own origin, and nothing here may
-depend on `@sceneaxi/profile-kids`. Emitting a Kids theme would invent a product
-surface the canonical spec holds closed. This adds no Kids behaviour of any kind.
+map so no visual fact is lost. `resolveSurfaceAccent("kids")` and
+`foundationsCss({ surface: "kids" })` still **refuse** `KIDS_SURFACE_DENIED`:
+the separate `sites/kids` origin may not import `site-kit` or any other SceneAxi
+package, so the shared emitter cannot become its theme dependency.
+
+Issue #200 records the first Kids-specific composition in
+[`kids-first-release.md`](kids-first-release.md): the archive's violet, 16px surface
+radius, larger controls, no assistant, and a grown-ups disclosure; dark Foundations
+neutrals; plus the three world background pairs implemented in
+`sites/kids/src/app/globals.css`. Those world colors are a #200 product decision,
+not a new shared token. They stay site-local and claim no palette authority outside
+the isolated Kids origin.
+
+Because that origin may not import this package, its stylesheet holds a **copy** of
+the neutrals — the same situation as `apps/desktop-shell/src/visual-tokens.ts`, and
+handled the same way: `tests/sites/kids-surface.test.ts` compares every copied token
+against `FOUNDATION_COLORS` and measures a 4.5:1 floor on each shipped text pairing,
+the empty-stage hint's 78% alpha over every stop of every curated world gradient
+included. Both inputs are read out of the shipped stylesheet rather than listed in
+the test — the colour-token set is asserted to be exactly the pinned one, so an
+unpinned eleventh token fails, and a repainted world is measured as painted. One
+divergence is recorded rather than corrected: the Kids surface ships a single border
+weight and spends it on the strong one, so its `--line` carries this sheet's
+`--line-strong` hex.
 
 ## Browser evidence
 

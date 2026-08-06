@@ -22,7 +22,8 @@ L3  profiles · cli · importers · provider adapters · plugin-host · auth ←
 L4  apps               (leaves; nothing depends on an app), plus one charted edge
                        web-shell holds alone: auth + billing for its account /
                        credit-balance view model
-L4  sites              site-kit ← the three deployable sites (leaves; ADR 0018), plus
+L4  sites              site-kit ← the three non-Kids sites (leaves; ADR 0018), plus
+                       the dependency-empty dedicated Kids site, plus
                        two charted edges the umbrella alone holds: engine-presentation
                        for every viewport it owns (ADR 0022; surfaces inventoried in
                        docs/three-presentation-core.md), and auth + billing for the
@@ -146,6 +147,13 @@ allow-list drift cannot silently open the Kids boundary. The separate Kids surfa
 origin boundary is owned by
 [`docs/program/site-domain-topology.md`](program/site-domain-topology.md).
 
+`@sceneaxi/site-kids` does not weaken that rule: it is a separate install root with
+an empty matrix allow list and no import of `@sceneaxi/profile-kids`, `site-kit`, or
+any other SceneAxi package. `pnpm check:sites` additionally restricts its runtime
+dependencies to Next/React, permits no environment input, and refuses outbound
+browser APIs in its source. Profile/site activity parity is a root test over two
+independent copies, not a runtime dependency.
+
 ## Test-only `testing/` subpaths
 
 A package may declare a visibly test-only `./testing/*` export subpath so that a test in
@@ -193,7 +201,7 @@ Recorded in `dependency-matrix.json → releaseGroups` and stamped on every mani
 - **importers** (external importers and provider adapters), **plugin-host**,
   **apps**: independent / private.
   `plugin-host` is independently versioned and may depend only on `schemas`.
-- **sites** (`site-kit` plus the three deployable sites): first-party deployable web
+- **sites** (`site-kit`, three non-Kids sites, and the dependency-empty Kids site): first-party deployable web
   surfaces and their shared deployment-neutral logic. Consume only public contracts and
   public `authoring-core` APIs; never profiles, a service locator, or Kids. The single
   engine edge is umbrella → `engine-presentation` for every viewport the umbrella owns

@@ -400,7 +400,7 @@ The site ports are structural projections of that vertical's contracts (`Princip
 `User`, `Session`, `CreditLedgerEntry`, `CreditPack`, `CheckoutSessionIntent`), so its
 exports satisfy them as injected adapters with no redefinition of identity or ledger
 semantics. The ports speak that vertical's identity-surface vocabulary
-(`IDENTITY_SURFACES`): all three deployable sites map onto the `"site"` identity surface,
+(`IDENTITY_SURFACES`): all three non-Kids deployable sites map onto the `"site"` identity surface,
 while the umbrella / catalog-game / catalog-web identifiers stay for routing, branding,
 catalog lookup, and deep links and are not identity surfaces.
 

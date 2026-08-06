@@ -25,6 +25,12 @@ This is a product topology decision, not publication authority. It does not
 authorize buying domains, creating accounts, deploying sites, or making any
 surface public.
 
+The first local implementation of that dedicated origin is `sites/kids`
+(sceneaxi#200). It is a self-contained install root with no SceneAxi dependency,
+environment input, external data API, shared identity, commerce, catalog, or model
+route. This repository implementation does not change the publication-authority
+limits above.
+
 ## Canonical ownership
 
 Each public page has one owning surface and one canonical URL on that surface:

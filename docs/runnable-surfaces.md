@@ -10,7 +10,7 @@ a marketing word.
 |---|---|---|
 | **R2 — startable** | A real entrypoint a human can run and get product behaviour from | `bin` entry + a smoke test that **spawns** it |
 | **R1 — driveable** | Reachable through the public seam and golden-tested end to end | golden e2e in `tests/e2e/` |
-| **R0 — refuse-only** | The *product* is a refusal/isolation boundary, not a UI | executable refuse matrix + an explicit "no product surface" assertion |
+| **R0 — refuse-only** | A named shared path is deliberately unavailable | executable refusal matrix + an explicit empty-operation assertion |
 
 ## Surfaces
 
@@ -23,7 +23,8 @@ a marketing word.
 | Game profile (single object) | **R1** | `pnpm test:golden` | `tests/e2e/cli-golden-path.test.ts` |
 | Game profile (multi-object scene) | **R1** | `pnpm test:golden` | `tests/e2e/profile-game-scene-golden.test.ts` |
 | Web Experience profile | **R1** | `pnpm test:golden` | `tests/e2e/profile-web-golden-path.test.ts` |
-| Kids profile | **R0** | `pnpm test:golden` | `tests/e2e/profile-kids-refuse-golden.test.ts` |
+| Kids profile shared engine open path | **R0** | `pnpm test:golden` | `tests/e2e/profile-kids-refuse-golden.test.ts` |
+| Kids isolated build-and-play activity (`sites/kids`) | **R1** | `cd sites/kids && pnpm install --frozen-lockfile && pnpm dev` (development phase only, this widens the served policy to `connect-src 'self'` + `'unsafe-eval'` so hot reload works; for the shipped policy use `pnpm build && pnpm start`); root proof via `pnpm test:golden` | `tests/e2e/profile-kids-refuse-golden.test.ts`, `packages/profile-kids/test/activity.test.ts`, `tests/sites/kids-surface.test.ts` |
 | Importers + plugin host | **R1** | `pnpm test:golden` | `tests/e2e/importers-plugin-golden.test.ts`, `tests/e2e/plugin-capability-golden.test.ts` (the one registered capability, `sceneaxi.sculpt.intake-source.v1`, from the shipped seed through load to an addressed call) |
 | Umbrella live open path (`/open`) | **R1** | `pnpm test:golden`; in a browser, `cd sites/umbrella && pnpm build && pnpm start` | `tests/e2e/umbrella-live-open-golden.test.ts` (headless surface, no pixel claim) + the browser record in `docs/three-presentation-core.md` |
 | Umbrella entitled editors (`/editor`: Engine Desktop + simplified Web Experience projection) | **R1** | `pnpm test:golden`; in a browser, `cd sites/umbrella && pnpm build && SCENEAXI_SITE_EDITOR_PREVIEW=1 pnpm start`, then use `?profile=web` for the Web projection | `tests/e2e/umbrella-editor-viewport-golden.test.ts` (headless surface, no pixel claim), `packages/site-kit/test/{editor-shell,web-experience-editor}.test.ts`, `tests/sites/web-experience-editor.test.ts`, `tests/parity/editor-shell-parity.test.ts`, + the browser records in `docs/three-presentation-core.md` and [`web-editor-shell.md`](web-editor-shell.md). Without preview, the product path is the existing `/login` session and entitlement seam; a refused request constructs neither editor and draws nothing. The Web subset and sandbox are owned by [`web-experience-editor.md`](web-experience-editor.md) |
@@ -119,10 +120,13 @@ still-unimplemented target:
   approval, or listing readiness; marketplace activation holds stay closed.
 - `scene compose` fails closed on the named refuse matrix
   (`docs/scene-composition.md`) rather than composing a partial scene.
-- The Kids profile has **no** product surface: no UI, commerce, identity, or
-  third-party LLM route, and `kidsBoundary.allowedDependents` stays empty. The
-  desktop shell's editor chrome honours that over its design source: on the
-  refuse-only profile the whole editor body is replaced by
+- The Kids profile's **shared engine open path** has no product surface: no
+  kernel session, commerce, identity, or third-party LLM route, and
+  `kidsBoundary.allowedDependents` stays empty. The separate `sites/kids` origin
+  owns only the curated in-memory activity documented in
+  [`kids-first-release.md`](kids-first-release.md); it imports no profile or shared
+  site package. The desktop shell's editor chrome still honours the shared-path
+  refusal over its design source: on the refuse-only profile the whole editor body is replaced by
   `OPEN_PATH_KIDS_REFUSED` rather than rendered disabled, the mode rail refuses
   by the same name, and the assistant shows its own named denial — all of it in
   the emitted bytes and selected by state, so a browser-side profile switch
