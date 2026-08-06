@@ -277,24 +277,36 @@ describe("Stripe Connect TEST onboarding", () => {
   });
 
   it("issues a fresh intent against the existing account once a link expired", async () => {
+    const seen: Array<Record<string, unknown>> = [];
+    const resumedValue = {
+      stripeAccountId: "acct_test_creator",
+      onboardingUrl: "https://connect.stripe.example/test/onboard-2",
+      expiresAt: "2026-08-06T14:00:00Z",
+      accountRequestId: "req_account_02",
+      accountCreatedAt: "2026-08-06T12:59:00Z",
+      onboardingRequestId: "req_onboarding_02",
+      onboardingCreatedAt: "2026-08-06T13:00:00Z",
+    };
+    const firstValue = {
+      stripeAccountId: "acct_test_creator",
+      onboardingUrl: "https://connect.stripe.example/test/onboard",
+      expiresAt: "2026-08-06T11:00:00Z",
+      accountRequestId: "req_account_01",
+      accountCreatedAt: "2026-08-06T09:59:00Z",
+      onboardingRequestId: "req_onboarding_01",
+      onboardingCreatedAt: "2026-08-06T10:00:00Z",
+    };
     const { provider } = providerFixture({
-      createOnboarding: () => ({
-        ok: true as const,
-        value: {
-          stripeAccountId: "acct_test_creator",
-          onboardingUrl: "https://connect.stripe.example/test/onboard-2",
-          expiresAt: "2026-08-06T14:00:00Z",
-          accountRequestId: "req_account_02",
-          accountCreatedAt: "2026-08-06T12:59:00Z",
-          onboardingRequestId: "req_onboarding_02",
-          onboardingCreatedAt: "2026-08-06T13:00:00Z",
-        },
-      }),
+      createOnboarding: (request) => {
+        seen.push({ ...request });
+        return {
+          ok: true as const,
+          value: seen.length === 1 ? firstValue : resumedValue,
+        };
+      },
     });
     const store = createInMemoryConnectStore();
-    const first = await startConnectOnboarding(
-      onboardingRequest(store, providerFixture().provider),
-    );
+    const first = await startConnectOnboarding(onboardingRequest(store, provider));
     const resumed = await startConnectOnboarding(
       onboardingRequest(store, provider, {
         idempotencyKey: "connect-onboarding:usr_creator-2",
@@ -314,6 +326,11 @@ describe("Stripe Connect TEST onboarding", () => {
     expect(resumed.value.account).toEqual(first.value.account);
     expect(store.accountCount()).toBe(1);
     expect(store.onboardingIntentCount()).toBe(2);
+    expect(seen).toHaveLength(2);
+    expect(seen.map((request) => request["stripeAccountId"])).toEqual([
+      undefined,
+      "acct_test_creator",
+    ]);
   });
 
   it("refuses a resumed onboarding that names a different provider account", async () => {

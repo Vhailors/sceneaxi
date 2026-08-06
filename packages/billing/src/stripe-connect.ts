@@ -98,12 +98,21 @@ export type ConnectPayoutProviderValue = Readonly<{
   paidAt: string;
 }>;
 
-/** The only external operations needed by the Connect application seam. */
+/**
+ * The only external operations needed by the Connect application seam.
+ *
+ * `createOnboarding` carries `stripeAccountId` whenever the creator already has a
+ * recorded Connect account, and the adapter must then issue a fresh onboarding
+ * link **for that account** rather than creating a second one: a provider account
+ * the store cannot name is an orphan, and the seam refuses the commit that would
+ * follow it. Its absence is the only case in which an account may be created.
+ */
 export type StripeConnectProvider = Readonly<{
   readiness: ConnectProviderReadiness;
   createOnboarding(request: {
     creatorUserId: string;
     idempotencyKey: string;
+    stripeAccountId?: string | undefined;
   }): Awaitable<ConnectProviderResult<ConnectOnboardingProviderValue>>;
   retrieveStatus(request: {
     stripeAccountId: string;
@@ -180,7 +189,11 @@ export function isConnectStoreConflict(error: unknown): boolean {
  *   evidence, and the migration's append-only trigger forbids rewriting it — so a
  *   later intent under a fresh key commits against that row and returns it. A
  *   provider naming a different `stripeAccountId` or mode for the creator
- *   conflicts.
+ *   conflicts;
+ * - `findAccountByCreatorUserId` is what makes that resume reachable: the seam
+ *   reads it before every onboarding dispatch and hands the recorded
+ *   `stripeAccountId` to `createOnboarding`, so an adapter that answers it
+ *   incompletely turns a resume into a second provider account.
  */
 export type ConnectStore = Readonly<{
   findAccountByCreatorUserId(
@@ -790,12 +803,41 @@ export async function startConnectOnboarding(
     }
   }
 
+  const existing = await storeCall(() =>
+    input.store.findAccountByCreatorUserId(input.creatorUserId),
+  );
+  if (!existing.ok) return existing;
+  let existingAccountId: string | undefined;
+  if (existing.value !== undefined) {
+    const storedAccount = validateStored(
+      existing.value,
+      validateConnectAccountRecord,
+      "Connect account",
+    );
+    if (!storedAccount.ok) return storedAccount;
+    if (storedAccount.value.creatorUserId !== input.creatorUserId) {
+      return billingRefuse(
+        BILLING_REFUSE_REASONS.connectStoreFailed,
+        "The Connect audit store returned an account for a different creator.",
+      );
+    }
+    existingAccountId = storedAccount.value.stripeAccountId;
+  }
+
   let response: unknown;
   try {
-    response = await ready.value.createOnboarding({
-      creatorUserId: input.creatorUserId,
-      idempotencyKey: input.idempotencyKey,
-    });
+    response = await ready.value.createOnboarding(
+      existingAccountId === undefined
+        ? {
+            creatorUserId: input.creatorUserId,
+            idempotencyKey: input.idempotencyKey,
+          }
+        : {
+            creatorUserId: input.creatorUserId,
+            idempotencyKey: input.idempotencyKey,
+            stripeAccountId: existingAccountId,
+          },
+    );
   } catch {
     return billingRefuse(
       BILLING_REFUSE_REASONS.connectProviderRefused,

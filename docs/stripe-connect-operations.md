@@ -51,6 +51,12 @@ The versioned record contract is
   expiry and provider request identity while `commitOnboarding` keeps and returns the
   stored account row. A provider naming a different `stripeAccountId` or mode for that
   creator conflicts, so re-onboarding cannot silently move a creator's account.
+- The seam reads the recorded account before every onboarding dispatch and passes its
+  `stripeAccountId` to `createOnboarding` when one exists. That field is the adapter's
+  instruction to issue a link **for that account**; creating a second provider account
+  for a creator who already has one is an adapter fault, and the commit that would
+  follow it refuses rather than recording the orphan. Only an absent
+  `stripeAccountId` permits account creation.
 - Status observations key on provider request evidence.
 - `commitPayoutIntent` atomically stores the validated `MoneySplitRecord` and the
   exact creator-leg payout intent. A different split under the sale or idempotency
