@@ -24,7 +24,8 @@
  *
  * Missing configuration still refuses by name: session verification needs Better Auth
  * and Neon, balances need a provisioned Neon account, and checkout/grants need Stripe
- * TEST mode plus persisted evidence. `docs/websites-deploy.md` owns activation.
+ * TEST mode plus persisted evidence. `docs/websites-deploy.md` owns the wiring mechanics
+ * and `docs/production-activation.md` the ordered activation and rollback procedure.
  *
  * The rule the whole module is built around: an absent dependency produces a *named*
  * refusal, never an invented session, balance, or checkout.

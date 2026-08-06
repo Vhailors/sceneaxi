@@ -30,7 +30,10 @@ public `@sceneaxi/site-kit/catalog-identity` entry directly, and the item page s
 that plane says about the request — display only, with a server-derived role or a named refusal. The
 matrix denies this site `@sceneaxi/auth` and `@sceneaxi/billing`, and no adapter is
 supplied here, so an unwired deployment refuses rather than inventing a viewer. The plane
-and its activation are owned by [`docs/websites-deploy.md`](../../docs/websites-deploy.md).
+and its wiring mechanics are owned by
+[`docs/websites-deploy.md`](../../docs/websites-deploy.md); the ordered activation and
+rollback procedure is owned by
+[`docs/production-activation.md`](../../docs/production-activation.md).
 
 ## TEST purchase is explicit and fail-closed
 

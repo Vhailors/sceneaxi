@@ -12,7 +12,8 @@
  * The registry is resolved once and memoised, so a deployment's provider clients are
  * built at most once per server process rather than per request.
  *
- * Contract owners: `docs/websites-deploy.md` (activation, env names) and
+ * Contract owners: `docs/websites-deploy.md` (wiring mechanics, env names),
+ * `docs/production-activation.md` (ordered activation and rollback), and
  * `docs/auth-credits.md` (refusal ordering); the boundary is ADR 0021's 2026-08-01
  * clarification.
  */

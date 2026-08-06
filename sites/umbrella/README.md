@@ -299,7 +299,8 @@ named fault instead of reporting a valid password as refused
 `identityPort.signIn` through this same plug point
 ([sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185), see **Hosted sign-in**
 above); a deployment whose provider handles are absent issues no session and refuses by
-name instead. `docs/websites-deploy.md` owns the env names and activation procedure.
+name instead. `docs/websites-deploy.md` owns the env names and wiring mechanics;
+`docs/production-activation.md` owns the ordered activation and rollback procedure.
 
 `SCENEAXI_SITE_EDITOR_PREVIEW=1` grants a banner-marked editor preview so the
 Minimum E2 surface is demonstrable until those handles are configured. Absent by

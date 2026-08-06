@@ -28,7 +28,8 @@ provider credentials and the database remain outside the repository.
 
 The TEST deployment path now has the provider-backed handles and idempotent account
 provisioning. Missing provider configuration remains a named refusal, and activation
-still requires the deployment procedure at `docs/websites-deploy.md`. The sign-in HTTP
+still requires the wiring mechanics at `docs/websites-deploy.md`, taken in the order
+`docs/production-activation.md` owns. The sign-in HTTP
 entry point that reaches `identityPort.signIn` **ships** (sceneaxi#185): the umbrella's
 `/login` page and `POST /api/login|logout` routes drive the plane's login port and set the
 HttpOnly `sceneaxi.session` cookie — see *Better Auth* below. **What v1 still does
