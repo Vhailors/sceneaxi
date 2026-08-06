@@ -548,47 +548,6 @@ describe("the storefronts are responsive, which the archive is not", () => {
     expect(released).toBe("5.5rem");
     expect(Number.parseFloat(released) * 16).toBeLessThan(Number.parseFloat(narrow) * 16);
   });
-
-  /**
-   * Recorded prose may not be placed in a track sized for an ordinal.
-   *
-   * `.record-row` is two tracks below `48rem` with four children, so auto placement puts the
-   * curation reason in the 2rem ordinal column, where `overflow-wrap: anywhere` breaks it to
-   * a few characters a line. That never widens the document, so the `scrollWidth` probe the
-   * README records cannot see it — the placement is asserted here instead, in both
-   * directions, since an unreset span would collapse the four-track tablet row the same way.
-   */
-  it.each(STOREFRONTS)("%s gives the curation reason a full row when narrow", (site) => {
-    const sheet = stripComments(css[site]);
-    const stacked = sheet.slice(0, sheet.indexOf("@media (min-width: 64rem)"));
-    const columns = sheet.slice(sheet.indexOf("@media (min-width: 64rem)"));
-
-    expect(
-      declarationsFor(stacked, ".record-row")["grid-template-columns"],
-      "the ordinal track stays an ordinal track",
-    ).toBe("2rem minmax(0, 1fr)");
-    for (const selector of [".record-detail", ".record-at"]) {
-      expect(declarationsFor(stacked, selector)["grid-column"], `${selector} takes the row`).toBe(
-        "1 / -1",
-      );
-      expect(
-        declarationsFor(columns, selector)["grid-column"],
-        `${selector} is a column again once the row has four tracks`,
-      ).toBe("auto");
-    }
-    // The four-column row belongs to the breakpoint that gives it the width, not to the one
-    // that halves `.detail-main` around it — at `48rem` the reason's `1fr` track resolves to
-    // nothing at all.
-    expect(
-      declarationsFor(
-        sheet.slice(
-          sheet.indexOf("@media (min-width: 48rem)"),
-          sheet.indexOf("@media (min-width: 64rem)"),
-        ),
-        ".record-row",
-      )["grid-template-columns"],
-    ).toBeUndefined();
-  });
 });
 
 describe("accessibility corrections the archive needs", () => {

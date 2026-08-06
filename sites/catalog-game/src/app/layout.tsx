@@ -117,7 +117,7 @@ export default function RootLayout({ children }: { readonly children: React.Reac
                     <a href="/publish">Sell your work</a>
                   </li>
                   <li>
-                    <a href="/publish#requirements">What listing requires</a>
+                    <a href="/publish#requirements">What listing will require</a>
                   </li>
                 </ul>
               </div>
@@ -140,9 +140,9 @@ export default function RootLayout({ children }: { readonly children: React.Reac
                 <strong>Sell what you sculpt</strong>
               </p>
               <p className="footer-blurb">
-                Listing is reviewed against the artifact&apos;s own evidence, not its
-                render. The share rule and what a listing would pay are published before
-                you submit anything.
+                Listing will be reviewed against the artifact&apos;s own evidence, not
+                its render. Publishing is not open yet, so the share rule and what a
+                listing would pay are published ahead of it.
               </p>
               <a className="button button-quiet" href="/publish">
                 Read the listing rules
@@ -153,8 +153,8 @@ export default function RootLayout({ children }: { readonly children: React.Reac
           <div className="shell footer-base">
             <span>© 2026 SceneAxi</span>
             <span className="footer-note">
-              A separate storefront from Web assets — its own origin, its own catalogue,
-              its own curation.
+              A separate storefront from Web assets — its own origin and its own
+              catalogue.
             </span>
           </div>
         </footer>

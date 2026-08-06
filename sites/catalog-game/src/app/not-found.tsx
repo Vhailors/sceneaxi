@@ -10,7 +10,7 @@ export default function NotFound() {
       <p className="eyebrow">Not found</p>
       <h1>No listing with that id</h1>
       <p className="lede">
-        This storefront only publishes its own curated listings, so an id from another
+        This storefront only publishes its own committed listings, so an id from another
         SceneAxi surface will not resolve here either.
       </p>
       <div className="actions">

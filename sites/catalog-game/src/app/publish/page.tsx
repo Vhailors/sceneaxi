@@ -11,9 +11,12 @@ import { StatePanel } from "../_components/state-panel.js";
  * The creator publish surface.
  *
  * Display-only: it shows the share rule and a worked example of what a listing would
- * pay, then refuses submission with the pipeline's own reason. Publishing to a live
- * marketplace is an open captain decision, and this page does not pre-empt it — which is
- * also why the design's "Apply as a seller" button and its payouts column are not here.
+ * pay, then refuses submission with the pipeline's own reason. The requirements it lists
+ * are that unopened pipeline's, not fields this storefront collects or displays — the
+ * committed fixture record a detail page renders carries none of them. Publishing to a
+ * live marketplace is an open captain decision, and this page does not pre-empt it —
+ * which is also why the design's "Apply as a seller" button and its payouts column are
+ * not here.
  */
 export default function PublishPage() {
   const example = createPublishIntent({
@@ -54,7 +57,11 @@ export default function PublishPage() {
       </section>
 
       <section className="section" id="requirements">
-        <h2>What listing requires</h2>
+        <h2>What listing will require</h2>
+        <p className="prose">
+          These are the requirements of the publishing pipeline, which is not open. None
+          of them is collected, screened, or displayed by this storefront today.
+        </p>
         <ul className="bullets">
           <li>A sculpt artifact whose evidence matches its spec bytes.</li>
           <li>A licence, a named rights holder, and whether commercial use is allowed.</li>
@@ -63,9 +70,11 @@ export default function PublishPage() {
           <li>Compatibility: the core range and the profiles it targets.</li>
         </ul>
         <p className="prose">
-          Every listing on this storefront passes intake, screening, and curation with a
-          recorded human verdict before it appears. That is why the metadata on each
-          detail page is complete rather than optional.
+          When publishing opens, intake, screening, and curation each record their own
+          verdict before a listing appears. Until then the catalogue serves committed TEST
+          fixture records, which carry a seller, a title, prices, and a publication time
+          and nothing else — so every detail page states that no licence, preview, or
+          compatibility declaration is part of the record rather than showing one.
         </p>
       </section>
 

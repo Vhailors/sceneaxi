@@ -190,26 +190,12 @@ overflowing navigation — and the probe above read no overflow at 520 or 537 ei
 the two are not the same claim. Text carrying `overflow-wrap: anywhere` never widens the
 document: squeezed into a track far narrower than its content it wraps instead, so the
 probe reads `390 = 390` while the text renders as a column of two- and three-character
-lines. The curation record was exactly that — four children auto-placed into the two-track
-`.record-row`, which put the reason in the 2rem ordinal track — and every viewport in the
-table above passed while that section was unreadable. So it is read directly, as the
-rendered width and line count of `.record-detail` on the former #156 detail projection:
-
-| Viewport width | `.record-detail` width | Lines |
-|---|---|---|
-| 390 | 316 | 1 |
-| 520 | 446 | 1 |
-| 768 | 386 | 1 |
-| 840 | 429 | 1 |
-| 1023 | 527 | 1 |
-| 1024 | 132 | 2 |
-| 1366 | 322 | 1 |
-
-Below `64rem` the reason takes its own full-width row under the ordinal; from `64rem` the
-row has four columns and the width for them. The four-column form is at `64rem` rather
-than `48rem` because `48rem` also halves `.detail-main` around this row: measured before
-the change, the reason's `1fr` track resolved to 0 wide and 624 tall at a 768 viewport —
-the same defect as the phone case and a worse instance of it.
+lines. The #156 curation record was exactly that — four children auto-placed into a
+two-track row, which put the recorded reason in the 2rem ordinal track — and every
+viewport in the table above passed while that section was unreadable. #195 removed that
+record from the detail projection along with the rules that carried it, so nothing in the
+shipped sheet answers this defect any more; the caveat stands as the reason a prose row
+this storefront adds later is read as rendered width and line count, not as a probe.
 
 #### Sticky columns at short desktop heights
 
@@ -263,8 +249,7 @@ What a browser has to prove is recorded here. What the gate can prove — shared
 mobile-first breakpoints only, no masked overflow, the reduced-motion answer, a computed
 4.5:1 on every shipped text pairing measured against the sheet the site actually serves,
 each sticky column being bounded and internally scrollable rather than clipped, and
-keyboard-reachable while it is, the anchor offset clearing a wrapped masthead, the curation
-reason taking a full row rather than the ordinal track,
+keyboard-reachable while it is, the anchor offset clearing a wrapped masthead,
 no redeclared Foundations token or pasted Foundations hex, digest-mark determinism, real
 facet counts, and the absence of every invented value above — is asserted in
 [`tests/sites/catalog-storefronts.test.ts`](../../tests/sites/catalog-storefronts.test.ts).
