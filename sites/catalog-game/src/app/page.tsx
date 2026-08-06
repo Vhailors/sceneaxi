@@ -80,13 +80,12 @@ export default function CataloguePage() {
 
           <div className="rail-note">
             <p>
-              <strong>Every listing carries its record</strong>
+              <strong>Every listing is a committed fixture record</strong>
             </p>
             <p>
-              Rights, provenance, an AI-generation disclosure, compatibility, and the
-              curation history that put it here — published on the detail page rather than
-              summarised into a badge. These counts describe the listings on this page and
-              nothing beyond them.
+              Price mode, seller, publication time, TEST mode, and availability come from
+              the validated catalog-listing contract. Asset payload, licence, preview,
+              compatibility, and delivery are not in that fixture and are not implied here.
             </p>
           </div>
         </aside>
@@ -106,28 +105,27 @@ export default function CataloguePage() {
           </ul>
 
           <p className="prose">
-            Each card is marked with a figure derived from that listing&apos;s own
-            content hash. It is a mark of the digest, not a render of the asset — this
-            storefront has never rendered these assets and does not draw a picture that
-            would imply otherwise.
+            Each card is marked with a figure derived from the validated listing record.
+            It is a mark of the record digest, not a render of the asset — the fixture
+            carries no asset payload or preview.
           </p>
 
           <section className="section" id="pricing">
             <h2>How pricing reads</h2>
             <p className="prose">
-              A listing may be priced in credits, in money, or both — you pick at
-              purchase. Creators receive {CREATOR_SHARE_RULE.creatorPercent}% of the
-              credits on a sale.
+              A listing may be priced in credits, money, or both. The display keeps the
+              seller&apos;s choice exactly; it does not convert currencies. Creators receive
+              {" "}{CREATOR_SHARE_RULE.creatorPercent}% in the established share model.
             </p>
             <p className="reason">{CREATOR_SHARE_ROUNDING_NOTE}</p>
           </section>
 
-          <StatePanel tone="warn" title="This catalogue is evaluation-only for now">
+          <StatePanel tone="warn" title="TEST catalog · purchases refuse here">
             <p>
-              Every listing here is a curated fixture with real rights, provenance, and
-              AI-disclosure metadata, so the contract surface can be inspected before
-              purchasing opens. Buying is not activated, and nothing on this site collects
-              payment details.
+              These are committed TEST fixture listings. Browse and detail are available;
+              asset delivery and payment completion are not. The catalog sites own no
+              billing stack, collect no payment details, and cannot report a purchase as
+              complete.
             </p>
           </StatePanel>
         </div>

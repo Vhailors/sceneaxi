@@ -1,4 +1,9 @@
-import { describeListingPrice, type SiteListing } from "@sceneaxi/site-kit";
+import {
+  CREATOR_SHARE_RULE,
+  describeCreatorShare,
+  describeListingPrice,
+  type SiteListing,
+} from "@sceneaxi/site-kit";
 import { DigestFigure } from "./digest-figure.js";
 
 /**
@@ -6,9 +11,9 @@ import { DigestFigure } from "./digest-figure.js";
  *
  * The design's card carries a thumbnail, a kind badge, a triangle count, five pass bars,
  * a name/price row and an author/licence row. Every one of those slots is filled here
- * from the Catalog Item contract or left out: there is no triangle count in the contract,
- * so there is no triangle count on the card, and the pass bars are the item's recorded
- * curation transitions rather than five invented build passes.
+ * from the committed Catalog Listing contract or left out: the contract carries no
+ * triangle count, licence, or build pass, so none of them appears on the card. The chips
+ * carry the fixture's TEST mode and its metadata-only availability instead.
  *
  * `compact` is the design's "From the same studio" variant: figure, name, price.
  */
@@ -20,29 +25,24 @@ export function ListingCard({
   readonly compact?: boolean;
 }) {
   const price = describeListingPrice(listing.price);
-  const steps = listing.item.moderation.history.length;
+  const share = describeCreatorShare(listing.price);
   const chips = compact
     ? []
     : [
-        ...listing.item.compatibility.profiles.map((profile) => ({
-          key: `profile-${profile}`,
-          label: profile,
-        })),
         {
-          key: "state",
-          label: listing.item.moderation.pipelineState,
-          tone: "ok" as const,
+          key: "mode",
+          label: listing.availability.mode.toUpperCase(),
+          tone: "accent" as const,
         },
+        { key: "availability", label: listing.availability.asset },
       ];
 
   return (
     <li className="card">
       <a className="card-link" href={`/item/${listing.itemId}`}>
         <DigestFigure
-          digest={listing.item.assetPackage.contentHash}
+          digest={listing.recordDigest}
           chips={chips}
-          steps={steps}
-          stepsLabel={`${steps} recorded curation transitions`}
         />
         <span className="card-head">
           <span className="card-name">{listing.title}</span>
@@ -50,12 +50,13 @@ export function ListingCard({
             {price.ok ? price.value.label : `unpriced (${price.reason})`}
           </span>
         </span>
-        {!compact && (
-          <span className="card-meta">
-            <span className="card-author">by {listing.creatorId}</span>
-            <span className="card-licence">{listing.item.rights.license}</span>
+        <span className="card-meta">
+          <span className="card-author">by {listing.creatorId}</span>
+          <span className="card-licence">
+            Creator {CREATOR_SHARE_RULE.creatorPercent}%
           </span>
-        )}
+        </span>
+        {!compact && share.ok && <span className="card-meta">{share.value.label}</span>}
       </a>
     </li>
   );

@@ -329,8 +329,14 @@ const CASES: Readonly<Record<SiteRefusalReason, () => Promise<unknown> | unknown
   CATALOG_COMMERCE_INERT: () =>
     attemptCatalogPurchase({
       surface: "catalog-game",
-      itemId: "game-lantern-prop",
+      itemId: "market-stall-kit",
       payWith: "credits",
+    }),
+  CATALOG_PURCHASE_METHOD_UNAVAILABLE: () =>
+    attemptCatalogPurchase({
+      surface: "catalog-game",
+      itemId: "lantern-prop",
+      payWith: "money",
     }),
   CATALOG_PRICE_UNAVAILABLE: () =>
     createPublishIntent({

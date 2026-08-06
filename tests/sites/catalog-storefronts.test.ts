@@ -22,12 +22,16 @@ import {
   COMMERCE_NOTICE_COPY,
   FOUNDATION_COLORS,
   FOUNDATION_STATUSES,
+  attemptCatalogPurchase,
   commerceNoticeElement,
+  describeCreatorShare,
+  describeListingPrice,
   listSiteCatalog,
   ok,
   refuse,
   renderSiteElementHtml,
   resolveSurfaceAccent,
+  showSiteListing,
   type SitePrincipal,
   type SiteResult,
 } from "@sceneaxi/site-kit";
@@ -544,47 +548,6 @@ describe("the storefronts are responsive, which the archive is not", () => {
     expect(released).toBe("5.5rem");
     expect(Number.parseFloat(released) * 16).toBeLessThan(Number.parseFloat(narrow) * 16);
   });
-
-  /**
-   * Recorded prose may not be placed in a track sized for an ordinal.
-   *
-   * `.record-row` is two tracks below `48rem` with four children, so auto placement puts the
-   * curation reason in the 2rem ordinal column, where `overflow-wrap: anywhere` breaks it to
-   * a few characters a line. That never widens the document, so the `scrollWidth` probe the
-   * README records cannot see it — the placement is asserted here instead, in both
-   * directions, since an unreset span would collapse the four-track tablet row the same way.
-   */
-  it.each(STOREFRONTS)("%s gives the curation reason a full row when narrow", (site) => {
-    const sheet = stripComments(css[site]);
-    const stacked = sheet.slice(0, sheet.indexOf("@media (min-width: 64rem)"));
-    const columns = sheet.slice(sheet.indexOf("@media (min-width: 64rem)"));
-
-    expect(
-      declarationsFor(stacked, ".record-row")["grid-template-columns"],
-      "the ordinal track stays an ordinal track",
-    ).toBe("2rem minmax(0, 1fr)");
-    for (const selector of [".record-detail", ".record-at"]) {
-      expect(declarationsFor(stacked, selector)["grid-column"], `${selector} takes the row`).toBe(
-        "1 / -1",
-      );
-      expect(
-        declarationsFor(columns, selector)["grid-column"],
-        `${selector} is a column again once the row has four tracks`,
-      ).toBe("auto");
-    }
-    // The four-column row belongs to the breakpoint that gives it the width, not to the one
-    // that halves `.detail-main` around it — at `48rem` the reason's `1fr` track resolves to
-    // nothing at all.
-    expect(
-      declarationsFor(
-        sheet.slice(
-          sheet.indexOf("@media (min-width: 48rem)"),
-          sheet.indexOf("@media (min-width: 64rem)"),
-        ),
-        ".record-row",
-      )["grid-template-columns"],
-    ).toBeUndefined();
-  });
 });
 
 describe("accessibility corrections the archive needs", () => {
@@ -760,8 +723,66 @@ describe("the family bar resolves the archive's store switch into two origins", 
   });
 });
 
-describe("the card figure is a mark of a real digest, never a fake render", () => {
-  const DIGEST = listSiteCatalog("catalog-game")[0]?.item.assetPackage.contentHash as string;
+describe("SA-ST-1 fixture storefront behavior", () => {
+  it("browses the committed Game and Web inventories and resolves detail records", () => {
+    expect(listSiteCatalog("catalog-game").map((listing) => listing.itemId)).toEqual([
+      "lantern-prop",
+      "market-stall-kit",
+      "odd-price-charm",
+    ]);
+    expect(listSiteCatalog("catalog-web").map((listing) => listing.itemId)).toEqual([
+      "harbour-diorama",
+    ]);
+    expect(showSiteListing("catalog-game", "market-stall-kit")).toMatchObject({
+      ok: true,
+      value: { priceMode: "credits-and-money" },
+    });
+    expect(showSiteListing("catalog-web", "missing-fixture")).toMatchObject({
+      ok: false,
+      reason: "CATALOG_ITEM_NOT_FOUND",
+    });
+  });
+
+  it("presents committed prices and creator shares without implying settlement", () => {
+    for (const listing of STOREFRONTS.flatMap((surface) => listSiteCatalog(surface))) {
+      expect(describeListingPrice(listing.price).ok).toBe(true);
+      const share = describeCreatorShare(listing.price);
+      expect(share.ok).toBe(true);
+      if (!share.ok) continue;
+      expect(share.value.label).toContain("creator");
+      expect(share.value.settlement).toBe("credits-ledger-or-money-bookkeeping-only");
+    }
+  });
+
+  it("keeps TEST purchase fail-closed with no completion", () => {
+    expect(
+      attemptCatalogPurchase({
+        surface: "catalog-game",
+        itemId: "market-stall-kit",
+        payWith: "money",
+      }),
+    ).toMatchObject({
+      ok: false,
+      reason: "CATALOG_COMMERCE_INERT",
+      mode: "test",
+      completion: "none",
+    });
+  });
+
+  it("builds editor deep links for each catalog without carrying session state", () => {
+    const env = { NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN: "https://umbrella.example" };
+    expect(game.editorLinkFor(env, "market-stall-kit")).toMatchObject({ ok: true });
+    expect(web.editorLinkFor(env, "harbour-diorama")).toMatchObject({ ok: true });
+    const gameLink = game.editorLinkFor(env, "market-stall-kit");
+    expect(gameLink.ok && gameLink.value).toBe(
+      "https://umbrella.example/editor?source=catalog-game&item=market-stall-kit",
+    );
+    expect(gameLink.ok && gameLink.value).not.toContain("session");
+  });
+});
+
+describe("the card figure is a mark of a real record digest, never a fake render", () => {
+  const DIGEST = listSiteCatalog("catalog-game")[0]?.recordDigest as string;
 
   it("is deterministic for one digest", () => {
     expect(game.digestSigil(DIGEST)).toEqual(game.digestSigil(DIGEST));
@@ -769,7 +790,7 @@ describe("the card figure is a mark of a real digest, never a fake render", () =
 
   it("differs between the digests the catalogue actually holds", () => {
     const marks = [...listSiteCatalog("catalog-game"), ...listSiteCatalog("catalog-web")].map(
-      (listing) => JSON.stringify(game.digestSigil(listing.item.assetPackage.contentHash)),
+      (listing) => JSON.stringify(game.digestSigil(listing.recordDigest)),
     );
     expect(new Set(marks).size).toBe(marks.length);
   });
@@ -782,7 +803,7 @@ describe("the card figure is a mark of a real digest, never a fake render", () =
 
   it("bounds every field, so a hostile digest cannot reshape the layout", () => {
     for (const listing of listSiteCatalog("catalog-game")) {
-      const sigil = game.digestSigil(listing.item.assetPackage.contentHash);
+      const sigil = game.digestSigil(listing.recordDigest);
       expect(sigil).not.toBeNull();
       expect(sigil?.rotateDeg).toBeGreaterThanOrEqual(-9);
       expect(sigil?.rotateDeg).toBeLessThanOrEqual(9);
@@ -815,27 +836,21 @@ describe("the rail counts real listings instead of the archive's invented facets
       expect(total).toBeGreaterThanOrEqual(listings.length);
       expect(facet.rows.every((row) => row.count > 0)).toBe(true);
     }
-    const licence = facets.find((facet) => facet.title === "Licence");
-    expect(licence?.rows.reduce((sum, row) => sum + row.count, 0)).toBe(listings.length);
+    const pricing = facets.find((facet) => facet.title === "Pricing");
+    expect(pricing?.rows.reduce((sum, row) => sum + row.count, 0)).toBe(listings.length);
   });
 
   it("drops every facet when there is nothing to describe", () => {
     expect(game.catalogFacets([])).toEqual([]);
   });
 
-  it("reads the curation trail off the contract's own history", () => {
+  it("reads the detail rows off the committed listing record", () => {
     const listing = listSiteCatalog("catalog-game")[0];
     expect(listing).toBeDefined();
-    const trail = game.curationTrail((listing as NonNullable<typeof listing>).item);
-    expect(trail).toHaveLength(
-      (listing as NonNullable<typeof listing>).item.moderation.history.length,
-    );
-    expect(trail.map((step) => step.ordinal)).toEqual(
-      trail.map((_step, index) => String(index + 1).padStart(2, "0")),
-    );
-    expect(trail.at(-1)?.state).toBe(
-      (listing as NonNullable<typeof listing>).item.moderation.pipelineState,
-    );
+    const record = game.listingRecord(listing as NonNullable<typeof listing>);
+    expect(record).toContainEqual({ label: "Schema", value: "sceneaxi.catalog-listing v1" });
+    expect(record).toContainEqual({ label: "Fixture mode", value: "test" });
+    expect(record).toContainEqual({ label: "Asset payload", value: "metadata-only" });
   });
 
   it("relates only same-creator listings on the same surface, never itself", () => {

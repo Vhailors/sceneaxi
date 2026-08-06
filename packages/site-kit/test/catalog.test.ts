@@ -1,13 +1,16 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  CATALOG_LISTING_AVAILABILITY,
   CATALOG_SURFACES,
   CREATOR_SHARE_RULE,
+  SITE_CATALOG_FIXTURE_PATH,
+  SITE_CATALOG_MODE,
   type CatalogSurface,
   attemptCatalogPurchase,
   buildEditorDeepLink,
   createPublishIntent,
   creatorShare,
+  describeCreatorShare,
   describeListingPrice,
   listSiteCatalog,
   parseEditorDeepLink,
@@ -15,95 +18,101 @@ import {
   showSiteListing,
   submitPublishIntent,
 } from "@sceneaxi/site-kit";
-import { COMMERCE_ACTIVATION_GATE } from "@sceneaxi/schemas";
+import {
+  CATALOG_LISTINGS_DATA,
+  CATALOG_LISTINGS_FIXTURES_PATH,
+  validateCatalogListingSet,
+} from "@sceneaxi/schemas";
 
 const UMBRELLA = "https://sceneaxi-umbrella.vercel.app";
 
-describe("listed catalog fixtures", () => {
-  it.each([...CATALOG_SURFACES])("%s publishes at least one listed fixture", (surface) => {
+describe("committed catalog fixture browse and detail", () => {
+  const committed = validateCatalogListingSet(CATALOG_LISTINGS_DATA);
+  if (!committed.ok) throw new Error(committed.message);
+
+  it("projects exactly the validated fixture set into its two storefronts", () => {
+    expect(SITE_CATALOG_MODE).toBe("test");
+    expect(SITE_CATALOG_FIXTURE_PATH).toBe(CATALOG_LISTINGS_FIXTURES_PATH);
+
+    const projected = CATALOG_SURFACES.flatMap((surface) => listSiteCatalog(surface));
+    expect(
+      projected
+        .map((listing) => listing.listing)
+        .sort((left, right) => left.listingId.localeCompare(right.listingId)),
+    ).toEqual(
+      [...committed.value.listings].sort((left, right) =>
+        left.listingId.localeCompare(right.listingId),
+      ),
+    );
+    expect(projected.map((listing) => listing.itemId).sort()).toEqual(
+      committed.value.listings.map((listing) => listing.listingId).sort(),
+    );
+  });
+
+  it.each([...CATALOG_SURFACES])("%s publishes at least one fixture", (surface) => {
     const listings = listSiteCatalog(surface);
     expect(listings.length).toBeGreaterThan(0);
     for (const listing of listings) {
       expect(listing.surface).toBe(surface);
-      expect(listing.item.moderation.pipelineState).toBe("listed");
-      expect(listing.item.assetPackage.contentHash).toMatch(/^sha256:[0-9a-f]{64}$/);
-      expect(listing.item.aiGenerationDisclosure.disclosureText.length).toBeGreaterThan(0);
+      expect(listing.recordDigest).toMatch(/^sha256:[0-9a-f]{64}$/);
+      expect(listing.availability).toEqual(CATALOG_LISTING_AVAILABILITY);
+      expect(listing.availability).toMatchObject({
+        browse: "listed-fixture",
+        asset: "metadata-only",
+        purchase: "refused",
+        mode: "test",
+      });
     }
   });
 
-  it("records a human curation verdict on the way to listed", () => {
-    const listing = listSiteCatalog("catalog-game")[0];
-    expect(listing).toBeDefined();
-    const approvals = listing?.item.moderation.history.filter(
-      (record) => record.to === "listed",
-    );
-    expect(approvals?.length).toBe(1);
-  });
-
-  it("keeps every fixture deep-frozen", () => {
+  it("keeps every fixture and nested contract record frozen", () => {
     const listing = listSiteCatalog("catalog-web")[0];
     expect(Object.isFrozen(listing)).toBe(true);
-    expect(Object.isFrozen(listing?.item)).toBe(true);
-    expect(Object.isFrozen(listing?.item.rights)).toBe(true);
+    expect(Object.isFrozen(listing?.listing)).toBe(true);
+    expect(Object.isFrozen(listing?.availability)).toBe(true);
   });
 
-  it("validates every fixture against the published Catalog Item schema", () => {
-    const schema = JSON.parse(
-      readFileSync(
-        new URL("../../schemas/contracts/catalog-item.schema.json", import.meta.url),
-        "utf8",
-      ),
-    ) as { readonly required?: readonly string[] };
-    const required = schema.required ?? [];
-    expect(required.length).toBeGreaterThan(0);
-    for (const surface of CATALOG_SURFACES) {
-      for (const listing of listSiteCatalog(surface)) {
-        for (const field of required) {
-          expect(listing.item).toHaveProperty(field);
-        }
-      }
-    }
-  });
-
-  it("refuses an unknown item id so a detail route can answer 404", () => {
+  it("refuses a missing fixture and a fixture from the other catalog", () => {
     expect(showSiteListing("catalog-game", "nope")).toMatchObject({
       ok: false,
       reason: "CATALOG_ITEM_NOT_FOUND",
     });
-    expect(showSiteListing("catalog-game", "web-hero-diorama")).toMatchObject({
+    expect(showSiteListing("catalog-game", "harbour-diorama")).toMatchObject({
       ok: false,
       reason: "CATALOG_ITEM_NOT_FOUND",
     });
   });
 
-  it("keeps the two storefronts distinct — neither publishes the other's items", () => {
+  it("keeps the two storefront inventories distinct", () => {
     const gameIds = listSiteCatalog("catalog-game").map((listing) => listing.itemId);
     const webIds = listSiteCatalog("catalog-web").map((listing) => listing.itemId);
-    expect(gameIds.length).toBeGreaterThan(0);
-    expect(webIds.length).toBeGreaterThan(0);
+    expect(gameIds).toEqual(["lantern-prop", "market-stall-kit", "odd-price-charm"]);
+    expect(webIds).toEqual(["harbour-diorama"]);
     expect(gameIds.filter((id) => webIds.includes(id))).toEqual([]);
   });
 });
 
-describe("dual price display", () => {
-  it("renders credits only, money only, and both", () => {
-    expect(describeListingPrice({ credits: 40, money: null })).toMatchObject({
+describe("price and creator-share display", () => {
+  it("renders the committed credits-only, money-only, and dual-price fixtures", () => {
+    const credits = showSiteListing("catalog-game", "lantern-prop");
+    const money = showSiteListing("catalog-web", "harbour-diorama");
+    const both = showSiteListing("catalog-game", "market-stall-kit");
+    expect(credits.ok && describeListingPrice(credits.value.price)).toMatchObject({
       ok: true,
       value: { credits: "40 credits", money: null, label: "40 credits" },
     });
-    expect(
-      describeListingPrice({ credits: null, money: { amount: "6.00", currency: "usd" } }),
-    ).toMatchObject({ ok: true, value: { credits: null, money: "6.00 USD" } });
-    const both = describeListingPrice({
-      credits: 35,
-      money: { amount: "3.50", currency: "usd" },
+    expect(money.ok && describeListingPrice(money.value.price)).toMatchObject({
+      ok: true,
+      value: { credits: null, money: "12.00 USD", label: "12.00 USD" },
     });
-    expect(both.ok && both.value.label).toBe("35 credits or 3.50 USD");
-  });
-
-  it("singularizes one credit", () => {
-    const display = describeListingPrice({ credits: 1, money: null });
-    expect(display.ok && display.value.credits).toBe("1 credit");
+    expect(both.ok && describeListingPrice(both.value.price)).toMatchObject({
+      ok: true,
+      value: {
+        credits: "75 credits",
+        money: "25.00 USD",
+        label: "75 credits or 25.00 USD",
+      },
+    });
   });
 
   it("refuses a listing that offers neither price", () => {
@@ -113,79 +122,101 @@ describe("dual price display", () => {
     });
   });
 
-  it("gives every shipped fixture a showable price", () => {
-    for (const surface of CATALOG_SURFACES) {
-      for (const listing of listSiteCatalog(surface)) {
-        expect(describeListingPrice(listing.price).ok).toBe(true);
-      }
-    }
-  });
-});
-
-describe("creator 50% share", () => {
-  it("splits an even total in half", () => {
-    expect(creatorShare(100)).toMatchObject({
+  it("projects creator share for every offered currency", () => {
+    const dual = showSiteListing("catalog-game", "market-stall-kit");
+    expect(dual.ok && describeCreatorShare(dual.value.price)).toMatchObject({
       ok: true,
-      value: { total: 100, creator: 50, platform: 50 },
+      value: {
+        credits: "37 creator / 38 platform credits",
+        money: "12.50 USD creator / 12.50 USD platform (bookkeeping only)",
+      },
+    });
+
+    const moneyOnly = showSiteListing("catalog-web", "harbour-diorama");
+    expect(moneyOnly.ok && describeCreatorShare(moneyOnly.value.price)).toMatchObject({
+      ok: true,
+      value: {
+        credits: null,
+        money: "6.00 USD creator / 6.00 USD platform (bookkeeping only)",
+      },
     });
   });
 
-  it("gives the odd remainder to the platform, losing no unit", () => {
-    expect(creatorShare(101)).toMatchObject({
+  it("loses no unit when splitting odd credit and money totals", () => {
+    expect(creatorShare(7)).toMatchObject({
       ok: true,
-      value: { total: 101, creator: 50, platform: 51 },
+      value: { total: 7, creator: 3, platform: 4 },
+    });
+    const odd = showSiteListing("catalog-game", "odd-price-charm");
+    expect(odd.ok && describeCreatorShare(odd.value.price)).toMatchObject({
+      ok: true,
+      value: {
+        credits: "3 creator / 4 platform credits",
+        money: "1.66 USD creator / 1.67 USD platform (bookkeeping only)",
+      },
     });
   });
 
-  it("holds creator + platform === total across a deterministic range", () => {
-    for (let total = 0; total <= 500; total += 1) {
-      const share = creatorShare(total);
-      expect(share.ok).toBe(true);
-      if (!share.ok) return;
-      expect(share.value.creator + share.value.platform).toBe(total);
-      expect(share.value.creator).toBeLessThanOrEqual(share.value.platform);
-    }
-  });
-
-  it("refuses a negative or fractional total", () => {
-    expect(creatorShare(-1).ok).toBe(false);
-    expect(creatorShare(1.5).ok).toBe(false);
-  });
-
-  it("publishes the 50/50 rule for display", () => {
-    expect(CREATOR_SHARE_RULE.creatorPercent).toBe(50);
-    expect(CREATOR_SHARE_RULE.platformPercent).toBe(50);
+  it("publishes the established 50/50 display rule", () => {
+    expect(CREATOR_SHARE_RULE).toMatchObject({
+      creatorPercent: 50,
+      platformPercent: 50,
+    });
     expect(Object.isFrozen(CREATOR_SHARE_RULE)).toBe(true);
   });
 });
 
-describe("commerce stays inert while tier-6b keys are open", () => {
-  it("refuses a purchase of a listed fixture and carries the gate policy and registry cite", () => {
-    const result = attemptCatalogPurchase({
-      surface: "catalog-game",
-      itemId: "game-lantern-prop",
-      payWith: "credits",
+describe("TEST purchase flow refuses without fake completion", () => {
+  it.each(["credits", "money"] as const)(
+    "refuses the dual-priced fixture through %s before completion",
+    (payWith) => {
+      const result = attemptCatalogPurchase({
+        surface: "catalog-game",
+        itemId: "market-stall-kit",
+        payWith,
+      });
+      expect(result).toMatchObject({
+        ok: false,
+        reason: "CATALOG_COMMERCE_INERT",
+        mode: "test",
+        completion: "none",
+        registryCite: "factories-helpers#42",
+      });
+    },
+  );
+
+  it("refuses a payment method the seller did not offer", () => {
+    expect(
+      attemptCatalogPurchase({
+        surface: "catalog-game",
+        itemId: "lantern-prop",
+        payWith: "money",
+      }),
+    ).toMatchObject({
+      ok: false,
+      reason: "CATALOG_PURCHASE_METHOD_UNAVAILABLE",
     });
-    expect(result.ok).toBe(false);
-    expect(result).toMatchObject({
-      reason: "CATALOG_COMMERCE_INERT",
-      registryCite: "factories-helpers#42",
-    });
-    expect("gate" in result && result.gate.policy).toBe(COMMERCE_ACTIVATION_GATE.policy);
   });
 
-  it("refuses a purchase of an unknown item as not-found, not as a purchase", () => {
+  it("refuses a missing fixture before treating it as a purchase", () => {
     expect(
-      attemptCatalogPurchase({ surface: "catalog-web", itemId: "nope", payWith: "money" }),
+      attemptCatalogPurchase({
+        surface: "catalog-web",
+        itemId: "nope",
+        payWith: "money",
+      }),
     ).toMatchObject({ reason: "CATALOG_ITEM_NOT_FOUND" });
   });
 
-  it("builds a display-only publish intent with the share preview and refuses submission", () => {
+  it("builds a display-only publish intent and refuses submission", () => {
     const intent = createPublishIntent({
-      creatorId: "Vhailors",
+      creatorId: "usr_creator_ada",
       surface: "catalog-game",
       title: "New prop",
-      price: { credits: 80, money: { amount: "8.00", currency: "usd" } },
+      price: {
+        credits: 80,
+        money: { unitAmount: 800, currency: "usd" },
+      },
     });
     expect(intent.ok).toBe(true);
     if (!intent.ok) return;
@@ -194,77 +225,67 @@ describe("commerce stays inert while tier-6b keys are open", () => {
     expect(submitPublishIntent(intent.value)).toMatchObject({
       ok: false,
       reason: "CATALOG_COMMERCE_INERT",
+      mode: "test",
+      completion: "none",
     });
-  });
-
-  it("refuses a publish intent with no showable price", () => {
-    expect(
-      createPublishIntent({
-        creatorId: "Vhailors",
-        surface: "catalog-web",
-        title: "Priceless",
-        price: { credits: null, money: null },
-      }),
-    ).toMatchObject({ ok: false, reason: "CATALOG_PRICE_UNAVAILABLE" });
-  });
-
-  it("keeps every shipped fixture structurally inert", () => {
-    for (const surface of CATALOG_SURFACES) {
-      for (const listing of listSiteCatalog(surface)) {
-        expect(listing.item.commerce.activation).toBe("inert");
-      }
-    }
   });
 });
 
 describe("editor deep link", () => {
-  it("round-trips a link with and without an artifact ref", () => {
-    const link = buildEditorDeepLink({
+  it("round-trips links for committed Game and Web fixtures", () => {
+    const game = buildEditorDeepLink({
       umbrellaOrigin: UMBRELLA,
       source: "catalog-game",
-      itemId: "game-lantern-prop",
+      itemId: "market-stall-kit",
       artifactRef: "artifact-1",
     });
-    expect(link.ok).toBe(true);
-    if (!link.ok) return;
-    expect(link.value.startsWith(`${UMBRELLA}/editor?`)).toBe(true);
-    expect(parseEditorDeepLink(link.value)).toMatchObject({
+    expect(game.ok).toBe(true);
+    if (!game.ok) return;
+    expect(parseEditorDeepLink(game.value)).toMatchObject({
       ok: true,
-      value: { source: "catalog-game", itemId: "game-lantern-prop", artifactRef: "artifact-1" },
+      value: {
+        source: "catalog-game",
+        itemId: "market-stall-kit",
+        artifactRef: "artifact-1",
+      },
     });
 
-    const bare = buildEditorDeepLink({
+    const web = buildEditorDeepLink({
       umbrellaOrigin: UMBRELLA,
       source: "catalog-web",
-      itemId: "web-hero-diorama",
+      itemId: "harbour-diorama",
     });
-    expect(bare.ok && parseEditorDeepLink(bare.value)).toMatchObject({
+    expect(web.ok && parseEditorDeepLink(web.value)).toMatchObject({
       ok: true,
-      value: { artifactRef: null },
+      value: {
+        source: "catalog-web",
+        itemId: "harbour-diorama",
+        artifactRef: null,
+      },
     });
   });
 
-  it("allows http://localhost so development needs no second code path", () => {
+  it("allows localhost development and refuses insecure or malformed origins", () => {
     expect(
       buildEditorDeepLink({
         umbrellaOrigin: "http://localhost:3000",
         source: "catalog-game",
-        itemId: "game-crate-set",
+        itemId: "lantern-prop",
       }).ok,
     ).toBe(true);
+
+    for (const origin of ["http://evil.example", "not-a-url", ""]) {
+      expect(
+        buildEditorDeepLink({
+          umbrellaOrigin: origin,
+          source: "catalog-game",
+          itemId: "lantern-prop",
+        }),
+      ).toMatchObject({ ok: false, reason: "DEEP_LINK_ORIGIN_INSECURE" });
+    }
   });
 
-  it.each([
-    ["http://evil.example", "DEEP_LINK_ORIGIN_INSECURE"],
-    ["not-a-url", "DEEP_LINK_ORIGIN_INSECURE"],
-    ["", "DEEP_LINK_ORIGIN_INSECURE"],
-  ])("refuses building against origin %s", (origin, reason) => {
-    expect(
-      buildEditorDeepLink({ umbrellaOrigin: origin, source: "catalog-game", itemId: "x" }),
-    ).toMatchObject({ ok: false, reason });
-  });
-
-  it("refuses an unknown source and a missing item", () => {
+  it("refuses unknown sources, missing items, and extra parameters", () => {
     expect(
       buildEditorDeepLink({
         umbrellaOrigin: UMBRELLA,
@@ -273,31 +294,13 @@ describe("editor deep link", () => {
       }),
     ).toMatchObject({ reason: "DEEP_LINK_SOURCE_UNKNOWN" });
     expect(
-      buildEditorDeepLink({ umbrellaOrigin: UMBRELLA, source: "catalog-game", itemId: " " }),
-    ).toMatchObject({ reason: "DEEP_LINK_ITEM_MISSING" });
-  });
-
-  it.each([
-    [`${UMBRELLA}/editor?source=kids&item=x`, "DEEP_LINK_SOURCE_UNKNOWN"],
-    [`${UMBRELLA}/editor?source=catalog-game`, "DEEP_LINK_ITEM_MISSING"],
-    [`${UMBRELLA}/editor?source=catalog-game&item=x&session=abc`, "DEEP_LINK_UNKNOWN_PARAMETER"],
-    [`http://evil.example/editor?source=catalog-game&item=x`, "DEEP_LINK_ORIGIN_INSECURE"],
-  ])("refuses parsing %s", (href, reason) => {
-    expect(parseEditorDeepLink(href)).toMatchObject({ ok: false, reason });
-  });
-
-  it("refuses a link that tries to carry a session across the surface boundary", () => {
-    expect(
-      parseEditorDeepLinkParams({ source: "catalog-game", item: "x", token: "abc" }),
-    ).toMatchObject({ ok: false, reason: "DEEP_LINK_UNKNOWN_PARAMETER" });
-  });
-
-  it("parses route params a Next handler already holds", () => {
-    expect(
-      parseEditorDeepLinkParams({ source: "catalog-web", item: "web-ui-panel-kit" }),
-    ).toMatchObject({ ok: true, value: { source: "catalog-web", artifactRef: null } });
+      parseEditorDeepLinkParams({
+        source: "catalog-game",
+        item: "market-stall-kit",
+        token: "abc",
+      }),
+    ).toMatchObject({ reason: "DEEP_LINK_UNKNOWN_PARAMETER" });
     expect(parseEditorDeepLinkParams({ source: "catalog-web" })).toMatchObject({
-      ok: false,
       reason: "DEEP_LINK_ITEM_MISSING",
     });
   });

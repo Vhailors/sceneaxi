@@ -28,13 +28,15 @@ describe("shared commerce notice", () => {
   it("carries the catalog gate and signed-out refusal from the owning contracts", () => {
     const model = createCommerceNoticeModel({
       surface: "catalog-game",
-      itemId: "game-lantern-prop",
+      itemId: "market-stall-kit",
       viewer: refuse("IDENTITY_PLANE_NOT_WIRED"),
     });
     expect(model).toMatchObject({
       tone: "warn",
       title: COMMERCE_NOTICE_COPY.title,
       reason: "CATALOG_COMMERCE_INERT",
+      mode: "TEST",
+      completion: "none",
       policy: COMMERCE_ACTIVATION_GATE.policy,
       viewer: { state: "refused", reason: "IDENTITY_PLANE_NOT_WIRED" },
       registry: COMMERCE_ACTIVATION_GATE.registry,
@@ -45,7 +47,7 @@ describe("shared commerce notice", () => {
   it("projects only the server-resolved viewer facts the notice displays", () => {
     const model = createCommerceNoticeModel({
       surface: "catalog-web",
-      itemId: "web-hero-diorama",
+      itemId: "harbour-diorama",
       viewer: ok(principal),
     });
     expect(model.viewer).toEqual({
@@ -69,7 +71,7 @@ describe("shared commerce notice", () => {
     const html = renderSiteElementHtml(
       commerceNoticeElement({
         surface: "catalog-game",
-        itemId: "game-lantern-prop",
+        itemId: "market-stall-kit",
         viewer: ok(principal),
       }),
     );
@@ -77,6 +79,8 @@ describe("shared commerce notice", () => {
     expect(html).toContain(COMMERCE_ACTIVATION_GATE.policy);
     expect(html).toContain("viewer@example.com");
     expect(html).toContain("CATALOG_COMMERCE_INERT");
+    expect(html).toContain("TEST");
+    expect(html).toContain("none");
     expect(html).toContain(COMMERCE_ACTIVATION_GATE.registry);
   });
 });

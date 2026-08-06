@@ -840,21 +840,6 @@ p {
   padding: 1px 5px;
 }
 
-.sigil-bl {
-  position: absolute;
-  left: 8px;
-  bottom: 8px;
-  display: flex;
-  gap: 3px;
-}
-
-.sigil-step {
-  width: 12px;
-  height: 3px;
-  border-radius: var(--radius-xs);
-  background: var(--accent);
-}
-
 .sigil-empty {
   position: absolute;
   inset: 0;
@@ -1029,7 +1014,10 @@ p {
 .buy-option-name {
   font-size: 0.8125rem;
   font-weight: 600;
-  flex: 1;
+  /* Grows to push the value to the right edge, but never shrinks: the base reset above
+   * drops the `min-width: auto` floor, so a `flex: 1` basis of 0 collapses this label
+   * under a long value and its text overlaps. `auto` basis makes the row wrap instead. */
+  flex: 1 0 auto;
 }
 
 .buy-option-value {
@@ -1112,7 +1100,7 @@ p {
   overflow-wrap: anywhere;
 }
 
-/* --- the included grid and the curation record --- */
+/* --- the included grid --- */
 
 .included {
   display: grid;
@@ -1164,70 +1152,6 @@ p {
   font-size: 0.6875rem;
   color: var(--fg-2);
   overflow-wrap: anywhere;
-}
-
-.record {
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius-lg);
-  background: var(--bg-panel);
-  overflow: hidden;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.record-row {
-  display: grid;
-  grid-template-columns: 2rem minmax(0, 1fr);
-  gap: 0.4rem 0.9rem;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--line-soft);
-  align-items: baseline;
-}
-
-.record-row:last-child {
-  border-bottom: none;
-}
-
-.record-n {
-  font-family: var(--store-mono);
-  font-size: 0.6875rem;
-  color: var(--fg-2);
-}
-
-.record-name {
-  font-size: 0.8125rem;
-  font-weight: 600;
-}
-
-.record-detail {
-  font-size: 0.8125rem;
-  color: var(--fg-2);
-  overflow-wrap: anywhere;
-}
-
-.record-at {
-  font-family: var(--store-mono);
-  font-size: 0.6875rem;
-  color: var(--ok);
-  overflow-wrap: anywhere;
-}
-
-/*
- * Four children in two tracks auto-place as [ordinal, state] then [reason, timestamp],
- * which drops the reason — recorded contract prose at 13px with `overflow-wrap: anywhere`
- * — into the 2rem ordinal track, where it breaks to a few characters a line. Widening that
- * track would cost the state name its width, so the two text rows take the full row under
- * the ordinal pair instead. The `64rem` rule gives the row four real tracks and returns
- * these to auto placement.
- *
- * Nothing about this is visible to a `scrollWidth` probe: `overflow-wrap: anywhere` wraps
- * the prose rather than overflowing, so the document stays exactly as wide as the viewport
- * while the text is unreadable.
- */
-.record-detail,
-.record-at {
-  grid-column: 1 / -1;
 }
 
 /* --- chips, states, actions --- */
@@ -1638,31 +1562,6 @@ p {
   .rail > *,
   .detail-side > * {
     flex-shrink: 0;
-  }
-
-  /*
-   * The curation record becomes four columns here rather than at `48rem`, because that is
-   * where the row has the width for them. `.record-row` lives inside `.detail-main`, which
-   * the `48rem` rule has already cut to the smaller half of the detail grid: measured in
-   * Chrome, the reason's `1fr` track resolves to 0px wide and 624px tall at a 768px
-   * viewport, since the ordinal, state and timestamp tracks plus three gaps already exceed
-   * the row. That is the same defect as the auto-placed narrow row and a worse instance of
-   * it, so the stacked form holds until the columns fit.
-   *
-   * Both queries match from here up, so the narrow full-row span has to be undone with them.
-   */
-  .record-row {
-    grid-template-columns: 2rem minmax(0, 9rem) minmax(0, 1fr) minmax(0, 11rem);
-    align-items: center;
-  }
-
-  .record-detail,
-  .record-at {
-    grid-column: auto;
-  }
-
-  .record-at {
-    text-align: right;
   }
 
   .footer-inner {

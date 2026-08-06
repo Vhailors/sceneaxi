@@ -111,8 +111,8 @@ describe("the two storefronts are distinct surfaces", () => {
 describe("catalog deep links to the umbrella", () => {
   it("builds a link that names its own source surface", () => {
     const env = { NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN: UMBRELLA_ORIGIN };
-    const game = gameEditorLink(env, "game-lantern-prop");
-    const web = webEditorLink(env, "web-hero-diorama");
+    const game = gameEditorLink(env, "market-stall-kit");
+    const web = webEditorLink(env, "harbour-diorama");
     expect(game.ok && game.value).toContain("source=catalog-game");
     expect(web.ok && web.value).toContain("source=catalog-web");
     expect(game.ok && game.value.startsWith(`${UMBRELLA_ORIGIN}/editor?`)).toBe(true);
@@ -124,7 +124,7 @@ describe("catalog deep links to the umbrella", () => {
     ["non-https", { NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN: "http://evil.example" }],
     ["malformed", { NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN: "not-a-url" }],
   ])("refuses to render a link when the origin is %s", (_label, env) => {
-    const link = gameEditorLink(env, "game-lantern-prop");
+    const link = gameEditorLink(env, "market-stall-kit");
     expect(link.ok).toBe(false);
     expect(link.ok === false && link.reason).toBe("DEEP_LINK_ORIGIN_INSECURE");
     expect(gameUmbrellaOrigin(env).ok).toBe(false);

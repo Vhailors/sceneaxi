@@ -17,7 +17,7 @@ opened — and what may be drawn — lives here.
 | `access-states.ts` | the total projection from a refusal reason to a **named access state** — what a guarded surface tells a visitor and the one action that can change it — plus the same-site confinement rule both ends of a sign-in round trip use |
 | `catalog-identity.ts` | the storefront identity plane both catalogs read through, pinned to the `site` surface; a reader of identity, never an issuer |
 | `entitlement.ts` | free-vs-paid capability matrix, Minimum E2 editor entitlement |
-| `catalog.ts` | catalog view models, dual price, creator share, fail-closed purchase intent |
+| `catalog.ts` | validated projection of the committed TEST catalog-listing fixtures, dual-price and creator-share display, honest availability, fail-closed purchase intent |
 | `deep-link.ts` | catalog → umbrella editor deep-link contract, and the one definition of the configured umbrella origin — including the checkout redirect origin, which is never taken from a request `Host` |
 | `web-editor.ts` | bounded Minimum E2 web editor session over `@sceneaxi/authoring-core` |
 | `web-experience-editor.ts` | deterministic #197 page/HTML/site-canvas model over the shared Web Experience operation and sandbox contract; arbitrary assets and desktop-only actions refuse |
@@ -30,7 +30,7 @@ opened — and what may be drawn — lives here.
 | `site-element.ts` | a framework-neutral element tree plus an escaping HTML serializer |
 | `change-review.ts` | Change Review — the design system's signature primitive, over a real `Proposal` |
 | `state-panel.ts` | the shared named-state model, Foundations status mapping, and neutral tree; sites retain only React adapters |
-| `commerce-notice.ts` | the two storefronts' inert-commerce copy, refusal model, and neutral tree |
+| `commerce-notice.ts` | the two storefronts' explicit TEST/no-completion purchase refusal model and neutral tree |
 | `site-session.ts` | the shared session header/cookie vocabulary, header-first token normalization, and the session cookie a login grant is handed to a browser in — built, cleared, and its `Secure` attribute decided from the deployment's configured origin rather than the request |
 | `desktop-app-offer.ts` | the validated Linux workflow-artifact offer for umbrella `/engine` — exact run, source commit, files, sizes, checksums, and the retention window after which the artifact is gone, held in lockstep with [`docs/desktop-linux.md`](../../docs/desktop-linux.md), with named refusals for missing or broken metadata |
 
