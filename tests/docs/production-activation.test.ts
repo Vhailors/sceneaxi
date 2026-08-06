@@ -35,6 +35,31 @@ describe("SA-OPS-1 production activation runbook", () => {
     ),
   ];
 
+  const quotedIn = (source: string) =>
+    [...source.matchAll(/"([^"]+)"/g)].map((match) => match[1]);
+
+  const frozenList = (source: string, name: string) => {
+    const match = source.match(
+      new RegExp(`\\b${name}\\s*=\\s*Object\\.freeze\\(\\[([^\\]]*)\\]\\)`),
+    );
+    expect(match, `owner script no longer freezes a ${name} list`).toBeTruthy();
+    const entries = quotedIn((match as RegExpMatchArray)[1]);
+    expect(entries.length, `${name} parsed as empty`).toBeGreaterThan(0);
+    return entries;
+  };
+
+  const frozenKeys = (source: string, name: string) => {
+    const match = source.match(
+      new RegExp(`\\b${name}\\s*=\\s*Object\\.freeze\\(\\{([\\s\\S]*?)\\n\\}\\)`),
+    );
+    expect(match, `owner script no longer freezes a ${name} map`).toBeTruthy();
+    const keys = [
+      ...(match as RegExpMatchArray)[1].matchAll(/^\s+([A-Z][A-Z0-9_]*):/gm),
+    ].map((entry) => entry[1]);
+    expect(keys.length, `${name} parsed as empty`).toBeGreaterThan(0);
+    return keys;
+  };
+
   it("holds the explicit authorization boundary and complete operator phases", () => {
     expect(runbook).toContain("RUNBOOK ONLY — NO PRODUCTION ACTION IS AUTHORIZED");
     expect(runbook).toContain(
@@ -133,8 +158,10 @@ describe("SA-OPS-1 production activation runbook", () => {
     const macosOwner = `${read("docs/desktop-macos.md")}\n${readAll("desktop/macos/scripts", [".mjs", ".mts"])}`;
     const windowsOwner = `${read("docs/desktop-windows.md")}\n${readAll("desktop/windows/scripts", [".mjs", ".mts"])}`;
 
-    const macosIdentifiers = identifiersIn(rowOf(desktop, "macOS"));
-    const windowsIdentifiers = identifiersIn(rowOf(desktop, "Windows"));
+    const macosRow = rowOf(desktop, "macOS");
+    const windowsRow = rowOf(desktop, "Windows");
+    const macosIdentifiers = identifiersIn(macosRow);
+    const windowsIdentifiers = identifiersIn(windowsRow);
     expect(macosIdentifiers.length).toBeGreaterThanOrEqual(14);
     expect(windowsIdentifiers.length).toBeGreaterThanOrEqual(7);
 
@@ -149,21 +176,54 @@ describe("SA-OPS-1 production activation runbook", () => {
       );
     }
 
-    for (const tool of [
-      "codesign",
-      "hdiutil",
-      "security",
-      "spctl",
-      "xcrun",
-      "notarytool",
-      "stapler",
-    ]) {
-      expect(desktop).toContain(`\`${tool}\``);
-      expect(macosOwner, `macOS owner no longer requires ${tool}`).toContain(tool);
+    const macosDist = read("desktop/macos/scripts/dist.mjs");
+    const windowsPreflight = read("desktop/windows/scripts/release-preflight.mjs");
+
+    const macosRequired = [
+      ...frozenList(macosDist, "requiredEnvironment"),
+      ...frozenKeys(macosDist, "provenanceValidators"),
+    ];
+    const windowsRequired = [
+      ...frozenList(windowsPreflight, "WINDOWS_SIGNING_ENV"),
+      ...frozenList(windowsPreflight, "WINDOWS_RELEASE_ENV"),
+    ];
+    for (const name of macosRequired) {
+      expect(macosRow, `runbook omits required macOS input \`${name}\``).toContain(
+        `\`${name}\``,
+      );
     }
-    for (const tool of ["signtool.exe", "gh.exe"]) {
-      expect(desktop).toContain(`\`${tool}\``);
-      expect(windowsOwner, `Windows owner no longer requires ${tool}`).toContain(tool);
+    for (const name of windowsRequired) {
+      expect(windowsRow, `runbook omits required Windows input \`${name}\``).toContain(
+        `\`${name}\``,
+      );
+    }
+
+    const macosTools = [
+      ...new Set([
+        ...frozenList(macosDist, "requiredTools"),
+        ...[...macosDist.matchAll(/for \(const tool of \[([^\]]*)\]\)/g)].flatMap((match) =>
+          quotedIn(match[1]),
+        ),
+      ]),
+    ];
+    const windowsTools = [
+      ...new Set(
+        [...windowsPreflight.matchAll(/commandAvailable\("([^"]+)"\)/g)].map(
+          (match) => match[1],
+        ),
+      ),
+    ];
+    expect(macosTools.length).toBeGreaterThanOrEqual(7);
+    expect(windowsTools.length).toBeGreaterThanOrEqual(2);
+    for (const tool of macosTools) {
+      expect(desktop, `runbook omits required macOS tool ${tool}`).toContain(
+        `\`${tool}\``,
+      );
+    }
+    for (const tool of windowsTools) {
+      expect(desktop, `runbook omits required Windows tool ${tool}`).toContain(
+        `\`${tool}\``,
+      );
     }
   });
 
