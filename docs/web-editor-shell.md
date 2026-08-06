@@ -91,14 +91,38 @@ The editor now has one TEST-only submission adapter at
 `sites/umbrella/src/lib/catalog-submission.ts`. It accepts only an already
 entitled non-Kids request and carries the current render's saved document digest
 and composed artifact digest into the existing Catalog Item intake contract. It
-is not a new authoring operation, is not in `WEB_EDITOR_SESSION_OPERATIONS`, and
-does not run automatically from the page. Preview access cannot submit.
+is not a new authoring operation and is not in `WEB_EDITOR_SESSION_OPERATIONS`.
+Preview access cannot submit.
 
-Storage, curation, and the storefront read model are injected through the TEST
-seam documented in [`catalog-intake.md`](catalog-intake.md). The repository has
-no production provider or moderation operator, and the only route to a listing
-remains the recorded `intake → screening → curation → listed` path with explicit
-human approval.
+**A page render never submits.** A GET of `/editor` calls
+`readUmbrellaCatalogIntakePanel()`, which reads and never writes; the one control
+that writes posts to `/api/editor/catalog-intake`, which is POST-only and is the
+only caller of `buildUmbrellaCatalogIntakeView()`. The split, the same-origin
+proof the action requires, and what the panel may display are owned by
+[`catalog-intake.md`](catalog-intake.md).
+
+Storage, curation, and the storefront read model are injected through that TEST
+seam. The repository has no production provider or moderation operator, and the
+only route to a listing remains the recorded
+`intake → screening → curation → listed` path with explicit human approval.
+
+### The notice rail
+
+`.edshell` is `position: fixed; inset: 0` over an opaque `--bg-base`, on a page
+that does not scroll. A notice rendered beside it in normal flow is therefore
+painted underneath it and reachable at no viewport, and two independently fixed,
+centred notes land on identical coordinates and hide each other. Both are why the
+route's notices — the preview banner and the catalog intake state — render inside
+one `.ed-overlay-notes` rail: fixed above the shell's stacking layer (`z-index`
+40 against the shell's 30), opaque, a **column** so each notice takes its own row,
+bounded by the viewport and scrolled internally.
+
+This is a deviation the design archive does not draw; it exists because the
+archive draws an application chrome and no route-level notice at all. Recorded
+browser measurement (`SCENEAXI_SITE_EDITOR_PREVIEW=1`, both notices present): at
+1920×1080, 1280×800, 1024×700, and 390×844 the rail is fully inside the viewport,
+the two notices' rects do not intersect, and `document.elementFromPoint()` at the
+intake panel's own coordinates returns an element inside that panel.
 
 Control accounting has two halves, and both are load-bearing:
 

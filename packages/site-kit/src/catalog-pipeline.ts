@@ -152,6 +152,17 @@ export type CatalogPipelineReadModel = {
   readonly surface: CatalogSurface;
   readonly itemId: string;
   readonly pipelineState: PipelineState;
+  /**
+   * The digests the stored record is bound to, at every pipeline state.
+   *
+   * `validRecord()` has already re-checked that both equal the item's own
+   * `provenance.sourceDigest` and `assetPackage.contentHash`, so a reader may show
+   * this evidence before a listing exists without waiting for the `listed`
+   * projection — which is the only way a surface that reads back an `intake` record
+   * can print evidence instead of inventing it.
+   */
+  readonly documentDigest: string;
+  readonly artifactDigest: string;
   readonly history: CatalogItem["moderation"]["history"];
   readonly listing: CatalogListedProjection | null;
 };
@@ -400,6 +411,8 @@ export async function readCatalogPipelineItem(input: {
         surface: record.surface,
         itemId: item.itemId,
         pipelineState: item.moderation.pipelineState,
+        documentDigest: record.documentDigest,
+        artifactDigest: record.artifactDigest,
         history: item.moderation.history,
         listing,
       }),

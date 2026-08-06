@@ -13,17 +13,47 @@ The connection has three deliberately separate layers:
    reads the record. This repository ships only the process-local TEST reference
    provider; it has no production database adapter or moderation operator.
 
-The shipped `/editor` route reaches all three through one call:
-`buildUmbrellaCatalogIntakeView()` submits the request's already-decided access
-and its own render, then reads the record back. Its whole input is one
-injection — the TEST provider that would store the record and the submitter's
-own declaration — and `umbrellaCatalogIntake()` resolves to `null`, because this
-deployment holds no catalog store and no form that collects those declarations.
-The default route therefore refuses `CATALOG_INTAKE_STORAGE_UNAVAILABLE` before
-a record is built and renders that named state; only an explicitly injected TEST
-provider reaches `submitUmbrellaEditorToCatalog()`. The route records no
-transition and no curation verdict, so what it can display is `intake` with an
-empty history and a `null` listing.
+## Submitting is an action, never a render
+
+The shipped surface is split in two, and the split is the contract:
+
+| Entry point | Method | What it may do |
+| --- | --- | --- |
+| `/editor` | GET | `readUmbrellaCatalogIntakePanel()` — **reads only** |
+| `/api/editor/catalog-intake` | POST | `buildUmbrellaCatalogIntakeView()` — the one write |
+
+A page render must never submit: opening `/editor` is something a refresh, a
+prefetch, or a crawler does, and a deployment that had injected a provider would
+otherwise have a record written for it without anyone asking. So the page reads
+the panel — an absent injection is answered from the injection alone, so the
+shipped deployment reaches no provider at all — and the panel's one control posts
+to the action.
+
+The action re-decides everything rather than trusting its form: the submission
+must prove it came from this deployment's own pages
+(`SITE_REQUEST_CROSS_ORIGIN`), entitlement is resolved again from the request's
+own session credential, and the editor state is read and rendered through the
+same `readEditorState()` / `renderEditorState()` the page used, so the digests
+that reach intake are that render's own. A refusal is the seam's named reason as
+JSON; success is a 303 back to `/editor`, whose panel then reads the stored
+record back rather than believing anything carried in the URL. The item read is
+the deployment's **own** declared item id, never one the request supplied.
+
+Both entry points take the same whole input: one injection — the TEST provider
+that would store the record and the submitter's own declaration — and
+`umbrellaCatalogIntake()` resolves to `null`, because this deployment holds no
+catalog store and no form that collects those declarations. The default
+deployment therefore refuses `CATALOG_INTAKE_STORAGE_UNAVAILABLE` before a record
+is built, renders that named state, and offers no control to press; only an
+explicitly injected TEST provider reaches `submitUmbrellaEditorToCatalog()`.
+Neither entry point records a transition or a curation verdict, so what they can
+display is `intake` with an empty history and a `null` listing.
+
+Those notices render in `/editor`'s fixed notice rail, above the shell's own
+stacking layer and stacked in a column — the editor shell is a fixed, opaque,
+full-viewport surface on a page that does not scroll, so a panel left in normal
+flow beside it is reachable at no viewport. `docs/web-editor-shell.md` owns that
+rail.
 
 The submitter supplies the existing Catalog Item declarations: Asset Package id,
 rights holder, licence and commercial-use flag, provenance origin and timestamp,
@@ -115,5 +145,8 @@ Executable proof is
 `tests/e2e/editor-catalog-intake-golden.test.ts`, which covers the vertical path,
 cross-principal idempotency, the demo's digests against a real render, and both
 route outcomes — the default deployment's named refusal and one injected TEST
-submission; the shared refusal registry is covered by
+submission — and the GET/POST split itself: the page names neither writing
+function, the action is POST-only, the panel offers the submission before it is
+pressed and reads the record back afterwards, and every route notice lives in the
+one stacked rail. The shared refusal registry is covered by
 `packages/site-kit/test/refuse-matrix.test.ts`.

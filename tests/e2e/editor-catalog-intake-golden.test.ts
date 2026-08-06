@@ -22,8 +22,11 @@ import {
 } from "@sceneaxi/site-kit";
 import {
   buildUmbrellaCatalogIntakeView,
+  readUmbrellaCatalogIntakePanel,
   submitUmbrellaEditorToCatalog,
   umbrellaCatalogIntake,
+  umbrellaEditorStateFields,
+  umbrellaEditorStateFromFields,
 } from "../../sites/umbrella/src/lib/catalog-submission.ts";
 
 const NOW = "2026-08-06T10:00:00.000Z";
@@ -701,19 +704,48 @@ describe("editor catalog intake", () => {
 });
 
 describe("the shipped umbrella editor route reaches catalog intake", () => {
-  const ROUTE = readFileSync(
+  const PAGE = readFileSync(
     new URL("../../sites/umbrella/src/app/editor/page.tsx", import.meta.url),
     "utf8",
   );
+  const ACTION = readFileSync(
+    new URL("../../sites/umbrella/src/app/api/editor/catalog-intake/route.ts", import.meta.url),
+    "utf8",
+  );
 
-  it("submits through the seam from the route and injects nothing by default", () => {
-    expect(ROUTE).toContain("buildUmbrellaCatalogIntakeView");
-    expect(ROUTE).toContain("injection: umbrellaCatalogIntake()");
+  it("submits only from the explicit POST action, never from a page render", () => {
+    // The page reads. It names neither writing function, so opening `/editor` — a
+    // refresh, a prefetch, a crawler — cannot reach a provider's `submit`.
+    expect(PAGE).toContain("readUmbrellaCatalogIntakePanel");
+    expect(PAGE).not.toContain("buildUmbrellaCatalogIntakeView");
+    expect(PAGE).not.toContain("submitUmbrellaEditorToCatalog");
+    // The one control that writes posts to the action.
+    expect(PAGE).toContain('method="post"');
+    expect(PAGE).toContain("UMBRELLA_CATALOG_INTAKE_ACTION");
+
+    // The action is POST-only and submits through the seam with the empty plug point.
+    expect(ACTION).toContain("export async function POST");
+    expect(ACTION).not.toContain("export async function GET");
+    expect(ACTION).toContain("buildUmbrellaCatalogIntakeView");
+    expect(ACTION).toContain("injection: umbrellaCatalogIntake()");
+
     // The deployment holds no store and no declaration form, so the plug point is empty.
     expect(umbrellaCatalogIntake()).toBeNull();
   });
 
-  it("refuses by name on the default deployment without building a record", async () => {
+  it("keeps every route notice in the one stacked rail above the shell", () => {
+    // `.edshell` is fixed, opaque, and full-viewport, so a notice in normal flow is
+    // unreachable; and two independently fixed notes landed on identical coordinates.
+    expect(PAGE).toContain('className="ed-overlay-notes"');
+    expect(PAGE.match(/ed-preview-note/g)).toHaveLength(1);
+  });
+
+  it("refuses by name on the default deployment without reaching a provider", async () => {
+    // The page's own read: no store injected, so it answers from the injection alone.
+    expect(await readUmbrellaCatalogIntakePanel({ injection: umbrellaCatalogIntake() })).toMatchObject(
+      { kind: "unavailable", reason: "CATALOG_INTAKE_STORAGE_UNAVAILABLE" },
+    );
+    // The action refuses the same way rather than inventing a store.
     expect(
       await buildUmbrellaCatalogIntakeView({
         access: entitledAccess(),
@@ -737,6 +769,12 @@ describe("the shipped umbrella editor route reaches catalog intake", () => {
       injection,
     };
 
+    // Before the control is pressed the page offers the submission and records nothing.
+    expect(await readUmbrellaCatalogIntakePanel({ injection })).toMatchObject({ kind: "offered" });
+    expect(
+      await readCatalogPipelineItem({ provider, itemId: "web-editor-submission-218" }),
+    ).toMatchObject({ ok: false, reason: "CATALOG_ITEM_NOT_FOUND" });
+
     const first = await buildUmbrellaCatalogIntakeView(request);
     expect(first).toMatchObject({
       ok: true,
@@ -752,12 +790,56 @@ describe("the shipped umbrella editor route reaches catalog intake", () => {
     expect(first.value.documentDigest).toBe(render.documentDigest);
     expect(first.value.artifactDigest).toBe(render.artifactDigest);
 
-    // Re-opening the same editor URL replays rather than conflicting, and still lists
-    // nothing: the route records no transition and no curation verdict.
+    // Returning to `/editor` after the action reads the stored record back — the same
+    // digests, still `intake`, still unlisted — without submitting again.
+    expect(await readUmbrellaCatalogIntakePanel({ injection })).toMatchObject({
+      kind: "recorded",
+      record: {
+        itemId: "web-editor-submission-218",
+        pipelineState: "intake",
+        recordedTransitions: 0,
+        documentDigest: render.documentDigest,
+        artifactDigest: render.artifactDigest,
+        listing: null,
+      },
+    });
+
+    // Pressing the control again replays rather than conflicting, and still lists
+    // nothing: the action records no transition and no curation verdict.
     expect(await buildUmbrellaCatalogIntakeView(request)).toMatchObject({
       ok: true,
       value: { replayed: true, pipelineState: "intake", recordedTransitions: 0, listing: null },
     });
+  });
+
+  it("carries the current editor URL state through the action's own form fields", () => {
+    const params = { profile: "web", objects: "2", "tx-object-1": "1,0,0" };
+    const fields = umbrellaEditorStateFields(params);
+    expect(umbrellaEditorStateFromFields(fields)).toEqual(params);
+    // Repeated parameters stay repeated, so a malformed link stays malformed for
+    // `readEditorState()` in the action instead of quietly becoming a different request.
+    expect(umbrellaEditorStateFromFields(umbrellaEditorStateFields({ sel: ["a", "b"] }))).toEqual({
+      sel: ["a", "b"],
+    });
+  });
+
+  it("reports a refused read as a refusal rather than as nothing submitted", async () => {
+    const failing = {
+      mode: "test",
+      submit: async () => ({ ok: false, reason: "CATALOG_PIPELINE_PROVIDER_FAILED", message: "x" }),
+      read: async () => ({ ok: false, reason: "CATALOG_PIPELINE_PROVIDER_FAILED", message: "x" }),
+      commitTransition: async () => ({
+        ok: false,
+        reason: "CATALOG_PIPELINE_PROVIDER_FAILED",
+        message: "x",
+      }),
+    } as unknown as CatalogTestPipelineProvider;
+
+    expect(
+      await readUmbrellaCatalogIntakePanel({
+        injection: { provider: failing, declaration: metadata() },
+      }),
+    ).toMatchObject({ kind: "read-refused", reason: "CATALOG_PIPELINE_PROVIDER_FAILED" });
   });
 
   it("keeps Kids and unentitled requests off the route seam", async () => {
