@@ -1233,7 +1233,9 @@ is `NOT NULL REFERENCES catalog_listings (listing_id)`, and this repository seed
 module, not a table. So a Neon settlement additionally requires the deployment to seed that
 table from the committed listing set, or the transaction fails the foreign key. No umbrella
 route reaches that path today — none of `/login`, `/api/login`, `/api/logout`,
-`/api/checkout`, or `/api/stripe/webhook`
+`/api/checkout`, `/api/stripe/webhook`, or the TEST-only
+`/api/editor/catalog-intake` ([`catalog-intake.md`](catalog-intake.md), which records
+metadata and moves no money)
 does — so the store method is wired ahead of the catalog-sale surface that
 would call it, and its gate tests run against an in-memory fake that enforces no constraint.
 

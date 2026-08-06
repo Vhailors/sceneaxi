@@ -194,6 +194,12 @@ designed around that rather than around widening the contract.
   canvas, known-asset injection, and the draw-only Three embed, with desktop-only
   actions inert and named — owned by
   [`docs/web-experience-editor.md`](../../docs/web-experience-editor.md).
+- `/editor` also carries the TEST-only catalog intake panel (sceneaxi#218). A GET reads
+  it and never writes; its one control posts to `POST /api/editor/catalog-intake`, the
+  only route that can write a catalog record, and that handler re-decides origin, entitlement,
+  and the render rather than trusting the form. What may be submitted, what the panel
+  may display, and why the split exists are owned by
+  [`docs/catalog-intake.md`](../../docs/catalog-intake.md).
 - Each page reports the running core's own frame record (`backend`, `label`, draw
   surface, `pixelsDrawn`, draw calls, mounted instances), so a frame counter can never
   imply pixels that were never drawn. The editor additionally shows its *server*

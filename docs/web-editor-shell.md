@@ -190,6 +190,10 @@ Control accounting has two halves, and both are load-bearing:
   heading paints the same pixels the archive's panel head does.
 - **Traffic lights and collaborator avatars are not drawn** — a web page has no
   window controls, and there are no collaborators to show.
+- **The route's notices live in a rail the archive does not draw**, because the
+  archive draws an application chrome and no route-level notice at all. Why the
+  rail exists and its recorded measurement are above, under
+  [The notice rail](#the-notice-rail).
 
 ## Recorded browser evidence (2026-07-31)
 
