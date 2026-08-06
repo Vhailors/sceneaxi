@@ -418,6 +418,43 @@ describe("SA-OPS-1 production activation runbook", () => {
     expect(deploy).toContain("production-activation.md#activation-checklist");
   });
 
+  it("keeps every required workflow manually recoverable after check-registration failure", () => {
+    const requiredWorkflows = [
+      ".github/workflows/gate.yml",
+      ".github/workflows/engine-sdk.yml",
+      ".github/workflows/desktop-linux.yml",
+      ".github/workflows/desktop-macos.yml",
+    ];
+
+    for (const path of requiredWorkflows) {
+      const workflow = read(path);
+      const jobsStart = workflow.indexOf("\njobs:");
+      expect(jobsStart, `${path} no longer declares jobs`).toBeGreaterThan(-1);
+      const triggers = workflow.slice(0, jobsStart);
+      expect(
+        triggers,
+        `${path} cannot be dispatched to recover a missing or cancelled required check`,
+      ).toMatch(/^ {2}workflow_dispatch:\s*$/m);
+      expect(runbook, `runbook omits the manual recovery owner ${path}`).toContain(
+        `\`${path}\``,
+      );
+    }
+
+    const recovery = sectionOf("GitHub required-check registration recovery");
+    const normalizedRecovery = recovery.replace(/\s+/g, " ");
+    expect(normalizedRecovery).toContain(
+      "operator-only CI recovery mechanics, not an activation step",
+    );
+    expect(normalizedRecovery).toContain("does not deploy a site");
+    expect(normalizedRecovery).toContain("enable Stripe LIVE");
+    expect(normalizedRecovery).toContain(
+      "fails closed when its real Apple inputs are absent",
+    );
+    expect(normalizedRecovery).toContain(
+      "authoritative GitHub results for the intended head",
+    );
+  });
+
   it("keeps the dated readiness observations in lockstep with the deployment owner", () => {
     const deploy = read("docs/websites-deploy.md");
     const readinessMarker = "## Verified TEST readiness";

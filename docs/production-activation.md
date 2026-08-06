@@ -168,6 +168,26 @@ needs the documented Windows x64 toolchain, `signtool.exe`, and—only for draft
 secret store. A locally produced macOS record remains `iaLinkable: false`; only the exact
 canonical `workflow_dispatch` provenance may produce the linkable record.
 
+### GitHub required-check registration recovery
+
+This is **operator-only CI recovery mechanics, not an activation step**. If GitHub fails
+to register a required check, or cancels it before its job executes, a repository
+operator may use the Actions **Run workflow** control against the exact preserved PR
+branch and head commit for each required workflow:
+
+- `.github/workflows/gate.yml`
+- `.github/workflows/engine-sdk.yml`
+- `.github/workflows/desktop-linux.yml`
+- `.github/workflows/desktop-macos.yml`
+
+Record each dispatched run URL and verify that all four runs name the intended full head
+commit before treating the required-check set as recovered. A dispatch does not deploy a
+site, publish an artifact, prove a provider credential, enable Stripe LIVE, or supply
+captain authorization. The macOS dispatch retains its existing signing and notarization
+candidate path and fails closed when its real Apple inputs are absent; never substitute,
+copy, print, or invent credentials merely to obtain a green check. Only authoritative
+GitHub results for the intended head count as CI evidence.
+
 ## Preflight checklist
 
 Do not start activation until every applicable item is checked with real evidence.
