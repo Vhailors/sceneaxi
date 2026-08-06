@@ -40,7 +40,7 @@ describe("SA-OPS-1 production activation runbook", () => {
 
   const frozenList = (source: string, name: string) => {
     const match = source.match(
-      new RegExp(`\\b${name}\\s*=\\s*Object\\.freeze\\(\\[([^\\]]*)\\]\\)`),
+      new RegExp(`\\b${name}(?:\\s*:[^=]*)?\\s*=\\s*Object\\.freeze\\(\\[([^\\]]*)\\]\\)`),
     );
     expect(match, `owner script no longer freezes a ${name} list`).toBeTruthy();
     const entries = quotedIn((match as RegExpMatchArray)[1] as string);
@@ -48,17 +48,70 @@ describe("SA-OPS-1 production activation runbook", () => {
     return entries;
   };
 
-  const frozenKeys = (source: string, name: string) => {
+  const frozenBody = (source: string, name: string) => {
     const match = source.match(
-      new RegExp(`\\b${name}\\s*=\\s*Object\\.freeze\\(\\{([\\s\\S]*?)\\n\\}\\)`),
+      new RegExp(
+        `\\b${name}(?:\\s*:[^=]*)?\\s*=\\s*Object\\.freeze\\(\\{([\\s\\S]*?)\\n\\}(?: as const)?\\)`,
+      ),
     );
-    expect(match, `owner script no longer freezes a ${name} map`).toBeTruthy();
-    const keys = [
-      ...((match as RegExpMatchArray)[1] as string).matchAll(/^\s+([A-Z][A-Z0-9_]*):/gm),
-    ].map((entry) => entry[1]);
+    expect(match, `owner no longer freezes a ${name} map`).toBeTruthy();
+    return (match as RegExpMatchArray)[1] as string;
+  };
+
+  const frozenKeys = (source: string, name: string) => {
+    const keys = [...frozenBody(source, name).matchAll(/^\s+([A-Z][A-Z0-9_]*):/gm)].map(
+      (entry) => entry[1] as string,
+    );
     expect(keys.length, `${name} parsed as empty`).toBeGreaterThan(0);
     return keys;
   };
+
+  const frozenValues = (source: string, name: string) => {
+    const values = [
+      ...frozenBody(source, name).matchAll(/:\s*"([A-Z][A-Z0-9_]*)"/g),
+    ].map((entry) => entry[1] as string);
+    expect(values.length, `${name} parsed as empty`).toBeGreaterThan(0);
+    return values;
+  };
+
+  const EXACT_ENV_NAMES = [
+    "BETTER_AUTH_ORIGIN",
+    "DATABASE_URL",
+    "SCENEAXI_ADMIN_EMAIL",
+    "SCENEAXI_ADMIN_BOOTSTRAP_SECRET",
+    "STRIPE_SECRET_KEY",
+    "STRIPE_WEBHOOK_SECRET",
+    "SCENEAXI_BILLING_MODE",
+    "SCENEAXI_STRIPE_LIVE_AUTHORIZED",
+    "NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN",
+    "NEXT_PUBLIC_SCENEAXI_GAME_CATALOG_ORIGIN",
+    "NEXT_PUBLIC_SCENEAXI_WEB_CATALOG_ORIGIN",
+    "SCENEAXI_SITE_EDITOR_PREVIEW",
+    "CSC_LINK",
+    "CSC_KEY_PASSWORD",
+    "APPLE_ID",
+    "APPLE_APP_SPECIFIC_PASSWORD",
+    "APPLE_TEAM_ID",
+    "SCENEAXI_MACOS_RELEASE_BASE_URL",
+    "WIN_CSC_LINK",
+    "WIN_CSC_KEY_PASSWORD",
+    "GITHUB_RELEASE_TOKEN",
+    "SCENEAXI_WINDOWS_RELEASE_TAG",
+    "GITHUB_SHA",
+    "GITHUB_REPOSITORY",
+    "GITHUB_RUN_ID",
+  ];
+
+  const desktopRefusalUniverse = () => [
+    ...new Set(
+      [
+        ...`${readAll("desktop/macos/scripts", [".mjs", ".mts"])}\n${readAll(
+          "desktop/windows/scripts",
+          [".mjs", ".mts"],
+        )}`.matchAll(/\b((?:MACOS|WINDOWS)_[A-Z][A-Z0-9_]*)\b/g),
+      ].map((match) => match[1] as string),
+    ),
+  ];
 
   it("holds the explicit authorization boundary and complete operator phases", () => {
     expect(runbook).toContain("RUNBOOK ONLY — NO PRODUCTION ACTION IS AUTHORIZED");
@@ -83,30 +136,7 @@ describe("SA-OPS-1 production activation runbook", () => {
   });
 
   it("pins the exact web, Neon, Stripe, alias, and desktop inputs", () => {
-    for (const exactName of [
-      "BETTER_AUTH_ORIGIN",
-      "DATABASE_URL",
-      "SCENEAXI_ADMIN_EMAIL",
-      "SCENEAXI_ADMIN_BOOTSTRAP_SECRET",
-      "STRIPE_SECRET_KEY",
-      "STRIPE_WEBHOOK_SECRET",
-      "SCENEAXI_BILLING_MODE",
-      "SCENEAXI_STRIPE_LIVE_AUTHORIZED",
-      "NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN",
-      "NEXT_PUBLIC_SCENEAXI_GAME_CATALOG_ORIGIN",
-      "NEXT_PUBLIC_SCENEAXI_WEB_CATALOG_ORIGIN",
-      "SCENEAXI_SITE_EDITOR_PREVIEW",
-      "CSC_LINK",
-      "CSC_KEY_PASSWORD",
-      "APPLE_ID",
-      "APPLE_APP_SPECIFIC_PASSWORD",
-      "APPLE_TEAM_ID",
-      "SCENEAXI_MACOS_RELEASE_BASE_URL",
-      "WIN_CSC_LINK",
-      "WIN_CSC_KEY_PASSWORD",
-      "GITHUB_RELEASE_TOKEN",
-      "SCENEAXI_WINDOWS_RELEASE_TAG",
-    ]) {
+    for (const exactName of EXACT_ENV_NAMES) {
       expect(runbook).toContain(`\`${exactName}\``);
     }
 
@@ -150,6 +180,96 @@ describe("SA-OPS-1 production activation runbook", () => {
       "package publication",
     ]) {
       expect(normalizedRunbook).toContain(held);
+    }
+  });
+
+  it("resolves every named refusal against its owning source registry", () => {
+    const siteRefusals = frozenKeys(read("packages/site-kit/src/refusals.ts"), "SITE_REFUSALS");
+    const billingRefusals = frozenValues(
+      read("packages/billing/src/refusals.ts"),
+      "BILLING_REFUSE_REASONS",
+    );
+    const desktopRefusals = desktopRefusalUniverse();
+    expect(siteRefusals.length).toBeGreaterThanOrEqual(40);
+    expect(billingRefusals.length).toBeGreaterThanOrEqual(40);
+    expect(desktopRefusals.length).toBeGreaterThanOrEqual(10);
+
+    const tokens = [
+      ...new Set(
+        [...runbook.matchAll(/`([A-Z][A-Z0-9_]*)(?::<[a-z]+>)?`/g)].map(
+          (match) => match[1] as string,
+        ),
+      ),
+    ];
+    expect(tokens.length).toBeGreaterThanOrEqual(45);
+
+    const cited = [
+      [siteRefusals, "packages/site-kit/src/refusals.ts", [
+        "IDENTITY_PLANE_NOT_WIRED",
+        "IDENTITY_PLANE_UNAVAILABLE",
+        "IDENTITY_SESSION_ABSENT",
+        "CREDITS_PLANE_UNAVAILABLE",
+        "BILLING_CHECKOUT_ORIGIN_UNCONFIGURED",
+        "BILLING_CHECKOUT_ORIGIN_UNTRUSTED",
+        "SITE_REQUEST_CROSS_ORIGIN",
+        "CATALOG_COMMERCE_INERT",
+      ]],
+      [billingRefusals, "packages/billing/src/refusals.ts", [
+        "STRIPE_WEBHOOK_SECRET_MISSING",
+        "STRIPE_LIVE_MODE_NOT_AUTHORIZED",
+        "STRIPE_CONNECT_PROVIDER_MISSING",
+        "STRIPE_CONNECT_TEST_OPERATIONS_DISABLED",
+        "STRIPE_CONNECT_DASHBOARD_MISSING",
+        "STRIPE_CONNECT_SECRET_MISSING",
+        "STRIPE_CONNECT_LIVE_UNAVAILABLE",
+      ]],
+      [desktopRefusals, "the desktop release scripts", [
+        "MACOS_ENV_REQUIRED",
+        "MACOS_PROVENANCE_REQUIRED",
+        "MACOS_HOST_REQUIRED",
+        "MACOS_TOOL_REQUIRED",
+        "MACOS_XCRUN_TOOL_REQUIRED",
+        "WINDOWS_RELEASE_ENV_MISSING",
+        "WINDOWS_RELEASE_HOST_REQUIRED",
+        "WINDOWS_RELEASE_TOOL_MISSING",
+      ]],
+    ] as const;
+
+    for (const [registry, owner, names] of cited) {
+      for (const name of names) {
+        expect(tokens, `runbook no longer names the refusal \`${name}\``).toContain(name);
+        expect(registry, `${owner} no longer defines \`${name}\``).toContain(name);
+      }
+    }
+
+    const liveMode = read("packages/billing/src/live-mode.ts");
+    const liveModeEnvVar = (liveMode.match(
+      /STRIPE_LIVE_MODE_ENV_VAR\s*=\s*"([A-Z][A-Z0-9_]*)"/,
+    ) as RegExpMatchArray | null)?.[1];
+    expect(liveModeEnvVar, "live-mode owner no longer names its sole variable").toBeTruthy();
+    expect(normalizedRunbook).toContain(
+      `The sole accepted LIVE authorization variable is \`${liveModeEnvVar}\``,
+    );
+    const liveModeAliases = frozenList(liveMode, "STRIPE_LIVE_MODE_ALIAS_ENV_VARS");
+    const citedAlias = "STRIPE_LIVE_MODE_AUTHORIZED";
+    expect(normalizedRunbook).toContain(`any alias such as \`${citedAlias}\``);
+    expect(liveModeAliases, `live-mode owner no longer refuses \`${citedAlias}\``).toContain(
+      citedAlias,
+    );
+
+    const resolvable = new Set([
+      ...EXACT_ENV_NAMES,
+      ...siteRefusals,
+      ...billingRefusals,
+      ...desktopRefusals,
+      ...liveModeAliases,
+      liveModeEnvVar as string,
+    ]);
+    for (const token of tokens) {
+      expect(
+        resolvable.has(token),
+        `runbook names \`${token}\`, which is neither a pinned production input nor a refusal any source registry defines`,
+      ).toBe(true);
     }
   });
 
