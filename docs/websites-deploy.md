@@ -2,10 +2,12 @@
 
 How the three first-party SceneAxi sites are built, configured, and deployed.
 
-The cross-surface execution gate and evidence checklist are owned by
-[`production-activation.md`](production-activation.md). This document remains the
-authoritative web topology, configuration, provider-wiring, and verification owner; it
-does not itself authorize a new deployment or alias move.
+[`production-activation.md`](production-activation.md) is the **sole ordered
+activation and rollback owner**: the authorization gate, the order operator actions are
+taken in, and the evidence checklist all live there. This document remains the
+authoritative web topology, configuration, provider-wiring, and verification owner, and
+holds the mechanics each of those steps needs — but it carries no ordered procedure of
+its own and does not authorize a deployment or alias move.
 
 **No secret value appears in this document or anywhere in the repository.** Names only;
 values are set in the Vercel project by whoever holds them. `pnpm check:sites` fails the
@@ -228,7 +230,7 @@ Sign-in, credit balances, and credit-pack checkout are owned by
 single-admin resolution, fail-closed role guards, the append-only credit ledger, and
 Stripe webhook verification. The sites fork **none** of it.
 
-Steps 1–3 of the activation below are done ([#131](https://github.com/Vhailors/sceneaxi/issues/131)):
+The in-repo wiring is done ([#131](https://github.com/Vhailors/sceneaxi/issues/131)):
 `@sceneaxi/auth` and `@sceneaxi/billing` are on the umbrella's matrix allow list, are
 `link:` dependencies in its manifest and `transpilePackages`, and
 `sites/umbrella/src/lib/identity-plane.ts` builds the site-kit adapters over them. What
@@ -245,7 +247,7 @@ ADR 0021 keeps the provider clients — Better Auth, the Neon client, the Stripe
 | The **Buy** control on `/pricing` | posts to a real checkout once the TEST Stripe handle is configured, but only for a signed-in buyer | the adapter persists the intent before creating a card-only hosted checkout; with no session the POST refuses `IDENTITY_SESSION_ABSENT`, so a visitor signs in at `/login` first and the control refuses by name until then |
 | Admin identity (`SCENEAXI_ADMIN_EMAIL`) | **live as deployment evidence** | resolved by `@sceneaxi/auth` only inside the deployment owner and held behind `umbrellaRequestAuthority()`; request routes cannot supply another environment or issuer |
 | Checkout intent, starter grant, webhook verification | **live as behaviour** | implemented in-repo and gate-tested |
-| Hosted sign-in on `/login` (`POST /api/login`, `POST /api/logout`) | **live as behaviour**; signs a member in once Better Auth + Neon are configured, and refuses `IDENTITY_PLANE_NOT_WIRED` until they are | the whole flow — form, named refusal states, HttpOnly `sceneaxi.session` cookie, sign-out — is in-repo and gate-tested ([#185](https://github.com/Vhailors/sceneaxi/issues/185)); it drives the same `IdentityPort` handle, so wiring step 4 activates it with no other change |
+| Hosted sign-in on `/login` (`POST /api/login`, `POST /api/logout`) | **live as behaviour**; signs a member in once Better Auth + Neon are configured, and refuses `IDENTITY_PLANE_NOT_WIRED` until they are | the whole flow — form, named refusal states, HttpOnly `sceneaxi.session` cookie, sign-out — is in-repo and gate-tested ([#185](https://github.com/Vhailors/sceneaxi/issues/185)); it drives the same `IdentityPort` handle, so wiring the deployment-owner provider handles activates it with no other change |
 | Session verification on `/account`, `/editor` | adapter live when Better Auth + Neon are configured | `verifySession` is wired, and authentication provisions the SceneAxi user and credit account idempotently; the `sessions` row is written by the sign-in above, and that same `IdentityPort` verifies the credential both surfaces read. Unwired they refuse `IDENTITY_PLANE_NOT_WIRED`, and a visitor with no cookie refuses `IDENTITY_SESSION_ABSENT` |
 | Credit balance | adapter live; reachable for a signed-in member | the balance is derived from the append-only ledger through `createCreditStore`, and the once-per-user 100-credit starter grant runs on the first authenticated read |
 | Hosted checkout redirect | live when the TEST Stripe handle is configured | the adapter uses the committed intent and TEST-only Stripe API call |
@@ -268,136 +270,158 @@ HTTP/UI layer that turns that into a signed-in browser is now in-repo too
 is `<sessionId>.<token>` matched against a `sessions` row that only `putSession` writes,
 and `putSession` is reached only from `identityPort.signIn` — which `POST /api/login`
 drives through the plane's login port, over the deployment's own handle. So an operator
-who completes the steps below has a deployment where a member can sign in at `/login` and
-reach the entitled `/editor`; with no handle configured, every one of those surfaces
-refuses by name instead of inventing a session.
+who has configured every mechanic below has a deployment where a member can sign in at
+`/login` and reach the entitled `/editor`; with no handle configured, every one of those
+surfaces refuses by name instead of inventing a session.
 
-### Remaining activation
+### Activation mechanics
 
-1. ~~Widen the `@sceneaxi/site-umbrella` allow list in `docs/dependency-matrix.json`.~~ Done.
-2. ~~Add both packages as `link:` dependencies and to `transpilePackages`.~~ Done.
-3. ~~Build the site-kit adapters over them in `identity-plane.ts`.~~ Done.
-4. The deployment owner now returns the capabilities and provider handles held behind `umbrellaRequestAuthority()`:
-   the exact `AdminIdentity` issued from the one `SCENEAXI_ADMIN_EMAIL`, a secret-holding
-   `CreditWebhookCapability`, an `IdentityPort`
-   (`createIdentityPort` over the Neon-backed `IdentityStore` and Better Auth adapter), a
-   Neon-backed credit store — a `CreditStoreAdapter` handed to `createCreditStore`, never a
-   `CreditStore` implemented directly, so it inherits the commit invariants
-   ([`auth-credits.md`](auth-credits.md#the-credit-persistence-boundary-sceneaxi128)) — a
-   `CheckoutSessionAdapter` that persists the intent and turns it into a hosted Stripe
-   **test** checkout URL, and a `CheckoutEvidencePort` that reads the persisted intent and
-   the exact Stripe settlement. The adapter provisions the user's one credit account at
-   authentication with an idempotent insert; the webhook never creates accounts.
+The **order** these are performed in, the authorization each one needs, and the evidence
+each one must capture belong to
+[`production-activation.md`](production-activation.md) — work from that runbook and treat
+the subsections here as the reference for what each step actually entails. They are
+grouped by topic, not sequenced, and none of them is a step number other prose may cite.
 
-   The `CheckoutSessionAdapter` and the `CheckoutEvidencePort` beside it owe three things
-   beyond the URL, because the grant is bound to the intent rather than to the event, and
-   an implementation that only creates a session captures money and then refuses every
-   grant — retried by Stripe until it gives up:
+The three repository-side prerequisites — the `@sceneaxi/site-umbrella` allow list in
+`docs/dependency-matrix.json`, both packages as `link:` dependencies and in
+`transpilePackages`, and the site-kit adapters built over them in `identity-plane.ts` —
+have already landed and need no operator action.
 
-   - **Persist the intent** under `intent.intentId`, exactly as given, before redirecting,
-     and keep the four price-bearing fields it was written with — `credits`, `unit_amount`,
-     `currency`, `stripe_price_id` — unchanged for the row's whole life.
-     `CheckoutEvidencePort.findIntent(intentId)` must return that same price snapshot; an
-     absent one refuses `STRIPE_CHECKOUT_EVIDENCE_MISSING`. The money figure is corroborated
-     across two reads, because `parseCheckoutCompletedEvent` compares the retrieved
-     settlement against this row. At grant time, `applyCheckoutCompletedGrant` resolves the
-     row's `(itemId, stripePriceId, unitAmount)` through the committed archive and requires
-     its credits to match the retained revision; the ledger uses that revision's credits,
-     not the row or event as an issuance authority ([`auth-credits.md`](auth-credits.md#stripe-test-mode)).
-     Unknown tuples refuse `BILLING_CATALOG_REVISION_UNRESOLVABLE` and mismatches refuse
-     `BILLING_CATALOG_REVISION_CREDITS_MISMATCH` before the commit boundary. The obligation is
-     deliberately field-scoped rather than whole-row: the columns a deployment adds for its
-     own operations stay writable, so stamping the hosted Stripe session id onto the row once
-     the session exists is expected, and nobody should later re-tighten this into whole-row
-     immutability. D2 is implemented over the archived/versioned catalog from
-     [PR #173](https://github.com/Vhailors/sceneaxi/pull/173) and adds no migration: the
-     grant anchors to that committed archive rather than to the row. D3
-     remains a separate decision this change implements no part of,
-     but its migration landed in [PR #172](https://github.com/Vhailors/sceneaxi/pull/172):
-     once you have run step 5 below, `0003_checkout_session_intent_price_immutability.sql`
-     refuses an `UPDATE` to those same four columns in the database, leaving the operational
-     ones writable. Do not read that as D3 discharged — auditing this deployment's own writes
-     is still outstanding, and this repository cannot see them — and until the migration is
-     applied here the field scope rests on the adapter alone, which writes the exact intent
-     snapshot before redirecting.
-   - **Echo the session id on the settlement.** `CheckoutEvidencePort.retrieveSettlement`
-     is called with the Checkout Session id read from the verified body, and the
-     `CheckoutSettlement` it returns must carry that same id on `sessionId`.
-     `parseCheckoutCompletedEvent` compares the two before it reads anything else about the
-     settlement, so evidence retrieved for a *different* paid session refuses
-     `STRIPE_SETTLEMENT_SESSION_MISMATCH` even when its amount, currency, and price match
-     (sceneaxi#127). An adapter that omits the field refuses the same way.
-   - **Set the Stripe session metadata** to `CHECKOUT_METADATA_KEYS` from
-     `@sceneaxi/billing` — `sceneaxiUserId`, `sceneaxiPurpose`, `sceneaxiItemId`,
-     `sceneaxiIntentId` — copied from the intent's own `userId` / `purpose` / `itemId` /
-     `intentId`. `parseCheckoutCompletedEvent` cross-checks all four plus the mode against
-     the persisted intent, so a missing or mismatched key refuses the grant as an invalid
-     webhook payload. Set the **same** four keys on `payment_intent_data.metadata` as well:
-     Stripe copies those onto the PaymentIntent and its Charge, and a `charge.refunded`
-     event carries only the Charge's own metadata. This is the only thing binding a refund
-     to the purchase it reverses, and an adapter that stamps the session alone loses it
-     quietly rather than loudly — the Charge then carries no SceneAxi key, so the refund is
-     read as another product's event and acknowledged `200` with `ignored: true`. Nothing
-     refuses, and the reconciliation simply never runs on that deployment.
+#### Deployment-owner provider handles
 
-     Two of the four are *also* routing keys, read from the verified body before the
-     intent and the settlement are, because that decision must not depend on a read that
-     can fail. `sceneaxiIntentId` names the record to bind to: a completed session
-     carrying any SceneAxi key but no usable intent id is refused and retried rather than
-     acknowledged as another product's event. `sceneaxiPurpose` decides whether this
-     endpoint owes the completion any work at all, so it must be copied from
-     `intent.purpose` and never from a literal — a credit-pack checkout stamped with a
-     purpose that settles on the revenue-share path is acknowledged `200` with
-     `ignored: true` before the intent is read, which ends Stripe's retries and drops the
-     grant silently rather than refusing it. An absent, malformed, or unknown purpose does
-     not route: it stays on the grant path and meets the parser's cross-check.
-5. Run that vertical's Neon migrations against the shared database. The migrations create
-   the `credit_accounts` table and insert **no rows**. The deployment adapter provisions one
-   account per authenticated user with `INSERT ... ON CONFLICT DO NOTHING`; a missing
-   account still refuses `CREDITS_PLANE_UNAVAILABLE` rather than becoming a zero balance.
-   The 100-credit starter grant therefore runs only after a real account exists, and a paid
-   webhook still refuses `CREDIT_LEDGER_UNAVAILABLE` rather than creating one from payment.
-6. Register the webhook endpoint `POST /api/stripe/webhook` in the Stripe **test**
-   dashboard for **both** event types this endpoint acts on — `checkout.session.completed`
-   for credit grants and `charge.refunded` for full-refund reconciliation — and set
-   `STRIPE_WEBHOOK_SECRET` to the signing secret it issues. An endpoint subscribed to only
-   the completion never receives a refund event, so the refund adjustment silently never
-   runs: the ledger keeps credits the buyer was paid back for, and nothing refuses, because
-   an event that was never delivered cannot be refused. Subscribing the endpoint to more
-   than those two event types is harmless: anything it is not built to act on — another
-   event type, or a
-   catalog-listing completion that settles on the revenue-share path — is acknowledged
-   `200` with `ignored: true` and its named reason, because no grant is owed and no
-   redelivery could change that. Both acknowledgements are decided from the verified event
-   body alone, before the intent, the settlement, or the ledger is read, so an expired
-   session, a foreign-typed event, or a listing completion is never turned into a
-   permanent retry by a settlement that cannot exist or an account nobody provisioned.
+The deployment owner returns the capabilities and provider handles held behind `umbrellaRequestAuthority()`:
+the exact `AdminIdentity` issued from the one `SCENEAXI_ADMIN_EMAIL`, a secret-holding
+`CreditWebhookCapability`, an `IdentityPort`
+(`createIdentityPort` over the Neon-backed `IdentityStore` and Better Auth adapter), a
+Neon-backed credit store — a `CreditStoreAdapter` handed to `createCreditStore`, never a
+`CreditStore` implemented directly, so it inherits the commit invariants
+([`auth-credits.md`](auth-credits.md#the-credit-persistence-boundary-sceneaxi128)) — a
+`CheckoutSessionAdapter` that persists the intent and turns it into a hosted Stripe
+**test** checkout URL, and a `CheckoutEvidencePort` that reads the persisted intent and
+the exact Stripe settlement. The adapter provisions the user's one credit account at
+authentication with an idempotent insert; the webhook never creates accounts.
 
-   **Keep this Checkout card-only.** A delayed-notification payment method completes the
-   session before the money confirms, and the confirmation arrives later as
-   `checkout.session.async_payment_succeeded`, which this endpoint does not handle: it is
-   acknowledged like any other unhandled type and grants nothing, while the immediate
-   unpaid completion is refused as an invalid payload. Supporting it needs grant and
-   idempotency semantics this step deliberately does not add, so the boundary is a scope
-   decision rather than an omission — enabling such a method in the Stripe dashboard would
-   take payments this endpoint cannot settle.
-7. **The step that opens the deployment to a member** is done in-repo
-   ([sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185)): the umbrella exposes
-   `/login`, `POST /api/login`, and `POST /api/logout` beside `/api/checkout` and
-   `/api/stripe/webhook`, and `performLogin` calls `identityPort.signIn` through the
-   plane's login port and sets the HttpOnly `sceneaxi.session` cookie. What remains
-   operational is provider-side: serve Better Auth's own handler at `BETTER_AUTH_ORIGIN`
-   (the `sign-in/email` and `get-session` endpoints named above) and configure the handles
-   the deployment owner holds behind `umbrellaRequestAuthority()` per step 4. With those
-   configured, sign-in writes a
-   `sessions` row, provisions the user and the starter grant, and `/account` and `/editor`
-   verify that credential through the same `IdentityPort`; without them every one of those
-   surfaces refuses by name.
-8. Remove `SCENEAXI_SITE_EDITOR_PREVIEW` from the umbrella project once step 7's provider
-   configuration is in place. Entitlement is resolved for real as soon as a member can
-   hold a session; the preview flag is a labeled temporary fallback, not the product path,
-   and dropping it before sign-in works turns `/editor` into a refusal wall for every
-   visitor.
+The `CheckoutSessionAdapter` and the `CheckoutEvidencePort` beside it owe three things
+beyond the URL, because the grant is bound to the intent rather than to the event, and
+an implementation that only creates a session captures money and then refuses every
+grant — retried by Stripe until it gives up:
+
+- **Persist the intent** under `intent.intentId`, exactly as given, before redirecting,
+  and keep the four price-bearing fields it was written with — `credits`, `unit_amount`,
+  `currency`, `stripe_price_id` — unchanged for the row's whole life.
+  `CheckoutEvidencePort.findIntent(intentId)` must return that same price snapshot; an
+  absent one refuses `STRIPE_CHECKOUT_EVIDENCE_MISSING`. The money figure is corroborated
+  across two reads, because `parseCheckoutCompletedEvent` compares the retrieved
+  settlement against this row. At grant time, `applyCheckoutCompletedGrant` resolves the
+  row's `(itemId, stripePriceId, unitAmount)` through the committed archive and requires
+  its credits to match the retained revision; the ledger uses that revision's credits,
+  not the row or event as an issuance authority ([`auth-credits.md`](auth-credits.md#stripe-test-mode)).
+  Unknown tuples refuse `BILLING_CATALOG_REVISION_UNRESOLVABLE` and mismatches refuse
+  `BILLING_CATALOG_REVISION_CREDITS_MISMATCH` before the commit boundary. The obligation is
+  deliberately field-scoped rather than whole-row: the columns a deployment adds for its
+  own operations stay writable, so stamping the hosted Stripe session id onto the row once
+  the session exists is expected, and nobody should later re-tighten this into whole-row
+  immutability. D2 is implemented over the archived/versioned catalog from
+  [PR #173](https://github.com/Vhailors/sceneaxi/pull/173) and adds no migration: the
+  grant anchors to that committed archive rather than to the row. D3
+  remains a separate decision this change implements no part of,
+  but its migration landed in [PR #172](https://github.com/Vhailors/sceneaxi/pull/172):
+  once the Neon migrations below are applied, `0003_checkout_session_intent_price_immutability.sql`
+  refuses an `UPDATE` to those same four columns in the database, leaving the operational
+  ones writable. Do not read that as D3 discharged — auditing this deployment's own writes
+  is still outstanding, and this repository cannot see them — and until the migration is
+  applied here the field scope rests on the adapter alone, which writes the exact intent
+  snapshot before redirecting.
+- **Echo the session id on the settlement.** `CheckoutEvidencePort.retrieveSettlement`
+  is called with the Checkout Session id read from the verified body, and the
+  `CheckoutSettlement` it returns must carry that same id on `sessionId`.
+  `parseCheckoutCompletedEvent` compares the two before it reads anything else about the
+  settlement, so evidence retrieved for a *different* paid session refuses
+  `STRIPE_SETTLEMENT_SESSION_MISMATCH` even when its amount, currency, and price match
+  (sceneaxi#127). An adapter that omits the field refuses the same way.
+- **Set the Stripe session metadata** to `CHECKOUT_METADATA_KEYS` from
+  `@sceneaxi/billing` — `sceneaxiUserId`, `sceneaxiPurpose`, `sceneaxiItemId`,
+  `sceneaxiIntentId` — copied from the intent's own `userId` / `purpose` / `itemId` /
+  `intentId`. `parseCheckoutCompletedEvent` cross-checks all four plus the mode against
+  the persisted intent, so a missing or mismatched key refuses the grant as an invalid
+  webhook payload. Set the **same** four keys on `payment_intent_data.metadata` as well:
+  Stripe copies those onto the PaymentIntent and its Charge, and a `charge.refunded`
+  event carries only the Charge's own metadata. This is the only thing binding a refund
+  to the purchase it reverses, and an adapter that stamps the session alone loses it
+  quietly rather than loudly — the Charge then carries no SceneAxi key, so the refund is
+  read as another product's event and acknowledged `200` with `ignored: true`. Nothing
+  refuses, and the reconciliation simply never runs on that deployment.
+
+  Two of the four are *also* routing keys, read from the verified body before the
+  intent and the settlement are, because that decision must not depend on a read that
+  can fail. `sceneaxiIntentId` names the record to bind to: a completed session
+  carrying any SceneAxi key but no usable intent id is refused and retried rather than
+  acknowledged as another product's event. `sceneaxiPurpose` decides whether this
+  endpoint owes the completion any work at all, so it must be copied from
+  `intent.purpose` and never from a literal — a credit-pack checkout stamped with a
+  purpose that settles on the revenue-share path is acknowledged `200` with
+  `ignored: true` before the intent is read, which ends Stripe's retries and drops the
+  grant silently rather than refusing it. An absent, malformed, or unknown purpose does
+  not route: it stays on the grant path and meets the parser's cross-check.
+#### Neon migrations for the credit vertical
+
+Run that vertical's Neon migrations against the shared database. The migrations create
+the `credit_accounts` table and insert **no rows**. The deployment adapter provisions one
+account per authenticated user with `INSERT ... ON CONFLICT DO NOTHING`; a missing
+account still refuses `CREDITS_PLANE_UNAVAILABLE` rather than becoming a zero balance.
+The 100-credit starter grant therefore runs only after a real account exists, and a paid
+webhook still refuses `CREDIT_LEDGER_UNAVAILABLE` rather than creating one from payment.
+
+#### Stripe TEST webhook endpoint
+
+Register the webhook endpoint `POST /api/stripe/webhook` in the Stripe **test**
+dashboard for **both** event types this endpoint acts on — `checkout.session.completed`
+for credit grants and `charge.refunded` for full-refund reconciliation — and set
+`STRIPE_WEBHOOK_SECRET` to the signing secret it issues. An endpoint subscribed to only
+the completion never receives a refund event, so the refund adjustment silently never
+runs: the ledger keeps credits the buyer was paid back for, and nothing refuses, because
+an event that was never delivered cannot be refused. Subscribing the endpoint to more
+than those two event types is harmless: anything it is not built to act on — another
+event type, or a
+catalog-listing completion that settles on the revenue-share path — is acknowledged
+`200` with `ignored: true` and its named reason, because no grant is owed and no
+redelivery could change that. Both acknowledgements are decided from the verified event
+body alone, before the intent, the settlement, or the ledger is read, so an expired
+session, a foreign-typed event, or a listing completion is never turned into a
+permanent retry by a settlement that cannot exist or an account nobody provisioned.
+
+**Keep this Checkout card-only.** A delayed-notification payment method completes the
+session before the money confirms, and the confirmation arrives later as
+`checkout.session.async_payment_succeeded`, which this endpoint does not handle: it is
+acknowledged like any other unhandled type and grants nothing, while the immediate
+unpaid completion is refused as an invalid payload. Supporting it needs grant and
+idempotency semantics this document deliberately does not add, so the boundary is a scope
+decision rather than an omission — enabling such a method in the Stripe dashboard would
+take payments this endpoint cannot settle.
+
+#### Hosted sign-in provider configuration
+
+**What opens the deployment to a member** is done in-repo
+([sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185)): the umbrella exposes
+`/login`, `POST /api/login`, and `POST /api/logout` beside `/api/checkout` and
+`/api/stripe/webhook`, and `performLogin` calls `identityPort.signIn` through the
+plane's login port and sets the HttpOnly `sceneaxi.session` cookie. What remains
+operational is provider-side: serve Better Auth's own handler at `BETTER_AUTH_ORIGIN`
+(the `sign-in/email` and `get-session` endpoints named above) and configure the handles
+the deployment owner holds behind `umbrellaRequestAuthority()`, as described under
+[Deployment-owner provider handles](#deployment-owner-provider-handles). With those
+configured, sign-in writes a
+`sessions` row, provisions the user and the starter grant, and `/account` and `/editor`
+verify that credential through the same `IdentityPort`; without them every one of those
+surfaces refuses by name.
+
+#### Retiring the editor preview flag
+
+Remove `SCENEAXI_SITE_EDITOR_PREVIEW` from the umbrella project once the hosted sign-in
+provider configuration above is in place. Entitlement is resolved for real as soon as a
+member can hold a session; the preview flag is a labeled temporary fallback, not the
+product path, and dropping it before sign-in works turns `/editor` into a refusal wall
+for every visitor.
 
 ### How the seam holds
 
@@ -518,12 +542,14 @@ webhook event, or performing a charge:
   `checkout.session.completed`. The available CLI profile has TEST access and no LIVE
   access; SceneAxi's separate live-authorization refusal remains unchanged. That
   observation predates refund reconciliation: until the recorded endpoint is also
-  subscribed to `charge.refunded` per step 6, no refund event reaches this deployment and
+  subscribed to `charge.refunded` per [Stripe TEST webhook
+  endpoint](#stripe-test-webhook-endpoint), no refund event reaches this deployment and
   the TEST refund proof cannot be run there.
 - The umbrella `/` and `/pricing` pages and both catalog roots are reachable. The current
   production umbrella deployment predates the merged hosted-login route and still serves
   `404` at `/login`; `BETTER_AUTH_ORIGIN` is also absent from the umbrella Production
-  variable-name listing. Activating member sign-in therefore still requires step 7 and a
+  variable-name listing. Activating member sign-in therefore still requires the [hosted
+  sign-in provider configuration](#hosted-sign-in-provider-configuration) and a
   fresh deployment of current `main`. Do not remove `SCENEAXI_SITE_EDITOR_PREVIEW` before
   that sign-in path is proven.
 

@@ -8,11 +8,16 @@ charge, enable Stripe LIVE, sign a desktop build, or publish an artifact. Each e
 action still needs its own explicit captain authorization naming the action, and it may
 be executed only with real configured credentials and a recorded verification result.
 
-This is the operator control plane for activation. It does not replace the narrower
-owners:
+This is the operator control plane for activation, and the **sole owner of the ordered
+activation and rollback procedure**. No other document sequences these actions; the
+narrower owners below hold the mechanics, contracts, and verification commands each step
+needs, and this runbook does not replace them:
 
 - [`websites-deploy.md`](websites-deploy.md) owns the Vercel topology, environment
-  names, provider wiring, and web verification commands;
+  names, provider wiring, and web verification commands. Its
+  [activation mechanics](websites-deploy.md#activation-mechanics) are grouped by topic
+  and deliberately unnumbered — read them for what a step entails, and take the steps in
+  the order below;
 - [`auth-credits.md`](auth-credits.md) owns identity, ledger, checkout, and LIVE-mode
   invariants;
 - [`stripe-live-activation.md`](stripe-live-activation.md) and
@@ -275,9 +280,22 @@ Rollback favors a safe named refusal over partial availability.
 
 - [ ] On any failed verification, stop alias movement. If an alias moved, reassign only
   that alias to its last recorded verified deployment and capture both deployment ids.
-- [ ] Disable new TEST Checkout creation by removing the failing deployment's checkout
-  provider handle under an explicitly authorized configuration rollback. Keep the webhook
-  reachable until every already-created paid session and refund is reconciled.
+- [ ] Withdraw new TEST Checkout creation by restoring the umbrella's last recorded
+  verified deployment and its configuration under an explicitly authorized rollback —
+  never by removing the deployment's Stripe provider handle. The shipped wiring builds the
+  checkout entry point and the webhook's settlement evidence from that one handle, so
+  removing it also blinds the webhook to the persisted intent and the exact settlement:
+  every already-created paid session then refuses instead of granting, which is the
+  paid-but-ungranted outcome this checklist exists to prevent.
+- [ ] Throughout that rollback, keep `POST /api/stripe/webhook` reachable with its signing
+  secret and Stripe subscriptions unchanged, and confirm the restored deployment still
+  reads persisted intents and settlements, so every already-created paid session and refund
+  still reconciles. Rollback is complete only once that reconciliation is evidenced.
+- [ ] If no verified known-good deployment, configuration, or provider handle is available
+  to restore, stop and hold the incident open under its rollback owner. Do not deploy an
+  unverified build, clear configuration, or disable the endpoint to end an alert. An
+  unreconciled paid session stays a named refusal and a Stripe retry, never an acknowledged
+  no-op and never an invented grant.
 - [ ] Do not delete or edit a checkout intent, session, credit account, ledger entry,
   Connect record, or paid grant. Apply forward fixes only. A missing account remains
   `CREDITS_PLANE_UNAVAILABLE`; a webhook never invents one.

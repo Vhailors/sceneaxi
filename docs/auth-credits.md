@@ -418,7 +418,7 @@ own operations stay writable, so it may stamp the hosted Stripe session id onto 
 after creating the session, and this rule must not be re-tightened into whole-row
 immutability later. The `CheckoutEvidencePort` obligations themselves, retrieving the
 settlement separately for that exact Checkout Session included, stay owned by
-[`websites-deploy.md`](websites-deploy.md#remaining-activation).
+[`websites-deploy.md`](websites-deploy.md#activation-mechanics).
 [`packages/billing/src/stripe-webhook.ts`](../packages/billing/src/stripe-webhook.ts),
 [`packages/billing/test/stripe-checkout.test.ts`](../packages/billing/test/stripe-checkout.test.ts),
 and the credit-pack grant-anchor tests prove the settlement comparison, grant-time anchor,
@@ -435,7 +435,7 @@ while operational columns stay writable, and
 [`tests/db/schema-lockstep.test.ts`](../tests/db/schema-lockstep.test.ts) asserts that
 field scope. What D3 still owes is outside this repository: the deployment's own writes
 have not been audited — this repository cannot see them — and applying the migration needs
-the separate deploy authority that [`websites-deploy.md`](websites-deploy.md#remaining-activation)
+the separate deploy authority that [`websites-deploy.md`](websites-deploy.md#activation-mechanics)
 owns. So the obligation above is enforced in the database of any deployment that has run
 `db/migrations` in order, and rests on the adapter alone until it has. Stripe LIVE is still
 unactivated under ADR 0021.
@@ -1247,6 +1247,6 @@ it does, `signIn` has no adapter to reach, so no user is provisioned, no starter
 runs, and every surface refuses by name. Dropping the editor preview flag comes after
 that provider configuration, never before it.
 The deployable-site mechanics and surface status are owned by
-[`websites-deploy.md`](websites-deploy.md#remaining-activation). The operator
+[`websites-deploy.md`](websites-deploy.md#activation-mechanics). The operator
 authorization gate, ordered activation/rollback procedure, and evidence checklist are
 owned by [`production-activation.md`](production-activation.md).
