@@ -93,6 +93,7 @@ export const BILLING_REFUSE_REASONS = Object.freeze({
   connectProviderResponseInvalid: "STRIPE_CONNECT_PROVIDER_RESPONSE_INVALID",
   connectStoreFailed: "STRIPE_CONNECT_STORE_FAILED",
   connectIdempotencyConflict: "STRIPE_CONNECT_IDEMPOTENCY_CONFLICT",
+  connectOnboardingLinkExpired: "STRIPE_CONNECT_ONBOARDING_LINK_EXPIRED",
   connectAccountMissing: "STRIPE_CONNECT_ACCOUNT_MISSING",
   connectStatusMissing: "STRIPE_CONNECT_STATUS_MISSING",
   connectPayoutsDisabled: "STRIPE_CONNECT_PAYOUTS_DISABLED",

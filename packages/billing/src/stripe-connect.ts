@@ -175,7 +175,12 @@ export function isConnectStoreConflict(error: unknown): boolean {
  * - `commitPayoutIntent` holds one payout intent per `saleId`, mirroring the
  *   migration's `sale_id ... UNIQUE`, so a second intent for a sale that already
  *   has one under a different idempotency key conflicts rather than authorizing
- *   a second provider payout.
+ *   a second provider payout;
+ * - `commitOnboarding` keeps a creator's first account row — it is immutable
+ *   evidence, and the migration's append-only trigger forbids rewriting it — so a
+ *   later intent under a fresh key commits against that row and returns it. A
+ *   provider naming a different `stripeAccountId` or mode for the creator
+ *   conflicts.
  */
 export type ConnectStore = Readonly<{
   findAccountByCreatorUserId(
@@ -249,6 +254,19 @@ const same = (left: unknown, right: unknown): boolean => {
   );
 };
 
+/**
+ * A Connect account row is immutable first-call evidence, so a later onboarding
+ * is bound to it by identity rather than by the request evidence it happens to
+ * carry: same creator, same provider account, same mode.
+ */
+const sameAccountIdentity = (
+  left: ConnectAccountRecord,
+  right: ConnectAccountRecord,
+) =>
+  left.creatorUserId === right.creatorUserId &&
+  left.stripeAccountId === right.stripeAccountId &&
+  left.mode === right.mode;
+
 /** In-memory reference adapter with the same idempotency conflicts as durable storage. */
 export function createInMemoryConnectStore(): InMemoryConnectStore {
   const accounts = new Map<string, ConnectAccountRecord>();
@@ -279,8 +297,14 @@ export function createInMemoryConnectStore(): InMemoryConnectStore {
       }
       const priorIntent = onboarding.get(intent.value.idempotencyKey);
       const priorAccount = accounts.get(account.value.creatorUserId);
+      if (
+        priorAccount !== undefined &&
+        !sameAccountIdentity(priorAccount, account.value)
+      ) {
+        return conflict("creator account");
+      }
       if (priorIntent !== undefined) {
-        if (!same(priorIntent, intent.value) || !same(priorAccount, account.value)) {
+        if (!same(priorIntent, intent.value) || priorAccount === undefined) {
           return conflict("onboarding");
         }
         return Object.freeze({
@@ -289,13 +313,11 @@ export function createInMemoryConnectStore(): InMemoryConnectStore {
           replayed: true,
         }) as ConnectOnboardingCommit;
       }
-      if (priorAccount !== undefined && !same(priorAccount, account.value)) {
-        return conflict("creator account");
-      }
-      accounts.set(account.value.creatorUserId, account.value);
+      const committedAccount = priorAccount ?? account.value;
+      accounts.set(committedAccount.creatorUserId, committedAccount);
       onboarding.set(intent.value.idempotencyKey, intent.value);
       return Object.freeze({
-        account: account.value,
+        account: committedAccount,
         intent: intent.value,
         replayed: false,
       });
@@ -644,7 +666,10 @@ function validateOnboardingCommit(
     "onboarding intent",
   );
   if (!intent.ok) return intent;
-  if (!same(account.value, expectedAccount) || !same(intent.value, expectedIntent)) {
+  if (
+    !sameAccountIdentity(account.value, expectedAccount) ||
+    !same(intent.value, expectedIntent)
+  ) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.connectIdempotencyConflict,
       "The Connect audit store answered onboarding with different records.",
@@ -757,6 +782,12 @@ export async function startConnectOnboarding(
         "The onboarding idempotency key belongs to another creator.",
       );
     }
+    if (Date.parse(storedPrior.value.expiresAt) <= input.now) {
+      return billingRefuse(
+        BILLING_REFUSE_REASONS.connectOnboardingLinkExpired,
+        "The onboarding link recorded under this idempotency key has expired; a fresh key starts a new intent against the same Connect account.",
+      );
+    }
   }
 
   let response: unknown;
@@ -818,7 +849,7 @@ export async function startConnectOnboarding(
   if (!checkedCommit.ok) return checkedCommit;
   return billingOk(
     Object.freeze({
-      account: accountValidation.value,
+      account: checkedCommit.value.account,
       intent: checkedCommit.value.intent,
       onboardingUrl: value.onboardingUrl,
       replayed: checkedCommit.value.replayed,

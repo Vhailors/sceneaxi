@@ -258,6 +258,98 @@ describe("Stripe Connect TEST onboarding", () => {
     expect(fixture.calls.onboarding).toBe(0);
   });
 
+  it("refuses to replay an onboarding link that has already expired", async () => {
+    const { calls, provider } = providerFixture();
+    const store = createInMemoryConnectStore();
+    const first = await startConnectOnboarding(onboardingRequest(store, provider));
+    expect(first.ok).toBe(true);
+    const afterExpiry = await startConnectOnboarding(
+      onboardingRequest(store, provider, {
+        now: Date.parse("2026-08-06T12:00:00Z"),
+      }),
+    );
+    expect(afterExpiry).toMatchObject({
+      ok: false,
+      reason: BILLING_REFUSE_REASONS.connectOnboardingLinkExpired,
+    });
+    expect(calls.onboarding).toBe(1);
+    expect(store.onboardingIntentCount()).toBe(1);
+  });
+
+  it("issues a fresh intent against the existing account once a link expired", async () => {
+    const { provider } = providerFixture({
+      createOnboarding: () => ({
+        ok: true as const,
+        value: {
+          stripeAccountId: "acct_test_creator",
+          onboardingUrl: "https://connect.stripe.example/test/onboard-2",
+          expiresAt: "2026-08-06T14:00:00Z",
+          accountRequestId: "req_account_02",
+          accountCreatedAt: "2026-08-06T12:59:00Z",
+          onboardingRequestId: "req_onboarding_02",
+          onboardingCreatedAt: "2026-08-06T13:00:00Z",
+        },
+      }),
+    });
+    const store = createInMemoryConnectStore();
+    const first = await startConnectOnboarding(
+      onboardingRequest(store, providerFixture().provider),
+    );
+    const resumed = await startConnectOnboarding(
+      onboardingRequest(store, provider, {
+        idempotencyKey: "connect-onboarding:usr_creator-2",
+        now: Date.parse("2026-08-06T13:00:00Z"),
+      }),
+    );
+    expect(first.ok).toBe(true);
+    expect(resumed.ok).toBe(true);
+    if (!first.ok || !resumed.ok) return;
+    expect(resumed.value.replayed).toBe(false);
+    expect(resumed.value.onboardingUrl).not.toBe(first.value.onboardingUrl);
+    expect(resumed.value.intent).toMatchObject({
+      expiresAt: "2026-08-06T14:00:00Z",
+      providerRequestId: "req_onboarding_02",
+      idempotencyKey: "connect-onboarding:usr_creator-2",
+    });
+    expect(resumed.value.account).toEqual(first.value.account);
+    expect(store.accountCount()).toBe(1);
+    expect(store.onboardingIntentCount()).toBe(2);
+  });
+
+  it("refuses a resumed onboarding that names a different provider account", async () => {
+    const store = createInMemoryConnectStore();
+    const first = await startConnectOnboarding(
+      onboardingRequest(store, providerFixture().provider),
+    );
+    expect(first.ok).toBe(true);
+    const { provider } = providerFixture({
+      createOnboarding: () => ({
+        ok: true as const,
+        value: {
+          stripeAccountId: "acct_test_other",
+          onboardingUrl: "https://connect.stripe.example/test/onboard-3",
+          expiresAt: "2026-08-06T14:00:00Z",
+          accountRequestId: "req_account_03",
+          accountCreatedAt: "2026-08-06T12:59:00Z",
+          onboardingRequestId: "req_onboarding_03",
+          onboardingCreatedAt: "2026-08-06T13:00:00Z",
+        },
+      }),
+    });
+    const swapped = await startConnectOnboarding(
+      onboardingRequest(store, provider, {
+        idempotencyKey: "connect-onboarding:usr_creator-3",
+        now: Date.parse("2026-08-06T13:00:00Z"),
+      }),
+    );
+    expect(swapped).toMatchObject({
+      ok: false,
+      reason: BILLING_REFUSE_REASONS.connectIdempotencyConflict,
+    });
+    expect(store.accountCount()).toBe(1);
+    expect(store.onboardingIntentCount()).toBe(1);
+  });
+
   it("surfaces provider refusal and records no account", async () => {
     const fixture = providerFixture({
       createOnboarding: () => ({

@@ -1460,6 +1460,14 @@ describe("billing refuse matrix", () => {
       }),
     );
 
+    const expiredStore = createInMemoryConnectStore();
+    await onboard(expiredStore, provider());
+    record(
+      await onboard(expiredStore, provider(), {
+        now: Date.parse("2026-07-25T12:00:00Z"),
+      }),
+    );
+
     record(
       await refreshConnectStatus({
         principal: principal(),

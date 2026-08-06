@@ -27,6 +27,7 @@ minor-unit amounts, currency, sale ids, and idempotency keys.
 | provider secret absent | `STRIPE_CONNECT_SECRET_MISSING` |
 | provider refuses or throws | `STRIPE_CONNECT_PROVIDER_REFUSED` |
 | malformed provider success | `STRIPE_CONNECT_PROVIDER_RESPONSE_INVALID` |
+| retry of an onboarding key whose link has expired | `STRIPE_CONNECT_ONBOARDING_LINK_EXPIRED` |
 | Connect account/status/payout capability absent | the corresponding named `STRIPE_CONNECT_*` refusal |
 
 ## Audit and idempotency
@@ -41,7 +42,16 @@ The versioned record contract is
   persisted. Its intent, expiry, provider request id, account id, and idempotency key
   are persisted.
 - Onboarding retries call the provider with the same idempotency key and replay the
-  same stored intent. Status observations key on provider request evidence.
+  same stored intent, but only while that intent's `expiresAt` is still ahead of the
+  caller's clock: an expired link is never replayed as if valid, it refuses
+  `STRIPE_CONNECT_ONBOARDING_LINK_EXPIRED` before the provider is called.
+- Re-onboarding is therefore a **new idempotency key against the existing account**.
+  A creator's account row is immutable first-call evidence — the migration's
+  append-only trigger forbids rewriting it — so the fresh intent carries the new
+  expiry and provider request identity while `commitOnboarding` keeps and returns the
+  stored account row. A provider naming a different `stripeAccountId` or mode for that
+  creator conflicts, so re-onboarding cannot silently move a creator's account.
+- Status observations key on provider request evidence.
 - `commitPayoutIntent` atomically stores the validated `MoneySplitRecord` and the
   exact creator-leg payout intent. A different split under the sale or idempotency
   key conflicts, and so does a second payout intent for a sale that already has one

@@ -1094,9 +1094,19 @@ identical row.
 Both credits paths are idempotent on the sale id (`sale:<saleId>:buyer` / `:creator`), so a
 replay moves nothing, and neither key can reach persistence except through
 `settleCreditsSale` — see *The credit persistence boundary* above. `recordMoneySale`
-still constructs a pure `MoneySplitRecord`. The SA-CON-1 Connect store adds the narrower
-durable boundary: `commitPayoutIntent` atomically appends that validated split and its
-exact creator-leg payout intent before a provider call. A success can be appended only
+still constructs a pure `MoneySplitRecord`, and no credits or checkout path persists one.
+
+Captain decision D4 recorded that atomic persistence for `MoneySplitRecord` was not
+selected and remained an unauthorized gap before any Connect work. For the accepted
+SA-CON-1 creator-payout package (sceneaxi#199) the captain **superseded** that
+prohibition, and only to the width described here; the disposition row in
+[`NEXT-STEP.md`](program/NEXT-STEP.md) restates the same supersession. What is
+authorized is the narrower durable boundary `commitPayoutIntent`: it atomically appends
+one validated split together with its exact creator-leg payout intent before a provider
+call, and nothing else. It is not a general money-settlement store — it commits only a
+split a `ConnectPayoutIntent` is bound to field by field, it is reachable only from the
+authenticated TEST-only Connect seam, and D4's general statement stands everywhere else:
+a deployment that wants money splits durable outside this path still owns that write. A success can be appended only
 from strict provider evidence, and retry reads the existing outcome before dispatch.
 All Connect operations are TEST-only and require explicit provider, dashboard, secret,
 and operations readiness. LIVE remains refused and is only the uncompleted checklist in
