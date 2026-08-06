@@ -37,17 +37,41 @@ empty `kidsBoundary.allowedDependents` boundary.
 | Unknown activity action | `KIDS_ACTIVITY_ACTION_UNSUPPORTED`; the child sees only “That tool is not part of this play space.” |
 | Non-curated world or piece | `KIDS_ACTIVITY_CURATED_CHOICE_REQUIRED` |
 | More than six pieces | `KIDS_ACTIVITY_SCENE_FULL` |
+| Undo with nothing placed | `KIDS_ACTIVITY_SCENE_EMPTY`; the scene is not reissued and `revision` does not move |
 | Editing during play | `KIDS_ACTIVITY_BUILD_PAUSED_WHILE_PLAYING` |
+| Starting play that is already running | `KIDS_ACTIVITY_ALREADY_PLAYING` |
+| Stopping play that is already stopped | `KIDS_ACTIVITY_ALREADY_STOPPED` |
 | Non-Kids catalog | `NON_KIDS_CATALOG_DENIED` at the profile policy; no catalog code or link exists in the site |
 | Model route | third party refuses `THIRD_PARTY_LLM_DENIED_BY_DEFAULT`; every other route refuses `KIDS_LLM_ROUTE_NOT_ALLOWED`; no provider dependency exists |
 | External data | policy refuses; the site gate rejects network/environment APIs across the whole install root and CSP enforces `connect-src 'none'` |
 | Outbound site configuration | the site gate refuses a Next rewrite, redirect, remote image pattern, asset prefix, or build-time `env` block — a same-origin proxy CSP could never see |
 | Identity or commerce | no dependency, form, route, environment input, or state vocabulary exists; unsupported activity requests return the generic refusal |
 
+Every no-op in the closed table refuses rather than reissuing an unchanged scene, so
+`revision` counts real changes and nothing else. A refusal carries no `state` at all:
+the decision the caller already holds stays the current one.
+
 The generic activity refusal deliberately does not echo the attempted action and
 contains no balance, account, session, provider, catalog, or model detail. Internal
 policy refusals remain specific for operators and tests, but are not rendered into
 the child surface.
+
+## Development server exception
+
+The shipped `security-headers.json` is what the deployed origin serves, unchanged:
+`connect-src 'none'` and the external-data denial hold in every phase but one. The
+local development server cannot run under that policy — its hot-reload channel is a
+socket `connect-src` governs, and its compiler wraps modules in `eval`. So
+`security-headers.json` declares a second, fully written-out
+`developmentServerHeaders` list that differs from the shipped one in exactly two
+same-origin directives — `connect-src 'self'` and an added `'unsafe-eval'` — and
+`next.config.ts` is a phase function that *selects* between the two lists. It
+selects rather than derives because Next's config transpiler cannot resolve a
+relative `.ts` import, so it cannot reach `kidsSecurityHeadersForPhase()`; a root
+test holds the two selections and the exact two-directive difference in lockstep.
+Neither list names a host. `next build`, `next start`, and export receive the
+shipped policy byte for byte; there is no production connection path, and the source
+gates that refuse network APIs and external URLs are untouched either way.
 
 ## Proof map
 
@@ -55,6 +79,8 @@ the child surface.
 |---|---|
 | Allowed build → play flow | `packages/profile-kids/test/activity.test.ts`, `tests/e2e/profile-kids-refuse-golden.test.ts`, `tests/sites/kids-surface.test.ts` |
 | Complete external refusal matrix | `packages/profile-kids/test/refuse-matrix.test.ts`, `tests/e2e/profile-kids-refuse-golden.test.ts` |
+| Every activity refusal reason reachable, and refusing mutates nothing | `packages/profile-kids/test/activity.test.ts`, `tests/e2e/profile-kids-refuse-golden.test.ts`, `tests/sites/kids-surface.test.ts` |
+| Production policy unchanged; the development exception is phase-scoped and same-origin | `tests/sites/kids-surface.test.ts` |
 | Empty dependent boundary | `docs/dependency-matrix.json`, `tests/boundary/injected-violations.test.ts`, `tests/boundary/injected-site-violations.test.ts` |
 | Site has no outbound API or configuration | `scripts/check-sites.mjs`, `tests/boundary/injected-site-violations.test.ts` |
 | Browser-enforced outbound denial | `sites/kids/src/lib/security-policy.ts`, `tests/sites/kids-surface.test.ts` |

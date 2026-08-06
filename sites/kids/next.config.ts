@@ -19,9 +19,17 @@ const nextConfig: NextConfig = {
     };
     return config;
   },
-  async headers() {
-    return [{ source: "/:path*", headers: securityPolicy.headers }];
-  },
 };
 
-export default nextConfig;
+export default function kidsNextConfig(phase: string): NextConfig {
+  const headers =
+    phase === "phase-development-server"
+      ? securityPolicy.developmentServerHeaders
+      : securityPolicy.headers;
+  return {
+    ...nextConfig,
+    async headers() {
+      return [{ source: "/:path*", headers }];
+    },
+  };
+}

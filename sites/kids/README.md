@@ -17,6 +17,13 @@ forms, links, environment access, and external URLs anywhere under this director
 configuration as well as source — and refuses Next configuration keys that could
 proxy, redirect, or inject build-time values; response headers add
 `connect-src 'none'`, `form-action 'none'`, and same-origin isolation.
+
+`pnpm dev` is the one exception, and it is scoped to Next's development phase:
+`next.config.ts` is a phase function, so the development server alone receives
+`connect-src 'self'` (its hot-reload socket) and `'unsafe-eval'` (its compiler).
+Both are same-origin and name no host. `pnpm build` and `pnpm start` serve
+`security-headers.json` byte for byte, so the deployed origin keeps
+`connect-src 'none'`. See [`docs/kids-first-release.md`](../../docs/kids-first-release.md).
 The standalone pnpm workspace approves one dependency build only: Next's `sharp`;
 `pnpm check:sites` refuses any second approval.
 

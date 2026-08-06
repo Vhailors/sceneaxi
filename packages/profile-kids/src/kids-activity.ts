@@ -80,6 +80,7 @@ export const KIDS_ACTIVITY_REFUSE_REASONS = Object.freeze({
   actionUnsupported: "KIDS_ACTIVITY_ACTION_UNSUPPORTED",
   curatedChoiceRequired: "KIDS_ACTIVITY_CURATED_CHOICE_REQUIRED",
   sceneFull: "KIDS_ACTIVITY_SCENE_FULL",
+  sceneEmpty: "KIDS_ACTIVITY_SCENE_EMPTY",
   buildPaused: "KIDS_ACTIVITY_BUILD_PAUSED_WHILE_PLAYING",
   alreadyPlaying: "KIDS_ACTIVITY_ALREADY_PLAYING",
   alreadyStopped: "KIDS_ACTIVITY_ALREADY_STOPPED",
@@ -247,10 +248,17 @@ export function applyKidsActivityAction(
   }
 
   if (action === "piece.undo") {
+    if (state.pieceIds.length === 0) {
+      return refuse(
+        action,
+        KIDS_ACTIVITY_REFUSE_REASONS.sceneEmpty,
+        "Your world is already clear. Add a piece first.",
+      );
+    }
     return accept(
       action,
       issueState(state.worldId, state.pieceIds.slice(0, -1), "build", state.revision + 1),
-      state.pieceIds.length === 0 ? "Your world is already clear." : "Last piece removed.",
+      "Last piece removed.",
     );
   }
 

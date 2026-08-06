@@ -9,4 +9,10 @@ export const seam: KidsSiteSeam = Object.freeze({
 });
 
 export * from "./lib/kids-activity.js";
-export { KIDS_CONTENT_SECURITY_POLICY, KIDS_SECURITY_HEADERS } from "./lib/security-policy.js";
+export {
+  KIDS_CONTENT_SECURITY_POLICY,
+  KIDS_DEVELOPMENT_SERVER_HEADERS,
+  KIDS_DEVELOPMENT_SERVER_PHASE,
+  KIDS_SECURITY_HEADERS,
+  kidsSecurityHeadersForPhase,
+} from "./lib/security-policy.js";

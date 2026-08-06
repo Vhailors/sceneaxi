@@ -85,6 +85,114 @@ describe("@sceneaxi/profile-kids curated first-release activity", () => {
     );
   });
 
+  it("reaches every reason in the closed refusal table, and mutates nothing when it refuses", () => {
+    const built = (() => {
+      let state = createKidsActivityState();
+      const decision = applyKidsActivityAction(state, { action: "piece.add", pieceId: "star" });
+      if (decision.ok) state = decision.state;
+      return state;
+    })();
+    const playing = (() => {
+      const decision = applyKidsActivityAction(built, { action: "play.start" });
+      if (!decision.ok) throw new Error("play.start must be allowed from a built scene.");
+      return decision.state;
+    })();
+    const full = (() => {
+      let state = createKidsActivityState();
+      for (let index = 0; index < KIDS_ACTIVITY_PIECE_LIMIT; index += 1) {
+        const decision = applyKidsActivityAction(state, {
+          action: "piece.add",
+          pieceId: "friend",
+        });
+        if (decision.ok) state = decision.state;
+      }
+      return state;
+    })();
+
+    const cases = [
+      { reason: KIDS_ACTIVITY_REFUSE_REASONS.stateInvalid, state: { ...built }, request: { action: "play.start" } },
+      { reason: KIDS_ACTIVITY_REFUSE_REASONS.requestInvalid, state: built, request: "play.start" },
+      { reason: KIDS_ACTIVITY_REFUSE_REASONS.actionUnsupported, state: built, request: { action: "scene.export" } },
+      {
+        reason: KIDS_ACTIVITY_REFUSE_REASONS.curatedChoiceRequired,
+        state: built,
+        request: { action: "piece.add", pieceId: "uploaded" },
+      },
+      { reason: KIDS_ACTIVITY_REFUSE_REASONS.sceneFull, state: full, request: { action: "piece.add", pieceId: "tree" } },
+      {
+        reason: KIDS_ACTIVITY_REFUSE_REASONS.sceneEmpty,
+        state: createKidsActivityState(),
+        request: { action: "piece.undo" },
+      },
+      {
+        reason: KIDS_ACTIVITY_REFUSE_REASONS.buildPaused,
+        state: playing,
+        request: { action: "piece.add", pieceId: "tree" },
+      },
+      { reason: KIDS_ACTIVITY_REFUSE_REASONS.alreadyPlaying, state: playing, request: { action: "play.start" } },
+      { reason: KIDS_ACTIVITY_REFUSE_REASONS.alreadyStopped, state: built, request: { action: "play.stop" } },
+    ] as const;
+
+    for (const testCase of cases) {
+      const before = JSON.stringify(testCase.state);
+      const decision = applyKidsActivityAction(testCase.state, testCase.request);
+      expect(decision, JSON.stringify(testCase.request)).toMatchObject({
+        ok: false,
+        reason: testCase.reason,
+      });
+      expect(decision).not.toHaveProperty("state");
+      expect(JSON.stringify(testCase.state)).toBe(before);
+      expect(JSON.stringify(decision)).not.toMatch(
+        /account|balance|billing|catalog|checkout|credit|identity|model|provider|session/i,
+      );
+    }
+
+    expect([...new Set(cases.map((testCase) => testCase.reason))].sort()).toEqual(
+      Object.values(KIDS_ACTIVITY_REFUSE_REASONS).sort(),
+    );
+  });
+
+  it("keeps play a read-only mode for every editing action", () => {
+    let state = createKidsActivityState();
+    for (const request of [
+      { action: "piece.add", pieceId: "rocket" },
+      { action: "play.start" },
+    ] as const) {
+      const decision = applyKidsActivityAction(state, request);
+      if (decision.ok) state = decision.state;
+    }
+    expect(state).toMatchObject({ mode: "play", pieceIds: ["rocket"], revision: 2 });
+
+    for (const request of [
+      { action: "world.choose", worldId: "ocean" },
+      { action: "piece.add", pieceId: "tree" },
+      { action: "piece.undo" },
+      { action: "scene.reset" },
+    ] as const) {
+      expect(applyKidsActivityAction(state, request), JSON.stringify(request)).toEqual({
+        ok: false,
+        action: request.action,
+        reason: KIDS_ACTIVITY_REFUSE_REASONS.buildPaused,
+        message: "Stop play before changing your world.",
+      });
+    }
+    expect(state).toMatchObject({ mode: "play", pieceIds: ["rocket"], revision: 2 });
+  });
+
+  it("refuses an undo with nothing to undo instead of advancing the revision", () => {
+    const state = createKidsActivityState();
+    expect(applyKidsActivityAction(state, { action: "piece.undo" })).toEqual({
+      ok: false,
+      action: "piece.undo",
+      reason: KIDS_ACTIVITY_REFUSE_REASONS.sceneEmpty,
+      message: "Your world is already clear. Add a piece first.",
+    });
+    expect(state.revision).toBe(0);
+    expect(applyKidsActivityAction(state, { action: "piece.undo" })).toEqual(
+      applyKidsActivityAction(state, { action: "piece.undo" }),
+    );
+  });
+
   it("refuses forged state and accessor-backed requests without executing them", () => {
     const accessor = Object.defineProperty({}, "action", {
       get() {

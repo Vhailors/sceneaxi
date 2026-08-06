@@ -231,6 +231,45 @@ describe("Kids dedicated local activity", () => {
     expect(kids.policy.allowedActivityActions).toBe(kids.KIDS_ACTIVITY_ACTIONS);
   });
 
+  it("refuses every editing action while a world is playing, leaving the scene untouched", () => {
+    let state = kids.createKidsActivityState();
+    for (const request of [
+      { action: "piece.add", pieceId: "star" },
+      { action: "play.start" },
+    ] as const) {
+      const decision = kids.applyKidsActivityAction(state, request);
+      if (decision.ok) state = decision.state;
+    }
+    const playing = JSON.stringify(state);
+
+    for (const request of [
+      { action: "world.choose", worldId: "ocean" },
+      { action: "piece.add", pieceId: "tree" },
+      { action: "piece.undo" },
+      { action: "scene.reset" },
+    ] as const) {
+      const decision = kids.applyKidsActivityAction(state, request);
+      expect(decision, JSON.stringify(request)).toMatchObject({
+        ok: false,
+        reason: kids.KIDS_ACTIVITY_REFUSE_REASONS.buildPaused,
+      });
+      expect(decision).not.toHaveProperty("state");
+    }
+    expect(JSON.stringify(state)).toBe(playing);
+
+    // The mode toggles themselves refuse the transition they are already in.
+    expect(kids.applyKidsActivityAction(state, { action: "play.start" })).toMatchObject({
+      ok: false,
+      reason: kids.KIDS_ACTIVITY_REFUSE_REASONS.alreadyPlaying,
+    });
+    expect(
+      kids.applyKidsActivityAction(kids.createKidsActivityState(), { action: "play.stop" }),
+    ).toMatchObject({ ok: false, reason: kids.KIDS_ACTIVITY_REFUSE_REASONS.alreadyStopped });
+    expect(
+      kids.applyKidsActivityAction(kids.createKidsActivityState(), { action: "piece.undo" }),
+    ).toMatchObject({ ok: false, reason: kids.KIDS_ACTIVITY_REFUSE_REASONS.sceneEmpty });
+  });
+
   it("exports only policy, refusal helpers, and the local activity — no external plane", () => {
     const exported = Object.keys(kids).sort();
 

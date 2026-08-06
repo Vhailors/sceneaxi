@@ -145,6 +145,90 @@ describe("the isolated Kids site", () => {
     });
   });
 
+  it("relaxes the policy for the development server only, and only to same-origin", () => {
+    for (const phase of [
+      "phase-production-build",
+      "phase-production-server",
+      "phase-export",
+      "phase-test",
+      "",
+    ]) {
+      expect(site.kidsSecurityHeadersForPhase(phase), phase).toEqual(site.KIDS_SECURITY_HEADERS);
+    }
+
+    const development = site.kidsSecurityHeadersForPhase(site.KIDS_DEVELOPMENT_SERVER_PHASE);
+    const developmentPolicy = development.find(
+      (header) => header.key === "Content-Security-Policy",
+    )?.value;
+
+    expect(development.filter((header) => header.key !== "Content-Security-Policy")).toEqual(
+      site.KIDS_SECURITY_HEADERS.filter((header) => header.key !== "Content-Security-Policy"),
+    );
+    // The exception is exactly two same-origin directives and nothing else.
+    expect(developmentPolicy).toBe(
+      site.KIDS_CONTENT_SECURITY_POLICY.replace("connect-src 'none'", "connect-src 'self'").replace(
+        "script-src 'self' 'unsafe-inline'",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      ),
+    );
+    expect(developmentPolicy).not.toMatch(/https?:|\/\/|\*/);
+
+    // The shipped contract is what production serves, byte for byte.
+    const shipped = JSON.parse(
+      readFileSync(new URL("sites/kids/security-headers.json", ROOT), "utf8"),
+    ) as { headers: { key: string; value: string }[] };
+    expect(site.kidsSecurityHeadersForPhase("phase-production-server")).toEqual(shipped.headers);
+    expect(site.KIDS_CONTENT_SECURITY_POLICY).toContain("connect-src 'none'");
+    expect(site.KIDS_CONTENT_SECURITY_POLICY).not.toContain("unsafe-eval");
+
+    // `next.config.ts` cannot import this module — Next's config transpiler does not
+    // resolve a relative `.ts` — so it selects the same two lists by name instead.
+    const config = readFileSync(new URL("sites/kids/next.config.ts", ROOT), "utf8");
+    expect(config).toContain(`phase === "${site.KIDS_DEVELOPMENT_SERVER_PHASE}"`);
+    expect(config).toContain("securityPolicy.developmentServerHeaders");
+    expect(config).toContain("securityPolicy.headers");
+    expect(config).not.toMatch(/connect-src|unsafe-eval/);
+  });
+
+  it("refuses identically on both isolated copies across the whole closed reason table", () => {
+    const buildOne = (
+      apply: typeof profile.applyKidsActivityAction,
+      create: typeof profile.createKidsActivityState,
+      requests: readonly unknown[],
+    ) => {
+      let state = create();
+      for (const request of requests) {
+        const decision = apply(state, request);
+        if (decision.ok) state = decision.state;
+      }
+      return state;
+    };
+    const scenarios = [
+      { setup: [], request: { action: "piece.undo" } },
+      { setup: [], request: { action: "play.stop" } },
+      { setup: [{ action: "play.start" }], request: { action: "play.start" } },
+      {
+        setup: [{ action: "piece.add", pieceId: "star" }, { action: "play.start" }],
+        request: { action: "piece.add", pieceId: "tree" },
+      },
+      { setup: [], request: { action: "piece.add", pieceId: "uploaded" } },
+      { setup: [], request: { action: "scene.export" } },
+    ] as const;
+
+    for (const scenario of scenarios) {
+      const profileDecision = profile.applyKidsActivityAction(
+        buildOne(profile.applyKidsActivityAction, profile.createKidsActivityState, scenario.setup),
+        scenario.request,
+      );
+      const siteDecision = site.applyKidsActivityAction(
+        buildOne(site.applyKidsActivityAction, site.createKidsActivityState, scenario.setup),
+        scenario.request,
+      );
+      expect(profileDecision.ok, JSON.stringify(scenario)).toBe(false);
+      expect(siteDecision).toEqual(profileDecision);
+    }
+  });
+
   it("has a sealed install root and an empty SceneAxi dependency edge", () => {
     const manifest = JSON.parse(
       readFileSync(new URL("sites/kids/package.json", ROOT), "utf8"),
