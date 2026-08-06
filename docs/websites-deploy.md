@@ -178,7 +178,7 @@ unzip -t sdk.zip
 curl -s -o /dev/null -w '%{http_code}\n' "$GAME/"
 curl -s -o /dev/null -w '%{http_code}\n' "$GAME/item/lantern-prop"
 curl -s -o /dev/null -w '%{http_code}\n' "$GAME/item/nope"                # 404
-curl -s -o /dev/null -w '%{http_code}\n' "$WEB/item/lantern-prop"    # 404
+curl -s -o /dev/null -w '%{http_code}\n' "$WEB/item/lantern-prop"         # 404
 ```
 
 Every umbrella viewport — the `/` hero, `/open`, and the entitled `/editor` — draws

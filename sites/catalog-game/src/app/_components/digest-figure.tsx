@@ -3,11 +3,12 @@ import { digestSigil } from "../../lib/digest-sigil.js";
 /**
  * The card and hero figure.
  *
- * Everything drawn here is either a pure function of the listing's real content hash
- * (the chip) or a real record printed on top of it (the chips, the short digest, the
- * curation steps). Nothing depicts the asset, because this storefront has never rendered
- * it — so the figure is labelled as a mark of the digest rather than left to read as a
- * preview, and a digest the sigil cannot parse draws no mark at all.
+ * Everything drawn here is either a pure function of the validated listing record's own
+ * digest (the mark) or a real fact printed on top of it (the chips, the short digest, the
+ * step marks). Nothing depicts the asset, because the committed listing contract carries
+ * no asset payload and this storefront has never rendered one — so the figure is labelled
+ * as a mark of the record digest rather than left to read as a preview, and a digest the
+ * sigil cannot parse draws no mark at all.
  */
 export function DigestFigure({
   digest,
@@ -19,9 +20,9 @@ export function DigestFigure({
 }: {
   readonly digest: string;
   readonly large?: boolean;
-  /** Real, short facts overlaid at the top left — licence, profile, pipeline state. */
+  /** Real, short facts overlaid at the top left — fixture mode, availability. */
   readonly chips?: readonly { readonly key: string; readonly label: string; readonly tone?: "accent" | "ok" }[];
-  /** How many curation transitions this item has recorded. */
+  /** How many recorded steps to mark; the listing contract carries none, so no page passes it. */
   readonly steps?: number;
   readonly stepsLabel?: string;
   /** Mono key/value pairs along the bottom of the large figure. */

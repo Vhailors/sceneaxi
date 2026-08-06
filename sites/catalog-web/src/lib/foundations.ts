@@ -39,7 +39,7 @@ export type StorefrontSurface = Extract<
  *
  * Foundations §04 publishes six status chips as a colour triple each, and site-kit emits
  * them as `.sx-status-*` classes. A storefront also needs those triples on surfaces that
- * are not chips — the inert-commerce notice, the curation trail, the availability rail —
+ * are not chips — the TEST purchase notice, the listing record, the availability rail —
  * so they are re-projected here as variables. Every value is read out of
  * `FOUNDATION_STATUSES`; this function contains no hex of its own, which is what keeps
  * "one source for a token" true even for the derived form.

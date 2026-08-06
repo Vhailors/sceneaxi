@@ -11,9 +11,9 @@ import { DigestFigure } from "./digest-figure.js";
  *
  * The design's card carries a thumbnail, a kind badge, a triangle count, five pass bars,
  * a name/price row and an author/licence row. Every one of those slots is filled here
- * from the Catalog Item contract or left out: there is no triangle count in the contract,
- * so there is no triangle count on the card, and the pass bars are the item's recorded
- * curation transitions rather than five invented build passes.
+ * from the committed Catalog Listing contract or left out: the contract carries no
+ * triangle count, licence, or build pass, so none of them appears on the card. The chips
+ * carry the fixture's TEST mode and its metadata-only availability instead.
  *
  * `compact` is the design's "From the same studio" variant: figure, name, price.
  */
