@@ -384,6 +384,23 @@ describe("SA-OPS-1 production activation runbook", () => {
     expect(runbook).toContain(migrations[migrations.length - 1]);
   });
 
+  it("keeps the runbook the only owner that sequences activation by number", () => {
+    const deploy = read("docs/websites-deploy.md");
+    const mechanicsMarker = "### Activation mechanics";
+    expect(
+      deploy.indexOf(mechanicsMarker),
+      "deployment owner no longer groups activation as unnumbered mechanics",
+    ).toBeGreaterThan(-1);
+
+    const stepCitations = [...deploy.matchAll(/.*\bsteps? \d+.*/gi)].map(
+      (match) => match[0].trim(),
+    );
+    expect(
+      stepCitations,
+      "the deployment owner cites an activation step number; the runbook owns the ordering, so link the mechanics anchor instead",
+    ).toEqual([]);
+  });
+
   it("keeps the dated readiness observations in lockstep with the deployment owner", () => {
     const deploy = read("docs/websites-deploy.md");
     const readinessMarker = "## Verified TEST readiness";
