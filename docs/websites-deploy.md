@@ -134,17 +134,30 @@ both, still refuses `STRIPE_LIVE_MODE_NOT_AUTHORIZED` at intent creation and at 
 Nothing infers authorization from the mode, the key prefix, `NODE_ENV`, or anything else
 that merely correlates with production; `docs/auth-credits.md` owns that contract.
 
-## Deploy checklist
+## Deploy mechanics
 
-1. Provision the shared Neon project and database; capture `DATABASE_URL`.
-2. Create the three Vercel projects on one team with the settings above.
-3. Set the environment variables per project (Production scope).
-4. Deploy each project; record its `*.vercel.app` production URL.
-5. Set `NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN` on **all three** projects to the umbrella
-   URL — the umbrella needs its own canonical origin for checkout redirects — and
-   optionally the two catalog origins on the umbrella, then **redeploy** those projects —
-   these are build-time values.
-6. Run the verification below and record the output.
+What a deployment is made of, and what each piece means. This is **not** a sequence: the
+order these are performed in, the authorization each one requires, and the evidence each
+must capture belong to the
+[activation checklist](production-activation.md#activation-checklist) in
+`production-activation.md`. Nothing here authorizes a deployment, an alias move, or a
+provider account, and none of it asserts that production is activated.
+
+- **One shared Neon project and database**, reached through `DATABASE_URL` in Production
+  scope on all three projects. Provisioning it is provider account creation and carries
+  its own separate authority; this document only records what the value is for.
+- **Three Vercel projects on one team**, with the roots and settings in the
+  [project map](#vercel-project-map) above.
+- **Per-project environment variables** in Production scope, exactly the names in
+  [Environment variables](#environment-variables). Names only — a value never appears in
+  this repository.
+- **A production deployment per project**, whose immutable deployment id and
+  `*.vercel.app` production URL are recorded before any alias is attached to it.
+- **Build-time origins**: `NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN` on **all three** projects
+  set to the umbrella URL — the umbrella needs its own canonical origin for checkout
+  redirects — and optionally the two catalog origins. These are build-time values, so
+  changing one takes effect only on **redeploy**.
+- **The verification below**, run against the real hostnames with its output recorded.
 
 ## Verification
 

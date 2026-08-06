@@ -399,6 +399,23 @@ describe("SA-OPS-1 production activation runbook", () => {
       stepCitations,
       "the deployment owner cites an activation step number; the runbook owns the ordering, so link the mechanics anchor instead",
     ).toEqual([]);
+
+    const prose = deploy.replace(/^```[\s\S]*?^```/gm, "");
+    const orderedListItems = [...prose.matchAll(/^ *\d+\. .*/gm)].map((match) =>
+      (match[0] as string).trim(),
+    );
+    expect(
+      orderedListItems,
+      "the deployment owner numbers a list into an ordered procedure; only the runbook sequences actions, so state these as unordered mechanics",
+    ).toEqual([]);
+
+    for (const runbookOwned of ["## Activation checklist", "## Rollback and refusal checklist"]) {
+      expect(
+        runbook,
+        `runbook no longer owns "${runbookOwned}", which the deployment owner defers to`,
+      ).toContain(runbookOwned);
+    }
+    expect(deploy).toContain("production-activation.md#activation-checklist");
   });
 
   it("keeps the dated readiness observations in lockstep with the deployment owner", () => {
