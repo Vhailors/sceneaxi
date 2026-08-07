@@ -440,23 +440,28 @@ describe("engine desktop chrome — accessibility", () => {
 
   it("closes the dialog for a dismissal this shell has no product handler for", () => {
     // A renamed or added dismissal must not inherit another dismissal's
-    // handler: without a declared mapping it is a plain overlay close.
+    // handler: without a declared mapping it is a plain overlay close. An id
+    // that names an `Object.prototype` member is the same case — the routing
+    // table must answer for what it declares, not for what it inherits.
     const view = desktopVisualView(createDesktopVisualState());
-    const dismissal = view.overlay.dismissals[0]!;
-    const known = new Set(view.overlay.dismissals.map((entry) => entry.id));
-    const unknown = {
-      ...dismissal,
-      id: "outcome-renamed-dismiss",
-      control: { ...dismissal.control, id: "overlay-close-outcome-renamed-dismiss" },
-    };
-    expect(known.has(unknown.id)).toBe(false);
-    const html = renderDesktopChrome({
-      ...view,
-      overlay: { ...view.overlay, dismissals: [...view.overlay.dismissals, unknown] },
-    });
-    expect(html).toContain(
-      `id="${unknown.control.id}" data-kind="view" data-action="overlay" data-value="none"`,
-    );
+    const shipped = view.overlay.dismissals[0]!;
+    const known = new Set(view.overlay.dismissals.map((dismissal) => dismissal.id));
+    for (const id of ["outcome-renamed-dismiss", "toString", "constructor"]) {
+      const unknown = {
+        ...shipped,
+        id,
+        control: { ...shipped.control, id: `overlay-close-${id}` },
+      };
+      expect(known.has(id)).toBe(false);
+      const html = renderDesktopChrome({
+        ...view,
+        overlay: { ...view.overlay, dismissals: [...view.overlay.dismissals, unknown] },
+      });
+      expect(html).toContain(
+        `id="${unknown.control.id}" data-kind="view" data-action="overlay" data-value="none"`,
+      );
+      expect(html).not.toContain("[native code]");
+    }
   });
 
   it("offers the modelled cancel while a sculpt pass runs", () => {

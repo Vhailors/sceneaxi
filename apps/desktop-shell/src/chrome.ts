@@ -801,8 +801,14 @@ function statusBar(view: DesktopVisualView): string {
  * already been given, and every decision it could otherwise offer is taken on
  * the surface that owns it — the proposal is accepted or rejected in Change
  * Review, not from a dialog that names why the last attempt refused.
+ *
+ * Null-prototype, so the table answers for what it declares rather than for
+ * what it inherits: an id that names an `Object.prototype` member is as unknown
+ * to it as any other.
  */
-const DISMISSAL_PRODUCT_ACTIONS: Readonly<Record<string, string>> = Object.freeze({});
+const DISMISSAL_PRODUCT_ACTIONS: Readonly<Record<string, string>> = Object.freeze(
+  Object.create(null) as Record<string, string>,
+);
 
 function overlays(view: DesktopVisualView): string {
   const palette = view.overlay.paletteGroups
@@ -835,7 +841,7 @@ function overlays(view: DesktopVisualView): string {
         const productAction = DISMISSAL_PRODUCT_ACTIONS[dismissal.id];
         const action = productAction === undefined
           ? ` data-action="overlay" data-value="none"`
-          : ` data-product-action data-action="${productAction}"`;
+          : ` data-product-action data-action="${escapeHtml(productAction)}"`;
         return button(
           dismissal.control,
           escapeHtml(dismissal.label),
