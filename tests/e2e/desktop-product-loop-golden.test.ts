@@ -123,6 +123,147 @@ function mountChrome(
 }
 
 describe("desktop first-release product loop", () => {
+  it("renders the active proposal and atomically accepts, rejects, and refuses stale hashes", async () => {
+    const dir = projectDir();
+    const bridge = createDesktopBridge({ cwd: dir });
+    const requests: Array<{ action?: unknown; payload?: { op?: unknown } }> = [];
+    const window = new HappyWindow({ width: 1000, height: 700 });
+    const ipcClone = <T>(value: T): T =>
+      window.eval(`(${JSON.stringify(value)})`) as T;
+    windows.push(window);
+    Object.defineProperty(window, "structuredClone", { value: ipcClone });
+    Object.defineProperty(window, "sceneaxiDesktop", {
+      value: {
+        request: async (request: unknown) => {
+          const typed = JSON.parse(JSON.stringify(request)) as {
+            action?: unknown;
+            payload?: { op?: unknown };
+          };
+          requests.push(typed);
+          return ipcClone(bridge.handle(typed));
+        },
+      },
+    });
+
+    const html = renderDesktopChrome(
+      desktopVisualView(
+        createDesktopVisualState({
+          profile: "game",
+          window: { width: 1000, height: 700 },
+        }),
+      ),
+    );
+    const match = /<script>([\s\S]*?)<\/script>/.exec(html);
+    if (match?.[1] === undefined) throw new Error("desktop chrome lost its emitted script");
+    window.document.write(html.replace(match[0], ""));
+    window.eval(match[1]);
+
+    const documentText = () => readFileSync(join(dir, "scene.json"), "utf8");
+    const status = () => query(window, "[data-project-status]")?.textContent ?? "";
+    const badge = () => query(window, "[data-change-badge]")?.textContent ?? "";
+    const proposal = () => query(window, "[data-change-proposal]");
+
+    await click(window, "#profile-web");
+    await click(window, "#project-open");
+    const beforeReject = documentText();
+    await click(window, "#web-inject-asset");
+
+    expect(proposal()?.hidden).toBe(false);
+    expect(query(window, "[data-change-document]")?.textContent).toBe("scene.json");
+    expect(query(window, "[data-change-content-hash]")?.textContent).toMatch(
+      /^sha256:[0-9a-f]{64}$/,
+    );
+    expect(query(window, "[data-change-diff]")?.textContent).toContain(
+      "=== SceneAxi inspector — proposed change",
+    );
+    expect(query(window, "[data-change-diff]")?.textContent).toContain(
+      '"assets/hero.glb"',
+    );
+    expect(badge()).toBe("1");
+    expect(status()).toContain("staged");
+    expect(query(window, "[data-project-state]")?.dataset.projectState).toBe("dirty");
+    expect(documentText()).toBe(beforeReject);
+
+    await click(window, "#change-review-reject");
+    expect(documentText()).toBe(beforeReject);
+    expect(proposal()?.hidden).toBe(true);
+    expect(badge()).toBe("0");
+    expect(status()).toContain("rejected · no document written");
+    expect(query(window, "[data-project-state]")?.dataset.projectState).toBe("open");
+
+    await click(window, "#web-inject-asset");
+    await click(window, "#change-review-accept");
+    expect(documentText()).toContain('"assets/hero.glb"');
+    expect(proposal()?.hidden).toBe(true);
+    expect(badge()).toBe("0");
+    expect(status()).toContain("saved");
+    expect(query(window, "[data-project-state]")?.dataset.projectState).toBe("saved");
+
+    const resetScene = desktopOpenScene();
+    if (!resetScene.ok) throw new Error(`desktop scene refused: ${resetScene.reason}`);
+    expect(
+      writeDocumentFile(
+        join(dir, "scene.json"),
+        createDocument({
+          id: "desktop-first-release",
+          data: { ...resetScene.composed.document.data, title: "Reset" },
+        }),
+        { cwd: dir },
+      ).ok,
+    ).toBe(true);
+    await click(window, "#project-open");
+    await click(window, "#web-inject-asset");
+
+    expect(
+      writeDocumentFile(
+        join(dir, "scene.json"),
+        createDocument({
+          id: "desktop-first-release",
+          data: { ...resetScene.composed.document.data, title: "External after review" },
+        }),
+        { cwd: dir },
+      ).ok,
+    ).toBe(true);
+    await click(window, "#change-review-accept");
+
+    expect(documentText()).toContain('"title": "External after review"');
+    expect(documentText()).not.toContain('"assets/hero.glb"');
+    expect(proposal()?.hidden).toBe(false);
+    expect(badge()).toBe("1");
+    // The refusal reaches the operator through the one outcome dialog, carrying
+    // the host's own diagnostic rather than a sentence about conflicts.
+    expect(query(window, '[data-overlay="outcome"]')?.hidden).toBe(false);
+    expect(query(window, "[data-outcome-code]")?.textContent).toBe(
+      "content-hash-conflict",
+    );
+    expect(query(window, "[data-outcome-message]")?.textContent).not.toBe("");
+
+    await click(window, "#overlay-close-outcome-dismiss");
+    expect(query(window, '[data-overlay="outcome"]')?.hidden).toBe(true);
+    // Dismissing decides nothing: the proposal the host still holds is still on
+    // the surface, and discarding it is the same all-or-nothing Reject.
+    expect(proposal()?.hidden).toBe(false);
+    await click(window, "#change-review-reject");
+    expect(proposal()?.hidden).toBe(true);
+    expect(badge()).toBe("0");
+    expect(status()).toContain("rejected · no document written");
+    expect(documentText()).toContain('"title": "External after review"');
+
+    expect(requests.map((request) => request.payload?.op ?? request.action)).toEqual([
+      "status",
+      "propose",
+      "reject",
+      "status",
+      "propose",
+      "accept",
+      "status",
+      "propose",
+      "accept",
+      "reject",
+      "status",
+    ]);
+  });
+
   it("drives profile switching, open, save recovery, and viewport play through the emitted UI", async () => {
     const dir = projectDir();
     const requests: Array<{ action?: unknown; payload?: { op?: unknown } }> = [];
@@ -205,9 +346,9 @@ describe("desktop first-release product loop", () => {
       query(window, "[data-project-status]")?.textContent ?? "";
     expect(shell?.dataset.tier).toBe("narrow");
     expect(shell?.dataset.profile).toBe("game");
-    expect(window.document.querySelectorAll("button")).toHaveLength(71);
+    expect(window.document.querySelectorAll("button")).toHaveLength(65);
     expect(window.document.querySelectorAll('button:not([tabindex="-1"])')).toHaveLength(
-      66,
+      60,
     );
 
     const refusalHelp = query(window, "#status-refusal-help");
@@ -269,7 +410,7 @@ describe("desktop first-release product loop", () => {
     await click(window, "#project-open");
     await click(window, "#web-inject-asset");
     await click(window, "#project-save");
-    expect(status()).toContain("recovery pending · Save to refresh");
+    expect(status()).toContain("recovery pending · transaction fixture-pending-apply");
 
     await click(window, "#profile-kids");
     expect(shell?.dataset.profile).toBe("web");
@@ -296,7 +437,7 @@ describe("desktop first-release product loop", () => {
     await click(window, "#project-open");
     await click(window, "#web-inject-asset");
     await click(window, "#project-save");
-    expect(status()).toContain("recovery pending · Save to refresh");
+    expect(status()).toContain("recovery pending · transaction fixture-pending-apply");
 
     await click(window, "#profile-kids");
     expect(shell?.dataset.profile).toBe("web");

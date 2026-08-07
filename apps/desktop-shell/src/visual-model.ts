@@ -10,8 +10,7 @@
  * Three properties hold it honest:
  *
  * 1. **Every control declares its kind.** `view` controls change visual state
- *    and genuinely work. `review` controls edit the fixture Change Review queue
- *    and write no document. `live` controls declare a capability the injected
+ *    and genuinely work. `live` controls declare a capability the injected
  *    desktop host — a consumer runtime — must bind. `inert` controls render,
  *    take focus, and refuse by a name from `DESKTOP_VISUAL_REFUSALS` — because
  *    the archive draws controls for behaviour this shell has no contract for,
@@ -404,8 +403,6 @@ export type DesktopVisualState = Readonly<{
   sculptPass: number;
   /** Fraction of the current pass, 0..1. */
   sculptPassFraction: number;
-  /** Change Review rows the operator has already decided on, by index. */
-  decidedChanges: ReadonlyArray<number>;
   selection: string;
   window: DesktopWindowSize;
 }>;
@@ -441,7 +438,6 @@ const INITIAL_STATE: DesktopVisualState = Object.freeze({
   sculpt: "idle",
   sculptPass: 2,
   sculptPassFraction: 0.64,
-  decidedChanges: Object.freeze([] as number[]),
   selection: "crate_service_a",
   window: DESKTOP_REFERENCE_WINDOW,
 });
@@ -489,7 +485,6 @@ function normalize(state: DesktopVisualState): DesktopVisualState {
     assistantThinking: assistant === "open" ? state.assistantThinking : false,
     sculptPass: Math.min(Math.max(Math.trunc(state.sculptPass), 0), 4),
     sculptPassFraction: Math.min(Math.max(state.sculptPassFraction, 0), 1),
-    decidedChanges: Object.freeze([...new Set(state.decidedChanges)].sort((a, b) => a - b)),
   });
 }
 
@@ -505,8 +500,6 @@ export type DesktopVisualAction =
   | Readonly<{ type: "start-sculpt" }>
   | Readonly<{ type: "cancel-sculpt" }>
   | Readonly<{ type: "advance-sculpt"; by: number }>
-  | Readonly<{ type: "decide-change"; index: number }>
-  | Readonly<{ type: "decide-all-changes" }>
   | Readonly<{ type: "select-object"; name: string }>
   | Readonly<{ type: "resize"; size: DesktopWindowSize }>;
 
@@ -574,16 +567,6 @@ export function applyDesktopVisualAction(
         sculptPassFraction: 0,
       });
     }
-    case "decide-change":
-      return normalize({
-        ...state,
-        decidedChanges: [...state.decidedChanges, action.index],
-      });
-    case "decide-all-changes":
-      return normalize({
-        ...state,
-        decidedChanges: CHANGE_REVIEW_ROWS.map((_row, index) => index),
-      });
     case "select-object":
       return normalize({ ...state, selection: action.name });
     case "resize":
@@ -592,53 +575,8 @@ export function applyDesktopVisualAction(
 }
 
 /* -------------------------------------------------------------------------- */
-/* Fixture content                                                             */
+/* Presentation content                                                        */
 /* -------------------------------------------------------------------------- */
-
-/**
- * The Change Review queue. Fixture rows from the archive, held here so the
- * dock's badge count, its empty state, and its accept/reject arithmetic are one
- * thing a test can drive — not three numbers a renderer keeps in step.
- */
-export const CHANGE_REVIEW_ROWS: ReadonlyArray<
-  Readonly<{
-    badge: string;
-    kind: "modified" | "added";
-    path: string;
-    directory: string;
-    leaf: string;
-    before: string;
-    after: string;
-  }>
-> = Object.freeze([
-  Object.freeze({
-    badge: "M",
-    kind: "modified" as const,
-    path: "/scene/objects/field_drone/position",
-    directory: "objects/field_drone",
-    leaf: "/position",
-    before: "0, 0, 0",
-    after: "0, 1.85, -2.30",
-  }),
-  Object.freeze({
-    badge: "+",
-    kind: "added" as const,
-    path: "/scene/objects/field_drone/sockets/rotor_fl",
-    directory: "objects/field_drone/sockets",
-    leaf: "/rotor_fl",
-    before: "—",
-    after: "spin 0 → 360°",
-  }),
-  Object.freeze({
-    badge: "+",
-    kind: "added" as const,
-    path: "/scene/materials/matte_polymer",
-    directory: "materials",
-    leaf: "/matte_polymer",
-    before: "—",
-    after: "rough 0.74",
-  }),
-]);
 
 /** The five-pass sculpt plan the archive shows, and its progress copy. */
 export const SCULPT_PASSES: ReadonlyArray<
@@ -986,38 +924,15 @@ function assistantProjection(
   });
 }
 
-export type DesktopChangeReviewRow = Readonly<{
-  index: number;
-  badge: string;
-  kind: "modified" | "added";
-  path: string;
-  directory: string;
-  leaf: string;
-  before: string;
-  after: string;
-  /** False once the operator has decided this row. */
-  pending: boolean;
-  accept: DesktopControl;
-  reject: DesktopControl;
-}>;
-
 export type DesktopChangeReviewView = Readonly<{
-  /**
-   * Every fixture row, decided or not, each carrying its own pair of controls.
-   *
-   * The renderer draws the whole queue and hides the decided rows, so a row that
-   * exists in the document has to exist in the model too — otherwise its two
-   * buttons would be markup no control kind accounts for.
-   */
-  rows: ReadonlyArray<DesktopChangeReviewRow>;
-  /** The subset of `rows` still awaiting a decision, in queue order. */
-  pending: ReadonlyArray<DesktopChangeReviewRow>;
+  /** Runtime snapshots populate the one proposal; the server render is empty. */
   count: number;
   empty: boolean;
-  acceptAll: DesktopControl;
-  rejectAll: DesktopControl;
-  /** Stated on the surface: deciding here writes no document. */
-  writesDocuments: false;
+  /** Atomic E1 decisions for the host's one active proposal. */
+  accept: DesktopControl;
+  reject: DesktopControl;
+  /** Accept reaches the shared authoring session and may write the document. */
+  writesDocuments: true;
 }>;
 
 export type DesktopSculptView = Readonly<{
@@ -1275,30 +1190,12 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
         })
       : null;
 
-  const pendingIndexes = CHANGE_REVIEW_ROWS.map((_row, index) => index).filter(
-    (index) => !state.decidedChanges.includes(index),
-  );
-
-  const changeRows: ReadonlyArray<DesktopChangeReviewRow> = Object.freeze(
-    CHANGE_REVIEW_ROWS.map((row, index) =>
-      Object.freeze({
-        index,
-        ...row,
-        pending: pendingIndexes.includes(index),
-        accept: control(`change-accept-${index}`, `Accept ${row.leaf}`, "review"),
-        reject: control(`change-reject-${index}`, `Reject ${row.leaf}`, "review"),
-      }),
-    ),
-  );
-
   const changeReview: DesktopChangeReviewView = Object.freeze({
-    rows: changeRows,
-    pending: Object.freeze(changeRows.filter((row) => row.pending)),
-    count: pendingIndexes.length,
-    empty: pendingIndexes.length === 0,
-    acceptAll: control("change-accept-all", "Accept all", "review"),
-    rejectAll: control("change-reject-all", "Reject all", "review"),
-    writesDocuments: false as const,
+    count: 0,
+    empty: true,
+    accept: control("change-review-accept", "Accept proposal", "live"),
+    reject: control("change-review-reject", "Reject proposal", "live"),
+    writesDocuments: true as const,
   });
 
   const running = state.sculpt === "running";

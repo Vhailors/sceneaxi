@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  CHANGE_REVIEW_ROWS,
   DESKTOP_ASSISTANT_MODE_IDS,
   DESKTOP_INTERACTION_COMMANDS,
   DESKTOP_MENU_IDS,
@@ -220,61 +219,27 @@ describe("desktop visual model — assistant", () => {
 });
 
 describe("desktop visual model — change review", () => {
-  it("states on the surface that a decision writes no document", () => {
-    expect(desktopVisualView(createDesktopVisualState()).changeReview.writesDocuments)
-      .toBe(false);
-  });
-
-  it("removes a decided row and moves the dock badge with it", () => {
-    const view = desktopVisualView(drive([{ type: "decide-change", index: 1 }]));
-    expect(view.changeReview.count).toBe(CHANGE_REVIEW_ROWS.length - 1);
-    expect(view.changeReview.pending.map((row) => row.index)).toEqual([0, 2]);
-    expect(view.dockTabs.find((tab) => tab.id === "changes")?.badge).toBe(
-      CHANGE_REVIEW_ROWS.length - 1,
-    );
-  });
-
-  it("is idempotent: deciding the same row twice removes it once", () => {
-    const twice = drive([
-      { type: "decide-change", index: 0 },
-      { type: "decide-change", index: 0 },
-    ]);
-    expect(desktopVisualView(twice).changeReview.count).toBe(
-      CHANGE_REVIEW_ROWS.length - 1,
-    );
-  });
-
-  it("empties on decide-all and reports the empty state", () => {
-    const view = desktopVisualView(drive([{ type: "decide-all-changes" }]));
-    expect(view.changeReview.count).toBe(0);
-    expect(view.changeReview.empty).toBe(true);
-    expect(view.changeReview.pending).toEqual([]);
-  });
-
-  it("keeps a control pair for every fixture row, decided or not", () => {
-    // The renderer draws the whole queue and hides the decided rows, so a row
-    // that only exists in `pending` would put two buttons in the document that
-    // no control kind accounts for.
-    const view = desktopVisualView(drive([{ type: "decide-all-changes" }]));
-    expect(view.changeReview.rows).toHaveLength(CHANGE_REVIEW_ROWS.length);
-    expect(view.changeReview.rows.every((row) => !row.pending)).toBe(true);
-    for (const row of view.changeReview.rows) {
-      expect(row.accept.id).toBe(`change-accept-${row.index}`);
-      expect(row.reject.kind).toBe("review");
-    }
-    const open = desktopVisualView(createDesktopVisualState());
-    expect(open.changeReview.pending).toEqual(open.changeReview.rows);
-  });
-
-  it("marks every decision control `review`, never a writing kind", () => {
+  it("starts empty because only a real session snapshot may populate review", () => {
     const view = desktopVisualView(createDesktopVisualState());
-    const controls = [
-      view.changeReview.acceptAll,
-      view.changeReview.rejectAll,
-      ...view.changeReview.pending.flatMap((row) => [row.accept, row.reject]),
-    ];
-    expect(controls.every((control) => control.kind === "review")).toBe(true);
-    expect(controls.every((control) => control.refusal === null)).toBe(true);
+    expect(view.changeReview).toMatchObject({ count: 0, empty: true });
+    expect(view.dockTabs.find((tab) => tab.id === "changes")?.badge).toBe(0);
+  });
+
+  it("models one atomic accept and reject pair that reaches the host", () => {
+    const review = desktopVisualView(createDesktopVisualState()).changeReview;
+    expect(review.writesDocuments).toBe(true);
+    expect(review.accept).toMatchObject({ id: "change-review-accept", kind: "live" });
+    expect(review.reject).toMatchObject({ id: "change-review-reject", kind: "live" });
+  });
+
+  it("demotes both proposal decisions under the structural Kids refusal", () => {
+    const review = desktopVisualView(
+      createDesktopVisualState({ profile: "kids" }),
+    ).changeReview;
+    expect([review.accept, review.reject].every((control) =>
+      control.kind === "inert" &&
+      control.refusal === DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly,
+    )).toBe(true);
   });
 });
 
@@ -530,9 +495,8 @@ describe("desktop visual model — refusals and honesty", () => {
         ...view.drawers.map((drawer) => drawer.control),
         ...view.profiles.map((profile) => profile.control),
         ...view.assistant.modes.map((mode) => mode.control),
-        view.changeReview.acceptAll,
-        view.changeReview.rejectAll,
-        ...view.changeReview.pending.flatMap((row) => [row.accept, row.reject]),
+        view.changeReview.accept,
+        view.changeReview.reject,
         ...view.menus.map((menu) => menu.control),
         ...view.modes.map((mode) => mode.control),
         ...view.dockTabs.map((tab) => tab.control),
@@ -633,7 +597,6 @@ describe("desktop visual model — refusals and honesty", () => {
   it("is deterministic: the same state always projects the same view", () => {
     const state = drive([
       { type: "select-mode", mode: "compose" },
-      { type: "decide-change", index: 2 },
       { type: "open-overlay", overlay: "palette" },
     ]);
     expect(JSON.stringify(desktopVisualView(state))).toBe(

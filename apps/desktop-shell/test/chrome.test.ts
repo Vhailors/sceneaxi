@@ -7,7 +7,6 @@ import {
   DESKTOP_REFUSAL_MESSAGES,
   DESKTOP_VISUAL_REFUSALS,
   WINDOW_TIERS,
-  applyDesktopVisualAction,
   createDesktopVisualState,
   defaultDockTabFor,
   desktopVisualView,
@@ -142,28 +141,18 @@ describe("engine desktop chrome — regions and modes", () => {
     }
   });
 
-  it("offers a bulk decision only in a mode that has the Changes tab", () => {
-    for (const mode of DESKTOP_MODE_IDS) {
-      const html = render(createDesktopVisualState({ mode }));
-      const hidden = /data-change-bulk hidden>/.test(html);
-      // `run` and `ship` have no Changes tab, so accepting or rejecting the whole
-      // queue from their tab strip would decide a queue the mode cannot show.
-      expect(hidden, mode).toBe(!dockTabsFor(mode).includes("changes"));
-    }
-    // Empty still hides it in a mode that does have the tab.
-    const decided = applyDesktopVisualAction(createDesktopVisualState(), {
-      type: "decide-all-changes",
-    });
-    expect(render(decided)).toContain("data-change-bulk hidden>");
-    // And the script re-applies both conditions when the mode switches.
-    const script = /<script>(.*)<\/script>/s.exec(render())?.[1] ?? "";
-    expect(script).toContain(`shell.querySelector('.dock-tab[data-value="changes"]')`);
-    expect(script).toContain("bulk.hidden = n === 0 || changes === null");
+  it("renders one atomic proposal decision pair in an initially empty review", () => {
+    const html = render();
+    expect(html).toContain('data-change-proposal hidden>');
+    expect(html).toContain('id="change-review-accept"');
+    expect(html).toContain('id="change-review-reject"');
+    expect(html).not.toContain("Accept all");
+    expect(html).not.toContain("Reject all");
   });
 
   it("hides what it marks hidden, whatever the layout class says", () => {
-    // `.change-row` and `.dock-bulk` declare a display, which outranks the UA
-    // sheet's `[hidden]` rule — so every model-driven `hidden` needs this one.
+    // Runtime proposal and overlay regions have layout rules, so the explicit
+    // `hidden` state must outrank them.
     expect(render()).toContain("[hidden]{display:none !important}");
   });
 
@@ -357,13 +346,11 @@ describe("engine desktop chrome — accessibility", () => {
     expect(script).toContain(`list.querySelectorAll('[role="tab"]')`);
   });
 
-  it("renders every change decision through a modelled control", () => {
+  it("renders the atomic proposal decisions through modelled controls", () => {
     const view = desktopVisualView(createDesktopVisualState());
     const html = render();
-    for (const row of view.changeReview.rows) {
-      for (const control of [row.accept, row.reject]) {
-        expect(html).toContain(`id="${control.id}" data-kind="${control.kind}"`);
-      }
+    for (const control of [view.changeReview.accept, view.changeReview.reject]) {
+      expect(html).toContain(`id="${control.id}" data-kind="${control.kind}"`);
     }
   });
 
@@ -438,8 +425,13 @@ describe("engine desktop chrome — accessibility", () => {
     const ids = view.overlay.dismissals.map((dismissal) => dismissal.control.id);
     expect(new Set(ids).size).toBe(ids.length);
     for (const dismissal of view.overlay.dismissals) {
+      const action = dismissal.overlay === "conflict"
+        ? dismissal.control.id.endsWith("discard")
+          ? "conflict-discard"
+          : "conflict-review"
+        : "overlay";
       expect(html).toContain(
-        `id="${dismissal.control.id}" data-kind="view" data-action="overlay" data-value="none"`,
+        `id="${dismissal.control.id}" data-kind="view"${dismissal.overlay === "conflict" ? " data-product-action" : ""} data-action="${action}"`,
       );
     }
   });
@@ -471,14 +463,12 @@ describe("engine desktop chrome — accessibility", () => {
     expect(render()).toContain("data-assistant-thinking hidden>");
   });
 
-  it("gives every decision button an accessible name naming its pointer", () => {
+  it("names the one whole-proposal decision pair", () => {
     const html = render();
-    expect(html).toContain(
-      'aria-label="Accept /scene/objects/field_drone/position"',
-    );
-    expect(html).toContain(
-      'aria-label="Reject /scene/objects/field_drone/position"',
-    );
+    expect(html).toContain('id="change-review-accept"');
+    expect(html).toContain('>Accept</button>');
+    expect(html).toContain('id="change-review-reject"');
+    expect(html).toContain('>Reject</button>');
   });
 
   it("backs aria-modal with a real focus trap and a focus restore", () => {
@@ -654,10 +644,10 @@ describe("engine desktop chrome — honesty", () => {
     }
   });
 
-  it("says on the Change Review surface that a decision writes nothing", () => {
+  it("states the atomic authoring behavior on Change Review", () => {
     const html = render();
-    expect(html).toContain("no document is written and nothing reaches");
-    expect(html).toContain("authoring-core");
+    expect(html).toContain("Accept applies the whole proposal through the shared authoring session");
+    expect(html).toContain("Reject discards it without writing");
   });
 
   it("replaces the whole editor body on the refuse-only profile", () => {
@@ -878,16 +868,12 @@ describe("engine desktop chrome — honesty", () => {
     }
   });
 
-  it("keeps the same decisions after a state transition", () => {
-    const decided = applyDesktopVisualAction(createDesktopVisualState(), {
-      type: "decide-all-changes",
-    });
-    const html = render(decided);
+  it("ships no fabricated review row in the default document", () => {
+    const html = render();
     expect(html).toContain("Nothing waiting for review");
-    // Every fixture row is present but hidden, so the script can re-show none of
-    // them without the model saying so.
-    expect((html.match(/class="change-row"/g) ?? []).length).toBe(3);
-    expect((html.match(/class="change-row" data-change-index="\d+" hidden/g) ?? []).length)
-      .toBe(3);
+    expect(html).not.toContain('class="change-row"');
+    expect(html).not.toContain("field_drone");
+    expect(html).not.toContain("matte_polymer");
+    expect(html).not.toContain("0, 1.85, -2.30");
   });
 });

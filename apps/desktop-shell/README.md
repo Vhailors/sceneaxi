@@ -80,9 +80,8 @@ the editor is, and `tests/parity/editor-shell-parity.test.ts` asserts that as a
 data identity. What stays local is this renderer's own detail (glyph geometry,
 tier shape) and everything below.
 
-Every control declares its kind — `view` changes visual state and works,
-`review` edits the fixture Change Review queue and writes no document, `live`
-declares a product action the injected desktop host — an enclosing consumer
+Every control declares its kind — `view` changes visual state and works, and
+`live` declares a product action the injected desktop host — an enclosing consumer
 runtime — must bind (the assistant prompt, Send, Retry, and the artifact
 manipulators, plus New/Open Project, Recent, Reload/Save/Play, Undo once the
 project's apply journal reports a completed Save, and Web staging, which the packaged Linux tier
@@ -91,6 +90,10 @@ from `DESKTOP_VISUAL_REFUSALS`. This app invokes no authoring operation itself
 and adds no engine/profile/site/billing dependency: the host remains the adapter
 that reaches shared authoring, orchestration, and presentation seams, so a `live`
 control rendered by the standalone `chrome` command is inert and says why.
+
+Change Review is populated only by the active `DesktopSession` proposal and
+offers one atomic Accept/Reject pair. Accept may write through authoring-core;
+Reject discards without writing.
 
 The first-release loop has one honest active file, `scene.json`. In the packaged
 host, first launch shows New Project and Open Project without binding or seeding

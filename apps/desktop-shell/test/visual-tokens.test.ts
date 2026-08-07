@@ -193,7 +193,6 @@ describe("engine desktop visual tokens", () => {
       ".menu-command.is-inert:hover,.menu-command.is-inert:focus-visible{background:none;color:var(--inert)}",
       ".ghost-button.is-inert:hover{border-color:var(--line-control);color:var(--inert)}",
       ".primary-button.is-inert,.primary-button.is-inert:hover{color:var(--inert-on-accent)}",
-      ".decision.is-inert,.decision.is-inert:hover{background:none;border-color:var(--line-raised);color:var(--inert)}",
     ]) {
       expect(documents[0]).toContain(override);
     }

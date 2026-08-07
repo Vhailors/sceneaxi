@@ -29,7 +29,6 @@
  */
 
 import {
-  CHANGE_REVIEW_ROWS,
   DESKTOP_ASSISTANT_RUNTIME_EVENT,
   DESKTOP_DOCK_TAB_IDS,
   DESKTOP_MINIMUM_WINDOW,
@@ -581,34 +580,21 @@ function dock(view: DesktopVisualView): string {
     )
     .join("");
 
-  const rows = view.changeReview.rows
-    .map((row) => {
-      const decide = (ctrl: DesktopControl, glyph: string, name: string, className: string): string =>
-        button(
-          ctrl,
-          glyph,
-          `decision ${className}`,
-          ` data-action="decide-change" data-value="${row.index}" aria-label="${escapeHtml(name)}"`,
-        );
-      return `<li class="change-row" data-change-index="${row.index}"${row.pending ? "" : ` hidden`}>
-  <span class="change-badge" data-change-kind="${escapeHtml(row.kind)}">${escapeHtml(row.badge)}</span>
-  <span class="change-path"><span class="dir">${escapeHtml(row.directory)}</span><span class="leaf">${escapeHtml(row.leaf)}</span></span>
-  <span class="change-before">${escapeHtml(row.before)}</span>
-  <span class="change-arrow" aria-hidden="true">→</span>
-  <span class="change-after">${escapeHtml(row.after)}</span>
-  <span class="change-actions">
-    ${decide(row.reject, "✕", `Reject ${row.path}`, "decision-reject")}
-    ${decide(row.accept, "✓", `Accept ${row.path}`, "decision-accept")}
-  </span>
-</li>`;
-    })
-    .join("");
-
   const bodies: Readonly<Record<DesktopDockTabId, string>> = {
     changes: `
-      <p class="dock-caption">Fixture review queue. Deciding here changes this view only — no document is written and nothing reaches <code>authoring-core</code>.</p>
-      <ol class="change-list">${rows}</ol>
-      <p class="change-empty" data-change-empty${view.changeReview.empty ? "" : " hidden"}>Nothing waiting for review. Generated edits land here before they touch the scene.</p>
+      <p class="dock-caption">One active E1 proposal at a time. Accept applies the whole proposal through the shared authoring session; Reject discards it without writing.</p>
+      <article class="change-proposal" data-change-proposal hidden>
+        <dl class="change-meta">
+          <div><dt>Document</dt><dd><code data-change-document></code></dd></div>
+          <div><dt>Base content hash</dt><dd><code data-change-content-hash></code></dd></div>
+        </dl>
+        <pre class="change-diff" data-change-diff aria-label="Rendered proposal diff"></pre>
+        <div class="change-actions">
+          ${button(view.changeReview.reject, "Reject", "ghost-button", ` data-product-action data-action="change-reject"`)}
+          ${button(view.changeReview.accept, "Accept", "primary-button", ` data-product-action data-action="change-accept"`)}
+        </div>
+      </article>
+      <p class="change-empty" data-change-empty>Nothing waiting for review. Generated edits land here before they touch the scene.</p>
     `,
     assets: `<p class="panel-empty">No asset library is bound to this surface.</p>`,
     console: `<p class="panel-empty">No session is running, so there is no console output to show.</p>`,
@@ -621,11 +607,6 @@ function dock(view: DesktopVisualView): string {
       `<div role="tabpanel" id="dock-panel-${escapeHtml(id)}" class="dock-tabpanel" data-dock-panel="${escapeHtml(id)}"${id === view.state.dockTab ? "" : " hidden"}>${bodies[id]}</div>`,
   ).join("\n    ");
 
-  // A bulk decision belongs to the Changes tab, so a mode without one must not
-  // offer it: `run` and `ship` would otherwise let the operator accept or reject
-  // a queue that mode cannot even show.
-  const hasChanges = view.dockTabs.some((tab) => tab.id === "changes");
-
   return `
 <section class="dock" aria-label="Dock" style="--dock-h:${view.dockHeight}px">
   <div class="dock-tabs">
@@ -633,10 +614,6 @@ function dock(view: DesktopVisualView): string {
       ${tabs}
     </div>
     <span class="spacer"></span>
-    <span class="dock-bulk" data-change-bulk${hasChanges && !view.changeReview.empty ? "" : " hidden"}>
-      ${button(view.changeReview.rejectAll, "Reject all", "ghost-button", ` data-action="decide-all"`)}
-      ${button(view.changeReview.acceptAll, "Accept all", "primary-button", ` data-action="decide-all"`)}
-    </span>
   </div>
 
   <div class="dock-body">
@@ -889,9 +866,7 @@ function styles(): string {
   --sans:${TYPE.sans};--mono:${TYPE.mono};
 }
 *{box-sizing:border-box}
-/* Every hidden region here is a model decision (a row decided, a panel its mode
-   does not show), so the attribute has to win over the class that lays it out —
-   a display rule on .change-row or .dock-bulk otherwise outranks the UA sheet. */
+/* Every hidden region here is an explicit model or runtime decision. */
 [hidden]{display:none !important}
 html,body{margin:0;padding:0;height:100%;overflow:hidden}
 body{background:var(--backdrop);color:var(--text);font-family:var(--sans);font-size:13px;-webkit-font-smoothing:antialiased}
@@ -1088,28 +1063,17 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .dock-tab{display:flex;align-items:center;gap:7px;padding:0 13px;font-size:11px;color:var(--dim);border-right:1px solid var(--line)}
 .dock-tab[aria-selected="true"]{color:var(--text);font-weight:600;background:var(--panel);box-shadow:inset 0 2px 0 var(--accent)}
 .badge{min-width:15px;height:15px;padding:0 4px;border-radius:8px;background:var(--accent);color:var(--on-accent);font-family:var(--mono);font-size:9px;font-weight:700;display:grid;place-items:center}
-.dock-bulk{display:flex;align-items:center;gap:7px;padding:0 10px}
 .dock-body{flex:1;min-height:0;overflow-y:auto}
 .dock-caption{margin:0;padding:8px 14px;font-size:10.5px;color:var(--dim);border-bottom:1px solid var(--line-row);background:var(--well)}
-.change-list{list-style:none;margin:0;padding:0}
-.change-row{display:grid;grid-template-columns:22px minmax(0,1fr) 118px 16px 148px 84px;gap:10px;padding:9px 14px;border-bottom:1px solid var(--line-row);align-items:center}
-.change-row:hover{background:var(--raised)}
-.change-badge{width:17px;height:17px;border-radius:3px;display:grid;place-items:center;font-family:var(--mono);font-size:10px;font-weight:700}
-.change-badge[data-change-kind="modified"]{background:${ACCENT.surface};color:var(--accent)}
-.change-badge[data-change-kind="added"]{background:${SIGNAL.okSurface};color:var(--ok)}
-.change-path{display:flex;align-items:baseline;min-width:0;font-family:var(--mono);font-size:11px}
-.change-path .dir{color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.change-path .leaf{color:var(--text);white-space:nowrap}
-.change-before{font-family:var(--mono);font-size:11px;color:var(--superseded);text-decoration:line-through}
-.change-arrow{color:var(--faint);font-size:10px}
-.change-after{font-family:var(--mono);font-size:11px;color:var(--ok)}
-.change-actions{display:flex;gap:6px;justify-content:flex-end}
-.decision{width:24px;height:24px;border-radius:3px;border:1px solid var(--line-raised);color:var(--dim);display:grid;place-items:center;font-size:11px}
-.decision-accept{border-color:${SIGNAL.okLine};background:${SIGNAL.okSurface};color:var(--ok)}
-.decision-reject:hover{border-color:${SIGNAL.refuseLine};background:${SIGNAL.refuseSurface};color:var(--refuse)}
-/* An inert decision drops its semantic fill rather than wearing a green accept
-   badge it cannot honour; --inert is 4.42:1 on that fill and 5.06:1 off it. */
-.decision.is-inert,.decision.is-inert:hover{background:none;border-color:var(--line-raised);color:var(--inert)}
+.change-proposal{padding:12px 14px;display:grid;grid-template-columns:minmax(220px,.42fr) minmax(0,1fr) auto;gap:14px;align-items:start}
+.change-meta{margin:0;display:grid;gap:9px;min-width:0}
+.change-meta div{min-width:0}
+.change-meta dt{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.change-meta dd{margin:3px 0 0;min-width:0;color:var(--text-2)}
+.change-meta code{display:block;overflow-wrap:anywhere;font-size:10px}
+.change-diff{min-width:0;max-height:132px;overflow:auto;margin:0;padding:9px 10px;border:1px solid var(--line-control);border-radius:4px;background:var(--well);color:var(--text-2);font:10px/1.45 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
+.change-actions{display:flex;gap:7px;justify-content:flex-end}
+.change-actions .primary-button,.change-actions .ghost-button{height:30px;padding:0 13px}
 .change-empty{margin:0;padding:34px 14px;text-align:center;font-size:12px;color:var(--dim)}
 
 .assistant{background:var(--assistant);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
@@ -1246,8 +1210,8 @@ code,kbd{font-family:var(--mono);font-size:.86em}
   .inspector{right:0;width:min(var(--inspector),100%)}
   .shell:not([data-drawer-left="open"]) .left-dock{display:none}
   .shell:not([data-drawer-inspector="open"]) .inspector{display:none}
-  .change-row{grid-template-columns:22px minmax(0,1fr) 84px}
-  .change-before,.change-arrow,.change-after{display:none}
+  .change-proposal{grid-template-columns:minmax(0,1fr) auto}
+  .change-meta{grid-column:1/-1}
   .profile-surface{grid-template-columns:120px minmax(0,1fr);min-height:76px}
   .profile-surface .capability-list,.game-runtime-note{display:none}
   .runtime-report{display:none}
@@ -1336,7 +1300,6 @@ function script(view: DesktopVisualView): string {
         mode === "animate" ? METRICS.dockHeightAnimate : METRICS.dockHeight,
       ]),
     ),
-    changeCount: CHANGE_REVIEW_ROWS.length,
     assistantRuntimeEvent: DESKTOP_ASSISTANT_RUNTIME_EVENT,
     assistantRuntimeRows,
     assistantRuntimeRefusal: DESKTOP_VISUAL_REFUSALS.noPresentationRuntime,
@@ -1385,6 +1348,7 @@ if (shell) {
   let projectContentHash = null;
   let projectDirty = false;
   let projectRecovering = false;
+  let activeReviewSnapshot = null;
   let activeProject = null;
   let editableScene = null;
   let selectedSceneEntityId = null;
@@ -1492,6 +1456,60 @@ if (shell) {
     q('[data-action="scene-entity-select"]').forEach((el) => { el.dataset.value = entity.id; });
     if (previousSelection !== null) showSceneProperty(previousSelection);
     return true;
+  };
+
+  const reviewCount = () => activeReviewSnapshot === null ? 0 : 1;
+
+  const syncReview = (snapshot) => {
+    const proposal = snapshot && snapshot.proposal;
+    const edits = proposal && Array.isArray(proposal.edits) ? proposal.edits : [];
+    const first = edits[0];
+    const diff = snapshot && typeof snapshot.renderedDiff === 'string'
+      ? snapshot.renderedDiff
+      : null;
+    const active = snapshot && (snapshot.phase === 'reviewing' || snapshot.phase === 'pending') &&
+      first && typeof first.documentPath === 'string' &&
+      typeof first.baseContentHash === 'string' && diff !== null;
+    activeReviewSnapshot = active ? snapshot : null;
+    if (snapshot && typeof snapshot.phase === 'string') {
+      projectDirty = snapshot.phase === 'reviewing' || snapshot.phase === 'pending';
+      if (snapshot.phase === 'applied' || snapshot.phase === 'rejected') {
+        projectRecovering = false;
+      }
+    }
+    const panel = shell.querySelector('[data-change-proposal]');
+    const empty = shell.querySelector('[data-change-empty]');
+    if (panel) panel.hidden = !active;
+    if (empty) empty.hidden = Boolean(active);
+    const documentPath = shell.querySelector('[data-change-document]');
+    const contentHash = shell.querySelector('[data-change-content-hash]');
+    const renderedDiff = shell.querySelector('[data-change-diff]');
+    if (documentPath) documentPath.textContent = active ? first.documentPath : '';
+    if (contentHash) contentHash.textContent = active ? first.baseContentHash : '';
+    if (renderedDiff) renderedDiff.textContent = active ? diff : '';
+    q('[data-change-badge]').forEach((el) => {
+      el.textContent = String(active ? 1 : 0);
+    });
+  };
+
+  // A conflict or recovery outcome reports the host's own diagnostic — its code,
+  // its message, and the re-read hint it returned — through the one outcome
+  // dialog, so nothing here describes a conflict the response did not name.
+  const showConflictOutcome = (title, snapshot, fallback) => {
+    const diagnostics = snapshot && Array.isArray(snapshot.diagnostics)
+      ? snapshot.diagnostics
+      : [];
+    const diagnostic = diagnostics[0];
+    const code = diagnostic && typeof diagnostic.code === 'string'
+      ? diagnostic.code
+      : fallback;
+    const message = diagnostic && typeof diagnostic.message === 'string'
+      ? diagnostic.message
+      : 'The authoring session refused the proposal.';
+    const hint = diagnostic && typeof diagnostic.reReadHint === 'string'
+      ? ' · ' + diagnostic.reReadHint
+      : '';
+    showOutcome(title, code, message + hint);
   };
 
   // The run report is hidden below the compact tier, so a refusal that lives
@@ -1664,6 +1682,7 @@ if (shell) {
     projectRecovering = false;
     clearSceneProperty();
     undoAvailability = 'unavailable';
+    syncReview(null);
     if (response.data.outcome === 'removed') {
       productStatus(activeProject === null ? 'closed' : 'open', 'Recent project removed · active project unchanged');
       return;
@@ -1721,6 +1740,7 @@ if (shell) {
     projectDirty = false;
     projectRecovering = false;
     undoAvailability = 'unavailable';
+    syncReview(null);
     if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' || status.data === null || typeof status.contentHash !== 'string') {
       clearSceneProperty();
       productStatus('refused', 'Recovery reset · ' + diagnostic + ' · ' + (reason || T.product.refusals.documentDataInvalid));
@@ -1755,6 +1775,7 @@ if (shell) {
     projectContentHash = null;
     projectDirty = false;
     clearSceneProperty();
+    syncReview(snapshot);
     return true;
   };
 
@@ -1789,6 +1810,7 @@ if (shell) {
       ? status.undoAvailability
       : 'unavailable';
     syncCommandAvailability();
+    syncReview(null);
     productStatus('open', withSceneRefusal(T.product.documentPath + ' · open · ' + status.documentId));
     return true;
   };
@@ -1819,8 +1841,12 @@ if (shell) {
     const response = await runtimeRequest(decision.request);
     const reason = responseReason(response);
     const snapshot = response?.ok ? response.data : null;
+    syncReview(snapshot);
     if (reason !== null || !snapshot || snapshot.phase !== 'reviewing') {
       productStatus('refused', 'Stage refused · ' + (reason || T.product.refusals.proposalNotReviewing));
+      if (reason === 'content-hash-conflict' || reason === 'journal-conflict') {
+        showConflictOutcome('Stage refused', snapshot, reason);
+      }
       return;
     }
     projectData = decision.request.payload.newValue;
@@ -1887,11 +1913,14 @@ if (shell) {
 
   const applySaveSnapshot = (snapshot) => {
     if (!snapshot) return false;
+    syncReview(snapshot);
     const diagnostics = Array.isArray(snapshot.diagnostics) ? snapshot.diagnostics : [];
     if (diagnostics[0]?.code === 'journal-not-found') return false;
     if (snapshot.phase === 'pending' || snapshot.journalRecoveryPending === true) {
       projectRecovering = true;
-      productStatus('recovering', T.product.documentPath + ' · recovery pending · Save to refresh or Open to re-read');
+      const code = typeof diagnostics[0]?.code === 'string' ? ' · ' + diagnostics[0].code : '';
+      const transaction = typeof snapshot.transactionId === 'string' ? ' · transaction ' + snapshot.transactionId : '';
+      productStatus('recovering', T.product.documentPath + ' · recovery pending' + code + transaction + ' · Save to refresh or Open to re-read');
       return true;
     }
     if (snapshot.phase === 'applied' && diagnostics.length === 0) {
@@ -1928,7 +1957,36 @@ if (shell) {
     if (applySaveSnapshot(snapshot)) return;
     if (recovering && snapshot && snapshot.journalRecoveryPending !== true) projectRecovering = false;
     productStatus(projectRecovering ? 'recovering' : 'refused', 'Save refused · ' + (reason || T.product.refusals.applyNotCompleted));
-    showOutcome('Save refused', reason || T.product.refusals.applyNotCompleted, 'No staged document change was reported as saved.');
+    if (reason === 'content-hash-conflict' || reason === 'journal-conflict' || reason === 'apply-in-progress') {
+      showConflictOutcome('Save refused', snapshot, reason);
+    } else {
+      showOutcome('Save refused', reason || T.product.refusals.applyNotCompleted, 'No staged document change was reported as saved.');
+    }
+  };
+
+  // Reject is the other half of the all-or-nothing decision: it discards the
+  // host's one active proposal and re-opens the document, so the surface reports
+  // the bytes on disk rather than a queue it decided locally.
+  const rejectProposal = async (outcome = 'rejected') => {
+    const response = await runtimeRequest({ action: 'authoring', payload: { op: 'reject' } });
+    const reason = responseReason(response);
+    const snapshot = response?.ok ? response.data : null;
+    syncReview(snapshot);
+    if (reason !== null || !snapshot || snapshot.phase !== 'rejected') {
+      const code = reason || T.product.refusals.proposalNotDiscarded;
+      productStatus('refused', 'Reject refused · ' + code);
+      showOutcome('Reject refused', code, 'The staged proposal was not discarded and no document was written.');
+      return false;
+    }
+    projectDirty = false;
+    projectRecovering = false;
+    projectData = null;
+    projectContentHash = null;
+    const opened = await openProject();
+    if (opened) {
+      productStatus('open', T.product.documentPath + ' · ' + outcome + ' · no document written');
+    }
+    return opened;
   };
 
   // The host's undo clears its own proposal along with the apply it reverses,
@@ -2091,7 +2149,7 @@ if (shell) {
         const badge = document.createElement('span');
         badge.className = 'badge';
         badge.setAttribute('data-change-badge', '');
-        badge.textContent = String(pendingCount());
+        badge.textContent = String(reviewCount());
         b.appendChild(badge);
       }
       // A rebuilt tab is a rendered control like any other, so it takes the
@@ -2101,9 +2159,7 @@ if (shell) {
       strip.appendChild(b);
     });
     selectDockTab(chosen);
-    // The bulk actions belong to the Changes tab, so a mode without one loses
-    // them with the tab rather than keeping two live buttons over a hidden queue.
-    syncChanges();
+    syncReview(activeReviewSnapshot);
   };
 
   const selectDockTab = (id) => {
@@ -2113,18 +2169,6 @@ if (shell) {
       el.tabIndex = on ? 0 : -1;
     });
     q('[data-dock-panel]').forEach((el) => { el.hidden = el.dataset.dockPanel !== id; });
-  };
-
-  const pendingCount = () => q('.change-row').filter((el) => !el.hidden).length;
-
-  const syncChanges = () => {
-    const n = pendingCount();
-    q('[data-change-badge]').forEach((el) => { el.textContent = String(n); });
-    const empty = shell.querySelector('[data-change-empty]');
-    if (empty) empty.hidden = n !== 0;
-    const bulk = shell.querySelector('[data-change-bulk]');
-    const changes = shell.querySelector('.dock-tab[data-value="changes"]');
-    if (bulk) bulk.hidden = n === 0 || changes === null;
   };
 
   // Roving tabindex takes the non-active tabs out of the Tab order, so the arrow
@@ -2453,6 +2497,8 @@ if (shell) {
     if (action === 'project-open-recent') void productAction(() => chooseProject('open-recent'));
     else if (action === 'project-remove-recent') void productAction(() => chooseProject('remove-recent'));
     else if (action === 'document-reload') void productAction(openProject);
+    else if (action === 'change-accept') void productAction(saveProject);
+    else if (action === 'change-reject') void productAction(() => rejectProposal('rejected'));
     else if (action === 'scene-entity-select' && value) {
       if (showSceneProperty(value) && shell.dataset.mode !== 'build') showModePanels('build');
     }
@@ -2485,13 +2531,6 @@ if (shell) {
       // state this document renders with the progress region hidden.
       const progress = shell.querySelector('[data-sculpt-progress]');
       if (progress) progress.hidden = true;
-    } else if (action === 'decide-change' && value !== undefined) {
-      const row = shell.querySelector('.change-row[data-change-index="' + value + '"]');
-      if (row) row.hidden = true;
-      syncChanges();
-    } else if (action === 'decide-all') {
-      q('.change-row').forEach((r) => { r.hidden = true; });
-      syncChanges();
     }
   });
 
@@ -2575,7 +2614,7 @@ if (shell) {
     }
   });
 
-  syncChanges();
+  syncReview(null);
   syncAssistantTier();
   syncCommandAvailability();
   void syncProjectLifecycle();
