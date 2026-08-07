@@ -102,8 +102,9 @@ otherwise. The browser sandbox stays on unless `CI` or `SCENEAXI_CHROME_NO_SANDB
 says the environment cannot provide it.
 
 `pnpm typecheck` covers this suite: `tsconfig.json` is the shipped app and
-`tsconfig.test.json` is `playwright.config.ts` plus `test/**`, so a spec that stops
-compiling fails the same command rather than only failing when a browser is available.
+`tsconfig.test.json` is `playwright.config.ts`, `vitest.config.ts`, plus `test/**`, so a
+spec that stops compiling fails the same command rather than only failing when a browser
+is available.
 
 Three overview client components carry the visual layer's behaviour, and all are deliberate:
 `src/app/_components/site-nav.tsx` exists only to resolve `aria-current`, and
@@ -309,6 +310,12 @@ provider-owned `better_auth_*` tables from migration 0005, and returns redacted 
 refusals when configuration or storage is unavailable. Better Auth and `pg` remain
 dependencies of this standalone site install root, not `@sceneaxi/auth`.
 
+Its contract and integration proof is `test/better-auth-provider.test.ts`, run from this
+install root with `pnpm test:provider` over real Better Auth and an in-memory provider
+database — no network and no credential. The hermetic `pnpm gate` cannot run it, because
+both provider SDKs resolve only here, so CI installs this root and runs `pnpm
+test:provider` and `pnpm typecheck` after the gate.
+
 Three deployment properties of that provider are decided in code rather than left to a
 default. First-run provisioning gates `sign-in/email` alone and refuses a persisted
 credential that disagrees with `SCENEAXI_ADMIN_BOOTSTRAP_SECRET` as
@@ -318,7 +325,7 @@ never described. That decision is memoized rather than re-run per request, but o
 bounded interval, because the remedy an operator applies changes the very state it read —
 a corrected database recovers on its own without a redeploy. Throttling is stored in
 `better_auth_rate_limits`, since a per-instance memory counter resets on every cold start;
-both endpoints are throttled per source address, with session lookup on the longer
+both endpoints are throttled per source address, with session lookup on the looser
 fallback rule, which the deployment's own relay never approaches because it reaches that
 path at most once per already-capped sign-in. The provider sweeps counters past every live
 window itself on a bounded interval, so the table needs no operator retention step. The `pg`

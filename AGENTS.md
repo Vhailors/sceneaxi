@@ -120,7 +120,10 @@ belong in `sites/` only.
 extend `tests/boundary/injected-site-violations.test.ts` when you extend any of them. Only
 `sites/*/src/app/**` may import React or Next; `src/index.ts` and `src/lib/**` stay pure
 TypeScript so the hermetic build type-checks them, and site seam tests live in
-`tests/sites/`. Deploy topology, the exact env var list, and the unordered identity-plane
+`tests/sites/` — the one exception being a suite that needs a site's own provider SDK,
+which lives in that install root and runs there (the umbrella's `pnpm test:provider`,
+in CI after `pnpm gate`, never inside it). Deploy topology, the exact env var list, and
+the unordered identity-plane
 wiring mechanics are in `docs/websites-deploy.md`, which sequences nothing; the
 cross-surface operator control plane — the
 authorization gate, ordered preflight/activation/verification/rollback procedure, and

@@ -107,7 +107,7 @@ reads it only to construct the `NeonDatabase` adapter; the root gate never reads
 `BETTER_AUTH_ORIGIN` names the provider endpoint for sign-in. The provider is hosted in
 the existing `sceneaxi-umbrella` project by
 `sites/umbrella/src/app/api/auth/[...all]/route.ts`; production therefore sets the origin
-to the umbrella's stable HTTPS origin. `BETTER_AUTH_SECRET` and the four
+to the umbrella's stable HTTPS origin. `BETTER_AUTH_SECRET` and the
 `better_auth_*` tables from `db/migrations/0005_better_auth_provider.sql` remain
 provider-owned. `resolveBetterAuthOrigin` accepts an
 `https` origin, or plaintext `http` only for an exact loopback host (`localhost`,
