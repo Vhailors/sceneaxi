@@ -323,6 +323,14 @@ describe("desktop command menu, palette, and accelerator parity", () => {
     expect(element(window, '.overlay[data-overlay="palette"]').hidden).toBe(false);
   });
 
+  it("keeps command accelerators active from the recent-project chooser", async () => {
+    const { window, calls } = await harness();
+    const event = shortcut(window, "o", element(window, "#project-recent-select"));
+    await settle(window);
+    expect(event.defaultPrevented).toBe(true);
+    expect(calls).toContainEqual({ plane: "project", action: "choose-open", op: null });
+  });
+
   it("contains focus in the palette even when every row is inert", async () => {
     // The refuse-only profile demotes every operation row, so a trap built from
     // the actionable rows alone would contain nothing at all and let Tab walk
@@ -385,6 +393,40 @@ describe("desktop command menu, palette, and accelerator parity", () => {
     // keep reporting the project rather than the refused command.
     expect(element(window, "[data-project-status]").textContent).toBe(running);
     expect(element(window, "[data-project-state]").dataset.projectState).toBe(pill);
+  });
+
+  it("keeps Undo refused when availability refreshes during a request", async () => {
+    const { window } = await harness();
+    await click(window, "#web-stage-html");
+    await click(window, '#project-save[data-command="project-save"]');
+    const host = (
+      window as unknown as {
+        sceneaxiDesktopLinux: {
+          project: (request: unknown) => Promise<unknown>;
+          request: (request: unknown) => Promise<unknown>;
+        };
+      }
+    ).sceneaxiDesktopLinux;
+    Object.defineProperty(window, "sceneaxiDesktopLinux", {
+      configurable: true,
+      value: {
+        project: host.project,
+        request: async (request: unknown) => {
+          const action = (request as Record<string, unknown>)["action"];
+          if (action === "open-path") return new Promise(() => {});
+          return host.request(request);
+        },
+      },
+    });
+
+    shortcut(window, "p");
+    for (let turn = 0; turn < 20; turn += 1) await Promise.resolve();
+    for (const selector of ["#menu-command-edit-undo", "#palette-edit-undo"]) {
+      const undo = element(window, selector);
+      expect(undo.getAttribute("aria-disabled")).toBe("true");
+      expect(undo.dataset.refusal).toBe(DESKTOP_PRODUCT_REFUSALS.requestInFlight);
+      expect(undo.hasAttribute("data-busy")).toBe(true);
+    }
   });
 
   it("refuses Undo rather than dropping a staged proposal with the Save it reverses", async () => {

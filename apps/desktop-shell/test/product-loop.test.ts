@@ -156,7 +156,7 @@ describe("desktop product loop", () => {
     expect(game).toContain('class="project-file is-active" aria-current="page"');
     expect(game).toContain('data-project-file="scene.json"');
     expect(game).toContain(
-      'id="project-open" data-kind="live" data-product-action data-action="project-open"',
+      'id="project-open" data-kind="live" data-product-action data-action="document-reload"',
     );
     expect(game).toContain(
       'id="project-save" data-kind="live" data-product-action data-command="project-save"',

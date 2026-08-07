@@ -378,7 +378,7 @@ function titleBar(view: DesktopVisualView): string {
     <span class="project-pill" data-project-state="closed"><span class="dot dot-ok" aria-hidden="true"></span><span data-project-status>No project selected</span></span>
   </div>
   <div class="title-actions">
-    ${button(view.product.open, "Reload", "ghost-button", ` data-product-action data-action="project-open"`)}
+    ${button(view.product.open, "Reload", "ghost-button", ` data-product-action data-action="document-reload"`)}
     ${button(view.product.save, "Save", "primary-button", ` data-product-action data-command="project-save"`)}
     ${drawers}
     ${button(
@@ -2340,13 +2340,15 @@ if (shell) {
       if (el.dataset.command !== 'edit-undo') return;
       applyControl(el);
       if (shell.dataset.profile !== 'kids') {
-        const available = undoAvailability === 'available';
+        const available = !inFlight && undoAvailability === 'available';
         el.dataset.kind = available ? 'live' : 'inert';
         setRefusal(
           el,
           available
             ? null
-            : undoAvailability === 'recovery-pending'
+            : inFlight
+              ? T.product.refusals.requestInFlight
+              : undoAvailability === 'recovery-pending'
               ? T.product.refusals.recoveryPending
               : T.commandRefusals.undoUnavailable,
         );
@@ -2449,7 +2451,7 @@ if (shell) {
     }
     if (action === 'project-open-recent') void productAction(() => chooseProject('open-recent'));
     else if (action === 'project-remove-recent') void productAction(() => chooseProject('remove-recent'));
-    else if (action === 'project-open') void productAction(openProject);
+    else if (action === 'document-reload') void productAction(openProject);
     else if (action === 'scene-entity-select' && value) {
       if (showSceneProperty(value) && shell.dataset.mode !== 'build') showModePanels('build');
     }
@@ -2516,7 +2518,7 @@ if (shell) {
 
   const isTextEntryTarget = (target) => {
     if (!(target instanceof Element)) return false;
-    if (target.closest('input, textarea, select') !== null) return true;
+    if (target.closest('input, textarea') !== null) return true;
     if (target instanceof HTMLElement && target.isContentEditable) return true;
     let current = target;
     while (current !== null) {
