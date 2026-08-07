@@ -196,8 +196,11 @@ BYOK job:
    process;
 3. create one provider session with a revocable key accessor and inject only the
    resulting runner into `createDesktopBridge()`;
-4. revoke the key reference in `finally` before closing the provider session; and
-5. reduce every thrown provider detail to a named, secret-free refusal.
+4. replace any streamed progress snapshot that echoes the leased credential with a
+   fixed message on a known phase, and refuse a returned result that contains it,
+   so a provider cannot hand the key back through its own output;
+5. revoke the key reference in `finally` before closing the provider session; and
+6. reduce every thrown provider detail to a named, secret-free refusal.
 
 The checked-in packaged host does not add a live provider transport or production
 credential configuration: its provider runtime reports unavailable, while the
@@ -218,6 +221,7 @@ than borrowing the local route or crossing into hosted metering.
 | `DESKTOP_PROVIDER_KEY_MISSING` | no key is stored for the selected provider |
 | `DESKTOP_PROVIDER_KEY_INVALID` | the submitted value is empty or has an unsupported shape |
 | `DESKTOP_BYO_PROVIDER_UNSUPPORTED` | the requested provider is outside the checked-in provider list |
+| `DESKTOP_BYO_CONFIGURATION_REQUEST_MALFORMED` | the configuration request carries no SceneAxi profile, or no supported action/provider pair |
 | `DESKTOP_BYO_PROVIDER_SESSION_UNAVAILABLE` | secure configuration exists but no privileged provider session factory is installed |
 | `DESKTOP_BYO_PROVIDER_SESSION_FAILED` | provider session creation or execution failed; upstream detail is deliberately redacted |
 
