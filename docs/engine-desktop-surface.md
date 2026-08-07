@@ -339,8 +339,12 @@ make zero host requests;
 pending recovery stays non-decidable, reports `DESKTOP_RECOVERY_PENDING` once,
 and keeps the recovery instructions beside it — Web staging refuses before
 reaching the host under the same condition. When a validated host snapshot has
-cleared a stale proposal, a blocked decision restores the active conflict refusal
-rather than replacing it with a normal-open status. That recorded conflict stays
+cleared a stale proposal, a blocked decision names its own outcome and carries
+the recorded conflict as detail —
+`Decision refused · DESKTOP_PROPOSAL_NOT_REVIEWING · <recorded conflict>` — so it
+neither claims a normal-open document nor replays the earlier action's status
+sentence over whatever the operator did since, and repeating it answers the same
+way rather than accumulating the previous answer. That recorded conflict stays
 attached to its unresolved session transition across intervening status
 messages; a validated clean session snapshot or a successful document re-open
 clears it. A transport failure
@@ -966,6 +970,10 @@ sentence can return by review slip.
     keys reach them), joined on `kids` by the non-active dock tabs.
   - **Every `role="tablist"` owned only `role="tab"` children** in every document
     measured, so the bulk accept/reject and the spacer are outside it.
+    *(Superseded by sceneaxi#227, not re-recorded: the bulk accept/reject pair
+    was removed with the fixture queue, so the structural spacer is now the only
+    non-tab sibling. The tablist property itself is asserted in
+    `apps/desktop-shell/test/chrome.test.ts`; the browser reading is owed.)*
   - **The viewport carries one note**, `VIEWPORT_INERT_NOTE`; the archive's
     "not the final choice" line is nowhere in the document (`indexOf` `-1`).
   - **Rendered contrast sweep, composited.** Each visible text-bearing element's

@@ -102,8 +102,10 @@ reaches the host when there is no active review, including while apply recovery 
 pending, where the surface reports `DESKTOP_RECOVERY_PENDING` without changing the
 recovery state. Web staging also refuses before reaching the host during recovery
 and retains the transaction details and recovery instructions. When a host snapshot
-has already cleared a stale proposal, unavailable conflict actions preserve the
-active conflict refusal instead of replacing it with a normal-open status.
+has already cleared a stale proposal, an unavailable conflict action names its own
+outcome and carries the recorded conflict as detail, so it neither claims a
+normal-open document nor replays the earlier action's status sentence over a newer
+one.
 
 The first-release loop has one honest active file, `scene.json`. In the packaged
 host, first launch shows New Project and Open Project without binding or seeding

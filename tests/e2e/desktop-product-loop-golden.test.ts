@@ -321,15 +321,26 @@ describe("desktop first-release product loop", () => {
     const stageConflictRequests = requests.length;
     await click(window, "#overlay-close-outcome-dismiss");
     await click(window, "#change-review-reject");
-    expect(status()).toBe(stageConflictStatus);
+    const unavailableConflictStatus = status();
+    expect(unavailableConflictStatus).toContain(
+      "Decision refused · DESKTOP_PROPOSAL_NOT_REVIEWING · content-hash-conflict",
+    );
     expect(query(window, "[data-project-state]")?.dataset.projectState).toBe("refused");
     expect(requests).toHaveLength(stageConflictRequests);
-    // The refusal survives an intervening status message: only a validated
-    // resolution ends it, so the next blocked decision restores it.
-    await click(window, "#project-save");
-    expect(status()).toContain("no staged changes");
+    // Repeating an unavailable decision answers the same way rather than
+    // accumulating the previous answer as detail.
     await click(window, "#change-review-reject");
-    expect(status()).toBe(stageConflictStatus);
+    expect(status()).toBe(unavailableConflictStatus);
+    // A newer, unrelated status owns the status line: the blocked decision must
+    // report what the operator just clicked, not replay the earlier stage
+    // refusal as if it had happened again.
+    await click(window, "#project-save");
+    const noStagedChangesStatus = status();
+    expect(noStagedChangesStatus).toContain("no staged changes");
+    await click(window, "#change-review-reject");
+    expect(status()).not.toBe(stageConflictStatus);
+    expect(status()).not.toBe(noStagedChangesStatus);
+    expect(status()).toBe(unavailableConflictStatus);
     expect(requests).toHaveLength(stageConflictRequests);
     // Re-reading the document is that resolution.
     await click(window, "#project-open");

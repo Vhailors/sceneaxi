@@ -1357,10 +1357,10 @@ if (shell) {
   let projectDirty = false;
   let projectRecovering = false;
   let recoveryStatusText = null;
-  // The status that carried the host's last unresolved refusal about this
-  // document. Only a validated resolution clears it, so a blocked decision can
-  // restore the refusal instead of overwriting it.
-  let activeConflictStatus = null;
+  // The code of the host's last unresolved refusal about this document. Only a
+  // validated resolution clears it, so a blocked decision can name what is
+  // actually in the way instead of claiming a normal-open document.
+  let activeConflictDetail = null;
   let activeReviewSnapshot = null;
   let activeProject = null;
   let editableScene = null;
@@ -1510,7 +1510,7 @@ if (shell) {
       : null;
   };
 
-  const clearConflictOutcome = () => { activeConflictStatus = null; };
+  const clearConflictOutcome = () => { activeConflictDetail = null; };
 
   const syncReview = (snapshot) => {
     if (snapshot !== null && !isSessionSnapshot(snapshot)) return false;
@@ -1569,13 +1569,7 @@ if (shell) {
       ? ' · ' + diagnostic.reReadHint
       : '';
     showOutcome(title, code, message + hint);
-    // The status the operator was looking at when this refusal was reported is
-    // what the refusal is about. While it is still on screen the refusal is
-    // current, so a blocked decision must not replace it.
-    activeConflictStatus = {
-      state: shell.querySelector('[data-project-state]')?.dataset.projectState || '',
-      text: shell.querySelector('[data-project-status]')?.textContent || '',
-    };
+    activeConflictDetail = code;
   };
 
   // The run report is hidden below the compact tier, so a refusal that lives
@@ -2049,11 +2043,15 @@ if (shell) {
     setOverlay('none');
     if (projectRecovering) {
       reportRecoveryRefusal('Decision');
-    } else if (activeConflictStatus !== null) {
-      // The refusal the host last reported about this document is still the
-      // truth about it, so a blocked decision restores it rather than replacing
-      // it with a status that only says nothing is under review.
-      productStatus(activeConflictStatus.state, activeConflictStatus.text);
+    } else if (activeConflictDetail !== null) {
+      // The refusal the host last reported about this document is still in the
+      // way, so a blocked decision names its own outcome and carries that code
+      // as detail rather than replaying the earlier action's whole sentence.
+      productStatus(
+        'refused',
+        'Decision refused · ' + T.product.refusals.proposalNotReviewing +
+          ' · ' + activeConflictDetail,
+      );
     } else {
       productStatus(
         projectData === null ? 'closed' : 'open',
