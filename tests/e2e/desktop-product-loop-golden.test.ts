@@ -15,6 +15,7 @@ import {
   type HTMLElement as HappyHTMLElement,
 } from "happy-dom";
 import { createDocument, writeDocumentFile } from "@sceneaxi/authoring-core";
+import type { JsonValue } from "@sceneaxi/schemas";
 import {
   DESKTOP_VIEWPORT_PLAY_EVENT,
   createDesktopVisualState,
@@ -523,7 +524,7 @@ describe("desktop first-release product loop", () => {
     const dir = projectDir();
     const starter = desktopOpenScene();
     if (!starter.ok) throw new Error(`desktop scene refused: ${starter.reason}`);
-    const writeScene = (composedScene: unknown) => {
+    const writeScene = (composedScene: JsonValue) => {
       const written = writeDocumentFile(
         join(dir, "scene.json"),
         createDocument({
@@ -539,7 +540,11 @@ describe("desktop first-release product loop", () => {
       );
       if (!written.ok) throw new Error("composition fixture refused");
     };
-    writeScene({ ...(starter.composed.document.data as { composedScene: object }).composedScene, instances: "not-a-list" });
+    writeScene({
+      ...(starter.composed.document.data as { composedScene: Record<string, JsonValue> })
+        .composedScene,
+      instances: "not-a-list",
+    });
 
     const { window, start } = mountChrome(dir);
     start();
@@ -569,7 +574,7 @@ describe("desktop first-release product loop", () => {
 
     // A composition the inspection accepts takes the refusal back down, in the
     // panel and in the status alike.
-    writeScene((starter.composed.document.data as { composedScene: unknown }).composedScene);
+    writeScene((starter.composed.document.data as { composedScene: JsonValue }).composedScene);
     await click(window, "#project-open");
     expect(query(window, "[data-scene-entities]")?.hidden).toBe(false);
     expect(refusal()?.hidden).toBe(true);
