@@ -232,6 +232,24 @@ function promptInput(ctrl: DesktopControl): string {
   ].join("");
 }
 
+/** Render the bounded numeric Scene Document property through the modelled control. */
+function numericPropertyInput(ctrl: DesktopControl): string {
+  const inert = ctrl.kind === "inert";
+  const described = inert
+    ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
+    : "";
+  return [
+    `<input id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
+    inert
+      ? ` aria-disabled="true" data-refusal="${escapeHtml(ctrl.refusal ?? "")}" readonly`
+      : "",
+    described,
+    ` type="number"`,
+    ` class="scene-property-input${inert ? " is-inert" : ""}"`,
+    ` aria-label="${escapeHtml(ctrl.label)}" step="0.1">`,
+  ].join("");
+}
+
 /** Render the modelled recent-project chooser through the same refusal contract. */
 function recentProjectSelect(ctrl: DesktopControl): string {
   const inert = ctrl.kind === "inert";
@@ -420,6 +438,15 @@ function leftDock(view: DesktopVisualView): string {
   </div>
   <div class="project-bound" data-project-bound hidden>
     <div class="project-files">${files}</div>
+    <div class="scene-entities" data-scene-entities hidden>
+      <p class="scene-entities-label">SCENE ENTITY</p>
+      ${button(
+        view.product.selectStarterEntity,
+        `<span data-scene-entity-label>Placed beside the root</span><code data-scene-entity-id>desktop-crate-beside</code>`,
+        "scene-entity",
+        ` data-product-action data-action="scene-entity-select" data-value="desktop-crate-beside" aria-pressed="false"`,
+      )}
+    </div>
     <p class="project-root" data-project-root></p>
   </div>
   <p class="project-file-state" data-project-file-state>Active · not opened</p>
@@ -604,6 +631,22 @@ function inspector(view: DesktopVisualView): string {
     return `<section class="inspector-panel" data-mode-panel="${escapeHtml(mode)}" aria-label="${escapeHtml(panel.inspectorTitle)}"${mode === active ? "" : " hidden"}>
   <h2 class="panel-head"><span>${escapeHtml(panel.inspectorTitle)}</span></h2>
   <p class="panel-empty"${mode === "run" ? " data-run-live-report" : ""}>${escapeHtml(panel.inspectorEmpty)}</p>
+  ${
+    mode === "build"
+      ? `<div class="scene-property-editor" data-scene-property-editor hidden>
+    <p class="scene-property-entity"><b data-scene-property-entity-label></b><code data-scene-property-entity-id></code></p>
+    <label for="${escapeHtml(view.product.translationX.id)}"><span data-scene-property-label>Translation X</span>${numericPropertyInput(view.product.translationX)}</label>
+    ${button(
+      view.product.stageTranslationX,
+      "Stage for review",
+      "primary-button block-button",
+      ` data-product-action data-action="scene-property-stage"`,
+    )}
+    <p class="scene-property-diagnostic" data-scene-property-diagnostic aria-live="polite">Select this entity to edit its saved composition.</p>
+    <pre class="scene-property-review" data-scene-property-review hidden></pre>
+  </div>`
+      : ""
+  }
 </section>`;
   }).join("");
 
@@ -955,8 +998,23 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .project-file b,.project-file em{display:block}
 .project-file b{font-family:var(--mono);font-size:10px;font-weight:500}
 .project-file em{font-size:9px;font-style:normal;color:var(--dim);margin-top:2px}
+.scene-entities{padding:0 7px 9px}
+.scene-entities-label{margin:0 3px 5px;font-family:var(--mono);font-size:8px;letter-spacing:.12em;color:var(--faint)}
+.scene-entity{width:100%;min-width:0;padding:8px 9px;border:1px solid var(--line-card);border-radius:4px;background:var(--raised);color:var(--dim);text-align:left}
+.scene-entity span,.scene-entity code{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scene-entity span{font-size:10px;color:var(--text)}.scene-entity code{margin-top:3px;font-size:8px;color:var(--dim)}
+.scene-entity[aria-pressed="true"]{border-color:var(--accent);background:${ACCENT.surface}}
 .project-file-state{margin:0;padding:0 10px 9px;font-family:var(--mono);font-size:9px;color:var(--faint)}
 .project-root{padding:0 10px 9px;font-family:var(--mono)}
+.scene-property-editor{display:grid;gap:8px;padding:10px 11px}
+.scene-property-entity{margin:0;padding-bottom:7px;border-bottom:1px solid var(--line);min-width:0}
+.scene-property-entity b,.scene-property-entity code{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scene-property-entity b{font-size:11px}.scene-property-entity code{margin-top:3px;font-size:8px;color:var(--dim)}
+.scene-property-editor label{display:grid;gap:5px;font-family:var(--mono);font-size:9px;color:var(--dim)}
+.scene-property-input{width:100%;min-width:0;height:28px;padding:0 8px;border:1px solid var(--line-control);border-radius:4px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:11px}
+.scene-property-input:focus{outline:1px solid var(--accent);outline-offset:1px}.scene-property-input.is-inert{color:var(--inert)}
+.scene-property-diagnostic{margin:0;font-size:9px;line-height:1.45;color:var(--dim);overflow-wrap:anywhere}
+.scene-property-review{max-height:150px;margin:0;padding:8px;overflow:auto;border:1px solid var(--line);border-radius:4px;background:var(--well);color:var(--dim);font-family:var(--mono);font-size:8px;line-height:1.45;white-space:pre-wrap}
 .pass-list{list-style:none;margin:0;padding:10px 11px;display:flex;flex-direction:column;gap:6px}
 .pass-row{display:flex;align-items:center;gap:10px;padding:6px 9px;background:var(--raised);border:1px solid var(--line);border-radius:4px}
 .pass-order{width:14px;height:14px;border-radius:3px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-size:9px;font-weight:700;flex:none}
@@ -1315,6 +1373,8 @@ if (shell) {
   let projectDirty = false;
   let projectRecovering = false;
   let activeProject = null;
+  let editableScene = null;
+  let selectedSceneEntityId = null;
   // One product request at a time. Every live control reads \`projectData\` before
   // its first await, so two overlapping clicks would each build a proposal from
   // the same pre-edit document and the second would replace the first in the
@@ -1326,6 +1386,62 @@ if (shell) {
     if (pill) pill.dataset.projectState = state;
     q('[data-project-status]').forEach((el) => { el.textContent = text; });
     q('[data-project-file-state]').forEach((el) => { el.textContent = text; });
+  };
+
+  const clearSceneProperty = () => {
+    editableScene = null;
+    selectedSceneEntityId = null;
+    const entities = shell.querySelector('[data-scene-entities]');
+    const editor = shell.querySelector('[data-scene-property-editor]');
+    const review = shell.querySelector('[data-scene-property-review]');
+    if (entities) entities.hidden = true;
+    if (editor) editor.hidden = true;
+    if (review) { review.hidden = true; review.textContent = ''; }
+    q('[data-action="scene-entity-select"]').forEach((el) => el.setAttribute('aria-pressed', 'false'));
+  };
+
+  const showSceneProperty = (entityId) => {
+    const entities = editableScene && Array.isArray(editableScene.entities)
+      ? editableScene.entities
+      : [];
+    const entity = entities.find((candidate) => candidate && candidate.id === entityId);
+    const property = entity && Array.isArray(entity.properties) ? entity.properties[0] : null;
+    if (!entity || !property || typeof property.value !== 'number') return false;
+    selectedSceneEntityId = entity.id;
+    q('[data-action="scene-entity-select"]').forEach((el) => {
+      el.setAttribute('aria-pressed', String(el.dataset.value === entity.id));
+    });
+    q('[data-scene-property-entity-label]').forEach((el) => { el.textContent = entity.label; });
+    q('[data-scene-property-entity-id]').forEach((el) => { el.textContent = entity.id; });
+    q('[data-scene-property-label]').forEach((el) => { el.textContent = property.label; });
+    const input = shell.querySelector('#scene-property-translation-x');
+    if (input && input.tagName === 'INPUT') {
+      input.value = String(property.value);
+      input.step = String(property.step);
+    }
+    const editor = shell.querySelector('[data-scene-property-editor]');
+    if (editor) editor.hidden = false;
+    const diagnostic = shell.querySelector('[data-scene-property-diagnostic]');
+    if (diagnostic) diagnostic.textContent = 'Typed numeric property · edits stage one E1 proposal and write only on Save.';
+    return true;
+  };
+
+  const syncSceneProperties = (status) => {
+    clearSceneProperty();
+    const inspected = status && status.editableScene;
+    const entity = inspected && inspected.ok === true && Array.isArray(inspected.entities)
+      ? inspected.entities[0]
+      : null;
+    const property = entity && Array.isArray(entity.properties) ? entity.properties[0] : null;
+    if (!entity || typeof entity.id !== 'string' || typeof entity.label !== 'string' ||
+        !property || property.id !== 'translation-x' || typeof property.value !== 'number') return false;
+    editableScene = inspected;
+    const entities = shell.querySelector('[data-scene-entities]');
+    if (entities) entities.hidden = false;
+    q('[data-scene-entity-label]').forEach((el) => { el.textContent = entity.label; });
+    q('[data-scene-entity-id]').forEach((el) => { el.textContent = entity.id; });
+    q('[data-action="scene-entity-select"]').forEach((el) => { el.dataset.value = entity.id; });
+    return true;
   };
 
   // The run report is hidden below the compact tier, so a refusal that lives
@@ -1490,6 +1606,7 @@ if (shell) {
     projectContentHash = null;
     projectDirty = false;
     projectRecovering = false;
+    clearSceneProperty();
     if (response.data.outcome === 'removed') {
       productStatus(activeProject === null ? 'closed' : 'open', 'Recent project removed · active project unchanged');
       return;
@@ -1502,19 +1619,32 @@ if (shell) {
   // Both are read here so the host's reason reaches the surface instead of the
   // generic one — \`apply-in-progress\` in particular is the operator's cue that
   // journal recovery, not another click, is what moves this forward.
-  const responseReason = (response) => {
-    if (response === null) return T.product.refusals.runtimeUnavailable;
-    if (!response.ok) return response.reason || T.product.refusals.runtimeRequestRefused;
+  const responseDiagnostic = (response) => {
+    if (response === null) return {
+      code: T.product.refusals.runtimeUnavailable,
+      message: T.product.refusals.runtimeUnavailable,
+    };
+    if (!response.ok) return {
+      code: response.reason || T.product.refusals.runtimeRequestRefused,
+      message: response.message || T.product.refusals.runtimeRequestRefused,
+    };
     const data = response.data;
     const diagnostics = data && Array.isArray(data.diagnostics) ? data.diagnostics : [];
     if (diagnostics.length > 0) {
-      return diagnostics[0]?.code || T.product.refusals.authoringRefused;
+      return {
+        code: diagnostics[0]?.code || T.product.refusals.authoringRefused,
+        message: diagnostics[0]?.message || T.product.refusals.authoringRefused,
+      };
     }
     if (data && data.ok === false) {
-      return data.reason || T.product.refusals.authoringRefused;
+      return {
+        code: data.reason || T.product.refusals.authoringRefused,
+        message: data.message || T.product.refusals.authoringRefused,
+      };
     }
     return null;
   };
+  const responseReason = (response) => responseDiagnostic(response)?.code ?? null;
 
   const restartProject = async (diagnostic) => {
     productStatus('recovering', T.product.documentPath + ' · ' + diagnostic + ' · re-opening fresh session…');
@@ -1538,6 +1668,7 @@ if (shell) {
     }
     projectData = status.data;
     projectContentHash = status.contentHash;
+    syncSceneProperties(status);
     productStatus('open', T.product.documentPath + ' · re-opened after ' + diagnostic + ' · ' + status.documentId);
     return true;
   };
@@ -1559,6 +1690,7 @@ if (shell) {
     projectData = null;
     projectContentHash = null;
     projectDirty = false;
+    clearSceneProperty();
     return true;
   };
 
@@ -1582,6 +1714,7 @@ if (shell) {
     }
     projectData = status.data;
     projectContentHash = status.contentHash;
+    syncSceneProperties(status);
     projectDirty = false;
     projectRecovering = false;
     productStatus('open', T.product.documentPath + ' · open · ' + status.documentId);
@@ -1622,6 +1755,54 @@ if (shell) {
     projectDirty = true;
     projectRecovering = false;
     productStatus('dirty', T.product.documentPath + ' · staged · Save to apply');
+  };
+
+  const stageSceneProperty = async () => {
+    if (projectDirty || projectRecovering) {
+      productStatus('refused', 'Edit refused · save or re-open the one staged proposal first');
+      return;
+    }
+    if ((projectData === null || projectContentHash === null) && !(await openProject())) return;
+    if (selectedSceneEntityId === null || editableScene === null) {
+      productStatus('refused', 'Edit refused · select the starter entity first');
+      return;
+    }
+    const input = shell.querySelector('#scene-property-translation-x');
+    const newValue = input && input.tagName === 'INPUT' ? input.valueAsNumber : Number.NaN;
+    const response = await runtimeRequest({
+      action: 'authoring',
+      payload: {
+        op: 'edit-property',
+        documentPath: T.product.documentPath,
+        expectedContentHash: projectContentHash,
+        entityId: selectedSceneEntityId,
+        propertyId: 'translation-x',
+        newValue,
+      },
+    });
+    const diagnostic = responseDiagnostic(response);
+    const snapshot = response?.ok ? response.data : null;
+    const message = shell.querySelector('[data-scene-property-diagnostic]');
+    if (diagnostic !== null || !snapshot || snapshot.phase !== 'reviewing') {
+      const code = diagnostic?.code || T.product.refusals.proposalNotReviewing;
+      const detail = diagnostic?.message || T.product.refusals.proposalNotReviewing;
+      if (message) message.textContent = code + ' · ' + detail;
+      productStatus('refused', 'Edit refused · ' + code + ' · ' + detail);
+      return;
+    }
+    const edit = Array.isArray(snapshot.proposal?.edits) ? snapshot.proposal.edits[0] : null;
+    if (edit && edit.jsonPointer === '/data/composedScene' && projectData && typeof projectData === 'object') {
+      projectData = { ...projectData, composedScene: edit.newValue };
+    }
+    const review = shell.querySelector('[data-scene-property-review]');
+    if (review) {
+      review.textContent = String(snapshot.renderedDiff || snapshot.unifiedDiff || 'Proposal staged for review.');
+      review.hidden = false;
+    }
+    if (message) message.textContent = 'Proposal staged with base ' + projectContentHash + ' · Save applies atomically.';
+    projectDirty = true;
+    projectRecovering = false;
+    productStatus('dirty', T.product.documentPath + ' · property staged · review before Save');
   };
 
   const applySaveSnapshot = (snapshot) => {
@@ -1896,13 +2077,13 @@ if (shell) {
       el.setAttribute('aria-disabled', 'true');
       el.setAttribute('aria-describedby', 'refusal-' + code);
       el.dataset.refusal = code;
-      if (el instanceof HTMLTextAreaElement) el.readOnly = true;
+      if ('readOnly' in el) el.readOnly = true;
     } else {
       el.classList.remove('is-inert');
       el.removeAttribute('aria-disabled');
       el.removeAttribute('aria-describedby');
       delete el.dataset.refusal;
-      if (el instanceof HTMLTextAreaElement) el.readOnly = false;
+      if ('readOnly' in el) el.readOnly = false;
     }
   };
 
@@ -1977,6 +2158,8 @@ if (shell) {
     else if (action === 'project-open') void productAction(openProject);
     else if (action === 'project-save') void productAction(saveProject);
     else if (action === 'scene-play') void productAction(playScene);
+    else if (action === 'scene-entity-select' && value) showSceneProperty(value);
+    else if (action === 'scene-property-stage') void productAction(stageSceneProperty);
     else if (action === 'web-stage-html') void productAction(() => stageWebEdit('html'));
     else if (action === 'web-inject-asset') void productAction(() => stageWebEdit('asset'));
     else if (action === 'mode' && value) showModePanels(value);

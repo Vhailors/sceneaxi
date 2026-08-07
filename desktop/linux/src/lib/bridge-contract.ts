@@ -107,6 +107,7 @@ export type DesktopBridgeResponse<T = unknown> = DesktopBridgeOk<T> | DesktopBri
 export const DESKTOP_BRIDGE_AUTHORING_OPS = Object.freeze([
   "status",
   "propose",
+  "edit-property",
   "accept",
   "reject",
   "recover",

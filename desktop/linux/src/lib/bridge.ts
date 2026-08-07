@@ -61,6 +61,8 @@ import {
   DESKTOP_SCENE_NOT_COMPOSABLE,
   desktopAssistantScene,
   desktopSceneFromDocumentData,
+  inspectDesktopSceneProperties,
+  stageDesktopScenePropertyEdit,
   type DesktopSceneResult,
 } from "./desktop-scene.js";
 import { DesktopByoRunnerRefusal } from "./byo-configuration.js";
@@ -320,6 +322,18 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         `Unknown authoring operation ${JSON.stringify(op)}. Known: ${DESKTOP_BRIDGE_AUTHORING_OPS.join(", ")}.`,
       );
     }
+    const statusWithProperties = (live: DesktopSession, documentPath: string) => {
+      const status = live.status(documentPath);
+      if (!status.ok) return status;
+      return Object.freeze({
+        ...status,
+        editableScene: inspectDesktopSceneProperties({
+          documentData: status.data,
+          contentHash: status.contentHash,
+          documentPath,
+        }),
+      });
+    };
     if (op === "restart") {
       const documentPath = containedDocumentPath(field(payload, "documentPath"));
       if (documentPath === null) {
@@ -329,7 +343,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         );
       }
       session = createDesktopSession({ cwd: options.cwd });
-      return bridgeOk("authoring", session.status(documentPath));
+      return bridgeOk("authoring", statusWithProperties(session, documentPath));
     }
     const live = authoringSession();
     if (op === "status") {
@@ -340,7 +354,33 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           "authoring status requires a documentPath string inside the project directory.",
         );
       }
-      return bridgeOk("authoring", live.status(documentPath));
+      return bridgeOk("authoring", statusWithProperties(live, documentPath));
+    }
+    if (op === "edit-property") {
+      const documentPath = containedDocumentPath(field(payload, "documentPath"));
+      const expectedContentHash = field(payload, "expectedContentHash");
+      if (
+        documentPath === null ||
+        typeof expectedContentHash !== "string" ||
+        !/^sha256:[0-9a-f]{64}$/.test(expectedContentHash)
+      ) {
+        return bridgeRefuse(
+          DESKTOP_BRIDGE_REFUSALS.requestMalformed,
+          "authoring edit-property requires a SHA-256 expectedContentHash and a documentPath inside the project directory.",
+        );
+      }
+      const status = live.status(documentPath);
+      if (!status.ok) return bridgeOk("authoring", status);
+      const staged = stageDesktopScenePropertyEdit({
+        documentData: status.data,
+        contentHash: expectedContentHash,
+        documentPath,
+        entityId: field(payload, "entityId"),
+        propertyId: field(payload, "propertyId"),
+        newValue: field(payload, "newValue"),
+      });
+      if (!staged.ok) return bridgeOk("authoring", staged);
+      return bridgeOk("authoring", live.proposeEdit(staged.edit));
     }
     if (op === "propose") {
       const documentPath = containedDocumentPath(field(payload, "documentPath"));

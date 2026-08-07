@@ -1188,6 +1188,9 @@ export type DesktopVisualView = Readonly<{
     open: DesktopControl;
     save: DesktopControl;
     play: DesktopControl;
+    selectStarterEntity: DesktopControl;
+    translationX: DesktopControl;
+    stageTranslationX: DesktopControl;
     stageHtml: DesktopControl;
     injectAsset: DesktopControl;
   }>;
@@ -1381,6 +1384,21 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
     open: control("project-open", "Open scene.json", "live"),
     save: control("project-save", "Save scene.json", "live"),
     play: control("scene-play", "Play composed scene", "live"),
+    selectStarterEntity: control(
+      "scene-entity-desktop-crate-beside",
+      "Select placed starter entity",
+      "view",
+    ),
+    translationX: control(
+      "scene-property-translation-x",
+      "Translation X",
+      "live",
+    ),
+    stageTranslationX: control(
+      "scene-property-stage",
+      "Stage Translation X",
+      "live",
+    ),
     stageHtml:
       state.profile === "web"
         ? control("web-stage-html", "Stage starter HTML", "live")

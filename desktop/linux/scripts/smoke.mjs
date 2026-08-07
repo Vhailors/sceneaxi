@@ -2,7 +2,7 @@
 /**
  * Packaged-app smoke: launch the real application with `--smoke` and assert the
  * proof line it prints — handshake, kernel open path with moving digests, the
- * authoring propose/accept/undo round trip, and the renderer's real frame report.
+ * typed edit/review/save/reopen/play round trip, and the renderer's real frame report.
  *
  * Two launch modes:
  * - default: `electron dist/main.cjs --smoke` (the built runtime, dev install)
@@ -85,7 +85,7 @@ if (proof.openPath?.initialDigest === proof.openPath?.tickDigests?.at(-1)) {
 }
 // The authoring round trip is proven by the session's own phases and the document
 // bytes, on a scratch project this run created — not by the bridge envelope, which
-// carries a refused propose or a failed apply inside `{ok: true}` just the same.
+// carries a refused proposal or failed apply inside `{ok: true}` just the same.
 // The app compares the project it bound against its own persistent one (the only
 // process that knows that path); the launcher independently checks the directory
 // it reports is a temporary one, so neither side can assert isolation alone.
@@ -101,8 +101,27 @@ if (proof.authoring?.proposedPhase !== "reviewing") {
 if (proof.authoring?.acceptedPhase !== "applied") {
   failures.push(`authoring accept reached phase '${proof.authoring?.acceptedPhase}', not 'applied'`);
 }
-if (proof.authoring?.undone !== true || proof.authoring?.restored !== true) {
-  failures.push("authoring undo did not restore the document it applied to");
+if (
+  proof.authoring?.selected !== true ||
+  proof.authoring?.reopened !== true ||
+  proof.authoring?.played !== true ||
+  proof.authoring?.persisted !== true
+) {
+  failures.push("authoring did not prove select, save, fresh-session reopen, and Play");
+}
+if (
+  proof.authoring?.initialPropertyValue !== -4.4 ||
+  proof.authoring?.reopenedValue !== -3.25 ||
+  proof.authoring?.playedTranslation !== -3.25
+) {
+  failures.push("the saved translation was not preserved through reopen and Play");
+}
+if (
+  proof.playbackDom?.accepted !== true ||
+  proof.playbackDom?.state !== "acknowledged" ||
+  typeof proof.playbackDom?.frame !== "number"
+) {
+  failures.push("the packaged viewport did not acknowledge the saved-composition redraw");
 }
 if (proof.frameReport?.backend !== "three") failures.push("frame report is not the Three core");
 // The pixel claim the docs and the site-kit offer carry is only ever this
@@ -142,7 +161,7 @@ console.log(
   `  open path: ${proof.openPath.tickDigests.length} ticks, digest ${String(proof.openPath.initialDigest).slice(0, 18)}… → ${String(proof.openPath.tickDigests.at(-1)).slice(0, 18)}…`,
 );
 console.log(
-  `  authoring: scratch project, ${proof.authoring.proposedPhase} → ${proof.authoring.acceptedPhase} → undone, document restored`,
+  `  authoring: scratch project, selected -4.4 → ${proof.authoring.proposedPhase} → ${proof.authoring.acceptedPhase} → reopened -3.25 → played and redrawn at frame ${proof.playbackDom.frame}`,
 );
 console.log(
   `  frame: backend ${proof.frameReport.backend} · surface ${proof.frameReport.surface ?? "unreported"} · pixelsDrawn ${proof.frameReport.pixelsDrawn ?? "unreported"} · drawCalls ${proof.frameReport.drawCalls}`,
