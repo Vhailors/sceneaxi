@@ -812,6 +812,8 @@ function overlays(view: DesktopVisualView): string {
   // bytes, so a screenshot of one state needs no script to have run.
   const shown = (id: string): string => (view.state.overlay === id ? "" : " hidden");
 
+  // One modelled control per dismiss button, so each carries its own id and kind
+  // instead of several elements sharing a control that can only be rendered once.
   const dismissals = (overlay: string): string =>
     view.overlay.dismissals
       .filter((dismissal) => dismissal.overlay === overlay)
@@ -1355,6 +1357,7 @@ if (shell) {
   let projectDirty = false;
   let projectRecovering = false;
   let recoveryStatusText = null;
+  let activeConflictStatus = null;
   let activeReviewSnapshot = null;
   let activeProject = null;
   let editableScene = null;
@@ -1368,6 +1371,12 @@ if (shell) {
   let inFlight = false;
 
   const productStatus = (state, text) => {
+    // A refusal the operator has moved past is no longer the current truth about
+    // the document, so the status that carried it stops protecting it.
+    if (activeConflictStatus !== null &&
+        (state !== activeConflictStatus.state || text !== activeConflictStatus.text)) {
+      activeConflictStatus = null;
+    }
     const pill = shell.querySelector('[data-project-state]');
     if (pill) pill.dataset.projectState = state;
     q('[data-project-status]').forEach((el) => { el.textContent = text; });
@@ -1504,11 +1513,6 @@ if (shell) {
       : null;
   };
 
-  // True while the outcome dialog is reporting a refusal the host returned about
-  // the document itself: a blocked decision must not overwrite that with a
-  // status that only says nothing is under review.
-  let conflictOutcomeShown = false;
-
   const syncReview = (snapshot) => {
     if (snapshot !== null && !isSessionSnapshot(snapshot)) return false;
     const projection = reviewProjection(snapshot);
@@ -1534,11 +1538,6 @@ if (shell) {
     if (documentPath) documentPath.textContent = active ? projection.first.documentPath : '';
     if (contentHash) contentHash.textContent = active ? projection.first.baseContentHash : '';
     if (renderedDiff) renderedDiff.textContent = active ? projection.diff : '';
-    // A conflict the host no longer reports is not the current truth about this
-    // document, so the flag that protects its refusal is dropped with it.
-    if (!active || (Array.isArray(snapshot?.diagnostics) ? snapshot.diagnostics : []).length === 0) {
-      conflictOutcomeShown = false;
-    }
     q('[data-change-badge]').forEach((el) => {
       el.textContent = String(active ? 1 : 0);
     });
@@ -1564,8 +1563,14 @@ if (shell) {
     const hint = diagnostic && typeof diagnostic.reReadHint === 'string'
       ? ' · ' + diagnostic.reReadHint
       : '';
-    conflictOutcomeShown = true;
     showOutcome(title, code, message + hint);
+    // The status the operator was looking at when this refusal was reported is
+    // what the refusal is about. While it is still on screen the refusal is
+    // current, so a blocked decision must not replace it.
+    activeConflictStatus = {
+      state: shell.querySelector('[data-project-state]')?.dataset.projectState || '',
+      text: shell.querySelector('[data-project-status]')?.textContent || '',
+    };
   };
 
   // The run report is hidden below the compact tier, so a refusal that lives
@@ -2035,9 +2040,13 @@ if (shell) {
   const requireActiveReview = () => {
     if (activeReviewSnapshot !== null) return true;
     setOverlay('none');
+    const currentState = shell.querySelector('[data-project-state]')?.dataset.projectState || '';
+    const current = shell.querySelector('[data-project-status]')?.textContent || '';
+    const conflictStatusCurrent = activeConflictStatus !== null &&
+      currentState === activeConflictStatus.state && current === activeConflictStatus.text;
     if (projectRecovering) {
       reportRecoveryRefusal('Decision');
-    } else if (!conflictOutcomeShown) {
+    } else if (!conflictStatusCurrent) {
       productStatus(
         projectData === null ? 'closed' : 'open',
         T.product.documentPath + ' · nothing under review · ' + T.product.refusals.proposalNotReviewing,

@@ -334,7 +334,8 @@ rest of the project loop. `Escape` and the outcome dismissal still close the
 dialog on every profile, so the refusal stays a state you can leave.
 
 A decision also needs a review the surface actually validated and projected.
-Without one, Accept and Reject refuse by name rather than reaching the host;
+Without one, Accept and Reject refuse with `DESKTOP_PROPOSAL_NOT_REVIEWING` and
+make zero host requests;
 pending recovery stays non-decidable, reports `DESKTOP_RECOVERY_PENDING` once,
 and keeps the recovery instructions beside it — Web staging refuses before
 reaching the host under the same condition. When a validated host snapshot has
