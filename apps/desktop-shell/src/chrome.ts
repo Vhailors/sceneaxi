@@ -1377,6 +1377,7 @@ if (shell) {
   let activeProject = null;
   let editableScene = null;
   let selectedSceneEntityId = null;
+  let sceneRefusalText = null;
   // One product request at a time. Every live control reads \`projectData\` before
   // its first await, so two overlapping clicks would each build a proposal from
   // the same pre-edit document and the second would replace the first in the
@@ -1393,12 +1394,18 @@ if (shell) {
   // The panel's refusal lives beside the entity list rather than inside the
   // editor it would explain: the editor is hidden exactly when there is no
   // inspectable entity, so a reason written in there is a reason nobody reads.
+  // The left dock is itself a closed drawer below the compact tier, so the same
+  // text also rides the product status the status bar mirrors at every tier.
   const sceneEntitiesRefusal = (text) => {
+    sceneRefusalText = text || null;
     const el = shell.querySelector('[data-scene-entities-refusal]');
     if (!el) return;
     el.textContent = text || '';
     el.hidden = !text;
   };
+
+  const withSceneRefusal = (text) =>
+    sceneRefusalText === null ? text : text + ' · ' + sceneRefusalText;
 
   const clearSceneProperty = () => {
     editableScene = null;
@@ -1684,6 +1691,7 @@ if (shell) {
       payload: { op: 'restart', documentPath: T.product.documentPath },
     });
     if (response === null || !response.ok) {
+      clearSceneProperty();
       productStatus('recovering', 'Open refused · ' + diagnostic + ' · ' + responseReason(response));
       return false;
     }
@@ -1694,13 +1702,14 @@ if (shell) {
     projectDirty = false;
     projectRecovering = false;
     if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' || status.data === null || typeof status.contentHash !== 'string') {
+      clearSceneProperty();
       productStatus('refused', 'Recovery reset · ' + diagnostic + ' · ' + (reason || T.product.refusals.documentDataInvalid));
       return false;
     }
     projectData = status.data;
     projectContentHash = status.contentHash;
     syncSceneProperties(status);
-    productStatus('open', T.product.documentPath + ' · re-opened after ' + diagnostic + ' · ' + status.documentId);
+    productStatus('open', withSceneRefusal(T.product.documentPath + ' · re-opened after ' + diagnostic + ' · ' + status.documentId));
     return true;
   };
 
@@ -1740,6 +1749,7 @@ if (shell) {
     const reason = responseReason(response);
     const status = response?.ok ? response.data : null;
     if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' || status.data === null || typeof status.contentHash !== 'string') {
+      clearSceneProperty();
       productStatus('refused', 'Open refused · ' + (reason || T.product.refusals.documentDataInvalid));
       return false;
     }
@@ -1748,7 +1758,7 @@ if (shell) {
     syncSceneProperties(status);
     projectDirty = false;
     projectRecovering = false;
-    productStatus('open', T.product.documentPath + ' · open · ' + status.documentId);
+    productStatus('open', withSceneRefusal(T.product.documentPath + ' · open · ' + status.documentId));
     return true;
   };
 
@@ -1841,7 +1851,7 @@ if (shell) {
     if (message) message.textContent = 'Proposal staged with base ' + projectContentHash + ' · Save applies atomically.';
     projectDirty = true;
     projectRecovering = false;
-    productStatus('dirty', T.product.documentPath + ' · property staged · review before Save');
+    productStatus('dirty', withSceneRefusal(T.product.documentPath + ' · property staged · review before Save'));
   };
 
   const applySaveSnapshot = (snapshot) => {
@@ -1862,7 +1872,7 @@ if (shell) {
       // proposal is spent, so the review panel goes with it while the panel
       // keeps showing the value the next Play will mount.
       syncSceneProperties(snapshot);
-      productStatus('saved', T.product.documentPath + ' · saved');
+      productStatus('saved', withSceneRefusal(T.product.documentPath + ' · saved'));
       return true;
     }
     return false;

@@ -543,21 +543,74 @@ describe("desktop first-release product loop", () => {
 
     const { window, start } = mountChrome(dir);
     start();
+    const shell = query(window, ".shell");
     const refusal = () => query(window, "[data-scene-entities-refusal]");
+    // The left dock is a drawer below the compact tier and starts closed, so a
+    // reason that lives only in it is unreadable at the tier this window is at.
+    const readableStatus = () =>
+      queryAll(window, "[data-project-status]")
+        .filter((el) => el.closest(".left-dock") === null)
+        .map((el) => el.textContent ?? "");
+
+    expect(shell?.dataset.tier).toBe("narrow");
+    expect(shell?.dataset.drawerLeft).toBe("closed");
 
     await click(window, "#project-open");
-    expect(query(window, "[data-project-status]")?.textContent).toContain("open · ");
     expect(query(window, "[data-scene-entities]")?.hidden).toBe(true);
     expect(refusal()?.hidden).toBe(false);
     expect(refusal()?.textContent).toContain("Scene entities unavailable");
     expect(refusal()?.textContent).toContain("validation-failed");
+    expect(readableStatus().length).toBeGreaterThan(0);
+    for (const text of readableStatus()) {
+      expect(text).toContain("open · ");
+      expect(text).toContain("Scene entities unavailable");
+      expect(text).toContain("validation-failed");
+    }
 
-    // A composition the inspection accepts takes the refusal back down.
+    // A composition the inspection accepts takes the refusal back down, in the
+    // panel and in the status alike.
     writeScene((starter.composed.document.data as { composedScene: unknown }).composedScene);
     await click(window, "#project-open");
     expect(query(window, "[data-scene-entities]")?.hidden).toBe(false);
     expect(refusal()?.hidden).toBe(true);
     expect(refusal()?.textContent).toBe("");
+    for (const text of readableStatus()) {
+      expect(text).toContain("open · ");
+      expect(text).not.toContain("Scene entities unavailable");
+    }
+  });
+
+  /**
+   * A refused re-open leaves no document behind it, so the panel must not keep
+   * presenting the last one's entity and typed value as if they were current.
+   */
+  it("clears the entity panel when a re-open is refused", async () => {
+    const dir = projectDir();
+    const { window, start } = mountChrome(dir);
+    start();
+    const status = () => query(window, "[data-project-status]")?.textContent ?? "";
+    const translationInput = () =>
+      query(window, "#scene-property-translation-x") as
+        | (HappyHTMLElement & { value: string })
+        | null;
+
+    await click(window, "#project-open");
+    await click(window, "#scene-entity-desktop-crate-beside");
+    expect(translationInput()?.value).toBe("-4.4");
+    expect(query(window, "[data-scene-entities]")?.hidden).toBe(false);
+
+    rmSync(join(dir, "scene.json"));
+    await click(window, "#project-open");
+    expect(status()).toContain("Open refused · document-not-found");
+    expect(query(window, "[data-scene-entities]")?.hidden).toBe(true);
+    expect(query(window, "[data-scene-property-editor]")?.hidden).toBe(true);
+    expect(
+      query(window, "#scene-entity-desktop-crate-beside")?.getAttribute("aria-pressed"),
+    ).toBe("false");
+
+    // Nothing to stage against a document that is gone, and it says so.
+    await click(window, "#scene-property-stage");
+    expect(status()).toContain("refused");
   });
 
   /**
