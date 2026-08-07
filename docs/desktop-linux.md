@@ -415,7 +415,12 @@ base `b338a911` and therefore predates the unified product loop
 describe — one more reason the record above must be re-taken from a fresh successful
 main-branch run. It also predates the contained project lifecycle in sceneaxi#224;
 the hard-bound seed observations below are historical and superseded by the
-first-launch contract above. These lines never describe the offered bytes. All three launch modes
+first-launch contract above. It predates the typed scene-property edit in
+sceneaxi#225 the same way: the `authoring:` bullet below records the
+propose → accept → undo round trip the smoke asserted then, and the script now
+asserts select → stage → save → fresh-session reopen → Play instead, so that
+bullet is a historical observation and not the current proof line.
+These lines never describe the offered bytes. All three launch modes
 printed the same proof (`pnpm smoke`, `pnpm smoke --packaged`, and the AppImage itself
 with `--appimage-extract-and-run --smoke`):
 

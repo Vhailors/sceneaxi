@@ -99,7 +99,11 @@ shared authoring session is rebound. The chrome displays the host-provided
 project name, canonical root, and active document, but never receives file
 contents through the lifecycle port. Standalone chrome has no lifecycle port,
 so those controls refuse honestly. Reload validates
-and reads it through the long-lived authoring session. Web Experience can stage
+and reads it through the long-lived authoring session. An opened project also
+exposes the one editable scene entity the host reports: selecting it fills the
+Build inspector with a numeric Translation X field whose Stage control asks the
+host for a single proposal, and the panel is re-read from the host's inspection
+rather than from a value the chrome keeps. Web Experience can stage
 stored HTML or the normalized `assets/hero.glb` reference as one `/data`
 proposal; Save accepts that proposal atomically. The chrome never executes the
 stored HTML. Stored markup is capped at 100,000 characters; asset paths are
