@@ -14,6 +14,7 @@ import { createDocument, writeDocumentFile } from "@sceneaxi/authoring-core";
 import {
   DESKTOP_PROJECT_REFUSALS,
   DESKTOP_RECENT_PROJECTS_FILE,
+  DESKTOP_RECENT_PROJECTS_QUARANTINE_PREFIX,
   createDesktopProjectHost,
   createDesktopProjectLifecycle,
   desktopProjectReloadRequired,
@@ -40,6 +41,12 @@ function validProject(label: string, title: string) {
   );
   if (!written.ok) throw new Error(`could not create ${label}`);
   return root;
+}
+
+function quarantined(stateDirectory: string) {
+  return readdirSync(stateDirectory)
+    .filter((name) => name.startsWith(DESKTOP_RECENT_PROJECTS_QUARANTINE_PREFIX))
+    .sort();
 }
 
 function statusOf(response: ReturnType<ReturnType<typeof createDesktopProjectLifecycle>["startup"]>) {
@@ -209,7 +216,7 @@ describe("desktop contained project lifecycle", () => {
     );
   });
 
-  it("leaves invalid recent-state bytes untouched and refuses a project write", () => {
+  it("quarantines invalid recent-state bytes and lets New Project proceed", () => {
     const state = temporaryRoot("invalid-recent-state");
     const chosen = temporaryRoot("invalid-recent-chosen");
     const stateFile = join(state, DESKTOP_RECENT_PROJECTS_FILE);
@@ -219,12 +226,93 @@ describe("desktop contained project lifecycle", () => {
 
     const started = statusOf(lifecycle.startup());
     expect(started.recovery?.reason).toBe(DESKTOP_PROJECT_REFUSALS.stateInvalid);
-    expect(lifecycle.createProject(chosen)).toMatchObject({
+    expect(started.recovery?.choices).toEqual(["new", "open"]);
+    // Reporting the recovery choice reads the registry; it never rewrites it.
+    expect(readFileSync(stateFile, "utf8")).toBe(invalidState);
+    expect(quarantined(state)).toEqual([]);
+
+    // A recent entry cannot exist while the registry is unreadable, so the two
+    // actions the recovery does not offer keep refusing by name.
+    expect(lifecycle.openRecent(chosen)).toMatchObject({
       ok: false,
       reason: DESKTOP_PROJECT_REFUSALS.stateInvalid,
     });
+    expect(lifecycle.removeRecent(chosen)).toMatchObject({
+      ok: false,
+      reason: DESKTOP_PROJECT_REFUSALS.stateInvalid,
+    });
+    expect(quarantined(state)).toEqual([]);
+
+    // An offered choice that refuses its own root must not spend the quarantine.
+    expect(lifecycle.createProject("relative/project")).toMatchObject({
+      ok: false,
+      reason: DESKTOP_PROJECT_REFUSALS.rootNotAbsolute,
+    });
+    expect(quarantined(state)).toEqual([]);
     expect(readFileSync(stateFile, "utf8")).toBe(invalidState);
-    expect(existsSync(join(chosen, "scene.json"))).toBe(false);
+
+    const created = lifecycle.createProject(chosen);
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    expect(created.data.status.active).toMatchObject({
+      root: resolve(chosen),
+      source: "new",
+    });
+    expect(created.data.status.recovery).toBeNull();
+    expect(existsSync(join(chosen, "scene.json"))).toBe(true);
+
+    expect(quarantined(state)).toEqual(["recent-projects.invalid-1.json"]);
+    expect(readFileSync(join(state, "recent-projects.invalid-1.json"), "utf8")).toBe(
+      invalidState,
+    );
+    expect(JSON.parse(readFileSync(stateFile, "utf8"))).toEqual({
+      schemaVersion: 1,
+      lastRoot: resolve(chosen),
+      roots: [resolve(chosen)],
+    });
+    expect(readdirSync(state).filter((name) => name.includes(".tmp-"))).toEqual([]);
+
+    const restarted = createDesktopProjectLifecycle({ stateDirectory: state });
+    const status = statusOf(restarted.startup());
+    expect(status.recovery).toBeNull();
+    expect(status.active?.root).toBe(resolve(chosen));
+  });
+
+  it("lets Open Project recover too and never overwrites an earlier quarantine", () => {
+    const state = temporaryRoot("recover-open-state");
+    const project = validProject("recover-open-project", "Recovered project");
+    const stateFile = join(state, DESKTOP_RECENT_PROJECTS_FILE);
+    const earlier = join(state, "recent-projects.invalid-1.json");
+    const earlierBytes = "an earlier quarantined registry";
+    writeFileSync(earlier, earlierBytes, "utf8");
+    const invalidState = JSON.stringify({ schemaVersion: 1, lastRoot: 7, roots: "nope" });
+    writeFileSync(stateFile, invalidState, "utf8");
+    const lifecycle = createDesktopProjectLifecycle({ stateDirectory: state });
+
+    expect(statusOf(lifecycle.startup()).recovery?.reason).toBe(
+      DESKTOP_PROJECT_REFUSALS.stateInvalid,
+    );
+    const opened = lifecycle.openProject(project);
+    expect(opened.ok).toBe(true);
+    if (!opened.ok) return;
+    expect(opened.data.status.active).toMatchObject({
+      root: resolve(project),
+      source: "opened",
+    });
+    expect(opened.data.status.recovery).toBeNull();
+
+    expect(quarantined(state)).toEqual([
+      "recent-projects.invalid-1.json",
+      "recent-projects.invalid-2.json",
+    ]);
+    expect(readFileSync(earlier, "utf8")).toBe(earlierBytes);
+    expect(readFileSync(join(state, "recent-projects.invalid-2.json"), "utf8")).toBe(
+      invalidState,
+    );
+    expect(JSON.parse(readFileSync(stateFile, "utf8"))).toMatchObject({
+      schemaVersion: 1,
+      lastRoot: resolve(project),
+    });
   });
 });
 

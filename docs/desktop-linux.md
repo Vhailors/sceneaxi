@@ -294,7 +294,20 @@ Successful roots are stored as canonical path strings only in versioned
 bytes, credentials, or BYOK material; a temporary mode-0600 file is flushed and
 renamed over the prior version atomically. Startup filters missing/inaccessible or
 invalid recent entries, restores the last valid root, or shows the named recovery
-reason with New/Open choices. Invalid `scene.json` bytes are never replaced. Recent
+reason with New/Open choices. Invalid `scene.json` bytes are never replaced.
+
+An unreadable `recent-projects.json` is a recovery state rather than a dead end.
+Startup reports it and leaves the bytes byte-identical; the two offered choices then
+proceed, but only once their selected root has validated, so a refused root spends
+nothing. The first such New or Open copies the invalid bytes to an exclusively
+created `recent-projects.invalid-N.json` beside the registry and flushes it before a
+fresh registry replaces the old one — the bytes are never overwritten in place,
+never deleted, and never overwrite an earlier quarantine. A copy that cannot be made
+keeps the refusal instead of trading the bytes for a usable app, and a registry so
+unreadable that it yields no bytes at all has nothing to preserve and keeps refusing.
+Open Recent and Remove Recent are not offered as recovery choices and keep refusing
+`DESKTOP_PROJECT_STATE_INVALID`, since no validated recent entry can exist while the
+registry is unreadable. Recent
 entries can be opened only after membership validation and can be removed without
 closing the active project. The window title and Project / Files panel show the
 validated document title (or root basename), canonical root, and active
@@ -398,8 +411,9 @@ with `--appimage-extract-and-run --smoke`):
 The smoke owns a scratch project, so it proves nothing about the project lifecycle the
 *launched* application presents. The 2026-08-05 throwaway-user-data seed observation
 belonged to the retired implicit-root behavior. Current first-launch, validation,
-atomic recent migration, restart recovery, and invalid-byte preservation are gate
-evidence in `tests/desktop/desktop-project-lifecycle.test.ts` and
+atomic recent migration, restart recovery, invalid-byte preservation, and
+invalid-registry quarantine are gate evidence in
+`tests/desktop/desktop-project-lifecycle.test.ts` and
 `tests/e2e/desktop-project-lifecycle-golden.test.ts`; a post-wave packaged artifact and
 pixel record remains separate work rather than being inferred from those Node tests.
 

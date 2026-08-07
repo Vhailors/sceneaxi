@@ -93,6 +93,7 @@ export {
 
 export {
   DESKTOP_RECENT_PROJECTS_FILE,
+  DESKTOP_RECENT_PROJECTS_QUARANTINE_PREFIX,
   createDesktopProjectLifecycle,
   type DesktopProjectLifecycle,
   type DesktopProjectLifecycleOptions,

@@ -30,6 +30,9 @@ import {
 import { seedDesktopProject } from "./project-seed.js";
 
 const RECENT_PROJECTS_FILE = "recent-projects.json";
+const QUARANTINE_PREFIX = "recent-projects.invalid-";
+const QUARANTINE_EXTENSION = ".json";
+const MAX_QUARANTINE_SLOTS = 32;
 const MAX_RECENT_PROJECTS = 12;
 const RECOVERY_CHOICES = Object.freeze(["new", "open"] as const);
 
@@ -70,6 +73,11 @@ function own(value: unknown, key: string): unknown {
   if (typeof value !== "object" || value === null) return undefined;
   const descriptor = Object.getOwnPropertyDescriptor(value, key);
   return descriptor !== undefined && "value" in descriptor ? descriptor.value : undefined;
+}
+
+function errorCode(error: unknown): string | null {
+  const code = own(error, "code");
+  return typeof code === "string" ? code : null;
 }
 
 function refusal(
@@ -221,6 +229,7 @@ export function createDesktopProjectLifecycle(
   const stateFile = join(options.stateDirectory, RECENT_PROJECTS_FILE);
   let initialized = false;
   let stateReadable = true;
+  let invalidStateText: string | null = null;
   let active: DesktopProjectSummary | null = null;
   let roots: string[] = [];
   let recovery: DesktopProjectStatus["recovery"] = null;
@@ -281,32 +290,40 @@ export function createDesktopProjectLifecycle(
     }
   };
 
+  /**
+   * Latch the unreadable registry and keep the exact bytes a later New/Open must
+   * preserve. A registry that could not even be read carries no bytes, so
+   * quarantine has nothing to copy and refuses rather than inventing a backup.
+   */
+  const markStateInvalid = (preserved: string | null): null => {
+    stateReadable = false;
+    invalidStateText = preserved;
+    recovery = Object.freeze({
+      reason: DESKTOP_PROJECT_REFUSALS.stateInvalid,
+      root: null,
+      choices: RECOVERY_CHOICES,
+    });
+    return null;
+  };
+
   const initialize = (): DesktopProjectResponse | null => {
     if (initialized) return null;
     initialized = true;
     if (!existsSync(stateFile)) return null;
+    let text: string;
+    try {
+      text = readFileSync(stateFile, "utf8");
+    } catch {
+      return markStateInvalid(null);
+    }
     let decoded: unknown;
     try {
-      decoded = JSON.parse(readFileSync(stateFile, "utf8"));
+      decoded = JSON.parse(text);
     } catch {
-      stateReadable = false;
-      recovery = Object.freeze({
-        reason: DESKTOP_PROJECT_REFUSALS.stateInvalid,
-        root: null,
-        choices: RECOVERY_CHOICES,
-      });
-      return null;
+      return markStateInvalid(text);
     }
     const parsed = storedState(decoded);
-    if (parsed === null) {
-      stateReadable = false;
-      recovery = Object.freeze({
-        reason: DESKTOP_PROJECT_REFUSALS.stateInvalid,
-        root: null,
-        choices: RECOVERY_CHOICES,
-      });
-      return null;
-    }
+    if (parsed === null) return markStateInvalid(text);
 
     const validRoots: string[] = [];
     for (const candidate of parsed.state.roots) {
@@ -341,10 +358,68 @@ export function createDesktopProjectLifecycle(
     return null;
   };
 
+  /**
+   * The one way an unreadable registry becomes writable again, taken only by the
+   * New and Open choices the recovery status offers, and only once their selected
+   * root has already validated.
+   *
+   * The invalid bytes are copied to an exclusively created `recent-projects.invalid-N.json`
+   * beside the registry and flushed before the registry itself is replaced, so
+   * they are never overwritten in place, never deleted, and never overwrite an
+   * earlier quarantine. A copy that cannot be made leaves the dead end in place
+   * rather than trading the bytes for a usable app.
+   */
+  const quarantineInvalidState = (): DesktopProjectResponse | null => {
+    if (stateReadable) return null;
+    const preserved = invalidStateText;
+    if (preserved === null) {
+      return projectRefuse(
+        DESKTOP_PROJECT_REFUSALS.stateInvalid,
+        "The recent-project state could not be read, so it was left byte-identical and cannot be quarantined.",
+      );
+    }
+    let descriptor: number | null = null;
+    try {
+      mkdirSync(options.stateDirectory, { recursive: true });
+      for (let slot = 1; slot <= MAX_QUARANTINE_SLOTS && descriptor === null; slot += 1) {
+        const candidate = join(
+          options.stateDirectory,
+          `${QUARANTINE_PREFIX}${slot}${QUARANTINE_EXTENSION}`,
+        );
+        try {
+          descriptor = openSync(candidate, "wx", 0o600);
+        } catch (error) {
+          if (errorCode(error) !== "EEXIST") throw error;
+        }
+      }
+      if (descriptor === null) {
+        throw new Error(
+          `every quarantine slot up to ${MAX_QUARANTINE_SLOTS} is already taken`,
+        );
+      }
+      writeFileSync(descriptor, preserved, "utf8");
+      fsyncSync(descriptor);
+      closeSync(descriptor);
+      descriptor = null;
+    } catch (error) {
+      if (descriptor !== null) closeSync(descriptor);
+      return projectRefuse(
+        DESKTOP_PROJECT_REFUSALS.stateInvalid,
+        "The invalid recent-project state could not be quarantined, so it was left byte-identical.",
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+    stateReadable = true;
+    invalidStateText = null;
+    return null;
+  };
+
   const remember = (
     project: ValidProject,
     source: DesktopProjectSource,
   ): DesktopProjectResponse => {
+    const quarantined = quarantineInvalidState();
+    if (quarantined !== null) return quarantined;
     const previousRoots = roots;
     roots = [project.root, ...roots.filter((root) => root !== project.root)].slice(
       0,
@@ -374,12 +449,6 @@ export function createDesktopProjectLifecycle(
   ): DesktopProjectResponse => {
     const failure = initialize();
     if (failure !== null) return failure;
-    if (!stateReadable) {
-      return projectRefuse(
-        DESKTOP_PROJECT_REFUSALS.stateInvalid,
-        "The recent-project state is invalid and was left byte-identical.",
-      );
-    }
     const checked = validateProject(selected);
     if (!checked.ok) return refuseValidation(checked);
     return remember(checked.project, source);
@@ -391,12 +460,6 @@ export function createDesktopProjectLifecycle(
     createProject(selected: string): DesktopProjectResponse {
       const failure = initialize();
       if (failure !== null) return failure;
-      if (!stateReadable) {
-        return projectRefuse(
-          DESKTOP_PROJECT_REFUSALS.stateInvalid,
-          "The recent-project state is invalid and was left byte-identical.",
-        );
-      }
       const root = canonicalRoot(selected, true);
       if (!root.ok) return refuseValidation(root);
       const documentFile = join(root.project.root, DESKTOP_ACTIVE_DOCUMENT_PATH);
@@ -469,3 +532,6 @@ export function createDesktopProjectLifecycle(
 }
 
 export const DESKTOP_RECENT_PROJECTS_FILE = RECENT_PROJECTS_FILE;
+
+/** Name prefix of the preserved copies an invalid registry is quarantined to. */
+export const DESKTOP_RECENT_PROJECTS_QUARANTINE_PREFIX = QUARANTINE_PREFIX;
