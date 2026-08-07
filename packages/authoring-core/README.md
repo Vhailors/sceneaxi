@@ -129,6 +129,7 @@ import {
   editDirect,
   recoverIncompleteApplies,
   resolveApplyTransaction,
+  applyUndoAvailability,
   undoLastApply,
   writeDocumentFile,
   createDocument,
@@ -161,6 +162,12 @@ if (p.ok) {
 
 // Service entrypoints recover first; hosts may also recover explicitly at startup.
 const recovered = recoverIncompleteApplies({ cwd: projectRoot });
+
+// A host that offers Undo asks first, so it never offers an action that refuses:
+// "available" only when the latest completed journal entry's documents still
+// carry its after-image, "recovery-pending" while an interrupted apply is
+// unresolved, "unavailable" otherwise — including every read failure.
+const undoState = applyUndoAvailability({ cwd: projectRoot });
 
 // Undo restores exact prior bytes from the latest completed journal entry.
 const undone = undoLastApply({ cwd: projectRoot });

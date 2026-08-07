@@ -29,7 +29,7 @@ failing obscurely.
 
 | Command | Effect |
 |---|---|
-| `status --document <path>` | Report the document's id, content hash, top-level `data` keys, and validated inert document data |
+| `status --document <path>` | Report the document's id, content hash, top-level `data` keys, whether the project's apply journal makes `undo` available, and validated inert document data |
 | `propose --document <path> --pointer <ptr> --value <json>` | Render the diff for review — **writes nothing** |
 | `apply --document <path> --pointer <ptr> --value <json>` | Propose and accept in one non-interactive step |
 | `undo` | Revert the last completed apply |
@@ -84,7 +84,8 @@ Every control declares its kind — `view` changes visual state and works,
 `review` edits the fixture Change Review queue and writes no document, `live`
 declares a product action the injected desktop host — an enclosing consumer
 runtime — must bind (the assistant prompt, Send, Retry, and the artifact
-manipulators, plus New/Open Project, Recent, Reload/Save/Play, and Web staging, which the packaged Linux tier
+manipulators, plus New/Open Project, Recent, Reload/Save/Play, Undo once the
+project's apply journal reports a completed Save, and Web staging, which the packaged Linux tier
 binds through its bridge), and `inert` keeps its focus stop and refuses by a name
 from `DESKTOP_VISUAL_REFUSALS`. This app invokes no authoring operation itself
 and adds no engine/profile/site/billing dependency: the host remains the adapter

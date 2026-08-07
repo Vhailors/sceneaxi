@@ -413,6 +413,16 @@ the `sceneaxi-desktop` CLI's `DESKTOP_COMMANDS`. File, Edit, Run, the palette,
 and keyboard accelerators carry the same interaction command id and dispatch it
 through one handler table. Commands this desktop cannot execute are absent.
 
+Each accelerator is declared beside its command in that list rather than written
+into the key handler, so the chord a menu prints is the chord that fires; a
+command may declare none (New Project does). They are plain `Ctrl`/`Cmd` chords,
+and a `Shift` or `Alt` modifier is not one of them, so `Ctrl+Shift+Z` is not
+Undo. A command whose declaration does not set `allowInTextEntry` does not fire
+while focus is in a text-entry context — only the palette opener does, so
+`Ctrl/Cmd+K` still reaches the palette from the assistant prompt. A refused
+command names its reason in the outcome dialog, which carries the failure's own
+code and message and is dismissed by its one `Dismiss` button or `Escape`.
+
 ## Responsive and windowing strategy
 
 The archive is a fixed 1680×1000 stage scaled with `transform: scale()`. That is
@@ -481,9 +491,10 @@ Two rules keep this honest:
   points at the paragraph carrying its refusal — a screen reader gets the reason,
   not just "dimmed". Every button is rendered through the one
   `button(control, …)` helper — the mode rail, the dock tabs, the
-  viewport-source tabs, the profile chips, the drawer openers, the status-bar
-  overlay shortcuts, the assistant modes, the sculpt cancel, and each of the four
-  overlay dismiss buttons, and the assistant artifact manipulators. The prompt
+  viewport-source tabs, the profile chips, the drawer openers, the menu triggers
+  and every command row under them, the palette rows, the status-bar
+  overlay shortcuts, the assistant modes, the sculpt cancel, the outcome
+  dialog's dismissal, and the assistant artifact manipulators. The prompt
   uses the parallel `promptInput(control)` helper so it carries the same
   `data-kind`, refusal reference, and profile-switch demotion; when inert it is
   `readonly` rather than removed from the focus order. The recent-project chooser
@@ -521,6 +532,15 @@ Two rules keep this honest:
   by `Escape` — returns focus to the control that opened it. The `keydown`
   handler is on the document rather than the shell so a lost focus cannot swallow
   `Escape`.
+- **A `role="menu"` is backed by the keys that role implies.** A menu trigger
+  carries `aria-haspopup="menu"` and an `aria-expanded` that tracks its panel;
+  opening one moves focus to its first non-inert `role="menuitem"`, `ArrowUp` /
+  `ArrowDown` / `Home` / `End` move between the items, and `Escape` or a click
+  outside closes it. Closing a menu while focus is still inside it returns focus
+  to the trigger that owns it — the same return the overlay makes — because
+  hiding the focused element would otherwise restart the Tab order at the top of
+  the document. The items keep their plain Tab stop as well, so an inert command
+  stays reachable with its refusal, exactly like every other inert control here.
 - **Element ids are unique and well-formed**, because a control id is derived
   from a declared identity (`DESKTOP_INTERACTION_COMMANDS[].id`,
   `DESKTOP_MENU_IDS`) and never from display text. An `aria-describedby` reference is only meaningful
@@ -618,6 +638,13 @@ sentence can return by review slip.
   `tests/e2e/desktop-product-loop-golden.test.ts` crosses the rendered profiles,
   existing desktop bridge, shared authoring session, durable accept, and
   orchestrated composed-scene play path in one test.
+
+- **Every interaction command is invoked, not inventoried** —
+  `tests/e2e/desktop-command-interactions-golden.test.ts` loads the emitted
+  document, then drives each `DESKTOP_INTERACTION_COMMANDS` id from its menu
+  item, its palette row, and its accelerator, and asserts the host call or the
+  named refusal each one produces. A control that only closed its overlay would
+  fail there, which is the fault the palette rows carried before #226.
 
 - **The model/renderer split is enforced, not conventional** —
   `apps/desktop-shell/test/control-accounting.test.ts`. Review round after review
