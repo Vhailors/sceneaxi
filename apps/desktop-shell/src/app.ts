@@ -487,7 +487,7 @@ export function runDesktopCommand(
         documentId: status.documentId,
         contentHash: status.contentHash,
         dataKeys: status.dataKeys,
-        undoAvailable: status.undoAvailable,
+        undoAvailability: status.undoAvailability,
         data: status.data,
       },
       ["Run `sceneaxi-desktop propose --document ... --pointer ... --value ...` to edit"],

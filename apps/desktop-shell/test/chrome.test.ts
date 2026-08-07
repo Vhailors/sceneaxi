@@ -37,7 +37,6 @@ const ALL_STATES: ReadonlyArray<readonly [string, DesktopVisualState]> = [
   ["profile:web", createDesktopVisualState({ profile: "web" })],
   ["profile:kids", createDesktopVisualState({ profile: "kids" })],
   ["overlay:palette", createDesktopVisualState({ overlay: "palette" })],
-  ["overlay:outcome", createDesktopVisualState({ overlay: "outcome" })],
   ["assistant:closed", createDesktopVisualState({ assistant: "closed" })],
   [
     "sculpt:running",

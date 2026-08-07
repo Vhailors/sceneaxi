@@ -469,17 +469,43 @@ function readJournals(
   return { ok: true, entries };
 }
 
-export function hasCompletedApplyJournal(
+export type ApplyUndoAvailability =
+  | "available"
+  | "unavailable"
+  | "recovery-pending";
+
+function latestCompletedJournal(
+  entries: readonly ApplyJournalEntry[],
+): ApplyJournalEntry | undefined {
+  return entries
+    .filter((entry) => entry.state === "completed")
+    .sort(
+      (a, b) => (b.completionOrder ?? 0) - (a.completionOrder ?? 0),
+    )[0];
+}
+
+export function applyUndoAvailability(
   input: { readonly cwd?: string } = {},
-): boolean {
+): ApplyUndoAvailability {
   try {
-    const journals = readJournals(input.cwd ?? process.cwd());
-    return (
-      journals.ok &&
-      journals.entries.some((entry) => entry.state === "completed")
-    );
+    const cwd = input.cwd ?? process.cwd();
+    const active = readActiveJournal(cwd);
+    if (!active.ok) return "unavailable";
+    if (active.entry !== null) return "recovery-pending";
+    const journals = readJournals(cwd);
+    if (!journals.ok) return "unavailable";
+    const latest = latestCompletedJournal(journals.entries);
+    return latest !== undefined && latest.documents.every((document) => {
+      const path = canonicalPath(resolve(cwd, document.documentPath));
+      return (
+        fileExists(path) &&
+        contentHash(readFileSync(path, "utf8")) === document.afterContentHash
+      );
+    })
+      ? "available"
+      : "unavailable";
   } catch {
-    return false;
+    return "unavailable";
   }
 }
 
@@ -866,12 +892,7 @@ export function undoLastApply(
     const journals = readJournals(cwd);
     if (!journals.ok) return journals;
 
-    const latest = journals.entries
-      .filter((entry) => entry.state === "completed")
-      .sort(
-        (a, b) =>
-          (b.completionOrder ?? 0) - (a.completionOrder ?? 0),
-      )[0];
+    const latest = latestCompletedJournal(journals.entries);
     if (latest === undefined) {
       return {
         ok: false,

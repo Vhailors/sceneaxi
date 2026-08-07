@@ -46,7 +46,9 @@ function projectStatus() {
 
 function engineResponse(
   request: Record<string, unknown>,
-  state: { undoAvailable: boolean },
+  state: {
+    undoAvailability: "available" | "unavailable" | "recovery-pending";
+  },
 ) {
   const payload = request["payload"] as Record<string, unknown> | undefined;
   const action = request["action"];
@@ -61,7 +63,7 @@ function engineResponse(
         documentId: "command-test",
         contentHash: CONTENT_HASH,
         dataKeys: ["entities"],
-        undoAvailable: state.undoAvailable,
+        undoAvailability: state.undoAvailability,
         data: { entities: [] },
       },
     };
@@ -78,7 +80,7 @@ function engineResponse(
     };
   }
   if (action === "authoring" && op === "accept") {
-    state.undoAvailable = true;
+    state.undoAvailability = "available";
     return {
       ok: true,
       action,
@@ -91,7 +93,7 @@ function engineResponse(
     };
   }
   if (action === "authoring" && op === "undo") {
-    state.undoAvailable = false;
+    state.undoAvailability = "unavailable";
     return {
       ok: true,
       action,
@@ -127,12 +129,15 @@ async function settle(window: HappyWindow) {
 
 async function harness(
   profile: "game" | "web" | "kids" = "web",
-  initialUndoAvailable = false,
+  initialUndoAvailability:
+    | "available"
+    | "unavailable"
+    | "recovery-pending" = "unavailable",
 ) {
   const window = new HappyWindow({ width: 1200, height: 800 });
   windows.push(window);
   const calls: HostCall[] = [];
-  const state = { undoAvailable: initialUndoAvailable };
+  const state = { undoAvailability: initialUndoAvailability };
   const clone = <T>(value: T): T => window.eval(`(${JSON.stringify(value)})`) as T;
   Object.defineProperty(window, "structuredClone", { value: clone });
   Object.defineProperty(window, "sceneaxiDesktopLinux", {
@@ -290,12 +295,21 @@ describe("desktop command menu, palette, and accelerator parity", () => {
         const { window, calls } = await harness();
         await prepare(command, window);
         calls.splice(0);
+        const shell = element(window, ".shell");
         const input = window.document.createElement("input") as unknown as HappyHTMLElement;
-        element(window, ".shell").append(input);
-        const event = shortcut(window, command.key, input);
-        await settle(window);
-        expect(event.defaultPrevented).toBe(false);
-        expect(calls).not.toContainEqual(expectedEffect(command));
+        const editable = window.document.createElement("div") as unknown as HappyHTMLElement;
+        editable.setAttribute("contenteditable", "");
+        const plaintext = window.document.createElement("div") as unknown as HappyHTMLElement;
+        plaintext.setAttribute("contenteditable", "plaintext-only");
+        const inherited = window.document.createElement("span") as unknown as HappyHTMLElement;
+        editable.append(inherited);
+        shell.append(input, editable, plaintext);
+        for (const target of [input, editable, plaintext, inherited]) {
+          const event = shortcut(window, command.key, target);
+          await settle(window);
+          expect(event.defaultPrevented).toBe(false);
+          expect(calls).not.toContainEqual(expectedEffect(command));
+        }
       });
     }
   }
@@ -457,7 +471,7 @@ describe("desktop command menu, palette, and accelerator parity", () => {
   });
 
   it("exposes persisted Undo availability after a renderer relaunch", async () => {
-    const { window, calls } = await harness("web", true);
+    const { window, calls } = await harness("web", "available");
     const undo = element(window, "#menu-command-edit-undo");
     expect(undo.getAttribute("aria-disabled")).toBeNull();
 
@@ -470,6 +484,21 @@ describe("desktop command menu, palette, and accelerator parity", () => {
       op: "undo",
     });
     expect(undo.getAttribute("aria-disabled")).toBe("true");
+  });
+
+  it("keeps Undo inert while journal recovery is pending", async () => {
+    const { window, calls } = await harness("web", "recovery-pending");
+    const undo = element(window, "#menu-command-edit-undo");
+    expect(undo.getAttribute("aria-disabled")).toBe("true");
+    expect(undo.dataset.refusal).toBe(DESKTOP_PRODUCT_REFUSALS.recoveryPending);
+
+    const event = shortcut(window, "z");
+    await settle(window);
+    expect(event.defaultPrevented).toBe(true);
+    expect(calls).toHaveLength(0);
+    expect(element(window, "[data-outcome-code]").textContent).toBe(
+      DESKTOP_PRODUCT_REFUSALS.recoveryPending,
+    );
   });
 
   it("names the refusal when an accelerator reaches an unavailable command", async () => {

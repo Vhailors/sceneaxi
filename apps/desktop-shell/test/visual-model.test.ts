@@ -344,6 +344,18 @@ describe("desktop visual model — overlays and palette", () => {
     expect(state.overlay).toBeNull();
   });
 
+  it("keeps outcome UI outside constructible visual state", () => {
+    expect(
+      createDesktopVisualState({ overlay: "outcome" as never }).overlay,
+    ).toBeNull();
+    expect(
+      applyDesktopVisualAction(createDesktopVisualState(), {
+        type: "open-overlay",
+        overlay: "outcome" as never,
+      }).overlay,
+    ).toBeNull();
+  });
+
   it("projects exactly the real desktop commands into the palette", () => {
     const view = desktopVisualView(createDesktopVisualState());
     const rows = view.overlay.paletteGroups.flatMap((group) => group.items);
@@ -622,7 +634,7 @@ describe("desktop visual model — refusals and honesty", () => {
     const state = drive([
       { type: "select-mode", mode: "compose" },
       { type: "decide-change", index: 2 },
-      { type: "open-overlay", overlay: "outcome" },
+      { type: "open-overlay", overlay: "palette" },
     ]);
     expect(JSON.stringify(desktopVisualView(state))).toBe(
       JSON.stringify(desktopVisualView(state)),

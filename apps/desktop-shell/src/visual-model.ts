@@ -131,24 +131,13 @@ export const DESKTOP_PROFILE_PACKAGES: Readonly<
 export const DESKTOP_DOCK_TAB_IDS = EDITOR_SHELL_DOCK_TAB_IDS;
 export type DesktopDockTabId = (typeof DESKTOP_DOCK_TAB_IDS)[number];
 
-export const DESKTOP_OVERLAY_IDS = Object.freeze([
-  "palette",
-  "outcome",
-] as const);
+export const DESKTOP_OVERLAY_IDS = Object.freeze(["palette"] as const);
 export type DesktopOverlayId = (typeof DESKTOP_OVERLAY_IDS)[number];
 
-/**
- * The buttons that dismiss an overlay.
- *
- * Held as data with one identity each because there are four of them across two
- * dialogs, and a single shared `overlay-close` control cannot be rendered onto
- * four elements: an id is unique or the `aria-describedby` and `getElementById`
- * references in this document stop meaning anything.
- */
 export const DESKTOP_OVERLAY_DISMISSALS: ReadonlyArray<
   Readonly<{
     id: string;
-    overlay: DesktopOverlayId;
+    overlay: "outcome";
     label: string;
     emphasis: "ghost" | "primary";
   }>
@@ -240,7 +229,7 @@ export const DESKTOP_VISUAL_REFUSALS = Object.freeze({
   noKernelSession: "DESKTOP_NO_KERNEL_SESSION",
   /** The chrome is not bound to a document, so nothing may be authored. */
   noDocumentBound: "DESKTOP_NO_DOCUMENT_BOUND",
-  /** Undo becomes actionable only after this renderer session completes a save. */
+  /** Undo requires a completed Save in the active project's authoring journal. */
   undoUnavailable: "DESKTOP_UNDO_UNAVAILABLE",
   /** The window is smaller than the editor chrome's declared minimum. */
   windowBelowMinimum: "DESKTOP_WINDOW_BELOW_MINIMUM",
@@ -270,7 +259,7 @@ export const DESKTOP_REFUSAL_MESSAGES: Readonly<
   [DESKTOP_VISUAL_REFUSALS.noDocumentBound]:
     "This control has no bound authoring operation, so it writes nothing.",
   [DESKTOP_VISUAL_REFUSALS.undoUnavailable]:
-    "Undo becomes available after this desktop session completes a Save.",
+    "Undo becomes available when the active project authoring journal reports a completed Save.",
   [DESKTOP_VISUAL_REFUSALS.windowBelowMinimum]:
     "The editor chrome refuses below its minimum window size rather than rendering an unusable layout.",
   [DESKTOP_VISUAL_REFUSALS.webCapabilityRequired]:
@@ -492,6 +481,7 @@ function normalize(state: DesktopVisualState): DesktopVisualState {
   return Object.freeze({
     ...state,
     dockTab,
+    overlay: state.overlay === "palette" ? state.overlay : null,
     assistant,
     assistantThinking: assistant === "open" ? state.assistantThinking : false,
     sculptPass: Math.min(Math.max(Math.trunc(state.sculptPass), 0), 4),
@@ -1059,7 +1049,7 @@ export type DesktopOverlayView = Readonly<{
    */
   dismissals: ReadonlyArray<
     Readonly<{
-      overlay: DesktopOverlayId;
+      overlay: "outcome";
       label: string;
       emphasis: "ghost" | "primary";
       control: DesktopControl;

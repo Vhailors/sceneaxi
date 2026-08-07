@@ -17,6 +17,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   apply,
+  applyUndoAvailability,
   acquireAtomicWriteLocks,
   atomicWriteAll,
   contentHash,
@@ -106,6 +107,7 @@ describe("E1 apply journal", () => {
 
     const applied = apply({ cwd, proposal: proposed.proposal });
     expect(applied.ok).toBe(true);
+    expect(applyUndoAvailability({ cwd })).toBe("available");
     expect(readFileSync(absolutePath, "utf8")).not.toBe(before);
 
     const undone = undoLastApply({ cwd });
@@ -528,6 +530,7 @@ describe("E1 apply journal", () => {
     >;
     writeFileSync(aPath, beforeA, "utf8");
     stageActiveJournal(journalDir, { ...journal, state: "undoing" });
+    expect(applyUndoAvailability({ cwd })).toBe("recovery-pending");
 
     const recovered = recoverIncompleteApplies({ cwd });
 
@@ -537,6 +540,7 @@ describe("E1 apply journal", () => {
     expect(
       (JSON.parse(readFileSync(journalPath, "utf8")) as { state: string }).state,
     ).toBe("undone");
+    expect(applyUndoAvailability({ cwd })).toBe("unavailable");
   });
 
   it("does not prepare a journal before acquiring every target lock", () => {

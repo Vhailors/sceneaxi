@@ -835,9 +835,6 @@ function overlays(view: DesktopVisualView): string {
   // bytes, so a screenshot of one state needs no script to have run.
   const shown = (id: string): string => (view.state.overlay === id ? "" : " hidden");
 
-  // One modelled control per dismiss button, so each of the four carries its own
-  // id and kind instead of four elements sharing a control that can only be
-  // rendered once.
   const dismissals = (overlay: string): string =>
     view.overlay.dismissals
       .filter((dismissal) => dismissal.overlay === overlay)
@@ -861,10 +858,10 @@ function overlays(view: DesktopVisualView): string {
     </div>
   </div>
 
-  <div class="overlay" data-overlay="outcome" role="dialog" aria-modal="true" aria-labelledby="outcome-title"${shown("outcome")}>
+  <div class="overlay" data-overlay="outcome" role="dialog" aria-modal="true" aria-labelledby="outcome-title" hidden>
     <div class="overlay-card overlay-refused">
-      <div class="overlay-head"><span class="overlay-mark mark-refuse" aria-hidden="true">!</span><h2 id="outcome-title" data-outcome-title>Operation refused</h2></div>
-      <p class="overlay-body"><code data-outcome-code>${escapeHtml(DESKTOP_PRODUCT_REFUSALS.runtimeRequestRefused)}</code><br><span data-outcome-message>The desktop host refused the requested operation.</span></p>
+      <div class="overlay-head"><span class="overlay-mark mark-refuse" aria-hidden="true">!</span><h2 id="outcome-title" data-outcome-title></h2></div>
+      <p class="overlay-body"><code data-outcome-code></code><br><span data-outcome-message></span></p>
       <div class="overlay-actions">${dismissals("outcome")}</div>
     </div>
   </div>
@@ -1391,7 +1388,7 @@ if (shell) {
   let editableScene = null;
   let selectedSceneEntityId = null;
   let sceneRefusalText = null;
-  let undoAvailable = false;
+  let undoAvailability = 'unavailable';
   // One product request at a time. Every live control reads \`projectData\` before
   // its first await, so two overlapping clicks would each build a proposal from
   // the same pre-edit document and the second would replace the first in the
@@ -1665,7 +1662,7 @@ if (shell) {
     projectDirty = false;
     projectRecovering = false;
     clearSceneProperty();
-    undoAvailable = false;
+    undoAvailability = 'unavailable';
     if (response.data.outcome === 'removed') {
       productStatus(activeProject === null ? 'closed' : 'open', 'Recent project removed · active project unchanged');
       return;
@@ -1722,7 +1719,7 @@ if (shell) {
     projectContentHash = null;
     projectDirty = false;
     projectRecovering = false;
-    undoAvailable = false;
+    undoAvailability = 'unavailable';
     if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' || status.data === null || typeof status.contentHash !== 'string') {
       clearSceneProperty();
       productStatus('refused', 'Recovery reset · ' + diagnostic + ' · ' + (reason || T.product.refusals.documentDataInvalid));
@@ -1731,7 +1728,9 @@ if (shell) {
     projectData = status.data;
     projectContentHash = status.contentHash;
     syncSceneProperties(status);
-    undoAvailable = status.undoAvailable === true;
+    undoAvailability = status.undoAvailability === 'available' || status.undoAvailability === 'recovery-pending'
+      ? status.undoAvailability
+      : 'unavailable';
     syncCommandAvailability();
     productStatus('open', withSceneRefusal(T.product.documentPath + ' · re-opened after ' + diagnostic + ' · ' + status.documentId));
     return true;
@@ -1785,7 +1784,9 @@ if (shell) {
     syncSceneProperties(status);
     projectDirty = false;
     projectRecovering = false;
-    undoAvailable = status.undoAvailable === true;
+    undoAvailability = status.undoAvailability === 'available' || status.undoAvailability === 'recovery-pending'
+      ? status.undoAvailability
+      : 'unavailable';
     syncCommandAvailability();
     productStatus('open', withSceneRefusal(T.product.documentPath + ' · open · ' + status.documentId));
     return true;
@@ -1897,7 +1898,7 @@ if (shell) {
       projectContentHash = null;
       projectDirty = false;
       projectRecovering = false;
-      undoAvailable = true;
+      undoAvailability = 'available';
       syncCommandAvailability();
       // The written document, not the diff of how it got there: the applied
       // proposal is spent, so the review panel goes with it while the panel
@@ -1933,7 +1934,7 @@ if (shell) {
   // so a staged edit would go with it. Every other path here that can lose one
   // either refuses by name or discards it explicitly; this one refuses.
   const undoProject = async () => {
-    if (!undoAvailable) return;
+    if (undoAvailability !== 'available') return;
     if (projectDirty) {
       const code = T.product.refusals.undoStagedProposal;
       productStatus('refused', 'Undo refused · ' + code);
@@ -2339,8 +2340,16 @@ if (shell) {
       if (el.dataset.command !== 'edit-undo') return;
       applyControl(el);
       if (shell.dataset.profile !== 'kids') {
-        el.dataset.kind = undoAvailable ? 'live' : 'inert';
-        setRefusal(el, undoAvailable ? null : T.commandRefusals.undoUnavailable);
+        const available = undoAvailability === 'available';
+        el.dataset.kind = available ? 'live' : 'inert';
+        setRefusal(
+          el,
+          available
+            ? null
+            : undoAvailability === 'recovery-pending'
+              ? T.product.refusals.recoveryPending
+              : T.commandRefusals.undoUnavailable,
+        );
       }
     });
   };
@@ -2505,6 +2514,23 @@ if (shell) {
     if (root === null) closeMenus();
   });
 
+  const isTextEntryTarget = (target) => {
+    if (!(target instanceof Element)) return false;
+    if (target.closest('input, textarea, select') !== null) return true;
+    if (target instanceof HTMLElement && target.isContentEditable) return true;
+    let current = target;
+    while (current !== null) {
+      const attribute = current.getAttribute('contenteditable');
+      if (attribute !== null) {
+        const value = attribute.trim().toLowerCase();
+        if (value === 'false') return false;
+        if (value === '' || value === 'true' || value === 'plaintext-only') return true;
+      }
+      current = current.parentElement;
+    }
+    return false;
+  };
+
   // On the document, not the shell: once focus is inside a dialog the shell is
   // still the ancestor, but a restored or lost focus must not silently drop the
   // Escape key, and the trap has to see every Tab.
@@ -2518,11 +2544,7 @@ if (shell) {
         ? T.paletteShortcut
         : T.commands.find((candidate) => candidate.key === key);
       if (command) {
-        const target = event.target instanceof Element ? event.target : null;
-        const textEntry = target !== null && (
-          target.matches('input, textarea, select') ||
-          target.closest('[contenteditable="true"]') !== null
-        );
+        const textEntry = isTextEntryTarget(event.target);
         if (!textEntry || command.allowInTextEntry) {
           event.preventDefault();
           executeCommand(command.id);

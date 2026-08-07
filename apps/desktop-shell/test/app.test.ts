@@ -59,7 +59,7 @@ describe("desktop shell commands", () => {
     expect(r.result["documentId"]).toBe("scene");
     expect(r.result["dataKeys"]).toEqual(["entities"]);
     expect(r.result["contentHash"]).toMatch(/^sha256:[0-9a-f]{64}$/);
-    expect(r.result["undoAvailable"]).toBe(false);
+    expect(r.result["undoAvailability"]).toBe("unavailable");
   });
 
   it("reports persisted Undo availability to a fresh session", () => {
@@ -78,13 +78,13 @@ describe("desktop shell commands", () => {
     const status = relaunched.status("scene.json");
     expect(status.ok).toBe(true);
     if (!status.ok) throw new Error("applied document did not reopen");
-    expect(status.undoAvailable).toBe(true);
+    expect(status.undoAvailability).toBe("available");
 
     expect(relaunched.undo().ok).toBe(true);
     const afterUndo = relaunched.status("scene.json");
     expect(afterUndo.ok).toBe(true);
     if (!afterUndo.ok) throw new Error("undone document did not reopen");
-    expect(afterUndo.undoAvailable).toBe(false);
+    expect(afterUndo.undoAvailability).toBe("unavailable");
   });
 
   it("refuses status on a missing document without throwing", () => {

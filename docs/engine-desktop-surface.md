@@ -179,8 +179,8 @@ always has a refusal and a non-inert one never does.
 |---|---|---|
 | `view` | changes visual state; genuinely works | mode rail, dock tabs, profile switch, assistant open/close, its Ask/Build/Agent modes and its three route chips, menu openers, the palette openers, the outcome dismissal, the sculpt cancel, drawer toggles, the scene-entity selection |
 | `review` | edits the fixture Change Review queue; **writes no document** | accept/reject a row, accept all, reject all |
-| `live` | delegates a product action to an injected desktop-host seam; refuses visibly when that host is absent | File New/Open/Save, Edit Undo after a completed Save, Run Play, their palette rows and accelerators, the Translation X field and its Stage control, stage Web HTML, inject a project-relative Web asset; and — only once the packaged Linux runtime binds them — the assistant prompt, Send, Retry, and the artifact manipulators |
-| `inert` | renders, keeps its focus stop, refuses by name | Undo before this renderer session completes a Save, Sculpt object, standalone-shell assistant prompt/Send/Retry and the four artifact manipulators, the three viewport-source tabs, and — on the refuse-only profile — every control except the seven named below |
+| `live` | delegates a product action to an injected desktop-host seam; refuses visibly when that host is absent | File New/Open/Save, Edit Undo when the active project's authoring journal reports a completed Save, Run Play, their palette rows and accelerators, the Translation X field and its Stage control, stage Web HTML, inject a project-relative Web asset; and — only once the packaged Linux runtime binds them — the assistant prompt, Send, Retry, and the artifact manipulators |
+| `inert` | renders, keeps its focus stop, refuses by name | Undo when the active project's authoring journal has no completed Save or has recovery pending, Sculpt object, standalone-shell assistant prompt/Send/Retry and the four artifact manipulators, the three viewport-source tabs, and — on the refuse-only profile — every control except the seven named below |
 
 The chrome imports no engine, profile, site, billing, or host package, and
 reaches no authoring package itself. Its live adapter calls the host's existing
@@ -367,7 +367,7 @@ document also explains. `test/product-loop.test.ts` asserts that in both directi
 | `DESKTOP_NO_PRESENTATION_RUNTIME` | the viewport: no renderer is mounted, so no pixels — the three viewport-source tabs, because switching what a viewport shows needs the runtime that is missing, and every `live` assistant control (prompt, Send, Retry, the four artifact manipulators) while `assistantRuntime` is `none` |
 | `DESKTOP_NO_KERNEL_SESSION` | the static `run` mode before a host-backed Play response; the chrome never invents a tick, frame, or body |
 | `DESKTOP_NO_DOCUMENT_BOUND` | authoring controls not covered by the first-release project loop (for example Sculpt) |
-| `DESKTOP_UNDO_UNAVAILABLE` | Edit Undo and its palette row before this renderer session completes a Save |
+| `DESKTOP_UNDO_UNAVAILABLE` | Edit Undo and its palette row when the active project's authoring journal has no completed Save |
 | `DESKTOP_WEB_CAPABILITY_REQUIRED` | the Web stored-HTML and asset-injection controls on Game and Kids; these controls are already inert with the more specific capability refusal, so the Kids demotion preserves it |
 | `DESKTOP_WINDOW_BELOW_MINIMUM` | the window is smaller than 900×600 |
 
@@ -386,7 +386,7 @@ document also explains. `test/product-loop.test.ts` asserts that in both directi
 | `DESKTOP_PROPOSAL_NOT_DISCARDED` | re-opening could not discard the proposal the host still holds |
 | `DESKTOP_PROFILE_SWITCH_DIRTY` | a staged proposal must be saved or discarded before another edit stages, the project changes, or the profile changes |
 | `DESKTOP_APPLY_NOT_COMPLETED` | accept returned without reporting the apply completed |
-| `DESKTOP_RECOVERY_PENDING` | staging an edit, changing the project, and switching profiles are blocked until Save resolves recovery or Open starts a fresh re-read session |
+| `DESKTOP_RECOVERY_PENDING` | Undo, staging an edit, changing the project, and switching profiles are blocked until Save resolves recovery or Open starts a fresh re-read session |
 | `DESKTOP_OPEN_PATH_EVIDENCE_INVALID` | the play response carried no closed session with observed tick digests |
 | `DESKTOP_PRODUCT_REQUEST_IN_FLIGHT` | another serialized product-loop request currently owns the shared session |
 

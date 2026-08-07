@@ -171,7 +171,7 @@ export const DESKTOP_PRODUCT_REFUSAL_MESSAGES: Readonly<
   [DESKTOP_PRODUCT_REFUSALS.applyNotCompleted]:
     "The host did not report the apply as completed, so the staged edit is still pending.",
   [DESKTOP_PRODUCT_REFUSALS.recoveryPending]:
-    "Durable apply recovery is still pending; save to refresh it or open to re-read in a fresh session before staging another edit, changing the project, or switching profiles.",
+    "Durable apply recovery is still pending; save to refresh it or open to re-read in a fresh session before Undo, staging another edit, changing the project, or switching profiles.",
   [DESKTOP_PRODUCT_REFUSALS.openPathEvidenceInvalid]:
     "The play response carried no closed session with observed tick digests, so nothing is reported as played.",
   [DESKTOP_PRODUCT_REFUSALS.requestInFlight]:
