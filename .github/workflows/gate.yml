@@ -18,3 +18,9 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm gate
+      - run: pnpm install --frozen-lockfile
+        working-directory: sites/umbrella
+      - run: pnpm test:provider
+        working-directory: sites/umbrella
+      - run: pnpm typecheck
+        working-directory: sites/umbrella

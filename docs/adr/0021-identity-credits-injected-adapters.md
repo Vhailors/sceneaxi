@@ -8,7 +8,10 @@
   [sceneaxi#199](https://github.com/Vhailors/sceneaxi/issues/199): a TEST-only
   Connect creator-payout seam ships, with one narrow durable exception to
   ledger-only money bookkeeping. LIVE Connect onboarding and payout activation
-  stay held. See the second *Amendment* below.
+  stay held. **Amended 2026-08-07** by
+  [sceneaxi#222](https://github.com/Vhailors/sceneaxi/issues/222): the provider
+  implementation now ships only in the umbrella install root while core remains
+  injected. See the amendments below.
 - **Date recorded:** 2026-07-25
 - **Source:** [sceneaxi#90](https://github.com/Vhailors/sceneaxi/issues/90) (children #91–#101).
 - **Lineage:** Follows the Model Provider Port precedent
@@ -140,11 +143,12 @@ now contain that surface.
 
 What stays true:
 
-- **The provider is still injected and still absent.** A live signed-in session
-  additionally requires the deployment to serve Better Auth's own handler and
-  return the handles from `umbrellaPlaneHandles()` — operational work outside
-  this repository. Until it does, `signIn` has no adapter to reach and every
-  dependent surface refuses by name.
+- **The provider remains injected into core.** Sceneaxi#222 subsequently put the
+  production Better Auth dependency and its two HTTP routes in the separate umbrella
+  install root, never in `@sceneaxi/auth`; see the 2026-08-07 amendment below. A live
+  signed-in session still requires deployment configuration, migration, and the handles
+  returned by `umbrellaPlaneHandles()`. Until then every dependent surface refuses by
+  name.
 - **The gate stays hermetic.** The whole flow is proven with mocked providers,
   no network, and no credential; secrets remain env-only.
 - **`IDENTITY_SESSION_ABSENT` still means signed out, not broken**, and the
@@ -157,6 +161,24 @@ refusal ordering, and session-credential rules are owned by
 surface status by [`docs/websites-deploy.md`](../websites-deploy.md); and the
 operator authorization gate, ordered activation/rollback procedure, and evidence
 checklist by [`docs/production-activation.md`](../production-activation.md).
+
+## Amendment — the injected provider implementation landed (2026-08-07)
+
+[sceneaxi#222](https://github.com/Vhailors/sceneaxi/issues/222) added the smallest
+production Better Auth provider to the existing `sceneaxi-umbrella` deployable project.
+`sites/umbrella/src/provider/better-auth-provider.ts` owns the provider SDK and PostgreSQL
+pool, `/api/auth/[...all]` exposes only `POST sign-in/email` and `GET get-session`, and
+`db/migrations/0005_better_auth_provider.sql` owns the provider's four core tables plus
+its durable rate-limit counters. Cookie and
+bearer lookup are both enabled. Missing configuration or storage produces a redacted
+fail-closed response; public sign-up is disabled.
+
+The original decision is unchanged: `packages/auth` has no provider dependency, the
+provider creates no SceneAxi role, `SCENEAXI_ADMIN_EMAIL` remains the only admin source,
+and request code still reaches the SceneAxi identity plane only through
+`umbrellaRequestAuthority()`. This amendment records implementation, not deployment:
+production migration, configuration, endpoint proof, and secret handling remain unchecked
+operator work under `production-activation.md`.
 
 ## Clarification — deployment owns provenance issuance capabilities (2026-08-01)
 

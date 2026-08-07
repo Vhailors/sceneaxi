@@ -20,11 +20,12 @@ The architecture decision behind the shape of this plane is
 | Login + balance view model | `apps/web-shell` (`createAccountPanel`) |
 | In-app AI assistant view model | `apps/web-shell` (`createAssistantPanel`) |
 | Deployable-site wiring | `sites/umbrella/src/lib/identity-plane.ts` + `provider-adapters.ts`, reached by request code only through the `request-authority.ts` facade (`docs/websites-deploy.md`) |
+| Better Auth HTTP provider | provider-only `sites/umbrella/src/provider/better-auth-provider.ts` + `/api/auth/[...all]`, persisted by `db/migrations/0005_better_auth_provider.sql`; no core import or role field |
 
-Release group `identity`; both packages consume only public contracts. **Outside core:** a
-running Better Auth instance, a Neon connection, the Stripe API client, any HTTP surface,
-and any UI. The umbrella owns only the deployment adapters that connect those providers;
-provider credentials and the database remain outside the repository.
+Release group `identity`; both packages consume only public contracts. **Outside core:**
+the deployable umbrella owns the Better Auth handler, Neon connection, Stripe API client,
+HTTP surfaces, and UI. Provider SDKs are dependencies only of that separate install root;
+provider credentials and the live database remain outside the repository.
 
 The TEST deployment path now has the provider-backed handles and idempotent account
 provisioning. Missing provider configuration remains a named refusal, and activation
@@ -32,10 +33,10 @@ still requires the wiring mechanics at `docs/websites-deploy.md`, taken in the o
 `docs/production-activation.md` owns. The sign-in HTTP
 entry point that reaches `identityPort.signIn` **ships** (sceneaxi#185): the umbrella's
 `/login` page and `POST /api/login|logout` routes drive the plane's login port and set the
-HttpOnly `sceneaxi.session` cookie — see *Better Auth* below. **What v1 still does
-not deliver is a running provider:** a live signed-in browser session additionally needs
-the deployment to serve Better Auth's own handler and configure the handles held behind
-`umbrellaRequestAuthority()`, which is operational work outside this repository. See
+HttpOnly `sceneaxi.session` cookie — see *Better Auth* below. The narrow Better Auth
+provider also ships (sceneaxi#222), but no production deployment is claimed: a live
+signed-in browser session still needs migration `0005`, the named deployment secrets,
+and the handles held behind `umbrellaRequestAuthority()`. See
 *Deployment activation* at the end.
 
 ## Environment
@@ -47,6 +48,7 @@ Names only; values never appear in the repository.
 | `SCENEAXI_ADMIN_EMAIL` | The **one** captain email that resolves to the `admin` role |
 | `SCENEAXI_ADMIN_BOOTSTRAP_SECRET` | Provider-owned first-admin credential material. It is not a role source and never enters core |
 | `BETTER_AUTH_ORIGIN` | Better Auth provider origin used by the umbrella sign-in adapter. The provider must serve `sign-in/email` and `get-session`, and must resolve that lookup from either the issued session cookie or the issued bearer token; `docs/websites-deploy.md` owns that prerequisite |
+| `BETTER_AUTH_SECRET` | Better Auth session-signing material, read only by the umbrella provider and never by core |
 | `DATABASE_URL` | Neon Postgres connection string |
 | `STRIPE_SECRET_KEY` | Stripe **test** secret key |
 | `STRIPE_WEBHOOK_SECRET` | Stripe **test** webhook signing secret |
@@ -190,9 +192,11 @@ grant decision, and commit boundary; the deployment adds no second verifier or i
 
 ## Better Auth
 
-Better Auth is **injected**, not depended on: it needs a running HTTP host and a live
-database instance, which SceneAxi core does not contain (ADR 0021). The boundary is typed
-structurally against Better Auth's documented result, so a real instance drops in:
+Better Auth is **injected into core**, not depended on by core: it needs a running HTTP
+host and a live database instance, which the hermetic packages do not contain (ADR 0021).
+The deployable umbrella now carries that provider dependency in its separate install root
+and mounts the two required routes; the boundary remains typed structurally against Better
+Auth's documented result, so another host still drops in:
 
 ```ts
 import { betterAuth } from "better-auth";              // in your HTTP app, not in core
@@ -1239,14 +1243,17 @@ metadata and moves no money)
 does — so the store method is wired ahead of the catalog-sale surface that
 would call it, and its gate tests run against an in-memory fake that enforces no constraint.
 
-The second is no longer code in this repository: the sign-in surface
+The sign-in surface
 [sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185) called for has landed. The
 umbrella serves `/login` beside `POST /api/login`, `POST /api/logout`, `/api/checkout`, and
 `/api/stripe/webhook`, and `performLogin` reaches `identityPort.signIn` — and therefore
 `putSession` — through `createAuthLoginAdapter`, the login-port counterpart to the
-verify-only `createAuthIdentityAdapter`. What remains is the deployment's own: serve Better
-Auth's own handler and configure the handles behind `umbrellaRequestAuthority()`. Until
-it does, `signIn` has no adapter to reach, so no user is provisioned, no starter grant
+verify-only `createAuthIdentityAdapter`. The provider handler requested by
+[sceneaxi#222](https://github.com/Vhailors/sceneaxi/issues/222) now lands beside it and
+serves only stock `sign-in/email` and `get-session`, with cookie and bearer lookup over
+the provider-owned `better_auth_*` tables. What remains is the deployment's own: apply
+the migration, set the named secrets/origin, and configure the handles behind
+`umbrellaRequestAuthority()`. Until it does, `signIn` has no adapter to reach, so no user is provisioned, no starter grant
 runs, and every surface refuses by name. Dropping the editor preview flag comes after
 that provider configuration, never before it.
 The deployable-site mechanics and surface status are owned by

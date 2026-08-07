@@ -124,7 +124,9 @@ Deliberate denials that carry design intent:
   `tests/boundary/injected-desktop-violations.test.ts` injects a profile import, a Kids
   import, and an identity-plane dependency and asserts the real checker fails on each.
 - **framework, provider, and packaging toolchains → the hermetic tier: denied.**
-  `next`, `react`, and provider clients live in `sites/` only; Electron, esbuild, and
+  `next`, `react`, and provider clients live in `sites/` only — and among the sites,
+  `better-auth`, `pg`, `@neondatabase/serverless`, and `stripe` belong to the umbrella
+  deployment seam alone; Electron, esbuild, and
   electron-builder in `desktop/` only. `pnpm check:sites` and `pnpm check:desktop` each
   fail if one appears in the root manifest, and if `pnpm-workspace.yaml` starts globbing
   its tier — both tiers are separate install roots so the hermetic root lockfile never
@@ -232,4 +234,5 @@ Recorded in `dependency-matrix.json → releaseGroups` and stamped on every mani
 - **identity** (`auth`, `billing`): independently versioned; consumes only public
   contracts from `schemas` (and, for `billing`, the `auth` seam); never engine
   packages, profiles, the CLI, or a service locator. Better Auth, Neon, and the
-  Stripe API stay injected adapters (ADR 0021; `docs/auth-credits.md`).
+  Stripe API stay injected adapters outside core; their production dependencies
+  may live only in a separate deployable install root (ADR 0021; `docs/auth-credits.md`).

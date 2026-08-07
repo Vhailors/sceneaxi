@@ -4,7 +4,8 @@
  * A thin view + wiring layer over `@sceneaxi/site-kit`, which owns every
  * non-presentational behaviour and is tested in `pnpm gate`. This seam and the
  * `src/lib/` modules beside it are pure TypeScript, so the hermetic gate type-checks
- * them; only `src/app/` imports React or Next.
+ * them; only `src/app/` imports React or Next, and only `src/provider/` imports a
+ * provider SDK — both resolve solely in this install root and are type-checked here.
  *
  * `src/lib/identity-plane.ts` is the single documented plug point for
  * `@sceneaxi/auth` and `@sceneaxi/billing`, and is where the provider handles those

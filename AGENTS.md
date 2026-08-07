@@ -120,7 +120,10 @@ belong in `sites/` only.
 extend `tests/boundary/injected-site-violations.test.ts` when you extend any of them. Only
 `sites/*/src/app/**` may import React or Next; `src/index.ts` and `src/lib/**` stay pure
 TypeScript so the hermetic build type-checks them, and site seam tests live in
-`tests/sites/`. Deploy topology, the exact env var list, and the unordered identity-plane
+`tests/sites/` — the one exception being a suite that needs a site's own provider SDK,
+which lives in that install root and runs there (the umbrella's `pnpm test:provider`,
+in CI after `pnpm gate`, never inside it). Deploy topology, the exact env var list, and
+the unordered identity-plane
 wiring mechanics are in `docs/websites-deploy.md`, which sequences nothing; the
 cross-surface operator control plane — the
 authorization gate, ordered preflight/activation/verification/rollback procedure, and
@@ -136,15 +139,20 @@ That plug point is now **wired** (sceneaxi#131): the umbrella alone may depend o
 adapters it assembles in `src/lib/provider-adapters.ts` (sceneaxi#180) — two files and no
 more, never a route, page, or component. Between them they build the site-kit
 adapters over those packages and map their named refusals onto the site refusal registry —
-they implement no identity, no ledger, and no signature check. Provider clients (Better Auth,
-Neon, Stripe API) stay outside the repo per ADR 0021 and arrive through the one
+they implement no identity, no ledger, and no signature check. Provider clients stay
+outside hermetic core per ADR 0021; the Better Auth handler and PostgreSQL pool now live
+only in the umbrella install root at `src/provider/better-auth-provider.ts` — beside
+`src/lib/`, not in it, because those SDKs resolve only in that install root while the
+hermetic gate compiles `src/index.ts` and `src/lib/**` without them — exposing the two
+stock routes through `/api/auth/[...all]` over migration `0005_better_auth_provider.sql`.
+They create no SceneAxi role and do not replace the one
 `umbrellaPlaneHandles()` function, which reads the server environment once and holds the
 issued admin identity and the secret-closing webhook capability beside the provider
 handles; request code never reaches it directly but only through the no-argument
 `umbrellaRequestAuthority()` facade in `src/lib/request-authority.ts`, supplying a carried
 session credential — or, for the webhook route, raw bytes plus the signature header — and
 never an environment, issuer, store, clock, or secret, which `pnpm check:boundaries`
-enforces. While the provider clients are absent every dependent surface refuses
+enforces. While provider configuration, storage, or handles are absent every dependent surface refuses
 by name and `IDENTITY_SESSION_ABSENT` means signed-out, not broken. Those adapters make the
 provider authoritative for a user's address and verification state on every
 authentication, and treat a repeated idempotency key as an intent replay rather than a

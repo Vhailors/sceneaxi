@@ -102,8 +102,9 @@ otherwise. The browser sandbox stays on unless `CI` or `SCENEAXI_CHROME_NO_SANDB
 says the environment cannot provide it.
 
 `pnpm typecheck` covers this suite: `tsconfig.json` is the shipped app and
-`tsconfig.test.json` is `playwright.config.ts` plus `test/**`, so a spec that stops
-compiling fails the same command rather than only failing when a browser is available.
+`tsconfig.test.json` is `playwright.config.ts`, `vitest.config.ts`, plus `test/**`, so a
+spec that stops compiling fails the same command rather than only failing when a browser
+is available.
 
 Three overview client components carry the visual layer's behaviour, and all are deliberate:
 `src/app/_components/site-nav.tsx` exists only to resolve `aria-current`, and
@@ -301,11 +302,50 @@ payment-event side effect. The Better Auth client reads the session back from
 `GET /api/auth/get-session`, sending both the issued session cookie and the issued bearer
 token so either provider configuration resolves; a provider that honours neither throws a
 named fault instead of reporting a valid password as refused
-(`docs/websites-deploy.md` owns that prerequisite). Hosted sign-in reaches
+(`docs/websites-deploy.md` owns that prerequisite). The provider itself is
+`src/provider/better-auth-provider.ts`, mounted only at `/api/auth/[...all]`: public sign-up
+and every endpoint other than `POST sign-in/email` and `GET get-session` return 404.
+It uses `BETTER_AUTH_SECRET` and `DATABASE_URL` only on the server, persists in the
+provider-owned `better_auth_*` tables from migration 0005, and returns redacted 503
+refusals when configuration or storage is unavailable. Better Auth and `pg` remain
+dependencies of this standalone site install root, not `@sceneaxi/auth`.
+
+It lives under `src/provider/` rather than beside the plug point in `src/lib/` for the
+same structural reason `src/app/` does: the hermetic root type-checks `src/index.ts` and
+`src/lib/**`, and both provider SDKs resolve only in this install root, so a module that
+names them cannot sit in the set the gate compiles without those packages. `src/lib/`
+therefore stays pure TypeScript, and this directory is type-checked here, by this root's
+own `pnpm typecheck`.
+
+Its contract and integration proof is `test/better-auth-provider.test.ts`, run from this
+install root with `pnpm test:provider` over real Better Auth and an in-memory provider
+database — no network and no credential. The hermetic `pnpm gate` cannot run it, because
+both provider SDKs resolve only here, so CI installs this root and runs `pnpm
+test:provider` and `pnpm typecheck` after the gate.
+
+Three deployment properties of that provider are decided in code rather than left to a
+default. First-run provisioning gates `sign-in/email` alone and refuses a persisted
+credential that disagrees with `SCENEAXI_ADMIN_BOOTSTRAP_SECRET` as
+`BETTER_AUTH_PROVIDER_BOOTSTRAP_DISAGREEMENT` — its own refusal, not the storage one —
+so a rotation stops new sessions without taking session lookup down for principals it
+never described. That decision is memoized rather than re-run per request, but only for a
+bounded interval, because the remedy an operator applies changes the very state it read —
+a corrected database recovers on its own without a redeploy. Throttling is stored in
+`better_auth_rate_limits`, since a per-instance memory counter resets on every cold start;
+both endpoints are throttled per source address, with session lookup on the looser
+fallback rule, which the deployment's own relay never approaches because it reaches that
+path at most once per already-capped sign-in. The provider sweeps counters past every live
+window itself on a bounded interval, so the table needs no operator retention step. The `pg`
+pool is bounded well below the driver default (`BETTER_AUTH_PROVIDER_POOL_LIMITS`) because
+every warm serverless instance holds its own, and the umbrella already reaches the same
+Neon database over the stateless `@neondatabase/serverless` HTTP driver.
+
+Hosted sign-in reaches
 `identityPort.signIn` through this same plug point
 ([sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185), see **Hosted sign-in**
-above); a deployment whose provider handles are absent issues no session and refuses by
-name instead. `docs/websites-deploy.md` owns the env names and wiring mechanics;
+above); a deployment whose provider configuration, migration, or handles are absent
+issues no session and refuses by name instead. `docs/websites-deploy.md` owns the env
+names and wiring mechanics;
 `docs/production-activation.md` owns the ordered activation and rollback procedure.
 
 `SCENEAXI_SITE_EDITOR_PREVIEW=1` grants a banner-marked editor preview so the

@@ -600,6 +600,17 @@ describe("sites tier — injected violations", () => {
     expect(res.stderr).toContain("framework and provider SDKs stay in the sites/ tier");
   });
 
+  it("sites check keeps Better Auth at the umbrella provider seam", () => {
+    editManifest(fx, "sites/catalog-web/package.json", (manifest) => {
+      manifest.dependencies = { ...manifest.dependencies, "better-auth": "1.6.26" };
+    });
+    const res = runCheck(fx, "check-sites.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "@sceneaxi/site-catalog-web: provider dependency 'better-auth' belongs only to the umbrella deployment seam",
+    );
+  });
+
   it("sites check fails when pnpm-workspace starts globbing sites/", () => {
     writeTo(fx, "pnpm-workspace.yaml", 'packages:\n  - "packages/*"\n  - "apps/*"\n  - "sites/*"\n');
     const res = runCheck(fx, "check-sites.mjs");

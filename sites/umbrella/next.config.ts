@@ -28,7 +28,7 @@ const nextConfig: NextConfig = {
     "@sceneaxi/auth",
     "@sceneaxi/billing",
   ],
-  // The two provider SDKs are loaded through Node's own `require` in
+  // The Neon and Stripe SDKs are loaded through Node's own `require` in
   // `src/lib/provider-adapters.ts`, deliberately reached in a form the bundler
   // does not rewrite, so neither the bundler nor output-file tracing sees the
   // specifiers statically. Listing them keeps them external (required from
@@ -37,10 +37,14 @@ const nextConfig: NextConfig = {
   // build ships a lambda missing them, and both construction failures are caught
   // into ordinary provider absence, so a fully configured deployment would report
   // the same state as an unconfigured one.
-  serverExternalPackages: ["@neondatabase/serverless", "stripe"],
+  // Better Auth and pg are statically imported only by the provider host and stay
+  // server-external for the same trace reason; no browser graph reaches this module.
+  serverExternalPackages: ["@neondatabase/serverless", "better-auth", "pg", "stripe"],
   outputFileTracingIncludes: {
     "/**": [
       "./node_modules/@neondatabase/serverless/**",
+      "./node_modules/better-auth/**",
+      "./node_modules/pg/**",
       "./node_modules/stripe/**",
     ],
   },

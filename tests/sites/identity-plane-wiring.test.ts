@@ -1956,6 +1956,28 @@ describe("acceptance 6 — no secret, no live mode, no Kids", () => {
     );
   });
 
+  it("keeps the Better Auth host provider-only and outside request authority", () => {
+    const provider = readFileSync(
+      new URL("../../sites/umbrella/src/provider/better-auth-provider.ts", import.meta.url),
+      "utf8",
+    );
+    const route = readFileSync(
+      new URL("../../sites/umbrella/src/app/api/auth/[...all]/route.ts", import.meta.url),
+      "utf8",
+    );
+    expect(provider).toContain('from "better-auth"');
+    expect(provider).toContain('from "better-auth/plugins"');
+    expect(provider).toContain('from "pg"');
+    expect(provider).not.toMatch(
+      /(?:from\s+|import\s*)["']@sceneaxi\/(?:auth|billing|profile-kids)/,
+    );
+    expect(provider).toContain("disableSignUp: true");
+    expect(provider).toContain("plugins: [bearer()]");
+    expect(route).toContain("betterAuthProviderHandler");
+    expect(route).not.toContain("umbrellaRequestAuthority");
+    expect(route).not.toContain("identity-plane");
+  });
+
   it("refuses a webhook on an unwired deployment as that deployment's own omission", async () => {
     // The facade is the only thing between the transport and a capability a deployment
     // may never have provisioned, and it is now the only owner of that answer: the route

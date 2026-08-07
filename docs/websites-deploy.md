@@ -19,7 +19,8 @@ Design decisions behind this: [ADR 0018](adr/0018-sites-tier-three-vercel-one-ne
 [ADR 0019](adr/0019-public-engine-sdk-zip-not-npm.md) (the SDK archive),
 [ADR 0020](adr/0020-minimum-e2-web-editor-entitlement.md) (editor entitlement), and
 [ADR 0021](adr/0021-identity-credits-injected-adapters.md) (the identity plane's
-provider clients stay injected adapters outside this repository).
+provider clients stay injected adapters outside hermetic core; production SDKs are
+confined to the umbrella install root).
 
 ## Vercel project map
 
@@ -78,6 +79,7 @@ set them *before* deploying and redeploy after changing one.
 |---|---|---|---|---|
 | `DATABASE_URL` | all three | captain (Neon) | the identity plane | one shared Neon Postgres database: auth/billing plus catalog read models |
 | `BETTER_AUTH_ORIGIN` | umbrella | deployment owner | identity sign-in | https origin of the Better Auth provider endpoint used by the umbrella; credentials remain with that provider. The provider must serve `POST /api/auth/sign-in/email` and `GET /api/auth/get-session` under that origin — see the provider prerequisite below |
+| `BETTER_AUTH_SECRET` | umbrella | captain/provider owner | Better Auth session signing | provider-only signing material read by the umbrella's Better Auth handler; it never enters `@sceneaxi/auth`, a route response, or evidence |
 | `SCENEAXI_ADMIN_EMAIL` | umbrella | captain | admin sign-in | sole admin identity, resolved by `@sceneaxi/auth` only inside the deployment plug point; no route accepts an override |
 | `SCENEAXI_ADMIN_BOOTSTRAP_SECRET` | umbrella | captain | first admin sign-in | provider-owned first-run credential material; env-secret bootstrap only, never a role source or core input |
 | `STRIPE_SECRET_KEY` | umbrella | captain | credit-pack checkout | **TEST** key (`sk_test_…`) only in this wave |
@@ -102,8 +104,12 @@ Provisioned: Neon project `sceneaxi-prod` (`misty-king-68383952`, `aws-us-east-2
 database `neondb`). `DATABASE_URL` is set as an **encrypted** environment variable in all
 three Vercel projects and appears in no committed file. The umbrella deployment tier
 reads it only to construct the `NeonDatabase` adapter; the root gate never reads it.
-`BETTER_AUTH_ORIGIN` names the provider endpoint for sign-in, while Better Auth's own
-credentials and account tables remain provider-owned. `resolveBetterAuthOrigin` accepts an
+`BETTER_AUTH_ORIGIN` names the provider endpoint for sign-in. The provider is hosted in
+the existing `sceneaxi-umbrella` project by
+`sites/umbrella/src/app/api/auth/[...all]/route.ts`; production therefore sets the origin
+to the umbrella's stable HTTPS origin. `BETTER_AUTH_SECRET` and the
+`better_auth_*` tables from `db/migrations/0005_better_auth_provider.sql` remain
+provider-owned. `resolveBetterAuthOrigin` accepts an
 `https` origin, or plaintext `http` only for an exact loopback host (`localhost`,
 `127.0.0.1`, `[::1]`) — a look-alike such as `http://localhost.example` resolves to no
 provider at all, because the sign-in client posts a member's email and password there.
@@ -111,7 +117,9 @@ Anything else leaves `identityPort` absent and the surface refuses by name.
 
 #### Better Auth provider prerequisite
 
-The umbrella's client speaks two standard Better Auth endpoints under that origin:
+The umbrella ships a deliberately narrow Better Auth 1.6 handler under that origin. It
+enables email/password authentication and the `bearer()` plugin, disables public sign-up,
+and exposes only these two endpoint/method pairs:
 `POST /api/auth/sign-in/email`, whose answer (`{ redirect, token, user }`) carries no
 session record, and `GET /api/auth/get-session`, which supplies the session id, owner, and
 expiry the `sessions` row is written from. That lookup sends **both** credentials the
@@ -122,6 +130,14 @@ from the header. Either configuration works; a provider that honours neither is 
 deployment fault, and the client throws a named error rather than reporting the member's
 correct password as a rejected sign-in. A provider that returns a session inline on
 sign-in is used as-is and no lookup is made.
+
+Startup is lazy and fail-closed. Missing or malformed `DATABASE_URL`,
+`BETTER_AUTH_ORIGIN`, `BETTER_AUTH_SECRET`, `SCENEAXI_ADMIN_EMAIL`, or
+`SCENEAXI_ADMIN_BOOTSTRAP_SECRET` returns a redacted provider `503`; an unavailable or
+unmigrated Neon database does the same. The first-run credential is idempotently hashed
+into Better Auth's provider account table from the two captain-owned bootstrap inputs.
+It creates no SceneAxi role: `@sceneaxi/auth` still derives the sole admin only after the
+provider authenticated a verified matching address and the SceneAxi store accepted it.
 
 ### Stripe
 
@@ -243,16 +259,20 @@ Sign-in, credit balances, and credit-pack checkout are owned by
 single-admin resolution, fail-closed role guards, the append-only credit ledger, and
 Stripe webhook verification. The sites fork **none** of it.
 
-The in-repo wiring is done ([#131](https://github.com/Vhailors/sceneaxi/issues/131)):
+The in-repo wiring is done ([#131](https://github.com/Vhailors/sceneaxi/issues/131),
+[#222](https://github.com/Vhailors/sceneaxi/issues/222)):
 `@sceneaxi/auth` and `@sceneaxi/billing` are on the umbrella's matrix allow list, are
 `link:` dependencies in its manifest and `transpilePackages`, and
-`sites/umbrella/src/lib/identity-plane.ts` builds the site-kit adapters over them. What
-remains is operational, and it is deliberately *not* code in this repository.
+`sites/umbrella/src/lib/identity-plane.ts` builds the site-kit adapters over them, while
+the provider-only route and Neon schema live in the same deployable install root and
+forward migration sequence. What remains is authorized configuration, migration, and
+deployment evidence, not a missing provider implementation.
 
 ### What works now, and what still refuses
 
-ADR 0021 keeps the provider clients — Better Auth, the Neon client, the Stripe API —
-**outside** this repository. So the plane splits in two:
+ADR 0021 keeps provider clients outside the hermetic packages. Better Auth, the Neon
+client, and the Stripe API may exist only in the umbrella deployable tier, so the plane
+splits in two:
 
 | Capability | State | Why |
 |---|---|---|
@@ -260,7 +280,7 @@ ADR 0021 keeps the provider clients — Better Auth, the Neon client, the Stripe
 | The **Buy** control on `/pricing` | posts to a real checkout once the TEST Stripe handle is configured, but only for a signed-in buyer | the adapter persists the intent before creating a card-only hosted checkout; with no session the POST refuses `IDENTITY_SESSION_ABSENT`, so a visitor signs in at `/login` first and the control refuses by name until then |
 | Admin identity (`SCENEAXI_ADMIN_EMAIL`) | **live as deployment evidence** | resolved by `@sceneaxi/auth` only inside the deployment owner and held behind `umbrellaRequestAuthority()`; request routes cannot supply another environment or issuer |
 | Checkout intent, starter grant, webhook verification | **live as behaviour** | implemented in-repo and gate-tested |
-| Hosted sign-in on `/login` (`POST /api/login`, `POST /api/logout`) | **live as behaviour**; signs a member in once Better Auth + Neon are configured, and refuses `IDENTITY_PLANE_NOT_WIRED` until they are | the whole flow — form, named refusal states, HttpOnly `sceneaxi.session` cookie, sign-out — is in-repo and gate-tested ([#185](https://github.com/Vhailors/sceneaxi/issues/185)); it drives the same `IdentityPort` handle, so wiring the deployment-owner provider handles activates it with no other change |
+| Hosted sign-in on `/login` (`POST /api/login`, `POST /api/logout`) | **live as behaviour**; signs a member in once the shipped Better Auth handler + Neon are configured, and refuses `IDENTITY_PLANE_NOT_WIRED` until they are | the whole flow — provider routes, form, named refusal states, HttpOnly `sceneaxi.session` cookie, sign-out — is in-repo and contract-tested ([#185](https://github.com/Vhailors/sceneaxi/issues/185), [#222](https://github.com/Vhailors/sceneaxi/issues/222)); it drives the same `IdentityPort` handle |
 | Session verification on `/account`, `/editor` | adapter live when Better Auth + Neon are configured | `verifySession` is wired, and authentication provisions the SceneAxi user and credit account idempotently; the `sessions` row is written by the sign-in above, and that same `IdentityPort` verifies the credential both surfaces read. Unwired they refuse `IDENTITY_PLANE_NOT_WIRED`, and a visitor with no cookie refuses `IDENTITY_SESSION_ABSENT` |
 | Credit balance | adapter live; reachable for a signed-in member | the balance is derived from the append-only ledger through `createCreditStore`, and the once-per-user 100-credit starter grant runs on the first authenticated read |
 | Hosted checkout redirect | live when the TEST Stripe handle is configured | the adapter uses the committed intent and TEST-only Stripe API call |
@@ -273,7 +293,7 @@ beside the provider handles. Request code reaches it only through the no-argumen
 carried session credential, and the webhook route can supply only raw bytes and the
 signature header. The boundary checker denies direct owner-module, provider-adapter, and
 root-barrel imports from routes or arbitrary library modules. An absent or malformed
-provider remains absent, so each plane refuses by name rather than inventing a session,
+provider handle remains absent, so each plane refuses by name rather than inventing a session,
 account, balance, or checkout.
 
 Read the table as two separate facts. The provider adapters are wired and gate-tested, so
@@ -418,9 +438,10 @@ take payments this endpoint cannot settle.
 ([sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185)): the umbrella exposes
 `/login`, `POST /api/login`, and `POST /api/logout` beside `/api/checkout` and
 `/api/stripe/webhook`, and `performLogin` calls `identityPort.signIn` through the
-plane's login port and sets the HttpOnly `sceneaxi.session` cookie. What remains
-operational is provider-side: serve Better Auth's own handler at `BETTER_AUTH_ORIGIN`
-(the `sign-in/email` and `get-session` endpoints named above) and configure the handles
+plane's login port and sets the HttpOnly `sceneaxi.session` cookie. The provider handler
+now ships in the umbrella at `BETTER_AUTH_ORIGIN` (the `sign-in/email` and `get-session`
+endpoints named above). What remains operational is to apply migration
+`0005_better_auth_provider.sql`, set its named configuration, and configure the handles
 the deployment owner holds behind `umbrellaRequestAuthority()`, as described under
 [Deployment-owner provider handles](#deployment-owner-provider-handles). With those
 configured, sign-in writes a
@@ -561,7 +582,8 @@ webhook event, or performing a charge:
 - The umbrella `/` and `/pricing` pages and both catalog roots are reachable. The current
   production umbrella deployment predates the merged hosted-login route and still serves
   `404` at `/login`; `BETTER_AUTH_ORIGIN` is also absent from the umbrella Production
-  variable-name listing. Activating member sign-in therefore still requires the [hosted
+  variable-name listing. `BETTER_AUTH_SECRET` was not part of that observation either.
+  Activating member sign-in therefore still requires the [hosted
   sign-in provider configuration](#hosted-sign-in-provider-configuration) and a
   fresh deployment of current `main`. Do not remove `SCENEAXI_SITE_EDITOR_PREVIEW` before
   that sign-in path is proven.
