@@ -168,18 +168,33 @@ describe("sites tier — injected violations", () => {
     );
   }
 
+  it("sites check rejects a deployed site whose workspace file omits the hoisted linker", () => {
+    // pnpm 10.6 and later reads the linker only from here, so `.npmrc` alone leaves the
+    // isolated graph in place on that line — measured, and silently.
+    writeTo(
+      fx,
+      "sites/umbrella/pnpm-workspace.yaml",
+      ["packages:", '  - "."', "allowBuilds:", "  sharp: true", ""].join("\n"),
+    );
+    const res = runCheck(fx, "check-sites.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "@sceneaxi/site-umbrella: deployable serverless sites must set 'nodeLinker: hoisted' in pnpm-workspace.yaml",
+    );
+  });
+
   it.each([
     ["a bare value", "nodeLinker: isolated"],
-    // The workspace file wins over `.npmrc` on pnpm >= 10.6, so a declaration hidden
-    // behind a trailing comment restores the exact symlink graph this tier forbids.
+    // A declaration hidden behind a trailing comment restores the exact symlink graph
+    // this tier forbids, on the pnpm line that reads this file.
     ["a value behind a trailing comment", "nodeLinker: isolated # keep the old graph"],
     ["a quoted value", 'nodeLinker: "isolated"'],
-  ])("sites check rejects a workspace linker overriding the npmrc — %s", (_case, declaration) => {
+  ])("sites check rejects a non-hoisted workspace linker — %s", (_case, declaration) => {
     writeWorkspaceLinker("umbrella", declaration);
     const res = runCheck(fx, "check-sites.mjs");
     expect(res.status).toBe(1);
     expect(res.stderr).toContain(
-      "@sceneaxi/site-umbrella: pnpm-workspace.yaml declares the 'isolated' linker, which overrides .npmrc on pnpm 10.6 and later",
+      "@sceneaxi/site-umbrella: pnpm-workspace.yaml declares the 'isolated' linker, which pnpm 10.6 and later reads instead of .npmrc",
     );
   });
 

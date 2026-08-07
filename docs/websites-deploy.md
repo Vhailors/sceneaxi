@@ -75,21 +75,26 @@ monorepo root so their `link:` SceneAxi sources are copied as repository files, 
 flat site `node_modules` keeps pnpm's isolated dependency-symlink graph out of Vercel
 Functions.
 
-The linker is selected in each deployed site's **`.npmrc`** (`node-linker=hoisted`), and
-that file — not `pnpm-workspace.yaml` — is the authoritative source `pnpm check:sites`
-asserts. Settings in `pnpm-workspace.yaml` are only read by pnpm 10.6 and later, and no
-site pins a `packageManager`: CI resolves the repository-root pin (`pnpm@9.15.0`) and
-Vercel infers pnpm 9 from `lockfileVersion: '9.0'`, so a `nodeLinker:` key there is
-silently ignored on both builders and the symlink graph returns. Measured on this
-checkout: pnpm 9.15.0 with only the workspace key leaves `node_modules/<dep>` a symlink
-into `.pnpm/`; the same pnpm with `.npmrc` produces flat real directories, as does pnpm
-11.5.0. `node-linker` is not recorded in the lockfile's `settings` block, so adding it
-keeps `--frozen-lockfile` installs valid.
+Each deployed site declares the linker **twice**, and `pnpm check:sites` requires both:
+`node-linker=hoisted` in `.npmrc` and `nodeLinker: hoisted` in `pnpm-workspace.yaml`.
+Neither file is authoritative alone. pnpm below 10.6 reads the linker only from `.npmrc`;
+pnpm 10.6 and later reads it only from `pnpm-workspace.yaml` and ignores the `.npmrc`
+key. No site pins a `packageManager`, so neither line is ruled out: CI resolves the
+repository-root pin (`pnpm@9.15.0`) while Vercel infers pnpm from
+`lockfileVersion: '9.0'`. Dropping either declaration therefore restores the symlink
+graph on one of the two lines — with no warning.
 
-The workspace key is kept for pnpm 10.6+, and where it is read it **overrides**
-`.npmrc` — measured: pnpm 11.5.0 with `nodeLinker: isolated` beside
-`node-linker=hoisted` links `node_modules/<dep>` back into `.pnpm/`. So it may only
-agree, and `pnpm check:sites` compares the two after reducing each declaration to the
+Measured on this checkout with a one-dependency install root, reading
+`node_modules/.modules.yaml` for the linker pnpm actually resolved:
+
+| pnpm | `.npmrc` only | `pnpm-workspace.yaml` only | both |
+|---|---|---|---|
+| 9.15.0 | hoisted (flat) | **isolated (symlink)** | hoisted |
+| 11.5.0 | **isolated (symlink)** | hoisted (flat) | hoisted |
+
+`node-linker` is not recorded in the lockfile's `settings` block, so adding it keeps
+`--frozen-lockfile` installs valid. Where both are read the workspace file wins, so the
+two must agree; `pnpm check:sites` compares them after reducing each declaration to the
 value its own parser yields — an inline comment dropped, quotes treated as delimiters —
 because a raw text comparison both misses `nodeLinker: isolated # …` and invents a
 mismatch for `nodeLinker: "hoisted"`.

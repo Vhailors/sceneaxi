@@ -6,7 +6,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, relative } from "node:path";
+import { basename, dirname, join, relative } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { validateVercelPackage } from "../../scripts/check-vercel-package.mjs";
 
@@ -79,6 +79,22 @@ describe("Vercel function package traces", () => {
     expect(validateVercelPackage(fx.site, fx.root)).toContainEqual(
       expect.stringContaining("reaches pnpm package symlink 'sites/umbrella/node_modules/server-only'"),
     );
+  });
+
+  it("accepts a valid tree reached through a symlinked checkout root", () => {
+    // Containment is decided against realpath'd link targets, so a root carrying a
+    // symlinked ancestor — an aliased checkout, or macOS's `/var` -> `/private/var`
+    // temp directory — must not make every in-repository package link read external.
+    const fx = makeFixture();
+    const physicalDependency = join(fx.site, "node_modules", "server-only", "index.js");
+    write(physicalDependency, "export {};");
+    emitTrace(fx.trace, [fx.linkedModule, fx.linkedManifest, physicalDependency]);
+
+    const aliasedRoot = join(dirname(fx.root), `${basename(fx.root)}-alias`);
+    symlinkSync(fx.root, aliasedRoot, "dir");
+    fixtures.push(aliasedRoot);
+
+    expect(validateVercelPackage(join(aliasedRoot, "sites", "umbrella"), aliasedRoot)).toEqual([]);
   });
 
   it("refuses a site-root trace that omits the linked package source", () => {

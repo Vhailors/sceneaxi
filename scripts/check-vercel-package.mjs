@@ -11,6 +11,21 @@ function containsPath(root, candidate) {
   return rel === "" || (!rel.startsWith(`..${sep}`) && rel !== ".." && !isAbsolute(rel));
 }
 
+/**
+ * Resolve a root to its real location. Containment is decided against `realpathSync`
+ * link targets, so a root that still carries a symlinked ancestor — a checkout reached
+ * through an alias, or the macOS `/var` -> `/private/var` temp directory — would make
+ * every in-repository package link read as external.
+ */
+function canonicalRoot(path) {
+  const resolved = resolve(path);
+  try {
+    return realpathSync(resolved);
+  } catch {
+    return resolved;
+  }
+}
+
 function walkTraceFiles(dir, out = []) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name);
@@ -60,8 +75,8 @@ function symlinksOnPath(root, target, cache) {
 }
 
 export function validateVercelPackage(siteRootInput, tracingRootInput = repositoryRoot) {
-  const siteRoot = resolve(siteRootInput);
-  const tracingRoot = resolve(tracingRootInput);
+  const siteRoot = canonicalRoot(siteRootInput);
+  const tracingRoot = canonicalRoot(tracingRootInput);
   const nextRoot = join(siteRoot, ".next");
   const errors = [];
 

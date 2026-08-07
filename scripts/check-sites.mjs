@@ -419,23 +419,29 @@ for (const dir of siteDirs) {
         `${manifest.name}: @sceneaxi/site-kit must use a 'link:' specifier (found '${siteKit}') because sites are not workspace members`,
       );
     }
-    // `nodeLinker` in pnpm-workspace.yaml is only read by pnpm >= 10.6, and no site
-    // pins a package manager, so `.npmrc` — read by every supported pnpm — is the
-    // source that has to carry the setting. Where the workspace file is read it
-    // *overrides* `.npmrc`, so it may only agree: every value it declares must be
-    // hoisted or the isolated graph comes back on exactly the newer pnpm the `.npmrc`
-    // was never needed for.
+    // Neither file carries the linker on its own: pnpm below 10.6 reads it only from
+    // `.npmrc`, pnpm 10.6 and later only from pnpm-workspace.yaml, and no site pins a
+    // `packageManager` that would settle which line a builder runs. Both declarations
+    // are therefore required, and a value that is not hoisted is refused wherever it
+    // appears — on the line that reads it, it is the whole failure this tier exists to
+    // prevent, silently.
     const siteNpmrc = join(dir, ".npmrc");
     const nodeLinker = existsSync(siteNpmrc) ? readNpmrc(siteNpmrc)["node-linker"] : undefined;
     if (nodeLinker !== "hoisted") {
       fail(
-        `${manifest.name}: deployable serverless sites must set 'node-linker=hoisted' in .npmrc — pnpm below 10.6 ignores the pnpm-workspace.yaml setting`,
+        `${manifest.name}: deployable serverless sites must set 'node-linker=hoisted' in .npmrc — pnpm below 10.6 reads the linker only from there`,
       );
     }
-    for (const declared of readWorkspaceSettings(join(dir, "pnpm-workspace.yaml"), "nodeLinker")) {
+    const workspaceLinkers = readWorkspaceSettings(join(dir, "pnpm-workspace.yaml"), "nodeLinker");
+    if (workspaceLinkers.length === 0) {
+      fail(
+        `${manifest.name}: deployable serverless sites must set 'nodeLinker: hoisted' in pnpm-workspace.yaml — pnpm 10.6 and later reads the linker only from there`,
+      );
+    }
+    for (const declared of workspaceLinkers) {
       if (declared !== "hoisted") {
         fail(
-          `${manifest.name}: pnpm-workspace.yaml declares the '${declared}' linker, which overrides .npmrc on pnpm 10.6 and later`,
+          `${manifest.name}: pnpm-workspace.yaml declares the '${declared}' linker, which pnpm 10.6 and later reads instead of .npmrc`,
         );
       }
     }
