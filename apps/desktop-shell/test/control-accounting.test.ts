@@ -237,10 +237,28 @@ describe("engine desktop chrome — control accounting (document → model)", ()
       );
       expect(html, label).not.toMatch(/\son[a-z]+=/i);
       // A focus stop outside a <button> would be an interactive element with no
-      // control behind it; the tabs' roving `tabindex` sits on buttons.
+      // control behind it; the tabs' roving `tabindex` sits on buttons. The one
+      // exception is a scroll container: the rendered diff clips, and WCAG 2.1.1
+      // requires that its own overflow be reachable without a pointer, so it is
+      // a focusable labelled region rather than a control.
       for (const [tag] of html.matchAll(/<[a-z][^>]*\stabindex="[^"]*"[^>]*>/gi)) {
+        if (/\sdata-change-diff\b/.test(tag)) {
+          expect(tag, `${label} ${tag}`).toMatch(/^<pre\b/);
+          expect(tag, `${label} ${tag}`).toContain('tabindex="0"');
+          expect(tag, `${label} ${tag}`).toContain('role="region"');
+          expect(tag, `${label} ${tag}`).toMatch(/aria-label="[^"]+"/);
+          continue;
+        }
         expect(tag, `${label} ${tag}`).toMatch(/^<(button|input|textarea|select)\b/);
       }
+      // The rendered diff is the one surface whose whole purpose is reviewing
+      // before an all-or-nothing write, and it clips at its own `max-height`.
+      // A scroll container the keyboard cannot reach hides part of what Accept
+      // is about to apply, so the focus stop is required, not merely permitted.
+      const diff = /<pre\b[^>]*\sdata-change-diff\b[^>]*>/.exec(html)?.[0];
+      expect(diff, label).toBeDefined();
+      expect(diff, label).toContain('tabindex="0"');
+      expect(diff, label).toContain('role="region"');
     }
   });
 });

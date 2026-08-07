@@ -241,6 +241,42 @@ describe("desktop visual model — change review", () => {
       control.refusal === DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly,
     )).toBe(true);
   });
+
+  it("mints a dismissal's kind from the action it declares", () => {
+    // The action a dismissal performs decides its kind, so a dismissal cannot
+    // acquire host reach while staying outside the refusal.
+    const dismissals = desktopVisualView(createDesktopVisualState()).overlay.dismissals;
+    for (const dismissal of dismissals) {
+      expect([dismissal.id, dismissal.control.kind]).toEqual([
+        dismissal.id,
+        dismissal.productAction === null ? "view" : "live",
+      ]);
+      expect(dismissal.control.refusal).toBeNull();
+    }
+    // The shipped dialog reports an outcome a response already returned and
+    // decides nothing, so no dismissal on it reaches the authoring session.
+    expect(
+      dismissals.filter((dismissal) => dismissal.productAction !== null).map((d) => d.id),
+    ).toEqual([]);
+  });
+
+  it("demotes every acting dismissal under the structural Kids refusal", () => {
+    // A dismissal that reached the authoring session would have to go inert on
+    // the refuse-only profile; one that only closes its dialog stays usable, or
+    // the refusal becomes a state you cannot leave.
+    const dismissals = desktopVisualView(
+      createDesktopVisualState({ profile: "kids" }),
+    ).overlay.dismissals;
+    for (const dismissal of dismissals) {
+      if (dismissal.productAction === null) {
+        expect([dismissal.id, dismissal.control.kind]).toEqual([dismissal.id, "view"]);
+        expect(dismissal.control.refusal).toBeNull();
+      } else {
+        expect([dismissal.id, dismissal.control.kind]).toEqual([dismissal.id, "inert"]);
+        expect(dismissal.control.refusal).toBe(DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly);
+      }
+    }
+  });
 });
 
 describe("desktop visual model — sculpt run", () => {

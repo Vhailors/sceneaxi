@@ -133,15 +133,34 @@ export type DesktopDockTabId = (typeof DESKTOP_DOCK_TAB_IDS)[number];
 export const DESKTOP_OVERLAY_IDS = Object.freeze(["palette"] as const);
 export type DesktopOverlayId = (typeof DESKTOP_OVERLAY_IDS)[number];
 
+/**
+ * The buttons that dismiss an overlay.
+ *
+ * Held as data with one identity each because a single shared `overlay-close`
+ * control cannot be rendered onto more than one element: an id is unique or the
+ * `aria-describedby` and `getElementById` references in this document stop
+ * meaning anything.
+ *
+ * Each also carries the product action it performs, for any that would do real
+ * authoring work. Declaring the action here is what keeps the kind honest: a
+ * dismissal that names one is minted `live` through the central `control()`
+ * mint, so it goes inert on the refuse-only profile and refuses
+ * `DESKTOP_RUNTIME_UNAVAILABLE` in a host-less render, exactly like every other
+ * control that reaches the host. A dismissal with no action only closes its
+ * dialog and stays outside the refusal on every profile — which is every
+ * dismissal the shipped outcome dialog owns, because it reports an outcome and
+ * decides nothing.
+ */
 export const DESKTOP_OVERLAY_DISMISSALS: ReadonlyArray<
   Readonly<{
     id: string;
     overlay: "outcome";
     label: string;
     emphasis: "ghost" | "primary";
+    productAction: string | null;
   }>
 > = Object.freeze([
-  Object.freeze({ id: "outcome-dismiss", overlay: "outcome" as const, label: "Dismiss", emphasis: "primary" as const }),
+  Object.freeze({ id: "outcome-dismiss", overlay: "outcome" as const, label: "Dismiss", emphasis: "primary" as const, productAction: null }),
 ]);
 
 /**
@@ -971,6 +990,7 @@ export type DesktopOverlayView = Readonly<{
       overlay: "outcome";
       label: string;
       emphasis: "ghost" | "primary";
+      productAction: string | null;
       control: DesktopControl;
     }>
   >;
@@ -1172,9 +1192,10 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
   /**
    * The controls that are *not* behind the refusal, so the demotion above must
    * not reach them: the profile switch is how an operator leaves the Kids
-   * state, and the overlays this chrome opens and dismisses work on every
-   * profile. Marking a control that works as refusing is the same dishonesty in
-   * the other direction.
+   * state, and opening an overlay — or closing one that only closes — works on
+   * every profile. Marking a control that works as refusing is the same
+   * dishonesty in the other direction. A dismissal that reaches the host is not
+   * one of these; it declares a `productAction` and is minted `live` above.
    */
   function outsideRefusal(id: string, label: string): DesktopControl {
     const built = liveControl(id, label, "view");
@@ -1410,10 +1431,10 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
             overlay: dismissal.overlay,
             label: dismissal.label,
             emphasis: dismissal.emphasis,
-            control: outsideRefusal(
-              `overlay-close-${dismissal.id}`,
-              dismissal.label,
-            ),
+            productAction: dismissal.productAction,
+            control: dismissal.productAction === null
+              ? outsideRefusal(`overlay-close-${dismissal.id}`, dismissal.label)
+              : control(`overlay-close-${dismissal.id}`, dismissal.label, "live"),
           }),
         ),
       ),

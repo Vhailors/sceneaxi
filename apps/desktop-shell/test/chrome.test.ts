@@ -424,44 +424,45 @@ describe("engine desktop chrome — accessibility", () => {
     expect(view.overlay.dismissals).toHaveLength(1);
     const ids = view.overlay.dismissals.map((dismissal) => dismissal.control.id);
     expect(new Set(ids).size).toBe(ids.length);
-    // The action is keyed off the model's stable dismissal id, so this asserts
-    // the declared mapping rather than re-deriving it from the control id.
-    const actions: Readonly<Record<string, string>> = {
-      "outcome-dismiss": "overlay",
-    };
+    // Kind and action both come from the model's own declaration, so a button
+    // that reaches the host is rendered `live` and one that only closes `view`.
     for (const dismissal of view.overlay.dismissals) {
-      const action = actions[dismissal.id];
-      expect(action).toBeDefined();
       expect(html).toContain(
-        `id="${dismissal.control.id}" data-kind="view"${action === "overlay" ? "" : " data-product-action"} data-action="${action}"`,
+        dismissal.productAction === null
+          ? `id="${dismissal.control.id}" data-kind="view" data-action="overlay" data-value="none"`
+          : `id="${dismissal.control.id}" data-kind="live" data-product-action data-action="${dismissal.productAction}"`,
       );
     }
+    // The shipped dialog reports an outcome and decides nothing, so no
+    // dismissal on it reaches the host at all.
+    expect(
+      view.overlay.dismissals
+        .filter((dismissal) => dismissal.productAction !== null)
+        .map((dismissal) => dismissal.control.id),
+    ).toEqual([]);
   });
 
-  it("closes the dialog for a dismissal this shell has no product handler for", () => {
-    // A renamed or added dismissal must not inherit another dismissal's
-    // handler: without a declared mapping it is a plain overlay close. An id
-    // that names an `Object.prototype` member is the same case — the routing
-    // table must answer for what it declares, not for what it inherits.
+  it("renders a dismissal that declares no product action as a plain close", () => {
+    // A dismissal added to a dialog without an action must close it rather than
+    // inherit an acting sibling's handler, and a declared action is escaped into
+    // the attribute rather than concatenated into the markup.
     const view = desktopVisualView(createDesktopVisualState());
     const shipped = view.overlay.dismissals[0]!;
-    const known = new Set(view.overlay.dismissals.map((dismissal) => dismissal.id));
-    for (const id of ["outcome-renamed-dismiss", "toString", "constructor"]) {
-      const unknown = {
-        ...shipped,
-        id,
-        control: { ...shipped.control, id: `overlay-close-${id}` },
-      };
-      expect(known.has(id)).toBe(false);
-      const html = renderDesktopChrome({
-        ...view,
-        overlay: { ...view.overlay, dismissals: [...view.overlay.dismissals, unknown] },
-      });
-      expect(html).toContain(
-        `id="${unknown.control.id}" data-kind="view" data-action="overlay" data-value="none"`,
-      );
-      expect(html).not.toContain("[native code]");
-    }
+    const added = [
+      { ...shipped, id: "outcome-explain", productAction: null,
+        control: { ...shipped.control, id: "overlay-close-outcome-explain" } },
+      { ...shipped, id: "outcome-hostile", productAction: `x" onclick="steal()`,
+        control: { ...shipped.control, id: "overlay-close-outcome-hostile" } },
+    ];
+    const html = renderDesktopChrome({
+      ...view,
+      overlay: { ...view.overlay, dismissals: [...view.overlay.dismissals, ...added] },
+    });
+    expect(html).toContain(
+      `id="overlay-close-outcome-explain" data-kind="view" data-action="overlay" data-value="none"`,
+    );
+    expect(html).toContain(`data-action="x&quot; onclick=&quot;steal()"`);
+    expect(html).not.toContain(`onclick="steal()"`);
   });
 
   it("offers the modelled cancel while a sculpt pass runs", () => {

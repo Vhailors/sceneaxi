@@ -588,7 +588,7 @@ function dock(view: DesktopVisualView): string {
           <div><dt>Document</dt><dd><code data-change-document></code></dd></div>
           <div><dt>Base content hash</dt><dd><code data-change-content-hash></code></dd></div>
         </dl>
-        <pre class="change-diff" data-change-diff aria-label="Rendered proposal diff"></pre>
+        <pre class="change-diff" data-change-diff tabindex="0" role="region" aria-label="Rendered proposal diff"></pre>
         <div class="change-actions">
           ${button(view.changeReview.reject, "Reject", "ghost-button", ` data-product-action data-action="change-reject"`)}
           ${button(view.changeReview.accept, "Accept", "primary-button", ` data-product-action data-action="change-accept"`)}
@@ -791,25 +791,6 @@ function statusBar(view: DesktopVisualView): string {
 </footer>`;
 }
 
-/**
- * The dismissals this shell binds to a product action, keyed by the model's own
- * dismissal id. Every other dismissal — existing or added later — closes its
- * dialog, so a rename or an added dismissal cannot silently acquire a handler it
- * was never declared for.
- *
- * It declares none today: the one dialog reports an outcome the operator has
- * already been given, and every decision it could otherwise offer is taken on
- * the surface that owns it — the proposal is accepted or rejected in Change
- * Review, not from a dialog that names why the last attempt refused.
- *
- * Null-prototype, so the table answers for what it declares rather than for
- * what it inherits: an id that names an `Object.prototype` member is as unknown
- * to it as any other.
- */
-const DISMISSAL_PRODUCT_ACTIONS: Readonly<Record<string, string>> = Object.freeze(
-  Object.create(null) as Record<string, string>,
-);
-
 function overlays(view: DesktopVisualView): string {
   const palette = view.overlay.paletteGroups
     .map(
@@ -835,13 +816,12 @@ function overlays(view: DesktopVisualView): string {
     view.overlay.dismissals
       .filter((dismissal) => dismissal.overlay === overlay)
       .map((dismissal) => {
-        // Routed by the model's own dismissal id, never by the shape of a
-        // control id: a dismissal this shell has no product handler for closes
-        // the dialog rather than inheriting another dismissal's behaviour.
-        const productAction = DISMISSAL_PRODUCT_ACTIONS[dismissal.id];
-        const action = productAction === undefined
+        // The model decides both the kind and the action, so a dismissal that
+        // reaches the host cannot be rendered as a plain closer — nor a plain
+        // closer be wired to another dismissal's handler.
+        const action = dismissal.productAction === null
           ? ` data-action="overlay" data-value="none"`
-          : ` data-product-action data-action="${escapeHtml(productAction)}"`;
+          : ` data-product-action data-action="${escapeHtml(dismissal.productAction)}"`;
         return button(
           dismissal.control,
           escapeHtml(dismissal.label),
@@ -1097,7 +1077,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .change-meta dt{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
 .change-meta dd{margin:3px 0 0;min-width:0;color:var(--text-2)}
 .change-meta code{display:block;overflow-wrap:anywhere;font-size:10px}
-.change-diff{min-width:0;max-height:132px;overflow:auto;margin:0;padding:9px 10px;border:1px solid var(--line-control);border-radius:4px;background:var(--well);color:var(--text-2);font:10px/1.45 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
+.change-diff{min-width:0;max-height:min(46vh,280px);overflow:auto;margin:0;padding:9px 10px;border:1px solid var(--line-control);border-radius:4px;background:var(--well);color:var(--text-2);font:10px/1.45 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
 .change-actions{display:flex;gap:7px;justify-content:flex-end}
 .change-actions .primary-button,.change-actions .ghost-button{height:30px;padding:0 13px}
 .change-empty{margin:0;padding:34px 14px;text-align:center;font-size:12px;color:var(--dim)}
@@ -1493,7 +1473,11 @@ if (shell) {
     const diff = snapshot && typeof snapshot.renderedDiff === 'string'
       ? snapshot.renderedDiff
       : null;
-    const active = snapshot && (snapshot.phase === 'reviewing' || snapshot.phase === 'pending') &&
+    // Only \`reviewing\` is decidable. \`pending\` keeps the proposal so the surface
+    // can still show what was attempted, but its apply outcome is indeterminate:
+    // Reject would come back \`apply-in-progress\` and Accept would issue
+    // \`recover\`, so offering either decision there would be a lie.
+    const active = snapshot && snapshot.phase === 'reviewing' &&
       first && typeof first.documentPath === 'string' &&
       typeof first.baseContentHash === 'string' && diff !== null;
     activeReviewSnapshot = active ? snapshot : null;
@@ -1521,6 +1505,8 @@ if (shell) {
   // A conflict or recovery outcome reports the host's own diagnostic — its code,
   // its message, and the re-read hint it returned — through the one outcome
   // dialog, so nothing here describes a conflict the response did not name.
+  // The dialog is written on every open, so a resolved conflict cannot be
+  // re-read from it later.
   const showConflictOutcome = (title, snapshot, fallback) => {
     const diagnostics = snapshot && Array.isArray(snapshot.diagnostics)
       ? snapshot.diagnostics

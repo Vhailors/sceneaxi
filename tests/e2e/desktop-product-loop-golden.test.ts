@@ -162,6 +162,9 @@ describe("desktop first-release product loop", () => {
     const status = () => query(window, "[data-project-status]")?.textContent ?? "";
     const badge = () => query(window, "[data-change-badge]")?.textContent ?? "";
     const proposal = () => query(window, "[data-change-proposal]");
+    // The outcome dialog starts empty: it prints a refusal a response reported,
+    // never a standing sentence about what a conflict generally is.
+    expect(query(window, "[data-outcome-code]")?.textContent).toBe("");
 
     await click(window, "#profile-web");
     await click(window, "#project-open");
@@ -243,6 +246,7 @@ describe("desktop first-release product loop", () => {
     // Dismissing decides nothing: the proposal the host still holds is still on
     // the surface, and discarding it is the same all-or-nothing Reject.
     expect(proposal()?.hidden).toBe(false);
+    expect(badge()).toBe("1");
     await click(window, "#change-review-reject");
     expect(proposal()?.hidden).toBe(true);
     expect(badge()).toBe("0");
@@ -412,6 +416,13 @@ describe("desktop first-release product loop", () => {
     await click(window, "#project-save");
     expect(status()).toContain("recovery pending · transaction fixture-pending-apply");
 
+    // An indeterminate apply is not a decidable review. Offering Accept/Reject
+    // here would offer two buttons that do something other than what they say:
+    // Reject comes back `apply-in-progress`, and Accept issues `recover`.
+    expect(query(window, "[data-change-proposal]")?.hidden).toBe(true);
+    expect(query(window, "[data-change-empty]")?.hidden).toBe(false);
+    expect(query(window, "[data-change-badge]")?.textContent).toBe("0");
+
     await click(window, "#profile-kids");
     expect(shell?.dataset.profile).toBe("web");
     expect(status()).toContain("DESKTOP_RECOVERY_PENDING");
@@ -491,6 +502,20 @@ describe("desktop first-release product loop", () => {
         "status-refusal-help",
       ].sort(),
     );
+
+    // Change Review's two decisions reach the authoring session, so the
+    // refuse-only profile must not be able to drive them.
+    const requestsBeforeKidsReview = requests.length;
+    for (const id of ["change-review-accept", "change-review-reject"]) {
+      const control = query(window, `#${id}`);
+      expect(control?.dataset.kind).toBe("inert");
+      expect(control?.getAttribute("aria-disabled")).toBe("true");
+      control?.click();
+    }
+    await Promise.resolve();
+    expect(requests.length).toBe(requestsBeforeKidsReview);
+    expect(shell?.dataset.profile).toBe("kids");
+    expect(shell?.dataset.mode).toBe("run");
 
     expect(requests.map((request) => request.payload?.op ?? request.action)).toEqual([
       "status",

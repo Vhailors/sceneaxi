@@ -449,8 +449,9 @@ with `--appimage-extract-and-run --smoke`):
 - captured window (`SCENEAXI_SMOKE_SHOT=<path> pnpm smoke`): the Engine Desktop
   chrome — mode rail, the unified **Project / Files** panel listing `scene.json`
   as `Active · not opened`, title-bar **Open**/**Save** beside the project pill
-  `scene.json · ready to open`, the **Play composed scene** control, dock with the
-  Change Review queue, profile switch with `Kids refuse-only`, status bar
+  `scene.json · ready to open`, the **Play composed scene** control, dock with
+  Change Review showing its empty state (no proposal is under review at capture
+  time), profile switch with `Kids refuse-only`, status bar
   `game profile · core 0.0.0` — with the three composed crates lit in the viewport
   above the kernel open-path line and the frame report line. Binary evidence stays
   out of the repository; the capture is reproducible with that one environment
