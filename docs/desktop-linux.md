@@ -450,12 +450,12 @@ with `--appimage-extract-and-run --smoke`):
   chrome — mode rail, the unified **Project / Files** panel listing `scene.json`
   as `Active · not opened`, title-bar **Open**/**Save** beside the project pill
   `scene.json · ready to open`, the **Play composed scene** control, dock with
-  Change Review showing its empty state (no proposal is under review at capture
-  time), profile switch with `Kids refuse-only`, status bar
+  the fixture Change Review queue, profile switch with `Kids refuse-only`, status bar
   `game profile · core 0.0.0` — with the three composed crates lit in the viewport
   above the kernel open-path line and the frame report line. Binary evidence stays
-  out of the repository; the capture is reproducible with that one environment
-  variable on any Linux host
+  out of the repository. *(Superseded by sceneaxi#227, not re-recorded: the fixture
+  queue no longer exists, the current default chrome's empty review is gate evidence,
+  and a replacement packaged-window capture is owed.)*
 
 The smoke owns a scratch project, so it proves nothing about the project lifecycle the
 *launched* application presents. The 2026-08-05 throwaway-user-data seed observation

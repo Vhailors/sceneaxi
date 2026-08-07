@@ -336,9 +336,13 @@ dialog on every profile, so the refusal stays a state you can leave.
 A decision also needs a review the surface actually validated and projected.
 Without one, Accept and Reject refuse by name rather than reaching the host;
 pending recovery stays non-decidable, reports `DESKTOP_RECOVERY_PENDING` once,
-and keeps the recovery instructions beside it. A transport failure or malformed
-response leaves the last validated review projected; a validated host session
-snapshot replaces it, including when that snapshot carries a refusal diagnostic.
+and keeps the recovery instructions beside it — Web staging refuses before
+reaching the host under the same condition. When a validated host snapshot has
+cleared a stale proposal, a blocked decision leaves the active conflict refusal
+standing rather than replacing it with a normal-open status. A transport failure
+or malformed response leaves the last validated review projected; a validated
+host session snapshot replaces it, including when that snapshot carries a
+refusal diagnostic.
 
 The browser-side switch applies the same decision the same way: it sweeps
 **every** `[data-kind]` element and applies the model's own `[kind, refusal]` for

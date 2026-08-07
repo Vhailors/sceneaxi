@@ -314,6 +314,16 @@ describe("desktop first-release product loop", () => {
     expect(badge()).toBe("0");
     expect(status()).toContain("Stage refused · content-hash-conflict");
     expect(query(window, "[data-project-state]")?.dataset.projectState).toBe("refused");
+    // The host cleared the stale proposal, so Reject has nothing to decide — but
+    // the conflict it just reported is still the truth about this document, and
+    // must not be replaced by a status that only says nothing is under review.
+    const stageConflictStatus = status();
+    const stageConflictRequests = requests.length;
+    await click(window, "#overlay-close-outcome-dismiss");
+    await click(window, "#change-review-reject");
+    expect(status()).toBe(stageConflictStatus);
+    expect(query(window, "[data-project-state]")?.dataset.projectState).toBe("refused");
+    expect(requests).toHaveLength(stageConflictRequests);
 
     expect(requests.map((request) => request.payload?.op ?? request.action)).toEqual([
       "status",
@@ -495,6 +505,11 @@ describe("desktop first-release product loop", () => {
     const recoveryStatus = status();
     const recoveryRequests = requests.length;
     expect(query(window, "[data-project-state]")?.dataset.projectState).toBe("recovering");
+    await click(window, "#web-stage-html");
+    expect(status()).toContain("Stage refused · DESKTOP_RECOVERY_PENDING");
+    expect(status()).toContain(recoveryStatus);
+    expect(query(window, "[data-project-state]")?.dataset.projectState).toBe("recovering");
+    expect(requests).toHaveLength(recoveryRequests);
     await click(window, "#change-review-reject");
     expect(status()).toContain("Decision refused · DESKTOP_RECOVERY_PENDING");
     expect(status()).toContain(recoveryStatus);

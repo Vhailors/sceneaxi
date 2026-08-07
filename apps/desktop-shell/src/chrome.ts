@@ -1354,6 +1354,7 @@ if (shell) {
   let projectContentHash = null;
   let projectDirty = false;
   let projectRecovering = false;
+  let recoveryStatusText = null;
   let activeReviewSnapshot = null;
   let activeProject = null;
   let editableScene = null;
@@ -1464,6 +1465,14 @@ if (shell) {
     return true;
   };
 
+  const reportRecoveryRefusal = (action) => {
+    const current = recoveryStatusText || shell.querySelector('[data-project-status]')?.textContent || '';
+    productStatus(
+      'recovering',
+      action + ' refused · ' + T.product.refusals.recoveryPending + (current ? ' · ' + current : ''),
+    );
+  };
+
   const reviewCount = () => activeReviewSnapshot === null ? 0 : 1;
 
   const isSessionSnapshot = (snapshot) => {
@@ -1495,6 +1504,11 @@ if (shell) {
       : null;
   };
 
+  // True while the outcome dialog is reporting a refusal the host returned about
+  // the document itself: a blocked decision must not overwrite that with a
+  // status that only says nothing is under review.
+  let conflictOutcomeShown = false;
+
   const syncReview = (snapshot) => {
     if (snapshot !== null && !isSessionSnapshot(snapshot)) return false;
     const projection = reviewProjection(snapshot);
@@ -1520,6 +1534,11 @@ if (shell) {
     if (documentPath) documentPath.textContent = active ? projection.first.documentPath : '';
     if (contentHash) contentHash.textContent = active ? projection.first.baseContentHash : '';
     if (renderedDiff) renderedDiff.textContent = active ? projection.diff : '';
+    // A conflict the host no longer reports is not the current truth about this
+    // document, so the flag that protects its refusal is dropped with it.
+    if (!active || (Array.isArray(snapshot?.diagnostics) ? snapshot.diagnostics : []).length === 0) {
+      conflictOutcomeShown = false;
+    }
     q('[data-change-badge]').forEach((el) => {
       el.textContent = String(active ? 1 : 0);
     });
@@ -1545,6 +1564,7 @@ if (shell) {
     const hint = diagnostic && typeof diagnostic.reReadHint === 'string'
       ? ' · ' + diagnostic.reReadHint
       : '';
+    conflictOutcomeShown = true;
     showOutcome(title, code, message + hint);
   };
 
@@ -1858,6 +1878,10 @@ if (shell) {
       productStatus('refused', 'Stage refused · ' + T.product.refusals.webCapabilityRequired);
       return;
     }
+    if (projectRecovering) {
+      reportRecoveryRefusal('Stage');
+      return;
+    }
     if ((projectData === null || projectContentHash === null) && !(await openProject())) return;
     const decision = webStageDecision(
       {
@@ -1960,7 +1984,8 @@ if (shell) {
       projectRecovering = true;
       const code = typeof diagnostics[0]?.code === 'string' ? ' · ' + diagnostics[0].code : '';
       const transaction = typeof snapshot.transactionId === 'string' ? ' · transaction ' + snapshot.transactionId : '';
-      productStatus('recovering', T.product.documentPath + ' · recovery pending' + code + transaction + ' · Save to refresh or Open to re-read');
+      recoveryStatusText = T.product.documentPath + ' · recovery pending' + code + transaction + ' · Save to refresh or Open to re-read';
+      productStatus('recovering', recoveryStatusText);
       return true;
     }
     if (applied) {
@@ -2011,10 +2036,8 @@ if (shell) {
     if (activeReviewSnapshot !== null) return true;
     setOverlay('none');
     if (projectRecovering) {
-      const current = shell.querySelector('[data-project-status]')?.textContent || '';
-      const prefix = 'Decision refused · ' + T.product.refusals.recoveryPending;
-      productStatus('recovering', current.startsWith(prefix) ? current : prefix + ' · ' + current);
-    } else {
+      reportRecoveryRefusal('Decision');
+    } else if (!conflictOutcomeShown) {
       productStatus(
         projectData === null ? 'closed' : 'open',
         T.product.documentPath + ' · nothing under review · ' + T.product.refusals.proposalNotReviewing,

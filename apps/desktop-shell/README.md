@@ -100,7 +100,10 @@ the last validated review intact; a validated host session snapshot replaces it,
 including when that snapshot carries a refusal diagnostic. Neither conflict action
 reaches the host when there is no active review, including while apply recovery is
 pending, where the surface reports `DESKTOP_RECOVERY_PENDING` without changing the
-recovery state.
+recovery state. Web staging also refuses before reaching the host during recovery
+and retains the transaction details and recovery instructions. When a host snapshot
+has already cleared a stale proposal, unavailable conflict actions preserve the
+active conflict refusal instead of replacing it with a normal-open status.
 
 The first-release loop has one honest active file, `scene.json`. In the packaged
 host, first launch shows New Project and Open Project without binding or seeding
