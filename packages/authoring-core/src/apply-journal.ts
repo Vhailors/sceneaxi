@@ -104,6 +104,7 @@ export function journalRecoveryPendingDiagnostics(): readonly ApplyDiagnostic[] 
 }
 
 const TRANSACTION_ID_RE = /^\d{13}-[0-9a-f]{16}$/;
+const CANONICAL_JOURNAL_NAME_RE = /^\d{13}-[0-9a-f]{16}\.json$/;
 const JOURNAL_KEYS = new Set([
   "schemaVersion",
   "kind",
@@ -149,13 +150,21 @@ function completionSequencePath(cwd: string): string {
   return join(journalDirectory(cwd), ".completion-sequence");
 }
 
-const latestCompletedJournalCache = new Map<
-  string,
-  {
-    readonly directoryMtimeMs: number;
-    readonly entry: ApplyJournalEntry | undefined;
-  }
->();
+type ApplyUndoCandidate = Readonly<{
+  completionOrder: number;
+  documents: readonly Readonly<{
+    documentPath: string;
+    afterContentHash: string;
+  }>[];
+}>;
+
+let latestCompletedJournalCache:
+  | Readonly<{
+      directory: string;
+      signature: string;
+      entry: ApplyUndoCandidate | undefined;
+    }>
+  | undefined;
 
 export function beginApplyJournalTransaction(
   cwd: string,
@@ -181,7 +190,9 @@ function writeJournal(cwd: string, entry: ApplyJournalEntry): void {
     serializeJournal(entry),
     { token: `journal-${entry.transactionId}` },
   );
-  latestCompletedJournalCache.delete(journalDirectory(cwd));
+  if (latestCompletedJournalCache?.directory === journalDirectory(cwd)) {
+    latestCompletedJournalCache = undefined;
+  }
 }
 
 function writeActiveJournal(cwd: string, entry: ApplyJournalEntry | null): void {
@@ -453,9 +464,8 @@ function readJournals(
   if (!fileExists(dir)) return { ok: true, entries: [] };
 
   const entries: ApplyJournalEntry[] = [];
-  const canonicalName = /^\d{13}-[0-9a-f]{16}\.json$/;
   const names = readdirSync(dir)
-    .filter((entry) => canonicalName.test(entry))
+    .filter((entry) => CANONICAL_JOURNAL_NAME_RE.test(entry))
     .sort();
   for (const name of names) {
     const path = join(dir, name);
@@ -496,38 +506,81 @@ function latestCompletedJournal(
     )[0];
 }
 
+function applyUndoCandidate(
+  entry: ApplyJournalEntry | undefined,
+): ApplyUndoCandidate | undefined {
+  if (entry?.completionOrder === undefined) return undefined;
+  return Object.freeze({
+    completionOrder: entry.completionOrder,
+    documents: Object.freeze(
+      entry.documents.map((document) =>
+        Object.freeze({
+          documentPath: document.documentPath,
+          afterContentHash: document.afterContentHash,
+        }),
+      ),
+    ),
+  });
+}
+
+function journalFileSignature(cwd: string): string | undefined {
+  const directory = journalDirectory(cwd);
+  if (!fileExists(directory)) return undefined;
+  return JSON.stringify(
+    readdirSync(directory)
+      .filter((name) => CANONICAL_JOURNAL_NAME_RE.test(name))
+      .sort()
+      .map((name) => {
+        const stat = statSync(join(directory, name), { bigint: true });
+        return [name, stat.mtimeNs.toString(), stat.size.toString()];
+      }),
+  );
+}
+
 function cacheLatestCompletedJournal(
   cwd: string,
   entry: ApplyJournalEntry | undefined,
+  capturedSignature?: string,
 ): void {
   const directory = journalDirectory(cwd);
+  let signature: string | undefined;
   try {
-    latestCompletedJournalCache.set(directory, {
-      directoryMtimeMs: statSync(directory).mtimeMs,
-      entry,
-    });
+    signature = capturedSignature ?? journalFileSignature(cwd);
   } catch {
-    latestCompletedJournalCache.delete(directory);
+    signature = undefined;
   }
+  if (signature === undefined) {
+    if (latestCompletedJournalCache?.directory === directory) {
+      latestCompletedJournalCache = undefined;
+    }
+    return;
+  }
+  latestCompletedJournalCache = Object.freeze({
+    directory,
+    signature,
+    entry: applyUndoCandidate(entry),
+  });
 }
 
 function readLatestCompletedJournal(
   cwd: string,
 ):
-  | { readonly ok: true; readonly entry: ApplyJournalEntry | undefined }
+  | { readonly ok: true; readonly entry: ApplyUndoCandidate | undefined }
   | { readonly ok: false; readonly diagnostics: readonly ApplyDiagnostic[] } {
   const directory = journalDirectory(cwd);
-  if (!fileExists(directory)) return { ok: true, entry: undefined };
-  const directoryMtimeMs = statSync(directory).mtimeMs;
-  const cached = latestCompletedJournalCache.get(directory);
-  if (cached?.directoryMtimeMs === directoryMtimeMs) {
-    return { ok: true, entry: cached.entry };
+  const signature = journalFileSignature(cwd);
+  if (signature === undefined) return { ok: true, entry: undefined };
+  if (
+    latestCompletedJournalCache?.directory === directory &&
+    latestCompletedJournalCache.signature === signature
+  ) {
+    return { ok: true, entry: latestCompletedJournalCache.entry };
   }
   const journals = readJournals(cwd);
   if (!journals.ok) return journals;
   const entry = latestCompletedJournal(journals.entries);
-  cacheLatestCompletedJournal(cwd, entry);
-  return { ok: true, entry };
+  cacheLatestCompletedJournal(cwd, entry, signature);
+  return { ok: true, entry: applyUndoCandidate(entry) };
 }
 
 export function applyUndoAvailability(
