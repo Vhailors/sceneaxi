@@ -374,13 +374,22 @@ export function createDesktopProjectLifecycle(
   const slotsExhausted = (): Error =>
     new Error(`every quarantine slot up to ${MAX_QUARANTINE_SLOTS} is already taken`);
 
-  /** Preserve bytes we hold by exclusive create, so no existing slot can be hit. */
+  /**
+   * Preserve bytes we hold by exclusive create, so no existing slot can be hit.
+   *
+   * A slot only survives this call once it holds the whole flushed copy: a write
+   * or flush that fails takes its own half-written slot with it, so the directory
+   * never offers an operator an empty file that looks like a preserved backup.
+   */
   const copyInvalidState = (preserved: string): void => {
     let descriptor: number | null = null;
+    let created: string | null = null;
     try {
       for (let slot = 1; slot <= MAX_QUARANTINE_SLOTS && descriptor === null; slot += 1) {
+        const candidate = quarantineSlot(slot);
         try {
-          descriptor = openSync(quarantineSlot(slot), "wx", 0o600);
+          descriptor = openSync(candidate, "wx", 0o600);
+          created = candidate;
         } catch (error) {
           if (errorCode(error) !== "EEXIST") throw error;
         }
@@ -388,8 +397,13 @@ export function createDesktopProjectLifecycle(
       if (descriptor === null) throw slotsExhausted();
       writeFileSync(descriptor, preserved, "utf8");
       fsyncSync(descriptor);
-    } finally {
+      closeSync(descriptor);
+      descriptor = null;
+      created = null;
+    } catch (error) {
       if (descriptor !== null) closeSync(descriptor);
+      if (created !== null && existsSync(created)) unlinkSync(created);
+      throw error;
     }
   };
 

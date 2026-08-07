@@ -305,7 +305,8 @@ refused quarantine writes no document either. The first such New or Open quarant
 its place — never rewriting it in place, never deleting it, and never overwriting an
 earlier quarantine, whose slot counts as taken even when it is a dangling symlink.
 A registry whose bytes were readable is copied into an exclusively created slot and
-flushed. A registry whose bytes could never be read — mode-denied, owned by another
+flushed; a copy that fails to write or flush removes its own half-written slot, so no
+empty file is left looking like a preserved backup. A registry whose bytes could never be read — mode-denied, owned by another
 user, or replaced by a directory — is **moved** into a free slot instead, since
 renaming needs write permission on the state directory alone and preserves the exact
 object without reading it. Only a quarantine the operating system itself refuses,
