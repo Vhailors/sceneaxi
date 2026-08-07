@@ -232,6 +232,24 @@ function promptInput(ctrl: DesktopControl): string {
   ].join("");
 }
 
+/** Render the modelled recent-project chooser through the same refusal contract. */
+function recentProjectSelect(ctrl: DesktopControl): string {
+  const inert = ctrl.kind === "inert";
+  const described = inert
+    ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
+    : "";
+  return [
+    `<select id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
+    inert
+      ? ` aria-disabled="true" data-refusal="${escapeHtml(ctrl.refusal ?? "")}"`
+      : "",
+    described,
+    ` class="project-recent-select${inert ? " is-inert" : ""}"`,
+    ` aria-label="${escapeHtml(ctrl.label)}">`,
+    `<option value="">No recent projects</option></select>`,
+  ].join("");
+}
+
 /**
  * The whole closed registry, each code printed with the registry's own sentence.
  *
@@ -319,10 +337,10 @@ function titleBar(view: DesktopVisualView): string {
   </nav>
   <div class="profile-switch" role="group" aria-label="Profile">${profiles}</div>
   <div class="title-centre">
-    <span class="project-pill" data-project-state="closed"><span class="dot dot-ok" aria-hidden="true"></span><span data-project-status>${escapeHtml(view.product.surface.project.activeFile)} · ready to open</span></span>
+    <span class="project-pill" data-project-state="closed"><span class="dot dot-ok" aria-hidden="true"></span><span data-project-status>No project selected</span></span>
   </div>
   <div class="title-actions">
-    ${button(view.product.open, "Open", "ghost-button", ` data-product-action data-action="project-open"`)}
+    ${button(view.product.open, "Reload", "ghost-button", ` data-product-action data-action="project-open"`)}
     ${button(view.product.save, "Save", "primary-button", ` data-product-action data-action="project-save"`)}
     ${drawers}
     ${button(
@@ -386,8 +404,24 @@ function leftDock(view: DesktopVisualView): string {
     .join("");
   return `<aside class="left-dock" id="left-dock" aria-label="Project files and editor panels">
 <section class="project-panel" aria-labelledby="project-files-title">
-  <h2 class="panel-head" id="project-files-title"><span>PROJECT / FILES</span><span class="project-name">${escapeHtml(project.name)}</span></h2>
-  <div class="project-files">${files}</div>
+  <h2 class="panel-head" id="project-files-title"><span>PROJECT / FILES</span><span class="project-name" data-project-name>${escapeHtml(project.name)}</span></h2>
+  <div class="project-launcher" data-project-launcher>
+    <p>No project is selected. New Project creates the starter only after you choose its directory.</p>
+    <div class="project-lifecycle-actions">
+      ${button(view.product.newProject, "New Project", "primary-button", ` data-product-action data-action="project-new-root"`)}
+      ${button(view.product.openProjectRoot, "Open Project", "ghost-button", ` data-product-action data-action="project-open-root"`)}
+    </div>
+    <label class="project-recent-label" for="project-recent-select">Recent</label>
+    ${recentProjectSelect(view.product.recentProject)}
+    <div class="project-lifecycle-actions">
+      ${button(view.product.openRecent, "Open Recent", "ghost-button", ` data-product-action data-action="project-open-recent"`)}
+      ${button(view.product.removeRecent, "Remove", "ghost-button", ` data-product-action data-action="project-remove-recent"`)}
+    </div>
+  </div>
+  <div class="project-bound" data-project-bound hidden>
+    <div class="project-files">${files}</div>
+    <p class="project-root" data-project-root></p>
+  </div>
   <p class="project-file-state" data-project-file-state>Active · not opened</p>
 </section>
 ${panels}</aside>`;
@@ -906,6 +940,14 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .project-panel{flex:none;border-bottom:1px solid var(--line)}
 .project-panel .panel-head{justify-content:space-between}
 .project-name{max-width:126px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dim);font-size:8px;letter-spacing:.04em}
+.project-launcher{display:grid;gap:7px;padding:9px;border-bottom:1px solid var(--line)}
+.project-launcher p,.project-root{margin:0;color:var(--dim);font-size:9px;line-height:1.45;overflow-wrap:anywhere}
+.project-lifecycle-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px}
+.project-lifecycle-actions button{min-width:0;padding-inline:7px}
+.project-recent-label{font-family:var(--mono);font-size:8px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em}
+.project-recent-select{width:100%;min-width:0;height:26px;padding:0 7px;border:1px solid var(--line-control);border-radius:4px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:9px}
+.project-recent-select.is-inert{color:var(--inert);border-color:var(--line-control)}
+.project-bound{min-width:0}
 .project-files{padding:7px}
 .project-file{display:flex;align-items:center;gap:9px;padding:8px 9px;border:1px solid transparent;border-radius:4px;color:var(--dim)}
 .project-file.is-active{background:${ACCENT.surface};border-color:${ACCENT.line};color:var(--text)}
@@ -914,6 +956,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .project-file b{font-family:var(--mono);font-size:10px;font-weight:500}
 .project-file em{font-size:9px;font-style:normal;color:var(--dim);margin-top:2px}
 .project-file-state{margin:0;padding:0 10px 9px;font-family:var(--mono);font-size:9px;color:var(--faint)}
+.project-root{padding:0 10px 9px;font-family:var(--mono)}
 .pass-list{list-style:none;margin:0;padding:10px 11px;display:flex;flex-direction:column;gap:6px}
 .pass-row{display:flex;align-items:center;gap:10px;padding:6px 9px;background:var(--raised);border:1px solid var(--line);border-radius:4px}
 .pass-order{width:14px;height:14px;border-radius:3px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-size:9px;font-weight:700;flex:none}
@@ -1271,6 +1314,7 @@ if (shell) {
   let projectContentHash = null;
   let projectDirty = false;
   let projectRecovering = false;
+  let activeProject = null;
   // One product request at a time. Every live control reads \`projectData\` before
   // its first await, so two overlapping clicks would each build a proposal from
   // the same pre-edit document and the second would replace the first in the
@@ -1310,6 +1354,13 @@ if (shell) {
     return candidate && typeof candidate.request === 'function' ? candidate : null;
   };
 
+  const projectPort = () => {
+    const portable = globalThis.sceneaxiDesktop;
+    const linux = globalThis.sceneaxiDesktopLinux;
+    const candidate = portable || linux;
+    return candidate && typeof candidate.project === 'function' ? candidate : null;
+  };
+
   const runtimeRequest = async (request) => {
     const port = desktopPort();
     if (port === null) return null;
@@ -1324,6 +1375,126 @@ if (shell) {
         detail: message,
       };
     }
+  };
+
+  const projectRequest = async (request) => {
+    const port = projectPort();
+    if (port === null) return null;
+    try {
+      return await port.project(request);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return {
+        ok: false,
+        reason: T.product.refusals.runtimeRequestFailed,
+        message,
+        detail: message,
+      };
+    }
+  };
+
+  const applyProjectLifecycleStatus = (status) => {
+    if (!status || !Array.isArray(status.recents)) return false;
+    const candidate = status.active;
+    activeProject = candidate && typeof candidate.name === 'string' &&
+      typeof candidate.root === 'string' && candidate.documentPath === T.product.documentPath
+      ? candidate
+      : null;
+    const launcher = shell.querySelector('[data-project-launcher]');
+    const bound = shell.querySelector('[data-project-bound]');
+    if (launcher) launcher.hidden = activeProject !== null;
+    if (bound) bound.hidden = activeProject === null;
+    q('[data-project-name]').forEach((el) => {
+      el.textContent = activeProject === null ? 'No project' : activeProject.name;
+    });
+    q('[data-project-root]').forEach((el) => {
+      el.textContent = activeProject === null ? '' : activeProject.root;
+    });
+    const recent = shell.querySelector('#project-recent-select');
+    if (recent) {
+      recent.replaceChildren();
+      const empty = document.createElement('option');
+      empty.value = '';
+      empty.textContent = status.recents.length === 0 ? 'No recent projects' : 'Choose a recent project';
+      recent.append(empty);
+      status.recents.forEach((entry) => {
+        if (!entry || typeof entry.root !== 'string' || typeof entry.name !== 'string') return;
+        const option = document.createElement('option');
+        option.value = entry.root;
+        option.textContent = entry.name + ' — ' + entry.root;
+        recent.append(option);
+      });
+    }
+    if (activeProject !== null) {
+      document.title = activeProject.name + ' — ' + activeProject.root + ' — ' +
+        activeProject.documentPath + ' — SceneAxi Engine Desktop';
+      productStatus('closed', activeProject.name + ' · ' + activeProject.root + ' · ' +
+        activeProject.documentPath + ' · ready to open');
+    } else {
+      document.title = 'SceneAxi Engine Desktop — Choose a project';
+      const recovery = status.recovery && typeof status.recovery.reason === 'string'
+        ? ' · recovery: ' + status.recovery.reason + ' · choose New Project or Open Project'
+        : '';
+      productStatus(recovery ? 'refused' : 'closed', 'No project selected' + recovery);
+    }
+    return true;
+  };
+
+  const syncProjectLifecycle = async () => {
+    const port = projectPort();
+    if (port === null) return;
+    const response = await projectRequest({ action: 'status', profile: shell.dataset.profile });
+    if (!response || !response.ok || !applyProjectLifecycleStatus(response.data?.status)) {
+      productStatus('refused', 'Project lifecycle refused · ' +
+        (response?.reason || T.product.refusals.runtimeRequestRefused));
+      return;
+    }
+    if (activeProject !== null) await openProject();
+  };
+
+  const chooseProject = async (action) => {
+    if (projectRecovering) {
+      productStatus('refused', 'Project change refused · ' + T.product.refusals.recoveryPending);
+      return;
+    }
+    if (projectDirty) {
+      productStatus('refused', 'Project change refused · ' + T.product.refusals.profileSwitchDirty);
+      return;
+    }
+    const recent = shell.querySelector('#project-recent-select');
+    const root = recent && typeof recent.value === 'string' ? recent.value : '';
+    if ((action === 'open-recent' || action === 'remove-recent') && root.length === 0) {
+      productStatus('refused', 'Recent project refused · no validated recent root selected');
+      return;
+    }
+    productStatus('opening', action === 'choose-new' ? 'Choose a directory for the explicit starter project…' : 'Choose a project directory…');
+    const response = await projectRequest({
+      action,
+      profile: shell.dataset.profile,
+      ...((action === 'open-recent' || action === 'remove-recent') ? { root } : {}),
+    });
+    if (response === null || !response.ok) {
+      productStatus('refused', 'Project lifecycle refused · ' +
+        (response === null ? T.product.refusals.runtimeUnavailable : response.reason));
+      return;
+    }
+    if (!applyProjectLifecycleStatus(response.data?.status)) {
+      productStatus('refused', 'Project lifecycle refused · ' + T.product.refusals.runtimeRequestRefused);
+      return;
+    }
+    if (response.data.outcome === 'cancelled') {
+      productStatus(activeProject === null ? 'closed' : 'open', 'Project selection cancelled · no project bytes changed');
+      return;
+    }
+    projectData = null;
+    projectContentHash = null;
+    projectDirty = false;
+    projectRecovering = false;
+    if (response.data.outcome === 'removed') {
+      productStatus(activeProject === null ? 'closed' : 'open', 'Recent project removed · active project unchanged');
+      return;
+    }
+    if (activeProject !== null) await openProject();
   };
 
   // A refused authoring response carries its own named reason: the document
@@ -1392,6 +1563,10 @@ if (shell) {
   };
 
   const openProject = async () => {
+    if (activeProject === null && projectPort() !== null) {
+      productStatus('refused', 'Open refused · no project root selected');
+      return false;
+    }
     if (projectRecovering) return restartProject('recovery-pending');
     if (!(await discardStagedProposal())) return false;
     productStatus('opening', T.product.documentPath + ' · opening…');
@@ -1795,7 +1970,11 @@ if (shell) {
       el.setAttribute('aria-expanded', String(open));
       return;
     }
-    if (action === 'project-open') void productAction(openProject);
+    if (action === 'project-new-root') void productAction(() => chooseProject('choose-new'));
+    else if (action === 'project-open-root') void productAction(() => chooseProject('choose-open'));
+    else if (action === 'project-open-recent') void productAction(() => chooseProject('open-recent'));
+    else if (action === 'project-remove-recent') void productAction(() => chooseProject('remove-recent'));
+    else if (action === 'project-open') void productAction(openProject);
     else if (action === 'project-save') void productAction(saveProject);
     else if (action === 'scene-play') void productAction(playScene);
     else if (action === 'web-stage-html') void productAction(() => stageWebEdit('html'));
@@ -1857,6 +2036,7 @@ if (shell) {
 
   syncChanges();
   syncAssistantTier();
+  void syncProjectLifecycle();
 }
 `;
 }

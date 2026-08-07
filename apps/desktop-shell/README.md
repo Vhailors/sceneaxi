@@ -84,14 +84,21 @@ Every control declares its kind — `view` changes visual state and works,
 `review` edits the fixture Change Review queue and writes no document, `live`
 declares a product action the injected desktop host — an enclosing consumer
 runtime — must bind (the assistant prompt, Send, Retry, and the artifact
-manipulators, plus Open/Save/Play and Web staging, which the packaged Linux tier
+manipulators, plus New/Open Project, Recent, Reload/Save/Play, and Web staging, which the packaged Linux tier
 binds through its bridge), and `inert` keeps its focus stop and refuses by a name
 from `DESKTOP_VISUAL_REFUSALS`. This app invokes no authoring operation itself
 and adds no engine/profile/site/billing dependency: the host remains the adapter
 that reaches shared authoring, orchestration, and presentation seams, so a `live`
 control rendered by the standalone `chrome` command is inert and says why.
 
-The first-release loop has one honest active file, `scene.json`. Open validates
+The first-release loop has one honest active file, `scene.json`. In the packaged
+host, first launch shows New Project and Open Project without binding or seeding
+an implicit root. New Project creates the existing starter only after a native
+directory choice; Open Project and Recent validate a canonical root before the
+shared authoring session is rebound. The chrome displays the host-provided
+project name, canonical root, and active document, but never receives file
+contents through the lifecycle port. Standalone chrome has no lifecycle port,
+so those controls refuse honestly. Reload validates
 and reads it through the long-lived authoring session. Web Experience can stage
 stored HTML or the normalized `assets/hero.glb` reference as one `/data`
 proposal; Save accepts that proposal atomically. The chrome never executes the
@@ -230,7 +237,10 @@ itself, so Kids refuses there with the shared code. `test/app.test.ts`
 ("chrome / open-path parity") asserts the identity, and also that a palette row
 may claim to be driveable only when it names a real desktop command.
 
-`tests/e2e/desktop-product-loop-golden.test.ts` is the vertical acceptance path:
-it executes the emitted browser script at the narrow window tier, clicks all
+`tests/e2e/desktop-product-loop-golden.test.ts` is the authoring/play vertical.
+`tests/e2e/desktop-project-lifecycle-golden.test.ts` drives the emitted UI through
+a preload-shaped project host for first launch, create, cancel, open, invalid
+bytes, recents, removal, and restart. The former
+test executes the emitted browser script at the narrow window tier, clicks all
 three profile surfaces plus Open, Web asset staging, Save recovery, and Play
 against the real host bridge, and observes the viewport playback acknowledgement.

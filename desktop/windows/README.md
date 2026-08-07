@@ -76,11 +76,10 @@ configuration and update-check errors become closed named refusals; there is no
 fallback URL and no unsigned install path. NSIS update signature verification
 remains enabled and derives the publisher identity from the signing certificate.
 
-First run is the existing desktop application behavior: the app creates its
-persistent project directory under Electron's user-data directory, seeds
-`scene.json` only when absent, and opens the Game profile. Website (Web) remains
-selectable and Kids remains refuse-only. Windows packaging changes none of those
-product semantics.
+First run is the existing desktop application behavior — the contained project
+lifecycle, product tabs, and Kids refuse-only posture owned by
+[`docs/desktop-linux.md`](../../docs/desktop-linux.md). Windows packaging changes
+none of those product semantics.
 
 ## Safe smoke
 

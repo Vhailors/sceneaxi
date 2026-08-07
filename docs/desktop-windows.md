@@ -97,9 +97,9 @@ Start-Process .\SceneAxi-Engine-Desktop-<version>-windows-x64.exe
 ```
 
 Choose the default per-user install unless an operator has a separate machine-wide
-policy. On first launch, the unchanged desktop application creates its project under
-Electron's user-data directory and seeds `scene.json` only if absent. It opens Game;
-Website (Web) is selectable; Kids remains visibly refuse-only.
+policy. This root stages the unchanged desktop application, so first launch, the
+contained project lifecycle, the product tabs, and the Kids refuse-only posture are
+owned by [`desktop-linux.md`](desktop-linux.md).
 
 ## Fail-closed update behavior
 

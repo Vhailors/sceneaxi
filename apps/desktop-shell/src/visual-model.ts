@@ -1180,6 +1180,11 @@ export type DesktopVisualView = Readonly<{
   product: Readonly<{
     surface: DesktopProductSurface;
     surfaces: readonly DesktopProductSurface[];
+    newProject: DesktopControl;
+    openProjectRoot: DesktopControl;
+    recentProject: DesktopControl;
+    openRecent: DesktopControl;
+    removeRecent: DesktopControl;
     open: DesktopControl;
     save: DesktopControl;
     play: DesktopControl;
@@ -1368,6 +1373,11 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
   const product = Object.freeze({
     surface: productSurface,
     surfaces: Object.freeze(DESKTOP_PROFILE_IDS.map(desktopProductSurface)),
+    newProject: control("project-new-root", "New Project", "live"),
+    openProjectRoot: control("project-open-root", "Open Project", "live"),
+    recentProject: control("project-recent-select", "Recent project", "view"),
+    openRecent: control("project-open-recent", "Open recent project", "live"),
+    removeRecent: control("project-remove-recent", "Remove recent project", "live"),
     open: control("project-open", "Open scene.json", "live"),
     save: control("project-save", "Save scene.json", "live"),
     play: control("scene-play", "Play composed scene", "live"),

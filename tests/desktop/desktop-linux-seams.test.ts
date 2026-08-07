@@ -19,6 +19,10 @@ import {
   DESKTOP_BRIDGE_CHANNEL,
   DESKTOP_BRIDGE_GLOBAL,
   DESKTOP_BRIDGE_REFUSALS,
+  DESKTOP_PROJECT_ACTIONS,
+  DESKTOP_PROJECT_CHANNEL,
+  DESKTOP_PROJECT_REFUSALS,
+  DESKTOP_PROJECT_STATE_SCHEMA_VERSION,
   DESKTOP_OPEN_PLACEMENTS,
   seam,
 } from "../../desktop/linux/src/index.ts";
@@ -48,6 +52,16 @@ describe("desktop-linux seam", () => {
     expect(DESKTOP_BRIDGE_GLOBAL).toBe("sceneaxiDesktopLinux");
     expect(DESKTOP_BRIDGE_AUTHORING_OPS).toContain("recover");
     expect(DESKTOP_BRIDGE_AUTHORING_OPS).toContain("restart");
+    expect(DESKTOP_PROJECT_CHANNEL).toBe("sceneaxi:desktop-project");
+    expect(DESKTOP_PROJECT_STATE_SCHEMA_VERSION).toBe(1);
+    expect(DESKTOP_PROJECT_ACTIONS).toEqual([
+      "status",
+      "choose-new",
+      "choose-open",
+      "open-recent",
+      "remove-recent",
+    ]);
+    expect(DESKTOP_PROJECT_REFUSALS.projectRequired).toBe("DESKTOP_PROJECT_REQUIRED");
     expect(Object.isFrozen(DESKTOP_OPEN_PLACEMENTS)).toBe(true);
     expect(DESKTOP_OPEN_PLACEMENTS).toHaveLength(3);
   });
@@ -116,5 +130,17 @@ describe("desktop-linux install root", () => {
     const smoke = read("desktop/linux/scripts/smoke.mjs");
     expect(smoke).toContain("kernel session did not advance");
     expect(smoke).toContain("frame report is not the Three core");
+  });
+
+  it("adapts project lifecycle through real Electron dialogs and the frozen preload global", () => {
+    const main = read("desktop/linux/src/electron/main.ts");
+    const preload = read("desktop/linux/src/electron/preload.ts");
+    expect(main).toContain("dialog.showOpenDialog(window");
+    expect(main).toContain("DESKTOP_PROJECT_CHANNEL");
+    expect(main).toContain('properties: ["openDirectory", "createDirectory"]');
+    expect(main).toContain('properties: ["openDirectory"]');
+    expect(preload).toContain("project: (request: unknown)");
+    expect(preload).toContain("DESKTOP_PROJECT_CHANNEL");
+    expect(preload).not.toContain("node:fs");
   });
 });

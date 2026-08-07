@@ -16,7 +16,12 @@ request followed by `\n`, then one UTF-8 JSON response followed by `\n`; the
 connection closes after that exchange. Requests and responses carry
 `protocolVersion: 1` and the caller's deterministic `id`.
 
-The packaged desktop publishes a discovery descriptor at:
+The bridge belongs to the bound project, not to the process: the desktop
+publishes its descriptor when a project root is active and republishes it — same
+socket path, new capability, new recorded root — whenever the operator activates
+a different one. While no project is bound there is nothing to attach to and no
+descriptor exists (see the project lifecycle in
+[`desktop-linux.md`](desktop-linux.md)). The descriptor path is:
 
 - `${XDG_CONFIG_HOME}/sceneaxi/desktop-bridge-v1.json` when
   `XDG_CONFIG_HOME` is absolute;
@@ -29,12 +34,13 @@ explicit CLI override for isolated installs and tests; it changes no server
 authority.
 
 The descriptor records protocol identity, socket path, desktop PID, project
-root, granted permissions, and one random 256-bit launch capability. It is not
+root, granted permissions, and one random 256-bit capability. It is not
 a BYOK credential. The containing directories are mode `0700`; descriptor and
 socket are mode `0600`; the CLI refuses symlinks, non-owner endpoints, and any
-group/world permission bit. A capability is generated on every launch, compared
-in constant time, never emitted by a CLI envelope, and removed with the
-descriptor on graceful shutdown.
+group/world permission bit. A capability is generated for every activated
+project, compared in constant time, never emitted by a CLI envelope, and removed
+with the descriptor when that server closes — on graceful shutdown or when
+another root replaces it.
 
 A descriptor that outlived its host — after a crash or `SIGKILL`, where no
 `close()` ran — is reclaimed on the next launch. Liveness is proven against the
@@ -52,7 +58,7 @@ MiB and one request per connection.
 ## Permission boundary
 
 Every request names exactly one permission. The host checks three things before
-calling the desktop bridge: the launch capability is valid, the named
+calling the desktop bridge: the capability is valid, the named
 permission is granted by this desktop instance, and it is the exact permission
 declared by the checked-in tool definition.
 
