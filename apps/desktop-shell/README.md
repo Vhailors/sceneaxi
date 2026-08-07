@@ -95,9 +95,12 @@ control rendered by the standalone `chrome` command is inert and says why.
 
 Change Review is populated only by the active `DesktopSession` proposal and
 offers one atomic Accept/Reject pair. Accept may write through authoring-core;
-Reject discards without writing. A refused or malformed host response leaves the
-last validated review intact, and neither conflict action reaches the host when
-there is no active review, including while apply recovery is pending.
+Reject discards without writing. A transport failure or malformed response leaves
+the last validated review intact; a validated host session snapshot replaces it,
+including when that snapshot carries a refusal diagnostic. Neither conflict action
+reaches the host when there is no active review, including while apply recovery is
+pending, where the surface reports `DESKTOP_RECOVERY_PENDING` without changing the
+recovery state.
 
 The first-release loop has one honest active file, `scene.json`. In the packaged
 host, first launch shows New Project and Open Project without binding or seeding

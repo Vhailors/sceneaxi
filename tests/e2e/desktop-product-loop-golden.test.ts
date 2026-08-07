@@ -296,6 +296,25 @@ describe("desktop first-release product loop", () => {
     expect(status()).toContain("rejected · no document written");
     expect(documentText()).toContain('"title": "External after review"');
 
+    await click(window, "#web-inject-asset");
+    expect(proposal()?.hidden).toBe(false);
+    expect(
+      writeDocumentFile(
+        join(dir, "scene.json"),
+        createDocument({
+          id: "desktop-first-release",
+          data: { ...resetScene.composed.document.data, title: "External after second review" },
+        }),
+        { cwd: dir },
+      ).ok,
+    ).toBe(true);
+    await click(window, "#web-stage-html");
+    expect(documentText()).toContain('"title": "External after second review"');
+    expect(proposal()?.hidden).toBe(true);
+    expect(badge()).toBe("0");
+    expect(status()).toContain("Stage refused · content-hash-conflict");
+    expect(query(window, "[data-project-state]")?.dataset.projectState).toBe("refused");
+
     expect(requests.map((request) => request.payload?.op ?? request.action)).toEqual([
       "status",
       "propose",
@@ -311,6 +330,8 @@ describe("desktop first-release product loop", () => {
       "reject",
       "reject",
       "status",
+      "propose",
+      "propose",
     ]);
   });
 
@@ -475,7 +496,14 @@ describe("desktop first-release product loop", () => {
     const recoveryRequests = requests.length;
     expect(query(window, "[data-project-state]")?.dataset.projectState).toBe("recovering");
     await click(window, "#change-review-reject");
-    expect(status()).toBe(recoveryStatus);
+    expect(status()).toContain("Decision refused · DESKTOP_RECOVERY_PENDING");
+    expect(status()).toContain(recoveryStatus);
+    expect(query(window, "[data-project-state]")?.dataset.projectState).toBe("recovering");
+    // Announced once: a second blocked decision must not stack another prefix
+    // over the recovery instructions the operator still has to follow.
+    const announcedRecoveryStatus = status();
+    await click(window, "#change-review-reject");
+    expect(status()).toBe(announcedRecoveryStatus);
     expect(query(window, "[data-project-state]")?.dataset.projectState).toBe("recovering");
     expect(requests).toHaveLength(recoveryRequests);
 

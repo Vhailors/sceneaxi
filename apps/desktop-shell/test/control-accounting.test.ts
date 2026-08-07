@@ -196,7 +196,7 @@ describe("engine desktop chrome — control accounting (document → model)", ()
       for (const tag of buttons) {
         // `button(control, …)` is the only thing that emits this pair, so a raw
         // `<button>` written into the markup fails here rather than at review.
-        expect(tag, `${label} ${tag}`).toMatch(/\sid="[^"]+"\sdata-kind="(view|review|live|inert)"/);
+        expect(tag, `${label} ${tag}`).toMatch(/\sid="[^"]+"\sdata-kind="(view|live|inert)"/);
       }
     }
   });

@@ -1877,6 +1877,7 @@ if (shell) {
     const response = await runtimeRequest(decision.request);
     const reason = responseReason(response);
     const snapshot = response?.ok ? response.data : null;
+    if (isSessionSnapshot(snapshot)) syncReview(snapshot);
     if (reason !== null || reviewProjection(snapshot) === null) {
       productStatus('refused', 'Stage refused · ' + (reason || T.product.refusals.proposalNotReviewing));
       if (reason === 'content-hash-conflict' || reason === 'journal-conflict') {
@@ -1884,7 +1885,6 @@ if (shell) {
       }
       return;
     }
-    syncReview(snapshot);
     projectData = decision.request.payload.newValue;
     projectDirty = true;
     projectRecovering = false;
@@ -1949,12 +1949,12 @@ if (shell) {
 
   const applySaveSnapshot = (snapshot) => {
     if (!isSessionSnapshot(snapshot)) return false;
+    syncReview(snapshot);
     const diagnostics = Array.isArray(snapshot.diagnostics) ? snapshot.diagnostics : [];
     const reviewing = reviewProjection(snapshot) !== null;
     const recovering = snapshot.phase === 'pending' || snapshot.journalRecoveryPending === true;
     const applied = snapshot.phase === 'applied' && diagnostics.length === 0;
     if (!reviewing && !recovering && !applied) return false;
-    syncReview(snapshot);
     if (diagnostics[0]?.code === 'journal-not-found') return false;
     if (recovering) {
       projectRecovering = true;
@@ -2010,7 +2010,11 @@ if (shell) {
   const requireActiveReview = () => {
     if (activeReviewSnapshot !== null) return true;
     setOverlay('none');
-    if (!projectRecovering) {
+    if (projectRecovering) {
+      const current = shell.querySelector('[data-project-status]')?.textContent || '';
+      const prefix = 'Decision refused · ' + T.product.refusals.recoveryPending;
+      productStatus('recovering', current.startsWith(prefix) ? current : prefix + ' · ' + current);
+    } else {
       productStatus(
         projectData === null ? 'closed' : 'open',
         T.product.documentPath + ' · nothing under review · ' + T.product.refusals.proposalNotReviewing,

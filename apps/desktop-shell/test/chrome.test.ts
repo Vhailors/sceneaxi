@@ -402,7 +402,7 @@ describe("engine desktop chrome — accessibility", () => {
 
   it("keeps every tablist owning nothing but its tabs", () => {
     // ARIA restricts a tablist's children to tabs, and `moveTab()` enumerates
-    // them, so the bulk accept/reject and the spacer stay outside it.
+    // them, so the structural spacer stays outside it.
     const html = render();
     for (const [, inner] of html.matchAll(
       /<div class="(?:dock|view)-tablist" role="tablist"[^>]*>(.*?)<\/div>/gs,
@@ -410,7 +410,6 @@ describe("engine desktop chrome — accessibility", () => {
       const tags = [...(inner ?? "").matchAll(/<button\b[^>]*>/g)].map(([tag]) => tag);
       expect(tags.length).toBeGreaterThan(0);
       for (const tag of tags) expect(tag).toContain('role="tab"');
-      expect(inner).not.toContain("dock-bulk");
       expect(inner).not.toContain("spacer");
     }
     expect(html).toContain('<div class="dock-tablist" role="tablist" aria-label="Dock panel">');

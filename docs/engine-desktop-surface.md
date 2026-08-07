@@ -333,7 +333,12 @@ own all-or-nothing Accept and Reject, which are `live` and inert on Kids like th
 rest of the project loop. `Escape` and the outcome dismissal still close the
 dialog on every profile, so the refusal stays a state you can leave.
 
-A decision also needs a review the surface actually validated and projected: without one, Accept and Reject refuse by name rather than reaching the host, pending recovery stays non-decidable and keeps its recovery status, and a refused or malformed authoring response leaves the last validated review projected.
+A decision also needs a review the surface actually validated and projected.
+Without one, Accept and Reject refuse by name rather than reaching the host;
+pending recovery stays non-decidable, reports `DESKTOP_RECOVERY_PENDING` once,
+and keeps the recovery instructions beside it. A transport failure or malformed
+response leaves the last validated review projected; a validated host session
+snapshot replaces it, including when that snapshot carries a refusal diagnostic.
 
 The browser-side switch applies the same decision the same way: it sweeps
 **every** `[data-kind]` element and applies the model's own `[kind, refusal]` for
