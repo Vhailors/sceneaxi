@@ -22,6 +22,8 @@ import {
   createDesktopByoConfiguration,
   createProviderKeyStore,
   createSecureDesktopByoAssistantRunner,
+  desktopByoConfigurationView,
+  desktopByoRemovalContext,
   seedDesktopProject,
   type PlatformSecureStorage,
   type ProviderKeyAccess,
@@ -395,12 +397,52 @@ describe("desktop BYOK configuration", () => {
       ok: true,
       operation: "removed",
       keyStatus: "missing",
+      storageStatus: "unavailable",
     });
     expect(await configuration.handle({ ...request, action: "status" })).toMatchObject({
       ok: false,
       reason: PROVIDER_KEY_STORE_REFUSALS.locked,
       removable: false,
     });
+  });
+
+  it("reports a reachable backend on every other successful answer", async () => {
+    const root = temporaryRoot("provider-config-storage-status");
+    const configuration = createDesktopByoConfiguration({
+      keyStore: createProviderKeyStore({ root, platformStorage: syntheticPlatform() }),
+      providerRuntimeAvailable: false,
+    });
+    const request = { profile: "@sceneaxi/profile-game", provider: "openrouter" } as const;
+
+    expect(await configuration.handle({ ...request, action: "status" })).toMatchObject({
+      ok: true,
+      keyStatus: "missing",
+      storageStatus: "ready",
+    });
+    expect(
+      await configuration.handle({ ...request, action: "save", key: SYNTHETIC_NON_SECRET }),
+    ).toMatchObject({ ok: true, operation: "saved", storageStatus: "ready" });
+    expect(await configuration.handle({ ...request, action: "remove" })).toMatchObject({
+      ok: true,
+      operation: "removed",
+      storageStatus: "ready",
+    });
+    expect(await configuration.handle({ ...request, action: "remove" })).toMatchObject({
+      ok: true,
+      operation: "already-missing",
+      storageStatus: "ready",
+    });
+  });
+
+  it.each([
+    [PROVIDER_KEY_STORE_REFUSALS.unavailable, "storage-unavailable"],
+    [PROVIDER_KEY_STORE_REFUSALS.locked, "storage-unavailable"],
+    [PROVIDER_KEY_STORE_REFUSALS.unsupported, "storage-unavailable"],
+    [PROVIDER_KEY_STORE_REFUSALS.corrupt, "envelope-invalid"],
+    [PROVIDER_KEY_STORE_REFUSALS.keyInvalid, "envelope-present"],
+    [PROVIDER_KEY_STORE_REFUSALS.failed, "envelope-present"],
+  ] as const)("classifies %s removal context as %s", (reason, context) => {
+    expect(desktopByoRemovalContext(reason)).toBe(context);
   });
 
   it("denies Kids before reading a key field or touching secure storage", async () => {
@@ -447,6 +489,80 @@ describe("desktop BYOK configuration", () => {
     });
     expect(keyReads).toBe(0);
     expect(storageCalls).toBe(0);
+  });
+});
+
+describe("BYOK configuration surface projection", () => {
+  const refusal = (
+    reason: (typeof PROVIDER_KEY_STORE_REFUSALS)[keyof typeof PROVIDER_KEY_STORE_REFUSALS],
+    removable: boolean,
+  ) => desktopByoConfigurationView({ ok: false, reason, message: "Synthetic detail.", removable });
+
+  it("blames only the cause the store reported", () => {
+    const locked = refusal(PROVIDER_KEY_STORE_REFUSALS.locked, true);
+    expect(locked.message).toContain("Secure storage is unavailable");
+    expect(locked.message).toContain("without unlocking it");
+    expect(locked.removeEnabled).toBe(true);
+
+    const corrupt = refusal(PROVIDER_KEY_STORE_REFUSALS.corrupt, true);
+    expect(corrupt.state).toBe("Stored · unusable");
+    expect(corrupt.message).toContain("The stored entry is invalid and can be removed.");
+    expect(corrupt.message).not.toContain("sealed");
+    expect(corrupt.message).not.toContain("unlock");
+    expect(corrupt.message).not.toContain("Secure storage is unavailable");
+    expect(corrupt.removeEnabled).toBe(true);
+
+    const unknown = refusal(PROVIDER_KEY_STORE_REFUSALS.keyInvalid, true);
+    expect(unknown.message).toContain("A stored entry is present and can be removed.");
+    expect(unknown.message).not.toContain("sealed");
+    expect(unknown.message).not.toContain("Secure storage is unavailable");
+
+    for (const view of [locked, corrupt, unknown, refusal(PROVIDER_KEY_STORE_REFUSALS.failed, false)]) {
+      expect(view.keyFieldEnabled).toBe(false);
+      expect(view.saveEnabled).toBe(false);
+      expect(view.saveLabel).toBeNull();
+    }
+    expect(refusal(PROVIDER_KEY_STORE_REFUSALS.failed, false).removeEnabled).toBe(false);
+  });
+
+  it("never offers save while the backend stays unreachable after a successful removal", () => {
+    const removed = desktopByoConfigurationView({
+      ok: true,
+      action: "remove",
+      provider: "openrouter",
+      providerLabel: "OpenRouter",
+      keyStatus: "missing",
+      operation: "removed",
+      storageStatus: "unavailable",
+      runtimeStatus: "unavailable",
+    });
+    expect(removed).toMatchObject({
+      state: "Storage unavailable",
+      keyFieldEnabled: false,
+      saveEnabled: false,
+      removeEnabled: false,
+    });
+    expect(removed.message).toContain("The provider key was removed.");
+    expect(removed.message).toContain("saving and replacing stay refused");
+
+    const ready = desktopByoConfigurationView({
+      ok: true,
+      action: "status",
+      provider: "openrouter",
+      providerLabel: "OpenRouter",
+      keyStatus: "configured",
+      operation: "status",
+      storageStatus: "ready",
+      runtimeStatus: "unavailable",
+    });
+    expect(ready).toMatchObject({
+      state: "Key saved",
+      saveLabel: "Replace key",
+      keyFieldEnabled: true,
+      saveEnabled: true,
+      removeEnabled: true,
+    });
+    expect(ready.message).toContain("Provider execution is unavailable in this desktop build.");
   });
 });
 
@@ -605,7 +721,9 @@ describe("renderer and transport redaction structure", () => {
     );
     expect(renderer).toContain('keyInput.type = "password"');
     expect(renderer).toContain('keyInput.value = ""');
-    expect(renderer).toContain("remove.disabled = !removable");
+    expect(renderer).toContain("desktopByoConfigurationView(response)");
+    expect(renderer).toContain("save.disabled = !view.saveEnabled");
+    expect(renderer).toContain("remove.disabled = !view.removeEnabled");
     expect(renderer).not.toContain("localStorage");
     expect(renderer).not.toContain("sessionStorage");
     expect(preload).toContain("configureByo");

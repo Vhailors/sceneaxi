@@ -18,6 +18,13 @@ export const PROVIDER_KEY_STORE_REFUSALS = Object.freeze({
 export type ProviderKeyStoreRefusalReason =
   (typeof PROVIDER_KEY_STORE_REFUSALS)[keyof typeof PROVIDER_KEY_STORE_REFUSALS];
 
+/** The refusals that mean the platform backend itself could not be reached. */
+export const PROVIDER_KEY_STORE_AVAILABILITY_REFUSALS = Object.freeze([
+  PROVIDER_KEY_STORE_REFUSALS.unavailable,
+  PROVIDER_KEY_STORE_REFUSALS.locked,
+  PROVIDER_KEY_STORE_REFUSALS.unsupported,
+] as const);
+
 export const DESKTOP_BYO_CONFIGURATION_CHANNEL =
   "sceneaxi:desktop-byo-configuration";
 
@@ -60,8 +67,36 @@ export type DesktopByoConfigurationStatus = Readonly<{
   providerLabel: string;
   keyStatus: "missing" | "configured";
   operation: "status" | "saved" | "replaced" | "removed" | "already-missing";
+  /**
+   * Whether the platform backend is reachable *now*. A successful removal proves
+   * nothing about it — unlinking needs no cipher — so this is resolved rather
+   * than inferred from the operation succeeding, and it is what decides whether
+   * the key field and Save may be offered.
+   */
+  storageStatus: "ready" | "unavailable";
   runtimeStatus: "ready" | "unavailable";
 }>;
+
+/**
+ * Why a refusal is still offering removal. The surface may state the cause it was
+ * given and nothing more: an unreachable backend says so, an invalid envelope says
+ * only that, and anything else asserts no more than the presence the probe found.
+ */
+export type DesktopByoRemovalContext =
+  | "storage-unavailable"
+  | "envelope-invalid"
+  | "envelope-present";
+
+export function desktopByoRemovalContext(
+  reason: DesktopByoConfigurationRefusalReason,
+): DesktopByoRemovalContext {
+  if ((PROVIDER_KEY_STORE_AVAILABILITY_REFUSALS as readonly string[]).includes(reason)) {
+    return "storage-unavailable";
+  }
+  return reason === PROVIDER_KEY_STORE_REFUSALS.corrupt
+    ? "envelope-invalid"
+    : "envelope-present";
+}
 
 export type DesktopByoConfigurationResponse =
   | DesktopByoConfigurationStatus

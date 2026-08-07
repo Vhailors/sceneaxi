@@ -101,7 +101,9 @@ export {
   DESKTOP_BYO_CONFIGURATION_CHANNEL,
   DESKTOP_BYO_CONFIGURATION_REFUSALS,
   DESKTOP_BYO_PROVIDERS,
+  PROVIDER_KEY_STORE_AVAILABILITY_REFUSALS,
   PROVIDER_KEY_STORE_REFUSALS,
+  desktopByoRemovalContext,
   type DesktopByoConfigurationAction,
   type DesktopByoConfigurationRefusal,
   type DesktopByoConfigurationRefusalReason,
@@ -109,8 +111,14 @@ export {
   type DesktopByoConfigurationResponse,
   type DesktopByoConfigurationStatus,
   type DesktopByoProvider,
+  type DesktopByoRemovalContext,
   type ProviderKeyStoreRefusalReason,
 } from "./lib/byo-configuration-contract.js";
+
+export {
+  desktopByoConfigurationView,
+  type DesktopByoConfigurationView,
+} from "./lib/byo-configuration-view.js";
 
 export {
   DesktopByoRunnerRefusal,

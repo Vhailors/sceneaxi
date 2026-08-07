@@ -70,6 +70,7 @@ and tokens; the renderer only binds their Mount API effects.
 | Bridge (`handle()` over the real engine and assistant job) | `src/lib/bridge.ts` | main process; gate-tested from `tests/e2e/` |
 | Local RPC adapter | `src/lib/local-rpc.ts` | main process; private same-user Unix socket for the CLI's closed agent tools |
 | Provider key store + configuration | `src/lib/{provider-key-store,byo-configuration}.ts` | privileged host; encrypted-at-rest store, redacted status/mutations, per-session key lease |
+| BYOK surface projection (which controls may be offered, and the copy) | `src/lib/byo-configuration-view.ts` | pure; gate-tested from `tests/desktop/` |
 | Electron secure-store adapter | `src/electron/provider-key-store.ts` | main process; OS-backed `safeStorage`, never basic-text fallback |
 | BYOK configuration UI | `src/renderer/byo-configuration.ts` | the window; provider/key status and save/replace/remove/unavailable states |
 | Scene composition (one pipeline, two consumers) | `src/lib/desktop-scene.ts` | main process; gate-tested |

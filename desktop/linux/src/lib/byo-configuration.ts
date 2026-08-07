@@ -68,6 +68,7 @@ export function createDesktopByoConfiguration(
     provider: DesktopByoProvider,
     keyStatus: "missing" | "configured",
     operation: DesktopByoConfigurationStatus["operation"],
+    storageStatus: DesktopByoConfigurationStatus["storageStatus"],
   ): DesktopByoConfigurationStatus =>
     Object.freeze({
       ok: true as const,
@@ -76,6 +77,7 @@ export function createDesktopByoConfiguration(
       providerLabel: "OpenRouter",
       keyStatus,
       operation,
+      storageStatus,
       runtimeStatus: options.providerRuntimeAvailable ? "ready" as const : "unavailable" as const,
     });
 
@@ -141,23 +143,28 @@ export function createDesktopByoConfiguration(
         provider,
         "configured",
         saved.replaced ? "replaced" : "saved",
+        "ready",
       );
     }
 
     if (action === "remove") {
       const removed = await options.keyStore.remove(provider);
       if (!removed.ok) return refusalFor(provider, removed);
+      // Removal is the one success that proves nothing about the backend, so
+      // the answer carries a resolved availability rather than an inferred one.
+      const after = await options.keyStore.status(provider);
       return answer(
         action,
         provider,
-        "missing",
+        after.ok ? after.keyStatus : "missing",
         removed.removed ? "removed" : "already-missing",
+        after.ok ? "ready" : "unavailable",
       );
     }
 
     const current = await options.keyStore.status(provider);
     if (!current.ok) return refusalFor(provider, current);
-    return answer(action, provider, current.keyStatus, "status");
+    return answer(action, provider, current.keyStatus, "status", "ready");
   };
 
   return Object.freeze({ handle });

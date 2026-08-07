@@ -124,10 +124,16 @@ Saving, replacing, reading, and provider dispatch all require OS secure storage 
 be available and unlocked. Linux launches using Electron's `basic_text` password
 backend refuse as unsupported; SceneAxi does not downgrade to plaintext. Deleting
 is deliberately not one of those operations: unlinking the envelope needs no
-cipher, so **Remove** stays offered — and the surface reads `Stored · unavailable`
-— when a key is stored but the backend is unavailable, locked, or unsupported. That
-path never reads, decrypts, or returns the envelope, and refuses by name when the
-target is not a regular owner-private file or cannot be unlinked.
+cipher, so **Remove** stays offered — and the surface reads
+`Stored · storage unavailable` — when a key is stored but the backend is
+unavailable, locked, or unsupported. That path never reads, decrypts, or returns
+the envelope, and refuses by name when the target is not a regular owner-private
+file or cannot be unlinked. A `corrupt` envelope reads `Stored · unusable` and says
+only that the stored entry is invalid and removable; the panel never claims a key
+stays sealed, and never blames a lock the runtime did not report. Because removal
+can succeed while the backend is still unreachable, the answer carries a resolved
+`storageStatus` and the key field and Save stay disabled afterwards rather than
+appearing live for a capability that would refuse on submit.
 The checked-in host intentionally has no live provider session factory,
 so it reports provider execution unavailable even when a key is securely stored.
 This implements configuration and the privileged injection contract without

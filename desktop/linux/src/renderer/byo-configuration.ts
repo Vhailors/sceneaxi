@@ -2,9 +2,11 @@
 import {
   DESKTOP_BYO_PROVIDERS,
   DESKTOP_BYO_CONFIGURATION_REFUSALS,
+  type DesktopByoConfigurationRefusalReason,
   type DesktopByoConfigurationRequest,
   type DesktopByoConfigurationResponse,
 } from "../lib/byo-configuration-contract.js";
+import { desktopByoConfigurationView } from "../lib/byo-configuration-view.js";
 
 export type DesktopByoConfigurationPort = Readonly<{
   configureByo?(request: DesktopByoConfigurationRequest): Promise<DesktopByoConfigurationResponse>;
@@ -118,40 +120,21 @@ export function installDesktopByoConfigurationSurface(
   routes.insertAdjacentElement("afterend", surface);
   byoRoute.setAttribute("aria-controls", SURFACE_ID);
 
-  const unavailable = (reason: string, detail: string, removable: boolean): void => {
-    state.textContent = removable ? "Stored · unavailable" : "Unavailable";
-    message.textContent = removable
-      ? `${reason} — ${detail} The stored key stays sealed, and Remove can still delete it without unlocking secure storage.`
-      : `${reason} — ${detail}`;
-    keyInput.disabled = true;
-    save.disabled = true;
-    remove.disabled = !removable;
+  const render = (response: DesktopByoConfigurationResponse): void => {
+    const view = desktopByoConfigurationView(response);
+    state.textContent = view.state;
+    message.textContent = view.message;
+    if (view.saveLabel !== null) save.textContent = view.saveLabel;
+    keyInput.disabled = !view.keyFieldEnabled;
+    save.disabled = !view.saveEnabled;
+    remove.disabled = !view.removeEnabled;
   };
 
-  const render = (response: DesktopByoConfigurationResponse): void => {
-    if (!response.ok) {
-      unavailable(response.reason, response.message, response.removable === true);
-      return;
-    }
-    keyInput.disabled = false;
-    save.disabled = false;
-    remove.disabled = response.keyStatus === "missing";
-    save.textContent = response.keyStatus === "configured" ? "Replace key" : "Save key";
-    state.textContent = response.keyStatus === "configured" ? "Key saved" : "No key";
-    const operation = response.operation === "status"
-      ? response.keyStatus === "configured"
-        ? "A provider key is securely stored."
-        : "No provider key is stored."
-      : response.operation === "replaced"
-        ? "The stored provider key was replaced."
-        : response.operation === "saved"
-          ? "The provider key was saved."
-          : response.operation === "removed"
-            ? "The provider key was removed."
-            : "No provider key was stored.";
-    message.textContent = response.runtimeStatus === "ready"
-      ? `${operation} BYOK is ready for this provider.`
-      : `${operation} Provider execution is unavailable in this desktop build.`;
+  const unavailable = (
+    reason: DesktopByoConfigurationRefusalReason,
+    detail: string,
+  ): void => {
+    render(Object.freeze({ ok: false as const, reason, message: detail }));
   };
 
   const request = async (
@@ -161,7 +144,6 @@ export function installDesktopByoConfigurationSurface(
       unavailable(
         DESKTOP_BYO_CONFIGURATION_REFUSALS.providerSessionUnavailable,
         "The privileged BYOK configuration channel is not exposed.",
-        false,
       );
       return;
     }
@@ -173,7 +155,6 @@ export function installDesktopByoConfigurationSurface(
       unavailable(
         DESKTOP_BYO_CONFIGURATION_REFUSALS.providerSessionFailed,
         "The privileged BYOK configuration request failed.",
-        false,
       );
     }
   };

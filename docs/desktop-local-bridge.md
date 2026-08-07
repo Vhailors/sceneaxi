@@ -129,8 +129,22 @@ It is a renderer-only settings path beside the existing Assistant route control,
 not a local agent tool. Selecting BYOK shows whether a key is stored and the
 available Save, Replace, Remove, or named-unavailable action. The password field
 is cleared after every submission; status and mutation responses contain only
-provider, operation, key-presence, and runtime-availability metadata, and a
-refusal adds at most the `removable` presence boolean.
+provider, operation, key-presence, storage-availability, and runtime-availability
+metadata, and a refusal adds at most the `removable` presence boolean.
+
+Which controls the panel may offer is decided outside the window by
+`desktopByoConfigurationView()` in `desktop/linux/src/lib/byo-configuration-view.ts`,
+so the honesty rules are gate-executed rather than asserted over DOM code. Two of
+them are load-bearing. The key field and Save follow `storageStatus`, never the
+mere fact that a call succeeded: removal succeeds on an unreachable backend, so
+that answer resolves availability instead of implying it, and the panel keeps Save
+disabled afterwards rather than offering a control that would refuse on submit. And
+a refusal states the cause it was given and no other: an availability refusal says
+secure storage is unavailable and that Remove can still delete the envelope without
+unlocking it, `DESKTOP_PROVIDER_KEY_STORE_CORRUPT` says only that the stored entry
+is invalid and removable — never that it remains sealed, and never blaming a lock
+that was not reported — and any other removable refusal asserts no more than the
+presence the probe actually found.
 
 `ProviderKeyStore` in `desktop/linux/src/lib/provider-key-store.ts` is the typed
 host seam: `status`, `read`, `save`, `remove`, and `removable`. Its Electron adapter
@@ -246,9 +260,10 @@ cannot opt into hosted routing or bypass metering.
   unavailable backend while save and read still refuse, removal refusing a
   wrong-type / symlinked / non-owner-private target and a failed unlink, the
   owner-private assertion staying off a platform without POSIX permissions while
-  the file-type check still holds, Kids-before-store ordering, provider-session
-  retrieval and cleanup, renderer/bridge redaction, and the unchanged
-  hosted/tool-registry boundary.
+  the file-type check still holds, the surface projection's cause-specific refusal
+  copy and its refusal to offer Save while storage stays unreachable,
+  Kids-before-store ordering, provider-session retrieval and cleanup,
+  renderer/bridge redaction, and the unchanged hosted/tool-registry boundary.
 
 This contract does not authorize production deployment, hosted-provider
 activation, Stripe LIVE, Connect LIVE, legal or tax behavior, production
