@@ -30,7 +30,10 @@ import {
   type DesktopLocalBridgeServer,
 } from "../lib/local-rpc.js";
 import { seedDesktopProject } from "../lib/project-seed.js";
-import { createDesktopProjectHost } from "../lib/project-host.js";
+import {
+  createDesktopProjectHost,
+  desktopProjectReloadRequired,
+} from "../lib/project-host.js";
 import {
   DESKTOP_PROJECT_CHANNEL,
   DESKTOP_PROJECT_REFUSALS,
@@ -237,7 +240,7 @@ async function start(): Promise<void> {
     ipcMain.handle(DESKTOP_PROJECT_CHANNEL, async (_event, request: unknown) => {
       const before = activeRoot;
       const response = await projectHost.handle(request);
-      if (response.ok && response.data.status.active?.root !== before) {
+      if (desktopProjectReloadRequired(before, response)) {
         // Let the invoke response cross the preload boundary, then reload the
         // unforked chrome so its one renderer owner mounts the newly active root.
         setTimeout(() => window.webContents.reload(), 0);

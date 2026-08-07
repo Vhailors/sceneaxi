@@ -14,7 +14,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { basename, dirname, isAbsolute, join, parse } from "node:path";
+import { basename, dirname, isAbsolute, join } from "node:path";
 import { parseDocumentText } from "@sceneaxi/authoring-core";
 import { DESKTOP_ACTIVE_DOCUMENT_PATH } from "./bridge-contract.js";
 import {
@@ -85,7 +85,7 @@ function hasTraversal(path: string): boolean {
 }
 
 function canonicalRoot(selected: string, writable: boolean): ProjectValidation {
-  if (!isAbsolute(selected) || /^[a-zA-Z]:[\\/]/.test(selected) && parse(selected).root === "") {
+  if (!isAbsolute(selected)) {
     return refusal(
       DESKTOP_PROJECT_REFUSALS.rootNotAbsolute,
       "A project root must be an absolute path selected by the desktop host.",

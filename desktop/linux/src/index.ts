@@ -100,6 +100,7 @@ export {
 
 export {
   createDesktopProjectHost,
+  desktopProjectReloadRequired,
   type DesktopProjectDialogPort,
   type DesktopProjectHost,
   type DesktopProjectHostOptions,

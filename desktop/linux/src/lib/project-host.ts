@@ -22,6 +22,23 @@ export type DesktopProjectHost = Readonly<{
   handle(request: unknown): Promise<DesktopProjectResponse>;
 }>;
 
+/**
+ * Whether a project response moved the window off the root it currently mounts.
+ *
+ * The status a bound project answers with carries its root; an unbound one
+ * carries `null`, which is the same "no root" the caller holds before the
+ * request. Both sides are therefore normalized to `null` before they are
+ * compared, because the chrome asks for `status` on every load: reading an
+ * unbound answer as a change would reload the window, which would ask again.
+ */
+export function desktopProjectReloadRequired(
+  mountedRoot: string | null,
+  response: DesktopProjectResponse,
+): boolean {
+  if (!response.ok) return false;
+  return (response.data.status.active?.root ?? null) !== mountedRoot;
+}
+
 function field(value: unknown, name: string): unknown {
   if (typeof value !== "object" || value === null) return undefined;
   const descriptor = Object.getOwnPropertyDescriptor(value, name);

@@ -16,6 +16,7 @@ import {
   DESKTOP_RECENT_PROJECTS_FILE,
   createDesktopProjectHost,
   createDesktopProjectLifecycle,
+  desktopProjectReloadRequired,
 } from "../../desktop/linux/src/index.ts";
 
 const roots: string[] = [];
@@ -274,5 +275,55 @@ describe("desktop project dialog host", () => {
       ok: false,
       reason: DESKTOP_PROJECT_REFUSALS.recentUnknown,
     });
+  });
+
+  it("reloads the window only when the mounted root changed", async () => {
+    const state = temporaryRoot("reload-state");
+    const chosen = temporaryRoot("reload-chosen");
+    const mounted: string[] = [];
+    const mountedRoot = () => mounted.at(-1) ?? null;
+    const lifecycle = createDesktopProjectLifecycle({ stateDirectory: state });
+    const host = createDesktopProjectHost({
+      lifecycle,
+      dialogs: {
+        async chooseNewProjectRoot() {
+          return chosen;
+        },
+        async chooseOpenProjectRoot() {
+          return null;
+        },
+      },
+      activate(root) {
+        mounted.push(root);
+      },
+    });
+
+    // The chrome asks for `status` on every load, so an unbound answer must not
+    // read as a change: it would reload the window, which would ask again.
+    const unbound = await host.handle({ action: "status", profile: "game" });
+    expect(unbound).toMatchObject({ ok: true });
+    expect(desktopProjectReloadRequired(mountedRoot(), unbound)).toBe(false);
+
+    const cancelled = await host.handle({ action: "choose-open", profile: "game" });
+    expect(cancelled).toMatchObject({ ok: true, data: { outcome: "cancelled" } });
+    expect(desktopProjectReloadRequired(mountedRoot(), cancelled)).toBe(false);
+
+    const created = await host.handle({ action: "choose-new", profile: "game" });
+    expect(created).toMatchObject({ ok: true, data: { outcome: "ready" } });
+    expect(desktopProjectReloadRequired(null, created)).toBe(true);
+    expect(mountedRoot()).toBe(resolve(chosen));
+    expect(desktopProjectReloadRequired(mountedRoot(), created)).toBe(false);
+
+    const bound = await host.handle({ action: "status", profile: "game" });
+    expect(desktopProjectReloadRequired(mountedRoot(), bound)).toBe(false);
+
+    expect(
+      desktopProjectReloadRequired(mountedRoot(), {
+        ok: false,
+        reason: DESKTOP_PROJECT_REFUSALS.activationFailed,
+        message: "activation failed",
+        detail: null,
+      }),
+    ).toBe(false);
   });
 });
