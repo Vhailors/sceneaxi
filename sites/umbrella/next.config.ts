@@ -1,4 +1,4 @@
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { NextConfig } from "next";
 
@@ -9,9 +9,11 @@ import type { NextConfig } from "next";
  * `.js` specifier onto its TypeScript source.
  */
 const nextConfig: NextConfig = {
-  // This site keeps its own lockfile, so Next must be told which directory is the
-  // deployment root rather than inferring it from the repository lockfile above.
-  outputFileTracingRoot: dirname(fileURLToPath(import.meta.url)),
+  // The site is its own install root, but its `link:` packages live two levels above
+  // it. Vercel materializes serverless functions from Next's file traces, so the trace
+  // root must contain both the app and those package sources; using the site directory
+  // leaves package-directory symlinks in the emitted function instead.
+  outputFileTracingRoot: resolve(dirname(fileURLToPath(import.meta.url)), "../.."),
   // `@sceneaxi/engine-presentation` is the umbrella's one engine edge (ADR 0022): it
   // carries the Three presentation core the public live open path draws with. It is not
   // accompanied by `@sceneaxi/engine-kernel`, whose only appearance there is a

@@ -140,6 +140,93 @@ describe("sites tier — injected violations", () => {
     );
   });
 
+  it("sites check rejects a deployed site whose npmrc omits the hoisted linker", () => {
+    // The workspace-file setting alone is silently ignored by pnpm below 10.6, which
+    // neither Vercel nor CI pins away from, so `.npmrc` is the load-bearing source.
+    rmSync(join(fx, "sites/catalog-game/.npmrc"));
+    const res = runCheck(fx, "check-sites.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "@sceneaxi/site-catalog-game: deployable serverless sites must set 'node-linker=hoisted' in .npmrc",
+    );
+  });
+
+  it("sites check rejects an npmrc that selects a non-hoisted linker", () => {
+    writeTo(fx, "sites/catalog-web/.npmrc", "node-linker=isolated\n");
+    const res = runCheck(fx, "check-sites.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "@sceneaxi/site-catalog-web: deployable serverless sites must set 'node-linker=hoisted' in .npmrc",
+    );
+  });
+
+  function writeWorkspaceLinker(site: string, declaration: string): void {
+    writeTo(
+      fx,
+      `sites/${site}/pnpm-workspace.yaml`,
+      ["packages:", '  - "."', declaration, "allowBuilds:", "  sharp: true", ""].join("\n"),
+    );
+  }
+
+  it("sites check rejects a deployed site whose workspace file omits the hoisted linker", () => {
+    // pnpm 10.6 and later reads the linker only from here, so `.npmrc` alone leaves the
+    // isolated graph in place on that line — measured, and silently.
+    writeTo(
+      fx,
+      "sites/umbrella/pnpm-workspace.yaml",
+      ["packages:", '  - "."', "allowBuilds:", "  sharp: true", ""].join("\n"),
+    );
+    const res = runCheck(fx, "check-sites.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "@sceneaxi/site-umbrella: deployable serverless sites must set 'nodeLinker: hoisted' in pnpm-workspace.yaml",
+    );
+  });
+
+  it.each([
+    ["a bare value", "nodeLinker: isolated"],
+    // A declaration hidden behind a trailing comment restores the exact symlink graph
+    // this tier forbids, on the pnpm line that reads this file.
+    ["a value behind a trailing comment", "nodeLinker: isolated # keep the old graph"],
+    ["a quoted value", 'nodeLinker: "isolated"'],
+  ])("sites check rejects a non-hoisted workspace linker — %s", (_case, declaration) => {
+    writeWorkspaceLinker("umbrella", declaration);
+    const res = runCheck(fx, "check-sites.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "@sceneaxi/site-umbrella: pnpm-workspace.yaml declares the 'isolated' linker, which pnpm 10.6 and later reads instead of .npmrc",
+    );
+  });
+
+  it.each([
+    ["a quoted workspace value", 'nodeLinker: "hoisted"'],
+    ["a commented workspace value", "nodeLinker: hoisted # the deployable linker"],
+  ])("sites check accepts an agreeing workspace linker — %s", (_case, declaration) => {
+    writeWorkspaceLinker("umbrella", declaration);
+    const res = runCheck(fx, "check-sites.mjs");
+    expect(res.status, `stderr: ${res.stderr}`).toBe(0);
+  });
+
+  it("sites check accepts an npmrc linker followed by an inline comment", () => {
+    // pnpm's own ini reader drops the comment and honours the setting, so refusing
+    // here would fail a site whose linker is in fact hoisted.
+    writeTo(fx, "sites/catalog-game/.npmrc", "node-linker=hoisted # deployable linker\n");
+    const res = runCheck(fx, "check-sites.mjs");
+    expect(res.status, `stderr: ${res.stderr}`).toBe(0);
+  });
+
+  it("sites check rejects removal of the Vercel package postbuild", () => {
+    editManifest(fx, "sites/catalog-web/package.json", (manifest) => {
+      const scripts = manifest.scripts as Record<string, string>;
+      delete scripts.postbuild;
+    });
+    const res = runCheck(fx, "check-sites.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "@sceneaxi/site-catalog-web: postbuild must validate the emitted Vercel function package traces",
+    );
+  });
+
   it("boundary check allows the umbrella's one charted engine edge — the presentation seam", () => {
     // ADR 0022: the umbrella owns the public viewport, so this edge must pass. It is
     // asserted here beside the denials so widening and its bound are proven together.

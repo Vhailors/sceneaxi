@@ -70,6 +70,70 @@ machine that already has a root install and then fails on a clean Vercel builder
 whole repository uploads; a CLI deploy from inside the site directory uploads that
 directory alone and cannot work.
 
+The three deployed site workspaces use pnpm's hoisted linker. Next traces from the
+monorepo root so their `link:` SceneAxi sources are copied as repository files, while the
+flat site `node_modules` keeps pnpm's isolated dependency-symlink graph out of Vercel
+Functions.
+
+Each deployed site declares the linker **twice**, and `pnpm check:sites` requires both:
+`node-linker=hoisted` in `.npmrc` and `nodeLinker: hoisted` in `pnpm-workspace.yaml`.
+Neither file is authoritative alone. pnpm below 10.6 reads the linker only from `.npmrc`;
+pnpm 10.6 and later reads it only from `pnpm-workspace.yaml` and ignores the `.npmrc`
+key. No site pins a `packageManager`, so neither line is ruled out: CI resolves the
+repository-root pin (`pnpm@9.15.0`) while Vercel infers pnpm from
+`lockfileVersion: '9.0'`. Dropping either declaration therefore restores the symlink
+graph on one of the two lines — with no warning.
+
+Measured on this checkout with a one-dependency install root, reading
+`node_modules/.modules.yaml` for the linker pnpm actually resolved:
+
+| pnpm | `.npmrc` only | `pnpm-workspace.yaml` only | both |
+|---|---|---|---|
+| 9.15.0 | hoisted (flat) | **isolated (symlink)** | hoisted |
+| 11.5.0 | **isolated (symlink)** | hoisted (flat) | hoisted |
+
+`node-linker` is not recorded in the lockfile's `settings` block, so adding it keeps
+`--frozen-lockfile` installs valid. Where both are read the workspace file wins, so the
+two must agree; `pnpm check:sites` compares them after reducing each declaration to the
+value its own parser yields — an inline comment dropped, quotes treated as delimiters —
+because a raw text comparison both misses `nodeLinker: isolated # …` and invents a
+mismatch for `nodeLinker: "hoisted"`.
+
+Every deployed site's `pnpm build` runs
+`scripts/check-vercel-package.mjs` as `postbuild`; it reads Next's emitted `.nft.json`
+contracts and refuses a trace outside the monorepo, a missing file, a linked package
+whose real source is absent, a server-external package the traces do not carry, or a
+pnpm package symlink **inside the site install root**. That last scope is deliberate:
+the repository root keeps pnpm's isolated store links by design, so refusing those
+would name a remediation — the hoisted site linker — that cannot be applied to them.
+This is a local package-shape gate, not evidence that a production deployment
+succeeded. Kids is not deployed and does not inherit this deployment linker or check.
+
+### Observed trace contents
+
+The tracing-root move raises one question the config cannot answer on its own: whether
+`outputFileTracingIncludes`' relative globs still resolve, now that the tracing root and
+the project directory differ for the first time. They do — Next 15.5.21's
+`collectBuildTraces` takes `dir` and `outputFileTracingRoot` as separate arguments and
+globs the includes with `cwd: dir`, the project directory.
+
+Recorded from a local `pnpm build` of `sites/umbrella` on this checkout (Next 15.5.21,
+pnpm 11.5.0, hoisted site linker confirmed in `node_modules/.modules.yaml`) — 21
+`.nft.json` files, 3577 unique traced paths:
+
+| Traced | Result |
+|---|---|
+| `@neondatabase/serverless` | 10 files, manifest included |
+| `better-auth` | 475 files, manifest included |
+| `pg` | 20 files, manifest included |
+| `stripe` | 1430 files, manifest included |
+| `packages/{auth,billing,engine-presentation,site-kit}/package.json` | all four present |
+| `three` | not traced — bundled into the server chunk, never reached through a root-workspace store link |
+| paths outside `sites/umbrella` | 8, all real files under `packages/` plus the root manifest |
+
+Both catalogs build and pass the same check. This is local build output: it shows the
+emitted package is well-formed, and it claims nothing about a production deployment.
+
 ## Environment variables
 
 Set in **Production** scope. `NEXT_PUBLIC_*` values are inlined at **build** time, so
@@ -265,8 +329,9 @@ The in-repo wiring is done ([#131](https://github.com/Vhailors/sceneaxi/issues/1
 `link:` dependencies in its manifest and `transpilePackages`, and
 `sites/umbrella/src/lib/identity-plane.ts` builds the site-kit adapters over them, while
 the provider-only route and Neon schema live in the same deployable install root and
-forward migration sequence. What remains is authorized configuration, migration, and
-deployment evidence, not a missing provider implementation.
+forward migration sequence. Migration state is recorded under
+[Verified TEST readiness](#verified-test-readiness); what remains is authorized
+configuration and deployment evidence, not a missing provider implementation.
 
 ### What works now, and what still refuses
 
@@ -440,9 +505,10 @@ take payments this endpoint cannot settle.
 `/api/stripe/webhook`, and `performLogin` calls `identityPort.signIn` through the
 plane's login port and sets the HttpOnly `sceneaxi.session` cookie. The provider handler
 now ships in the umbrella at `BETTER_AUTH_ORIGIN` (the `sign-in/email` and `get-session`
-endpoints named above). What remains operational is to apply migration
-`0005_better_auth_provider.sql`, set its named configuration, and configure the handles
-the deployment owner holds behind `umbrellaRequestAuthority()`, as described under
+endpoints named above). The migration state is owned by
+[Verified TEST readiness](#verified-test-readiness) and is not an outstanding operator
+step. What remains operational is to set the named configuration and configure the
+handles the deployment owner holds behind `umbrellaRequestAuthority()`, as described under
 [Deployment-owner provider handles](#deployment-owner-provider-handles). With those
 configured, sign-in writes a
 `sessions` row, provisions the user and the starter grant, and `/account` and `/editor`
@@ -587,6 +653,13 @@ webhook event, or performing a charge:
   sign-in provider configuration](#hosted-sign-in-provider-configuration) and a
   fresh deployment of current `main`. Do not remove `SCENEAXI_SITE_EDITOR_PREVIEW` before
   that sign-in path is proven.
+
+Later captain-confirmed operating state (2026-08-07), separate from the dated
+name-only observation above: migration `0005_better_auth_provider.sql` is applied, and
+the umbrella Production environment values were reset without exposing them. Deployment
+close-out verifies the existing schema through the authorized database path; it does not
+rerun that migration or wait for fresh `neonctl` OAuth. This adds no secret value or
+production-success claim to the repository.
 
 `SCENEAXI_ADMIN_EMAIL` remains the only source of the `admin` role. Its value is
 captain-held deployment configuration and is not documented here. Neither its presence nor

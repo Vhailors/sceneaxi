@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postbuild": "node ../../scripts/check-vercel-package.mjs .",
     "start": "next start",
     "test:provider": "vitest run --config vitest.config.ts test/better-auth-provider.test.ts",
     "test:visual": "playwright test",

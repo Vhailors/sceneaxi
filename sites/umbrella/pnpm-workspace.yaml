@@ -8,5 +8,10 @@
 packages:
   - "."
 
+# Vercel functions cannot contain symlinked package directories. The hoisted linker
+# gives this serverless install root a flat node_modules while `link:` SceneAxi sources
+# remain represented by the monorepo-root Next trace above.
+nodeLinker: hoisted
+
 allowBuilds:
   sharp: true
