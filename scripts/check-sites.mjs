@@ -21,6 +21,19 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const errors = [];
 const fail = (msg) => errors.push(msg);
 
+/** Parse an npmrc into a normalized key/value map — the shape pnpm actually reads. */
+function readNpmrc(path) {
+  const settings = {};
+  for (const line of readFileSync(path, "utf8").split("\n")) {
+    const trimmed = line.trim();
+    if (trimmed.length === 0 || trimmed.startsWith("#") || trimmed.startsWith(";")) continue;
+    const separator = trimmed.indexOf("=");
+    if (separator === -1) continue;
+    settings[trimmed.slice(0, separator).trim()] = trimmed.slice(separator + 1).trim();
+  }
+  return settings;
+}
+
 const REQUIRED_FILES = Object.freeze([
   "package.json",
   "tsconfig.json",
@@ -369,10 +382,22 @@ for (const dir of siteDirs) {
         `${manifest.name}: @sceneaxi/site-kit must use a 'link:' specifier (found '${siteKit}') because sites are not workspace members`,
       );
     }
-    const siteWorkspacePolicy = readFileSync(join(dir, "pnpm-workspace.yaml"), "utf8");
-    if (!/^nodeLinker:\s*hoisted\s*$/m.test(siteWorkspacePolicy)) {
+    // `nodeLinker` in pnpm-workspace.yaml is only read by pnpm >= 10.6, and no site
+    // pins a package manager, so `.npmrc` — read by every supported pnpm — is the
+    // authoritative source and the workspace file may only agree with it.
+    const siteNpmrc = join(dir, ".npmrc");
+    const nodeLinker = existsSync(siteNpmrc) ? readNpmrc(siteNpmrc)["node-linker"] : undefined;
+    if (nodeLinker !== "hoisted") {
       fail(
-        `${manifest.name}: deployable serverless sites must use the hoisted pnpm linker`,
+        `${manifest.name}: deployable serverless sites must set 'node-linker=hoisted' in .npmrc — pnpm below 10.6 ignores the pnpm-workspace.yaml setting`,
+      );
+    }
+    const workspaceLinker = /^nodeLinker:\s*(\S+)\s*$/m.exec(
+      readFileSync(join(dir, "pnpm-workspace.yaml"), "utf8"),
+    );
+    if (workspaceLinker !== null && workspaceLinker[1] !== "hoisted") {
+      fail(
+        `${manifest.name}: pnpm-workspace.yaml declares the '${workspaceLinker[1]}' linker, contradicting .npmrc`,
       );
     }
     if (manifest.scripts?.postbuild !== "node ../../scripts/check-vercel-package.mjs .") {

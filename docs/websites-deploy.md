@@ -70,10 +70,24 @@ machine that already has a root install and then fails on a clean Vercel builder
 whole repository uploads; a CLI deploy from inside the site directory uploads that
 directory alone and cannot work.
 
-The three deployed site workspaces use pnpm's `nodeLinker: hoisted`. Next traces from the
+The three deployed site workspaces use pnpm's hoisted linker. Next traces from the
 monorepo root so their `link:` SceneAxi sources are copied as repository files, while the
 flat site `node_modules` keeps pnpm's isolated dependency-symlink graph out of Vercel
-Functions. Every deployed site's `pnpm build` runs
+Functions.
+
+The linker is selected in each deployed site's **`.npmrc`** (`node-linker=hoisted`), and
+that file — not `pnpm-workspace.yaml` — is the authoritative source `pnpm check:sites`
+asserts. Settings in `pnpm-workspace.yaml` are only read by pnpm 10.6 and later, and no
+site pins a `packageManager`: CI resolves the repository-root pin (`pnpm@9.15.0`) and
+Vercel infers pnpm 9 from `lockfileVersion: '9.0'`, so a `nodeLinker:` key there is
+silently ignored on both builders and the symlink graph returns. Measured on this
+checkout: pnpm 9.15.0 with only the workspace key leaves `node_modules/<dep>` a symlink
+into `.pnpm/`; the same pnpm with `.npmrc` produces flat real directories, as does pnpm
+11.5.0. `node-linker` is not recorded in the lockfile's `settings` block, so adding it
+keeps `--frozen-lockfile` installs valid. The workspace key is kept for pnpm 10.6+ and
+may only agree with `.npmrc`; a contradiction fails the check.
+
+Every deployed site's `pnpm build` runs
 `scripts/check-vercel-package.mjs` as `postbuild`; it reads Next's emitted `.nft.json`
 contracts and refuses a trace outside the monorepo, a package-manager symlink, a missing
 file, or a linked package whose real source is absent. This is a local package-shape gate,

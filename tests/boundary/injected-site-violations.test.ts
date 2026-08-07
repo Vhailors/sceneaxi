@@ -140,10 +140,30 @@ describe("sites tier — injected violations", () => {
     );
   });
 
-  it("sites check rejects the isolated pnpm linker for a deployed site", () => {
+  it("sites check rejects a deployed site whose npmrc omits the hoisted linker", () => {
+    // The workspace-file setting alone is silently ignored by pnpm below 10.6, which
+    // neither Vercel nor CI pins away from, so `.npmrc` is the load-bearing source.
+    rmSync(join(fx, "sites/catalog-game/.npmrc"));
+    const res = runCheck(fx, "check-sites.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "@sceneaxi/site-catalog-game: deployable serverless sites must set 'node-linker=hoisted' in .npmrc",
+    );
+  });
+
+  it("sites check rejects an npmrc that selects a non-hoisted linker", () => {
+    writeTo(fx, "sites/catalog-web/.npmrc", "node-linker=isolated\n");
+    const res = runCheck(fx, "check-sites.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "@sceneaxi/site-catalog-web: deployable serverless sites must set 'node-linker=hoisted' in .npmrc",
+    );
+  });
+
+  it("sites check rejects a workspace linker that contradicts the npmrc", () => {
     writeTo(
       fx,
-      "sites/catalog-game/pnpm-workspace.yaml",
+      "sites/umbrella/pnpm-workspace.yaml",
       [
         "packages:",
         '  - "."',
@@ -156,7 +176,7 @@ describe("sites tier — injected violations", () => {
     const res = runCheck(fx, "check-sites.mjs");
     expect(res.status).toBe(1);
     expect(res.stderr).toContain(
-      "@sceneaxi/site-catalog-game: deployable serverless sites must use the hoisted pnpm linker",
+      "@sceneaxi/site-umbrella: pnpm-workspace.yaml declares the 'isolated' linker, contradicting .npmrc",
     );
   });
 

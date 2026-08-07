@@ -24,16 +24,37 @@ function readJson(path) {
   return JSON.parse(readFileSync(path, "utf8"));
 }
 
-function symlinksOnPath(root, target) {
+/**
+ * Classify one path segment, memoized: Next traces repeat the same directory prefixes
+ * across every entry of every `.nft.json`, so an uncached walk costs one lstat per
+ * segment per traced file on the deployment builder.
+ */
+function classifySegment(cache, path) {
+  const cached = cache.get(path);
+  if (cached !== undefined) return cached;
+  // A path that cannot be stat'ed — including a symlink whose target is gone — counts
+  // as missing, exactly as the followed-link existence check it replaces did.
+  let entry = { missing: true, link: undefined };
+  try {
+    entry = lstatSync(path).isSymbolicLink()
+      ? { missing: false, link: { path, target: realpathSync(path) } }
+      : { missing: false, link: undefined };
+  } catch {
+    entry = { missing: true, link: undefined };
+  }
+  cache.set(path, entry);
+  return entry;
+}
+
+function symlinksOnPath(root, target, cache) {
   const links = [];
   let cursor = root;
   for (const segment of relative(root, target).split(sep)) {
     if (segment === "") continue;
     cursor = join(cursor, segment);
-    if (!existsSync(cursor)) break;
-    if (lstatSync(cursor).isSymbolicLink()) {
-      links.push({ path: cursor, target: realpathSync(cursor) });
-    }
+    const entry = classifySegment(cache, cursor);
+    if (entry.missing) break;
+    if (entry.link !== undefined) links.push(entry.link);
   }
   return links;
 }
@@ -57,6 +78,8 @@ export function validateVercelPackage(siteRootInput, tracingRootInput = reposito
   }
 
   const tracedPaths = new Set();
+  const segmentCache = new Map();
+  const linksCache = new Map();
   for (const traceFile of traceFiles) {
     let trace;
     try {
@@ -79,12 +102,17 @@ export function validateVercelPackage(siteRootInput, tracingRootInput = reposito
         );
         continue;
       }
-      if (!existsSync(tracedPath)) {
+      if (classifySegment(segmentCache, tracedPath).missing) {
         errors.push(`${relative(tracingRoot, traceFile)} traces missing file '${file}'`);
         continue;
       }
 
-      for (const link of symlinksOnPath(tracingRoot, tracedPath)) {
+      let links = linksCache.get(tracedPath);
+      if (links === undefined) {
+        links = symlinksOnPath(tracingRoot, tracedPath, segmentCache);
+        linksCache.set(tracedPath, links);
+      }
+      for (const link of links) {
         if (!containsPath(tracingRoot, link.target)) {
           errors.push(
             `${relative(tracingRoot, traceFile)} reaches symlink '${relative(tracingRoot, link.path)}' outside the monorepo root`,
