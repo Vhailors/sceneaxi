@@ -285,8 +285,22 @@ export async function ensureBetterAuthAdminBootstrap(
   }
 }
 
-function productionRuntime(config: BetterAuthProviderConfig): BetterAuthProviderRuntime {
+/**
+ * The provider-owned connection pool.
+ *
+ * node-postgres reports a backend or network failure on an otherwise idle client
+ * as an `'error'` event on the pool rather than as a rejected query, so the pool
+ * owns that event itself: a suspended or reset connection stays a storage fault
+ * the next request refuses by name.
+ */
+export function createProviderPool(config: BetterAuthProviderConfig): Pool {
   const pool = new Pool({ connectionString: config.databaseUrl });
+  pool.on("error", () => undefined);
+  return pool;
+}
+
+function productionRuntime(config: BetterAuthProviderConfig): BetterAuthProviderRuntime {
+  const pool = createProviderPool(config);
   let bootstrap: Promise<void> | undefined;
   return createBetterAuthProviderRuntime({
     config,

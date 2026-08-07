@@ -1,5 +1,6 @@
 import { memoryAdapter, type MemoryDB } from "better-auth/adapters/memory";
-import { hashPassword } from "better-auth/crypto";
+import { hashPassword, verifyPassword } from "better-auth/crypto";
+import type { Pool } from "pg";
 import { describe, expect, it } from "vitest";
 import {
   AUTH_REFUSE_REASONS,
@@ -11,6 +12,8 @@ import {
   BETTER_AUTH_PROVIDER_REFUSALS,
   createBetterAuthProviderHandler,
   createBetterAuthProviderRuntime,
+  createProviderPool,
+  ensureBetterAuthAdminBootstrap,
   resolveBetterAuthProviderConfig,
   type BetterAuthProviderConfig,
   type BetterAuthProviderRuntimeResult,
@@ -83,6 +86,44 @@ async function providerFixture() {
   };
 }
 
+type BootstrapQuery = Readonly<{ text: string; values: ReadonlyArray<unknown> }>;
+
+/**
+ * A hand-rolled pool that answers the bootstrap writer's two reads, so the
+ * transaction, refusal, and release contract is proven without a database.
+ */
+function bootstrapPool(
+  seed: Readonly<{
+    user?: Readonly<{ id: string; emailVerified: boolean }>;
+    password?: string | null;
+  }>,
+) {
+  const queries: BootstrapQuery[] = [];
+  let released = 0;
+  const client = {
+    async query(text: string, values: ReadonlyArray<unknown> = []) {
+      queries.push(Object.freeze({ text, values: Object.freeze([...values]) }));
+      if (text.includes('FROM "better_auth_users"')) {
+        return { rows: seed.user === undefined ? [] : [seed.user] };
+      }
+      if (text.includes('FROM "better_auth_accounts"')) {
+        return { rows: seed.password === undefined ? [] : [{ password: seed.password }] };
+      }
+      return { rows: [] };
+    },
+    release() {
+      released += 1;
+    },
+  };
+  return {
+    pool: { connect: async () => client } as unknown as Pool,
+    queries,
+    released: () => released,
+    inserts: () => queries.filter((query) => query.text.trimStart().startsWith("INSERT")),
+    verbs: () => queries.map((query) => query.text.trimStart().split(/\s+/, 1)[0] ?? ""),
+  };
+}
+
 async function signIn(handler: (request: Request) => Promise<Response>) {
   return handler(
     new Request(`${ORIGIN}/api/auth/sign-in/email`, {
@@ -142,6 +183,86 @@ describe("umbrella Better Auth provider", () => {
       user: { id: "provider-user-1", email: EMAIL },
     });
     expect(database["better_auth_sessions"]).toHaveLength(1);
+  });
+
+  it("serves the header shape its own server-to-server adapter sends", async () => {
+    const { database, handler } = await providerFixture();
+    const response = await handler(
+      new Request(`${ORIGIN}/api/auth/sign-in/email`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: EMAIL, password: PASSWORD }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const payload = (await response.json()) as Record<string, unknown>;
+    expect(typeof payload["token"]).toBe("string");
+    expect(payload).toMatchObject({ user: { id: "provider-user-1", email: EMAIL } });
+    expect(database["better_auth_sessions"]).toHaveLength(1);
+  });
+
+  it("provisions the one provider credential without persisting the raw secret", async () => {
+    const fake = bootstrapPool({});
+    await ensureBetterAuthAdminBootstrap(fake.pool, config());
+
+    const inserts = fake.inserts();
+    expect(inserts).toHaveLength(2);
+    expect(inserts[0]?.text).toContain('"better_auth_users"');
+    expect(inserts[0]?.values).toContain(EMAIL);
+    expect(inserts[1]?.text).toContain('"better_auth_accounts"');
+    const held = inserts[1]?.values[2];
+    expect(typeof held).toBe("string");
+    expect(await verifyPassword({ hash: String(held), password: PASSWORD })).toBe(true);
+    expect(JSON.stringify(fake.queries)).not.toContain(PASSWORD);
+    expect(fake.verbs()).toContain("COMMIT");
+    expect(fake.verbs()).not.toContain("ROLLBACK");
+    expect(fake.released()).toBe(1);
+  });
+
+  it("accepts matching persisted provider state as an idempotent no-op", async () => {
+    const fake = bootstrapPool({
+      user: { id: "provider-user-1", emailVerified: true },
+      password: await hashPassword(PASSWORD),
+    });
+    await ensureBetterAuthAdminBootstrap(fake.pool, config());
+
+    expect(fake.inserts()).toHaveLength(0);
+    expect(fake.verbs()).toContain("COMMIT");
+    expect(fake.released()).toBe(1);
+  });
+
+  it("refuses disagreeing provider state, rolls back, and releases the client", async () => {
+    const disagreements = [
+      { user: { id: "provider-user-1", emailVerified: false } },
+      { user: { id: "provider-user-1", emailVerified: true }, password: null },
+      {
+        user: { id: "provider-user-1", emailVerified: true },
+        password: await hashPassword(`${PASSWORD}-rotated`),
+      },
+    ] as const;
+
+    for (const seed of disagreements) {
+      const fake = bootstrapPool(seed);
+      await expect(ensureBetterAuthAdminBootstrap(fake.pool, config())).rejects.toThrow(
+        /provider bootstrap/,
+      );
+      expect(fake.inserts()).toHaveLength(0);
+      expect(fake.verbs()).toContain("ROLLBACK");
+      expect(fake.verbs()).not.toContain("COMMIT");
+      expect(fake.released()).toBe(1);
+      expect(JSON.stringify(fake.queries)).not.toContain(PASSWORD);
+    }
+  });
+
+  it("keeps an idle-client failure inside the provider pool", async () => {
+    const pool = createProviderPool(config());
+    try {
+      expect(pool.listenerCount("error")).toBeGreaterThan(0);
+      expect(() => pool.emit("error", new Error("terminated by administrator"))).not.toThrow();
+    } finally {
+      await pool.end();
+    }
   });
 
   it("rejects a wrong credential without exposing it or creating a session", async () => {
