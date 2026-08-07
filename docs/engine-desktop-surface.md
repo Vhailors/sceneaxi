@@ -339,8 +339,11 @@ make zero host requests;
 pending recovery stays non-decidable, reports `DESKTOP_RECOVERY_PENDING` once,
 and keeps the recovery instructions beside it — Web staging refuses before
 reaching the host under the same condition. When a validated host snapshot has
-cleared a stale proposal, a blocked decision leaves the active conflict refusal
-standing rather than replacing it with a normal-open status. A transport failure
+cleared a stale proposal, a blocked decision restores the active conflict refusal
+rather than replacing it with a normal-open status. That recorded conflict stays
+attached to its unresolved session transition across intervening status
+messages; a validated clean session snapshot or a successful document re-open
+clears it. A transport failure
 or malformed response leaves the last validated review projected; a validated
 host session snapshot replaces it, including when that snapshot carries a
 refusal diagnostic.

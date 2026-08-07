@@ -324,13 +324,19 @@ describe("desktop first-release product loop", () => {
     expect(status()).toBe(stageConflictStatus);
     expect(query(window, "[data-project-state]")?.dataset.projectState).toBe("refused");
     expect(requests).toHaveLength(stageConflictRequests);
-    // Once the operator moves past it the refusal stops being current, so the
-    // next blocked decision names that there is nothing under review instead.
+    // The refusal survives an intervening status message: only a validated
+    // resolution ends it, so the next blocked decision restores it.
     await click(window, "#project-save");
     expect(status()).toContain("no staged changes");
     await click(window, "#change-review-reject");
-    expect(status()).toContain("nothing under review · DESKTOP_PROPOSAL_NOT_REVIEWING");
+    expect(status()).toBe(stageConflictStatus);
     expect(requests).toHaveLength(stageConflictRequests);
+    // Re-reading the document is that resolution.
+    await click(window, "#project-open");
+    expect(requests).toHaveLength(stageConflictRequests + 1);
+    await click(window, "#change-review-reject");
+    expect(status()).toContain("nothing under review · DESKTOP_PROPOSAL_NOT_REVIEWING");
+    expect(requests).toHaveLength(stageConflictRequests + 1);
 
     expect(requests.map((request) => request.payload?.op ?? request.action)).toEqual([
       "status",
@@ -349,6 +355,7 @@ describe("desktop first-release product loop", () => {
       "status",
       "propose",
       "propose",
+      "status",
     ]);
   });
 

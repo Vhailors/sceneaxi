@@ -1357,6 +1357,9 @@ if (shell) {
   let projectDirty = false;
   let projectRecovering = false;
   let recoveryStatusText = null;
+  // The status that carried the host's last unresolved refusal about this
+  // document. Only a validated resolution clears it, so a blocked decision can
+  // restore the refusal instead of overwriting it.
   let activeConflictStatus = null;
   let activeReviewSnapshot = null;
   let activeProject = null;
@@ -1371,12 +1374,6 @@ if (shell) {
   let inFlight = false;
 
   const productStatus = (state, text) => {
-    // A refusal the operator has moved past is no longer the current truth about
-    // the document, so the status that carried it stops protecting it.
-    if (activeConflictStatus !== null &&
-        (state !== activeConflictStatus.state || text !== activeConflictStatus.text)) {
-      activeConflictStatus = null;
-    }
     const pill = shell.querySelector('[data-project-state]');
     if (pill) pill.dataset.projectState = state;
     q('[data-project-status]').forEach((el) => { el.textContent = text; });
@@ -1513,6 +1510,8 @@ if (shell) {
       : null;
   };
 
+  const clearConflictOutcome = () => { activeConflictStatus = null; };
+
   const syncReview = (snapshot) => {
     if (snapshot !== null && !isSessionSnapshot(snapshot)) return false;
     const projection = reviewProjection(snapshot);
@@ -1538,6 +1537,12 @@ if (shell) {
     if (documentPath) documentPath.textContent = active ? projection.first.documentPath : '';
     if (contentHash) contentHash.textContent = active ? projection.first.baseContentHash : '';
     if (renderedDiff) renderedDiff.textContent = active ? projection.diff : '';
+    // A validated snapshot that reports no diagnostic is the host saying the
+    // conflict is over, which is the only thing that resolves it.
+    if (snapshot !== null &&
+        (Array.isArray(snapshot.diagnostics) ? snapshot.diagnostics : []).length === 0) {
+      clearConflictOutcome();
+    }
     q('[data-change-badge]').forEach((el) => {
       el.textContent = String(active ? 1 : 0);
     });
@@ -1814,6 +1819,7 @@ if (shell) {
       ? status.undoAvailability
       : 'unavailable';
     syncCommandAvailability();
+    clearConflictOutcome();
     productStatus('open', withSceneRefusal(T.product.documentPath + ' · re-opened after ' + diagnostic + ' · ' + status.documentId));
     return true;
   };
@@ -1872,6 +1878,7 @@ if (shell) {
       : 'unavailable';
     syncCommandAvailability();
     syncReview(null);
+    clearConflictOutcome();
     productStatus('open', withSceneRefusal(T.product.documentPath + ' · open · ' + status.documentId));
     return true;
   };
@@ -2040,13 +2047,14 @@ if (shell) {
   const requireActiveReview = () => {
     if (activeReviewSnapshot !== null) return true;
     setOverlay('none');
-    const currentState = shell.querySelector('[data-project-state]')?.dataset.projectState || '';
-    const current = shell.querySelector('[data-project-status]')?.textContent || '';
-    const conflictStatusCurrent = activeConflictStatus !== null &&
-      currentState === activeConflictStatus.state && current === activeConflictStatus.text;
     if (projectRecovering) {
       reportRecoveryRefusal('Decision');
-    } else if (!conflictStatusCurrent) {
+    } else if (activeConflictStatus !== null) {
+      // The refusal the host last reported about this document is still the
+      // truth about it, so a blocked decision restores it rather than replacing
+      // it with a status that only says nothing is under review.
+      productStatus(activeConflictStatus.state, activeConflictStatus.text);
+    } else {
       productStatus(
         projectData === null ? 'closed' : 'open',
         T.product.documentPath + ' · nothing under review · ' + T.product.refusals.proposalNotReviewing,

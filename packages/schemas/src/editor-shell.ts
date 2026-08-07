@@ -217,7 +217,7 @@ export type EditorShellAssistantState =
  *   `chrome` render keeps those inert (`docs/desktop-linux.md`).
  * - `inert` — renders, keeps its focus stop, and refuses by name.
  *
- * There is no fifth kind, and a control with no kind cannot exist: both
+ * There is no fourth kind, and a control with no kind cannot exist: both
  * surfaces render controls only through helpers that require one.
  */
 export const EDITOR_SHELL_CONTROL_KINDS = Object.freeze([
