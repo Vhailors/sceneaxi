@@ -513,4 +513,41 @@ describe("desktop first-release product loop", () => {
     expect(savedTranslationX()).toBe(-1.5);
     expect(translationInput()?.value).toBe("-1.5");
   });
+
+  /**
+   * The entity list lives in the always-visible project panel, but the editor it
+   * reveals is a Build-mode inspector panel. Selecting from another mode used to
+   * report the control activated while its editor stayed inside a hidden section.
+   */
+  it("switches to Build when the entity is selected from another mode", async () => {
+    const dir = projectDir();
+    const { window, start } = mountChrome(dir);
+    start();
+    const shell = query(window, ".shell");
+
+    await click(window, "#project-open");
+    await click(window, "#mode-sculpt");
+    expect(shell?.dataset.mode).toBe("sculpt");
+    expect(query(window, '[data-mode-panel="build"]')?.hidden).toBe(true);
+
+    await click(window, "#scene-entity-desktop-crate-beside");
+    expect(shell?.dataset.mode).toBe("build");
+    expect(query(window, '[data-mode-panel="build"]')?.hidden).toBe(false);
+    expect(query(window, "[data-scene-property-editor]")?.hidden).toBe(false);
+    expect(
+      query(window, "#scene-entity-desktop-crate-beside")?.getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      (query(window, "#scene-property-translation-x") as
+        | (HappyHTMLElement & { value: string })
+        | null)?.value,
+    ).toBe("-4.4");
+
+    // Already in Build: selecting again leaves the mode and the operator's dock
+    // tab alone rather than resetting the panel.
+    await click(window, "#dock-console");
+    await click(window, "#scene-entity-desktop-crate-beside");
+    expect(shell?.dataset.mode).toBe("build");
+    expect(query(window, "#dock-console")?.getAttribute("aria-selected")).toBe("true");
+  });
 });

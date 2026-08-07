@@ -2173,7 +2173,9 @@ if (shell) {
     else if (action === 'project-open') void productAction(openProject);
     else if (action === 'project-save') void productAction(saveProject);
     else if (action === 'scene-play') void productAction(playScene);
-    else if (action === 'scene-entity-select' && value) showSceneProperty(value);
+    else if (action === 'scene-entity-select' && value) {
+      if (showSceneProperty(value) && shell.dataset.mode !== 'build') showModePanels('build');
+    }
     else if (action === 'scene-property-stage') void productAction(stageSceneProperty);
     else if (action === 'web-stage-html') void productAction(() => stageWebEdit('html'));
     else if (action === 'web-inject-asset') void productAction(() => stageWebEdit('asset'));
