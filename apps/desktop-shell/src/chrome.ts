@@ -447,6 +447,7 @@ function leftDock(view: DesktopVisualView): string {
         ` data-product-action data-action="scene-entity-select" data-value="desktop-crate-beside" aria-pressed="false"`,
       )}
     </div>
+    <p class="scene-entities-refusal" data-scene-entities-refusal aria-live="polite" hidden></p>
     <p class="project-root" data-project-root></p>
   </div>
   <p class="project-file-state" data-project-file-state>Active · not opened</p>
@@ -1004,6 +1005,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .scene-entity span,.scene-entity code{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .scene-entity span{font-size:10px;color:var(--text)}.scene-entity code{margin-top:3px;font-size:8px;color:var(--dim)}
 .scene-entity[aria-pressed="true"]{border-color:var(--accent);background:${ACCENT.surface}}
+.scene-entities-refusal{margin:0;padding:0 10px 9px;font-size:9px;line-height:1.45;color:var(--dim);overflow-wrap:anywhere}
 .project-file-state{margin:0;padding:0 10px 9px;font-family:var(--mono);font-size:9px;color:var(--faint)}
 .project-root{padding:0 10px 9px;font-family:var(--mono)}
 .scene-property-editor{display:grid;gap:8px;padding:10px 11px}
@@ -1388,6 +1390,16 @@ if (shell) {
     q('[data-project-file-state]').forEach((el) => { el.textContent = text; });
   };
 
+  // The panel's refusal lives beside the entity list rather than inside the
+  // editor it would explain: the editor is hidden exactly when there is no
+  // inspectable entity, so a reason written in there is a reason nobody reads.
+  const sceneEntitiesRefusal = (text) => {
+    const el = shell.querySelector('[data-scene-entities-refusal]');
+    if (!el) return;
+    el.textContent = text || '';
+    el.hidden = !text;
+  };
+
   const clearSceneProperty = () => {
     editableScene = null;
     selectedSceneEntityId = null;
@@ -1397,6 +1409,7 @@ if (shell) {
     if (entities) entities.hidden = true;
     if (editor) editor.hidden = true;
     if (review) { review.hidden = true; review.textContent = ''; }
+    sceneEntitiesRefusal('');
     q('[data-action="scene-entity-select"]').forEach((el) => el.setAttribute('aria-pressed', 'false'));
   };
 
@@ -1440,7 +1453,18 @@ if (shell) {
       : null;
     const property = entity && Array.isArray(entity.properties) ? entity.properties[0] : null;
     if (!entity || typeof entity.id !== 'string' || typeof entity.label !== 'string' ||
-        !property || property.id !== 'translation-x' || typeof property.value !== 'number') return false;
+        !property || property.id !== 'translation-x' || typeof property.value !== 'number') {
+      const refusal = inspected && inspected.ok === false && Array.isArray(inspected.diagnostics)
+        ? inspected.diagnostics[0]
+        : null;
+      if (refusal && typeof refusal.code === 'string') {
+        sceneEntitiesRefusal(
+          'Scene entities unavailable · ' + refusal.code +
+          (typeof refusal.message === 'string' && refusal.message ? ' · ' + refusal.message : ''),
+        );
+      }
+      return false;
+    }
     editableScene = inspected;
     const entities = shell.querySelector('[data-scene-entities]');
     if (entities) entities.hidden = false;

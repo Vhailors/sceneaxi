@@ -515,6 +515,52 @@ describe("desktop first-release product loop", () => {
   });
 
   /**
+   * A document can open cleanly and still carry a composition the property
+   * inspection refuses. The panel used to answer that by vanishing, leaving the
+   * operator to discover it later when Play refused.
+   */
+  it("names the host's inspection refusal instead of hiding the entity panel", async () => {
+    const dir = projectDir();
+    const starter = desktopOpenScene();
+    if (!starter.ok) throw new Error(`desktop scene refused: ${starter.reason}`);
+    const writeScene = (composedScene: unknown) => {
+      const written = writeDocumentFile(
+        join(dir, "scene.json"),
+        createDocument({
+          id: "desktop-first-release",
+          data: {
+            ...starter.composed.document.data,
+            composedScene,
+            title: "First release",
+            entities: [{ id: "hero" }],
+          },
+        }),
+        { cwd: dir },
+      );
+      if (!written.ok) throw new Error("composition fixture refused");
+    };
+    writeScene({ ...(starter.composed.document.data as { composedScene: object }).composedScene, instances: "not-a-list" });
+
+    const { window, start } = mountChrome(dir);
+    start();
+    const refusal = () => query(window, "[data-scene-entities-refusal]");
+
+    await click(window, "#project-open");
+    expect(query(window, "[data-project-status]")?.textContent).toContain("open · ");
+    expect(query(window, "[data-scene-entities]")?.hidden).toBe(true);
+    expect(refusal()?.hidden).toBe(false);
+    expect(refusal()?.textContent).toContain("Scene entities unavailable");
+    expect(refusal()?.textContent).toContain("validation-failed");
+
+    // A composition the inspection accepts takes the refusal back down.
+    writeScene((starter.composed.document.data as { composedScene: unknown }).composedScene);
+    await click(window, "#project-open");
+    expect(query(window, "[data-scene-entities]")?.hidden).toBe(false);
+    expect(refusal()?.hidden).toBe(true);
+    expect(refusal()?.textContent).toBe("");
+  });
+
+  /**
    * A pending durable apply and a staged proposal are different states with
    * different next steps, so Stage used to hand the recovery case guidance for
    * the other one — under no named refusal the legend could explain.
