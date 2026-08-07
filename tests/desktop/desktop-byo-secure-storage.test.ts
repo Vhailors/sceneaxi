@@ -23,7 +23,7 @@ import {
   createProviderKeyStore,
   createSecureDesktopByoAssistantRunner,
   desktopByoConfigurationView,
-  desktopByoRemovalContext,
+  desktopByoRefusalContext,
   seedDesktopProject,
   type PlatformSecureStorage,
   type ProviderKeyAccess,
@@ -439,10 +439,43 @@ describe("desktop BYOK configuration", () => {
     [PROVIDER_KEY_STORE_REFUSALS.locked, "storage-unavailable"],
     [PROVIDER_KEY_STORE_REFUSALS.unsupported, "storage-unavailable"],
     [PROVIDER_KEY_STORE_REFUSALS.corrupt, "envelope-invalid"],
-    [PROVIDER_KEY_STORE_REFUSALS.keyInvalid, "envelope-present"],
+    [PROVIDER_KEY_STORE_REFUSALS.keyInvalid, "request-invalid"],
     [PROVIDER_KEY_STORE_REFUSALS.failed, "envelope-present"],
-  ] as const)("classifies %s removal context as %s", (reason, context) => {
-    expect(desktopByoRemovalContext(reason)).toBe(context);
+    [PROVIDER_KEY_STORE_REFUSALS.keyMissing, "envelope-present"],
+    [DESKTOP_BYO_CONFIGURATION_REFUSALS.requestMalformed, "envelope-present"],
+  ] as const)("classifies %s as %s", (reason, context) => {
+    expect(desktopByoRefusalContext(reason)).toBe(context);
+  });
+
+  it("rejects an empty submission without blaming the backend or stranding the field", async () => {
+    const root = temporaryRoot("provider-config-empty-key");
+    const configuration = createDesktopByoConfiguration({
+      keyStore: createProviderKeyStore({ root, platformStorage: syntheticPlatform() }),
+      providerRuntimeAvailable: false,
+    });
+    const request = { profile: "@sceneaxi/profile-game", provider: "openrouter" } as const;
+    await configuration.handle({ ...request, action: "save", key: SYNTHETIC_NON_SECRET });
+
+    const rejected = await configuration.handle({ ...request, action: "save", key: "" });
+    expect(rejected).toMatchObject({
+      ok: false,
+      reason: PROVIDER_KEY_STORE_REFUSALS.keyInvalid,
+      removable: true,
+    });
+
+    const view = desktopByoConfigurationView(rejected);
+    expect(view.state).toBe("Entry rejected");
+    expect(view.message).not.toContain("Secure storage is unavailable");
+    expect(view.message).not.toContain("unavailable");
+    expect(view).toMatchObject({
+      keyFieldEnabled: true,
+      saveEnabled: true,
+      removeEnabled: true,
+    });
+
+    expect(
+      await configuration.handle({ ...request, action: "save", key: SYNTHETIC_NON_SECRET }),
+    ).toMatchObject({ ok: true, operation: "replaced", storageStatus: "ready" });
   });
 
   it("denies Kids before reading a key field or touching secure storage", async () => {
@@ -500,6 +533,7 @@ describe("BYOK configuration surface projection", () => {
 
   it("blames only the cause the store reported", () => {
     const locked = refusal(PROVIDER_KEY_STORE_REFUSALS.locked, true);
+    expect(locked.state).toBe("Stored · storage unavailable");
     expect(locked.message).toContain("Secure storage is unavailable");
     expect(locked.message).toContain("without unlocking it");
     expect(locked.removeEnabled).toBe(true);
@@ -512,17 +546,41 @@ describe("BYOK configuration surface projection", () => {
     expect(corrupt.message).not.toContain("Secure storage is unavailable");
     expect(corrupt.removeEnabled).toBe(true);
 
-    const unknown = refusal(PROVIDER_KEY_STORE_REFUSALS.keyInvalid, true);
-    expect(unknown.message).toContain("A stored entry is present and can be removed.");
-    expect(unknown.message).not.toContain("sealed");
-    expect(unknown.message).not.toContain("Secure storage is unavailable");
+    const neutral = refusal(PROVIDER_KEY_STORE_REFUSALS.failed, true);
+    expect(neutral.state).toBe("Stored");
+    expect(neutral.message).toContain("A stored entry is present and can be removed.");
+    expect(neutral.message).not.toContain("sealed");
+    expect(neutral.message).not.toContain("Secure storage is unavailable");
+    expect(neutral.removeEnabled).toBe(true);
 
-    for (const view of [locked, corrupt, unknown, refusal(PROVIDER_KEY_STORE_REFUSALS.failed, false)]) {
+    const absent = refusal(PROVIDER_KEY_STORE_REFUSALS.failed, false);
+    expect(absent.state).toBe("Unavailable");
+    expect(absent.removeEnabled).toBe(false);
+
+    // Only a refusal the runtime raised about the platform may say so.
+    for (const view of [corrupt, neutral, absent]) {
+      expect(view.state).not.toContain("storage unavailable");
+    }
+    for (const view of [locked, corrupt, neutral, absent]) {
       expect(view.keyFieldEnabled).toBe(false);
       expect(view.saveEnabled).toBe(false);
       expect(view.saveLabel).toBeNull();
     }
-    expect(refusal(PROVIDER_KEY_STORE_REFUSALS.failed, false).removeEnabled).toBe(false);
+  });
+
+  it("keeps the submission controls live when only the submitted value was rejected", () => {
+    for (const removable of [true, false]) {
+      const rejected = refusal(PROVIDER_KEY_STORE_REFUSALS.keyInvalid, removable);
+      expect(rejected.state).toBe("Entry rejected");
+      expect(rejected.state).not.toContain("storage unavailable");
+      expect(rejected.message).not.toContain("Secure storage is unavailable");
+      expect(rejected).toMatchObject({
+        keyFieldEnabled: true,
+        saveEnabled: true,
+        saveLabel: null,
+        removeEnabled: removable,
+      });
+    }
   });
 
   it("never offers save while the backend stays unreachable after a successful removal", () => {

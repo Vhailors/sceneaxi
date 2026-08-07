@@ -78,23 +78,27 @@ export type DesktopByoConfigurationStatus = Readonly<{
 }>;
 
 /**
- * Why a refusal is still offering removal. The surface may state the cause it was
- * given and nothing more: an unreachable backend says so, an invalid envelope says
- * only that, and anything else asserts no more than the presence the probe found.
+ * What a refusal actually establishes. The surface may state the cause it was
+ * given and nothing more: an unreachable backend says so, an invalid envelope
+ * says only that, a rejected submission says only that — the backend was never
+ * consulted — and anything else asserts no more than the presence the probe
+ * found. Nothing outside `storage-unavailable` may claim the platform failed.
  */
-export type DesktopByoRemovalContext =
+export type DesktopByoRefusalContext =
   | "storage-unavailable"
   | "envelope-invalid"
+  | "request-invalid"
   | "envelope-present";
 
-export function desktopByoRemovalContext(
+export function desktopByoRefusalContext(
   reason: DesktopByoConfigurationRefusalReason,
-): DesktopByoRemovalContext {
+): DesktopByoRefusalContext {
   if ((PROVIDER_KEY_STORE_AVAILABILITY_REFUSALS as readonly string[]).includes(reason)) {
     return "storage-unavailable";
   }
-  return reason === PROVIDER_KEY_STORE_REFUSALS.corrupt
-    ? "envelope-invalid"
+  if (reason === PROVIDER_KEY_STORE_REFUSALS.corrupt) return "envelope-invalid";
+  return reason === PROVIDER_KEY_STORE_REFUSALS.keyInvalid
+    ? "request-invalid"
     : "envelope-present";
 }
 

@@ -139,12 +139,20 @@ them are load-bearing. The key field and Save follow `storageStatus`, never the
 mere fact that a call succeeded: removal succeeds on an unreachable backend, so
 that answer resolves availability instead of implying it, and the panel keeps Save
 disabled afterwards rather than offering a control that would refuse on submit. And
-a refusal states the cause it was given and no other: an availability refusal says
-secure storage is unavailable and that Remove can still delete the envelope without
-unlocking it, `DESKTOP_PROVIDER_KEY_STORE_CORRUPT` says only that the stored entry
-is invalid and removable — never that it remains sealed, and never blaming a lock
-that was not reported — and any other removable refusal asserts no more than the
-presence the probe actually found.
+a refusal states the cause it was given and no other, in **both** the state label
+and the message — `desktopByoRefusalContext()` is the closed classification that
+decides which, and only its `storage-unavailable` arm may say the platform failed:
+
+| Context | Reasons | Label | What it may claim |
+|---|---|---|---|
+| `storage-unavailable` | `…UNAVAILABLE`, `…LOCKED`, `…UNSUPPORTED` | `Stored · storage unavailable` | secure storage is unavailable, and Remove can still delete the envelope without unlocking it |
+| `envelope-invalid` | `…STORE_CORRUPT` | `Stored · unusable` | only that the stored entry is invalid and removable — never that it stays sealed, never a lock that was not reported |
+| `request-invalid` | `DESKTOP_PROVIDER_KEY_INVALID` | `Entry rejected` | only that the submission was rejected; the backend was never consulted, so the key field and Save stay live for the retype |
+| `envelope-present` | everything else | `Stored`, or `Unavailable` when nothing is removable | no more than the presence the probe actually found |
+
+`request-invalid` is the one refusal that leaves the submission controls enabled,
+because it is decided before `available()` is consulted and an empty or malformed
+value is the user's to correct; every other refusal keeps them disabled.
 
 `ProviderKeyStore` in `desktop/linux/src/lib/provider-key-store.ts` is the typed
 host seam: `status`, `read`, `save`, `remove`, and `removable`. Its Electron adapter
@@ -261,7 +269,9 @@ cannot opt into hosted routing or bypass metering.
   wrong-type / symlinked / non-owner-private target and a failed unlink, the
   owner-private assertion staying off a platform without POSIX permissions while
   the file-type check still holds, the surface projection's cause-specific refusal
-  copy and its refusal to offer Save while storage stays unreachable,
+  label and copy — including an empty submission against a stored envelope naming
+  neither an unavailable backend nor a disabled field — and its refusal to offer
+  Save while storage stays unreachable,
   Kids-before-store ordering, provider-session retrieval and cleanup,
   renderer/bridge redaction, and the unchanged hosted/tool-registry boundary.
 

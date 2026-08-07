@@ -3,11 +3,13 @@
  *
  * Every honesty rule the panel has to keep lives here rather than in DOM
  * conditionals: a control is offered only when the response says the capability
- * behind it is reachable, and the copy states the cause the runtime reported and
- * nothing else. The renderer binds this projection; `tests/desktop/` executes it.
+ * behind it is reachable, and both the state label and the copy state the cause
+ * the runtime reported and nothing else — no label may claim the platform failed
+ * unless the refusal was about the platform. The renderer binds this projection;
+ * `tests/desktop/` executes it.
  */
 import {
-  desktopByoRemovalContext,
+  desktopByoRefusalContext,
   type DesktopByoConfigurationResponse,
 } from "./byo-configuration-contract.js";
 
@@ -25,7 +27,12 @@ function refusalView(
   response: Extract<DesktopByoConfigurationResponse, { ok: false }>,
 ): DesktopByoConfigurationView {
   const removable = response.removable === true;
-  const context = desktopByoRemovalContext(response.reason);
+  const context = desktopByoRefusalContext(response.reason);
+  // A rejected submission is the one refusal that says nothing about the
+  // platform: it is decided before the backend is consulted, so the field and
+  // Save stay live for the retype rather than stranding the user behind a
+  // capability failure that was never reported.
+  const resubmittable = context === "request-invalid";
   const offer = !removable
     ? ""
     : context === "storage-unavailable"
@@ -33,16 +40,21 @@ function refusalView(
       : context === "envelope-invalid"
         ? " The stored entry is invalid and can be removed."
         : " A stored entry is present and can be removed.";
-  return Object.freeze({
-    state: !removable
+  const state = resubmittable
+    ? "Entry rejected"
+    : !removable
       ? "Unavailable"
-      : context === "envelope-invalid"
-        ? "Stored · unusable"
-        : "Stored · storage unavailable",
+      : context === "storage-unavailable"
+        ? "Stored · storage unavailable"
+        : context === "envelope-invalid"
+          ? "Stored · unusable"
+          : "Stored";
+  return Object.freeze({
+    state,
     message: `${response.reason} — ${response.message}${offer}`,
     saveLabel: null,
-    keyFieldEnabled: false,
-    saveEnabled: false,
+    keyFieldEnabled: resubmittable,
+    saveEnabled: resubmittable,
     removeEnabled: removable,
   });
 }

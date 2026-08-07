@@ -130,10 +130,14 @@ unavailable, locked, or unsupported. That path never reads, decrypts, or returns
 the envelope, and refuses by name when the target is not a regular owner-private
 file or cannot be unlinked. A `corrupt` envelope reads `Stored · unusable` and says
 only that the stored entry is invalid and removable; the panel never claims a key
-stays sealed, and never blames a lock the runtime did not report. Because removal
-can succeed while the backend is still unreachable, the answer carries a resolved
-`storageStatus` and the key field and Save stay disabled afterwards rather than
-appearing live for a capability that would refuse on submit.
+stays sealed, and never blames a lock the runtime did not report. No other state
+may claim the platform failed either: a rejected submission reads `Entry rejected`
+and leaves the key field and Save live for the retype, since that refusal is
+decided before the backend is consulted, and any other removable refusal reads a
+plain `Stored`. Because removal can succeed while the backend is still unreachable,
+the answer carries a resolved `storageStatus` and the key field and Save stay
+disabled afterwards rather than appearing live for a capability that would refuse
+on submit.
 The checked-in host intentionally has no live provider session factory,
 so it reports provider execution unavailable even when a key is securely stored.
 This implements configuration and the privileged injection contract without
