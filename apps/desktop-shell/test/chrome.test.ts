@@ -446,7 +446,8 @@ describe("engine desktop chrome — accessibility", () => {
     // inherit an acting sibling's handler, and a declared action is escaped into
     // the attribute rather than concatenated into the markup.
     const view = desktopVisualView(createDesktopVisualState());
-    const shipped = view.overlay.dismissals[0]!;
+    const shipped = view.overlay.dismissals[0];
+    if (shipped === undefined) throw new Error("outcome dismissal missing");
     const added = [
       { ...shipped, id: "outcome-explain", productAction: null,
         control: { ...shipped.control, id: "overlay-close-outcome-explain" } },

@@ -953,7 +953,8 @@ describe("desktop first-release product loop", () => {
     expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(before);
 
     await click(window, "#project-save");
-    expect(status()).toContain("recovery pending · Save to refresh");
+    expect(status()).toContain("recovery pending · transaction fixture-pending-apply");
+    expect(status()).toContain("Save to refresh");
     await click(window, "#scene-property-stage");
     expect(status()).toContain("DESKTOP_RECOVERY_PENDING");
     expect(status()).not.toContain("DESKTOP_PROFILE_SWITCH_DIRTY");

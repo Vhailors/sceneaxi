@@ -97,20 +97,20 @@ Change Review is populated only by the active `DesktopSession` proposal and
 offers one atomic Accept/Reject pair. Accept may write through authoring-core;
 Reject discards without writing. A transport failure or malformed response leaves
 the last validated review intact; a validated host session snapshot replaces it,
-including when that snapshot carries a refusal diagnostic. Neither conflict action
+including when that snapshot carries a refusal diagnostic. Neither decision
 reaches the host when there is no active review, including while apply recovery is
 pending, where the surface reports `DESKTOP_RECOVERY_PENDING` without changing the
 recovery state. Web staging also refuses before reaching the host during recovery
 and retains the transaction details and recovery instructions.
-The conflict dialog is raised only by a diagnostic a shipped path can produce —
-`content-hash-conflict` from staging or Save, `journal-conflict` from Save — and its
-heading names that diagnostic: the document-changed wording is restored for a real
-content-hash conflict, and any other diagnostic is announced as a session refusal.
+The outcome dialog is raised only by a diagnostic a shipped path can produce —
+`content-hash-conflict` from staging or Save, `journal-conflict` from Save — and it
+reports that diagnostic rather than describing a conflict in general: its heading
+names the action that refused and its body carries the host's own code, message,
+and re-read hint.
 When a host snapshot
-has already cleared a stale proposal, an unavailable conflict action names its own
-outcome and carries the recorded conflict as detail, so it neither claims a
-normal-open document nor replays the earlier action's status sentence over a newer
-one.
+has already cleared a stale proposal, a blocked decision names its own outcome and
+carries the recorded conflict as detail, so it neither claims a normal-open
+document nor replays the earlier action's status sentence over a newer one.
 
 The first-release loop has one honest active file, `scene.json`. In the packaged
 host, first launch shows New Project and Open Project without binding or seeding
@@ -272,3 +272,7 @@ bytes, recents, removal, and restart. The former
 test executes the emitted browser script at the narrow window tier, clicks all
 three profile surfaces plus Open, Web asset staging, Save recovery, and Play
 against the real host bridge, and observes the viewport playback acknowledgement.
+It also drives Change Review end to end — the rendered proposal, Accept writing,
+Reject leaving the document untouched, a stale base hash refusing, the outcome
+dialog naming the diagnostic it was raised for, and the default emitted document
+carrying no review row.

@@ -424,12 +424,12 @@ document also explains. `test/product-loop.test.ts` asserts that in both directi
 | `DESKTOP_RUNTIME_REQUEST_REFUSED` | the host refused and named no reason of its own |
 | `DESKTOP_VIEWPORT_UNAVAILABLE` | orchestrated playback completed but the live viewport did not acknowledge a post-play frame |
 | `DESKTOP_AUTHORING_REFUSED` | the shared authoring session refused and carried no diagnostic code |
-| `DESKTOP_PROPOSAL_NOT_REVIEWING` | propose returned without parking the edit for review |
-| `DESKTOP_PROPOSAL_NOT_DISCARDED` | re-opening could not discard the proposal the host still holds |
+| `DESKTOP_PROPOSAL_NOT_REVIEWING` | propose returned without parking the edit for review, or Reject / a conflict action was taken with no validated active review |
+| `DESKTOP_PROPOSAL_NOT_DISCARDED` | Reject, or a re-open, could not discard the proposal the host still holds |
 | `DESKTOP_PROFILE_SWITCH_DIRTY` | a staged proposal must be saved or discarded before another edit stages, the project changes, or the profile changes |
 | `DESKTOP_UNDO_STAGED_PROPOSAL` | Undo would drop a staged, unsaved proposal along with the Save it reverses |
 | `DESKTOP_APPLY_NOT_COMPLETED` | accept returned without reporting the apply completed |
-| `DESKTOP_RECOVERY_PENDING` | Undo, staging an edit, changing the project, and switching profiles are blocked until Save resolves recovery or Open starts a fresh re-read session |
+| `DESKTOP_RECOVERY_PENDING` | Undo, staging an edit, changing the project, switching profiles, and the Change Review decisions are blocked — none of them reaches the host — until Save resolves recovery or Open starts a fresh re-read session |
 | `DESKTOP_OPEN_PATH_EVIDENCE_INVALID` | the play response carried no closed session with observed tick digests |
 | `DESKTOP_PRODUCT_REQUEST_IN_FLIGHT` | another serialized product-loop request currently owns the shared session |
 
@@ -679,7 +679,11 @@ sentence can return by review slip.
   spawns the real binary and renders a document from it.
   `tests/e2e/desktop-product-loop-golden.test.ts` crosses the rendered profiles,
   existing desktop bridge, shared authoring session, durable accept, and
-  orchestrated composed-scene play path in one test.
+  orchestrated composed-scene play path, and drives Change Review itself against
+  that bridge: the rendered proposal, Accept writing, Reject leaving the document
+  untouched, a stale base hash refusing, the conflict dialog naming the
+  diagnostic it was raised for, and the default emitted document carrying no
+  review row.
 
 - **Every interaction command is invoked, not inventoried** —
   `tests/e2e/desktop-command-interactions-golden.test.ts` loads the emitted
