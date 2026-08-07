@@ -6,6 +6,7 @@ import {
 } from "happy-dom";
 import {
   DESKTOP_INTERACTION_COMMANDS,
+  DESKTOP_OVERLAY_SHORTCUTS,
   DESKTOP_PALETTE_SHORTCUT,
   DESKTOP_PRODUCT_REFUSALS,
   createDesktopVisualState,
@@ -379,6 +380,83 @@ describe("desktop command menu, palette, and accelerator parity", () => {
     expect(element(window, '[data-menu-trigger="file"]').getAttribute("aria-expanded")).toBe(
       "false",
     );
+  });
+
+  it("returns focus to the menu trigger when Escape closes the menu", async () => {
+    const { window } = await harness();
+    await click(window, '[data-menu-trigger="file"]');
+    const trigger = element(window, '[data-menu-trigger="file"]');
+    expect(element(window, "#menu-panel-file").contains(window.document.activeElement)).toBe(
+      true,
+    );
+    const escape = new window.KeyboardEvent("keydown", {
+      key: "Escape",
+      bubbles: true,
+      cancelable: true,
+    });
+    (window.document.activeElement as unknown as HappyHTMLElement).dispatchEvent(escape);
+    expect(element(window, "#menu-panel-file").hidden).toBe(true);
+    expect(window.document.activeElement).toBe(trigger);
+  });
+
+  it("returns focus to the menu trigger when a menu item is invoked", async () => {
+    const { window } = await harness();
+    await click(window, '[data-menu-trigger="run"]');
+    const trigger = element(window, '[data-menu-trigger="run"]');
+    await click(window, "#menu-command-run-play");
+    expect(element(window, "#menu-panel-run").hidden).toBe(true);
+    expect(window.document.activeElement).toBe(trigger);
+  });
+
+  it("moves between menu items with the arrow keys its role advertises", async () => {
+    const { window } = await harness();
+    await click(window, '[data-menu-trigger="file"]');
+    const items = [
+      ...element(window, "#menu-panel-file").querySelectorAll('[role="menuitem"]'),
+    ] as HappyHTMLElement[];
+    expect(items.length).toBeGreaterThan(1);
+    const first = items[0];
+    const second = items[1];
+    const last = items[items.length - 1];
+    if (first === undefined || second === undefined || last === undefined) {
+      throw new Error("File menu rendered no items");
+    }
+    first.focus();
+    const down = new window.KeyboardEvent("keydown", {
+      key: "ArrowDown",
+      bubbles: true,
+      cancelable: true,
+    });
+    first.dispatchEvent(down);
+    expect(down.defaultPrevented).toBe(true);
+    expect(window.document.activeElement).toBe(second);
+
+    const up = new window.KeyboardEvent("keydown", {
+      key: "ArrowUp",
+      bubbles: true,
+      cancelable: true,
+    });
+    second.dispatchEvent(up);
+    expect(window.document.activeElement).toBe(first);
+
+    const end = new window.KeyboardEvent("keydown", {
+      key: "End",
+      bubbles: true,
+      cancelable: true,
+    });
+    first.dispatchEvent(end);
+    expect(window.document.activeElement).toBe(last);
+  });
+
+  it("opens the overlay each status shortcut declares", async () => {
+    for (const declared of DESKTOP_OVERLAY_SHORTCUTS) {
+      const { window } = await harness();
+      await click(window, `#status-overlay-${declared.overlay}`);
+      expect(element(window, ".shell").dataset.overlay).toBe(declared.overlay);
+      expect(
+        element(window, `.overlay[data-overlay="${declared.overlay}"]`).hidden,
+      ).toBe(false);
+    }
   });
 
   it("shows and dismisses the real refusal returned by a command", async () => {

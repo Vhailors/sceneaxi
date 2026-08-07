@@ -806,7 +806,7 @@ function statusBar(view: DesktopVisualView): string {
         shortcut.control,
         escapeHtml(shortcut.label),
         "state-shortcut",
-        ` data-command="${escapeHtml(DESKTOP_PALETTE_SHORTCUT.id)}"`,
+        ` data-command="${escapeHtml(shortcut.commandId)}"`,
       ),
     )
     .join("")}
@@ -2179,9 +2179,48 @@ if (shell) {
     setOverlay('outcome');
   };
 
+  const menuTrigger = (panel) => {
+    const root = panel.closest('[data-menu-root]');
+    return root === null ? null : root.querySelector('[data-menu-trigger]');
+  };
+
+  // Hiding the panel under the caret would drop focus to the body and restart
+  // the Tab order at the top of the document, so the menu hands focus back to
+  // the trigger that owns it — the same return the overlay makes.
   const closeMenus = () => {
+    const active = document.activeElement;
+    let restore = null;
+    q('.menu-panel').forEach((panel) => {
+      if (!panel.hidden && active !== null && panel.contains(active)) {
+        restore = menuTrigger(panel);
+      }
+      panel.hidden = true;
+    });
     q('[data-menu-trigger]').forEach((trigger) => trigger.setAttribute('aria-expanded', 'false'));
-    q('.menu-panel').forEach((panel) => { panel.hidden = true; });
+    if (restore !== null && typeof restore.focus === 'function') restore.focus();
+  };
+
+  // The panel declares role="menu", so the arrow keys have to move between its
+  // items for that role to be true. The items keep their plain Tab stop as
+  // well: an inert control that stays findable is this surface's own rule.
+  const moveMenuItem = (event) => {
+    const from = event.target instanceof Element ? event.target.closest('[role="menuitem"]') : null;
+    if (from === null) return false;
+    const panel = from.closest('.menu-panel');
+    if (panel === null || panel.hidden) return false;
+    const items = Array.from(panel.querySelectorAll('[role="menuitem"]'));
+    const at = items.indexOf(from);
+    if (at === -1) return false;
+    let next = -1;
+    if (event.key === 'ArrowDown') next = (at + 1) % items.length;
+    else if (event.key === 'ArrowUp') next = (at - 1 + items.length) % items.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = items.length - 1;
+    else return false;
+    event.preventDefault();
+    const target = items[next];
+    if (target && typeof target.focus === 'function') target.focus();
+    return true;
   };
 
   const toggleMenu = (id) => {
@@ -2435,7 +2474,8 @@ if (shell) {
       }
     }
     if (shell.dataset.overlay === 'none') {
-      if (event.key === 'Escape') closeMenus();
+      if (event.key === 'Escape') { closeMenus(); return; }
+      if (moveMenuItem(event)) return;
       moveTab(event);
       return;
     }

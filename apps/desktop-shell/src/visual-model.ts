@@ -156,11 +156,21 @@ export const DESKTOP_OVERLAY_DISMISSALS: ReadonlyArray<
   Object.freeze({ id: "outcome-dismiss", overlay: "outcome" as const, label: "Dismiss", emphasis: "primary" as const }),
 ]);
 
-/** The status bar's overlay shortcuts, in the order the archive draws them. */
+/**
+ * The status bar's overlay shortcuts, in the order the archive draws them.
+ *
+ * Each row carries the command id that opens its overlay, so the renderer
+ * dispatches the data it iterates rather than a constant that only happens to
+ * agree with it while the list holds one entry.
+ */
 export const DESKTOP_OVERLAY_SHORTCUTS: ReadonlyArray<
-  Readonly<{ overlay: DesktopOverlayId; label: string }>
+  Readonly<{ overlay: DesktopOverlayId; commandId: string; label: string }>
 > = Object.freeze([
-  Object.freeze({ overlay: "palette" as const, label: DESKTOP_PALETTE_SHORTCUT.accelerator }),
+  Object.freeze({
+    overlay: "palette" as const,
+    commandId: DESKTOP_PALETTE_SHORTCUT.id,
+    label: DESKTOP_PALETTE_SHORTCUT.accelerator,
+  }),
 ]);
 
 /**
@@ -1033,14 +1043,19 @@ export type DesktopOverlayView = Readonly<{
   /** The title bar's palette opener. */
   search: DesktopControl;
   refusalHelp: DesktopControl;
-  /** The status bar's three overlay shortcuts. */
+  /** The status bar's overlay shortcuts. */
   shortcuts: ReadonlyArray<
-    Readonly<{ overlay: DesktopOverlayId; label: string; control: DesktopControl }>
+    Readonly<{
+      overlay: DesktopOverlayId;
+      commandId: string;
+      label: string;
+      control: DesktopControl;
+    }>
   >;
   /**
-   * One control per dismiss button, so the four buttons that close the two
-   * dialogs each carry their own identity instead of sharing one that could
-   * only ever be rendered once.
+   * One control per dismiss button, so each button that closes a dialog carries
+   * its own identity instead of sharing one that could only ever be rendered
+   * once.
    */
   dismissals: ReadonlyArray<
     Readonly<{
