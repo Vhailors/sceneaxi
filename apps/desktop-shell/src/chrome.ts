@@ -1426,7 +1426,13 @@ if (shell) {
     return true;
   };
 
+  // Every path that moves the document — open, stage, save, recovery — re-reads
+  // the panel from the host's own inspection, and keeps the operator's selection
+  // across that read. Re-selecting is how the value on screen used to be
+  // refreshed, so dropping the selection here is what made a stale value
+  // survivable in the first place.
   const syncSceneProperties = (status) => {
+    const previousSelection = selectedSceneEntityId;
     clearSceneProperty();
     const inspected = status && status.editableScene;
     const entity = inspected && inspected.ok === true && Array.isArray(inspected.entities)
@@ -1441,6 +1447,7 @@ if (shell) {
     q('[data-scene-entity-label]').forEach((el) => { el.textContent = entity.label; });
     q('[data-scene-entity-id]').forEach((el) => { el.textContent = entity.id; });
     q('[data-action="scene-entity-select"]').forEach((el) => { el.dataset.value = entity.id; });
+    if (previousSelection !== null) showSceneProperty(previousSelection);
     return true;
   };
 
@@ -1758,6 +1765,11 @@ if (shell) {
   };
 
   const stageSceneProperty = async () => {
+    // Read what the operator typed before the first await: re-opening re-reads
+    // the panel from the document, so a value captured afterwards would be the
+    // saved one rather than the edit that was just requested.
+    const input = shell.querySelector('#scene-property-translation-x');
+    const newValue = input && input.tagName === 'INPUT' ? input.valueAsNumber : Number.NaN;
     if (projectDirty || projectRecovering) {
       productStatus('refused', 'Edit refused · save or re-open the one staged proposal first');
       return;
@@ -1767,8 +1779,6 @@ if (shell) {
       productStatus('refused', 'Edit refused · select the starter entity first');
       return;
     }
-    const input = shell.querySelector('#scene-property-translation-x');
-    const newValue = input && input.tagName === 'INPUT' ? input.valueAsNumber : Number.NaN;
     const response = await runtimeRequest({
       action: 'authoring',
       payload: {
@@ -1794,6 +1804,7 @@ if (shell) {
     if (edit && edit.jsonPointer === '/data/composedScene' && projectData && typeof projectData === 'object') {
       projectData = { ...projectData, composedScene: edit.newValue };
     }
+    syncSceneProperties(snapshot);
     const review = shell.querySelector('[data-scene-property-review]');
     if (review) {
       review.textContent = String(snapshot.renderedDiff || snapshot.unifiedDiff || 'Proposal staged for review.');
@@ -1819,6 +1830,10 @@ if (shell) {
       projectContentHash = null;
       projectDirty = false;
       projectRecovering = false;
+      // The written document, not the diff of how it got there: the applied
+      // proposal is spent, so the review panel goes with it while the panel
+      // keeps showing the value the next Play will mount.
+      syncSceneProperties(snapshot);
       productStatus('saved', T.product.documentPath + ' · saved');
       return true;
     }

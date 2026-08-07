@@ -61,6 +61,7 @@ import {
   DESKTOP_SCENE_NOT_COMPOSABLE,
   desktopAssistantScene,
   desktopSceneFromDocumentData,
+  desktopScenePropertyInspection,
   inspectDesktopSceneProperties,
   stageDesktopScenePropertyEdit,
   type DesktopSceneResult,
@@ -334,6 +335,37 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         }),
       });
     };
+    /**
+     * A snapshot the surface can re-read its property panel from.
+     *
+     * Stage and Save both move the edited value past the inspection the last
+     * `status` produced, so a snapshot that carries none leaves the surface
+     * holding a value the session no longer agrees with. An applied proposal is
+     * re-read from the document it wrote; anything else answers unchanged.
+     */
+    const appliedWithProperties = (
+      live: DesktopSession,
+      snapshot: DesktopSnapshot,
+    ) => {
+      if (
+        snapshot.phase !== "applied" ||
+        snapshot.journalRecoveryPending ||
+        (snapshot.diagnostics?.length ?? 0) > 0
+      ) return snapshot;
+      const edited = snapshot.proposal?.edits[0]?.documentPath;
+      const documentPath = containedDocumentPath(edited);
+      if (documentPath === null) return snapshot;
+      const status = live.status(documentPath);
+      if (!status.ok) return snapshot;
+      return Object.freeze({
+        ...snapshot,
+        editableScene: inspectDesktopSceneProperties({
+          documentData: status.data,
+          contentHash: status.contentHash,
+          documentPath,
+        }),
+      });
+    };
     if (op === "restart") {
       const documentPath = containedDocumentPath(field(payload, "documentPath"));
       if (documentPath === null) {
@@ -380,7 +412,18 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         newValue: field(payload, "newValue"),
       });
       if (!staged.ok) return bridgeOk("authoring", staged);
-      return bridgeOk("authoring", live.proposeEdit(staged.edit));
+      const snapshot = live.proposeEdit(staged.edit);
+      if (snapshot.phase !== "reviewing") return bridgeOk("authoring", snapshot);
+      return bridgeOk(
+        "authoring",
+        Object.freeze({
+          ...snapshot,
+          editableScene: desktopScenePropertyInspection(
+            expectedContentHash,
+            staged.entity,
+          ),
+        }),
+      );
     }
     if (op === "propose") {
       const documentPath = containedDocumentPath(field(payload, "documentPath"));
@@ -406,9 +449,16 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       });
       return bridgeOk("authoring", snapshot);
     }
-    if (op === "accept") return bridgeOk("authoring", live.accept());
+    if (op === "accept") {
+      return bridgeOk("authoring", appliedWithProperties(live, live.accept()));
+    }
     if (op === "reject") return bridgeOk("authoring", live.reject());
-    if (op === "recover") return bridgeOk("authoring", live.refreshRecovery());
+    if (op === "recover") {
+      return bridgeOk(
+        "authoring",
+        appliedWithProperties(live, live.refreshRecovery()),
+      );
+    }
     return bridgeOk("authoring", live.undo());
   };
 

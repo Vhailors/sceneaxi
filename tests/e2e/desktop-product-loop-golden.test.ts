@@ -438,4 +438,101 @@ describe("desktop first-release product loop", () => {
       "Played composed scene · 4 ticks · viewport frame 31",
     );
   });
+
+  /**
+   * The panel used to hold the inspection the last open produced, so a value it
+   * displayed could be one the session had already moved past — and the next
+   * edit re-opened, which dropped the selection and refused.
+   */
+  it("keeps the property panel on the staged then saved value without reopening or reselecting", async () => {
+    const dir = projectDir();
+    const bridge = createDesktopBridge({ cwd: dir, nowMs: () => 1_753_920_000_000 });
+    const window = new HappyWindow({ width: 1000, height: 700 });
+    const ipcClone = <T>(value: T): T =>
+      window.eval(`(${JSON.stringify(value)})`) as T;
+    windows.push(window);
+    Object.defineProperty(window, "structuredClone", { value: ipcClone });
+    Object.defineProperty(window, "sceneaxiDesktop", {
+      value: {
+        request: async (request: unknown) => ipcClone(bridge.handle(ipcClone(request))),
+      },
+    });
+    const html = renderDesktopChrome(
+      desktopVisualView(
+        createDesktopVisualState({
+          profile: "game",
+          window: { width: 1000, height: 700 },
+        }),
+      ),
+    );
+    const match = /<script>([\s\S]*?)<\/script>/.exec(html);
+    if (match === null || match[1] === undefined) {
+      throw new Error("desktop chrome lost its emitted script");
+    }
+    window.document.write(html.replace(match[0], ""));
+    window.eval(match[1]);
+
+    const translationInput = () =>
+      query(window, "#scene-property-translation-x") as
+        | (HappyHTMLElement & { value: string })
+        | null;
+    const savedTranslationX = () => {
+      const document_ = JSON.parse(readFileSync(join(dir, "scene.json"), "utf8")) as {
+        data: {
+          composedScene: {
+            instances: Array<{
+              instanceId: string;
+              localTransform: { translation: number[] };
+            }>;
+          };
+        };
+      };
+      return document_.data.composedScene.instances.find(
+        (instance) => instance.instanceId === "desktop-crate-beside",
+      )?.localTransform.translation[0];
+    };
+
+    await click(window, "#project-open");
+    await click(window, "#scene-entity-desktop-crate-beside");
+    const input = translationInput();
+    if (input === null) throw new Error("translation input is missing");
+    expect(input.value).toBe("-4.4");
+    input.value = "-3.25";
+
+    const before = readFileSync(join(dir, "scene.json"), "utf8");
+    await click(window, "#scene-property-stage");
+    expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(before);
+    // The staged value is the host's, echoed back — not the string left in the field.
+    expect(translationInput()?.value).toBe("-3.25");
+    await click(window, "#scene-entity-desktop-crate-beside");
+    expect(translationInput()?.value).toBe("-3.25");
+
+    await click(window, "#project-save");
+    expect(query(window, "[data-project-status]")?.textContent).toContain("saved");
+    expect(savedTranslationX()).toBe(-3.25);
+    // The applied proposal is spent: its diff goes, the written value stays.
+    expect(query(window, "[data-scene-property-review]")?.hidden).toBe(true);
+    expect(query(window, "[data-scene-property-review]")?.textContent).toBe("");
+    expect(query(window, "[data-scene-entities]")?.hidden).toBe(false);
+    expect(translationInput()?.value).toBe("-3.25");
+    await click(window, "#scene-entity-desktop-crate-beside");
+    expect(translationInput()?.value).toBe("-3.25");
+
+    // A second edit straight after Save: no reopen, no reselect, and the value
+    // typed at click time is the one that stages.
+    const staged = translationInput();
+    if (staged === null) throw new Error("translation input is missing after save");
+    staged.value = "-1.5";
+    const beforeSecond = readFileSync(join(dir, "scene.json"), "utf8");
+    await click(window, "#scene-property-stage");
+    expect(query(window, "[data-project-status]")?.textContent).toContain(
+      "property staged · review before Save",
+    );
+    expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(beforeSecond);
+    expect(translationInput()?.value).toBe("-1.5");
+
+    await click(window, "#project-save");
+    expect(savedTranslationX()).toBe(-1.5);
+    expect(translationInput()?.value).toBe("-1.5");
+  });
 });

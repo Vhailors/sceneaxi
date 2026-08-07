@@ -327,6 +327,25 @@ function editableEntityOf(instance: ComposedSceneInstance): DesktopSceneEditable
 }
 
 /**
+ * The inspection shape both the read path and the staged-edit path answer with.
+ *
+ * A staged proposal has no document on disk to re-read, so the host reports the
+ * entity the edit recomposed rather than leaving the surface to derive a value
+ * of its own — a second, unvalidated authoring answer is exactly what this
+ * vertical must not grow.
+ */
+export function desktopScenePropertyInspection(
+  contentHash: string,
+  entity: DesktopSceneEditableEntity,
+): DesktopScenePropertyInspection {
+  return Object.freeze({
+    ok: true as const,
+    contentHash,
+    entities: Object.freeze([entity]),
+  });
+}
+
+/**
  * Inspect the one typed property this vertical supports.
  *
  * The property is taken from the validated, digest-bound composition rather
@@ -344,11 +363,10 @@ export function inspectDesktopSceneProperties(input: Readonly<{
     input.documentPath ?? DESKTOP_ACTIVE_DOCUMENT_PATH,
   );
   if (!read.ok) return read;
-  return Object.freeze({
-    ok: true as const,
-    contentHash: input.contentHash,
-    entities: Object.freeze([editableEntityOf(read.instance)]),
-  });
+  return desktopScenePropertyInspection(
+    input.contentHash,
+    editableEntityOf(read.instance),
+  );
 }
 
 /**
