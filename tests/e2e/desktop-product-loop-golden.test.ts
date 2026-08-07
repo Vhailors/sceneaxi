@@ -74,95 +74,119 @@ async function click(window: HappyWindow, selector: string) {
   throw new Error(`product-loop control did not settle ${selector}`);
 }
 
+type ChromeHarnessPort = {
+  readonly bridge: ReturnType<typeof createDesktopBridge>;
+  readonly ipcClone: <T>(value: T) => T;
+};
+
+/**
+ * Mount the emitted chrome over a real bridge the way the packaged app does:
+ * the renderer only ever sees structured-cloned values, so every request and
+ * response crosses `ipcClone` exactly as it would cross Electron IPC.
+ *
+ * `start()` is separate from mounting so a case can register its viewport-play
+ * listener first — the script binds its handlers as it evaluates.
+ */
+function mountChrome(
+  dir: string,
+  intercept?: (port: ChromeHarnessPort) => (request: unknown) => Promise<unknown>,
+) {
+  const bridge = createDesktopBridge({ cwd: dir, nowMs: () => 1_753_920_000_000 });
+  const window = new HappyWindow({ width: 1000, height: 700 });
+  windows.push(window);
+  const ipcClone = <T>(value: T): T => window.eval(`(${JSON.stringify(value)})`) as T;
+  const request =
+    intercept?.({ bridge, ipcClone }) ??
+    (async (value: unknown) => ipcClone(bridge.handle(ipcClone(value))));
+  Object.defineProperty(window, "structuredClone", { value: ipcClone });
+  Object.defineProperty(window, "sceneaxiDesktop", { value: { request } });
+  const html = renderDesktopChrome(
+    desktopVisualView(
+      createDesktopVisualState({
+        profile: "game",
+        window: { width: 1000, height: 700 },
+      }),
+    ),
+  );
+  const match = /<script>([\s\S]*?)<\/script>/.exec(html);
+  if (match === null) throw new Error("desktop chrome lost its emitted script");
+  const script = match[1];
+  if (script === undefined) throw new Error("desktop chrome emitted an empty script");
+  window.document.write(html.replace(match[0], ""));
+  return {
+    window,
+    start: () => {
+      window.eval(script);
+    },
+  };
+}
+
 describe("desktop first-release product loop", () => {
   it("drives profile switching, open, save recovery, and viewport play through the emitted UI", async () => {
     const dir = projectDir();
-    const bridge = createDesktopBridge({ cwd: dir, nowMs: () => 1_753_920_000_000 });
     const requests: Array<{ action?: unknown; payload?: { op?: unknown } }> = [];
     let deferredAcceptedSaves = 2;
     let reportMissingRecovery = true;
     let refuseNextPlay = false;
-    const window = new HappyWindow({ width: 1000, height: 700 });
-    const ipcClone = <T>(value: T): T =>
-      window.eval(`(${JSON.stringify(value)})`) as T;
-    windows.push(window);
-    Object.defineProperty(window, "structuredClone", { value: ipcClone });
-    Object.defineProperty(window, "sceneaxiDesktop", {
-      value: {
-        request: async (request: unknown) => {
-          const typed = JSON.parse(JSON.stringify(request)) as {
-            action?: unknown;
-            payload?: { op?: unknown };
-          };
-          requests.push(typed);
-          if (refuseNextPlay && typed.action === "open-path") {
-            refuseNextPlay = false;
-            return ipcClone({
-              ok: false,
-              reason: "DESKTOP_SCENE_NOT_COMPOSABLE",
-              message: "The active composition is invalid.",
-              detail: null,
-            });
-          }
-          const response = bridge.handle(typed);
-          if (
-            deferredAcceptedSaves > 0 &&
-            typed.action === "authoring" &&
-            typed.payload?.op === "accept" &&
-            response.ok
-          ) {
-            deferredAcceptedSaves -= 1;
-            return ipcClone({
-              ...response,
-              data: {
-                ...(response.data as Record<string, unknown>),
-                phase: "pending",
-                journalRecoveryPending: true,
-                transactionId: "fixture-pending-apply",
+    const { window, start } = mountChrome(dir, ({ bridge, ipcClone }) => async (request) => {
+      const typed = JSON.parse(JSON.stringify(request)) as {
+        action?: unknown;
+        payload?: { op?: unknown };
+      };
+      requests.push(typed);
+      if (refuseNextPlay && typed.action === "open-path") {
+        refuseNextPlay = false;
+        return ipcClone({
+          ok: false,
+          reason: "DESKTOP_SCENE_NOT_COMPOSABLE",
+          message: "The active composition is invalid.",
+          detail: null,
+        });
+      }
+      const response = bridge.handle(typed);
+      if (
+        deferredAcceptedSaves > 0 &&
+        typed.action === "authoring" &&
+        typed.payload?.op === "accept" &&
+        response.ok
+      ) {
+        deferredAcceptedSaves -= 1;
+        return ipcClone({
+          ...response,
+          data: {
+            ...(response.data as Record<string, unknown>),
+            phase: "pending",
+            journalRecoveryPending: true,
+            transactionId: "fixture-pending-apply",
+          },
+        });
+      }
+      if (
+        reportMissingRecovery &&
+        typed.action === "authoring" &&
+        typed.payload?.op === "recover" &&
+        response.ok
+      ) {
+        reportMissingRecovery = false;
+        return ipcClone({
+          ...response,
+          data: {
+            ...(response.data as Record<string, unknown>),
+            phase: "pending",
+            journalRecoveryPending: true,
+            transactionId: "fixture-pending-apply",
+            diagnostics: [
+              {
+                code: "journal-not-found",
+                message: "The pending apply journal is missing.",
+                reReadHint: "Re-read the document in a fresh session.",
               },
-            });
-          }
-          if (
-            reportMissingRecovery &&
-            typed.action === "authoring" &&
-            typed.payload?.op === "recover" &&
-            response.ok
-          ) {
-            reportMissingRecovery = false;
-            return ipcClone({
-              ...response,
-              data: {
-                ...(response.data as Record<string, unknown>),
-                phase: "pending",
-                journalRecoveryPending: true,
-                transactionId: "fixture-pending-apply",
-                diagnostics: [
-                  {
-                    code: "journal-not-found",
-                    message: "The pending apply journal is missing.",
-                    reReadHint: "Re-read the document in a fresh session.",
-                  },
-                ],
-              },
-            });
-          }
-          return ipcClone(response);
-        },
-      },
+            ],
+          },
+        });
+      }
+      return ipcClone(response);
     });
-    const html = renderDesktopChrome(
-      desktopVisualView(
-        createDesktopVisualState({
-          profile: "game",
-          window: { width: 1000, height: 700 },
-        }),
-      ),
-    );
-    const match = /<script>([\s\S]*?)<\/script>/.exec(html);
-    if (match === null) throw new Error("desktop chrome lost its emitted script");
-    const script = match[1];
-    if (script === undefined) throw new Error("desktop chrome emitted an empty script");
-    window.document.write(html.replace(match[0], ""));
     let playback: { closed?: unknown; tickDigests?: unknown } | null = null;
     window.document.addEventListener(DESKTOP_VIEWPORT_PLAY_EVENT, (event) => {
       const detail = (event as HappyCustomEvent).detail as {
@@ -173,7 +197,7 @@ describe("desktop first-release product loop", () => {
       detail.accepted = true;
       (detail as { frame?: number }).frame = 27;
     });
-    window.eval(script);
+    start();
 
     const shell = query(window, ".shell");
     const status = () =>
@@ -354,30 +378,7 @@ describe("desktop first-release product loop", () => {
 
   it("selects, reviews, saves, reopens, and plays the starter entity translation", async () => {
     const dir = projectDir();
-    const bridge = createDesktopBridge({ cwd: dir, nowMs: () => 1_753_920_000_000 });
-    const window = new HappyWindow({ width: 1000, height: 700 });
-    const ipcClone = <T>(value: T): T =>
-      window.eval(`(${JSON.stringify(value)})`) as T;
-    windows.push(window);
-    Object.defineProperty(window, "structuredClone", { value: ipcClone });
-    Object.defineProperty(window, "sceneaxiDesktop", {
-      value: {
-        request: async (request: unknown) => ipcClone(bridge.handle(ipcClone(request))),
-      },
-    });
-    const html = renderDesktopChrome(
-      desktopVisualView(
-        createDesktopVisualState({
-          profile: "game",
-          window: { width: 1000, height: 700 },
-        }),
-      ),
-    );
-    const match = /<script>([\s\S]*?)<\/script>/.exec(html);
-    if (match === null || match[1] === undefined) {
-      throw new Error("desktop chrome lost its emitted script");
-    }
-    window.document.write(html.replace(match[0], ""));
+    const { window, start } = mountChrome(dir);
     let playedTranslation: number | null = null;
     window.document.addEventListener(DESKTOP_VIEWPORT_PLAY_EVENT, (event) => {
       const detail = (event as HappyCustomEvent).detail as {
@@ -399,7 +400,7 @@ describe("desktop first-release product loop", () => {
       detail.accepted = true;
       detail.frame = 31;
     });
-    window.eval(match[1]);
+    start();
 
     await click(window, "#project-open");
     expect(query(window, "[data-scene-entities]")?.hidden).toBe(false);
@@ -446,31 +447,8 @@ describe("desktop first-release product loop", () => {
    */
   it("keeps the property panel on the staged then saved value without reopening or reselecting", async () => {
     const dir = projectDir();
-    const bridge = createDesktopBridge({ cwd: dir, nowMs: () => 1_753_920_000_000 });
-    const window = new HappyWindow({ width: 1000, height: 700 });
-    const ipcClone = <T>(value: T): T =>
-      window.eval(`(${JSON.stringify(value)})`) as T;
-    windows.push(window);
-    Object.defineProperty(window, "structuredClone", { value: ipcClone });
-    Object.defineProperty(window, "sceneaxiDesktop", {
-      value: {
-        request: async (request: unknown) => ipcClone(bridge.handle(ipcClone(request))),
-      },
-    });
-    const html = renderDesktopChrome(
-      desktopVisualView(
-        createDesktopVisualState({
-          profile: "game",
-          window: { width: 1000, height: 700 },
-        }),
-      ),
-    );
-    const match = /<script>([\s\S]*?)<\/script>/.exec(html);
-    if (match === null || match[1] === undefined) {
-      throw new Error("desktop chrome lost its emitted script");
-    }
-    window.document.write(html.replace(match[0], ""));
-    window.eval(match[1]);
+    const { window, start } = mountChrome(dir);
+    start();
 
     const translationInput = () =>
       query(window, "#scene-property-translation-x") as
