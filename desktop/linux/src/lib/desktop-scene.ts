@@ -18,6 +18,8 @@ import {
   digestSceneArtifact,
   identitySculptTransform,
   isJsonObject,
+  type ComposedScene,
+  type ComposedSceneInstance,
   type SceneCompositionIntake,
   type SculptArtifact,
   type SculptTransform,
@@ -29,6 +31,7 @@ import {
   type ComposedSceneOk,
   type MountableScene,
 } from "@sceneaxi/site-kit";
+import { DESKTOP_ACTIVE_DOCUMENT_PATH } from "./bridge-contract.js";
 
 /** Document id of the composed scene the desktop app opens. */
 export const DESKTOP_OPEN_SCENE_ID = "desktop-linux-open-scene";
@@ -148,6 +151,37 @@ function desktopPlacementLabels(): ReadonlyMap<string, string> {
 }
 
 /**
+ * Rebuild the intake for an already-validated composition and run it back through
+ * the pipeline, one placement transform at a time.
+ *
+ * `transformFor` returns `unknown` on purpose: an edited transform carries a
+ * caller-supplied value, and `composeScene()` — not this module — owns the
+ * validation diagnostic that value must produce.
+ */
+function recomposeStoredScene(
+  stored: ComposedScene,
+  transformFor: (instance: ComposedSceneInstance) => unknown,
+) {
+  const intake = {
+    schemaVersion: SCENE_COMPOSITION_SCHEMA_VERSION,
+    kind: SCENE_COMPOSITION_INTAKE_KIND,
+    sceneId: stored.sceneId,
+    rootInstanceId: stored.rootInstanceId,
+    placements: stored.instances.map((instance) => ({
+      instanceId: instance.instanceId,
+      artifactId: instance.artifactId,
+      parentInstanceId: instance.parentInstanceId,
+      transform: transformFor(instance),
+    })),
+  };
+  const artifacts = new Map<string, SculptArtifact>();
+  for (const instance of stored.instances) {
+    artifacts.set(instance.artifactId, instance.artifact);
+  }
+  return composeScene(intake, [...artifacts.values()]);
+}
+
+/**
  * Compose the desktop open scene from the committed starter artifact.
  *
  * Deterministic for the fixed starter seed, so the packaged app always opens the
@@ -211,23 +245,10 @@ export function desktopSceneFromDocumentData(data: unknown): DesktopSceneResult 
     });
   }
 
-  const intake: SceneCompositionIntake = {
-    schemaVersion: SCENE_COMPOSITION_SCHEMA_VERSION,
-    kind: SCENE_COMPOSITION_INTAKE_KIND,
-    sceneId: stored.value.sceneId,
-    rootInstanceId: stored.value.rootInstanceId,
-    placements: stored.value.instances.map((instance) => ({
-      instanceId: instance.instanceId,
-      artifactId: instance.artifactId,
-      parentInstanceId: instance.parentInstanceId,
-      transform: instance.localTransform,
-    })),
-  };
-  const artifacts = new Map<string, SculptArtifact>();
-  for (const instance of stored.value.instances) {
-    artifacts.set(instance.artifactId, instance.artifact);
-  }
-  const composed = composeScene(intake, [...artifacts.values()]);
+  const composed = recomposeStoredScene(
+    stored.value,
+    (instance) => instance.localTransform,
+  );
   if (!composed.ok || composed.sceneDigest !== stored.value.evidence.sceneDigest) {
     return Object.freeze({
       ok: false as const,
@@ -242,32 +263,34 @@ export function desktopSceneFromDocumentData(data: unknown): DesktopSceneResult 
   });
 }
 
+type DesktopEditableCompositionRead =
+  | Readonly<{ ok: true; stored: ComposedScene; instance: ComposedSceneInstance }>
+  | Readonly<{ ok: false; diagnostics: readonly ApplyDiagnostic[] }>;
+
 /**
- * Inspect the one typed property this vertical supports.
- *
- * The property is taken from the validated, digest-bound composition rather
- * than the legacy sample fields beside it. That is what makes the displayed
- * value the value Play will actually mount after an accepted save.
+ * The one validated read behind both the inspection and the staged edit: a
+ * content hash, a composition, and the editable starter entity inside it.
+ * Every refusal on the property path is minted here, so the two public seams
+ * cannot drift apart on which document they will accept.
  */
-export function inspectDesktopSceneProperties(input: Readonly<{
-  documentData: unknown;
-  contentHash: string;
-  documentPath?: string;
-}>): DesktopScenePropertyInspection {
-  const documentPath = input.documentPath ?? "scene.json";
-  if (!/^sha256:[0-9a-f]{64}$/.test(input.contentHash)) {
+function readEditableComposition(
+  documentData: unknown,
+  contentHash: string,
+  documentPath: string,
+): DesktopEditableCompositionRead {
+  if (!/^sha256:[0-9a-f]{64}$/.test(contentHash)) {
     return propertyDiagnostic(
       "The open Scene Document is missing its validated content hash.",
       documentPath,
     );
   }
-  if (!isJsonObject(input.documentData)) {
+  if (!isJsonObject(documentData)) {
     return propertyDiagnostic(
       "The active Scene Document data is not a JSON object.",
       documentPath,
     );
   }
-  const stored = composedSceneFromDocumentData(input.documentData);
+  const stored = composedSceneFromDocumentData(documentData);
   if (!stored.ok) {
     const diagnostic = stored.diagnostics[0];
     return propertyDiagnostic(
@@ -285,23 +308,46 @@ export function inspectDesktopSceneProperties(input: Readonly<{
       documentPath,
     );
   }
+  return Object.freeze({ ok: true as const, stored: stored.value, instance });
+}
+
+function editableEntityOf(instance: ComposedSceneInstance): DesktopSceneEditableEntity {
+  return Object.freeze({
+    id: instance.instanceId,
+    label: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityLabel,
+    properties: Object.freeze([
+      Object.freeze({
+        id: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id,
+        label: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.label,
+        value: instance.localTransform.translation[0],
+        step: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.step,
+      }),
+    ]),
+  });
+}
+
+/**
+ * Inspect the one typed property this vertical supports.
+ *
+ * The property is taken from the validated, digest-bound composition rather
+ * than the legacy sample fields beside it. That is what makes the displayed
+ * value the value Play will actually mount after an accepted save.
+ */
+export function inspectDesktopSceneProperties(input: Readonly<{
+  documentData: unknown;
+  contentHash: string;
+  documentPath?: string;
+}>): DesktopScenePropertyInspection {
+  const read = readEditableComposition(
+    input.documentData,
+    input.contentHash,
+    input.documentPath ?? DESKTOP_ACTIVE_DOCUMENT_PATH,
+  );
+  if (!read.ok) return read;
   return Object.freeze({
     ok: true as const,
     contentHash: input.contentHash,
-    entities: Object.freeze([
-      Object.freeze({
-        id: instance.instanceId,
-        label: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityLabel,
-        properties: Object.freeze([
-          Object.freeze({
-            id: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id,
-            label: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.label,
-            value: instance.localTransform.translation[0],
-            step: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.step,
-          }),
-        ]),
-      }),
-    ]),
+    entities: Object.freeze([editableEntityOf(read.instance)]),
   });
 }
 
@@ -318,13 +364,13 @@ export function stageDesktopScenePropertyEdit(input: Readonly<{
   propertyId: unknown;
   newValue: unknown;
 }>): DesktopScenePropertyStageResult {
-  const documentPath = input.documentPath ?? "scene.json";
-  const inspected = inspectDesktopSceneProperties({
-    documentData: input.documentData,
-    contentHash: input.contentHash,
+  const documentPath = input.documentPath ?? DESKTOP_ACTIVE_DOCUMENT_PATH;
+  const read = readEditableComposition(
+    input.documentData,
+    input.contentHash,
     documentPath,
-  });
-  if (!inspected.ok) return inspected;
+  );
+  if (!read.ok) return read;
   if (
     input.entityId !== DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId ||
     input.propertyId !== DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id
@@ -334,67 +380,31 @@ export function stageDesktopScenePropertyEdit(input: Readonly<{
       documentPath,
     );
   }
-  if (!isJsonObject(input.documentData)) {
-    return propertyDiagnostic(
-      "The active Scene Document data is not a JSON object.",
-      documentPath,
-    );
-  }
-  const stored = composedSceneFromDocumentData(input.documentData);
-  if (!stored.ok) {
-    const diagnostic = stored.diagnostics[0];
-    return propertyDiagnostic(
-      `${diagnostic?.path ?? `$.${COMPOSED_SCENE_DOCUMENT_DATA_KEY}`}: ${diagnostic?.message ?? "The active Scene Document has no valid composition."}`,
-      documentPath,
-    );
-  }
 
-  const intake = {
-    schemaVersion: SCENE_COMPOSITION_SCHEMA_VERSION,
-    kind: SCENE_COMPOSITION_INTAKE_KIND,
-    sceneId: stored.value.sceneId,
-    rootInstanceId: stored.value.rootInstanceId,
-    placements: stored.value.instances.map((instance) => ({
-      instanceId: instance.instanceId,
-      artifactId: instance.artifactId,
-      parentInstanceId: instance.parentInstanceId,
-      transform:
-        instance.instanceId === input.entityId
-          ? {
-              ...instance.localTransform,
-              translation: Object.freeze([
-                input.newValue,
-                instance.localTransform.translation[1],
-                instance.localTransform.translation[2],
-              ]),
-            }
-          : instance.localTransform,
-    })),
-  };
-  const artifacts = new Map<string, SculptArtifact>();
-  for (const instance of stored.value.instances) {
-    artifacts.set(instance.artifactId, instance.artifact);
-  }
-  const composed = composeScene(intake, [...artifacts.values()]);
+  const composed = recomposeStoredScene(read.stored, (instance) =>
+    instance.instanceId === input.entityId
+      ? {
+          ...instance.localTransform,
+          translation: Object.freeze([
+            input.newValue,
+            instance.localTransform.translation[1],
+            instance.localTransform.translation[2],
+          ]),
+        }
+      : instance.localTransform,
+  );
   if (!composed.ok) {
     return propertyDiagnostic(
       `${composed.path}: ${composed.message}`,
       documentPath,
     );
   }
-  const entity = inspectDesktopSceneProperties({
-    documentData: composed.document.data,
-    contentHash: input.contentHash,
+  const edited = readEditableComposition(
+    composed.document.data,
+    input.contentHash,
     documentPath,
-  });
-  if (!entity.ok) return entity;
-  const editedEntity = entity.entities[0];
-  if (editedEntity === undefined) {
-    return propertyDiagnostic(
-      "The recomposed scene lost its editable starter entity.",
-      documentPath,
-    );
-  }
+  );
+  if (!edited.ok) return edited;
 
   return Object.freeze({
     ok: true as const,
@@ -404,7 +414,7 @@ export function stageDesktopScenePropertyEdit(input: Readonly<{
       expectedContentHash: input.contentHash,
       newValue: composed.scene,
     }),
-    entity: editedEntity,
+    entity: editableEntityOf(edited.instance),
     sceneDigest: composed.sceneDigest,
   });
 }
