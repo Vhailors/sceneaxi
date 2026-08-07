@@ -2172,6 +2172,27 @@ if (shell) {
     (entry || stops[0]).focus();
   };
 
+  // The legend row the document already renders for every registry code is the
+  // one copy of that sentence, so the dialog cannot name a reason the disclosure
+  // explains differently.
+  const refusalMessage = (code) => {
+    const row = shell.querySelector('#refusal-' + code);
+    if (row === null) return '';
+    const text = String(row.textContent);
+    return (text.startsWith(code) ? text.slice(String(code).length) : text).trim();
+  };
+
+  // A refused command is not a project state: the operation it collided with may
+  // still be running, so this names the reason in the outcome dialog and leaves
+  // the project pill and its status reporting the project.
+  const commandRefusal = (code) => {
+    showOutcome(
+      'Command refused',
+      code,
+      refusalMessage(code) || 'This desktop refused the requested command.',
+    );
+  };
+
   const showOutcome = (title, code, message) => {
     q('[data-outcome-title]').forEach((el) => { el.textContent = String(title); });
     q('[data-outcome-code]').forEach((el) => { el.textContent = String(code); });
@@ -2364,11 +2385,14 @@ if (shell) {
     // without ever touching a control, so a second press during a round trip has
     // to name the refusal instead of disappearing.
     if (inFlight) {
-      productStatus('refused', 'Command refused · ' + T.product.refusals.requestInFlight);
+      commandRefusal(T.product.refusals.requestInFlight);
       return;
     }
     const representative = q('[data-command]').find((el) => el.dataset.command === id);
-    if (representative?.getAttribute('aria-disabled') === 'true') return;
+    if (representative?.getAttribute('aria-disabled') === 'true') {
+      commandRefusal(representative.dataset.refusal || T.product.refusals.runtimeRequestRefused);
+      return;
+    }
     setOverlay('none');
     void productAction(handler);
   };

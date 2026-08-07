@@ -348,11 +348,57 @@ describe("desktop command menu, palette, and accelerator parity", () => {
     expect(element(window, "#menu-command-project-save").getAttribute("aria-disabled")).toBe(
       "true",
     );
-    shortcut(window, "p");
+    const running = element(window, "[data-project-status]").textContent;
+    const pill = element(window, "[data-project-state]").dataset.projectState;
+
+    shortcut(window, "s");
     for (let turn = 0; turn < 10; turn += 1) await Promise.resolve();
-    expect(element(window, "[data-project-status]").textContent).toBe(
-      `Command refused · ${DESKTOP_PRODUCT_REFUSALS.requestInFlight}`,
+    expect(element(window, '.overlay[data-overlay="outcome"]').hidden).toBe(false);
+    expect(element(window, "[data-outcome-code]").textContent).toBe(
+      DESKTOP_PRODUCT_REFUSALS.requestInFlight,
     );
+    // The collided-with operation is still running, so the project channel must
+    // keep reporting the project rather than the refused command.
+    expect(element(window, "[data-project-status]").textContent).toBe(running);
+    expect(element(window, "[data-project-state]").dataset.projectState).toBe(pill);
+  });
+
+  it("names the refusal when an accelerator reaches an unavailable command", async () => {
+    const { window, calls } = await harness();
+    const undo = element(window, "#menu-command-edit-undo");
+    expect(undo.getAttribute("aria-disabled")).toBe("true");
+    const before = element(window, "[data-project-status]").textContent;
+
+    const event = shortcut(window, "z");
+    await settle(window);
+    expect(event.defaultPrevented).toBe(true);
+    expect(calls).toHaveLength(0);
+    expect(element(window, '.overlay[data-overlay="outcome"]').hidden).toBe(false);
+    expect(element(window, "[data-outcome-code]").textContent).toBe(
+      undo.dataset.refusal,
+    );
+    // Its reason is the sentence the refusal disclosure prints for that code.
+    expect(element(window, "[data-outcome-message]").textContent).toBe(
+      element(window, `#refusal-${undo.dataset.refusal}`).textContent?.replace(
+        String(undo.dataset.refusal),
+        "",
+      ).trim(),
+    );
+    expect(element(window, "[data-project-status]").textContent).toBe(before);
+
+    await click(window, "#overlay-close-outcome-dismiss");
+    expect(element(window, '.overlay[data-overlay="outcome"]').hidden).toBe(true);
+  });
+
+  it("names the Kids refusal when an accelerator is pressed on that profile", async () => {
+    const { window, calls } = await harness("kids");
+    const save = element(window, "#menu-command-project-save");
+    expect(save.getAttribute("aria-disabled")).toBe("true");
+    shortcut(window, "s");
+    await settle(window);
+    expect(calls).toHaveLength(0);
+    expect(element(window, '.overlay[data-overlay="outcome"]').hidden).toBe(false);
+    expect(element(window, "[data-outcome-code]").textContent).toBe(save.dataset.refusal);
   });
 
   it("ignores a Shift-modified chord that no menu advertises", async () => {
