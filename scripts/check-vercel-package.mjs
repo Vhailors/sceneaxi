@@ -74,6 +74,42 @@ function symlinksOnPath(root, target, cache) {
   return links;
 }
 
+/**
+ * A package kept external is required from `node_modules` at runtime rather than
+ * bundled, so it ships only if the trace carries it. Nothing else fails when it does
+ * not: the function builds, deploys, and then reports the provider as absent, which is
+ * indistinguishable from an unconfigured deployment. `required-server-files.json` is
+ * Next's own emitted deployment contract — the resolved config Vercel itself reads —
+ * so the declarations are taken from there rather than from the site's TypeScript.
+ */
+function serverExternalErrors(siteRoot, nextRoot, tracedPaths) {
+  const contract = join(nextRoot, "required-server-files.json");
+  let declared;
+  try {
+    declared = readJson(contract).config?.serverExternalPackages;
+  } catch (error) {
+    return [`.next/required-server-files.json is missing or invalid: ${error.message}`];
+  }
+  if (declared === undefined) return [];
+  if (!Array.isArray(declared) || declared.some((name) => typeof name !== "string")) {
+    return [".next/required-server-files.json has no string-array 'serverExternalPackages'"];
+  }
+
+  const errors = [];
+  const traced = [...tracedPaths];
+  for (const name of declared) {
+    const suffix = `${sep}node_modules${sep}${name.split("/").join(sep)}${sep}package.json`;
+    if (tracedPaths.has(join(siteRoot, "node_modules", ...name.split("/"), "package.json"))) {
+      continue;
+    }
+    if (traced.some((path) => path.endsWith(suffix))) continue;
+    errors.push(
+      `server-external package '${name}' is absent from the Next.js traces; the deployed function would resolve it at runtime and report the provider as unconfigured`,
+    );
+  }
+  return errors;
+}
+
 export function validateVercelPackage(siteRootInput, tracingRootInput = repositoryRoot) {
   const siteRoot = canonicalRoot(siteRootInput);
   const tracingRoot = canonicalRoot(tracingRootInput);
@@ -132,7 +168,14 @@ export function validateVercelPackage(siteRootInput, tracingRootInput = reposito
           errors.push(
             `${relative(tracingRoot, traceFile)} reaches symlink '${relative(tracingRoot, link.path)}' outside the monorepo root`,
           );
-        } else if (link.target.split(sep).includes("node_modules")) {
+        } else if (
+          // Scoped to the site install root, which is the package Vercel builds a
+          // function from and the only place the hoisted linker this refusal names
+          // applies. The repository root keeps pnpm's isolated store links by design,
+          // so refusing those would demand a remediation the tier cannot perform.
+          containsPath(siteRoot, link.path) &&
+          link.target.split(sep).includes("node_modules")
+        ) {
           errors.push(
             `${relative(tracingRoot, traceFile)} reaches pnpm package symlink '${relative(tracingRoot, link.path)}'; use the hoisted site linker before Vercel packages this function`,
           );
@@ -154,6 +197,8 @@ export function validateVercelPackage(siteRootInput, tracingRootInput = reposito
       );
     }
   }
+
+  errors.push(...serverExternalErrors(siteRoot, nextRoot, tracedPaths));
 
   return [...new Set(errors)].sort();
 }

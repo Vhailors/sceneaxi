@@ -101,10 +101,38 @@ mismatch for `nodeLinker: "hoisted"`.
 
 Every deployed site's `pnpm build` runs
 `scripts/check-vercel-package.mjs` as `postbuild`; it reads Next's emitted `.nft.json`
-contracts and refuses a trace outside the monorepo, a package-manager symlink, a missing
-file, or a linked package whose real source is absent. This is a local package-shape gate,
-not evidence that a production deployment succeeded. Kids is not deployed and does not
-inherit this deployment linker or check.
+contracts and refuses a trace outside the monorepo, a missing file, a linked package
+whose real source is absent, a server-external package the traces do not carry, or a
+pnpm package symlink **inside the site install root**. That last scope is deliberate:
+the repository root keeps pnpm's isolated store links by design, so refusing those
+would name a remediation — the hoisted site linker — that cannot be applied to them.
+This is a local package-shape gate, not evidence that a production deployment
+succeeded. Kids is not deployed and does not inherit this deployment linker or check.
+
+### Observed trace contents
+
+The tracing-root move raises one question the config cannot answer on its own: whether
+`outputFileTracingIncludes`' relative globs still resolve, now that the tracing root and
+the project directory differ for the first time. They do — Next 15.5.21's
+`collectBuildTraces` takes `dir` and `outputFileTracingRoot` as separate arguments and
+globs the includes with `cwd: dir`, the project directory.
+
+Recorded from a local `pnpm build` of `sites/umbrella` on this checkout (Next 15.5.21,
+pnpm 11.5.0, hoisted site linker confirmed in `node_modules/.modules.yaml`) — 21
+`.nft.json` files, 3577 unique traced paths:
+
+| Traced | Result |
+|---|---|
+| `@neondatabase/serverless` | 10 files, manifest included |
+| `better-auth` | 475 files, manifest included |
+| `pg` | 20 files, manifest included |
+| `stripe` | 1430 files, manifest included |
+| `packages/{auth,billing,engine-presentation,site-kit}/package.json` | all four present |
+| `three` | not traced — bundled into the server chunk, never reached through a root-workspace store link |
+| paths outside `sites/umbrella` | 8, all real files under `packages/` plus the root manifest |
+
+Both catalogs build and pass the same check. This is local build output: it shows the
+emitted package is well-formed, and it claims nothing about a production deployment.
 
 ## Environment variables
 

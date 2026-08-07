@@ -33,8 +33,17 @@ function makeFixture() {
   write(linkedManifest, JSON.stringify({ name: "@sceneaxi/site-kit" }));
   mkdirSync(dirname(linkedModule), { recursive: true });
   symlinkSync(linkedPackage, linkedModule, "dir");
+  declareServerExternals(site, []);
 
   return { root, site, trace, linkedManifest, linkedModule };
+}
+
+/** Next's emitted deployment contract, the resolved config Vercel reads. */
+function declareServerExternals(site: string, serverExternalPackages: string[]) {
+  write(
+    join(site, ".next", "required-server-files.json"),
+    JSON.stringify({ version: 1, config: { serverExternalPackages } }),
+  );
 }
 
 function emitTrace(trace: string, files: string[]) {
@@ -79,6 +88,49 @@ describe("Vercel function package traces", () => {
     expect(validateVercelPackage(fx.site, fx.root)).toContainEqual(
       expect.stringContaining("reaches pnpm package symlink 'sites/umbrella/node_modules/server-only'"),
     );
+  });
+
+  it("accepts the repository root's own isolated pnpm store links", () => {
+    // The tracing root is the monorepo root, whose hermetic install keeps pnpm's
+    // isolated linker by design. Those links are outside the site install root, so the
+    // hoisted-linker remediation this refusal names cannot be applied to them.
+    const fx = makeFixture();
+    const storedPackage = join(
+      fx.root,
+      "node_modules",
+      ".pnpm",
+      "three@0.185.1",
+      "node_modules",
+      "three",
+    );
+    const rootWorkspaceLink = join(fx.root, "packages", "site-kit", "node_modules", "three");
+    write(join(storedPackage, "index.js"), "export {};");
+    mkdirSync(dirname(rootWorkspaceLink), { recursive: true });
+    symlinkSync(storedPackage, rootWorkspaceLink, "dir");
+    emitTrace(fx.trace, [
+      fx.linkedModule,
+      fx.linkedManifest,
+      join(rootWorkspaceLink, "index.js"),
+    ]);
+
+    expect(validateVercelPackage(fx.site, fx.root)).toEqual([]);
+  });
+
+  it("refuses a server-external package the traces do not carry", () => {
+    // An external package is required from node_modules at runtime, so an untraced one
+    // deploys and then reports its provider absent — the same state as unconfigured.
+    const fx = makeFixture();
+    declareServerExternals(fx.site, ["stripe", "@neondatabase/serverless"]);
+    write(join(fx.site, "node_modules", "stripe", "package.json"), JSON.stringify({}));
+    emitTrace(fx.trace, [
+      fx.linkedModule,
+      fx.linkedManifest,
+      join(fx.site, "node_modules", "stripe", "package.json"),
+    ]);
+
+    expect(validateVercelPackage(fx.site, fx.root)).toEqual([
+      "server-external package '@neondatabase/serverless' is absent from the Next.js traces; the deployed function would resolve it at runtime and report the provider as unconfigured",
+    ]);
   });
 
   it("accepts a valid tree reached through a symlinked checkout root", () => {
