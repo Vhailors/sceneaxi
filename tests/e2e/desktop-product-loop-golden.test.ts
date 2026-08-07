@@ -423,6 +423,11 @@ describe("desktop first-release product loop", () => {
     expect(query(window, "[data-change-empty]")?.hidden).toBe(false);
     expect(query(window, "[data-change-badge]")?.textContent).toBe("0");
 
+    // Projecting an undecidable review must not overwrite the recovery the
+    // status bar is reporting: recovery is still what the operator must resolve.
+    expect(status()).toContain("recovery pending");
+    expect(query(window, "[data-project-state]")?.dataset.projectState).toBe("recovering");
+
     await click(window, "#profile-kids");
     expect(shell?.dataset.profile).toBe("web");
     expect(status()).toContain("DESKTOP_RECOVERY_PENDING");

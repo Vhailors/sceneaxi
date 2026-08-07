@@ -208,7 +208,6 @@ export type EditorShellAssistantState =
  * (`docs/engine-desktop-surface.md`, `docs/web-editor-shell.md`):
  *
  * - `view` — changes visual state only, and genuinely works.
- * - `review` — edits a Change Review queue; writes no document.
  * - `live` — operates a real engine seam (a Minimum E2 session operation, a
  *   real save through propose/apply, or the desktop chrome's injected
  *   packaged host). Only a surface that can reach a real session may mint one,
@@ -223,7 +222,6 @@ export type EditorShellAssistantState =
  */
 export const EDITOR_SHELL_CONTROL_KINDS = Object.freeze([
   "view",
-  "review",
   "live",
   "inert",
 ] as const);

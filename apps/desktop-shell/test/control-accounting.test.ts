@@ -55,7 +55,6 @@ const render = (state: DesktopVisualState): string =>
 
 const CONTROL_KINDS: ReadonlySet<string> = new Set([
   "view",
-  "review",
   "live",
   "inert",
 ]);

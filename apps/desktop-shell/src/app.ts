@@ -387,7 +387,6 @@ function chromeResult(args: ParsedArgs): DesktopResult {
       dockTab: view.state.dockTab,
       assistant: view.assistant.state,
       overlay: view.state.overlay ?? "none",
-      pendingChanges: view.changeReview.count,
       pixelsDrawn: view.viewport.pixelsDrawn,
       ...(view.refusal === null ? {} : { refusal: view.refusal.code }),
       html: renderDesktopChrome(view),

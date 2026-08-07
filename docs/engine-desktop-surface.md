@@ -73,14 +73,16 @@ opinion about them.
 | Disposition | Tokens | Meaning |
 |---|---|---|
 | **carried** (20, plus both families) | `--bg-base`, `--bg-panel`, `--bg-raised`, `--bg-control`, `--bg-field`, `--bg-row`, `--line-soft`, `--line`, `--fg`, `--fg-2`, `--accent`, `--accent-hi`, `--ok`, `--danger`, `--info`, `--axis-x`, `--axis-y`, `--axis-z`, `--kids`, `--store-web`, and the `Archivo`/`JetBrains Mono` families | the sheet's hex, verbatim |
-| **raised** (2) | `--fg-4` `#3F464F` → `#7D8694`; `--stale` `#7A6448` → `#A08663` | below the 4.5:1 text floor on this surface's near-black chrome; each names its `DEVIATIONS` row |
-| **absent** (2) | `--line-strong`, `--store-game` | named with a reason, not silently unused (see below) |
+| **raised** (1) | `--fg-4` `#3F464F` → `#7D8694` | below the 4.5:1 text floor on this surface's near-black chrome; names its `DEVIATIONS` row |
+| **absent** (3) | `--line-strong`, `--stale`, `--store-game` | named with a reason, not silently unused (see below) |
 
 `--line-strong` `#2C323B` is the one place the two archive members genuinely
 disagree: the Foundations sheet prints three line weights, but the implemented
 member `Engine Desktop.dc.html` draws its own six-step line scale and does not
 use `#2C323B` anywhere in the file. For a value the accepted surface itself
-specifies, that member wins. `--store-game` is a storefront accent this app never
+specifies, that member wins. `--stale` belonged to the removed struck-through
+fixture row; the active E1 proposal renders one unified diff and has no stale-text
+role. `--store-game` is a storefront accent this app never
 paints — the Game profile chip is drawn with the accent instead. `--store-web`
 *is* painted here, on the Website profile chip, so it is carried as
 `PROFILE_DOT.web` rather than declared absent: a token this surface ships cannot
@@ -159,7 +161,9 @@ node apps/desktop-shell/bin/sceneaxi-desktop.mjs chrome --json                # 
 ```
 
 Text mode emits the document itself so it redirects straight to a file; `--json`
-keeps the versioned envelope. An unknown flag value refuses with exit `2` and
+keeps the versioned envelope. That standalone envelope carries no proposal count:
+only the bound host session can populate the Changes badge in the document. An
+unknown flag value refuses with exit `2` and
 renders nothing, rather than silently falling back to a state nobody asked for.
 
 The document is **self-contained**: no remote font, script, style, or image, and
@@ -171,7 +175,7 @@ the standalone file they refuse `DESKTOP_RUNTIME_UNAVAILABLE` and stay honest.
 
 The archive is a mockup: it draws controls for behaviour this shell has no
 contract for. Rather than dim them and hope, every control in the model declares
-one of four kinds, and `test/visual-model.test.ts` asserts that an inert control
+one of three kinds, and `test/visual-model.test.ts` asserts that an inert control
 always has a refusal and a non-inert one never does.
 
 | Kind | Meaning | Examples |
@@ -597,7 +601,6 @@ against.
 | Deviation | Archive | Shipped | Why |
 |---|---|---|---|
 | Dim text tiers collapsed | `#6E7681` (4.36:1), `#565E68` (3.05:1), `#3F464F` (2.10:1), `#333A42` (1.74:1) | two passing tiers, `#8A929C` and `#7D8694` | all four fail the 4.5:1 text floor on the surfaces they are used on. Lightening them monotonically would have produced four indistinguishable greys; two tiers keep a real hierarchy, and the archive's remaining separation is carried by size, weight, and letter-spacing, which is preserved. |
-| Struck-through review value | `#7A6448` (3.42:1) | `#A08663` | same floor |
 | Inert dimming | element `opacity` on a control that cannot be used | the painted `INERT` tokens, and no `opacity` outside `@keyframes` | opacity composites a label toward its background after every check here has read the declared colour, so the dimming was measured by nothing and shipped at 3.67:1, 4.07:1, and 2.16:1. Raising the fraction would have left the blind spot; a painted token is measured by the test that already exists. An inert control is deliberately not `disabled`, so its refusal has to stay readable. |
 | Web fonts | `fonts.googleapis.com` link for Archivo + JetBrains Mono | font-family stack, no remote request | the emitted document is self-contained and offline. The archive families are named first and render when installed; otherwise the system UI face does. |
 | Fixed stage | 1680×1000 scaled with a transform | fluid layout, four window tiers | see above |

@@ -892,7 +892,7 @@ describe("engine desktop chrome — honesty", () => {
   it("never renders a control kind the model did not assign", () => {
     for (const [label, state] of ALL_STATES) {
       for (const [, kind] of render(state).matchAll(/data-kind="(\w+)"/g)) {
-        expect(["view", "review", "live", "inert"], label).toContain(kind);
+        expect(["view", "live", "inert"], label).toContain(kind);
       }
     }
   });

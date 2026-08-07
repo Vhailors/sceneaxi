@@ -39,7 +39,9 @@ failing obscurely.
 `--cwd <dir>` sets the working directory for the session commands above;
 `open-path` opens no session and takes only its own two flags, so `--cwd` refuses
 there as an unknown flag. `--json` works on every command and emits the machine
-envelope with exactly the same data as the text rendering.
+envelope with exactly the same data as the text rendering. The standalone
+`chrome` envelope describes its static projection and carries no proposal count;
+only a bound host session can populate the Changes badge in the emitted document.
 
 Exit codes use the CLI protocol's compatible subset so scripts branch
 identically for shared outcomes: `0` success, `1` operational refusal (typed

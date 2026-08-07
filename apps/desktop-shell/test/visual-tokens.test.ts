@@ -80,7 +80,6 @@ describe("engine desktop visual tokens", () => {
       TEXT.label,
       TEXT.dim,
       TEXT.faint,
-      TEXT.superseded,
       ACCENT.base,
       ACCENT.noteText,
       SIGNAL.ok,
@@ -119,6 +118,16 @@ describe("engine desktop visual tokens", () => {
         expect(contrast(row.shipped, surface)).toBeGreaterThanOrEqual(4.5);
       }
     }
+  });
+
+  it("retires fixture-review paint from the desktop token contract", () => {
+    expect("superseded" in TEXT).toBe(false);
+    expect("okSurface" in SIGNAL).toBe(false);
+    expect("okLine" in SIGNAL).toBe(false);
+    expect(DEVIATIONS.map((row) => row.id)).not.toContain("text-contrast-7A6448");
+    expect(
+      FOUNDATIONS_V2_ALIGNMENT.find((row) => row.token === "--stale"),
+    ).toMatchObject({ disposition: "absent" });
   });
 
   it("never reintroduces a value the superseded v1 pass carried", () => {

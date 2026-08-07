@@ -194,7 +194,7 @@ const TONE_COLORS: Readonly<
 });
 
 /**
- * Render one control. `view`, `review`, and `live` controls are buttons; an inert
+ * Render one control. `view` and `live` controls are buttons; an inert
  * one keeps its focus stop, is marked `aria-disabled`, and points at the
  * paragraph carrying its refusal so a screen reader gets the reason, not just
  * "dimmed".
@@ -863,7 +863,7 @@ function styles(): string {
   --accent:${ACCENT.base};--accent-hover:${ACCENT.hover};--on-accent:${ACCENT.on};
   --ok:${SIGNAL.ok};--refuse:${SIGNAL.refuse};--info:${SIGNAL.info};--scene:${SIGNAL.scene};
   --text:${TEXT.primary};--text-2:${TEXT.secondary};--text-3:${TEXT.label};
-  --dim:${TEXT.dim};--faint:${TEXT.faint};--superseded:${TEXT.superseded};
+  --dim:${TEXT.dim};--faint:${TEXT.faint};
   --inert:${INERT.text};--inert-on-accent:${INERT.onAccent};--inert-glyph:${INERT.glyph};
   --rail:${METRICS.railWidth}px;--left:${METRICS.leftDockWidth}px;
   --inspector:${METRICS.inspectorWidth}px;--assistant-w:${METRICS.assistantWidth}px;
