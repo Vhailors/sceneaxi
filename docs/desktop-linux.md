@@ -299,12 +299,19 @@ reason with New/Open choices. Invalid `scene.json` bytes are never replaced.
 An unreadable `recent-projects.json` is a recovery state rather than a dead end.
 Startup reports it and leaves the bytes byte-identical; the two offered choices then
 proceed, but only once their selected root has validated, so a refused root spends
-nothing. The first such New or Open copies the invalid bytes to an exclusively
-created `recent-projects.invalid-N.json` beside the registry and flushes it before a
-fresh registry replaces the old one — the bytes are never overwritten in place,
-never deleted, and never overwrite an earlier quarantine. A copy that cannot be made
-keeps the refusal instead of trading the bytes for a usable app, and a registry so
-unreadable that it yields no bytes at all has nothing to preserve and keeps refusing.
+nothing; for New Project the registry decision also precedes the starter seed, so a
+refused quarantine writes no document either. The first such New or Open quarantines the registry into
+`recent-projects.invalid-N.json` beside it, durably, before a fresh registry takes
+its place — never rewriting it in place, never deleting it, and never overwriting an
+earlier quarantine, whose slot counts as taken even when it is a dangling symlink.
+A registry whose bytes were readable is copied into an exclusively created slot and
+flushed. A registry whose bytes could never be read — mode-denied, owned by another
+user, or replaced by a directory — is **moved** into a free slot instead, since
+renaming needs write permission on the state directory alone and preserves the exact
+object without reading it. Only a quarantine the operating system itself refuses,
+such as an unwritable state directory or no free slot, keeps the named
+`DESKTOP_PROJECT_STATE_INVALID` refusal, which is reported rather than presented as a
+working choice.
 Open Recent and Remove Recent are not offered as recovery choices and keep refusing
 `DESKTOP_PROJECT_STATE_INVALID`, since no validated recent entry can exist while the
 registry is unreadable. Recent

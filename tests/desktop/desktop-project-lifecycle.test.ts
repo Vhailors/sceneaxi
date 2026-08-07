@@ -1,9 +1,11 @@
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
   rmSync,
+  statSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -313,6 +315,72 @@ describe("desktop contained project lifecycle", () => {
       schemaVersion: 1,
       lastRoot: resolve(project),
     });
+  });
+
+  it("relocates a registry whose bytes can never be read and lets New Project proceed", () => {
+    const state = temporaryRoot("unreadable-state");
+    const chosen = temporaryRoot("unreadable-chosen");
+    const stateFile = join(state, DESKTOP_RECENT_PROJECTS_FILE);
+    // A directory in the registry's place cannot be read on any host, unlike a
+    // mode-0000 file, which a privileged test runner would read straight through.
+    mkdirSync(stateFile);
+    const marker = "the object a copy could never have preserved";
+    writeFileSync(join(stateFile, "marker.txt"), marker, "utf8");
+    const lifecycle = createDesktopProjectLifecycle({ stateDirectory: state });
+
+    expect(statusOf(lifecycle.startup()).recovery?.reason).toBe(
+      DESKTOP_PROJECT_REFUSALS.stateInvalid,
+    );
+    expect(quarantined(state)).toEqual([]);
+    expect(readFileSync(join(stateFile, "marker.txt"), "utf8")).toBe(marker);
+
+    const created = lifecycle.createProject(chosen);
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    expect(created.data.status.active?.root).toBe(resolve(chosen));
+    expect(created.data.status.recovery).toBeNull();
+
+    const relocated = join(state, "recent-projects.invalid-1.json");
+    expect(quarantined(state)).toEqual(["recent-projects.invalid-1.json"]);
+    expect(statSync(relocated).isDirectory()).toBe(true);
+    expect(readFileSync(join(relocated, "marker.txt"), "utf8")).toBe(marker);
+    expect(statSync(stateFile).isFile()).toBe(true);
+    expect(JSON.parse(readFileSync(stateFile, "utf8"))).toEqual({
+      schemaVersion: 1,
+      lastRoot: resolve(chosen),
+      roots: [resolve(chosen)],
+    });
+
+    const restarted = createDesktopProjectLifecycle({ stateDirectory: state });
+    expect(statusOf(restarted.startup()).active?.root).toBe(resolve(chosen));
+  });
+
+  it("refuses by name when no quarantine slot is free, leaving the registry in place", () => {
+    const state = temporaryRoot("quarantine-full-state");
+    const chosen = temporaryRoot("quarantine-full-chosen");
+    const stateFile = join(state, DESKTOP_RECENT_PROJECTS_FILE);
+    mkdirSync(stateFile);
+    const marker = "still here after the refusal";
+    writeFileSync(join(stateFile, "marker.txt"), marker, "utf8");
+    for (let slot = 1; slot <= 32; slot += 1) {
+      writeFileSync(join(state, `recent-projects.invalid-${slot}.json`), `slot ${slot}`, "utf8");
+    }
+    const lifecycle = createDesktopProjectLifecycle({ stateDirectory: state });
+
+    expect(statusOf(lifecycle.startup()).recovery?.reason).toBe(
+      DESKTOP_PROJECT_REFUSALS.stateInvalid,
+    );
+    expect(lifecycle.createProject(chosen)).toMatchObject({
+      ok: false,
+      reason: DESKTOP_PROJECT_REFUSALS.stateInvalid,
+    });
+    expect(quarantined(state)).toHaveLength(32);
+    expect(readFileSync(join(state, "recent-projects.invalid-1.json"), "utf8")).toBe("slot 1");
+    expect(statSync(stateFile).isDirectory()).toBe(true);
+    expect(readFileSync(join(stateFile, "marker.txt"), "utf8")).toBe(marker);
+    // The registry decision precedes the starter seed, so a refused New Project
+    // leaves no document behind either.
+    expect(existsSync(join(chosen, "scene.json"))).toBe(false);
   });
 });
 

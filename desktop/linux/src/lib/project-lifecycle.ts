@@ -292,8 +292,8 @@ export function createDesktopProjectLifecycle(
 
   /**
    * Latch the unreadable registry and keep the exact bytes a later New/Open must
-   * preserve. A registry that could not even be read carries no bytes, so
-   * quarantine has nothing to copy and refuses rather than inventing a backup.
+   * preserve. A registry whose bytes could not be read at all carries none, and
+   * is quarantined by relocation instead of by copy.
    */
   const markStateInvalid = (preserved: string | null): null => {
     stateReadable = false;
@@ -358,54 +358,80 @@ export function createDesktopProjectLifecycle(
     return null;
   };
 
+  const quarantineSlot = (slot: number): string =>
+    join(options.stateDirectory, `${QUARANTINE_PREFIX}${slot}${QUARANTINE_EXTENSION}`);
+
+  /** Presence by `lstat`, so a dangling symlink counts as taken and is not replaced. */
+  const slotTaken = (candidate: string): boolean => {
+    try {
+      lstatSync(candidate);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const slotsExhausted = (): Error =>
+    new Error(`every quarantine slot up to ${MAX_QUARANTINE_SLOTS} is already taken`);
+
+  /** Preserve bytes we hold by exclusive create, so no existing slot can be hit. */
+  const copyInvalidState = (preserved: string): void => {
+    let descriptor: number | null = null;
+    try {
+      for (let slot = 1; slot <= MAX_QUARANTINE_SLOTS && descriptor === null; slot += 1) {
+        try {
+          descriptor = openSync(quarantineSlot(slot), "wx", 0o600);
+        } catch (error) {
+          if (errorCode(error) !== "EEXIST") throw error;
+        }
+      }
+      if (descriptor === null) throw slotsExhausted();
+      writeFileSync(descriptor, preserved, "utf8");
+      fsyncSync(descriptor);
+    } finally {
+      if (descriptor !== null) closeSync(descriptor);
+    }
+  };
+
+  /**
+   * Preserve a registry whose contents we could never read — mode-denied, owned by
+   * another user, or replaced by a directory — by moving the object itself into a
+   * free slot. Renaming needs write permission on the state directory alone, so it
+   * reaches states a copy cannot, and it keeps the original bytes and inode without
+   * reading, rewriting, or deleting them.
+   */
+  const relocateInvalidState = (): void => {
+    for (let slot = 1; slot <= MAX_QUARANTINE_SLOTS; slot += 1) {
+      const candidate = quarantineSlot(slot);
+      if (slotTaken(candidate)) continue;
+      renameSync(stateFile, candidate);
+      return;
+    }
+    throw slotsExhausted();
+  };
+
   /**
    * The one way an unreadable registry becomes writable again, taken only by the
    * New and Open choices the recovery status offers, and only once their selected
    * root has already validated.
    *
-   * The invalid bytes are copied to an exclusively created `recent-projects.invalid-N.json`
-   * beside the registry and flushed before the registry itself is replaced, so
-   * they are never overwritten in place, never deleted, and never overwrite an
-   * earlier quarantine. A copy that cannot be made leaves the dead end in place
-   * rather than trading the bytes for a usable app.
+   * The invalid registry moves or is copied into `recent-projects.invalid-N.json`
+   * beside it, durably, before a fresh registry takes its place: it is never
+   * rewritten in place, never deleted, and never overwrites an earlier quarantine.
+   * A quarantine the operating system refuses keeps the named refusal rather than
+   * trading the preserved state for a usable app.
    */
   const quarantineInvalidState = (): DesktopProjectResponse | null => {
     if (stateReadable) return null;
     const preserved = invalidStateText;
-    if (preserved === null) {
-      return projectRefuse(
-        DESKTOP_PROJECT_REFUSALS.stateInvalid,
-        "The recent-project state could not be read, so it was left byte-identical and cannot be quarantined.",
-      );
-    }
-    let descriptor: number | null = null;
     try {
       mkdirSync(options.stateDirectory, { recursive: true });
-      for (let slot = 1; slot <= MAX_QUARANTINE_SLOTS && descriptor === null; slot += 1) {
-        const candidate = join(
-          options.stateDirectory,
-          `${QUARANTINE_PREFIX}${slot}${QUARANTINE_EXTENSION}`,
-        );
-        try {
-          descriptor = openSync(candidate, "wx", 0o600);
-        } catch (error) {
-          if (errorCode(error) !== "EEXIST") throw error;
-        }
-      }
-      if (descriptor === null) {
-        throw new Error(
-          `every quarantine slot up to ${MAX_QUARANTINE_SLOTS} is already taken`,
-        );
-      }
-      writeFileSync(descriptor, preserved, "utf8");
-      fsyncSync(descriptor);
-      closeSync(descriptor);
-      descriptor = null;
+      if (preserved === null) relocateInvalidState();
+      else copyInvalidState(preserved);
     } catch (error) {
-      if (descriptor !== null) closeSync(descriptor);
       return projectRefuse(
         DESKTOP_PROJECT_REFUSALS.stateInvalid,
-        "The invalid recent-project state could not be quarantined, so it was left byte-identical.",
+        "The invalid recent-project state could not be quarantined, so it was left untouched.",
         error instanceof Error ? error.message : String(error),
       );
     }
@@ -472,6 +498,8 @@ export function createDesktopProjectLifecycle(
           root.project.root,
         );
       }
+      const quarantined = quarantineInvalidState();
+      if (quarantined !== null) return quarantined;
       const seeded = seedDesktopProject(root.project.root);
       if (!seeded.ok) {
         return projectRefuse(
