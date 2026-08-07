@@ -160,8 +160,10 @@ the deterministic default, while an injected panel supplies any explicit BYO or
 hosted wiring. The transport creates no provider, identity, or credits policy,
 and the built default panel has no ledger or hosted opt-in, so it cannot spend.
 The packaged Linux desktop exposes the same distinction but does not own a
-hosted billing route: Local is deterministic and free, BYOK needs an explicitly
-injected provider runner and touches no credits, and Hosted refuses by name.
+hosted billing route: Local is deterministic and free, BYOK needs both an
+OS-encrypted key from that tier's own secure store and an explicitly injected
+privileged provider session — and touches no credits either way — and Hosted
+refuses by name.
 
 ## Why the web shell serves loopback only
 

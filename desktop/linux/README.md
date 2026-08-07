@@ -48,14 +48,17 @@ drawing buffer exists).
 
 The packaged chrome also binds its Assistant **Build** mode to the bridge. Local
 is a deterministic, free compiler; BYOK is free of SceneAxi credits but runs
-only when the embedding deployment injects its provider runner; Hosted is
+only when the privileged host retrieves an OpenRouter key from the typed
+`ProviderKeyStore` and injects its provider session; Hosted is
 metered and refuses here because this desktop tier has no identity/credit plane.
 A successful action projects the validated Sculpt Artifact through the shared
 `MountableScene` payload — directly, since composition refuses a one-instance
 scene as a sculpt — before the
 live center viewport mounts it, adds translate/rotate/scale manipulators, and shows the artifact's
 read-only materials, supported collider physics, and procedural settings.
-Progress, provider/refusal details, and Retry remain on the surface. A timed-out
+Progress, named refusals, and Retry remain on the surface, while a BYOK
+provider's own thrown detail is redacted because it may echo credential
+material. A timed-out
 job is abandoned before Retry is offered, so a late provider result cannot
 replace the newer job. Ask and Agent modes refuse clearly rather than pretending
 they produce build output. The shell visual model owns the manipulator controls
@@ -68,6 +71,10 @@ and tokens; the renderer only binds their Mount API effects.
 | Bridge contract (channel, envelope, refusals) | `src/lib/bridge-contract.ts` | everywhere (pure) |
 | Bridge (`handle()` over the real engine and assistant job) | `src/lib/bridge.ts` | main process; gate-tested from `tests/e2e/` |
 | Local RPC adapter | `src/lib/local-rpc.ts` | main process; private same-user Unix socket for the CLI's closed agent tools |
+| Provider key store + configuration | `src/lib/{provider-key-store,byo-configuration}.ts` | privileged host; encrypted-at-rest store, redacted status/mutations, per-session key lease |
+| BYOK surface projection (which controls may be offered, and the copy) | `src/lib/byo-configuration-view.ts` | pure; gate-tested from `tests/desktop/` |
+| Electron secure-store adapter | `src/electron/provider-key-store.ts` | main process; OS-backed `safeStorage`, never basic-text fallback |
+| BYOK configuration UI | `src/renderer/byo-configuration.ts` | the window; provider/key status and save/replace/remove/unavailable states |
 | Scene composition (one pipeline, two consumers) | `src/lib/desktop-scene.ts` | main process; gate-tested |
 | First-launch project seed and one-time migration | `src/lib/project-seed.ts` | main process; gate-tested |
 | Chrome document emitter (desktop-shell, unforked) | `src/lib/chrome-document.ts` | build time |
@@ -95,7 +102,12 @@ Rules the gate enforces (`pnpm check:desktop`, `pnpm check:boundaries`,
   the profile it carries makes authoring-core deny again — independently — before
   generation or provider dispatch. No Kids or identity package is imported; the
   dependency matrix keeps both denied.
-- No provider secret exists in this tier. The local RPC adapter does generate a
+- Provider secrets exist only transiently in the password control during
+  submission and in the privileged main process during secure save/retrieval and
+  a provider session. The field and privileged lease are explicitly cleared; no
+  raw value reaches the engine bridge, Unix socket, CLI, project, URL, output, or
+  log. Electron `safeStorage` protects the persisted ciphertext, and Linux
+  `basic_text`/unknown backends refuse. The local RPC adapter does generate a
   launch-scoped 256-bit capability in a mode-`0600` discovery descriptor; it is
   local bridge authentication, never BYOK configuration, and is neither logged
   nor returned by the CLI. Provider credentials may arrive only inside an
@@ -112,3 +124,7 @@ publication or release authority — all deliberately absent, recorded in
 packaging root (`desktop/windows`, `desktop/macos`); neither changes a Linux source
 or claim, and there is no public Windows artifact and no public macOS artifact yet
 (`docs/desktop-windows.md`, `docs/desktop-macos.md`).
+
+This configuration surface does not authorize production deployment,
+hosted-provider activation, Stripe LIVE, Connect LIVE, legal/tax behavior,
+production credentials, or public Windows/macOS release behavior.

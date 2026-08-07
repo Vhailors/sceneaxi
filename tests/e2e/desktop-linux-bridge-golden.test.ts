@@ -524,9 +524,9 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
         reason: DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
         message: "The configured assistant runner failed.",
         recoverable: true,
-        detail: "synchronous provider failure",
       },
     });
+    expect(JSON.stringify(failed)).not.toContain("synchronous provider failure");
 
     const retried = bridge.handle({
       action: "assistant",

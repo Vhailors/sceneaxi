@@ -4,8 +4,11 @@
  * no filesystem reaches the window.
  */
 import { contextBridge, ipcRenderer } from "electron";
+import { DESKTOP_BYO_CONFIGURATION_CHANNEL } from "../lib/byo-configuration-contract.js";
 import { DESKTOP_BRIDGE_CHANNEL, DESKTOP_BRIDGE_GLOBAL } from "../lib/bridge-contract.js";
 
 contextBridge.exposeInMainWorld(DESKTOP_BRIDGE_GLOBAL, {
   request: (request: unknown) => ipcRenderer.invoke(DESKTOP_BRIDGE_CHANNEL, request),
+  configureByo: (request: unknown) =>
+    ipcRenderer.invoke(DESKTOP_BYO_CONFIGURATION_CHANNEL, request),
 });

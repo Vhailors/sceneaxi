@@ -83,6 +83,56 @@ export {
 } from "./lib/local-rpc.js";
 
 export {
+  createProviderKeyStore,
+  type CreateProviderKeyStoreOptions,
+  type PlatformSecureStorage,
+  type PlatformSecureStorageAvailability,
+  type ProviderKeyRead,
+  type ProviderKeyRemovable,
+  type ProviderKeyRemoved,
+  type ProviderKeySaved,
+  type ProviderKeyStatus,
+  type ProviderKeyStore,
+  type ProviderKeyStoreRefusal,
+} from "./lib/provider-key-store.js";
+
+export {
+  DESKTOP_BYO_CONFIGURATION_ACTIONS,
+  DESKTOP_BYO_CONFIGURATION_CHANNEL,
+  DESKTOP_BYO_CONFIGURATION_REFUSALS,
+  DESKTOP_BYO_PROVIDERS,
+  PROVIDER_KEY_STORE_AVAILABILITY_REFUSALS,
+  PROVIDER_KEY_STORE_REFUSALS,
+  desktopByoRefusalContext,
+  type DesktopByoConfigurationAction,
+  type DesktopByoConfigurationRefusal,
+  type DesktopByoConfigurationRefusalReason,
+  type DesktopByoConfigurationRequest,
+  type DesktopByoConfigurationResponse,
+  type DesktopByoConfigurationStatus,
+  type DesktopByoProvider,
+  type DesktopByoRefusalContext,
+  type ProviderKeyStoreRefusalReason,
+} from "./lib/byo-configuration-contract.js";
+
+export {
+  desktopByoConfigurationView,
+  type DesktopByoConfigurationView,
+} from "./lib/byo-configuration-view.js";
+
+export {
+  DesktopByoRunnerRefusal,
+  createDesktopByoConfiguration,
+  createSecureDesktopByoAssistantRunner,
+  type CreateDesktopByoConfigurationOptions,
+  type CreateDesktopByoProviderSession,
+  type CreateSecureDesktopByoAssistantRunnerOptions,
+  type DesktopByoConfiguration,
+  type DesktopByoProviderSession,
+  type ProviderKeyAccess,
+} from "./lib/byo-configuration.js";
+
+export {
   DESKTOP_RUNTIME_META,
   PIXELS_META_NAME,
   RENDERER_SCRIPT_TAG,

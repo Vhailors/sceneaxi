@@ -124,22 +124,113 @@ request/response, discovery descriptor, log, evidence packet, project document,
 or committed file. The v1 BYOK tool accepts only `prompt` and a non-Kids
 `profile`; schema validation rejects extra fields such as a key or token.
 
-The only supported secret boundary is an embedding deployment that:
+The desktop configuration surface supports the non-Kids `OpenRouter` provider.
+It is a renderer-only settings path beside the existing Assistant route control,
+not a local agent tool. Selecting BYOK shows whether a key is stored and the
+available Save, Replace, Remove, or named-unavailable action. The password field
+is cleared after every submission; status and mutation responses contain only
+provider, operation, key-presence, storage-availability, and runtime-availability
+metadata, and a refusal adds at most the `removable` presence boolean.
 
-1. retrieves the provider credential from the operating system's user-scoped
-   credential store while Engine Desktop starts;
-2. closes over that credential inside a provider adapter and injects only the
-   existing `runByoAssistant` function into `createDesktopBridge()`;
-3. keeps the credential in process memory for that desktop session and clears
-   its reference when the adapter/session closes; and
-4. never serializes or logs the credential, including on provider errors.
+Which controls the panel may offer is decided outside the window by
+`desktopByoConfigurationView()` in `desktop/linux/src/lib/byo-configuration-view.ts`,
+so the honesty rules are gate-executed rather than asserted over DOM code. Two of
+them are load-bearing. The key field and Save follow `storageStatus`, never the
+mere fact that a call succeeded: removal succeeds on an unreachable backend, so
+that answer resolves availability instead of implying it, and the panel keeps Save
+disabled afterwards rather than offering a control that would refuse on submit. And
+a refusal states the cause it was given and no other, in **both** the state label
+and the message — `desktopByoRefusalContext()` is the closed classification that
+decides which, and only its `storage-unavailable` arm may say the platform failed:
 
-The repository's packaged default injects no provider adapter and reads no BYOK
-environment variable or plaintext config file, so
-`sceneaxi.assistant.byo.start` deterministically refuses
-`DESKTOP_ASSISTANT_BYO_UNAVAILABLE`. This is intentional: adding an OS-keychain
-adapter is deployment work at the existing seam, not authority to add a secret
-store or provider dependency to CLI/core.
+| Context | Reasons | Label | What it may claim |
+|---|---|---|---|
+| `storage-unavailable` | `…UNAVAILABLE`, `…LOCKED`, `…UNSUPPORTED` | `Stored · storage unavailable` | secure storage is unavailable, and Remove can still delete the envelope without unlocking it |
+| `envelope-invalid` | `…STORE_CORRUPT` | `Stored · unusable` | only that the stored entry is invalid and removable — never that it stays sealed, never a lock that was not reported |
+| `request-invalid` | `DESKTOP_PROVIDER_KEY_INVALID` | `Entry rejected` | only that the submission was rejected; the backend was never consulted, so the key field and Save stay live for the retype |
+| `envelope-present` | everything else | `Stored`, or `Unavailable` when nothing is removable | no more than the presence the probe actually found |
+
+`request-invalid` is the one refusal that leaves the submission controls enabled,
+because it is decided before `available()` is consulted and an empty or malformed
+value is the user's to correct; every other refusal keeps them disabled.
+
+`ProviderKeyStore` in `desktop/linux/src/lib/provider-key-store.ts` is the typed
+host seam: `status`, `read`, `save`, `remove`, and `removable`. Its Electron adapter
+uses `safeStorage` only after `app.ready`, stores only its ciphertext envelope under
+the application's user-data directory, and atomically replaces that envelope.
+There is no app-owned cipher. On Linux, Electron's `basic_text` and `unknown`
+backends are explicitly unsupported rather than treated as secure storage.
+Environment variables, plaintext configuration, browser storage, project files,
+and CLI arguments are not fallbacks.
+
+The seam separates two capabilities on purpose. Producing or consuming a key needs
+the platform backend, so `status`, `read`, and `save` refuse whenever it is
+unavailable, locked, or unsupported. Unlinking needs no cipher, so `remove` and its
+`removable` presence probe answer from the filesystem alone and a locked keyring
+never strands a stored credential. That path `lstat`s the envelope — a symlink or
+directory is a wrong type, not a redirected delete — refuses
+`DESKTOP_PROVIDER_KEY_STORE_CORRUPT` for a non-regular or non-owner-private target
+and `DESKTOP_PROVIDER_KEY_STORE_FAILED` for a failed unlink, and never reads,
+decrypts, or returns envelope bytes. The file-type half of that check is
+platform-independent; the owner-private half is asserted only where `Stats.mode`
+is a real POSIX permission set, because Windows synthesizes it from the read-only
+attribute alone and the Windows packaging root stages this same runtime — a
+credential that could be saved must always be deletable. A store refusal for a resolved provider
+carries one extra boolean, `removable`, so the surface can keep offering Remove
+without learning anything about the key itself; the renderer disables Save and the
+key field, and enables Remove from that flag alone.
+
+The configuration request uses its own
+`sceneaxi:desktop-byo-configuration` IPC channel. It is not a
+`createDesktopBridge().handle()` action, cannot be reached through `local-rpc.ts`,
+and adds nothing to the protocol-v1 permission/tool registry. The raw value exists
+in the password control only until Save/Replace submits it to the privileged main
+process; it is then cleared in both success and failure paths and never returned.
+
+When a privileged provider adapter is injected,
+`createSecureDesktopByoAssistantRunner()` performs this fixed sequence for every
+BYOK job:
+
+1. deny Kids before secure-store access;
+2. retrieve the selected provider key from `ProviderKeyStore` in the privileged
+   process;
+3. create one provider session with a revocable key accessor and inject only the
+   resulting runner into `createDesktopBridge()`;
+4. replace any streamed progress snapshot that echoes the leased credential with a
+   fixed message on a known phase, and refuse a returned result that contains it,
+   so a provider cannot hand the key back through its own output;
+5. revoke the key reference in `finally` before closing the provider session; and
+6. reduce every thrown provider detail to a named, secret-free refusal.
+
+The checked-in packaged host does not add a live provider transport or production
+credential configuration: its provider runtime reports unavailable, while the
+secure storage and UI states remain real. A deployment-owned privileged adapter
+can satisfy the existing session factory without changing the renderer, CLI,
+Unix socket, or tool registry. Until then a BYOK assistant start refuses rather
+than borrowing the local route or crossing into hosted metering.
+
+### Named secure-storage refusals
+
+| Reason | Meaning |
+|---|---|
+| `DESKTOP_PROVIDER_KEY_STORE_UNAVAILABLE` | the platform secure-storage service is absent |
+| `DESKTOP_PROVIDER_KEY_STORE_LOCKED` | the user-scoped OS credential store is locked or encryption is not currently available |
+| `DESKTOP_PROVIDER_KEY_STORE_UNSUPPORTED` | the OS/backend is unsupported, including Electron `basic_text` on Linux |
+| `DESKTOP_PROVIDER_KEY_STORE_CORRUPT` | the encrypted envelope or decrypted key is invalid, or the envelope path is not a regular owner-private file |
+| `DESKTOP_PROVIDER_KEY_STORE_FAILED` | availability, encryption, persistence, path inspection, or removal failed |
+| `DESKTOP_PROVIDER_KEY_MISSING` | no key is stored for the selected provider |
+| `DESKTOP_PROVIDER_KEY_INVALID` | the submitted value is empty or has an unsupported shape |
+| `DESKTOP_BYO_PROVIDER_UNSUPPORTED` | the requested provider is outside the checked-in provider list |
+| `DESKTOP_BYO_CONFIGURATION_REQUEST_MALFORMED` | the configuration request carries no SceneAxi profile, or no supported action/provider pair |
+| `DESKTOP_BYO_PROVIDER_SESSION_UNAVAILABLE` | secure configuration exists but no privileged provider session factory is installed |
+| `DESKTOP_BYO_PROVIDER_SESSION_FAILED` | provider session creation or execution failed; upstream detail is deliberately redacted |
+
+All of these refuse before provider dispatch. Save encrypts before writing and
+uses an atomic rename, so an encryption/write failure does not replace an existing
+envelope with partial bytes. Corrupt data never falls back to an empty or plaintext
+value. The availability refusals gate save, read, status, and dispatch — not
+removal, which is a filesystem capability and stays available so a locked backend
+cannot strand a stored credential.
 
 ## Cost and hosted separation
 
@@ -175,3 +266,20 @@ cannot opt into hosted routing or bypass metering.
 - `tests/e2e/desktop-cli-local-bridge-golden.test.ts` spawns the real CLI binary
   against the real desktop server, performs propose/apply, runs the free local
   assistant, and proves absent BYOK plus hosted stay fail-closed.
+- `tests/desktop/desktop-byo-secure-storage.test.ts` uses clearly synthetic
+  non-secret sentinels to prove encrypted save/read/replace/remove, unavailable /
+  locked / unsupported / corrupt / failed refusals, removal surviving an
+  unavailable backend while save and read still refuse, removal refusing a
+  wrong-type / symlinked / non-owner-private target and a failed unlink, the
+  owner-private assertion staying off a platform without POSIX permissions while
+  the file-type check still holds, the surface projection's cause-specific refusal
+  label and copy — including an empty submission against a stored envelope naming
+  neither an unavailable backend nor a disabled field — and its refusal to offer
+  Save while storage stays unreachable,
+  Kids-before-store ordering, provider-session retrieval and cleanup,
+  renderer/bridge redaction, and the unchanged hosted/tool-registry boundary.
+
+This contract does not authorize production deployment, hosted-provider
+activation, Stripe LIVE, Connect LIVE, legal or tax behavior, production
+credential setup, or a public Windows/macOS release. Those remain separately
+owned and out of scope.
