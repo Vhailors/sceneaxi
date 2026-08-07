@@ -84,8 +84,15 @@ silently ignored on both builders and the symlink graph returns. Measured on thi
 checkout: pnpm 9.15.0 with only the workspace key leaves `node_modules/<dep>` a symlink
 into `.pnpm/`; the same pnpm with `.npmrc` produces flat real directories, as does pnpm
 11.5.0. `node-linker` is not recorded in the lockfile's `settings` block, so adding it
-keeps `--frozen-lockfile` installs valid. The workspace key is kept for pnpm 10.6+ and
-may only agree with `.npmrc`; a contradiction fails the check.
+keeps `--frozen-lockfile` installs valid.
+
+The workspace key is kept for pnpm 10.6+, and where it is read it **overrides**
+`.npmrc` — measured: pnpm 11.5.0 with `nodeLinker: isolated` beside
+`node-linker=hoisted` links `node_modules/<dep>` back into `.pnpm/`. So it may only
+agree, and `pnpm check:sites` compares the two after reducing each declaration to the
+value its own parser yields — an inline comment dropped, quotes treated as delimiters —
+because a raw text comparison both misses `nodeLinker: isolated # …` and invents a
+mismatch for `nodeLinker: "hoisted"`.
 
 Every deployed site's `pnpm build` runs
 `scripts/check-vercel-package.mjs` as `postbuild`; it reads Next's emitted `.nft.json`

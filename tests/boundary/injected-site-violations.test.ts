@@ -160,24 +160,44 @@ describe("sites tier — injected violations", () => {
     );
   });
 
-  it("sites check rejects a workspace linker that contradicts the npmrc", () => {
+  function writeWorkspaceLinker(site: string, declaration: string): void {
     writeTo(
       fx,
-      "sites/umbrella/pnpm-workspace.yaml",
-      [
-        "packages:",
-        '  - "."',
-        "nodeLinker: isolated",
-        "allowBuilds:",
-        "  sharp: true",
-        "",
-      ].join("\n"),
+      `sites/${site}/pnpm-workspace.yaml`,
+      ["packages:", '  - "."', declaration, "allowBuilds:", "  sharp: true", ""].join("\n"),
     );
+  }
+
+  it.each([
+    ["a bare value", "nodeLinker: isolated"],
+    // The workspace file wins over `.npmrc` on pnpm >= 10.6, so a declaration hidden
+    // behind a trailing comment restores the exact symlink graph this tier forbids.
+    ["a value behind a trailing comment", "nodeLinker: isolated # keep the old graph"],
+    ["a quoted value", 'nodeLinker: "isolated"'],
+  ])("sites check rejects a workspace linker overriding the npmrc — %s", (_case, declaration) => {
+    writeWorkspaceLinker("umbrella", declaration);
     const res = runCheck(fx, "check-sites.mjs");
     expect(res.status).toBe(1);
     expect(res.stderr).toContain(
-      "@sceneaxi/site-umbrella: pnpm-workspace.yaml declares the 'isolated' linker, contradicting .npmrc",
+      "@sceneaxi/site-umbrella: pnpm-workspace.yaml declares the 'isolated' linker, which overrides .npmrc on pnpm 10.6 and later",
     );
+  });
+
+  it.each([
+    ["a quoted workspace value", 'nodeLinker: "hoisted"'],
+    ["a commented workspace value", "nodeLinker: hoisted # the deployable linker"],
+  ])("sites check accepts an agreeing workspace linker — %s", (_case, declaration) => {
+    writeWorkspaceLinker("umbrella", declaration);
+    const res = runCheck(fx, "check-sites.mjs");
+    expect(res.status, `stderr: ${res.stderr}`).toBe(0);
+  });
+
+  it("sites check accepts an npmrc linker followed by an inline comment", () => {
+    // pnpm's own ini reader drops the comment and honours the setting, so refusing
+    // here would fail a site whose linker is in fact hoisted.
+    writeTo(fx, "sites/catalog-game/.npmrc", "node-linker=hoisted # deployable linker\n");
+    const res = runCheck(fx, "check-sites.mjs");
+    expect(res.status, `stderr: ${res.stderr}`).toBe(0);
   });
 
   it("sites check rejects removal of the Vercel package postbuild", () => {

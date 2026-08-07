@@ -21,6 +21,26 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const errors = [];
 const fail = (msg) => errors.push(msg);
 
+/**
+ * Reduce a declared scalar to the value its parser yields: an inline comment is not
+ * part of the value, and quotes are delimiters rather than characters. Comparing the
+ * raw text instead both misses `key: value # comment` and invents a mismatch for
+ * `key: "value"`.
+ */
+function declaredScalar(raw, commentChars) {
+  let value = raw.trim();
+  const quote = value[0];
+  if (quote === '"' || quote === "'") {
+    const closing = value.indexOf(quote, 1);
+    if (closing !== -1) return value.slice(1, closing);
+  }
+  for (const char of commentChars) {
+    const at = value.indexOf(char);
+    if (at !== -1) value = value.slice(0, at);
+  }
+  return value.trim();
+}
+
 /** Parse an npmrc into a normalized key/value map — the shape pnpm actually reads. */
 function readNpmrc(path) {
   const settings = {};
@@ -29,9 +49,26 @@ function readNpmrc(path) {
     if (trimmed.length === 0 || trimmed.startsWith("#") || trimmed.startsWith(";")) continue;
     const separator = trimmed.indexOf("=");
     if (separator === -1) continue;
-    settings[trimmed.slice(0, separator).trim()] = trimmed.slice(separator + 1).trim();
+    settings[trimmed.slice(0, separator).trim()] = declaredScalar(
+      trimmed.slice(separator + 1),
+      ["#", ";"],
+    );
   }
   return settings;
+}
+
+/**
+ * Every value a pnpm-workspace.yaml declares for one top-level key. A list rather than
+ * a lookup because a repeated key must not be able to hide a second declaration behind
+ * whichever one a given YAML parser keeps.
+ */
+function readWorkspaceSettings(path, key) {
+  const declared = [];
+  for (const line of readFileSync(path, "utf8").split("\n")) {
+    if (!line.startsWith(`${key}:`)) continue;
+    declared.push(declaredScalar(line.slice(key.length + 1), ["#"]));
+  }
+  return declared;
 }
 
 const REQUIRED_FILES = Object.freeze([
@@ -384,7 +421,10 @@ for (const dir of siteDirs) {
     }
     // `nodeLinker` in pnpm-workspace.yaml is only read by pnpm >= 10.6, and no site
     // pins a package manager, so `.npmrc` — read by every supported pnpm — is the
-    // authoritative source and the workspace file may only agree with it.
+    // source that has to carry the setting. Where the workspace file is read it
+    // *overrides* `.npmrc`, so it may only agree: every value it declares must be
+    // hoisted or the isolated graph comes back on exactly the newer pnpm the `.npmrc`
+    // was never needed for.
     const siteNpmrc = join(dir, ".npmrc");
     const nodeLinker = existsSync(siteNpmrc) ? readNpmrc(siteNpmrc)["node-linker"] : undefined;
     if (nodeLinker !== "hoisted") {
@@ -392,13 +432,12 @@ for (const dir of siteDirs) {
         `${manifest.name}: deployable serverless sites must set 'node-linker=hoisted' in .npmrc — pnpm below 10.6 ignores the pnpm-workspace.yaml setting`,
       );
     }
-    const workspaceLinker = /^nodeLinker:\s*(\S+)\s*$/m.exec(
-      readFileSync(join(dir, "pnpm-workspace.yaml"), "utf8"),
-    );
-    if (workspaceLinker !== null && workspaceLinker[1] !== "hoisted") {
-      fail(
-        `${manifest.name}: pnpm-workspace.yaml declares the '${workspaceLinker[1]}' linker, contradicting .npmrc`,
-      );
+    for (const declared of readWorkspaceSettings(join(dir, "pnpm-workspace.yaml"), "nodeLinker")) {
+      if (declared !== "hoisted") {
+        fail(
+          `${manifest.name}: pnpm-workspace.yaml declares the '${declared}' linker, which overrides .npmrc on pnpm 10.6 and later`,
+        );
+      }
     }
     if (manifest.scripts?.postbuild !== "node ../../scripts/check-vercel-package.mjs .") {
       fail(
