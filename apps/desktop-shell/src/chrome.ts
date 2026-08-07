@@ -1466,20 +1466,43 @@ if (shell) {
 
   const reviewCount = () => activeReviewSnapshot === null ? 0 : 1;
 
-  const syncReview = (snapshot) => {
+  const isSessionSnapshot = (snapshot) => {
+    const phases = ['idle', 'reviewing', 'applied', 'pending', 'rejected'];
+    return snapshot !== null && typeof snapshot === 'object' &&
+      phases.includes(snapshot.phase) &&
+      (snapshot.unifiedDiff === null || typeof snapshot.unifiedDiff === 'string') &&
+      (snapshot.renderedDiff === null || typeof snapshot.renderedDiff === 'string') &&
+      (snapshot.proposal === null || typeof snapshot.proposal === 'object') &&
+      (snapshot.appliedPaths === null ||
+        (Array.isArray(snapshot.appliedPaths) && snapshot.appliedPaths.every((path) => typeof path === 'string'))) &&
+      typeof snapshot.journalRecoveryPending === 'boolean' &&
+      (snapshot.transactionId === null || typeof snapshot.transactionId === 'string') &&
+      (snapshot.diagnostics === null || Array.isArray(snapshot.diagnostics));
+  };
+
+  const reviewProjection = (snapshot) => {
+    if (!isSessionSnapshot(snapshot)) return null;
     const proposal = snapshot && snapshot.proposal;
     const edits = proposal && Array.isArray(proposal.edits) ? proposal.edits : [];
     const first = edits[0];
     const diff = snapshot && typeof snapshot.renderedDiff === 'string'
       ? snapshot.renderedDiff
       : null;
+    return snapshot && snapshot.phase === 'reviewing' &&
+      first && typeof first.documentPath === 'string' &&
+      typeof first.baseContentHash === 'string' && diff !== null
+      ? { first, diff }
+      : null;
+  };
+
+  const syncReview = (snapshot) => {
+    if (snapshot !== null && !isSessionSnapshot(snapshot)) return false;
+    const projection = reviewProjection(snapshot);
     // Only \`reviewing\` is decidable. \`pending\` keeps the proposal so the surface
     // can still show what was attempted, but its apply outcome is indeterminate:
     // Reject would come back \`apply-in-progress\` and Accept would issue
     // \`recover\`, so offering either decision there would be a lie.
-    const active = snapshot && snapshot.phase === 'reviewing' &&
-      first && typeof first.documentPath === 'string' &&
-      typeof first.baseContentHash === 'string' && diff !== null;
+    const active = projection !== null;
     activeReviewSnapshot = active ? snapshot : null;
     if (snapshot && typeof snapshot.phase === 'string') {
       projectDirty = snapshot.phase === 'reviewing' || snapshot.phase === 'pending';
@@ -1494,12 +1517,13 @@ if (shell) {
     const documentPath = shell.querySelector('[data-change-document]');
     const contentHash = shell.querySelector('[data-change-content-hash]');
     const renderedDiff = shell.querySelector('[data-change-diff]');
-    if (documentPath) documentPath.textContent = active ? first.documentPath : '';
-    if (contentHash) contentHash.textContent = active ? first.baseContentHash : '';
-    if (renderedDiff) renderedDiff.textContent = active ? diff : '';
+    if (documentPath) documentPath.textContent = active ? projection.first.documentPath : '';
+    if (contentHash) contentHash.textContent = active ? projection.first.baseContentHash : '';
+    if (renderedDiff) renderedDiff.textContent = active ? projection.diff : '';
     q('[data-change-badge]').forEach((el) => {
       el.textContent = String(active ? 1 : 0);
     });
+    return true;
   };
 
   // A conflict or recovery outcome reports the host's own diagnostic — its code,
@@ -1853,14 +1877,14 @@ if (shell) {
     const response = await runtimeRequest(decision.request);
     const reason = responseReason(response);
     const snapshot = response?.ok ? response.data : null;
-    syncReview(snapshot);
-    if (reason !== null || !snapshot || snapshot.phase !== 'reviewing') {
+    if (reason !== null || reviewProjection(snapshot) === null) {
       productStatus('refused', 'Stage refused · ' + (reason || T.product.refusals.proposalNotReviewing));
       if (reason === 'content-hash-conflict' || reason === 'journal-conflict') {
         showConflictOutcome('Stage refused', snapshot, reason);
       }
       return;
     }
+    syncReview(snapshot);
     projectData = decision.request.payload.newValue;
     projectDirty = true;
     projectRecovering = false;
@@ -1924,18 +1948,22 @@ if (shell) {
   };
 
   const applySaveSnapshot = (snapshot) => {
-    if (!snapshot) return false;
-    syncReview(snapshot);
+    if (!isSessionSnapshot(snapshot)) return false;
     const diagnostics = Array.isArray(snapshot.diagnostics) ? snapshot.diagnostics : [];
+    const reviewing = reviewProjection(snapshot) !== null;
+    const recovering = snapshot.phase === 'pending' || snapshot.journalRecoveryPending === true;
+    const applied = snapshot.phase === 'applied' && diagnostics.length === 0;
+    if (!reviewing && !recovering && !applied) return false;
+    syncReview(snapshot);
     if (diagnostics[0]?.code === 'journal-not-found') return false;
-    if (snapshot.phase === 'pending' || snapshot.journalRecoveryPending === true) {
+    if (recovering) {
       projectRecovering = true;
       const code = typeof diagnostics[0]?.code === 'string' ? ' · ' + diagnostics[0].code : '';
       const transaction = typeof snapshot.transactionId === 'string' ? ' · transaction ' + snapshot.transactionId : '';
       productStatus('recovering', T.product.documentPath + ' · recovery pending' + code + transaction + ' · Save to refresh or Open to re-read');
       return true;
     }
-    if (snapshot.phase === 'applied' && diagnostics.length === 0) {
+    if (applied) {
       projectData = null;
       projectContentHash = null;
       projectDirty = false;
@@ -1976,20 +2004,36 @@ if (shell) {
     }
   };
 
+  // A decision needs a review that was actually validated and projected, so an
+  // action started from anywhere refuses by name rather than reaching the host
+  // with nothing under review — recovery included, which is not decidable.
+  const requireActiveReview = () => {
+    if (activeReviewSnapshot !== null) return true;
+    setOverlay('none');
+    if (!projectRecovering) {
+      productStatus(
+        projectData === null ? 'closed' : 'open',
+        T.product.documentPath + ' · nothing under review · ' + T.product.refusals.proposalNotReviewing,
+      );
+    }
+    return false;
+  };
+
   // Reject is the other half of the all-or-nothing decision: it discards the
   // host's one active proposal and re-opens the document, so the surface reports
   // the bytes on disk rather than a queue it decided locally.
   const rejectProposal = async (outcome = 'rejected') => {
+    if (!requireActiveReview()) return false;
     const response = await runtimeRequest({ action: 'authoring', payload: { op: 'reject' } });
     const reason = responseReason(response);
     const snapshot = response?.ok ? response.data : null;
-    syncReview(snapshot);
-    if (reason !== null || !snapshot || snapshot.phase !== 'rejected') {
+    if (reason !== null || !isSessionSnapshot(snapshot) || snapshot.phase !== 'rejected') {
       const code = reason || T.product.refusals.proposalNotDiscarded;
       productStatus('refused', 'Reject refused · ' + code);
       showOutcome('Reject refused', code, 'The staged proposal was not discarded and no document was written.');
       return false;
     }
+    syncReview(snapshot);
     projectDirty = false;
     projectRecovering = false;
     projectData = null;

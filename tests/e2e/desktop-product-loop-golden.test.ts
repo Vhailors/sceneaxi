@@ -127,6 +127,7 @@ describe("desktop first-release product loop", () => {
     const dir = projectDir();
     const bridge = createDesktopBridge({ cwd: dir });
     const requests: Array<{ action?: unknown; payload?: { op?: unknown } }> = [];
+    const refuseNextAuthoring = new Set<string>();
     const window = new HappyWindow({ width: 1000, height: 700 });
     const ipcClone = <T>(value: T): T =>
       window.eval(`(${JSON.stringify(value)})`) as T;
@@ -140,6 +141,18 @@ describe("desktop first-release product loop", () => {
             payload?: { op?: unknown };
           };
           requests.push(typed);
+          if (
+            typed.action === "authoring" &&
+            typeof typed.payload?.op === "string" &&
+            refuseNextAuthoring.delete(typed.payload.op)
+          ) {
+            return ipcClone({
+              ok: false,
+              reason: "DESKTOP_RUNTIME_UNAVAILABLE",
+              message: "The authoring host is unavailable.",
+              detail: null,
+            });
+          }
           return ipcClone(bridge.handle(typed));
         },
       },
@@ -166,6 +179,11 @@ describe("desktop first-release product loop", () => {
     // never a standing sentence about what a conflict generally is.
     expect(query(window, "[data-outcome-code]")?.textContent).toBe("");
 
+    // Reject with nothing under review must not reach the host at all.
+    await click(window, "#change-review-reject");
+    expect(requests).toHaveLength(0);
+    expect(status()).toContain("nothing under review · DESKTOP_PROPOSAL_NOT_REVIEWING");
+
     await click(window, "#profile-web");
     await click(window, "#project-open");
     const beforeReject = documentText();
@@ -186,6 +204,22 @@ describe("desktop first-release product loop", () => {
     expect(status()).toContain("staged");
     expect(query(window, "[data-project-state]")?.dataset.projectState).toBe("dirty");
     expect(documentText()).toBe(beforeReject);
+
+    const stagedDiff = query(window, "[data-change-diff]")?.textContent;
+    refuseNextAuthoring.add("propose");
+    await click(window, "#web-stage-html");
+    expect(proposal()?.hidden).toBe(false);
+    expect(badge()).toBe("1");
+    expect(query(window, "[data-change-diff]")?.textContent).toBe(stagedDiff);
+    expect(status()).toContain("Stage refused · DESKTOP_RUNTIME_UNAVAILABLE");
+
+    refuseNextAuthoring.add("reject");
+    await click(window, "#change-review-reject");
+    expect(documentText()).toBe(beforeReject);
+    expect(proposal()?.hidden).toBe(false);
+    expect(badge()).toBe("1");
+    expect(query(window, "[data-change-diff]")?.textContent).toBe(stagedDiff);
+    expect(status()).toContain("Reject refused · DESKTOP_RUNTIME_UNAVAILABLE");
 
     await click(window, "#change-review-reject");
     expect(documentText()).toBe(beforeReject);
@@ -247,6 +281,15 @@ describe("desktop first-release product loop", () => {
     // the surface, and discarding it is the same all-or-nothing Reject.
     expect(proposal()?.hidden).toBe(false);
     expect(badge()).toBe("1");
+    // A refused host response leaves the last validated review projected rather
+    // than clearing the panel over an answer that decided nothing.
+    refuseNextAuthoring.add("reject");
+    await click(window, "#change-review-reject");
+    expect(status()).toContain("Reject refused · DESKTOP_RUNTIME_UNAVAILABLE");
+    expect(proposal()?.hidden).toBe(false);
+    expect(badge()).toBe("1");
+    expect(documentText()).toContain('"title": "External after review"');
+
     await click(window, "#change-review-reject");
     expect(proposal()?.hidden).toBe(true);
     expect(badge()).toBe("0");
@@ -256,6 +299,8 @@ describe("desktop first-release product loop", () => {
     expect(requests.map((request) => request.payload?.op ?? request.action)).toEqual([
       "status",
       "propose",
+      "propose",
+      "reject",
       "reject",
       "status",
       "propose",
@@ -263,6 +308,7 @@ describe("desktop first-release product loop", () => {
       "status",
       "propose",
       "accept",
+      "reject",
       "reject",
       "status",
     ]);
@@ -423,10 +469,15 @@ describe("desktop first-release product loop", () => {
     expect(query(window, "[data-change-empty]")?.hidden).toBe(false);
     expect(query(window, "[data-change-badge]")?.textContent).toBe("0");
 
-    // Projecting an undecidable review must not overwrite the recovery the
-    // status bar is reporting: recovery is still what the operator must resolve.
-    expect(status()).toContain("recovery pending");
+    // Pending recovery is not a decidable review, so Reject must not reach the
+    // host and must leave the recovery the operator still has to resolve.
+    const recoveryStatus = status();
+    const recoveryRequests = requests.length;
     expect(query(window, "[data-project-state]")?.dataset.projectState).toBe("recovering");
+    await click(window, "#change-review-reject");
+    expect(status()).toBe(recoveryStatus);
+    expect(query(window, "[data-project-state]")?.dataset.projectState).toBe("recovering");
+    expect(requests).toHaveLength(recoveryRequests);
 
     await click(window, "#profile-kids");
     expect(shell?.dataset.profile).toBe("web");
