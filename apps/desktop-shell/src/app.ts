@@ -69,7 +69,7 @@ const USAGE_LINES: readonly string[] = Object.freeze([
   "Flags: --document <path> --pointer <json-pointer> --value <json> --cwd <dir> --json",
   "open-path flags: --profile <@sceneaxi/profile-name> --operation <open|dispatch|advance|observe|save|replay>",
   "chrome flags: --mode <build|sculpt|compose|animate|run|ship|plugins> --profile <game|web|kids>",
-  "              --overlay <palette|refused|conflict> --assistant-mode <ask|build|agent>",
+  "              --overlay <palette|outcome> --assistant-mode <ask|build|agent>",
   "              --sculpt <idle|running> --width <px> --height <px>",
 ]);
 

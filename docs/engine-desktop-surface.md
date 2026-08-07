@@ -177,10 +177,10 @@ always has a refusal and a non-inert one never does.
 
 | Kind | Meaning | Examples |
 |---|---|---|
-| `view` | changes visual state; genuinely works | mode rail, dock tabs, profile switch, assistant open/close, its Ask/Build/Agent modes and its three route chips, the overlay openers and each of the four overlay dismiss buttons, the sculpt cancel, drawer toggles, the scene-entity selection |
+| `view` | changes visual state; genuinely works | mode rail, dock tabs, profile switch, assistant open/close, its Ask/Build/Agent modes and its three route chips, menu openers, the palette openers, the outcome dismissal, the sculpt cancel, drawer toggles, the scene-entity selection |
 | `review` | edits the fixture Change Review queue; **writes no document** | accept/reject a row, accept all, reject all |
-| `live` | delegates a product action to an injected desktop-host seam; refuses visibly when that host is absent | Open and Save `scene.json`, play the composed scene, the Translation X field and its Stage control, stage Web HTML, inject a project-relative Web asset; and — only once the packaged Linux runtime binds them — the assistant prompt, Send, Retry, and the artifact manipulators |
-| `inert` | renders, keeps its focus stop, refuses by name | Sculpt object, standalone-shell assistant prompt/Send/Retry and the four artifact manipulators, menu bar, the three viewport-source tabs, the palette rows naming CLI-only verbs, and — on the refuse-only profile — every control except the twelve named below |
+| `live` | delegates a product action to an injected desktop-host seam; refuses visibly when that host is absent | File New/Open/Save, Edit Undo after a completed Save, Run Play, their palette rows and accelerators, the Translation X field and its Stage control, stage Web HTML, inject a project-relative Web asset; and — only once the packaged Linux runtime binds them — the assistant prompt, Send, Retry, and the artifact manipulators |
+| `inert` | renders, keeps its focus stop, refuses by name | Undo before this renderer session completes a Save, Sculpt object, standalone-shell assistant prompt/Send/Retry and the four artifact manipulators, the three viewport-source tabs, and — on the refuse-only profile — every control except the seven named below |
 
 The chrome imports no engine, profile, site, billing, or host package, and
 reaches no authoring package itself. Its live adapter calls the host's existing
@@ -299,7 +299,7 @@ A `view` control on the refuse-only profile is decided **once**, not per call
 site. `desktopVisualView()` mints every control through one local function, and
 on Kids that function makes each one `inert` with `OPEN_PATH_KIDS_REFUSED` —
 unless the control is *already* inert, which keeps its own more specific reason
-(the assistant's denial, the menus' "not a verb here"), because one control must
+(the assistant's denial or Undo's unavailable state), because one control must
 not carry two refusals. A control added anywhere in the projection is therefore
 behind the refusal by default: **forgetting fails closed.**
 
@@ -310,11 +310,11 @@ same tier on height alone — "Panels" and "Inspector" rendered as live `view`
 buttons that set `aria-expanded="true"` on regions
 `.shell[data-profile="kids"]` keeps shut at every size.
 
-Exactly twelve controls are exempt, and they are the ones **not behind** the
+Exactly seven controls are exempt, and they are the ones **not behind** the
 refusal: the three profile chips (the switch is how an operator leaves the Kids
 state, so making it inert would turn a state you can exit into a dead end), the
-palette opener, the three status-bar overlay shortcuts, the refusal-help
-disclosure, and the four overlay dismiss buttons. Those genuinely work on every
+two palette openers, the refusal-help disclosure, and the outcome dismissal.
+Those genuinely work on every
 profile, and marking a control
 that works as refusing is the same dishonesty pointing the other way.
 
@@ -367,8 +367,8 @@ document also explains. `test/product-loop.test.ts` asserts that in both directi
 | `DESKTOP_NO_PRESENTATION_RUNTIME` | the viewport: no renderer is mounted, so no pixels — the three viewport-source tabs, because switching what a viewport shows needs the runtime that is missing, and every `live` assistant control (prompt, Send, Retry, the four artifact manipulators) while `assistantRuntime` is `none` |
 | `DESKTOP_NO_KERNEL_SESSION` | the static `run` mode before a host-backed Play response; the chrome never invents a tick, frame, or body |
 | `DESKTOP_NO_DOCUMENT_BOUND` | authoring controls not covered by the first-release project loop (for example Sculpt) |
+| `DESKTOP_UNDO_UNAVAILABLE` | Edit Undo and its palette row before this renderer session completes a Save |
 | `DESKTOP_WEB_CAPABILITY_REQUIRED` | the Web stored-HTML and asset-injection controls on Game and Kids; these controls are already inert with the more specific capability refusal, so the Kids demotion preserves it |
-| `DESKTOP_VERB_NOT_ON_THIS_SURFACE` | a palette row naming a CLI verb this shell has no command for, and every application-menu button — this surface has no command behind any of the archive's menus |
 | `DESKTOP_WINDOW_BELOW_MINIMUM` | the window is smaller than 900×600 |
 
 | Product-loop code | When |
@@ -407,9 +407,10 @@ says so, with the shared code, and the identity is asserted in
 `apps/desktop-shell/test/app.test.ts` ("chrome / open-path parity") rather than
 maintained as four prose descriptions.
 
-Likewise, a command palette row is driveable only when it names a key of
-`DESKTOP_COMMANDS`. `sceneaxi project dev` is a CLI verb with no desktop command,
-so its row renders inert and says so.
+Window commands use `DESKTOP_INTERACTION_COMMANDS`, deliberately separate from
+the `sceneaxi-desktop` CLI's `DESKTOP_COMMANDS`. File, Edit, Run, the palette,
+and keyboard accelerators carry the same interaction command id and dispatch it
+through one handler table. Commands this desktop cannot execute are absent.
 
 ## Responsive and windowing strategy
 
@@ -520,9 +521,8 @@ Two rules keep this honest:
   handler is on the document rather than the shell so a lost focus cannot swallow
   `Escape`.
 - **Element ids are unique and well-formed**, because a control id is derived
-  from a declared identity (`PALETTE_GROUPS[].id`, `DESKTOP_MENU_IDS`) and never
-  from display text — two palette rows name the same CLI verb in the same mode,
-  and a verb contains spaces. An `aria-describedby` reference is only meaningful
+  from a declared identity (`DESKTOP_INTERACTION_COMMANDS[].id`,
+  `DESKTOP_MENU_IDS`) and never from display text. An `aria-describedby` reference is only meaningful
   if it resolves to exactly one element.
 - **The viewport's image role sits on an empty backdrop.** `role="img"` is
   Children Presentational, so anything under it is pruned from the accessibility
@@ -829,21 +829,13 @@ sentence can return by review slip.
   - **Exactly one network request** — the document itself
     (`GET file://…/build.html [200]`, and `performance.getEntriesByType(
     'resource')` empty). No font, script, style, or image was fetched.
-  - **Every button came from the helper.** Across the thirteen document/size
-    combinations audited, **0** buttons lacked the `id` + `data-kind` pair and
-    **0** `aria-describedby` references dangled, in every state and after every
-    interaction below. `build` renders 64 buttons, 59 focus stops, **0
-    unlabelled**, 19 inert. `kids` renders the same 64 with **52** inert: the
-    live twelve are exactly the controls not behind the refusal —
-    `profile-game`, `profile-web`, `profile-kids`, `overlay-open-palette`,
-    `status-overlay-conflict`, `status-overlay-palette`,
-    `status-overlay-refused`, `status-refusal-help`,
-    `overlay-close-conflict-discard`, `overlay-close-conflict-review`,
-    `overlay-close-refused-edit-brief`, and
-    `overlay-close-refused-keep-draft`. The only inert
-    controls outside the plain Tab order are `viewport-source-game` and
-    `viewport-source-sculpt-preview` on `build` (roving tabindex, and the arrow
-    keys reach them), joined on `kids` by the non-active dock tabs.
+  - **Every button comes from the helper.** The control-accounting suite walks
+    every projected state, asserts every button carries its model-owned `id` +
+    `data-kind` pair, and rejects dangling `aria-describedby` references. On
+    Kids, the seven live controls are exactly `profile-game`, `profile-web`,
+    `profile-kids`, `overlay-open-palette`, `status-overlay-palette`,
+    `status-refusal-help`, and `overlay-close-outcome-dismiss`; every desktop
+    operation remains behind the structural refusal.
   - **Every `role="tablist"` owned only `role="tab"` children** in every document
     measured, so the bulk accept/reject and the spacer are outside it.
   - **The viewport carries one note**, `VIEWPORT_INERT_NOTE`; the archive's
@@ -860,14 +852,11 @@ sentence can return by review slip.
     and 1920×620 (56, 4.60:1 each). At 800×560 the shell is the refusal, so it
     contributes no shell text: the 20 elements measured there are the refusal's
     own, worst 6.33:1.
-  - **The inert state is measured, not assumed.** In every one of those
-    measurements the sweep found **0** elements with a group `opacity` other than
-    `1`, and enumerating the live stylesheet's rules found **0** `opacity`
-    declarations outside `@keyframes`. The worst *inert* label composited to
-    **5.22:1** on `build` (`File`, on the menu bar) and **4.97:1** on `kids` (the
-    `Assistant` toggle at 1680×1000, the `Panels` drawer toggle at the drawer
-    tiers) — the values the previous record could not see were 3.67, 4.07, and
-    2.16.
+  - **The inert state is measured, not assumed.** The sweep found **0** elements
+    with a group `opacity` other than `1`, and the stylesheet contains **0**
+    `opacity` declarations outside `@keyframes`; the token contrast suite remains
+    the authority for every inert text pairing. Menu headings are no longer part
+    of that inert set because File, Edit, and Run now open truthful command menus.
   - **An inert control stays inert under the pointer.** Measured with a real
     mouse move, not at rest. At 1024×700 on `kids` all **11** visible inert
     controls — both drawer toggles, the assistant toggle, its ✕, and the seven
@@ -883,17 +872,12 @@ sentence can return by review slip.
     `.decision`) can match an inert control, and each now ships its `.is-inert`
     answer beside it, while `.state-shortcut` and the palette rows never go
     inert (`outsideRefusal`) and `.rail-mode:hover` sets only a background.
-  - **A palette row keeps its dismiss action through a profile switch.** Opened
-    on `--overlay palette`, `palette-sculpt-from-reference` renders
-    `data-action="overlay"` in every profile. Clicking the Kids chip made it
-    `data-kind="inert" aria-disabled="true"` and clicking it then left the
-    overlay open (`data-overlay` still `palette`, the dialog still
-    `display: grid`) — the `aria-disabled` guard, not a missing attribute.
-    Clicking Game promoted it back to `view`, and clicking it closed the palette
-    (`data-overlay` `none`, `display: none`). Before the fix the attribute was
-    emitted only when the control was live at render time, so a Kids-rendered
-    document had a row that announced itself live after the switch and did
-    nothing.
+  - **Palette rows execute operations, not dismissals.** Each row carries the
+    same `data-command` id as its menu item; choosing one closes the palette and
+    invokes the shared handler. On Kids the profile table demotes every operation
+    row before dispatch. The semantic golden test drives all menu, palette, and
+    accelerator paths and asserts the corresponding project or engine-host call,
+    which catches a row that merely closes its overlay.
   - **The Kids lock screen is reachable at every tier.** Read from computed
     style at 1680×1000, 1280×800, 1024×700, and 1920×620: the shell body kept
     `mode-rail, profile-refusal, assistant` in flow, the editor refusal resolved

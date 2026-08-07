@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   DESKTOP_COMMANDS,
+  DESKTOP_INTERACTION_COMMANDS,
   DesktopExit,
   createDesktopSession,
   createDesktopVisualState,
@@ -514,18 +515,13 @@ describe("desktop shell commands", () => {
       );
     });
 
-    it("keeps the desktop command map and the palette's claims in step", () => {
-      // A palette row may only be driveable when it names a real command, and
-      // `chrome` itself must be one of them.
+    it("keeps the CLI vocabulary separate from the interactive palette", () => {
       expect(Object.hasOwn(DESKTOP_COMMANDS, "chrome")).toBe(true);
-      const driveable = desktopVisualView(createDesktopVisualState())
-        .overlay.paletteGroups.flatMap((group) => group.items)
-        .filter((item) => item.control.kind === "view");
-      expect(driveable.length).toBeGreaterThan(0);
-      for (const item of driveable) {
-        const verb = item.cli.split(" ").at(-1) ?? "";
-        expect(Object.hasOwn(DESKTOP_COMMANDS, verb)).toBe(true);
-      }
+      const palette = desktopVisualView(createDesktopVisualState())
+        .overlay.paletteGroups.flatMap((group) => group.items);
+      expect(palette.map((item) => item.commandId)).toEqual(
+        DESKTOP_INTERACTION_COMMANDS.map((command) => command.id),
+      );
     });
   });
 

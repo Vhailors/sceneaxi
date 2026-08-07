@@ -238,8 +238,10 @@ which the matrix denies this package.
 The visual surface extends that parity again: the chrome's profile switch
 projects the same `openPathPolicyView()` payload rather than describing a profile
 itself, so Kids refuses there with the shared code. `test/app.test.ts`
-("chrome / open-path parity") asserts the identity, and also that a palette row
-may claim to be driveable only when it names a real desktop command.
+("chrome / open-path parity") asserts the identity. Interactive File/Edit/Run,
+palette, and accelerator parity is owned by `DESKTOP_INTERACTION_COMMANDS` and
+executed semantically in
+`tests/e2e/desktop-command-interactions-golden.test.ts`.
 
 `tests/e2e/desktop-product-loop-golden.test.ts` is the authoring/play vertical.
 `tests/e2e/desktop-project-lifecycle-golden.test.ts` drives the emitted UI through
