@@ -6,6 +6,11 @@
  * its own Neon tables; the existing umbrella HTTP adapter then maps an authenticated
  * provider result through `@sceneaxi/auth`, where session provenance, the sole-admin
  * decision, Kids denial, and SceneAxi session persistence remain authoritative.
+ *
+ * It sits in `src/provider/` rather than `src/lib/` because the hermetic root
+ * type-checks `src/index.ts` and `src/lib/**` without this install root's
+ * dependencies: a module that names Better Auth or `pg` may not live there. This
+ * directory is type-checked by the site's own `pnpm typecheck`, like `src/app/`.
  */
 import { randomUUID } from "node:crypto";
 import { betterAuth, type BetterAuthOptions } from "better-auth";

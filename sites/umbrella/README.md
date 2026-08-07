@@ -303,12 +303,19 @@ payment-event side effect. The Better Auth client reads the session back from
 token so either provider configuration resolves; a provider that honours neither throws a
 named fault instead of reporting a valid password as refused
 (`docs/websites-deploy.md` owns that prerequisite). The provider itself is
-`src/lib/better-auth-provider.ts`, mounted only at `/api/auth/[...all]`: public sign-up
+`src/provider/better-auth-provider.ts`, mounted only at `/api/auth/[...all]`: public sign-up
 and every endpoint other than `POST sign-in/email` and `GET get-session` return 404.
 It uses `BETTER_AUTH_SECRET` and `DATABASE_URL` only on the server, persists in the
 provider-owned `better_auth_*` tables from migration 0005, and returns redacted 503
 refusals when configuration or storage is unavailable. Better Auth and `pg` remain
 dependencies of this standalone site install root, not `@sceneaxi/auth`.
+
+It lives under `src/provider/` rather than beside the plug point in `src/lib/` for the
+same structural reason `src/app/` does: the hermetic root type-checks `src/index.ts` and
+`src/lib/**`, and both provider SDKs resolve only in this install root, so a module that
+names them cannot sit in the set the gate compiles without those packages. `src/lib/`
+therefore stays pure TypeScript, and this directory is type-checked here, by this root's
+own `pnpm typecheck`.
 
 Its contract and integration proof is `test/better-auth-provider.test.ts`, run from this
 install root with `pnpm test:provider` over real Better Auth and an in-memory provider

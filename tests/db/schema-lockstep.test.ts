@@ -390,7 +390,7 @@ describe("migration hygiene", () => {
 
   it("keeps Better Auth persistence provider-owned and schema-pinned", () => {
     const providerSource = readFileSync(
-      new URL("../../sites/umbrella/src/lib/better-auth-provider.ts", import.meta.url),
+      new URL("../../sites/umbrella/src/provider/better-auth-provider.ts", import.meta.url),
       "utf8",
     );
     for (const table of [

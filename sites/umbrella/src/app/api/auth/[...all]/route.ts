@@ -1,4 +1,4 @@
-import { betterAuthProviderHandler } from "../../../../lib/better-auth-provider.js";
+import { betterAuthProviderHandler } from "../../../../provider/better-auth-provider.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

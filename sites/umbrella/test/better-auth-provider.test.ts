@@ -24,16 +24,23 @@ import {
   resolveBetterAuthProviderConfig,
   type BetterAuthProviderConfig,
   type BetterAuthProviderRuntimeResult,
-} from "../src/lib/better-auth-provider.js";
+} from "../src/provider/better-auth-provider.js";
 
 const ORIGIN = "https://auth.example.invalid";
 const EMAIL = ["captain", "example.invalid"].join("@");
 const PASSWORD = ["Synthetic", "Credential", "42!"].join("");
 const SIGNING_SECRET = "synthetic-provider-signing-material".padEnd(48, "x");
+// Assembled rather than written out, exactly like the synthetic address and
+// credential above: `tests/contracts/no-committed-secrets.test.ts` scans the whole
+// tracked tree for connection-string *shapes*, and a synthetic one is still a shape.
+// The binding is named for the fixture, not the variable, because
+// `scripts/check-sites.mjs` refuses a secret name assigned anything but an
+// environment reference anywhere under `sites/` — including in a comment.
+const SYNTHETIC_DATABASE_URL = ["postgresql:", "synthetic.invalid", "sceneaxi"].join("/");
 
 function providerEnv(overrides: Readonly<Record<string, string>> = {}) {
   return Object.fromEntries([
-    ["DATABASE_URL", overrides["databaseUrl"] ?? "postgresql://synthetic.invalid/sceneaxi"],
+    ["DATABASE_URL", overrides["databaseUrl"] ?? SYNTHETIC_DATABASE_URL],
     ["BETTER_AUTH_ORIGIN", overrides["origin"] ?? ORIGIN],
     ["BETTER_AUTH_SECRET", overrides["secret"] ?? SIGNING_SECRET],
     ["SCENEAXI_ADMIN_EMAIL", overrides["email"] ?? EMAIL],

@@ -1958,7 +1958,7 @@ describe("acceptance 6 — no secret, no live mode, no Kids", () => {
 
   it("keeps the Better Auth host provider-only and outside request authority", () => {
     const provider = readFileSync(
-      new URL("../../sites/umbrella/src/lib/better-auth-provider.ts", import.meta.url),
+      new URL("../../sites/umbrella/src/provider/better-auth-provider.ts", import.meta.url),
       "utf8",
     );
     const route = readFileSync(

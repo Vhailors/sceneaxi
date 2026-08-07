@@ -166,7 +166,7 @@ checklist by [`docs/production-activation.md`](../production-activation.md).
 
 [sceneaxi#222](https://github.com/Vhailors/sceneaxi/issues/222) added the smallest
 production Better Auth provider to the existing `sceneaxi-umbrella` deployable project.
-`sites/umbrella/src/lib/better-auth-provider.ts` owns the provider SDK and PostgreSQL
+`sites/umbrella/src/provider/better-auth-provider.ts` owns the provider SDK and PostgreSQL
 pool, `/api/auth/[...all]` exposes only `POST sign-in/email` and `GET get-session`, and
 `db/migrations/0005_better_auth_provider.sql` owns the provider's four core tables plus
 its durable rate-limit counters. Cookie and

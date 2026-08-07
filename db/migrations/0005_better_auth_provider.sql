@@ -6,7 +6,7 @@
 -- `sessions` tables from 0001_identity.sql.
 --
 -- The schema matches Better Auth 1.6's four core models with the explicit
--- model names configured in sites/umbrella/src/lib/better-auth-provider.ts.
+-- model names configured in sites/umbrella/src/provider/better-auth-provider.ts.
 
 CREATE TABLE IF NOT EXISTS better_auth_users (
   "id"            text        PRIMARY KEY,

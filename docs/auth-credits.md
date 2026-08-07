@@ -20,7 +20,7 @@ The architecture decision behind the shape of this plane is
 | Login + balance view model | `apps/web-shell` (`createAccountPanel`) |
 | In-app AI assistant view model | `apps/web-shell` (`createAssistantPanel`) |
 | Deployable-site wiring | `sites/umbrella/src/lib/identity-plane.ts` + `provider-adapters.ts`, reached by request code only through the `request-authority.ts` facade (`docs/websites-deploy.md`) |
-| Better Auth HTTP provider | provider-only `sites/umbrella/src/lib/better-auth-provider.ts` + `/api/auth/[...all]`, persisted by `db/migrations/0005_better_auth_provider.sql`; no core import or role field |
+| Better Auth HTTP provider | provider-only `sites/umbrella/src/provider/better-auth-provider.ts` + `/api/auth/[...all]`, persisted by `db/migrations/0005_better_auth_provider.sql`; no core import or role field |
 
 Release group `identity`; both packages consume only public contracts. **Outside core:**
 the deployable umbrella owns the Better Auth handler, Neon connection, Stripe API client,

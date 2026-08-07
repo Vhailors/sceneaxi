@@ -141,7 +141,9 @@ more, never a route, page, or component. Between them they build the site-kit
 adapters over those packages and map their named refusals onto the site refusal registry —
 they implement no identity, no ledger, and no signature check. Provider clients stay
 outside hermetic core per ADR 0021; the Better Auth handler and PostgreSQL pool now live
-only in the umbrella install root at `src/lib/better-auth-provider.ts`, exposing the two
+only in the umbrella install root at `src/provider/better-auth-provider.ts` — beside
+`src/lib/`, not in it, because those SDKs resolve only in that install root while the
+hermetic gate compiles `src/index.ts` and `src/lib/**` without them — exposing the two
 stock routes through `/api/auth/[...all]` over migration `0005_better_auth_provider.sql`.
 They create no SceneAxi role and do not replace the one
 `umbrellaPlaneHandles()` function, which reads the server environment once and holds the
