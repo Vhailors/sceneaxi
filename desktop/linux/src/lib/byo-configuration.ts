@@ -79,6 +79,21 @@ export function createDesktopByoConfiguration(
       runtimeStatus: options.providerRuntimeAvailable ? "ready" as const : "unavailable" as const,
     });
 
+  /**
+   * A store refusal for a resolved provider is republished with the one extra
+   * fact the surface needs to stay useful: whether Remove can still proceed.
+   * Deletion is a filesystem capability, so an unavailable backend does not
+   * strand an already-stored credential. Probing carries no key material and
+   * runs only after the Kids guard and a supported provider.
+   */
+  const refusalFor = async (
+    provider: DesktopByoProvider,
+    response: DesktopByoConfigurationRefusal,
+  ): Promise<DesktopByoConfigurationRefusal> => {
+    const probe = await options.keyStore.removable(provider);
+    return Object.freeze({ ...response, removable: probe.ok && probe.removable });
+  };
+
   const handle = async (request: unknown): Promise<DesktopByoConfigurationResponse> => {
     // Profile is the first and only field read before the Kids guard. In
     // particular, a hostile key getter cannot run on a Kids request.
@@ -111,13 +126,16 @@ export function createDesktopByoConfiguration(
     if (action === "save") {
       const key = field(request, "key");
       if (typeof key !== "string") {
-        return refusal(
-          PROVIDER_KEY_STORE_REFUSALS.keyInvalid,
-          "Saving a provider credential requires a non-empty key value.",
+        return refusalFor(
+          provider,
+          refusal(
+            PROVIDER_KEY_STORE_REFUSALS.keyInvalid,
+            "Saving a provider credential requires a non-empty key value.",
+          ),
         );
       }
       const saved = await options.keyStore.save(provider, key);
-      if (!saved.ok) return saved;
+      if (!saved.ok) return refusalFor(provider, saved);
       return answer(
         action,
         provider,
@@ -128,7 +146,7 @@ export function createDesktopByoConfiguration(
 
     if (action === "remove") {
       const removed = await options.keyStore.remove(provider);
-      if (!removed.ok) return removed;
+      if (!removed.ok) return refusalFor(provider, removed);
       return answer(
         action,
         provider,
@@ -138,7 +156,7 @@ export function createDesktopByoConfiguration(
     }
 
     const current = await options.keyStore.status(provider);
-    if (!current.ok) return current;
+    if (!current.ok) return refusalFor(provider, current);
     return answer(action, provider, current.keyStatus, "status");
   };
 

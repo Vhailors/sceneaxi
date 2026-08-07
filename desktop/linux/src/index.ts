@@ -88,6 +88,7 @@ export {
   type PlatformSecureStorage,
   type PlatformSecureStorageAvailability,
   type ProviderKeyRead,
+  type ProviderKeyRemovable,
   type ProviderKeyRemoved,
   type ProviderKeySaved,
   type ProviderKeyStatus,

@@ -129,16 +129,30 @@ It is a renderer-only settings path beside the existing Assistant route control,
 not a local agent tool. Selecting BYOK shows whether a key is stored and the
 available Save, Replace, Remove, or named-unavailable action. The password field
 is cleared after every submission; status and mutation responses contain only
-provider, operation, key-presence, and runtime-availability metadata.
+provider, operation, key-presence, and runtime-availability metadata, and a
+refusal adds at most the `removable` presence boolean.
 
 `ProviderKeyStore` in `desktop/linux/src/lib/provider-key-store.ts` is the typed
-host seam: `status`, `read`, `save`, and `remove`. Its Electron adapter uses
-`safeStorage` only after `app.ready`, stores only its ciphertext envelope under
+host seam: `status`, `read`, `save`, `remove`, and `removable`. Its Electron adapter
+uses `safeStorage` only after `app.ready`, stores only its ciphertext envelope under
 the application's user-data directory, and atomically replaces that envelope.
 There is no app-owned cipher. On Linux, Electron's `basic_text` and `unknown`
 backends are explicitly unsupported rather than treated as secure storage.
 Environment variables, plaintext configuration, browser storage, project files,
 and CLI arguments are not fallbacks.
+
+The seam separates two capabilities on purpose. Producing or consuming a key needs
+the platform backend, so `status`, `read`, and `save` refuse whenever it is
+unavailable, locked, or unsupported. Unlinking needs no cipher, so `remove` and its
+`removable` presence probe answer from the filesystem alone and a locked keyring
+never strands a stored credential. That path `lstat`s the envelope — a symlink or
+directory is a wrong type, not a redirected delete — refuses
+`DESKTOP_PROVIDER_KEY_STORE_CORRUPT` for a non-regular or non-owner-private target
+and `DESKTOP_PROVIDER_KEY_STORE_FAILED` for a failed unlink, and never reads,
+decrypts, or returns envelope bytes. A store refusal for a resolved provider
+carries one extra boolean, `removable`, so the surface can keep offering Remove
+without learning anything about the key itself; the renderer disables Save and the
+key field, and enables Remove from that flag alone.
 
 The configuration request uses its own
 `sceneaxi:desktop-byo-configuration` IPC channel. It is not a
@@ -173,8 +187,8 @@ than borrowing the local route or crossing into hosted metering.
 | `DESKTOP_PROVIDER_KEY_STORE_UNAVAILABLE` | the platform secure-storage service is absent |
 | `DESKTOP_PROVIDER_KEY_STORE_LOCKED` | the user-scoped OS credential store is locked or encryption is not currently available |
 | `DESKTOP_PROVIDER_KEY_STORE_UNSUPPORTED` | the OS/backend is unsupported, including Electron `basic_text` on Linux |
-| `DESKTOP_PROVIDER_KEY_STORE_CORRUPT` | the encrypted envelope or decrypted key is invalid |
-| `DESKTOP_PROVIDER_KEY_STORE_FAILED` | availability, encryption, persistence, or removal failed |
+| `DESKTOP_PROVIDER_KEY_STORE_CORRUPT` | the encrypted envelope or decrypted key is invalid, or the envelope path is not a regular owner-private file |
+| `DESKTOP_PROVIDER_KEY_STORE_FAILED` | availability, encryption, persistence, path inspection, or removal failed |
 | `DESKTOP_PROVIDER_KEY_MISSING` | no key is stored for the selected provider |
 | `DESKTOP_PROVIDER_KEY_INVALID` | the submitted value is empty or has an unsupported shape |
 | `DESKTOP_BYO_PROVIDER_UNSUPPORTED` | the requested provider is outside the checked-in provider list |
@@ -184,7 +198,9 @@ than borrowing the local route or crossing into hosted metering.
 All of these refuse before provider dispatch. Save encrypts before writing and
 uses an atomic rename, so an encryption/write failure does not replace an existing
 envelope with partial bytes. Corrupt data never falls back to an empty or plaintext
-value.
+value. The availability refusals gate save, read, status, and dispatch — not
+removal, which is a filesystem capability and stays available so a locked backend
+cannot strand a stored credential.
 
 ## Cost and hosted separation
 
@@ -222,9 +238,11 @@ cannot opt into hosted routing or bypass metering.
   assistant, and proves absent BYOK plus hosted stay fail-closed.
 - `tests/desktop/desktop-byo-secure-storage.test.ts` uses clearly synthetic
   non-secret sentinels to prove encrypted save/read/replace/remove, unavailable /
-  locked / unsupported / corrupt / failed refusals, Kids-before-store ordering,
-  provider-session retrieval and cleanup, renderer/bridge redaction, and the
-  unchanged hosted/tool-registry boundary.
+  locked / unsupported / corrupt / failed refusals, removal surviving an
+  unavailable backend while save and read still refuse, removal refusing a
+  wrong-type / symlinked / non-owner-private target and a failed unlink,
+  Kids-before-store ordering, provider-session retrieval and cleanup,
+  renderer/bridge redaction, and the unchanged hosted/tool-registry boundary.
 
 This contract does not authorize production deployment, hosted-provider
 activation, Stripe LIVE, Connect LIVE, legal or tax behavior, production

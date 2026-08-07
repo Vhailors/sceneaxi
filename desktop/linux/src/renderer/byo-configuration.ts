@@ -2,7 +2,6 @@
 import {
   DESKTOP_BYO_PROVIDERS,
   DESKTOP_BYO_CONFIGURATION_REFUSALS,
-  PROVIDER_KEY_STORE_REFUSALS,
   type DesktopByoConfigurationRequest,
   type DesktopByoConfigurationResponse,
 } from "../lib/byo-configuration-contract.js";
@@ -119,17 +118,19 @@ export function installDesktopByoConfigurationSurface(
   routes.insertAdjacentElement("afterend", surface);
   byoRoute.setAttribute("aria-controls", SURFACE_ID);
 
-  const unavailable = (reason: string, detail: string): void => {
-    state.textContent = "Unavailable";
-    message.textContent = `${reason} — ${detail}`;
+  const unavailable = (reason: string, detail: string, removable: boolean): void => {
+    state.textContent = removable ? "Stored · unavailable" : "Unavailable";
+    message.textContent = removable
+      ? `${reason} — ${detail} The stored key stays sealed, and Remove can still delete it without unlocking secure storage.`
+      : `${reason} — ${detail}`;
     keyInput.disabled = true;
     save.disabled = true;
-    remove.disabled = reason !== PROVIDER_KEY_STORE_REFUSALS.corrupt;
+    remove.disabled = !removable;
   };
 
   const render = (response: DesktopByoConfigurationResponse): void => {
     if (!response.ok) {
-      unavailable(response.reason, response.message);
+      unavailable(response.reason, response.message, response.removable === true);
       return;
     }
     keyInput.disabled = false;
@@ -160,6 +161,7 @@ export function installDesktopByoConfigurationSurface(
       unavailable(
         DESKTOP_BYO_CONFIGURATION_REFUSALS.providerSessionUnavailable,
         "The privileged BYOK configuration channel is not exposed.",
+        false,
       );
       return;
     }
@@ -171,6 +173,7 @@ export function installDesktopByoConfigurationSurface(
       unavailable(
         DESKTOP_BYO_CONFIGURATION_REFUSALS.providerSessionFailed,
         "The privileged BYOK configuration request failed.",
+        false,
       );
     }
   };

@@ -5,15 +5,24 @@
  * cipher, environment fallback, browser store, CLI field, or logging path. The
  * Electron adapter supplies the OS-backed primitive; tests supply a synthetic
  * in-memory primitive with the same contract.
+ *
+ * Two capabilities, deliberately separated. Producing or consuming a key needs the
+ * platform backend, so `save` and `read` refuse whenever it is unavailable, locked,
+ * or unsupported. Unlinking an envelope needs no cipher at all, so `remove` and its
+ * `removable` probe answer from the filesystem alone — a user whose OS keyring is
+ * locked can still delete a stored credential. That path never reads, decrypts, or
+ * returns envelope bytes, and refuses by name when the file is not a regular
+ * owner-private file or cannot be unlinked.
  */
 import {
   chmodSync,
+  lstatSync,
   mkdirSync,
   readFileSync,
   renameSync,
   rmSync,
-  statSync,
   writeFileSync,
+  type Stats,
 } from "node:fs";
 import { join } from "node:path";
 import {
@@ -71,11 +80,18 @@ export type ProviderKeyRemoved = Readonly<{
   removed: boolean;
 }>;
 
+export type ProviderKeyRemovable = Readonly<{
+  ok: true;
+  provider: DesktopByoProvider;
+  removable: boolean;
+}>;
+
 export type ProviderKeyStore = Readonly<{
   status(provider: DesktopByoProvider): Promise<ProviderKeyStatus | ProviderKeyStoreRefusal>;
   read(provider: DesktopByoProvider): Promise<ProviderKeyRead | ProviderKeyStoreRefusal>;
   save(provider: DesktopByoProvider, key: string): Promise<ProviderKeySaved | ProviderKeyStoreRefusal>;
   remove(provider: DesktopByoProvider): Promise<ProviderKeyRemoved | ProviderKeyStoreRefusal>;
+  removable(provider: DesktopByoProvider): Promise<ProviderKeyRemovable | ProviderKeyStoreRefusal>;
 }>;
 
 type ProviderKeyEnvelope = Readonly<{
@@ -86,6 +102,7 @@ type ProviderKeyEnvelope = Readonly<{
 
 const ENVELOPE_SCHEMA_VERSION = 1 as const;
 const MAX_KEY_LENGTH = 16_384;
+const GROUP_AND_OTHER_MODE_BITS = 0o077;
 
 function refuse(
   reason: ProviderKeyStoreRefusalReason,
@@ -164,6 +181,40 @@ export function createProviderKeyStore(
         message: "The platform secure-storage availability check failed.",
       });
     }
+  };
+
+  /**
+   * The one thing deletion is allowed to learn about the envelope: whether the
+   * path is a stored credential this store may safely unlink. `lstat` rather than
+   * `stat`, so a symlink is a wrong type instead of a redirected delete, and the
+   * owner-private check refuses a file this store cannot have written.
+   */
+  const inspectEnvelopeFile = (
+    provider: DesktopByoProvider,
+  ): Readonly<{ ok: true; present: boolean }> | ProviderKeyStoreRefusal => {
+    let entry: Stats;
+    try {
+      entry = lstatSync(pathFor(provider));
+    } catch (error) {
+      if (isMissing(error)) return Object.freeze({ ok: true as const, present: false });
+      return refuse(
+        PROVIDER_KEY_STORE_REFUSALS.failed,
+        "The stored provider credential path could not be inspected.",
+      );
+    }
+    if (!entry.isFile()) {
+      return refuse(
+        PROVIDER_KEY_STORE_REFUSALS.corrupt,
+        "The stored provider credential path is not a regular encrypted file.",
+      );
+    }
+    if ((entry.mode & GROUP_AND_OTHER_MODE_BITS) !== 0) {
+      return refuse(
+        PROVIDER_KEY_STORE_REFUSALS.corrupt,
+        "The stored provider credential file is not owner-private.",
+      );
+    }
+    return Object.freeze({ ok: true as const, present: true });
   };
 
   const readEnvelope = (
@@ -335,18 +386,13 @@ export function createProviderKeyStore(
         "The requested BYOK provider is not supported by this desktop build.",
       );
     }
-    const availability = available();
-    if (!availability.ok) return availability;
-    const path = pathFor(provider);
+    const inspected = inspectEnvelopeFile(provider);
+    if (!inspected.ok) return inspected;
+    if (!inspected.present) {
+      return Object.freeze({ ok: true as const, provider, removed: false });
+    }
     try {
-      if (!statSync(path).isFile()) {
-        return refuse(
-          PROVIDER_KEY_STORE_REFUSALS.corrupt,
-          "The stored provider credential path is not a regular encrypted file.",
-        );
-      }
-      rmSync(path);
-      return Object.freeze({ ok: true as const, provider, removed: true });
+      rmSync(pathFor(provider));
     } catch (error) {
       if (isMissing(error)) {
         return Object.freeze({ ok: true as const, provider, removed: false });
@@ -356,7 +402,22 @@ export function createProviderKeyStore(
         "The encrypted provider credential could not be removed.",
       );
     }
+    return Object.freeze({ ok: true as const, provider, removed: true });
   };
 
-  return Object.freeze({ status, read, save, remove });
+  const removable = async (
+    provider: DesktopByoProvider,
+  ): Promise<ProviderKeyRemovable | ProviderKeyStoreRefusal> => {
+    if (!validProvider(provider)) {
+      return refuse(
+        PROVIDER_KEY_STORE_REFUSALS.providerUnsupported,
+        "The requested BYOK provider is not supported by this desktop build.",
+      );
+    }
+    const inspected = inspectEnvelopeFile(provider);
+    if (!inspected.ok) return inspected;
+    return Object.freeze({ ok: true as const, provider, removable: inspected.present });
+  };
+
+  return Object.freeze({ status, read, save, remove, removable });
 }

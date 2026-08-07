@@ -45,6 +45,12 @@ export type DesktopByoConfigurationRefusal = Readonly<{
   ok: false;
   reason: DesktopByoConfigurationRefusalReason;
   message: string;
+  /**
+   * Whether a stored envelope is still safely unlinkable. Deletion needs no
+   * cipher, so a refusal caused by an unavailable, locked, or unsupported
+   * backend can still offer Remove. Presence only — never key material.
+   */
+  removable?: boolean;
 }>;
 
 export type DesktopByoConfigurationStatus = Readonly<{

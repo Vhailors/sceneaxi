@@ -58,7 +58,8 @@ The renderer script progressively binds one desktop-only BYOK settings section
 beside the shell-owned route selector. It uses the chrome's existing controls and
 tokens and does not add an editor mode or action to the shell state machine.
 Selecting BYOK shows OpenRouter key presence and Save, Replace, Remove, locked,
-unsupported, corrupt, failure, or runtime-unavailable state. Switching to Kids
+unsupported, corrupt, failure, or runtime-unavailable state; Remove stays offered
+whenever a stored envelope is still safely unlinkable. Switching to Kids
 hides the section and clears its password field before any submission or secure
 store request can occur.
 
@@ -119,9 +120,15 @@ only after the bridge, initial Mount API scene, and every assistant handler bind
 4. The field clears immediately after submission. The stored value is never shown,
    copied into the project, or included in a status/refusal response.
 
-OS secure storage must be available and unlocked. Linux launches using Electron's
-`basic_text` password backend refuse as unsupported; SceneAxi does not downgrade to
-plaintext. The checked-in host intentionally has no live provider session factory,
+Saving, replacing, reading, and provider dispatch all require OS secure storage to
+be available and unlocked. Linux launches using Electron's `basic_text` password
+backend refuse as unsupported; SceneAxi does not downgrade to plaintext. Deleting
+is deliberately not one of those operations: unlinking the envelope needs no
+cipher, so **Remove** stays offered — and the surface reads `Stored · unavailable`
+— when a key is stored but the backend is unavailable, locked, or unsupported. That
+path never reads, decrypts, or returns the envelope, and refuses by name when the
+target is not a regular owner-private file or cannot be unlinked.
+The checked-in host intentionally has no live provider session factory,
 so it reports provider execution unavailable even when a key is securely stored.
 This implements configuration and the privileged injection contract without
 claiming production provider readiness.

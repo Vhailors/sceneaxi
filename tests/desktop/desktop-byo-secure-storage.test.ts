@@ -1,7 +1,11 @@
 import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -113,7 +117,11 @@ describe("desktop provider key store", () => {
 
   it("names corrupt and failed storage without exposing stored bytes", async () => {
     const root = temporaryRoot("provider-key-corrupt");
-    writeFileSync(join(root, "openrouter.v1.json"), "not-json", "utf8");
+    writeFileSync(join(root, "openrouter.v1.json"), "not-json", {
+      encoding: "utf8",
+      mode: 0o600,
+    });
+    chmodSync(join(root, "openrouter.v1.json"), 0o600);
     const corrupt = createProviderKeyStore({ root, platformStorage: syntheticPlatform() });
     expect(await corrupt.read("openrouter")).toMatchObject({
       ok: false,
@@ -167,6 +175,121 @@ describe("desktop provider key store", () => {
       key: SYNTHETIC_NON_SECRET,
     });
   });
+
+  it.each([
+    PROVIDER_KEY_STORE_REFUSALS.unavailable,
+    PROVIDER_KEY_STORE_REFUSALS.locked,
+    PROVIDER_KEY_STORE_REFUSALS.unsupported,
+  ] as const)(
+    "still unlinks an already-stored envelope when the backend reports %s",
+    async (reason) => {
+      const root = temporaryRoot("provider-key-remove-unavailable");
+      await createProviderKeyStore({
+        root,
+        platformStorage: syntheticPlatform(),
+      }).save("openrouter", SYNTHETIC_NON_SECRET);
+      let decryptions = 0;
+      const store = createProviderKeyStore({
+        root,
+        platformStorage: {
+          availability: () => ({ ok: false, reason, message: "Synthetic refusal." }),
+          encrypt: () => new Uint8Array(),
+          decrypt: () => {
+            decryptions += 1;
+            return "";
+          },
+        },
+      });
+
+      expect(await store.removable("openrouter")).toEqual({
+        ok: true,
+        provider: "openrouter",
+        removable: true,
+      });
+      expect(await store.read("openrouter")).toMatchObject({ ok: false, reason });
+      expect(await store.status("openrouter")).toMatchObject({ ok: false, reason });
+      expect(await store.save("openrouter", SYNTHETIC_NON_SECRET)).toMatchObject({
+        ok: false,
+        reason,
+      });
+
+      const removed = await store.remove("openrouter");
+      expect(removed).toEqual({ ok: true, provider: "openrouter", removed: true });
+      expect(JSON.stringify(removed)).not.toContain(SYNTHETIC_NON_SECRET);
+      expect(existsSync(join(root, "openrouter.v1.json"))).toBe(false);
+      expect(await store.remove("openrouter")).toEqual({
+        ok: true,
+        provider: "openrouter",
+        removed: false,
+      });
+      expect(await store.removable("openrouter")).toEqual({
+        ok: true,
+        provider: "openrouter",
+        removable: false,
+      });
+      expect(decryptions).toBe(0);
+    },
+  );
+
+  it("refuses removal of a path that is not a regular owner-private file", async () => {
+    const platformStorage = syntheticPlatform();
+
+    const directoryRoot = temporaryRoot("provider-key-remove-directory");
+    mkdirSync(join(directoryRoot, "openrouter.v1.json"));
+    const directory = createProviderKeyStore({ root: directoryRoot, platformStorage });
+    expect(await directory.remove("openrouter")).toMatchObject({
+      ok: false,
+      reason: PROVIDER_KEY_STORE_REFUSALS.corrupt,
+    });
+    expect(await directory.removable("openrouter")).toMatchObject({
+      ok: false,
+      reason: PROVIDER_KEY_STORE_REFUSALS.corrupt,
+    });
+    expect(existsSync(join(directoryRoot, "openrouter.v1.json"))).toBe(true);
+
+    const decoy = join(temporaryRoot("provider-key-remove-decoy"), "decoy.json");
+    writeFileSync(decoy, "{}", { encoding: "utf8", mode: 0o600 });
+    const linkRoot = temporaryRoot("provider-key-remove-symlink");
+    symlinkSync(decoy, join(linkRoot, "openrouter.v1.json"));
+    const linked = createProviderKeyStore({ root: linkRoot, platformStorage });
+    expect(await linked.remove("openrouter")).toMatchObject({
+      ok: false,
+      reason: PROVIDER_KEY_STORE_REFUSALS.corrupt,
+    });
+    expect(existsSync(decoy)).toBe(true);
+
+    const openRoot = temporaryRoot("provider-key-remove-permissions");
+    const openPath = join(openRoot, "openrouter.v1.json");
+    writeFileSync(openPath, "{}", { encoding: "utf8", mode: 0o600 });
+    chmodSync(openPath, 0o644);
+    const open = createProviderKeyStore({ root: openRoot, platformStorage });
+    expect(await open.remove("openrouter")).toMatchObject({
+      ok: false,
+      reason: PROVIDER_KEY_STORE_REFUSALS.corrupt,
+    });
+    expect(existsSync(openPath)).toBe(true);
+  });
+
+  it.skipIf(process.getuid?.() === 0)(
+    "names a failed removal without deleting anything",
+    async () => {
+      const root = temporaryRoot("provider-key-remove-failed");
+      const store = createProviderKeyStore({ root, platformStorage: syntheticPlatform() });
+      await store.save("openrouter", SYNTHETIC_NON_SECRET);
+      chmodSync(root, 0o500);
+      try {
+        const response = await store.remove("openrouter");
+        expect(response).toMatchObject({
+          ok: false,
+          reason: PROVIDER_KEY_STORE_REFUSALS.failed,
+        });
+        expect(JSON.stringify(response)).not.toContain(SYNTHETIC_NON_SECRET);
+        expect(existsSync(join(root, "openrouter.v1.json"))).toBe(true);
+      } finally {
+        chmodSync(root, 0o700);
+      }
+    },
+  );
 });
 
 describe("desktop BYOK configuration", () => {
@@ -202,10 +325,60 @@ describe("desktop BYOK configuration", () => {
     expect(Object.keys(replace)).not.toContain("key");
   });
 
+  it("offers removal but no save or read while the backend is locked", async () => {
+    const root = temporaryRoot("provider-config-locked");
+    await createProviderKeyStore({
+      root,
+      platformStorage: syntheticPlatform(),
+    }).save("openrouter", SYNTHETIC_NON_SECRET);
+    const configuration = createDesktopByoConfiguration({
+      keyStore: createProviderKeyStore({
+        root,
+        platformStorage: {
+          availability: () => ({
+            ok: false,
+            reason: PROVIDER_KEY_STORE_REFUSALS.locked,
+            message: "Synthetic lock.",
+          }),
+          encrypt: () => new Uint8Array(),
+          decrypt: () => SYNTHETIC_NON_SECRET,
+        },
+      }),
+      providerRuntimeAvailable: false,
+    });
+    const request = { profile: "@sceneaxi/profile-game", provider: "openrouter" } as const;
+
+    const stored = await configuration.handle({ ...request, action: "status" });
+    expect(stored).toMatchObject({
+      ok: false,
+      reason: PROVIDER_KEY_STORE_REFUSALS.locked,
+      removable: true,
+    });
+    expect(JSON.stringify(stored)).not.toContain(SYNTHETIC_NON_SECRET);
+    expect(
+      await configuration.handle({ ...request, action: "save", key: SYNTHETIC_NON_SECRET }),
+    ).toMatchObject({ ok: false, reason: PROVIDER_KEY_STORE_REFUSALS.locked, removable: true });
+
+    expect(await configuration.handle({ ...request, action: "remove" })).toMatchObject({
+      ok: true,
+      operation: "removed",
+      keyStatus: "missing",
+    });
+    expect(await configuration.handle({ ...request, action: "status" })).toMatchObject({
+      ok: false,
+      reason: PROVIDER_KEY_STORE_REFUSALS.locked,
+      removable: false,
+    });
+  });
+
   it("denies Kids before reading a key field or touching secure storage", async () => {
     let keyReads = 0;
     let storageCalls = 0;
     const store = {
+      removable: async () => {
+        storageCalls += 1;
+        throw new Error("Kids reached removable");
+      },
       status: async () => {
         storageCalls += 1;
         throw new Error("Kids reached status");
@@ -400,6 +573,7 @@ describe("renderer and transport redaction structure", () => {
     );
     expect(renderer).toContain('keyInput.type = "password"');
     expect(renderer).toContain('keyInput.value = ""');
+    expect(renderer).toContain("remove.disabled = !removable");
     expect(renderer).not.toContain("localStorage");
     expect(renderer).not.toContain("sessionStorage");
     expect(preload).toContain("configureByo");
