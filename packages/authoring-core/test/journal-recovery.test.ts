@@ -17,6 +17,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   apply,
+  applyUndoAvailability,
   acquireAtomicWriteLocks,
   atomicWriteAll,
   contentHash,
@@ -106,6 +107,7 @@ describe("E1 apply journal", () => {
 
     const applied = apply({ cwd, proposal: proposed.proposal });
     expect(applied.ok).toBe(true);
+    expect(applyUndoAvailability({ cwd })).toBe("available");
     expect(readFileSync(absolutePath, "utf8")).not.toBe(before);
 
     const undone = undoLastApply({ cwd });
@@ -113,6 +115,36 @@ describe("E1 apply journal", () => {
     if (!undone.ok) return;
     expect(undone.documentPaths).toEqual([documentPath]);
     expect(readFileSync(absolutePath, "utf8")).toBe(before);
+  });
+
+  it("keeps an older completed apply available after undo", () => {
+    const cwd = fixtureDir();
+    const absolutePath = join(cwd, "scene.json");
+    expect(
+      writeDocumentFile(
+        absolutePath,
+        createDocument({ id: "scene", data: { x: 1 } }),
+        { cwd },
+      ).ok,
+    ).toBe(true);
+
+    for (const newValue of [2, 3]) {
+      const proposed = propose({
+        cwd,
+        documentPath: "scene.json",
+        jsonPointer: "/data/x",
+        newValue,
+      });
+      expect(proposed.ok).toBe(true);
+      if (!proposed.ok) return;
+      expect(apply({ cwd, proposal: proposed.proposal }).ok).toBe(true);
+    }
+
+    expect(applyUndoAvailability({ cwd })).toBe("available");
+    expect(undoLastApply({ cwd }).ok).toBe(true);
+    expect(applyUndoAvailability({ cwd })).toBe("available");
+    expect(undoLastApply({ cwd }).ok).toBe(true);
+    expect(applyUndoAvailability({ cwd })).toBe("unavailable");
   });
 
   it("recovery completes a crash-interrupted multi-document apply", () => {
@@ -528,6 +560,7 @@ describe("E1 apply journal", () => {
     >;
     writeFileSync(aPath, beforeA, "utf8");
     stageActiveJournal(journalDir, { ...journal, state: "undoing" });
+    expect(applyUndoAvailability({ cwd })).toBe("recovery-pending");
 
     const recovered = recoverIncompleteApplies({ cwd });
 
@@ -537,6 +570,7 @@ describe("E1 apply journal", () => {
     expect(
       (JSON.parse(readFileSync(journalPath, "utf8")) as { state: string }).state,
     ).toBe("undone");
+    expect(applyUndoAvailability({ cwd })).toBe("unavailable");
   });
 
   it("does not prepare a journal before acquiring every target lock", () => {

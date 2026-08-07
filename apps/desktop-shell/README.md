@@ -29,7 +29,7 @@ failing obscurely.
 
 | Command | Effect |
 |---|---|
-| `status --document <path>` | Report the document's id, content hash, top-level `data` keys, and validated inert document data |
+| `status --document <path>` | Report the document's id, content hash, top-level `data` keys, whether the project's apply journal makes `undo` available, and validated inert document data |
 | `propose --document <path> --pointer <ptr> --value <json>` | Render the diff for review — **writes nothing** |
 | `apply --document <path> --pointer <ptr> --value <json>` | Propose and accept in one non-interactive step |
 | `undo` | Revert the last completed apply |
@@ -84,7 +84,8 @@ Every control declares its kind — `view` changes visual state and works,
 `review` edits the fixture Change Review queue and writes no document, `live`
 declares a product action the injected desktop host — an enclosing consumer
 runtime — must bind (the assistant prompt, Send, Retry, and the artifact
-manipulators, plus New/Open Project, Recent, Reload/Save/Play, and Web staging, which the packaged Linux tier
+manipulators, plus New/Open Project, Recent, Reload/Save/Play, Undo once the
+project's apply journal reports a completed Save, and Web staging, which the packaged Linux tier
 binds through its bridge), and `inert` keeps its focus stop and refuses by a name
 from `DESKTOP_VISUAL_REFUSALS`. This app invokes no authoring operation itself
 and adds no engine/profile/site/billing dependency: the host remains the adapter
@@ -125,8 +126,9 @@ The refuse-only profile demotes in **one** place: every control is minted throug
 one function inside `desktopVisualView()`, and on Kids that function makes each
 one inert unless it is already inert for a more specific reason. A control added
 anywhere is behind the refusal by default, so forgetting fails closed; the
-twelve that are deliberately *not* behind it — the profile switch, refusal
-help, and the overlay open/close controls — say so by naming
+seven that are deliberately *not* behind it — the three profile chips, the
+title-bar and status-bar palette openers, the refusal-help disclosure, and the
+outcome dialog's dismissal — say so by naming
 `outsideRefusal()`. The browser-side switch applies
 the same answer by sweeping every `[data-kind]` element against
 `view.controls`, never a selector list. Everything else the switch changes comes
@@ -238,8 +240,10 @@ which the matrix denies this package.
 The visual surface extends that parity again: the chrome's profile switch
 projects the same `openPathPolicyView()` payload rather than describing a profile
 itself, so Kids refuses there with the shared code. `test/app.test.ts`
-("chrome / open-path parity") asserts the identity, and also that a palette row
-may claim to be driveable only when it names a real desktop command.
+("chrome / open-path parity") asserts the identity. Interactive File/Edit/Run,
+palette, and accelerator parity is owned by `DESKTOP_INTERACTION_COMMANDS` and
+executed semantically in
+`tests/e2e/desktop-command-interactions-golden.test.ts`.
 
 `tests/e2e/desktop-product-loop-golden.test.ts` is the authoring/play vertical.
 `tests/e2e/desktop-project-lifecycle-golden.test.ts` drives the emitted UI through

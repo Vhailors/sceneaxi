@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   DESKTOP_COMMANDS,
+  DESKTOP_INTERACTION_COMMANDS,
   DesktopExit,
   createDesktopSession,
   createDesktopVisualState,
@@ -58,6 +59,32 @@ describe("desktop shell commands", () => {
     expect(r.result["documentId"]).toBe("scene");
     expect(r.result["dataKeys"]).toEqual(["entities"]);
     expect(r.result["contentHash"]).toMatch(/^sha256:[0-9a-f]{64}$/);
+    expect(r.result["undoAvailability"]).toBe("unavailable");
+  });
+
+  it("reports persisted Undo availability to a fresh session", () => {
+    const applied = run([
+      "apply",
+      "--document",
+      "scene.json",
+      "--pointer",
+      "/data/entities/0/x",
+      "--value",
+      "7",
+    ]);
+    expect(applied.exitCode).toBe(DesktopExit.OK);
+
+    const relaunched = createDesktopSession({ cwd });
+    const status = relaunched.status("scene.json");
+    expect(status.ok).toBe(true);
+    if (!status.ok) throw new Error("applied document did not reopen");
+    expect(status.undoAvailability).toBe("available");
+
+    expect(relaunched.undo().ok).toBe(true);
+    const afterUndo = relaunched.status("scene.json");
+    expect(afterUndo.ok).toBe(true);
+    if (!afterUndo.ok) throw new Error("undone document did not reopen");
+    expect(afterUndo.undoAvailability).toBe("unavailable");
   });
 
   it("refuses status on a missing document without throwing", () => {
@@ -407,6 +434,15 @@ describe("desktop shell commands", () => {
       expect(parsed.result.tier).toBe("regular");
     });
 
+    it("refuses a synthetic outcome as an initial overlay", () => {
+      const r = runDesktopShell(["chrome", "--overlay", "outcome"]);
+      expect(r.exitCode).toBe(DesktopExit.USAGE);
+      expect(r.ok).toBe(false);
+      expect(r.result["message"]).toBe(
+        '--overlay must be one of: none, palette (got "outcome")',
+      );
+    });
+
     it("renders each mode with that mode's own dock tab", () => {
       for (const [mode, tab] of [
         ["build", "changes"],
@@ -514,18 +550,13 @@ describe("desktop shell commands", () => {
       );
     });
 
-    it("keeps the desktop command map and the palette's claims in step", () => {
-      // A palette row may only be driveable when it names a real command, and
-      // `chrome` itself must be one of them.
+    it("keeps the CLI vocabulary separate from the interactive palette", () => {
       expect(Object.hasOwn(DESKTOP_COMMANDS, "chrome")).toBe(true);
-      const driveable = desktopVisualView(createDesktopVisualState())
-        .overlay.paletteGroups.flatMap((group) => group.items)
-        .filter((item) => item.control.kind === "view");
-      expect(driveable.length).toBeGreaterThan(0);
-      for (const item of driveable) {
-        const verb = item.cli.split(" ").at(-1) ?? "";
-        expect(Object.hasOwn(DESKTOP_COMMANDS, verb)).toBe(true);
-      }
+      const palette = desktopVisualView(createDesktopVisualState())
+        .overlay.paletteGroups.flatMap((group) => group.items);
+      expect(palette.map((item) => item.commandId)).toEqual(
+        DESKTOP_INTERACTION_COMMANDS.map((command) => command.id),
+      );
     });
   });
 

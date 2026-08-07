@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   CHANGE_REVIEW_ROWS,
   DESKTOP_ASSISTANT_MODE_IDS,
-  DESKTOP_COMMANDS,
+  DESKTOP_INTERACTION_COMMANDS,
   DESKTOP_MENU_IDS,
   DESKTOP_MINIMUM_WINDOW,
   DESKTOP_MODE_IDS,
@@ -344,39 +344,37 @@ describe("desktop visual model — overlays and palette", () => {
     expect(state.overlay).toBeNull();
   });
 
-  it("marks a palette row driveable only when this shell has that command", () => {
+  it("keeps outcome UI outside constructible visual state", () => {
+    expect(
+      createDesktopVisualState({ overlay: "outcome" as never }).overlay,
+    ).toBeNull();
+    expect(
+      applyDesktopVisualAction(createDesktopVisualState(), {
+        type: "open-overlay",
+        overlay: "outcome" as never,
+      }).overlay,
+    ).toBeNull();
+  });
+
+  it("projects exactly the real desktop commands into the palette", () => {
     const view = desktopVisualView(createDesktopVisualState());
     const rows = view.overlay.paletteGroups.flatMap((group) => group.items);
-    const declared = PALETTE_GROUPS.flatMap((group) => group.items);
-    expect(rows).toHaveLength(declared.length);
-
-    for (const [index, row] of rows.entries()) {
-      const item = declared[index];
-      const driveable =
-        item?.desktopCommand !== null &&
-        item !== undefined &&
-        Object.hasOwn(DESKTOP_COMMANDS, item.desktopCommand ?? "");
-      expect(row.control.kind).toBe(driveable ? "view" : "inert");
-      if (!driveable) {
-        expect(row.control.refusal).toBe(DESKTOP_VISUAL_REFUSALS.verbNotOnDesktop);
-      }
-    }
+    expect(rows.map((row) => row.commandId)).toEqual(
+      DESKTOP_INTERACTION_COMMANDS.map((command) => command.id),
+    );
+    expect(rows.find((row) => row.commandId === "edit-undo")?.control).toMatchObject({
+      kind: "inert",
+      refusal: DESKTOP_VISUAL_REFUSALS.undoUnavailable,
+    });
+    expect(
+      rows.filter((row) => row.commandId !== "edit-undo").every((row) => row.control.kind === "live"),
+    ).toBe(true);
   });
 
-  it("keeps `sceneaxi project dev` inert — it is a CLI verb, not a desktop one", () => {
-    const rows = desktopVisualView(createDesktopVisualState()).overlay.paletteGroups
-      .flatMap((group) => group.items);
-    const dev = rows.find((row) => row.cli === "sceneaxi project dev");
-    expect(dev?.control.kind).toBe("inert");
-    expect(dev?.control.refusal).toBe(DESKTOP_VISUAL_REFUSALS.verbNotOnDesktop);
-  });
-
-  it("names a real CLI verb on every palette row", () => {
-    for (const group of PALETTE_GROUPS) {
-      for (const item of group.items) {
-        expect(item.cli.startsWith("sceneaxi ")).toBe(true);
-      }
-    }
+  it("omits command-set fiction from the palette", () => {
+    expect(PALETTE_GROUPS.flatMap((group) => group.items).map((item) => item.id)).toEqual(
+      DESKTOP_INTERACTION_COMMANDS.map((command) => command.id),
+    );
   });
 });
 
@@ -548,14 +546,15 @@ describe("desktop visual model — refusals and honesty", () => {
     }
   });
 
-  it("marks every application menu inert, with the menus' own reason", () => {
+  it("exposes only real desktop commands through File, Edit, and Run", () => {
     const view = desktopVisualView(createDesktopVisualState());
     expect(view.menus.map((menu) => menu.id)).toEqual([...DESKTOP_MENU_IDS]);
     for (const menu of view.menus) {
-      expect(menu.control.kind).toBe("inert");
-      // Not the viewport's reason: that one is about pixels, not commands.
-      expect(menu.control.refusal).toBe(DESKTOP_VISUAL_REFUSALS.verbNotOnDesktop);
+      expect(menu.control.kind).toBe("view");
     }
+    expect(view.menus.flatMap((menu) => menu.items).map((item) => item.commandId)).toEqual(
+      DESKTOP_INTERACTION_COMMANDS.map((command) => command.id),
+    );
   });
 
   it("never claims pixels, and says nothing about which renderer is final", () => {
@@ -635,7 +634,7 @@ describe("desktop visual model — refusals and honesty", () => {
     const state = drive([
       { type: "select-mode", mode: "compose" },
       { type: "decide-change", index: 2 },
-      { type: "open-overlay", overlay: "conflict" },
+      { type: "open-overlay", overlay: "palette" },
     ]);
     expect(JSON.stringify(desktopVisualView(state))).toBe(
       JSON.stringify(desktopVisualView(state)),

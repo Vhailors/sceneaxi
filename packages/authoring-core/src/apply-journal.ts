@@ -9,6 +9,7 @@
 import {
   readdirSync,
   readFileSync,
+  statSync,
 } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { join, resolve } from "node:path";
@@ -103,6 +104,7 @@ export function journalRecoveryPendingDiagnostics(): readonly ApplyDiagnostic[] 
 }
 
 const TRANSACTION_ID_RE = /^\d{13}-[0-9a-f]{16}$/;
+const CANONICAL_JOURNAL_NAME_RE = /^\d{13}-[0-9a-f]{16}\.json$/;
 const JOURNAL_KEYS = new Set([
   "schemaVersion",
   "kind",
@@ -148,6 +150,22 @@ function completionSequencePath(cwd: string): string {
   return join(journalDirectory(cwd), ".completion-sequence");
 }
 
+type ApplyUndoCandidate = Readonly<{
+  completionOrder: number;
+  documents: readonly Readonly<{
+    documentPath: string;
+    afterContentHash: string;
+  }>[];
+}>;
+
+let latestCompletedJournalCache:
+  | Readonly<{
+      directory: string;
+      signature: string;
+      entry: ApplyUndoCandidate | undefined;
+    }>
+  | undefined;
+
 export function beginApplyJournalTransaction(
   cwd: string,
   absoluteDocumentPaths: readonly string[],
@@ -172,6 +190,9 @@ function writeJournal(cwd: string, entry: ApplyJournalEntry): void {
     serializeJournal(entry),
     { token: `journal-${entry.transactionId}` },
   );
+  if (latestCompletedJournalCache?.directory === journalDirectory(cwd)) {
+    latestCompletedJournalCache = undefined;
+  }
 }
 
 function writeActiveJournal(cwd: string, entry: ApplyJournalEntry | null): void {
@@ -351,12 +372,14 @@ export function completeApplyJournal(
   if (entry.completionOrder === undefined) {
     throw new Error("Apply journal completion order was not reserved.");
   }
-  writeJournal(cwd, {
+  const completed = {
     ...entry,
-    state: "completed",
+    state: "completed" as const,
     completedAt: new Date().toISOString(),
-  });
+  };
+  writeJournal(cwd, completed);
   writeActiveJournal(cwd, null);
+  cacheLatestCompletedJournal(cwd, completed);
 }
 
 function reserveCompletionOrder(cwd: string): number {
@@ -441,9 +464,8 @@ function readJournals(
   if (!fileExists(dir)) return { ok: true, entries: [] };
 
   const entries: ApplyJournalEntry[] = [];
-  const canonicalName = /^\d{13}-[0-9a-f]{16}\.json$/;
   const names = readdirSync(dir)
-    .filter((entry) => canonicalName.test(entry))
+    .filter((entry) => CANONICAL_JOURNAL_NAME_RE.test(entry))
     .sort();
   for (const name of names) {
     const path = join(dir, name);
@@ -467,6 +489,123 @@ function readJournals(
     entries.push(parsed);
   }
   return { ok: true, entries };
+}
+
+export type ApplyUndoAvailability =
+  | "available"
+  | "unavailable"
+  | "recovery-pending";
+
+function latestCompletedJournal(
+  entries: readonly ApplyJournalEntry[],
+): ApplyJournalEntry | undefined {
+  return entries
+    .filter((entry) => entry.state === "completed")
+    .sort(
+      (a, b) => (b.completionOrder ?? 0) - (a.completionOrder ?? 0),
+    )[0];
+}
+
+function applyUndoCandidate(
+  entry: ApplyJournalEntry | undefined,
+): ApplyUndoCandidate | undefined {
+  if (entry?.completionOrder === undefined) return undefined;
+  return Object.freeze({
+    completionOrder: entry.completionOrder,
+    documents: Object.freeze(
+      entry.documents.map((document) =>
+        Object.freeze({
+          documentPath: document.documentPath,
+          afterContentHash: document.afterContentHash,
+        }),
+      ),
+    ),
+  });
+}
+
+function journalFileSignature(cwd: string): string | undefined {
+  const directory = journalDirectory(cwd);
+  if (!fileExists(directory)) return undefined;
+  return JSON.stringify(
+    readdirSync(directory)
+      .filter((name) => CANONICAL_JOURNAL_NAME_RE.test(name))
+      .sort()
+      .map((name) => {
+        const stat = statSync(join(directory, name), { bigint: true });
+        return [name, stat.mtimeNs.toString(), stat.size.toString()];
+      }),
+  );
+}
+
+function cacheLatestCompletedJournal(
+  cwd: string,
+  entry: ApplyJournalEntry | undefined,
+  capturedSignature?: string,
+): void {
+  const directory = journalDirectory(cwd);
+  let signature: string | undefined;
+  try {
+    signature = capturedSignature ?? journalFileSignature(cwd);
+  } catch {
+    signature = undefined;
+  }
+  if (signature === undefined) {
+    if (latestCompletedJournalCache?.directory === directory) {
+      latestCompletedJournalCache = undefined;
+    }
+    return;
+  }
+  latestCompletedJournalCache = Object.freeze({
+    directory,
+    signature,
+    entry: applyUndoCandidate(entry),
+  });
+}
+
+function readLatestCompletedJournal(
+  cwd: string,
+):
+  | { readonly ok: true; readonly entry: ApplyUndoCandidate | undefined }
+  | { readonly ok: false; readonly diagnostics: readonly ApplyDiagnostic[] } {
+  const directory = journalDirectory(cwd);
+  const signature = journalFileSignature(cwd);
+  if (signature === undefined) return { ok: true, entry: undefined };
+  if (
+    latestCompletedJournalCache?.directory === directory &&
+    latestCompletedJournalCache.signature === signature
+  ) {
+    return { ok: true, entry: latestCompletedJournalCache.entry };
+  }
+  const journals = readJournals(cwd);
+  if (!journals.ok) return journals;
+  const entry = latestCompletedJournal(journals.entries);
+  cacheLatestCompletedJournal(cwd, entry, signature);
+  return { ok: true, entry: applyUndoCandidate(entry) };
+}
+
+export function applyUndoAvailability(
+  input: { readonly cwd?: string } = {},
+): ApplyUndoAvailability {
+  try {
+    const cwd = input.cwd ?? process.cwd();
+    const active = readActiveJournal(cwd);
+    if (!active.ok) return "unavailable";
+    if (active.entry !== null) return "recovery-pending";
+    const latestJournal = readLatestCompletedJournal(cwd);
+    if (!latestJournal.ok) return "unavailable";
+    const latest = latestJournal.entry;
+    return latest !== undefined && latest.documents.every((document) => {
+      const path = canonicalPath(resolve(cwd, document.documentPath));
+      return (
+        fileExists(path) &&
+        contentHash(readFileSync(path, "utf8")) === document.afterContentHash
+      );
+    })
+      ? "available"
+      : "unavailable";
+  } catch {
+    return "unavailable";
+  }
 }
 
 function recoverJournalEntry(
@@ -852,12 +991,7 @@ export function undoLastApply(
     const journals = readJournals(cwd);
     if (!journals.ok) return journals;
 
-    const latest = journals.entries
-      .filter((entry) => entry.state === "completed")
-      .sort(
-        (a, b) =>
-          (b.completionOrder ?? 0) - (a.completionOrder ?? 0),
-      )[0];
+    const latest = latestCompletedJournal(journals.entries);
     if (latest === undefined) {
       return {
         ok: false,
@@ -869,6 +1003,11 @@ export function undoLastApply(
         ],
       };
     }
+    const nextLatest = latestCompletedJournal(
+      journals.entries.filter(
+        (entry) => entry.transactionId !== latest.transactionId,
+      ),
+    );
 
     const plans = latest.documents.map((document) => ({
       path: canonicalPath(resolve(cwd, document.documentPath)),
@@ -954,6 +1093,7 @@ export function undoLastApply(
       try {
         writeJournal(cwd, { ...undoing, state: "undone" });
         writeActiveJournal(cwd, null);
+        cacheLatestCompletedJournal(cwd, nextLatest);
       } catch {
         return {
           ok: true,

@@ -141,6 +141,14 @@ export {
 } from "./visual-model.js";
 
 export {
+  DESKTOP_INTERACTION_COMMANDS,
+  DESKTOP_MENU_LABELS,
+  DESKTOP_PALETTE_SHORTCUT,
+  type DesktopInteractionCommand,
+  type DesktopInteractionCommandId,
+} from "./interaction-commands.js";
+
+export {
   escapeHtml,
   renderDesktopChrome,
   type DesktopChromeOptions,

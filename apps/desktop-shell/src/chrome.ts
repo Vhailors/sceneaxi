@@ -58,6 +58,10 @@ import {
   desktopWebStageDecision,
 } from "./product-loop.js";
 import {
+  DESKTOP_INTERACTION_COMMANDS,
+  DESKTOP_PALETTE_SHORTCUT,
+} from "./interaction-commands.js";
+import {
   ACCENT,
   AXIS,
   INERT,
@@ -345,27 +349,43 @@ function titleBar(view: DesktopVisualView): string {
     )
     .join("");
 
+  const menus = view.menus
+    .map(
+      (menu) => `<div class="menu-root" data-menu-root="${escapeHtml(menu.id)}">${button(
+        menu.control,
+        escapeHtml(menu.label),
+        "menu-item",
+        ` data-menu-trigger="${escapeHtml(menu.id)}" aria-haspopup="menu" aria-expanded="false"`,
+      )}<div class="menu-panel" id="menu-panel-${escapeHtml(menu.id)}" role="menu" hidden>${menu.items
+        .map((item) =>
+          button(
+            item.control,
+            `<span>${escapeHtml(item.label)}</span>${item.accelerator === "" ? "" : `<kbd>${escapeHtml(item.accelerator)}</kbd>`}`,
+            "menu-command",
+            ` role="menuitem" data-command="${escapeHtml(item.commandId)}"`,
+          ),
+        )
+        .join("")}</div></div>`,
+    )
+    .join("");
+
   return `
 <header class="title-bar">
   <div class="window-dots" aria-hidden="true"><i></i><i></i><i></i></div>
-  <nav class="menu-bar" aria-label="Application menu">
-    ${view.menus
-      .map((menu) => button(menu.control, escapeHtml(menu.label), "menu-item"))
-      .join("")}
-  </nav>
+  <nav class="menu-bar" aria-label="Application menu">${menus}</nav>
   <div class="profile-switch" role="group" aria-label="Profile">${profiles}</div>
   <div class="title-centre">
     <span class="project-pill" data-project-state="closed"><span class="dot dot-ok" aria-hidden="true"></span><span data-project-status>No project selected</span></span>
   </div>
   <div class="title-actions">
-    ${button(view.product.open, "Reload", "ghost-button", ` data-product-action data-action="project-open"`)}
-    ${button(view.product.save, "Save", "primary-button", ` data-product-action data-action="project-save"`)}
+    ${button(view.product.open, "Reload", "ghost-button", ` data-product-action data-action="document-reload"`)}
+    ${button(view.product.save, "Save", "primary-button", ` data-product-action data-command="project-save"`)}
     ${drawers}
     ${button(
       view.overlay.search,
-      `${escapeHtml(view.overlay.search.label)} <kbd>⌘K</kbd>`,
+      `${escapeHtml(view.overlay.search.label)} <kbd>${escapeHtml(DESKTOP_PALETTE_SHORTCUT.accelerator)}</kbd>`,
       "ghost-button",
-      ` data-action="overlay" data-value="palette"`,
+      ` data-command="${escapeHtml(DESKTOP_PALETTE_SHORTCUT.id)}"`,
     )}
     ${button(
       view.assistant.toggle,
@@ -426,8 +446,8 @@ function leftDock(view: DesktopVisualView): string {
   <div class="project-launcher" data-project-launcher>
     <p>No project is selected. New Project creates the starter only after you choose its directory.</p>
     <div class="project-lifecycle-actions">
-      ${button(view.product.newProject, "New Project", "primary-button", ` data-product-action data-action="project-new-root"`)}
-      ${button(view.product.openProjectRoot, "Open Project", "ghost-button", ` data-product-action data-action="project-open-root"`)}
+      ${button(view.product.newProject, "New Project", "primary-button", ` data-product-action data-command="project-new"`)}
+      ${button(view.product.openProjectRoot, "Open Project", "ghost-button", ` data-product-action data-command="project-open"`)}
     </div>
     <label class="project-recent-label" for="project-recent-select">Recent</label>
     ${recentProjectSelect(view.product.recentProject)}
@@ -483,7 +503,7 @@ function profileSurfaces(view: DesktopVisualView): string {
     })
     .join("");
   return `<div class="profile-surfaces">${surfaces}<div class="profile-runtime-actions">
-  ${button(view.product.play, "▶ Play composed scene", "primary-button", ` data-product-action data-action="scene-play"`)}
+  ${button(view.product.play, "▶ Play composed scene", "primary-button", ` data-product-action data-command="run-play"`)}
   <p class="runtime-report" data-product-run-report aria-live="polite">Ready to run through the desktop host.</p>
 </div></div>`;
 }
@@ -786,7 +806,7 @@ function statusBar(view: DesktopVisualView): string {
         shortcut.control,
         escapeHtml(shortcut.label),
         "state-shortcut",
-        ` data-action="overlay" data-value="${escapeHtml(shortcut.overlay)}"`,
+        ` data-command="${escapeHtml(shortcut.commandId)}"`,
       ),
     )
     .join("")}
@@ -802,9 +822,9 @@ function overlays(view: DesktopVisualView): string {
           (item) =>
             `<li>${button(
               item.control,
-              `<span class="palette-name">${escapeHtml(item.name)}</span><code class="palette-cli">${escapeHtml(item.cli)}</code>${item.shortcut === "" ? "" : `<kbd>${escapeHtml(item.shortcut)}</kbd>`}`,
+              `<span class="palette-name">${escapeHtml(item.name)}</span>${item.shortcut === "" ? "" : `<kbd>${escapeHtml(item.shortcut)}</kbd>`}`,
               "palette-item",
-              ` data-action="overlay" data-value="none"`,
+              ` data-command="${escapeHtml(item.commandId)}"`,
             )}</li>`,
         )
         .join("")}</ul></li>`,
@@ -815,9 +835,6 @@ function overlays(view: DesktopVisualView): string {
   // bytes, so a screenshot of one state needs no script to have run.
   const shown = (id: string): string => (view.state.overlay === id ? "" : " hidden");
 
-  // One modelled control per dismiss button, so each of the four carries its own
-  // id and kind instead of four elements sharing a control that can only be
-  // rendered once.
   const dismissals = (overlay: string): string =>
     view.overlay.dismissals
       .filter((dismissal) => dismissal.overlay === overlay)
@@ -835,29 +852,17 @@ function overlays(view: DesktopVisualView): string {
 <div class="overlay-layer" data-overlay-host>
   <div class="overlay" data-overlay="palette" role="dialog" aria-modal="true" aria-label="Command palette"${shown("palette")}>
     <div class="overlay-card overlay-palette">
-      <div class="overlay-head"><span class="palette-search">Search commands</span><kbd>ESC</kbd></div>
+      <div class="overlay-head"><h2>Commands</h2><kbd>ESC</kbd></div>
       <ul class="palette-list">${palette}</ul>
-      <p class="overlay-foot">Everything here is also a CLI verb — the editor and the agent drive the same protocol. Rows this shell has no command for stay inert and say so.</p>
+      <p class="overlay-foot">Every row invokes the same desktop command as its menu item and accelerator.</p>
     </div>
   </div>
 
-  <div class="overlay" data-overlay="refused" role="dialog" aria-modal="true" aria-labelledby="refused-title"${shown("refused")}>
+  <div class="overlay" data-overlay="outcome" role="dialog" aria-modal="true" aria-labelledby="outcome-title" hidden>
     <div class="overlay-card overlay-refused">
-      <div class="overlay-head"><span class="overlay-mark mark-refuse" aria-hidden="true">!</span><h2 id="refused-title">Some of what you asked for is missing</h2></div>
-      <p class="overlay-body">A refusal names every item it could not build and adds nothing to the scene. This surface has no sculpt run bound to it, so the list below is the shape of that refusal, not a result.</p>
-      <ul class="refuse-list">
-        <li><span class="mark mark-refuse">✕</span>Requested detail not visible in the supplied references</li>
-        <li><span class="mark mark-refuse">✕</span>Requested wear clamped away by the hard-surface class</li>
-      </ul>
-      <div class="overlay-actions">${dismissals("refused")}</div>
-    </div>
-  </div>
-
-  <div class="overlay" data-overlay="conflict" role="dialog" aria-modal="true" aria-labelledby="conflict-title"${shown("conflict")}>
-    <div class="overlay-card overlay-conflict">
-      <div class="overlay-head"><span class="overlay-mark mark-accent" aria-hidden="true">↺</span><h2 id="conflict-title">The document changed while you were reviewing</h2></div>
-      <p class="overlay-body">A proposal is bound to the content hash it was written against. When that hash moves, apply refuses all-or-nothing rather than writing a partial edit — the same conflict the CLI reports.</p>
-      <div class="overlay-actions">${dismissals("conflict")}</div>
+      <div class="overlay-head"><span class="overlay-mark mark-refuse" aria-hidden="true">!</span><h2 id="outcome-title" data-outcome-title></h2></div>
+      <p class="overlay-body"><code data-outcome-code></code><br><span data-outcome-message></span></p>
+      <div class="overlay-actions">${dismissals("outcome")}</div>
     </div>
   </div>
 </div>`;
@@ -916,7 +921,14 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .window-dots{display:flex;gap:7px}
 .window-dots i{width:11px;height:11px;border-radius:50%;background:${LINE.raised}}
 .menu-bar{display:flex;gap:1px}
+.menu-root{position:relative}
 .menu-item{font-size:12px;color:var(--text-3);padding:0 8px;height:22px;border-radius:3px}
+.menu-item[aria-expanded="true"]{background:var(--hover);color:var(--text)}
+.menu-panel{position:absolute;left:0;top:25px;z-index:45;min-width:220px;padding:5px;background:var(--raised);border:1px solid var(--line-raised);border-radius:6px;box-shadow:0 18px 45px -16px ${SCRIM.shadow}}
+.menu-command{display:flex;align-items:center;justify-content:space-between;gap:22px;width:100%;padding:7px 9px;border-radius:4px;color:var(--text-2);font-size:12px;text-align:left}
+.menu-command:hover,.menu-command:focus-visible{background:var(--hover);color:var(--text)}
+.menu-command.is-inert:hover,.menu-command.is-inert:focus-visible{background:none;color:var(--inert)}
+.menu-command kbd{font-size:9px;color:var(--dim)}
 .profile-switch{display:flex;gap:2px;padding:2px;background:var(--well);border:1px solid var(--line-control);border-radius:5px}
 .profile-chip{display:flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:3px;font-size:11px;color:var(--dim);white-space:nowrap}
 .profile-chip[aria-pressed="true"]{background:var(--hover);color:var(--text);font-weight:600}
@@ -1168,25 +1180,19 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .overlay{position:absolute;inset:0;background:${SCRIM.overlay};display:grid;place-items:center;z-index:50;padding:24px}
 .overlay-card{width:min(620px,100%);max-height:80%;overflow:auto;background:var(--overlay);border:1px solid var(--line-raised);border-radius:9px;box-shadow:0 40px 90px -20px ${SCRIM.shadow};animation:rise .16s ease-out}
 .overlay-card.overlay-refused{border-color:${SIGNAL.refuseLine}}
-.overlay-card.overlay-conflict{border-color:${ACCENT.line}}
 .overlay-head{display:flex;align-items:center;gap:12px;padding:15px 18px;border-bottom:1px solid var(--line)}
 .overlay-head h2{margin:0;font-size:15px;font-weight:600}
 .overlay-mark{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;flex:none}
 .mark-refuse{background:${SIGNAL.refuseSurface};border:1px solid ${SIGNAL.refuseLine};color:var(--refuse)}
-.mark-accent{background:${ACCENT.surface};border:1px solid ${ACCENT.line};color:var(--accent)}
 .overlay-body{margin:0;padding:15px 18px;font-size:12px;line-height:1.6;color:var(--text-2)}
-.refuse-list{list-style:none;margin:0;padding:0 18px 15px;display:flex;flex-direction:column;gap:9px;font-size:12px;color:var(--text-2)}
-.refuse-list .mark{margin-right:10px;color:var(--refuse)}
 .overlay-actions{display:flex;gap:9px;justify-content:flex-end;padding:13px 18px;background:var(--well);border-top:1px solid var(--line)}
 .overlay-actions .primary-button,.overlay-actions .ghost-button{height:31px;padding:0 14px;font-size:12px}
-.palette-search{flex:1;font-size:15px}
 .palette-list{list-style:none;margin:0;padding:6px 0;max-height:352px;overflow-y:auto}
 .palette-group h3{margin:0;padding:8px 16px 4px;font-family:var(--mono);font-size:9px;font-weight:400;letter-spacing:.14em;color:var(--faint)}
 .palette-group ul{list-style:none;margin:0;padding:0}
 .palette-item{display:flex;align-items:center;gap:12px;padding:8px 16px;width:100%;text-align:left}
 .palette-item:hover{background:var(--hover)}
 .palette-name{flex:1;font-size:13px}
-.palette-cli{color:var(--faint)}
 .palette-item kbd{font-size:9px;color:var(--dim);border:1px solid var(--line-control);border-radius:3px;padding:2px 5px}
 .overlay-foot{margin:0;padding:10px 16px;background:var(--well);border-top:1px solid var(--line);font-size:10.5px;color:var(--dim)}
 
@@ -1345,6 +1351,11 @@ function script(view: DesktopVisualView): string {
     ),
     /** The tier boundary the stylesheet undocks the assistant at. */
     assistantDrawerQuery: belowTier("regular"),
+    commands: DESKTOP_INTERACTION_COMMANDS,
+    paletteShortcut: DESKTOP_PALETTE_SHORTCUT,
+    commandRefusals: {
+      undoUnavailable: DESKTOP_VISUAL_REFUSALS.undoUnavailable,
+    },
     product: {
       documentPath: view.product.surface.project.activeFile,
       viewportPlayEvent: DESKTOP_VIEWPORT_PLAY_EVENT,
@@ -1378,6 +1389,7 @@ if (shell) {
   let editableScene = null;
   let selectedSceneEntityId = null;
   let sceneRefusalText = null;
+  let undoAvailability = 'unavailable';
   // One product request at a time. Every live control reads \`projectData\` before
   // its first await, so two overlapping clicks would each build a proposal from
   // the same pre-edit document and the second would replace the first in the
@@ -1499,6 +1511,7 @@ if (shell) {
       el.textContent = 'No viewport frame was acknowledged for the latest Play request.';
     });
     productStatus('refused', text);
+    showOutcome('Play refused', code, detail || 'The composed scene was not played.');
   };
 
   const desktopPort = () => {
@@ -1609,16 +1622,19 @@ if (shell) {
   const chooseProject = async (action) => {
     if (projectRecovering) {
       productStatus('refused', 'Project change refused · ' + T.product.refusals.recoveryPending);
+      showOutcome('Project change refused', T.product.refusals.recoveryPending, 'Resolve the pending Save recovery before changing project roots.');
       return;
     }
     if (projectDirty) {
       productStatus('refused', 'Project change refused · ' + T.product.refusals.profileSwitchDirty);
+      showOutcome('Project change refused', T.product.refusals.profileSwitchDirty, 'Save or reload the staged proposal before changing project roots.');
       return;
     }
     const recent = shell.querySelector('#project-recent-select');
     const root = recent && typeof recent.value === 'string' ? recent.value : '';
     if ((action === 'open-recent' || action === 'remove-recent') && root.length === 0) {
       productStatus('refused', 'Recent project refused · no validated recent root selected');
+      showOutcome('Recent project refused', T.product.refusals.runtimeRequestRefused, 'Choose a validated recent project first.');
       return;
     }
     productStatus('opening', action === 'choose-new' ? 'Choose a directory for the explicit starter project…' : 'Choose a project directory…');
@@ -1628,12 +1644,14 @@ if (shell) {
       ...((action === 'open-recent' || action === 'remove-recent') ? { root } : {}),
     });
     if (response === null || !response.ok) {
-      productStatus('refused', 'Project lifecycle refused · ' +
-        (response === null ? T.product.refusals.runtimeUnavailable : response.reason));
+      const code = response === null ? T.product.refusals.runtimeUnavailable : response.reason;
+      productStatus('refused', 'Project lifecycle refused · ' + code);
+      showOutcome('Project lifecycle refused', code, response?.message || 'The project root was not changed.');
       return;
     }
     if (!applyProjectLifecycleStatus(response.data?.status)) {
       productStatus('refused', 'Project lifecycle refused · ' + T.product.refusals.runtimeRequestRefused);
+      showOutcome('Project lifecycle refused', T.product.refusals.runtimeRequestRefused, 'The host returned no valid project status.');
       return;
     }
     if (response.data.outcome === 'cancelled') {
@@ -1645,6 +1663,7 @@ if (shell) {
     projectDirty = false;
     projectRecovering = false;
     clearSceneProperty();
+    undoAvailability = 'unavailable';
     if (response.data.outcome === 'removed') {
       productStatus(activeProject === null ? 'closed' : 'open', 'Recent project removed · active project unchanged');
       return;
@@ -1701,6 +1720,7 @@ if (shell) {
     projectContentHash = null;
     projectDirty = false;
     projectRecovering = false;
+    undoAvailability = 'unavailable';
     if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' || status.data === null || typeof status.contentHash !== 'string') {
       clearSceneProperty();
       productStatus('refused', 'Recovery reset · ' + diagnostic + ' · ' + (reason || T.product.refusals.documentDataInvalid));
@@ -1709,6 +1729,10 @@ if (shell) {
     projectData = status.data;
     projectContentHash = status.contentHash;
     syncSceneProperties(status);
+    undoAvailability = status.undoAvailability === 'available' || status.undoAvailability === 'recovery-pending'
+      ? status.undoAvailability
+      : 'unavailable';
+    syncCommandAvailability();
     productStatus('open', withSceneRefusal(T.product.documentPath + ' · re-opened after ' + diagnostic + ' · ' + status.documentId));
     return true;
   };
@@ -1737,6 +1761,7 @@ if (shell) {
   const openProject = async () => {
     if (activeProject === null && projectPort() !== null) {
       productStatus('refused', 'Open refused · no project root selected');
+      showOutcome('Open refused', T.product.refusals.runtimeRequestRefused, 'Choose New Project or Open Project first.');
       return false;
     }
     if (projectRecovering) return restartProject('recovery-pending');
@@ -1750,7 +1775,9 @@ if (shell) {
     const status = response?.ok ? response.data : null;
     if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' || status.data === null || typeof status.contentHash !== 'string') {
       clearSceneProperty();
-      productStatus('refused', 'Open refused · ' + (reason || T.product.refusals.documentDataInvalid));
+      const code = reason || T.product.refusals.documentDataInvalid;
+      productStatus('refused', 'Open refused · ' + code);
+      showOutcome('Open refused', code, 'The active Scene Document was not opened.');
       return false;
     }
     projectData = status.data;
@@ -1758,6 +1785,10 @@ if (shell) {
     syncSceneProperties(status);
     projectDirty = false;
     projectRecovering = false;
+    undoAvailability = status.undoAvailability === 'available' || status.undoAvailability === 'recovery-pending'
+      ? status.undoAvailability
+      : 'unavailable';
+    syncCommandAvailability();
     productStatus('open', withSceneRefusal(T.product.documentPath + ' · open · ' + status.documentId));
     return true;
   };
@@ -1868,6 +1899,8 @@ if (shell) {
       projectContentHash = null;
       projectDirty = false;
       projectRecovering = false;
+      undoAvailability = 'available';
+      syncCommandAvailability();
       // The written document, not the diff of how it got there: the applied
       // proposal is spent, so the review panel goes with it while the panel
       // keeps showing the value the next Play will mount.
@@ -1895,6 +1928,54 @@ if (shell) {
     if (applySaveSnapshot(snapshot)) return;
     if (recovering && snapshot && snapshot.journalRecoveryPending !== true) projectRecovering = false;
     productStatus(projectRecovering ? 'recovering' : 'refused', 'Save refused · ' + (reason || T.product.refusals.applyNotCompleted));
+    showOutcome('Save refused', reason || T.product.refusals.applyNotCompleted, 'No staged document change was reported as saved.');
+  };
+
+  // The host's undo clears its own proposal along with the apply it reverses,
+  // so a staged edit would go with it. Every other path here that can lose one
+  // either refuses by name or discards it explicitly; this one refuses.
+  const undoProject = async () => {
+    if (undoAvailability !== 'available') return;
+    if (projectDirty) {
+      const code = T.product.refusals.undoStagedProposal;
+      productStatus('refused', 'Undo refused · ' + code);
+      showOutcome('Undo refused', code, 'Save the staged proposal or re-open the project to discard it before undoing the last Save.');
+      return;
+    }
+    productStatus('undoing', T.product.documentPath + ' · undoing last completed Save…');
+    const response = await runtimeRequest({ action: 'authoring', payload: { op: 'undo' } });
+    const reason = responseReason(response);
+    const result = response?.ok ? response.data : null;
+    if (reason !== null || !result || result.ok !== true || !Array.isArray(result.restoredPaths)) {
+      const code = reason || T.commandRefusals.undoUnavailable;
+      productStatus('refused', 'Undo refused · ' + code);
+      showOutcome('Undo refused', code, 'The host did not restore a completed Save.');
+      return;
+    }
+    projectData = null;
+    projectContentHash = null;
+    projectDirty = false;
+    projectRecovering = false;
+    const reopened = await openProject();
+    if (reopened) {
+      productStatus('open', 'Undid last Save · restored ' + result.restoredPaths.join(', '));
+    }
+  };
+
+  // Every element that can start a product action, whichever surface it sits on:
+  // the same command reachable from a menu, a palette row, and a title-bar
+  // button is one operation, so all three carry the in-flight refusal, not only
+  // the one that happens to be marked as a product action. The palette opener is
+  // excluded because opening the palette is not a product action and stays
+  // available while one is outstanding.
+  const productActionControls = () => {
+    const seen = [];
+    q('[data-product-action]').forEach((el) => { if (!seen.includes(el)) seen.push(el); });
+    q('[data-command]').forEach((el) => {
+      if (el.dataset.command === T.paletteShortcut.id) return;
+      if (!seen.includes(el)) seen.push(el);
+    });
+    return seen;
   };
 
   // Serialize the product loop: the host holds one session and one proposal, so
@@ -1904,7 +1985,7 @@ if (shell) {
   const productAction = async (run) => {
     if (inFlight) return;
     inFlight = true;
-    q('[data-product-action]').forEach((el) => {
+    productActionControls().forEach((el) => {
       el.dataset.busy = 'true';
       setRefusal(el, T.product.refusals.requestInFlight);
     });
@@ -1914,11 +1995,12 @@ if (shell) {
       inFlight = false;
       // Cleared unconditionally, then re-decided: a control whose id the profile
       // table does not carry must not stay disabled because a request finished.
-      q('[data-product-action]').forEach((el) => {
+      productActionControls().forEach((el) => {
         delete el.dataset.busy;
         setRefusal(el, null);
         applyControl(el);
       });
+      syncCommandAvailability();
     }
   };
 
@@ -2074,6 +2156,11 @@ if (shell) {
   // control that opened it gets focus back on close.
   let overlayReturn = null;
 
+  // Every button in the dialog, inert ones included: an inert control keeps its
+  // native focus stop, so a trap that dropped it would hand Tab to an element it
+  // does not contain and then bounce focus back to the first stop, leaving the
+  // rows after it unreachable — and on a profile where every row is inert it
+  // would contain nothing at all.
   const overlayStops = () => {
     const open = shell.querySelector('.overlay:not([hidden])');
     return open === null ? [] : Array.from(open.querySelectorAll('button'));
@@ -2094,7 +2181,102 @@ if (shell) {
       return;
     }
     const stops = overlayStops();
-    if (stops.length > 0) stops[0].focus();
+    if (stops.length === 0) return;
+    // Containment covers every stop; the opening move prefers one that can act.
+    const entry = stops.find((el) => el.getAttribute('aria-disabled') !== 'true');
+    (entry || stops[0]).focus();
+  };
+
+  // The legend row the document already renders for every registry code is the
+  // one copy of that sentence, so the dialog cannot name a reason the disclosure
+  // explains differently.
+  const refusalMessage = (code) => {
+    const row = shell.querySelector('#refusal-' + code);
+    if (row === null) return '';
+    const text = String(row.textContent);
+    return (text.startsWith(code) ? text.slice(String(code).length) : text).trim();
+  };
+
+  // A refused command is not a project state: the operation it collided with may
+  // still be running, so this names the reason in the outcome dialog and leaves
+  // the project pill and its status reporting the project.
+  const commandRefusal = (code) => {
+    showOutcome(
+      'Command refused',
+      code,
+      refusalMessage(code) || 'This desktop refused the requested command.',
+    );
+  };
+
+  const showOutcome = (title, code, message) => {
+    q('[data-outcome-title]').forEach((el) => { el.textContent = String(title); });
+    q('[data-outcome-code]').forEach((el) => { el.textContent = String(code); });
+    q('[data-outcome-message]').forEach((el) => { el.textContent = String(message); });
+    setOverlay('outcome');
+  };
+
+  const menuTrigger = (panel) => {
+    const root = panel.closest('[data-menu-root]');
+    return root === null ? null : root.querySelector('[data-menu-trigger]');
+  };
+
+  const hideMenus = () => {
+    q('.menu-panel').forEach((panel) => { panel.hidden = true; });
+    q('[data-menu-trigger]').forEach((trigger) => trigger.setAttribute('aria-expanded', 'false'));
+  };
+
+  // Hiding the panel under the caret would drop focus to the body and restart
+  // the Tab order at the top of the document, so the menu hands focus back to
+  // the trigger that owns it — the same return the overlay makes. Only the
+  // paths that dismiss a menu while focus is still inside it restore; a
+  // dismissal caused by focus leaving must not pull it back.
+  const closeMenus = () => {
+    const active = document.activeElement;
+    let restore = null;
+    q('.menu-panel').forEach((panel) => {
+      if (!panel.hidden && active !== null && panel.contains(active)) {
+        restore = menuTrigger(panel);
+      }
+    });
+    hideMenus();
+    if (restore !== null && typeof restore.focus === 'function') restore.focus();
+  };
+
+  // The panel declares role="menu", so the arrow keys have to move between its
+  // items for that role to be true. The items keep their plain Tab stop as
+  // well: an inert control that stays findable is this surface's own rule.
+  const moveMenuItem = (event) => {
+    const from = event.target instanceof Element ? event.target.closest('[role="menuitem"]') : null;
+    if (from === null) return false;
+    const panel = from.closest('.menu-panel');
+    if (panel === null || panel.hidden) return false;
+    const items = Array.from(panel.querySelectorAll('[role="menuitem"]'));
+    const at = items.indexOf(from);
+    if (at === -1) return false;
+    let next = -1;
+    if (event.key === 'ArrowDown') next = (at + 1) % items.length;
+    else if (event.key === 'ArrowUp') next = (at - 1 + items.length) % items.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = items.length - 1;
+    else return false;
+    event.preventDefault();
+    const target = items[next];
+    if (target && typeof target.focus === 'function') target.focus();
+    return true;
+  };
+
+  const toggleMenu = (id) => {
+    const trigger = shell.querySelector('[data-menu-trigger="' + id + '"]');
+    const panel = shell.querySelector('#menu-panel-' + id);
+    if (!trigger || !panel) return;
+    const open = panel.hidden;
+    closeMenus();
+    panel.hidden = !open;
+    trigger.setAttribute('aria-expanded', String(open));
+    if (open) {
+      const first = panel.querySelector('[role="menuitem"]:not([aria-disabled="true"])');
+      if (first && typeof first.focus === 'function') first.focus();
+    }
   };
 
   // Below the regular tier the assistant is a drawer that starts closed, so the
@@ -2154,6 +2336,27 @@ if (shell) {
 
   const applyProfileControls = () => q('[data-kind]').forEach(applyControl);
 
+  const syncCommandAvailability = () => {
+    q('[data-command]').forEach((el) => {
+      if (el.dataset.command !== 'edit-undo') return;
+      applyControl(el);
+      if (shell.dataset.profile !== 'kids') {
+        const available = !inFlight && undoAvailability === 'available';
+        el.dataset.kind = available ? 'live' : 'inert';
+        setRefusal(
+          el,
+          available
+            ? null
+            : inFlight
+              ? T.product.refusals.requestInFlight
+              : undoAvailability === 'recovery-pending'
+              ? T.product.refusals.recoveryPending
+              : T.commandRefusals.undoUnavailable,
+        );
+      }
+    });
+  };
+
   // A drawer opened before the switch must not keep announcing itself expanded
   // over a region the new profile's refusal removes. Read after the controls are
   // applied, so the toggle the profile just made inert is the one that closes —
@@ -2175,6 +2378,7 @@ if (shell) {
     const pin = T.pinByProfile[id];
     if (pin) q('[data-profile-pin]').forEach((el) => { el.textContent = pin; });
     applyProfileControls();
+    syncCommandAvailability();
     closeRefusedDrawers();
     // The column the profile restores is still a drawer in the tiers that undock
     // it, and leaving a refusal is not opening a drawer.
@@ -2192,7 +2396,49 @@ if (shell) {
     }
   });
 
+  const commandHandlers = Object.freeze({
+    'project-new': () => chooseProject('choose-new'),
+    'project-open': () => chooseProject('choose-open'),
+    'project-save': saveProject,
+    'edit-undo': undoProject,
+    'run-play': playScene,
+  });
+
+  const executeCommand = (id) => {
+    closeMenus();
+    if (id === T.paletteShortcut.id) {
+      setOverlay('palette');
+      return;
+    }
+    const handler = commandHandlers[id];
+    if (typeof handler !== 'function') return;
+    // Read the state, not one element's attributes: an accelerator reaches this
+    // without ever touching a control, so a second press during a round trip has
+    // to name the refusal instead of disappearing.
+    if (inFlight) {
+      commandRefusal(T.product.refusals.requestInFlight);
+      return;
+    }
+    const representative = q('[data-command]').find((el) => el.dataset.command === id);
+    if (representative?.getAttribute('aria-disabled') === 'true') {
+      commandRefusal(representative.dataset.refusal || T.product.refusals.runtimeRequestRefused);
+      return;
+    }
+    setOverlay('none');
+    void productAction(handler);
+  };
+
   shell.addEventListener('click', (event) => {
+    const command = event.target instanceof Element ? event.target.closest('[data-command]') : null;
+    if (command && command.getAttribute('aria-disabled') !== 'true') {
+      executeCommand(command.dataset.command);
+      return;
+    }
+    const menu = event.target instanceof Element ? event.target.closest('[data-menu-trigger]') : null;
+    if (menu && menu.getAttribute('aria-disabled') !== 'true') {
+      toggleMenu(menu.dataset.menuTrigger);
+      return;
+    }
     const el = event.target instanceof Element ? event.target.closest('[data-action]') : null;
     if (!el || el.getAttribute('aria-disabled') === 'true') return;
     const action = el.dataset.action;
@@ -2204,13 +2450,9 @@ if (shell) {
       el.setAttribute('aria-expanded', String(open));
       return;
     }
-    if (action === 'project-new-root') void productAction(() => chooseProject('choose-new'));
-    else if (action === 'project-open-root') void productAction(() => chooseProject('choose-open'));
-    else if (action === 'project-open-recent') void productAction(() => chooseProject('open-recent'));
+    if (action === 'project-open-recent') void productAction(() => chooseProject('open-recent'));
     else if (action === 'project-remove-recent') void productAction(() => chooseProject('remove-recent'));
-    else if (action === 'project-open') void productAction(openProject);
-    else if (action === 'project-save') void productAction(saveProject);
-    else if (action === 'scene-play') void productAction(playScene);
+    else if (action === 'document-reload') void productAction(openProject);
     else if (action === 'scene-entity-select' && value) {
       if (showSceneProperty(value) && shell.dataset.mode !== 'build') showModePanels('build');
     }
@@ -2253,11 +2495,72 @@ if (shell) {
     }
   });
 
+  // Tab is deliberately not captured inside a menu — every item keeps its plain
+  // focus stop — so leaving the menu root by keyboard is the one dismissal the
+  // click and Escape paths cannot see. Focus is already elsewhere here, so the
+  // panel is hidden without the trigger return.
+  shell.addEventListener('focusout', (event) => {
+    const root = event.target instanceof Element ? event.target.closest('[data-menu-root]') : null;
+    if (root === null) return;
+    const panel = root.querySelector('.menu-panel');
+    if (panel === null || panel.hidden) return;
+    const next = event.relatedTarget;
+    if (next instanceof Element && root.contains(next)) return;
+    hideMenus();
+  });
+
+  // A dropped-down menu floats over the surface below it, so any click that is
+  // not inside a menu closes it — including one outside the shell entirely,
+  // which is why this listens on the document.
+  document.addEventListener('click', (event) => {
+    const root = event.target instanceof Element ? event.target.closest('[data-menu-root]') : null;
+    if (root === null) closeMenus();
+  });
+
+  const isTextEntryTarget = (target) => {
+    if (!(target instanceof Element)) return false;
+    if (target.closest('input, textarea') !== null) return true;
+    if (target instanceof HTMLElement && target.isContentEditable) return true;
+    let current = target;
+    while (current !== null) {
+      const attribute = current.getAttribute('contenteditable');
+      if (attribute !== null) {
+        const value = attribute.trim().toLowerCase();
+        if (value === 'false') return false;
+        if (value === '' || value === 'true' || value === 'plaintext-only') return true;
+      }
+      current = current.parentElement;
+    }
+    return false;
+  };
+
   // On the document, not the shell: once focus is inside a dialog the shell is
   // still the ancestor, but a restored or lost focus must not silently drop the
   // Escape key, and the trap has to see every Tab.
   document.addEventListener('keydown', (event) => {
-    if (shell.dataset.overlay === 'none') { moveTab(event); return; }
+    // Shift is not part of any declared accelerator, so Ctrl+Shift+Z must not be
+    // Undo: the menus advertise exactly five chords and these are those five.
+    const modified = (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey;
+    if (modified) {
+      const key = String(event.key).toLowerCase();
+      const command = key === T.paletteShortcut.key
+        ? T.paletteShortcut
+        : T.commands.find((candidate) => candidate.key === key);
+      if (command) {
+        const textEntry = isTextEntryTarget(event.target);
+        if (!textEntry || command.allowInTextEntry) {
+          event.preventDefault();
+          executeCommand(command.id);
+          return;
+        }
+      }
+    }
+    if (shell.dataset.overlay === 'none') {
+      if (event.key === 'Escape') { closeMenus(); return; }
+      if (moveMenuItem(event)) return;
+      moveTab(event);
+      return;
+    }
     if (event.key === 'Escape') { setOverlay('none'); return; }
     if (event.key !== 'Tab') return;
     const stops = overlayStops();
@@ -2274,6 +2577,7 @@ if (shell) {
 
   syncChanges();
   syncAssistantTier();
+  syncCommandAvailability();
   void syncProjectLifecycle();
 }
 `;

@@ -13,9 +13,11 @@ import { resolve } from "node:path";
 import {
   canonicalPath,
   contentHash,
+  applyUndoAvailability,
   parseDocumentText,
   resolveApplyTransaction,
   undoLastApply,
+  type ApplyUndoAvailability,
   type ApplyDiagnostic,
   type Proposal,
 } from "@sceneaxi/authoring-core";
@@ -50,6 +52,7 @@ export type DesktopDocumentStatus =
       readonly documentId: string;
       readonly contentHash: string;
       readonly dataKeys: readonly string[];
+      readonly undoAvailability: ApplyUndoAvailability;
       /** Validated document data for project-loop proposals; never executable. */
       readonly data: Readonly<Record<string, unknown>>;
     }
@@ -82,6 +85,7 @@ export type DesktopSession = {
 
 export type DesktopSessionOperations = {
   readonly applyProposal: typeof shellApply;
+  readonly applyUndoAvailability: typeof applyUndoAvailability;
   readonly resolveTransaction: typeof resolveApplyTransaction;
   readonly undoLastApply: typeof undoLastApply;
 };
@@ -119,6 +123,8 @@ export function createDesktopSession(
   const sessionCwd = canonicalPath(options.cwd ?? ".");
   const operations: DesktopSessionOperations = Object.freeze({
     applyProposal: options.operations?.applyProposal ?? shellApply,
+    applyUndoAvailability:
+      options.operations?.applyUndoAvailability ?? applyUndoAvailability,
     resolveTransaction:
       options.operations?.resolveTransaction ?? resolveApplyTransaction,
     undoLastApply: options.operations?.undoLastApply ?? undoLastApply,
@@ -330,6 +336,16 @@ export function createDesktopSession(
         documentId: validation.document.id,
         contentHash: contentHash(text),
         dataKeys: Object.freeze(Object.keys(validation.document.data).sort()),
+        undoAvailability: (() => {
+          if (journalRecoveryPending) return "recovery-pending";
+          const appliedCwd = appliedCwdHistory.at(-1);
+          if (appliedCwd !== undefined) {
+            return operations.applyUndoAvailability({ cwd: appliedCwd });
+          }
+          return sessionApplyHistoryStarted
+            ? "unavailable"
+            : operations.applyUndoAvailability({ cwd: sessionCwd });
+        })(),
         data: deepFreeze(structuredClone(validation.document.data)),
       };
     },

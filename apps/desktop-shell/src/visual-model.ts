@@ -51,7 +51,16 @@ import {
   type OpenPathPolicyViewModel,
   type OpenPathPolicyViewRow,
 } from "@sceneaxi/schemas";
-import { DESKTOP_COMMANDS } from "./commands.js";
+import {
+  DESKTOP_INTERACTION_COMMANDS,
+  DESKTOP_MENU_IDS,
+  DESKTOP_MENU_LABELS,
+  DESKTOP_PALETTE_SHORTCUT,
+  type DesktopInteractionCommandId,
+  type DesktopMenuId,
+} from "./interaction-commands.js";
+export { DESKTOP_MENU_IDS } from "./interaction-commands.js";
+export type { DesktopMenuId } from "./interaction-commands.js";
 import {
   DESKTOP_PRODUCT_REFUSALS,
   desktopProductSurface,
@@ -107,37 +116,6 @@ export const DESKTOP_MODES: ReadonlyArray<
   }),
 );
 
-/**
- * The archive's application menus.
- *
- * Held as ids rather than as labels in the renderer so each menu is a modelled
- * control that goes through the same closed-registry accounting as every other
- * one: this shell has no command behind any of them, so all eight are inert and
- * name the reason a menu is inert, not the viewport's reason.
- */
-export const DESKTOP_MENU_IDS = Object.freeze([
-  "file",
-  "edit",
-  "scene",
-  "object",
-  "sculpt",
-  "run",
-  "window",
-  "help",
-] as const);
-export type DesktopMenuId = (typeof DESKTOP_MENU_IDS)[number];
-
-const MENU_LABELS: Readonly<Record<DesktopMenuId, string>> = Object.freeze({
-  file: "File",
-  edit: "Edit",
-  scene: "Scene",
-  object: "Object",
-  sculpt: "Sculpt",
-  run: "Run",
-  window: "Window",
-  help: "Help",
-});
-
 export const DESKTOP_PROFILE_IDS = Object.freeze(["game", "web", "kids"] as const);
 export type DesktopProfileId = (typeof DESKTOP_PROFILE_IDS)[number];
 
@@ -153,42 +131,35 @@ export const DESKTOP_PROFILE_PACKAGES: Readonly<
 export const DESKTOP_DOCK_TAB_IDS = EDITOR_SHELL_DOCK_TAB_IDS;
 export type DesktopDockTabId = (typeof DESKTOP_DOCK_TAB_IDS)[number];
 
-export const DESKTOP_OVERLAY_IDS = Object.freeze([
-  "palette",
-  "refused",
-  "conflict",
-] as const);
+export const DESKTOP_OVERLAY_IDS = Object.freeze(["palette"] as const);
 export type DesktopOverlayId = (typeof DESKTOP_OVERLAY_IDS)[number];
 
-/**
- * The buttons that dismiss an overlay.
- *
- * Held as data with one identity each because there are four of them across two
- * dialogs, and a single shared `overlay-close` control cannot be rendered onto
- * four elements: an id is unique or the `aria-describedby` and `getElementById`
- * references in this document stop meaning anything.
- */
 export const DESKTOP_OVERLAY_DISMISSALS: ReadonlyArray<
   Readonly<{
     id: string;
-    overlay: DesktopOverlayId;
+    overlay: "outcome";
     label: string;
     emphasis: "ghost" | "primary";
   }>
 > = Object.freeze([
-  Object.freeze({ id: "refused-keep-draft", overlay: "refused" as const, label: "Keep draft", emphasis: "ghost" as const }),
-  Object.freeze({ id: "refused-edit-brief", overlay: "refused" as const, label: "Edit the brief", emphasis: "primary" as const }),
-  Object.freeze({ id: "conflict-discard", overlay: "conflict" as const, label: "Discard them", emphasis: "ghost" as const }),
-  Object.freeze({ id: "conflict-review", overlay: "conflict" as const, label: "Review against current", emphasis: "primary" as const }),
+  Object.freeze({ id: "outcome-dismiss", overlay: "outcome" as const, label: "Dismiss", emphasis: "primary" as const }),
 ]);
 
-/** The status bar's overlay shortcuts, in the order the archive draws them. */
+/**
+ * The status bar's overlay shortcuts, in the order the archive draws them.
+ *
+ * Each row carries the command id that opens its overlay, so the renderer
+ * dispatches the data it iterates rather than a constant that only happens to
+ * agree with it while the list holds one entry.
+ */
 export const DESKTOP_OVERLAY_SHORTCUTS: ReadonlyArray<
-  Readonly<{ overlay: DesktopOverlayId; label: string }>
+  Readonly<{ overlay: DesktopOverlayId; commandId: string; label: string }>
 > = Object.freeze([
-  Object.freeze({ overlay: "refused" as const, label: "REFUSED" }),
-  Object.freeze({ overlay: "conflict" as const, label: "CONFLICT" }),
-  Object.freeze({ overlay: "palette" as const, label: "⌘K" }),
+  Object.freeze({
+    overlay: "palette" as const,
+    commandId: DESKTOP_PALETTE_SHORTCUT.id,
+    label: DESKTOP_PALETTE_SHORTCUT.accelerator,
+  }),
 ]);
 
 /**
@@ -258,8 +229,8 @@ export const DESKTOP_VISUAL_REFUSALS = Object.freeze({
   noKernelSession: "DESKTOP_NO_KERNEL_SESSION",
   /** The chrome is not bound to a document, so nothing may be authored. */
   noDocumentBound: "DESKTOP_NO_DOCUMENT_BOUND",
-  /** The control names a CLI verb this shell has no command for. */
-  verbNotOnDesktop: "DESKTOP_VERB_NOT_ON_THIS_SURFACE",
+  /** Undo requires a completed Save in the active project's authoring journal. */
+  undoUnavailable: "DESKTOP_UNDO_UNAVAILABLE",
   /** The window is smaller than the editor chrome's declared minimum. */
   windowBelowMinimum: "DESKTOP_WINDOW_BELOW_MINIMUM",
   /**
@@ -287,8 +258,8 @@ export const DESKTOP_REFUSAL_MESSAGES: Readonly<
     "Without a packaged-host Play response, this shell has no kernel session to report.",
   [DESKTOP_VISUAL_REFUSALS.noDocumentBound]:
     "This control has no bound authoring operation, so it writes nothing.",
-  [DESKTOP_VISUAL_REFUSALS.verbNotOnDesktop]:
-    "That verb exists on the CLI and has no desktop command; run it with `sceneaxi`.",
+  [DESKTOP_VISUAL_REFUSALS.undoUnavailable]:
+    "Undo becomes available when the active project authoring journal reports a completed Save.",
   [DESKTOP_VISUAL_REFUSALS.windowBelowMinimum]:
     "The editor chrome refuses below its minimum window size rather than rendering an unusable layout.",
   [DESKTOP_VISUAL_REFUSALS.webCapabilityRequired]:
@@ -510,6 +481,10 @@ function normalize(state: DesktopVisualState): DesktopVisualState {
   return Object.freeze({
     ...state,
     dockTab,
+    overlay:
+      state.overlay !== null && DESKTOP_OVERLAY_IDS.includes(state.overlay)
+        ? state.overlay
+        : null,
     assistant,
     assistantThinking: assistant === "open" ? state.assistantThinking : false,
     sculptPass: Math.min(Math.max(Math.trunc(state.sculptPass), 0), 4),
@@ -676,56 +651,30 @@ export const SCULPT_PASSES: ReadonlyArray<
   Object.freeze({ name: "Sockets & pivots", description: "Where it hinges and animates", runningLabel: "Placing sockets" }),
 ]);
 
-/**
- * The command palette. Each row names the CLI verb the archive names, and — the
- * part that keeps it honest — whether *this* surface can drive it. A row whose
- * `desktopCommand` is a `DESKTOP_COMMANDS` key is real; every other row renders
- * inert with `verbNotOnDesktop`, because `sceneaxi project dev` is a CLI verb
- * and this shell has no command for it.
- */
+/** Commands shown in the palette. Every row is a real desktop-host operation. */
 export const PALETTE_GROUPS: ReadonlyArray<
   Readonly<{
     title: string;
     items: ReadonlyArray<
       Readonly<{
-        /**
-         * Stable row identity, and the only thing a rendered element id is
-         * derived from. Display text is not an identity: two rows may name the
-         * same CLI verb in the same mode, and a verb contains spaces, which is
-         * not permitted in an HTML id.
-         */
-        id: string;
+        id: DesktopInteractionCommandId;
         name: string;
-        cli: string;
         shortcut: string;
-        mode: DesktopModeId;
-        /** A key of `DESKTOP_COMMANDS`, or null when this surface has none. */
-        desktopCommand: string | null;
       }>
     >;
   }>
 > = Object.freeze([
   Object.freeze({
-    title: "SCULPT",
-    items: Object.freeze([
-      Object.freeze({ id: "sculpt-from-reference", name: "Sculpt an object from a reference", cli: "sceneaxi project propose", shortcut: "⇧S", mode: "sculpt" as const, desktopCommand: "propose" }),
-      Object.freeze({ id: "resculpt-selection", name: "Re-sculpt selection with changes", cli: "sceneaxi project propose", shortcut: "", mode: "sculpt" as const, desktopCommand: "propose" }),
-    ]),
-  }),
-  Object.freeze({
-    title: "SCENE",
-    items: Object.freeze([
-      Object.freeze({ id: "compose-instances", name: "Compose instances into a scene", cli: "sceneaxi project apply", shortcut: "⇧C", mode: "compose" as const, desktopCommand: "apply" }),
-      Object.freeze({ id: "import-document", name: "Import an external document", cli: "sceneaxi asset list", shortcut: "", mode: "build" as const, desktopCommand: null }),
-    ]),
-  }),
-  Object.freeze({
-    title: "RUN & SHIP",
-    items: Object.freeze([
-      Object.freeze({ id: "play-scene", name: "Play the scene", cli: "sceneaxi project dev", shortcut: "⌘P", mode: "run" as const, desktopCommand: null }),
-      Object.freeze({ id: "replay-last-run", name: "Replay the last run", cli: "sceneaxi evidence list", shortcut: "", mode: "run" as const, desktopCommand: null }),
-      Object.freeze({ id: "export-handoff", name: "Export a delivery handoff", cli: "sceneaxi project capture", shortcut: "", mode: "ship" as const, desktopCommand: null }),
-    ]),
+    title: "DESKTOP",
+    items: Object.freeze(
+      DESKTOP_INTERACTION_COMMANDS.map((command) =>
+        Object.freeze({
+          id: command.id,
+          name: command.label,
+          shortcut: command.accelerator,
+        }),
+      ),
+    ),
   }),
 ]);
 
@@ -1087,18 +1036,23 @@ export type DesktopOverlayView = Readonly<{
   /** The title bar's palette opener. */
   search: DesktopControl;
   refusalHelp: DesktopControl;
-  /** The status bar's three overlay shortcuts. */
+  /** The status bar's overlay shortcuts. */
   shortcuts: ReadonlyArray<
-    Readonly<{ overlay: DesktopOverlayId; label: string; control: DesktopControl }>
+    Readonly<{
+      overlay: DesktopOverlayId;
+      commandId: string;
+      label: string;
+      control: DesktopControl;
+    }>
   >;
   /**
-   * One control per dismiss button, so the four buttons that close the two
-   * dialogs each carry their own identity instead of sharing one that could
-   * only ever be rendered once.
+   * One control per dismiss button, so each button that closes a dialog carries
+   * its own identity instead of sharing one that could only ever be rendered
+   * once.
    */
   dismissals: ReadonlyArray<
     Readonly<{
-      overlay: DesktopOverlayId;
+      overlay: "outcome";
       label: string;
       emphasis: "ghost" | "primary";
       control: DesktopControl;
@@ -1109,8 +1063,8 @@ export type DesktopOverlayView = Readonly<{
       title: string;
       items: ReadonlyArray<
         Readonly<{
+          commandId: DesktopInteractionCommandId;
           name: string;
-          cli: string;
           shortcut: string;
           control: DesktopControl;
         }>
@@ -1163,12 +1117,22 @@ export type DesktopVisualView = Readonly<{
     }>
   >;
   dockHeight: number;
-  /**
-   * The application menu bar. Every entry is inert: this surface has no command
-   * behind any of the archive's menus, and saying so with the menus' own reason
-   * is what keeps eight controls from borrowing the viewport's.
-   */
-  menus: ReadonlyArray<Readonly<{ id: DesktopMenuId; label: string; control: DesktopControl }>>;
+  /** Application menus containing only commands this desktop can execute. */
+  menus: ReadonlyArray<
+    Readonly<{
+      id: DesktopMenuId;
+      label: string;
+      control: DesktopControl;
+      items: ReadonlyArray<
+        Readonly<{
+          commandId: DesktopInteractionCommandId;
+          label: string;
+          accelerator: string;
+          control: DesktopControl;
+        }>
+      >;
+    }>
+  >;
   modes: ReadonlyArray<Readonly<{ id: DesktopModeId; label: string; title: string; active: boolean; control: DesktopControl }>>;
   profiles: ReadonlyArray<DesktopProfileChip>;
   policy: OpenPathPolicyViewModel;
@@ -1444,12 +1408,30 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
       DESKTOP_MENU_IDS.map((id) =>
         Object.freeze({
           id,
-          label: MENU_LABELS[id],
-          control: control(
-            `menu-${id}`,
-            MENU_LABELS[id],
-            "inert",
-            DESKTOP_VISUAL_REFUSALS.verbNotOnDesktop,
+          label: DESKTOP_MENU_LABELS[id],
+          control: control(`menu-${id}`, DESKTOP_MENU_LABELS[id], "view"),
+          items: Object.freeze(
+            DESKTOP_INTERACTION_COMMANDS.filter((command) => command.menu === id).map(
+              (command) =>
+                Object.freeze({
+                  commandId: command.id,
+                  label: command.label,
+                  accelerator: command.accelerator,
+                  control:
+                    command.id === "edit-undo"
+                      ? control(
+                          `menu-command-${command.id}`,
+                          command.label,
+                          "inert",
+                          DESKTOP_VISUAL_REFUSALS.undoUnavailable,
+                        )
+                      : control(
+                          `menu-command-${command.id}`,
+                          command.label,
+                          "live",
+                        ),
+                }),
+            ),
           ),
         }),
       ),
@@ -1510,7 +1492,7 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
 
     overlay: Object.freeze({
       id: state.overlay,
-      search: outsideRefusal("overlay-open-palette", "Search"),
+      search: outsideRefusal("overlay-open-palette", "Commands"),
       refusalHelp: outsideRefusal("status-refusal-help", "Refusal help"),
       shortcuts: Object.freeze(
         DESKTOP_OVERLAY_SHORTCUTS.map((shortcut) =>
@@ -1543,19 +1525,18 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
             items: Object.freeze(
               group.items.map((item) =>
                 Object.freeze({
+                  commandId: item.id,
                   name: item.name,
-                  cli: item.cli,
                   shortcut: item.shortcut,
                   control:
-                    item.desktopCommand !== null &&
-                    Object.hasOwn(DESKTOP_COMMANDS, item.desktopCommand)
-                      ? control(`palette-${item.id}`, item.name, "view")
-                      : control(
+                    item.id === "edit-undo"
+                      ? control(
                           `palette-${item.id}`,
                           item.name,
                           "inert",
-                          DESKTOP_VISUAL_REFUSALS.verbNotOnDesktop,
-                        ),
+                          DESKTOP_VISUAL_REFUSALS.undoUnavailable,
+                        )
+                      : control(`palette-${item.id}`, item.name, "live"),
                 }),
               ),
             ),

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DESKTOP_MENU_IDS,
+  DESKTOP_INTERACTION_COMMANDS,
   DESKTOP_MINIMUM_WINDOW,
   DESKTOP_MODE_IDS,
   DESKTOP_REFUSAL_MESSAGES,
@@ -36,8 +37,6 @@ const ALL_STATES: ReadonlyArray<readonly [string, DesktopVisualState]> = [
   ["profile:web", createDesktopVisualState({ profile: "web" })],
   ["profile:kids", createDesktopVisualState({ profile: "kids" })],
   ["overlay:palette", createDesktopVisualState({ overlay: "palette" })],
-  ["overlay:refused", createDesktopVisualState({ overlay: "refused" })],
-  ["overlay:conflict", createDesktopVisualState({ overlay: "conflict" })],
   ["assistant:closed", createDesktopVisualState({ assistant: "closed" })],
   [
     "sculpt:running",
@@ -192,7 +191,7 @@ describe("engine desktop chrome — regions and modes", () => {
   it("opens the requested overlay in the bytes, so a screenshot needs no script", () => {
     const palette = render(createDesktopVisualState({ overlay: "palette" }));
     expect(palette).toContain(`data-overlay="palette" role="dialog" aria-modal="true" aria-label="Command palette">`);
-    expect(palette).toMatch(/data-overlay="conflict"[^>]*hidden/);
+    expect(palette).toMatch(/data-overlay="outcome"[^>]*hidden/);
     const none = render();
     expect(none).toMatch(/data-overlay="palette"[^>]*hidden/);
   });
@@ -324,17 +323,14 @@ describe("engine desktop chrome — accessibility", () => {
     }
   });
 
-  it("gives the menu bar its own reason, not the viewport's", () => {
+  it("renders File, Edit, and Run with their real command ids", () => {
     const html = render();
     for (const id of DESKTOP_MENU_IDS) {
-      expect(html).toContain(
-        `id="menu-${id}" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.verbNotOnDesktop}"`,
-      );
+      expect(html).toContain(`id="menu-${id}" data-kind="view"`);
     }
-    // The viewport's reason describes the viewport; a menu must not borrow it.
-    expect(html).not.toContain(
-      `id="menu-file" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.noPresentationRuntime}"`,
-    );
+    for (const command of DESKTOP_INTERACTION_COMMANDS) {
+      expect(html).toContain(`data-command="${command.id}"`);
+    }
   });
 
   it("gives every tablist a selected tab and roving tabindex", () => {
@@ -435,11 +431,10 @@ describe("engine desktop chrome — accessibility", () => {
   });
 
   it("gives each overlay dismiss button its own modelled identity", () => {
-    // One `overlay-close` control could only ever be rendered onto one of the
-    // four buttons that dismiss the two dialogs, so each is minted separately.
+    // The one real-outcome dialog owns one functional dismissal.
     const view = desktopVisualView(createDesktopVisualState());
     const html = render();
-    expect(view.overlay.dismissals).toHaveLength(4);
+    expect(view.overlay.dismissals).toHaveLength(1);
     const ids = view.overlay.dismissals.map((dismissal) => dismissal.control.id);
     expect(new Set(ids).size).toBe(ids.length);
     for (const dismissal of view.overlay.dismissals) {
@@ -867,9 +862,12 @@ describe("engine desktop chrome — honesty", () => {
 
   it("keeps the palette honest about which rows this surface can drive", () => {
     const html = render(createDesktopVisualState({ overlay: "palette" }));
-    expect(html).toContain("sceneaxi project dev");
-    expect(html).toContain("Rows this shell has no command for stay inert and say so.");
-    expect(html).toContain(DESKTOP_VISUAL_REFUSALS.verbNotOnDesktop);
+    for (const command of DESKTOP_INTERACTION_COMMANDS) {
+      expect(html).toContain(`id="palette-${command.id}"`);
+      expect(html).toContain(`data-command="${command.id}"`);
+    }
+    expect(html).not.toContain("Search commands");
+    expect(html).not.toContain("sceneaxi project dev");
   });
 
   it("never renders a control kind the model did not assign", () => {

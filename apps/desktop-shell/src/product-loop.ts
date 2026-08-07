@@ -129,6 +129,7 @@ export const DESKTOP_PRODUCT_REFUSALS = Object.freeze({
   proposalNotReviewing: "DESKTOP_PROPOSAL_NOT_REVIEWING",
   proposalNotDiscarded: "DESKTOP_PROPOSAL_NOT_DISCARDED",
   profileSwitchDirty: "DESKTOP_PROFILE_SWITCH_DIRTY",
+  undoStagedProposal: "DESKTOP_UNDO_STAGED_PROPOSAL",
   applyNotCompleted: "DESKTOP_APPLY_NOT_COMPLETED",
   recoveryPending: "DESKTOP_RECOVERY_PENDING",
   openPathEvidenceInvalid: "DESKTOP_OPEN_PATH_EVIDENCE_INVALID",
@@ -165,10 +166,12 @@ export const DESKTOP_PRODUCT_REFUSAL_MESSAGES: Readonly<
     "A staged proposal is still held by the host, so re-opening would abandon an edit the host still has.",
   [DESKTOP_PRODUCT_REFUSALS.profileSwitchDirty]:
     "One proposal is already staged; save it or re-open the project to discard it before staging another edit, changing the project, or switching profiles.",
+  [DESKTOP_PRODUCT_REFUSALS.undoStagedProposal]:
+    "Undo restores the last completed Save and the host drops the staged proposal with it, so save that proposal or re-open the project to discard it first.",
   [DESKTOP_PRODUCT_REFUSALS.applyNotCompleted]:
     "The host did not report the apply as completed, so the staged edit is still pending.",
   [DESKTOP_PRODUCT_REFUSALS.recoveryPending]:
-    "Durable apply recovery is still pending; save to refresh it or open to re-read in a fresh session before staging another edit, changing the project, or switching profiles.",
+    "Durable apply recovery is still pending; save to refresh it or open to re-read in a fresh session before Undo, staging another edit, changing the project, or switching profiles.",
   [DESKTOP_PRODUCT_REFUSALS.openPathEvidenceInvalid]:
     "The play response carried no closed session with observed tick digests, so nothing is reported as played.",
   [DESKTOP_PRODUCT_REFUSALS.requestInFlight]:

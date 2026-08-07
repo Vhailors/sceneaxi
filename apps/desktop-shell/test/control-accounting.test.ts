@@ -123,8 +123,6 @@ const STATES: ReadonlyArray<readonly [string, DesktopVisualState]> = [
   ["mode:animate", createDesktopVisualState({ mode: "animate" })],
   ["mode:ship", createDesktopVisualState({ mode: "ship" })],
   ["overlay:palette", createDesktopVisualState({ overlay: "palette" })],
-  ["overlay:refused", createDesktopVisualState({ overlay: "refused" })],
-  ["overlay:conflict", createDesktopVisualState({ overlay: "conflict" })],
   ["assistant:closed", createDesktopVisualState({ assistant: "closed" })],
   ["assistant:thinking", createDesktopVisualState({ assistantThinking: true })],
   ["sculpt:idle", createDesktopVisualState({ mode: "sculpt" })],
