@@ -1,4 +1,4 @@
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { NextConfig } from "next";
 
@@ -9,9 +9,10 @@ import type { NextConfig } from "next";
  * `.js` specifier onto its TypeScript source.
  */
 const nextConfig: NextConfig = {
-  // This site keeps its own lockfile, so Next must be told which directory is the
-  // deployment root rather than inferring it from the repository lockfile above.
-  outputFileTracingRoot: dirname(fileURLToPath(import.meta.url)),
+  // The site is its own install root, but its `link:` packages live two levels above
+  // it. Vercel materializes serverless functions from Next's file traces, so the trace
+  // root must contain both the app and those package sources.
+  outputFileTracingRoot: resolve(dirname(fileURLToPath(import.meta.url)), "../.."),
   transpilePackages: ["@sceneaxi/site-kit", "@sceneaxi/schemas", "@sceneaxi/authoring-core"],
   reactStrictMode: true,
   turbopack: {

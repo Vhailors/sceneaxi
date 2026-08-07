@@ -70,6 +70,16 @@ machine that already has a root install and then fails on a clean Vercel builder
 whole repository uploads; a CLI deploy from inside the site directory uploads that
 directory alone and cannot work.
 
+The three deployed site workspaces use pnpm's `nodeLinker: hoisted`. Next traces from the
+monorepo root so their `link:` SceneAxi sources are copied as repository files, while the
+flat site `node_modules` keeps pnpm's isolated dependency-symlink graph out of Vercel
+Functions. Every deployed site's `pnpm build` runs
+`scripts/check-vercel-package.mjs` as `postbuild`; it reads Next's emitted `.nft.json`
+contracts and refuses a trace outside the monorepo, a package-manager symlink, a missing
+file, or a linked package whose real source is absent. This is a local package-shape gate,
+not evidence that a production deployment succeeded. Kids is not deployed and does not
+inherit this deployment linker or check.
+
 ## Environment variables
 
 Set in **Production** scope. `NEXT_PUBLIC_*` values are inlined at **build** time, so

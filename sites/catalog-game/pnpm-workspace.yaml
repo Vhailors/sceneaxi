@@ -8,5 +8,8 @@
 packages:
   - "."
 
+# Keep the deployable serverless package free of pnpm's isolated symlink graph.
+nodeLinker: hoisted
+
 allowBuilds:
   sharp: true

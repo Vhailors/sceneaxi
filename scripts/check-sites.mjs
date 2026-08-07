@@ -369,6 +369,17 @@ for (const dir of siteDirs) {
         `${manifest.name}: @sceneaxi/site-kit must use a 'link:' specifier (found '${siteKit}') because sites are not workspace members`,
       );
     }
+    const siteWorkspacePolicy = readFileSync(join(dir, "pnpm-workspace.yaml"), "utf8");
+    if (!/^nodeLinker:\s*hoisted\s*$/m.test(siteWorkspacePolicy)) {
+      fail(
+        `${manifest.name}: deployable serverless sites must use the hoisted pnpm linker`,
+      );
+    }
+    if (manifest.scripts?.postbuild !== "node ../../scripts/check-vercel-package.mjs .") {
+      fail(
+        `${manifest.name}: postbuild must validate the emitted Vercel function package traces`,
+      );
+    }
   }
   for (const framework of ["next", "react", "react-dom"]) {
     if (dependencies[framework] === undefined) {

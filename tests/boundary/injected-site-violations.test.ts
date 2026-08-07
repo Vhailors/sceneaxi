@@ -140,6 +140,38 @@ describe("sites tier — injected violations", () => {
     );
   });
 
+  it("sites check rejects the isolated pnpm linker for a deployed site", () => {
+    writeTo(
+      fx,
+      "sites/catalog-game/pnpm-workspace.yaml",
+      [
+        "packages:",
+        '  - "."',
+        "nodeLinker: isolated",
+        "allowBuilds:",
+        "  sharp: true",
+        "",
+      ].join("\n"),
+    );
+    const res = runCheck(fx, "check-sites.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "@sceneaxi/site-catalog-game: deployable serverless sites must use the hoisted pnpm linker",
+    );
+  });
+
+  it("sites check rejects removal of the Vercel package postbuild", () => {
+    editManifest(fx, "sites/catalog-web/package.json", (manifest) => {
+      const scripts = manifest.scripts as Record<string, string>;
+      delete scripts.postbuild;
+    });
+    const res = runCheck(fx, "check-sites.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "@sceneaxi/site-catalog-web: postbuild must validate the emitted Vercel function package traces",
+    );
+  });
+
   it("boundary check allows the umbrella's one charted engine edge — the presentation seam", () => {
     // ADR 0022: the umbrella owns the public viewport, so this edge must pass. It is
     // asserted here beside the denials so widening and its bound are proven together.
