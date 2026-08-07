@@ -64,6 +64,7 @@ export { unifiedDiff } from "./unified-diff.js";
 export {
   APPLY_JOURNAL_KIND,
   APPLY_JOURNAL_SCHEMA_VERSION,
+  hasCompletedApplyJournal,
   recoverIncompleteApplies,
   resolveApplyTransaction,
   undoLastApply,

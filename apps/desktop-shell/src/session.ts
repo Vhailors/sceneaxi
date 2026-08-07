@@ -13,6 +13,7 @@ import { resolve } from "node:path";
 import {
   canonicalPath,
   contentHash,
+  hasCompletedApplyJournal,
   parseDocumentText,
   resolveApplyTransaction,
   undoLastApply,
@@ -50,6 +51,7 @@ export type DesktopDocumentStatus =
       readonly documentId: string;
       readonly contentHash: string;
       readonly dataKeys: readonly string[];
+      readonly undoAvailable: boolean;
       /** Validated document data for project-loop proposals; never executable. */
       readonly data: Readonly<Record<string, unknown>>;
     }
@@ -82,6 +84,7 @@ export type DesktopSession = {
 
 export type DesktopSessionOperations = {
   readonly applyProposal: typeof shellApply;
+  readonly hasCompletedApplyJournal: typeof hasCompletedApplyJournal;
   readonly resolveTransaction: typeof resolveApplyTransaction;
   readonly undoLastApply: typeof undoLastApply;
 };
@@ -119,6 +122,8 @@ export function createDesktopSession(
   const sessionCwd = canonicalPath(options.cwd ?? ".");
   const operations: DesktopSessionOperations = Object.freeze({
     applyProposal: options.operations?.applyProposal ?? shellApply,
+    hasCompletedApplyJournal:
+      options.operations?.hasCompletedApplyJournal ?? hasCompletedApplyJournal,
     resolveTransaction:
       options.operations?.resolveTransaction ?? resolveApplyTransaction,
     undoLastApply: options.operations?.undoLastApply ?? undoLastApply,
@@ -330,6 +335,10 @@ export function createDesktopSession(
         documentId: validation.document.id,
         contentHash: contentHash(text),
         dataKeys: Object.freeze(Object.keys(validation.document.data).sort()),
+        undoAvailable:
+          appliedCwdHistory.length > 0 ||
+          (!sessionApplyHistoryStarted &&
+            operations.hasCompletedApplyJournal({ cwd: sessionCwd })),
         data: deepFreeze(structuredClone(validation.document.data)),
       };
     },

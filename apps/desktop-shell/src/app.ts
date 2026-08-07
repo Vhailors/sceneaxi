@@ -25,13 +25,11 @@ import {
 import {
   DESKTOP_ASSISTANT_MODE_IDS,
   DESKTOP_MODE_IDS,
-  DESKTOP_OVERLAY_IDS,
   DESKTOP_PROFILE_IDS,
   createDesktopVisualState,
   desktopVisualView,
   type DesktopAssistantModeId,
   type DesktopModeId,
-  type DesktopOverlayId,
   type DesktopProfileId,
 } from "./visual-model.js";
 
@@ -69,7 +67,7 @@ const USAGE_LINES: readonly string[] = Object.freeze([
   "Flags: --document <path> --pointer <json-pointer> --value <json> --cwd <dir> --json",
   "open-path flags: --profile <@sceneaxi/profile-name> --operation <open|dispatch|advance|observe|save|replay>",
   "chrome flags: --mode <build|sculpt|compose|animate|run|ship|plugins> --profile <game|web|kids>",
-  "              --overlay <palette|outcome> --assistant-mode <ask|build|agent>",
+  "              --overlay <none|palette> --assistant-mode <ask|build|agent>",
   "              --sculpt <idle|running> --width <px> --height <px>",
 ]);
 
@@ -346,10 +344,10 @@ function chromeResult(args: ParsedArgs): DesktopResult {
   if (!mode.ok) return refuse(command, DesktopExit.USAGE, mode.message);
   const profile = pick<DesktopProfileId>(args, "--profile", DESKTOP_PROFILE_IDS, "game");
   if (!profile.ok) return refuse(command, DesktopExit.USAGE, profile.message);
-  const overlay = pick<DesktopOverlayId | "none">(
+  const overlay = pick<"none" | "palette">(
     args,
     "--overlay",
-    [...DESKTOP_OVERLAY_IDS, "none"],
+    ["none", "palette"],
     "none",
   );
   if (!overlay.ok) return refuse(command, DesktopExit.USAGE, overlay.message);
@@ -489,6 +487,7 @@ export function runDesktopCommand(
         documentId: status.documentId,
         contentHash: status.contentHash,
         dataKeys: status.dataKeys,
+        undoAvailable: status.undoAvailable,
         data: status.data,
       },
       ["Run `sceneaxi-desktop propose --document ... --pointer ... --value ...` to edit"],

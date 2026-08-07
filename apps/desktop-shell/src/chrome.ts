@@ -1391,7 +1391,7 @@ if (shell) {
   let editableScene = null;
   let selectedSceneEntityId = null;
   let sceneRefusalText = null;
-  let undoDepth = 0;
+  let undoAvailable = false;
   // One product request at a time. Every live control reads \`projectData\` before
   // its first await, so two overlapping clicks would each build a proposal from
   // the same pre-edit document and the second would replace the first in the
@@ -1665,7 +1665,7 @@ if (shell) {
     projectDirty = false;
     projectRecovering = false;
     clearSceneProperty();
-    undoDepth = 0;
+    undoAvailable = false;
     if (response.data.outcome === 'removed') {
       productStatus(activeProject === null ? 'closed' : 'open', 'Recent project removed · active project unchanged');
       return;
@@ -1722,7 +1722,7 @@ if (shell) {
     projectContentHash = null;
     projectDirty = false;
     projectRecovering = false;
-    undoDepth = 0;
+    undoAvailable = false;
     if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' || status.data === null || typeof status.contentHash !== 'string') {
       clearSceneProperty();
       productStatus('refused', 'Recovery reset · ' + diagnostic + ' · ' + (reason || T.product.refusals.documentDataInvalid));
@@ -1731,6 +1731,8 @@ if (shell) {
     projectData = status.data;
     projectContentHash = status.contentHash;
     syncSceneProperties(status);
+    undoAvailable = status.undoAvailable === true;
+    syncCommandAvailability();
     productStatus('open', withSceneRefusal(T.product.documentPath + ' · re-opened after ' + diagnostic + ' · ' + status.documentId));
     return true;
   };
@@ -1783,6 +1785,8 @@ if (shell) {
     syncSceneProperties(status);
     projectDirty = false;
     projectRecovering = false;
+    undoAvailable = status.undoAvailable === true;
+    syncCommandAvailability();
     productStatus('open', withSceneRefusal(T.product.documentPath + ' · open · ' + status.documentId));
     return true;
   };
@@ -1893,7 +1897,8 @@ if (shell) {
       projectContentHash = null;
       projectDirty = false;
       projectRecovering = false;
-      undoDepth += 1;
+      undoAvailable = true;
+      syncCommandAvailability();
       // The written document, not the diff of how it got there: the applied
       // proposal is spent, so the review panel goes with it while the panel
       // keeps showing the value the next Play will mount.
@@ -1928,7 +1933,7 @@ if (shell) {
   // so a staged edit would go with it. Every other path here that can lose one
   // either refuses by name or discards it explicitly; this one refuses.
   const undoProject = async () => {
-    if (undoDepth < 1) return;
+    if (!undoAvailable) return;
     if (projectDirty) {
       const code = T.product.refusals.undoStagedProposal;
       productStatus('refused', 'Undo refused · ' + code);
@@ -1945,7 +1950,6 @@ if (shell) {
       showOutcome('Undo refused', code, 'The host did not restore a completed Save.');
       return;
     }
-    undoDepth = Math.max(0, undoDepth - 1);
     projectData = null;
     projectContentHash = null;
     projectDirty = false;
@@ -2335,8 +2339,8 @@ if (shell) {
       if (el.dataset.command !== 'edit-undo') return;
       applyControl(el);
       if (shell.dataset.profile !== 'kids') {
-        el.dataset.kind = undoDepth > 0 ? 'live' : 'inert';
-        setRefusal(el, undoDepth > 0 ? null : T.commandRefusals.undoUnavailable);
+        el.dataset.kind = undoAvailable ? 'live' : 'inert';
+        setRefusal(el, undoAvailable ? null : T.commandRefusals.undoUnavailable);
       }
     });
   };
@@ -2480,15 +2484,16 @@ if (shell) {
   });
 
   // Tab is deliberately not captured inside a menu — every item keeps its plain
-  // focus stop — so leaving the panel by keyboard is the one dismissal the click
-  // and Escape paths cannot see. Focus is already elsewhere here, so the panel
-  // is hidden without the trigger return.
+  // focus stop — so leaving the menu root by keyboard is the one dismissal the
+  // click and Escape paths cannot see. Focus is already elsewhere here, so the
+  // panel is hidden without the trigger return.
   shell.addEventListener('focusout', (event) => {
-    const panel = event.target instanceof Element ? event.target.closest('.menu-panel') : null;
+    const root = event.target instanceof Element ? event.target.closest('[data-menu-root]') : null;
+    if (root === null) return;
+    const panel = root.querySelector('.menu-panel');
     if (panel === null || panel.hidden) return;
-    const root = panel.closest('[data-menu-root]');
     const next = event.relatedTarget;
-    if (root !== null && next instanceof Element && root.contains(next)) return;
+    if (next instanceof Element && root.contains(next)) return;
     hideMenus();
   });
 

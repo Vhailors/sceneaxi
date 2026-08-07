@@ -469,6 +469,20 @@ function readJournals(
   return { ok: true, entries };
 }
 
+export function hasCompletedApplyJournal(
+  input: { readonly cwd?: string } = {},
+): boolean {
+  try {
+    const journals = readJournals(input.cwd ?? process.cwd());
+    return (
+      journals.ok &&
+      journals.entries.some((entry) => entry.state === "completed")
+    );
+  } catch {
+    return false;
+  }
+}
+
 function recoverJournalEntry(
   cwd: string,
   entry: ApplyJournalEntry,

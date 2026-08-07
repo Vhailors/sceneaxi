@@ -44,7 +44,10 @@ function projectStatus() {
   };
 }
 
-function engineResponse(request: Record<string, unknown>) {
+function engineResponse(
+  request: Record<string, unknown>,
+  state: { undoAvailable: boolean },
+) {
   const payload = request["payload"] as Record<string, unknown> | undefined;
   const action = request["action"];
   const op = payload?.["op"];
@@ -58,6 +61,7 @@ function engineResponse(request: Record<string, unknown>) {
         documentId: "command-test",
         contentHash: CONTENT_HASH,
         dataKeys: ["entities"],
+        undoAvailable: state.undoAvailable,
         data: { entities: [] },
       },
     };
@@ -74,6 +78,7 @@ function engineResponse(request: Record<string, unknown>) {
     };
   }
   if (action === "authoring" && op === "accept") {
+    state.undoAvailable = true;
     return {
       ok: true,
       action,
@@ -86,6 +91,7 @@ function engineResponse(request: Record<string, unknown>) {
     };
   }
   if (action === "authoring" && op === "undo") {
+    state.undoAvailable = false;
     return {
       ok: true,
       action,
@@ -119,10 +125,14 @@ async function settle(window: HappyWindow) {
   throw new Error("desktop command did not settle");
 }
 
-async function harness(profile: "game" | "web" | "kids" = "web") {
+async function harness(
+  profile: "game" | "web" | "kids" = "web",
+  initialUndoAvailable = false,
+) {
   const window = new HappyWindow({ width: 1200, height: 800 });
   windows.push(window);
   const calls: HostCall[] = [];
+  const state = { undoAvailable: initialUndoAvailable };
   const clone = <T>(value: T): T => window.eval(`(${JSON.stringify(value)})`) as T;
   Object.defineProperty(window, "structuredClone", { value: clone });
   Object.defineProperty(window, "sceneaxiDesktopLinux", {
@@ -151,7 +161,7 @@ async function harness(profile: "game" | "web" | "kids" = "web") {
           action: String(typed["action"]),
           op: typeof payload?.["op"] === "string" ? payload["op"] : null,
         });
-        return clone(engineResponse(typed));
+        return clone(engineResponse(typed, state));
       },
     },
   });
@@ -414,7 +424,7 @@ describe("desktop command menu, palette, and accelerator parity", () => {
     );
   });
 
-  it("keeps an open menu while focus moves within it", async () => {
+  it("keeps a menu within its root and closes after the trigger loses focus", async () => {
     const { window } = await harness();
     await click(window, '[data-menu-trigger="file"]');
     const panel = element(window, "#menu-panel-file");
@@ -436,6 +446,30 @@ describe("desktop command menu, palette, and accelerator parity", () => {
       }),
     );
     expect(panel.hidden).toBe(false);
+    const trigger = element(window, '[data-menu-trigger="file"]');
+    trigger.dispatchEvent(
+      new window.FocusEvent("focusout", {
+        bubbles: true,
+        relatedTarget: element(window, "#project-open"),
+      }),
+    );
+    expect(panel.hidden).toBe(true);
+  });
+
+  it("exposes persisted Undo availability after a renderer relaunch", async () => {
+    const { window, calls } = await harness("web", true);
+    const undo = element(window, "#menu-command-edit-undo");
+    expect(undo.getAttribute("aria-disabled")).toBeNull();
+
+    const event = shortcut(window, "z");
+    await settle(window);
+    expect(event.defaultPrevented).toBe(true);
+    expect(calls).toContainEqual({
+      plane: "engine",
+      action: "authoring",
+      op: "undo",
+    });
+    expect(undo.getAttribute("aria-disabled")).toBe("true");
   });
 
   it("names the refusal when an accelerator reaches an unavailable command", async () => {
