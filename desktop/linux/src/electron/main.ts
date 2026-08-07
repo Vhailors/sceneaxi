@@ -4,7 +4,7 @@
  * Everything decided lives in `src/lib/` (gate-tested without Electron); this file
  * adapts it: `ipcMain.handle` serves the synchronous bridge, the window loads the
  * build-time Engine Desktop chrome document, and `--smoke` runs the packaged-app
- * proof — handshake, real kernel open path, authoring propose/accept round trip in
+ * proof — handshake, real kernel open path, typed edit/review/save/reopen/Play in
  * a scratch project, and the renderer's real frame report — then prints one JSON
  * line and exits, so CI can assert the packaged binary is not a static HTML export.
  *
@@ -65,11 +65,10 @@ function retiredImplicitProjectDir(): string {
 /**
  * The smoke's project: a fresh directory per run, never the persistent one.
  *
- * The proof asserts what propose/accept/undo did to a document, so it has to own
- * that document: a selected project can already hold an edited, invalid, or
- * mid-transaction file, and `undo()` there can resolve an earlier completed
- * journal this run never wrote — either of which would let the proof line report
- * a round trip it did not perform.
+ * The proof asserts what staging and Save did to a document, then reopens and
+ * plays it, so it has to own that document: a selected project can already hold
+ * an edited, invalid, or mid-transaction file, any of which could make the proof
+ * line report a round trip it did not perform.
  */
 function smokeProjectDir(): string {
   const dir = mkdtempSync(join(tmpdir(), "sceneaxi-desktop-smoke-"));

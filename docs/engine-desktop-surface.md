@@ -117,7 +117,7 @@ asserted rather than remembered.
 |---|---|
 | Colours, typography, metrics, contrast deviations, archive provenance | `apps/desktop-shell/src/visual-tokens.ts` |
 | Shared chrome vocabulary — the seven modes, rail labels, dock-tab derivation, assistant modes, window-tier thresholds, structural metrics | `packages/schemas/src/editor-shell.ts` (sceneaxi#184); this model **derives** its tables from it, and the umbrella web editor projects the same rows — parity is a data identity in `tests/parity/editor-shell-parity.test.ts`, and the web surface's own record is [`web-editor-shell.md`](web-editor-shell.md) |
-| First-release project/file and per-profile product loop, including host-projected New/Open/Recent lifecycle, Web stored-HTML, and project-relative asset staging | `apps/desktop-shell/src/product-loop.ts` + emitted adapter in `chrome.ts` (sceneaxi#196/#224); root validation and persistence remain host-owned |
+| First-release project/file and per-profile product loop, including host-projected New/Open/Recent lifecycle, the typed scene-property edit, Web stored-HTML, and project-relative asset staging | `apps/desktop-shell/src/product-loop.ts` + emitted adapter in `chrome.ts` (sceneaxi#196/#224/#225); root validation, property validation and staging, and persistence remain host-owned |
 | Mode/profile/dock/assistant/overlay/sculpt state, refusals, window tiers, control kinds | `apps/desktop-shell/src/visual-model.ts` |
 | The emitted document (markup, stylesheet, behaviour script) | `apps/desktop-shell/src/chrome.ts` |
 | The `chrome` command and its flags | `apps/desktop-shell/src/app.ts` |
