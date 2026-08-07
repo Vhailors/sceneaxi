@@ -185,7 +185,7 @@ describe("SA-OPS-1 production activation runbook", () => {
         /:\s*"(BETTER_AUTH_PROVIDER_[A-Z_]+)"/g,
       ),
     ].map((match) => match[1] as string);
-    expect(providerRefusals).toHaveLength(3);
+    expect(providerRefusals).toHaveLength(4);
     expect(desktopRefusals.length).toBeGreaterThanOrEqual(10);
 
     const tokens = [
@@ -220,6 +220,7 @@ describe("SA-OPS-1 production activation runbook", () => {
       [providerRefusals, "the umbrella Better Auth provider", [
         "BETTER_AUTH_PROVIDER_CONFIGURATION_ABSENT",
         "BETTER_AUTH_PROVIDER_CONFIGURATION_INVALID",
+        "BETTER_AUTH_PROVIDER_BOOTSTRAP_DISAGREEMENT",
         "BETTER_AUTH_PROVIDER_STORAGE_UNAVAILABLE",
       ]],
       [desktopRefusals, "the desktop release scripts", [

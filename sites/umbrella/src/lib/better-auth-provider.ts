@@ -11,11 +11,12 @@ import { randomUUID } from "node:crypto";
 import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { hashPassword, verifyPassword } from "better-auth/crypto";
 import { bearer } from "better-auth/plugins";
-import { Pool, type PoolClient } from "pg";
+import { Pool, types as pgTypes, type PoolClient } from "pg";
 
 export const BETTER_AUTH_PROVIDER_REFUSALS = Object.freeze({
   configurationAbsent: "BETTER_AUTH_PROVIDER_CONFIGURATION_ABSENT",
   configurationInvalid: "BETTER_AUTH_PROVIDER_CONFIGURATION_INVALID",
+  bootstrapDisagreement: "BETTER_AUTH_PROVIDER_BOOTSTRAP_DISAGREEMENT",
   storageUnavailable: "BETTER_AUTH_PROVIDER_STORAGE_UNAVAILABLE",
 } as const);
 
@@ -142,9 +143,21 @@ type ProviderAuth = Readonly<{
   handler(request: Request): Promise<Response>;
 }>;
 
+/**
+ * Whether the one configured provider credential is provisioned. Only sign-in
+ * needs it, and a disagreement is reported as itself rather than as a storage
+ * fault, so an operator rotating the captain-held secret is not sent looking for
+ * a database that is answering perfectly well.
+ */
+export type BetterAuthProviderReadiness =
+  | Readonly<{ ok: true }>
+  | Readonly<{ ok: false; reason: BetterAuthProviderRefusal }>;
+
+const PROVIDER_READY: BetterAuthProviderReadiness = Object.freeze({ ok: true as const });
+
 export type BetterAuthProviderRuntime = Readonly<{
   auth: ProviderAuth;
-  ready(): Promise<void>;
+  ready(): Promise<BetterAuthProviderReadiness>;
 }>;
 
 export type BetterAuthProviderRuntimeResult =
@@ -156,6 +169,28 @@ const providerModels = Object.freeze({
   session: "better_auth_sessions",
   account: "better_auth_accounts",
   verification: "better_auth_verifications",
+  rateLimit: "better_auth_rate_limits",
+});
+
+/**
+ * Durable throttling for the public credential endpoint.
+ *
+ * The counter lives in the provider's own PostgreSQL, not in per-instance
+ * memory, because a serverless instance's memory resets on every cold start and
+ * so throttles nothing an attacker cannot simply outlast. Sign-up is disabled
+ * and exactly one account is ever provisioned, which makes `/sign-in/email` the
+ * whole brute-force surface for the sole admin address.
+ *
+ * Session lookup is exempt on purpose: every request reaches this provider
+ * server-to-server from the deployment's own egress address, so a shared bucket
+ * on that path would throttle unrelated visitors rather than an attacker, and
+ * the path creates nothing and already requires an issued 32-byte token. That
+ * same shared egress is why the sign-in rule is deliberately a deployment-wide
+ * ceiling on credential attempts rather than a per-caller one.
+ */
+export const BETTER_AUTH_PROVIDER_RATE_LIMIT = Object.freeze({
+  signIn: Object.freeze({ window: 300, max: 5 }),
+  fallback: Object.freeze({ window: 60, max: 120 }),
 });
 
 /**
@@ -166,7 +201,7 @@ const providerModels = Object.freeze({
 export function createBetterAuthProviderRuntime(options: {
   readonly config: BetterAuthProviderConfig;
   readonly database: BetterAuthOptions["database"];
-  readonly ready?: (() => Promise<void>) | undefined;
+  readonly ready?: (() => Promise<BetterAuthProviderReadiness>) | undefined;
 }): BetterAuthProviderRuntime {
   const { config } = options;
   const auth = betterAuth({
@@ -184,6 +219,17 @@ export function createBetterAuthProviderRuntime(options: {
     },
     plugins: [bearer()],
     trustedOrigins: [config.origin],
+    rateLimit: {
+      enabled: true,
+      storage: "database",
+      modelName: providerModels.rateLimit,
+      window: BETTER_AUTH_PROVIDER_RATE_LIMIT.fallback.window,
+      max: BETTER_AUTH_PROVIDER_RATE_LIMIT.fallback.max,
+      customRules: {
+        "/sign-in/email": { ...BETTER_AUTH_PROVIDER_RATE_LIMIT.signIn },
+        "/get-session": false,
+      },
+    },
     advanced: {
       useSecureCookies: new URL(config.origin).protocol === "https:",
       database: { generateId: () => randomUUID() },
@@ -192,7 +238,7 @@ export function createBetterAuthProviderRuntime(options: {
   });
   return Object.freeze({
     auth,
-    ready: options.ready ?? (async () => undefined),
+    ready: options.ready ?? (async () => PROVIDER_READY),
   });
 }
 
@@ -204,6 +250,20 @@ type ProviderUserRow = Readonly<{
 type ProviderAccountRow = Readonly<{
   password: string | null;
 }>;
+
+/**
+ * Persisted provider state disagrees with the configured bootstrap credential.
+ *
+ * This is a deployment configuration disagreement, not an unavailable database,
+ * and re-deciding it cannot change the answer — so it is both reported and
+ * memoized separately from a storage fault.
+ */
+export class BetterAuthProviderBootstrapDisagreement extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "BetterAuthProviderBootstrapDisagreement";
+  }
+}
 
 async function queryRows<Row extends object>(
   client: PoolClient,
@@ -249,7 +309,9 @@ export async function ensureBetterAuthAdminBootstrap(
         [userId, "SceneAxi Admin", config.bootstrapEmail, now],
       );
     } else if (users[0]?.emailVerified !== true) {
-      throw new Error("provider bootstrap state is not verified");
+      throw new BetterAuthProviderBootstrapDisagreement(
+        "provider bootstrap state is not verified",
+      );
     }
 
     const accounts = await queryRows<ProviderAccountRow>(
@@ -274,7 +336,9 @@ export async function ensureBetterAuthAdminBootstrap(
       heldPassword === null ||
       !(await verifyPassword({ hash: heldPassword, password: config.bootstrapSecret }))
     ) {
-      throw new Error("provider bootstrap credential does not match persisted state");
+      throw new BetterAuthProviderBootstrapDisagreement(
+        "provider bootstrap credential does not match persisted state",
+      );
     }
     await client.query("COMMIT");
   } catch (error) {
@@ -286,32 +350,94 @@ export async function ensureBetterAuthAdminBootstrap(
 }
 
 /**
+ * Deliberately far below node-postgres's default of ten.
+ *
+ * The umbrella already reaches this same Neon database through the stateless
+ * `@neondatabase/serverless` HTTP driver; this pooled driver exists only because
+ * Better Auth's Kysely adapter needs one. Every concurrently warm serverless
+ * instance holds its own copy of this pool, so an unbounded default multiplies
+ * held Neon connections across instances for two endpoints that issue a handful
+ * of short queries each. `connectionTimeoutMillis` is set for the same reason a
+ * refusal beats a hang: without it a request waits forever for a client instead
+ * of failing closed.
+ */
+export const BETTER_AUTH_PROVIDER_POOL_LIMITS = Object.freeze({
+  max: 3,
+  idleTimeoutMillis: 10_000,
+  connectionTimeoutMillis: 10_000,
+});
+
+const PG_INT8_OID = 20;
+
+/**
  * The provider-owned connection pool.
  *
  * node-postgres reports a backend or network failure on an otherwise idle client
  * as an `'error'` event on the pool rather than as a rejected query, so the pool
  * owns that event itself: a suspended or reset connection stays a storage fault
- * the next request refuses by name.
+ * the next request refuses by name. The `int8` parser is pool-local rather than
+ * a process-wide `setTypeParser`, and keeps the rate limiter's millisecond
+ * timestamps arithmetic rather than text.
  */
 export function createProviderPool(config: BetterAuthProviderConfig): Pool {
-  const pool = new Pool({ connectionString: config.databaseUrl });
+  const pool = new Pool({
+    connectionString: config.databaseUrl,
+    ...BETTER_AUTH_PROVIDER_POOL_LIMITS,
+    types: {
+      getTypeParser: ((oid: number, format?: unknown) =>
+        oid === PG_INT8_OID
+          ? Number
+          : (pgTypes.getTypeParser as (id: number, format?: unknown) => unknown)(
+              oid,
+              format,
+            )) as typeof pgTypes.getTypeParser,
+    },
+  });
   pool.on("error", () => undefined);
   return pool;
 }
 
+/**
+ * Memoize provisioning by outcome, not by attempt.
+ *
+ * A disagreement is deterministic, so it is answered from the memo forever:
+ * re-running it would re-open a client and re-run an advisory lock, two locking
+ * reads, and a scrypt verification for every unauthenticated request while the
+ * deployment stays misconfigured. A storage fault is transient, so it is
+ * forgotten and the next request tries again.
+ */
+export function createBootstrapReadiness(
+  provision: () => Promise<void>,
+): () => Promise<BetterAuthProviderReadiness> {
+  let held: Promise<BetterAuthProviderReadiness> | undefined;
+  return () => {
+    held ??= provision()
+      .then(() => PROVIDER_READY)
+      .catch((error: unknown) =>
+        Object.freeze({
+          ok: false as const,
+          reason:
+            error instanceof BetterAuthProviderBootstrapDisagreement
+              ? BETTER_AUTH_PROVIDER_REFUSALS.bootstrapDisagreement
+              : BETTER_AUTH_PROVIDER_REFUSALS.storageUnavailable,
+        }),
+      )
+      .then((readiness) => {
+        if (!readiness.ok && readiness.reason !== BETTER_AUTH_PROVIDER_REFUSALS.bootstrapDisagreement) {
+          held = undefined;
+        }
+        return readiness;
+      });
+    return held;
+  };
+}
+
 function productionRuntime(config: BetterAuthProviderConfig): BetterAuthProviderRuntime {
   const pool = createProviderPool(config);
-  let bootstrap: Promise<void> | undefined;
   return createBetterAuthProviderRuntime({
     config,
     database: pool,
-    ready() {
-      bootstrap ??= ensureBetterAuthAdminBootstrap(pool, config).catch((error: unknown) => {
-        bootstrap = undefined;
-        throw error;
-      });
-      return bootstrap;
-    },
+    ready: createBootstrapReadiness(() => ensureBetterAuthAdminBootstrap(pool, config)),
   });
 }
 
@@ -348,26 +474,38 @@ function refusal(reason: BetterAuthProviderRefusal): Response {
   );
 }
 
-function requiredEndpoint(request: Request): boolean {
+type ProviderEndpoint = "sign-in" | "get-session";
+
+function requiredEndpoint(request: Request): ProviderEndpoint | undefined {
   const { pathname } = new URL(request.url);
-  return (
-    (request.method === "POST" && pathname === "/api/auth/sign-in/email") ||
-    (request.method === "GET" && pathname === "/api/auth/get-session")
-  );
+  if (request.method === "POST" && pathname === "/api/auth/sign-in/email") return "sign-in";
+  if (request.method === "GET" && pathname === "/api/auth/get-session") return "get-session";
+  return undefined;
 }
 
-/** Build the two-route HTTP boundary with an injectable runtime loader for tests. */
+/**
+ * Build the two-route HTTP boundary with an injectable runtime loader for tests.
+ *
+ * Provisioning gates sign-in alone. It exists to create the one configured
+ * credential, and nothing it decides makes an already-issued session forged, so
+ * a disagreement stops new credential grants without taking session lookup down
+ * for principals it never described.
+ */
 export function createBetterAuthProviderHandler(
   loadRuntime: () => BetterAuthProviderRuntimeResult = loadProductionBetterAuthProvider,
 ) {
   return async (request: Request): Promise<Response> => {
-    if (!requiredEndpoint(request)) {
+    const endpoint = requiredEndpoint(request);
+    if (endpoint === undefined) {
       return Response.json({ code: "NOT_FOUND" }, { status: 404 });
     }
     const loaded = loadRuntime();
     if (!loaded.ok) return refusal(loaded.reason);
     try {
-      await loaded.value.ready();
+      if (endpoint === "sign-in") {
+        const readiness = await loaded.value.ready();
+        if (!readiness.ok) return refusal(readiness.reason);
+      }
       return await loaded.value.auth.handler(request);
     } catch {
       return refusal(BETTER_AUTH_PROVIDER_REFUSALS.storageUnavailable);

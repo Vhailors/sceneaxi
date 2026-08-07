@@ -17,8 +17,9 @@ Forward-only, in numeric order:
    `stripe_connect_payout_intents`, `stripe_connect_payout_outcomes`, and the
    append-only triggers those tables share with `money_split_records`
 5. `migrations/0005_better_auth_provider.sql` — provider-owned Better Auth
-   `better_auth_users`, `better_auth_sessions`, `better_auth_accounts`, and
-   `better_auth_verifications`; these are distinct from SceneAxi identity rows
+   `better_auth_users`, `better_auth_sessions`, `better_auth_accounts`,
+   `better_auth_verifications`, and the durable `better_auth_rate_limits`
+   counters; these are distinct from SceneAxi identity rows
 
 There are no down-migrations. Reverting a financial schema by dropping tables loses the
 ledger, so a correction ships as a new forward migration.

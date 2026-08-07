@@ -309,6 +309,19 @@ provider-owned `better_auth_*` tables from migration 0005, and returns redacted 
 refusals when configuration or storage is unavailable. Better Auth and `pg` remain
 dependencies of this standalone site install root, not `@sceneaxi/auth`.
 
+Three deployment properties of that provider are decided in code rather than left to a
+default. First-run provisioning gates `sign-in/email` alone and refuses a persisted
+credential that disagrees with `SCENEAXI_ADMIN_BOOTSTRAP_SECRET` as
+`BETTER_AUTH_PROVIDER_BOOTSTRAP_DISAGREEMENT` — its own refusal, not the storage one —
+so a rotation stops new sessions without taking session lookup down for principals it
+never described, and it is decided once rather than re-run per request. Sign-in throttling
+is stored in `better_auth_rate_limits`, since a per-instance memory counter resets on
+every cold start; session lookup is exempt because it is reached server-to-server from
+one egress address, which makes the sign-in ceiling deployment-wide by design. The `pg`
+pool is bounded well below the driver default (`BETTER_AUTH_PROVIDER_POOL_LIMITS`) because
+every warm serverless instance holds its own, and the umbrella already reaches the same
+Neon database over the stateless `@neondatabase/serverless` HTTP driver.
+
 Hosted sign-in reaches
 `identityPort.signIn` through this same plug point
 ([sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185), see **Hosted sign-in**

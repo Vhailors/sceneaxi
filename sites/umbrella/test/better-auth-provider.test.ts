@@ -9,9 +9,13 @@ import {
   type IdentityStore,
 } from "@sceneaxi/auth";
 import {
+  BETTER_AUTH_PROVIDER_POOL_LIMITS,
+  BETTER_AUTH_PROVIDER_RATE_LIMIT,
   BETTER_AUTH_PROVIDER_REFUSALS,
+  BetterAuthProviderBootstrapDisagreement,
   createBetterAuthProviderHandler,
   createBetterAuthProviderRuntime,
+  createBootstrapReadiness,
   createProviderPool,
   ensureBetterAuthAdminBootstrap,
   resolveBetterAuthProviderConfig,
@@ -71,6 +75,7 @@ async function providerFixture() {
       },
     ],
     better_auth_verifications: [],
+    better_auth_rate_limits: [],
   };
   const runtime = createBetterAuthProviderRuntime({
     config: config(),
@@ -255,14 +260,125 @@ describe("umbrella Better Auth provider", () => {
     }
   });
 
-  it("keeps an idle-client failure inside the provider pool", async () => {
+  it("keeps an idle-client failure inside a bounded provider pool", async () => {
     const pool = createProviderPool(config());
     try {
       expect(pool.listenerCount("error")).toBeGreaterThan(0);
       expect(() => pool.emit("error", new Error("terminated by administrator"))).not.toThrow();
+
+      expect(BETTER_AUTH_PROVIDER_POOL_LIMITS.max).toBeLessThan(10);
+      expect(pool.options.max).toBe(BETTER_AUTH_PROVIDER_POOL_LIMITS.max);
+      expect(pool.options.connectionTimeoutMillis).toBeGreaterThan(0);
+      const parseInt8 = pool.options.types?.getTypeParser(20) as (value: string) => unknown;
+      expect(parseInt8("1754563200000")).toBe(1754563200000);
     } finally {
       await pool.end();
     }
+  });
+
+  it("refuses a bootstrap disagreement as itself and decides it exactly once", async () => {
+    let attempts = 0;
+    const ready = createBootstrapReadiness(async () => {
+      attempts += 1;
+      throw new BetterAuthProviderBootstrapDisagreement(
+        "provider bootstrap credential does not match persisted state",
+      );
+    });
+
+    for (let call = 0; call < 5; call += 1) {
+      expect(await ready()).toEqual({
+        ok: false,
+        reason: BETTER_AUTH_PROVIDER_REFUSALS.bootstrapDisagreement,
+      });
+    }
+    expect(attempts).toBe(1);
+  });
+
+  it("retries provisioning after a storage fault but not after a disagreement", async () => {
+    let attempts = 0;
+    const ready = createBootstrapReadiness(async () => {
+      attempts += 1;
+      if (attempts < 3) throw new Error("connection terminated unexpectedly");
+    });
+
+    expect(await ready()).toEqual({
+      ok: false,
+      reason: BETTER_AUTH_PROVIDER_REFUSALS.storageUnavailable,
+    });
+    expect(await ready()).toEqual({
+      ok: false,
+      reason: BETTER_AUTH_PROVIDER_REFUSALS.storageUnavailable,
+    });
+    expect(await ready()).toEqual({ ok: true });
+    expect(await ready()).toEqual({ ok: true });
+    expect(attempts).toBe(3);
+  });
+
+  it("keeps a disagreeing bootstrap out of session lookup for unrelated principals", async () => {
+    const { database, handler: provisioned } = await providerFixture();
+    const issued = await signIn(provisioned);
+    const cookie = (issued.headers.get("set-cookie") ?? "").split(";", 1)[0] ?? "";
+
+    let readyCalls = 0;
+    const runtime = createBetterAuthProviderRuntime({
+      config: config(),
+      database: memoryAdapter(database),
+      ready: async () => {
+        readyCalls += 1;
+        return {
+          ok: false,
+          reason: BETTER_AUTH_PROVIDER_REFUSALS.bootstrapDisagreement,
+        };
+      },
+    });
+    const handler = createBetterAuthProviderHandler(() => ({ ok: true, value: runtime }));
+
+    const refused = await signIn(handler);
+    expect(refused.status).toBe(503);
+    expect(await refused.json()).toEqual({
+      code: BETTER_AUTH_PROVIDER_REFUSALS.bootstrapDisagreement,
+    });
+    expect(readyCalls).toBe(1);
+
+    const lookup = await handler(
+      new Request(`${ORIGIN}/api/auth/get-session`, { headers: { cookie } }),
+    );
+    expect(lookup.status).toBe(200);
+    expect(await lookup.json()).toMatchObject({ user: { id: "provider-user-1" } });
+    expect(readyCalls).toBe(1);
+  });
+
+  it("throttles sign-in through provider storage and exempts session lookup", async () => {
+    const { database, handler } = await providerFixture();
+    const attempt = () =>
+      handler(
+        new Request(`${ORIGIN}/api/auth/sign-in/email`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ email: EMAIL, password: `${PASSWORD}-wrong` }),
+        }),
+      );
+
+    const statuses: number[] = [];
+    for (let call = 0; call < BETTER_AUTH_PROVIDER_RATE_LIMIT.signIn.max + 1; call += 1) {
+      statuses.push((await attempt()).status);
+    }
+    expect(statuses.slice(0, -1)).not.toContain(429);
+    expect(statuses.at(-1)).toBe(429);
+    expect(database["better_auth_sessions"]).toHaveLength(0);
+
+    const counters = database["better_auth_rate_limits"] ?? [];
+    expect(counters).toHaveLength(1);
+    expect(counters[0]).toMatchObject({
+      key: expect.stringContaining("/sign-in/email"),
+      count: BETTER_AUTH_PROVIDER_RATE_LIMIT.signIn.max,
+    });
+
+    for (let call = 0; call < 8; call += 1) {
+      const lookup = await handler(new Request(`${ORIGIN}/api/auth/get-session`));
+      expect(lookup.status).toBe(200);
+    }
+    expect(database["better_auth_rate_limits"]).toHaveLength(1);
   });
 
   it("rejects a wrong credential without exposing it or creating a session", async () => {

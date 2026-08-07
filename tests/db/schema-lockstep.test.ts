@@ -398,6 +398,7 @@ describe("migration hygiene", () => {
       "better_auth_sessions",
       "better_auth_accounts",
       "better_auth_verifications",
+      "better_auth_rate_limits",
     ]) {
       expect(providerSource).toContain(`"${table}"`);
       expect(sql).toContain(`CREATE TABLE IF NOT EXISTS ${table}`);
