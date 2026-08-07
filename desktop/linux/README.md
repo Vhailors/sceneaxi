@@ -114,7 +114,7 @@ Rules the gate enforces (`pnpm check:desktop`, `pnpm check:boundaries`,
   raw value reaches the engine bridge, Unix socket, CLI, project, URL, output, or
   log. Electron `safeStorage` protects the persisted ciphertext, and Linux
   `basic_text`/unknown backends refuse. The local RPC adapter does generate a
-  launch-scoped 256-bit capability in a mode-`0600` discovery descriptor; it is
+  project-scoped 256-bit capability in a mode-`0600` discovery descriptor; it is
   local bridge authentication, never BYOK configuration, and is neither logged
   nor returned by the CLI. Provider credentials may arrive only inside an
   injected runner backed by the OS credential store, as specified in

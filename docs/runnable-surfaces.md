@@ -152,7 +152,7 @@ The CLI is **free and BYO-AI**: no verb reads a provider credential or spends
 anything, and no shipped verb is held-key gated (`SHIPPED_COMMAND_MAP`). The
 `desktop bridge` group opens only the same-user Unix socket documented in
 [`desktop-local-bridge.md`](desktop-local-bridge.md); every tool has
-`creditRoute: none`, and the CLI never receives the launch capability in output.
+`creditRoute: none`, and the CLI never receives that socket's capability in output.
 
 Hosted AI is metered but remains **explicit and default-off**. The free-vs-paid
 matrix it obeys — including BYO-key never touching the ledger and the

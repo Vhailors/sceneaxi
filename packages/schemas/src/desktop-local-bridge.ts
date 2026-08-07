@@ -2,7 +2,7 @@
  * Versioned, provider-neutral contract for the same-user desktop local bridge.
  *
  * The transport carries agent tool inputs, never provider credentials. The
- * launch-scoped capability authenticates the local CLI to the desktop host; the
+ * server-scoped capability authenticates the local CLI to the desktop host; the
  * explicit permission on every request is then checked against both the tool
  * registry and the permissions granted by that host instance.
  */

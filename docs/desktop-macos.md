@@ -192,11 +192,10 @@ the image, and start the installed copy:
 open "/Applications/SceneAxi Engine Desktop.app"
 ```
 
-On first launch the unchanged desktop application creates its project directory in
-Electron's macOS user-data location and seeds `scene.json` only when it is absent.
-Later launches preserve those bytes. The product tabs and Kids refuse-only posture
-are exactly the same as the existing desktop application documented in
-[`desktop-linux.md`](desktop-linux.md).
+Nothing about first launch is macOS-specific: this root stages the unchanged
+desktop application, so its contained project lifecycle (New Project, Open
+Project, recents, restart recovery), the product tabs, and the Kids refuse-only
+posture are owned by [`desktop-linux.md`](desktop-linux.md).
 
 ## Update behavior
 

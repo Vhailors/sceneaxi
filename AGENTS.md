@@ -345,7 +345,13 @@ the one bridge seam is `createDesktopBridge()` in `desktop/linux/src/lib/bridge.
 `composeScene()`, `bootstrapOpenPath()`, `createDesktopSession()`, and the
 deterministic local or explicitly injected BYOK assistant runner in
 `authoring-core`; hosted assistant work refuses because this tier owns no identity
-or credit plane. Every successful assistant artifact is projected through the shared
+or credit plane. Which root that bridge is bound to is decided by the contained
+lifecycle seam (`src/lib/{project-lifecycle-contract,project-lifecycle,project-host}.ts`,
+sceneaxi#224) and never by a default: first launch binds no root and writes no
+project, a root reaches the host only from a native directory dialog or its own
+validated versioned recent registry, and invalid bytes are refused rather than
+replaced — `docs/desktop-linux.md` owns that contract. Every successful
+assistant artifact is projected through the shared
 `MountableScene` boundary before the renderer may mount it — directly, not through
 `composeScene()`, because composition's own contract calls a one-instance scene a
 sculpt and refuses it, and because placement there belongs to the viewport's
@@ -381,8 +387,9 @@ External CLI/agent attachment (sceneaxi#202) is the protocol-v1 same-user Unix
 socket in `desktop/linux/src/lib/local-rpc.ts`, over the same
 `createDesktopBridge()` session; the CLI surface is `desktop bridge
 status|tools|call`, and the shared closed tool/permission registry is
-`packages/schemas/src/desktop-local-bridge.ts`. Discovery, launch-capability
-permissions, BYOK OS-secret-store contract, deterministic refusals, and proof
+`packages/schemas/src/desktop-local-bridge.ts`; it is published per bound project,
+not per launch. Discovery, capability, permissions, BYOK OS-secret-store
+contract, deterministic refusals, and proof
 map are authoritative in `docs/desktop-local-bridge.md`. No provider credential
 crosses the descriptor, CLI, RPC, tool input, logs, evidence, or project files;
 local and BYOK carry `creditRoute: none`, while hosted has no local tool and
