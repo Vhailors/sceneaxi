@@ -49,7 +49,7 @@ function classifySegment(cache, path) {
   if (cached !== undefined) return cached;
   // A path that cannot be stat'ed — including a symlink whose target is gone — counts
   // as missing, exactly as the followed-link existence check it replaces did.
-  let entry = { missing: true, link: undefined };
+  let entry;
   try {
     entry = lstatSync(path).isSymbolicLink()
       ? { missing: false, link: { path, target: realpathSync(path) } }

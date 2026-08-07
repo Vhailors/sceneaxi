@@ -329,8 +329,9 @@ The in-repo wiring is done ([#131](https://github.com/Vhailors/sceneaxi/issues/1
 `link:` dependencies in its manifest and `transpilePackages`, and
 `sites/umbrella/src/lib/identity-plane.ts` builds the site-kit adapters over them, while
 the provider-only route and Neon schema live in the same deployable install root and
-forward migration sequence. What remains is authorized configuration, migration, and
-deployment evidence, not a missing provider implementation.
+forward migration sequence. Migration state is recorded under
+[Verified TEST readiness](#verified-test-readiness); what remains is authorized
+configuration and deployment evidence, not a missing provider implementation.
 
 ### What works now, and what still refuses
 
@@ -504,9 +505,10 @@ take payments this endpoint cannot settle.
 `/api/stripe/webhook`, and `performLogin` calls `identityPort.signIn` through the
 plane's login port and sets the HttpOnly `sceneaxi.session` cookie. The provider handler
 now ships in the umbrella at `BETTER_AUTH_ORIGIN` (the `sign-in/email` and `get-session`
-endpoints named above). What remains operational is to apply migration
-`0005_better_auth_provider.sql`, set its named configuration, and configure the handles
-the deployment owner holds behind `umbrellaRequestAuthority()`, as described under
+endpoints named above). The migration state is owned by
+[Verified TEST readiness](#verified-test-readiness) and is not an outstanding operator
+step. What remains operational is to set the named configuration and configure the
+handles the deployment owner holds behind `umbrellaRequestAuthority()`, as described under
 [Deployment-owner provider handles](#deployment-owner-provider-handles). With those
 configured, sign-in writes a
 `sessions` row, provisions the user and the starter grant, and `/account` and `/editor`
@@ -651,6 +653,13 @@ webhook event, or performing a charge:
   sign-in provider configuration](#hosted-sign-in-provider-configuration) and a
   fresh deployment of current `main`. Do not remove `SCENEAXI_SITE_EDITOR_PREVIEW` before
   that sign-in path is proven.
+
+Later captain-confirmed operating state (2026-08-07), separate from the dated
+name-only observation above: migration `0005_better_auth_provider.sql` is applied, and
+the umbrella Production environment values were reset without exposing them. Deployment
+close-out verifies the existing schema through the authorized database path; it does not
+rerun that migration or wait for fresh `neonctl` OAuth. This adds no secret value or
+production-success claim to the repository.
 
 `SCENEAXI_ADMIN_EMAIL` remains the only source of the `admin` role. Its value is
 captain-held deployment configuration and is not documented here. Neither its presence nor
