@@ -36,10 +36,11 @@ const PIXELS_META_ANCHOR = `<meta name="${PIXELS_META_NAME}" content="false">`;
 const BODY_CLOSE_ANCHOR = "</body>";
 
 /**
- * Markup this tier reads but does not own: `@sceneaxi/desktop-shell` renders both
+ * Markup this tier reads but does not own: `@sceneaxi/desktop-shell` renders it all
  * and knows nothing about this consumer, so a rename there would otherwise land as
- * a silent runtime hole — no canvas at all, or the "no renderer is mounted" note
- * left painted over a live one while the smoke's honesty check reads clean.
+ * a silent runtime hole — no canvas at all, the "no renderer is mounted" note left
+ * painted over a live one while the smoke's honesty check reads clean, or the whole
+ * BYOK configuration surface simply never installed.
  */
 const RUNTIME_ANCHORS: readonly { readonly markup: string; readonly used: string }[] = [
   {
@@ -53,6 +54,18 @@ const RUNTIME_ANCHORS: readonly { readonly markup: string; readonly used: string
   {
     markup: `data-assistant-runtime-event="${DESKTOP_ASSISTANT_RUNTIME_EVENT}"`,
     used: "the renderer signals runtime availability to the visual model's control transition",
+  },
+  {
+    markup: '<div class="shell"',
+    used: "the BYOK configuration surface reads the active profile and assistant route from the .shell dataset",
+  },
+  {
+    markup: '<div class="assistant-routes"',
+    used: "the BYOK configuration surface is inserted after the assistant route group",
+  },
+  {
+    markup: 'id="assistant-route-byo"',
+    used: "the BYOK configuration surface binds its aria-controls and expanded state to the BYO route control",
   },
 ];
 

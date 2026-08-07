@@ -196,9 +196,16 @@ export function createProviderKeyStore(
     }
   };
 
-  const status = async (
+  /**
+   * The one decrypt-and-validate path. `status` projects presence from it and
+   * `read` returns its plaintext, so a single refusal order — unsupported
+   * provider, platform availability, envelope shape, decryption, plaintext
+   * validation — governs both, and a retrieval costs one file read and one
+   * platform decrypt.
+   */
+  const loadKey = (
     provider: DesktopByoProvider,
-  ): Promise<ProviderKeyStatus | ProviderKeyStoreRefusal> => {
+  ): Readonly<{ ok: true; key: string | null }> | ProviderKeyStoreRefusal => {
     if (!validProvider(provider)) {
       return refuse(
         PROVIDER_KEY_STORE_REFUSALS.providerUnsupported,
@@ -209,67 +216,51 @@ export function createProviderKeyStore(
     if (!availability.ok) return availability;
     const stored = readEnvelope(provider);
     if (!stored.ok) return stored;
-    if (stored.envelope !== null) {
-      try {
-        const verified = options.platformStorage.decrypt(
-          Buffer.from(stored.envelope.ciphertext, "base64"),
-        );
-        if (!validKey(verified)) {
-          return refuse(
-            PROVIDER_KEY_STORE_REFUSALS.corrupt,
-            "The stored provider credential could not be validated after secure retrieval.",
-          );
-        }
-      } catch {
-        return refuse(
-          PROVIDER_KEY_STORE_REFUSALS.corrupt,
-          "The stored provider credential could not be decrypted by platform secure storage.",
-        );
-      }
-    }
-    return Object.freeze({
-      ok: true as const,
-      provider,
-      keyStatus: stored.envelope === null ? "missing" as const : "configured" as const,
-    });
-  };
-
-  const read = async (
-    provider: DesktopByoProvider,
-  ): Promise<ProviderKeyRead | ProviderKeyStoreRefusal> => {
-    const current = await status(provider);
-    if (!current.ok) return current;
-    if (current.keyStatus === "missing") {
-      return refuse(
-        PROVIDER_KEY_STORE_REFUSALS.keyMissing,
-        "No provider credential is stored for the selected provider.",
-      );
-    }
-    const stored = readEnvelope(provider);
-    if (!stored.ok) return stored;
-    if (stored.envelope === null) {
-      return refuse(
-        PROVIDER_KEY_STORE_REFUSALS.keyMissing,
-        "No provider credential is stored for the selected provider.",
-      );
-    }
+    if (stored.envelope === null) return Object.freeze({ ok: true as const, key: null });
+    let key: string;
     try {
-      const key = options.platformStorage.decrypt(
+      key = options.platformStorage.decrypt(
         Buffer.from(stored.envelope.ciphertext, "base64"),
       );
-      if (!validKey(key)) {
-        return refuse(
-          PROVIDER_KEY_STORE_REFUSALS.corrupt,
-          "The stored provider credential could not be validated after secure retrieval.",
-        );
-      }
-      return Object.freeze({ ok: true as const, provider, key });
     } catch {
       return refuse(
         PROVIDER_KEY_STORE_REFUSALS.corrupt,
         "The stored provider credential could not be decrypted by platform secure storage.",
       );
     }
+    if (!validKey(key)) {
+      return refuse(
+        PROVIDER_KEY_STORE_REFUSALS.corrupt,
+        "The stored provider credential could not be validated after secure retrieval.",
+      );
+    }
+    return Object.freeze({ ok: true as const, key });
+  };
+
+  const status = async (
+    provider: DesktopByoProvider,
+  ): Promise<ProviderKeyStatus | ProviderKeyStoreRefusal> => {
+    const loaded = loadKey(provider);
+    if (!loaded.ok) return loaded;
+    return Object.freeze({
+      ok: true as const,
+      provider,
+      keyStatus: loaded.key === null ? "missing" as const : "configured" as const,
+    });
+  };
+
+  const read = async (
+    provider: DesktopByoProvider,
+  ): Promise<ProviderKeyRead | ProviderKeyStoreRefusal> => {
+    const loaded = loadKey(provider);
+    if (!loaded.ok) return loaded;
+    if (loaded.key === null) {
+      return refuse(
+        PROVIDER_KEY_STORE_REFUSALS.keyMissing,
+        "No provider credential is stored for the selected provider.",
+      );
+    }
+    return Object.freeze({ ok: true as const, provider, key: loaded.key });
   };
 
   const save = async (

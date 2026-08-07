@@ -1,5 +1,9 @@
 /** Desktop-only BYOK configuration and secure provider-session wiring. */
-import type { AssistantSculptResult } from "@sceneaxi/authoring-core";
+import {
+  ASSISTANT_SCULPT_PROGRESS_PHASES,
+  type AssistantSculptProgress,
+  type AssistantSculptResult,
+} from "@sceneaxi/authoring-core";
 import type {
   DesktopAssistantProfile,
   DesktopAssistantRunRequest,
@@ -196,24 +200,47 @@ export function createSecureDesktopByoAssistantRunner(
     if (!stored.ok) {
       throw new DesktopByoRunnerRefusal(stored.reason, stored.message);
     }
-    let keyReference: string | null = stored.key;
+    // Two separate lifetimes. The lease the provider may read from is revoked
+    // before the session closes; the comparison copy the redaction measures
+    // against outlives it until the session has closed, because a provider may
+    // flush progress from an async `close()` while the bridge job is still
+    // running. Once the copy is dropped the session is over, so any later
+    // progress is redacted rather than compared.
+    let secret: string | null = stored.key;
+    let leaseRevoked = false;
     const access: ProviderKeyAccess = Object.freeze({
       read(): string {
-        if (keyReference === null) {
+        if (leaseRevoked || secret === null) {
           throw new DesktopByoRunnerRefusal(
             DESKTOP_BYO_CONFIGURATION_REFUSALS.providerSessionFailed,
             "The privileged provider credential lease has ended.",
           );
         }
-        return keyReference;
+        return secret;
       },
     });
+
+    // A redacted snapshot carries no provider-authored text: `message` is fixed
+    // and `phase` is projected back onto the known vocabulary, so a provider
+    // that hides credential material in a field other than `message` cannot
+    // have it copied through the redaction branch.
+    const redacted = (snapshot: AssistantSculptProgress): AssistantSculptProgress =>
+      Object.freeze({
+        phase: (ASSISTANT_SCULPT_PROGRESS_PHASES as readonly string[]).includes(snapshot.phase)
+          ? snapshot.phase
+          : "waiting-provider",
+        percent: typeof snapshot.percent === "number" && Number.isFinite(snapshot.percent)
+          ? snapshot.percent
+          : 0,
+        message: "Provider progress was redacted.",
+      });
 
     let session: DesktopByoProviderSession;
     try {
       session = options.createProviderSession({ provider: options.provider, key: access });
     } catch {
-      keyReference = null;
+      leaseRevoked = true;
+      secret = null;
       throw new DesktopByoRunnerRefusal(
         DESKTOP_BYO_CONFIGURATION_REFUSALS.providerSessionFailed,
         "The privileged BYOK provider session could not be created.",
@@ -224,26 +251,15 @@ export function createSecureDesktopByoAssistantRunner(
       const providerRequest: DesktopAssistantRunRequest = Object.freeze({
         ...request,
         onProgress: (snapshot) => {
-          const serialized = JSON.stringify(snapshot);
-          if (
-            keyReference !== null &&
-            serialized.includes(keyReference)
-          ) {
-            request.onProgress(Object.freeze({
-              phase: snapshot.phase,
-              percent: snapshot.percent,
-              message: "Provider progress was redacted.",
-            }));
+          if (secret === null || JSON.stringify(snapshot).includes(secret)) {
+            request.onProgress(redacted(snapshot));
             return;
           }
           request.onProgress(snapshot);
         },
       });
       const result = await session.run(providerRequest);
-      if (
-        keyReference !== null &&
-        JSON.stringify(result).includes(keyReference)
-      ) {
+      if (secret === null || JSON.stringify(result).includes(secret)) {
         throw new DesktopByoRunnerRefusal(
           DESKTOP_BYO_CONFIGURATION_REFUSALS.providerSessionFailed,
           "The privileged BYOK provider session returned credential material and was refused.",
@@ -256,12 +272,14 @@ export function createSecureDesktopByoAssistantRunner(
         "The privileged BYOK provider session failed.",
       );
     } finally {
-      keyReference = null;
+      leaseRevoked = true;
       try {
         await session.close();
       } catch {
         // Credential cleanup already happened; provider cleanup has no safe
         // renderer-facing detail and cannot restore access to the lease.
+      } finally {
+        secret = null;
       }
     }
   };

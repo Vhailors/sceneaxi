@@ -351,7 +351,7 @@ async function mountLiveViewport(): Promise<void> {
   if (!byoConfigurationBound) {
     openPathLine(
       stage,
-      "BYOK configuration refused: the desktop settings controls could not bind to platform secure storage.",
+      "BYOK configuration refused: the chrome document did not expose the assistant route controls the configuration surface binds to.",
     );
   }
 
