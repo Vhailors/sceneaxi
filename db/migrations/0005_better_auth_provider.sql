@@ -81,12 +81,18 @@ CREATE INDEX IF NOT EXISTS better_auth_verifications_identifier_idx
 CREATE INDEX IF NOT EXISTS better_auth_verifications_expires_at_idx
   ON better_auth_verifications ("expiresAt");
 
--- Durable rate-limit counters for the public credential endpoint. The provider
--- configures `rateLimit.storage = "database"` because a per-instance in-memory
--- counter resets on every serverless cold start and throttles nothing an
--- attacker can simply outlast. `"key"` is the provider's `<ip>|<path>` bucket
--- and its uniqueness is load-bearing: the atomic consume path depends on a
--- concurrent insert for the same bucket losing.
+-- Durable rate-limit counters for the public endpoints. The provider configures
+-- `rateLimit.storage = "database"` because a per-instance in-memory counter
+-- resets on every serverless cold start and throttles nothing an attacker can
+-- simply outlast. `"key"` is the provider's `<ip>|<path>` bucket and its
+-- uniqueness is load-bearing: the atomic consume path depends on a concurrent
+-- insert for the same bucket losing.
+--
+-- These rows are working state, not evidence: they carry no identity, decide
+-- nothing once their window has passed, and are the one table here that a
+-- caller who never returns can leave behind. The provider therefore sweeps rows
+-- past every live window on a bounded interval, which is what the index below
+-- orders; retention needs no operator step.
 CREATE TABLE IF NOT EXISTS better_auth_rate_limits (
   "id"          text    PRIMARY KEY,
   "key"         text    NOT NULL UNIQUE,

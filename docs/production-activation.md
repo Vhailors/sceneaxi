@@ -363,7 +363,7 @@ Capture at least one safe proof for each applicable closed state before go/no-go
 | Missing or unsafe state | Required result |
 |---|---|
 | Better Auth provider configuration or provider tables unavailable | `BETTER_AUTH_PROVIDER_CONFIGURATION_ABSENT`, `BETTER_AUTH_PROVIDER_CONFIGURATION_INVALID`, or `BETTER_AUTH_PROVIDER_STORAGE_UNAVAILABLE`; redacted HTTP 503 and no provider dispatch after a failed readiness check |
-| Persisted provider credential disagrees with `SCENEAXI_ADMIN_BOOTSTRAP_SECRET` | `BETTER_AUTH_PROVIDER_BOOTSTRAP_DISAGREEMENT`, never the storage refusal; `POST /api/auth/sign-in/email` refuses and issues no session, while `GET /api/auth/get-session` keeps answering for already-issued sessions. The provider never rotates or overwrites the persisted account to resolve it — a rotation is applied to the database by its owner |
+| Persisted provider credential disagrees with `SCENEAXI_ADMIN_BOOTSTRAP_SECRET` | `BETTER_AUTH_PROVIDER_BOOTSTRAP_DISAGREEMENT`, never the storage refusal; `POST /api/auth/sign-in/email` refuses and issues no session, while `GET /api/auth/get-session` keeps answering for already-issued sessions. The provider never rotates or overwrites the persisted account to resolve it — a rotation is applied to the database by its owner, after which each running instance re-reads the credential within a minute and recovers without a redeploy |
 | Better Auth or identity store absent | `IDENTITY_PLANE_NOT_WIRED`; no form/session/account invention |
 | Signed-out visitor | `IDENTITY_SESSION_ABSENT`; treated as signed out, not a provider failure |
 | Credit store unreadable | `CREDITS_PLANE_UNAVAILABLE`; no zero-balance substitution |

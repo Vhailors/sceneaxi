@@ -314,10 +314,14 @@ default. First-run provisioning gates `sign-in/email` alone and refuses a persis
 credential that disagrees with `SCENEAXI_ADMIN_BOOTSTRAP_SECRET` as
 `BETTER_AUTH_PROVIDER_BOOTSTRAP_DISAGREEMENT` — its own refusal, not the storage one —
 so a rotation stops new sessions without taking session lookup down for principals it
-never described, and it is decided once rather than re-run per request. Sign-in throttling
-is stored in `better_auth_rate_limits`, since a per-instance memory counter resets on
-every cold start; session lookup is exempt because it is reached server-to-server from
-one egress address, which makes the sign-in ceiling deployment-wide by design. The `pg`
+never described. That decision is memoized rather than re-run per request, but only for a
+bounded interval, because the remedy an operator applies changes the very state it read —
+a corrected database recovers on its own without a redeploy. Throttling is stored in
+`better_auth_rate_limits`, since a per-instance memory counter resets on every cold start;
+both endpoints are throttled per source address, with session lookup on the longer
+fallback rule, which the deployment's own relay never approaches because it reaches that
+path at most once per already-capped sign-in. The provider sweeps counters past every live
+window itself on a bounded interval, so the table needs no operator retention step. The `pg`
 pool is bounded well below the driver default (`BETTER_AUTH_PROVIDER_POOL_LIMITS`) because
 every warm serverless instance holds its own, and the umbrella already reaches the same
 Neon database over the stateless `@neondatabase/serverless` HTTP driver.

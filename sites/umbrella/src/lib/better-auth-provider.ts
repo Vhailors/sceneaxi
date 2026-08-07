@@ -158,6 +158,8 @@ const PROVIDER_READY: BetterAuthProviderReadiness = Object.freeze({ ok: true as 
 export type BetterAuthProviderRuntime = Readonly<{
   auth: ProviderAuth;
   ready(): Promise<BetterAuthProviderReadiness>;
+  /** Best-effort, bounded retention for the durable throttle counters. */
+  retain(): void;
 }>;
 
 export type BetterAuthProviderRuntimeResult =
@@ -173,7 +175,7 @@ const providerModels = Object.freeze({
 });
 
 /**
- * Durable throttling for the public credential endpoint.
+ * Durable throttling for both public endpoints.
  *
  * The counter lives in the provider's own PostgreSQL, not in per-instance
  * memory, because a serverless instance's memory resets on every cold start and
@@ -181,16 +183,36 @@ const providerModels = Object.freeze({
  * and exactly one account is ever provisioned, which makes `/sign-in/email` the
  * whole brute-force surface for the sole admin address.
  *
- * Session lookup is exempt on purpose: every request reaches this provider
- * server-to-server from the deployment's own egress address, so a shared bucket
- * on that path would throttle unrelated visitors rather than an attacker, and
- * the path creates nothing and already requires an issued 32-byte token. That
- * same shared egress is why the sign-in rule is deliberately a deployment-wide
- * ceiling on credential attempts rather than a per-caller one.
+ * Session lookup keeps the fallback rule rather than an exemption. Buckets are
+ * keyed per source address, and this deployment's own relay reaches that path at
+ * most once per sign-in — already capped by the sign-in rule — so the fallback
+ * binds a direct flood without ever binding the relay, and unauthenticated
+ * lookups cannot monopolise the small connection pool below.
+ *
+ * `fallback.window` is also the longest window here on purpose: Better Auth
+ * prunes its own expired counters against `rateLimit.window`, so a custom window
+ * longer than the fallback would have its bucket deleted while still live,
+ * quietly resetting an attacker's count mid-window.
  */
 export const BETTER_AUTH_PROVIDER_RATE_LIMIT = Object.freeze({
   signIn: Object.freeze({ window: 300, max: 5 }),
-  fallback: Object.freeze({ window: 60, max: 120 }),
+  fallback: Object.freeze({ window: 300, max: 120 }),
+});
+
+/**
+ * Retention for the counter table.
+ *
+ * Better Auth prunes only when a returning caller finds its own bucket expired,
+ * so on a deployment whose sign-ins are rare, rows left by callers that never
+ * come back — one per source address — accumulate against the same database that
+ * holds the ledger. This sweep is the safety net: one bounded, index-ordered
+ * delete per instance per interval, of rows far past any window this provider
+ * can still be deciding.
+ */
+export const BETTER_AUTH_PROVIDER_RETENTION = Object.freeze({
+  staleAfterMs: 4 * 300 * 1_000,
+  sweepIntervalMs: 15 * 60 * 1_000,
+  maxRowsPerSweep: 2_000,
 });
 
 /**
@@ -202,6 +224,7 @@ export function createBetterAuthProviderRuntime(options: {
   readonly config: BetterAuthProviderConfig;
   readonly database: BetterAuthOptions["database"];
   readonly ready?: (() => Promise<BetterAuthProviderReadiness>) | undefined;
+  readonly retain?: (() => void) | undefined;
 }): BetterAuthProviderRuntime {
   const { config } = options;
   const auth = betterAuth({
@@ -227,7 +250,6 @@ export function createBetterAuthProviderRuntime(options: {
       max: BETTER_AUTH_PROVIDER_RATE_LIMIT.fallback.max,
       customRules: {
         "/sign-in/email": { ...BETTER_AUTH_PROVIDER_RATE_LIMIT.signIn },
-        "/get-session": false,
       },
     },
     advanced: {
@@ -239,6 +261,7 @@ export function createBetterAuthProviderRuntime(options: {
   return Object.freeze({
     auth,
     ready: options.ready ?? (async () => PROVIDER_READY),
+    retain: options.retain ?? (() => undefined),
   });
 }
 
@@ -397,20 +420,88 @@ export function createProviderPool(config: BetterAuthProviderConfig): Pool {
   return pool;
 }
 
+const RATE_LIMIT_RETENTION_SQL = `DELETE FROM "better_auth_rate_limits"
+        WHERE "id" IN (
+          SELECT "id"
+            FROM "better_auth_rate_limits"
+           WHERE "lastRequest" < $1
+           ORDER BY "lastRequest"
+           LIMIT $2
+        )`;
+
+/**
+ * One bounded counter sweep per instance per interval.
+ *
+ * It never blocks, never rejects, and never reports: a request that could not
+ * prune is still a request the provider answered correctly, and the row it left
+ * behind decides nothing. The row cap keeps a first sweep against a long-neglected
+ * table from becoming a long-running statement on the shared database.
+ */
+export function createRateLimitRetention(
+  pool: Pick<Pool, "query">,
+  clock: () => number = Date.now,
+): () => void {
+  let sweptAt: number | undefined;
+  let sweeping = false;
+  return () => {
+    const now = clock();
+    if (sweeping) return;
+    if (
+      sweptAt !== undefined &&
+      now - sweptAt < BETTER_AUTH_PROVIDER_RETENTION.sweepIntervalMs
+    ) {
+      return;
+    }
+    sweptAt = now;
+    sweeping = true;
+    try {
+      void Promise.resolve(
+        pool.query(RATE_LIMIT_RETENTION_SQL, [
+          now - BETTER_AUTH_PROVIDER_RETENTION.staleAfterMs,
+          BETTER_AUTH_PROVIDER_RETENTION.maxRowsPerSweep,
+        ]),
+      )
+        .catch(() => undefined)
+        .finally(() => {
+          sweeping = false;
+        });
+    } catch {
+      sweeping = false;
+    }
+  };
+}
+
+/**
+ * How long a disagreement stands before the provider asks the database again.
+ *
+ * The remedy an operator applies is a change to the very state the decision read,
+ * so the answer is deterministic only until they apply it. Re-deciding on a bounded
+ * interval lets a corrected deployment recover on its own, without a redeploy, while
+ * still keeping the advisory lock, two locking reads, and scrypt verification off the
+ * per-request path of an unauthenticated endpoint.
+ */
+export const BETTER_AUTH_PROVIDER_BOOTSTRAP_RETRY_MS = 60_000;
+
 /**
  * Memoize provisioning by outcome, not by attempt.
  *
- * A disagreement is deterministic, so it is answered from the memo forever:
- * re-running it would re-open a client and re-run an advisory lock, two locking
- * reads, and a scrypt verification for every unauthenticated request while the
- * deployment stays misconfigured. A storage fault is transient, so it is
- * forgotten and the next request tries again.
+ * A storage fault is transient, so it is forgotten immediately and the next request
+ * tries again. A disagreement is held for the retry interval above.
  */
 export function createBootstrapReadiness(
   provision: () => Promise<void>,
+  clock: () => number = Date.now,
 ): () => Promise<BetterAuthProviderReadiness> {
   let held: Promise<BetterAuthProviderReadiness> | undefined;
+  let disagreedAt: number | undefined;
   return () => {
+    if (
+      disagreedAt !== undefined &&
+      clock() - disagreedAt >= BETTER_AUTH_PROVIDER_BOOTSTRAP_RETRY_MS
+    ) {
+      held = undefined;
+      disagreedAt = undefined;
+    }
     held ??= provision()
       .then(() => PROVIDER_READY)
       .catch((error: unknown) =>
@@ -423,7 +514,10 @@ export function createBootstrapReadiness(
         }),
       )
       .then((readiness) => {
-        if (!readiness.ok && readiness.reason !== BETTER_AUTH_PROVIDER_REFUSALS.bootstrapDisagreement) {
+        if (readiness.ok) return readiness;
+        if (readiness.reason === BETTER_AUTH_PROVIDER_REFUSALS.bootstrapDisagreement) {
+          disagreedAt = clock();
+        } else {
           held = undefined;
         }
         return readiness;
@@ -438,6 +532,7 @@ function productionRuntime(config: BetterAuthProviderConfig): BetterAuthProvider
     config,
     database: pool,
     ready: createBootstrapReadiness(() => ensureBetterAuthAdminBootstrap(pool, config)),
+    retain: createRateLimitRetention(pool),
   });
 }
 
@@ -501,6 +596,9 @@ export function createBetterAuthProviderHandler(
     }
     const loaded = loadRuntime();
     if (!loaded.ok) return refusal(loaded.reason);
+    void Promise.resolve()
+      .then(() => loaded.value.retain())
+      .catch(() => undefined);
     try {
       if (endpoint === "sign-in") {
         const readiness = await loaded.value.ready();

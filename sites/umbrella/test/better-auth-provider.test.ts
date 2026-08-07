@@ -9,14 +9,17 @@ import {
   type IdentityStore,
 } from "@sceneaxi/auth";
 import {
+  BETTER_AUTH_PROVIDER_BOOTSTRAP_RETRY_MS,
   BETTER_AUTH_PROVIDER_POOL_LIMITS,
   BETTER_AUTH_PROVIDER_RATE_LIMIT,
   BETTER_AUTH_PROVIDER_REFUSALS,
+  BETTER_AUTH_PROVIDER_RETENTION,
   BetterAuthProviderBootstrapDisagreement,
   createBetterAuthProviderHandler,
   createBetterAuthProviderRuntime,
   createBootstrapReadiness,
   createProviderPool,
+  createRateLimitRetention,
   ensureBetterAuthAdminBootstrap,
   resolveBetterAuthProviderConfig,
   type BetterAuthProviderConfig,
@@ -276,14 +279,21 @@ describe("umbrella Better Auth provider", () => {
     }
   });
 
-  it("refuses a bootstrap disagreement as itself and decides it exactly once", async () => {
+  it("holds a bootstrap disagreement for a bounded interval, then re-decides it", async () => {
     let attempts = 0;
-    const ready = createBootstrapReadiness(async () => {
-      attempts += 1;
-      throw new BetterAuthProviderBootstrapDisagreement(
-        "provider bootstrap credential does not match persisted state",
-      );
-    });
+    let persistedCredentialDisagrees = true;
+    let now = 1_700_000_000_000;
+    const ready = createBootstrapReadiness(
+      async () => {
+        attempts += 1;
+        if (persistedCredentialDisagrees) {
+          throw new BetterAuthProviderBootstrapDisagreement(
+            "provider bootstrap credential does not match persisted state",
+          );
+        }
+      },
+      () => now,
+    );
 
     for (let call = 0; call < 5; call += 1) {
       expect(await ready()).toEqual({
@@ -292,9 +302,22 @@ describe("umbrella Better Auth provider", () => {
       });
     }
     expect(attempts).toBe(1);
+
+    now += BETTER_AUTH_PROVIDER_BOOTSTRAP_RETRY_MS - 1;
+    expect(await ready()).toEqual({
+      ok: false,
+      reason: BETTER_AUTH_PROVIDER_REFUSALS.bootstrapDisagreement,
+    });
+    expect(attempts).toBe(1);
+
+    persistedCredentialDisagrees = false;
+    now += 1;
+    expect(await ready()).toEqual({ ok: true });
+    expect(await ready()).toEqual({ ok: true });
+    expect(attempts).toBe(2);
   });
 
-  it("retries provisioning after a storage fault but not after a disagreement", async () => {
+  it("retries provisioning immediately after a storage fault", async () => {
     let attempts = 0;
     const ready = createBootstrapReadiness(async () => {
       attempts += 1;
@@ -348,7 +371,11 @@ describe("umbrella Better Auth provider", () => {
     expect(readyCalls).toBe(1);
   });
 
-  it("throttles sign-in through provider storage and exempts session lookup", async () => {
+  it("throttles both endpoints through provider storage", async () => {
+    expect(BETTER_AUTH_PROVIDER_RATE_LIMIT.fallback.window).toBeGreaterThanOrEqual(
+      BETTER_AUTH_PROVIDER_RATE_LIMIT.signIn.window,
+    );
+
     const { database, handler } = await providerFixture();
     const attempt = () =>
       handler(
@@ -367,18 +394,103 @@ describe("umbrella Better Auth provider", () => {
     expect(statuses.at(-1)).toBe(429);
     expect(database["better_auth_sessions"]).toHaveLength(0);
 
-    const counters = database["better_auth_rate_limits"] ?? [];
-    expect(counters).toHaveLength(1);
-    expect(counters[0]).toMatchObject({
-      key: expect.stringContaining("/sign-in/email"),
+    const signInCounters = (database["better_auth_rate_limits"] ?? []).filter((row) =>
+      String(row["key"]).includes("/sign-in/email"),
+    );
+    expect(signInCounters).toHaveLength(1);
+    expect(signInCounters[0]).toMatchObject({
       count: BETTER_AUTH_PROVIDER_RATE_LIMIT.signIn.max,
     });
 
-    for (let call = 0; call < 8; call += 1) {
+    const relayLookups = BETTER_AUTH_PROVIDER_RATE_LIMIT.signIn.max + 3;
+    for (let call = 0; call < relayLookups; call += 1) {
       const lookup = await handler(new Request(`${ORIGIN}/api/auth/get-session`));
       expect(lookup.status).toBe(200);
     }
-    expect(database["better_auth_rate_limits"]).toHaveLength(1);
+    const lookupCounters = (database["better_auth_rate_limits"] ?? []).filter((row) =>
+      String(row["key"]).includes("/get-session"),
+    );
+    expect(lookupCounters).toHaveLength(1);
+    expect(lookupCounters[0]).toMatchObject({ count: relayLookups });
+  });
+
+  it("sweeps stale counters on a bounded interval and never fails a request", async () => {
+    const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+    const queries: Array<{ text: string; values: ReadonlyArray<unknown> }> = [];
+    let now = 1_700_000_000_000;
+    let unavailable = false;
+    const pool = {
+      async query(text: string, values: ReadonlyArray<unknown> = []) {
+        queries.push({ text, values });
+        if (unavailable) throw new Error("connection terminated unexpectedly");
+        return { rows: [] };
+      },
+    };
+    const retain = createRateLimitRetention(pool as unknown as Pool, () => now);
+
+    expect(BETTER_AUTH_PROVIDER_RETENTION.staleAfterMs).toBeGreaterThan(
+      BETTER_AUTH_PROVIDER_RATE_LIMIT.fallback.window * 1_000,
+    );
+    expect(BETTER_AUTH_PROVIDER_RETENTION.staleAfterMs).toBeGreaterThan(
+      BETTER_AUTH_PROVIDER_RATE_LIMIT.signIn.window * 1_000,
+    );
+
+    retain();
+    retain();
+    await flush();
+    expect(queries).toHaveLength(1);
+    expect(queries[0]?.text).toContain('DELETE FROM "better_auth_rate_limits"');
+    expect(queries[0]?.text).toContain("LIMIT $2");
+    expect(queries[0]?.values).toEqual([
+      now - BETTER_AUTH_PROVIDER_RETENTION.staleAfterMs,
+      BETTER_AUTH_PROVIDER_RETENTION.maxRowsPerSweep,
+    ]);
+
+    now += BETTER_AUTH_PROVIDER_RETENTION.sweepIntervalMs - 1;
+    retain();
+    await flush();
+    expect(queries).toHaveLength(1);
+
+    now += 1;
+    unavailable = true;
+    expect(() => retain()).not.toThrow();
+    await flush();
+    expect(queries).toHaveLength(2);
+
+    now += BETTER_AUTH_PROVIDER_RETENTION.sweepIntervalMs;
+    unavailable = false;
+    retain();
+    await flush();
+    expect(queries).toHaveLength(3);
+  });
+
+  it("asks for retention on every answered request without letting it fail one", async () => {
+    let retained = 0;
+    const handler = createBetterAuthProviderHandler(() => ({
+      ok: true,
+      value: {
+        async ready() {
+          return { ok: true } as const;
+        },
+        retain() {
+          retained += 1;
+          throw new Error("retention is best-effort");
+        },
+        auth: {
+          async handler() {
+            return new Response(null, { status: 204 });
+          },
+        },
+      },
+    }));
+
+    expect((await signIn(handler)).status).toBe(204);
+    expect(
+      (await handler(new Request(`${ORIGIN}/api/auth/get-session`))).status,
+    ).toBe(204);
+    expect((await handler(new Request(`${ORIGIN}/api/auth/sign-up/email`))).status).toBe(404);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(retained).toBe(2);
   });
 
   it("rejects a wrong credential without exposing it or creating a session", async () => {
@@ -433,8 +545,11 @@ describe("umbrella Better Auth provider", () => {
     const handler = createBetterAuthProviderHandler(() => ({
       ok: true,
       value: {
-        async ready() {
+        async ready(): Promise<never> {
           throw new Error(`unavailable ${PASSWORD} ${SIGNING_SECRET}`);
+        },
+        retain() {
+          return undefined;
         },
         auth: {
           async handler() {
