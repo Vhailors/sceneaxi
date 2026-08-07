@@ -221,7 +221,12 @@ describe("engine desktop chrome — control accounting (document → model)", ()
   it("adds no interactive element the button helper cannot own", () => {
     for (const [label, state] of STATES) {
       const html = render(state);
-      expect(html, label).not.toMatch(/<(a|input|details|summary)\b/i);
+      expect(html, label).not.toMatch(/<(a|details|summary)\b/i);
+      const inputs = html.match(/<input\b[^>]*>/g) ?? [];
+      expect(inputs, label).toHaveLength(1);
+      expect(inputs[0], label).toMatch(
+        /id="scene-property-translation-x" data-kind="(live|inert)"/,
+      );
       const selects = html.match(/<select\b[^>]*>/g) ?? [];
       expect(selects, label).toHaveLength(1);
       expect(selects[0], label).toMatch(
@@ -236,7 +241,7 @@ describe("engine desktop chrome — control accounting (document → model)", ()
       // A focus stop outside a <button> would be an interactive element with no
       // control behind it; the tabs' roving `tabindex` sits on buttons.
       for (const [tag] of html.matchAll(/<[a-z][^>]*\stabindex="[^"]*"[^>]*>/gi)) {
-        expect(tag, `${label} ${tag}`).toMatch(/^<(button|textarea|select)\b/);
+        expect(tag, `${label} ${tag}`).toMatch(/^<(button|input|textarea|select)\b/);
       }
     }
   });

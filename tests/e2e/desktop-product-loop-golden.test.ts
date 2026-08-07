@@ -15,6 +15,7 @@ import {
   type HTMLElement as HappyHTMLElement,
 } from "happy-dom";
 import { createDocument, writeDocumentFile } from "@sceneaxi/authoring-core";
+import type { JsonValue } from "@sceneaxi/schemas";
 import {
   DESKTOP_VIEWPORT_PLAY_EVENT,
   createDesktopVisualState,
@@ -74,95 +75,119 @@ async function click(window: HappyWindow, selector: string) {
   throw new Error(`product-loop control did not settle ${selector}`);
 }
 
+type ChromeHarnessPort = {
+  readonly bridge: ReturnType<typeof createDesktopBridge>;
+  readonly ipcClone: <T>(value: T) => T;
+};
+
+/**
+ * Mount the emitted chrome over a real bridge the way the packaged app does:
+ * the renderer only ever sees structured-cloned values, so every request and
+ * response crosses `ipcClone` exactly as it would cross Electron IPC.
+ *
+ * `start()` is separate from mounting so a case can register its viewport-play
+ * listener first — the script binds its handlers as it evaluates.
+ */
+function mountChrome(
+  dir: string,
+  intercept?: (port: ChromeHarnessPort) => (request: unknown) => Promise<unknown>,
+) {
+  const bridge = createDesktopBridge({ cwd: dir, nowMs: () => 1_753_920_000_000 });
+  const window = new HappyWindow({ width: 1000, height: 700 });
+  windows.push(window);
+  const ipcClone = <T>(value: T): T => window.eval(`(${JSON.stringify(value)})`) as T;
+  const request =
+    intercept?.({ bridge, ipcClone }) ??
+    (async (value: unknown) => ipcClone(bridge.handle(ipcClone(value))));
+  Object.defineProperty(window, "structuredClone", { value: ipcClone });
+  Object.defineProperty(window, "sceneaxiDesktop", { value: { request } });
+  const html = renderDesktopChrome(
+    desktopVisualView(
+      createDesktopVisualState({
+        profile: "game",
+        window: { width: 1000, height: 700 },
+      }),
+    ),
+  );
+  const match = /<script>([\s\S]*?)<\/script>/.exec(html);
+  if (match === null) throw new Error("desktop chrome lost its emitted script");
+  const script = match[1];
+  if (script === undefined) throw new Error("desktop chrome emitted an empty script");
+  window.document.write(html.replace(match[0], ""));
+  return {
+    window,
+    start: () => {
+      window.eval(script);
+    },
+  };
+}
+
 describe("desktop first-release product loop", () => {
   it("drives profile switching, open, save recovery, and viewport play through the emitted UI", async () => {
     const dir = projectDir();
-    const bridge = createDesktopBridge({ cwd: dir, nowMs: () => 1_753_920_000_000 });
     const requests: Array<{ action?: unknown; payload?: { op?: unknown } }> = [];
     let deferredAcceptedSaves = 2;
     let reportMissingRecovery = true;
     let refuseNextPlay = false;
-    const window = new HappyWindow({ width: 1000, height: 700 });
-    const ipcClone = <T>(value: T): T =>
-      window.eval(`(${JSON.stringify(value)})`) as T;
-    windows.push(window);
-    Object.defineProperty(window, "structuredClone", { value: ipcClone });
-    Object.defineProperty(window, "sceneaxiDesktop", {
-      value: {
-        request: async (request: unknown) => {
-          const typed = JSON.parse(JSON.stringify(request)) as {
-            action?: unknown;
-            payload?: { op?: unknown };
-          };
-          requests.push(typed);
-          if (refuseNextPlay && typed.action === "open-path") {
-            refuseNextPlay = false;
-            return ipcClone({
-              ok: false,
-              reason: "DESKTOP_SCENE_NOT_COMPOSABLE",
-              message: "The active composition is invalid.",
-              detail: null,
-            });
-          }
-          const response = bridge.handle(typed);
-          if (
-            deferredAcceptedSaves > 0 &&
-            typed.action === "authoring" &&
-            typed.payload?.op === "accept" &&
-            response.ok
-          ) {
-            deferredAcceptedSaves -= 1;
-            return ipcClone({
-              ...response,
-              data: {
-                ...(response.data as Record<string, unknown>),
-                phase: "pending",
-                journalRecoveryPending: true,
-                transactionId: "fixture-pending-apply",
+    const { window, start } = mountChrome(dir, ({ bridge, ipcClone }) => async (request) => {
+      const typed = JSON.parse(JSON.stringify(request)) as {
+        action?: unknown;
+        payload?: { op?: unknown };
+      };
+      requests.push(typed);
+      if (refuseNextPlay && typed.action === "open-path") {
+        refuseNextPlay = false;
+        return ipcClone({
+          ok: false,
+          reason: "DESKTOP_SCENE_NOT_COMPOSABLE",
+          message: "The active composition is invalid.",
+          detail: null,
+        });
+      }
+      const response = bridge.handle(typed);
+      if (
+        deferredAcceptedSaves > 0 &&
+        typed.action === "authoring" &&
+        typed.payload?.op === "accept" &&
+        response.ok
+      ) {
+        deferredAcceptedSaves -= 1;
+        return ipcClone({
+          ...response,
+          data: {
+            ...(response.data as Record<string, unknown>),
+            phase: "pending",
+            journalRecoveryPending: true,
+            transactionId: "fixture-pending-apply",
+          },
+        });
+      }
+      if (
+        reportMissingRecovery &&
+        typed.action === "authoring" &&
+        typed.payload?.op === "recover" &&
+        response.ok
+      ) {
+        reportMissingRecovery = false;
+        return ipcClone({
+          ...response,
+          data: {
+            ...(response.data as Record<string, unknown>),
+            phase: "pending",
+            journalRecoveryPending: true,
+            transactionId: "fixture-pending-apply",
+            diagnostics: [
+              {
+                code: "journal-not-found",
+                message: "The pending apply journal is missing.",
+                reReadHint: "Re-read the document in a fresh session.",
               },
-            });
-          }
-          if (
-            reportMissingRecovery &&
-            typed.action === "authoring" &&
-            typed.payload?.op === "recover" &&
-            response.ok
-          ) {
-            reportMissingRecovery = false;
-            return ipcClone({
-              ...response,
-              data: {
-                ...(response.data as Record<string, unknown>),
-                phase: "pending",
-                journalRecoveryPending: true,
-                transactionId: "fixture-pending-apply",
-                diagnostics: [
-                  {
-                    code: "journal-not-found",
-                    message: "The pending apply journal is missing.",
-                    reReadHint: "Re-read the document in a fresh session.",
-                  },
-                ],
-              },
-            });
-          }
-          return ipcClone(response);
-        },
-      },
+            ],
+          },
+        });
+      }
+      return ipcClone(response);
     });
-    const html = renderDesktopChrome(
-      desktopVisualView(
-        createDesktopVisualState({
-          profile: "game",
-          window: { width: 1000, height: 700 },
-        }),
-      ),
-    );
-    const match = /<script>([\s\S]*?)<\/script>/.exec(html);
-    if (match === null) throw new Error("desktop chrome lost its emitted script");
-    const script = match[1];
-    if (script === undefined) throw new Error("desktop chrome emitted an empty script");
-    window.document.write(html.replace(match[0], ""));
     let playback: { closed?: unknown; tickDigests?: unknown } | null = null;
     window.document.addEventListener(DESKTOP_VIEWPORT_PLAY_EVENT, (event) => {
       const detail = (event as HappyCustomEvent).detail as {
@@ -173,16 +198,16 @@ describe("desktop first-release product loop", () => {
       detail.accepted = true;
       (detail as { frame?: number }).frame = 27;
     });
-    window.eval(script);
+    start();
 
     const shell = query(window, ".shell");
     const status = () =>
       query(window, "[data-project-status]")?.textContent ?? "";
     expect(shell?.dataset.tier).toBe("narrow");
     expect(shell?.dataset.profile).toBe("game");
-    expect(window.document.querySelectorAll("button")).toHaveLength(76);
+    expect(window.document.querySelectorAll("button")).toHaveLength(78);
     expect(window.document.querySelectorAll('button:not([tabindex="-1"])')).toHaveLength(
-      71,
+      73,
     );
 
     const refusalHelp = query(window, "#status-refusal-help");
@@ -350,5 +375,344 @@ describe("desktop first-release product loop", () => {
       "open-path",
       "open-path",
     ]);
+  });
+
+  it("selects, reviews, saves, reopens, and plays the starter entity translation", async () => {
+    const dir = projectDir();
+    const { window, start } = mountChrome(dir);
+    let playedTranslation: number | null = null;
+    window.document.addEventListener(DESKTOP_VIEWPORT_PLAY_EVENT, (event) => {
+      const detail = (event as HappyCustomEvent).detail as {
+        accepted: boolean;
+        frame?: number;
+        exercise: {
+          mountable: {
+            instances: Array<{
+              instanceId: string;
+              worldTransform: { translation: number[] };
+            }>;
+          };
+        };
+      };
+      playedTranslation =
+        detail.exercise.mountable.instances.find(
+          (instance) => instance.instanceId === "desktop-crate-beside",
+        )?.worldTransform.translation[0] ?? null;
+      detail.accepted = true;
+      detail.frame = 31;
+    });
+    start();
+
+    await click(window, "#project-open");
+    expect(query(window, "[data-scene-entities]")?.hidden).toBe(false);
+    await click(window, "#scene-entity-desktop-crate-beside");
+    const input = query(window, "#scene-property-translation-x") as
+      | (HappyHTMLElement & { value: string })
+      | null;
+    expect(input?.value).toBe("-4.4");
+    if (input === null) throw new Error("translation input is missing");
+    input.value = "-3.25";
+    const before = readFileSync(join(dir, "scene.json"), "utf8");
+
+    await click(window, "#scene-property-stage");
+    expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(before);
+    expect(query(window, "[data-project-status]")?.textContent).toContain(
+      "property staged · review before Save",
+    );
+    expect(query(window, "[data-scene-property-review]")?.textContent).toContain(
+      "SceneAxi inspector — proposed change",
+    );
+
+    await click(window, "#project-save");
+    const saved = readFileSync(join(dir, "scene.json"), "utf8");
+    expect(saved).not.toBe(before);
+    await click(window, "#project-open");
+    await click(window, "#scene-entity-desktop-crate-beside");
+    expect(
+      (query(window, "#scene-property-translation-x") as
+        | (HappyHTMLElement & { value: string })
+        | null)?.value,
+    ).toBe("-3.25");
+
+    await click(window, "#scene-play");
+    expect(playedTranslation).toBe(-3.25);
+    expect(query(window, "[data-project-status]")?.textContent).toContain(
+      "Played composed scene · 4 ticks · viewport frame 31",
+    );
+  });
+
+  /**
+   * The panel used to hold the inspection the last open produced, so a value it
+   * displayed could be one the session had already moved past — and the next
+   * edit re-opened, which dropped the selection and refused.
+   */
+  it("keeps the property panel on the staged then saved value without reopening or reselecting", async () => {
+    const dir = projectDir();
+    const { window, start } = mountChrome(dir);
+    start();
+
+    const translationInput = () =>
+      query(window, "#scene-property-translation-x") as
+        | (HappyHTMLElement & { value: string })
+        | null;
+    const savedTranslationX = () => {
+      const document_ = JSON.parse(readFileSync(join(dir, "scene.json"), "utf8")) as {
+        data: {
+          composedScene: {
+            instances: Array<{
+              instanceId: string;
+              localTransform: { translation: number[] };
+            }>;
+          };
+        };
+      };
+      return document_.data.composedScene.instances.find(
+        (instance) => instance.instanceId === "desktop-crate-beside",
+      )?.localTransform.translation[0];
+    };
+
+    await click(window, "#project-open");
+    await click(window, "#scene-entity-desktop-crate-beside");
+    const input = translationInput();
+    if (input === null) throw new Error("translation input is missing");
+    expect(input.value).toBe("-4.4");
+    input.value = "-3.25";
+
+    const before = readFileSync(join(dir, "scene.json"), "utf8");
+    await click(window, "#scene-property-stage");
+    expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(before);
+    // The staged value is the host's, echoed back — not the string left in the field.
+    expect(translationInput()?.value).toBe("-3.25");
+    await click(window, "#scene-entity-desktop-crate-beside");
+    expect(translationInput()?.value).toBe("-3.25");
+
+    await click(window, "#project-save");
+    expect(query(window, "[data-project-status]")?.textContent).toContain("saved");
+    expect(savedTranslationX()).toBe(-3.25);
+    // The applied proposal is spent: its diff goes, the written value stays.
+    expect(query(window, "[data-scene-property-review]")?.hidden).toBe(true);
+    expect(query(window, "[data-scene-property-review]")?.textContent).toBe("");
+    expect(query(window, "[data-scene-entities]")?.hidden).toBe(false);
+    expect(translationInput()?.value).toBe("-3.25");
+    await click(window, "#scene-entity-desktop-crate-beside");
+    expect(translationInput()?.value).toBe("-3.25");
+
+    // A second edit straight after Save: no reopen, no reselect, and the value
+    // typed at click time is the one that stages.
+    const staged = translationInput();
+    if (staged === null) throw new Error("translation input is missing after save");
+    staged.value = "-1.5";
+    const beforeSecond = readFileSync(join(dir, "scene.json"), "utf8");
+    await click(window, "#scene-property-stage");
+    expect(query(window, "[data-project-status]")?.textContent).toContain(
+      "property staged · review before Save",
+    );
+    expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(beforeSecond);
+    expect(translationInput()?.value).toBe("-1.5");
+
+    await click(window, "#project-save");
+    expect(savedTranslationX()).toBe(-1.5);
+    expect(translationInput()?.value).toBe("-1.5");
+  });
+
+  /**
+   * A document can open cleanly and still carry a composition the property
+   * inspection refuses. The panel used to answer that by vanishing, leaving the
+   * operator to discover it later when Play refused.
+   */
+  it("names the host's inspection refusal instead of hiding the entity panel", async () => {
+    const dir = projectDir();
+    const starter = desktopOpenScene();
+    if (!starter.ok) throw new Error(`desktop scene refused: ${starter.reason}`);
+    const writeScene = (composedScene: JsonValue) => {
+      const written = writeDocumentFile(
+        join(dir, "scene.json"),
+        createDocument({
+          id: "desktop-first-release",
+          data: {
+            ...starter.composed.document.data,
+            composedScene,
+            title: "First release",
+            entities: [{ id: "hero" }],
+          },
+        }),
+        { cwd: dir },
+      );
+      if (!written.ok) throw new Error("composition fixture refused");
+    };
+    writeScene({
+      ...(starter.composed.document.data as { composedScene: Record<string, JsonValue> })
+        .composedScene,
+      instances: "not-a-list",
+    });
+
+    const { window, start } = mountChrome(dir);
+    start();
+    const shell = query(window, ".shell");
+    const refusal = () => query(window, "[data-scene-entities-refusal]");
+    // The left dock is a drawer below the compact tier and starts closed, so a
+    // reason that lives only in it is unreadable at the tier this window is at.
+    const readableStatus = () =>
+      queryAll(window, "[data-project-status]")
+        .filter((el) => el.closest(".left-dock") === null)
+        .map((el) => el.textContent ?? "");
+
+    expect(shell?.dataset.tier).toBe("narrow");
+    expect(shell?.dataset.drawerLeft).toBe("closed");
+
+    await click(window, "#project-open");
+    expect(query(window, "[data-scene-entities]")?.hidden).toBe(true);
+    expect(refusal()?.hidden).toBe(false);
+    expect(refusal()?.textContent).toContain("Scene entities unavailable");
+    expect(refusal()?.textContent).toContain("validation-failed");
+    expect(readableStatus().length).toBeGreaterThan(0);
+    for (const text of readableStatus()) {
+      expect(text).toContain("open · ");
+      expect(text).toContain("Scene entities unavailable");
+      expect(text).toContain("validation-failed");
+    }
+
+    // A composition the inspection accepts takes the refusal back down, in the
+    // panel and in the status alike.
+    writeScene((starter.composed.document.data as { composedScene: JsonValue }).composedScene);
+    await click(window, "#project-open");
+    expect(query(window, "[data-scene-entities]")?.hidden).toBe(false);
+    expect(refusal()?.hidden).toBe(true);
+    expect(refusal()?.textContent).toBe("");
+    for (const text of readableStatus()) {
+      expect(text).toContain("open · ");
+      expect(text).not.toContain("Scene entities unavailable");
+    }
+  });
+
+  /**
+   * A refused re-open leaves no document behind it, so the panel must not keep
+   * presenting the last one's entity and typed value as if they were current.
+   */
+  it("clears the entity panel when a re-open is refused", async () => {
+    const dir = projectDir();
+    const { window, start } = mountChrome(dir);
+    start();
+    const status = () => query(window, "[data-project-status]")?.textContent ?? "";
+    const translationInput = () =>
+      query(window, "#scene-property-translation-x") as
+        | (HappyHTMLElement & { value: string })
+        | null;
+
+    await click(window, "#project-open");
+    await click(window, "#scene-entity-desktop-crate-beside");
+    expect(translationInput()?.value).toBe("-4.4");
+    expect(query(window, "[data-scene-entities]")?.hidden).toBe(false);
+
+    rmSync(join(dir, "scene.json"));
+    await click(window, "#project-open");
+    expect(status()).toContain("Open refused · document-not-found");
+    expect(query(window, "[data-scene-entities]")?.hidden).toBe(true);
+    expect(query(window, "[data-scene-property-editor]")?.hidden).toBe(true);
+    expect(
+      query(window, "#scene-entity-desktop-crate-beside")?.getAttribute("aria-pressed"),
+    ).toBe("false");
+
+    // Nothing to stage against a document that is gone, and it says so.
+    await click(window, "#scene-property-stage");
+    expect(status()).toContain("refused");
+  });
+
+  /**
+   * A pending durable apply and a staged proposal are different states with
+   * different next steps, so Stage used to hand the recovery case guidance for
+   * the other one — under no named refusal the legend could explain.
+   */
+  it("names recovery and a staged proposal separately when Stage refuses", async () => {
+    const dir = projectDir();
+    let deferNextAccept = true;
+    const { window, start } = mountChrome(dir, ({ bridge, ipcClone }) => async (request) => {
+      const typed = JSON.parse(JSON.stringify(request)) as {
+        action?: unknown;
+        payload?: { op?: unknown };
+      };
+      const response = bridge.handle(typed);
+      if (
+        deferNextAccept &&
+        typed.action === "authoring" &&
+        typed.payload?.op === "accept" &&
+        response.ok
+      ) {
+        deferNextAccept = false;
+        return ipcClone({
+          ...response,
+          data: {
+            ...(response.data as Record<string, unknown>),
+            phase: "pending",
+            journalRecoveryPending: true,
+            transactionId: "fixture-pending-apply",
+          },
+        });
+      }
+      return ipcClone(response);
+    });
+    start();
+    const status = () => query(window, "[data-project-status]")?.textContent ?? "";
+    const legendFor = (code: string) =>
+      query(window, `#refusal-legend #refusal-${code}`)?.textContent ?? "";
+
+    await click(window, "#project-open");
+    await click(window, "#scene-entity-desktop-crate-beside");
+    await click(window, "#scene-property-stage");
+    expect(status()).toContain("property staged · review before Save");
+    const before = readFileSync(join(dir, "scene.json"), "utf8");
+
+    await click(window, "#scene-property-stage");
+    expect(status()).toContain("DESKTOP_PROFILE_SWITCH_DIRTY");
+    expect(status()).not.toContain("DESKTOP_RECOVERY_PENDING");
+    expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(before);
+
+    await click(window, "#project-save");
+    expect(status()).toContain("recovery pending · Save to refresh");
+    await click(window, "#scene-property-stage");
+    expect(status()).toContain("DESKTOP_RECOVERY_PENDING");
+    expect(status()).not.toContain("DESKTOP_PROFILE_SWITCH_DIRTY");
+
+    // Both states name a refusal the shipped legend can actually explain, and
+    // neither sentence is written for profile switching alone any more.
+    expect(legendFor("DESKTOP_RECOVERY_PENDING")).toContain("staging another edit");
+    expect(legendFor("DESKTOP_PROFILE_SWITCH_DIRTY")).toContain("staging another edit");
+  });
+
+  /**
+   * The entity list lives in the always-visible project panel, but the editor it
+   * reveals is a Build-mode inspector panel. Selecting from another mode used to
+   * report the control activated while its editor stayed inside a hidden section.
+   */
+  it("switches to Build when the entity is selected from another mode", async () => {
+    const dir = projectDir();
+    const { window, start } = mountChrome(dir);
+    start();
+    const shell = query(window, ".shell");
+
+    await click(window, "#project-open");
+    await click(window, "#mode-sculpt");
+    expect(shell?.dataset.mode).toBe("sculpt");
+    expect(query(window, '[data-mode-panel="build"]')?.hidden).toBe(true);
+
+    await click(window, "#scene-entity-desktop-crate-beside");
+    expect(shell?.dataset.mode).toBe("build");
+    expect(query(window, '[data-mode-panel="build"]')?.hidden).toBe(false);
+    expect(query(window, "[data-scene-property-editor]")?.hidden).toBe(false);
+    expect(
+      query(window, "#scene-entity-desktop-crate-beside")?.getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      (query(window, "#scene-property-translation-x") as
+        | (HappyHTMLElement & { value: string })
+        | null)?.value,
+    ).toBe("-4.4");
+
+    // Already in Build: selecting again leaves the mode and the operator's dock
+    // tab alone rather than resetting the panel.
+    await click(window, "#dock-console");
+    await click(window, "#scene-entity-desktop-crate-beside");
+    expect(shell?.dataset.mode).toBe("build");
+    expect(query(window, "#dock-console")?.getAttribute("aria-selected")).toBe("true");
   });
 });

@@ -4,7 +4,7 @@
  * Everything decided lives in `src/lib/` (gate-tested without Electron); this file
  * adapts it: `ipcMain.handle` serves the synchronous bridge, the window loads the
  * build-time Engine Desktop chrome document, and `--smoke` runs the packaged-app
- * proof — handshake, real kernel open path, authoring propose/accept round trip in
+ * proof — handshake, real kernel open path, typed edit/review/save/reopen/Play in
  * a scratch project, and the renderer's real frame report — then prints one JSON
  * line and exits, so CI can assert the packaged binary is not a static HTML export.
  *
@@ -21,9 +21,11 @@ import { DESKTOP_BYO_CONFIGURATION_CHANNEL } from "../lib/byo-configuration-cont
 import {
   DESKTOP_ACTIVE_DOCUMENT_PATH,
   DESKTOP_BRIDGE_CHANNEL,
+  DESKTOP_VIEWPORT_PLAY_EVENT,
   bridgeRefuse,
 } from "../lib/bridge-contract.js";
 import { createDesktopBridge, type DesktopBridge } from "../lib/bridge.js";
+import { DESKTOP_SCENE_TRANSLATION_X_PROPERTY } from "../lib/desktop-scene.js";
 import {
   resolveDesktopLocalBridgePaths,
   startDesktopLocalBridgeServer,
@@ -63,11 +65,10 @@ function retiredImplicitProjectDir(): string {
 /**
  * The smoke's project: a fresh directory per run, never the persistent one.
  *
- * The proof asserts what propose/accept/undo did to a document, so it has to own
- * that document: a selected project can already hold an edited, invalid, or
- * mid-transaction file, and `undo()` there can resolve an earlier completed
- * journal this run never wrote — either of which would let the proof line report
- * a round trip it did not perform.
+ * The proof asserts what staging and Save did to a document, then reopens and
+ * plays it, so it has to own that document: a selected project can already hold
+ * an edited, invalid, or mid-transaction file, any of which could make the proof
+ * line report a round trip it did not perform.
  */
 function smokeProjectDir(): string {
   const dir = mkdtempSync(join(tmpdir(), "sceneaxi-desktop-smoke-"));
@@ -266,12 +267,6 @@ async function start(): Promise<void> {
   const handshake = proofBridge.handle({ action: "handshake" });
   if (!handshake.ok) fail(`handshake refused: ${handshake.reason}`);
 
-  const openPath = proofBridge.handle({
-    action: "open-path",
-    payload: { documentPath: SAMPLE_DOCUMENT },
-  });
-  if (!openPath.ok) fail(`open-path refused: ${openPath.reason}`);
-
   // Isolation is observed, not declared: the proof owns the document it reports on
   // only if the round trip is outside the retired implicit location, and the
   // directory is deleted below, so a wrong `cwd` here would take user data with it.
@@ -280,19 +275,36 @@ async function start(): Promise<void> {
   const scratchProject = cwd !== persistent && !cwd.startsWith(`${persistent}${sep}`);
   if (!scratchProject) fail(`authoring proof would run on the retired implicit project ${cwd}`);
 
-  // The envelope only says the bridge answered; a refused propose, a failed apply,
-  // and an undo that restored nothing all arrive inside `{ok: true}`. So the proof
-  // reads the session's own phases and the document bytes on disk.
+  // The envelope only says the bridge answered; a refused proposal or failed apply
+  // also arrives inside `{ok: true}`. Read the typed property, session phases, and
+  // document bytes, then start a fresh session and play only what it re-read.
   const documentFile = join(cwd, SAMPLE_DOCUMENT);
   const seededBytes = readFileSync(documentFile, "utf8");
+  const opened = proofBridge.handle({
+    action: "authoring",
+    payload: { op: "status", documentPath: SAMPLE_DOCUMENT },
+  });
+  if (!opened.ok) fail(`authoring status refused: ${opened.reason}`);
+  const openedHash = payloadField(opened.data, "contentHash");
+  const editableScene = payloadField(opened.data, "editableScene");
+  const editableEntities = payloadField(editableScene, "entities");
+  const editableEntity = Array.isArray(editableEntities) ? editableEntities[0] : undefined;
+  const editableProperties = payloadField(editableEntity, "properties");
+  const editableProperty = Array.isArray(editableProperties) ? editableProperties[0] : undefined;
+  const initialPropertyValue = payloadField(editableProperty, "value");
+  if (typeof openedHash !== "string" || initialPropertyValue !== -4.4) {
+    fail("authoring status did not expose the typed starter translation");
+  }
 
   const proposed = proofBridge.handle({
     action: "authoring",
     payload: {
-      op: "propose",
+      op: "edit-property",
       documentPath: SAMPLE_DOCUMENT,
-      jsonPointer: "/data/entities/0/x",
-      newValue: 7,
+      expectedContentHash: openedHash,
+      entityId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
+      propertyId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id,
+      newValue: -3.25,
     },
   });
   if (!proposed.ok) fail(`authoring propose refused: ${proposed.reason}`);
@@ -314,17 +326,66 @@ async function start(): Promise<void> {
     fail("authoring accept reported applied but the document is unchanged");
   }
 
-  const undone = proofBridge.handle({ action: "authoring", payload: { op: "undo" } });
-  if (!undone.ok) fail(`authoring undo refused: ${undone.reason}`);
-  if (payloadField(undone.data, "ok") !== true) fail("authoring undo did not succeed");
-  const restored = readFileSync(documentFile, "utf8") === seededBytes;
-  if (!restored) fail("authoring undo did not restore the document it applied to");
+  const savedBytes = readFileSync(documentFile, "utf8");
+  const reopened = proofBridge.handle({
+    action: "authoring",
+    payload: { op: "restart", documentPath: SAMPLE_DOCUMENT },
+  });
+  if (!reopened.ok) fail(`authoring reopen refused: ${reopened.reason}`);
+  const reopenedScene = payloadField(reopened.data, "editableScene");
+  const reopenedEntities = payloadField(reopenedScene, "entities");
+  const reopenedEntity = Array.isArray(reopenedEntities) ? reopenedEntities[0] : undefined;
+  const reopenedProperties = payloadField(reopenedEntity, "properties");
+  const reopenedProperty = Array.isArray(reopenedProperties) ? reopenedProperties[0] : undefined;
+  const reopenedValue = payloadField(reopenedProperty, "value");
+  if (reopenedValue !== -3.25 || readFileSync(documentFile, "utf8") !== savedBytes) {
+    fail("authoring reopen did not prove the saved translation bytes");
+  }
+
+  const openPath = proofBridge.handle({
+    action: "open-path",
+    payload: { documentPath: SAMPLE_DOCUMENT },
+  });
+  if (!openPath.ok) fail(`saved open-path refused: ${openPath.reason}`);
+  const mountable = payloadField(openPath.data, "mountable");
+  const mountedInstances = payloadField(mountable, "instances");
+  const playedEntity = Array.isArray(mountedInstances)
+    ? mountedInstances.find(
+        (instance) =>
+          payloadField(instance, "instanceId") ===
+          DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
+      )
+    : undefined;
+  const playedTransform = payloadField(playedEntity, "worldTransform");
+  const playedTranslation = payloadField(playedTransform, "translation");
+  if (!Array.isArray(playedTranslation) || playedTranslation[0] !== -3.25) {
+    fail("Play did not reopen the saved composition translation");
+  }
 
   const frameReport = await Promise.race([
     firstFrameReport,
     new Promise((resolve) => setTimeout(() => resolve(null), SMOKE_TIMEOUT_MS)),
   ]);
   if (frameReport === null) fail("no renderer frame report within the smoke timeout");
+
+  const playbackDom = (await window.webContents.executeJavaScript(
+    `(() => {
+      const detail = { exercise: ${JSON.stringify(openPath.data)}, accepted: false, frame: null };
+      document.dispatchEvent(new CustomEvent(${JSON.stringify(DESKTOP_VIEWPORT_PLAY_EVENT)}, { detail }));
+      return {
+        accepted: detail.accepted,
+        frame: detail.frame,
+        state: document.querySelector('.viewport')?.dataset.playback ?? null,
+      };
+    })()`,
+  )) as { accepted: boolean; frame: number | null; state: string | null };
+  if (
+    playbackDom.accepted !== true ||
+    playbackDom.state !== "acknowledged" ||
+    typeof playbackDom.frame !== "number"
+  ) {
+    fail("Play did not redraw the saved composition in the packaged viewport");
+  }
 
   // The window's own DOM must agree with the frame report: one live canvas, the
   // inert note gone, the report line printed. Asserted by scripts/smoke.mjs.
@@ -359,16 +420,22 @@ async function start(): Promise<void> {
       handshake: handshake.data,
       openPath: openPath.data,
       authoring: {
+        selected: true,
         proposed: true,
         accepted: true,
-        undone: true,
+        reopened: true,
+        played: true,
         proposedPhase,
         acceptedPhase,
-        restored,
+        initialPropertyValue,
+        reopenedValue,
+        playedTranslation: playedTranslation[0],
+        persisted: savedBytes !== seededBytes,
         scratchProject,
         project: cwd,
       },
       frameReport,
+      playbackDom,
       viewportDom,
       ...(screenshotBytes > 0 ? { screenshotBytes } : {}),
     }),

@@ -429,17 +429,22 @@ describe("desktop product loop", () => {
     expect(source).toBeTruthy();
 
     const statuses: string[] = [];
+    let panelClears = 0;
     const createRestart = new Function(
       "productStatus",
       "T",
       "runtimeRequest",
       "responseReason",
+      "clearSceneProperty",
+      "withSceneRefusal",
       `let projectData = {}; let projectDirty = true; let projectRecovering = true; return ${source ?? "null"};`,
     ) as (
       productStatus: (state: string, text: string) => void,
       tables: unknown,
       runtimeRequest: (request: unknown) => Promise<unknown>,
       responseReason: (response: unknown) => string | null,
+      clearSceneProperty: () => void,
+      withSceneRefusal: (text: string) => string,
     ) => (diagnostic: string) => Promise<boolean>;
     const restart = createRestart(
       (_state, text) => statuses.push(text),
@@ -457,12 +462,16 @@ describe("desktop product loop", () => {
         },
       }),
       () => "document-not-found",
+      () => { panelClears += 1; },
+      (text: string) => text,
     );
 
     await expect(restart("recovery-pending")).resolves.toBe(false);
     expect(statuses.at(-1)).toContain(
       "Recovery reset · recovery-pending · document-not-found",
     );
+    // The refused re-read leaves no document, so the property panel goes too.
+    expect(panelClears).toBe(1);
   });
 
   it("explains every refusal name the surface can print", () => {

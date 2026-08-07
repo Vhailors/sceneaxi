@@ -46,6 +46,31 @@ Bridge actions and what each reaches — only through public seams:
 | `authoring` | `createDesktopSession()` from `@sceneaxi/desktop-shell` — the same propose/accept protocol as the CLI and web-shell. A `documentPath` arrives from the renderer over IPC — here, and on `scene` and `open-path` alike — and the authoring core resolves it against `cwd` without a containment check of its own, so the bridge owns that constraint for every action that takes one: an absolute path, one escaping the project directory, or one whose **canonical** path leaves it through a symlink refuses `DESKTOP_BRIDGE_REQUEST_MALFORMED`. Containment is judged after symlink resolution because that is where the bytes land; a missing leaf still resolves, so this is containment and not an existence check |
 | `frame-report` | nothing: it *accepts* the renderer's real presentation frame so main and the smoke can see what was claimed |
 
+### Typed Scene Document property edit
+
+After a Game or Website project binds, the Project / Files panel exposes the
+starter instance `desktop-crate-beside`. Selecting it shows one numeric property,
+Translation X. The property comes from the validated `composedScene` stored in
+`scene.json`; it is not the legacy sample `entities` object beside that composition.
+
+`edit-property` rebuilds the composition and its evidence through `composeScene()`,
+then hands `/data/composedScene` to the existing `DesktopSession.proposeEdit()`
+path with the content hash returned by status. Nothing writes during staging.
+The inspector shows the shared rendered diff, Save calls the existing atomic
+accept path, Reload starts a new authoring session, and Play mounts the composition
+that session re-read. Invalid numeric input returns the scene validator's path and
+message under `validation-failed`; a stale status hash returns
+`content-hash-conflict`, matching the CLI refusal code.
+
+The public helpers and bridge behavior are covered by
+`tests/desktop/desktop-scene-property.test.ts` and
+`tests/e2e/desktop-scene-property-golden.test.ts`. The latter also applies the
+same generated E1 edit through the protocol client and `sceneaxi project
+propose|apply`, then compares the three canonical document byte streams. The
+emitted-chrome interaction test in
+`tests/e2e/desktop-product-loop-golden.test.ts` clicks the full select, review,
+save, reopen, and Play path.
+
 The UI is the Engine Desktop chrome from `@sceneaxi/desktop-shell`, **unforked**:
 `desktopLinuxIndexHtml()` renders `renderDesktopChrome(desktopVisualView(...))` and
 injects exactly two things — a `sceneaxi-desktop-runtime` marker meta and the
@@ -180,6 +205,16 @@ uploads them with `SHA256SUMS` as the workflow artifact `sceneaxi-desktop-linux`
 The first download points to the concrete successful main-branch run recorded below.
 No GitHub Release is created and no release URL is invented; the repository artifact
 is the distribution path for this first ship.
+
+Local host note, 2026-08-07: `pnpm build` completed, but two `pnpm smoke`
+attempts exited before SceneAxi printed its JSON proof line. Electron 43.2.0's GPU
+process logged `InitializeSandbox() called with multiple threads in process
+gpu-process` and then exited with `SIGSEGV`. The Phase 0 desktop report records
+this as a host-specific smoke limitation. No pixel or packaged-runtime claim is
+derived from those attempts, and the command was not retried after FirstMate
+confirmed the limitation. TypeScript checks, the pure bridge tests, the
+Happy DOM interaction test, and the protocol/CLI byte-parity test remain valid
+on this host; CI under Xvfb owns the packaged smoke proof.
 
 ## First download record
 
@@ -380,7 +415,12 @@ base `b338a911` and therefore predates the unified product loop
 describe — one more reason the record above must be re-taken from a fresh successful
 main-branch run. It also predates the contained project lifecycle in sceneaxi#224;
 the hard-bound seed observations below are historical and superseded by the
-first-launch contract above. These lines never describe the offered bytes. All three launch modes
+first-launch contract above. It predates the typed scene-property edit in
+sceneaxi#225 the same way: the `authoring:` bullet below records the
+propose → accept → undo round trip the smoke asserted then, and the script now
+asserts select → stage → save → fresh-session reopen → Play instead, so that
+bullet is a historical observation and not the current proof line.
+These lines never describe the offered bytes. All three launch modes
 printed the same proof (`pnpm smoke`, `pnpm smoke --packaged`, and the AppImage itself
 with `--appimage-extract-and-run --smoke`):
 

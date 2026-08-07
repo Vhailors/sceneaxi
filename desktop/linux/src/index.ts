@@ -61,10 +61,18 @@ export {
   DESKTOP_ASSISTANT_SCENE_ID,
   DESKTOP_OPEN_PLACEMENTS,
   DESKTOP_OPEN_SCENE_ID,
+  DESKTOP_SCENE_TRANSLATION_X_PROPERTY,
   DESKTOP_SCENE_NOT_COMPOSABLE,
   desktopAssistantScene,
   desktopOpenScene,
   desktopSceneFromDocumentData,
+  inspectDesktopSceneProperties,
+  stageDesktopScenePropertyEdit,
+  type DesktopSceneEditableEntity,
+  type DesktopSceneEditableProperty,
+  type DesktopScenePropertyInspection,
+  type DesktopScenePropertyProposalInput,
+  type DesktopScenePropertyStageResult,
   type DesktopSceneResult,
 } from "./lib/desktop-scene.js";
 
