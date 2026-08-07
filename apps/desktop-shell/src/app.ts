@@ -25,11 +25,13 @@ import {
 import {
   DESKTOP_ASSISTANT_MODE_IDS,
   DESKTOP_MODE_IDS,
+  DESKTOP_OVERLAY_IDS,
   DESKTOP_PROFILE_IDS,
   createDesktopVisualState,
   desktopVisualView,
   type DesktopAssistantModeId,
   type DesktopModeId,
+  type DesktopOverlayId,
   type DesktopProfileId,
 } from "./visual-model.js";
 
@@ -344,10 +346,10 @@ function chromeResult(args: ParsedArgs): DesktopResult {
   if (!mode.ok) return refuse(command, DesktopExit.USAGE, mode.message);
   const profile = pick<DesktopProfileId>(args, "--profile", DESKTOP_PROFILE_IDS, "game");
   if (!profile.ok) return refuse(command, DesktopExit.USAGE, profile.message);
-  const overlay = pick<"none" | "palette">(
+  const overlay = pick<"none" | DesktopOverlayId>(
     args,
     "--overlay",
-    ["none", "palette"],
+    ["none", ...DESKTOP_OVERLAY_IDS],
     "none",
   );
   if (!overlay.ok) return refuse(command, DesktopExit.USAGE, overlay.message);

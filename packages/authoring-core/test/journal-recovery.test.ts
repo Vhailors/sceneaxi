@@ -117,6 +117,36 @@ describe("E1 apply journal", () => {
     expect(readFileSync(absolutePath, "utf8")).toBe(before);
   });
 
+  it("keeps an older completed apply available after undo", () => {
+    const cwd = fixtureDir();
+    const absolutePath = join(cwd, "scene.json");
+    expect(
+      writeDocumentFile(
+        absolutePath,
+        createDocument({ id: "scene", data: { x: 1 } }),
+        { cwd },
+      ).ok,
+    ).toBe(true);
+
+    for (const newValue of [2, 3]) {
+      const proposed = propose({
+        cwd,
+        documentPath: "scene.json",
+        jsonPointer: "/data/x",
+        newValue,
+      });
+      expect(proposed.ok).toBe(true);
+      if (!proposed.ok) return;
+      expect(apply({ cwd, proposal: proposed.proposal }).ok).toBe(true);
+    }
+
+    expect(applyUndoAvailability({ cwd })).toBe("available");
+    expect(undoLastApply({ cwd }).ok).toBe(true);
+    expect(applyUndoAvailability({ cwd })).toBe("available");
+    expect(undoLastApply({ cwd }).ok).toBe(true);
+    expect(applyUndoAvailability({ cwd })).toBe("unavailable");
+  });
+
   it("recovery completes a crash-interrupted multi-document apply", () => {
     const cwd = fixtureDir();
     const aPath = join(cwd, "a.json");

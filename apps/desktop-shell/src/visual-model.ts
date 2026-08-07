@@ -481,7 +481,10 @@ function normalize(state: DesktopVisualState): DesktopVisualState {
   return Object.freeze({
     ...state,
     dockTab,
-    overlay: state.overlay === "palette" ? state.overlay : null,
+    overlay:
+      state.overlay !== null && DESKTOP_OVERLAY_IDS.includes(state.overlay)
+        ? state.overlay
+        : null,
     assistant,
     assistantThinking: assistant === "open" ? state.assistantThinking : false,
     sculptPass: Math.min(Math.max(Math.trunc(state.sculptPass), 0), 4),

@@ -9,6 +9,7 @@
 import {
   readdirSync,
   readFileSync,
+  statSync,
 } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { join, resolve } from "node:path";
@@ -148,6 +149,14 @@ function completionSequencePath(cwd: string): string {
   return join(journalDirectory(cwd), ".completion-sequence");
 }
 
+const latestCompletedJournalCache = new Map<
+  string,
+  {
+    readonly directoryMtimeMs: number;
+    readonly entry: ApplyJournalEntry | undefined;
+  }
+>();
+
 export function beginApplyJournalTransaction(
   cwd: string,
   absoluteDocumentPaths: readonly string[],
@@ -172,6 +181,7 @@ function writeJournal(cwd: string, entry: ApplyJournalEntry): void {
     serializeJournal(entry),
     { token: `journal-${entry.transactionId}` },
   );
+  latestCompletedJournalCache.delete(journalDirectory(cwd));
 }
 
 function writeActiveJournal(cwd: string, entry: ApplyJournalEntry | null): void {
@@ -351,12 +361,14 @@ export function completeApplyJournal(
   if (entry.completionOrder === undefined) {
     throw new Error("Apply journal completion order was not reserved.");
   }
-  writeJournal(cwd, {
+  const completed = {
     ...entry,
-    state: "completed",
+    state: "completed" as const,
     completedAt: new Date().toISOString(),
-  });
+  };
+  writeJournal(cwd, completed);
   writeActiveJournal(cwd, null);
+  cacheLatestCompletedJournal(cwd, completed);
 }
 
 function reserveCompletionOrder(cwd: string): number {
@@ -484,6 +496,40 @@ function latestCompletedJournal(
     )[0];
 }
 
+function cacheLatestCompletedJournal(
+  cwd: string,
+  entry: ApplyJournalEntry | undefined,
+): void {
+  const directory = journalDirectory(cwd);
+  try {
+    latestCompletedJournalCache.set(directory, {
+      directoryMtimeMs: statSync(directory).mtimeMs,
+      entry,
+    });
+  } catch {
+    latestCompletedJournalCache.delete(directory);
+  }
+}
+
+function readLatestCompletedJournal(
+  cwd: string,
+):
+  | { readonly ok: true; readonly entry: ApplyJournalEntry | undefined }
+  | { readonly ok: false; readonly diagnostics: readonly ApplyDiagnostic[] } {
+  const directory = journalDirectory(cwd);
+  if (!fileExists(directory)) return { ok: true, entry: undefined };
+  const directoryMtimeMs = statSync(directory).mtimeMs;
+  const cached = latestCompletedJournalCache.get(directory);
+  if (cached?.directoryMtimeMs === directoryMtimeMs) {
+    return { ok: true, entry: cached.entry };
+  }
+  const journals = readJournals(cwd);
+  if (!journals.ok) return journals;
+  const entry = latestCompletedJournal(journals.entries);
+  cacheLatestCompletedJournal(cwd, entry);
+  return { ok: true, entry };
+}
+
 export function applyUndoAvailability(
   input: { readonly cwd?: string } = {},
 ): ApplyUndoAvailability {
@@ -492,9 +538,9 @@ export function applyUndoAvailability(
     const active = readActiveJournal(cwd);
     if (!active.ok) return "unavailable";
     if (active.entry !== null) return "recovery-pending";
-    const journals = readJournals(cwd);
-    if (!journals.ok) return "unavailable";
-    const latest = latestCompletedJournal(journals.entries);
+    const latestJournal = readLatestCompletedJournal(cwd);
+    if (!latestJournal.ok) return "unavailable";
+    const latest = latestJournal.entry;
     return latest !== undefined && latest.documents.every((document) => {
       const path = canonicalPath(resolve(cwd, document.documentPath));
       return (
@@ -904,6 +950,11 @@ export function undoLastApply(
         ],
       };
     }
+    const nextLatest = latestCompletedJournal(
+      journals.entries.filter(
+        (entry) => entry.transactionId !== latest.transactionId,
+      ),
+    );
 
     const plans = latest.documents.map((document) => ({
       path: canonicalPath(resolve(cwd, document.documentPath)),
@@ -989,6 +1040,7 @@ export function undoLastApply(
       try {
         writeJournal(cwd, { ...undoing, state: "undone" });
         writeActiveJournal(cwd, null);
+        cacheLatestCompletedJournal(cwd, nextLatest);
       } catch {
         return {
           ok: true,
