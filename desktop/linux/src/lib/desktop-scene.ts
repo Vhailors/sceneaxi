@@ -79,17 +79,27 @@ export type DesktopScenePropertyStageResult =
 const propertyDiagnostic = (
   message: string,
   documentPath: string,
+  code: ApplyDiagnostic["code"] = "validation-failed",
 ) =>
   Object.freeze({
     ok: false as const,
     diagnostics: Object.freeze([
       Object.freeze({
-        code: "validation-failed" as const,
+        code,
         message,
         documentPath,
       }),
     ]),
   });
+
+/**
+ * A request fault, not a rejected value: the caller named something this
+ * release cannot edit, or handed over an argument that is not a content hash.
+ * It carries a different code from `validation-failed` so a consumer can tell
+ * "that number is invalid" from "that is not an editable property".
+ */
+const propertyRequestDiagnostic = (message: string, documentPath: string) =>
+  propertyDiagnostic(message, documentPath, "invalid-proposal");
 
 /** Refusal passed through when the committed starter artifact fails reconstruction. */
 export type DesktopSceneResult =
@@ -279,7 +289,7 @@ function readEditableComposition(
   documentPath: string,
 ): DesktopEditableCompositionRead {
   if (!/^sha256:[0-9a-f]{64}$/.test(contentHash)) {
-    return propertyDiagnostic(
+    return propertyRequestDiagnostic(
       "The open Scene Document is missing its validated content hash.",
       documentPath,
     );
@@ -393,7 +403,7 @@ export function stageDesktopScenePropertyEdit(input: Readonly<{
     input.entityId !== DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId ||
     input.propertyId !== DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id
   ) {
-    return propertyDiagnostic(
+    return propertyRequestDiagnostic(
       `Only ${DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId}.${DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id} is editable in this release.`,
       documentPath,
     );

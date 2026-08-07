@@ -515,6 +515,67 @@ describe("desktop first-release product loop", () => {
   });
 
   /**
+   * A pending durable apply and a staged proposal are different states with
+   * different next steps, so Stage used to hand the recovery case guidance for
+   * the other one — under no named refusal the legend could explain.
+   */
+  it("names recovery and a staged proposal separately when Stage refuses", async () => {
+    const dir = projectDir();
+    let deferNextAccept = true;
+    const { window, start } = mountChrome(dir, ({ bridge, ipcClone }) => async (request) => {
+      const typed = JSON.parse(JSON.stringify(request)) as {
+        action?: unknown;
+        payload?: { op?: unknown };
+      };
+      const response = bridge.handle(typed);
+      if (
+        deferNextAccept &&
+        typed.action === "authoring" &&
+        typed.payload?.op === "accept" &&
+        response.ok
+      ) {
+        deferNextAccept = false;
+        return ipcClone({
+          ...response,
+          data: {
+            ...(response.data as Record<string, unknown>),
+            phase: "pending",
+            journalRecoveryPending: true,
+            transactionId: "fixture-pending-apply",
+          },
+        });
+      }
+      return ipcClone(response);
+    });
+    start();
+    const status = () => query(window, "[data-project-status]")?.textContent ?? "";
+    const legendFor = (code: string) =>
+      query(window, `#refusal-legend #refusal-${code}`)?.textContent ?? "";
+
+    await click(window, "#project-open");
+    await click(window, "#scene-entity-desktop-crate-beside");
+    await click(window, "#scene-property-stage");
+    expect(status()).toContain("property staged · review before Save");
+    const before = readFileSync(join(dir, "scene.json"), "utf8");
+
+    await click(window, "#scene-property-stage");
+    expect(status()).toContain("DESKTOP_PROFILE_SWITCH_DIRTY");
+    expect(status()).not.toContain("DESKTOP_RECOVERY_PENDING");
+    expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(before);
+
+    await click(window, "#project-save");
+    expect(status()).toContain("recovery pending · Save to refresh");
+    await click(window, "#scene-property-stage");
+    expect(status()).toContain("DESKTOP_RECOVERY_PENDING");
+    expect(status()).not.toContain("DESKTOP_PROFILE_SWITCH_DIRTY");
+
+    // Both states name a refusal the shipped legend can actually explain, and
+    // neither sentence is written for profile switching alone any more.
+    expect(legendFor("DESKTOP_RECOVERY_PENDING")).toContain("staging another edit");
+    expect(legendFor("DESKTOP_PROFILE_SWITCH_DIRTY")).toContain("staging another edit");
+  });
+
+  /**
    * The entity list lives in the always-visible project panel, but the editor it
    * reveals is a Build-mode inspector panel. Selecting from another mode used to
    * report the control activated while its editor stayed inside a hidden section.

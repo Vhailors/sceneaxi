@@ -1770,8 +1770,12 @@ if (shell) {
     // saved one rather than the edit that was just requested.
     const input = shell.querySelector('#scene-property-translation-x');
     const newValue = input && input.tagName === 'INPUT' ? input.valueAsNumber : Number.NaN;
-    if (projectDirty || projectRecovering) {
-      productStatus('refused', 'Edit refused · save or re-open the one staged proposal first');
+    if (projectRecovering) {
+      productStatus('refused', 'Edit refused · ' + T.product.refusals.recoveryPending);
+      return;
+    }
+    if (projectDirty) {
+      productStatus('refused', 'Edit refused · ' + T.product.refusals.profileSwitchDirty);
       return;
     }
     if ((projectData === null || projectContentHash === null) && !(await openProject())) return;

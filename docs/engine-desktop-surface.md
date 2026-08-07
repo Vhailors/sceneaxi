@@ -384,9 +384,9 @@ document also explains. `test/product-loop.test.ts` asserts that in both directi
 | `DESKTOP_AUTHORING_REFUSED` | the shared authoring session refused and carried no diagnostic code |
 | `DESKTOP_PROPOSAL_NOT_REVIEWING` | propose returned without parking the edit for review |
 | `DESKTOP_PROPOSAL_NOT_DISCARDED` | re-opening could not discard the proposal the host still holds |
-| `DESKTOP_PROFILE_SWITCH_DIRTY` | a staged proposal must be saved or discarded before the profile changes |
+| `DESKTOP_PROFILE_SWITCH_DIRTY` | a staged proposal must be saved or discarded before another edit stages, the project changes, or the profile changes |
 | `DESKTOP_APPLY_NOT_COMPLETED` | accept returned without reporting the apply completed |
-| `DESKTOP_RECOVERY_PENDING` | profile switching is blocked until Save resolves recovery or Open starts a fresh re-read session |
+| `DESKTOP_RECOVERY_PENDING` | staging an edit, changing the project, and switching profiles are blocked until Save resolves recovery or Open starts a fresh re-read session |
 | `DESKTOP_OPEN_PATH_EVIDENCE_INVALID` | the play response carried no closed session with observed tick digests |
 | `DESKTOP_PRODUCT_REQUEST_IN_FLIGHT` | another serialized product-loop request currently owns the shared session |
 
