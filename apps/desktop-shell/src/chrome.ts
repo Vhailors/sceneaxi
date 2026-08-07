@@ -927,6 +927,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .menu-panel{position:absolute;left:0;top:25px;z-index:45;min-width:220px;padding:5px;background:var(--raised);border:1px solid var(--line-raised);border-radius:6px;box-shadow:0 18px 45px -16px ${SCRIM.shadow}}
 .menu-command{display:flex;align-items:center;justify-content:space-between;gap:22px;width:100%;padding:7px 9px;border-radius:4px;color:var(--text-2);font-size:12px;text-align:left}
 .menu-command:hover,.menu-command:focus-visible{background:var(--hover);color:var(--text)}
+.menu-command.is-inert:hover,.menu-command.is-inert:focus-visible{background:none;color:var(--inert)}
 .menu-command kbd{font-size:9px;color:var(--dim)}
 .profile-switch{display:flex;gap:2px;padding:2px;background:var(--well);border:1px solid var(--line-control);border-radius:5px}
 .profile-chip{display:flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:3px;font-size:11px;color:var(--dim);white-space:nowrap}
