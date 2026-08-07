@@ -967,6 +967,7 @@ export type DesktopOverlayView = Readonly<{
    */
   dismissals: ReadonlyArray<
     Readonly<{
+      id: string;
       overlay: "outcome";
       label: string;
       emphasis: "ghost" | "primary";
@@ -1405,6 +1406,7 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
       dismissals: Object.freeze(
         DESKTOP_OVERLAY_DISMISSALS.map((dismissal) =>
           Object.freeze({
+            id: dismissal.id,
             overlay: dismissal.overlay,
             label: dismissal.label,
             emphasis: dismissal.emphasis,

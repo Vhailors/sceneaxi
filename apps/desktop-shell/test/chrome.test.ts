@@ -424,16 +424,39 @@ describe("engine desktop chrome — accessibility", () => {
     expect(view.overlay.dismissals).toHaveLength(1);
     const ids = view.overlay.dismissals.map((dismissal) => dismissal.control.id);
     expect(new Set(ids).size).toBe(ids.length);
+    // The action is keyed off the model's stable dismissal id, so this asserts
+    // the declared mapping rather than re-deriving it from the control id.
+    const actions: Readonly<Record<string, string>> = {
+      "outcome-dismiss": "overlay",
+    };
     for (const dismissal of view.overlay.dismissals) {
-      const action = dismissal.overlay === "conflict"
-        ? dismissal.control.id.endsWith("discard")
-          ? "conflict-discard"
-          : "conflict-review"
-        : "overlay";
+      const action = actions[dismissal.id];
+      expect(action).toBeDefined();
       expect(html).toContain(
-        `id="${dismissal.control.id}" data-kind="view"${dismissal.overlay === "conflict" ? " data-product-action" : ""} data-action="${action}"`,
+        `id="${dismissal.control.id}" data-kind="view"${action === "overlay" ? "" : " data-product-action"} data-action="${action}"`,
       );
     }
+  });
+
+  it("closes the dialog for a dismissal this shell has no product handler for", () => {
+    // A renamed or added dismissal must not inherit another dismissal's
+    // handler: without a declared mapping it is a plain overlay close.
+    const view = desktopVisualView(createDesktopVisualState());
+    const dismissal = view.overlay.dismissals[0]!;
+    const known = new Set(view.overlay.dismissals.map((entry) => entry.id));
+    const unknown = {
+      ...dismissal,
+      id: "outcome-renamed-dismiss",
+      control: { ...dismissal.control, id: "overlay-close-outcome-renamed-dismiss" },
+    };
+    expect(known.has(unknown.id)).toBe(false);
+    const html = renderDesktopChrome({
+      ...view,
+      overlay: { ...view.overlay, dismissals: [...view.overlay.dismissals, unknown] },
+    });
+    expect(html).toContain(
+      `id="${unknown.control.id}" data-kind="view" data-action="overlay" data-value="none"`,
+    );
   });
 
   it("offers the modelled cancel while a sculpt pass runs", () => {

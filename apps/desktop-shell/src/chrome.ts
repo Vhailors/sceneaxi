@@ -791,6 +791,19 @@ function statusBar(view: DesktopVisualView): string {
 </footer>`;
 }
 
+/**
+ * The dismissals this shell binds to a product action, keyed by the model's own
+ * dismissal id. Every other dismissal — existing or added later — closes its
+ * dialog, so a rename or an added dismissal cannot silently acquire a handler it
+ * was never declared for.
+ *
+ * It declares none today: the one dialog reports an outcome the operator has
+ * already been given, and every decision it could otherwise offer is taken on
+ * the surface that owns it — the proposal is accepted or rejected in Change
+ * Review, not from a dialog that names why the last attempt refused.
+ */
+const DISMISSAL_PRODUCT_ACTIONS: Readonly<Record<string, string>> = Object.freeze({});
+
 function overlays(view: DesktopVisualView): string {
   const palette = view.overlay.paletteGroups
     .map(
@@ -815,14 +828,21 @@ function overlays(view: DesktopVisualView): string {
   const dismissals = (overlay: string): string =>
     view.overlay.dismissals
       .filter((dismissal) => dismissal.overlay === overlay)
-      .map((dismissal) =>
-        button(
+      .map((dismissal) => {
+        // Routed by the model's own dismissal id, never by the shape of a
+        // control id: a dismissal this shell has no product handler for closes
+        // the dialog rather than inheriting another dismissal's behaviour.
+        const productAction = DISMISSAL_PRODUCT_ACTIONS[dismissal.id];
+        const action = productAction === undefined
+          ? ` data-action="overlay" data-value="none"`
+          : ` data-product-action data-action="${productAction}"`;
+        return button(
           dismissal.control,
           escapeHtml(dismissal.label),
           dismissal.emphasis === "primary" ? "primary-button" : "ghost-button",
-          ` data-action="overlay" data-value="none"`,
-        ),
-      )
+          action,
+        );
+      })
       .join("");
 
   return `
