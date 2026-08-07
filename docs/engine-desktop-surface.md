@@ -333,6 +333,14 @@ own all-or-nothing Accept and Reject, which are `live` and inert on Kids like th
 rest of the project loop. `Escape` and the outcome dismissal still close the
 dialog on every profile, so the refusal stays a state you can leave.
 
+The dialog reports the diagnostic it was raised for and nothing else: its
+heading names the action that refused, its body carries the host's own code,
+message, and re-read hint, and no standing sentence about what a conflict
+generally is survives to be read as current. Only the diagnostics a shipped path
+can actually produce raise it — staging for `content-hash-conflict`, Save for
+that or `journal-conflict` from a stale durable transaction; pending apply
+recovery stays represented by the `recovering` state and raises no dialog.
+
 A decision also needs a review the surface actually validated and projected.
 Without one, Accept and Reject refuse with `DESKTOP_PROPOSAL_NOT_REVIEWING` and
 make zero host requests;

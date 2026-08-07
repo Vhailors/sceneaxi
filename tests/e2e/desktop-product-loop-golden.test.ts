@@ -1000,4 +1000,126 @@ describe("desktop first-release product loop", () => {
     expect(shell?.dataset.mode).toBe("build");
     expect(query(window, "#dock-console")?.getAttribute("aria-selected")).toBe("true");
   });
+
+  it("names the diagnostic the conflict dialog is actually reporting", async () => {
+    const dir = projectDir();
+    const bridge = createDesktopBridge({ cwd: dir });
+    let deferAcceptedSave = true;
+    let reportStaleRecovery = true;
+    const window = new HappyWindow({ width: 1000, height: 700 });
+    const ipcClone = <T>(value: T): T =>
+      window.eval(`(${JSON.stringify(value)})`) as T;
+    windows.push(window);
+    Object.defineProperty(window, "structuredClone", { value: ipcClone });
+    Object.defineProperty(window, "sceneaxiDesktop", {
+      value: {
+        request: async (request: unknown) => {
+          const typed = JSON.parse(JSON.stringify(request)) as {
+            action?: unknown;
+            payload?: { op?: unknown };
+          };
+          const response = bridge.handle(typed);
+          if (!response.ok || typed.action !== "authoring") return ipcClone(response);
+          const data = response.data as Record<string, unknown>;
+          if (deferAcceptedSave && typed.payload?.op === "accept") {
+            deferAcceptedSave = false;
+            return ipcClone({
+              ...response,
+              data: {
+                ...data,
+                phase: "pending",
+                journalRecoveryPending: true,
+                transactionId: "fixture-pending-apply",
+              },
+            });
+          }
+          // The one recovery outcome that is a real authoring diagnostic but not
+          // a moved content hash: the durable transaction resolved stale.
+          if (reportStaleRecovery && typed.payload?.op === "recover") {
+            reportStaleRecovery = false;
+            return ipcClone({
+              ...response,
+              data: {
+                ...data,
+                phase: "reviewing",
+                journalRecoveryPending: false,
+                transactionId: null,
+                diagnostics: [
+                  {
+                    code: "journal-conflict",
+                    message: "Pending transaction fixture-pending-apply is stale.",
+                    reReadHint:
+                      "Re-read the affected documents before accepting another proposal.",
+                  },
+                ],
+              },
+            });
+          }
+          return ipcClone(response);
+        },
+      },
+    });
+
+    const html = renderDesktopChrome(
+      desktopVisualView(
+        createDesktopVisualState({
+          profile: "web",
+          window: { width: 1000, height: 700 },
+        }),
+      ),
+    );
+    const match = /<script>([\s\S]*?)<\/script>/.exec(html);
+    if (match?.[1] === undefined) throw new Error("desktop chrome lost its emitted script");
+    window.document.write(html.replace(match[0], ""));
+    window.eval(match[1]);
+
+    const status = () => query(window, "[data-project-status]")?.textContent ?? "";
+    const title = () => query(window, "[data-outcome-title]")?.textContent ?? "";
+    const code = () => query(window, "[data-outcome-code]")?.textContent ?? "";
+    const message = () => query(window, "[data-outcome-message]")?.textContent ?? "";
+    // Nothing standing: the dialog is empty until a response fills it, so no
+    // sentence about conflicts in general can be read as the current one.
+    expect(title()).toBe("");
+    expect(code()).toBe("");
+
+    await click(window, "#project-open");
+    await click(window, "#web-inject-asset");
+    await click(window, "#project-save");
+    expect(status()).toContain("recovery pending · transaction fixture-pending-apply");
+
+    await click(window, "#project-save");
+    expect(status()).toContain("Save refused · journal-conflict");
+    expect(query(window, '[data-overlay="outcome"]')?.hidden).toBe(false);
+    // The heading names the action that refused and the body carries the host's
+    // own diagnostic, so a stale transaction is never announced as a moved
+    // document. The heading is the dialog's `aria-labelledby`.
+    expect(title()).toBe("Save refused");
+    expect(code()).toBe("journal-conflict");
+    expect(message()).toContain("is stale");
+    expect(message()).toContain("Re-read the affected documents");
+
+    await click(window, "#overlay-close-outcome-dismiss");
+    await click(window, "#project-open");
+    expect(status()).toContain("open · desktop-first-release");
+
+    const externalScene = desktopOpenScene();
+    if (!externalScene.ok) {
+      throw new Error(`desktop scene refused: ${externalScene.reason}`);
+    }
+    expect(
+      writeDocumentFile(
+        join(dir, "scene.json"),
+        createDocument({
+          id: "desktop-first-release",
+          data: { ...externalScene.composed.document.data, title: "External edit" },
+        }),
+        { cwd: dir },
+      ).ok,
+    ).toBe(true);
+    await click(window, "#web-stage-html");
+    expect(status()).toContain("Stage refused · content-hash-conflict");
+    expect(query(window, '[data-overlay="outcome"]')?.hidden).toBe(false);
+    expect(title()).toBe("Stage refused");
+    expect(code()).toBe("content-hash-conflict");
+  });
 });

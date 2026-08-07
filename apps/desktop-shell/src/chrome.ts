@@ -1910,7 +1910,7 @@ if (shell) {
     if (isSessionSnapshot(snapshot)) syncReview(snapshot);
     if (reason !== null || reviewProjection(snapshot) === null) {
       productStatus('refused', 'Stage refused · ' + (reason || T.product.refusals.proposalNotReviewing));
-      if (reason === 'content-hash-conflict' || reason === 'journal-conflict') {
+      if (reason === 'content-hash-conflict') {
         showConflictOutcome('Stage refused', snapshot, reason);
       }
       return;
@@ -2028,7 +2028,7 @@ if (shell) {
     if (applySaveSnapshot(snapshot)) return;
     if (recovering && snapshot && snapshot.journalRecoveryPending !== true) projectRecovering = false;
     productStatus(projectRecovering ? 'recovering' : 'refused', 'Save refused · ' + (reason || T.product.refusals.applyNotCompleted));
-    if (reason === 'content-hash-conflict' || reason === 'journal-conflict' || reason === 'apply-in-progress') {
+    if (reason === 'content-hash-conflict' || reason === 'journal-conflict') {
       showConflictOutcome('Save refused', snapshot, reason);
     } else {
       showOutcome('Save refused', reason || T.product.refusals.applyNotCompleted, 'No staged document change was reported as saved.');

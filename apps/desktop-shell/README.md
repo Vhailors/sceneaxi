@@ -101,7 +101,12 @@ including when that snapshot carries a refusal diagnostic. Neither conflict acti
 reaches the host when there is no active review, including while apply recovery is
 pending, where the surface reports `DESKTOP_RECOVERY_PENDING` without changing the
 recovery state. Web staging also refuses before reaching the host during recovery
-and retains the transaction details and recovery instructions. When a host snapshot
+and retains the transaction details and recovery instructions.
+The conflict dialog is raised only by a diagnostic a shipped path can produce —
+`content-hash-conflict` from staging or Save, `journal-conflict` from Save — and its
+heading names that diagnostic: the document-changed wording is restored for a real
+content-hash conflict, and any other diagnostic is announced as a session refusal.
+When a host snapshot
 has already cleared a stale proposal, an unavailable conflict action names its own
 outcome and carries the recorded conflict as detail, so it neither claims a
 normal-open document nor replays the earlier action's status sentence over a newer
