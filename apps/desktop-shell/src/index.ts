@@ -143,9 +143,7 @@ export {
 export {
   DESKTOP_INTERACTION_COMMANDS,
   DESKTOP_MENU_LABELS,
-  DESKTOP_PALETTE_COMMAND_IDS,
   DESKTOP_PALETTE_SHORTCUT,
-  desktopInteractionCommand,
   type DesktopInteractionCommand,
   type DesktopInteractionCommandId,
 } from "./interaction-commands.js";

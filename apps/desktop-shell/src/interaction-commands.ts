@@ -65,10 +65,6 @@ export type DesktopInteractionCommand =
   (typeof DESKTOP_INTERACTION_COMMANDS)[number];
 export type DesktopInteractionCommandId = DesktopInteractionCommand["id"];
 
-export const DESKTOP_PALETTE_COMMAND_IDS = Object.freeze(
-  DESKTOP_INTERACTION_COMMANDS.map((command) => command.id),
-);
-
 export const DESKTOP_PALETTE_SHORTCUT = Object.freeze({
   id: "palette-open",
   label: "Commands",
@@ -76,11 +72,3 @@ export const DESKTOP_PALETTE_SHORTCUT = Object.freeze({
   key: "k",
   allowInTextEntry: true,
 });
-
-export function desktopInteractionCommand(
-  id: DesktopInteractionCommandId,
-): DesktopInteractionCommand {
-  const command = DESKTOP_INTERACTION_COMMANDS.find((candidate) => candidate.id === id);
-  if (command === undefined) throw new Error(`unknown desktop interaction command ${id}`);
-  return command;
-}

@@ -7,6 +7,7 @@ import {
 import {
   DESKTOP_INTERACTION_COMMANDS,
   DESKTOP_PALETTE_SHORTCUT,
+  DESKTOP_PRODUCT_REFUSALS,
   createDesktopVisualState,
   desktopVisualView,
   renderDesktopChrome,
@@ -117,7 +118,7 @@ async function settle(window: HappyWindow) {
   throw new Error("desktop command did not settle");
 }
 
-async function harness() {
+async function harness(profile: "game" | "web" | "kids" = "web") {
   const window = new HappyWindow({ width: 1200, height: 800 });
   windows.push(window);
   const calls: HostCall[] = [];
@@ -155,7 +156,7 @@ async function harness() {
   });
 
   const html = renderDesktopChrome(
-    desktopVisualView(createDesktopVisualState({ profile: "web" })),
+    desktopVisualView(createDesktopVisualState({ profile })),
   );
   const match = /<script>([\s\S]*?)<\/script>/.exec(html);
   if (match?.[1] === undefined) throw new Error("desktop chrome script missing");
@@ -190,6 +191,17 @@ function shortcut(window: HappyWindow, key: string, target?: HappyHTMLElement) {
     cancelable: true,
   });
   (target ?? (window.document.body as unknown as HappyHTMLElement)).dispatchEvent(event);
+  return event;
+}
+
+function tab(window: HappyWindow, target: HappyHTMLElement, shiftKey: boolean) {
+  const event = new window.KeyboardEvent("keydown", {
+    key: "Tab",
+    shiftKey,
+    bubbles: true,
+    cancelable: true,
+  });
+  target.dispatchEvent(event);
   return event;
 }
 
@@ -230,7 +242,7 @@ async function invoke(
     await click(window, `#menu-command-${command.id}`);
   } else if (path === "palette") {
     shortcut(window, DESKTOP_PALETTE_SHORTCUT.key);
-    expect(element(window, '[data-overlay="palette"]').hidden).toBe(false);
+    expect(element(window, '.overlay[data-overlay="palette"]').hidden).toBe(false);
     await click(window, `#palette-${command.id}`);
   } else {
     if (command.key === null) throw new Error(`${command.id} has no accelerator`);
@@ -283,7 +295,90 @@ describe("desktop command menu, palette, and accelerator parity", () => {
     element(window, ".shell").append(input);
     const event = shortcut(window, DESKTOP_PALETTE_SHORTCUT.key, input);
     expect(event.defaultPrevented).toBe(true);
-    expect(element(window, '[data-overlay="palette"]').hidden).toBe(false);
+    expect(element(window, '.overlay[data-overlay="palette"]').hidden).toBe(false);
+  });
+
+  it("contains focus in the palette even when every row is inert", async () => {
+    // The refuse-only profile demotes every operation row, so a trap built from
+    // the actionable rows alone would contain nothing at all and let Tab walk
+    // the document behind an `aria-modal` dialog.
+    const { window } = await harness("kids");
+    shortcut(window, DESKTOP_PALETTE_SHORTCUT.key);
+    const palette = element(window, '.overlay[data-overlay="palette"]');
+    expect(palette.hidden).toBe(false);
+    const stops = [...palette.querySelectorAll("button")] as HappyHTMLElement[];
+    expect(stops.length).toBeGreaterThan(0);
+    expect(stops.every((el) => el.getAttribute("aria-disabled") === "true")).toBe(true);
+    expect(palette.contains(window.document.activeElement)).toBe(true);
+
+    const last = stops[stops.length - 1];
+    if (last === undefined) throw new Error("palette rendered no rows");
+    last.focus();
+    const wrap = tab(window, last, false);
+    expect(wrap.defaultPrevented).toBe(true);
+    expect(window.document.activeElement).toBe(stops[0]);
+  });
+
+  it("keeps the rows after an inert palette row reachable by Tab", async () => {
+    const { window } = await harness();
+    shortcut(window, DESKTOP_PALETTE_SHORTCUT.key);
+    const palette = element(window, '.overlay[data-overlay="palette"]');
+    const undo = element(window, "#palette-edit-undo");
+    expect(undo.getAttribute("aria-disabled")).toBe("true");
+    const stops = [...palette.querySelectorAll("button")] as HappyHTMLElement[];
+    expect(stops.indexOf(undo)).toBeGreaterThan(-1);
+    expect(stops.indexOf(undo)).toBeLessThan(stops.length - 1);
+    undo.focus();
+    // An inert row is a member of the trap, so Tab off it is the browser's own
+    // move to the next stop, not a wrap back to the first.
+    const forward = tab(window, undo, false);
+    expect(forward.defaultPrevented).toBe(false);
+  });
+
+  it("names the in-flight refusal when a command is re-invoked mid-request", async () => {
+    const { window } = await harness();
+    Object.defineProperty(window, "sceneaxiDesktopLinux", {
+      configurable: true,
+      value: { request: () => new Promise(() => {}) },
+    });
+    shortcut(window, "p");
+    for (let turn = 0; turn < 10; turn += 1) await Promise.resolve();
+    expect(element(window, "#project-save").getAttribute("aria-disabled")).toBe("true");
+    expect(element(window, "#menu-command-project-save").getAttribute("aria-disabled")).toBe(
+      "true",
+    );
+    shortcut(window, "p");
+    for (let turn = 0; turn < 10; turn += 1) await Promise.resolve();
+    expect(element(window, "[data-project-status]").textContent).toBe(
+      `Command refused · ${DESKTOP_PRODUCT_REFUSALS.requestInFlight}`,
+    );
+  });
+
+  it("ignores a Shift-modified chord that no menu advertises", async () => {
+    const { window, calls } = await harness();
+    const event = new window.KeyboardEvent("keydown", {
+      key: "z",
+      ctrlKey: true,
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    (window.document.body as unknown as HappyHTMLElement).dispatchEvent(event);
+    await settle(window);
+    expect(event.defaultPrevented).toBe(false);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("closes an open menu when the click lands outside it", async () => {
+    const { window } = await harness();
+    await click(window, '[data-menu-trigger="file"]');
+    const panel = element(window, "#menu-panel-file");
+    expect(panel.hidden).toBe(false);
+    element(window, ".viewport-column").click();
+    expect(panel.hidden).toBe(true);
+    expect(element(window, '[data-menu-trigger="file"]').getAttribute("aria-expanded")).toBe(
+      "false",
+    );
   });
 
   it("shows and dismisses the real refusal returned by a command", async () => {
@@ -301,7 +396,7 @@ describe("desktop command menu, palette, and accelerator parity", () => {
     });
     shortcut(window, "p");
     await settle(window);
-    const outcome = element(window, '[data-overlay="outcome"]');
+    const outcome = element(window, '.overlay[data-overlay="outcome"]');
     expect(outcome.hidden).toBe(false);
     expect(element(window, "[data-outcome-title]").textContent).toBe("Play refused");
     expect(element(window, "[data-outcome-code]").textContent).toBe(
@@ -311,6 +406,6 @@ describe("desktop command menu, palette, and accelerator parity", () => {
       "scene.json has no composition",
     );
     await click(window, "#overlay-close-outcome-dismiss");
-    expect(element(window, '[data-overlay="outcome"]').hidden).toBe(true);
+    expect(element(window, '.overlay[data-overlay="outcome"]').hidden).toBe(true);
   });
 });

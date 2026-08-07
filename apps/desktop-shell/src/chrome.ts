@@ -864,7 +864,7 @@ function overlays(view: DesktopVisualView): string {
   <div class="overlay" data-overlay="outcome" role="dialog" aria-modal="true" aria-labelledby="outcome-title"${shown("outcome")}>
     <div class="overlay-card overlay-refused">
       <div class="overlay-head"><span class="overlay-mark mark-refuse" aria-hidden="true">!</span><h2 id="outcome-title" data-outcome-title>Operation refused</h2></div>
-      <p class="overlay-body"><code data-outcome-code>DESKTOP_RUNTIME_REQUEST_REFUSED</code><br><span data-outcome-message>The desktop host refused the requested operation.</span></p>
+      <p class="overlay-body"><code data-outcome-code>${escapeHtml(DESKTOP_PRODUCT_REFUSALS.runtimeRequestRefused)}</code><br><span data-outcome-message>The desktop host refused the requested operation.</span></p>
       <div class="overlay-actions">${dismissals("outcome")}</div>
     </div>
   </div>
@@ -1182,25 +1182,19 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .overlay{position:absolute;inset:0;background:${SCRIM.overlay};display:grid;place-items:center;z-index:50;padding:24px}
 .overlay-card{width:min(620px,100%);max-height:80%;overflow:auto;background:var(--overlay);border:1px solid var(--line-raised);border-radius:9px;box-shadow:0 40px 90px -20px ${SCRIM.shadow};animation:rise .16s ease-out}
 .overlay-card.overlay-refused{border-color:${SIGNAL.refuseLine}}
-.overlay-card.overlay-conflict{border-color:${ACCENT.line}}
 .overlay-head{display:flex;align-items:center;gap:12px;padding:15px 18px;border-bottom:1px solid var(--line)}
 .overlay-head h2{margin:0;font-size:15px;font-weight:600}
 .overlay-mark{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;flex:none}
 .mark-refuse{background:${SIGNAL.refuseSurface};border:1px solid ${SIGNAL.refuseLine};color:var(--refuse)}
-.mark-accent{background:${ACCENT.surface};border:1px solid ${ACCENT.line};color:var(--accent)}
 .overlay-body{margin:0;padding:15px 18px;font-size:12px;line-height:1.6;color:var(--text-2)}
-.refuse-list{list-style:none;margin:0;padding:0 18px 15px;display:flex;flex-direction:column;gap:9px;font-size:12px;color:var(--text-2)}
-.refuse-list .mark{margin-right:10px;color:var(--refuse)}
 .overlay-actions{display:flex;gap:9px;justify-content:flex-end;padding:13px 18px;background:var(--well);border-top:1px solid var(--line)}
 .overlay-actions .primary-button,.overlay-actions .ghost-button{height:31px;padding:0 14px;font-size:12px}
-.palette-search{flex:1;font-size:15px}
 .palette-list{list-style:none;margin:0;padding:6px 0;max-height:352px;overflow-y:auto}
 .palette-group h3{margin:0;padding:8px 16px 4px;font-family:var(--mono);font-size:9px;font-weight:400;letter-spacing:.14em;color:var(--faint)}
 .palette-group ul{list-style:none;margin:0;padding:0}
 .palette-item{display:flex;align-items:center;gap:12px;padding:8px 16px;width:100%;text-align:left}
 .palette-item:hover{background:var(--hover)}
 .palette-name{flex:1;font-size:13px}
-.palette-cli{color:var(--faint)}
 .palette-item kbd{font-size:9px;color:var(--dim);border:1px solid var(--line-control);border-radius:3px;padding:2px 5px}
 .overlay-foot{margin:0;padding:10px 16px;background:var(--well);border-top:1px solid var(--line);font-size:10.5px;color:var(--dim)}
 
@@ -1953,6 +1947,22 @@ if (shell) {
     }
   };
 
+  // Every element that can start a product action, whichever surface it sits on:
+  // the same command reachable from a menu, a palette row, and a title-bar
+  // button is one operation, so all three carry the in-flight refusal, not only
+  // the one that happens to be marked as a product action. The palette opener is
+  // excluded because opening the palette is not a product action and stays
+  // available while one is outstanding.
+  const productActionControls = () => {
+    const seen = [];
+    q('[data-product-action]').forEach((el) => { if (!seen.includes(el)) seen.push(el); });
+    q('[data-command]').forEach((el) => {
+      if (el.dataset.command === T.paletteShortcut.id) return;
+      if (!seen.includes(el)) seen.push(el);
+    });
+    return seen;
+  };
+
   // Serialize the product loop: the host holds one session and one proposal, so
   // a second action started before the first answers is not concurrency, it is a
   // lost edit. The controls are inert for the duration, which is the surface's
@@ -1960,7 +1970,7 @@ if (shell) {
   const productAction = async (run) => {
     if (inFlight) return;
     inFlight = true;
-    q('[data-product-action]').forEach((el) => {
+    productActionControls().forEach((el) => {
       el.dataset.busy = 'true';
       setRefusal(el, T.product.refusals.requestInFlight);
     });
@@ -1970,7 +1980,7 @@ if (shell) {
       inFlight = false;
       // Cleared unconditionally, then re-decided: a control whose id the profile
       // table does not carry must not stay disabled because a request finished.
-      q('[data-product-action]').forEach((el) => {
+      productActionControls().forEach((el) => {
         delete el.dataset.busy;
         setRefusal(el, null);
         applyControl(el);
@@ -2131,11 +2141,14 @@ if (shell) {
   // control that opened it gets focus back on close.
   let overlayReturn = null;
 
+  // Every button in the dialog, inert ones included: an inert control keeps its
+  // native focus stop, so a trap that dropped it would hand Tab to an element it
+  // does not contain and then bounce focus back to the first stop, leaving the
+  // rows after it unreachable — and on a profile where every row is inert it
+  // would contain nothing at all.
   const overlayStops = () => {
     const open = shell.querySelector('.overlay:not([hidden])');
-    return open === null ? [] : Array.from(open.querySelectorAll('button')).filter(
-      (button) => button.getAttribute('aria-disabled') !== 'true',
-    );
+    return open === null ? [] : Array.from(open.querySelectorAll('button'));
   };
 
   const setOverlay = (id) => {
@@ -2153,7 +2166,10 @@ if (shell) {
       return;
     }
     const stops = overlayStops();
-    if (stops.length > 0) stops[0].focus();
+    if (stops.length === 0) return;
+    // Containment covers every stop; the opening move prefers one that can act.
+    const entry = stops.find((el) => el.getAttribute('aria-disabled') !== 'true');
+    (entry || stops[0]).focus();
   };
 
   const showOutcome = (title, code, message) => {
@@ -2305,6 +2321,13 @@ if (shell) {
     }
     const handler = commandHandlers[id];
     if (typeof handler !== 'function') return;
+    // Read the state, not one element's attributes: an accelerator reaches this
+    // without ever touching a control, so a second press during a round trip has
+    // to name the refusal instead of disappearing.
+    if (inFlight) {
+      productStatus('refused', 'Command refused · ' + T.product.refusals.requestInFlight);
+      return;
+    }
     const representative = q('[data-command]').find((el) => el.dataset.command === id);
     if (representative?.getAttribute('aria-disabled') === 'true') return;
     setOverlay('none');
@@ -2378,11 +2401,21 @@ if (shell) {
     }
   });
 
+  // A dropped-down menu floats over the surface below it, so any click that is
+  // not inside a menu closes it — including one outside the shell entirely,
+  // which is why this listens on the document.
+  document.addEventListener('click', (event) => {
+    const root = event.target instanceof Element ? event.target.closest('[data-menu-root]') : null;
+    if (root === null) closeMenus();
+  });
+
   // On the document, not the shell: once focus is inside a dialog the shell is
   // still the ancestor, but a restored or lost focus must not silently drop the
   // Escape key, and the trap has to see every Tab.
   document.addEventListener('keydown', (event) => {
-    const modified = (event.ctrlKey || event.metaKey) && !event.altKey;
+    // Shift is not part of any declared accelerator, so Ctrl+Shift+Z must not be
+    // Undo: the menus advertise exactly five chords and these are those five.
+    const modified = (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey;
     if (modified) {
       const key = String(event.key).toLowerCase();
       const command = key === T.paletteShortcut.key
