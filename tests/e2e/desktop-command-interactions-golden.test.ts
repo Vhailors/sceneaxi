@@ -363,6 +363,81 @@ describe("desktop command menu, palette, and accelerator parity", () => {
     expect(element(window, "[data-project-state]").dataset.projectState).toBe(pill);
   });
 
+  it("refuses Undo rather than dropping a staged proposal with the Save it reverses", async () => {
+    const { window, calls } = await harness();
+    await click(window, "#web-stage-html");
+    await click(window, '#project-save[data-command="project-save"]');
+    // Stage a second edit the host is still holding for review.
+    await click(window, "#web-inject-asset");
+    expect(calls.filter((call) => call.op === "propose")).toHaveLength(2);
+    calls.splice(0);
+
+    const event = shortcut(window, "z");
+    await settle(window);
+    expect(event.defaultPrevented).toBe(true);
+    expect(calls.some((call) => call.op === "undo")).toBe(false);
+    expect(element(window, '.overlay[data-overlay="outcome"]').hidden).toBe(false);
+    expect(element(window, "[data-outcome-code]").textContent).toBe(
+      DESKTOP_PRODUCT_REFUSALS.undoStagedProposal,
+    );
+    expect(element(window, "[data-project-status]").textContent).toContain(
+      DESKTOP_PRODUCT_REFUSALS.undoStagedProposal,
+    );
+
+    // The staged proposal survives: saving it still reaches the host's accept.
+    await click(window, "#overlay-close-outcome-dismiss");
+    await click(window, '#project-save[data-command="project-save"]');
+    expect(calls).toContainEqual({ plane: "engine", action: "authoring", op: "accept" });
+  });
+
+  it("closes an open menu when focus leaves it by keyboard", async () => {
+    const { window } = await harness();
+    await click(window, '[data-menu-trigger="file"]');
+    const panel = element(window, "#menu-panel-file");
+    expect(panel.hidden).toBe(false);
+    const items = [...panel.querySelectorAll('[role="menuitem"]')] as HappyHTMLElement[];
+    const last = items[items.length - 1];
+    if (last === undefined) throw new Error("File menu rendered no items");
+    last.focus();
+
+    const outside = element(window, "#project-open");
+    last.dispatchEvent(
+      new window.FocusEvent("focusout", { bubbles: true, relatedTarget: outside }),
+    );
+    expect(panel.hidden).toBe(true);
+    expect(element(window, '[data-menu-trigger="file"]').getAttribute("aria-expanded")).toBe(
+      "false",
+    );
+    // Focus went where the browser sent it; the menu must not pull it back.
+    expect(window.document.activeElement).not.toBe(
+      element(window, '[data-menu-trigger="file"]'),
+    );
+  });
+
+  it("keeps an open menu while focus moves within it", async () => {
+    const { window } = await harness();
+    await click(window, '[data-menu-trigger="file"]');
+    const panel = element(window, "#menu-panel-file");
+    const items = [...panel.querySelectorAll('[role="menuitem"]')] as HappyHTMLElement[];
+    const first = items[0];
+    const second = items[1];
+    if (first === undefined || second === undefined) {
+      throw new Error("File menu rendered too few items");
+    }
+    first.dispatchEvent(
+      new window.FocusEvent("focusout", { bubbles: true, relatedTarget: second }),
+    );
+    expect(panel.hidden).toBe(false);
+    // And back to the trigger that owns it, which is still part of the menu.
+    second.dispatchEvent(
+      new window.FocusEvent("focusout", {
+        bubbles: true,
+        relatedTarget: element(window, '[data-menu-trigger="file"]'),
+      }),
+    );
+    expect(panel.hidden).toBe(false);
+  });
+
   it("names the refusal when an accelerator reaches an unavailable command", async () => {
     const { window, calls } = await harness();
     const undo = element(window, "#menu-command-edit-undo");

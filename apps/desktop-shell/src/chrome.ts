@@ -1924,8 +1924,17 @@ if (shell) {
     showOutcome('Save refused', reason || T.product.refusals.applyNotCompleted, 'No staged document change was reported as saved.');
   };
 
+  // The host's undo clears its own proposal along with the apply it reverses,
+  // so a staged edit would go with it. Every other path here that can lose one
+  // either refuses by name or discards it explicitly; this one refuses.
   const undoProject = async () => {
     if (undoDepth < 1) return;
+    if (projectDirty) {
+      const code = T.product.refusals.undoStagedProposal;
+      productStatus('refused', 'Undo refused · ' + code);
+      showOutcome('Undo refused', code, 'Save the staged proposal or re-open the project to discard it before undoing the last Save.');
+      return;
+    }
     productStatus('undoing', T.product.documentPath + ' · undoing last completed Save…');
     const response = await runtimeRequest({ action: 'authoring', payload: { op: 'undo' } });
     const reason = responseReason(response);
@@ -2205,9 +2214,16 @@ if (shell) {
     return root === null ? null : root.querySelector('[data-menu-trigger]');
   };
 
+  const hideMenus = () => {
+    q('.menu-panel').forEach((panel) => { panel.hidden = true; });
+    q('[data-menu-trigger]').forEach((trigger) => trigger.setAttribute('aria-expanded', 'false'));
+  };
+
   // Hiding the panel under the caret would drop focus to the body and restart
   // the Tab order at the top of the document, so the menu hands focus back to
-  // the trigger that owns it — the same return the overlay makes.
+  // the trigger that owns it — the same return the overlay makes. Only the
+  // paths that dismiss a menu while focus is still inside it restore; a
+  // dismissal caused by focus leaving must not pull it back.
   const closeMenus = () => {
     const active = document.activeElement;
     let restore = null;
@@ -2215,9 +2231,8 @@ if (shell) {
       if (!panel.hidden && active !== null && panel.contains(active)) {
         restore = menuTrigger(panel);
       }
-      panel.hidden = true;
     });
-    q('[data-menu-trigger]').forEach((trigger) => trigger.setAttribute('aria-expanded', 'false'));
+    hideMenus();
     if (restore !== null && typeof restore.focus === 'function') restore.focus();
   };
 
@@ -2462,6 +2477,19 @@ if (shell) {
       q('.change-row').forEach((r) => { r.hidden = true; });
       syncChanges();
     }
+  });
+
+  // Tab is deliberately not captured inside a menu — every item keeps its plain
+  // focus stop — so leaving the panel by keyboard is the one dismissal the click
+  // and Escape paths cannot see. Focus is already elsewhere here, so the panel
+  // is hidden without the trigger return.
+  shell.addEventListener('focusout', (event) => {
+    const panel = event.target instanceof Element ? event.target.closest('.menu-panel') : null;
+    if (panel === null || panel.hidden) return;
+    const root = panel.closest('[data-menu-root]');
+    const next = event.relatedTarget;
+    if (root !== null && next instanceof Element && root.contains(next)) return;
+    hideMenus();
   });
 
   // A dropped-down menu floats over the surface below it, so any click that is
