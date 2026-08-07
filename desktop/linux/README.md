@@ -76,7 +76,8 @@ and tokens; the renderer only binds their Mount API effects.
 | Electron secure-store adapter | `src/electron/provider-key-store.ts` | main process; OS-backed `safeStorage`, never basic-text fallback |
 | BYOK configuration UI | `src/renderer/byo-configuration.ts` | the window; provider/key status and save/replace/remove/unavailable states |
 | Scene composition (one pipeline, two consumers) | `src/lib/desktop-scene.ts` | main process; gate-tested |
-| First-launch project seed and one-time migration | `src/lib/project-seed.ts` | main process; gate-tested |
+| Contained project lifecycle + versioned atomic recents | `src/lib/{project-lifecycle-contract,project-lifecycle,project-host}.ts` | pure typed host seam; gate-tested from `tests/desktop/` and packaged-like e2e |
+| Explicit New Project starter and one-time document migration | `src/lib/project-seed.ts` | main process; invoked only after New Project selects a root or by the isolated smoke |
 | Chrome document emitter (desktop-shell, unforked) | `src/lib/chrome-document.ts` | build time |
 | Electron entries (window, IPC adapter, smoke) | `src/electron/{main,preload}.ts` | Electron only |
 | Live viewport (the desktop tier's one renderer-owning module) | `src/renderer/viewport.ts` | the window |
@@ -102,6 +103,11 @@ Rules the gate enforces (`pnpm check:desktop`, `pnpm check:boundaries`,
   the profile it carries makes authoring-core deny again — independently — before
   generation or provider dispatch. No Kids or identity package is imported; the
   dependency matrix keeps both denied.
+- The lifecycle host accepts roots only from native directory dialogs or its own
+  validated recent registry. It canonicalizes them, validates `scene.json`
+  before persistence, refuses traversal and symlink escapes, and stores only
+  canonical root strings in a versioned atomically-renamed file. Kids refuses
+  before the host opens a dialog or reads that registry.
 - Provider secrets exist only transiently in the password control during
   submission and in the privileged main process during secure save/retrieval and
   a provider session. The field and privileged lease are explicitly cleared; no

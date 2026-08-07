@@ -275,7 +275,12 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
    */
   const containedDocumentPath = (value: unknown): string | null => {
     if (typeof value !== "string" || value.length === 0) return null;
-    if (isAbsolute(value) || /^[a-zA-Z]:[\\/]/.test(value) || value.includes("\0")) return null;
+    if (
+      isAbsolute(value) ||
+      /^[a-zA-Z]:[\\/]/.test(value) ||
+      value.includes("\0") ||
+      value.split(/[\\/]+/).includes("..")
+    ) return null;
     const root = resolve(options.cwd);
     const target = resolve(root, value);
     if (target !== root && !target.startsWith(`${root}${sep}`)) return null;

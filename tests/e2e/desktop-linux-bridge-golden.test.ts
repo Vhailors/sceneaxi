@@ -886,7 +886,13 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
     // against `cwd` with no containment check of its own, so the bridge owns it.
     const dir = authoringDir();
     const bridge = bridgeAt(dir);
-    const escapes = ["/etc/passwd", "../scene.json", "nested/../../scene.json", join(dir, "scene.json")];
+    const escapes = [
+      "/etc/passwd",
+      "../scene.json",
+      "nested/../scene.json",
+      "nested/../../scene.json",
+      join(dir, "scene.json"),
+    ];
 
     for (const documentPath of escapes) {
       const proposed = bridge.handle({

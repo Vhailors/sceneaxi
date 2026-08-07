@@ -14,21 +14,28 @@
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, sep } from "node:path";
-import { BrowserWindow, app, ipcMain } from "electron";
+import { BrowserWindow, app, dialog, ipcMain } from "electron";
 import { DESKTOP_MINIMUM_WINDOW } from "@sceneaxi/desktop-shell";
 import { createDesktopByoConfiguration } from "../lib/byo-configuration.js";
 import { DESKTOP_BYO_CONFIGURATION_CHANNEL } from "../lib/byo-configuration-contract.js";
 import {
   DESKTOP_ACTIVE_DOCUMENT_PATH,
   DESKTOP_BRIDGE_CHANNEL,
+  bridgeRefuse,
 } from "../lib/bridge-contract.js";
-import { createDesktopBridge } from "../lib/bridge.js";
+import { createDesktopBridge, type DesktopBridge } from "../lib/bridge.js";
 import {
   resolveDesktopLocalBridgePaths,
   startDesktopLocalBridgeServer,
   type DesktopLocalBridgeServer,
 } from "../lib/local-rpc.js";
 import { seedDesktopProject } from "../lib/project-seed.js";
+import { createDesktopProjectHost } from "../lib/project-host.js";
+import {
+  DESKTOP_PROJECT_CHANNEL,
+  DESKTOP_PROJECT_REFUSALS,
+} from "../lib/project-lifecycle-contract.js";
+import { createDesktopProjectLifecycle } from "../lib/project-lifecycle.js";
 import { createElectronProviderKeyStore } from "./provider-key-store.js";
 
 // The bundle is CJS (Electron's main entry), so the native `__dirname` is real.
@@ -37,7 +44,7 @@ declare const __dirname: string;
 const SMOKE = process.argv.includes("--smoke");
 const SMOKE_TIMEOUT_MS = 45_000;
 
-/** Sample document the authoring session works on, seeded on first launch. */
+/** Active document name shared by explicit projects and the isolated smoke. */
 const SAMPLE_DOCUMENT = DESKTOP_ACTIVE_DOCUMENT_PATH;
 
 function seedProject(dir: string): void {
@@ -45,23 +52,16 @@ function seedProject(dir: string): void {
   if (!seeded.ok) console.error("desktop-linux: could not seed the sample document", seeded);
 }
 
-/** Where the launched application's own project lives: persistent, under userData. */
-function persistentProjectDir(): string {
+/** The retired implicit seed location, retained only as a smoke safety boundary. */
+function retiredImplicitProjectDir(): string {
   return join(app.getPath("userData"), "project");
-}
-
-/** The launched application's own project: persistent, under the user's data dir. */
-function projectDir(): string {
-  const dir = persistentProjectDir();
-  seedProject(dir);
-  return dir;
 }
 
 /**
  * The smoke's project: a fresh directory per run, never the persistent one.
  *
  * The proof asserts what propose/accept/undo did to a document, so it has to own
- * that document: a persistent project can already hold an edited, invalid, or
+ * that document: a selected project can already hold an edited, invalid, or
  * mid-transaction file, and `undo()` there can resolve an earlier completed
  * journal this run never wrote — either of which would let the proof line report
  * a round trip it did not perform.
@@ -103,7 +103,7 @@ async function start(): Promise<void> {
     frameReported = resolve;
   });
 
-  const cwd = SMOKE ? smokeProjectDir() : projectDir();
+  const smokeRoot = SMOKE ? smokeProjectDir() : null;
   const providerKeyStore = createElectronProviderKeyStore(app.getPath("userData"));
   const byoConfiguration = createDesktopByoConfiguration({
     keyStore: providerKeyStore,
@@ -112,17 +112,25 @@ async function start(): Promise<void> {
     // without changing the renderer, CLI, or local bridge contract.
     providerRuntimeAvailable: false,
   });
-  const bridge = createDesktopBridge({
-    cwd,
-    onFrameReport: (report) => frameReported?.(report),
-  });
+  let bridge: DesktopBridge | null = null;
+  let activeRoot: string | null = null;
 
-  const localPaths = SMOKE
-    ? {
-        socketPath: join(cwd, ".sceneaxi-runtime", "desktop-v1.sock"),
-        discoveryPath: join(cwd, ".sceneaxi-config", "desktop-bridge-v1.json"),
-      }
-    : resolveDesktopLocalBridgePaths({
+  const activateProject = async (root: string): Promise<DesktopBridge> => {
+    if (bridge !== null && activeRoot === root) return bridge;
+    bridge = null;
+    activeRoot = null;
+    await localBridgeServer?.close();
+    localBridgeServer = null;
+    const next = createDesktopBridge({
+      cwd: root,
+      onFrameReport: (report) => frameReported?.(report),
+    });
+    const localPaths = SMOKE
+      ? {
+          socketPath: join(root, ".sceneaxi-runtime", "desktop-v1.sock"),
+          discoveryPath: join(root, ".sceneaxi-config", "desktop-bridge-v1.json"),
+        }
+      : resolveDesktopLocalBridgePaths({
         ...(process.env["XDG_RUNTIME_DIR"] === undefined
           ? {}
           : { runtimeDir: process.env["XDG_RUNTIME_DIR"] }),
@@ -130,27 +138,48 @@ async function start(): Promise<void> {
           ? {}
           : { configDir: process.env["XDG_CONFIG_HOME"] }),
       });
-  // The local agent bridge is an attachment point, not the application: a second
-  // live host, an unusable runtime directory, or a refused socket must cost the
-  // operator the CLI attachment, never the window and the authoring session in it.
-  // The smoke proof asserts that attachment, so there it stays fatal.
-  try {
-    localBridgeServer = await startDesktopLocalBridgeServer({
-      bridge,
-      projectRoot: cwd,
-      ...localPaths,
-    });
-  } catch (error) {
-    if (SMOKE) throw error;
-    localBridgeServer = null;
-    console.error(
-      "desktop-linux: the local agent bridge did not start; Engine Desktop continues without CLI attachment:",
-      error instanceof Error ? error.message : String(error),
-    );
+    // The local agent bridge is an attachment point, not the application: a
+    // refused socket costs the operator that attachment, never the selected root.
+    try {
+      localBridgeServer = await startDesktopLocalBridgeServer({
+        bridge: next,
+        projectRoot: root,
+        ...localPaths,
+      });
+    } catch (error) {
+      if (SMOKE) throw error;
+      localBridgeServer = null;
+      console.error(
+        "desktop-linux: the local agent bridge did not start; Engine Desktop continues without CLI attachment:",
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+    bridge = next;
+    activeRoot = root;
+    return next;
+  };
+
+  const lifecycle = SMOKE
+    ? null
+    : createDesktopProjectLifecycle({
+        stateDirectory: join(app.getPath("userData"), "project-lifecycle"),
+      });
+  let smokeBridge: DesktopBridge | null = null;
+  if (smokeRoot !== null) {
+    smokeBridge = await activateProject(smokeRoot);
+  } else if (lifecycle !== null) {
+    const startup = lifecycle.startup();
+    if (startup.ok && startup.data.status.active !== null) {
+      await activateProject(startup.data.status.active.root);
+    }
   }
 
   ipcMain.handle(DESKTOP_BRIDGE_CHANNEL, (_event, request: unknown) =>
-    bridge.handle(request),
+    bridge?.handle(request) ??
+      bridgeRefuse(
+        DESKTOP_PROJECT_REFUSALS.projectRequired,
+        "Choose New Project, Open Project, or a validated recent project before using the engine bridge.",
+      ),
   );
   ipcMain.handle(DESKTOP_BYO_CONFIGURATION_CHANNEL, (_event, request: unknown) =>
     byoConfiguration.handle(request),
@@ -182,27 +211,71 @@ async function start(): Promise<void> {
   window.webContents.on("will-navigate", (event) => event.preventDefault());
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
 
+  if (lifecycle !== null) {
+    const projectHost = createDesktopProjectHost({
+      lifecycle,
+      dialogs: {
+        async chooseNewProjectRoot() {
+          const selected = await dialog.showOpenDialog(window, {
+            title: "New SceneAxi Project",
+            buttonLabel: "Create starter project here",
+            properties: ["openDirectory", "createDirectory"],
+          });
+          return selected.canceled ? null : (selected.filePaths[0] ?? null);
+        },
+        async chooseOpenProjectRoot() {
+          const selected = await dialog.showOpenDialog(window, {
+            title: "Open SceneAxi Project",
+            buttonLabel: "Open Project",
+            properties: ["openDirectory"],
+          });
+          return selected.canceled ? null : (selected.filePaths[0] ?? null);
+        },
+      },
+      activate: activateProject,
+    });
+    ipcMain.handle(DESKTOP_PROJECT_CHANNEL, async (_event, request: unknown) => {
+      const before = activeRoot;
+      const response = await projectHost.handle(request);
+      if (response.ok && response.data.status.active?.root !== before) {
+        // Let the invoke response cross the preload boundary, then reload the
+        // unforked chrome so its one renderer owner mounts the newly active root.
+        setTimeout(() => window.webContents.reload(), 0);
+      }
+      return response;
+    });
+  } else {
+    ipcMain.handle(DESKTOP_PROJECT_CHANNEL, () =>
+      bridgeRefuse(
+        DESKTOP_PROJECT_REFUSALS.requestMalformed,
+        "Project dialogs are disabled in the packaged smoke proof.",
+      ),
+    );
+  }
+
   await window.loadFile(join(__dirname, "index.html"));
 
   if (!SMOKE) return;
 
   // --- packaged-app smoke proof ---
-  const handshake = bridge.handle({ action: "handshake" });
+  if (smokeBridge === null || smokeRoot === null) fail("smoke project bridge is unavailable");
+  const proofBridge = smokeBridge;
+  const handshake = proofBridge.handle({ action: "handshake" });
   if (!handshake.ok) fail(`handshake refused: ${handshake.reason}`);
 
-  const openPath = bridge.handle({
+  const openPath = proofBridge.handle({
     action: "open-path",
     payload: { documentPath: SAMPLE_DOCUMENT },
   });
   if (!openPath.ok) fail(`open-path refused: ${openPath.reason}`);
 
   // Isolation is observed, not declared: the proof owns the document it reports on
-  // only if the round trip is running somewhere the persistent project is not, and
-  // the directory is deleted below, so a wrong `cwd` here would take a real project
-  // with it. Compared against the same path `projectDir()` resolves.
-  const persistent = persistentProjectDir();
+  // only if the round trip is outside the retired implicit location, and the
+  // directory is deleted below, so a wrong `cwd` here would take user data with it.
+  const persistent = retiredImplicitProjectDir();
+  const cwd = smokeRoot;
   const scratchProject = cwd !== persistent && !cwd.startsWith(`${persistent}${sep}`);
-  if (!scratchProject) fail(`authoring proof would run on the persistent project ${cwd}`);
+  if (!scratchProject) fail(`authoring proof would run on the retired implicit project ${cwd}`);
 
   // The envelope only says the bridge answered; a refused propose, a failed apply,
   // and an undo that restored nothing all arrive inside `{ok: true}`. So the proof
@@ -210,7 +283,7 @@ async function start(): Promise<void> {
   const documentFile = join(cwd, SAMPLE_DOCUMENT);
   const seededBytes = readFileSync(documentFile, "utf8");
 
-  const proposed = bridge.handle({
+  const proposed = proofBridge.handle({
     action: "authoring",
     payload: {
       op: "propose",
@@ -228,7 +301,7 @@ async function start(): Promise<void> {
     fail("authoring propose wrote to the document before it was accepted");
   }
 
-  const accepted = bridge.handle({ action: "authoring", payload: { op: "accept" } });
+  const accepted = proofBridge.handle({ action: "authoring", payload: { op: "accept" } });
   if (!accepted.ok) fail(`authoring accept refused: ${accepted.reason}`);
   const acceptedPhase = payloadField(accepted.data, "phase");
   if (acceptedPhase !== "applied") {
@@ -238,7 +311,7 @@ async function start(): Promise<void> {
     fail("authoring accept reported applied but the document is unchanged");
   }
 
-  const undone = bridge.handle({ action: "authoring", payload: { op: "undo" } });
+  const undone = proofBridge.handle({ action: "authoring", payload: { op: "undo" } });
   if (!undone.ok) fail(`authoring undo refused: ${undone.reason}`);
   if (payloadField(undone.data, "ok") !== true) fail("authoring undo did not succeed");
   const restored = readFileSync(documentFile, "utf8") === seededBytes;

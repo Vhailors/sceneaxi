@@ -74,6 +74,38 @@ export {
 } from "./lib/project-seed.js";
 
 export {
+  DESKTOP_PROJECT_ACTIONS,
+  DESKTOP_PROJECT_CHANNEL,
+  DESKTOP_PROJECT_REFUSALS,
+  DESKTOP_PROJECT_STATE_SCHEMA_VERSION,
+  projectOk,
+  projectRefuse,
+  type DesktopProjectAction,
+  type DesktopProjectHostResult,
+  type DesktopProjectRecovery,
+  type DesktopProjectRefusalReason,
+  type DesktopProjectRequest,
+  type DesktopProjectResponse,
+  type DesktopProjectSource,
+  type DesktopProjectStatus,
+  type DesktopProjectSummary,
+} from "./lib/project-lifecycle-contract.js";
+
+export {
+  DESKTOP_RECENT_PROJECTS_FILE,
+  createDesktopProjectLifecycle,
+  type DesktopProjectLifecycle,
+  type DesktopProjectLifecycleOptions,
+} from "./lib/project-lifecycle.js";
+
+export {
+  createDesktopProjectHost,
+  type DesktopProjectDialogPort,
+  type DesktopProjectHost,
+  type DesktopProjectHostOptions,
+} from "./lib/project-host.js";
+
+export {
   resolveDesktopLocalBridgePaths,
   startDesktopLocalBridgeServer,
   type DesktopLocalBridgePathOptions,

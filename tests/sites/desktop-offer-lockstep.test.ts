@@ -127,14 +127,14 @@ describe("desktop offer ↔ recorded build lockstep", () => {
     expect(doc).toContain("no auto-update support");
   });
 
-  it("documents first-run project creation and all three honest product tabs", () => {
-    // The seed writes a project only where one is missing something: it creates
-    // `scene.json`, migrates a document that predates the composed-scene field,
-    // and leaves anything else alone. The doc has to say all three, because
-    // "seeds on first launch" alone would read as "may rewrite what is there".
-    expect(doc).toContain("seeds `scene.json`");
-    expect(doc).toContain("Documents that already carry that field are never rewritten");
-    expect(doc).toContain("invalid existing bytes refuse rather than being replaced");
+  it("documents explicit project creation and all three honest product tabs", () => {
+    // First launch must not silently choose a project root. The existing seed is
+    // available only through New Project, while Open Project validates without
+    // writing and invalid bytes remain the operator's bytes.
+    expect(doc).toContain("First launch binds no root and writes no project");
+    expect(doc).toContain("New Project creates the\nexisting starter `scene.json`");
+    expect(doc).toContain("Open Project performs no\nproject write");
+    expect(doc).toContain("Invalid `scene.json` bytes are never replaced");
     expect(doc).toContain("**Game**");
     expect(doc).toContain("**Website (Web)**");
     expect(doc).toContain("**Kids**");

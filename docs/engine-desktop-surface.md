@@ -117,7 +117,7 @@ asserted rather than remembered.
 |---|---|
 | Colours, typography, metrics, contrast deviations, archive provenance | `apps/desktop-shell/src/visual-tokens.ts` |
 | Shared chrome vocabulary — the seven modes, rail labels, dock-tab derivation, assistant modes, window-tier thresholds, structural metrics | `packages/schemas/src/editor-shell.ts` (sceneaxi#184); this model **derives** its tables from it, and the umbrella web editor projects the same rows — parity is a data identity in `tests/parity/editor-shell-parity.test.ts`, and the web surface's own record is [`web-editor-shell.md`](web-editor-shell.md) |
-| First-release project/file and per-profile product loop, including Web stored-HTML and project-relative asset staging | `apps/desktop-shell/src/product-loop.ts` (sceneaxi#196) |
+| First-release project/file and per-profile product loop, including host-projected New/Open/Recent lifecycle, Web stored-HTML, and project-relative asset staging | `apps/desktop-shell/src/product-loop.ts` + emitted adapter in `chrome.ts` (sceneaxi#196/#224); root validation and persistence remain host-owned |
 | Mode/profile/dock/assistant/overlay/sculpt state, refusals, window tiers, control kinds | `apps/desktop-shell/src/visual-model.ts` |
 | The emitted document (markup, stylesheet, behaviour script) | `apps/desktop-shell/src/chrome.ts` |
 | The `chrome` command and its flags | `apps/desktop-shell/src/app.ts` |
@@ -198,6 +198,16 @@ maintaining a renderer-owned control list. The runtime contract is owned in
 `docs/desktop-linux.md`.
 
 ### First-release product loop
+
+The Project / Files panel begins unbound. New Project, Open Project, a Recent
+chooser, Open Recent, and Remove are modelled controls like every other control;
+on standalone chrome they refuse because no host lifecycle method exists, and on
+Kids the central refusal mint demotes them before a dialog or storage request.
+The packaged host supplies only typed project summaries — name, canonical root,
+and `scene.json` — so the chrome can update its title and project surface without
+receiving document contents through this lifecycle path. Selecting a different
+root reloads the same unforked chrome against a newly bound instance of the
+existing engine bridge; it does not create a second authoring implementation.
 
 The left dock owns one project/file answer rather than parallel mock panels:
 `SceneAxi Project` has one active validated document, `scene.json`. Open calls

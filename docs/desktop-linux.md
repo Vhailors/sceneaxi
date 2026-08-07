@@ -26,12 +26,13 @@ IPC channel and the local socket adapter are two transports over that one
 
 | Piece | Where it runs | What it is |
 |---|---|---|
-| `src/lib/bridge-contract.ts` | everywhere | channel name, request/response envelope, named refusals |
+| `src/lib/bridge-contract.ts` | everywhere | engine channel name, request/response envelope, named refusals |
+| `src/lib/project-lifecycle-contract.ts` + `project-lifecycle.ts` + `project-host.ts` | everywhere / main process | typed New/Open/Recent lifecycle, canonical-root validation, and the versioned atomic recent-root registry |
 | `src/lib/bridge.ts` — `createDesktopBridge()` | main process | synchronous `handle()` over the real engine; `ipcMain.handle` adapts it in one line |
 | `src/lib/local-rpc.ts` | main process | protocol-v1 same-user Unix-socket adapter over the closed project/assistant agent-tool registry; private discovery and explicit permissions |
 | `src/lib/provider-key-store.ts` + `byo-configuration.ts` | main process | typed OS-secure credential store, redacted configuration controller, and per-session key lease for injected BYOK runners |
 | `src/electron/provider-key-store.ts` | privileged Electron process | `safeStorage` adapter; refuses locked, unsupported, basic-text, and failed backends and persists ciphertext only |
-| `src/electron/preload.ts` | preload | exposes one frozen global: the existing engine request plus a separate BYOK configuration method on its own IPC channel |
+| `src/electron/preload.ts` | preload | exposes one frozen global: the existing engine request, typed project lifecycle method on its own IPC channel, and separate BYOK configuration method |
 | `src/renderer/viewport.ts` | the window | the desktop tier's **one renderer-owning module** (see below) |
 
 Bridge actions and what each reaches — only through public seams:
@@ -278,12 +279,31 @@ Future builds must be downloaded and checksum-verified manually.
 
 ## First launch and product tabs
 
-On first launch, the application creates its persistent project directory under
-Electron's user-data directory and seeds `scene.json`. A valid document from an
-older desktop build that lacks the composed-scene field is migrated once by
-adding the starter composition while retaining its id, title, entities, material,
-and other data. Documents that already carry that field are never rewritten;
-invalid existing bytes refuse rather than being replaced.
+First launch binds no root and writes no project. The shared Project / Files
+surface offers **New Project** and **Open Project** through a typed preload method
+whose Electron adapter owns the native directory dialogs. New Project creates the
+existing starter `scene.json` only after the operator selects a directory; it
+refuses an existing document rather than overwriting it. Open Project performs no
+project write: it canonicalizes the selected directory and validates the active
+document first. Relative roots, `..` segments, missing/inaccessible or non-directory
+roots, invalid documents, and a `scene.json` symlink resolving outside the root all
+refuse by name.
+
+Successful roots are stored as canonical path strings only in versioned
+`recent-projects.json` under Electron user data. The store contains no document
+bytes, credentials, or BYOK material; a temporary mode-0600 file is flushed and
+renamed over the prior version atomically. Startup filters missing/inaccessible or
+invalid recent entries, restores the last valid root, or shows the named recovery
+reason with New/Open choices. Invalid `scene.json` bytes are never replaced. Recent
+entries can be opened only after membership validation and can be removed without
+closing the active project. The window title and Project / Files panel show the
+validated document title (or root basename), canonical root, and active
+`scene.json`.
+
+The legacy starter migration remains part of the explicit New Project seed helper:
+a valid document lacking composed-scene data can be migrated by that helper while
+retaining its id, title, entities, material, and other data; existing composed data
+is never rewritten. Normal Open Project never invokes the seed helper.
 
 The profile switch presents **Game**, **Website (Web)**, and **Kids**:
 
@@ -337,7 +357,9 @@ also a *later source* than the offered artifact, which was packaged from this br
 base `b338a911` and therefore predates the unified product loop
 ([sceneaxi#196](https://github.com/Vhailors/sceneaxi/issues/196)) these observations
 describe — one more reason the record above must be re-taken from a fresh successful
-main-branch run. These lines never describe the offered bytes. All three launch modes
+main-branch run. It also predates the contained project lifecycle in sceneaxi#224;
+the hard-bound seed observations below are historical and superseded by the
+first-launch contract above. These lines never describe the offered bytes. All three launch modes
 printed the same proof (`pnpm smoke`, `pnpm smoke --packaged`, and the AppImage itself
 with `--appimage-extract-and-run --smoke`):
 
@@ -349,12 +371,12 @@ with `--appimage-extract-and-run --smoke`):
   routing the open path through a named document moved nothing about what the kernel
   observed
 - authoring: propose → accept → undo on a **scratch project the run creates and
-  deletes** (never the persistent user project, whose contents no proof controls),
+  deletes** (never a selected user project, whose contents no proof controls),
   asserted on the session's own phases and the bytes on disk rather than on the
   bridge envelope: `reviewing` with the file untouched → `applied` with the file
   changed → `undo` reporting success with the seeded bytes restored. The isolation
   is observed too, not declared: the app compares the directory it bound against
-  its own persistent project path and refuses the round trip there, and the
+  the retired implicit-project location and refuses the round trip there, and the
   launcher separately checks the directory the proof reports is a temporary one
 - renderer frame report: `backend three · surface webgl-canvas · pixelsDrawn true
   · drawCalls 15` — real pixels from the packaged window, drawn by SwiftShader
@@ -373,15 +395,13 @@ with `--appimage-extract-and-run --smoke`):
   out of the repository; the capture is reproducible with that one environment
   variable on any Linux host
 
-The smoke owns a scratch project, so it proves nothing about the seed the *launched*
-application starts from. That was observed separately on 2026-08-05, from the same
-build, by launching the packaged binary against a throwaway `--user-data-dir` instead
-of the host's own user data: an empty directory came back seeded with `scene.json`; a
-valid document lacking the composed-scene field gained it while keeping its id, title,
-entities, and material; relaunching over the resulting document left it byte-identical,
-down to its mtime; and unparseable bytes were left exactly as found, with the seed
-reporting its refusal rather than replacing them. Those are the behaviours the section
-above describes.
+The smoke owns a scratch project, so it proves nothing about the project lifecycle the
+*launched* application presents. The 2026-08-05 throwaway-user-data seed observation
+belonged to the retired implicit-root behavior. Current first-launch, validation,
+atomic recent migration, restart recovery, and invalid-byte preservation are gate
+evidence in `tests/desktop/desktop-project-lifecycle.test.ts` and
+`tests/e2e/desktop-project-lifecycle-golden.test.ts`; a post-wave packaged artifact and
+pixel record remains separate work rather than being inferred from those Node tests.
 
 ## Deliberately absent
 
@@ -392,7 +412,9 @@ Also absent: Linux code signing, Linux auto-update, an app store listing, a GitH
 identity/billing (the desktop app has no account surface; the matrix denies it
 `auth`/`billing`), any Kids authoring path (the chrome's refuse-only Kids projection
 stays owned by `@sceneaxi/desktop-shell`, and the matrix denies every profile
-package). The `desktop bridge` CLI group is now present and explicitly ungated
+package), cloud sync, database workspaces, multiple simultaneous windows, and any
+filesystem path not selected by a native directory dialog or retained in the validated
+recent-root registry. The `desktop bridge` CLI group is now present and explicitly ungated
 because it is local/free; held-key policy is untouched and every verb remains in
 the shipped command map.
 
