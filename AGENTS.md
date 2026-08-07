@@ -136,15 +136,18 @@ That plug point is now **wired** (sceneaxi#131): the umbrella alone may depend o
 adapters it assembles in `src/lib/provider-adapters.ts` (sceneaxi#180) — two files and no
 more, never a route, page, or component. Between them they build the site-kit
 adapters over those packages and map their named refusals onto the site refusal registry —
-they implement no identity, no ledger, and no signature check. Provider clients (Better Auth,
-Neon, Stripe API) stay outside the repo per ADR 0021 and arrive through the one
+they implement no identity, no ledger, and no signature check. Provider clients stay
+outside hermetic core per ADR 0021; the Better Auth handler and PostgreSQL pool now live
+only in the umbrella install root at `src/lib/better-auth-provider.ts`, exposing the two
+stock routes through `/api/auth/[...all]` over migration `0005_better_auth_provider.sql`.
+They create no SceneAxi role and do not replace the one
 `umbrellaPlaneHandles()` function, which reads the server environment once and holds the
 issued admin identity and the secret-closing webhook capability beside the provider
 handles; request code never reaches it directly but only through the no-argument
 `umbrellaRequestAuthority()` facade in `src/lib/request-authority.ts`, supplying a carried
 session credential — or, for the webhook route, raw bytes plus the signature header — and
 never an environment, issuer, store, clock, or secret, which `pnpm check:boundaries`
-enforces. While the provider clients are absent every dependent surface refuses
+enforces. While provider configuration, storage, or handles are absent every dependent surface refuses
 by name and `IDENTITY_SESSION_ABSENT` means signed-out, not broken. Those adapters make the
 provider authoritative for a user's address and verification state on every
 authentication, and treat a repeated idempotency key as an intent replay rather than a

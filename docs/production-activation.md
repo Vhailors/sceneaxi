@@ -77,17 +77,19 @@ the operator's at-a-glance copy of it, the two must move in the same change, and
 `tests/docs/production-activation.test.ts` fails if they drift.
 
 The remaining cells are not part of that dated observation. `SCENEAXI_ADMIN_EMAIL` records
-captain-held configuration policy, while the cells for Neon-backed provider handles and TEST
+captain-held configuration policy, `BETTER_AUTH_SECRET` names newly required provider
+configuration, while the cells for Neon-backed provider handles and TEST
 checkout/evidence adapters state what this repository's own source and tests establish
-together with what production has not evidenced. None of the three is an external
+together with what production has not evidenced. None of the four is an external
 observation, none is held in lockstep by that test, and none may be read as a deployment
 claim; the deployment owner still proves each of them through the close-out column.
 
 | Input or evidence | Exact target | Current recorded state | Owner and required close-out |
 |---|---|---|---|
 | `BETTER_AUTH_ORIGIN` | Vercel Production scope, `sceneaxi-umbrella` | **Missing** from the latest name-only Vercel observation. The deployed umbrella also predates `/login`. | Better Auth/deployment owner supplies a real HTTPS provider origin and proves `POST /api/auth/sign-in/email` plus `GET /api/auth/get-session`. Credentials and provider tables remain provider-owned. A malformed or absent origin leaves the identity handle absent. |
+| `BETTER_AUTH_SECRET` | Vercel Production scope, `sceneaxi-umbrella` | Required by the in-repo provider implementation; absent from the latest name-only observation, and no value is recorded. | Captain/provider owner supplies signing material of the provider's required strength. Missing or malformed material returns `BETTER_AUTH_PROVIDER_CONFIGURATION_ABSENT` or `BETTER_AUTH_PROVIDER_CONFIGURATION_INVALID`; it is never printed or passed to core. |
 | `DATABASE_URL` | Vercel Production scope, all three web projects | The deployment doc records one encrypted value shared by all three; the latest external observation confirmed the name only on the umbrella, not its value or use. | Captain (Neon) owns the connection secret. The deployment owner confirms the same target database on all three projects without printing the URL. |
-| Neon project identifiers | project `sceneaxi-prod`, id `misty-king-68383952`, region `aws-us-east-2`, database `neondb` | Project identity is recorded; no connection or migration proof was performed in the latest readiness observation. | Neon/deployment owner verifies the identifiers, applies `db/migrations/0001_identity.sql` through `0004_stripe_connect_audit.sql` in order, and captures schema/trigger/index evidence. There is no down-migration rollback. |
+| Neon project identifiers | project `sceneaxi-prod`, id `misty-king-68383952`, region `aws-us-east-2`, database `neondb` | Project identity is recorded; no connection or migration proof was performed in the latest readiness observation. | Neon/deployment owner verifies the identifiers, applies `db/migrations/0001_identity.sql` through `0005_better_auth_provider.sql` in order, and captures schema/trigger/index evidence. There is no down-migration rollback. |
 | Neon-backed provider handles | umbrella deployment owner behind `umbrellaRequestAuthority()` | Adapter code exists; production handle construction and authenticated read/write behavior are not yet evidenced. | Deployment owner supplies the real `IdentityStore`, `CreditStoreAdapter`, checkout-intent store, settlement evidence port, and any separately authorized Connect store. Missing or unreadable storage remains a refusal, never an empty account or zero balance. |
 | `SCENEAXI_ADMIN_EMAIL` | Vercel Production scope, `sceneaxi-umbrella` | Value is captain-held and intentionally undocumented. | Captain supplies the sole admin address. The deployment owner verifies a real provider-authenticated session for that address; the environment value alone grants no role. |
 | `SCENEAXI_ADMIN_BOOTSTRAP_SECRET` | Vercel Production scope, `sceneaxi-umbrella` | Encrypted variable name was observed; its value was not and must not be attested here. | Captain/provider owner supplies first-run credential material and proves it through the provider. It is never a role source or core input. |
@@ -224,6 +226,8 @@ Do not start activation until every applicable item is checked with real evidenc
 - [ ] Prove `BETTER_AUTH_ORIGIN` is a real HTTPS provider origin serving both required
   endpoints, using an authorized test member. Capture status and provider request ids,
   not credentials, cookies, bearer tokens, or response bodies containing them.
+- [ ] Confirm `BETTER_AUTH_SECRET` is present only as encrypted Production configuration
+  on `sceneaxi-umbrella`; inspect name and scope only, never its value.
 - [ ] Confirm all three `DATABASE_URL` entries target Neon project `sceneaxi-prod`
   (`misty-king-68383952`), `aws-us-east-2`, database `neondb`, without recording the
   connection string.
@@ -247,8 +251,9 @@ Execute only the rows named by the current authorization; unchecked rows remain 
 
 ### Web identity and Stripe TEST
 
-- [ ] Configure the real Better Auth handler at `BETTER_AUTH_ORIGIN` and the real
-  provider/store handles behind `umbrellaRequestAuthority()`.
+- [ ] Configure the shipped Better Auth handler at `BETTER_AUTH_ORIGIN`, including
+  `BETTER_AUTH_SECRET` and migration `0005_better_auth_provider.sql`, and configure the
+  real provider/store handles behind `umbrellaRequestAuthority()`.
 - [ ] Set the exact Vercel Production variables and build-time origins on only their
   assigned projects. Keep `SCENEAXI_BILLING_MODE=test` and LIVE authorization absent.
 - [ ] Configure the existing Stripe TEST webhook endpoint for both handled event types
@@ -357,6 +362,7 @@ Capture at least one safe proof for each applicable closed state before go/no-go
 
 | Missing or unsafe state | Required result |
 |---|---|
+| Better Auth provider configuration or provider tables unavailable | `BETTER_AUTH_PROVIDER_CONFIGURATION_ABSENT`, `BETTER_AUTH_PROVIDER_CONFIGURATION_INVALID`, or `BETTER_AUTH_PROVIDER_STORAGE_UNAVAILABLE`; redacted HTTP 503 and no provider dispatch after a failed readiness check |
 | Better Auth or identity store absent | `IDENTITY_PLANE_NOT_WIRED`; no form/session/account invention |
 | Signed-out visitor | `IDENTITY_SESSION_ABSENT`; treated as signed out, not a provider failure |
 | Credit store unreadable | `CREDITS_PLANE_UNAVAILABLE`; no zero-balance substitution |

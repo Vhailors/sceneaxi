@@ -232,4 +232,5 @@ Recorded in `dependency-matrix.json → releaseGroups` and stamped on every mani
 - **identity** (`auth`, `billing`): independently versioned; consumes only public
   contracts from `schemas` (and, for `billing`, the `auth` seam); never engine
   packages, profiles, the CLI, or a service locator. Better Auth, Neon, and the
-  Stripe API stay injected adapters (ADR 0021; `docs/auth-credits.md`).
+  Stripe API stay injected adapters outside core; their production dependencies
+  may live only in a separate deployable install root (ADR 0021; `docs/auth-credits.md`).

@@ -387,6 +387,33 @@ describe("migration hygiene", () => {
       expect(text).not.toMatch(/\bPASSWORD\s*=/i);
     }
   });
+
+  it("keeps Better Auth persistence provider-owned and schema-pinned", () => {
+    const providerSource = readFileSync(
+      new URL("../../sites/umbrella/src/lib/better-auth-provider.ts", import.meta.url),
+      "utf8",
+    );
+    for (const table of [
+      "better_auth_users",
+      "better_auth_sessions",
+      "better_auth_accounts",
+      "better_auth_verifications",
+    ]) {
+      expect(providerSource).toContain(`"${table}"`);
+      expect(sql).toContain(`CREATE TABLE IF NOT EXISTS ${table}`);
+    }
+    const providerMigration = readFileSync(
+      join(migrationsDir, "0005_better_auth_provider.sql"),
+      "utf8",
+    );
+    expect(providerMigration).not.toMatch(/^\s*"?role"?\s+/m);
+    expect(providerMigration).toContain(
+      'UNIQUE ("userId", "providerId")',
+    );
+    expect(providerMigration).toContain(
+      '"providerId" <> \'credential\' OR "password" IS NOT NULL',
+    );
+  });
 });
 
 describe("contract to DDL lockstep", () => {

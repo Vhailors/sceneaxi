@@ -83,6 +83,15 @@ const FRAMEWORK_DEPENDENCIES = Object.freeze([
   "pg",
 ]);
 
+/** Provider clients terminate at the umbrella's one deployment-owned seam. */
+const UMBRELLA_SITE_PACKAGE = "@sceneaxi/site-umbrella";
+const UMBRELLA_ONLY_PROVIDER_DEPENDENCIES = Object.freeze([
+  "better-auth",
+  "stripe",
+  "@neondatabase/serverless",
+  "pg",
+]);
+
 /**
  * Secret-shaped material. Names alone are fine (that is what `.env.example` is
  * for); a name assigned a value is not.
@@ -308,6 +317,15 @@ for (const dir of siteDirs) {
   }
 
   const dependencies = manifest.dependencies ?? {};
+  if (manifest.name !== UMBRELLA_SITE_PACKAGE) {
+    for (const dependency of UMBRELLA_ONLY_PROVIDER_DEPENDENCIES) {
+      if (dependencies[dependency] !== undefined) {
+        fail(
+          `${manifest.name}: provider dependency '${dependency}' belongs only to the umbrella deployment seam`,
+        );
+      }
+    }
+  }
   if (manifest.name === KIDS_SITE_PACKAGE) {
     const runtimeNames = Object.keys(dependencies).sort();
     if (JSON.stringify(runtimeNames) !== JSON.stringify(KIDS_SITE_RUNTIME_DEPENDENCIES)) {

@@ -109,7 +109,7 @@ POST-AUTH box stays unchecked indefinitely.
 - [ ] **PRE-AUTH** — Prove the planned canonical HTTPS `NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN`; checkout success
   and cancel redirects use it rather than a request `Host` or preview alias.
 - [ ] **PRE-AUTH** — Verify the deployment secret store contains the correct TEST-scoped names:
-  `DATABASE_URL`, `BETTER_AUTH_ORIGIN`, `SCENEAXI_ADMIN_EMAIL`,
+  `DATABASE_URL`, `BETTER_AUTH_ORIGIN`, `BETTER_AUTH_SECRET`, `SCENEAXI_ADMIN_EMAIL`,
   `SCENEAXI_ADMIN_BOOTSTRAP_SECRET`, `STRIPE_SECRET_KEY`, and
   `STRIPE_WEBHOOK_SECRET`. Inspect presence and scope only; never print values.
 - [ ] **PRE-AUTH** — Keep `SCENEAXI_BILLING_MODE` set to `test` throughout readiness work. A later LIVE

@@ -518,6 +518,26 @@ describe("the sites tier keeps the hermetic root hermetic", () => {
     }
   });
 
+  it("keeps Better Auth and PostgreSQL in the umbrella install root only", () => {
+    const manifest = (dir: string) =>
+      JSON.parse(
+        readFileSync(new URL(`../../${dir}/package.json`, import.meta.url), "utf8"),
+      ) as { readonly dependencies?: Record<string, string> };
+    expect(manifest("sites/umbrella").dependencies).toMatchObject({
+      "better-auth": expect.any(String),
+      pg: expect.any(String),
+    });
+    for (const dir of [
+      "packages/auth",
+      "sites/catalog-game",
+      "sites/catalog-web",
+      "sites/kids",
+    ]) {
+      expect(manifest(dir).dependencies ?? {}).not.toHaveProperty("better-auth");
+      expect(manifest(dir).dependencies ?? {}).not.toHaveProperty("pg");
+    }
+  });
+
   it("keeps sites/ out of the pnpm workspace, so the root lockfile never moves for a site", () => {
     const workspace = readFileSync(new URL("../../pnpm-workspace.yaml", import.meta.url), "utf8");
     expect(workspace).toContain("packages/*");

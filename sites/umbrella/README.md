@@ -301,11 +301,20 @@ payment-event side effect. The Better Auth client reads the session back from
 `GET /api/auth/get-session`, sending both the issued session cookie and the issued bearer
 token so either provider configuration resolves; a provider that honours neither throws a
 named fault instead of reporting a valid password as refused
-(`docs/websites-deploy.md` owns that prerequisite). Hosted sign-in reaches
+(`docs/websites-deploy.md` owns that prerequisite). The provider itself is
+`src/lib/better-auth-provider.ts`, mounted only at `/api/auth/[...all]`: public sign-up
+and every endpoint other than `POST sign-in/email` and `GET get-session` return 404.
+It uses `BETTER_AUTH_SECRET` and `DATABASE_URL` only on the server, persists in the
+provider-owned `better_auth_*` tables from migration 0005, and returns redacted 503
+refusals when configuration or storage is unavailable. Better Auth and `pg` remain
+dependencies of this standalone site install root, not `@sceneaxi/auth`.
+
+Hosted sign-in reaches
 `identityPort.signIn` through this same plug point
 ([sceneaxi#185](https://github.com/Vhailors/sceneaxi/issues/185), see **Hosted sign-in**
-above); a deployment whose provider handles are absent issues no session and refuses by
-name instead. `docs/websites-deploy.md` owns the env names and wiring mechanics;
+above); a deployment whose provider configuration, migration, or handles are absent
+issues no session and refuses by name instead. `docs/websites-deploy.md` owns the env
+names and wiring mechanics;
 `docs/production-activation.md` owns the ordered activation and rollback procedure.
 
 `SCENEAXI_SITE_EDITOR_PREVIEW=1` grants a banner-marked editor preview so the

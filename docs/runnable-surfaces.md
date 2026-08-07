@@ -31,9 +31,12 @@ a marketing word.
 
 Hosted sign-in is the editor row's access path, not a second runnable-level claim:
 `/login` and `POST /api/login|logout` exist to establish or clear the session that
-unlocks `/editor`. Their deterministic site-level proof is
+unlocks `/editor`; the umbrella also hosts the two provider routes they call. Their
+deterministic site-level proof is
 `tests/sites/identity-plane-wiring.test.ts` plus
-`tests/sites/umbrella-login-flow.test.ts`; the editor's R1 claim remains owned by
+`tests/sites/umbrella-login-flow.test.ts`, while
+`sites/umbrella/test/better-auth-provider.test.ts` drives real Better Auth sign-in and
+cookie/bearer session lookup over an in-memory provider database. The editor's R1 claim remains owned by
 the golden e2e named in the table.
 
 `@sceneaxi/desktop-macos` is deliberately absent from the table. Its packaging,
