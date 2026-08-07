@@ -149,7 +149,11 @@ never strands a stored credential. That path `lstat`s the envelope — a symlink
 directory is a wrong type, not a redirected delete — refuses
 `DESKTOP_PROVIDER_KEY_STORE_CORRUPT` for a non-regular or non-owner-private target
 and `DESKTOP_PROVIDER_KEY_STORE_FAILED` for a failed unlink, and never reads,
-decrypts, or returns envelope bytes. A store refusal for a resolved provider
+decrypts, or returns envelope bytes. The file-type half of that check is
+platform-independent; the owner-private half is asserted only where `Stats.mode`
+is a real POSIX permission set, because Windows synthesizes it from the read-only
+attribute alone and the Windows packaging root stages this same runtime — a
+credential that could be saved must always be deletable. A store refusal for a resolved provider
 carries one extra boolean, `removable`, so the surface can keep offering Remove
 without learning anything about the key itself; the renderer disables Save and the
 key field, and enables Remove from that flag alone.
@@ -240,9 +244,11 @@ cannot opt into hosted routing or bypass metering.
   non-secret sentinels to prove encrypted save/read/replace/remove, unavailable /
   locked / unsupported / corrupt / failed refusals, removal surviving an
   unavailable backend while save and read still refuse, removal refusing a
-  wrong-type / symlinked / non-owner-private target and a failed unlink,
-  Kids-before-store ordering, provider-session retrieval and cleanup,
-  renderer/bridge redaction, and the unchanged hosted/tool-registry boundary.
+  wrong-type / symlinked / non-owner-private target and a failed unlink, the
+  owner-private assertion staying off a platform without POSIX permissions while
+  the file-type check still holds, Kids-before-store ordering, provider-session
+  retrieval and cleanup, renderer/bridge redaction, and the unchanged
+  hosted/tool-registry boundary.
 
 This contract does not authorize production deployment, hosted-provider
 activation, Stripe LIVE, Connect LIVE, legal or tax behavior, production

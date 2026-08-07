@@ -270,6 +270,38 @@ describe("desktop provider key store", () => {
     expect(existsSync(openPath)).toBe(true);
   });
 
+  it("keeps the owner-private assertion off platforms without POSIX permissions", async () => {
+    const root = temporaryRoot("provider-key-remove-windows");
+    const store = createProviderKeyStore({ root, platformStorage: syntheticPlatform() });
+    await store.save("openrouter", SYNTHETIC_NON_SECRET);
+    const envelope = join(root, "openrouter.v1.json");
+    chmodSync(envelope, 0o666);
+
+    const platform = Object.getOwnPropertyDescriptor(process, "platform");
+    Object.defineProperty(process, "platform", { value: "win32", configurable: true });
+    try {
+      expect(await store.removable("openrouter")).toEqual({
+        ok: true,
+        provider: "openrouter",
+        removable: true,
+      });
+      expect(await store.remove("openrouter")).toEqual({
+        ok: true,
+        provider: "openrouter",
+        removed: true,
+      });
+      expect(existsSync(envelope)).toBe(false);
+
+      mkdirSync(envelope);
+      expect(await store.remove("openrouter")).toMatchObject({
+        ok: false,
+        reason: PROVIDER_KEY_STORE_REFUSALS.corrupt,
+      });
+    } finally {
+      if (platform !== undefined) Object.defineProperty(process, "platform", platform);
+    }
+  });
+
   it.skipIf(process.getuid?.() === 0)(
     "names a failed removal without deleting anything",
     async () => {

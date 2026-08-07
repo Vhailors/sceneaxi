@@ -104,6 +104,18 @@ const ENVELOPE_SCHEMA_VERSION = 1 as const;
 const MAX_KEY_LENGTH = 16_384;
 const GROUP_AND_OTHER_MODE_BITS = 0o077;
 
+/**
+ * Whether `Stats.mode` carries a real POSIX permission set. Windows synthesizes
+ * it from the read-only attribute alone — `0o666`, or `0o444` when read-only —
+ * and `chmod` there toggles only that attribute, so an envelope this store wrote
+ * itself would fail an owner-private assertion that the platform cannot express.
+ * The Windows packaging root stages this exact runtime, so the assertion is made
+ * where it means something and the file-type check carries every platform.
+ */
+function posixPermissions(): boolean {
+  return process.platform !== "win32";
+}
+
 function refuse(
   reason: ProviderKeyStoreRefusalReason,
   message: string,
@@ -186,8 +198,9 @@ export function createProviderKeyStore(
   /**
    * The one thing deletion is allowed to learn about the envelope: whether the
    * path is a stored credential this store may safely unlink. `lstat` rather than
-   * `stat`, so a symlink is a wrong type instead of a redirected delete, and the
-   * owner-private check refuses a file this store cannot have written.
+   * `stat`, so a symlink is a wrong type instead of a redirected delete, and —
+   * where the platform has POSIX permissions — an owner-private check that
+   * refuses a file this store cannot have written.
    */
   const inspectEnvelopeFile = (
     provider: DesktopByoProvider,
@@ -208,7 +221,7 @@ export function createProviderKeyStore(
         "The stored provider credential path is not a regular encrypted file.",
       );
     }
-    if ((entry.mode & GROUP_AND_OTHER_MODE_BITS) !== 0) {
+    if (posixPermissions() && (entry.mode & GROUP_AND_OTHER_MODE_BITS) !== 0) {
       return refuse(
         PROVIDER_KEY_STORE_REFUSALS.corrupt,
         "The stored provider credential file is not owner-private.",
