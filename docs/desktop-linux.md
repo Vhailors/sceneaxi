@@ -29,7 +29,9 @@ IPC channel and the local socket adapter are two transports over that one
 | `src/lib/bridge-contract.ts` | everywhere | channel name, request/response envelope, named refusals |
 | `src/lib/bridge.ts` — `createDesktopBridge()` | main process | synchronous `handle()` over the real engine; `ipcMain.handle` adapts it in one line |
 | `src/lib/local-rpc.ts` | main process | protocol-v1 same-user Unix-socket adapter over the closed project/assistant agent-tool registry; private discovery and explicit permissions |
-| `src/electron/preload.ts` | preload | exposes exactly one frozen global with one `request()` method |
+| `src/lib/provider-key-store.ts` + `byo-configuration.ts` | main process | typed OS-secure credential store, redacted configuration controller, and per-session key lease for injected BYOK runners |
+| `src/electron/provider-key-store.ts` | privileged Electron process | `safeStorage` adapter; refuses locked, unsupported, basic-text, and failed backends and persists ciphertext only |
+| `src/electron/preload.ts` | preload | exposes one frozen global: the existing engine request plus a separate BYOK configuration method on its own IPC channel |
 | `src/renderer/viewport.ts` | the window | the desktop tier's **one renderer-owning module** (see below) |
 
 Bridge actions and what each reaches — only through public seams:
@@ -52,6 +54,14 @@ deepens that surface, not this tier). The chrome's `sceneaxi-pixels-drawn` meta
 stays `false` at build time; the renderer updates it only from a real frame's
 `pixelsDrawn` — evidence, never assertion.
 
+The renderer script progressively binds one desktop-only BYOK settings section
+beside the shell-owned route selector. It uses the chrome's existing controls and
+tokens and does not add an editor mode or action to the shell state machine.
+Selecting BYOK shows OpenRouter key presence and Save, Replace, Remove, locked,
+unsupported, corrupt, failure, or runtime-unavailable state. Switching to Kids
+hides the section and clears its password field before any submission or secure
+store request can occur.
+
 The local CLI/BYOK agent attachment is separately owned by
 [`desktop-local-bridge.md`](desktop-local-bridge.md). It exposes no renderer-only
 action, no TCP listener, no provider credential field, and no hosted route; the
@@ -69,7 +79,9 @@ correctly keeps auth/billing out of this tier. Hosted completion and debiting ar
 proved separately through web-shell's existing `createAssistantPanel()` seam.
 The desktop golden test injects a real fixture-backed Model Provider Port through
 that BYOK runner and proves the typed result crosses the job seam; the packaged
-default deliberately injects no provider, credential, or fallback behaviour.
+default deliberately injects no live provider transport or fallback behaviour.
+Its configuration surface may persist only OS-encrypted credential bytes and
+reports the provider runtime unavailable until that privileged adapter exists.
 
 On success the existing validated `SculptArtifact` becomes the shared
 `MountableScene` payload before it is mounted through `createSculptMountApi()` into
@@ -80,8 +92,9 @@ transform because placement here is the manipulators' job. The renderer exposes
 real translate/rotate/scale controls using the Mount API and prints read-only
 materials, collider physics where the quality artifact supports it, and
 procedural settings. Unsupported edits and legacy physics inspection refuse by
-name. Provider failures, malformed output, timeouts, and other refusals remain
-visible with Retry; a timeout first abandons the old job so its late result
+name. Typed provider refusals, malformed output, timeouts, and other refusals remain
+visible with Retry, while thrown provider detail is redacted because it may echo
+credential material; a timeout first abandons the old job so its late result
 cannot overwrite the retry, and a runner that dispatches nothing takes its
 `running` claim back rather than leaving the seam permanently
 `DESKTOP_ASSISTANT_BUSY`. Streaming progress contains only deltas actually
@@ -96,6 +109,22 @@ authoring-core denies the carried Kids profile again — independently — befor
 local compilation or provider dispatch.
 The packaged document starts in that unavailable state and transitions to local
 only after the bridge, initial Mount API scene, and every assistant handler bind.
+
+### Configure a BYOK key
+
+1. Open Assistant and select **BYOK · free** on Game or Website.
+2. Confirm the provider row says **OpenRouter** and inspect the key/runtime status.
+3. Paste the key and choose **Save key**. Once configured, the same action reads
+   **Replace key**; **Remove** deletes the encrypted envelope.
+4. The field clears immediately after submission. The stored value is never shown,
+   copied into the project, or included in a status/refusal response.
+
+OS secure storage must be available and unlocked. Linux launches using Electron's
+`basic_text` password backend refuse as unsupported; SceneAxi does not downgrade to
+plaintext. The checked-in host intentionally has no live provider session factory,
+so it reports provider execution unavailable even when a key is securely stored.
+This implements configuration and the privileged injection contract without
+claiming production provider readiness.
 
 The first-release manipulator is deliberately bounded: `Move +X` and `Move +Y`
 advance by 0.25 world units, `Rotate Y` advances by 15 degrees, and `Scale +`

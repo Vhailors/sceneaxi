@@ -63,6 +63,7 @@ import {
   desktopSceneFromDocumentData,
   type DesktopSceneResult,
 } from "./desktop-scene.js";
+import { DesktopByoRunnerRefusal } from "./byo-configuration.js";
 
 export type DesktopBridgeOptions = {
   /** Working directory the authoring session binds to. */
@@ -71,7 +72,7 @@ export type DesktopBridgeOptions = {
   readonly nowMs?: () => number;
   /** Observer for renderer frame reports (the smoke path listens here). */
   readonly onFrameReport?: (report: DesktopFrameReport) => void;
-  /** Optional BYOK runner. The default desktop owns only the free local path. */
+  /** Optional privileged BYOK runner. Credentials never enter this bridge. */
   readonly runByoAssistant?: (request: DesktopAssistantRunRequest) => Promise<AssistantSculptResult>;
 };
 
@@ -477,13 +478,21 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     };
     const settleRuntimeFailure = (error: unknown): void => {
       if (assistantJob !== activeJob || activeJob.status !== "running") return;
+      const byoRefusal = route === "byo" && error instanceof DesktopByoRunnerRefusal
+        ? error
+        : null;
       activeJob.status = "refused";
       activeJob.refusal = Object.freeze({
         ok: false as const,
-        reason: DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
-        message: "The configured assistant runner failed.",
+        reason: byoRefusal?.reason ?? DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
+        message: byoRefusal?.message ?? "The configured assistant runner failed.",
         recoverable: true,
-        detail: error instanceof Error ? error.message : String(error),
+        // BYOK provider errors are deliberately detail-free: an upstream error
+        // may include request headers or credential material. The renderer and
+        // local bridge get only the named, redacted refusal.
+        ...(route === "local"
+          ? { detail: error instanceof Error ? error.message : String(error) }
+          : {}),
       });
     };
     let running: Promise<AssistantSculptResult> | undefined;

@@ -23,6 +23,10 @@ import {
   type SculptPresentationFrame,
 } from "@sceneaxi/engine-presentation";
 import { createDesktopAssistantViewportController } from "../lib/assistant-viewport.js";
+import type {
+  DesktopByoConfigurationRequest,
+  DesktopByoConfigurationResponse,
+} from "../lib/byo-configuration-contract.js";
 import {
   DESKTOP_ACTIVE_DOCUMENT_PATH,
   DESKTOP_BRIDGE_GLOBAL,
@@ -37,9 +41,13 @@ import {
   mountDesktopScene,
   synchronizeViewportScene,
 } from "./viewport-playback.js";
+import { installDesktopByoConfigurationSurface } from "./byo-configuration.js";
 
 type BridgeGlobal = {
   request(request: unknown): Promise<DesktopBridgeResponse>;
+  configureByo?: (
+    request: DesktopByoConfigurationRequest,
+  ) => Promise<DesktopByoConfigurationResponse>;
 };
 
 // A rejected bridge call is worth retrying — the next frame is milliseconds away —
@@ -338,6 +346,13 @@ async function mountLiveViewport(): Promise<void> {
   if (port === null) {
     refuseLiveViewport(stage, "the desktop bridge is not exposed.");
     return;
+  }
+  const byoConfigurationBound = installDesktopByoConfigurationSurface(port);
+  if (!byoConfigurationBound) {
+    openPathLine(
+      stage,
+      "BYOK configuration refused: the desktop settings controls could not bind to platform secure storage.",
+    );
   }
 
   const sceneResponse = await port.request({

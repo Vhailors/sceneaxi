@@ -124,22 +124,67 @@ request/response, discovery descriptor, log, evidence packet, project document,
 or committed file. The v1 BYOK tool accepts only `prompt` and a non-Kids
 `profile`; schema validation rejects extra fields such as a key or token.
 
-The only supported secret boundary is an embedding deployment that:
+The desktop configuration surface supports the non-Kids `OpenRouter` provider.
+It is a renderer-only settings path beside the existing Assistant route control,
+not a local agent tool. Selecting BYOK shows whether a key is stored and the
+available Save, Replace, Remove, or named-unavailable action. The password field
+is cleared after every submission; status and mutation responses contain only
+provider, operation, key-presence, and runtime-availability metadata.
 
-1. retrieves the provider credential from the operating system's user-scoped
-   credential store while Engine Desktop starts;
-2. closes over that credential inside a provider adapter and injects only the
-   existing `runByoAssistant` function into `createDesktopBridge()`;
-3. keeps the credential in process memory for that desktop session and clears
-   its reference when the adapter/session closes; and
-4. never serializes or logs the credential, including on provider errors.
+`ProviderKeyStore` in `desktop/linux/src/lib/provider-key-store.ts` is the typed
+host seam: `status`, `read`, `save`, and `remove`. Its Electron adapter uses
+`safeStorage` only after `app.ready`, stores only its ciphertext envelope under
+the application's user-data directory, and atomically replaces that envelope.
+There is no app-owned cipher. On Linux, Electron's `basic_text` and `unknown`
+backends are explicitly unsupported rather than treated as secure storage.
+Environment variables, plaintext configuration, browser storage, project files,
+and CLI arguments are not fallbacks.
 
-The repository's packaged default injects no provider adapter and reads no BYOK
-environment variable or plaintext config file, so
-`sceneaxi.assistant.byo.start` deterministically refuses
-`DESKTOP_ASSISTANT_BYO_UNAVAILABLE`. This is intentional: adding an OS-keychain
-adapter is deployment work at the existing seam, not authority to add a secret
-store or provider dependency to CLI/core.
+The configuration request uses its own
+`sceneaxi:desktop-byo-configuration` IPC channel. It is not a
+`createDesktopBridge().handle()` action, cannot be reached through `local-rpc.ts`,
+and adds nothing to the protocol-v1 permission/tool registry. The raw value exists
+in the password control only until Save/Replace submits it to the privileged main
+process; it is then cleared in both success and failure paths and never returned.
+
+When a privileged provider adapter is injected,
+`createSecureDesktopByoAssistantRunner()` performs this fixed sequence for every
+BYOK job:
+
+1. deny Kids before secure-store access;
+2. retrieve the selected provider key from `ProviderKeyStore` in the privileged
+   process;
+3. create one provider session with a revocable key accessor and inject only the
+   resulting runner into `createDesktopBridge()`;
+4. revoke the key reference in `finally` before closing the provider session; and
+5. reduce every thrown provider detail to a named, secret-free refusal.
+
+The checked-in packaged host does not add a live provider transport or production
+credential configuration: its provider runtime reports unavailable, while the
+secure storage and UI states remain real. A deployment-owned privileged adapter
+can satisfy the existing session factory without changing the renderer, CLI,
+Unix socket, or tool registry. Until then a BYOK assistant start refuses rather
+than borrowing the local route or crossing into hosted metering.
+
+### Named secure-storage refusals
+
+| Reason | Meaning |
+|---|---|
+| `DESKTOP_PROVIDER_KEY_STORE_UNAVAILABLE` | the platform secure-storage service is absent |
+| `DESKTOP_PROVIDER_KEY_STORE_LOCKED` | the user-scoped OS credential store is locked or encryption is not currently available |
+| `DESKTOP_PROVIDER_KEY_STORE_UNSUPPORTED` | the OS/backend is unsupported, including Electron `basic_text` on Linux |
+| `DESKTOP_PROVIDER_KEY_STORE_CORRUPT` | the encrypted envelope or decrypted key is invalid |
+| `DESKTOP_PROVIDER_KEY_STORE_FAILED` | availability, encryption, persistence, or removal failed |
+| `DESKTOP_PROVIDER_KEY_MISSING` | no key is stored for the selected provider |
+| `DESKTOP_PROVIDER_KEY_INVALID` | the submitted value is empty or has an unsupported shape |
+| `DESKTOP_BYO_PROVIDER_UNSUPPORTED` | the requested provider is outside the checked-in provider list |
+| `DESKTOP_BYO_PROVIDER_SESSION_UNAVAILABLE` | secure configuration exists but no privileged provider session factory is installed |
+| `DESKTOP_BYO_PROVIDER_SESSION_FAILED` | provider session creation or execution failed; upstream detail is deliberately redacted |
+
+All of these refuse before provider dispatch. Save encrypts before writing and
+uses an atomic rename, so an encryption/write failure does not replace an existing
+envelope with partial bytes. Corrupt data never falls back to an empty or plaintext
+value.
 
 ## Cost and hosted separation
 
@@ -175,3 +220,13 @@ cannot opt into hosted routing or bypass metering.
 - `tests/e2e/desktop-cli-local-bridge-golden.test.ts` spawns the real CLI binary
   against the real desktop server, performs propose/apply, runs the free local
   assistant, and proves absent BYOK plus hosted stay fail-closed.
+- `tests/desktop/desktop-byo-secure-storage.test.ts` uses clearly synthetic
+  non-secret sentinels to prove encrypted save/read/replace/remove, unavailable /
+  locked / unsupported / corrupt / failed refusals, Kids-before-store ordering,
+  provider-session retrieval and cleanup, renderer/bridge redaction, and the
+  unchanged hosted/tool-registry boundary.
+
+This contract does not authorize production deployment, hosted-provider
+activation, Stripe LIVE, Connect LIVE, legal or tax behavior, production
+credential setup, or a public Windows/macOS release. Those remain separately
+owned and out of scope.

@@ -16,6 +16,8 @@ import { tmpdir } from "node:os";
 import { join, sep } from "node:path";
 import { BrowserWindow, app, ipcMain } from "electron";
 import { DESKTOP_MINIMUM_WINDOW } from "@sceneaxi/desktop-shell";
+import { createDesktopByoConfiguration } from "../lib/byo-configuration.js";
+import { DESKTOP_BYO_CONFIGURATION_CHANNEL } from "../lib/byo-configuration-contract.js";
 import {
   DESKTOP_ACTIVE_DOCUMENT_PATH,
   DESKTOP_BRIDGE_CHANNEL,
@@ -27,6 +29,7 @@ import {
   type DesktopLocalBridgeServer,
 } from "../lib/local-rpc.js";
 import { seedDesktopProject } from "../lib/project-seed.js";
+import { createElectronProviderKeyStore } from "./provider-key-store.js";
 
 // The bundle is CJS (Electron's main entry), so the native `__dirname` is real.
 declare const __dirname: string;
@@ -101,6 +104,14 @@ async function start(): Promise<void> {
   });
 
   const cwd = SMOKE ? smokeProjectDir() : projectDir();
+  const providerKeyStore = createElectronProviderKeyStore(app.getPath("userData"));
+  const byoConfiguration = createDesktopByoConfiguration({
+    keyStore: providerKeyStore,
+    // This change installs the secure credential boundary, not a production
+    // provider deployment. A future privileged adapter may turn this ready
+    // without changing the renderer, CLI, or local bridge contract.
+    providerRuntimeAvailable: false,
+  });
   const bridge = createDesktopBridge({
     cwd,
     onFrameReport: (report) => frameReported?.(report),
@@ -140,6 +151,9 @@ async function start(): Promise<void> {
 
   ipcMain.handle(DESKTOP_BRIDGE_CHANNEL, (_event, request: unknown) =>
     bridge.handle(request),
+  );
+  ipcMain.handle(DESKTOP_BYO_CONFIGURATION_CHANNEL, (_event, request: unknown) =>
+    byoConfiguration.handle(request),
   );
 
   const window = new BrowserWindow({
