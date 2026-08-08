@@ -16,7 +16,6 @@ import { tmpdir } from "node:os";
 import { join, sep } from "node:path";
 import { BrowserWindow, app, dialog, ipcMain } from "electron";
 import { DESKTOP_MINIMUM_WINDOW } from "@sceneaxi/desktop-shell";
-import { createDesktopByoConfiguration } from "../lib/byo-configuration.js";
 import { DESKTOP_BYO_CONFIGURATION_CHANNEL } from "../lib/byo-configuration-contract.js";
 import {
   DESKTOP_ACTIVE_DOCUMENT_PATH,
@@ -42,6 +41,7 @@ import {
 } from "../lib/project-lifecycle-contract.js";
 import { createDesktopProjectLifecycle } from "../lib/project-lifecycle.js";
 import { createElectronProviderKeyStore } from "./provider-key-store.js";
+import { createPrivilegedDesktopByoRuntime } from "./provider-runtime.js";
 
 // The bundle is CJS (Electron's main entry), so the native `__dirname` is real.
 declare const __dirname: string;
@@ -109,12 +109,8 @@ async function start(): Promise<void> {
 
   const smokeRoot = SMOKE ? smokeProjectDir() : null;
   const providerKeyStore = createElectronProviderKeyStore(app.getPath("userData"));
-  const byoConfiguration = createDesktopByoConfiguration({
+  const byoRuntime = createPrivilegedDesktopByoRuntime({
     keyStore: providerKeyStore,
-    // This change installs the secure credential boundary, not a production
-    // provider deployment. A future privileged adapter may turn this ready
-    // without changing the renderer, CLI, or local bridge contract.
-    providerRuntimeAvailable: false,
   });
   let bridge: DesktopBridge | null = null;
   let activeRoot: string | null = null;
@@ -128,6 +124,9 @@ async function start(): Promise<void> {
     const next = createDesktopBridge({
       cwd: root,
       onFrameReport: (report) => frameReported?.(report),
+      ...(byoRuntime.runByoAssistant === undefined
+        ? {}
+        : { runByoAssistant: byoRuntime.runByoAssistant }),
     });
     const localPaths = SMOKE
       ? {
@@ -186,7 +185,7 @@ async function start(): Promise<void> {
       ),
   );
   ipcMain.handle(DESKTOP_BYO_CONFIGURATION_CHANNEL, (_event, request: unknown) =>
-    byoConfiguration.handle(request),
+    byoRuntime.configuration.handle(request),
   );
 
   const window = new BrowserWindow({

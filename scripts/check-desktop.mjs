@@ -7,12 +7,14 @@
  * Electron, its bundler, and its packaging toolchain never move the hermetic root
  * install, the root lockfile, the `tsc --build` graph, or the gate runtime. That isolation is what this
  * check protects — plus the rule that no secret value is ever committed, and the
- * tier's own split: only `src/electron/**` may import Electron, so everything under
- * `src/lib/**` stays pure TypeScript the hermetic gate can test from `tests/desktop/`.
+ * tier's own split: only `src/electron/**` may import Electron or the concrete
+ * provider adapter, so everything under `src/lib/**` stays pure TypeScript the
+ * hermetic gate can test from `tests/desktop/`.
  *
  * Fail-closed: an empty `desktop/` tree, a missing required file, an app that is not
  * matrix-listed, any of that toolchain leaking into the hermetic root, an Electron import outside
- * `src/electron/`, or any committed secret value exits 1.
+ * `src/electron/`, a provider adapter import outside that privileged host, or any
+ * committed secret value exits 1.
  */
 import { existsSync, lstatSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
@@ -118,6 +120,7 @@ if (existsSync(workspaceFile)) {
 
 // --- per-app structure ---
 const ELECTRON_SPEC = /(?:from\s+|require\s*\(\s*|import\s*\(\s*|^\s*import\s+)["'](electron(?:\/[^"']*)?)["']/gm;
+const PRIVILEGED_PROVIDER_SPEC = /(?:from\s+|require\s*\(\s*|import\s*\(\s*|^\s*import\s+)["'](@sceneaxi\/provider-openrouter(?:\/[^"']*)?)["']/gm;
 const contains = (parent, candidate) => {
   const rel = relative(parent, candidate);
   return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !rel.startsWith("/"));
@@ -188,6 +191,13 @@ for (const dir of appDirs) {
           );
         }
       }
+      for (const match of text.matchAll(PRIVILEGED_PROVIDER_SPEC)) {
+        if (!contains(electronDir, file)) {
+          fail(
+            `${relative(root, file)} imports '${match[1]}' — only ${relative(root, electronDir)}/ may import a desktop provider adapter`,
+          );
+        }
+      }
     }
   }
 }
@@ -207,5 +217,5 @@ if (errors.length > 0) {
   process.exit(1);
 }
 console.log(
-  `desktop check OK — ${appDirs.length} desktop app(s) verified (separate install roots, matrix-listed, Electron confined, no committed secrets)`,
+  `desktop check OK — ${appDirs.length} desktop app(s) verified (separate install roots, matrix-listed, privileged imports confined, no committed secrets)`,
 );

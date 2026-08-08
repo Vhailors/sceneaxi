@@ -23,6 +23,9 @@ importers:
       '@sceneaxi/engine-presentation':
         specifier: link:../../packages/engine-presentation
         version: link:../../packages/engine-presentation
+      '@sceneaxi/provider-openrouter':
+        specifier: link:../../packages/provider-openrouter
+        version: link:../../packages/provider-openrouter
       '@sceneaxi/schemas':
         specifier: link:../../packages/schemas
         version: link:../../packages/schemas

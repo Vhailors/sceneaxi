@@ -75,6 +75,7 @@ and tokens; the renderer only binds their Mount API effects.
 | Provider key store + configuration | `src/lib/{provider-key-store,byo-configuration}.ts` | privileged host; encrypted-at-rest store, redacted status/mutations, per-session key lease |
 | BYOK surface projection (which controls may be offered, and the copy) | `src/lib/byo-configuration-view.ts` | pure; gate-tested from `tests/desktop/` |
 | Electron secure-store adapter | `src/electron/provider-key-store.ts` | main process; OS-backed `safeStorage`, never basic-text fallback |
+| Privileged provider composition | `src/electron/provider-runtime.ts` | main process; exact OpenRouter pin and policy over an injected transport, with no live transport in the checked-in build |
 | BYOK configuration UI | `src/renderer/byo-configuration.ts` | the window; provider/key status and save/replace/remove/unavailable states |
 | Scene composition (one pipeline, two consumers) | `src/lib/desktop-scene.ts` | main process; gate-tested |
 | Contained project lifecycle + versioned atomic recents | `src/lib/{project-lifecycle-contract,project-lifecycle,project-host}.ts` | pure typed host seam; gate-tested from `tests/desktop/` and packaged-like e2e |
@@ -87,8 +88,9 @@ and tokens; the renderer only binds their Mount API effects.
 Rules the gate enforces (`pnpm check:desktop`, `pnpm check:boundaries`,
 `tests/desktop/`, `tests/e2e/desktop-linux-bridge-golden.test.ts`):
 
-- Only `src/electron/**` may import Electron; `src/lib/**` stays pure TypeScript
-  the hermetic gate tests without an Electron install.
+- Only `src/electron/**` may import Electron or the concrete OpenRouter adapter;
+  `src/lib/**` stays pure TypeScript the hermetic gate tests without an Electron
+  install.
 - The visual model is consumed, never duplicated: no control, mode, refusal, or
   token is re-declared here, and the emitted document is byte-derived from
   `renderDesktopChrome()` plus exactly two injections (a runtime marker meta and

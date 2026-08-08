@@ -32,6 +32,7 @@ IPC channel and the local socket adapter are two transports over that one
 | `src/lib/local-rpc.ts` | main process | protocol-v1 same-user Unix-socket adapter over the closed project/assistant agent-tool registry; private discovery and explicit permissions |
 | `src/lib/provider-key-store.ts` + `byo-configuration.ts` | main process | typed OS-secure credential store, redacted configuration controller, and per-session key lease for injected BYOK runners |
 | `src/electron/provider-key-store.ts` | privileged Electron process | `safeStorage` adapter; refuses locked, unsupported, basic-text, and failed backends and persists ciphertext only |
+| `src/electron/provider-runtime.ts` | privileged Electron process | composes the existing OpenRouter adapter, Model Provider Port, profile policies, exact model pin, secure key lease, and desktop runner over an injected transport session |
 | `src/electron/preload.ts` | preload | exposes one frozen global: the existing engine request, typed project lifecycle method on its own IPC channel, and separate BYOK configuration method |
 | `src/renderer/viewport.ts` | the window | the desktop tier's **one renderer-owning module** (see below) |
 
@@ -104,11 +105,13 @@ uses only an injected runner and otherwise refuses
 `DESKTOP_ASSISTANT_HOSTED_METERING_UNAVAILABLE` because the dependency matrix
 correctly keeps auth/billing out of this tier. Hosted completion and debiting are
 proved separately through web-shell's existing `createAssistantPanel()` seam.
-The desktop golden test injects a real fixture-backed Model Provider Port through
-that BYOK runner and proves the typed result crosses the job seam; the packaged
-default deliberately injects no live provider transport or fallback behaviour.
-Its configuration surface may persist only OS-encrypted credential bytes and
-reports the provider runtime unavailable until that privileged adapter exists.
+The desktop provider-host golden test drives the recorded OpenRouter fixture
+through the privileged composition, existing Model Provider Port, authoring
+action, bridge job, and MountableScene result. It also checks the exact executed
+model descriptor and no-fallback request. The packaged default deliberately
+injects no live provider transport or fallback behaviour, so its configuration
+surface reports the provider runtime unavailable even when an encrypted key is
+stored.
 
 On success the existing validated `SculptArtifact` becomes the shared
 `MountableScene` payload before it is mounted through `createSculptMountApi()` into
@@ -120,8 +123,9 @@ real translate/rotate/scale controls using the Mount API and prints read-only
 materials, collider physics where the quality artifact supports it, and
 procedural settings. Unsupported edits and legacy physics inspection refuse by
 name. Typed provider refusals, malformed output, timeouts, and other refusals remain
-visible with Retry, while thrown provider detail is redacted because it may echo
-credential material; a timeout first abandons the old job so its late result
+visible with Retry. The privileged OpenRouter session removes provider-authored
+failure detail, and the secure runner replaces any failure that echoes the key;
+a timeout first abandons the old job so its late result
 cannot overwrite the retry, and a runner that dispatches nothing takes its
 `running` claim back rather than leaving the seam permanently
 `DESKTOP_ASSISTANT_BUSY`. Streaming progress contains only deltas actually
@@ -160,10 +164,11 @@ that only an unavailable-backend refusal may say the platform failed — is the
 shared contract owned by
 [`desktop-local-bridge.md`](desktop-local-bridge.md#byok-secure-storage-contract).
 
-The checked-in host intentionally has no live provider session factory,
+The checked-in host intentionally supplies no live provider transport session,
 so it reports provider execution unavailable even when a key is securely stored.
-This implements configuration and the privileged injection contract without
-claiming production provider readiness.
+It does use the same privileged composition module as the fixture proof, which
+keeps readiness and runner injection on one decision without claiming production
+provider readiness.
 
 The first-release manipulator is deliberately bounded: `Move +X` and `Move +Y`
 advance by 0.25 world units, `Rotate Y` advances by 15 degrees, and `Scale +`

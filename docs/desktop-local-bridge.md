@@ -193,9 +193,12 @@ and adds nothing to the protocol-v1 permission/tool registry. The raw value exis
 in the password control only until Save/Replace submits it to the privileged main
 process; it is then cleared in both success and failure paths and never returned.
 
-When a privileged provider adapter is injected,
-`createSecureDesktopByoAssistantRunner()` performs this fixed sequence for every
-BYOK job:
+The privileged subpath
+`@sceneaxi/desktop-linux/electron/provider-runtime` now composes the existing
+OpenRouter adapter with the Model Provider Port and
+`createSecureDesktopByoAssistantRunner()`. It accepts an injected transport
+session whose only credential input is the revocable accessor. For every BYOK
+job, the host performs this fixed sequence:
 
 1. deny Kids before secure-store access;
 2. retrieve the selected provider key from `ProviderKeyStore` in the privileged
@@ -206,14 +209,17 @@ BYOK job:
    fixed message on a known phase, and refuse a returned result that contains it,
    so a provider cannot hand the key back through its own output;
 5. revoke the key reference in `finally` before closing the provider session; and
-6. reduce every thrown provider detail to a named, secret-free refusal.
+6. reduce every thrown provider detail to a named, secret-free refusal. The
+   OpenRouter session also removes provider-authored detail from ordinary
+   authoring refusals before bridge status can carry them.
 
-The checked-in packaged host does not add a live provider transport or production
-credential configuration: its provider runtime reports unavailable, while the
-secure storage and UI states remain real. A deployment-owned privileged adapter
-can satisfy the existing session factory without changing the renderer, CLI,
-Unix socket, or tool registry. Until then a BYOK assistant start refuses rather
-than borrowing the local route or crossing into hosted metering.
+The checked-in packaged host calls that privileged composition module but does
+not inject a live transport or production credential configuration. Its provider
+runtime therefore reports unavailable while secure storage and the UI states
+remain real. An authorized deployment can supply the transport session without
+changing the renderer, CLI, Unix socket, or tool registry. Until then a BYOK
+assistant start refuses rather than borrowing the local route or crossing into
+hosted metering.
 
 ### Named secure-storage refusals
 
@@ -272,6 +278,11 @@ cannot opt into hosted routing or bypass metering.
 - `tests/e2e/desktop-cli-local-bridge-golden.test.ts` spawns the real CLI binary
   against the real desktop server, performs propose/apply, runs the free local
   assistant, and proves absent BYOK plus hosted stay fail-closed.
+- `tests/e2e/desktop-provider-host-golden.test.ts` injects the recorded OpenRouter
+  fixture transport through the privileged host composition. It proves the
+  pinned no-fallback request, exact executed-model evidence, secure-store refusal
+  order, provider-detail removal, key-lease revocation, and unchanged Kids and
+  Hosted denials without a network call.
 - `tests/desktop/desktop-byo-secure-storage.test.ts` uses clearly synthetic
   non-secret sentinels to prove encrypted save/read/replace/remove, unavailable /
   locked / unsupported / corrupt / failed refusals, removal surviving an

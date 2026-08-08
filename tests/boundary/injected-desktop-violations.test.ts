@@ -155,6 +155,19 @@ describe("desktop tier — injected violations", () => {
     expect(res.stderr).toContain("only desktop/linux/src/electron/ may import Electron");
   });
 
+  it("desktop check confines the concrete provider adapter to the privileged host", () => {
+    appendTo(
+      fx,
+      "desktop/linux/src/lib/bridge.ts",
+      '\nimport "@sceneaxi/provider-openrouter";\n',
+    );
+    const res = runCheck(fx, "check-desktop.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "only desktop/linux/src/electron/ may import a desktop provider adapter",
+    );
+  });
+
   it("desktop check fails on a workspace: specifier — install roots need link:", () => {
     editManifest(fx, "desktop/linux/package.json", (manifest) => {
       manifest.dependencies = {
