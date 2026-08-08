@@ -29,10 +29,12 @@ L4  sites              site-kit ← the three non-Kids sites (leaves; ADR 0018),
                        docs/three-presentation-core.md), and auth + billing for the
                        identity plane (ADR 0021)
 L4  desktop            the packaged desktop applications (leaf; ADR 0024). desktop/linux
-                       consumes schemas, desktop-shell, site-kit, authoring-core and the
-                       three engine packages it draws and opens through; no profile, no
-                       Kids, no auth/billing, no plugin host. desktop/windows packages
-                       that same built application for Windows and names no SceneAxi
+                       consumes schemas, desktop-shell, site-kit, authoring-core, the
+                       three engine packages it draws and opens through, and
+                       provider-openrouter from src/electron/** alone (sceneaxi#235);
+                       no profile, no Kids, no auth/billing, no plugin host.
+                       desktop/windows packages that same built application for Windows
+                       and names no SceneAxi
                        package at all (sceneaxi#204); desktop/macos stages that same
                        bundled runtime for signing/notarization and consumes schemas
                        only (sceneaxi#194)
