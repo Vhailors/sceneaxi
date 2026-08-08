@@ -123,9 +123,11 @@ real translate/rotate/scale controls using the Mount API and prints read-only
 materials, collider physics where the quality artifact supports it, and
 procedural settings. Unsupported edits and legacy physics inspection refuse by
 name. Typed provider refusals, malformed output, timeouts, and other refusals remain
-visible with Retry. The privileged OpenRouter session removes provider-authored
-failure detail, and the secure runner replaces any failure that echoes the key;
-a timeout first abandons the old job so its late result
+visible with Retry. Provider-authored failure `detail` is the **bridge's** rule to
+enforce, on the refusal a runner returns exactly as on the one it throws, so a
+non-local route carries no upstream text no matter which runner is injected; the
+privileged OpenRouter session strips it again at the source, and the secure runner
+replaces any failure that echoes the key. A timeout first abandons the old job so its late result
 cannot overwrite the retry, and a runner that dispatches nothing takes its
 `running` claim back rather than leaving the seam permanently
 `DESKTOP_ASSISTANT_BUSY`. Streaming progress contains only deltas actually

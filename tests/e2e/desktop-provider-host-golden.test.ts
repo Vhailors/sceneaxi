@@ -345,6 +345,10 @@ describe("desktop privileged provider host", () => {
       platformStorage: platformStorage(),
     });
     await store.save("openrouter", SYNTHETIC_CREDENTIAL);
+    // A partially-initialized deployment client: the shape is wrong, but it has
+    // already allocated whatever its own `close` releases, so refusing must not
+    // strand it.
+    const events: string[] = [];
     const runtime = createPrivilegedDesktopByoRuntime({
       keyStore: store,
       createProviderSession: createDesktopOpenRouterProviderSession({
@@ -353,7 +357,15 @@ describe("desktop privileged provider host", () => {
         profilePolicies: {
           "@sceneaxi/profile-game": () => ({ ok: true }),
         },
-        openTransport: () => ({ transport: "invalid" }) as never,
+        openTransport: () => {
+          events.push("transport-open");
+          return {
+            transport: "invalid",
+            close() {
+              events.push("transport-close");
+            },
+          } as never;
+        },
       }),
     });
     if (runtime.runByoAssistant === undefined) throw new Error("runtime unavailable");
@@ -375,6 +387,7 @@ describe("desktop privileged provider host", () => {
         message: "The privileged BYOK provider session could not be created.",
       },
     });
+    expect(events).toEqual(["transport-open", "transport-close"]);
   });
 
   it("closes the opened transport session when the pinned adapter refuses construction", async () => {

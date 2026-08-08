@@ -498,6 +498,53 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
     });
   });
 
+  it("redacts provider detail from a BYOK failure the runner returns, not only one it throws", async () => {
+    // `runAssistantSculptAction` returns rather than throws on PROVIDER_FAILED,
+    // PROVIDER_REFUSED, and OUTPUT_INVALID, each carrying provider-authored detail
+    // that may echo request headers or credential material. The bridge owns that
+    // policy for every injected runner, so the returned path must redact too.
+    const bridge = createDesktopBridge({
+      cwd: authoringDir(),
+      nowMs: fixedNow,
+      runByoAssistant: async () =>
+        Object.freeze({
+          ok: false as const,
+          reason: "ASSISTANT_SCULPT_PROVIDER_REFUSED" as const,
+          message: "The BYOK Model Provider Port refused the assistant action.",
+          recoverable: true,
+          detail: "upstream said: authorization Bearer leaked-provider-text",
+        }),
+    });
+    expect(
+      bridge.handle({
+        action: "assistant",
+        payload: {
+          op: "start",
+          route: "byo",
+          profile: "@sceneaxi/profile-game",
+          prompt: "Provider returns a refusal carrying detail",
+        },
+      }).ok,
+    ).toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const status = bridge.handle({ action: "assistant", payload: { op: "status" } });
+    expect(status.ok).toBe(true);
+    if (!status.ok) return;
+    expect(status.data).toMatchObject({
+      route: "byo",
+      status: "refused",
+      refusal: {
+        reason: "ASSISTANT_SCULPT_PROVIDER_REFUSED",
+        message: "The BYOK Model Provider Port refused the assistant action.",
+        recoverable: true,
+      },
+    });
+    const job = status.data as DesktopAssistantJobSnapshot | null;
+    expect(job?.refusal).not.toHaveProperty("detail");
+    expect(JSON.stringify(status)).not.toContain("leaked-provider-text");
+  });
+
   it("settles a synchronous BYOK runner throw so Retry can start fresh work", async () => {
     const bridge = createDesktopBridge({
       cwd: authoringDir(),

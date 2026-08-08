@@ -90,28 +90,37 @@ export function createDesktopOpenRouterProviderSession(
     }
 
     const transportSession = options.openTransport({ credential: key });
-    if (
-      typeof transportSession !== "object" ||
-      transportSession === null ||
-      typeof transportSession.transport !== "function" ||
-      (transportSession.close !== undefined &&
-        typeof transportSession.close !== "function")
-    ) {
-      throw new DesktopByoRunnerRefusal(
-        DESKTOP_BYO_CONFIGURATION_REFUSALS.providerSessionFailed,
-        "The privileged OpenRouter transport session is invalid.",
-      );
-    }
 
+    // Everything that can refuse after the deployment has already allocated a
+    // transport lives under one guard, so a malformed session is closed on the way
+    // out exactly like a mis-pinned adapter is.
     let closed = false;
     const closeTransport = async () => {
       if (closed) return;
       closed = true;
-      await transportSession.close?.();
+      const close: unknown =
+        transportSession === null || typeof transportSession !== "object"
+          ? undefined
+          : (transportSession as { close?: unknown }).close;
+      if (typeof close === "function") {
+        await (close as () => void | Promise<void>).call(transportSession);
+      }
     };
 
     let port: ReturnType<typeof createModelProviderPort>;
     try {
+      if (
+        typeof transportSession !== "object" ||
+        transportSession === null ||
+        typeof transportSession.transport !== "function" ||
+        (transportSession.close !== undefined &&
+          typeof transportSession.close !== "function")
+      ) {
+        throw new DesktopByoRunnerRefusal(
+          DESKTOP_BYO_CONFIGURATION_REFUSALS.providerSessionFailed,
+          "The privileged OpenRouter transport session is invalid.",
+        );
+      }
       port = createModelProviderPort({
         adapter: createOpenRouterAdapter({
           model,
@@ -120,12 +129,14 @@ export function createDesktopOpenRouterProviderSession(
         }),
         profilePolicies: options.profilePolicies,
       });
-    } catch {
+    } catch (error) {
       void closeTransport().catch(() => {});
-      throw new DesktopByoRunnerRefusal(
-        DESKTOP_BYO_CONFIGURATION_REFUSALS.providerSessionFailed,
-        "The privileged OpenRouter provider session could not be composed.",
-      );
+      throw error instanceof DesktopByoRunnerRefusal
+        ? error
+        : new DesktopByoRunnerRefusal(
+            DESKTOP_BYO_CONFIGURATION_REFUSALS.providerSessionFailed,
+            "The privileged OpenRouter provider session could not be composed.",
+          );
     }
 
     return Object.freeze({
