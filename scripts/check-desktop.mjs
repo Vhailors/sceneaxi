@@ -126,12 +126,50 @@ const PRIVILEGED_PROVIDER_SPEC = /(?:from\s+|require\s*\(\s*|import\s*\(\s*|^\s*
  * Confining the adapter by its own specifier alone would only move the leak: a
  * `src/lib/` or `src/renderer/` module re-exporting the privileged host pulls the
  * same adapter into the same bundle while naming neither Electron nor the adapter.
- * Any module specifier resolving into `src/electron/` from outside it is refused.
+ * Any module specifier resolving into `src/electron/` from outside it is refused —
+ * relative or through the package's own `exports` map, since Node, TypeScript, and
+ * esbuild all resolve a self-reference that way and a published privileged subpath
+ * is otherwise the one specifier that reaches the host without naming a path.
  */
 const ANY_MODULE_SPEC = /(?:from\s+|require\s*\(\s*|import\s*\(\s*|^\s*import\s+)["']([^"']+)["']/gm;
 const contains = (parent, candidate) => {
   const rel = relative(parent, candidate);
   return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !rel.startsWith("/"));
+};
+
+/** Every string target in an `exports` map, keyed by its subpath. */
+const exportTargets = (exportsField) => {
+  const targets = new Map();
+  const leaves = (value, out = []) => {
+    if (typeof value === "string") out.push(value);
+    else if (value !== null && typeof value === "object") {
+      for (const nested of Object.values(value)) leaves(nested, out);
+    }
+    return out;
+  };
+  if (typeof exportsField === "string") {
+    targets.set(".", leaves(exportsField));
+  } else if (exportsField !== null && typeof exportsField === "object") {
+    for (const [subpath, value] of Object.entries(exportsField)) {
+      targets.set(subpath.startsWith(".") ? subpath : ".", leaves(value));
+    }
+  }
+  return targets;
+};
+
+/**
+ * Resolve a specifier to the file paths it can reach inside `dir`, or `null` when it
+ * names something outside this package. A self-reference goes through `exports` when
+ * the manifest declares one, because that map is the only resolution Node performs.
+ */
+const resolveWithinApp = (spec, file, dir, manifestName, exportsMap) => {
+  if (spec.startsWith(".")) return [resolve(dirname(file), spec)];
+  if (spec !== manifestName && !spec.startsWith(`${manifestName}/`)) return null;
+  const subpath = spec === manifestName ? "." : `.${spec.slice(manifestName.length)}`;
+  if (exportsMap.size === 0) return [resolve(dir, subpath)];
+  const declared = exportsMap.get(subpath);
+  if (declared === undefined) return [];
+  return declared.map((target) => resolve(dir, target));
 };
 
 for (const dir of appDirs) {
@@ -152,6 +190,7 @@ for (const dir of appDirs) {
     fail(`${rel}/package.json has no name`);
     continue;
   }
+  const appExports = exportTargets(manifest.exports);
   if (manifest.private !== true) fail(`${manifest.name} must be private`);
   if (manifest.sceneaxi?.releaseGroup !== "desktop") {
     fail(
@@ -209,8 +248,9 @@ for (const dir of appDirs) {
       if (contains(electronDir, file)) continue;
       for (const match of text.matchAll(ANY_MODULE_SPEC)) {
         const spec = match[1];
-        if (!spec.startsWith(".")) continue;
-        if (!contains(electronDir, resolve(dirname(file), spec))) continue;
+        const resolved = resolveWithinApp(spec, file, dir, manifest.name, appExports);
+        if (resolved === null) continue;
+        if (!resolved.some((target) => contains(electronDir, target))) continue;
         fail(
           `${relative(root, file)} imports '${spec}' — nothing outside ${relative(root, electronDir)}/ may reach the privileged host, which would launder the provider adapter into an unprivileged bundle`,
         );
