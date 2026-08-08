@@ -1981,10 +1981,8 @@ if (shell) {
     if (!isSessionSnapshot(snapshot)) return false;
     syncReview(snapshot);
     const diagnostics = Array.isArray(snapshot.diagnostics) ? snapshot.diagnostics : [];
-    const reviewing = reviewProjection(snapshot) !== null;
     const recovering = snapshot.phase === 'pending' || snapshot.journalRecoveryPending === true;
     const applied = snapshot.phase === 'applied' && diagnostics.length === 0;
-    if (!reviewing && !recovering && !applied) return false;
     if (diagnostics[0]?.code === 'journal-not-found') return false;
     if (recovering) {
       projectRecovering = true;

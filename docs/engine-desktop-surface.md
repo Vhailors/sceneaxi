@@ -424,7 +424,7 @@ document also explains. `test/product-loop.test.ts` asserts that in both directi
 | `DESKTOP_RUNTIME_REQUEST_REFUSED` | the host refused and named no reason of its own |
 | `DESKTOP_VIEWPORT_UNAVAILABLE` | orchestrated playback completed but the live viewport did not acknowledge a post-play frame |
 | `DESKTOP_AUTHORING_REFUSED` | the shared authoring session refused and carried no diagnostic code |
-| `DESKTOP_PROPOSAL_NOT_REVIEWING` | propose returned without parking the edit for review, or Reject / a conflict action was taken with no validated active review |
+| `DESKTOP_PROPOSAL_NOT_REVIEWING` | propose returned without parking the edit for review, or Accept or Reject was taken with no validated active review |
 | `DESKTOP_PROPOSAL_NOT_DISCARDED` | Reject, or a re-open, could not discard the proposal the host still holds |
 | `DESKTOP_PROFILE_SWITCH_DIRTY` | a staged proposal must be saved or discarded before another edit stages, the project changes, or the profile changes |
 | `DESKTOP_UNDO_STAGED_PROPOSAL` | Undo would drop a staged, unsaved proposal along with the Save it reverses |
