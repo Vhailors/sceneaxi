@@ -2061,6 +2061,17 @@ if (shell) {
     return false;
   };
 
+  // Accept is one half of the all-or-nothing decision, so it is gated on the
+  // same validated review Reject is rather than on the dirty flag: a decision
+  // taken with nothing under review refuses by name instead of sending the
+  // document action underneath it. Save itself is not a decision and keeps its
+  // own path, which is why the gate lives here and not in \`saveProject\`.
+  const acceptProposal = async () => {
+    if (!requireActiveReview()) return false;
+    await saveProject();
+    return true;
+  };
+
   // Reject is the other half of the all-or-nothing decision: it discards the
   // host's one active proposal and re-opens the document, so the surface reports
   // the bytes on disk rather than a queue it decided locally.
@@ -2595,7 +2606,7 @@ if (shell) {
     if (action === 'project-open-recent') void productAction(() => chooseProject('open-recent'));
     else if (action === 'project-remove-recent') void productAction(() => chooseProject('remove-recent'));
     else if (action === 'document-reload') void productAction(openProject);
-    else if (action === 'change-accept') void productAction(saveProject);
+    else if (action === 'change-accept') void productAction(acceptProposal);
     else if (action === 'change-reject') void productAction(() => rejectProposal('rejected'));
     else if (action === 'scene-entity-select' && value) {
       if (showSceneProperty(value) && shell.dataset.mode !== 'build') showModePanels('build');

@@ -184,6 +184,13 @@ describe("desktop first-release product loop", () => {
     expect(requests).toHaveLength(0);
     expect(status()).toContain("nothing under review · DESKTOP_PROPOSAL_NOT_REVIEWING");
 
+    // Accept is the same decision from the other side and answers the same way:
+    // no validated review means the named refusal, not the document action
+    // underneath it.
+    await click(window, "#change-review-accept");
+    expect(requests).toHaveLength(0);
+    expect(status()).toContain("nothing under review · DESKTOP_PROPOSAL_NOT_REVIEWING");
+
     await click(window, "#profile-web");
     await click(window, "#project-open");
     const beforeReject = documentText();
@@ -331,6 +338,12 @@ describe("desktop first-release product loop", () => {
     // accumulating the previous answer as detail.
     await click(window, "#change-review-reject");
     expect(status()).toBe(unavailableConflictStatus);
+    // Accept carries the recorded conflict too rather than reporting the
+    // document as having nothing staged, and reaches the host no more than
+    // Reject does.
+    await click(window, "#change-review-accept");
+    expect(status()).toBe(unavailableConflictStatus);
+    expect(requests).toHaveLength(stageConflictRequests);
     // A newer, unrelated status owns the status line: the blocked decision must
     // report what the operator just clicked, not replay the earlier stage
     // refusal as if it had happened again.
