@@ -168,6 +168,19 @@ describe("desktop tier — injected violations", () => {
     );
   });
 
+  it("desktop check refuses re-export laundering of the privileged host", () => {
+    // Naming neither Electron nor the adapter still pulls both into an unprivileged
+    // bundle, so reaching into src/electron/ from outside it is refused on its own.
+    appendTo(
+      fx,
+      "desktop/linux/src/renderer/viewport.ts",
+      '\nexport { createDesktopOpenRouterProviderSession } from "../electron/provider-runtime.js";\n',
+    );
+    const res = runCheck(fx, "check-desktop.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("nothing outside desktop/linux/src/electron/ may reach the privileged host");
+  });
+
   it("desktop check fails on a workspace: specifier — install roots need link:", () => {
     editManifest(fx, "desktop/linux/package.json", (manifest) => {
       manifest.dependencies = {

@@ -88,9 +88,10 @@ and tokens; the renderer only binds their Mount API effects.
 Rules the gate enforces (`pnpm check:desktop`, `pnpm check:boundaries`,
 `tests/desktop/`, `tests/e2e/desktop-linux-bridge-golden.test.ts`):
 
-- Only `src/electron/**` may import Electron or the concrete OpenRouter adapter;
-  `src/lib/**` stays pure TypeScript the hermetic gate tests without an Electron
-  install.
+- Only `src/electron/**` may import Electron or the concrete OpenRouter adapter,
+  and nothing outside it may import *from* it — a re-export would launder the same
+  adapter into an unprivileged bundle while naming neither. `src/lib/**` stays pure
+  TypeScript the hermetic gate tests without an Electron install.
 - The visual model is consumed, never duplicated: no control, mode, refusal, or
   token is re-declared here, and the emitted document is byte-derived from
   `renderDesktopChrome()` plus exactly two injections (a runtime marker meta and

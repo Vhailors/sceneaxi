@@ -377,6 +377,60 @@ describe("desktop privileged provider host", () => {
     });
   });
 
+  it("closes the opened transport session when the pinned adapter refuses construction", async () => {
+    const store = createProviderKeyStore({
+      root: temporaryRoot("provider-mispinned-store"),
+      platformStorage: platformStorage(),
+    });
+    await store.save("openrouter", SYNTHETIC_CREDENTIAL);
+    const events: string[] = [];
+    const runtime = createPrivilegedDesktopByoRuntime({
+      keyStore: store,
+      createProviderSession: createDesktopOpenRouterProviderSession({
+        // A descriptor the OpenRouter adapter refuses: the session factory's own
+        // guard only checks the key-store provider, so construction throws after
+        // the deployment's transport has already been opened.
+        model: { ...MODEL, provider: "not-openrouter" },
+        eval: EVAL,
+        profilePolicies: {
+          "@sceneaxi/profile-game": () => ({ ok: true }),
+        },
+        openTransport: () => {
+          events.push("transport-open");
+          return {
+            transport() {
+              events.push("transport-dispatch");
+              throw new Error("must not dispatch");
+            },
+            close() {
+              events.push("transport-close");
+            },
+          };
+        },
+      }),
+    });
+    if (runtime.runByoAssistant === undefined) throw new Error("runtime unavailable");
+    const { bridge } = projectBridge(runtime.runByoAssistant);
+    bridge.handle({
+      action: "assistant",
+      payload: {
+        op: "start",
+        route: "byo",
+        profile: "@sceneaxi/profile-game",
+        prompt: "Build a crate",
+      },
+    });
+
+    expect(await settledAssistant(bridge)).toMatchObject({
+      status: "refused",
+      refusal: {
+        reason: "DESKTOP_BYO_PROVIDER_SESSION_FAILED",
+        message: "The privileged BYOK provider session could not be created.",
+      },
+    });
+    expect(events).toEqual(["transport-open", "transport-close"]);
+  });
+
   it.each([
     ["missing", PROVIDER_KEY_STORE_REFUSALS.keyMissing],
     ["locked", PROVIDER_KEY_STORE_REFUSALS.locked],

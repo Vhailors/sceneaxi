@@ -13,7 +13,8 @@
  *
  * Fail-closed: an empty `desktop/` tree, a missing required file, an app that is not
  * matrix-listed, any of that toolchain leaking into the hermetic root, an Electron import outside
- * `src/electron/`, a provider adapter import outside that privileged host, or any
+ * `src/electron/`, a provider adapter import outside that privileged host, an import
+ * that reaches into that privileged host from outside it, or any
  * committed secret value exits 1.
  */
 import { existsSync, lstatSync, readFileSync, readdirSync, statSync } from "node:fs";
@@ -121,6 +122,13 @@ if (existsSync(workspaceFile)) {
 // --- per-app structure ---
 const ELECTRON_SPEC = /(?:from\s+|require\s*\(\s*|import\s*\(\s*|^\s*import\s+)["'](electron(?:\/[^"']*)?)["']/gm;
 const PRIVILEGED_PROVIDER_SPEC = /(?:from\s+|require\s*\(\s*|import\s*\(\s*|^\s*import\s+)["'](@sceneaxi\/provider-openrouter(?:\/[^"']*)?)["']/gm;
+/**
+ * Confining the adapter by its own specifier alone would only move the leak: a
+ * `src/lib/` or `src/renderer/` module re-exporting the privileged host pulls the
+ * same adapter into the same bundle while naming neither Electron nor the adapter.
+ * Any module specifier resolving into `src/electron/` from outside it is refused.
+ */
+const ANY_MODULE_SPEC = /(?:from\s+|require\s*\(\s*|import\s*\(\s*|^\s*import\s+)["']([^"']+)["']/gm;
 const contains = (parent, candidate) => {
   const rel = relative(parent, candidate);
   return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !rel.startsWith("/"));
@@ -197,6 +205,15 @@ for (const dir of appDirs) {
             `${relative(root, file)} imports '${match[1]}' — only ${relative(root, electronDir)}/ may import a desktop provider adapter`,
           );
         }
+      }
+      if (contains(electronDir, file)) continue;
+      for (const match of text.matchAll(ANY_MODULE_SPEC)) {
+        const spec = match[1];
+        if (!spec.startsWith(".")) continue;
+        if (!contains(electronDir, resolve(dirname(file), spec))) continue;
+        fail(
+          `${relative(root, file)} imports '${spec}' — nothing outside ${relative(root, electronDir)}/ may reach the privileged host, which would launder the provider adapter into an unprivileged bundle`,
+        );
       }
     }
   }

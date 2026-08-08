@@ -103,15 +103,30 @@ export function createDesktopOpenRouterProviderSession(
       );
     }
 
-    const port = createModelProviderPort({
-      adapter: createOpenRouterAdapter({
-        model,
-        eval: evalConfig,
-        transport: transportSession.transport,
-      }),
-      profilePolicies: options.profilePolicies,
-    });
     let closed = false;
+    const closeTransport = async () => {
+      if (closed) return;
+      closed = true;
+      await transportSession.close?.();
+    };
+
+    let port: ReturnType<typeof createModelProviderPort>;
+    try {
+      port = createModelProviderPort({
+        adapter: createOpenRouterAdapter({
+          model,
+          eval: evalConfig,
+          transport: transportSession.transport,
+        }),
+        profilePolicies: options.profilePolicies,
+      });
+    } catch {
+      void closeTransport().catch(() => {});
+      throw new DesktopByoRunnerRefusal(
+        DESKTOP_BYO_CONFIGURATION_REFUSALS.providerSessionFailed,
+        "The privileged OpenRouter provider session could not be composed.",
+      );
+    }
 
     return Object.freeze({
       async run(request: DesktopAssistantRunRequest) {
@@ -123,18 +138,16 @@ export function createDesktopOpenRouterProviderSession(
         }
         return rendererSafeResult(
           await runAssistantSculptAction({
+            ...request,
             route: "byo",
             operation: "complete",
             model,
             port,
-            ...request,
           }),
         );
       },
       async close() {
-        if (closed) return;
-        closed = true;
-        await transportSession.close?.();
+        await closeTransport();
       },
     });
   };
