@@ -1954,7 +1954,11 @@ if (shell) {
     const diagnostic = responseDiagnostic(response);
     const snapshot = response?.ok ? response.data : null;
     const message = shell.querySelector('[data-scene-property-diagnostic]');
-    if (diagnostic !== null || !snapshot || snapshot.phase !== 'reviewing') {
+    // The typed edit parks the same E1 proposal every other staging path does,
+    // so Change Review is driven by the returned snapshot here too — and the
+    // decidable projection, not the phase alone, is what says it may be shown.
+    if (isSessionSnapshot(snapshot)) syncReview(snapshot);
+    if (diagnostic !== null || reviewProjection(snapshot) === null) {
       const code = diagnostic?.code || T.product.refusals.proposalNotReviewing;
       const detail = diagnostic?.message || T.product.refusals.proposalNotReviewing;
       if (message) message.textContent = code + ' · ' + detail;

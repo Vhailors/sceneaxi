@@ -712,6 +712,11 @@ describe("desktop first-release product loop", () => {
     input.value = "-3.25";
     const before = readFileSync(join(dir, "scene.json"), "utf8");
 
+    // Nothing staged yet, so Change Review shows the honest empty state.
+    expect(query(window, "[data-change-proposal]")?.hidden).toBe(true);
+    expect(query(window, "[data-change-empty]")?.hidden).toBe(false);
+    expect(query(window, "[data-change-badge]")?.textContent).toBe("0");
+
     await click(window, "#scene-property-stage");
     expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(before);
     expect(query(window, "[data-project-status]")?.textContent).toContain(
@@ -720,10 +725,29 @@ describe("desktop first-release product loop", () => {
     expect(query(window, "[data-scene-property-review]")?.textContent).toContain(
       "SceneAxi inspector — proposed change",
     );
+    // The typed edit is the same E1 proposal Change Review decides, so the
+    // returned snapshot drives the badge and the panel — the host's own
+    // document path, base content hash, and rendered diff, nothing invented.
+    expect(query(window, "[data-change-proposal]")?.hidden).toBe(false);
+    expect(query(window, "[data-change-empty]")?.hidden).toBe(true);
+    expect(query(window, "[data-change-badge]")?.textContent).toBe("1");
+    expect(query(window, "[data-change-document]")?.textContent).toBe("scene.json");
+    expect(query(window, "[data-change-content-hash]")?.textContent).toMatch(
+      /^sha256:[0-9a-f]{64}$/,
+    );
+    expect(query(window, "[data-change-diff]")?.textContent).toContain(
+      "=== SceneAxi inspector — proposed change",
+    );
+    expect(query(window, "[data-change-diff]")?.textContent).toContain("-3.25");
 
     await click(window, "#project-save");
     const saved = readFileSync(join(dir, "scene.json"), "utf8");
     expect(saved).not.toBe(before);
+    // The applied proposal is spent: the panel goes back to the empty state
+    // rather than keeping a diff of a change already on disk.
+    expect(query(window, "[data-change-proposal]")?.hidden).toBe(true);
+    expect(query(window, "[data-change-empty]")?.hidden).toBe(false);
+    expect(query(window, "[data-change-badge]")?.textContent).toBe("0");
     await click(window, "#project-open");
     await click(window, "#scene-entity-desktop-crate-beside");
     expect(
@@ -811,6 +835,39 @@ describe("desktop first-release product loop", () => {
     await click(window, "#project-save");
     expect(savedTranslationX()).toBe(-1.5);
     expect(translationInput()?.value).toBe("-1.5");
+  });
+
+  /**
+   * The typed edit parks the one E1 proposal Change Review decides, so the
+   * all-or-nothing Reject reaches it on the default Game profile — the only
+   * staging path that profile has.
+   */
+  it("rejects a staged Translation X edit without writing the document", async () => {
+    const dir = projectDir();
+    const { window, start } = mountChrome(dir);
+    start();
+
+    await click(window, "#project-open");
+    await click(window, "#scene-entity-desktop-crate-beside");
+    const input = query(window, "#scene-property-translation-x") as
+      | (HappyHTMLElement & { value: string })
+      | null;
+    if (input === null) throw new Error("translation input is missing");
+    input.value = "-3.25";
+    const before = readFileSync(join(dir, "scene.json"), "utf8");
+
+    await click(window, "#scene-property-stage");
+    expect(query(window, "[data-change-proposal]")?.hidden).toBe(false);
+    expect(query(window, "[data-change-badge]")?.textContent).toBe("1");
+
+    await click(window, "#change-review-reject");
+    expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(before);
+    expect(query(window, "[data-change-proposal]")?.hidden).toBe(true);
+    expect(query(window, "[data-change-empty]")?.hidden).toBe(false);
+    expect(query(window, "[data-change-badge]")?.textContent).toBe("0");
+    expect(query(window, "[data-project-status]")?.textContent).toContain(
+      "rejected · no document written",
+    );
   });
 
   /**
