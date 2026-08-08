@@ -69,11 +69,13 @@ pnpm sceneaxi-desktop chrome --width 1024 --height 700
 ```
 
 The product-loop model is `src/product-loop.ts` (active project file, profile
-capabilities, Web HTML and project-relative asset staging). The broader decision
-layer is `src/visual-model.ts` (modes, mode-dependent dock tabs,
-profile switch, assistant states, Change Review, command palette, overlays,
-sculpt progress, window tiers, refusals); `src/chrome.ts` renders it and decides
-nothing. The chrome's product **vocabulary** is not this app's: the mode ids and
+capabilities, Web HTML and project-relative asset staging). The static visual
+model is `src/visual-model.ts` (modes, mode-dependent dock tabs, profile switch,
+assistant states, Change Review controls and empty state, command palette,
+overlays, sculpt progress, window tiers, refusals). `src/chrome.ts` renders that
+model and contains the packaged-host adapter that validates session snapshots,
+projects the active proposal, and sends the declared Accept/Reject operations.
+The chrome's product **vocabulary** is not this app's: the mode ids and
 rail labels, the dock-tab ids and their per-mode derivation, the assistant modes
 and states, the viewport sources, and the window-tier thresholds are derived from
 `packages/schemas/src/editor-shell.ts` (sceneaxi#184), which the umbrella's

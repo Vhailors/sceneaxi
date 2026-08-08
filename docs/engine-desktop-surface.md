@@ -120,17 +120,19 @@ asserted rather than remembered.
 | Colours, typography, metrics, contrast deviations, archive provenance | `apps/desktop-shell/src/visual-tokens.ts` |
 | Shared chrome vocabulary — the seven modes, rail labels, dock-tab derivation, assistant modes, window-tier thresholds, structural metrics | `packages/schemas/src/editor-shell.ts` (sceneaxi#184); this model **derives** its tables from it, and the umbrella web editor projects the same rows — parity is a data identity in `tests/parity/editor-shell-parity.test.ts`, and the web surface's own record is [`web-editor-shell.md`](web-editor-shell.md) |
 | First-release project/file and per-profile product loop, including host-projected New/Open/Recent lifecycle, the typed scene-property edit, Web stored-HTML, and project-relative asset staging | `apps/desktop-shell/src/product-loop.ts` + emitted adapter in `chrome.ts` (sceneaxi#196/#224/#225); root validation, property validation and staging, and persistence remain host-owned |
-| Mode/profile/dock/assistant/overlay/sculpt state, refusals, window tiers, control kinds | `apps/desktop-shell/src/visual-model.ts` |
-| The emitted document (markup, stylesheet, behaviour script) | `apps/desktop-shell/src/chrome.ts` |
+| Mode/profile/dock/assistant/overlay/sculpt state, refusals, window tiers, control kinds, and Change Review's static controls/empty state | `apps/desktop-shell/src/visual-model.ts` |
+| The emitted document (markup, stylesheet, behaviour script), including validated host-snapshot projection and the active Change Review decision flow | `apps/desktop-shell/src/chrome.ts` |
 | The `chrome` command and its flags | `apps/desktop-shell/src/app.ts` |
 | Runnable level and how to start it | [`runnable-surfaces.md`](runnable-surfaces.md) |
 
-The model decides and the renderer draws. `chrome.ts` contains no policy: every
-table its emitted script reads — which dock tabs a mode has, which dock height,
+The visual model decides the static projection and the renderer draws it. Every
+table the emitted script reads — which dock tabs a mode has, which dock height,
 what the assistant becomes on each profile and with which refusals, which
 refusal the rail takes — is serialized from the model at render time, so the
-document and the model cannot disagree about a state. **A state a client toggle
-can reach is a state the bytes already contain.** The Kids editor refusal, and
+document and the model cannot disagree about those states. The emitted adapter
+separately validates host responses and projects the one active Change Review
+proposal; it does not derive proposal data or acceptance outcomes itself.
+**A state a client toggle can reach is a state the bytes already contain.** The Kids editor refusal, and
 now the Kids assistant lock, are emitted in *every* document and selected by a
 `[data-profile="kids"]` / `[data-assistant="denied"]` rule rather than by a
 server-side branch, because a refuse-only decision a browser-side profile switch

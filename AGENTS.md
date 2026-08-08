@@ -433,10 +433,12 @@ renderer and still cannot import a profile package. Desktop-only operations
 refuse by the shared contract. Owner and proof map: `docs/web-experience-editor.md`.
 
 The Engine Desktop **visual** surface is `apps/desktop-shell` alone
-(sceneaxi#158): `src/visual-model.ts` decides (seven modes, mode-dependent dock
-tabs, profile switch, assistant states, Change Review, command palette,
-overlays, sculpt progress, window tiers, the closed `DESKTOP_VISUAL_REFUSALS`
-registry) and `src/chrome.ts` renders it as one self-contained HTML document via
+(sceneaxi#158): `src/visual-model.ts` decides the static projection (seven modes,
+mode-dependent dock tabs, profile switch, assistant states, Change Review
+controls and empty state, command palette, overlays, sculpt progress, window
+tiers, the closed `DESKTOP_VISUAL_REFUSALS` registry), while `src/chrome.ts`
+renders it and owns the validated packaged-host snapshot/decision adapter in one
+self-contained HTML document via
 the `sceneaxi-desktop chrome` command — no remote asset, no framework, no DOM
 types. The first-release product loop is `src/product-loop.ts`, which owns the
 second closed registry, `DESKTOP_PRODUCT_REFUSALS` (the visual one re-exports
