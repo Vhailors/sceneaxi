@@ -823,15 +823,17 @@ sentence can return by review slip.
     the recent chooser a `<select>`, the scene property an `<input>`, and the
     rendered diff a focusable `<pre>`
     scroll region rather than buttons. The **live controls on `kids`** enumerated
-    beside those counts are **also** stale now, though not as a browser fact:
-    that list is the model's own
-    outside-the-refusal set (`outsideRefusal` in `visual-model.ts`), and #227
-    removed two entries from it — `overlay-close-conflict-discard` and
-    `overlay-close-conflict-review` now declare a `productAction`, so they are
-    minted `live` and go inert on Kids with every other path to the host. Neither
-    #192, #224, nor #225 changed that set; the
-    project-lifecycle and scene-property controls are minted through the refusal
-    path. The inert count
+    beside those counts are unaffected by any of this: that list is the model's
+    own outside-the-refusal set (`outsideRefusal` in `visual-model.ts`), not a
+    browser observation, and none of #192, #224, #225, or #227 added an entry to
+    it or removed one. #227's Accept and Reject are minted `live` through the
+    central `control()` mint, and the one dismissal
+    `DESKTOP_OVERLAY_DISMISSALS` ships declares no `productAction`, so it stays
+    exempt exactly as it was; the
+    project-lifecycle and scene-property controls are likewise minted through the
+    refusal path. That enumeration is stale for a different reason, recorded with
+    the addendum below: #226 retired the `refused` and `conflict` dialogs it
+    names. The inert count
     sitting next to it is a count of this document, and it is stale.
   - **The Change Review interaction reading.** The recorded "deciding one row
     moved the badge `3 → 2`", the **Accept all** sweep to `0`, and the bulk
