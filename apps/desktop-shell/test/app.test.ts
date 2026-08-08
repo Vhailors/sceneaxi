@@ -432,6 +432,7 @@ describe("desktop shell commands", () => {
       expect(parsed.result.html).toBe(runDesktopShell(["chrome"]).stdout);
       expect(parsed.result.pixelsDrawn).toBe(false);
       expect(parsed.result.tier).toBe("regular");
+      expect(parsed.result).not.toHaveProperty("pendingChanges");
     });
 
     it("refuses a synthetic outcome as an initial overlay", () => {

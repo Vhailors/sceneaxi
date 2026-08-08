@@ -7,7 +7,6 @@ import {
   DESKTOP_REFUSAL_MESSAGES,
   DESKTOP_VISUAL_REFUSALS,
   WINDOW_TIERS,
-  applyDesktopVisualAction,
   createDesktopVisualState,
   defaultDockTabFor,
   desktopVisualView,
@@ -142,28 +141,18 @@ describe("engine desktop chrome — regions and modes", () => {
     }
   });
 
-  it("offers a bulk decision only in a mode that has the Changes tab", () => {
-    for (const mode of DESKTOP_MODE_IDS) {
-      const html = render(createDesktopVisualState({ mode }));
-      const hidden = /data-change-bulk hidden>/.test(html);
-      // `run` and `ship` have no Changes tab, so accepting or rejecting the whole
-      // queue from their tab strip would decide a queue the mode cannot show.
-      expect(hidden, mode).toBe(!dockTabsFor(mode).includes("changes"));
-    }
-    // Empty still hides it in a mode that does have the tab.
-    const decided = applyDesktopVisualAction(createDesktopVisualState(), {
-      type: "decide-all-changes",
-    });
-    expect(render(decided)).toContain("data-change-bulk hidden>");
-    // And the script re-applies both conditions when the mode switches.
-    const script = /<script>(.*)<\/script>/s.exec(render())?.[1] ?? "";
-    expect(script).toContain(`shell.querySelector('.dock-tab[data-value="changes"]')`);
-    expect(script).toContain("bulk.hidden = n === 0 || changes === null");
+  it("renders one atomic proposal decision pair in an initially empty review", () => {
+    const html = render();
+    expect(html).toContain('data-change-proposal hidden>');
+    expect(html).toContain('id="change-review-accept"');
+    expect(html).toContain('id="change-review-reject"');
+    expect(html).not.toContain("Accept all");
+    expect(html).not.toContain("Reject all");
   });
 
   it("hides what it marks hidden, whatever the layout class says", () => {
-    // `.change-row` and `.dock-bulk` declare a display, which outranks the UA
-    // sheet's `[hidden]` rule — so every model-driven `hidden` needs this one.
+    // Runtime proposal and overlay regions have layout rules, so the explicit
+    // `hidden` state must outrank them.
     expect(render()).toContain("[hidden]{display:none !important}");
   });
 
@@ -357,13 +346,11 @@ describe("engine desktop chrome — accessibility", () => {
     expect(script).toContain(`list.querySelectorAll('[role="tab"]')`);
   });
 
-  it("renders every change decision through a modelled control", () => {
+  it("renders the atomic proposal decisions through modelled controls", () => {
     const view = desktopVisualView(createDesktopVisualState());
     const html = render();
-    for (const row of view.changeReview.rows) {
-      for (const control of [row.accept, row.reject]) {
-        expect(html).toContain(`id="${control.id}" data-kind="${control.kind}"`);
-      }
+    for (const control of [view.changeReview.accept, view.changeReview.reject]) {
+      expect(html).toContain(`id="${control.id}" data-kind="${control.kind}"`);
     }
   });
 
@@ -415,7 +402,7 @@ describe("engine desktop chrome — accessibility", () => {
 
   it("keeps every tablist owning nothing but its tabs", () => {
     // ARIA restricts a tablist's children to tabs, and `moveTab()` enumerates
-    // them, so the bulk accept/reject and the spacer stay outside it.
+    // them, so the structural spacer stays outside it.
     const html = render();
     for (const [, inner] of html.matchAll(
       /<div class="(?:dock|view)-tablist" role="tablist"[^>]*>(.*?)<\/div>/gs,
@@ -423,7 +410,6 @@ describe("engine desktop chrome — accessibility", () => {
       const tags = [...(inner ?? "").matchAll(/<button\b[^>]*>/g)].map(([tag]) => tag);
       expect(tags.length).toBeGreaterThan(0);
       for (const tag of tags) expect(tag).toContain('role="tab"');
-      expect(inner).not.toContain("dock-bulk");
       expect(inner).not.toContain("spacer");
     }
     expect(html).toContain('<div class="dock-tablist" role="tablist" aria-label="Dock panel">');
@@ -437,11 +423,46 @@ describe("engine desktop chrome — accessibility", () => {
     expect(view.overlay.dismissals).toHaveLength(1);
     const ids = view.overlay.dismissals.map((dismissal) => dismissal.control.id);
     expect(new Set(ids).size).toBe(ids.length);
+    // Kind and action both come from the model's own declaration, so a button
+    // that reaches the host is rendered `live` and one that only closes `view`.
     for (const dismissal of view.overlay.dismissals) {
       expect(html).toContain(
-        `id="${dismissal.control.id}" data-kind="view" data-action="overlay" data-value="none"`,
+        dismissal.productAction === null
+          ? `id="${dismissal.control.id}" data-kind="view" data-action="overlay" data-value="none"`
+          : `id="${dismissal.control.id}" data-kind="live" data-product-action data-action="${dismissal.productAction}"`,
       );
     }
+    // The shipped dialog reports an outcome and decides nothing, so no
+    // dismissal on it reaches the host at all.
+    expect(
+      view.overlay.dismissals
+        .filter((dismissal) => dismissal.productAction !== null)
+        .map((dismissal) => dismissal.control.id),
+    ).toEqual([]);
+  });
+
+  it("renders a dismissal that declares no product action as a plain close", () => {
+    // A dismissal added to a dialog without an action must close it rather than
+    // inherit an acting sibling's handler, and a declared action is escaped into
+    // the attribute rather than concatenated into the markup.
+    const view = desktopVisualView(createDesktopVisualState());
+    const shipped = view.overlay.dismissals[0];
+    if (shipped === undefined) throw new Error("outcome dismissal missing");
+    const added = [
+      { ...shipped, id: "outcome-explain", productAction: null,
+        control: { ...shipped.control, id: "overlay-close-outcome-explain" } },
+      { ...shipped, id: "outcome-hostile", productAction: `x" onclick="steal()`,
+        control: { ...shipped.control, id: "overlay-close-outcome-hostile" } },
+    ];
+    const html = renderDesktopChrome({
+      ...view,
+      overlay: { ...view.overlay, dismissals: [...view.overlay.dismissals, ...added] },
+    });
+    expect(html).toContain(
+      `id="overlay-close-outcome-explain" data-kind="view" data-action="overlay" data-value="none"`,
+    );
+    expect(html).toContain(`data-action="x&quot; onclick=&quot;steal()"`);
+    expect(html).not.toContain(`onclick="steal()"`);
   });
 
   it("offers the modelled cancel while a sculpt pass runs", () => {
@@ -471,14 +492,12 @@ describe("engine desktop chrome — accessibility", () => {
     expect(render()).toContain("data-assistant-thinking hidden>");
   });
 
-  it("gives every decision button an accessible name naming its pointer", () => {
+  it("names the one whole-proposal decision pair", () => {
     const html = render();
-    expect(html).toContain(
-      'aria-label="Accept /scene/objects/field_drone/position"',
-    );
-    expect(html).toContain(
-      'aria-label="Reject /scene/objects/field_drone/position"',
-    );
+    expect(html).toContain('id="change-review-accept"');
+    expect(html).toContain('>Accept</button>');
+    expect(html).toContain('id="change-review-reject"');
+    expect(html).toContain('>Reject</button>');
   });
 
   it("backs aria-modal with a real focus trap and a focus restore", () => {
@@ -654,10 +673,10 @@ describe("engine desktop chrome — honesty", () => {
     }
   });
 
-  it("says on the Change Review surface that a decision writes nothing", () => {
+  it("states the atomic authoring behavior on Change Review", () => {
     const html = render();
-    expect(html).toContain("no document is written and nothing reaches");
-    expect(html).toContain("authoring-core");
+    expect(html).toContain("Accept applies the whole proposal through the shared authoring session");
+    expect(html).toContain("Reject discards it without writing");
   });
 
   it("replaces the whole editor body on the refuse-only profile", () => {
@@ -873,21 +892,17 @@ describe("engine desktop chrome — honesty", () => {
   it("never renders a control kind the model did not assign", () => {
     for (const [label, state] of ALL_STATES) {
       for (const [, kind] of render(state).matchAll(/data-kind="(\w+)"/g)) {
-        expect(["view", "review", "live", "inert"], label).toContain(kind);
+        expect(["view", "live", "inert"], label).toContain(kind);
       }
     }
   });
 
-  it("keeps the same decisions after a state transition", () => {
-    const decided = applyDesktopVisualAction(createDesktopVisualState(), {
-      type: "decide-all-changes",
-    });
-    const html = render(decided);
+  it("ships no fabricated review row in the default document", () => {
+    const html = render();
     expect(html).toContain("Nothing waiting for review");
-    // Every fixture row is present but hidden, so the script can re-show none of
-    // them without the model saying so.
-    expect((html.match(/class="change-row"/g) ?? []).length).toBe(3);
-    expect((html.match(/class="change-row" data-change-index="\d+" hidden/g) ?? []).length)
-      .toBe(3);
+    expect(html).not.toContain('class="change-row"');
+    expect(html).not.toContain("field_drone");
+    expect(html).not.toContain("matte_polymer");
+    expect(html).not.toContain("0, 1.85, -2.30");
   });
 });

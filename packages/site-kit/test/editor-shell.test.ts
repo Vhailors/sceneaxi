@@ -58,7 +58,7 @@ const walkControls = (shell: EditorShellView): readonly EditorShellControl[] =>
 describe("control accounting", () => {
   it("every control declares a kind, and inert exactly when it refuses", () => {
     for (const control of walkControls(view())) {
-      expect(["view", "review", "live", "inert"]).toContain(control.kind);
+      expect(["view", "live", "inert"]).toContain(control.kind);
       if (control.kind === "inert") {
         if (control.refusal === null) throw new Error(`${control.id} refuses nothing`);
         expect(control.refusalMessage, control.id).toBe(

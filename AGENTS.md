@@ -406,7 +406,7 @@ must keep Windows coming soon and no Windows R2 claim exists.
 The Engine Desktop chrome's **shared product model** is
 `packages/schemas/src/editor-shell.ts` (sceneaxi#184): the seven modes, rail
 labels, dock-tab derivation, viewport sources, assistant modes/states, control
-kinds (`view`/`review`/`live`/`inert`), window-tier thresholds, structural
+kinds (`view`/`live`/`inert`), window-tier thresholds, structural
 metrics, and the retired-copy list — vocabulary only, no state machine and no
 colour. `apps/desktop-shell` derives its tables from it; the umbrella's entitled
 `/editor` projects it through `buildEditorShellView()` in
@@ -433,10 +433,12 @@ renderer and still cannot import a profile package. Desktop-only operations
 refuse by the shared contract. Owner and proof map: `docs/web-experience-editor.md`.
 
 The Engine Desktop **visual** surface is `apps/desktop-shell` alone
-(sceneaxi#158): `src/visual-model.ts` decides (seven modes, mode-dependent dock
-tabs, profile switch, assistant states, Change Review, command palette,
-overlays, sculpt progress, window tiers, the closed `DESKTOP_VISUAL_REFUSALS`
-registry) and `src/chrome.ts` renders it as one self-contained HTML document via
+(sceneaxi#158): `src/visual-model.ts` decides the static projection (seven modes,
+mode-dependent dock tabs, profile switch, assistant states, Change Review
+controls and empty state, command palette, overlays, sculpt progress, window
+tiers, the closed `DESKTOP_VISUAL_REFUSALS` registry), while `src/chrome.ts`
+renders it and owns the validated packaged-host snapshot/decision adapter in one
+self-contained HTML document via
 the `sceneaxi-desktop chrome` command — no remote asset, no framework, no DOM
 types. The first-release product loop is `src/product-loop.ts`, which owns the
 second closed registry, `DESKTOP_PRODUCT_REFUSALS` (the visual one re-exports
@@ -445,7 +447,7 @@ decision `desktopWebStageDecision()` — free of module bindings so the emitted
 script embeds that exact function instead of a hand-copied paraphrase of it.
 The chrome writes no refusal name as a literal: both registries are serialized
 into the script, and `refusalLegend()` prints a sentence for every code in
-either. Three invariants: every control declares `view` | `review` | `live` | `inert`,
+either. Three invariants: every control declares `view` | `live` | `inert`,
 a `live` control is bound only by an explicit consumer runtime transition, and an
 inert one keeps its focus stop and names a refusal; the profile switch
 **projects** `openPathPolicyView()` rather than describing a profile, so parity

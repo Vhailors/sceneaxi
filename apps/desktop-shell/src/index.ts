@@ -78,7 +78,6 @@ export {
 } from "./visual-tokens.js";
 
 export {
-  CHANGE_REVIEW_ROWS,
   DESKTOP_ASSISTANT_RUNTIME_EVENT,
   DESKTOP_ASSISTANT_MANIPULATORS,
   DESKTOP_ASSISTANT_MODE_IDS,
@@ -117,7 +116,6 @@ export {
   type DesktopAssistantRuntime,
   type DesktopAssistantState,
   type DesktopAssistantView,
-  type DesktopChangeReviewRow,
   type DesktopChangeReviewView,
   type DesktopControl,
   type DesktopControlKind,

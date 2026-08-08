@@ -80,7 +80,6 @@ describe("engine desktop visual tokens", () => {
       TEXT.label,
       TEXT.dim,
       TEXT.faint,
-      TEXT.superseded,
       ACCENT.base,
       ACCENT.noteText,
       SIGNAL.ok,
@@ -119,6 +118,16 @@ describe("engine desktop visual tokens", () => {
         expect(contrast(row.shipped, surface)).toBeGreaterThanOrEqual(4.5);
       }
     }
+  });
+
+  it("retires fixture-review paint from the desktop token contract", () => {
+    expect("superseded" in TEXT).toBe(false);
+    expect("okSurface" in SIGNAL).toBe(false);
+    expect("okLine" in SIGNAL).toBe(false);
+    expect(DEVIATIONS.map((row) => row.id)).not.toContain("text-contrast-7A6448");
+    expect(
+      FOUNDATIONS_V2_ALIGNMENT.find((row) => row.token === "--stale"),
+    ).toMatchObject({ disposition: "absent" });
   });
 
   it("never reintroduces a value the superseded v1 pass carried", () => {
@@ -193,7 +202,6 @@ describe("engine desktop visual tokens", () => {
       ".menu-command.is-inert:hover,.menu-command.is-inert:focus-visible{background:none;color:var(--inert)}",
       ".ghost-button.is-inert:hover{border-color:var(--line-control);color:var(--inert)}",
       ".primary-button.is-inert,.primary-button.is-inert:hover{color:var(--inert-on-accent)}",
-      ".decision.is-inert,.decision.is-inert:hover{background:none;border-color:var(--line-raised);color:var(--inert)}",
     ]) {
       expect(documents[0]).toContain(override);
     }

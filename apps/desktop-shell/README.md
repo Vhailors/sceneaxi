@@ -39,7 +39,9 @@ failing obscurely.
 `--cwd <dir>` sets the working directory for the session commands above;
 `open-path` opens no session and takes only its own two flags, so `--cwd` refuses
 there as an unknown flag. `--json` works on every command and emits the machine
-envelope with exactly the same data as the text rendering.
+envelope with exactly the same data as the text rendering. The standalone
+`chrome` envelope describes its static projection and carries no proposal count;
+only a bound host session can populate the Changes badge in the emitted document.
 
 Exit codes use the CLI protocol's compatible subset so scripts branch
 identically for shared outcomes: `0` success, `1` operational refusal (typed
@@ -67,11 +69,13 @@ pnpm sceneaxi-desktop chrome --width 1024 --height 700
 ```
 
 The product-loop model is `src/product-loop.ts` (active project file, profile
-capabilities, Web HTML and project-relative asset staging). The broader decision
-layer is `src/visual-model.ts` (modes, mode-dependent dock tabs,
-profile switch, assistant states, Change Review, command palette, overlays,
-sculpt progress, window tiers, refusals); `src/chrome.ts` renders it and decides
-nothing. The chrome's product **vocabulary** is not this app's: the mode ids and
+capabilities, Web HTML and project-relative asset staging). The static visual
+model is `src/visual-model.ts` (modes, mode-dependent dock tabs, profile switch,
+assistant states, Change Review controls and empty state, command palette,
+overlays, sculpt progress, window tiers, refusals). `src/chrome.ts` renders that
+model and contains the packaged-host adapter that validates session snapshots,
+projects the active proposal, and sends the declared Accept/Reject operations.
+The chrome's product **vocabulary** is not this app's: the mode ids and
 rail labels, the dock-tab ids and their per-mode derivation, the assistant modes
 and states, the viewport sources, and the window-tier thresholds are derived from
 `packages/schemas/src/editor-shell.ts` (sceneaxi#184), which the umbrella's
@@ -80,9 +84,8 @@ the editor is, and `tests/parity/editor-shell-parity.test.ts` asserts that as a
 data identity. What stays local is this renderer's own detail (glyph geometry,
 tier shape) and everything below.
 
-Every control declares its kind — `view` changes visual state and works,
-`review` edits the fixture Change Review queue and writes no document, `live`
-declares a product action the injected desktop host — an enclosing consumer
+Every control declares its kind — `view` changes visual state and works, and
+`live` declares a product action the injected desktop host — an enclosing consumer
 runtime — must bind (the assistant prompt, Send, Retry, and the artifact
 manipulators, plus New/Open Project, Recent, Reload/Save/Play, Undo once the
 project's apply journal reports a completed Save, and Web staging, which the packaged Linux tier
@@ -91,6 +94,25 @@ from `DESKTOP_VISUAL_REFUSALS`. This app invokes no authoring operation itself
 and adds no engine/profile/site/billing dependency: the host remains the adapter
 that reaches shared authoring, orchestration, and presentation seams, so a `live`
 control rendered by the standalone `chrome` command is inert and says why.
+
+Change Review is populated only by the active `DesktopSession` proposal and
+offers one atomic Accept/Reject pair. Accept may write through authoring-core;
+Reject discards without writing. A transport failure or malformed response leaves
+the last validated review intact; a validated host session snapshot replaces it,
+including when that snapshot carries a refusal diagnostic. Neither decision
+reaches the host when there is no active review, including while apply recovery is
+pending, where the surface reports `DESKTOP_RECOVERY_PENDING` without changing the
+recovery state. Web staging also refuses before reaching the host during recovery
+and retains the transaction details and recovery instructions.
+The outcome dialog is raised only by a diagnostic a shipped path can produce —
+`content-hash-conflict` from staging or Save, `journal-conflict` from Save — and it
+reports that diagnostic rather than describing a conflict in general: its heading
+names the action that refused and its body carries the host's own code, message,
+and re-read hint.
+When a host snapshot
+has already cleared a stale proposal, a blocked decision names its own outcome and
+carries the recorded conflict as detail, so it neither claims a normal-open
+document nor replays the earlier action's status sentence over a newer one.
 
 The first-release loop has one honest active file, `scene.json`. In the packaged
 host, first launch shows New Project and Open Project without binding or seeding
@@ -252,3 +274,7 @@ bytes, recents, removal, and restart. The former
 test executes the emitted browser script at the narrow window tier, clicks all
 three profile surfaces plus Open, Web asset staging, Save recovery, and Play
 against the real host bridge, and observes the viewport playback acknowledgement.
+It also drives Change Review end to end — the rendered proposal, Accept writing,
+Reject leaving the document untouched, a stale base hash refusing, the outcome
+dialog naming the diagnostic it was raised for, and the default emitted document
+carrying no review row.

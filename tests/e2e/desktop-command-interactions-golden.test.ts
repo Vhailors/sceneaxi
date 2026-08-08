@@ -68,12 +68,21 @@ function engineResponse(
       },
     };
   }
+  // A whole `DesktopSnapshot`, the shape the real session returns: the surface
+  // refuses a snapshot it cannot validate rather than projecting a partial one.
   if (action === "authoring" && op === "propose") {
     return {
       ok: true,
       action,
       data: {
         phase: "reviewing",
+        unifiedDiff: "--- scene.json\n+++ scene.json\n",
+        renderedDiff: "=== SceneAxi inspector — proposed change\n",
+        proposal: {
+          edits: [{ documentPath: "scene.json", baseContentHash: CONTENT_HASH }],
+        },
+        appliedPaths: null,
+        transactionId: null,
         diagnostics: null,
         journalRecoveryPending: false,
       },
@@ -86,9 +95,13 @@ function engineResponse(
       action,
       data: {
         phase: "applied",
+        unifiedDiff: null,
+        renderedDiff: null,
+        proposal: null,
+        appliedPaths: ["scene.json"],
+        transactionId: null,
         diagnostics: null,
         journalRecoveryPending: false,
-        appliedPaths: ["scene.json"],
       },
     };
   }

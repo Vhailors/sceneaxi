@@ -73,14 +73,16 @@ opinion about them.
 | Disposition | Tokens | Meaning |
 |---|---|---|
 | **carried** (20, plus both families) | `--bg-base`, `--bg-panel`, `--bg-raised`, `--bg-control`, `--bg-field`, `--bg-row`, `--line-soft`, `--line`, `--fg`, `--fg-2`, `--accent`, `--accent-hi`, `--ok`, `--danger`, `--info`, `--axis-x`, `--axis-y`, `--axis-z`, `--kids`, `--store-web`, and the `Archivo`/`JetBrains Mono` families | the sheet's hex, verbatim |
-| **raised** (2) | `--fg-4` `#3F464F` → `#7D8694`; `--stale` `#7A6448` → `#A08663` | below the 4.5:1 text floor on this surface's near-black chrome; each names its `DEVIATIONS` row |
-| **absent** (2) | `--line-strong`, `--store-game` | named with a reason, not silently unused (see below) |
+| **raised** (1) | `--fg-4` `#3F464F` → `#7D8694` | below the 4.5:1 text floor on this surface's near-black chrome; names its `DEVIATIONS` row |
+| **absent** (3) | `--line-strong`, `--stale`, `--store-game` | named with a reason, not silently unused (see below) |
 
 `--line-strong` `#2C323B` is the one place the two archive members genuinely
 disagree: the Foundations sheet prints three line weights, but the implemented
 member `Engine Desktop.dc.html` draws its own six-step line scale and does not
 use `#2C323B` anywhere in the file. For a value the accepted surface itself
-specifies, that member wins. `--store-game` is a storefront accent this app never
+specifies, that member wins. `--stale` belonged to the removed struck-through
+fixture row; the active E1 proposal renders one unified diff and has no stale-text
+role. `--store-game` is a storefront accent this app never
 paints — the Game profile chip is drawn with the accent instead. `--store-web`
 *is* painted here, on the Website profile chip, so it is carried as
 `PROFILE_DOT.web` rather than declared absent: a token this surface ships cannot
@@ -118,17 +120,19 @@ asserted rather than remembered.
 | Colours, typography, metrics, contrast deviations, archive provenance | `apps/desktop-shell/src/visual-tokens.ts` |
 | Shared chrome vocabulary — the seven modes, rail labels, dock-tab derivation, assistant modes, window-tier thresholds, structural metrics | `packages/schemas/src/editor-shell.ts` (sceneaxi#184); this model **derives** its tables from it, and the umbrella web editor projects the same rows — parity is a data identity in `tests/parity/editor-shell-parity.test.ts`, and the web surface's own record is [`web-editor-shell.md`](web-editor-shell.md) |
 | First-release project/file and per-profile product loop, including host-projected New/Open/Recent lifecycle, the typed scene-property edit, Web stored-HTML, and project-relative asset staging | `apps/desktop-shell/src/product-loop.ts` + emitted adapter in `chrome.ts` (sceneaxi#196/#224/#225); root validation, property validation and staging, and persistence remain host-owned |
-| Mode/profile/dock/assistant/overlay/sculpt state, refusals, window tiers, control kinds | `apps/desktop-shell/src/visual-model.ts` |
-| The emitted document (markup, stylesheet, behaviour script) | `apps/desktop-shell/src/chrome.ts` |
+| Mode/profile/dock/assistant/overlay/sculpt state, refusals, window tiers, control kinds, and Change Review's static controls/empty state | `apps/desktop-shell/src/visual-model.ts` |
+| The emitted document (markup, stylesheet, behaviour script), including validated host-snapshot projection and the active Change Review decision flow | `apps/desktop-shell/src/chrome.ts` |
 | The `chrome` command and its flags | `apps/desktop-shell/src/app.ts` |
 | Runnable level and how to start it | [`runnable-surfaces.md`](runnable-surfaces.md) |
 
-The model decides and the renderer draws. `chrome.ts` contains no policy: every
-table its emitted script reads — which dock tabs a mode has, which dock height,
+The visual model decides the static projection and the renderer draws it. Every
+table the emitted script reads — which dock tabs a mode has, which dock height,
 what the assistant becomes on each profile and with which refusals, which
 refusal the rail takes — is serialized from the model at render time, so the
-document and the model cannot disagree about a state. **A state a client toggle
-can reach is a state the bytes already contain.** The Kids editor refusal, and
+document and the model cannot disagree about those states. The emitted adapter
+separately validates host responses and projects the one active Change Review
+proposal; it does not derive proposal data or acceptance outcomes itself.
+**A state a client toggle can reach is a state the bytes already contain.** The Kids editor refusal, and
 now the Kids assistant lock, are emitted in *every* document and selected by a
 `[data-profile="kids"]` / `[data-assistant="denied"]` rule rather than by a
 server-side branch, because a refuse-only decision a browser-side profile switch
@@ -138,14 +142,13 @@ close, and Send refusals — so switching *back* restores a correct column inste
 of stranding one. That holds for the emitted
 bytes too, not just for what the script does afterwards: the visible dock
 tabpanel is `state.dockTab`, so `--mode run` opens on Console rather than on a
-hardcoded Change Review queue the mode does not even have a tab for. The bulk
-accept/reject in the tab strip follows the same rule — it belongs to the Changes
-tab, so `run` and `ship` do not offer it, and the emitted script re-applies that
-condition when the mode switches rather than only tracking the pending count.
+hardcoded Change Review queue the mode does not even have a tab for. Change
+Review itself follows the same rule — it belongs to the Changes tab, so `run` and
+`ship` do not offer it, and the emitted script re-applies that condition when the
+mode switches rather than only tracking whether a proposal is under review.
 Because a region hidden by the model is hidden with the `hidden` attribute, the
-stylesheet declares `[hidden]{display:none !important}`: `.change-row` and
-`.dock-bulk` set their own `display`, and an author class outranks the UA sheet's
-`[hidden]` rule.
+stylesheet declares `[hidden]{display:none !important}`: `.change-proposal` sets
+its own `display`, and an author class outranks the UA sheet's `[hidden]` rule.
 
 ## How to render it
 
@@ -160,7 +163,9 @@ node apps/desktop-shell/bin/sceneaxi-desktop.mjs chrome --json                # 
 ```
 
 Text mode emits the document itself so it redirects straight to a file; `--json`
-keeps the versioned envelope. An unknown flag value refuses with exit `2` and
+keeps the versioned envelope. That standalone envelope carries no proposal count:
+only the bound host session can populate the Changes badge in the document. An
+unknown flag value refuses with exit `2` and
 renders nothing, rather than silently falling back to a state nobody asked for.
 
 The document is **self-contained**: no remote font, script, style, or image, and
@@ -172,14 +177,13 @@ the standalone file they refuse `DESKTOP_RUNTIME_UNAVAILABLE` and stay honest.
 
 The archive is a mockup: it draws controls for behaviour this shell has no
 contract for. Rather than dim them and hope, every control in the model declares
-one of four kinds, and `test/visual-model.test.ts` asserts that an inert control
+one of three kinds, and `test/visual-model.test.ts` asserts that an inert control
 always has a refusal and a non-inert one never does.
 
 | Kind | Meaning | Examples |
 |---|---|---|
 | `view` | changes visual state; genuinely works | mode rail, dock tabs, profile switch, assistant open/close, its Ask/Build/Agent modes and its three route chips, menu openers, the palette openers, the outcome dismissal, the sculpt cancel, drawer toggles, the scene-entity selection |
-| `review` | edits the fixture Change Review queue; **writes no document** | accept/reject a row, accept all, reject all |
-| `live` | delegates a product action to an injected desktop-host seam; refuses visibly when that host is absent | File New/Open/Save, Edit Undo when the active project's authoring journal reports a completed Save, Run Play, their palette rows and accelerators, the Translation X field and its Stage control, stage Web HTML, inject a project-relative Web asset; and — only once the packaged Linux runtime binds them — the assistant prompt, Send, Retry, and the artifact manipulators |
+| `live` | delegates a product action to an injected desktop-host seam; refuses visibly when that host is absent | File New/Open/Save, Edit Undo when the active project's authoring journal reports a completed Save, Run Play, their palette rows and accelerators, Change Review's Accept and Reject, the Translation X field and its Stage control, stage Web HTML, inject a project-relative Web asset; and — only once the packaged Linux runtime binds them — the assistant prompt, Send, Retry, and the artifact manipulators |
 | `inert` | renders, keeps its focus stop, refuses by name | Undo when the active project's authoring journal has no completed Save or has recovery pending, Sculpt object, standalone-shell assistant prompt/Send/Retry and the four artifact manipulators, the three viewport-source tabs, and — on the refuse-only profile — every control except the seven named below |
 
 The chrome imports no engine, profile, site, billing, or host package, and
@@ -318,6 +322,46 @@ Those genuinely work on every
 profile, and marking a control
 that works as refusing is the same dishonesty pointing the other way.
 
+Which dismissals may be exempt is decided by the model rather than by a
+judgement call per button: every entry in `DESKTOP_OVERLAY_DISMISSALS` declares a
+`productAction`, and one that names an action is minted `live` through the
+central `control()` mint — so it goes inert on Kids like every other path to the
+host, and refuses `DESKTOP_RUNTIME_UNAVAILABLE` in the standalone render. The
+shipped outcome dialog reports a refusal a response already returned and decides
+nothing, so its dismissal declares no action and only closes the dialog. Since
+sceneaxi#227 the decisions that would once have been offered there — discard the
+held proposal, re-open against the current document — belong to Change Review's
+own all-or-nothing Accept and Reject, which are `live` and inert on Kids like the
+rest of the project loop. `Escape` and the outcome dismissal still close the
+dialog on every profile, so the refusal stays a state you can leave.
+
+The dialog reports the diagnostic it was raised for and nothing else: its
+heading names the action that refused, its body carries the host's own code,
+message, and re-read hint, and no standing sentence about what a conflict
+generally is survives to be read as current. Only the diagnostics a shipped path
+can actually produce raise it — staging for `content-hash-conflict`, Save for
+that or `journal-conflict` from a stale durable transaction; pending apply
+recovery stays represented by the `recovering` state and raises no dialog.
+
+A decision also needs a review the surface actually validated and projected.
+Without one, Accept and Reject refuse with `DESKTOP_PROPOSAL_NOT_REVIEWING` and
+make zero host requests;
+pending recovery stays non-decidable, reports `DESKTOP_RECOVERY_PENDING` once,
+and keeps the recovery instructions beside it — Web staging refuses before
+reaching the host under the same condition. When a validated host snapshot has
+cleared a stale proposal, a blocked decision names its own outcome and carries
+the recorded conflict as detail —
+`Decision refused · DESKTOP_PROPOSAL_NOT_REVIEWING · <recorded conflict>` — so it
+neither claims a normal-open document nor replays the earlier action's status
+sentence over whatever the operator did since, and repeating it answers the same
+way rather than accumulating the previous answer. That recorded conflict stays
+attached to its unresolved session transition across intervening status
+messages; a validated clean session snapshot or a successful document re-open
+clears it. A transport failure
+or malformed response leaves the last validated review projected; a validated
+host session snapshot replaces it, including when that snapshot carries a
+refusal diagnostic.
+
 The browser-side switch applies the same decision the same way: it sweeps
 **every** `[data-kind]` element and applies the model's own `[kind, refusal]` for
 that control id, serialized per profile and assistant-runtime state from
@@ -382,12 +426,12 @@ document also explains. `test/product-loop.test.ts` asserts that in both directi
 | `DESKTOP_RUNTIME_REQUEST_REFUSED` | the host refused and named no reason of its own |
 | `DESKTOP_VIEWPORT_UNAVAILABLE` | orchestrated playback completed but the live viewport did not acknowledge a post-play frame |
 | `DESKTOP_AUTHORING_REFUSED` | the shared authoring session refused and carried no diagnostic code |
-| `DESKTOP_PROPOSAL_NOT_REVIEWING` | propose returned without parking the edit for review |
-| `DESKTOP_PROPOSAL_NOT_DISCARDED` | re-opening could not discard the proposal the host still holds |
+| `DESKTOP_PROPOSAL_NOT_REVIEWING` | propose returned without parking the edit for review, or Accept or Reject was taken with no validated active review |
+| `DESKTOP_PROPOSAL_NOT_DISCARDED` | Reject, or a re-open, could not discard the proposal the host still holds |
 | `DESKTOP_PROFILE_SWITCH_DIRTY` | a staged proposal must be saved or discarded before another edit stages, the project changes, or the profile changes |
 | `DESKTOP_UNDO_STAGED_PROPOSAL` | Undo would drop a staged, unsaved proposal along with the Save it reverses |
 | `DESKTOP_APPLY_NOT_COMPLETED` | accept returned without reporting the apply completed |
-| `DESKTOP_RECOVERY_PENDING` | Undo, staging an edit, changing the project, and switching profiles are blocked until Save resolves recovery or Open starts a fresh re-read session |
+| `DESKTOP_RECOVERY_PENDING` | Undo, staging an edit, changing the project, switching profiles, and the Change Review decisions are blocked — none of them reaches the host — until Save resolves recovery or Open starts a fresh re-read session |
 | `DESKTOP_OPEN_PATH_EVIDENCE_INVALID` | the play response carried no closed session with observed tick digests |
 | `DESKTOP_PRODUCT_REQUEST_IN_FLIGHT` | another serialized product-loop request currently owns the shared session |
 
@@ -520,11 +564,11 @@ Two rules keep this honest:
   `DESKTOP_NO_PRESENTATION_RUNTIME` rather than looking switchable.
 - **A tablist owns nothing but its tabs.** ARIA restricts a `tablist`'s children
   to `tab`, so `role="tablist"` sits on an inner wrapper holding only the tabs;
-  the spacer, the tool glyphs, and the Change Review bulk accept/reject stay
-  siblings in the same flex row. The bulk pair is the only way to decide the
-  whole queue at once, so it is the worst control in the strip to have dropped
-  from the exposed structure — and `moveTab()` enumerating `[role="tab"]` now
-  depends on the same boundary.
+  the spacer and the tool glyphs stay siblings in the same flex row. Change
+  Review's own Accept and Reject live inside the Changes tabpanel beside the
+  proposal they decide, not in the strip — the decision is all-or-nothing over
+  one proposal, so there is nothing for a strip-level control to act on — and
+  `moveTab()` enumerating `[role="tab"]` depends on the same boundary.
 - **`aria-modal` is backed by a real trap.** An overlay declares
   `role="dialog" aria-modal="true"`, which tells assistive tech the rest of the
   document is inert, so keyboard focus must agree: opening one moves focus into
@@ -586,13 +630,12 @@ against.
 | Deviation | Archive | Shipped | Why |
 |---|---|---|---|
 | Dim text tiers collapsed | `#6E7681` (4.36:1), `#565E68` (3.05:1), `#3F464F` (2.10:1), `#333A42` (1.74:1) | two passing tiers, `#8A929C` and `#7D8694` | all four fail the 4.5:1 text floor on the surfaces they are used on. Lightening them monotonically would have produced four indistinguishable greys; two tiers keep a real hierarchy, and the archive's remaining separation is carried by size, weight, and letter-spacing, which is preserved. |
-| Struck-through review value | `#7A6448` (3.42:1) | `#A08663` | same floor |
 | Inert dimming | element `opacity` on a control that cannot be used | the painted `INERT` tokens, and no `opacity` outside `@keyframes` | opacity composites a label toward its background after every check here has read the declared colour, so the dimming was measured by nothing and shipped at 3.67:1, 4.07:1, and 2.16:1. Raising the fraction would have left the blind spot; a painted token is measured by the test that already exists. An inert control is deliberately not `disabled`, so its refusal has to stay readable. |
 | Web fonts | `fonts.googleapis.com` link for Archivo + JetBrains Mono | font-family stack, no remote request | the emitted document is self-contained and offline. The archive families are named first and render when installed; otherwise the system UI face does. |
 | Fixed stage | 1680×1000 scaled with a transform | fluid layout, four window tiers | see above |
 | Informational blue | the member carries both `#5B9CFF` and a lighter `#8FB7F5` for the same informational role | `#5B9CFF` | the two archive members disagree, so the shared sheet settles it: Foundations v2 canonicalises `--info` to `#5B9CFF`, D1 makes the sheet binding, and the value clears the text floor here anyway (6.16:1 at worst on `SURFACE`, 6.48:1 on the note's own fill) — so there is no accessibility reason to keep the member's lighter variant, and keeping it would be drift from the shared layer. |
 | Kids profile | a working editor with only the assistant locked | the **whole editor body** refuses | **contract conflict, resolved for the repository.** Kids authoring exists only on its dedicated, simplified origin (`kids-first-release.md`); the shared desktop open path remains `OPEN_PATH_KIDS_REFUSED`. An adult editor that merely looked disabled under a Kids badge would cross that boundary. Every control behind the refusal goes inert — in the emitted bytes, not only after a click, and decided in one place rather than remembered per call site — so no mode can be entered and no removed panel can be opened from behind it; the seven chrome controls enumerated above stay live so the refusal is a state you can leave and its named reasons remain reachable. |
-| Panel inventory | fixture object trees, digests, byte sizes, fps, triangle counts, run timings, evidence rows | real structure with honest empty and inert states | the chrome mounts no renderer itself and reports only results returned by the packaged host, so it has no authority to invent fps, a triangle count, or a `14.2 MB` artifact. Rendering the archive's fixtures would be inventing file sizes and hashes. Change Review is the one fixture queue kept — its interactions are in scope — and it says on the surface that deciding there writes no document. |
+| Panel inventory | fixture object trees, digests, byte sizes, fps, triangle counts, run timings, evidence rows | real structure with honest empty and inert states | the chrome mounts no renderer itself and reports only results returned by the packaged host, so it has no authority to invent fps, a triangle count, or a `14.2 MB` artifact. Rendering the archive's fixtures would be inventing file sizes and hashes. Change Review was the one fixture queue kept, and sceneaxi#227 retired that exception too: the panel is populated only by the active `DesktopSession` proposal — its real document path, base content hash, and rendered diff — with an honest empty state when none exists. It is therefore the one panel here that **does** write: Accept applies the whole proposal through the shared authoring session (`writesDocuments: true`), Reject discards it without writing, and there is no per-row or partial acceptance to have. |
 | Project lifecycle (sceneaxi#224) | a Project / Files panel drawn with files already present, like the rest of the fixture inventory above; no project selection, recents, or unbound state is recorded | an unbound launcher with New Project, Open Project, a recent chooser, Open Recent, and Remove, replaced by the bound project's name, canonical root, and active `scene.json` once a root validates | **product decision, not a visual one.** First launch must not silently choose a project root, so the panel has to have an unbound state the archive never drew. The controls ship under the rules already on this page: each declares its kind — the chooser `view`, the four actions `live`, exactly like the rest of the project loop, so a standalone render refuses `DESKTOP_RUNTIME_UNAVAILABLE` when one is clicked — and all of them go inert through the central mint on Kids, before a dialog or a storage read. No colour, size, or geometry is claimed for them from the archive, which is why there is no `DEVIATIONS` row. Their rendered contrast has not been swept in a browser — see the caveat on the recorded sweep below. |
 | Scene property edit (sceneaxi#225) | nothing recorded: the archive draws no scene-entity list in the project panel and no property editor in the Build inspector | a `SCENE ENTITY` list under the bound project, and a Build-inspector editor carrying the entity's identity, a numeric Translation X field, a Stage control, the staged proposal's own diff, and — beside the list, so it stays readable while the editor is hidden — the host's named inspection refusal | **product decision, not a visual one.** Editing a supported Scene Document field needs a way to pick the entity and a typed field to change, neither of which the archive drew. They ship under the rules already on this page: each declares its kind — the selection `view`, the field and Stage `live`, so a standalone render refuses `DESKTOP_RUNTIME_UNAVAILABLE` when Stage is clicked — and all three go inert through the central mint on Kids, before any session or document is reached. No colour, size, or geometry is claimed for them from the archive, which is why there is no `DEVIATIONS` row: there is no archive value to compare against. Their rendered contrast has not been swept in a browser — see the caveat on the recorded sweep below. |
 | Assistant product flow (sceneaxi#192) | nothing recorded: this document has never carried an assistant composer inventory from the archive, and the archive is a design input for visual values, not for product flow | a real prompt `<textarea>`, three provider-route chips (`local`, `byo`, `hosted`), progress and result regions that report actual work, a `Retry` action, and a viewport manipulator bar (`Move +X`, `Move +Y`, `Rotate Y`, `Scale +`) | **product decision, not a visual one.** sceneaxi#192 turns the assistant from a drawn panel into a flow that a runtime performs, so the surface needs controls for the states that flow really has. They ship as modelled controls under the rules already on this page: each declares its kind, all of them are `inert` with a named refusal in the standalone CLI render and become `live` only when the packaged Linux runtime binds them, and all of them are denied on Kids. No colour, size, or geometry is claimed for them from the archive, which is why there is no `DEVIATIONS` row: there is no archive value to compare against. Their rendered contrast has not been swept in a browser — see the caveat on the recorded sweep below. |
@@ -623,7 +666,8 @@ sentence can return by review slip.
 - **Node gates** (`pnpm gate`) cover the whole model — mode/dock-tab derivation,
   the active project file, profile capability projection and the Kids refusal,
   Web stored-HTML/project-asset staging, assistant states including the
-  non-reopenable deny, Change Review arithmetic, sculpt pass advance and
+  non-reopenable deny, Change Review's proposal projection and empty state,
+  sculpt pass advance and
   clamping, overlays, window tiers, control kinds, refusal reachability, view
   freezing, and determinism — plus the emitted document: escaping (including a
   hostile selection name that cannot close the script tag), landmarks, labels,
@@ -637,7 +681,11 @@ sentence can return by review slip.
   spawns the real binary and renders a document from it.
   `tests/e2e/desktop-product-loop-golden.test.ts` crosses the rendered profiles,
   existing desktop bridge, shared authoring session, durable accept, and
-  orchestrated composed-scene play path in one test.
+  orchestrated composed-scene play path, and drives Change Review itself against
+  that bridge: the rendered proposal, Accept writing, Reject leaving the document
+  untouched, a stale base hash refusing, the conflict dialog naming the
+  diagnostic it was raised for, and the default emitted document carrying no
+  review row.
 
 - **Every interaction command is invoked, not inventoried** —
   `tests/e2e/desktop-command-interactions-golden.test.ts` loads the emitted
@@ -675,8 +723,8 @@ sentence can return by review slip.
      companion case asserts the same helper reports `display: none` for the
      docked assistant below the regular tier, so the check cannot pass vacuously.
      This is the property the Kids lock screen failed at 1280×800.
-  4. **A declared kind tells the truth.** No control declares itself `view`,
-     `review`, or `live` while the region it names through `aria-controls` resolves to
+  4. **A declared kind tells the truth.** No control declares itself `view`
+     or `live` while the region it names through `aria-controls` resolves to
      `display: none` — judged with the control's *own* effect applied, since a
      drawer opener naming a region the sheet keeps shut until it opens it is the
      control working, not a region the profile removed. An `aria-controls` target
@@ -753,8 +801,8 @@ sentence can return by review slip.
   at the drawer tiers, not only at 1680×1000.
 
   **This sweep predates the assistant product controls, the project
-  lifecycle, and the typed scene-property edit, and has not been re-run for any
-  of them.** sceneaxi#192 later added, to
+  lifecycle, the typed scene-property edit, and the Change Review rework, and
+  has not been re-run for any of them.** sceneaxi#192 later added, to
   the documents that render the assistant panel and the viewport, eight further
   buttons — `Retry`, the three provider-route chips, and the four artifact
   manipulators — plus the modelled prompt `<textarea>`; sceneaxi#224 then added
@@ -762,22 +810,40 @@ sentence can return by review slip.
   document, along with the unbound launcher this sweep never saw; sceneaxi#225
   then added two more buttons — the scene-entity selection and Stage — plus the
   numeric Translation X `<input>`, all three in every document because every
-  document emits the Build inspector panel that carries them. Everything
-  below therefore describes the document as it stood on 2026-07-28, and three
+  document emits the Build inspector panel that carries them; sceneaxi#227
+  then replaced the fixture Change Review queue with the active proposal,
+  removing its three rows and the bulk accept/reject pair and adding a focusable
+  diff region. Everything
+  below therefore describes the document as it stood on 2026-07-28, and four
   claims in it are stale by name:
 
   - **The control counts.** `build`'s "58 buttons, 53 focus stops, 17 inert" and
     `kids`'s "the same 58 with 47 inert" were taken before those fourteen buttons
-    existed, so each figure is low, and "buttons" is no longer even a count of
+    existed and before #227 removed the queue's own, so each figure is wrong in
+    both directions, and "buttons" is no longer even a count of
     the document's interactive elements, because the prompt is a `<textarea>`,
-    the recent chooser a `<select>`, and the scene property an `<input>` rather
-    than buttons. The **live controls on `kids`** enumerated
-    beside those counts are unaffected: that list is the model's own
-    outside-the-refusal set (`outsideRefusal` in `visual-model.ts`), not a
-    browser observation, and none of #192, #224, or #225 added a control to it — the
-    project-lifecycle and scene-property controls are minted through the refusal
-    path. The inert count
+    the recent chooser a `<select>`, the scene property an `<input>`, and the
+    rendered diff a focusable `<pre>`
+    scroll region rather than buttons. The **live controls on `kids`** enumerated
+    beside those counts are unaffected by any of this: that list is the model's
+    own outside-the-refusal set (`outsideRefusal` in `visual-model.ts`), not a
+    browser observation, and none of #192, #224, #225, or #227 added an entry to
+    it or removed one. #227's Accept and Reject are minted `live` through the
+    central `control()` mint, and the one dismissal
+    `DESKTOP_OVERLAY_DISMISSALS` ships declares no `productAction`, so it stays
+    exempt exactly as it was; the
+    project-lifecycle and scene-property controls are likewise minted through the
+    refusal path. That enumeration is stale for a different reason, recorded with
+    the addendum below: #226 retired the `refused` and `conflict` dialogs it
+    names. The inert count
     sitting next to it is a count of this document, and it is stale.
+  - **The Change Review interaction reading.** The recorded "deciding one row
+    moved the badge `3 → 2`", the **Accept all** sweep to `0`, and the bulk
+    actions resolving to `display: none` all describe the fixture queue #227
+    deleted. There is no row to decide and no bulk pair to hide; the badge is
+    `1` while one proposal is under review and `0` otherwise, and Accept now
+    writes. Nothing was re-derived to replace those readings — they need a real
+    browser, like the rest of this sweep.
   - **The composited contrast sweep.** Its per-document element totals (99 on
     `build`, 63 on `kids`, and every other figure in that list) are counts of a
     smaller document than the chrome emits today, so its "0 failures below 4.5:1"
@@ -911,13 +977,19 @@ sentence can return by review slip.
     `status-overlay-refused`, `status-refusal-help`,
     `overlay-close-conflict-discard`, `overlay-close-conflict-review`,
     `overlay-close-refused-edit-brief`, and
-    `overlay-close-refused-keep-draft`. That set is superseded by #226 — see the
-    caveat above. The only inert
+    `overlay-close-refused-keep-draft`. That set is superseded by #226 and again
+    by #227 — see the caveat above; the `refused` and `conflict` dialogs it names
+    no longer exist, and the counts beside it are this document's and are stale.
+    The only inert
     controls outside the plain Tab order are `viewport-source-game` and
     `viewport-source-sculpt-preview` on `build` (roving tabindex, and the arrow
     keys reach them), joined on `kids` by the non-active dock tabs.
   - **Every `role="tablist"` owned only `role="tab"` children** in every document
     measured, so the bulk accept/reject and the spacer are outside it.
+    *(Superseded by sceneaxi#227, not re-recorded: the bulk accept/reject pair
+    was removed with the fixture queue, so the structural spacer is now the only
+    non-tab sibling. The tablist property itself is asserted in
+    `apps/desktop-shell/test/chrome.test.ts`; the browser reading is owed.)*
   - **The viewport carries one note**, `VIEWPORT_INERT_NOTE`; the archive's
     "not the final choice" line is nowhere in the document (`indexOf` `-1`).
   - **Rendered contrast sweep, composited.** Each visible text-bearing element's
@@ -1036,11 +1108,14 @@ sentence can return by review slip.
     said `open`, and the drawer sat over the inspector until a script ran.
   - **Interactivity matches the model.** Switching to `animate` rebuilt the dock
     tabs to `["timeline","changes","console"]`, each with an `id`, a `data-kind`,
-    and `dock-panel-timeline` the visible panel. Deciding one Change Review row
-    moved the badge `3 → 2` and the computed-visible row count to 2; **Accept
-    all** took the badge to `0`, left **0** visible rows, resolved the bulk
-    actions to `display: none` and the empty state to `block`. In `run`, which
-    has no Changes tab, the bulk actions were `none` and `dock-panel-console` was
+    and `dock-panel-timeline` the visible panel. *(Superseded by sceneaxi#227,
+    not re-recorded: the rest of this reading — deciding one Change Review row
+    moving the badge `3 → 2`, **Accept all** taking it to `0`, and the bulk
+    actions resolving to `display: none` — was taken against the fixture queue
+    that no longer exists. The badge is now `1` while one proposal is under
+    review and `0` otherwise, there is no row and no bulk pair, and the
+    `pnpm gate` golden drives the real bridge instead; the browser reading is
+    owed.)* In `run`, which has no Changes tab, `dock-panel-console` was
     the visible panel.
   - **Roving tabindex is a working pattern.** On the dock strip `ArrowRight`
     moved focus to `dock-assets`, moved `aria-selected` with it, and left

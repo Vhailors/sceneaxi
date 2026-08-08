@@ -185,8 +185,6 @@ export const ACCENT = Object.freeze({
 /** Semantic marks. All are used as text somewhere, so all are contrast-gated. */
 export const SIGNAL = Object.freeze({
   ok: "#5EEAD4",
-  okSurface: "#0D2422",
-  okLine: "#1E4A45",
   refuse: "#FF4D5E",
   refuseSurface: "#211316",
   refuseLine: "#5A2B32",
@@ -271,8 +269,6 @@ export const TEXT = Object.freeze({
   dim: "#8A929C",
   /** Micro-labels. Archive #6E7681 / #565E68 / #3F464F / #333A42 (all failing). */
   faint: "#7D8694",
-  /** The struck-through "current" value in Change Review. Archive #7A6448. */
-  superseded: "#A08663",
   /** On an accent fill. */
   onAccent: "#07080A",
 });
@@ -330,12 +326,6 @@ export const DEVIATIONS = Object.freeze([
     archive: "#333A42",
     shipped: TEXT.faint,
     reason: "1.74:1 on #07080A",
-  }),
-  Object.freeze({
-    id: "text-contrast-7A6448",
-    archive: "#7A6448",
-    shipped: TEXT.superseded,
-    reason: "3.42:1 on #0D0F12 for the struck-through Change Review value",
   }),
   Object.freeze({
     id: "webfont-not-fetched",
@@ -409,10 +399,9 @@ export const FOUNDATIONS_V2_ALIGNMENT = Object.freeze([
   Object.freeze({ token: "--info", disposition: "carried", local: "SIGNAL.info", value: SIGNAL.info }),
   Object.freeze({
     token: "--stale",
-    disposition: "raised",
-    local: "TEXT.superseded",
-    value: TEXT.superseded,
-    deviation: "text-contrast-7A6448",
+    disposition: "absent",
+    reason:
+      "the active proposal review renders one unified diff and no struck-through fixture value, so this surface has no stale-text role",
   }),
   // Axis and surface accents.
   Object.freeze({ token: "--axis-x", disposition: "carried", local: "AXIS.x", value: AXIS.x }),

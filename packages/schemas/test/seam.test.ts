@@ -27,6 +27,10 @@ describe("@sceneaxi/schemas public seam", () => {
     expect(typeof runProfileConformanceSuite).toBe("function");
   });
 
+  it("exposes only control kinds a shared editor surface mints", () => {
+    expect(schemas.EDITOR_SHELL_CONTROL_KINDS).toEqual(["view", "live", "inert"]);
+  });
+
   it("ships every declared contract as versioned JSON Schema", () => {
     const entries = Object.values(contracts);
     expect(entries.length).toBeGreaterThan(0);

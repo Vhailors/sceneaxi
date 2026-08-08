@@ -123,6 +123,266 @@ function mountChrome(
 }
 
 describe("desktop first-release product loop", () => {
+  it("renders the active proposal and atomically accepts, rejects, and refuses stale hashes", async () => {
+    const dir = projectDir();
+    const bridge = createDesktopBridge({ cwd: dir });
+    const requests: Array<{ action?: unknown; payload?: { op?: unknown } }> = [];
+    const refuseNextAuthoring = new Set<string>();
+    const window = new HappyWindow({ width: 1000, height: 700 });
+    const ipcClone = <T>(value: T): T =>
+      window.eval(`(${JSON.stringify(value)})`) as T;
+    windows.push(window);
+    Object.defineProperty(window, "structuredClone", { value: ipcClone });
+    Object.defineProperty(window, "sceneaxiDesktop", {
+      value: {
+        request: async (request: unknown) => {
+          const typed = JSON.parse(JSON.stringify(request)) as {
+            action?: unknown;
+            payload?: { op?: unknown };
+          };
+          requests.push(typed);
+          if (
+            typed.action === "authoring" &&
+            typeof typed.payload?.op === "string" &&
+            refuseNextAuthoring.delete(typed.payload.op)
+          ) {
+            return ipcClone({
+              ok: false,
+              reason: "DESKTOP_RUNTIME_UNAVAILABLE",
+              message: "The authoring host is unavailable.",
+              detail: null,
+            });
+          }
+          return ipcClone(bridge.handle(typed));
+        },
+      },
+    });
+
+    const html = renderDesktopChrome(
+      desktopVisualView(
+        createDesktopVisualState({
+          profile: "game",
+          window: { width: 1000, height: 700 },
+        }),
+      ),
+    );
+    const match = /<script>([\s\S]*?)<\/script>/.exec(html);
+    if (match?.[1] === undefined) throw new Error("desktop chrome lost its emitted script");
+    window.document.write(html.replace(match[0], ""));
+    window.eval(match[1]);
+
+    const documentText = () => readFileSync(join(dir, "scene.json"), "utf8");
+    const status = () => query(window, "[data-project-status]")?.textContent ?? "";
+    const badge = () => query(window, "[data-change-badge]")?.textContent ?? "";
+    const proposal = () => query(window, "[data-change-proposal]");
+    // The outcome dialog starts empty: it prints a refusal a response reported,
+    // never a standing sentence about what a conflict generally is.
+    expect(query(window, "[data-outcome-code]")?.textContent).toBe("");
+
+    // Reject with nothing under review must not reach the host at all.
+    await click(window, "#change-review-reject");
+    expect(requests).toHaveLength(0);
+    expect(status()).toContain("nothing under review · DESKTOP_PROPOSAL_NOT_REVIEWING");
+
+    // Accept is the same decision from the other side and answers the same way:
+    // no validated review means the named refusal, not the document action
+    // underneath it.
+    await click(window, "#change-review-accept");
+    expect(requests).toHaveLength(0);
+    expect(status()).toContain("nothing under review · DESKTOP_PROPOSAL_NOT_REVIEWING");
+
+    await click(window, "#profile-web");
+    await click(window, "#project-open");
+    const beforeReject = documentText();
+    await click(window, "#web-inject-asset");
+
+    expect(proposal()?.hidden).toBe(false);
+    expect(query(window, "[data-change-document]")?.textContent).toBe("scene.json");
+    expect(query(window, "[data-change-content-hash]")?.textContent).toMatch(
+      /^sha256:[0-9a-f]{64}$/,
+    );
+    expect(query(window, "[data-change-diff]")?.textContent).toContain(
+      "=== SceneAxi inspector — proposed change",
+    );
+    expect(query(window, "[data-change-diff]")?.textContent).toContain(
+      '"assets/hero.glb"',
+    );
+    expect(badge()).toBe("1");
+    expect(status()).toContain("staged");
+    expect(query(window, "[data-project-state]")?.dataset.projectState).toBe("dirty");
+    expect(documentText()).toBe(beforeReject);
+
+    const stagedDiff = query(window, "[data-change-diff]")?.textContent;
+    refuseNextAuthoring.add("propose");
+    await click(window, "#web-stage-html");
+    expect(proposal()?.hidden).toBe(false);
+    expect(badge()).toBe("1");
+    expect(query(window, "[data-change-diff]")?.textContent).toBe(stagedDiff);
+    expect(status()).toContain("Stage refused · DESKTOP_RUNTIME_UNAVAILABLE");
+
+    refuseNextAuthoring.add("reject");
+    await click(window, "#change-review-reject");
+    expect(documentText()).toBe(beforeReject);
+    expect(proposal()?.hidden).toBe(false);
+    expect(badge()).toBe("1");
+    expect(query(window, "[data-change-diff]")?.textContent).toBe(stagedDiff);
+    expect(status()).toContain("Reject refused · DESKTOP_RUNTIME_UNAVAILABLE");
+
+    await click(window, "#change-review-reject");
+    expect(documentText()).toBe(beforeReject);
+    expect(proposal()?.hidden).toBe(true);
+    expect(badge()).toBe("0");
+    expect(status()).toContain("rejected · no document written");
+    expect(query(window, "[data-project-state]")?.dataset.projectState).toBe("open");
+
+    await click(window, "#web-inject-asset");
+    await click(window, "#change-review-accept");
+    expect(documentText()).toContain('"assets/hero.glb"');
+    expect(proposal()?.hidden).toBe(true);
+    expect(badge()).toBe("0");
+    expect(status()).toContain("saved");
+    expect(query(window, "[data-project-state]")?.dataset.projectState).toBe("saved");
+
+    const resetScene = desktopOpenScene();
+    if (!resetScene.ok) throw new Error(`desktop scene refused: ${resetScene.reason}`);
+    expect(
+      writeDocumentFile(
+        join(dir, "scene.json"),
+        createDocument({
+          id: "desktop-first-release",
+          data: { ...resetScene.composed.document.data, title: "Reset" },
+        }),
+        { cwd: dir },
+      ).ok,
+    ).toBe(true);
+    await click(window, "#project-open");
+    await click(window, "#web-inject-asset");
+
+    expect(
+      writeDocumentFile(
+        join(dir, "scene.json"),
+        createDocument({
+          id: "desktop-first-release",
+          data: { ...resetScene.composed.document.data, title: "External after review" },
+        }),
+        { cwd: dir },
+      ).ok,
+    ).toBe(true);
+    await click(window, "#change-review-accept");
+
+    expect(documentText()).toContain('"title": "External after review"');
+    expect(documentText()).not.toContain('"assets/hero.glb"');
+    expect(proposal()?.hidden).toBe(false);
+    expect(badge()).toBe("1");
+    // The refusal reaches the operator through the one outcome dialog, carrying
+    // the host's own diagnostic rather than a sentence about conflicts.
+    expect(query(window, '[data-overlay="outcome"]')?.hidden).toBe(false);
+    expect(query(window, "[data-outcome-code]")?.textContent).toBe(
+      "content-hash-conflict",
+    );
+    expect(query(window, "[data-outcome-message]")?.textContent).not.toBe("");
+
+    await click(window, "#overlay-close-outcome-dismiss");
+    expect(query(window, '[data-overlay="outcome"]')?.hidden).toBe(true);
+    // Dismissing decides nothing: the proposal the host still holds is still on
+    // the surface, and discarding it is the same all-or-nothing Reject.
+    expect(proposal()?.hidden).toBe(false);
+    expect(badge()).toBe("1");
+    // A refused host response leaves the last validated review projected rather
+    // than clearing the panel over an answer that decided nothing.
+    refuseNextAuthoring.add("reject");
+    await click(window, "#change-review-reject");
+    expect(status()).toContain("Reject refused · DESKTOP_RUNTIME_UNAVAILABLE");
+    expect(proposal()?.hidden).toBe(false);
+    expect(badge()).toBe("1");
+    expect(documentText()).toContain('"title": "External after review"');
+
+    await click(window, "#change-review-reject");
+    expect(proposal()?.hidden).toBe(true);
+    expect(badge()).toBe("0");
+    expect(status()).toContain("rejected · no document written");
+    expect(documentText()).toContain('"title": "External after review"');
+
+    await click(window, "#web-inject-asset");
+    expect(proposal()?.hidden).toBe(false);
+    expect(
+      writeDocumentFile(
+        join(dir, "scene.json"),
+        createDocument({
+          id: "desktop-first-release",
+          data: { ...resetScene.composed.document.data, title: "External after second review" },
+        }),
+        { cwd: dir },
+      ).ok,
+    ).toBe(true);
+    await click(window, "#web-stage-html");
+    expect(documentText()).toContain('"title": "External after second review"');
+    expect(proposal()?.hidden).toBe(true);
+    expect(badge()).toBe("0");
+    expect(status()).toContain("Stage refused · content-hash-conflict");
+    expect(query(window, "[data-project-state]")?.dataset.projectState).toBe("refused");
+    // The host cleared the stale proposal, so Reject has nothing to decide — but
+    // the conflict it just reported is still the truth about this document, and
+    // must not be replaced by a status that only says nothing is under review.
+    const stageConflictStatus = status();
+    const stageConflictRequests = requests.length;
+    await click(window, "#overlay-close-outcome-dismiss");
+    await click(window, "#change-review-reject");
+    const unavailableConflictStatus = status();
+    expect(unavailableConflictStatus).toContain(
+      "Decision refused · DESKTOP_PROPOSAL_NOT_REVIEWING · content-hash-conflict",
+    );
+    expect(query(window, "[data-project-state]")?.dataset.projectState).toBe("refused");
+    expect(requests).toHaveLength(stageConflictRequests);
+    // Repeating an unavailable decision answers the same way rather than
+    // accumulating the previous answer as detail.
+    await click(window, "#change-review-reject");
+    expect(status()).toBe(unavailableConflictStatus);
+    // Accept carries the recorded conflict too rather than reporting the
+    // document as having nothing staged, and reaches the host no more than
+    // Reject does.
+    await click(window, "#change-review-accept");
+    expect(status()).toBe(unavailableConflictStatus);
+    expect(requests).toHaveLength(stageConflictRequests);
+    // A newer, unrelated status owns the status line: the blocked decision must
+    // report what the operator just clicked, not replay the earlier stage
+    // refusal as if it had happened again.
+    await click(window, "#project-save");
+    const noStagedChangesStatus = status();
+    expect(noStagedChangesStatus).toContain("no staged changes");
+    await click(window, "#change-review-reject");
+    expect(status()).not.toBe(stageConflictStatus);
+    expect(status()).not.toBe(noStagedChangesStatus);
+    expect(status()).toBe(unavailableConflictStatus);
+    expect(requests).toHaveLength(stageConflictRequests);
+    // Re-reading the document is that resolution.
+    await click(window, "#project-open");
+    expect(requests).toHaveLength(stageConflictRequests + 1);
+    await click(window, "#change-review-reject");
+    expect(status()).toContain("nothing under review · DESKTOP_PROPOSAL_NOT_REVIEWING");
+    expect(requests).toHaveLength(stageConflictRequests + 1);
+
+    expect(requests.map((request) => request.payload?.op ?? request.action)).toEqual([
+      "status",
+      "propose",
+      "propose",
+      "reject",
+      "reject",
+      "status",
+      "propose",
+      "accept",
+      "status",
+      "propose",
+      "accept",
+      "reject",
+      "reject",
+      "status",
+      "propose",
+      "propose",
+      "status",
+    ]);
+  });
+
   it("drives profile switching, open, save recovery, and viewport play through the emitted UI", async () => {
     const dir = projectDir();
     const requests: Array<{ action?: unknown; payload?: { op?: unknown } }> = [];
@@ -205,9 +465,9 @@ describe("desktop first-release product loop", () => {
       query(window, "[data-project-status]")?.textContent ?? "";
     expect(shell?.dataset.tier).toBe("narrow");
     expect(shell?.dataset.profile).toBe("game");
-    expect(window.document.querySelectorAll("button")).toHaveLength(71);
+    expect(window.document.querySelectorAll("button")).toHaveLength(65);
     expect(window.document.querySelectorAll('button:not([tabindex="-1"])')).toHaveLength(
-      66,
+      60,
     );
 
     const refusalHelp = query(window, "#status-refusal-help");
@@ -269,7 +529,36 @@ describe("desktop first-release product loop", () => {
     await click(window, "#project-open");
     await click(window, "#web-inject-asset");
     await click(window, "#project-save");
-    expect(status()).toContain("recovery pending · Save to refresh");
+    expect(status()).toContain("recovery pending · transaction fixture-pending-apply");
+
+    // An indeterminate apply is not a decidable review. Offering Accept/Reject
+    // here would offer two buttons that do something other than what they say:
+    // Reject comes back `apply-in-progress`, and Accept issues `recover`.
+    expect(query(window, "[data-change-proposal]")?.hidden).toBe(true);
+    expect(query(window, "[data-change-empty]")?.hidden).toBe(false);
+    expect(query(window, "[data-change-badge]")?.textContent).toBe("0");
+
+    // Pending recovery is not a decidable review, so Reject must not reach the
+    // host and must leave the recovery the operator still has to resolve.
+    const recoveryStatus = status();
+    const recoveryRequests = requests.length;
+    expect(query(window, "[data-project-state]")?.dataset.projectState).toBe("recovering");
+    await click(window, "#web-stage-html");
+    expect(status()).toContain("Stage refused · DESKTOP_RECOVERY_PENDING");
+    expect(status()).toContain(recoveryStatus);
+    expect(query(window, "[data-project-state]")?.dataset.projectState).toBe("recovering");
+    expect(requests).toHaveLength(recoveryRequests);
+    await click(window, "#change-review-reject");
+    expect(status()).toContain("Decision refused · DESKTOP_RECOVERY_PENDING");
+    expect(status()).toContain(recoveryStatus);
+    expect(query(window, "[data-project-state]")?.dataset.projectState).toBe("recovering");
+    // Announced once: a second blocked decision must not stack another prefix
+    // over the recovery instructions the operator still has to follow.
+    const announcedRecoveryStatus = status();
+    await click(window, "#change-review-reject");
+    expect(status()).toBe(announcedRecoveryStatus);
+    expect(query(window, "[data-project-state]")?.dataset.projectState).toBe("recovering");
+    expect(requests).toHaveLength(recoveryRequests);
 
     await click(window, "#profile-kids");
     expect(shell?.dataset.profile).toBe("web");
@@ -296,7 +585,7 @@ describe("desktop first-release product loop", () => {
     await click(window, "#project-open");
     await click(window, "#web-inject-asset");
     await click(window, "#project-save");
-    expect(status()).toContain("recovery pending · Save to refresh");
+    expect(status()).toContain("recovery pending · transaction fixture-pending-apply");
 
     await click(window, "#profile-kids");
     expect(shell?.dataset.profile).toBe("web");
@@ -350,6 +639,20 @@ describe("desktop first-release product loop", () => {
         "status-refusal-help",
       ].sort(),
     );
+
+    // Change Review's two decisions reach the authoring session, so the
+    // refuse-only profile must not be able to drive them.
+    const requestsBeforeKidsReview = requests.length;
+    for (const id of ["change-review-accept", "change-review-reject"]) {
+      const control = query(window, `#${id}`);
+      expect(control?.dataset.kind).toBe("inert");
+      expect(control?.getAttribute("aria-disabled")).toBe("true");
+      control?.click();
+    }
+    await Promise.resolve();
+    expect(requests.length).toBe(requestsBeforeKidsReview);
+    expect(shell?.dataset.profile).toBe("kids");
+    expect(shell?.dataset.mode).toBe("run");
 
     expect(requests.map((request) => request.payload?.op ?? request.action)).toEqual([
       "status",
@@ -409,6 +712,11 @@ describe("desktop first-release product loop", () => {
     input.value = "-3.25";
     const before = readFileSync(join(dir, "scene.json"), "utf8");
 
+    // Nothing staged yet, so Change Review shows the honest empty state.
+    expect(query(window, "[data-change-proposal]")?.hidden).toBe(true);
+    expect(query(window, "[data-change-empty]")?.hidden).toBe(false);
+    expect(query(window, "[data-change-badge]")?.textContent).toBe("0");
+
     await click(window, "#scene-property-stage");
     expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(before);
     expect(query(window, "[data-project-status]")?.textContent).toContain(
@@ -417,10 +725,29 @@ describe("desktop first-release product loop", () => {
     expect(query(window, "[data-scene-property-review]")?.textContent).toContain(
       "SceneAxi inspector — proposed change",
     );
+    // The typed edit is the same E1 proposal Change Review decides, so the
+    // returned snapshot drives the badge and the panel — the host's own
+    // document path, base content hash, and rendered diff, nothing invented.
+    expect(query(window, "[data-change-proposal]")?.hidden).toBe(false);
+    expect(query(window, "[data-change-empty]")?.hidden).toBe(true);
+    expect(query(window, "[data-change-badge]")?.textContent).toBe("1");
+    expect(query(window, "[data-change-document]")?.textContent).toBe("scene.json");
+    expect(query(window, "[data-change-content-hash]")?.textContent).toMatch(
+      /^sha256:[0-9a-f]{64}$/,
+    );
+    expect(query(window, "[data-change-diff]")?.textContent).toContain(
+      "=== SceneAxi inspector — proposed change",
+    );
+    expect(query(window, "[data-change-diff]")?.textContent).toContain("-3.25");
 
     await click(window, "#project-save");
     const saved = readFileSync(join(dir, "scene.json"), "utf8");
     expect(saved).not.toBe(before);
+    // The applied proposal is spent: the panel goes back to the empty state
+    // rather than keeping a diff of a change already on disk.
+    expect(query(window, "[data-change-proposal]")?.hidden).toBe(true);
+    expect(query(window, "[data-change-empty]")?.hidden).toBe(false);
+    expect(query(window, "[data-change-badge]")?.textContent).toBe("0");
     await click(window, "#project-open");
     await click(window, "#scene-entity-desktop-crate-beside");
     expect(
@@ -508,6 +835,39 @@ describe("desktop first-release product loop", () => {
     await click(window, "#project-save");
     expect(savedTranslationX()).toBe(-1.5);
     expect(translationInput()?.value).toBe("-1.5");
+  });
+
+  /**
+   * The typed edit parks the one E1 proposal Change Review decides, so the
+   * all-or-nothing Reject reaches it on the default Game profile — the only
+   * staging path that profile has.
+   */
+  it("rejects a staged Translation X edit without writing the document", async () => {
+    const dir = projectDir();
+    const { window, start } = mountChrome(dir);
+    start();
+
+    await click(window, "#project-open");
+    await click(window, "#scene-entity-desktop-crate-beside");
+    const input = query(window, "#scene-property-translation-x") as
+      | (HappyHTMLElement & { value: string })
+      | null;
+    if (input === null) throw new Error("translation input is missing");
+    input.value = "-3.25";
+    const before = readFileSync(join(dir, "scene.json"), "utf8");
+
+    await click(window, "#scene-property-stage");
+    expect(query(window, "[data-change-proposal]")?.hidden).toBe(false);
+    expect(query(window, "[data-change-badge]")?.textContent).toBe("1");
+
+    await click(window, "#change-review-reject");
+    expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(before);
+    expect(query(window, "[data-change-proposal]")?.hidden).toBe(true);
+    expect(query(window, "[data-change-empty]")?.hidden).toBe(false);
+    expect(query(window, "[data-change-badge]")?.textContent).toBe("0");
+    expect(query(window, "[data-project-status]")?.textContent).toContain(
+      "rejected · no document written",
+    );
   });
 
   /**
@@ -663,15 +1023,121 @@ describe("desktop first-release product loop", () => {
     expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(before);
 
     await click(window, "#project-save");
-    expect(status()).toContain("recovery pending · Save to refresh");
+    expect(status()).toContain("recovery pending · transaction fixture-pending-apply");
+    expect(status()).toContain("Save to refresh");
     await click(window, "#scene-property-stage");
     expect(status()).toContain("DESKTOP_RECOVERY_PENDING");
     expect(status()).not.toContain("DESKTOP_PROFILE_SWITCH_DIRTY");
+    // Recovery is still the truth about this document, so the refusal names
+    // itself and keeps the transaction and the two instructions that resolve
+    // it rather than replacing them with a bare code.
+    expect(status()).toContain("Edit refused · DESKTOP_RECOVERY_PENDING");
+    expect(status()).toContain("transaction fixture-pending-apply");
+    expect(status()).toContain("Save to refresh or Open to re-read");
+    expect(query(window, "[data-project-state]")?.dataset.projectState).toBe(
+      "recovering",
+    );
+
+    // Changing the project root is blocked by the same recovery and answers the
+    // same way: it names its own action and keeps the transaction and the two
+    // instructions, and repeating it does not accumulate its own answer.
+    await click(window, "#project-open-recent");
+    const projectRefusal = status();
+    expect(projectRefusal).toContain(
+      "Project change refused · DESKTOP_RECOVERY_PENDING",
+    );
+    expect(projectRefusal).toContain("transaction fixture-pending-apply");
+    expect(projectRefusal).toContain("Save to refresh or Open to re-read");
+    expect(projectRefusal).not.toContain("Edit refused");
+    expect(query(window, "[data-project-state]")?.dataset.projectState).toBe(
+      "recovering",
+    );
+    await click(window, "#project-open-recent");
+    expect(status()).toBe(projectRefusal);
+
+    // So is switching profile, which must not leave the surface reporting the
+    // previous action either.
+    await click(window, "#overlay-close-outcome-dismiss");
+    await click(window, "#profile-web");
+    const profileRefusal = status();
+    expect(profileRefusal).toContain(
+      "Profile switch refused · DESKTOP_RECOVERY_PENDING",
+    );
+    expect(profileRefusal).toContain("transaction fixture-pending-apply");
+    expect(profileRefusal).toContain("Save to refresh or Open to re-read");
+    expect(profileRefusal).not.toContain("Project change refused");
+    expect(query(window, "[data-project-state]")?.dataset.projectState).toBe(
+      "recovering",
+    );
+    expect(query(window, ".shell")?.dataset.profile).toBe("game");
+    await click(window, "#profile-web");
+    expect(status()).toBe(profileRefusal);
 
     // Both states name a refusal the shipped legend can actually explain, and
     // neither sentence is written for profile switching alone any more.
     expect(legendFor("DESKTOP_RECOVERY_PENDING")).toContain("staging another edit");
     expect(legendFor("DESKTOP_PROFILE_SWITCH_DIRTY")).toContain("staging another edit");
+  });
+
+  /**
+   * The Game profile's only staging path can lose the content-hash race too, so
+   * the conflict it reports is recorded the way Web staging and Save record
+   * theirs: the host's own diagnostic in the one outcome dialog, and a decision
+   * that still names it once the host has cleared the stale proposal.
+   */
+  it("raises and records the real conflict when a typed edit stages against a moved document", async () => {
+    const dir = projectDir();
+    const { window, start } = mountChrome(dir);
+    start();
+    const status = () => query(window, "[data-project-status]")?.textContent ?? "";
+
+    await click(window, "#project-open");
+    await click(window, "#scene-entity-desktop-crate-beside");
+    const input = query(window, "#scene-property-translation-x") as
+      | (HappyHTMLElement & { value: string })
+      | null;
+    if (input === null) throw new Error("translation input is missing");
+    input.value = "-3.25";
+
+    const starter = desktopOpenScene();
+    if (!starter.ok) throw new Error(`desktop scene refused: ${starter.reason}`);
+    expect(
+      writeDocumentFile(
+        join(dir, "scene.json"),
+        createDocument({
+          id: "desktop-first-release",
+          data: {
+            ...starter.composed.document.data,
+            title: "External before stage",
+            entities: [{ id: "hero" }],
+          },
+        }),
+        { cwd: dir },
+      ).ok,
+    ).toBe(true);
+    const moved = readFileSync(join(dir, "scene.json"), "utf8");
+
+    await click(window, "#scene-property-stage");
+    expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(moved);
+    expect(status()).toContain("Edit refused · content-hash-conflict");
+    expect(query(window, "[data-change-proposal]")?.hidden).toBe(true);
+    expect(query(window, "[data-change-badge]")?.textContent).toBe("0");
+    expect(query(window, '[data-overlay="outcome"]')?.hidden).toBe(false);
+    expect(query(window, "[data-outcome-title]")?.textContent).toBe("Edit refused");
+    expect(query(window, "[data-outcome-code]")?.textContent).toBe(
+      "content-hash-conflict",
+    );
+    expect(query(window, "[data-outcome-message]")?.textContent).not.toBe("");
+
+    // The host cleared the stale proposal, so Reject has nothing to decide —
+    // but the conflict it just reported is still the truth about this document
+    // and is what the blocked decision carries.
+    await click(window, "#overlay-close-outcome-dismiss");
+    await click(window, "#change-review-reject");
+    expect(status()).toContain(
+      "Decision refused · DESKTOP_PROPOSAL_NOT_REVIEWING · content-hash-conflict",
+    );
+    expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(moved);
   });
 
   /**
@@ -709,5 +1175,127 @@ describe("desktop first-release product loop", () => {
     await click(window, "#scene-entity-desktop-crate-beside");
     expect(shell?.dataset.mode).toBe("build");
     expect(query(window, "#dock-console")?.getAttribute("aria-selected")).toBe("true");
+  });
+
+  it("names the diagnostic the conflict dialog is actually reporting", async () => {
+    const dir = projectDir();
+    const bridge = createDesktopBridge({ cwd: dir });
+    let deferAcceptedSave = true;
+    let reportStaleRecovery = true;
+    const window = new HappyWindow({ width: 1000, height: 700 });
+    const ipcClone = <T>(value: T): T =>
+      window.eval(`(${JSON.stringify(value)})`) as T;
+    windows.push(window);
+    Object.defineProperty(window, "structuredClone", { value: ipcClone });
+    Object.defineProperty(window, "sceneaxiDesktop", {
+      value: {
+        request: async (request: unknown) => {
+          const typed = JSON.parse(JSON.stringify(request)) as {
+            action?: unknown;
+            payload?: { op?: unknown };
+          };
+          const response = bridge.handle(typed);
+          if (!response.ok || typed.action !== "authoring") return ipcClone(response);
+          const data = response.data as Record<string, unknown>;
+          if (deferAcceptedSave && typed.payload?.op === "accept") {
+            deferAcceptedSave = false;
+            return ipcClone({
+              ...response,
+              data: {
+                ...data,
+                phase: "pending",
+                journalRecoveryPending: true,
+                transactionId: "fixture-pending-apply",
+              },
+            });
+          }
+          // The one recovery outcome that is a real authoring diagnostic but not
+          // a moved content hash: the durable transaction resolved stale.
+          if (reportStaleRecovery && typed.payload?.op === "recover") {
+            reportStaleRecovery = false;
+            return ipcClone({
+              ...response,
+              data: {
+                ...data,
+                phase: "reviewing",
+                journalRecoveryPending: false,
+                transactionId: null,
+                diagnostics: [
+                  {
+                    code: "journal-conflict",
+                    message: "Pending transaction fixture-pending-apply is stale.",
+                    reReadHint:
+                      "Re-read the affected documents before accepting another proposal.",
+                  },
+                ],
+              },
+            });
+          }
+          return ipcClone(response);
+        },
+      },
+    });
+
+    const html = renderDesktopChrome(
+      desktopVisualView(
+        createDesktopVisualState({
+          profile: "web",
+          window: { width: 1000, height: 700 },
+        }),
+      ),
+    );
+    const match = /<script>([\s\S]*?)<\/script>/.exec(html);
+    if (match?.[1] === undefined) throw new Error("desktop chrome lost its emitted script");
+    window.document.write(html.replace(match[0], ""));
+    window.eval(match[1]);
+
+    const status = () => query(window, "[data-project-status]")?.textContent ?? "";
+    const title = () => query(window, "[data-outcome-title]")?.textContent ?? "";
+    const code = () => query(window, "[data-outcome-code]")?.textContent ?? "";
+    const message = () => query(window, "[data-outcome-message]")?.textContent ?? "";
+    // Nothing standing: the dialog is empty until a response fills it, so no
+    // sentence about conflicts in general can be read as the current one.
+    expect(title()).toBe("");
+    expect(code()).toBe("");
+
+    await click(window, "#project-open");
+    await click(window, "#web-inject-asset");
+    await click(window, "#project-save");
+    expect(status()).toContain("recovery pending · transaction fixture-pending-apply");
+
+    await click(window, "#project-save");
+    expect(status()).toContain("Save refused · journal-conflict");
+    expect(query(window, '[data-overlay="outcome"]')?.hidden).toBe(false);
+    // The heading names the action that refused and the body carries the host's
+    // own diagnostic, so a stale transaction is never announced as a moved
+    // document. The heading is the dialog's `aria-labelledby`.
+    expect(title()).toBe("Save refused");
+    expect(code()).toBe("journal-conflict");
+    expect(message()).toContain("is stale");
+    expect(message()).toContain("Re-read the affected documents");
+
+    await click(window, "#overlay-close-outcome-dismiss");
+    await click(window, "#project-open");
+    expect(status()).toContain("open · desktop-first-release");
+
+    const externalScene = desktopOpenScene();
+    if (!externalScene.ok) {
+      throw new Error(`desktop scene refused: ${externalScene.reason}`);
+    }
+    expect(
+      writeDocumentFile(
+        join(dir, "scene.json"),
+        createDocument({
+          id: "desktop-first-release",
+          data: { ...externalScene.composed.document.data, title: "External edit" },
+        }),
+        { cwd: dir },
+      ).ok,
+    ).toBe(true);
+    await click(window, "#web-stage-html");
+    expect(status()).toContain("Stage refused · content-hash-conflict");
+    expect(query(window, '[data-overlay="outcome"]')?.hidden).toBe(false);
+    expect(title()).toBe("Stage refused");
+    expect(code()).toBe("content-hash-conflict");
   });
 });

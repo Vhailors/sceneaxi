@@ -208,7 +208,6 @@ export type EditorShellAssistantState =
  * (`docs/engine-desktop-surface.md`, `docs/web-editor-shell.md`):
  *
  * - `view` — changes visual state only, and genuinely works.
- * - `review` — edits a Change Review queue; writes no document.
  * - `live` — operates a real engine seam (a Minimum E2 session operation, a
  *   real save through propose/apply, or the desktop chrome's injected
  *   packaged host). Only a surface that can reach a real session may mint one,
@@ -218,12 +217,11 @@ export type EditorShellAssistantState =
  *   `chrome` render keeps those inert (`docs/desktop-linux.md`).
  * - `inert` — renders, keeps its focus stop, and refuses by name.
  *
- * There is no fifth kind, and a control with no kind cannot exist: both
+ * There is no fourth kind, and a control with no kind cannot exist: both
  * surfaces render controls only through helpers that require one.
  */
 export const EDITOR_SHELL_CONTROL_KINDS = Object.freeze([
   "view",
-  "review",
   "live",
   "inert",
 ] as const);

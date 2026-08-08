@@ -437,6 +437,8 @@ describe("desktop product loop", () => {
       "responseReason",
       "clearSceneProperty",
       "withSceneRefusal",
+      "syncReview",
+      "clearConflictOutcome",
       `let projectData = {}; let projectDirty = true; let projectRecovering = true; return ${source ?? "null"};`,
     ) as (
       productStatus: (state: string, text: string) => void,
@@ -445,6 +447,8 @@ describe("desktop product loop", () => {
       responseReason: (response: unknown) => string | null,
       clearSceneProperty: () => void,
       withSceneRefusal: (text: string) => string,
+      syncReview: (snapshot: unknown) => void,
+      clearConflictOutcome: () => void,
     ) => (diagnostic: string) => Promise<boolean>;
     const restart = createRestart(
       (_state, text) => statuses.push(text),
@@ -464,6 +468,8 @@ describe("desktop product loop", () => {
       () => "document-not-found",
       () => { panelClears += 1; },
       (text: string) => text,
+      () => undefined,
+      () => undefined,
     );
 
     await expect(restart("recovery-pending")).resolves.toBe(false);
