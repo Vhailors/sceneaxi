@@ -1028,11 +1028,81 @@ describe("desktop first-release product loop", () => {
     await click(window, "#scene-property-stage");
     expect(status()).toContain("DESKTOP_RECOVERY_PENDING");
     expect(status()).not.toContain("DESKTOP_PROFILE_SWITCH_DIRTY");
+    // Recovery is still the truth about this document, so the refusal names
+    // itself and keeps the transaction and the two instructions that resolve
+    // it rather than replacing them with a bare code.
+    expect(status()).toContain("Edit refused · DESKTOP_RECOVERY_PENDING");
+    expect(status()).toContain("transaction fixture-pending-apply");
+    expect(status()).toContain("Save to refresh or Open to re-read");
+    expect(query(window, "[data-project-state]")?.dataset.projectState).toBe(
+      "recovering",
+    );
 
     // Both states name a refusal the shipped legend can actually explain, and
     // neither sentence is written for profile switching alone any more.
     expect(legendFor("DESKTOP_RECOVERY_PENDING")).toContain("staging another edit");
     expect(legendFor("DESKTOP_PROFILE_SWITCH_DIRTY")).toContain("staging another edit");
+  });
+
+  /**
+   * The Game profile's only staging path can lose the content-hash race too, so
+   * the conflict it reports is recorded the way Web staging and Save record
+   * theirs: the host's own diagnostic in the one outcome dialog, and a decision
+   * that still names it once the host has cleared the stale proposal.
+   */
+  it("raises and records the real conflict when a typed edit stages against a moved document", async () => {
+    const dir = projectDir();
+    const { window, start } = mountChrome(dir);
+    start();
+    const status = () => query(window, "[data-project-status]")?.textContent ?? "";
+
+    await click(window, "#project-open");
+    await click(window, "#scene-entity-desktop-crate-beside");
+    const input = query(window, "#scene-property-translation-x") as
+      | (HappyHTMLElement & { value: string })
+      | null;
+    if (input === null) throw new Error("translation input is missing");
+    input.value = "-3.25";
+
+    const starter = desktopOpenScene();
+    if (!starter.ok) throw new Error(`desktop scene refused: ${starter.reason}`);
+    expect(
+      writeDocumentFile(
+        join(dir, "scene.json"),
+        createDocument({
+          id: "desktop-first-release",
+          data: {
+            ...starter.composed.document.data,
+            title: "External before stage",
+            entities: [{ id: "hero" }],
+          },
+        }),
+        { cwd: dir },
+      ).ok,
+    ).toBe(true);
+    const moved = readFileSync(join(dir, "scene.json"), "utf8");
+
+    await click(window, "#scene-property-stage");
+    expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(moved);
+    expect(status()).toContain("Edit refused · content-hash-conflict");
+    expect(query(window, "[data-change-proposal]")?.hidden).toBe(true);
+    expect(query(window, "[data-change-badge]")?.textContent).toBe("0");
+    expect(query(window, '[data-overlay="outcome"]')?.hidden).toBe(false);
+    expect(query(window, "[data-outcome-title]")?.textContent).toBe("Edit refused");
+    expect(query(window, "[data-outcome-code]")?.textContent).toBe(
+      "content-hash-conflict",
+    );
+    expect(query(window, "[data-outcome-message]")?.textContent).not.toBe("");
+
+    // The host cleared the stale proposal, so Reject has nothing to decide —
+    // but the conflict it just reported is still the truth about this document
+    // and is what the blocked decision carries.
+    await click(window, "#overlay-close-outcome-dismiss");
+    await click(window, "#change-review-reject");
+    expect(status()).toContain(
+      "Decision refused · DESKTOP_PROPOSAL_NOT_REVIEWING · content-hash-conflict",
+    );
+    expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(moved);
   });
 
   /**

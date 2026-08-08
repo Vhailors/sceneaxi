@@ -1928,7 +1928,7 @@ if (shell) {
     const input = shell.querySelector('#scene-property-translation-x');
     const newValue = input && input.tagName === 'INPUT' ? input.valueAsNumber : Number.NaN;
     if (projectRecovering) {
-      productStatus('refused', 'Edit refused · ' + T.product.refusals.recoveryPending);
+      reportRecoveryRefusal('Edit');
       return;
     }
     if (projectDirty) {
@@ -1963,6 +1963,9 @@ if (shell) {
       const detail = diagnostic?.message || T.product.refusals.proposalNotReviewing;
       if (message) message.textContent = code + ' · ' + detail;
       productStatus('refused', 'Edit refused · ' + code + ' · ' + detail);
+      if (code === 'content-hash-conflict') {
+        showConflictOutcome('Edit refused', snapshot, code);
+      }
       return;
     }
     const edit = Array.isArray(snapshot.proposal?.edits) ? snapshot.proposal.edits[0] : null;
