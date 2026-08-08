@@ -1699,7 +1699,7 @@ if (shell) {
 
   const chooseProject = async (action) => {
     if (projectRecovering) {
-      productStatus('refused', 'Project change refused · ' + T.product.refusals.recoveryPending);
+      reportRecoveryRefusal('Project change');
       showOutcome('Project change refused', T.product.refusals.recoveryPending, 'Resolve the pending Save recovery before changing project roots.');
       return;
     }
@@ -2220,7 +2220,7 @@ if (shell) {
   const switchProfile = async (value) => {
     if (shell.dataset.profile === value) return;
     if (projectRecovering) {
-      productStatus('refused', 'Profile switch refused · ' + T.product.refusals.recoveryPending);
+      reportRecoveryRefusal('Profile switch');
       return;
     }
     if (projectDirty) {

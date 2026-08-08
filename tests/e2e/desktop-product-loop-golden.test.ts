@@ -1038,6 +1038,41 @@ describe("desktop first-release product loop", () => {
       "recovering",
     );
 
+    // Changing the project root is blocked by the same recovery and answers the
+    // same way: it names its own action and keeps the transaction and the two
+    // instructions, and repeating it does not accumulate its own answer.
+    await click(window, "#project-open-recent");
+    const projectRefusal = status();
+    expect(projectRefusal).toContain(
+      "Project change refused · DESKTOP_RECOVERY_PENDING",
+    );
+    expect(projectRefusal).toContain("transaction fixture-pending-apply");
+    expect(projectRefusal).toContain("Save to refresh or Open to re-read");
+    expect(projectRefusal).not.toContain("Edit refused");
+    expect(query(window, "[data-project-state]")?.dataset.projectState).toBe(
+      "recovering",
+    );
+    await click(window, "#project-open-recent");
+    expect(status()).toBe(projectRefusal);
+
+    // So is switching profile, which must not leave the surface reporting the
+    // previous action either.
+    await click(window, "#overlay-close-outcome-dismiss");
+    await click(window, "#profile-web");
+    const profileRefusal = status();
+    expect(profileRefusal).toContain(
+      "Profile switch refused · DESKTOP_RECOVERY_PENDING",
+    );
+    expect(profileRefusal).toContain("transaction fixture-pending-apply");
+    expect(profileRefusal).toContain("Save to refresh or Open to re-read");
+    expect(profileRefusal).not.toContain("Project change refused");
+    expect(query(window, "[data-project-state]")?.dataset.projectState).toBe(
+      "recovering",
+    );
+    expect(query(window, ".shell")?.dataset.profile).toBe("game");
+    await click(window, "#profile-web");
+    expect(status()).toBe(profileRefusal);
+
     // Both states name a refusal the shipped legend can actually explain, and
     // neither sentence is written for profile switching alone any more.
     expect(legendFor("DESKTOP_RECOVERY_PENDING")).toContain("staging another edit");
