@@ -346,7 +346,9 @@ describe("rarity domain contracts", () => {
   it("refuses through the shipped schema what the runtime validators refuse", () => {
     const vector = fixture.vectors[0];
     if (vector === undefined) throw new Error("rarity fixture is empty");
-    const { tierDraw: _dropped, ...withoutTierDraw } = vector.provenance;
+    const withoutTierDraw = Object.fromEntries(
+      Object.entries(vector.provenance).filter(([key]) => key !== "tierDraw"),
+    );
 
     for (const [label, value] of [
       ["extra policy property", { ...fixture.policy, extra: true }],

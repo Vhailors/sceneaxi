@@ -43,8 +43,9 @@ One resolution performs two domain-separated draws:
   digest, then selects the first candidate in request order whose cumulative
   interval contains the second draw.
 
-The existing product manifest owns `projectSeed`; the product id is the scope;
-the `rarity-roll` kernel command owns an explicit stable `eventId`. The request
+The existing product manifest owns the integer `seed`, which the kernel supplies
+as the resolver context's `projectSeed`; its `productId` is the scope; the
+`rarity-roll` kernel command owns an explicit stable `eventId`. The request
 shape contains candidates only. Exact validation refuses provider-authored seed,
 draw, outcome, provenance, or provider-response fields, so provider data can
 propose weights and candidates but cannot supply entropy or an authoritative
@@ -101,8 +102,11 @@ replaying to a shorter event log than it was handed.
 
 `packages/schemas/contracts/rarity.fixtures.json` pins the policy, seed, scope,
 ten event vectors, both candidate interval endpoints, all five tier intervals,
-and every outcome/provenance digest. Schema, resolver, browser-open, kernel
-save/replay, and orchestrator tests execute those public contracts without a
+and every outcome/provenance digest.
+`tests/e2e/rarity-engine-golden.test.ts` (in `pnpm test:golden`) drives both
+boundary vectors through the orchestrator's public open/advance/save/resume
+seams against those pinned digests. Schema, resolver, browser-open, kernel
+save/replay, and orchestrator tests execute the same public contracts without a
 network or live provider.
 
 `rarity.schema.json` is enforced rather than described: every accepted value the
