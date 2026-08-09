@@ -289,9 +289,12 @@ observation above, however, remains a reading of the earlier build and is not a
 claim about the renderer at this head. `fac19c4` later changed
 `renderer/assistant-poll.ts`, and `974b2af` changed the kernel, bridge, formatter,
 renderer, and recovery paths. `9a61731` then tightened stored evidence and
-Assistant settlement, and `ba0c4f5` handled the abandonment race. All four are
-post-smoke source corrections; the smoke was not rerun after them or this
-follow-up review.
+Assistant settlement, `ba0c4f5` handled the abandonment race, `dd9cb10` matched
+the shipped evidence contract to runtime validation, added semantic renderer
+bundle checks, bounded Agent input in the renderer, associated settlement with
+the displayed result, and retired evidence when a document was missing;
+`6a75109` corrected Node 20 smoke invocation. These are post-smoke source
+corrections; the smoke was not rerun after them or this follow-up review.
 
 The pinned vector digests above, by contrast, are re-proved on every run:
 `tests/e2e/rarity-provider-desktop-golden.test.ts` compares runtime output to

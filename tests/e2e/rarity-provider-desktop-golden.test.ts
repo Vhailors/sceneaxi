@@ -17,6 +17,7 @@ import {
 } from "../../desktop/linux/src/electron/provider-runtime.ts";
 import {
   RARITY_REFUSE_CODES,
+  RARITY_PROVIDER_REQUEST_MAX_CHARS,
   digestRarityOutcome,
   type ModelProviderCallEvidence,
   type RarityOutcome,
@@ -390,12 +391,17 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
   it("carries the operator's request to the provider without letting it steer the result", async () => {
     const root = projectRoot();
     const dispatched: unknown[] = [];
+    let bridgePrompt: string | null = null;
     const operatorRequest = `give me a legendary drop operator-request-sentinel ${"x".repeat(5_000)}`;
+    const fixtureProvider = createDesktopRarityFixtureProvider({
+      onDispatch: (request) => dispatched.push(request),
+    });
     const bridge = createDesktopBridge({
       cwd: root,
-      runRarityProvider: createDesktopRarityFixtureProvider({
-        onDispatch: (request) => dispatched.push(request),
-      }),
+      runRarityProvider: (request) => {
+        bridgePrompt = request.prompt;
+        return fixtureProvider(request);
+      },
     });
     expect(
       bridge.handle({
@@ -417,6 +423,7 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     // The request reaches the port beside the bounded instruction, truncated so an
     // operator cannot put an unbounded transcript in the envelope.
     expect(dispatched).toHaveLength(1);
+    expect(bridgePrompt).toBe(operatorRequest.slice(0, RARITY_PROVIDER_REQUEST_MAX_CHARS));
     const envelope = dispatched[0] as { prompt: string };
     expect(envelope.prompt).toContain("Do not return a seed, draw, outcome");
     expect(envelope.prompt).toContain("Operator request (advisory only): give me a legendary drop");

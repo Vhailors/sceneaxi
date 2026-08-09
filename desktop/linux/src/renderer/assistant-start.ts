@@ -47,7 +47,10 @@ export function decideAssistantStart(input: Readonly<{
       message: DESKTOP_ASSISTANT_START_MODE_REFUSAL_MESSAGE,
     });
   }
-  const prompt = input.prompt.trim().slice(0, RARITY_PROVIDER_REQUEST_MAX_CHARS);
+  const trimmedPrompt = input.prompt.trim();
+  const prompt = mode === "agent"
+    ? trimmedPrompt.slice(0, RARITY_PROVIDER_REQUEST_MAX_CHARS)
+    : trimmedPrompt;
   if (prompt.length === 0) {
     return Object.freeze({
       ok: false as const,

@@ -36,6 +36,8 @@ export function formatSafeRarityEvidence(
   const modelFields = ["provider", "model", "quantization", "version"];
   const identifier = /^[a-z0-9][a-z0-9._:-]{0,127}$/;
   const digest = /^sha256:[0-9a-f]{64}$/;
+  const providerDescriptor =
+    /^(?!(?:.*[._:/+-])?(?:sk|key|token|secret|credential|password)(?:[._:/+-]|$))[a-z0-9][a-z0-9._:/+-]{0,127}$/;
   const numericFields = [
     "projectSeed",
     "tierDraw",
@@ -77,8 +79,8 @@ export function formatSafeRarityEvidence(
     model === null || model === undefined || typeof model !== "object" || Array.isArray(model) ||
     Object.keys(model).length !== modelFields.length ||
     !modelFields.every((field) => Object.prototype.hasOwnProperty.call(model, field)) ||
-    !modelFields.every(
-      (field) => typeof model[field] === "string" && model[field].length > 0,
+    !modelFields.every((field) =>
+      typeof model[field] === "string" && providerDescriptor.test(String(model[field]))
     )
   ) {
     return null;

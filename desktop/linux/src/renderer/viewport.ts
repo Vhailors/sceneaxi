@@ -31,6 +31,7 @@ import { decideAssistantStart } from "./assistant-start.js";
 import {
   assistantRaritySettlement,
   assistantRarityResultDigest,
+  assistantRarityResultSettlement,
   assistantInspectionText,
   isRarityProposalResult,
 } from "./assistant-inspection.js";
@@ -310,6 +311,16 @@ function installAssistantProductFlow(
     const result = outcome.result;
     activeRarityProposalDigest = assistantRarityResultDigest(result);
     if (isRarityProposalResult(result)) {
+      const settlement = assistantRarityResultSettlement(result);
+      if (settlement !== null) {
+        resultView.textContent = settlement.evidenceText;
+        if (settlement.evidenceVisible) resultView.removeAttribute("hidden");
+        else resultView.setAttribute("hidden", "");
+        retry.removeAttribute("hidden");
+        status.textContent = settlement.status;
+        running = false;
+        return;
+      }
       const replayed = result.replayed;
       resultView.textContent = formatSafeRarityEvidence(result.evidence) ?? "";
       resultView.removeAttribute("hidden");

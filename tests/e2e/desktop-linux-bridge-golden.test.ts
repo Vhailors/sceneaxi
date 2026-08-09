@@ -81,6 +81,7 @@ import { desktopAssistantRuntimeSignal } from "../../desktop/linux/src/renderer/
 import {
   assistantInspectionText,
   assistantRarityResultDigest,
+  assistantRarityResultSettlement,
   assistantRaritySettlement,
 } from "../../desktop/linux/src/renderer/assistant-inspection.ts";
 import { formatSafeRarityEvidence } from "@sceneaxi/authoring-core/rarity-evidence";
@@ -1556,6 +1557,76 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     expect(runSession.textContent).not.toContain("rarity uncommon");
   });
 
+  it("keeps staged evidence in the dock while Play reports accepted evidence", async () => {
+    const stagedEvidence = Object.freeze({
+      ...RARITY_EVIDENCE_FIXTURE,
+      eventId: "wayfinder-drop-002",
+      candidateId: "wayfinder-silver",
+      provenanceDigest: `sha256:${"8".repeat(64)}`,
+      namespaceDigest: `sha256:${"9".repeat(64)}`,
+    });
+    const openPath = {
+      closed: true,
+      initialDigest: "sha256:initial",
+      tickDigests: ["sha256:tick"],
+      instanceCount: 1,
+      mountable: { sceneId: "desktop-scene" },
+      rarity: RARITY_EVIDENCE_FIXTURE,
+      raritySession: RARITY_PRODUCT_SESSION,
+    };
+    const port = {
+      request: (request: { readonly action?: string; readonly payload?: { readonly op?: string } }) =>
+        Promise.resolve(
+          request.action === "open-path"
+            ? { ok: true, action: "open-path", data: openPath }
+            : request.payload?.op === "status"
+              ? {
+                  ok: true,
+                  action: "authoring",
+                  data: {
+                    ok: true,
+                    documentId: "scene",
+                    contentHash: "sha256:accepted",
+                    data: { rarity: { kind: "sceneaxi.rarity.namespace" } },
+                    rarityNamespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
+                    acceptedRarityEvidence: RARITY_EVIDENCE_FIXTURE,
+                    undoAvailability: "unavailable",
+                  },
+                }
+              : { ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" },
+        ),
+    };
+    const {
+      shell, play, reload, status, evidence, runEvidence, documentListeners,
+    } = mountRarityChrome(port);
+    documentListeners.set(DESKTOP_VIEWPORT_PLAY_EVENT, (event) => {
+      const detail = event.detail as { accepted: boolean; frame: number | null };
+      detail.accepted = true;
+      detail.frame = 1;
+    });
+
+    shell.clickListener?.({ target: reload });
+    await vi.waitFor(() => {
+      expect(status.textContent).toContain("· open ·");
+    });
+    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+      detail: {
+        replayed: false,
+        evidence: stagedEvidence,
+        snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, rarityEvidence: stagedEvidence },
+      },
+    });
+    expect(evidence.textContent).toContain("wayfinder-silver");
+
+    shell.clickListener?.({ target: play });
+    await vi.waitFor(() => {
+      expect(runEvidence.hidden).toBe(false);
+    });
+    expect(runEvidence.textContent).toContain("wayfinder-copper");
+    expect(evidence.textContent).toContain("wayfinder-silver");
+    expect(evidence.textContent).not.toContain("wayfinder-copper");
+  });
+
   it("renders the run's full safe provenance through the shared formatter", async () => {
     const openPath = {
       closed: true,
@@ -1657,6 +1728,36 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
           profile: "@sceneaxi/profile-kids",
         },
       },
+      {
+        ...RARITY_EVIDENCE_FIXTURE,
+        providerEvidence: {
+          ...RARITY_EVIDENCE_FIXTURE.providerEvidence,
+          model: {
+            ...RARITY_EVIDENCE_FIXTURE.providerEvidence.model,
+            model: "wayfinder\nraw-detail",
+          },
+        },
+      },
+      {
+        ...RARITY_EVIDENCE_FIXTURE,
+        providerEvidence: {
+          ...RARITY_EVIDENCE_FIXTURE.providerEvidence,
+          model: {
+            ...RARITY_EVIDENCE_FIXTURE.providerEvidence.model,
+            provider: "sk_live_fixture",
+          },
+        },
+      },
+      {
+        ...RARITY_EVIDENCE_FIXTURE,
+        providerEvidence: {
+          ...RARITY_EVIDENCE_FIXTURE.providerEvidence,
+          model: {
+            ...RARITY_EVIDENCE_FIXTURE.providerEvidence.model,
+            version: "v".repeat(129),
+          },
+        },
+      },
     ]) {
       expect(formatSafeRarityEvidence(malformed)).toBeNull();
     }
@@ -1717,6 +1818,32 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       RARITY_EVIDENCE_FIXTURE.namespaceDigest,
     );
     expect(assistantRarityResultDigest({ ...staged, replayed: true })).toBeNull();
+    const rejected = {
+      ...staged,
+      authoring: {
+        ...RARITY_PROPOSAL_SNAPSHOT,
+        phase: "rejected" as const,
+        rarityEvidence: RARITY_EVIDENCE_FIXTURE,
+      },
+    };
+    expect(assistantRarityResultDigest(rejected)).toBeNull();
+    expect(assistantRarityResultSettlement(rejected)).toMatchObject({
+      evidenceVisible: false,
+      status: expect.stringContaining("rejected"),
+    });
+    const applied = {
+      ...staged,
+      authoring: {
+        ...RARITY_PROPOSAL_SNAPSHOT,
+        phase: "applied" as const,
+        rarityEvidence: RARITY_EVIDENCE_FIXTURE,
+      },
+    };
+    expect(assistantRarityResultDigest(applied)).toBeNull();
+    expect(assistantRarityResultSettlement(applied)).toMatchObject({
+      evidenceVisible: true,
+      status: expect.stringContaining("accepted"),
+    });
     expect(assistantRarityResultDigest(null)).toBeNull();
     expect(
       assistantRarityResultDigest({
@@ -2285,12 +2412,12 @@ describe("desktop renderer behavior", () => {
       mode: "build",
       route: undefined,
       profile,
-      prompt: "a crate",
+      prompt: `a crate ${"x".repeat(RARITY_PROVIDER_REQUEST_MAX_CHARS)}`,
     });
-    expect(build).toEqual({
-      ok: true,
-      payload: { op: "start", route: "local", profile, prompt: "a crate", mode: "build" },
-    });
+    expect(build.ok).toBe(true);
+    if (build.ok) {
+      expect(build.payload.prompt).toBe(`a crate ${"x".repeat(RARITY_PROVIDER_REQUEST_MAX_CHARS)}`);
+    }
 
     for (const mode of [undefined, "", "ask", "Agent", "agent "]) {
       expect(decideAssistantStart({ mode, route: "local", profile, prompt: "a crate" })).toEqual({

@@ -2307,12 +2307,8 @@ if (shell) {
     // proposal's provenance is still on screen in Change Review and still waiting
     // for Accept, and retiring the dock under it would deny evidence the surface
     // is showing. Only a run with nothing staged may clear it.
-    const rarityText = exercise.rarity === undefined && rarityProposalStaged
-      ? null
-      : syncRarityEvidence(exercise.rarity);
-    const runRarity = rarityText === null
-      ? null
-      : rarityEvidenceText(exercise.rarity, exercise.raritySession);
+    const runRarity = rarityEvidenceText(exercise.rarity, exercise.raritySession);
+    if (!rarityProposalStaged) syncRarityEvidence(exercise.rarity);
     q('[data-run-rarity-evidence]').forEach((el) => {
       el.textContent = runRarity || '';
       el.hidden = runRarity === null;

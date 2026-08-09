@@ -57,11 +57,30 @@ export function isRarityProposalResult(
 export function assistantRarityResultDigest(
   result: DesktopAssistantJobSnapshot["result"] | null,
 ): string | null {
-  if (result === null || result === undefined || !isRarityProposalResult(result) || result.replayed) {
+  if (
+    result === null ||
+    result === undefined ||
+    !isRarityProposalResult(result) ||
+    result.replayed ||
+    result.authoring?.phase === "applied" ||
+    result.authoring?.phase === "rejected"
+  ) {
     return null;
   }
   return typeof result.evidence.namespaceDigest === "string"
     ? result.evidence.namespaceDigest
+    : null;
+}
+
+export function assistantRarityResultSettlement(
+  result: DesktopAssistantJobSnapshot["result"] | null,
+): AssistantRaritySettlement | null {
+  if (result === null || result === undefined || !isRarityProposalResult(result)) return null;
+  const phase = result.authoring?.phase;
+  if (phase !== "applied" && phase !== "rejected") return null;
+  const digest = result.evidence.namespaceDigest;
+  return typeof digest === "string"
+    ? assistantRaritySettlement(digest, { settled: phase, evidence: result.evidence })
     : null;
 }
 

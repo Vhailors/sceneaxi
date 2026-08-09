@@ -311,14 +311,18 @@ export function createDesktopSession(
       let text: string;
       try {
         text = readFileSync(resolve(sessionCwd, documentPath), "utf8");
-      } catch {
+      } catch (error) {
+        const missing = typeof error === "object" && error !== null &&
+          "code" in error && error.code === "ENOENT";
         return {
           ok: false,
           documentPath,
           diagnostics: [
             {
-              code: "document-not-found",
-              message: `Document not found: ${documentPath}`,
+              code: missing ? "document-not-found" : "document-read-failed",
+              message: missing
+                ? `Document not found: ${documentPath}`
+                : `Document could not be read: ${documentPath}`,
               documentPath,
             },
           ],

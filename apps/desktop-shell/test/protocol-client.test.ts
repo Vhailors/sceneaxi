@@ -1,7 +1,7 @@
 /**
  * desktop-shell: thin wrapper over the same authoring-core protocol (sceneaxi#11).
  */
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -99,5 +99,20 @@ describe("desktop-shell protocol client", () => {
       ],
     });
     expect(JSON.parse(readFileSync(join(dir, "scene.json"), "utf8")).data.n).toBe(7);
+  });
+
+  it("distinguishes a missing document from one that cannot be read", () => {
+    const dir = fixtureDir();
+    mkdirSync(join(dir, "directory.json"));
+    const session = createDesktopSession({ cwd: dir });
+
+    expect(session.status("missing.json")).toMatchObject({
+      ok: false,
+      diagnostics: [{ code: "document-not-found" }],
+    });
+    expect(session.status("directory.json")).toMatchObject({
+      ok: false,
+      diagnostics: [{ code: "document-read-failed" }],
+    });
   });
 });

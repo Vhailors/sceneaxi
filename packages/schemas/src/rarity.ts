@@ -35,6 +35,10 @@ export const RARITY_OUTCOME_KIND = "sceneaxi.rarity.outcome" as const;
 export const RARITY_PROVENANCE_KIND = "sceneaxi.rarity.provenance" as const;
 export const RARITY_NAMESPACE_KIND = "sceneaxi.rarity.namespace" as const;
 export const RARITY_MAX_CANDIDATES = 64 as const;
+export const RARITY_PROVIDER_DESCRIPTOR_MAX_CHARS = 128 as const;
+
+const RARITY_PROVIDER_DESCRIPTOR_RE =
+  /^(?!(?:.*[._:/+-])?(?:sk|key|token|secret|credential|password)(?:[._:/+-]|$))[a-z0-9][a-z0-9._:/+-]*$/;
 
 /** Stable identifiers and cumulative-selection order. */
 export const RARITY_TIERS = Object.freeze([
@@ -184,9 +188,12 @@ export function validateRarityProviderEvidence(
       evidence["profile"] !== "@sceneaxi/profile-web") ||
     model === undefined ||
     modelFields !== null ||
-    !["model", "provider", "quantization", "version"].every(
-      (field) => typeof model[field] === "string" && model[field].length > 0,
-    )
+    !["model", "provider", "quantization", "version"].every((field) => {
+      const descriptor = model[field];
+      return typeof descriptor === "string" &&
+        descriptor.length <= RARITY_PROVIDER_DESCRIPTOR_MAX_CHARS &&
+        RARITY_PROVIDER_DESCRIPTOR_RE.test(descriptor);
+    })
   ) {
     return refuseRarity(
       RARITY_REFUSE_CODES.provenanceMismatch,

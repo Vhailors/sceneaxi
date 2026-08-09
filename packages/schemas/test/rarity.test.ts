@@ -6,6 +6,7 @@ import {
   RARITY_NAMESPACE_KIND,
   RARITY_OUTCOME_KIND,
   RARITY_POLICY_KIND,
+  RARITY_PROVIDER_DESCRIPTOR_MAX_CHARS,
   RARITY_PROVENANCE_KIND,
   RARITY_REFUSE_CODES,
   RARITY_REQUEST_KIND,
@@ -98,6 +99,7 @@ const SUPPORTED_KEYWORDS = new Set([
   "const",
   "pattern",
   "minLength",
+  "maxLength",
   "minimum",
   "maximum",
   "minItems",
@@ -223,6 +225,10 @@ function schemaViolations(
     const minLength = node["minLength"];
     if (typeof minLength === "number" && value.length < minLength) {
       violations.push(`${path}: shorter than ${String(minLength)} characters`);
+    }
+    const maxLength = node["maxLength"];
+    if (typeof maxLength === "number" && value.length > maxLength) {
+      violations.push(`${path}: longer than ${String(maxLength)} characters`);
     }
     const pattern = node["pattern"];
     if (typeof pattern === "string" && !new RegExp(pattern).test(value)) {
@@ -386,6 +392,21 @@ describe("rarity domain contracts", () => {
     for (const [label, invalidEvidence] of [
       ["complete operation", { ...providerEvidence, operation: "complete" }],
       ["Kids profile", { ...providerEvidence, profile: "@sceneaxi/profile-kids" }],
+      ["multiline descriptor", {
+        ...providerEvidence,
+        model: { ...providerEvidence.model, model: "fixture-rarity\nraw-detail" },
+      }],
+      ["unbounded descriptor", {
+        ...providerEvidence,
+        model: {
+          ...providerEvidence.model,
+          version: "v".repeat(RARITY_PROVIDER_DESCRIPTOR_MAX_CHARS + 1),
+        },
+      }],
+      ["credential-shaped descriptor", {
+        ...providerEvidence,
+        model: { ...providerEvidence.model, provider: "sk_live_fixture" },
+      }],
     ] as const) {
       const invalid = { ...namespace, providerEvidence: invalidEvidence };
       expect(validateRarityNamespace(invalid), label).toMatchObject({ ok: false });
@@ -610,6 +631,21 @@ describe("rarity domain contracts", () => {
     for (const invalidEvidence of [
       { ...providerEvidence, operation: "complete" },
       { ...providerEvidence, profile: "@sceneaxi/profile-kids" },
+      {
+        ...providerEvidence,
+        model: { ...providerEvidence.model, model: "fixture\nraw-detail" },
+      },
+      {
+        ...providerEvidence,
+        model: {
+          ...providerEvidence.model,
+          version: "v".repeat(RARITY_PROVIDER_DESCRIPTOR_MAX_CHARS + 1),
+        },
+      },
+      {
+        ...providerEvidence,
+        model: { ...providerEvidence.model, provider: "sk_live_fixture" },
+      },
     ]) {
       expect(
         validateRarityNamespace({

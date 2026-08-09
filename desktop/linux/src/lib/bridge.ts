@@ -48,6 +48,7 @@ import {
 } from "@sceneaxi/desktop-shell";
 import { bootstrapOpenPath, resumeOpenPath } from "@sceneaxi/engine-orchestrator";
 import {
+  RARITY_PROVIDER_REQUEST_MAX_CHARS,
   RARITY_REFUSE_CODES,
   digestRarityNamespace,
   validateRarityNamespace,
@@ -961,8 +962,11 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       activeJob.latestProgress = snapshot;
       activeJob.progressCount += 1;
     };
+    const trimmedPrompt = prompt.trim();
     const request: DesktopAssistantRunRequest = {
-      prompt: prompt.trim(),
+      prompt: rarityMode
+        ? trimmedPrompt.slice(0, RARITY_PROVIDER_REQUEST_MAX_CHARS)
+        : trimmedPrompt,
       profile,
       onProgress,
     };
