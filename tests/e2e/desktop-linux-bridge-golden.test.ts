@@ -33,12 +33,14 @@ import {
 } from "@sceneaxi/authoring-core";
 import {
   EDITOR_SHELL_ASSISTANT_MODE_IDS,
+  RARITY_REFUSE_CODES,
   SCENE_COMPOSITION_INTAKE_KIND,
   SCENE_COMPOSITION_SCHEMA_VERSION,
   type SceneCompositionIntake,
 } from "@sceneaxi/schemas";
 import {
   DESKTOP_ASSISTANT_RUNTIME_EVENT,
+  DESKTOP_PRODUCT_REFUSALS,
   DESKTOP_RARITY_PROPOSAL_EVENT as SHELL_RARITY_PROPOSAL_EVENT,
   DESKTOP_VIEWPORT_PLAY_EVENT as SHELL_VIEWPORT_PLAY_EVENT,
   DESKTOP_VISUAL_REFUSALS,
@@ -62,6 +64,7 @@ import {
   seedDesktopProject,
   type DesktopAssistantJobSnapshot,
   type DesktopFrameReport,
+  type DesktopRarityEvidence,
 } from "../../desktop/linux/src/index.ts";
 import {
   DESKTOP_RUNTIME_META,
@@ -88,7 +91,10 @@ import {
   rarityInvalidationMatches,
 } from "../../desktop/linux/src/renderer/assistant-inspection.ts";
 import { formatSafeRarityEvidence } from "@sceneaxi/authoring-core/rarity-evidence";
-import { pollAssistantJob } from "../../desktop/linux/src/renderer/assistant-poll.ts";
+import {
+  pollAssistantJob,
+  watchAssistantRaritySettlement,
+} from "../../desktop/linux/src/renderer/assistant-poll.ts";
 import {
   pixelsMetaContent,
   playableExercise,
@@ -1254,6 +1260,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
         ["[data-project-file-state]", [fileStatus]],
         ["[data-change-badge]", [badge]],
         ["[data-command]", [play, undo]],
+        ["[data-product-action]", [accept, reject, reload, openRecent, removeRecent]],
         ["#project-recent-select", [recentSelect]],
         ["[data-run-session-report]", [runSession]],
         ["[data-run-live-report]", [runLive]],
@@ -1308,6 +1315,39 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       documentListeners, dispatchedEvents,
     };
   }
+
+  it("reports runtime absence, request failure, and in-flight product state through mounted chrome", async () => {
+    const absent = mountRarityChrome();
+    absent.shell.clickListener?.({ target: absent.reload });
+    await vi.waitFor(() => {
+      expect(absent.status.textContent).toContain(DESKTOP_PRODUCT_REFUSALS.runtimeUnavailable);
+    });
+
+    const failed = mountRarityChrome({
+      request: () => Promise.reject(new Error("ipc channel closed")),
+    });
+    failed.shell.clickListener?.({ target: failed.reload });
+    await vi.waitFor(() => {
+      expect(failed.status.textContent).toContain(DESKTOP_PRODUCT_REFUSALS.runtimeRequestFailed);
+    });
+
+    let resolveRequest: ((response: unknown) => void) | undefined;
+    const pending = mountRarityChrome({
+      request: () => new Promise((resolve) => {
+        resolveRequest = resolve;
+      }),
+    });
+    pending.shell.clickListener?.({ target: pending.reload });
+    expect(pending.reload.dataset.busy).toBe("true");
+    expect(pending.reload.getAttribute("aria-describedby")).toBe(
+      `refusal-${DESKTOP_PRODUCT_REFUSALS.requestInFlight}`,
+    );
+    await vi.waitFor(() => expect(resolveRequest).toBeTypeOf("function"));
+    resolveRequest?.({ ok: false, reason: "DESKTOP_TEST_DONE", message: "done" });
+    await vi.waitFor(() => {
+      expect(pending.reload.dataset.busy).toBeUndefined();
+    });
+  });
 
   const RARITY_EVIDENCE_FIXTURE = Object.freeze({
     eventId: "wayfinder-drop-001",
@@ -1917,8 +1957,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     });
     expect(assistantRarityResultEvent(applied)).toMatchObject({
       settled: "applied",
-      synchronize: true,
-      snapshot: applied.authoring,
+      refreshAuthoring: true,
       evidence: RARITY_EVIDENCE_FIXTURE,
     });
     expect(
@@ -2198,7 +2237,10 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     });
   });
 
-  it("retires displayed evidence when Reload proves the document is gone", async () => {
+  it.each([
+    "document-not-found",
+    RARITY_REFUSE_CODES.outcomeMismatch,
+  ])("retires displayed evidence when Reload proves %s", async (diagnosticCode) => {
     let statusReads = 0;
     const port = {
       request: (request: { readonly action?: string; readonly payload?: { readonly op?: string } }) => {
@@ -2237,7 +2279,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
               action: "authoring",
               data: {
                 ok: false,
-                diagnostics: [{ code: "document-not-found", message: "scene.json is gone" }],
+                diagnostics: [{ code: diagnosticCode, message: "accepted rarity is unavailable" }],
               },
             });
       },
@@ -2265,7 +2307,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
 
     shell.clickListener?.({ target: reload });
     await vi.waitFor(() => {
-      expect(status.textContent).toContain("Open refused · document-not-found");
+      expect(status.textContent).toContain(`Open refused · ${diagnosticCode}`);
     });
     expect(evidence.hidden).toBe(true);
     expect(evidence.textContent).toBe("");
@@ -2441,10 +2483,12 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
   });
 
   it("refreshes mounted chrome after a late local-RPC settlement", async () => {
-    const applied = {
+    const currentProposal = {
       ...RARITY_PROPOSAL_SNAPSHOT,
-      phase: "applied",
-      rarityEvidence: RARITY_EVIDENCE_FIXTURE,
+      proposal: {
+        edits: [{ documentPath: "scene.json", baseContentHash: "sha256:accepted" }],
+      },
+      renderedDiff: "translation.x: 1 → 4",
     };
     let statusReads = 0;
     const port = {
@@ -2468,12 +2512,13 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
             undoAvailability: "available",
             rarityNamespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
             acceptedRarityEvidence: RARITY_EVIDENCE_FIXTURE,
+            authoringSnapshot: currentProposal,
           },
         });
       },
     };
     const {
-      proposal, evidence, status, documentListeners,
+      proposal, diff, evidence, status, projectState, documentListeners,
     } = mountRarityChrome(port);
     documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
       detail: {
@@ -2486,17 +2531,18 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
       detail: {
         settled: "applied",
-        synchronize: true,
-        snapshot: applied,
+        refreshAuthoring: true,
         evidence: RARITY_EVIDENCE_FIXTURE,
       },
     });
 
     await vi.waitFor(() => {
       expect(statusReads).toBe(1);
-      expect(status.textContent).toContain("· open ·");
+      expect(status.textContent).toContain("current proposal restored");
     });
-    expect(proposal.hidden).toBe(true);
+    expect(proposal.hidden).toBe(false);
+    expect(diff.textContent).toBe("translation.x: 1 → 4");
+    expect(projectState.dataset.projectState).toBe("dirty");
     expect(evidence.hidden).toBe(false);
     expect(evidence.textContent).toContain(RARITY_EVIDENCE_FIXTURE.namespaceDigest);
   });
@@ -2691,6 +2737,58 @@ describe("desktop renderer behavior", () => {
       job: { status: "ready", result },
       result,
     });
+  });
+
+  it("keeps a ready rarity job observable until local-RPC settlement", async () => {
+    let statusReads = 0;
+    const namespaceDigest = `sha256:${"5".repeat(64)}`;
+    const evidence = { namespaceDigest } as DesktopRarityEvidence;
+    const reviewing = {
+      phase: "reviewing" as const,
+      proposal: null,
+      unifiedDiff: "",
+      renderedDiff: "",
+      appliedPaths: null,
+      journalRecoveryPending: false,
+      transactionId: null,
+      diagnostics: [],
+    };
+    const applied = {
+      ...reviewing,
+      phase: "applied" as const,
+      rarityEvidence: evidence,
+    };
+    const settled = await watchAssistantRaritySettlement({
+      jobId: "desktop-assistant-1",
+      namespaceDigest,
+      active: () => true,
+      wait: () => Promise.resolve(),
+      request: () => {
+        statusReads += 1;
+        return Promise.resolve({
+          ok: true as const,
+          action: "assistant" as const,
+          data: {
+            jobId: "desktop-assistant-1",
+            route: "local" as const,
+            status: "ready" as const,
+            latestProgress: null,
+            progressCount: 0,
+            result: {
+              ok: true as const,
+              kind: "rarity-proposal" as const,
+              replayed: false,
+              evidence,
+              authoring: statusReads === 1
+                ? { ...reviewing, rarityEvidence: evidence }
+                : applied,
+            },
+          },
+        });
+      },
+    });
+    expect(statusReads).toBe(2);
+    expect(settled?.authoring?.phase).toBe("applied");
   });
 
   it("does not claim Retry is safe when abandonment refuses or cannot be confirmed", async () => {

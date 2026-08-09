@@ -1933,6 +1933,7 @@ if (shell) {
     return null;
   };
   const responseReason = (response) => responseDiagnostic(response)?.code ?? null;
+  const isRarityRefusal = (code) => typeof code === 'string' && code.startsWith('RARITY_');
 
   const restartProject = async (diagnostic) => {
     productStatus('recovering', T.product.documentPath + ' · ' + diagnostic + ' · re-opening fresh session…');
@@ -1969,7 +1970,7 @@ if (shell) {
         }));
       }
       clearSceneProperty();
-      if (reason === 'document-not-found') clearRarityEvidence(true);
+      if (reason === 'document-not-found' || isRarityRefusal(reason)) clearRarityEvidence(true);
       productStatus('refused', 'Recovery reset · ' + diagnostic + ' · ' + (reason || T.product.refusals.documentDataInvalid));
       return false;
     }
@@ -2021,6 +2022,47 @@ if (shell) {
     return true;
   };
 
+  const refreshAuthoringState = async () => {
+    const response = await runtimeRequest({
+      action: 'authoring',
+      payload: { op: 'status', documentPath: T.product.documentPath },
+    });
+    const reason = responseReason(response);
+    const status = response?.ok ? response.data : null;
+    if (status && isSessionSnapshot(status.authoringSnapshot)) {
+      syncReview(status.authoringSnapshot);
+    }
+    if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' ||
+        status.data === null || typeof status.contentHash !== 'string') {
+      if (reason === 'document-not-found' || isRarityRefusal(reason)) {
+        clearRarityEvidence(true);
+      }
+      productStatus('refused', 'Authoring refresh refused · ' +
+        (reason || T.product.refusals.documentDataInvalid));
+      return false;
+    }
+    projectData = status.data;
+    projectContentHash = status.contentHash;
+    reconcileRarityEvidence(status);
+    syncSceneProperties(status);
+    undoAvailability = status.undoAvailability === 'available' || status.undoAvailability === 'recovery-pending'
+      ? status.undoAvailability
+      : 'unavailable';
+    syncCommandAvailability();
+    clearConflictOutcome();
+    const snapshot = isSessionSnapshot(status.authoringSnapshot)
+      ? status.authoringSnapshot
+      : null;
+    const reviewing = reviewProjection(snapshot) !== null;
+    productStatus(
+      reviewing ? 'dirty' : (projectRecovering ? 'recovering' : 'open'),
+      reviewing
+        ? T.product.documentPath + ' · current proposal restored · review before Save'
+        : T.product.documentPath + ' · authoring state refreshed · ' + status.documentId,
+    );
+    return true;
+  };
+
   const openProject = async () => {
     if (activeProject === null && projectPort() !== null) {
       productStatus('refused', 'Open refused · no project root selected');
@@ -2039,7 +2081,7 @@ if (shell) {
     if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' || status.data === null || typeof status.contentHash !== 'string') {
       clearSceneProperty();
       const code = reason || T.product.refusals.documentDataInvalid;
-      if (code === 'document-not-found') clearRarityEvidence(true);
+      if (code === 'document-not-found' || isRarityRefusal(code)) clearRarityEvidence(true);
       productStatus('refused', 'Open refused · ' + code);
       showOutcome('Open refused', code, 'The active Scene Document was not opened.');
       return false;
@@ -2942,10 +2984,7 @@ if (shell) {
     const detail = event && event.detail;
     if (!detail) return;
     if (detail.settled === 'applied' || detail.settled === 'rejected') {
-      if (detail.synchronize === true && isSessionSnapshot(detail.snapshot)) {
-        syncReview(detail.snapshot);
-        void openProject();
-      }
+      if (detail.refreshAuthoring === true) void refreshAuthoringState();
       return;
     }
     if (detail.retired === 'session-restarted' || detail.retired === 'undo' ||

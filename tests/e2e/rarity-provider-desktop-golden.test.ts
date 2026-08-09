@@ -361,6 +361,34 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     expect(documentBytes(root)).toBe(before);
   });
 
+  it("refuses credential-shaped provider candidate identifiers without echoing them", async () => {
+    const root = projectRoot();
+    const before = documentBytes(root);
+    const credentialCandidate = "whsec_abcdefghijklmnop";
+    const bridge = createDesktopBridge({
+      cwd: root,
+      runRarityProvider: createDesktopRarityFixtureProvider({
+        arguments: {
+          ...DESKTOP_RARITY_FIXTURE_INPUT,
+          request: {
+            ...DESKTOP_RARITY_FIXTURE_INPUT.request,
+            candidates: DESKTOP_RARITY_FIXTURE_INPUT.request.candidates.map((candidate, index) =>
+              index === 0 ? { ...candidate, candidateId: credentialCandidate } : candidate,
+            ),
+          },
+        } as unknown as import("@sceneaxi/schemas").JsonObject,
+      }),
+    });
+    startRarity(bridge);
+    const job = await settledJob(bridge);
+    expect(job).toMatchObject({
+      status: "refused",
+      refusal: { reason: RARITY_REFUSE_CODES.providerEntropyForbidden },
+    });
+    expect(JSON.stringify(job)).not.toContain(credentialCandidate);
+    expect(documentBytes(root)).toBe(before);
+  });
+
   it("refuses a replayed event whose accepted provider evidence was stripped, and stays available", async () => {
     const root = projectRoot();
     const first = createDesktopBridge({
@@ -803,6 +831,43 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     });
   });
 
+  it("recognizes a matching rarity namespace committed before restart", async () => {
+    const root = projectRoot();
+    const bridge = createDesktopBridge({
+      cwd: root,
+      runRarityProvider: createDesktopRarityFixtureProvider(),
+    });
+    startRarity(bridge);
+    const staged = await settledJob(bridge);
+    if (
+      staged.result === undefined ||
+      !("kind" in staged.result) ||
+      staged.result.kind !== "rarity-proposal"
+    ) throw new Error("missing rarity proposal result");
+    const dataEdit = staged.result.authoring?.proposal?.edits.find(
+      (edit) => edit.documentPath === DESKTOP_ACTIVE_DOCUMENT_PATH,
+    );
+    if (dataEdit === undefined) throw new Error("missing staged rarity document edit");
+    const path = join(root, DESKTOP_ACTIVE_DOCUMENT_PATH);
+    const document = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+    document.data = dataEdit.newValue;
+    writeFileSync(path, `${JSON.stringify(document)}\n`);
+
+    expect(
+      bridge.handle({
+        action: "authoring",
+        payload: { op: "restart", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+      }),
+    ).toMatchObject({ ok: true, data: { ok: true } });
+    expect(await settledJob(bridge)).toMatchObject({
+      result: {
+        kind: "rarity-proposal",
+        authoring: { phase: "applied", journalRecoveryPending: false },
+      },
+    });
+    expect(await settledJob(bridge)).not.toHaveProperty("result.retirement");
+  });
+
   it("retires a reviewing Agent result when successful Undo clears its proposal", async () => {
     const root = projectRoot();
     const bridge = createDesktopBridge({
@@ -987,6 +1052,26 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     writeFileSync(path, `${JSON.stringify(document)}\n`);
     const tamperedBytes = documentBytes(root);
 
+    expect(
+      first.handle({
+        action: "authoring",
+        payload: { op: "status", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+      }),
+    ).toMatchObject({
+      ok: true,
+      data: {
+        ok: false,
+        diagnostics: [{ code: RARITY_REFUSE_CODES.outcomeMismatch }],
+      },
+    });
+    expect(await settledJob(first)).toMatchObject({
+      result: {
+        kind: "rarity-proposal",
+        authoring: { phase: "applied" },
+        retirement: { reason: "namespace-replaced" },
+      },
+    });
+
     const replay = createDesktopBridge({
       cwd: root,
       runRarityProvider: createDesktopRarityFixtureProvider(),
@@ -1000,7 +1085,7 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
       ok: true,
       data: {
         ok: false,
-        diagnostics: [{ code: "OPEN_PATH_KERNEL_REFUSED" }],
+        diagnostics: [{ code: RARITY_REFUSE_CODES.outcomeMismatch }],
       },
     });
     startRarity(replay);

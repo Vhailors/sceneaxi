@@ -305,7 +305,10 @@ lifecycle across restart and Undo, and compared each presentation surface with
 accepted project provenance. `7071775` preserved legacy evidence-less playback,
 refused new evidence-less extensions, retired Assistant results without calling
 Undo a rejection, expanded descriptor filtering, and added the corresponding
-contract and lifecycle regressions. The smoke was not rerun after these changes.
+contract and lifecycle regressions. `367ef34` added credential-shape filtering,
+named kernel replay refusals, restart and late-settlement reconciliation,
+no-write preservation for existing composed projects, and mounted desktop
+regressions. The smoke was not rerun after these changes.
 
 The pinned vector digests above, by contrast, are re-proved on every run:
 `tests/e2e/rarity-provider-desktop-golden.test.ts` compares runtime output to

@@ -13,6 +13,7 @@ import {
   DESKTOP_BRIDGE_REFUSALS,
   type DesktopAssistantJobSnapshot,
   type DesktopBridgeResponse,
+  type DesktopRarityProposalResult,
 } from "../lib/bridge-contract.js";
 
 export const ASSISTANT_POLL_MAX_ATTEMPTS = 200;
@@ -37,6 +38,14 @@ export type AssistantPollInput = Readonly<{
   /** Called for every polled snapshot so the surface can show live progress. */
   onSnapshot?: (job: DesktopAssistantJobSnapshot) => void;
   attempts?: number;
+  wait?: (ms: number) => Promise<void>;
+}>;
+
+export type AssistantRaritySettlementWatchInput = Readonly<{
+  request: (request: unknown) => Promise<DesktopBridgeResponse>;
+  jobId: string;
+  namespaceDigest: string;
+  active: () => boolean;
   wait?: (ms: number) => Promise<void>;
 }>;
 
@@ -114,4 +123,37 @@ export async function pollAssistantJob(
     DESKTOP_BRIDGE_REFUSALS.assistantStatusTimeout,
     "The assistant job did not finish in time; it was abandoned and Retry may start a fresh job.",
   );
+}
+
+export async function watchAssistantRaritySettlement(
+  input: AssistantRaritySettlementWatchInput,
+): Promise<DesktopRarityProposalResult | null> {
+  const wait = input.wait ?? ((ms: number) =>
+    new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  while (input.active()) {
+    await wait(ASSISTANT_POLL_INTERVAL_MS);
+    if (!input.active()) return null;
+    let response: DesktopBridgeResponse;
+    try {
+      response = await input.request({ action: "assistant", payload: { op: "status" } });
+    } catch {
+      return null;
+    }
+    if (!response.ok) return null;
+    const job = response.data as DesktopAssistantJobSnapshot | null;
+    if (job?.jobId !== input.jobId) return null;
+    const result = job.result;
+    if (
+      result === undefined ||
+      !("kind" in result) ||
+      result.kind !== "rarity-proposal" ||
+      result.evidence.namespaceDigest !== input.namespaceDigest
+    ) return null;
+    if (
+      result.retirement !== undefined ||
+      result.authoring?.phase === "applied" ||
+      result.authoring?.phase === "rejected"
+    ) return result;
+  }
+  return null;
 }

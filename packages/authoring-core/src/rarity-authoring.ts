@@ -13,6 +13,7 @@ import {
   isJsonObject,
   isRarityForbiddenInputKey,
   isRarityIdentifier,
+  isRarityProviderSafeIdentifier,
   validateRarityNamespace,
   validateRarityPolicy,
   validateRarityProviderEvidence,
@@ -255,6 +256,16 @@ export async function requestRarityProviderContribution(input: Readonly<{
   if (!policy.ok) return refuse(policy.code, policy.message, policy.path);
   const request = validateRarityRollRequest(call.arguments.request, policy.value);
   if (!request.ok) return refuse(request.code, request.message, request.path);
+  const unsafeCandidate = request.value.candidates.findIndex(
+    (candidate) => !isRarityProviderSafeIdentifier(candidate.candidateId),
+  );
+  if (unsafeCandidate !== -1) {
+    return refuse(
+      RARITY_REFUSE_CODES.providerEntropyForbidden,
+      "The provider rarity proposal contains a credential-shaped candidate identifier.",
+      `rarity.provider.request.candidates[${String(unsafeCandidate)}].candidateId`,
+    );
+  }
   return Object.freeze({
     ok: true as const,
     value: Object.freeze({

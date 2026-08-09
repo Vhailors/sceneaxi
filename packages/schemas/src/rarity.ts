@@ -296,6 +296,10 @@ export function isRarityIdentifier(value: unknown): value is string {
     [...value].every((character) => /[a-z0-9._:-]/.test(character));
 }
 
+export function isRarityProviderSafeIdentifier(value: unknown): value is string {
+  return isRarityIdentifier(value) && !hasRarityProviderCredentialShape(value);
+}
+
 function isRarityDigest(value: unknown): value is string {
   return typeof value === "string" &&
     value.length === DIGEST_PREFIX.length + 64 &&

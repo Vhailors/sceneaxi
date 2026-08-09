@@ -112,8 +112,7 @@ export function assistantRarityResultEvent(
   if (phase === "applied" || phase === "rejected") {
     return Object.freeze({
       settled: phase,
-      synchronize: true,
-      snapshot: result.authoring,
+      refreshAuthoring: true,
       evidence: result.evidence,
     });
   }

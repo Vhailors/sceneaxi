@@ -592,6 +592,7 @@ export {
   digestRarityValue,
   isRarityForbiddenInputKey,
   isRarityIdentifier,
+  isRarityProviderSafeIdentifier,
   refuseRarity,
   serializeRarityNamespace,
   validateRarityNamespace,

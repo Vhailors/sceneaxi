@@ -326,6 +326,12 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     });
 
   const resolveRarityWithKernel = (input: RarityKernelResolutionInput) => {
+    const rarityReason = (detail: unknown): string | null => {
+      if (typeof detail !== "string") return null;
+      return Object.values(RARITY_REFUSE_CODES).find(
+        (code) => detail === code || detail.startsWith(`${code} `),
+      ) ?? null;
+    };
     const bootstrapped = bootstrapOpenPath(
       {
         kind: "product",
@@ -338,10 +344,13 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       { nowMs },
     );
     if (!bootstrapped.ok) {
+      const reason = rarityReason(bootstrapped.detail);
       return Object.freeze({
         ok: false as const,
-        reason: bootstrapped.reason,
-        message: bootstrapped.message,
+        reason: reason ?? bootstrapped.reason,
+        message: reason === null
+          ? bootstrapped.message
+          : bootstrapped.detail ?? bootstrapped.message,
       });
     }
     const handle = bootstrapped.value;
@@ -368,7 +377,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       }
       return Object.freeze({ ok: true as const, value: rarity });
     } catch (error) {
-      const reason = field(error, "reason");
+      const reason = field(error, "code") ?? field(error, "reason");
       return Object.freeze({
         ok: false as const,
         reason: typeof reason === "string" ? reason : RARITY_REFUSE_CODES.outcomeMismatch,
@@ -747,8 +756,11 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         result.retirement !== undefined
       ) return;
       if (!status.ok) {
-        if (status.diagnostics?.[0]?.code === "document-not-found") {
+        const code = status.diagnostics?.[0]?.code;
+        if (code === "document-not-found") {
           retireRarityAssistantResult(result.evidence, reason ?? "document-missing");
+        } else if (code?.startsWith("RARITY_")) {
+          retireRarityAssistantResult(result.evidence, reason ?? "namespace-replaced");
         }
         return;
       }
@@ -771,6 +783,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         const refused = Object.freeze({
           ok: false as const,
           documentPath,
+          authoringSnapshot: withRarityProposalEvidence(live.snapshot()),
           diagnostics: Object.freeze([
             Object.freeze({
               code: rarity.reason,
@@ -785,6 +798,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       const enriched = Object.freeze({
         ...status,
         ...rarity.value,
+        authoringSnapshot: withRarityProposalEvidence(live.snapshot()),
         editableScene: inspectDesktopSceneProperties({
           documentData: status.data,
           contentHash: status.contentHash,
@@ -850,11 +864,36 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         );
       }
       session = options.createAuthoringSession?.() ?? createDesktopSession({ cwd: options.cwd });
-      if (rarityProposalEvidence !== null) {
-        retireRarityAssistantResult(rarityProposalEvidence, "session-restarted");
-      }
+      const restartedEvidence = rarityProposalEvidence;
       rarityProposalEvidence = null;
-      return bridgeOk("authoring", statusWithProperties(session, documentPath));
+      const restarted = statusWithProperties(session, documentPath);
+      if (restartedEvidence !== null) {
+        if (
+          restarted.ok &&
+          restarted.rarityNamespaceDigest === restartedEvidence.namespaceDigest
+        ) {
+          const result = currentRarityAssistantResult();
+          const snapshot = result?.authoring;
+          if (snapshot !== undefined) {
+            updateRarityAssistantAuthoring(
+              Object.freeze({
+                ...snapshot,
+                phase: "applied" as const,
+                appliedPaths: Object.freeze(
+                  snapshot.proposal?.edits.map((edit) => edit.documentPath) ?? [documentPath],
+                ),
+                journalRecoveryPending: false,
+                transactionId: null,
+                diagnostics: Object.freeze([]),
+              }),
+              restartedEvidence,
+            );
+          }
+        } else {
+          retireRarityAssistantResult(restartedEvidence, "session-restarted");
+        }
+      }
+      return bridgeOk("authoring", restarted);
     }
     const live = authoringSession();
     if (op === "status") {

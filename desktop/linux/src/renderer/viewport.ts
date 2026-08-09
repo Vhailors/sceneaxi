@@ -38,7 +38,10 @@ import {
   isRarityProposalResult,
   rarityInvalidationMatches,
 } from "./assistant-inspection.js";
-import { pollAssistantJob } from "./assistant-poll.js";
+import {
+  pollAssistantJob,
+  watchAssistantRaritySettlement,
+} from "./assistant-poll.js";
 import {
   pixelsMetaContent,
   playableExercise,
@@ -267,6 +270,7 @@ function installAssistantProductFlow(
     return false;
   }
   let running = false;
+  let assistantRunVersion = 0;
   let activeRarityProposalDigest: string | null = null;
   let displayedRarityResultDigest: string | null = null;
   const assistantViewport = createDesktopAssistantViewportController(mounts);
@@ -367,6 +371,22 @@ function installAssistantProductFlow(
         ? "Identical rarity event replayed · project bytes unchanged, so nothing was staged for review."
         : "Rarity proposal staged · review the canonical diff before Accept or Reject.";
       running = false;
+      if (!replayed) {
+        const watchedVersion = assistantRunVersion;
+        void watchAssistantRaritySettlement({
+          request: (request) => port.request(request),
+          jobId: job.jobId,
+          namespaceDigest: result.evidence.namespaceDigest,
+          active: () => assistantRunVersion === watchedVersion,
+        }).then((settled) => {
+          if (settled === null || assistantRunVersion !== watchedVersion) return;
+          const detail = assistantRarityResultEvent(settled);
+          if (detail === null) return;
+          document.dispatchEvent(
+            new CustomEvent(DESKTOP_RARITY_PROPOSAL_EVENT, { detail }),
+          );
+        });
+      }
       return;
     }
     assistantViewport.replace(result.mountable);
@@ -393,8 +413,6 @@ function installAssistantProductFlow(
       refused(decision.reason, decision.message);
       return;
     }
-    activeRarityProposalDigest = assistantRarityResultDigest(null);
-    displayedRarityResultDigest = null;
     running = true;
     retry?.setAttribute("hidden", "");
     resultView.setAttribute("hidden", "");
@@ -407,6 +425,9 @@ function installAssistantProductFlow(
       refused(response.reason, response.message);
       return;
     }
+    assistantRunVersion += 1;
+    activeRarityProposalDigest = assistantRarityResultDigest(null);
+    displayedRarityResultDigest = null;
     await poll();
   };
 
