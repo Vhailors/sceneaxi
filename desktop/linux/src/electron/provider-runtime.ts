@@ -64,8 +64,7 @@ function rendererSafeResult(result: AssistantSculptResult): AssistantSculptResul
   return Object.freeze({
     ok: false as const,
     reason: result.reason,
-    message:
-      "The OpenRouter-backed assistant action refused before producing a renderer-safe artifact.",
+    message: result.message,
     recoverable: result.recoverable,
   });
 }
@@ -129,14 +128,12 @@ export function createDesktopOpenRouterProviderSession(
         }),
         profilePolicies: options.profilePolicies,
       });
-    } catch (error) {
+    } catch {
       void closeTransport().catch(() => {});
-      throw error instanceof DesktopByoRunnerRefusal
-        ? error
-        : new DesktopByoRunnerRefusal(
-            DESKTOP_BYO_CONFIGURATION_REFUSALS.providerSessionFailed,
-            "The privileged OpenRouter provider session could not be composed.",
-          );
+      throw new DesktopByoRunnerRefusal(
+        DESKTOP_BYO_CONFIGURATION_REFUSALS.providerSessionFailed,
+        "The privileged OpenRouter provider session could not be composed.",
+      );
     }
 
     return Object.freeze({

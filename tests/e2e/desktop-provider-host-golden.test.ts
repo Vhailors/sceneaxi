@@ -293,7 +293,7 @@ describe("desktop privileged provider host", () => {
       refusal: {
         reason: "ASSISTANT_SCULPT_PROVIDER_FAILED",
         message:
-          "The OpenRouter-backed assistant action refused before producing a renderer-safe artifact.",
+          "The BYOK provider failed; the prompt can be retried after its adapter recovers.",
       },
     });
     expect(JSON.stringify(snapshot)).not.toContain(PROVIDER_PRIVATE_MARKER);
