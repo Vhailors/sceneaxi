@@ -338,14 +338,20 @@ The packaged **Linux desktop application** is its own `desktop/` tier (ADR 0024)
 `desktop/linux` (`@sceneaxi/desktop-linux`), an Electron install root outside the
 root workspace exactly like each site, so Electron/esbuild/electron-builder never
 touch the hermetic lockfile — `pnpm check:desktop` (in the gate) enforces that,
-plus the tier split where only `src/electron/**` may import Electron. The window
-document is the desktop-shell chrome **unforked** plus exactly two injections;
+plus the tier split where only `src/electron/**` may import Electron or the
+concrete provider adapter, and nothing outside it may reach into that privileged
+host, since a re-export would launder the adapter into an unprivileged bundle.
+The window document is the desktop-shell chrome **unforked** plus exactly two injections;
 the one bridge seam is `createDesktopBridge()` in `desktop/linux/src/lib/bridge.ts`
 (synchronous `handle()`, mirrored on web-shell's inspector app), reaching
 `composeScene()`, `bootstrapOpenPath()`, `createDesktopSession()`, and the
 deterministic local or explicitly injected BYOK assistant runner in
-`authoring-core`; hosted assistant work refuses because this tier owns no identity
-or credit plane. Which root that bridge is bound to is decided by the contained
+`authoring-core` — whose OpenRouter adapter, model pin, and credential lease stay
+in the privileged `src/electron/provider-runtime.ts`, which the checked-in build
+constructs with no provider session factory, so readiness and runner injection
+stay one decision and the provider runtime reports unavailable
+(sceneaxi#235; `docs/desktop-linux.md` owns that contract); hosted assistant work
+refuses because this tier owns no identity or credit plane. Which root that bridge is bound to is decided by the contained
 lifecycle seam (`src/lib/{project-lifecycle-contract,project-lifecycle,project-host}.ts`,
 sceneaxi#224) and never by a default: first launch binds no root and writes no
 project, a root reaches the host only from a native directory dialog or its own

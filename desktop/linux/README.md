@@ -58,8 +58,8 @@ scene as a sculpt — before the
 live center viewport mounts it, adds translate/rotate/scale manipulators, and shows the artifact's
 read-only materials, supported collider physics, and procedural settings.
 Progress, named refusals, and Retry remain on the surface, while a BYOK
-provider's own thrown detail is redacted because it may echo credential
-material. A timed-out
+provider's own failure detail is redacted — whether the runner threw it or
+returned it — because it may echo credential material. A timed-out
 job is abandoned before Retry is offered, so a late provider result cannot
 replace the newer job. Ask and Agent modes refuse clearly rather than pretending
 they produce build output. The shell visual model owns the manipulator controls
