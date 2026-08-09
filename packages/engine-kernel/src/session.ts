@@ -142,11 +142,12 @@ export function replay(
       throw new KernelSessionError("invalid save artifact event");
     }
     if (event.kind === "dispatch") {
-      verifySavedRarityCommand(event.command, expectedManifest.rarity);
-      if (!session.dispatchRecorded(event.command, event.timestampMs)) {
+      const command = validateCommand(event.command);
+      verifySavedRarityCommand(command, expectedManifest.rarity);
+      if (!session.dispatchRecorded(command, event.timestampMs)) {
         throw rarityError(
           RARITY_REFUSE_CODES.duplicateEvent,
-          `rarity.rolls.${event.command.type === "rarity-roll" ? event.command.eventId : ""}`,
+          `rarity.rolls.${command.type === "rarity-roll" ? command.eventId : ""}`,
           "A save artifact cannot record the same rarity event id twice.",
         );
       }

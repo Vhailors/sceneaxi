@@ -321,6 +321,29 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
     );
   });
 
+  it("refuses a malformed saved dispatch command as a named kernel refusal", () => {
+    const session = open(manifest(), fixedHost());
+    session.dispatch(rarityCommand("roll-0000"));
+    session.advance({ tick: 1, deltaMs: 16 });
+    const save = jsonCopy(session.save());
+
+    for (const command of [null, undefined, "rarity-roll", []]) {
+      const malformed = {
+        ...save,
+        events: [{ kind: "dispatch", command, timestampMs: 1 }],
+      } as unknown as KernelSessionSaveArtifact;
+      try {
+        replay(malformed, fixedHost());
+        throw new Error("a malformed saved dispatch command was accepted");
+      } catch (error) {
+        expect(error, JSON.stringify(command ?? null)).toBeInstanceOf(
+          KernelSessionError,
+        );
+        expect((error as Error).message).toContain("invalid command");
+      }
+    }
+  });
+
   it("refuses rarity rolls when the existing product manifest has no policy", () => {
     const session = open(
       { productId: "no-rarity-policy", seed: 42 },

@@ -74,6 +74,145 @@ const schema = JSON.parse(
   };
 };
 
+type SchemaNode = Readonly<Record<string, unknown>>;
+
+/**
+ * The keywords `rarity.schema.json` is allowed to use. An unlisted keyword
+ * throws rather than being ignored, so the shipped contract can never gain a
+ * rule this evaluator would silently skip.
+ */
+const SUPPORTED_KEYWORDS = new Set([
+  "$schema",
+  "$id",
+  "title",
+  "description",
+  "$defs",
+  "$ref",
+  "oneOf",
+  "type",
+  "required",
+  "additionalProperties",
+  "properties",
+  "enum",
+  "const",
+  "pattern",
+  "minimum",
+  "maximum",
+  "minItems",
+  "items",
+]);
+
+function resolveRef(ref: string): SchemaNode {
+  if (!ref.startsWith("#/")) throw new Error(`unsupported $ref "${ref}"`);
+  let node: unknown = schema;
+  for (const segment of ref.slice(2).split("/")) {
+    node = (node as Record<string, unknown>)[segment];
+  }
+  if (node === null || typeof node !== "object") {
+    throw new Error(`unresolved $ref "${ref}"`);
+  }
+  return node as SchemaNode;
+}
+
+function schemaViolations(
+  node: SchemaNode,
+  value: unknown,
+  path: string,
+): string[] {
+  const unsupported = Object.keys(node).find(
+    (keyword) => !SUPPORTED_KEYWORDS.has(keyword),
+  );
+  if (unsupported !== undefined) {
+    throw new Error(`rarity schema keyword "${unsupported}" is not evaluated`);
+  }
+  if (typeof node["$ref"] === "string") {
+    return schemaViolations(resolveRef(node["$ref"]), value, path);
+  }
+  if (Array.isArray(node["oneOf"])) {
+    const matched = (node["oneOf"] as SchemaNode[]).filter(
+      (branch) => schemaViolations(branch, value, path).length === 0,
+    );
+    return matched.length === 1
+      ? []
+      : [`${path}: matched ${String(matched.length)} oneOf branches`];
+  }
+
+  const violations: string[] = [];
+  const type = node["type"];
+  if (type === "object") {
+    if (value === null || typeof value !== "object" || Array.isArray(value)) {
+      return [`${path}: expected object`];
+    }
+    const record = value as Record<string, unknown>;
+    const properties = (node["properties"] ?? {}) as Record<string, SchemaNode>;
+    for (const key of (node["required"] as string[] | undefined) ?? []) {
+      if (!Object.hasOwn(record, key)) violations.push(`${path}.${key}: required`);
+    }
+    if (node["additionalProperties"] === false) {
+      for (const key of Object.keys(record)) {
+        if (!Object.hasOwn(properties, key)) {
+          violations.push(`${path}.${key}: additional property`);
+        }
+      }
+    }
+    for (const [key, child] of Object.entries(properties)) {
+      if (Object.hasOwn(record, key)) {
+        violations.push(...schemaViolations(child, record[key], `${path}.${key}`));
+      }
+    }
+    return violations;
+  }
+  if (type === "array") {
+    if (!Array.isArray(value)) return [`${path}: expected array`];
+    const minItems = node["minItems"];
+    if (typeof minItems === "number" && value.length < minItems) {
+      violations.push(`${path}: fewer than ${String(minItems)} items`);
+    }
+    const items = node["items"] as SchemaNode | undefined;
+    if (items !== undefined) {
+      value.forEach((entry, index) => {
+        violations.push(
+          ...schemaViolations(items, entry, `${path}[${String(index)}]`),
+        );
+      });
+    }
+    return violations;
+  }
+  if (type === "string") {
+    if (typeof value !== "string") return [`${path}: expected string`];
+    const pattern = node["pattern"];
+    if (typeof pattern === "string" && !new RegExp(pattern).test(value)) {
+      violations.push(`${path}: pattern`);
+    }
+  }
+  if (type === "integer") {
+    if (typeof value !== "number" || !Number.isInteger(value)) {
+      return [`${path}: expected integer`];
+    }
+    const minimum = node["minimum"];
+    const maximum = node["maximum"];
+    if (typeof minimum === "number" && value < minimum) {
+      violations.push(`${path}: below minimum`);
+    }
+    if (typeof maximum === "number" && value > maximum) {
+      violations.push(`${path}: above maximum`);
+    }
+  }
+  if (Object.hasOwn(node, "const") && value !== node["const"]) {
+    violations.push(`${path}: const`);
+  }
+  const allowed = node["enum"];
+  if (Array.isArray(allowed) && !allowed.includes(value)) {
+    violations.push(`${path}: enum`);
+  }
+  return violations;
+}
+
+/** Every rarity value the repository produces is a document of the shipped schema. */
+function shippedSchemaViolations(value: unknown): string[] {
+  return schemaViolations(schema as unknown as SchemaNode, value, "$");
+}
+
 const policy = (tierWeights: Record<(typeof RARITY_TIERS)[number], number>) => ({
   schemaVersion: RARITY_SCHEMA_VERSION,
   kind: RARITY_POLICY_KIND,
@@ -91,6 +230,56 @@ describe("rarity domain contracts", () => {
       RARITY_ALGORITHM_ID,
     );
     expect(schema.$defs.request.additionalProperties).toBe(false);
+  });
+
+  it("accepts every accepted rarity value this repository produces", () => {
+    const rolls = fixture.vectors.map((vector) => ({
+      eventId: vector.eventId,
+      request: fixture.request,
+      outcome: vector.outcome,
+      provenance: vector.provenance,
+    }));
+    const validated = validateRarityNamespace({
+      schemaVersion: RARITY_SCHEMA_VERSION,
+      kind: RARITY_NAMESPACE_KIND,
+      policy: fixture.policy,
+      rolls,
+    });
+    expect(validated.ok).toBe(true);
+    if (!validated.ok) return;
+
+    expect(shippedSchemaViolations(validated.value)).toEqual([]);
+    expect(shippedSchemaViolations(fixture.policy)).toEqual([]);
+    expect(shippedSchemaViolations(fixture.request)).toEqual([]);
+    for (const vector of fixture.vectors) {
+      expect(shippedSchemaViolations(vector.outcome), vector.eventId).toEqual([]);
+      expect(shippedSchemaViolations(vector.provenance), vector.eventId).toEqual([]);
+    }
+  });
+
+  it("refuses through the shipped schema what the runtime validators refuse", () => {
+    const vector = fixture.vectors[0];
+    if (vector === undefined) throw new Error("rarity fixture is empty");
+    const { tierDraw: _dropped, ...withoutTierDraw } = vector.provenance;
+
+    for (const [label, value] of [
+      ["extra policy property", { ...fixture.policy, extra: true }],
+      ["extra provenance property", { ...vector.provenance, extra: "x" }],
+      ["missing provenance field", withoutTierDraw],
+      ["migrated schemaVersion", { ...fixture.policy, schemaVersion: 2 }],
+      ["unknown tier", { ...vector.outcome, tier: "mythic" }],
+      ["uppercase candidate id", {
+        ...fixture.request,
+        candidates: [{ candidateId: "INVALID", tier: "common", weight: 1 }],
+      }],
+      ["fractional weight", {
+        ...fixture.request,
+        candidates: [{ candidateId: "fraction", tier: "common", weight: 1.5 }],
+      }],
+      ["empty candidates", { ...fixture.request, candidates: [] }],
+    ] as const) {
+      expect(shippedSchemaViolations(value), label).not.toEqual([]);
+    }
   });
 
   it("pins the stable tier identifiers, order, algorithm, and canonical digests", () => {

@@ -89,6 +89,12 @@ and every outcome/provenance digest. Schema, resolver, browser-open, kernel
 save/replay, and orchestrator tests execute those public contracts without a
 network or live provider.
 
+`rarity.schema.json` is enforced rather than described: every accepted value the
+repository produces is validated as a document of the shipped schema, and an
+unevaluated schema keyword fails the suite instead of being skipped. A field
+added to the runtime contract without the same field in the schema is therefore
+caught by the `additionalProperties: false` branch it would violate.
+
 This contract adds no rarity economy, inventory, marketplace, renderer, provider
 adapter, live network path, Hosted enablement, or Kids path. It does not rewrite
 Sculpt Artifacts.
