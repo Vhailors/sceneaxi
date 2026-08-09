@@ -324,6 +324,20 @@ export function stageRarityProviderProposal(input: Readonly<{
         "rarity.policy",
       );
     }
+    // One namespace holds one provider call descriptor, and it describes every
+    // roll in it. Both ways of breaking that are refused here, at the single
+    // point the stored namespace is read, rather than on the branches that
+    // happen to reach it: a namespace whose rolls have no descriptor cannot
+    // borrow this call's — including the rolls a #240 kernel-only path produced,
+    // which legitimately have none — and one that already has a descriptor
+    // cannot be extended by a call carrying a different one.
+    if (existing.rolls.length > 0 && existing.providerEvidence === undefined) {
+      return refuse(
+        RARITY_AUTHORING_REFUSALS.providerEvidenceAbsent,
+        "The accepted rarity namespace already holds rolls with no provider evidence, so this call's descriptor cannot be attached to them; start a new rarity namespace instead.",
+        "rarity.providerEvidence",
+      );
+    }
     if (
       existing.providerEvidence !== undefined &&
       canonicalRarityJson(existing.providerEvidence as unknown as JsonValue) !==
@@ -343,13 +357,6 @@ export function stageRarityProviderProposal(input: Readonly<{
         RARITY_REFUSE_CODES.eventInputConflict,
         "An existing rarity event id cannot be reused with changed request bytes; reroll with a new event id.",
         `rarity.rolls.${input.eventId}.request`,
-      );
-    }
-    if (existing.providerEvidence === undefined) {
-      return refuse(
-        RARITY_AUTHORING_REFUSALS.providerEvidenceAbsent,
-        "The accepted rarity namespace carries a roll for this event but no provider evidence, so its provenance cannot be replayed.",
-        "rarity.providerEvidence",
       );
     }
     return Object.freeze({

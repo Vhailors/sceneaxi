@@ -18,6 +18,7 @@ import {
 import { RARITY_REFUSE_CODES } from "@sceneaxi/schemas";
 import {
   RARITY_AUTHORING_REFUSALS,
+  stageRarityProviderProposal,
   type RarityProviderContributionResult,
 } from "@sceneaxi/authoring-core";
 
@@ -563,6 +564,54 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
       refusal: { reason: RARITY_REFUSE_CODES.eventInputConflict },
     });
     expect(documentBytes(root)).toBe(acceptedBytes);
+  });
+
+  it("refuses to attach a call's descriptor to rolls that carry none", async () => {
+    // Reachable through the authoring-core seam rather than the desktop, whose
+    // event id is a single constant: a namespace holding rolls with no provider
+    // evidence — what a kernel-only #240 path legitimately produces — must not
+    // adopt this call's descriptor, because `safeRarityEvidenceFromNamespace`
+    // would then report it as the provenance of rolls it never produced.
+    const root = projectRoot();
+    const bridge = createDesktopBridge({
+      cwd: root,
+      runRarityProvider: createDesktopRarityFixtureProvider(),
+    });
+    startRarity(bridge);
+    expect((await settledJob(bridge)).status).toBe("ready");
+    bridge.handle({ action: "authoring", payload: { op: "accept" } });
+
+    const documentData = JSON.parse(documentBytes(root)).data as {
+      rarity: { providerEvidence?: unknown; rolls: readonly unknown[] };
+    };
+    expect(documentData.rarity.rolls).toHaveLength(1);
+    delete documentData.rarity.providerEvidence;
+
+    const contribution = await createDesktopRarityFixtureProvider()({
+      profile: "@sceneaxi/profile-game",
+      prompt: "stage a drop",
+    });
+    if (!contribution.ok) throw new Error(contribution.reason);
+
+    let resolverCalls = 0;
+    const staged = stageRarityProviderProposal({
+      documentData,
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      expectedContentHash: `sha256:${"0".repeat(64)}`,
+      profile: "@sceneaxi/profile-game",
+      eventId: "wayfinder-drop-002",
+      contribution: contribution.value,
+      resolve: () => {
+        resolverCalls += 1;
+        throw new Error("the kernel resolver must not run for a refused namespace");
+      },
+    });
+    expect(staged).toMatchObject({
+      ok: false,
+      reason: RARITY_AUTHORING_REFUSALS.providerEvidenceAbsent,
+      path: "rarity.providerEvidence",
+    });
+    expect(resolverCalls).toBe(0);
   });
 
   it("refuses to extend an accepted namespace from a call with different model evidence", async () => {

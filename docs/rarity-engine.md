@@ -147,9 +147,13 @@ runs.
 described by one provider call descriptor. Extending an existing namespace from a
 call whose model evidence differs would leave earlier rolls reporting a descriptor
 that is not theirs, so `stageRarityProviderProposal` refuses
-`RARITY_AUTHORING_PROVIDER_EVIDENCE_CONFLICT` instead; a namespace whose evidence
-was removed refuses `RARITY_AUTHORING_PROVIDER_EVIDENCE_ABSENT` rather than
-reporting provenance it cannot support. Between them, the descriptor
+`RARITY_AUTHORING_PROVIDER_EVIDENCE_CONFLICT` instead. A namespace that already
+holds rolls and carries no descriptor at all refuses
+`RARITY_AUTHORING_PROVIDER_EVIDENCE_ABSENT` rather than adopting this call's — the
+rolls a kernel-only #240 path produced legitimately have none, and borrowing a
+descriptor for them would invent provenance as surely as keeping a stale one.
+Both refusals are decided once, where the stored namespace is read, so the replay
+and extend paths cannot diverge. Between them, the descriptor
 `safeRarityEvidenceFromNamespace()` reports for a roll is always the descriptor of
 the call that produced that roll's input.
 
@@ -203,10 +207,14 @@ evidence formatter, per-namespace evidence conflict refusal), `27c1ccf` (that
 formatter moved to a browser-safe entry so the renderer bundles again, plus the
 gate check that catches the class), `fd7aae9` (Run and viewport render the full
 shared provenance, evidence cleared on a project-root change, the operator's
-request carried to the provider), and the round recorded below (the shipped
-binaries' resolver taught to map workspace subpaths, provenance retired on Undo
-and preserved through Remove Recent, the overlay's line breaks preserved). Each
-added executable coverage.
+request carried to the provider), `9b45aca` (the shipped binaries' resolver taught
+to map workspace subpaths, provenance retired on Undo and preserved through Remove
+Recent, the overlay's line breaks preserved), `96ddee0` (Undo and the recovery
+restart stopped clearing the dock on the action and now re-read the reopened
+document, clearing only when `data.rarity` is gone), and the round recorded below
+(one provider-evidence invariant decided where the stored namespace is read, so a
+namespace whose rolls carry no descriptor refuses instead of adopting this call's).
+Each added executable coverage.
 
 Its executable desktop vector is unchanged by all of them —
 `tests/e2e/fixtures/rarity-provider/wayfinder-desktop.json`:
@@ -255,10 +263,12 @@ to `renderer/assistant-poll.ts`, the result inspection to
 branch. `fd7aae9` then rewrote the open-path report's rarity clause: what was a
 tier/candidate summary became `rarityEvidenceReport()`, printed on its own
 `rarityEvidenceLine` overlay above the frame report, and `AssistantPollOutcome`
-was narrowed so the poll consumer no longer re-checks an optional result. The
-round recorded below gave that overlay `white-space: pre-wrap` so the shared
-formatter's line breaks survive, and made it clear itself when a run carries no
-rarity. One of those rounds also
+was narrowed so the poll consumer no longer re-checks an optional result.
+`9b45aca` gave that overlay `white-space: pre-wrap` so the shared formatter's line
+breaks survive, and made it clear itself when a run carries no rarity, and
+`96ddee0` moved the pixels-meta decision and the playable-exercise validation out
+to `renderer/playback-report.ts`, where the gate executes them. One of those
+rounds also
 imported the shared evidence formatter from the Node-bearing root barrel, which
 made `renderer.js` unbundlable until it was moved to the import-free
 `@sceneaxi/authoring-core/rarity-evidence` entry — a break `pnpm gate` could not
