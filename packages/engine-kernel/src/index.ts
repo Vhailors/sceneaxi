@@ -36,6 +36,13 @@ export {
   type KernelSession,
 } from "./session.js";
 
+export {
+  resolveRarityRoll,
+  type RarityResolution,
+  type RarityResolutionContext,
+  type RarityResolutionResult,
+} from "./rarity.js";
+
 export type {
   FrameClock,
   KernelCommand,
@@ -43,10 +50,32 @@ export type {
   KernelSessionSaveArtifact,
   KernelSnapshot,
   ProductManifest,
+  RarityCandidate,
+  RarityNamespace,
+  RarityOutcome,
+  RarityPolicy,
+  RarityProvenance,
+  RarityRefuseCode,
+  RarityRollCommand,
+  RarityRollRecord,
+  RarityRollRequest,
+  RarityTierId,
+  RarityValidationRefuse,
   SnapshotEntity,
 } from "@sceneaxi/schemas";
 
-export { KERNEL_SESSION_SCHEMA_VERSION } from "@sceneaxi/schemas";
+export {
+  KERNEL_SESSION_SCHEMA_VERSION,
+  RARITY_ALGORITHM_ID,
+  RARITY_NAMESPACE_KIND,
+  RARITY_OUTCOME_KIND,
+  RARITY_POLICY_KIND,
+  RARITY_PROVENANCE_KIND,
+  RARITY_REFUSE_CODES,
+  RARITY_REQUEST_KIND,
+  RARITY_SCHEMA_VERSION,
+  RARITY_TIERS,
+} from "@sceneaxi/schemas";
 
 export {
   SCULPT_KERNEL_SAVE_KIND,

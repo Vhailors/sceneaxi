@@ -597,6 +597,13 @@ capability itself), and a declared-but-unimplemented contract refuses with
 `capability-contract-violation`. The golden for the whole path is
 `tests/e2e/plugin-capability-golden.test.ts`.
 
+Deterministic rarity (sceneaxi#240) is owned by `docs/rarity-engine.md` and the
+versioned contracts in `packages/schemas/src/rarity.ts`. The existing
+`ProductManifest.rarity` namespace is the only project model; the kernel queues
+`rarity-roll` on dispatch and resolves only on `advance`, while save/replay
+recomputes outcome and provenance. Provider input never supplies seed, draw, or
+authoritative outcome.
+
 ## Maintaining this file
 
 Rewrite when durable project-wide knowledge changes; prefer pointers over copied process.

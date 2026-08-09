@@ -3,6 +3,7 @@
  * command/snapshot seam (ADR 0001 Design A). Durable save/replay shape is
  * versioned as contracts/kernel-session.schema.json.
  */
+import type { RarityNamespace, RarityRollRequest } from "./rarity.js";
 
 /** Major version of the Kernel Session contract (schema const). */
 export const KERNEL_SESSION_SCHEMA_VERSION = 1 as const;
@@ -12,6 +13,8 @@ export interface ProductManifest {
   readonly productId: string;
   readonly seed: number;
   readonly entities?: ReadonlyArray<ProductEntitySeed>;
+  /** Project-owned deterministic rarity policy and accepted roll records. */
+  readonly rarity?: RarityNamespace;
 }
 
 export interface ProductEntitySeed {
@@ -30,6 +33,12 @@ export type Position2 = readonly [number, number];
  * Validated command vocabulary for the tracer-bullet simulation domain
  * (entity transforms under move/spawn). Presentation/backend types are forbidden.
  */
+export type RarityRollCommand = {
+  readonly type: "rarity-roll";
+  readonly eventId: string;
+  readonly request: RarityRollRequest;
+};
+
 export type KernelCommand =
   | {
       readonly type: "move";
@@ -40,7 +49,8 @@ export type KernelCommand =
       readonly type: "spawn";
       readonly actor: string;
       readonly position: Position2;
-    };
+    }
+  | RarityRollCommand;
 
 /** Frame clock passed to advance — only advance mutates authoritative state. */
 export interface FrameClock {
@@ -62,6 +72,8 @@ export interface KernelSnapshot {
   readonly tick: number;
   readonly seed: number;
   readonly entities: ReadonlyArray<SnapshotEntity>;
+  /** Present only when the opened product manifest owns a rarity namespace. */
+  readonly rarity?: RarityNamespace;
   /** Opaque canonical digest used for determinism and replay checks. */
   readonly digest: string;
 }

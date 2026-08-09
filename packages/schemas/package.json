@@ -23,6 +23,8 @@
     "./contracts/catalog-listings.fixtures.json": "./contracts/catalog-listings.fixtures.json",
     "./contracts/revenue-share.schema.json": "./contracts/revenue-share.schema.json",
     "./contracts/model-provider-port.schema.json": "./contracts/model-provider-port.schema.json",
+    "./contracts/rarity.schema.json": "./contracts/rarity.schema.json",
+    "./contracts/rarity.fixtures.json": "./contracts/rarity.fixtures.json",
     "./contracts/sculpt-intake.schema.json": "./contracts/sculpt-intake.schema.json",
     "./contracts/object-sculpt-spec.schema.json": "./contracts/object-sculpt-spec.schema.json",
     "./contracts/sculpt-artifact.schema.json": "./contracts/sculpt-artifact.schema.json",

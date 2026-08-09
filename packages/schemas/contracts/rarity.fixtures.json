@@ -1,0 +1,235 @@
+{
+  "schemaVersion": 1,
+  "algorithmId": "sceneaxi.rarity.weighted-sha256-v1",
+  "projectSeed": 424242,
+  "scope": "wayfinder-fixture",
+  "policy": {
+    "schemaVersion": 1,
+    "kind": "sceneaxi.rarity.policy",
+    "tierWeights": {
+      "common": 1,
+      "uncommon": 1,
+      "rare": 1,
+      "epic": 1,
+      "legendary": 1
+    }
+  },
+  "request": {
+    "schemaVersion": 1,
+    "kind": "sceneaxi.rarity.request",
+    "candidates": [
+      { "candidateId": "common-a", "tier": "common", "weight": 1 },
+      { "candidateId": "common-b", "tier": "common", "weight": 1 },
+      { "candidateId": "uncommon-a", "tier": "uncommon", "weight": 1 },
+      { "candidateId": "uncommon-b", "tier": "uncommon", "weight": 1 },
+      { "candidateId": "rare-a", "tier": "rare", "weight": 1 },
+      { "candidateId": "rare-b", "tier": "rare", "weight": 1 },
+      { "candidateId": "epic-a", "tier": "epic", "weight": 1 },
+      { "candidateId": "epic-b", "tier": "epic", "weight": 1 },
+      { "candidateId": "legendary-a", "tier": "legendary", "weight": 1 },
+      { "candidateId": "legendary-b", "tier": "legendary", "weight": 1 }
+    ]
+  },
+  "vectors": [
+    {
+      "eventId": "roll-0000",
+      "outcome": { "schemaVersion": 1, "kind": "sceneaxi.rarity.outcome", "tier": "common", "candidateId": "common-a" },
+      "provenance": {
+        "schemaVersion": 1,
+        "kind": "sceneaxi.rarity.provenance",
+        "algorithmId": "sceneaxi.rarity.weighted-sha256-v1",
+        "scope": "wayfinder-fixture",
+        "eventId": "roll-0000",
+        "policyDigest": "sha256:ab1a0d4aee9b7776fe0e93bd065f5d8d06eed6ec7458dfaeb770f6efc0154f26",
+        "requestDigest": "sha256:85e2b410d81dc9a0c36837ad676c950e32e3fbeddcb5b1adfde39a95e9e04936",
+        "tierRollDigest": "sha256:005f1d88424a47c8127b6ae2082d92ea40cd5f5824205dbdcbb0b1ddf15f2cb3",
+        "tierDraw": 0,
+        "tierTotalWeight": 5,
+        "candidateRollDigest": "sha256:3848d15225499ad5bbf2d283a8a25ce57399ad824505168cd36305b3b35a7c42",
+        "candidateDraw": 0,
+        "candidateTotalWeight": 2,
+        "outcomeDigest": "sha256:48e3815859b1033f162138db52811771f866a0f156531fd16339445851e99bc4"
+      }
+    },
+    {
+      "eventId": "roll-0002",
+      "outcome": { "schemaVersion": 1, "kind": "sceneaxi.rarity.outcome", "tier": "common", "candidateId": "common-b" },
+      "provenance": {
+        "schemaVersion": 1,
+        "kind": "sceneaxi.rarity.provenance",
+        "algorithmId": "sceneaxi.rarity.weighted-sha256-v1",
+        "scope": "wayfinder-fixture",
+        "eventId": "roll-0002",
+        "policyDigest": "sha256:ab1a0d4aee9b7776fe0e93bd065f5d8d06eed6ec7458dfaeb770f6efc0154f26",
+        "requestDigest": "sha256:85e2b410d81dc9a0c36837ad676c950e32e3fbeddcb5b1adfde39a95e9e04936",
+        "tierRollDigest": "sha256:bcfb13734eba8644e747d5aa18bb4cf7482161d6854304e1d08084aa44d2b7cb",
+        "tierDraw": 0,
+        "tierTotalWeight": 5,
+        "candidateRollDigest": "sha256:1b8ad46be05fabc1a0b59a625c3bed29b28ba6aa06bdec2b506038e1f3a2d605",
+        "candidateDraw": 1,
+        "candidateTotalWeight": 2,
+        "outcomeDigest": "sha256:34bf68dedfedee8438fbac80462a3e2ea9d9a294211ba01e2e9656a71b55cfe5"
+      }
+    },
+    {
+      "eventId": "roll-0013",
+      "outcome": { "schemaVersion": 1, "kind": "sceneaxi.rarity.outcome", "tier": "uncommon", "candidateId": "uncommon-a" },
+      "provenance": {
+        "schemaVersion": 1,
+        "kind": "sceneaxi.rarity.provenance",
+        "algorithmId": "sceneaxi.rarity.weighted-sha256-v1",
+        "scope": "wayfinder-fixture",
+        "eventId": "roll-0013",
+        "policyDigest": "sha256:ab1a0d4aee9b7776fe0e93bd065f5d8d06eed6ec7458dfaeb770f6efc0154f26",
+        "requestDigest": "sha256:85e2b410d81dc9a0c36837ad676c950e32e3fbeddcb5b1adfde39a95e9e04936",
+        "tierRollDigest": "sha256:ab40ff25e414f0fdaf668966f198fe1bfc421255274dddf8c6fbc71c4145ea62",
+        "tierDraw": 1,
+        "tierTotalWeight": 5,
+        "candidateRollDigest": "sha256:290472c12bdf58399351af6534adfe4301b80a50164d4c904731be062c236ea2",
+        "candidateDraw": 0,
+        "candidateTotalWeight": 2,
+        "outcomeDigest": "sha256:21051d42ee800602c95a4339fe572874e19c1b14ca24d64f91fc3d9af8ca4872"
+      }
+    },
+    {
+      "eventId": "roll-0034",
+      "outcome": { "schemaVersion": 1, "kind": "sceneaxi.rarity.outcome", "tier": "uncommon", "candidateId": "uncommon-b" },
+      "provenance": {
+        "schemaVersion": 1,
+        "kind": "sceneaxi.rarity.provenance",
+        "algorithmId": "sceneaxi.rarity.weighted-sha256-v1",
+        "scope": "wayfinder-fixture",
+        "eventId": "roll-0034",
+        "policyDigest": "sha256:ab1a0d4aee9b7776fe0e93bd065f5d8d06eed6ec7458dfaeb770f6efc0154f26",
+        "requestDigest": "sha256:85e2b410d81dc9a0c36837ad676c950e32e3fbeddcb5b1adfde39a95e9e04936",
+        "tierRollDigest": "sha256:c6f0fc12144a719c1b2e25ad16db1b8b64692478d3f56b4fcb422bb5dad040c2",
+        "tierDraw": 1,
+        "tierTotalWeight": 5,
+        "candidateRollDigest": "sha256:d2b32173a8e6f3474143896fcbdf4d1ea120a7b335976637953805e0fe31acc1",
+        "candidateDraw": 1,
+        "candidateTotalWeight": 2,
+        "outcomeDigest": "sha256:078e598fda7a5a023df05d3f4709ad2e21595b5c49b72e955c0584fa80da2b4f"
+      }
+    },
+    {
+      "eventId": "roll-0024",
+      "outcome": { "schemaVersion": 1, "kind": "sceneaxi.rarity.outcome", "tier": "rare", "candidateId": "rare-a" },
+      "provenance": {
+        "schemaVersion": 1,
+        "kind": "sceneaxi.rarity.provenance",
+        "algorithmId": "sceneaxi.rarity.weighted-sha256-v1",
+        "scope": "wayfinder-fixture",
+        "eventId": "roll-0024",
+        "policyDigest": "sha256:ab1a0d4aee9b7776fe0e93bd065f5d8d06eed6ec7458dfaeb770f6efc0154f26",
+        "requestDigest": "sha256:85e2b410d81dc9a0c36837ad676c950e32e3fbeddcb5b1adfde39a95e9e04936",
+        "tierRollDigest": "sha256:bbd265bca7283904c092dc221763de8fa54f230ab31e2c7433674f4b279fbcb6",
+        "tierDraw": 2,
+        "tierTotalWeight": 5,
+        "candidateRollDigest": "sha256:ced73faf8e7da9433b4382752254807e70db3f4c0932a3f04dda8d63811b1dbe",
+        "candidateDraw": 0,
+        "candidateTotalWeight": 2,
+        "outcomeDigest": "sha256:45d6b32305a4c19a1ac80ad08f5d53f3fb036afe71423e3c8beba8e845cd02b3"
+      }
+    },
+    {
+      "eventId": "roll-0003",
+      "outcome": { "schemaVersion": 1, "kind": "sceneaxi.rarity.outcome", "tier": "rare", "candidateId": "rare-b" },
+      "provenance": {
+        "schemaVersion": 1,
+        "kind": "sceneaxi.rarity.provenance",
+        "algorithmId": "sceneaxi.rarity.weighted-sha256-v1",
+        "scope": "wayfinder-fixture",
+        "eventId": "roll-0003",
+        "policyDigest": "sha256:ab1a0d4aee9b7776fe0e93bd065f5d8d06eed6ec7458dfaeb770f6efc0154f26",
+        "requestDigest": "sha256:85e2b410d81dc9a0c36837ad676c950e32e3fbeddcb5b1adfde39a95e9e04936",
+        "tierRollDigest": "sha256:9366d3e719af5345d879385ec8748a800da86c2a4d2cecd51d24bc93a8047758",
+        "tierDraw": 2,
+        "tierTotalWeight": 5,
+        "candidateRollDigest": "sha256:95a595c7d70c657a367002d2d8200f4634f011e3caa2e465e3afcdee8906da43",
+        "candidateDraw": 1,
+        "candidateTotalWeight": 2,
+        "outcomeDigest": "sha256:007d0ab6f8a77061ff3158ebd70787467d28762d6e3b11dd83a45af8912f0811"
+      }
+    },
+    {
+      "eventId": "roll-0001",
+      "outcome": { "schemaVersion": 1, "kind": "sceneaxi.rarity.outcome", "tier": "epic", "candidateId": "epic-a" },
+      "provenance": {
+        "schemaVersion": 1,
+        "kind": "sceneaxi.rarity.provenance",
+        "algorithmId": "sceneaxi.rarity.weighted-sha256-v1",
+        "scope": "wayfinder-fixture",
+        "eventId": "roll-0001",
+        "policyDigest": "sha256:ab1a0d4aee9b7776fe0e93bd065f5d8d06eed6ec7458dfaeb770f6efc0154f26",
+        "requestDigest": "sha256:85e2b410d81dc9a0c36837ad676c950e32e3fbeddcb5b1adfde39a95e9e04936",
+        "tierRollDigest": "sha256:74ff173c8ff4218906e2440afdb62b2e87f37dee2619f8bf80cd23c9a9d33a08",
+        "tierDraw": 3,
+        "tierTotalWeight": 5,
+        "candidateRollDigest": "sha256:ede63e5ed96d19ebbc4b335df70c0a3fb13bfe2f78c47c9db1972cc61a7633cc",
+        "candidateDraw": 0,
+        "candidateTotalWeight": 2,
+        "outcomeDigest": "sha256:db74f6c9a3e3a086687395d36396dfb726c53510ae678d77ea01a0c87f7bdad7"
+      }
+    },
+    {
+      "eventId": "roll-0023",
+      "outcome": { "schemaVersion": 1, "kind": "sceneaxi.rarity.outcome", "tier": "epic", "candidateId": "epic-b" },
+      "provenance": {
+        "schemaVersion": 1,
+        "kind": "sceneaxi.rarity.provenance",
+        "algorithmId": "sceneaxi.rarity.weighted-sha256-v1",
+        "scope": "wayfinder-fixture",
+        "eventId": "roll-0023",
+        "policyDigest": "sha256:ab1a0d4aee9b7776fe0e93bd065f5d8d06eed6ec7458dfaeb770f6efc0154f26",
+        "requestDigest": "sha256:85e2b410d81dc9a0c36837ad676c950e32e3fbeddcb5b1adfde39a95e9e04936",
+        "tierRollDigest": "sha256:5c064731750f869f9ecfc897a98af08785d0806d0aa83b322f86e97f7388b4a5",
+        "tierDraw": 3,
+        "tierTotalWeight": 5,
+        "candidateRollDigest": "sha256:66e2c6e62d5e25b86fa0576df370bdcda6f1067485fee7e2b847a466f3b30043",
+        "candidateDraw": 1,
+        "candidateTotalWeight": 2,
+        "outcomeDigest": "sha256:f1cbcd0de69bffccf4378761bd55d98ec22ff142cdcea79a9570e41118f0109f"
+      }
+    },
+    {
+      "eventId": "roll-0008",
+      "outcome": { "schemaVersion": 1, "kind": "sceneaxi.rarity.outcome", "tier": "legendary", "candidateId": "legendary-a" },
+      "provenance": {
+        "schemaVersion": 1,
+        "kind": "sceneaxi.rarity.provenance",
+        "algorithmId": "sceneaxi.rarity.weighted-sha256-v1",
+        "scope": "wayfinder-fixture",
+        "eventId": "roll-0008",
+        "policyDigest": "sha256:ab1a0d4aee9b7776fe0e93bd065f5d8d06eed6ec7458dfaeb770f6efc0154f26",
+        "requestDigest": "sha256:85e2b410d81dc9a0c36837ad676c950e32e3fbeddcb5b1adfde39a95e9e04936",
+        "tierRollDigest": "sha256:9359b31fada45867c0897cea7905c6cd18e68bd6d669220eb8b48e46544bd6f1",
+        "tierDraw": 4,
+        "tierTotalWeight": 5,
+        "candidateRollDigest": "sha256:5669712e425549ca48b74a9afc7fea8d9e54db7c8ce32b3557294256347e8994",
+        "candidateDraw": 0,
+        "candidateTotalWeight": 2,
+        "outcomeDigest": "sha256:e1dedbfcd2990ec792f7510e6a448f859e6726a6ce0d749ef8eb4585b7249f91"
+      }
+    },
+    {
+      "eventId": "roll-0015",
+      "outcome": { "schemaVersion": 1, "kind": "sceneaxi.rarity.outcome", "tier": "legendary", "candidateId": "legendary-b" },
+      "provenance": {
+        "schemaVersion": 1,
+        "kind": "sceneaxi.rarity.provenance",
+        "algorithmId": "sceneaxi.rarity.weighted-sha256-v1",
+        "scope": "wayfinder-fixture",
+        "eventId": "roll-0015",
+        "policyDigest": "sha256:ab1a0d4aee9b7776fe0e93bd065f5d8d06eed6ec7458dfaeb770f6efc0154f26",
+        "requestDigest": "sha256:85e2b410d81dc9a0c36837ad676c950e32e3fbeddcb5b1adfde39a95e9e04936",
+        "tierRollDigest": "sha256:ec16670ecb1e2f48f93d4ee92b435645c396c2dd91b0db369f7b3b277ba7e17a",
+        "tierDraw": 4,
+        "tierTotalWeight": 5,
+        "candidateRollDigest": "sha256:2d1e1295cc9ea7432340b6eeef3b9fcb245f7936cf2eacce8cbf660ca95d94b3",
+        "candidateDraw": 1,
+        "candidateTotalWeight": 2,
+        "outcomeDigest": "sha256:49a3c86e0d1d6c8fa965bc7443427444f1b03c5b6da00cbabb7d4cf07a27145d"
+      }
+    }
+  ]
+}
