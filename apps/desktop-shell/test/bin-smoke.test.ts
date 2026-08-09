@@ -19,6 +19,11 @@ const BIN = fileURLToPath(
 const BUILT_ENTRY = fileURLToPath(
   new URL("../dist/src/app.js", import.meta.url),
 );
+const NO_TYPE_STRIPPING_ARGS = process.allowedNodeEnvironmentFlags.has("--no-strip-types")
+  ? ["--no-strip-types"]
+  : process.allowedNodeEnvironmentFlags.has("--no-experimental-strip-types")
+    ? ["--no-experimental-strip-types"]
+    : [];
 
 function desktop(
   args: readonly string[],
@@ -67,14 +72,14 @@ describe("sceneaxi-desktop binary", () => {
   // binary is started once with stripping off, which is the same resolution the
   // lower half of the supported range performs.
   it("starts on a runtime that does not strip types", () => {
-    const r = desktop(["--help"], cwd, ["--no-experimental-strip-types"]);
+    const r = desktop(["--help"], cwd, NO_TYPE_STRIPPING_ARGS);
     expect(r.stderr).not.toContain("ERR_UNKNOWN_FILE_EXTENSION");
     expect(r.status).toBe(0);
     expect(r.stdout).toContain("sceneaxi-desktop <command>");
   });
 
   it("renders the chrome without type stripping, embedded functions intact", () => {
-    const r = desktop(["chrome"], cwd, ["--no-experimental-strip-types"]);
+    const r = desktop(["chrome"], cwd, NO_TYPE_STRIPPING_ARGS);
     expect(r.status).toBe(0);
     expect(r.stdout).toContain("data-run-rarity-evidence");
     expect(r.stdout).toContain("data-change-rarity-evidence");
