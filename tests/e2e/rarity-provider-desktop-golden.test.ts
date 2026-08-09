@@ -15,12 +15,19 @@ import {
   DESKTOP_RARITY_FIXTURE_MODEL,
   createDesktopRarityFixtureProvider,
 } from "../../desktop/linux/src/electron/provider-runtime.ts";
-import { RARITY_REFUSE_CODES } from "@sceneaxi/schemas";
+import {
+  RARITY_REFUSE_CODES,
+  digestRarityOutcome,
+  type ModelProviderCallEvidence,
+  type RarityOutcome,
+} from "@sceneaxi/schemas";
 import {
   RARITY_AUTHORING_REFUSALS,
+  resolveApplyTransaction,
   stageRarityProviderProposal,
   type RarityProviderContributionResult,
 } from "@sceneaxi/authoring-core";
+import { createDesktopSession, shellApply } from "@sceneaxi/desktop-shell";
 
 const acceptanceVector = JSON.parse(
   readFileSync(
@@ -148,6 +155,18 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     expect(acceptedBytes).not.toBe(before);
     expect(acceptedBytes).not.toContain("credential-sentinel-never-persisted");
     expect(acceptedBytes).not.toContain("providerResponse");
+    expect(
+      bridge.handle({
+        action: "authoring",
+        payload: { op: "status", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+      }),
+    ).toMatchObject({
+      ok: true,
+      data: {
+        rarityNamespaceDigest: job.result.evidence.namespaceDigest,
+        acceptedRarityEvidence: job.result.evidence,
+      },
+    });
 
     const reopened = createDesktopBridge({ cwd: root, nowMs: () => 1_726_000_000_000 });
     const played = reopened.handle({
@@ -477,6 +496,137 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     });
   });
 
+  it("refuses Agent staging when another proposal enters review while the provider runs", async () => {
+    const root = projectRoot();
+    const contribution = await createDesktopRarityFixtureProvider()({
+      profile: "@sceneaxi/profile-game",
+      prompt: "stage a drop",
+    });
+    if (!contribution.ok) throw new Error(contribution.reason);
+    let release: ((value: RarityProviderContributionResult) => void) | undefined;
+    const deferred = new Promise<RarityProviderContributionResult>((resolve) => {
+      release = resolve;
+    });
+    const bridge = createDesktopBridge({ cwd: root, runRarityProvider: () => deferred });
+    startRarity(bridge);
+    const current = bridge.handle({
+      action: "authoring",
+      payload: { op: "status", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+    });
+    if (!current.ok) throw new Error(current.reason);
+    const contentHash = (current.data as { contentHash: string }).contentHash;
+    expect(
+      bridge.handle({
+        action: "authoring",
+        payload: {
+          op: "edit-property",
+          documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+          expectedContentHash: contentHash,
+          entityId: "desktop-crate-beside",
+          propertyId: "translation-x",
+          newValue: 3,
+        },
+      }),
+    ).toMatchObject({ ok: true, data: { phase: "reviewing", diagnostics: null } });
+
+    release?.(contribution);
+    expect(await settledJob(bridge)).toMatchObject({
+      status: "refused",
+      refusal: { reason: "invalid-proposal", recoverable: true },
+    });
+    expect(bridge.handle({ action: "authoring", payload: { op: "accept" } })).toMatchObject({
+      ok: true,
+      data: { phase: "applied" },
+    });
+    const accepted = JSON.parse(documentBytes(root)) as {
+      data: {
+        rarity?: unknown;
+        composedScene: {
+          instances: Array<{
+            instanceId: string;
+            localTransform: { translation: number[] };
+          }>;
+        };
+      };
+    };
+    expect(accepted.data.rarity).toBeUndefined();
+    expect(
+      accepted.data.composedScene.instances.find(
+        (instance) => instance.instanceId === "desktop-crate-beside",
+      )?.localTransform.translation[0],
+    ).toBe(3);
+  });
+
+  it("preserves staged rarity evidence through pending recovery and retires it on reject", async () => {
+    const root = projectRoot();
+    const applyProposal: typeof shellApply = () => ({
+      ok: false,
+      applicationState: "indeterminate",
+      journalRecoveryPending: true,
+      transactionId: "0000000000000-0000000000000000",
+      diagnostics: [{ code: "apply-in-progress", message: "Apply recovery is pending." }],
+    });
+    const resolveTransaction: typeof resolveApplyTransaction = () => ({
+      ok: true,
+      transactionId: "0000000000000-0000000000000000",
+      state: "aborted",
+      documentPaths: [DESKTOP_ACTIVE_DOCUMENT_PATH],
+    });
+    const bridge = createDesktopBridge({
+      cwd: root,
+      runRarityProvider: createDesktopRarityFixtureProvider(),
+      createAuthoringSession: () =>
+        createDesktopSession({
+          cwd: root,
+          operations: { applyProposal, resolveTransaction },
+        }),
+    });
+    startRarity(bridge);
+    const staged = await settledJob(bridge);
+    if (staged.result === undefined || !("kind" in staged.result)) {
+      throw new Error("missing rarity result");
+    }
+
+    const pending = bridge.handle({ action: "authoring", payload: { op: "accept" } });
+    expect(pending).toMatchObject({
+      ok: true,
+      data: { phase: "pending", rarityEvidence: staged.result.evidence },
+    });
+    const recovered = bridge.handle({ action: "authoring", payload: { op: "recover" } });
+    expect(recovered).toMatchObject({
+      ok: true,
+      data: {
+        phase: "reviewing",
+        rarityEvidence: staged.result.evidence,
+        diagnostics: [{ code: "journal-conflict" }],
+      },
+    });
+    const rejected = bridge.handle({ action: "authoring", payload: { op: "reject" } });
+    expect(rejected).toMatchObject({
+      ok: true,
+      data: { phase: "rejected", rarityEvidence: staged.result.evidence },
+    });
+
+    const current = bridge.handle({
+      action: "authoring",
+      payload: { op: "status", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+    });
+    if (!current.ok) throw new Error(current.reason);
+    const ordinary = bridge.handle({
+      action: "authoring",
+      payload: {
+        op: "edit-property",
+        documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+        expectedContentHash: (current.data as { contentHash: string }).contentHash,
+        entityId: "desktop-crate-beside",
+        propertyId: "translation-x",
+        newValue: 4,
+      },
+    });
+    expect(ordinary).toMatchObject({ ok: true, data: { phase: "reviewing" } });
+    expect(ordinary.ok && ordinary.data).not.toHaveProperty("rarityEvidence");
+  });
+
   it("replays an identical event and refuses changed request bytes under that event id", async () => {
     const root = projectRoot();
     const first = createDesktopBridge({
@@ -564,6 +714,94 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
       refusal: { reason: RARITY_REFUSE_CODES.eventInputConflict },
     });
     expect(documentBytes(root)).toBe(acceptedBytes);
+  });
+
+  it("kernel-verifies an identical replay before reporting provider evidence", async () => {
+    const root = projectRoot();
+    const first = createDesktopBridge({
+      cwd: root,
+      runRarityProvider: createDesktopRarityFixtureProvider(),
+    });
+    startRarity(first);
+    expect((await settledJob(first)).status).toBe("ready");
+    first.handle({ action: "authoring", payload: { op: "accept" } });
+
+    const path = join(root, DESKTOP_ACTIVE_DOCUMENT_PATH);
+    const document = JSON.parse(documentBytes(root)) as {
+      data: {
+        rarity: {
+          rolls: Array<{
+            outcome: RarityOutcome;
+            provenance: { outcomeDigest: string };
+          }>;
+        };
+      };
+    };
+    const roll = document.data.rarity.rolls[0];
+    if (roll === undefined) throw new Error("accepted rarity roll missing");
+    const tamperedOutcome: RarityOutcome = {
+      ...roll.outcome,
+      tier: "rare",
+      candidateId: "wayfinder-silver",
+    };
+    roll.outcome = tamperedOutcome;
+    roll.provenance.outcomeDigest = digestRarityOutcome(tamperedOutcome);
+    writeFileSync(path, `${JSON.stringify(document)}\n`);
+    const tamperedBytes = documentBytes(root);
+
+    const replay = createDesktopBridge({
+      cwd: root,
+      runRarityProvider: createDesktopRarityFixtureProvider(),
+    });
+    expect(
+      replay.handle({
+        action: "authoring",
+        payload: { op: "status", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+      }),
+    ).toMatchObject({
+      ok: true,
+      data: { acceptedRarityEvidence: null },
+    });
+    startRarity(replay);
+    expect(await settledJob(replay)).toMatchObject({
+      status: "refused",
+      refusal: { recoverable: true },
+    });
+    expect(documentBytes(root)).toBe(tamperedBytes);
+  });
+
+  it("requires tool-call evidence for the authored profile", async () => {
+    const root = projectRoot();
+    const contribution = await createDesktopRarityFixtureProvider()({
+      profile: "@sceneaxi/profile-game",
+      prompt: "stage a drop",
+    });
+    if (!contribution.ok) throw new Error(contribution.reason);
+    const documentData = JSON.parse(documentBytes(root)).data as Record<string, unknown>;
+    let resolverCalls = 0;
+    for (const providerEvidence of [
+      { ...contribution.value.providerEvidence, operation: "complete" },
+      { ...contribution.value.providerEvidence, profile: "@sceneaxi/profile-web" },
+    ] as ModelProviderCallEvidence[]) {
+      const staged = stageRarityProviderProposal({
+        documentData,
+        documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+        expectedContentHash: `sha256:${"0".repeat(64)}`,
+        profile: "@sceneaxi/profile-game",
+        eventId: DESKTOP_RARITY_EVENT_ID,
+        contribution: { ...contribution.value, providerEvidence },
+        resolve: () => {
+          resolverCalls += 1;
+          throw new Error("invalid evidence must refuse before kernel resolution");
+        },
+      });
+      expect(staged).toMatchObject({
+        ok: false,
+        reason: RARITY_AUTHORING_REFUSALS.providerEvidenceInvalid,
+        path: "rarity.providerEvidence",
+      });
+    }
+    expect(resolverCalls).toBe(0);
   });
 
   it("refuses to attach a call's descriptor to rolls that carry none", async () => {

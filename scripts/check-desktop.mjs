@@ -52,6 +52,7 @@ const REQUIRED_SCRIPTS = Object.freeze(["build", "dist", "smoke", "typecheck"]);
  * is the whole reason the tier is a separate install root (ADR 0024).
  */
 const DESKTOP_DEPENDENCIES = Object.freeze(["electron", "electron-builder", "esbuild"]);
+const DESKTOP_RENDERER_OWNER = "src/renderer/viewport.ts";
 
 /** Same secret-shaped material the sites check refuses; the desktop tier needs no secret at all. */
 const SECRET_VALUE_PATTERNS = Object.freeze([
@@ -306,10 +307,18 @@ for (const dir of appDirs) {
   // that the hermetic gate can exercise from tests/desktop/ without an Electron install.
   const srcDir = join(dir, "src");
   const electronDir = join(srcDir, "electron");
+  const presentationOwners = [];
   if (existsSync(srcDir)) {
     for (const file of walk(srcDir)) {
       if (!/\.(ts|tsx|mts|cts|js|mjs|cjs)$/.test(file)) continue;
       const text = readFileSync(file, "utf8");
+      if (
+        [...text.matchAll(VALUE_MODULE_SPEC)].some(
+          (match) => match[1] === "@sceneaxi/engine-presentation",
+        )
+      ) {
+        presentationOwners.push(relative(dir, file));
+      }
       for (const match of text.matchAll(ELECTRON_SPEC)) {
         if (!contains(electronDir, file)) {
           fail(
@@ -335,6 +344,15 @@ for (const dir of appDirs) {
         );
       }
     }
+  }
+  if (
+    manifest.dependencies?.["@sceneaxi/engine-presentation"] !== undefined &&
+    (presentationOwners.length !== 1 ||
+      presentationOwners[0] !== DESKTOP_RENDERER_OWNER)
+  ) {
+    fail(
+      `${manifest.name}: presentation runtime ownership must be exactly '${DESKTOP_RENDERER_OWNER}' (found ${presentationOwners.join(", ") || "none"})`,
+    );
   }
 
   const rendererDir = join(srcDir, "renderer");

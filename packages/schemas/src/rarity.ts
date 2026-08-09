@@ -153,6 +153,51 @@ export type RarityValidationResult<Value> =
   | RarityValidationOk<Value>
   | RarityValidationRefuse;
 
+export function validateRarityProviderEvidence(
+  value: unknown,
+  path = "rarity.providerEvidence",
+): RarityValidationResult<ModelProviderCallEvidence> {
+  const evidence = snapshotPlainRecord(value);
+  const evidenceFields = evidence === undefined
+    ? null
+    : requireExactFields(
+        evidence,
+        ["schemaVersion", "kind", "operation", "profile", "model"],
+        path,
+      );
+  const model = evidence === undefined
+    ? undefined
+    : snapshotPlainRecord(evidence["model"]);
+  const modelFields = model === undefined
+    ? null
+    : requireExactFields(
+        model,
+        ["model", "provider", "quantization", "version"],
+        `${path}.model`,
+      );
+  if (
+    evidence === undefined ||
+    evidenceFields !== null ||
+    evidence["schemaVersion"] !== MODEL_PROVIDER_PORT_SCHEMA_VERSION ||
+    evidence["kind"] !== MODEL_PROVIDER_CALL_EVIDENCE_KIND ||
+    !MODEL_PROVIDER_OPERATIONS.some((operation) => operation === evidence["operation"]) ||
+    typeof evidence["profile"] !== "string" ||
+    !/^@sceneaxi\/profile-[a-z][a-z0-9-]*$/.test(evidence["profile"]) ||
+    model === undefined ||
+    modelFields !== null ||
+    !["model", "provider", "quantization", "version"].every(
+      (field) => typeof model[field] === "string" && model[field].length > 0,
+    )
+  ) {
+    return refuseRarity(
+      RARITY_REFUSE_CODES.provenanceMismatch,
+      path,
+      "Rarity provider evidence must be the exact Model Provider Port evidence shape.",
+    );
+  }
+  return ok(snapshotSculptJson(evidence) as unknown as ModelProviderCallEvidence);
+}
+
 const IDENTIFIER_RE = /^[a-z0-9][a-z0-9._:-]{0,127}$/;
 const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
 
@@ -711,45 +756,9 @@ export function validateRarityNamespace(
   }
   let providerEvidence: ModelProviderCallEvidence | undefined;
   if (hasProviderEvidence) {
-    const evidence = snapshotPlainRecord(header["providerEvidence"]);
-    const evidenceFields = evidence === undefined
-      ? null
-      : requireExactFields(
-          evidence,
-          ["schemaVersion", "kind", "operation", "profile", "model"],
-          "rarity.providerEvidence",
-        );
-    const model = evidence === undefined
-      ? undefined
-      : snapshotPlainRecord(evidence["model"]);
-    const modelFields = model === undefined
-      ? null
-      : requireExactFields(
-          model,
-          ["model", "provider", "quantization", "version"],
-          "rarity.providerEvidence.model",
-        );
-    if (
-      evidence === undefined ||
-      evidenceFields !== null ||
-      evidence["schemaVersion"] !== MODEL_PROVIDER_PORT_SCHEMA_VERSION ||
-      evidence["kind"] !== MODEL_PROVIDER_CALL_EVIDENCE_KIND ||
-      !MODEL_PROVIDER_OPERATIONS.some((operation) => operation === evidence["operation"]) ||
-      typeof evidence["profile"] !== "string" ||
-      !/^@sceneaxi\/profile-[a-z][a-z0-9-]*$/.test(evidence["profile"]) ||
-      model === undefined ||
-      modelFields !== null ||
-      !["model", "provider", "quantization", "version"].every(
-        (field) => typeof model[field] === "string" && model[field].length > 0,
-      )
-    ) {
-      return refuseRarity(
-        RARITY_REFUSE_CODES.provenanceMismatch,
-        "rarity.providerEvidence",
-        "Rarity provider evidence must be the exact Model Provider Port evidence shape.",
-      );
-    }
-    providerEvidence = snapshotSculptJson(evidence) as unknown as ModelProviderCallEvidence;
+    const evidence = validateRarityProviderEvidence(header["providerEvidence"]);
+    if (!evidence.ok) return evidence;
+    providerEvidence = evidence.value;
   }
   return ok(
     snapshotSculptJson({

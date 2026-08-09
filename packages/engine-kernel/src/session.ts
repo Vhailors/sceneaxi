@@ -24,6 +24,7 @@ import {
   snapshotPlainRecord,
   validateRarityNamespace,
   validateRarityRollRequest,
+  validateRarityProviderEvidence,
   type FrameClock,
   type KernelCommand,
   type KernelSessionEvent,
@@ -473,7 +474,11 @@ function validateCommand(command: KernelCommand): KernelCommand {
   }
   if (record["type"] === "rarity-roll") {
     const unexpected = Object.keys(record).find(
-      (key) => key !== "type" && key !== "eventId" && key !== "request",
+      (key) =>
+        key !== "type" &&
+        key !== "eventId" &&
+        key !== "request" &&
+        key !== "providerEvidence",
     );
     if (unexpected !== undefined) {
       throw rarityError(
@@ -494,10 +499,21 @@ function validateCommand(command: KernelCommand): KernelCommand {
     }
     const request = validateRarityRollRequest(record["request"]);
     if (!request.ok) throw rarityError(request.code, request.path, request.message);
+    const hasProviderEvidence = Object.hasOwn(record, "providerEvidence");
+    const providerEvidence = hasProviderEvidence
+      ? validateRarityProviderEvidence(
+          record["providerEvidence"],
+          "rarity.command.providerEvidence",
+        )
+      : undefined;
+    if (providerEvidence !== undefined && !providerEvidence.ok) {
+      throw rarityError(providerEvidence.code, providerEvidence.path, providerEvidence.message);
+    }
     return Object.freeze({
       type: "rarity-roll",
       eventId,
       request: request.value,
+      ...(providerEvidence === undefined ? {} : { providerEvidence: providerEvidence.value }),
     });
   }
   throw new KernelSessionError(
@@ -662,6 +678,20 @@ class SessionImpl implements KernelSession {
       }
       const request = validateRarityRollRequest(command.request, this.rarity.policy);
       if (!request.ok) throw rarityError(request.code, request.path, request.message);
+      const expectedEvidence = this.rarity.providerEvidence;
+      if (
+        (expectedEvidence === undefined) !== (command.providerEvidence === undefined) ||
+        (expectedEvidence !== undefined &&
+          command.providerEvidence !== undefined &&
+          canonicalRarityJson(expectedEvidence as unknown as JsonValue) !==
+            canonicalRarityJson(command.providerEvidence as unknown as JsonValue))
+      ) {
+        throw rarityError(
+          RARITY_REFUSE_CODES.provenanceMismatch,
+          `rarity.rolls.${command.eventId}.providerEvidence`,
+          "A rarity roll command must carry the exact provider evidence bound to its namespace, or carry none when the namespace is evidence-less.",
+        );
+      }
       const prior =
         this.rarity.rolls.find((roll) => roll.eventId === command.eventId)?.request ??
         this.pending.find(

@@ -595,6 +595,7 @@ export {
   validateRarityNamespace,
   validateRarityOutcome,
   validateRarityPolicy,
+  validateRarityProviderEvidence,
   validateRarityProvenance,
   validateRarityRollRequest,
 } from "./rarity.js";

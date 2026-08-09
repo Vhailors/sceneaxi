@@ -14,6 +14,7 @@ import {
   isRarityIdentifier,
   validateRarityNamespace,
   validateRarityPolicy,
+  validateRarityProviderEvidence,
   validateRarityRollRequest,
   type JsonObject,
   type JsonValue,
@@ -35,6 +36,7 @@ export const RARITY_AUTHORING_REFUSALS = Object.freeze({
   documentInvalid: "RARITY_AUTHORING_DOCUMENT_INVALID",
   providerEvidenceAbsent: "RARITY_AUTHORING_PROVIDER_EVIDENCE_ABSENT",
   providerEvidenceConflict: "RARITY_AUTHORING_PROVIDER_EVIDENCE_CONFLICT",
+  providerEvidenceInvalid: "RARITY_AUTHORING_PROVIDER_EVIDENCE_INVALID",
   projectIdentityInvalid: "RARITY_AUTHORING_PROJECT_IDENTITY_INVALID",
   resolutionRefused: "RARITY_AUTHORING_KERNEL_RESOLUTION_REFUSED",
   resolutionMismatch: "RARITY_AUTHORING_KERNEL_RESOLUTION_MISMATCH",
@@ -283,6 +285,20 @@ export function stageRarityProviderProposal(input: Readonly<{
       "The active Scene Document data is not a JSON object.",
     );
   }
+  const providerEvidence = validateRarityProviderEvidence(
+    input.contribution.providerEvidence,
+  );
+  if (
+    !providerEvidence.ok ||
+    providerEvidence.value.operation !== "tool-call" ||
+    providerEvidence.value.profile !== input.profile
+  ) {
+    return refuse(
+      RARITY_AUTHORING_REFUSALS.providerEvidenceInvalid,
+      "Rarity proposals require exact tool-call evidence for the profile being authored.",
+      "rarity.providerEvidence",
+    );
+  }
   const productId = input.documentData.productId;
   const seed = input.documentData.seed;
   if (!isRarityIdentifier(productId) || !Number.isSafeInteger(seed)) {
@@ -308,7 +324,7 @@ export function stageRarityProviderProposal(input: Readonly<{
     kind: RARITY_NAMESPACE_KIND,
     policy: policy.value,
     rolls: Object.freeze([]),
-    providerEvidence: input.contribution.providerEvidence,
+    providerEvidence: providerEvidence.value,
   });
   if (input.documentData.rarity !== undefined) {
     const current = validateRarityNamespace(input.documentData.rarity);
@@ -341,7 +357,7 @@ export function stageRarityProviderProposal(input: Readonly<{
     if (
       existing.providerEvidence !== undefined &&
       canonicalRarityJson(existing.providerEvidence as unknown as JsonValue) !==
-        canonicalRarityJson(input.contribution.providerEvidence as unknown as JsonValue)
+        canonicalRarityJson(providerEvidence.value as unknown as JsonValue)
     ) {
       return refuse(
         RARITY_AUTHORING_REFUSALS.providerEvidenceConflict,
@@ -359,10 +375,37 @@ export function stageRarityProviderProposal(input: Readonly<{
         `rarity.rolls.${input.eventId}.request`,
       );
     }
+    let replayed: ReturnType<RarityKernelResolver>;
+    try {
+      replayed = input.resolve({
+        productId,
+        seed: seed as number,
+        eventId: input.eventId,
+        namespace: existing,
+        request: request.value,
+      });
+    } catch {
+      return refuse(
+        RARITY_AUTHORING_REFUSALS.resolutionRefused,
+        "The authoritative kernel rarity replay failed; no evidence was reported.",
+      );
+    }
+    if (!replayed.ok) return refuse(replayed.reason, replayed.message, replayed.path);
+    const verified = validateRarityNamespace(replayed.value);
+    if (
+      !verified.ok ||
+      canonicalRarityJson(verified.value as unknown as JsonValue) !==
+        canonicalRarityJson(existing as unknown as JsonValue)
+    ) {
+      return refuse(
+        RARITY_AUTHORING_REFUSALS.resolutionMismatch,
+        "The authoritative kernel replay did not reproduce the accepted rarity namespace exactly.",
+      );
+    }
     return Object.freeze({
       ok: true as const,
-      namespace: existing,
-      evidence: safeRarityEvidenceFromNamespace(existing, input.eventId, seed as number),
+      namespace: verified.value,
+      evidence: safeRarityEvidenceFromNamespace(verified.value, input.eventId, seed as number),
       replayed: true as const,
     });
   }
@@ -372,7 +415,7 @@ export function stageRarityProviderProposal(input: Readonly<{
     kind: RARITY_NAMESPACE_KIND,
     policy: existing.rolls.length === 0 ? policy.value : existing.policy,
     rolls: existing.rolls,
-    providerEvidence: existing.providerEvidence ?? input.contribution.providerEvidence,
+    providerEvidence: existing.providerEvidence ?? providerEvidence.value,
   });
   let resolved: ReturnType<RarityKernelResolver>;
   try {

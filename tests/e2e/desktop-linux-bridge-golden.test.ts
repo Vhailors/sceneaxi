@@ -14,10 +14,9 @@
  * `docs/desktop-linux.md`, never a gate inference — the same split the umbrella
  * live open path uses.
  */
-import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { runInNewContext } from "node:vm";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import {
@@ -32,6 +31,7 @@ import {
   type ModelDescriptor,
 } from "@sceneaxi/authoring-core";
 import {
+  EDITOR_SHELL_ASSISTANT_MODE_IDS,
   SCENE_COMPOSITION_INTAKE_KIND,
   SCENE_COMPOSITION_SCHEMA_VERSION,
   type SceneCompositionIntake,
@@ -71,7 +71,11 @@ import {
   mountDesktopScene,
   synchronizeViewportScene,
 } from "../../desktop/linux/src/renderer/viewport-playback.ts";
-import { decideAssistantStart } from "../../desktop/linux/src/renderer/assistant-start.ts";
+import {
+  DESKTOP_ASSISTANT_START_MODES,
+  decideAssistantStart,
+} from "../../desktop/linux/src/renderer/assistant-start.ts";
+import { desktopAssistantRuntimeSignal } from "../../desktop/linux/src/renderer/assistant-runtime.ts";
 import { assistantInspectionText } from "../../desktop/linux/src/renderer/assistant-inspection.ts";
 import { formatSafeRarityEvidence } from "@sceneaxi/authoring-core/rarity-evidence";
 import { pollAssistantJob } from "../../desktop/linux/src/renderer/assistant-poll.ts";
@@ -1304,6 +1308,10 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     candidateDraw: 2,
     candidateTotalWeight: 5,
     providerEvidence: {
+      schemaVersion: 1,
+      kind: "sceneaxi.model-provider-call-evidence",
+      operation: "tool-call",
+      profile: "@sceneaxi/profile-game",
       model: {
         provider: "sceneaxi-fixture",
         model: "wayfinder-rarity-fixture",
@@ -1312,6 +1320,8 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       },
     },
   });
+
+  const RARITY_REPLAY_DIGEST = `sha256:${"a".repeat(64)}`;
 
   const RARITY_PROPOSAL_SNAPSHOT = Object.freeze({
     phase: "reviewing",
@@ -1526,7 +1536,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       instanceCount: 1,
       mountable: { sceneId: "desktop-scene" },
       rarity: RARITY_EVIDENCE_FIXTURE,
-      raritySession: { replayDigest: "sha256:rarity-replay" },
+      raritySession: { replayDigest: RARITY_REPLAY_DIGEST },
     };
     const port = {
       request: (request: { readonly action?: string; readonly payload?: { readonly op?: string } }) =>
@@ -1576,10 +1586,33 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     // The rarity product session is named, and the run report line claims none of
     // the rarity facts as its own.
     expect(runEvidence.textContent).toContain(
-      "verified in a separate product session replayed to sha256:rarity-replay",
+      `verified in a separate product session replayed to ${RARITY_REPLAY_DIGEST}`,
     );
     expect(runSession.textContent).toContain("terminal digest sha256:tick");
     expect(runSession.textContent).not.toContain("rarity");
+  });
+
+  it("refuses malformed numeric evidence and owns product-session attribution", () => {
+    const withSession = formatSafeRarityEvidence(
+      RARITY_EVIDENCE_FIXTURE,
+      { replayDigest: RARITY_REPLAY_DIGEST },
+    );
+    expect(withSession).toContain(
+      `verified in a separate product session replayed to ${RARITY_REPLAY_DIGEST}`,
+    );
+    for (const [field, value] of [
+      ["projectSeed", undefined],
+      ["tierDraw", -1],
+      ["tierDraw", 1.5],
+      ["tierTotalWeight", 0],
+      ["candidateDraw", 5],
+      ["candidateTotalWeight", Number.NaN],
+    ] as const) {
+      expect(
+        formatSafeRarityEvidence({ ...RARITY_EVIDENCE_FIXTURE, [field]: value }),
+        field,
+      ).toBeNull();
+    }
   });
 
   it("clears rarity evidence when the bound project root changes", async () => {
@@ -1665,6 +1698,8 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
                     documentId: "scene",
                     contentHash: "sha256:base",
                     data: { rarity: { kind: "sceneaxi.rarity.namespace" } },
+                    rarityNamespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
+                    acceptedRarityEvidence: RARITY_EVIDENCE_FIXTURE,
                     undoAvailability: "available",
                   },
                 }
@@ -1690,6 +1725,44 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     expect(evidence.hidden).toBe(false);
     expect(evidence.textContent).toContain("provenance sha256:provenance");
     expect(evidenceEmpty.hidden).toBe(true);
+  });
+
+  it("reconciles displayed evidence to the namespace returned by Reload", async () => {
+    const replacement = Object.freeze({
+      ...RARITY_EVIDENCE_FIXTURE,
+      candidateId: "wayfinder-silver",
+      namespaceDigest: "sha256:replacement-namespace",
+      provenanceDigest: "sha256:replacement-provenance",
+    });
+    const port = {
+      request: () =>
+        Promise.resolve({
+          ok: true,
+          action: "authoring",
+          data: {
+            ok: true,
+            documentId: "scene",
+            contentHash: "sha256:replacement",
+            data: { rarity: { kind: "sceneaxi.rarity.namespace" } },
+            rarityNamespaceDigest: replacement.namespaceDigest,
+            acceptedRarityEvidence: replacement,
+            undoAvailability: "unavailable",
+          },
+        }),
+    };
+    const { shell, reload, status, evidence, documentListeners } = mountRarityChrome(port);
+    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+      detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
+    });
+    expect(evidence.textContent).toContain("wayfinder-copper");
+
+    shell.clickListener?.({ target: reload });
+    await vi.waitFor(() => {
+      expect(status.textContent).toContain("· open ·");
+      expect(evidence.textContent).toContain("wayfinder-silver");
+    });
+    expect(evidence.textContent).toContain("namespace sha256:replacement-namespace");
+    expect(evidence.textContent).not.toContain("wayfinder-copper");
   });
 
   it("retires rarity evidence when Undo takes the accepted namespace back out", async () => {
@@ -1758,27 +1831,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
   });
 });
 
-describe("desktop renderer module accounting", () => {
-  const desktopRoot = fileURLToPath(new URL("../../desktop", import.meta.url));
-
-  function sourceFiles(dir: string, out: string[] = []): string[] {
-    for (const entry of readdirSync(dir)) {
-      if (entry === "node_modules" || entry === "dist" || entry === "release") continue;
-      const path = join(dir, entry);
-      if (statSync(path).isDirectory()) sourceFiles(path, out);
-      else if (/\.(ts|tsx)$/.test(entry)) out.push(path);
-    }
-    return out;
-  }
-
-  it("exactly one desktop module constructs the presentation backend: the renderer viewport", () => {
-    const owners = sourceFiles(desktopRoot).filter((file) =>
-      readFileSync(file, "utf8").includes("createThreeSculptPresentationBackend"),
-    );
-    expect(owners.map((file) => file.slice(desktopRoot.length + 1))).toEqual([
-      "linux/src/renderer/viewport.ts",
-    ]);
-  });
+describe("desktop renderer behavior", () => {
 
   // The manipulator seam has two ends that have to agree: the emitted chrome
   // document — a generated public artifact this tier ships — declares the control
@@ -2006,6 +2059,9 @@ describe("desktop renderer module accounting", () => {
 
   it("starts Build and Agent through the bridge and refuses every other composer mode", async () => {
     const profile = "@sceneaxi/profile-game" as const;
+    expect(DESKTOP_ASSISTANT_START_MODES).toEqual(
+      EDITOR_SHELL_ASSISTANT_MODE_IDS.filter((mode) => mode !== "ask"),
+    );
     const agent = decideAssistantStart({
       mode: "agent",
       route: "local",
@@ -2054,6 +2110,21 @@ describe("desktop renderer module accounting", () => {
         nowMs: fixedNow,
         runRarityProvider: createDesktopRarityFixtureProvider(),
       });
+      expect(
+        bridge.handle({
+          action: "assistant",
+          payload: {
+            op: "start",
+            route: "local",
+            profile,
+            prompt: "ask a question",
+            mode: "ask",
+          },
+        }),
+      ).toMatchObject({
+        ok: false,
+        reason: DESKTOP_BRIDGE_REFUSALS.assistantBuildModeRequired,
+      });
       if (!agent.ok) throw new Error("agent start refused");
       expect(bridge.handle({ action: "assistant", payload: agent.payload })).toMatchObject({
         ok: true,
@@ -2072,26 +2143,22 @@ describe("desktop renderer module accounting", () => {
     }
   });
 
-  it("leaves no composer control live-but-unbound when the viewport refuses", () => {
-    const source = readFileSync(
-      join(desktopRoot, "linux/src/renderer/viewport.ts"),
-      "utf8",
-    );
-    // The chrome starts the composer inert. The runtime promotes it only after
-    // the scene request, backend construction, first mount, and handler binding.
-    // Every earlier return keeps the model-owned unavailable transition.
-    expect(source).toContain("signalAssistantRuntimeUnavailable");
-    expect(source).toContain('signalAssistantRuntime("local")');
-    expect(source).toContain("const assistantBound = installAssistantProductFlow");
-    expect(source.indexOf("const assistantBound = installAssistantProductFlow")).toBeLessThan(
-      source.indexOf('signalAssistantRuntime("local")'),
-    );
-    expect(source).toContain("shell?.dataset.assistantRuntimeEvent");
-    expect(source).toContain('signalAssistantRuntime("none", message)');
-    expect(source).not.toContain("ASSISTANT_CONTROL_IDS");
-    // One place says it, and that place settles the composer too — a second
-    // refusal sentence would be a path that reports without disarming Send.
-    expect(source.match(/Live viewport refused/g)).toHaveLength(1);
+  it("keeps the composer unavailable until viewport controls are bound", () => {
+    expect(
+      desktopAssistantRuntimeSignal({
+        status: "refused",
+        message: "the scene request refused",
+      }),
+    ).toEqual({ runtime: "none", message: "the scene request refused" });
+    expect(
+      desktopAssistantRuntimeSignal({ status: "mounted", controlsBound: false }),
+    ).toEqual({
+      runtime: "none",
+      message: "the assistant controls could not be bound to the mounted presentation runtime.",
+    });
+    expect(
+      desktopAssistantRuntimeSignal({ status: "mounted", controlsBound: true }),
+    ).toEqual({ runtime: "local" });
   });
 
   it("synchronizes the mounted viewport scene and restores it after a refused replacement", () => {

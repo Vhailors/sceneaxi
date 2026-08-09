@@ -57,9 +57,11 @@ import {
   DESKTOP_BRIDGE_ASSISTANT_OPS,
   DESKTOP_BRIDGE_AUTHORING_OPS,
   DESKTOP_BRIDGE_REFUSALS,
+  DESKTOP_ASSISTANT_START_MODE_REFUSAL_MESSAGE,
   DESKTOP_RARITY_EVENT_ID,
   bridgeOk,
   bridgeRefuse,
+  desktopAssistantStartMode,
   type DesktopBridgeAction,
   type DesktopBridgeAssistantOp,
   type DesktopAssistantJobSnapshot,
@@ -93,6 +95,7 @@ export type DesktopBridgeOptions = {
   readonly runRarityProvider?: (
     request: DesktopRarityProviderRunRequest,
   ) => Promise<RarityProviderContributionResult>;
+  readonly createAuthoringSession?: () => DesktopSession;
 };
 
 export type DesktopAssistantProfile =
@@ -244,6 +247,7 @@ function frameReportOf(payload: unknown): DesktopFrameReport | null {
 export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridge {
   const nowMs = options.nowMs ?? ((): number => Date.now());
   let session: DesktopSession | null = null;
+  let rarityProposalEvidence: DesktopRarityEvidence | null = null;
   let lastReport: DesktopFrameReport | null = null;
   let assistantSequence = 0;
   let assistantJob: {
@@ -257,9 +261,14 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
   } | null = null;
 
   const authoringSession = (): DesktopSession => {
-    session ??= createDesktopSession({ cwd: options.cwd });
+    session ??= options.createAuthoringSession?.() ?? createDesktopSession({ cwd: options.cwd });
     return session;
   };
+
+  const withRarityProposalEvidence = (snapshot: DesktopSnapshot) =>
+    rarityProposalEvidence === null
+      ? snapshot
+      : Object.freeze({ ...snapshot, rarityEvidence: rarityProposalEvidence });
 
   const handshake = (): DesktopBridgeHandshake =>
     Object.freeze({
@@ -299,6 +308,9 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         type: "rarity-roll",
         eventId: input.eventId,
         request: input.request,
+        ...(input.namespace.providerEvidence === undefined
+          ? {}
+          : { providerEvidence: input.namespace.providerEvidence }),
       });
       live.value.advance({ tick: 1, deltaMs: 0 });
       const rarity = live.value.observe().rarity;
@@ -386,7 +398,12 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     try {
       const initial = live.value.observe();
       initialDigest = initial.digest;
-      live.value.dispatch({ type: "rarity-roll", eventId: roll.eventId, request: roll.request });
+      live.value.dispatch({
+        type: "rarity-roll",
+        eventId: roll.eventId,
+        request: roll.request,
+        providerEvidence: rarity.value.providerEvidence,
+      });
       for (let tick = 1; tick <= OPEN_PATH_EXERCISE_TICKS; tick += 1) {
         live.value.advance({ tick, deltaMs: 100 });
         tickDigests.push(live.value.observe().digest);
@@ -591,11 +608,52 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         `Unknown authoring operation ${JSON.stringify(op)}. Known: ${DESKTOP_BRIDGE_AUTHORING_OPS.join(", ")}.`,
       );
     }
+    const rarityStatus = (data: Readonly<Record<string, unknown>>) => {
+      if (data.rarity === undefined) {
+        return Object.freeze({ rarityNamespaceDigest: null, acceptedRarityEvidence: null });
+      }
+      const rarity = validateRarityNamespace(data.rarity);
+      if (!rarity.ok) {
+        return Object.freeze({ rarityNamespaceDigest: null, acceptedRarityEvidence: null });
+      }
+      const rarityNamespaceDigest = digestRarityNamespace(rarity.value);
+      const roll = rarity.value.rolls.at(-1);
+      if (
+        roll === undefined ||
+        rarity.value.providerEvidence === undefined ||
+        typeof data.productId !== "string" ||
+        !Number.isSafeInteger(data.seed)
+      ) {
+        return Object.freeze({ rarityNamespaceDigest, acceptedRarityEvidence: null });
+      }
+      const verified = resolveRarityWithKernel({
+        productId: data.productId,
+        seed: data.seed as number,
+        eventId: roll.eventId,
+        namespace: rarity.value,
+        request: roll.request,
+      });
+      if (
+        !verified.ok ||
+        digestRarityNamespace(verified.value) !== rarityNamespaceDigest
+      ) {
+        return Object.freeze({ rarityNamespaceDigest, acceptedRarityEvidence: null });
+      }
+      return Object.freeze({
+        rarityNamespaceDigest,
+        acceptedRarityEvidence: safeRarityEvidenceFromNamespace(
+          rarity.value,
+          roll.eventId,
+          data.seed as number,
+        ),
+      });
+    };
     const statusWithProperties = (live: DesktopSession, documentPath: string) => {
       const status = live.status(documentPath);
       if (!status.ok) return status;
       return Object.freeze({
         ...status,
+        ...rarityStatus(status.data),
         editableScene: inspectDesktopSceneProperties({
           documentData: status.data,
           contentHash: status.contentHash,
@@ -627,12 +685,23 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       if (!status.ok) return snapshot;
       return Object.freeze({
         ...snapshot,
+        ...rarityStatus(status.data),
         editableScene: inspectDesktopSceneProperties({
           documentData: status.data,
           contentHash: status.contentHash,
           documentPath,
         }),
       });
+    };
+    const settleRarityProposalEvidence = (snapshot: DesktopSnapshot) => {
+      const decorated = withRarityProposalEvidence(snapshot);
+      if (
+        (snapshot.phase === "applied" || snapshot.phase === "rejected") &&
+        !snapshot.journalRecoveryPending
+      ) {
+        rarityProposalEvidence = null;
+      }
+      return decorated;
     };
     if (op === "restart") {
       const documentPath = containedDocumentPath(field(payload, "documentPath"));
@@ -642,7 +711,8 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           "authoring restart requires a documentPath string inside the project directory.",
         );
       }
-      session = createDesktopSession({ cwd: options.cwd });
+      session = options.createAuthoringSession?.() ?? createDesktopSession({ cwd: options.cwd });
+      rarityProposalEvidence = null;
       return bridgeOk("authoring", statusWithProperties(session, documentPath));
     }
     const live = authoringSession();
@@ -681,7 +751,9 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       });
       if (!staged.ok) return bridgeOk("authoring", staged);
       const snapshot = live.proposeEdit(staged.edit);
-      if (snapshot.phase !== "reviewing") return bridgeOk("authoring", snapshot);
+      if (snapshot.phase !== "reviewing" || (snapshot.diagnostics?.length ?? 0) > 0) {
+        return bridgeOk("authoring", withRarityProposalEvidence(snapshot));
+      }
       return bridgeOk(
         "authoring",
         Object.freeze({
@@ -715,18 +787,24 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         newValue: field(payload, "newValue"),
         ...(expectedContentHash !== undefined ? { expectedContentHash } : {}),
       });
-      return bridgeOk("authoring", snapshot);
+      return bridgeOk("authoring", withRarityProposalEvidence(snapshot));
     }
     if (op === "accept") {
-      return bridgeOk("authoring", appliedWithProperties(live, live.accept()));
+      return bridgeOk(
+        "authoring",
+        settleRarityProposalEvidence(appliedWithProperties(live, live.accept())),
+      );
     }
-    if (op === "reject") return bridgeOk("authoring", live.reject());
+    if (op === "reject") {
+      return bridgeOk("authoring", settleRarityProposalEvidence(live.reject()));
+    }
     if (op === "recover") {
       return bridgeOk(
         "authoring",
-        appliedWithProperties(live, live.refreshRecovery()),
+        settleRarityProposalEvidence(appliedWithProperties(live, live.refreshRecovery())),
       );
     }
+    rarityProposalEvidence = null;
     return bridgeOk("authoring", live.undo());
   };
 
@@ -777,12 +855,18 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     const profile = field(payload, "profile");
     const route = field(payload, "route");
     const mode = field(payload, "mode");
+    const startMode = mode === undefined ? "build" : desktopAssistantStartMode(mode);
+    if (startMode === null) {
+      return bridgeRefuse(
+        DESKTOP_BRIDGE_REFUSALS.assistantBuildModeRequired,
+        DESKTOP_ASSISTANT_START_MODE_REFUSAL_MESSAGE,
+      );
+    }
     if (
       typeof prompt !== "string" ||
       prompt.trim().length === 0 ||
       !isAssistantProfile(profile) ||
-      (route !== "local" && route !== "byo" && route !== "hosted") ||
-      (mode !== undefined && mode !== "build" && mode !== "agent")
+      (route !== "local" && route !== "byo" && route !== "hosted")
     ) {
       return bridgeRefuse(
         DESKTOP_BRIDGE_REFUSALS.requestMalformed,
@@ -801,7 +885,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         "Hosted AI is metered through the web-shell assistant panel; the desktop has no identity or credit plane and cannot bypass that gate.",
       );
     }
-    const rarityMode = mode === "agent";
+    const rarityMode = startMode === "agent";
     if (rarityMode && (route !== "local" || options.runRarityProvider === undefined)) {
       return bridgeRefuse(
         DESKTOP_BRIDGE_REFUSALS.rarityProviderUnavailable,
@@ -962,7 +1046,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           return;
         }
         const snapshot = authoringSession().proposeEdit(staged.edit);
-        if (snapshot.phase !== "reviewing") {
+        if (snapshot.phase !== "reviewing" || (snapshot.diagnostics?.length ?? 0) > 0) {
           const diagnostic = snapshot.diagnostics?.[0];
           settleRefusal({
             reason: diagnostic?.code ?? "RARITY_PROPOSAL_NOT_REVIEWING",
@@ -971,6 +1055,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           });
           return;
         }
+        rarityProposalEvidence = staged.evidence;
         onProgress(Object.freeze({
           phase: "ready",
           percent: 100,
@@ -982,7 +1067,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           kind: "rarity-proposal" as const,
           replayed: false as const,
           evidence: staged.evidence,
-          authoring: Object.freeze({ ...snapshot, rarityEvidence: staged.evidence }),
+          authoring: withRarityProposalEvidence(snapshot),
         });
       };
       try {

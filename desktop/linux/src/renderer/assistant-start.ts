@@ -9,13 +9,15 @@
  */
 import {
   DESKTOP_ACTIVE_DOCUMENT_PATH,
+  DESKTOP_ASSISTANT_START_MODE_REFUSAL_MESSAGE,
+  DESKTOP_ASSISTANT_START_MODES,
   DESKTOP_BRIDGE_REFUSALS,
+  desktopAssistantStartMode,
+  type DesktopAssistantStartMode,
 } from "../lib/bridge-contract.js";
 import type { DesktopAssistantProfile } from "../lib/bridge.js";
 
-export const DESKTOP_ASSISTANT_START_MODES = Object.freeze(["build", "agent"] as const);
-
-export type DesktopAssistantStartMode = (typeof DESKTOP_ASSISTANT_START_MODES)[number];
+export { DESKTOP_ASSISTANT_START_MODES, type DesktopAssistantStartMode };
 
 export type DesktopAssistantStartPayload = Readonly<{
   op: "start";
@@ -36,13 +38,12 @@ export function decideAssistantStart(input: Readonly<{
   profile: DesktopAssistantProfile;
   prompt: string;
 }>): DesktopAssistantStartDecision {
-  const mode = DESKTOP_ASSISTANT_START_MODES.find((candidate) => candidate === input.mode);
-  if (mode === undefined) {
+  const mode = desktopAssistantStartMode(input.mode);
+  if (mode === null) {
     return Object.freeze({
       ok: false as const,
       reason: DESKTOP_BRIDGE_REFUSALS.assistantBuildModeRequired,
-      message:
-        "Choose Build for a Sculpt Artifact or Agent for a fixture-backed rarity proposal; Ask is not implemented.",
+      message: DESKTOP_ASSISTANT_START_MODE_REFUSAL_MESSAGE,
     });
   }
   const prompt = input.prompt.trim();

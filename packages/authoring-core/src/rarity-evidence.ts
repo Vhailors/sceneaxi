@@ -14,7 +14,10 @@
  * It validates the value it is handed and answers `null` rather than printing a
  * partially-known descriptor.
  */
-export function formatSafeRarityEvidence(evidence: unknown): string | null {
+export function formatSafeRarityEvidence(
+  evidence: unknown,
+  productSession?: unknown,
+): string | null {
   const record = evidence as Record<string, unknown> | null | undefined;
   const provider = record === null || record === undefined
     ? undefined
@@ -27,17 +30,40 @@ export function formatSafeRarityEvidence(evidence: unknown): string | null {
     "requestDigest", "outcomeDigest", "provenanceDigest", "namespaceDigest",
     "tierRollDigest", "candidateRollDigest",
   ];
+  const numericFields = [
+    "projectSeed",
+    "tierDraw",
+    "tierTotalWeight",
+    "candidateDraw",
+    "candidateTotalWeight",
+  ];
   if (
-    record === null || record === undefined || typeof record !== "object" ||
-    !strings.every((field) => typeof record[field] === "string") ||
-    model === null || model === undefined || typeof model !== "object" ||
+    record === null || record === undefined || typeof record !== "object" || Array.isArray(record) ||
+    !strings.every((field) => typeof record[field] === "string" && record[field].length > 0) ||
+    !numericFields.every(
+      (field) => typeof record[field] === "number" && Number.isSafeInteger(record[field]),
+    ) ||
+    Number(record["tierDraw"]) < 0 ||
+    Number(record["tierTotalWeight"]) <= 0 ||
+    Number(record["tierDraw"]) >= Number(record["tierTotalWeight"]) ||
+    Number(record["candidateDraw"]) < 0 ||
+    Number(record["candidateTotalWeight"]) <= 0 ||
+    Number(record["candidateDraw"]) >= Number(record["candidateTotalWeight"]) ||
+    provider === null || provider === undefined || typeof provider !== "object" ||
+    Array.isArray(provider) ||
+    provider["schemaVersion"] !== 1 ||
+    provider["kind"] !== "sceneaxi.model-provider-call-evidence" ||
+    provider["operation"] !== "tool-call" ||
+    typeof provider["profile"] !== "string" ||
+    !/^@sceneaxi\/profile-[a-z][a-z0-9-]*$/.test(provider["profile"]) ||
+    model === null || model === undefined || typeof model !== "object" || Array.isArray(model) ||
     !["provider", "model", "quantization", "version"].every(
-      (field) => typeof model[field] === "string",
+      (field) => typeof model[field] === "string" && model[field].length > 0,
     )
   ) {
     return null;
   }
-  return [
+  const lines = [
     "RARITY " + String(record["tier"]) + " · " + String(record["candidateId"]),
     "event " + String(record["eventId"]) + " · scope " + String(record["scope"]) +
       " · seed " + String(record["projectSeed"]),
@@ -54,6 +80,21 @@ export function formatSafeRarityEvidence(evidence: unknown): string | null {
     "candidate roll " + String(record["candidateRollDigest"]),
     "provider " + String(model["provider"]) + " · model " + String(model["model"]) +
       " · quantization " + String(model["quantization"]) +
-      " · version " + String(model["version"]),
-  ].join("\n");
+      " · version " + String(model["version"]) +
+      " · operation " + String(provider["operation"]) +
+      " · profile " + String(provider["profile"]),
+  ];
+  if (productSession !== undefined) {
+    const session = productSession as Record<string, unknown> | null;
+    const replayDigest = session !== null && typeof session === "object" && !Array.isArray(session)
+      ? session["replayDigest"]
+      : undefined;
+    lines.push(
+      "verified in a separate product session" +
+        (typeof replayDigest === "string" && /^sha256:[0-9a-f]{64}$/.test(replayDigest)
+          ? " replayed to " + replayDigest
+          : ""),
+    );
+  }
+  return lines.join("\n");
 }

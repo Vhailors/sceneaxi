@@ -1368,6 +1368,7 @@ if (shell) {
   let activeConflictDetail = null;
   let activeReviewSnapshot = null;
   let rarityProposalStaged = false;
+  let activeRarityEvidenceDigest = null;
   let activeProject = null;
   let editableScene = null;
   let selectedSceneEntityId = null;
@@ -1524,6 +1525,10 @@ if (shell) {
 
   const syncRarityEvidence = (evidence) => {
     const text = rarityEvidenceText(evidence);
+    activeRarityEvidenceDigest = text !== null && evidence && typeof evidence === 'object' &&
+      typeof evidence.namespaceDigest === 'string'
+      ? evidence.namespaceDigest
+      : null;
     const panel = shell.querySelector('[data-rarity-evidence]');
     const empty = shell.querySelector('[data-rarity-evidence-empty]');
     if (panel) {
@@ -1536,13 +1541,21 @@ if (shell) {
 
   const clearRarityEvidence = () => syncRarityEvidence(null);
 
-  // The dock holds safe evidence for one accepted namespace, and only a Play can
-  // recompute it. So a path that may have taken that namespace out of the file
-  // asks the reopened document whether it is still there rather than guessing:
-  // present means the provenance on screen still describes real bytes.
-  const retireRarityEvidenceUnlessProjectCarriesIt = () => {
-    if (projectData === null || typeof projectData !== 'object') return;
-    if (projectData.rarity === undefined) clearRarityEvidence();
+  const reconcileRarityEvidence = (status) => {
+    if (!status || status.ok !== true) return;
+    const accepted = status.acceptedRarityEvidence;
+    const digest = typeof status.rarityNamespaceDigest === 'string'
+      ? status.rarityNamespaceDigest
+      : null;
+    const acceptedDigest = accepted && typeof accepted === 'object' &&
+      typeof accepted.namespaceDigest === 'string'
+      ? accepted.namespaceDigest
+      : null;
+    if (digest === null || acceptedDigest !== digest || rarityEvidenceText(accepted) === null) {
+      clearRarityEvidence();
+      return;
+    }
+    if (activeRarityEvidenceDigest !== digest) syncRarityEvidence(accepted);
   };
 
   const clearConflictOutcome = () => { activeConflictDetail = null; };
@@ -1868,7 +1881,7 @@ if (shell) {
     }
     projectData = status.data;
     projectContentHash = status.contentHash;
-    retireRarityEvidenceUnlessProjectCarriesIt();
+    reconcileRarityEvidence(status);
     syncSceneProperties(status);
     undoAvailability = status.undoAvailability === 'available' || status.undoAvailability === 'recovery-pending'
       ? status.undoAvailability
@@ -1925,6 +1938,7 @@ if (shell) {
     }
     projectData = status.data;
     projectContentHash = status.contentHash;
+    reconcileRarityEvidence(status);
     syncSceneProperties(status);
     projectDirty = false;
     projectRecovering = false;
@@ -2061,6 +2075,7 @@ if (shell) {
       return true;
     }
     if (applied) {
+      reconcileRarityEvidence(snapshot);
       projectData = null;
       projectContentHash = null;
       projectDirty = false;
@@ -2197,7 +2212,6 @@ if (shell) {
     // it was. Clearing on the reverted-rarity case alone keeps the dock from
     // both lies — digests for bytes that are gone, and an empty state over bytes
     // that are still there.
-    retireRarityEvidenceUnlessProjectCarriesIt();
     if (reopened) {
       productStatus('open', 'Undid last Save · restored ' + result.restoredPaths.join(', '));
     }
@@ -2283,17 +2297,9 @@ if (shell) {
     const rarityText = exercise.rarity === undefined && rarityProposalStaged
       ? null
       : syncRarityEvidence(exercise.rarity);
-    // Run is one of the four surfaces required to show matching provenance, so it
-    // renders the shared formatter's own output rather than a second summary of
-    // it. Only the session attribution is added here: the namespace is verified in
-    // its own product session, which carries no entities and produced none of the
-    // digests on the report line beside it.
     const runRarity = rarityText === null
       ? null
-      : rarityText + '\\n' + 'verified in a separate product session' +
-        (exercise.raritySession && typeof exercise.raritySession.replayDigest === 'string'
-          ? ' replayed to ' + exercise.raritySession.replayDigest
-          : '');
+      : rarityEvidenceText(exercise.rarity, exercise.raritySession);
     q('[data-run-rarity-evidence]').forEach((el) => {
       el.textContent = runRarity || '';
       el.hidden = runRarity === null;

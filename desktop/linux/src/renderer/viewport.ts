@@ -25,6 +25,7 @@ import {
 import { formatSafeRarityEvidence } from "@sceneaxi/authoring-core/rarity-evidence";
 import { createDesktopAssistantViewportController } from "../lib/assistant-viewport.js";
 import type { DesktopAssistantProfile } from "../lib/bridge.js";
+import { desktopAssistantRuntimeSignal } from "./assistant-runtime.js";
 import { decideAssistantStart } from "./assistant-start.js";
 import {
   assistantInspectionText,
@@ -162,24 +163,20 @@ function frameText(frame: SculptPresentationFrame): string {
 }
 
 function signalAssistantRuntime(
-  runtime: "none" | "local",
-  message?: string,
+  signal: Readonly<{ runtime: "none" | "local"; message?: string }>,
 ): void {
   const shell = document.querySelector<HTMLElement>(".shell");
   const eventName = shell?.dataset.assistantRuntimeEvent;
   if (eventName === undefined) return;
   document.dispatchEvent(
     new CustomEvent(eventName, {
-      detail: Object.freeze({
-        runtime,
-        ...(message === undefined ? {} : { message }),
-      }),
+      detail: signal,
     }),
   );
 }
 
 function signalAssistantRuntimeUnavailable(message: string): void {
-  signalAssistantRuntime("none", message);
+  signalAssistantRuntime(desktopAssistantRuntimeSignal({ status: "refused", message }));
 }
 
 /**
@@ -217,13 +214,7 @@ type RarityReportable = {
  * the viewport draws while the namespace is verified in its own product session.
  */
 function rarityEvidenceReport(exercise: RarityReportable): string | null {
-  const evidence = formatSafeRarityEvidence(exercise.rarity);
-  if (evidence === null) return null;
-  const replay = exercise.raritySession?.replayDigest;
-  const attribution = typeof replay === "string"
-    ? `verified in a separate product session replayed to ${replay}`
-    : "verified in a separate product session";
-  return `${evidence}\n${attribution}`;
+  return formatSafeRarityEvidence(exercise.rarity, exercise.raritySession);
 }
 
 function installAssistantProductFlow(
@@ -503,13 +494,9 @@ async function mountLiveViewport(): Promise<void> {
   });
   loop.start();
   const assistantBound = installAssistantProductFlow(stage, port, mounts, backend);
-  if (assistantBound) {
-    signalAssistantRuntime("local");
-  } else {
-    signalAssistantRuntimeUnavailable(
-      "the assistant controls could not be bound to the mounted presentation runtime.",
-    );
-  }
+  signalAssistantRuntime(
+    desktopAssistantRuntimeSignal({ status: "mounted", controlsBound: assistantBound }),
+  );
 
   document.addEventListener(DESKTOP_VIEWPORT_PLAY_EVENT, (event: Event) => {
     if (!(event instanceof CustomEvent)) return;

@@ -17,6 +17,7 @@ import type {
   AssistantSculptSuccess,
   SafeRarityEvidence,
 } from "@sceneaxi/authoring-core";
+import { EDITOR_SHELL_ASSISTANT_MODE_IDS } from "@sceneaxi/schemas";
 import type { MountableScene } from "@sceneaxi/site-kit";
 import type { DesktopSnapshot } from "@sceneaxi/desktop-shell";
 
@@ -133,6 +134,27 @@ export const DESKTOP_BRIDGE_ASSISTANT_OPS = Object.freeze([
 
 export type DesktopBridgeAssistantOp =
   (typeof DESKTOP_BRIDGE_ASSISTANT_OPS)[number];
+
+const executableAssistantMode = (
+  mode: (typeof EDITOR_SHELL_ASSISTANT_MODE_IDS)[number],
+): mode is Exclude<(typeof EDITOR_SHELL_ASSISTANT_MODE_IDS)[number], "ask"> =>
+  mode !== "ask";
+
+export const DESKTOP_ASSISTANT_START_MODES = Object.freeze(
+  EDITOR_SHELL_ASSISTANT_MODE_IDS.filter(executableAssistantMode),
+);
+
+export type DesktopAssistantStartMode =
+  (typeof DESKTOP_ASSISTANT_START_MODES)[number];
+
+export const DESKTOP_ASSISTANT_START_MODE_REFUSAL_MESSAGE =
+  "Choose Build for a Sculpt Artifact or Agent for a fixture-backed rarity proposal; Ask is not implemented.";
+
+export function desktopAssistantStartMode(
+  value: unknown,
+): DesktopAssistantStartMode | null {
+  return DESKTOP_ASSISTANT_START_MODES.find((mode) => mode === value) ?? null;
+}
 
 export type DesktopAssistantMountedResult = Omit<AssistantSculptSuccess, "artifact"> &
   Readonly<{ mountable: MountableScene }>;

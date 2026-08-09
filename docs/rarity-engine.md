@@ -67,11 +67,12 @@ scope — never later, inside `advance()`.
 
 ## Kernel authority and replay
 
-`dispatch({ type: "rarity-roll", eventId, request })` validates and records a
-pending command without changing the snapshot. The existing `advance()` path
-resolves it and appends the accepted roll record. Presentation, providers, and
-the orchestrator do not resolve or mutate rarity; the orchestrator returns the
-kernel session unchanged.
+`dispatch({ type: "rarity-roll", eventId, request, providerEvidence? })` validates
+and records a pending command without changing the snapshot. Evidence is required
+exactly when the opened namespace carries it, and must be byte-identical. The
+existing `advance()` path resolves the command and appends the accepted roll
+record. Presentation, providers, and the orchestrator do not resolve or mutate
+rarity; the orchestrator returns the kernel session unchanged.
 
 The same event id plus the same canonical request digest is idempotent before or
 after resolution. Reusing an event id with changed request bytes refuses with
@@ -155,7 +156,12 @@ descriptor for them would invent provenance as surely as keeping a stale one.
 Both refusals are decided once, where the stored namespace is read, so the replay
 and extend paths cannot diverge. Between them, the descriptor
 `safeRarityEvidenceFromNamespace()` reports for a roll is always the descriptor of
-the call that produced that roll's input.
+the call that produced that roll's input. The kernel additionally binds that
+descriptor to every evidenced `rarity-roll` dispatch event: the command must carry
+the exact namespace descriptor, while an evidence-less namespace requires an
+evidence-less command. Save/replay therefore refuses a missing or conflicting
+per-roll binding instead of attributing a later request to an earlier provider
+call.
 
 All four required surfaces render that evidence through one function,
 `formatSafeRarityEvidence()` on the import-free
@@ -165,10 +171,10 @@ script the way the web staging decision already does, and the packaged renderer
 imports the same one — matching provenance is then an identity rather than two
 texts kept in step by review. Run/viewport is included: the Run panel's
 `[data-run-rarity-evidence]` region and the viewport's own evidence overlay both
-print that function's output, not a tier/candidate summary of it. The one thing
-either adds is the session attribution, because the digests on the report line
-beside them belong to the composed scene session while the namespace is verified
-in its own product session.
+print that function's output, not a tier/candidate summary of it. The formatter's
+optional second input owns the product-session attribution too, because the
+digests on the report line beside them belong to the composed scene session while
+the namespace is verified in its own product session.
 
 ## Evidence and exclusions
 
@@ -211,10 +217,12 @@ request carried to the provider), `9b45aca` (the shipped binaries' resolver taug
 to map workspace subpaths, provenance retired on Undo and preserved through Remove
 Recent, the overlay's line breaks preserved), `96ddee0` (Undo and the recovery
 restart stopped clearing the dock on the action and now re-read the reopened
-document, clearing only when `data.rarity` is gone), and the round recorded below
-(one provider-evidence invariant decided where the stored namespace is read, so a
-namespace whose rolls carry no descriptor refuses instead of adopting this call's).
-Each added executable coverage.
+document, clearing only when `data.rarity` is gone), `85b8f75` (the stored-namespace
+evidence invariant moved to one authoring boundary, so rolls with no descriptor
+refuse instead of adopting a later call's), and `fac19c4` (assistant poll timeout
+reporting now claims Retry is safe only after abandonment succeeds). Each added
+executable coverage. Neither `85b8f75` nor `fac19c4` is covered by the historical
+smoke observation below.
 
 Its executable desktop vector is unchanged by all of them —
 `tests/e2e/fixtures/rarity-provider/wayfinder-desktop.json`:
@@ -276,7 +284,9 @@ see, because the root `build` stage is `tsc --build` rather than the esbuild
 bundle. `pnpm check:desktop` now walks the renderer's module graph and refuses a
 Node builtin anywhere in it, so the gate catches that class; the pixel
 observation above, however, remains a reading of the earlier build and is not a
-claim about the renderer at this head.
+claim about the renderer at this head. `fac19c4` later changed
+`renderer/assistant-poll.ts`; it is likewise a post-smoke source correction, not a
+new smoke observation.
 
 The pinned vector digests above, by contrast, are re-proved on every run:
 `tests/e2e/rarity-provider-desktop-golden.test.ts` compares runtime output to

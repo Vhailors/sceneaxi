@@ -70,8 +70,14 @@ function manifest(): ProductManifest {
 function rarityCommand(
   eventId: string,
   request: RarityRollRequest = fixture.request,
+  providerEvidence?: ModelProviderCallEvidence,
 ) {
-  return { type: "rarity-roll", eventId, request } as const;
+  return {
+    type: "rarity-roll",
+    eventId,
+    request,
+    ...(providerEvidence === undefined ? {} : { providerEvidence }),
+  } as const;
 }
 
 function jsonCopy<Value>(value: Value): Value {
@@ -335,6 +341,50 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
     expect(replayed.save()).toEqual(save);
   });
 
+  it("binds every evidenced roll command to the namespace provider descriptor", () => {
+    const base = manifest();
+    const evidence: ModelProviderCallEvidence = {
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      kind: MODEL_PROVIDER_CALL_EVIDENCE_KIND,
+      operation: "tool-call",
+      profile: "@sceneaxi/profile-game",
+      model: {
+        model: "wayfinder-rarity-fixture",
+        provider: "sceneaxi-fixture",
+        quantization: "deterministic-json",
+        version: "2026-08-09",
+      },
+    };
+    const evidenced = open(
+      {
+        ...base,
+        rarity: { ...(base.rarity as RarityNamespace), providerEvidence: evidence },
+      },
+      fixedHost(),
+    );
+    expect(() => evidenced.dispatch(rarityCommand("roll-unbound"))).toThrow(
+      RARITY_REFUSE_CODES.provenanceMismatch,
+    );
+    expect(() =>
+      evidenced.dispatch(
+        rarityCommand("roll-conflict", fixture.request, {
+          ...evidence,
+          model: { ...evidence.model, version: "2026-09-01" },
+        }),
+      ),
+    ).toThrow(RARITY_REFUSE_CODES.provenanceMismatch);
+
+    evidenced.dispatch(rarityCommand("roll-bound", fixture.request, evidence));
+    evidenced.advance({ tick: 1, deltaMs: 16 });
+    const save = evidenced.save();
+    const dispatch = save.events.find((event) => event.kind === "dispatch");
+    expect(dispatch?.kind === "dispatch" ? dispatch.command : null).toMatchObject({
+      type: "rarity-roll",
+      eventId: "roll-bound",
+      providerEvidence: evidence,
+    });
+  });
+
   it("carries namespace provider evidence through save and replay of a generated roll", () => {
     const base = manifest();
     const evidence: ModelProviderCallEvidence = {
@@ -356,7 +406,7 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
       },
       fixedHost(),
     );
-    session.dispatch(rarityCommand("roll-0000"));
+    session.dispatch(rarityCommand("roll-0000", fixture.request, evidence));
     session.advance({ tick: 1, deltaMs: 16 });
     const terminal = session.observe();
     const save = session.save();

@@ -91,6 +91,9 @@
               },
               "request": {
                 "$ref": "./rarity.schema.json#/$defs/request"
+              },
+              "providerEvidence": {
+                "$ref": "./rarity.schema.json#/$defs/providerEvidence"
               }
             }
           },

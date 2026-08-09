@@ -116,6 +116,13 @@ const PENDING_DIAGNOSTICS: readonly ApplyDiagnostic[] = Object.freeze([
   }),
 ]);
 
+const ACTIVE_PROPOSAL_DIAGNOSTICS: readonly ApplyDiagnostic[] = Object.freeze([
+  Object.freeze({
+    code: "invalid-proposal" as const,
+    message: "One proposal is already waiting for review; accept or reject it before staging another.",
+  }),
+]);
+
 /** Create a single-proposal desktop session bound to a working directory. */
 export function createDesktopSession(
   options: DesktopSessionOptions = {},
@@ -176,6 +183,10 @@ export function createDesktopSession(
 
     proposeEdit(input: ShellEditInput): DesktopSnapshot {
       if (journalRecoveryPending) return refusePending();
+      if (phase === "reviewing" && proposal !== null) {
+        diagnostics = ACTIVE_PROPOSAL_DIAGNOSTICS;
+        return snap();
+      }
       const cwd = canonicalPath(input.cwd ?? sessionCwd);
       const result = shellPropose({ ...input, cwd });
       if (!result.ok) {
