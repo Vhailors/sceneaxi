@@ -7,12 +7,15 @@
  * Electron, its bundler, and its packaging toolchain never move the hermetic root
  * install, the root lockfile, the `tsc --build` graph, or the gate runtime. That isolation is what this
  * check protects — plus the rule that no secret value is ever committed, and the
- * tier's own split: only `src/electron/**` may import Electron, so everything under
- * `src/lib/**` stays pure TypeScript the hermetic gate can test from `tests/desktop/`.
+ * tier's own split: only `src/electron/**` may import Electron or the concrete
+ * provider adapter, so everything under `src/lib/**` stays pure TypeScript the
+ * hermetic gate can test from `tests/desktop/`.
  *
  * Fail-closed: an empty `desktop/` tree, a missing required file, an app that is not
  * matrix-listed, any of that toolchain leaking into the hermetic root, an Electron import outside
- * `src/electron/`, or any committed secret value exits 1.
+ * `src/electron/`, a provider adapter import outside that privileged host, an import
+ * that reaches into that privileged host from outside it, or any
+ * committed secret value exits 1.
  */
 import { existsSync, lstatSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
@@ -118,9 +121,55 @@ if (existsSync(workspaceFile)) {
 
 // --- per-app structure ---
 const ELECTRON_SPEC = /(?:from\s+|require\s*\(\s*|import\s*\(\s*|^\s*import\s+)["'](electron(?:\/[^"']*)?)["']/gm;
+const PRIVILEGED_PROVIDER_SPEC = /(?:from\s+|require\s*\(\s*|import\s*\(\s*|^\s*import\s+)["'](@sceneaxi\/provider-openrouter(?:\/[^"']*)?)["']/gm;
+/**
+ * Confining the adapter by its own specifier alone would only move the leak: a
+ * `src/lib/` or `src/renderer/` module re-exporting the privileged host pulls the
+ * same adapter into the same bundle while naming neither Electron nor the adapter.
+ * Any module specifier resolving into `src/electron/` from outside it is refused —
+ * relative or through the package's own `exports` map, since Node, TypeScript, and
+ * esbuild all resolve a self-reference that way and a published privileged subpath
+ * is otherwise the one specifier that reaches the host without naming a path.
+ */
+const ANY_MODULE_SPEC = /(?:from\s+|require\s*\(\s*|import\s*\(\s*|^\s*import\s+)["']([^"']+)["']/gm;
 const contains = (parent, candidate) => {
   const rel = relative(parent, candidate);
   return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !rel.startsWith("/"));
+};
+
+/** Every string target in an `exports` map, keyed by its subpath. */
+const exportTargets = (exportsField) => {
+  const targets = new Map();
+  const leaves = (value, out = []) => {
+    if (typeof value === "string") out.push(value);
+    else if (value !== null && typeof value === "object") {
+      for (const nested of Object.values(value)) leaves(nested, out);
+    }
+    return out;
+  };
+  if (typeof exportsField === "string") {
+    targets.set(".", leaves(exportsField));
+  } else if (exportsField !== null && typeof exportsField === "object") {
+    for (const [subpath, value] of Object.entries(exportsField)) {
+      targets.set(subpath.startsWith(".") ? subpath : ".", leaves(value));
+    }
+  }
+  return targets;
+};
+
+/**
+ * Resolve a specifier to the file paths it can reach inside `dir`, or `null` when it
+ * names something outside this package. A self-reference goes through `exports` when
+ * the manifest declares one, because that map is the only resolution Node performs.
+ */
+const resolveWithinApp = (spec, file, dir, manifestName, exportsMap) => {
+  if (spec.startsWith(".")) return [resolve(dirname(file), spec)];
+  if (spec !== manifestName && !spec.startsWith(`${manifestName}/`)) return null;
+  const subpath = spec === manifestName ? "." : `.${spec.slice(manifestName.length)}`;
+  if (exportsMap.size === 0) return [resolve(dir, subpath)];
+  const declared = exportsMap.get(subpath);
+  if (declared === undefined) return [];
+  return declared.map((target) => resolve(dir, target));
 };
 
 for (const dir of appDirs) {
@@ -141,6 +190,7 @@ for (const dir of appDirs) {
     fail(`${rel}/package.json has no name`);
     continue;
   }
+  const appExports = exportTargets(manifest.exports);
   if (manifest.private !== true) fail(`${manifest.name} must be private`);
   if (manifest.sceneaxi?.releaseGroup !== "desktop") {
     fail(
@@ -188,6 +238,23 @@ for (const dir of appDirs) {
           );
         }
       }
+      for (const match of text.matchAll(PRIVILEGED_PROVIDER_SPEC)) {
+        if (!contains(electronDir, file)) {
+          fail(
+            `${relative(root, file)} imports '${match[1]}' — only ${relative(root, electronDir)}/ may import a desktop provider adapter`,
+          );
+        }
+      }
+      if (contains(electronDir, file)) continue;
+      for (const match of text.matchAll(ANY_MODULE_SPEC)) {
+        const spec = match[1];
+        const resolved = resolveWithinApp(spec, file, dir, manifest.name, appExports);
+        if (resolved === null) continue;
+        if (!resolved.some((target) => contains(electronDir, target))) continue;
+        fail(
+          `${relative(root, file)} imports '${spec}' — nothing outside ${relative(root, electronDir)}/ may reach the privileged host, which would launder the provider adapter into an unprivileged bundle`,
+        );
+      }
     }
   }
 }
@@ -207,5 +274,5 @@ if (errors.length > 0) {
   process.exit(1);
 }
 console.log(
-  `desktop check OK — ${appDirs.length} desktop app(s) verified (separate install roots, matrix-listed, Electron confined, no committed secrets)`,
+  `desktop check OK — ${appDirs.length} desktop app(s) verified (separate install roots, matrix-listed, privileged imports confined, no committed secrets)`,
 );

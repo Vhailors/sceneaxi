@@ -29,10 +29,12 @@ L4  sites              site-kit ← the three non-Kids sites (leaves; ADR 0018),
                        docs/three-presentation-core.md), and auth + billing for the
                        identity plane (ADR 0021)
 L4  desktop            the packaged desktop applications (leaf; ADR 0024). desktop/linux
-                       consumes schemas, desktop-shell, site-kit, authoring-core and the
-                       three engine packages it draws and opens through; no profile, no
-                       Kids, no auth/billing, no plugin host. desktop/windows packages
-                       that same built application for Windows and names no SceneAxi
+                       consumes schemas, desktop-shell, site-kit, authoring-core, the
+                       three engine packages it draws and opens through, and
+                       provider-openrouter from src/electron/** alone (sceneaxi#235);
+                       no profile, no Kids, no auth/billing, no plugin host.
+                       desktop/windows packages that same built application for Windows
+                       and names no SceneAxi
                        package at all (sceneaxi#204); desktop/macos stages that same
                        bundled runtime for signing/notarization and consumes schemas
                        only (sceneaxi#194)
@@ -59,7 +61,7 @@ L4  desktop            the packaged desktop applications (leaf; ADR 0024). deskt
 | site-kit | ✓ | | | | ✓ | | | | | |
 | site-umbrella (→ site-kit ✓, auth ✓, billing ✓) | | | ✓ | | | | | | | |
 | site-catalog-game / site-catalog-web (→ site-kit ✓) | | | | | | | | | | |
-| desktop-linux (→ site-kit ✓) | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | ✓ (desktop-shell alone) |
+| desktop-linux (→ site-kit ✓) | ✓ | ✓ | ✓ | ✓ | ✓ | | | ✓ (provider-openrouter, `src/electron/` alone) | | ✓ (desktop-shell alone) |
 | desktop-windows | | | | | | | | | | |
 | desktop-macos (stages desktop-linux dist) | ✓ | | | | | | | | | |
 
@@ -221,8 +223,11 @@ Recorded in `dependency-matrix.json → releaseGroups` and stamped on every mani
   hermetic lockfile. Deployable, not consumable — its root export is a gate-tested
   package seam rather than a registry consumer surface, and it uses `link:` dependencies
   (into `packages/` **or** `apps/`, the one
-  widening the desktop tier holds). Build, distribution, and the recorded checksums:
-  [`desktop-linux.md`](desktop-linux.md). `desktop-windows` holds an empty allow list:
+  widening the desktop tier holds). `desktop-linux` alone may name
+  `provider-openrouter`, and only from `src/electron/**`: `pnpm check:desktop` refuses
+  that adapter — and any re-export of the privileged host that would launder it — from
+  `src/lib/**`, `src/renderer/**`, and the package root. Build, distribution, and the
+  recorded checksums: [`desktop-linux.md`](desktop-linux.md). `desktop-windows` holds an empty allow list:
   it packages the already-built `desktop/linux` runtime and imports no SceneAxi
   package, so it is a second install root rather than a second application —
   signing, update, and release contract in

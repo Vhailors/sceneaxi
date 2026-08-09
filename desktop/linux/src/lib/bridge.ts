@@ -571,23 +571,38 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       profile,
       onProgress,
     };
-    const settleRuntimeFailure = (error: unknown): void => {
+    // The one owner of this job's detail policy, for a refusal a runner threw and
+    // one it returned alike. BYOK provider errors are deliberately detail-free: an
+    // upstream error may include request headers or credential material, and only a
+    // local run's detail is ours to begin with. The renderer and local bridge get
+    // only the named, redacted refusal.
+    const settleRefusal = (refusal: Readonly<{
+      reason: string;
+      message: string;
+      recoverable: boolean;
+      detail?: string;
+    }>): void => {
       if (assistantJob !== activeJob || activeJob.status !== "running") return;
-      const byoRefusal = route === "byo" && error instanceof DesktopByoRunnerRefusal
-        ? error
-        : null;
       activeJob.status = "refused";
       activeJob.refusal = Object.freeze({
         ok: false as const,
+        reason: refusal.reason,
+        message: refusal.message,
+        recoverable: refusal.recoverable,
+        ...(route === "local" && refusal.detail !== undefined
+          ? { detail: refusal.detail }
+          : {}),
+      });
+    };
+    const settleRuntimeFailure = (error: unknown): void => {
+      const byoRefusal = route === "byo" && error instanceof DesktopByoRunnerRefusal
+        ? error
+        : null;
+      settleRefusal({
         reason: byoRefusal?.reason ?? DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
         message: byoRefusal?.message ?? "The configured assistant runner failed.",
         recoverable: true,
-        // BYOK provider errors are deliberately detail-free: an upstream error
-        // may include request headers or credential material. The renderer and
-        // local bridge get only the named, redacted refusal.
-        ...(route === "local"
-          ? { detail: error instanceof Error ? error.message : String(error) }
-          : {}),
+        detail: error instanceof Error ? error.message : String(error),
       });
     };
     let running: Promise<AssistantSculptResult> | undefined;
@@ -628,8 +643,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
               : { providerEvidence: result.providerEvidence }),
           });
         } else {
-          activeJob.status = "refused";
-          activeJob.refusal = result;
+          settleRefusal(result);
         }
       },
       settleRuntimeFailure,

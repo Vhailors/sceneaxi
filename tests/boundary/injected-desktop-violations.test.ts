@@ -155,6 +155,58 @@ describe("desktop tier — injected violations", () => {
     expect(res.stderr).toContain("only desktop/linux/src/electron/ may import Electron");
   });
 
+  it("desktop check confines the concrete provider adapter to the privileged host", () => {
+    appendTo(
+      fx,
+      "desktop/linux/src/lib/bridge.ts",
+      '\nimport "@sceneaxi/provider-openrouter";\n',
+    );
+    const res = runCheck(fx, "check-desktop.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      "only desktop/linux/src/electron/ may import a desktop provider adapter",
+    );
+  });
+
+  it("desktop check refuses re-export laundering of the privileged host", () => {
+    // Naming neither Electron nor the adapter still pulls both into an unprivileged
+    // bundle, so reaching into src/electron/ from outside it is refused on its own.
+    appendTo(
+      fx,
+      "desktop/linux/src/renderer/viewport.ts",
+      '\nexport { createDesktopOpenRouterProviderSession } from "../electron/provider-runtime.js";\n',
+    );
+    const res = runCheck(fx, "check-desktop.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("nothing outside desktop/linux/src/electron/ may reach the privileged host");
+  });
+
+  it("desktop check refuses laundering through the package's own privileged export subpath", () => {
+    // The manifest publishes the privileged host at `./electron/provider-runtime`,
+    // and a self-reference resolves through that `exports` map in Node, TypeScript,
+    // and esbuild alike — so naming no path at all must not be a way around the rule.
+    appendTo(
+      fx,
+      "desktop/linux/src/renderer/viewport.ts",
+      '\nexport { createDesktopOpenRouterProviderSession } from "@sceneaxi/desktop-linux/electron/provider-runtime";\n',
+    );
+    const res = runCheck(fx, "check-desktop.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("nothing outside desktop/linux/src/electron/ may reach the privileged host");
+  });
+
+  it("desktop check allows an unprivileged module to name the package root export", () => {
+    // The bound is the privileged subpath, not self-reference itself: the root
+    // export resolves to src/index.ts and must keep passing.
+    appendTo(
+      fx,
+      "desktop/linux/src/renderer/viewport.ts",
+      '\nimport "@sceneaxi/desktop-linux";\n',
+    );
+    const res = runCheck(fx, "check-desktop.mjs");
+    expect(res.status, `stderr: ${res.stderr}`).toBe(0);
+  });
+
   it("desktop check fails on a workspace: specifier — install roots need link:", () => {
     editManifest(fx, "desktop/linux/package.json", (manifest) => {
       manifest.dependencies = {
