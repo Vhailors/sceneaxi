@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  MODEL_PROVIDER_CALL_EVIDENCE_KIND,
+  MODEL_PROVIDER_PORT_SCHEMA_VERSION,
   RARITY_FIXTURES_PATH,
   RARITY_NAMESPACE_KIND,
   RARITY_POLICY_KIND,
@@ -10,7 +12,9 @@ import {
   RARITY_TIERS,
   type KernelCommand,
   type KernelSessionSaveArtifact,
+  type ModelProviderCallEvidence,
   type ProductManifest,
+  type RarityNamespace,
   type RarityOutcome,
   type RarityPolicy,
   type RarityProvenance,
@@ -328,6 +332,40 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
 
     const replayed = replay(jsonCopy(save), fixedHost());
     expect(replayed.observe()).toEqual(terminal);
+    expect(replayed.save()).toEqual(save);
+  });
+
+  it("carries namespace provider evidence through save and replay of a generated roll", () => {
+    const base = manifest();
+    const evidence: ModelProviderCallEvidence = {
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      kind: MODEL_PROVIDER_CALL_EVIDENCE_KIND,
+      operation: "tool-call",
+      profile: "@sceneaxi/profile-game",
+      model: {
+        model: "wayfinder-rarity-fixture",
+        provider: "sceneaxi-fixture",
+        quantization: "deterministic-json",
+        version: "2026-08-09",
+      },
+    };
+    const session = open(
+      {
+        ...base,
+        rarity: { ...(base.rarity as RarityNamespace), providerEvidence: evidence },
+      },
+      fixedHost(),
+    );
+    session.dispatch(rarityCommand("roll-0000"));
+    session.advance({ tick: 1, deltaMs: 16 });
+    const terminal = session.observe();
+    const save = session.save();
+    expect(terminal.rarity?.rolls).toHaveLength(1);
+    expect(save.productManifest.rarity?.providerEvidence).toEqual(evidence);
+
+    const replayed = replay(jsonCopy(save), fixedHost());
+    expect(replayed.observe()).toEqual(terminal);
+    expect(replayed.observe().rarity?.providerEvidence).toEqual(evidence);
     expect(replayed.save()).toEqual(save);
   });
 

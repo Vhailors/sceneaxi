@@ -356,9 +356,7 @@ function withoutGeneratedRarityRolls(
 ): ProductManifest {
   if (manifest.rarity === undefined || generatedEventIds.size === 0) return manifest;
   const rarity = Object.freeze({
-    schemaVersion: RARITY_SCHEMA_VERSION,
-    kind: RARITY_NAMESPACE_KIND,
-    policy: manifest.rarity.policy,
+    ...manifest.rarity,
     rolls: Object.freeze(
       manifest.rarity.rolls.filter((roll) => !generatedEventIds.has(roll.eventId)),
     ),
