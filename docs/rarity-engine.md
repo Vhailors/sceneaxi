@@ -196,11 +196,17 @@ The implementation landed as `3874b409fabbb058e415723eba2d26daa6e6e460` and was
 then corrected in review, so that commit is **not** the head this contract
 describes. The corrections are `a026e64` (named replay refusal, shared
 forbidden-key list), `71d0058` (provider-detail redaction, one document reader),
-`4dc8f30` (provider evidence carried through kernel replay), and the round
-recorded below (replay reported as a replay, the rarity product session reported
-beside the scene session rather than in place of it, Evidence retained on an
-unrelated reject, one shared evidence formatter, per-namespace evidence conflict
-refusal). Each added executable coverage.
+`4dc8f30` (provider evidence carried through kernel replay), `8d424a1` (replay
+reported as a replay, the rarity product session reported beside the scene session
+rather than in place of it, Evidence retained on an unrelated reject, one shared
+evidence formatter, per-namespace evidence conflict refusal), `27c1ccf` (that
+formatter moved to a browser-safe entry so the renderer bundles again, plus the
+gate check that catches the class), `fd7aae9` (Run and viewport render the full
+shared provenance, evidence cleared on a project-root change, the operator's
+request carried to the provider), and the round recorded below (the shipped
+binaries' resolver taught to map workspace subpaths, provenance retired on Undo
+and preserved through Remove Recent, the overlay's line breaks preserved). Each
+added executable coverage.
 
 Its executable desktop vector is unchanged by all of them —
 `tests/e2e/fixtures/rarity-provider/wayfinder-desktop.json`:
@@ -245,8 +251,14 @@ That smoke has **not** been re-run since, and review rounds after it did change
 the tier's one renderer-owning module, `desktop/linux/src/renderer/viewport.ts`:
 the assistant-start decision moved to `renderer/assistant-start.ts`, the job poll
 to `renderer/assistant-poll.ts`, the result inspection to
-`renderer/assistant-inspection.ts`, the rarity result gained its replayed branch,
-and the open-path report gained `rarityReportSuffix`. One of those rounds also
+`renderer/assistant-inspection.ts`, and the rarity result gained its replayed
+branch. `27c1ccf` then rewrote the open-path report's rarity clause: what was a
+tier/candidate summary became `rarityEvidenceReport()`, printed on its own
+`rarityEvidenceLine` overlay above the frame report, and `AssistantPollOutcome`
+was narrowed so the poll consumer no longer re-checks an optional result. The
+round recorded below gave that overlay `white-space: pre-wrap` so the shared
+formatter's line breaks survive, and made it clear itself when a run carries no
+rarity. One of those rounds also
 imported the shared evidence formatter from the Node-bearing root barrel, which
 made `renderer.js` unbundlable until it was moved to the import-free
 `@sceneaxi/authoring-core/rarity-evidence` entry — a break `pnpm gate` could not

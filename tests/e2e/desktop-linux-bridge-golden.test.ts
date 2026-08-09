@@ -55,6 +55,7 @@ import {
   DESKTOP_VIEWPORT_PLAY_EVENT,
   createDesktopAssistantViewportController,
   createDesktopBridge,
+  desktopAssistantScene,
   desktopOpenScene,
   desktopSceneFromDocumentData,
   seedDesktopProject,
@@ -1181,6 +1182,10 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     const reject = new FakeElement("change-reject", { action: "change-reject" });
     const reload = new FakeElement("document-reload", { action: "document-reload" });
     const openRecent = new FakeElement("project-open-recent", { action: "project-open-recent" });
+    const removeRecent = new FakeElement("project-remove-recent", {
+      action: "project-remove-recent",
+    });
+    const undo = new FakeElement("edit-undo", { command: "edit-undo" });
     const recentSelect = new FakeSelectElement("project-recent-select");
     const play = new FakeElement("run-play", { command: "run-play" });
     const runSession = new FakeElement("run-session");
@@ -1222,7 +1227,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
         ["[data-project-status]", [status]],
         ["[data-project-file-state]", [fileStatus]],
         ["[data-change-badge]", [badge]],
-        ["[data-command]", [play]],
+        ["[data-command]", [play, undo]],
         ["#project-recent-select", [recentSelect]],
         ["[data-run-session-report]", [runSession]],
         ["[data-run-live-report]", [runLive]],
@@ -1267,7 +1272,8 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       ...(port === undefined ? {} : { sceneaxiDesktop: port }),
     });
     return {
-      shell, reject, reload, openRecent, recentSelect, play, runSession, runLive,
+      shell, reject, reload, openRecent, removeRecent, recentSelect, play, undo,
+      runSession, runLive,
       runEvidence, proposal, empty, documentPath,
       contentHash, diff, reviewEvidence, evidence, evidenceEmpty, projectState, status,
       fileStatus, badge, changesTab, evidenceTab, changesPanel, evidencePanel,
@@ -1602,6 +1608,88 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     expect(evidenceEmpty.hidden).toBe(false);
   });
 
+  it("keeps rarity evidence when Remove Recent leaves the active project bound", async () => {
+    const lifecycleStatus = {
+      recents: [],
+      active: { name: "project-a", root: "/tmp/project-a", documentPath: "scene.json" },
+    };
+    const port = {
+      request: () =>
+        Promise.resolve({ ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" }),
+      project: () =>
+        Promise.resolve({ ok: true, data: { status: lifecycleStatus, outcome: "removed" } }),
+    };
+    const { shell, removeRecent, recentSelect, status, evidence, evidenceEmpty, documentListeners } =
+      mountRarityChrome(port);
+
+    // The chrome syncs project lifecycle on load; let that settle so the status
+    // this test reads is the one its own click produced.
+    await vi.waitFor(() => {
+      expect(status.textContent).toContain("Open refused");
+    });
+    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+      detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
+    });
+    expect(evidence.hidden).toBe(false);
+
+    recentSelect.value = "/tmp/project-b";
+    shell.clickListener?.({ target: removeRecent });
+    await vi.waitFor(() => {
+      expect(status.textContent).toContain("Recent project removed");
+    });
+    // Forgetting a recent entry binds nothing, so the bound project's own
+    // provenance is still exactly as real as it was.
+    expect(evidence.hidden).toBe(false);
+    expect(evidence.textContent).toContain("provenance sha256:provenance");
+    expect(evidenceEmpty.hidden).toBe(true);
+  });
+
+  it("retires rarity evidence when Undo takes the accepted namespace back out", async () => {
+    const port = {
+      request: (request: { readonly payload?: { readonly op?: string } }) =>
+        Promise.resolve(
+          request.payload?.op === "undo"
+            ? { ok: true, action: "authoring", data: { ok: true, restoredPaths: ["scene.json"] } }
+            : request.payload?.op === "status"
+              ? {
+                  ok: true,
+                  action: "authoring",
+                  data: {
+                    ok: true,
+                    documentId: "scene",
+                    contentHash: "sha256:base",
+                    data: {},
+                    undoAvailability: "available",
+                  },
+                }
+              : { ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" },
+        ),
+    };
+    const { shell, reload, undo, status, evidence, evidenceEmpty, documentListeners } =
+      mountRarityChrome(port);
+
+    // Open the project so a completed Save is undoable, then show the accepted
+    // provenance the way Play or a staged replay would.
+    shell.clickListener?.({ target: reload });
+    await vi.waitFor(() => {
+      expect(status.textContent).toContain("· open ·");
+    });
+    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+      detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
+    });
+    expect(evidence.hidden).toBe(false);
+
+    shell.clickListener?.({ target: undo });
+    await vi.waitFor(() => {
+      expect(status.textContent).toContain("Undid last Save");
+    });
+    // The Save that wrote the namespace has been reverted, so provenance for it
+    // must not stay on screen describing bytes the file no longer holds.
+    expect(evidence.hidden).toBe(true);
+    expect(evidence.textContent).toBe("");
+    expect(evidenceEmpty.hidden).toBe(false);
+  });
+
   it("retires rarity evidence when the rarity proposal itself is rejected", async () => {
     const { reject, shell, evidence, evidenceEmpty, status, documentListeners } =
       mountRarityChrome(rejectingPort());
@@ -1644,15 +1732,47 @@ describe("desktop renderer module accounting", () => {
     ]);
   });
 
-  it("wires the assistant job into the existing mount and manipulator seams", () => {
-    const source = readFileSync(
-      join(desktopRoot, "linux/src/renderer/viewport.ts"),
-      "utf8",
-    );
-    expect(source).toContain('action: "assistant"');
-    expect(source).toContain("createDesktopAssistantViewportController(mounts)");
-    expect(source).toContain("assistantViewport.manipulate(control.dataset.value)");
-    expect(source).toContain('data-assistant-manipulators');
+  // The manipulator seam has two ends that have to agree: the emitted chrome
+  // document — a generated public artifact this tier ships — declares the control
+  // values, and the renderer's viewport controller is what has to answer them.
+  // Asserting the document's own values against the controller's real transforms
+  // proves the wiring; reading viewport.ts for the call site would not.
+  it("answers every manipulator the emitted chrome document declares", () => {
+    const bar = /<div class="assistant-manipulators"[\s\S]*?<\/div>/.exec(
+      desktopLinuxIndexHtml(),
+    )?.[0];
+    expect(bar).toBeDefined();
+    const declared = [
+      ...(bar ?? "").matchAll(
+        /data-action="assistant-manipulator" data-value="([^"]+)"/g,
+      ),
+    ].map((match) => match[1]);
+    expect(declared.length).toBeGreaterThan(0);
+
+    const starter = desktopOpenScene();
+    if (!starter.ok) throw new Error(`desktop scene fixture refused: ${starter.reason}`);
+    const mounted = starter.composed.scene.instances[0];
+    if (mounted === undefined) throw new Error("desktop starter scene has no instance");
+    const scene = desktopAssistantScene(mounted.artifact);
+
+    const backend = createThreeSculptPresentationBackend();
+    const mounts = createSculptMountApi(backend);
+    const controller = createDesktopAssistantViewportController(mounts);
+    controller.replace(scene);
+
+    const identity = {
+      translation: [0, 0, 0],
+      rotationEulerDegrees: [0, 0, 0],
+      scale: [1, 1, 1],
+    };
+    for (const value of declared) {
+      const moved = controller.manipulate(value);
+      expect(moved, value).not.toBeNull();
+      expect(moved?.transform, value).not.toEqual(identity);
+      controller.replace(scene);
+    }
+    // And a value the document does not declare is not silently accepted.
+    expect(controller.manipulate("not-a-manipulator")).toBeNull();
   });
 
   it("abandons a job that never settles and names the timeout", async () => {

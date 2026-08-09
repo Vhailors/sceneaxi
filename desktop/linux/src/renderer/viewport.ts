@@ -94,9 +94,25 @@ function overlayLine(host: Element, id: string, kind: string, bottom: string, te
     line.style.textAlign = "left";
     line.style.maxWidth = "none";
     line.style.pointerEvents = "none";
+    // `.viewport-note` sets no `white-space`, so a multi-line body would collapse
+    // into one run-on paragraph. The safe-evidence overlay is the one line whose
+    // field boundaries carry meaning; single-line notes are unaffected.
+    line.style.whiteSpace = "pre-wrap";
     host.append(line);
   }
   line.textContent = text;
+}
+
+/**
+ * Remove an overlay line rather than blanking it.
+ *
+ * A report that has nothing to say about this run must not keep the previous
+ * run's answer on screen: after an Undo takes the accepted namespace back out of
+ * the project, the next Play carries no rarity, and an overlay that is only ever
+ * written would still be printing that namespace's tier, seed, and digests.
+ */
+function clearOverlayLine(id: string): void {
+  document.getElementById(id)?.remove();
 }
 
 function reportLine(host: Element, text: string): void {
@@ -531,7 +547,8 @@ async function mountLiveViewport(): Promise<void> {
       `kernel playback acknowledged: ${exercise.tickDigests.length} ticks advanced · digest ${exercise.initialDigest.slice(0, 18)}… → ${exercise.tickDigests.at(-1)?.slice(0, 18)}… · composed scene redrawn at viewport frame ${frame.frame}`,
     );
     const rarity = rarityEvidenceReport(exercise);
-    if (rarity !== null) rarityEvidenceLine(stage, rarity);
+    if (rarity === null) clearOverlayLine(RARITY_EVIDENCE_ID);
+    else rarityEvidenceLine(stage, rarity);
   });
 
   // Everything below runs after `loop.start()`, so it names itself on its own line
@@ -551,7 +568,8 @@ async function mountLiveViewport(): Promise<void> {
         `kernel open path: ${exercise.tickDigests.length} ticks advanced · digest ${exercise.initialDigest.slice(0, 18)}… → ${exercise.tickDigests[exercise.tickDigests.length - 1]?.slice(0, 18)}… · session closed`,
       );
       const rarity = rarityEvidenceReport(exercise);
-      if (rarity !== null) rarityEvidenceLine(stage, rarity);
+      if (rarity === null) clearOverlayLine(RARITY_EVIDENCE_ID);
+      else rarityEvidenceLine(stage, rarity);
     } else {
       openPathLine(stage, `kernel open path refused: ${openPath.reason} — ${openPath.message}`);
     }

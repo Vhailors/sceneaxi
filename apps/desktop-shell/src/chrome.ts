@@ -1785,17 +1785,17 @@ if (shell) {
     projectRecovering = false;
     clearSceneProperty();
     undoAvailability = 'unavailable';
-    // The dock's provenance belongs to the project it was read from. A new root
-    // is bound below, so keeping it would render one project's tier, seed, and
-    // digests over another's — the same over-reach as clearing evidence that is
-    // still real, in the other direction.
-    rarityProposalStaged = false;
-    clearRarityEvidence();
     syncReview(null);
     if (response.data.outcome === 'removed') {
       productStatus(activeProject === null ? 'closed' : 'open', 'Recent project removed · active project unchanged');
       return;
     }
+    // Only past this point has a root actually changed. The dock's provenance
+    // belongs to the project it was read from, so binding another one must not
+    // leave one project's tier, seed, and digests describing another's — while
+    // forgetting a recent entry binds nothing and takes nothing away.
+    rarityProposalStaged = false;
+    clearRarityEvidence();
     if (activeProject !== null) await openProject();
   };
 
@@ -2179,6 +2179,12 @@ if (shell) {
     projectContentHash = null;
     projectDirty = false;
     projectRecovering = false;
+    // Undo reverts the apply the provenance describes, so the namespace it names
+    // may no longer be in the file. Play repopulates the dock from whatever the
+    // reopened project really carries; keeping the old text until then would show
+    // digests for bytes this Save just took back out.
+    rarityProposalStaged = false;
+    clearRarityEvidence();
     const reopened = await openProject();
     if (reopened) {
       productStatus('open', 'Undid last Save · restored ' + result.restoredPaths.join(', '));
