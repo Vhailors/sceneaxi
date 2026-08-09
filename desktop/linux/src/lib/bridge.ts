@@ -663,21 +663,33 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     }
     const rarityStatus = (data: Readonly<Record<string, unknown>>) => {
       if (data.rarity === undefined) {
-        return Object.freeze({ rarityNamespaceDigest: null, acceptedRarityEvidence: null });
+        return Object.freeze({
+          ok: true as const,
+          value: Object.freeze({ rarityNamespaceDigest: null, acceptedRarityEvidence: null }),
+        });
       }
       const rarity = validateRarityNamespace(data.rarity);
       if (!rarity.ok) {
-        return Object.freeze({ rarityNamespaceDigest: null, acceptedRarityEvidence: null });
+        return Object.freeze({
+          ok: false as const,
+          reason: rarity.code,
+          message: rarity.message,
+        });
       }
       const rarityNamespaceDigest = digestRarityNamespace(rarity.value);
       const roll = rarity.value.rolls.at(-1);
-      if (
-        roll === undefined ||
-        roll.providerEvidence === undefined ||
-        typeof data.productId !== "string" ||
-        !Number.isSafeInteger(data.seed)
-      ) {
-        return Object.freeze({ rarityNamespaceDigest, acceptedRarityEvidence: null });
+      if (roll === undefined || roll.providerEvidence === undefined) {
+        return Object.freeze({
+          ok: true as const,
+          value: Object.freeze({ rarityNamespaceDigest, acceptedRarityEvidence: null }),
+        });
+      }
+      if (typeof data.productId !== "string" || !Number.isSafeInteger(data.seed)) {
+        return Object.freeze({
+          ok: false as const,
+          reason: RARITY_REFUSE_CODES.seedInvalid,
+          message: "The accepted rarity namespace has no valid ProductManifest identity.",
+        });
       }
       const verified = resolveRarityWithKernel({
         productId: data.productId,
@@ -687,23 +699,46 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         request: roll.request,
         providerEvidence: roll.providerEvidence,
       });
-      if (
-        !verified.ok ||
-        digestRarityNamespace(verified.value) !== rarityNamespaceDigest
-      ) {
-        return Object.freeze({ rarityNamespaceDigest, acceptedRarityEvidence: null });
+      if (!verified.ok) {
+        return Object.freeze({
+          ok: false as const,
+          reason: verified.reason,
+          message: verified.message,
+        });
       }
-      return Object.freeze({
-        rarityNamespaceDigest,
-        acceptedRarityEvidence: safeRarityEvidenceFromNamespace(
+      if (digestRarityNamespace(verified.value) !== rarityNamespaceDigest) {
+        return Object.freeze({
+          ok: false as const,
+          reason: RARITY_REFUSE_CODES.outcomeMismatch,
+          message: "The accepted rarity namespace does not match authoritative kernel replay.",
+        });
+      }
+      const acceptedRarityEvidence = safeRarityEvidenceFromNamespace(
           rarity.value,
           roll.eventId,
           data.seed as number,
-        ),
+        );
+      if (acceptedRarityEvidence === null) {
+        return Object.freeze({
+          ok: false as const,
+          reason: RARITY_REFUSE_CODES.provenanceMismatch,
+          message: "The accepted rarity namespace has malformed display provenance.",
+        });
+      }
+      return Object.freeze({
+        ok: true as const,
+        value: Object.freeze({
+          rarityNamespaceDigest,
+          acceptedRarityEvidence,
+        }),
       });
     };
     const reconcileRarityAssistantDocument = (
-      status: DesktopDocumentStatus & Readonly<{ rarityNamespaceDigest?: string | null }>,
+      status: Readonly<{
+        ok: boolean;
+        diagnostics?: readonly Readonly<{ code: string }>[];
+        rarityNamespaceDigest?: string | null;
+      }>,
       reason?: DesktopRarityRetirementReason,
     ) => {
       const result = currentRarityAssistantResult();
@@ -712,7 +747,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         result.retirement !== undefined
       ) return;
       if (!status.ok) {
-        if (status.diagnostics[0]?.code === "document-not-found") {
+        if (status.diagnostics?.[0]?.code === "document-not-found") {
           retireRarityAssistantResult(result.evidence, reason ?? "document-missing");
         }
         return;
@@ -731,9 +766,25 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         reconcileRarityAssistantDocument(status, retirementReason);
         return status;
       }
+      const rarity = rarityStatus(status.data);
+      if (!rarity.ok) {
+        const refused = Object.freeze({
+          ok: false as const,
+          documentPath,
+          diagnostics: Object.freeze([
+            Object.freeze({
+              code: rarity.reason,
+              message: rarity.message,
+              documentPath,
+            }),
+          ]),
+        });
+        reconcileRarityAssistantDocument(refused, retirementReason);
+        return refused;
+      }
       const enriched = Object.freeze({
         ...status,
-        ...rarityStatus(status.data),
+        ...rarity.value,
         editableScene: inspectDesktopSceneProperties({
           documentData: status.data,
           contentHash: status.contentHash,
@@ -765,9 +816,11 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       if (documentPath === null) return snapshot;
       const status = live.status(documentPath);
       if (!status.ok) return snapshot;
+      const rarity = rarityStatus(status.data);
+      if (!rarity.ok) return snapshot;
       return Object.freeze({
         ...snapshot,
-        ...rarityStatus(status.data),
+        ...rarity.value,
         editableScene: inspectDesktopSceneProperties({
           documentData: status.data,
           contentHash: status.contentHash,

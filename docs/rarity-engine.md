@@ -302,7 +302,10 @@ an unresolved ready Agent job, rejects final-line terminators in descriptors,
 retains evidence through unreadable recovery, and invalidates matching Assistant,
 Run, viewport, and Evidence output together. `ce6b714` then reconciled Assistant
 lifecycle across restart and Undo, and compared each presentation surface with
-accepted project provenance. The smoke was not rerun after these changes.
+accepted project provenance. `7071775` preserved legacy evidence-less playback,
+refused new evidence-less extensions, retired Assistant results without calling
+Undo a rejection, expanded descriptor filtering, and added the corresponding
+contract and lifecycle regressions. The smoke was not rerun after these changes.
 
 The pinned vector digests above, by contrast, are re-proved on every run:
 `tests/e2e/rarity-provider-desktop-golden.test.ts` compares runtime output to

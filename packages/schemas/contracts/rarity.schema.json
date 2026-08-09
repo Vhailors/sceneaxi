@@ -227,25 +227,25 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 128,
-              "pattern": "^(?![\\s\\S]*[^a-z0-9._:/+-])(?!(?:.*[._:/+-])?(?:sk|rk|whsec|key|token|secret|credential|password)(?:[._:/+-]|(?![\\s\\S])))[a-z0-9][a-z0-9._:/+-]*(?![\\s\\S])"
+              "pattern": "^(?![\\s\\S]*[^a-z0-9._:/+-])(?![\\s\\S]*://)(?!(?:[\\s\\S]*[._:/+-])?(?:sk|rk|whsec|key|token|secret|credential|password)(?:[._:/+-]|(?![\\s\\S])))(?!(?:[\\s\\S]*[._:/+-])?(?:sk_(?:test|live)_|rk_(?:test|live)_|whsec_|xox[abprs]-|gh[pousr]_|github_pat_|glpat-|npm_|pypi-|hf_|lin_api_|sq0atp-|sq0csp-))[a-z0-9][a-z0-9._:/+-]*(?![\\s\\S])"
             },
             "provider": {
               "type": "string",
               "minLength": 1,
               "maxLength": 128,
-              "pattern": "^(?![\\s\\S]*[^a-z0-9._:/+-])(?!(?:.*[._:/+-])?(?:sk|rk|whsec|key|token|secret|credential|password)(?:[._:/+-]|(?![\\s\\S])))[a-z0-9][a-z0-9._:/+-]*(?![\\s\\S])"
+              "pattern": "^(?![\\s\\S]*[^a-z0-9._:/+-])(?![\\s\\S]*://)(?!(?:[\\s\\S]*[._:/+-])?(?:sk|rk|whsec|key|token|secret|credential|password)(?:[._:/+-]|(?![\\s\\S])))(?!(?:[\\s\\S]*[._:/+-])?(?:sk_(?:test|live)_|rk_(?:test|live)_|whsec_|xox[abprs]-|gh[pousr]_|github_pat_|glpat-|npm_|pypi-|hf_|lin_api_|sq0atp-|sq0csp-))[a-z0-9][a-z0-9._:/+-]*(?![\\s\\S])"
             },
             "quantization": {
               "type": "string",
               "minLength": 1,
               "maxLength": 128,
-              "pattern": "^(?![\\s\\S]*[^a-z0-9._:/+-])(?!(?:.*[._:/+-])?(?:sk|rk|whsec|key|token|secret|credential|password)(?:[._:/+-]|(?![\\s\\S])))[a-z0-9][a-z0-9._:/+-]*(?![\\s\\S])"
+              "pattern": "^(?![\\s\\S]*[^a-z0-9._:/+-])(?![\\s\\S]*://)(?!(?:[\\s\\S]*[._:/+-])?(?:sk|rk|whsec|key|token|secret|credential|password)(?:[._:/+-]|(?![\\s\\S])))(?!(?:[\\s\\S]*[._:/+-])?(?:sk_(?:test|live)_|rk_(?:test|live)_|whsec_|xox[abprs]-|gh[pousr]_|github_pat_|glpat-|npm_|pypi-|hf_|lin_api_|sq0atp-|sq0csp-))[a-z0-9][a-z0-9._:/+-]*(?![\\s\\S])"
             },
             "version": {
               "type": "string",
               "minLength": 1,
               "maxLength": 128,
-              "pattern": "^(?![\\s\\S]*[^a-z0-9._:/+-])(?!(?:.*[._:/+-])?(?:sk|rk|whsec|key|token|secret|credential|password)(?:[._:/+-]|(?![\\s\\S])))[a-z0-9][a-z0-9._:/+-]*(?![\\s\\S])"
+              "pattern": "^(?![\\s\\S]*[^a-z0-9._:/+-])(?![\\s\\S]*://)(?!(?:[\\s\\S]*[._:/+-])?(?:sk|rk|whsec|key|token|secret|credential|password)(?:[._:/+-]|(?![\\s\\S])))(?!(?:[\\s\\S]*[._:/+-])?(?:sk_(?:test|live)_|rk_(?:test|live)_|whsec_|xox[abprs]-|gh[pousr]_|github_pat_|glpat-|npm_|pypi-|hf_|lin_api_|sq0atp-|sq0csp-))[a-z0-9][a-z0-9._:/+-]*(?![\\s\\S])"
             }
           }
         }

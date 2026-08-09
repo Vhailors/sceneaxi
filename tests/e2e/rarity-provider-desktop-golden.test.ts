@@ -998,7 +998,10 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
       }),
     ).toMatchObject({
       ok: true,
-      data: { acceptedRarityEvidence: null },
+      data: {
+        ok: false,
+        diagnostics: [{ code: "OPEN_PATH_KERNEL_REFUSED" }],
+      },
     });
     startRarity(replay);
     expect(await settledJob(replay)).toMatchObject({

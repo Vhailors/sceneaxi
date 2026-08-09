@@ -52,13 +52,37 @@ export function assistantRaritySettlement(
     return null;
   }
   const record = detail as Record<string, unknown>;
-  if (record["settled"] !== "applied" && record["settled"] !== "rejected") return null;
+  const settled = record["settled"];
+  const retired = record["retired"];
+  if (
+    settled !== "applied" &&
+    settled !== "rejected" &&
+    retired !== "session-restarted" &&
+    retired !== "undo" &&
+    retired !== "namespace-replaced" &&
+    retired !== "document-missing"
+  ) return null;
   const evidence = record["evidence"];
   if (typeof evidence !== "object" || evidence === null) return null;
   const namespaceDigest = (evidence as Record<string, unknown>)["namespaceDigest"];
   const evidenceText = formatSafeRarityEvidence(evidence);
   if (namespaceDigest !== activeNamespaceDigest || evidenceText === null) return null;
-  if (record["settled"] === "rejected") {
+  if (retired !== undefined) {
+    const status = retired === "session-restarted"
+      ? "Rarity proposal retired · the authoring session restarted before settlement was confirmed."
+      : retired === "undo"
+        ? "Rarity evidence retired · Undo removed the proposal or accepted namespace."
+        : retired === "document-missing"
+          ? "Rarity evidence retired · the bound document is gone."
+          : "Rarity evidence retired · the bound namespace was replaced.";
+    return Object.freeze({
+      activeNamespaceDigest: null,
+      evidenceText: "",
+      evidenceVisible: false,
+      status,
+    });
+  }
+  if (settled === "rejected") {
     return Object.freeze({
       activeNamespaceDigest: null,
       evidenceText: "",
@@ -71,6 +95,32 @@ export function assistantRaritySettlement(
     evidenceText,
     evidenceVisible: true,
     status: "Rarity proposal accepted · canonical project bytes saved.",
+  });
+}
+
+export function assistantRarityResultEvent(
+  result: DesktopAssistantJobSnapshot["result"] | null,
+): Readonly<Record<string, unknown>> | null {
+  if (result === null || result === undefined || !isRarityProposalResult(result)) return null;
+  if (result.retirement !== undefined) {
+    return Object.freeze({
+      retired: result.retirement.reason,
+      evidence: result.evidence,
+    });
+  }
+  const phase = result.authoring?.phase;
+  if (phase === "applied" || phase === "rejected") {
+    return Object.freeze({
+      settled: phase,
+      synchronize: true,
+      snapshot: result.authoring,
+      evidence: result.evidence,
+    });
+  }
+  return Object.freeze({
+    replayed: result.replayed,
+    snapshot: result.replayed ? null : result.authoring,
+    evidence: result.evidence,
   });
 }
 

@@ -45,8 +45,20 @@ export function formatSafeRarityEvidence(
     typeof value === "string" && value.length <= 128 &&
     [...value].every((character) => /[a-z0-9._:/+-]/.test(character)) &&
     /[a-z0-9]/.test(value[0] || "") &&
+    !value.includes("://") &&
     !value.split(/[._:/+-]/).some((segment) =>
       ["sk", "rk", "whsec", "key", "token", "secret", "credential", "password"].includes(segment)
+    ) &&
+    ![
+        "sk_test_", "sk_live_", "rk_test_", "rk_live_", "whsec_",
+        "xoxa-", "xoxb-", "xoxp-", "xoxr-", "xoxs-",
+        "ghp_", "gho_", "ghu_", "ghs_", "ghr_", "github_pat_",
+        "glpat-", "npm_", "pypi-", "hf_", "lin_api_", "sq0atp-", "sq0csp-",
+      ].some((prefix) =>
+        value.startsWith(prefix) ||
+        [".", "_", ":", "/", "+", "-"].some((separator) =>
+          value.includes(separator + prefix)
+        )
     );
   const numericFields = [
     "projectSeed",

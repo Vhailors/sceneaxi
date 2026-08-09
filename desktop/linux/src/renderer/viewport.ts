@@ -32,6 +32,7 @@ import {
   assistantRaritySettlement,
   assistantRarityInvalidation,
   assistantRarityResultDigest,
+  assistantRarityResultEvent,
   assistantRarityResultSettlement,
   assistantInspectionText,
   isRarityProposalResult,
@@ -337,7 +338,13 @@ function installAssistantProductFlow(
     if (isRarityProposalResult(result)) {
       displayedRarityResultDigest = result.evidence.namespaceDigest;
       const settlement = assistantRarityResultSettlement(result);
+      const lifecycleEvent = assistantRarityResultEvent(result);
       if (settlement !== null) {
+        if (lifecycleEvent !== null) {
+          document.dispatchEvent(
+            new CustomEvent(DESKTOP_RARITY_PROPOSAL_EVENT, { detail: lifecycleEvent }),
+          );
+        }
         if (!settlement.evidenceVisible) displayedRarityResultDigest = null;
         resultView.textContent = settlement.evidenceText;
         if (settlement.evidenceVisible) resultView.removeAttribute("hidden");
@@ -353,11 +360,7 @@ function installAssistantProductFlow(
       retry?.setAttribute("hidden", "");
       document.dispatchEvent(
         new CustomEvent(DESKTOP_RARITY_PROPOSAL_EVENT, {
-          detail: Object.freeze({
-            replayed,
-            snapshot: replayed ? null : result.authoring,
-            evidence: result.evidence,
-          }),
+          detail: lifecycleEvent,
         }),
       );
       status.textContent = replayed

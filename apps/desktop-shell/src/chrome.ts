@@ -1952,21 +1952,22 @@ if (shell) {
     projectDirty = false;
     projectRecovering = false;
     undoAvailability = 'unavailable';
+    let restartedRarityEvidence = null;
     if (rarityProposalStaged) {
-      const discardedEvidence = activeRarityEvidence;
+      restartedRarityEvidence = activeRarityEvidence;
       rarityProposalStaged = false;
       syncReview(null);
-      if (rarityEvidenceText(discardedEvidence) !== null) {
-        document.dispatchEvent(new CustomEvent(T.product.rarityProposalEvent, {
-          detail: { settled: 'rejected', evidence: discardedEvidence },
-        }));
-      }
       clearRarityEvidence();
     } else {
       rarityProposalStaged = false;
       syncReview(null);
     }
     if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' || status.data === null || typeof status.contentHash !== 'string') {
+      if (rarityEvidenceText(restartedRarityEvidence) !== null) {
+        document.dispatchEvent(new CustomEvent(T.product.rarityProposalEvent, {
+          detail: { retired: 'session-restarted', evidence: restartedRarityEvidence },
+        }));
+      }
       clearSceneProperty();
       if (reason === 'document-not-found') clearRarityEvidence(true);
       productStatus('refused', 'Recovery reset · ' + diagnostic + ' · ' + (reason || T.product.refusals.documentDataInvalid));
@@ -1975,6 +1976,19 @@ if (shell) {
     projectData = status.data;
     projectContentHash = status.contentHash;
     reconcileRarityEvidence(status);
+    if (rarityEvidenceText(restartedRarityEvidence) !== null) {
+      const acceptedDigest = status.acceptedRarityEvidence &&
+        typeof status.acceptedRarityEvidence === 'object' &&
+        typeof status.acceptedRarityEvidence.namespaceDigest === 'string'
+        ? status.acceptedRarityEvidence.namespaceDigest
+        : null;
+      const restartedDigest = restartedRarityEvidence.namespaceDigest;
+      document.dispatchEvent(new CustomEvent(T.product.rarityProposalEvent, {
+        detail: acceptedDigest === restartedDigest
+          ? { settled: 'applied', evidence: restartedRarityEvidence }
+          : { retired: 'session-restarted', evidence: restartedRarityEvidence },
+      }));
+    }
     syncSceneProperties(status);
     undoAvailability = status.undoAvailability === 'available' || status.undoAvailability === 'recovery-pending'
       ? status.undoAvailability
@@ -2927,7 +2941,15 @@ if (shell) {
   document.addEventListener(T.product.rarityProposalEvent, (event) => {
     const detail = event && event.detail;
     if (!detail) return;
-    if (detail.settled === 'applied' || detail.settled === 'rejected') return;
+    if (detail.settled === 'applied' || detail.settled === 'rejected') {
+      if (detail.synchronize === true && isSessionSnapshot(detail.snapshot)) {
+        syncReview(detail.snapshot);
+        void openProject();
+      }
+      return;
+    }
+    if (detail.retired === 'session-restarted' || detail.retired === 'undo' ||
+        detail.retired === 'namespace-replaced' || detail.retired === 'document-missing') return;
     if (detail.replayed === true) {
       if (syncRarityEvidence(detail.evidence) === null) return;
       selectDockTab('evidence');

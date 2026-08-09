@@ -30,11 +30,7 @@ export function seedDesktopProject(dir: string): DesktopProjectSeedResult {
   if (existsSync(documentPath)) {
     const parsed = parseDocumentText(readFileSync(documentPath, "utf8"));
     if (!parsed.ok) return { ok: false, message: parsed.message };
-    if (
-      Object.hasOwn(parsed.document.data, COMPOSED_SCENE_DOCUMENT_DATA_KEY) &&
-      parsed.document.data.productId === DESKTOP_RARITY_PRODUCT_ID &&
-      parsed.document.data.seed === DESKTOP_RARITY_PROJECT_SEED
-    ) {
+    if (Object.hasOwn(parsed.document.data, COMPOSED_SCENE_DOCUMENT_DATA_KEY)) {
       return { ok: true, migrated: false };
     }
     if (

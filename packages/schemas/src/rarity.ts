@@ -48,14 +48,51 @@ const RARITY_PROVIDER_DESCRIPTOR_FORBIDDEN_SEGMENTS = new Set([
   "password",
 ]);
 
+const RARITY_PROVIDER_DESCRIPTOR_CREDENTIAL_PREFIXES = Object.freeze([
+  "sk_test_",
+  "sk_live_",
+  "rk_test_",
+  "rk_live_",
+  "whsec_",
+  "xoxa-",
+  "xoxb-",
+  "xoxp-",
+  "xoxr-",
+  "xoxs-",
+  "ghp_",
+  "gho_",
+  "ghu_",
+  "ghs_",
+  "ghr_",
+  "github_pat_",
+  "glpat-",
+  "npm_",
+  "pypi-",
+  "hf_",
+  "lin_api_",
+  "sq0atp-",
+  "sq0csp-",
+]);
+
+function hasRarityProviderCredentialShape(value: string): boolean {
+  return value.includes("://") ||
+    value.split(/[._:/+-]/).some((segment) =>
+      RARITY_PROVIDER_DESCRIPTOR_FORBIDDEN_SEGMENTS.has(segment)
+    ) ||
+    RARITY_PROVIDER_DESCRIPTOR_CREDENTIAL_PREFIXES.some((prefix) =>
+      value.startsWith(prefix) ||
+      [".", "_", ":", "/", "+", "-"].some((separator) =>
+        value.includes(`${separator}${prefix}`)
+      )
+    );
+}
+
 function isRarityProviderDescriptor(value: unknown): value is string {
   return typeof value === "string" &&
     value.length <= RARITY_PROVIDER_DESCRIPTOR_MAX_CHARS &&
     [...value].every((character) => /[a-z0-9._:/+-]/.test(character)) &&
     /[a-z0-9]/.test(value[0] ?? "") &&
-    !value.split(/[._:/+-]/).some((segment) =>
-      RARITY_PROVIDER_DESCRIPTOR_FORBIDDEN_SEGMENTS.has(segment)
-    );
+    !hasRarityProviderCredentialShape(value);
 }
 
 /** Stable identifiers and cumulative-selection order. */

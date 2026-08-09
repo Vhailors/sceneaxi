@@ -436,6 +436,10 @@ describe("rarity domain contracts", () => {
         ...providerEvidence,
         model: { ...providerEvidence.model, provider: "whsec_abcdefgh" },
       }],
+      ["slack-token-shaped descriptor", {
+        ...providerEvidence,
+        model: { ...providerEvidence.model, provider: "xoxb-12345678-abcdefghijklmnop" },
+      }],
     ] as const) {
       const invalid = {
         ...namespace,
@@ -696,6 +700,10 @@ describe("rarity domain contracts", () => {
       {
         ...providerEvidence,
         model: { ...providerEvidence.model, provider: "whsec_abcdefgh" },
+      },
+      {
+        ...providerEvidence,
+        model: { ...providerEvidence.model, provider: "xoxb-12345678-abcdefghijklmnop" },
       },
     ]) {
       expect(

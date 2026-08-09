@@ -82,6 +82,7 @@ import {
   assistantInspectionText,
   assistantRarityInvalidation,
   assistantRarityResultDigest,
+  assistantRarityResultEvent,
   assistantRarityResultSettlement,
   assistantRaritySettlement,
   rarityInvalidationMatches,
@@ -307,6 +308,13 @@ function bridgeAt(dir: string, onFrameReport?: (report: DesktopFrameReport) => v
 }
 
 describe("desktop bridge — the packaged app's engine paths are real", () => {
+  it("preserves an existing composed document without adding rarity identity", () => {
+    const dir = authoringDir("existing-composed-scene");
+    const before = readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8");
+    expect(seedDesktopProject(dir)).toEqual({ ok: true, migrated: false });
+    expect(readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toBe(before);
+  });
+
   it("migrates a legacy seeded project without replacing its existing data", () => {
     const dir = mkdtempSync(join(tmpdir(), "sceneaxi-desktop-legacy-"));
     tmpDirs.push(dir);
@@ -1786,6 +1794,16 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
           ...RARITY_EVIDENCE_FIXTURE.providerEvidence,
           model: {
             ...RARITY_EVIDENCE_FIXTURE.providerEvidence.model,
+            provider: "xoxb-12345678-abcdefghijklmnop",
+          },
+        },
+      },
+      {
+        ...RARITY_EVIDENCE_FIXTURE,
+        providerEvidence: {
+          ...RARITY_EVIDENCE_FIXTURE.providerEvidence,
+          model: {
+            ...RARITY_EVIDENCE_FIXTURE.providerEvidence.model,
             version: "v".repeat(129),
           },
         },
@@ -1896,6 +1914,21 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     expect(assistantRarityResultSettlement(retired)).toMatchObject({
       evidenceVisible: false,
       status: expect.stringContaining("Undo"),
+    });
+    expect(assistantRarityResultEvent(applied)).toMatchObject({
+      settled: "applied",
+      synchronize: true,
+      snapshot: applied.authoring,
+      evidence: RARITY_EVIDENCE_FIXTURE,
+    });
+    expect(
+      assistantRarityResultEvent({
+        ...staged,
+        retirement: { reason: "session-restarted" as const },
+      }),
+    ).toEqual({
+      retired: "session-restarted",
+      evidence: RARITY_EVIDENCE_FIXTURE,
     });
     expect(assistantRarityResultDigest(null)).toBeNull();
     expect(
@@ -2396,7 +2429,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     expect(reviewEvidence.hidden).toBe(true);
     expect(dispatchedEvents).toContainEqual({
       type: DESKTOP_RARITY_PROPOSAL_EVENT,
-      detail: { settled: "rejected", evidence: RARITY_EVIDENCE_FIXTURE },
+      detail: { retired: "session-restarted", evidence: RARITY_EVIDENCE_FIXTURE },
     });
     expect(dispatchedEvents).toContainEqual({
       type: DESKTOP_RARITY_PROPOSAL_EVENT,
@@ -2405,6 +2438,67 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
         namespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
       },
     });
+  });
+
+  it("refreshes mounted chrome after a late local-RPC settlement", async () => {
+    const applied = {
+      ...RARITY_PROPOSAL_SNAPSHOT,
+      phase: "applied",
+      rarityEvidence: RARITY_EVIDENCE_FIXTURE,
+    };
+    let statusReads = 0;
+    const port = {
+      request: (request: { readonly payload?: { readonly op?: string } }) => {
+        if (request.payload?.op !== "status") {
+          return Promise.resolve({
+            ok: false,
+            reason: "DESKTOP_TEST_NO_RUNTIME",
+            message: "no runtime",
+          });
+        }
+        statusReads += 1;
+        return Promise.resolve({
+          ok: true,
+          action: "authoring",
+          data: {
+            ok: true,
+            documentId: "scene",
+            contentHash: "sha256:accepted",
+            data: { rarity: { kind: "sceneaxi.rarity.namespace" } },
+            undoAvailability: "available",
+            rarityNamespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
+            acceptedRarityEvidence: RARITY_EVIDENCE_FIXTURE,
+          },
+        });
+      },
+    };
+    const {
+      proposal, evidence, status, documentListeners,
+    } = mountRarityChrome(port);
+    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+      detail: {
+        replayed: false,
+        evidence: RARITY_EVIDENCE_FIXTURE,
+        snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, rarityEvidence: RARITY_EVIDENCE_FIXTURE },
+      },
+    });
+
+    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+      detail: {
+        settled: "applied",
+        synchronize: true,
+        snapshot: applied,
+        evidence: RARITY_EVIDENCE_FIXTURE,
+      },
+    });
+
+    await vi.waitFor(() => {
+      expect(statusReads).toBe(1);
+      expect(status.textContent).toContain("· open ·");
+    });
+    expect(proposal.hidden).toBe(true);
+    expect(evidence.hidden).toBe(false);
+    expect(evidence.textContent).toContain(RARITY_EVIDENCE_FIXTURE.namespaceDigest);
   });
 
   it("retires rarity evidence when Undo takes the accepted namespace back out", async () => {
