@@ -151,6 +151,50 @@ unevaluated schema keyword fails the suite instead of being skipped. A field
 added to the runtime contract without the same field in the schema is therefore
 caught by the `additionalProperties: false` branch it would violate.
 
-This contract adds no rarity economy, inventory, marketplace, renderer, provider
-adapter, live network path, Hosted enablement, or Kids path. It does not rewrite
-Sculpt Artifacts.
+## Integration acceptance evidence — 2026-08-09
+
+The implementation source is commit
+`3874b409fabbb058e415723eba2d26daa6e6e460`. Its executable desktop vector is
+`tests/e2e/fixtures/rarity-provider/wayfinder-desktop.json`:
+
+- scope `desktop-linux-rarity`, seed `20260809`, event
+  `wayfinder-drop-001`;
+- fixture descriptor `sceneaxi-fixture` /
+  `wayfinder-rarity-fixture` / `deterministic-json` / `2026-08-09`;
+- selected result `uncommon` / `wayfinder-copper`;
+- policy digest
+  `sha256:dc9fb14cf67da2aaaabf813969d5e2863b3d4ccdcbbe8cbbd366a1400aab7099`;
+- request digest
+  `sha256:e70812f13e9a23e08476afce6fd6e8690a3d74e41f1807c977d0d7b7482067d8`;
+- outcome digest
+  `sha256:ec77ae2c1f62725339fbf87a0e39d61cfd680941fb975a045770cb31f0d0d5de`;
+- provenance digest
+  `sha256:db910560dd96620f7d42b5114a0f28b53140bb87569024c184c6ad20e93cfb6b`;
+- namespace digest
+  `sha256:edff92bd9ac5a8e38044e76bda2f4339b7545d1b247f710fce3629a33070b1c8`.
+
+Observed commands:
+
+```text
+pnpm exec vitest run tests/e2e/rarity-provider-desktop-golden.test.ts packages/schemas/test/rarity.test.ts packages/engine-kernel/test/rarity.test.ts packages/engine-orchestrator/test/open-path.test.ts tests/e2e/rarity-engine-golden.test.ts tests/e2e/desktop-linux-bridge-golden.test.ts tests/e2e/desktop-provider-host-golden.test.ts apps/desktop-shell/test/chrome.test.ts
+pnpm test:golden
+pnpm --dir desktop/linux typecheck
+pnpm --dir desktop/linux build
+xvfb-run -a pnpm --dir desktop/linux smoke
+pnpm gate
+```
+
+The final gate passed 209 files and 3,542 tests. The golden suite passed 28 files
+and 242 tests. The Linux built-runtime smoke drew through the real
+`webgl-canvas` surface under Xvfb/SwiftShader (`pixelsDrawn true`, 15 draw calls)
+and completed its existing authoring and orchestrated kernel checks.
+
+This record covers the checked-in no-network fixture and the built runtime on
+this host. It is not a packaged-artifact observation, live provider readiness,
+credential handling proof beyond the tested refusal/redaction boundaries,
+distribution or deployment evidence, Kids activation, publication, or Stage 1
+proof.
+
+This contract adds no rarity economy, inventory, marketplace, renderer, live
+provider adapter or network path, Hosted enablement, or Kids path. It does not
+rewrite Sculpt Artifacts.
