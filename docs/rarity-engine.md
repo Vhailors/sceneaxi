@@ -21,6 +21,12 @@ fractional, negative, non-finite, unsafe, overflowing, empty, and zero-total
 inputs. Every positive-weight tier must have a positive candidate pool. A zero
 weight is valid but can never own a selected interval.
 
+One request carries at most `RARITY_MAX_CANDIDATES` (64) candidates. The bound is
+part of the shipped contract, not a caller convention: a longer candidate array
+refuses with `RARITY_INPUT_BOUND_EXCEEDED` at the same validation seam every
+provider, authoring, kernel, and replay path already reads, so caller-supplied
+input cannot grow the work one resolution performs.
+
 The canonical project namespace is `ProductManifest.rarity`; it contains one
 versioned policy and the accepted request/outcome/provenance records. This is an
 extension of the existing product manifest, snapshot, and save artifact, not a

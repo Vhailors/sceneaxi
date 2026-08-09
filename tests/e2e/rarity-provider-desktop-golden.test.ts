@@ -16,7 +16,10 @@ import {
   createDesktopRarityFixtureProvider,
 } from "../../desktop/linux/src/electron/provider-runtime.ts";
 import { RARITY_REFUSE_CODES } from "@sceneaxi/schemas";
-import type { RarityProviderContributionResult } from "@sceneaxi/authoring-core";
+import {
+  RARITY_AUTHORING_REFUSALS,
+  type RarityProviderContributionResult,
+} from "@sceneaxi/authoring-core";
 
 const acceptanceVector = JSON.parse(
   readFileSync(
@@ -210,6 +213,63 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     });
     expect(JSON.stringify(job)).not.toContain("projectSeed\":7");
     expect(documentBytes(root)).toBe(before);
+  });
+
+  it("classifies a raw provider response key as forbidden entropy", async () => {
+    const root = projectRoot();
+    const before = documentBytes(root);
+    const bridge = createDesktopBridge({
+      cwd: root,
+      runRarityProvider: createDesktopRarityFixtureProvider({
+        arguments: {
+          ...DESKTOP_RARITY_FIXTURE_INPUT,
+          providerResponse: "raw-transcript-never-accepted",
+        } as unknown as import("@sceneaxi/schemas").JsonObject,
+      }),
+    });
+    startRarity(bridge);
+    const job = await settledJob(bridge);
+    expect(job).toMatchObject({
+      status: "refused",
+      refusal: { reason: RARITY_REFUSE_CODES.providerEntropyForbidden },
+    });
+    expect(JSON.stringify(job)).not.toContain("raw-transcript-never-accepted");
+    expect(documentBytes(root)).toBe(before);
+  });
+
+  it("refuses a replayed event whose accepted provider evidence was stripped, and stays available", async () => {
+    const root = projectRoot();
+    const first = createDesktopBridge({
+      cwd: root,
+      runRarityProvider: createDesktopRarityFixtureProvider(),
+    });
+    startRarity(first);
+    expect((await settledJob(first)).status).toBe("ready");
+    first.handle({ action: "authoring", payload: { op: "accept" } });
+
+    const path = join(root, DESKTOP_ACTIVE_DOCUMENT_PATH);
+    const document = JSON.parse(readFileSync(path, "utf8")) as {
+      data: { rarity: { providerEvidence?: unknown } };
+    };
+    expect(document.data.rarity.providerEvidence).toBeDefined();
+    delete document.data.rarity.providerEvidence;
+    writeFileSync(path, `${JSON.stringify(document)}\n`);
+    const tampered = documentBytes(root);
+
+    const replayed = createDesktopBridge({
+      cwd: root,
+      runRarityProvider: createDesktopRarityFixtureProvider(),
+    });
+    startRarity(replayed);
+    expect(await settledJob(replayed)).toMatchObject({
+      status: "refused",
+      refusal: {
+        reason: RARITY_AUTHORING_REFUSALS.providerEvidenceAbsent,
+        recoverable: true,
+      },
+    });
+    expect(documentBytes(root)).toBe(tampered);
+    expect(startRarity(replayed)).toMatchObject({ ok: true, action: "assistant" });
   });
 
   it("refuses Kids and Hosted before the fixture provider dispatches", async () => {

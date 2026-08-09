@@ -42,6 +42,7 @@ import {
 } from "@sceneaxi/authoring-core";
 import {
   createDesktopSession,
+  type DesktopDocumentStatus,
   type DesktopSession,
   type DesktopSnapshot,
 } from "@sceneaxi/desktop-shell";
@@ -298,21 +299,9 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
   };
 
   const openPathExercise = (payload: unknown): DesktopBridgeResponse => {
-    const documentPath = containedDocumentPath(field(payload, "documentPath"));
-    if (documentPath === null) {
-      return bridgeRefuse(
-        DESKTOP_BRIDGE_REFUSALS.requestMalformed,
-        "scene playback requires a documentPath string inside the project directory.",
-      );
-    }
-    const status = authoringSession().status(documentPath);
-    if (!status.ok) {
-      const diagnostic = status.diagnostics[0];
-      return bridgeRefuse(
-        diagnostic?.code ?? DESKTOP_SCENE_NOT_COMPOSABLE,
-        diagnostic?.message ?? "The active Scene Document could not be read.",
-      );
-    }
+    const read = readActiveDocument(payload);
+    if (!read.ok) return bridgeRefuse(read.reason, read.message);
+    const status = read.status;
     const scene = desktopSceneFromDocumentData(status.data);
     if (!scene.ok) return bridgeRefuse(scene.reason, scene.message);
 
@@ -480,7 +469,16 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     return value;
   };
 
-  const activeScene = (payload: unknown): DesktopSceneResult => {
+  /**
+   * The one owner of "which document does this payload name, and may this
+   * process read it": containment first, then the session's own diagnostic
+   * mapping. Scene playback and the rarity open path both start here, so a
+   * caller that needs the raw status alongside the composed scene cannot end up
+   * enforcing containment a second, divergent way.
+   */
+  const readActiveDocument = (payload: unknown):
+    | Readonly<{ ok: true; status: Extract<DesktopDocumentStatus, { ok: true }> }>
+    | Readonly<{ ok: false; reason: string; message: string }> => {
     const documentPath = containedDocumentPath(field(payload, "documentPath"));
     if (documentPath === null) {
       return {
@@ -498,7 +496,13 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         message: diagnostic?.message ?? "The active Scene Document could not be read.",
       };
     }
-    return desktopSceneFromDocumentData(status.data);
+    return { ok: true, status };
+  };
+
+  const activeScene = (payload: unknown): DesktopSceneResult => {
+    const read = readActiveDocument(payload);
+    if (!read.ok) return { ok: false, reason: read.reason, message: read.message };
+    return desktopSceneFromDocumentData(read.status.data);
   };
 
   const authoring = (payload: unknown): DesktopBridgeResponse => {
@@ -832,8 +836,8 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         percent: 20,
         message: "Requesting bounded rarity policy and candidate input from the fixture provider.",
       }));
-      void options.runRarityProvider({ profile }).then(
-        (contribution) => {
+      void options.runRarityProvider({ profile })
+        .then((contribution) => {
           if (assistantJob !== activeJob || activeJob.status !== "running") return;
           if (!contribution.ok) {
             settleRefusal({
@@ -901,9 +905,8 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
             evidence: staged.evidence,
             authoring: Object.freeze({ ...snapshot, rarityEvidence: staged.evidence }),
           });
-        },
-        settleRuntimeFailure,
-      );
+        })
+        .catch(settleRuntimeFailure);
       return bridgeOk("assistant", assistantSnapshot());
     }
     let running: Promise<AssistantSculptResult> | undefined;

@@ -10,6 +10,7 @@ import {
   digestRarityProvenance,
   digestRarityRequest,
   isJsonObject,
+  isRarityForbiddenInputKey,
   isRarityIdentifier,
   validateRarityNamespace,
   validateRarityPolicy,
@@ -32,6 +33,7 @@ export const RARITY_AUTHORING_REFUSALS = Object.freeze({
   providerRefused: "RARITY_AUTHORING_PROVIDER_REFUSED",
   providerResponseInvalid: "RARITY_AUTHORING_PROVIDER_RESPONSE_INVALID",
   documentInvalid: "RARITY_AUTHORING_DOCUMENT_INVALID",
+  providerEvidenceAbsent: "RARITY_AUTHORING_PROVIDER_EVIDENCE_ABSENT",
   projectIdentityInvalid: "RARITY_AUTHORING_PROJECT_IDENTITY_INVALID",
   resolutionRefused: "RARITY_AUTHORING_KERNEL_RESOLUTION_REFUSED",
   resolutionMismatch: "RARITY_AUTHORING_KERNEL_RESOLUTION_MISMATCH",
@@ -211,9 +213,7 @@ export async function requestRarityProviderContribution(input: Readonly<{
     !Object.hasOwn(call.arguments, "policy") ||
     !Object.hasOwn(call.arguments, "request")
   ) {
-    const forbidden = keys.find((key) =>
-      ["seed", "projectSeed", "draw", "tierDraw", "candidateDraw", "outcome", "provenance"].includes(key),
-    );
+    const forbidden = keys.find(isRarityForbiddenInputKey);
     return refuse(
       forbidden === undefined
         ? RARITY_AUTHORING_REFUSALS.providerResponseInvalid
@@ -313,6 +313,13 @@ export function stageRarityProviderProposal(input: Readonly<{
         RARITY_REFUSE_CODES.eventInputConflict,
         "An existing rarity event id cannot be reused with changed request bytes; reroll with a new event id.",
         `rarity.rolls.${input.eventId}.request`,
+      );
+    }
+    if (existing.providerEvidence === undefined) {
+      return refuse(
+        RARITY_AUTHORING_REFUSALS.providerEvidenceAbsent,
+        "The accepted rarity namespace carries a roll for this event but no provider evidence, so its provenance cannot be replayed.",
+        "rarity.providerEvidence",
       );
     }
     return Object.freeze({
