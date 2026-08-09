@@ -6,6 +6,7 @@ import {
   resumeOpenPath,
 } from "@sceneaxi/engine-orchestrator";
 import {
+  RARITY_FIXTURES_PATH,
   RARITY_NAMESPACE_KIND,
   RARITY_SCHEMA_VERSION,
   type RarityOutcome,
@@ -28,10 +29,7 @@ type Fixture = {
 
 const fixture = JSON.parse(
   readFileSync(
-    new URL(
-      "../../packages/schemas/contracts/rarity.fixtures.json",
-      import.meta.url,
-    ),
+    new URL(`../../packages/schemas/${RARITY_FIXTURES_PATH}`, import.meta.url),
     "utf8",
   ),
 ) as Fixture;

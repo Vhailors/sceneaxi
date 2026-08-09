@@ -42,10 +42,6 @@ export type RarityResolution = Readonly<{
 
 export type RarityResolutionResult = RarityValidationResult<RarityResolution>;
 
-function digestCanonical(value: unknown): string {
-  return digestRarityValue(value as Parameters<typeof digestRarityValue>[0]);
-}
-
 function drawFor(digestValue: string, total: number): number {
   const hex = digestValue.slice("sha256:".length);
   return Number(BigInt(`0x${hex}`) % BigInt(total));
@@ -135,7 +131,7 @@ export function resolveRarityRoll(
     (total, tier) => total + policy.value.tierWeights[tier],
     0,
   );
-  const tierRollDigest = digestCanonical({
+  const tierRollDigest = digestRarityValue({
     algorithmId: RARITY_ALGORITHM_ID,
     phase: "tier",
     projectSeed: context.projectSeed,
@@ -149,7 +145,7 @@ export function resolveRarityRoll(
 
   const tierCandidates = candidatesFor(request.value, tier);
   const candidateTotalWeight = candidateTotal(tierCandidates);
-  const candidateRollDigest = digestCanonical({
+  const candidateRollDigest = digestRarityValue({
     algorithmId: RARITY_ALGORITHM_ID,
     phase: "candidate",
     projectSeed: context.projectSeed,

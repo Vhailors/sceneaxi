@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  RARITY_FIXTURES_PATH,
   RARITY_NAMESPACE_KIND,
   RARITY_POLICY_KIND,
   RARITY_REFUSE_CODES,
@@ -38,7 +39,7 @@ type Fixture = {
 
 const fixture = JSON.parse(
   readFileSync(
-    new URL("../../schemas/contracts/rarity.fixtures.json", import.meta.url),
+    new URL(`../../schemas/${RARITY_FIXTURES_PATH}`, import.meta.url),
     "utf8",
   ),
 ) as Fixture;

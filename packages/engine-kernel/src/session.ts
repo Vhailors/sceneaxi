@@ -165,7 +165,8 @@ export function replay(
     );
   }
 
-  if (!sameRarityNamespace(session.observe().rarity, expectedManifest.rarity)) {
+  const snapshot = session.observe();
+  if (!sameRarityNamespace(snapshot.rarity, expectedManifest.rarity)) {
     throw rarityError(
       RARITY_REFUSE_CODES.provenanceMismatch,
       "rarity",
@@ -173,10 +174,9 @@ export function replay(
     );
   }
 
-  const terminal = session.observe().digest;
-  if (artifact.terminalDigest !== terminal) {
+  if (artifact.terminalDigest !== snapshot.digest) {
     throw new KernelSessionError(
-      `replay digest mismatch: expected ${artifact.terminalDigest}, got ${terminal}`,
+      `replay digest mismatch: expected ${artifact.terminalDigest}, got ${snapshot.digest}`,
     );
   }
 
