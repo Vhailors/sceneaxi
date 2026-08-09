@@ -6,6 +6,7 @@ import {
   RARITY_REFUSE_CODES,
   RARITY_REQUEST_KIND,
   RARITY_SCHEMA_VERSION,
+  RARITY_TIERS,
   type KernelCommand,
   type KernelSessionSaveArtifact,
   type ProductManifest,
@@ -13,6 +14,7 @@ import {
   type RarityPolicy,
   type RarityProvenance,
   type RarityRollRequest,
+  type RarityTierId,
 } from "@sceneaxi/schemas";
 import {
   KernelSessionError,
@@ -70,6 +72,78 @@ function rarityCommand(
 function jsonCopy<Value>(value: Value): Value {
   return JSON.parse(JSON.stringify(value)) as Value;
 }
+
+/**
+ * A deliberately non-uniform policy and candidate pool. The shipped fixture is
+ * uniform, so only skewed weights can tell a weighted cumulative interval apart
+ * from a positional one. Every expected value below was derived independently
+ * of this implementation from the documented algorithm.
+ */
+const SKEWED_SEED = 20_260_809;
+const SKEWED_SCOPE = "skewed-rarity-product";
+
+const SKEWED_POLICY: RarityPolicy = {
+  schemaVersion: RARITY_SCHEMA_VERSION,
+  kind: RARITY_POLICY_KIND,
+  tierWeights: { common: 7, uncommon: 1, rare: 0, epic: 0, legendary: 0 },
+};
+
+const SKEWED_REQUEST: RarityRollRequest = {
+  schemaVersion: RARITY_SCHEMA_VERSION,
+  kind: RARITY_REQUEST_KIND,
+  candidates: [
+    { candidateId: "skew-common-a", tier: "common", weight: 1 },
+    { candidateId: "skew-common-b", tier: "common", weight: 5 },
+    { candidateId: "skew-uncommon-a", tier: "uncommon", weight: 3 },
+  ],
+};
+
+const SKEWED_VECTORS = [
+  {
+    eventId: "skew-0000",
+    tier: "common",
+    candidateId: "skew-common-b",
+    tierDraw: 1,
+    tierTotalWeight: 8,
+    candidateDraw: 2,
+    candidateTotalWeight: 6,
+  },
+  {
+    eventId: "skew-0002",
+    tier: "common",
+    candidateId: "skew-common-b",
+    tierDraw: 6,
+    tierTotalWeight: 8,
+    candidateDraw: 3,
+    candidateTotalWeight: 6,
+  },
+  {
+    eventId: "skew-0003",
+    tier: "uncommon",
+    candidateId: "skew-uncommon-a",
+    tierDraw: 7,
+    tierTotalWeight: 8,
+    candidateDraw: 0,
+    candidateTotalWeight: 3,
+  },
+  {
+    eventId: "skew-0014",
+    tier: "common",
+    candidateId: "skew-common-b",
+    tierDraw: 2,
+    tierTotalWeight: 8,
+    candidateDraw: 2,
+    candidateTotalWeight: 6,
+  },
+] as const satisfies ReadonlyArray<{
+  readonly eventId: string;
+  readonly tier: RarityTierId;
+  readonly candidateId: string;
+  readonly tierDraw: number;
+  readonly tierTotalWeight: number;
+  readonly candidateDraw: number;
+  readonly candidateTotalWeight: number;
+}>;
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -130,6 +204,81 @@ describe("pure deterministic rarity resolver", () => {
     );
     expect(first).toEqual(second);
     expect(first).toMatchObject({ ok: true, value: { outcome: vector.outcome } });
+  });
+
+  it("selects both intervals by weight rather than by position", () => {
+    for (const vector of SKEWED_VECTORS) {
+      const result = resolveRarityRoll(
+        {
+          projectSeed: SKEWED_SEED,
+          scope: SKEWED_SCOPE,
+          eventId: vector.eventId,
+        },
+        SKEWED_POLICY,
+        SKEWED_REQUEST,
+      );
+      expect(result.ok, vector.eventId).toBe(true);
+      if (!result.ok) continue;
+      expect(result.value.outcome.tier, vector.eventId).toBe(vector.tier);
+      expect(result.value.outcome.candidateId, vector.eventId).toBe(
+        vector.candidateId,
+      );
+      expect(result.value.provenance, vector.eventId).toMatchObject({
+        tierDraw: vector.tierDraw,
+        tierTotalWeight: vector.tierTotalWeight,
+        candidateDraw: vector.candidateDraw,
+        candidateTotalWeight: vector.candidateTotalWeight,
+      });
+    }
+  });
+
+  it("keeps every draw inside the cumulative interval its weights define", () => {
+    const policyTotal = RARITY_TIERS.reduce(
+      (total, tier) => total + SKEWED_POLICY.tierWeights[tier],
+      0,
+    );
+    for (let index = 0; index < 16; index += 1) {
+      const eventId = `skew-${String(index).padStart(4, "0")}`;
+      const result = resolveRarityRoll(
+        { projectSeed: SKEWED_SEED, scope: SKEWED_SCOPE, eventId },
+        SKEWED_POLICY,
+        SKEWED_REQUEST,
+      );
+      expect(result.ok, eventId).toBe(true);
+      if (!result.ok) continue;
+      const { outcome, provenance } = result.value;
+
+      expect(provenance.tierTotalWeight, eventId).toBe(policyTotal);
+      expect(SKEWED_POLICY.tierWeights[outcome.tier], eventId).toBeGreaterThan(0);
+      let cumulative = 0;
+      let expectedTier: RarityTierId | undefined;
+      for (const tier of RARITY_TIERS) {
+        cumulative += SKEWED_POLICY.tierWeights[tier];
+        if (expectedTier === undefined && provenance.tierDraw < cumulative) {
+          expectedTier = tier;
+        }
+      }
+      expect(outcome.tier, eventId).toBe(expectedTier);
+
+      const pool = SKEWED_REQUEST.candidates.filter(
+        (candidate) => candidate.tier === outcome.tier,
+      );
+      expect(provenance.candidateTotalWeight, eventId).toBe(
+        pool.reduce((total, candidate) => total + candidate.weight, 0),
+      );
+      cumulative = 0;
+      let expectedCandidate: string | undefined;
+      for (const candidate of pool) {
+        cumulative += candidate.weight;
+        if (
+          expectedCandidate === undefined &&
+          provenance.candidateDraw < cumulative
+        ) {
+          expectedCandidate = candidate.candidateId;
+        }
+      }
+      expect(outcome.candidateId, eventId).toBe(expectedCandidate);
+    }
   });
 
   it("refuses an unsafe project seed before hashing", () => {
@@ -287,6 +436,45 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
       terminalDigest: `sha256:${"f".repeat(64)}`,
     } as KernelSessionSaveArtifact;
     expect(() => replay(digest, fixedHost())).toThrow(/replay digest mismatch/);
+  });
+
+  it("records the weighted outcome through dispatch, advance, save, and replay", () => {
+    const session = open(
+      {
+        productId: SKEWED_SCOPE,
+        seed: SKEWED_SEED,
+        rarity: {
+          schemaVersion: RARITY_SCHEMA_VERSION,
+          kind: RARITY_NAMESPACE_KIND,
+          policy: SKEWED_POLICY,
+          rolls: [],
+        },
+      },
+      fixedHost(),
+    );
+
+    let tick = 0;
+    for (const vector of SKEWED_VECTORS) {
+      session.dispatch(rarityCommand(vector.eventId, SKEWED_REQUEST));
+      tick += 1;
+      session.advance({ tick, deltaMs: 16 });
+    }
+
+    const rolls = session.observe().rarity?.rolls ?? [];
+    expect(
+      rolls.map((roll) => ({
+        eventId: roll.eventId,
+        tier: roll.outcome.tier,
+        candidateId: roll.outcome.candidateId,
+        tierDraw: roll.provenance.tierDraw,
+        tierTotalWeight: roll.provenance.tierTotalWeight,
+        candidateDraw: roll.provenance.candidateDraw,
+        candidateTotalWeight: roll.provenance.candidateTotalWeight,
+      })),
+    ).toEqual(SKEWED_VECTORS.map((vector) => ({ ...vector })));
+
+    const save = session.save();
+    expect(replay(jsonCopy(save), fixedHost()).save()).toEqual(save);
   });
 
   it("refuses a manifest whose productId cannot be the rarity resolution scope", () => {

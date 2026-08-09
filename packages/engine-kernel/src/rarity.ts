@@ -6,10 +6,10 @@ import {
   RARITY_REFUSE_CODES,
   RARITY_SCHEMA_VERSION,
   RARITY_TIERS,
-  canonicalRarityJson,
   digestRarityOutcome,
   digestRarityPolicy,
   digestRarityRequest,
+  digestRarityValue,
   isRarityIdentifier,
   refuseRarity,
   validateRarityPolicy,
@@ -24,11 +24,6 @@ import {
   type RarityValidationRefuse,
   type RarityValidationResult,
 } from "@sceneaxi/schemas";
-import {
-  portableKernelDigest,
-  prefixedDigest,
-  type KernelDigest,
-} from "./portable-digest.js";
 
 export type RarityResolutionContext = Readonly<{
   /** Integer seed owned by the existing ProductManifest. */
@@ -47,11 +42,8 @@ export type RarityResolution = Readonly<{
 
 export type RarityResolutionResult = RarityValidationResult<RarityResolution>;
 
-function digestCanonical(value: unknown, digest: KernelDigest): string {
-  return prefixedDigest(
-    canonicalRarityJson(value as Parameters<typeof canonicalRarityJson>[0]),
-    digest,
-  );
+function digestCanonical(value: unknown): string {
+  return digestRarityValue(value as Parameters<typeof digestRarityValue>[0]);
 }
 
 function drawFor(digestValue: string, total: number): number {
@@ -143,37 +135,31 @@ export function resolveRarityRoll(
     (total, tier) => total + policy.value.tierWeights[tier],
     0,
   );
-  const tierRollDigest = digestCanonical(
-    {
-      algorithmId: RARITY_ALGORITHM_ID,
-      phase: "tier",
-      projectSeed: context.projectSeed,
-      scope: context.scope,
-      eventId: context.eventId,
-      policyDigest,
-      requestDigest,
-    },
-    portableKernelDigest,
-  );
+  const tierRollDigest = digestCanonical({
+    algorithmId: RARITY_ALGORITHM_ID,
+    phase: "tier",
+    projectSeed: context.projectSeed,
+    scope: context.scope,
+    eventId: context.eventId,
+    policyDigest,
+    requestDigest,
+  });
   const tierDraw = drawFor(tierRollDigest, tierTotalWeight);
   const tier = selectTier(policy.value, tierDraw);
 
   const tierCandidates = candidatesFor(request.value, tier);
   const candidateTotalWeight = candidateTotal(tierCandidates);
-  const candidateRollDigest = digestCanonical(
-    {
-      algorithmId: RARITY_ALGORITHM_ID,
-      phase: "candidate",
-      projectSeed: context.projectSeed,
-      scope: context.scope,
-      eventId: context.eventId,
-      policyDigest,
-      requestDigest,
-      tier,
-      tierRollDigest,
-    },
-    portableKernelDigest,
-  );
+  const candidateRollDigest = digestCanonical({
+    algorithmId: RARITY_ALGORITHM_ID,
+    phase: "candidate",
+    projectSeed: context.projectSeed,
+    scope: context.scope,
+    eventId: context.eventId,
+    policyDigest,
+    requestDigest,
+    tier,
+    tierRollDigest,
+  });
   const candidateDraw = drawFor(candidateRollDigest, candidateTotalWeight);
   const candidate = selectCandidate(tierCandidates, candidateDraw);
   const outcome: RarityOutcome = Object.freeze({
