@@ -49,6 +49,13 @@ export type AssistantRaritySettlementWatchInput = Readonly<{
   wait?: (ms: number) => Promise<void>;
 }>;
 
+export type AssistantRaritySettlementAcknowledgementInput = Readonly<{
+  request: (request: unknown) => Promise<DesktopBridgeResponse>;
+  jobId: string;
+  active: () => boolean;
+  wait?: (ms: number) => Promise<void>;
+}>;
+
 const refuse = (reason: string, message: string): AssistantPollOutcome =>
   Object.freeze({ ok: false as const, reason, message });
 
@@ -156,4 +163,22 @@ export async function watchAssistantRaritySettlement(
     ) return result;
   }
   return null;
+}
+
+export async function acknowledgeAssistantRaritySettlement(
+  input: AssistantRaritySettlementAcknowledgementInput,
+): Promise<boolean> {
+  const wait = input.wait ?? ((ms: number) =>
+    new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  while (input.active()) {
+    try {
+      const response = await input.request({
+        action: "assistant",
+        payload: { op: "abandon", jobId: input.jobId },
+      });
+      if (response.ok) return true;
+    } catch {}
+    await wait(ASSISTANT_POLL_INTERVAL_MS);
+  }
+  return false;
 }

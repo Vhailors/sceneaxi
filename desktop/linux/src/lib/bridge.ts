@@ -1053,10 +1053,12 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     }
     if (op === "abandon") {
       const acknowledgedJobId = field(payload, "jobId");
+      const acknowledgementTargetsCurrent =
+        acknowledgedJobId === undefined ||
+        (typeof acknowledgedJobId === "string" && assistantJob?.jobId === acknowledgedJobId);
       const result = currentRarityAssistantResult();
       if (
-        typeof acknowledgedJobId === "string" &&
-        assistantJob?.jobId === acknowledgedJobId &&
+        acknowledgementTargetsCurrent &&
         result !== null &&
         (result.retirement !== undefined ||
           result.authoring?.phase === "applied" ||
@@ -1066,7 +1068,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         assistantJob = null;
         return bridgeOk("assistant", acknowledged);
       }
-      if (assistantJob?.status === "running") {
+      if (acknowledgementTargetsCurrent && assistantJob?.status === "running") {
         assistantJob.status = "refused";
         assistantJob.refusal = Object.freeze({
           ok: false as const,

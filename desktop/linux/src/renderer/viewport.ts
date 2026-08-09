@@ -39,6 +39,7 @@ import {
   rarityInvalidationMatches,
 } from "./assistant-inspection.js";
 import {
+  acknowledgeAssistantRaritySettlement,
   pollAssistantJob,
   watchAssistantRaritySettlement,
 } from "./assistant-poll.js";
@@ -348,10 +349,12 @@ function installAssistantProductFlow(
           document.dispatchEvent(
             new CustomEvent(DESKTOP_RARITY_PROPOSAL_EVENT, { detail: lifecycleEvent }),
           );
-          void port.request({
-            action: "assistant",
-            payload: { op: "abandon", jobId: job.jobId },
-          }).catch(() => undefined);
+          const acknowledgementVersion = assistantRunVersion;
+          void acknowledgeAssistantRaritySettlement({
+            request: (request) => port.request(request),
+            jobId: job.jobId,
+            active: () => assistantRunVersion === acknowledgementVersion,
+          });
         }
         if (!settlement.evidenceVisible) displayedRarityResultDigest = null;
         resultView.textContent = settlement.evidenceText;
@@ -389,10 +392,11 @@ function installAssistantProductFlow(
           document.dispatchEvent(
             new CustomEvent(DESKTOP_RARITY_PROPOSAL_EVENT, { detail }),
           );
-          void port.request({
-            action: "assistant",
-            payload: { op: "abandon", jobId: job.jobId },
-          }).catch(() => undefined);
+          void acknowledgeAssistantRaritySettlement({
+            request: (request) => port.request(request),
+            jobId: job.jobId,
+            active: () => assistantRunVersion === watchedVersion,
+          });
         });
       }
       return;

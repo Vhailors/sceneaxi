@@ -92,6 +92,7 @@ import {
 } from "../../desktop/linux/src/renderer/assistant-inspection.ts";
 import { formatSafeRarityEvidence } from "@sceneaxi/authoring-core/rarity-evidence";
 import {
+  acknowledgeAssistantRaritySettlement,
   pollAssistantJob,
   watchAssistantRaritySettlement,
 } from "../../desktop/linux/src/renderer/assistant-poll.ts";
@@ -2894,6 +2895,37 @@ describe("desktop renderer behavior", () => {
     });
     expect(statusReads).toBe(2);
     expect(settled?.authoring?.phase).toBe("applied");
+  });
+
+  it("retries terminal rarity acknowledgement without targeting a newer job", async () => {
+    const requests: unknown[] = [];
+    let attempts = 0;
+    const acknowledged = await acknowledgeAssistantRaritySettlement({
+      jobId: "desktop-assistant-1",
+      active: () => true,
+      wait: () => Promise.resolve(),
+      request: (request) => {
+        requests.push(request);
+        attempts += 1;
+        if (attempts === 1) return Promise.reject(new Error("transport unavailable"));
+        return Promise.resolve({
+          ok: true as const,
+          action: "assistant" as const,
+          data: null,
+        });
+      },
+    });
+    expect(acknowledged).toBe(true);
+    expect(requests).toEqual([
+      {
+        action: "assistant",
+        payload: { op: "abandon", jobId: "desktop-assistant-1" },
+      },
+      {
+        action: "assistant",
+        payload: { op: "abandon", jobId: "desktop-assistant-1" },
+      },
+    ]);
   });
 
   it("does not claim Retry is safe when abandonment refuses or cannot be confirmed", async () => {
