@@ -299,7 +299,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
   };
 
   const openPathExercise = (payload: unknown): DesktopBridgeResponse => {
-    const read = readActiveDocument(payload);
+    const read = readActiveDocument(payload, SCENE_DOCUMENT_REFUSALS);
     if (!read.ok) return bridgeRefuse(read.reason, read.message);
     const status = read.status;
     const scene = desktopSceneFromDocumentData(status.data);
@@ -472,11 +472,14 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
   /**
    * The one owner of "which document does this payload name, and may this
    * process read it": containment first, then the session's own diagnostic
-   * mapping. Scene playback and the rarity open path both start here, so a
-   * caller that needs the raw status alongside the composed scene cannot end up
-   * enforcing containment a second, divergent way.
+   * mapping. Every action that names a document starts here, so a caller cannot
+   * end up enforcing containment a second, divergent way; a caller supplies only
+   * the vocabulary its own surface refuses in, never the rule.
    */
-  const readActiveDocument = (payload: unknown):
+  const readActiveDocument = (
+    payload: unknown,
+    refusals: Readonly<{ missingMessage: string; unreadableReason: string }>,
+  ):
     | Readonly<{ ok: true; status: Extract<DesktopDocumentStatus, { ok: true }> }>
     | Readonly<{ ok: false; reason: string; message: string }> => {
     const documentPath = containedDocumentPath(field(payload, "documentPath"));
@@ -484,7 +487,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       return {
         ok: false,
         reason: DESKTOP_BRIDGE_REFUSALS.requestMalformed,
-        message: "scene playback requires a documentPath string inside the project directory.",
+        message: refusals.missingMessage,
       };
     }
     const status = authoringSession().status(documentPath);
@@ -492,15 +495,25 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       const diagnostic = status.diagnostics[0];
       return {
         ok: false,
-        reason: diagnostic?.code ?? DESKTOP_SCENE_NOT_COMPOSABLE,
+        reason: diagnostic?.code ?? refusals.unreadableReason,
         message: diagnostic?.message ?? "The active Scene Document could not be read.",
       };
     }
     return { ok: true, status };
   };
 
+  const SCENE_DOCUMENT_REFUSALS = Object.freeze({
+    missingMessage: "scene playback requires a documentPath string inside the project directory.",
+    unreadableReason: DESKTOP_SCENE_NOT_COMPOSABLE,
+  });
+
+  const RARITY_DOCUMENT_REFUSALS = Object.freeze({
+    missingMessage: "A rarity assistant action requires a documentPath inside the project directory.",
+    unreadableReason: DESKTOP_BRIDGE_REFUSALS.requestMalformed,
+  });
+
   const activeScene = (payload: unknown): DesktopSceneResult => {
-    const read = readActiveDocument(payload);
+    const read = readActiveDocument(payload, SCENE_DOCUMENT_REFUSALS);
     if (!read.ok) return { ok: false, reason: read.reason, message: read.message };
     return desktopSceneFromDocumentData(read.status.data);
   };
@@ -747,25 +760,12 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       | Readonly<{ documentPath: string; contentHash: string; data: Readonly<Record<string, unknown>> }>
       | undefined;
     if (rarityMode) {
-      const documentPath = containedDocumentPath(field(payload, "documentPath"));
-      if (documentPath === null) {
-        return bridgeRefuse(
-          DESKTOP_BRIDGE_REFUSALS.requestMalformed,
-          "A rarity assistant action requires a documentPath inside the project directory.",
-        );
-      }
-      const status = authoringSession().status(documentPath);
-      if (!status.ok) {
-        const diagnostic = status.diagnostics[0];
-        return bridgeRefuse(
-          diagnostic?.code ?? DESKTOP_BRIDGE_REFUSALS.requestMalformed,
-          diagnostic?.message ?? "The active Scene Document could not be read.",
-        );
-      }
+      const read = readActiveDocument(payload, RARITY_DOCUMENT_REFUSALS);
+      if (!read.ok) return bridgeRefuse(read.reason, read.message);
       rarityDocument = Object.freeze({
-        documentPath,
-        contentHash: status.contentHash,
-        data: status.data,
+        documentPath: read.status.documentPath,
+        contentHash: read.status.contentHash,
+        data: read.status.data,
       });
     }
 
@@ -797,10 +797,13 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       onProgress,
     };
     // The one owner of this job's detail policy, for a refusal a runner threw and
-    // one it returned alike. BYOK provider errors are deliberately detail-free: an
-    // upstream error may include request headers or credential material, and only a
-    // local run's detail is ours to begin with. The renderer and local bridge get
+    // one it returned alike. Provider-backed work is deliberately detail-free: an
+    // upstream error may include request headers or credential material, and only
+    // an in-process local run's detail is ours to begin with. The route alone does
+    // not answer that — Agent mode dispatches a Model Provider Port under route
+    // `local` — so this job's own work decides. The renderer and local bridge get
     // only the named, redacted refusal.
+    const detailIsOurs = route === "local" && !rarityMode;
     const settleRefusal = (refusal: Readonly<{
       reason: string;
       message: string;
@@ -814,7 +817,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         reason: refusal.reason,
         message: refusal.message,
         recoverable: refusal.recoverable,
-        ...(route === "local" && refusal.detail !== undefined
+        ...(detailIsOurs && refusal.detail !== undefined
           ? { detail: refusal.detail }
           : {}),
       });
@@ -836,77 +839,80 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         percent: 20,
         message: "Requesting bounded rarity policy and candidate input from the fixture provider.",
       }));
-      void options.runRarityProvider({ profile })
-        .then((contribution) => {
-          if (assistantJob !== activeJob || activeJob.status !== "running") return;
-          if (!contribution.ok) {
-            settleRefusal({
-              reason: contribution.reason,
-              message: contribution.message,
-              recoverable: true,
-            });
-            return;
-          }
-          onProgress(Object.freeze({
-            phase: "validating-artifact",
-            percent: 70,
-            message: "Validating canonical rarity bytes and authoritative kernel resolution.",
-          }));
-          const current = authoringSession().status(rarityDocument.documentPath);
-          if (!current.ok || current.contentHash !== rarityDocument.contentHash) {
-            settleRefusal({
-              reason: "content-hash-conflict",
-              message: "The Scene Document changed while rarity input was being prepared; reopen and retry.",
-              recoverable: true,
-            });
-            return;
-          }
-          const staged = stageRarityProviderProposal({
-            documentData: current.data,
-            documentPath: rarityDocument.documentPath,
-            expectedContentHash: rarityDocument.contentHash,
-            profile,
-            eventId: DESKTOP_RARITY_EVENT_ID,
-            contribution: contribution.value,
-            resolve: resolveRarityWithKernel,
+      const stageRarity = (contribution: RarityProviderContributionResult): void => {
+        if (assistantJob !== activeJob || activeJob.status !== "running") return;
+        if (!contribution.ok) {
+          settleRefusal({
+            reason: contribution.reason,
+            message: contribution.message,
+            recoverable: true,
           });
-          if (!staged.ok) {
-            settleRefusal({
-              reason: staged.reason,
-              message: staged.message,
-              recoverable: true,
-            });
-            return;
-          }
-          const live = authoringSession();
-          const snapshot = staged.replayed
-            ? live.snapshot()
-            : live.proposeEdit(staged.edit);
-          if (!staged.replayed && snapshot.phase !== "reviewing") {
-            const diagnostic = snapshot.diagnostics?.[0];
-            settleRefusal({
-              reason: diagnostic?.code ?? "RARITY_PROPOSAL_NOT_REVIEWING",
-              message: diagnostic?.message ?? "The rarity proposal did not reach Change Review.",
-              recoverable: true,
-            });
-            return;
-          }
-          onProgress(Object.freeze({
-            phase: "ready",
-            percent: 100,
-            message: staged.replayed
-              ? "The identical rarity event replayed without changing project bytes."
-              : "The canonical rarity proposal is waiting in Change Review.",
-          }));
-          activeJob.status = "ready";
-          activeJob.result = Object.freeze({
-            ok: true as const,
-            kind: "rarity-proposal" as const,
-            evidence: staged.evidence,
-            authoring: Object.freeze({ ...snapshot, rarityEvidence: staged.evidence }),
+          return;
+        }
+        onProgress(Object.freeze({
+          phase: "validating-artifact",
+          percent: 70,
+          message: "Validating canonical rarity bytes and authoritative kernel resolution.",
+        }));
+        const current = authoringSession().status(rarityDocument.documentPath);
+        if (!current.ok || current.contentHash !== rarityDocument.contentHash) {
+          settleRefusal({
+            reason: "content-hash-conflict",
+            message: "The Scene Document changed while rarity input was being prepared; reopen and retry.",
+            recoverable: true,
           });
-        })
-        .catch(settleRuntimeFailure);
+          return;
+        }
+        const staged = stageRarityProviderProposal({
+          documentData: current.data,
+          documentPath: rarityDocument.documentPath,
+          expectedContentHash: rarityDocument.contentHash,
+          profile,
+          eventId: DESKTOP_RARITY_EVENT_ID,
+          contribution: contribution.value,
+          resolve: resolveRarityWithKernel,
+        });
+        if (!staged.ok) {
+          settleRefusal({
+            reason: staged.reason,
+            message: staged.message,
+            recoverable: true,
+          });
+          return;
+        }
+        const live = authoringSession();
+        const snapshot = staged.replayed
+          ? live.snapshot()
+          : live.proposeEdit(staged.edit);
+        if (!staged.replayed && snapshot.phase !== "reviewing") {
+          const diagnostic = snapshot.diagnostics?.[0];
+          settleRefusal({
+            reason: diagnostic?.code ?? "RARITY_PROPOSAL_NOT_REVIEWING",
+            message: diagnostic?.message ?? "The rarity proposal did not reach Change Review.",
+            recoverable: true,
+          });
+          return;
+        }
+        onProgress(Object.freeze({
+          phase: "ready",
+          percent: 100,
+          message: staged.replayed
+            ? "The identical rarity event replayed without changing project bytes."
+            : "The canonical rarity proposal is waiting in Change Review.",
+        }));
+        activeJob.status = "ready";
+        activeJob.result = Object.freeze({
+          ok: true as const,
+          kind: "rarity-proposal" as const,
+          evidence: staged.evidence,
+          authoring: Object.freeze({ ...snapshot, rarityEvidence: staged.evidence }),
+        });
+      };
+      try {
+        void options.runRarityProvider({ profile }).then(stageRarity).catch(settleRuntimeFailure);
+      } catch (error) {
+        settleRuntimeFailure(error);
+      }
       return bridgeOk("assistant", assistantSnapshot());
     }
     let running: Promise<AssistantSculptResult> | undefined;

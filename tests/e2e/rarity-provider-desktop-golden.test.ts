@@ -272,6 +272,39 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     expect(startRarity(replayed)).toMatchObject({ ok: true, action: "assistant" });
   });
 
+  it("redacts a throwing provider's own error detail from the refusal", async () => {
+    const root = projectRoot();
+    const before = documentBytes(root);
+    const rejected = createDesktopBridge({
+      cwd: root,
+      runRarityProvider: () =>
+        Promise.reject(new Error("authorization: Bearer sk-leaked-upstream-detail")),
+    });
+    startRarity(rejected);
+    const job = await settledJob(rejected);
+    expect(job).toMatchObject({
+      status: "refused",
+      refusal: { reason: "DESKTOP_ASSISTANT_RUNTIME_FAILED", recoverable: true },
+    });
+    expect(job.refusal && "detail" in job.refusal).toBe(false);
+    expect(JSON.stringify(job)).not.toContain("sk-leaked-upstream-detail");
+
+    const threw = createDesktopBridge({
+      cwd: root,
+      runRarityProvider: () => {
+        throw new Error("x-api-key: sk-thrown-upstream-detail");
+      },
+    });
+    expect(startRarity(threw)).toMatchObject({ ok: true, action: "assistant" });
+    const thrownJob = await settledJob(threw);
+    expect(thrownJob).toMatchObject({
+      status: "refused",
+      refusal: { reason: "DESKTOP_ASSISTANT_RUNTIME_FAILED" },
+    });
+    expect(JSON.stringify(thrownJob)).not.toContain("sk-thrown-upstream-detail");
+    expect(documentBytes(root)).toBe(before);
+  });
+
   it("refuses Kids and Hosted before the fixture provider dispatches", async () => {
     const root = projectRoot();
     let dispatches = 0;
