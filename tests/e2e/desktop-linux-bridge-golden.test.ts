@@ -1967,6 +1967,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       }),
     ).toEqual({
       retired: "session-restarted",
+      refreshAuthoring: true,
       evidence: RARITY_EVIDENCE_FIXTURE,
     });
     expect(assistantRarityResultDigest(null)).toBeNull();
@@ -2545,6 +2546,110 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     expect(projectState.dataset.projectState).toBe("dirty");
     expect(evidence.hidden).toBe(false);
     expect(evidence.textContent).toContain(RARITY_EVIDENCE_FIXTURE.namespaceDigest);
+  });
+
+  it("refreshes every mounted surface after a rarity retirement event", async () => {
+    let statusReads = 0;
+    const idleSnapshot = {
+      ...RARITY_PROPOSAL_SNAPSHOT,
+      phase: "idle",
+      proposal: null,
+      unifiedDiff: "",
+      renderedDiff: "",
+    };
+    const port = {
+      request: (request: { readonly action?: string; readonly payload?: { readonly op?: string } }) => {
+        if (request.action === "open-path") {
+          return Promise.resolve({
+            ok: true,
+            action: "open-path",
+            data: {
+              closed: true,
+              initialDigest: "sha256:initial",
+              tickDigests: ["sha256:tick"],
+              instanceCount: 1,
+              mountable: { sceneId: "desktop-scene" },
+              rarity: RARITY_EVIDENCE_FIXTURE,
+              raritySession: RARITY_PRODUCT_SESSION,
+            },
+          });
+        }
+        statusReads += 1;
+        return Promise.resolve(statusReads === 1
+          ? {
+              ok: true,
+              action: "authoring",
+              data: {
+                ok: true,
+                documentId: "scene",
+                contentHash: "sha256:accepted",
+                data: { rarity: { kind: "sceneaxi.rarity.namespace" } },
+                rarityNamespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
+                acceptedRarityEvidence: RARITY_EVIDENCE_FIXTURE,
+                undoAvailability: "available",
+                authoringSnapshot: idleSnapshot,
+              },
+            }
+          : {
+              ok: true,
+              action: "authoring",
+              data: {
+                ok: true,
+                documentId: "scene",
+                contentHash: "sha256:base",
+                data: {},
+                rarityNamespaceDigest: null,
+                acceptedRarityEvidence: null,
+                undoAvailability: "unavailable",
+                authoringSnapshot: idleSnapshot,
+              },
+            });
+      },
+    };
+    const {
+      shell, reload, play, proposal, evidence, runEvidence, projectState, status,
+      documentListeners, dispatchedEvents,
+    } = mountRarityChrome(port);
+    documentListeners.set(DESKTOP_VIEWPORT_PLAY_EVENT, (event) => {
+      const detail = event.detail as { accepted: boolean; frame: number | null };
+      detail.accepted = true;
+      detail.frame = 1;
+    });
+    shell.clickListener?.({ target: reload });
+    await vi.waitFor(() => expect(status.textContent).toContain("· open ·"));
+    shell.clickListener?.({ target: play });
+    await vi.waitFor(() => expect(runEvidence.hidden).toBe(false));
+    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+      detail: {
+        replayed: false,
+        evidence: RARITY_EVIDENCE_FIXTURE,
+        snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, rarityEvidence: RARITY_EVIDENCE_FIXTURE },
+      },
+    });
+    expect(proposal.hidden).toBe(false);
+
+    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+      detail: {
+        retired: "undo",
+        refreshAuthoring: true,
+        evidence: RARITY_EVIDENCE_FIXTURE,
+      },
+    });
+    await vi.waitFor(() => {
+      expect(statusReads).toBe(2);
+      expect(status.textContent).toContain("authoring state refreshed");
+    });
+    expect(proposal.hidden).toBe(true);
+    expect(evidence.hidden).toBe(true);
+    expect(runEvidence.hidden).toBe(true);
+    expect(projectState.dataset.projectState).toBe("open");
+    expect(dispatchedEvents).toContainEqual({
+      type: DESKTOP_RARITY_PROPOSAL_EVENT,
+      detail: {
+        invalidated: true,
+        namespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
+      },
+    });
   });
 
   it("retires rarity evidence when Undo takes the accepted namespace back out", async () => {

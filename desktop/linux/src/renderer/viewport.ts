@@ -348,6 +348,10 @@ function installAssistantProductFlow(
           document.dispatchEvent(
             new CustomEvent(DESKTOP_RARITY_PROPOSAL_EVENT, { detail: lifecycleEvent }),
           );
+          void port.request({
+            action: "assistant",
+            payload: { op: "abandon", jobId: job.jobId },
+          }).catch(() => undefined);
         }
         if (!settlement.evidenceVisible) displayedRarityResultDigest = null;
         resultView.textContent = settlement.evidenceText;
@@ -385,6 +389,10 @@ function installAssistantProductFlow(
           document.dispatchEvent(
             new CustomEvent(DESKTOP_RARITY_PROPOSAL_EVENT, { detail }),
           );
+          void port.request({
+            action: "assistant",
+            payload: { op: "abandon", jobId: job.jobId },
+          }).catch(() => undefined);
         });
       }
       return;

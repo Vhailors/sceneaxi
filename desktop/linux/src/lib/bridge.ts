@@ -248,6 +248,12 @@ function frameReportOf(payload: unknown): DesktopFrameReport | null {
 
 export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridge {
   const nowMs = options.nowMs ?? ((): number => Date.now());
+  const rarityRefusalReason = (detail: unknown): string | null => {
+    if (typeof detail !== "string") return null;
+    return Object.values(RARITY_REFUSE_CODES).find(
+      (code) => detail === code || detail.startsWith(`${code} `),
+    ) ?? null;
+  };
   let session: DesktopSession | null = null;
   let rarityProposalEvidence: DesktopRarityEvidence | null = null;
   let lastReport: DesktopFrameReport | null = null;
@@ -326,12 +332,6 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     });
 
   const resolveRarityWithKernel = (input: RarityKernelResolutionInput) => {
-    const rarityReason = (detail: unknown): string | null => {
-      if (typeof detail !== "string") return null;
-      return Object.values(RARITY_REFUSE_CODES).find(
-        (code) => detail === code || detail.startsWith(`${code} `),
-      ) ?? null;
-    };
     const bootstrapped = bootstrapOpenPath(
       {
         kind: "product",
@@ -344,7 +344,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       { nowMs },
     );
     if (!bootstrapped.ok) {
-      const reason = rarityReason(bootstrapped.detail);
+      const reason = rarityRefusalReason(bootstrapped.detail);
       return Object.freeze({
         ok: false as const,
         reason: reason ?? bootstrapped.reason,
@@ -437,10 +437,13 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       { nowMs },
     );
     if (!bootstrapped.ok) {
+      const reason = rarityRefusalReason(bootstrapped.detail);
       return {
         ok: false,
-        reason: bootstrapped.reason,
-        message: bootstrapped.message,
+        reason: reason ?? bootstrapped.reason,
+        message: reason === null
+          ? bootstrapped.message
+          : bootstrapped.detail ?? bootstrapped.message,
         detail: bootstrapped.detail,
       };
     }
@@ -448,7 +451,13 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     const live = handle.session();
     if (!live.ok) {
       handle.close();
-      return { ok: false, reason: live.reason, message: live.message, detail: live.detail };
+      const reason = rarityRefusalReason(live.detail);
+      return {
+        ok: false,
+        reason: reason ?? live.reason,
+        message: reason === null ? live.message : live.detail ?? live.message,
+        detail: live.detail,
+      };
     }
     let initialDigest: string;
     let save: ReturnType<typeof live.value.save>;
@@ -470,7 +479,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       }
       save = live.value.save();
     } catch (error) {
-      const reason = field(error, "reason");
+      const reason = field(error, "code") ?? field(error, "reason");
       return {
         ok: false,
         reason: typeof reason === "string" ? reason : RARITY_REFUSE_CODES.provenanceMismatch,
@@ -481,17 +490,24 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     }
     const resumed = resumeOpenPath({ kind: "product", save }, { nowMs });
     if (!resumed.ok) {
+      const reason = rarityRefusalReason(resumed.detail);
       return {
         ok: false,
-        reason: resumed.reason,
-        message: resumed.message,
+        reason: reason ?? resumed.reason,
+        message: reason === null ? resumed.message : resumed.detail ?? resumed.message,
         detail: resumed.detail,
       };
     }
     const replay = resumed.value.session();
     if (!replay.ok) {
       resumed.value.close();
-      return { ok: false, reason: replay.reason, message: replay.message, detail: replay.detail };
+      const reason = rarityRefusalReason(replay.detail);
+      return {
+        ok: false,
+        reason: reason ?? replay.reason,
+        message: reason === null ? replay.message : replay.detail ?? replay.message,
+        detail: replay.detail,
+      };
     }
     let replayDigest: string;
     try {
@@ -1036,6 +1052,20 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       return bridgeOk("assistant", assistantSnapshot());
     }
     if (op === "abandon") {
+      const acknowledgedJobId = field(payload, "jobId");
+      const result = currentRarityAssistantResult();
+      if (
+        typeof acknowledgedJobId === "string" &&
+        assistantJob?.jobId === acknowledgedJobId &&
+        result !== null &&
+        (result.retirement !== undefined ||
+          result.authoring?.phase === "applied" ||
+          result.authoring?.phase === "rejected")
+      ) {
+        const acknowledged = assistantSnapshot();
+        assistantJob = null;
+        return bridgeOk("assistant", acknowledged);
+      }
       if (assistantJob?.status === "running") {
         assistantJob.status = "refused";
         assistantJob.refusal = Object.freeze({
@@ -1095,12 +1125,23 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         "No BYOK Model Provider Port is configured for this desktop session. Local remains free and available.",
       );
     }
-    if (assistantJob?.status === "running" || rarityProposalEvidence !== null) {
+    const currentRarityResult = currentRarityAssistantResult();
+    const raritySettlementPending = currentRarityResult !== null &&
+      (currentRarityResult.retirement !== undefined ||
+        currentRarityResult.authoring?.phase === "applied" ||
+        currentRarityResult.authoring?.phase === "rejected");
+    if (
+      assistantJob?.status === "running" ||
+      rarityProposalEvidence !== null ||
+      raritySettlementPending
+    ) {
       return bridgeRefuse(
         DESKTOP_BRIDGE_REFUSALS.assistantBusy,
-        rarityProposalEvidence === null
-          ? "An assistant job is already running; poll its status before retrying."
-          : "A rarity proposal is still waiting for Accept or Reject; settle it before starting another assistant job.",
+        rarityProposalEvidence !== null
+          ? "A rarity proposal is still waiting for Accept or Reject; settle it before starting another assistant job."
+          : raritySettlementPending
+            ? "The settled rarity job has not been acknowledged; read and acknowledge it before starting another assistant job."
+            : "An assistant job is already running; poll its status before retrying.",
       );
     }
 

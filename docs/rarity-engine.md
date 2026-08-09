@@ -308,7 +308,9 @@ Undo a rejection, expanded descriptor filtering, and added the corresponding
 contract and lifecycle regressions. `367ef34` added credential-shape filtering,
 named kernel replay refusals, restart and late-settlement reconciliation,
 no-write preservation for existing composed projects, and mounted desktop
-regressions. The smoke was not rerun after these changes.
+regressions. `d694f6d` added provider candidate filtering and refreshed late
+settlement state from current authoring status. The smoke was not rerun after
+these changes.
 
 The pinned vector digests above, by contrast, are re-proved on every run:
 `tests/e2e/rarity-provider-desktop-golden.test.ts` compares runtime output to

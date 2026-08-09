@@ -389,6 +389,40 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     expect(documentBytes(root)).toBe(before);
   });
 
+  it("refuses an unsafe typed contribution at the shared staging boundary", async () => {
+    const root = projectRoot();
+    const before = documentBytes(root);
+    const credentialCandidate = "whsec_abcdefghijklmnop";
+    const fixture = await createDesktopRarityFixtureProvider()({
+      profile: "@sceneaxi/profile-game",
+      prompt: "stage a drop",
+    });
+    if (!fixture.ok) throw new Error(fixture.reason);
+    const bridge = createDesktopBridge({
+      cwd: root,
+      runRarityProvider: () => Promise.resolve({
+        ok: true,
+        value: {
+          ...fixture.value,
+          request: {
+            ...fixture.value.request,
+            candidates: fixture.value.request.candidates.map((candidate, index) =>
+              index === 0 ? { ...candidate, candidateId: credentialCandidate } : candidate,
+            ),
+          },
+        },
+      }),
+    });
+    startRarity(bridge);
+    const job = await settledJob(bridge);
+    expect(job).toMatchObject({
+      status: "refused",
+      refusal: { reason: RARITY_REFUSE_CODES.providerEntropyForbidden },
+    });
+    expect(JSON.stringify(job)).not.toContain(credentialCandidate);
+    expect(documentBytes(root)).toBe(before);
+  });
+
   it("refuses a replayed event whose accepted provider evidence was stripped, and stays available", async () => {
     const root = projectRoot();
     const first = createDesktopBridge({
@@ -568,7 +602,7 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     expect(documentBytes(root)).toBe(before);
   });
 
-  it("protects a ready rarity job until its proposal settles", async () => {
+  it("protects ready and settled rarity jobs until the renderer acknowledges them", async () => {
     const root = projectRoot();
     const bridge = createDesktopBridge({
       cwd: root,
@@ -600,6 +634,37 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     expect(
       bridge.handle({ action: "authoring", payload: { op: "reject" } }),
     ).toMatchObject({ ok: true, data: { phase: "rejected" } });
+    const buildRequest = {
+      action: "assistant" as const,
+      payload: {
+        op: "start",
+        mode: "build",
+        route: "local",
+        profile: "@sceneaxi/profile-game",
+        prompt: "build a crate",
+      },
+    };
+    expect(bridge.handle(buildRequest)).toMatchObject({
+      ok: false,
+      reason: "DESKTOP_ASSISTANT_BUSY",
+    });
+    const settled = bridge.handle({ action: "assistant", payload: { op: "status" } });
+    if (!settled.ok || settled.data === null) throw new Error("missing settled rarity job");
+    const jobId = (settled.data as DesktopAssistantJobSnapshot).jobId;
+    expect(
+      bridge.handle({
+        action: "assistant",
+        payload: { op: "abandon", jobId },
+      }),
+    ).toMatchObject({
+      ok: true,
+      data: { jobId, result: { kind: "rarity-proposal", authoring: { phase: "rejected" } } },
+    });
+    expect(bridge.handle({ action: "assistant", payload: { op: "status" } })).toMatchObject({
+      ok: true,
+      data: null,
+    });
+    expect(bridge.handle(buildRequest)).toMatchObject({ ok: true, action: "assistant" });
   });
 
   it("turns an in-flight document change into an actionable stale-content refusal", async () => {
@@ -799,13 +864,20 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
         payload: { op: "restart", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
       }),
     ).toMatchObject({ ok: true, data: { ok: true } });
-    expect(await settledJob(bridge)).toMatchObject({
+    const restarted = await settledJob(bridge);
+    expect(restarted).toMatchObject({
       result: {
         kind: "rarity-proposal",
         authoring: { phase: "reviewing" },
         retirement: { reason: "session-restarted" },
       },
     });
+    expect(
+      bridge.handle({
+        action: "assistant",
+        payload: { op: "abandon", jobId: restarted.jobId },
+      }),
+    ).toMatchObject({ ok: true, data: { jobId: restarted.jobId } });
 
     startRarity(bridge);
     expect(await settledJob(bridge)).toMatchObject({
@@ -1241,7 +1313,7 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     });
     expect(played).toMatchObject({
       ok: false,
-      reason: "OPEN_PATH_KERNEL_REFUSED",
+      reason: RARITY_REFUSE_CODES.provenanceMismatch,
     });
     if (played.ok) throw new Error("tampered rarity unexpectedly opened");
     expect(played.detail).toContain(RARITY_REFUSE_CODES.provenanceMismatch);

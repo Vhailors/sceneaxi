@@ -105,6 +105,7 @@ export function assistantRarityResultEvent(
   if (result.retirement !== undefined) {
     return Object.freeze({
       retired: result.retirement.reason,
+      refreshAuthoring: true,
       evidence: result.evidence,
     });
   }

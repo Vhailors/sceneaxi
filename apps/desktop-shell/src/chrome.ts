@@ -2988,7 +2988,10 @@ if (shell) {
       return;
     }
     if (detail.retired === 'session-restarted' || detail.retired === 'undo' ||
-        detail.retired === 'namespace-replaced' || detail.retired === 'document-missing') return;
+        detail.retired === 'namespace-replaced' || detail.retired === 'document-missing') {
+      if (detail.refreshAuthoring === true) void refreshAuthoringState();
+      return;
+    }
     if (detail.replayed === true) {
       if (syncRarityEvidence(detail.evidence) === null) return;
       selectDockTab('evidence');

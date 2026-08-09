@@ -138,6 +138,21 @@ const refuse = (
 ): RarityAuthoringRefusal =>
   Object.freeze({ ok: false as const, reason, message, ...(path === undefined ? {} : { path }) });
 
+const providerCandidateIdentifierRefusal = (
+  request: RarityRollRequest,
+): RarityAuthoringRefusal | null => {
+  const unsafeCandidate = request.candidates.findIndex(
+    (candidate) => !isRarityProviderSafeIdentifier(candidate.candidateId),
+  );
+  return unsafeCandidate === -1
+    ? null
+    : refuse(
+        RARITY_REFUSE_CODES.providerEntropyForbidden,
+        "The provider rarity proposal contains a credential-shaped candidate identifier.",
+        `rarity.provider.request.candidates[${String(unsafeCandidate)}].candidateId`,
+      );
+};
+
 export function safeRarityEvidenceFromNamespace(
   namespace: RarityNamespace,
   eventId: string,
@@ -256,16 +271,8 @@ export async function requestRarityProviderContribution(input: Readonly<{
   if (!policy.ok) return refuse(policy.code, policy.message, policy.path);
   const request = validateRarityRollRequest(call.arguments.request, policy.value);
   if (!request.ok) return refuse(request.code, request.message, request.path);
-  const unsafeCandidate = request.value.candidates.findIndex(
-    (candidate) => !isRarityProviderSafeIdentifier(candidate.candidateId),
-  );
-  if (unsafeCandidate !== -1) {
-    return refuse(
-      RARITY_REFUSE_CODES.providerEntropyForbidden,
-      "The provider rarity proposal contains a credential-shaped candidate identifier.",
-      `rarity.provider.request.candidates[${String(unsafeCandidate)}].candidateId`,
-    );
-  }
+  const candidateRefusal = providerCandidateIdentifierRefusal(request.value);
+  if (candidateRefusal !== null) return candidateRefusal;
   return Object.freeze({
     ok: true as const,
     value: Object.freeze({
@@ -337,6 +344,8 @@ export function stageRarityProviderProposal(input: Readonly<{
   if (!policy.ok) return refuse(policy.code, policy.message, policy.path);
   const request = validateRarityRollRequest(input.contribution.request, policy.value);
   if (!request.ok) return refuse(request.code, request.message, request.path);
+  const candidateRefusal = providerCandidateIdentifierRefusal(request.value);
+  if (candidateRefusal !== null) return candidateRefusal;
 
   let existing: RarityNamespace = Object.freeze({
     schemaVersion: RARITY_SCHEMA_VERSION,
