@@ -2047,6 +2047,108 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     expect(evidence.textContent).not.toContain("wayfinder-copper");
   });
 
+  it("reconciles each rarity presentation surface to accepted provenance", async () => {
+    const replacement = Object.freeze({
+      ...RARITY_EVIDENCE_FIXTURE,
+      candidateId: "wayfinder-silver",
+      namespaceDigest: `sha256:${"8".repeat(64)}`,
+      provenanceDigest: `sha256:${"9".repeat(64)}`,
+    });
+    let acceptedEvidence = RARITY_EVIDENCE_FIXTURE;
+    const port = {
+      request: (request: { readonly action?: string }) =>
+        Promise.resolve(
+          request.action === "open-path"
+            ? {
+                ok: true,
+                action: "open-path",
+                data: {
+                  closed: true,
+                  initialDigest: "sha256:initial",
+                  tickDigests: ["sha256:tick"],
+                  instanceCount: 1,
+                  mountable: { sceneId: "desktop-scene" },
+                  rarity: RARITY_EVIDENCE_FIXTURE,
+                  raritySession: RARITY_PRODUCT_SESSION,
+                },
+              }
+            : {
+                ok: true,
+                action: "authoring",
+                data: {
+                  ok: true,
+                  documentId: "scene",
+                  contentHash: "sha256:accepted",
+                  data: { rarity: { kind: "sceneaxi.rarity.namespace" } },
+                  rarityNamespaceDigest: acceptedEvidence.namespaceDigest,
+                  acceptedRarityEvidence: acceptedEvidence,
+                  undoAvailability: "unavailable",
+                },
+              },
+        ),
+    };
+    const {
+      shell, reload, play, evidence, runEvidence, status,
+      documentListeners, dispatchedEvents,
+    } = mountRarityChrome(port);
+    documentListeners.set(DESKTOP_VIEWPORT_PLAY_EVENT, (event) => {
+      const detail = event.detail as { accepted: boolean; frame: number | null };
+      detail.accepted = true;
+      detail.frame = 1;
+    });
+
+    shell.clickListener?.({ target: reload });
+    await vi.waitFor(() => {
+      expect(status.textContent).toContain("· open ·");
+    });
+    shell.clickListener?.({ target: play });
+    await vi.waitFor(() => {
+      expect(runEvidence.textContent).toContain("wayfinder-copper");
+    });
+    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+      detail: { replayed: true, snapshot: null, evidence: replacement },
+    });
+    expect(evidence.textContent).toContain("wayfinder-silver");
+
+    const firstInvalidation = dispatchedEvents.length;
+    shell.clickListener?.({ target: reload });
+    await vi.waitFor(() => {
+      expect(evidence.textContent).toContain("wayfinder-copper");
+    });
+    expect(runEvidence.textContent).toContain("wayfinder-copper");
+    expect(dispatchedEvents.slice(firstInvalidation)).toContainEqual({
+      type: DESKTOP_RARITY_PROPOSAL_EVENT,
+      detail: { invalidated: true, namespaceDigest: replacement.namespaceDigest },
+    });
+    expect(dispatchedEvents.slice(firstInvalidation)).not.toContainEqual({
+      type: DESKTOP_RARITY_PROPOSAL_EVENT,
+      detail: { invalidated: true, namespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest },
+    });
+
+    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+      detail: { replayed: true, snapshot: null, evidence: replacement },
+    });
+    acceptedEvidence = replacement;
+    const secondInvalidation = dispatchedEvents.length;
+    shell.clickListener?.({ target: reload });
+    await vi.waitFor(() => {
+      expect(evidence.textContent).toContain("wayfinder-silver");
+      expect(runEvidence.hidden).toBe(true);
+    });
+    expect(runEvidence.textContent).toBe("");
+    expect(dispatchedEvents.slice(secondInvalidation)).toContainEqual({
+      type: DESKTOP_RARITY_PROPOSAL_EVENT,
+      detail: {
+        invalidated: true,
+        namespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
+      },
+    });
+    expect(dispatchedEvents.slice(secondInvalidation)).not.toContainEqual({
+      type: DESKTOP_RARITY_PROPOSAL_EVENT,
+      detail: { invalidated: true, namespaceDigest: replacement.namespaceDigest },
+    });
+  });
+
   it("retires displayed evidence when Reload proves the document is gone", async () => {
     let statusReads = 0;
     const port = {

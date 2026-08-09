@@ -1543,6 +1543,30 @@ if (shell) {
     return text;
   };
 
+  const dispatchRarityInvalidations = (invalidatedDigests) => {
+    invalidatedDigests.forEach((namespaceDigest) => {
+      document.dispatchEvent(new CustomEvent(T.product.rarityProposalEvent, {
+        detail: { invalidated: true, namespaceDigest },
+      }));
+    });
+  };
+
+  const clearReviewRarityEvidence = () => {
+    activeReviewRarityEvidenceDigest = null;
+    q('[data-change-rarity-evidence]').forEach((el) => {
+      el.textContent = '';
+      el.hidden = true;
+    });
+  };
+
+  const clearRunRarityEvidence = () => {
+    activeRunRarityEvidenceDigest = null;
+    q('[data-run-rarity-evidence]').forEach((el) => {
+      el.textContent = '';
+      el.hidden = true;
+    });
+  };
+
   const clearRarityEvidence = (retireAll = false) => {
     const invalidatedDigests = new Set();
     if (activeRarityEvidenceDigest !== null) invalidatedDigests.add(activeRarityEvidenceDigest);
@@ -1555,24 +1579,12 @@ if (shell) {
     const invalidatedDigest = activeRarityEvidenceDigest;
     const cleared = syncRarityEvidence(null);
     if (retireAll || activeReviewRarityEvidenceDigest === invalidatedDigest) {
-      activeReviewRarityEvidenceDigest = null;
-      q('[data-change-rarity-evidence]').forEach((el) => {
-        el.textContent = '';
-        el.hidden = true;
-      });
+      clearReviewRarityEvidence();
     }
     if (retireAll || activeRunRarityEvidenceDigest === invalidatedDigest) {
-      activeRunRarityEvidenceDigest = null;
-      q('[data-run-rarity-evidence]').forEach((el) => {
-        el.textContent = '';
-        el.hidden = true;
-      });
+      clearRunRarityEvidence();
     }
-    invalidatedDigests.forEach((namespaceDigest) => {
-      document.dispatchEvent(new CustomEvent(T.product.rarityProposalEvent, {
-        detail: { invalidated: true, namespaceDigest },
-      }));
-    });
+    dispatchRarityInvalidations(invalidatedDigests);
     return cleared;
   };
 
@@ -1590,10 +1602,25 @@ if (shell) {
       clearRarityEvidence(true);
       return;
     }
+    const invalidatedDigests = new Set();
     if (activeRarityEvidenceDigest !== digest) {
-      clearRarityEvidence(true);
+      if (activeRarityEvidenceDigest !== null) {
+        invalidatedDigests.add(activeRarityEvidenceDigest);
+      }
       syncRarityEvidence(accepted);
     }
+    if (
+      activeReviewRarityEvidenceDigest !== null &&
+      activeReviewRarityEvidenceDigest !== digest
+    ) {
+      invalidatedDigests.add(activeReviewRarityEvidenceDigest);
+      clearReviewRarityEvidence();
+    }
+    if (activeRunRarityEvidenceDigest !== null && activeRunRarityEvidenceDigest !== digest) {
+      invalidatedDigests.add(activeRunRarityEvidenceDigest);
+      clearRunRarityEvidence();
+    }
+    dispatchRarityInvalidations(invalidatedDigests);
   };
 
   const clearConflictOutcome = () => { activeConflictDetail = null; };

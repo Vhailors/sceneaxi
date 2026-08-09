@@ -271,6 +271,54 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       ? snapshot
       : Object.freeze({ ...snapshot, rarityEvidence: rarityProposalEvidence });
 
+  const currentRarityAssistantResult = () => {
+    const result = assistantJob?.result;
+    return result !== undefined && "kind" in result && result.kind === "rarity-proposal"
+      ? result
+      : null;
+  };
+
+  const updateRarityAssistantAuthoring = (
+    snapshot: DesktopSnapshot,
+    evidence: DesktopRarityEvidence,
+  ) => {
+    const result = currentRarityAssistantResult();
+    if (
+      assistantJob === null ||
+      result === null ||
+      result.evidence.namespaceDigest !== evidence.namespaceDigest
+    ) return;
+    assistantJob = {
+      ...assistantJob,
+      result: Object.freeze({
+        ...result,
+        authoring: Object.freeze({ ...snapshot, rarityEvidence: evidence }),
+      }),
+    };
+  };
+
+  const retireRarityAssistantAuthoring = (evidence: DesktopRarityEvidence) => {
+    const result = currentRarityAssistantResult();
+    if (
+      result?.authoring === undefined ||
+      result.evidence.namespaceDigest !== evidence.namespaceDigest
+    ) return;
+    updateRarityAssistantAuthoring(
+      Object.freeze({
+        ...result.authoring,
+        phase: "rejected",
+        proposal: null,
+        unifiedDiff: null,
+        renderedDiff: null,
+        appliedPaths: null,
+        journalRecoveryPending: false,
+        transactionId: null,
+        diagnostics: Object.freeze([]),
+      }),
+      evidence,
+    );
+  };
+
   const handshake = (): DesktopBridgeHandshake =>
     Object.freeze({
       app: "@sceneaxi/desktop-linux" as const,
@@ -699,25 +747,8 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         (snapshot.phase === "applied" || snapshot.phase === "rejected") &&
         !snapshot.journalRecoveryPending
       ) {
-        const result = assistantJob?.result;
-        if (
-          assistantJob !== null &&
-          rarityProposalEvidence !== null &&
-          result !== undefined &&
-          "kind" in result &&
-          result.kind === "rarity-proposal" &&
-          result.evidence.namespaceDigest === rarityProposalEvidence.namespaceDigest
-        ) {
-          assistantJob = {
-            ...assistantJob,
-            result: Object.freeze({
-              ...result,
-              authoring: Object.freeze({
-                ...snapshot,
-                rarityEvidence: rarityProposalEvidence,
-              }),
-            }),
-          };
+        if (rarityProposalEvidence !== null) {
+          updateRarityAssistantAuthoring(snapshot, rarityProposalEvidence);
         }
         rarityProposalEvidence = null;
       }
@@ -732,6 +763,9 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         );
       }
       session = options.createAuthoringSession?.() ?? createDesktopSession({ cwd: options.cwd });
+      if (rarityProposalEvidence !== null) {
+        retireRarityAssistantAuthoring(rarityProposalEvidence);
+      }
       rarityProposalEvidence = null;
       return bridgeOk("authoring", statusWithProperties(session, documentPath));
     }
@@ -825,7 +859,24 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       );
     }
     const result = live.undo();
-    if (result.ok) rarityProposalEvidence = null;
+    if (result.ok) {
+      const assistantResult = currentRarityAssistantResult();
+      const appliedDocumentPath = containedDocumentPath(
+        assistantResult?.authoring?.proposal?.edits[0]?.documentPath,
+      );
+      if (
+        assistantResult?.authoring?.phase === "applied" &&
+        appliedDocumentPath !== null &&
+        result.restoredPaths.includes(appliedDocumentPath)
+      ) {
+        const restored = statusWithProperties(live, appliedDocumentPath);
+        const namespaceGone = restored.ok
+          ? restored.rarityNamespaceDigest !== assistantResult.evidence.namespaceDigest
+          : restored.diagnostics[0]?.code === "document-not-found";
+        if (namespaceGone) retireRarityAssistantAuthoring(assistantResult.evidence);
+      }
+      rarityProposalEvidence = null;
+    }
     return bridgeOk("authoring", result);
   };
 

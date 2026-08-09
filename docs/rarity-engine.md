@@ -297,7 +297,7 @@ the displayed result, and retired evidence when a document was missing;
 corrections. `105d120` then bounded and filtered provider descriptors, separated
 missing documents from read failures, enforced the Agent prompt limit at the
 shared bridge, preserved staged evidence during Play, and handled late proposal
-settlement. This follow-up correction binds evidence to individual rolls, protects
+settlement. `6cbf43a` binds evidence to individual rolls, protects
 an unresolved ready Agent job, rejects final-line terminators in descriptors,
 retains evidence through unreadable recovery, and invalidates matching Assistant,
 Run, viewport, and Evidence output together. The smoke was not rerun after these
