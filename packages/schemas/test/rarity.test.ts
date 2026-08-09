@@ -1,0 +1,297 @@
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+import {
+  RARITY_ALGORITHM_ID,
+  RARITY_NAMESPACE_KIND,
+  RARITY_OUTCOME_KIND,
+  RARITY_POLICY_KIND,
+  RARITY_PROVENANCE_KIND,
+  RARITY_REFUSE_CODES,
+  RARITY_REQUEST_KIND,
+  RARITY_SCHEMA_VERSION,
+  RARITY_TIERS,
+  digestRarityPolicy,
+  digestRarityRequest,
+  serializeRarityNamespace,
+  validateRarityNamespace,
+  validateRarityPolicy,
+  validateRarityRollRequest,
+  type RarityNamespace,
+  type RarityPolicy,
+  type RarityRollRequest,
+} from "@sceneaxi/schemas";
+
+type Fixture = {
+  readonly policy: RarityPolicy;
+  readonly request: RarityRollRequest;
+  readonly vectors: ReadonlyArray<{
+    readonly eventId: string;
+    readonly outcome: {
+      readonly schemaVersion: 1;
+      readonly kind: typeof RARITY_OUTCOME_KIND;
+      readonly tier: (typeof RARITY_TIERS)[number];
+      readonly candidateId: string;
+    };
+    readonly provenance: {
+      readonly schemaVersion: 1;
+      readonly kind: typeof RARITY_PROVENANCE_KIND;
+      readonly algorithmId: typeof RARITY_ALGORITHM_ID;
+      readonly scope: string;
+      readonly eventId: string;
+      readonly policyDigest: string;
+      readonly requestDigest: string;
+      readonly tierRollDigest: string;
+      readonly tierDraw: number;
+      readonly tierTotalWeight: number;
+      readonly candidateRollDigest: string;
+      readonly candidateDraw: number;
+      readonly candidateTotalWeight: number;
+      readonly outcomeDigest: string;
+    };
+  }>;
+};
+
+const fixture = JSON.parse(
+  readFileSync(
+    new URL("../contracts/rarity.fixtures.json", import.meta.url),
+    "utf8",
+  ),
+) as Fixture;
+
+const schema = JSON.parse(
+  readFileSync(new URL("../contracts/rarity.schema.json", import.meta.url), "utf8"),
+) as {
+  readonly $id: string;
+  readonly $defs: {
+    readonly tier: { readonly enum: readonly string[] };
+    readonly policy: {
+      readonly properties: { readonly schemaVersion: { readonly const: number } };
+    };
+    readonly request: { readonly additionalProperties: boolean };
+    readonly provenance: {
+      readonly properties: { readonly algorithmId: { readonly const: string } };
+    };
+  };
+};
+
+const policy = (tierWeights: Record<(typeof RARITY_TIERS)[number], number>) => ({
+  schemaVersion: RARITY_SCHEMA_VERSION,
+  kind: RARITY_POLICY_KIND,
+  tierWeights,
+});
+
+describe("rarity domain contracts", () => {
+  it("ships a versioned schema that pins the runtime tier and algorithm contract", () => {
+    expect(schema.$id).toBe("https://sceneaxi.invalid/contracts/rarity/v1");
+    expect(schema.$defs.tier.enum).toEqual(RARITY_TIERS);
+    expect(schema.$defs.policy.properties.schemaVersion.const).toBe(
+      RARITY_SCHEMA_VERSION,
+    );
+    expect(schema.$defs.provenance.properties.algorithmId.const).toBe(
+      RARITY_ALGORITHM_ID,
+    );
+    expect(schema.$defs.request.additionalProperties).toBe(false);
+  });
+
+  it("pins the stable tier identifiers, order, algorithm, and canonical digests", () => {
+    expect(RARITY_TIERS).toEqual([
+      "common",
+      "uncommon",
+      "rare",
+      "epic",
+      "legendary",
+    ]);
+    expect(RARITY_ALGORITHM_ID).toBe("sceneaxi.rarity.weighted-sha256-v1");
+    expect(digestRarityPolicy(fixture.policy)).toBe(
+      "sha256:ab1a0d4aee9b7776fe0e93bd065f5d8d06eed6ec7458dfaeb770f6efc0154f26",
+    );
+    expect(digestRarityRequest(fixture.request)).toBe(
+      "sha256:85e2b410d81dc9a0c36837ad676c950e32e3fbeddcb5b1adfde39a95e9e04936",
+    );
+  });
+
+  it.each([
+    ["fractional", 1.5, RARITY_REFUSE_CODES.invalidWeight],
+    ["negative", -1, RARITY_REFUSE_CODES.invalidWeight],
+    ["non-finite positive", Number.POSITIVE_INFINITY, RARITY_REFUSE_CODES.invalidWeight],
+    ["non-finite NaN", Number.NaN, RARITY_REFUSE_CODES.invalidWeight],
+    ["unsafe", Number.MAX_SAFE_INTEGER + 1, RARITY_REFUSE_CODES.invalidWeight],
+  ])("refuses %s policy weights", (_label, weight, code) => {
+    const result = validateRarityPolicy(
+      policy({ common: weight, uncommon: 0, rare: 0, epic: 0, legendary: 0 }),
+    );
+    expect(result).toMatchObject({ ok: false, code });
+  });
+
+  it("refuses zero totals and safe-integer total overflow", () => {
+    expect(
+      validateRarityPolicy(
+        policy({ common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 0 }),
+      ),
+    ).toMatchObject({ ok: false, code: RARITY_REFUSE_CODES.zeroTotal });
+    expect(
+      validateRarityPolicy(
+        policy({
+          common: Number.MAX_SAFE_INTEGER,
+          uncommon: 1,
+          rare: 0,
+          epic: 0,
+          legendary: 0,
+        }),
+      ),
+    ).toMatchObject({ ok: false, code: RARITY_REFUSE_CODES.weightOverflow });
+  });
+
+  it("refuses empty, zero-total, duplicate, overflowing, and unavailable candidate pools", () => {
+    const base = {
+      schemaVersion: RARITY_SCHEMA_VERSION,
+      kind: RARITY_REQUEST_KIND,
+    } as const;
+    expect(validateRarityRollRequest({ ...base, candidates: [] })).toMatchObject({
+      ok: false,
+      code: RARITY_REFUSE_CODES.emptyInput,
+    });
+    expect(
+      validateRarityRollRequest({
+        ...base,
+        candidates: [{ candidateId: "only", tier: "common", weight: 0 }],
+      }),
+    ).toMatchObject({ ok: false, code: RARITY_REFUSE_CODES.zeroTotal });
+    expect(
+      validateRarityRollRequest({
+        ...base,
+        candidates: [
+          { candidateId: "same", tier: "common", weight: 1 },
+          { candidateId: "same", tier: "common", weight: 1 },
+        ],
+      }),
+    ).toMatchObject({ ok: false, code: RARITY_REFUSE_CODES.duplicateCandidate });
+    expect(
+      validateRarityRollRequest({
+        ...base,
+        candidates: [
+          { candidateId: "one", tier: "common", weight: Number.MAX_SAFE_INTEGER },
+          { candidateId: "two", tier: "uncommon", weight: 1 },
+        ],
+      }),
+    ).toMatchObject({ ok: false, code: RARITY_REFUSE_CODES.weightOverflow });
+    expect(
+      validateRarityRollRequest(
+        {
+          ...base,
+          candidates: [{ candidateId: "only", tier: "common", weight: 1 }],
+        },
+        fixture.policy,
+      ),
+    ).toMatchObject({
+      ok: false,
+      code: RARITY_REFUSE_CODES.candidatePoolUnavailable,
+    });
+  });
+
+  it.each([
+    ["fractional", 0.5],
+    ["negative", -1],
+    ["positive infinity", Number.POSITIVE_INFINITY],
+    ["NaN", Number.NaN],
+    ["unsafe", Number.MAX_SAFE_INTEGER + 1],
+  ])("refuses %s candidate weights", (_label, weight) => {
+    expect(
+      validateRarityRollRequest({
+        schemaVersion: RARITY_SCHEMA_VERSION,
+        kind: RARITY_REQUEST_KIND,
+        candidates: [{ candidateId: "candidate", tier: "common", weight }],
+      }),
+    ).toMatchObject({ ok: false, code: RARITY_REFUSE_CODES.invalidWeight });
+  });
+
+  it.each(["seed", "draw", "outcome", "provenance", "providerResponse"])(
+    "refuses provider-authored %s authority",
+    (field) => {
+      const request = { ...fixture.request, [field]: 1 };
+      expect(validateRarityRollRequest(request)).toMatchObject({
+        ok: false,
+        code: RARITY_REFUSE_CODES.providerEntropyForbidden,
+      });
+    },
+  );
+
+  it("validates and canonically serializes the complete project-owned namespace", () => {
+    const first = fixture.vectors[0];
+    if (first === undefined) throw new Error("rarity fixture is empty");
+    const namespace: RarityNamespace = {
+      schemaVersion: RARITY_SCHEMA_VERSION,
+      kind: RARITY_NAMESPACE_KIND,
+      policy: fixture.policy,
+      rolls: [
+        {
+          eventId: first.eventId,
+          request: fixture.request,
+          outcome: first.outcome,
+          provenance: first.provenance,
+        },
+      ],
+    };
+    const validated = validateRarityNamespace(namespace);
+    expect(validated.ok).toBe(true);
+    if (!validated.ok) return;
+    const serialized = serializeRarityNamespace(validated.value);
+    expect(serialized.endsWith("\n")).toBe(true);
+    expect(JSON.parse(serialized)).toEqual(namespace);
+    expect(serialized.indexOf('"kind"')).toBeLessThan(
+      serialized.indexOf('"schemaVersion"'),
+    );
+  });
+
+  it("refuses schema/version and record-envelope tampering", () => {
+    expect(validateRarityPolicy({ ...fixture.policy, schemaVersion: 2 })).toMatchObject({
+      ok: false,
+      code: RARITY_REFUSE_CODES.schemaVersionMismatch,
+    });
+    expect(validateRarityPolicy({ ...fixture.policy, kind: "parallel-policy" })).toMatchObject({
+      ok: false,
+      code: RARITY_REFUSE_CODES.kindMismatch,
+    });
+    expect(validateRarityPolicy({ ...fixture.policy, extra: true })).toMatchObject({
+      ok: false,
+      code: RARITY_REFUSE_CODES.unexpectedProperty,
+    });
+  });
+
+  it("keeps the remaining structural refusal codes reachable", () => {
+    expect(validateRarityPolicy(null)).toMatchObject({
+      ok: false,
+      code: RARITY_REFUSE_CODES.notObject,
+    });
+    expect(
+      validateRarityPolicy({
+        schemaVersion: RARITY_SCHEMA_VERSION,
+        kind: RARITY_POLICY_KIND,
+      }),
+    ).toMatchObject({ ok: false, code: RARITY_REFUSE_CODES.missingProperty });
+    expect(
+      validateRarityRollRequest({
+        schemaVersion: RARITY_SCHEMA_VERSION,
+        kind: RARITY_REQUEST_KIND,
+        candidates: [{ candidateId: "INVALID", tier: "common", weight: 1 }],
+      }),
+    ).toMatchObject({ ok: false, code: RARITY_REFUSE_CODES.invalidIdentifier });
+
+    const vector = fixture.vectors[0];
+    if (vector === undefined) throw new Error("rarity fixture is empty");
+    const roll = {
+      eventId: vector.eventId,
+      request: fixture.request,
+      outcome: vector.outcome,
+      provenance: vector.provenance,
+    };
+    expect(
+      validateRarityNamespace({
+        schemaVersion: RARITY_SCHEMA_VERSION,
+        kind: RARITY_NAMESPACE_KIND,
+        policy: fixture.policy,
+        rolls: [roll, roll],
+      }),
+    ).toMatchObject({ ok: false, code: RARITY_REFUSE_CODES.duplicateEvent });
+  });
+});

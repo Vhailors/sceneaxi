@@ -53,6 +53,9 @@
               "y": { "type": "integer" }
             }
           }
+        },
+        "rarity": {
+          "$ref": "./rarity.schema.json#/$defs/namespace"
         }
       }
     },
@@ -67,7 +70,7 @@
             "type": "object",
             "required": ["type"],
             "properties": {
-              "type": { "type": "string", "enum": ["move", "spawn"] },
+              "type": { "type": "string", "enum": ["move", "spawn", "rarity-roll"] },
               "actor": {
                 "type": "string",
                 "pattern": "^[a-z0-9][a-z0-9-]*$"
@@ -81,6 +84,13 @@
                 "type": "array",
                 "minItems": 2,
                 "items": { "type": "integer" }
+              },
+              "eventId": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._:-]{0,127}$"
+              },
+              "request": {
+                "$ref": "./rarity.schema.json#/$defs/request"
               }
             }
           },

@@ -33,6 +33,22 @@ terminal digest.
 
 Neither domain claims engine readiness or composes a renderer.
 
+## Deterministic rarity
+
+The product session accepts the typed `rarity-roll` command over the one
+project-owned `ProductManifest.rarity` namespace. Dispatch is queue-only;
+`advance` calls the pure `resolveRarityRoll()` and appends the accepted
+request/outcome/provenance record. Save persists that namespace and replay
+recomputes it before accepting the terminal digest. Identical event/request
+bytes are idempotent; changed bytes under an existing event id refuse, and a
+reroll needs a new event id.
+
+The resolver uses the portable browser-safe SHA-256 semantics under
+`sceneaxi.rarity.weighted-sha256-v1`; provider input has no seed, draw, outcome,
+or provenance field. See
+[`docs/rarity-engine.md`](../../docs/rarity-engine.md) and the checked-in vectors
+in `packages/schemas/contracts/rarity.fixtures.json`.
+
 ## Scene kernel sessions
 
 `openSceneKernelSession()` and `replaySceneKernelSession()` open a validated

@@ -42,6 +42,12 @@ and nothing more.
 implementation of kernel behaviour that can drift from the first: the lifecycle
 guard belongs here, the simulation contract stays the kernel's (ADR 0001).
 
+The rarity contract follows that same bound: product open/resume requests carry
+the typed manifest and the package re-exports rarity vocabulary, but the handle
+returns the kernel session unchanged. Only kernel `advance` resolves a pending
+rarity roll; the orchestrator adds no entropy, outcome, or mutation path. See
+[`docs/rarity-engine.md`](../../docs/rarity-engine.md).
+
 Honest bound on `close()`: it ends the handle's grant. A caller that already took
 the session keeps the reference it took — this is a lifecycle boundary, not a
 revocation of a kernel object someone else is holding.

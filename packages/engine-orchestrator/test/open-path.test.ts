@@ -17,6 +17,12 @@ import {
   resumeOpenPath,
 } from "@sceneaxi/engine-orchestrator";
 import {
+  RARITY_NAMESPACE_KIND,
+  RARITY_POLICY_KIND,
+  RARITY_REQUEST_KIND,
+  RARITY_SCHEMA_VERSION,
+} from "@sceneaxi/schemas";
+import {
   FIXED_NOW_MS,
   composedSceneFixture,
   fixedHost,
@@ -27,6 +33,62 @@ import {
 const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
 
 describe("open-path bootstrap over the product session", () => {
+  it("carries the kernel-owned rarity command and replay contract unchanged", () => {
+    const opened = bootstrapOpenPath(
+      {
+        kind: "product",
+        productManifest: {
+          productId: "orchestrated-rarity",
+          seed: 701,
+          rarity: {
+            schemaVersion: RARITY_SCHEMA_VERSION,
+            kind: RARITY_NAMESPACE_KIND,
+            policy: {
+              schemaVersion: RARITY_SCHEMA_VERSION,
+              kind: RARITY_POLICY_KIND,
+              tierWeights: {
+                common: 1,
+                uncommon: 0,
+                rare: 0,
+                epic: 0,
+                legendary: 0,
+              },
+            },
+            rolls: [],
+          },
+        },
+      },
+      fixedHost,
+    );
+    if (!opened.ok) throw new Error(opened.detail ?? opened.reason);
+    const session = opened.value.session();
+    if (!session.ok) throw new Error(session.reason);
+    session.value.dispatch({
+      type: "rarity-roll",
+      eventId: "orchestrated-roll",
+      request: {
+        schemaVersion: RARITY_SCHEMA_VERSION,
+        kind: RARITY_REQUEST_KIND,
+        candidates: [{ candidateId: "only-choice", tier: "common", weight: 1 }],
+      },
+    });
+    expect(session.value.observe().rarity?.rolls).toEqual([]);
+    session.value.advance({ tick: 1, deltaMs: 16 });
+    expect(session.value.observe().rarity?.rolls[0]?.outcome).toMatchObject({
+      tier: "common",
+      candidateId: "only-choice",
+    });
+
+    const resumed = resumeOpenPath(
+      { kind: "product", save: session.value.save() },
+      fixedHost,
+    );
+    if (!resumed.ok) throw new Error(resumed.detail ?? resumed.reason);
+    const replayed = resumed.value.session();
+    if (!replayed.ok) throw new Error(replayed.reason);
+    expect(replayed.value.observe()).toEqual(session.value.observe());
+  });
+
   it("opens a real kernel session and records what it opened", () => {
     const bootstrapped = bootstrapOpenPath(
       { kind: "product", productManifest: productManifestFixture() },

@@ -20,12 +20,16 @@ import {
   replay,
   replaySceneKernelSession,
   replaySculptKernelSession,
+  resolveRarityRoll,
   type KernelDigest,
   type KernelDigestHost,
   type KernelHost,
 } from "@sceneaxi/engine-kernel";
 import {
   COMPOSED_SCENE_KIND,
+  RARITY_POLICY_KIND,
+  RARITY_REQUEST_KIND,
+  RARITY_SCHEMA_VERSION,
   SCENE_COMPOSITION_INTAKE_KIND,
   SCENE_COMPOSITION_SCHEMA_VERSION,
   digestComposedScene,
@@ -205,6 +209,57 @@ afterEach(() => {
 });
 
 describe("sessions open and play without Node globals", () => {
+  it("resolves the checked-in rarity algorithm without Node globals", () => {
+    const resolved = withoutNodeGlobals(() =>
+      resolveRarityRoll(
+        {
+          projectSeed: 424242,
+          scope: "wayfinder-fixture",
+          eventId: "roll-0000",
+        },
+        {
+          schemaVersion: RARITY_SCHEMA_VERSION,
+          kind: RARITY_POLICY_KIND,
+          tierWeights: {
+            common: 1,
+            uncommon: 1,
+            rare: 1,
+            epic: 1,
+            legendary: 1,
+          },
+        },
+        {
+          schemaVersion: RARITY_SCHEMA_VERSION,
+          kind: RARITY_REQUEST_KIND,
+          candidates: [
+            { candidateId: "common-a", tier: "common", weight: 1 },
+            { candidateId: "common-b", tier: "common", weight: 1 },
+            { candidateId: "uncommon-a", tier: "uncommon", weight: 1 },
+            { candidateId: "uncommon-b", tier: "uncommon", weight: 1 },
+            { candidateId: "rare-a", tier: "rare", weight: 1 },
+            { candidateId: "rare-b", tier: "rare", weight: 1 },
+            { candidateId: "epic-a", tier: "epic", weight: 1 },
+            { candidateId: "epic-b", tier: "epic", weight: 1 },
+            { candidateId: "legendary-a", tier: "legendary", weight: 1 },
+            { candidateId: "legendary-b", tier: "legendary", weight: 1 },
+          ],
+        },
+      ),
+    );
+    expect(resolved).toMatchObject({
+      ok: true,
+      value: {
+        outcome: { tier: "common", candidateId: "common-a" },
+        provenance: {
+          tierRollDigest:
+            "sha256:005f1d88424a47c8127b6ae2082d92ea40cd5f5824205dbdcbb0b1ddf15f2cb3",
+          candidateRollDigest:
+            "sha256:3848d15225499ad5bbf2d283a8a25ce57399ad824505168cd36305b3b35a7c42",
+        },
+      },
+    });
+  });
+
   it("plays the entity session end to end", () => {
     const terminal = withoutNodeGlobals(() => {
       const session = open(

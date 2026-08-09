@@ -2,6 +2,16 @@
 
 Shared contracts home for SceneAxi. Zero internal dependencies by rule.
 
+## Deterministic rarity (sceneaxi#240)
+
+`contracts/rarity.schema.json` and `src/rarity.ts` own the versioned policy,
+provider-safe request, outcome, provenance, canonical project namespace,
+validators, serialization, digest helpers, stable refusals, and fixed tier
+order. Checked-in boundary vectors are
+`contracts/rarity.fixtures.json`. Authoritative weighted resolution lives in
+`@sceneaxi/engine-kernel`; see
+[`docs/rarity-engine.md`](../../docs/rarity-engine.md).
+
 ## Desktop local bridge (sceneaxi#202)
 
 `contracts/desktop-local-bridge.schema.json` and

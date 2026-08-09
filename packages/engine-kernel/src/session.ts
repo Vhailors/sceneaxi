@@ -13,14 +13,29 @@ import {
 } from "./portable-digest.js";
 import {
   KERNEL_SESSION_SCHEMA_VERSION,
+  RARITY_NAMESPACE_KIND,
+  RARITY_REFUSE_CODES,
+  RARITY_SCHEMA_VERSION,
+  canonicalRarityJson,
+  digestRarityRequest,
+  snapshotPlainRecord,
+  validateRarityNamespace,
+  validateRarityRollRequest,
   type FrameClock,
   type KernelCommand,
   type KernelSessionEvent,
   type KernelSessionSaveArtifact,
   type KernelSnapshot,
+  type JsonValue,
   type ProductManifest,
+  type RarityNamespace,
+  type RarityPolicy,
+  type RarityRefuseCode,
+  type RarityRollCommand,
+  type RarityRollRecord,
   type SnapshotEntity,
 } from "@sceneaxi/schemas";
+import { resolveRarityRoll } from "./rarity.js";
 
 /** engine-kernel package version stamped into save artifacts. */
 export const KERNEL_VERSION = "0.0.0";
@@ -31,6 +46,7 @@ export const BOM_VERSION = "0.0.0";
 const VERSION_RE = /^[0-9]+\.[0-9]+\.[0-9]+$/;
 const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
 const ID_RE = /^[a-z0-9][a-z0-9-]*$/;
+const RARITY_ID_RE = /^[a-z0-9][a-z0-9._:-]{0,127}$/;
 
 /** Host services injected at open/replay. */
 export interface KernelHost extends KernelDigestHost {
@@ -57,14 +73,18 @@ interface PendingDispatch {
   timestampMs: number;
 }
 
+type MutableRarityState = {
+  readonly policy: RarityPolicy;
+  rolls: RarityRollRecord[];
+};
+
 export function open(
   productManifest: ProductManifest,
   host: KernelHost,
 ): KernelSession {
-  validateManifest(productManifest);
   validateHost(host);
   return new SessionImpl(
-    cloneManifest(productManifest),
+    validateManifest(productManifest),
     host,
     [],
     resolveKernelDigest(host.digest),
@@ -95,7 +115,7 @@ export function replay(
   if (!Array.isArray(artifact.events)) {
     throw new KernelSessionError("save artifact missing events");
   }
-  validateManifest(artifact.productManifest);
+  const expectedManifest = validateManifest(artifact.productManifest);
   if (
     typeof artifact.terminalDigest !== "string" ||
     !DIGEST_RE.test(artifact.terminalDigest)
@@ -103,8 +123,13 @@ export function replay(
     throw new KernelSessionError("save artifact has invalid terminalDigest");
   }
 
+  const generatedRarityEvents = rarityEventIdsOf(artifact.events);
+  const replayManifest = withoutGeneratedRarityRolls(
+    expectedManifest,
+    generatedRarityEvents,
+  );
   const session = new SessionImpl(
-    cloneManifest(artifact.productManifest),
+    replayManifest,
     host,
     [],
     resolveKernelDigest(host.digest),
@@ -116,6 +141,7 @@ export function replay(
       throw new KernelSessionError("invalid save artifact event");
     }
     if (event.kind === "dispatch") {
+      verifySavedRarityCommand(event.command, expectedManifest.rarity);
       session.dispatchRecorded(event.command, event.timestampMs);
       hasPendingDispatch = true;
     } else if (event.kind === "advance") {
@@ -128,6 +154,14 @@ export function replay(
   if (hasPendingDispatch) {
     throw new KernelSessionError(
       "save artifact ends with unadvanced dispatch commands",
+    );
+  }
+
+  if (!sameRarityNamespace(session.observe().rarity, expectedManifest.rarity)) {
+    throw rarityError(
+      RARITY_REFUSE_CODES.provenanceMismatch,
+      "rarity",
+      "Replay did not recompute the saved rarity namespace exactly.",
     );
   }
 
@@ -147,7 +181,15 @@ function validateHost(host: KernelHost): void {
   }
 }
 
-function validateManifest(manifest: ProductManifest): void {
+function rarityError(
+  code: RarityRefuseCode,
+  path: string,
+  message: string,
+): KernelSessionError {
+  return new KernelSessionError(`${code} at ${path}: ${message}`, code);
+}
+
+function validateManifest(manifest: ProductManifest): ProductManifest {
   if (
     !manifest ||
     typeof manifest.productId !== "string" ||
@@ -158,6 +200,60 @@ function validateManifest(manifest: ProductManifest): void {
   if (!Number.isInteger(manifest.seed)) {
     throw new KernelSessionError("productManifest.seed must be an integer");
   }
+  let rarity: RarityNamespace | undefined;
+  if (manifest.rarity !== undefined) {
+    if (!Number.isSafeInteger(manifest.seed)) {
+      throw rarityError(
+        RARITY_REFUSE_CODES.seedInvalid,
+        "productManifest.seed",
+        "A product manifest with rarity must own a safe integer seed.",
+      );
+    }
+    const validated = validateRarityNamespace(manifest.rarity);
+    if (!validated.ok) {
+      throw rarityError(validated.code, validated.path, validated.message);
+    }
+    rarity = validated.value;
+    for (const roll of rarity.rolls) {
+      const resolved = resolveRarityRoll(
+        {
+          projectSeed: manifest.seed,
+          scope: manifest.productId,
+          eventId: roll.eventId,
+        },
+        rarity.policy,
+        roll.request,
+      );
+      if (!resolved.ok) {
+        throw rarityError(resolved.code, resolved.path, resolved.message);
+      }
+      if (
+        canonicalRarityJson(
+          resolved.value.outcome as unknown as JsonValue,
+        ) !==
+        canonicalRarityJson(roll.outcome as unknown as JsonValue)
+      ) {
+        throw rarityError(
+          RARITY_REFUSE_CODES.outcomeMismatch,
+          `rarity.rolls.${roll.eventId}.outcome`,
+          "Stored rarity outcome does not match deterministic recomputation.",
+        );
+      }
+      if (
+        canonicalRarityJson(
+          resolved.value.provenance as unknown as JsonValue,
+        ) !==
+        canonicalRarityJson(roll.provenance as unknown as JsonValue)
+      ) {
+        throw rarityError(
+          RARITY_REFUSE_CODES.provenanceMismatch,
+          `rarity.rolls.${roll.eventId}.provenance`,
+          "Stored rarity provenance does not match deterministic recomputation.",
+        );
+      }
+    }
+  }
+  let entities: ReadonlyArray<{ readonly id: string; readonly x: number; readonly y: number }> | undefined;
   if (manifest.entities !== undefined) {
     if (!Array.isArray(manifest.entities)) {
       throw new KernelSessionError("productManifest.entities must be an array");
@@ -175,24 +271,121 @@ function validateManifest(manifest: ProductManifest): void {
         throw new KernelSessionError(`entity "${e.id}" positions must be integers`);
       }
     }
+    entities = Object.freeze(
+      manifest.entities.map((entity) =>
+        Object.freeze({ id: entity.id, x: entity.x, y: entity.y }),
+      ),
+    );
   }
-}
-
-function cloneManifest(manifest: ProductManifest): ProductManifest {
-  const entities = manifest.entities?.map((e) =>
-    Object.freeze({ id: e.id, x: e.x, y: e.y }),
-  );
-  if (entities) {
+  if (entities !== undefined && rarity !== undefined) {
     return Object.freeze({
       productId: manifest.productId,
       seed: manifest.seed,
-      entities: Object.freeze(entities),
+      entities,
+      rarity,
+    });
+  }
+  if (entities !== undefined) {
+    return Object.freeze({
+      productId: manifest.productId,
+      seed: manifest.seed,
+      entities,
+    });
+  }
+  if (rarity !== undefined) {
+    return Object.freeze({
+      productId: manifest.productId,
+      seed: manifest.seed,
+      rarity,
     });
   }
   return Object.freeze({
     productId: manifest.productId,
     seed: manifest.seed,
   });
+}
+
+function rarityEventIdsOf(events: readonly KernelSessionEvent[]): Set<string> {
+  const ids = new Set<string>();
+  for (const event of events) {
+    if (
+      event !== null &&
+      typeof event === "object" &&
+      event.kind === "dispatch" &&
+      event.command !== null &&
+      typeof event.command === "object" &&
+      event.command.type === "rarity-roll" &&
+      typeof event.command.eventId === "string"
+    ) {
+      ids.add(event.command.eventId);
+    }
+  }
+  return ids;
+}
+
+function withoutGeneratedRarityRolls(
+  manifest: ProductManifest,
+  generatedEventIds: ReadonlySet<string>,
+): ProductManifest {
+  if (manifest.rarity === undefined || generatedEventIds.size === 0) return manifest;
+  const rarity = Object.freeze({
+    schemaVersion: RARITY_SCHEMA_VERSION,
+    kind: RARITY_NAMESPACE_KIND,
+    policy: manifest.rarity.policy,
+    rolls: Object.freeze(
+      manifest.rarity.rolls.filter((roll) => !generatedEventIds.has(roll.eventId)),
+    ),
+  });
+  return manifest.entities === undefined
+    ? Object.freeze({ productId: manifest.productId, seed: manifest.seed, rarity })
+    : Object.freeze({
+        productId: manifest.productId,
+        seed: manifest.seed,
+        entities: manifest.entities,
+        rarity,
+      });
+}
+
+function verifySavedRarityCommand(
+  command: KernelCommand,
+  expected: RarityNamespace | undefined,
+): void {
+  if (command.type !== "rarity-roll") return;
+  if (expected === undefined) {
+    throw rarityError(
+      RARITY_REFUSE_CODES.policyAbsent,
+      "productManifest.rarity",
+      "A saved rarity dispatch has no project-owned rarity namespace.",
+    );
+  }
+  const roll = expected.rolls.find((candidate) => candidate.eventId === command.eventId);
+  if (roll === undefined) {
+    throw rarityError(
+      RARITY_REFUSE_CODES.outcomeMismatch,
+      `rarity.rolls.${command.eventId}`,
+      "A saved rarity dispatch has no accepted project-owned outcome.",
+    );
+  }
+  const request = validateRarityRollRequest(command.request, expected.policy);
+  if (!request.ok) throw rarityError(request.code, request.path, request.message);
+  if (digestRarityRequest(request.value) !== roll.provenance.requestDigest) {
+    throw rarityError(
+      RARITY_REFUSE_CODES.eventInputConflict,
+      `rarity.rolls.${command.eventId}.request`,
+      "An existing rarity event id was replayed with changed request bytes.",
+    );
+  }
+}
+
+function sameRarityNamespace(
+  left: RarityNamespace | undefined,
+  right: RarityNamespace | undefined,
+): boolean {
+  if (left === undefined || right === undefined) return left === right;
+  return (
+    canonicalRarityJson(left as unknown as JsonValue) ===
+    canonicalRarityJson(right as unknown as JsonValue)
+  );
 }
 
 function isIntegerPair(value: unknown): value is readonly [number, number] {
@@ -205,37 +398,81 @@ function isIntegerPair(value: unknown): value is readonly [number, number] {
 }
 
 function validateCommand(command: KernelCommand): KernelCommand {
-  if (!command || typeof command !== "object" || typeof command.type !== "string") {
+  const record = snapshotPlainRecord(command);
+  if (record === undefined || typeof record["type"] !== "string") {
     throw new KernelSessionError("invalid command");
   }
-  if (command.type === "move") {
-    if (typeof command.actor !== "string" || !ID_RE.test(command.actor)) {
+  if (record["type"] === "move") {
+    const actor = record["actor"];
+    const axis = record["axis"];
+    if (typeof actor !== "string" || !ID_RE.test(actor)) {
       throw new KernelSessionError("move.actor must be a valid entity id");
     }
-    if (!isIntegerPair(command.axis)) {
+    if (!isIntegerPair(axis)) {
       throw new KernelSessionError("move.axis must be an integer pair");
     }
     return Object.freeze({
       type: "move",
-      actor: command.actor,
-      axis: Object.freeze([command.axis[0], command.axis[1]] as const),
+      actor,
+      axis: Object.freeze([axis[0], axis[1]] as const),
     });
   }
-  if (command.type === "spawn") {
-    if (typeof command.actor !== "string" || !ID_RE.test(command.actor)) {
+  if (record["type"] === "spawn") {
+    const actor = record["actor"];
+    const position = record["position"];
+    if (typeof actor !== "string" || !ID_RE.test(actor)) {
       throw new KernelSessionError("spawn.actor must be a valid entity id");
     }
-    if (!isIntegerPair(command.position)) {
+    if (!isIntegerPair(position)) {
       throw new KernelSessionError("spawn.position must be an integer pair");
     }
     return Object.freeze({
       type: "spawn",
-      actor: command.actor,
-      position: Object.freeze([command.position[0], command.position[1]] as const),
+      actor,
+      position: Object.freeze([position[0], position[1]] as const),
+    });
+  }
+  if (record["type"] === "rarity-roll") {
+    const unexpected = Object.keys(record).find(
+      (key) => key !== "type" && key !== "eventId" && key !== "request",
+    );
+    if (unexpected !== undefined) {
+      const entropyKeys = new Set([
+        "seed",
+        "projectSeed",
+        "draw",
+        "tierDraw",
+        "candidateDraw",
+        "outcome",
+        "provenance",
+        "providerResponse",
+      ]);
+      throw rarityError(
+        entropyKeys.has(unexpected)
+          ? RARITY_REFUSE_CODES.providerEntropyForbidden
+          : RARITY_REFUSE_CODES.unexpectedProperty,
+        `rarity.command.${unexpected}`,
+        `Rarity roll command cannot supply "${unexpected}".`,
+      );
+    }
+    const eventId = record["eventId"];
+    if (typeof eventId !== "string" || !RARITY_ID_RE.test(eventId)) {
+      throw rarityError(
+        RARITY_REFUSE_CODES.invalidIdentifier,
+        "rarity.command.eventId",
+        "Rarity roll eventId must be a stable lowercase identifier.",
+      );
+    }
+    const request = validateRarityRollRequest(record["request"]);
+    if (!request.ok) throw rarityError(request.code, request.path, request.message);
+    return Object.freeze({
+      type: "rarity-roll",
+      eventId,
+      request: request.value,
     });
   }
   throw new KernelSessionError(
-    `unknown or invalid command type "${String((command as { type?: string }).type)}"`,
+    `unknown or invalid command type "${String(record["type"])}"`,
   );
 }
 
@@ -277,13 +514,19 @@ function computeDigest(
   tick: number,
   seed: number,
   entities: ReadonlyArray<SnapshotEntity>,
+  rarity: RarityNamespace | undefined,
   digest: KernelDigest,
 ): string {
-  const payload = JSON.stringify({
-    tick,
-    seed,
-    entities: entities.map((e) => ({ id: e.id, x: e.x, y: e.y })),
-  });
+  const snapshotEntities = entities.map((e) => ({ id: e.id, x: e.x, y: e.y }));
+  const payload =
+    rarity === undefined
+      ? JSON.stringify({ tick, seed, entities: snapshotEntities })
+      : canonicalRarityJson({
+          tick,
+          seed,
+          entities: snapshotEntities,
+          rarity,
+        } as unknown as JsonValue);
   return prefixedDigest(payload, digest);
 }
 
@@ -292,6 +535,7 @@ class SessionImpl implements KernelSession {
   private readonly host: KernelHost;
   private readonly digest: KernelDigest;
   private entities: Map<string, MutableEntity>;
+  private readonly rarity: MutableRarityState | undefined;
   private readonly pending: PendingDispatch[] = [];
   private readonly events: KernelSessionEvent[] = [];
   private tick = 0;
@@ -306,6 +550,13 @@ class SessionImpl implements KernelSession {
     this.host = host;
     this.digest = digest;
     this.entities = seedEntities(manifest);
+    this.rarity =
+      manifest.rarity === undefined
+        ? undefined
+        : {
+            policy: manifest.rarity.policy,
+            rolls: [...manifest.rarity.rolls],
+          };
     this.events.push(...initialEvents);
   }
 
@@ -322,7 +573,7 @@ class SessionImpl implements KernelSession {
       throw new KernelSessionError("dispatch timestampMs must be an integer");
     }
     const validated = validateCommand(command);
-    this.validateCommandState(validated);
+    if (this.validateCommandState(validated)) return;
     this.pending.push({ command: validated, timestampMs });
     this.events.push(
       Object.freeze({
@@ -338,10 +589,14 @@ class SessionImpl implements KernelSession {
     const nextEntities = new Map(
       [...this.entities].map(([id, entity]) => [id, { ...entity }]),
     );
+    const nextRarityRolls = this.rarity?.rolls.slice();
     for (const item of this.pending) {
-      this.applyCommand(nextEntities, item.command);
+      this.applyCommand(nextEntities, nextRarityRolls, item.command);
     }
     this.entities = nextEntities;
+    if (this.rarity !== undefined && nextRarityRolls !== undefined) {
+      this.rarity.rolls = nextRarityRolls;
+    }
     this.pending.length = 0;
     this.tick = validatedClock.tick;
     this.events.push(
@@ -352,7 +607,32 @@ class SessionImpl implements KernelSession {
     );
   }
 
-  private validateCommandState(command: KernelCommand): void {
+  private validateCommandState(command: KernelCommand): boolean {
+    if (command.type === "rarity-roll") {
+      if (this.rarity === undefined) {
+        throw rarityError(
+          RARITY_REFUSE_CODES.policyAbsent,
+          "productManifest.rarity",
+          "A rarity roll requires a project-owned rarity policy.",
+        );
+      }
+      const request = validateRarityRollRequest(command.request, this.rarity.policy);
+      if (!request.ok) throw rarityError(request.code, request.path, request.message);
+      const prior =
+        this.rarity.rolls.find((roll) => roll.eventId === command.eventId)?.request ??
+        this.pending.find(
+          (item): item is PendingDispatch & { readonly command: RarityRollCommand } =>
+            item.command.type === "rarity-roll" &&
+            item.command.eventId === command.eventId,
+        )?.command.request;
+      if (prior === undefined) return false;
+      if (digestRarityRequest(prior) === digestRarityRequest(request.value)) return true;
+      throw rarityError(
+        RARITY_REFUSE_CODES.eventInputConflict,
+        `rarity.rolls.${command.eventId}.request`,
+        "An existing rarity event id cannot be reused with changed request bytes; reroll with a new event id.",
+      );
+    }
     const actorIds = new Set(this.entities.keys());
     for (const item of this.pending) {
       if (item.command.type === "spawn") actorIds.add(item.command.actor);
@@ -367,10 +647,12 @@ class SessionImpl implements KernelSession {
         `spawn actor "${command.actor}" already exists`,
       );
     }
+    return false;
   }
 
   private applyCommand(
     entities: Map<string, MutableEntity>,
+    rarityRolls: RarityRollRecord[] | undefined,
     command: KernelCommand,
   ): void {
     if (command.type === "move") {
@@ -397,22 +679,79 @@ class SessionImpl implements KernelSession {
       });
       return;
     }
+    if (command.type === "rarity-roll") {
+      if (this.rarity === undefined || rarityRolls === undefined) {
+        throw rarityError(
+          RARITY_REFUSE_CODES.policyAbsent,
+          "productManifest.rarity",
+          "A rarity roll requires a project-owned rarity policy.",
+        );
+      }
+      const resolved = resolveRarityRoll(
+        {
+          projectSeed: this.manifest.seed,
+          scope: this.manifest.productId,
+          eventId: command.eventId,
+        },
+        this.rarity.policy,
+        command.request,
+      );
+      if (!resolved.ok) {
+        throw rarityError(resolved.code, resolved.path, resolved.message);
+      }
+      rarityRolls.push(resolved.value.record);
+    }
+  }
+
+  private rarityNamespace(): RarityNamespace | undefined {
+    if (this.rarity === undefined) return undefined;
+    return Object.freeze({
+      schemaVersion: RARITY_SCHEMA_VERSION,
+      kind: RARITY_NAMESPACE_KIND,
+      policy: this.rarity.policy,
+      rolls: Object.freeze([...this.rarity.rolls]),
+    });
+  }
+
+  private currentManifest(rarity: RarityNamespace | undefined): ProductManifest {
+    const base = {
+      productId: this.manifest.productId,
+      seed: this.manifest.seed,
+    };
+    if (this.manifest.entities !== undefined && rarity !== undefined) {
+      return Object.freeze({ ...base, entities: this.manifest.entities, rarity });
+    }
+    if (this.manifest.entities !== undefined) {
+      return Object.freeze({ ...base, entities: this.manifest.entities });
+    }
+    if (rarity !== undefined) return Object.freeze({ ...base, rarity });
+    return Object.freeze(base);
   }
 
   observe(): KernelSnapshot {
     const entities = Object.freeze(sortedEntities(this.entities));
+    const rarity = this.rarityNamespace();
     const digest = computeDigest(
       this.tick,
       this.manifest.seed,
       entities,
+      rarity,
       this.digest,
     );
-    return Object.freeze({
-      tick: this.tick,
-      seed: this.manifest.seed,
-      entities,
-      digest,
-    });
+    return rarity === undefined
+      ? Object.freeze({
+          tick: this.tick,
+          seed: this.manifest.seed,
+          entities,
+          digest,
+        })
+      : Object.freeze({
+          tick: this.tick,
+          seed: this.manifest.seed,
+          entities,
+          rarity,
+          digest,
+        });
   }
 
   save(): KernelSessionSaveArtifact {
@@ -421,14 +760,14 @@ class SessionImpl implements KernelSession {
         "cannot save with pending un-advanced commands; call advance first",
       );
     }
-    const terminalDigest = this.observe().digest;
+    const snapshot = this.observe();
     return Object.freeze({
       schemaVersion: KERNEL_SESSION_SCHEMA_VERSION,
       kernelVersion: KERNEL_VERSION,
       bomVersion: BOM_VERSION,
-      productManifest: this.manifest,
+      productManifest: this.currentManifest(snapshot.rarity),
       events: Object.freeze([...this.events]),
-      terminalDigest,
+      terminalDigest: snapshot.digest,
     });
   }
 }

@@ -49,3 +49,15 @@ export {
   type OrchestratorRefusalReason,
   type OrchestratorResult,
 } from "./refusals.js";
+
+/** Rarity commands remain kernel-owned; the orchestrator carries their typed session unchanged. */
+export type {
+  RarityNamespace,
+  RarityOutcome,
+  RarityPolicy,
+  RarityProvenance,
+  RarityRollCommand,
+  RarityRollRecord,
+  RarityRollRequest,
+  RarityTierId,
+} from "@sceneaxi/engine-kernel";
