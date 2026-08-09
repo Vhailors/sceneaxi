@@ -4,7 +4,10 @@
   "private": true,
   "description": "SceneAxi authoring-core — text-canonical document model, propose/apply application service (E1), session orchestration, evidence hooks, Model Provider Port",
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts",
+    "./rarity-evidence": "./src/rarity-evidence.ts"
+  },
   "files": ["src"],
   "dependencies": {
     "@sceneaxi/schemas": "workspace:^",

@@ -28,7 +28,7 @@
  *   families are named in a stack that falls back to the system UI face.
  */
 
-import { formatSafeRarityEvidence } from "@sceneaxi/authoring-core";
+import { formatSafeRarityEvidence } from "@sceneaxi/authoring-core/rarity-evidence";
 import {
   DESKTOP_ASSISTANT_RUNTIME_EVENT,
   DESKTOP_DOCK_TAB_IDS,
@@ -2248,7 +2248,14 @@ if (shell) {
     }
     showModePanels('run');
     const lastDigest = exercise.tickDigests[ticks - 1];
-    const rarityText = syncRarityEvidence(exercise.rarity);
+    // Play reports the session it just ran. A staged rarity proposal has not
+    // changed project bytes yet, so that session carries no rarity — but the
+    // proposal's provenance is still on screen in Change Review and still waiting
+    // for Accept, and retiring the dock under it would deny evidence the surface
+    // is showing. Only a run with nothing staged may clear it.
+    const rarityText = exercise.rarity === undefined && rarityProposalStaged
+      ? null
+      : syncRarityEvidence(exercise.rarity);
     // The rarity namespace is verified in its own product session, which carries
     // no entities and therefore produced none of the digests above. Naming that
     // session keeps the report from reading as one advance.

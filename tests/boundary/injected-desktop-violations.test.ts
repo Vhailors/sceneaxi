@@ -195,12 +195,49 @@ describe("desktop tier — injected violations", () => {
     expect(res.stderr).toContain("nothing outside desktop/linux/src/electron/ may reach the privileged host");
   });
 
-  it("desktop check allows an unprivileged module to name the package root export", () => {
-    // The bound is the privileged subpath, not self-reference itself: the root
-    // export resolves to src/index.ts and must keep passing.
+  it("desktop check refuses a Node builtin the browser-bundled renderer imports directly", () => {
+    appendTo(fx, "desktop/linux/src/renderer/viewport.ts", '\nimport { readFileSync } from "node:fs";\n');
+    const res = runCheck(fx, "check-desktop.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("reaches 'node:fs'");
+    expect(res.stderr).toContain("bundled for the browser");
+  });
+
+  it("desktop check refuses a Node builtin the renderer reaches through a workspace entry point", () => {
+    // The break this catches did not name a builtin at all: it imported a package
+    // root barrel whose own graph is Node-bearing, which type-checks cleanly and
+    // only fails at the esbuild step the root gate never runs.
     appendTo(
       fx,
       "desktop/linux/src/renderer/viewport.ts",
+      '\nexport { proposeEdit } from "@sceneaxi/authoring-core";\n',
+    );
+    const res = runCheck(fx, "check-desktop.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("bundled for the browser");
+  });
+
+  it("desktop check allows the renderer's import-free shared evidence entry point", () => {
+    // The bound is a Node-bearing graph, not a workspace edge: the narrow subpath
+    // the renderer really uses carries no builtin and must keep passing.
+    appendTo(
+      fx,
+      "desktop/linux/src/renderer/viewport.ts",
+      '\nexport { formatSafeRarityEvidence as reExported } from "@sceneaxi/authoring-core/rarity-evidence";\n',
+    );
+    const res = runCheck(fx, "check-desktop.mjs");
+    expect(res.status, `stderr: ${res.stderr}`).toBe(0);
+  });
+
+  it("desktop check allows an unprivileged module to name the package root export", () => {
+    // The bound is the privileged subpath, not self-reference itself: the root
+    // export resolves to src/index.ts and must keep passing. The host is a
+    // `src/lib/` module rather than the renderer because the root barrel is
+    // Node-bearing, which the renderer's own browser-bundling rule refuses for a
+    // different and equally real reason — the case above proves that separately.
+    appendTo(
+      fx,
+      "desktop/linux/src/lib/project-seed.ts",
       '\nimport "@sceneaxi/desktop-linux";\n',
     );
     const res = runCheck(fx, "check-desktop.mjs");

@@ -15,6 +15,7 @@
   "packages/authoring-core/src/model-provider-port.ts",
   "packages/authoring-core/src/propose-apply.ts",
   "packages/authoring-core/src/rarity-authoring.ts",
+  "packages/authoring-core/src/rarity-evidence.ts",
   "packages/authoring-core/src/scene-composition.ts",
   "packages/authoring-core/src/sculpt-procedural-emit.ts",
   "packages/authoring-core/src/sculpt-reconstruction.ts",

@@ -22,10 +22,15 @@ import {
   createThreeSculptPresentationBackend,
   type SculptPresentationFrame,
 } from "@sceneaxi/engine-presentation";
-import { formatSafeRarityEvidence } from "@sceneaxi/authoring-core";
+import { formatSafeRarityEvidence } from "@sceneaxi/authoring-core/rarity-evidence";
 import { createDesktopAssistantViewportController } from "../lib/assistant-viewport.js";
 import type { DesktopAssistantProfile } from "../lib/bridge.js";
 import { decideAssistantStart } from "./assistant-start.js";
+import {
+  assistantInspectionText,
+  isRarityProposalResult,
+} from "./assistant-inspection.js";
+import { pollAssistantJob } from "./assistant-poll.js";
 import type {
   DesktopByoConfigurationRequest,
   DesktopByoConfigurationResponse,
@@ -37,10 +42,8 @@ import {
   DESKTOP_RARITY_PROPOSAL_EVENT,
   DESKTOP_VIEWPORT_PLAY_EVENT,
   PIXELS_META_NAME,
-  type DesktopAssistantJobSnapshot,
   type DesktopBridgeResponse,
   type DesktopRarityEvidence,
-  type DesktopRarityProposalResult,
 } from "../lib/bridge-contract.js";
 import {
   desktopMountablePayload,
@@ -190,42 +193,6 @@ function rarityReportSuffix(exercise: RarityReportable): string {
   return ` · rarity ${exercise.rarity.tier}/${exercise.rarity.candidateId} · provenance ${exercise.rarity.provenanceDigest} · verified in a separate product session${replayed}`;
 }
 
-function isRarityProposalResult(
-  result: NonNullable<DesktopAssistantJobSnapshot["result"]>,
-): result is DesktopRarityProposalResult {
-  return "kind" in result && result.kind === "rarity-proposal";
-}
-
-function inspectionText(job: DesktopAssistantJobSnapshot): string {
-  const result = job.result;
-  if (result === undefined || isRarityProposalResult(result)) return "";
-  const inspection = result.inspection;
-  if (inspection === undefined) return "";
-  const materials = inspection.materials.values
-    .map(
-      (material) =>
-        `${material.id}: ${material.baseColor}, metal ${material.metallic}, rough ${material.roughness}`,
-    )
-    .join("\n");
-  const physics = inspection.physics.supported
-    ? inspection.physics.colliders
-        .map((collider) => `${collider.id}: ${collider.shape} collider`)
-        .join("\n")
-    : `${inspection.physics.reason}: ${inspection.physics.message}`;
-  const settings = inspection.settings.proceduralModule;
-  return [
-    "MATERIALS (read-only)",
-    materials || "none",
-    "",
-    "PHYSICS (read-only)",
-    physics || "none",
-    "",
-    "SETTINGS (read-only)",
-    `${settings.moduleId} · ${settings.exportName}`,
-    inspection.settings.edit.refusal,
-  ].join("\n");
-}
-
 function installAssistantProductFlow(
   stage: Element,
   port: BridgeGlobal,
@@ -279,70 +246,49 @@ function installAssistantProductFlow(
   };
 
   const poll = async (): Promise<void> => {
-    for (let attempt = 0; attempt < 200; attempt += 1) {
-      const response = await port.request({ action: "assistant", payload: { op: "status" } });
-      if (!response.ok) {
-        refused(response.reason, response.message);
-        return;
-      }
-      const job = response.data as DesktopAssistantJobSnapshot | null;
-      if (job === null) {
-        refused(
-          DESKTOP_BRIDGE_REFUSALS.assistantJobMissing,
-          "The assistant job disappeared; retry the prompt.",
-        );
-        return;
-      }
-      const latest = job.latestProgress;
-      if (latest !== null) status.textContent = `${latest.percent}% · ${latest.message}`;
-      if (job.status === "refused") {
-        refused(
-          job.refusal?.reason ?? DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
-          job.refusal === undefined
-            ? "The assistant action refused."
-            : `${job.refusal.message}${job.refusal.detail === undefined ? "" : ` — ${job.refusal.detail}`}`,
-        );
-        return;
-      }
-      if (job.status === "ready" && job.result !== undefined) {
-        if (isRarityProposalResult(job.result)) {
-          const replayed = job.result.replayed;
-          resultView.textContent = formatSafeRarityEvidence(job.result.evidence) ?? "";
-          resultView.removeAttribute("hidden");
-          retry?.setAttribute("hidden", "");
-          document.dispatchEvent(
-            new CustomEvent(DESKTOP_RARITY_PROPOSAL_EVENT, {
-              detail: Object.freeze({
-                replayed,
-                snapshot: replayed ? null : job.result.authoring,
-                evidence: job.result.evidence,
-              }),
-            }),
-          );
-          status.textContent = replayed
-            ? "Identical rarity event replayed · project bytes unchanged, so nothing was staged for review."
-            : "Rarity proposal staged · review the canonical diff before Accept or Reject.";
-          running = false;
-          return;
-        }
-        assistantViewport.replace(job.result.mountable);
-        backend.frameMountedContent();
-        manipulatorBar?.removeAttribute("hidden");
-        resultView.textContent = inspectionText(job);
-        resultView.removeAttribute("hidden");
-        retry?.setAttribute("hidden", "");
-        status.textContent =
-          "Mounted in the live center viewport · translate/rotate/scale manipulators active · drag to orbit, wheel to zoom.";
-        running = false;
-        return;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 50));
+    const outcome = await pollAssistantJob({
+      request: (request) => port.request(request),
+      onSnapshot: (job) => {
+        const latest = job.latestProgress;
+        if (latest !== null) status.textContent = `${latest.percent}% · ${latest.message}`;
+      },
+    });
+    if (!outcome.ok) {
+      refused(outcome.reason, outcome.message);
+      return;
     }
-    await port.request({ action: "assistant", payload: { op: "abandon" } });
-    refused(
-      DESKTOP_BRIDGE_REFUSALS.assistantStatusTimeout,
-      "The assistant job did not finish in time; it was abandoned and Retry may start a fresh job.",
-    );
+    const job = outcome.job;
+    const result = job.result;
+    if (result === undefined) return;
+    if (isRarityProposalResult(result)) {
+      const replayed = result.replayed;
+      resultView.textContent = formatSafeRarityEvidence(result.evidence) ?? "";
+      resultView.removeAttribute("hidden");
+      retry?.setAttribute("hidden", "");
+      document.dispatchEvent(
+        new CustomEvent(DESKTOP_RARITY_PROPOSAL_EVENT, {
+          detail: Object.freeze({
+            replayed,
+            snapshot: replayed ? null : result.authoring,
+            evidence: result.evidence,
+          }),
+        }),
+      );
+      status.textContent = replayed
+        ? "Identical rarity event replayed · project bytes unchanged, so nothing was staged for review."
+        : "Rarity proposal staged · review the canonical diff before Accept or Reject.";
+      running = false;
+      return;
+    }
+    assistantViewport.replace(result.mountable);
+    backend.frameMountedContent();
+    manipulatorBar?.removeAttribute("hidden");
+    resultView.textContent = assistantInspectionText(job);
+    resultView.removeAttribute("hidden");
+    retry?.setAttribute("hidden", "");
+    status.textContent =
+      "Mounted in the live center viewport · translate/rotate/scale manipulators active · drag to orbit, wheel to zoom.";
+    running = false;
   };
 
   const start = async (): Promise<void> => {

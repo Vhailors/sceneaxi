@@ -100,7 +100,6 @@ export {
 export {
   RARITY_AUTHORING_REFUSALS,
   RARITY_PROVIDER_TOOL_NAME,
-  formatSafeRarityEvidence,
   requestRarityProviderContribution,
   safeRarityEvidenceFromNamespace,
   stageRarityProviderProposal,
@@ -113,6 +112,8 @@ export {
   type RarityProviderContributionResult,
   type SafeRarityEvidence,
 } from "./rarity-authoring.js";
+
+export { formatSafeRarityEvidence } from "./rarity-evidence.js";
 
 export {
   reconstructSculpt,

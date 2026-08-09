@@ -71,6 +71,8 @@ import {
   synchronizeViewportScene,
 } from "../../desktop/linux/src/renderer/viewport-playback.ts";
 import { decideAssistantStart } from "../../desktop/linux/src/renderer/assistant-start.ts";
+import { assistantInspectionText } from "../../desktop/linux/src/renderer/assistant-inspection.ts";
+import { pollAssistantJob } from "../../desktop/linux/src/renderer/assistant-poll.ts";
 import { createDesktopRarityFixtureProvider } from "../../desktop/linux/src/electron/provider-runtime.ts";
 
 const FIXED_NOW_MS = 1_753_920_000_000;
@@ -169,6 +171,9 @@ class FakeElement {
   }
 
   closest(selector: string): FakeElement | null {
+    if (selector === "[data-command]") {
+      return this.dataset.command === undefined ? null : this;
+    }
     return selector === "[data-action]" ? this : null;
   }
 
@@ -1165,6 +1170,10 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
 
   function mountRarityChrome(port?: unknown) {
     const reject = new FakeElement("change-reject", { action: "change-reject" });
+    const reload = new FakeElement("document-reload", { action: "document-reload" });
+    const play = new FakeElement("run-play", { command: "run-play" });
+    const runSession = new FakeElement("run-session");
+    const runLive = new FakeElement("run-live");
     const proposal = new FakeElement("proposal");
     proposal.hidden = true;
     const empty = new FakeElement("empty");
@@ -1200,6 +1209,9 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
         ["[data-project-status]", [status]],
         ["[data-project-file-state]", [fileStatus]],
         ["[data-change-badge]", [badge]],
+        ["[data-command]", [play]],
+        ["[data-run-session-report]", [runSession]],
+        ["[data-run-live-report]", [runLive]],
         [".dock-tab", [changesTab, evidenceTab]],
         ["[data-dock-panel]", [changesPanel, evidencePanel]],
       ]),
@@ -1214,7 +1226,22 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
           name: string,
           listener: (event: { readonly detail?: unknown }) => void,
         ) => documentListeners.set(name, listener),
+        // The chrome dispatches the viewport play event and the renderer answers
+        // it by marking the detail accepted. Routing it back through the same
+        // listener map lets a test stand in for that renderer.
+        dispatchEvent: (event: { readonly type: string; readonly detail?: unknown }) => {
+          documentListeners.get(event.type)?.(event);
+          return true;
+        },
         querySelector: (selector: string) => (selector === ".shell" ? shell : null),
+      },
+      CustomEvent: class {
+        readonly type: string;
+        readonly detail: unknown;
+        constructor(type: string, init?: { readonly detail?: unknown }) {
+          this.type = type;
+          this.detail = init?.detail;
+        }
       },
       Element: FakeElement,
       HTMLTextAreaElement: FakeTextAreaElement,
@@ -1224,9 +1251,10 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       ...(port === undefined ? {} : { sceneaxiDesktop: port }),
     });
     return {
-      shell, reject, proposal, empty, documentPath, contentHash, diff, reviewEvidence,
-      evidence, evidenceEmpty, projectState, status, fileStatus, badge, changesTab,
-      evidenceTab, changesPanel, evidencePanel, documentListeners,
+      shell, reject, reload, play, runSession, runLive, proposal, empty, documentPath,
+      contentHash, diff, reviewEvidence, evidence, evidenceEmpty, projectState, status,
+      fileStatus, badge, changesTab, evidenceTab, changesPanel, evidencePanel,
+      documentListeners,
     };
   }
 
@@ -1397,6 +1425,72 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     expect(evidenceEmpty.hidden).toBe(true);
   });
 
+  it("keeps a staged rarity proposal's evidence on screen through Play", async () => {
+    // Play reports the open path it just ran. Staging changed no project bytes, so
+    // that run carries no rarity — but the staged proposal is still pending Accept
+    // and its provenance is still rendered in Change Review.
+    const openPath = {
+      closed: true,
+      initialDigest: "sha256:initial",
+      tickDigests: ["sha256:tick"],
+      instanceCount: 1,
+      mountable: { sceneId: "desktop-scene" },
+    };
+    const port = {
+      request: (request: { readonly action?: string; readonly payload?: { readonly op?: string } }) =>
+        Promise.resolve(
+          request.action === "open-path"
+            ? { ok: true, action: "open-path", data: openPath }
+            : request.payload?.op === "status"
+              ? {
+                  ok: true,
+                  action: "authoring",
+                  data: {
+                    ok: true,
+                    documentId: "scene",
+                    contentHash: "sha256:base",
+                    data: {},
+                    undoAvailability: "unavailable",
+                  },
+                }
+              : { ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" },
+        ),
+    };
+    const { shell, play, reload, status, evidence, evidenceEmpty, runSession, documentListeners } =
+      mountRarityChrome(port);
+
+    documentListeners.set(DESKTOP_VIEWPORT_PLAY_EVENT, (event) => {
+      const detail = event.detail as { accepted: boolean; frame: number | null };
+      detail.accepted = true;
+      detail.frame = 1;
+    });
+    // Open the project first, so Play does not take the branch that discards a
+    // staged proposal on the operator's behalf — the sequence under test is
+    // Agent stages, then Play, on an already-open document.
+    shell.clickListener?.({ target: reload });
+    await vi.waitFor(() => {
+      expect(status.textContent).toContain("· open ·");
+    });
+    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+      detail: {
+        replayed: false,
+        evidence: RARITY_EVIDENCE_FIXTURE,
+        snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, rarityEvidence: RARITY_EVIDENCE_FIXTURE },
+      },
+    });
+    expect(evidence.hidden).toBe(false);
+
+    shell.clickListener?.({ target: play });
+    await vi.waitFor(() => {
+      expect(runSession.textContent).toContain("terminal digest sha256:tick");
+    });
+    expect(evidence.textContent).toContain("provenance sha256:provenance");
+    expect(evidence.hidden).toBe(false);
+    expect(evidenceEmpty.hidden).toBe(true);
+    // The run itself carried no rarity, so its own report must not claim one.
+    expect(runSession.textContent).not.toContain("rarity uncommon");
+  });
+
   it("retires rarity evidence when the rarity proposal itself is rejected", async () => {
     const { reject, shell, evidence, evidenceEmpty, status, documentListeners } =
       mountRarityChrome(rejectingPort());
@@ -1446,13 +1540,141 @@ describe("desktop renderer module accounting", () => {
     );
     expect(source).toContain('action: "assistant"');
     expect(source).toContain("createDesktopAssistantViewportController(mounts)");
-    expect(source).toContain("assistantViewport.replace(job.result.mountable)");
+    expect(source).toContain("assistantViewport.replace(result.mountable)");
     expect(source).toContain("assistantViewport.manipulate(control.dataset.value)");
     expect(source).toContain('data-assistant-manipulators');
-    expect(source).toContain('payload: { op: "abandon" }');
-    expect(source).toContain("MATERIALS (read-only)");
-    expect(source).toContain("PHYSICS (read-only)");
-    expect(source).toContain("SETTINGS (read-only)");
+  });
+
+  it("abandons a job that never settles and names the timeout", async () => {
+    const requests: unknown[] = [];
+    const outcome = await pollAssistantJob({
+      attempts: 3,
+      wait: () => Promise.resolve(),
+      request: (request) => {
+        requests.push(request);
+        return Promise.resolve({
+          ok: true as const,
+          action: "assistant" as const,
+          data: {
+            jobId: "desktop-assistant-1",
+            route: "local",
+            status: "running",
+            latestProgress: null,
+            progressCount: 0,
+          },
+        });
+      },
+    });
+    expect(outcome).toEqual({
+      ok: false,
+      reason: DESKTOP_BRIDGE_REFUSALS.assistantStatusTimeout,
+      message:
+        "The assistant job did not finish in time; it was abandoned and Retry may start a fresh job.",
+    });
+    // The abandon is the point: without it the job stays running and the next
+    // Retry is met with DESKTOP_ASSISTANT_BUSY.
+    expect(requests).toHaveLength(4);
+    expect(requests.at(-1)).toEqual({ action: "assistant", payload: { op: "abandon" } });
+    expect(requests.slice(0, 3)).toEqual(
+      Array.from({ length: 3 }, () => ({ action: "assistant", payload: { op: "status" } })),
+    );
+  });
+
+  it("carries a refused job's redacted reason and detail into one poll outcome", async () => {
+    const settled = async (job: unknown) =>
+      pollAssistantJob({
+        attempts: 2,
+        wait: () => Promise.resolve(),
+        request: () =>
+          Promise.resolve({ ok: true as const, action: "assistant" as const, data: job }),
+      });
+
+    expect(
+      await settled({
+        jobId: "j",
+        route: "local",
+        status: "refused",
+        latestProgress: null,
+        progressCount: 0,
+        refusal: { ok: false, reason: "SOME_REFUSAL", message: "it refused", recoverable: true },
+      }),
+    ).toEqual({ ok: false, reason: "SOME_REFUSAL", message: "it refused" });
+
+    expect(
+      await settled({
+        jobId: "j",
+        route: "local",
+        status: "refused",
+        latestProgress: null,
+        progressCount: 0,
+        refusal: {
+          ok: false,
+          reason: "SOME_REFUSAL",
+          message: "it refused",
+          recoverable: true,
+          detail: "local detail",
+        },
+      }),
+    ).toMatchObject({ ok: false, message: "it refused — local detail" });
+
+    expect(await settled(null)).toEqual({
+      ok: false,
+      reason: DESKTOP_BRIDGE_REFUSALS.assistantJobMissing,
+      message: "The assistant job disappeared; retry the prompt.",
+    });
+  });
+
+  it("projects a settled Build job into the read-only inspection view", () => {
+    const job = {
+      jobId: "j",
+      route: "local" as const,
+      status: "ready" as const,
+      latestProgress: null,
+      progressCount: 0,
+      result: {
+        ok: true as const,
+        route: "local" as const,
+        artifactBytes: 0,
+        artifactDigest: "sha256:artifact",
+        inspection: {
+          materials: {
+            values: [{ id: "crate-shell", baseColor: "#3366cc", metallic: 0.1, roughness: 0.7 }],
+          },
+          physics: {
+            supported: false,
+            reason: "PHYSICS_UNSUPPORTED",
+            message: "no collider authority on this surface",
+          },
+          settings: {
+            proceduralModule: { moduleId: "crate", exportName: "buildCrate" },
+            edit: { refusal: "SETTINGS_READ_ONLY" },
+          },
+        },
+        mountable: undefined,
+      },
+    } as unknown as DesktopAssistantJobSnapshot;
+
+    const text = assistantInspectionText(job);
+    expect(text.split("\n")).toEqual([
+      "MATERIALS (read-only)",
+      "crate-shell: #3366cc, metal 0.1, rough 0.7",
+      "",
+      "PHYSICS (read-only)",
+      "PHYSICS_UNSUPPORTED: no collider authority on this surface",
+      "",
+      "SETTINGS (read-only)",
+      "crate · buildCrate",
+      "SETTINGS_READ_ONLY",
+    ]);
+
+    // A rarity proposal carries no artifact to inspect, so this view stays empty
+    // and its provenance is rendered by the shared safe-evidence formatter.
+    expect(
+      assistantInspectionText({
+        ...job,
+        result: { ok: true, kind: "rarity-proposal", replayed: false, evidence: {} },
+      } as unknown as DesktopAssistantJobSnapshot),
+    ).toBe("");
   });
 
   it("starts Build and Agent through the bridge and refuses every other composer mode", async () => {

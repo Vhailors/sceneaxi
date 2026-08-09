@@ -233,7 +233,22 @@ head is larger and these two numbers are a historical reading rather than a clai
 about it. The Linux built-runtime smoke, also observed at that commit, drew
 through the real `webgl-canvas` surface under Xvfb/SwiftShader (`pixelsDrawn
 true`, 15 draw calls) and completed its existing authoring and orchestrated kernel
-checks; no review round has touched the presentation path, and none has re-run it.
+checks.
+
+That smoke has **not** been re-run since, and review rounds after it did change
+the tier's one renderer-owning module, `desktop/linux/src/renderer/viewport.ts`:
+the assistant-start decision moved to `renderer/assistant-start.ts`, the job poll
+to `renderer/assistant-poll.ts`, the result inspection to
+`renderer/assistant-inspection.ts`, the rarity result gained its replayed branch,
+and the open-path report gained `rarityReportSuffix`. One of those rounds also
+imported the shared evidence formatter from the Node-bearing root barrel, which
+made `renderer.js` unbundlable until it was moved to the import-free
+`@sceneaxi/authoring-core/rarity-evidence` entry — a break `pnpm gate` could not
+see, because the root `build` stage is `tsc --build` rather than the esbuild
+bundle. `pnpm check:desktop` now walks the renderer's module graph and refuses a
+Node builtin anywhere in it, so the gate catches that class; the pixel
+observation above, however, remains a reading of the earlier build and is not a
+claim about the renderer at this head.
 
 The pinned vector digests above, by contrast, are re-proved on every run:
 `tests/e2e/rarity-provider-desktop-golden.test.ts` compares runtime output to
