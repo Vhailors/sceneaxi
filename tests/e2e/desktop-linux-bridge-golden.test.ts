@@ -1978,15 +1978,27 @@ describe("desktop renderer behavior", () => {
       wait: () => Promise.resolve(),
       request: (request) => {
         requests.push(request);
+        const abandoning =
+          (request as { payload?: { op?: string } }).payload?.op === "abandon";
         return Promise.resolve({
           ok: true as const,
           action: "assistant" as const,
           data: {
             jobId: "desktop-assistant-1",
             route: "local",
-            status: "running",
+            status: abandoning ? "refused" : "running",
             latestProgress: null,
             progressCount: 0,
+            ...(abandoning
+              ? {
+                  refusal: {
+                    ok: false as const,
+                    reason: DESKTOP_BRIDGE_REFUSALS.assistantAbandoned,
+                    message: "The unresolved assistant job was abandoned.",
+                    recoverable: true,
+                  },
+                }
+              : {}),
           },
         });
       },
@@ -2004,6 +2016,40 @@ describe("desktop renderer behavior", () => {
     expect(requests.slice(0, 3)).toEqual(
       Array.from({ length: 3 }, () => ({ action: "assistant", payload: { op: "status" } })),
     );
+  });
+
+  it("returns a ready job that wins the abandonment race", async () => {
+    const result = {
+      ok: true as const,
+      kind: "rarity-proposal" as const,
+      replayed: false,
+      evidence: {},
+    };
+    const outcome = await pollAssistantJob({
+      attempts: 1,
+      wait: () => Promise.resolve(),
+      request: (request) => {
+        const abandoning =
+          (request as { payload?: { op?: string } }).payload?.op === "abandon";
+        return Promise.resolve({
+          ok: true as const,
+          action: "assistant" as const,
+          data: {
+            jobId: "desktop-assistant-1",
+            route: "local",
+            status: abandoning ? "ready" : "running",
+            latestProgress: null,
+            progressCount: 0,
+            ...(abandoning ? { result } : {}),
+          },
+        });
+      },
+    });
+    expect(outcome).toMatchObject({
+      ok: true,
+      job: { status: "ready", result },
+      result,
+    });
   });
 
   it("does not claim Retry is safe when abandonment refuses or cannot be confirmed", async () => {

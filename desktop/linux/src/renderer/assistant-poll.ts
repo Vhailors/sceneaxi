@@ -43,6 +43,31 @@ export type AssistantPollInput = Readonly<{
 const refuse = (reason: string, message: string): AssistantPollOutcome =>
   Object.freeze({ ok: false as const, reason, message });
 
+const settledJobOutcome = (
+  job: DesktopAssistantJobSnapshot | null,
+  onSnapshot?: (job: DesktopAssistantJobSnapshot) => void,
+): AssistantPollOutcome | null => {
+  if (job === null) {
+    return refuse(
+      DESKTOP_BRIDGE_REFUSALS.assistantJobMissing,
+      "The assistant job disappeared; retry the prompt.",
+    );
+  }
+  onSnapshot?.(job);
+  if (job.status === "refused") {
+    return refuse(
+      job.refusal?.reason ?? DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
+      job.refusal === undefined
+        ? "The assistant action refused."
+        : `${job.refusal.message}${job.refusal.detail === undefined ? "" : ` — ${job.refusal.detail}`}`,
+    );
+  }
+  if (job.status === "ready" && job.result !== undefined) {
+    return Object.freeze({ ok: true as const, job, result: job.result });
+  }
+  return null;
+};
+
 export async function pollAssistantJob(
   input: AssistantPollInput,
 ): Promise<AssistantPollOutcome> {
@@ -52,24 +77,8 @@ export async function pollAssistantJob(
     const response = await input.request({ action: "assistant", payload: { op: "status" } });
     if (!response.ok) return refuse(response.reason, response.message);
     const job = response.data as DesktopAssistantJobSnapshot | null;
-    if (job === null) {
-      return refuse(
-        DESKTOP_BRIDGE_REFUSALS.assistantJobMissing,
-        "The assistant job disappeared; retry the prompt.",
-      );
-    }
-    input.onSnapshot?.(job);
-    if (job.status === "refused") {
-      return refuse(
-        job.refusal?.reason ?? DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
-        job.refusal === undefined
-          ? "The assistant action refused."
-          : `${job.refusal.message}${job.refusal.detail === undefined ? "" : ` — ${job.refusal.detail}`}`,
-      );
-    }
-    if (job.status === "ready" && job.result !== undefined) {
-      return Object.freeze({ ok: true as const, job, result: job.result });
-    }
+    const outcome = settledJobOutcome(job, input.onSnapshot);
+    if (outcome !== null) return outcome;
     await wait(ASSISTANT_POLL_INTERVAL_MS);
   }
   let abandoned: DesktopBridgeResponse;
@@ -82,6 +91,25 @@ export async function pollAssistantJob(
     );
   }
   if (!abandoned.ok) return refuse(abandoned.reason, abandoned.message);
+  const abandonedJob = abandoned.data as DesktopAssistantJobSnapshot | null;
+  const abandonedOutcome = settledJobOutcome(abandonedJob, input.onSnapshot);
+  if (abandonedOutcome?.ok) return abandonedOutcome;
+  if (
+    abandonedOutcome !== null &&
+    abandonedOutcome.reason !== DESKTOP_BRIDGE_REFUSALS.assistantAbandoned
+  ) {
+    return abandonedOutcome;
+  }
+  if (
+    abandonedJob === null ||
+    abandonedJob.status !== "refused" ||
+    abandonedJob.refusal?.reason !== DESKTOP_BRIDGE_REFUSALS.assistantAbandoned
+  ) {
+    return refuse(
+      DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
+      "The assistant job did not finish in time, and its abandonment could not be confirmed; wait before retrying.",
+    );
+  }
   return refuse(
     DESKTOP_BRIDGE_REFUSALS.assistantStatusTimeout,
     "The assistant job did not finish in time; it was abandoned and Retry may start a fresh job.",
