@@ -699,6 +699,26 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         (snapshot.phase === "applied" || snapshot.phase === "rejected") &&
         !snapshot.journalRecoveryPending
       ) {
+        const result = assistantJob?.result;
+        if (
+          assistantJob !== null &&
+          rarityProposalEvidence !== null &&
+          result !== undefined &&
+          "kind" in result &&
+          result.kind === "rarity-proposal" &&
+          result.evidence.namespaceDigest === rarityProposalEvidence.namespaceDigest
+        ) {
+          assistantJob = {
+            ...assistantJob,
+            result: Object.freeze({
+              ...result,
+              authoring: Object.freeze({
+                ...snapshot,
+                rarityEvidence: rarityProposalEvidence,
+              }),
+            }),
+          };
+        }
         rarityProposalEvidence = null;
       }
       return decorated;
@@ -804,8 +824,9 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         settleRarityProposalEvidence(appliedWithProperties(live, live.refreshRecovery())),
       );
     }
-    rarityProposalEvidence = null;
-    return bridgeOk("authoring", live.undo());
+    const result = live.undo();
+    if (result.ok) rarityProposalEvidence = null;
+    return bridgeOk("authoring", result);
   };
 
   /**

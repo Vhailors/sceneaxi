@@ -1602,6 +1602,18 @@ if (shell) {
       rarityProposalStaged = false;
     }
     if (snapshot?.phase === 'applied') rarityProposalStaged = false;
+    const settledRarityText = snapshot &&
+      (snapshot.phase === 'applied' || snapshot.phase === 'rejected')
+      ? rarityEvidenceText(snapshot.rarityEvidence)
+      : null;
+    if (settledRarityText !== null) {
+      document.dispatchEvent(new CustomEvent(T.product.rarityProposalEvent, {
+        detail: {
+          settled: snapshot.phase,
+          evidence: snapshot.rarityEvidence,
+        },
+      }));
+    }
     // A validated snapshot that reports no diagnostic is the host saying the
     // conflict is over, which is the only thing that resolves it.
     if (snapshot !== null &&
@@ -2833,6 +2845,7 @@ if (shell) {
   document.addEventListener(T.product.rarityProposalEvent, (event) => {
     const detail = event && event.detail;
     if (!detail) return;
+    if (detail.settled === 'applied' || detail.settled === 'rejected') return;
     if (detail.replayed === true) {
       if (syncRarityEvidence(detail.evidence) === null) return;
       selectDockTab('evidence');

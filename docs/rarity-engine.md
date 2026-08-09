@@ -220,9 +220,11 @@ restart stopped clearing the dock on the action and now re-read the reopened
 document, clearing only when `data.rarity` is gone), `85b8f75` (the stored-namespace
 evidence invariant moved to one authoring boundary, so rolls with no descriptor
 refuse instead of adopting a later call's), and `fac19c4` (assistant poll timeout
-reporting now claims Retry is safe only after abandonment succeeds). Each added
-executable coverage. Neither `85b8f75` nor `fac19c4` is covered by the historical
-smoke observation below.
+reporting now claims Retry is safe only after abandonment succeeds), followed by
+`974b2af` (single-proposal atomicity, kernel replay and per-roll evidence checks,
+evidence reconciliation through recovery, shared formatter and mode ownership,
+and executable refusal coverage). None of `85b8f75`, `fac19c4`, or `974b2af` is
+covered by the historical smoke observation below.
 
 Its executable desktop vector is unchanged by all of them —
 `tests/e2e/fixtures/rarity-provider/wayfinder-desktop.json`:
@@ -285,8 +287,9 @@ bundle. `pnpm check:desktop` now walks the renderer's module graph and refuses a
 Node builtin anywhere in it, so the gate catches that class; the pixel
 observation above, however, remains a reading of the earlier build and is not a
 claim about the renderer at this head. `fac19c4` later changed
-`renderer/assistant-poll.ts`; it is likewise a post-smoke source correction, not a
-new smoke observation.
+`renderer/assistant-poll.ts`, and `974b2af` changed the kernel, bridge, formatter,
+renderer, and recovery paths. Both are post-smoke source corrections; the smoke
+was not rerun after either commit or this follow-up review.
 
 The pinned vector digests above, by contrast, are re-proved on every run:
 `tests/e2e/rarity-provider-desktop-golden.test.ts` compares runtime output to

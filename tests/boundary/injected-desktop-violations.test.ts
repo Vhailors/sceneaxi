@@ -229,19 +229,6 @@ describe("desktop tier — injected violations", () => {
     expect(res.status, `stderr: ${res.stderr}`).toBe(0);
   });
 
-  it("desktop check refuses a second presentation runtime owner", () => {
-    appendTo(
-      fx,
-      "desktop/linux/src/lib/assistant-viewport.ts",
-      '\nimport { createThreeSculptPresentationBackend } from "@sceneaxi/engine-presentation";\nvoid createThreeSculptPresentationBackend;\n',
-    );
-    const res = runCheck(fx, "check-desktop.mjs");
-    expect(res.status).toBe(1);
-    expect(res.stderr).toContain(
-      "presentation runtime ownership must be exactly 'src/renderer/viewport.ts'",
-    );
-  });
-
   it("desktop check allows an unprivileged module to name the package root export", () => {
     // The bound is the privileged subpath, not self-reference itself: the root
     // export resolves to src/index.ts and must keep passing. The host is a

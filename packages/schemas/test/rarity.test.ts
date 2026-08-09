@@ -567,6 +567,20 @@ describe("rarity domain contracts", () => {
         providerEvidence,
       }),
     ).toMatchObject({ ok: true, value: { providerEvidence } });
+    for (const invalidEvidence of [
+      { ...providerEvidence, operation: "complete" },
+      { ...providerEvidence, profile: "@sceneaxi/profile-kids" },
+    ]) {
+      expect(
+        validateRarityNamespace({
+          schemaVersion: RARITY_SCHEMA_VERSION,
+          kind: RARITY_NAMESPACE_KIND,
+          policy: fixture.policy,
+          rolls: [],
+          providerEvidence: invalidEvidence,
+        }),
+      ).toMatchObject({ ok: false, code: RARITY_REFUSE_CODES.provenanceMismatch });
+    }
     expect(
       validateRarityNamespace({
         schemaVersion: RARITY_SCHEMA_VERSION,

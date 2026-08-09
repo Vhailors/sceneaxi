@@ -385,6 +385,39 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
     });
   });
 
+  it("refuses stored rarity evidence outside Game or Web tool calls", () => {
+    const base = manifest();
+    const evidence: ModelProviderCallEvidence = {
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      kind: MODEL_PROVIDER_CALL_EVIDENCE_KIND,
+      operation: "tool-call",
+      profile: "@sceneaxi/profile-game",
+      model: {
+        model: "wayfinder-rarity-fixture",
+        provider: "sceneaxi-fixture",
+        quantization: "deterministic-json",
+        version: "2026-08-09",
+      },
+    };
+    for (const invalidEvidence of [
+      { ...evidence, operation: "complete" },
+      { ...evidence, profile: "@sceneaxi/profile-kids" },
+    ] as ModelProviderCallEvidence[]) {
+      expect(() =>
+        open(
+          {
+            ...base,
+            rarity: {
+              ...(base.rarity as RarityNamespace),
+              providerEvidence: invalidEvidence,
+            },
+          },
+          fixedHost(),
+        ),
+      ).toThrow(RARITY_REFUSE_CODES.provenanceMismatch);
+    }
+  });
+
   it("carries namespace provider evidence through save and replay of a generated roll", () => {
     const base = manifest();
     const evidence: ModelProviderCallEvidence = {

@@ -25,6 +25,7 @@ import {
   RARITY_AUTHORING_REFUSALS,
   resolveApplyTransaction,
   stageRarityProviderProposal,
+  undoLastApply,
   type RarityProviderContributionResult,
 } from "@sceneaxi/authoring-core";
 import { createDesktopSession, shellApply } from "@sceneaxi/desktop-shell";
@@ -151,6 +152,9 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
 
     const accepted = bridge.handle({ action: "authoring", payload: { op: "accept" } });
     expect(accepted).toMatchObject({ ok: true, data: { phase: "applied" } });
+    expect(await settledJob(bridge)).toMatchObject({
+      result: { kind: "rarity-proposal", authoring: { phase: "applied" } },
+    });
     const acceptedBytes = documentBytes(root);
     expect(acceptedBytes).not.toBe(before);
     expect(acceptedBytes).not.toContain("credential-sentinel-never-persisted");
@@ -258,6 +262,9 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     expect(bridge.handle({ action: "authoring", payload: { op: "reject" } })).toMatchObject({
       ok: true,
       data: { phase: "rejected" },
+    });
+    expect(await settledJob(bridge)).toMatchObject({
+      result: { kind: "rarity-proposal", authoring: { phase: "rejected" } },
     });
     expect(documentBytes(root)).toBe(before);
     const played = bridge.handle({
@@ -625,6 +632,34 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     });
     expect(ordinary).toMatchObject({ ok: true, data: { phase: "reviewing" } });
     expect(ordinary.ok && ordinary.data).not.toHaveProperty("rarityEvidence");
+  });
+
+  it("keeps staged rarity evidence when a direct undo refuses", async () => {
+    const root = projectRoot();
+    const refusingUndo: typeof undoLastApply = () => ({
+      ok: false,
+      diagnostics: [{ code: "journal-not-found", message: "No completed apply." }],
+    });
+    const bridge = createDesktopBridge({
+      cwd: root,
+      runRarityProvider: createDesktopRarityFixtureProvider(),
+      createAuthoringSession: () =>
+        createDesktopSession({ cwd: root, operations: { undoLastApply: refusingUndo } }),
+    });
+    startRarity(bridge);
+    const staged = await settledJob(bridge);
+    if (staged.result === undefined || !("kind" in staged.result)) {
+      throw new Error("missing rarity result");
+    }
+
+    expect(bridge.handle({ action: "authoring", payload: { op: "undo" } })).toMatchObject({
+      ok: true,
+      data: { ok: false, diagnostics: [{ code: "journal-not-found" }] },
+    });
+    expect(bridge.handle({ action: "authoring", payload: { op: "reject" } })).toMatchObject({
+      ok: true,
+      data: { phase: "rejected", rarityEvidence: staged.result.evidence },
+    });
   });
 
   it("replays an identical event and refuses changed request bytes under that event id", async () => {

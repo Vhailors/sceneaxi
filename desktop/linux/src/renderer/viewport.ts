@@ -21,6 +21,7 @@ import {
   createThreeRenderLoop,
   createThreeSculptPresentationBackend,
   type SculptPresentationFrame,
+  type ThreePresentationCoreOptions,
 } from "@sceneaxi/engine-presentation";
 import { formatSafeRarityEvidence } from "@sceneaxi/authoring-core/rarity-evidence";
 import { createDesktopAssistantViewportController } from "../lib/assistant-viewport.js";
@@ -28,6 +29,7 @@ import type { DesktopAssistantProfile } from "../lib/bridge.js";
 import { desktopAssistantRuntimeSignal } from "./assistant-runtime.js";
 import { decideAssistantStart } from "./assistant-start.js";
 import {
+  assistantRaritySettlement,
   assistantInspectionText,
   isRarityProposalResult,
 } from "./assistant-inspection.js";
@@ -217,6 +219,12 @@ function rarityEvidenceReport(exercise: RarityReportable): string | null {
   return formatSafeRarityEvidence(exercise.rarity, exercise.raritySession);
 }
 
+export function createDesktopPresentationBackend(
+  options: ThreePresentationCoreOptions = {},
+) {
+  return createThreeSculptPresentationBackend(options);
+}
+
 function installAssistantProductFlow(
   stage: Element,
   port: BridgeGlobal,
@@ -254,7 +262,23 @@ function installAssistantProductFlow(
     return false;
   }
   let running = false;
+  let activeRarityProposalDigest: string | null = null;
   const assistantViewport = createDesktopAssistantViewportController(mounts);
+
+  document.addEventListener(DESKTOP_RARITY_PROPOSAL_EVENT, (event: Event) => {
+    const settlement = assistantRaritySettlement(
+      activeRarityProposalDigest,
+      (event as CustomEvent).detail,
+    );
+    if (settlement === null) return;
+    activeRarityProposalDigest = settlement.activeNamespaceDigest;
+    resultView.textContent = settlement.evidenceText;
+    if (settlement.evidenceVisible) resultView.removeAttribute("hidden");
+    else resultView.setAttribute("hidden", "");
+    retry.removeAttribute("hidden");
+    status.textContent = settlement.status;
+    running = false;
+  });
 
   manipulatorControls.forEach((control) => {
     control.addEventListener("click", () => {
@@ -286,6 +310,7 @@ function installAssistantProductFlow(
     if (isRarityProposalResult(result)) {
       const replayed = result.replayed;
       resultView.textContent = formatSafeRarityEvidence(result.evidence) ?? "";
+      activeRarityProposalDigest = replayed ? null : result.evidence.namespaceDigest;
       resultView.removeAttribute("hidden");
       retry?.setAttribute("hidden", "");
       document.dispatchEvent(
@@ -404,7 +429,7 @@ async function mountLiveViewport(): Promise<void> {
 
   let backend: ReturnType<typeof createThreeSculptPresentationBackend>;
   try {
-    backend = createThreeSculptPresentationBackend({
+    backend = createDesktopPresentationBackend({
       canvas,
       // Transparent clear: the chrome's own viewport gradient stays visible
       // behind the mounted scene instead of a second background fighting it.
@@ -565,8 +590,10 @@ function startLiveViewport(): void {
   });
 }
 
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", startLiveViewport);
-} else {
-  startLiveViewport();
+if (typeof document !== "undefined") {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", startLiveViewport);
+  } else {
+    startLiveViewport();
+  }
 }

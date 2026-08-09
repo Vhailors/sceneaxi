@@ -207,11 +207,10 @@ not a parallel control or palette.
 desktop tier adds one: `desktop/linux/src/renderer/viewport.ts`, which constructs
 the ADR 0002 presentation backend over its own window canvas — exactly the calls
 the umbrella's `sculpt-viewport.tsx` makes, naming no Three type. The golden test
-asserts the tier has exactly one module constructing a backend, mirroring the
-sites-tier owner-list assertion; the umbrella's own list is unchanged. Its
-playback synchronizer is separately executable on the headless surface: the
-golden replaces the mounted composition and proves a refused replacement rolls
-back to the prior mount set.
+calls that module's exported construction seam and runs the resulting Three
+backend on the headless surface. Its playback synchronizer is exercised there as
+well: the golden replaces the mounted composition and proves a refused replacement
+rolls back to the prior mount set. The umbrella's owner list is unchanged.
 
 ## Build, verify, run
 

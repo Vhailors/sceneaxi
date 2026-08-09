@@ -9,7 +9,6 @@
 import type { JsonValue } from "./document.js";
 import {
   MODEL_PROVIDER_CALL_EVIDENCE_KIND,
-  MODEL_PROVIDER_OPERATIONS,
   MODEL_PROVIDER_PORT_SCHEMA_VERSION,
   type ModelProviderCallEvidence,
 } from "./model-provider.js";
@@ -180,9 +179,9 @@ export function validateRarityProviderEvidence(
     evidenceFields !== null ||
     evidence["schemaVersion"] !== MODEL_PROVIDER_PORT_SCHEMA_VERSION ||
     evidence["kind"] !== MODEL_PROVIDER_CALL_EVIDENCE_KIND ||
-    !MODEL_PROVIDER_OPERATIONS.some((operation) => operation === evidence["operation"]) ||
-    typeof evidence["profile"] !== "string" ||
-    !/^@sceneaxi\/profile-[a-z][a-z0-9-]*$/.test(evidence["profile"]) ||
+    evidence["operation"] !== "tool-call" ||
+    (evidence["profile"] !== "@sceneaxi/profile-game" &&
+      evidence["profile"] !== "@sceneaxi/profile-web") ||
     model === undefined ||
     modelFields !== null ||
     !["model", "provider", "quantization", "version"].every(
@@ -192,7 +191,7 @@ export function validateRarityProviderEvidence(
     return refuseRarity(
       RARITY_REFUSE_CODES.provenanceMismatch,
       path,
-      "Rarity provider evidence must be the exact Model Provider Port evidence shape.",
+      "Rarity provider evidence must be an exact Game or Web tool-call descriptor.",
     );
   }
   return ok(snapshotSculptJson(evidence) as unknown as ModelProviderCallEvidence);

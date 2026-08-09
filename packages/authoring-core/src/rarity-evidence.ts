@@ -25,11 +25,17 @@ export function formatSafeRarityEvidence(
   const model = provider === null || provider === undefined
     ? undefined
     : (provider["model"] as Record<string, unknown> | undefined);
-  const strings = [
+  const evidenceFields = [
     "eventId", "tier", "candidateId", "scope", "algorithmId", "policyDigest",
     "requestDigest", "outcomeDigest", "provenanceDigest", "namespaceDigest",
     "tierRollDigest", "candidateRollDigest",
+    "projectSeed", "tierDraw", "tierTotalWeight", "candidateDraw",
+    "candidateTotalWeight", "providerEvidence",
   ];
+  const providerFields = ["schemaVersion", "kind", "operation", "profile", "model"];
+  const modelFields = ["provider", "model", "quantization", "version"];
+  const identifier = /^[a-z0-9][a-z0-9._:-]{0,127}$/;
+  const digest = /^sha256:[0-9a-f]{64}$/;
   const numericFields = [
     "projectSeed",
     "tierDraw",
@@ -39,7 +45,17 @@ export function formatSafeRarityEvidence(
   ];
   if (
     record === null || record === undefined || typeof record !== "object" || Array.isArray(record) ||
-    !strings.every((field) => typeof record[field] === "string" && record[field].length > 0) ||
+    Object.keys(record).length !== evidenceFields.length ||
+    !evidenceFields.every((field) => Object.prototype.hasOwnProperty.call(record, field)) ||
+    !["eventId", "candidateId", "scope"].every(
+      (field) => typeof record[field] === "string" && identifier.test(String(record[field])),
+    ) ||
+    !["common", "uncommon", "rare", "epic", "legendary"].includes(String(record["tier"])) ||
+    record["algorithmId"] !== "sceneaxi.rarity.weighted-sha256-v1" ||
+    ![
+      "policyDigest", "requestDigest", "outcomeDigest", "provenanceDigest",
+      "namespaceDigest", "tierRollDigest", "candidateRollDigest",
+    ].every((field) => typeof record[field] === "string" && digest.test(String(record[field]))) ||
     !numericFields.every(
       (field) => typeof record[field] === "number" && Number.isSafeInteger(record[field]),
     ) ||
@@ -51,13 +67,17 @@ export function formatSafeRarityEvidence(
     Number(record["candidateDraw"]) >= Number(record["candidateTotalWeight"]) ||
     provider === null || provider === undefined || typeof provider !== "object" ||
     Array.isArray(provider) ||
+    Object.keys(provider).length !== providerFields.length ||
+    !providerFields.every((field) => Object.prototype.hasOwnProperty.call(provider, field)) ||
     provider["schemaVersion"] !== 1 ||
     provider["kind"] !== "sceneaxi.model-provider-call-evidence" ||
     provider["operation"] !== "tool-call" ||
-    typeof provider["profile"] !== "string" ||
-    !/^@sceneaxi\/profile-[a-z][a-z0-9-]*$/.test(provider["profile"]) ||
+    (provider["profile"] !== "@sceneaxi/profile-game" &&
+      provider["profile"] !== "@sceneaxi/profile-web") ||
     model === null || model === undefined || typeof model !== "object" || Array.isArray(model) ||
-    !["provider", "model", "quantization", "version"].every(
+    Object.keys(model).length !== modelFields.length ||
+    !modelFields.every((field) => Object.prototype.hasOwnProperty.call(model, field)) ||
+    !modelFields.every(
       (field) => typeof model[field] === "string" && model[field].length > 0,
     )
   ) {
@@ -86,14 +106,46 @@ export function formatSafeRarityEvidence(
   ];
   if (productSession !== undefined) {
     const session = productSession as Record<string, unknown> | null;
-    const replayDigest = session !== null && typeof session === "object" && !Array.isArray(session)
-      ? session["replayDigest"]
+    const bootstrap = session !== null && typeof session === "object" && !Array.isArray(session)
+      ? session["bootstrap"] as Record<string, unknown> | null | undefined
       : undefined;
+    const ticks = session !== null && typeof session === "object" && !Array.isArray(session)
+      ? session["tickDigests"]
+      : undefined;
+    const sessionFields = ["bootstrap", "initialDigest", "tickDigests", "replayDigest"];
+    const bootstrapFields = [
+      "kind", "subjectId", "sessionId", "openedAtMs", "resumed", "kernelVersion", "bomVersion",
+    ];
+    if (
+      session === null || typeof session !== "object" || Array.isArray(session) ||
+      Object.keys(session).length !== sessionFields.length ||
+      !sessionFields.every((field) => Object.prototype.hasOwnProperty.call(session, field)) ||
+      bootstrap === null || bootstrap === undefined || typeof bootstrap !== "object" ||
+      Array.isArray(bootstrap) ||
+      Object.keys(bootstrap).length !== bootstrapFields.length ||
+      !bootstrapFields.every((field) => Object.prototype.hasOwnProperty.call(bootstrap, field)) ||
+      bootstrap["kind"] !== "product" ||
+      typeof bootstrap["subjectId"] !== "string" ||
+      !identifier.test(bootstrap["subjectId"]) ||
+      typeof bootstrap["sessionId"] !== "string" || !digest.test(bootstrap["sessionId"]) ||
+      typeof bootstrap["openedAtMs"] !== "number" || !Number.isSafeInteger(bootstrap["openedAtMs"]) ||
+      bootstrap["resumed"] !== false ||
+      typeof bootstrap["kernelVersion"] !== "string" || bootstrap["kernelVersion"].length === 0 ||
+      typeof bootstrap["bomVersion"] !== "string" || bootstrap["bomVersion"].length === 0 ||
+      typeof session["initialDigest"] !== "string" || !digest.test(session["initialDigest"]) ||
+      !Array.isArray(ticks) || ticks.length === 0 ||
+      !ticks.every((value) => typeof value === "string" && digest.test(value)) ||
+      typeof session["replayDigest"] !== "string" || !digest.test(session["replayDigest"]) ||
+      ticks[ticks.length - 1] !== session["replayDigest"]
+    ) {
+      return null;
+    }
     lines.push(
-      "verified in a separate product session" +
-        (typeof replayDigest === "string" && /^sha256:[0-9a-f]{64}$/.test(replayDigest)
-          ? " replayed to " + replayDigest
-          : ""),
+      "verified in a separate product session " + String(bootstrap["subjectId"]) +
+        " · session " + String(bootstrap["sessionId"]) +
+        " · initial " + String(session["initialDigest"]) +
+        " · ticks " + String(ticks.length) +
+        " · replayed to " + String(session["replayDigest"]),
     );
   }
   return lines.join("\n");

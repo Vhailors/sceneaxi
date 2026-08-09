@@ -9,6 +9,44 @@
  */
 import type { DesktopAssistantJobSnapshot } from "../lib/bridge-contract.js";
 import type { DesktopRarityProposalResult } from "../lib/bridge-contract.js";
+import { formatSafeRarityEvidence } from "@sceneaxi/authoring-core/rarity-evidence";
+
+export type AssistantRaritySettlement = Readonly<{
+  activeNamespaceDigest: null;
+  evidenceText: string;
+  evidenceVisible: boolean;
+  status: string;
+}>;
+
+export function assistantRaritySettlement(
+  activeNamespaceDigest: string | null,
+  detail: unknown,
+): AssistantRaritySettlement | null {
+  if (activeNamespaceDigest === null || typeof detail !== "object" || detail === null) {
+    return null;
+  }
+  const record = detail as Record<string, unknown>;
+  if (record["settled"] !== "applied" && record["settled"] !== "rejected") return null;
+  const evidence = record["evidence"];
+  if (typeof evidence !== "object" || evidence === null) return null;
+  const namespaceDigest = (evidence as Record<string, unknown>)["namespaceDigest"];
+  const evidenceText = formatSafeRarityEvidence(evidence);
+  if (namespaceDigest !== activeNamespaceDigest || evidenceText === null) return null;
+  if (record["settled"] === "rejected") {
+    return Object.freeze({
+      activeNamespaceDigest: null,
+      evidenceText: "",
+      evidenceVisible: false,
+      status: "Rarity proposal rejected · project bytes and kernel state unchanged.",
+    });
+  }
+  return Object.freeze({
+    activeNamespaceDigest: null,
+    evidenceText,
+    evidenceVisible: true,
+    status: "Rarity proposal accepted · canonical project bytes saved.",
+  });
+}
 
 export function isRarityProposalResult(
   result: NonNullable<DesktopAssistantJobSnapshot["result"]>,

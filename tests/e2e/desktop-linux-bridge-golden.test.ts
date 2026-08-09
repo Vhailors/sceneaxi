@@ -71,12 +71,16 @@ import {
   mountDesktopScene,
   synchronizeViewportScene,
 } from "../../desktop/linux/src/renderer/viewport-playback.ts";
+import { createDesktopPresentationBackend } from "../../desktop/linux/src/renderer/viewport.ts";
 import {
   DESKTOP_ASSISTANT_START_MODES,
   decideAssistantStart,
 } from "../../desktop/linux/src/renderer/assistant-start.ts";
 import { desktopAssistantRuntimeSignal } from "../../desktop/linux/src/renderer/assistant-runtime.ts";
-import { assistantInspectionText } from "../../desktop/linux/src/renderer/assistant-inspection.ts";
+import {
+  assistantInspectionText,
+  assistantRaritySettlement,
+} from "../../desktop/linux/src/renderer/assistant-inspection.ts";
 import { formatSafeRarityEvidence } from "@sceneaxi/authoring-core/rarity-evidence";
 import { pollAssistantJob } from "../../desktop/linux/src/renderer/assistant-poll.ts";
 import {
@@ -413,7 +417,7 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
       settings: { supported: true },
     });
 
-    const backend = createThreeSculptPresentationBackend();
+    const backend = createDesktopPresentationBackend();
     const mounts = createSculptMountApi(backend);
     const viewport = createDesktopAssistantViewportController(mounts);
     expect(first.mountable.instances).toHaveLength(1);
@@ -1296,13 +1300,13 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     scope: "desktop-linux-rarity",
     algorithmId: "sceneaxi.rarity.weighted-sha256-v1",
     projectSeed: 20260809,
-    policyDigest: "sha256:policy",
-    requestDigest: "sha256:request",
-    outcomeDigest: "sha256:outcome",
-    provenanceDigest: "sha256:provenance",
-    namespaceDigest: "sha256:namespace",
-    tierRollDigest: "sha256:tier-roll",
-    candidateRollDigest: "sha256:candidate-roll",
+    policyDigest: `sha256:${"1".repeat(64)}`,
+    requestDigest: `sha256:${"2".repeat(64)}`,
+    outcomeDigest: `sha256:${"3".repeat(64)}`,
+    provenanceDigest: `sha256:${"4".repeat(64)}`,
+    namespaceDigest: `sha256:${"5".repeat(64)}`,
+    tierRollDigest: `sha256:${"6".repeat(64)}`,
+    candidateRollDigest: `sha256:${"7".repeat(64)}`,
     tierDraw: 69,
     tierTotalWeight: 100,
     candidateDraw: 2,
@@ -1322,6 +1326,20 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
   });
 
   const RARITY_REPLAY_DIGEST = `sha256:${"a".repeat(64)}`;
+  const RARITY_PRODUCT_SESSION = Object.freeze({
+    bootstrap: Object.freeze({
+      kind: "product",
+      subjectId: "desktop-linux-rarity",
+      sessionId: `sha256:${"b".repeat(64)}`,
+      openedAtMs: FIXED_NOW_MS,
+      resumed: false,
+      kernelVersion: "0.0.0",
+      bomVersion: "0.0.0",
+    }),
+    initialDigest: `sha256:${"c".repeat(64)}`,
+    tickDigests: Object.freeze([`sha256:${"d".repeat(64)}`, RARITY_REPLAY_DIGEST]),
+    replayDigest: RARITY_REPLAY_DIGEST,
+  });
 
   const RARITY_PROPOSAL_SNAPSHOT = Object.freeze({
     phase: "reviewing",
@@ -1356,7 +1374,9 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     expect(empty.hidden).toBe(true);
     expect(documentPath.textContent).toBe("scene.json");
     expect(diff.textContent).toContain("wayfinder-copper");
-    expect(reviewEvidence.textContent).toContain("provenance sha256:provenance");
+    expect(reviewEvidence.textContent).toContain(
+      `provenance ${RARITY_EVIDENCE_FIXTURE.provenanceDigest}`,
+    );
     expect(evidence.textContent).toContain(
       "provider sceneaxi-fixture · model wayfinder-rarity-fixture",
     );
@@ -1383,7 +1403,9 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
     });
 
-    expect(evidence.textContent).toContain("provenance sha256:provenance");
+    expect(evidence.textContent).toContain(
+      `provenance ${RARITY_EVIDENCE_FIXTURE.provenanceDigest}`,
+    );
     expect(evidence.hidden).toBe(false);
     expect(evidenceEmpty.hidden).toBe(true);
     expect(evidenceTab.getAttribute("aria-selected")).toBe("true");
@@ -1457,7 +1479,9 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
 
     shell.clickListener?.({ target: reject });
     await rejectSettled(status);
-    expect(evidence.textContent).toContain("provenance sha256:provenance");
+    expect(evidence.textContent).toContain(
+      `provenance ${RARITY_EVIDENCE_FIXTURE.provenanceDigest}`,
+    );
     expect(evidence.hidden).toBe(false);
     expect(evidenceEmpty.hidden).toBe(true);
   });
@@ -1521,7 +1545,9 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     await vi.waitFor(() => {
       expect(runSession.textContent).toContain("terminal digest sha256:tick");
     });
-    expect(evidence.textContent).toContain("provenance sha256:provenance");
+    expect(evidence.textContent).toContain(
+      `provenance ${RARITY_EVIDENCE_FIXTURE.provenanceDigest}`,
+    );
     expect(evidence.hidden).toBe(false);
     expect(evidenceEmpty.hidden).toBe(true);
     // The run itself carried no rarity, so its own report must not claim one.
@@ -1536,7 +1562,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       instanceCount: 1,
       mountable: { sceneId: "desktop-scene" },
       rarity: RARITY_EVIDENCE_FIXTURE,
-      raritySession: { replayDigest: RARITY_REPLAY_DIGEST },
+      raritySession: RARITY_PRODUCT_SESSION,
     };
     const port = {
       request: (request: { readonly action?: string; readonly payload?: { readonly op?: string } }) =>
@@ -1579,15 +1605,18 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     expect(runEvidence.textContent).toContain("scope desktop-linux-rarity");
     expect(runEvidence.textContent).toContain("seed 20260809");
     expect(runEvidence.textContent).toContain("tier draw 69 / 100");
-    expect(runEvidence.textContent).toContain("namespace sha256:namespace");
+    expect(runEvidence.textContent).toContain(
+      `namespace ${RARITY_EVIDENCE_FIXTURE.namespaceDigest}`,
+    );
     expect(runEvidence.textContent).toContain(
       "provider sceneaxi-fixture · model wayfinder-rarity-fixture",
     );
     // The rarity product session is named, and the run report line claims none of
     // the rarity facts as its own.
     expect(runEvidence.textContent).toContain(
-      `verified in a separate product session replayed to ${RARITY_REPLAY_DIGEST}`,
+      `verified in a separate product session ${RARITY_PRODUCT_SESSION.bootstrap.subjectId}`,
     );
+    expect(runEvidence.textContent).toContain(`replayed to ${RARITY_REPLAY_DIGEST}`);
     expect(runSession.textContent).toContain("terminal digest sha256:tick");
     expect(runSession.textContent).not.toContain("rarity");
   });
@@ -1595,11 +1624,12 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
   it("refuses malformed numeric evidence and owns product-session attribution", () => {
     const withSession = formatSafeRarityEvidence(
       RARITY_EVIDENCE_FIXTURE,
-      { replayDigest: RARITY_REPLAY_DIGEST },
+      RARITY_PRODUCT_SESSION,
     );
     expect(withSession).toContain(
-      `verified in a separate product session replayed to ${RARITY_REPLAY_DIGEST}`,
+      `verified in a separate product session ${RARITY_PRODUCT_SESSION.bootstrap.subjectId}`,
     );
+    expect(withSession).toContain(`replayed to ${RARITY_REPLAY_DIGEST}`);
     for (const [field, value] of [
       ["projectSeed", undefined],
       ["tierDraw", -1],
@@ -1613,6 +1643,65 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
         field,
       ).toBeNull();
     }
+    for (const malformed of [
+      { ...RARITY_EVIDENCE_FIXTURE, eventId: "Invalid event" },
+      { ...RARITY_EVIDENCE_FIXTURE, tier: "mythic" },
+      { ...RARITY_EVIDENCE_FIXTURE, algorithmId: "other-algorithm" },
+      { ...RARITY_EVIDENCE_FIXTURE, namespaceDigest: "sha256:short" },
+      {
+        ...RARITY_EVIDENCE_FIXTURE,
+        providerEvidence: {
+          ...RARITY_EVIDENCE_FIXTURE.providerEvidence,
+          profile: "@sceneaxi/profile-kids",
+        },
+      },
+    ]) {
+      expect(formatSafeRarityEvidence(malformed)).toBeNull();
+    }
+    expect(
+      formatSafeRarityEvidence(RARITY_EVIDENCE_FIXTURE, {
+        replayDigest: RARITY_REPLAY_DIGEST,
+      }),
+    ).toBeNull();
+    expect(
+      formatSafeRarityEvidence(RARITY_EVIDENCE_FIXTURE, {
+        ...RARITY_PRODUCT_SESSION,
+        replayDigest: `sha256:${"e".repeat(64)}`,
+      }),
+    ).toBeNull();
+  });
+
+  it("updates Assistant output when its rarity proposal settles", () => {
+    expect(
+      assistantRaritySettlement(RARITY_EVIDENCE_FIXTURE.namespaceDigest, {
+        settled: "applied",
+        evidence: RARITY_EVIDENCE_FIXTURE,
+      }),
+    ).toMatchObject({
+      activeNamespaceDigest: null,
+      evidenceVisible: true,
+      evidenceText: expect.stringContaining(
+        `namespace ${RARITY_EVIDENCE_FIXTURE.namespaceDigest}`,
+      ),
+      status: expect.stringContaining("accepted"),
+    });
+    expect(
+      assistantRaritySettlement(RARITY_EVIDENCE_FIXTURE.namespaceDigest, {
+        settled: "rejected",
+        evidence: RARITY_EVIDENCE_FIXTURE,
+      }),
+    ).toEqual({
+      activeNamespaceDigest: null,
+      evidenceText: "",
+      evidenceVisible: false,
+      status: "Rarity proposal rejected · project bytes and kernel state unchanged.",
+    });
+    expect(
+      assistantRaritySettlement(`sha256:${"f".repeat(64)}`, {
+        settled: "rejected",
+        evidence: RARITY_EVIDENCE_FIXTURE,
+      }),
+    ).toBeNull();
   });
 
   it("clears rarity evidence when the bound project root changes", async () => {
@@ -1634,7 +1723,9 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
     });
     expect(evidence.hidden).toBe(false);
-    expect(evidence.textContent).toContain("provenance sha256:provenance");
+    expect(evidence.textContent).toContain(
+      `provenance ${RARITY_EVIDENCE_FIXTURE.provenanceDigest}`,
+    );
 
     recentSelect.value = "/tmp/project-b";
     shell.clickListener?.({ target: openRecent });
@@ -1677,7 +1768,9 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     // Forgetting a recent entry binds nothing, so the bound project's own
     // provenance is still exactly as real as it was.
     expect(evidence.hidden).toBe(false);
-    expect(evidence.textContent).toContain("provenance sha256:provenance");
+    expect(evidence.textContent).toContain(
+      `provenance ${RARITY_EVIDENCE_FIXTURE.provenanceDigest}`,
+    );
     expect(evidenceEmpty.hidden).toBe(true);
   });
 
@@ -1723,7 +1816,9 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       expect(status.textContent).toContain("Undid last Save");
     });
     expect(evidence.hidden).toBe(false);
-    expect(evidence.textContent).toContain("provenance sha256:provenance");
+    expect(evidence.textContent).toContain(
+      `provenance ${RARITY_EVIDENCE_FIXTURE.provenanceDigest}`,
+    );
     expect(evidenceEmpty.hidden).toBe(true);
   });
 
@@ -1731,8 +1826,8 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     const replacement = Object.freeze({
       ...RARITY_EVIDENCE_FIXTURE,
       candidateId: "wayfinder-silver",
-      namespaceDigest: "sha256:replacement-namespace",
-      provenanceDigest: "sha256:replacement-provenance",
+      namespaceDigest: `sha256:${"8".repeat(64)}`,
+      provenanceDigest: `sha256:${"9".repeat(64)}`,
     });
     const port = {
       request: () =>
@@ -1761,7 +1856,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       expect(status.textContent).toContain("· open ·");
       expect(evidence.textContent).toContain("wayfinder-silver");
     });
-    expect(evidence.textContent).toContain("namespace sha256:replacement-namespace");
+    expect(evidence.textContent).toContain(`namespace ${replacement.namespaceDigest}`);
     expect(evidence.textContent).not.toContain("wayfinder-copper");
   });
 
