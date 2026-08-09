@@ -248,7 +248,8 @@ export type CreateDesktopRarityFixtureProviderOptions = Readonly<{
   /** Test-only replacement used for malformed/entropy refusal vectors. */
   arguments?: JsonObject;
   executedModel?: ModelDescriptor;
-  onDispatch?: () => void;
+  /** Observes the exact envelope the port dispatched, for no-network vectors. */
+  onDispatch?: (request: unknown) => void;
 }>;
 
 /**
@@ -270,8 +271,8 @@ export function createDesktopRarityFixtureProvider(
         schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
         operations: Object.freeze(["tool-call" as const]),
       }),
-      toolCall: () => {
-        options.onDispatch?.();
+      toolCall: (dispatched) => {
+        options.onDispatch?.(dispatched);
         return Object.freeze({
           response: Object.freeze({
             schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
@@ -298,5 +299,6 @@ export function createDesktopRarityFixtureProvider(
       port,
       profile: request.profile,
       model: DESKTOP_RARITY_FIXTURE_MODEL,
+      prompt: request.prompt,
     });
 }

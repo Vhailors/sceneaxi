@@ -154,11 +154,17 @@ reporting provenance it cannot support. Between them, the descriptor
 the call that produced that roll's input.
 
 All four required surfaces render that evidence through one function,
-`formatSafeRarityEvidence()` in `@sceneaxi/authoring-core`. It closes over no
-module binding, so the Engine Desktop chrome embeds the exact function in its
-emitted script the way the web staging decision already does, and the packaged
-renderer imports the same one — matching provenance is then an identity rather
-than two texts kept in step by review.
+`formatSafeRarityEvidence()` on the import-free
+`@sceneaxi/authoring-core/rarity-evidence` entry. It closes over no module
+binding, so the Engine Desktop chrome embeds the exact function in its emitted
+script the way the web staging decision already does, and the packaged renderer
+imports the same one — matching provenance is then an identity rather than two
+texts kept in step by review. Run/viewport is included: the Run panel's
+`[data-run-rarity-evidence]` region and the viewport's own evidence overlay both
+print that function's output, not a tier/candidate summary of it. The one thing
+either adds is the session attribution, because the digests on the report line
+beside them belong to the composed scene session while the namespace is verified
+in its own product session.
 
 ## Evidence and exclusions
 

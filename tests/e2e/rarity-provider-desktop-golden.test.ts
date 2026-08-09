@@ -360,6 +360,59 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     expect(documentBytes(root)).toBe(before);
   });
 
+  it("carries the operator's request to the provider without letting it steer the result", async () => {
+    const root = projectRoot();
+    const dispatched: unknown[] = [];
+    const operatorRequest = `give me a legendary drop operator-request-sentinel ${"x".repeat(5_000)}`;
+    const bridge = createDesktopBridge({
+      cwd: root,
+      runRarityProvider: createDesktopRarityFixtureProvider({
+        onDispatch: (request) => dispatched.push(request),
+      }),
+    });
+    expect(
+      bridge.handle({
+        action: "assistant",
+        payload: {
+          op: "start",
+          mode: "agent",
+          route: "local",
+          profile: "@sceneaxi/profile-game",
+          prompt: operatorRequest,
+          documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+        },
+      }),
+    ).toMatchObject({ ok: true });
+    const job = await settledJob(bridge);
+    expect(job.status).toBe("ready");
+    if (job.result === undefined || !("kind" in job.result)) throw new Error("missing rarity result");
+
+    // The request reaches the port beside the bounded instruction, truncated so an
+    // operator cannot put an unbounded transcript in the envelope.
+    expect(dispatched).toHaveLength(1);
+    const envelope = dispatched[0] as { prompt: string };
+    expect(envelope.prompt).toContain("Do not return a seed, draw, outcome");
+    expect(envelope.prompt).toContain("Operator request (advisory only): give me a legendary drop");
+    expect(envelope.prompt.length).toBeLessThan(operatorRequest.length);
+
+    // And it steers nothing: the checked-in fixture answers the same bounded input,
+    // so the accepted outcome is byte-identical to a run with any other prompt.
+    expect(job.result.evidence).toMatchObject({
+      tier: acceptanceVector.expected.tier,
+      candidateId: acceptanceVector.expected.candidateId,
+      outcomeDigest: acceptanceVector.expected.outcomeDigest,
+      namespaceDigest: acceptanceVector.expected.namespaceDigest,
+    });
+
+    // The request text is provider-bound only: no transcript reaches project bytes.
+    expect(bridge.handle({ action: "authoring", payload: { op: "accept" } })).toMatchObject({
+      ok: true,
+      data: { phase: "applied" },
+    });
+    expect(documentBytes(root)).not.toContain("operator-request-sentinel");
+    expect(documentBytes(root)).not.toContain("Operator request");
+  });
+
   it("refuses Kids and Hosted before the fixture provider dispatches", async () => {
     const root = projectRoot();
     let dispatches = 0;
@@ -383,7 +436,10 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
   it("turns an in-flight document change into an actionable stale-content refusal", async () => {
     const root = projectRoot();
     const fixture = createDesktopRarityFixtureProvider();
-    const contribution = await fixture({ profile: "@sceneaxi/profile-game" });
+    const contribution = await fixture({
+      profile: "@sceneaxi/profile-game",
+      prompt: "stage a drop",
+    });
     expect(contribution.ok).toBe(true);
     let release: ((value: RarityProviderContributionResult) => void) | undefined;
     const deferred = new Promise<RarityProviderContributionResult>((resolve) => { release = resolve; });

@@ -72,6 +72,7 @@ import {
 } from "../../desktop/linux/src/renderer/viewport-playback.ts";
 import { decideAssistantStart } from "../../desktop/linux/src/renderer/assistant-start.ts";
 import { assistantInspectionText } from "../../desktop/linux/src/renderer/assistant-inspection.ts";
+import { formatSafeRarityEvidence } from "@sceneaxi/authoring-core/rarity-evidence";
 import { pollAssistantJob } from "../../desktop/linux/src/renderer/assistant-poll.ts";
 import { createDesktopRarityFixtureProvider } from "../../desktop/linux/src/electron/provider-runtime.ts";
 
@@ -190,6 +191,14 @@ class FakeElement {
   contains(element: FakeElement | null): boolean {
     return element !== null;
   }
+
+  replaceChildren(): void {}
+
+  append(): void {}
+}
+
+class FakeSelectElement extends FakeElement {
+  value = "";
 }
 
 class FakeTextAreaElement extends FakeElement {
@@ -1171,9 +1180,13 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
   function mountRarityChrome(port?: unknown) {
     const reject = new FakeElement("change-reject", { action: "change-reject" });
     const reload = new FakeElement("document-reload", { action: "document-reload" });
+    const openRecent = new FakeElement("project-open-recent", { action: "project-open-recent" });
+    const recentSelect = new FakeSelectElement("project-recent-select");
     const play = new FakeElement("run-play", { command: "run-play" });
     const runSession = new FakeElement("run-session");
     const runLive = new FakeElement("run-live");
+    const runEvidence = new FakeElement("run-evidence");
+    runEvidence.hidden = true;
     const proposal = new FakeElement("proposal");
     proposal.hidden = true;
     const empty = new FakeElement("empty");
@@ -1210,8 +1223,10 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
         ["[data-project-file-state]", [fileStatus]],
         ["[data-change-badge]", [badge]],
         ["[data-command]", [play]],
+        ["#project-recent-select", [recentSelect]],
         ["[data-run-session-report]", [runSession]],
         ["[data-run-live-report]", [runLive]],
+        ["[data-run-rarity-evidence]", [runEvidence]],
         [".dock-tab", [changesTab, evidenceTab]],
         ["[data-dock-panel]", [changesPanel, evidencePanel]],
       ]),
@@ -1233,6 +1248,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
           documentListeners.get(event.type)?.(event);
           return true;
         },
+        createElement: () => new FakeElement("created"),
         querySelector: (selector: string) => (selector === ".shell" ? shell : null),
       },
       CustomEvent: class {
@@ -1251,7 +1267,8 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       ...(port === undefined ? {} : { sceneaxiDesktop: port }),
     });
     return {
-      shell, reject, reload, play, runSession, runLive, proposal, empty, documentPath,
+      shell, reject, reload, openRecent, recentSelect, play, runSession, runLive,
+      runEvidence, proposal, empty, documentPath,
       contentHash, diff, reviewEvidence, evidence, evidenceEmpty, projectState, status,
       fileStatus, badge, changesTab, evidenceTab, changesPanel, evidencePanel,
       documentListeners,
@@ -1491,6 +1508,100 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     expect(runSession.textContent).not.toContain("rarity uncommon");
   });
 
+  it("renders the run's full safe provenance through the shared formatter", async () => {
+    const openPath = {
+      closed: true,
+      initialDigest: "sha256:initial",
+      tickDigests: ["sha256:tick"],
+      instanceCount: 1,
+      mountable: { sceneId: "desktop-scene" },
+      rarity: RARITY_EVIDENCE_FIXTURE,
+      raritySession: { replayDigest: "sha256:rarity-replay" },
+    };
+    const port = {
+      request: (request: { readonly action?: string; readonly payload?: { readonly op?: string } }) =>
+        Promise.resolve(
+          request.action === "open-path"
+            ? { ok: true, action: "open-path", data: openPath }
+            : request.payload?.op === "status"
+              ? {
+                  ok: true,
+                  action: "authoring",
+                  data: {
+                    ok: true,
+                    documentId: "scene",
+                    contentHash: "sha256:base",
+                    data: {},
+                    undoAvailability: "unavailable",
+                  },
+                }
+              : { ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" },
+        ),
+    };
+    const { shell, play, runSession, runEvidence, documentListeners } =
+      mountRarityChrome(port);
+    documentListeners.set(DESKTOP_VIEWPORT_PLAY_EVENT, (event) => {
+      const detail = event.detail as { accepted: boolean; frame: number | null };
+      detail.accepted = true;
+      detail.frame = 1;
+    });
+
+    shell.clickListener?.({ target: play });
+    await vi.waitFor(() => {
+      expect(runEvidence.hidden).toBe(false);
+    });
+
+    // Every field the shared formatter prints, on the Run surface — not the
+    // tier/candidate/provenance summary it used to paraphrase.
+    const shared = formatSafeRarityEvidence(RARITY_EVIDENCE_FIXTURE);
+    expect(shared).not.toBeNull();
+    expect(runEvidence.textContent).toContain(shared ?? "");
+    expect(runEvidence.textContent).toContain("scope desktop-linux-rarity");
+    expect(runEvidence.textContent).toContain("seed 20260809");
+    expect(runEvidence.textContent).toContain("tier draw 69 / 100");
+    expect(runEvidence.textContent).toContain("namespace sha256:namespace");
+    expect(runEvidence.textContent).toContain(
+      "provider sceneaxi-fixture · model wayfinder-rarity-fixture",
+    );
+    // The rarity product session is named, and the run report line claims none of
+    // the rarity facts as its own.
+    expect(runEvidence.textContent).toContain(
+      "verified in a separate product session replayed to sha256:rarity-replay",
+    );
+    expect(runSession.textContent).toContain("terminal digest sha256:tick");
+    expect(runSession.textContent).not.toContain("rarity");
+  });
+
+  it("clears rarity evidence when the bound project root changes", async () => {
+    const lifecycleStatus = {
+      recents: [{ root: "/tmp/project-b", name: "project-b" }],
+      active: { name: "project-b", root: "/tmp/project-b", documentPath: "scene.json" },
+    };
+    const port = {
+      request: () =>
+        Promise.resolve({ ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" }),
+      project: () =>
+        Promise.resolve({ ok: true, data: { status: lifecycleStatus, outcome: "opened" } }),
+    };
+    const { shell, openRecent, recentSelect, evidence, evidenceEmpty, documentListeners } =
+      mountRarityChrome(port);
+
+    // Project A's accepted provenance is on screen.
+    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+      detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
+    });
+    expect(evidence.hidden).toBe(false);
+    expect(evidence.textContent).toContain("provenance sha256:provenance");
+
+    recentSelect.value = "/tmp/project-b";
+    shell.clickListener?.({ target: openRecent });
+    await vi.waitFor(() => {
+      expect(evidence.hidden).toBe(true);
+    });
+    expect(evidence.textContent).toBe("");
+    expect(evidenceEmpty.hidden).toBe(false);
+  });
+
   it("retires rarity evidence when the rarity proposal itself is rejected", async () => {
     const { reject, shell, evidence, evidenceEmpty, status, documentListeners } =
       mountRarityChrome(rejectingPort());
@@ -1540,7 +1651,6 @@ describe("desktop renderer module accounting", () => {
     );
     expect(source).toContain('action: "assistant"');
     expect(source).toContain("createDesktopAssistantViewportController(mounts)");
-    expect(source).toContain("assistantViewport.replace(result.mountable)");
     expect(source).toContain("assistantViewport.manipulate(control.dataset.value)");
     expect(source).toContain('data-assistant-manipulators');
   });

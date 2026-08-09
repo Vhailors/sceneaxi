@@ -430,6 +430,7 @@ describe("desktop product loop", () => {
 
     const statuses: string[] = [];
     let panelClears = 0;
+    let rarityClears = 0;
     const createRestart = new Function(
       "productStatus",
       "T",
@@ -439,7 +440,8 @@ describe("desktop product loop", () => {
       "withSceneRefusal",
       "syncReview",
       "clearConflictOutcome",
-      `let projectData = {}; let projectDirty = true; let projectRecovering = true; return ${source ?? "null"};`,
+      "clearRarityEvidence",
+      `let projectData = {}; let projectDirty = true; let projectRecovering = true; let rarityProposalStaged = true; return ${source ?? "null"};`,
     ) as (
       productStatus: (state: string, text: string) => void,
       tables: unknown,
@@ -449,6 +451,7 @@ describe("desktop product loop", () => {
       withSceneRefusal: (text: string) => string,
       syncReview: (snapshot: unknown) => void,
       clearConflictOutcome: () => void,
+      clearRarityEvidence: () => void,
     ) => (diagnostic: string) => Promise<boolean>;
     const restart = createRestart(
       (_state, text) => statuses.push(text),
@@ -470,6 +473,7 @@ describe("desktop product loop", () => {
       (text: string) => text,
       () => undefined,
       () => undefined,
+      () => { rarityClears += 1; },
     );
 
     await expect(restart("recovery-pending")).resolves.toBe(false);
@@ -478,6 +482,9 @@ describe("desktop product loop", () => {
     );
     // The refused re-read leaves no document, so the property panel goes too.
     expect(panelClears).toBe(1);
+    // The discarded session is where the dock's provenance came from, so it goes
+    // with it rather than describing a session that no longer exists.
+    expect(rarityClears).toBe(1);
   });
 
   it("explains every refusal name the surface can print", () => {

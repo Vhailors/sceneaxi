@@ -99,6 +99,7 @@ export {
 
 export {
   RARITY_AUTHORING_REFUSALS,
+  RARITY_PROVIDER_REQUEST_MAX_CHARS,
   RARITY_PROVIDER_TOOL_NAME,
   requestRarityProviderContribution,
   safeRarityEvidenceFromNamespace,

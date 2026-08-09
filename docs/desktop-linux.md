@@ -149,11 +149,21 @@ only after the bridge, initial Mount API scene, and every assistant handler bind
 Assistant **Agent** has one bounded implementation: the checked-in rarity fixture.
 It crosses the privileged host and existing Model Provider Port, then stages a
 canonical Scene Document proposal through the same Change Review used by property
-edits. Assistant, Change Review, the Evidence dock, Run, and the viewport show the
-same safe result and provenance digest. The provider supplies neither entropy nor
-an outcome; the project seed and event id are held by the desktop project and the
-kernel resolves only during its dispatch/advance path. This fixture takes no key,
-makes no network call, and is not evidence of live provider readiness.
+edits. Assistant, Change Review, the Evidence dock, Run, and the viewport render
+the same safe provenance through one shared formatter. The provider supplies
+neither entropy nor an outcome; the project seed and event id are held by the
+desktop project and the kernel resolves only during its dispatch/advance path.
+This fixture takes no key, makes no network call, and is not evidence of live
+provider readiness.
+
+The composer's prompt is carried to the Model Provider Port beside the bounded
+rarity instruction, truncated to `RARITY_PROVIDER_REQUEST_MAX_CHARS` and marked
+advisory, so an operator's request is not silently dropped at the bridge. It
+cannot steer a result: every returned byte is validated, seed/draw/outcome and
+raw-response keys are refused on the return path whatever was asked, and the
+**checked-in fixture answers the same bounded input whatever the prompt says** —
+which is what the Agent progress line tells the operator rather than leaving the
+field looking load-bearing.
 
 ### Configure a BYOK key
 

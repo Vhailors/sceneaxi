@@ -18,8 +18,18 @@ import {
 export const ASSISTANT_POLL_MAX_ATTEMPTS = 200;
 export const ASSISTANT_POLL_INTERVAL_MS = 50;
 
+/**
+ * A settled job carries its result on the outcome rather than leaving the caller
+ * to re-narrow an optional member. `ok: true` is only ever produced for a job
+ * that has one, so a consumer with a branch for its absence would be writing a
+ * branch that cannot run — and, being unreachable, could not be kept correct.
+ */
 export type AssistantPollOutcome =
-  | Readonly<{ ok: true; job: DesktopAssistantJobSnapshot }>
+  | Readonly<{
+      ok: true;
+      job: DesktopAssistantJobSnapshot;
+      result: NonNullable<DesktopAssistantJobSnapshot["result"]>;
+    }>
   | Readonly<{ ok: false; reason: string; message: string }>;
 
 export type AssistantPollInput = Readonly<{
@@ -58,7 +68,7 @@ export async function pollAssistantJob(
       );
     }
     if (job.status === "ready" && job.result !== undefined) {
-      return Object.freeze({ ok: true as const, job });
+      return Object.freeze({ ok: true as const, job, result: job.result });
     }
     await wait(ASSISTANT_POLL_INTERVAL_MS);
   }

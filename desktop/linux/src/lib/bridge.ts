@@ -108,6 +108,14 @@ export type DesktopAssistantRunRequest = Readonly<{
 
 export type DesktopRarityProviderRunRequest = Readonly<{
   profile: DesktopAssistantProfile;
+  /**
+   * The operator's own request text, carried to the Model Provider Port beside
+   * the bounded rarity instruction rather than dropped at this boundary. It
+   * reaches the provider only: nothing on this path lets prompt text choose a
+   * tier, a candidate, a weight, or an outcome, and the checked-in fixture
+   * answers the same bytes whatever it says.
+   */
+  prompt: string;
 }>;
 
 export type DesktopBridge = {
@@ -894,7 +902,8 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       onProgress(Object.freeze({
         phase: "waiting-provider",
         percent: 20,
-        message: "Requesting bounded rarity policy and candidate input from the fixture provider.",
+        message:
+          "Requesting bounded rarity policy and candidate input from the fixture provider. Your request is carried to the provider, but the checked-in fixture answers the same bounded input whatever it says.",
       }));
       const stageRarity = (contribution: RarityProviderContributionResult): void => {
         if (assistantJob !== activeJob || activeJob.status !== "running") return;
@@ -977,7 +986,9 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         });
       };
       try {
-        void options.runRarityProvider({ profile }).then(stageRarity).catch(settleRuntimeFailure);
+        void options.runRarityProvider({ profile, prompt: request.prompt })
+          .then(stageRarity)
+          .catch(settleRuntimeFailure);
       } catch (error) {
         settleRuntimeFailure(error);
       }

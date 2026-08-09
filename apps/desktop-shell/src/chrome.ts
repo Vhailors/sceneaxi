@@ -430,6 +430,7 @@ function leftDock(view: DesktopVisualView): string {
     return `<section class="dock-panel" data-mode-panel="${escapeHtml(mode)}" aria-label="${escapeHtml(panel.leftTitle)}"${mode === active ? "" : " hidden"}>
   <h2 class="panel-head"><span>${escapeHtml(panel.leftTitle)}</span></h2>
   <p class="panel-empty"${mode === "run" ? " data-run-session-report" : ""}>${escapeHtml(panel.leftEmpty)}</p>
+  ${mode === "run" ? `<pre class="change-diff" data-run-rarity-evidence hidden tabindex="0" role="region" aria-label="Safe rarity provenance for this run"></pre>` : ""}
   ${note(panel.note, panel.noteTone)}
 </section>`;
   }).join("");
@@ -1784,6 +1785,12 @@ if (shell) {
     projectRecovering = false;
     clearSceneProperty();
     undoAvailability = 'unavailable';
+    // The dock's provenance belongs to the project it was read from. A new root
+    // is bound below, so keeping it would render one project's tier, seed, and
+    // digests over another's — the same over-reach as clearing evidence that is
+    // still real, in the other direction.
+    rarityProposalStaged = false;
+    clearRarityEvidence();
     syncReview(null);
     if (response.data.outcome === 'removed') {
       productStatus(activeProject === null ? 'closed' : 'open', 'Recent project removed · active project unchanged');
@@ -1842,6 +1849,8 @@ if (shell) {
     projectDirty = false;
     projectRecovering = false;
     undoAvailability = 'unavailable';
+    rarityProposalStaged = false;
+    clearRarityEvidence();
     syncReview(null);
     if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' || status.data === null || typeof status.contentHash !== 'string') {
       clearSceneProperty();
@@ -2256,20 +2265,24 @@ if (shell) {
     const rarityText = exercise.rarity === undefined && rarityProposalStaged
       ? null
       : syncRarityEvidence(exercise.rarity);
-    // The rarity namespace is verified in its own product session, which carries
-    // no entities and therefore produced none of the digests above. Naming that
-    // session keeps the report from reading as one advance.
-    const raritySummary = rarityText === null
-      ? ''
-      : ' · rarity ' + exercise.rarity.tier + '/' + exercise.rarity.candidateId +
-        ' · provenance ' + exercise.rarity.provenanceDigest +
-        ' · verified in a separate product session' +
+    // Run is one of the four surfaces required to show matching provenance, so it
+    // renders the shared formatter's own output rather than a second summary of
+    // it. Only the session attribution is added here: the namespace is verified in
+    // its own product session, which carries no entities and produced none of the
+    // digests on the report line beside it.
+    const runRarity = rarityText === null
+      ? null
+      : rarityText + '\\n' + 'verified in a separate product session' +
         (exercise.raritySession && typeof exercise.raritySession.replayDigest === 'string'
           ? ' replayed to ' + exercise.raritySession.replayDigest
           : '');
-    const played = 'Played composed scene · ' + ticks + ' ticks · viewport frame ' + playback.frame + ' · session closed' + raritySummary;
+    q('[data-run-rarity-evidence]').forEach((el) => {
+      el.textContent = runRarity || '';
+      el.hidden = runRarity === null;
+    });
+    const played = 'Played composed scene · ' + ticks + ' ticks · viewport frame ' + playback.frame + ' · session closed';
     q('[data-run-session-report]').forEach((el) => {
-      el.textContent = 'Completed closed session · ' + ticks + ' ticks · terminal digest ' + String(lastDigest) + raritySummary;
+      el.textContent = 'Completed closed session · ' + ticks + ' ticks · terminal digest ' + String(lastDigest);
     });
     q('[data-run-live-report]').forEach((el) => {
       el.textContent = 'Viewport frame ' + playback.frame + ' acknowledged for ' + exercise.mountable.sceneId + '.';

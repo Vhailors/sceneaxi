@@ -163,23 +163,41 @@ export function safeRarityEvidenceFromNamespace(
   });
 }
 
+/** Longest operator request carried into one provider envelope. */
+export const RARITY_PROVIDER_REQUEST_MAX_CHARS = 2_000;
+
+const RARITY_PROVIDER_INSTRUCTION =
+  "Return one bounded SceneAxi rarity policy and candidate request. Do not return a seed, draw, outcome, provenance, credential, or transcript.";
+
 /**
- * Ask one injected Model Provider Port for the bounded tool-call payload. Raw
- * prompts and adapter responses stop here; callers receive validated policy,
- * request, and the port's exact evidence record only.
+ * Ask one injected Model Provider Port for the bounded tool-call payload.
+ *
+ * A caller's own request text may ride along, truncated to
+ * `RARITY_PROVIDER_REQUEST_MAX_CHARS` so an operator cannot put an unbounded
+ * transcript in the envelope, and marked advisory: the outbound instruction is
+ * the only thing that decides what shape comes back, and every returned byte is
+ * still validated here. Nothing it says can supply a seed, draw, or outcome —
+ * those are refused on the return path whatever was asked. Adapter responses
+ * stop here; callers receive validated policy, request, and the port's exact
+ * evidence record only.
  */
 export async function requestRarityProviderContribution(input: Readonly<{
   port: ModelProviderPort;
   profile: ModelProviderProfile;
   model: ModelDescriptor;
+  prompt?: string;
 }>): Promise<RarityProviderContributionResult> {
+  const operatorRequest = (input.prompt ?? "")
+    .trim()
+    .slice(0, RARITY_PROVIDER_REQUEST_MAX_CHARS);
   const result = await input.port.toolCall({
     schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
     operation: "tool-call",
     profile: input.profile,
     model: input.model,
-    prompt:
-      "Return one bounded SceneAxi rarity policy and candidate request. Do not return a seed, draw, outcome, provenance, credential, or transcript.",
+    prompt: operatorRequest.length === 0
+      ? RARITY_PROVIDER_INSTRUCTION
+      : `${RARITY_PROVIDER_INSTRUCTION}\n\nOperator request (advisory only): ${operatorRequest}`,
     tools: Object.freeze([
       Object.freeze({
         name: RARITY_PROVIDER_TOOL_NAME,

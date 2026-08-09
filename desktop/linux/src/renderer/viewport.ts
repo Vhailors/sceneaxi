@@ -68,6 +68,7 @@ const FRAME_REPORT_MAX_ATTEMPTS = 3;
 const REPORT_ID = "desktop-live-viewport-report";
 const OPEN_PATH_ID = "desktop-live-viewport-open-path";
 const FRAME_REPORT_ID = "desktop-live-viewport-frame-report";
+const RARITY_EVIDENCE_ID = "desktop-live-viewport-rarity-evidence";
 
 function bridge(): BridgeGlobal | null {
   const candidate = (globalThis as Record<string, unknown>)[DESKTOP_BRIDGE_GLOBAL];
@@ -110,6 +111,10 @@ function openPathLine(host: Element, text: string): void {
 
 function frameReportLine(host: Element, text: string): void {
   overlayLine(host, FRAME_REPORT_ID, "frame-report", "96px", text);
+}
+
+function rarityEvidenceLine(host: Element, text: string): void {
+  overlayLine(host, RARITY_EVIDENCE_ID, "rarity-evidence", "140px", text);
 }
 
 function refusalText(error: unknown): string {
@@ -180,17 +185,23 @@ type RarityReportable = {
 };
 
 /**
- * The rarity clause of an open-path report line.
+ * Run/viewport's rarity provenance, on its own line above the open-path report.
  *
- * The digests beside it belong to the composed scene session the viewport draws;
- * the accepted namespace is verified in its own product session, so this names
- * that session rather than letting one sentence imply a single advance.
+ * The body is the shared `formatSafeRarityEvidence()` output, not a clause
+ * written here: this is one of the four surfaces required to display matching
+ * provenance, and a second hand-written summary is exactly the drift the shared
+ * formatter exists to prevent. Only the session attribution is added, because
+ * the digests on the report line beside it belong to the composed scene session
+ * the viewport draws while the namespace is verified in its own product session.
  */
-function rarityReportSuffix(exercise: RarityReportable): string {
-  if (exercise.rarity === undefined) return "";
+function rarityEvidenceReport(exercise: RarityReportable): string | null {
+  const evidence = formatSafeRarityEvidence(exercise.rarity);
+  if (evidence === null) return null;
   const replay = exercise.raritySession?.replayDigest;
-  const replayed = typeof replay === "string" ? ` replayed to ${replay}` : "";
-  return ` · rarity ${exercise.rarity.tier}/${exercise.rarity.candidateId} · provenance ${exercise.rarity.provenanceDigest} · verified in a separate product session${replayed}`;
+  const attribution = typeof replay === "string"
+    ? `verified in a separate product session replayed to ${replay}`
+    : "verified in a separate product session";
+  return `${evidence}\n${attribution}`;
 }
 
 function installAssistantProductFlow(
@@ -258,8 +269,7 @@ function installAssistantProductFlow(
       return;
     }
     const job = outcome.job;
-    const result = job.result;
-    if (result === undefined) return;
+    const result = outcome.result;
     if (isRarityProposalResult(result)) {
       const replayed = result.replayed;
       resultView.textContent = formatSafeRarityEvidence(result.evidence) ?? "";
@@ -518,8 +528,10 @@ async function mountLiveViewport(): Promise<void> {
     stage.dataset.playback = "acknowledged";
     openPathLine(
       stage,
-      `kernel playback acknowledged: ${exercise.tickDigests.length} ticks advanced · digest ${exercise.initialDigest.slice(0, 18)}… → ${exercise.tickDigests.at(-1)?.slice(0, 18)}…${rarityReportSuffix(exercise)} · composed scene redrawn at viewport frame ${frame.frame}`,
+      `kernel playback acknowledged: ${exercise.tickDigests.length} ticks advanced · digest ${exercise.initialDigest.slice(0, 18)}… → ${exercise.tickDigests.at(-1)?.slice(0, 18)}… · composed scene redrawn at viewport frame ${frame.frame}`,
     );
+    const rarity = rarityEvidenceReport(exercise);
+    if (rarity !== null) rarityEvidenceLine(stage, rarity);
   });
 
   // Everything below runs after `loop.start()`, so it names itself on its own line
@@ -536,8 +548,10 @@ async function mountLiveViewport(): Promise<void> {
       };
       openPathLine(
         stage,
-        `kernel open path: ${exercise.tickDigests.length} ticks advanced · digest ${exercise.initialDigest.slice(0, 18)}… → ${exercise.tickDigests[exercise.tickDigests.length - 1]?.slice(0, 18)}…${rarityReportSuffix(exercise)} · session closed`,
+        `kernel open path: ${exercise.tickDigests.length} ticks advanced · digest ${exercise.initialDigest.slice(0, 18)}… → ${exercise.tickDigests[exercise.tickDigests.length - 1]?.slice(0, 18)}… · session closed`,
       );
+      const rarity = rarityEvidenceReport(exercise);
+      if (rarity !== null) rarityEvidenceLine(stage, rarity);
     } else {
       openPathLine(stage, `kernel open path refused: ${openPath.reason} — ${openPath.message}`);
     }

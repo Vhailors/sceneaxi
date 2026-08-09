@@ -241,7 +241,9 @@ describe("engine desktop chrome — control accounting (document → model)", ()
       // summaries clip, and WCAG 2.1.1 requires their overflow to be reachable
       // without a pointer, so each is a labelled region rather than a control.
       for (const [tag] of html.matchAll(/<[a-z][^>]*\stabindex="[^"]*"[^>]*>/gi)) {
-        if (/\sdata-(?:change-diff|change-rarity-evidence|rarity-evidence)\b/.test(tag)) {
+        if (
+          /\sdata-(?:change-diff|change-rarity-evidence|run-rarity-evidence|rarity-evidence)\b/.test(tag)
+        ) {
           expect(tag, `${label} ${tag}`).toMatch(/^<pre\b/);
           expect(tag, `${label} ${tag}`).toContain('tabindex="0"');
           expect(tag, `${label} ${tag}`).toContain('role="region"');
