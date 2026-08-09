@@ -15,15 +15,19 @@
 import type {
   AssistantSculptProgress,
   AssistantSculptSuccess,
+  SafeRarityEvidence,
 } from "@sceneaxi/authoring-core";
 import type { MountableScene } from "@sceneaxi/site-kit";
+import type { DesktopSnapshot } from "@sceneaxi/desktop-shell";
 
 /** The one IPC channel the preload exposes and the main process serves. */
 export const DESKTOP_BRIDGE_CHANNEL = "sceneaxi:desktop-bridge";
 
 export const DESKTOP_VIEWPORT_PLAY_EVENT = "sceneaxi:desktop-viewport-play";
+export const DESKTOP_RARITY_PROPOSAL_EVENT = "sceneaxi:desktop-rarity-proposal";
 
 export const DESKTOP_ACTIVE_DOCUMENT_PATH = "scene.json";
+export const DESKTOP_RARITY_EVENT_ID = "wayfinder-drop-001" as const;
 
 /**
  * The chrome meta the renderer updates from the real frame report. Lives here —
@@ -65,6 +69,7 @@ export const DESKTOP_BRIDGE_REFUSALS = Object.freeze({
   assistantByoUnavailable: "DESKTOP_ASSISTANT_BYO_UNAVAILABLE",
   assistantHostedMeteringUnavailable:
     "DESKTOP_ASSISTANT_HOSTED_METERING_UNAVAILABLE",
+  rarityProviderUnavailable: "DESKTOP_RARITY_PROVIDER_UNAVAILABLE",
   /**
    * No presentation runtime owns the window canvas, so nothing can be mounted.
    *
@@ -117,6 +122,9 @@ export const DESKTOP_BRIDGE_AUTHORING_OPS = Object.freeze([
 
 export type DesktopBridgeAuthoringOp = (typeof DESKTOP_BRIDGE_AUTHORING_OPS)[number];
 
+/** Safe rarity fields allowed across preload, renderer, and local inspection surfaces. */
+export type DesktopRarityEvidence = SafeRarityEvidence;
+
 export const DESKTOP_BRIDGE_ASSISTANT_OPS = Object.freeze([
   "start",
   "status",
@@ -128,6 +136,17 @@ export type DesktopBridgeAssistantOp =
 
 export type DesktopAssistantMountedResult = Omit<AssistantSculptSuccess, "artifact"> &
   Readonly<{ mountable: MountableScene }>;
+
+export type DesktopRarityProposalResult = Readonly<{
+  ok: true;
+  kind: "rarity-proposal";
+  evidence: DesktopRarityEvidence;
+  authoring: DesktopSnapshot & Readonly<{ rarityEvidence: DesktopRarityEvidence }>;
+}>;
+
+export type DesktopAssistantResult =
+  | DesktopAssistantMountedResult
+  | DesktopRarityProposalResult;
 
 export type DesktopAssistantJobSnapshot = Readonly<{
   jobId: string;
@@ -143,7 +162,7 @@ export type DesktopAssistantJobSnapshot = Readonly<{
   latestProgress: AssistantSculptProgress | null;
   /** How many progress entries the job has observed so far. */
   progressCount: number;
-  result?: DesktopAssistantMountedResult;
+  result?: DesktopAssistantResult;
   refusal?: Readonly<{
     ok: false;
     reason: string;

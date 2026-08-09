@@ -8,6 +8,12 @@
  */
 import type { JsonValue } from "./document.js";
 import {
+  MODEL_PROVIDER_CALL_EVIDENCE_KIND,
+  MODEL_PROVIDER_OPERATIONS,
+  MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+  type ModelProviderCallEvidence,
+} from "./model-provider.js";
+import {
   firstMissingKey,
   firstUnexpectedKey,
   snapshotPlainArray,
@@ -29,6 +35,7 @@ export const RARITY_REQUEST_KIND = "sceneaxi.rarity.request" as const;
 export const RARITY_OUTCOME_KIND = "sceneaxi.rarity.outcome" as const;
 export const RARITY_PROVENANCE_KIND = "sceneaxi.rarity.provenance" as const;
 export const RARITY_NAMESPACE_KIND = "sceneaxi.rarity.namespace" as const;
+export const RARITY_MAX_CANDIDATES = 64 as const;
 
 /** Stable identifiers and cumulative-selection order. */
 export const RARITY_TIERS = Object.freeze([
@@ -51,6 +58,7 @@ export const RARITY_REFUSE_CODES = Object.freeze({
   invalidWeight: "RARITY_WEIGHT_INVALID",
   weightOverflow: "RARITY_WEIGHT_TOTAL_OVERFLOW",
   emptyInput: "RARITY_INPUT_EMPTY",
+  inputBoundExceeded: "RARITY_INPUT_BOUND_EXCEEDED",
   zeroTotal: "RARITY_WEIGHT_TOTAL_ZERO",
   candidatePoolUnavailable: "RARITY_CANDIDATE_POOL_UNAVAILABLE",
   duplicateCandidate: "RARITY_CANDIDATE_DUPLICATE",
@@ -125,6 +133,8 @@ export type RarityNamespace = Readonly<{
   kind: typeof RARITY_NAMESPACE_KIND;
   policy: RarityPolicy;
   rolls: ReadonlyArray<RarityRollRecord>;
+  /** Exact, bounded input provenance when a Model Provider Port proposed this namespace. */
+  providerEvidence?: ModelProviderCallEvidence;
 }>;
 
 export type RarityValidationOk<Value> = Readonly<{
@@ -412,6 +422,13 @@ export function validateRarityRollRequest(
       "Rarity candidates cannot be empty.",
     );
   }
+  if (candidates.length > RARITY_MAX_CANDIDATES) {
+    return refuseRarity(
+      RARITY_REFUSE_CODES.inputBoundExceeded,
+      "rarity.request.candidates",
+      `Rarity candidates cannot exceed ${String(RARITY_MAX_CANDIDATES)} entries.`,
+    );
+  }
 
   const normalized: RarityCandidate[] = [];
   const ids = new Set<string>();
@@ -652,10 +669,18 @@ function validateRarityRollRecord(
 export function validateRarityNamespace(
   value: unknown,
 ): RarityValidationResult<RarityNamespace> {
+  const raw = snapshotPlainRecord(value);
+  const hasProviderEvidence = raw !== undefined && Object.hasOwn(raw, "providerEvidence");
   const header = validateHeader(
     value,
     RARITY_NAMESPACE_KIND,
-    ["schemaVersion", "kind", "policy", "rolls"],
+    [
+      "schemaVersion",
+      "kind",
+      "policy",
+      "rolls",
+      ...(hasProviderEvidence ? ["providerEvidence"] : []),
+    ],
     "rarity",
   );
   if (isRefusal(header)) return header;
@@ -684,12 +709,55 @@ export function validateRarityNamespace(
     events.add(roll.value.eventId);
     normalized.push(roll.value);
   }
+  let providerEvidence: ModelProviderCallEvidence | undefined;
+  if (hasProviderEvidence) {
+    const evidence = snapshotPlainRecord(header["providerEvidence"]);
+    const evidenceFields = evidence === undefined
+      ? null
+      : requireExactFields(
+          evidence,
+          ["schemaVersion", "kind", "operation", "profile", "model"],
+          "rarity.providerEvidence",
+        );
+    const model = evidence === undefined
+      ? undefined
+      : snapshotPlainRecord(evidence["model"]);
+    const modelFields = model === undefined
+      ? null
+      : requireExactFields(
+          model,
+          ["model", "provider", "quantization", "version"],
+          "rarity.providerEvidence.model",
+        );
+    if (
+      evidence === undefined ||
+      evidenceFields !== null ||
+      evidence["schemaVersion"] !== MODEL_PROVIDER_PORT_SCHEMA_VERSION ||
+      evidence["kind"] !== MODEL_PROVIDER_CALL_EVIDENCE_KIND ||
+      !MODEL_PROVIDER_OPERATIONS.some((operation) => operation === evidence["operation"]) ||
+      typeof evidence["profile"] !== "string" ||
+      !/^@sceneaxi\/profile-[a-z][a-z0-9-]*$/.test(evidence["profile"]) ||
+      model === undefined ||
+      modelFields !== null ||
+      !["model", "provider", "quantization", "version"].every(
+        (field) => typeof model[field] === "string" && model[field].length > 0,
+      )
+    ) {
+      return refuseRarity(
+        RARITY_REFUSE_CODES.provenanceMismatch,
+        "rarity.providerEvidence",
+        "Rarity provider evidence must be the exact Model Provider Port evidence shape.",
+      );
+    }
+    providerEvidence = snapshotSculptJson(evidence) as unknown as ModelProviderCallEvidence;
+  }
   return ok(
     snapshotSculptJson({
       schemaVersion: RARITY_SCHEMA_VERSION,
       kind: RARITY_NAMESPACE_KIND,
       policy: policy.value,
       rolls: normalized,
+      ...(providerEvidence === undefined ? {} : { providerEvidence }),
     }),
   );
 }

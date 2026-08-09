@@ -61,8 +61,10 @@ Progress, named refusals, and Retry remain on the surface, while a BYOK
 provider's own failure detail is redacted — whether the runner threw it or
 returned it — because it may echo credential material. A timed-out
 job is abandoned before Retry is offered, so a late provider result cannot
-replace the newer job. Ask and Agent modes refuse clearly rather than pretending
-they produce build output. The shell visual model owns the manipulator controls
+replace the newer job. Assistant **Agent** uses the privileged no-network rarity
+fixture through the same Model Provider Port, then stages the canonical result in
+the existing Change Review; it does not mount a second artifact or accept provider
+entropy. Ask refuses clearly rather than pretending it produces build output. The shell visual model owns the manipulator controls
 and tokens; the renderer only binds their Mount API effects.
 
 ## Shape

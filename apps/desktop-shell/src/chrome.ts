@@ -51,6 +51,7 @@ import {
 import {
   DESKTOP_PRODUCT_REFUSAL_MESSAGES,
   DESKTOP_PRODUCT_REFUSALS,
+  DESKTOP_RARITY_PROPOSAL_EVENT,
   DESKTOP_VIEWPORT_PLAY_EVENT,
   DESKTOP_WEB_STAGE_CONFIG,
   DESKTOP_WEB_STARTER,
@@ -588,6 +589,7 @@ function dock(view: DesktopVisualView): string {
           <div><dt>Document</dt><dd><code data-change-document></code></dd></div>
           <div><dt>Base content hash</dt><dd><code data-change-content-hash></code></dd></div>
         </dl>
+        <pre class="change-diff" data-change-rarity-evidence hidden tabindex="0" role="region" aria-label="Safe rarity provenance"></pre>
         <pre class="change-diff" data-change-diff tabindex="0" role="region" aria-label="Rendered proposal diff"></pre>
         <div class="change-actions">
           ${button(view.changeReview.reject, "Reject", "ghost-button", ` data-product-action data-action="change-reject"`)}
@@ -598,7 +600,7 @@ function dock(view: DesktopVisualView): string {
     `,
     assets: `<p class="panel-empty">No asset library is bound to this surface.</p>`,
     console: `<p class="panel-empty">No session is running, so there is no console output to show.</p>`,
-    evidence: `<p class="panel-empty">No evidence packet has been captured here. Evidence digests are produced by <code>sceneaxi project capture</code>, never invented by a viewer.</p>`,
+    evidence: `<p class="panel-empty" data-rarity-evidence-empty>No accepted rarity evidence has been opened or staged in this session.</p><pre class="change-diff" data-rarity-evidence hidden tabindex="0" role="region" aria-label="Rarity evidence"></pre>`,
     timeline: `<p class="panel-empty">No clip is loaded, so the timeline has no tracks.</p>`,
   };
 
@@ -1330,6 +1332,7 @@ function script(view: DesktopVisualView): string {
     product: {
       documentPath: view.product.surface.project.activeFile,
       viewportPlayEvent: DESKTOP_VIEWPORT_PLAY_EVENT,
+      rarityProposalEvent: DESKTOP_RARITY_PROPOSAL_EVENT,
       webStarter: DESKTOP_WEB_STARTER,
       // Every name the script can print, serialized rather than typed out as a
       // literal in the browser body: a refusal the visitor reads is one the
@@ -1510,6 +1513,51 @@ if (shell) {
       : null;
   };
 
+  const rarityEvidenceText = (evidence) => {
+    const model = evidence && evidence.providerEvidence && evidence.providerEvidence.model;
+    const requiredStrings = [
+      'eventId', 'tier', 'candidateId', 'scope', 'algorithmId', 'policyDigest',
+      'requestDigest', 'outcomeDigest', 'provenanceDigest', 'namespaceDigest',
+      'tierRollDigest', 'candidateRollDigest',
+    ];
+    if (!evidence || typeof evidence !== 'object' ||
+        !requiredStrings.every((field) => typeof evidence[field] === 'string') ||
+        !model || typeof model !== 'object' ||
+        !['provider', 'model', 'quantization', 'version'].every((field) => typeof model[field] === 'string')) {
+      return null;
+    }
+    return [
+      'RARITY ' + evidence.tier + ' · ' + evidence.candidateId,
+      'event ' + evidence.eventId + ' · scope ' + evidence.scope + ' · seed ' + String(evidence.projectSeed),
+      'algorithm ' + evidence.algorithmId,
+      'policy ' + evidence.policyDigest,
+      'request ' + evidence.requestDigest,
+      'outcome ' + evidence.outcomeDigest,
+      'provenance ' + evidence.provenanceDigest,
+      'namespace ' + evidence.namespaceDigest,
+      'tier draw ' + String(evidence.tierDraw) + ' / ' + String(evidence.tierTotalWeight),
+      'candidate draw ' + String(evidence.candidateDraw) + ' / ' + String(evidence.candidateTotalWeight),
+      'tier roll ' + evidence.tierRollDigest,
+      'candidate roll ' + evidence.candidateRollDigest,
+      'provider ' + model.provider + ' · model ' + model.model +
+        ' · quantization ' + model.quantization + ' · version ' + model.version,
+    ].join('\\n');
+  };
+
+  const syncRarityEvidence = (evidence) => {
+    const text = rarityEvidenceText(evidence);
+    const panel = shell.querySelector('[data-rarity-evidence]');
+    const empty = shell.querySelector('[data-rarity-evidence-empty]');
+    if (panel) {
+      panel.textContent = text || '';
+      panel.hidden = text === null;
+    }
+    if (empty) empty.hidden = text !== null;
+    return text;
+  };
+
+  const clearRarityEvidence = () => syncRarityEvidence(null);
+
   const clearConflictOutcome = () => { activeConflictDetail = null; };
 
   const syncReview = (snapshot) => {
@@ -1534,9 +1582,17 @@ if (shell) {
     const documentPath = shell.querySelector('[data-change-document]');
     const contentHash = shell.querySelector('[data-change-content-hash]');
     const renderedDiff = shell.querySelector('[data-change-diff]');
+    const rarityEvidence = shell.querySelector('[data-change-rarity-evidence]');
     if (documentPath) documentPath.textContent = active ? projection.first.documentPath : '';
     if (contentHash) contentHash.textContent = active ? projection.first.baseContentHash : '';
     if (renderedDiff) renderedDiff.textContent = active ? projection.diff : '';
+    const rarityText = active ? rarityEvidenceText(snapshot.rarityEvidence) : null;
+    if (rarityEvidence) {
+      rarityEvidence.textContent = rarityText || '';
+      rarityEvidence.hidden = rarityText === null;
+    }
+    if (rarityText !== null) syncRarityEvidence(snapshot.rarityEvidence);
+    if (snapshot?.phase === 'rejected') clearRarityEvidence();
     // A validated snapshot that reports no diagnostic is the host saying the
     // conflict is over, which is the only thing that resolves it.
     if (snapshot !== null &&
@@ -2206,9 +2262,14 @@ if (shell) {
     }
     showModePanels('run');
     const lastDigest = exercise.tickDigests[ticks - 1];
-    const played = 'Played composed scene · ' + ticks + ' ticks · viewport frame ' + playback.frame + ' · session closed';
+    const rarityText = syncRarityEvidence(exercise.rarity);
+    const raritySummary = rarityText === null
+      ? ''
+      : ' · rarity ' + exercise.rarity.tier + '/' + exercise.rarity.candidateId +
+        ' · provenance ' + exercise.rarity.provenanceDigest;
+    const played = 'Played composed scene · ' + ticks + ' ticks · viewport frame ' + playback.frame + ' · session closed' + raritySummary;
     q('[data-run-session-report]').forEach((el) => {
-      el.textContent = 'Completed closed session · ' + ticks + ' ticks · terminal digest ' + String(lastDigest);
+      el.textContent = 'Completed closed session · ' + ticks + ' ticks · terminal digest ' + String(lastDigest) + raritySummary;
     });
     q('[data-run-live-report]').forEach((el) => {
       el.textContent = 'Viewport frame ' + playback.frame + ' acknowledged for ' + exercise.mountable.sceneId + '.';
@@ -2726,6 +2787,15 @@ if (shell) {
       event.preventDefault();
       (event.shiftKey ? last : first).focus();
     }
+  });
+
+  document.addEventListener(T.product.rarityProposalEvent, (event) => {
+    const detail = event && event.detail;
+    if (!detail || !isSessionSnapshot(detail.snapshot)) return;
+    if (!syncReview(detail.snapshot)) return;
+    syncRarityEvidence(detail.evidence);
+    selectDockTab('changes');
+    productStatus('dirty', T.product.documentPath + ' · rarity proposal staged · review before Save');
   });
 
   syncReview(null);

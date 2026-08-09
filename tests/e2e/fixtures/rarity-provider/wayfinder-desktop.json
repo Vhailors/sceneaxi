@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "projectSeed": 20260809,
+  "scope": "desktop-linux-rarity",
+  "eventId": "wayfinder-drop-001",
+  "model": {
+    "model": "wayfinder-rarity-fixture",
+    "provider": "sceneaxi-fixture",
+    "quantization": "deterministic-json",
+    "version": "2026-08-09"
+  },
+  "policy": {
+    "schemaVersion": 1,
+    "kind": "sceneaxi.rarity.policy",
+    "tierWeights": {
+      "common": 55,
+      "uncommon": 25,
+      "rare": 12,
+      "epic": 6,
+      "legendary": 2
+    }
+  },
+  "request": {
+    "schemaVersion": 1,
+    "kind": "sceneaxi.rarity.request",
+    "candidates": [
+      { "candidateId": "wayfinder-stone", "tier": "common", "weight": 7 },
+      { "candidateId": "wayfinder-moss", "tier": "common", "weight": 3 },
+      { "candidateId": "wayfinder-copper", "tier": "uncommon", "weight": 5 },
+      { "candidateId": "wayfinder-silver", "tier": "rare", "weight": 3 },
+      { "candidateId": "wayfinder-aurora", "tier": "epic", "weight": 2 },
+      { "candidateId": "wayfinder-crown", "tier": "legendary", "weight": 1 }
+    ]
+  },
+  "expected": {
+    "tier": "uncommon",
+    "candidateId": "wayfinder-copper",
+    "policyDigest": "sha256:dc9fb14cf67da2aaaabf813969d5e2863b3d4ccdcbbe8cbbd366a1400aab7099",
+    "requestDigest": "sha256:e70812f13e9a23e08476afce6fd6e8690a3d74e41f1807c977d0d7b7482067d8",
+    "outcomeDigest": "sha256:ec77ae2c1f62725339fbf87a0e39d61cfd680941fb975a045770cb31f0d0d5de",
+    "provenanceDigest": "sha256:db910560dd96620f7d42b5114a0f28b53140bb87569024c184c6ad20e93cfb6b",
+    "namespaceDigest": "sha256:edff92bd9ac5a8e38044e76bda2f4339b7545d1b247f710fce3629a33070b1c8",
+    "tierRollDigest": "sha256:131e0db6132da857fe4479031e5a8504c31a7486c5fa71ab096c67bf8bfe9715",
+    "candidateRollDigest": "sha256:aeaa01fc8a389cb2d4368a88d07b2484beddaa5a10ed76931f6cfb555d19b3ed",
+    "tierDraw": 69,
+    "tierTotalWeight": 100,
+    "candidateDraw": 2,
+    "candidateTotalWeight": 5
+  }
+}

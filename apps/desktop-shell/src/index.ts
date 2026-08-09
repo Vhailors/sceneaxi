@@ -163,6 +163,7 @@ export {
   DESKTOP_WEB_STAGE_CONFIG,
   DESKTOP_WEB_STARTER,
   DESKTOP_VIEWPORT_PLAY_EVENT,
+  DESKTOP_RARITY_PROPOSAL_EVENT,
   desktopProductSurface,
   desktopWebStageDecision,
   stageWebAssetInjection,

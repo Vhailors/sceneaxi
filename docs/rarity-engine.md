@@ -98,6 +98,35 @@ repeated dispatch, so a saved event stream that carries one rarity event id twic
 is a crafted artifact and refuses with `RARITY_EVENT_DUPLICATE` rather than
 replaying to a shorter event log than it was handed.
 
+## Provider-to-desktop acceptance
+
+Issue [sceneaxi#241](https://github.com/Vhailors/sceneaxi/issues/241) extends the
+existing Model Provider Port and desktop assistant path; it does not introduce a
+second authoring operation. The privileged fixture provider returns only a typed,
+bounded policy and candidate request plus the port's exact
+model/provider/quantization/version evidence. Authoring-core validates that input,
+asks a kernel product session to dispatch and advance the roll, and stages the
+result as the ordinary E1 `/data` proposal in `DesktopSession`.
+
+The proposal holds the accepted policy, request, outcome, provenance, and safe
+provider-call evidence under the Scene Document's `data.rarity` namespace. Change
+Review renders the real canonical diff and the same safe evidence summary shown by
+Assistant and the dedicated Evidence dock. Accept uses the existing atomic apply;
+Reject writes nothing. A changed content hash stays the existing actionable
+`content-hash-conflict` recovery path.
+
+After reopen, the desktop `open-path` action gives that namespace to
+`bootstrapOpenPath({ kind: "product" })`, dispatches the identical event, advances
+through the kernel's authoritative mutation path, saves, resumes, and verifies the
+terminal replay digest. Run and the viewport receive only the resulting tier,
+candidate, safe draw/digest fields, and provider descriptor. Raw prompts, provider
+responses, credentials, and provider-authored failure detail do not cross the
+privileged boundary.
+
+Exact replay of the accepted request/event pair is idempotent. A changed request
+under that event refuses `RARITY_EVENT_INPUT_CONFLICT`; an intentional reroll must
+use a new event id. Kids and Hosted refuse before the fixture provider runs.
+
 ## Evidence and exclusions
 
 `packages/schemas/contracts/rarity.fixtures.json` pins the policy, seed, scope,
@@ -108,6 +137,13 @@ boundary vectors through the orchestrator's public open/advance/save/resume
 seams against those pinned digests. Schema, resolver, browser-open, kernel
 save/replay, and orchestrator tests execute the same public contracts without a
 network or live provider.
+
+`tests/e2e/fixtures/rarity-provider/wayfinder-desktop.json` pins the integration
+vector used by `tests/e2e/rarity-provider-desktop-golden.test.ts`: fixture model,
+policy, candidate request, project seed, event, selected result, draws, and every
+policy/request/outcome/provenance/namespace digest. The test compares runtime
+output to those bytes before it exercises review, accept/reject, reopen, replay,
+presentation, and the refusal matrix.
 
 `rarity.schema.json` is enforced rather than described: every accepted value the
 repository produces is validated as a document of the shipped schema, and an

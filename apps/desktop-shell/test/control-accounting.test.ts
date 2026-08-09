@@ -237,11 +237,11 @@ describe("engine desktop chrome — control accounting (document → model)", ()
       expect(html, label).not.toMatch(/\son[a-z]+=/i);
       // A focus stop outside a <button> would be an interactive element with no
       // control behind it; the tabs' roving `tabindex` sits on buttons. The one
-      // exception is a scroll container: the rendered diff clips, and WCAG 2.1.1
-      // requires that its own overflow be reachable without a pointer, so it is
-      // a focusable labelled region rather than a control.
+      // exceptions are scroll containers: the rendered diff and safe evidence
+      // summaries clip, and WCAG 2.1.1 requires their overflow to be reachable
+      // without a pointer, so each is a labelled region rather than a control.
       for (const [tag] of html.matchAll(/<[a-z][^>]*\stabindex="[^"]*"[^>]*>/gi)) {
-        if (/\sdata-change-diff\b/.test(tag)) {
+        if (/\sdata-(?:change-diff|change-rarity-evidence|rarity-evidence)\b/.test(tag)) {
           expect(tag, `${label} ${tag}`).toMatch(/^<pre\b/);
           expect(tag, `${label} ${tag}`).toContain('tabindex="0"');
           expect(tag, `${label} ${tag}`).toContain('role="region"');

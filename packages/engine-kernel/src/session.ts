@@ -33,6 +33,7 @@ import {
   type ProductManifest,
   type RarityNamespace,
   type RarityPolicy,
+  type ModelProviderCallEvidence,
   type RarityRefuseCode,
   type RarityRollCommand,
   type RarityRollRecord,
@@ -78,6 +79,7 @@ interface PendingDispatch {
 type MutableRarityState = {
   readonly policy: RarityPolicy;
   rolls: RarityRollRecord[];
+  readonly providerEvidence?: ModelProviderCallEvidence;
 };
 
 export function open(
@@ -593,6 +595,9 @@ class SessionImpl implements KernelSession {
         : {
             policy: manifest.rarity.policy,
             rolls: [...manifest.rarity.rolls],
+            ...(manifest.rarity.providerEvidence === undefined
+              ? {}
+              : { providerEvidence: manifest.rarity.providerEvidence }),
           };
     this.events.push(...initialEvents);
   }
@@ -751,6 +756,9 @@ class SessionImpl implements KernelSession {
       kind: RARITY_NAMESPACE_KIND,
       policy: this.rarity.policy,
       rolls: Object.freeze([...this.rarity.rolls]),
+      ...(this.rarity.providerEvidence === undefined
+        ? {}
+        : { providerEvidence: this.rarity.providerEvidence }),
     });
   }
 

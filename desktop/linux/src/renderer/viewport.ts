@@ -31,10 +31,13 @@ import {
   DESKTOP_ACTIVE_DOCUMENT_PATH,
   DESKTOP_BRIDGE_GLOBAL,
   DESKTOP_BRIDGE_REFUSALS,
+  DESKTOP_RARITY_PROPOSAL_EVENT,
   DESKTOP_VIEWPORT_PLAY_EVENT,
   PIXELS_META_NAME,
   type DesktopAssistantJobSnapshot,
   type DesktopBridgeResponse,
+  type DesktopRarityEvidence,
+  type DesktopRarityProposalResult,
 } from "../lib/bridge-contract.js";
 import {
   desktopMountablePayload,
@@ -163,8 +166,16 @@ function assistantProfile(shell: HTMLElement): `@sceneaxi/profile-${string}` {
   return `@sceneaxi/profile-${id === "web" ? "web" : id === "kids" ? "kids" : "game"}`;
 }
 
+function isRarityProposalResult(
+  result: NonNullable<DesktopAssistantJobSnapshot["result"]>,
+): result is DesktopRarityProposalResult {
+  return "kind" in result && result.kind === "rarity-proposal";
+}
+
 function inspectionText(job: DesktopAssistantJobSnapshot): string {
-  const inspection = job.result?.inspection;
+  const result = job.result;
+  if (result === undefined || isRarityProposalResult(result)) return "";
+  const inspection = result.inspection;
   if (inspection === undefined) return "";
   const materials = inspection.materials.values
     .map(
@@ -188,6 +199,25 @@ function inspectionText(job: DesktopAssistantJobSnapshot): string {
     "SETTINGS (read-only)",
     `${settings.moduleId} · ${settings.exportName}`,
     inspection.settings.edit.refusal,
+  ].join("\n");
+}
+
+function rarityEvidenceText(evidence: DesktopRarityEvidence): string {
+  const model = evidence.providerEvidence.model;
+  return [
+    `RARITY ${evidence.tier} · ${evidence.candidateId}`,
+    `event ${evidence.eventId} · scope ${evidence.scope} · seed ${String(evidence.projectSeed)}`,
+    `algorithm ${evidence.algorithmId}`,
+    `policy ${evidence.policyDigest}`,
+    `request ${evidence.requestDigest}`,
+    `outcome ${evidence.outcomeDigest}`,
+    `provenance ${evidence.provenanceDigest}`,
+    `namespace ${evidence.namespaceDigest}`,
+    `tier draw ${String(evidence.tierDraw)} / ${String(evidence.tierTotalWeight)}`,
+    `candidate draw ${String(evidence.candidateDraw)} / ${String(evidence.candidateTotalWeight)}`,
+    `tier roll ${evidence.tierRollDigest}`,
+    `candidate roll ${evidence.candidateRollDigest}`,
+    `provider ${model.provider} · model ${model.model} · quantization ${model.quantization} · version ${model.version}`,
   ].join("\n");
 }
 
@@ -270,6 +300,22 @@ function installAssistantProductFlow(
         return;
       }
       if (job.status === "ready" && job.result !== undefined) {
+        if (isRarityProposalResult(job.result)) {
+          resultView.textContent = rarityEvidenceText(job.result.evidence);
+          resultView.removeAttribute("hidden");
+          retry?.setAttribute("hidden", "");
+          document.dispatchEvent(
+            new CustomEvent(DESKTOP_RARITY_PROPOSAL_EVENT, {
+              detail: Object.freeze({
+                snapshot: job.result.authoring,
+                evidence: job.result.evidence,
+              }),
+            }),
+          );
+          status.textContent = "Rarity proposal staged · review the canonical diff before Accept or Reject.";
+          running = false;
+          return;
+        }
         assistantViewport.replace(job.result.mountable);
         backend.frameMountedContent();
         manipulatorBar?.removeAttribute("hidden");
@@ -292,10 +338,11 @@ function installAssistantProductFlow(
 
   const start = async (): Promise<void> => {
     if (running) return;
-    if (shell.dataset.assistantMode !== "build") {
+    const mode = shell.dataset.assistantMode;
+    if (mode !== "build" && mode !== "agent") {
       refused(
         DESKTOP_BRIDGE_REFUSALS.assistantBuildModeRequired,
-        "Choose Build mode to produce and mount a typed Sculpt Artifact; Ask and Agent are not implemented by this first-release flow.",
+        "Choose Build for a Sculpt Artifact or Agent for a fixture-backed rarity proposal; Ask is not implemented.",
       );
       return;
     }
@@ -315,6 +362,8 @@ function installAssistantProductFlow(
         route: shell.dataset.assistantRoute ?? "local",
         profile: assistantProfile(shell),
         prompt: value,
+        mode,
+        ...(mode === "agent" ? { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH } : {}),
       },
     });
     if (!response.ok) {
@@ -494,6 +543,7 @@ async function mountLiveViewport(): Promise<void> {
         initialDigest?: unknown;
         tickDigests?: unknown;
         mountable?: unknown;
+        rarity?: DesktopRarityEvidence;
       };
       frame?: unknown;
     } | null;
@@ -524,7 +574,7 @@ async function mountLiveViewport(): Promise<void> {
     stage.dataset.playback = "acknowledged";
     openPathLine(
       stage,
-      `kernel playback acknowledged: ${exercise.tickDigests.length} ticks advanced · digest ${exercise.initialDigest.slice(0, 18)}… → ${exercise.tickDigests.at(-1)?.slice(0, 18)}… · composed scene redrawn at viewport frame ${frame.frame}`,
+      `kernel playback acknowledged: ${exercise.tickDigests.length} ticks advanced · digest ${exercise.initialDigest.slice(0, 18)}… → ${exercise.tickDigests.at(-1)?.slice(0, 18)}…${exercise.rarity === undefined ? "" : ` · rarity ${exercise.rarity.tier}/${exercise.rarity.candidateId} · provenance ${exercise.rarity.provenanceDigest}`} · composed scene redrawn at viewport frame ${frame.frame}`,
     );
   });
 
@@ -536,10 +586,14 @@ async function mountLiveViewport(): Promise<void> {
       payload: { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
     });
     if (openPath.ok) {
-      const exercise = openPath.data as { initialDigest: string; tickDigests: string[] };
+      const exercise = openPath.data as {
+        initialDigest: string;
+        tickDigests: string[];
+        rarity?: DesktopRarityEvidence;
+      };
       openPathLine(
         stage,
-        `kernel open path: ${exercise.tickDigests.length} ticks advanced · digest ${exercise.initialDigest.slice(0, 18)}… → ${exercise.tickDigests[exercise.tickDigests.length - 1]?.slice(0, 18)}… · session closed`,
+        `kernel open path: ${exercise.tickDigests.length} ticks advanced · digest ${exercise.initialDigest.slice(0, 18)}… → ${exercise.tickDigests[exercise.tickDigests.length - 1]?.slice(0, 18)}…${exercise.rarity === undefined ? "" : ` · rarity ${exercise.rarity.tier}/${exercise.rarity.candidateId} · provenance ${exercise.rarity.provenanceDigest}`} · session closed`,
       );
     } else {
       openPathLine(stage, `kernel open path refused: ${openPath.reason} — ${openPath.message}`);

@@ -32,7 +32,7 @@ IPC channel and the local socket adapter are two transports over that one
 | `src/lib/local-rpc.ts` | main process | protocol-v1 same-user Unix-socket adapter over the closed project/assistant agent-tool registry; private discovery and explicit permissions |
 | `src/lib/provider-key-store.ts` + `byo-configuration.ts` | main process | typed OS-secure credential store, redacted configuration controller, and per-session key lease for injected BYOK runners |
 | `src/electron/provider-key-store.ts` | privileged Electron process | `safeStorage` adapter; refuses locked, unsupported, basic-text, and failed backends and persists ciphertext only |
-| `src/electron/provider-runtime.ts` | privileged Electron process | composes the existing OpenRouter adapter, Model Provider Port, profile policies, exact model pin, secure key lease, and desktop runner over an injected transport session |
+| `src/electron/provider-runtime.ts` | privileged Electron process | composes the existing OpenRouter adapter, Model Provider Port, profile policies, exact model pin, secure key lease, and desktop runner over an injected transport session; it also owns the no-network rarity fixture provider used by acceptance tests |
 | `src/electron/preload.ts` | preload | exposes one frozen global: the existing engine request, typed project lifecycle method on its own IPC channel, and separate BYOK configuration method |
 | `src/renderer/viewport.ts` | the window | the desktop tier's **one renderer-owning module** (see below) |
 
@@ -42,8 +42,8 @@ Bridge actions and what each reaches — only through public seams:
 |---|---|
 | `handshake` | identity only |
 | `scene` | re-read the requested project-contained Scene Document, validate and reproduce its stored composition through `composeScene()`, then return the shared `MountableScene` payload from `@sceneaxi/site-kit` |
-| `open-path` | the same requested document's composition — `documentPath` required exactly as for `scene` — through `bootstrapOpenPath()` from `@sceneaxi/engine-orchestrator`: a real kernel scene session opened, advanced, observed, closed, with its mountable payload returned for viewport synchronization |
-| `assistant` | `runAssistantSculptAction()` in `@sceneaxi/authoring-core`: deterministic local compilation by default, or an explicitly injected BYOK runner; job status carries real progress and a typed artifact or recoverable named refusal. Hosted refuses here because this tier has no identity/credit authority |
+| `open-path` | the same requested document's composition — `documentPath` required exactly as for `scene` — through `bootstrapOpenPath()` from `@sceneaxi/engine-orchestrator`: a real kernel scene session opened, advanced, observed, closed, with its mountable payload returned for viewport synchronization. An accepted rarity namespace additionally opens a product session, verifies the accepted event through dispatch/advance/save/resume, and returns its safe result for Run and viewport presentation |
+| `assistant` | Build uses `runAssistantSculptAction()` in `@sceneaxi/authoring-core`: deterministic local compilation by default, or an explicitly injected BYOK runner. Agent uses the privileged no-network rarity fixture through the same Model Provider Port and stages its result in the existing DesktopSession review. Hosted refuses here because this tier has no identity/credit authority |
 | `authoring` | `createDesktopSession()` from `@sceneaxi/desktop-shell` — the same propose/accept protocol as the CLI and web-shell. A `documentPath` arrives from the renderer over IPC — here, and on `scene` and `open-path` alike — and the authoring core resolves it against `cwd` without a containment check of its own, so the bridge owns that constraint for every action that takes one: an absolute path, one escaping the project directory, or one whose **canonical** path leaves it through a symlink refuses `DESKTOP_BRIDGE_REQUEST_MALFORMED`. Containment is judged after symlink resolution because that is where the bytes land; a missing leaf still resolves, so this is containment and not an existence check |
 | `frame-report` | nothing: it *accepts* the renderer's real presentation frame so main and the smoke can see what was claimed |
 
@@ -145,6 +145,15 @@ authoring-core denies the carried Kids profile again — independently — befor
 local compilation or provider dispatch.
 The packaged document starts in that unavailable state and transitions to local
 only after the bridge, initial Mount API scene, and every assistant handler bind.
+
+Assistant **Agent** has one bounded implementation: the checked-in rarity fixture.
+It crosses the privileged host and existing Model Provider Port, then stages a
+canonical Scene Document proposal through the same Change Review used by property
+edits. Assistant, Change Review, the Evidence dock, Run, and the viewport show the
+same safe result and provenance digest. The provider supplies neither entropy nor
+an outcome; the project seed and event id are held by the desktop project and the
+kernel resolves only during its dispatch/advance path. This fixture takes no key,
+makes no network call, and is not evidence of live provider readiness.
 
 ### Configure a BYOK key
 
@@ -392,8 +401,9 @@ scene through the orchestrator and succeeds only when the mounted renderer
 redraws the same composed scene and acknowledges the post-play viewport frame.
 
 The Assistant column distinguishes `Local · free`, `BYOK · free`, and
-`Hosted · metered`. Build is the first-release artifact-producing mode; Ask and
-Agent refuse instead of borrowing Build semantics. A mounted assistant result
+`Hosted · metered`. Build is the artifact-producing mode; Agent stages the bounded
+fixture-backed rarity proposal for review, while Ask still refuses rather than
+borrowing Build semantics. A mounted Build result
 keeps orbit/zoom plus explicit translation, rotation, and scale manipulators in
 the center viewport.
 

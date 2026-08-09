@@ -38,6 +38,7 @@ import {
 } from "@sceneaxi/schemas";
 import {
   DESKTOP_ASSISTANT_RUNTIME_EVENT,
+  DESKTOP_RARITY_PROPOSAL_EVENT as SHELL_RARITY_PROPOSAL_EVENT,
   DESKTOP_VIEWPORT_PLAY_EVENT as SHELL_VIEWPORT_PLAY_EVENT,
   DESKTOP_VISUAL_REFUSALS,
 } from "@sceneaxi/desktop-shell";
@@ -50,6 +51,7 @@ import {
   DESKTOP_BRIDGE_ACTIONS,
   DESKTOP_ACTIVE_DOCUMENT_PATH,
   DESKTOP_BRIDGE_REFUSALS,
+  DESKTOP_RARITY_PROPOSAL_EVENT,
   DESKTOP_VIEWPORT_PLAY_EVENT,
   createDesktopAssistantViewportController,
   createDesktopBridge,
@@ -168,8 +170,8 @@ class FakeElement {
     return selector === "[data-action]" ? this : null;
   }
 
-  querySelector(): FakeElement | null {
-    return null;
+  querySelector(selector: string): FakeElement | null {
+    return this.selectorMatches.get(selector)?.[0] ?? null;
   }
 
   querySelectorAll(selector: string): FakeElement[] {
@@ -190,7 +192,11 @@ class FakeTextAreaElement extends FakeElement {
 class FakeShell extends FakeElement {
   clickListener?: (event: { readonly target: FakeElement }) => void;
 
-  constructor(controls: readonly FakeElement[], profileChips: readonly FakeElement[]) {
+  constructor(
+    controls: readonly FakeElement[],
+    profileChips: readonly FakeElement[],
+    selectorMatches: ReadonlyMap<string, readonly FakeElement[]> = new Map(),
+  ) {
     super(
       "shell",
       {
@@ -203,6 +209,7 @@ class FakeShell extends FakeElement {
       new Map([
         ["[data-kind]", controls],
         [".profile-chip", profileChips],
+        ...selectorMatches,
       ]),
     );
   }
@@ -367,6 +374,9 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
       const job = status.data as DesktopAssistantJobSnapshot | null;
       if (job?.status !== "ready" || job.result === undefined) {
         throw new Error("local assistant job did not produce a mountable result");
+      }
+      if (!("mountable" in job.result)) {
+        throw new Error("local Build unexpectedly produced a rarity proposal");
       }
       return job.result;
     };
@@ -1150,6 +1160,132 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     await switchTo("game");
     expectRefusal(runtimeRefusal);
   });
+
+  it("moves a rarity proposal into actionable review and both safe evidence views", () => {
+    const proposal = new FakeElement("proposal");
+    proposal.hidden = true;
+    const empty = new FakeElement("empty");
+    const documentPath = new FakeElement("document");
+    const contentHash = new FakeElement("hash");
+    const diff = new FakeElement("diff");
+    const reviewEvidence = new FakeElement("review-evidence");
+    reviewEvidence.hidden = true;
+    const evidence = new FakeElement("evidence");
+    evidence.hidden = true;
+    const evidenceEmpty = new FakeElement("evidence-empty");
+    const projectState = new FakeElement("project-state");
+    const status = new FakeElement("status");
+    const fileStatus = new FakeElement("file-status");
+    const badge = new FakeElement("badge");
+    const changesTab = new FakeElement("dock-changes", { value: "changes" });
+    const evidenceTab = new FakeElement("dock-evidence", { value: "evidence" });
+    const changesPanel = new FakeElement("dock-panel-changes", { dockPanel: "changes" });
+    const evidencePanel = new FakeElement("dock-panel-evidence", { dockPanel: "evidence" });
+    const shell = new FakeShell(
+      [],
+      [],
+      new Map([
+        ["[data-change-proposal]", [proposal]],
+        ["[data-change-empty]", [empty]],
+        ["[data-change-document]", [documentPath]],
+        ["[data-change-content-hash]", [contentHash]],
+        ["[data-change-diff]", [diff]],
+        ["[data-change-rarity-evidence]", [reviewEvidence]],
+        ["[data-rarity-evidence]", [evidence]],
+        ["[data-rarity-evidence-empty]", [evidenceEmpty]],
+        ["[data-project-state]", [projectState]],
+        ["[data-project-status]", [status]],
+        ["[data-project-file-state]", [fileStatus]],
+        ["[data-change-badge]", [badge]],
+        [".dock-tab", [changesTab, evidenceTab]],
+        ["[data-dock-panel]", [changesPanel, evidencePanel]],
+      ]),
+    );
+    const documentListeners = new Map<string, (event: { readonly detail?: unknown }) => void>();
+    const script = /<script>([\s\S]*?)<\/script>/.exec(desktopLinuxIndexHtml())?.[1];
+    expect(script).toBeDefined();
+    runInNewContext(script ?? "", {
+      document: {
+        activeElement: null,
+        addEventListener: (
+          name: string,
+          listener: (event: { readonly detail?: unknown }) => void,
+        ) => documentListeners.set(name, listener),
+        querySelector: (selector: string) => (selector === ".shell" ? shell : null),
+      },
+      Element: FakeElement,
+      HTMLTextAreaElement: FakeTextAreaElement,
+      window: {
+        matchMedia: () => ({ addEventListener: () => undefined, matches: false }),
+      },
+    });
+
+    const rarityEvidence = {
+      eventId: "wayfinder-drop-001",
+      tier: "uncommon",
+      candidateId: "wayfinder-copper",
+      scope: "desktop-linux-rarity",
+      algorithmId: "sceneaxi.rarity.weighted-sha256-v1",
+      projectSeed: 20260809,
+      policyDigest: "sha256:policy",
+      requestDigest: "sha256:request",
+      outcomeDigest: "sha256:outcome",
+      provenanceDigest: "sha256:provenance",
+      namespaceDigest: "sha256:namespace",
+      tierRollDigest: "sha256:tier-roll",
+      candidateRollDigest: "sha256:candidate-roll",
+      tierDraw: 69,
+      tierTotalWeight: 100,
+      candidateDraw: 2,
+      candidateTotalWeight: 5,
+      providerEvidence: {
+        model: {
+          provider: "sceneaxi-fixture",
+          model: "wayfinder-rarity-fixture",
+          quantization: "deterministic-json",
+          version: "2026-08-09",
+        },
+      },
+    };
+    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+      detail: {
+        evidence: rarityEvidence,
+        snapshot: {
+          phase: "reviewing",
+          proposal: {
+            edits: [{ documentPath: "scene.json", baseContentHash: "sha256:base" }],
+          },
+          unifiedDiff: "--- scene.json",
+          renderedDiff: "rarity: + uncommon / wayfinder-copper",
+          appliedPaths: null,
+          journalRecoveryPending: false,
+          transactionId: null,
+          diagnostics: [],
+          rarityEvidence,
+        },
+      },
+    });
+
+    expect(proposal.hidden).toBe(false);
+    expect(empty.hidden).toBe(true);
+    expect(documentPath.textContent).toBe("scene.json");
+    expect(diff.textContent).toContain("wayfinder-copper");
+    expect(reviewEvidence.textContent).toContain("provenance sha256:provenance");
+    expect(evidence.textContent).toContain(
+      "provider sceneaxi-fixture · model wayfinder-rarity-fixture",
+    );
+    expect(reviewEvidence.hidden).toBe(false);
+    expect(evidence.hidden).toBe(false);
+    expect(evidenceEmpty.hidden).toBe(true);
+    expect(changesTab.getAttribute("aria-selected")).toBe("true");
+    expect(evidenceTab.getAttribute("aria-selected")).toBe("false");
+    expect(changesPanel.hidden).toBe(false);
+    expect(evidencePanel.hidden).toBe(true);
+    expect(projectState.dataset.projectState).toBe("dirty");
+    expect(status.textContent).toContain("review before Save");
+    expect(fileStatus.textContent).toContain("review before Save");
+    expect(badge.textContent).toBe("1");
+  });
 });
 
 describe("desktop renderer module accounting", () => {
@@ -1184,7 +1320,7 @@ describe("desktop renderer module accounting", () => {
     expect(source).toContain("assistantViewport.replace(job.result.mountable)");
     expect(source).toContain("assistantViewport.manipulate(control.dataset.value)");
     expect(source).toContain('data-assistant-manipulators');
-    expect(source).toContain('shell.dataset.assistantMode !== "build"');
+    expect(source).toContain('mode !== "build" && mode !== "agent"');
     expect(source).toContain("DESKTOP_BRIDGE_REFUSALS.assistantBuildModeRequired");
     expect(source).toContain('payload: { op: "abandon" }');
     expect(source).toContain("MATERIALS (read-only)");
@@ -1273,6 +1409,7 @@ describe("desktop renderer module accounting", () => {
     expect(viewport).toContain('stage.dataset.playback = "acknowledged"');
     expect(DESKTOP_VIEWPORT_PLAY_EVENT).toBe("sceneaxi:desktop-viewport-play");
     expect(DESKTOP_VIEWPORT_PLAY_EVENT).toBe(SHELL_VIEWPORT_PLAY_EVENT);
+    expect(DESKTOP_RARITY_PROPOSAL_EVENT).toBe(SHELL_RARITY_PROPOSAL_EVENT);
     expect(viewport).not.toContain('from "@sceneaxi/desktop-shell"');
     expect(viewport).not.toMatch(/from\s+"electron"/);
     // No Three type crosses the seam into this consumer either.

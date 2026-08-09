@@ -98,6 +98,22 @@ export {
 } from "./model-provider-port.js";
 
 export {
+  RARITY_AUTHORING_REFUSALS,
+  RARITY_PROVIDER_TOOL_NAME,
+  requestRarityProviderContribution,
+  safeRarityEvidenceFromNamespace,
+  stageRarityProviderProposal,
+  type RarityAuthoringRefusal,
+  type RarityKernelResolutionInput,
+  type RarityKernelResolver,
+  type RarityProposalEdit,
+  type RarityProposalStageResult,
+  type RarityProviderContribution,
+  type RarityProviderContributionResult,
+  type SafeRarityEvidence,
+} from "./rarity-authoring.js";
+
+export {
   reconstructSculpt,
   reconstructSculptQuality,
   serializeSculptArtifact,

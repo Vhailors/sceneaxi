@@ -97,9 +97,11 @@ const SUPPORTED_KEYWORDS = new Set([
   "enum",
   "const",
   "pattern",
+  "minLength",
   "minimum",
   "maximum",
   "minItems",
+  "maxItems",
   "items",
 ]);
 
@@ -202,6 +204,10 @@ function schemaViolations(
     if (typeof minItems === "number" && value.length < minItems) {
       violations.push(`${path}: fewer than ${String(minItems)} items`);
     }
+    const maxItems = node["maxItems"];
+    if (typeof maxItems === "number" && value.length > maxItems) {
+      violations.push(`${path}: more than ${String(maxItems)} items`);
+    }
     const items = node["items"] as SchemaNode | undefined;
     if (items !== undefined) {
       value.forEach((entry, index) => {
@@ -214,6 +220,10 @@ function schemaViolations(
   }
   if (type === "string") {
     if (typeof value !== "string") return [`${path}: expected string`];
+    const minLength = node["minLength"];
+    if (typeof minLength === "number" && value.length < minLength) {
+      violations.push(`${path}: shorter than ${String(minLength)} characters`);
+    }
     const pattern = node["pattern"];
     if (typeof pattern === "string" && !new RegExp(pattern).test(value)) {
       violations.push(`${path}: pattern`);
@@ -533,6 +543,49 @@ describe("rarity domain contracts", () => {
       ok: false,
       code: RARITY_REFUSE_CODES.unexpectedProperty,
     });
+  });
+
+  it("retains exact Model Provider Port evidence and refuses tampered or unbounded input", () => {
+    const providerEvidence = {
+      schemaVersion: 1,
+      kind: "sceneaxi.model-provider-call-evidence",
+      operation: "tool-call",
+      profile: "@sceneaxi/profile-game",
+      model: {
+        model: "wayfinder-rarity-fixture",
+        provider: "sceneaxi-fixture",
+        quantization: "deterministic-json",
+        version: "2026-08-09",
+      },
+    } as const;
+    expect(
+      validateRarityNamespace({
+        schemaVersion: RARITY_SCHEMA_VERSION,
+        kind: RARITY_NAMESPACE_KIND,
+        policy: fixture.policy,
+        rolls: [],
+        providerEvidence,
+      }),
+    ).toMatchObject({ ok: true, value: { providerEvidence } });
+    expect(
+      validateRarityNamespace({
+        schemaVersion: RARITY_SCHEMA_VERSION,
+        kind: RARITY_NAMESPACE_KIND,
+        policy: fixture.policy,
+        rolls: [],
+        providerEvidence: { ...providerEvidence, credential: "must-not-pass" },
+      }),
+    ).toMatchObject({ ok: false, code: RARITY_REFUSE_CODES.provenanceMismatch });
+    expect(
+      validateRarityRollRequest({
+        ...fixture.request,
+        candidates: Array.from({ length: 65 }, (_, index) => ({
+          candidateId: `bounded-${String(index)}`,
+          tier: "common",
+          weight: 1,
+        })),
+      }),
+    ).toMatchObject({ ok: false, code: RARITY_REFUSE_CODES.inputBoundExceeded });
   });
 
   it("keeps the remaining structural refusal codes reachable", () => {

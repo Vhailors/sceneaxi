@@ -33,20 +33,30 @@ import { basename, dirname, isAbsolute, join, resolve, sep } from "node:path";
 import {
   ASSISTANT_SCULPT_REFUSALS,
   runAssistantSculptAction,
+  safeRarityEvidenceFromNamespace,
+  stageRarityProviderProposal,
   type AssistantSculptProgress,
   type AssistantSculptResult,
+  type RarityKernelResolutionInput,
+  type RarityProviderContributionResult,
 } from "@sceneaxi/authoring-core";
 import {
   createDesktopSession,
   type DesktopSession,
   type DesktopSnapshot,
 } from "@sceneaxi/desktop-shell";
-import { bootstrapOpenPath } from "@sceneaxi/engine-orchestrator";
+import { bootstrapOpenPath, resumeOpenPath } from "@sceneaxi/engine-orchestrator";
+import {
+  RARITY_REFUSE_CODES,
+  digestRarityNamespace,
+  validateRarityNamespace,
+} from "@sceneaxi/schemas";
 import {
   DESKTOP_BRIDGE_ACTIONS,
   DESKTOP_BRIDGE_ASSISTANT_OPS,
   DESKTOP_BRIDGE_AUTHORING_OPS,
   DESKTOP_BRIDGE_REFUSALS,
+  DESKTOP_RARITY_EVENT_ID,
   bridgeOk,
   bridgeRefuse,
   type DesktopBridgeAction,
@@ -56,6 +66,7 @@ import {
   type DesktopBridgeHandshake,
   type DesktopBridgeResponse,
   type DesktopFrameReport,
+  type DesktopRarityEvidence,
 } from "./bridge-contract.js";
 import {
   DESKTOP_SCENE_NOT_COMPOSABLE,
@@ -77,6 +88,10 @@ export type DesktopBridgeOptions = {
   readonly onFrameReport?: (report: DesktopFrameReport) => void;
   /** Optional privileged BYOK runner. Credentials never enter this bridge. */
   readonly runByoAssistant?: (request: DesktopAssistantRunRequest) => Promise<AssistantSculptResult>;
+  /** Privileged fixture provider. It returns validated input/evidence, never raw output. */
+  readonly runRarityProvider?: (
+    request: DesktopRarityProviderRunRequest,
+  ) => Promise<RarityProviderContributionResult>;
 };
 
 export type DesktopAssistantProfile =
@@ -88,6 +103,10 @@ export type DesktopAssistantRunRequest = Readonly<{
   prompt: string;
   profile: DesktopAssistantProfile;
   onProgress: (snapshot: AssistantSculptProgress) => void;
+}>;
+
+export type DesktopRarityProviderRunRequest = Readonly<{
+  profile: DesktopAssistantProfile;
 }>;
 
 export type DesktopBridge = {
@@ -106,6 +125,8 @@ export type OpenPathExercise = {
   readonly instanceCount: number;
   readonly mountable: Extract<DesktopSceneResult, { readonly ok: true }>["mountable"];
   readonly closed: true;
+  readonly replayDigest?: string;
+  readonly rarity?: DesktopRarityEvidence;
 };
 
 /**
@@ -223,9 +244,174 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       actions: DESKTOP_BRIDGE_ACTIONS,
     });
 
+  const resolveRarityWithKernel = (input: RarityKernelResolutionInput) => {
+    const bootstrapped = bootstrapOpenPath(
+      {
+        kind: "product",
+        productManifest: {
+          productId: input.productId,
+          seed: input.seed,
+          rarity: input.namespace,
+        },
+      },
+      { nowMs },
+    );
+    if (!bootstrapped.ok) {
+      return Object.freeze({
+        ok: false as const,
+        reason: bootstrapped.reason,
+        message: bootstrapped.message,
+      });
+    }
+    const handle = bootstrapped.value;
+    const live = handle.session();
+    if (!live.ok) {
+      handle.close();
+      return Object.freeze({ ok: false as const, reason: live.reason, message: live.message });
+    }
+    try {
+      live.value.dispatch({
+        type: "rarity-roll",
+        eventId: input.eventId,
+        request: input.request,
+      });
+      live.value.advance({ tick: 1, deltaMs: 0 });
+      const rarity = live.value.observe().rarity;
+      if (rarity === undefined) {
+        return Object.freeze({
+          ok: false as const,
+          reason: RARITY_REFUSE_CODES.outcomeMismatch,
+          message: "The authoritative kernel did not expose the resolved rarity namespace.",
+        });
+      }
+      return Object.freeze({ ok: true as const, value: rarity });
+    } catch (error) {
+      const reason = field(error, "reason");
+      return Object.freeze({
+        ok: false as const,
+        reason: typeof reason === "string" ? reason : RARITY_REFUSE_CODES.outcomeMismatch,
+        message: "The authoritative kernel refused the rarity resolution.",
+      });
+    } finally {
+      handle.close();
+    }
+  };
+
   const openPathExercise = (payload: unknown): DesktopBridgeResponse => {
-    const scene = activeScene(payload);
+    const documentPath = containedDocumentPath(field(payload, "documentPath"));
+    if (documentPath === null) {
+      return bridgeRefuse(
+        DESKTOP_BRIDGE_REFUSALS.requestMalformed,
+        "scene playback requires a documentPath string inside the project directory.",
+      );
+    }
+    const status = authoringSession().status(documentPath);
+    if (!status.ok) {
+      const diagnostic = status.diagnostics[0];
+      return bridgeRefuse(
+        diagnostic?.code ?? DESKTOP_SCENE_NOT_COMPOSABLE,
+        diagnostic?.message ?? "The active Scene Document could not be read.",
+      );
+    }
+    const scene = desktopSceneFromDocumentData(status.data);
     if (!scene.ok) return bridgeRefuse(scene.reason, scene.message);
+
+    const rarityValue = status.data.rarity;
+    if (rarityValue !== undefined) {
+      const rarity = validateRarityNamespace(rarityValue);
+      const productId = status.data.productId;
+      const seed = status.data.seed;
+      if (!rarity.ok) return bridgeRefuse(rarity.code, rarity.message, rarity.path);
+      if (typeof productId !== "string" || !Number.isSafeInteger(seed)) {
+        return bridgeRefuse(
+          DESKTOP_BRIDGE_REFUSALS.requestMalformed,
+          "The active rarity project has no valid ProductManifest identity.",
+        );
+      }
+      const roll = rarity.value.rolls.at(-1);
+      if (roll === undefined || rarity.value.providerEvidence === undefined) {
+        return bridgeRefuse(
+          RARITY_REFUSE_CODES.outcomeMismatch,
+          "The active rarity namespace has no accepted outcome and provider evidence.",
+        );
+      }
+      const bootstrapped = bootstrapOpenPath(
+        {
+          kind: "product",
+          productManifest: {
+            productId,
+            seed: seed as number,
+            rarity: rarity.value,
+          },
+        },
+        { nowMs },
+      );
+      if (!bootstrapped.ok) {
+        return bridgeRefuse(bootstrapped.reason, bootstrapped.message, bootstrapped.detail);
+      }
+      const handle = bootstrapped.value;
+      const live = handle.session();
+      if (!live.ok) {
+        handle.close();
+        return bridgeRefuse(live.reason, live.message, live.detail);
+      }
+      let initialDigest: string;
+      let save: ReturnType<typeof live.value.save>;
+      const tickDigests: string[] = [];
+      try {
+        const initial = live.value.observe();
+        initialDigest = initial.digest;
+        live.value.dispatch({ type: "rarity-roll", eventId: roll.eventId, request: roll.request });
+        for (let tick = 1; tick <= OPEN_PATH_EXERCISE_TICKS; tick += 1) {
+          live.value.advance({ tick, deltaMs: 100 });
+          tickDigests.push(live.value.observe().digest);
+        }
+        save = live.value.save();
+      } catch (error) {
+        const reason = field(error, "reason");
+        return bridgeRefuse(
+          typeof reason === "string" ? reason : RARITY_REFUSE_CODES.provenanceMismatch,
+          "The accepted rarity session could not be replayed exactly.",
+        );
+      } finally {
+        handle.close();
+      }
+      const resumed = resumeOpenPath({ kind: "product", save }, { nowMs });
+      if (!resumed.ok) return bridgeRefuse(resumed.reason, resumed.message, resumed.detail);
+      const replay = resumed.value.session();
+      if (!replay.ok) {
+        resumed.value.close();
+        return bridgeRefuse(replay.reason, replay.message, replay.detail);
+      }
+      let replayDigest: string;
+      try {
+        const snapshot = replay.value.observe();
+        replayDigest = snapshot.digest;
+        if (
+          replayDigest !== save.terminalDigest ||
+          snapshot.rarity === undefined ||
+          digestRarityNamespace(snapshot.rarity) !== digestRarityNamespace(rarity.value)
+        ) {
+          return bridgeRefuse(
+            RARITY_REFUSE_CODES.provenanceMismatch,
+            "The resumed rarity session did not reproduce the accepted namespace and terminal digest.",
+          );
+        }
+      } finally {
+        resumed.value.close();
+      }
+      const exercise: OpenPathExercise = Object.freeze({
+        bootstrap: handle.bootstrap,
+        initialDigest,
+        tickDigests: Object.freeze(tickDigests),
+        instanceCount: scene.mountable.instances.length,
+        mountable: scene.mountable,
+        closed: true as const,
+        replayDigest,
+        rarity: safeRarityEvidenceFromNamespace(rarity.value, roll.eventId, seed as number),
+      });
+      return bridgeOk("open-path", exercise);
+    }
 
     const bootstrapped = bootstrapOpenPath(
       { kind: "scene", scene: scene.composed.scene, options: { seed: 20260731 } },
@@ -508,11 +694,13 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     const prompt = field(payload, "prompt");
     const profile = field(payload, "profile");
     const route = field(payload, "route");
+    const mode = field(payload, "mode");
     if (
       typeof prompt !== "string" ||
       prompt.trim().length === 0 ||
       !isAssistantProfile(profile) ||
-      (route !== "local" && route !== "byo" && route !== "hosted")
+      (route !== "local" && route !== "byo" && route !== "hosted") ||
+      (mode !== undefined && mode !== "build" && mode !== "agent")
     ) {
       return bridgeRefuse(
         DESKTOP_BRIDGE_REFUSALS.requestMalformed,
@@ -531,7 +719,14 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         "Hosted AI is metered through the web-shell assistant panel; the desktop has no identity or credit plane and cannot bypass that gate.",
       );
     }
-    if (route === "byo" && options.runByoAssistant === undefined) {
+    const rarityMode = mode === "agent";
+    if (rarityMode && (route !== "local" || options.runRarityProvider === undefined)) {
+      return bridgeRefuse(
+        DESKTOP_BRIDGE_REFUSALS.rarityProviderUnavailable,
+        "The checked-in rarity fixture provider is available only through the local privileged host path.",
+      );
+    }
+    if (!rarityMode && route === "byo" && options.runByoAssistant === undefined) {
       return bridgeRefuse(
         DESKTOP_BRIDGE_REFUSALS.assistantByoUnavailable,
         "No BYOK Model Provider Port is configured for this desktop session. Local remains free and available.",
@@ -542,6 +737,32 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         DESKTOP_BRIDGE_REFUSALS.assistantBusy,
         "An assistant job is already running; poll its status before retrying.",
       );
+    }
+
+    let rarityDocument:
+      | Readonly<{ documentPath: string; contentHash: string; data: Readonly<Record<string, unknown>> }>
+      | undefined;
+    if (rarityMode) {
+      const documentPath = containedDocumentPath(field(payload, "documentPath"));
+      if (documentPath === null) {
+        return bridgeRefuse(
+          DESKTOP_BRIDGE_REFUSALS.requestMalformed,
+          "A rarity assistant action requires a documentPath inside the project directory.",
+        );
+      }
+      const status = authoringSession().status(documentPath);
+      if (!status.ok) {
+        const diagnostic = status.diagnostics[0];
+        return bridgeRefuse(
+          diagnostic?.code ?? DESKTOP_BRIDGE_REFUSALS.requestMalformed,
+          diagnostic?.message ?? "The active Scene Document could not be read.",
+        );
+      }
+      rarityDocument = Object.freeze({
+        documentPath,
+        contentHash: status.contentHash,
+        data: status.data,
+      });
     }
 
     // Kept so a runner that never dispatches can be rolled back to it. The job
@@ -605,6 +826,86 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         detail: error instanceof Error ? error.message : String(error),
       });
     };
+    if (rarityMode && rarityDocument !== undefined && options.runRarityProvider !== undefined) {
+      onProgress(Object.freeze({
+        phase: "waiting-provider",
+        percent: 20,
+        message: "Requesting bounded rarity policy and candidate input from the fixture provider.",
+      }));
+      void options.runRarityProvider({ profile }).then(
+        (contribution) => {
+          if (assistantJob !== activeJob || activeJob.status !== "running") return;
+          if (!contribution.ok) {
+            settleRefusal({
+              reason: contribution.reason,
+              message: contribution.message,
+              recoverable: true,
+            });
+            return;
+          }
+          onProgress(Object.freeze({
+            phase: "validating-artifact",
+            percent: 70,
+            message: "Validating canonical rarity bytes and authoritative kernel resolution.",
+          }));
+          const current = authoringSession().status(rarityDocument.documentPath);
+          if (!current.ok || current.contentHash !== rarityDocument.contentHash) {
+            settleRefusal({
+              reason: "content-hash-conflict",
+              message: "The Scene Document changed while rarity input was being prepared; reopen and retry.",
+              recoverable: true,
+            });
+            return;
+          }
+          const staged = stageRarityProviderProposal({
+            documentData: current.data,
+            documentPath: rarityDocument.documentPath,
+            expectedContentHash: rarityDocument.contentHash,
+            profile,
+            eventId: DESKTOP_RARITY_EVENT_ID,
+            contribution: contribution.value,
+            resolve: resolveRarityWithKernel,
+          });
+          if (!staged.ok) {
+            settleRefusal({
+              reason: staged.reason,
+              message: staged.message,
+              recoverable: true,
+            });
+            return;
+          }
+          const live = authoringSession();
+          const snapshot = staged.replayed
+            ? live.snapshot()
+            : live.proposeEdit(staged.edit);
+          if (!staged.replayed && snapshot.phase !== "reviewing") {
+            const diagnostic = snapshot.diagnostics?.[0];
+            settleRefusal({
+              reason: diagnostic?.code ?? "RARITY_PROPOSAL_NOT_REVIEWING",
+              message: diagnostic?.message ?? "The rarity proposal did not reach Change Review.",
+              recoverable: true,
+            });
+            return;
+          }
+          onProgress(Object.freeze({
+            phase: "ready",
+            percent: 100,
+            message: staged.replayed
+              ? "The identical rarity event replayed without changing project bytes."
+              : "The canonical rarity proposal is waiting in Change Review.",
+          }));
+          activeJob.status = "ready";
+          activeJob.result = Object.freeze({
+            ok: true as const,
+            kind: "rarity-proposal" as const,
+            evidence: staged.evidence,
+            authoring: Object.freeze({ ...snapshot, rarityEvidence: staged.evidence }),
+          });
+        },
+        settleRuntimeFailure,
+      );
+      return bridgeOk("assistant", assistantSnapshot());
+    }
     let running: Promise<AssistantSculptResult> | undefined;
     try {
       running = route === "local"
