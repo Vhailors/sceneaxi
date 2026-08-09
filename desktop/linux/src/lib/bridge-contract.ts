@@ -137,11 +137,18 @@ export type DesktopBridgeAssistantOp =
 export type DesktopAssistantMountedResult = Omit<AssistantSculptSuccess, "artifact"> &
   Readonly<{ mountable: MountableScene }>;
 
+/**
+ * An Agent run either staged a canonical diff or replayed an event the project
+ * already accepted. `replayed` is what tells the two apart, and a replay carries
+ * no `authoring` snapshot at all: nothing was staged, so there is no proposal to
+ * attach and no unrelated in-flight review to stamp this evidence onto.
+ */
 export type DesktopRarityProposalResult = Readonly<{
   ok: true;
   kind: "rarity-proposal";
+  replayed: boolean;
   evidence: DesktopRarityEvidence;
-  authoring: DesktopSnapshot & Readonly<{ rarityEvidence: DesktopRarityEvidence }>;
+  authoring?: DesktopSnapshot & Readonly<{ rarityEvidence: DesktopRarityEvidence }>;
 }>;
 
 export type DesktopAssistantResult =

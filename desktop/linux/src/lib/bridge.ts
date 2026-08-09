@@ -119,6 +119,22 @@ export type DesktopBridge = {
 /** Ticks the open-path exercise advances: enough to prove digests move. */
 export const OPEN_PATH_EXERCISE_TICKS = 4;
 
+/**
+ * The accepted rarity namespace's own kernel evidence.
+ *
+ * It is reported beside the composed scene's, never in place of it: the product
+ * session that verifies a rarity event carries the manifest's rarity namespace
+ * and no entities, so its digests describe a different session from the one the
+ * viewport draws. Folding them into the scene fields would make the Run report
+ * claim the drawn scene advanced through digests it never produced.
+ */
+export type OpenPathRaritySession = {
+  readonly bootstrap: unknown;
+  readonly initialDigest: string;
+  readonly tickDigests: readonly string[];
+  readonly replayDigest: string;
+};
+
 export type OpenPathExercise = {
   readonly bootstrap: unknown;
   readonly initialDigest: string;
@@ -126,8 +142,8 @@ export type OpenPathExercise = {
   readonly instanceCount: number;
   readonly mountable: Extract<DesktopSceneResult, { readonly ok: true }>["mountable"];
   readonly closed: true;
-  readonly replayDigest?: string;
   readonly rarity?: DesktopRarityEvidence;
+  readonly raritySession?: OpenPathRaritySession;
 };
 
 /**
@@ -298,6 +314,131 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     }
   };
 
+  /**
+   * Exercise the accepted rarity namespace through its own product session.
+   *
+   * This is additional to the composed scene's open path, never a replacement
+   * for it, so its digests stay in their own record.
+   */
+  const rarityProductExercise = (
+    documentData: Readonly<Record<string, unknown>>,
+    rarityValue: unknown,
+  ):
+    | Readonly<{ ok: true; session: OpenPathRaritySession; evidence: DesktopRarityEvidence }>
+    | Readonly<{ ok: false; reason: string; message: string; detail?: string | null }> => {
+    const rarity = validateRarityNamespace(rarityValue);
+    if (!rarity.ok) {
+      return { ok: false, reason: rarity.code, message: rarity.message, detail: rarity.path };
+    }
+    const productId = documentData.productId;
+    const seed = documentData.seed;
+    if (typeof productId !== "string" || !Number.isSafeInteger(seed)) {
+      return {
+        ok: false,
+        reason: DESKTOP_BRIDGE_REFUSALS.requestMalformed,
+        message: "The active rarity project has no valid ProductManifest identity.",
+      };
+    }
+    const roll = rarity.value.rolls.at(-1);
+    if (roll === undefined || rarity.value.providerEvidence === undefined) {
+      return {
+        ok: false,
+        reason: RARITY_REFUSE_CODES.outcomeMismatch,
+        message: "The active rarity namespace has no accepted outcome and provider evidence.",
+      };
+    }
+    const bootstrapped = bootstrapOpenPath(
+      {
+        kind: "product",
+        productManifest: {
+          productId,
+          seed: seed as number,
+          rarity: rarity.value,
+        },
+      },
+      { nowMs },
+    );
+    if (!bootstrapped.ok) {
+      return {
+        ok: false,
+        reason: bootstrapped.reason,
+        message: bootstrapped.message,
+        detail: bootstrapped.detail,
+      };
+    }
+    const handle = bootstrapped.value;
+    const live = handle.session();
+    if (!live.ok) {
+      handle.close();
+      return { ok: false, reason: live.reason, message: live.message, detail: live.detail };
+    }
+    let initialDigest: string;
+    let save: ReturnType<typeof live.value.save>;
+    const tickDigests: string[] = [];
+    try {
+      const initial = live.value.observe();
+      initialDigest = initial.digest;
+      live.value.dispatch({ type: "rarity-roll", eventId: roll.eventId, request: roll.request });
+      for (let tick = 1; tick <= OPEN_PATH_EXERCISE_TICKS; tick += 1) {
+        live.value.advance({ tick, deltaMs: 100 });
+        tickDigests.push(live.value.observe().digest);
+      }
+      save = live.value.save();
+    } catch (error) {
+      const reason = field(error, "reason");
+      return {
+        ok: false,
+        reason: typeof reason === "string" ? reason : RARITY_REFUSE_CODES.provenanceMismatch,
+        message: "The accepted rarity session could not be replayed exactly.",
+      };
+    } finally {
+      handle.close();
+    }
+    const resumed = resumeOpenPath({ kind: "product", save }, { nowMs });
+    if (!resumed.ok) {
+      return {
+        ok: false,
+        reason: resumed.reason,
+        message: resumed.message,
+        detail: resumed.detail,
+      };
+    }
+    const replay = resumed.value.session();
+    if (!replay.ok) {
+      resumed.value.close();
+      return { ok: false, reason: replay.reason, message: replay.message, detail: replay.detail };
+    }
+    let replayDigest: string;
+    try {
+      const snapshot = replay.value.observe();
+      replayDigest = snapshot.digest;
+      if (
+        replayDigest !== save.terminalDigest ||
+        snapshot.rarity === undefined ||
+        digestRarityNamespace(snapshot.rarity) !== digestRarityNamespace(rarity.value)
+      ) {
+        return {
+          ok: false,
+          reason: RARITY_REFUSE_CODES.provenanceMismatch,
+          message:
+            "The resumed rarity session did not reproduce the accepted namespace and terminal digest.",
+        };
+      }
+    } finally {
+      resumed.value.close();
+    }
+    return {
+      ok: true,
+      session: Object.freeze({
+        bootstrap: handle.bootstrap,
+        initialDigest,
+        tickDigests: Object.freeze(tickDigests),
+        replayDigest,
+      }),
+      evidence: safeRarityEvidenceFromNamespace(rarity.value, roll.eventId, seed as number),
+    };
+  };
+
   const openPathExercise = (payload: unknown): DesktopBridgeResponse => {
     const read = readActiveDocument(payload, SCENE_DOCUMENT_REFUSALS);
     if (!read.ok) return bridgeRefuse(read.reason, read.message);
@@ -305,101 +446,15 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     const scene = desktopSceneFromDocumentData(status.data);
     if (!scene.ok) return bridgeRefuse(scene.reason, scene.message);
 
-    const rarityValue = status.data.rarity;
-    if (rarityValue !== undefined) {
-      const rarity = validateRarityNamespace(rarityValue);
-      const productId = status.data.productId;
-      const seed = status.data.seed;
-      if (!rarity.ok) return bridgeRefuse(rarity.code, rarity.message, rarity.path);
-      if (typeof productId !== "string" || !Number.isSafeInteger(seed)) {
-        return bridgeRefuse(
-          DESKTOP_BRIDGE_REFUSALS.requestMalformed,
-          "The active rarity project has no valid ProductManifest identity.",
-        );
+    let raritySession: OpenPathRaritySession | undefined;
+    let rarityEvidence: DesktopRarityEvidence | undefined;
+    if (status.data.rarity !== undefined) {
+      const exercised = rarityProductExercise(status.data, status.data.rarity);
+      if (!exercised.ok) {
+        return bridgeRefuse(exercised.reason, exercised.message, exercised.detail);
       }
-      const roll = rarity.value.rolls.at(-1);
-      if (roll === undefined || rarity.value.providerEvidence === undefined) {
-        return bridgeRefuse(
-          RARITY_REFUSE_CODES.outcomeMismatch,
-          "The active rarity namespace has no accepted outcome and provider evidence.",
-        );
-      }
-      const bootstrapped = bootstrapOpenPath(
-        {
-          kind: "product",
-          productManifest: {
-            productId,
-            seed: seed as number,
-            rarity: rarity.value,
-          },
-        },
-        { nowMs },
-      );
-      if (!bootstrapped.ok) {
-        return bridgeRefuse(bootstrapped.reason, bootstrapped.message, bootstrapped.detail);
-      }
-      const handle = bootstrapped.value;
-      const live = handle.session();
-      if (!live.ok) {
-        handle.close();
-        return bridgeRefuse(live.reason, live.message, live.detail);
-      }
-      let initialDigest: string;
-      let save: ReturnType<typeof live.value.save>;
-      const tickDigests: string[] = [];
-      try {
-        const initial = live.value.observe();
-        initialDigest = initial.digest;
-        live.value.dispatch({ type: "rarity-roll", eventId: roll.eventId, request: roll.request });
-        for (let tick = 1; tick <= OPEN_PATH_EXERCISE_TICKS; tick += 1) {
-          live.value.advance({ tick, deltaMs: 100 });
-          tickDigests.push(live.value.observe().digest);
-        }
-        save = live.value.save();
-      } catch (error) {
-        const reason = field(error, "reason");
-        return bridgeRefuse(
-          typeof reason === "string" ? reason : RARITY_REFUSE_CODES.provenanceMismatch,
-          "The accepted rarity session could not be replayed exactly.",
-        );
-      } finally {
-        handle.close();
-      }
-      const resumed = resumeOpenPath({ kind: "product", save }, { nowMs });
-      if (!resumed.ok) return bridgeRefuse(resumed.reason, resumed.message, resumed.detail);
-      const replay = resumed.value.session();
-      if (!replay.ok) {
-        resumed.value.close();
-        return bridgeRefuse(replay.reason, replay.message, replay.detail);
-      }
-      let replayDigest: string;
-      try {
-        const snapshot = replay.value.observe();
-        replayDigest = snapshot.digest;
-        if (
-          replayDigest !== save.terminalDigest ||
-          snapshot.rarity === undefined ||
-          digestRarityNamespace(snapshot.rarity) !== digestRarityNamespace(rarity.value)
-        ) {
-          return bridgeRefuse(
-            RARITY_REFUSE_CODES.provenanceMismatch,
-            "The resumed rarity session did not reproduce the accepted namespace and terminal digest.",
-          );
-        }
-      } finally {
-        resumed.value.close();
-      }
-      const exercise: OpenPathExercise = Object.freeze({
-        bootstrap: handle.bootstrap,
-        initialDigest,
-        tickDigests: Object.freeze(tickDigests),
-        instanceCount: scene.mountable.instances.length,
-        mountable: scene.mountable,
-        closed: true as const,
-        replayDigest,
-        rarity: safeRarityEvidenceFromNamespace(rarity.value, roll.eventId, seed as number),
-      });
-      return bridgeOk("open-path", exercise);
+      raritySession = exercised.session;
+      rarityEvidence = exercised.evidence;
     }
 
     const bootstrapped = bootstrapOpenPath(
@@ -439,6 +494,8 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       instanceCount,
       mountable: scene.mountable,
       closed: true as const,
+      ...(rarityEvidence === undefined ? {} : { rarity: rarityEvidence }),
+      ...(raritySession === undefined ? {} : { raritySession }),
     });
     return bridgeOk("open-path", exercise);
   };
@@ -880,11 +937,23 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           });
           return;
         }
-        const live = authoringSession();
-        const snapshot = staged.replayed
-          ? live.snapshot()
-          : live.proposeEdit(staged.edit);
-        if (!staged.replayed && snapshot.phase !== "reviewing") {
+        if (staged.replayed) {
+          onProgress(Object.freeze({
+            phase: "ready",
+            percent: 100,
+            message: "The identical rarity event replayed without changing project bytes.",
+          }));
+          activeJob.status = "ready";
+          activeJob.result = Object.freeze({
+            ok: true as const,
+            kind: "rarity-proposal" as const,
+            replayed: true as const,
+            evidence: staged.evidence,
+          });
+          return;
+        }
+        const snapshot = authoringSession().proposeEdit(staged.edit);
+        if (snapshot.phase !== "reviewing") {
           const diagnostic = snapshot.diagnostics?.[0];
           settleRefusal({
             reason: diagnostic?.code ?? "RARITY_PROPOSAL_NOT_REVIEWING",
@@ -896,14 +965,13 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         onProgress(Object.freeze({
           phase: "ready",
           percent: 100,
-          message: staged.replayed
-            ? "The identical rarity event replayed without changing project bytes."
-            : "The canonical rarity proposal is waiting in Change Review.",
+          message: "The canonical rarity proposal is waiting in Change Review.",
         }));
         activeJob.status = "ready";
         activeJob.result = Object.freeze({
           ok: true as const,
           kind: "rarity-proposal" as const,
+          replayed: false as const,
           evidence: staged.evidence,
           authoring: Object.freeze({ ...snapshot, rarityEvidence: staged.evidence }),
         });

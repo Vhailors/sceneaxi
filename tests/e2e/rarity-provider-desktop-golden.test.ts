@@ -136,8 +136,9 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
       projectSeed: acceptanceVector.projectSeed,
       ...acceptanceVector.expected,
     });
-    expect(job.result.authoring.renderedDiff).toContain('"rarity"');
-    expect(job.result.authoring.renderedDiff).toContain(job.result.evidence.outcomeDigest);
+    expect(job.result.replayed).toBe(false);
+    expect(job.result.authoring?.renderedDiff).toContain('"rarity"');
+    expect(job.result.authoring?.renderedDiff).toContain(job.result.evidence.outcomeDigest);
     expect(documentBytes(root)).toBe(before);
 
     const accepted = bridge.handle({ action: "authoring", payload: { op: "accept" } });
@@ -166,9 +167,63 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
         providerEvidence: { model: DESKTOP_RARITY_FIXTURE_MODEL },
       },
     });
-    const exercise = played.data as { replayDigest: string; tickDigests: readonly string[] };
-    expect(exercise.replayDigest).toBe(exercise.tickDigests.at(-1));
+    const exercise = played.data as {
+      instanceCount: number;
+      initialDigest: string;
+      tickDigests: readonly string[];
+      raritySession: { replayDigest: string; initialDigest: string; tickDigests: readonly string[] };
+    };
+    // The rarity product session is reported beside the composed scene session,
+    // not in place of it: the scene the viewport draws still has its instances and
+    // its own advance, and the rarity replay digest belongs to the other session.
+    expect(exercise.instanceCount).toBeGreaterThan(0);
+    expect(exercise.raritySession.replayDigest).toBe(exercise.raritySession.tickDigests.at(-1));
+    expect(exercise.raritySession.initialDigest).not.toBe(exercise.initialDigest);
+    expect(exercise.tickDigests).not.toContain(exercise.raritySession.replayDigest);
     expect(JSON.stringify({ job, played })).not.toContain("credential-sentinel-never-persisted");
+  });
+
+  it("keeps the composed scene open path identical whether or not rarity is accepted", async () => {
+    const root = projectRoot();
+    const before = createDesktopBridge({ cwd: root, nowMs: () => 1_726_000_000_000 });
+    const beforeAccept = before.handle({
+      action: "open-path",
+      payload: { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+    });
+    if (!beforeAccept.ok) throw new Error(beforeAccept.reason);
+    const plain = beforeAccept.data as {
+      instanceCount: number;
+      initialDigest: string;
+      tickDigests: readonly string[];
+      rarity?: unknown;
+      raritySession?: unknown;
+    };
+    expect(plain.rarity).toBeUndefined();
+    expect(plain.raritySession).toBeUndefined();
+
+    const bridge = createDesktopBridge({
+      cwd: root,
+      nowMs: () => 1_726_000_000_000,
+      runRarityProvider: createDesktopRarityFixtureProvider(),
+    });
+    startRarity(bridge);
+    expect((await settledJob(bridge)).status).toBe("ready");
+    bridge.handle({ action: "authoring", payload: { op: "accept" } });
+
+    const after = createDesktopBridge({ cwd: root, nowMs: () => 1_726_000_000_000 });
+    const played = after.handle({
+      action: "open-path",
+      payload: { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+    });
+    if (!played.ok) throw new Error(played.reason);
+    const withRarity = played.data as {
+      instanceCount: number;
+      initialDigest: string;
+      tickDigests: readonly string[];
+    };
+    expect(withRarity.instanceCount).toBe(plain.instanceCount);
+    expect(withRarity.initialDigest).toBe(plain.initialDigest);
+    expect(withRarity.tickDigests).toEqual(plain.tickDigests);
   });
 
   it("rejects the staged proposal without changing project bytes or creating a roll", async () => {
@@ -361,7 +416,54 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     });
     startRarity(identical);
     const replay = await settledJob(identical);
-    expect(replay).toMatchObject({ status: "ready", result: { kind: "rarity-proposal" } });
+    expect(replay).toMatchObject({
+      status: "ready",
+      result: { kind: "rarity-proposal", replayed: true },
+    });
+    // A replay staged nothing, so it hands back no authoring snapshot at all —
+    // there is no proposal of its own to attach, and stamping this evidence onto
+    // whatever review happened to be open would describe an unrelated diff.
+    if (replay.result === undefined || !("kind" in replay.result)) {
+      throw new Error("missing rarity result");
+    }
+    expect(replay.result.authoring).toBeUndefined();
+    expect(documentBytes(root)).toBe(acceptedBytes);
+
+    // The same holds when an unrelated proposal is mid-review: the replay must not
+    // borrow it. Project bytes are unchanged by staging, so the content-hash guard
+    // does not catch this case.
+    const withOpenReview = createDesktopBridge({
+      cwd: root,
+      runRarityProvider: createDesktopRarityFixtureProvider(),
+    });
+    const current = withOpenReview.handle({
+      action: "authoring",
+      payload: { op: "status", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+    });
+    if (!current.ok) throw new Error(current.reason);
+    const inspected = current.data as { contentHash: string };
+    const staged = withOpenReview.handle({
+      action: "authoring",
+      payload: {
+        op: "edit-property",
+        documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+        expectedContentHash: inspected.contentHash,
+        entityId: "desktop-crate-beside",
+        propertyId: "translation-x",
+        newValue: 3,
+      },
+    });
+    expect(staged).toMatchObject({ ok: true, data: { phase: "reviewing" } });
+    startRarity(withOpenReview);
+    const borrowed = await settledJob(withOpenReview);
+    expect(borrowed).toMatchObject({
+      status: "ready",
+      result: { kind: "rarity-proposal", replayed: true },
+    });
+    if (borrowed.result === undefined || !("kind" in borrowed.result)) {
+      throw new Error("missing rarity result");
+    }
+    expect(borrowed.result.authoring).toBeUndefined();
     expect(documentBytes(root)).toBe(acceptedBytes);
 
     const changedRequest = {
@@ -383,6 +485,40 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
       refusal: { reason: RARITY_REFUSE_CODES.eventInputConflict },
     });
     expect(documentBytes(root)).toBe(acceptedBytes);
+  });
+
+  it("refuses to extend an accepted namespace from a call with different model evidence", async () => {
+    const root = projectRoot();
+    const first = createDesktopBridge({
+      cwd: root,
+      runRarityProvider: createDesktopRarityFixtureProvider(),
+    });
+    startRarity(first);
+    expect((await settledJob(first)).status).toBe("ready");
+    first.handle({ action: "authoring", payload: { op: "accept" } });
+    const acceptedBytes = documentBytes(root);
+    expect(acceptedBytes).toContain(DESKTOP_RARITY_FIXTURE_MODEL.version);
+
+    // `providerEvidence` is a namespace property, so every roll it holds is
+    // described by one descriptor. A second call from a different model may not
+    // extend it, because the rolls already stored would then report a descriptor
+    // that is not theirs.
+    const requoted = createDesktopBridge({
+      cwd: root,
+      runRarityProvider: createDesktopRarityFixtureProvider({
+        executedModel: { ...DESKTOP_RARITY_FIXTURE_MODEL, version: "2026-09-01" },
+      }),
+    });
+    startRarity(requoted);
+    expect(await settledJob(requoted)).toMatchObject({
+      status: "refused",
+      refusal: {
+        reason: RARITY_AUTHORING_REFUSALS.providerEvidenceConflict,
+        recoverable: true,
+      },
+    });
+    expect(documentBytes(root)).toBe(acceptedBytes);
+    expect(documentBytes(root)).not.toContain("2026-09-01");
   });
 
   it("refuses a tampered accepted provenance before Run can claim a result", async () => {

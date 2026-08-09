@@ -19,7 +19,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runInNewContext } from "node:vm";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import {
   MODEL_PROVIDER_PORT_SCHEMA_VERSION,
   composeScene,
@@ -70,6 +70,8 @@ import {
   mountDesktopScene,
   synchronizeViewportScene,
 } from "../../desktop/linux/src/renderer/viewport-playback.ts";
+import { decideAssistantStart } from "../../desktop/linux/src/renderer/assistant-start.ts";
+import { createDesktopRarityFixtureProvider } from "../../desktop/linux/src/electron/provider-runtime.ts";
 
 const FIXED_NOW_MS = 1_753_920_000_000;
 const fixedNow = (): number => FIXED_NOW_MS;
@@ -1161,7 +1163,8 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     expectRefusal(runtimeRefusal);
   });
 
-  it("moves a rarity proposal into actionable review and both safe evidence views", () => {
+  function mountRarityChrome(port?: unknown) {
+    const reject = new FakeElement("change-reject", { action: "change-reject" });
     const proposal = new FakeElement("proposal");
     proposal.hidden = true;
     const empty = new FakeElement("empty");
@@ -1218,51 +1221,69 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       window: {
         matchMedia: () => ({ addEventListener: () => undefined, matches: false }),
       },
+      ...(port === undefined ? {} : { sceneaxiDesktop: port }),
     });
-
-    const rarityEvidence = {
-      eventId: "wayfinder-drop-001",
-      tier: "uncommon",
-      candidateId: "wayfinder-copper",
-      scope: "desktop-linux-rarity",
-      algorithmId: "sceneaxi.rarity.weighted-sha256-v1",
-      projectSeed: 20260809,
-      policyDigest: "sha256:policy",
-      requestDigest: "sha256:request",
-      outcomeDigest: "sha256:outcome",
-      provenanceDigest: "sha256:provenance",
-      namespaceDigest: "sha256:namespace",
-      tierRollDigest: "sha256:tier-roll",
-      candidateRollDigest: "sha256:candidate-roll",
-      tierDraw: 69,
-      tierTotalWeight: 100,
-      candidateDraw: 2,
-      candidateTotalWeight: 5,
-      providerEvidence: {
-        model: {
-          provider: "sceneaxi-fixture",
-          model: "wayfinder-rarity-fixture",
-          quantization: "deterministic-json",
-          version: "2026-08-09",
-        },
-      },
+    return {
+      shell, reject, proposal, empty, documentPath, contentHash, diff, reviewEvidence,
+      evidence, evidenceEmpty, projectState, status, fileStatus, badge, changesTab,
+      evidenceTab, changesPanel, evidencePanel, documentListeners,
     };
+  }
+
+  const RARITY_EVIDENCE_FIXTURE = Object.freeze({
+    eventId: "wayfinder-drop-001",
+    tier: "uncommon",
+    candidateId: "wayfinder-copper",
+    scope: "desktop-linux-rarity",
+    algorithmId: "sceneaxi.rarity.weighted-sha256-v1",
+    projectSeed: 20260809,
+    policyDigest: "sha256:policy",
+    requestDigest: "sha256:request",
+    outcomeDigest: "sha256:outcome",
+    provenanceDigest: "sha256:provenance",
+    namespaceDigest: "sha256:namespace",
+    tierRollDigest: "sha256:tier-roll",
+    candidateRollDigest: "sha256:candidate-roll",
+    tierDraw: 69,
+    tierTotalWeight: 100,
+    candidateDraw: 2,
+    candidateTotalWeight: 5,
+    providerEvidence: {
+      model: {
+        provider: "sceneaxi-fixture",
+        model: "wayfinder-rarity-fixture",
+        quantization: "deterministic-json",
+        version: "2026-08-09",
+      },
+    },
+  });
+
+  const RARITY_PROPOSAL_SNAPSHOT = Object.freeze({
+    phase: "reviewing",
+    proposal: {
+      edits: [{ documentPath: "scene.json", baseContentHash: "sha256:base" }],
+    },
+    unifiedDiff: "--- scene.json",
+    renderedDiff: "rarity: + uncommon / wayfinder-copper",
+    appliedPaths: null,
+    journalRecoveryPending: false,
+    transactionId: null,
+    diagnostics: [],
+  });
+
+  it("moves a rarity proposal into actionable review and both safe evidence views", () => {
+    const {
+      proposal, empty, documentPath, diff, reviewEvidence, evidence, evidenceEmpty,
+      projectState, status, fileStatus, badge, changesTab, evidenceTab, changesPanel,
+      evidencePanel, documentListeners,
+    } = mountRarityChrome();
+
+    const rarityEvidence = RARITY_EVIDENCE_FIXTURE;
     documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
       detail: {
+        replayed: false,
         evidence: rarityEvidence,
-        snapshot: {
-          phase: "reviewing",
-          proposal: {
-            edits: [{ documentPath: "scene.json", baseContentHash: "sha256:base" }],
-          },
-          unifiedDiff: "--- scene.json",
-          renderedDiff: "rarity: + uncommon / wayfinder-copper",
-          appliedPaths: null,
-          journalRecoveryPending: false,
-          transactionId: null,
-          diagnostics: [],
-          rarityEvidence,
-        },
+        snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, rarityEvidence },
       },
     });
 
@@ -1285,6 +1306,114 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     expect(status.textContent).toContain("review before Save");
     expect(fileStatus.textContent).toContain("review before Save");
     expect(badge.textContent).toBe("1");
+  });
+
+  it("reports an idempotent rarity replay as a replay, not as a staged proposal", () => {
+    const {
+      proposal, empty, evidence, evidenceEmpty, projectState, status, badge,
+      changesTab, evidenceTab, changesPanel, evidencePanel, documentListeners,
+    } = mountRarityChrome();
+
+    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+      detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
+    });
+
+    expect(evidence.textContent).toContain("provenance sha256:provenance");
+    expect(evidence.hidden).toBe(false);
+    expect(evidenceEmpty.hidden).toBe(true);
+    expect(evidenceTab.getAttribute("aria-selected")).toBe("true");
+    expect(evidencePanel.hidden).toBe(false);
+    expect(changesTab.getAttribute("aria-selected")).toBe("false");
+    expect(changesPanel.hidden).toBe(true);
+    expect(proposal.hidden).toBe(true);
+    expect(empty.hidden).toBe(false);
+    expect(badge.textContent).toBe("0");
+    expect(projectState.dataset.projectState).not.toBe("dirty");
+    expect(status.textContent).toContain("nothing staged");
+    expect(status.textContent).not.toContain("review before Save");
+  });
+
+  // Reject is driven through the real click handler and a fake desktop port, so
+  // the assertion covers the chrome's own decision rather than a helper called
+  // directly. The proposal under review is installed through the rarity event in
+  // both cases; only its `rarityEvidence` member differs, which is exactly the
+  // difference the clear is supposed to key on.
+  const rejectingPort = () => {
+    const rejected = {
+      phase: "rejected",
+      proposal: null,
+      unifiedDiff: null,
+      renderedDiff: null,
+      appliedPaths: null,
+      journalRecoveryPending: false,
+      transactionId: null,
+      diagnostics: [],
+    };
+    return {
+      request: (request: { readonly payload?: { readonly op?: string } }) =>
+        Promise.resolve(
+          request.payload?.op === "reject"
+            ? { ok: true, data: rejected }
+            : { ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" },
+        ),
+    };
+  };
+
+  // Reject completes asynchronously and ends by reporting the re-open it could
+  // not perform against this fake port, so that status is the signal that
+  // `syncReview` has already seen the rejected snapshot. Asserting before it
+  // would read the pre-click state and pass either way.
+  const rejectSettled = async (status: FakeElement): Promise<void> => {
+    await vi.waitFor(() => {
+      expect(status.textContent).toContain("Open refused");
+    });
+  };
+
+  it("keeps accepted rarity evidence when an unrelated proposal is rejected", async () => {
+    const { reject, shell, evidence, evidenceEmpty, status, documentListeners } =
+      mountRarityChrome(rejectingPort());
+
+    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+      detail: {
+        replayed: false,
+        evidence: RARITY_EVIDENCE_FIXTURE,
+        snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, rarityEvidence: RARITY_EVIDENCE_FIXTURE },
+      },
+    });
+    expect(evidence.hidden).toBe(false);
+
+    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+      detail: {
+        replayed: false,
+        evidence: RARITY_EVIDENCE_FIXTURE,
+        snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, renderedDiff: "translation.x: 0 → 3" },
+      },
+    });
+
+    shell.clickListener?.({ target: reject });
+    await rejectSettled(status);
+    expect(evidence.textContent).toContain("provenance sha256:provenance");
+    expect(evidence.hidden).toBe(false);
+    expect(evidenceEmpty.hidden).toBe(true);
+  });
+
+  it("retires rarity evidence when the rarity proposal itself is rejected", async () => {
+    const { reject, shell, evidence, evidenceEmpty, status, documentListeners } =
+      mountRarityChrome(rejectingPort());
+
+    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+      detail: {
+        replayed: false,
+        evidence: RARITY_EVIDENCE_FIXTURE,
+        snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, rarityEvidence: RARITY_EVIDENCE_FIXTURE },
+      },
+    });
+    expect(evidence.hidden).toBe(false);
+
+    shell.clickListener?.({ target: reject });
+    await rejectSettled(status);
+    expect(evidence.hidden).toBe(true);
+    expect(evidenceEmpty.hidden).toBe(false);
   });
 });
 
@@ -1320,12 +1449,78 @@ describe("desktop renderer module accounting", () => {
     expect(source).toContain("assistantViewport.replace(job.result.mountable)");
     expect(source).toContain("assistantViewport.manipulate(control.dataset.value)");
     expect(source).toContain('data-assistant-manipulators');
-    expect(source).toContain('mode !== "build" && mode !== "agent"');
-    expect(source).toContain("DESKTOP_BRIDGE_REFUSALS.assistantBuildModeRequired");
     expect(source).toContain('payload: { op: "abandon" }');
     expect(source).toContain("MATERIALS (read-only)");
     expect(source).toContain("PHYSICS (read-only)");
     expect(source).toContain("SETTINGS (read-only)");
+  });
+
+  it("starts Build and Agent through the bridge and refuses every other composer mode", async () => {
+    const profile = "@sceneaxi/profile-game" as const;
+    const agent = decideAssistantStart({
+      mode: "agent",
+      route: "local",
+      profile,
+      prompt: "  stage a drop  ",
+    });
+    expect(agent).toEqual({
+      ok: true,
+      payload: {
+        op: "start",
+        route: "local",
+        profile,
+        prompt: "stage a drop",
+        mode: "agent",
+        documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      },
+    });
+    const build = decideAssistantStart({
+      mode: "build",
+      route: undefined,
+      profile,
+      prompt: "a crate",
+    });
+    expect(build).toEqual({
+      ok: true,
+      payload: { op: "start", route: "local", profile, prompt: "a crate", mode: "build" },
+    });
+
+    for (const mode of [undefined, "", "ask", "Agent", "agent "]) {
+      expect(decideAssistantStart({ mode, route: "local", profile, prompt: "a crate" })).toEqual({
+        ok: false,
+        reason: DESKTOP_BRIDGE_REFUSALS.assistantBuildModeRequired,
+        message:
+          "Choose Build for a Sculpt Artifact or Agent for a fixture-backed rarity proposal; Ask is not implemented.",
+      });
+    }
+    expect(
+      decideAssistantStart({ mode: "agent", route: "local", profile, prompt: "   " }),
+    ).toMatchObject({ ok: false, reason: "ASSISTANT_SCULPT_PROMPT_INVALID" });
+
+    const dir = mkdtempSync(join(tmpdir(), "sceneaxi-desktop-composer-mode-"));
+    try {
+      expect(seedDesktopProject(dir)).toEqual({ ok: true, migrated: false });
+      const bridge = createDesktopBridge({
+        cwd: dir,
+        nowMs: fixedNow,
+        runRarityProvider: createDesktopRarityFixtureProvider(),
+      });
+      if (!agent.ok) throw new Error("agent start refused");
+      expect(bridge.handle({ action: "assistant", payload: agent.payload })).toMatchObject({
+        ok: true,
+        action: "assistant",
+      });
+      await vi.waitFor(() => {
+        const response = bridge.handle({ action: "assistant", payload: { op: "status" } });
+        const job = response.ok ? (response.data as DesktopAssistantJobSnapshot | null) : null;
+        expect(job?.status).toBe("ready");
+      });
+      const settled = bridge.handle({ action: "assistant", payload: { op: "status" } });
+      const job = settled.ok ? (settled.data as DesktopAssistantJobSnapshot | null) : null;
+      expect(job?.result).toMatchObject({ kind: "rarity-proposal", replayed: false });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("leaves no composer control live-but-unbound when the viewport refuses", () => {

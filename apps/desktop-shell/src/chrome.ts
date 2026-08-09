@@ -28,6 +28,7 @@
  *   families are named in a stack that falls back to the system UI face.
  */
 
+import { formatSafeRarityEvidence } from "@sceneaxi/authoring-core";
 import {
   DESKTOP_ASSISTANT_RUNTIME_EVENT,
   DESKTOP_DOCK_TAB_IDS,
@@ -600,7 +601,7 @@ function dock(view: DesktopVisualView): string {
     `,
     assets: `<p class="panel-empty">No asset library is bound to this surface.</p>`,
     console: `<p class="panel-empty">No session is running, so there is no console output to show.</p>`,
-    evidence: `<p class="panel-empty" data-rarity-evidence-empty>No accepted rarity evidence has been opened or staged in this session.</p><pre class="change-diff" data-rarity-evidence hidden tabindex="0" role="region" aria-label="Rarity evidence"></pre>`,
+    evidence: `<p class="panel-empty" data-rarity-evidence-empty>No accepted rarity evidence has been opened or staged in this session.</p><pre class="change-diff" data-rarity-evidence hidden tabindex="0" role="region" aria-label="Rarity evidence"></pre><p class="panel-empty">No evidence packet has been captured here. Evidence digests are produced by <code>sceneaxi project capture</code>, never invented by a viewer.</p>`,
     timeline: `<p class="panel-empty">No clip is loaded, so the timeline has no tracks.</p>`,
   };
 
@@ -1365,6 +1366,7 @@ if (shell) {
   // actually in the way instead of claiming a normal-open document.
   let activeConflictDetail = null;
   let activeReviewSnapshot = null;
+  let rarityProposalStaged = false;
   let activeProject = null;
   let editableScene = null;
   let selectedSceneEntityId = null;
@@ -1513,36 +1515,11 @@ if (shell) {
       : null;
   };
 
-  const rarityEvidenceText = (evidence) => {
-    const model = evidence && evidence.providerEvidence && evidence.providerEvidence.model;
-    const requiredStrings = [
-      'eventId', 'tier', 'candidateId', 'scope', 'algorithmId', 'policyDigest',
-      'requestDigest', 'outcomeDigest', 'provenanceDigest', 'namespaceDigest',
-      'tierRollDigest', 'candidateRollDigest',
-    ];
-    if (!evidence || typeof evidence !== 'object' ||
-        !requiredStrings.every((field) => typeof evidence[field] === 'string') ||
-        !model || typeof model !== 'object' ||
-        !['provider', 'model', 'quantization', 'version'].every((field) => typeof model[field] === 'string')) {
-      return null;
-    }
-    return [
-      'RARITY ' + evidence.tier + ' · ' + evidence.candidateId,
-      'event ' + evidence.eventId + ' · scope ' + evidence.scope + ' · seed ' + String(evidence.projectSeed),
-      'algorithm ' + evidence.algorithmId,
-      'policy ' + evidence.policyDigest,
-      'request ' + evidence.requestDigest,
-      'outcome ' + evidence.outcomeDigest,
-      'provenance ' + evidence.provenanceDigest,
-      'namespace ' + evidence.namespaceDigest,
-      'tier draw ' + String(evidence.tierDraw) + ' / ' + String(evidence.tierTotalWeight),
-      'candidate draw ' + String(evidence.candidateDraw) + ' / ' + String(evidence.candidateTotalWeight),
-      'tier roll ' + evidence.tierRollDigest,
-      'candidate roll ' + evidence.candidateRollDigest,
-      'provider ' + model.provider + ' · model ' + model.model +
-        ' · quantization ' + model.quantization + ' · version ' + model.version,
-    ].join('\\n');
-  };
+  // The authoring core's own safe-evidence rendering, not a browser paraphrase
+  // of it: the packaged renderer prints this exact function's output, so the
+  // Assistant, Change Review, Run, and Evidence surfaces cannot disagree about
+  // what an accepted roll's provenance says.
+  const rarityEvidenceText = ${String(formatSafeRarityEvidence)};
 
   const syncRarityEvidence = (evidence) => {
     const text = rarityEvidenceText(evidence);
@@ -1592,7 +1569,16 @@ if (shell) {
       rarityEvidence.hidden = rarityText === null;
     }
     if (rarityText !== null) syncRarityEvidence(snapshot.rarityEvidence);
-    if (snapshot?.phase === 'rejected') clearRarityEvidence();
+    if (active) rarityProposalStaged = rarityText !== null;
+    // Only the rarity proposal's own discard retires its provenance. Rejecting
+    // an unrelated property edit says nothing about rarity the project already
+    // accepted, and clearing the dock there would deny evidence that still
+    // exists in the project bytes.
+    if (snapshot?.phase === 'rejected') {
+      if (rarityProposalStaged) clearRarityEvidence();
+      rarityProposalStaged = false;
+    }
+    if (snapshot?.phase === 'applied') rarityProposalStaged = false;
     // A validated snapshot that reports no diagnostic is the host saying the
     // conflict is over, which is the only thing that resolves it.
     if (snapshot !== null &&
@@ -2263,10 +2249,17 @@ if (shell) {
     showModePanels('run');
     const lastDigest = exercise.tickDigests[ticks - 1];
     const rarityText = syncRarityEvidence(exercise.rarity);
+    // The rarity namespace is verified in its own product session, which carries
+    // no entities and therefore produced none of the digests above. Naming that
+    // session keeps the report from reading as one advance.
     const raritySummary = rarityText === null
       ? ''
       : ' · rarity ' + exercise.rarity.tier + '/' + exercise.rarity.candidateId +
-        ' · provenance ' + exercise.rarity.provenanceDigest;
+        ' · provenance ' + exercise.rarity.provenanceDigest +
+        ' · verified in a separate product session' +
+        (exercise.raritySession && typeof exercise.raritySession.replayDigest === 'string'
+          ? ' replayed to ' + exercise.raritySession.replayDigest
+          : '');
     const played = 'Played composed scene · ' + ticks + ' ticks · viewport frame ' + playback.frame + ' · session closed' + raritySummary;
     q('[data-run-session-report]').forEach((el) => {
       el.textContent = 'Completed closed session · ' + ticks + ' ticks · terminal digest ' + String(lastDigest) + raritySummary;
@@ -2789,9 +2782,23 @@ if (shell) {
     }
   });
 
+  // A replay staged nothing, so it moves no proposal into Change Review and
+  // leaves the project clean. Its provenance is still real and still belongs in
+  // the Evidence dock — the surface just may not claim there is something to
+  // accept or save.
   document.addEventListener(T.product.rarityProposalEvent, (event) => {
     const detail = event && event.detail;
-    if (!detail || !isSessionSnapshot(detail.snapshot)) return;
+    if (!detail) return;
+    if (detail.replayed === true) {
+      if (syncRarityEvidence(detail.evidence) === null) return;
+      selectDockTab('evidence');
+      productStatus(
+        projectRecovering ? 'recovering' : (projectDirty ? 'dirty' : (projectData === null ? 'closed' : 'open')),
+        T.product.documentPath + ' · identical rarity event replayed · project bytes unchanged, nothing staged',
+      );
+      return;
+    }
+    if (!isSessionSnapshot(detail.snapshot)) return;
     if (!syncReview(detail.snapshot)) return;
     syncRarityEvidence(detail.evidence);
     selectDockTab('changes');

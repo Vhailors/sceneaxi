@@ -22,7 +22,10 @@ import {
   createThreeSculptPresentationBackend,
   type SculptPresentationFrame,
 } from "@sceneaxi/engine-presentation";
+import { formatSafeRarityEvidence } from "@sceneaxi/authoring-core";
 import { createDesktopAssistantViewportController } from "../lib/assistant-viewport.js";
+import type { DesktopAssistantProfile } from "../lib/bridge.js";
+import { decideAssistantStart } from "./assistant-start.js";
 import type {
   DesktopByoConfigurationRequest,
   DesktopByoConfigurationResponse,
@@ -161,9 +164,30 @@ function refuseLiveViewport(stage: Element | null, message: string): void {
   );
 }
 
-function assistantProfile(shell: HTMLElement): `@sceneaxi/profile-${string}` {
+function assistantProfile(shell: HTMLElement): DesktopAssistantProfile {
   const id = shell.dataset.profile;
-  return `@sceneaxi/profile-${id === "web" ? "web" : id === "kids" ? "kids" : "game"}`;
+  if (id === "web") return "@sceneaxi/profile-web";
+  if (id === "kids") return "@sceneaxi/profile-kids";
+  return "@sceneaxi/profile-game";
+}
+
+type RarityReportable = {
+  readonly rarity?: DesktopRarityEvidence;
+  readonly raritySession?: { readonly replayDigest?: unknown };
+};
+
+/**
+ * The rarity clause of an open-path report line.
+ *
+ * The digests beside it belong to the composed scene session the viewport draws;
+ * the accepted namespace is verified in its own product session, so this names
+ * that session rather than letting one sentence imply a single advance.
+ */
+function rarityReportSuffix(exercise: RarityReportable): string {
+  if (exercise.rarity === undefined) return "";
+  const replay = exercise.raritySession?.replayDigest;
+  const replayed = typeof replay === "string" ? ` replayed to ${replay}` : "";
+  return ` · rarity ${exercise.rarity.tier}/${exercise.rarity.candidateId} · provenance ${exercise.rarity.provenanceDigest} · verified in a separate product session${replayed}`;
 }
 
 function isRarityProposalResult(
@@ -199,25 +223,6 @@ function inspectionText(job: DesktopAssistantJobSnapshot): string {
     "SETTINGS (read-only)",
     `${settings.moduleId} · ${settings.exportName}`,
     inspection.settings.edit.refusal,
-  ].join("\n");
-}
-
-function rarityEvidenceText(evidence: DesktopRarityEvidence): string {
-  const model = evidence.providerEvidence.model;
-  return [
-    `RARITY ${evidence.tier} · ${evidence.candidateId}`,
-    `event ${evidence.eventId} · scope ${evidence.scope} · seed ${String(evidence.projectSeed)}`,
-    `algorithm ${evidence.algorithmId}`,
-    `policy ${evidence.policyDigest}`,
-    `request ${evidence.requestDigest}`,
-    `outcome ${evidence.outcomeDigest}`,
-    `provenance ${evidence.provenanceDigest}`,
-    `namespace ${evidence.namespaceDigest}`,
-    `tier draw ${String(evidence.tierDraw)} / ${String(evidence.tierTotalWeight)}`,
-    `candidate draw ${String(evidence.candidateDraw)} / ${String(evidence.candidateTotalWeight)}`,
-    `tier roll ${evidence.tierRollDigest}`,
-    `candidate roll ${evidence.candidateRollDigest}`,
-    `provider ${model.provider} · model ${model.model} · quantization ${model.quantization} · version ${model.version}`,
   ].join("\n");
 }
 
@@ -301,18 +306,22 @@ function installAssistantProductFlow(
       }
       if (job.status === "ready" && job.result !== undefined) {
         if (isRarityProposalResult(job.result)) {
-          resultView.textContent = rarityEvidenceText(job.result.evidence);
+          const replayed = job.result.replayed;
+          resultView.textContent = formatSafeRarityEvidence(job.result.evidence) ?? "";
           resultView.removeAttribute("hidden");
           retry?.setAttribute("hidden", "");
           document.dispatchEvent(
             new CustomEvent(DESKTOP_RARITY_PROPOSAL_EVENT, {
               detail: Object.freeze({
-                snapshot: job.result.authoring,
+                replayed,
+                snapshot: replayed ? null : job.result.authoring,
                 evidence: job.result.evidence,
               }),
             }),
           );
-          status.textContent = "Rarity proposal staged · review the canonical diff before Accept or Reject.";
+          status.textContent = replayed
+            ? "Identical rarity event replayed · project bytes unchanged, so nothing was staged for review."
+            : "Rarity proposal staged · review the canonical diff before Accept or Reject.";
           running = false;
           return;
         }
@@ -338,17 +347,14 @@ function installAssistantProductFlow(
 
   const start = async (): Promise<void> => {
     if (running) return;
-    const mode = shell.dataset.assistantMode;
-    if (mode !== "build" && mode !== "agent") {
-      refused(
-        DESKTOP_BRIDGE_REFUSALS.assistantBuildModeRequired,
-        "Choose Build for a Sculpt Artifact or Agent for a fixture-backed rarity proposal; Ask is not implemented.",
-      );
-      return;
-    }
-    const value = prompt.value.trim();
-    if (value.length === 0) {
-      refused("ASSISTANT_SCULPT_PROMPT_INVALID", "Enter a prompt before sending.");
+    const decision = decideAssistantStart({
+      mode: shell.dataset.assistantMode,
+      route: shell.dataset.assistantRoute,
+      profile: assistantProfile(shell),
+      prompt: prompt.value,
+    });
+    if (!decision.ok) {
+      refused(decision.reason, decision.message);
       return;
     }
     running = true;
@@ -357,14 +363,7 @@ function installAssistantProductFlow(
     status.textContent = "Starting assistant action…";
     const response = await port.request({
       action: "assistant",
-      payload: {
-        op: "start",
-        route: shell.dataset.assistantRoute ?? "local",
-        profile: assistantProfile(shell),
-        prompt: value,
-        mode,
-        ...(mode === "agent" ? { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH } : {}),
-      },
+      payload: decision.payload,
     });
     if (!response.ok) {
       refused(response.reason, response.message);
@@ -538,12 +537,11 @@ async function mountLiveViewport(): Promise<void> {
     if (!(event instanceof CustomEvent)) return;
     const detail = event.detail as {
       accepted?: unknown;
-      exercise?: {
+      exercise?: RarityReportable & {
         closed?: unknown;
         initialDigest?: unknown;
         tickDigests?: unknown;
         mountable?: unknown;
-        rarity?: DesktopRarityEvidence;
       };
       frame?: unknown;
     } | null;
@@ -574,7 +572,7 @@ async function mountLiveViewport(): Promise<void> {
     stage.dataset.playback = "acknowledged";
     openPathLine(
       stage,
-      `kernel playback acknowledged: ${exercise.tickDigests.length} ticks advanced · digest ${exercise.initialDigest.slice(0, 18)}… → ${exercise.tickDigests.at(-1)?.slice(0, 18)}…${exercise.rarity === undefined ? "" : ` · rarity ${exercise.rarity.tier}/${exercise.rarity.candidateId} · provenance ${exercise.rarity.provenanceDigest}`} · composed scene redrawn at viewport frame ${frame.frame}`,
+      `kernel playback acknowledged: ${exercise.tickDigests.length} ticks advanced · digest ${exercise.initialDigest.slice(0, 18)}… → ${exercise.tickDigests.at(-1)?.slice(0, 18)}…${rarityReportSuffix(exercise)} · composed scene redrawn at viewport frame ${frame.frame}`,
     );
   });
 
@@ -586,14 +584,13 @@ async function mountLiveViewport(): Promise<void> {
       payload: { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
     });
     if (openPath.ok) {
-      const exercise = openPath.data as {
+      const exercise = openPath.data as RarityReportable & {
         initialDigest: string;
         tickDigests: string[];
-        rarity?: DesktopRarityEvidence;
       };
       openPathLine(
         stage,
-        `kernel open path: ${exercise.tickDigests.length} ticks advanced · digest ${exercise.initialDigest.slice(0, 18)}… → ${exercise.tickDigests[exercise.tickDigests.length - 1]?.slice(0, 18)}…${exercise.rarity === undefined ? "" : ` · rarity ${exercise.rarity.tier}/${exercise.rarity.candidateId} · provenance ${exercise.rarity.provenanceDigest}`} · session closed`,
+        `kernel open path: ${exercise.tickDigests.length} ticks advanced · digest ${exercise.initialDigest.slice(0, 18)}… → ${exercise.tickDigests[exercise.tickDigests.length - 1]?.slice(0, 18)}…${rarityReportSuffix(exercise)} · session closed`,
       );
     } else {
       openPathLine(stage, `kernel open path refused: ${openPath.reason} — ${openPath.message}`);

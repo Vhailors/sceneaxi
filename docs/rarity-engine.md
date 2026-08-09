@@ -124,14 +124,41 @@ Reject writes nothing. A changed content hash stays the existing actionable
 After reopen, the desktop `open-path` action gives that namespace to
 `bootstrapOpenPath({ kind: "product" })`, dispatches the identical event, advances
 through the kernel's authoritative mutation path, saves, resumes, and verifies the
-terminal replay digest. Run and the viewport receive only the resulting tier,
-candidate, safe draw/digest fields, and provider descriptor. Raw prompts, provider
-responses, credentials, and provider-authored failure detail do not cross the
-privileged boundary.
+terminal replay digest. That product session carries the manifest's rarity
+namespace and no entities, so it is **additional** to the composed scene session
+the viewport draws, never a replacement for it: the exercise reports the scene's
+`initialDigest`/`tickDigests` as always and puts the rarity session's own
+bootstrap, ticks, and replay digest in a separate `raritySession` record. Run and
+the viewport print them as two sessions, because one sentence claiming both would
+attribute the scene's advance to digests it never produced. Run and the viewport
+receive only the resulting tier, candidate, safe draw/digest fields, and provider
+descriptor. Raw prompts, provider responses, credentials, and provider-authored
+failure detail do not cross the privileged boundary.
 
-Exact replay of the accepted request/event pair is idempotent. A changed request
-under that event refuses `RARITY_EVENT_INPUT_CONFLICT`; an intentional reroll must
-use a new event id. Kids and Hosted refuse before the fixture provider runs.
+Exact replay of the accepted request/event pair is idempotent, and the surfaces
+say so: a replay stages nothing, so the result carries `replayed: true` and **no**
+authoring snapshot, the Assistant and product status report unchanged project
+bytes, Change Review stays empty, and only the Evidence dock updates. A changed
+request under that event refuses `RARITY_EVENT_INPUT_CONFLICT`; an intentional
+reroll must use a new event id. Kids and Hosted refuse before the fixture provider
+runs.
+
+`providerEvidence` is a property of the namespace, so every roll it holds is
+described by one provider call descriptor. Extending an existing namespace from a
+call whose model evidence differs would leave earlier rolls reporting a descriptor
+that is not theirs, so `stageRarityProviderProposal` refuses
+`RARITY_AUTHORING_PROVIDER_EVIDENCE_CONFLICT` instead; a namespace whose evidence
+was removed refuses `RARITY_AUTHORING_PROVIDER_EVIDENCE_ABSENT` rather than
+reporting provenance it cannot support. Between them, the descriptor
+`safeRarityEvidenceFromNamespace()` reports for a roll is always the descriptor of
+the call that produced that roll's input.
+
+All four required surfaces render that evidence through one function,
+`formatSafeRarityEvidence()` in `@sceneaxi/authoring-core`. It closes over no
+module binding, so the Engine Desktop chrome embeds the exact function in its
+emitted script the way the web staging decision already does, and the packaged
+renderer imports the same one — matching provenance is then an identity rather
+than two texts kept in step by review.
 
 ## Evidence and exclusions
 
@@ -159,8 +186,17 @@ caught by the `additionalProperties: false` branch it would violate.
 
 ## Integration acceptance evidence — 2026-08-09
 
-The implementation source is commit
-`3874b409fabbb058e415723eba2d26daa6e6e460`. Its executable desktop vector is
+The implementation landed as `3874b409fabbb058e415723eba2d26daa6e6e460` and was
+then corrected in review, so that commit is **not** the head this contract
+describes. The corrections are `a026e64` (named replay refusal, shared
+forbidden-key list), `71d0058` (provider-detail redaction, one document reader),
+`4dc8f30` (provider evidence carried through kernel replay), and the round
+recorded below (replay reported as a replay, the rarity product session reported
+beside the scene session rather than in place of it, Evidence retained on an
+unrelated reject, one shared evidence formatter, per-namespace evidence conflict
+refusal). Each added executable coverage.
+
+Its executable desktop vector is unchanged by all of them —
 `tests/e2e/fixtures/rarity-provider/wayfinder-desktop.json`:
 
 - scope `desktop-linux-rarity`, seed `20260809`, event
@@ -190,10 +226,19 @@ xvfb-run -a pnpm --dir desktop/linux smoke
 pnpm gate
 ```
 
-The final gate passed 209 files and 3,542 tests. The golden suite passed 28 files
-and 242 tests. The Linux built-runtime smoke drew through the real
-`webgl-canvas` surface under Xvfb/SwiftShader (`pixelsDrawn true`, 15 draw calls)
-and completed its existing authoring and orchestrated kernel checks.
+Those counts belong to `3874b409fabbb058e415723eba2d26daa6e6e460` and to nothing
+after it: the gate passed 209 files and 3,542 tests there, and the golden suite 28
+files and 242 tests. Every review round since added tests, so the suite at the
+head is larger and these two numbers are a historical reading rather than a claim
+about it. The Linux built-runtime smoke, also observed at that commit, drew
+through the real `webgl-canvas` surface under Xvfb/SwiftShader (`pixelsDrawn
+true`, 15 draw calls) and completed its existing authoring and orchestrated kernel
+checks; no review round has touched the presentation path, and none has re-run it.
+
+The pinned vector digests above, by contrast, are re-proved on every run:
+`tests/e2e/rarity-provider-desktop-golden.test.ts` compares runtime output to
+those exact bytes, so a change that moved any of them would fail rather than
+silently outdate this section.
 
 This record covers the checked-in no-network fixture and the built runtime on
 this host. It is not a packaged-artifact observation, live provider readiness,

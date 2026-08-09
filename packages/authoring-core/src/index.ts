@@ -100,6 +100,7 @@ export {
 export {
   RARITY_AUTHORING_REFUSALS,
   RARITY_PROVIDER_TOOL_NAME,
+  formatSafeRarityEvidence,
   requestRarityProviderContribution,
   safeRarityEvidenceFromNamespace,
   stageRarityProviderProposal,
