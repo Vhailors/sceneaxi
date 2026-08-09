@@ -46,7 +46,7 @@ export function formatSafeRarityEvidence(
     [...value].every((character) => /[a-z0-9._:/+-]/.test(character)) &&
     /[a-z0-9]/.test(value[0] || "") &&
     !value.split(/[._:/+-]/).some((segment) =>
-      ["sk", "key", "token", "secret", "credential", "password"].includes(segment)
+      ["sk", "rk", "whsec", "key", "token", "secret", "credential", "password"].includes(segment)
     );
   const numericFields = [
     "projectSeed",

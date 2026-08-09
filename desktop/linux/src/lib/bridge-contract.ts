@@ -159,6 +159,12 @@ export function desktopAssistantStartMode(
 export type DesktopAssistantMountedResult = Omit<AssistantSculptSuccess, "artifact"> &
   Readonly<{ mountable: MountableScene }>;
 
+export type DesktopRarityRetirementReason =
+  | "session-restarted"
+  | "undo"
+  | "namespace-replaced"
+  | "document-missing";
+
 /**
  * An Agent run either staged a canonical diff or replayed an event the project
  * already accepted. `replayed` is what tells the two apart, and a replay carries
@@ -171,6 +177,7 @@ export type DesktopRarityProposalResult = Readonly<{
   replayed: boolean;
   evidence: DesktopRarityEvidence;
   authoring?: DesktopSnapshot & Readonly<{ rarityEvidence: DesktopRarityEvidence }>;
+  retirement?: Readonly<{ reason: DesktopRarityRetirementReason }>;
 }>;
 
 export type DesktopAssistantResult =

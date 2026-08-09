@@ -71,6 +71,7 @@ import {
   type DesktopBridgeResponse,
   type DesktopFrameReport,
   type DesktopRarityEvidence,
+  type DesktopRarityRetirementReason,
 } from "./bridge-contract.js";
 import {
   DESKTOP_SCENE_NOT_COMPOSABLE,
@@ -297,26 +298,23 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     };
   };
 
-  const retireRarityAssistantAuthoring = (evidence: DesktopRarityEvidence) => {
+  const retireRarityAssistantResult = (
+    evidence: DesktopRarityEvidence,
+    reason: DesktopRarityRetirementReason,
+  ) => {
     const result = currentRarityAssistantResult();
     if (
-      result?.authoring === undefined ||
+      assistantJob === null ||
+      result === null ||
       result.evidence.namespaceDigest !== evidence.namespaceDigest
     ) return;
-    updateRarityAssistantAuthoring(
-      Object.freeze({
-        ...result.authoring,
-        phase: "rejected",
-        proposal: null,
-        unifiedDiff: null,
-        renderedDiff: null,
-        appliedPaths: null,
-        journalRecoveryPending: false,
-        transactionId: null,
-        diagnostics: Object.freeze([]),
+    assistantJob = {
+      ...assistantJob,
+      result: Object.freeze({
+        ...result,
+        retirement: Object.freeze({ reason }),
       }),
-      evidence,
-    );
+    };
   };
 
   const handshake = (): DesktopBridgeHandshake =>
@@ -391,7 +389,11 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     documentData: Readonly<Record<string, unknown>>,
     rarityValue: unknown,
   ):
-    | Readonly<{ ok: true; session: OpenPathRaritySession; evidence: DesktopRarityEvidence }>
+    | Readonly<{
+        ok: true;
+        session: OpenPathRaritySession;
+        evidence?: DesktopRarityEvidence;
+      }>
     | Readonly<{ ok: false; reason: string; message: string; detail?: string | null }> => {
     const rarity = validateRarityNamespace(rarityValue);
     if (!rarity.ok) {
@@ -407,11 +409,11 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       };
     }
     const roll = rarity.value.rolls.at(-1);
-    if (roll === undefined || roll.providerEvidence === undefined) {
+    if (roll === undefined) {
       return {
         ok: false,
         reason: RARITY_REFUSE_CODES.outcomeMismatch,
-        message: "The active rarity namespace has no accepted outcome and provider evidence.",
+        message: "The active rarity namespace has no accepted outcome.",
       };
     }
     const bootstrapped = bootstrapOpenPath(
@@ -449,7 +451,9 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         type: "rarity-roll",
         eventId: roll.eventId,
         request: roll.request,
-        providerEvidence: roll.providerEvidence,
+        ...(roll.providerEvidence === undefined
+          ? {}
+          : { providerEvidence: roll.providerEvidence }),
       });
       for (let tick = 1; tick <= OPEN_PATH_EXERCISE_TICKS; tick += 1) {
         live.value.advance({ tick, deltaMs: 100 });
@@ -507,7 +511,9 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         tickDigests: Object.freeze(tickDigests),
         replayDigest,
       }),
-      evidence: safeRarityEvidenceFromNamespace(rarity.value, roll.eventId, seed as number),
+      ...(roll.providerEvidence === undefined
+        ? {}
+        : { evidence: safeRarityEvidenceFromNamespace(rarity.value, roll.eventId, seed as number) }),
     };
   };
 
@@ -526,7 +532,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         return bridgeRefuse(exercised.reason, exercised.message, exercised.detail);
       }
       raritySession = exercised.session;
-      rarityEvidence = exercised.evidence;
+      if (exercised.evidence !== undefined) rarityEvidence = exercised.evidence;
     }
 
     const bootstrapped = bootstrapOpenPath(
@@ -696,10 +702,36 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         ),
       });
     };
-    const statusWithProperties = (live: DesktopSession, documentPath: string) => {
+    const reconcileRarityAssistantDocument = (
+      status: DesktopDocumentStatus & Readonly<{ rarityNamespaceDigest?: string | null }>,
+      reason?: DesktopRarityRetirementReason,
+    ) => {
+      const result = currentRarityAssistantResult();
+      if (
+        result?.authoring?.phase !== "applied" ||
+        result.retirement !== undefined
+      ) return;
+      if (!status.ok) {
+        if (status.diagnostics[0]?.code === "document-not-found") {
+          retireRarityAssistantResult(result.evidence, reason ?? "document-missing");
+        }
+        return;
+      }
+      if (status.rarityNamespaceDigest !== result.evidence.namespaceDigest) {
+        retireRarityAssistantResult(result.evidence, reason ?? "namespace-replaced");
+      }
+    };
+    const statusWithProperties = (
+      live: DesktopSession,
+      documentPath: string,
+      retirementReason?: DesktopRarityRetirementReason,
+    ) => {
       const status = live.status(documentPath);
-      if (!status.ok) return status;
-      return Object.freeze({
+      if (!status.ok) {
+        reconcileRarityAssistantDocument(status, retirementReason);
+        return status;
+      }
+      const enriched = Object.freeze({
         ...status,
         ...rarityStatus(status.data),
         editableScene: inspectDesktopSceneProperties({
@@ -708,6 +740,8 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           documentPath,
         }),
       });
+      reconcileRarityAssistantDocument(enriched, retirementReason);
+      return enriched;
     };
     /**
      * A snapshot the surface can re-read its property panel from.
@@ -764,7 +798,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       }
       session = options.createAuthoringSession?.() ?? createDesktopSession({ cwd: options.cwd });
       if (rarityProposalEvidence !== null) {
-        retireRarityAssistantAuthoring(rarityProposalEvidence);
+        retireRarityAssistantResult(rarityProposalEvidence, "session-restarted");
       }
       rarityProposalEvidence = null;
       return bridgeOk("authoring", statusWithProperties(session, documentPath));
@@ -860,6 +894,9 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     }
     const result = live.undo();
     if (result.ok) {
+      if (rarityProposalEvidence !== null) {
+        retireRarityAssistantResult(rarityProposalEvidence, "undo");
+      }
       const assistantResult = currentRarityAssistantResult();
       const appliedDocumentPath = containedDocumentPath(
         assistantResult?.authoring?.proposal?.edits[0]?.documentPath,
@@ -869,11 +906,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         appliedDocumentPath !== null &&
         result.restoredPaths.includes(appliedDocumentPath)
       ) {
-        const restored = statusWithProperties(live, appliedDocumentPath);
-        const namespaceGone = restored.ok
-          ? restored.rarityNamespaceDigest !== assistantResult.evidence.namespaceDigest
-          : restored.diagnostics[0]?.code === "document-not-found";
-        if (namespaceGone) retireRarityAssistantAuthoring(assistantResult.evidence);
+        statusWithProperties(live, appliedDocumentPath, "undo");
       }
       rarityProposalEvidence = null;
     }

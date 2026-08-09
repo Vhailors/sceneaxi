@@ -39,6 +39,8 @@ export const RARITY_PROVIDER_DESCRIPTOR_MAX_CHARS = 128 as const;
 
 const RARITY_PROVIDER_DESCRIPTOR_FORBIDDEN_SEGMENTS = new Set([
   "sk",
+  "rk",
+  "whsec",
   "key",
   "token",
   "secret",

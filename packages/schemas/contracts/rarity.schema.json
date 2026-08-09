@@ -227,25 +227,25 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 128,
-              "pattern": "^(?![\\s\\S]*[^a-z0-9._:/+-])(?!(?:.*[._:/+-])?(?:sk|key|token|secret|credential|password)(?:[._:/+-]|(?![\\s\\S])))[a-z0-9][a-z0-9._:/+-]*(?![\\s\\S])"
+              "pattern": "^(?![\\s\\S]*[^a-z0-9._:/+-])(?!(?:.*[._:/+-])?(?:sk|rk|whsec|key|token|secret|credential|password)(?:[._:/+-]|(?![\\s\\S])))[a-z0-9][a-z0-9._:/+-]*(?![\\s\\S])"
             },
             "provider": {
               "type": "string",
               "minLength": 1,
               "maxLength": 128,
-              "pattern": "^(?![\\s\\S]*[^a-z0-9._:/+-])(?!(?:.*[._:/+-])?(?:sk|key|token|secret|credential|password)(?:[._:/+-]|(?![\\s\\S])))[a-z0-9][a-z0-9._:/+-]*(?![\\s\\S])"
+              "pattern": "^(?![\\s\\S]*[^a-z0-9._:/+-])(?!(?:.*[._:/+-])?(?:sk|rk|whsec|key|token|secret|credential|password)(?:[._:/+-]|(?![\\s\\S])))[a-z0-9][a-z0-9._:/+-]*(?![\\s\\S])"
             },
             "quantization": {
               "type": "string",
               "minLength": 1,
               "maxLength": 128,
-              "pattern": "^(?![\\s\\S]*[^a-z0-9._:/+-])(?!(?:.*[._:/+-])?(?:sk|key|token|secret|credential|password)(?:[._:/+-]|(?![\\s\\S])))[a-z0-9][a-z0-9._:/+-]*(?![\\s\\S])"
+              "pattern": "^(?![\\s\\S]*[^a-z0-9._:/+-])(?!(?:.*[._:/+-])?(?:sk|rk|whsec|key|token|secret|credential|password)(?:[._:/+-]|(?![\\s\\S])))[a-z0-9][a-z0-9._:/+-]*(?![\\s\\S])"
             },
             "version": {
               "type": "string",
               "minLength": 1,
               "maxLength": 128,
-              "pattern": "^(?![\\s\\S]*[^a-z0-9._:/+-])(?!(?:.*[._:/+-])?(?:sk|key|token|secret|credential|password)(?:[._:/+-]|(?![\\s\\S])))[a-z0-9][a-z0-9._:/+-]*(?![\\s\\S])"
+              "pattern": "^(?![\\s\\S]*[^a-z0-9._:/+-])(?!(?:.*[._:/+-])?(?:sk|rk|whsec|key|token|secret|credential|password)(?:[._:/+-]|(?![\\s\\S])))[a-z0-9][a-z0-9._:/+-]*(?![\\s\\S])"
             }
           }
         }

@@ -330,8 +330,6 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
     const session = open(manifest(), fixedHost());
     session.dispatch(rarityCommand("roll-0000"));
     session.advance({ tick: 1, deltaMs: 16 });
-    session.dispatch(rarityCommand("roll-0015"));
-    session.advance({ tick: 2, deltaMs: 16 });
     const terminal = session.observe();
     const save = session.save();
     expect(save.productManifest.rarity).toEqual(terminal.rarity);
@@ -499,7 +497,7 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
     );
   });
 
-  it("makes an identical event/request idempotent and requires a new event id to reroll", () => {
+  it("replays evidence-less events but refuses to extend their history", () => {
     const session = open(manifest(), fixedHost());
     session.dispatch(rarityCommand("roll-0000"));
     session.dispatch(rarityCommand("roll-0000"));
@@ -526,12 +524,10 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
       );
     }
 
-    session.dispatch(rarityCommand("reroll-0000", changed));
-    session.advance({ tick: 2, deltaMs: 16 });
-    expect(session.observe().rarity?.rolls.map((roll) => roll.eventId)).toEqual([
-      "roll-0000",
-      "reroll-0000",
-    ]);
+    expect(() => session.dispatch(rarityCommand("reroll-0000", changed))).toThrow(
+      RARITY_REFUSE_CODES.provenanceMismatch,
+    );
+    expect(session.observe().rarity?.rolls.map((roll) => roll.eventId)).toEqual(["roll-0000"]);
   });
 
   it("refuses provider entropy at both request and command boundaries", () => {
@@ -608,28 +604,27 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
   });
 
   it("records the weighted outcome through dispatch, advance, save, and replay", () => {
-    const session = open(
-      {
-        productId: SKEWED_SCOPE,
-        seed: SKEWED_SEED,
-        rarity: {
-          schemaVersion: RARITY_SCHEMA_VERSION,
-          kind: RARITY_NAMESPACE_KIND,
-          policy: SKEWED_POLICY,
-          rolls: [],
+    const rolls = SKEWED_VECTORS.map((vector) => {
+      const session = open(
+        {
+          productId: SKEWED_SCOPE,
+          seed: SKEWED_SEED,
+          rarity: {
+            schemaVersion: RARITY_SCHEMA_VERSION,
+            kind: RARITY_NAMESPACE_KIND,
+            policy: SKEWED_POLICY,
+            rolls: [],
+          },
         },
-      },
-      fixedHost(),
-    );
-
-    let tick = 0;
-    for (const vector of SKEWED_VECTORS) {
+        fixedHost(),
+      );
       session.dispatch(rarityCommand(vector.eventId, SKEWED_REQUEST));
-      tick += 1;
-      session.advance({ tick, deltaMs: 16 });
-    }
-
-    const rolls = session.observe().rarity?.rolls ?? [];
+      session.advance({ tick: 1, deltaMs: 16 });
+      const roll = session.observe().rarity?.rolls[0];
+      if (roll === undefined) throw new Error(`missing weighted roll ${vector.eventId}`);
+      expect(replay(jsonCopy(session.save()), fixedHost()).observe().rarity?.rolls[0]).toEqual(roll);
+      return roll;
+    });
     expect(
       rolls.map((roll) => ({
         eventId: roll.eventId,
@@ -641,9 +636,6 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
         candidateTotalWeight: roll.provenance.candidateTotalWeight,
       })),
     ).toEqual(SKEWED_VECTORS.map((vector) => ({ ...vector })));
-
-    const save = session.save();
-    expect(replay(jsonCopy(save), fixedHost()).save()).toEqual(save);
   });
 
   it("names a changed policy rather than reporting an accepted roll as tampered", () => {

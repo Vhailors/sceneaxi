@@ -47,6 +47,7 @@ export {
   type DesktopFrameReport,
   type DesktopRarityEvidence,
   type DesktopRarityProposalResult,
+  type DesktopRarityRetirementReason,
 } from "./lib/bridge-contract.js";
 
 export {

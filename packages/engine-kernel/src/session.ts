@@ -733,14 +733,11 @@ class SessionImpl implements KernelSession {
         : firstPending?.providerEvidence;
       if (firstRoll !== undefined || firstPending !== undefined) {
         if (boundEvidence === undefined) {
-          if (command.providerEvidence !== undefined) {
-            throw rarityError(
-              RARITY_REFUSE_CODES.provenanceMismatch,
-              `rarity.rolls.${command.eventId}.providerEvidence`,
-              "Provider evidence cannot be attached retroactively to an evidence-less rarity history.",
-            );
-          }
-          return false;
+          throw rarityError(
+            RARITY_REFUSE_CODES.provenanceMismatch,
+            `rarity.rolls.${command.eventId}.providerEvidence`,
+            "An evidence-less rarity history can replay its existing event but cannot be extended.",
+          );
         }
         if (
           command.providerEvidence === undefined ||

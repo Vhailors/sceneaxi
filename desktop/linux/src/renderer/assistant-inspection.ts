@@ -88,6 +88,7 @@ export function assistantRarityResultDigest(
     result === undefined ||
     !isRarityProposalResult(result) ||
     result.replayed ||
+    result.retirement !== undefined ||
     result.authoring?.phase === "applied" ||
     result.authoring?.phase === "rejected"
   ) {
@@ -102,6 +103,21 @@ export function assistantRarityResultSettlement(
   result: DesktopAssistantJobSnapshot["result"] | null,
 ): AssistantRaritySettlement | null {
   if (result === null || result === undefined || !isRarityProposalResult(result)) return null;
+  if (result.retirement !== undefined) {
+    const status = result.retirement.reason === "session-restarted"
+      ? "Rarity proposal retired · the authoring session restarted."
+      : result.retirement.reason === "undo"
+        ? "Rarity evidence retired · Undo removed the proposal or accepted namespace."
+        : result.retirement.reason === "document-missing"
+          ? "Rarity evidence retired · the bound document is gone."
+          : "Rarity evidence retired · the bound namespace was replaced.";
+    return Object.freeze({
+      activeNamespaceDigest: null,
+      evidenceText: "",
+      evidenceVisible: false,
+      status,
+    });
+  }
   const phase = result.authoring?.phase;
   if (phase !== "applied" && phase !== "rejected") return null;
   const digest = result.evidence.namespaceDigest;

@@ -1776,6 +1776,16 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
           ...RARITY_EVIDENCE_FIXTURE.providerEvidence,
           model: {
             ...RARITY_EVIDENCE_FIXTURE.providerEvidence.model,
+            provider: "whsec_abcdefgh",
+          },
+        },
+      },
+      {
+        ...RARITY_EVIDENCE_FIXTURE,
+        providerEvidence: {
+          ...RARITY_EVIDENCE_FIXTURE.providerEvidence,
+          model: {
+            ...RARITY_EVIDENCE_FIXTURE.providerEvidence.model,
             version: "v".repeat(129),
           },
         },
@@ -1880,6 +1890,12 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     expect(assistantRarityResultSettlement(applied)).toMatchObject({
       evidenceVisible: true,
       status: expect.stringContaining("accepted"),
+    });
+    const retired = { ...applied, retirement: { reason: "undo" as const } };
+    expect(assistantRarityResultDigest(retired)).toBeNull();
+    expect(assistantRarityResultSettlement(retired)).toMatchObject({
+      evidenceVisible: false,
+      status: expect.stringContaining("Undo"),
     });
     expect(assistantRarityResultDigest(null)).toBeNull();
     expect(

@@ -300,8 +300,9 @@ shared bridge, preserved staged evidence during Play, and handled late proposal
 settlement. `6cbf43a` binds evidence to individual rolls, protects
 an unresolved ready Agent job, rejects final-line terminators in descriptors,
 retains evidence through unreadable recovery, and invalidates matching Assistant,
-Run, viewport, and Evidence output together. The smoke was not rerun after these
-changes.
+Run, viewport, and Evidence output together. `ce6b714` then reconciled Assistant
+lifecycle across restart and Undo, and compared each presentation surface with
+accepted project provenance. The smoke was not rerun after these changes.
 
 The pinned vector digests above, by contrast, are re-proved on every run:
 `tests/e2e/rarity-provider-desktop-golden.test.ts` compares runtime output to

@@ -252,6 +252,46 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     expect(withRarity.tickDigests).toEqual(plain.tickDigests);
   });
 
+  it("plays and kernel-verifies a legacy evidence-less rarity namespace", async () => {
+    const root = projectRoot();
+    const bridge = createDesktopBridge({
+      cwd: root,
+      runRarityProvider: createDesktopRarityFixtureProvider(),
+    });
+    startRarity(bridge);
+    expect((await settledJob(bridge)).status).toBe("ready");
+    bridge.handle({ action: "authoring", payload: { op: "accept" } });
+
+    const path = join(root, DESKTOP_ACTIVE_DOCUMENT_PATH);
+    const document = JSON.parse(documentBytes(root)) as {
+      data: {
+        rarity: {
+          rolls: Array<{
+            providerEvidence?: unknown;
+            provenance: { providerEvidenceDigest?: string };
+          }>;
+        };
+      };
+    };
+    const roll = document.data.rarity.rolls[0];
+    if (roll === undefined) throw new Error("accepted rarity roll missing");
+    delete roll.providerEvidence;
+    delete roll.provenance.providerEvidenceDigest;
+    writeFileSync(path, `${JSON.stringify(document)}\n`);
+
+    const reopened = createDesktopBridge({ cwd: root, nowMs: () => 1_726_000_000_000 });
+    const played = reopened.handle({
+      action: "open-path",
+      payload: { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+    });
+    if (!played.ok) throw new Error(JSON.stringify(played));
+    expect(played).toMatchObject({
+      ok: true,
+      data: { closed: true, raritySession: { replayDigest: expect.any(String) } },
+    });
+    expect(played.ok && played.data).not.toHaveProperty("rarity");
+  });
+
   it("rejects the staged proposal without changing project bytes or creating a roll", async () => {
     const root = projectRoot();
     const before = documentBytes(root);
@@ -732,7 +772,11 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
       }),
     ).toMatchObject({ ok: true, data: { ok: true } });
     expect(await settledJob(bridge)).toMatchObject({
-      result: { kind: "rarity-proposal", authoring: { phase: "rejected" } },
+      result: {
+        kind: "rarity-proposal",
+        authoring: { phase: "reviewing" },
+        retirement: { reason: "session-restarted" },
+      },
     });
 
     startRarity(bridge);
@@ -751,7 +795,73 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
       data: { ok: true, restoredPaths: [DESKTOP_ACTIVE_DOCUMENT_PATH] },
     });
     expect(await settledJob(bridge)).toMatchObject({
-      result: { kind: "rarity-proposal", authoring: { phase: "rejected" } },
+      result: {
+        kind: "rarity-proposal",
+        authoring: { phase: "applied" },
+        retirement: { reason: "undo" },
+      },
+    });
+  });
+
+  it("retires a reviewing Agent result when successful Undo clears its proposal", async () => {
+    const root = projectRoot();
+    const bridge = createDesktopBridge({
+      cwd: root,
+      runRarityProvider: createDesktopRarityFixtureProvider(),
+      createAuthoringSession: () =>
+        createDesktopSession({
+          cwd: root,
+          operations: {
+            undoLastApply: () => ({
+              ok: true,
+              transactionId: "tx-reviewing-undo",
+              documentPaths: [DESKTOP_ACTIVE_DOCUMENT_PATH],
+            }),
+          },
+        }),
+    });
+    startRarity(bridge);
+    expect(await settledJob(bridge)).toMatchObject({
+      result: { kind: "rarity-proposal", authoring: { phase: "reviewing" } },
+    });
+
+    expect(bridge.handle({ action: "authoring", payload: { op: "undo" } })).toMatchObject({
+      ok: true,
+      data: { ok: true },
+    });
+    expect(await settledJob(bridge)).toMatchObject({
+      result: {
+        kind: "rarity-proposal",
+        authoring: { phase: "reviewing" },
+        retirement: { reason: "undo" },
+      },
+    });
+  });
+
+  it("retires applied Assistant evidence when status proves its namespace changed", async () => {
+    const root = projectRoot();
+    const before = documentBytes(root);
+    const bridge = createDesktopBridge({
+      cwd: root,
+      runRarityProvider: createDesktopRarityFixtureProvider(),
+    });
+    startRarity(bridge);
+    expect((await settledJob(bridge)).status).toBe("ready");
+    bridge.handle({ action: "authoring", payload: { op: "accept" } });
+    writeFileSync(join(root, DESKTOP_ACTIVE_DOCUMENT_PATH), before);
+
+    expect(
+      bridge.handle({
+        action: "authoring",
+        payload: { op: "status", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+      }),
+    ).toMatchObject({ ok: true, data: { ok: true, rarityNamespaceDigest: null } });
+    expect(await settledJob(bridge)).toMatchObject({
+      result: {
+        kind: "rarity-proposal",
+        authoring: { phase: "applied" },
+        retirement: { reason: "namespace-replaced" },
+      },
     });
   });
 

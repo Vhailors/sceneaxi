@@ -432,6 +432,10 @@ describe("rarity domain contracts", () => {
         ...providerEvidence,
         model: { ...providerEvidence.model, provider: "sk_live_fixture" },
       }],
+      ["webhook-secret-shaped descriptor", {
+        ...providerEvidence,
+        model: { ...providerEvidence.model, provider: "whsec_abcdefgh" },
+      }],
     ] as const) {
       const invalid = {
         ...namespace,
@@ -688,6 +692,10 @@ describe("rarity domain contracts", () => {
       {
         ...providerEvidence,
         model: { ...providerEvidence.model, provider: "sk_live_fixture" },
+      },
+      {
+        ...providerEvidence,
+        model: { ...providerEvidence.model, provider: "whsec_abcdefgh" },
       },
     ]) {
       expect(
