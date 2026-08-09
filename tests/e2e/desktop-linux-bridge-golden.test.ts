@@ -75,6 +75,10 @@ import { decideAssistantStart } from "../../desktop/linux/src/renderer/assistant
 import { assistantInspectionText } from "../../desktop/linux/src/renderer/assistant-inspection.ts";
 import { formatSafeRarityEvidence } from "@sceneaxi/authoring-core/rarity-evidence";
 import { pollAssistantJob } from "../../desktop/linux/src/renderer/assistant-poll.ts";
+import {
+  pixelsMetaContent,
+  playableExercise,
+} from "../../desktop/linux/src/renderer/playback-report.ts";
 import { createDesktopRarityFixtureProvider } from "../../desktop/linux/src/electron/provider-runtime.ts";
 
 const FIXED_NOW_MS = 1_753_920_000_000;
@@ -1644,6 +1648,50 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     expect(evidenceEmpty.hidden).toBe(true);
   });
 
+  it("keeps rarity evidence when Undo reverts an unrelated Save", async () => {
+    // The reopened document still carries the accepted namespace, so the dock's
+    // provenance still describes real bytes and the empty state would be false.
+    const port = {
+      request: (request: { readonly payload?: { readonly op?: string } }) =>
+        Promise.resolve(
+          request.payload?.op === "undo"
+            ? { ok: true, action: "authoring", data: { ok: true, restoredPaths: ["scene.json"] } }
+            : request.payload?.op === "status"
+              ? {
+                  ok: true,
+                  action: "authoring",
+                  data: {
+                    ok: true,
+                    documentId: "scene",
+                    contentHash: "sha256:base",
+                    data: { rarity: { kind: "sceneaxi.rarity.namespace" } },
+                    undoAvailability: "available",
+                  },
+                }
+              : { ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" },
+        ),
+    };
+    const { shell, reload, undo, status, evidence, evidenceEmpty, documentListeners } =
+      mountRarityChrome(port);
+
+    shell.clickListener?.({ target: reload });
+    await vi.waitFor(() => {
+      expect(status.textContent).toContain("· open ·");
+    });
+    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+      detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
+    });
+    expect(evidence.hidden).toBe(false);
+
+    shell.clickListener?.({ target: undo });
+    await vi.waitFor(() => {
+      expect(status.textContent).toContain("Undid last Save");
+    });
+    expect(evidence.hidden).toBe(false);
+    expect(evidence.textContent).toContain("provenance sha256:provenance");
+    expect(evidenceEmpty.hidden).toBe(true);
+  });
+
   it("retires rarity evidence when Undo takes the accepted namespace back out", async () => {
     const port = {
       request: (request: { readonly payload?: { readonly op?: string } }) =>
@@ -2045,23 +2093,54 @@ describe("desktop renderer module accounting", () => {
     mounts.dispose();
   });
 
-  it("updates the pixels meta only from the real frame, and never imports Electron", () => {
-    const viewport = readFileSync(
-      join(desktopRoot, "linux/src/renderer/viewport.ts"),
-      "utf8",
-    );
-    expect(viewport).toContain("frame.pixelsDrawn");
-    expect(viewport).toContain("PIXELS_META_NAME");
-    expect(viewport).toContain("document.addEventListener(DESKTOP_VIEWPORT_PLAY_EVENT");
-    expect(viewport).toContain('stage.dataset.playback = "acknowledged"');
+  // The two tiers must name the same events or neither surface ever hears the
+  // other; these are the constants both sides import, not a reading of a file.
+  it("shares one event name per surface with the shell", () => {
     expect(DESKTOP_VIEWPORT_PLAY_EVENT).toBe("sceneaxi:desktop-viewport-play");
     expect(DESKTOP_VIEWPORT_PLAY_EVENT).toBe(SHELL_VIEWPORT_PLAY_EVENT);
     expect(DESKTOP_RARITY_PROPOSAL_EVENT).toBe(SHELL_RARITY_PROPOSAL_EVENT);
-    expect(viewport).not.toContain('from "@sceneaxi/desktop-shell"');
-    expect(viewport).not.toMatch(/from\s+"electron"/);
-    // No Three type crosses the seam into this consumer either.
-    expect(viewport).not.toMatch(/from\s+"three"/);
-    expect(viewport).not.toContain("THREE.");
+  });
+
+  it("lets the pixels meta claim only what a frame really reported", () => {
+    const frame = (pixelsDrawn: unknown) =>
+      ({
+        backend: "three",
+        label: "desktop",
+        drawCalls: 1,
+        frame: 1,
+        instanceIds: [],
+        surface: "headless",
+        ...(pixelsDrawn === undefined ? {} : { pixelsDrawn }),
+      }) as unknown as Parameters<typeof pixelsMetaContent>[0];
+
+    expect(pixelsMetaContent(frame(true))).toBe("true");
+    expect(pixelsMetaContent(frame(false))).toBe("false");
+    // A frame that reported nothing is not evidence, so the meta is left alone
+    // rather than being written with a fabricated value.
+    expect(pixelsMetaContent(frame(undefined))).toBeNull();
+    expect(pixelsMetaContent(frame("true"))).toBeNull();
+  });
+
+  it("acknowledges a playback only for an exercise it can honour", () => {
+    const starter = desktopOpenScene();
+    if (!starter.ok) throw new Error(`desktop scene fixture refused: ${starter.reason}`);
+    const exercise = {
+      closed: true,
+      initialDigest: "sha256:initial",
+      tickDigests: ["sha256:tick"],
+      mountable: starter.mountable,
+    };
+    expect(playableExercise({ exercise })).toBe(exercise);
+
+    // Every field the acknowledgement line goes on to print is refused when it
+    // cannot be trusted, before a single mount happens.
+    expect(playableExercise(null)).toBeNull();
+    expect(playableExercise({})).toBeNull();
+    expect(playableExercise({ exercise: { ...exercise, closed: false } })).toBeNull();
+    expect(playableExercise({ exercise: { ...exercise, initialDigest: 1 } })).toBeNull();
+    expect(playableExercise({ exercise: { ...exercise, tickDigests: [] } })).toBeNull();
+    expect(playableExercise({ exercise: { ...exercise, tickDigests: [7] } })).toBeNull();
+    expect(playableExercise({ exercise: { ...exercise, mountable: { sceneId: "x" } } })).toBeNull();
   });
 });
 

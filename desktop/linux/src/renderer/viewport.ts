@@ -31,6 +31,11 @@ import {
   isRarityProposalResult,
 } from "./assistant-inspection.js";
 import { pollAssistantJob } from "./assistant-poll.js";
+import {
+  pixelsMetaContent,
+  playableExercise,
+  type PlayableExercise,
+} from "./playback-report.js";
 import type {
   DesktopByoConfigurationRequest,
   DesktopByoConfigurationResponse,
@@ -138,10 +143,11 @@ function refusalText(error: unknown): string {
 }
 
 function updatePixelsMeta(frame: SculptPresentationFrame): void {
-  const meta = document.querySelector(`meta[name="${PIXELS_META_NAME}"]`);
-  if (meta !== null && typeof frame.pixelsDrawn === "boolean") {
-    meta.setAttribute("content", String(frame.pixelsDrawn));
-  }
+  const content = pixelsMetaContent(frame);
+  if (content === null) return;
+  document
+    .querySelector(`meta[name="${PIXELS_META_NAME}"]`)
+    ?.setAttribute("content", content);
 }
 
 function frameText(frame: SculptPresentationFrame): string {
@@ -509,26 +515,11 @@ async function mountLiveViewport(): Promise<void> {
     if (!(event instanceof CustomEvent)) return;
     const detail = event.detail as {
       accepted?: unknown;
-      exercise?: RarityReportable & {
-        closed?: unknown;
-        initialDigest?: unknown;
-        tickDigests?: unknown;
-        mountable?: unknown;
-      };
       frame?: unknown;
     } | null;
-    const exercise = detail?.exercise;
-    if (
-      detail === null ||
-      exercise?.closed !== true ||
-      typeof exercise.initialDigest !== "string" ||
-      !Array.isArray(exercise.tickDigests) ||
-      exercise.tickDigests.length === 0 ||
-      !exercise.tickDigests.every((digest) => typeof digest === "string") ||
-      !desktopMountablePayload(exercise.mountable)
-    ) {
-      return;
-    }
+    const playable = playableExercise(event.detail);
+    if (detail === null || playable === null) return;
+    const exercise = playable as PlayableExercise & RarityReportable;
     const synchronized = synchronizeViewportScene({
       mounts,
       frameMountedContent: () => backend.frameMountedContent(),

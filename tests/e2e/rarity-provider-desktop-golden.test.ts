@@ -430,7 +430,29 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
       ok: false,
       reason: "DESKTOP_ASSISTANT_HOSTED_METERING_UNAVAILABLE",
     });
+    // The BYOK tier is operator-selectable and Agent mode is reachable from it,
+    // but the checked-in fixture is a privileged local-host path only.
+    expect(startRarity(bridge, "@sceneaxi/profile-game", "byo")).toMatchObject({
+      ok: false,
+      reason: "DESKTOP_RARITY_PROVIDER_UNAVAILABLE",
+    });
     expect(dispatches).toBe(0);
+  });
+
+  it("refuses Agent mode when no privileged fixture provider is wired at all", async () => {
+    const root = projectRoot();
+    const before = documentBytes(root);
+    const bridge = createDesktopBridge({ cwd: root });
+    expect(startRarity(bridge)).toMatchObject({
+      ok: false,
+      reason: "DESKTOP_RARITY_PROVIDER_UNAVAILABLE",
+    });
+    // Nothing was started, so a later assistant job is not met with BUSY.
+    expect(bridge.handle({ action: "assistant", payload: { op: "status" } })).toMatchObject({
+      ok: true,
+      data: null,
+    });
+    expect(documentBytes(root)).toBe(before);
   });
 
   it("turns an in-flight document change into an actionable stale-content refusal", async () => {

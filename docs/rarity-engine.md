@@ -252,7 +252,7 @@ the tier's one renderer-owning module, `desktop/linux/src/renderer/viewport.ts`:
 the assistant-start decision moved to `renderer/assistant-start.ts`, the job poll
 to `renderer/assistant-poll.ts`, the result inspection to
 `renderer/assistant-inspection.ts`, and the rarity result gained its replayed
-branch. `27c1ccf` then rewrote the open-path report's rarity clause: what was a
+branch. `fd7aae9` then rewrote the open-path report's rarity clause: what was a
 tier/candidate summary became `rarityEvidenceReport()`, printed on its own
 `rarityEvidenceLine` overlay above the frame report, and `AssistantPollOutcome`
 was narrowed so the poll consumer no longer re-checks an optional result. The

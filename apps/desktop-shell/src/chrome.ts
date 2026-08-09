@@ -1536,6 +1536,15 @@ if (shell) {
 
   const clearRarityEvidence = () => syncRarityEvidence(null);
 
+  // The dock holds safe evidence for one accepted namespace, and only a Play can
+  // recompute it. So a path that may have taken that namespace out of the file
+  // asks the reopened document whether it is still there rather than guessing:
+  // present means the provenance on screen still describes real bytes.
+  const retireRarityEvidenceUnlessProjectCarriesIt = () => {
+    if (projectData === null || typeof projectData !== 'object') return;
+    if (projectData.rarity === undefined) clearRarityEvidence();
+  };
+
   const clearConflictOutcome = () => { activeConflictDetail = null; };
 
   const syncReview = (snapshot) => {
@@ -1850,15 +1859,16 @@ if (shell) {
     projectRecovering = false;
     undoAvailability = 'unavailable';
     rarityProposalStaged = false;
-    clearRarityEvidence();
     syncReview(null);
     if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' || status.data === null || typeof status.contentHash !== 'string') {
       clearSceneProperty();
+      clearRarityEvidence();
       productStatus('refused', 'Recovery reset · ' + diagnostic + ' · ' + (reason || T.product.refusals.documentDataInvalid));
       return false;
     }
     projectData = status.data;
     projectContentHash = status.contentHash;
+    retireRarityEvidenceUnlessProjectCarriesIt();
     syncSceneProperties(status);
     undoAvailability = status.undoAvailability === 'available' || status.undoAvailability === 'recovery-pending'
       ? status.undoAvailability
@@ -2179,13 +2189,15 @@ if (shell) {
     projectContentHash = null;
     projectDirty = false;
     projectRecovering = false;
-    // Undo reverts the apply the provenance describes, so the namespace it names
-    // may no longer be in the file. Play repopulates the dock from whatever the
-    // reopened project really carries; keeping the old text until then would show
-    // digests for bytes this Save just took back out.
     rarityProposalStaged = false;
-    clearRarityEvidence();
     const reopened = await openProject();
+    // Whether the provenance is still real is a question the reopened document
+    // answers: an Undo that reverted the rarity apply leaves no namespace to
+    // describe, and one that reverted an unrelated Save leaves it exactly where
+    // it was. Clearing on the reverted-rarity case alone keeps the dock from
+    // both lies — digests for bytes that are gone, and an empty state over bytes
+    // that are still there.
+    retireRarityEvidenceUnlessProjectCarriesIt();
     if (reopened) {
       productStatus('open', 'Undid last Save · restored ' + result.restoredPaths.join(', '));
     }
