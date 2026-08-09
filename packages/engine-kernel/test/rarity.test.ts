@@ -289,6 +289,38 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
     expect(() => replay(digest, fixedHost())).toThrow(/replay digest mismatch/);
   });
 
+  it("refuses a manifest whose productId cannot be the rarity resolution scope", () => {
+    const scoped = { ...manifest(), productId: `p${"x".repeat(128)}` };
+    try {
+      open(scoped, fixedHost());
+      throw new Error("an unusable rarity scope was accepted at open");
+    } catch (error) {
+      expect(error).toBeInstanceOf(KernelSessionError);
+      expect((error as KernelSessionError).code).toBe(
+        RARITY_REFUSE_CODES.invalidIdentifier,
+      );
+    }
+  });
+
+  it("refuses a save artifact that records one rarity event id twice", () => {
+    const session = open(manifest(), fixedHost());
+    session.dispatch(rarityCommand("roll-0000"));
+    session.advance({ tick: 1, deltaMs: 16 });
+    const save = jsonCopy(session.save());
+    const [dispatched, advanced] = save.events;
+    if (dispatched?.kind !== "dispatch" || advanced?.kind !== "advance") {
+      throw new Error("saved rarity event stream is not dispatch-then-advance");
+    }
+
+    const duplicated = {
+      ...save,
+      events: [dispatched, jsonCopy(dispatched), advanced],
+    } as KernelSessionSaveArtifact;
+    expect(() => replay(duplicated, fixedHost())).toThrow(
+      RARITY_REFUSE_CODES.duplicateEvent,
+    );
+  });
+
   it("refuses rarity rolls when the existing product manifest has no policy", () => {
     const session = open(
       { productId: "no-rarity-policy", seed: 42 },

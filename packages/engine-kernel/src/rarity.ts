@@ -10,6 +10,7 @@ import {
   digestRarityOutcome,
   digestRarityPolicy,
   digestRarityRequest,
+  isRarityIdentifier,
   refuseRarity,
   validateRarityPolicy,
   validateRarityRollRequest,
@@ -45,8 +46,6 @@ export type RarityResolution = Readonly<{
 }>;
 
 export type RarityResolutionResult = RarityValidationResult<RarityResolution>;
-
-const IDENTIFIER_RE = /^[a-z0-9][a-z0-9._:-]{0,127}$/;
 
 function digestCanonical(value: unknown, digest: KernelDigest): string {
   return prefixedDigest(
@@ -102,14 +101,14 @@ function contextRefusal(
       "The ProductManifest rarity seed must be a safe integer.",
     );
   }
-  if (!IDENTIFIER_RE.test(context.scope)) {
+  if (!isRarityIdentifier(context.scope)) {
     return refuseRarity(
       RARITY_REFUSE_CODES.invalidIdentifier,
       "rarity.context.scope",
       "Rarity scope must be a stable lowercase identifier.",
     );
   }
-  if (!IDENTIFIER_RE.test(context.eventId)) {
+  if (!isRarityIdentifier(context.eventId)) {
     return refuseRarity(
       RARITY_REFUSE_CODES.invalidIdentifier,
       "rarity.context.eventId",

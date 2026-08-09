@@ -50,6 +50,14 @@ draw, outcome, provenance, or provider-response fields, so provider data can
 propose weights and candidates but cannot supply entropy or an authoritative
 result.
 
+Scopes, event ids, and candidate ids all answer to the single exported
+`isRarityIdentifier()` predicate, and the forbidden input keys are the single
+exported `RARITY_FORBIDDEN_INPUT_KEYS` list. Every boundary reads those rather
+than restating them, because a boundary that accepts what the resolver refuses
+would queue an unresolvable command. A manifest that owns a rarity namespace is
+therefore refused at `open()` when its `productId` cannot be the resolution
+scope — never later, inside `advance()`.
+
 ## Kernel authority and replay
 
 `dispatch({ type: "rarity-roll", eventId, request })` validates and records a
@@ -68,6 +76,10 @@ event stream. `replay()` removes event-produced terminal records from its
 starting state, re-runs the recorded advances, and requires the recomputed
 outcome, provenance, namespace, and terminal digest to match exactly. Schema
 major mismatch, altered request, outcome, provenance, or terminal digest refuses.
+Idempotence is a live-dispatch rule, not a replay one: a session never records a
+repeated dispatch, so a saved event stream that carries one rarity event id twice
+is a crafted artifact and refuses with `RARITY_EVENT_DUPLICATE` rather than
+replaying to a shorter event log than it was handed.
 
 ## Evidence and exclusions
 

@@ -144,7 +144,12 @@ export type RarityValidationResult<Value> =
 
 const IDENTIFIER_RE = /^[a-z0-9][a-z0-9._:-]{0,127}$/;
 const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
-const FORBIDDEN_REQUEST_KEYS = new Set([
+
+/**
+ * The one key set no authoring or provider caller may supply on rarity input,
+ * shared by every boundary that accepts caller-authored rarity data.
+ */
+export const RARITY_FORBIDDEN_INPUT_KEYS = Object.freeze([
   "seed",
   "projectSeed",
   "draw",
@@ -153,7 +158,24 @@ const FORBIDDEN_REQUEST_KEYS = new Set([
   "outcome",
   "provenance",
   "providerResponse",
-]);
+] as const);
+
+const FORBIDDEN_REQUEST_KEYS: ReadonlySet<string> = new Set<string>(
+  RARITY_FORBIDDEN_INPUT_KEYS,
+);
+
+export function isRarityForbiddenInputKey(key: string): boolean {
+  return FORBIDDEN_REQUEST_KEYS.has(key);
+}
+
+/**
+ * The one rarity identifier predicate; scopes, event ids, and candidate ids all
+ * answer to it so a caller-facing boundary cannot accept what the resolver
+ * refuses.
+ */
+export function isRarityIdentifier(value: unknown): value is string {
+  return typeof value === "string" && IDENTIFIER_RE.test(value);
+}
 
 function ok<Value>(value: Value): RarityValidationOk<Value> {
   return Object.freeze({ ok: true as const, value });
@@ -233,10 +255,6 @@ function isRefusal(
 
 function isRarityTier(value: unknown): value is RarityTierId {
   return RARITY_TIERS.some((tier) => tier === value);
-}
-
-function validIdentifier(value: unknown): value is string {
-  return typeof value === "string" && IDENTIFIER_RE.test(value);
 }
 
 function validWeight(value: unknown): value is number {
@@ -326,7 +344,7 @@ function validateCandidate(
   }
   const fields = requireExactFields(record, ["candidateId", "tier", "weight"], path);
   if (fields !== null) return fields;
-  if (!validIdentifier(record["candidateId"])) {
+  if (!isRarityIdentifier(record["candidateId"])) {
     return refuseRarity(
       RARITY_REFUSE_CODES.invalidIdentifier,
       `${path}.candidateId`,
@@ -362,7 +380,7 @@ export function validateRarityRollRequest(
 ): RarityValidationResult<RarityRollRequest> {
   const raw = snapshotPlainRecord(value);
   if (raw !== undefined) {
-    const forbidden = Object.keys(raw).find((key) => FORBIDDEN_REQUEST_KEYS.has(key));
+    const forbidden = Object.keys(raw).find(isRarityForbiddenInputKey);
     if (forbidden !== undefined) {
       return refuseRarity(
         RARITY_REFUSE_CODES.providerEntropyForbidden,
@@ -477,7 +495,7 @@ export function validateRarityOutcome(
       "Rarity outcome tier is invalid.",
     );
   }
-  if (!validIdentifier(header["candidateId"])) {
+  if (!isRarityIdentifier(header["candidateId"])) {
     return refuseRarity(
       RARITY_REFUSE_CODES.invalidIdentifier,
       "rarity.outcome.candidateId",
@@ -528,7 +546,7 @@ export function validateRarityProvenance(
       `Rarity algorithmId must be "${RARITY_ALGORITHM_ID}".`,
     );
   }
-  if (!validIdentifier(header["scope"]) || !validIdentifier(header["eventId"])) {
+  if (!isRarityIdentifier(header["scope"]) || !isRarityIdentifier(header["eventId"])) {
     return refuseRarity(
       RARITY_REFUSE_CODES.invalidIdentifier,
       "rarity.provenance",
@@ -600,7 +618,7 @@ function validateRarityRollRecord(
     path,
   );
   if (fields !== null) return fields;
-  if (!validIdentifier(record["eventId"])) {
+  if (!isRarityIdentifier(record["eventId"])) {
     return refuseRarity(
       RARITY_REFUSE_CODES.invalidIdentifier,
       `${path}.eventId`,

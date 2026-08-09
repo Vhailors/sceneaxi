@@ -571,6 +571,7 @@ export {
 export {
   RARITY_ALGORITHM_ID,
   RARITY_FIXTURES_PATH,
+  RARITY_FORBIDDEN_INPUT_KEYS,
   RARITY_NAMESPACE_KIND,
   RARITY_OUTCOME_KIND,
   RARITY_POLICY_KIND,
@@ -586,6 +587,8 @@ export {
   digestRarityProvenance,
   digestRarityRequest,
   digestRarityValue,
+  isRarityForbiddenInputKey,
+  isRarityIdentifier,
   refuseRarity,
   serializeRarityNamespace,
   validateRarityNamespace,

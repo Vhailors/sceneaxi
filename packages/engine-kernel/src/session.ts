@@ -18,6 +18,8 @@ import {
   RARITY_SCHEMA_VERSION,
   canonicalRarityJson,
   digestRarityRequest,
+  isRarityForbiddenInputKey,
+  isRarityIdentifier,
   snapshotPlainRecord,
   validateRarityNamespace,
   validateRarityRollRequest,
@@ -46,7 +48,6 @@ export const BOM_VERSION = "0.0.0";
 const VERSION_RE = /^[0-9]+\.[0-9]+\.[0-9]+$/;
 const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
 const ID_RE = /^[a-z0-9][a-z0-9-]*$/;
-const RARITY_ID_RE = /^[a-z0-9][a-z0-9._:-]{0,127}$/;
 
 /** Host services injected at open/replay. */
 export interface KernelHost extends KernelDigestHost {
@@ -142,7 +143,13 @@ export function replay(
     }
     if (event.kind === "dispatch") {
       verifySavedRarityCommand(event.command, expectedManifest.rarity);
-      session.dispatchRecorded(event.command, event.timestampMs);
+      if (!session.dispatchRecorded(event.command, event.timestampMs)) {
+        throw rarityError(
+          RARITY_REFUSE_CODES.duplicateEvent,
+          `rarity.rolls.${event.command.type === "rarity-roll" ? event.command.eventId : ""}`,
+          "A save artifact cannot record the same rarity event id twice.",
+        );
+      }
       hasPendingDispatch = true;
     } else if (event.kind === "advance") {
       session.advance(event.clock);
@@ -207,6 +214,13 @@ function validateManifest(manifest: ProductManifest): ProductManifest {
         RARITY_REFUSE_CODES.seedInvalid,
         "productManifest.seed",
         "A product manifest with rarity must own a safe integer seed.",
+      );
+    }
+    if (!isRarityIdentifier(manifest.productId)) {
+      throw rarityError(
+        RARITY_REFUSE_CODES.invalidIdentifier,
+        "productManifest.productId",
+        "A product manifest with rarity must own a productId usable as the rarity resolution scope.",
       );
     }
     const validated = validateRarityNamespace(manifest.rarity);
@@ -437,18 +451,8 @@ function validateCommand(command: KernelCommand): KernelCommand {
       (key) => key !== "type" && key !== "eventId" && key !== "request",
     );
     if (unexpected !== undefined) {
-      const entropyKeys = new Set([
-        "seed",
-        "projectSeed",
-        "draw",
-        "tierDraw",
-        "candidateDraw",
-        "outcome",
-        "provenance",
-        "providerResponse",
-      ]);
       throw rarityError(
-        entropyKeys.has(unexpected)
+        isRarityForbiddenInputKey(unexpected)
           ? RARITY_REFUSE_CODES.providerEntropyForbidden
           : RARITY_REFUSE_CODES.unexpectedProperty,
         `rarity.command.${unexpected}`,
@@ -456,7 +460,7 @@ function validateCommand(command: KernelCommand): KernelCommand {
       );
     }
     const eventId = record["eventId"];
-    if (typeof eventId !== "string" || !RARITY_ID_RE.test(eventId)) {
+    if (!isRarityIdentifier(eventId)) {
       throw rarityError(
         RARITY_REFUSE_CODES.invalidIdentifier,
         "rarity.command.eventId",
@@ -509,7 +513,15 @@ function sortedEntities(entities: Map<string, MutableEntity>): SnapshotEntity[] 
     .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 }
 
-/** Canonical digest: sha256 over JSON of {tick, seed, entities sorted by id}. */
+/**
+ * Canonical digest, in two byte-stable branches.
+ *
+ * Without a rarity namespace it stays `JSON.stringify({tick, seed, entities
+ * sorted by id})`, so every checked-in golden digest predating rarity keeps its
+ * exact bytes. With one, the payload gains `rarity` and is serialized with the
+ * repository's sorted-key canonical JSON (`entities`, `rarity`, `seed`, `tick`),
+ * which is what binds the accepted rolls into the terminal digest.
+ */
 function computeDigest(
   tick: number,
   seed: number,
@@ -568,12 +580,13 @@ class SessionImpl implements KernelSession {
     this.dispatchRecorded(command, timestampMs);
   }
 
-  dispatchRecorded(command: KernelCommand, timestampMs: number): void {
+  /** Returns false when the command was an accepted idempotent repeat and nothing was recorded. */
+  dispatchRecorded(command: KernelCommand, timestampMs: number): boolean {
     if (!Number.isInteger(timestampMs)) {
       throw new KernelSessionError("dispatch timestampMs must be an integer");
     }
     const validated = validateCommand(command);
-    if (this.validateCommandState(validated)) return;
+    if (this.validateCommandState(validated)) return false;
     this.pending.push({ command: validated, timestampMs });
     this.events.push(
       Object.freeze({
@@ -582,6 +595,7 @@ class SessionImpl implements KernelSession {
         timestampMs,
       }),
     );
+    return true;
   }
 
   advance(clock: FrameClock): void {
