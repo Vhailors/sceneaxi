@@ -195,12 +195,16 @@ describe("desktop tier — injected violations", () => {
     expect(res.stderr).toContain("nothing outside desktop/linux/src/electron/ may reach the privileged host");
   });
 
-  it("desktop check refuses a Node builtin the browser-bundled renderer imports directly", () => {
-    appendTo(fx, "desktop/linux/src/renderer/viewport.ts", '\nimport { readFileSync } from "node:fs";\n');
+  it("desktop check refuses a compact Node import through the browser bundler", () => {
+    appendTo(
+      fx,
+      "desktop/linux/src/renderer/viewport.ts",
+      '\nimport{readFileSync}from"node:fs";void readFileSync;\n',
+    );
     const res = runCheck(fx, "check-desktop.mjs");
     expect(res.status).toBe(1);
-    expect(res.stderr).toContain("reaches 'node:fs'");
-    expect(res.stderr).toContain("bundled for the browser");
+    expect(res.stderr).toContain("node:fs");
+    expect(res.stderr).toContain("renderer browser bundle contract refused");
   });
 
   it("desktop check refuses a Node builtin the renderer reaches through a workspace entry point", () => {
@@ -214,7 +218,24 @@ describe("desktop tier — injected violations", () => {
     );
     const res = runCheck(fx, "check-desktop.mjs");
     expect(res.status).toBe(1);
-    expect(res.stderr).toContain("bundled for the browser");
+    expect(res.stderr).toContain("node:fs");
+  });
+
+  it("desktop check refuses a second resolved presentation owner", () => {
+    writeTo(
+      fx,
+      "desktop/linux/src/renderer/second-owner.ts",
+      'export { createCanvasPresentationBackend } from "@sceneaxi/engine-presentation";\n',
+    );
+    appendTo(
+      fx,
+      "desktop/linux/src/renderer/viewport.ts",
+      '\nimport "./second-owner.js";\n',
+    );
+    const res = runCheck(fx, "check-desktop.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("only src/renderer/viewport.ts may enter");
+    expect(res.stderr).toContain("src/renderer/second-owner.ts");
   });
 
   it("desktop check allows the renderer's import-free shared evidence entry point", () => {

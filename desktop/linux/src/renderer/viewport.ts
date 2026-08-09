@@ -30,6 +30,7 @@ import { desktopAssistantRuntimeSignal } from "./assistant-runtime.js";
 import { decideAssistantStart } from "./assistant-start.js";
 import {
   assistantRaritySettlement,
+  assistantRarityResultDigest,
   assistantInspectionText,
   isRarityProposalResult,
 } from "./assistant-inspection.js";
@@ -307,10 +308,10 @@ function installAssistantProductFlow(
     }
     const job = outcome.job;
     const result = outcome.result;
+    activeRarityProposalDigest = assistantRarityResultDigest(result);
     if (isRarityProposalResult(result)) {
       const replayed = result.replayed;
       resultView.textContent = formatSafeRarityEvidence(result.evidence) ?? "";
-      activeRarityProposalDigest = replayed ? null : result.evidence.namespaceDigest;
       resultView.removeAttribute("hidden");
       retry?.setAttribute("hidden", "");
       document.dispatchEvent(
@@ -351,6 +352,7 @@ function installAssistantProductFlow(
       refused(decision.reason, decision.message);
       return;
     }
+    activeRarityProposalDigest = assistantRarityResultDigest(null);
     running = true;
     retry?.setAttribute("hidden", "");
     resultView.setAttribute("hidden", "");

@@ -283,13 +283,15 @@ imported the shared evidence formatter from the Node-bearing root barrel, which
 made `renderer.js` unbundlable until it was moved to the import-free
 `@sceneaxi/authoring-core/rarity-evidence` entry — a break `pnpm gate` could not
 see, because the root `build` stage is `tsc --build` rather than the esbuild
-bundle. `pnpm check:desktop` now walks the renderer's module graph and refuses a
-Node builtin anywhere in it, so the gate catches that class; the pixel
+bundle. `pnpm check:desktop` now runs the browser-platform esbuild graph and
+checks its metafile for Node imports and a second presentation owner; the pixel
 observation above, however, remains a reading of the earlier build and is not a
 claim about the renderer at this head. `fac19c4` later changed
 `renderer/assistant-poll.ts`, and `974b2af` changed the kernel, bridge, formatter,
-renderer, and recovery paths. Both are post-smoke source corrections; the smoke
-was not rerun after either commit or this follow-up review.
+renderer, and recovery paths. `9a61731` then tightened stored evidence and
+Assistant settlement, and `ba0c4f5` handled the abandonment race. All four are
+post-smoke source corrections; the smoke was not rerun after them or this
+follow-up review.
 
 The pinned vector digests above, by contrast, are re-proved on every run:
 `tests/e2e/rarity-provider-desktop-golden.test.ts` compares runtime output to

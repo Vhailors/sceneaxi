@@ -1944,6 +1944,7 @@ if (shell) {
     if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' || status.data === null || typeof status.contentHash !== 'string') {
       clearSceneProperty();
       const code = reason || T.product.refusals.documentDataInvalid;
+      if (code === 'document-not-found') clearRarityEvidence();
       productStatus('refused', 'Open refused · ' + code);
       showOutcome('Open refused', code, 'The active Scene Document was not opened.');
       return false;

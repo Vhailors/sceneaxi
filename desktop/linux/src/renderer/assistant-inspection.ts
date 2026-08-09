@@ -54,6 +54,17 @@ export function isRarityProposalResult(
   return "kind" in result && result.kind === "rarity-proposal";
 }
 
+export function assistantRarityResultDigest(
+  result: DesktopAssistantJobSnapshot["result"] | null,
+): string | null {
+  if (result === null || result === undefined || !isRarityProposalResult(result) || result.replayed) {
+    return null;
+  }
+  return typeof result.evidence.namespaceDigest === "string"
+    ? result.evidence.namespaceDigest
+    : null;
+}
+
 export function assistantInspectionText(job: DesktopAssistantJobSnapshot): string {
   const result = job.result;
   if (result === undefined || isRarityProposalResult(result)) return "";

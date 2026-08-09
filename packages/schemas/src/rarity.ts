@@ -215,6 +215,8 @@ export const RARITY_FORBIDDEN_INPUT_KEYS = Object.freeze([
   "providerResponse",
 ] as const);
 
+export const RARITY_PROVIDER_REQUEST_MAX_CHARS = 2_000;
+
 const FORBIDDEN_REQUEST_KEYS: ReadonlySet<string> = new Set<string>(
   RARITY_FORBIDDEN_INPUT_KEYS,
 );

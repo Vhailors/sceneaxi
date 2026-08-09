@@ -21,6 +21,7 @@ import { runInNewContext } from "node:vm";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import {
   MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+  RARITY_PROVIDER_REQUEST_MAX_CHARS,
   composeScene,
   createDocument,
   createModelProviderPort,
@@ -79,6 +80,7 @@ import {
 import { desktopAssistantRuntimeSignal } from "../../desktop/linux/src/renderer/assistant-runtime.ts";
 import {
   assistantInspectionText,
+  assistantRarityResultDigest,
   assistantRaritySettlement,
 } from "../../desktop/linux/src/renderer/assistant-inspection.ts";
 import { formatSafeRarityEvidence } from "@sceneaxi/authoring-core/rarity-evidence";
@@ -1704,6 +1706,27 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     ).toBeNull();
   });
 
+  it("associates settlement only with the displayed rarity result", () => {
+    const staged = {
+      ok: true as const,
+      kind: "rarity-proposal" as const,
+      replayed: false,
+      evidence: RARITY_EVIDENCE_FIXTURE,
+    };
+    expect(assistantRarityResultDigest(staged)).toBe(
+      RARITY_EVIDENCE_FIXTURE.namespaceDigest,
+    );
+    expect(assistantRarityResultDigest({ ...staged, replayed: true })).toBeNull();
+    expect(assistantRarityResultDigest(null)).toBeNull();
+    expect(
+      assistantRarityResultDigest({
+        ok: true,
+        artifactDigest: `sha256:${"a".repeat(64)}`,
+        mountable: { instances: [] },
+      } as unknown as DesktopAssistantJobSnapshot["result"]),
+    ).toBeNull();
+  });
+
   it("clears rarity evidence when the bound project root changes", async () => {
     const lifecycleStatus = {
       recents: [{ root: "/tmp/project-b", name: "project-b" }],
@@ -1858,6 +1881,34 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     });
     expect(evidence.textContent).toContain(`namespace ${replacement.namespaceDigest}`);
     expect(evidence.textContent).not.toContain("wayfinder-copper");
+  });
+
+  it("retires displayed evidence when Reload proves the document is gone", async () => {
+    const port = {
+      request: () =>
+        Promise.resolve({
+          ok: true,
+          action: "authoring",
+          data: {
+            ok: false,
+            diagnostics: [{ code: "document-not-found", message: "scene.json is gone" }],
+          },
+        }),
+    };
+    const { shell, reload, status, evidence, evidenceEmpty, documentListeners } =
+      mountRarityChrome(port);
+    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+      detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
+    });
+    expect(evidence.hidden).toBe(false);
+
+    shell.clickListener?.({ target: reload });
+    await vi.waitFor(() => {
+      expect(status.textContent).toContain("Open refused · document-not-found");
+    });
+    expect(evidence.hidden).toBe(true);
+    expect(evidence.textContent).toBe("");
+    expect(evidenceEmpty.hidden).toBe(false);
   });
 
   it("retires rarity evidence when Undo takes the accepted namespace back out", async () => {
@@ -2220,6 +2271,16 @@ describe("desktop renderer behavior", () => {
         documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
       },
     });
+    const boundedAgent = decideAssistantStart({
+      mode: "agent",
+      route: "local",
+      profile,
+      prompt: "x".repeat(RARITY_PROVIDER_REQUEST_MAX_CHARS + 100),
+    });
+    expect(boundedAgent.ok).toBe(true);
+    if (boundedAgent.ok) {
+      expect(boundedAgent.payload.prompt).toHaveLength(RARITY_PROVIDER_REQUEST_MAX_CHARS);
+    }
     const build = decideAssistantStart({
       mode: "build",
       route: undefined,

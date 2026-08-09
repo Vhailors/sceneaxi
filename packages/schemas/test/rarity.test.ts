@@ -353,6 +353,46 @@ describe("rarity domain contracts", () => {
     }
   });
 
+  it("keeps stored provider evidence identical in the schema and runtime", () => {
+    const vector = fixture.vectors[0];
+    if (vector === undefined) throw new Error("rarity fixture is empty");
+    const providerEvidence = {
+      schemaVersion: 1,
+      kind: "sceneaxi.model-provider-call-evidence",
+      operation: "tool-call",
+      profile: "@sceneaxi/profile-game",
+      model: {
+        model: "fixture-rarity",
+        provider: "sceneaxi-fixture",
+        quantization: "deterministic",
+        version: "v1",
+      },
+    } as const;
+    const namespace = {
+      schemaVersion: RARITY_SCHEMA_VERSION,
+      kind: RARITY_NAMESPACE_KIND,
+      policy: fixture.policy,
+      rolls: [{
+        eventId: vector.eventId,
+        request: fixture.request,
+        outcome: vector.outcome,
+        provenance: vector.provenance,
+      }],
+      providerEvidence,
+    };
+    expect(validateRarityNamespace(namespace).ok).toBe(true);
+    expect(shippedSchemaViolations(namespace)).toEqual([]);
+
+    for (const [label, invalidEvidence] of [
+      ["complete operation", { ...providerEvidence, operation: "complete" }],
+      ["Kids profile", { ...providerEvidence, profile: "@sceneaxi/profile-kids" }],
+    ] as const) {
+      const invalid = { ...namespace, providerEvidence: invalidEvidence };
+      expect(validateRarityNamespace(invalid), label).toMatchObject({ ok: false });
+      expect(shippedSchemaViolations(invalid), label).not.toEqual([]);
+    }
+  });
+
   it("refuses through the shipped schema what the runtime validators refuse", () => {
     const vector = fixture.vectors[0];
     if (vector === undefined) throw new Error("rarity fixture is empty");

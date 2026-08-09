@@ -15,6 +15,7 @@ import {
   desktopAssistantStartMode,
   type DesktopAssistantStartMode,
 } from "../lib/bridge-contract.js";
+import { RARITY_PROVIDER_REQUEST_MAX_CHARS } from "@sceneaxi/schemas";
 import type { DesktopAssistantProfile } from "../lib/bridge.js";
 
 export { DESKTOP_ASSISTANT_START_MODES, type DesktopAssistantStartMode };
@@ -46,7 +47,7 @@ export function decideAssistantStart(input: Readonly<{
       message: DESKTOP_ASSISTANT_START_MODE_REFUSAL_MESSAGE,
     });
   }
-  const prompt = input.prompt.trim();
+  const prompt = input.prompt.trim().slice(0, RARITY_PROVIDER_REQUEST_MAX_CHARS);
   if (prompt.length === 0) {
     return Object.freeze({
       ok: false as const,

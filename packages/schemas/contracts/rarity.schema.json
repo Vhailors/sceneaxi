@@ -155,11 +155,8 @@
       "properties": {
         "schemaVersion": { "const": 1 },
         "kind": { "const": "sceneaxi.model-provider-call-evidence" },
-        "operation": { "enum": ["complete", "tool-call", "stream"] },
-        "profile": {
-          "type": "string",
-          "pattern": "^@sceneaxi/profile-[a-z][a-z0-9-]*$"
-        },
+        "operation": { "const": "tool-call" },
+        "profile": { "enum": ["@sceneaxi/profile-game", "@sceneaxi/profile-web"] },
         "model": {
           "type": "object",
           "required": ["model", "provider", "quantization", "version"],

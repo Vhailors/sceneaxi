@@ -2,6 +2,7 @@
 import {
   MODEL_PROVIDER_PORT_SCHEMA_VERSION,
   RARITY_NAMESPACE_KIND,
+  RARITY_PROVIDER_REQUEST_MAX_CHARS,
   RARITY_REFUSE_CODES,
   RARITY_SCHEMA_VERSION,
   canonicalRarityJson,
@@ -166,7 +167,7 @@ export function safeRarityEvidenceFromNamespace(
 }
 
 /** Longest operator request carried into one provider envelope. */
-export const RARITY_PROVIDER_REQUEST_MAX_CHARS = 2_000;
+export { RARITY_PROVIDER_REQUEST_MAX_CHARS };
 
 const RARITY_PROVIDER_INSTRUCTION =
   "Return one bounded SceneAxi rarity policy and candidate request. Do not return a seed, draw, outcome, provenance, credential, or transcript.";

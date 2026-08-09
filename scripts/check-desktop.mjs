@@ -11,21 +11,17 @@
  * provider adapter, so everything under `src/lib/**` stays pure TypeScript the
  * hermetic gate can test from `tests/desktop/`.
  *
- * It also protects the renderer's bundling contract. `scripts/build.mjs` bundles
- * `src/renderer/*` for `platform: "browser"`, so a Node builtin anywhere in that
- * module graph — the renderer's own files or any workspace entry point they reach
- * — is an unresolvable import that breaks `build`, `dist`, and the packaged smoke.
- * The root `build` stage is `tsc --build`, which type-checks that import happily,
- * so nothing else in the gate can see it. This check walks the graph instead of
- * trusting the tier split, because a package's root barrel is Node-bearing far more
- * often than its individual modules are.
+ * It also executes the renderer's esbuild contract. The browser-platform resolver
+ * supplies the module graph and metafile used to refuse Node builtins and any
+ * second module entering the Three presentation package.
  *
  * Fail-closed: an empty `desktop/` tree, a missing required file, an app that is not
  * matrix-listed, any of that toolchain leaking into the hermetic root, an Electron import outside
  * `src/electron/`, a provider adapter import outside that privileged host, an import
- * that reaches into that privileged host from outside it, a Node builtin reachable
- * from the browser-bundled renderer, or any committed secret value exits 1.
+ * that reaches into that privileged host from outside it, a refused renderer bundle
+ * contract, or any committed secret value exits 1.
  */
+import { spawnSync } from "node:child_process";
 import { existsSync, lstatSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -181,76 +177,6 @@ const resolveWithinApp = (spec, file, dir, manifestName, exportsMap) => {
   return declared.map((target) => resolve(dir, target));
 };
 
-/**
- * Every Node builtin the browser-bundled module graph rooted at `entry` can reach.
- *
- * Resolution mirrors what esbuild does for this tier: relative specifiers directly
- * (with the repository's `.js`-specifier-for-a-`.ts`-file convention), and workspace
- * specifiers through the target package's own `exports` map, since that map is the
- * only thing that decides which file a subpath is. A type-only import is skipped —
- * it is erased before the bundler sees it, which is exactly why a Node-bearing type
- * edge is not a bundling problem and a value edge is.
- */
-const NODE_BUILTIN_SPEC =
-  /(?:from\s+|require\s*\(\s*|import\s*\(\s*|^\s*import\s+)["'](node:[a-z_/]+)["']/gm;
-const VALUE_MODULE_SPEC =
-  /(?:^\s*import\s+(?!type\s)[^;]*?from\s+|^\s*import\s+|^\s*export\s+(?!type\s)[^;]*?from\s+|require\s*\(\s*|import\s*\(\s*)["']([^"']+)["']/gm;
-
-const sourceFileFor = (target) => {
-  const candidates = target.endsWith(".js")
-    ? [`${target.slice(0, -3)}.ts`, `${target.slice(0, -3)}.tsx`, target]
-    : [target, `${target}.ts`, `${target}.tsx`, join(target, "index.ts")];
-  return candidates.find((candidate) => existsSync(candidate) && statSync(candidate).isFile()) ?? null;
-};
-
-const workspaceEntryFor = (spec, matrixEntries) => {
-  const parts = spec.split("/");
-  const name = spec.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0];
-  const declared = matrixEntries[name];
-  if (declared === undefined) return null;
-  const pkgDir = resolve(root, declared.dir);
-  let json;
-  try {
-    json = readJson(join(pkgDir, "package.json"));
-  } catch {
-    return null;
-  }
-  const subpath = spec === name ? "." : `.${spec.slice(name.length)}`;
-  const targets = exportTargets(json.exports).get(subpath) ?? [];
-  return targets
-    .map((target) => sourceFileFor(resolve(pkgDir, target)))
-    .filter((file) => file !== null);
-};
-
-function nodeBuiltinsReachableFrom(entry, matrixEntries) {
-  const offences = [];
-  const seen = new Set();
-  const queue = [entry];
-  while (queue.length > 0) {
-    const file = queue.pop();
-    if (file === undefined || seen.has(file)) continue;
-    seen.add(file);
-    let text;
-    try {
-      text = readFileSync(file, "utf8");
-    } catch {
-      continue;
-    }
-    for (const match of text.matchAll(NODE_BUILTIN_SPEC)) {
-      offences.push({ builtin: match[1], via: relative(root, file) });
-    }
-    for (const match of text.matchAll(VALUE_MODULE_SPEC)) {
-      const spec = match[1];
-      if (spec.startsWith("node:")) continue;
-      const next = spec.startsWith(".")
-        ? [sourceFileFor(resolve(dirname(file), spec))].filter((candidate) => candidate !== null)
-        : (workspaceEntryFor(spec, matrixEntries) ?? []);
-      queue.push(...next);
-    }
-  }
-  return offences;
-}
-
 for (const dir of appDirs) {
   const rel = relative(root, dir);
   for (const required of REQUIRED_FILES) {
@@ -336,16 +262,20 @@ for (const dir of appDirs) {
       }
     }
   }
-  const rendererDir = join(srcDir, "renderer");
-  if (existsSync(rendererDir)) {
-    for (const entry of walk(rendererDir)) {
-      if (!/\.(ts|tsx|mts|js|mjs)$/.test(entry)) continue;
-      for (const offence of nodeBuiltinsReachableFrom(entry, matrixPackages)) {
-        fail(
-          `${relative(root, entry)} reaches '${offence.builtin}' through ${offence.via} — ${relative(root, rendererDir)}/ is bundled for the browser, so a Node builtin anywhere in its module graph cannot resolve`,
-        );
-      }
+  if (
+    manifest.dependencies?.["@sceneaxi/engine-presentation"] !== undefined &&
+    manifest.scripts?.["check:renderer"] === "node scripts/check-renderer.mjs"
+  ) {
+    const check = spawnSync(process.execPath, [join(dir, "scripts/check-renderer.mjs")], {
+      cwd: dir,
+      encoding: "utf8",
+    });
+    if (check.status !== 0) {
+      const detail = check.stderr.trim() || check.stdout.trim() || check.error?.message || "unknown refusal";
+      fail(`${manifest.name}: renderer browser bundle contract refused: ${detail}`);
     }
+  } else if (manifest.dependencies?.["@sceneaxi/engine-presentation"] !== undefined) {
+    fail(`${manifest.name}: check:renderer must execute 'node scripts/check-renderer.mjs'`);
   }
 }
 
